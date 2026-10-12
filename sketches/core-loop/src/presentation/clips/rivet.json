@@ -380,59 +380,74 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "Both claws rest on their yokes."
+          "note": "Both claws remain planted on their yokes."
         },
         {
           "frame": 5,
-          "head": {
-            "pitch": 2
-          },
-          "note": "The chin rises slightly before the visor opens."
-        },
-        {
-          "frame": 7,
           "goggles": 65,
           "head": {
             "pitch": 2
           },
-          "note": "The visor flips clear of the eyes."
+          "note": "The visor reaches its fully raised angle. The rig lifts its lenses and pupils together."
         },
         {
-          "frame": 22,
+          "frame": 9,
           "goggles": 65,
           "head": {
             "pitch": 2
           },
-          "note": "The eyes remain exposed for fifteen frames."
+          "note": "Hold the fully raised visor; this is the contact sample."
         },
         {
-          "frame": 24,
+          "frame": 14,
+          "goggles": 65,
+          "head": {
+            "pitch": 2
+          },
+          "note": "The raised visor is the peak sheet pose, halfway through the fifteen-frame hold."
+        },
+        {
+          "frame": 20,
+          "goggles": 65,
+          "head": {
+            "pitch": 2
+          },
+          "note": "The visor remains fully up through frame 20."
+        },
+        {
+          "frame": 23,
           "goggles": 0,
           "head": {
             "pitch": 2
           },
-          "note": "The visor snaps back over the eyes."
+          "note": "The visor snaps down in three frames."
         },
         {
-          "frame": 29,
+          "frame": 27,
           "head": {
             "pitch": -10
           },
-          "note": "The head makes one firm downward nod."
+          "note": "The head makes a firm ten-degree nod after the visor closes."
         },
         {
-          "frame": 33,
+          "frame": 30,
           "head": {
-            "pitch": -3
+            "pitch": -10
           },
-          "note": "The chin rises from the nod."
+          "note": "Hold. The head makes a firm ten-degree nod after the visor closes."
         },
         {
           "frame": 37,
           "pose": "rest",
-          "note": "The head returns to its bind angle."
+          "note": "The head returns to the seated bind pose."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 5,
+        "contact": 9,
+        "peak": 14,
+        "release": 27
+      }
     },
     "cast_special": {
       "end": 19,
@@ -449,16 +464,16 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "Both claws sit on the yokes."
+          "note": "Both claws begin on the twin yokes."
         },
         {
-          "frame": 4,
+          "frame": 5,
           "hand.R": {
             "control": "Lever",
             "offset": [
               0,
               0,
-              0.07
+              0.32
             ]
           },
           "hand.L": {
@@ -466,25 +481,24 @@
             "offset": [
               -0.08,
               0,
-              0.07
+              0.32
             ]
           },
           "curl.R": -12,
           "curl.L": -12,
           "torso": {
-            "yaw": -12,
-            "pitch": 2
+            "yaw": -10
           },
-          "note": "Both claws rise over the slot-2 lever."
+          "note": "Both claws rise beside the right yoke, above the ring. The shipped lever head remains lower."
         },
         {
-          "frame": 7,
+          "frame": 8,
           "hand.R": {
             "control": "Lever",
             "offset": [
               0,
               0,
-              0
+              0.32
             ]
           },
           "hand.L": {
@@ -492,20 +506,15 @@
             "offset": [
               -0.08,
               0,
-              0
+              0.32
             ]
           },
-          "curl.R": -35,
-          "curl.L": -35,
+          "curl.R": -12,
+          "curl.L": -12,
           "torso": {
-            "height": 0.96,
-            "yaw": -12,
-            "pitch": 5
+            "yaw": -10
           },
-          "shoulder": {
-            "lift": 0.012
-          },
-          "note": "Both claws meet the slot-2 lever cap."
+          "note": "Hold. Both claws rise beside the right yoke, above the ring. The shipped lever head remains lower."
         },
         {
           "frame": 9,
@@ -513,32 +522,31 @@
             "control": "Lever",
             "offset": [
               0,
-              0.035,
-              -0.045
+              0,
+              0
             ]
           },
           "hand.L": {
             "control": "Lever",
             "offset": [
               -0.08,
-              0.035,
-              -0.045
+              0,
+              0
             ]
           },
-          "curl.R": -45,
-          "curl.L": -45,
+          "curl.R": -25,
+          "curl.L": -25,
           "torso": {
-            "height": 0.94,
-            "yaw": -12,
-            "pitch": 7
-          },
-          "shoulder": {
-            "lift": -0.008
+            "pitch": 9,
+            "yaw": -10
           },
           "head": {
-            "pitch": -4
+            "pitch": 0
           },
-          "note": "Both claws drive the lever down against the seat brace."
+          "shoulder": {
+            "lift": 0.008
+          },
+          "note": "Both claws slam down while the spine extends nine degrees into the seat. The verifier pins contact to the low lever pivot."
         },
         {
           "frame": 12,
@@ -546,66 +554,70 @@
             "control": "Lever",
             "offset": [
               0,
-              0.035,
-              -0.045
+              0,
+              0
             ]
           },
           "hand.L": {
             "control": "Lever",
             "offset": [
               -0.08,
-              0.035,
-              -0.045
+              0,
+              0
             ]
           },
-          "curl.R": -45,
-          "curl.L": -45,
+          "curl.R": -25,
+          "curl.L": -25,
           "torso": {
-            "height": 0.96,
-            "yaw": -10,
-            "pitch": 5
+            "pitch": 9,
+            "yaw": -10
+          },
+          "head": {
+            "pitch": 0
           },
           "shoulder": {
-            "lift": -0.008
+            "lift": 0.008
           },
-          "note": "Both claws hold the lever at the bottom of its throw."
+          "note": "Hold. Both claws slam down while the spine extends nine degrees into the seat. The verifier pins contact to the low lever pivot."
         },
         {
-          "frame": 16,
+          "frame": 15,
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              -0.02,
-              0.025
+            "at": [
+              0.4,
+              0.36,
+              0.05
             ]
           },
           "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              -0.02,
-              0.025
+            "at": [
+              -0.18,
+              0.38,
+              0.05
             ]
           },
           "torso": {
-            "yaw": -3,
-            "pitch": 1
+            "pitch": 3,
+            "yaw": -3
           },
-          "curl.R": -10,
-          "curl.L": -10,
-          "note": "Both claws approach their separate yokes."
+          "note": "Both claws release the lever as the brace relaxes."
         },
         {
           "frame": 19,
           "pose": "rest",
-          "note": "Both claws settle onto the bind grips."
+          "note": "Both claws and shoulders return to seated bind."
         }
       ],
       "contact": {
-        "frame": 7,
+        "frame": 9,
         "hand": "R",
         "control": "Lever"
+      },
+      "beats": {
+        "anticipation": 5,
+        "contact": 9,
+        "peak": 9,
+        "release": 15
       }
     },
     "cast_line": {
@@ -625,7 +637,20 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "The right claw rests on its yoke."
+          "note": "The left claw stays on its yoke. The right claw starts at bind."
+        },
+        {
+          "frame": 2,
+          "hand.R": {
+            "control": "WinchLever",
+            "offset": [
+              0,
+              0.18,
+              0.04
+            ]
+          },
+          "curl.R": -18,
+          "note": "The right claw grips ahead of the winch pivot before the bite pull."
         },
         {
           "frame": 3,
@@ -633,18 +658,28 @@
             "control": "WinchLever",
             "offset": [
               0,
-              0.02,
+              0.18,
               0.04
             ]
           },
-          "torso": {
-            "yaw": -5
-          },
-          "curl.R": -12,
-          "note": "The right claw reaches above the winch lever."
+          "curl.R": -18,
+          "note": "The right claw has reached the winch by frame three."
         },
         {
           "frame": 5,
+          "hand.R": {
+            "control": "WinchLever",
+            "offset": [
+              0,
+              0.18,
+              0.04
+            ]
+          },
+          "curl.R": -18,
+          "note": "Hold the forward grip until the sharp bite pull; anticipation spans four frames."
+        },
+        {
+          "frame": 6,
           "hand.R": {
             "control": "WinchLever",
             "offset": [
@@ -653,79 +688,65 @@
               0
             ]
           },
-          "curl.R": -40,
+          "curl.R": -30,
           "torso": {
-            "yaw": -6
+            "pitch": 5
           },
-          "note": "Line bite contact: the right claw closes on the winch lever; this clip plays only on line_skill_fired."
+          "head": {
+            "pitch": 0
+          },
+          "note": "Bite contact: the claw yanks back eighteen centimetres, the elbow drives back, and the spine rocks back five degrees. No forward dive."
         },
         {
-          "frame": 7,
+          "frame": 9,
           "hand.R": {
             "control": "WinchLever",
             "offset": [
               0,
-              -0.07,
-              0.02
+              0,
+              0
             ]
           },
-          "curl.R": -50,
+          "curl.R": -30,
           "torso": {
-            "pitch": 5,
-            "yaw": -6
+            "pitch": 5
           },
           "head": {
+            "pitch": 0
+          },
+          "note": "Hold. Bite contact: the claw yanks back eighteen centimetres, the elbow drives back, and the spine rocks back five degrees. No forward dive."
+        },
+        {
+          "frame": 12,
+          "hand.R": {
+            "at": [
+              0.4,
+              0.28,
+              -0.08
+            ]
+          },
+          "torso": {
             "pitch": 2
           },
-          "note": "The right claw yanks the lever toward the seat."
-        },
-        {
-          "frame": 10,
-          "hand.R": {
-            "control": "WinchLever",
-            "offset": [
-              0,
-              -0.07,
-              0.02
-            ]
-          },
-          "curl.R": -45,
-          "torso": {
-            "height": 0.96,
-            "pitch": -12,
-            "yaw": -3
-          },
-          "head": {
-            "pitch": -5
-          },
-          "note": "The pull flows into a forward seated lean."
-        },
-        {
-          "frame": 13,
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              -0.015,
-              0.02
-            ]
-          },
-          "torso": {
-            "pitch": -3
-          },
-          "curl.R": -12,
-          "note": "The right claw approaches its yoke after the pull."
+          "curl.R": -10,
+          "note": "The right claw releases toward its yoke as the torso centres."
         },
         {
           "frame": 16,
           "pose": "rest",
-          "note": "The right claw returns to its bind grip."
+          "note": "The right claw returns to its yoke in exact seated bind."
         }
       ],
       "contact": {
-        "frame": 5,
+        "frame": 6,
         "hand": "R",
         "control": "WinchLever"
+      },
+      "beats": {
+        "anticipation": 2,
+        "contact": 6,
+        "peak": 6,
+        "release": 12
       }
     },
     "ult_ready": {
@@ -745,92 +766,156 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "The visor stays lowered over the eyes."
+          "note": "The visor remains closed; the left claw stays planted."
         },
         {
-          "frame": 4,
+          "frame": 2,
           "hand.R": {
             "at": [
-              0.14,
-              0.22,
-              0.27
+              0.31,
+              0.25,
+              0.34
             ]
           },
-          "curl.R": -12,
-          "note": "The right claw lifts beside the visor rim."
+          "curl.R": -8,
+          "goggles": 0,
+          "note": "The right claw waits clearly outside the visor rim."
+        },
+        {
+          "frame": 5,
+          "hand.R": {
+            "at": [
+              0.31,
+              0.25,
+              0.34
+            ]
+          },
+          "curl.R": -8,
+          "goggles": 0,
+          "note": "Hold. The right claw waits clearly outside the visor rim."
         },
         {
           "frame": 6,
           "hand.R": {
             "at": [
-              0.12,
-              0.24,
-              0.23
+              0.14,
+              0.255,
+              0.24
             ]
           },
-          "curl.R": -20,
-          "note": "The right claw makes its first tap on the visor rim."
+          "curl.R": -12,
+          "goggles": 0,
+          "note": "First distinct tap on the visor rim."
         },
         {
           "frame": 9,
           "hand.R": {
             "at": [
               0.14,
-              0.22,
-              0.27
+              0.255,
+              0.24
             ]
           },
           "curl.R": -12,
-          "note": "The right claw lifts clear of the rim."
+          "goggles": 0,
+          "note": "Hold. First distinct tap on the visor rim."
         },
         {
-          "frame": 11,
+          "frame": 10,
           "hand.R": {
             "at": [
-              0.12,
-              0.24,
-              0.23
-            ]
-          },
-          "curl.R": -20,
-          "note": "The right claw makes its second visor tap."
-        },
-        {
-          "frame": 16,
-          "head": {
-            "pitch": -5
-          },
-          "hand.R": {
-            "at": [
-              0.22,
-              0.3,
-              0.14
+              0.31,
+              0.25,
+              0.34
             ]
           },
           "curl.R": -8,
-          "note": "The head gives a small downward nod."
+          "goggles": 0,
+          "note": "The right claw lifts twenty centimetres clear between the taps."
+        },
+        {
+          "frame": 13,
+          "hand.R": {
+            "at": [
+              0.31,
+              0.25,
+              0.34
+            ]
+          },
+          "curl.R": -8,
+          "goggles": 0,
+          "note": "Hold. The right claw lifts twenty centimetres clear between the taps."
+        },
+        {
+          "frame": 14,
+          "hand.R": {
+            "at": [
+              0.14,
+              0.255,
+              0.24
+            ]
+          },
+          "curl.R": -12,
+          "goggles": 0,
+          "note": "Second distinct tap on the visor rim."
+        },
+        {
+          "frame": 17,
+          "hand.R": {
+            "at": [
+              0.14,
+              0.255,
+              0.24
+            ]
+          },
+          "curl.R": -12,
+          "goggles": 0,
+          "note": "Hold. Second distinct tap on the visor rim."
+        },
+        {
+          "frame": 18,
+          "hand.R": {
+            "at": [
+              0.3,
+              0.32,
+              0.16
+            ]
+          },
+          "head": {
+            "pitch": -5
+          },
+          "curl.R": -8,
+          "goggles": 0,
+          "note": "The claw withdraws as the head gives a small five-degree nod."
         },
         {
           "frame": 21,
-          "head": {
-            "pitch": -1
-          },
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              -0.01,
-              0.01
+            "at": [
+              0.3,
+              0.32,
+              0.16
             ]
           },
-          "note": "The right claw nears the yoke after the nod."
+          "head": {
+            "pitch": -5
+          },
+          "curl.R": -8,
+          "goggles": 0,
+          "note": "Hold. The claw withdraws as the head gives a small five-degree nod."
         },
         {
           "frame": 25,
           "pose": "rest",
-          "note": "The claw and head return to bind."
+          "note": "The right claw and head return to bind; the visor never moves."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 2,
+        "contact": 6,
+        "peak": 14,
+        "release": 10
+      }
     },
     "ult_windup": {
       "end": 11,
@@ -1388,142 +1473,84 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "Both claws start planted on the yokes."
+          "note": "Both claws stay planted with no wrist or finger gesture."
         },
         {
-          "frame": 4,
+          "frame": 3,
           "torso": {
-            "roll": 8,
-            "pitch": -3,
-            "height": 0.98
+            "roll": 8
           },
           "head": {
-            "roll": -3,
-            "pitch": -2
+            "roll": -3
           },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
+          "note": "The spine rolls sideways eight degrees; the head counter-tilts slightly without pitching forward."
+        },
+        {
+          "frame": 6,
+          "torso": {
+            "roll": 8
           },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
+          "head": {
+            "roll": -3
           },
-          "curl.R": -25,
-          "curl.L": -25,
-          "note": "The seated torso begins leaning into the right-hand skid."
+          "note": "Hold. The spine rolls sideways eight degrees; the head counter-tilts slightly without pitching forward."
         },
         {
           "frame": 7,
           "torso": {
-            "roll": 16,
-            "pitch": -6,
-            "height": 0.96
+            "roll": 14
           },
           "head": {
-            "roll": -5,
-            "pitch": -3
+            "roll": -4
           },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "curl.R": -45,
-          "curl.L": -45,
-          "note": "The torso commits to the bend with both claws braced."
+          "note": "The sideways skid peaks at fourteen degrees; both claws stay on their yokes and the head counter-tilts four degrees."
         },
         {
           "frame": 10,
           "torso": {
-            "roll": 16,
-            "pitch": -6,
-            "height": 0.96
+            "roll": 14
           },
           "head": {
-            "roll": -5,
-            "pitch": -3
+            "roll": -4
           },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "curl.R": -45,
-          "curl.L": -45,
-          "note": "Both claws keep their yokes through the sideways skid."
+          "note": "Hold. The sideways skid peaks at fourteen degrees; both claws stay on their yokes and the head counter-tilts four degrees."
         },
         {
-          "frame": 16,
+          "frame": 15,
           "torso": {
-            "roll": 6,
-            "pitch": -2,
-            "height": 0.99
+            "roll": 4
           },
           "head": {
-            "roll": -2,
-            "pitch": -1
+            "roll": -1
           },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
+          "note": "The torso returns toward centre while both claws remain planted."
+        },
+        {
+          "frame": 18,
+          "torso": {
+            "roll": 4
           },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
+          "head": {
+            "roll": -1
           },
-          "curl.R": -18,
-          "curl.L": -18,
-          "note": "The torso rises toward centre while both claws stay planted."
+          "note": "Hold. The torso returns toward centre while both claws remain planted."
         },
         {
           "frame": 22,
           "pose": "rest",
-          "note": "The seated torso returns to bind over the yokes."
+          "note": "The rider returns to seated bind over the yokes."
         }
       ],
       "contact": {
         "frame": 7,
         "hand": "R",
         "control": "Grip.R"
+      },
+      "beats": {
+        "anticipation": 3,
+        "contact": 7,
+        "peak": 7,
+        "release": 15
       }
     },
     "unlock": {
@@ -1543,192 +1570,285 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "The pilot sits motionless inside the cage.",
           "root": [
             0,
             0,
             0
-          ]
+          ],
+          "note": "The pilot sits still inside the cage."
         },
         {
           "frame": 13,
           "pose": "rest",
-          "note": "Both claws remain still while the latch is inspected.",
           "root": [
             0,
             0,
             0
-          ]
+          ],
+          "note": "The claws remain still while the side latch is inspected."
         },
         {
           "frame": 21,
-          "head": {
-            "yaw": -10,
-            "pitch": -3
-          },
-          "note": "The head turns toward the latch on the right.",
-          "root": [
-            0,
-            0,
-            0
-          ]
-        },
-        {
-          "frame": 27,
-          "head": {
-            "yaw": -10,
-            "pitch": -3
-          },
           "hand.R": {
             "at": [
-              0.18,
-              0.47,
-              0.18
-            ]
-          },
-          "curl.R": 12,
-          "wrist.R": [
-            0,
-            0,
-            -15
-          ],
-          "note": "The open calliper claw reaches around the latch.",
-          "root": [
-            0,
-            0,
-            0
-          ]
-        },
-        {
-          "frame": 39,
-          "head": {
-            "yaw": -10,
-            "pitch": -3
-          },
-          "hand.R": {
-            "at": [
-              0.18,
-              0.47,
-              0.18
-            ]
-          },
-          "curl.R": -32,
-          "wrist.R": [
-            0,
-            0,
-            -15
-          ],
-          "note": "The calliper claw closes to measure the latch width.",
-          "root": [
-            0,
-            0,
-            0
-          ]
-        },
-        {
-          "frame": 47,
-          "head": {
-            "yaw": -10,
-            "pitch": -10
-          },
-          "hand.R": {
-            "at": [
-              0.18,
-              0.47,
-              0.18
-            ]
-          },
-          "curl.R": -32,
-          "wrist.R": [
-            0,
-            0,
-            -15
-          ],
-          "note": "The head gives one exact nod over the measured latch.",
-          "root": [
-            0,
-            0,
-            0
-          ]
-        },
-        {
-          "frame": 54,
-          "head": {
-            "yaw": -6,
-            "pitch": -3
-          },
-          "hand.R": {
-            "at": [
-              0.18,
-              0.47,
-              0.18
-            ]
-          },
-          "curl.R": 8,
-          "wrist.R": [
-            0,
-            0,
-            -15
-          ],
-          "note": "The claw opens as the measured latch gives.",
-          "root": [
-            0,
-            0,
-            0
-          ]
-        },
-        {
-          "frame": 60,
-          "goggles": 55,
-          "head": {
-            "yaw": -3
-          },
-          "hand.R": {
-            "at": [
-              0.26,
-              0.4,
+              0.44,
+              0.23,
               0.12
             ]
           },
-          "curl.R": -8,
-          "note": "The visor lifts while the claw withdraws from the latch.",
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "head": {
+            "yaw": -12,
+            "pitch": 0
+          },
           "root": [
             0,
             0,
             0
-          ]
+          ],
+          "curl.R": 12,
+          "note": "The open calliper reaches to the cage-latch side of the seat rail, away from the face."
+        },
+        {
+          "frame": 28,
+          "hand.R": {
+            "at": [
+              0.44,
+              0.23,
+              0.12
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "head": {
+            "yaw": -12,
+            "pitch": 0
+          },
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "curl.R": 12,
+          "note": "Hold. The open calliper reaches to the cage-latch side of the seat rail, away from the face."
+        },
+        {
+          "frame": 35,
+          "hand.R": {
+            "at": [
+              0.44,
+              0.23,
+              0.12
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "head": {
+            "yaw": -12,
+            "pitch": 0
+          },
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "curl.R": -32,
+          "note": "The calliper closes to measure the side latch."
+        },
+        {
+          "frame": 42,
+          "hand.R": {
+            "at": [
+              0.44,
+              0.23,
+              0.12
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "head": {
+            "yaw": -12,
+            "pitch": 0
+          },
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "curl.R": -32,
+          "note": "Hold. The calliper closes to measure the side latch."
+        },
+        {
+          "frame": 43,
+          "hand.R": {
+            "at": [
+              0.44,
+              0.23,
+              0.12
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "head": {
+            "yaw": -12,
+            "pitch": -10
+          },
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "curl.R": -32,
+          "note": "One exact nod over the measured side latch."
+        },
+        {
+          "frame": 46,
+          "hand.R": {
+            "at": [
+              0.44,
+              0.23,
+              0.12
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "head": {
+            "yaw": -12,
+            "pitch": -10
+          },
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "curl.R": -32,
+          "note": "Hold. One exact nod over the measured side latch."
+        },
+        {
+          "frame": 51,
+          "hand.R": {
+            "at": [
+              0.44,
+              0.23,
+              0.12
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "head": {
+            "yaw": -12,
+            "pitch": 0
+          },
+          "root": [
+            0,
+            0,
+            0.02
+          ],
+          "curl.R": 8,
+          "note": "The claw opens as the side latch gives; the body rises two centimetres before settling onto the seat."
+        },
+        {
+          "frame": 54,
+          "hand.R": {
+            "at": [
+              0.44,
+              0.23,
+              0.12
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "head": {
+            "yaw": -12,
+            "pitch": 0
+          },
+          "root": [
+            0,
+            0,
+            0.02
+          ],
+          "curl.R": 8,
+          "note": "Hold. The claw opens as the side latch gives; the body rises two centimetres before settling onto the seat."
+        },
+        {
+          "frame": 60,
+          "hand.R": {
+            "at": [
+              0.37,
+              0.32,
+              0.1
+            ]
+          },
+          "goggles": 55,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "note": "The body settles to seated height while the claw withdraws and the visor rises."
         },
         {
           "frame": 66,
           "goggles": 55,
-          "note": "The exposed eyes face forward with the claw back on its yoke.",
           "root": [
             0,
             0,
             0
-          ]
+          ],
+          "note": "Hold the raised visor with the claw returned to its yoke."
         },
         {
           "frame": 69,
           "goggles": 0,
-          "note": "The visor closes over the eyes.",
           "root": [
             0,
             0,
             0
-          ]
+          ],
+          "note": "The visor closes in three frames."
         },
         {
           "frame": 73,
           "pose": "rest",
-          "note": "Both claws finish on the yokes in the seated bind pose.",
           "root": [
             0,
             0,
             0
-          ]
+          ],
+          "note": "Both claws end on the yokes in exact seated bind."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 21,
+        "contact": 35,
+        "peak": 35,
+        "release": 51
+      }
     }
   },
   "machinery": [
