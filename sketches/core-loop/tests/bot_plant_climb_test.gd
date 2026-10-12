@@ -1,5 +1,7 @@
+# 2026-10-12 FIXTURE-ADAPT: 38addaa made bot hands read kit.hooked and player.abilities; keep them idle here.
 extends SceneTree
 
+const AbilityState := preload("res://src/core/ability_state.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -13,10 +15,12 @@ const FACE := Vector3(4.0, 30.0, -76.0)
 
 class FakeKit:
 	var mounted := false
+	var hooked := false
 
 
 class FakePlayer:
 	var kit := FakeKit.new()
+	var abilities := AbilityState.new()
 
 	func ball_position() -> Vector3:
 		return Vector3(20.0, 17.0, -42.0)
