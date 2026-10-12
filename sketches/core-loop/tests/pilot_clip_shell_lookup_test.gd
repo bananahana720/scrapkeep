@@ -6,6 +6,9 @@ const T := preload("res://tests/support/t.gd")
 var t := T.new("pilot_clip_shell_lookup_test")
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+func _run() -> void:
 	var roster: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/presentation/clips/roster.json"))
 	for pilot in roster.pilots:
 		var row: Dictionary = roster.pilots[pilot]
