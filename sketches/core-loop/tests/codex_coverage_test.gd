@@ -36,7 +36,7 @@ const NEVER_SPAWNS := ["miniboss", "vault", "netcaster", "bola_thrower", "gyro_j
 
 func _initialize() -> void:
 	var t := T.new("codex_coverage_test")
-	var reach := _reachable()
+	var reach := _reachable(t)
 	_check_enemies(t, reach)
 	_check_never(t, reach)
 	_check_combat_detectors(t)
@@ -46,8 +46,9 @@ func _initialize() -> void:
 
 
 # {kind: [variants]}: every kind some table can spawn, with the Warden's variants.
-func _reachable() -> Dictionary:
+func _reachable(t) -> Dictionary:
 	var reach := {}
+	var park_sites := {}
 	for id in Game.TABLES:
 		var table = Game.TABLES[id]
 		for row in table.DEFS:
@@ -64,12 +65,16 @@ func _reachable() -> Dictionary:
 				_add(reach, WARDEN_GUARD)
 			if not row.get("event_mix", {}).is_empty():
 				_add(reach, "miniboss")
-			_add_sites(reach, Terrain.MAPS[row["map"]].new())
+			var map = Terrain.map_named(String(row["map"]), int(row["stage"]))
+			_add_sites(reach, map)
+			if String(row["map"]).begins_with("park_"):
+				_add_sites(park_sites, map)
 		if table.has_vault():
 			_add(reach, "vault")
 	for world in Worlds.ROWS:
 		_add_all(reach, BOSS_SUMMONS.get(String(world["boss"]), []))
 	_add_all(reach, AmbushAltar.PACK)
+	t.check("park site kinds found", not park_sites.is_empty(), "%d kinds: %s" % [park_sites.size(), park_sites])
 	return reach
 
 
