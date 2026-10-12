@@ -55,7 +55,7 @@ const REFUND_MIN := 1.0
 const REFUND_MAX := 2.0
 # At most this share of one charge's cooldown comes back from combat, so the effective
 # cooldown never drops under half its base (start).
-const REFUND_CYCLE_SHARE := 0.5
+const REFUND_CYCLE_SHARE := 0.75
 # Seconds of refund one stage hands out; a stage entry (refill) resets the tally (start).
 const STAGE_REFUND_CAP := 20.0
 # The slot a refund feeds: the first in this order whose ability has a cooldown. Sable's

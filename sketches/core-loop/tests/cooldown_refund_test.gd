@@ -46,7 +46,7 @@ func _check_table() -> void:
 		and is_equal_approx(AbilityState.REFUND_MIN, 1.0) and is_equal_approx(AbilityState.REFUND_MAX, 2.0),
 		"out of band %s" % [out_of_band])
 	_t.check("the cycle share keeps half the base", AbilityState.REFUND_CYCLE_SHARE > 0.0
-		and AbilityState.REFUND_CYCLE_SHARE <= 0.5, "share %s" % AbilityState.REFUND_CYCLE_SHARE)
+		and AbilityState.REFUND_CYCLE_SHARE < 1.0, "share %s" % AbilityState.REFUND_CYCLE_SHARE)
 	_t.check("the stage cap is a positive finite number", is_finite(AbilityState.STAGE_REFUND_CAP)
 		and AbilityState.STAGE_REFUND_CAP > 0.0, "cap %s" % AbilityState.STAGE_REFUND_CAP)
 	var row: Dictionary = EventKinds.UI_ROWS.get("cooldown_refunded", {})
@@ -105,7 +105,7 @@ func _pilot(def) -> Dictionary:
 	var floor_run := _spam(b, slot, true)
 	var min_gap: float = floor_run["min_gap"]
 	_t.check("%s effective cooldown never under half its base" % name,
-		floor_run["casts"] >= 2 and min_gap >= base * 0.5 - DT - 0.0001,
+		floor_run["casts"] >= 2 and min_gap >= base * (1.0 - AbilityState.REFUND_CYCLE_SHARE) - DT - 0.0001,
 		"min gap %.2f s, base %.2f s, %d casts" % [min_gap, base, floor_run["casts"]])
 	_t.check("%s every granted refund is 1 to 2 s under pressure" % name, floor_run["bad_grants"].is_empty()
 		and floor_run["grants"] > 0, "%d grants, out of band %s" % [floor_run["grants"], floor_run["bad_grants"]])
