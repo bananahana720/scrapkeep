@@ -11,7 +11,16 @@ const STAGES := ["park_dam", "park_test"]
 const EXPECTED_CHECKS := 28
 const H := 1.0 / 60.0
 
-var t := preload("res://tests/support/t.gd").new("pocket_kinds_test")
+class Checks extends "res://tests/support/t.gd":
+	var failed_labels: Array = []
+
+	func check(label: String, ok: bool, detail: String = "") -> bool:
+		if not ok:
+			failed_labels.append(label + ": " + detail)
+		return super.check(label, ok, detail)
+
+
+var t := Checks.new("pocket_kinds_test")
 var game
 var acts
 var graphs := {}
@@ -29,7 +38,7 @@ func _run() -> void:
 		var index := args.find("--only")
 		if index + 1 < args.size():
 			only = args[index + 1]
-		if not only in ["ladder", "ambush", "hazards", "exit"]:
+		if not only in ["ladder", "ambush", "hazards", "exit", "recovery"]:
 			t.check("valid control selection", false, str(args))
 			quit(t.verdict())
 			return
@@ -53,6 +62,7 @@ func _run() -> void:
 	game.flow.press_start()
 	game.flow.choose_class(0)
 	await physics_frame
+	print("pocket context: run_id=%s class=%s" % [game.run.run_id, game.run.class_id()])
 	acts.clear()
 	game.run.set_max_hp(99999.0)
 	game.events.part_gained.connect(func(id, source):
@@ -78,8 +88,14 @@ func _run() -> void:
 		await _hazards()
 	elif only == "exit":
 		await _exit()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4}[only]
+	elif only == "recovery":
+		game.run.set_max_hp(100.0)
+		await _combat()
+		_rounds()
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 10}[only]
 	t.eq("expected check count", t.checks, want - 1)
+	for failure in t.failed_labels:
+		print("failed check: " + failure)
 	game.free()
 	quit(t.verdict())
 
@@ -149,7 +165,7 @@ func _combat() -> void:
 	t.check("arena fixed bundle", s.started and s.pack.size() == 3 and s.hazards.size() >= 1, "three enemies and an active pocket hazard")
 	_kill(s.pack)
 	acts.step_pocket(s, H, s.global_position)
-	t.check("arena clear heals and opens one chest", s.done and s.pickup != null and s.heal_paid and game.run.hp > hurt, "clear creates the reward pickup and restores wounded health once")
+	t.check("arena clear heals and opens one chest", s.done and s.pickup != null and s.heal_paid and game.run.hp > hurt, "done=%s pickup=%s heal=%s hp=%s hurt=%s max=%s" % [s.done, s.pickup != null, s.heal_paid, game.run.hp, hurt, game.run.max_hp])
 	acts.clear()
 	var arrivals := 0
 	var vanished := true
@@ -218,7 +234,7 @@ func _rounds() -> void:
 		pay_count += 1
 	t.check("round credits formula within 1 percent with D capped", formula, "(12 + 6 x (round - 1)) x min(D,3); three rounds")
 	t.check("each round adds exactly one element", additions and s.round_elements == ["chaser", "lobber", "plated_brute"], str(s.round_elements))
-	t.check("pay events equal round count", s.round_payments == pay_count and pay_count == 3 and s.done and paid.size() - granted_before == 3 and game.run.cogs - cogs_before == 702, "%d round payments; three part_gained events; 162 credits + 540 scrap cogs" % s.round_payments)
+	t.check("pay events equal round count", s.round_payments == pay_count and pay_count == 3 and s.done and paid.size() - granted_before == 3 and game.run.cogs - cogs_before == 702, "payments=%d grants=%d cogs=%d expected=702 done=%s" % [s.round_payments, paid.size() - granted_before, game.run.cogs - cogs_before, s.done])
 	t.check("safe zone announced at least natural family lead", lead, "all three safe zones announced at least 3 s before spawn")
 	acts.clear()
 
