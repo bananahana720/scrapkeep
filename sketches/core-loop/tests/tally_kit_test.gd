@@ -13,6 +13,7 @@ const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Rows := preload("res://src/presentation/rows.gd")
+const Hitscan := preload("res://src/combat/hitscan.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Tally's kit through the real game (calm, stage 1): the class row, pressure that time never
@@ -36,7 +37,9 @@ const T := preload("res://tests/support/t.gd")
 # boss takes half of it as tally.md:377 asks; one new check. Measured 84 checks (was 83).
 # 2026-10-12 (PC-TALLY round 3): four owned bank recipes and their admitted levels/keys.
 # 2026-10-12 (PC-TALLY round 3): direct notes isolate the background bank transposition.
-const EXPECTED_CHECKS := 93
+# 2026-10-12 (PC-TALLY round 5, coordinator ruling): four real-input plate counts and
+# four event/aim waits raise the measured count from 93 to 101.
+const EXPECTED_CHECKS := 101
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -82,7 +85,16 @@ func _physics_process(_delta: float) -> bool:
 	elif step.size() > 3:
 		(step[3] as Callable).call()
 	_ticks += 1
-	if _ticks >= int(step[1]):
+	var complete: bool
+	if step[1] is Callable:
+		complete = (step[1] as Callable).call()
+		if not complete and _ticks < 2 * Engine.physics_ticks_per_second:
+			return false
+		_t.check(String(step[4]), complete, _balance_state())
+		complete = true
+	else:
+		complete = _ticks >= int(step[1])
+	if complete:
 		(step[2] as Callable).call()
 		_index += 1
 		_ticks = 0
@@ -130,11 +142,10 @@ func _boot() -> void:
 		[_post_start, 1, _check_post],
 		[_load_start, 1, _check_load_timing],
 		[_warden_arc_start, 1, _check_warden_arc],
-		[_balance_start, 2, _balance_press],
-		[_noop, 2, _balance_rest],
-		[_noop, tps, _balance_fast],
-		[_noop, 1, _balance_fast_press],
-		[_noop, 2, _check_balance],
+		[_balance_start, _balance_aim_ready, _balance_press, _noop, "stationary Balance Due has a ready enemy aim"],
+		[_noop, _balance_shot_arrived, _balance_rest, _noop, "stationary Balance Due publishes shot_fired once"],
+		[_balance_fast, _balance_aim_ready, _balance_fast_press, _noop, "moving Balance Due has a ready enemy aim"],
+		[_noop, _balance_shot_arrived, _check_balance, _noop, "moving Balance Due publishes shot_fired once"],
 		[_restore_start, 1, _check_contact_restores],
 		# The spawn slope is not flat: the ball leaves the ground on bumps and the clock
 		# pauses there, so the roll runs 2.6 s, under two restores' worth of time.
@@ -259,15 +270,15 @@ func _arc_force(enemy: Node3D, from: int) -> float:
 	return float(hits[0][2]) if not hits.is_empty() else -1.0
 
 
-# Pitches the camera so the aim ray meets `point` (the stage-1 spawn faces a rise).
-# Wait for the actual camera render callback, rather than counting physics catch-up ticks.
+# A process frame lets the camera apply pitch; Balance Due also waits for its enemy ray.
 func _stage_pitch(value: float) -> void:
 	_game.camera.pitch = value
 	_aim_frame = Engine.get_process_frames()
 
 
+# Pitch about the spring-arm pivot: rotating the lens moves its old aim origin.
 func _aim_at(point: Vector3) -> void:
-	var origin: Vector3 = _game.ctx.aim_origin()
+	var origin: Vector3 = _game.camera.global_position
 	var flat := _planar(point - origin).length()
 	_stage_pitch(atan2(point.y - origin.y, flat))
 
@@ -373,11 +384,12 @@ func _check_cooldowns() -> void:
 
 func _gather_start() -> void:
 	_as_class("tally")
-	_record = {"from": _struck.size()}
+	_record = {"from": _struck.size(), "cue_from": _game.presentation.audio.cue_log.size()}
 	_press_slot(1)
 
 
 func _gather_planted() -> void:
+	_check_plate_cues("Gather Plate admits exactly one plate cue", 1)
 	_t.check("gather plants the plate", not _combat.plate.is_empty(), str(_combat.plate))
 	_t.eq("gather costs no pressure", _charges(), 3)
 	_t.eq("gather spends slot 2's own charge", _player.abilities.ready(AbilityState.SPECIAL), false)
@@ -421,12 +433,14 @@ func _check_gather() -> void:
 
 # A second tap inside the 6 s cooldown: refused, the first plate stays.
 func _gather_again_press() -> void:
+	_record["cue_from"] = _game.presentation.audio.cue_log.size()
 	_fails.clear()
 	_record["plate"] = _combat.plate.duplicate()
 	_press_slot(1)
 
 
 func _check_gather_again() -> void:
+	_check_plate_cues("a cooling Gather Plate pick admits no plate cue", 0)
 	# The pick is refused, so the click stays on slot 1 (Balance Due may fire there).
 	_t.eq("a gather pick inside its cooldown is refused (cooling) and keeps the plate",
 		[_fails.has(["select", "cooling"]), _combat.plate.get("until"), _player.abilities.selected],
@@ -459,11 +473,13 @@ func _invalid_tap_start() -> void:
 
 
 func _invalid_tap_press() -> void:
+	_record["cue_from"] = _game.presentation.audio.cue_log.size()
 	_fails.clear()
 	_press_slot(1)
 
 
 func _check_invalid_tap() -> void:
+	_check_plate_cues("an invalid Gather Plate aim admits no plate cue", 0)
 	_t.eq("a gather tap at the sky spends nothing and answers no_target",
 		[_charges(), _fails.has(["fire", "no_target"]), _player.abilities.selected, _combat.plate.is_empty(),
 			_player.abilities.ready(AbilityState.SPECIAL)],
@@ -509,12 +525,14 @@ func _link_start() -> void:
 
 
 func _link_press() -> void:
+	_record["cue_from"] = _game.presentation.audio.cue_log.size()
 	_set_charges(0)
 	_press_slot(2)
 
 
 # 3 then click with no line loads the clip; the next bite on c0 fires it.
 func _link_bite() -> void:
+	_check_plate_cues("loading Ledger Clip admits no plate cue", 0)
 	_record["loaded"] = _loaded.duplicate()
 	_record["fired_at_load"] = _fired.size()
 	_record["pressure"] = _charges()
@@ -729,6 +747,8 @@ func _balance_start() -> void:
 
 
 func _balance_press() -> void:
+	_record["shots_from"] = _shots.size()
+	_record["fails_from"] = _fails.size()
 	_record["from"] = _struck.size()
 	_press_slot(0)
 
@@ -746,13 +766,15 @@ func _balance_rest() -> void:
 func _balance_fast() -> void:
 	_player.abilities.refill()
 	_record["from"] = _struck.size()
-	var v := _aim_flat() * 30.0
-	_player.body().linear_velocity = v
-	_player.state.velocity = v
 	_aim_at((_record["t"] as Node3D).global_position)
 
 
 func _balance_fast_press() -> void:
+	_record["shots_from"] = _shots.size()
+	_record["fails_from"] = _fails.size()
+	var v := _aim_flat() * 30.0
+	_player.body().linear_velocity = v
+	_player.state.velocity = v
 	_record["speed"] = _player.planar_velocity().length()
 	_press_slot(0)
 
@@ -914,3 +936,33 @@ func _check_stamp() -> void:
 	_set_charges(0)
 	_player._on_slammed(at, 30.0, 1.0)
 	_t.eq("one stamped contact restores one, with no plain slam point on top", _charges(), 1)
+
+
+func _check_plate_cues(label: String, expected: int) -> void:
+	var cues: Array = _game.presentation.audio.cue_log.slice(_record["cue_from"])
+	var admitted := cues.filter(func(n): return n[1] == "plate_tally" and n[2] == "now")
+	_t.eq(label, admitted.size(), expected)
+
+
+func _balance_aim_ready() -> bool:
+	var space: PhysicsDirectSpaceState3D = _game.get_world_3d().direct_space_state
+	var sight := Hitscan.aim(space, _game.ctx.aim_origin(), _game.ctx.aim_forward(),
+		_player.ball_position(), Weapons.CARD_REACH + _combat.AIM_SLACK)
+	var aim: Dictionary = _combat._card_aim()
+	if bool(sight["on_enemy"]) and bool(aim["valid"]) and _player.abilities.selected == AbilityState.WEAPON \
+			and _player.abilities.ready(AbilityState.WEAPON) and _combat._cooldown <= 0.0:
+		return true
+	_aim_at((_record["t"] as Node3D).global_position)
+	return false
+
+
+func _balance_shot_arrived() -> bool:
+	return _shots.slice(_record["shots_from"]) == ["balance_due"]
+
+
+func _balance_state() -> String:
+	return str({"aim": _combat._card_aim(), "selected": _player.abilities.selected,
+		"ready": _player.abilities.ready(AbilityState.WEAPON), "charges": _charges(),
+		"cooldown": _combat._cooldown, "forward": _game.ctx.aim_forward(),
+		"shots": _shots.slice(_record.get("shots_from", _shots.size())),
+		"refusals": _fails.slice(_record.get("fails_from", _fails.size()))})
