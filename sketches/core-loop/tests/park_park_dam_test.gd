@@ -1,6 +1,7 @@
 extends SceneTree
 
-# Stage 1, park_dam (Spillway Works), greybox pass 2026-10-11 (K-UNITS KD1). Rule: the committed
+# Stage 1, park_dam (Spillway Works), greybox pass 2026-10-11, re-pinned on the KB9 head the same day
+# (K-UNITS KD1). Rule: the committed
 # bake and stage graph of src/world/park/park_dam.json are fresh; the waymarks run drop_in,
 # domes_camp, the_eye, landmark; the four pockets hold their roles in graph.json (domes_camp on
 # the line, rim_cache the reward, bench_altar the risk, gallery_valve the hidden pocket) with no
@@ -8,13 +9,19 @@ extends SceneTree
 # dam face as a harpoon anchor; every waypoint of the six pilot lines and the floor line in
 # tools/park_lines/park_dam.json resolves to a point of the park file, each line starts at drop_in,
 # ends at landmark and passes every waymark in order; KD0's stand-in park_dam_stage1.json is gone.
+# Two runtime facts since KB9 places the rows (park_recipes.gd place_row): every placed greybox row
+# but a kicker wedge or an anchor field carries a stamp, because an unstamped greybox stand-in is a
+# solid box of the row's whole size (slickrock_domes stood as a 24 m wall across every line); and no
+# anchor post (park_recipes.gd anchor_posts) stands within LINE_CLEAR_M of a pilot or floor line.
 #
-# Planted: a copy of the park with the Warden's family changed, one with two waymarks swapped and
-# a lines copy naming a row the park lacks each turn the pins red.
+# Planted: a copy of the park with the Warden's family changed, one with two waymarks swapped, a
+# lines copy naming a row the park lacks, a pocket role changed, a stamp dropped from a placed row
+# and a line bent through an anchor field each turn the pins red.
 
 const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 const MAP := "park_dam"
 const PARK := "res://src/world/park/park_dam.json"
@@ -26,6 +33,10 @@ const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 const ROLES := {"domes_camp": "online", "rim_cache": "reward", "bench_altar": "risk", "gallery_valve": "hidden"}
 const BEACON := [0, 575]
 const SIGHT_SHARE := 0.85
+# A post is 8 m square (park_recipes.gd ANCHOR_POST_M); 15 m from its centre leaves the ball about 10 m
+# of drift either side of a line before it meets a post.
+const LINE_CLEAR_M := 15.0
+const UNSTAMPED_OK := ["kicker", "anchor_field"]
 
 var t := T.new("park_park_dam_test")
 
@@ -64,6 +75,14 @@ func _run() -> void:
 	var bad_graph: Dictionary = graph.duplicate(true)
 	bad_graph["pockets"][0]["role"] = "extra"
 	t.check("planted pocket role turns the pins red", not pins(park, lines, bad_graph).is_empty())
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "slickrock_domes":
+			row["stamp"] = ""
+	t.check("planted unstamped greybox row turns the pins red", not pins(planted, lines, graph).is_empty())
+	bad_lines = lines.duplicate(true)
+	bad_lines["pilots"]["sable"]["waypoints"].insert(1, [-600, -600])
+	t.check("planted line through an anchor field turns the pins red", not pins(park, bad_lines, graph).is_empty())
 	quit(t.verdict())
 
 
@@ -128,4 +147,39 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Arra
 			out.append("%s line does not run drop_in to landmark" % key)
 		if order != WAYMARKS:
 			out.append("%s line passes waymarks %s, want %s" % [key, order, WAYMARKS])
+
+	# KB9 runtime: no unstamped greybox box, and no anchor post near a line.
+	var places := {}
+	for row in park.get("park_rows", []):
+		var recipe := String(row.get("recipe", ""))
+		if recipe.begins_with(ParkRecipes.GREYBOX) and not UNSTAMPED_OK.has(row["element"]) and String(row.get("stamp", "")) == "":
+			out.append("%s is a greybox %s with no stamp: KB9 builds it as a solid box" % [row["id"], row["element"]])
+		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
+	for row in park.get("activity_rows", []):
+		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
+	if park.has("spawn"):
+		places["drop_in"] = Vector2(float(park["spawn"]["at"][0]), float(park["spawn"]["at"][1]))
+	if beacon.size() == 2:
+		places["landmark"] = Vector2(float(beacon[0]), float(beacon[1]))
+	var zones := ParkRecipes.clear_zones(park)
+	var posts := PackedVector2Array()
+	for row in park.get("park_rows", []):
+		if String(row.get("recipe", "")) == ParkRecipes.GREYBOX + "anchor_field":
+			posts.append_array(ParkRecipes.anchor_posts(row, zones))
+	for key in all:
+		var pts := []
+		for wp in all[key]:
+			if wp is String and places.has(wp):
+				pts.append(places[wp])
+			elif wp is Array and wp.size() == 2:
+				pts.append(Vector2(float(wp[0]), float(wp[1])))
+		var near := INF
+		for i in range(1, pts.size()):
+			var a: Vector2 = pts[i - 1]
+			var ab: Vector2 = pts[i] - a
+			for p in posts:
+				var u := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+				near = minf(near, p.distance_to(a + ab * u))
+		if near < LINE_CLEAR_M:
+			out.append("%s line passes %.1f m from an anchor post, want at least %s" % [key, near, LINE_CLEAR_M])
 	return out
