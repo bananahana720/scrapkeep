@@ -422,6 +422,10 @@ func _drop(at: Vector3, damage: float, radius: float) -> Dictionary:
 		return {}
 	var c: Dictionary = payloads.drop(at, damage, radius, INF, INF, MINE_REACH, combat._clock)
 	c["device_id"] = int(placed["id"])
+	var node: Node3D = c["node"]
+	node.tree_exiting.connect(func():
+		combat.devices.remove(int(c["device_id"]))
+		payloads.charges.erase(c))
 	_tag(c)
 	c["_inert"] = true
 	return c
