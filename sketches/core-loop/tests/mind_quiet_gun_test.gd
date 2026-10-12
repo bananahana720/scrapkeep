@@ -1,6 +1,6 @@
 extends "res://tests/cannon_ultimate_test.gd"
-# 2026-10-11 (PC-CANNON): real Mind death, Old Verdigris fallback, notes and settle-once grants.
-const EXPECTED_QUIET_CHECKS := 45
+# 2026-10-11 (PC-CANNON): real Mind death, fallback, arena cleanup, notes and settle-once grants.
+const EXPECTED_QUIET_CHECKS := 46
 const Mind := preload("res://src/boss/mind.gd")
 const QuietGun := preload("res://src/presentation/quiet_gun.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -127,3 +127,6 @@ func _cases() -> void:
 	_t.check("all three grants persist", progress.rows.keys().all(func(id): return reload.earned(id) and reload.has_cosmetic(progress.rows[id]["reward"]["cosmetic"])))
 	progress.free()
 	grant_events.free()
+	mind.pad = null
+	gun._physics_process(0.0)
+	_t.check("quiet gun leaves with the arena", gun.is_queued_for_deletion())
