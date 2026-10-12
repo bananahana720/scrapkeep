@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for ea699dc.
+# freed pilot clip big_cheer -> unlock; PE-0 rescue action keeps the 2.1 m position pin.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -38,7 +40,7 @@ func _run() -> void:
 	t.check("freeing signal glows for active rescue", cage._signal.emission_energy_multiplier >= 1.5)
 	cage.tick(Site.BREAK_SECONDS * 0.5)
 	t.check("freed gate opens the exit and the locked bars are hidden", cage._open_walls.visible and not cage._bars.visible)
-	t.check("freed pilot clears the frame", is_equal_approx(cage._pilot.position.z, 2.1) and cage._animator.assigned_animation == "big_cheer",
+	t.check("freed pilot clears the frame", is_equal_approx(cage._pilot.position.z, 2.1) and cage._animator.assigned_animation == "unlock",
 		"position %s pose %s" % [cage._pilot.position, cage._animator.assigned_animation])
 	t.check("freed gate folds down toward the exit", cage._freed_wall != null and absf(cage._freed_wall.rotation.x) > deg_to_rad(60.0))
 	var outer_top := Vector3.ZERO

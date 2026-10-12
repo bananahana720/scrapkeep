@@ -203,6 +203,14 @@ const ENTRIES := [
 		"clue": "three hostile holds + Redjaw Rend + one run", "text": "Break three hostile holds with Redjaw Rend in one run to earn the Steady Cap."},
 	# --- end Tarn ---
 	# --- P-C Tally entries ---
+	{"id": "tally_skim", "name": "Skim", "hint": "The line takes its cut on the way in.",
+		"clue": "a harpoon bite + the ledger clip on three enemies", "text": "Cast the ledger clip on a standing line, or load it before the bite. The line clips the target and two neighbours, and each clip pays a point of pressure. Hit any clip and the rest take it too."},
+	{"id": "tally_books_balanced", "name": "Books Balanced", "hint": "Every clip is a debt. Land and collect.",
+		"clue": "six clips + one Plate Return landing", "text": "Clip enemies on the ride in, then land. The landing settles every clip you made, wherever it ran, and your reader refills."},
+	{"id": "tally_punch_tape", "name": "Punch Tape", "hint": "Keep the tape running.",
+		"clue": "the ledger clip + ten casts + one stage", "text": "Fire the ledger clip ten times in one stage to earn Punch Tape."},
+	{"id": "tally_eyeshade", "name": "Eyeshade", "hint": "Twenty debts, one ride at a time.",
+		"clue": "twenty settled clips + Plate Return + one run", "text": "Settle twenty clips with Plate Return in one run to earn the Eyeshade."},
 	# --- end Tally ---
 	# --- P-C Cannon entries ---
 	{"id": "cannon_lane_charge", "name": "Lane Charge", "hint": "The cable already shows where it goes.", "clue": "a standing line + 3", "text": "Press 3 while the harpoon holds something. The cable becomes a lane that fires through the enemy and twelve metres on, or out of a wall. Chains make it hit harder."},
@@ -233,6 +241,12 @@ const DETECTORS := {
 	"tarn_dragged": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
 	"tarn_hold_still": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
 	# --- end Tarn ---
+	# --- P-C Tally detectors ---
+	"tally_skim": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"tally_books_balanced": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"tally_punch_tape": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"tally_eyeshade": {"kind": "", "script": "res://src/combat/combat.gd"},
+	# --- end Tally ---
 	"shell_return": {"kind": "lobber", "script": "res://src/combat/combat.gd"},
 	"counter_ram": {"kind": "chaser", "script": "res://src/combat/combat.gd"},
 	"chain": {"kind": "", "script": "res://src/combat/combat.gd"},
