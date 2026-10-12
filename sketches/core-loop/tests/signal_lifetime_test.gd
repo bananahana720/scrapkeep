@@ -7,6 +7,7 @@ const Game := preload("res://src/game.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 class Fleet extends RefCounted:
 	var bus
@@ -38,7 +39,32 @@ var _second := 0
 var _named := 0
 
 func _initialize() -> void:
-	_run.call_deferred()
+	if "--signal-lifetime-child" in OS.get_cmdline_user_args():
+		_run.call_deferred()
+	else:
+		_run_parent.call_deferred()
+
+func _run_parent() -> void:
+	var audio_only := "--audio-only" in OS.get_cmdline_user_args()
+	var args := ["--signal-lifetime-child"]
+	if audio_only:
+		args.append("--audio-only")
+	var result: Dictionary = ChildRuns.run([
+		{"script": "res://tests/signal_lifetime_test.gd", "args": args}
+	], 120.0)[0]
+	var summary := ChildRuns.summary(result)
+	for line in summary.checks:
+		print(line)
+	for error in summary.errors:
+		print("child engine error: %s" % error)
+	var ok: bool = result.code == 0 and not result.timed_out \
+		and summary.verdict == "signal_lifetime_test: PASS" and summary.errors.is_empty()
+	_report("bounded child audio-only=%s" % audio_only, ok,
+		"exit=%s timed_out=%s verdict=%s errors=%d" % [result.code, result.timed_out, summary.verdict, summary.errors.size()])
+	if not audio_only:
+		_report("bus may free before owner", ok and String(result.log).contains("[bus-first cleanup completed]"),
+			"cleanup completed with checked child result")
+	_finish()
 
 func _report(label: String, ok: bool, detail: String) -> void:
 	if not ok:
@@ -132,7 +158,7 @@ func _owner_exit() -> void:
 	SignalLifetime.listen(owner, events.stage_content_cleared, func(_reason: String): pass)
 	events.free()
 	owner.free()
-	_report("bus may free before owner", true, "owner cleanup emitted after bus free")
+	print("[bus-first cleanup completed] owner cleanup emitted after bus free")
 
 func _swarm() -> void:
 	var events := Events.new()
