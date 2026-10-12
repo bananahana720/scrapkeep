@@ -36,7 +36,10 @@ func _run() -> void:
 		if id == "tailings_slump": announced_s = game.world.events.stage_time)
 	game.events.event_started.connect(func(id):
 		started.append(id)
-		if id == "tailings_slump": started_s = game.world.events.stage_time)
+		if id == "tailings_slump":
+			started_s = game.world.events.stage_time
+			# Freeze event updates on the landing callback so the physics server can sync the first collider.
+			game.world.set_physics_process(false))
 	game.events.world_fact.connect(func(kind, _at): forms.append(kind))
 	game.flow.press_start()
 	game.flow.choose_class(1)
@@ -173,18 +176,25 @@ func _collider_y(body: Node3D, point: Vector2) -> float:
 			return a.y + u * (b.y - a.y) + v * (c.y - a.y)
 	return -INF
 
+func _real_ray(label: String, progress: float) -> void:
+	await physics_frame
+	await physics_frame
+	var ray := PhysicsRayQueryParameters3D.create(Vector3(366, low_tread + collapse_depth + 10, 110), Vector3(366, low_tread - 10, 110))
+	var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(ray)
+	var expected := low_tread + collapse_depth * (366.0 - 354.0) / 22.0 * progress
+	t.check(label + " real physics ray hits", not hit.is_empty())
+	if not hit.is_empty(): t.near(label + " real ray matches independent ramp", hit.position.y, expected, 0.001)
+
 func _geometry(state: Dictionary) -> void:
 	var dstate: Dictionary = game.world.events._park_states.filter(func(s): return s.row.id == "tailings_slump")[0]
 	t.near("first landing probe is at zero elapsed", float(dstate.live_elapsed_s), 0.0)
 	_sample_geometry(state, "first landing frame", 0.0)
+	await _real_ray("first landing frame", 0.0)
 	for target in [fill_s * 0.5, fill_s]:
+		game.world.set_physics_process(true)
 		while float(dstate.live_elapsed_s) < target - 0.000001:
 			await physics_frame
+		game.world.set_physics_process(false)
 		t.near("authored duration probe is at requested elapsed", float(dstate.live_elapsed_s), target)
 		_sample_geometry(state, "elapsed %s" % target, target)
-		await physics_frame
-		var ray := PhysicsRayQueryParameters3D.create(Vector3(366, low_tread + collapse_depth + 10, 110), Vector3(366, low_tread - 10, 110))
-		var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(ray)
-		var expected := low_tread + collapse_depth * (366.0 - 354.0) / 22.0 * clampf(target / fill_s, 0.0, 1.0)
-		t.check("elapsed %s real physics ray hits" % target, not hit.is_empty())
-		if not hit.is_empty(): t.near("elapsed %s real ray matches independent ramp" % target, hit.position.y, expected, 0.001)
+		await _real_ray("elapsed %s" % target, target / fill_s)
