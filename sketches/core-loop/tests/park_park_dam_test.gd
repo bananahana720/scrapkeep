@@ -164,7 +164,8 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Arra
 			out.append("%s is a greybox %s with no stamp: KB9 builds it as a solid box" % [row["id"], row["element"]])
 		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
 	for row in park.get("activity_rows", []) + park.get("contraption_rows", []):
-		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
+		if row.has("at"):
+			places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
 	if park.has("spawn"):
 		places["drop_in"] = Vector2(float(park["spawn"]["at"][0]), float(park["spawn"]["at"][1]))
 	if beacon.size() == 2:
