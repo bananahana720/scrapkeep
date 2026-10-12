@@ -11,6 +11,7 @@ const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const SpillwayScenery := preload("res://src/presentation/spillway_scenery.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 const WORLD_SECONDS := 12.0
 const ESTABLISH_SECONDS := 2.0
@@ -22,6 +23,15 @@ const HINT_BAND := 72.0
 const SKIP_HINT := [{"cap": "key_enter", "say": "Enter"}, {"say": "or"}, {"cap": "key_esc", "say": "Esc"}, {"say": "skip to summary"}]
 const TOTAL_SECONDS := WORLD_SECONDS * 3.0 + CREDITS_SECONDS
 const WORLD_DRESSING := {1: "SpillwayScenery", 2: "DigScenery", 3: "HighdraftScenery"}
+# KC10 (PARK.md section 6, 13 item 6): the credits' set is Meteor Crater, the crater_ending bowl (400 m, stamp radius
+# 235 m, lip scale 0.7647). The row's at is the footprint centre; its GLB origin sits at the entry lip, so at [0, 0]
+# with size[0] = 2 * 235 * 0.7647 puts the bowl's middle at the world origin. The camera drops from high over the
+# rim (about 220 m out, 95 m up) toward the bowl's middle during the credits.
+const CRATER_ROW := {"id": "row_crater_ending", "element": "crater_bowl", "recipe": "crater_ending", "budget": "park_large",
+	"at": [0.0, 0.0], "y": 0.0, "yaw_deg": 0.0, "size": [359.4, 60.0, 359.4]}
+const CRATER_CAM_FROM := Vector3(-160.0, 240.0, -300.0)
+const CRATER_CAM_TO := Vector3(-40.0, 95.0, -215.0)
+const CRATER_LOOK := Vector3(0.0, -20.0, 0.0)
 # TONE-READ: Credits. The thanks belongs to the person who made the return trip.
 const CREDITS := "SCRAPKEEP\n\nCreator and director\nAndrew\n\nMade with\nGodot · Blender\n\nMusic\nACE-Step\n\nAI collaborators\nClaude · Codex\n\nThank you for bringing the crew home."
 
@@ -54,6 +64,7 @@ var _cut: ColorRect
 var _at := Vector3.ZERO
 var _dig_deep := false
 var quiet_gun: Node3D
+var crater: Node3D
 var cannon_answered := false
 var cannon_answer_at := -1.0
 
@@ -67,6 +78,7 @@ func start(game_ref) -> void:
 	var began := Time.get_ticks_usec()
 	_build_view()
 	_build_worlds()
+	_build_crater()
 	_build_crew()
 	prepare_usec = Time.get_ticks_usec() - began
 	active = true
@@ -131,7 +143,8 @@ func _build_view() -> void:
 	_copy.offset_bottom = -65.0
 	_copy.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_credits_back = _backing(0.0, 1.0, Color(Palette.CHARCOAL, 0.94))
+	# KC10: a veil lighter than before, so the crater bowl reads under the roll (tune in play).
+	_credits_back = _backing(0.0, 1.0, Color(Palette.CHARCOAL, 0.6))
 	_credits_back.visible = false
 	_credits_clip = Control.new()
 	_credits_clip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -231,6 +244,20 @@ func _build_worlds() -> void:
 		worlds.append(holder)
 		stages.append(stage)
 		holder.visible = false
+
+
+# KC10: Meteor Crater is the credits' set only. It is placed in this viewport's own scene, never in a stage's terrain,
+# and its -col collider is stripped: the sequence stays physics free (the test's _physics_free check).
+func _build_crater() -> void:
+	var placed := ParkRecipes.place(CRATER_ROW, _scene, Callable(), Callable())
+	if placed == null:
+		push_warning("ending_sequence: crater_ending placed nothing; the credits roll over the sky")
+		return
+	for body in placed.find_children("Collider", "StaticBody3D", true, false):
+		body.get_parent().remove_child(body)
+		body.free()
+	placed.visible = false
+	crater = placed
 
 
 # The Highdraft's ground mesh is the catch floor: an orange and blue grid under the
@@ -386,6 +413,7 @@ func advance(delta: float) -> void:
 		var height := get_viewport_rect().size.y - HINT_BAND
 		_credits.position.y = lerpf(height, -_credits.get_minimum_size().y, p)
 		_cut.color.a = 0.0
+		_show_crater(credits_at / CREDITS_SECONDS)
 		return
 	var local := fmod(elapsed, WORLD_SECONDS)
 	if world_index == 2 and local >= 8.0 and not cannon_answered:
@@ -416,6 +444,19 @@ func advance(delta: float) -> void:
 	_cut.color.a = maxf(1.0 - local / 0.5, (local - WORLD_SECONDS + 0.5) / 0.5)
 	_cut.color.a = clampf(_cut.color.a, 0.0, 1.0)
 	viewport.size = Vector2i(get_viewport_rect().size)
+
+
+# KC10: the credits roll over the crater bowl. The Highdraft worlds hide, the bowl shows, and the camera drops from
+# its start point over the rim toward the bowl's middle as the roll runs (p 0 to 1).
+func _show_crater(p: float) -> void:
+	for holder in worlds:
+		holder.visible = false
+	if crater == null:
+		return
+	crater.visible = true
+	var drop := smoothstep(0.0, 1.0, clampf(p, 0.0, 1.0))
+	camera.position = CRATER_CAM_FROM.lerp(CRATER_CAM_TO, drop)
+	camera.look_at(CRATER_LOOK)
 
 
 # The close lines each get a slot from the start of the roll, then the sign holds to the end.
