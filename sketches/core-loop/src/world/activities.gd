@@ -838,7 +838,7 @@ func stand_odds(s: Site) -> Dictionary:
 		result["tier"] = picks.size() + rung
 		result["parts"] = picks.size()
 		result["reward_rarity"] = rarity
-		result["reward_text"] = String(table.named) if table.named != "" else "%d %s parts" % [picks.size(), "/".join(descriptions)]
+		result["reward_text"] = Parts.display_name(String(table.named)) if table.named != "" else "%d %s parts" % [picks.size(), "/".join(descriptions)]
 	return result
 
 func _finish(s: Site, at: Vector3) -> void:
