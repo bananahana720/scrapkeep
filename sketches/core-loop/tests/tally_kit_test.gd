@@ -8,6 +8,10 @@ const Augments := preload("res://src/movement/augments.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Audio := preload("res://src/presentation/audio.gd")
+const Bank := preload("res://src/presentation/sfx_bank.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
+const Rows := preload("res://src/presentation/rows.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Tally's kit through the real game (calm, stage 1): the class row, pressure that time never
@@ -29,7 +33,8 @@ const T := preload("res://tests/support/t.gd")
 # inside its cooldown is refused as verb_failed("select", "cooling") by the router.
 # Re-pinned 2026-10-12 (PC-TALLY fix round): Balance Due now strikes through _ledger_hit, so a
 # boss takes half of it as tally.md:377 asks; one new check. Measured 84 checks (was 83).
-const EXPECTED_CHECKS := 84
+# 2026-10-12 (PC-TALLY round 3): four owned bank recipes and their admitted levels/keys.
+const EXPECTED_CHECKS := 92
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -94,6 +99,7 @@ func _boot() -> void:
 	_game.events.line_skill_loaded.connect(func(id: String, seconds: float): _loaded.append([id, seconds]))
 	_game.events.line_skill_fired.connect(func(id: String, _target: Node3D, _at: Vector3, on: String): _fired.append([id, on]))
 	_game.events.line_skill_expired.connect(func(id: String): _expired.append(id))
+	_check_cues()
 	var tps := Engine.physics_ticks_per_second
 	_steps = [
 		[_noop, 1, _check_row],
@@ -136,6 +142,25 @@ func _boot() -> void:
 		[_noop, 1, _check_shift_burst],
 		[_stamp_start, 1, _check_stamp],
 	]
+
+
+func _check_cues() -> void:
+	var audio := Audio.new()
+	audio.setup(_game.ctx)
+	audio.bake_now()
+	audio.engine.key = 3
+	for cue in ["tally_plate", "tally_clip", "tally_stroke", "tally_settle"]:
+		var row: Dictionary = Audio.TALLY_CUES[cue]
+		var sound := String(row["sound"])
+		_t.check(cue + " resolves to its own bank recipe", sound == cue and Bank.has_recipe(sound)
+			and not Bank.samples(sound).is_empty() and Bank.samples(sound) != Bank.samples("cog_tick"))
+		audio.cue_log.clear()
+		audio._tally_cue(cue, 0)
+		var notes: Array = audio.cue_log.filter(func(n): return n[1] == sound and n[2] == "now")
+		_t.check(cue + " admitted at trim plus priority in the live key", notes.size() == 1
+			and is_equal_approx(float(notes[0][5]), Bank.trim_db(sound) + Audio.PRIORITY_DB[Rows.priority(String(row["kind"]))])
+			and is_equal_approx(float(notes[0][4]), Harmony.ratio(audio.live_key())), str(notes))
+	audio.free()
 
 
 func _noop() -> void:

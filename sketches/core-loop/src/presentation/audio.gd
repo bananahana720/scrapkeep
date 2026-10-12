@@ -2459,17 +2459,15 @@ func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) 
 
 
 # --- P-C Tally audio ---
-# Tally's four ledger cues (pilots/tally.md sections 2 and 3). Each row names the event kind
-# whose priority sets its level through play(), the sound it rides and the semitone steps over
-# her motif's home (D) it climbs. Every row rides her own class sound, cog_tick (ClassDef
-# "sound", keyed), until the bank gains tally_plate, tally_clip, tally_stroke and tally_settle
-# recipes (sfx_bank.gd, a follow-up outside this unit). Strokes and ripples fall a sixteenth apart.
+# Notes are baked at their written pitch, then transposed together into the live key.
+# The four bank recipes carry the paper punch and bell independently of cog_tick.
+const TALLY_SOUNDS := {"plate": "tally_plate", "clip": "tally_clip", "stroke": "tally_stroke", "settle": "tally_settle"}
 const TALLY_CUES := {
-	"tally_plate": {"kind": "slot_cast", "sound": "cog_tick", "steps": [-12]},
-	"tally_clip": {"kind": "line_skill_fired", "sound": "cog_tick", "steps": [0, 2, 3]},
-	"tally_stroke": {"kind": "ultimate_peak", "sound": "cog_tick", "steps": [0, 2, 3, 5]},
-	"tally_total": {"kind": "ultimate_landed", "sound": "cog_tick", "steps": [12]},
-	"tally_settle": {"kind": "ultimate_landed", "sound": "cog_tick", "steps": [0, 3, 5, 7, 10, 12, 15, 17, 19, 22]},
+	"tally_plate": {"kind": "slot_cast", "sound": "tally_plate", "steps": [-12]},
+	"tally_clip": {"kind": "line_skill_fired", "sound": "tally_clip", "steps": [0, 2, 3]},
+	"tally_stroke": {"kind": "ultimate_peak", "sound": "tally_stroke", "steps": [0, 2, 3, 5]},
+	"tally_total": {"kind": "ultimate_landed", "sound": "tally_stroke", "steps": [12]},
+	"tally_settle": {"kind": "ultimate_landed", "sound": "tally_settle", "steps": [0, 3, 5, 7, 10, 12, 15, 17, 19, 22]},
 }
 const TALLY_PIECES := ["plate_return", "plate_audit", "plate_flywheel"]
 const TALLY_SIXTEENTHS := 4.0
@@ -2477,6 +2475,7 @@ const TALLY_SIXTEENTHS := 4.0
 const TALLY_HOME_BPM := 172.0
 var _tally_notes: Array = []
 var _tally_beat := -1
+var _tally_streams := {}
 
 
 func _wire_tally(events) -> void:
@@ -2517,7 +2516,11 @@ func _tally_cue(cue: String, step: int, lift := 0, slot := 0) -> void:
 	var row: Dictionary = TALLY_CUES[cue]
 	var steps: Array = row["steps"]
 	var semis: int = int(steps[step % steps.size()]) + lift
-	_tally_notes.append([clock + slot * _tally_sixteenth(), row["kind"], row["sound"], pow(2.0, semis / 12.0)])
+	var note := [clock + slot * _tally_sixteenth(), row["kind"], row["sound"], 62 + semis, cue == "tally_total"]
+	if slot == 0:
+		_tally_play(note)
+	else:
+		_tally_notes.append(note)
 
 
 # Plays due notes, and one ledger stroke per flight beat of her set piece (D, E, F, G, round again).
@@ -2535,7 +2538,19 @@ func _tend_tally() -> void:
 	for note in _tally_notes:
 		if float(note[0]) > clock:
 			waiting.append(note)
-		elif sound_ready:
-			play(String(note[1]), 0.0, float(note[3]), "SFX", String(note[2]))
+		else:
+			_tally_play(note)
 	_tally_notes = waiting
+
+
+func _tally_play(note: Array) -> void:
+	var kind := String(note[1])
+	var sound := String(note[2])
+	var pitch := Harmony.ratio(live_key())
+	if not _admit(kind, sound, pitch):
+		return
+	var key := "%s:%d:%s" % [sound, int(note[3]), bool(note[4])]
+	if not _tally_streams.has(key):
+		_tally_streams[key] = Synth.to_wav(SfxBank.tally_recipe(sound, int(note[3]), bool(note[4])))
+	_start(kind, sound, _tally_streams[key], SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)], pitch, "SFX")
 # --- end Tally ---
