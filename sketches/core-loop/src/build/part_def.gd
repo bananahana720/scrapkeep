@@ -56,6 +56,7 @@ const TAGS := ["frost", "arc", "kinetic", "split", "spiral", "chain", "anchor", 
 # stack_cap, when set, is a lower multiple ceiling). icon_category is the cat_ family
 # glyph; element is the el_ glyph ("" for none).
 const STACK_RULES := ["linear", "hyperbolic", "capped", "spike"]
+const WEAPON_MODS := ["weapon_damage", "weapon_rate", "weapon_range", "turret_damage"]
 # SR4 start values (comps/ror2/items-and-stacking.md:85 and :96): a spike family exists
 # for the big-jump feel, but it is always capped (the proposed 8x of one copy) and the
 # pool holds at most one spike part per tier. tools/build_sweep.gd and
@@ -149,6 +150,12 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	var player_global: bool = def.max_hp_bonus != 0.0 or not def.effect.is_empty() \
 		or not def.charges.is_empty() or def.trigger != "" or def.magnet != 1.0 \
 		or def.cooldown_scale != 1.0 or def.kill_scrap != 1.0
+	for key in def.mods:
+		if not key in WEAPON_MODS:
+			player_global = true
+	for action in def.elements:
+		if action != "shot":
+			player_global = true
 	def.layer = row.get("layer", "global" if player_global else "local")
 	return def
 

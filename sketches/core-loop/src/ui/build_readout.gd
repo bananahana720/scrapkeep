@@ -197,13 +197,10 @@ static func describe(held: Array) -> Dictionary:
 
 static func _pool(out: Dictionary, key: String, pool: String, total: float, cap := -1.0) -> void:
 	var percent := key == "resistance" or key.ends_with(".chance") or pool == "multiplying remaining"
-	var shown := String.num(total * 100.0, 2) + "%" if percent else String.num(total, 4)
-	if pool == "multiplying":
-		shown = "x" + shown
-	elif pool == "additive" and total >= 0.0:
-		shown = "+" + shown
-	var limit := String.num(cap * 100.0, 2) + "%" if percent else String.num(cap, 4)
-	var words := "%s · %s · total %s · %s" % [_stat_words(key), pool, shown,
+	var shown := _pool_value(total, pool, percent)
+	var limit := _pool_value(cap, pool, percent)
+	var pool_words := "shrinks what is left" if pool == "multiplying remaining" else pool
+	var words := "%s · %s · total %s · %s" % [_stat_words(key), pool_words, shown,
 		"cap " + limit if cap >= 0.0 else "no cap"]
 	var neutral := 1.0 if pool == "multiplying" else 0.0
 	if is_equal_approx(total, neutral):
@@ -211,8 +208,20 @@ static func _pool(out: Dictionary, key: String, pool: String, total: float, cap 
 	out[key] = {"pool": pool, "total": total, "cap": cap, "text": words}
 
 
+static func _pool_value(value: float, pool: String, percent: bool) -> String:
+	var words := String.num(value * 100.0, 2) + "%" if percent else String.num(value, 4)
+	if pool == "multiplying":
+		return "x" + words
+	if pool == "additive" and value >= 0.0:
+		return "+" + words
+	return words
+
+
 static func _stat_words(key: String) -> String:
-	return STAT_WORDS.get(key, key)
+	if not STAT_WORDS.has(key):
+		push_error("BuildReadout.STAT_WORDS missing key: %s" % key)
+		return "Unknown stat"
+	return STAT_WORDS[key]
 
 
 static func _cap(d: Resource) -> String:
@@ -220,7 +229,7 @@ static func _cap(d: Resource) -> String:
 		return "spike cap %s x one copy" % String.num(_spike_cap(d), 2)
 	if d.stack_rule == "hyperbolic":
 		return "hyperbolic cap %s%%" % String.num(100.0 * (d.stack_cap if d.stack_cap > 0.0 else 1.0), 2)
-	return "%s cap %s copies" % [d.stack_rule, String.num(d.stacked(1.0, int(d.stack_cap)), 0)] if d.stack_cap >= 1.0 else "%s, no copy cap" % d.stack_rule
+	return "%s, stops at %s copies" % [d.stack_rule, String.num(d.stacked(1.0, int(d.stack_cap)), 0)] if d.stack_cap >= 1.0 else "%s, no copy cap" % d.stack_rule
 
 
 static func _spike_cap(d: Resource) -> float:

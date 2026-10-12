@@ -104,8 +104,13 @@ func set_piece_visible() -> bool:
 
 static func depth_rows() -> Array:
 	var rows: Array = []
-	for world in range(1, UpgradeTree.DEPTHS):
-		rows.append({"world": world, "depth": UpgradeTree.depth_cap(world)})
+	var world := 1
+	while true:
+		var depth := UpgradeTree.depth_cap(world)
+		rows.append({"world": world, "depth": depth})
+		if depth == UpgradeTree.DEPTHS:
+			break
+		world += 1
 	return rows
 
 
