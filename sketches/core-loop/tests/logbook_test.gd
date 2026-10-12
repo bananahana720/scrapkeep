@@ -10,7 +10,7 @@ const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 const PAGE := "res://src/ui/logbook_page.gd"
 const KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
-const EXPECTED_CHECKS := 48
+const EXPECTED_CHECKS := 49
 
 # A full three-stage flow, as spine_run_log_test uses, with combat and boss doubles.
 class ScriptedGame extends Game:
@@ -114,6 +114,8 @@ func _check_run(spawner, run, profile) -> void:
 		_t.eq("SR12 scripted flow reaches stage %d" % stage, run.stage, stage)
 		_advance(run, float(stage) + 0.125)
 		spawner.strike(_game.flow.warden, "arc", 99999.0)
+		if stage == 1:
+			_t.eq("SR12 retried stage counts its Warden once", run.tallies()["wardens_seen"], 1)
 		_game.flow._finish_stage()
 		if _game.flow.state_name() == "boss":
 			_game.ctx.boss.defeat()
