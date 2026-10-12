@@ -1,5 +1,8 @@
 extends "res://tests/rivet_kit_test.gd"
 
+const Arena := preload("res://src/boss/arena.gd")
+const RunState := preload("res://src/core/run_state.gd")
+
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const RivetTree := preload("res://src/core/trees/rivet.gd")
@@ -11,7 +14,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 198
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 206
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -27,10 +30,13 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # 2026-10-12 (PC-RIVET r6): 148 -> 198, narrow-wall shadows, terrain formats, exposed hulls
 # and a real-stage dispatch so the normal terrain commitment must complete within smoke's cap.
 
+# 2026-10-12 (PC-RIVET r7): 198 -> 206, captured alpha Reach peak and bowl landing,
+# frozen draw reuse and independent positive damage/terrain controls.
+
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 198
+	_expected_checks = 206
 	super._initialize()
 
 
@@ -307,8 +313,64 @@ func _terrain_shadow_fixture() -> void:
 	await _fresh()
 
 
+func _alpha_terrain_cost_fixture() -> void:
+	await _fresh()
+	_game.ctx.terrain.use(2)
+	var reach_at := Vector3(-83.37614, 24.67473, 53.09039)
+	var reach_aim := Vector3(-0.479884, -0.166079, 0.861469).normalized()
+	_player.reset_to(reach_at)
+	await physics_frame
+	await physics_frame
+	_piece("foundry_cutter", Vector3(-0.456, 0.0, 0.89).normalized())
+	_tech("foundry_cutter", 4, reach_aim)
+	var started := Time.get_ticks_usec()
+	_combat.ultimate._peak(_player.ball_position())
+	print("alpha Reach peak commitment us=", Time.get_ticks_usec() - started)
+	_t.eq("captured alpha Reach peak commits through one selector", _kit.selected_shapes.size(), 1)
+	_t.check("captured alpha Reach peak draws the committed volume", _kit.volume_indicator.shapes.get("rivet_scar", {}) == _kit.selected_shapes[0])
+	var indicator = _kit.volume_indicator
+	indicator._process(0.0)
+	var changes := [0]
+	var changed := func(): changes[0] += 1
+	indicator._tris.changed.connect(changed)
+	started = Time.get_ticks_usec()
+	indicator._process(0.0)
+	print("alpha Reach unchanged draw us=", Time.get_ticks_usec() - started)
+	_t.eq("captured alpha frozen volume does not rebuild its mesh", changes[0], 0)
+	indicator._tris.changed.disconnect(changed)
+	await _fresh()
+	var arena := Arena.new()
+	arena.position = Vector3(0.0, 50.75909, 118.0)
+	_game.add_child(arena)
+	# The skipper's traced class III landing, not the stage's spawn point.
+	var arena_at := Vector3(-5.500705, 52.86404, 115.151)
+	var arena_heading := Vector3(0.99119, 0.0, 0.132449).normalized()
+	var prior_mass: float = _game.run.mass
+	_game.run.mass = (float(RunState.HEFT_CLASS_AT[2]) - 1.0) / RunState.HEFT_PER_MASS + 0.01
+	_player.reset_to(arena_at)
+	await physics_frame
+	await physics_frame
+	_t.eq("captured alpha bowl landing uses class III", _game.run.heft_class(), 3)
+	_piece("foundry_cutter", arena_heading)
+	var front := _enemy("chaser", 0.0)
+	front.global_position = arena_at + arena_heading * 4.0
+	front.set_physics_process(false)
+	_t.check("captured bowl front target has an independent clear ray", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(arena_at, front.global_position, 1)).is_empty())
+	started = Time.get_ticks_usec()
+	_combat.ultimate._strike(_player.ball_position())
+	print("alpha bowl landing commitment us=", Time.get_ticks_usec() - started)
+	_t.eq("captured alpha bowl landing commits through one selector", _kit.selected_shapes.size(), 1)
+	_t.check("captured alpha bowl landing retains exposed volume", not (_kit.selected_shapes[0]["cells"] as Array).is_empty())
+	_t.eq("captured alpha bowl landing hits the exposed target exactly once", _damage(front), [Ultimate.LANDING_DAMAGE * Ultimate.HEFT_MULT[2]])
+	_game.run.mass = prior_mass
+	arena.queue_free()
+	_game.ctx.terrain.use(1)
+	await _fresh()
+
+
 func _run() -> void:
 	await _boot()
+	await _alpha_terrain_cost_fixture()
 	await _shape_dispatch_fixture()
 	await _terrain_shadow_fixture()
 	var ult = _combat.ultimate
