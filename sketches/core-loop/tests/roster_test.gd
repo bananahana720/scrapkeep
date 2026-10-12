@@ -1,3 +1,4 @@
+# 2026-10-12 FIXTURE-ADAPT: bd3e0ed added wrapping Tradeoff text; reserve a fixed-height slot above the keys.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
