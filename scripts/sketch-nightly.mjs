@@ -30,7 +30,6 @@ export const DEFAULT_RUNS = 3;
 export const PERF_RUNS = 3;
 export const FUZZ_SEEDS = 200;
 export const FUZZ_SECONDS = 90;
-const TEST_TIMEOUT_MS = 180_000; // matches sketch-smoke.mjs (2026-10-04)
 const TOOL_TIMEOUT_MS = 15 * 60_000;
 export const EXPORT_TIMEOUT_MS = 20 * 60_000;
 const FINISH_RESERVE_MS = 45_000; // Final read-only git checks and receipt writing.
@@ -97,7 +96,8 @@ export function soloScripts(scripts, baseline, directory = sketch) {
 export function buildPlan(
   options,
   {
-    scripts = smoke.testScripts(sketch),
+    directory = sketch,
+    scripts = smoke.testScripts(directory),
     baseline = JSON.parse(
       readFileSync(
         path.join(root, "scripts/sketch-lint.baseline.json"),
@@ -105,10 +105,10 @@ export function buildPlan(
       ),
     ),
     outDir,
-    imported = existsSync(path.join(sketch, ".godot/imported")),
+    imported = existsSync(path.join(directory, ".godot/imported")),
   } = {},
 ) {
-  const solo = soloScripts(scripts, baseline);
+  const solo = soloScripts(scripts, baseline, directory);
   const plan = [];
   const add = (id, kind, args, extra = {}) => {
     plan.push({
@@ -117,11 +117,11 @@ export function buildPlan(
       command: smoke.binary,
       args,
       render: false,
-      timeout_ms: kind === "test" ? TEST_TIMEOUT_MS : TOOL_TIMEOUT_MS,
+      timeout_ms: TOOL_TIMEOUT_MS,
       ...extra,
     });
   };
-  const base = ["--headless", "--path", sketch];
+  const base = ["--headless", "--path", directory];
   if (!imported)
     add("import", "import", [...base, "--import"], { timeout_ms: 600_000 });
   if (options.export)
@@ -207,7 +207,14 @@ export function buildPlan(
         `${script} run ${run}`,
         "test",
         [...base, "--script", testEntry(script)],
-        { script, run, solo: solo.has(script) },
+        {
+          script,
+          run,
+          solo: solo.has(script),
+          timeout_ms: smoke.testTimeoutMs(
+            readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"),
+          ),
+        },
       );
     }
   }

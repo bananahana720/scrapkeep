@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for a784c82.
+# reactor meltdown fixture stage ID 3 -> 2; bare swarm stage ID 2 -> 3, matching the accepted KF0 mounting table.
 extends SceneTree
 
 # WHE: the game builds the real Tarn, Tally and cannon pilots and shells and the four Warden
@@ -14,7 +16,7 @@ const NEW := {
 	"remembered_cannon": ["pilot_cannon_anim.glb", "world_one/shell_cannon.glb"],
 }
 const MANTLES := {
-	3: ["reactor", "MeltRearShell", "Body"],
+	2: ["reactor", "MeltRearShell", "Body"],
 	4: ["swarm", "BroodRibs", "Body"],
 	5: ["mind", "HandWrist", "Body"],
 	6: ["mind", "ChoirFiveHorns", "Body"],
@@ -65,15 +67,15 @@ func _run() -> void:
 		var kit: Node = rec.get("kit")
 		var hull: Node = kit.find_child(spec[1], true, false) if kit != null else null
 		_t.check("stage %d %s mounts %s" % [stage, spec[0], spec[1]], hull != null and hull.get_parent().get_parent() == kit.get_node(spec[2]) and rec.mantle != null, "mantle %s" % [rec.get("mantle")])
-		if stage == 3:
-			_t.check("stage 3 vents carry bells", kit.get_node("Vent2").find_child("MeltVentBell2", true, false) != null, "Vent2")
+		if stage == 2:
+			_t.check("stage 2 vents carry bells", kit.get_node("Vent2").find_child("MeltVentBell2", true, false) != null, "Vent2")
 		if stage == 6:
 			_t.check("stage 6 shoes on both arms", kit.get_node("ArmL").find_child("ChoirShoeL", true, false) != null and kit.get_node("ArmR").find_child("ChoirShoeR", true, false) != null, "arms")
 		_t.check("stage %d tool material stays out of rec.materials" % stage, rec.mantle_tool != null and not rec.materials.values().has(rec.mantle_tool), "own instance")
 		warden.free()
-	var bare := await _warden("swarm", 2)
+	var bare := await _warden("swarm", 3)
 	var bare_rec: Dictionary = game.presentation.hero_assets.warden_of(bare)
-	_t.check("stage 2 stays bare", not bare_rec.is_empty() and bare_rec.mantle == null, "no mantle row")
+	_t.check("stage 3 stays bare", not bare_rec.is_empty() and bare_rec.mantle == null, "no mantle row")
 	bare.free()
 	# Fallback: the same stage-3 Warden under a loader whose mantle files are missing keeps the bare kit.
 	var old = game.presentation.hero_assets

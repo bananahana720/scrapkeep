@@ -1,4 +1,5 @@
-# smoke: solo (twelve bot runs in child processes at once, each through its world's boss; a loaded machine slows them)
+# smoke: solo timeout=300s (twelve bot runs in child processes at once, each through its world's boss)
+# 2026-10-12, W13 smoke triage: 195.469 s alone; 1.5x rounded up to 10 s is 300 s, inside the 360 s ordinary cap.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")

@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for 5b903a3, bbe53ec, 17429d6.
+# counter.gd SHA256 56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca -> 5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554; merged pack stagger, rename and shared-recovery changes.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -13,7 +15,7 @@ const GAMEPLAY_HASHES := {
 	"_die": "6fe86d1077f6f165709184282a397ce2ffaa9542f30990cf6cd1658c463792ea",
 }
 const INHERITED_HASHES := {
-	"counter": "56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca",
+	"counter": "5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554",
 	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
 }
 var t := T.new("enemy_drill_crew_asset_test")
