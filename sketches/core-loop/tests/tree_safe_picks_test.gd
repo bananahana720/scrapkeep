@@ -151,7 +151,10 @@ func _token_live(pilot: String, token: String, kit: Dictionary) -> bool:
 
 func _op_live(pilot: String, n: Dictionary, kit: Dictionary, rows: Dictionary = AbilityState.ABILITIES) -> bool:
 	for slot in n.get("swap", {}):
-		if n["swap"][slot] != kit[slot]:
+		var replacement = n["swap"][slot]
+		if slot == AbilityState.ULTIMATE and String(rows.get(replacement, {}).get("variant_of", "")) != String(kit[slot]):
+			continue
+		if replacement != kit[slot]:
 			return true
 	for op in ["charges", "cooldown"]:
 		for slot in n.get(op, {}):
