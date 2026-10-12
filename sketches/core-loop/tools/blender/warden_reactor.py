@@ -87,7 +87,7 @@ COPPER = "copper"
 SAND = common.mix("sandstone", "petrol", 0.22)
 SAND_DARK = common.mix("sandstone", "charcoal", 0.45)
 TOOTH = common.mix("sandstone", "bone", 0.35)  # the lightest value on the body: teeth over the dark jacket
-ROD = "bone"
+ROD_STEEL = common.mix("ice", "bone", 0.25)
 COPPER_DARK = common.mix("copper", "charcoal", 0.6)
 DUST = common.mix("petrol", "sandstone", 0.3)
 
@@ -963,20 +963,20 @@ def ram_columns(root):
             return faces
 
         barrel_name, rod_name = label + "_barrel", label + "_rod"
-        piece(barrel_name, moving.beam, "ancient_enamel", base, base + axis * RAM_BASE_NECK, 0.32, color=COPPER_DARK)
+        piece(barrel_name, moving.beam, "ancient_enamel", base, base + axis * RAM_BASE_NECK, 0.32, color=common.mix("charcoal", "petrol", 0.1))
         smooth(piece(barrel_name, moving.rod, "ancient_enamel", base + axis * RAM_BASE_NECK,
                      base + axis * (RAM_BASE_NECK + RAM_BARREL_LENGTH), RAM_BARREL_R, 8,
-                     color=COPPER_DARK, measure=label + "_barrel"))
+                     color=common.mix("charcoal", "petrol", 0.1), measure=label + "_barrel"))
         piece(barrel_name, moving.rod, "ancient_enamel", base + axis * (RAM_MOUTH - RAM_GLAND_LENGTH),
-              base + axis * RAM_MOUTH, RAM_GLAND_R, 10, color=TOOTH)
+              base + axis * RAM_MOUTH, RAM_GLAND_R, 10, color=COPPER)
         for offset in (-0.20, 0.20):
             piece(barrel_name, moving.cyl, "ancient_enamel", 0.28, 0.28, 0.10, 8,
-                  loc=base + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=TOOTH)
+                  loc=base + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=COPPER)
         smooth(piece(rod_name, moving.rod, "ancient_enamel", eye - axis * 1.95,
-                     eye - axis * RAM_EYE_R, RAM_ROD_R, 10, color=ROD, measure=label + "_rod"))
+                     eye - axis * RAM_EYE_R, RAM_ROD_R, 10, color=ROD_STEEL, measure=label + "_rod"))
         for offset in (-0.20, 0.20):
             piece(rod_name, moving.cyl, "ancient_enamel", RAM_EYE_R, RAM_EYE_R, 0.10, 8,
-                  loc=eye + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=TOOTH)
+                  loc=eye + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=COPPER)
         records.append((label, side, base, eye, axis, barrel_name, rod_name, foot))
     mounts = finish(mount, (0, 0, 0), root)
     mesh = finish(moving, (0, 0, 0), root)
