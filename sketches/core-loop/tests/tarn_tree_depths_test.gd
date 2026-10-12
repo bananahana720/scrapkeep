@@ -1,3 +1,4 @@
+# 2026-10-11 (PC-TARN): 507 to 511 checks; cover registry ultimate swaps and preserve cooldown/charge slot limits.
 extends SceneTree
 
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -7,11 +8,12 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Cards := preload("res://src/core/trees/world_one_cards.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Triggers := preload("res://src/build/triggers.gd")
+const Registry := preload("res://src/core/content_registry.gd")
 const T := preload("res://tests/support/t.gd")
 
-# PC-TARN, 2026-10-11. Expected: 507 checks. Tree nodes are one-copy capped picks;
+# PC-TARN, 2026-10-11. Expected: 511 checks. Tree nodes are one-copy capped picks;
 # sweep 1..20 attempts per leaf through pick(), not just their metadata. No new loot/proc.
-const EXPECTED_CHECKS := 507
+const EXPECTED_CHECKS := 511
 
 
 func _initialize() -> void:
@@ -61,5 +63,21 @@ func _initialize() -> void:
 		for copies in range(1, 21):
 			var accepted := tree.pick(leaf["id"])
 			t.check("%s copy %d remains capped" % [leaf["id"], copies], not accepted and before == [tree.path(), tree.knob(knob), abilities.ultimate_id, abilities.cooldown_of("movement")])
+	_registry_slots(t)
 	t.eq("expected check count", t.checks + 1, EXPECTED_CHECKS)
 	quit(t.verdict())
+
+
+func _registry_slots(t) -> void:
+	var tables := Registry.snapshot()
+	var rows: Dictionary = tables["upgrade_tree.TREES"]
+	t.eq("registry resolves Tarn's ultimate swaps", Registry.validate_table("upgrade_tree.TREES", rows, tables, false), [])
+	for op in ["charges", "cooldown"]:
+		var changed := rows.duplicate(true)
+		changed["tarn"][6][op] = {"ultimate": 1}
+		var issues := Registry.validate_table("upgrade_tree.TREES", changed, tables, false)
+		t.check("ultimate stays outside registry %s slots" % op, issues.any(func(issue): return issue.rule == "references" and issue.detail.contains("slot 'ultimate'")))
+	var changed := rows.duplicate(true)
+	changed["tarn"][6]["swap"] = {"missing_slot": "rake_run"}
+	var issues := Registry.validate_table("upgrade_tree.TREES", changed, tables, false)
+	t.check("registry still rejects unknown swap slots", issues.any(func(issue): return issue.rule == "references" and issue.detail.contains("slot 'missing_slot'")))
