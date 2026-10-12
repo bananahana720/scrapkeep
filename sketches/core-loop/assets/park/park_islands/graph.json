@@ -1,56 +1,31 @@
 {
-  "bake_sha256": "b226981c556e1c8e1732718b1b4d522e49bce36b4eac04fd3b82e8629092bd2d",
-  "beacon_ok": false,
-  "breaches": [
-    {
-      "action": "log",
-      "detail": "detour 144 m from the line to the pay point, want 150 to 600",
-      "pocket": "cache_east_wing",
-      "rule": "detour"
-    },
-    {
-      "action": "log",
-      "detail": "no clear ray from the door to a line node within 240 m",
-      "pocket": "bounty_ore_bench",
-      "rule": "sight"
-    },
-    {
-      "action": "log",
-      "detail": "reward detour 144 m is not larger than the risk's 184 m",
-      "pocket": "cache_east_wing",
-      "rule": "detour_order"
-    },
-    {
-      "action": "fix",
-      "detail": "the larger detour (184 m) pays common, rare, want rare only",
-      "pocket": "bounty_ore_bench",
-      "rule": "pay"
-    }
-  ],
-  "bytes": 835424,
-  "edges": 309338,
-  "first_failed": "beacon_ok",
+  "bake_sha256": "bc8aafcab2b3f09b9aadadca78caf90e43f350afabf31ef98fd631cbfa5d96f1",
+  "beacon_ok": true,
+  "breaches": [],
+  "bytes": 839170,
+  "edges": 307614,
+  "first_failed": "",
   "flags": {
     "deck": 0,
-    "door_ok": 39271,
-    "line": 441,
+    "door_ok": 39277,
+    "line": 439,
     "open": 40401,
-    "sight_ok": 9539,
+    "sight_ok": 10241,
     "under": 0
   },
-  "full_visit_m": 1603,
-  "full_visit_ratio": "1.247",
-  "graph_sha256": "e1f17c84d9904ab59e037ea14378585d02613b51d9e1701009dadcfb8ea54cf6",
+  "full_visit_m": 1749,
+  "full_visit_ratio": "1.339",
+  "graph_sha256": "a4b73c2d9eaf6b28b4f05701136e2bae9bc01ad781819a97046ed99456da4254",
   "line_errors": [],
-  "line_path_nodes": 156,
-  "longest_est_m": 3036,
+  "line_path_nodes": 157,
+  "longest_est_m": 2356,
   "map": "park_islands",
   "nodes": 40401,
-  "park_sha256": "ec2cdd9e9011d66065fd5af25574c41ce6c2eaca5fd25d44bfc66cac23ca0ee8",
+  "park_sha256": "ca82b0cb6969d46c8ccfa0a99a9769e433fd6d2fb378677985ff4ba9424ebd2f",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 430,
+      "d_landmark": 451,
       "d_spawn": 857,
       "detour_m": 0,
       "door_at": [
@@ -77,14 +52,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 354,
-      "d_spawn": 1043,
-      "detour_m": 144,
+      "d_landmark": 399,
+      "d_spawn": 1084,
+      "detour_m": 235,
       "door_at": [
-        152,
-        232
+        232,
+        240
       ],
-      "door_m": 144,
+      "door_m": 235,
       "flags": [
         "open",
         "door_ok",
@@ -92,7 +67,7 @@
       ],
       "id": "cache_east_wing",
       "kind": "cracked_cache",
-      "nearest_door": 388,
+      "nearest_door": 327,
       "nearest_door_id": "bounty_ore_bench",
       "pay_named": "",
       "pay_rarities": [
@@ -104,34 +79,35 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 740,
-      "d_spawn": 683,
+      "d_landmark": 685,
+      "d_spawn": 757,
       "detour_m": 184,
       "door_at": [
         184,
-        -128
+        -56
       ],
       "door_m": 184,
       "flags": [
         "open",
-        "door_ok"
+        "door_ok",
+        "sight_ok"
       ],
       "id": "bounty_ore_bench",
       "kind": "hauler_bounty",
-      "nearest_door": 315,
-      "nearest_door_id": "saddle_seam",
+      "nearest_door": 327,
+      "nearest_door_id": "cache_east_wing",
       "pay_named": "",
       "pay_rarities": [
         "common",
         "rare"
       ],
       "role": "risk",
-      "sight_ok": false,
+      "sight_ok": true,
       "site": "ore_bench"
     },
     {
       "clear_ring": [],
-      "d_landmark": 1054,
+      "d_landmark": 1073,
       "d_spawn": 408,
       "detour_m": 240,
       "door_at": [
@@ -146,7 +122,7 @@
       ],
       "id": "saddle_seam",
       "kind": "cracked_wall",
-      "nearest_door": 315,
+      "nearest_door": 390,
       "nearest_door_id": "bounty_ore_bench",
       "pay_named": "",
       "pay_rarities": [],
@@ -155,13 +131,11 @@
       "site": "saddle"
     }
   ],
-  "reward_ratio": "0.531",
-  "ride_edges": 16,
+  "reward_ratio": "0.580",
+  "ride_edges": 17,
   "routes": {
     "carve_net": [],
-    "east": [
-      "saddle -> tram_head: no path"
-    ],
+    "east": [],
     "envelope": [],
     "fan_chute": [],
     "fan_east": [],
@@ -176,28 +150,29 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": -1,
-    "farther_share": "0.000",
-    "ok": false,
-    "run": false
+    "d_landmark": 1306,
+    "farther_share": "0.135",
+    "ok": true,
+    "run": true
   },
-  "spawn_beacon_m": 1285,
-  "spawn_beacon_share": "0.423",
+  "spawn_beacon_m": 1306,
+  "spawn_beacon_share": "0.555",
   "stage_checked": [
-    "beacon_ok"
+    "beacon_ok",
+    "spawn"
   ],
   "targets": [
     {
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.531
+      "value": 0.58
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.247
+      "value": 1.339
     }
   ],
   "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"

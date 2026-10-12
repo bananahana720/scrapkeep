@@ -10,12 +10,19 @@ extends SceneTree
 # on the park file. Each fact is checked by a function that a planted copy must fail, so a pin
 # that cannot go red is caught here (the plants are the positive controls).
 #
-# Greybox pass, 2026-10-11 (KD5). The byte-identity of two builds is a CLI receipt of the unit,
-# not rerun here: the graph tool takes minutes on this stage.
+# Greybox pass, 2026-10-11 (KD5); fix round 2026-10-12 (flat arena, full-width sheets, the tram
+# station ledge, the pockets moved). The byte-identity of two builds is a CLI receipt of the unit,
+# not rerun here: the bake takes about 8 s and the shipped graph tool about 18 s on this stage
+# (the greybox's sloped apron made the tool's float32 search re-relax without end; the flat
+# arena does not), and the freshness pin below holds the committed graph to the shipped tool.
+#
+# The PARK.md 2.12 distances are read from tools/park_graph.gd, so this test cannot drift from the
+# tool that rules them. sight_share 0.85 is the stage page's own landmark row.
 
 const T := preload("res://tests/support/t.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const Traversal := preload("res://tools/traversal_line.gd")
+const GraphTool := preload("res://tools/park_graph.gd")
 
 const MAP := "park_islands"
 const PARK := "res://src/world/park/park_islands.json"
@@ -27,11 +34,11 @@ const GRAPH_TOOL := "res://tools/park_graph.gd"
 const WAYMARKS := ["drop_in", "saddle", "anvil_rock", "landmark"]
 const POCKETS := {"online": "camp_anvil", "reward": "cache_east_wing", "risk": "bounty_ore_bench", "hidden": "saddle_seam"}
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
-const DOOR_TO_LINE_M := 240
-const SPAWN_M := 240
-const BEACON_M := 320
-const DOOR_TO_DOOR_M := 200
-const DETOUR_M := [150, 600]
+const DOOR_TO_LINE_M := GraphTool.SIGHT_M
+const SPAWN_M := GraphTool.DOOR_SPAWN_M
+const BEACON_M := GraphTool.DOOR_BEACON_M
+const DOOR_TO_DOOR_M := GraphTool.DOOR_DOOR_M
+const DETOUR_M := [GraphTool.DETOUR_MIN_M, GraphTool.DETOUR_MAX_M]
 
 var t := T.new("park_park_islands_test")
 
