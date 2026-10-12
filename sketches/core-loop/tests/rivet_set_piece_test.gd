@@ -37,11 +37,14 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # 2026-10-12 (FU-RIVET-SHADOW): 219 -> 223, the empty-shadow subtraction asserted directly
 # (cone meets the cell, cell wholly in front of the contact plane, one part, original geometry),
 # and the class-V fixture mass read from RunState.HEFT_CLASS_AT[4] and HEFT_PER_MASS.
+# 2026-10-12 (FU-RIVET-SHADOW r2): 223 -> 226, the selection path (_in_shape, hull_boundary
+# shadows) checked directly: hulls behind the terrain contact select nothing from the empty-shadow
+# cell, the unshadowed cell selects two of them, and an in-front hull is still selected.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 223
+	_expected_checks = 226
 	super._initialize()
 
 
@@ -411,7 +414,11 @@ func _empty_shadow_fixture() -> void:
 	var h := Vector3(5.0, -0.5, 0.5)
 	var faces: Array = [[a, b, c, d], [e, f, g, h], [a, e, h, d], [b, f, g, c], [a, e, f, b], [d, h, g, c]]
 	var corners: Array = [a, b, c, d, e, f, g, h]
-	var cell := {"faces": faces, "planes": [], "vertices": corners, "bounds": AABB(lo, hi - lo)}
+	# The six box planes bound the cell for point tests; an empty plane list would count every point as inside.
+	var box_planes: Array = [{"at": Vector3(2.0, 0.0, 0.0), "normal": Vector3.LEFT}, {"at": Vector3(5.0, 0.0, 0.0), "normal": Vector3.RIGHT},
+		{"at": Vector3(0.0, -0.5, 0.0), "normal": Vector3.DOWN}, {"at": Vector3(0.0, 0.5, 0.0), "normal": Vector3.UP},
+		{"at": Vector3(0.0, 0.0, -0.5), "normal": Vector3.FORWARD}, {"at": Vector3(0.0, 0.0, 0.5), "normal": Vector3.BACK}]
+	var cell := {"faces": faces, "planes": box_planes, "vertices": corners, "bounds": AABB(lo, hi - lo)}
 	var cone_meets := shadow.slice(0, 4).all(func(plane): return (((lo + hi) * 0.5) - plane["at"]).dot(plane["normal"]) <= 0.0)
 	var in_front := corners.all(func(v): return (v - contact["at"]).dot(contact["normal"]) > 0.0)
 	_t.check("empty shadow fixture: silhouette cone meets the cell and the whole cell is in front of the contact", cone_meets and in_front, "%s %s" % [cone_meets, in_front])
@@ -420,6 +427,16 @@ func _empty_shadow_fixture() -> void:
 	var kept: Dictionary = parts[0] if parts.size() == 1 else {}
 	_t.eq("empty shadow keeps the cell's original faces", kept.get("faces", []), faces)
 	_t.eq("empty shadow keeps the cell's original vertices", kept.get("vertices", []), corners)
+	# The selection path (_in_shape, hull forgiveness on) consumes the same shadow with hull_boundary true.
+	# Probes behind the terrain contact select nothing from the empty-shadow cell. The unshadowed cell
+	# does select the two probes that reach it, so the negative is not trivial. The in-front probe is the
+	# positive control that the same shape still selects.
+	var shadowed := {"origin": origin, "kind": "area", "cells": [cell], "shadows": [shadow]}
+	var unshadowed := {"origin": origin, "kind": "area", "cells": [cell]}
+	var behind := [[Vector3(6.6, 0.0, 0.0), 2.0], [Vector3(9.0, 0.0, 0.0), 2.0], [Vector3(6.6, 0.4, 0.4), 2.0]]
+	_t.eq("empty shadow selection: nothing behind the terrain contact is selected", behind.map(func(p): return _kit._in_shape(shadowed, p[0], p[1])), [false, false, false])
+	_t.eq("empty shadow selection: the unshadowed cell reaches the two probes that touch it", [_kit._in_shape(unshadowed, behind[0][0], behind[0][1]), _kit._in_shape(unshadowed, behind[2][0], behind[2][1])], [true, true])
+	_t.check("empty shadow selection: a hull in front of the contact is still selected", _kit._in_shape(shadowed, Vector3(5.2, 0.0, 0.0), 0.5))
 
 
 func _cylinder_terrain_fixture() -> void:
