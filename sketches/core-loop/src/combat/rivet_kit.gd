@@ -570,6 +570,9 @@ func drive_step(ball: Vector3) -> int:
 	for enemy in _enemies():
 		var to := _flat(enemy.global_position - ball)
 		var closed_guard: bool = _warden(enemy) and not enemy.staggered()
+		if closed_guard and _excepted.has(enemy):
+			body.remove_collision_exception_with(enemy)
+			_excepted.erase(enemy)
 		if enemy is PhysicsBody3D and not closed_guard and not _excepted.has(enemy) and to.length() < Weapons.DRIVE_WAVE_AHEAD * 2.0:
 			body.add_collision_exception_with(enemy)
 			_excepted.append(enemy)
