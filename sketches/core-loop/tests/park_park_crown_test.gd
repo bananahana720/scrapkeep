@@ -2,7 +2,7 @@ extends SceneTree
 
 # Stage 6, park_crown (design-v3/park/stages/6-park_crown.md, K-UNITS KD6): the stage's own pins.
 #
-# Pinned on greybox round 2, 2026-10-12, after alignment with 560d177:
+# Pinned on greybox round 3, 2026-10-12, after alignment with d8e5077:
 #   freshness  the bake (tools/park_bake.gd) and the graph (tools/park_graph.gd) of
 #              src/world/park/park_crown.json are fresh: the hashes in bake.json and graph.json
 #              match the park file, the tools and the outputs.
@@ -16,9 +16,9 @@ extends SceneTree
 #              its own; a group's 20 m post lattice has no lane through it, walled Kest's needles
 #              line at [-135, 105], stopped Rivet at the split spire's edge post [27, 25] and would
 #              fill the Warden bowl) and spire_top_ramp (the strike's swap
-#              target; no runtime swap yet), plus the 59 slickrock_field_* ground-cover rows
-#              (no recipe, no stamp: they build nothing and keep park_density_test's 80 m rule;
-#              2026-10-11, restored after their removal failed that rule). No reversed-ramp
+#              target; no runtime swap yet). Coverage fields build physical posts outside the
+#              fixed pilot corridors and pocket rings. Effective density excludes unplaced
+#              rows and empty post fields, and reads the limit from park_density_test. No reversed-ramp
 #              "_rise" row is left (a kicker's wedge is its own ramp), and no kicker is stamped.
 #   waymarks   drop_in, turnstone, split_spire, landmark, in that order; the Turnstone is a
 #              landform waymark, not a pocket (coordinator ruling R7, PARK.md 2.12).
@@ -43,6 +43,7 @@ const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
 const GraphLoader := preload("res://src/world/park/park_graph.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const Density := preload("res://tests/park_density_test.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 
@@ -66,7 +67,6 @@ const TOPPLED := ["toppled", "last_toppled"]
 const SWAP_ROW := "spire_top_ramp"
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 const UNPLACED := ["perch_spires", "needles", "hoodoo_forest", "split_spire", "spire_top_ramp"]
-const FIELD_PREFIX := "slickrock_field_"
 const PERCH_XZ := [[0.0, 515.0], [39.0, 447.5], [-39.0, 447.5]]
 const PERCH_TOP_M := 12.0
 
@@ -142,6 +142,18 @@ func _run() -> void:
 	var tall_failures := physical_perch_failures(tall_perch, holder, ground)
 	t.check("height-only perch mutation breaks physical mounting", not tall_failures.is_empty(), "; ".join(tall_failures))
 	holder.free()
+	var effective := effective_density_rows(park)
+	var density_graph = GraphLoader.read(BAKE_DIR + "/graph.bin")
+	var density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective}))
+	print("[effective_density] rows %d worst %.1f m over %d" % [effective.size(), density["worst"], density["over"]])
+	t.check("effective geometry meets the owner's density limit", density["open"] > 0 and density["worst"] <= Density.DENSITY_M, str(density))
+	var empty_coverage: Dictionary = park.duplicate(true)
+	for row in empty_coverage["park_rows"]:
+		if row["id"] == "slickrock_field_1":
+			row["recipe"] = ""
+			row["stamp"] = ""
+	var empty_density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective_density_rows(empty_coverage)}))
+	t.check("one emptied coverage row fails effective density", empty_density["worst"] > Density.DENSITY_M, str(empty_density))
 	var approach: Dictionary = by_row["sentinel_48"]
 	t.check("the centre approach builds anchor posts without raising the fight floor", String(approach["stamp"]) == "" and not ParkRecipes.anchor_posts(approach, clear_zones).is_empty())
 	t.eq("the bowl keeps its 12 m depth", float(by_row["crown_bowl"]["size"][1]), 12.0)
@@ -195,7 +207,7 @@ static func pin_failures(park: Dictionary) -> Array:
 		var id := String(r["id"])
 		rows[id] = true
 		var recipe := String(r["recipe"])
-		if UNPLACED.has(id) or id.begins_with(FIELD_PREFIX):
+		if UNPLACED.has(id):
 			if recipe != "":
 				out.append("%s carries recipe %s, want none (left unplaced)" % [id, recipe])
 		elif recipe != "greybox:" + String(r["element"]):
@@ -245,6 +257,22 @@ static func line_failures(park: Dictionary, lines: Dictionary) -> Array:
 		if pts.is_empty() or pts[0] != "drop_in":
 			out.append("%s does not start at drop_in" % key)
 	return out
+
+
+static func effective_density_rows(park: Dictionary) -> Array:
+	var out := []
+	var zones := ParkRecipes.clear_zones(park)
+	for row: Dictionary in park["park_rows"]:
+		if row["element"] == "ground":
+			continue
+		if String(row["stamp"]) != "":
+			out.append(row)
+		elif String(row["recipe"]) != "":
+			if row["element"] != "anchor_field" or not ParkRecipes.anchor_posts(row, zones).is_empty():
+				out.append(row)
+	var coverage := out.filter(func(row: Dictionary) -> bool: return String(row["id"]).begins_with("slickrock_field_"))
+	var other := out.filter(func(row: Dictionary) -> bool: return not String(row["id"]).begins_with("slickrock_field_"))
+	return coverage + other
 
 
 static func physical_perch_failures(park: Dictionary, parent: Node3D, ground: Callable) -> Array:
