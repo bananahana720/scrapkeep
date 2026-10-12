@@ -363,7 +363,7 @@ func _toe_vents_wake() -> void:
 			points.append(Vector2(at[0], at[1]))
 		var hit := false
 		for i in range(1, points.size()):
-			hit = hit or ParkMap.footprint_contains(site, points[i - 1], 8.0, points[i])
+			hit = hit or ParkMap.footprint_contains(site, points[i - 1], Director.PARK_CORRIDOR_M, points[i])
 		clear = clear and not hit
 		resolved.append(points)
 	var event: Dictionary
@@ -380,7 +380,7 @@ func _toe_vents_wake() -> void:
 		if action == "land":
 			observed.land_hooks += 1)
 	for i in 400:
-		for f in d.advance(0.05, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 2, "grounded": true, "bar_s": 240.0 / 172.0, "bar_origin_s": 0.0, "pilot_lines": resolved}):
+		for f in d.advance(0.05, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 2, "grounded": true, "bar_origin_s": 0.0, "pilot_lines": resolved}):
 			if f.kind in ["announced", "started"]:
 				observed[f.kind] += 1
 			if f.kind == "world" and f.get("phase") in ["telegraph", "land"]:
