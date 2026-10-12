@@ -526,16 +526,16 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 		if _park_can_end(state):
 			_park_end(state, facts)
 		return
+	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
+	state.live_elapsed_s += dt
 	if not state.weather and _park_rising(state) and not _park_clear(state, ball, velocity, ctx):
 		return
-	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
 	var step_ctx := ctx.duplicate(true)
 	step_ctx.delta_s = dt
 	step_ctx.rise_s = state.rise_s
 	_park_hook("step", state, step_ctx)
 	if state.phase != LIVE:
 		return
-	state.live_elapsed_s += dt
 	if not state.weather and _park_rising(state):
 		state.rise_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.rise_s) + dt)
 	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001 and _park_can_end(state):
