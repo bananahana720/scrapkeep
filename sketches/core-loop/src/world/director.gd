@@ -274,13 +274,13 @@ func _credit_advance(delta: float, alive_count: int, ball: Vector2, velocity: Ve
 	var room := cap() - alive_count - arrivals.size()
 	if room <= 0:
 		return
+	var income := delta * income_per_second()
+	credits += income
+	credits_accrued += income
 	if _next_pack.is_empty():
 		_next_pack = _draw_credit()
 	if _next_pack.is_empty() or _next_pack.kinds.size() > room:
 		return
-	var income := delta * income_per_second()
-	credits += income
-	credits_accrued += income
 	while room > 0:
 		if _next_pack.is_empty():
 			_next_pack = _draw_credit()
