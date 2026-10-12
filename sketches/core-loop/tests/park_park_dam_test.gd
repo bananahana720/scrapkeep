@@ -1,5 +1,6 @@
 extends SceneTree
 
+# Dressed pass re-pinned 2026-10-12: native family coverage and measured GLB bounds.
 # Stage 1, park_dam (Spillway Works), greybox pass 2026-10-11, re-pinned on the KB9 head the same day
 # (K-UNITS KD1). Rule: the committed
 # bake and stage graph of src/world/park/park_dam.json are fresh; the waymarks run drop_in,
@@ -37,6 +38,8 @@ const SIGHT_SHARE := 0.85
 # of drift either side of a line before it meets a post.
 const LINE_CLEAR_M := 15.0
 const UNSTAMPED_OK := ["kicker", "anchor_field"]
+const DRESSED_RECIPES := {"west_wash": "half_pipe_concrete", "upper_slot": "slot_canyon_flow", "corkscrew_slot": "slot_canyon_flow", "west_lane_fin": "mesa_rim_ledge", "east_lane_fin": "mesa_rim_ledge", "incline_spine": "mesa_rim_ledge", "west_rim_bench": "mesa_rim_ledge", "spillway_tunnel": "spillway_tunnel", "cliff_rooms_west": "cliff_dwelling_row", "viga_span": "viga_pivot", "service_ledge": "mesa_rim_ledge", "lobber_ledge": "mesa_rim_ledge", "tailwater_bar": "half_pipe_concrete", "pipeline_bridge": "pipeline_rail", "canal_lips": "canal_lip", "east_rim_bench": "mesa_rim_ledge"}
+const PIECE_BOUNDS := {"half_pipe_concrete": [60, 11.9797, 34.64], "slot_canyon_flow": [48, 14.4202, 26], "mesa_rim_ledge": [60, 19.0219, 34.1729], "spillway_tunnel": [90, 46.1333, 15.0], "cliff_dwelling_row": [60, 22.3102, 21.287], "viga_pivot": [36, 18.7, 20.02], "pipeline_rail": [120.4797, 11.0151, 4.4784], "canal_lip": [120.1375, 11.0967, 12.018]}
 
 var t := T.new("park_park_dam_test")
 
@@ -83,6 +86,17 @@ func _run() -> void:
 	bad_lines = lines.duplicate(true)
 	bad_lines["pilots"]["sable"]["waypoints"].insert(1, [-600, -600])
 	t.check("planted line through an anchor field turns the pins red", not pins(park, bad_lines, graph).is_empty())
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "west_wash":
+			row["recipe"] = "greybox:half_pipe"
+			row["stamp"] = "wash"
+	t.check("planted family greybox turns dressed coverage red", not pins(planted, lines, graph).is_empty())
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "west_wash":
+			row["size"][0] *= 2
+	t.check("planted oversized recipe turns dressed bounds red", not pins(planted, lines, graph).is_empty())
 	quit(t.verdict())
 
 
@@ -182,4 +196,19 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Arra
 				near = minf(near, p.distance_to(a + ab * u))
 		if near < LINE_CLEAR_M:
 			out.append("%s line passes %.1f m from an anchor post, want at least %s" % [key, near, LINE_CLEAR_M])
+	var dressed := {}
+	for row in park.get("park_rows", []):
+		var recipe := String(row.get("recipe", ""))
+		dressed[row["id"]] = recipe
+		if recipe == "" or recipe.begins_with(ParkRecipes.GREYBOX):
+			continue
+		if not PIECE_BOUNDS.has(recipe):
+			out.append("%s uses an unmeasured native recipe %s" % [row["id"], recipe])
+			continue
+		for axis in 3:
+			if absf(float(row["size"][axis]) - float(PIECE_BOUNDS[recipe][axis])) > 0.001:
+				out.append("%s size %s differs from native %s bounds %s" % [row["id"], row["size"], recipe, PIECE_BOUNDS[recipe]])
+	for id in DRESSED_RECIPES:
+		if dressed.get(id) != DRESSED_RECIPES[id]:
+			out.append("%s must use %s in the dressed pass" % [id, DRESSED_RECIPES[id]])
 	return out
