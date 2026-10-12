@@ -2,7 +2,7 @@
   "bake_sha256": "2a43bb1e8654d2254916c4981e136060430e0757ba3c2b1bd5bbd75624c219ab",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 824822,
+  "bytes": 827812,
   "edges": 321135,
   "first_failed": "",
   "flags": {
@@ -15,7 +15,7 @@
   },
   "full_visit_m": 2116,
   "full_visit_ratio": "1.624",
-  "graph_sha256": "00e66f38e31448e45c7cc993a239c54d657678cffce72dbdaeabfab18a4c133a",
+  "graph_sha256": "ae00f7f70705ff40f9e592fa7378509dd2357a6e760915998827bd7fcaddcb76",
   "line_errors": [],
   "line_path_nodes": 124,
   "longest_est_m": 2267,
@@ -167,5 +167,80 @@
       "value": 1.624
     }
   ],
-  "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"
+  "tool_sha256": "c23975a50d02465e1e3c767455665712caa356e254ab6192ee819a7b3edee9f6",
+  "zones": {
+    "anchors": [
+      {
+        "cost": 1003.2,
+        "d_landmark": 380.5,
+        "name": "bench",
+        "on_route": false,
+        "rank": 1,
+        "viable": true
+      },
+      {
+        "cost": 954.9,
+        "d_landmark": 217.3,
+        "name": "tube",
+        "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 910.5,
+        "d_landmark": 491.3,
+        "name": "service_ledge",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 782.4,
+        "d_landmark": 496.1,
+        "name": "cliff_rooms",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 619.3,
+        "d_landmark": 673.8,
+        "name": "lip",
+        "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 463.4,
+        "d_landmark": 769.7,
+        "name": "canal_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 282.4,
+        "d_landmark": 765.2,
+        "name": "run_wash",
+        "on_route": false,
+        "rank": 3,
+        "viable": true
+      }
+    ],
+    "count": 13,
+    "crossings": {
+      "drop": 3,
+      "ride": 3,
+      "walk": 12
+    },
+    "hidden": [
+      {
+        "count": 1,
+        "id": "tube_wall",
+        "zones": [
+          "open"
+        ]
+      }
+    ]
+  }
 }

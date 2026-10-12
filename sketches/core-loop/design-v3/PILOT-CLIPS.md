@@ -58,6 +58,8 @@ The shells (`world_one/shell_<id>.glb`) carry no animations (parsed: 0 animation
 
 Eighteen clips per pilot: the seven that exist, plus eleven new. The plan's list (idle loop, class-up pulse, two skill casts, ultimate wind-up, strike and recovery, smash flavour, unlock ceremony) is nine. SKILL-BAR adds `ult_ready` (`SKILL-BAR.md` section 4, "Ready cue"). This sheet adds `ult_ride_loop`, so the pilot holds the big control through the flight instead of dropping back to idle mid-air (section 1.3).
 
+Pose keys may include `"pelvis": {"pitch": 0, "roll": 0, "yaw": 0}`. These optional angles use the torso's XYZ convention in degrees and rotate the `pelvis` bone at its fixed seated head. They do not move `root` or replace the torso's 55/45 spine split. Omitted pelvis fields use rest rotation. The builder applies pelvis rotation before solving the hands; the verifier retains the fixed pelvis-head, clearance, anchor and planted-hand checks. In loops, pelvis rotation has the same 6-degree cap as the spine.
+
 ### 1.1 Roster table: one row per clip, the same in all six GLBs
 
 Blend in is the `custom_blend` seconds passed to `AnimationPlayer.play()`. Every clip hands back to a base loop with a 0.1 s blend when it ends (section 3).
@@ -183,7 +185,7 @@ Once per profile uses the existing seen list: `ui_profile.seen()` and `mark_seen
 
 1. **The seven existing names stay**, spelled as they are: `drop_land`, `big_cheer`, `wince`, `slump`, `phew`, `brace`, `heave`. Their action data stays as built (the verifier checks it, section 6).
 2. **One name per role in all six GLBs.** The GLB is the pilot's namespace. The sheets' `idle`, `idle_tally`, `smash_rush`, `smash_stamp`, `smash_rend`, `unlock_tally` and `unlock_tarn` become `idle_loop`, `smash` and `unlock`. `class_clips` stays in the router for a future exception; no row uses it.
-3. **A loop's name ends in `_loop`. A one-shot's name never starts or ends with `loop` or `cycle`.** Godot 4.7 imports any animation whose name starts or ends with those tokens as looping, with no hyphen needed (Godot docs, "Node type customization using name suffixes", animation loop). The pilot GLBs import with `nodes/use_name_suffixes=true` (`assets/models/pilot_tarn_anim.glb.import`), so the name alone sets the loop. No import file edit.
+3. **A loop's name ends in `_loop`. A one-shot's name never starts or ends with `loop` or `cycle`.** The names keep that rule, but the import does not rely on it. Godot 4.7 strips a `_loop` suffix from the clip name when `nodes/use_name_suffixes=true` (Godot docs, "Node type customization using name suffixes"), so each pilot's committed `.import` sets `nodes/use_name_suffixes=false` and gives `idle_loop` and `ult_ride_loop` `"settings/loop_mode": 1` (candidate 9f8e36b). `tests/pilot_reactions_test.gd` fails if either setting is lost.
 4. **Lower snake case, role first**: `cast_special`, `ult_strike`. Prefixes group roles: `cast_` for bar slots, `ult_` for the ultimate chain.
 5. **A new role is a roster change.** It goes into `src/presentation/clips/roster.json` and all six GLBs in the same wave, or into none.
 6. **No `RESET` action is exported.** Today's tests skip `RESET` (`tests/pilot_reactions_test.gd:49`); the import keeps `animation/import_rest_as_RESET=false`.
@@ -225,7 +227,7 @@ The pose JSON tables exist only for `drop_land` (`tools/blender/{rivet,sable,kes
 1. **Reference.** The pilot sheet's section 6 pose story is the default source, the way `brace` and `heave` were authored from a written brief (`anim_pilot_reactions.py:256-257`). An image is optional: one motion sheet per pilot, eleven panels, made by the current concept route and pinned by SHA-256 in the table. Images guide gestures, never rig dimensions (`anim_tarn.py:3-4`).
 2. **Pose table.** `src/presentation/clips/<pilot>.json`, one file per pilot, so six units never edit the same file. It lives under `src/` because the game reads it too (the mecha motion code reads contact frames), following `src/world/reach_routes.json` (`src/presentation/set_dressing.gd:10`, `:244`). Format in 4.3.
 3. **Blender action.** `tools/blender/pilot_clips.py` (new, unit PE-0) opens the pilot's base scene, which already holds the rig, the meshes and the seven actions. It adds one action per table clip, baked every frame, with linear keys. It runs the same checks as the verifier before export.
-4. **Export.** It exports all actions with the exact exporter arguments of that pilot's own route (table below), so the seven re-export from unchanged actions and the mesh bytes keep their attributes.
+4. **Export.** It exports all actions with the exact exporter arguments of that pilot's own route (table below), so the seven re-export from unchanged actions and the mesh bytes keep their attributes. Trap (PE-0b, 2026-10-11): a Rivet, Sable or Kest base scene older than `brace` and `heave` lacks those two kept clips, so the builder resamples them from `--baseline` and prints `PILOT_CLIPS_RESTORE <pilot> <clip> <baseline>`; check 16 still guards their values. Trap (PE round 2, 2026-10-11): Godot's scene importer strips a `_loop` suffix from clip names while name suffixes are on, so `idle_loop` would import as `idle`. The six `assets/models/pilot_<pilot>_anim.glb.import` files are committed (a `.gitignore` negation, like the texture imports) with `nodes/use_name_suffixes=false` and `idle_loop` and `ult_ride_loop` set to loop. A Blender rebuild leaves them alone; `tests/pilot_reactions_test.gd` fails if one loses either setting.
 
 | Pilot | Base scene | How a unit gets it | Exporter arguments |
 | --- | --- | --- | --- |
@@ -276,6 +278,7 @@ The pose JSON tables exist only for `drop_land` (`tools/blender/{rivet,sable,kes
 | --- | --- | --- |
 | `torso.height` | spine scale; 1 is rest. Refused when `torso_scale` is false (the Cannon) | `anim_tarn.py:116-119` |
 | `torso.pitch`, `.yaw`, `.roll` | split 55/45 over `spine_01` and `spine_02` | `anim_tarn.py:114-115` |
+| `pelvis.pitch`, `.roll`, `.yaw` | optional XYZ rotation on `pelvis`, in degrees; head stays fixed | section 1; `pilot_clips.apply` |
 | `head.pitch`, `.yaw`, `.roll` | `head` | `anim_pilot_reactions.py:181` |
 | `neck.drop` | `neck` location z | `anim_pilot_drop.py:50` |
 | `shoulder.lift` | `shoulder.R/L` location z | `anim_tarn.py:125` |
@@ -287,9 +290,9 @@ The pose JSON tables exist only for `drop_land` (`tools/blender/{rivet,sable,kes
 | `root` | `[x, y, z]` location; `unlock` only | `PILOTS.md:67` |
 | `note` | one concrete observation per key, as every route records | `anim_pilot_reactions.py:30-82` |
 
-Clip keys: `end` (end frame), `loop`, `from` and `to` (anchors), `ease` (`smooth` or `linear`; `linear` for impact clips, as `wince` and `brace` are), `planted` (hands held at their grip every frame), `contact` (cast and smash clips; frame, hand and control), `source`.
+Clip keys: `end` (end frame), `loop`, `from` and `to` (anchors), `ease` (`smooth` or `linear`; `linear` for impact clips, as `wince` and `brace` are), `planted` (hands held at their grip every frame), `contact` (cast and smash clips; frame, hand and control), `preen_frames` (Kest only: the frames where the feather tip meets the beak, measured by check 17), `source`.
 
-`controls` names the shell recipe's `CONTROLS` table: control name to Pod-space position. P-D's shell units write it; PE-0 defines the format. Until a pilot's P-D shell ships its controls, the clip table may use the grips `(±0.32, 0.40, 0.05)` (`anim_tarn.py:19`) as stand-ins, and the cast clip is re-targeted when the controls land.
+`controls` names the shell recipe's `CONTROLS` table: control name to Pod-space position. P-D's shell units write it; PE-0 defines the format. Since PE-0b (2026-10-11) the builder and check 14 read each control from one source, the pilot's shipped shell GLB (`roster.json` `shell`), by walking its `Control.*` and `LapBar.*` nodes up to `Pod` (`tools/blender/pilot_arm.py`). A table's hand-copied `control_points` block is ignored, never trusted. A control the shell lacks resolves to the grips `(±0.32, 0.40, 0.05)` (`anim_tarn.py:19`) and prints `PILOT_CLIPS_STANDIN <pilot> <control>`; the cast clip is re-targeted when P-D ships that control.
 
 **Baking rules** (in `pilot_clips.py`). Interpolate every field between keys with the clip's ease. Bake every frame and key it linear, so nothing overshoots between inspected keys (the reason `pilot_cannon.py:323` gives). Re-solve planted hands every frame, as `pilot_cannon.py:330-345` and `pilot_tally.py:507-527` do. For a loop, write frame E equal to frame 1. After baking, write a full 25-bone snapshot per key to the evidence folder as `poses.json`, the receipt `anim_pilot_reactions.py:299` keeps.
 
@@ -381,14 +384,14 @@ The pilot hangs directly under Pod (`hero_assets.gd:526`), so hand and control s
 
 8. Endpoints match the declared anchors: `rest` is the bind pose within 1e-5 per component; `ride` matches the table's ride pose within 1e-4.
 9. Loops are seamless: frame E equals frame 1 within 1e-5.
-10. Idle and ride amplitude stay inside the caps (section 3, rules 5 and 6).
+10. Idle and ride amplitude stay inside the caps (section 3, rules 5 and 6), compared with a 1e-5 tolerance for float32 rounding after reimport.
 11. No root motion: the pelvis head stays within 1e-6 of `(0, 0, -0.30)`, as every route checks (`anim_tarn.py:179`). `unlock` alone may move `root`, and it must end at rest.
 12. Clearance: every skinned vertex stays inside 0.98 m, today's limit in all four routes (`anim_pilot_drop.py:129`, `anim_tarn.py:178`, `pilot_tally.py:592`, `pilot_cannon.py:382`). `unlock` is exempt. The receipt also records each clip's maximum radius as the clip envelope (section 10, first risk).
 13. Planted hands stay within 3 mm of their target (Tally's bound, `pilot_tally.py:595`).
-14. At each contact frame the named hand is within 10 mm of its control's position from the shell recipe's `CONTROLS`.
+14. At each contact frame the named hand is within 10 mm of its control's position, read from the shipped shell GLB through the same lookup the builder uses (`pilot_arm.control`).
 15. Scale: the Cannon keeps every bone scale at 1 within 1e-5 (`pilot_cannon.py:384`); the others stay between 0.7 and 1.4 on any axis.
 16. The seven kept clips are unchanged: sampled bone values equal the baseline GLB's within 1e-5.
-17. Pilot extras keep running: Kest's preen contact under 5 mm (`anim_pilot_drop.py:146`) and Tally's zero ledger-to-arm overlaps (`pilot_tally.py:596`) on every new clip.
+17. Pilot extras keep running: Kest's preen contact under 5 mm (`anim_pilot_drop.py:146`) on the retained `drop_land` and at every frame a new clip lists in `preen_frames`, and Tally's zero ledger-to-arm overlaps (`pilot_tally.py:596`) on every half-frame sample of every new clip. The preen is one pose, not a running motion, so a clip without a preen beat lists no `preen_frames` (ruling, 2026-10-11, PE-0b gate).
 
 **Receipt.** `artifacts/local/alpha/push/w13/clips/<pilot>/verify.json`: the GLB's SHA-256 and bytes, per-clip length, anchors error, loop seam error, amplitude, envelope, grip and contact errors, and a verdict. It prints `PILOT_CLIPS: PASS <pilot> 18 clips` and exits 0, or names the first failure and exits 1.
 
@@ -405,9 +408,9 @@ The pilot hangs directly under Pod (`hero_assets.gd:526`), so hand and control s
 | Item | Value |
 | --- | --- |
 | Rows | Row 1: the resting chase camera (7.5-unit arm, 65-degree vertical field of view, pitch -0.30, anchor height 0.8, `PILOT-RIG.md:58`), Core visible. Row 2: a three-quarter front close-up, 2.6 m, 35 degrees, Core hidden so the pose reads |
-| Frames | One-shots: 5 per row at the table's key beats (start, anticipation, contact or peak, release, end). Loops: 6 per row, evenly spaced, the last next to frame 1 to show the seam |
+| Frames | Every clip: 5 per row. Collapse each consecutive run of equal key poses, ignoring `frame` and `note`, to its first frame. Always include the first contact beat, identified by the clip's `contact.frame`, a key's `contact` field or its contact note. Fill the other cells evenly from the remaining beats in time order. With fewer than 5 beats, use even frame spacing while retaining the first contact beat. Loops include their end beat to show the seam |
 | Cell size | 480 by 360 px, with a 24 px label band (clip, frame, seconds) |
-| Strip size | 2,400 by 768 px for one-shots, 2,880 by 768 px for loops |
+| Strip size | 2,400 by 768 px for every clip, so width does not reveal whether it loops |
 | Video | `<clip>.mp4`, chase row only, 960 by 540, 30 fps; loops play three times |
 | Contact sheet | `sheet.png`: all 18 clips, the chase cell at each clip's contact or peak frame |
 | Path | `artifacts/local/alpha/push/w13/clips/<pilot>/<clip>.png`, `<clip>.mp4`, `sheet.png` |

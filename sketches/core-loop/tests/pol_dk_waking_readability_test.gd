@@ -1,4 +1,6 @@
 extends SceneTree
+# 2026-10-11 re-pin (W13-LIGHTS): dropped-floor rim lights return to the session-lived pool
+# and stay dark across preset changes. Freeing them was the Forward+ exit/reentry crash path.
 # 2026-10-09 re-pin (SWAP-FIX): the plate is pale zinc (ArenaWakingDress.FLOOR_PLATE_COLOR), not slate, because slate is
 # the "not yet" state colour (palette.gd:25) and, at half sandstone's luminance, took arw_pit/down_shaft to 0.90 and
 # arw_pit_b/pit_edge to 0.85 near-black (dead). The check now asks for a cool, non-state tone at least sandstone in every
@@ -60,7 +62,13 @@ func _run() -> void:
 		mod._drop_left = 0.0
 		await physics_frame
 		await process_frame
-		_t.check("DK dropped floor removes its rim lights", pools.is_empty() or not is_instance_valid(pools[0]))
+		for light in pools:
+			if _t.check("DK dropped floor preserves its rim light", is_instance_valid(light)):
+				_t.check("DK dropped floor darkens its rim light", is_zero_approx(light.light_energy) and not light.visible)
+		Preset.apply("low")
+		for light in pools:
+			if is_instance_valid(light):
+				_t.check("DK preset change keeps dropped rim light dark", is_zero_approx(light.light_energy) and not light.visible)
 		if key != null:
 			_t.near("DK key follows core after drop", key.global_position.distance_to(mod.warden.family_point_at() + Vector3(10, 18, 12)), 0.0, 0.01)
 	mod.exit_arena()

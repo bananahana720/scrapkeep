@@ -128,7 +128,9 @@ func _skill_bar() -> void:
 	_report("keys gain line and ultimate", UpgradeTree.KEYS.has("line") and UpgradeTree.KEYS.has("ultimate"), str(UpgradeTree.KEYS))
 	_report("SWAPPABLE is the five slots plus the ultimate", AbilityState.SWAPPABLE == AbilityState.SLOTS + ["ultimate"]
 		and AbilityState.SLOTS.size() == 5 and not AbilityState.SLOTS.has("ultimate"), str(AbilityState.SWAPPABLE))
-	var held := UpgradeTree.safe_pick_problems("pylon_engineer", {"id": "fixture_keep", "swap": {"ultimate": "ult_default"}})
+	# The held ultimate comes from Sable's class row, so the fixture holds after her kit ships one.
+	var held_ult: String = ClassDef.by_id("pylon_engineer").ultimate_id
+	var held := UpgradeTree.safe_pick_problems("pylon_engineer", {"id": "fixture_keep", "swap": {"ultimate": held_ult}})
 	var replaced := UpgradeTree.safe_pick_problems("pylon_engineer", {"id": "fixture_replace", "swap": {"ultimate": "line_reel"}})
 	_report("an ultimate swap is checked against the held ultimate", held.is_empty() and replaced.size() == 1,
 		"keep %s, replace %s" % [held, replaced])

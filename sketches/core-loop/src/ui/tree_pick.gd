@@ -92,7 +92,7 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 		_row.remove_child(child)
 		child.queue_free()
 	for i in nodes.size():
-		var card := TreeCard.new(nodes[i], "key_%d" % (i + 1), color, pick_depth, _world_one(), _shell())
+		var card := TreeCard.new(nodes[i], "key_%d" % (i + 1), color, pick_depth, _world_one(), _shell(), TreeCard.WorldOneCards.SET_PIECE_LINES, class_id)
 		card.pressed.connect(func(): chosen.emit(i))
 		_row.add_child(card)
 	_crumb.set_path(class_id, path, nodes.map(func(n): return n["id"]), color, _world_one())

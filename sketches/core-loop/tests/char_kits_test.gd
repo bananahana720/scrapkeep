@@ -70,7 +70,8 @@ func _rows() -> void:
 			complete = complete and String(str(def.get(field))) != ""
 		complete = complete and def.shape in EventKinds.SHAPES and def.color != Palette.HAZARD
 		complete = complete and AbilityState.ABILITIES.has(def.weapon_id) and AbilityState.ABILITIES.has(def.movement_id) \
-			and AbilityState.ABILITIES.has(def.special_id) and AbilityState.ABILITIES.has(def.smash_id)
+			and AbilityState.ABILITIES.has(def.special_id) and AbilityState.ABILITIES.has(def.smash_id) \
+			and AbilityState.ABILITIES.has(def.line_id) and AbilityState.ABILITIES.has(def.ultimate_id)
 		colours[def.color.to_html()] = true
 	var motifs := rows.map(func(d): return d.motif)
 	# The cannon (wave 16 look) has its own motif, shape and colour.

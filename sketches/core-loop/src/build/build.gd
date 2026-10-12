@@ -52,8 +52,8 @@ const SHELL_AIR_FACTOR_SPRINT := 1.0
 # The resolved shell factor moved between two fitted values: `rose` is true above the base
 # factor (an inversion is live), false on the return to it. Presentation reads only this.
 signal shell_air_changed(factor: float, rose: bool)
-# The hot-wired Fit / Recycle choice (BUILD-SYSTEMS.md, Two hot-wired parts): offered once a
-# run, after Warden I; resolved by hotwire_fit() ("fit") or hotwire_recycle() ("recycle", with
+# The hot-wired Fit / Recycle choice (BUILD-SYSTEMS.md, Two hot-wired parts): offered once per
+# world, after its first Warden; resolved by hotwire_fit() ("fit") or hotwire_recycle() ("recycle", with
 # the cogs paid). Build-local like shell_air_changed, not a bus fact.
 signal hotwire_offered(part_id: String, recycle: int)
 signal hotwire_resolved(part_id: String, choice: String, cogs: int)
@@ -147,11 +147,11 @@ var _air_seen := 0.0
 var _sprint_seen := false
 # Likewise for kit.gliding (K5).
 var _glide_seen := false
-# The run's hot-wired offer: the part id, its state ("" none yet, "open", "fit", "recycle") and
-# whether Warden I has been broken this run (the offer comes once, whatever it held).
+# The hot-wired offer and the world whose first Warden spent it.
 var _hotwire_id := ""
 var _hotwire_state := ""
 var _hotwire_spent := false
+var _hotwire_world := 1
 # Spark Tread: sim seconds left in the recovery, the frame and kind of the last activation
 # (one activation per attack), bonus strikes waiting for the physics step, and a count of
 # activations this run.
@@ -605,15 +605,21 @@ func shell_scrap_per_hp() -> float:
 
 # ---- Hot-wired offer (unit V's Fit / Recycle) and Spark Tread (H2) ----
 
-# Warden I is the first Warden broken in a run. Its unseal offers the first part
-# Parts.hotwire_offer allows; later Wardens offer nothing (the stage-2 discovery offer is
+# The first Warden broken in each world offers the first part Parts.hotwire_offer allows;
+# later Wardens in that world offer nothing (the stage-2 discovery offer is
 # authored elsewhere).
 func _on_warden_broken_hotwire(_stage: int) -> void:
+	var world := maxi(ctx.run.world, 1)
+	if world != _hotwire_world:
+		_hotwire_world = world
+		_hotwire_spent = false
+		_hotwire_id = ""
+		_hotwire_state = ""
 	if _hotwire_spent:
 		return
 	_hotwire_spent = true
 	_hotwire_save()
-	var ids := Parts.hotwire_offer(ctx.run.armor_mode, ctx.run.parts)
+	var ids := Parts.hotwire_offer(ctx.run.armor_mode, ctx.run.parts, ctx.run.world)
 	if ids.is_empty():
 		return
 	_hotwire_id = ids[0]
@@ -622,12 +628,12 @@ func _on_warden_broken_hotwire(_stage: int) -> void:
 	hotwire_offered.emit(_hotwire_id, Parts.hotwire_recycle(_hotwire_id))
 
 
-# The offer's three fields ride the run's extra so the entrance doc carries them: resume_run
+# The offer's fields ride the run's extra so the entrance doc carries them: resume_run
 # emits run_started (which clears them) before it applies the doc, so _hotwire_restore puts
 # them back on the first stage_entered.
 func _hotwire_save() -> void:
 	if ctx != null and ctx.run != null:
-		ctx.run.extra["hotwire"] = {"id": _hotwire_id, "state": _hotwire_state, "spent": _hotwire_spent}
+		ctx.run.extra["hotwire"] = {"id": _hotwire_id, "state": _hotwire_state, "spent": _hotwire_spent, "world": _hotwire_world}
 
 
 func _hotwire_restore(retry := false) -> void:
@@ -639,6 +645,7 @@ func _hotwire_restore(retry := false) -> void:
 		_hotwire_id = ""
 		_hotwire_state = ""
 		_hotwire_spent = false
+		_hotwire_world = 1
 		return
 	if (_hotwire_spent and not retry) or not ctx.run.extra.has("hotwire"):
 		return
@@ -646,6 +653,7 @@ func _hotwire_restore(retry := false) -> void:
 	_hotwire_id = String(saved.get("id", ""))
 	_hotwire_state = String(saved.get("state", ""))
 	_hotwire_spent = bool(saved.get("spent", false))
+	_hotwire_world = int(saved.get("world", 1))
 
 
 # {part_id, state, recycle}; part_id "" when nothing was offered this run.
@@ -842,6 +850,7 @@ func _on_run_started(_class_id_value: String) -> void:
 	_hotwire_id = ""
 	_hotwire_state = ""
 	_hotwire_spent = false
+	_hotwire_world = 1
 	_tread_recovery = 0.0
 	_tread_frame = -1
 	_tread_hits = []
