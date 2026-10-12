@@ -50,8 +50,9 @@ const WORLD_STEPS := [0, -5, 5]
 const TRIM_DB := {
 	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
+	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
 	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0,
-	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -8.0, "hurt": -3.0,
+	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -7.0, "hurt": -3.0,
 	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
 	"gate_through": -3.0, "launch_roar": -2.0, "event_start": -3.0, "event_end": -6.0,
 	"klaxon": -3.0, "stinger_run": -3.0, "stinger_stage": -4.0, "stinger_clear": -2.0,
@@ -287,6 +288,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.2, 95.0, 42.0, "sine", 20.0), 0, 1.0], [_noise(0.05, 800.0, 400.0, 60.0), 0, 0.4]])
 		"slam_boom":
 			return _slam()
+		"core_slam":
+			return _core_slam()
+		"ultimate_land":
+			return _ultimate_land()
+		"kest_demo_knock":
+			return _kest_demo_knock()
+		"rivet_skid_plate":
+			return _rivet_skid_plate()
 		"grapple_clink":
 			return _fm(0.24, _hz(81), 3.5, 5.0, 16.0)
 		"line_bite":
@@ -906,6 +915,44 @@ static func _slam() -> PackedFloat32Array:
 		phase += TAU * f * Synth.INV_RATE
 		buf[i] = tanh(2.2 * sin(phase)) * exp(-t * 4.5)
 	return _mix([[buf, 0, 1.0], [_noise(0.3, 1200.0, 200.0, 12.0), 0, 0.8], [_cut(Synth.crash(), 0.8), 0, 0.25]], true)
+
+
+static func _core_slam() -> PackedFloat32Array:
+	# Neutral planted mass: a 105-to-55 Hz sweep with a rounded attack, not Kest's bomb.
+	return _mix([[_tone(0.9, 105.0, 55.0, "sine", 2.2), 0, 1.0],
+		[_fm(0.12, 165.0, 1.41, 1.2, 22.0), Synth.seconds(0.004), 0.18],
+		[_noise(0.09, 950.0, 280.0, 30.0, 0.006), 0, 0.22]], true)
+
+
+static func _ultimate_land() -> PackedFloat32Array:
+	# Shared downbeat: a D sub drop under a short Dm7 stab, no pilot motif.
+	return _mix([[_tone(1.25, _hz(38), _hz(26), "sine", 3.2), 0, 1.0],
+		[_fm(0.12, _hz(62), 2.0, 1.6, 28.0), 0, 0.2],
+		[_fm(0.1, _hz(65), 2.0, 1.4, 30.0), 0, 0.16],
+		[_fm(0.09, _hz(69), 2.0, 1.2, 32.0), 0, 0.14],
+		[_fm(0.08, _hz(72), 2.0, 1.0, 35.0), 0, 0.12],
+		[_noise(0.018, 4200.0, 1800.0, 120.0), 0, 0.18]])
+
+
+static func _kest_demo_knock() -> PackedFloat32Array:
+	var parts := [[_fm(0.1, _hz(57), 1.41, 2.0, 45.0), 0, 0.85],
+		[_tone(0.08, _hz(53), _hz(41), "sine", 38.0), 0, 0.45],
+		[_noise(0.012, 1800.0, 900.0, 150.0), 0, 0.3]]
+	# Three discrete pips count the mini charges after the dry knock.
+	for i in 3:
+		var at := Synth.seconds(0.11 + 0.1 * i)
+		var note: int = [86, 89, 93][i]
+		parts.append([_fm(0.09, _hz(note), 1.0, 0.45, 48.0), at, 0.36 - 0.03 * i])
+		parts.append([_noise(0.008, 5200.0, 3500.0, 250.0), at, 0.12])
+	return _mix(parts)
+
+
+static func _rivet_skid_plate() -> PackedFloat32Array:
+	var at := Synth.seconds(0.055)
+	return _mix([[_noise(0.065, 3600.0, 1100.0, 14.0), 0, 0.55],
+		[_fm(0.35, _hz(45), 2.76, 3.2, 14.0), at, 0.8],
+		[_tone(0.3, _hz(43), _hz(31), "sine", 13.0), at, 1.0],
+		[_noise(0.025, 2400.0, 600.0, 95.0), at, 0.45]], true)
 
 
 static func _boing() -> PackedFloat32Array:

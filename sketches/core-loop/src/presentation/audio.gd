@@ -47,7 +47,7 @@ const POLYPHONY := 32
 const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
-	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60,
+	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
 	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
@@ -63,6 +63,7 @@ const MENU_STATES := ["title", "class_select", "summary", "dead"]
 const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0, "claw_sweep": -5.0, "cannon_lane": -7.0,
 	"gather_plate": 2.0, "link_clips": 3.0, "balance_due": 5.0}
 const VOLUME_STEP := 0.1
+const VAULT_KILL_SOUND := "vault_drop"
 
 # The harpoon line's grammar (design-v3/LEGIBILITY.md sections 3 and 5). Gaps are in seconds on
 # the audio clock, which _process advances by its delta so a test can step it.
@@ -98,7 +99,8 @@ const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tic
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer"]
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
+	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate"]
 # --- P-C Kest sounds ---
 const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
 	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
@@ -1279,7 +1281,7 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String)
 				_chain_bite_ms = -100000.0
 			return
 		"smash_lands":
-			if _recent_ms("slam_boom") > MIN_GAP_MS["slam_boom"]:
+			if _recent_ms(Rows.sound("slammed")) > int(MIN_GAP_MS.get(Rows.sound("slammed"), 60)):
 				_grammar_cue("harpoon_smashed", sound)
 			_grammar_cue("harpoon_smashed", "smash_crack")
 			return
@@ -1623,7 +1625,7 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		_miniboss = null
 	if _kind == "vault":
 		# A small drop, on the moment the vault breaks.
-		play("enemy_killed", 2.0, 1.0, "SFX", "vault_drop")
+		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
 	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
 
