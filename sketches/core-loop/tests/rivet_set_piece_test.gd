@@ -11,7 +11,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 75
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 86
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -19,11 +19,13 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # framework card, Line True on the tenth punch; the Breach Skid reads player_ball's skid cone.
 # 2026-10-12 (PC-RIVET round 3): exercise the framework's encore transition and both legs' rams.
 # Closed Warden guards remain collidable; a staggered core may be passed.
+# 2026-10-12 (PC-RIVET r4): 75 -> 86, elevated/covered beam fixtures, camera parallax,
+# re-closed guard and independent Breach Skid damage expectation, coordinator rulings.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 75
+	_expected_checks = 86
 	super._initialize()
 
 
@@ -58,7 +60,10 @@ func _piece(id: String, heading := Vector3.RIGHT, release := 20.0) -> void:
 	_game.events.ultimate_started.emit(id, "line", from, to, 2.75)
 
 
-func _tech(id: String, beat: int, aim := Vector3.RIGHT) -> int:
+func _tech(id: String, beat: int, aim := Vector3.RIGHT, camera_offset := Vector3.ZERO) -> int:
+	_game.camera.set_physics_process(false)
+	_game.camera.cam.get_parent().global_position = _player.ball_position() + camera_offset
+	_game.camera.cam.global_basis = Basis.looking_at(aim)
 	return int(_combat.ultimate._ult_rows[id]["tech"].call(beat, _player.ball_position(), aim, 1.0))
 
 
@@ -106,6 +111,52 @@ func _run() -> void:
 	_t.eq("ult_volley cuts a fourth", _tech("foundry_cutter", 2), 4)
 	_knob("ult_volley", 0)
 
+	# An elevated reticle ray must not damage its horizontal projection.
+	await _fresh()
+	_piece("prism_cutter")
+	var elevated := _enemy("chaser", 10.0)
+	elevated.global_position += Vector3.UP * 10.0
+	elevated.set_physics_process(false)
+	var projected := _enemy("chaser", 10.0)
+	projected.set_physics_process(false)
+	await physics_frame
+	var elevated_aim := Vector3(1.0, 1.0, 0.0).normalized()
+	_t.eq("an elevated Prism beam cuts its 3D target", _tech("prism_cutter", 1, elevated_aim), 1)
+	_t.check("the horizontal projection is outside the elevated beam", _hits(projected).is_empty())
+	var drawn_dir: Vector3 = (_kit.beam_shapes[1]["to"] - _kit.beam_shapes[1]["from"]).normalized()
+	_t.check("the drawn centre beam keeps the aim elevation", drawn_dir.is_equal_approx(elevated_aim), str(drawn_dir))
+	_t.near("the heading clamp preserves elevation", _kit.beam_dir(Vector3(0.0, 1.0, -1.0).normalized(), Vector3.RIGHT).y, elevated_aim.y, 0.0001)
+
+	await _fresh()
+	_piece("prism_cutter")
+	var front := _enemy("chaser", 5.0)
+	var covered := _enemy("chaser", 15.0)
+	front.set_physics_process(false)
+	covered.set_physics_process(false)
+	var wall := StaticBody3D.new()
+	wall.collision_layer = 1
+	var wall_shape := CollisionShape3D.new()
+	var wall_box := BoxShape3D.new()
+	wall_box.size = Vector3(1.0, 20.0, 20.0)
+	wall_shape.shape = wall_box
+	wall.add_child(wall_shape)
+	_game.add_child(wall)
+	wall.global_position = _player.ball_position() + Vector3.RIGHT * 10.0
+	await physics_frame
+	await physics_frame
+	_t.eq("Prism cuts only the machine before world cover", _tech("prism_cutter", 1), 1)
+	_t.check("world cover stops damage behind the wall", not _hits(front).is_empty() and _hits(covered).is_empty())
+	_t.near("the drawn beam stops on the wall face", (_kit.beam_shapes[1]["to"] as Vector3).x - _player.ball_position().x, 9.5, 0.001)
+	wall.queue_free()
+
+	await _fresh()
+	_piece("foundry_cutter")
+	var reticle_target := _enemy("chaser", 10.0, 3.0)
+	reticle_target.set_physics_process(false)
+	await physics_frame
+	_t.eq("the camera-to-weapon query cuts the offset reticle target", _tech("foundry_cutter", 1, Vector3.RIGHT, Vector3(0.0, 0.0, 3.0)), 1)
+	_t.check("the committed beam turns from the weapon toward the camera ray", (_kit.beam_shapes[0]["to"] as Vector3).z > _player.ball_position().z)
+
 	# Full Cut: 90 degrees once, 18 x heft, out to 30 m.
 	await _fresh()
 	_piece("foundry_cutter")
@@ -130,21 +181,24 @@ func _run() -> void:
 	_player.abilities.spend("movement")
 	var charges: int = _player.abilities.slot("movement").charges
 	var landed := []
+	var chain_mult: float = _player.chain.multiplier()
+	var heft_mult: float = Ultimate.HEFT_MULT[ult._heft_index()]
+	var expected_damage: float = Ultimate.LANDING_DAMAGE * chain_mult * heft_mult
 	var slam_rate: float = _combat.punch_of("slam", 1.0)
 	var on_landed := func(_id: String, _at: Vector3, count: int, dealt: float): landed.append([count, dealt])
 	_game.events.ultimate_landed.connect(on_landed)
 	ult._strike(_player.ball_position())
 	_game.events.ultimate_landed.disconnect(on_landed)
-	var paid: float = float(landed[0][1]) / maxf(1.0, float(landed[0][0])) / 60.0 if landed.size() == 1 else -1.0
 	_t.near("class I cone reaches 9 m", _kit.breach_reach(), 9.0)
 	_t.check("the skid cone keeps the Shockwave Skid's 10 m and 1.5 m by default",
 		PlayerBall.in_skid_cone(Vector3(9.9, 0.0, 0.0), Vector3.RIGHT) and not PlayerBall.in_skid_cone(Vector3(10.1, 0.0, 0.0), Vector3.RIGHT)
 		and PlayerBall.in_skid_cone(Vector3(-1.4, 0.0, 0.0), Vector3.RIGHT) and not PlayerBall.in_skid_cone(Vector3(-1.6, 0.0, 0.0), Vector3.RIGHT))
 	# The landing's own scrap raises heft after the strike, so the punch is read at the strike's slam rate.
 	var at_strike := func(rows: Array): return rows.map(func(row): return snappedf(float(row[2]) * slam_rate, 0.01))
-	_t.eq("ahead and inside the ring are hit", [at_strike.call(_hits(ahead)), at_strike.call(_hits(behind_close))], [[snappedf(60.0 * paid, 0.01)], [snappedf(60.0 * paid, 0.01)]])
+	_t.eq("ahead and inside the ring are hit", [at_strike.call(_hits(ahead)), at_strike.call(_hits(behind_close))], [[snappedf(expected_damage, 0.01)], [snappedf(expected_damage, 0.01)]])
 	_t.check("behind and past the reach are not", _hits(behind).is_empty() and _hits(past).is_empty() and int(landed[0][0]) == 2)
-	_t.check("the landing pays the chain multiplier", paid > 1.0, str(paid))
+	_t.check("the landing pays the captured chain multiplier", chain_mult > 1.0, str(chain_mult))
+	_t.near("ultimate_landed reports the independent total damage", float(landed[0][1]) if landed.size() == 1 else -1.0, expected_damage * 2.0, 0.01)
 	_t.eq("the landing ends the chain", _player.chain.combo, 0)
 	var release: Vector3 = ult._ride.release_velocity()
 	_t.check("the exit is flat along the heading at the banked speed", release.is_equal_approx(Vector3.RIGHT * 20.0), str(release))
@@ -262,6 +316,10 @@ func _run() -> void:
 	warden._posture.staggered = true
 	_kit.drive_step(_player.ball_position())
 	_t.check("a staggered Warden may be passed", _player.body().get_collision_exceptions().has(warden) and _kit._excepted.has(warden))
+
+	warden._posture.staggered = false
+	_kit.drive_step(_player.ball_position())
+	_t.check("a re-closed guard removes both exceptions before ram dedup", not _player.body().get_collision_exceptions().has(warden) and not _kit._excepted.has(warden))
 
 	# ult_beats: two more beats in the plan.
 	await _fresh()
