@@ -11,7 +11,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 171
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 190
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -24,12 +24,12 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # 2026-10-12 (PC-RIVET r5): 86 -> 148, ten real shape dispatches, independent height,
 # terrain and kit-constant expectations, selected geometry versus rendered vertices,
 # and the unchanged centre-based wave limits and Breach Skid inner ring.
-# 2026-10-12 (PC-RIVET r6): 148 -> 171, narrow-wall shadows and exposed-hull control.
+# 2026-10-12 (PC-RIVET r6): 148 -> 190, narrow-wall shadows, terrain formats and exposed-hull controls.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 171
+	_expected_checks = 190
 	super._initialize()
 
 
@@ -202,19 +202,31 @@ func _shape_dispatch_fixture() -> void:
 
 
 func _terrain_shadow_fixture() -> void:
-	for width in [30.0, 4.0, 3.0, 2.6]:
+	for spec in [{"width": 30.0, "kind": "box"}, {"width": 4.0, "kind": "box"},
+		{"width": 3.0, "kind": "box"}, {"width": 2.6, "kind": "box"},
+		{"width": 2.6, "kind": "trimesh"}, {"width": 2.6, "kind": "convex"}]:
+		var width: float = spec["width"]
+		var label := "%s %s" % [spec["kind"], width]
 		await _fresh()
 		_piece("foundry_cutter")
 		var front := _enemy("chaser", 5.0)
 		var covered := _enemy("chaser", 8.0)
 		front.set_physics_process(false)
 		covered.set_physics_process(false)
+		var exposed_shadow: Node3D = null
+		if width == 2.6 and spec["kind"] == "box":
+			exposed_shadow = _enemy("chaser", 8.0, 1.3)
+			exposed_shadow.set_physics_process(false)
 		var wall := StaticBody3D.new()
 		wall.collision_layer = 1
 		var collision := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		box.size = Vector3(0.5, 30.0, width)
 		collision.shape = box
+		if spec["kind"] != "box":
+			var mesh := BoxMesh.new()
+			mesh.size = box.size
+			collision.shape = mesh.create_trimesh_shape() if spec["kind"] == "trimesh" else mesh.create_convex_shape()
 		wall.add_child(collision)
 		_game.add_child(wall)
 		wall.global_position = _player.ball_position() + Vector3.RIGHT * 6.5
@@ -223,11 +235,25 @@ func _terrain_shadow_fixture() -> void:
 		_tech("foundry_cutter", 4)
 		_combat.ultimate._peak(_player.ball_position())
 		var hull: float = _combat._hull(covered)
-		_t.check("wall %s occludes the whole target hull" % width, width * 0.5 >= hull * 6.25 / (8.0 - hull), "hull=%s" % hull)
-		_t.check("wall %s covers the beam aperture" % width, width >= Weapons.FULL_CUT_WIDTH)
-		_t.eq("wall %s front target hit exactly once" % width, _damage(front), [Weapons.FULL_CUT_DAMAGE])
-		_t.check("wall %s independently blocks the centre ray" % width, not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(_player.ball_position(), covered.global_position, 1)).is_empty())
-		_t.check("wall %s covered target receives zero hits" % width, _hits(covered).is_empty(), str(_damage(covered)))
+		_t.check("wall %s occludes the whole target hull" % label, width * 0.5 >= hull * 6.25 / (8.0 - hull), "hull=%s" % hull)
+		_t.check("wall %s covers the beam aperture" % label, width >= Weapons.FULL_CUT_WIDTH)
+		_t.eq("wall %s front target hit exactly once" % label, _damage(front), [Weapons.FULL_CUT_DAMAGE])
+		_t.check("wall %s independently blocks the centre ray" % label, not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(_player.ball_position(), covered.global_position, 1)).is_empty())
+		_t.check("wall %s covered target receives zero hits" % label, _hits(covered).is_empty(), str(_damage(covered)))
+		var vertices: Array = []
+		for cell in _kit.volume_indicator.shapes["rivet_scar"]["cells"]:
+			for face in cell["faces"]:
+				vertices.append_array(face)
+		var origin: Vector3 = _player.ball_position()
+		_t.check("wall %s drawn vertices exclude the independent shadow" % label, not vertices.is_empty() and vertices.all(func(v):
+			var offset: Vector3 = v - origin
+			return offset.x <= 6.25 + 0.001 or absf(offset.z) >= width * 0.5 * offset.x / 6.25 - 0.001 or absf(offset.y) >= 15.0 * offset.x / 6.25 - 0.001))
+		if exposed_shadow != null:
+			var slope := width * 0.5 / 6.25
+			var edge_distance := (slope * 8.0 - 1.3) / sqrt(1.0 + slope * slope)
+			_t.check("partial hull independently crosses the terrain shadow edge", edge_distance > 0.0 and edge_distance < _combat._hull(exposed_shadow))
+			_t.check("partial hull centre ray is blocked", not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(_player.ball_position(), exposed_shadow.global_position, 1)).is_empty())
+			_t.eq("exposed part of a terrain-shadow boundary hull hits once", _damage(exposed_shadow), [Weapons.FULL_CUT_DAMAGE])
 		wall.queue_free()
 	await _fresh()
 	_piece("foundry_cutter")
