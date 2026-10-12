@@ -115,6 +115,8 @@ const UNCHANGED := [
 ]
 
 const HARDPOINTS := [Vector3(0.0, 1.6, 0.0), Vector3(2.8, 0.0, 0.0), Vector3(-2.8, 0.0, 0.0)]
+const UNCHANGED_PLACEMENTS := [Vector3(-46, 16.6, -12), Vector3(0, -6.4, 118),
+	Vector3(20, 1.6, 90), Vector3(40, -10.4, 130), Vector3(0, 25.6, -60), Vector3(-20, 37.6, -115)]
 const PARK_FIELDS := ["family", "mounting", "hardpoints", "anchor", "path", "harpoon_anchor"]
 var t := T.new("park_warden_wiring_test")
 
@@ -183,6 +185,24 @@ func _run() -> void:
 		out.close()
 		_exercise_copy(game, probe_path, 1)
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(probe_path))
+	var moving: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ParkMap.FIXTURE))
+	moving["landmark"]["warden"].merge({"family": "mind", "mounting": "spires",
+		"harpoon_anchor": true, "anchor": [0, 22, 590],
+		"path": [[0, 22, 590], [18, 30, 600], [-12, 24, 570]]}, true)
+	var moving_path := _write_copy(moving, "moving")
+	_exercise_copy(game, moving_path, 1)
+	var w = game.flow.warden
+	var points: Array = moving["landmark"]["warden"]["path"]
+	for leg in range(points.size()):
+		var start := _v3(points[leg])
+		var finish := _v3(points[(leg + 1) % points.size()])
+		w._step_mounting(8.0)
+		_near3("moving takeoff %d" % leg, w.global_position, start)
+		w._step_mounting(1.5)
+		_near3("moving midpoint %d" % leg, w.global_position, start.lerp(finish, 0.5) + Vector3.UP * 9.0)
+		w._step_mounting(1.5)
+		_near3("moving landing %d" % leg, w.global_position, finish)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(moving_path))
 	game.free()
 	await process_frame
 	print("park_warden_wiring_test: %s" % ("PASS" if t.failures == 0 else "FAIL"))
@@ -197,6 +217,22 @@ func _exercise_copy(game, path: String, stage: int) -> void:
 	game.ctx.terrain.maps[stage - 1] = previous
 
 
+func _write_copy(row: Dictionary, name: String) -> String:
+	var path := "user://park_warden_wiring_%s.json" % name
+	var out := FileAccess.open(path, FileAccess.WRITE)
+	out.store_string(JSON.stringify(row))
+	out.close()
+	return path
+
+
+func _v3(numbers: Array) -> Vector3:
+	return Vector3(float(numbers[0]), float(numbers[1]), float(numbers[2]))
+
+
+func _near3(label: String, got: Vector3, want: Vector3) -> void:
+	t.check(label, got.distance_to(want) < 0.0001, "got %s, want %s" % [got, want])
+
+
 func _check_park(game, path: String, stage: int) -> void:
 	var row: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
 	var mark: Dictionary = row["landmark"]
@@ -209,6 +245,10 @@ func _check_park(game, path: String, stage: int) -> void:
 	for field in PARK_FIELDS:
 		if expected.has(field):
 			t.eq(label + " spec " + field, w.spec.get(field), expected[field])
+	if expected.has("anchor"):
+		var anchor := _v3(expected["anchor"])
+		_near3(label + " home", w.home, anchor)
+		_near3(label + " initial world position", w.global_position, anchor)
 	var family: String = expected.get("family", UNCHANGED[stage - 1]["spec"]["family"])
 	var mounting: String = expected.get("mounting", Warden.MOUNTINGS.get(family + ":" + w.variant, ""))
 	t.eq(label + " family", w.family, family)
@@ -244,3 +284,5 @@ func _check_unchanged(game, stage: int, table: String) -> void:
 	t.eq(label + " hardpoints unchanged", w.hardpoints, HARDPOINTS)
 	t.eq(label + " harpoon unchanged", w.harpoon_anchor, expected["harpoon_anchor"])
 	t.check(label + " driver unchanged", w.mount_driver == null)
+	_near3(label + " home unchanged", w.home, UNCHANGED_PLACEMENTS[stage - 1])
+	_near3(label + " position unchanged", w.global_position, UNCHANGED_PLACEMENTS[stage - 1])
