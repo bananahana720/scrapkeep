@@ -38,6 +38,11 @@ const PARTS := [
 	"grip_tread", "live_line", "vent_baffle", "spare_cell", "spring_shims", "drop_weight",
 ]
 
+# SG4 burden parts: a second list beside PARTS, so the 18-part loot list (build_synergy_test pins
+# its size and a touch verb on every entry) is unchanged. Never offered by a pool
+# (Parts.offer_pool skips them); in play so a pocket's pay.named can name one.
+const BURDEN_PARTS := ["cracked_plating", "thin_pickings", "slack_coil"]
+
 # A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.
 const PICK_ON_CLASS_UP := true
 
@@ -167,7 +172,7 @@ static func synergy_in_play(synergy_id: String) -> bool:
 
 
 static func part_in_play(part_id: String) -> bool:
-	return part_id in PARTS
+	return part_id in PARTS or part_id in BURDEN_PARTS
 
 
 # True when part_in_play restricts what sources offer (the pool, the generated share and
