@@ -130,6 +130,8 @@ func _run() -> void:
 		perches_ok = perches_ok and perch["at"] == [path[i][0], path[i][2]] and String(perch["stamp"]) == ""
 		perches_ok = perches_ok and not ParkRecipes.anchor_posts(perch, clear_zones).is_empty()
 	t.check("the three physical perches retain the Warden path without raising the fight floor", perches_ok)
+	var approach: Dictionary = by_row["sentinel_48"]
+	t.check("the centre approach builds anchor posts without raising the fight floor", String(approach["stamp"]) == "" and not ParkRecipes.anchor_posts(approach, clear_zones).is_empty())
 	t.eq("the bowl keeps its 12 m depth", float(by_row["crown_bowl"]["size"][1]), 12.0)
 
 	var lines = JSON.parse_string(FileAccess.get_file_as_string(LINES_PATH))
