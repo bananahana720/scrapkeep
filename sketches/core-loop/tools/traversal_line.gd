@@ -311,7 +311,7 @@ class Sampler:
 	func _record_tick(player, ball: Vector3, grounded: bool) -> void:
 		var contacts: Array = []
 		for body in player._rigid.get_colliding_bodies():
-			contacts.append(str(body.get_path()))
+			contacts.append(_contact_path(body))
 		var velocity: Vector3 = player.state.velocity
 		trace.append({
 			"tick": traversal.ticks, "time": snappedf(game.run.stage_time, 0.001),
@@ -321,6 +321,17 @@ class Sampler:
 			"grounded": grounded, "contacts": contacts, "dead_stops": traversal.dead_stops,
 			"frozen": player.frozen(), "mounted": player.kit.mounted, "state": game.flow.state_name(),
 		})
+
+	# Godot's generated node names include a process-wide serial. Sibling indices preserve
+	# contact identity without putting that serial into an otherwise repeatable trace.
+	func _contact_path(body: Node) -> String:
+		var names: Array[String] = []
+		var node := body
+		while node != null:
+			var label := String(node.name)
+			names.push_front("%s[%d]" % [node.get_class(), node.get_index()] if label.begins_with("@") else label)
+			node = node.get_parent()
+		return "/" + "/".join(names)
 
 	func _anchored(ball: Vector3) -> bool:
 		var reach: float = game.player.grapple_range()
