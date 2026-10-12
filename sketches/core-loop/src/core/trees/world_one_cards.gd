@@ -61,10 +61,6 @@ const SET_PIECE_LINES := {
 	# --- P-C Sable set piece lines ---
 	"ball_lightning": "Set piece: Ball Lightning",
 	"outpost": "Set piece: Outpost",
-	"ult_encore": "Set piece: a second leg",
-	"ult_beats": "Set piece: two more beats",
-	"ult_radius": "Set piece: a wider landing",
-	"ult_volley": "Set piece: one more target",
 	# --- end Sable ---
 	# --- P-C Rivet set piece lines ---
 	# --- end Rivet ---
