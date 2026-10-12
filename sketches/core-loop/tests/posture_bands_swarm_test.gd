@@ -44,6 +44,11 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 # per grown seed [4, 4, 4, 3, 2, 3, 2, 3]; finishes from a latch per grown seed [2, 4, 4, 3, 4, 4, 4, 4] (camper all
 # 0). The three sweeps agree within 10 percent, so both medians are pinned. Before the latch arm (KF3 fix round):
 # grown 151.71 s, small 223.12 s.
+# 2026-10-11 (KF-BOT fix round, coordinator ruling 3): a fourth sweep, direct, load 20 to 45, gave the same 24
+# fights to the hundredth and prints the hand's counts per seed. Grown: latches [42, 31, 31, 46, 32, 43, 33, 35],
+# ride s [70.2, 45.6, 54.1, 78.8, 51.9, 76.2, 57.5, 55.8], line shots [354, 712, 87, 399, 809, 126, 287, 878],
+# chunks from a haul [2, 4, 4, 3, 4, 4, 4, 4], drop break on seeds 0, 4, 7. The hand latches, rides, fires and
+# finishes as swarm.md section 4 describes, so the miss is the mechanism's tuning, not the hand: owner call.
 # THESE PINS ARE NOT THE BAND. The two band checks stay red: grown 118.32 s against 25 to 45 s, small/grown 1.39
 # against 2. The latch arm keeps posture from draining through the high dwell (shots from the line) and finishes
 # every stagger with a haul (the alpha rows set ram_shatters false, so a ram never takes a chunk), but posture still
@@ -110,6 +115,11 @@ func _initialize() -> void:
 		if not latch_finishes.has(arm):
 			latch_finishes[arm] = []
 		latch_finishes[arm].append(_latch_chunks(record))
+		var note := _stage_note(record)
+		print("swarm latch arm %s seed %d: latches %d, ride %.1f s, shots from the line %d, hauls %d, chunks from a haul %d, drop hauls %d, drop chunks %d, drop break %s, fight %.2f s" % [
+			arm, run_seed, int(note.get("latch_bites", 0)), float(note.get("latch_ride_s", 0.0)), int(note.get("latch_shots", 0)),
+			int(note.get("latch_hauls", 0)), int(note.get("latch_chunks", 0)), int(note.get("drop_hauls", 0)), int(note.get("drop_chunks", 0)),
+			note.get("drop_break", false) == true, fights[arm].back()])
 	var grown: float = _median(fights.get("grown", []))
 	var small: float = _median(fights.get("small", []))
 	var camper_broke: int = fights.get("camper", []).filter(func(s): return s < RUN_CAP_S).size()
@@ -193,10 +203,15 @@ func _record(out: String) -> Dictionary:
 
 # Chunks the bot took with a haul from a line on a hardpoint inside a stagger (bot_driver.gd _watch_haul).
 func _latch_chunks(record: Dictionary) -> int:
+	return int(_stage_note(record).get("latch_chunks", 0))
+
+
+# The bot's note for the stage under test (bot_driver.gd _anchor_fight's counts ride in it).
+func _stage_note(record: Dictionary) -> Dictionary:
 	for note in record.get("stages", []):
 		if int(note.get("stage", 0)) == STAGE:
-			return int(note.get("latch_chunks", 0))
-	return 0
+			return note
+	return {}
 
 
 func _fight(record: Dictionary) -> float:
