@@ -7,7 +7,6 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Flood := preload("res://src/world/flood.gd")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
-const TerrainEvent := preload("res://src/world/terrain_event.gd")
 const LocalMesh := preload("res://src/world/local_mesh.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Audio := preload("res://src/presentation/audio.gd")
@@ -16,13 +15,8 @@ const Rows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 
 const KINDS := {
-	"flood_fill": {"form": "flood_rising", "land": "flood_landed"},
-	"drain": {"form": "flood_rising", "land": "flood_landed"},
-	"cave_in": {"form": "cave_in_crumble", "land": "cave_in_swap"},
-	"collapse": {"form": "cave_in_crumble", "land": "cave_in_swap"},
-	"impact": {"form": "impact_incoming", "land": "impact_swap", "lift_mps": 8.0},
-	"flash_flood": {"form": "flood_rising", "land": "flood_landed"},
-	"lightning": {"form": "lightning_charge", "land": "lightning_landed", "lift_mps": 8.0},
+	"flood_fill": {}, "drain": {}, "cave_in": {}, "collapse": {}, "flash_flood": {},
+	"impact": {"lift_mps": 8.0}, "lightning": {"lift_mps": 8.0},
 }
 
 var world
@@ -153,18 +147,11 @@ func setup(world_ref) -> void:
 			continue
 		var site: Dictionary = _sites[row.site]
 		var at := _at(site)
-		var record := {"site": site, "at": at, "overlay": null, "model": null}
+		var record := {"site": site, "at": at, "overlay": null}
 		if row.kind in ["flood_fill", "drain", "flash_flood"]:
 			record.water_surface = _prepare_water(site)
 		if row.kind in ["cave_in", "collapse", "impact"]:
 			_prepare_overlay(row, record)
-			var half := ParkMap.footprint_half_extents(site)
-			var footprint := {"centre": Vector2(at.x, at.z), "radius": minf(half.x, half.y)}
-			var model = TerrainEvent.new("impact" if row.kind == "impact" else "cave_in",
-				{"footprint": [footprint], "lead": maxf(float(row.telegraph.lead_s), ParkSchema._lead_floor(row))},
-				0.0, 14.0, Callable(world.terrain, "height"))
-			world.events.terrain.append(model)
-			record.model = model
 		_prepared[row.id] = record
 	world.terrain.flood = _water_field
 	# Replace the generic world's sound listener for this stage, preserving its other cues.
@@ -188,9 +175,6 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 			state.merge({"phase": "telegraph", "hit": false, "elapsed_s": 0.0, "depth_m": 0.0,
 				"water": null, "mark": _mark(row, ctx.at), "announced_s": ctx.clock_s}, true)
 			active[row.id] = state
-			if state.model != null:
-				state.model.phase = TerrainEvent.ANNOUNCED
-				state.model.timer = state.model.lead
 		"land":
 			var state: Dictionary = active[row.id]
 			state.phase = "land"
@@ -199,8 +183,6 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				_land_water(row, state)
 			if state.overlay != null:
 				_set_overlay(row, true)
-			if state.model != null:
-				state.model.phase = TerrainEvent.CHANGED
 			_hazard(row, state, ctx)
 		"step":
 			var state: Dictionary = active[row.id]
@@ -430,7 +412,8 @@ func _mark(row: Dictionary, at: Vector3, landed := false) -> Node3D:
 	var mark := Node3D.new()
 	add_child(mark)
 	mark.position = at + Vector3.UP * 0.15
-	var spec: Dictionary = Kinds.world_row(KINDS[row.kind].land if landed else KINDS[row.kind].form)
+	var form: String = row.telegraph.form
+	var spec: Dictionary = Kinds.world_row(world.events.PARK_LAND_FACTS[form] if landed else form)
 	var half := ParkMap.footprint_half_extents(_sites[row.site])
 	var mesh := MeshInstance3D.new()
 	if spec.shape == "burst":
@@ -447,6 +430,8 @@ func _mark(row: Dictionary, at: Vector3, landed := false) -> Node3D:
 		other.rotation.y = PI * 0.5
 		other.material_override = Palette.unshaded(spec.color)
 		mark.add_child(other)
+	elif spec.shape == "wave":
+		mesh.mesh = _wave_mesh(half)
 	else:
 		var shape := TorusMesh.new()
 		shape.inner_radius = maxf(0.1, minf(half.x, half.y) - 0.3)
@@ -456,6 +441,26 @@ func _mark(row: Dictionary, at: Vector3, landed := false) -> Node3D:
 	mesh.material_override = Palette.unshaded(spec.color)
 	mark.add_child(mesh)
 	return mark
+
+
+func _wave_mesh(half: Vector2) -> ArrayMesh:
+	var vertices := PackedVector3Array()
+	var indices := PackedInt32Array()
+	var segments := 32
+	for j in segments + 1:
+		var z := lerpf(-half.y, half.y, float(j) / segments)
+		var y := sin(float(j) / segments * TAU * 3.0) * 0.2
+		vertices.append_array([Vector3(-half.x, y, z), Vector3(half.x, y, z)])
+		if j < segments:
+			var a := j * 2
+			indices.append_array([a, a + 1, a + 2, a + 1, a + 3, a + 2])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
 func _show_landing(row: Dictionary, state: Dictionary) -> void:
@@ -476,14 +481,6 @@ func _on_world_sound(kind: String, at: Vector3) -> void:
 			Bank.trim_db(sound) + Audio.PRIORITY_DB[Rows.priority("world_fact")], pitch, "SFX")
 
 
-func _process(_delta: float) -> void:
-	if world == null:
-		return
-	for state in active.values():
-		if state.phase == "telegraph" and state.model != null:
-			state.model.timer = maxf(0.0, state.model.lead - (world.events.stage_time - float(state.announced_s)))
-
-
 func _end(row: Dictionary) -> void:
 	if not active.has(row.id):
 		return
@@ -494,8 +491,6 @@ func _end(row: Dictionary) -> void:
 		_water_field.refresh()
 	if state.overlay != null:
 		_set_overlay(row, false)
-	if state.model != null:
-		state.model.phase = TerrainEvent.DONE
 	state.mark.free()
 	active.erase(row.id)
 
