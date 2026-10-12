@@ -48,7 +48,7 @@ const PATH_SAMPLES := 6
 # map's build_props, or an element hazard like ice) stands across its approach or its
 # roll-out: an unforeseen stop is exactly what momentum is sacred forbids. The probe is
 # a ball-sized sphere swept on the physics layer terrain and props share (layer 1); the
-# terrain's own "Ground" body is excluded by RID so only real obstacles count. A
+# terrain's own "Ground" bodies are excluded by RID so only real obstacles count. A
 # blocked candidate is penalised, never returned outright, unless every candidate is
 # blocked, in which case the least-blocked one is used and a warning is pushed once.
 const PROBE_RADIUS := 1.0
@@ -230,11 +230,11 @@ func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, 
 	return result
 
 
-# The RID of the active stage's terrain body, so the shape probe below can tell "a
+# The RIDs of the active stage's ground bodies, so the shape probe below can tell "a
 # static prop is in the way" from "the ground itself is under the sphere". Both are
 # StaticBody3D on the same physics layer (map_spillway.gd's box()/cylinder() helpers
-# never set a layer of their own), and the terrain's own body is the only one always
-# named "Ground" (terrain.gd _build_ground). No RID means no exclusion, never a query
+# never set a layer of their own). Old maps name their single body "Ground"; parks
+# put their tiles under that node. No RID means no exclusion, never a query
 # that silently forbids every candidate.
 func _prop_probe_exclude() -> Array:
 	if _terrain == null or not _terrain.has_method("geometry_root"):
@@ -243,7 +243,14 @@ func _prop_probe_exclude() -> Array:
 	if holder == null:
 		return []
 	var ground := holder.get_node_or_null("Ground")
-	return [ground.get_rid()] if ground != null else []
+	var exclude: Array[RID] = []
+	if ground == null:
+		return exclude
+	if ground is CollisionObject3D:
+		exclude.append(ground.get_rid())
+	for body in ground.find_children("*", "CollisionObject3D", true, false):
+		exclude.append(body.get_rid())
+	return exclude
 
 
 # A ball-sized sphere swept from `from` to `to`, both raised to the terrain height at
