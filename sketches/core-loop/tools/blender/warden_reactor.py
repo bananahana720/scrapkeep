@@ -50,6 +50,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import struct
 import sys
 
@@ -86,7 +87,8 @@ COPPER = "copper"
 SAND = common.mix("sandstone", "petrol", 0.22)
 SAND_DARK = common.mix("sandstone", "charcoal", 0.45)
 TOOTH = common.mix("sandstone", "bone", 0.35)  # the lightest value on the body: teeth over the dark jacket
-ROD = common.mix("bone", "charcoal", 0.3)  # KF7b fix: the ram's piston rod, polished and lighter than its copper barrel
+ROD = "bone"  # KF7c round 3: the ram's piston rod, polished, the lightest value on the ram
+COPPER_DARK = common.mix("copper", "charcoal", 0.6)  # KF7c round 3: the ram's fat barrel, dark under its rod
 DUST = common.mix("petrol", "sandstone", 0.3)
 
 # 2026-10-11 (w13 KF7c): the drum is slimmer (core 2.42, jacket ribs and bands to 2.62) so the
@@ -140,24 +142,46 @@ HINGE = Vector((JAW_R[1], 0.0, JAW_Z[0]))
 # is r 1.25 to 1.1, the barrels are fatter (r 0.4, out to 2.78) and stand from the ground to 1.55
 # m under a light gland collar, and the light rod slants out of the gland past the drum's edge to
 # a lug under the jaw (outer face r 3.5): from the side the barrel stands clear of the stem.
-# 2026-10-11 (w13 KF7c fix round): the gate read the upright barrels as copper legs on the ground.
-# Each ram is now one straight diagonal piston, like an excavator's: a fat copper barrel pinned to
-# the stem 0.35 m up, slanting out at 50 degrees under the skirt to a light gland collar, then the
-# light rod out past the drum's edge to a lug on the jaw's corner. Nothing touches the ground but
-# the stem. The line crosses r 2.8 above 2 m, so below 2 m everything stays inside the collider.
+# 2026-10-11 (w13 KF7c fix round): the gate read the upright barrels as copper legs on the ground,
+# and the diagonal pistons that replaced them read as "angled legs", "short legs", "stubby feet" in
+# the third blind read: a part that runs from the drum down toward the ground reads as a leg.
+# 2026-10-11 (w13 KF7c round 3): the rams point the way they strike. The reactor has no ram attack
+# (src/combat: no ram or piston strike); its rams' only stroke is the jaw lean, the stagger's
+# 'active' clip here and warden_look.gd JAW_OPEN_DEGREES 14: each jaw turns about its bottom
+# outer edge (HINGE, a line along the jaw's local Y) and every point of its crown moves straight
+# out along the jaw's local +X, level. So each jaw has one level ram along its local +X, over the
+# crown at one corner: a fat dark copper barrel on a post standing on the drum's top rim, a light
+# gland collar at the barrel's mouth, the thin light rod out of it (2.47 to 1 in diameter) to a
+# light eye pinned on a dark clevis rising from the jaw's crown. The barrel and post are the
+# Drum's; the rod, eye and lug are the jaw's, so on the lean the rod slides out of the gland along
+# the ram's own axis. JawR's ram rides its front corner (Godot +Z) and JawL's its back corner (the
+# jaw frame turned a half turn): from the three_q read camera both stand past the body's left and
+# right edges, and from over_shoulder they lie side on over the drum. A ram on the jaw's middle
+# bearing was tried first: from over_shoulder its eye stood over the upper middle fang and took
+# that fang's outline (teeth count 2 of 4). Nothing of a ram stands under 6.5 m.
 PED_R = (1.0, 1.1)  # the pedestal stem's bottom and top radius
-RAM_FOOT = (1.15, 0.35)  # (r, z) of the barrel's pin on the stem
-RAM_END = (3.4, 3.0)  # (r, z) of the rod's pin in the jaw lug
-RAM_SPLIT = 0.5  # the barrel's share of the line; the gland collar follows it
-RAM_BARREL_R = 0.45
-RAM_GLAND = (0.06, 0.47)  # the gland collar's share of the line and its radius
-RAM_ROD_R = 0.16
-RAM_LUG = (3.15, 3.68)  # the jaw lug's inner and outer face; the rod's eye, counted as the ram's end
-RAM_DEG = 50.0  # each ram sits at a corner of its jaw, front and back
+RAM_Z = 7.6  # the ram's axis height, over the jaw crown (6.9)
+RAM_SIDE = 2.2  # the ram's offset from the jaw's middle plane, toward JawR's front (jaw frame -Y)
+# Per side (1 JawR, -1 JawL), along the jaw frame's X: the barrel's inner end and its mouth, and
+# the rod's inner end. JawR's ram rides the front, where it crosses the drum's front to the middle
+# and its rod runs back inside the barrel past the full lean's 1.26 m stroke. JawL's rides the back,
+# where its barrel must stay 0.95 m off the back stack's axis (Stack0, Godot z -2.5), so it is
+# shorter and its rod shows 0.36 m out of the gland at the full lean.
+RAM_BARREL = {1: (-0.6, 1.3), -1: (0.95, 1.75)}
+RAM_ROD_IN = {1: 0.1, -1: 1.0}
+RAM_BARREL_R = 0.42
+RAM_GLAND = (0.15, 0.48)  # the gland collar's length past the barrel's mouth and its radius
+RAM_EYE_X = 2.62  # the eye's centre along X: its far corner is r 3.74 at RAM_SIDE
+RAM_ROD_R = 0.17
+RAM_EYE_R = 0.26  # the eye's radius; its pin runs along the jaw's Y, 0.38 m long
+RAM_POST_X = {1: 0.35, -1: 1.3}  # the barrel's post, standing on the drum's top rim
+RAM_CLEVIS = (2.36, 2.88, 0.3)  # the lug block under the eye: inner and outer X, width along Y
 # 2026-10-11 (w13 KF7c): the silhouette check (see "silhouette check" below).
 # The read cameras: (name, eye offset in radii, look_subjects.gd constant and row). Each looks along
 # -normalize(offset) in the body frame (coordinator ruling at the KF7c fix round: no probed staging
-# yaw; a read direction tuned until the body passes is not a read).
+# yaw; a read direction tuned until the body passes is not a read). KF7c round 3: the offsets are
+# world axes; the check turns them into the body frame by look_subjects.gd WARDEN_BODY_STAGE_YAW,
+# read from that file at build time, the yaw look_harness stages and asserts (see sil_cameras).
 SIL_CAMERAS = [
     ("over_shoulder", (0.0, 0.6, 2.0), "WARDEN_BODY_CAMERAS row 0"),
     ("three_q", (-1.97, 0.42, 1.31), "WARDEN_BODY_CAMERAS row 3"),
@@ -165,11 +189,15 @@ SIL_CAMERAS = [
 ]
 SIL_APPROACH = ("over_shoulder", "three_q")
 # Thresholds (KF7c packet; fixed, never lowered inside a unit).
-SIL_RAM_OUT_M = 0.4
+SIL_RAM_OUT_M = 0.5  # KF7c round 3: raised from 0.4 to hold the level rams (three_q 0.570 and 0.603)
 SIL_RAM_OUT_FRAC = 0.3
 SIL_RAM_COUNT = 2
+SIL_RAM_MIN_Y = 4.0  # KF7c round 3: a ram's lowest vertex, metres over the base (7d87f33: 0.075, red)
+SIL_RAM_STROKE_DEG = 20.0  # KF7c round 3: a ram's axis against its jaw's stroke (7d87f33: 30.3, red)
 SIL_TOOTH_OUT_M = 0.5
 SIL_TOOTH_COUNT = 4
+# KF7c round 3 note: the 3D tooth height line (SIL_TOOTH_MIN_H) guards the teeth's size: the outline
+# count measures how far a tooth's root breaks the outline sideways, not how tall the tooth is.
 SIL_TOOTH_MIN_H = 0.6
 SIL_TOOTH_PER_ROW = 3
 SIL_JAW_STANDOFF = 0.3
@@ -248,9 +276,10 @@ def polar(r, deg, z):
     return Vector((r * math.cos(a), r * math.sin(a), z))
 
 
-def ram_point(deg, t):
-    """A point on the ram line at bearing deg, t from the stem pin (0) to the jaw lug pin (1)."""
-    return polar(RAM_FOOT[0] + (RAM_END[0] - RAM_FOOT[0]) * t, deg, RAM_FOOT[1] + (RAM_END[1] - RAM_FOOT[1]) * t)
+def ram_point(x, side=1):
+    """A point on a ram's level axis, x along the jaw frame's X (side 1: JawR, -1: JawL, the jaw
+    frame turned a half turn)."""
+    return Vector((side * x, -side * RAM_SIDE, RAM_Z))
 
 
 # --- silhouette check (w13 KF7c) -----------------------------------------------------------
@@ -359,6 +388,57 @@ def sil_part_outside(part_pts, outline_pts, axes):
     return max(d), sum(1 for x in d if x > 1e-6) / len(d)
 
 
+# 2026-10-11 (w13 KF7c round 3): one frame for this check and the render. The read cameras' eye
+# offsets are world axes, and look_harness stages the body at look_subjects.gd
+# WARDEN_BODY_STAGE_YAW, so the check reads that yaw from the same file at build time and turns each
+# offset into the body frame by it (no copied or probed yaw). SIL_CAMERAS stays the readable copy:
+# a row that drifts from look_subjects.gd fails the build.
+LOOK_SUBJECTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "look_subjects.gd")
+
+
+def sil_frame(subject, const):
+    """(stage yaw in degrees or None, {camera: world eye offset}) from look_subjects.gd."""
+    with open(LOOK_SUBJECTS) as f:
+        text = f.read()
+    m = re.search(r"const WARDEN_BODY_STAGE_YAW := \{([^}]*)\}", text)
+    yaws = {k: float(v) for k, v in re.findall(r'"(\w+)":\s*(-?[0-9.]+)', m.group(1))} if m else {}
+    start = text.find("const %s := [" % const)
+    rows = {}
+    if start >= 0:
+        block = text[start:text.index("]]", start) + 2]
+        rows = {k: tuple(float(x) for x in v.split(",")) for k, v in re.findall(r'\["(\w+)", Vector3\(([^)]*)\)', block)}
+    return yaws.get(subject), rows
+
+
+def sil_turn(v, deg):
+    """v turned deg about +Y (Godot frame)."""
+    a = math.radians(deg)
+    return (v[0] * math.cos(a) + v[2] * math.sin(a), v[1], -v[0] * math.sin(a) + v[2] * math.cos(a))
+
+
+def sil_cameras(subject, const, fails):
+    """[(name, body-frame offset)] for SIL_CAMERAS, a CHECK line each; a missing stage yaw or a copy
+    that drifts from look_subjects.gd appends to fails."""
+    yaw, rows = sil_frame(subject, const)
+    print("CHECK silhouette_stage_yaw %s %s from look_subjects.gd WARDEN_BODY_STAGE_YAW" % (subject, yaw))
+    if yaw is None:
+        print("SILHOUETTE FAIL %s frame stage_yaw missing wants a WARDEN_BODY_STAGE_YAW row" % subject)
+        fails.append("stage yaw")
+        yaw = 0.0
+    out = []
+    for name, off, src in SIL_CAMERAS:
+        live = rows.get(name)
+        if live is None or max(abs(a - b) for a, b in zip(live, off)) >= 1e-6:
+            print("SILHOUETTE FAIL %s frame %s offset=%s wants look_subjects.gd %s %s" % (subject, name, off, const, live))
+            fails.append("camera drift " + name)
+        body = sil_turn(off, -yaw)
+        view = _unit((-body[0], -body[1], -body[2]))
+        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s stage_yaw=%.1f body_view=(%.3f, %.3f, %.3f)"
+              % (name, off[0], off[1], off[2], src, yaw, view[0], view[1], view[2]))
+        out.append((name, body))
+    return out
+
+
 def sil_say(ok, body, camera, part, metric, value, want):
     print("SILHOUETTE %s %s %s %s %s=%.3f wants %s" % ("ok" if ok else "FAIL", body, camera, part, metric, value, want))
     return ok
@@ -436,6 +516,27 @@ def _jaw_standoff(pts, labels, faces, jaw):
     return worst
 
 
+def _ram_stroke_angle(points):
+    """Degrees between a ram's axis (the centroid of its innermost 30% of radial extent to that of its
+    outermost 30%) and the stroke of its outer end: the direction that point moves as its jaw leans
+    out about its hinge line (the jaw is rigid: the line through HINGE along the jaw frame's Y, the
+    jaw being JawR on the +X side, JawL on the -X side). Godot frame; unsigned."""
+    rs = [math.hypot(p[0], p[2]) for p in points]
+    lo, hi = min(rs), max(rs)
+
+    def centroid(sel):
+        return tuple(sum(p[i] for p in sel) / len(sel) for i in range(3))
+
+    ci = centroid([p for p, r in zip(points, rs) if r <= lo + 0.3 * (hi - lo)])
+    co = centroid([p for p, r in zip(points, rs) if r >= hi - 0.3 * (hi - lo)])
+    axis = _unit(_sub(co, ci))
+    a = 0.0 if co[0] >= 0.0 else math.pi  # the Blender bearing of its jaw's middle
+    hinge = (JAW_R[1] * math.cos(a), JAW_Z[0], -JAW_R[1] * math.sin(a))
+    tangent = (-math.sin(a), 0.0, -math.cos(a))
+    stroke = _unit(_cross(tangent, _sub(co, hinge)))
+    return math.degrees(math.acos(min(1.0, abs(_dot(axis, stroke)))))
+
+
 def silhouette(root):
     """Prints a SILHOUETTE line per rule; returns the failures."""
     pts, labels, faces = _labelled_points(root)
@@ -443,16 +544,12 @@ def silhouette(root):
         if o.type == "MESH" and o.data.attributes.get(SIL_LAYER) is not None:
             o.data.attributes.remove(o.data.attributes[SIL_LAYER])
     fails = []
-    for name, off, src in SIL_CAMERAS:
-        view, up, right = sil_axes(off)
-        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s view=(%.3f, %.3f, %.3f)"
-              % (name, off[0], off[1], off[2], src, view[0], view[1], view[2]))
+    axes = {name: sil_axes(off) for name, off in sil_cameras("warden_body_reactor", "WARDEN_BODY_CAMERAS", fails)}
     rams = sorted(set(l for l in labels if l.startswith("ram")))
     teeth = sorted(set(l for l in labels if l.startswith("tooth_")))
     by_label = {}
     for p, l in zip(pts, labels):
         by_label.setdefault(l, []).append(p)
-    axes = {name: sil_axes(off) for name, off, _ in SIL_CAMERAS}
     best_ram = best_tooth = (-1, "")
     for cam in SIL_APPROACH:
         good_rams = good_teeth = 0
@@ -470,6 +567,19 @@ def silhouette(root):
                    "count(outside_m>=%.1f,outside_frac>=%.1f)" % (SIL_RAM_OUT_M, SIL_RAM_OUT_FRAC), best_ram[0],
                    ">=%d on over_shoulder or three_q" % SIL_RAM_COUNT):
         fails.append("rams")
+    # 2026-10-11 (w13 KF7c round 3): the outline count above passed the 7d87f33 rams, which read as
+    # legs. Two 3D lines hold the new form: every ram stands clear of the ground (its lowest vertex
+    # over SIL_RAM_MIN_Y, so no ram runs down toward the ground plane), and each ram's axis lies within
+    # SIL_RAM_STROKE_DEG of its jaw's stroke (the way its outer end moves when the jaw leans about
+    # HINGE), so the body's ram and the jaw lean it drives share one line. Both read the mesh.
+    for ram in rams:
+        low = min(p[1] for p in by_label[ram])
+        if not sil_say(low >= SIL_RAM_MIN_Y, "reactor", "3d", ram, "min_y_m", low, ">=%.1f" % SIL_RAM_MIN_Y):
+            fails.append(ram + " low")
+        angle = _ram_stroke_angle(by_label[ram])
+        if not sil_say(angle <= SIL_RAM_STROKE_DEG, "reactor", "3d", ram, "stroke_angle_deg", angle,
+                       "<=%.1f" % SIL_RAM_STROKE_DEG):
+            fails.append(ram + " stroke")
     if not sil_say(best_tooth[0] >= SIL_TOOTH_COUNT, "reactor", best_tooth[1], "teeth",
                    "count(outside_m>=%.1f)" % SIL_TOOTH_OUT_M, best_tooth[0],
                    ">=%d on over_shoulder or three_q" % SIL_TOOTH_COUNT):
@@ -499,18 +609,21 @@ def drum(root):
     p = Part("Drum")
     # Pedestal: a narrow stem; everything under 2 m stays inside r = 2.8.
     p.cyl("ancient_enamel", PED_R[0], PED_R[1], 2.0, 16, loc=(0, 0, 1.0), color=ENAMEL)
-    # KF7c fix round: the jaws' rams, one at each jaw corner: a dark pin block on the stem, the fat
-    # copper barrel slanting out from it with a dark band at its foot, and the light gland collar
-    # at its mouth (the rod is the jaw's). Inside r 2.8 below 2 m.
-    for a in (-RAM_DEG, RAM_DEG, 180.0 - RAM_DEG, 180.0 + RAM_DEG):
-        tagged(p, ram_label(a), p.box, "ancient_enamel", (0.5, 0.6, 0.55), loc=ram_point(a, 0.0),
-               rot=(0, 0, math.radians(a)), color=IRON)
-        tagged(p, ram_label(a), p.rod, "ancient_enamel", ram_point(a, 0.04), ram_point(a, RAM_SPLIT), RAM_BARREL_R, 8,
-               color=COPPER)
-        tagged(p, ram_label(a), p.rod, "ancient_enamel", ram_point(a, 0.06), ram_point(a, 0.13), RAM_BARREL_R + 0.03, 8,
-               color=IRON)
-        tagged(p, ram_label(a), p.rod, "ancient_enamel", ram_point(a, RAM_SPLIT),
-               ram_point(a, RAM_SPLIT + RAM_GLAND[0]), RAM_GLAND[1], 8, color=TOOTH)
+    # KF7c round 3: each jaw's ram barrel, level over the crown at a corner (see RAM_Z): a dark
+    # iron post on the drum's top band, the fat dark copper barrel on it with a dark iron band at
+    # its mouth, and the light gland collar (the rod, eye and lug are the jaw's).
+    for side, jaw_deg in ((1, 0.0), (-1, 180.0)):
+        label = ram_label(jaw_deg)
+        x0, x1 = RAM_BARREL[side]
+        post = ram_point(RAM_POST_X[side], side)
+        p.box("ancient_enamel", (0.3, 0.3, RAM_Z - DRUM_Z[1]), loc=(post.x, post.y, (RAM_Z + DRUM_Z[1]) / 2),
+              color=IRON)
+        tagged(p, label, p.rod, "ancient_enamel", ram_point(x0, side), ram_point(x1, side), RAM_BARREL_R, 10,
+               color=COPPER_DARK)
+        tagged(p, label, p.rod, "ancient_enamel", ram_point(x1 - 0.12, side), ram_point(x1, side),
+               RAM_BARREL_R + 0.03, 10, color=IRON)
+        tagged(p, label, p.rod, "ancient_enamel", ram_point(x1, side), ram_point(x1 + RAM_GLAND[0], side),
+               RAM_GLAND[1], 10, color=TOOTH)
     p.ring("rubber", PED_R[1] - 0.05, PED_R[1] + 0.14, 0.18, 16, loc=(0, 0, 1.5))
     # Skirt flares above 2 m from the stem to the drum, an overhang the jaws' lower mandibles
     # stand clear of.
@@ -656,14 +769,18 @@ def jaw(root, side):
                h_low, TOOTH, min(root_r, TOOTH_R[2]), TOOTH_W_OUT)
         tagged(p, "tooth_%s_upper_%d" % (p.name, n), tooth, p, TOOTH_R[0], root_r, deg, up + 0.05, width,
                -h_up, TOOTH, min(root_r, TOOTH_R[2]), TOOTH_W_OUT)
-    # The light piston rods slanting up and out of the glands (the ram line, ram_point) to their
-    # eyes, each pinned in a dark lug on the lower lip's corner: the eye and lug are the ram's end.
-    for deg in (-RAM_DEG, RAM_DEG):
-        label = ram_label(deg + (0.0 if side > 0 else 180.0))
-        tagged(p, label, p.rod, "ancient_enamel", ram_point(deg, RAM_SPLIT + RAM_GLAND[0]), ram_point(deg, 1.0),
-               RAM_ROD_R, 8, color=ROD)
-        tagged(p, label, p.box, "ancient_enamel", (RAM_LUG[1] - RAM_LUG[0], 0.45, 0.55),
-               loc=polar(sum(RAM_LUG) / 2, deg, RAM_END[1]), rot=(0, 0, math.radians(deg)), color=SAND_DARK)
+    # KF7c round 3: the ram's moving half (see RAM_Z), modelled in JawR's frame: the light rod
+    # out of the Drum's gland, its light eye on a pin along Y, and a dark clevis block rising from
+    # the crown under the eye (no cheek in front of the eye, so the side view shows the eye's ring).
+    label = ram_label(0.0 if side > 0 else 180.0)
+    tagged(p, label, p.rod, "ancient_enamel", ram_point(RAM_ROD_IN[side]), ram_point(RAM_EYE_X), RAM_ROD_R, 8,
+           color=ROD)
+    tagged(p, label, p.cyl, "ancient_enamel", RAM_EYE_R, RAM_EYE_R, 0.38, 10, loc=ram_point(RAM_EYE_X),
+           rot=(math.pi / 2, 0, 0), color=TOOTH)
+    lug_z0 = z1 - 0.2
+    lug_z1 = RAM_Z - RAM_EYE_R + 0.05
+    tagged(p, label, p.box, "ancient_enamel", (RAM_CLEVIS[1] - RAM_CLEVIS[0], RAM_CLEVIS[2], lug_z1 - lug_z0),
+           loc=(sum(RAM_CLEVIS[:2]) / 2, -RAM_SIDE, (lug_z0 + lug_z1) / 2), color=SAND_DARK)
     p.cyl("ancient_enamel", 0.1, 0.1, 0.75, 8, loc=(r0 + 0.06, 0.0, z0 + 0.12), rot=(math.pi / 2, 0, 0), color=IRON)
     return finish(p, HINGE, root, rot_z=0.0 if side > 0 else math.pi)
 

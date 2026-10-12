@@ -43,11 +43,16 @@ const CGE_BALL_REASON := "the ball is the subject: it stays under the camera tar
 # sheets, w13 KF8-CAM). over_shoulder and three_q frame from warden_bounds as well, at gameplay height and
 # ball is pinned beside the body.
 # 2026-10-11 (w13 KF7c): "under" is the ball's own eye: about 1 m over the ground, aimed at the bounds
-# centre. Reactor and swarm: 1.6 radii out, 0.45 radii under the centre, from the reactor's +X side
-# (the jaw that faces the ball in play). Mind: 1.15 radii out on the fingertips' side (the hand's -Z
-# at the staged Pose yaw of about 96 degrees), 1.06 radii under the centre, looking up 43 degrees, so
-# the back of the hanging hand shows with sky between the fingers. The warden recipes' silhouette
-# checks copy these vectors (warden_reactor.py, warden_mind.py SIL_CAMERAS); move one, move both.
+# centre. Reactor and swarm: 1.6 radii out, 0.45 radii under the centre. Mind: 1.15 radii out, 1.06
+# radii under the centre, looking up 43 degrees at the back of the hanging hand.
+# 2026-10-11 (w13 KF7c round 3): the basis. Every offset is in world axes (warden_bounds carries no
+# basis), and look_harness stages the reactor and the mind at WARDEN_BODY_STAGE_YAW (below), so for
+# them world axes are the body's own GLB axes: reactor under looks from -X -Z (the JawL side, back
+# quarter), over_shoulder from +Z (both jaws in profile); mind under looks from -X (the right hand's
+# little-finger side), over_shoulder from +Z (behind the wrist, the fingers running away along -Z).
+# The warden recipes' silhouette checks hold a copy of these vectors (warden_reactor.py,
+# warden_mind.py SIL_CAMERAS) and read this file at build time: a copy that drifts from a row here,
+# or a stage yaw, fails the build.
 const WARDEN_BODY_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZERO, 62.0, "warden_bounds"], ["boss_high", Vector3(-1.04, 1.4709, 1.04), Vector3.ZERO, 62.0, "warden_bounds"],
 	["boss_low", Vector3(-2.0, -0.25, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"], ["under", Vector3(-1.2, -0.45, -1.06), Vector3.ZERO, 62.0, "warden_bounds"]]
 # The mind's boss_low eye sits level with the bounds centre (y 0.1 radii, not -0.25): from below,
@@ -56,7 +61,15 @@ const WARDEN_BODY_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZE
 const WARDEN_BODY_MIND_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZERO, 62.0, "warden_bounds"], ["boss_high", Vector3(-1.04, 1.4709, 1.04), Vector3.ZERO, 62.0, "warden_bounds"],
 	["boss_low", Vector3(-2.0, 0.1, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"], ["under", Vector3(-1.148, -1.06, 0.074), Vector3.ZERO, 62.0, "warden_bounds"]]
 const WARDEN_BODY_BALL := {"boss_high": Vector3(6.4, 0, 6.4), "boss_low": Vector3(0, 0, 9.0), "under": Vector3(0, 0, 9.0)}
-const WARDEN_BODY_BALL_REASON := "the ball stands on the floor beside the body (under: 9 m to the side of the target), off the eye-to-target line, so it stays small"
+# 2026-10-11 (w13 KF7c round 3): one frame for the silhouette check and the render. The body's yaw,
+# in degrees about +Y from its GLB frame to the world, at which look_harness _warden_bodies stages it:
+# the harness puts the frozen ball where the body's runtime facing turns to this yaw (reactor: the
+# body's +X faces the ball, hero_assets _update_warden_body; mind: the Pose's -Z faces it,
+# hero_assets _hold_mind), measures the staged yaw and fails a frame off by more than 0.5 degrees.
+# warden_reactor.py and warden_mind.py read this constant from this file and turn their read
+# directions by it. A body not listed keeps its runtime facing.
+const WARDEN_BODY_STAGE_YAW := {"warden_body_reactor": 0.0, "warden_body_mind": 0.0}
+const WARDEN_BODY_BALL_REASON :="the ball stands on the floor beside the body (under: 9 m to the side of the target), off the eye-to-target line, so it stays small"
 
 const SUBJECTS := {
 	# ---------------------------------------------------------------- miniboss, swarm, vault (stage 1)

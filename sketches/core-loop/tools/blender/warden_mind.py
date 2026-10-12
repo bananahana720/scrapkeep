@@ -48,6 +48,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import struct
 import sys
 
@@ -78,7 +79,10 @@ GRIP_DROP = 2.4  # how far a gripping finger's middle segment hooks down past th
 BUDGET = {"tris": 5000, "verts": 9600, "draws": 32}
 # 2026-10-11 (w13 KF7c): the silhouette check (see "silhouette check" below). The read cameras:
 # (name, eye offset in radii, look_subjects.gd constant and row). Each looks along -normalize(offset)
-# in the body frame (coordinator ruling at the KF7c fix round: no probed staging yaw).
+# in the body frame (coordinator ruling at the KF7c fix round: no probed staging yaw). KF7c round 3:
+# the offsets are world axes; the check turns them into the body frame by look_subjects.gd
+# WARDEN_BODY_STAGE_YAW, read from that file at build time, the yaw look_harness stages and asserts
+# (see sil_cameras), so the over_shoulder finger gaps below are the frame the render shows.
 SIL_CAMERAS = [
     ("over_shoulder", (0.0, 0.6, 2.0), "WARDEN_BODY_MIND_CAMERAS row 0"),
     ("three_q", (-1.97, 0.42, 1.31), "WARDEN_BODY_MIND_CAMERAS row 3"),
@@ -90,7 +94,10 @@ SIL_FINGER_GAP = 0.5
 SIL_TIP_SPAN = 1.2
 SIL_THUMB_OUT_M = 1.0
 SIL_THUMB_CAMERAS = 2
-SIL_THUMB_RISE = 1.0  # KF7c fix round: the thumb tip over the palm's top along its normal (see silhouette)
+# KF7c fix round: the thumb tip over the palm's top along its normal (see silhouette). This 3D line
+# guards the thumb's rise, which the outline metric (SIL_THUMB_OUT_M) alone does not: a thumb laid
+# flat and splayed sideways passed it 3 of 3.
+SIL_THUMB_RISE = 1.0
 
 # Section 5: name -> (length, blend) in seconds. The extras below repeat a row for the
 # finger or knuckle the loader picks.
@@ -1046,6 +1053,57 @@ def sil_part_outside(part_pts, outline_pts, axes):
     return max(d), sum(1 for x in d if x > 1e-6) / len(d)
 
 
+# 2026-10-11 (w13 KF7c round 3): one frame for this check and the render. The read cameras' eye
+# offsets are world axes, and look_harness stages the body at look_subjects.gd
+# WARDEN_BODY_STAGE_YAW, so the check reads that yaw from the same file at build time and turns each
+# offset into the body frame by it (no copied or probed yaw). SIL_CAMERAS stays the readable copy:
+# a row that drifts from look_subjects.gd fails the build.
+LOOK_SUBJECTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "look_subjects.gd")
+
+
+def sil_frame(subject, const):
+    """(stage yaw in degrees or None, {camera: world eye offset}) from look_subjects.gd."""
+    with open(LOOK_SUBJECTS) as f:
+        text = f.read()
+    m = re.search(r"const WARDEN_BODY_STAGE_YAW := \{([^}]*)\}", text)
+    yaws = {k: float(v) for k, v in re.findall(r'"(\w+)":\s*(-?[0-9.]+)', m.group(1))} if m else {}
+    start = text.find("const %s := [" % const)
+    rows = {}
+    if start >= 0:
+        block = text[start:text.index("]]", start) + 2]
+        rows = {k: tuple(float(x) for x in v.split(",")) for k, v in re.findall(r'\["(\w+)", Vector3\(([^)]*)\)', block)}
+    return yaws.get(subject), rows
+
+
+def sil_turn(v, deg):
+    """v turned deg about +Y (Godot frame)."""
+    a = math.radians(deg)
+    return (v[0] * math.cos(a) + v[2] * math.sin(a), v[1], -v[0] * math.sin(a) + v[2] * math.cos(a))
+
+
+def sil_cameras(subject, const, fails):
+    """[(name, body-frame offset)] for SIL_CAMERAS, a CHECK line each; a missing stage yaw or a copy
+    that drifts from look_subjects.gd appends to fails."""
+    yaw, rows = sil_frame(subject, const)
+    print("CHECK silhouette_stage_yaw %s %s from look_subjects.gd WARDEN_BODY_STAGE_YAW" % (subject, yaw))
+    if yaw is None:
+        print("SILHOUETTE FAIL %s frame stage_yaw missing wants a WARDEN_BODY_STAGE_YAW row" % subject)
+        fails.append("stage yaw")
+        yaw = 0.0
+    out = []
+    for name, off, src in SIL_CAMERAS:
+        live = rows.get(name)
+        if live is None or max(abs(a - b) for a, b in zip(live, off)) >= 1e-6:
+            print("SILHOUETTE FAIL %s frame %s offset=%s wants look_subjects.gd %s %s" % (subject, name, off, const, live))
+            fails.append("camera drift " + name)
+        body = sil_turn(off, -yaw)
+        view = _unit((-body[0], -body[1], -body[2]))
+        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s stage_yaw=%.1f body_view=(%.3f, %.3f, %.3f)"
+              % (name, off[0], off[1], off[2], src, yaw, view[0], view[1], view[2]))
+        out.append((name, body))
+    return out
+
+
 def sil_say(ok, body, camera, part, metric, value, want):
     print("SILHOUETTE %s %s %s %s %s=%.3f wants %s" % ("ok" if ok else "FAIL", body, camera, part, metric, value, want))
     return ok
@@ -1057,12 +1115,7 @@ def silhouette(body):
     names = {i: g.name for i, g in enumerate(body.vertex_groups)}
     groups = [names[v.groups[0].group] if v.groups else "" for v in body.data.vertices]
     fails = []
-    axes = {}
-    for name, off, src in SIL_CAMERAS:
-        axes[name] = sil_axes(off)
-        view = axes[name][0]
-        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s view=(%.3f, %.3f, %.3f)"
-              % (name, off[0], off[1], off[2], src, view[0], view[1], view[2]))
+    axes = {name: sil_axes(off) for name, off in sil_cameras("warden_body_mind", "WARDEN_BODY_MIND_CAMERAS", fails)}
     fingers = [[p for p, g in zip(pts, groups) if g.startswith("Finger%d_" % fi)] for fi in range(len(FINGERS))]
     thumb = [p for p, g in zip(pts, groups) if g.startswith("Thumb")]
     palm_fingers = [p for p, g in zip(pts, groups) if g == "Palm" or g.startswith("Knuckle") or g.startswith("Finger")]
