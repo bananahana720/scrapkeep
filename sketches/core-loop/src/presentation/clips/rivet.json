@@ -23,19 +23,17 @@
         "drop": -0.008
       },
       "hand.R": {
-        "control": "LapBar.R",
-        "offset": [
-          0,
-          0,
-          0
+        "at": [
+          0.14,
+          0.38,
+          0.06
         ]
       },
       "hand.L": {
-        "control": "LapBar.L",
-        "offset": [
-          0,
-          0,
-          0
+        "at": [
+          -0.14,
+          0.38,
+          0.06
         ]
       },
       "curl.R": -25,
@@ -121,6 +119,21 @@
         },
         {
           "frame": 81,
+          "head": {
+            "yaw": 0
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0.016
+            ]
+          },
+          "note": "Hold. The right claw lifts above the dial beside its yoke."
+        },
+        {
+          "frame": 82,
           "hand.R": {
             "control": "Grip.R",
             "offset": [
@@ -131,6 +144,19 @@
           },
           "curl.R": -10,
           "note": "The right claw lands its first dial tap."
+        },
+        {
+          "frame": 85,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0.015,
+              -0.005
+            ]
+          },
+          "curl.R": -10,
+          "note": "Hold. The right claw lands its first dial tap."
         },
         {
           "frame": 87,
@@ -158,11 +184,29 @@
           "note": "The right claw lands its second dial tap."
         },
         {
+          "frame": 93,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0.015,
+              -0.005
+            ]
+          },
+          "curl.R": -10,
+          "note": "Hold. The right claw lands its second dial tap."
+        },
+        {
           "frame": 127,
           "pose": "rest",
           "note": "Both claws return to the bind grips."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 78,
+        "contact": 82,
+        "peak": 90
+      }
     },
     "ult_ride_loop": {
       "end": 43,
@@ -197,24 +241,22 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "Both claws hold the copper lap bar."
+          "note": "Both claws hold the copper lap bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 12,
@@ -233,24 +275,56 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -28,
           "curl.L": -28,
-          "note": "The seated torso compresses slightly behind the sight."
+          "note": "The seated torso compresses slightly behind the sight. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
+        },
+        {
+          "frame": 15,
+          "torso": {
+            "height": 0.965,
+            "pitch": -11,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -7,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "at": [
+              0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "curl.R": -28,
+          "curl.L": -28,
+          "note": "Hold. The seated torso compresses slightly behind the sight. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 22,
@@ -269,24 +343,56 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "The head makes a two-degree correction toward the right."
+          "note": "The head makes a two-degree correction toward the right. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
+        },
+        {
+          "frame": 25,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": -2,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "at": [
+              0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "Hold. The head makes a two-degree correction toward the right. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 33,
@@ -305,24 +411,56 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "The head recentres without releasing the bar."
+          "note": "The head recentres without releasing the bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
+        },
+        {
+          "frame": 36,
+          "torso": {
+            "height": 0.975,
+            "pitch": -9,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -5,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "at": [
+              0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "Hold. The head recentres without releasing the bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 43,
@@ -341,26 +479,29 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "Both claws retain the opening lap-bar grip."
+          "note": "Both claws retain the opening lap-bar grip. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 12,
+        "contact": 22,
+        "peak": 33
+      }
     },
     "class_up": {
       "end": 37,
@@ -388,7 +529,10 @@
           "head": {
             "pitch": 2
           },
-          "note": "The visor reaches its fully raised angle. The rig lifts its lenses and pupils together."
+          "note": "Lift the chest sixteen degrees while the visor is fully raised. The separate eyes remain a rig limitation.",
+          "torso": {
+            "pitch": 16
+          }
         },
         {
           "frame": 9,
@@ -396,7 +540,10 @@
           "head": {
             "pitch": 2
           },
-          "note": "Hold the fully raised visor; this is the contact sample."
+          "note": "Lift the chest sixteen degrees while the visor is fully raised. The separate eyes remain a rig limitation.",
+          "torso": {
+            "pitch": 16
+          }
         },
         {
           "frame": 14,
@@ -404,7 +551,10 @@
           "head": {
             "pitch": 2
           },
-          "note": "The raised visor is the peak sheet pose, halfway through the fifteen-frame hold."
+          "note": "Lift the chest sixteen degrees while the visor is fully raised. The separate eyes remain a rig limitation.",
+          "torso": {
+            "pitch": 16
+          }
         },
         {
           "frame": 20,
@@ -412,7 +562,10 @@
           "head": {
             "pitch": 2
           },
-          "note": "The visor remains fully up through frame 20."
+          "note": "Lift the chest sixteen degrees while the visor is fully raised. The separate eyes remain a rig limitation.",
+          "torso": {
+            "pitch": 16
+          }
         },
         {
           "frame": 23,
@@ -425,16 +578,16 @@
         {
           "frame": 27,
           "head": {
-            "pitch": -10
+            "pitch": -20
           },
-          "note": "The head makes a firm ten-degree nod after the visor closes."
+          "note": "Give a distinct twenty-degree nod after the visor snaps down; both claws remain on the yokes."
         },
         {
           "frame": 30,
           "head": {
-            "pitch": -10
+            "pitch": -20
           },
-          "note": "Hold. The head makes a firm ten-degree nod after the visor closes."
+          "note": "Give a distinct twenty-degree nod after the visor snaps down; both claws remain on the yokes."
         },
         {
           "frame": 37,
@@ -464,121 +617,137 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "Both claws begin on the twin yokes."
+          "note": "Both claws start on the twin yokes."
         },
         {
           "frame": 5,
           "hand.R": {
-            "control": "Lever",
-            "offset": [
-              0,
-              0,
-              0.32
+            "at": [
+              0.52,
+              0.3,
+              0.12
             ]
           },
           "hand.L": {
-            "control": "Lever",
-            "offset": [
-              -0.08,
-              0,
-              0.32
+            "at": [
+              0.44,
+              0.3,
+              0.12
             ]
           },
           "curl.R": -12,
           "curl.L": -12,
           "torso": {
-            "yaw": -10
+            "height": 1.38,
+            "yaw": -45
           },
-          "note": "Both claws rise beside the right yoke, above the ring. The shipped lever head remains lower."
+          "note": "Turn toward the right bank and extend the nonrigid torso to 1.38 so both short arms can close together on the raised lever handle, twelve centimetres above the ring plane."
         },
         {
           "frame": 8,
           "hand.R": {
-            "control": "Lever",
-            "offset": [
-              0,
-              0,
-              0.32
+            "at": [
+              0.52,
+              0.3,
+              0.12
             ]
           },
           "hand.L": {
-            "control": "Lever",
-            "offset": [
-              -0.08,
-              0,
-              0.32
+            "at": [
+              0.44,
+              0.3,
+              0.12
             ]
           },
           "curl.R": -12,
           "curl.L": -12,
           "torso": {
-            "yaw": -10
+            "height": 1.38,
+            "yaw": -45
           },
-          "note": "Hold. Both claws rise beside the right yoke, above the ring. The shipped lever head remains lower."
+          "note": "Turn toward the right bank and extend the nonrigid torso to 1.38 so both short arms can close together on the raised lever handle, twelve centimetres above the ring plane."
         },
         {
           "frame": 9,
           "hand.R": {
-            "control": "Lever",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.52,
+              0.3,
+              -0.27
             ]
           },
           "hand.L": {
-            "control": "Lever",
-            "offset": [
-              -0.08,
-              0,
-              0
+            "at": [
+              0.44,
+              0.3,
+              -0.27
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
           "torso": {
-            "pitch": 9,
-            "yaw": -10
+            "height": 1.38,
+            "pitch": 18,
+            "yaw": -45
           },
           "head": {
-            "pitch": 0
+            "pitch": -30
           },
           "shoulder": {
             "lift": 0.008
           },
-          "note": "Both claws slam down while the spine extends nine degrees into the seat. The verifier pins contact to the low lever pivot."
+          "note": "Both claws drive down together along the lever throw, eight centimetres apart. Brace the spine eighteen degrees into the seat and tuck the chin. Turn the right wrist outward and keep the left wrist forward so both contacts are visible beside the bank despite the low pivot.",
+          "wrist.R": [
+            0,
+            0,
+            -90
+          ],
+          "wrist.L": [
+            0,
+            0,
+            0
+          ]
         },
         {
           "frame": 12,
           "hand.R": {
-            "control": "Lever",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.52,
+              0.3,
+              -0.27
             ]
           },
           "hand.L": {
-            "control": "Lever",
-            "offset": [
-              -0.08,
-              0,
-              0
+            "at": [
+              0.44,
+              0.3,
+              -0.27
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
           "torso": {
-            "pitch": 9,
-            "yaw": -10
+            "height": 1.38,
+            "pitch": 18,
+            "yaw": -45
           },
           "head": {
-            "pitch": 0
+            "pitch": -30
           },
           "shoulder": {
             "lift": 0.008
           },
-          "note": "Hold. Both claws slam down while the spine extends nine degrees into the seat. The verifier pins contact to the low lever pivot."
+          "note": "Both claws drive down together along the lever throw, eight centimetres apart. Brace the spine eighteen degrees into the seat and tuck the chin. Turn the right wrist outward and keep the left wrist forward so both contacts are visible beside the bank despite the low pivot.",
+          "wrist.R": [
+            0,
+            0,
+            -90
+          ],
+          "wrist.L": [
+            0,
+            0,
+            0
+          ]
         },
         {
           "frame": 15,
@@ -597,15 +766,14 @@
             ]
           },
           "torso": {
-            "pitch": 3,
-            "yaw": -3
+            "pitch": 3
           },
-          "note": "Both claws release the lever as the brace relaxes."
+          "note": "Release the brace as both claws return toward their yokes."
         },
         {
           "frame": 19,
           "pose": "rest",
-          "note": "Both claws and shoulders return to seated bind."
+          "note": "Both claws and shoulders finish in exact seated bind."
         }
       ],
       "contact": {
@@ -637,104 +805,86 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "The left claw stays on its yoke. The right claw starts at bind."
+          "note": "The left claw remains planted while the right starts on its yoke."
         },
         {
           "frame": 2,
           "hand.R": {
-            "control": "WinchLever",
-            "offset": [
-              0,
-              0.18,
-              0.04
+            "at": [
+              0.52,
+              0.4,
+              0.03
             ]
           },
           "curl.R": -18,
-          "note": "The right claw grips ahead of the winch pivot before the bite pull."
-        },
-        {
-          "frame": 3,
-          "hand.R": {
-            "control": "WinchLever",
-            "offset": [
-              0,
-              0.18,
-              0.04
-            ]
-          },
-          "curl.R": -18,
-          "note": "The right claw has reached the winch by frame three."
+          "note": "Grip the winch from ring height before one continuous backward pull. The explicit target avoids the low pivot during anticipation."
         },
         {
           "frame": 5,
           "hand.R": {
-            "control": "WinchLever",
-            "offset": [
-              0,
-              0.18,
-              0.04
+            "at": [
+              0.52,
+              0.4,
+              0.03
             ]
           },
           "curl.R": -18,
-          "note": "Hold the forward grip until the sharp bite pull; anticipation spans four frames."
+          "note": "Hold. Grip the winch from ring height before one continuous backward pull. The explicit target avoids the low pivot during anticipation."
         },
         {
           "frame": 6,
           "hand.R": {
-            "control": "WinchLever",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.52,
+              0.18,
+              -0.27
             ]
           },
           "curl.R": -30,
           "torso": {
-            "pitch": 5
+            "pitch": 5,
+            "yaw": -8
           },
           "head": {
-            "pitch": 0
+            "pitch": 8,
+            "yaw": 40
           },
-          "note": "Bite contact: the claw yanks back eighteen centimetres, the elbow drives back, and the spine rocks back five degrees. No forward dive."
-        },
-        {
-          "frame": 9,
-          "hand.R": {
-            "control": "WinchLever",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "curl.R": -30,
-          "torso": {
-            "pitch": 5
-          },
-          "head": {
-            "pitch": 0
-          },
-          "note": "Hold. Bite contact: the claw yanks back eighteen centimetres, the elbow drives back, and the spine rocks back five degrees. No forward dive."
+          "note": "Pull hard backward and keep the elbow behind the shoulder line. The shoulder turns eight degrees and the spine rocks back five degrees, and the head tips and tracks the pull. Contact remains pinned to the shipped low winch pivot. Rotate the claw outward around the pin to expose it beside the bank rather than behind its rail.",
+          "wrist.R": [
+            0,
+            0,
+            -90
+          ]
         },
         {
           "frame": 12,
           "hand.R": {
             "at": [
-              0.4,
-              0.28,
-              -0.08
+              0.52,
+              0.18,
+              -0.27
             ]
           },
+          "curl.R": -30,
           "torso": {
-            "pitch": 2
+            "pitch": 5,
+            "yaw": -8
           },
-          "curl.R": -10,
-          "note": "The right claw releases toward its yoke as the torso centres."
+          "head": {
+            "pitch": 8,
+            "yaw": 40
+          },
+          "note": "Hold. Pull hard backward and keep the elbow behind the shoulder line. The shoulder turns eight degrees and the spine rocks back five degrees, and the head tips and tracks the pull. Contact remains pinned to the shipped low winch pivot. Rotate the claw outward around the pin to expose it beside the bank rather than behind its rail.",
+          "wrist.R": [
+            0,
+            0,
+            -90
+          ]
         },
         {
           "frame": 16,
           "pose": "rest",
-          "note": "The right claw returns to its yoke in exact seated bind."
+          "note": "Release directly to exact seated bind without an intervening rest fidget."
         }
       ],
       "contact": {
@@ -745,8 +895,8 @@
       "beats": {
         "anticipation": 2,
         "contact": 6,
-        "peak": 6,
-        "release": 12
+        "peak": 9,
+        "release": 13
       }
     },
     "ult_ready": {
@@ -772,105 +922,129 @@
           "frame": 2,
           "hand.R": {
             "at": [
-              0.31,
+              0.36,
               0.25,
               0.34
             ]
           },
           "curl.R": -8,
           "goggles": 0,
-          "note": "The right claw waits clearly outside the visor rim."
+          "note": "The right claw waits clearly outside the visor rim. Turn the head thirty-five degrees toward the tapping claw; the closed visor rim stays the target.",
+          "head": {
+            "yaw": -35
+          }
         },
         {
           "frame": 5,
           "hand.R": {
             "at": [
-              0.31,
+              0.36,
               0.25,
               0.34
             ]
           },
           "curl.R": -8,
           "goggles": 0,
-          "note": "Hold. The right claw waits clearly outside the visor rim."
+          "note": "Hold. The right claw waits clearly outside the visor rim. Turn the head thirty-five degrees toward the tapping claw; the closed visor rim stays the target.",
+          "head": {
+            "yaw": -35
+          }
         },
         {
           "frame": 6,
           "hand.R": {
             "at": [
-              0.14,
-              0.255,
+              0.27,
+              0.25,
               0.24
             ]
           },
           "curl.R": -12,
           "goggles": 0,
-          "note": "First distinct tap on the visor rim."
+          "note": "First distinct tap on the visor rim. Turn the head thirty-five degrees toward the tapping claw; the closed visor rim stays the target.",
+          "head": {
+            "yaw": -35
+          }
         },
         {
           "frame": 9,
           "hand.R": {
             "at": [
-              0.14,
-              0.255,
+              0.27,
+              0.25,
               0.24
             ]
           },
           "curl.R": -12,
           "goggles": 0,
-          "note": "Hold. First distinct tap on the visor rim."
+          "note": "Hold. First distinct tap on the visor rim. Turn the head thirty-five degrees toward the tapping claw; the closed visor rim stays the target.",
+          "head": {
+            "yaw": -35
+          }
         },
         {
           "frame": 10,
           "hand.R": {
             "at": [
-              0.31,
+              0.36,
               0.25,
               0.34
             ]
           },
           "curl.R": -8,
           "goggles": 0,
-          "note": "The right claw lifts twenty centimetres clear between the taps."
+          "note": "The right claw lifts twenty centimetres clear between the taps. Turn the head thirty-five degrees toward the tapping claw; the closed visor rim stays the target.",
+          "head": {
+            "yaw": -35
+          }
         },
         {
           "frame": 13,
           "hand.R": {
             "at": [
-              0.31,
+              0.36,
               0.25,
               0.34
             ]
           },
           "curl.R": -8,
           "goggles": 0,
-          "note": "Hold. The right claw lifts twenty centimetres clear between the taps."
+          "note": "Hold the claw clearly clear of the visor between two taps. The closed visor never moves.",
+          "head": {
+            "yaw": -35
+          }
         },
         {
           "frame": 14,
           "hand.R": {
             "at": [
-              0.14,
-              0.255,
+              0.27,
+              0.25,
               0.24
             ]
           },
           "curl.R": -12,
           "goggles": 0,
-          "note": "Second distinct tap on the visor rim."
+          "note": "Second distinct tap on the visor rim. Turn the head thirty-five degrees toward the tapping claw; the closed visor rim stays the target.",
+          "head": {
+            "yaw": -35
+          }
         },
         {
           "frame": 17,
           "hand.R": {
             "at": [
-              0.14,
-              0.255,
+              0.27,
+              0.25,
               0.24
             ]
           },
           "curl.R": -12,
           "goggles": 0,
-          "note": "Hold. Second distinct tap on the visor rim."
+          "note": "Hold. Second distinct tap on the visor rim. Turn the head thirty-five degrees toward the tapping claw; the closed visor rim stays the target.",
+          "head": {
+            "yaw": -35
+          }
         },
         {
           "frame": 18,
@@ -935,7 +1109,7 @@
           "note": "Both claws sit on the yokes."
         },
         {
-          "frame": 3,
+          "frame": 2,
           "hand.R": {
             "at": [
               0.26,
@@ -966,37 +1140,69 @@
           "note": "Both claws leave the yokes toward the lap bar."
         },
         {
-          "frame": 6,
+          "frame": 5,
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0.025
+            "at": [
+              0.26,
+              0.36,
+              -0.015
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0.025
+            "at": [
+              -0.26,
+              0.36,
+              -0.015
             ]
           },
           "torso": {
-            "height": 0.98,
-            "pitch": -7
+            "height": 0.99,
+            "pitch": -3
           },
           "head": {
-            "pitch": -5
+            "pitch": -2
           },
           "neck": {
-            "drop": -0.006
+            "drop": -0.003
           },
-          "goggles": -4,
-          "curl.R": -15,
-          "curl.L": -15,
-          "note": "Both claws hover just above the lap-bar hand points."
+          "goggles": -8,
+          "curl.R": -8,
+          "curl.L": -8,
+          "note": "Hold. Both claws leave the yokes toward the lap bar."
+        },
+        {
+          "frame": 6,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "at": [
+              0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "Finish the lap-bar grip and hold the lowered sighting pose through the ride handoff. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 9,
@@ -1015,24 +1221,22 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "The lowered head sights between the two bar grips."
+          "note": "Hold. Finish the lap-bar grip and hold the lowered sighting pose through the ride handoff. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 11,
@@ -1051,26 +1255,29 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "Both claws finish locked on the lap bar."
+          "note": "Both claws finish locked on the lap bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 2,
+        "contact": 6,
+        "peak": 6
+      }
     },
     "ult_strike": {
       "end": 19,
@@ -1104,31 +1311,29 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "Both claws retain the ride grip."
+          "note": "Both claws retain the ride grip. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 3,
           "torso": {
             "height": 0.97,
             "pitch": -11,
-            "yaw": 15,
+            "yaw": 8,
             "roll": 0
           },
           "head": {
@@ -1140,24 +1345,56 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -35,
           "curl.L": -35,
-          "note": "The head and shoulders face the left edge of the sweep."
+          "note": "The head and shoulders face the left edge of the sweep. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Keep the shoulder turn at eight degrees so both planted elevated grips remain within the 3 mm bound between frames."
+        },
+        {
+          "frame": 6,
+          "torso": {
+            "height": 0.97,
+            "pitch": -11,
+            "yaw": 8,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 30,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "at": [
+              0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "curl.R": -35,
+          "curl.L": -35,
+          "note": "Hold. The head and shoulders face the left edge of the sweep. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Keep the shoulder turn at eight degrees so both planted elevated grips remain within the 3 mm bound between frames."
         },
         {
           "frame": 7,
@@ -1176,31 +1413,63 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -40,
           "curl.L": -40,
-          "note": "The shoulders cross the centre of the beam sweep."
+          "note": "The shoulders cross the centre of the beam sweep. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
+        },
+        {
+          "frame": 10,
+          "torso": {
+            "height": 0.97,
+            "pitch": -12,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -7,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "at": [
+              0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "curl.R": -40,
+          "curl.L": -40,
+          "note": "Hold. The shoulders cross the centre of the beam sweep. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 11,
           "torso": {
             "height": 0.97,
             "pitch": -11,
-            "yaw": -15,
+            "yaw": -8,
             "roll": 0
           },
           "head": {
@@ -1212,24 +1481,56 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -35,
           "curl.L": -35,
-          "note": "The head and shoulders reach the right edge of the sweep."
+          "note": "The head and shoulders reach the right edge of the sweep. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Keep the shoulder turn at eight degrees so both planted elevated grips remain within the 3 mm bound between frames."
+        },
+        {
+          "frame": 14,
+          "torso": {
+            "height": 0.97,
+            "pitch": -11,
+            "yaw": -8,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": -30,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "at": [
+              0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.14,
+              0.38,
+              0.06
+            ]
+          },
+          "curl.R": -35,
+          "curl.L": -35,
+          "note": "Hold. The head and shoulders reach the right edge of the sweep. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Keep the shoulder turn at eight degrees so both planted elevated grips remain within the 3 mm bound between frames."
         },
         {
           "frame": 15,
@@ -1248,24 +1549,22 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -30,
           "curl.L": -30,
-          "note": "The head recentres while both claws hold the bar."
+          "note": "The head recentres while both claws hold the bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
           "frame": 19,
@@ -1284,26 +1583,29 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "The torso settles into the opening ride pose."
+          "note": "The torso settles into the opening ride pose. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 3,
+        "contact": 7,
+        "peak": 11
+      }
     },
     "ult_recover": {
       "end": 22,
@@ -1334,27 +1636,25 @@
             "drop": -0.008
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.14,
+              0.38,
+              0.06
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.14,
+              0.38,
+              0.06
             ]
           },
           "curl.R": -25,
           "curl.L": -25,
-          "note": "Both claws begin on the lap bar."
+          "note": "Both claws begin on the lap bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
-          "frame": 4,
+          "frame": 2,
           "torso": {
             "height": 0.99,
             "pitch": 3
@@ -1363,27 +1663,52 @@
             "pitch": -2
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0.03
+            "at": [
+              0.14,
+              0.38,
+              0.09
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0.03
+            "at": [
+              -0.14,
+              0.38,
+              0.09
             ]
           },
           "curl.R": -10,
           "curl.L": -10,
-          "note": "The torso sits back as both claws release the bar."
+          "note": "The torso sits back as both claws release the bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
         },
         {
-          "frame": 8,
+          "frame": 5,
+          "torso": {
+            "height": 0.99,
+            "pitch": 3
+          },
+          "head": {
+            "pitch": -2
+          },
+          "hand.R": {
+            "at": [
+              0.14,
+              0.38,
+              0.09
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.14,
+              0.38,
+              0.09
+            ]
+          },
+          "curl.R": -10,
+          "curl.L": -10,
+          "note": "Hold. The torso sits back as both claws release the bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar. Use the explicit elevated lap-bar grip cue in front of the torso, above the ring, instead of the hidden low bar."
+        },
+        {
+          "frame": 6,
           "hand.R": {
             "control": "Grip.R",
             "offset": [
@@ -1404,6 +1729,29 @@
             "pitch": 2
           },
           "note": "Both claws settle onto their yokes."
+        },
+        {
+          "frame": 9,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "torso": {
+            "pitch": 2
+          },
+          "note": "Hold. Both claws settle onto their yokes."
         },
         {
           "frame": 12,
@@ -1434,6 +1782,22 @@
           "note": "The right claw gives the dial one measured tap."
         },
         {
+          "frame": 17,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0.015,
+              -0.005
+            ]
+          },
+          "curl.R": -12,
+          "head": {
+            "pitch": -3
+          },
+          "note": "Hold. The right claw gives the dial one measured tap."
+        },
+        {
           "frame": 18,
           "hand.R": {
             "control": "Grip.R",
@@ -1453,7 +1817,12 @@
           "pose": "rest",
           "note": "Both claws finish in the seated bind pose."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 2,
+        "contact": 6,
+        "peak": 14
+      }
     },
     "smash": {
       "end": 22,
@@ -1472,85 +1841,64 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both claws stay planted with no wrist or finger gesture."
-        },
-        {
-          "frame": 3,
-          "torso": {
-            "roll": 8
-          },
-          "head": {
-            "roll": -3
-          },
-          "note": "The spine rolls sideways eight degrees; the head counter-tilts slightly without pitching forward."
+          "note": "Both claws begin planted on the yokes."
         },
         {
           "frame": 6,
           "torso": {
-            "roll": 8
+            "roll": 10
           },
           "head": {
-            "roll": -3
+            "roll": -9
           },
-          "note": "Hold. The spine rolls sideways eight degrees; the head counter-tilts slightly without pitching forward."
+          "note": "The rider starts the sideways skid, with the head counter-tilting toward level."
         },
         {
-          "frame": 7,
+          "frame": 9,
           "torso": {
-            "roll": 14
+            "roll": 10
           },
           "head": {
-            "roll": -4
+            "roll": -9
           },
-          "note": "The sideways skid peaks at fourteen degrees; both claws stay on their yokes and the head counter-tilts four degrees."
+          "note": "Hold. The rider starts the sideways skid, with the head counter-tilting toward level."
         },
         {
           "frame": 10,
           "torso": {
-            "roll": 14
+            "roll": 20
           },
           "head": {
-            "roll": -4
+            "roll": -18
           },
-          "note": "Hold. The sideways skid peaks at fourteen degrees; both claws stay on their yokes and the head counter-tilts four degrees."
-        },
-        {
-          "frame": 15,
-          "torso": {
-            "roll": 4
-          },
-          "head": {
-            "roll": -1
-          },
-          "note": "The torso returns toward centre while both claws remain planted."
+          "note": "Hold a twenty-degree lateral lean through the skid. Both elbows absorb it while the claws remain planted."
         },
         {
           "frame": 18,
           "torso": {
-            "roll": 4
+            "roll": 20
           },
           "head": {
-            "roll": -1
+            "roll": -18
           },
-          "note": "Hold. The torso returns toward centre while both claws remain planted."
+          "note": "Hold. Hold a twenty-degree lateral lean through the skid. Both elbows absorb it while the claws remain planted."
         },
         {
           "frame": 22,
           "pose": "rest",
-          "note": "The rider returns to seated bind over the yokes."
+          "note": "The rider returns to exact seated bind."
         }
       ],
       "contact": {
-        "frame": 7,
+        "frame": 10,
         "hand": "R",
         "control": "Grip.R"
       },
       "beats": {
-        "anticipation": 3,
-        "contact": 7,
-        "peak": 7,
-        "release": 15
+        "anticipation": 6,
+        "contact": 10,
+        "peak": 15,
+        "release": 19
       }
     },
     "unlock": {
@@ -1591,9 +1939,9 @@
           "frame": 21,
           "hand.R": {
             "at": [
-              0.44,
-              0.23,
-              0.12
+              0.28,
+              0.46,
+              0.13
             ]
           },
           "wrist.R": [
@@ -1611,15 +1959,18 @@
             0
           ],
           "curl.R": 12,
-          "note": "The open calliper reaches to the cage-latch side of the seat rail, away from the face."
+          "note": "The open calliper reaches to the latch in front of the chest, away from the face. The torso leans forward sixteen degrees toward the chest-height measure.",
+          "torso": {
+            "pitch": -16
+          }
         },
         {
           "frame": 28,
           "hand.R": {
             "at": [
-              0.44,
-              0.23,
-              0.12
+              0.28,
+              0.46,
+              0.13
             ]
           },
           "wrist.R": [
@@ -1637,15 +1988,18 @@
             0
           ],
           "curl.R": 12,
-          "note": "Hold. The open calliper reaches to the cage-latch side of the seat rail, away from the face."
+          "note": "Hold. The open calliper reaches to the latch in front of the chest, away from the face. The torso leans forward sixteen degrees toward the chest-height measure.",
+          "torso": {
+            "pitch": -16
+          }
         },
         {
           "frame": 35,
           "hand.R": {
             "at": [
-              0.44,
-              0.23,
-              0.12
+              0.28,
+              0.46,
+              0.13
             ]
           },
           "wrist.R": [
@@ -1663,15 +2017,18 @@
             0
           ],
           "curl.R": -32,
-          "note": "The calliper closes to measure the side latch."
+          "note": "The calliper closes to measure the front latch. The torso leans forward sixteen degrees toward the chest-height measure.",
+          "torso": {
+            "pitch": -16
+          }
         },
         {
           "frame": 42,
           "hand.R": {
             "at": [
-              0.44,
-              0.23,
-              0.12
+              0.28,
+              0.46,
+              0.13
             ]
           },
           "wrist.R": [
@@ -1689,15 +2046,18 @@
             0
           ],
           "curl.R": -32,
-          "note": "Hold. The calliper closes to measure the side latch."
+          "note": "Hold. The calliper closes to measure the front latch. The torso leans forward sixteen degrees toward the chest-height measure.",
+          "torso": {
+            "pitch": -16
+          }
         },
         {
           "frame": 43,
           "hand.R": {
             "at": [
-              0.44,
-              0.23,
-              0.12
+              0.28,
+              0.46,
+              0.13
             ]
           },
           "wrist.R": [
@@ -1715,15 +2075,18 @@
             0
           ],
           "curl.R": -32,
-          "note": "One exact nod over the measured side latch."
+          "note": "One exact nod over the measured front latch. The torso leans forward sixteen degrees toward the chest-height measure.",
+          "torso": {
+            "pitch": -16
+          }
         },
         {
           "frame": 46,
           "hand.R": {
             "at": [
-              0.44,
-              0.23,
-              0.12
+              0.28,
+              0.46,
+              0.13
             ]
           },
           "wrist.R": [
@@ -1741,15 +2104,18 @@
             0
           ],
           "curl.R": -32,
-          "note": "Hold. One exact nod over the measured side latch."
+          "note": "Hold. One exact nod over the measured front latch. The torso leans forward sixteen degrees toward the chest-height measure.",
+          "torso": {
+            "pitch": -16
+          }
         },
         {
           "frame": 51,
           "hand.R": {
             "at": [
-              0.44,
-              0.23,
-              0.12
+              0.28,
+              0.46,
+              0.13
             ]
           },
           "wrist.R": [
@@ -1767,15 +2133,18 @@
             0.02
           ],
           "curl.R": 8,
-          "note": "The claw opens as the side latch gives; the body rises two centimetres before settling onto the seat."
+          "note": "The claw opens as the front latch gives; the body rises two centimetres before settling onto the seat. The torso leans forward sixteen degrees toward the chest-height measure.",
+          "torso": {
+            "pitch": -16
+          }
         },
         {
           "frame": 54,
           "hand.R": {
             "at": [
-              0.44,
-              0.23,
-              0.12
+              0.28,
+              0.46,
+              0.13
             ]
           },
           "wrist.R": [
@@ -1793,7 +2162,10 @@
             0.02
           ],
           "curl.R": 8,
-          "note": "Hold. The claw opens as the side latch gives; the body rises two centimetres before settling onto the seat."
+          "note": "Hold. The claw opens as the front latch gives; the body rises two centimetres before settling onto the seat. The torso leans forward sixteen degrees toward the chest-height measure.",
+          "torso": {
+            "pitch": -16
+          }
         },
         {
           "frame": 60,
@@ -1804,23 +2176,23 @@
               0.1
             ]
           },
-          "goggles": 55,
+          "goggles": 30,
           "root": [
             0,
             0,
             0
           ],
-          "note": "The body settles to seated height while the claw withdraws and the visor rises."
+          "note": "After the measure, nod and root settlement, make a smaller thirty-degree visor flip as the last beat."
         },
         {
           "frame": 66,
-          "goggles": 55,
+          "goggles": 30,
           "root": [
             0,
             0,
             0
           ],
-          "note": "Hold the raised visor with the claw returned to its yoke."
+          "note": "After the measure, nod and root settlement, make a smaller thirty-degree visor flip as the last beat."
         },
         {
           "frame": 69,
