@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "67f902583c35621a1367dd53981f6dd918a162476cbc79ce8611110c8b5f7bf0",
+  "bake_sha256": "f1cd33b12cda337f0cdb65282f801d9a8ce07031f9e6d4cc44ebc7942f3ee03c",
   "beacon_ok": false,
   "breaches": [],
-  "bytes": 1113854,
-  "edges": 315002,
+  "bytes": 1110769,
+  "edges": 314602,
   "first_failed": "beacon_ok",
   "flags": {
-    "deck": 84,
-    "door_ok": 39961,
+    "deck": 44,
+    "door_ok": 39921,
     "line": 342,
-    "open": 40454,
-    "sight_ok": 10160,
+    "open": 40414,
+    "sight_ok": 10158,
     "under": 22
   },
   "full_visit_m": 2041,
   "full_visit_ratio": "1.588",
-  "graph_sha256": "02c3fff6df963bc8b7aea78ee274a646f1a4106a8a3f786a978610ce98025f29",
+  "graph_sha256": "147e86c6f16a2cd83853e58c16c3bb784d1b018dc0160654ee43156cc5e35ff9",
   "line_errors": [],
   "line_path_nodes": 118,
   "longest_est_m": 2651,
   "map": "park_pit",
-  "nodes": 40485,
-  "park_sha256": "8bacf6ec4917f8fed2db93d077016eb8f1a6edcdc0fd1ffcab91b41a2b33bdee",
+  "nodes": 40445,
+  "park_sha256": "670c837482f097d429c3fb978d2bcad7493ed57e072bd0eab606b4219221fd64",
   "pockets": [
     {
       "clear_ring": [],
@@ -144,9 +144,7 @@
     "floor_bowl": [],
     "hoist_roof_line": [],
     "hoist_yard": [],
-    "main": [
-      "dump_wash_1 -> dump_wash_2: no path"
-    ],
+    "main": [],
     "north_dive": [],
     "north_plateau": [],
     "rim_zip_line": [],
@@ -408,6 +406,14 @@
         "d_landmark": 309.1,
         "name": "bench4_dive",
         "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1040.2,
+        "d_landmark": 509.2,
+        "name": "camp_dive_ore_bin",
+        "on_route": false,
         "rank": 0,
         "viable": false
       },
@@ -692,11 +698,11 @@
         "viable": false
       }
     ],
-    "count": 118,
+    "count": 119,
     "crossings": {
-      "drop": 45,
+      "drop": 40,
       "ride": 15,
-      "walk": 125
+      "walk": 129
     },
     "hidden": [
       {
