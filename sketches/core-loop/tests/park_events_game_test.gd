@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 const Families := preload("res://src/world/events/families.gd")
+const ParkSchema := preload("res://src/world/park/park_schema.gd")
 
 var t := T.new("park_events_game_test")
 var game
@@ -57,7 +58,9 @@ func _run() -> void:
 	t.check("clock_tier flood ends through the game loop", ended.has("plunge_pool_flood"), str(ended))
 	t.check("real flood uses a live water surface", flood_surface_seen)
 	t.check("real terrain resolves the flood as water", flood_material_seen)
-	t.near("real flood reaches the 1.2 m cap", flood_max_depth, 1.2)
+	var flood_row: Dictionary = game.ctx.terrain.map().park.event_rows.filter(func(row): return row.id == "plunge_pool_flood")[0]
+	var expected_depth := minf(float(flood_row.effect.depth_m), ParkSchema.MAX_EVENT_WATER_M)
+	t.near("real flood reaches its capped requested depth", flood_max_depth, expected_depth)
 	t.eq("one registration table names every family", Families.SCRIPTS.keys(), ["natural", "fleet", "ancient", "industrial"])
 	var warden = game.flow.warden
 	t.check("real park Warden exists", is_instance_valid(warden))

@@ -2,6 +2,7 @@ extends SceneTree
 
 const Director := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const T := preload("res://tests/support/t.gd")
 const Events := preload("res://src/core/game_events.gd")
 const Audio := preload("res://src/presentation/audio.gd")
@@ -69,7 +70,7 @@ func _initialize() -> void:
 
 func _row(kind: String, form: String) -> Dictionary:
 	var water := kind in ["flood_fill", "drain", "flash_flood"]
-	var effect := {"depth_m": 9.0, "fill_s": 2.0, "material": "water"} if water else {"swap": "rubble_ramp", "strike_m": 6.0, "damage": 8.0}
+	var effect := {"depth_m": ParkSchema.MAX_EVENT_WATER_M * 2.0, "fill_s": 2.0, "material": "water"} if water else {"swap": "rubble_ramp", "strike_m": 6.0, "damage": 8.0}
 	if kind == "lightning":
 		effect.erase("swap")
 	return {"id": kind, "kind": kind, "family": "natural", "site": "site",
@@ -128,7 +129,8 @@ func _run() -> void:
 			for i in 25:
 				w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true})
 			var depth: float = float(state.get("depth_m", -INF))
-			t.near(kind + " committed water depth", depth, 0.0 if kind == "drain" else 1.2)
+			var expected_depth := 0.0 if kind == "drain" else minf(float(row.effect.depth_m), ParkSchema.MAX_EVENT_WATER_M)
+			t.near(kind + " committed water depth", depth, expected_depth)
 			t.check(kind + " uses Flood rendering", state.get("water") != null)
 			if state.get("water") != null:
 				t.near(kind + " rendered surface agrees", state.water.surface_y(), depth)
@@ -191,7 +193,7 @@ func _water_lifecycle() -> void:
 	t.near("grounded hold also holds the renderer", state.water.surface_y(), held)
 	for i in 25:
 		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true})
-	t.near("water rise resumes after clearance", state.depth_m, 1.2)
+	t.near("water rise resumes after clearance", state.depth_m, ParkSchema.MAX_EVENT_WATER_M)
 	for i in 80:
 		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 2, "grounded": true})
 	var inside: bool = w.terrain.flood.in_basin(Vector3.ZERO)
@@ -201,6 +203,6 @@ func _water_lifecycle() -> void:
 		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 2, "grounded": true})
 	w.terrain.flood.in_basin(Vector3.ZERO)
 	t.check("drain end restores the prior live water", state.water.visible)
-	t.near("restored water material uses its surface", w.terrain.flood.surface_y(), 1.2)
+	t.near("restored water material uses its surface", w.terrain.flood.surface_y(), ParkSchema.MAX_EVENT_WATER_M)
 	handler.release()
 	w.free()
