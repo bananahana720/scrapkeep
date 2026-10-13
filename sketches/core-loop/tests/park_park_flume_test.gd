@@ -344,6 +344,7 @@ func collapse_event_pins() -> void:
 	var facts_seen := []
 	var times := {}
 	var land_s := -1.0
+	var reactor_live_at_land := false
 	var ball: Vector3 = game.player.ball_position()
 	for step in 2400:
 		var context := {"clock_tier": 2, "grounded": false, "bar_s": 240.0 / 172.0, "bar_origin_s": 0.0,
@@ -357,6 +358,9 @@ func collapse_event_pins() -> void:
 			if fact.has("fact"):
 				facts_seen.append(fact.fact)
 				times[fact.fact] = fact.time_s
+			if fact.kind == "started" and fact.id == "annex_reactor_blow":
+				var active: Dictionary = world.event_families.industrial.active.get(fact.id, {})
+				reactor_live_at_land = not active.is_empty() and active.hazard.is_live()
 			if fact.kind == "started" and fact.id == "hollow_trestle_collapse":
 				land_s = fact.time_s
 		if land_s >= 0.0 and world.events.stage_time >= land_s + 2.1:
@@ -366,8 +370,7 @@ func collapse_event_pins() -> void:
 		t.check(spec[0] + " authored lead", float(times.get(spec[1], -1000.0)) - float(times.get(spec[0], 0.0)) >= float(spec[2]))
 		t.check(spec[0] + " presentation uses common kind records", not Kinds.world_row(spec[0]).is_empty() and not Kinds.world_row(spec[1]).is_empty())
 	t.check("collapse route flags", world.events.route_open("trestle_ramp_line") and not world.events.route_open("flume_mid"))
-	var industrial: Dictionary = world.event_families.industrial.active.get("annex_reactor_blow", {})
-	t.check("reactor fallout and annex route", not industrial.is_empty() and industrial.hazard.is_live() and world.events.route_open("annex_ramp_line"))
+	t.check("reactor fallout at land and annex route", reactor_live_at_land and world.events.route_open("annex_ramp_line"))
 	var map = world.terrain.map()
 	var swap: Dictionary = map.swaps.get("trestle_ramp", {}) if "swaps" in map else {}
 	if t.check("collapse has a physical swapped surface", not swap.is_empty() and swap.has("target")):
