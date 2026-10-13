@@ -27,7 +27,11 @@ func _run() -> void:
 	w.mount_driver.sheet_left=0.0
 	w.mount_driver.step(w,1.0/Engine.physics_ticks_per_second)
 	p.step(Posture.DRAIN_DELAY+0.5)
-	t.eq("dam dry drain keeps its delay and rate",p.posture,40.0-Posture.DRAIN_RATE*0.5)
+	t.eq("engaged dam holds posture through dry seconds",p.posture,40.0)
+	w.live=func(): return false
+	w.mount_driver.step(w,1.0/Engine.physics_ticks_per_second)
+	p.step(Posture.DRAIN_DELAY+0.5)
+	t.eq("disengaged dam keeps ordinary drain",p.posture,40.0-Posture.DRAIN_RATE*0.5)
 	var normal=Posture.new()
 	normal.apply({"contact":true,"gain":40.0},1)
 	normal.step(Posture.DRAIN_DELAY+0.5)
