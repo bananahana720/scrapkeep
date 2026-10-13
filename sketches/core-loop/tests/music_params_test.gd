@@ -113,6 +113,7 @@ func _run() -> void:
 	for pilot in Harmony.CLASS_MOTIFS:
 		_ultimate_fixture(pilot)
 	_stopped_ultimate_fixture()
+	_handback_hum_fixture()
 	if OS.get_environment("KE10_UNIT_ONLY") == "1":
 		quit(t.verdict())
 		return
@@ -169,6 +170,22 @@ func _stopped_ultimate_fixture() -> void:
 	audio.ace.ultimate_lift = true
 	audio._set_ult_lift(false)
 	t.check("stopped ACE sequencer clears spent lift", not audio.ace.ultimate_lift)
+	audio.free()
+
+
+func _handback_hum_fixture() -> void:
+	var audio := Audio.new()
+	audio.engine = Music.new()
+	audio.engine.out_landmark = PackedVector2Array([Vector2(0.25, 0.25)])
+	audio.engine.out_music = PackedVector2Array([Vector2(0.25, 0.25)])
+	audio._unmute_at = 0
+	audio._fade_in_band(0, 1)
+	t.eq("handback first frame retains landmark hum", audio.engine.out_music[0], Vector2(0.25, 0.25))
+	audio.engine.out_music = PackedVector2Array([Vector2(0.75, 0.75)])
+	var half_sample := floori(audio.UNMUTE_RAMP / 2)
+	audio._fade_in_band(half_sample, 1)
+	var expected := 0.25 + 0.5 * half_sample / audio.UNMUTE_RAMP
+	t.eq("handback fades only the synth contribution", audio.engine.out_music[0], Vector2(expected, expected))
 	audio.free()
 
 

@@ -90,6 +90,16 @@ func _run() -> void:
 	t.eq("ACE approach uses committed graph feed", float(ace.parameters.get("approach", -1.0)), 1.0)
 	t.check("record-selected landmark hum survives handover", engine.band_muted and engine.landmark_hum_sound == String(EventKinds.world_row("landmark_hum").sound) and Array(engine.out_landmark).any(func(v): return v.length_squared() > 0.0))
 	t.check("audible handover mix includes landmark hum", _hum_in_mix(audio))
+	var hum_voices: Array = engine._voices.filter(func(v): return v.layer == engine.LANDMARK_HUM)
+	engine._voices = [hum_voices.back()]
+	engine.solo = [engine.LANDMARK_HUM]
+	engine._lp.fill(0.0)
+	engine._lp_on = false
+	audio._unmute_band()
+	audio._render_music(4096, true)
+	t.check("handback ramp preserves audible landmark hum", _hum_in_mix(audio))
+	engine.solo = []
+	audio._hand_over_band()
 	game.run.mass = 20.0
 	_pump_to(audio, boundary + phrase * 2 - 8192)
 	t.check("ACE armour waits for phrase", _other_target(ace) > 0.0)
