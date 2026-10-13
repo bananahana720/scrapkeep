@@ -1,5 +1,6 @@
 extends Node
 
+const Activities := preload("res://src/world/activities.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
@@ -1126,7 +1127,8 @@ func wire_optional() -> void:
 	_listen_optional(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
 		play("bet_resolved", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("bet", "won" if won else "lost"), cue_context())))
 	_listen_optional(events, "activity_done", func(id: String, _at: Vector3):
-		play("activity_done", 0.0, 1.0, "SFX", Rows.heard(EventKinds.activity_row(id), cue_context())))
+		if not Activities.RULES.get(id, {}).has("bundle"):
+			play("activity_done", 0.0, 1.0, "SFX", Rows.heard(EventKinds.activity_row(id), cue_context())))
 	_listen_optional(events, "core_gained", _on_core)
 	_listen_optional(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
 	_listen_optional(events, "synergy_discovered", _on_synergy)

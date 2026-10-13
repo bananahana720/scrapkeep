@@ -5,6 +5,7 @@ extends SceneTree
 # that rule; the clean fixture and the six stage pages' park file and pilot line drafts load
 # with zero errors (design-v3/PARK.md section 2, K-UNITS KB2).
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const Activities := preload("res://src/world/activities.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
 const FIXTURE := "res://src/world/park/park_test.json"
@@ -20,8 +21,11 @@ func _initialize() -> void:
 	_fixture = read["data"]
 	_report("fixture loads with zero errors", read["errors"].is_empty(), ParkSchema.describe(read["errors"]))
 	_report("fixture is a 1.6 km park with rows in every table", _fixture_full(), "")
-	_report("activity kinds match ACTIVITY_ROWS", ParkSchema.ACTIVITY_KINDS == EventKinds.ACTIVITY_ROWS.keys(),
-		str(ParkSchema.ACTIVITY_KINDS))
+	var aliases := []
+	for kind in ParkSchema.ACTIVITY_KINDS:
+		var rule: Dictionary = Activities.RULES.get(kind, {})
+		aliases.append(String(rule.get("cue", {}).get("view", kind)))
+	_report("activity kinds resolve existing presentation rows", aliases.all(func(alias): return EventKinds.ACTIVITY_ROWS.has(alias)) and EventKinds.ACTIVITY_ROWS.keys().all(func(kind): return kind in aliases), str(aliases))
 	if not _fixture.is_empty():
 		_planted_rows()
 		_planted_lines()
