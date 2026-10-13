@@ -7,6 +7,7 @@ const HoldRelay := preload("res://src/world/hold_relay.gd")
 const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
 const TerrainEvent := preload("res://src/world/terrain_event.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
@@ -53,10 +54,13 @@ const PARK_BAR_S := 240.0 / 172.0
 const PARK_GROUND_CAP := 2
 const PARK_FAMILY_CAP := 1
 const PARK_LAND_FACTS := {
+	"ground_slump": "ground_slump_landed",
 	"flood_rising": "flood_landed", "fleet_inbound": "fleet_landed",
 	"ancient_stirring": "ancient_erupted", "boiler_pressure": "boiler_landed",
 	"lightning_charge": "lightning_landed",
 	"cave_in_crumble": "cave_in_swap", "impact_incoming": "impact_swap",
+	"crust_crack": "crust_crack_landed", "drain_gurgle": "drain_landed", "trestle_groan": "trestle_landed",
+	"lightning_mark": "lightning_mark_landed", "reactor_overload": "reactor_landed",
 }
 
 var rng := RandomNumberGenerator.new()
@@ -409,7 +413,7 @@ func _build_park(park: Dictionary, height: Callable) -> void:
 func _park_state(row: Dictionary, weather: bool) -> Dictionary:
 	return {"row": row, "weather": weather, "phase": WAITING, "ready_s": 0.0,
 		"due_s": 0.0, "holding": false, "pending": 0, "live_elapsed_s": 0.0,
-		"rise_s": 0.0, "context": {}}
+		"rise_s": 0.0, "collapse_s": 0.0, "context": {}}
 
 
 func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dictionary, facts: Array) -> void:
@@ -437,6 +441,7 @@ func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dict
 		state.phase = LIVE
 		state.live_elapsed_s = 0.0
 		state.rise_s = 0.0
+		state.collapse_s = 0.0
 		_park_hook("land", state, ctx)
 		if not state.weather:
 			facts.append(_park_world(state, PARK_LAND_FACTS[state.row.telegraph.form], "land"))
@@ -508,7 +513,13 @@ func _park_capacity(candidate: Dictionary) -> bool:
 			if state.weather and state.row.kind != "clear" and candidate.row.kind != "clear":
 				return false
 		elif not state.weather:
-			ground += int(_park_ground(state.row))
+			var progress_s: float = state.live_elapsed_s
+			if state.row.kind == "collapse":
+				progress_s = state.collapse_s
+			elif state.row.kind != "drain" and (state.row.kind in ["flood_fill", "flash_flood"] or state.row.effect.get("material") == "water"):
+				progress_s = state.rise_s
+			var settled := float(state.row.live_s) == 0.0 and progress_s >= maxf(0.0, float(state.row.effect.get("fill_s", 0.0)))
+			ground += int(_park_ground(state.row) and not settled)
 			family += int(state.row.family == candidate.row.family)
 	if candidate.weather:
 		return true
@@ -529,7 +540,7 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 		return
 	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
 	state.live_elapsed_s += dt
-	if not state.weather and _park_rising(state) and not _park_clear(state, ball, velocity, ctx):
+	if not state.weather and (_park_rising(state) or _park_collapsing(state)) and not _park_clear(state, ball, velocity, ctx):
 		return
 	var step_ctx := ctx.duplicate(true)
 	step_ctx.delta_s = dt
@@ -537,10 +548,16 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	_park_hook("step", state, step_ctx)
 	if state.phase != LIVE:
 		return
+	if not state.weather and state.row.kind == "collapse":
+		state.collapse_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.collapse_s) + dt)
 	if not state.weather and _park_rising(state):
 		state.rise_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.rise_s) + dt)
 	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001 and _park_can_end(state):
 		_park_end(state, facts)
+
+
+static func _park_collapsing(state: Dictionary) -> bool:
+	return state.row.kind == "collapse" and state.collapse_s < float(state.row.effect.get("fill_s", 0.0))
 
 
 static func _park_rising(state: Dictionary) -> bool:
@@ -572,7 +589,7 @@ func _park_hook(action: String, state: Dictionary, context: Dictionary) -> void:
 func _park_at(state: Dictionary) -> Vector3:
 	if state.weather:
 		return Vector3.ZERO
-	var site: Dictionary = _park_sites[state.row.site]
+	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
 	var at := Vector2(float(site.at[0]), float(site.at[1]))
 	return Vector3(at.x, float(site.y) if site.y != null else float(_park_height.call(at.x, at.y)), at.y)
 
@@ -596,7 +613,7 @@ func _park_world(state: Dictionary, form: String, phase: String) -> Dictionary:
 func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: Dictionary) -> bool:
 	if state.weather:
 		return true
-	var site: Dictionary = _park_sites[state.row.site]
+	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
 	var half := ParkMap.footprint_half_extents(site)
 	if state.row.effect.has("footprint_m"):
 		var footprint = state.row.effect.footprint_m
@@ -618,7 +635,11 @@ func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: D
 	return true
 
 
-func _park_route_safe(proposed: Dictionary, withdrawing := false) -> bool:
+func route_open(route_id: String) -> bool:
+	return bool(_park_routes_open().get(route_id, false))
+
+
+func _park_routes_open(proposed: Dictionary = {}, withdrawing := false) -> Dictionary:
 	var open := {}
 	for route in _park.get("routes", []):
 		open[route.id] = true
@@ -635,6 +656,11 @@ func _park_route_safe(proposed: Dictionary, withdrawing := false) -> bool:
 	for change in changes:
 		for id in change.closes:
 			open[id] = false
+	return open
+
+
+func _park_route_safe(proposed: Dictionary, withdrawing := false) -> bool:
+	var open := _park_routes_open(proposed, withdrawing)
 	var reached := {"drop_in": true}
 	var pending := ["drop_in"]
 	while not pending.is_empty():

@@ -155,7 +155,8 @@ void fragment() {
 
 
 # The seat-back DecalPlate on the Pod (ROSTER-LOOK section 7) takes the decal when the shell
-# has one; else the decal projects onto Core glass or paint as before. Both placements use one
+# has one; else the decal projects onto gap-panel and ring-band paint, never the Core lattice.
+# Both placements use one
 # cached material per placement, tile and tint, so refits never build a new one.
 func _apply_decal(rec: Dictionary, row: Dictionary) -> void:
 	var core = rec.get("core")
@@ -180,10 +181,14 @@ func _apply_decal(rec: Dictionary, row: Dictionary) -> void:
 		if not _decal["surfaces"].is_empty():
 			return
 	var mat := decal_material("core", row)
-	for mesh in _meshes(core):
+	for mesh in _meshes(pod):
+		var ring_band: bool = mesh.name == "WeaponRing"
+		var gap_panel: bool = mesh.name == "Pod" and String(mesh.get_parent().name) in ["HeftC2", "HeftC3", "HeftC4", "HeftC5"]
+		if not ring_band and not gap_panel:
+			continue
 		for surface in mesh.mesh.get_surface_count():
 			var original: Material = mesh.get_active_material(surface)
-			if original == null or not original.resource_name in ["glass", "paint"]:
+			if original == null or original.resource_name != "paint":
 				continue
 			_decal["surfaces"].append({"mesh": mesh, "surface": surface, "material": mesh.get_surface_override_material(surface)})
 			mesh.set_surface_override_material(surface, mat)

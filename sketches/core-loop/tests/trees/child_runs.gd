@@ -12,6 +12,10 @@ static func run(jobs: Array, timeout_s: float) -> Array:
 		var log_path := dir.path_join("child-%d.log" % i)
 		var args: Array = ["--headless", "--fixed-fps", "90", "--log-file", log_path, "--path", project,
 			"--script", jobs[i]["script"], "--"] + jobs[i].get("args", [])
+		if jobs[i]["script"] in ["res://tools/bot_run.gd", "res://tools/posture_sweep.gd",
+			"res://tests/posture_bands_mind_test.gd", "res://tests/posture_bands_reactor_test.gd",
+			"res://tests/posture_bands_swarm_test.gd"]:
+			args.append("--gate=1")
 		running.append({"pid": OS.create_process(OS.get_executable_path(), PackedStringArray(args)), "log": log_path})
 	var start := Time.get_ticks_msec()
 	while running.any(func(r): return OS.is_process_running(r["pid"])) and Time.get_ticks_msec() - start < timeout_s * 1000.0:

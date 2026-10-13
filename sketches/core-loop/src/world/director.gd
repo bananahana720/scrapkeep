@@ -44,6 +44,7 @@ enum { CHASER, LOBBER }
 
 const Roster := preload("res://src/combat/roster.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Cards := preload("res://src/world/director_cards.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
@@ -96,6 +97,7 @@ const FLANK_RANGE := Vector2(45.0, 70.0)
 const MIN_GAP := 25.0
 const SLOW := 3.0
 const TRIES := 8
+const HOME_WINDOW := Vector2(60.0, 250.0)
 # Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
 # elite pack again; never two elites in a row.
 const ELITE_REPEAT := 0.1
@@ -110,6 +112,10 @@ const BREATH := {
 }
 
 var stage_time := 0.0
+var mode := "interval"
+var credits := 0.0
+var credits_accrued := 0.0
+var credits_spent := 0.0
 var spike := false
 # The stage's threat dial from stage_defs.gd: more enemies alive, arriving sooner, and
 # the one input to enemy HP.
@@ -151,6 +157,13 @@ var _arrivals_made := 0
 var _next_pack := {}
 var _last_pack_id := ""
 var _last_was_elite := false
+var homes: Array[Dictionary] = []
+var _park_map
+var _park_graph
+var _corridors
+var _home_sites := {}
+var _forward_homes: Array[Dictionary] = []
+var _stopped_kinds := {}
 
 
 func _init(seed_value := 20260922) -> void:
@@ -217,9 +230,12 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 	for a in arrivals.duplicate():
 		if a["left"] <= 0.0:
 			arrivals.erase(a)
-			if (a["at"] as Vector2).distance_to(ball) >= MIN_GAP:
+			if (a["at"] as Vector2).distance_to(ball) >= MIN_GAP and not _kind_stopped(a["kind"]):
 				due.append({"kind": a["kind"], "at": a["at"]})
 	if paused:
+		return due
+	if mode == "credit":
+		_credit_advance(delta, alive_count + due.size(), ball, velocity, forward)
 		return due
 	_timer -= delta
 	while _timer <= 0.0:
@@ -236,16 +252,111 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 		var weight := reinforcement_weight()
 		var pack := compose() if weight > 0.0 and room >= 2 and _rng.randf() < weight else []
 		if pack.is_empty():
-			arrivals.append({"kind": LOBBER if _rng.randf() < lobber_share() else CHASER, "at": at, "left": ARRIVAL})
+			var kind := LOBBER if _rng.randf() < lobber_share() else CHASER
+			if _park_map == null:
+				arrivals.append({"kind": kind, "at": at, "left": ARRIVAL})
+			else:
+				_place_pack(at, [KIND_NAMES[kind]], ball)
 			continue
 		_place_pack(at, pack, ball)
 	return due
 
 
+func income_per_second() -> float:
+	return Cards.I0 * (1.0 + Cards.K * effective_tier())
+
+
+func credit_pack_cost(kinds: Array, is_elite := false) -> float:
+	return Cards.cost(kinds, is_elite)
+
+
+func _credit_advance(delta: float, alive_count: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> void:
+	var room := cap() - alive_count - arrivals.size()
+	if room <= 0:
+		return
+	var income := delta * income_per_second()
+	credits += income
+	credits_accrued += income
+	if _next_pack.is_empty():
+		_next_pack = _draw_credit()
+	if _next_pack.is_empty() or _next_pack.kinds.size() > room:
+		return
+	while room > 0:
+		if _next_pack.is_empty():
+			_next_pack = _draw_credit()
+		if _next_pack.is_empty():
+			return
+		var kinds: Array = _next_pack.kinds
+		var is_elite: bool = _next_pack == elite
+		var price := credit_pack_cost(kinds, is_elite)
+		if kinds.size() > room or price > credits:
+			return
+		var at := spawn_spot(ball, velocity, forward)
+		if at == Vector2.INF:
+			return
+		var first := arrivals.size()
+		var queued := _place_pack(at, kinds, ball)
+		if queued == 0:
+			return
+		var placed := []
+		for arrival in arrivals.slice(first):
+			placed.append(KIND_NAMES[arrival.kind])
+		var spent := credit_pack_cost(placed, is_elite)
+		credits -= spent
+		credits_spent += spent
+		packs.append({"id": _next_pack.id, "kinds": placed, "tests": _next_pack.get("tests", "")})
+		_last_was_elite = is_elite
+		if not is_elite:
+			_last_pack_id = _next_pack.id
+		_next_pack = {}
+		_arrivals_made += 1
+		room -= queued
+
+
+func _draw_credit() -> Dictionary:
+	if not elite.is_empty() and elite_arrival > 0:
+		if _arrivals_made + 1 == elite_arrival:
+			return elite
+		if _arrivals_made + 1 > elite_arrival and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate"):
+			return elite
+	var choices: Array = authored
+	var weights := {}
+	if choices.is_empty():
+		choices = [{"id": "chaser", "kinds": ["chaser"]}, {"id": "lobber", "kinds": ["lobber"]}]
+		var share := reinforcement_weight()
+		weights = {"chaser": (1.0 - share) * (1.0 - lobber_share()), "lobber": (1.0 - share) * lobber_share()}
+		var open := open_packs()
+		for id in open:
+			var pack: Dictionary = PACKS[id]
+			choices.append({"id": id, "kinds": [pack.controller, pack.punisher], "tests": pack.tests})
+			weights[id] = share * (1.0 - ANCIENT_SHARE) * pack_weight(id) / open.size()
+		if effective_tier() > 0:
+			var ancient := _ancient()
+			choices.append({"id": ancient, "kinds": [ancient], "tests": "ancient"})
+			weights[ancient] = share * ANCIENT_SHARE
+	var pool := choices if authored.is_empty() else choices.filter(func(p: Dictionary) -> bool: return p.id != _last_pack_id)
+	if pool.is_empty():
+		pool = choices
+	var total := 0.0
+	for pack in pool:
+		total += Cards.weight(pack.kinds) * float(weights.get(pack.id, 1.0))
+	if total <= 0.0:
+		return {}
+	var pick := _rng.randf() * total
+	for pack in pool:
+		pick -= Cards.weight(pack.kinds) * float(weights.get(pack.id, 1.0))
+		if pick < 0.0:
+			return pack
+	return pool[-1]
+
+
 # One pack's members side by side across the line from the ball, on one ring timer.
-func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> void:
+func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> int:
+	var queued := 0
 	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
 	var side := Vector2(-heading.y, heading.x)
+	var home_spots := _home_pack_spots(kinds, ball, side) if _park_map != null and not _forward_homes.is_empty() else {}
+	var assigned: Array[Vector2] = []
 	for i in kinds.size():
 		var kind := KIND_NAMES.find(kinds[i])
 		if kind == -1:
@@ -261,8 +372,19 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> void:
 		var spot: Vector2 = at + side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
 		spot.x = clampf(spot.x, play_rect.position.x, play_rect.end.x)
 		spot.y = clampf(spot.y, play_rect.position.y, play_rect.end.y)
+		if _park_map != null:
+			if _kind_stopped(kind):
+				continue
+			if not _forward_homes.is_empty():
+				spot = home_spots.get(i, Vector2.INF)
+			if spot == Vector2.INF or not _park_safe(spot) or spot.distance_to(ball) < MIN_GAP or not _pack_gap(spot, assigned):
+				continue
 		arrivals.append({"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq})
-	_pack_seq += 1
+		assigned.append(spot)
+		queued += 1
+	if _park_map == null or queued > 0:
+		_pack_seq += 1
+	return queued
 
 
 # An authored arrival: the pack due next waits until the cap has room for all of it.
@@ -275,8 +397,10 @@ func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vec
 	var at := spawn_spot(ball, velocity, forward)
 	if at == Vector2.INF:
 		return
+	var queued := _place_pack(at, kinds, ball)
+	if _park_map != null and queued == 0:
+		return
 	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})
-	_place_pack(at, kinds, ball)
 	_last_was_elite = _next_pack == elite
 	if not _last_was_elite:
 		_last_pack_id = _next_pack["id"]
@@ -307,6 +431,165 @@ func use_row(row: Dictionary, breath_option := "") -> void:
 		_row = {"unlock_base": int(row["unlock_base"]), "ancient": String(row["ancient"])}
 	pressure_row = row.get("pressure", {})
 	breath = breath_option
+	_read_homes(String(row.get("map", "")))
+
+
+func _read_homes(map_id: String) -> void:
+	homes.clear()
+	_home_sites.clear()
+	_stopped_kinds.clear()
+	_forward_homes.clear()
+	_park_map = null
+	_park_graph = null
+	_corridors = null
+	var path := "res://src/world/park/%s.json" % map_id
+	if not map_id.begins_with("park_") or not FileAccess.file_exists(path):
+		return
+	# Runtime loads avoid the schema's preload of Director forming a cycle.
+	var map_script = load("res://src/world/park/park_map.gd")
+	var map = map_script.new(path)
+	if not map.ok:
+		return
+	_park_map = map
+	for row in map.park.park_rows:
+		_home_sites[row.id] = row
+	for row in map.park.home_rows:
+		var home: Dictionary = row.duplicate(true)
+		home.broken = false
+		homes.append(home)
+	var graph_path := "res://assets/park/%s/graph.bin" % map_id
+	if FileAccess.file_exists(graph_path):
+		_park_graph = load("res://src/world/park/park_graph.gd").read(graph_path)
+	# KE1 owns both the pilot-line reader and the corridor clearance.
+	_corridors = load("res://src/world/event_director.gd").new(0, {}, map, 0.0, Callable())
+
+
+func home_live(id: String) -> bool:
+	for home in homes:
+		if home.id == id:
+			return not home.broken and not home.dormant
+	return false
+
+
+func break_home(id: String) -> bool:
+	for home in homes:
+		if home.id != id or home.broken:
+			continue
+		home.broken = true
+		if home.stops_kind:
+			_stopped_kinds[home.enemy] = true
+			for arrival in arrivals.duplicate():
+				if _kind_stopped(arrival.kind):
+					arrivals.erase(arrival)
+		return true
+	return false
+
+
+func activate_home(id: String) -> bool:
+	for home in homes:
+		if home.id == id and not home.broken:
+			home.dormant = false
+			return true
+	return false
+
+
+func _kind_stopped(kind: int) -> bool:
+	return _stopped_kinds.has(KIND_NAMES[kind])
+
+
+func _home_at(home: Dictionary) -> Vector2:
+	var at: Array = _home_sites[home.site].at
+	return Vector2(float(at[0]), float(at[1]))
+
+
+func _ahead(at: Vector2, ball: Vector2) -> bool:
+	if _park_graph == null:
+		return false
+	var ahead: float = _park_graph.d_landmark(ball) - _park_graph.d_landmark(at)
+	return is_finite(ahead) and ahead >= HOME_WINDOW.x and ahead <= HOME_WINDOW.y
+
+
+func _window_homes(ball: Vector2) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for home in homes:
+		if home_live(home.id) and not _stopped_kinds.has(home.enemy) and _ahead(_home_at(home), ball):
+			out.append(home)
+	return out
+
+
+
+func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2) -> Dictionary:
+	var spots := {}
+	var assigned: Array[Vector2] = []
+	for home in _forward_homes:
+		var indices: Array[int] = []
+		for i in kinds.size():
+			var kind := KIND_NAMES.find(kinds[i])
+			if not spots.has(i) and kinds[i] == home.enemy and kind >= 0 and Roster.built(kinds[i]) and not _kind_stopped(kind):
+				indices.append(i)
+		if indices.is_empty():
+			continue
+		var site: Dictionary = _home_sites[home.site]
+		var half: Vector2 = _park_map.footprint_half_extents(site)
+		var group := {}
+		for attempt in TRIES * 4:
+			var offset := Vector2.ZERO if attempt == 0 else Vector2(_rng.randf_range(-half.x, half.x), _rng.randf_range(-half.y, half.y))
+			var anchor := _home_at(home) + offset.rotated(-deg_to_rad(float(site.yaw_deg)))
+			var occupied := assigned.duplicate()
+			group.clear()
+			for i in indices:
+				var spot := anchor + side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
+				if not _home_point_safe(site, spot, ball, occupied):
+					break
+				group[i] = spot
+				occupied.append(spot)
+			if group.size() == indices.size():
+				break
+		if group.size() == indices.size():
+			for i in indices:
+				spots[i] = group[i]
+				assigned.append(group[i])
+		else:
+			for i in indices:
+				var offset := side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
+				var spot := _home_spot(home, ball, offset, assigned)
+				if spot != Vector2.INF:
+					spots[i] = spot
+					assigned.append(spot)
+	return spots
+
+
+func _pack_gap(spot: Vector2, assigned: Array[Vector2]) -> bool:
+	for other in assigned:
+		if spot.distance_to(other) < PACK_SPREAD - 0.0001:
+			return false
+	return true
+
+
+func _home_point_safe(site: Dictionary, spot: Vector2, ball: Vector2, assigned: Array[Vector2]) -> bool:
+	return play_rect.has_point(spot) and _park_map.footprint_contains(site, spot) and _ahead(spot, ball) \
+		and spot.distance_to(ball) >= MIN_GAP and _park_safe(spot) and _pack_gap(spot, assigned)
+
+
+func _home_spot(home: Dictionary, ball: Vector2, preferred := Vector2.ZERO, assigned: Array[Vector2] = []) -> Vector2:
+	var site: Dictionary = _home_sites[home.site]
+	var half: Vector2 = _park_map.footprint_half_extents(site)
+	for i in TRIES * 4:
+		var offset := Vector2.ZERO if i == 0 else Vector2(_rng.randf_range(-half.x, half.x), _rng.randf_range(-half.y, half.y))
+		var spot := _home_at(home) + preferred + offset.rotated(-deg_to_rad(float(site.yaw_deg)))
+		if _home_point_safe(site, spot, ball, assigned):
+			return spot
+	return Vector2.INF
+
+
+func _park_safe(spot: Vector2) -> bool:
+	for line in _corridors._park_pilot_lines:
+		for i in range(1, line.size()):
+			# A point footprint uses ParkMap's same segment/margin predicate as KE1.
+			var point := {"at": [spot.x, spot.y], "size": [0.0, 0.0, 0.0], "yaw_deg": 0.0}
+			if _park_map.footprint_contains(point, line[i - 1], _corridors.PARK_CORRIDOR_M, line[i]):
+				return false
+	return true
 
 
 # One pressure key's multiplier: the stage row's times the Breath row's, 1.0 where either is silent.
@@ -423,6 +706,14 @@ func compose() -> Array:
 
 
 func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
+	if _park_map != null:
+		_forward_homes = _window_homes(ball)
+		if not _forward_homes.is_empty():
+			for home in _forward_homes:
+				var at := _home_spot(home, ball)
+				if at != Vector2.INF:
+					return at
+			return Vector2.INF
 	var heading := velocity.normalized() if velocity.length() > SLOW else forward.normalized()
 	var ahead := _rng.randf() < AHEAD_SHARE
 	for i in TRIES:
@@ -437,6 +728,6 @@ func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
 		var spot := ball + heading.rotated(angle) * dist
 		spot.x = clampf(spot.x, play_rect.position.x, play_rect.end.x)
 		spot.y = clampf(spot.y, play_rect.position.y, play_rect.end.y)
-		if spot.distance_to(ball) >= MIN_GAP:
+		if spot.distance_to(ball) >= MIN_GAP and (_park_map == null or _park_safe(spot)):
 			return spot
 	return Vector2.INF

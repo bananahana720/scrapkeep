@@ -164,7 +164,8 @@ func _check_label() -> void:
 # Wrecking Ball stays under its cap as the pool grows.
 # 2026-10-08 (alpha wave 11 GP2): six new parts; was arc 14, spiral 7, anchor 17, speed 31, mass 33
 # 2026-10-11 (alpha wave 13 SG5): load_dividend; was mass 35
-const TAG_COUNTS := {"frost": 5, "arc": 15, "kinetic": 19, "split": 5, "spiral": 8, "chain": 9, "anchor": 18,
+# 2026-10-12 (alpha wave 13 SR9): relay_convergence, seam-gated on relay.convergence; was arc 15
+const TAG_COUNTS := {"frost": 5, "arc": 16, "kinetic": 19, "split": 5, "spiral": 8, "chain": 9, "anchor": 18,
 	"speed": 32, "mass": 36}
 const KINETIC_SHARE_MAX := 0.25
 
@@ -277,7 +278,8 @@ func _check_needs_gate() -> void:
 	Parts.seams = {"spawner.extend_cloak": true}
 	var opened: bool = "feedback_loop" in Parts.offer_pool(Items.KEST, ["rare"])
 	Parts.seams = saved
-	_report("parts waiting on a seam are never offered", leaked.is_empty() and waiting.size() == 5 and opened,
+	# 2026-10-12 (alpha wave 13 SR9): relay_convergence waits on relay.convergence; was 5 waiting.
+	_report("parts waiting on a seam are never offered", leaked.is_empty() and waiting.size() == 6 and opened,
 		"%d parts wait on a seam %s; offered without it %s; feedback_loop offered once spawner.extend_cloak exists: %s"
 			% [waiting.size(), waiting, leaked, opened])
 

@@ -35,7 +35,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 
 const KEY_H := 28.0
 const MIN_ICON_SIDE := 28.0  # the smallest a key icon may shrink to at six cards (roster ruling R-B)
-const HEIGHT := 600.0
+const HEIGHT := 648.0
 const PAD := 18.0
 const PREVIEW_H := 260.0
 # A row too tall for the card takes height from the preview, never below this.
@@ -49,6 +49,7 @@ const MOUSE_CAP := 36.0
 const PIP := 9.0
 const CHIP_ICON := 18.0
 const CHIP_CAP := 14.0
+const TRADEOFF_H := 42.0
 const WORD_SIZE := 13
 const WORD_MIN := 9
 const SHAKE := 0.25
@@ -167,10 +168,17 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	line.custom_minimum_size = Vector2(0.0, 58.0)
 	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	box.add_child(line)
+	var tradeoff_slot := Control.new()
+	tradeoff_slot.custom_minimum_size.y = TRADEOFF_H
+	tradeoff_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(tradeoff_slot)
 	_tradeoff = _text(ClassKit.tradeoff(def), WORD_SIZE, Palette.SAND)
 	_tradeoff.name = "Tradeoff"
 	_tradeoff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_tradeoff)
+	_tradeoff.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_tradeoff.clip_text = true
+	tradeoff_slot.add_child(_tradeoff)
+	_tradeoff.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_details.append(_tradeoff)
 	# Two rows (design-v3/SKILL-BAR.md section 5): the bar as it plays (1, 2, 3, Q), then the
 	# chips (RMB, Shift, Ctrl) and the Space extras, one short line of icons. The keycaps are the
@@ -542,6 +550,7 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	while word_size > WORD_MIN and _widest_word(words, word_size) > cell_w:
 		word_size -= 1
 	label.add_theme_font_size_override("font_size", word_size)
+	label.custom_minimum_size.y = UiFonts.bold().get_height(word_size) * 2.0
 	label.max_lines_visible = 2
 	cell.add_child(label)
 	_details.append(label)
