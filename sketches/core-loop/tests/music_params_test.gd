@@ -73,7 +73,7 @@ func _run() -> void:
 	var hitch_end := Harmony.BAR + roundi(Harmony.RATE * 0.1)
 	_advance(hitch, Harmony.BAR - roundi(Harmony.RATE * 0.1))
 	hitch.render(hitch_end - hitch.clock)
-	var expected := ceili(float(hitch_end) / (Harmony.BAR / 4))
+	var expected := ceili(float(hitch_end) / (Harmony.BAR / Music.PARAMETER_SAMPLES_PER_BAR))
 	t.eq("ordinary grid survives a 200 ms hitch", hitch.get("parameter_sample_count"), expected)
 	# A short bar makes one hitch cross several sample deadlines, exposing lost catch-up.
 	var fast_hitch := Music.new()
@@ -87,7 +87,7 @@ func _run() -> void:
 	fast_hitch.render(hitch_frames)
 	t.eq("hitch is exactly 200 ms", hitch_frames, roundi(Harmony.RATE * 0.2))
 	t.eq("hitch advances the transport without a stall", fast_hitch.clock, fast_end)
-	t.eq("200 ms hitch skips no transport samples", fast_hitch.parameter_sample_count, ceili(float(fast_end) / (fast_bar / 4)))
+	t.eq("200 ms hitch skips no transport samples", fast_hitch.parameter_sample_count, ceili(float(fast_end) / (fast_bar / Music.PARAMETER_SAMPLES_PER_BAR)))
 	var bounded := Music.new()
 	bounded.call("set_parameter_source", func(): return {"threat": 1.5, "approach": -0.2, "armour": 0.5})
 	bounded.render(1)

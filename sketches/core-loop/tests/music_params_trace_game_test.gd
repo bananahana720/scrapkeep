@@ -107,7 +107,7 @@ func _run() -> void:
 	t.near("trace covers 300 simulation seconds", physics.seconds, 300.0, 0.000001)
 	t.check("five-minute trace is recorded", FileAccess.file_exists(trace_path) and not samples.is_empty(), trace_path)
 	t.eq("trace sampler clamps zero values", engine.parameter_clamps, 0)
-	t.eq("trace records every transport sample", samples.size(), ceili(float(engine._parameter_step) / (Harmony.STEPS_PER_BAR / 4)))
+	t.eq("trace records every transport sample", samples.size(), ceili(float(engine._parameter_step) / (Harmony.STEPS_PER_BAR / Music.PARAMETER_SAMPLES_PER_BAR)))
 	t.check("trace values stay in range", samples.all(func(s): return s.values.values().all(func(v): return v >= 0.0 and v <= 1.0)))
 	t.check("trace has no unflagged mid-phrase changes", changes.all(func(c): return (c.phrase and c.phrase_step % (Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR) == 0) or MusicRows.danger(c.danger) or (c.get("ultimate", false) and c.phrase_step % Harmony.STEPS_PER_BAR == 0)), str(changes.size()))
 	t.check("trace bot engages the dam Warden", engaged, "engaged=%s broke=%s" % [engaged, broke])
