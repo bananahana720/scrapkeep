@@ -1409,7 +1409,8 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 			and target.mount_driver.has_method("sheet_live"):
 		var sheet = target.mount_driver
 		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
-		var foot: Vector3 = at + dir * minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
+		var runup: float = float(sheet.SHEET_RUN) + RUNUP_EDGE if target.state_name() == "charging" else minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
+		var foot: Vector3 = at + dir * runup
 		var live: bool = sheet.sheet_live()
 		var steer: Vector3 = target.family_point_at() if live else _ground_point(foot.x, foot.z)
 		if kit.hooked:
@@ -1418,7 +1419,15 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_harpoon_commit = false
 		_anchor_below = 0.0
 		_goal = "ride spillway sheet" if live else "wait spillway sheet"
+		var boost_clock := _boost_clock
+		var ignore_walls := _ignore_walls
+		_boost_clock = maxf(_boost_clock, delta)
+		_ignore_walls = live
+		_slow_time = 0.0
+		_detour_time = 0.0
 		_act(steer, target, delta, target, false)
+		_ignore_walls = ignore_walls
+		_boost_clock = boost_clock
 		if not live:
 			source.press.erase("shift_pressed")
 			source.hold.erase("shift_held")
