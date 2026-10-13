@@ -301,6 +301,7 @@ func setup(ctx_ref) -> void:
 	engine = MusicEngine.new()
 	if ctx.has_method("aim_forward"):
 		engine.set_parameter_source(sample_run_parameters)
+		engine.parameter_commit.connect(_commit_band_parameters)
 	_music_player = _generator_player("Music", "MusicStream")
 	_stinger_player = _generator_player("SFX", "StingerStream")
 	_sfx_player = _poly_player("SFX", "SfxVoices")
@@ -519,7 +520,7 @@ func _process(delta: float) -> void:
 # Renders the same frames into both streams, so the band and the stinger lane stay
 # sample-locked. The synth band fills its ring; the ACE band keeps it at the POC's
 # QUEUE_TARGET, so a contact reaches the speaker sooner.
-func _pump() -> void:
+func _pump(virtual_frames := -1) -> void:
 	_guard_park_bookings()
 	if _ace_arrival_stage > 0 and _ace_arrival_at >= 0 and engine.clock > _ace_arrival_at and not engine.in_drop():
 		var stage := _ace_arrival_stage
@@ -532,7 +533,7 @@ func _pump() -> void:
 	if not live_output:
 		# No device: advance the band by the real time that passed, as a speaker would.
 		var now := Time.get_ticks_usec()
-		var owed := int((now - _virtual_usec) * Harmony.RATE / 1000000.0)
+		var owed := virtual_frames if virtual_frames >= 0 else int((now - _virtual_usec) * Harmony.RATE / 1000000.0)
 		if owed > 0:
 			var requested := mini(owed, 8192)
 			var frames := _park_render_limit(requested)
@@ -569,6 +570,14 @@ func _render_music(frames: int, ace_live: bool) -> void:
 		out_music = music
 	else:
 		out_music = _with_band(music, from)
+	if ace_live:
+		for i in frames:
+			out_music[i] += engine.out_landmark[i]
+
+
+func _commit_band_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String) -> void:
+	if ace != null:
+		ace.commit_parameters(at, values, released, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
 
 
 # One band at a time, handed over without a hole: the synth band plays until the ACE
@@ -595,13 +604,13 @@ func _with_band(music: PackedVector2Array, from: int) -> PackedVector2Array:
 	var n := mini(music.size(), band.size())
 	if _band_fade_start < 0:
 		for i in n:
-			music[i] += band[i]
+			music[i] += band[i] - engine.out_landmark[i]
 		return music
 	var inv := 1.0 / AceSequencer.STOP_RAMP
 	for i in n:
 		var g := clampf(1.0 - float(from + i - _band_fade_start) * inv, 0.0, 1.0)
 		if g > 0.0:
-			music[i] += band[i] * g
+			music[i] += (band[i] - engine.out_landmark[i]) * g
 	return music
 
 
@@ -659,7 +668,7 @@ func _ace_render(frames: int, live: bool) -> PackedVector2Array:
 	if ace == null:
 		return PackedVector2Array()
 	if live:
-		return ace.render(frames)
+		return ace.render(frames).duplicate()
 	ace.advance(frames)
 	return PackedVector2Array()
 
@@ -702,6 +711,9 @@ func ace_ready() -> bool:
 	ace.clock = engine.clock
 	ace.set_breath(breath())
 	ace.ultimate_lift = _ult_lift
+	ace.parameter_enabled = engine.parameter_source.is_valid()
+	if ace.parameter_enabled:
+		ace.commit_parameters(engine.clock, engine.parameter_committed_values, engine.parameter_committed_released, engine.ultimate_lift, "")
 	return true
 
 
@@ -2029,7 +2041,7 @@ func _set_ult_lift(on: bool) -> void:
 	engine.set_ultimate_lift(on)
 	# Written whether or not the band plays: a level band that ended for the flight keeps its
 	# sequencer, and a resume must not carry a lift the landing already released.
-	if ace != null:
+	if ace != null and not engine.parameter_source.is_valid():
 		ace.set_ultimate_lift(on)
 
 
@@ -2440,7 +2452,7 @@ func _on_pressure(pressure: float) -> void:
 	cue_log.append(["pressure_changed", "music_pressure", "music", engine.clock, 1.0])
 	if not engine.parameter_source.is_valid():
 		engine.set_pressure(pressure)
-	if ace_playing():
+	if ace_playing() and not engine.parameter_source.is_valid():
 		ace.set_pressure(pressure)
 
 

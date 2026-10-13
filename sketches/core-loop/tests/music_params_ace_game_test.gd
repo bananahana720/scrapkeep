@@ -32,9 +32,7 @@ func _run() -> void:
 	audio.set_process(false)
 	audio._flush_flow()
 	var engine = audio.engine
-	var present: bool = FileAccess.file_exists("res://assets/music_ace/spillway/calm.drums.ogg")
-	# The manifest owns filenames. This also handles a package with differently named clips.
-	present = Array(DirAccess.get_files_at("res://assets/music_ace/spillway")).any(func(name): return name.ends_with(".ogg"))
+	var present: bool = Array(DirAccess.get_files_at("res://assets/music_ace/spillway")).any(func(name): return name.ends_with(".ogg"))
 	if not present:
 		t.check("absent ACE stems retain audible synth fallback", not audio.ace_playing() and not engine.band_muted)
 		_pump_to(audio, engine.clock + Harmony.BAR)
@@ -49,12 +47,25 @@ func _run() -> void:
 	t.check("normal pump hands over and mutes synth", engine.band_muted and ace.active())
 	t.check("normal handover produces ACE PCM", Array(audio.out_music).any(func(v): return v.length_squared() > 0.0))
 	var before := _other_target(ace)
+	var step_origin: int = engine.grid_origin + ceili(float(engine.bar_origin - engine.grid_origin) / engine.step_len) * engine.step_len
+	var lift_boundary: int = step_origin + (floori(float(engine.clock - step_origin) / engine.bar_len()) + 1) * engine.bar_len()
+	audio._set_ult_lift(true)
+	_pump_to(audio, lift_boundary - 4096)
+	t.eq("performing ACE ultimate waits for next bar", _other_target(ace), before)
+	_pump_to(audio, lift_boundary + 4096)
+	t.near("performing ACE ultimate adds existing pressure step at next bar", _other_target(ace), _profile_other(ace) * 0.4)
+	t.check("performing ACE ultimate logs its next-bar commit", ace.parameter_layer_log.back().ultimate and ace.parameter_layer_log.back().at == lift_boundary)
+	audio._set_ult_lift(false)
+	_pump_to(audio, lift_boundary + engine.bar_len() + 4096)
+	t.near("performing ACE spent meter releases at next bar", _other_target(ace), before)
 	var enemy := ThreatEnemy.new()
 	root.add_child(enemy)
 	enemy.add_to_group("enemy")
 	enemy.global_position = game.player.ball_position() + game.ctx.aim_forward() * 0.1
 	var phrase: int = engine.bar_len() * Harmony.PHRASE_BARS
-	var boundary: int = engine.bar_origin + (floori(float(engine.clock - engine.bar_origin) / phrase) + 1) * phrase
+	# A same-tempo restart can reset the phrase between steps without moving the step grid.
+	var origin: int = engine.grid_origin + ceili(float(engine.bar_origin - engine.grid_origin) / engine.step_len) * engine.step_len
+	var boundary: int = origin + (floori(float(engine.clock - origin) / phrase) + 1) * phrase
 	_pump_to(audio, boundary - 8192)
 	t.near("ACE threat waits for phrase", _other_target(ace), before)
 	audio._on_pressure(0.0)
@@ -104,6 +115,7 @@ func _run() -> void:
 	var file := FileAccess.open("user://ke10-ace-commits.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify({"schema": "scrapkeep-ace-parameters/1", "commits": ace.parameter_layer_log, "samples": engine.parameter_sample_log, "band_muted": engine.band_muted, "misses": ace.misses, "short_reads": ace.short_reads}))
 	file.close()
+	t.check("ACE recorded parameter commits obey chosen boundaries", ace.parameter_layer_log.all(func(c): return c.timing.is_empty() or (c.timing.phrase and c.timing.phrase_step % 128 == 0) or Rows.danger(c.danger) or (c.ultimate and c.timing.phrase_step % 16 == 0)))
 	print("KE10_ACE_TRACE ", ProjectSettings.globalize_path("user://ke10-ace-commits.json"))
 	enemy.free()
 	game.queue_free()
@@ -113,8 +125,7 @@ func _run() -> void:
 func _pump_to(audio, until: int) -> void:
 	while audio.engine.clock < until:
 		var n := mini(4096, until - audio.engine.clock)
-		audio._virtual_usec = Time.get_ticks_usec() - ceili(float(n) * 1000000.0 / Harmony.RATE)
-		audio._pump()
+		audio._pump(n)
 
 func _other_target(ace) -> float:
 	for voice in ace.voices:

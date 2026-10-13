@@ -103,6 +103,12 @@ var mode := "off"
 var warden_state := "closed"
 var pressure := 0.0
 var ultimate_lift := false
+var parameter_enabled := false
+var parameters := {}
+var parameter_released := false
+var parameter_layer_log: Array = []
+var _parameter_follow_now := false
+var _parameter_danger_floor := 0.0
 var threat := 0
 var in_bay := false
 var built := false
@@ -277,6 +283,21 @@ func stop_at(at: int, ramp := STOP_RAMP) -> void:
 func set_pressure(value: float) -> void:
 	pressure = value
 	_follow()
+
+
+func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String, timing: Dictionary = {}) -> void:
+	parameter_enabled = true
+	_add({"at": maxi(at, clock), "type": "parameters", "values": values.duplicate(), "released": released, "lift": lift, "reason": reason, "timing": timing.duplicate()})
+
+
+# Demucs's other stem carries the melodic roles; drums and bass retain their profiles.
+# At full threat/approach the recorded mix is unchanged. Armour and release remove other.
+func parameter_gain(stem: String) -> float:
+	if not parameter_enabled or not parameters.has("threat") or stem != "other":
+		return 1.0
+	if parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3):
+		return 0.0
+	return clampf(maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), _parameter_danger_floor), float(parameters.get("approach", 0.0))), 0.0, 1.0)
 
 
 # A full ultimate meter is one pressure step for the ACE band, as set_ultimate_lift is one
@@ -616,6 +637,8 @@ func _desired() -> String:
 # Moves toward what the game asks for, at the first moment a change is allowed: never
 # inside a hold, never over a protected entry, never during the directed piece.
 func _follow() -> void:
+	if parameter_enabled and parameters.has("threat") and not _parameter_follow_now:
+		return
 	if mode == "off" or mode == "piece":
 		return
 	if hold_until > clock:
@@ -635,7 +658,7 @@ func _follow() -> void:
 	if want == section:
 		return
 	var row: Dictionary = sections[want]
-	_schedule(want, _landing(want, row["enter"] == "beat"))
+	_schedule(want, clock if parameter_enabled else _landing(want, row["enter"] == "beat"))
 
 
 # home and calm share a clip: the release from home into calm plays on without a join.
@@ -708,7 +731,7 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 	v.count = int(clip["sample_count"])
 	v.loop = bool(clip["loop"])
 	v.loop_offset = int(clip["loop_offset"])
-	var g := _gain_of(gains)
+	var g := _gain_of(gains, stem)
 	var hz = gains.get("lowpass_hz")
 	if hz != null:
 		v.lp = lowpass_coeffs(float(hz))
@@ -724,9 +747,9 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 	return v
 
 
-func _gain_of(stem_row: Dictionary) -> float:
+func _gain_of(stem_row: Dictionary, stem := "") -> float:
 	var db := float(stem_row["volume_db"])
-	return 0.0 if db <= float(manifest.get("silent_db", -80.0)) else db_to_linear(db)
+	return 0.0 if db <= float(manifest.get("silent_db", -80.0)) else db_to_linear(db) * parameter_gain(stem)
 
 
 func _ramp_to(v: Voice, g: float, frames: int) -> void:
@@ -739,7 +762,7 @@ func _retarget(frames: int) -> void:
 	var gains := _profile(section)
 	for v: Voice in voices:
 		var row: Dictionary = gains[v.stem]
-		_ramp_to(v, _gain_of(row), frames)
+		_ramp_to(v, _gain_of(row, v.stem), frames)
 		var hz = row.get("lowpass_hz")
 		if hz != null:
 			if v.lp.is_empty() or v.wet_target == 0.0:
@@ -781,6 +804,30 @@ func _cancel_pending(ramp := GAP_RAMP, keep := false) -> bool:
 
 func _run(action: Dictionary) -> void:
 	match action["type"]:
+		"parameters":
+			var previous_gain := parameter_gain("other")
+			var previous := parameters.duplicate()
+			var previous_released := parameter_released
+			var previous_lift := ultimate_lift
+			parameters = action.values
+			parameter_released = action.released
+			ultimate_lift = action.lift
+			pressure = float(parameters.get("threat", 0.0))
+			if action.reason != "ultimate":
+				_parameter_danger_floor = 1.0 if MusicRows.danger(action.reason) else 0.0
+			_parameter_follow_now = true
+			_follow()
+			_parameter_follow_now = false
+			if section != "":
+				_retarget(STOP_RAMP)
+			if previous != parameters or previous_released != parameter_released or previous_lift != ultimate_lift or previous_gain != parameter_gain("other"):
+				var targets := {}
+				var performing: Array = pending.get("voices", voices) if int(pending.get("begin", -1)) == clock else voices
+				for voice: Voice in performing:
+					targets[voice.stem] = voice.target
+				parameter_layer_log.append({"at": clock, "values": parameters.duplicate(), "released": parameter_released,
+					"danger": action.reason if action.reason != "ultimate" else "", "ultimate": action.reason == "ultimate",
+					"other_gain": parameter_gain("other"), "targets": targets, "timing": action.timing})
 		"begin":
 			if pending.is_empty() or int(pending["serial"]) != int(action["serial"]):
 				return

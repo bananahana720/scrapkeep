@@ -81,10 +81,7 @@ func _run() -> void:
 		audio._flush_flow()
 		audio._follow_warden()
 		audio._follow_escalation()
-		audio._guard_park_bookings()
-		var frames: int = audio._park_render_limit(Harmony.RATE / 60)
-		if frames > 0:
-			audio._render_music(frames, audio.ace != null and audio.ace.active())
+		audio._pump(Harmony.RATE / 60)
 		if frame % 1800 == 0:
 			var progress := FileAccess.open(_trace_path("ke10-trace-progress.txt"), FileAccess.WRITE)
 			progress.store_string("frame=%d clock=%d engaged=%s broke=%s clamps=%d" % [frame, engine.clock, engaged, broke, engine.parameter_clamps])
@@ -98,7 +95,9 @@ func _run() -> void:
 		"engaged": engaged, "broke": broke, "sample_count": engine.parameter_sample_count,
 		"transport_samples": engine.clock, "transport_steps": engine._parameter_step,
 		"run_seconds": game.run.run_time, "bot_outcome": bot.outcome,
-		"clamps": engine.parameter_clamps, "samples": samples, "layer_changes": changes}
+		"clamps": engine.parameter_clamps, "samples": samples, "layer_changes": changes,
+		"ace_manifest": audio.ace.manifest_source if audio.ace != null else "",
+		"ace_layer_changes": audio.ace.parameter_layer_log if audio.ace != null else [], "band_muted": engine.band_muted}
 	var trace_path := _trace_path("ke10-park-dam-trace.json")
 	var file := FileAccess.open(trace_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(record))
@@ -112,6 +111,8 @@ func _run() -> void:
 	t.check("trace values stay in range", samples.all(func(s): return s.values.values().all(func(v): return v >= 0.0 and v <= 1.0)))
 	t.check("trace has no unflagged mid-phrase changes", changes.all(func(c): return (c.phrase and c.phrase_step % (Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR) == 0) or MusicRows.danger(c.danger) or (c.get("ultimate", false) and c.phrase_step % Harmony.STEPS_PER_BAR == 0)), str(changes.size()))
 	t.check("trace bot engages the dam Warden", engaged, "engaged=%s broke=%s" % [engaged, broke])
+	var performing: Array = record.ace_layer_changes
+	t.check("performing ACE changes obey phrase danger or ultimate boundary", performing.all(func(c): return c.timing.is_empty() or (c.timing.phrase and c.timing.phrase_step % (Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR) == 0) or MusicRows.danger(c.danger) or (c.ultimate and c.timing.phrase_step % Harmony.STEPS_PER_BAR == 0)), str(performing.size()))
 	print("KE10_TRACE %s samples=%d changes=%d engaged=%s broke=%s" % [trace_path, samples.size(), changes.size(), engaged, broke])
 	physics.queue_free()
 	game.queue_free()

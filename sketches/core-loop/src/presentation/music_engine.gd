@@ -1,5 +1,7 @@
 extends RefCounted
 
+signal parameter_commit(at: int, values: Dictionary, released: bool, lift: bool, reason: String)
+
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
@@ -333,6 +335,8 @@ var _parameter_curve_base := 0.0
 var _parameter_curve_masks := PackedFloat32Array()
 var _parameter_curve_play := false
 var _parameter_last_ultimate := false
+var parameter_committed_values := {}
+var parameter_committed_released := false
 var _mid := PackedFloat32Array()
 var _left := PackedFloat32Array()
 var _right := PackedFloat32Array()
@@ -340,6 +344,9 @@ var _sl := PackedFloat32Array()
 var _sr := PackedFloat32Array()
 var _dl := PackedFloat32Array()
 var _dr := PackedFloat32Array()
+var _hl := PackedFloat32Array()
+var _hr := PackedFloat32Array()
+var out_landmark := PackedVector2Array()
 var _rng := RandomNumberGenerator.new()
 var _stingers_live := false
 # v2 W5 layers, each added on a real game-state threshold and never swapped in:
@@ -1276,6 +1283,7 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 func render(frames: int) -> void:
 	out_music.resize(frames)
 	out_stinger.resize(frames)
+	out_landmark.resize(frames)
 	_mid.resize(frames)
 	_left.resize(frames)
 	_right.resize(frames)
@@ -1283,6 +1291,8 @@ func render(frames: int) -> void:
 	_sr.resize(frames)
 	_dl.resize(frames)
 	_dr.resize(frames)
+	_hl.resize(frames)
+	_hr.resize(frames)
 	_stingers_live = false
 	_mid.fill(0.0)
 	_left.fill(0.0)
@@ -1291,6 +1301,8 @@ func render(frames: int) -> void:
 	_sr.fill(0.0)
 	_dl.fill(0.0)
 	_dr.fill(0.0)
+	_hl.fill(0.0)
+	_hr.fill(0.0)
 	var done := 0
 	while done < frames:
 		_run_due()
@@ -1837,6 +1849,9 @@ func _retarget() -> void:
 				"danger": _parameter_danger, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
 			if parameter_layer_log.size() > 4096:
 				parameter_layer_log.pop_front()
+		parameter_committed_values = parameters.duplicate()
+		parameter_committed_released = _parameter_released
+		parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, _parameter_danger)
 
 
 func _retarget_ultimate() -> void:
@@ -1853,6 +1868,7 @@ func _retarget_ultimate() -> void:
 		_intensity = effective
 		parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": false,
 			"danger": "", "ultimate": true, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
+	parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, "ultimate")
 
 
 func _lounge_live() -> bool:
@@ -2629,7 +2645,7 @@ func _hit(instrument: String, layer: int, gain: float, pan: float) -> void:
 
 
 func _start(buf: PackedFloat32Array, length: int, layer: int, gain: float, pan: float, to_stinger: bool) -> Voice:
-	if band_muted and not to_stinger:
+	if band_muted and not to_stinger and layer != LANDMARK_HUM:
 		return null
 	var band_count := 0
 	if not to_stinger:
@@ -2752,7 +2768,7 @@ func _mix(offset: int, n: int) -> void:
 		var gl := voice.gl
 		var gr := voice.gr
 		var flat := g0 == g1 and pos + count <= release_at
-		if voice.mono and not voice.to_stinger and voice.layer != DRY:
+		if voice.mono and not voice.to_stinger and voice.layer not in [DRY, LANDMARK_HUM]:
 			if flat:
 				var m := gl * g0
 				for i in count:
@@ -2767,8 +2783,8 @@ func _mix(offset: int, n: int) -> void:
 		else:
 			if voice.to_stinger:
 				_stingers_live = true
-			var left := _sl if voice.to_stinger else (_dl if voice.layer == DRY else _left)
-			var right := _sr if voice.to_stinger else (_dr if voice.layer == DRY else _right)
+			var left := _sl if voice.to_stinger else (_hl if voice.layer == LANDMARK_HUM else (_dl if voice.layer == DRY else _left))
+			var right := _sr if voice.to_stinger else (_hr if voice.layer == LANDMARK_HUM else (_dr if voice.layer == DRY else _right))
 			if voice.mono:
 				gr = gl
 			for i in count:
@@ -2841,12 +2857,14 @@ func _mix(offset: int, n: int) -> void:
 func _finish(frames: int) -> void:
 	if bot_skip_samples:
 		return
+	for i in frames:
+		out_landmark[i] = Vector2(_hl[i], _hr[i]) * master * pause_gain
 	if band_muted:
 		out_music.fill(Vector2.ZERO)
 	else:
 		for i in frames:
-			var l := _left[i]
-			var r := _right[i]
+			var l := _left[i] + out_landmark[i].x
+			var r := _right[i] + out_landmark[i].y
 			if l > 0.75 or l < -0.75:
 				l = _soft(l)
 			if r > 0.75 or r < -0.75:
