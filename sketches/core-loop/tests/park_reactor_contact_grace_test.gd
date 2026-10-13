@@ -3,6 +3,7 @@ extends SceneTree
 const Game=preload("res://src/game.gd")
 const Posture=preload("res://src/combat/boss_posture.gd")
 const Warden=preload("res://src/combat/warden.gd")
+const Reactor=preload("res://src/combat/warden_reactor.gd")
 const T=preload("res://tests/support/t.gd")
 var t=T.new("park_reactor_contact_grace_test")
 func _initialize() -> void: _run.call_deferred()
@@ -32,7 +33,10 @@ func _run() -> void:
 		game.add_child(other)
 		var spec={"family":family,"mounting":"flume" if family=="reactor" else "under_island","park_landmark":true,"anchor":[0,22,590],"harpoon_anchor":true}
 		other.setup(game.player,game.ctx.terrain,game,Callable(game.flow,"in_play"),1.0,spec)
-		if other.mount_driver!=null and other.mount_driver.has_method("step"): other.mount_driver.step(other,1.0/Engine.physics_ticks_per_second)
+		Reactor.new().step(other,1.0/Engine.physics_ticks_per_second)
+		for child in other.get_children():
+			if child is CollisionShape3D:
+				t.check(family+" outside dam retains its collider",child.position.is_equal_approx(Vector3.ZERO),str(child.position))
 		other._posture.apply({"contact":true,"gain":40.0},1)
 		other._posture.step(Posture.DRAIN_DELAY+0.5)
 		t.eq(family+" outside dam keeps its regeneration",other.posture(),40.0-Posture.DRAIN_RATE*0.5)
