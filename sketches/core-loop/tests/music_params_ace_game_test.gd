@@ -113,6 +113,11 @@ func _run() -> void:
 	_pump_to(audio, boundary + phrase * 5 + 8192)
 	t.eq("scripted Warden break releases performing ACE within phrase", _other_target(ace), 0.0)
 	t.eq("Warden release clears audible landmark hum", engine.layer_target(engine.LANDMARK_HUM), 0.0)
+	game.flow.enter_stage(3, Vector3.ZERO, false)
+	audio._flush_flow()
+	var replacement = audio.ace
+	var fresh: Array = replacement.pending.get("voices", replacement.voices)
+	t.check("replacement ACE package starts from committed release", replacement != ace and fresh.any(func(v): return v.stem == "other") and fresh.filter(func(v): return v.stem == "other").all(func(v): return v.target == 0.0))
 	var file := FileAccess.open("user://ke10-ace-commits.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify({"schema": "scrapkeep-ace-parameters/1", "commits": ace.parameter_layer_log, "samples": engine.parameter_sample_log, "band_muted": engine.band_muted, "misses": ace.misses, "short_reads": ace.short_reads}))
 	file.close()
