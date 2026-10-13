@@ -4,6 +4,14 @@ World 1, Spillway Works, the world's last stage before Brindle. Warden kind `rea
 
 This page follows `design-v3/PARK.md` section 2 and `adr/TADR-011-park-terrain-and-warden-kinds.md`. The draft park file in section 13 passed a scratch copy of the 2.10 checks, the route test and the line estimates in section 9. The name "The Cable Reach" retires (PARK.md:573).
 
+**Round 5 current qualification: BLOCKED.** STEP 0 merged candidate `3debeb86e30a63756e7e83c9950e37a79d656b68` at `56a4b80f8e9313cea755f11133dffb157eedcab7`, without conflicts. Every earlier traversal measurement is superseded by ruling 28. The bake and graph were rebuilt; the committed measuring tool is `tools/traversal_line.gd`, SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. The first fresh Sable and Rivet children throw at `natural.gd:267` because the authored hollow-collapse effect lacks `depth_m`. TRAV-DET2 rejects those rows as INCONCLUSIVE. The population was stopped, so there is no accepted round-5 population, replay equality, band verdict or stop classification. No geometry repair was made. Evidence and input hashes are under `/home/andrew/scratch/w13/sol/kd2-flume-r5/`.
+
+The real-stage stepped probe loads stage 2 and advances its director with tier 2 and one `chunk_2` notification. It records the reactor telegraph at 0.0611 s and land at 5.6111 s, with a live fallout hazard and `annex_ramp_line` open. It records the collapse telegraph at 0.2611 s and land fact at 13.9611 s, with `flume_mid` closed and `trestle_ramp_line` open. The collapse throws on missing `depth_m` during setup and `fill_s` at land. Its emitted facts do not prove a working fallen ramp. `events-stage-red.log`, `events-stage.json` and `events-verdict.json` retain the runtime result; the error-aware qualification is FAIL despite the probe's eight fact assertions passing.
+
+Ruling 23, reaffirmed by ruling 28, makes the stage win criterion engagement-only. Engagement and breaks remain separate. The historical round-4 proof records 3/3 engages and 0/3 breaks under the wrapper that only sets `stage_limit = 600.0` before tick 1. 0/3 breaks does not pass a two-of-three break criterion. No round-5 completionist proof is claimed while the real-stage initialization has script errors. Warden fight duration stays with WT-PARK.
+
+The two median-only tool flags remain unchanged under the coordinator's approved override. Current qualification reads raw seed records and takes the maximum anchor gap and quiet time against the unchanged 40 m and 20 s limits. `worst-controls.json` demonstrates rejection when seven passing seeds hide one 49.8 m anchor gap or one 20.59 s quiet interval. The independent checker refuses an incomplete population. The final complete table awaits a corrected shared collapse handler or approved authored depth and fill duration; historical cells below are not a current pass.
+
 ## 1. The stage in one paragraph
 
 You drop in on the weir at the top of a mesa, where the reservoir behind stage 1's dam spills into a wooden flume. The flume runs 1.6 km across falling canal country on trestles that grow taller as the land drops away, and it ends at a penstock tower in the south-east, 90 m tall, with a green beam on top. You can ride the flume the whole way as one long grind, or drop off it into the canal fields, the trestle hollow, or the rim road above a horseshoe bend. The lines pinch twice, at a gap between two buttes and at the siphon where the canal dives under the hollow. They meet again in the head house at the tower's foot, where a reactor relic sits on the flume's last channel and boils it.
@@ -177,7 +185,7 @@ The first round-4 kicker repair increased the rise from 3 to 3.25 m over its 8 m
 
 ## 6. `event_rows` (5 rows)
 
-The candidate rejects `trestle_groan` and `reactor_overload` as unsupported event forms. The two corresponding rows remain authored in this file, but their collapse and reactor-blow behavior is not proved on this head. The shared event registry/director needs a coordinator follow-up; no form was substituted in this round.
+The merged candidate has records for `trestle_groan` and `reactor_overload` and loads their natural and industrial handlers. The round-5 real-stage probe above proves both scheduling paths and the reactor hazard, but the natural collapse throws on missing `depth_m` and `fill_s`. A land fact alone does not establish the fallen-ramp geometry. No effect, lead, trigger, form or route was substituted.
 
 | Row | Family, kind | Site | Trigger | Telegraph | What changes | Route change |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -238,7 +246,7 @@ Four waymarks: `drop_in`, `butte_gap`, `siphon_camp`, `landmark`. The lines are 
 
 **Round-4 greybox verdict: FAIL.** Completed final-geometry summaries cover 40/56 seed rows. Missing summaries and incomplete live runs remain pending, not passes. Candidate baseline Rivet-5, Sable-4, Tally-5 and floor-1 all reproduced solo with identical inputs under R24. Current-head replay equality is PASS. Each measured table cell comes from the final population, with per-seed bounds judged from the worst seed. No band, pilot line, kit or shared tool changed in this round.
 
-**Measured round 4, 2026-10-12.** Geometry head `7838cffbf84d61dca1c0b448082e93467f3d4ae7`; candidate `b1cc003`; tool SHA256 `902da5cd3879fcc555f6ccc83a83548479d7f318d6e7783738baad4e5d2fbfe6`. Evidence `/home/andrew/scratch/w13/sol/kd2-flume-r4/final-population`, input manifests and commands.ndjson in the same round folder. R24 replaces the old export with the candidate tool. The table gives median/worst, or ranges where the band is bounded. The floor gates only its reach, time cap and zero terrain stops. Historical writer and gate measurements remain in the traversal page.
+**Historical measured round 4, 2026-10-12; superseded by ruling 28.** Geometry head `7838cffbf84d61dca1c0b448082e93467f3d4ae7`; candidate `b1cc003`; tool SHA256 `902da5cd3879fcc555f6ccc83a83548479d7f318d6e7783738baad4e5d2fbfe6`. Evidence `/home/andrew/scratch/w13/sol/kd2-flume-r4/final-population`, input manifests and commands.ndjson in the same round folder. R24 replaces the old export with the candidate tool. The table gives median/worst, or ranges where the band is bounded. The floor gates only its reach, time cap and zero terrain stops. Historical writer and gate measurements remain in the traversal page.
 
 | Band | sable | rivet | kest | tarn | tally | cannon | floor |
 | --- | --- | --- | --- | --- | --- | --- | --- |

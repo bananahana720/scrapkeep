@@ -2,6 +2,16 @@
 
 KD2's table (ruling R8): the 13 bands of PARK.md section 8 for the six pilot lines and the floor line, 8 seeds each through `tools/traversal_line.gd` (KB7, `--table=park --stage=2 --seeds=1,2,3,4,5,6,7,8 --trace`, `--fixed-fps 90`). Each cell is median / worst seed, then pass or MISS. The lines are `tools/park_lines/park_flume.json`.
 
+
+**Round 5 current qualification: BLOCKED.** STEP 0 merged candidate `3debeb86e30a63756e7e83c9950e37a79d656b68` at `56a4b80f8e9313cea755f11133dffb157eedcab7`, without conflicts. Every earlier traversal measurement is superseded by ruling 28. The bake and graph were rebuilt; the committed measuring tool is `tools/traversal_line.gd`, SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. The first fresh Sable and Rivet children throw at `natural.gd:267` because the authored hollow-collapse effect lacks `depth_m`. TRAV-DET2 rejects those rows as INCONCLUSIVE. The population was stopped, so there is no accepted round-5 population, replay equality, band verdict or stop classification. No geometry repair was made. Evidence and input hashes are under `/home/andrew/scratch/w13/sol/kd2-flume-r5/`.
+
+The real-stage stepped probe loads stage 2 and advances its director with tier 2 and one `chunk_2` notification. It records the reactor telegraph at 0.0611 s and land at 5.6111 s, with a live fallout hazard and `annex_ramp_line` open. It records the collapse telegraph at 0.2611 s and land fact at 13.9611 s, with `flume_mid` closed and `trestle_ramp_line` open. The collapse throws on missing `depth_m` during setup and `fill_s` at land. Its emitted facts do not prove a working fallen ramp. `events-stage-red.log`, `events-stage.json` and `events-verdict.json` retain the runtime result; the error-aware qualification is FAIL despite the probe's eight fact assertions passing.
+
+Ruling 23, reaffirmed by ruling 28, makes the stage win criterion engagement-only. Engagement and breaks remain separate. The historical round-4 proof records 3/3 engages and 0/3 breaks under the wrapper that only sets `stage_limit = 600.0` before tick 1. 0/3 breaks does not pass a two-of-three break criterion. No round-5 completionist proof is claimed while the real-stage initialization has script errors. Warden fight duration stays with WT-PARK.
+
+The two median-only tool flags remain unchanged under the coordinator's approved override. Current qualification reads raw seed records and takes the maximum anchor gap and quiet time against the unchanged 40 m and 20 s limits. `worst-controls.json` demonstrates rejection when seven passing seeds hide one 49.8 m anchor gap or one 20.59 s quiet interval. The independent checker refuses an incomplete population. The final complete table awaits a corrected shared collapse handler or approved authored depth and fill duration; historical cells below are not a current pass.
+
+
 ## Greybox pass, fix round, 2026-10-11
 
 Measured on commit b2da61d (park file, bake and graph; the lines file unchanged since). Machine load average 20 to 71 during the runs (three runs started after the 10 minute load wait). The table that stood here before this round was withdrawn: it was not measured on the committed park and lines files.
@@ -292,11 +302,11 @@ Dead-stop sites by seed:
 
 The reactor runs without its park mounting until KF8-WIRE. No mounting or driver workaround was applied. The eight-file smoke, compile, lint and byte-determinism checks pass on unchanged game inputs. `graph.json` has `beacon_ok true` and `spawn.run true`. This is real headless physics, with no GPU, listening or human-feel verdict. Missing enemy-kind fields and the floor replay gap remain explicit follow-ups. The distinct-line proof is not supplied by this export and is reported, not gated.
 
-## Round 4, candidate TRAV-DET, 2026-10-12
+## Round 4, historical candidate TRAV-DET, 2026-10-12
 
 **Round-4 greybox verdict: FAIL.** Completed final-geometry summaries cover 40/56 seed rows. Missing summaries and incomplete live runs remain pending, not passes. Candidate baseline Rivet-5, Sable-4, Tally-5 and floor-1 all reproduced solo with identical inputs under R24. Current-head replay equality is PASS. Each measured table cell comes from the final population, with per-seed bounds judged from the worst seed. No band, pilot line, kit or shared tool changed in this round.
 
-**Measured round 4, 2026-10-12.** Geometry head `7838cffbf84d61dca1c0b448082e93467f3d4ae7`; candidate `b1cc003`; tool SHA256 `902da5cd3879fcc555f6ccc83a83548479d7f318d6e7783738baad4e5d2fbfe6`. Evidence `/home/andrew/scratch/w13/sol/kd2-flume-r4/final-population`, input manifests and commands.ndjson in the same round folder. R24 replaces the old export with the candidate tool. The table gives median/worst, or ranges where the band is bounded. The floor gates only its reach, time cap and zero terrain stops. Historical writer and gate measurements remain in the traversal page.
+**Historical measured round 4, 2026-10-12; superseded by ruling 28.** Geometry head `7838cffbf84d61dca1c0b448082e93467f3d4ae7`; candidate `b1cc003`; tool SHA256 `902da5cd3879fcc555f6ccc83a83548479d7f318d6e7783738baad4e5d2fbfe6`. Evidence `/home/andrew/scratch/w13/sol/kd2-flume-r4/final-population`, input manifests and commands.ndjson in the same round folder. R24 replaces the old export with the candidate tool. The table gives median/worst, or ranges where the band is bounded. The floor gates only its reach, time cap and zero terrain stops. Historical writer and gate measurements remain in the traversal page.
 
 | Band | sable | rivet | kest | tarn | tally | cannon | floor |
 | --- | --- | --- | --- | --- | --- | --- | --- |
