@@ -645,7 +645,7 @@ func _fade_in_band(from: int, frames: int) -> void:
 		var g := clampf(float(from + i - _unmute_at) / UNMUTE_RAMP, 0.0, 1.0)
 		if g >= 1.0:
 			break
-		band[i] *= g
+		band[i] = (band[i] - engine.out_landmark[i]) * g + engine.out_landmark[i]
 	engine.out_music = band
 
 

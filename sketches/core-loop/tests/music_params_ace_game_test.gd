@@ -83,6 +83,15 @@ func _run() -> void:
 	t.eq("audible ACE threat change commits on phrase", int(change.at), boundary)
 	t.near("ACE other stem keeps profile level at sampled gain", _other_target(ace), _profile_other(ace) * expected, 0.0001)
 	t.check("ACE committed change reaches actual gain and PCM", ace.voices.any(func(v): return v.stem == "other" and v.gain > 0.0) and Array(audio.out_music).any(func(v): return v.length_squared() > 0.0))
+	ace.solo = ["other"]
+	var other_peak := 0.0
+	var other_end: int = boundary + engine.bar_len() * 2
+	while engine.clock < other_end:
+		audio._pump(mini(4096, other_end - engine.clock))
+		for sample in audio.out_music:
+			other_peak = maxf(other_peak, sample.length_squared())
+	t.check("isolated performing ACE other stem has audible PCM", engine.band_muted and other_peak > 0.0, str(other_peak))
+	ace.solo = []
 	var graph = audio._parameter_graph
 	game.player.reset_to(graph.position(graph.beacon_node))
 	enemy.global_position = game.player.ball_position() + game.ctx.aim_forward() * 0.1
@@ -129,7 +138,7 @@ func _run() -> void:
 	var fresh: Array = replacement.pending.get("voices", replacement.voices)
 	t.check("replacement ACE package starts from committed release", replacement != ace and fresh.any(func(v): return v.stem == "other") and fresh.filter(func(v): return v.stem == "other").all(func(v): return v.target == 0.0))
 	var file := FileAccess.open("user://ke10-ace-commits.json", FileAccess.WRITE)
-	file.store_string(JSON.stringify({"schema": "scrapkeep-ace-parameters/1", "commits": ace.parameter_layer_log, "samples": engine.parameter_sample_log, "band_muted": engine.band_muted, "misses": ace.misses, "short_reads": ace.short_reads}))
+	file.store_string(JSON.stringify({"schema": "scrapkeep-ace-parameters/1", "commits": ace.parameter_layer_log, "samples": engine.parameter_sample_log, "band_muted": engine.band_muted, "isolated_other_peak": other_peak, "misses": ace.misses, "short_reads": ace.short_reads}))
 	file.close()
 	t.check("ACE recorded parameter commits obey chosen boundaries", ace.parameter_layer_log.all(func(c): return c.timing.is_empty() or (c.timing.phrase and c.timing.phrase_step % 128 == 0) or Rows.danger(c.danger) or (c.ultimate and c.timing.phrase_step % 16 == 0)))
 	print("KE10_ACE_TRACE ", ProjectSettings.globalize_path("user://ke10-ace-commits.json"))
