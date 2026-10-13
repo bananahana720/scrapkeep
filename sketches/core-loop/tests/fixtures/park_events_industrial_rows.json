@@ -1,5 +1,5 @@
 {
- "_note": "Six industrial rows copied from /home/andrew/scratch/w13/haiku/families/industrial.json (rows only). park_rows are fixture geometry, one 20 m site per row, yaw 0, spaced 100 m apart; they are not the stage maps.",
+ "_note": "Six industrial rows, sites and route graphs copied from the stage sources named in /home/andrew/scratch/w13/haiku/families/industrial.json. Tests project them over sloped terrain.",
  "rows": [
   {
    "id": "powerhouse_boiler",
@@ -242,87 +242,174 @@
  "park_rows": [
   {
    "id": "powerhouse",
+   "element": "ledge",
+   "landform": "dam_face",
+   "society": "dam_era",
    "at": [
-    0.0,
-    0.0
+    120,
+    515
    ],
-   "y": 0.0,
+   "y": null,
    "size": [
+    60,
     20,
-    2,
-    20
+    40
    ],
-   "yaw_deg": 0
+   "yaw_deg": 0,
+   "verb": "roll",
+   "ride_fact": "ride_ledge",
+   "home": "powerhouse_trappers",
+   "recipe": "greybox:ledge",
+   "stamp": "plateau",
+   "hole": false,
+   "budget": "landform",
+   "routes": [
+    "powerhouse_floor",
+    "roof_ramp_line"
+   ],
+   "fragment": "dam_era_powerhouse_log"
   },
   {
    "id": "hoist_house",
+   "element": "ledge",
+   "landform": "headframe",
+   "society": "mining",
    "at": [
-    100.0,
-    0.0
+    -75,
+    215
    ],
-   "y": 0.0,
+   "y": null,
    "size": [
-    20,
-    2,
-    20
+    44,
+    16,
+    26
    ],
-   "yaw_deg": 0
+   "yaw_deg": -63,
+   "verb": "roll",
+   "ride_fact": "ride_ledge",
+   "home": "",
+   "recipe": "greybox:ledge",
+   "stamp": "",
+   "hole": false,
+   "budget": "landform",
+   "routes": [
+    "hoist_yard",
+    "hoist_roof_line"
+   ],
+   "fragment": "mining_hoist_boiler"
   },
   {
    "id": "heat_exchanger_annex",
+   "element": "ledge",
+   "landform": "penstock",
+   "society": "dam_era",
    "at": [
-    200.0,
-    0.0
+    185,
+    525
    ],
-   "y": 0.0,
+   "y": null,
    "size": [
-    20,
-    2,
-    20
+    40,
+    14,
+    24
    ],
-   "yaw_deg": 0
+   "yaw_deg": 35,
+   "verb": "roll",
+   "ride_fact": "ride_ledge",
+   "home": "",
+   "recipe": "greybox:ledge",
+   "stamp": "",
+   "hole": false,
+   "budget": "detail",
+   "routes": [
+    "annex_ramp_line"
+   ],
+   "fragment": "dam_era_annex_dial"
   },
   {
    "id": "crown_collector",
+   "element": "ledge",
+   "landform": "spire",
+   "society": "fleet",
    "at": [
-    300.0,
-    0.0
+    145,
+    470
    ],
-   "y": 0.0,
+   "y": 64,
    "size": [
-    20,
-    2,
-    20
+    30,
+    3,
+    8
    ],
-   "yaw_deg": 0
+   "yaw_deg": 90,
+   "verb": "roll",
+   "ride_fact": "ride_ledge",
+   "home": "",
+   "recipe": "greybox:ledge",
+   "stamp": "",
+   "hole": false,
+   "budget": "landform",
+   "routes": [],
+   "fragment": "fleet_collector_tag"
   },
   {
    "id": "mooring_mesa",
+   "element": "sky_island",
+   "landform": "mesa_rim",
+   "society": "fleet",
    "at": [
-    400.0,
-    0.0
+    -240,
+    -20
    ],
-   "y": 0.0,
+   "y": null,
    "size": [
-    20,
-    2,
-    20
+    140,
+    0.01,
+    180
    ],
-   "yaw_deg": 0
+   "yaw_deg": 0,
+   "verb": "drop",
+   "ride_fact": "ride_drop",
+   "home": "mooring_anchor_crew",
+   "recipe": "greybox:sky_island",
+   "stamp": "plateau",
+   "hole": false,
+   "budget": "landform",
+   "routes": [
+    "west",
+    "envelope",
+    "fan_west",
+    "fan_envelope"
+   ],
+   "fragment": "fleet_mooring_tags"
   },
   {
    "id": "pump_gallery",
+   "element": "ledge",
+   "landform": "flooded_shaft",
+   "society": "mining",
    "at": [
-    500.0,
-    0.0
+    60,
+    350
    ],
-   "y": 0.0,
+   "y": null,
    "size": [
     20,
-    2,
-    20
+    6,
+    24
    ],
-   "yaw_deg": 0
+   "yaw_deg": -90,
+   "verb": "roll",
+   "ride_fact": "ride_ledge",
+   "home": "",
+   "recipe": "greybox:ledge",
+   "stamp": "",
+   "hole": false,
+   "budget": "landform",
+   "routes": [
+    "pump_ramp"
+   ],
+   "fragment": "mining_pump_ticket"
   }
  ],
  "routes_by_row": {
