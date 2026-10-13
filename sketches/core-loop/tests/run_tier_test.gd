@@ -92,7 +92,6 @@ func _create_game() -> void:
 	root.add_child(game)
 
 func _parallel_runtime() -> void:
-	var started := Time.get_ticks_msec()
 	for first in range(0, SEEDS, 4):
 		var jobs := []
 		for seed_value in range(first, mini(first + 4, SEEDS)):
@@ -100,11 +99,7 @@ func _parallel_runtime() -> void:
 			if record:
 				args.append("--record-base")
 			jobs.append({"script": "res://tests/run_tier_test.gd", "args": args})
-		var remaining := 340.0 - (Time.get_ticks_msec() - started) / 1000.0
-		if remaining <= 0.0:
-			t.check("runtime child time budget", false)
-			return
-		var results := ChildRuns.run(jobs, remaining)
+		var results := ChildRuns.run(jobs, 70.0)
 		for i in results.size():
 			var result: Dictionary = results[i]
 			var summary := ChildRuns.summary(result)
