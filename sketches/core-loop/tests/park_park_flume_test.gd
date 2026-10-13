@@ -474,8 +474,11 @@ from pathlib import Path
 sk=Path(sys.argv[1]); pages=[sk/'design-v3/park/stages/2-park_flume.md',sk/'design-v3/park/traversal/park_flume.md']
 texts=[p.read_text() for p in pages]
 def block(text,start,end):
- assert text.count(start)==1 and text.count(end)==1, 'missing or duplicate current publication block'
- return text.split(start,1)[1].split(end,1)[0].strip()
+ assert text.count(start)==1, 'missing or duplicate current publication block'
+ tail=text.split(start,1)[1]
+ assert end in tail, 'missing publication block end'
+ if end!='-->':assert text.count(end)==1, 'duplicate publication block end'
+ return tail.split(end,1)[0].strip()
 blocks=[block(t,'<!-- flume-current-table -->','<!-- /flume-current-table -->') for t in texts]
 assert blocks[0]==blocks[1], 'current pages mismatch'
 b=blocks[0]
