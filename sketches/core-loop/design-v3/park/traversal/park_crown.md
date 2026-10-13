@@ -1,6 +1,64 @@
 # Traversal: stage 6, the crown (`park_crown`)
 
-## Round 5, 13 October 2026 — current qualification
+## Round 6, 13 October 2026: current qualification
+
+FIX. Automated native evidence level 4. Geometry head `bcfc1dec0bfae92e0f7536e71e5ab9c847c36934` follows STEP 0 merge `8d46221e5fbe3ba62b42122f028b52de140b58d6` of candidate `afbd8e6d0755a88504cd25a549de9592acdbc96d`. All round-6 receipts live in `/home/andrew/scratch/w13/sol/kd6-crown-r6`. The third and final Tarn launch trial was withdrawn after its 46 m anchor gap breached the unchanged 40 m limit by 15%. Its airborne median was 0.24105, still a measured MISS. No fourth repair is authorized. `withdrawal.json` retains the trial and agreeing trace. The restored source, shared runtime and all eight bake/graph files match the post-STEP-0 baseline across 421 recorded inputs in `restored-input-equality.json`. The table reports those byte-identical restored-input measurements, not a new post-withdrawal run. Fresh distinctness and completionist engagement remain absent under the exhausted-repair stop, so qualification remains FIX. Previous rounds below are dated history.
+
+The committed traversal tool has SHA-256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. `commands.ndjson` records argv, head, input hashes, output paths and exits. The current table comes from `baseline-measurements.json`, independently recomputed from raw post-STEP-0 baseline batch rows. Scalar cells show the midpoint median, the actual worst seed and both seed extrema. Segment cells show the three medians and seed ranges. The maximum anchor gap, peak speed, quiet interval and terrain stops are judged from their seed extrema. The floor gates only its own reach/time/zero-stop row; its other measures are reporting only.
+
+| Measure | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; reported, pilot band, not the floor's |
+| time_to_warden_s | 61.67 (worst seed 2: 62.85); min 56.19 seed 4, max 62.85 seed 2; PASS | 70.475 (worst seed 3: 70.97); min 70.47 seed 4, max 70.97 seed 3; PASS | 67.58 (worst seed 2: 71.53); min 67.16 seed 1, max 71.53 seed 2; PASS | 80.86 (worst seed 2: 81.71); min 80.36 seed 6, max 81.71 seed 2; PASS | 76.04 (worst seed 6: 78.28); min 75.88 seed 2, max 78.28 seed 6; PASS | 73.87 (worst seed 1: 74.27); min 71.14 seed 6, max 74.27 seed 1; PASS | 57.59 (worst seed 5: 57.64); min 57.17 seed 3, max 57.64 seed 5; reported, pilot band, not the floor's |
+| segment_s | 18.12/21.4/22.13; seed ranges 18.12 to 19.05/16.11 to 23.07/20.72 to 22.25; PASS | 16.63/39.5/14.31; seed ranges 16.35 to 16.64/39.36 to 39.67/14.3 to 14.8; PASS | 16.335/19.255/32.08; seed ranges 16.12 to 16.37/19.12 to 21.78/30.77 to 33.43; PASS | 15.03/36.76/29.015; seed ranges 14.98 to 15.08/36.62 to 37.51/28.31 to 29.94; PASS | 16.91/37.905/21.48; seed ranges 16.65 to 16.93/37.62 to 38.81/20.48 to 23.3; PASS | 15.84/36.19/21.82; seed ranges 15.84 to 16.25/33.48 to 36.21/21.4 to 22.04; PASS | 21.11/21.29/15.165; seed ranges 20.76 to 21.19/21.29 to 22.28/14.23 to 15.19; reported, pilot band, not the floor's |
+| flow_share | 0.9503 (worst seed 1: 0.9401); min 0.9401 seed 1, max 0.9504 seed 7; PASS | 0.8756 (worst seed 1: 0.8658); min 0.8658 seed 1, max 0.8837 seed 6; PASS | 0.8028 (worst seed 2: 0.7064); min 0.7064 seed 2, max 0.8164 seed 5; PASS | 0.9025 (worst seed 3: 0.893); min 0.893 seed 3, max 0.9132 seed 2; PASS | 0.8344 (worst seed 3: 0.8225); min 0.8225 seed 3, max 0.8366 seed 1; PASS | 0.9081 (worst seed 3: 0.9081); min 0.9081 seed 3, max 0.946 seed 6; PASS | 0.9392 (worst seed 1: 0.9392); min 0.9392 seed 1, max 0.9462 seed 5; reported, pilot band, not the floor's |
+| airborne_share | 0.304 (worst seed 4: 0.1817); min 0.1817 seed 4, max 0.3132 seed 2; PASS | 0.3399 (worst seed 3: 0.3274); min 0.3274 seed 3, max 0.3533 seed 1; PASS | 0.2552 (worst seed 2: 0.2398); min 0.2398 seed 2, max 0.2589 seed 4; PASS | 0.2224 (worst seed 6: 0.2123); min 0.2123 seed 6, max 0.2311 seed 2; MISS | 0.3737 (worst seed 6: 0.3658); min 0.3658 seed 6, max 0.3805 seed 2; PASS | 0.3761 (worst seed 3: 0.3761); min 0.3761 seed 3, max 0.3902 seed 2; PASS | 0.1691 (worst seed 6: 0.1687); min 0.1687 seed 6, max 0.189 seed 3; reported, pilot band, not the floor's |
+| dead_stops | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; reported, pilot band, not the floor's |
+| peak_speed_mps | 51.79 (worst seed 2: 51.43); min 51.43 seed 2, max 53.28 seed 4; PASS | 43.75 (worst seed 2: 43.57); min 43.57 seed 2, max 44.77 seed 1; PASS | 39.09 (worst seed 3: 38.97); min 38.97 seed 3, max 39.99 seed 1; PASS | 42.81 (worst seed 1: 42.25); min 42.25 seed 1, max 43.72 seed 2; PASS | 43.41 (worst seed 2: 42.66); min 42.66 seed 2, max 44.55 seed 1; PASS | 41.99 (worst seed 2: 38.0); min 38.0 seed 2, max 41.99 seed 3; PASS | 44.4 (worst seed 8: 43.5); min 43.5 seed 8, max 44.4 seed 1; reported, pilot band, not the floor's |
+| tier3_s | 31.71 (worst seed 2: 31.16); min 31.16 seed 2, max 33.24 seed 4; PASS | 9.975 (worst seed 3: 9.32); min 9.32 seed 3, max 9.99 seed 4; PASS | 9.385 (worst seed 3: 7.94); min 7.94 seed 3, max 9.6 seed 4; PASS | 9.03 (worst seed 2: 8.9); min 8.9 seed 2, max 11.07 seed 6; PASS | 8.33 (worst seed 1: 7.91); min 7.91 seed 1, max 8.63 seed 2; PASS | 8.74 (worst seed 1: 8.3); min 8.3 seed 1, max 8.74 seed 3; PASS | 11.91 (worst seed 6: 11.9); min 11.9 seed 6, max 13.02 seed 5; reported, pilot band, not the floor's |
+| quiet_max_s | 4.31 (worst seed 4: 6.4); min 4.31 seed 3, max 6.4 seed 4; PASS | 5.695 (worst seed 6: 6.49); min 5.57 seed 4, max 6.49 seed 6; PASS | 5.58 (worst seed 5: 7.4); min 5.43 seed 4, max 7.4 seed 5; PASS | 5.52 (worst seed 3: 5.63); min 5.34 seed 2, max 5.63 seed 3; PASS | 5.39 (worst seed 1: 6.07); min 5.01 seed 2, max 6.07 seed 1; PASS | 9.73 (worst seed 2: 10.93); min 8.59 seed 1, max 10.93 seed 2; PASS | 4.7 (worst seed 8: 5.78); min 4.7 seed 1, max 5.78 seed 8; reported, pilot band, not the floor's |
+| max_anchor_gap_m | 37.2 (worst seed 1: 37.2); min 37.2 seed 1, max 37.2 seed 1; PASS | 38.55 (worst seed 4: 39.0); min 35.9 seed 1, max 39.0 seed 4; PASS | 25.5 (worst seed 2: 31.6); min 25.4 seed 4, max 31.6 seed 2; PASS | 21.3 (worst seed 2: 23.1); min 18.9 seed 1, max 23.1 seed 2; PASS | 38.0 (worst seed 2: 38.5); min 34.6 seed 3, max 38.5 seed 2; PASS | 35.7 (worst seed 1: 37.2); min 35.7 seed 3, max 37.2 seed 1; PASS | 102.2 (worst seed 1: 102.2); min 102.2 seed 1, max 102.2 seed 1; reported, pilot band, not the floor's |
+| distinct_verbs | 5.0 (worst seed 4: 4); min 4 seed 4, max 5 seed 1; PASS | 5.0 (worst seed 1: 5); min 5 seed 1, max 5 seed 1; PASS | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; PASS | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; PASS | 5.0 (worst seed 1: 5); min 5 seed 1, max 5 seed 1; PASS | 5.0 (worst seed 1: 5); min 5 seed 1, max 5 seed 1; PASS | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; reported, pilot band, not the floor's |
+| length_ratio | 1.49 (worst seed 4: 1.46); min 1.46 seed 4, max 1.5 seed 7; PASS | 1.25 (worst seed 1: 1.25); min 1.25 seed 1, max 1.26 seed 3; MISS | 1.28 (worst seed 1: 1.28); min 1.28 seed 1, max 1.3 seed 3; MISS | 1.57 (worst seed 2: 1.56); min 1.56 seed 2, max 1.57 seed 1; PASS | 1.34 (worst seed 2: 1.34); min 1.34 seed 2, max 1.35 seed 1; PASS | 1.38 (worst seed 1: 1.34); min 1.34 seed 1, max 1.38 seed 3; PASS | 1.15 (worst seed 1: 1.15); min 1.15 seed 1, max 1.16 seed 5; reported, pilot band, not the floor's |
+| Distinct lines, at least 3 | pending eight-seed tick witness; FIX | | | | | | |
+| Floor own row: all seeds reach, time within 2 x Rivet median, zero stops | | | | | | | max 57.64 s / limit 140.95 s; PASS |
+
+
+### Ruling 29 open rows
+
+| Pilot | Measured ratio | Unchanged band | Receipt | Owner and status |
+| --- | --- | --- | --- | --- |
+| rivet | 1.25 | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r6/baseline-rivet/rivet.json` | MISS; conditional carry awaits every other acceptance line |
+| kest | 1.28 | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r6/baseline-kest/kest.json` | MISS; conditional carry awaits every other acceptance line |
+
+The two Rivet ride attempts and two Kest launch/ride attempts are documented in the dated round-5 report. No new ratio repair is authorized in round 6. Measured misses retain MISS in the table; a carried row does not make the measured value green.
+
+### Current stops and replay
+
+The restored-input 56 seed rows record 0 dead stops. Terrain stops require zero on every seed. No enemy-pack exemption is inferred from a batch outcome.
+The agreeing baseline Tarn seed-1 batch/solo/traced controls are in `baseline-tarn-check.json`. Required final 33-case equality and distinctness remain absent after the repair stop. Full raw-result batch/solo/traced comparisons, when present, are retained in `/home/andrew/scratch/w13/sol/kd6-crown-r6/analysis.json`; current equality status is FIX until all required controls agree.
+
+The historical Sable seed 4 and Kest seed 2 mast contacts were terrain. Their preceding 90-tick windows contained the mast collider and terrain only. Current matching controls and the final batches decide whether those stops remain; the old classifications are not an enemy-pack exception.
+
+### Current distinctness
+
+Pending final eight-seed Sable/Cannon/Kest 3D witness; FIX. The round-5 gate witness is dated history and does not qualify changed geometry.
+
+### Current completionist engagement proof
+
+Wrapper `/home/andrew/scratch/w13/sol/kd6-crown-r6/win.gd` extends `res://tools/bot_run.gd` and changes only `driver.stage_limit` to 600.0 before tick zero. Each seed runs `--table=park --policy=completionist --from-stage=6 --stages=6 --seeds=<seed> --trace=1` through the eight-core CPU queue and a 1,500 s outer cap. Ruling 23 requires every seed to engage without a traversal-cause stall. Warden break time and engage-to-break duration are reported, never gated here.
+
+| Seed | Engaged s | Broken s | Engage to break s | Outcome and receipt |
+| --- | --- | --- | --- | --- |
+| 1 | pending; FIX | pending | pending | missing current-head receipt |
+| 2 | pending; FIX | pending | pending | missing current-head receipt |
+| 3 | pending; FIX | pending | pending | missing current-head receipt |
+
+## Historical round 5, retained
+
+All sections below are superseded history and do not qualify the round-6 head.
+
+### Historical round 5 qualification
 
 FIX. Automated native evidence level 4. Qualification is incomplete until all seven final eight-seed batches, the matching solo/traced controls, distinctness and the fresh completionist engagement proof are complete. The table reports only final-geometry receipts retained in `/home/andrew/scratch/w13/sol/kd6-crown-r5`. An absent receipt remains pending; earlier rounds remain dated history.
 

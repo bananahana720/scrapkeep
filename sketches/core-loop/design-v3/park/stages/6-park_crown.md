@@ -1,6 +1,6 @@
 # Stage 6: Highdraft, the crown (`park_crown`)
 
-**Status: greybox round 5, FIX; current qualification incomplete.** The stage source, bake and graph describe the shipped geometry. The current measured table below and the traversal page use the same pinned receipt set. TRAV-DET2 resolves the prior repeatability/export prerequisite; fresh equality controls still qualify each changed geometry. KF8-WIRE owns runtime park mounting. Warden duration belongs to the Warden fight units. Dressing and human feel are outside this greybox round.
+**Status: greybox round 6, FIX.** Current qualification below uses the restored-input receipt set on the traversal page. Warden duration belongs to the fight units. Dressing and human feel are outside this greybox round.
 
 | Field | Value |
 | --- | --- |
@@ -15,7 +15,7 @@
 
 The run's last park. You drop off a butte at dusk under a building thunderstorm and ride a wide alluvial fan, the bajada, down into a valley of buttes, hoodoos and needle spires. Lightning picks out spires on the beat. At the far end the Crown Spire stands 330 m tall with three short perch spires round its foot, and the Mind's hand flies between them.
 
-| Number | Value (start) |
+| Number | Historical design estimate |
 | --- | --- |
 | Drop-in | the Watch Butte's top, 200 m |
 | The bajada | falls from 80 m at its head (z -400) to 0 m at its foot (z 330) |
@@ -59,7 +59,7 @@ The run's last park. You drop off a butte at dusk under a building thunderstorm 
 
 **After the break.** The hand drops off its perch into the bowl and goes dark; the three lens seats go dark with it. The beam stays. No event starts in the next 20 s (PARK.md:311). The gates lead on to the Mind's own arena, which stays authored and small (PARK.md:381; `src/boss/mind.gd`), and after the Mind to the ending bowl (PARK.md veto 13).
 
-## 3. Region sketch
+## 3. Historical region design sketch
 
 The 1.6 km square, -800 to +800 m on both axes. The fall line runs up the page, from the drop-in at the south to the landmark at the north.
 
@@ -127,9 +127,9 @@ Each cell is 100 m. North (+z, the landmark side) is up.
 
 Read it as three fans between four waymarks. The Watch Butte's drop ramp funnels every line onto the bajada at the Turnstone. The middle fan spreads four ways (the alcove west, the hoodoo forest, the meander, the east wash) and gathers at the split spire. The last fan spreads three ways (the needles and signal wire west, the crown ramp in the centre, the Gauntlet east) and ends in the bowl. The Signal Butte camp and the lens spire sit off the lines on the west flank; you see them, and you choose them.
 
-## 4. `park_rows` draft
+## 4. Historical `park_rows` design draft
 
-Conventions on this stage. `size` h of a stamped row is its height above the local ground: the bajada for most rows, the base plain at 0 m north of z 330. The `bajada` row is the ramp stamp everything else stands on. Rows that hang (the alcove ledge and horns, the Gauntlet net, the collector) carry an absolute `y`. These are 29 rows; KD6 grows them toward PARK.md 2.2's 40 to 70 with detail rows.
+The following 29-row table is the original design draft. Current shipped rows are recorded in section 13; current measurements are in the round-6 qualification below. Conventions in the original design: `size` h of a stamped row is its height above the local ground: the bajada for most rows, the base plain at 0 m north of z 330. The `bajada` row is the ramp stamp everything else stands on. Rows that hang (the alcove ledge and horns, the Gauntlet net, the collector) carry an absolute `y`. These are 29 rows; KD6 grows them toward PARK.md 2.2's 40 to 70 with detail rows.
 
 **Anchor cover.** The max anchor gap is 40 m (PARK.md:464), and walkable ground is not a target (`design-v3/TRAVERSAL.md:14`). The bajada is wide open, so `bajada_blocks` scatters fallen sandstone blocks 8 to 12 m tall on an 80 m jittered lattice across it: each block is a target, and no point on the fan is more than about 45 m from one. Elsewhere the hoodoos, needles, spires and butte faces carry the anchors. The blocks are what the buttes shed, so the anchors explain themselves.
 
@@ -220,7 +220,7 @@ The west cable approach fields are narrowed to one local anchor each: sentinel_3
 
 The meander retains its 10 m wash depth and uses a local 6 m bowl cut at [132,-293] to ease the east crossing. This preserves its anchor faces after the shallow whole-wash attempt caused a 74.1 m gap. The signal wire starts at [-245,12,285] to capture the traced approach height and lands at [-140,5,455], leaving a banking turn to the unchanged [-100,430] waypoint before the Crown.
 
-The round-5 source moves signal_masts west to [-282,272], retaining mast_cutters and the ridge stamp. Its physical clearance check covers both reproduced approaches. signal_runout_anchor at [-225,370] provides a real 60 m post in Sable's gap. The Crown ramp retains its original footprint and height with its low edge seated at y -1.25. The shared needles kicker is lengthened to 60 m, widened to 60 m and seated at y 10.965379; its height is 26 m. needle_launch_anchor at [-270,300] provides unstamped physical cover. Excessive Rivet and Tarn launch trials were withdrawn after their second bounded attempts; their remaining scalar misses stay FIX. Current numbers come from the final receipt table.
+The round-5 source moves signal_masts west to [-282,272], retaining mast_cutters and the ridge stamp. Its physical clearance check covers both reproduced approaches. signal_runout_anchor at [-225,370] provides a real 60 m post in Sable's gap. The Crown ramp retains its original footprint and height with its low edge seated at y -1.25. The shared needles kicker is lengthened to 60 m, widened to 60 m and seated at y 10.965379; its height is 26 m. needle_launch_anchor at [-270,300] provides unstamped physical cover. The first two Rivet and Tarn trials were withdrawn in round 5. Round 6 tried the third and final Tarn launch under X2, then withdrew it after an agreeing 46 m anchor-gap miss. The current source retains the last zero-stop geometry. No fourth Tarn repair is authorized; its 0.2224 airborne median and the Rivet/Kest ratio misses remain FIX. Current numbers come from the final receipt table.
 
 ## 6. Current event rows
 
@@ -276,7 +276,9 @@ The park file declares `dusk`. The native, headless checks below do not qualify 
 
 **Current lines, 12 October 2026.** Sable takes hoodoo then needles, Rivet east then centre, Kest centre then needles, Tarn west then needles, and Tally and Cannon east then shelf. Tarn retains its earlier [-60,-310] waypoint after the failed south-route attempt. Cannon's first east waypoint is [110,-350], south of the meander wall. The floor takes the far east butte crest at x 96, then [16,-540], before returning to the centre line. All six bars carry airborne_share [0.25, 0.60] because park_schema.gd requires it in each pilot bar. PARK.md section 8 remains authoritative; the stage 6 values agree with its Highdraft band. The exact lines are below. Tick-based distinctness is recorded with the traversal sweep; fan names alone do not prove it.
 
-**The flow line.** A skater drops off the Watch Butte's north nose and carves the slickrock S down to the Turnstone. They pass the cache, cut east into the gooseneck and pump it round its bank. Then they swing past the split spire, run straight up the bajada's last stretch and launch the crown ramp into the bowl. That is the `floor` line: 1,291 m with no harpoon and no contraption. The pilot lines take a side fan in the middle or last segment, which gives them length, air and a second verb.
+**Historical floor-line design estimate.** A skater drops off the Watch Butte's north nose and carves the slickrock S down to the Turnstone. They pass the cache, cut east into the gooseneck and pump it round its bank. Then they swing past the split spire, run straight up the bajada's last stretch and launch the crown ramp into the bowl. That is the `floor` line: 1,291 m with no harpoon and no contraption. The pilot lines take a side fan in the middle or last segment, which gives them length, air and a second verb.
+
+**Historical design estimates, before native measurement.** This table and the following ratio/time estimate describe the original routes. The current fixed lines and measured qualification supersede them.
 
 | line | fans taken (segment 1, 2, 3) | length m | straight m | ratio | segment lengths m | time at 20 to 26 m/s | segments at 20 m/s |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -288,16 +290,16 @@ The park file declares `dusk`. The native, headless checks below do not qualify 
 | cannon | S, meander, B | 1519 | 1070 | 1.42 | 490, 471, 557 | 58 to 76 s | 24 s, 24 s, 28 s |
 | floor | S, meander, C | 1291 | 1070 | 1.21 | 490, 471, 329 | 50 to 65 s | 24 s, 24 s, 16 s |
 
-Every pilot line sits inside PARK.md's ratio band of 1.3 to 2.0 (PARK.md:466). The floor line is held to its own bar: reach the Warden within twice the pilot median (PARK.md:467). Segments run 16 to 38 s at 20 m/s, inside 12 to 45 s; the shortest is the centre finish (329 m), which a fast Rivet runs in about 13 s. At 26 m/s the Cannon's and Kest's lines finish just under 60 s; if the bot averages that fast, the fix is a longer carve in the last fan.
+The original design estimated every pilot line inside PARK.md's ratio band of 1.3 to 2.0 (PARK.md:466). The floor line is held to its own bar: reach the Warden within twice the pilot median (PARK.md:467). Segments run 16 to 38 s at 20 m/s, inside 12 to 45 s; the shortest is the centre finish (329 m), which a fast Rivet runs in about 13 s. At 26 m/s the Cannon's and Kest's lines finish just under 60 s; if the bot averages that fast, the fix is a longer carve in the last fan.
 
-**The tricks each line offers.**
+**Current fixed pilot routes and their verbs.**
 
-- **Sable (vault and slingshot): hoodoo, then Gauntlet.** Vault from hoodoo cap to hoodoo cap down the forest; slingshot off the split spire. Then east: the balloon lift onto the Gauntlet net, pump it under the anchor crews' rim, drop to the shelf and take the shelf cannon into the bowl.
+- **Sable (vault and slingshot): hoodoo, then needles and west approach.** Take the hoodoo middle line to the split spire, then the fixed waypoints through [-120,100], [-135,175], [-180,200] and [-245,285]. The west approach returns through [-100,430] and [-60,480] to the landmark. The current line does not visit the Gauntlet.
 - **Rivet (sprint): east wash, then the centre.** Sprint the east wash, hit the east ribs and launch north-west to the split spire. Then flat out up the bajada's last stretch over the crown ramp: the stage's peak-speed line.
 - **Kest (glide and rocket jump): meander, then west.** Pump the gooseneck and rocket-jump off its bank. Past the split spire, ride the needle updraft, glide over the needles and catch the signal wire down into the bowl's west wall. When the split spire has fallen, the toppled ramp is a rocket-jump launch.
 - **Tarn (claw pull): west, then west.** The west wash, the talus and the alcove ledge, then claw off the rock horns above it. Past the split spire, claw through the needles and grab the signal masts for the wire into the bowl.
-- **Tally (surge): east wash, then Gauntlet.** The longest line on the stage. A surge through the east wash and the Gauntlet net, where her surge breaks the anchor crews' timing.
-- **The Cannon (recoil): meander, then the bajada east.** Recoil out of the bend and through its cracked wall with a recoil-boosted ram. Then across the bajada to the shelf and the shelf cannon. A cannon riding a cannon.
+- **Tally (surge): east wash, then shelf approach.** Follow the east middle waypoints to the split spire, then [80,120] and [150,305] into the landmark. The measured line uses the shelf approach rather than the original elevated Gauntlet-net design.
+- **The Cannon (recoil): east wash, then shelf approach.** Its first east waypoint is [110,-350], followed by [170,-290], [230,-110], [140,-40] and [40,-8]. Past the split spire it takes [80,120] and [150,305] into the landmark. The shelf bots ride the cable landing rather than the cannon mouth.
 
 **Against the bands** (PARK.md:452-468), as designed and before any bot run:
 
@@ -334,33 +336,59 @@ Every pilot line sits inside PARK.md's ratio band of 1.3 to 2.0 (PARK.md:466). T
 
 
 
-### Measured round 5 result
+### Measured round 6 result
 
-FIX. Automated native evidence level 4. Qualification is incomplete until all seven final eight-seed batches, the matching solo/traced controls, distinctness and the fresh completionist engagement proof are complete. The table reports only final-geometry receipts retained in `/home/andrew/scratch/w13/sol/kd6-crown-r5`. An absent receipt remains pending; earlier rounds remain dated history.
+FIX. Automated native evidence level 4. Geometry head `bcfc1dec0bfae92e0f7536e71e5ab9c847c36934` follows STEP 0 merge `8d46221e5fbe3ba62b42122f028b52de140b58d6` of candidate `afbd8e6d0755a88504cd25a549de9592acdbc96d`. All round-6 receipts live in `/home/andrew/scratch/w13/sol/kd6-crown-r6`. The third and final Tarn launch trial was withdrawn after its 46 m anchor gap breached the unchanged 40 m limit by 15%. Its airborne median was 0.24105, still a measured MISS. No fourth repair is authorized. `withdrawal.json` retains the trial and agreeing trace. The restored source, shared runtime and all eight bake/graph files match the post-STEP-0 baseline across 421 recorded inputs in `restored-input-equality.json`. The table reports those byte-identical restored-input measurements, not a new post-withdrawal run. Fresh distinctness and completionist engagement remain absent under the exhausted-repair stop, so qualification remains FIX. Previous rounds below are dated history.
 
-STEP 0 merge `77161880e12c5e070d97160b6757a121cfaff09a` imports candidate `51eb3c2` or its fetched descendant. The final geometry is recorded at `55f655ae539814e571e85e9d23d6878474b458e3`. Ruling 28 requires the committed `res://tools/traversal_line.gd`, SHA-256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. `commands.ndjson` retains argv, source/bake/graph input hashes, output paths, exits and the checked head. Pilot waypoints, kits, Warden pins and PARK.md bands stay fixed. The retired export is not used.
-
-The table is generated from `final-measurements.json`, independently recomputed from raw `final-<pilot>/<pilot>.json` rows. Cells give medians and actual worst seed values. Segment cells give all three segment medians. The maximum anchor gap and terrain stops gate every seed. The floor's own row gates reach, its maximum time against twice the Rivet median and zero terrain stops; its other cells are reporting only.
+The committed traversal tool has SHA-256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. `commands.ndjson` records argv, head, input hashes, output paths and exits. The current table comes from `baseline-measurements.json`, independently recomputed from raw post-STEP-0 baseline batch rows. Scalar cells show the midpoint median, the actual worst seed and both seed extrema. Segment cells show the three medians and seed ranges. The maximum anchor gap, peak speed, quiet interval and terrain stops are judged from their seed extrema. The floor gates only its own reach/time/zero-stop row; its other measures are reporting only.
 
 | Measure | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| reached_warden | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | pending; FIX | pending; FIX | 8/8; reported, pilot band, not the floor's |
-| time_to_warden_s | 61.67 (seed 2: 62.85); PASS | 70.475 (seed 3: 70.97); PASS | 67.58 (seed 2: 71.53); PASS | 80.86 (seed 2: 81.71); PASS | pending; FIX | pending; FIX | 57.59 (seed 5: 57.64); reported, pilot band, not the floor's |
-| segment_s | 18.12/21.4/22.13; PASS | 16.63/39.5/14.31; PASS | 16.335/19.255/32.08; PASS | 15.03/36.76/29.015; PASS | pending; FIX | pending; FIX | 21.11/21.29/15.165; reported, pilot band, not the floor's |
-| flow_share | 0.9503 (seed 1: 0.9401); PASS | 0.8756 (seed 1: 0.8658); PASS | 0.8028 (seed 2: 0.7064); PASS | 0.9025 (seed 3: 0.893); PASS | pending; FIX | pending; FIX | 0.9392 (seed 1: 0.9392); reported, pilot band, not the floor's |
-| airborne_share | 0.304 (seed 4: 0.1817); PASS | 0.3399 (seed 3: 0.3274); PASS | 0.2552 (seed 2: 0.2398); PASS | 0.2224 (seed 6: 0.2123); MISS | pending; FIX | pending; FIX | 0.1691 (seed 6: 0.1687); reported, pilot band, not the floor's |
-| dead_stops | 0.0 (seed 1: 0); PASS | 0.0 (seed 1: 0); PASS | 0.0 (seed 1: 0); PASS | 0.0 (seed 1: 0); PASS | pending; FIX | pending; FIX | 0.0 (seed 1: 0); reported, pilot band, not the floor's |
-| peak_speed_mps | 51.79 (seed 2: 51.43); PASS | 43.75 (seed 2: 43.57); PASS | 39.09 (seed 3: 38.97); PASS | 42.81 (seed 1: 42.25); PASS | pending; FIX | pending; FIX | 44.4 (seed 8: 43.5); reported, pilot band, not the floor's |
-| tier3_s | 31.71 (seed 2: 31.16); PASS | 9.975 (seed 3: 9.32); PASS | 9.385 (seed 3: 7.94); PASS | 9.03 (seed 2: 8.9); PASS | pending; FIX | pending; FIX | 11.91 (seed 6: 11.9); reported, pilot band, not the floor's |
-| quiet_max_s | 4.31 (seed 4: 6.4); PASS | 5.695 (seed 6: 6.49); PASS | 5.58 (seed 5: 7.4); PASS | 5.52 (seed 3: 5.63); PASS | pending; FIX | pending; FIX | 4.7 (seed 8: 5.78); reported, pilot band, not the floor's |
-| max_anchor_gap_m | 37.2 (seed 1: 37.2); PASS | 38.55 (seed 4: 39.0); PASS | 25.5 (seed 2: 31.6); PASS | 21.3 (seed 2: 23.1); PASS | pending; FIX | pending; FIX | 102.2 (seed 1: 102.2); reported, pilot band, not the floor's |
-| distinct_verbs | 5.0 (seed 4: 4); PASS | 5.0 (seed 1: 5); PASS | 4.0 (seed 1: 4); PASS | 4.0 (seed 1: 4); PASS | pending; FIX | pending; FIX | 4.0 (seed 1: 4); reported, pilot band, not the floor's |
-| length_ratio | 1.49 (seed 4: 1.46); PASS | 1.25 (seed 1: 1.25); MISS | 1.28 (seed 1: 1.28); MISS | 1.57 (seed 2: 1.56); PASS | pending; FIX | pending; FIX | 1.15 (seed 1: 1.15); reported, pilot band, not the floor's |
+| reached_warden | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; reported, pilot band, not the floor's |
+| time_to_warden_s | 61.67 (worst seed 2: 62.85); min 56.19 seed 4, max 62.85 seed 2; PASS | 70.475 (worst seed 3: 70.97); min 70.47 seed 4, max 70.97 seed 3; PASS | 67.58 (worst seed 2: 71.53); min 67.16 seed 1, max 71.53 seed 2; PASS | 80.86 (worst seed 2: 81.71); min 80.36 seed 6, max 81.71 seed 2; PASS | 76.04 (worst seed 6: 78.28); min 75.88 seed 2, max 78.28 seed 6; PASS | 73.87 (worst seed 1: 74.27); min 71.14 seed 6, max 74.27 seed 1; PASS | 57.59 (worst seed 5: 57.64); min 57.17 seed 3, max 57.64 seed 5; reported, pilot band, not the floor's |
+| segment_s | 18.12/21.4/22.13; seed ranges 18.12 to 19.05/16.11 to 23.07/20.72 to 22.25; PASS | 16.63/39.5/14.31; seed ranges 16.35 to 16.64/39.36 to 39.67/14.3 to 14.8; PASS | 16.335/19.255/32.08; seed ranges 16.12 to 16.37/19.12 to 21.78/30.77 to 33.43; PASS | 15.03/36.76/29.015; seed ranges 14.98 to 15.08/36.62 to 37.51/28.31 to 29.94; PASS | 16.91/37.905/21.48; seed ranges 16.65 to 16.93/37.62 to 38.81/20.48 to 23.3; PASS | 15.84/36.19/21.82; seed ranges 15.84 to 16.25/33.48 to 36.21/21.4 to 22.04; PASS | 21.11/21.29/15.165; seed ranges 20.76 to 21.19/21.29 to 22.28/14.23 to 15.19; reported, pilot band, not the floor's |
+| flow_share | 0.9503 (worst seed 1: 0.9401); min 0.9401 seed 1, max 0.9504 seed 7; PASS | 0.8756 (worst seed 1: 0.8658); min 0.8658 seed 1, max 0.8837 seed 6; PASS | 0.8028 (worst seed 2: 0.7064); min 0.7064 seed 2, max 0.8164 seed 5; PASS | 0.9025 (worst seed 3: 0.893); min 0.893 seed 3, max 0.9132 seed 2; PASS | 0.8344 (worst seed 3: 0.8225); min 0.8225 seed 3, max 0.8366 seed 1; PASS | 0.9081 (worst seed 3: 0.9081); min 0.9081 seed 3, max 0.946 seed 6; PASS | 0.9392 (worst seed 1: 0.9392); min 0.9392 seed 1, max 0.9462 seed 5; reported, pilot band, not the floor's |
+| airborne_share | 0.304 (worst seed 4: 0.1817); min 0.1817 seed 4, max 0.3132 seed 2; PASS | 0.3399 (worst seed 3: 0.3274); min 0.3274 seed 3, max 0.3533 seed 1; PASS | 0.2552 (worst seed 2: 0.2398); min 0.2398 seed 2, max 0.2589 seed 4; PASS | 0.2224 (worst seed 6: 0.2123); min 0.2123 seed 6, max 0.2311 seed 2; MISS | 0.3737 (worst seed 6: 0.3658); min 0.3658 seed 6, max 0.3805 seed 2; PASS | 0.3761 (worst seed 3: 0.3761); min 0.3761 seed 3, max 0.3902 seed 2; PASS | 0.1691 (worst seed 6: 0.1687); min 0.1687 seed 6, max 0.189 seed 3; reported, pilot band, not the floor's |
+| dead_stops | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; reported, pilot band, not the floor's |
+| peak_speed_mps | 51.79 (worst seed 2: 51.43); min 51.43 seed 2, max 53.28 seed 4; PASS | 43.75 (worst seed 2: 43.57); min 43.57 seed 2, max 44.77 seed 1; PASS | 39.09 (worst seed 3: 38.97); min 38.97 seed 3, max 39.99 seed 1; PASS | 42.81 (worst seed 1: 42.25); min 42.25 seed 1, max 43.72 seed 2; PASS | 43.41 (worst seed 2: 42.66); min 42.66 seed 2, max 44.55 seed 1; PASS | 41.99 (worst seed 2: 38.0); min 38.0 seed 2, max 41.99 seed 3; PASS | 44.4 (worst seed 8: 43.5); min 43.5 seed 8, max 44.4 seed 1; reported, pilot band, not the floor's |
+| tier3_s | 31.71 (worst seed 2: 31.16); min 31.16 seed 2, max 33.24 seed 4; PASS | 9.975 (worst seed 3: 9.32); min 9.32 seed 3, max 9.99 seed 4; PASS | 9.385 (worst seed 3: 7.94); min 7.94 seed 3, max 9.6 seed 4; PASS | 9.03 (worst seed 2: 8.9); min 8.9 seed 2, max 11.07 seed 6; PASS | 8.33 (worst seed 1: 7.91); min 7.91 seed 1, max 8.63 seed 2; PASS | 8.74 (worst seed 1: 8.3); min 8.3 seed 1, max 8.74 seed 3; PASS | 11.91 (worst seed 6: 11.9); min 11.9 seed 6, max 13.02 seed 5; reported, pilot band, not the floor's |
+| quiet_max_s | 4.31 (worst seed 4: 6.4); min 4.31 seed 3, max 6.4 seed 4; PASS | 5.695 (worst seed 6: 6.49); min 5.57 seed 4, max 6.49 seed 6; PASS | 5.58 (worst seed 5: 7.4); min 5.43 seed 4, max 7.4 seed 5; PASS | 5.52 (worst seed 3: 5.63); min 5.34 seed 2, max 5.63 seed 3; PASS | 5.39 (worst seed 1: 6.07); min 5.01 seed 2, max 6.07 seed 1; PASS | 9.73 (worst seed 2: 10.93); min 8.59 seed 1, max 10.93 seed 2; PASS | 4.7 (worst seed 8: 5.78); min 4.7 seed 1, max 5.78 seed 8; reported, pilot band, not the floor's |
+| max_anchor_gap_m | 37.2 (worst seed 1: 37.2); min 37.2 seed 1, max 37.2 seed 1; PASS | 38.55 (worst seed 4: 39.0); min 35.9 seed 1, max 39.0 seed 4; PASS | 25.5 (worst seed 2: 31.6); min 25.4 seed 4, max 31.6 seed 2; PASS | 21.3 (worst seed 2: 23.1); min 18.9 seed 1, max 23.1 seed 2; PASS | 38.0 (worst seed 2: 38.5); min 34.6 seed 3, max 38.5 seed 2; PASS | 35.7 (worst seed 1: 37.2); min 35.7 seed 3, max 37.2 seed 1; PASS | 102.2 (worst seed 1: 102.2); min 102.2 seed 1, max 102.2 seed 1; reported, pilot band, not the floor's |
+| distinct_verbs | 5.0 (worst seed 4: 4); min 4 seed 4, max 5 seed 1; PASS | 5.0 (worst seed 1: 5); min 5 seed 1, max 5 seed 1; PASS | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; PASS | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; PASS | 5.0 (worst seed 1: 5); min 5 seed 1, max 5 seed 1; PASS | 5.0 (worst seed 1: 5); min 5 seed 1, max 5 seed 1; PASS | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; reported, pilot band, not the floor's |
+| length_ratio | 1.49 (worst seed 4: 1.46); min 1.46 seed 4, max 1.5 seed 7; PASS | 1.25 (worst seed 1: 1.25); min 1.25 seed 1, max 1.26 seed 3; MISS | 1.28 (worst seed 1: 1.28); min 1.28 seed 1, max 1.3 seed 3; MISS | 1.57 (worst seed 2: 1.56); min 1.56 seed 2, max 1.57 seed 1; PASS | 1.34 (worst seed 2: 1.34); min 1.34 seed 2, max 1.35 seed 1; PASS | 1.38 (worst seed 1: 1.34); min 1.34 seed 1, max 1.38 seed 3; PASS | 1.15 (worst seed 1: 1.15); min 1.15 seed 1, max 1.16 seed 5; reported, pilot band, not the floor's |
 | Distinct lines, at least 3 | pending eight-seed tick witness; FIX | | | | | | |
 | Floor own row: all seeds reach, time within 2 x Rivet median, zero stops | | | | | | | max 57.64 s / limit 140.95 s; PASS |
 
 
-Previous round-4 numbers remain dated history on the traversal page.
+### Ruling 29 open rows
+
+| Pilot | Measured ratio | Unchanged band | Receipt | Owner and status |
+| --- | --- | --- | --- | --- |
+| rivet | 1.25 | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r6/baseline-rivet/rivet.json` | MISS; conditional carry awaits every other acceptance line |
+| kest | 1.28 | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r6/baseline-kest/kest.json` | MISS; conditional carry awaits every other acceptance line |
+
+The two Rivet ride attempts and two Kest launch/ride attempts are documented in the dated round-5 report. No new ratio repair is authorized in round 6. Measured misses retain MISS in the table; a carried row does not make the measured value green.
+
+### Current stops and replay
+
+The restored-input 56 seed rows record 0 dead stops. Terrain stops require zero on every seed. No enemy-pack exemption is inferred from a batch outcome.
+The agreeing baseline Tarn seed-1 batch/solo/traced controls are in `baseline-tarn-check.json`. Required final 33-case equality and distinctness remain absent after the repair stop. Full raw-result batch/solo/traced comparisons, when present, are retained in `/home/andrew/scratch/w13/sol/kd6-crown-r6/analysis.json`; current equality status is FIX until all required controls agree.
+
+The historical Sable seed 4 and Kest seed 2 mast contacts were terrain. Their preceding 90-tick windows contained the mast collider and terrain only. Current matching controls and the final batches decide whether those stops remain; the old classifications are not an enemy-pack exception.
+
+### Current distinctness
+
+Pending final eight-seed Sable/Cannon/Kest 3D witness; FIX. The round-5 gate witness is dated history and does not qualify changed geometry.
+
+### Current completionist engagement proof
+
+Wrapper `/home/andrew/scratch/w13/sol/kd6-crown-r6/win.gd` extends `res://tools/bot_run.gd` and changes only `driver.stage_limit` to 600.0 before tick zero. Each seed runs `--table=park --policy=completionist --from-stage=6 --stages=6 --seeds=<seed> --trace=1` through the eight-core CPU queue and a 1,500 s outer cap. Ruling 23 requires every seed to engage without a traversal-cause stall. Warden break time and engage-to-break duration are reported, never gated here.
+
+| Seed | Engaged s | Broken s | Engage to break s | Outcome and receipt |
+| --- | --- | --- | --- | --- |
+| 1 | pending; FIX | pending | pending | missing current-head receipt |
+| 2 | pending; FIX | pending | pending | missing current-head receipt |
+| 3 | pending; FIX | pending | pending | missing current-head receipt |
 
 ## 11. The music arc
 
