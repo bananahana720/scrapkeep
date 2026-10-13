@@ -1,5 +1,31 @@
 # park_islands traversal
 
+## Round 5 measurement, 2026-10-13
+
+Admission is held while the new measurements finish. Candidate `3debeb8`
+merged without conflicts at `1f4ad76`. Ruling 28 requires the committed
+`tools/traversal_line.gd`, SHA-256
+`37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`.
+Every earlier traversal measurement is superseded and retained below.
+
+### Effective Warden criterion
+
+The round-5 coordinator packet resolves the brief conflict. R23 is an
+engagement-only proof: every seed reaches and engages the mind Warden,
+with no traversal-caused stall before engagement. The two-of-three break
+requirement in the earlier brief and focus question is superseded.
+The wrapper changes only the driver's stage limit to 600 seconds before
+its first tick. Break time and engage-to-break time are still reported.
+WT-PARK and WT-BANDS own Warden duration. KD5 does not change the Warden
+row, combat values or bot behavior.
+
+The retained round-4 rows engaged at 141.79, 132.4 and 126.14 seconds,
+with no break in any of the three 600-second runs. Those rows establish
+engagement on the old program only. A fresh proof on this merged program
+is pending; no current Warden PASS is claimed yet.
+
+## Superseded round 4 measurement
+
 ## Round 4 candidate measurement, 2026-10-12, program head 7e6368d
 
 Admission remains held. Candidate `9467de7` merged without conflicts at `5223b95`.
