@@ -24,6 +24,7 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 #   - a contact starts the gap at the render head and drops on the next beat after it.
 # Section edges crossfade over the manifest's join (10 ms) or the breath style's ramp,
 # ending on the edge, so a downbeat always lands at its full level.
+# Parameter joins use the same duration starting at their committed boundary.
 
 const RATE := 44100
 const LEAD_IN := 2
