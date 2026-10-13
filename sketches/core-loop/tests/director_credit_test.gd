@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_CHECKS := 1122
+const EXPECTED_FIXED_CHECKS := 1100
 
 var _t := T.new("director_credit_test")
 
@@ -35,7 +35,7 @@ func _initialize() -> void:
 	_cap_income_sweep()
 	_sweeps()
 	_held_crowd_sweep()
-	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
+	_t.eq("expected check count", _t.checks + 1, EXPECTED_FIXED_CHECKS + Director.KIND_NAMES.size())
 	quit(_t.verdict())
 
 
@@ -66,7 +66,7 @@ func _cards() -> void:
 		var stage_cap = card.get("stage_cap", 0)
 		var singleton: float = cards.cost([kind])
 		_t.check("supported kind %s has a purchasable explicit card" % kind,
-			cards.CARDS.size() == 22 and is_finite(cost) and cost > 0.0 and is_finite(weight) and weight > 0.0
+			cards.CARDS.size() == Director.KIND_NAMES.size() and is_finite(cost) and cost > 0.0 and is_finite(weight) and weight > 0.0
 			and typeof(stage_cap) == TYPE_INT and stage_cap > 0 and is_finite(singleton) and singleton > 0.0,
 			"cost=%s weight=%s stage_cap=%s singleton=%s" % [cost, weight, stage_cap, singleton])
 	var d = _director(7, Park.of(1), "credit")
@@ -80,7 +80,10 @@ func _cards() -> void:
 		normal += cards.CARDS[kind].cost
 	_t.near("elite costs its multiplier", d.credit_pack_cost(Park.ELITE.kinds, true), normal * cards.ELITE_MULTIPLIER)
 	_t.check("unknown kinds never receive a fallback price", not is_finite(d.credit_pack_cost(["unpriced"])))
-	_t.check("stage_cap rejects an oversized kind group", not is_finite(d.credit_pack_cost(["chaser", "chaser", "chaser", "chaser", "chaser"])))
+	var oversized := []
+	for member in cards.CARDS["chaser"].stage_cap + 1:
+		oversized.append("chaser")
+	_t.check("stage_cap rejects an oversized kind group", not is_finite(d.credit_pack_cost(oversized)))
 	var expected_price := 0.0
 	for kind in Park.PACKS[0].kinds:
 		expected_price += cards.CARDS[kind].cost
