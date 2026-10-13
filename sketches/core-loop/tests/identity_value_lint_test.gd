@@ -33,13 +33,9 @@ const NUMERIC_CALLS := [
 # Calls that take an id only as a lookup key.
 const KEY_CALLS := ["has", "get", "erase", "find"]
 # Out-of-scope uses that the fix does not touch. Each entry is "<path>|<stripped line text>".
-# item_effects.gd: a victim's instance id rolls an item effect, and the roll's threshold check
-# reads it (a gameplay leak; owner ruling and a follow-up unit are needed). drill_crew.gd: the id
-# string is written into a death fact; no reader of that fact exists under src (inference that it
-# is a key only).
+# drill_crew.gd: the id string is written into a death fact; no reader of that fact exists under
+# src (inference that it is a key only).
 const EXEMPT := [
-	"res://src/build/item_effects.gd|var roll: float = fposmod(_clock * 7.31 + float(key % 997) * Triggers.SPREAD, 1.0)",
-	"res://src/build/item_effects.gd|if roll >= stacked(d, \"chance\", n):",
 	"res://src/combat/drill_crew.gd|bore_fact = {\"breached\": true, \"kind\": \"drill_crew\", \"id\": \"drill_%d\" % get_instance_id(),",
 ]
 
