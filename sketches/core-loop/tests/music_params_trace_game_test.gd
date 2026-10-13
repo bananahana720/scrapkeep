@@ -12,6 +12,11 @@ var engaged := false
 var broke := false
 
 
+class ThreatEnemy extends Node3D:
+	func is_dead() -> bool:
+		return false
+
+
 class PhysicsProbe extends Node:
 	var frames := 0
 	var seconds := 0.0
@@ -32,6 +37,10 @@ func _run() -> void:
 	Engine.time_scale = 1.0
 	if OS.get_environment("KE10_ABSENCE_ONLY") == "1":
 		await _absence_fixture()
+		quit(t.verdict())
+		return
+	if OS.get_environment("KE10_RELEASE_ONLY") == "1":
+		await _release_fixture()
 		quit(t.verdict())
 		return
 	var game := Game.new()
@@ -115,6 +124,7 @@ func _release_fixture() -> void:
 	audio.bake_now()
 	audio.set_process(false)
 	var engine = audio.engine
+	engine.bot_skip_samples = true
 	var initial: Vector3 = game.player.ball_position()
 	t.near("park approach starts at zero", float(audio.sample_run_parameters().get("approach", -1.0)), 0.0)
 	var graph = audio._parameter_graph
@@ -128,6 +138,8 @@ func _release_fixture() -> void:
 	audio._flush_flow()
 	game.events.warden_engaged.emit(1)
 	engine.render(1)
+	engine.set_overcharge(2)
+	engine.set_fleet_ticks(3)
 	engine.parameter_danger("warden_engaged")
 	t.check("release fixture starts with busy layers", engine.layer_target(Music.LEAD) > 0.0)
 	game.flow._unseal()
@@ -135,8 +147,59 @@ func _release_fixture() -> void:
 	var deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS
 	while engine.clock <= deadline:
 		engine.render(mini(4096, deadline + 1 - engine.clock))
-	t.check("scripted Warden break releases within one phrase", Music.MELODIC.all(func(layer): return engine.layer_target(layer) == 0.0) and engine.layer_target(Music.WOB) == 0.0)
+	t.check("scripted Warden break releases within one phrase", Music.MELODIC.all(func(layer): return engine.layer_target(layer) == 0.0) and [Music.KEYS, Music.WARM, Music.WOB, Music.FLEET].all(func(layer): return engine.layer_target(layer) == 0.0))
 	print("KE10_RELEASE scripted Game beacon_unsealed clock=%d deadline=%d" % [engine.clock, deadline])
+	game.events.launched.emit(Vector3.FORWARD * 30.0)
+	t.check("scripted launch arms stage transition", audio._launch_armed)
+	game.flow._finish_stage()
+	audio._flush_flow()
+	t.eq("launch enters next real Game stage", game.run.stage, 2)
+	t.check("launch arrival preserves release until phrase", engine.layer_target(Music.LEAD) == 0.0)
+	game.run.mass = 100.0
+	game.player.set_frozen(true)
+	audio.sample_run_parameters()
+	t.check("flume has no graph and no approach", audio._parameter_graph == null and not audio.sample_run_parameters().has("approach"))
+	game.events.landed.emit(12.0)
+	var flume_deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS * 2
+	engine.set_overcharge(2)
+	engine.set_pressure(1.0)
+	# The absent approach feed is preserved on the flume; recovery is checked again below with a graph.
+	while engine.clock <= flume_deadline:
+		engine.render(mini(4096, flume_deadline + 1 - engine.clock))
+	t.check("launch into flume resets release state", not engine._parameter_released)
+	game.flow._unseal()
+	audio._flush_flow()
+	game.events.launched.emit(Vector3.FORWARD * 30.0)
+	# The world boss is outside this music fixture. Enter the next authored graph-bearing stage directly.
+	game.flow.enter_stage(3, Vector3.FORWARD * 30.0, false)
+	audio._flush_flow()
+	audio.sample_run_parameters()
+	graph = audio._parameter_graph
+	if not t.check("next graph-bearing stage supplies a graph", graph != null):
+		game.queue_free()
+		await process_frame
+		return
+	game.player.set_frozen(true)
+	game.player.reset_to(graph.position(graph.beacon_node))
+	game.events.landed.emit(12.0)
+	t.check("next stage landing schedules its drop", not audio.drop_log.is_empty() and not audio._launch_armed)
+	engine.set_overcharge(2)
+	engine.set_fleet_ticks(3)
+	var enemy := ThreatEnemy.new()
+	root.add_child(enemy)
+	enemy.add_to_group("enemy")
+	enemy.global_position = game.player.ball_position() + game.ctx.aim_forward() * 0.1
+	var restored: Dictionary = audio.sample_run_parameters()
+	t.check("next stage fixture has regained armour and positive feeds", restored.get("armour", 0.0) == 1.0 and restored.get("approach", 0.0) == 1.0 and restored.get("threat", 0.0) > 0.8, str(restored))
+	var recovery_deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS * 2
+	while engine.clock <= recovery_deadline:
+		engine.render(mini(4096, recovery_deadline + 1 - engine.clock))
+	t.check("next stage restores eligible layers after landing", [Music.KEYS, Music.LEAD, Music.ARP, Music.WARM, Music.PAD, Music.CHOIR, Music.ECHO, Music.COUNTER, Music.FLEET].all(func(layer): return engine.layer_target(layer) > 0.0), str(engine._targets))
+	enemy.free()
+	game.flow.retry_stage()
+	audio._flush_flow()
+	t.check("retry resets stage release state", not engine._parameter_released)
+
 	game.queue_free()
 	await process_frame
 
