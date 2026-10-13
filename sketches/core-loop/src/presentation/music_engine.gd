@@ -584,6 +584,11 @@ func parameters_warden_broken() -> void:
 	_parameter_released = true
 
 
+func parameters_stage_entered() -> void:
+	_parameter_released = false
+	_parameter_danger_floor = 0.0
+
+
 func _riser_into(bar: int) -> void:
 	if bar - beat_len() > clock and bar - _last_riser >= RISER_SPACING:
 		_last_riser = bar
@@ -1463,8 +1468,7 @@ func _run(action: Dictionary) -> void:
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
 		"restart":
-			_parameter_released = false
-			_parameter_danger_floor = 0.0
+			parameters_stage_entered()
 			_dominant_held = false
 			_reset_escalation()
 			_bar_queue.clear()

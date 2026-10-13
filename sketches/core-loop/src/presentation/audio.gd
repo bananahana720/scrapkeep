@@ -1744,6 +1744,7 @@ func _on_flow_changed(state: String) -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	engine.parameters_stage_entered()
 	for event_id in _park_cues:
 		engine.cancel_park_cue(event_id)
 	_park_cues.clear()
