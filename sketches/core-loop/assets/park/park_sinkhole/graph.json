@@ -1,0 +1,268 @@
+{
+  "bake_sha256": "d1acc7152a3de9b8b3beedec243a12142e90ddaf6ed74d6513fe9568759bcc89",
+  "beacon_ok": true,
+  "breaches": [],
+  "bytes": 943367,
+  "edges": 315278,
+  "first_failed": "",
+  "flags": {
+    "deck": 55,
+    "door_ok": 39895,
+    "line": 417,
+    "open": 40438,
+    "sight_ok": 9696,
+    "under": 18
+  },
+  "full_visit_m": 1909,
+  "full_visit_ratio": "1.363",
+  "graph_sha256": "c552b2215db7f31f03f87e7dc5491f464094cff37cce9da3fdf25eab750a6848",
+  "line_errors": [],
+  "line_path_nodes": 175,
+  "longest_est_m": 2038,
+  "map": "park_sinkhole",
+  "nodes": 40456,
+  "park_sha256": "87d9bf3dc7d3422a2e9799a7834f4bb942890c55fcae13f213380abe32d857a0",
+  "pockets": [
+    {
+      "clear_ring": [],
+      "d_landmark": 375,
+      "d_spawn": 1040,
+      "detour_m": 0,
+      "door_at": [
+        0,
+        -16
+      ],
+      "door_m": 0,
+      "flags": [
+        "open",
+        "line",
+        "sight_ok"
+      ],
+      "id": "great_room_camp",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "pylon_capacitor",
+      "pay_rarities": [
+        "common"
+      ],
+      "role": "online",
+      "sight_ok": true,
+      "site": "great_room"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 387,
+      "d_spawn": 1213,
+      "detour_m": 164,
+      "door_at": [
+        176,
+        40
+      ],
+      "door_m": 164,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "east_chamber_bounty",
+      "kind": "hauler_bounty",
+      "nearest_door": 304,
+      "nearest_door_id": "sealed_crosscut",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": true,
+      "site": "east_chamber"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 459,
+      "d_spawn": 941,
+      "detour_m": 224,
+      "door_at": [
+        -224,
+        -16
+      ],
+      "door_m": 224,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "west_chamber_cache",
+      "kind": "cracked_cache",
+      "nearest_door": 238,
+      "nearest_door_id": "sealed_crosscut",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": true,
+      "site": "west_chamber"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 233,
+      "d_spawn": 1170,
+      "detour_m": 79,
+      "door_at": [
+        -80,
+        152
+      ],
+      "door_m": 79,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "sealed_crosscut",
+      "kind": "cracked_wall",
+      "nearest_door": 238,
+      "nearest_door_id": "west_chamber_cache",
+      "pay_named": "",
+      "pay_rarities": [],
+      "role": "hidden",
+      "sight_ok": true,
+      "site": "crosscut_drift"
+    }
+  ],
+  "reward_ratio": "0.835",
+  "ride_edges": 57,
+  "routes": {
+    "bore_shaft": [],
+    "breach_caps": [],
+    "cannon_tube": [],
+    "cenote_floor": [],
+    "crosscut": [],
+    "crosscut_east": [],
+    "crosscut_return": [],
+    "east_chamber_spur": [],
+    "east_drift": [],
+    "east_haulage": [],
+    "east_loop": [],
+    "eruption_lip": [],
+    "main": [],
+    "main_lower": [],
+    "main_upper": [],
+    "plateau_drop": [],
+    "pump_ramp": [],
+    "rim_line": [],
+    "skylight_chain": [],
+    "south_loop": [],
+    "upper_cap_drop": [],
+    "warden_line": [],
+    "west_breakthrough": [],
+    "west_chamber_spur": [],
+    "west_gallery": [],
+    "west_loop": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1401,
+    "farther_share": "0.008",
+    "ok": true,
+    "run": true
+  },
+  "spawn_beacon_m": 1401,
+  "spawn_beacon_share": "0.687",
+  "stage_checked": [
+    "beacon_ok",
+    "spawn"
+  ],
+  "targets": [
+    {
+      "name": "reward_ratio",
+      "ok": false,
+      "target": "at least 1.5",
+      "value": 0.835
+    },
+    {
+      "name": "full_visit_ratio",
+      "ok": true,
+      "target": "at most 3.0",
+      "value": 1.363
+    }
+  ],
+  "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
+  "zones": {
+    "anchors": [
+      {
+        "cost": 1418.1,
+        "d_landmark": 56.0,
+        "name": "pump_gallery",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1292.7,
+        "d_landmark": 302.3,
+        "name": "bore_apron",
+        "on_route": false,
+        "rank": 1,
+        "viable": true
+      },
+      {
+        "cost": 1211.8,
+        "d_landmark": 454.9,
+        "name": "east_mesa",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 1182.4,
+        "d_landmark": 364.0,
+        "name": "east_chamber",
+        "on_route": false,
+        "rank": 3,
+        "viable": true
+      },
+      {
+        "cost": 918.7,
+        "d_landmark": 436.6,
+        "name": "west_chamber",
+        "on_route": false,
+        "rank": 4,
+        "viable": true
+      },
+      {
+        "cost": 679.2,
+        "d_landmark": 649.1,
+        "name": "west_cenote",
+        "on_route": false,
+        "rank": 5,
+        "viable": true
+      },
+      {
+        "cost": 661.1,
+        "d_landmark": 759.8,
+        "name": "trench_granaries",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      }
+    ],
+    "count": 151,
+    "crossings": {
+      "drop": 22,
+      "ride": 45,
+      "walk": 374
+    },
+    "hidden": [
+      {
+        "count": 2,
+        "id": "sealed_crosscut",
+        "zones": [
+          "crosscut_drift",
+          "open.6"
+        ]
+      }
+    ]
+  }
+}
