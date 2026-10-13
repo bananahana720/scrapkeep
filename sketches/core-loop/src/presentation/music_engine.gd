@@ -1755,6 +1755,8 @@ func _floor() -> float:
 
 
 func _retarget() -> void:
+	# Threat, approach and armour layers commit on phrases unless danger is flagged.
+	# Calm bay entry/exit is a place change and keeps its existing next-bar switch (K1).
 	if parameter_source.is_valid() and not _parameter_phrase_due and _parameter_danger == "":
 		return
 	var previous := _targets.duplicate()
