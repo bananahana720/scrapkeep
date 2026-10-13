@@ -172,7 +172,8 @@ func _release_fixture() -> void:
 	var busy_deadline: int = engine.clock + engine.step_len * Harmony.STEPS_PER_BAR * Harmony.PHRASE_BARS
 	while engine.clock <= busy_deadline:
 		engine.render(mini(4096, busy_deadline + 1 - engine.clock))
-	t.check("release fixture starts with busy layers", [Music.KEYS, Music.LEAD, Music.WARM, Music.FLEET, Music.LANDMARK_HUM].all(func(layer): return engine.layer_target(layer) > 0.0) and engine.fleet_ticks == 3)
+	t.check("release fixture starts with busy layers", [Music.KEYS, Music.LEAD, Music.WARM, Music.FLEET, Music.LANDMARK_HUM].all(func(layer): return engine.layer_target(layer) > 0.0) and engine.fleet_ticks == 3,
+		"targets=%s mode=%d track=%s section=%s clock=%d phrase_step=%d feeds=%s fleet=%d pending=%d" % [engine._targets, engine.mode, engine.track, engine.section, engine.clock, engine._bar_step, audio.sample_run_parameters(), engine.fleet_ticks, engine._parameter_fleet_pending])
 
 	game.flow._unseal()
 	audio._flush_flow()
