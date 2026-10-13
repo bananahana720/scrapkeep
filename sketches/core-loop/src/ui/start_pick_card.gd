@@ -23,6 +23,7 @@ const PIP := 5.0
 const KEYS := ["key_1", "key_2", "key_3"]
 
 var _tiles: Array = []
+var _tile_rects: Array[Rect2] = []
 var _rerolls := 0
 var _color := Palette.SAND
 var _interactive := false
@@ -66,6 +67,7 @@ func show_picks(run, profile = null) -> void:
 	visible = _tiles.size() == StartPicks.OFFERED
 	custom_minimum_size = extent()
 	size = extent()
+	_layout_tiles()
 	_controls()
 	queue_redraw()
 
@@ -80,6 +82,24 @@ func showing() -> bool:
 
 func tiles() -> Array:
 	return _tiles.duplicate(true)
+
+
+func tile_rects() -> Array[Rect2]:
+	return _tile_rects.duplicate()
+
+
+func _layout_tiles() -> void:
+	var widths := []
+	var total := TILE_GAP * maxf(0.0, _tiles.size() - 1)
+	for tile in _tiles:
+		var width := _tile_width(tile)
+		widths.append(width)
+		total += width
+	_tile_rects.clear()
+	var x := (size.x - total) * 0.5
+	for width in widths:
+		_tile_rects.append(Rect2(x, 0.0, width, ICON + PAD * 2.0))
+		x += width + TILE_GAP
 
 
 func rerolls_left() -> int:
@@ -145,22 +165,16 @@ func _controls() -> void:
 	reroll_button = null
 	if not _interactive or not visible:
 		return
-	var tile_extent := 0.0
-	for tile in _tiles:
-		tile_extent += _tile_width(tile)
-	tile_extent += TILE_GAP * maxf(0.0, _tiles.size() - 1)
-	var x := (size.x - tile_extent) * 0.5
 	for index in _tiles.size():
-		var width := _tile_width(_tiles[index])
-		var button := _button(Vector2(x, 0.0), Vector2(width, ICON + PAD * 2.0), "", func(): pick_requested.emit(index))
+		var rect := _tile_rects[index]
+		var button := _button(rect.position, rect.size, "", func(): pick_requested.emit(index))
 		button.flat = true
 		button.tooltip_text = "Take " + String(_tiles[index].name)
-		x += width + TILE_GAP
 	var y := ICON + PAD * 2.0 + PIP * 3.0
 	_label(RunTier.threat_text(), y)
 	_label(RunTier.pay_text(), y + 28.0)
 	var tiers := offered_tiers()
-	x = size.x * 0.5 - 250.0
+	var x := size.x * 0.5 - 250.0
 	for tier_value in tiers:
 		var words := "Tier %d%s" % [tier_value, " (selected)" if _run.selected_run_tier() == tier_value else ""]
 		_tier_buttons[tier_value] = _button(Vector2(x, y + 60.0), Vector2(160.0, 38.0), words, func(): tier_requested.emit(tier_value))
@@ -185,21 +199,19 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
-	var w := extent().x
-	var x := (size.x - w) * 0.5
 	var h := ICON + PAD * 2.0
-	for tile in _tiles:
-		var tw := _tile_width(tile)
-		UiDraw.panel(self, Rect2(Vector2(x, 0.0), Vector2(tw, h)))
+	for index in _tiles.size():
+		var tile: Dictionary = _tiles[index]
+		var rect := _tile_rects[index]
+		UiDraw.panel(self, rect)
 		var mid := h * 0.5
-		var cx := x + PAD
+		var cx := rect.position.x + PAD
 		draw_texture_rect(Icons.texture(tile["key"]), Rect2(Vector2(cx, mid - KEY * 0.5), Vector2(KEY, KEY)), false, Palette.SAND)
 		cx += KEY + GAP
 		draw_texture_rect(Icons.texture(tile["icon"]), Rect2(Vector2(cx, mid - ICON * 0.5), Vector2(ICON, ICON)), false,
 			Icons.tint(tile["icon"], _color))
 		cx += ICON + GAP
 		UiDraw.text(self, cx, mid, String(tile["name"]), FONT, _color)
-		x += tw + TILE_GAP
 	# One pip per reroll left, centred under the tiles: a spent reroll leaves an outline.
 	for i in StartPicks.REROLLS:
 		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * 3.0, h + PIP * 1.5)
