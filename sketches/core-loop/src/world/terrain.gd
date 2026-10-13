@@ -460,13 +460,38 @@ func cave_roof(id: String) -> Dictionary:
 
 
 func _floor(i: int, x: float, z: float) -> float:
+	var roof_y := -INF
 	for roof in _cave_roofs.get(i, {}).values():
-		var y: float = roof.surface.height(Vector2(x, z))
-		if y > -INF:
-			return y
+		roof_y = maxf(roof_y, roof.surface.height(Vector2(x, z)))
+	if roof_y > -INF:
+		return maxf(roof_y, _retained_park_height(_heights[i], _holes[i], x, z))
 	if _is_park[i]:
 		return _park_height(_heights[i], _holes[i], _under[i], x, z)
 	return _grid_height(_heights[i], x, z)
+
+
+static func _retained_park_height(heights: PackedFloat32Array, holes: PackedByteArray, x: float, z: float) -> float:
+	var grid := Vector2((x + ParkTerrain.HALF) / ParkTerrain.STEP, (z + ParkTerrain.HALF) / ParkTerrain.STEP)
+	var cell := Vector2i(floori(grid.x), floori(grid.y))
+	var result := -INF
+	# The footprint is closed: a rim edge or corner can belong to four ground cells.
+	for delta in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.UP, Vector2i(-1, -1)]:
+		var at: Vector2i = cell + delta
+		if at.x < 0 or at.y < 0 or at.x >= ParkTerrain.CELLS or at.y >= ParkTerrain.CELLS:
+			continue
+		if holes[at.y * ParkTerrain.CELLS + at.x] == 1:
+			continue
+		var f := grid - Vector2(at)
+		if f.x < 0.0 or f.y < 0.0 or f.x > 1.0 or f.y > 1.0:
+			continue
+		var k := at.y * ParkTerrain.SIDE + at.x
+		var a := heights[k]
+		var b := heights[k + 1]
+		var c := heights[k + ParkTerrain.SIDE]
+		var d := heights[k + ParkTerrain.SIDE + 1]
+		var y := a + (b - a) * f.x + (c - a) * f.y if f.x + f.y <= 1.0 else d + (c - d) * (1.0 - f.x) + (b - d) * (1.0 - f.y)
+		result = maxf(result, y)
+	return result
 
 
 static func _park_height(heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, x: float, z: float) -> float:

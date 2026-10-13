@@ -242,7 +242,7 @@ func _sample_rim(label: String, expected_drop: float) -> void:
 		# Jolt's shared-edge rays on both sides to measure the upper one-sided limit.
 		if hit.is_empty():
 			ray = -INF
-		for shift in [Vector2(0.0001, 0), Vector2(-0.0001, 0), Vector2(0, 0.0001), Vector2(0, -0.0001)]:
+		for shift in [Vector2(0.0001, 0), Vector2(-0.0001, 0), Vector2(0, 0.0001), Vector2(0, -0.0001), Vector2(0.0001, 0.0001), Vector2(-0.0001, 0.0001), Vector2(0.0001, -0.0001), Vector2(-0.0001, -0.0001)]:
 			var near_at: Vector2 = at + shift
 			var alternate := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(near_at.x, expected + 20.0, near_at.y), Vector3(near_at.x, expected - 20.0, near_at.y), 0xFFFFFFFF, excluded))
 			if not alternate.is_empty():
