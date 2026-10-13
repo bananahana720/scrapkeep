@@ -581,15 +581,16 @@ func _step_pins() -> void:
 
 
 # A pin hitting a pin may chain once more: the victim is flung at its nearest
-# neighbour. The pin that fling causes has chain_depth 1, so it may not domino again
-# (Triggers.MAX_CHAIN_DEPTH), and a window allows at most DOMINO_MAX_PER_WINDOW. The
+# neighbour. The pin that fling causes carries the domino bit in its chain mask, so it may not
+# domino again (Triggers.chain_allows), and a window allows at most DOMINO_MAX_PER_WINDOW. The
 # roll is the pin's own deterministic draw, from the clock and this run's domino serial, so two
 # runs with the same inputs roll the same dominoes whatever ids their objects were given.
 func _domino(id: String, d: Resource, n: int, victim: Node3D) -> void:
 	var key: int = victim.get_instance_id()
 	var mark: Dictionary = _domino_marks.get(key, {})
-	var depth: int = mark.get("depth", 0) if _clock - float(mark.get("t", -9.0)) < 1.0 else 0
-	if depth + 1 > Triggers.MAX_CHAIN_DEPTH:
+	var mask: int = mark.get("mask", 0) if _clock - float(mark.get("t", -9.0)) < 1.0 else 0
+	var bit: int = Triggers.chain_bit("domino")
+	if not Triggers.chain_allows(mask, bit):
 		return
 	if _domino_count >= DOMINO_MAX_PER_WINDOW:
 		return
@@ -604,7 +605,7 @@ func _domino(id: String, d: Resource, n: int, victim: Node3D) -> void:
 		var to: Vector3 = other.global_position - victim.global_position
 		to.y = 0.0
 		victim.knock(to.normalized() + Vector3.UP * 0.2, d.effect.get("speed", 10.0) * float(victim.weight))
-		_domino_marks[other.get_instance_id()] = {"depth": depth + 1, "t": _clock}
+		_domino_marks[other.get_instance_id()] = {"mask": Triggers.chain_add(mask, bit), "t": _clock}
 		_domino_count += 1
 		_count(id)
 		return
