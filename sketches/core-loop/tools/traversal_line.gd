@@ -816,9 +816,13 @@ func _run_children() -> void:
 		var child_out := out.path_join("children/%d-seed-%d" % [i + 1, _seeds[i]])
 		DirAccess.make_dir_recursive_absolute(child_out)
 		var path := child_out.path_join("%s.json" % _pilot)
-		# A rerun must never read a previous successful child's result after a failure.
-		if FileAccess.file_exists(path):
-			DirAccess.remove_absolute(path)
+		var name := "%s-seed-%d-trace.json" % [_pilot, _seeds[i]]
+		var child_trace := child_out.path_join(name)
+		var trace_path := out.path_join(name)
+		# Invalidate both trace consumers before replacing this seed's evidence.
+		for stale in [path, child_trace, trace_path]:
+			if FileAccess.file_exists(stale):
+				DirAccess.remove_absolute(stale)
 		var previous := {}
 		for kind in ["DATA", "CONFIG", "CACHE"]:
 			var key: String = "XDG_%s_HOME" % kind
@@ -845,7 +849,15 @@ func _run_children() -> void:
 		print(log.strip_edges())
 		var doc = JSON.parse_string(FileAccess.get_file_as_string(path)) if code == 0 and FileAccess.file_exists(path) else null
 		var rows: Array = doc.get("runs", []) if doc is Dictionary else []
-		if code != 0 or rows.size() != 1 or int(rows[0].get("seed", -1)) != _seeds[i] or log.contains("SCRIPT ERROR"):
+		var rejected := code != 0 or rows.size() != 1 or int(rows[0].get("seed", -1)) != _seeds[i] or log.contains("SCRIPT ERROR")
+		if not rejected and _settings.has("trace"):
+			rejected = not FileAccess.file_exists(child_trace)
+			if not rejected:
+				rejected = DirAccess.copy_absolute(child_trace, trace_path) != OK
+		if rejected:
+			for unusable in [child_trace, trace_path]:
+				if FileAccess.file_exists(unusable):
+					DirAccess.remove_absolute(unusable)
 			_inconclusive.append({"seed": _seeds[i], "status": "INCONCLUSIVE", "exit_code": code, "out": child_out})
 			printerr("traversal_line: seed %d INCONCLUSIVE (child exit %d, %d rows); see %s" % [_seeds[i], code, rows.size(), child_out])
 			continue
@@ -854,9 +866,6 @@ func _run_children() -> void:
 			rows[0][key] = int(rows[0][key])
 		_runs.append(rows[0])
 		_line["bar"] = doc.get("bar", {})
-		if _settings.has("trace"):
-			var name := "%s-seed-%d-trace.json" % [_pilot, _seeds[i]]
-			DirAccess.copy_absolute(child_out.path_join(name), out.path_join(name))
 	_finish()
 
 
