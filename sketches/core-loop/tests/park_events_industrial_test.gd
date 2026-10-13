@@ -4,6 +4,8 @@ const Director := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const T := preload("res://tests/support/t.gd")
 const FIXTURE := "res://tests/fixtures/park_events_industrial_rows.json"
+const RunState := preload("res://src/core/run_state.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
 const Industrial := preload("res://src/world/events/industrial.gd")
 const BAR := 240.0 / 172.0
 const H := 0.05
@@ -14,16 +16,11 @@ class Player extends RefCounted:
 	func set_velocity_now(v: Vector3, _cause := "") -> void:
 		state.velocity = v
 
-class Run extends RefCounted:
-	var mass := 20
-	func lose_scrap(amount: int, _at: Vector3, _cause: String) -> int:
-		var lost := mini(amount, mass)
-		mass -= lost
-		return lost
-
 class Context extends RefCounted:
 	var player := Player.new()
-	var run := Run.new()
+	var events := GameEvents.new()
+	var run := RunState.new(events, 823)
+	var losses: Array = []
 	var root: Node3D
 
 class Terrain extends RefCounted:
@@ -56,6 +53,9 @@ func _world(row: Dictionary, sites: Array, routes: Array) -> World:
 	var w := World.new()
 	root.add_child(w)
 	w.ctx.root = w
+	w.add_child(w.ctx.events)
+	w.ctx.run.add_scrap(20, FAR)
+	w.ctx.events.scrap_lost.connect(func(amount, at, total, cause): w.ctx.losses.append({"amount": amount, "at": at, "total": total, "cause": cause}))
 	w.terrain.geometry = w
 	var map := ParkMap.new()
 	map.park = {"map": "fixture", "park_rows": sites.duplicate(true), "event_rows": [row],
@@ -131,7 +131,7 @@ func _painted(hazard, point: Vector3) -> bool:
 
 func _damage(w: World, point: Vector3) -> int:
 	point.y = w.terrain.height(point.x, point.z)
-	var before: int = w.ctx.run.mass
+	var before: float = w.ctx.run.mass
 	w.events.advance(0.01, point, Vector3.ZERO, _context())
 	return before - w.ctx.run.mass
 
@@ -170,6 +170,10 @@ func _run() -> void:
 			t.eq("%s eye probe takes none" % row.id, _damage(w, eye), 0)
 		t.eq("%s inside probe takes exactly the row damage" % row.id, _damage(w, inside), damage)
 		t.eq("%s second contact takes none in one activation" % row.id, _damage(w, inside), 0)
+		t.check("%s real run state and scrap_lost fact agree on the hit" % row.id,
+			w.ctx.run.scrap == 20 - damage and is_equal_approx(w.ctx.run.mass, 20 - damage)
+			and w.ctx.losses.size() == 1 and w.ctx.losses[0].amount == damage
+			and w.ctx.losses[0].total == w.ctx.run.scrap and w.ctx.losses[0].cause == row.kind)
 		var ended := false
 		for i in 2000:
 			for fact in w.events.advance(H, FAR, Vector3.ZERO, _context()):
@@ -181,5 +185,5 @@ func _run() -> void:
 			ended and not is_instance_valid(hazard) and not w.terrain.overlays.has(swap + "_after"))
 		w.event_families.industrial.release()
 		w.free()
-	t.eq("test runs all expected checks", t.checks + 1, 83)
+	t.eq("test runs all expected checks", t.checks + 1, 89)
 	quit(t.verdict())

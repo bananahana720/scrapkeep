@@ -253,7 +253,7 @@ func _prepare_water(geometry: Dictionary) -> WaterSurface:
 # Clip each shape to the terrain's actual 2 m triangles before projecting. The resulting
 # triangles, including their interiors, share terrain.gd's b-c diagonal and interpolation.
 func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: WaterSurface = null) -> WaterSurface:
-	return EventGround.project_surface(world, geometry, shapes, offset, water, baseline, _overlay_map)
+	return EventGround.project_surface(world, geometry, shapes, offset, water, baseline, _overlay_map, ArrayMesh.new())
 
 
 func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:

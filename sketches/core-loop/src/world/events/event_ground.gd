@@ -58,7 +58,7 @@ static func _rectangle(low: Vector2, high: Vector2) -> Array:
 	return [low, Vector2(high.x, low.y), high, Vector2(low.x, high.y)]
 
 
-static func project_surface(world, geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: Surface = null, overlay_map: OverlayMap = null) -> Surface:
+static func project_surface(world, geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: Surface = null, overlay_map: OverlayMap = null, mesh: ArrayMesh = null) -> Surface:
 	if overlay_map == null and world.terrain.map() is OverlayMap:
 		overlay_map = world.terrain.map()
 	var surface := Surface.new()
@@ -146,7 +146,7 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 	for k in vertices.size():
 		indices.append(k)
 	arrays[Mesh.ARRAY_INDEX] = indices
-	surface.mesh = ArrayMesh.new()
+	surface.mesh = mesh if mesh != null else ArrayMesh.new()
 	if not vertices.is_empty():
 		surface.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return surface
