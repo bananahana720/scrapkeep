@@ -25,6 +25,10 @@ The committed traversal tool has SHA-256 `37e98e4ac7e0a5d4141d97828f5834a083d326
 
 Mandatory smoke is 7/8: the imported `park_table_test` fails the park/arena posture equality for rows 3–6. The shared test, ParkDefs and AlphaDefs are unchanged from candidate 907bfef and outside KD6 SCOPE. `shared-smoke-blocker.json` records the source identities and four failures. Crown remains unadmitted.
 
+### Midpoint-anchor disposition
+
+Round-8 coordinator ruling X4 accepts the retained uncommitted red and subsequent green for the midpoint-anchor assertions and fix in `d7099a6ca3efaab376ac15af6f8c49693f8bbecf`, parent `87035911`. The assertions were absent from the parent. This is an explicit exception to the committed-red requirement. Receipts: `/home/andrew/scratch/w13/sol/kd6-crown-r7/anchor-red.log:37,79` and `/home/andrew/scratch/w13/sol/kd6-crown-r7/anchor-green.log:37-40,82`. No history was rewritten and no later failing commit substitutes for the original red.
+
 ### Ruling 29 open rows
 
 | Pilot | Measure and value | Unchanged band | Final receipt | Attempts, owner and status |
