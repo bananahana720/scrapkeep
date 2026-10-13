@@ -12,6 +12,18 @@ var due := -1
 var lead := 0.0
 
 
+class TransportProbe extends Node:
+	var audio
+	var director
+	var snapshot := {}
+
+	func _physics_process(delta: float) -> void:
+		var engine = audio.engine
+		var bar: int = engine.step_len * Harmony.STEPS_PER_BAR
+		var origin: int = engine.bar_origin + ceili(float(engine.clock - engine.bar_origin) / bar) * bar
+		snapshot = {"stage": director.stage_time + delta, "sample": engine.clock, "origin": origin, "bar": bar}
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -62,6 +74,9 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	await _warning_through_hold()
+	await _recovery(true)
+	await _recovery(false)
+	await _recovery(false, true)
 	quit(t.verdict())
 
 
@@ -115,5 +130,90 @@ func _warning_through_hold() -> void:
 	t.check("unsafe lead preserves all original riser cells", heard.map(func(a): return [a.at, a.end]) == expected,
 		str([heard.map(func(a): return [a.at, a.end]), expected]))
 	t.check("unsafe lead holds drop silent", flood.holding and not audio.engine.park_cue_log.any(func(a): return a.owner == "plunge_pool_flood" and a.id == "drop_flood"), str(flood.holding))
+	game.queue_free()
+	await process_frame
+
+
+func _recovery(before_deadline: bool, direct_live := false) -> void:
+	game = Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	game.ctx.calm = true
+	game.flow.press_start()
+	game.flow.choose_class(0)
+	game.player.set_frozen(true)
+	var safe_at: Vector3 = game.player.ball_position()
+	var audio = game.presentation.audio
+	audio.bake_now()
+	var probe := TransportProbe.new()
+	probe.audio = audio
+	probe.director = game.world.events
+	probe.process_physics_priority = -100
+	root.add_child(probe)
+	var announcement := []
+	var landed := []
+	game.events.event_announced.connect(func(id, seconds):
+		if id == "plunge_pool_flood":
+			announcement.append({"sample": audio.engine.clock + roundi(seconds * Harmony.RATE), "stage": game.world.events.stage_time + seconds}))
+	game.events.event_started.connect(func(id):
+		if id == "plunge_pool_flood":
+			landed.append(probe.snapshot.duplicate()))
+	game.world.director.stage_time = game.world.director.TIER_SECONDS
+	for frame in 120:
+		await physics_frame
+		if not announcement.is_empty():
+			break
+	var label := "clearance recovery" if before_deadline else ("hold direct LIVE recovery" if direct_live else "held recovery")
+	t.check(label + " announced", not announcement.is_empty(), str(announcement))
+	if announcement.is_empty():
+		probe.queue_free()
+		game.queue_free()
+		await process_frame
+		return
+	var flood: Dictionary = game.world.events._park_states.filter(func(s): return s.row.id == "plunge_pool_flood")[0]
+	game.player.reset_to(game.world.events._park_at(flood) + Vector3.UP * game.player.Tuning.RADIUS)
+	game.player.set_frozen(true)
+	game.player.state.grounded = true
+	for frame in (30 if before_deadline else 900):
+		await physics_frame
+		game.player.state.grounded = true
+		if not before_deadline and flood.holding:
+			break
+	t.check(label + " cancelled before recovery", not audio.engine._actions.any(func(a): return a.get("type") == "park_cue" and a.owner == "plunge_pool_flood" and not a.row.rise)
+		and (game.world.events.stage_time < announcement[0].stage if before_deadline else flood.holding), str([flood.holding, game.world.events.stage_time]))
+	if not before_deadline:
+		for frame in 12:
+			await physics_frame
+		if direct_live:
+			# Align the render head, not the director rules, so release commits in one advance.
+			var bar: int = audio.engine.step_len * Harmony.STEPS_PER_BAR
+			var target: int = audio.engine.bar_origin + ceili(float(audio.engine.clock - audio.engine.bar_origin) / bar) * bar
+			while audio.engine.clock < target:
+				var frames: int = mini(4096, target - audio.engine.clock)
+				audio._virtual_usec = Time.get_ticks_usec() - ceili(float(frames) * 1000000.0 / Harmony.RATE)
+				audio._pump()
+			audio._virtual_usec = Time.get_ticks_usec()
+	game.player.reset_to(safe_at)
+	game.player.set_frozen(true)
+	var expected: int = announcement[0].sample
+	var scheduling := {}
+	var previous_due: float = flood.due_s
+	for frame in 900:
+		await physics_frame
+		if float(flood.due_s) != previous_due and scheduling.is_empty():
+			scheduling = probe.snapshot.duplicate()
+			var origin_stage: float = scheduling.stage + float(scheduling.origin - scheduling.sample) / Harmony.RATE
+			expected = scheduling.origin + roundi((float(flood.due_s) - origin_stage) * Harmony.RATE)
+		if not landed.is_empty() and audio.engine.clock > expected + audio.engine.beat_len():
+			break
+	var drops: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "drop_flood")
+	var bar: int = audio.engine.step_len * Harmony.STEPS_PER_BAR
+	t.check(label + " committed deadline", not landed.is_empty() and (float(flood.due_s) == announcement[0].stage if before_deadline else float(flood.due_s) > announcement[0].stage), str([flood.due_s, announcement, scheduling]))
+	t.check(label + " exactly one mapped downbeat", drops.size() == 1 and drops[0].at == expected and posmod(expected - audio.engine.bar_origin, bar) == 0,
+		str([drops.map(func(a): return a.at), expected, audio.engine.bar_origin, bar]))
+	if direct_live:
+		t.check(label + " committed on release advance", not landed.is_empty() and not scheduling.is_empty() and is_equal_approx(landed[0].stage, scheduling.stage), str([landed, scheduling]))
+	probe.queue_free()
 	game.queue_free()
 	await process_frame
