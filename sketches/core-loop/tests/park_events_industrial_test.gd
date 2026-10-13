@@ -130,6 +130,7 @@ func _painted(hazard, point: Vector3) -> bool:
 	return false
 
 func _damage(w: World, point: Vector3) -> int:
+	point.y = w.terrain.height(point.x, point.z)
 	var before: int = w.ctx.run.mass
 	w.events.advance(0.01, point, Vector3.ZERO, _context())
 	return before - w.ctx.run.mass
@@ -158,6 +159,7 @@ func _run() -> void:
 		var swap := str(row.effect.swap)
 		t.check("%s lands its swap without a natural handler" % row.id, w.terrain.overlays.has(swap + "_after"))
 		_route_checks(w, row)
+		t.near("%s hazard follows the ground under its drawn footprint" % row.id, float(hazard.ground_at(inside)), w.terrain.height(inside.x, inside.z))
 		t.near("%s drawn outer radius matches hazard_m" % row.id, float(hazard.descriptor().r_out), outer)
 		t.check("%s inside probe is drawn in the live fill" % row.id, _painted(hazard, inside))
 		t.check("%s outside probe is outside the live fill" % row.id, not _painted(hazard, outside))
@@ -179,5 +181,5 @@ func _run() -> void:
 			ended and not is_instance_valid(hazard) and not w.terrain.overlays.has(swap + "_after"))
 		w.event_families.industrial.release()
 		w.free()
-	t.eq("test runs all expected checks", t.checks + 1, 77)
+	t.eq("test runs all expected checks", t.checks + 1, 83)
 	quit(t.verdict())
