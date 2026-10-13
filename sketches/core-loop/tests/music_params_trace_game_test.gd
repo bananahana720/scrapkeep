@@ -1,3 +1,4 @@
+# smoke: solo timeout=360s
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
