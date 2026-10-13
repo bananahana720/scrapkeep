@@ -332,9 +332,6 @@ var heft_lift := 0
 # A full ultimate meter adds one more step, the same size (SKILL-BAR section 4, music).
 var ultimate_lift := false
 var _requested_ultimate_lift := false
-var _parameter_curve_base := 0.0
-var _parameter_curve_masks := PackedFloat32Array()
-var _parameter_curve_play := false
 var _parameter_last_ultimate := false
 var parameter_committed_values := {}
 var parameter_committed_released := false
@@ -567,6 +564,7 @@ func set_parameter_source(source: Callable) -> void:
 	parameter_source = source
 	_parameter_step = 0
 	parameters.clear()
+	parameter_committed_values.clear()
 
 
 func _sample_parameters() -> void:
@@ -591,8 +589,7 @@ func parameter_danger(id: String) -> void:
 		return
 	_parameter_danger = id
 	_parameter_danger_floor = 1.0
-	applied_pressure = pressure
-	_retarget()
+	_commit_parameters()
 	_parameter_danger = ""
 
 
@@ -1399,8 +1396,7 @@ func _on_step() -> void:
 				fleet_ticks = _parameter_fleet_pending
 				events_log.append(["fleet", clock, fleet_ticks])
 			_parameter_danger_floor = 0.0
-			applied_pressure = pressure
-			_retarget()
+			_commit_parameters()
 		_parameter_phrase_due = false
 	var s := _bar_step % Harmony.STEPS_PER_BAR
 	var bar := _bar_step / Harmony.STEPS_PER_BAR
@@ -1780,28 +1776,34 @@ func _floor() -> float:
 	return PRESSURE_FLOOR.get(key_name, 0.0)
 
 
-func _retarget() -> void:
-	# Threat, approach and armour layers commit on phrases unless danger is flagged.
-	# Calm bay entry/exit is a place change and keeps its existing next-bar switch (K1).
-	if parameter_source.is_valid() and not _parameter_phrase_due and _parameter_danger == "":
-		_retarget_ultimate()
-		return
+# Threat, approach and armour schedule their own phrase or flagged-danger commit.
+# Shared retarget callers, including calm bay entry/exit (K1), retain their own boundaries.
+func _commit_parameters() -> void:
 	var previous := _targets.duplicate()
+	parameter_committed_values = parameters.duplicate()
+	parameter_committed_released = _parameter_released
+	parameter_committed_danger_floor = _parameter_danger_floor
+	applied_pressure = float(parameter_committed_values.get("threat", 0.0))
+	_retarget()
+	if previous != _targets or _parameter_logged_fleet != fleet_ticks:
+		_parameter_logged_fleet = fleet_ticks
+		parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": _parameter_phrase_due,
+			"danger": _parameter_danger, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
+		if parameter_layer_log.size() > 4096:
+			parameter_layer_log.pop_front()
+	parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, _parameter_danger)
+
+
+func _retarget() -> void:
+	var ultimate_changed := ultimate_lift != _parameter_last_ultimate
+	_parameter_last_ultimate = ultimate_lift
 	var effective := maxf(applied_pressure, _floor()) if mode == PLAY else applied_pressure
 	if parameter_source.is_valid():
-		effective = maxf(effective, _parameter_danger_floor)
+		effective = maxf(effective, parameter_committed_danger_floor)
 	if mode == PLAY and building():
 		effective = maxf(effective, build_level())
 	if mode == PLAY:
-		effective = minf(1.0, effective + HEFT_STEP * heft_lift)
-	_parameter_curve_base = effective
-	_parameter_curve_play = mode == PLAY
-	_parameter_curve_masks = PackedFloat32Array(MODE_MASK[mode])
-	for layer in [WARM, WOB, LANDMARK_HUM]:
-		_parameter_curve_masks[layer] = 0.0
-	if mode == PLAY and ultimate_lift:
-		effective = minf(1.0, effective + HEFT_STEP)
-	_parameter_last_ultimate = ultimate_lift
+		effective = minf(1.0, effective + HEFT_STEP * (heft_lift + (1 if ultimate_lift else 0)))
 	_intensity = effective
 	var gains := layer_gains(effective)
 	for layer in gains.size():
@@ -1819,17 +1821,14 @@ func _retarget() -> void:
 		elif track in BOSS_TRACKS:
 			_pump_depth = 0.4
 	if _lounge_live() and mode == PLAY and _drop.is_empty() and _cadence_bar < 0:
-		_parameter_curve_masks.fill(0.0)
 		for layer in LOUNGE_GAINS.size():
 			if layer != WARM:
 				_targets[layer] = LOUNGE_GAINS[layer]
 		_intensity = maxf(LOUNGE_FLOOR, build_level())
 	if track == "warden" and section == "open" and mode == PLAY and _cadence_bar < 0:
-		_parameter_curve_masks.fill(0.0)
 		for layer in OPEN_GAINS.size():
 			_targets[layer] = OPEN_GAINS[layer]
 	if track in MENU_TRACKS and mode == IDLE:
-		_parameter_curve_masks[LEAD] = 0.0
 		var lost := section == "lost"
 		if lost:
 			for layer in gains.size():
@@ -1840,46 +1839,22 @@ func _retarget() -> void:
 	if parameter_source.is_valid():
 		parameter_layer_reads = {}
 		if mode == PLAY:
-			if parameters.has("approach"):
+			if parameter_committed_values.has("approach"):
 				parameter_layer_reads["approach"] = true
 				landmark_hum_sound = String(EventKinds.world_row("landmark_hum").get("sound", ""))
 				if not landmark_hum_sound.is_empty():
-					_targets[LANDMARK_HUM] = float(parameters.approach)
-			var strip := _parameter_released
-			if parameters.has("armour"):
+					_targets[LANDMARK_HUM] = float(parameter_committed_values.approach)
+			var strip := parameter_committed_released
+			if parameter_committed_values.has("armour"):
 				parameter_layer_reads["armour"] = true
-				strip = strip or float(parameters.armour) < ARMOUR_STRIP_AT
+				strip = strip or float(parameter_committed_values.armour) < ARMOUR_STRIP_AT
 			if strip:
 				for layer in [KEYS, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET, LANDMARK_HUM]:
 					_targets[layer] = 0.0
-					_parameter_curve_masks[layer] = 0.0
-		if previous != _targets or _parameter_logged_fleet != fleet_ticks:
-			_parameter_logged_fleet = fleet_ticks
-			parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": _parameter_phrase_due,
-				"danger": _parameter_danger, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
-			if parameter_layer_log.size() > 4096:
-				parameter_layer_log.pop_front()
-		parameter_committed_values = parameters.duplicate()
-		parameter_committed_released = _parameter_released
-		parameter_committed_danger_floor = _parameter_danger_floor
-		parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, _parameter_danger)
-
-
-func _retarget_ultimate() -> void:
-	if ultimate_lift == _parameter_last_ultimate or _parameter_curve_masks.is_empty():
-		return
-	_parameter_last_ultimate = ultimate_lift
-	var effective := minf(1.0, _parameter_curve_base + (HEFT_STEP if ultimate_lift and _parameter_curve_play else 0.0))
-	var gains := layer_gains(effective)
-	var previous := _targets.duplicate()
-	for layer in gains.size():
-		if _parameter_curve_masks[layer] > 0.0:
-			_targets[layer] = gains[layer] * _parameter_curve_masks[layer]
-	if previous != _targets:
-		_intensity = effective
-		parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": false,
-			"danger": "", "ultimate": true, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
-	parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, "ultimate")
+		if ultimate_changed and not _parameter_phrase_due and _parameter_danger == "":
+			parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": false,
+				"danger": "", "ultimate": true, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
+			parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, "ultimate")
 
 
 func _lounge_live() -> bool:

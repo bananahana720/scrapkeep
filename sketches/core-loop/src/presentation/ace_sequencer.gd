@@ -108,7 +108,6 @@ var parameter_enabled := false
 var parameters := {}
 var parameter_released := false
 var parameter_layer_log: Array = []
-var _parameter_follow_now := false
 var _parameter_danger_floor := 0.0
 var threat := 0
 var in_bay := false
@@ -283,7 +282,7 @@ func stop_at(at: int, ramp := STOP_RAMP) -> void:
 
 func set_pressure(value: float) -> void:
 	pressure = value
-	_follow(true)
+	_follow()
 
 
 func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String, timing: Dictionary = {}) -> void:
@@ -306,7 +305,7 @@ func parameter_gain(stem: String) -> float:
 # releases it. It sits on top of the systemic pressure; set_pressure keeps its own value.
 func set_ultimate_lift(on: bool) -> void:
 	ultimate_lift = on
-	_follow(true)
+	_follow()
 
 
 func effective_pressure() -> float:
@@ -315,7 +314,7 @@ func effective_pressure() -> float:
 
 func threat_rose(tier: int) -> void:
 	threat = maxi(threat, tier)
-	_follow(true)
+	_follow()
 
 
 func set_bay(on: bool) -> void:
@@ -637,30 +636,38 @@ func _desired() -> String:
 
 # Moves toward what the game asks for, at the first moment a change is allowed: never
 # inside a hold, never over a protected entry, never during the directed piece.
-func _follow(parameter_driven := false) -> void:
-	if parameter_driven and parameter_enabled and parameters.has("threat") and not _parameter_follow_now:
-		return
+func _follow() -> void:
+	var want := _follow_target()
+	if want != "":
+		_schedule(want, _landing(want, sections[want]["enter"] == "beat"))
+
+
+func _follow_parameters() -> void:
+	var want := _follow_target()
+	if want != "":
+		_schedule(want, clock, true)
+
+
+func _follow_target() -> String:
 	if mode == "off" or mode == "piece":
-		return
+		return ""
 	if hold_until > clock:
-		return
+		return ""
 	if not pending.is_empty():
 		if String(pending["section"]) in PROTECTED or bool(pending.get("begun", false)):
-			return
+			return ""
 	var want := _desired()
 	if want == "" or want == pending.get("section", ""):
-		return
+		return ""
 	if pending.is_empty() and (want == section or _continues(want)):
-		return
+		return ""
 	# A drop or pivot is heard to its end before the build comes back.
 	if want == "build" and section in ["drop", "pivot"]:
-		return
+		return ""
 	_cancel_pending()
 	if want == section:
-		return
-	var row: Dictionary = sections[want]
-	var committed_parameter := parameter_driven and _parameter_follow_now
-	_schedule(want, clock if committed_parameter else _landing(want, row["enter"] == "beat"), committed_parameter)
+		return ""
+	return want
 
 
 # home and calm share a clip: the release from home into calm plays on without a join.
@@ -818,9 +825,7 @@ func _run(action: Dictionary) -> void:
 			pressure = float(parameters.get("threat", 0.0))
 			if action.reason != "ultimate":
 				_parameter_danger_floor = 1.0 if MusicRows.danger(action.reason) else 0.0
-			_parameter_follow_now = true
-			_follow(true)
-			_parameter_follow_now = false
+			_follow_parameters()
 			if section != "":
 				_retarget(STOP_RAMP)
 			if not pending.is_empty():
