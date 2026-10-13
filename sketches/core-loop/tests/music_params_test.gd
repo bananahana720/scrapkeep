@@ -5,6 +5,7 @@ const Music := preload("res://src/presentation/music_engine.gd")
 const Rows := preload("res://src/presentation/music_rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Audio := preload("res://src/presentation/audio.gd")
+const Ace := preload("res://src/presentation/ace_sequencer.gd")
 const T := preload("res://tests/support/t.gd")
 
 var t := T.new("music_params_test")
@@ -111,6 +112,7 @@ func _run() -> void:
 	_fleet_fixture(false)
 	for pilot in Harmony.CLASS_MOTIFS:
 		_ultimate_fixture(pilot)
+	_stopped_ultimate_fixture()
 	if OS.get_environment("KE10_UNIT_ONLY") == "1":
 		quit(t.verdict())
 		return
@@ -154,6 +156,20 @@ func _ultimate_fixture(pilot: String) -> void:
 	t.check("spent lift retains committed armour " + pilot, lift.layer_target(Music.KEYS) > 0.0)
 	_advance(lift, Harmony.BAR * Harmony.PHRASE_BARS + 1)
 	t.eq("pending armour still commits at phrase " + pilot, lift.layer_target(Music.KEYS), 0.0)
+
+
+func _stopped_ultimate_fixture() -> void:
+	var audio := Audio.new()
+	audio.engine = Music.new()
+	audio.engine.set_parameter_source(func(): return {"threat": 0.0})
+	audio.ace = Ace.new("")
+	audio.ace.parameter_enabled = true
+	audio._set_ult_lift(true)
+	t.check("stopped ACE sequencer retains requested lift", audio.ace.ultimate_lift)
+	audio.ace.ultimate_lift = true
+	audio._set_ult_lift(false)
+	t.check("stopped ACE sequencer clears spent lift", not audio.ace.ultimate_lift)
+	audio.free()
 
 
 func _fleet_fixture(armour: bool) -> void:
