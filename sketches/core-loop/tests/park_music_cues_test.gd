@@ -193,7 +193,7 @@ func _physics_process(_delta: float) -> bool:
 			_land_samples[id] = (audio.engine.park_cue_log + audio.engine._actions.filter(func(a): return a.get("type") == "park_cue" and not a.row.rise)).duplicate(true))
 		audio.bake_now()
 		# The real director's public tier input unlocks unchanged park_dam rows.
-		_game.world.director.stage_time = 45.0
+		_game.world.director.stage_time = _game.world.director.TIER_SECONDS
 	_ticks += 1
 	if _ticks < 760:
 		return false

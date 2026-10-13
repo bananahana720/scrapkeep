@@ -45,7 +45,7 @@ func _run() -> void:
 			due = audio.engine.clock + roundi(seconds * Harmony.RATE)
 			booked = audio.engine._actions.filter(func(a): return a.get("type") == "park_cue" and a.id == "drop_flood").duplicate(true))
 	game.events.event_started.connect(func(id): started.append(id))
-	game.world.director.stage_time = 45.0
+	game.world.director.stage_time = game.world.director.TIER_SECONDS
 	for frame in 120:
 		await physics_frame
 		if due >= 0:
