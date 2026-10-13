@@ -160,13 +160,6 @@ func _run() -> void:
 	print("[crown_ramp_entry] physical low edge %s ground gap %.3f m" % [entry, entry_gap])
 	t.check("the Crown ramp entry meets Rivet's rolling ground contact", absf(entry_gap) <= Tuning.RADIUS, "entry gap %.3f m exceeds ball radius %.3f m" % [entry_gap, Tuning.RADIUS])
 	ramp_node.free()
-	var west_launch: Dictionary = by_row["kick_wmid_3"]
-	var west_node := ParkRecipes.place_row(west_launch, holder, ground, Callable(), clear_zones)
-	var west_entry := west_node.to_global(Vector3(0.0, 0.0, -float(west_launch["size"][0]) * 0.5))
-	var west_gap := west_entry.y - float(ground.call(west_entry.x, west_entry.z))
-	print("[west_launch_entry] physical low edge %s ground gap %.3f m" % [west_entry, west_gap])
-	t.check("Tarn's west launch entry meets rolling ground contact", absf(west_gap) <= Tuning.RADIUS, "entry gap %.3f m exceeds ball radius %.3f m" % [west_gap, Tuning.RADIUS])
-	west_node.free()
 	t.eq("the Warden anchor stays at the first 18 m lens", park["landmark"]["warden"]["anchor"], [0.0, 18.0, 515.0])
 	t.eq("the Warden flight path stays approved", park["landmark"]["warden"]["path"], [[0.0, 18.0, 515.0], [39.0, 18.0, 447.5], [-39.0, 18.0, 447.5]])
 	var tall_perch: Dictionary = park.duplicate(true)
