@@ -115,6 +115,11 @@ func _hold(label: String, ball: Vector3, velocity: Vector3, elapsed: float, ctx:
 		w.events.advance(float(row.effect.fill_s) * 0.5, ball, velocity, ctx)
 		var phase := "%s tick %d" % [label, tick + 1]
 		await _sample(phase, elapsed, true)
+		var expected_y := BASELINE_B3B840D - float(row.effect.depth_m) * elapsed / float(row.effect.fill_s)
+		var sample: Dictionary = samples[-1]
+		t.near(phase + " terrain holds", float(sample.height), expected_y, 0.05)
+		t.near(phase + " drawn roof holds", float(sample.drawn), expected_y, 0.05)
+		t.near(phase + " exact collider holds", float(sample.ray), expected_y, 0.05)
 		t.near(phase + " handler elapsed holds", float(handler.active[row.id].elapsed_s), elapsed)
 		t.near(phase + " director clear-time holds", float(descent.collapse_s), elapsed)
 
