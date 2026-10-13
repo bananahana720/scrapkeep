@@ -20,10 +20,14 @@ func _run() -> void:
 	var w=game.flow.warden
 	var p=w._posture
 	p.apply({"contact":true,"gain":40.0},1)
-	p.step(Warden.PULSE_CYCLE)
-	t.eq("a landed dam contact holds through one pulse rhythm",p.posture,40.0)
-	p.step(0.5)
-	t.eq("dam drain resumes at its unchanged rate after grace",p.posture,40.0-Posture.DRAIN_RATE*0.5)
+	w.mount_driver.on_pulse(w,false)
+	w.mount_driver.step(w,1.0/Engine.physics_ticks_per_second)
+	p.step(Reactor.SHEET_SECONDS)
+	t.eq("the live sheet holds dam posture",p.posture,40.0)
+	w.mount_driver.sheet_left=0.0
+	w.mount_driver.step(w,1.0/Engine.physics_ticks_per_second)
+	p.step(Posture.DRAIN_DELAY+0.5)
+	t.eq("dam dry drain keeps its delay and rate",p.posture,40.0-Posture.DRAIN_RATE*0.5)
 	var normal=Posture.new()
 	normal.apply({"contact":true,"gain":40.0},1)
 	normal.step(Posture.DRAIN_DELAY+0.5)
