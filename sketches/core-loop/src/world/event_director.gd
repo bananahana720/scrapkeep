@@ -514,7 +514,7 @@ func _park_capacity(candidate: Dictionary) -> bool:
 				return false
 		elif not state.weather:
 			var progress_s: float = state.live_elapsed_s
-			if state.row.kind == "collapse":
+			if state.row.kind in ["collapse", "cave_in"]:
 				progress_s = state.collapse_s
 			elif state.row.kind != "drain" and (state.row.kind in ["flood_fill", "flash_flood"] or state.row.effect.get("material") == "water"):
 				progress_s = state.rise_s
@@ -548,7 +548,7 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	_park_hook("step", state, step_ctx)
 	if state.phase != LIVE:
 		return
-	if not state.weather and state.row.kind == "collapse":
+	if not state.weather and state.row.kind in ["collapse", "cave_in"]:
 		state.collapse_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.collapse_s) + dt)
 	if not state.weather and _park_rising(state):
 		state.rise_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.rise_s) + dt)
@@ -557,7 +557,7 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 
 
 static func _park_collapsing(state: Dictionary) -> bool:
-	return state.row.kind == "collapse" and state.collapse_s < float(state.row.effect.get("fill_s", 0.0))
+	return state.row.kind in ["collapse", "cave_in"] and state.collapse_s < float(state.row.effect.get("fill_s", 0.0))
 
 
 static func _park_rising(state: Dictionary) -> bool:
