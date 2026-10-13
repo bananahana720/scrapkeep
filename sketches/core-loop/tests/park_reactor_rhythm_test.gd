@@ -42,7 +42,7 @@ func _run() -> void:
 	var grown: Dictionary = await _cycles(Run.HEFT_CLASS_AT[2], "grown")
 	var small: Dictionary = await _cycles(Run.HEFT_CLASS_AT[0], "small")
 	t.eq("three landed sheet rams break grown Warden", grown.rams, 3)
-	t.check("grown Warden breaks on third sheet ram", grown.broken and not grown.early, str(grown))
+	t.check("grown Warden breaks on third sheet ram", grown.broken and not grown.early and grown.rams == 3, str(grown))
 	t.check("small also breaks", small.broken, str(small))
 	t.check("small takes at least twice grown time on dam", grown.seconds > 0.0 and small.seconds >= 2.0 * grown.seconds, "small %s, grown %s" % [small, grown])
 	await _setup(Run.HEFT_CLASS_AT[2])
@@ -70,10 +70,13 @@ func _cycles(heft: float, label: String) -> Dictionary:
 	var contacts = []
 	var solved = []
 	var result = {"broken": false, "early": false, "rams": 0, "seconds": 0.0}
+	var core_at: Vector3 = w.family_point_at()
+	var pulse_times: Array[float] = []
+	var live_drain := 0.0
 	game.player.body().enemy_touched.connect(func(enemy, _normal):
 		if enemy == w: solved.append(game.player.ball_position()))
 	game.events.enemy_struck.connect(func(enemy, kind, force):
-		if enemy == w and kind == "ram": contacts.append([force, game.player.ball_position()]))
+		if enemy == w and kind in ["ram", "stomp", "slam"]: contacts.append([force, game.player.ball_position(), w.posture()]))
 	game.events.beacon_unsealed.connect(func(_stage): result.broken = true)
 	var started: float = game.run.stage_time
 	var last_cycle := -1
@@ -81,16 +84,26 @@ func _cycles(heft: float, label: String) -> Dictionary:
 		if result.broken: break
 		if sheet.sheet_live() and sheet.gates_opened != last_cycle:
 			last_cycle = sheet.gates_opened
+			pulse_times.append(game.run.stage_time)
 			var foot: Vector3 = w.home + sheet.sheet_dir * (Reactor.SHEET_RUN - Tuning.RADIUS)
 			game.player.reset_to(game.ctx.terrain.drop_point(foot.x, foot.z, Tuning.RADIUS), -sheet.sheet_dir * game.player.tuning.f("cruise"))
 		elif not sheet.sheet_live():
-			var wait: Vector3 = w.home + Vector3.FORWARD * Reactor.SHEET_RUN
+			var wait: Vector3 = w.home + Vector3.FORWARD * (Reactor.SHEET_RUN - Tuning.RADIUS)
 			game.player.reset_to(game.ctx.terrain.drop_point(wait.x, wait.z, Tuning.RADIUS), Vector3.ZERO)
+		var before: float = w.posture()
+		var live: bool = sheet.sheet_live() and sheet.sheet_left > 1.0 / Engine.physics_ticks_per_second
 		await physics_frame
+		if is_instance_valid(w) and live and not result.broken:
+			live_drain += maxf(0.0, before - w.posture())
 		if result.broken and contacts.size() < 3: result.early = true
 	result.rams = contacts.size()
 	result.seconds = game.run.stage_time - started
-	t.check(label + " sheet rams came from aligned solver contacts", not solved.is_empty() and contacts.all(func(row): return row[1].distance_to(w.family_point_at()) <= w.FAMILY_POINT_RADIUS + Tuning.RADIUS + 0.01), str(contacts))
+	t.check(label + " sheet rams came from aligned solver contacts", not solved.is_empty() and contacts.all(func(row): return row[1].distance_to(core_at) <= Warden.FAMILY_POINT_RADIUS + Tuning.RADIUS + 0.01), str(contacts))
+	t.near(label + " cycles have no live-sheet regeneration", live_drain, 0.0)
+	var rhythm_ok := pulse_times.size() >= 3
+	for i in range(1, pulse_times.size()):
+		rhythm_ok = rhythm_ok and absf(pulse_times[i] - pulse_times[i-1] - Warden.PULSE_CYCLE) <= 1.0 / Engine.physics_ticks_per_second + 0.0001
+	t.check(label + " pulses keep six-second rhythm", rhythm_ok, str(pulse_times))
 	game.free()
 	await physics_frame
 	return result

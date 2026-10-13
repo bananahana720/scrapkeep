@@ -16,7 +16,9 @@ func _run() -> void:
 	var jump := Tuning.new().f("jump_speed")
 	for above in [false, true]:
 		m.target.at = m.home + d.sheet_dir * (Reactor.SHEET_TOP - Tuning.RADIUS)
-		m.target.at.y = m.family_point_at().y + (Tuning.RADIUS if above else -Tuning.RADIUS)
+		var progress := 1.0 - (Reactor.SHEET_TOP - Tuning.RADIUS) / Reactor.SHEET_RUN
+		var profile := Tuning.RADIUS + (m.family_point_at().y - Tuning.RADIUS) * progress * progress
+		m.target.at.y = m.family_point_at().y + Tuning.RADIUS if above else profile + Tuning.RADIUS
 		m.target.rigid.linear_velocity = -d.sheet_dir * Reactor.RIDE_MIN_SPEED + Vector3.UP * jump
 		d._ride(m, 1.0 / Engine.physics_ticks_per_second)
 		t.near("rising jump retained " + ("above core" if above else "above profile below core"), m.target.rigid.linear_velocity.y, jump)
