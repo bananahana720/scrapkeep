@@ -47,6 +47,7 @@ func _run() -> void:
 	_crossfade_fixture(audio.ace_manifest)
 	_ultimate_section_fixture(audio.ace_manifest)
 	_warden_state_fixture(audio.ace_manifest)
+	_warden_state_fixture(audio.ace_manifest, true)
 	var ace = audio.ace
 	_pump_to(audio, engine.clock + Harmony.BAR * 2)
 	t.eq("source-enabled restart aligns step and phrase origins", engine.grid_origin, engine.bar_origin)
@@ -286,7 +287,7 @@ func _pair_to(transport, seq, until: int) -> void:
 		seq.render(n)
 
 
-func _warden_state_fixture(manifest_path: String) -> void:
+func _warden_state_fixture(manifest_path: String, pending_parameters := false) -> void:
 	var seq := Ace.new(manifest_path)
 	var committed := {"threat": 0.7, "approach": 0.0, "armour": 1.0}
 	seq.parameter_enabled = true
@@ -302,8 +303,11 @@ func _warden_state_fixture(manifest_path: String) -> void:
 	t.eq("Warden fixture has committed threat", seq.parameters, committed)
 	var pending_values := {"threat": 1.0, "approach": 1.0, "armour": 0.2}
 	var parameter_at := build_at + bar * Harmony.PHRASE_BARS
-	seq.commit_parameters(parameter_at, pending_values, false, false, "")
-	t.check("Warden fixture has a pending parameter commit", seq.actions.any(func(a): return a.type == "parameters"))
+	if pending_parameters:
+		seq.commit_parameters(parameter_at, pending_values, false, false, "")
+		t.check("Warden fixture has a pending parameter commit", seq.actions.any(func(a): return a.type == "parameters"))
+	else:
+		t.check("Warden fixture has no pending parameter commit", seq.actions.all(func(a): return a.type != "parameters"))
 	for state in ["telegraph", "open", "closed"]:
 		var incoming: String = "build" if state == "closed" else state
 		var outgoing: String = seq.section
@@ -335,10 +339,11 @@ func _warden_state_fixture(manifest_path: String) -> void:
 		t.eq("Warden retains manifest clip entry " + state, seq.voices[0].pos - 1, entry)
 		t.eq("Warden state admits no new parameters " + state, seq.parameters, committed)
 		_seq_to(seq, boundary + beat + 1234)
-	_seq_to(seq, parameter_at)
-	t.eq("Warden pending snapshot waits for phrase", seq.parameters, committed)
-	_seq_to(seq, parameter_at + 1)
-	t.eq("Warden pending snapshot commits at phrase", seq.parameters, pending_values)
+	if pending_parameters:
+		_seq_to(seq, parameter_at)
+		t.eq("Warden pending snapshot waits for phrase", seq.parameters, committed)
+		_seq_to(seq, parameter_at + 1)
+		t.eq("Warden pending snapshot commits at phrase", seq.parameters, pending_values)
 	var held := Ace.new(manifest_path)
 	held.parameter_enabled = true
 	held.parameters = committed.duplicate()
