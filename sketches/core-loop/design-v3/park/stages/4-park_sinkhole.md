@@ -455,7 +455,7 @@ bot_run: completionist seed 2 (demolitions_caster) -> stages_done at stage 5, 38
 bot_run: completionist seed 3 (tarn) -> stages_done at stage 5, 23155 ticks (257.3 s game), 141.4 s wall
 ```
 
-[The measured outcomes](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/analysis.json) and each seed's bots.ndjson supply engage, break and fight duration. No get_rid script error occurs. The completionist's older camp-only result and pocket-clock limit are historical bot evidence, not a current chamber failure. Warden duration belongs to WT-PARK under ruling 23; this stage does not tune it. The cave-in effect failure in section 5 still blocks complete event acceptance.
+[The measured outcomes](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/analysis.json) and each seed's bots.ndjson supply engage, break and fight duration. No get_rid script error occurs. All three current seeds enter the cache, bounty and camp but finish only `enemy_camp`. This matches the known completionist limit: its pocket clock starts at the drop-in. The chamber routes remain connected in the graph; no timer or pocket workaround is made. Warden duration belongs to WT-PARK under ruling 23; this stage does not tune it. The cave-in effect failure in section 5 still blocks complete event acceptance.
 
 ## Appendix: the shipped park file
 
