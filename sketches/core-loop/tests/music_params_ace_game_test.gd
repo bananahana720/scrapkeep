@@ -46,6 +46,7 @@ func _run() -> void:
 	t.check("existing ACE stems perform in real Game", audio.ace_playing())
 	_crossfade_fixture(audio.ace_manifest)
 	_ultimate_section_fixture(audio.ace_manifest)
+	_warden_state_fixture(audio.ace_manifest)
 	var ace = audio.ace
 	_pump_to(audio, engine.clock + Harmony.BAR * 2)
 	t.eq("source-enabled restart aligns step and phrase origins", engine.grid_origin, engine.bar_origin)
@@ -283,3 +284,88 @@ func _pair_to(transport, seq, until: int) -> void:
 		var n := mini(4096, until - transport.clock)
 		transport.render(n)
 		seq.render(n)
+
+
+func _warden_state_fixture(manifest_path: String) -> void:
+	var seq := Ace.new(manifest_path)
+	var committed := {"threat": 0.7, "approach": 0.0, "armour": 1.0}
+	seq.parameter_enabled = true
+	seq.parameters = committed.duplicate()
+	seq.start_boss(0)
+	var pivot_at := _manifest_join(seq, "", "pivot")
+	var build_at: int = pivot_at + int(seq.manifest.clips.pivot.bar)
+	var build_clip: Dictionary = seq.manifest.clips[seq.sections.build.clip]
+	var beat: int = build_clip.beat
+	var bar: int = build_clip.bar
+	_seq_to(seq, build_at + bar + 1234)
+	t.eq("source-enabled Warden fixture starts in build", seq.section, "build")
+	t.eq("Warden fixture has committed threat", seq.parameters, committed)
+	t.check("Warden fixture has no pending parameter commit", seq.actions.all(func(a): return a.type != "parameters"))
+	for state in ["telegraph", "open", "closed"]:
+		var incoming: String = "build" if state == "closed" else state
+		var outgoing: String = seq.section
+		var asked: int = seq.clock
+		var duration := _manifest_join(seq, outgoing, incoming)
+		var unit: int = beat if seq.manifest.sections[incoming].enter == "beat" else bar
+		var boundary: int = build_at + ceili(float(asked + duration - build_at) / unit) * unit
+		var old: Array = seq.voices.duplicate()
+		var starts := old.map(func(v): return v.gain)
+		seq.set_warden_state(state)
+		t.eq("Warden state keeps manifest landing " + state, int(seq.pending.get("at", -1)), boundary)
+		t.eq("Warden state join ends on its edge " + state, int(seq.pending.get("begin", -1)), boundary - duration)
+		_seq_to(seq, boundary - duration)
+		t.eq("Warden section waits for its edge " + state, seq.section, outgoing)
+		var half := floori(duration / 2.0)
+		_seq_to(seq, boundary - duration + half)
+		for i in old.size():
+			t.near("Warden outgoing join " + state + " " + old[i].stem, old[i].gain, starts[i] * (1.0 - float(half) / duration))
+		_seq_to(seq, boundary + 1)
+		t.eq("Warden enters on manifest boundary " + state, seq.section, incoming)
+		var entries: Array = seq.events_log.filter(func(e): return e[0] == "enter" and e[2] == incoming and e[1] >= asked)
+		t.check("Warden entry timestamp " + state, entries.size() == 1 and entries[0][1] == boundary)
+		var clip: Dictionary = seq.manifest.clips[seq.sections[incoming].clip]
+		var entry: int = clip.entry
+		if incoming == "build":
+			entry += (int(seq.manifest.sections.build.reenter_bar) - 1) * int(clip.bar)
+		else:
+			entry += posmod((boundary - build_at) / beat, int(clip.beats_per_bar)) * int(clip.beat)
+		t.eq("Warden retains manifest clip entry " + state, seq.voices[0].pos - 1, entry)
+		t.eq("Warden state admits no new parameters " + state, seq.parameters, committed)
+		_seq_to(seq, boundary + beat + 1234)
+	var held := Ace.new(manifest_path)
+	held.parameter_enabled = true
+	held.parameters = committed.duplicate()
+	held.start_boss(0)
+	held.set_warden_state("open")
+	t.eq("Warden request preserves protected pivot entry", held.pending.section, "pivot")
+	_seq_to(held, pivot_at + 1)
+	var hold_end: int = pivot_at + int(held.manifest.sections.pivot.hold_bars) * int(held.manifest.clips.pivot.bar)
+	t.eq("Warden pivot hold uses manifest duration", held.hold_until, hold_end)
+	held.set_warden_state("telegraph")
+	t.eq("Warden request during hold preserves scheduled build", held.pending.section, "build")
+	_seq_to(held, hold_end)
+	t.eq("Warden protected hold plays through", held.section, "pivot")
+	_seq_to(held, hold_end + 1)
+	t.eq("Warden hold completes into build", held.section, "build")
+	var after_hold: int = build_at + ceili(float(hold_end + _manifest_join(held, "build", "telegraph") - build_at) / beat) * beat
+	t.eq("Warden hold completion follows on next manifest beat", int(held.pending.get("at", -1)), after_hold)
+	_seq_to(held, after_hold + 1)
+	t.eq("Warden held request enters without parameter permission", held.section, "telegraph")
+	t.eq("Warden held request keeps committed parameters", held.parameters, committed)
+
+
+func _manifest_join(seq, outgoing: String, incoming: String) -> int:
+	var ms: float = seq.manifest.join_ms
+	var breath_row: Dictionary = seq.manifest.breath[seq.breath]
+	if seq.manifest.sections[incoming].profile == "breath":
+		ms = maxf(ms, float(breath_row.ramp_in_ms))
+	if outgoing != "" and seq.manifest.sections[outgoing].profile == "breath":
+		ms = maxf(ms, float(breath_row.ramp_out_ms))
+	return mini(maxi(1, roundi(ms * Harmony.RATE / 1000.0)), int(seq.manifest.pre_roll))
+
+
+func _seq_to(seq, until: int) -> void:
+	while seq.clock < until:
+		seq.render(mini(4096, until - seq.clock))
+
+
