@@ -501,6 +501,18 @@ for k in keys:
   assert not any('SCRIPT ERROR' in x or x.startswith('ERROR:') for x in log.splitlines()),'rejected population '+k
   assert json.loads((child/(k+'.json')).read_text())['runs']==[r], 'summary differs from seed receipt '+k
  assert str(folder/(k+'.json')) in b,'missing population provenance '+k
+for k,seed in [('sable',1),('rivet',5),('sable',4),('tally',5),('floor',1)]:
+ row=next(r for r in pop[k] if r['seed']==seed)
+ for mode in ['plain','trace']:
+  name='solo-'+k+str(seed)+'-'+mode;folder=p/'solos'/name
+  assert (folder/(k+'.json')).exists(),'incomplete named replay '+name
+  assert json.loads((folder/(k+'.json')).read_text())['runs']==[row],'named replay differs from batch '+name
+  assert json.loads((p/(name+'-inputs.json')).read_text())==inputs,'named replay runtime inputs differ '+name
+  logs=list((folder/'children').glob('*/child.log'))
+  assert len(logs)==1,'missing named replay child log '+name
+  assert not any('SCRIPT ERROR' in x or x.startswith('ERROR:') for x in logs[0].read_text().splitlines()),'rejected named replay '+name
+  if mode=='trace':
+   assert (folder/(k+'-seed-'+str(seed)+'-trace.json')).exists(),'missing named replay trace '+name
 stops=json.loads((p/'stop-classification.json').read_text())
 raw_stops=[(k,r['seed'],s) for k,rows in pop.items() for r in rows for s in r['dead_stop_at']]
 assert len(stops)==len(raw_stops),'missing stop classification'
