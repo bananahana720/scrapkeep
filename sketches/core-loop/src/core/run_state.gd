@@ -366,6 +366,9 @@ func select_run_tier(value: int, profile) -> bool:
 
 
 func add_event_core(at: Vector3) -> void:
+	if run_tier == 0:
+		add_core("event", at)
+		return
 	var multiplier: float = RunTier.row(run_tier).event_core_multiplier
 	var before := floori(event_core_grants * multiplier)
 	event_core_grants += 1
@@ -864,6 +867,9 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"run_tallies": tallies(),
 		"seen_wardens": _seen_wardens.keys(),
 	}, true)
+	if run_tier == 0:
+		doc.erase("run_tier")
+		doc.erase("event_core_grants")
 	return doc
 
 

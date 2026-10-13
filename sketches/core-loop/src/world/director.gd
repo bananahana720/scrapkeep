@@ -194,11 +194,15 @@ func hp_scale() -> float:
 
 
 func cap() -> int:
-	var base := int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * RunTier.row(run_tier()).cap_weight))
+	var base := int(round((6 + effective_tier() * 2) * threat * scale("pack_scale")))
+	if run_tier() != 0:
+		base = int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * RunTier.row(run_tier()).cap_weight))
 	return mini(HARD_CAP, base + HEFT_CAP_STEP * maxi(0, heft_class - 1))
 
 
 func interval() -> float:
+	if run_tier() == 0:
+		return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale"))
 	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale") * RunTier.row(run_tier()).interval_weight)
 
 
