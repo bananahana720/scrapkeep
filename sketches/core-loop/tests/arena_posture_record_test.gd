@@ -45,6 +45,10 @@ func _run() -> void:
 		for key in ["contact_gain_scale", "contact_gain_floor", "drain_rate"]:
 			t.eq("stage %d shares family %s" % [stage, key], numbers.get(key), pair.get(key))
 		for ratio in [0.35, 0.75]:
+			t.eq("stage %d isolated contact starts with untouched live posture" % stage, warden.posture(), 0.0)
+			t.eq("stage %d setup reads contact gain" % stage, warden._posture.contact_gain_scale, float(numbers.get("contact_gain_scale", 0.0)))
+			t.eq("stage %d setup reads contact floor" % stage, warden._posture.contact_gain_floor, float(numbers.get("contact_gain_floor", 0.0)))
+			t.eq("stage %d setup reads drain rate" % stage, warden._posture.drain_rate, float(numbers.get("drain_rate", BossPosture.DRAIN_RATE)))
 			warden._posture = BossPosture.new(numbers)
 			game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
 			game.combat.heft_override = 1.0
