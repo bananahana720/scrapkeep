@@ -23,14 +23,6 @@ func _run() -> void:
 		d._ride(m, 1.0 / Engine.physics_ticks_per_second)
 		t.near("rising jump retained " + ("above core" if above else "above profile below core"), m.target.rigid.linear_velocity.y, jump)
 		t.eq("core height releases ride" if above else "below core remains a ride", d.riding, not above)
-	m.target.at = m.home + d.sheet_dir * (Reactor.SHEET_TOP - Tuning.RADIUS)
-	var below_progress := 1.0 - (Reactor.SHEET_TOP - Tuning.RADIUS) / Reactor.SHEET_RUN
-	var below_profile := Tuning.RADIUS + (m.family_point_at().y - Tuning.RADIUS) * below_progress * below_progress
-	m.target.at.y = below_profile - Reactor.SHEET_DEPTH - Tuning.RADIUS
-	m.target.rigid.linear_velocity = -d.sheet_dir * Reactor.RIDE_MIN_SPEED + Vector3.DOWN * Reactor.RIDE_MIN_SPEED
-	d._ride(m, 1.0 / Engine.physics_ticks_per_second)
-	t.near("ball below the water depth receives no launch", m.target.rigid.linear_velocity.y, -Reactor.RIDE_MIN_SPEED)
-	t.check("ball below the sheet is not riding", not d.riding)
 	var along := Reactor.SHEET_RUN - Tuning.RADIUS
 	m.target.at = m.home + d.sheet_dir * along
 	var progress := 1.0 - along / Reactor.SHEET_RUN

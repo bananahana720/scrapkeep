@@ -163,6 +163,8 @@ func _open_sheet(warden) -> void:
 		sheet_dir = _face_heading(warden)
 	gates_opened += 1
 	sheet_left = SHEET_SECONDS
+	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
+		sheet_left = warden.PULSE_CYCLE - warden.PULSE_TELEGRAPH
 	riding = false
 	_show_sheet(warden)
 
