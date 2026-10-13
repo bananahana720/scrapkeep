@@ -34,8 +34,7 @@ func _run() -> void:
 	for i in ceili(Warden.PULSE_CYCLE * 2.0 / tick):
 		if sheet.sheet_live(): break
 		await physics_frame
-	var window := Warden.PULSE_CYCLE - Warden.PULSE_TELEGRAPH
-	t.near("dam sheet uses the full pulse-to-charge window", sheet.sheet_left, window, 2.0 * tick)
+	t.near("dam pulse opens the documented three-second road", sheet.sheet_left, 3.0, 2.0 * tick)
 	var started: float = game.run.stage_time
 	var bot = BotDriver.new(game, "skipper", 1)
 	var foot: Vector3 = w.home + sheet.sheet_dir * (Reactor.SHEET_RUN + BotDriver.RUNUP_EDGE)
@@ -62,14 +61,28 @@ func _run() -> void:
 		t.check(label + " sheet approach launches", bot.source.press.get("shift_pressed", false) and bot.source.hold.get("shift_held", false))
 		t.near(label + " launch starts boost cooldown", bot._boost_clock, BotDriver.BOOST_GAP)
 		t.near(label + " launch starts hold clock", bot._shift_left, BotDriver.SHIFT_HOLD)
+	bot.source.press.clear()
+	bot.source.hold.clear()
 	game.player.reset_to(game.ctx.terrain.drop_point(waiting.x, waiting.z, game.player.tuning.RADIUS), Vector3.ZERO)
-	var middle := (Reactor.SHEET_SECONDS + window) * 0.5
-	while game.run.stage_time - started < middle:
+	while game.run.stage_time - started < 3.0 - 4.0 * tick:
 		await physics_frame
-	t.check("dam road remains live after the old dry boundary", sheet.sheet_live(), "elapsed %s, remaining %s" % [game.run.stage_time - started, sheet.sheet_left])
+	t.check("dam road remains live through its three-second window", sheet.sheet_live())
+	while game.run.stage_time - started < 3.0 + 2.0 * tick:
+		await physics_frame
+	t.check("three-second road closes before the next charge", not sheet.sheet_live() and w.state_name() != "charging")
 	for i in ceili(Warden.PULSE_TELEGRAPH / tick):
 		if w.state_name() == "charging": break
 		await physics_frame
 	t.check("the following charge closes the road", w.state_name() == "charging" and not sheet.sheet_live())
+	for i in ceili(Warden.PULSE_CYCLE / tick):
+		if sheet.sheet_live(): break
+		await physics_frame
+	t.near("next pulse reopens a three-second road", sheet.sheet_left, 3.0, 2.0 * tick)
+	var cycle: int = sheet.gates_opened
+	var steady_start: float = game.run.stage_time
+	for i in ceili(Warden.PULSE_CYCLE * 2.0 / tick):
+		if sheet.gates_opened > cycle: break
+		await physics_frame
+	t.near("stationary pulse lifecycle keeps six-second rhythm", game.run.stage_time - steady_start, 6.0, 2.0 * tick)
 	game.free()
 	quit(t.verdict())
