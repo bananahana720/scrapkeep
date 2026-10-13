@@ -658,7 +658,7 @@ func _follow() -> void:
 	if want == section:
 		return
 	var row: Dictionary = sections[want]
-	_schedule(want, clock if parameter_enabled else _landing(want, row["enter"] == "beat"))
+	_schedule(want, clock if parameter_enabled else _landing(want, row["enter"] == "beat"), parameter_enabled)
 
 
 # home and calm share a clip: the release from home into calm plays on without a join.
@@ -696,9 +696,8 @@ func _join_frames(name: String) -> int:
 	return mini(_ramp_frames(ms), int(manifest.get("pre_roll", 4096)))
 
 
-# Schedules name to take over at transport sample at: its decoders open now, positioned
-# so their fade-in ends on at.
-func _schedule(name: String, at: int) -> void:
+# Parameter joins start on the committed boundary. Other joins end on their section edge.
+func _schedule(name: String, at: int, join_from_edge := false) -> void:
 	var row: Dictionary = sections[name]
 	var clip: Dictionary = clips[row["clip"]]
 	var entry := int(clip["entry"])
@@ -707,13 +706,15 @@ func _schedule(name: String, at: int) -> void:
 	if row["phase"] == "keep" and section != "" and int(clip["beat"]) == grid_beat:
 		var beat_in_bar := posmod(int(round(float(at - origin) / grid_beat)), int(clip["beats_per_bar"]))
 		entry += beat_in_bar * int(clip["beat"])
-	var begin := maxi(clock, at - _join_frames(name))
+	var join := _join_frames(name)
+	var begin := at if join_from_edge else maxi(clock, at - join)
+	var ramp := join if join_from_edge else at - begin
 	var fresh: Array = []
 	var gains := _profile(name)
 	for stem in stems:
-		fresh.append(_open(clip, stem, entry - (at - begin), gains[stem], at - begin))
+		fresh.append(_open(clip, stem, entry - (at - begin), gains[stem], ramp))
 	_serial += 1
-	pending = {"section": name, "at": at, "begin": begin, "entry": entry, "voices": fresh, "serial": _serial}
+	pending = {"section": name, "at": at, "begin": begin, "ramp": ramp, "entry": entry, "voices": fresh, "serial": _serial}
 	_add({"at": begin, "type": "begin", "serial": _serial})
 	_add({"at": at, "type": "commit", "serial": _serial})
 
@@ -839,7 +840,7 @@ func _run(action: Dictionary) -> void:
 			if pending.is_empty() or int(pending["serial"]) != int(action["serial"]):
 				return
 			pending["begun"] = true
-			var ramp := int(pending["at"]) - clock
+			var ramp := int(pending["ramp"])
 			for v: Voice in voices:
 				_ramp_to(v, 0.0, maxi(ramp, 1))
 				fading.append(v)
