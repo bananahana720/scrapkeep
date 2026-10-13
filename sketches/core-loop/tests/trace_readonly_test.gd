@@ -19,11 +19,12 @@ func _run() -> void:
 	var t := T.new("trace_readonly_test")
 	_check_observer(t)
 	_check_actor_sides(t)
+	var base := OS.get_user_data_dir().path_join("trace-readonly-%d" % OS.get_process_id())
+	DirAccess.make_dir_recursive_absolute(base)
+	_check_actor_wiring(t, base)
 	if t.failures > 0:
 		quit(t.verdict())
 		return
-	var base := OS.get_user_data_dir().path_join("trace-readonly-%d" % OS.get_process_id())
-	DirAccess.make_dir_recursive_absolute(base)
 	var jobs := []
 	for pilot in PILOTS:
 		for mode in ["plain", "trace"]:
@@ -163,3 +164,40 @@ func _check_actor_sides(t) -> void:
 	for actor in actors:
 		actor.free()
 	world.free()
+
+
+func _check_actor_wiring(t, base: String) -> void:
+	var launcher := base.path_join("actor-wiring.gd")
+	var file := FileAccess.open(launcher, FileAccess.WRITE)
+	file.store_string("""extends "res://tools/traversal_line.gd"
+const T := preload("res://tests/support/t.gd")
+const Counter := preload("res://src/combat/counter.gd")
+func _physics_process(_delta: float) -> bool:
+	if _game == null or _game.build == null:
+		return false
+	var t := T.new("trace_actor_wiring")
+	var ordinal := _counter_serial
+	# Seed 7 alternates minus/plus from spawn zero, independently of replay_side.
+	var expected: float = [-1.0, 1.0][ordinal % 2]
+	var world := Node3D.new()
+	root.add_child(world)
+	var actor := Counter.new()
+	world.add_child(actor)
+	t.check("production node-added supplies bot_strafe before Counter.setup", actor.has_meta("bot_strafe"))
+	t.eq("production node-added supplies the seed/spawn sign", actor.get_meta("bot_strafe", 0.0), expected)
+	actor.setup(null, null, world, func(): return false, 1.0)
+	t.eq("Counter.setup consumes the production node-added sign", actor._strafe, expected)
+	world.free()
+	quit(t.verdict())
+	return true
+""")
+	file.close()
+	var result: Dictionary = ChildRuns.run([{"script": launcher, "args": [
+		"--child", "--table=park", "--stage=0", "--pilot=sable", "--seeds=7",
+		"--ticks=1", "--out=" + base.path_join("actor-wiring")]}], 15.0)[0]
+	print(String(result["log"]).strip_edges())
+	var summary := ChildRuns.summary(result)
+	t.check("production actor wiring child passes without a direct replay_side call", result["code"] == 0
+		and not result["timed_out"] and summary["errors"].is_empty()
+		and summary["verdict"] == "trace_actor_wiring: PASS",
+		"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], summary["errors"]])
