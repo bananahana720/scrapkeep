@@ -57,6 +57,7 @@ class FakeCtx extends RefCounted:
 	var root := Node3D.new()
 	var events := Node.new()
 	var spawner
+	var calm := false
 
 
 class FakeWorld extends RefCounted:
@@ -161,3 +162,12 @@ func _drive(row: Dictionary, park_sites: Array) -> void:
 		"closes %s opens %s" % [str(closes), str(opens)])
 	closes_total += closes.size()
 	opens_total += opens.size()
+	# Free every node this run made, so the exit prints no leak lines.
+	ancient.release()
+	natural.release()
+	for call in calls:
+		call.node.free()
+	ancient.free()
+	natural.free()
+	ctx.root.free()
+	ctx.events.free()
