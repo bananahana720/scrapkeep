@@ -373,6 +373,7 @@ func resume_run() -> bool:
 	_apply_tree_picks()
 	var p: Array = doc["entry_velocity"]
 	enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)
+	show_start_card()
 	return true
 
 
