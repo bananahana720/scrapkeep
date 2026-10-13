@@ -525,6 +525,8 @@ func intact_span_heights(world) -> Array:
 		for view: MeshInstance3D in mesh_nodes:
 			mesh_top = maxf(mesh_top, highest_triangle_y(view.mesh.get_faces(), view.global_transform, point))
 		for collider: CollisionShape3D in colliders:
+			if not collider.get_parent() is StaticBody3D:
+				continue
 			var faces := PackedVector3Array()
 			if collider.shape is BoxShape3D:
 				var box := BoxMesh.new()
