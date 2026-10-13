@@ -64,6 +64,14 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	if "--docs" in OS.get_cmdline_user_args():
+		var output := []
+		var code := OS.execute("python3", ["-c", DOCUMENTATION_CHECK, ProjectSettings.globalize_path("res://")], output, true)
+		for line in output:
+			print(line)
+		t.eq("current documentation derived from qualified seed receipts", code, 0)
+		quit(t.verdict())
+		return
 	var text := FileAccess.get_file_as_string(PARK_PATH)
 	var park = JSON.parse_string(text)
 	if not t.check("park_flume.json parses", park is Dictionary):
@@ -453,3 +461,84 @@ func observe_span(world, elapsed: float, floor_y: float) -> void:
 		print("[fallen ramp] elapsed %.2f fraction %.2f xz %s expected %.6f mesh %.6f collider %.6f" % [elapsed, fraction, point, expected, drawn, physical])
 		t.check("fallen ramp mesh %.2f at %.2fs" % [fraction, elapsed], absf(drawn - expected) < 0.05)
 		t.check("fallen ramp collider %.2f at %.2fs" % [fraction, elapsed], absf(physical - expected) < 0.05)
+
+
+const DOCUMENTATION_CHECK := """
+import hashlib,json,re,statistics,sys
+from pathlib import Path
+sk=Path(sys.argv[1]); pages=[sk/'design-v3/park/stages/2-park_flume.md',sk/'design-v3/park/traversal/park_flume.md']
+texts=[p.read_text() for p in pages]
+def block(text,start,end):
+ assert text.count(start)==1 and text.count(end)==1, 'missing or duplicate current publication block'
+ return text.split(start,1)[1].split(end,1)[0].strip()
+blocks=[block(t,'<!-- flume-current-table -->','<!-- /flume-current-table -->') for t in texts]
+assert blocks[0]==blocks[1], 'current pages mismatch'
+b=blocks[0]
+assert not re.search(r'pending|BLOCKED|unqualified population',b,re.I),'pending current cell'
+meta=json.loads(block(b,'<!-- flume-current-receipts','-->'))
+p=Path(meta['receipt_root']); tool=sk/'tools/traversal_line.gd'
+assert meta['tool_sha256']==hashlib.sha256(tool.read_bytes()).hexdigest(),'wrong committed tool hash'
+assert re.fullmatch('[a-f0-9]{40}',meta['head']),'missing measured head'
+inputs={str(f.relative_to(sk.parent.parent)):hashlib.sha256(f.read_bytes()).hexdigest() for d in ['src','tools','assets/park/park_flume'] for f in (sk/d).rglob('*') if f.is_file()}
+keys=['sable','rivet','kest','tarn','tally','cannon','floor'];pop={}
+for k in keys:
+ manifest=json.loads((p/('population-'+k+'-inputs.json')).read_text())
+ assert manifest==inputs,'rejected or stale runtime inputs '+k
+ folder=p/'population'/k
+ data=json.loads((folder/(k+'.json')).read_text()); rows=data['runs'];pop[k]=rows
+ assert sorted(r['seed'] for r in rows)==list(range(1,9)), 'missing seeds '+k
+ assert data['commit']==meta['head'],'wrong measured head '+k
+ logs=list((folder/'children').glob('*/child.log'))
+ assert len(logs)==8,'missing child logs '+k
+ for r in rows:
+  child=next((folder/'children').glob('*-seed-'+str(r['seed'])))
+  log=(child/'child.log').read_text()
+  assert not any('SCRIPT ERROR' in x or x.startswith('ERROR:') for x in log.splitlines()),'rejected population '+k
+  assert json.loads((child/(k+'.json')).read_text())['runs']==[r], 'summary differs from seed receipt '+k
+ assert str(folder/(k+'.json')) in b,'missing population provenance '+k
+stops=json.loads((p/'stop-classification.json').read_text())
+raw_stops=[(k,r['seed'],s) for k,rows in pop.items() for r in rows for s in r['dead_stop_at']]
+assert len(stops)==len(raw_stops),'missing stop classification'
+for k,seed,s in raw_stops:
+ matches=[x for x in stops if x['pilot']==k and x['seed']==seed and x['time_s']==s['time_s']]
+ assert len(matches)==1,'unmatched stop'
+ item=matches[0];assert item['qualified'],'unqualified stop receipt'
+ trace=Path(item['trace_receipt']); traced=json.loads((trace.parent/(k+'.json')).read_text())['runs']
+ row=next(r for r in pop[k] if r['seed']==seed)
+ assert traced==[row],'stop traced row mismatch'
+ assert str(trace) in b and item['classification'] in b,'stop missing from publication'
+ if item['classification']=='pack':
+  assert item.get('enemy_kind') and item.get('provenance') in ['home','director'],'anonymous pack exemption'
+labels=['Reached Warden, 8/8','Time s, median 60–120; worst ≤150','Segments s, each median 12–45','Flow, median ≥.70; worst ≥.60','Airborne, median .12–.45','Terrain or unclassified stops, every seed 0','Peak m/s, worst ≥26.6','Tier-3 s, median ≥3','Quiet s, worst ≤20','Anchor gap m, worst ≤40','Ride facts, worst ≥3','Length ratio, median 1.3–2.0','Floor, ≤2× Rivet median; zero terrain stops']
+expected={l:{} for l in labels}
+def f(x):
+ if isinstance(x,list):return '['+', '.join(f(v) for v in x)+']'
+ return str(round(x,5)) if isinstance(x,float) else str(x)
+for k,rs in pop.items():
+ med=lambda field:statistics.median(r[field] for r in rs)
+ lo=lambda field:min(r[field] for r in rs)
+ hi=lambda field:max(r[field] for r in rs)
+ terrain=[r['dead_stops']-sum(s['pilot']==k and s['seed']==r['seed'] and s['classification']=='pack' and s['qualified'] for s in stops) for r in rs]
+ segments=[statistics.median(r['segments_s'][i] for r in rs) for i in range(3)]
+ vals=[(sum(r['reached_warden'] for r in rs),8,all(r['reached_warden'] for r in rs)),(med('time_to_warden_s'),hi('time_to_warden_s'),60<=med('time_to_warden_s')<=120 and hi('time_to_warden_s')<=150),(segments,[max(r['segments_s'][i] for r in rs) for i in range(3)],all(12<=v<=45 for v in segments)),(med('flow_share'),lo('flow_share'),med('flow_share')>=.7 and lo('flow_share')>=.6),(med('airborne_share'),[lo('airborne_share'),hi('airborne_share')],.12<=med('airborne_share')<=.45),(statistics.median(terrain),max(terrain),max(terrain)==0),(med('peak_speed_mps'),lo('peak_speed_mps'),lo('peak_speed_mps')>=26.6),(med('tier3_s'),lo('tier3_s'),med('tier3_s')>=3),(med('quiet_max_s'),hi('quiet_max_s'),hi('quiet_max_s')<=20),(med('max_anchor_gap_m'),hi('max_anchor_gap_m'),hi('max_anchor_gap_m')<=40),(med('distinct_ride_facts'),lo('distinct_ride_facts'),lo('distinct_ride_facts')>=3),(med('length_ratio'),[lo('length_ratio'),hi('length_ratio')],1.3<=med('length_ratio')<=2)]
+ for i,(m,w,ok) in enumerate(vals):
+  expected[labels[i]][k]=f(m)+' / '+f(w)+( ", reported, pilot band, not the floor's" if k=='floor' and i not in [0,5] else ' '+('pass' if ok else 'MISS'))
+ expected[labels[-1]][k]='not applicable'
+ if k=='floor':
+  cap=2*statistics.median(r['time_to_warden_s'] for r in pop['rivet'])
+  ok=all(r['reached_warden'] for r in rs) and max(terrain)==0 and hi('time_to_warden_s')<=cap
+  expected[labels[-1]][k]=f(med('time_to_warden_s'))+' / max '+f(hi('time_to_warden_s'))+'; cap '+f(cap)+' '+('pass' if ok else 'MISS')
+assert '| Band | '+' | '.join(keys)+' |' in b,'missing complete table header'
+for label in labels:
+ line='| '+label+' | '+' | '.join(expected[label][k] for k in keys)+' |'
+ assert line in b,'missing or wrong measured row: '+label
+assert meta['head'] in b and meta['tool_sha256'] in b,'missing provenance'
+for seed in [1,2,3]:
+ receipt=p/('win-seed-'+str(seed))/'bots.ndjson'
+ raw=json.loads(receipt.read_text().splitlines()[-1]);stage=next(x for x in raw['stages'] if x['stage']==2)
+ engage=stage['warden_engaged_s']; broken=stage['warden_broken_s']
+ line='| %s | %s | %s | %s | %s | %s | `%s` |'%(seed,engage,broken if broken is not None else 'not broken in 600 s',round(broken-engage,2) if broken is not None and engage is not None else 'not applicable',raw['outcome'],stage.get('stall_state',''),receipt)
+ assert line in b,'win values differ from saved seed receipt '+str(seed)
+ assert not any('SCRIPT ERROR' in x or x.startswith('ERROR:') for x in (p/('win-'+str(seed)+'.log')).read_text().splitlines()),'unqualified win receipt'
+print('CURRENT DOCUMENTATION: PASS (56 qualified seed rows, 13 complete measured bands, matching pages, saved win values)')
+"""
