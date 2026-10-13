@@ -25,6 +25,10 @@ func _setup(heft: float) -> void:
 	game.run.grant_start_mass((heft - Run.HEFT_CLASS_AT[0]) / Run.HEFT_PER_MASS)
 	for i in 40: await physics_frame
 	t.near("the pilot has the requested actual heft", game.run.heft(), heft)
+	var ring: Vector3 = game.ctx.terrain.beacon_point(game.run.stage)
+	game.player.reset_to(game.ctx.terrain.drop_point(ring.x, ring.z, Tuning.RADIUS), Vector3.ZERO)
+	for i in 2: await physics_frame
+	t.check("the pilot engages through the authored beacon ring", game.flow.engaged())
 func _run() -> void:
 	await _setup(Run.HEFT_CLASS_AT[2])
 	var w = game.flow.warden
@@ -36,10 +40,16 @@ func _run() -> void:
 	var before: float = p.posture
 	for i in roundi(Reactor.SHEET_SECONDS * Engine.physics_ticks_per_second) - 2: await physics_frame
 	t.near("posture never regenerates during live sheet", p.posture, before)
-	for i in roundi((Posture.DRAIN_DELAY + 0.5) * Engine.physics_ticks_per_second): await physics_frame
+	sheet.sheet_left = 0.0
+	w._charging = false
+	for i in roundi((Posture.DRAIN_DELAY + 0.5) * Engine.physics_ticks_per_second):
+		w._pulse_clock = 0.0
+		await physics_frame
 	t.near("engaged posture holds across dry seconds", p.posture, before)
 	w.live = func(): return false
 	sheet.step(w, 1.0 / Engine.physics_ticks_per_second)
+	before = p.posture
+	p.idle = 0.0
 	p.step(Posture.DRAIN_DELAY + 0.5)
 	t.near("disengaged posture retains ordinary regeneration", p.posture, before - Posture.DRAIN_RATE * 0.5)
 	game.free()

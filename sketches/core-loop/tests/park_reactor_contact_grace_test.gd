@@ -4,6 +4,7 @@ const Game=preload("res://src/game.gd")
 const Posture=preload("res://src/combat/boss_posture.gd")
 const Warden=preload("res://src/combat/warden.gd")
 const Reactor=preload("res://src/combat/warden_reactor.gd")
+const Tuning=preload("res://src/movement/tuning.gd")
 const T=preload("res://tests/support/t.gd")
 var t=T.new("park_reactor_contact_grace_test")
 func _initialize() -> void: _run.call_deferred()
@@ -19,6 +20,10 @@ func _run() -> void:
 	for i in 40: await physics_frame
 	var w=game.flow.warden
 	var p=w._posture
+	var ring: Vector3=game.ctx.terrain.beacon_point(game.run.stage)
+	game.player.reset_to(game.ctx.terrain.drop_point(ring.x,ring.z,Tuning.RADIUS),Vector3.ZERO)
+	for i in 2: await physics_frame
+	t.check("dam hold begins after authored ring engagement",game.flow.engaged())
 	p.apply({"contact":true,"gain":40.0},1)
 	w.mount_driver.on_pulse(w,false)
 	w.mount_driver.step(w,1.0/Engine.physics_ticks_per_second)
