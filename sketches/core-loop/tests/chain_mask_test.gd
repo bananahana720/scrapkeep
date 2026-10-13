@@ -4,7 +4,9 @@ extends SceneTree
 # type (RoR2 ProcChainMask, design-v3/research/comps/ror2/items-and-stacking.md). A link whose
 # type bit is already set in its chain is refused, so a chain ends instead of repeating. Distinct
 # sources still combine. Today's single chain (Domino Wire) keeps its one-link depth.
-# - Five distinct sources in one hit each fire once; no same-type repeat fires.
+# - Primitive level only: five distinct type bits are each admitted once into one mask, and no
+#   bit already in the mask is admitted again. No live hit path runs more than one chain type
+#   today (CHAIN_TYPES is ["domino"]), so no check here drives five sources through a live hit.
 # - A 32-type mask admits every type once.
 # - The domino read site consults the mask: a second link inside the window is refused before its
 #   roll (no serial draw), and the link fires again once the one-second window has expired.
@@ -65,7 +67,7 @@ func _run_checks() -> void:
 	quit(code)
 
 
-# The mask arithmetic on its own: five sources in one hit, then 32 types.
+# The mask arithmetic on its own, not a live hit: five type bits offered to one mask, then 32.
 func _primitives(t) -> void:
 	t.eq("domino owns bit one", Triggers.chain_bit("domino"), 1)
 	t.eq("a type that cannot chain has no bit", Triggers.chain_bit("pin_chain"), 0)
@@ -84,9 +86,9 @@ func _primitives(t) -> void:
 	for i in SOURCES:
 		if Triggers.chain_allows(mask, 1 << i):
 			repeats += 1
-	t.eq("five distinct sources in one hit each fire once", fires, SOURCES)
-	t.eq("zero same-type repeats after the five fire", repeats, 0)
-	t.eq("the hit mask holds exactly the five bits", mask, 31)
+	t.eq("primitive: five distinct type bits each admitted once", fires, SOURCES)
+	t.eq("primitive: no bit of the five is admitted again", repeats, 0)
+	t.eq("primitive: the mask holds exactly the five bits", mask, 31)
 
 	var full := 0
 	var admitted := 0
