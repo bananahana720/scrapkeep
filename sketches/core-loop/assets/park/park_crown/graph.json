@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "7a1138afb445dd4cf2ce2973e58d1221ad5e30038cb1f39976b0620e63568c7a",
+  "bake_sha256": "c1fe602a40434273a3d75347080c8f2c7655d826983cffa0dbbec8f21159e614",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 981820,
-  "edges": 320827,
+  "bytes": 981693,
+  "edges": 320881,
   "first_failed": "",
   "flags": {
     "deck": 627,
-    "door_ok": 39506,
-    "line": 384,
-    "open": 40650,
-    "sight_ok": 8932,
+    "door_ok": 39515,
+    "line": 387,
+    "open": 40664,
+    "sight_ok": 8938,
     "under": 0
   },
-  "full_visit_m": 1780,
-  "full_visit_ratio": "1.441",
-  "graph_sha256": "7ea8888957bed3d18556806bd612e81e5c7a8af585f23d3eae5e1b9790799455",
+  "full_visit_m": 1779,
+  "full_visit_ratio": "1.440",
+  "graph_sha256": "b24532509bdbe0734cb4f3b76899c6d2bfd7f0b25de767678c6bafa208c49e24",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
   "nodes": 41028,
-  "park_sha256": "d5053c8a15d61dc4cf74fa74c1d9c12f1b5eac3020f5914ed6f44cebab3fc11a",
+  "park_sha256": "abdd818634133bf407f1cd47e9a3f79afa6ae38cfaefef03766aa2eb9301f43e",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,7 +52,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 879,
+      "d_landmark": 878,
       "d_spawn": 555,
       "detour_m": 239,
       "door_at": [
@@ -79,7 +79,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 525,
+      "d_landmark": 524,
       "d_spawn": 863,
       "detour_m": 191,
       "door_at": [
@@ -107,7 +107,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 672,
+      "d_landmark": 671,
       "d_spawn": 625,
       "detour_m": 72,
       "door_at": [
@@ -155,7 +155,7 @@
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
     "d_landmark": 1235,
-    "farther_share": "0.147",
+    "farther_share": "0.146",
     "ok": true,
     "run": true
   },
@@ -176,7 +176,7 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.441
+      "value": 1.44
     }
   ],
   "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
@@ -231,8 +231,8 @@
         "viable": false
       },
       {
-        "cost": 1041.7,
-        "d_landmark": 172.9,
+        "cost": 1041.3,
+        "d_landmark": 170.7,
         "name": "crown_ramp",
         "on_route": true,
         "rank": 0,
@@ -240,7 +240,7 @@
       },
       {
         "cost": 843.7,
-        "d_landmark": 505.9,
+        "d_landmark": 504.5,
         "name": "gauntlet_toe",
         "on_route": false,
         "rank": 3,
@@ -256,7 +256,7 @@
       },
       {
         "cost": 742.9,
-        "d_landmark": 524.4,
+        "d_landmark": 523.0,
         "name": "kick_wmid_5",
         "on_route": false,
         "rank": 0,
@@ -264,7 +264,7 @@
       },
       {
         "cost": 735.8,
-        "d_landmark": 609.3,
+        "d_landmark": 607.9,
         "name": "east_ribs",
         "on_route": false,
         "rank": 4,
@@ -272,7 +272,7 @@
       },
       {
         "cost": 636.6,
-        "d_landmark": 424.0,
+        "d_landmark": 422.6,
         "name": "meander_bend",
         "on_route": false,
         "rank": 5,
@@ -280,7 +280,7 @@
       },
       {
         "cost": 537.2,
-        "d_landmark": 863.1,
+        "d_landmark": 861.7,
         "name": "turnstone_scree",
         "on_route": false,
         "rank": 6,
