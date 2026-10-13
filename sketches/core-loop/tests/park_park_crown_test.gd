@@ -44,6 +44,8 @@ const GraphTool := preload("res://tools/park_graph.gd")
 const GraphLoader := preload("res://src/world/park/park_graph.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Density := preload("res://tests/park_density_test.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 
@@ -71,6 +73,10 @@ const PERCH_XZ := [[0.0, 515.0], [39.0, 447.5], [-39.0, 447.5]]
 const PERCH_TOP_M := 12.0
 
 var t := T.new("park_park_crown_test")
+
+class EventMap:
+	extends RefCounted
+	var park := {}
 
 
 func _initialize() -> void:
@@ -122,6 +128,8 @@ func _run() -> void:
 
 	var fails := pin_failures(park)
 	t.check("the stage's pins hold on the committed file", fails.is_empty(), "; ".join(fails))
+	var event_failures := lightning_failures(park)
+	t.check("both Crown lightning rows register supported runtime event states", event_failures.is_empty(), "; ".join(event_failures))
 	t.eq("the authored engage ring stays 120 m", float(park["landmark"]["reach_m"]), 120.0)
 	var by_row := {}
 	for row in park["park_rows"]:
@@ -183,6 +191,26 @@ func _run() -> void:
 	t.check("planted copy is stale against the committed bake", not plant_stale.is_empty(), "%d reasons" % plant_stale.size())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PLANT_PATH))
 	quit(t.verdict())
+
+
+static func lightning_failures(park: Dictionary) -> Array:
+	var out := []
+	var map := EventMap.new()
+	map.park = park
+	var director := EventDirector.new(813, {}, map, 14.0, func(_x, _z): return 0.0)
+	for id in ["needle_strikes", "split_spire_strike"]:
+		var matches := []
+		for state in director._park_states:
+			if state.row.id == id:
+				matches.append(state)
+		if matches.size() != 1:
+			out.append("%s registered %d times, want 1" % [id, matches.size()])
+			continue
+		var form := str(matches[0].row.telegraph.form)
+		var landed := str(EventDirector.PARK_LAND_FACTS.get(form, ""))
+		if form != "lightning_mark" or landed != "lightning_mark_landed" or EventKinds.world_row(form).is_empty() or EventKinds.world_row(landed).is_empty():
+			out.append("%s unsupported owner records %s/%s" % [id, form, landed])
+	return out
 
 
 static func pin_failures(park: Dictionary) -> Array:
