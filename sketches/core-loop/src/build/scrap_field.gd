@@ -70,6 +70,7 @@ var _cluster_material: Material
 var _cluster_mesh: BoxMesh
 var _items: Array[MeshInstance3D] = []
 var _caught := {}
+var _catch_serial := 0
 var _material: Material
 var _mesh: BoxMesh
 var _spin := 0.0
@@ -189,6 +190,7 @@ func clear() -> void:
 		item.queue_free()
 	_items.clear()
 	_caught.clear()
+	_catch_serial = 0
 	_value.clear()
 	_age.clear()
 	_cogs.clear()
@@ -325,8 +327,7 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 			item.queue_free()
 		else:
 			if distance < reach and not _caught.has(item):
-				# The bot supplies a spawn-order sign; player runs retain their existing swirl.
-				_caught[item] = float(item.get_meta("bot_side", 1.0 if item.get_instance_id() % 2 == 0 else -1.0))
+				_caught[item] = _catch_side(item)
 			if _caught.has(item):
 				var far := clampf(distance / reach, 0.0, 1.0)
 				var side := offset.cross(Vector3.UP)
@@ -336,6 +337,16 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 			item.rotation = Vector3(_spin * 0.7, _spin, 0.0)
 		i -= 1
 	return taken
+
+
+# The swirl side of a caught piece: the bot's sign when it set one, else this field's catch serial,
+# so the sign alternates +1, -1, ... in catch order. Runtime identity never reaches the side.
+func _catch_side(item: MeshInstance3D) -> float:
+	if item.has_meta("bot_side"):
+		return float(item.get_meta("bot_side"))
+	var side := 1.0 if _catch_serial % 2 == 0 else -1.0
+	_catch_serial += 1
+	return side
 
 
 func _forget(item: MeshInstance3D) -> void:
