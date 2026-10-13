@@ -93,7 +93,7 @@ func _check_row(row: Dictionary, site: Dictionary, out: Dictionary) -> void:
 	var id: String = row.id
 	t.check("%s home dormant before telegraph" % id, out.announced and out.home_telegraph == false,
 		"home_live at telegraph=%s" % str(out.home_telegraph))
-	t.check("%s telegraph builds the vessel" % id, out.mark_telegraph != null, "mark=%s" % str(out.mark_telegraph))
+	t.check("%s telegraph builds the vessel" % id, out.mark_telegraph == true, "mark valid at telegraph=%s" % str(out.mark_telegraph))
 	t.check("%s land wakes home %s" % [id, row.effect.home], out.started and out.home_land == true,
 		"home_live at land=%s" % str(out.home_land))
 	var footprint: Array = row.effect.footprint_m
@@ -120,7 +120,8 @@ func _run(entry: Dictionary, skip := false, lower := false) -> Dictionary:
 	proxy.skip = skip
 	var world := StageWorld.new()
 	world.terrain.park = {"map": entry.map, "park_rows": [site], "event_rows": [row],
-		"weather_rows": [], "routes": entry.routes}
+		"weather_rows": [], "routes": entry.routes, "spawn": entry.spawn, "landmark": entry.landmark,
+		"activity_rows": entry.activity_rows}
 	world.director = proxy
 	var handler = load(FLEET_PATH).new()
 	root.add_child(handler)
@@ -135,12 +136,15 @@ func _run(entry: Dictionary, skip := false, lower := false) -> Dictionary:
 	var centre := Vector2(float(site.at[0]), float(site.at[1]))
 	var yaw := deg_to_rad(float(site.yaw_deg))
 	var done := false
+	var after_land := 0
 	for step in 4000:
-		for fact in events.advance(H, FAR, Vector3.ZERO, {"clock_tier": 4, "grounded": true, "bar_s": BAR, "bar_origin_s": 0.0}):
+		# No pilot lines: the test's ball is parked far away, so corridor clearance is not under test.
+		var ctx := {"clock_tier": 4, "grounded": true, "bar_s": BAR, "bar_origin_s": 0.0, "pilot_lines": []}
+		for fact in events.advance(H, FAR, Vector3.ZERO, ctx):
 			if fact.kind == "announced" and not out.announced:
 				out.announced = true
 				out.home_telegraph = game.home_live(home.id)
-				out.mark_telegraph = handler.active.get(row.id, {}).get("mark")
+				out.mark_telegraph = handler.active.has(row.id) and is_instance_valid(handler.active[row.id].mark)
 			elif fact.kind == "started" and not out.started:
 				out.started = true
 				out.home_land = game.home_live(home.id)
@@ -159,8 +163,15 @@ func _run(entry: Dictionary, skip := false, lower := false) -> Dictionary:
 			elif fact.kind == "ended" and fact.id == row.id:
 				out.ended = true
 				done = true
-		if done:
+		if out.started:
+			after_land += 1
+		if done or after_land > 60:
 			break
+	# A fleet landing has live_s 0, so the step path never ends it: it persists until
+	# teardown, as the lifecycle test in park_events_test does with end_all().
+	for fact in events.end_all():
+		if fact.kind == "ended" and fact.id == row.id:
+			out.ended = true
 	out.handler_cleared = not handler.active.has(row.id)
 	handler.release()
 	handler.free()

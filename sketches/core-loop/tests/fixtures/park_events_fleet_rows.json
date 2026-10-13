@@ -262,6 +262,138 @@
      "gate_piers"
     ]
    }
+  ],
+  "spawn": {
+   "at": [
+    -150,
+    -690
+   ],
+   "heading_deg": 20
+  },
+  "landmark": {
+   "id": "spillway_dam",
+   "kind": "dam",
+   "at": [
+    0,
+    620
+   ],
+   "size": [
+    120,
+    120,
+    320
+   ],
+   "yaw_deg": 180,
+   "recipe": "landmark_dam",
+   "budget": "hero_landmark",
+   "sight_top": [
+    0,
+    141,
+    640
+   ],
+   "sight_share": 0.85,
+   "beacon": [
+    0,
+    575
+   ],
+   "reach_m": 30,
+   "warden": {
+    "family": "reactor",
+    "mounting": "dam_face",
+    "anchor": [
+     0,
+     22,
+     590
+    ],
+    "path": [],
+    "hardpoints": 3,
+    "harpoon_anchor": true
+   },
+   "bay_dock": {
+    "at": [
+     0,
+     467
+    ],
+    "facing_deg": 0
+   },
+   "gate_slots": [
+    {
+     "at": [
+      -16,
+      528
+     ],
+     "facing_deg": 0
+    },
+    {
+     "at": [
+      0,
+      528
+     ],
+     "facing_deg": 0
+    },
+    {
+     "at": [
+      16,
+      528
+     ],
+     "facing_deg": 0
+    }
+   ],
+   "light": "ancient_beam",
+   "music": "landmark_hum",
+   "fragment": "dam_dedication_plaque"
+  },
+  "activity_rows": [
+   {
+    "id": "domes_camp",
+    "activity": "enemy_camp",
+    "site": "slickrock_domes",
+    "at": [
+     -51,
+     -396
+    ],
+    "pack": [
+     "chaser",
+     "chaser",
+     "chaser"
+    ],
+    "pay": {
+     "named": "hot_rivets",
+     "rarities": [
+      "common"
+     ]
+    }
+   },
+   {
+    "id": "rim_cache",
+    "activity": "cracked_cache",
+    "site": "west_rim_bench",
+    "at": [
+     -206,
+     300
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "rare"
+     ]
+    }
+   },
+   {
+    "id": "bench_altar",
+    "activity": "ambush_altar",
+    "site": "east_rim_bench",
+    "at": [
+     206,
+     250
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "common",
+      "rare"
+     ]
+    }
+   }
   ]
  },
  {
@@ -579,6 +711,132 @@
      "west_slickrock"
     ]
    }
+  ],
+  "spawn": {
+   "at": [
+    -560,
+    -770
+   ],
+   "heading_deg": 15.0
+  },
+  "landmark": {
+   "id": "headframe",
+   "kind": "headframe",
+   "at": [
+    0,
+    255
+   ],
+   "size": [
+    40,
+    120,
+    30
+   ],
+   "yaw_deg": 180,
+   "recipe": "landmark_headframe",
+   "budget": "hero_landmark",
+   "sight_top": [
+    0,
+    20,
+    255
+   ],
+   "sight_share": 0.85,
+   "beacon": [
+    0,
+    255
+   ],
+   "reach_m": 42,
+   "warden": {
+    "mounting": "headframe",
+    "anchor": [
+     0,
+     -96,
+     255
+    ],
+    "path": [
+     [
+      0,
+      -96,
+      255
+     ],
+     [
+      0,
+      -66,
+      255
+     ]
+    ],
+    "hardpoints": 3,
+    "family": "swarm",
+    "harpoon_anchor": true
+   },
+   "bay_dock": {
+    "at": [
+     60,
+     300
+    ],
+    "facing_deg": 0
+   },
+   "gate_slots": [
+    {
+     "at": [
+      60,
+      280
+     ],
+     "facing_deg": 0
+    }
+   ],
+   "light": "",
+   "music": "landmark_hum",
+   "fragment": "mining_headframe_cage"
+  },
+  "activity_rows": [
+   {
+    "id": "cache_lip",
+    "activity": "cracked_cache",
+    "site": "spoil_heap_14",
+    "at": [
+     296,
+     -320
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "rare"
+     ]
+    }
+   },
+   {
+    "id": "switchback_camp_site",
+    "activity": "enemy_camp",
+    "site": "switchback_camp",
+    "at": [
+     180,
+     -160
+    ],
+    "pack": [
+     "burrower",
+     "burrower",
+     "drill_crew"
+    ],
+    "pay": {
+     "named": "rivet_plating"
+    }
+   },
+   {
+    "id": "bench3_altar",
+    "activity": "ambush_altar",
+    "site": "pit",
+    "at": [
+     -110,
+     -84
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "common",
+      "rare"
+     ]
+    }
+   }
   ]
  },
  {
@@ -821,6 +1079,138 @@
      "head_house_trusses",
      "head_house_drum"
     ]
+   }
+  ],
+  "spawn": {
+   "at": [
+    -460,
+    -650
+   ],
+   "heading_deg": 31
+  },
+  "landmark": {
+   "id": "penstock_tower",
+   "kind": "penstock_tower",
+   "at": [
+    270,
+    510
+   ],
+   "size": [
+    140,
+    90,
+    120
+   ],
+   "yaw_deg": 31,
+   "recipe": "landmark_penstock_tower",
+   "budget": "hero_landmark",
+   "sight_top": [
+    300,
+    90.0,
+    560
+   ],
+   "sight_share": 0.85,
+   "beacon": [
+    230,
+    480
+   ],
+   "reach_m": 30,
+   "warden": {
+    "family": "reactor",
+    "mounting": "flume",
+    "anchor": [
+     230,
+     -2.0,
+     470
+    ],
+    "path": [],
+    "hardpoints": 3,
+    "harpoon_anchor": true
+   },
+   "bay_dock": {
+    "at": [
+     239,
+     480
+    ],
+    "facing_deg": 90
+   },
+   "gate_slots": [
+    {
+     "at": [
+      300,
+      466
+     ],
+     "facing_deg": 90
+    },
+    {
+     "at": [
+      300,
+      480
+     ],
+     "facing_deg": 90
+    },
+    {
+     "at": [
+      300,
+      494
+     ],
+     "facing_deg": 90
+    }
+   ],
+   "light": "ancient_beam",
+   "music": "landmark_hum",
+   "fragment": "headhouse_relic_plate"
+  },
+  "activity_rows": [
+   {
+    "id": "siphon_camp",
+    "activity": "enemy_camp",
+    "site": "the_siphon",
+    "at": [
+     -28,
+     176
+    ],
+    "pack": [
+     "lobber",
+     "lobber",
+     "lobber"
+    ],
+    "pay": {
+     "named": "loose_trigger",
+     "rarities": [
+      "common"
+     ]
+    }
+   },
+   {
+    "id": "bend_cache",
+    "activity": "cracked_cache",
+    "site": "bend_rim_ledge",
+    "at": [
+     42,
+     -142
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "rare"
+     ]
+    }
+   },
+   {
+    "id": "bench_bounty",
+    "activity": "hauler_bounty",
+    "site": "south_bench",
+    "at": [
+     -119,
+     332
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "common",
+      "rare"
+     ]
+    }
    }
   ]
  },
@@ -1115,6 +1505,152 @@
      "spire_top_ramp"
     ]
    }
+  ],
+  "spawn": {
+   "at": [
+    8,
+    -720
+   ],
+   "heading_deg": 0
+  },
+  "landmark": {
+   "id": "crown_spire",
+   "kind": "spire",
+   "at": [
+    0,
+    470
+   ],
+   "size": [
+    50,
+    330,
+    50
+   ],
+   "yaw_deg": 0,
+   "recipe": "landmark_spire",
+   "budget": "hero_landmark",
+   "sight_top": [
+    0,
+    330,
+    470
+   ],
+   "sight_share": 0.85,
+   "beacon": [
+    0,
+    470
+   ],
+   "reach_m": 120,
+   "warden": {
+    "family": "mind",
+    "mounting": "spires",
+    "harpoon_anchor": true,
+    "anchor": [
+     0,
+     18,
+     515
+    ],
+    "path": [
+     [
+      0,
+      18,
+      515
+     ],
+     [
+      39,
+      18,
+      447.5
+     ],
+     [
+      -39,
+      18,
+      447.5
+     ]
+    ],
+    "bowl_floor": -12,
+    "hardpoints": 3
+   },
+   "bay_dock": {
+    "at": [
+     0,
+     600
+    ],
+    "facing_deg": 0
+   },
+   "gate_slots": [
+    {
+     "at": [
+      -20,
+      670
+     ],
+     "facing_deg": 0
+    },
+    {
+     "at": [
+      0,
+      670
+     ],
+     "facing_deg": 0
+    },
+    {
+     "at": [
+      20,
+      670
+     ],
+     "facing_deg": 0
+    }
+   ],
+   "light": "ancient_beam",
+   "music": "landmark_hum",
+   "fragment": "ancient_crown_count"
+  },
+  "activity_rows": [
+   {
+    "id": "camp_signal",
+    "activity": "enemy_camp",
+    "site": "bajada",
+    "at": [
+     0,
+     -120
+    ],
+    "pack": [
+     "line_cutter",
+     "line_cutter",
+     "kite_drone"
+    ],
+    "pay": {
+     "named": "rivet_plating"
+    }
+   },
+   {
+    "id": "cache_turnstone",
+    "activity": "cracked_cache",
+    "site": "turnstone_scree",
+    "at": [
+     -232,
+     -306
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "rare"
+     ]
+    }
+   },
+   {
+    "id": "bounty_gauntlet",
+    "activity": "hauler_bounty",
+    "site": "gauntlet_toe",
+    "at": [
+     200,
+     30
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "common",
+      "rare"
+     ]
+    }
+   }
   ]
  },
  {
@@ -1392,6 +1928,135 @@
      "knuckle_e",
      "net_bowl"
     ]
+   }
+  ],
+  "spawn": {
+   "at": [
+    0,
+    -720
+   ],
+   "heading_deg": 0
+  },
+  "landmark": {
+   "id": "hanging_isle",
+   "kind": "sky_island",
+   "at": [
+    0,
+    520
+   ],
+   "size": [
+    180,
+    318,
+    180
+   ],
+   "yaw_deg": 0,
+   "recipe": "landmark_sky_island",
+   "budget": "hero_landmark",
+   "sight_top": [
+    0,
+    400,
+    520
+   ],
+   "sight_share": 0.85,
+   "beacon": [
+    0,
+    530
+   ],
+   "reach_m": 120,
+   "warden": {
+    "mounting": "under_island",
+    "anchor": [
+     0,
+     80,
+     520
+    ],
+    "path": [],
+    "hardpoints": 3,
+    "family": "mind",
+    "harpoon_anchor": true
+   },
+   "bay_dock": {
+    "at": [
+     0,
+     650
+    ],
+    "facing_deg": 0
+   },
+   "gate_slots": [
+    {
+     "at": [
+      -20,
+      720
+     ],
+     "facing_deg": 0
+    },
+    {
+     "at": [
+      0,
+      720
+     ],
+     "facing_deg": 0
+    },
+    {
+     "at": [
+      20,
+      720
+     ],
+     "facing_deg": 0
+    }
+   ],
+   "light": "ancient_beam",
+   "music": "landmark_hum",
+   "fragment": "ancient_keel_grip"
+  },
+  "activity_rows": [
+   {
+    "id": "camp_anvil",
+    "activity": "enemy_camp",
+    "site": "anvil_rock",
+    "at": [
+     0,
+     104
+    ],
+    "pack": [
+     "anchor_crew",
+     "anchor_crew",
+     "line_cutter"
+    ],
+    "pay": {
+     "named": "rivet_plating"
+    }
+   },
+   {
+    "id": "cache_east_wing",
+    "activity": "cracked_cache",
+    "site": "east_wing",
+    "at": [
+     210,
+     236
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "rare"
+     ]
+    }
+   },
+   {
+    "id": "bounty_ore_bench",
+    "activity": "hauler_bounty",
+    "site": "ore_bench",
+    "at": [
+     186,
+     -60
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "common",
+      "rare"
+     ]
+    }
    }
   ]
  },
@@ -1863,6 +2528,124 @@
     "via": [
      "west_chamber"
     ]
+   }
+  ],
+  "spawn": {
+   "at": [
+    -690,
+    -760
+   ],
+   "heading_deg": 63
+  },
+  "landmark": {
+   "id": "sinkhole",
+   "kind": "sinkhole",
+   "at": [
+    0,
+    350
+   ],
+   "size": [
+    250,
+    120,
+    250
+   ],
+   "yaw_deg": 0,
+   "recipe": "landmark_sinkhole",
+   "budget": "hero_landmark",
+   "sight_top": [
+    0,
+    140,
+    388
+   ],
+   "sight_share": 0.85,
+   "beacon": [
+    0,
+    350
+   ],
+   "reach_m": 45,
+   "warden": {
+    "family": "swarm",
+    "mounting": "sinkhole",
+    "anchor": [
+     0,
+     -99,
+     388
+    ],
+    "path": [],
+    "hardpoints": 3,
+    "harpoon_anchor": true
+   },
+   "bay_dock": {
+    "at": [
+     0,
+     320
+    ],
+    "facing_deg": 0
+   },
+   "gate_slots": [
+    {
+     "at": [
+      0,
+      305
+     ],
+     "facing_deg": 180
+    }
+   ],
+   "light": "ancient_beam",
+   "music": "landmark_hum",
+   "fragment": "ancient_brood_count"
+  },
+  "activity_rows": [
+   {
+    "id": "great_room_camp",
+    "activity": "enemy_camp",
+    "site": "great_room",
+    "at": [
+     0,
+     -20
+    ],
+    "pack": [
+     "burrower",
+     "drill_crew",
+     "lamp_swarm"
+    ],
+    "pay": {
+     "named": "pylon_capacitor",
+     "rarities": [
+      "common"
+     ]
+    }
+   },
+   {
+    "id": "east_chamber_bounty",
+    "activity": "hauler_bounty",
+    "site": "east_chamber",
+    "at": [
+     172,
+     40
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "common",
+      "rare"
+     ]
+    }
+   },
+   {
+    "id": "west_chamber_cache",
+    "activity": "cracked_cache",
+    "site": "west_chamber",
+    "at": [
+     -226,
+     -18
+    ],
+    "pack": [],
+    "pay": {
+     "rarities": [
+      "rare"
+     ]
+    }
    }
   ]
  }
