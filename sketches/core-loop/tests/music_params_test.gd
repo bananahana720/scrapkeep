@@ -108,6 +108,7 @@ func _run() -> void:
 	_advance(pivot, pivot_origin + pivot.bar_len() * Harmony.PHRASE_BARS + 1)
 	t.check("pivot phrase admits pending layers", pivot.layer_target(Music.LEAD) > pivot_targets[Music.LEAD])
 	_landmark_hum_fixture()
+	_candidate_cues_fixture()
 	_fleet_fixture(true)
 	_fleet_fixture(false)
 	for pilot in Harmony.CLASS_MOTIFS:
@@ -128,6 +129,52 @@ func _run() -> void:
 func _advance(engine, until: int) -> void:
 	while engine.clock < until:
 		engine.render(mini(4096, until - engine.clock))
+
+
+func _candidate_cues_fixture() -> void:
+	# Candidate afbd8e6 owns these musical records; only danger metadata may change.
+	var expected := {
+		"drop_collapse": {"family": "natural", "rise": false, "voice": "stage", "notes": [57, 50, 45], "accent": "crash", "trim_sound": "smash_crack"},
+		"drop_cave_in": {"family": "natural", "rise": false, "voice": "stage", "notes": [50, 45, 38], "accent": "kick", "trim_sound": "land_thud"},
+		"drop_drain": {"family": "natural", "rise": false, "voice": "stage", "notes": [62, 57, 50, 45], "trim_sound": "stage_fade"},
+		"drop_impact": {"family": "natural", "rise": false, "voice": "stage", "notes": [38, 50], "accent": "kick", "trim_sound": "slam_boom"},
+		"drop_lightning": {"alias": "stinger_lightning"},
+		"drop_natural": {"alias": "drop_flood"},
+	}
+	var alias_records := {
+		"stinger_lightning": {"family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
+		"drop_flood": {"family": "natural", "rise": false, "voice": "stage", "notes": [50, 62, 57], "accent": "kick", "trim_sound": "slam_boom"},
+	}
+	for id in expected:
+		var raw: Dictionary = Rows.CUES.get(id, {}).duplicate(true)
+		raw.erase("danger")
+		t.eq("candidate cue fields preserved " + id, raw, expected[id])
+		for theme in Rows.STAGE_VOICES.size():
+			var resolved: Dictionary = alias_records[expected[id].alias].duplicate(true) if expected[id].has("alias") else expected[id].duplicate(true)
+			resolved.voice = Rows.STAGE_VOICES[theme]
+			var got := Rows.cue(id, {"theme": theme})
+			got.erase("danger")
+			t.eq("candidate cue resolves theme %d %s" % [theme, id], got, resolved)
+		var engine := Music.new()
+		engine.set_parameter_source(func(): return {"threat": 0.0, "approach": 0.0, "armour": 1.0})
+		engine.schedule_restart(0, Music.PLAY, 0)
+		_advance(engine, Harmony.BAR + 1)
+		var at := engine.clock
+		var before := engine._targets.duplicate()
+		var log_count := engine.parameter_layer_log.size()
+		t.eq("candidate cue books " + id, engine.park_cue(id, 0, at), at)
+		engine.render(1)
+		t.check("candidate cue sounds " + id, engine.park_cue_log.any(func(c): return c.id == id and c.at == at))
+		if id == "drop_drain":
+			t.check("nonhostile drain keeps default false", not Rows.danger(id))
+			t.eq("nonhostile drain keeps phrase targets", engine._targets, before)
+		else:
+			t.check("hostile candidate land danger " + id, Rows.danger(id))
+			t.check("candidate danger opens at cue without phrase " + id, engine.layer_target(Music.LEAD) > before[Music.LEAD]
+				and engine.parameter_layer_log.size() > log_count
+				and engine.parameter_layer_log.back().at == at
+				and engine.parameter_layer_log.back().danger == id
+				and not engine.parameter_layer_log.back().phrase)
 
 
 func _ultimate_fixture(pilot: String) -> void:
