@@ -216,7 +216,9 @@ func _physics_process(_delta: float) -> bool:
 			_sample_due[id] = audio.engine.clock + roundi(seconds * Harmony.RATE)
 			var bar: int = audio.engine.bar_len()
 			var origin: int = audio.engine.bar_origin
-			_grid_due[id] = origin + ceili(float(_sample_due[id] - origin) / bar) * bar)
+			_grid_due[id] = origin + ceili(float(_sample_due[id] - origin) / bar) * bar
+			if audio.engine.grid != null:
+				_grid_due[id] = audio.engine.grid.next_bar(_sample_due[id]))
 		_game.events.event_started.connect(func(id):
 			_starts[id] = _game.world.events.stage_time
 			_land_samples[id] = (audio.engine.park_cue_log + audio.engine._actions.filter(func(a): return a.get("type") == "park_cue" and not a.row.rise)).duplicate(true))

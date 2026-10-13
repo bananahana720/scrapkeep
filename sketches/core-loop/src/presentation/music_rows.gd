@@ -16,6 +16,10 @@ const CUES := {
 	"riser_industrial": {"family": "industrial", "rise": true, "voice": "steam_whistle", "notes": [62, 65, 67, 69, 74, 77, 81, 86], "trim_sound": "threat_whistle"},
 	"drop_industrial": {"family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50], "sound": "smash_crack", "trim_sound": "smash_crack"},
 	"drop_flash_flood": {"alias": "drop_flood"},
+	"drop_fleet_anvil": {"alias": "drop_fleet"},
+	"riser_mind_quote": {"alias": "riser_ancient", "ancient": "mind"},
+	"drop_mind_wrong": {"alias": "drop_ancient", "ancient": "mind"},
+	"drop_boiler": {"alias": "drop_industrial"},
 	"stinger_lightning": {"family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
 }
 const ANCIENT_VOICES := {"reactor_relic": "reactor", "swarm_remnant": "swarm", "mind_hand": "mind"}
@@ -26,6 +30,8 @@ const STAGE_VOICES := ["lead", "brass", "talk"]
 static func cue(id: String, context: Dictionary = {}) -> Dictionary:
 	var row: Dictionary = CUES.get(id, {}).duplicate(true)
 	if row.has("alias"):
+		if row.has("ancient"):
+			context = context.merged({"ancient": row.ancient}, true)
 		return cue(row.alias, context)
 	if row.is_empty():
 		return row

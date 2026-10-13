@@ -260,6 +260,8 @@ var _miniboss: Node3D
 var _park_cues := {}
 var _park_transport_snapshot := {}
 var park_cue_late: Array[Dictionary] = []
+# The Music-bus block after selecting or mixing the recorded and synthesized bands.
+var out_music := PackedVector2Array()
 
 var _event_id := ""
 var _event_started_ms := -1
@@ -526,9 +528,7 @@ func _pump() -> void:
 			var frames := _park_render_limit(requested)
 			_virtual_usec += int((owed - requested + frames) * 1000000.0 / Harmony.RATE)
 			if frames > 0:
-				_unmute_for_handover(frames)
-				engine.render(frames)
-				_ace_render(frames, ace_live)
+				_render_music(frames, ace_live)
 		return
 	if _music_pb == null or _stinger_pb == null:
 		return
@@ -542,18 +542,23 @@ func _pump() -> void:
 	frames = _park_render_limit(mini(frames, 8192))
 	if frames <= 0:
 		return
+	_render_music(frames, ace_live)
+	_music_pb.push_buffer(out_music)
+	_stinger_pb.push_buffer(engine.out_stinger)
+
+
+func _render_music(frames: int, ace_live: bool) -> void:
 	var from := engine.clock
 	_unmute_for_handover(frames)
 	engine.render(frames)
 	var music := _ace_render(frames, ace_live)
 	_fade_in_band(from, frames)
 	if not ace_live:
-		_music_pb.push_buffer(engine.out_music)
+		out_music = engine.out_music
 	elif engine.band_muted:
-		_music_pb.push_buffer(music)
+		out_music = music
 	else:
-		_music_pb.push_buffer(_with_band(music, from))
-	_stinger_pb.push_buffer(engine.out_stinger)
+		out_music = _with_band(music, from)
 
 
 # One band at a time, handed over without a hole: the synth band plays until the ACE

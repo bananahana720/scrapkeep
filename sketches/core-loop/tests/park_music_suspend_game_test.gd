@@ -14,6 +14,9 @@ class TransportProbe extends Node:
 		var e = audio.engine
 		var bar: int = e.step_len * Harmony.STEPS_PER_BAR
 		var origin: int = e.bar_origin + ceili(float(e.clock - e.bar_origin) / bar) * bar
+		if e.grid != null:
+			origin = e.grid.next_bar(e.clock)
+			bar = e.grid.next_bar(origin + 1) - origin
 		snapshot = {"stage": director.stage_time + delta, "sample": e.clock, "origin": origin, "bar": bar}
 
 func _initialize() -> void:
@@ -81,7 +84,7 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 		audio._virtual_usec -= int(8192.0 * 1000000.0 / Harmony.RATE)
 		audio._pump()
 		if audio.engine.clock > announcement[0].sample + 2 * audio.engine.bar_len():
-			for sample in audio.engine.out_music:
+			for sample in audio.out_music:
 				music_peak = maxf(music_peak, maxf(absf(sample.x), absf(sample.y)))
 	for frame in 12:
 		await process_frame
@@ -99,10 +102,14 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 	if aligned:
 		var e = audio.engine
 		var bar: int = e.step_len * Harmony.STEPS_PER_BAR
+		var origin: int = e.bar_origin
+		if e.grid != null:
+			origin = e.grid.next_bar(e.clock)
+			bar = e.grid.next_bar(origin + 1) - origin
 		var remaining := roundi((float(flood.due_s) - suspended_stage - 1.0 / Engine.physics_ticks_per_second) * Harmony.RATE)
-		var target: int = e.bar_origin + ceili(float(e.clock + remaining - e.bar_origin) / bar) * bar - remaining
+		var target: int = origin + ceili(float(e.clock + remaining - origin) / bar) * bar - remaining
 		while e.clock < target:
-			e.render(mini(4096, target - e.clock))
+			audio._render_music(mini(4096, target - e.clock), audio.ace != null and audio.ace.active())
 		audio._virtual_usec += 1000000
 	var probe := TransportProbe.new()
 	probe.audio = audio

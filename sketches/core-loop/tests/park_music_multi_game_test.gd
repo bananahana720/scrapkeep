@@ -76,6 +76,7 @@ func _two_events(band: String) -> void:
 			and posmod(expected.due - expected.origin, expected.bar) == 0, str([actions.map(func(a): return a.at), expected]))
 		deadlines[id] = audio._park_event_state(id).due_s
 	game.toggle_pause()
+	audio._process(0.0)
 	var stage: float = director.stage_time
 	var target: int = maxi(announcements[IDS[0]].due, announcements[IDS[1]].due) + 2 * Harmony.BAR
 	var peak := 0.0
