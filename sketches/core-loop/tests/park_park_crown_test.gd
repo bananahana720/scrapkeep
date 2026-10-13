@@ -46,6 +46,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Density := preload("res://tests/park_density_test.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 
@@ -141,6 +142,8 @@ func _run() -> void:
 	root.add_child(holder)
 	var perch_failures := physical_perch_failures(park, holder, ground)
 	t.check("physical perch centres and tops match mind.md's 12 m seats", perch_failures.is_empty(), "; ".join(perch_failures))
+	var clearance_failures := sentinel_clearance_failures(park, holder, ground)
+	t.check("sentinel_40 clears the reproduced Tally approach and retains reachable posts", clearance_failures.is_empty(), "; ".join(clearance_failures))
 	t.eq("the Warden anchor stays at the first 18 m lens", park["landmark"]["warden"]["anchor"], [0.0, 18.0, 515.0])
 	t.eq("the Warden flight path stays approved", park["landmark"]["warden"]["path"], [[0.0, 18.0, 515.0], [39.0, 18.0, 447.5], [-39.0, 18.0, 447.5]])
 	var tall_perch: Dictionary = park.duplicate(true)
@@ -326,4 +329,37 @@ static func physical_perch_failures(park: Dictionary, parent: Node3D, ground: Ca
 			if Vector2(centre.x, centre.z).distance_to(Vector2(PERCH_XZ[i][0], PERCH_XZ[i][1])) > 0.01 or absf(top - PERCH_TOP_M) > 0.01:
 				out.append("%s centre %s top %.3f, want %s top %.1f" % [id, centre, top, PERCH_XZ[i], PERCH_TOP_M])
 		node.free()
+	return out
+
+
+static func sentinel_clearance_failures(park: Dictionary, parent: Node3D, ground: Callable) -> Array:
+	var out := []
+	var rows: Array = park["park_rows"].filter(func(row: Dictionary) -> bool: return row["id"] == "sentinel_40")
+	if rows.size() != 1:
+		return ["sentinel_40 missing"]
+	var node := ParkRecipes.place_anchor_field(rows[0], parent, ground, ParkRecipes.clear_zones(park))
+	var point := Vector3(144.2, -5.93, 340.08)
+	var nearest := INF
+	var collisions := 0
+	var rope_range := 0.0
+	for spec: Dictionary in Tuning.SPECS:
+		if spec["key"] == "rope_range":
+			rope_range = float(spec["value"])
+	var shapes := node.find_children("*", "CollisionShape3D", true, false)
+	for shape: CollisionShape3D in shapes:
+		if not shape.shape is BoxShape3D:
+			out.append("sentinel_40 has an unsupported collider")
+			continue
+		var half := (shape.shape as BoxShape3D).size * 0.5
+		var local := shape.to_local(point)
+		var closest := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
+		var distance := point.distance_to(shape.to_global(closest))
+		nearest = minf(nearest, distance)
+		collisions += int(distance <= Tuning.RADIUS)
+	print("[sentinel_40_clearance] colliding posts %d nearest physical surface %.3f m" % [collisions, nearest])
+	if collisions != 0:
+		out.append("%d posts touch the recorded ball sphere at %s" % [collisions, point])
+	if shapes.is_empty() or rope_range <= 0.0 or nearest > rope_range:
+		out.append("no reachable physical anchor at the recorded approach")
+	node.free()
 	return out
