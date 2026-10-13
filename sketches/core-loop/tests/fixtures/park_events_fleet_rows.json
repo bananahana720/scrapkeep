@@ -76,7 +76,7 @@
     6,
     70
    ],
-   "yaw_deg": 0,
+   "yaw_deg": 31,
    "verb": "roll",
    "ride_fact": "",
    "home": "dropship_winches",
@@ -394,7 +394,8 @@
      ]
     }
    }
-  ]
+  ],
+  "_fixture_note": "Site yaw changed to 31 degrees to exercise footprint projection; row, home and route data remain authored."
  },
  {
   "source": "park_pit.json",

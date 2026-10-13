@@ -5,23 +5,23 @@ extends SceneTree
 # _park_capacity). Per row: it telegraphs and does nothing live before it lands; it lands within
 # the run; the stage spawner gets one call for its miniboss kind at the site; its swap overlay
 # (effect.swap) is in terrain.overlays and its body is visible after land; the started fact
-# carries its route_change. The spawner is a recording stub: the real combat spawn is not run.
+# answers its routes. The spawner records calls and validates kinds against combat's own tables.
+# Combat AI and physics are outside this bounded handler test. No natural handler is installed.
 
 const T := preload("res://tests/support/t.gd")
 const Director := preload("res://src/world/event_director.gd")
 const Ancient := preload("res://src/world/events/ancient.gd")
-const Natural := preload("res://src/world/events/natural.gd")
+const Combat := preload("res://src/combat/combat.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 
 const FIXTURE := "res://tests/fixtures/park_events_ancient_rows.json"
-const ROUTES := [{"id": "main", "from": "drop_in", "to": "landmark", "via": []}]
 const H := 0.05
 const BAR := 240.0 / 172.0
 const FAR := Vector3(1000.0, 1.0, 1000.0)
 const MAX_STEPS := 6000
 const ROW_COUNT := 6
-# 1 fixture read, 1 row count, 7 per row, 2 route totals, 1 count check.
-const EXPECTED_CHECKS := 47
+# Fixture, rejecting spawner, ten checks per row, route totals and count guard.
+const EXPECTED_CHECKS := 66
 
 var t := T.new("park_events_ancient_test")
 var closes_total := 0
@@ -30,9 +30,13 @@ var opens_total := 0
 
 class StubSpawner extends RefCounted:
 	var calls: Array = []
+	var fleet := Combat.Fleet.new()
 
 	func spawn_enemy(kind: String, at: Vector3) -> Node3D:
+		if kind not in Combat.KINDS and not fleet.makes(kind):
+			return null
 		var node := Node3D.new()
+		node.position = at
 		calls.append({"kind": kind, "at": at, "node": node})
 		return node
 
@@ -42,6 +46,7 @@ class FakeTerrain extends RefCounted:
 	var maps: Array = []
 	var overlays: Array = []
 	var flood = null
+	var drops: Array = []
 
 	func _init(map) -> void:
 		maps = [map]
@@ -49,8 +54,15 @@ class FakeTerrain extends RefCounted:
 	func map():
 		return maps[stage - 1]
 
-	func height(_x: float, _z: float) -> float:
-		return 0.0
+	func height(x: float, z: float) -> float:
+		var ground := 12.0 + 0.05 * x - 0.03 * z
+		for id in overlays:
+			ground = maxf(ground, map().overlay_height(id, x, z, ground))
+		return ground
+
+	func drop_point(x: float, z: float, clearance: float) -> Vector3:
+		drops.append({"x": x, "z": z, "clearance": clearance})
+		return Vector3(x, height(x, z) + clearance, z)
 
 
 class FakeCtx extends RefCounted:
@@ -78,8 +90,11 @@ func _run() -> void:
 		return
 	var rows: Array = fixture.event_rows
 	t.eq("fixture holds six ancient rows", rows.size(), ROW_COUNT)
+	var reject := StubSpawner.new()
+	t.check("spawner rejects a kind combat cannot spawn", reject.spawn_enemy("unknown_ancient", Vector3.ZERO) == null and reject.calls.is_empty())
+	reject.fleet.free()
 	for row in rows:
-		_drive(row, fixture.park_rows)
+		_drive(row, fixture.park_rows, fixture.routes_by_row[row.id])
 	t.eq("route closes counted across the six rows", closes_total, 2)
 	t.eq("route opens counted across the six rows", opens_total, 2)
 	t.eq("test runs its expected check count", t.checks + 1, EXPECTED_CHECKS)
@@ -101,12 +116,12 @@ func _site(park_sites: Array, id: String) -> Dictionary:
 	return {}
 
 
-func _drive(row: Dictionary, park_sites: Array) -> void:
+func _drive(row: Dictionary, park_sites: Array, routes: Array) -> void:
 	var site_row := _site(park_sites, str(row.site))
 	var swap := str(row.effect.get("swap", row.id))
 	var map := ParkMap.new()
 	map.park = {"map": "fixture", "event_rows": [row], "weather_rows": [],
-		"park_rows": [site_row], "routes": ROUTES}
+		"park_rows": [site_row], "routes": routes}
 	var terrain := FakeTerrain.new(map)
 	var ctx := FakeCtx.new()
 	var spawner := StubSpawner.new()
@@ -114,12 +129,9 @@ func _drive(row: Dictionary, park_sites: Array) -> void:
 	var world := FakeWorld.new()
 	world.terrain = terrain
 	world.ctx = ctx
-	var natural := Natural.new()
-	natural.setup(world)
-	world.event_families = {"natural": natural}
 	var ancient := Ancient.new()
 	ancient.setup(world)
-	var director := Director.new(813, {}, map, 14.0, func(_x, _z): return 0.0)
+	var director := Director.new(813, {}, map, 14.0, Callable(terrain, "height"))
 	director.register_family("ancient", Callable(ancient, "handle"))
 	var announced := false
 	var landed_fact = null
@@ -140,8 +152,8 @@ func _drive(row: Dictionary, park_sites: Array) -> void:
 	var landed := landed_fact != null
 	var site_at := Vector2(float(site_row.at[0]), float(site_row.at[1]))
 	var entry: Dictionary = {}
-	if natural._overlay_map != null:
-		entry = natural._overlay_map.swaps.get(swap, {})
+	if "swaps" in terrain.map():
+		entry = terrain.map().swaps.get(swap, {})
 	var body = entry.get("body")
 	var calls: Array = spawner.calls
 	var kind := str(row.effect.get("miniboss", ""))
@@ -155,19 +167,30 @@ func _drive(row: Dictionary, park_sites: Array) -> void:
 	t.check("%s miniboss stands within hold_clear_m of the site" % row.id, near, "hold_clear_m %s" % row.hold_clear_m)
 	var swap_on: bool = terrain.overlays.has(swap + "_after") and is_instance_valid(body) and body.visible
 	t.check("%s swap %s is on after land" % [row.id, swap], swap_on, "overlays %s" % str(terrain.overlays))
-	var closes: Array = landed_fact.route_change.closes if landed else []
-	var opens: Array = landed_fact.route_change.opens if landed else []
-	t.check("%s route_change on the started fact matches the row" % row.id,
-		landed and closes == row.route_change.closes and opens == row.route_change.opens,
-		"closes %s opens %s" % [str(closes), str(opens)])
-	closes_total += closes.size()
-	opens_total += opens.size()
+	var grounded := calls.size() == 1 and terrain.drops.size() == 1
+	if grounded:
+		grounded = is_equal_approx(float(terrain.drops[0].clearance), 2.4) \
+			and calls[0].node.position.is_equal_approx(Vector3(site_at.x, terrain.height(site_at.x, site_at.y) + 2.4, site_at.y))
+	t.check("%s miniboss uses terrain.drop_point with field clearance" % row.id, grounded, "drops %s calls %s" % [terrain.drops, calls])
+	var opened := 0
+	var closed := 0
+	for id in row.route_change.opens:
+		if director.has_method("route_open") and director.call("route_open", str(id)):
+			opened += 1
+	for id in row.route_change.closes:
+		if director.has_method("route_open") and not director.call("route_open", str(id)):
+			closed += 1
+	t.eq("%s director opens routes after land" % row.id, opened, row.route_change.opens.size())
+	t.eq("%s director closes routes after land" % row.id, closed, row.route_change.closes.size())
+	closes_total += closed
+	opens_total += opened
 	# Free every node this run made, so the exit prints no leak lines.
+	director.end_all()
+	t.check("%s end removes its swap without a natural handler" % row.id, not terrain.overlays.has(swap + "_after"))
 	ancient.release()
-	natural.release()
 	for call in calls:
 		call.node.free()
 	ancient.free()
-	natural.free()
+	spawner.fleet.free()
 	ctx.root.free()
 	ctx.events.free()
