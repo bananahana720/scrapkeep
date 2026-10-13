@@ -8,12 +8,11 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const PARK_DIR := "res://src/world/park"
 const FIXTURE := "res://tests/fixtures/park_cue_forms_pending.json"
-# Exact counts for the repository as it stands (2026-10-13): 26 park rows plus 11 fixture rows,
-# 19 distinct cue ids, 2 resolution checks per row (74) and 1 bank check per distinct id (19).
-# A stage merge changes them; the new values are re-pinned with a dated header.
-const EXPECTED_ROWS := 37
-const EXPECTED_DISTINCT := 19
-const EXPECTED_CHECKS := 93
+# A floor, not an exact count (coordinator, 2026-10-13): each stage merge adds park files and rows,
+# and a fixture row can duplicate a merged one. Measured at 27da2e5: 26 park rows plus 11 fixture
+# rows (37), 19 distinct cue ids.
+const MIN_ROWS := 37
+const MIN_DISTINCT := 19
 
 var _failures := 0
 var _checks := 0
@@ -25,7 +24,7 @@ func _initialize() -> void:
 	_resolution()
 	_bank()
 	_counts()
-	var ok := _failures == 0 and _checks == EXPECTED_CHECKS
+	var ok := _failures == 0
 	print("park_cue_forms_test: PASS" if ok else "park_cue_forms_test: FAIL")
 	quit(0 if ok else 1)
 
@@ -77,10 +76,12 @@ func _bank() -> void:
 
 func _counts() -> void:
 	var distinct := _distinct_cues()
-	print("park_cue_forms_test: rows %d (expected %d), distinct cue ids %d (expected %d), checks %d (expected %d)"
-		% [_rows.size(), EXPECTED_ROWS, distinct.size(), EXPECTED_DISTINCT, _checks, EXPECTED_CHECKS])
-	if _rows.size() != EXPECTED_ROWS or distinct.size() != EXPECTED_DISTINCT:
-		_failures += 1
+	print("park_cue_forms_test: rows %d (floor %d), distinct cue ids %d (floor %d)"
+		% [_rows.size(), MIN_ROWS, distinct.size(), MIN_DISTINCT])
+	_check("rows floor", _rows.size() >= MIN_ROWS,
+		"rows=%d min=%d" % [_rows.size(), MIN_ROWS])
+	_check("distinct ids floor", distinct.size() >= MIN_DISTINCT,
+		"distinct=%d min=%d" % [distinct.size(), MIN_DISTINCT])
 
 
 func _distinct_cues() -> Array:
