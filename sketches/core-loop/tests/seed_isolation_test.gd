@@ -11,6 +11,10 @@ func _initialize() -> void:
 	var t := T.new("seed_isolation_test")
 	var base := OS.get_user_data_dir().path_join("seed-isolation-%d" % OS.get_process_id())
 	DirAccess.make_dir_recursive_absolute(base)
+	_check_failed_trace(t, base.path_join("failed-trace"))
+	if t.failures > 0:
+		quit(t.verdict())
+		return
 	var jobs := []
 	for mode in ["batch", "isolated"]:
 		jobs.append({"script": "res://tools/traversal_line.gd", "args": [
@@ -95,3 +99,24 @@ func _initialize() -> void:
 func _runs(path: String) -> Array:
 	var doc = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else null
 	return doc.get("runs", []) if doc is Dictionary else []
+
+
+func _check_failed_trace(t, out: String) -> void:
+	var child_out := out.path_join("children/1-seed-8")
+	DirAccess.make_dir_recursive_absolute(child_out)
+	var name := "sable-seed-8-trace.json"
+	for path in [out.path_join(name), child_out.path_join(name), child_out.path_join("sable.json")]:
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string('{"pilot":"sable","seed":8,"ticks":[{"stale":true}]}')
+		file.close()
+	var result: Dictionary = ChildRuns.run([{"script": "res://tools/traversal_line.gd", "args": [
+		"--table=park", "--stage=0", "--pilot=sable", "--seeds=8", "--trace",
+		"--ticks=1000000000", "--child-timeout=0.001", "--out=" + out]}], 15.0)[0]
+	t.check("failed traced rerun exits 3 within its bound", result["code"] == 3 and not result["timed_out"])
+	var path := out.path_join("sable.json")
+	var doc = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else null
+	t.check("failed traced rerun is INCONCLUSIVE", doc is Dictionary and doc.get("status") == "INCONCLUSIVE"
+		and doc.get("inconclusive", []).size() == 1 and doc["inconclusive"][0].get("status") == "INCONCLUSIVE")
+	t.check("failed traced rerun has no result row", doc is Dictionary and doc.get("runs", [null]).is_empty())
+	t.check("failed traced rerun leaves no consumable top-level trace", not FileAccess.file_exists(out.path_join(name)), out)
+	t.check("failed traced rerun leaves no consumable child trace", not FileAccess.file_exists(child_out.path_join(name)), child_out)
