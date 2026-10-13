@@ -93,7 +93,7 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 130.0, "warden_hp": 950.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 24.0, "contact_gain_floor": 0.45}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 100.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower"]},
@@ -103,7 +103,7 @@ const DEFS := [
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 150.0, "warden_hp": 1100.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[3]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 24.0, "contact_gain_floor": 0.45}, "pressure": PRESSURE[3], "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[3]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 100.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[3], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "deep_bore", "kinds": ["drill_crew", "burrower", "burrower"]},
 			{"id": "deep_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "burrower"]},
@@ -113,7 +113,7 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 170.0, "warden_hp": 1250.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[4]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 48.0, "contact_gain_floor": 0.35, "drain_rate": 0.5}, "pressure": PRESSURE[4], "warden_hint": "Break its guard, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[4]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 10.0, "contact_gain_floor": 0.35, "drain_rate": 0.5}, "pressure": PRESSURE[4], "warden_hint": "Break its guard, then smash the core.",
 		"packs": [
 			{"id": "draft_cut", "kinds": ["line_cutter", "line_cutter", "kite_drone"]},
 			{"id": "draft_anchor", "kinds": ["anchor_crew", "line_cutter"]},
@@ -123,7 +123,7 @@ const DEFS := [
 		"unlock_base": 4, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 190.0, "warden_hp": 1400.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[5]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 48.0, "contact_gain_floor": 0.35, "drain_rate": 0.5}, "pressure": PRESSURE[5], "warden_hint": "Break its guard, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[5]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 10.0, "contact_gain_floor": 0.35, "drain_rate": 0.5}, "pressure": PRESSURE[5], "warden_hint": "Break its guard, then smash the core.",
 		"packs": [
 			{"id": "crown_cut", "kinds": ["line_cutter", "kite_drone", "kite_drone"]},
 			{"id": "crown_anchor", "kinds": ["anchor_crew", "anchor_crew", "line_cutter"]},
