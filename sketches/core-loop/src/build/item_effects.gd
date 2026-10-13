@@ -74,6 +74,8 @@ var _drone_until := 0.0
 var _drone_magnet := 1.0
 var _domino_marks := {}
 var _domino_count := 0
+# One per domino draw that reaches the roll; the roll never reads an object id (scrap_field's catch serial).
+var _domino_serial := 0
 
 
 func _init(build_ref) -> void:
@@ -206,6 +208,7 @@ func reset_stage() -> void:
 	_drone_until = 0.0
 	_domino_marks = {}
 	_domino_count = 0
+	_domino_serial = 0
 	for key in _timers:
 		_timers[key] = 0.0
 
@@ -580,7 +583,8 @@ func _step_pins() -> void:
 # A pin hitting a pin may chain once more: the victim is flung at its nearest
 # neighbour. The pin that fling causes has chain_depth 1, so it may not domino again
 # (Triggers.MAX_CHAIN_DEPTH), and a window allows at most DOMINO_MAX_PER_WINDOW. The
-# roll is the pin's own deterministic draw, from the clock and the victim.
+# roll is the pin's own deterministic draw, from the clock and this run's domino serial, so two
+# runs with the same inputs roll the same dominoes whatever ids their objects were given.
 func _domino(id: String, d: Resource, n: int, victim: Node3D) -> void:
 	var key: int = victim.get_instance_id()
 	var mark: Dictionary = _domino_marks.get(key, {})
@@ -589,7 +593,8 @@ func _domino(id: String, d: Resource, n: int, victim: Node3D) -> void:
 		return
 	if _domino_count >= DOMINO_MAX_PER_WINDOW:
 		return
-	var roll: float = fposmod(_clock * 7.31 + float(key % 997) * Triggers.SPREAD, 1.0)
+	var roll: float = fposmod(_clock * 7.31 + float(_domino_serial % 997) * Triggers.SPREAD, 1.0)
+	_domino_serial += 1
 	if roll >= stacked(d, "chance", n):
 		return
 	var near: Array = build.enemies_near(victim.global_position, 8.0, 2)

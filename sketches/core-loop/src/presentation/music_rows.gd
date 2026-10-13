@@ -21,6 +21,12 @@ const CUES := {
 	"drop_mind_wrong": {"alias": "drop_ancient"},
 	"drop_boiler": {"alias": "drop_industrial"},
 	"stinger_lightning": {"family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
+	"drop_collapse": {"family": "natural", "rise": false, "voice": "stage", "notes": [57, 50, 45], "accent": "crash", "trim_sound": "smash_crack"},
+	"drop_cave_in": {"family": "natural", "rise": false, "voice": "stage", "notes": [50, 45, 38], "accent": "kick", "trim_sound": "land_thud"},
+	"drop_drain": {"family": "natural", "rise": false, "voice": "stage", "notes": [62, 57, 50, 45], "trim_sound": "stage_fade"},
+	"drop_impact": {"family": "natural", "rise": false, "voice": "stage", "notes": [38, 50], "accent": "kick", "trim_sound": "slam_boom"},
+	"drop_lightning": {"alias": "stinger_lightning"},
+	"drop_natural": {"alias": "drop_flood"},
 }
 const ANCIENT_VOICES := {"reactor_relic": "reactor", "swarm_remnant": "swarm", "mind_hand": "mind"}
 const ANCIENT_DROPS := {"reactor": "reactor_erupt", "swarm": "swarm_lock", "mind": "mind_"}
