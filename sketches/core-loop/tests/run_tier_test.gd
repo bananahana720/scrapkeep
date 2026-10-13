@@ -15,6 +15,8 @@ const Profile := preload("res://src/core/profile.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Flow := preload("res://src/core/flow.gd")
+const StartCard := preload("res://src/ui/start_pick_card.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # Filled from the unchanged 5838892 production schedule and settlement fixture.
 const BASE_SCHEDULE := [
@@ -82,7 +84,7 @@ func _initialize() -> void:
 			only_seed = int(arg.trim_prefix("--seed="))
 		if arg.begins_with("--section="):
 			section = arg.trim_prefix("--section=")
-	if only_seed >= 0 or section in ["card", "variants", "persistence", "format"]:
+	if only_seed >= 0 or section in ["card", "variants", "persistence", "format", "mouse"]:
 		_create_game()
 	call_deferred("_run")
 
@@ -453,6 +455,58 @@ func _tier_zero_format() -> void:
 		t.eq(label + " Continue tier", game.run.selected_run_tier(), 0)
 	game.flow.store = null
 
+func _mouse_tiles() -> void:
+	game.bot_driven = false
+	paused = true
+	var offers := [["cogs", "core", "long_barrel"], ["chain_arc", "hot_rivets", "rivet_plating"]]
+	for offer_index in offers.size():
+		for pick_index in 3:
+			_begin(706, 0)
+			game.run.start_pick["options"] = offers[offer_index].duplicate()
+			game.flow.show_start_card()
+			await process_frame
+			var card = game.flow.start_card
+			var tiles: Array = card.tiles()
+			var widths := []
+			var total := StartCard.TILE_GAP * (tiles.size() - 1)
+			for tile in tiles:
+				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x
+				widths.append(width)
+				total += width
+			var label := "narrow" if offer_index == 0 else "wide"
+			t.check(label + " offer covers extent case", total < card.size.x if offer_index == 0 else is_equal_approx(total, card.size.x), "tiles=%s card=%s" % [total, card.size.x])
+			var expected := []
+			var x := (card.size.x - total) * 0.5
+			for width in widths:
+				expected.append(Rect2(x, 0.0, width, StartCard.ICON + StartCard.PAD * 2.0))
+				x += width + StartCard.TILE_GAP
+			t.check(label + " shared panel rectangles exist", card.has_method("tile_rects"))
+			if card.has_method("tile_rects"):
+				t.eq(label + " panels match independent layout", card.tile_rects(), expected)
+			var buttons := []
+			for child in card.get_children():
+				if child is Button and child.tooltip_text.begins_with("Take "):
+					buttons.append(child)
+			for i in buttons.size():
+				t.eq(label + " hit rectangle %d" % i, Rect2(buttons[i].position, buttons[i].size), expected[i])
+			var at: Vector2 = card.global_position + expected[pick_index].get_center()
+			var move := InputEventMouseMotion.new()
+			move.position = at
+			move.global_position = at
+			root.push_input(move, true)
+			for pressed in [true, false]:
+				var click := InputEventMouseButton.new()
+				click.button_index = MOUSE_BUTTON_LEFT
+				click.position = at
+				click.global_position = at
+				click.pressed = pressed
+				root.push_input(click, true)
+			await process_frame
+			t.eq(label + " viewport mouse tile %d reaches RunState" % pick_index, game.run.start_pick.taken, offers[offer_index][pick_index])
+			t.check(label + " mouse pick closes card", not card.showing())
+	paused = false
+	game.bot_driven = true
+
 func _variants() -> void:
 	_begin(703, 0)
 	var base: Resource = Parts.def("loose_trigger")
@@ -520,6 +574,8 @@ func _run() -> void:
 		_persistence()
 	if not record and section in ["all", "format"]:
 		_tier_zero_format()
+	if not record and section in ["all", "mouse"]:
+		await _mouse_tiles()
 	if game != null:
 		game.free()
 	quit(t.verdict())
