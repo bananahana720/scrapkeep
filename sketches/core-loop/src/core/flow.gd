@@ -279,7 +279,12 @@ func choose_run_tier(value: int) -> bool:
 	if ctx.build != null:
 		ctx.build.recompute()
 	if store != null and not _entrance.is_empty():
-		_entrance["run_tier"] = value
+		if value == 0:
+			_entrance.erase("run_tier")
+			_entrance.erase("event_core_grants")
+		else:
+			_entrance["run_tier"] = value
+			_entrance["event_core_grants"] = int(_entrance.get("event_core_grants", 0))
 		_save(_entrance)
 	show_start_card()
 	return true
