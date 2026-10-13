@@ -231,6 +231,8 @@ var _parameter_phrase_due := false
 var _parameter_danger := ""
 var _parameter_danger_floor := 0.0
 var _parameter_released := false
+var _parameter_fleet_pending := 0
+var _parameter_logged_fleet := -1
 var master := 0.8
 var pause_gain := 1.0
 var overcharge := 0
@@ -909,6 +911,9 @@ func set_class_motif(id: String) -> void:
 # layer from the next bar line and never swaps one: 1 the anvil on beats 2 and 4, 2 the
 # brass semitone lean answering the lead, 3 the anvil on every beat.
 func set_fleet_ticks(ticks: int) -> int:
+	if parameter_source.is_valid():
+		_parameter_fleet_pending = clampi(ticks, 0, 3)
+		return _next_multiple(Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR)
 	var at := next_bar()
 	_add_action(at, {"type": "fleet", "ticks": clampi(ticks, 0, 3)})
 	return at
@@ -1363,6 +1368,9 @@ func _on_step() -> void:
 	if parameter_source.is_valid():
 		_parameter_phrase_due = _bar_step % (Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR) == 0
 		if _parameter_phrase_due:
+			if fleet_ticks != _parameter_fleet_pending:
+				fleet_ticks = _parameter_fleet_pending
+				events_log.append(["fleet", clock, fleet_ticks])
 			_parameter_danger_floor = 0.0
 			applied_pressure = pressure
 			_retarget()
@@ -1379,7 +1387,7 @@ func _on_step() -> void:
 	if _gap:
 		return
 	var chord := _chord(bar)
-	if fleet_ticks > 0 and track == "level" and _cadence_bar < 0 and not _lounge_live():
+	if fleet_ticks > 0 and _targets[FLEET] > 0.0 and track == "level" and _cadence_bar < 0 and not _lounge_live():
 		_fleet_layer(s, chord)
 	if not _drop.is_empty():
 		_trigger_drop(bar, s, chord)
@@ -1544,8 +1552,11 @@ func _run(action: Dictionary) -> void:
 		"echo":
 			_start_note(action["voice"], int(action["midi"]), 1, ECHO, 0.9, float(action["pan"]))
 		"fleet":
-			fleet_ticks = int(action["ticks"])
-			events_log.append(["fleet", clock, fleet_ticks])
+			if parameter_source.is_valid():
+				_parameter_fleet_pending = int(action["ticks"])
+			else:
+				fleet_ticks = int(action["ticks"])
+				events_log.append(["fleet", clock, fleet_ticks])
 		"lounge":
 			lounge = bool(action["on"])
 			events_log.append(["lounge", clock, lounge])
@@ -1787,9 +1798,10 @@ func _retarget() -> void:
 			if strip:
 				for layer in [KEYS, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET]:
 					_targets[layer] = 0.0
-		if previous != _targets:
+		if previous != _targets or _parameter_logged_fleet != fleet_ticks:
+			_parameter_logged_fleet = fleet_ticks
 			parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": _parameter_phrase_due,
-				"danger": _parameter_danger, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
+				"danger": _parameter_danger, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
 			if parameter_layer_log.size() > 4096:
 				parameter_layer_log.pop_front()
 
