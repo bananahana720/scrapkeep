@@ -23,6 +23,8 @@ var t := T.new("park_cave_in_test")
 var w: World
 var handler
 var row: Dictionary
+var descent: Dictionary
+var site: Dictionary
 var point: Vector2
 const BASELINE_B3B840D := 1.363632
 var before: float
@@ -52,7 +54,7 @@ func _run() -> void:
 	w.terrain.use(1)
 	var park: Dictionary = w.terrain.map().park
 	row = park.event_rows.filter(func(r): return r.id == "west_roof_cave_in")[0]
-	var site: Dictionary = park.park_rows.filter(func(r): return r.id == row.site)[0]
+	site = park.park_rows.filter(func(r): return r.id == row.site)[0]
 	point = Vector2(float(site.at[0]), float(site.at[1]))
 	_prepare_rim(site)
 	before = w.terrain.height(point.x, point.y)
@@ -62,26 +64,56 @@ func _run() -> void:
 	w.add_child(handler)
 	handler.setup(w)
 	await _sample("before", 0.0, false)
-	var ctx := {"clock_s": 0.0, "ball": Vector3(700, 200, 700), "delta_s": 0.0, "rise_s": 0.0}
-	handler.handle("telegraph", row, ctx)
+	w.events.register_family("natural", Callable(handler, "handle"))
+	descent = w.events._park_states.filter(func(s): return s.row.id == row.id)[0]
+	var clear := Vector3(700, 200, 700)
+	var ctx := {"clock_tier": int(row.trigger.value)}
+	var facts: Array = w.events.advance(0.0, clear, Vector3.ZERO, ctx)
+	t.check("director announces authored cave-in", facts.any(func(f): return f.kind == "announced" and f.id == row.id))
 	await _sample("telegraph", 0.0, false)
-	handler.handle("land", row, ctx)
+	facts = w.events.advance(float(row.telegraph.lead_s) + 2.0, clear, Vector3.ZERO, ctx)
+	t.check("director lands authored cave-in with ball clear", facts.any(func(f): return f.kind == "started" and f.id == row.id))
 	await _sample("land", 0.0, true)
 	var fill_s := float(row.effect.fill_s)
-	for elapsed in [fill_s * 0.5, fill_s, fill_s + 2.0]:
-		ctx.delta_s = elapsed - float(samples[-1].elapsed)
-		ctx.rise_s = float(samples[-1].elapsed)
-		handler.handle("step", row, ctx)
-		await _sample(str(elapsed), elapsed, true)
+	w.events.advance(fill_s * 0.5, clear, Vector3.ZERO, ctx)
+	await _sample(str(fill_s * 0.5), fill_s * 0.5, true)
+	var yaw := deg_to_rad(float(site.yaw_deg))
+	var half_x := float(site.size[2]) * 0.5
+	var margin := float(row.hold_clear_m)
+	var inside := point + Vector2(half_x + margin * 0.5, 0.0).rotated(-yaw)
+	await _hold("inside authored margin", Vector3(inside.x, before + 1.2, inside.y), Vector3.ZERO, fill_s * 0.5, ctx)
+	var distance := half_x + margin + 10.0
+	var approaching := point + Vector2(distance, 0.0).rotated(-yaw)
+	var travel := Vector2(-distance / 2.0, 0.0).rotated(-yaw)
+	var outside := Vector3(approaching.x, before + 1.2, approaching.y)
+	t.check("approach starts outside authored margin", distance > half_x + margin)
+	t.near("approach two-second segment reaches site centre", (approaching + travel * 2.0).distance_to(point), 0.0)
+	w.events.advance(0.0, outside, Vector3.ZERO, ctx)
+	await _hold("approaching two-second segment", outside, Vector3(travel.x, 0.0, travel.y), fill_s * 0.5, ctx)
+	w.events.advance(fill_s * 0.5, clear, Vector3.ZERO, ctx)
+	await _sample(str(fill_s), fill_s, true)
+	t.near("director descent resumes using only clear fill time", float(descent.collapse_s), fill_s)
+	t.near("handler resumes without consuming held time", float(handler.active[row.id].elapsed_s), fill_s)
+	w.events.advance(2.0, clear, Vector3.ZERO, ctx)
+	await _sample(str(fill_s + 2.0), fill_s + 2.0, true)
 	var out := FileAccess.open("user://cave-in-samples.json", FileAccess.WRITE)
 	out.store_string(JSON.stringify(samples, "  ") + "\n")
 	out.close()
-	handler.handle("end", row, ctx)
+	w.events.end_all()
 	await _sample("ended", fill_s + 2.0, true)
 	handler.release()
 	w.free()
 	var result := t.verdict()
 	quit(result)
+
+func _hold(label: String, ball: Vector3, velocity: Vector3, elapsed: float, ctx: Dictionary) -> void:
+	for tick in 2:
+		w.events.advance(float(row.effect.fill_s) * 0.5, ball, velocity, ctx)
+		var phase := "%s tick %d" % [label, tick + 1]
+		await _sample(phase, elapsed, true)
+		t.near(phase + " handler elapsed holds", float(handler.active[row.id].elapsed_s), elapsed)
+		t.near(phase + " director clear-time holds", float(descent.collapse_s), elapsed)
+
 
 func _sample(label: String, elapsed: float, landed: bool) -> void:
 	await physics_frame
