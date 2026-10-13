@@ -1,6 +1,39 @@
 # Traversal bands: park_sinkhole (stage 4)
 
-Round 3 is blocked by failed Sable batch/solo result equality on the merged candidate tool. All tables before the round-3 section are historical and superseded. Round 2 failed determinism qualification, as disclosed below.
+## Qualified round-4 measurement, 2026-10-13
+
+Runtime inputs match STEP 0 merge `e3ae572401729243688f26deb47c60a9fe9f3b64`, carrying candidate `3debeb8`, TRAV-DET2 and KE-FORMS. [The command ledger](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/commands.ndjson) records each run's exact head and input hashes. The round-4 authored changes affect documentation only. Geometry, lines, bake and graph inputs are unchanged by publication. Earlier measurements below are historical and superseded under ruling 28.
+
+Every table number comes from the seven final-runtime untraced eight-seed batches in [the round-4 dataset](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/analysis.json). Commands use committed `res://tools/traversal_line.gd`, fixed-fps 90, `--table=park --stage=4 --seeds=1,2,3,4,5,6,7,8`, one batch per pilot and `--floor`. The measuring tool SHA-256 is `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`.
+
+Complete Sable seed-7 result dictionaries agree between the eight-seed batch, the {1,7} batch, solo and traced solo. Rivet, Kest and Tarn agree traced/untraced on every seed used for distinct-line qualification. [The agreement receipts](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/agreement-sable.json) and [input hashes](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/input-equality.json) qualify the current table.
+
+Cells show median / applicable worst seed. Segment cells show three medians and the reported ranges. Airborne and length cells show median / minimum..maximum. Peak, flow, tier-3 and ride-fact cells show the minimum; arrival, quiet and anchor show the maximum. The airborne and tier-3 bands judge the median; their extremes are reported. Ruling 14 judges anchor gap from the maximum. Ruling 13 gives the floor its own arrival-and-stops row; other floor pilot metrics are reported only.
+
+<!-- KD4-R4-TABLE-BEGIN -->
+| Measure | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached the Warden (8/8) | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS | 8/8; PASS |
+| Arrival, s (median 60..120; worst <=150) | 63.36 / 63.36; PASS | 102.03 / 102.78; PASS | 96.84 / 97.63; PASS | 92.53 / 93.94; PASS | 93.43 / 93.43; PASS | 89.54 / 90.22; PASS | 99.68 / 99.68; reported, pilot band, not the floor's |
+| Waymark segments, s (each median 12..45) | 28.73 / 15.08 / 19.53; ranges 28.73..28.73, 15.08..15.08, 19.53..19.53; PASS | 42.12 / 31.32 / 28.58; ranges 40.56..43.2, 30.43..31.56, 27.69..28.93; PASS | 43.86 / 27.51 / 25.47; ranges 43.86..43.86, 27.2..27.7, 25.47..26.07; PASS | 40.92 / 28.62 / 22.98; ranges 40.82..41.19, 28.62..29.6, 22.98..23.14; PASS | 42.48 / 24.98 / 25.97; ranges 42.48..42.48, 24.98..24.98, 25.97..25.97; PASS | 42.13 / 21.51 / 25.81; ranges 41.69..42.63, 21.37..22.37, 25.59..26.43; PASS | 44.51 / 27.08 / 28.08; ranges 43.78..44.51, 26.42..27.38, 27.21..28.08; reported, pilot band, not the floor's |
+| Flow share (median >=0.70; minimum >=0.60) | 0.926 / 0.926; PASS | 0.875 / 0.8564; PASS | 0.8412 / 0.8286; PASS | 0.9629 / 0.9496; PASS | 0.9407 / 0.9407; PASS | 0.9736 / 0.9664; PASS | 0.8889 / 0.8889; reported, pilot band, not the floor's |
+| Airborne share (median 0.12..0.45) | 0.3853 / 0.3853..0.3853; PASS | 0.1664 / 0.1627..0.1704; PASS | 0.2157 / 0.2057..0.2207; PASS | 0.2287 / 0.207..0.2291; PASS | 0.1688 / 0.1688..0.1688; PASS | 0.1854 / 0.1843..0.1946; PASS | 0.146 / 0.1441..0.1702; reported, pilot band, not the floor's |
+| Terrain dead stops (zero per seed) | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS |
+| Peak speed, m/s (minimum >=26.6) | 54.03 / 54.03; PASS | 33.91 / 33.4; PASS | 29.43 / 29.43; PASS | 32.2 / 31.83; PASS | 33.04 / 33.04; PASS | 32.62 / 32.14; PASS | 32.49 / 32.49; reported, pilot band, not the floor's |
+| Tier-3 time, s (median >=3) | 51.64 / 51.64; PASS | 15.87 / 12.71; PASS | 9.32 / 9.14; PASS | 11.99 / 11.99; PASS | 13.02 / 13.02; PASS | 12.34 / 11.48; PASS | 12.29 / 12.29; reported, pilot band, not the floor's |
+| Quiet stretch, s (worst <=20) | 4.67 / 4.67; PASS | 10.48 / 10.78; PASS | 9.57 / 9.57; PASS | 11.03 / 11.03; PASS | 9.12 / 9.12; PASS | 8.09 / 8.3; PASS | 9.23 / 11.62; reported, pilot band, not the floor's |
+| Anchor gap, m (worst <=40) | 15.3 / 15.3; PASS | 12.9 / 14.9; PASS | 13.6 / 13.6; PASS | 6.7 / 8.8; PASS | 8.4 / 8.4; PASS | 12.05 / 14; PASS | 8.5 / 9.6; reported, pilot band, not the floor's |
+| Distinct ride facts (minimum >=3) | 5 / 5; PASS | 6 / 6; PASS | 5 / 5; PASS | 4 / 4; PASS | 6 / 6; PASS | 5 / 5; PASS | 5 / 5; reported, pilot band, not the floor's |
+| Length / straight distance (1.3..2.0) | 1.63 / 1.63..1.63; PASS | 1.64 / 1.63..1.64; PASS | 1.59 / 1.58..1.59; PASS | 1.62 / 1.62..1.63; PASS | 1.55 / 1.55..1.55; PASS | 1.5 / 1.5..1.5; PASS | 1.54 / 1.54..1.54; reported, pilot band, not the floor's |
+| Floor row (worst <=2 x pilot median) | cap 126.72 s | cap 204.06 s | cap 193.68 s | cap 185.06 s | cap 186.86 s | cap 179.08 s | 99.68 / 99.68 s; conservative cap 126.72 s; PASS |
+| Distinct lines (>=3; both directions <50% within 8 m) | Rivet/Kest/Tarn: 3/3 on 8 seeds; maximum share 0.4386; PASS | Rivet/Kest/Tarn: 3/3 on 8 seeds; maximum share 0.4386; PASS | Rivet/Kest/Tarn: 3/3 on 8 seeds; maximum share 0.4386; PASS | Rivet/Kest/Tarn: 3/3 on 8 seeds; maximum share 0.4386; PASS | Rivet/Kest/Tarn: 3/3 on 8 seeds; maximum share 0.4386; PASS | Rivet/Kest/Tarn: 3/3 on 8 seeds; maximum share 0.4386; PASS | stage band |
+| Pack stops (separate enemy-contact row) | 0 total; no attribution exemption used | 0 total; no attribution exemption used | 0 total; no attribution exemption used | 0 total; no attribution exemption used | 0 total; no attribution exemption used | 0 total; no attribution exemption used | 0 total; no attribution exemption used |
+<!-- KD4-R4-TABLE-END -->
+
+
+The floor reaches in at most 99.68 s against the most conservative derived cap, 126.72 s, twice the fastest pilot median. The table also lists the cap derived separately from every pilot's median. All 56 raw stop counts and terrain stop counts are zero. Pack stops are zero, so no solo attribution exemption is needed and no terrain stop is relabeled. The historical Tally lamp-swarm stop remains historical.
+
+Distinct lines use every unfrozen stage tick of the qualified Rivet/Kest/Tarn captures. For each seed and each pair, both directed fractions within 8 m in 3D are below 0.5; the maximum across all 48 directed comparisons is 0.4386. These are captured paths, not waypoint polylines. Planar comparisons are also recorded in the dataset.
 
 ## Historical greybox pass, fix round, 2026-10-12 (KD4, on 3f6a780 over b0e4490)
 
@@ -284,7 +317,7 @@ Values are median / worst seed. Median-defined bands retain the PARK.md median r
 
 The round-2 writer tables above are superseded and unqualified. The gate found an omitted Tally pack stop, differing medians and failed result equality. The correction below records that evidence.
 
-## Round-2 gate correction and round-3 qualification
+## Historical round-2 gate correction and round-3 qualification
 
 Round 2 failed determinism qualification. The gate measured Sable seed 7 at 69.96 s and 6300 ticks in the {1,7} batch, versus 69.84 s and 6289 ticks alone, with ten differing result fields. Rivet, Kest and Tarn traced/untraced results also differed. Those measurements and the older tables are historical evidence, not current qualification.
 
@@ -294,4 +327,8 @@ The same gate reproduced one Tally seed-1 pack stop at [-621.2, -700.3], 7.10 s.
 traversal_line: tally seed 1 -> engaged, flow share 0.863, dead stops 1, anchor gap 14.0 m, to Warden 97.12 s, path 2057.8 m, rides ["kicker_launch", "ride_grapple_line", "ride_chute"], uphill 51.9 m
 ```
 
-Round 3 merges candidate b1cc003, including TRAV-DET 9467de7, KE6 84b17e6 and REWARD-PARK 13e7967. The round-3 prerequisite failed again: Sable seed 7 takes 69.13 s and 6225 ticks in the {1,7} batch, versus 69.19 s and 6231 ticks alone. Ten result fields differ. [The input-equality receipt](/home/andrew/scratch/w13/sol/kd4-sinkhole-r3/input-equality.json) confirms identical stage inputs and unchanged runtime sources. [The result comparison](/home/andrew/scratch/w13/sol/kd4-sinkhole-r3/sable-agreement.json) lists every difference. Ruling 24 stops qualification here and returns TRAV-DET to the coordinator. The seven eight-seed batches and distinct-lines captures were not started. There is no qualified current table or floor cap. No geometry or pilot line changes are made for the historical pack stop.
+Round 3 merges candidate b1cc003, including TRAV-DET 9467de7, KE6 84b17e6 and REWARD-PARK 13e7967. The round-3 prerequisite failed again: Sable seed 7 takes 69.13 s and 6225 ticks in the {1,7} batch, versus 69.19 s and 6231 ticks alone. Ten result fields differ. [The input-equality receipt](/home/andrew/scratch/w13/sol/kd4-sinkhole-r3/input-equality.json) confirms identical stage inputs and unchanged runtime sources. [The result comparison](/home/andrew/scratch/w13/sol/kd4-sinkhole-r3/sable-agreement.json) lists every difference. Ruling 24 stopped that round's qualification and returned TRAV-DET to the coordinator. The seven eight-seed batches and distinct-lines captures were not started. That round produced no qualified table or floor cap. The round-4 table above supersedes it. No geometry or pilot line changes are made for the historical pack stop.
+
+## Current event limit
+
+Both event rows now register, announce and land; the cenote drains its authored 1.2 m in 12 s. The shared cave-in handler still installs a fixed rubble mound immediately instead of the authored 12 m trench over 3 s. [The stage-page proof](../stages/4-park_sinkhole.md#authored-event-proof-round-4) and [failed effect check](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/cave-effect-proof.json) keep that blocker explicit. The qualified traversal table does not establish complete event acceptance.
