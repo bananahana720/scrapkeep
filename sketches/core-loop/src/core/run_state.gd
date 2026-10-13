@@ -914,7 +914,7 @@ static func validate_entrance_doc(doc) -> String:
 		return "schema %d is newer than known schema %d" % [int(doc["schema"]), ENTRANCE_SCHEMA]
 	if int(doc["schema"]) < 1:
 		return "schema %d is invalid" % int(doc["schema"])
-	if doc.has("run_tier") and (not _entrance_kind_ok(doc.run_tier, "int") or doc.run_tier not in [0, 1]):
+	if doc.has("run_tier") and (not _entrance_kind_ok(doc.run_tier, "int") or int(doc.run_tier) not in [0, 1]):
 		return "invalid run_tier"
 	if doc.has("event_core_grants") and (not _entrance_kind_ok(doc.event_core_grants, "int") or doc.event_core_grants < 0):
 		return "invalid event_core_grants"
