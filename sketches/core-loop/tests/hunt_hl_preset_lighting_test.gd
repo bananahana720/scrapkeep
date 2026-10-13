@@ -26,7 +26,7 @@ func _run() -> void:
 	game.flow.enter_stage(game.ctx.stages.last_of(3), Vector3.ZERO, false)
 	var dusk := Probe.lighting(game)
 	_t.eq("HL03 Mind departure stage is dusk", dusk.ambient, Color("5d6b86"))
-	_t.eq("HL03 dusk ambient energy", dusk.energy, 0.16)
+	_t.near("HL03 dusk ambient energy", dusk.energy, 0.16, 0.000001)
 	_t.eq("HL03 dusk key", dusk.sun_color, Color("e06f4a"))
 	_t.eq("HL03 dusk sun direction", dusk.sun_rotation, Vector3(-6.0, 60.0, 0.0))
 	_cycle(game, "Highdraft dusk")
