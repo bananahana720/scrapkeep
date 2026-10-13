@@ -476,7 +476,7 @@ func _mouse_tiles() -> void:
 			var label := "narrow" if offer_index == 0 else "wide"
 			t.check(label + " offer covers extent case", total < card.size.x if offer_index == 0 else is_equal_approx(total, card.size.x), "tiles=%s card=%s" % [total, card.size.x])
 			var expected := []
-			var x := (card.size.x - total) * 0.5
+			var x: float = (card.size.x - total) * 0.5
 			for width in widths:
 				expected.append(Rect2(x, 0.0, width, StartCard.ICON + StartCard.PAD * 2.0))
 				x += width + StartCard.TILE_GAP
