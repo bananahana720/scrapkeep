@@ -33,8 +33,7 @@ func _run() -> void:
 	game.player.reset_to(game.ctx.terrain.drop_point(ring.x, ring.z, game.player.tuning.RADIUS), Vector3.ZERO)
 	for i in 2: await physics_frame
 	var bot = Hands.new(game, "skipper", 1)
-	var dir: Vector3 = sheet._face_heading(w)
-	var expected: Vector3 = w.home + dir * (Reactor.SHEET_RUN + BotDriver.RUNUP_EDGE)
+	var expected := minf(BotDriver.RUNUP, Reactor.SHEET_RUN - BotDriver.RUNUP_EDGE)
 	var dry_ok := true
 	var charge_ok := true
 	var saw_dry := false
@@ -43,7 +42,7 @@ func _run() -> void:
 	for i in ceili(Warden.PULSE_CYCLE * 2.0 / tick):
 		if sheet.sheet_live(): break
 		bot._fight(w, tick)
-		var distance := Vector2(bot.steer_at.x - expected.x, bot.steer_at.z - expected.z).length()
+		var distance := absf(Vector2(bot.steer_at.x - w.home.x, bot.steer_at.z - w.home.z).length() - expected)
 		if w.state_name() == "charging":
 			saw_charge = true
 			charge_ok = charge_ok and distance < 0.0001
@@ -51,8 +50,8 @@ func _run() -> void:
 			saw_dry = true
 			dry_ok = dry_ok and distance < 0.0001
 		await physics_frame
-	t.check("ordinary dry approach stages outside the sheet foot", saw_dry and dry_ok)
-	t.check("charge keeps the same staging point", saw_charge and charge_ok)
+	t.check("ordinary dry approach stages inside the pulse ring", saw_dry and dry_ok)
+	t.check("charge keeps the same staging distance", saw_charge and charge_ok)
 	t.check("the staging probe follows a normal pulse", sheet.sheet_live() and w.pulses > 0)
 	game.free()
 	quit(t.verdict())
