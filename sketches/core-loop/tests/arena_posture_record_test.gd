@@ -21,6 +21,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var t := T.new("arena_posture_record_test")
+	_slice_ratio_regression(t)
 	while game.flow == null:
 		await physics_frame
 	game.ctx.calm = true
@@ -134,3 +135,30 @@ func _fresh(stage: int, t):
 	game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
 	game.combat.heft_override = 1.0
 	return warden
+
+
+func _slice_ratio_regression(t) -> void:
+	var source := FileAccess.get_file_as_string("res://tests/posture_bands_test.gd")
+	var pattern := RegEx.create_from_string('t\\.check\\("over the sweep seeds small takes at least twice grown\'s time", ([^\\n]+),')
+	var found := pattern.search(source)
+	t.check("slice ratio assertion is executable", found != null)
+	if found == null:
+		return
+	var assertion := Expression.new()
+	var parsed := assertion.parse(found.get_string(1), PackedStringArray(["small", "grown", "swept", "swept_grown"]))
+	t.eq("slice ratio assertion parses", parsed, OK)
+	if parsed != OK:
+		return
+	var cases := [
+		{"name": "saved pass cannot hide live miss", "saved": [80.6, 33.1], "live_ms": [51400, 27100]},
+		{"name": "live passing control", "saved": [80.6, 33.1], "live_ms": [80600, 33100]},
+		{"name": "saved miss cannot hide live pass", "saved": [51.4, 27.1], "live_ms": [80600, 33100]},
+	]
+	for case in cases:
+		var live: Array = case["live_ms"]
+		var saved: Array = case["saved"]
+		var expected: bool = int(live[1]) > 0 and int(live[0]) - int(live[1]) >= int(live[1])
+		var swept := {"small_median_s": str(saved[0]), "grown_median_s": str(saved[1])}
+		var actual = assertion.execute([float(live[0]) / 1000.0, float(live[1]) / 1000.0, swept, float(saved[1])])
+		t.check("slice %s evaluates" % case["name"], not assertion.has_execute_failed())
+		t.eq("slice %s" % case["name"], actual, expected)
