@@ -280,7 +280,9 @@ func _advance_collapse(row: Dictionary, progress: float) -> void:
 		return
 	entry.progress = progress
 	if row.kind == "cave_in":
-		EventGround.lower_roof(entry.roof, float(row.effect.depth_m) * progress)
+		var drop_m := float(row.effect.depth_m) * progress
+		EventGround.lower_roof(entry.roof, drop_m)
+		active[row.id].mark.position.y = 0.15 - drop_m
 		return
 	var geometry: Dictionary = entry.geometry.duplicate()
 	geometry.source_surface = entry.baseline
@@ -381,6 +383,8 @@ func _footprint_mesh(geometry: Dictionary) -> ArrayMesh:
 func _show_landing(row: Dictionary, state: Dictionary) -> void:
 	state.mark.free()
 	state.mark = _mark(row, state.geometry, true)
+	if row.kind == "cave_in":
+		state.mark.position.y -= float(row.effect.depth_m) * float(_overlay_map.swaps[_prepared[row.id].swap].progress)
 
 
 func _on_world_sound(kind: String, at: Vector3) -> void:
