@@ -95,6 +95,10 @@ func _run() -> void:
 	for i in 40: await physics_frame
 	var w=game.flow.warden
 	var driver=w.mount_driver
+	var collider: CollisionShape3D
+	for child in w.get_children():
+		if child is CollisionShape3D: collider=child
+	t.check("mounted contact volume agrees with the visible core",collider.global_position.is_equal_approx(w._kit._open_node.global_position),"collider %s, visual %s" % [collider.global_position,w._kit._open_node.global_position])
 	driver.sheet_dir=Vector3.FORWARD
 	var foot: Vector3=w.home+driver.sheet_dir*(driver.SHEET_RUN-Tuning.RADIUS)
 	game.player.reset_to(game.ctx.terrain.drop_point(foot.x,foot.z,Tuning.RADIUS),-driver.sheet_dir*game.player.tuning.f("cruise"))
