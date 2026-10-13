@@ -379,13 +379,8 @@ func _planar(a: Vector3, b: Vector3) -> float:
 func _build_pocket(s: Site, spec: Dictionary) -> void:
 	s.graph = spec.get("graph", _graph)
 	s.difficulty = clampf(float(spec.get("difficulty", 1.0)), 1.0, float(s.rule.get("difficulty_cap", 3.0)))
-	s.view.word.text = String(s.rule.cue.word)
-	s.tier_label = Label3D.new()
-	s.tier_label.name = "RewardTier"
+	s.tier_label = s.view.word
 	_show_reward(s)
-	s.tier_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	s.tier_label.position = Vector3.UP * ActivityView.WORD_HEIGHT
-	s.add_child(s.tier_label)
 	if "hazard" in s.rule.bundle:
 		_build_hazard(s)
 	match s.id:
