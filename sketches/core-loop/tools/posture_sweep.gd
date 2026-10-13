@@ -10,8 +10,8 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 # Every cell of the grid is played by every arm of ARMS over the seeds. Each run is its own
 # process, because a bot run repeats exactly only in a fresh process (tools/bot_run.gd,
 # tests/bot_repeat_test.gd). The seam is ctx.stages: after the game is built the child swaps
-# in a Table whose of() returns the slice row with warden_plating and a posture dictionary
-# replaced, so no source file changes between cells.
+# in a Table whose of() returns the slice row with warden_plating, curve and ram_shatters
+# overridden while keeping the slice's remaining posture fields. No source file changes between cells.
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/posture_sweep.gd \
 #     -- --out=<abs tsv> --runs=<abs tsv> [--procs=6] [--seeds=1,2,3,4,5] [--cap=240]
@@ -56,7 +56,9 @@ class Table extends RefCounted:
 	func of(stage: int) -> Dictionary:
 		var row: Dictionary = SliceDefs.of(stage).duplicate(true)
 		row["warden_plating"] = plating
-		row["posture"] = posture
+		var numbers: Dictionary = row.get("posture", {})
+		numbers.merge(posture, true)
+		row["posture"] = numbers
 		return row
 
 	func is_last(stage: int) -> bool:

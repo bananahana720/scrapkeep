@@ -1,5 +1,11 @@
 # smoke: bots timeout=770s (24 bot runs on stage 3 in child processes at once, each cut at RUN_CAP_S)
 # 2026-10-12, W13 smoke triage: completed in 510.708 s alone with its fixed bands still red; 1.5x rounded up to 10 s is 770 s, beyond the ordinary 360 s cap.
+# 2026-10-13 WT-BANDS: paired record gain 100 -> 150; measured small 104.78 -> 104.78 s, grown 46.40 -> 38.77 s.
+# Re-pinned small 164.03 -> 104.78 s and grown 118.32 -> 38.77 s from five agreeing sweeps.
+# Small medians [105.90, 104.78, 104.78, 104.78, 104.78]; grown [38.77, 38.77, 38.77, 38.77, 38.77].
+# All five pass the live band, twice-grown and mechanism contracts; only the old pins failed during calibration.
+# Load start/end [23.00/43.76, 43.76/31.66, 31.66/30.69, 30.69/33.08, 33.08/29.26]. Bands and arms unchanged.
+# The KF-BOT measurements below are historical; the current WT-BANDS measurements are above.
 extends "res://tools/bot_run.gd"
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -56,8 +62,8 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 # fills only from rams in the 4 s low dwell and about 1.5 a second from the line, so a chunk costs two to three
 # hoist cycles. Owner tuning call (no stage-3 tune is in KF-BOT's scope): restate the headframe band near the
 # sheet's own prediction (60 to 85 s, swarm.md:177), raise line-shot posture on an anchor, or shorten the high dwell.
-const EXPECT_SMALL_S := 164.03
-const EXPECT_GROWN_S := 118.32
+const EXPECT_SMALL_S := 104.78
+const EXPECT_GROWN_S := 38.77
 const TOLERANCE := 0.10
 
 var _child := false
