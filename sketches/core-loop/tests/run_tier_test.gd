@@ -77,6 +77,8 @@ var game
 var record := false
 var section := "all"
 var only_seed := -1
+var continue_path := ""
+var continue_mode := ""
 
 func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
@@ -86,7 +88,11 @@ func _initialize() -> void:
 			only_seed = int(arg.trim_prefix("--seed="))
 		if arg.begins_with("--section="):
 			section = arg.trim_prefix("--section=")
-	if only_seed >= 0 or section in ["card", "variants", "persistence", "format", "mouse"]:
+		if arg.begins_with("--continue-path="):
+			continue_path = arg.trim_prefix("--continue-path=")
+		if arg.begins_with("--continue-mode="):
+			continue_mode = arg.trim_prefix("--continue-mode=")
+	if only_seed >= 0 or section in ["card", "variants", "persistence", "format", "mouse", "continue", "continue-replay"]:
 		_create_game()
 	call_deferred("_run")
 
@@ -433,6 +439,87 @@ func _persistence() -> void:
 	loaded.events.free()
 	game.flow.store = null
 
+func _continue_card() -> void:
+	game.bot_driven = true
+	var jobs := []
+	for stage_value in [1, 2]:
+		var path := "user://tier-offer-%d-stage-%d.json" % [OS.get_process_id(), stage_value]
+		game.flow.store = Flow.RunStore.new(path)
+		_begin(707, 0)
+		t.check("Continue fixture rerolls saved offer", game.run.reroll_start_pick())
+		if stage_value == 2:
+			game.flow.enter_stage(2, Vector3.ZERO, false)
+		else:
+			game.flow._save(game.run.to_entrance_doc())
+		t.eq("Continue fixture disk save stage %d" % stage_value, game.flow.store_error, "")
+		var saved: Dictionary = game.flow.store.load()
+		t.eq("Continue fixture untaken stage %d" % stage_value, saved.start_pick.taken, "")
+		t.eq("Continue fixture saved three options stage %d" % stage_value, saved.start_pick.options, game.run.start_pick_options())
+		var modes := ["interactive", "bot", "headless"] if stage_value == 1 else ["interactive"]
+		for mode in modes:
+			jobs.append({"script": "res://tests/run_tier_test.gd", "args": ["--section=continue-replay", "--continue-path=" + path, "--continue-mode=" + mode]})
+	game.flow.store = null
+	var results := ChildRuns.run(jobs, 70.0)
+	for i in results.size():
+		var result: Dictionary = results[i]
+		var summary := ChildRuns.summary(result)
+		for line in summary.checks:
+			print(line)
+		print(summary.verdict)
+		t.check("fresh-process Continue child %d" % i, not result.timed_out and result.code == 0 and summary.errors.is_empty() and summary.verdict.ends_with(": PASS"), "exit=%s timeout=%s errors=%s" % [result.code, result.timed_out, summary.errors])
+
+func _continue_replay() -> void:
+	paused = true
+	game.ctx.calm = true
+	game.ctx.profile = _fresh_profile(true)
+	game.flow.store = Flow.RunStore.new(continue_path)
+	var saved: Dictionary = game.flow.store.load()
+	var expected_options: Array = saved.start_pick.options.duplicate()
+	var expected_stage := int(saved.stage)
+	var label := "Continue stage %d %s" % [expected_stage, continue_mode]
+	t.eq(label + " fresh title", game.flow.state, Flow.TITLE)
+	t.check(label + " starts with card hidden", not game.flow.start_card.showing())
+	if continue_mode == "interactive":
+		game.bot_driven = false
+	elif continue_mode == "bot":
+		game.bot_driven = true
+	else:
+		t.check(label + " headless default is bot driven", game.bot_driven and DisplayServer.get_name() == "headless")
+	t.check(label + " resumes without retry", game.flow.resume_run())
+	await process_frame
+	var card = game.flow.start_card
+	t.eq(label + " restored options", game.run.start_pick_options(), expected_options)
+	t.eq(label + " restored stage", game.run.stage, expected_stage)
+	t.eq(label + " default tier unchanged", game.run.selected_run_tier(), 0)
+	t.eq(label + " no automatic pick", game.run.start_pick.taken, "")
+	t.eq(label + " no automatic reroll", game.run.start_pick.rerolls_left, int(saved.start_pick.rerolls_left))
+	if expected_stage == 1 and continue_mode == "interactive":
+		t.check(label + " presents saved card", card.showing() and card.is_processing_input())
+		var shown_ids := []
+		for tile in card.tiles():
+			shown_ids.append(tile.id)
+		t.eq(label + " shows saved three options", shown_ids, expected_options)
+		var labels := []
+		for child in card.get_children():
+			if child is Label and child.is_visible_in_tree():
+				labels.append(child.text)
+		var hard: Dictionary = Cards.RUN_TIERS[1]
+		var threat := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
+		var pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
+		t.check(label + " visible pre-choice tier disclosure", threat in labels and pay in labels and card.offered_tiers() == [0, 1])
+		var key := InputEventKey.new()
+		key.pressed = true
+		key.keycode = KEY_2
+		key.physical_keycode = KEY_2
+		root.push_input(key, true)
+		t.eq(label + " viewport choice reaches RunState", game.run.start_pick.taken, expected_options[1])
+		t.check(label + " choice closes card", not card.showing())
+	else:
+		t.check(label + " card stays hidden", not card.showing())
+		t.eq(label + " returns to stage without waiting", game.flow.state, Flow.STAGE)
+	paused = false
+	game.flow.store = null
+
 func _tier_zero_format() -> void:
 	for switch_back in [false, true]:
 		var label := "switch to tier zero" if switch_back else "fresh tier zero"
@@ -598,6 +685,10 @@ func _run() -> void:
 		_tier_zero_format()
 	if not record and section in ["all", "mouse"]:
 		await _mouse_tiles()
+	if not record and section in ["all", "continue"]:
+		_continue_card()
+	if not record and section == "continue-replay":
+		await _continue_replay()
 	if game != null:
 		game.free()
 	quit(t.verdict())
