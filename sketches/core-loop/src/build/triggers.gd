@@ -12,7 +12,7 @@ extends RefCounted
 # resolved in this pass is refused, so each kind fires at most once per commitment and
 # every chain ends by construction: at most twelve resolutions. Five kills from one
 # burst are one on_kill in that pass. The one sanctioned exception is an explicit chain
-# (Domino Wire), which carries chain_depth and is refused past MAX_CHAIN_DEPTH.
+# (Domino Wire), which carries a chain mask and is refused when its type bit is already set.
 
 enum Kind { ON_HIT, ON_KILL, ON_SMASH, ON_REBOUND, ON_VAULT, ON_CHARGE_RELEASE, ON_CLOAK_BREAK, ON_LAND,
 	ON_SPEED_TIER_UP, ON_PICKUP, ON_DAMAGE_TAKEN, TIMED }
@@ -20,6 +20,13 @@ enum Kind { ON_HIT, ON_KILL, ON_SMASH, ON_REBOUND, ON_VAULT, ON_CHARGE_RELEASE, 
 const NAMES := ["on_hit", "on_kill", "on_smash", "on_rebound", "on_vault", "on_charge_release", "on_cloak_break",
 	"on_land", "on_speed_tier_up", "on_pickup", "on_damage_taken", "timed"]
 const PASSIVE := ""
+# The chain mask (RoR2 ProcChainMask, design-v3/research/comps/ror2/items-and-stacking.md):
+# one bit per proc type a chain may carry, bits 0 to 31. A link whose type bit is already set
+# in its chain is refused, so a chain ends instead of repeating, and distinct types still
+# combine. Each chain type owns one bit; only domino (Domino Wire) chains today.
+const CHAIN_TYPES := ["domino"]
+# The most links one chain holds. Each chain type joins a chain once, so the mask bounds depth
+# at one link per type, which is CHAIN_TYPES.size() today.
 const MAX_CHAIN_DEPTH := 1
 
 # base_proc for a discrete action the player chose: it already happened, so it always
@@ -56,6 +63,22 @@ static func icon(trigger_name: String) -> String:
 
 static func strike_proc(strike_kind: String) -> float:
 	return STRIKE_PROC.get(strike_kind, UNKNOWN_STRIKE_PROC)
+
+
+# The mask bit of a chain type, or 0 for a type that cannot chain.
+static func chain_bit(proc_type: String) -> int:
+	var i := CHAIN_TYPES.find(proc_type)
+	return (1 << i) if i >= 0 else 0
+
+
+# True when a link with this bit may join a chain whose mask is `mask`: a zero bit never
+# joins, and a type the chain already holds is refused.
+static func chain_allows(mask: int, bit: int) -> bool:
+	return bit != 0 and (mask & bit) == 0
+
+
+static func chain_add(mask: int, bit: int) -> int:
+	return mask | bit
 
 
 # One item's roll in a pass: the pass draw, spread by the item's slot and the
