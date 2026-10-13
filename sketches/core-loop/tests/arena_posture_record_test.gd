@@ -195,7 +195,7 @@ func _slice_record_regression(t) -> void:
 	game.flow.press_start()
 	game.flow.choose_class(1)
 	game.events.posture_changed.connect(func(_enemy, value: float, _open: bool): published.append(value))
-	for ratio in [0.35, 1.10]:
+	for ratio in [0.35, 1.0, 1.10]:
 		game.flow.enter_stage(1, Vector3.ZERO, false)
 		await physics_frame
 		await physics_frame
@@ -217,6 +217,8 @@ func _slice_record_regression(t) -> void:
 		t.check("slice publishes landed posture %.2f" % ratio, not published.is_empty() and absf(float(published.back()) - expected) < 0.001)
 		if ratio < 1.0:
 			t.check("slice light contact still moves posture with less buildup", warden.posture() > 0.0 and warden.posture() < legacy and not is_equal_approx(warden.posture(), legacy))
+		elif ratio == 1.0:
+			t.near("slice matched contact keeps inherited bar progression", warden.posture(), legacy, 0.001)
 		else:
 			t.check("slice grown contact retains at least legacy weight", warden.posture() >= legacy)
 		var swept_rule := BossPosture.new(measured)
