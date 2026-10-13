@@ -101,7 +101,7 @@ func _suspension(in_bay: bool) -> void:
 	probe.process_physics_priority = -100
 	root.add_child(probe)
 	if in_bay:
-		game.player.reset_to(safe_at)
+		game.player.reset_to(game.world.bay.deck_point(Vector2.ZERO) - Vector3.UP * (game.world.bay.FALL_OFF + 2.0))
 		# Falling off the real deck emits bay_left and resumes World on this tick.
 	else:
 		game.toggle_pause()
@@ -110,6 +110,7 @@ func _suspension(in_bay: bool) -> void:
 		await physics_frame
 		if game.world.events.stage_time > suspended_stage:
 			resume = probe.snapshot.duplicate()
+			if in_bay: game.player.reset_to(safe_at)
 			break
 	t.check(label + " stage resumes", not resume.is_empty(), str(resume))
 	var expected := -1
