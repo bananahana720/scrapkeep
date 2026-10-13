@@ -1410,14 +1410,29 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		var sheet = target.mount_driver
 		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
 		var foot: Vector3 = at + dir * minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
-		var steer: Vector3 = target.family_point_at() if sheet.sheet_live() else _ground_point(foot.x, foot.z)
+		var live: bool = sheet.sheet_live()
+		var steer: Vector3 = target.family_point_at() if live else _ground_point(foot.x, foot.z)
 		if kit.hooked:
 			source.press["harpoon_released"] = true
 		_harpoon_held = false
 		_harpoon_commit = false
 		_anchor_below = 0.0
-		_goal = "ride spillway sheet" if sheet.sheet_live() else "wait spillway sheet"
+		_goal = "ride spillway sheet" if live else "wait spillway sheet"
 		_act(steer, target, delta, target, false)
+		if not live:
+			source.press.erase("shift_pressed")
+			source.hold.erase("shift_held")
+			_boost_clock = 0.0
+			_shift_left = 0.0
+			if game.player.state.grounded and _flat(ball, foot) <= RUNUP_EDGE:
+				source.hold["brake_held"] = true
+		else:
+			source.hold.erase("brake_held")
+			if _boost_clock <= 0.0 and game.player.state.grounded and game.player.verb_ready("boost"):
+				source.press["shift_pressed"] = true
+				source.hold["shift_held"] = true
+				_boost_clock = BOOST_GAP
+				_shift_left = SHIFT_HOLD
 		return
 	if lined:
 		_anchor_ride(target, staggered, ball, delta)
