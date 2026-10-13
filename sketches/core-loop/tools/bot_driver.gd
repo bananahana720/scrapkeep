@@ -1404,6 +1404,21 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		if not game.player.state.grounded:
 			_count("latch_bites_air")
 	_anchor_lined = lined
+	if not staggered and target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
+			and target.spec.get("park_landmark", false) and target.mount_driver != null \
+			and target.mount_driver.has_method("sheet_live"):
+		var sheet = target.mount_driver
+		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
+		var foot: Vector3 = at + dir * minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
+		var steer: Vector3 = target.family_point_at() if sheet.sheet_live() else _ground_point(foot.x, foot.z)
+		if kit.hooked:
+			source.press["harpoon_released"] = true
+		_harpoon_held = false
+		_harpoon_commit = false
+		_anchor_below = 0.0
+		_goal = "ride spillway sheet" if sheet.sheet_live() else "wait spillway sheet"
+		_act(steer, target, delta, target, false)
+		return
 	if lined:
 		_anchor_ride(target, staggered, ball, delta)
 		return
