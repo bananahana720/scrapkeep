@@ -260,8 +260,6 @@ func _ride(warden, delta: float) -> void:
 		rise = maxf(0.0, core - base) * 2.0 * (1.0 - t) / (SHEET_RUN - top) * closing
 	var want_vy := rise + RIDE_GAIN * (height - ball.y)
 	var gravity: float = target.tuning.f("gravity") if "tuning" in target and target.tuning != null else 9.8
-	if mounted:
-		want_vy = minf(want_vy, sqrt(2.0 * gravity * maxf(0.0, core - ball.y)))
 	var up := (want_vy - v.y) / delta + gravity
 	# The water keeps the planar speed the ball came in with: it adds back what rolling lost.
 	var push := Vector3.ZERO
