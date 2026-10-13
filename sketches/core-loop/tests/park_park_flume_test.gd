@@ -217,7 +217,7 @@ static func deck_on_map(mid: Vector3, facing: Vector3, side: Vector3, map: RefCo
 	for du in [-Bay.DECK_U, 0.0, Bay.DECK_U]:
 		for dv in [-Bay.DECK_V, 0.0, Bay.DECK_V]:
 			var p: Vector3 = mid + facing * du + side * dv
-			if absf(p.x) > 800.0 or absf(p.z) > 800.0:
+			if not Bay._on_map(p, map):
 				return false
 	return true
 
