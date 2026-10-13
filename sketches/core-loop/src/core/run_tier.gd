@@ -5,6 +5,24 @@ const PAY_GAIN_CAP := 1.5
 const BASE := 0
 const HARD := 1
 const UNLOCK := "first_win"
+# Small existing bonuses; the base id and all metadata remain the same.
+const ENHANCED := {
+	"loose_trigger": {"mods": {"weapon_rate": 1.15}, "text": "+15% fire rate"},
+	"long_barrel": {"mods": {"weapon_range": 1.18}, "text": "+18% weapon range"},
+}
+
+static func is_variant_id(id: String) -> bool:
+	return id.contains("@tier")
+
+static func effective_part(id: String, base: Dictionary, tier: int) -> Dictionary:
+	if tier == BASE or not ENHANCED.has(id):
+		return base
+	var out := base.duplicate(true)
+	var change: Dictionary = ENHANCED[id]
+	out["mods"].merge(change.mods, true)
+	out["text"] = change.text
+	return out
+
 
 static func unlocked(profile) -> bool:
 	return profile != null and profile.earned(UNLOCK)

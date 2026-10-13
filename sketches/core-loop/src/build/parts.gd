@@ -323,7 +323,12 @@ static func rarity_of(part_id: String) -> String:
 	return String(row(part_id).get("rarity", "common"))
 
 
-static func row(part_id: String) -> Dictionary:
+static func row(part_id: String, tier := -1) -> Dictionary:
+	var base := _base_row(part_id)
+	return RunTier.effective_part(part_id, base, active_tier() if tier < 0 else tier)
+
+
+static func _base_row(part_id: String) -> Dictionary:
 	var authored: Dictionary = rows().get(part_id, {})
 	if not authored.is_empty():
 		return authored
@@ -336,12 +341,14 @@ static func row(part_id: String) -> Dictionary:
 
 
 static func def(part_id: String) -> Resource:
-	if not _defs.has(part_id):
-		var r := row(part_id)
+	var tier := active_tier()
+	var key := "1:" + part_id if tier == 1 and RunTier.ENHANCED.has(part_id) else part_id
+	if not _defs.has(key):
+		var r := row(part_id, tier)
 		if r.is_empty():
 			return null
-		_defs[part_id] = PartDef.from_row(part_id, r)
-	return _defs[part_id]
+		_defs[key] = PartDef.from_row(part_id, r)
+	return _defs[key]
 
 
 static func has(part_id: String) -> bool:

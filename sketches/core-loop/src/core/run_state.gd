@@ -412,6 +412,8 @@ func spend_scrap(amount: int) -> bool:
 
 
 func add_part(part_id: String, source: String) -> void:
+	if RunTier.is_variant_id(part_id):
+		return
 	parts.append(part_id)
 	events.part_gained.emit(part_id, source)
 	_publish_heft_class()
@@ -918,6 +920,9 @@ static func validate_entrance_doc(doc) -> String:
 	for key in ENTRANCE_OPTIONAL:
 		if doc.has(key) and not _entrance_kind_ok(doc[key], ENTRANCE_OPTIONAL[key]):
 			return "wrong type for %s (expected %s)" % [key, ENTRANCE_OPTIONAL[key]]
+	for part_id in doc["parts"]:
+		if RunTier.is_variant_id(part_id):
+			return "part versions must share the base id"
 	for w in doc["retries_spent"]:
 		if not str(w).is_valid_int():
 			return "retries_spent key %s is not a world id" % str(w)
