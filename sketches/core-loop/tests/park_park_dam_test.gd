@@ -21,7 +21,11 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+const Director := preload("res://src/world/event_director.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const MAP := "park_dam"
 const PARK := "res://src/world/park/park_dam.json"
@@ -59,35 +63,55 @@ func _run() -> void:
 	t.check("committed stage graph is fresh", stale_graph.is_empty(), str(stale_graph))
 	t.check("KD0's stand-in park_dam_stage1.json is deleted", not FileAccess.file_exists(STAND_IN))
 
-	var misses := pins(park, lines, graph)
+	var cells = ParkGraph.read(BAKED + "/graph.bin")
+	var misses := pins(park, lines, graph, cells)
 	t.check("stage pins hold", misses.is_empty(), "\n".join(misses))
 
 	# Plants: each change must turn the pins red.
 	var planted: Dictionary = park.duplicate(true)
 	planted["landmark"]["warden"]["family"] = "swarm"
-	t.check("planted Warden family turns the pins red", not pins(planted, lines, graph).is_empty())
+	t.check("planted Warden family turns the pins red", not pins(planted, lines, graph, cells).is_empty())
 	planted = park.duplicate(true)
 	planted["waymarks"] = ["drop_in", "the_eye", "domes_camp", "landmark"]
-	t.check("planted waymark swap turns the pins red", not pins(planted, lines, graph).is_empty())
+	t.check("planted waymark swap turns the pins red", not pins(planted, lines, graph, cells).is_empty())
 	var bad_lines: Dictionary = lines.duplicate(true)
 	bad_lines["pilots"]["rivet"]["waypoints"].insert(2, "no_such_row")
-	t.check("planted unknown waypoint turns the pins red", not pins(park, bad_lines, graph).is_empty())
+	t.check("planted unknown waypoint turns the pins red", not pins(park, bad_lines, graph, cells).is_empty())
 	var bad_graph: Dictionary = graph.duplicate(true)
 	bad_graph["pockets"][0]["role"] = "extra"
-	t.check("planted pocket role turns the pins red", not pins(park, lines, bad_graph).is_empty())
+	t.check("planted pocket role turns the pins red", not pins(park, lines, bad_graph, cells).is_empty())
 	planted = park.duplicate(true)
 	for row in planted["park_rows"]:
 		if row["id"] == "slickrock_domes":
 			row["stamp"] = ""
-	t.check("planted unstamped greybox row turns the pins red", not pins(planted, lines, graph).is_empty())
+	t.check("planted unstamped greybox row turns the pins red", not pins(planted, lines, graph, cells).is_empty())
 	bad_lines = lines.duplicate(true)
 	bad_lines["pilots"]["sable"]["waypoints"].insert(1, [-600, -600])
-	t.check("planted line through an anchor field turns the pins red", not pins(park, bad_lines, graph).is_empty())
+	t.check("planted line through an anchor field turns the pins red", not pins(park, bad_lines, graph, cells).is_empty())
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "toe_vent_pits":
+			row["at"] = [180, 430]
+	var vent_misses := pins(planted, lines, graph, cells)
+	t.check("planted vent corner fails corridor clearance", vent_misses.any(func(miss): return String(miss).begins_with("toe_vents_wake corridor clearance:")), str(vent_misses))
+	var closed_cells = ParkGraph.read(BAKED + "/graph.bin")
+	for row in park["park_rows"]:
+		if row["id"] == "the_eye":
+			var eye_cell: int = closed_cells.nearest(Vector2(row["at"][0], row["at"][1]))
+			closed_cells.node_flags[eye_cell] &= ~ParkGraph.OPEN
+	var open_misses := pins(park, lines, graph, closed_cells)
+	t.check("planted Eye OPEN bit fails its graph assertion", open_misses.any(func(miss): return String(miss).begins_with("the_eye graph OPEN:")), str(open_misses))
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "training_wall_east":
+			row["size"][0] = 65.0
+	var wall_misses := pins(planted, lines, graph, cells)
+	t.check("planted old wall tip fails Kest landing clearance", wall_misses.any(func(miss): return String(miss).begins_with("training_wall_east Kest landing clearance:")), str(wall_misses))
 	quit(t.verdict())
 
 
 # Every stage fact this test pins; [] when all hold, else one line per miss.
-static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Array:
+static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary, cells: ParkGraph) -> Array:
 	var out := []
 	if park.get("map") != MAP:
 		out.append("map is %s, want %s" % [park.get("map"), MAP])
@@ -151,16 +175,38 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Arra
 	# KB9 runtime: no unstamped greybox box, and no anchor post near a line.
 	var places := {}
 	for row in park.get("park_rows", []):
+		# Kest seed 4, merged round-5 trace ticks 7580..7583: ground-only wall-tip strike.
+		if row["id"] == "training_wall_east" and ParkMap.footprint_contains(row, Vector2(54.66, 531.65), Tuning.RADIUS, Vector2(54.37, 531.97)):
+			out.append("training_wall_east Kest landing clearance: wall footprint meets the recorded ball-radius approach at [54.66,531.65] to [54.37,531.97]")
 		var recipe := String(row.get("recipe", ""))
 		if recipe.begins_with(ParkRecipes.GREYBOX) and not UNSTAMPED_OK.has(row["element"]) and String(row.get("stamp", "")) == "":
 			out.append("%s is a greybox %s with no stamp: KB9 builds it as a solid box" % [row["id"], row["element"]])
 		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
-	for row in park.get("activity_rows", []):
-		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
+	for row in park.get("activity_rows", []) + park.get("contraption_rows", []):
+		if row.has("at"):
+			places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
 	if park.has("spawn"):
 		places["drop_in"] = Vector2(float(park["spawn"]["at"][0]), float(park["spawn"]["at"][1]))
 	if beacon.size() == 2:
 		places["landmark"] = Vector2(float(beacon[0]), float(beacon[1]))
+	if cells == null or not places.has("the_eye"):
+		out.append("the_eye graph OPEN: committed graph or authored coordinate is missing")
+	else:
+		var eye_cell: int = cells.nearest(places["the_eye"])
+		if eye_cell < 0 or eye_cell >= cells.node_count():
+			out.append("the_eye graph OPEN: authored coordinate %s has no cell" % places["the_eye"])
+		elif cells.flags(eye_cell) & ParkGraph.OPEN == 0:
+			out.append("the_eye graph OPEN: resolved cell %d at %s lacks OPEN" % [eye_cell, places["the_eye"]])
+	var vent_site := {}
+	var site_id := ""
+	for event in park.get("event_rows", []):
+		if event.get("id") == "toe_vents_wake":
+			site_id = String(event.get("site", ""))
+	for row in park.get("park_rows", []):
+		if row.get("id") == site_id:
+			vent_site = row
+	if vent_site.is_empty():
+		out.append("toe_vents_wake corridor clearance: event site %s is missing" % site_id)
 	var zones := ParkRecipes.clear_zones(park)
 	var posts := PackedVector2Array()
 	for row in park.get("park_rows", []):
@@ -177,6 +223,8 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Arra
 		for i in range(1, pts.size()):
 			var a: Vector2 = pts[i - 1]
 			var ab: Vector2 = pts[i] - a
+			if not vent_site.is_empty() and ParkMap.footprint_contains(vent_site, a, Director.PARK_CORRIDOR_M, pts[i]):
+				out.append("toe_vents_wake corridor clearance: %s segment %d %s to %s intersects complete footprint within %s m" % [key, i, a, pts[i], Director.PARK_CORRIDOR_M])
 			for p in posts:
 				var u := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
 				near = minf(near, p.distance_to(a + ab * u))

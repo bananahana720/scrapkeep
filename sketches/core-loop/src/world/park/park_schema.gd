@@ -70,8 +70,8 @@ const CONTRAPTION_KEYS := {
 const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal"]
 const CONTRAPTION_RECIPES := ["", "gauge", "geyser_vent", "cannon", "trebuchet", "lift_platform", "barge"]
 
-# The ACTIVITY_ROWS kinds (event_kinds.gd); park_schema_test holds the two lists equal.
-const ACTIVITY_KINDS := ["enemy_camp", "surge_run", "ambush_altar", "cracked_cache", "hauler_bounty"]
+# Activity presentation uses an ACTIVITY_ROWS key or the kind's existing cue.view alias.
+const ACTIVITY_KINDS := ["enemy_camp", "surge_run", "ambush_altar", "cracked_cache", "hauler_bounty", "movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
 const WEATHER_KINDS := ["clear", "monsoon", "dust_squall", "heat_shimmer", "cave_mist", "cloud_deck", "thunderstorm"]
 
 # The park recipe registry until KC0 folds the park recipes into assets/registry.json: the
