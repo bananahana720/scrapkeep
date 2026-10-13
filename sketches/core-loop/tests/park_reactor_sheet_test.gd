@@ -50,10 +50,7 @@ func _run() -> void:
 	m.target.struck.connect(func(e,k,f): hits.append([e,k,f]))
 	d._ride(m,1.0/Engine.physics_ticks_per_second)
 	d._ride(m,1.0/Engine.physics_ticks_per_second)
-	t.eq("one contact when the rolling sheet reaches the visual core",hits.size(),1)
-	if not hits.is_empty():
-		t.eq("sheet contact uses the normal ram kind",hits[0][1],"ram")
-		t.eq("sheet contact uses measured planar speed",hits[0][2],Reactor.RIDE_MIN_SPEED)
+	t.eq("the sheet leaves contact publication to the solver",hits.size(),0)
 	for family in ["swarm","mind"]:
 		m.family=family
 		if m.has_meta("reactor_sheet_contact"): m.remove_meta("reactor_sheet_contact")
