@@ -1556,10 +1556,10 @@ func _guard_park_bookings() -> void:
 			and director._park_capacity(state) and director._park_route_safe(state) \
 			and director._park_clear(state, ctx.player.ball_position(), ctx.player.state.velocity, state.context)
 		if not safe:
-			engine.cancel_park_cue(event_id)
+			engine.cancel_park_drop(event_id)
 			cue.booked = false
 		elif float(state.due_s) != float(cue.landing_s) or not cue.booked:
-			engine.cancel_park_cue(event_id)
+			engine.cancel_park_drop(event_id)
 			cue.landing_s = state.due_s
 			cue.due = engine.clock + roundi((float(state.due_s) - director.stage_time) * Harmony.RATE)
 			cue.booked = cue.due >= engine.clock

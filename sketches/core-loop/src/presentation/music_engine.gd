@@ -206,6 +206,7 @@ class Voice:
 	var mono := false
 	var park_owned := false
 	var park_owner := ""
+	var park_rise := false
 
 
 var park_cue_log: Array[Dictionary] = []
@@ -1155,6 +1156,13 @@ func cancel_park_cue(owner: String) -> void:
 			voice.end = mini(voice.end, voice.pos + RELEASE)
 
 
+func cancel_park_drop(owner: String) -> void:
+	_actions = _actions.filter(func(a): return a.get("type") != "park_cue" or a.get("owner", "") != owner or a.row.rise)
+	for voice in _voices:
+		if voice.park_owned and voice.park_owner == owner and not voice.park_rise:
+			voice.end = mini(voice.end, voice.pos + RELEASE)
+
+
 func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 	var row: Dictionary = action.row
 	var signature := str([row, action.cell, action.length, action.progress, live_key, step_len])
@@ -1366,6 +1374,7 @@ func _run(action: Dictionary) -> void:
 			var voice := _start(buf, buf.size(), -1, db_to_linear(db), 0.0, true)
 			voice.park_owned = true
 			voice.park_owner = action.owner
+			voice.park_rise = row.rise
 			park_cue_log.append({"id": action.id, "at": clock, "scheduled": action.at, "end": clock + voice.end,
 				"key": live_key, "pitch": Harmony.ratio(live_key), "db": linear_to_db(voice.gl), "trim_sound": row.trim_sound,
 				"voice": row.voice, "cell": action.cell, "owner": action.owner})
