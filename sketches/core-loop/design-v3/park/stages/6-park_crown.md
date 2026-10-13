@@ -336,9 +336,9 @@ The original design estimated every pilot line inside PARK.md's ratio band of 1.
 
 
 
-### Measured round 7 result
+### Measured round 8 result
 
-FIX. Automated native evidence level 4. Geometry head `d7099a6ca3efaab376ac15af6f8c49693f8bbecf` follows STEP 0 merge `8beb3b73f622dbe2ca06aea486c401012decb7af` of candidate `907bfef79d051fa48077323a8e34dfd8a872cdd2`. Current receipts are in `/home/andrew/scratch/w13/sol/kd6-crown-r7`. T1 restores the third trial's `kick_wmid_3` launch and adds one stage-local midpoint anchor, `tarn_west_gap_anchor`. No fourth launch repair, band change, waypoint change, kit change or Warden pin change is made. Earlier rounds below are dated history.
+PASS+NOTES under park ruling 29 and round-8 rulings X1 to X4. Automated native evidence level 4. STEP 0 merge `065996e4d2fe6f007319feaac7bb211665abcbd8` imports candidate `74ea6b2e876458367bf2b8e1deb1b26b06742712`. Crown geometry remains at `d7099a6ca3efaab376ac15af6f8c49693f8bbecf`. The complete round-7 verifier receipt set is retained under X3, with round-8 structural checks in `/home/andrew/scratch/w13/sol/kd6-crown-r8`. No geometry change or further repair is made. Tarn airborne share and Rivet/Kest length ratios remain measured MISS; their open carry rows belong to Crown dressing. Coordinator admission and Andrew's feel verdict remain separate.
 
 The committed traversal tool has SHA-256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. `commands.ndjson` records command, checked head, input hashes, output folder and exit. `final-measurements.json` independently recomputes the table from the final pinned raw batches. Scalar cells give midpoint medians, actual worst seeds and both seed extrema. Segment cells give medians and ranges. Anchor gap, stops, peak speed and quiet time use seed extrema. Only the floor's own reach/time/zero-stop row gates the floor. Missing receipts remain pending, FIX.
 
@@ -359,7 +359,7 @@ The committed traversal tool has SHA-256 `37e98e4ac7e0a5d4141d97828f5834a083d326
 | Distinct lines, at least 3 | Sable/Cannon/Kest, seeds 1 to 8, 24/24 pair-and-seed cases below 0.5 in both directions; PASS | | | | | | |
 | Floor own row: all seeds reach, time within 2 x Rivet median, zero stops | | | | | | | 8/8 reached; zero stops; maximum 57.64 s <= 140.95 s; PASS |
 
-Mandatory smoke is 7/8: the imported `park_table_test` fails the park/arena posture equality for rows 3–6. The shared test, ParkDefs and AlphaDefs are unchanged from candidate 907bfef and outside KD6 SCOPE. `shared-smoke-blocker.json` records the source identities and four failures. Crown remains unadmitted.
+Mandatory smoke is 8/8 PASS on the merged head. X1 imports the shared posture correction and Warden wiring pins; KD6 changes neither shared definitions nor shared tests. The standalone `park_warden_wiring_test` also passes. Compile against `6710ac0` checks 189 scripts with 0 bad; lint reports 0 findings. Two fresh round-8 bake/graph builds match each other and all eight committed outputs byte for byte. Receipts: `/home/andrew/scratch/w13/sol/kd6-crown-r8/smoke.log`, `wiring.log`, `compile.log`, `lint.log`, `byte-identity.json` and `mutations.json`. Every other greybox acceptance line is closed, including X4's explicit anchor disposition. The three narrow misses therefore become open carries under ruling 29; their measured cells stay MISS.
 
 ### Midpoint-anchor disposition
 
@@ -369,9 +369,9 @@ Round-8 coordinator ruling X4 accepts the retained uncommitted red and subsequen
 
 | Pilot | Measure and value | Unchanged band | Final receipt | Attempts, owner and status |
 | --- | --- | --- | --- | --- |
-| tarn | airborne_share 0.24105 | 0.25 to 0.6 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/final-tarn/tarn.json` | Two withdrawn round-5 west launches; third round-6 launch withdrawn for 46 m gap; restored with one anchor under T1. No fourth launch repair. Crown dressing unit owns closure. MISS; conditional carry awaits the other acceptance criteria. |
-| rivet | length_ratio 1.25 | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/final-rivet/rivet.json` | Two round-5 ride attempts withdrawn for stops and a 63.7 m gap. T2 authorizes carry only. Crown dressing unit owns closure. MISS; conditional carry awaits the other acceptance criteria. |
-| kest | length_ratio 1.28 diagnostic MISS; final pending, FIX | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/baseline-kest/kest.json; superseded diagnostic only` | Two round-5 launch/ride attempts; retained slope removes stops. T2 authorizes carry only. Crown dressing unit owns closure. pending; FIX. |
+| tarn | airborne_share 0.24105 | 0.25 to 0.6 | `/home/andrew/scratch/w13/cgate/kd6-crown-r7/env/measurements/batch-tarn/tarn.json` | Two withdrawn round-5 west launches; third round-6 launch withdrawn for 46 m gap, restored with one midpoint anchor under T1. No fourth launch repair. 3.58% short. Crown dressing unit owns closure. MISS; OPEN carry under ruling 29 and X2. |
+| rivet | length_ratio 1.25 | 1.3 to 2.0 | `/home/andrew/scratch/w13/cgate/kd6-crown-r7/env/measurements/batch-rivet/rivet.json` | Two round-5 ride attempts withdrawn for stops and a 63.7 m gap. T2 and X2 authorize carry. 3.846154% short. Crown dressing unit owns closure. MISS; OPEN carry under ruling 29. |
+| kest | length_ratio 1.28 | 1.3 to 2.0 | `/home/andrew/scratch/w13/cgate/kd6-crown-r7/env/measurements/batch-kest/kest.json` | Two round-5 launch/ride attempts; the retained slope removes stops. T2 and X2 authorize carry. 1.538462% short. Crown dressing unit owns closure. MISS; OPEN carry under ruling 29. |
 
 Measured misses remain MISS in the table. The bounded attempts are retained in `/home/andrew/scratch/w13/sol/kd6-crown-r5/REPORT.md` and `/home/andrew/scratch/w13/sol/kd6-crown-r6/REPORT.md`.
 
