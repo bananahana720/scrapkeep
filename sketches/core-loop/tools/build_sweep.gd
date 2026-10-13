@@ -30,8 +30,9 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # slot_growth  SG14 (W13-INTEGRATION-3.md; comps/gunfire/weapons-and-inscriptions.md:93). One row
 #          per milestone (worlds one to three): the slot count UpgradeTree.depth_cap gives it, and
 #          on the legal pool (class-neutral parts at common, rare and relic) the best paired set
-#          against the best unpaired set, as BuildSheet.power() on the fixed dummy. Greedy search,
-#          seeded by each named pair, so "best" is an approximation the report names.
+#          against the same set with its partner missing (refilled while the pair's row stays
+#          unlive), as BuildSheet.power() on the fixed dummy. Greedy search, seeded by each named
+#          pair, so "best" is an approximation the report names.
 #
 # Exit 0 when the arm printed nonzero rows and found no problem, else 1. Evidence limit:
 # a numbers model; time to kill reads the stat as a damage bonus on a fixed dummy, not
@@ -111,6 +112,9 @@ func _initialize() -> void:
 	elif arm == "slot_growth":
 		var srows := slot_growth_arm()
 		print_slot_table(srows)
+		var nul := slot_growth_null(UpgradeTree.DEPTHS)
+		print("slot_growth null | row %s | partner %s | paired dps %.1f | partner missing dps %.1f | margin %.1f%%"
+			% [nul["row"], nul["partner"], nul["paired_dps"], nul["unpaired_dps"], 100.0 * float(nul["margin"])])
 		var sbad := slot_growth_problems(srows)
 		for line in sbad:
 			print("build_sweep problem: %s" % line)
@@ -402,9 +406,12 @@ static func print_compose_table(stats: Dictionary) -> void:
 
 # SG14, one row per milestone. slots is UpgradeTree.depth_cap(world): the pick depth the
 # world-one profile opens (world.gd sets tree.max_depth the same way). Paired: greedy sets
-# seeded by each named pair (shown part plus one partner), filled to slots. Unpaired: greedy
-# from empty, admitting only sets with no named synergy live. margin is paired over unpaired,
-# minus one; -1 when no pair is available. best is the larger power, the ratio's input.
+# seeded by each named pair (shown part plus one partner), filled to slots. Unpaired is the
+# partner missing (comps/gunfire/weapons-and-inscriptions.md:93): the winning paired set with
+# each partner part swapped for the best substitute that keeps that pair's row unlive. unpaired_any
+# is the older search from empty, admitting only sets with no named synergy live; it is
+# report-only. margin is paired over the partner-missing value, minus one; -1 when no pair is
+# available. best is the largest power seen, the ratio's input.
 static func slot_growth_arm() -> Array:
 	var pool := _legal_pool()
 	var seeds := _pair_seeds(pool)
@@ -422,17 +429,79 @@ static func slot_growth_arm() -> Array:
 				best_paired = value
 				paired_set = found
 				pair_row = seed_info["row"]
-		var unpaired_set := _greedy([], pool, slots, true)
+		var unpaired_set := _partner_missing(paired_set, pair_row, pool, slots)
 		var best_unpaired := _power(unpaired_set)
+		var any_set := _greedy([], pool, slots, true)
+		var any_power := _power(any_set)
 		var pair_available := not seeds.is_empty() and slots >= 2
 		var margin := -1.0
 		if pair_available:
 			margin = best_paired / maxf(best_unpaired, EPS) - 1.0
 		rows.append({"world": world, "slots": slots, "pair_available": pair_available, "pair_row": pair_row,
 			"named_pairs": named, "best_paired": best_paired, "best_unpaired": best_unpaired,
-			"paired_set": paired_set, "unpaired_set": unpaired_set, "margin": margin,
-			"best": maxf(best_paired, best_unpaired)})
+			"unpaired_any": any_power, "paired_set": paired_set, "unpaired_set": unpaired_set,
+			"margin": margin, "best": maxf(best_paired, maxf(best_unpaired, any_power))})
 	return rows
+
+
+# Planted null control: the first named pair whose partner adds no power() on its own (the
+# shown part alone and with the partner give the same power), run through the same paired and
+# partner-missing path as the arm. A row that adds nothing should give a margin near zero.
+static func slot_growth_null(slots: int) -> Dictionary:
+	var pool := _legal_pool()
+	for key in Synergies.ROWS:
+		var row: Dictionary = Synergies.ROWS[key]
+		var shown: String = row["shown"]
+		if not shown in pool:
+			continue
+		for partner in pool:
+			if partner == shown or not row["tags"][1] in Parts.tags_of(partner):
+				continue
+			if absf(_power([shown, partner]) - _power([shown])) > EPS:
+				continue
+			var paired := _greedy([shown, partner], pool, slots, false)
+			var ablated := _partner_missing(paired, key, pool, slots)
+			return {"row": key, "partner": partner, "paired_dps": DUMMY_DPS * _power(paired),
+				"unpaired_dps": DUMMY_DPS * _power(ablated),
+				"margin": _power(paired) / maxf(_power(ablated), EPS) - 1.0}
+	return {"row": "", "partner": "", "paired_dps": 0.0, "unpaired_dps": 0.0, "margin": -1.0}
+
+
+# The partner missing: keep the shown part (index 0 of a paired set) and every other held part
+# that does not carry the row's second tag, then refill to slots while the row stays unlive.
+# With no pair row (no seed at this milestone), this is the no-pair legal set.
+static func _partner_missing(paired: Array, row_key: String, pool: Array, slots: int) -> Array:
+	if row_key == "" or paired.is_empty():
+		return _greedy([], pool, slots, true)
+	var tag: String = Synergies.ROWS[row_key]["tags"][1]
+	var kept: Array = []
+	for i in paired.size():
+		if i == 0 or not tag in Parts.tags_of(paired[i]):
+			kept.append(paired[i])
+	return _substitute(kept, pool, paired.size(), row_key)
+
+
+# Fills held to size with the admissible part that gives the most power at each step, even when
+# it does not raise power, so the substitute takes the partner's slot and no slot is left empty.
+static func _substitute(seed: Array, pool: Array, size: int, row_key: String) -> Array:
+	var held: Array = seed.duplicate()
+	while held.size() < size:
+		var pick := ""
+		var best := -1.0
+		for part_id in pool:
+			if part_id in held:
+				continue
+			var cand: Array = held + [part_id]
+			if Synergies.named_live(cand, Parts.tag_sets(cand), row_key):
+				continue
+			var value := _power(cand)
+			if value > best + EPS:
+				best = value
+				pick = part_id
+		if pick == "":
+			break
+		held.append(pick)
+	return held
 
 
 # The legal pool a scrap-built weapon can take: class-neutral offers at every gate rarity, with
@@ -524,10 +593,11 @@ static func slot_growth_problems(rows: Array) -> Array:
 
 
 static func print_slot_table(rows: Array) -> void:
-	print("slot_growth | world | slots | pair | paired dps | unpaired dps | margin (band %d%% to %d%%) | pair row | best dps"
+	print("slot_growth | world | slots | pair | paired dps | unpaired dps (partner missing) | margin (band %d%% to %d%%) | pair row | any-legal dps (report only) | best dps"
 		% [int(100.0 * SLOT_MARGIN_MIN), int(100.0 * SLOT_MARGIN_MAX)])
 	for row in rows:
 		var margin := "n/a" if not row["pair_available"] else "%.1f%%" % (100.0 * float(row["margin"]))
-		print("slot_growth | world %d | slots %d | %s | %.1f | %.1f | %s | %s | %.1f" % [int(row["world"]),
+		print("slot_growth | world %d | slots %d | %s | %.1f | %.1f | %s | %s | %.1f | %.1f" % [int(row["world"]),
 			int(row["slots"]), "yes" if row["pair_available"] else "no", DUMMY_DPS * float(row["best_paired"]),
-			DUMMY_DPS * float(row["best_unpaired"]), margin, row["pair_row"], DUMMY_DPS * float(row["best"])])
+			DUMMY_DPS * float(row["best_unpaired"]), margin, row["pair_row"],
+			DUMMY_DPS * float(row["unpaired_any"]), DUMMY_DPS * float(row["best"])])

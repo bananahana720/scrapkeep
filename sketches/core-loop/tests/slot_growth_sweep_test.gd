@@ -19,6 +19,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const MARGIN_MIN := 0.15
 const MARGIN_MAX := 0.40
 const RATIO_MAX := 6.0
+const NULL_MAX := 0.05
 const EPS := 1e-6
 # Five checks: schedule, margins, last-vs-first, pair availability, controls. Any other count fails.
 const EXPECTED_REPORTS := 5
@@ -117,10 +118,16 @@ func _check_controls(tool: Script) -> void:
 	var caught_band: Array = tool.call("slot_growth_problems", out_of_band)
 	var caught_ratio: Array = tool.call("slot_growth_problems", over_ratio)
 	var clean_problems: Array = tool.call("slot_growth_problems", clean)
+	# Planted null: a named pair whose partner adds no power on its own must not show a positive
+	# margin (a false gain would inflate the band check). One-sided on purpose: a neutral partner
+	# can measure below zero, because the paired greedy spends the slot the substitute fills.
+	var nul: Dictionary = tool.call("slot_growth_null", UpgradeTree.DEPTHS)
+	var null_ok := String(nul["row"]) != "" and float(nul["margin"]) <= NULL_MAX + EPS
 	_report("controls fire", caught_dec.size() > 0 and caught_band.size() > 0 and caught_ratio.size() > 0
-		and clean_problems.is_empty(),
-		"falling slots -> %s; out-of-band margin -> %s; 7x last-vs-first -> %s; clean planted rows -> %s"
-			% [caught_dec, caught_band, caught_ratio, clean_problems])
+		and clean_problems.is_empty() and null_ok,
+		"falling slots -> %s; out-of-band margin -> %s; 7x last-vs-first -> %s; clean planted rows -> %s; null pair %s margin %.1f%% (no gain above %d%%)"
+			% [caught_dec, caught_band, caught_ratio, clean_problems, nul["row"],
+				100.0 * float(nul["margin"]), int(100.0 * NULL_MAX)])
 
 
 func _row(world: int, slots: int, pair_ok: bool, margin: float, best: float) -> Dictionary:
