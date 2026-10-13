@@ -22,10 +22,11 @@ func _initialize() -> void:
 func _run() -> void:
 	await _suspension(false)
 	await _suspension(true)
+	await _suspension(false, true)
 	quit(t.verdict())
 
-func _suspension(in_bay: bool) -> void:
-	var label := "bay announcement" if in_bay else "paused announcement"
+func _suspension(in_bay: bool, aligned := false) -> void:
+	var label := "bay announcement" if in_bay else ("aligned pause announcement" if aligned else "paused announcement")
 	var game = Game.new()
 	game.test_mode = true
 	game.table = "park"
@@ -95,6 +96,14 @@ func _suspension(in_bay: bool) -> void:
 		expected_warning.append(announcement[0].at + roundi(float(announcement[0].lead) * cell / notes))
 	var heard: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "riser_natural")
 	t.check(label + " original riser cells finish once", heard.map(func(a): return a.at) == expected_warning, str([heard.map(func(a): return a.at), expected_warning]))
+	if aligned:
+		var e = audio.engine
+		var bar: int = e.step_len * Harmony.STEPS_PER_BAR
+		var remaining := roundi((float(flood.due_s) - suspended_stage - 1.0 / Engine.physics_ticks_per_second) * Harmony.RATE)
+		var target: int = e.bar_origin + ceili(float(e.clock + remaining - e.bar_origin) / bar) * bar - remaining
+		while e.clock < target:
+			e.render(mini(4096, target - e.clock))
+		audio._virtual_usec += 1000000
 	var probe := TransportProbe.new()
 	probe.audio = audio
 	probe.director = game.world.events
@@ -119,6 +128,11 @@ func _suspension(in_bay: bool) -> void:
 		var mapped: int = resume.sample + roundi((float(flood.due_s) - float(resume.stage)) * Harmony.RATE)
 		expected = resume.origin + ceili(float(mapped - resume.origin) / resume.bar) * resume.bar
 		after_fact = mapped < resume.sample or expected != mapped
+	audio._guard_park_bookings()
+	var rebooked: Array = audio.engine._actions.filter(func(a): return a.get("type") == "park_cue" and a.owner == "plunge_pool_flood" and not a.row.rise)
+	t.check(label + " resumed booking policy", rebooked.is_empty() if after_fact else (rebooked.size() == 1 and rebooked[0].at == expected), str([after_fact, rebooked.map(func(a): return a.at), expected]))
+	if aligned:
+		t.check(label + " reachable fresh downbeat", not after_fact and expected > announcement[0].sample, str([expected, resume]))
 	for frame in 1200:
 		await physics_frame
 		if not starts.is_empty() and audio.engine.clock > expected + audio.engine.beat_len(): break
