@@ -34,6 +34,7 @@ func _initialize() -> void:
 		_finish()
 		return
 	_fixture_checks()
+	_key_change_checks()
 	_game = Game.new()
 	_game.test_mode = true
 	_game.table = "park"
@@ -113,6 +114,34 @@ func _fixture_checks() -> void:
 	for event in park.event_rows:
 		for phase in event.music_cue:
 			_check(event.id + "/" + phase + " authored cue resolves", not MusicRows.new().call("cue", event.music_cue[phase], {}).is_empty(), event.music_cue[phase])
+
+
+func _key_change_checks() -> void:
+	for id in ["riser_natural", "drop_flood", "riser_fleet", "drop_fleet"]:
+		var e = MusicEngine.new()
+		e.band_muted = true
+		e.render(1)
+		var boundary: int = e.step_len * Harmony.STEPS_PER_BAR
+		e._queue({"key": 3})
+		var rising: bool = id.begins_with("riser_")
+		var priority: float = Audio.PRIORITY_DB[Rows.priority("event_announced" if rising else "event_started")]
+		e.park_cue(id, LEAD if rising else 0, boundary, {}, priority, id)
+		var action: Dictionary = e._actions.filter(func(a): return a.get("type") == "park_cue")[0]
+		e.render(boundary - e.clock)
+		e.render(1)
+		var label: String = id + " key-changing downbeat"
+		var voices: Array = e._voices.filter(func(v): return v.park_owned and v.park_owner == id)
+		_check(label + " new band key", e.key == 3, str(e.key))
+		_check(label + " exact sample", e.park_cue_log.size() == 1 and e.park_cue_log[0].at == boundary, str(e.park_cue_log))
+		_check(label + " actual voice", voices.size() == 1, str(voices.size()))
+		if voices.is_empty():
+			continue
+		var voice = voices[0]
+		_check_voice_key(label, voice.buf, action, 3, e.step_len, e.theme)
+		var previous_pcm := Bank.samples_at(action.row.sound, e.step_len, 0, e.theme) if action.row.has("sound") else _recipe_pcm(action, 0)
+		_check(label + " rejects previous-key PCM", voice.buf != previous_pcm, "started buffer differs from previous key zero")
+		var expected_db: float = Bank.trim_db(action.row.trim_sound) + priority
+		_check(label + " trim plus priority", absf(linear_to_db(voice.gl) - expected_db) < 0.01, str([linear_to_db(voice.gl), expected_db]))
 
 
 func _check_voice_key(id: String, pcm: PackedFloat32Array, action: Dictionary, live_key: int, step: int, theme: int) -> void:
