@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "f63ab9ef29e7bf121004cc949b0d0e1d5d9d6b2e6c225b9410cb6dbc9b64b442",
+  "bake_sha256": "2eb80295555229dd0b4163035084f00249cbe21c22963f4a1bff1ca5aaeb6884",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1314562,
-  "edges": 314009,
+  "bytes": 1312204,
+  "edges": 314074,
   "first_failed": "",
   "flags": {
     "deck": 0,
     "door_ok": 40018,
     "line": 294,
     "open": 40401,
-    "sight_ok": 8469,
+    "sight_ok": 8462,
     "under": 0
   },
-  "full_visit_m": 2316,
-  "full_visit_ratio": "1.713",
-  "graph_sha256": "441031fd7cbdc0159ba7738852b5bcadb5146a4283135af3e8292e658107e24d",
+  "full_visit_m": 2289,
+  "full_visit_ratio": "1.694",
+  "graph_sha256": "e6104e2ae9b63fab64cbcfdb95e24bc08ac4cb9a813260a3c8b115d47ac5d028",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2375,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "99ce445c21b848f486e5d487c021895d3d6a2039cdf4736324d12fd55de20a4e",
+  "park_sha256": "90bc53698c447624c03ad351c0738585e2a058bbab20849692d67da209b92adb",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,7 +52,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 424,
+      "d_landmark": 410,
       "d_spawn": 1065,
       "detour_m": 307,
       "door_at": [
@@ -67,7 +67,7 @@
       ],
       "id": "rim_cache",
       "kind": "cracked_cache",
-      "nearest_door": 421,
+      "nearest_door": 394,
       "nearest_door_id": "gallery_valve",
       "pay_named": "",
       "pay_rarities": [
@@ -79,7 +79,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 454,
+      "d_landmark": 445,
       "d_spawn": 1137,
       "detour_m": 251,
       "door_at": [
@@ -94,7 +94,7 @@
       ],
       "id": "bench_altar",
       "kind": "ambush_altar",
-      "nearest_door": 561,
+      "nearest_door": 560,
       "nearest_door_id": "rim_cache",
       "pay_named": "",
       "pay_rarities": [
@@ -122,7 +122,7 @@
       ],
       "id": "gallery_valve",
       "kind": "valve",
-      "nearest_door": 421,
+      "nearest_door": 394,
       "nearest_door_id": "rim_cache",
       "pay_named": "",
       "pay_rarities": [],
@@ -154,7 +154,7 @@
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
     "d_landmark": 1352,
-    "farther_share": "0.133",
+    "farther_share": "0.132",
     "ok": true,
     "run": true
   },
@@ -175,14 +175,14 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.713
+      "value": 1.694
     }
   ],
   "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
   "zones": {
     "anchors": [
       {
-        "cost": 1394.6,
+        "cost": 1394.3,
         "d_landmark": 153.8,
         "name": "east_abutment",
         "on_route": false,
@@ -230,6 +230,14 @@
         "viable": false
       },
       {
+        "cost": 1273.7,
+        "d_landmark": 77.5,
+        "name": "training_wall_east",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 1249.4,
         "d_landmark": 238.2,
         "name": "lobber_ledge",
@@ -247,15 +255,23 @@
       },
       {
         "cost": 1059.3,
-        "d_landmark": 413.6,
+        "d_landmark": 404.2,
         "name": "east_rim_bench",
         "on_route": false,
         "rank": 4,
         "viable": true
       },
       {
+        "cost": 1041.2,
+        "d_landmark": 235.9,
+        "name": "cliff_rooms_west",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 939.9,
-        "d_landmark": 378.1,
+        "d_landmark": 375.4,
         "name": "west_rim_bench",
         "on_route": false,
         "rank": 5,
@@ -263,7 +279,7 @@
       },
       {
         "cost": 928.6,
-        "d_landmark": 616.5,
+        "d_landmark": 607.1,
         "name": "shelf_sag_corner_4",
         "on_route": false,
         "rank": 6,
@@ -295,7 +311,7 @@
       },
       {
         "cost": 801.2,
-        "d_landmark": 623.0,
+        "d_landmark": 609.0,
         "name": "shelf_sag_corner_3",
         "on_route": false,
         "rank": 9,
@@ -303,7 +319,7 @@
       },
       {
         "cost": 773.1,
-        "d_landmark": 1331.8,
+        "d_landmark": 1327.1,
         "name": "hoodoo_stack_6",
         "on_route": false,
         "rank": 0,
@@ -311,7 +327,7 @@
       },
       {
         "cost": 721.0,
-        "d_landmark": 1144.5,
+        "d_landmark": 1139.8,
         "name": "hoodoo_stack_5",
         "on_route": false,
         "rank": 0,
@@ -327,7 +343,7 @@
       },
       {
         "cost": 695.7,
-        "d_landmark": 905.0,
+        "d_landmark": 905.9,
         "name": "hoodoo_stack_10",
         "on_route": false,
         "rank": 0,
@@ -335,7 +351,7 @@
       },
       {
         "cost": 603.6,
-        "d_landmark": 1001.4,
+        "d_landmark": 996.8,
         "name": "hoodoo_stack_4",
         "on_route": false,
         "rank": 0,
@@ -343,7 +359,7 @@
       },
       {
         "cost": 576.0,
-        "d_landmark": 1117.6,
+        "d_landmark": 1118.5,
         "name": "hoodoo_stack_9",
         "on_route": false,
         "rank": 0,
@@ -351,7 +367,7 @@
       },
       {
         "cost": 571.1,
-        "d_landmark": 1167.3,
+        "d_landmark": 1162.6,
         "name": "hoodoo_stack_2",
         "on_route": false,
         "rank": 0,
@@ -367,7 +383,7 @@
       },
       {
         "cost": 499.7,
-        "d_landmark": 1491.8,
+        "d_landmark": 1492.7,
         "name": "hoodoo_stack_11",
         "on_route": false,
         "rank": 0,
@@ -383,7 +399,7 @@
       },
       {
         "cost": 455.9,
-        "d_landmark": 1254.1,
+        "d_landmark": 1249.4,
         "name": "hoodoo_stack_1",
         "on_route": false,
         "rank": 0,
@@ -391,7 +407,7 @@
       },
       {
         "cost": 428.9,
-        "d_landmark": 1322.0,
+        "d_landmark": 1323.0,
         "name": "hoodoo_stack_8",
         "on_route": false,
         "rank": 0,
@@ -522,7 +538,7 @@
     "crossings": {
       "drop": 24,
       "ride": 11,
-      "walk": 144
+      "walk": 143
     },
     "hidden": [
       {

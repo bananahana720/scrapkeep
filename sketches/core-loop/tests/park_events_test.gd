@@ -30,6 +30,7 @@ func _initialize() -> void:
 		_site_footprints()
 		_site_clearance()
 		_site_corridors()
+		_toe_vents_wake()
 		_water_lifetime()
 		_overlap()
 		_held_announcements()
@@ -338,6 +339,53 @@ func _site_corridors() -> void:
 				_check("site-derived corridor %s yaw %.0f %s" % [spec[1], yaw, fixture[0]], announced == 1
 					and starts == fixture[3] and landing == fixture[3] and hooks.land == fixture[3],
 					"local line Z=%s announced=%d started=%d landing_world=%d land_hooks=%d expected=%d" % [fixture[1], announced, starts, landing, hooks.land, fixture[3]])
+
+
+func _toe_vents_wake() -> void:
+	var park: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_dam.json"))
+	var lines: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tools/park_lines/park_dam.json"))
+	var places := {"drop_in": park.spawn.at, "landmark": park.landmark.beacon}
+	for table in ["park_rows", "activity_rows"]:
+		for row in park[table]:
+			places[row.id] = row.at
+	var site: Dictionary
+	for row in park.park_rows:
+		if row.id == "toe_vent_pits":
+			site = row
+	var resolved := []
+	var all: Dictionary = lines.pilots.duplicate(true)
+	all.floor = lines.floor
+	var clear := true
+	for key in all:
+		var points := []
+		for wp in all[key].waypoints:
+			var at: Array = places[wp] if wp is String else wp
+			points.append(Vector2(at[0], at[1]))
+		var hit := false
+		for i in range(1, points.size()):
+			hit = hit or ParkMap.footprint_contains(site, points[i - 1], Director.PARK_CORRIDOR_M, points[i])
+		clear = clear and not hit
+		resolved.append(points)
+	var event: Dictionary
+	for row in park.event_rows:
+		if row.id == "toe_vents_wake":
+			event = row
+	park.event_rows = [event]
+	park.weather_rows = []
+	var map := Map.new()
+	map.park = park
+	var d = Director.new(77731, {}, map, 14.0, func(_x, _z): return 0.0)
+	var observed := {"announced": 0, "started": 0, "telegraph": 0, "land": 0, "land_hooks": 0}
+	d.register_family("ancient", func(action, _row, _ctx):
+		if action == "land":
+			observed.land_hooks += 1)
+	for i in 400:
+		for f in d.advance(0.05, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 2, "grounded": true, "bar_origin_s": 0.0, "pilot_lines": resolved}):
+			if f.kind in ["announced", "started"]:
+				observed[f.kind] += 1
+			if f.kind == "world" and f.get("phase") in ["telegraph", "land"]:
+				observed[f.phase] += 1
+	_check("toe_vents_wake telegraphs and lands off all seven corridors", clear and observed.values().all(func(value): return value == 1), str(observed))
 
 
 func _water_lifetime() -> void:
