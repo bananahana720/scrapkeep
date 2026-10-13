@@ -58,8 +58,10 @@ All stops are reproduced by matching batch, plain, traced and read-only probe re
 | Line / seed | Batch / plain / traced equality | Qualification |
 | --- | --- | --- |
 | sable / 1 | equal | error-free qualified |
+| rivet / 5 | equal | error-free qualified |
+| sable / 4 | equal | error-free qualified |
 
-Named replay acceptance: 1/5 qualified comparisons complete. The stage is not admitted while this proof is incomplete. Complete population cells above come from the 56 qualified child receipts; no rejected or missing row fills a cell.
+Named replay acceptance: 3/5 qualified comparisons complete. The stage is not admitted while this proof is incomplete. Complete population cells above come from the 56 qualified child receipts; no rejected or missing row fills a cell.
 
 Replay receipts and error qualification: `/home/andrew/scratch/w13/sol/kd2-flume-r7/replay-qualification.json`. Full runtime-input equality: `/home/andrew/scratch/w13/sol/kd2-flume-r7/input-equality.json`.
 
@@ -81,6 +83,8 @@ The physical event regression observes finite matching deck-to-floor mesh and co
 
 The shared ground-slump game fixtures retain an upstream timing failure: canonical downbeat remainder 0.56098191214518 s exceeds their 0.2 s pin. The same failure occurs on unmodified STEP 0 shared code. Their geometry and clearance checks pass, as do cave-in, natural, projection and event-family fixtures. This prevents a claim that the full shared suite is green.
 <!-- /flume-current-table -->
+
+
 
 
 This page follows `design-v3/PARK.md` section 2 and `adr/TADR-011-park-terrain-and-warden-kinds.md`. The draft park file in section 13 passed a scratch copy of the 2.10 checks, the route test and the line estimates in section 9. The name "The Cable Reach" retires (PARK.md:573).
