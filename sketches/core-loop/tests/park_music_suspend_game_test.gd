@@ -142,9 +142,10 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 		t.check(label + " reachable fresh downbeat", not after_fact and expected > announcement[0].sample, str([expected, resume]))
 	for frame in 1200:
 		await physics_frame
-		if not starts.is_empty() and audio.engine.clock > expected + audio.engine.beat_len(): break
-	if after_fact and not starts.is_empty():
-		expected = starts[0].origin + ceili(float(starts[0].sample - starts[0].origin) / starts[0].bar) * starts[0].bar
+		if starts.is_empty(): continue
+		if after_fact:
+			expected = starts[0].origin + ceili(float(starts[0].sample - starts[0].origin) / starts[0].bar) * starts[0].bar
+		if audio.engine.clock > expected + audio.engine.beat_len(): break
 	var drops: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "drop_flood")
 	t.check(label + " unchanged director landing", float(flood.due_s) == float(announcement[0].stage), str([flood.due_s, announcement[0].stage]))
 	t.check(label + " exactly one resumed director drop", starts.size() == 1 and drops.size() == 1 and drops[0].at == expected
