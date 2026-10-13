@@ -108,6 +108,9 @@ func _parallel_runtime() -> void:
 		for i in results.size():
 			var result: Dictionary = results[i]
 			var summary := ChildRuns.summary(result)
+			for line in String(result.log).split("\n"):
+				if line.begins_with("MEASURE "):
+					print(line)
 			var good: bool = not result.timed_out and result.code == 0 and summary.errors.is_empty()
 			t.check("runtime child seed %d" % (first + i), good, "exit=%s timeout=%s" % [result.code, result.timed_out])
 
