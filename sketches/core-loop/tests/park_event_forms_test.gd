@@ -99,6 +99,8 @@ func _stepped() -> void:
 		var route_ids := {}
 		for id in row.route_change.closes + row.route_change.opens:
 			route_ids[id] = true
+		# A base route keeps the landmark reachable; the director holds any row whose route graph is unreachable.
+		route_ids["main"] = true
 		var routes := []
 		for id in route_ids:
 			routes.append({"id": id, "from": "drop_in", "to": "landmark", "via": []})
@@ -121,8 +123,12 @@ func _stepped() -> void:
 		var telegraphed := facts.any(func(f): return f.kind == "announced" and f.id == row.id)
 		var did_land := facts.any(func(f): return f.kind == "world" and f.id == row.id and f.phase == "land" and f.fact == landed)
 		var ok := registered and telegraphed and (did_land if natural else true)
+		var seen := []
+		for f in facts:
+			if f.id == row.id:
+				seen.append("%s/%s" % [f.kind, f.get("phase", "")])
 		_check("stepped %s" % row.id, ok,
-			"form=%s registered=%s telegraphed=%s landed=%s" % [form, registered, telegraphed, did_land if natural else "not asserted (industrial)"])
+			"form=%s registered=%s telegraphed=%s landed=%s facts=%s" % [form, registered, telegraphed, did_land if natural else "not asserted (industrial)", seen.slice(0, 12)])
 	_check("stepped rows", fixture.size() == EXPECTED_STEPPED, "%d stepped rows, expected %d" % [fixture.size(), EXPECTED_STEPPED])
 
 

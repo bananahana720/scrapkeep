@@ -59,6 +59,8 @@ const PARK_LAND_FACTS := {
 	"ancient_stirring": "ancient_erupted", "boiler_pressure": "boiler_landed",
 	"lightning_charge": "lightning_landed",
 	"cave_in_crumble": "cave_in_swap", "impact_incoming": "impact_swap",
+	"crust_crack": "crust_crack_landed", "drain_gurgle": "drain_landed", "trestle_groan": "trestle_landed",
+	"lightning_mark": "lightning_mark_landed", "reactor_overload": "reactor_landed",
 }
 
 var rng := RandomNumberGenerator.new()
