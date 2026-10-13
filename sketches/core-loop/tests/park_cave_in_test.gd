@@ -68,7 +68,11 @@ func _run() -> void:
 	descent = w.events._park_states.filter(func(s): return s.row.id == row.id)[0]
 	var clear := Vector3(700, 200, 700)
 	var ctx := {"clock_tier": int(row.trigger.value)}
-	var facts: Array = w.events.advance(0.0, clear, Vector3.ZERO, ctx)
+	var facts: Array = []
+	for tick in 1200:
+		facts.append_array(w.events.advance(0.1, clear, Vector3.ZERO, ctx))
+		if descent.phase == Director.ANNOUNCED:
+			break
 	t.check("director announces authored cave-in", facts.any(func(f): return f.kind == "announced" and f.id == row.id))
 	await _sample("telegraph", 0.0, false)
 	facts = w.events.advance(float(row.telegraph.lead_s) + 2.0, clear, Vector3.ZERO, ctx)
