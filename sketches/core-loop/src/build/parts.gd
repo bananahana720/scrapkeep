@@ -1,6 +1,7 @@
 extends RefCounted
 
 const PartDef := preload("res://src/build/part_def.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -259,6 +260,33 @@ const EVOLVED := {
 }
 
 static var _defs := {}
+static var _run_ref: WeakRef
+
+
+static func bind_run(run) -> void:
+	_run_ref = weakref(run)
+
+
+static func active_tier() -> int:
+	var run = _run_ref.get_ref() if _run_ref != null else null
+	return run.selected_run_tier() if run != null else 0
+
+
+static func _pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
+	if active_tier() == 0:
+		return ItemGen.pick_rarity(rng, allowed)
+	var total := 0.0
+	var weights := {}
+	for rarity in allowed:
+		weights[rarity] = ItemGen.weight_of(rarity) * (RunTier.row(active_tier()).rare_weight if rarity == "rare" else 1.0)
+		total += weights[rarity]
+	var x := rng.randf() * total
+	for rarity in allowed:
+		x -= weights[rarity]
+		if x < 0.0:
+			return rarity
+	return allowed[-1]
+
 static var _rows := {}
 # Seams other modules offer ("spawner.extend_cloak"). A row whose needs is not here is
 # never offered; build fills this at setup from what the live modules answer.
@@ -537,7 +565,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	var tries := 0
 	while picks.size() < count and not pool.is_empty() and tries < count * 8:
 		tries += 1
-		var rarity := ItemGen.pick_rarity(rng, rarities)
+		var rarity := _pick_rarity(rng, rarities)
 		if not listed_only() and rng.randf() < GENERATED_SHARE:
 			var recipe := ItemGen.roll_id(rng, rarity)
 			if not recipe in picks and not recipe in exclude:

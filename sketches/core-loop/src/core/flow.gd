@@ -239,6 +239,17 @@ func new_run() -> void:
 	_begin_run(ctx.run.class_def)
 
 
+func choose_run_tier(value: int) -> bool:
+	if not ctx.run.select_run_tier(value, ctx.profile):
+		return false
+	if ctx.build != null:
+		ctx.build.recompute()
+	if store != null and not _entrance.is_empty():
+		_entrance["run_tier"] = value
+		_save(_entrance)
+	return true
+
+
 func _begin_run(chosen: Resource) -> void:
 	in_arena = false
 	boss_active = false

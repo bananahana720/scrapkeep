@@ -9,6 +9,7 @@ const Companion := preload("res://src/core/companion.gd")
 const Relics := preload("res://src/build/relics.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Profile := preload("res://src/core/profile.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const MAX_HP := 100.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
@@ -109,6 +110,8 @@ var companion := {}
 # SG9's run-start offer: {"options": three ids, "rerolls_left": int, "taken": id or ""}. Drawn
 # from run_seed in begin(); {} on a run loaded from a doc saved before SG9, which offers nothing.
 var start_pick := {}
+var run_tier := 0
+var event_core_grants := 0
 # True once enter_stage has run in this run. A pick opens only after flow's enter_stage(1),
 # because enter_stage zeroes bonus_cores and would wipe a Bonus Core taken before it.
 var _stage_entered := false
@@ -193,6 +196,9 @@ func begin(chosen_class: Resource) -> void:
 	world = 0
 	cogs = 0
 	start_pick = {}
+	run_tier = 0
+	event_core_grants = 0
+	load("res://src/build/parts.gd").bind_run(self)
 	_stage_entered = false
 	# 2026-10-11 (w13 coordinator, after SG9): a class without an id offers no pick. The run identity
 	# case begins runs with a bare Resource, which read chosen_class.id as a script error.
@@ -339,6 +345,33 @@ func _publish_heft_class() -> void:
 func add_core(source: String, at: Vector3) -> void:
 	bonus_cores += 1
 	events.core_gained.emit(source, at, bonus_cores)
+
+
+func selected_run_tier() -> int:
+	return run_tier
+
+
+func select_run_tier(value: int, profile) -> bool:
+	if value not in [0, 1] or not _start_pick_open() or not _stage_entered:
+		return false
+	if value == 1 and not RunTier.unlocked(profile):
+		return false
+	run_tier = value
+	# A start-card choice survives retry, while the pick still rewinds as SG9 specifies.
+	if not _snapshot.is_empty():
+		_snapshot["run_tier"] = value
+	if _stage_starts.has(stage):
+		_stage_starts[stage]["run_tier"] = value
+	return true
+
+
+func add_event_core(at: Vector3) -> void:
+	var multiplier: float = RunTier.row(run_tier).event_core_multiplier
+	var before := floori(event_core_grants * multiplier)
+	event_core_grants += 1
+	var amount := floori(event_core_grants * multiplier) - before
+	for core in amount:
+		add_core("event", at)
 
 
 # A lost risk bet burns this stage's cores (world/bet_crate.gd); its bet_resolved fact
@@ -621,6 +654,7 @@ func record_milestone(event_id: String) -> void:
 func enter_stage(index: int) -> void:
 	stage = index
 	bonus_cores = 0
+	event_core_grants = 0
 	_stage_entered = true
 
 
@@ -647,6 +681,8 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"hotwire": (extra.get("hotwire", {}) as Dictionary).duplicate(true),
 		# A retry rewinds a run-start pick with the part or cogs it paid, and offers the same three.
 		"start_pick": start_pick.duplicate(true),
+		"run_tier": run_tier,
+		"event_core_grants": event_core_grants,
 		"entry_position": entry_position,
 		"entry_velocity": entry_velocity,
 		"camera_yaw": camera_yaw,
@@ -706,6 +742,9 @@ func restore() -> void:
 	else:
 		extra["hotwire"] = hotwire.duplicate(true)
 	start_pick = _start_pick_from(_snapshot.get("start_pick", {}))
+	run_tier = int(_snapshot.get("run_tier", 0))
+	event_core_grants = int(_snapshot.get("event_core_grants", 0))
+	load("res://src/build/parts.gd").bind_run(self)
 	stage_time = 0.0
 	since_damage = 99.0
 	retries += 1
@@ -765,7 +804,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tallies": "dict", "seen_wardens": "strs"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -818,6 +857,8 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"settled": Array(settled),
 		"relics": relics.duplicate(),
 		"start_pick": start_pick.duplicate(true),
+		"run_tier": run_tier,
+		"event_core_grants": event_core_grants,
 		"run_tallies": tallies(),
 		"seen_wardens": _seen_wardens.keys(),
 	}, true)
@@ -865,6 +906,10 @@ static func validate_entrance_doc(doc) -> String:
 		return "schema %d is newer than known schema %d" % [int(doc["schema"]), ENTRANCE_SCHEMA]
 	if int(doc["schema"]) < 1:
 		return "schema %d is invalid" % int(doc["schema"])
+	if doc.has("run_tier") and (typeof(doc.run_tier) != TYPE_INT or doc.run_tier not in [0, 1]):
+		return "invalid run_tier"
+	if doc.has("event_core_grants") and (typeof(doc.event_core_grants) != TYPE_INT or doc.event_core_grants < 0):
+		return "invalid event_core_grants"
 	for key in ENTRANCE_KEYS:
 		if not doc.has(key):
 			return "missing key: %s" % key
@@ -942,6 +987,9 @@ func from_entrance_doc(doc) -> bool:
 	companion = (doc["companion"] as Dictionary).duplicate(true) if doc.has("companion") else {}
 	settled.assign(doc.get("settled", []))
 	start_pick = _start_pick_from(doc.get("start_pick", {}))
+	run_tier = int(doc.get("run_tier", 0))
+	event_core_grants = int(doc.get("event_core_grants", 0))
+	load("res://src/build/parts.gd").bind_run(self)
 	extra = {}
 	for key in doc:
 		if not ENTRANCE_KEYS.has(key) and not ENTRANCE_OPTIONAL.has(key):
