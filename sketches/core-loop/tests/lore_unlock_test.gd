@@ -1,3 +1,5 @@
+# 2026-10-12 FIXTURE-ADAPT: 50e4a6a added codex profile reads; the scene-free flow has no saved profile.
+# 2026-10-12 R4: exercise status/open_entry through a non-null flow.ctx.profile, retaining null-profile lore cases.
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
@@ -23,9 +25,23 @@ class Table:
 
 class Ctx:
 	var stages := Table.new()
+	var profile = null
 
 class FakeFlow:
 	var ctx := Ctx.new()
+
+class FakeProfile:
+	var can_save := false
+	var seen: Array[String] = []
+	var marked: Array[String] = []
+
+	func is_seen(id: String) -> bool:
+		return id in seen
+
+	func mark_seen(id: String) -> bool:
+		marked.append(id)
+		seen.append(id)
+		return true
 
 var _t
 var _events
@@ -36,6 +52,7 @@ var _found: Array[String] = []
 func _initialize() -> void:
 	_t = T.new("lore_unlock_test")
 	_check_codex()
+	_check_profile()
 	_events.free()
 	_codex.free()
 	await _check_hud()
@@ -123,6 +140,19 @@ func _check_codex() -> void:
 	_t.eq("known notes survive a reload", _ids("field_note").filter(func(id): return reload.known(id)), _ids("field_note").filter(func(id): return _codex.known(id)))
 	_t.check("reload kept the exchange rows", reload.known(_ids("exchange", "1-2")[0]))
 	reload.free()
+
+
+func _check_profile() -> void:
+	_fresh(DIR.path_join("profile"))
+	var profile := FakeProfile.new()
+	_codex.flow.ctx.profile = profile
+	var id := "fixture.lore.profile"
+	_codex.declare({"id": id, "category": "world", "name": "Profile note"})
+	_t.check("profile fixture entry discovered", _codex.mark_discovered(id))
+	_t.eq("unread flow profile entry is new", _codex.status(id), "new")
+	_t.check("open_entry consumes flow profile", _codex.open_entry(id))
+	_t.eq("flow profile mark_seen receives the entry id", profile.marked, [id])
+	_t.eq("read flow profile entry becomes available", _codex.status(id), "available")
 
 
 func _check_hud() -> void:

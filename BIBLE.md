@@ -532,7 +532,7 @@ Alpha amendment, 3 October 2026: every pilot has one character-specific binary t
 | --- | --- | --- |
 | Weapon | Available at run start | Establishes the repeatable aimed action and how the character applies pressure. |
 | Main hero skill | Unlocks through play during world one | Deepens the character's distinctive combat interaction. |
-| Mobility | Special mobility available at run start | Changes positioning and traversal around always-available ordinary movement. The movement abilities played in playtest entry 3 are candidates for this slot (see Characters); class versus item stays open. |
+| Mobility | Special mobility available at run start | Changes positioning and traversal around always-available ordinary movement. The movement abilities played in playtest entry 3 are candidates for this slot (see Characters). Movement that changes how a pilot moves belongs to that pilot: its own tree, its Shift and parts bound to it. Shared parts may change what a verb does, never how far or fast the ball moves. Optional transformative items keep the exception in Movement, camera and active aim (Andrew, 2026-10-12). |
 | Ultimate | Unlocks through play during world one | Converts useful class-specific contributions into a major payoff. |
 
 Growth earned through combat, activities and exploration opens tree offers at safe grounded moments. A successful run reaches its fourth pick by the final boss. Elapsed time never advances a tree, opens an exit or prices an offer (TADR-010). The first two depths belong to world one, and deeper offers wait for their eligible worlds. Exact node effects remain authored content; retries and reloads cannot award another pick for the same growth milestone.

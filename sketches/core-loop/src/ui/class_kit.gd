@@ -54,10 +54,11 @@ const WORDS := {
 	"tradeoff_pylon_engineer": "Strong anchors, needs a surface.",
 	# --- end Sable ---
 	# --- P-C Rivet words ---
+	"line_drive": "line drive", "foundry_cutter": "foundry cutter", "prism_cutter": "prism cutter", "juggernaut_drive": "juggernaut drive",
 	"tradeoff_runner_gunner": "Ignores knockback, still takes damage.",
 	# --- end Rivet ---
 	# --- P-C Kest words ---
-	"cable_charge": "cable charge", "windhover": "windhover",
+	"cable_charge": "cable charge", "windhover": "hovering mortar",
 	"air_raid": "air raid", "minelayer": "minelayer",
 	"tradeoff_demolitions_caster": "Delayed blasts, needs fuse timing.",
 	# --- end Kest ---

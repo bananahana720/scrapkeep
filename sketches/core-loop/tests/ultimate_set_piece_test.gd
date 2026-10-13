@@ -1,3 +1,4 @@
+# 2026-10-12 FIXTURE-ADAPT: 7a90eee added the contact rate/burst budget; check 03 reads its constants.
 # 2026-10-12, W13 smoke triage: class c re-pin for 24cc872.
 # Sable ultimate id ult_default -> cable_run; default rail-query result arc -> rail because Cable Run declares line, rail, arc.
 extends SceneTree
@@ -5,6 +6,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const T := preload("res://tests/support/t.gd")
@@ -142,9 +144,19 @@ func _run() -> void:
 	ev.enemy_struck.emit(a, "ram", 10.0)
 	ev.enemy_struck.emit(a, "ram", 10.0)
 	_t.near("02 kill 1 + near miss 4 + one contact 2 (the second inside 0.5 s is gated)", _ult.meter.value, 7.0)
+	var contact_clock: float = _ult.meter._clock
+	var first_contact := minf(float(UltimateMeter.WEIGHTS["contact"]), UltimateMeter.CONTACT_BURST)
 	await _sim(0.6)
 	ev.enemy_struck.emit(a, "ram", 10.0)
-	_t.check("03 a contact on the same enemy after 0.5 s pays again", absf(_ult.meter.value - 9.0) < 0.6, "%.2f" % _ult.meter.value)
+	var elapsed: float = _ult.meter._clock - contact_clock
+	var refill := minf(UltimateMeter.CONTACT_BURST, UltimateMeter.CONTACT_RATE_CAP * elapsed)
+	var contact_expected := first_contact + minf(float(UltimateMeter.WEIGHTS["contact"]), refill)
+	var contact_paid: float = _ult.meter.sources.get("contact", 0.0)
+	var speed_paid: float = _ult.meter.sources.get("fast", 0.0) + _ult.meter.sources.get("blazing", 0.0)
+	var expected := float(UltimateMeter.WEIGHTS["kill"]) + float(UltimateMeter.WEIGHTS["near_miss"]) + contact_expected + speed_paid
+	_t.check("03 a contact after 0.5 s pays only the refilled contact budget",
+		absf(_ult.meter.value - expected) < 0.6 and is_equal_approx(contact_paid, contact_expected),
+		"meter %.4f expected %.4f; contact %.4f expected %.4f over %.4f s" % [_ult.meter.value, expected, contact_paid, contact_expected, elapsed])
 	_ult.meter.reset()
 	ev.enemy_struck.emit(a, _player.abilities.id_of(AbilityState.WEAPON), 12.0)
 	_t.near("04 a weapon hit pays 0.25", _ult.meter.value, 0.25)

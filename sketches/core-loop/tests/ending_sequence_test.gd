@@ -61,6 +61,14 @@ func _run() -> void:
 	_t.eq("END-3 first_win announced once", _earned.count("first_win"), 1)
 	_t.eq("END-3 Mind announced once", _earned.count("mind_quieted"), 1)
 	_t.check("visuals have no bodies, areas or collision shapes", _physics_free(seq.viewport))
+	# KC10 (2026-10-12): the crater_ending bowl is the credits' set, in the ending's own viewport, never a stage.
+	var crater_start = seq.get("crater")
+	_t.check("KC10 crater set is built in the ending viewport", crater_start != null and seq.viewport.is_ancestor_of(crater_start))
+	var crater_outside_stages := crater_start != null
+	for stage in seq.stages:
+		crater_outside_stages = crater_outside_stages and not _game.ctx.terrain.geometry_root(stage).is_ancestor_of(crater_start)
+	_t.check("KC10 crater set is never inside a stage", crater_outside_stages)
+	_t.eq("KC10 total stays 54 seconds", Sequence.TOTAL_SECONDS, 54.0)
 	_t.check("pilot shell has real model", not seq.shell.find_children("HeroCore", "Node3D", true, false).is_empty())
 	_t.check("SPIL-9 has meshes", not seq.companion.find_children("*", "MeshInstance3D", true, false).is_empty())
 	if await _capture(seq):
@@ -80,6 +88,13 @@ func _run() -> void:
 	var positions := {}
 	var crew_visible := [true, true, true]
 	var camera_moves := [false, false, false]
+	var crater_seen := false
+	var crater_placed_seen := false
+	var crater_meshes := 0
+	var crater_physics_free := true
+	var worlds_hidden := true
+	var bowl_in_frame := false
+	var credit_heights := []
 	var frames := 0
 	while is_instance_valid(_game.screens.ending_sequence) and frames < 1800:
 		frames += 1
@@ -100,8 +115,26 @@ func _run() -> void:
 			if positions.has(seq.world_index) and positions[seq.world_index].distance_to(seq.camera.position) > 0.01:
 				camera_moves[seq.world_index] = true
 			positions[seq.world_index] = seq.camera.position
+		else:
+			var crater = seq.get("crater")
+			crater_seen = crater_seen or (crater != null and crater.visible)
+			# KC10 fix round: the bowl must hold real geometry once placed, and stay collider free after placement.
+			if crater != null and seq._crater_placed:
+				crater_placed_seen = true
+				crater_meshes = maxi(crater_meshes, crater.find_children("*", "MeshInstance3D", true, false).size())
+				crater_physics_free = crater_physics_free and _physics_free(seq.viewport)
+			worlds_hidden = worlds_hidden and seq.worlds.all(func(w): return not w.visible)
+			bowl_in_frame = bowl_in_frame or _in_frame(seq.camera, Vector3.ZERO)
+			credit_heights.append(seq.camera.position.y)
 		await process_frame
 	Engine.time_scale = 1.0
+	_t.check("KC10 crater set shows in the credits", crater_seen)
+	_t.check("KC10 crater placed before the credits ended", crater_placed_seen)
+	_t.check("KC10 crater bowl geometry renders in the credits", crater_meshes > 0, "%d mesh nodes" % crater_meshes)
+	_t.check("KC10 crater set stays physics free after placement", crater_physics_free)
+	_t.check("KC10 credits hide the Highdraft worlds", worlds_hidden)
+	_t.check("KC10 credits camera has the bowl centre in frame", bowl_in_frame)
+	_t.check("KC10 camera drops over the rim through the credits", credit_heights.size() > 1 and credit_heights[0] > credit_heights.back(), str(credit_heights.slice(0, 3)))
 	_t.eq("END-1 all fly-overs play automatically", seen_worlds, [0, 1, 2])
 	_t.eq("END-1 phases play automatically", seen_phases, ["flyover", "copy", "credits"])
 	var lines: Array = []
@@ -119,6 +152,7 @@ func _run() -> void:
 	_t.check("quiet gun appears in the Highdraft", _ending_gun_visible)
 	_t.check("quiet gun answers at eight seconds", absf(_ending_cannon_answer - 8.0) <= 60.0 / 172.0, str(_ending_cannon_answer))
 	_t.eq("ending answers only once", _game.presentation.audio.cannon_log.filter(func(row): return row["kind"] == "ending_cannon").size(), 1)
+	_crater_release_checks()
 	_skip_checks()
 	await _resume_world_check()
 	_finish()
@@ -147,6 +181,30 @@ func _before_sequence(won: bool) -> void:
 		and reloaded.has_cosmetic("paint_kest_dusk") and tombstone.get("ended", false) \
 		and line.get("outcome") == "won" and _game.run.over \
 		and not is_instance_valid(_game.screens.ending_sequence)
+
+
+func _crater_release_checks() -> void:
+	for action in ["free", "skip", "cancel"]:
+		var seq := Sequence.new()
+		_game.screens.add_child(seq)
+		seq.start(_game)
+		seq.set_process(false)
+		var paths: Array = seq._crater_paths()
+		var requests = seq.get("_crater_requests")
+		_t.check("KC10 %s fixture requests crater loads before credits" % action,
+			not paths.is_empty() and seq.phase == "flyover")
+		if action == "free":
+			seq.free()
+		else:
+			seq.call(action)
+		_t.check("KC10 %s before credits clears tracked requests" % action,
+			requests is Array and requests.is_empty())
+		for path in paths:
+			var status := ResourceLoader.load_threaded_get_status(path)
+			_t.eq("KC10 %s leaves no threaded task for %s" % [action, path],
+				status, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE)
+		if action != "free":
+			seq.free()
 
 
 func _skip_checks() -> void:

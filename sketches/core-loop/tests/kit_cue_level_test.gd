@@ -12,9 +12,9 @@ const LIVE_KEY := 3
 const CHECKS_PER_PATH := 3
 # Six table rows: four mandatory paths and one override-coverage check each, plus
 # two controls, population, nonempty and final count checks. Extra paths add three.
-# 2026-10-12, PC-TALLY r4, coordinator ruling: 83 -> 87 base checks,
-# 122 -> 126 measured checks including the Tally settle driver and step coverage.
-const EXPECTED_CHECKS := 87
+# 2026-10-12, PC-RIVET r4, coordinator ruling: 83 -> 95 base checks
+# (122 -> 134 measured total), both Rivet line branches and their admission.
+const EXPECTED_CHECKS := 99
 const CORE_KINDS := ["line_skill_fired", "special_used", "ultimate_peak", "ultimate_landed"]
 # Shared, non-kit exception: audio.gd:1027 -> on_beat at :966 schedules the generic
 # ultimate_peak/special_fire at bank trim. A kit override never receives this offset.
@@ -87,6 +87,8 @@ func _initialize() -> void:
 			_tally_settles(def)
 		_kit_calls(def)
 		_kit_events(def)
+		if def.id == "runner_gunner":
+			_rivet_lines(def)
 		var missing: Array = []
 		for sound in _registered_sounds(def):
 			if not _heard.has(sound):
@@ -152,9 +154,32 @@ func _registered_sounds(def: Resource) -> Array:
 			for sound in record.values():
 				if sound is String and not sound in sounds:
 					sounds.append(sound)
+		elif def.id == "runner_gunner" and name == "RIVET_LINE":
+			for field in ["punch", "arrive"]:
+				sounds.append(record[field])
 		elif record.get("motif", "") == def.motif and record.has("sound"):
 			sounds.append(record.sound)
 	return sounds
+
+
+# --- Rivet (PC-RIVET) begin ---
+func _rivet_lines(def: Resource) -> void:
+	for branch in {"body": "punch", "world": "arrive"}:
+		var field: String = "punch" if branch == "body" else "arrive"
+		var sound: String = Audio.RIVET_LINE[field]
+		_begin()
+		_events.line_skill_fired.emit(def.line_id, null, Vector3.ZERO, branch)
+		_path(def.id, "line_skill_fired", true, "line " + branch)
+		var heard: Array = _audio.cue_log.filter(func(row): return row[0] == "line_skill_fired" and row[1] == sound and row[2] == "now")
+		_check(def.id + " line " + branch + " owns its cue", heard.size() == 1, str(heard))
+		_check(def.id + " line " + branch + " admitted", _audio._last_start.has(sound), str(_audio._last_start))
+		_begin()
+		_audio.sound_ready = false
+		_events.line_skill_fired.emit(def.line_id, null, Vector3.ZERO, branch)
+		_audio.sound_ready = true
+		var skipped: Array = _audio.cue_log.filter(func(row): return row[1] == sound and row[2] == "skip")
+		_check(def.id + " line " + branch + " respects admission", _observe("line_skill_fired").is_empty() and skipped.size() == 1, str(_audio.cue_log))
+# --- Rivet (PC-RIVET) end ---
 
 
 # Named pilot listeners also register kit events. New listeners are exercised with
