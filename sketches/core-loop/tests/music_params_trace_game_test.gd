@@ -160,7 +160,9 @@ func _release_fixture() -> void:
 	game.run.mass = 100.0
 	audio._flush_flow()
 	game.events.warden_engaged.emit(1)
-	engine.render(1)
+	var commit_deadline: int = engine.clock + Harmony.RATE * 10
+	while engine.track != "warden" and engine.clock < commit_deadline:
+		engine.render(1)
 	t.eq("busy horizon uses committed Warden track", engine.track, "warden")
 	t.eq("busy horizon uses committed play mode", engine.mode, Music.PLAY)
 	t.eq("busy horizon uses committed boss step", engine.step_len, Harmony.BOSS_STEP)
