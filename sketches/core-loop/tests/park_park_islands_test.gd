@@ -61,6 +61,8 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	var park: Dictionary = read["data"]
+	var collapse_rows: Array = park["event_rows"].filter(func(row): return row["id"] == "fin_rim_collapse")
+	t.check("the fin collapse lands immediately after its six-second mark", collapse_rows.size() == 1 and collapse_rows[0]["effect"].get("fill_s") == 0.0)
 	var spec := _stage_spec()
 	if not t.check("the stage-owned geometry appendix parses", spec.get("map") == MAP):
 		quit(t.verdict())
