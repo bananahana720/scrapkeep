@@ -109,6 +109,8 @@ func _run() -> void:
 	_landmark_hum_fixture()
 	_fleet_fixture(true)
 	_fleet_fixture(false)
+	for pilot in Harmony.CLASS_MOTIFS:
+		_ultimate_fixture(pilot)
 	if OS.get_environment("KE10_UNIT_ONLY") == "1":
 		quit(t.verdict())
 		return
@@ -123,6 +125,35 @@ func _run() -> void:
 func _advance(engine, until: int) -> void:
 	while engine.clock < until:
 		engine.render(mini(4096, until - engine.clock))
+
+
+func _ultimate_fixture(pilot: String) -> void:
+	var lift := Music.new()
+	input = {"threat": 0.3, "approach": 0.0, "armour": 1.0}
+	lift.set_parameter_source(func(): return input.duplicate())
+	lift.set_class_motif(pilot)
+	lift.schedule_restart(0, Music.PLAY, 0)
+	_advance(lift, Harmony.BAR + 1)
+	var before: float = lift.layer_target(Music.ARP)
+	lift.set_ultimate_lift(true)
+	input = {"threat": 1.0, "approach": 1.0, "armour": 0.2}
+	_advance(lift, Harmony.BAR * 2)
+	t.near("ultimate waits for next bar " + pilot, lift.layer_target(Music.ARP), before)
+	lift.render(1)
+	# ARP's existing curve spans 0.3..0.5; the lift adds 0.12 to committed 0.3.
+	var x := (0.42 - 0.3) / (0.5 - 0.3)
+	t.near("ultimate rises at next bar " + pilot, lift.layer_target(Music.ARP), x * x * (3.0 - 2.0 * x))
+	t.eq("ultimate admits no pending threat " + pilot, lift.layer_target(Music.LEAD), 0.0)
+	t.eq("ultimate admits no pending approach " + pilot, lift.layer_target(Music.LANDMARK_HUM), 0.0)
+	t.check("ultimate admits no pending armour " + pilot, lift.layer_target(Music.KEYS) > 0.0)
+	lift.set_ultimate_lift(false)
+	_advance(lift, Harmony.BAR * 3)
+	t.near("spent lift waits for next bar " + pilot, lift.layer_target(Music.ARP), x * x * (3.0 - 2.0 * x))
+	lift.render(1)
+	t.eq("spent lift releases at next bar " + pilot, lift.layer_target(Music.ARP), 0.0)
+	t.check("spent lift retains committed armour " + pilot, lift.layer_target(Music.KEYS) > 0.0)
+	_advance(lift, Harmony.BAR * Harmony.PHRASE_BARS + 1)
+	t.eq("pending armour still commits at phrase " + pilot, lift.layer_target(Music.KEYS), 0.0)
 
 
 func _fleet_fixture(armour: bool) -> void:
