@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "5b420bb5988ffbc716f89775625b377c59715ef92f0db59b416eb525af867ab3",
+  "bake_sha256": "e55b2f7a8600441aab7ed634fa20771dd9de7db2ab788304cf9f99ed0d434680",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 894355,
-  "edges": 307384,
+  "bytes": 859843,
+  "edges": 307622,
   "first_failed": "",
   "flags": {
     "deck": 0,
     "door_ok": 39277,
     "line": 439,
     "open": 40401,
-    "sight_ok": 10036,
+    "sight_ok": 10239,
     "under": 0
   },
-  "full_visit_m": 1716,
-  "full_visit_ratio": "1.314",
-  "graph_sha256": "2955fbce8c5bbf28e64922e4d5bf86ae54085c91c8472b824f2478246e1551d1",
+  "full_visit_m": 1715,
+  "full_visit_ratio": "1.313",
+  "graph_sha256": "87e6b5d5ab3a18141bcabe323d3fbea5775e3322a85a42a9146d042aa389a9eb",
   "line_errors": [],
   "line_path_nodes": 157,
-  "longest_est_m": 2361,
+  "longest_est_m": 2356,
   "map": "park_islands",
   "nodes": 40401,
-  "park_sha256": "dd713090eea316ac55dcf0063e70566887ca2a387a438d4b53e1bcf38119ad89",
+  "park_sha256": "d4b27044313c3240469325400f68374732911c6fcc99622ea8ebd510a5fb520e",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,14 +52,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 390,
-      "d_spawn": 1072,
-      "detour_m": 209,
+      "d_landmark": 389,
+      "d_spawn": 1074,
+      "detour_m": 208,
       "door_at": [
         208,
         240
       ],
-      "door_m": 209,
+      "door_m": 208,
       "flags": [
         "open",
         "door_ok",
@@ -67,7 +67,7 @@
       ],
       "id": "cache_east_wing",
       "kind": "cracked_cache",
-      "nearest_door": 317,
+      "nearest_door": 318,
       "nearest_door_id": "bounty_ore_bench",
       "pay_named": "",
       "pay_rarities": [
@@ -94,7 +94,7 @@
       ],
       "id": "bounty_ore_bench",
       "kind": "hauler_bounty",
-      "nearest_door": 317,
+      "nearest_door": 318,
       "nearest_door_id": "cache_east_wing",
       "pay_named": "",
       "pay_rarities": [
@@ -156,7 +156,7 @@
     "run": true
   },
   "spawn_beacon_m": 1306,
-  "spawn_beacon_share": "0.553",
+  "spawn_beacon_share": "0.554",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -172,14 +172,14 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.314
+      "value": 1.313
     }
   ],
   "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
   "zones": {
     "anchors": [
       {
-        "cost": 1348.9,
+        "cost": 1349.2,
         "d_landmark": 389.3,
         "name": "lens_rocks",
         "on_route": false,
@@ -187,7 +187,7 @@
         "viable": true
       },
       {
-        "cost": 1343.2,
+        "cost": 1343.1,
         "d_landmark": 132.8,
         "name": "knuckle_w",
         "on_route": false,
@@ -251,11 +251,11 @@
         "viable": true
       }
     ],
-    "count": 190,
+    "count": 192,
     "crossings": {
-      "drop": 97,
+      "drop": 99,
       "ride": 13,
-      "walk": 343
+      "walk": 347
     },
     "hidden": [
       {
