@@ -1,5 +1,7 @@
 extends RefCounted
 
+const EventGround := preload("res://src/world/events/event_ground.gd")
+
 const Palette := preload("res://src/core/palette.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
@@ -74,6 +76,8 @@ var _is_park: Array[bool] = []
 var _grounds: Array = []
 var _holes: Array[PackedByteArray] = []
 var _under: Array[PackedFloat32Array] = []
+var _cave_roofs := {}
+var _placement_holes := {}
 # Two Terrain3D render nodes made at setup (park_terrain.gd make_render), each lent to one
 # resident park stage; _render_owner holds the stage index using each, or -1.
 var _render: Array[Node3D] = []
@@ -216,11 +220,32 @@ func _on_park_built(i: int) -> void:
 	var ground = _grounds[i]
 	_heights[i] = ground.heights
 	_holes[i] = ground.holes
-	_under[i] = ground.under
+	_under[i] = ground.under.duplicate()
+	_placement_holes[i] = _holes[i].duplicate()
+	_cave_roofs[i] = {}
+	for row in maps[i].park.event_rows:
+		if row.kind != "cave_in":
+			continue
+		var sites: Array = maps[i].park.park_rows.filter(func(site): return site.id == row.site and bool(site.hole))
+		if sites.is_empty():
+			continue
+		var roof := EventGround.cave_roof(_heights[i], _holes[i], sites[0], _roots[i])
+		roof.body.name = "CaveRoof_" + row.id
+		_cave_roofs[i][row.id] = roof
+		for cell: Vector2i in roof.baseline.cells:
+			var i_cell := cell.x + int(ParkTerrain.HALF / ParkTerrain.STEP)
+			var j_cell := cell.y + int(ParkTerrain.HALF / ParkTerrain.STEP)
+			var k := j_cell * ParkTerrain.CELLS + i_cell
+			var floor_y := INF
+			for face in roof.baseline.cells[cell]:
+				for vertex in range(face, face + 3):
+					floor_y = minf(floor_y, roof.baseline.vertices[vertex].y - float(row.effect.depth_m))
+			_under[i][k] = floor_y
+			_placement_holes[i][k] = 0
 	maps[i].build_props(_roots[i], ground_callable(i + 1))
 	# The park rows (KB9): every row naming a recipe, with its collider and ride sensor, placed on the height() floor.
 	if maps[i] is ParkMap:
-		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _holes[i], _under[i]), publish, _threaded[i])
+		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i])
 	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), true)
 
 
@@ -302,6 +327,8 @@ func _free_stage(i: int) -> void:
 	_roots[i].queue_free()
 	_roots[i] = null
 	_grounds[i] = null
+	_cave_roofs.erase(i)
+	_placement_holes.erase(i)
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
 	_under[i] = PackedFloat32Array()
@@ -423,15 +450,48 @@ func near_moss(point: Vector3) -> bool:
 func ground_callable(index: int) -> Callable:
 	var i := _ensure(index)
 	if _is_park[i]:
-		return _park_ground_at.bind(_heights[i], _holes[i], _under[i])
+		return _park_ground_at.bind(_heights[i], _placement_holes.get(i, _holes[i]), _under[i])
 	return _ground_at.bind(_heights[i])
 
 
 # The stage's ground at (x, z): the grid's two triangles, or a hole cell's floor beneath.
+func cave_roof(id: String) -> Dictionary:
+	return _cave_roofs.get(stage - 1, {}).get(id, {})
+
+
 func _floor(i: int, x: float, z: float) -> float:
+	var roof_y := -INF
+	for roof in _cave_roofs.get(i, {}).values():
+		roof_y = maxf(roof_y, roof.surface.height(Vector2(x, z)))
+	if roof_y > -INF:
+		return maxf(roof_y, _retained_park_height(_heights[i], _holes[i], x, z))
 	if _is_park[i]:
 		return _park_height(_heights[i], _holes[i], _under[i], x, z)
 	return _grid_height(_heights[i], x, z)
+
+
+static func _retained_park_height(heights: PackedFloat32Array, holes: PackedByteArray, x: float, z: float) -> float:
+	var grid := Vector2((x + ParkTerrain.HALF) / ParkTerrain.STEP, (z + ParkTerrain.HALF) / ParkTerrain.STEP)
+	var cell := Vector2i(floori(grid.x), floori(grid.y))
+	var result := -INF
+	# The footprint is closed: a rim edge or corner can belong to four ground cells.
+	for delta in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.UP, Vector2i(-1, -1)]:
+		var at: Vector2i = cell + delta
+		if at.x < 0 or at.y < 0 or at.x >= ParkTerrain.CELLS or at.y >= ParkTerrain.CELLS:
+			continue
+		if holes[at.y * ParkTerrain.CELLS + at.x] == 1:
+			continue
+		var f := grid - Vector2(at)
+		if f.x < 0.0 or f.y < 0.0 or f.x > 1.0 or f.y > 1.0:
+			continue
+		var k := at.y * ParkTerrain.SIDE + at.x
+		var a := heights[k]
+		var b := heights[k + 1]
+		var c := heights[k + ParkTerrain.SIDE]
+		var d := heights[k + ParkTerrain.SIDE + 1]
+		var y := a + (b - a) * f.x + (c - a) * f.y if f.x + f.y <= 1.0 else d + (c - d) * (1.0 - f.x) + (b - d) * (1.0 - f.y)
+		result = maxf(result, y)
+	return result
 
 
 static func _park_height(heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, x: float, z: float) -> float:
