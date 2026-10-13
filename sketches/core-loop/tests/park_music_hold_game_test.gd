@@ -191,9 +191,9 @@ func _recovery(before_deadline: bool, direct_live := false) -> void:
 			var target: int = audio.engine.bar_origin + ceili(float(audio.engine.clock - audio.engine.bar_origin) / bar) * bar
 			while audio.engine.clock < target:
 				var frames: int = mini(4096, target - audio.engine.clock)
-				audio._virtual_usec = Time.get_ticks_usec() - ceili(float(frames) * 1000000.0 / Harmony.RATE)
-				audio._pump()
-			audio._virtual_usec = Time.get_ticks_usec()
+				audio.engine.render(frames)
+			# Prevent wall-clock rounding from moving the head before the scheduling tick.
+			audio._virtual_usec = Time.get_ticks_usec() + 1000000
 	game.player.reset_to(safe_at)
 	game.player.set_frozen(true)
 	var expected: int = announcement[0].sample
