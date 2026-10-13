@@ -144,6 +144,8 @@ func _run() -> void:
 	t.check("physical perch centres and tops match mind.md's 12 m seats", perch_failures.is_empty(), "; ".join(perch_failures))
 	var clearance_failures := sentinel_clearance_failures(park, holder, ground)
 	t.check("sentinel_40 clears the reproduced Tally approach and retains reachable posts", clearance_failures.is_empty(), "; ".join(clearance_failures))
+	var mast_failures := signal_clearance_failures(park, holder, ground)
+	t.check("signal_masts clears both reproduced approaches and retains reachable physical anchors", mast_failures.is_empty(), "; ".join(mast_failures))
 	t.eq("the Warden anchor stays at the first 18 m lens", park["landmark"]["warden"]["anchor"], [0.0, 18.0, 515.0])
 	t.eq("the Warden flight path stays approved", park["landmark"]["warden"]["path"], [[0.0, 18.0, 515.0], [39.0, 18.0, 447.5], [-39.0, 18.0, 447.5]])
 	var tall_perch: Dictionary = park.duplicate(true)
@@ -361,5 +363,53 @@ static func sentinel_clearance_failures(park: Dictionary, parent: Node3D, ground
 		out.append("%d posts touch the recorded ball sphere at %s" % [collisions, point])
 	if shapes.is_empty() or rope_range <= 0.0 or nearest > rope_range:
 		out.append("no reachable physical anchor at the recorded approach")
+	node.free()
+	return out
+
+
+static func signal_clearance_failures(park: Dictionary, parent: Node3D, ground: Callable) -> Array:
+	var out := []
+	var rows: Array = park["park_rows"].filter(func(row: Dictionary) -> bool: return row["id"] == "signal_masts")
+	if rows.size() != 1:
+		return ["signal_masts missing"]
+	var row: Dictionary = rows[0]
+	if row["home"] != "mast_cutters" or row["stamp"] != "ridge":
+		out.append("signal mast home or ridge binding changed")
+	var node := ParkRecipes.place_row(row, parent, ground, Callable(), ParkRecipes.clear_zones(park))
+	var shapes := node.find_children("*", "CollisionShape3D", true, false)
+	var approaches := [
+		Vector3(-232.57, 13.85, 263.71), Vector3(-236.27, 14.46, 267.66),
+		Vector3(-239.9, 14.34, 271.63), Vector3(-243.46, 13.5, 275.6),
+		Vector3(-246.96, 11.95, 279.57), Vector3(-250.38, 9.69, 283.52),
+		Vector3(-253.56, 7.01, 287.09),
+		Vector3(-230.35, 12.99, 268.42), Vector3(-231.8, 11.87, 271.02),
+		Vector3(-233.3, 10.03, 273.58), Vector3(-234.84, 7.46, 276.11),
+		Vector3(-236.72, 7.0, 278.48), Vector3(-245.06, 7.01, 285.7),
+		Vector3(-247.13, 6.12, 287.53),
+	]
+	var rope_range := 0.0
+	for spec: Dictionary in Tuning.SPECS:
+		if spec["key"] == "rope_range":
+			rope_range = float(spec["value"])
+	for point: Vector3 in approaches:
+		var nearest := INF
+		for shape: CollisionShape3D in shapes:
+			if not shape.shape is BoxShape3D:
+				out.append("signal mast has an unsupported collider")
+				continue
+			var half := (shape.shape as BoxShape3D).size * 0.5
+			var local := shape.to_local(point)
+			var closest := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
+			nearest = minf(nearest, point.distance_to(shape.to_global(closest)))
+		var yaw := deg_to_rad(float(row["yaw_deg"]))
+		var delta := Vector2(point.x - float(row["at"][0]), point.z - float(row["at"][1]))
+		var along := absf(delta.dot(Vector2(sin(yaw), cos(yaw))))
+		var across := absf(delta.dot(Vector2(cos(yaw), -sin(yaw))))
+		var outside_ridge := along > float(row["size"][0]) * 0.5 + Tuning.RADIUS or across > float(row["size"][2]) * 0.5 + Tuning.RADIUS
+		print("[signal_clearance] approach %s nearest physical surface %.3f m outside ridge %s" % [point, nearest, outside_ridge])
+		if nearest <= Tuning.RADIUS or not outside_ridge:
+			out.append("mast collider or ridge intersects the recorded approach at %s" % point)
+		if shapes.is_empty() or nearest > rope_range:
+			out.append("no reachable physical mast at %s" % point)
 	node.free()
 	return out
