@@ -447,7 +447,7 @@ func observe_span(world, elapsed: float, floor_y: float) -> void:
 	var progress := clampf(elapsed / 2.0, 0.0, 1.0)
 	for fraction in [0.0, 0.25, 0.5, 0.75, 1.0]:
 		var point: Vector2 = centre + axis * (fraction - 0.5) * 373.0
-		var expected := 44.0 - (44.0 - floor_y) * fraction * progress
+		var expected: float = 44.0 - (44.0 - floor_y) * fraction * progress
 		var drawn := collider_y(mesh_vertices, point)
 		var physical := collider_y(faces, point)
 		print("[fallen ramp] elapsed %.2f fraction %.2f xz %s expected %.6f mesh %.6f collider %.6f" % [elapsed, fraction, point, expected, drawn, physical])
