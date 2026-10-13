@@ -80,6 +80,13 @@ func _run() -> void:
 				await physics_frame
 		if stage >= 5:
 			warden._posture = BossPosture.new(numbers)
+			game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
+			var damage: Array = game.combat.STRIKE_DAMAGE["ram"]
+			var force: float = (0.60 * warden.plating - damage[0]) / damage[1]
+			game.combat.strike(warden, "ram", force)
+			t.check("stage %d medium Mind contact leaves room for another hit" % stage, warden.posture() > 0.0 and warden.posture() < BossPosture.FULL,
+				"landed %.3f of %.3f" % [warden.posture(), BossPosture.FULL])
+			warden._posture = BossPosture.new(numbers)
 			warden._posture.posture = 50.0
 			warden._posture.step(BossPosture.DRAIN_DELAY + 1.0)
 			var drain := float(numbers.get("drain_rate", BossPosture.DRAIN_RATE))
