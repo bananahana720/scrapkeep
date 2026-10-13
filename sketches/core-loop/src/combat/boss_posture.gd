@@ -30,6 +30,8 @@ var mult_min := MULT_MIN
 var mult_max := MULT_MAX
 var drain_delay := DRAIN_DELAY
 var drain_rate := DRAIN_RATE
+var contact_drain_delay := 0.0
+var contact_grace_left := 0.0
 var stagger_seconds := STAGGER_SECONDS
 var shatter_tier := SHATTER_TIER
 var curve := 1.0
@@ -62,6 +64,7 @@ func _init(numbers := {}) -> void:
 	mult_max = float(numbers.get("mult_max", MULT_MAX))
 	drain_delay = float(numbers.get("drain_delay", DRAIN_DELAY))
 	drain_rate = float(numbers.get("drain_rate", DRAIN_RATE))
+	contact_drain_delay = float(numbers.get("contact_drain_delay", 0.0))
 	stagger_seconds = float(numbers.get("stagger_seconds", STAGGER_SECONDS))
 	shatter_tier = int(numbers.get("shatter_tier", SHATTER_TIER))
 	curve = float(numbers.get("curve", 1.0))
@@ -110,6 +113,8 @@ func _judge_core(result: Dictionary, hit: Dictionary) -> void:
 
 
 func apply(result: Dictionary, frame: int) -> void:
+	if result.get("contact", false):
+		contact_grace_left = contact_drain_delay
 	if result.get("glance", false):
 		glances += 1
 	if staggered:
@@ -140,13 +145,15 @@ func apply(result: Dictionary, frame: int) -> void:
 
 
 func step(delta: float) -> void:
+	var held := minf(delta, contact_grace_left)
+	contact_grace_left = maxf(0.0, contact_grace_left - delta)
 	if staggered:
 		stagger_left -= delta
 		if stagger_left <= 0.0:
 			_end_stagger()
 		return
 	idle += delta
-	var draining := minf(delta, idle - drain_delay)
+	var draining := minf(delta - held, idle - drain_delay)
 	if draining > 0.0:
 		posture = maxf(0.0, posture - drain_rate * draining)
 

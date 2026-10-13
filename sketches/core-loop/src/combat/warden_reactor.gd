@@ -44,6 +44,7 @@ const RIDE_GAIN := 8.0
 const FACE_SLOPE := 0.15
 const POUR_OFFSET := Vector3(0.0, 0.0, -6.0)
 const SHEET_COLOR := Palette.SANDSTONE
+const MOUNTED_POSTURE := {"contact_drain_delay": 6.0}
 
 var gates_opened := 0
 var rides := 0
@@ -66,6 +67,15 @@ func sheet_live() -> bool:
 # --- The hook ------------------------------------------------------------------------------
 
 func step(warden, delta: float) -> void:
+	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
+		warden._posture.contact_drain_delay = float(MOUNTED_POSTURE["contact_drain_delay"])
+		for child in warden.get_children():
+			if child is CollisionShape3D:
+				if not child.shape is SphereShape3D:
+					var core := SphereShape3D.new()
+					core.radius = warden.FAMILY_POINT_RADIUS
+					child.shape = core
+				child.global_position = warden.family_point_at()
 	if sheet_left > 0.0:
 		sheet_left = maxf(0.0, sheet_left - delta)
 		if sheet_left <= 0.0:
@@ -160,11 +170,7 @@ func _ride(warden, delta: float) -> void:
 		var point: Vector3 = warden.family_point_at()
 		var touching: bool = in_sheet(warden, ball) and closing >= RIDE_MIN_SPEED \
 				and ball.distance_to(point) <= warden.FAMILY_POINT_RADIUS + Tuning.RADIUS
-		var paid: bool = warden.get_meta("reactor_sheet_contact", false)
-		warden.set_meta("reactor_sheet_contact", touching)
 		if touching:
-			if not paid and target.has_method("_on_enemy_touched"):
-				target._on_enemy_touched(warden, (ball - point).normalized())
 			riding = false
 			return
 	if not in_sheet(warden, ball) or closing < RIDE_MIN_SPEED or (not mounted and ball.y >= core):
