@@ -331,7 +331,6 @@ var escalation := ""
 var heft_lift := 0
 # A full ultimate meter adds one more step, the same size (SKILL-BAR section 4, music).
 var ultimate_lift := false
-var _requested_ultimate_lift := false
 var _parameter_curve_base := 0.0
 var _parameter_curve_masks := PackedFloat32Array()
 var _parameter_curve_play := false
@@ -912,7 +911,6 @@ func set_heft_lift(steps: int) -> void:
 # set_heft_lift uses. A layer is added, never swapped (MUSIC-GEMS.md G11); the landing's drop
 # or a cancel that spends the meter releases it at the next bar.
 func set_ultimate_lift(on: bool) -> void:
-	_requested_ultimate_lift = on
 	for item in _bar_queue:
 		if (item["set"] as Dictionary).has("ult"):
 			item["set"]["ult"] = on
@@ -1512,9 +1510,6 @@ func _run(action: Dictionary) -> void:
 			_pulse_until = -1
 			_drop = {}
 			mode = action["mode"]
-			if ultimate_lift != _requested_ultimate_lift:
-				ultimate_lift = _requested_ultimate_lift
-				events_log.append(["ult", clock, ultimate_lift])
 			_new_phrase()
 			_release_all()
 			_retarget()
@@ -1641,11 +1636,9 @@ func _run(action: Dictionary) -> void:
 				_set_key(int(change["key"]))
 			# The set piece's landing drop releases the meter's lift on its own beat: the drop
 			# clears the bar queue, so a release queued for the next bar would be lost.
-			if change.has("ult"):
-				_requested_ultimate_lift = bool(change["ult"])
-				if _requested_ultimate_lift != ultimate_lift:
-					ultimate_lift = _requested_ultimate_lift
-					events_log.append(["ult", clock, ultimate_lift])
+			if change.has("ult") and bool(change["ult"]) != ultimate_lift:
+				ultimate_lift = bool(change["ult"])
+				events_log.append(["ult", clock, ultimate_lift])
 			if track == "warden":
 				section = "drop"
 				if not lap:
