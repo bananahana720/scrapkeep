@@ -221,10 +221,7 @@ func _check_base(unit: Node3D) -> void:
 	for name in BASE_FUNCTIONS:
 		var block: String = "func " + name + source.get_slice("func " + name, 1).get_slice("\n\n", 0)
 		t.check("base gameplay " + name, block.strip_edges().sha256_text() == BASE_FUNCTIONS[name])
-	t.eq("inherited counter unchanged", FileAccess.get_sha256("res://src/combat/counter.gd"),
-		"5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554")
-	t.eq("inherited enemy unchanged", FileAccess.get_sha256("res://src/combat/enemy.gd"),
-		"b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b")
+	# Shared combat files are not pinned here; the merge-time fence owns shared-file changes (2026-10-13, ENEMY-PINS).
 
 
 func _check_pose(unit: Node3D) -> void:

@@ -14,10 +14,6 @@ const GAMEPLAY_HASHES := {
 	"take_damage": "da8f0da2090fa2316550164b6eb7518ef16d2aaf524dd88a2fc90365a292f603",
 	"_die": "6fe86d1077f6f165709184282a397ce2ffaa9542f30990cf6cd1658c463792ea",
 }
-const INHERITED_HASHES := {
-	"counter": "5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554",
-	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
-}
 var t := T.new("enemy_drill_crew_asset_test")
 var game
 var fixture: Node3D
@@ -193,9 +189,7 @@ func _baseline() -> void:
 		var match0 := re.search(source)
 		t.check("base gameplay function unchanged " + name, match0 != null
 			and match0.get_string().strip_edges().sha256_text() == GAMEPLAY_HASHES[name])
-	for name in INHERITED_HASHES:
-		t.eq("inherited collider/AI unchanged " + name,
-			FileAccess.get_sha256("res://src/combat/" + name + ".gd"), INHERITED_HASHES[name])
+	# Shared combat files are not pinned here; the merge-time fence owns shared-file changes (2026-10-13, ENEMY-PINS).
 	for pair in [["PLATING", "22.0"], ["HP", "90.0"], ["LEAD", "0.8"], ["BORE_RADIUS", "3.0"],
 		["BORE_DAMAGE", "11.0"], ["BORE_SHOVE", "7.0"]]:
 		t.check("base constant " + pair[0], source.split("\n").has("const %s := %s" % [pair[0], pair[1]]))

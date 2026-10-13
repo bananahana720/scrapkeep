@@ -15,10 +15,6 @@ const GAMEPLAY := {
 	"_live": "922788a94ba22d28d18cc2734077951ad4b69219a7def45bb0fc128130c98dca",
 	"_on_broken": "dba8bcae678917a5752b106c595b6df15ed90cc0b0c911994414c1a21f3976fd",
 }
-const INHERITED := {
-	"counter": "5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554",
-	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
-}
 const SOCKETS := {
 	"reel_axis": Vector3(0, 0.9, -1.3), "post_base": Vector3(0, 0, -1.3),
 	"post_top": Vector3(0, 2.4, -1.3), "catch_endpoint": Vector3(0, 1.2, 0),
@@ -208,8 +204,7 @@ func _run() -> void:
 	for method in GAMEPLAY:
 		var text := source.get_slice("func " + method + "(", 1).get_slice("\n\n", 0)
 		t.check("base gameplay source " + method, text.sha256_text() == GAMEPLAY[method])
-	for file in INHERITED:
-		t.check("base inherited " + file, FileAccess.get_sha256("res://src/combat/" + file + ".gd") == INHERITED[file])
+	# Shared combat files are not pinned here; the merge-time fence owns shared-file changes (2026-10-13, ENEMY-PINS).
 	var actor = _spawn()
 	var constants: Dictionary = actor.get_script().get_script_constant_map()
 	for name in BASE_CONSTANTS:
