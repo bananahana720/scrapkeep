@@ -3,6 +3,8 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
+const Music := preload("res://src/presentation/music_engine.gd")
+const Ace := preload("res://src/presentation/ace_sequencer.gd")
 const Rows := preload("res://src/presentation/music_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
@@ -42,6 +44,7 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	t.check("existing ACE stems perform in real Game", audio.ace_playing())
+	_crossfade_fixture(audio.ace_manifest)
 	var ace = audio.ace
 	_pump_to(audio, engine.clock + Harmony.BAR * 2)
 	t.eq("source-enabled restart aligns step and phrase origins", engine.grid_origin, engine.bar_origin)
@@ -167,3 +170,52 @@ func _hum_in_mix(audio) -> bool:
 		if (audio.out_music[i] - audio.ace.out[i] - audio.engine.out_landmark[i]).length_squared() > 0.00000001:
 			return false
 	return true
+
+
+func _crossfade_fixture(manifest_path: String) -> void:
+	var transport := Music.new()
+	var seq := Ace.new(manifest_path)
+	var feed := {"threat": 0.1, "armour": 1.0}
+	transport.set_parameter_source(func(): return feed.duplicate())
+	transport.parameter_commit.connect(func(at, values, released, lift, reason):
+		seq.commit_parameters(at, values, released, lift, reason))
+	seq.parameter_enabled = true
+	seq.parameters = feed.duplicate()
+	seq.start_level(0)
+	transport.schedule_restart(0, Music.PLAY, 0)
+	_pair_to(transport, seq, Harmony.BAR + 1)
+	for incoming in ["travel", "calm"]:
+		var outgoing: String = seq.section
+		var old: Array = seq.voices.duplicate()
+		var starts := old.map(func(v): return v.gain)
+		var boundary: int = (floori(float(transport.clock) / (Harmony.BAR * Harmony.PHRASE_BARS)) + 1) * Harmony.BAR * Harmony.PHRASE_BARS
+		feed.threat = 0.7 if incoming == "travel" else 0.1
+		var ms: float = seq.manifest.join_ms
+		var breath_row: Dictionary = seq.manifest.breath[seq.breath]
+		if seq.sections[incoming].profile == "breath":
+			ms = maxf(ms, float(breath_row.ramp_in_ms))
+		if seq.sections[outgoing].profile == "breath":
+			ms = maxf(ms, float(breath_row.ramp_out_ms))
+		var duration: int = mini(maxi(1, roundi(ms * Harmony.RATE / 1000.0)), int(seq.manifest.pre_roll))
+		t.check("manifest gives nonzero join " + incoming, duration > 1)
+		_pair_to(transport, seq, boundary)
+		t.eq("join applies no pending threat before phrase " + incoming, seq.pressure, 0.1 if incoming == "travel" else 0.7)
+		t.check("old voices stay at full committed gains before phrase " + incoming, old.all(func(v): return v.gain == starts[old.find(v)]))
+		for elapsed in [1, floori(duration / 2.0), duration]:
+			_pair_to(transport, seq, boundary + elapsed)
+			t.eq("section enters on authorized phrase " + incoming, seq.events_log.filter(func(e): return e[0] == "enter").back()[1], boundary)
+			for i in old.size():
+				var v = old[i]
+				t.near("outgoing join %s %s at %d" % [outgoing, v.stem, elapsed], v.gain, float(starts[i]) * (1.0 - float(elapsed) / duration))
+			for v in seq.voices:
+				var row: Dictionary = seq.manifest.profiles[seq.sections[incoming].profile][v.stem]
+				var target: float = db_to_linear(float(row.volume_db)) * (float(feed.threat) if v.stem == "other" else 1.0)
+				t.near("incoming join %s %s at %d" % [incoming, v.stem, elapsed], v.gain, target * float(elapsed) / duration)
+		t.check("completed join removes outgoing voices " + incoming, old.all(func(v): return not seq.fading.has(v)))
+
+
+func _pair_to(transport, seq, until: int) -> void:
+	while transport.clock < until:
+		var n := mini(4096, until - transport.clock)
+		transport.render(n)
+		seq.render(n)
