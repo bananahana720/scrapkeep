@@ -118,6 +118,7 @@ func _run() -> void:
 	t.check("Mind enables its grown median pin", MindBands.EXPECT_GROWN_S > 0.0)
 	var quarantine := FileAccess.get_file_as_string("res://tests/QUARANTINE.tsv")
 	t.check("Mind remains a smoke failure when red", not quarantine.contains("posture_bands_mind_test\t"))
+	t.check("reactor remains a smoke failure when red", not quarantine.contains("posture_bands_reactor_test\t"))
 	game.free()
 	quit(t.verdict())
 
