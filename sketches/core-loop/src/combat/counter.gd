@@ -86,14 +86,24 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	fleet = spec.get("fleet")
 	if holds != null:
 		holds.released.connect(_on_hold_released)
-	# The bot supplies a spawn-order sign; player runs retain their existing strafe.
-	_strafe = float(get_meta("bot_strafe", 1.0 if (get_instance_id() % 2) == 0 else -1.0))
+	# The bot supplies its own spawn-order sign; otherwise the sign follows this run's spawn order.
+	_strafe = float(get_meta("bot_strafe", _spawn_order_sign()))
 	_configure(threat)
 	# A unit always closes to where its attack reaches before it circles.
 	keep_far = minf(keep_far, attack_range * 0.9)
 	_rest = first_rest
 	_build_crew()
 	_build_tool()
+
+
+# Each counter setup in a run takes the next serial from world_root, so runtime identity never
+# reaches gameplay: the sign alternates +1, -1, ... in spawn order. No root falls back to +1.
+func _spawn_order_sign() -> float:
+	if world_root == null:
+		return 1.0
+	var serial := int(world_root.get_meta("counter_spawn_serial", 0))
+	world_root.set_meta("counter_spawn_serial", serial + 1)
+	return 1.0 if serial % 2 == 0 else -1.0
 
 
 func state_name() -> String:
