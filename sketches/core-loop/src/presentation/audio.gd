@@ -506,6 +506,7 @@ func _process(delta: float) -> void:
 # sample-locked. The synth band fills its ring; the ACE band keeps it at the POC's
 # QUEUE_TARGET, so a contact reaches the speaker sooner.
 func _pump() -> void:
+	_guard_park_bookings()
 	if _ace_arrival_stage > 0 and _ace_arrival_at >= 0 and engine.clock > _ace_arrival_at and not engine.in_drop():
 		var stage := _ace_arrival_stage
 		_ace_arrival_stage = 0
@@ -1457,8 +1458,39 @@ func _on_hotwire_offered(_part_id: String, _recycle: int) -> void:
 	play("hotwire_offer", 0.0, 1.0, "SFX", "hotwire_offer")
 
 
-# Resolve the bus id against the same authored row the director reads.
+# Stage seconds and transport samples meet at the advance that schedules the event.
+func park_transport(stage_s: float) -> Dictionary:
+	if sound_ready:
+		_flush_flow()
+	var bar: int = engine.bar_len()
+	var origin: int = engine.next_bar()
+	if engine.grid != null:
+		origin = engine.grid.next_bar(engine.clock)
+		bar = engine.grid.next_bar(origin + 1) - origin
+	return {"bar_s": float(bar) / Harmony.RATE,
+		"bar_origin_s": stage_s + float(origin - engine.clock) / Harmony.RATE}
+
+
+func _park_director():
+	if ctx == null or ctx.get("root") == null:
+		return null
+	var world = ctx.root.get("world")
+	return world.events if world != null else null
+
+
+func _park_event_state(event_id: String) -> Dictionary:
+	var director = _park_director()
+	if director != null:
+		for state in director._park_states:
+			if state.row.id == event_id and not state.weather:
+				return state
+	return {}
+
+
 func _park_event_row(event_id: String) -> Dictionary:
+	var state := _park_event_state(event_id)
+	if not state.is_empty():
+		return state.row
 	if ctx == null or ctx.get("terrain") == null:
 		return {}
 	var map = ctx.terrain.map()
@@ -1471,6 +1503,7 @@ func _park_event_row(event_id: String) -> Dictionary:
 
 
 func _on_event_announced(event_id: String, seconds: float) -> void:
+	var state := _park_event_state(event_id)
 	var row := _park_event_row(event_id)
 	if row.is_empty():
 		on_beat("event_announced")
@@ -1481,28 +1514,58 @@ func _on_event_announced(event_id: String, seconds: float) -> void:
 	var options := {"theme": engine.theme, "motif": _motif,
 		"ancient": MusicRows.ANCIENT_VOICES.get(row.effect.get("miniboss", ""), "reactor")}
 	var lead := roundi(seconds * Harmony.RATE)
-	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead}
+	var landing_s := -1.0
+	if not state.is_empty():
+		var fact: Dictionary = _park_director()._park_fact(state, "announced")
+		landing_s = float(fact.landing_s)
+		lead = roundi((landing_s - float(fact.time_s)) * Harmony.RATE)
+	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead,
+		"landing_s": landing_s, "booked": true}
 	engine.park_cue(row.music_cue.telegraph, lead, engine.clock, options,
 		PRIORITY_DB[Rows.priority("event_announced")], event_id)
+	_book_park_drop(event_id, _park_cues[event_id])
 	_duck(0.6, seconds)
+
+
+func _book_park_drop(event_id: String, cue: Dictionary) -> void:
+	engine.park_cue(cue.row.music_cue.land, 0, cue.due, cue.options,
+		PRIORITY_DB[Rows.priority("event_started")], event_id)
+
+
+# Check the director's exact guards before a block can render the predicted impact.
+# Holding starts at the deadline; checking clearance during the lead protects the ring.
+func _guard_park_bookings() -> void:
+	var director = _park_director()
+	if director == null:
+		return
+	for event_id in _park_cues.keys():
+		var cue: Dictionary = _park_cues[event_id]
+		var state := _park_event_state(event_id)
+		if state.is_empty() or state.phase not in [director.ANNOUNCED, director.LIVE]:
+			engine.cancel_park_cue(event_id)
+			_park_cues.erase(event_id)
+			continue
+		if state.phase == director.LIVE:
+			continue
+		var safe: bool = not state.holding and director.stage_time >= director._park_quiet_until \
+			and director._park_capacity(state) and director._park_route_safe(state) \
+			and director._park_clear(state, ctx.player.ball_position(), ctx.player.state.velocity, state.context)
+		if not safe:
+			engine.cancel_park_cue(event_id)
+			cue.booked = false
+		elif float(state.due_s) != float(cue.landing_s) or not cue.booked:
+			engine.cancel_park_cue(event_id)
+			cue.landing_s = state.due_s
+			cue.due = engine.clock + roundi((float(state.due_s) - director.stage_time) * Harmony.RATE)
+			cue.booked = cue.due >= engine.clock
+			if cue.booked:
+				_book_park_drop(event_id, cue)
 
 
 func _park_event_land(event_id: String) -> bool:
 	if not _park_cues.has(event_id):
 		return false
-	var cue: Dictionary = _park_cues[event_id]
-	engine.cancel_park_cue(event_id)
-	var at: int = cue.due
-	if at < engine.clock:
-		# A held site is committed only on started. Never play a predicted impact.
-		var bar_s := 240.0 / 172.0
-		var bar_frames := roundi(bar_s * Harmony.RATE)
-		at += ceili(float(engine.clock - at) / bar_frames) * bar_frames
-		park_cue_late.append({"id": event_id, "due": cue.due, "clock": engine.clock, "at": at})
-		if park_cue_late.size() > 32:
-			park_cue_late.pop_front()
-	engine.park_cue(cue.row.music_cue.land, 0, at, cue.options,
-		PRIORITY_DB[Rows.priority("event_started")], event_id)
+	# The prebooked action may already be in the rendered block. Never cancel or replay it.
 	_park_cues.erase(event_id)
 	return true
 
