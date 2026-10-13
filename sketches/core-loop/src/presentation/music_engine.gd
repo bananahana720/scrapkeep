@@ -1261,8 +1261,8 @@ func _run_due() -> void:
 	var due: Array = []
 	for action in _actions:
 		if action["at"] <= clock:
-			# A tick on a bar line hears that bar's queued key, not the old key.
-			if action["type"] == "door_tick" and _step_clock != clock and posmod(clock - grid_origin, step_len) == 0:
+			# Keyed cues on a step boundary hear the committed bar key.
+			if action["type"] in ["door_tick", "park_cue"] and _step_clock != clock and posmod(clock - grid_origin, step_len) == 0:
 				continue
 			due.append(action)
 	for action in due:
