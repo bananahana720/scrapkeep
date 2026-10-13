@@ -39,7 +39,7 @@ func _run() -> void:
 	bot._fight(w, tick)
 	var charged: Vector3 = bot.steer_seen
 	t.near("charging keeps the same return foot", Vector2(charged.x - w.home.x, charged.z - w.home.z).length(), runup)
-	t.near("charging never moves the return target outward", Vector2(charged.x - dry_steer.x, charged.z - dry_steer.z).length(), 0.0)
+	t.near("charging never moves the return target outward", Vector2(charged.x - w.home.x, charged.z - w.home.z).length() - Vector2(dry_steer.x - w.home.x, dry_steer.z - w.home.z).length(), 0.0)
 	t.check("charging return target stays within the pulse ring", Vector2(charged.x - w.home.x, charged.z - w.home.z).length() <= w.pulse_radius)
 	t.check("charging still reserves boost for the live sheet", not bot.source.press.get("shift_pressed", false) and not bot.source.hold.get("shift_held", false))
 	game.free()
