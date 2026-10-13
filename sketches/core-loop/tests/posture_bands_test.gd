@@ -106,12 +106,8 @@ func _initialize() -> void:
 	var cell := _cell(cells)
 	var small := float(cell.get("small_median_s", "0"))
 	var grown := float(cell.get("grown_median_s", "0"))
-	# The band is a property of the swept cell, so it is checked on the sweep table. Three live seeds
-	# sit at the threshold and flip with any change to a random stream (nine seeds: 63.9 / 31.6 s, 2.02);
-	# the 10 percent checks below still catch a fight that changed.
-	var swept_small := float(swept.get("small_median_s", "0"))
-	t.check("over the sweep seeds small takes at least twice grown's time", swept_grown > 0.0 and swept_small >= 2.0 * swept_grown,
-		"small %.1f s, grown %.1f s" % [swept_small, swept_grown])
+	t.check("over the sweep seeds small takes at least twice grown's time", grown > 0.0 and small >= 2.0 * grown,
+		"small %.1f s, grown %.1f s" % [small, grown])
 	t.eq("small breaks it in every run", cell.get("small_broke", ""), str(SEEDS.count(",") + 1))
 	t.eq("the camper never breaks it", cell.get("camper_broke", ""), "0")
 	t.check("small median within 10 percent of the sweep's", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
