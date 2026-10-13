@@ -1,10 +1,14 @@
 # smoke: solo timeout=360s (four isolated seeded bot children at a time)
 # 2026-10-12, W13 smoke triage: 352.550 s alone; 1.5x exceeds the ordinary ceiling, so cap at 360 s. The fixed 5/16 band still fails at 4/16.
+# 2026-10-13 RED-COMBAT regression: Sable's Bank Shot removes the old
+# planned-bite reel (9000ca2, PC-SABLE brief-r4.md:3-7). A jump must clear
+# the floor probe before the first bite, so hit-stop cannot end that chain.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # Rule: the explorer re-bites a different enemy during airborne grace and pays a
 # two-link chain; the seed repeats and the skipper/camper records are the same with the
@@ -129,7 +133,7 @@ func _finish() -> void:
 
 func _check_hand() -> void:
 	_hand_game.ctx.calm = true
-	var driver := BotDriver.new(_hand_game, "completionist", 2)
+	var driver := BotDriver.new(_hand_game, "completionist", 0)
 	driver.start()
 	var player = _hand_game.player
 	var first := StaticBody3D.new()
@@ -145,8 +149,19 @@ func _check_hand() -> void:
 	driver._off_line = 99.0
 	driver._harpoon_hand(first, 1.0 / 90.0)
 	driver._act(player.ball_position(), first, 1.0 / 90.0)
-	_report("hand first bite", driver._chain_phase == "first" and driver._chain_second == second
-		and driver.source.press.get("jump_pressed", false), "two anchors arm the explorer's jump and first bite")
+	_report("hand first jump", driver._chain_phase == "takeoff" and driver._chain_second == second
+		and driver.source.press.get("jump_pressed", false)
+		and not driver.source.press.get("harpoon_pressed", false), "two anchors arm the jump before any bite")
+	driver.source.poll(player.intent)
+	player._read_grammar()
+	_report("hand grounded clearance", not player.kit.hooked and not player.chain.active(),
+		"a launch still in the floor probe cannot start a chain")
+	# Stage the observed clearance, independently of the pending jump impulse.
+	player.state.grounded = false
+	player.body().global_position += Vector3.UP * Tuning.RADIUS * 2.0
+	player.body().linear_velocity = Vector3.UP * 10.0
+	player.kit.aim = {"body": first, "point": first.global_position, "normal": Vector3.UP, "state": Augments.AIM_BODY}
+	driver._explorer_chain(1.0 / 90.0)
 	driver.source.poll(player.intent)
 	player._read_grammar()
 	_report("hand anchor A", player.kit.hooked and player.kit.anchor_body == first, "first input bites A")
