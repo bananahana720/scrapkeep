@@ -65,6 +65,7 @@ func _run() -> void:
 	game.player.reset_to(game.ctx.terrain.drop_point(foot.x,foot.z,game.player.tuning.RADIUS))
 	for i in Engine.physics_ticks_per_second: await physics_frame
 	game.player.state.boost_cooldown=BotDriver.BOOST_GAP
+	game.player.abilities.slot("movement").available=false
 	bot._boost_clock=0.0
 	bot.source.press.clear()
 	bot._fight(w,1.0/Engine.physics_ticks_per_second)

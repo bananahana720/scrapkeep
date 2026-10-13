@@ -103,6 +103,9 @@ func _run() -> void:
 	var foot: Vector3=w.home+driver.sheet_dir*(driver.SHEET_RUN-Tuning.RADIUS)
 	game.player.reset_to(game.ctx.terrain.drop_point(foot.x,foot.z,Tuning.RADIUS),-driver.sheet_dir*game.player.tuning.f("cruise"))
 	var contacts=[]
+	var body_contacts=[]
+	game.player.body().enemy_touched.connect(func(enemy,_normal):
+		if enemy==w: body_contacts.append(game.player.ball_position()))
 	game.events.enemy_struck.connect(func(enemy,kind,force):
 		if enemy==w and kind in ["ram","stomp","slam"]: contacts.append([kind,force,game.player.ball_position()]))
 	driver.on_pulse(w,false)
@@ -110,6 +113,7 @@ func _run() -> void:
 		w._pulse_clock=0.0
 		await physics_frame
 	t.check("cruise from the authored dam apron lands a real contact on the pulse sheet",not contacts.is_empty(),"contacts %s, final ball %s" % [contacts,game.player.ball_position()])
+	t.check("the solver contacts the same visible core",not body_contacts.is_empty(),str(body_contacts))
 	t.check("the applied contact lands at the authored visual core",contacts.any(func(row): return (row[2] as Vector3).distance_to(w.family_point_at())<=w.FAMILY_POINT_RADIUS+Tuning.RADIUS),str(contacts))
 	game.free()
 	quit(t.verdict())
