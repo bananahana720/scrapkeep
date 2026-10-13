@@ -45,7 +45,23 @@ func _run() -> void:
 	t.check("outbound control moves away from the core", game.player.planar_velocity().dot(sheet.sheet_dir) > Reactor.RIDE_MIN_SPEED)
 	bot._boost_clock = 0.0
 	bot._fight(w, tick)
-	t.check("dam hand never boosts an outbound approach", not bot.source.press.get("shift_pressed", false))
+	t.check("dam hand never boosts an outbound approach", not bot.source.press.get("shift_pressed", false) and not bot.source.hold.get("shift_held", false))
+	t.near("suppressed outbound launch keeps boost clock", bot._boost_clock, 0.0)
+	t.near("suppressed outbound launch keeps hold clock", bot._shift_left, 0.0)
+	for direction in [0.0, -1.0]:
+		bot.source.press.clear()
+		bot.source.hold.clear()
+		game.player.reset_to(game.ctx.terrain.drop_point(foot.x, foot.z, game.player.tuning.RADIUS), sheet.sheet_dir * game.player.tuning.f("cruise") * direction)
+		for i in 2: await physics_frame
+		var label := "stationary" if direction == 0.0 else "inbound"
+		t.check(label + " launch control is grounded with sheet live", game.player.state.grounded and sheet.sheet_live())
+		t.check(label + " approach is not outbound", game.player.planar_velocity().dot(sheet.sheet_dir) <= 0.0)
+		bot._boost_clock = 0.0
+		bot._shift_left = 0.0
+		bot._fight(w, tick)
+		t.check(label + " sheet approach launches", bot.source.press.get("shift_pressed", false) and bot.source.hold.get("shift_held", false))
+		t.near(label + " launch starts boost cooldown", bot._boost_clock, BotDriver.BOOST_GAP)
+		t.near(label + " launch starts hold clock", bot._shift_left, BotDriver.SHIFT_HOLD)
 	game.player.reset_to(game.ctx.terrain.drop_point(waiting.x, waiting.z, game.player.tuning.RADIUS), Vector3.ZERO)
 	var middle := (Reactor.SHEET_SECONDS + window) * 0.5
 	while game.run.stage_time - started < middle:
