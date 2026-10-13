@@ -48,6 +48,7 @@ func _run() -> void:
 	var site: Dictionary = park.park_rows.filter(func(r): return r.id == row.site)[0]
 	point = Vector2(float(site.at[0]), float(site.at[1]))
 	before = w.terrain.height(point.x, point.y)
+	await _sample("stage load", 0.0, false)
 	w.events = Director.new(823, {}, w.terrain.map(), 14.0, Callable(w.terrain, "height"))
 	handler = Natural.new()
 	w.add_child(handler)
@@ -71,7 +72,6 @@ func _run() -> void:
 	handler.release()
 	w.free()
 	var result := t.verdict()
-	print("park_cave_in_test: PASS" if result == 0 else "park_cave_in_test: FAIL")
 	quit(result)
 
 func _sample(label: String, elapsed: float, landed: bool) -> void:
@@ -82,8 +82,8 @@ func _sample(label: String, elapsed: float, landed: bool) -> void:
 	var expected := float(row.effect.depth_m) * clampf(elapsed / float(row.effect.fill_s), 0.0, 1.0)
 	var query := PhysicsRayQueryParameters3D.create(Vector3(point.x, before + 100.0, point.y), Vector3(point.x, before - 200.0, point.y))
 	var hit: Dictionary = w.get_world_3d().direct_space_state.intersect_ray(query)
-	var body: Node3D = handler._prepared[row.id].overlay
-	var drawn := _mesh_height(body.get_child(0), point) if body.is_visible_in_tree() else INF
+	var body: Node3D = handler._prepared[row.id].overlay if handler != null else w.terrain.cave_roof(row.id).get("body") if w.terrain.has_method("cave_roof") else null
+	var drawn := _mesh_height(body.get_child(0), point) if body != null and body.is_visible_in_tree() else INF
 	var ray_y: float = hit.position.y if not hit.is_empty() else INF
 	print("SAMPLE %s elapsed=%.2f pre=%.6f height=%.6f drop=%.6f expected=%.6f ray=%.6f drawn=%.6f" % [label, elapsed, before, height, drop, expected, ray_y, drawn])
 	samples.append({"label": label, "elapsed": elapsed, "before": before, "height": height, "drop": drop, "expected": expected, "ray": ray_y, "drawn": drawn, "drawn_method": "visible mesh triangles"})
