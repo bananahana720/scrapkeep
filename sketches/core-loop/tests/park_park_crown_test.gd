@@ -46,6 +46,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Density := preload("res://tests/park_density_test.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -131,6 +132,12 @@ func _run() -> void:
 	t.check("the stage's pins hold on the committed file", fails.is_empty(), "; ".join(fails))
 	var event_failures := lightning_failures(park)
 	t.check("both Crown lightning rows register supported runtime event states", event_failures.is_empty(), "; ".join(event_failures))
+	var cue_failures := music_cue_failures(park)
+	t.check("every authored Crown telegraph and landing music cue resolves", cue_failures.is_empty(), "; ".join(cue_failures))
+	var unknown_cue: Dictionary = park.duplicate(true)
+	unknown_cue["event_rows"][0]["music_cue"]["land"] = "crown_unknown_cue_negative_control"
+	var unknown_failures := music_cue_failures(unknown_cue)
+	t.eq("an unknown landing cue fails music resolution", unknown_failures.size(), 1)
 	t.eq("the authored engage ring stays 120 m", float(park["landmark"]["reach_m"]), 120.0)
 	var by_row := {}
 	for row in park["park_rows"]:
@@ -222,6 +229,19 @@ static func lightning_failures(park: Dictionary) -> Array:
 		var landed := str(EventDirector.PARK_LAND_FACTS.get(form, ""))
 		if form != "lightning_mark" or landed != "lightning_mark_landed" or EventKinds.world_row(form).is_empty() or EventKinds.world_row(landed).is_empty():
 			out.append("%s unsupported owner records %s/%s" % [id, form, landed])
+	return out
+
+
+static func music_cue_failures(park: Dictionary, owner = MusicRows) -> Array:
+	var out := []
+	for row: Dictionary in park["event_rows"]:
+		var context := {"theme": 2, "motif": "sable",
+			"ancient": MusicRows.ANCIENT_VOICES.get(row["effect"].get("miniboss", ""), "reactor")}
+		for phase in ["telegraph", "land"]:
+			var id := str(row["music_cue"][phase])
+			var cue: Dictionary = owner.cue(id, context)
+			if cue.is_empty() or str(cue.get("family", "")) == "" or str(cue.get("voice", "")) == "" or cue.get("notes", []).is_empty() or bool(cue.get("rise", false)) != (phase == "telegraph"):
+				out.append("%s %s cue %s does not resolve for its phase" % [row["id"], phase, id])
 	return out
 
 
