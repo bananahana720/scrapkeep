@@ -1409,7 +1409,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 			and target.mount_driver.has_method("sheet_live"):
 		var sheet = target.mount_driver
 		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
-		var runup: float = float(sheet.SHEET_RUN) + RUNUP_EDGE if target.state_name() == "charging" else minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
+		var runup: float = minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
 		var foot: Vector3 = at + dir * runup
 		var live: bool = sheet.sheet_live()
 		var steer: Vector3 = target.family_point_at() if live else _ground_point(foot.x, foot.z)
