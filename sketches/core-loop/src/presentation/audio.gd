@@ -1477,7 +1477,39 @@ func park_transport(stage_s: float) -> Dictionary:
 	_park_transport_snapshot = {"bar_s": float(bar) / Harmony.RATE,
 		"bar_origin_s": stage_s + float(origin - engine.clock) / Harmony.RATE,
 		"origin": origin}
+	_remap_suspended_park_cues()
 	return {"bar_s": _park_transport_snapshot.bar_s, "bar_origin_s": _park_transport_snapshot.bar_origin_s}
+
+
+func _park_stage_suspended() -> bool:
+	if get_tree().paused:
+		return true
+	if ctx == null or ctx.get("root") == null:
+		return false
+	var world = ctx.root.get("world")
+	return world != null and world.bay != null and world.bay.inside
+
+
+# Resumption changes the stage-to-sample mapping, never the director's deadline.
+func _remap_suspended_park_cues() -> void:
+	if _park_stage_suspended():
+		return
+	for event_id in _park_cues:
+		var cue: Dictionary = _park_cues[event_id]
+		if not cue.get("remap", false):
+			continue
+		var state := _park_event_state(event_id)
+		if state.is_empty():
+			continue
+		cue.landing_s = float(state.due_s)
+		cue.transport = _park_transport_snapshot.duplicate()
+		var mapped := _park_sample_at(cue.landing_s, cue.transport)
+		var bar := roundi(float(cue.transport.bar_s) * Harmony.RATE)
+		cue.due = int(cue.transport.origin) + ceili(float(mapped - int(cue.transport.origin)) / bar) * bar
+		if engine.grid != null:
+			cue.due = engine.grid.next_bar(maxi(mapped, engine.clock))
+		cue.after_land = mapped < engine.clock or int(cue.due) != mapped
+		cue.remap = false
 
 
 func _park_sample_at(landing_s: float, snapshot: Dictionary) -> int:
@@ -1492,6 +1524,7 @@ func _update_park_deadline(event_id: String, cue: Dictionary, state: Dictionary)
 	cue.transport = _park_transport_snapshot.duplicate()
 	cue.due = _park_sample_at(cue.landing_s, cue.transport)
 	cue.booked = false
+	cue.after_land = false
 
 
 # The previous advance can reschedule without publishing a new fact. Capture it
@@ -1499,13 +1532,20 @@ func _update_park_deadline(event_id: String, cue: Dictionary, state: Dictionary)
 func _sync_park_deadlines() -> void:
 	for event_id in _park_cues:
 		var state := _park_event_state(event_id)
-		if not state.is_empty():
+		if not state.is_empty() and not _park_cues[event_id].get("remap", false):
 			_update_park_deadline(event_id, _park_cues[event_id], state)
 
 
 func _restore_park_drop(event_id: String, cue: Dictionary) -> void:
-	if cue.booked:
+	if cue.booked or cue.get("remap", false):
 		return
+	if cue.get("after_land", false):
+		var state := _park_event_state(event_id)
+		var director = _park_director()
+		if state.is_empty() or director == null or state.phase != director.LIVE:
+			return
+		cue.due = engine.next_bar() if engine.grid == null else engine.grid.next_bar(engine.clock)
+		cue.after_land = false
 	if int(cue.due) < engine.clock:
 		park_cue_late.append({"id": event_id, "due": cue.due, "clock": engine.clock})
 		return
@@ -1589,6 +1629,13 @@ func _guard_park_bookings() -> void:
 			engine.cancel_park_cue(event_id)
 			_park_cues.erase(event_id)
 			continue
+		if state.phase == director.ANNOUNCED and _park_stage_suspended():
+			engine.cancel_park_drop(event_id)
+			cue.booked = false
+			cue.remap = true
+			continue
+		if cue.get("remap", false):
+			continue
 		_update_park_deadline(event_id, cue, state)
 		if state.phase == director.LIVE:
 			_restore_park_drop(event_id, cue)
@@ -1607,12 +1654,14 @@ func _guard_park_bookings() -> void:
 # A clearance check cannot revoke samples already pushed into a device's ring.
 func _park_render_limit(frames: int) -> int:
 	var director = _park_director()
-	if director == null:
+	if director == null or _park_stage_suspended():
 		return frames
 	for owner in _park_cues:
 		var state := _park_event_state(owner)
-		if not state.is_empty() and state.phase == director.ANNOUNCED and not state.holding:
-			frames = mini(frames, maxi(0, int(_park_cues[owner].due) - engine.clock))
+		var cue: Dictionary = _park_cues[owner]
+		if not state.is_empty() and state.phase == director.ANNOUNCED and not state.holding \
+			and not cue.get("remap", false) and not cue.get("after_land", false):
+			frames = mini(frames, maxi(0, int(cue.due) - engine.clock))
 	return frames
 
 
