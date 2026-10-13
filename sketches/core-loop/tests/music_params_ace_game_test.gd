@@ -57,7 +57,7 @@ func _run() -> void:
 	_pump_to(audio, lift_boundary - 4096)
 	t.eq("performing ACE ultimate waits for next bar", _other_target(ace), before)
 	_pump_to(audio, lift_boundary + 4096)
-	t.near("performing ACE ultimate adds existing pressure step at next bar", _other_target(ace), _profile_other(ace) * 0.4)
+	t.near("performing ACE ultimate adds existing pressure step at next bar", _other_target(ace), _profile_other(ace) * Ace.ULTIMATE_STEP)
 	t.check("performing ACE ultimate logs its next-bar commit", ace.parameter_layer_log.back().ultimate and ace.parameter_layer_log.back().at == lift_boundary)
 	audio._set_ult_lift(false)
 	_pump_to(audio, lift_boundary + engine.bar_len() + 4096)
@@ -74,7 +74,7 @@ func _run() -> void:
 	t.near("ACE threat waits for phrase", _other_target(ace), before)
 	audio._on_pressure(0.0)
 	_pump_to(audio, boundary + 8192)
-	var expected := 1.0 - 0.1 / 48.0
+	var expected: float = 1.0 - 0.1 / audio.parameter_threat_range
 	t.near("sampled threat reaches performing ACE band", ace.pressure, expected, 0.0001)
 	t.check("audible ACE layer opens after threat", _other_target(ace) > before)
 	if not t.check("performing ACE band records committed parameters", ace.get("parameter_layer_log") is Array):
@@ -143,7 +143,7 @@ func _run() -> void:
 	var file := FileAccess.open("user://ke10-ace-commits.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify({"schema": "scrapkeep-ace-parameters/1", "commits": ace.parameter_layer_log, "samples": engine.parameter_sample_log, "band_muted": engine.band_muted, "isolated_other_peak": other_peak, "misses": ace.misses, "short_reads": ace.short_reads}))
 	file.close()
-	t.check("ACE recorded parameter commits obey chosen boundaries", ace.parameter_layer_log.all(func(c): return c.timing.is_empty() or (c.timing.phrase and c.timing.phrase_step % 128 == 0) or Rows.danger(c.danger) or (c.ultimate and c.timing.phrase_step % 16 == 0)))
+	t.check("ACE recorded parameter commits obey chosen boundaries", ace.parameter_layer_log.all(func(c): return c.timing.is_empty() or (c.timing.phrase and c.timing.phrase_step % (Harmony.STEPS_PER_BAR * Harmony.PHRASE_BARS) == 0) or Rows.danger(c.danger) or (c.ultimate and c.timing.phrase_step % Harmony.STEPS_PER_BAR == 0)))
 	print("KE10_ACE_TRACE ", ProjectSettings.globalize_path("user://ke10-ace-commits.json"))
 	enemy.free()
 	game.queue_free()

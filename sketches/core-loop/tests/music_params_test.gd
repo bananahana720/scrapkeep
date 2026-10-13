@@ -133,6 +133,7 @@ func _advance(engine, until: int) -> void:
 func _ultimate_fixture(pilot: String) -> void:
 	var lift := Music.new()
 	input = {"threat": 0.3, "approach": 0.0, "armour": 1.0}
+	var committed_threat: float = input.threat
 	lift.set_parameter_source(func(): return input.duplicate())
 	lift.set_class_motif(pilot)
 	lift.schedule_restart(0, Music.PLAY, 0)
@@ -143,15 +144,16 @@ func _ultimate_fixture(pilot: String) -> void:
 	_advance(lift, Harmony.BAR * 2)
 	t.near("ultimate waits for next bar " + pilot, lift.layer_target(Music.ARP), before)
 	lift.render(1)
-	# ARP's existing curve spans 0.3..0.5; the lift adds 0.12 to committed 0.3.
-	var x := (0.42 - 0.3) / (0.5 - 0.3)
-	t.near("ultimate rises at next bar " + pilot, lift.layer_target(Music.ARP), x * x * (3.0 - 2.0 * x))
+	var curve: Array = Music.CURVES[Music.ARP]
+	var x := clampf((minf(1.0, committed_threat + Music.HEFT_STEP) - float(curve[1])) / (float(curve[2]) - float(curve[1])), 0.0, 1.0)
+	var expected := float(curve[0]) + (1.0 - float(curve[0])) * x * x * (3.0 - 2.0 * x)
+	t.near("ultimate rises at next bar " + pilot, lift.layer_target(Music.ARP), expected)
 	t.eq("ultimate admits no pending threat " + pilot, lift.layer_target(Music.LEAD), 0.0)
 	t.eq("ultimate admits no pending approach " + pilot, lift.layer_target(Music.LANDMARK_HUM), 0.0)
 	t.check("ultimate admits no pending armour " + pilot, lift.layer_target(Music.KEYS) > 0.0)
 	lift.set_ultimate_lift(false)
 	_advance(lift, Harmony.BAR * 3)
-	t.near("spent lift waits for next bar " + pilot, lift.layer_target(Music.ARP), x * x * (3.0 - 2.0 * x))
+	t.near("spent lift waits for next bar " + pilot, lift.layer_target(Music.ARP), expected)
 	lift.render(1)
 	t.eq("spent lift releases at next bar " + pilot, lift.layer_target(Music.ARP), 0.0)
 	t.check("spent lift retains committed armour " + pilot, lift.layer_target(Music.KEYS) > 0.0)
