@@ -45,6 +45,7 @@ func _run() -> void:
 		return
 	t.check("existing ACE stems perform in real Game", audio.ace_playing())
 	_crossfade_fixture(audio.ace_manifest)
+	_ultimate_section_fixture(audio.ace_manifest)
 	var ace = audio.ace
 	_pump_to(audio, engine.clock + Harmony.BAR * 2)
 	t.eq("source-enabled restart aligns step and phrase origins", engine.grid_origin, engine.bar_origin)
@@ -212,6 +213,69 @@ func _crossfade_fixture(manifest_path: String) -> void:
 				var target: float = db_to_linear(float(row.volume_db)) * (float(feed.threat) if v.stem == "other" else 1.0)
 				t.near("incoming join %s %s at %d" % [incoming, v.stem, elapsed], v.gain, target * float(elapsed) / duration)
 		t.check("completed join removes outgoing voices " + incoming, old.all(func(v): return not seq.fading.has(v)))
+
+
+func _ultimate_section_fixture(manifest_path: String) -> void:
+	var transport := Music.new()
+	var seq := Ace.new(manifest_path)
+	var committed := {"threat": 0.0, "approach": 0.0, "armour": 1.0}
+	var feed := committed.duplicate()
+	transport.set_parameter_source(func(): return feed.duplicate())
+	transport.parameter_commit.connect(func(at, values, released, lift, reason):
+		seq.commit_parameters(at, values, released, lift, reason))
+	seq.parameter_enabled = true
+	seq.parameters = committed.duplicate()
+	seq.start_level(0)
+	transport.schedule_restart(0, Music.PLAY, 0)
+	_pair_to(transport, seq, Harmony.BAR + 1)
+	t.eq("ultimate section fixture starts calm at zero threat", seq.section, "calm")
+	t.check("ultimate section fixture has no hold or protected pending entry", seq.hold_until <= seq.clock and seq.pending.is_empty())
+	t.check("ultimate step crosses travel up at rest", Ace.ULTIMATE_STEP >= Ace.TRAVEL_UP)
+	t.check("spent rest pressure crosses travel down", float(committed.threat) < Ace.TRAVEL_DOWN)
+	feed.threat = Ace.TRAVEL_UP + Ace.TRAVEL_DOWN
+	feed.approach = 1.0
+	feed.armour = 0.2
+	for lifted in [true, false]:
+		var effective: float = committed.threat + (Ace.ULTIMATE_STEP if lifted else 0.0)
+		var incoming := "travel" if effective >= Ace.TRAVEL_UP else "calm"
+		var outgoing: String = seq.section
+		var old: Array = seq.voices.duplicate()
+		var starts := old.map(func(v): return v.gain)
+		var boundary: int = (floori(float(transport.clock) / Harmony.BAR) + 1) * Harmony.BAR
+		var ms: float = seq.manifest.join_ms
+		var breath_row: Dictionary = seq.manifest.breath[seq.breath]
+		if seq.sections[incoming].profile == "breath":
+			ms = maxf(ms, float(breath_row.ramp_in_ms))
+		if seq.sections[outgoing].profile == "breath":
+			ms = maxf(ms, float(breath_row.ramp_out_ms))
+		var duration: int = mini(maxi(1, roundi(ms * Harmony.RATE / 1000.0)), int(seq.manifest.pre_roll))
+		transport.set_ultimate_lift(lifted)
+		_pair_to(transport, seq, boundary)
+		t.eq("ultimate section waits until next bar " + incoming, seq.section, outgoing)
+		t.eq("ultimate join keeps outgoing gains before bar " + incoming, old.map(func(v): return v.gain), starts)
+		for elapsed in [1, floori(duration / 2.0), duration]:
+			_pair_to(transport, seq, boundary + elapsed)
+			t.eq("ultimate selects section at next bar " + incoming, seq.section, incoming)
+			var entries: Array = seq.events_log.filter(func(e): return e[0] == "enter" and e[2] == incoming)
+			t.check("ultimate section entry timestamp " + incoming, not entries.is_empty() and entries.back()[1] == boundary)
+			t.eq("ultimate section uses manifest grid " + incoming, seq.grid_bar, int(seq.manifest.clips[seq.sections[incoming].clip].bar))
+			t.eq("ultimate commits no pending threat approach armour " + incoming, seq.parameters, committed)
+			t.near("ultimate retains committed threat " + incoming, seq.pressure, float(committed.threat))
+			for i in old.size():
+				var v = old[i]
+				t.near("ultimate outgoing join %s %s at %d" % [outgoing, v.stem, elapsed], v.gain, float(starts[i]) * (1.0 - float(elapsed) / duration))
+			for v in seq.voices:
+				var row: Dictionary = seq.manifest.profiles[seq.sections[incoming].profile][v.stem]
+				var target := db_to_linear(float(row.volume_db)) * (clampf(effective, 0.0, 1.0) if v.stem == "other" else 1.0)
+				t.near("ultimate incoming join %s %s at %d" % [incoming, v.stem, elapsed], v.gain, target * float(elapsed) / duration)
+		t.check("ultimate completed join removes outgoing voices " + incoming, old.all(func(v): return not seq.fading.has(v)))
+		t.check("ultimate transition logs authorized bar " + incoming, seq.parameter_layer_log.back().ultimate and seq.parameter_layer_log.back().at == boundary)
+	var phrase := Harmony.BAR * Harmony.PHRASE_BARS
+	_pair_to(transport, seq, phrase)
+	t.eq("pending parameters wait until phrase after ultimate", seq.parameters, committed)
+	_pair_to(transport, seq, phrase + 1)
+	t.eq("pending parameters commit on their phrase after ultimate", seq.parameters, feed)
+	t.eq("pending parameters record phrase boundary after ultimate", seq.parameter_layer_log.back().at, phrase)
 
 
 func _pair_to(transport, seq, until: int) -> void:
