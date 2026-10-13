@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "8d4f6e57e162380ecfa5a4cbaa3d25bb699b832472a8236cb8cfce87c9738756",
+  "bake_sha256": "9f10ec30d7d1c8c2301e52b4f6c70544771ac9d281a351263695c64b3068e3d1",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 982340,
-  "edges": 320881,
+  "bytes": 984065,
+  "edges": 321352,
   "first_failed": "",
   "flags": {
-    "deck": 627,
-    "door_ok": 39515,
+    "deck": 676,
+    "door_ok": 39531,
     "line": 387,
-    "open": 40664,
-    "sight_ok": 8938,
+    "open": 40680,
+    "sight_ok": 8985,
     "under": 0
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "02c6ec9267179527700112cc3869f3bd1623731161050732d03da00ed49b62dd",
+  "graph_sha256": "2d6b5d40415e18069e00e75db03870fd012e67c1d54d14f51a096f941a970691",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
-  "nodes": 41028,
-  "park_sha256": "6cbdcb9fb95b532d71afd06eb18267c9c6c8f2f93c6e7750b204b916e366b0c4",
+  "nodes": 41077,
+  "park_sha256": "ce648063a41b74b10bd49bcf43aea17c770f835a41affd22f511719d97779603",
   "pockets": [
     {
       "clear_ring": [],
@@ -215,7 +215,7 @@
         "viable": false
       },
       {
-        "cost": 1144.9,
+        "cost": 1144.4,
         "d_landmark": 255.2,
         "name": "kick_wlast_11",
         "on_route": false,
