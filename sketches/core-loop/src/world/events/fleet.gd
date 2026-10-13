@@ -89,8 +89,17 @@ func _end(row: Dictionary) -> void:
 func release() -> void:
 	for id in active.keys():
 		_end({"id": id, "kind": "fleet_landing"})
+	_free_projector()
+	_sites.clear()
+	world = null
+
+
+# The projector is never in the tree, so the tree does not free it; free it with the handler.
+func _exit_tree() -> void:
+	_free_projector()
+
+
+func _free_projector() -> void:
 	if _projector != null:
 		_projector.free()
 		_projector = null
-	_sites.clear()
-	world = null
