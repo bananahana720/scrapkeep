@@ -5,7 +5,7 @@ const Game := preload("res://src/game.gd")
 const Highdraft := preload("res://src/world/map_highdraft.gd")
 
 # The Highdraft's own light (VX1): the editor-like grid floor is hidden, a cream cloud deck lies
-# under the islands, the key is the sheet's warm morning light, the net draws its woven bone
+# under the islands, the key follows the stage's time of day, the net draws its woven bone
 # surface inside an amber edge, and weather sails stand in the stage after ten simulated
 # seconds. Colours are derived here from the D2 sheet's hexes, not read from the code's table.
 # Evidence limit: headless structure and values; no render, no capture, no feel claim.
@@ -80,15 +80,17 @@ func _run() -> void:
 			fill = light
 		elif key == null:
 			key = light
-	var warm_key := SHEET_CREAM.lerp(SHEET_AMBER, 1.0 / 3.0)
-	_t.check("the key light is the sheet's warm morning key", key != null and _near(key.light_color, warm_key),
-		"key %s, expected %s" % [key.light_color if key != null else "none", warm_key])
+	# 2026-10-13: KE7 merge 4cb6571, PARK.md:629 replaces Highdraft morning with golden/dusk.
+	# Pin the merged TIME_ROWS values independently; the sheet still owns cloud, fill and net.
+	_t.eq("the stage 5 key is golden-hour amber", key.light_color if key != null else null, Color("ffa35c"))
 	_t.check("the key is low and casts shadows", key != null and key.shadow_enabled
-		and key.rotation_degrees.x < -15.0 and key.rotation_degrees.x > -35.0, "pitch %.1f" % (key.rotation_degrees.x if key != null else 0.0))
+		and key.rotation_degrees.is_equal_approx(Vector3(-16.0, 20.0, 0.0)), "rotation %s" % (key.rotation_degrees if key != null else Vector3.ZERO))
+	_t.near("the golden-hour key keeps its time-row energy", key.light_energy if key != null else -1.0, 1.9)
 	_t.check("the fill is the sheet's cool sky", fill != null and _near(fill.light_color, SHEET_COOL))
 	_t.eq("one key plus the existing fill", lights.size(), 2)
 	var env: Environment = game.ctx.terrain.environment
-	_t.check("ambient light is the sky's cream", _near(env.ambient_light_color, SHEET_CREAM))
+	_t.eq("stage 5 ambient follows golden hour", env.ambient_light_color, Color("e0b58a"))
+	_t.eq("stage 5 ambient energy follows golden hour", env.ambient_light_energy, 0.25)
 
 	var tiles := scenery.get_node("NetDeck").find_children("Tiles_*", "MultiMeshInstance3D", false, false)
 	var woven := not tiles.is_empty()
