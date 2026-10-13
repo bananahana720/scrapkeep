@@ -236,17 +236,8 @@ func _sample_rim(label: String, expected_drop: float) -> void:
 		var collider := _faces_height(collider_faces, at)
 		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(at.x, expected + 20.0, at.y), Vector3(at.x, expected - 20.0, at.y), 0xFFFFFFFF, excluded))
 		var ray := INF if hit.is_empty() else float(hit.position.y)
-		if hit.is_empty() or absf(ray - collider) > 0.05:
+		if hit.is_empty() or absf(ray - collider) > 0.05 or absf(ray - height) > 0.05 or absf(ray - drawn) > 0.05:
 			exact_ray_misses += 1
-		# Exact closed collider triangles are checked separately. Always bracket
-		# Jolt's shared-edge rays on both sides to measure the upper one-sided limit.
-		if hit.is_empty():
-			ray = -INF
-		for shift in [Vector2(0.0001, 0), Vector2(-0.0001, 0), Vector2(0, 0.0001), Vector2(0, -0.0001), Vector2(0.0001, 0.0001), Vector2(-0.0001, 0.0001), Vector2(0.0001, -0.0001), Vector2(-0.0001, -0.0001)]:
-			var near_at: Vector2 = at + shift
-			var alternate := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(near_at.x, expected + 20.0, near_at.y), Vector3(near_at.x, expected - 20.0, near_at.y), 0xFFFFFFFF, excluded))
-			if not alternate.is_empty():
-				ray = maxf(ray, float(alternate.position.y))
 		var ray_error := absf(ray - drawn)
 		worst_ray = maxf(worst_ray, ray_error)
 		if absf(height - drawn) > 0.05:
@@ -266,6 +257,7 @@ func _sample_rim(label: String, expected_drop: float) -> void:
 		if at == Vector2(-224, 256):
 			print("RIM CORNER %s terrain=%.6f drawn=%.6f ray=%.6f expected=%.6f" % [label, height, drawn, ray, expected])
 	print("RIM SAMPLE %s points=%d terrain/drawn misses=%d ray misses=%d exact collider misses=%d exact ray edge misses=%d row-derived misses=%d worst ray/drawn=%.6f first=%s" % [label, rim_points.size(), mesh_misses, ray_misses, collider_misses, exact_ray_misses, expected_misses, worst_ray, first_bad])
+	t.eq(label + " whole boundary exact downward rays agree with terrain, drawing and closed collider", exact_ray_misses, 0)
 	t.eq(label + " whole boundary terrain agrees with uppermost drawn ground", mesh_misses, 0)
 	t.eq(label + " whole boundary collider agrees with uppermost drawn ground and terrain", ray_misses, 0)
 	t.eq(label + " whole boundary closed collider triangles agree at exact points", collider_misses, 0)
