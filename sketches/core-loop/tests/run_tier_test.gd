@@ -14,6 +14,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const Profile := preload("res://src/core/profile.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Flow := preload("res://src/core/flow.gd")
 
 # Filled from the unchanged 5838892 production schedule and settlement fixture.
 const BASE_SCHEDULE := [
@@ -81,7 +82,7 @@ func _initialize() -> void:
 			only_seed = int(arg.trim_prefix("--seed="))
 		if arg.begins_with("--section="):
 			section = arg.trim_prefix("--section=")
-	if only_seed >= 0 or section in ["card", "variants"]:
+	if only_seed >= 0 or section in ["card", "variants", "persistence"]:
 		_create_game()
 	call_deferred("_run")
 
@@ -373,6 +374,54 @@ func _card() -> void:
 	_begin(702, 0)
 	t.check("bot default unchanged", game.run.selected_run_tier() == 0 and game.run.start_pick.taken == "" and not game.flow.start_card.showing())
 
+func _persistence() -> void:
+	game.flow.store = Flow.RunStore.new("user://tier-continue-%d.json" % OS.get_process_id())
+	_begin(704, 0)
+	t.check("disk base Continue eligible", not game.flow.saved_run().is_empty())
+	t.check("disk tier-one selection", game.flow.choose_run_tier(1))
+	t.eq("disk tier-one save succeeds", game.flow.store_error, "")
+	var saved: Dictionary = game.flow.saved_run()
+	t.check("disk tier-one Continue eligible", not saved.is_empty(), game.flow.saved_run_why)
+	game.flow.state = Flow.TITLE
+	t.check("disk tier-one Continue resumes", game.flow.resume_run())
+	t.eq("disk Continue preserves tier one", game.run.selected_run_tier(), 1)
+	game.flow.retry_stage()
+	t.eq("disk Continue retry preserves tier one", game.run.selected_run_tier(), 1)
+	var doc: Dictionary = game.run.to_entrance_doc()
+	doc["run_tier"] = 1
+	doc["event_core_grants"] = 7
+	game.flow._save(doc)
+	t.eq("nonzero grants disk save succeeds", game.flow.store_error, "")
+	var disk: Dictionary = game.flow.saved_run()
+	t.check("nonzero grants disk Continue eligible", not disk.is_empty(), game.flow.saved_run_why)
+	t.eq("nonzero grants survive RunStore JSON", disk.get("event_core_grants", -1), 7)
+	var decoded: Dictionary = JSON.parse_string(JSON.stringify(doc))
+	t.eq("JSON decodes tier as float", typeof(decoded.run_tier), TYPE_FLOAT)
+	t.eq("JSON decodes grants as float", typeof(decoded.event_core_grants), TYPE_FLOAT)
+	var loaded := RunState.new(GameEvents.new(), 9)
+	loaded.begin(ClassDef.all()[0])
+	t.check("JSON both tier fields reconstruct", loaded.from_entrance_doc(decoded))
+	t.eq("JSON reconstructed tier", loaded.selected_run_tier(), 1)
+	t.eq("JSON reconstructed nonzero grants", loaded.event_core_grants, 7)
+	t.eq("JSON reconstructed grants are int", typeof(loaded.event_core_grants), TYPE_INT)
+	loaded.restore()
+	t.eq("JSON retry nonzero grants", loaded.event_core_grants, 7)
+	for field in ["run_tier", "event_core_grants"]:
+		for bad in [0.5, INF, -INF, NAN, "1", true, null, [], {}]:
+			var invalid := doc.duplicate(true)
+			invalid[field] = bad
+			t.eq("reject %s %s" % [field, str(bad)], RunState.validate_entrance_doc(invalid), "invalid " + field)
+	for bad_tier in [-1, 2, -1.0, 2.0]:
+		var invalid := doc.duplicate(true)
+		invalid.run_tier = bad_tier
+		t.eq("reject tier domain %s" % str(bad_tier), RunState.validate_entrance_doc(invalid), "invalid run_tier")
+	for bad_grants in [-1, -1.0]:
+		var invalid := doc.duplicate(true)
+		invalid.event_core_grants = bad_grants
+		t.eq("reject grants domain %s" % str(bad_grants), RunState.validate_entrance_doc(invalid), "invalid event_core_grants")
+	loaded.events.free()
+	game.flow.store = null
+
 func _variants() -> void:
 	_begin(703, 0)
 	var base: Resource = Parts.def("loose_trigger")
@@ -436,6 +485,8 @@ func _run() -> void:
 		_card()
 	if not record and section in ["all", "variants"]:
 		_variants()
+	if not record and section in ["all", "persistence"]:
+		_persistence()
 	if game != null:
 		game.free()
 	quit(t.verdict())
