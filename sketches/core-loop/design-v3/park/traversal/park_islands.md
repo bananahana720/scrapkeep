@@ -2,11 +2,64 @@
 
 ## Round 5 measurement, 2026-10-13
 
-Admission is held while the new measurements finish. Candidate `3debeb8`
-merged without conflicts at `1f4ad76`. Ruling 28 requires the committed
-`tools/traversal_line.gd`, SHA-256
+Admission remains held. Candidate `3debeb8` merged without conflicts at
+`1f4ad76`. The retained measurement programs are `05a0b56, faa5cd2`; the submitted head is `e496b0f`. Ruling 28
+requires the committed `tools/traversal_line.gd`, SHA-256
 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`.
-Every earlier traversal measurement is superseded and retained below.
+All measurements before the STEP 0 merge are superseded and retained below.
+The design sections and shipped appendix remain current.
+
+The valid tool logs have no script errors. The first merged-head runs exposed
+KD5's missing `fin_rim_collapse.effect.fill_s`; those invalid rows are retained
+and excluded. The stage row now declares its instantaneous landing explicitly
+with `fill_s: 0.0`, after a committed red-first assertion. No shared tool,
+pilot-line, Warden or combat value changed. The first Rivet batch was
+INCONCLUSIVE after seed 5 hit the 120-second child wall cap. Its fresh
+300-second-cap recovery retains all eight seeds; every complete row from
+the capped batch matches its recovery. Only the wall bound changed.
+
+Sable seed 2 and Rivet seed 4 agree in all fields between their untraced batch,
+untraced solo and traced solo. No fields were removed or normalized.
+The [agreement receipt](/home/andrew/scratch/w13/sol/kd5-islands-r5/agreement.json) retains the raw comparisons
+and source fingerprints. The shared traversal/runtime disagreement is resolved
+for these named seeds. The first complete batches remain the measurements.
+
+The table comes from raw seed rows in the [independent assessment](/home/andrew/scratch/w13/sol/kd5-islands-r5/bands-independent.json).
+There are 56 completed rows currently. Median and worst seed
+or seed range appear together. Airborne and length are judged per seed, and
+anchor gap uses the maximum seed. Segment and tier-3 gates retain their median
+rules. The floor uses only reach, its time cap and zero stops, per ruling 13.
+Current misses are `{"sable": ["time_median"], "tally": ["length"]}`.
+
+| Band | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 8/8: PASS | 8/8: PASS | 8/8: PASS | 8/8: PASS | 8/8: PASS | 8/8: PASS | 8/8: PASS |
+| Time to Warden, s | 59.055 / 60.58: FAIL | 89.39 / 90.86: PASS | 74.075 / 76.2: PASS | 81.19 / 81.19: PASS | 70.215 / 70.78: PASS | 82.015 / 83.4: PASS | 82.77 / 83.35: reported, pilot band, not the floor's |
+| Segment medians / worst time, s | 15.22/22.04/21.82 / 23.16: PASS | 24.505/36.425/28.48 / 37.7: PASS | 22.68/22.61/28.73 / 28.81: PASS | 22.43/31.22/27.52 / 31.4: PASS | 24.43/18.07/27.085 / 27.96: PASS | 22.73/32.31/26.94 / 32.91: PASS | 24.8/33.03/24.92 / 34.16: reported, pilot band, not the floor's |
+| Flow share | 0.9451 / 0.9287: PASS | 0.8754 / 0.8422: PASS | 0.9126 / 0.8705: PASS | 0.9685 / 0.9517: PASS | 0.9682 / 0.96: PASS | 0.9889 / 0.9824: PASS | 0.8954 / 0.8954: reported, pilot band, not the floor's |
+| Airborne share | 0.4034 / 0.3776..0.4084: PASS | 0.33545 / 0.2598..0.3425: PASS | 0.3581 / 0.3385..0.3608: PASS | 0.2967 / 0.2875..0.2967: PASS | 0.3246 / 0.3209..0.3276: PASS | 0.35435 / 0.3485..0.3555: PASS | 0.2914 / 0.2899..0.293: reported, pilot band, not the floor's |
+| Raw dead stops | 0 total / 0 worst: PASS | 0 total / 0 worst: PASS | 0 total / 0 worst: PASS | 0 total / 0 worst: PASS | 0 total / 0 worst: PASS | 0 total / 0 worst: PASS | 0 total / 0 worst: PASS |
+| Peak speed / tier-3 time | 55.93 m/s, 46.1 s / 55.93 m/s, 39.67 s: PASS | 30.54 m/s, 8.405 s / 29.44 m/s, 7.52 s: PASS | 29.78 m/s, 6.71 s / 28.93 m/s, 6.2 s: PASS | 30.79 m/s, 10.29 s / 30.79 m/s, 10.29 s: PASS | 27.295 m/s, 6.5 s / 26.7 m/s, 4.31 s: PASS | 28.53 m/s, 10.91 s / 27.97 m/s, 5.88 s: PASS | 32.87 m/s, 12.41 s / 31.76 m/s, 9.28 s: reported, pilot band, not the floor's |
+| Longest quiet, s | 4.38 / 4.38: PASS | 5.99 / 6.57: PASS | 3.285 / 3.56: PASS | 6.1 / 6.1: PASS | 3.525 / 3.72: PASS | 3.78 / 3.78: PASS | 7.62 / 7.62: reported, pilot band, not the floor's |
+| Anchor gap, m | 32.1 / 34.5: PASS | 27.6 / 32.0: PASS | 26.0 / 33.7: PASS | 19.5 / 22.9: PASS | 19.25 / 19.8: PASS | 20.9 / 20.9: PASS | 38.4 / 38.4: reported, pilot band, not the floor's |
+| Distinct ride facts | 6.0 / 6: PASS | 6.0 / 6: PASS | 6.0 / 6: PASS | 6.0 / 6: PASS | 6.0 / 6: PASS | 6.0 / 6: PASS | 6.0 / 6: reported, pilot band, not the floor's |
+| Length / straight distance | 1.65 / 1.65..1.66: PASS | 1.455 / 1.45..1.46: PASS | 1.36 / 1.36..1.38: PASS | 1.54 / 1.54..1.54: PASS | 1.26 / 1.26..1.26: FAIL | 1.5 / 1.5..1.5: PASS | 1.45 / 1.45..1.45: reported, pilot band, not the floor's |
+| Floor row | n/a | reference | n/a | n/a | n/a | n/a | worst 83.35 s / cap 178.78 s; 0 stops: PASS |
+| Distinct lines | pending current distinct-line traces | n/a | n/a | n/a | n/a | n/a | n/a |
+| Stop classification | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack |
+
+
+One bounded bank repair per failing pilot was tried at `d55b1a5`.
+The full eight-seed remeasurement still failed Sable's median time, 59.07 s,
+and Tally's length, 1.26 on every seed. Both trial lines had zero stops.
+The banks were reverted at `e496b0f`; exact runtime-byte equivalence restores
+the complete baseline and fresh win receipts. The [failed trial](/home/andrew/scratch/w13/sol/kd5-islands-r5/repair-band-assessment.json)
+is retained. No further geometry repair is authorized by this packet.
+
+Raw stops with no matching causal enemy receipt count as terrain. No pack
+exemption is claimed from the older, superseded traces. Any nonzero current
+stop remains held until its matching solo trace and ruling-25 enemy probe
+identify its cause. Zero-stop rows need no causal exemption.
 
 ### Effective Warden criterion
 
@@ -19,10 +72,16 @@ its first tick. Break time and engage-to-break time are still reported.
 WT-PARK and WT-BANDS own Warden duration. KD5 does not change the Warden
 row, combat values or bot behavior.
 
-The retained round-4 rows engaged at 141.79, 132.4 and 126.14 seconds,
-with no break in any of the three 600-second runs. Those rows establish
-engagement on the old program only. A fresh proof on this merged program
-is pending; no current Warden PASS is claimed yet.
+| Seed | Outcome | Engage s | Break s | Engage to break s |
+| --- | --- | --- | --- | --- |
+| 1 | stalled | 139.15 | null | null |
+| 2 | stalled | 133.73 | null | null |
+| 3 | stalled | 127.96 | null | null |
+
+R23 verdict: PASS. Breaks observed: 0/3. The [fresh win receipt](/home/andrew/scratch/w13/sol/kd5-islands-r5/win-review.json) retains the complete rows.
+
+These are automated headless receipts. Human feel, dressing, listening and
+physical hardware acceptance remain unqualified.
 
 ## Superseded round 4 measurement
 
