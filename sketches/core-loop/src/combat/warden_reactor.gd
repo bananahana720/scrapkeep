@@ -2,6 +2,7 @@ extends RefCounted
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Run := preload("res://src/core/run_state.gd")
 
 # The reactor relic's driver (design-v3/wardens/reactor.md sections 3 and 4; unit KF2). warden.gd's
 # per-kind hook loads this file for every park Warden of the reactor family (spec "harpoon_anchor":
@@ -44,13 +45,39 @@ const RIDE_GAIN := 8.0
 const FACE_SLOPE := 0.15
 const POUR_OFFSET := Vector3(0.0, 0.0, -6.0)
 const SHEET_COLOR := Palette.SANDSTONE
-const MOUNTED_POSTURE := {"contact_drain_delay": 6.0}
+const MOUNTED_POSTURE := {"sheet_ram_breaks": 3}
+
+class DamPosture extends "res://src/combat/boss_posture.gd":
+	var mounted_warden: WeakRef
+	func judge(hit: Dictionary) -> Dictionary:
+		var result := super.judge(hit)
+		var w = mounted_warden.get_ref()
+		if w != null:
+			w.mount_driver.judge_sheet_ram(w, self, hit, result)
+		return result
+	func apply(result: Dictionary, frame: int) -> void:
+		if not result.get("sheet_ram", false):
+			super.apply(result, frame)
+			return
+		var w = mounted_warden.get_ref()
+		w.mount_driver.paid_sheet_cycle = w.mount_driver.gates_opened
+		posture = minf(FULL, posture + float(result["gain"]))
+		idle = 0.0
+		gain_frame = frame
+		gain_in_frame = float(result["gain"])
+		if result.get("shatter", false):
+			chunks = 0
+			staggered = false
+			stagger_left = 0.0
+			shatter_frame = frame
 
 var gates_opened := 0
 var rides := 0
 var sheet_left := 0.0
 var sheet_dir := Vector3.ZERO
 var riding := false
+var entered_sheet_cycle := -1
+var paid_sheet_cycle := -1
 
 var _entry_speed := 0.0
 var _sheet_view: MeshInstance3D
@@ -68,7 +95,13 @@ func sheet_live() -> bool:
 
 func step(warden, delta: float) -> void:
 	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
-		warden._posture.contact_drain_delay = float(MOUNTED_POSTURE["contact_drain_delay"])
+		if not warden._posture is DamPosture:
+			var mounted := DamPosture.new(warden.spec.get("posture", {}))
+			for property in warden._posture.get_property_list():
+				if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+					mounted.set(property.name, warden._posture.get(property.name))
+			mounted.mounted_warden = weakref(warden)
+			warden._posture = mounted
 		for child in warden.get_children():
 			if child is CollisionShape3D:
 				if not child.shape is SphereShape3D:
@@ -82,6 +115,33 @@ func step(warden, delta: float) -> void:
 			_close_sheet()
 		else:
 			_ride(warden, delta)
+	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
+		warden._posture.contact_drain_delay = sheet_left
+
+
+func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> void:
+	if String(hit.get("kind", "")) != "ram" or not sheet_live() \
+			or entered_sheet_cycle != gates_opened or paid_sheet_cycle == gates_opened:
+		return
+	var target = warden.target
+	if target == null or not target.body().get_colliding_bodies().has(warden) \
+			or target.ball_position().distance_to(warden.family_point_at()) > warden.FAMILY_POINT_RADIUS + Tuning.RADIUS:
+		return
+	var heft: float = target.heft_of.call()
+	var plating: float = hit["plating"]
+	var grown_punch: float = float(hit["punch"]) / heft * Run.HEFT_CLASS_AT[2]
+	var grown_ratio: float = grown_punch / plating if plating > 0.0 else posture.mult_max
+	var ratio: float = float(hit["punch"]) / plating if plating > 0.0 else posture.mult_max
+	var relative_gain: float = pow(clampf(ratio, posture.mult_min, posture.mult_max), posture.curve) \
+			/ pow(clampf(grown_ratio, posture.mult_min, posture.mult_max), posture.curve)
+	var gain: float = posture.FULL / float(MOUNTED_POSTURE["sheet_ram_breaks"]) * relative_gain
+	result["sheet_ram"] = true
+	result["gain"] = gain
+	result["shatter"] = posture.posture + gain >= posture.FULL or is_equal_approx(posture.posture + gain, posture.FULL)
+	result["crack"] = false
+	if result["shatter"]:
+		result["dealt"] = float(hit["hp"])
+		result["part"] = warden.family_point()
 
 
 func on_charge(_warden, _seconds: float) -> void:
@@ -166,6 +226,8 @@ func _ride(warden, delta: float) -> void:
 	var closing := -planar.dot(sheet_dir)
 	var core: float = warden.family_point_at().y
 	var mounted: bool = warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face"
+	if mounted and in_sheet(warden, ball) and closing >= RIDE_MIN_SPEED and ball.y < core:
+		entered_sheet_cycle = gates_opened
 	if mounted:
 		var point: Vector3 = warden.family_point_at()
 		var touching: bool = in_sheet(warden, ball) and closing >= RIDE_MIN_SPEED \
@@ -173,7 +235,7 @@ func _ride(warden, delta: float) -> void:
 		if touching:
 			riding = false
 			return
-	if not in_sheet(warden, ball) or closing < RIDE_MIN_SPEED or (not mounted and ball.y >= core):
+	if not in_sheet(warden, ball) or closing < RIDE_MIN_SPEED or ball.y >= core:
 		riding = false
 		return
 	if not riding:
@@ -203,7 +265,7 @@ func _ride(warden, delta: float) -> void:
 		push = planar / speed * (_entry_speed - speed) / delta
 	if mounted and target.has_method("body") and target.body().has_method("set_velocity_now"):
 		var held: Vector3 = planar.normalized() * maxf(speed, _entry_speed)
-		target.body().set_velocity_now(Vector3(held.x, want_vy, held.z))
+		target.body().set_velocity_now(Vector3(held.x, maxf(v.y, maxf(0.0, want_vy)), held.z))
 	else:
 		target.add_external_accel(Vector3(push.x, maxf(up, 0.0), push.z))
 
