@@ -8,9 +8,10 @@ This page follows `design-v3/PARK.md` section 2 and `adr/TADR-011-park-terrain-a
 
 Those fields remove the collapse's missing-key script errors and allow the fall to finish in two seconds. The independent real-stage mesh and collider regression remains red: the shared handler projects the `trestle_hollow` footprint, not the flume span, and none of five span samples has a ramp surface. The merged music engine also logs `ERROR: music: missing park cue drop_collapse`. Registration, telegraph, landing and route facts alone cannot qualify the physical ride. Shared geometry and music fixes remain coordinator follow-ups; no substitute form, trigger, lead, hold-clear distance, route change or shared runtime edit was made.
 
-Every earlier table remains historical. Round 6 reruns use the committed `res://tools/traversal_line.gd`, SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`, with untraced eight-seed batches and separate plain/traced solos. Error-aware qualification rejects `ERROR:` and `SCRIPT ERROR` logs even when the tool accepts a raw row. There is no complete qualified current table yet. Receipts and input manifests are in `/home/andrew/scratch/w13/sol/kd2-flume-r6/`.
+Every earlier table remains historical. Round 6 reruns use the committed `res://tools/traversal_line.gd`, SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`, with untraced eight-seed batches and separate plain/traced solos. Error-aware qualification rejects `ERROR:` and `SCRIPT ERROR` logs even when the tool accepts a raw row. There is no complete qualified current table: 30/56 rows qualify. Receipts and input manifests are in `/home/andrew/scratch/w13/sol/kd2-flume-r6/`.
 
 Coordinator F2 corrects the stale two-of-three break requirement. Ruling 23 requires every seed to reach and engage the Warden with no traversal-cause stall; breaks are reported separately under the unchanged 600 s wrapper. Warden fight duration belongs to the Warden fight units and Andrew's task #5.
+
 
 <!-- current-win-results -->
 ## Current win results, round 6
@@ -25,6 +26,26 @@ Measured with the unchanged scratch `win_600.gd`, which only sets `stage_limit =
 
 Every seed reaches and engages the Warden; none stalls before engagement. The logs contain no `get_rid` script error. Each win log contains the shared missing `drop_collapse` music cue. The reach/engagement observations satisfy ruling 23; these runs do not establish error-free whole-stage execution or the physical fallen ramp. Post-engagement beacon or gate stalls are reported above. Warden break duration stays with the Warden fight units and Andrew's task #5.
 <!-- /current-win-results -->
+
+## Current population qualification, round 6
+
+Measured runtime head `ea4974b6cb21f79bd180effe5d441d140e4c2cfd`, which descends from candidate `1f09c26` through merge `e69bd20`. Later commits change the regression and these pages; runtime source, committed tool and bake/graph inputs remain identical. The committed tool SHA256 is `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. Each line uses an untraced seeds-1-to-8 batch in its own output folder. Input manifests are `population-<pilot>-inputs.json`; raw logs are `population/<pilot>/children/<position>-seed-<seed>/child.log`. All paths below are under `/home/andrew/scratch/w13/sol/kd2-flume-r6/`.
+
+| Line | Tool-accepted rows | Error-qualified rows | Qualification |
+| --- | --- | --- | --- |
+| sable | 8/8 | 8/8 | complete |
+| rivet | 8/8 | 0/8 | blocked by log errors or incomplete population |
+| kest | 8/8 | 6/8 | blocked by log errors or incomplete population |
+| tarn | 8/8 | 8/8 | complete |
+| tally | 8/8 | 0/8 | blocked by log errors or incomplete population |
+| cannon | 8/8 | 8/8 | complete |
+| floor | 8/8 | 0/8 | blocked by log errors or incomplete population |
+
+Total: 56/56 tool-accepted rows, 30/56 error-qualified rows. `population-qualification.json` and its log reject `SCRIPT ERROR` and `ERROR:` lines. Matching rejected records are diagnostic. `replay-qualification.json` retains the five named batch/plain/traced comparisons; `input-equality.json` proves matching runtime inputs.
+
+The required complete current 13-band table remains BLOCKED. No rejected record is copied into a current table; every earlier table remains historical. `band-table.md` contains fully qualified line diagnostics, with other lines explicitly unqualified. It is not the acceptance table. Rulings 13 and 14 retain the floor's own arrival/time/zero-terrain-stop row and per-seed anchor check. Every per-seed band uses its worst seed; explicitly median-based criteria retain their medians.
+
+Current stop attribution is in `stop-classification.json` and `stop-replay-comparisons.json`. Sable seed 2 stops at 41.48 s, [-97.6, 159.4]. Batch, plain solo, traced solo and read-only probe agree; all 5,761 trace ticks match. The preceding 90 ticks contain ground contacts only. It counts as terrain under ruling 25. Its 48.6 m anchor gap exceeds 40 m. No pack exemption is inferred. Other qualified stops and unqualified raw records remain in the receipts; missing or rejected attribution cannot qualify zero terrain stops. No repair budget is consumed while the authored physical collapse and shared cue remain blocked.
 
 **Historical round 5 qualification: BLOCKED.** STEP 0 merged candidate `3debeb86e30a63756e7e83c9950e37a79d656b68` at `56a4b80f8e9313cea755f11133dffb157eedcab7`, without conflicts. Every earlier traversal measurement is superseded by ruling 28. The bake and graph were rebuilt; the committed measuring tool is `tools/traversal_line.gd`, SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. The first fresh Sable and Rivet children throw at `natural.gd:267` because the authored hollow-collapse effect lacks `depth_m`. TRAV-DET2 rejects those rows as INCONCLUSIVE. The population was stopped, so there is no accepted round-5 population, replay equality, band verdict or stop classification. No geometry repair was made. Evidence and input hashes are under `/home/andrew/scratch/w13/sol/kd2-flume-r5/`.
 
