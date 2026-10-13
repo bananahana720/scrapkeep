@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Activities := preload("res://src/world/activities.gd")
+const ActivityView := preload("res://src/world/activity_view.gd")
 const Graph := preload("res://src/world/park/park_graph.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -12,7 +13,7 @@ const Schema := preload("res://src/world/park/park_schema.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const KINDS := ["movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
 const STAGES := ["park_dam", "park_test"]
-const EXPECTED_CHECKS := 33
+const EXPECTED_CHECKS := 35
 const H := 1.0 / 60.0
 
 class Checks extends "res://tests/support/t.gd":
@@ -43,7 +44,7 @@ func _run() -> void:
 		var index := args.find("--only")
 		if index + 1 < args.size():
 			only = args[index + 1]
-		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay", "marks", "rounds", "combat_cues"]:
+		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay", "marks", "rounds", "combat_cues", "preview"]:
 			t.check("valid control selection", false, str(args))
 			quit(t.verdict())
 			return
@@ -58,6 +59,7 @@ func _run() -> void:
 		graphs[id] = Graph.read("res://assets/park/%s/graph.bin" % id)
 	if only == "":
 		_admission()
+		_preview()
 		_ladder()
 		await _authored_pay()
 		await _combat()
@@ -84,6 +86,8 @@ func _run() -> void:
 		_admission()
 	elif only == "ladder":
 		_ladder()
+	elif only == "preview":
+		_preview()
 	elif only == "ambush":
 		await _ambush()
 	elif only == "hazards":
@@ -94,7 +98,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 12, "admission": 3, "cues": 3, "pay": 3, "marks": 5, "rounds": 8, "combat_cues": 13}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 12, "admission": 3, "cues": 3, "pay": 3, "marks": 5, "rounds": 8, "combat_cues": 13, "preview": 4}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -179,6 +183,40 @@ func _admission() -> void:
 				pay_retained = pay_retained and built[1].pay == data.activity_rows[0].pay
 			acts.clear()
 	t.check("new kinds admitted through schema ParkMap and stage entry", admitted == 14 and pay_retained, "%d/14 substitutions across park_dam and park_test; authored pay retained" % admitted)
+
+
+func _preview() -> void:
+	var readable := 0
+	var hidden := 0
+	for kind in KINDS:
+		for pay in [{}, {"rarities": ["common"]}, {"rarities": ["rare"]}, {"named": "hot_rivets", "rarities": ["rare"]}]:
+			var rule: Dictionary = Activities.RULES[kind]
+			var s = _site(kind, Vector2(100, 100), {"graph": graphs.park_test, "pay": pay})
+			var named: String = String(pay.get("named", ""))
+			var parts := 1 if named != "" else int(rule.pay.parts)
+			var rarity: String = Parts.rarity_of(named) if named != "" else String(pay.get("rarities", rule.pay.rarities)[0])
+			var tier := parts + (1 if rarity == "rare" else 0)
+			var reward := Parts.display_name(named) if named != "" else "%d %s parts" % [parts, rarity]
+			var expected := "%s — Tier %d (%s)" % [rule.cue.word, tier, reward]
+			var labels: Array = s.find_children("*", "Label3D", true, false)
+			s.view.near(s.global_position + Vector3.RIGHT * (ActivityView.WORD_REACH + 1.0))
+			var outside_hidden: bool = labels.all(func(label): return not label.is_visible_in_tree())
+			var distance := (float(rule.ring) + ActivityView.WORD_REACH) * 0.5
+			var ball: Vector3 = s.global_position + Vector3.RIGHT * distance
+			s.view.near(ball)
+			acts.step_pocket(s, H, ball)
+			var visible: Array = labels.filter(func(label): return label.is_visible_in_tree())
+			var preview_ok: bool = distance > float(rule.ring) and distance < ActivityView.WORD_REACH and not s.started and not s.done and not s.failed
+			var text_ok: bool = visible.size() == 1 and visible[0].text == expected
+			readable += int(outside_hidden and preview_ok and text_ok)
+			if not outside_hidden or not preview_ok or not text_ok:
+				print("preview mismatch: %s pay=%s visible=%d want='%s'" % [kind, pay, visible.size(), expected])
+			acts._finish(s, s.global_position)
+			s.view.near(ball)
+			hidden += int(s.done and labels.all(func(label): return not label.is_visible_in_tree()))
+			acts.clear()
+	t.check("one visible resolved reward label before commitment", readable == 28, "%d/28 previews: seven kinds x default/common/rare/named; outside start ring and inside WORD_REACH; hidden beyond reach" % readable)
+	t.check("completed pockets hide their stand label", hidden == 28, "%d/28 completions stay hidden after view.near" % hidden)
 
 
 func _ladder() -> void:
