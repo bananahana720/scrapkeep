@@ -156,6 +156,13 @@ func _check_hand() -> void:
 	player._read_grammar()
 	_report("hand grounded clearance", not player.kit.hooked and not player.chain.active(),
 		"a launch still in the floor probe cannot start a chain")
+	player.state.grounded = false
+	player.body().linear_velocity = Vector3.UP * 10.0
+	driver._explorer_chain(1.0 / 90.0)
+	driver.source.poll(player.intent)
+	player._read_grammar()
+	_report("hand rising clearance", not player.kit.hooked and not player.chain.active(),
+		"the jump's first airborne flag still waits for visible height")
 	# Stage the observed clearance, independently of the pending jump impulse.
 	player.state.grounded = false
 	player.body().global_position += Vector3.UP * Tuning.RADIUS * 2.0
