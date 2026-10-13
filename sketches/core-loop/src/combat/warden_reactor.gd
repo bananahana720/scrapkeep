@@ -122,8 +122,7 @@ func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 			or entered_sheet_cycle != gates_opened:
 		return
 	var target = warden.target
-	if target == null or not target.body().get_colliding_bodies().has(warden) \
-			or target.ball_position().distance_to(warden.family_point_at()) > warden.FAMILY_POINT_RADIUS + Tuning.RADIUS:
+	if target == null or not target.body().get_colliding_bodies().has(warden):
 		return
 	var heft: float = target.heft_of.call()
 	var plating: float = hit["plating"]
