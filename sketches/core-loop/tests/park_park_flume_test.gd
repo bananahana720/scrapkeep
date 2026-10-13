@@ -66,7 +66,12 @@ func _initialize() -> void:
 func _run() -> void:
 	if "--docs" in OS.get_cmdline_user_args():
 		var output := []
-		var code := OS.execute("python3", ["-c", DOCUMENTATION_CHECK, ProjectSettings.globalize_path("res://")], output, true)
+		var script_path := "user://flume_docs_check.py"
+		var script := FileAccess.open(script_path, FileAccess.WRITE)
+		script.store_string(DOCUMENTATION_CHECK)
+		script.close()
+		var code := OS.execute("python3", [ProjectSettings.globalize_path(script_path), ProjectSettings.globalize_path("res://")], output, true)
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(script_path))
 		for line in output:
 			print(line)
 		t.eq("current documentation derived from qualified seed receipts", code, 0)
@@ -500,10 +505,10 @@ stops=json.loads((p/'stop-classification.json').read_text())
 raw_stops=[(k,r['seed'],s) for k,rows in pop.items() for r in rows for s in r['dead_stop_at']]
 assert len(stops)==len(raw_stops),'missing stop classification'
 for k,seed,s in raw_stops:
- matches=[x for x in stops if x['pilot']==k and x['seed']==seed and x['time_s']==s['time_s']]
+ matches=[x for x in stops if x['pilot']==k and x['seed']==seed and x['time_s']==s['time']]
  assert len(matches)==1,'unmatched stop'
  item=matches[0];assert item['qualified'],'unqualified stop receipt'
- trace=Path(item['trace_receipt']); traced=json.loads((trace.parent/(k+'.json')).read_text())['runs']
+ trace=Path(item['receipt']); traced=json.loads((trace.parent/(k+'.json')).read_text())['runs']
  row=next(r for r in pop[k] if r['seed']==seed)
  assert traced==[row],'stop traced row mismatch'
  assert str(trace) in b and item['classification'] in b,'stop missing from publication'
