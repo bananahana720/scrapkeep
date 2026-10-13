@@ -34,6 +34,7 @@ var reroll_button: Button
 
 
 func _init() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 	set_process_input(false)
@@ -173,7 +174,7 @@ func _controls() -> void:
 func _input(event: InputEvent) -> void:
 	if not _interactive or not visible or not event is InputEventKey or not event.pressed or event.echo:
 		return
-	var key: int = event.keycode
+	var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	if key >= KEY_1 and key <= KEY_3:
 		pick_requested.emit(key - KEY_1)
 	elif key == KEY_V:

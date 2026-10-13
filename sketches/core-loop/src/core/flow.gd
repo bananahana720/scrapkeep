@@ -104,7 +104,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	beacon = beacon_ref
 	classes = ClassDef.all()
 	var layer := CanvasLayer.new()
-	layer.layer = 3
+	layer.layer = 5
 	add_child(layer)
 	start_card = StartPickCard.new()
 	layer.add_child(start_card)
@@ -256,6 +256,9 @@ func show_start_card() -> void:
 	start_card.position = Vector2((get_viewport().get_visible_rect().size.x - start_card.size.x) * 0.5, 160.0)
 	if not interactive or not in_stage():
 		start_card.hide_card()
+	var host = ctx.root.get_node_or_null("Workshop")
+	if host != null:
+		host.sync_start_card_pointer()
 
 
 func take_start_pick(index: int) -> bool:

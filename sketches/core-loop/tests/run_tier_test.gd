@@ -62,6 +62,11 @@ const BASE_RUN := [
 ]
 const SEEDS := 20
 const DRAWS := 400
+class ChoiceGame extends "res://src/game.gd":
+	var capture_requests: Array[bool] = []
+	func _capture_mouse(capture: bool) -> void:
+		capture_requests.append(capture)
+
 var t := T.new("run_tier_test")
 var game
 var record := false
@@ -81,7 +86,7 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 func _create_game() -> void:
-	game = Game.new()
+	game = ChoiceGame.new()
 	game.test_mode = true
 	game.table = "park"
 	root.add_child(game)
@@ -301,6 +306,8 @@ func _card() -> void:
 	game.flow.show_start_card()
 	var card = game.flow.start_card
 	t.check("production start card appears", card.is_inside_tree() and card.showing() and card.is_processing_input())
+	t.check("start card releases cursor", not game.capture_requests.is_empty() and game.capture_requests.back() == false and game.get_meta("menu_held", false))
+	t.check("start card does not pause or hold movement", not paused and not game.player.frozen() and game.player.state.velocity.length() > 0.0)
 	t.check("locked tier not offered", card.offered_tiers() == [0])
 	t.check("locked tier rejected at boundary", not game.flow.choose_run_tier(1) and game.run.selected_run_tier() == 0)
 	var win_bus := GameEvents.new()
@@ -326,7 +333,18 @@ func _card() -> void:
 			labels.append(node.text)
 	t.check("rendered pre-choice threat/pay", "Threat: 25% more crowd, 20% shorter intervals" in labels
 		and "Pay: 25% more event cores and rare weight; gain cap 1.5x" in labels and game.run.selected_run_tier() == 0)
-	# Click the actual tier button, then use the card's keyboard route for a pick.
+	var host = game.get_node("Workshop")
+	t.check("start card sits above workshop", card.get_parent().layer > host.layer)
+	t.eq("start card handles input during workshop pause", card.process_mode, Node.PROCESS_MODE_ALWAYS)
+	var click := InputEventMouseButton.new()
+	click.pressed = true
+	click.button_index = MOUSE_BUTTON_LEFT
+	game.test_mode = false
+	game._input(click)
+	game.test_mode = true
+	game.bot_driven = false
+	t.check("start-card clicks do not recapture cursor", game.capture_requests.back() == false)
+	# Click the actual tier button, then use viewport input for a pick.
 	card.tier_button(1).pressed.emit()
 	t.eq("scripted tier click reaches RunState", game.run.selected_run_tier(), 1)
 	t.eq("world director reads selected tier", game.world.director.run_tier(), 1)
@@ -336,8 +354,17 @@ func _card() -> void:
 	var key := InputEventKey.new()
 	key.pressed = true
 	key.keycode = KEY_1
-	card._input(key)
+	key.physical_keycode = KEY_1
+	host.armed = true
+	host.open_pick()
+	t.check("competing workshop pick is open", host.pick.is_open())
+	var tree_before: Array = game.player.tree.picks.duplicate()
+	root.push_input(key, true)
 	t.check("scripted pick reaches RunState", game.run.start_pick.taken == game.run.start_pick_options()[0] and not card.showing())
+	t.check("start input does not choose a workshop upgrade", game.player.tree.picks == tree_before)
+	host.close_pick()
+	host.armed = false
+	t.check("pick returns aim control", game.capture_requests.back() == true and not game.get_meta("menu_held", false))
 	var doc: Dictionary = game.run.to_entrance_doc()
 	var loaded := RunState.new(GameEvents.new(), 4)
 	loaded.begin(ClassDef.all()[0])
@@ -384,9 +411,9 @@ func _variants() -> void:
 	loaded.begin(ClassDef.all()[0])
 	t.check("enhanced reconstruction loads", loaded.from_entrance_doc(doc))
 	t.check("one-version reconstruction", loaded.parts == ["loose_trigger"])
-	t.near("reconstruction enhanced effect once", Sheet.from_parts(loaded.parts).mods.weapon_rate, 1.15)
+	t.near("reconstruction enhanced effect once", Sheet.from_parts(loaded.parts).mods.get("weapon_rate", 1.0), 1.15)
 	loaded.restore()
-	t.near("retry enhanced effect once", Sheet.from_parts(loaded.parts).mods.weapon_rate, 1.15)
+	t.near("retry enhanced effect once", Sheet.from_parts(loaded.parts).mods.get("weapon_rate", 1.0), 1.15)
 	# Deliberately attempt a second version through a save boundary.
 	var invalid := doc.duplicate(true)
 	invalid.parts.append("loose_trigger@tier1")

@@ -42,6 +42,7 @@ const OUTSIDE_RUN := ["title", "class_select"]
 
 var game
 var armed := true
+var _start_pointer_held := false
 var pick
 var counter
 var bubble
@@ -140,7 +141,24 @@ func setup(game_ref) -> void:
 		else:
 			companion_panel.close()
 			if _held:
-				_enforce_hold())
+				_enforce_hold()
+		sync_start_card_pointer())
+
+
+func _start_card_showing() -> bool:
+	var card = game.flow.get("start_card") if game.flow != null else null
+	return card != null and card.showing()
+
+
+func sync_start_card_pointer() -> void:
+	if _start_card_showing():
+		_start_pointer_held = true
+		game.set_meta("menu_held", true)
+		game._capture_mouse(false)
+	elif _start_pointer_held:
+		_start_pointer_held = false
+		game.set_meta("menu_held", _held)
+		game._capture_mouse(game.flow.in_play() and not _held)
 
 
 func shop():
@@ -412,6 +430,7 @@ static func babble_beat(record: Dictionary) -> int:
 # ---- Per frame ----
 
 func _process(_delta: float) -> void:
+	sync_start_card_pointer()
 	if _held:
 		_enforce_hold()
 	var s = shop()
@@ -435,6 +454,8 @@ func _update_talk(shown: bool) -> void:
 # ---- Keys and the pad ----
 
 func _input(event: InputEvent) -> void:
+	if _start_card_showing():
+		return
 	if not armed:
 		return
 	if companion_panel.is_open():
