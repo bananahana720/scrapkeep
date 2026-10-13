@@ -39,10 +39,10 @@ func _run() -> void:
 	for i in roundi(w.PULSE_CYCLE*Engine.physics_ticks_per_second):
 		bot.tick(1.0/Engine.physics_ticks_per_second)
 		saw_charge=saw_charge or w.state_name()=="charging"
-		if sheet.sheet_live() and bot.source.press.get("shift_pressed",false): saw_launch=true
+		if (sheet.sheet_live() or w.state_name()=="charging") and bot.source.press.get("shift_pressed",false) and game.player.state.grounded: saw_launch=true
 		await physics_frame
 	t.check("normal charge and pulse opens the road",saw_charge and w.pulses>pulses)
-	t.check("normal pulse produces a launch input",saw_launch)
+	t.check("normal charge-to-pulse transition produces a grounded launch input",saw_launch)
 	for i in roundi(sheet.SHEET_SECONDS*Engine.physics_ticks_per_second):
 		bot.tick(1.0/Engine.physics_ticks_per_second)
 		await physics_frame
