@@ -104,7 +104,7 @@ func _run() -> void:
 	t.near("trace covers 300 simulation seconds", physics.seconds, 300.0, 0.000001)
 	t.check("five-minute trace is recorded", FileAccess.file_exists(trace_path) and not samples.is_empty(), trace_path)
 	t.eq("trace sampler clamps zero values", engine.parameter_clamps, 0)
-	t.eq("trace records every transport sample", samples.size(), ceili(float(engine._parameter_step) / (Harmony.STEPS_PER_BAR / Music.PARAMETER_SAMPLES_PER_BAR)))
+	t.eq("trace records every transport sample", samples.size(), ceili(float(engine._parameter_step) / (Harmony.STEPS_PER_BAR / 4)))
 	t.check("trace values stay in range", samples.all(func(s): return s.values.values().all(func(v): return v >= 0.0 and v <= 1.0)))
 	t.check("trace has no unflagged mid-phrase changes", changes.all(func(c): return (c.phrase and c.phrase_step % (Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR) == 0) or MusicRows.danger(c.danger)), str(changes.size()))
 	t.check("trace bot engages the dam Warden", engaged, "engaged=%s broke=%s" % [engaged, broke])
@@ -154,14 +154,14 @@ func _release_fixture() -> void:
 	root.add_child(initial_enemy)
 	initial_enemy.add_to_group("enemy")
 	initial_enemy.global_position = game.player.ball_position() + game.ctx.aim_forward() * 0.1
-	var busy_deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS
+	var busy_deadline: int = engine.clock + engine.step_len * Harmony.STEPS_PER_BAR * Harmony.PHRASE_BARS
 	while engine.clock <= busy_deadline:
 		engine.render(mini(4096, busy_deadline + 1 - engine.clock))
 	t.check("release fixture starts with busy layers", [Music.KEYS, Music.LEAD, Music.WARM, Music.FLEET, Music.LANDMARK_HUM].all(func(layer): return engine.layer_target(layer) > 0.0) and engine.fleet_ticks == 3)
 
 	game.flow._unseal()
 	audio._flush_flow()
-	var deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS
+	var deadline: int = engine.clock + engine.step_len * Harmony.STEPS_PER_BAR * Harmony.PHRASE_BARS
 	while engine.clock <= deadline:
 		engine.render(mini(4096, deadline + 1 - engine.clock))
 	t.check("scripted Warden break releases within one phrase", Music.MELODIC.all(func(layer): return engine.layer_target(layer) == 0.0) and [Music.KEYS, Music.WARM, Music.WOB, Music.FLEET, Music.LANDMARK_HUM].all(func(layer): return engine.layer_target(layer) == 0.0))
@@ -178,7 +178,7 @@ func _release_fixture() -> void:
 	audio.sample_run_parameters()
 	t.check("flume has no graph and no approach", audio._parameter_graph == null and not audio.sample_run_parameters().has("approach"))
 	game.events.landed.emit(12.0)
-	var flume_deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS * 2
+	var flume_deadline: int = engine.clock + engine.step_len * Harmony.STEPS_PER_BAR * Harmony.PHRASE_BARS * 2
 	engine.set_overcharge(2)
 	engine.set_pressure(1.0)
 	# The absent approach feed is preserved on the flume; recovery is checked again below with a graph.
@@ -209,7 +209,7 @@ func _release_fixture() -> void:
 	enemy.global_position = game.player.ball_position() + game.ctx.aim_forward() * 0.1
 	var restored: Dictionary = audio.sample_run_parameters()
 	t.check("next stage fixture has regained armour and positive feeds", restored.get("armour", 0.0) == 1.0 and restored.get("approach", 0.0) == 1.0 and restored.get("threat", 0.0) > 0.8, str(restored))
-	var recovery_deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS * 2
+	var recovery_deadline: int = engine.clock + engine.step_len * Harmony.STEPS_PER_BAR * Harmony.PHRASE_BARS * 2
 	while engine.clock <= recovery_deadline:
 		engine.render(mini(4096, recovery_deadline + 1 - engine.clock))
 	t.check("next stage restores eligible layers after landing", [Music.KEYS, Music.LEAD, Music.ARP, Music.WARM, Music.PAD, Music.CHOIR, Music.ECHO, Music.COUNTER, Music.FLEET, Music.LANDMARK_HUM].all(func(layer): return engine.layer_target(layer) > 0.0), str(engine._targets))

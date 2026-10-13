@@ -79,13 +79,14 @@ func _run() -> void:
 	fast_hitch.set_parameter_source(func(): return {"threat": 0.4})
 	fast_hitch._set_grid(1000)
 	fast_hitch.render(1)
-	var fast_end := fast_hitch.bar_len() + roundi(Harmony.RATE * 0.1)
-	_advance(fast_hitch, fast_hitch.bar_len() - roundi(Harmony.RATE * 0.1))
+	var fast_bar := 1000 * Harmony.STEPS_PER_BAR
+	var fast_end := fast_bar + roundi(Harmony.RATE * 0.1)
+	_advance(fast_hitch, fast_bar - roundi(Harmony.RATE * 0.1))
 	var hitch_frames := fast_end - fast_hitch.clock
 	fast_hitch.render(hitch_frames)
 	t.eq("hitch is exactly 200 ms", hitch_frames, roundi(Harmony.RATE * 0.2))
 	t.eq("hitch advances the transport without a stall", fast_hitch.clock, fast_end)
-	t.eq("200 ms hitch skips no transport samples", fast_hitch.parameter_sample_count, ceili(float(fast_end) / (fast_hitch.bar_len() / 4)))
+	t.eq("200 ms hitch skips no transport samples", fast_hitch.parameter_sample_count, ceili(float(fast_end) / (fast_bar / 4)))
 	var bounded := Music.new()
 	bounded.call("set_parameter_source", func(): return {"threat": 1.5, "approach": -0.2, "armour": 0.5})
 	bounded.render(1)
@@ -129,7 +130,7 @@ func _fleet_fixture(armour: bool) -> void:
 	fleet.set_parameter_source(func(): return {"threat": 0.0, "armour": 1.0} if armour else {"threat": 0.0})
 	fleet.schedule_restart(0, Music.PLAY, 0)
 	_advance(fleet, Harmony.BAR + 1)
-	var starts: int = fleet.layer_starts[Music.FLEET]
+	var starts := 0
 	fleet.set_fleet_ticks(3)
 	var boundary := Harmony.BAR * Harmony.PHRASE_BARS
 	_advance(fleet, boundary)
@@ -163,7 +164,6 @@ func _landmark_hum_fixture() -> void:
 	hum.schedule_restart(0, Music.PLAY, 0)
 	hum.render(1)
 	t.eq("zero approach contributes no landmark hum", hum.layer_target(layer), 0.0)
-	var pad := hum.layer_target(Music.PAD)
 	input.approach = 1.0
 	var boundary := Harmony.BAR * Harmony.PHRASE_BARS
 	_advance(hum, boundary)
@@ -171,7 +171,7 @@ func _landmark_hum_fixture() -> void:
 	t.eq("approach-only gain waits for phrase", hum.layer_target(layer), 0.0)
 	hum.render(1)
 	t.near("approach-only opens landmark hum on phrase", hum.layer_target(layer), 1.0)
-	t.eq("approach leaves generic pad alone", hum.layer_target(Music.PAD), pad)
+	t.eq("approach leaves generic pad alone", hum.layer_target(Music.PAD), 0.0)
 	var voices: Array = hum._voices.filter(func(v): return v.layer == layer)
 	t.check("record-selected beacon hum starts on phrase", not voices.is_empty())
 	if not voices.is_empty():
