@@ -8,6 +8,8 @@ const T := preload("res://tests/support/t.gd")
 
 # Measured by entering every alpha and default-table stage on 560d177 before the fix.
 # Both tables produced these same six rows. The spec omits the fleet's object references.
+# Re-pinned 2026-10-13: stages 3 to 6 carry WT-BANDS's contact-gain posture tuning (907bfef), which the park
+# table mirrors; every other field is unchanged.
 const UNCHANGED := [
   {
     "harpoon_anchor": false,
@@ -52,6 +54,8 @@ const UNCHANGED := [
       "hp": 950.0,
       "plating": 130.0,
       "posture": {
+        "contact_gain_floor": 0.55,
+        "contact_gain_scale": 150.0,
         "curve": 2.1,
         "ram_shatters": false
       },
@@ -69,6 +73,8 @@ const UNCHANGED := [
       "hp": 1100.0,
       "plating": 150.0,
       "posture": {
+        "contact_gain_floor": 0.55,
+        "contact_gain_scale": 150.0,
         "curve": 2.1,
         "ram_shatters": false
       },
@@ -86,7 +92,10 @@ const UNCHANGED := [
       "hp": 1250.0,
       "plating": 170.0,
       "posture": {
+        "contact_gain_floor": 0.35,
+        "contact_gain_scale": 10.0,
         "curve": 2.2,
+        "drain_rate": 0.5,
         "ram_shatters": false
       },
       "reach": 30.0,
@@ -103,7 +112,10 @@ const UNCHANGED := [
       "hp": 1400.0,
       "plating": 190.0,
       "posture": {
+        "contact_gain_floor": 0.35,
+        "contact_gain_scale": 10.0,
         "curve": 2.2,
+        "drain_rate": 0.5,
         "ram_shatters": false
       },
       "reach": 30.0,

@@ -1,8 +1,11 @@
 extends RefCounted
 
+signal parameter_commit(at: int, values: Dictionary, released: bool, lift: bool, reason: String)
+
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 
 # The band. A sample-exact sequencer that mixes pre-rendered notes from synth.gd on a
@@ -32,12 +35,12 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 # beat of silence, and their payoff is the full texture plus the bass. A restrained
 # grid-locked wobble is kept only inside the Warden and Brindle drops.
 
-enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET }
+enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET, LANDMARK_HUM }
 # Tone-pending placeholders reuse Brindle's score with a different lead timbre.
 const BOSS_TRACKS := ["brindle", "waking", "mind"]
 const BOSS_LEAD_VOICES := {"brindle": "brass", "waking": "mallet", "mind": "talk"}
 
-const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter", "fleet"]
+const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter", "fleet", "landmark_hum"]
 # gain = floor + (1 - floor) * smoothstep(from, to, pressure). Each curve is monotonic.
 # The bass figure (layer 5) has a floor: it never leaves.
 const CURVES := [
@@ -56,12 +59,13 @@ const CURVES := [
 	[0.0, 0.7, 0.9],
 	[0.0, 0.8, 1.0],
 	[1.0, 0.0, 1.0],
+	[0.0, 0.0, 1.0],
 ]
 # The warm and wobble rows are placeholders: _retarget sets them from the overcharge
 # and the drop; the fleet row is gated by the difficulty ticks instead (set_fleet_ticks).
 # The melodic layers, in the order they enter: pad, arp, choir, lead, echo, counter.
 const MELODIC := [PAD, ARP, CHOIR, LEAD, ECHO, COUNTER]
-const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18, 0.3]
+const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18, 0.3, 1.0]
 # The restrained wobble: only in the Warden's and Brindle's drops, at half level.
 const WOB_DROP_GAIN := 0.5
 # The warm layer is not pressure: it is the overcharge, one step per bonus core.
@@ -72,9 +76,9 @@ const MODE_NAMES := ["idle", "play", "dead"]
 # What each mode lets through, per layer. Menus keep keys, sub, a light hat and the
 # restrained bass riff; death keeps the keys alone, so the band waits with you.
 const MODE_MASK := [
-	[1.0, 0.7, 0.4, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0],
-	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0],
+	[1.0, 0.7, 0.4, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0],
+	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0],
 ]
 const BASS_LAYERS := [SUB, REESE, WOB]
 # The build's own voices (riser, snare roll, launch tune) skip the tone filter.
@@ -217,6 +221,23 @@ var bar_origin := 0
 var mode := IDLE
 var pressure := 0.0
 var applied_pressure := 0.0
+const PARAMETER_SAMPLES_PER_BAR := 4
+const ARMOUR_STRIP_AT := 0.3
+var parameter_source := Callable()
+var parameters := {}
+var parameter_clamps := 0
+var parameter_sample_count := 0
+var parameter_sample_log: Array[Dictionary] = []
+var parameter_layer_log: Array[Dictionary] = []
+var parameter_layer_reads := {}
+var _parameter_step := 0
+var _parameter_phrase_due := false
+var _parameter_danger := ""
+var _parameter_danger_floor := 0.0
+var _parameter_released := false
+var _parameter_fleet_pending := 0
+var _parameter_logged_fleet := -1
+var landmark_hum_sound := ""
 var master := 0.8
 var pause_gain := 1.0
 var overcharge := 0
@@ -310,6 +331,11 @@ var escalation := ""
 var heft_lift := 0
 # A full ultimate meter adds one more step, the same size (SKILL-BAR section 4, music).
 var ultimate_lift := false
+var _requested_ultimate_lift := false
+var _parameter_last_ultimate := false
+var parameter_committed_values := {}
+var parameter_committed_released := false
+var parameter_committed_danger_floor := 0.0
 var _mid := PackedFloat32Array()
 var _left := PackedFloat32Array()
 var _right := PackedFloat32Array()
@@ -317,6 +343,9 @@ var _sl := PackedFloat32Array()
 var _sr := PackedFloat32Array()
 var _dl := PackedFloat32Array()
 var _dr := PackedFloat32Array()
+var _hl := PackedFloat32Array()
+var _hr := PackedFloat32Array()
+var out_landmark := PackedVector2Array()
 var _rng := RandomNumberGenerator.new()
 var _stingers_live := false
 # v2 W5 layers, each added on a real game-state threshold and never swapped in:
@@ -529,6 +558,48 @@ func set_pressure(value: float) -> void:
 		if before[layer] < 0.05 and after[layer] >= 0.05:
 			_riser_into(next_bar())
 			break
+
+
+func set_parameter_source(source: Callable) -> void:
+	parameter_source = source
+	_parameter_step = 0
+	parameters.clear()
+	parameter_committed_values.clear()
+
+
+func _sample_parameters() -> void:
+	var raw: Dictionary = parameter_source.call()
+	parameters = {}
+	for id in ["threat", "approach", "armour"]:
+		if not raw.has(id):
+			continue
+		var value := float(raw[id])
+		if not is_finite(value) or value < 0.0 or value > 1.0:
+			parameter_clamps += 1
+		parameters[id] = clampf(value, 0.0, 1.0) if is_finite(value) else 0.0
+	set_pressure(float(parameters.get("threat", 0.0)))
+	parameter_sample_count += 1
+	parameter_sample_log.append({"at": clock, "step": _parameter_step, "values": parameters.duplicate()})
+	if parameter_sample_log.size() > 4096:
+		parameter_sample_log.pop_front()
+
+
+func parameter_danger(id: String) -> void:
+	if not parameter_source.is_valid() or not MusicRows.danger(id):
+		return
+	_parameter_danger = id
+	_parameter_danger_floor = 1.0
+	_commit_parameters()
+	_parameter_danger = ""
+
+
+func parameters_warden_broken() -> void:
+	_parameter_released = true
+
+
+func parameters_stage_entered() -> void:
+	_parameter_released = false
+	_parameter_danger_floor = 0.0
 
 
 func _riser_into(bar: int) -> void:
@@ -838,6 +909,7 @@ func set_heft_lift(steps: int) -> void:
 # set_heft_lift uses. A layer is added, never swapped (MUSIC-GEMS.md G11); the landing's drop
 # or a cancel that spends the meter releases it at the next bar.
 func set_ultimate_lift(on: bool) -> void:
+	_requested_ultimate_lift = on
 	for item in _bar_queue:
 		if (item["set"] as Dictionary).has("ult"):
 			item["set"]["ult"] = on
@@ -858,6 +930,9 @@ func set_class_motif(id: String) -> void:
 # layer from the next bar line and never swaps one: 1 the anvil on beats 2 and 4, 2 the
 # brass semitone lean answering the lead, 3 the anvil on every beat.
 func set_fleet_ticks(ticks: int) -> int:
+	if parameter_source.is_valid():
+		_parameter_fleet_pending = clampi(ticks, 0, 3)
+		return _next_multiple(Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR)
 	var at := next_bar()
 	_add_action(at, {"type": "fleet", "ticks": clampi(ticks, 0, 3)})
 	return at
@@ -924,6 +999,7 @@ func drop_now(bars: int, weight: float, then := {}, next_theme := -1, change := 
 # The Warden breaks: the heaviest drop in the stage, eight bars back home in D, then
 # the kill cadence resolves home to the level at 172.
 func unseal_drop() -> int:
+	parameters_warden_broken()
 	return drop_now(8, 1.0, {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}}, -1, {"unseal": true})
 
 
@@ -1207,6 +1283,7 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 func render(frames: int) -> void:
 	out_music.resize(frames)
 	out_stinger.resize(frames)
+	out_landmark.resize(frames)
 	_mid.resize(frames)
 	_left.resize(frames)
 	_right.resize(frames)
@@ -1214,6 +1291,8 @@ func render(frames: int) -> void:
 	_sr.resize(frames)
 	_dl.resize(frames)
 	_dr.resize(frames)
+	_hl.resize(frames)
+	_hr.resize(frames)
 	_stingers_live = false
 	_mid.fill(0.0)
 	_left.fill(0.0)
@@ -1222,6 +1301,8 @@ func render(frames: int) -> void:
 	_sr.fill(0.0)
 	_dl.fill(0.0)
 	_dr.fill(0.0)
+	_hl.fill(0.0)
+	_hr.fill(0.0)
 	var done := 0
 	while done < frames:
 		_run_due()
@@ -1272,6 +1353,12 @@ func _run_due() -> void:
 
 func _on_step() -> void:
 	_step_clock = clock
+	if parameter_source.is_valid():
+		var phrase_steps := Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR
+		var sample_steps := phrase_steps / (Harmony.PHRASE_BARS * PARAMETER_SAMPLES_PER_BAR)
+		if _parameter_step % sample_steps == 0:
+			_sample_parameters()
+		_parameter_step += 1
 	# A tempo ramp moves one beat at a time, so every beat starts where the last ended.
 	if _bar_step % Harmony.STEPS_PER_BEAT == 0 and not _ramp.is_empty():
 		var left: int = _ramp["beats"]
@@ -1302,6 +1389,15 @@ func _on_step() -> void:
 		if not then.is_empty():
 			_run(then.duplicate())
 			_step_clock = clock
+	if parameter_source.is_valid():
+		_parameter_phrase_due = _bar_step % (Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR) == 0
+		if _parameter_phrase_due:
+			if fleet_ticks != _parameter_fleet_pending:
+				fleet_ticks = _parameter_fleet_pending
+				events_log.append(["fleet", clock, fleet_ticks])
+			_parameter_danger_floor = 0.0
+			_commit_parameters()
+		_parameter_phrase_due = false
 	var s := _bar_step % Harmony.STEPS_PER_BAR
 	var bar := _bar_step / Harmony.STEPS_PER_BAR
 	# A build stacks layers as it rises.
@@ -1314,7 +1410,10 @@ func _on_step() -> void:
 	if _gap:
 		return
 	var chord := _chord(bar)
-	if fleet_ticks > 0 and track == "level" and _cadence_bar < 0 and not _lounge_live():
+	if _targets[LANDMARK_HUM] > 0.0 and s % Harmony.STEPS_PER_BEAT == 0:
+		var hum := SfxBank.samples(landmark_hum_sound)
+		_start(hum, hum.size(), LANDMARK_HUM, db_to_linear(SfxBank.trim_db(landmark_hum_sound)), 0.0, false)
+	if fleet_ticks > 0 and _targets[FLEET] > 0.0 and track == "level" and _cadence_bar < 0 and not _lounge_live():
 		_fleet_layer(s, chord)
 	if not _drop.is_empty():
 		_trigger_drop(bar, s, chord)
@@ -1367,6 +1466,7 @@ func _run(action: Dictionary) -> void:
 			_start(buf, buf.size(), -1, db_to_linear(SfxBank.trim_db(id)), 0.0, true)
 			events_log.append(["door_tick", clock, id])
 		"park_cue":
+			parameter_danger(action.id)
 			var live_key: int = key if grid == null else grid.key_at(clock)
 			var buf := park_cue_samples(action, live_key)
 			var row: Dictionary = action.row
@@ -1389,6 +1489,7 @@ func _run(action: Dictionary) -> void:
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
 		"restart":
+			parameters_stage_entered()
 			_dominant_held = false
 			_reset_escalation()
 			_bar_queue.clear()
@@ -1407,6 +1508,9 @@ func _run(action: Dictionary) -> void:
 			_pulse_until = -1
 			_drop = {}
 			mode = action["mode"]
+			if ultimate_lift != _requested_ultimate_lift:
+				ultimate_lift = _requested_ultimate_lift
+				events_log.append(["ult", clock, ultimate_lift])
 			_new_phrase()
 			_release_all()
 			_retarget()
@@ -1476,8 +1580,11 @@ func _run(action: Dictionary) -> void:
 		"echo":
 			_start_note(action["voice"], int(action["midi"]), 1, ECHO, 0.9, float(action["pan"]))
 		"fleet":
-			fleet_ticks = int(action["ticks"])
-			events_log.append(["fleet", clock, fleet_ticks])
+			if parameter_source.is_valid():
+				_parameter_fleet_pending = int(action["ticks"])
+			else:
+				fleet_ticks = int(action["ticks"])
+				events_log.append(["fleet", clock, fleet_ticks])
 		"lounge":
 			lounge = bool(action["on"])
 			events_log.append(["lounge", clock, lounge])
@@ -1530,9 +1637,11 @@ func _run(action: Dictionary) -> void:
 				_set_key(int(change["key"]))
 			# The set piece's landing drop releases the meter's lift on its own beat: the drop
 			# clears the bar queue, so a release queued for the next bar would be lost.
-			if change.has("ult") and bool(change["ult"]) != ultimate_lift:
-				ultimate_lift = bool(change["ult"])
-				events_log.append(["ult", clock, ultimate_lift])
+			if change.has("ult"):
+				_requested_ultimate_lift = bool(change["ult"])
+				if _requested_ultimate_lift != ultimate_lift:
+					ultimate_lift = _requested_ultimate_lift
+					events_log.append(["ult", clock, ultimate_lift])
 			if track == "warden":
 				section = "drop"
 				if not lap:
@@ -1566,6 +1675,8 @@ func _set_key(next: int) -> void:
 
 func _reset_bar() -> void:
 	bar_origin = clock
+	if parameter_source.is_valid():
+		grid_origin = clock
 	_bar_step = 0
 	_step_clock = -1
 
@@ -1643,7 +1754,8 @@ func _on_bar() -> void:
 		_riser_into(clock + bar_len())
 	if track == "warden" and section == "build" and local % 4 == 3 and not building():
 		_riser_into(clock + bar_len())
-	applied_pressure = pressure
+	if not parameter_source.is_valid():
+		applied_pressure = pressure
 	_retarget()
 	if local % Harmony.PHRASE_BARS == 0:
 		_groove = _rng.randi() % 3
@@ -1664,8 +1776,30 @@ func _floor() -> float:
 	return PRESSURE_FLOOR.get(key_name, 0.0)
 
 
+# Threat, approach and armour schedule their own phrase or flagged-danger commit.
+# Shared retarget callers, including calm bay entry/exit (K1), retain their own boundaries.
+func _commit_parameters() -> void:
+	var previous := _targets.duplicate()
+	parameter_committed_values = parameters.duplicate()
+	parameter_committed_released = _parameter_released
+	parameter_committed_danger_floor = _parameter_danger_floor
+	applied_pressure = float(parameter_committed_values.get("threat", 0.0))
+	_retarget()
+	if previous != _targets or _parameter_logged_fleet != fleet_ticks:
+		_parameter_logged_fleet = fleet_ticks
+		parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": _parameter_phrase_due,
+			"danger": _parameter_danger, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
+		if parameter_layer_log.size() > 4096:
+			parameter_layer_log.pop_front()
+	parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, _parameter_danger)
+
+
 func _retarget() -> void:
+	var ultimate_changed := ultimate_lift != _parameter_last_ultimate
+	_parameter_last_ultimate = ultimate_lift
 	var effective := maxf(applied_pressure, _floor()) if mode == PLAY else applied_pressure
+	if parameter_source.is_valid():
+		effective = maxf(effective, parameter_committed_danger_floor)
 	if mode == PLAY and building():
 		effective = maxf(effective, build_level())
 	if mode == PLAY:
@@ -1700,6 +1834,27 @@ func _retarget() -> void:
 			for layer in gains.size():
 				_targets[layer] = gains[layer] * MODE_MASK[DEAD][layer]
 		_targets[LEAD] = 0.0 if lost else (TITLE_LEAD_GAIN if track == "title" else SUMMARY_LEAD_GAIN)
+	_targets[LANDMARK_HUM] = 0.0
+	landmark_hum_sound = ""
+	if parameter_source.is_valid():
+		parameter_layer_reads = {}
+		if mode == PLAY:
+			if parameter_committed_values.has("approach"):
+				parameter_layer_reads["approach"] = true
+				landmark_hum_sound = String(EventKinds.world_row("landmark_hum").get("sound", ""))
+				if not landmark_hum_sound.is_empty():
+					_targets[LANDMARK_HUM] = float(parameter_committed_values.approach)
+			var strip := parameter_committed_released
+			if parameter_committed_values.has("armour"):
+				parameter_layer_reads["armour"] = true
+				strip = strip or float(parameter_committed_values.armour) < ARMOUR_STRIP_AT
+			if strip:
+				for layer in [KEYS, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET, LANDMARK_HUM]:
+					_targets[layer] = 0.0
+		if ultimate_changed and not _parameter_phrase_due and _parameter_danger == "":
+			parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": false,
+				"danger": "", "ultimate": true, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
+			parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, "ultimate")
 
 
 func _lounge_live() -> bool:
@@ -2476,7 +2631,7 @@ func _hit(instrument: String, layer: int, gain: float, pan: float) -> void:
 
 
 func _start(buf: PackedFloat32Array, length: int, layer: int, gain: float, pan: float, to_stinger: bool) -> Voice:
-	if band_muted and not to_stinger:
+	if band_muted and not to_stinger and layer != LANDMARK_HUM:
 		return null
 	var band_count := 0
 	if not to_stinger:
@@ -2599,7 +2754,7 @@ func _mix(offset: int, n: int) -> void:
 		var gl := voice.gl
 		var gr := voice.gr
 		var flat := g0 == g1 and pos + count <= release_at
-		if voice.mono and not voice.to_stinger and voice.layer != DRY:
+		if voice.mono and not voice.to_stinger and voice.layer not in [DRY, LANDMARK_HUM]:
 			if flat:
 				var m := gl * g0
 				for i in count:
@@ -2614,8 +2769,8 @@ func _mix(offset: int, n: int) -> void:
 		else:
 			if voice.to_stinger:
 				_stingers_live = true
-			var left := _sl if voice.to_stinger else (_dl if voice.layer == DRY else _left)
-			var right := _sr if voice.to_stinger else (_dr if voice.layer == DRY else _right)
+			var left := _sl if voice.to_stinger else (_hl if voice.layer == LANDMARK_HUM else (_dl if voice.layer == DRY else _left))
+			var right := _sr if voice.to_stinger else (_hr if voice.layer == LANDMARK_HUM else (_dr if voice.layer == DRY else _right))
 			if voice.mono:
 				gr = gl
 			for i in count:
@@ -2688,12 +2843,14 @@ func _mix(offset: int, n: int) -> void:
 func _finish(frames: int) -> void:
 	if bot_skip_samples:
 		return
+	for i in frames:
+		out_landmark[i] = Vector2(_hl[i], _hr[i]) * master * pause_gain
 	if band_muted:
 		out_music.fill(Vector2.ZERO)
 	else:
 		for i in frames:
-			var l := _left[i]
-			var r := _right[i]
+			var l := _left[i] + out_landmark[i].x
+			var r := _right[i] + out_landmark[i].y
 			if l > 0.75 or l < -0.75:
 				l = _soft(l)
 			if r > 0.75 or r < -0.75:
