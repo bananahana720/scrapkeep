@@ -329,6 +329,10 @@ var escalation := ""
 var heft_lift := 0
 # A full ultimate meter adds one more step, the same size (SKILL-BAR section 4, music).
 var ultimate_lift := false
+var _parameter_curve_base := 0.0
+var _parameter_curve_masks := PackedFloat32Array()
+var _parameter_curve_play := false
+var _parameter_last_ultimate := false
 var _mid := PackedFloat32Array()
 var _left := PackedFloat32Array()
 var _right := PackedFloat32Array()
@@ -1758,6 +1762,7 @@ func _retarget() -> void:
 	# Threat, approach and armour layers commit on phrases unless danger is flagged.
 	# Calm bay entry/exit is a place change and keeps its existing next-bar switch (K1).
 	if parameter_source.is_valid() and not _parameter_phrase_due and _parameter_danger == "":
+		_retarget_ultimate()
 		return
 	var previous := _targets.duplicate()
 	var effective := maxf(applied_pressure, _floor()) if mode == PLAY else applied_pressure
@@ -1766,7 +1771,15 @@ func _retarget() -> void:
 	if mode == PLAY and building():
 		effective = maxf(effective, build_level())
 	if mode == PLAY:
-		effective = minf(1.0, effective + HEFT_STEP * (heft_lift + (1 if ultimate_lift else 0)))
+		effective = minf(1.0, effective + HEFT_STEP * heft_lift)
+	_parameter_curve_base = effective
+	_parameter_curve_play = mode == PLAY
+	_parameter_curve_masks = PackedFloat32Array(MODE_MASK[mode])
+	for layer in [WARM, WOB, LANDMARK_HUM]:
+		_parameter_curve_masks[layer] = 0.0
+	if mode == PLAY and ultimate_lift:
+		effective = minf(1.0, effective + HEFT_STEP)
+	_parameter_last_ultimate = ultimate_lift
 	_intensity = effective
 	var gains := layer_gains(effective)
 	for layer in gains.size():
@@ -1784,14 +1797,17 @@ func _retarget() -> void:
 		elif track in BOSS_TRACKS:
 			_pump_depth = 0.4
 	if _lounge_live() and mode == PLAY and _drop.is_empty() and _cadence_bar < 0:
+		_parameter_curve_masks.fill(0.0)
 		for layer in LOUNGE_GAINS.size():
 			if layer != WARM:
 				_targets[layer] = LOUNGE_GAINS[layer]
 		_intensity = maxf(LOUNGE_FLOOR, build_level())
 	if track == "warden" and section == "open" and mode == PLAY and _cadence_bar < 0:
+		_parameter_curve_masks.fill(0.0)
 		for layer in OPEN_GAINS.size():
 			_targets[layer] = OPEN_GAINS[layer]
 	if track in MENU_TRACKS and mode == IDLE:
+		_parameter_curve_masks[LEAD] = 0.0
 		var lost := section == "lost"
 		if lost:
 			for layer in gains.size():
@@ -1814,12 +1830,29 @@ func _retarget() -> void:
 			if strip:
 				for layer in [KEYS, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET, LANDMARK_HUM]:
 					_targets[layer] = 0.0
+					_parameter_curve_masks[layer] = 0.0
 		if previous != _targets or _parameter_logged_fleet != fleet_ticks:
 			_parameter_logged_fleet = fleet_ticks
 			parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": _parameter_phrase_due,
 				"danger": _parameter_danger, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
 			if parameter_layer_log.size() > 4096:
 				parameter_layer_log.pop_front()
+
+
+func _retarget_ultimate() -> void:
+	if ultimate_lift == _parameter_last_ultimate or _parameter_curve_masks.is_empty():
+		return
+	_parameter_last_ultimate = ultimate_lift
+	var effective := minf(1.0, _parameter_curve_base + (HEFT_STEP if ultimate_lift and _parameter_curve_play else 0.0))
+	var gains := layer_gains(effective)
+	var previous := _targets.duplicate()
+	for layer in gains.size():
+		if _parameter_curve_masks[layer] > 0.0:
+			_targets[layer] = gains[layer] * _parameter_curve_masks[layer]
+	if previous != _targets:
+		_intensity = effective
+		parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": false,
+			"danger": "", "ultimate": true, "fleet_ticks": fleet_ticks, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
 
 
 func _lounge_live() -> bool:
