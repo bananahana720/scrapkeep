@@ -44,6 +44,7 @@ func _run() -> void:
 	t.check("existing ACE stems perform in real Game", audio.ace_playing())
 	var ace = audio.ace
 	_pump_to(audio, engine.clock + Harmony.BAR * 2)
+	t.eq("source-enabled restart aligns step and phrase origins", engine.grid_origin, engine.bar_origin)
 	t.check("normal pump hands over and mutes synth", engine.band_muted and ace.active())
 	t.check("normal handover produces ACE PCM", Array(audio.out_music).any(func(v): return v.length_squared() > 0.0))
 	var before := _other_target(ace)
