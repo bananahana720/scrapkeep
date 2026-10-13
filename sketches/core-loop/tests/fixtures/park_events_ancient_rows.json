@@ -1,0 +1,370 @@
+{
+ "park_rows": [
+  {
+   "id": "toe_vent_pits",
+   "element": "bowl",
+   "landform": "dam_face",
+   "society": "ancient",
+   "at": [
+    190,
+    430
+   ],
+   "y": null,
+   "size": [
+    50,
+    3,
+    50
+   ],
+   "yaw_deg": 0,
+   "verb": "bank",
+   "ride_fact": "ride_bowl",
+   "home": "",
+   "recipe": "greybox:bowl",
+   "stamp": "bowl",
+   "hole": false,
+   "budget": "detail",
+   "routes": [],
+   "fragment": "ancient_vent_plate"
+  },
+  {
+   "id": "deep_adit",
+   "element": "tunnel",
+   "landform": "adit",
+   "society": "ancient",
+   "at": [
+    262.5,
+    330
+   ],
+   "y": null,
+   "size": [
+    50,
+    10,
+    14
+   ],
+   "yaw_deg": 0,
+   "verb": "roll",
+   "ride_fact": "ride_chute",
+   "home": "",
+   "recipe": "",
+   "stamp": "",
+   "hole": false,
+   "budget": "park_large",
+   "routes": [
+    "side_7a_east",
+    "deep_adit_floor",
+    "eruption_lip"
+   ],
+   "fragment": "ancient_adit_seal"
+  },
+  {
+   "id": "bend_overlook",
+   "element": "bank",
+   "landform": "horseshoe_bend",
+   "society": "none",
+   "at": [
+    150,
+    -60
+   ],
+   "y": null,
+   "size": [
+    140,
+    2,
+    30
+   ],
+   "yaw_deg": 0,
+   "verb": "bank",
+   "ride_fact": "ride_bowl",
+   "home": "",
+   "recipe": "greybox:bank",
+   "stamp": "ridge",
+   "hole": false,
+   "budget": "landform",
+   "routes": [
+    "rim_mid"
+   ],
+   "fragment": ""
+  },
+  {
+   "id": "lens_spire",
+   "element": "anchor_field",
+   "landform": "spire",
+   "society": "ancient",
+   "at": [
+    -330,
+    420
+   ],
+   "y": null,
+   "size": [
+    30,
+    130,
+    30
+   ],
+   "yaw_deg": 0,
+   "verb": "swing",
+   "ride_fact": "ride_grapple_line",
+   "home": "spire_hands",
+   "recipe": "greybox:anchor_field",
+   "stamp": "spire",
+   "hole": false,
+   "budget": "landform",
+   "routes": [],
+   "fragment": "ancient_lens_seat"
+  },
+  {
+   "id": "lens_rocks",
+   "element": "sky_island",
+   "landform": "butte",
+   "society": "ancient",
+   "at": [
+    430,
+    470
+   ],
+   "y": null,
+   "size": [
+    120,
+    90,
+    120
+   ],
+   "yaw_deg": 0,
+   "verb": "drop",
+   "ride_fact": "ride_drop",
+   "home": "",
+   "recipe": "greybox:sky_island",
+   "stamp": "butte",
+   "hole": false,
+   "budget": "landform",
+   "routes": [],
+   "fragment": "ancient_lens_rock_hum"
+  },
+  {
+   "id": "machine_vault",
+   "element": "bowl",
+   "landform": "lava_tube",
+   "society": "ancient",
+   "at": [
+    -182,
+    -160
+   ],
+   "y": null,
+   "size": [
+    40,
+    6,
+    40
+   ],
+   "yaw_deg": 0,
+   "verb": "bank",
+   "ride_fact": "",
+   "home": "",
+   "recipe": "greybox:bowl",
+   "stamp": "bowl",
+   "hole": false,
+   "budget": "park_large",
+   "routes": [
+    "eruption_lip"
+   ],
+   "fragment": "ancient_buried_lens"
+  }
+ ],
+ "event_rows": [
+  {
+   "id": "toe_vents_wake",
+   "kind": "machine_eruption",
+   "family": "ancient",
+   "site": "toe_vent_pits",
+   "trigger": {
+    "on": "clock_tier",
+    "value": 2
+   },
+   "weight": 1.0,
+   "telegraph": {
+    "lead_s": 8.0,
+    "form": "ancient_stirring",
+    "on_bar": true
+   },
+   "live_s": 0.0,
+   "effect": {
+    "miniboss": "reactor_relic",
+    "swap": "vent_pit_lip"
+   },
+   "route_change": {
+    "closes": [],
+    "opens": []
+   },
+   "hold_clear_m": 15.0,
+   "cooldown_s": 0.0,
+   "once": true,
+   "music_cue": {
+    "telegraph": "riser_ancient",
+    "land": "drop_ancient"
+   }
+  },
+  {
+   "id": "deep_adit_wakes",
+   "kind": "machine_eruption",
+   "family": "ancient",
+   "site": "deep_adit",
+   "trigger": {
+    "on": "clock_tier",
+    "value": 3
+   },
+   "weight": 1.0,
+   "telegraph": {
+    "lead_s": 8.0,
+    "form": "ancient_stirring",
+    "on_bar": true
+   },
+   "live_s": 0.0,
+   "effect": {
+    "miniboss": "swarm_remnant",
+    "swap": "eruption_lip"
+   },
+   "route_change": {
+    "closes": [
+     "deep_adit_floor"
+    ],
+    "opens": [
+     "eruption_lip"
+    ]
+   },
+   "hold_clear_m": 15.0,
+   "cooldown_s": 0.0,
+   "once": true,
+   "music_cue": {
+    "telegraph": "riser_ancient",
+    "land": "drop_ancient"
+   }
+  },
+  {
+   "id": "bend_relic_wakes",
+   "kind": "machine_eruption",
+   "family": "ancient",
+   "site": "bend_overlook",
+   "trigger": {
+    "on": "clock_tier",
+    "value": 2
+   },
+   "weight": 1.0,
+   "telegraph": {
+    "lead_s": 8.0,
+    "form": "ancient_stirring",
+    "on_bar": true
+   },
+   "live_s": 0.0,
+   "effect": {
+    "miniboss": "reactor_relic",
+    "swap": "bend_vent_lip"
+   },
+   "route_change": {
+    "closes": [],
+    "opens": []
+   },
+   "hold_clear_m": 15.0,
+   "cooldown_s": 0.0,
+   "once": true,
+   "music_cue": {
+    "telegraph": "riser_ancient",
+    "land": "drop_ancient"
+   }
+  },
+  {
+   "id": "lens_spire_wakes",
+   "kind": "machine_eruption",
+   "family": "ancient",
+   "site": "lens_spire",
+   "trigger": {
+    "on": "clock_tier",
+    "value": 2
+   },
+   "weight": 0.6,
+   "telegraph": {
+    "lead_s": 9.0,
+    "form": "ancient_stirring",
+    "on_bar": true
+   },
+   "live_s": 0.0,
+   "effect": {
+    "miniboss": "mind_hand",
+    "swap": "spire_foot_crater"
+   },
+   "route_change": {
+    "closes": [],
+    "opens": []
+   },
+   "hold_clear_m": 18.0,
+   "cooldown_s": 0.0,
+   "once": true,
+   "music_cue": {
+    "telegraph": "riser_mind_quote",
+    "land": "drop_mind_wrong"
+   }
+  },
+  {
+   "id": "lens_rocks_wake",
+   "kind": "machine_eruption",
+   "family": "ancient",
+   "site": "lens_rocks",
+   "trigger": {
+    "on": "clock_tier",
+    "value": 2
+   },
+   "weight": 0.6,
+   "telegraph": {
+    "lead_s": 9.0,
+    "form": "ancient_stirring",
+    "on_bar": true
+   },
+   "live_s": 0.0,
+   "effect": {
+    "miniboss": "mind_hand",
+    "swap": "lens_rock_crater"
+   },
+   "route_change": {
+    "closes": [],
+    "opens": []
+   },
+   "hold_clear_m": 18.0,
+   "cooldown_s": 0.0,
+   "once": true,
+   "music_cue": {
+    "telegraph": "riser_mind_quote",
+    "land": "drop_mind_wrong"
+   }
+  },
+  {
+   "id": "junction_machine_wakes",
+   "kind": "machine_eruption",
+   "family": "ancient",
+   "site": "machine_vault",
+   "trigger": {
+    "on": "clock_tier",
+    "value": 2
+   },
+   "weight": 1.0,
+   "telegraph": {
+    "lead_s": 8.0,
+    "form": "ancient_stirring",
+    "on_bar": true
+   },
+   "live_s": 0.0,
+   "effect": {
+    "miniboss": "swarm_remnant",
+    "swap": "eruption_lip"
+   },
+   "route_change": {
+    "closes": [
+     "cannon_tube"
+    ],
+    "opens": [
+     "eruption_lip"
+    ]
+   },
+   "hold_clear_m": 15.0,
+   "cooldown_s": 0.0,
+   "once": true,
+   "music_cue": {
+    "telegraph": "riser_ancient",
+    "land": "drop_ancient"
+   }
+  }
+ ]
+}
