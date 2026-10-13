@@ -106,8 +106,8 @@ func _initialize() -> void:
 	var cell := _cell(cells)
 	var small := float(cell.get("small_median_s", "0"))
 	var grown := float(cell.get("grown_median_s", "0"))
-	t.check("over the sweep seeds small takes at least twice grown's time", float(swept.get("small_median_s", "0")) >= 2.0 * swept_grown,
-		"small %.1f s, grown %.1f s" % [float(swept.get("small_median_s", "0")), swept_grown])
+	t.check("over the sweep seeds small takes at least twice grown's time", grown > 0.0 and small >= 2.0 * grown,
+		"small %.1f s, grown %.1f s" % [small, grown])
 	t.eq("small breaks it in every run", cell.get("small_broke", ""), str(SEEDS.count(",") + 1))
 	t.eq("the camper never breaks it", cell.get("camper_broke", ""), "0")
 	t.check("small median within 10 percent of the sweep's", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
