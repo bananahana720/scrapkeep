@@ -1,6 +1,80 @@
 # Traversal: stage 6, the crown (`park_crown`)
 
-## Round 6, 13 October 2026: current qualification
+## Round 7, 13 October 2026: current qualification
+
+FIX. Automated native evidence level 4. Geometry head `d7099a6ca3efaab376ac15af6f8c49693f8bbecf` follows STEP 0 merge `8beb3b73f622dbe2ca06aea486c401012decb7af` of candidate `907bfef79d051fa48077323a8e34dfd8a872cdd2`. Current receipts are in `/home/andrew/scratch/w13/sol/kd6-crown-r7`. T1 restores the third trial's `kick_wmid_3` launch and adds one stage-local midpoint anchor, `tarn_west_gap_anchor`. No fourth launch repair, band change, waypoint change, kit change or Warden pin change is made. Earlier rounds below are dated history.
+
+The committed traversal tool has SHA-256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. `commands.ndjson` records command, checked head, input hashes, output folder and exit. `final-measurements.json` independently recomputes the table from the final pinned raw batches. Scalar cells give midpoint medians, actual worst seeds and both seed extrema. Segment cells give medians and ranges. Anchor gap, stops, peak speed and quiet time use seed extrema. Only the floor's own reach/time/zero-stop row gates the floor. Missing receipts remain pending, FIX.
+
+| Measure | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | pending; FIX | pending; FIX | pending; FIX | 8/8; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| time_to_warden_s | pending; FIX | pending; FIX | pending; FIX | 85.52 (worst seed 4: 86.32); min 84.63 seed 2, max 86.32 seed 4; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| segment_s | pending; FIX | pending; FIX | pending; FIX | 15.03/41.06/29.385; seed ranges 14.98 to 15.08/40.53 to 41.13/29.0 to 30.15; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| flow_share | pending; FIX | pending; FIX | pending; FIX | 0.8438 (worst seed 3: 0.8357); min 0.8357 seed 3, max 0.8451 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| airborne_share | pending; FIX | pending; FIX | pending; FIX | 0.241 (worst seed 7: 0.2393); min 0.2393 seed 7, max 0.2457 seed 2; MISS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| dead_stops | pending; FIX | pending; FIX | pending; FIX | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| peak_speed_mps | pending; FIX | pending; FIX | pending; FIX | 42.81 (worst seed 1: 42.25); min 42.25 seed 1, max 43.72 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| tier3_s | pending; FIX | pending; FIX | pending; FIX | 9.56 (worst seed 4: 9.43); min 9.43 seed 4, max 9.68 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| quiet_max_s | pending; FIX | pending; FIX | pending; FIX | 5.845 (worst seed 1: 6.69); min 5.76 seed 4, max 6.69 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| max_anchor_gap_m | pending; FIX | pending; FIX | pending; FIX | 20.9 (worst seed 3: 21.4); min 18.9 seed 2, max 21.4 seed 3; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| distinct_verbs | pending; FIX | pending; FIX | pending; FIX | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| length_ratio | pending; FIX | pending; FIX | pending; FIX | 1.58 (worst seed 1: 1.58); min 1.58 seed 1, max 1.59 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| Distinct lines, at least 3 | pending eight-seed tick witness; FIX | | | | | | |
+| Floor own row: all seeds reach, time within 2 x Rivet median, zero stops | | | | | | | pending; FIX |
+
+Mandatory smoke is 7/8: the imported `park_table_test` fails the park/arena posture equality for rows 3–6. The shared test, ParkDefs and AlphaDefs are unchanged from candidate 907bfef and outside KD6 SCOPE. `shared-smoke-blocker.json` records the source identities and four failures. Crown remains unadmitted.
+
+### Ruling 29 open rows
+
+| Pilot | Measure and value | Unchanged band | Final receipt | Attempts, owner and status |
+| --- | --- | --- | --- | --- |
+| tarn | airborne_share 0.24105 | 0.25 to 0.6 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/final-tarn/tarn.json` | Two withdrawn round-5 west launches; third round-6 launch withdrawn for 46 m gap; restored with one anchor under T1. No fourth launch repair. Crown dressing unit owns closure. MISS; conditional carry awaits the other acceptance criteria. |
+| rivet | length_ratio 1.25 diagnostic MISS; final pending, FIX | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/baseline-rivet/rivet.json; superseded diagnostic only` | Two round-5 ride attempts withdrawn for stops and a 63.7 m gap. T2 authorizes carry only. Crown dressing unit owns closure. pending; FIX. |
+| kest | length_ratio 1.28 diagnostic MISS; final pending, FIX | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/baseline-kest/kest.json; superseded diagnostic only` | Two round-5 launch/ride attempts; retained slope removes stops. T2 authorizes carry only. Crown dressing unit owns closure. pending; FIX. |
+
+Measured misses remain MISS in the table. The bounded attempts are retained in `/home/andrew/scratch/w13/sol/kd6-crown-r5/REPORT.md` and `/home/andrew/scratch/w13/sol/kd6-crown-r6/REPORT.md`.
+
+### Current stops and replay
+
+8 final seed rows are retained, with 0 recorded dead stops. Unmeasured seeds have no zero-stop qualification. Terrain stops must be zero; no enemy-pack exemption is claimed. Full raw-result equality controls: 2/33, FIX. Receipts: `/home/andrew/scratch/w13/sol/kd6-crown-r7/analysis.json`. Every disagreement with identical inputs stops qualification.
+
+### Current distinctness
+
+FIX. The final geometry requires a fresh eight-seed Sable/Cannon/Kest witness and matching traced controls. Current retained cases: 0/24. The round-6 gate's passing witness remains historical and does not qualify the changed geometry.
+
+### Current completionist engagement proof
+
+Wrapper `/home/andrew/scratch/w13/sol/kd6-crown-r7/win.gd` extends `res://tools/bot_run.gd` and changes only `driver.stage_limit` to 600.0 before tick zero. Each seed runs `--table=park --policy=completionist --from-stage=6 --stages=6 --seeds=<seed> --trace=1` through `/tmp/claude-1000/w13-s/cpu_queue.sh --cores 8` and `timeout --signal=TERM --kill-after=10s 1500s`. Ruling 23 requires every seed to reach and engage without a traversal-cause stall. Break time and engage-to-break duration are reporting only, owned by the Warden fight units and Andrew's task #5.
+
+| Seed | Engaged s | Broken s | Engage to break s | Outcome and receipt |
+| --- | --- | --- | --- | --- |
+| 1 | 117.56 | 330.2 | 212.64 | stalled; `/home/andrew/scratch/w13/sol/kd6-crown-r7/win-seed-1/bots.ndjson` |
+| 2 | 122.12 | 511.04 | 388.92 | stalled; `/home/andrew/scratch/w13/sol/kd6-crown-r7/win-seed-2/bots.ndjson` |
+| 3 | 138.09 | 554.97 | 416.88 | stalled; `/home/andrew/scratch/w13/sol/kd6-crown-r7/win-seed-3/bots.ndjson` |
+
+Seed 1, exact bots.ndjson outcome:
+```json
+{"boss":null,"class":"runner_gunner","game_seconds":602.74,"outcome":"stalled","play_s":600.0,"policy":"completionist","profile":"","reaction_s":0.25,"run_id":"bot-1","seed":1,"slot_casts":{"line":24,"special":68},"stage_reached":6,"stages":[{"cap_hits":0,"cores":[],"evasions":0,"events_joined":[],"exit_s":0.0,"hits":0,"hp_lost":0.0,"magnet_stuns":0,"max_hp":100.0,"parts":[],"plants":0,"plate_slams":0,"punch_short_s":0.0,"slingshots":0,"specials":0,"stage":1,"stuck_detours":0,"thermal_rides":0,"vault_tried":false,"warden_broken_s":null,"warden_engaged_s":null,"warden_fight_s":null,"waypoints":0},{"activities_entered":["cracked_cache","hauler_bounty","enemy_camp"],"activities_finished":["enemy_camp"],"cap_hits":0,"chain_ends_ground":25.0,"cores":[],"drop_chunks":1.0,"drop_hauls":1.0,"evasions":132.0,"events_joined":[],"exit_s":600.01,"hit_sources":{"kite_drone":9.0,"mind_hand":10.0,"plated_brute":96.0},"hits":10.0,"hp_lost":115.0,"latch_bites":38.0,"latch_bites_air":28.0,"latch_break":true,"latch_chunks":4.0,"latch_hauls":4.0,"latch_presses":355.0,"latch_ride_s":168.12111111112,"latch_shots":2579.0,"magnet_stuns":0,"max_hp":100.0,"parts":["activity_camp:rivet_plating"],"plants":0,"plate_slams":0,"punch_short_s":197.24,"shred_peak":0.0,"slingshots":0,"slot_casts_line":24.0,"slot_casts_special":68.0,"specials":68.0,"stage":6,"stall_state":"gates","stuck_detours":1.0,"thermal_rides":0,"ultimates":3.0,"vault_tried":false,"wall_turns":36.0444444444475,"warden_broken_s":330.2,"warden_damage":{"ram":525.0,"slam":525.0,"stomp":350.0},"warden_engaged_s":117.56,"warden_fight_heft":1.282,"warden_fight_s":40.0,"waypoints":0}],"ticks":54247,"ult_fill_s":[198.71,57.59,245.1],"ult_presses":3,"ult_sources":{"blazing":52.76,"chain_link":20.0,"contact":38.56,"fast":36.61,"kill":46.59,"near_miss":30.19,"shatter":37.78,"smash":15.0,"stagger":32.0},"ult_sources_first_fill":{"blazing":27.69,"chain_link":10.0,"contact":10.3,"fast":26.87,"kill":6.0,"near_miss":9.36,"shatter":1.78,"stagger":8.0},"ultimates":3,"wall_seconds":446.05}
+```
+
+Seed 2, exact bots.ndjson outcome:
+```json
+{"boss":null,"class":"demolitions_caster","game_seconds":603.51,"outcome":"stalled","play_s":600.0,"policy":"completionist","profile":"","reaction_s":0.25,"run_id":"bot-2","seed":2,"slot_casts":{"line":28,"special":69},"stage_reached":6,"stages":[{"cap_hits":0,"cores":[],"evasions":0,"events_joined":[],"exit_s":0.0,"hits":0,"hp_lost":0.0,"magnet_stuns":0,"max_hp":100.0,"parts":[],"plants":0,"plate_slams":0,"punch_short_s":0.0,"slingshots":0,"specials":0,"stage":1,"stuck_detours":0,"thermal_rides":0,"vault_tried":false,"warden_broken_s":null,"warden_engaged_s":null,"warden_fight_s":null,"waypoints":0},{"activities_entered":["cracked_cache","hauler_bounty","enemy_camp"],"activities_finished":["enemy_camp"],"cap_hits":0,"chain_ends_grace":2.0,"chain_ends_ground":61.0,"chain_ends_paid":4.0,"chain_releases":1.0,"cores":[],"drop_break":true,"drop_chunks":3.0,"drop_hauls":3.0,"evasions":19.0,"events_joined":[],"exit_s":600.01,"harpoon_bites":4.0,"hit_sources":{"pocket_veil":35.1},"hits":357.0,"hp_lost":31.2,"latch_bites":91.0,"latch_bites_air":74.0,"latch_break":true,"latch_chunks":3.0,"latch_hauls":3.0,"latch_presses":599.0,"latch_ride_s":337.016111111253,"latch_shots":544.0,"magnet_stuns":0,"max_hp":100.0,"parts":["activity_camp:rivet_plating"],"plants":0,"plate_slams":0,"punch_short_s":193.89,"shred_peak":0.0,"slingshots":0,"slot_casts_line":28.0,"slot_casts_special":69.0,"specials":69.0,"stage":6,"stall_state":"gates","stuck_detours":3.0,"thermal_rides":0,"ultimates":4.0,"vault_tried":false,"wall_turns":13.6777777777777,"warden_broken_s":511.04,"warden_damage":{"ram":350.0,"slam":291.7,"sticky":116.7,"stomp":641.7},"warden_engaged_s":122.12,"warden_fight_heft":1.511,"warden_fight_s":40.0,"waypoints":0}],"ticks":54316,"ult_fill_s":[220.42,96.37,87.32,79.69],"ult_presses":4,"ult_sources":{"blazing":120.03,"chain_link":46.0,"contact":47.37,"fast":45.31,"kill":10.0,"near_miss":15.07,"shatter":43.4,"smash":18.42,"stagger":56.0},"ult_sources_first_fill":{"blazing":35.22,"chain_link":8.0,"contact":12.89,"fast":22.89,"kill":7.0,"near_miss":4.0,"smash":10.0},"ultimates":4,"wall_seconds":505.79}
+```
+
+Seed 3, exact bots.ndjson outcome:
+```json
+{"boss":null,"class":"tarn","game_seconds":604.08,"outcome":"stalled","play_s":599.99,"policy":"completionist","profile":"","reaction_s":0.25,"run_id":"bot-3","seed":3,"slot_casts":{"line":46,"special":65},"stage_reached":6,"stages":[{"cap_hits":0,"cores":[],"evasions":0,"events_joined":[],"exit_s":0.0,"hits":0,"hp_lost":0.0,"magnet_stuns":0,"max_hp":100.0,"parts":[],"plants":0,"plate_slams":0,"punch_short_s":0.0,"slingshots":0,"specials":0,"stage":1,"stuck_detours":0,"thermal_rides":0,"vault_tried":false,"warden_broken_s":null,"warden_engaged_s":null,"warden_fight_s":null,"waypoints":0},{"activities_entered":["cracked_cache","hauler_bounty","enemy_camp"],"activities_finished":["enemy_camp","hauler_bounty"],"cap_hits":0,"chain_ends_grace":2.0,"chain_ends_ground":55.0,"chain_ends_paid":3.0,"cores":[],"drop_chunks":3.0,"drop_hauls":3.0,"evasions":27.0,"events_joined":[],"exit_s":600.0,"harpoon_bites":3.0,"hit_sources":{"line_cutter":4.0,"pocket_veil":8.0},"hits":81.0,"hp_lost":11.1,"latch_bites":76.0,"latch_bites_air":49.0,"latch_chunks":3.0,"latch_hauls":5.0,"latch_presses":519.0,"latch_ride_s":301.128888889003,"latch_shots":606.0,"magnet_stuns":0,"max_hp":100.0,"parts":["activity_camp:rivet_plating"],"plants":0,"plate_slams":0,"punch_short_s":218.21,"shred_peak":0.0,"slingshots":0,"slot_casts_line":46.0,"slot_casts_special":65.0,"specials":65.0,"stage":6,"stall_state":"gates","stuck_detours":0,"thermal_rides":0,"ultimates":4.0,"vault_tried":false,"wall_turns":11.2,"warden_broken_s":554.97,"warden_damage":{"ram":350.0,"slam":525.0,"stomp":525.0},"warden_engaged_s":138.09,"warden_fight_heft":1.267,"warden_fight_s":40.0,"waypoints":0}],"ticks":54367,"ult_fill_s":[202.13,140.88,69.96,96.27],"ult_presses":4,"ult_sources":{"blazing":116.92,"chain_link":36.0,"contact":53.51,"fast":84.99,"kill":16.0,"near_miss":17.94,"shatter":48.0,"smash":20.0,"stagger":48.0},"ult_sources_first_fill":{"blazing":22.62,"chain_link":6.0,"contact":14.59,"fast":40.05,"kill":4.0,"near_miss":7.74,"smash":5.0},"ultimates":4,"wall_seconds":580.47}
+```
+
+Actual current win-log scan: 3/3 logs inspected, 0 get_rid lines. Ruling 26 PASS.
+
+## Historical round 6, retained
+
+All sections below are superseded history and do not qualify the round-7 head.
+
+### Historical round 6 qualification
 
 FIX. Automated native evidence level 4. Geometry head `bcfc1dec0bfae92e0f7536e71e5ab9c847c36934` follows STEP 0 merge `8d46221e5fbe3ba62b42122f028b52de140b58d6` of candidate `afbd8e6d0755a88504cd25a549de9592acdbc96d`. All round-6 receipts live in `/home/andrew/scratch/w13/sol/kd6-crown-r6`. The third and final Tarn launch trial was withdrawn after its 46 m anchor gap breached the unchanged 40 m limit by 15%. Its airborne median was 0.24105, still a measured MISS. No fourth repair is authorized. `withdrawal.json` retains the trial and agreeing trace. The restored source, shared runtime and all eight bake/graph files match the post-STEP-0 baseline across 421 recorded inputs in `restored-input-equality.json`. The table reports those byte-identical restored-input measurements, not a new post-withdrawal run. Fresh distinctness and completionist engagement remain absent under the exhausted-repair stop, so qualification remains FIX. Previous rounds below are dated history.
 
