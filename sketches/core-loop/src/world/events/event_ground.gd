@@ -198,6 +198,7 @@ static func _water_ground(world, point: Vector2) -> float:
 
 static func cave_roof(heights: PackedFloat32Array, holes: PackedByteArray, site: Dictionary, owner: Node) -> Dictionary:
 	var surface := Surface.new()
+	var retained := {}
 	var normals := PackedVector3Array()
 	var half := ParkMap.footprint_half_extents(site).length() + ParkTerrain.STEP
 	var centre := Vector2(float(site.at[0]), float(site.at[1]))
@@ -218,18 +219,53 @@ static func cave_roof(heights: PackedFloat32Array, holes: PackedByteArray, site:
 				surface.vertices.append_array(PackedVector3Array(face))
 				var normal: Vector3 = (face[2] - face[0]).cross(face[1] - face[0]).normalized()
 				normals.append_array([normal, normal, normal])
-	return roof_body(owner, mesh_surface(surface, normals))
+			for delta in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN, Vector2i(-1, -1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(1, 1)]:
+				var cell: Vector2i = Vector2i(i, j) + delta
+				if cell.x < 0 or cell.y < 0 or cell.x >= ParkTerrain.CELLS or cell.y >= ParkTerrain.CELLS:
+					continue
+				if holes[cell.y * ParkTerrain.CELLS + cell.x] == 0:
+					retained[cell] = true
+	var roof := roof_body(owner, mesh_surface(surface, normals), false)
+	for k in range(0, surface.vertices.size(), 6):
+		roof.body.add_child(_roof_cell_collider(surface.vertices.slice(k, k + 6)))
+	for cell: Vector2i in retained:
+		var at := Vector2(cell) * ParkTerrain.STEP - Vector2.ONE * ParkTerrain.HALF
+		var k := cell.y * ParkTerrain.SIDE + cell.x
+		var a := Vector3(at.x, heights[k], at.y)
+		var b := Vector3(at.x + ParkTerrain.STEP, heights[k + 1], at.y)
+		var c := Vector3(at.x, heights[k + ParkTerrain.SIDE], at.y + ParkTerrain.STEP)
+		var d := Vector3(b.x, heights[k + ParkTerrain.SIDE + 1], c.z)
+		var collider := _roof_cell_collider(PackedVector3Array([a, b, c, b, d, c]))
+		collider.set_meta("retained", true)
+		roof.body.add_child(collider)
+	return roof
 
 
-static func roof_body(owner: Node, surface: Surface) -> Dictionary:
+static func _roof_cell_collider(faces: PackedVector3Array) -> CollisionShape3D:
+	var collider := CollisionShape3D.new()
+	var origin := faces[0]
+	# Cell-local meshes keep Jolt's compressed vertices on the shared grid edges.
+	var local := PackedVector3Array()
+	for vertex in faces:
+		local.append(vertex - origin)
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(local)
+	collider.shape = shape
+	collider.position = origin
+	collider.set_meta("home", origin)
+	return collider
+
+
+static func roof_body(owner: Node, surface: Surface, single_collider := true) -> Dictionary:
 	var body := StaticBody3D.new()
 	var view := MeshInstance3D.new()
 	view.mesh = surface.mesh
 	view.material_override = Palette.ground_material()
-	var collider := CollisionShape3D.new()
-	collider.shape = surface.mesh.create_trimesh_shape()
 	body.add_child(view)
-	body.add_child(collider)
+	if single_collider:
+		var collider := CollisionShape3D.new()
+		collider.shape = surface.mesh.create_trimesh_shape()
+		body.add_child(collider)
 	owner.add_child(body)
 	return {"body": body, "baseline": surface, "surface": surface}
 
@@ -242,7 +278,12 @@ static func lower_roof(roof: Dictionary, drop: float) -> void:
 		surface.vertices.append(vertex + Vector3.DOWN * drop)
 	roof.surface = mesh_surface(surface, normals)
 	roof.body.get_child(0).mesh = surface.mesh
-	roof.body.get_child(1).shape = surface.mesh.create_trimesh_shape()
+	for collider in roof.body.get_children():
+		if collider is CollisionShape3D:
+			if collider.has_meta("home"):
+				collider.position = collider.get_meta("home") + (Vector3.ZERO if collider.has_meta("retained") else Vector3.DOWN * drop)
+			else:
+				collider.shape = surface.mesh.create_trimesh_shape()
 
 
 static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable()) -> OverlayMap:

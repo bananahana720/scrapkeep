@@ -205,9 +205,10 @@ func _sample_rim(label: String, expected_drop: float) -> void:
 	var roof_view: MeshInstance3D = roof_body.get_child(0)
 	var faces := PackedVector3Array()
 	var collider_faces := ground_collider_faces.duplicate()
-	var roof_collider: CollisionShape3D = roof_body.get_child(1)
-	for v in roof_collider.shape.get_faces():
-		collider_faces.append(roof_collider.global_transform * v)
+	for roof_collider in roof_body.get_children():
+		if roof_collider is CollisionShape3D:
+			for v in roof_collider.shape.get_faces():
+				collider_faces.append(roof_collider.global_transform * v)
 	if roof_body.is_visible_in_tree():
 		var arrays := roof_view.mesh.surface_get_arrays(0)
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
