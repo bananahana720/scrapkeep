@@ -122,7 +122,7 @@ func _run() -> void:
 
 
 func _trace_path(filename: String) -> String:
-	return OS.get_environment("TMPDIR").path_join(filename)
+	return ProjectSettings.globalize_path("user://".path_join(filename))
 
 
 func _output_fixture() -> void:
