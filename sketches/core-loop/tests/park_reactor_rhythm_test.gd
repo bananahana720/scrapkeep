@@ -22,7 +22,7 @@ func _setup(heft: float) -> void:
 	game.flow.press_start()
 	game.flow.choose_class(1)
 	game.player.source = Intent.Scripted.new()
-	game.ctx.spawner.heft_override = heft
+	game.run.grant_start_mass((heft - Run.HEFT_CLASS_AT[0]) / Run.HEFT_PER_MASS)
 	for i in 40: await physics_frame
 	t.near("the pilot has the requested actual heft", game.run.heft(), heft)
 func _run() -> void:
