@@ -135,6 +135,22 @@ func _damage(w: World, point: Vector3) -> int:
 	w.events.advance(0.01, point, Vector3.ZERO, _context())
 	return before - w.ctx.run.mass
 
+func _fill_ground_checks(w: World, hazard, row: Dictionary) -> void:
+	var painter = hazard.painter()
+	var fill = painter._layers.get("fill")
+	var vertices: PackedVector3Array = fill.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var raised := 0
+	var max_error := 0.0
+	for vertex in vertices:
+		var height := w.terrain.height(vertex.x, vertex.z)
+		var base_height := 12.0 + 0.05 * vertex.x - 0.03 * vertex.z
+		if height > base_height + 0.01:
+			raised += 1
+		max_error = maxf(max_error, absf(vertex.y - height - float(painter.lift)))
+	t.check("%s live fill samples raised swap ground" % row.id, raised > 0, "raised vertices=%d" % raised)
+	t.check("%s live fill vertices follow landed ground plus painter lift" % row.id,
+		max_error < 0.0001, "max error=%.6f vertices=%d" % [max_error, vertices.size()])
+
 func _run() -> void:
 	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(FIXTURE))
 	var rows: Array = fixture.rows
@@ -146,6 +162,7 @@ func _run() -> void:
 			continue
 		var state: Dictionary = w.event_families.industrial.active[row.id]
 		var hazard = state.hazard
+		_fill_ground_checks(w, hazard, row)
 		var centre: Vector3 = state.at
 		var size: Array = row.effect.hazard_m
 		var ring: bool = row.effect.hazard == "fallout_ring"
@@ -185,5 +202,5 @@ func _run() -> void:
 			ended and not is_instance_valid(hazard) and not w.terrain.overlays.has(swap + "_after"))
 		w.event_families.industrial.release()
 		w.free()
-	t.eq("test runs all expected checks", t.checks + 1, 89)
+	t.eq("test runs all expected checks", t.checks + 1, 101)
 	quit(t.verdict())
