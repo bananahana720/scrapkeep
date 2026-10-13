@@ -105,6 +105,8 @@ func _run() -> void:
 	t.eq("track pivot preserves actual phrase timing", pivot._targets, pivot_targets)
 	_advance(pivot, pivot_origin + pivot.bar_len() * Harmony.PHRASE_BARS + 1)
 	t.check("pivot phrase admits pending layers", pivot.layer_target(Music.LEAD) > pivot_targets[Music.LEAD])
+	_fleet_fixture(true)
+	_fleet_fixture(false)
 	if OS.get_environment("KE10_UNIT_ONLY") == "1":
 		quit(t.verdict())
 		return
@@ -119,3 +121,32 @@ func _run() -> void:
 func _advance(engine, until: int) -> void:
 	while engine.clock < until:
 		engine.render(mini(4096, until - engine.clock))
+
+
+func _fleet_fixture(armour: bool) -> void:
+	var fleet := Music.new()
+	fleet.set_parameter_source(func(): return {"threat": 0.0, "armour": 1.0} if armour else {"threat": 0.0})
+	fleet.schedule_restart(0, Music.PLAY, 0)
+	_advance(fleet, Harmony.BAR + 1)
+	var starts: int = fleet.layer_starts[Music.FLEET]
+	fleet.set_fleet_ticks(3)
+	var boundary := Harmony.BAR * Harmony.PHRASE_BARS
+	_advance(fleet, boundary)
+	t.eq("Fleet entry waits for phrase armour=%s" % armour, fleet.layer_starts[Music.FLEET], starts)
+	t.eq("Fleet density stays pending armour=%s" % armour, fleet.fleet_ticks, 0)
+	fleet.render(1)
+	t.eq("Fleet density commits on phrase armour=%s" % armour, fleet.fleet_ticks, 3)
+	t.check("Fleet voice starts on phrase armour=%s" % armour, fleet.layer_starts[Music.FLEET] > starts)
+	var logged: Array = fleet.parameter_layer_log.filter(func(c): return c.get("fleet_ticks", -1) == 3)
+	t.check("Fleet density is traced on phrase armour=%s" % armour, not logged.is_empty() and logged.back().at == boundary and logged.back().phrase)
+	fleet.set_fleet_ticks(1)
+	_advance(fleet, boundary * 2)
+	t.eq("Fleet density change waits for next phrase armour=%s" % armour, fleet.fleet_ticks, 3)
+	fleet.render(1)
+	t.eq("Fleet density change commits on next phrase armour=%s" % armour, fleet.fleet_ticks, 1)
+	var legacy := Music.new()
+	legacy.schedule_restart(0, Music.PLAY, 0)
+	legacy.render(1)
+	legacy.set_fleet_ticks(3)
+	_advance(legacy, Harmony.BAR + 1)
+	t.eq("legacy Fleet still enters next bar armour=%s" % armour, legacy.fleet_ticks, 3)
