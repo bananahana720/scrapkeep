@@ -563,7 +563,7 @@ func _render_music(frames: int, ace_live: bool) -> void:
 	_unmute_for_handover(frames)
 	engine.render(frames)
 	var music := _ace_render(frames, ace_live)
-	_fade_in_band(from, frames)
+	_fade_in_band(from, frames, engine.out_landmark)
 	if not ace_live:
 		out_music = engine.out_music
 	elif engine.band_muted:
@@ -633,7 +633,7 @@ func _unmute_for_handover(frames: int) -> void:
 
 # The synth band's block, scaled by the un-mute ramp; from is the transport sample of its
 # first frame.
-func _fade_in_band(from: int, frames: int) -> void:
+func _fade_in_band(from: int, frames: int, landmark := PackedVector2Array()) -> void:
 	if _unmute_at < 0:
 		return
 	if from >= _unmute_at + UNMUTE_RAMP:
@@ -645,7 +645,8 @@ func _fade_in_band(from: int, frames: int) -> void:
 		var g := clampf(float(from + i - _unmute_at) / UNMUTE_RAMP, 0.0, 1.0)
 		if g >= 1.0:
 			break
-		band[i] = (band[i] - engine.out_landmark[i]) * g + engine.out_landmark[i]
+		var hum := Vector2.ZERO if landmark.is_empty() else landmark[i]
+		band[i] = (band[i] - hum) * g + hum
 	engine.out_music = band
 
 

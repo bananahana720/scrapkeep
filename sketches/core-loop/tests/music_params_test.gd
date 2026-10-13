@@ -179,11 +179,11 @@ func _handback_hum_fixture() -> void:
 	audio.engine.out_landmark = PackedVector2Array([Vector2(0.25, 0.25)])
 	audio.engine.out_music = PackedVector2Array([Vector2(0.25, 0.25)])
 	audio._unmute_at = 0
-	audio._fade_in_band(0, 1)
+	audio._fade_in_band(0, 1, audio.engine.out_landmark)
 	t.eq("handback first frame retains landmark hum", audio.engine.out_music[0], Vector2(0.25, 0.25))
 	audio.engine.out_music = PackedVector2Array([Vector2(0.75, 0.75)])
 	var half_sample := floori(audio.UNMUTE_RAMP / 2)
-	audio._fade_in_band(half_sample, 1)
+	audio._fade_in_band(half_sample, 1, audio.engine.out_landmark)
 	var expected := 0.25 + 0.5 * half_sample / audio.UNMUTE_RAMP
 	t.eq("handback fades only the synth contribution", audio.engine.out_music[0], Vector2(expected, expected))
 	audio.free()
