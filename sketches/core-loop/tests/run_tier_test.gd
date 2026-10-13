@@ -458,10 +458,12 @@ func _tier_zero_format() -> void:
 func _mouse_tiles() -> void:
 	game.bot_driven = false
 	paused = true
-	var offers := [["cogs", "core", "long_barrel"], ["chain_arc", "hot_rivets", "rivet_plating"]]
+	var offers := [["cogs", "core", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
 	for offer_index in offers.size():
 		for pick_index in 3:
 			_begin(706, 0)
+			if offer_index == 1:
+				game.flow._begin_run(ClassDef.by_id("tally"))
 			game.run.start_pick["options"] = offers[offer_index].duplicate()
 			game.flow.show_start_card()
 			await process_frame
