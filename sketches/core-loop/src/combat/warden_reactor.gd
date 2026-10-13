@@ -59,12 +59,10 @@ class DamPosture extends "res://src/combat/boss_posture.gd":
 		if not result.get("sheet_ram", false):
 			super.apply(result, frame)
 			return
-		var w = mounted_warden.get_ref()
-		w.mount_driver.paid_sheet_cycle = w.mount_driver.gates_opened
 		posture = minf(FULL, posture + float(result["gain"]))
 		idle = 0.0
+		gain_in_frame = gain_in_frame + float(result["gain"]) if frame == gain_frame else float(result["gain"])
 		gain_frame = frame
-		gain_in_frame = float(result["gain"])
 		if result.get("shatter", false):
 			chunks = 0
 			staggered = false
@@ -77,7 +75,6 @@ var sheet_left := 0.0
 var sheet_dir := Vector3.ZERO
 var riding := false
 var entered_sheet_cycle := -1
-var paid_sheet_cycle := -1
 
 var _entry_speed := 0.0
 var _sheet_view: MeshInstance3D
@@ -102,6 +99,7 @@ func step(warden, delta: float) -> void:
 					mounted.set(property.name, warden._posture.get(property.name))
 			mounted.mounted_warden = weakref(warden)
 			warden._posture = mounted
+		warden._posture.contact_drain_delay = sheet_left
 		for child in warden.get_children():
 			if child is CollisionShape3D:
 				if not child.shape is SphereShape3D:
@@ -115,13 +113,11 @@ func step(warden, delta: float) -> void:
 			_close_sheet()
 		else:
 			_ride(warden, delta)
-	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
-		warden._posture.contact_drain_delay = sheet_left
 
 
 func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> void:
-	if String(hit.get("kind", "")) != "ram" or not sheet_live() \
-			or entered_sheet_cycle != gates_opened or paid_sheet_cycle == gates_opened:
+	if not result.get("contact", false) or not sheet_live() \
+			or entered_sheet_cycle != gates_opened:
 		return
 	var target = warden.target
 	if target == null or not target.body().get_colliding_bodies().has(warden) \
@@ -135,6 +131,8 @@ func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 	var relative_gain: float = pow(clampf(ratio, posture.mult_min, posture.mult_max), posture.curve) \
 			/ pow(clampf(grown_ratio, posture.mult_min, posture.mult_max), posture.curve)
 	var gain: float = posture.FULL / float(MOUNTED_POSTURE["sheet_ram_breaks"]) * relative_gain
+	if int(hit["frame"]) == posture.gain_frame:
+		gain = maxf(0.0, gain - posture.gain_in_frame)
 	result["sheet_ram"] = true
 	result["gain"] = gain
 	result["shatter"] = posture.posture + gain >= posture.FULL or is_equal_approx(posture.posture + gain, posture.FULL)
@@ -144,7 +142,9 @@ func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 		result["part"] = warden.family_point()
 
 
-func on_charge(_warden, _seconds: float) -> void:
+func on_charge(warden, seconds: float) -> void:
+	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
+		warden._charge_time = maxf(0.0, warden._pulse_clock - (warden.PULSE_CYCLE - seconds))
 	if sheet_live():
 		sheet_left = 0.0
 		_close_sheet()
@@ -211,7 +211,8 @@ func in_sheet(warden, point: Vector3) -> bool:
 func _profile(warden, point: Vector3, along: float) -> float:
 	var ground: float = warden.terrain.height(point.x, point.z) + Tuning.RADIUS if warden.terrain != null else point.y
 	var core: float = warden.family_point_at().y
-	var t := clampf((along - SHEET_TOP) / (SHEET_RUN - SHEET_TOP), 0.0, 1.0)
+	var top := 0.0 if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face" else SHEET_TOP
+	var t := clampf((along - top) / (SHEET_RUN - top), 0.0, 1.0)
 	return ground + maxf(0.0, core - ground) * (1.0 - t) * (1.0 - t)
 
 
@@ -250,11 +251,12 @@ func _ride(warden, delta: float) -> void:
 	var height := _profile(warden, ball, along)
 	# Follow the sheet's climb rate and height. The mounted ride hands its velocity to the
 	# next solver step; an inverse-delta force here feeds back a stale body velocity.
-	var t := clampf((along - SHEET_TOP) / (SHEET_RUN - SHEET_TOP), 0.0, 1.0)
+	var top := 0.0 if mounted else SHEET_TOP
+	var t := clampf((along - top) / (SHEET_RUN - top), 0.0, 1.0)
 	var rise := 0.0
-	if along > SHEET_TOP:
+	if along > top:
 		var base: float = warden.terrain.height(ball.x, ball.z) + Tuning.RADIUS if warden.terrain != null else ball.y
-		rise = maxf(0.0, core - base) * 2.0 * (1.0 - t) / (SHEET_RUN - SHEET_TOP) * closing
+		rise = maxf(0.0, core - base) * 2.0 * (1.0 - t) / (SHEET_RUN - top) * closing
 	var want_vy := rise + RIDE_GAIN * (height - ball.y)
 	var gravity: float = target.tuning.f("gravity") if "tuning" in target and target.tuning != null else 9.8
 	var up := (want_vy - v.y) / delta + gravity
@@ -265,7 +267,7 @@ func _ride(warden, delta: float) -> void:
 		push = planar / speed * (_entry_speed - speed) / delta
 	if mounted and target.has_method("body") and target.body().has_method("set_velocity_now"):
 		var held: Vector3 = planar.normalized() * maxf(speed, _entry_speed)
-		target.body().set_velocity_now(Vector3(held.x, maxf(v.y, maxf(0.0, want_vy)), held.z))
+		target.body().set_velocity_now(Vector3(held.x, maxf(v.y, want_vy), held.z))
 	else:
 		target.add_external_accel(Vector3(push.x, maxf(up, 0.0), push.z))
 

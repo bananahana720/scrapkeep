@@ -149,6 +149,7 @@ func step(delta: float) -> void:
 			_end_stagger()
 		return
 	if contact_drain_delay > 0.0:
+		idle = 0.0
 		return
 	idle += delta
 	var draining := minf(delta, idle - drain_delay)
