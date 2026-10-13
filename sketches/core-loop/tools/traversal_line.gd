@@ -17,6 +17,16 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/traversal_line.gd \
 #     -- --pilot=sable|rivet|kest [--seeds=1,2,3,4,5,6,7,8] [--out=<dir>] [--commit=<sha>] [--trace]
 #
+# Every seed, including a solo run, runs in a fresh child Godot process at the
+# parent's niceness. --ticks=N caps driver ticks for diagnostics (outcome ticks_done).
+# --child-timeout=S bounds each child in wall seconds (default 120); a killed or
+# failed child is INCONCLUSIVE, excluded from runs, and makes the parent exit 3.
+# Each child writes under <out>/children/<position>-seed-<seed>; trace files are
+# also copied beside the unchanged per-pilot summary for existing consumers.
+# As in bot_run, the audio bake completes before play and actor side choices use
+# seed/spawn order instead of allocator-dependent object IDs. Trace allocation
+# can then only change the diagnostic buffer, not the world it observes.
+#
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
 #
@@ -738,11 +748,13 @@ var _seeds: Array[int] = []
 var _pilot := ""
 var _routes := {}
 var _index := -1
-var _next_pending := false
 var _game
 var _driver
 var _sampler: Sampler
 var _runs: Array = []
+var _inconclusive: Array = []
+var _counter_serial := 0
+var _scrap_serial := 0
 # The park run: the stage number (0 the fixture), its map, the line file, the line and the class key.
 var _park := false
 var _stage := 1
@@ -755,6 +767,7 @@ var _floor := false
 
 func _initialize() -> void:
 	SimClock.ticks = true
+	node_added.connect(_on_node_added)
 	_settings = _parse(OS.get_cmdline_user_args())
 	_pilot = String(_settings.get("pilot", ""))
 	_park = String(_settings.get("table", TABLE)) == PARK
@@ -774,8 +787,86 @@ func _initialize() -> void:
 			seeds.append(int(part))
 	for value in seeds:
 		_seeds.append(int(value))
+	if _seeds.is_empty() or (_settings.has("ticks") and int(_settings["ticks"]) <= 0) or float(_settings.get("child-timeout", "120")) <= 0.0:
+		printerr("traversal_line: seeds must be nonempty and ticks and child-timeout positive")
+		quit(2)
+		return
 	_routes = load_routes()
-	_next()
+	if _settings.has("child"):
+		if _seeds.size() != 1:
+			printerr("traversal_line: a child must run exactly one seed")
+			quit(2)
+			return
+		_start_seed()
+	else:
+		_run_children()
+
+
+# GNU timeout owns the child's process group, so a deadline kills descendants too.
+# OS.execute and timeout inherit scheduling priority; no child resets niceness.
+func _run_children() -> void:
+	var out := ProjectSettings.globalize_path(_out_dir())
+	if not out.is_absolute_path():
+		out = OS.get_environment("PWD").path_join(out)
+	var forwarded := PackedStringArray()
+	for arg in OS.get_cmdline_user_args():
+		if not arg.begins_with("--seeds=") and not arg.begins_with("--out="):
+			forwarded.append(arg)
+	for i in _seeds.size():
+		var child_out := out.path_join("children/%d-seed-%d" % [i + 1, _seeds[i]])
+		DirAccess.make_dir_recursive_absolute(child_out)
+		var path := child_out.path_join("%s.json" % _pilot)
+		var name := "%s-seed-%d-trace.json" % [_pilot, _seeds[i]]
+		var child_trace := child_out.path_join(name)
+		var trace_path := out.path_join(name)
+		# Invalidate both trace consumers before replacing this seed's evidence.
+		for stale in [path, child_trace, trace_path]:
+			if FileAccess.file_exists(stale):
+				DirAccess.remove_absolute(stale)
+		var previous := {}
+		for kind in ["DATA", "CONFIG", "CACHE"]:
+			var key: String = "XDG_%s_HOME" % kind
+			previous[key] = {"present": OS.has_environment(key), "value": OS.get_environment(key)}
+			OS.set_environment(key, child_out.path_join("state/" + kind.to_lower()))
+		var args := PackedStringArray(["--signal=KILL", "%ss" % _settings.get("child-timeout", "120"),
+			OS.get_executable_path(), "--headless", "--fixed-fps", "90", "--path",
+			ProjectSettings.globalize_path("res://"), "--script", "res://tools/traversal_line.gd", "--"])
+		args.append_array(forwarded)
+		args.append("--child")
+		args.append("--seeds=%d" % _seeds[i])
+		args.append("--out=" + child_out)
+		var output := []
+		var code := OS.execute("timeout", args, output, true)
+		for key in previous:
+			if previous[key]["present"]:
+				OS.set_environment(key, previous[key]["value"])
+			else:
+				OS.unset_environment(key)
+		var log := "".join(output)
+		var file := FileAccess.open(child_out.path_join("child.log"), FileAccess.WRITE)
+		if file != null:
+			file.store_string(log)
+		print(log.strip_edges())
+		var doc = JSON.parse_string(FileAccess.get_file_as_string(path)) if code == 0 and FileAccess.file_exists(path) else null
+		var rows: Array = doc.get("runs", []) if doc is Dictionary else []
+		var rejected := code != 0 or rows.size() != 1 or int(rows[0].get("seed", -1)) != _seeds[i] or log.contains("SCRIPT ERROR")
+		if not rejected and _settings.has("trace"):
+			rejected = not FileAccess.file_exists(child_trace)
+			if not rejected:
+				rejected = DirAccess.copy_absolute(child_trace, trace_path) != OK
+		if rejected:
+			for unusable in [child_trace, trace_path]:
+				if FileAccess.file_exists(unusable):
+					DirAccess.remove_absolute(unusable)
+			_inconclusive.append({"seed": _seeds[i], "status": "INCONCLUSIVE", "exit_code": code, "out": child_out})
+			printerr("traversal_line: seed %d INCONCLUSIVE (child exit %d, %d rows); see %s" % [_seeds[i], code, rows.size(), child_out])
+			continue
+		# JSON parses every number as float; retain the result schema's integer fields.
+		for key in ["seed", "ticks", "dead_stops", "distinct_verbs", "distinct_ride_facts"]:
+			rows[0][key] = int(rows[0][key])
+		_runs.append(rows[0])
+		_line["bar"] = doc.get("bar", {})
+	_finish()
 
 
 func _setup_park() -> bool:
@@ -798,6 +889,7 @@ func _setup_park() -> bool:
 	if _lines.is_empty():
 		printerr("traversal_line: no line file at %s" % lines_path)
 		return false
+	_line["bar"] = _lines.get("pilots", {}).get(_pilot, {}).get("bar", {})
 	print("traversal_line: park %s (stage %d%s), %s line from %s" % [_map_id, _stage, ", the fixture as stage 1" if _stage == FIXTURE_STAGE else "",
 		_pilot, lines_path])
 	return true
@@ -818,16 +910,8 @@ static func _parse(args: PackedStringArray) -> Dictionary:
 	return out
 
 
-func _next() -> void:
-	_index += 1
-	if _index >= _seeds.size():
-		_finish()
-		return
-	Engine.time_scale = 1.0
-	# Freeing Game leaves the viewport's Jolt space and its body allocation history alive.
-	# Keep the old world alive until the viewport has detached its rendering scenario.
-	var _previous_world := root.world_3d
-	root.world_3d = World3D.new()
+func _start_seed() -> void:
+	_index = 0
 	seed(_seeds[_index])
 	_game = Game.new()
 	_game.name = "Game"
@@ -838,12 +922,10 @@ func _next() -> void:
 
 
 func _physics_process(delta: float) -> bool:
-	if _next_pending:
-		_next_pending = false
-		_next()
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
+		_game.presentation.audio.bake_now()
 		_driver = BotDriver.new(_game, "traversal", _seeds[_index])
 		if _park:
 			if not _start_park_driver():
@@ -856,6 +938,9 @@ func _physics_process(delta: float) -> bool:
 		_sampler.tracing = _settings.has("trace")
 		return false
 	var over: bool = _driver.tick(delta)
+	if not over and _settings.has("ticks") and _driver.ticks >= int(_settings["ticks"]):
+		_driver._end("ticks_done")
+		over = true
 	if _floor:
 		var hands := floor_hands(_driver.source.hold, _driver.source.press)
 		_driver.source.hold = hands["hold"]
@@ -877,10 +962,25 @@ func _physics_process(delta: float) -> bool:
 				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["distinct_ride_facts"], run["length_ratio"], run["progress_m"], run["dead_stop_at"]])
 	_game.free()
 	_game = null
-	# Match a fresh process: start the driver before the new camera's first render update.
-	Engine.time_scale = 1.0
-	_next_pending = true
+	_finish()
 	return false
+
+
+# This is bot_run's existing replay contract, applied before Counter.setup reads it.
+# Counter's object-ID parity and scrap's side otherwise change with trace allocation.
+static func replay_side(node: Node, key: String, ordinal: int, seed_number: int) -> void:
+	node.set_meta(key, 1.0 if (ordinal + seed_number) % 2 == 0 else -1.0)
+
+
+func _on_node_added(node: Node) -> void:
+	if _game == null or _game.build == null:
+		return
+	if "_strafe" in node:
+		replay_side(node, "bot_strafe", _counter_serial, _seeds[_index])
+		_counter_serial += 1
+	if node.get_parent() == _game.build.scrap:
+		replay_side(node, "bot_side", _scrap_serial, _seeds[_index])
+		_scrap_serial += 1
 
 
 func _start_park_driver() -> bool:
@@ -923,6 +1023,11 @@ func _finish() -> void:
 	else:
 		var bar: Dictionary = _routes.get("pilots", {}).get(_pilot, {}).get("bar", {})
 		doc = document(_pilot, TABLE, _commit(), _runs, bar)
+	if not _inconclusive.is_empty():
+		doc["status"] = "INCONCLUSIVE"
+		doc["inconclusive"] = _inconclusive
+		for band in doc.get("bands", []):
+			band["inside"] = null
 	var written := write_document(path, doc)
 	if _park:
 		for band in doc["bands"]:
@@ -932,7 +1037,7 @@ func _finish() -> void:
 		% [_pilot, doc["median_flow_share"], doc["worst_seed"], written, path])
 	if _park and _stage == FIXTURE_STAGE:
 		restore_park_defs()
-	quit(0 if written else 1)
+	quit((0 if _inconclusive.is_empty() else 3) if written else 1)
 
 
 # The floor band's reference: the --ref pilot's (Rivet's by default) summary in the same out.

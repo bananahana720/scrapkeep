@@ -18,6 +18,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const Breach := preload("res://src/world/breach.gd")
+const EventFamilies := preload("res://src/world/events/families.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -37,6 +38,9 @@ var terrain
 var flood
 var director
 var events
+var event_families := {}
+var _park_warden_staggered := false
+var _park_warden_chunks := 4
 var view
 var launch
 # Where the last miniboss was asked for, for tests and the field notes.
@@ -130,6 +134,9 @@ func setup(ctx_ref) -> void:
 		_class_picks_owed = 0)
 	ctx.events.heft_class_changed.connect(_on_class_rise)
 	ctx.events.stage_cleared.connect(_open_pick)
+	ctx.events.warden_engaged.connect(_on_park_warden_engaged)
+	ctx.events.posture_changed.connect(_on_park_warden_posture)
+	ctx.events.beacon_unsealed.connect(_on_park_warden_broken)
 	for entry in CodexWorld.ENTRIES:
 		ctx.codex.declare(entry)
 	# After this module's own stage_entered handler, so the map is already the stage's.
@@ -202,6 +209,9 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	Threat.Painter.warm_up(ctx.root)
 	if events != null:
 		_publish(events.end_all())
+	EventFamilies.release(events, event_families)
+	_park_warden_staggered = false
+	_park_warden_chunks = 4
 	launch.stop()
 	ride = null
 	bay.undock()
@@ -223,6 +233,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	var def: Dictionary = ctx.flow.stage_def()
 	var map = terrain.map()
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
+	event_families = EventFamilies.build(self, events)
 	director = Director.new(_stage_seed ^ 0x5eed)
 	_author_director(def)
 	director.use_row(def, ctx.tuning.option(Director.Tuning.BREATH_KEY) if ctx.tuning != null else "")
@@ -257,6 +268,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 func _on_stage_content_cleared(_reason: String) -> void:
 	if events != null:
 		_publish(events.end_all())
+	EventFamilies.release(events, event_families)
 	events = null
 	flood.cycle = null
 	flood.configure({}, 0.0, Vector3.ZERO)
@@ -324,7 +336,10 @@ func _physics_process(delta: float) -> void:
 			_pressure = 0.0
 			ctx.events.pressure_changed.emit(0.0)
 	if not calm_bay:
-		_publish(events.advance(delta, ball, velocity))
+		events.set_clock_tier(director.effective_tier())
+		_publish(events.advance(delta, ball, velocity, {
+			"grounded": player.state.grounded, "ball_radius_m": player.Tuning.RADIUS,
+		}))
 	if contraptions.has(ctx.flow.stage()) and contraptions[ctx.flow.stage()].live:
 		var steering: bool = player.intent.move.length() > 0.1 or player.intent.jump_pressed
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
@@ -338,6 +353,29 @@ func _physics_process(delta: float) -> void:
 		player.add_external_accel(flood.external_accel(ball, velocity) + events.push(ball, velocity))
 	if not calm_bay:
 		_step_director(delta)
+
+
+func _on_park_warden_engaged(_stage: int) -> void:
+	if events != null:
+		events.notify_warden_phase("engaged")
+
+
+func _on_park_warden_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
+	if events == null or enemy != ctx.flow.warden:
+		return
+	if staggered and not _park_warden_staggered:
+		events.notify_warden_phase("stagger")
+	_park_warden_staggered = staggered
+	var left: int = enemy.chunks_left()
+	for lost in range(4 - _park_warden_chunks + 1, 4 - left + 1):
+		if lost <= 3:
+			events.notify_warden_phase("chunk_%d" % lost)
+	_park_warden_chunks = left
+
+
+func _on_park_warden_broken(_stage: int) -> void:
+	if events != null:
+		events.notify_warden_phase("broken")
 
 
 func _publish(facts: Array) -> void:

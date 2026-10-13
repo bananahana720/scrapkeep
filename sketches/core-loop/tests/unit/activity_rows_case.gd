@@ -47,7 +47,11 @@ func run(t) -> void:
 	t.check("no pay source is a ceremony source, so none pauses the game", ceremony.is_empty(), "ceremony sources: %s" % [ceremony])
 
 	var row_ids: Array = EventKinds.ACTIVITY_ROWS.keys()
-	var orphan_rules: Array = Activities.RULES.keys().filter(func(id): return not row_ids.has(id))
+	# SQ5 (coordinator, 2026-10-13): a pocket kind borrows its sight and sound from an existing row
+	# through cue.view, so a rule resolves through its own row or the row its view names.
+	var orphan_rules: Array = Activities.RULES.keys().filter(func(id):
+		var view := String(Activities.RULES[id].get("cue", {}).get("view", id))
+		return not row_ids.has(id) and not row_ids.has(view))
 	t.check("every rule has a row", orphan_rules.is_empty(), "rules without a row: %s" % [orphan_rules])
 	t.check("surge_run has a row and no site", EventKinds.ACTIVITY_ROWS.has("surge_run") and not site_ids.has("surge_run"),
 		"row %s, sites %s" % [EventKinds.ACTIVITY_ROWS.has("surge_run"), site_ids])
