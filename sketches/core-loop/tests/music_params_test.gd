@@ -112,7 +112,7 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	var output := []
-	var code := OS.execute(OS.get_executable_path(), ["--headless", "--fixed-fps", "60", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tests/music_params_trace_game_test.gd"], output, true)
+	var code := OS.execute(OS.get_executable_path(), ["--headless", "--fixed-fps", "60", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tests/music_params_trace_game_test.gd", "--", "--ke10-fixed-trace"], output, true)
 	for line in output:
 		print(line)
 	t.eq("recorded five-minute Game fixture", code, 0)

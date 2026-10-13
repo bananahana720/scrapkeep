@@ -44,6 +44,13 @@ func _run() -> void:
 		await _release_fixture()
 		quit(t.verdict())
 		return
+	if not OS.get_cmdline_user_args().has("--ke10-fixed-trace"):
+		var output := []
+		var code := OS.execute(OS.get_executable_path(), ["--headless", "--fixed-fps", "60", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tests/music_params_trace_game_test.gd", "--", "--ke10-fixed-trace"], output, true)
+		for line in output:
+			print(line)
+		quit(code)
+		return
 	var game := Game.new()
 	game.test_mode = true
 	game.table = "park"
