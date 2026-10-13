@@ -30,12 +30,12 @@ class PhysicsProbe extends Node:
 
 
 func _initialize() -> void:
+	Engine.physics_ticks_per_second = 60
+	Engine.time_scale = 1.0
 	_run.call_deferred()
 
 
 func _run() -> void:
-	Engine.physics_ticks_per_second = 60
-	Engine.time_scale = 1.0
 	if OS.get_environment("KE10_ABSENCE_ONLY") == "1":
 		await _absence_fixture()
 		quit(t.verdict())
