@@ -140,7 +140,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				_land_water(row, state)
 			if state.overlay != null:
 				_set_overlay(row, true)
-				if row.kind == "collapse" and float(row.effect.fill_s) <= 0.0:
+				if row.kind in ["collapse", "cave_in"] and float(row.effect.fill_s) <= 0.0:
 					_advance_collapse(row, 1.0)
 			_show_landing(row, state)
 			_hazard(row, state, ctx)
@@ -156,7 +156,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				state.depth_m = lerpf(float(state.start_depth_m), 0.0 if row.kind == "drain" else depth, fraction)
 				state.water.cycle.metres = state.depth_m
 				state.water.render()
-			if row.kind == "collapse":
+			if row.kind in ["collapse", "cave_in"]:
 				var fill_s := maxf(0.0, float(row.effect.fill_s))
 				_advance_collapse(row, clampf(state.elapsed_s / fill_s, 0.0, 1.0) if fill_s > 0.0 else 1.0)
 			_hazard(row, state, ctx)
@@ -279,6 +279,9 @@ func _advance_collapse(row: Dictionary, progress: float) -> void:
 	if progress <= float(entry.progress):
 		return
 	entry.progress = progress
+	if row.kind == "cave_in":
+		EventGround.lower_roof(entry.roof, float(row.effect.depth_m) * progress)
+		return
 	var geometry: Dictionary = entry.geometry.duplicate()
 	geometry.source_surface = entry.baseline
 	geometry.target_surface = entry.target

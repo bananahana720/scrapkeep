@@ -45,6 +45,13 @@ class OverlayMap:
 		if is_instance_valid(entry.before):
 			entry.before.position = entry.before_home + Vector3.DOWN * Gorge.SWAP_PARK if changed else entry.before_home
 			entry.before.visible = false if changed else entry.before_visible
+	func cave_height(x: float, z: float) -> float:
+		for entry in swaps.values():
+			if entry.get("cave", false):
+				var y: float = entry.roof.surface.height(Vector2(x, z))
+				if y > -INF:
+					return y
+		return -INF
 	func overlay_height(id: String, x: float, z: float, ground: float) -> float:
 		if not profiles.has(id):
 			return source.overlay_height(id, x, z, ground)
@@ -134,6 +141,11 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 							normal = normal.normalized()
 							normals.append_array([normal, normal, normal])
 	surface.vertices = vertices
+	return mesh_surface(surface, normals, mesh)
+
+
+static func mesh_surface(surface: Surface, normals: PackedVector3Array, mesh: ArrayMesh = null) -> Surface:
+	var vertices := surface.vertices
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
@@ -184,6 +196,55 @@ static func _water_ground(world, point: Vector2) -> float:
 	return ground
 
 
+static func cave_roof(heights: PackedFloat32Array, holes: PackedByteArray, site: Dictionary, owner: Node) -> Dictionary:
+	var surface := Surface.new()
+	var normals := PackedVector3Array()
+	var half := ParkMap.footprint_half_extents(site).length() + ParkTerrain.STEP
+	var centre := Vector2(float(site.at[0]), float(site.at[1]))
+	var low := Vector2i((centre - Vector2.ONE * half + Vector2.ONE * ParkTerrain.HALF) / ParkTerrain.STEP)
+	var high := Vector2i((centre + Vector2.ONE * half + Vector2.ONE * ParkTerrain.HALF) / ParkTerrain.STEP)
+	for j in range(low.y, high.y + 1):
+		for i in range(low.x, high.x + 1):
+			var at := Vector2(i, j) * ParkTerrain.STEP - Vector2.ONE * ParkTerrain.HALF
+			if holes[j * ParkTerrain.CELLS + i] != 1 or not ParkMap.footprint_contains(site, at + Vector2.ONE * ParkTerrain.STEP * 0.5):
+				continue
+			var k := j * ParkTerrain.SIDE + i
+			var a := Vector3(at.x, heights[k], at.y)
+			var b := Vector3(at.x + ParkTerrain.STEP, heights[k + 1], at.y)
+			var c := Vector3(at.x, heights[k + ParkTerrain.SIDE], at.y + ParkTerrain.STEP)
+			var d := Vector3(b.x, heights[k + ParkTerrain.SIDE + 1], c.z)
+			surface.cells[Vector2i(floori(at.x / ParkTerrain.STEP), floori(at.y / ParkTerrain.STEP))] = [surface.vertices.size(), surface.vertices.size() + 3]
+			for face in [[a, b, c], [b, d, c]]:
+				surface.vertices.append_array(PackedVector3Array(face))
+				var normal: Vector3 = (face[2] - face[0]).cross(face[1] - face[0]).normalized()
+				normals.append_array([normal, normal, normal])
+	return roof_body(owner, mesh_surface(surface, normals))
+
+
+static func roof_body(owner: Node, surface: Surface) -> Dictionary:
+	var body := StaticBody3D.new()
+	var view := MeshInstance3D.new()
+	view.mesh = surface.mesh
+	view.material_override = Palette.ground_material()
+	var collider := CollisionShape3D.new()
+	collider.shape = surface.mesh.create_trimesh_shape()
+	body.add_child(view)
+	body.add_child(collider)
+	owner.add_child(body)
+	return {"body": body, "baseline": surface, "surface": surface}
+
+
+static func lower_roof(roof: Dictionary, drop: float) -> void:
+	var surface := Surface.new()
+	surface.cells = roof.baseline.cells
+	var normals: PackedVector3Array = roof.baseline.mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
+	for vertex: Vector3 in roof.baseline.vertices:
+		surface.vertices.append(vertex + Vector3.DOWN * drop)
+	roof.surface = mesh_surface(surface, normals)
+	roof.body.get_child(0).mesh = surface.mesh
+	roof.body.get_child(1).shape = surface.mesh.create_trimesh_shape()
+
+
 static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable()) -> OverlayMap:
 	var id: String = str(row.effect.get("swap", row.id))
 	if id == "":
@@ -202,6 +263,16 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 				overlay_map.set(property.name, current.get(property.name))
 		overlay_map.source = current
 		world.terrain.maps[world.terrain.stage - 1] = overlay_map
+	if row.kind == "cave_in":
+		var roof: Dictionary = world.terrain.cave_roof(row.id) if world.terrain.has_method("cave_roof") else {}
+		if roof.is_empty():
+			roof = roof_body(owner, project_surface(world, record.geometry, [_rectangle(-record.geometry.half, record.geometry.half)]))
+		roof.body.name = "Natural_" + row.id
+		overlay_map.swaps[id] = {"body": roof.body, "roof": roof, "cave": true, "owners": {}, "progress": 0.0}
+		record.overlay = roof.body
+		record.swap = id
+		record.overlay_map = overlay_map
+		return overlay_map
 	var site: Dictionary = record.site
 	var half: Vector2 = record.geometry.half
 	var radius := minf(half.x, half.y)
@@ -257,6 +328,12 @@ static func set_overlay(world, row: Dictionary, record: Dictionary, changed: boo
 	var overlay_map: OverlayMap = record.overlay_map
 	var id: String = record.swap
 	var entry: Dictionary = overlay_map.swaps[id]
+	if entry.get("cave", false):
+		if changed:
+			entry.owners[row.id] = true
+		else:
+			entry.owners.erase(row.id)
+		return
 	var overlays = world.terrain.overlays
 	if changed:
 		if entry.owners.has(row.id):
