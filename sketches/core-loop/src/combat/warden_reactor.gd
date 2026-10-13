@@ -99,7 +99,9 @@ func step(warden, delta: float) -> void:
 					mounted.set(property.name, warden._posture.get(property.name))
 			mounted.mounted_warden = weakref(warden)
 			warden._posture = mounted
-		warden._posture.contact_drain_delay = sheet_left
+		var engaged: bool = warden.fleet != null and warden.fleet.ctx.flow.engaged() \
+				and warden._in_play() and warden.hp > 0.0
+		warden._posture.contact_drain_delay = delta if engaged else 0.0
 		for child in warden.get_children():
 			if child is CollisionShape3D:
 				if not child.shape is SphereShape3D:
