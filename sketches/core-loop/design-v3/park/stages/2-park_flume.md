@@ -2,6 +2,8 @@
 
 World 1, Spillway Works, the world's last stage before Brindle. Warden kind `reactor` on the `flume` mounting, variant `meltdown`. Time of day `morning`. Storyboard board id `park-2-park_flume`. Status: draft for Andrew's approval (unit K-W1, 2026-10-10). Every number is a starting value to tune in play unless a file:line backs it.
 
+The corrected candidate tests judge the music bar grid booked at announcement. Both ground-slump game fixtures and the complete Z1 shared suite pass. The eight-file smoke remains blocked by four inherited park_table_test posture comparisons. Rivet also emits missing Fin.L/Fin.R control diagnostics, which the wrapper reports separately as a partial skip; all 111 flume geometry checks run and pass. KD2 leaves those shared files unchanged. The table/test owner must reconcile the posture comparisons before the eight-file smoke can pass.
+
 <!-- flume-current-table -->
 ## Current measurements and qualification, round 8
 
@@ -83,7 +85,6 @@ Every win seed reaches and engages. Child logs contain no collapse script error 
 
 The physical event regression observes finite matching deck-to-floor mesh and collider surfaces at five span positions at landing, 0.5 s, 1 s and 2 s. Its independent grid interpolation defines the authorized depth. The stage keeps its authored form, trigger, six-second lead, 20 m hold-clear distance, swap and route changes. Both authored music cue IDs resolve through the common runtime event/music path.
 
-The corrected candidate tests judge the music bar grid booked at announcement. Both ground-slump game fixtures and the complete Z1 shared suite pass. The eight-file smoke remains blocked by four inherited park_table_test posture comparisons. Rivet also emits missing Fin.L/Fin.R control diagnostics, which the wrapper reports separately as a partial skip; all 111 flume geometry checks run and pass. KD2 leaves those shared files unchanged. The table/test owner must reconcile the posture comparisons before the eight-file smoke can pass.
 <!-- /flume-current-table -->
 
 

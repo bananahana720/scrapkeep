@@ -2,6 +2,8 @@
 
 KD2's table (ruling R8): the 13 bands of PARK.md section 8 for the six pilot lines and the floor line, 8 seeds each through the committed `tools/traversal_line.gd` (`--table=park --stage=2 --seeds=1,2,3,4,5,6,7,8`, `--fixed-fps 90`). Current batches are untraced; separate traced solos qualify replay and stop attribution. Each cell is median / worst seed, then pass or MISS. The lines are `tools/park_lines/park_flume.json`.
 
+The corrected candidate tests judge the music bar grid booked at announcement. Both ground-slump game fixtures and the complete Z1 shared suite pass. The eight-file smoke remains blocked by four inherited park_table_test posture comparisons. Rivet also emits missing Fin.L/Fin.R control diagnostics, which the wrapper reports separately as a partial skip; all 111 flume geometry checks run and pass. KD2 leaves those shared files unchanged. The table/test owner must reconcile the posture comparisons before the eight-file smoke can pass.
+
 <!-- flume-current-table -->
 ## Current measurements and qualification, round 8
 
@@ -83,7 +85,6 @@ Every win seed reaches and engages. Child logs contain no collapse script error 
 
 The physical event regression observes finite matching deck-to-floor mesh and collider surfaces at five span positions at landing, 0.5 s, 1 s and 2 s. Its independent grid interpolation defines the authorized depth. The stage keeps its authored form, trigger, six-second lead, 20 m hold-clear distance, swap and route changes. Both authored music cue IDs resolve through the common runtime event/music path.
 
-The corrected candidate tests judge the music bar grid booked at announcement. Both ground-slump game fixtures and the complete Z1 shared suite pass. The eight-file smoke remains blocked by four inherited park_table_test posture comparisons. Rivet also emits missing Fin.L/Fin.R control diagnostics, which the wrapper reports separately as a partial skip; all 111 flume geometry checks run and pass. KD2 leaves those shared files unchanged. The table/test owner must reconcile the posture comparisons before the eight-file smoke can pass.
 <!-- /flume-current-table -->
 
 
