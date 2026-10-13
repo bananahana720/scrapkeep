@@ -216,7 +216,7 @@ func _slice_record_regression(t) -> void:
 		t.near("slice landed contact %.2f follows owner arithmetic" % ratio, warden.posture(), expected, 0.001)
 		t.check("slice publishes landed posture %.2f" % ratio, not published.is_empty() and absf(float(published.back()) - expected) < 0.001)
 		if ratio < 1.0:
-			t.check("slice light contact still moves posture with less buildup", warden.posture() > 0.0 and warden.posture() < legacy)
+			t.check("slice light contact still moves posture with less buildup", warden.posture() > 0.0 and warden.posture() < legacy and not is_equal_approx(warden.posture(), legacy))
 		else:
 			t.check("slice grown contact retains at least legacy weight", warden.posture() >= legacy)
 		var swept_rule := BossPosture.new(measured)
