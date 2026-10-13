@@ -87,6 +87,8 @@ func _initialize() -> void:
 func _row(kind: String, form: String) -> Dictionary:
 	var water := kind in ["flood_fill", "drain", "flash_flood"]
 	var effect := {"depth_m": ParkSchema.MAX_EVENT_WATER_M * 2.0, "fill_s": 2.0, "material": "water"} if water else {"swap": "rubble_ramp", "strike_m": 6.0, "damage": 8.0}
+	if kind == "cave_in":
+		effect.merge({"depth_m": 12.0, "fill_s": 3.0}, true)
 	if kind == "collapse":
 		effect.merge({"depth_m": 20.0, "fill_s": 4.0, "swap": "rubble_ramp"}, true)
 	if kind == "lightning":
@@ -147,6 +149,7 @@ func _run() -> void:
 		var fixture := _fixture(row)
 		var w = fixture[0]
 		var handler = fixture[1]
+		var original_height: float = w.terrain.height(0.0, 0.0)
 		var facts := []
 		for i in 52:
 			facts.append_array(w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true}))
@@ -169,6 +172,13 @@ func _run() -> void:
 			if kind == "collapse":
 				t.check("collapse lands on original bench with overlay active", w.terrain.overlays.has("rubble_ramp_after"))
 				t.near("collapse first landing retains original height", w.terrain.height(probe.x, probe.y), w.terrain.ground(probe.x, probe.y))
+			elif kind == "cave_in":
+				t.near("cave_in zero drop at land", original_height - w.terrain.height(0, 0), 0.0)
+				var ctx := {"clock_s": 5.2, "ball": FAR, "delta_s": float(row.effect.fill_s) * 0.5, "rise_s": 0.0}
+				handler.handle("step", row, ctx)
+				t.near("cave_in partial authored drop", original_height - w.terrain.height(0, 0), float(row.effect.depth_m) * 0.5)
+				handler.handle("step", row, ctx)
+				t.near("cave_in settled authored depth", original_height - w.terrain.height(0, 0), float(row.effect.depth_m))
 			else:
 				t.check(kind + " uses live terrain overlay", w.terrain.overlays.has("rubble_ramp_after") and w.terrain.height(probe.x, probe.y) > 0.0, str(w.terrain.overlays))
 			t.check(kind + " prebuilt collider lands", state.get("overlay") != null and state.overlay.visible)
