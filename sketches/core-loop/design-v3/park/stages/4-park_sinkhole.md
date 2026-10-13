@@ -177,6 +177,17 @@ Five rows, all four families, as shipped in `src/world/park/park_sinkhole.json` 
 - The drain lowers water and never raises ground. `great_room_camp` no longer stands on this site (R3): the on-line camp moved to the great room (section 14).
 - The boiler sits 63 m from the nest, outside the 45 m engage ring.
 
+### Authored event proof, round 4
+
+KE-FORMS is imported through STEP 0; every authored event row remains byte-identical to round 3. The completionist seed-1 stage run uses the live director and natural handler, with a read-only observer in the round folder. [The receipt](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/event-proof.json) verifies registration, announcement, landing, the installed cave-in swap and the drain effect, with no unsupported-form error. The cave-in's depth and fill timing fail the separate check below.
+
+- `west_roof_cave_in` announces at 45.01 s, with 6.61 s remaining, and lands at 51.64 s. Its warning `ring` and sound `threat_tick` and landed `burst` and sound `slam_boom` read the shared records. [Announcement and landing log](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/win-1.log) lines 114 and 154. The committed `west_collapse_trench_after` overlay is installed. Trigger tier 1, lead 6 s, 12 m basalt swap, authored fill 3 s, permanent live row and hold-clear 20 m remain unchanged.
+- `cenote_drain` announces at 122.62 s, with 5.75 s remaining, and lands at 128.37 s. Its warning `chevron` and sound `boost_whoosh` and landed `chevron` and sound `found_chime` read the shared records. [Announcement and landing log](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/win-1.log) lines 957 and 960. Water starts at the authored 1.2 m and reaches 0 m after 12 s; rendered and queried depth agree. Trigger tier 3, lead 5 s, live 60 s, hold-clear 12 m and cooldown 120 s remain unchanged.
+
+This is headless sight/sound wiring and gameplay-state evidence. It does not establish a visual or listening verdict.
+
+**Remaining shared natural-effect failure.** The cave-in's authored 12 m trench over 3 s is not implemented by this merged runtime. At its centre [-205, 250], the live terrain height rises from 1.36363 m to 12.31474 m at landing, a 10.95111 m rise. It is already unchanged at both 1.5 s and 3 s after landing. [The independent effect check](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/cave-effect-proof.json) is FAIL. `events/event_ground.gd` uses the fixed Gorge rubble profile for cave_in, and `events/natural.gd` advances fill only for water and collapse. The shared event owner must repair the cave_in effect. KD4 keeps the authored row, lead, trigger, effect and hold rules; no substitution or stage geometry workaround is made. The event table describes authored intent, not a passing terrain-effect result.
+
 ## 6. `home_rows` (shipped)
 
 | Id | Enemy | Site (landform, at) | Reinforce | Break | Stops kind |
@@ -354,7 +365,7 @@ Board id `park-4-park_sinkhole`. PARK.md section 6.1 panels in brackets. The pil
 7. **The drop finisher [p6_warden, second].** Stagger, the pool raised two steps: the nest's shutters are blown open and the queen cell swells green. The ball falls from a harpoon swing straight onto it, the rope trailing.
 8. **The exit.** The pool flooded to the gallery ring, flat and bright, the nest dark and dripping. The bay's hover barge docks over the water by the gate, and the launch arc rises up the sinkhole's open throat toward the sky and the next world.
 
-The west roof cave-in, frame 4 of the draft, fires at 45 s off every measured line; it stays a roaming player's event and a codex frame, not a line frame.
+The west roof cave-in, frame 4 of the draft, announces at clock tier 1 and lands after its 6 s warning on a bar when capacity, route and hold-clear rules allow it. Its site is off every measured line; it stays a roaming player's event and a codex frame, not a line frame.
 
 ## 14. Calls, veto list and open questions
 
@@ -375,7 +386,7 @@ The west roof cave-in, frame 4 of the draft, fires at 45 s off every measured li
 1. Same schema gaps as stage 3: rescue rows, vault, relic spot and breach caps (stage 3 page, section 14, question 1). `map_dig_deep.gd:58` places today's relic spot south of Kest's cage; KD4 confirms whether stage 4 keeps a rescue at all.
 2. Tube rows need a `y` profile along their length (mouth -12 m to ring -100 m). This draft uses one `y` per segment; the bake may want `y0` and `y1`.
 3. Roofed cells: the sight test excludes them (PARK.md:474), but the schema has no roof flag; `tunnel` and `flooded_cavern` rows could imply it.
-4. New telegraph forms for KE1: `crust_crack`, `drain_gurgle`. New music cues for KE8: `drop_cave_in`, `drop_drain`.
+4. KE-FORMS supplies `crust_crack` -> `crust_crack_landed` and `drain_gurgle` -> `drain_landed`. The shared WORLD_ROWS records drive sight and sound, and the scheduler maps each landing through PARK_LAND_FACTS. Section 5 records both rows' real-stage telegraphs and landings, the passing drain effect and the remaining shared cave-in effect failure. Music cues `drop_cave_in` and `drop_drain` remain the authored KE8 cues.
 5. Whether a lamp-swarm guard's scatter pays `GUARD_RACK_POSTURE` (`warden.gd:194-203` checks `enemy.get("swarm")` and `guard.following()`, which a lamp guard may not expose) is unverified; the kind sheet's section 3 asks KF3 to check it.
 
 **KD4 greybox calls (2026-10-11), on the veto list.**
