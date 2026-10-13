@@ -146,6 +146,13 @@ func _run() -> void:
 	t.check("sentinel_40 clears the reproduced Tally approach and retains reachable posts", clearance_failures.is_empty(), "; ".join(clearance_failures))
 	var mast_failures := signal_clearance_failures(park, holder, ground)
 	t.check("signal_masts clears both reproduced approaches and retains reachable physical anchors", mast_failures.is_empty(), "; ".join(mast_failures))
+	var ramp: Dictionary = by_row["crown_ramp"]
+	var ramp_node := ParkRecipes.place_row(ramp, holder, ground, Callable(), clear_zones)
+	var entry := ramp_node.to_global(Vector3(8.0, 0.0, -float(ramp["size"][0]) * 0.5))
+	var entry_gap := entry.y - float(ground.call(entry.x, entry.z))
+	print("[crown_ramp_entry] physical low edge %s ground gap %.3f m" % [entry, entry_gap])
+	t.check("the Crown ramp entry meets Rivet's rolling ground contact", absf(entry_gap) <= Tuning.RADIUS, "entry gap %.3f m exceeds ball radius %.3f m" % [entry_gap, Tuning.RADIUS])
+	ramp_node.free()
 	t.eq("the Warden anchor stays at the first 18 m lens", park["landmark"]["warden"]["anchor"], [0.0, 18.0, 515.0])
 	t.eq("the Warden flight path stays approved", park["landmark"]["warden"]["path"], [[0.0, 18.0, 515.0], [39.0, 18.0, 447.5], [-39.0, 18.0, 447.5]])
 	var tall_perch: Dictionary = park.duplicate(true)
