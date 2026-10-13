@@ -37,6 +37,7 @@ func _run() -> void:
 		var numbers: Dictionary = row["posture"]
 		t.eq("stage %d owns its arena posture" % stage, warden.spec["posture"], numbers)
 		t.check("stage %d records contact gain" % stage, float(numbers.get("contact_gain_scale", 0.0)) > 0.0)
+		t.check("stage %d records contact floor" % stage, numbers.has("contact_gain_floor"))
 		t.eq("stage %d keeps plating" % stage, warden.plating, row["warden_plating"])
 		t.eq("stage %d keeps health" % stage, warden.max_hp, row["warden_hp"])
 		var pair: Dictionary = AlphaDefs.DEFS[2 if stage < 5 else 4]["posture"]
@@ -70,6 +71,10 @@ func _run() -> void:
 			var drain := float(numbers.get("drain_rate", BossPosture.DRAIN_RATE))
 			t.check("stage %d records reduced regeneration" % stage, drain < BossPosture.DRAIN_RATE and drain > 0.0)
 			t.near("stage %d regeneration follows record" % stage, warden.posture(), 50.0 - drain)
+		var weapon_rule := BossPosture.new(numbers)
+		var weapon_hit := {"kind": "arc", "punch": 0.75 * warden.plating, "plating": warden.plating}
+		t.near("stage %d weapon gain stays unchanged" % stage, float(weapon_rule.judge(weapon_hit)["gain"]),
+			BossPosture.OTHER_BASE * pow(0.75, float(numbers["curve"])))
 	for stage in [1, 2]:
 		var numbers: Dictionary = AlphaDefs.DEFS[stage - 1]["posture"]
 		t.check("reactor stage %d has no new contact fields" % stage, not numbers.has("contact_gain_scale") and not numbers.has("contact_gain_floor"))
