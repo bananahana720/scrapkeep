@@ -14,14 +14,13 @@ const Natural := preload("res://src/world/events/natural.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 
 const FIXTURE := "res://tests/fixtures/park_events_ancient_rows.json"
-const ROUTES := [{"id": "main", "from": "drop_in", "to": "landmark", "via": []}]
 const H := 0.05
 const BAR := 240.0 / 172.0
 const FAR := Vector3(1000.0, 1.0, 1000.0)
 const MAX_STEPS := 6000
 const ROW_COUNT := 6
-# 1 fixture read, 1 row count, 7 per row, 2 route totals, 1 count check.
-const EXPECTED_CHECKS := 47
+# 1 fixture read, 1 row count, 10 per row, 2 route totals, 1 count check.
+const EXPECTED_CHECKS := 65
 
 var t := T.new("park_events_ancient_test")
 var closes_total := 0
@@ -51,6 +50,9 @@ class FakeTerrain extends RefCounted:
 
 	func height(_x: float, _z: float) -> float:
 		return 0.0
+
+	func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
+		return Vector3(x, height(x, z) + clearance, z)
 
 
 class FakeCtx extends RefCounted:
@@ -101,12 +103,40 @@ func _site(park_sites: Array, id: String) -> Dictionary:
 	return {}
 
 
+# Routes for one row: a main path that stays open, plus one edge per route id the row touches.
+# Every id is a real edge, so the oracle below can tell open from closed for each one.
+func _routes_for(row: Dictionary) -> Array:
+	var routes := [{"id": "main", "from": "drop_in", "to": "landmark", "via": []}]
+	for id in row.route_change.closes + row.route_change.opens:
+		routes.append({"id": id, "from": "drop_in", "to": "landmark", "via": []})
+	return routes
+
+
+# Independent edge-state oracle: built from the authored routes and the live changes only,
+# never from the director's own route predicate. Opens start dormant; a closure beats an opening.
+func _edge_states(routes: Array, rows: Array, live: Array) -> Dictionary:
+	var open := {}
+	for edge in routes:
+		open[edge.id] = true
+	for row in rows:
+		for id in row.route_change.opens:
+			open[id] = false
+	for change in live:
+		for id in change.opens:
+			open[id] = true
+	for change in live:
+		for id in change.closes:
+			open[id] = false
+	return open
+
+
 func _drive(row: Dictionary, park_sites: Array) -> void:
 	var site_row := _site(park_sites, str(row.site))
 	var swap := str(row.effect.get("swap", row.id))
+	var routes := _routes_for(row)
 	var map := ParkMap.new()
 	map.park = {"map": "fixture", "event_rows": [row], "weather_rows": [],
-		"park_rows": [site_row], "routes": ROUTES}
+		"park_rows": [site_row], "routes": routes}
 	var terrain := FakeTerrain.new(map)
 	var ctx := FakeCtx.new()
 	var spawner := StubSpawner.new()
@@ -153,6 +183,9 @@ func _drive(row: Dictionary, park_sites: Array) -> void:
 	var near := calls.size() == 1 and is_instance_valid(calls[0].node) \
 		and Vector2(calls[0].at.x, calls[0].at.z).distance_to(site_at) <= float(row.hold_clear_m)
 	t.check("%s miniboss stands within hold_clear_m of the site" % row.id, near, "hold_clear_m %s" % row.hold_clear_m)
+	# The spawn goes through drop_point at 2.4 m clearance, as world.gd's ancient pack does.
+	var placed := calls.size() == 1 and is_equal_approx(calls[0].at.y, 2.4)
+	t.check("%s miniboss is placed at drop_point clearance 2.4" % row.id, placed, "spawn calls %d" % calls.size())
 	var swap_on: bool = terrain.overlays.has(swap + "_after") and is_instance_valid(body) and body.visible
 	t.check("%s swap %s is on after land" % [row.id, swap], swap_on, "overlays %s" % str(terrain.overlays))
 	var closes: Array = landed_fact.route_change.closes if landed else []
@@ -160,8 +193,31 @@ func _drive(row: Dictionary, park_sites: Array) -> void:
 	t.check("%s route_change on the started fact matches the row" % row.id,
 		landed and closes == row.route_change.closes and opens == row.route_change.opens,
 		"closes %s opens %s" % [str(closes), str(opens)])
-	closes_total += closes.size()
-	opens_total += opens.size()
+	# Route state applies after land: the director's row is LIVE, and the oracle, fed the
+	# director's live rows, reports each opens id open and each closes id closed.
+	var director_live := false
+	var live: Array = []
+	for state in director._park_states:
+		if state.row.id == row.id and state.phase == Director.LIVE:
+			director_live = true
+		if state.phase == Director.LIVE and not state.weather:
+			live.append(state.row.route_change)
+	var edges := _edge_states(routes, [row], live)
+	var closed := 0
+	var opened := 0
+	for id in row.route_change.closes:
+		if not edges.get(id, true):
+			closed += 1
+	for id in row.route_change.opens:
+		if edges.get(id, false):
+			opened += 1
+	t.check("%s director row is LIVE after land" % row.id, landed and director_live, "landed %s" % landed)
+	t.check("%s route ids apply after land (oracle closed %d of %d, opened %d of %d)" % [row.id, closed,
+		row.route_change.closes.size(), opened, row.route_change.opens.size()],
+		landed and closed == row.route_change.closes.size() and opened == row.route_change.opens.size(),
+		"edges %s" % str(edges))
+	closes_total += closed
+	opens_total += opened
 	# Free every node this run made, so the exit prints no leak lines.
 	ancient.release()
 	natural.release()

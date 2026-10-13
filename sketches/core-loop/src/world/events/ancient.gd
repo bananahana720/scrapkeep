@@ -79,7 +79,7 @@ func _land(row: Dictionary, ctx: Dictionary) -> void:
 	var spawner = world.ctx.spawner
 	if kind == "" or world.ctx.calm or spawner == null or not spawner.has_method("spawn_enemy"):
 		return
-	spawner.spawn_enemy(kind, ctx.at)
+	spawner.spawn_enemy(kind, world.terrain.drop_point(ctx.at.x, ctx.at.z, 2.4))
 
 
 func _end(row: Dictionary) -> void:
