@@ -18,6 +18,11 @@ var _wait_frames := 0
 var _player: AudioStreamPlayer
 
 
+class ThreatEnemy extends Node3D:
+	func is_dead() -> bool:
+		return false
+
+
 func _initialize() -> void:
 	_game = Game.new()
 	_game.test_mode = true
@@ -68,8 +73,7 @@ func _process(_delta: float) -> bool:
 			_game.events.event_announced.emit("flood", 5.0)
 			var klaxon := _cues("event_announced")
 			_check("klaxon on beat", klaxon.size() == 1 and klaxon[0][2] == "beat" and int(klaxon[0][3]) % Harmony.BEAT == 0 and int(klaxon[0][3]) >= engine.clock, "the klaxon waits for the next beat (sample %d, play head %d)" % [int(klaxon[0][3]) if klaxon.size() > 0 else -1, engine.clock])
-			_game.events.pressure_changed.emit(0.9)
-			_check("pressure", is_equal_approx(engine.pressure, 0.9), "pressure_changed reaches the band (%.2f), applied on the next bar" % engine.pressure)
+			_check_pressure(engine)
 			_audio.cue_log.clear()
 			# A stage clear and the next stage in one frame: jingle, then the stage hits.
 			_game.events.stage_cleared.emit(1)
@@ -134,6 +138,41 @@ func _process(_delta: float) -> bool:
 
 func _cues(kind: String) -> Array:
 	return _audio.cue_log.filter(func(c: Array): return c[0] == kind)
+
+
+# 2026-10-13: KE10 merge f725a69, K-UNITS.md:366 replaces director pressure with live
+# proximity/facing threat; the merge commits that snapshot on phrases, not the next bar.
+func _check_pressure(engine: MusicEngine) -> void:
+	var enemy := ThreatEnemy.new()
+	_game.add_child(enemy)
+	enemy.add_to_group("enemy")
+	enemy.global_position = _game.player.ball_position() + _game.ctx.aim_forward() * _audio.parameter_threat_range * 0.1
+	var before := engine.applied_pressure
+	var sampled_before := engine.pressure
+	_game.events.pressure_changed.emit(0.2)
+	_check("director pressure stays a cue", _cues("pressure_changed").size() == 1 and engine.pressure == sampled_before,
+		"the director fact is recorded without replacing the live threat feed")
+	var skip := engine.bot_skip_samples
+	engine.bot_skip_samples = true
+	var phrase := engine.bar_len() * Harmony.PHRASE_BARS
+	var origin := engine.grid_origin + ceili(float(engine.bar_origin - engine.grid_origin) / engine.step_len) * engine.step_len
+	var boundary := origin + (floori(float(engine.clock - origin) / phrase) + 1) * phrase
+	_advance(engine, boundary)
+	_check("pressure sampled on transport", absf(engine.pressure - 0.9) <= 0.0001,
+		"the enemy at one tenth of threat range supplies %.4f, expected 0.9000" % engine.pressure)
+	_check("pressure waits for phrase", engine.applied_pressure == before,
+		"no pending threat is applied through the sample before the phrase")
+	engine.render(1)
+	_check("pressure reaches band on phrase", absf(engine.applied_pressure - 0.9) <= 0.0001
+		and absf(float(engine.parameter_committed_values.get("threat", -1.0)) - 0.9) <= 0.0001,
+		"live threat %.4f commits at sample %d" % [engine.applied_pressure, boundary])
+	engine.bot_skip_samples = skip
+	enemy.free()
+
+
+func _advance(engine: MusicEngine, at: int) -> void:
+	while engine.clock < at:
+		engine.render(mini(4096, at - engine.clock))
 
 
 func _next(wait_ms: int) -> void:
