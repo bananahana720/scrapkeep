@@ -45,7 +45,7 @@ func _run() -> void:
 	_advance(engine, Harmony.BAR * 2 + 1)
 	t.eq("mid-phrase targets stay committed", engine._targets, before)
 	_advance(engine, Harmony.BAR * Harmony.PHRASE_BARS + 1)
-	t.check("phrase admits threat and landmark hum", engine.layer_target(Music.LEAD) > before[Music.LEAD] and engine.layer_target(Music.PAD) > before[Music.PAD])
+	t.check("phrase admits threat", engine.layer_target(Music.LEAD) > before[Music.LEAD])
 	t.near("sampled threat feeds set_pressure", engine.pressure, 1.0)
 	input.armour = 0.2
 	_advance(engine, Harmony.BAR * Harmony.PHRASE_BARS * 2 + 1)
@@ -105,6 +105,7 @@ func _run() -> void:
 	t.eq("track pivot preserves actual phrase timing", pivot._targets, pivot_targets)
 	_advance(pivot, pivot_origin + pivot.bar_len() * Harmony.PHRASE_BARS + 1)
 	t.check("pivot phrase admits pending layers", pivot.layer_target(Music.LEAD) > pivot_targets[Music.LEAD])
+	_landmark_hum_fixture()
 	_fleet_fixture(true)
 	_fleet_fixture(false)
 	if OS.get_environment("KE10_UNIT_ONLY") == "1":
@@ -150,3 +151,47 @@ func _fleet_fixture(armour: bool) -> void:
 	legacy.set_fleet_ticks(3)
 	_advance(legacy, Harmony.BAR + 1)
 	t.eq("legacy Fleet still enters next bar armour=%s" % armour, legacy.fleet_ticks, 3)
+
+
+func _landmark_hum_fixture() -> void:
+	var hum := Music.new()
+	var layer: int = Music.LAYER_NAMES.find("landmark_hum")
+	if not t.check("approach owns the distinct landmark hum layer", layer >= 0):
+		return
+	input = {"threat": 0.0, "approach": 0.0, "armour": 1.0}
+	hum.set_parameter_source(func(): return input.duplicate())
+	hum.schedule_restart(0, Music.PLAY, 0)
+	hum.render(1)
+	t.eq("zero approach contributes no landmark hum", hum.layer_target(layer), 0.0)
+	var pad := hum.layer_target(Music.PAD)
+	input.approach = 1.0
+	var boundary := Harmony.BAR * Harmony.PHRASE_BARS
+	_advance(hum, boundary)
+	t.eq("approach-only hum waits for phrase", hum.layer_starts[layer], 0)
+	t.eq("approach-only gain waits for phrase", hum.layer_target(layer), 0.0)
+	hum.render(1)
+	t.near("approach-only opens landmark hum on phrase", hum.layer_target(layer), 1.0)
+	t.eq("approach leaves generic pad alone", hum.layer_target(Music.PAD), pad)
+	var voices: Array = hum._voices.filter(func(v): return v.layer == layer)
+	t.check("record-selected beacon hum starts on phrase", not voices.is_empty())
+	if not voices.is_empty():
+		t.eq("landmark hum uses record-selected existing samples", voices.back().buf, preload("res://src/presentation/sfx_bank.gd").samples("beacon_hum"))
+		t.near("landmark hum uses shared sound trim", voices.back().gl, db_to_linear(preload("res://src/presentation/sfx_bank.gd").trim_db("beacon_hum")) * 1.41 * cos(PI * 0.25))
+	input.armour = 0.2
+	_advance(hum, boundary * 2 + 1)
+	t.eq("low armour releases landmark hum", hum.layer_target(layer), 0.0)
+	input.armour = 1.0
+	_advance(hum, boundary * 3 + 1)
+	t.eq("regained armour restores landmark hum", hum.layer_target(layer), 1.0)
+	hum.parameters_warden_broken()
+	_advance(hum, boundary * 4 + 1)
+	t.eq("Warden break releases landmark hum", hum.layer_target(layer), 0.0)
+	var absent := Music.new()
+	absent.set_parameter_source(func(): return {"threat": 1.0})
+	absent.schedule_restart(0, Music.PLAY, 0)
+	_advance(absent, boundary + 1)
+	t.check("no graph has no hum reader or contribution", not absent.parameter_layer_reads.has("approach") and absent.layer_target(layer) == 0.0 and absent.layer_starts[layer] == 0)
+	input = {"threat": 0.0, "armour": 1.0}
+	hum.parameters_stage_entered()
+	_advance(hum, boundary * 5 + 1)
+	t.check("graph removal clears hum contribution and reader", not hum.parameter_layer_reads.has("approach") and hum.layer_target(layer) == 0.0)
