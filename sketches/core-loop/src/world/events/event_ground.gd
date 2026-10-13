@@ -314,11 +314,16 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		record.swap = id
 		record.overlay_map = overlay_map
 		return overlay_map
+	var geometry: Dictionary = record.geometry
 	var site: Dictionary = record.site
-	var half: Vector2 = record.geometry.half
+	if kind_of_span(row):
+		site = current.park.park_rows.filter(func(r): return r.id == "flume_hollow_reach")[0]
+		geometry = {"site": site, "at": Vector3(float(site.at[0]), float(site.y), float(site.at[1])),
+			"half": ParkMap.footprint_half_extents(site), "yaw": deg_to_rad(float(site.yaw_deg)), "span": true}
+	var half: Vector2 = geometry.half
 	var radius := minf(half.x, half.y)
-	var at: Vector3 = record.at
-	var yaw: float = record.geometry.yaw
+	var at: Vector3 = geometry.at
+	var yaw: float = geometry.yaw
 	var terrain = world.terrain
 	var kind: String = row.kind
 	# Collider vertices and terrain.height use this identical surface function.
@@ -328,8 +333,10 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		if kind == "impact":
 			return base + maxf(0.0, Gorge.crater_profile(Vector2(x, z).length() * Gorge.CRATER_OUT / radius))
 		return base + Gorge.rubble_profile(Vector2(x, z).length() * Gorge.RUBBLE_RADIUS / radius)
-	var surface := project_surface(world, record.geometry, [_rectangle(-half, half)],
+	var surface := project_surface(world, geometry, [_rectangle(-half, half)],
 		Callable() if kind == "collapse" else func(local, base): return float(height.call(local.x, local.y)) - base)
+	if geometry.get("span", false):
+		surface = span_surface(site, 0.0)
 	var body := StaticBody3D.new()
 	body.name = "Natural_" + row.id
 	var view := MeshInstance3D.new()
@@ -342,13 +349,13 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	owner.add_child(body)
 	var before: Node3D = null
 	if world.terrain.has_method("geometry_root"):
-		before = world.terrain.geometry_root(world.terrain.stage).find_child("Park_" + str(row.site), true, false) as Node3D
+		before = world.terrain.geometry_root(world.terrain.stage).find_child("Park_" + str(site.id), true, false) as Node3D
 	overlay_map.swaps[id] = {"body": body, "home": body.position, "before": before,
 		"before_home": before.position if is_instance_valid(before) else Vector3.ZERO,
 		"before_visible": before.visible if is_instance_valid(before) else false, "owners": {},
-		"baseline": surface, "geometry": record.geometry, "progress": 0.0, "collapse": kind == "collapse"}
+		"baseline": surface, "geometry": geometry, "progress": 0.0, "collapse": kind == "collapse"}
 	if kind == "collapse":
-		overlay_map.swaps[id].target = collapse_target.call(row, record.geometry, surface)
+		overlay_map.swaps[id].target = collapse_target.call(row, geometry, surface)
 	overlay_map.profiles[id + "_after"] = {"site": site, "surface": surface}
 	body.position += Vector3.DOWN * Gorge.SWAP_PARK
 	body.visible = false
@@ -414,3 +421,34 @@ static func restore_map(world, overlay_map: OverlayMap) -> void:
 			return
 	world.terrain.maps[world.terrain.stage - 1] = overlay_map.source
 
+
+
+static func kind_of_span(row: Dictionary) -> bool:
+	return row.kind == "collapse" and row.effect.get("swap", "") == "trestle_ramp"
+
+
+static func span_surface(site: Dictionary, depth_m: float) -> Surface:
+	var surface := Surface.new()
+	var half := ParkMap.footprint_half_extents(site)
+	var centre := Vector2(float(site.at[0]), float(site.at[1]))
+	var yaw := deg_to_rad(float(site.yaw_deg))
+	var corners := PackedVector3Array()
+	var low := Vector2.INF
+	var high := -Vector2.INF
+	for local: Vector2 in _rectangle(-half, half):
+		var point := local.rotated(-yaw) + centre
+		corners.append(Vector3(point.x, float(site.y) - depth_m * (local.y + half.y) / (2.0 * half.y), point.y))
+		low = low.min(point)
+		high = high.max(point)
+	var normals := PackedVector3Array()
+	for face in [[0, 1, 3], [1, 2, 3]]:
+		var a := corners[face[0]]
+		var b := corners[face[1]]
+		var c := corners[face[2]]
+		surface.vertices.append_array(PackedVector3Array([a, b, c]))
+		var normal := (c - a).cross(b - a).normalized()
+		normals.append_array([normal, normal, normal])
+	for j in range(floori(low.y / ParkTerrain.STEP), floori(high.y / ParkTerrain.STEP) + 1):
+		for i in range(floori(low.x / ParkTerrain.STEP), floori(high.x / ParkTerrain.STEP) + 1):
+			surface.cells[Vector2i(i, j)] = [0, 3]
+	return mesh_surface(surface, normals)
