@@ -404,7 +404,8 @@ func _persistence() -> void:
 	t.eq("JSON reconstructed tier", loaded.selected_run_tier(), 1)
 	t.eq("JSON reconstructed nonzero grants", loaded.event_core_grants, 7)
 	t.eq("JSON reconstructed grants are int", typeof(loaded.event_core_grants), TYPE_INT)
-	loaded.restore()
+	if loaded.has_snapshot():
+		loaded.restore()
 	t.eq("JSON retry nonzero grants", loaded.event_core_grants, 7)
 	for field in ["run_tier", "event_core_grants"]:
 		for bad in [0.5, INF, -INF, NAN, "1", true, null, [], {}]:
