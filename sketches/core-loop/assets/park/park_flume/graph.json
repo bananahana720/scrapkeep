@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "cc873207b543b03b924b54b8e1284c981fd10a96fe8dd47097a05ce4bb0302f8",
+  "bake_sha256": "acc5dc7b1e4062fe616d9503e51f2a1f343d3809dfd3cb371b3c3093ad2fd8ac",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1099568,
-  "edges": 319813,
+  "bytes": 1101194,
+  "edges": 319816,
   "first_failed": "",
   "flags": {
     "deck": 754,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 1771,
   "full_visit_ratio": "1.252",
-  "graph_sha256": "902708d74f6d1a414bf7b3d5487bfef5bbef6d559abd941da47e8a5e987303a2",
+  "graph_sha256": "d92709c7824797491ff0a3a40e3ddcb073c1e1603318352fa9b87541c375e8f1",
   "line_errors": [],
   "line_path_nodes": 125,
   "longest_est_m": 2495,
   "map": "park_flume",
   "nodes": 41155,
-  "park_sha256": "ac084f0a618a009779bc0277cdf97938c889b71bfa0dd13ea06c352e1f356c99",
+  "park_sha256": "2fdf36906bc2bc536f6a4f8e83f76653d5d5327f64b50c6a63730206fc26e696",
   "pockets": [
     {
       "clear_ring": [],
@@ -132,7 +132,7 @@
     }
   ],
   "reward_ratio": "0.532",
-  "ride_edges": 147,
+  "ride_edges": 150,
   "routes": {
     "annex_ramp_line": [],
     "bench_run": [],
@@ -225,6 +225,14 @@
         "cost": 1307.1,
         "d_landmark": 143.4,
         "name": "bluff_ride_pier_22",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1303.1,
+        "d_landmark": 235.4,
+        "name": "bench_hop_coping",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -345,6 +353,14 @@
         "cost": 986.3,
         "d_landmark": 441.3,
         "name": "siphon_return_pier",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 916.6,
+        "d_landmark": 494.7,
+        "name": "siphon_turn_coping",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -718,11 +734,11 @@
         "viable": false
       }
     ],
-    "count": 154,
+    "count": 156,
     "crossings": {
       "drop": 50,
       "ride": 79,
-      "walk": 229
+      "walk": 231
     },
     "hidden": [
       {
