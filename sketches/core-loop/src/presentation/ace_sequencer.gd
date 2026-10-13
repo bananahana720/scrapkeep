@@ -283,7 +283,7 @@ func stop_at(at: int, ramp := STOP_RAMP) -> void:
 
 func set_pressure(value: float) -> void:
 	pressure = value
-	_follow()
+	_follow(true)
 
 
 func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String, timing: Dictionary = {}) -> void:
@@ -306,7 +306,7 @@ func parameter_gain(stem: String) -> float:
 # releases it. It sits on top of the systemic pressure; set_pressure keeps its own value.
 func set_ultimate_lift(on: bool) -> void:
 	ultimate_lift = on
-	_follow()
+	_follow(true)
 
 
 func effective_pressure() -> float:
@@ -315,7 +315,7 @@ func effective_pressure() -> float:
 
 func threat_rose(tier: int) -> void:
 	threat = maxi(threat, tier)
-	_follow()
+	_follow(true)
 
 
 func set_bay(on: bool) -> void:
@@ -637,8 +637,8 @@ func _desired() -> String:
 
 # Moves toward what the game asks for, at the first moment a change is allowed: never
 # inside a hold, never over a protected entry, never during the directed piece.
-func _follow() -> void:
-	if parameter_enabled and parameters.has("threat") and not _parameter_follow_now:
+func _follow(parameter_driven := false) -> void:
+	if parameter_driven and parameter_enabled and parameters.has("threat") and not _parameter_follow_now:
 		return
 	if mode == "off" or mode == "piece":
 		return
@@ -659,7 +659,8 @@ func _follow() -> void:
 	if want == section:
 		return
 	var row: Dictionary = sections[want]
-	_schedule(want, clock if parameter_enabled else _landing(want, row["enter"] == "beat"), parameter_enabled)
+	var committed_parameter := parameter_driven and _parameter_follow_now
+	_schedule(want, clock if committed_parameter else _landing(want, row["enter"] == "beat"), committed_parameter)
 
 
 # home and calm share a clip: the release from home into calm plays on without a join.
@@ -818,7 +819,7 @@ func _run(action: Dictionary) -> void:
 			if action.reason != "ultimate":
 				_parameter_danger_floor = 1.0 if MusicRows.danger(action.reason) else 0.0
 			_parameter_follow_now = true
-			_follow()
+			_follow(true)
 			_parameter_follow_now = false
 			if section != "":
 				_retarget(STOP_RAMP)
