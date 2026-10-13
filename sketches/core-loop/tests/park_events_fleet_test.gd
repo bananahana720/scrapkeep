@@ -12,7 +12,8 @@ const GameDirector := preload("res://src/world/director.gd")
 const FLEET_PATH := "res://src/world/events/fleet.gd"
 const FIXTURE := "res://tests/fixtures/park_events_fleet_rows.json"
 const EXPECTED_ENTRIES := 6
-const EXPECTED_CHECKS := 48
+const EXPECTED_CHECKS := 69
+const EXPECTED_ROUTE_OPENS := 3
 const SEED := 813
 const H := 0.05
 const BAR := 240.0 / 172.0
@@ -63,9 +64,12 @@ func _initialize() -> void:
 		t.check("fleet handler file exists", false, FLEET_PATH)
 		_finish()
 		return
+	var route_total := 0
 	for entry in entries:
 		var out := _run(entry)
 		_check_row(entry.row, entry.site, out)
+		route_total += out.opens_live
+	t.eq("route opens open at land, across six rows", route_total, EXPECTED_ROUTE_OPENS)
 	var first: Dictionary = entries[0]
 	# Seeded control (a): skip activate_home, so the home stays dormant at land.
 	var skipped := _run(first, true)
@@ -80,6 +84,13 @@ func _initialize() -> void:
 		"worst gap %.3f m" % lowered.ground_broken)
 	t.check("control restored: vessel back on the ground", lowered.ground_restored <= GROUND_TOLERANCE,
 		"worst gap %.3f m" % lowered.ground_restored)
+	# Seeded control (c): drop route_change from the started fact, so the fact check goes red.
+	var dropped := _run(first, false, false, true)
+	t.check("control dropped route field fails the fact check", dropped.started and not _fact_matches(dropped, first.row),
+		"fact opens %s, want %s" % [str(dropped.fact_opens), str(first.row.route_change.opens)])
+	var routed := _run(first)
+	t.check("control restored: fact carries route opens again", routed.started and _fact_matches(routed, first.row),
+		"fact opens %s" % str(routed.fact_opens))
 	_finish()
 
 
@@ -102,13 +113,21 @@ func _check_row(row: Dictionary, site: Dictionary, out: Dictionary) -> void:
 		"span %s, want %s within %.1f m" % [out.span, Vector2(footprint[0], footprint[1]), FOOTPRINT_TOLERANCE])
 	t.check("%s vessel sits on the ground under the site" % id, out.ground_n > 0 and out.ground_error <= GROUND_TOLERANCE,
 		"vertices %d, worst gap %.3f m" % [out.ground_n, out.ground_error])
-	var want_opens: int = row.route_change.opens.size()
-	t.eq("%s route opens applied at land" % id, out.opens_live, want_opens)
+	var row_opens: Array = row.route_change.opens
+	t.eq("%s route opens closed before telegraph" % id, out.opens_telegraph_open, 0)
+	t.eq("%s route opens open after land" % id, out.opens_live, row_opens.size())
+	t.eq("%s route opens named in the park's routes" % id, out.opens_routed, row_opens.size())
+	t.check("%s started fact carries the row's route_change.opens" % id, _fact_matches(out, row),
+		"fact opens %s, want %s" % [str(out.fact_opens), str(row_opens)])
 	t.check("%s runs telegraph to end with no script error" % id, out.started and out.ended and out.handler_cleared,
 		"started=%s ended=%s cleared=%s" % [out.started, out.ended, out.handler_cleared])
 
 
-func _run(entry: Dictionary, skip := false, lower := false) -> Dictionary:
+func _fact_matches(out: Dictionary, row: Dictionary) -> bool:
+	return bool(out.started) and out.fact_opens == row.route_change.opens
+
+
+func _run(entry: Dictionary, skip := false, lower := false, drop_route := false) -> Dictionary:
 	var row: Dictionary = entry.row.duplicate(true)
 	var site: Dictionary = entry.site.duplicate(true)
 	var home: Dictionary = entry.home.duplicate(true)
@@ -132,7 +151,11 @@ func _run(entry: Dictionary, skip := false, lower := false) -> Dictionary:
 	events.register_family("fleet", Callable(handler, "handle"))
 	var out := {"announced": false, "home_telegraph": null, "mark_telegraph": null, "started": false,
 		"ended": false, "home_land": null, "span": Vector2.ZERO, "ground_n": 0, "ground_error": INF,
-		"opens_live": 0, "handler_cleared": false, "ground_broken": 0.0, "ground_restored": 0.0}
+		"opens_telegraph_open": -1, "opens_live": 0, "opens_routed": 0, "fact_opens": [],
+		"handler_cleared": false, "ground_broken": 0.0, "ground_restored": 0.0}
+	var named_routes := []
+	for route in entry.routes:
+		named_routes.append(route.id)
 	var centre := Vector2(float(site.at[0]), float(site.at[1]))
 	var yaw := deg_to_rad(float(site.yaw_deg))
 	var done := false
@@ -145,6 +168,7 @@ func _run(entry: Dictionary, skip := false, lower := false) -> Dictionary:
 				out.announced = true
 				out.home_telegraph = game.home_live(home.id)
 				out.mark_telegraph = handler.active.has(row.id) and is_instance_valid(handler.active[row.id].mark)
+				out.opens_telegraph_open = _open_count(_route_open(events), row.route_change.opens)
 			elif fact.kind == "started" and not out.started:
 				out.started = true
 				out.home_land = game.home_live(home.id)
@@ -153,7 +177,13 @@ func _run(entry: Dictionary, skip := false, lower := false) -> Dictionary:
 				out.span = stats.span
 				out.ground_n = stats.count
 				out.ground_error = stats.error
-				out.opens_live = _opens_live(events, row.id, row.route_change.opens)
+				out.opens_live = _open_count(_route_open(events), row.route_change.opens)
+				out.opens_routed = _open_count_in(row.route_change.opens, named_routes)
+				var observed: Dictionary = fact.duplicate(true)
+				if drop_route:
+					observed.erase("route_change")
+				var change: Dictionary = observed.get("route_change", {})
+				out.fact_opens = change.get("opens", []).duplicate()
 				if lower:
 					var base: float = mark.position.y
 					mark.position.y = 0.0
@@ -196,11 +226,39 @@ func _vessel_stats(mark: Node3D, terrain: Terrain, centre: Vector2, yaw: float) 
 	return {"span": span, "count": vertices.size(), "error": error if not vertices.is_empty() else INF}
 
 
-func _opens_live(events, id: String, opens: Array) -> int:
-	var live := 0
+# Mirrors event_director.gd _park_route_safe: every map route starts open, the rows' opens start
+# closed, then each LIVE state's changes apply (opens, then closes). Returns route id -> open.
+func _route_open(events) -> Dictionary:
+	var open := {}
+	for route in events._park.get("routes", []):
+		open[route.id] = true
+	for row in events._park.get("event_rows", []):
+		for id in row.route_change.opens:
+			open[id] = false
+	var changes := []
 	for state in events._park_states:
-		if state.row.id == id and state.phase == EventDirector.LIVE:
-			for route in state.row.route_change.opens:
-				if opens.has(route):
-					live += 1
-	return live
+		if not state.weather and state.phase == EventDirector.LIVE:
+			changes.append(state.row.route_change)
+	for change in changes:
+		for id in change.opens:
+			open[id] = true
+	for change in changes:
+		for id in change.closes:
+			open[id] = false
+	return open
+
+
+func _open_count(open: Dictionary, ids: Array) -> int:
+	var count := 0
+	for id in ids:
+		if open.get(id, false):
+			count += 1
+	return count
+
+
+func _open_count_in(ids: Array, named: Array) -> int:
+	var count := 0
+	for id in ids:
+		if named.has(id):
+			count += 1
+	return count
