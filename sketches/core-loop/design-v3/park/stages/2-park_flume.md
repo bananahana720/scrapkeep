@@ -2,19 +2,100 @@
 
 World 1, Spillway Works, the world's last stage before Brindle. Warden kind `reactor` on the `flume` mounting, variant `meltdown`. Time of day `morning`. Storyboard board id `park-2-park_flume`. Status: draft for Andrew's approval (unit K-W1, 2026-10-10). Every number is a starting value to tune in play unless a file:line backs it.
 
+<!-- flume-current-table -->
+## Current measurements and qualification, round 7
+
+<!-- flume-current-receipts
+{
+  "receipt_root": "/home/andrew/scratch/w13/sol/kd2-flume-r7",
+  "head": "dfde1de818f455214a0f1fc947e91bd21569a254",
+  "tool_sha256": "37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a"
+}
+-->
+
+Measured runtime head `dfde1de818f455214a0f1fc947e91bd21569a254`, merged from candidate `1afb24f59c04f692d7e7c038012c80ec9c63cc1b` at `7f381358948e4ce97bf70a6cc4943dc12b87a0a8`. Committed traversal tool SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. The final source, tool and bake inputs match every recorded input manifest. Subsequent documentation and regression commits do not change these runtime inputs.
+
+All 56 untraced seed rows pass error qualification from their child logs. Acceptance also requires the five named replay comparisons reported below. Each pilot uses seeds 1–8 in a fresh child process. The cells show median / worst seed and a measured verdict. Per-seed criteria use the worst seed. Segments, airborne share, tier-3 time and length retain their explicitly median-based criteria. The floor is judged only by arrival, maximum time against twice Rivet median and zero terrain stops; its other cells are reports.
+
+The committed stage fixture independently checks this publication with `--docs`. It reads the saved seed receipts, input manifests, child logs and traced stop probes, then recomputes the table and saved win values. Marker-only tables and rejected populations fail.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden, 8/8 | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass |
+| Time s, median 60–120; worst ≤150 | 63.06 / 64.02 pass | 96.675 / 99.42 pass | 85.665 / 91.41 pass | 80.185 / 81.43 pass | 92.825 / 94.99 pass | 81.415 / 84.87 pass | 96.465 / 97.59, reported, pilot band, not the floor's |
+| Segments s, each median 12–45 | [21.6, 21.11, 20.33] / [21.89, 22.3, 22.1] pass | [27.28, 36.245, 33.25] / [28.71, 37.16, 34.42] pass | [25.6, 35.34, 24.945] / [29.29, 35.82, 26.56] pass | [23.38, 26.445, 30.2] / [24.81, 26.6, 30.4] pass | [27.83, 30.895, 34.32] / [29.12, 31.76, 35.56] pass | [25.64, 36.795, 18.85] / [25.87, 37.2, 22.2] pass | [28.38, 30.08, 37.88] / [28.86, 30.57, 38.61], reported, pilot band, not the floor's |
+| Flow, median ≥.70; worst ≥.60 | 0.9325 / 0.929 pass | 0.7631 / 0.7329 pass | 0.714 / 0.6478 pass | 0.9417 / 0.9294 pass | 0.7097 / 0.6334 pass | 0.9376 / 0.9071 pass | 0.5998 / 0.5858, reported, pilot band, not the floor's |
+| Airborne, median .12–.45 | 0.2459 / [0.225, 0.265] pass | 0.12045 / [0.1162, 0.1286] pass | 0.161 / [0.1433, 0.163] pass | 0.1689 / [0.1616, 0.1711] pass | 0.1262 / [0.1206, 0.1337] pass | 0.16445 / [0.1284, 0.1771] pass | 0.1173 / [0.1141, 0.1267], reported, pilot band, not the floor's |
+| Terrain or unclassified stops, every seed 0 | 0.0 / 1 MISS | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass |
+| Peak m/s, worst ≥26.6 | 54.5 / 54.25 pass | 37.11 / 32.24 pass | 31.305 / 31.08 pass | 33.76 / 31.8 pass | 32.82 / 32.6 pass | 32.25 / 31.26 pass | 34.69 / 32.8, reported, pilot band, not the floor's |
+| Tier-3 s, median ≥3 | 47.68 / 46.86 pass | 7.79 / 7.59 pass | 6.95 / 3.98 pass | 9.5 / 8.74 pass | 8.465 / 6.11 pass | 11.41 / 8.19 pass | 8.1 / 7.87, reported, pilot band, not the floor's |
+| Quiet s, worst ≤20 | 7.7 / 8.21 pass | 11.715 / 12.13 pass | 17.375 / 18.29 pass | 8.72 / 8.87 pass | 15.265 / 16.41 pass | 12.525 / 13.22 pass | 12.48 / 12.82, reported, pilot band, not the floor's |
+| Anchor gap m, worst ≤40 | 29.8 / 30.8 pass | 30.3 / 31.5 pass | 25.25 / 30.3 pass | 35.7 / 35.7 pass | 32.05 / 35.3 pass | 20.75 / 31.6 pass | 30.75 / 34.8, reported, pilot band, not the floor's |
+| Ride facts, worst ≥3 | 5.0 / 5 pass | 5.0 / 5 pass | 4.0 / 4 pass | 5.0 / 5 pass | 5.0 / 5 pass | 4.0 / 4 pass | 5.0 / 5, reported, pilot band, not the floor's |
+| Length ratio, median 1.3–2.0 | 1.5 / [1.5, 1.52] pass | 1.43 / [1.43, 1.44] pass | 1.325 / [1.32, 1.36] pass | 1.36 / [1.36, 1.36] pass | 1.34 / [1.33, 1.34] pass | 1.34 / [1.33, 1.34] pass | 1.35 / [1.35, 1.36], reported, pilot band, not the floor's |
+| Floor, ≤2× Rivet median; zero terrain stops | not applicable | not applicable | not applicable | not applicable | not applicable | not applicable | 96.465 / max 97.59; cap 193.35 pass |
+
+| Line | Qualified population receipt | Input provenance |
+| --- | --- | --- |
+| sable | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population/sable/sable.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population-sable-inputs.json` |
+| rivet | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population/rivet/rivet.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population-rivet-inputs.json` |
+| kest | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population/kest/kest.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population-kest-inputs.json` |
+| tarn | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population/tarn/tarn.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population-tarn-inputs.json` |
+| tally | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population/tally/tally.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population-tally-inputs.json` |
+| cannon | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population/cannon/cannon.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population-cannon-inputs.json` |
+| floor | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population/floor/floor.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r7/population-floor-inputs.json` |
+
+### Stop classification
+
+| Line / seed | Time s | Position XZ m | Classification | Enemy kind | Home or director provenance | Matching traced receipt |
+| --- | --- | --- | --- | --- | --- | --- |
+| sable / 2 | 41.48 | [-97.6, 159.4] | terrain |  |  | `/home/andrew/scratch/w13/sol/kd2-flume-r7/stops/stop-sable2-trace/sable-seed-2-trace.json` |
+
+All stops are reproduced by matching batch, plain, traced and read-only probe records in `/home/andrew/scratch/w13/sol/kd2-flume-r7/stop-replay-comparisons.json`. The probe trace matches the standard trace tick for tick. Pack exemptions require an observed enemy kind and spawning provenance inside the preceding 90 ticks. Ground-only contacts count as terrain. Rejected raw records remain diagnostic.
+
+### Named replay qualification
+
+| Line / seed | Batch / plain / traced equality | Qualification |
+| --- | --- | --- |
+| sable / 1 | equal | error-free qualified |
+
+Named replay acceptance: 1/5 qualified comparisons complete. The stage is not admitted while this proof is incomplete. Complete population cells above come from the 56 qualified child receipts; no rejected or missing row fills a cell.
+
+Replay receipts and error qualification: `/home/andrew/scratch/w13/sol/kd2-flume-r7/replay-qualification.json`. Full runtime-input equality: `/home/andrew/scratch/w13/sol/kd2-flume-r7/input-equality.json`.
+
+<!-- current-win-results -->
+### Current win results, round 7
+
+The unchanged scratch `win_600.gd` only sets the bot stage limit to 600 s before tick 1. Runs use `--table=park --from-stage=2 --stages=2 --policy=completionist`. Ruling 23 judges reach and engagement without a traversal-cause stall. Warden break times are reported separately and belong to the fight units and Andrew's task #5.
+
+| Seed | Engage s | Break s | Engage to break s | Outcome | Stage stop | Receipt |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 116.69 | 299.4 | 182.71 | stalled | gates | `/home/andrew/scratch/w13/sol/kd2-flume-r7/win-seed-1/bots.ndjson` |
+| 2 | 116.96 | not broken in 600 s | not applicable | stalled | beacon | `/home/andrew/scratch/w13/sol/kd2-flume-r7/win-seed-2/bots.ndjson` |
+| 3 | 111.66 | not broken in 600 s | not applicable | stalled | beacon | `/home/andrew/scratch/w13/sol/kd2-flume-r7/win-seed-3/bots.ndjson` |
+
+Every win seed reaches and engages. Child logs contain no collapse script error or missing music cue. Post-engagement fight or gate outcomes are reported above and do not change the stage traversal criterion.
+<!-- /current-win-results -->
+
+The physical event regression observes finite matching deck-to-floor mesh and collider surfaces at five span positions at landing, 0.5 s, 1 s and 2 s. Its independent grid interpolation defines the authorized depth. The stage keeps its authored form, trigger, six-second lead, 20 m hold-clear distance, swap and route changes. Both authored music cue IDs resolve through the common runtime event/music path.
+
+The shared ground-slump game fixtures retain an upstream timing failure: canonical downbeat remainder 0.56098191214518 s exceeds their 0.2 s pin. The same failure occurs on unmodified STEP 0 shared code. Their geometry and clearance checks pass, as do cave-in, natural, projection and event-family fixtures. This prevents a claim that the full shared suite is green.
+<!-- /flume-current-table -->
+
+
 This page follows `design-v3/PARK.md` section 2 and `adr/TADR-011-park-terrain-and-warden-kinds.md`. The draft park file in section 13 passed a scratch copy of the 2.10 checks, the route test and the line estimates in section 9. The name "The Cable Reach" retires (PARK.md:573).
 
-**Round 6 current qualification: BLOCKED.** Candidate `1f09c265a68f274c0ae62d2155769b643a79a233` merged without conflicts at `e69bd20c11a4acefa041a3004991f6045bba4181`. Coordinator F1 authorizes `depth_m = 20.4413957595825` and `fill_s = 2.0`. A direct read of the committed baked grid at the flume span midpoint `[-115, 5.5]` gives hollow floor `y=23.5586042404175`, below deck `y=44`; the interpolation and input hashes are in `/home/andrew/scratch/w13/sol/kd2-flume-r6/measured-depth.json`.
+**Historical round 6 qualification: BLOCKED.** Candidate `1f09c265a68f274c0ae62d2155769b643a79a233` merged without conflicts at `e69bd20c11a4acefa041a3004991f6045bba4181`. Coordinator F1 authorizes `depth_m = 20.4413957595825` and `fill_s = 2.0`. A direct read of the committed baked grid at the flume span midpoint `[-115, 5.5]` gives hollow floor `y=23.5586042404175`, below deck `y=44`; the interpolation and input hashes are in `/home/andrew/scratch/w13/sol/kd2-flume-r6/measured-depth.json`.
 
-Those fields remove the collapse's missing-key script errors and allow the fall to finish in two seconds. The independent real-stage mesh and collider regression remains red: the shared handler projects the `trestle_hollow` footprint, not the flume span, and none of five span samples has a ramp surface. The merged music engine also logs `ERROR: music: missing park cue drop_collapse`. Registration, telegraph, landing and route facts alone cannot qualify the physical ride. Shared geometry and music fixes remain coordinator follow-ups; no substitute form, trigger, lead, hold-clear distance, route change or shared runtime edit was made.
+In round 6 those fields removed the collapse's missing-key script errors and allow the fall to finish in two seconds. The independent real-stage mesh and collider regression remains red: the shared handler projects the `trestle_hollow` footprint, not the flume span, and none of five span samples has a ramp surface. The merged music engine also logs `ERROR: music: missing park cue drop_collapse`. Registration, telegraph, landing and route facts alone cannot qualify the physical ride. Shared geometry and music fixes remain coordinator follow-ups; no substitute form, trigger, lead, hold-clear distance, route change or shared runtime edit was made.
 
 Every earlier table remains historical. Round 6 reruns use the committed `res://tools/traversal_line.gd`, SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`, with untraced eight-seed batches and separate plain/traced solos. Error-aware qualification rejects `ERROR:` and `SCRIPT ERROR` logs even when the tool accepts a raw row. There is no complete qualified current table: 30/56 rows qualify. Receipts and input manifests are in `/home/andrew/scratch/w13/sol/kd2-flume-r6/`.
 
 Coordinator F2 corrects the stale two-of-three break requirement. Ruling 23 requires every seed to reach and engage the Warden with no traversal-cause stall; breaks are reported separately under the unchanged 600 s wrapper. Warden fight duration belongs to the Warden fight units and Andrew's task #5.
 
 
-<!-- current-win-results -->
-## Current win results, round 6
+<!-- historical-win-results-r6 -->
+## Historical win results, round 6
 
 Measured with the unchanged scratch `win_600.gd`, which only sets `stage_limit = 600.0` before tick 1. Each process uses `--table=park --from-stage=2 --stages=2 --policy=completionist`. Coordinator F2 and ruling 23 require engagement; breaks are reported separately. Historical proofs below remain historical.
 
@@ -25,9 +106,9 @@ Measured with the unchanged scratch `win_600.gd`, which only sets `stage_limit =
 | 3 | 110.52 | not broken in 600 s | not applicable | stalled | beacon | `/home/andrew/scratch/w13/sol/kd2-flume-r6/win-seed-3/bots.ndjson` |
 
 Every seed reaches and engages the Warden; none stalls before engagement. The logs contain no `get_rid` script error. Each win log contains the shared missing `drop_collapse` music cue. The reach/engagement observations satisfy ruling 23; these runs do not establish error-free whole-stage execution or the physical fallen ramp. Post-engagement beacon or gate stalls are reported above. Warden break duration stays with the Warden fight units and Andrew's task #5.
-<!-- /current-win-results -->
+<!-- /historical-win-results-r6 -->
 
-## Current population qualification, round 6
+## Historical population qualification, round 6
 
 Measured runtime head `ea4974b6cb21f79bd180effe5d441d140e4c2cfd`, which descends from candidate `1f09c26` through merge `e69bd20`. Later commits change the regression and these pages; runtime source, committed tool and bake/graph inputs remain identical. The committed tool SHA256 is `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. Each line uses an untraced seeds-1-to-8 batch in its own output folder. Input manifests are `population-<pilot>-inputs.json`; raw logs are `population/<pilot>/children/<position>-seed-<seed>/child.log`. All paths below are under `/home/andrew/scratch/w13/sol/kd2-flume-r6/`.
 
@@ -43,9 +124,9 @@ Measured runtime head `ea4974b6cb21f79bd180effe5d441d140e4c2cfd`, which descends
 
 Total: 56/56 tool-accepted rows, 30/56 error-qualified rows. `population-qualification.json` and its log reject `SCRIPT ERROR` and `ERROR:` lines. Matching rejected records are diagnostic. `replay-qualification.json` retains the five named batch/plain/traced comparisons; `input-equality.json` proves matching runtime inputs.
 
-The required complete current 13-band table remains BLOCKED. No rejected record is copied into a current table; every earlier table remains historical. `band-table.md` contains fully qualified line diagnostics, with other lines explicitly unqualified. It is not the acceptance table. Rulings 13 and 14 retain the floor's own arrival/time/zero-terrain-stop row and per-seed anchor check. Every per-seed band uses its worst seed; explicitly median-based criteria retain their medians.
+The round-6 complete 13-band table remained BLOCKED. No rejected record is copied into a current table; every earlier table remains historical. `band-table.md` contains fully qualified line diagnostics, with other lines explicitly unqualified. It is not the acceptance table. Rulings 13 and 14 retain the floor's own arrival/time/zero-terrain-stop row and per-seed anchor check. Every per-seed band uses its worst seed; explicitly median-based criteria retain their medians.
 
-Current stop attribution is in `stop-classification.json` and `stop-replay-comparisons.json`. Sable seed 2 stops at 41.48 s, [-97.6, 159.4]. Batch, plain solo, traced solo and read-only probe agree; all 5,761 trace ticks match. The preceding 90 ticks contain ground contacts only. It counts as terrain under ruling 25. Its 48.6 m anchor gap exceeds 40 m. No pack exemption is inferred. Other qualified stops and unqualified raw records remain in the receipts; missing or rejected attribution cannot qualify zero terrain stops. No repair budget is consumed while the authored physical collapse and shared cue remain blocked.
+Round-6 stop attribution was in `stop-classification.json` and `stop-replay-comparisons.json`. Sable seed 2 stops at 41.48 s, [-97.6, 159.4]. Batch, plain solo, traced solo and read-only probe agree; all 5,761 trace ticks match. The preceding 90 ticks contain ground contacts only. It counts as terrain under ruling 25. Its 48.6 m anchor gap exceeds 40 m. No pack exemption is inferred. Other qualified stops and unqualified raw records remain in the receipts; missing or rejected attribution cannot qualify zero terrain stops. No repair budget is consumed while the authored physical collapse and shared cue remain blocked.
 
 **Historical round 5 qualification: BLOCKED.** STEP 0 merged candidate `3debeb86e30a63756e7e83c9950e37a79d656b68` at `56a4b80f8e9313cea755f11133dffb157eedcab7`, without conflicts. Every earlier traversal measurement is superseded by ruling 28. The bake and graph were rebuilt; the committed measuring tool is `tools/traversal_line.gd`, SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. The first fresh Sable and Rivet children throw at `natural.gd:267` because the authored hollow-collapse effect lacks `depth_m`. TRAV-DET2 rejects those rows as INCONCLUSIVE. The population was stopped, so there is no accepted round-5 population, replay equality, band verdict or stop classification. No geometry repair was made. Evidence and input hashes are under `/home/andrew/scratch/w13/sol/kd2-flume-r5/`.
 
@@ -164,7 +245,7 @@ The three activities: the siphon camp (`enemy_camp` with today's Reach lobber pa
 
 **The exit to Brindle.** After the break, the reward gates stand on the bluff lip outside the drum's east doors at x 300, facing +x over the lower gorge, and the bay docks 61 m behind them over the drum (`bay.gd:37-41`, `143-153`), so `bay_dock.at` is [239, 480]. The launch throws the ball out of the east doors and across the gorge. Stage 2 is the world's last stage, so when the launch flight ends (`LAUNCH_FLIGHT` 0.6 s, `flow.gd:23`), `_finish_stage` calls `enter_boss` with the ball's velocity instead of advancing (`flow.gd:667-673`, `456-473`), and Brindle's module places the ball in the Slag Bowl (`boss.gd:15-17`). The arena stays small and authored (PARK.md:381). The park only points at it: from the bend overlook and the bluff, a smoke column and a furnace glow stand on the eastern horizon past the lower gorge, the launch arc aims at them, and the Requisition's anvil enters the music on the last chunk (section 10).
 
-## 5. `park_rows` (216 rows, continuation 2026-10-12)
+## 5. `park_rows` (218 rows, round 7 continuation 2026-10-13)
 
 The shipped file is `src/world/park/park_flume.json`; the bake and the stage graph are under `assets/park/park_flume/` (KD2). The rows contain 137 authored rides and structures, 52 rock outcrops and 26 shallow washes. The continuation rides and piers are listed below. Rows with recipes are placed in play by `ParkRecipes.build_placed`. Stamped greyboxes use the terrain collider; raised pieces use their placed colliders. Ride rows publish facts through sensors.
 
@@ -226,9 +307,11 @@ The round-4 bench exit grade is a stamped bank, 125×3×80 m, at [-91, 345], yaw
 
 The first round-4 kicker repair increased the rise from 3 to 3.25 m over its 8 m ramp. Rivet airborne median fell from 0.11995 to 0.117, and the matching seed-5 trace records a shorter local flight. The second and final repair uses a 16×6×24 m ramp at the same centre [-5,438], base y 2 and yaw 88. Its 6/16 pitch restores the original 3/8 pitch while lifting the exit farther above the landing. The pilot line and entry base stay fixed. The final population decides this last attempt; no third kicker repair is allowed.
 
+The round-7 bounded hook repair adds `siphon_turn_coping` at [-92,128], 60×24×6 m, yaw 80, beside the ground-only reversal, and `bench_hop_coping` at [0,470], 16×28×8 m, yaw 90, beside the measured anchorless bench flight. Both are unstamped dam-era flume pieces. The bank and kicker stay unchanged. The final eight-seed anchor band passes; Sable seed 2 still has its terrain stop. The one bounded repair is exhausted.
+
 ## 6. `event_rows` (5 rows)
 
-The merged candidate has records for `trestle_groan` and `reactor_overload` and loads their natural and industrial handlers. The round-5 real-stage probe above proves both scheduling paths and the reactor hazard, but the natural collapse throws on missing `depth_m` and `fill_s`. A land fact alone does not establish the fallen-ramp geometry. No effect, lead, trigger, form or route was substituted.
+The round-7 stage regression proves registration, authored leads, common presentation records, landing facts, route changes and the live reactor fallout. It independently decodes the committed hollow floor and samples the falling flume span mesh and collider at four elapsed times through its authorized two-second fall. The candidate supplies the authored landing music cue. The earlier missing-field and missing-surface observations remain historical receipts.
 
 | Row | Family, kind | Site | Trigger | Telegraph | What changes | Route change |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -412,7 +495,7 @@ The `ref_` texts need a fact check before they ship.
 
 ## 13. The shipped park file
 
-The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026-10-12, 216 park rows) and the lines are `tools/park_lines/park_flume.json`; the stage test `tests/park_park_flume_test.gd` pins them. Changes from the draft:
+The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026-10-12, 218 park rows) and the lines are `tools/park_lines/park_flume.json`; the stage test `tests/park_park_flume_test.gd` pins them. Changes from the draft:
 
 - Removed `cliff_rooms` and `viga_beams`; added the crew camp (`crew_ledges`, `crane_booms`), the three terraces, `bend_rim_ledge`, `drum_lip_kicker` and sized filler rows (no tiled saguaro grid).
 - Removed `bend_far_rim`: the bend cache moved onto `bend_rim_ledge` [42, -142] beside the rim line.
@@ -676,6 +759,8 @@ The park file, verbatim (park_schema_test reads this block):
   {"id": "bench_coping_kicker", "element": "kicker", "landform": "slickrock", "society": "dam_era", "at": [-5, 438], "y": 2, "size": [16, 6, 24], "yaw_deg": 88, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "forecourt_pad_kicker", "element": "kicker", "landform": "penstock", "society": "dam_era", "at": [62, 419], "y": 0, "size": [8, 3, 20], "yaw_deg": 57, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench_coping_pier", "element": "grind_line", "landform": "slickrock", "society": "dam_era", "at": [50, 470], "y": null, "size": [16, 28, 8], "yaw_deg": 90, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "siphon_turn_coping", "element": "grind_line", "landform": "flume", "society": "dam_era", "at": [-92, 128], "y": null, "size": [60, 24, 6], "yaw_deg": 80, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "bench_hop_coping", "element": "grind_line", "landform": "flume", "society": "dam_era", "at": [0, 470], "y": null, "size": [16, 28, 8], "yaw_deg": 90, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "siphon_approach_bank", "element": "bank", "landform": "slickrock", "society": "none", "at": [-135, 149], "y": null, "size": [132, 6, 104], "yaw_deg": 76, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench_exit_grade", "element": "bank", "landform": "slickrock", "society": "none", "at": [-91, 345], "y": null, "size": [125, 3, 80], "yaw_deg": -15, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": ["bench_run"], "fragment": ""}
  ],
