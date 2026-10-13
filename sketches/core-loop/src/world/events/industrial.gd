@@ -20,8 +20,6 @@ const SHAPES := {
 const REACH_M := 3.0
 
 var world
-# Commit calls per row id: the one-commit check reads this.
-var commits := {}
 # row id -> {hazard, site, at, hit, swap}
 var active := {}
 var _sites := {}
@@ -69,7 +67,6 @@ func _telegraph(row: Dictionary) -> void:
 	else:
 		var outer := minf(float(size[0]), float(size[1])) * 0.5
 		hazard.commit_annulus(row.id, Threat.Type.INSTANT, at, Vector2(outer * float(spec.inner_fraction), outer), REACH_M, lead, live)
-	commits[row.id] = commits.get(row.id, 0) + 1
 	add_child(hazard)
 	active[row.id] = {"hazard": hazard, "site": site, "at": at, "hit": false, "swap": "", "overlay_record": {}}
 
