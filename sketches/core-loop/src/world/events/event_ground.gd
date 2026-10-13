@@ -320,7 +320,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		var span: Dictionary = current.park.park_rows.filter(func(r): return r.id == "flume_hollow_reach")[0]
 		site = record.site.duplicate(true)
 		site.id = span.id
-		site.y = span.y
+		site.y = float(span.y) + float(span.size[1])
 		geometry = record.geometry.duplicate()
 		geometry.site = site
 		geometry.at = Vector3(float(site.at[0]), float(site.y), float(site.at[1]))
