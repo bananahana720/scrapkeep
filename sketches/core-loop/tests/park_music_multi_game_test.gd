@@ -40,15 +40,21 @@ func _two_events(band: String) -> void:
 	audio._flush_flow()
 	var director = game.world.events
 	director.set_clock_tier(1)
+	var stems_present: bool = Array(DirAccess.get_files_at("res://assets/music_ace/spillway")).any(func(name): return name.ends_with(".ogg"))
+	var fallback: bool = band == "ace" and not stems_present
 	t.check(band + " all park families registered", ["natural", "fleet", "ancient", "industrial"].all(
 		func(family): return director._park_families.has(family)), str(director._park_families.keys()))
-	t.check(band + " selected band active", audio.ace_playing() if band == "ace" else not audio.ace_playing(), str(audio.ace_missing))
+	if fallback:
+		t.check("absent ACE package selects synth fallback", not audio.ace_playing() and audio.ace == null
+			and audio.ace_missing != "" and not audio.engine.band_muted, str(audio.ace_missing))
+	else:
+		t.check(band + " selected band active", audio.ace_playing() if band == "ace" else not audio.ace_playing(), str(audio.ace_missing))
 	var announcements := {}
 	game.events.event_announced.connect(func(id, seconds):
 		if id in IDS:
 			var bar: int = audio.engine.step_len * Harmony.STEPS_PER_BAR
 			var origin: int = audio.engine.bar_origin
-			if band == "ace":
+			if band == "ace" and not fallback:
 				var seq = audio.ace
 				var clip: Dictionary = seq.clips[seq.sections[str(seq.pending.section)].clip]
 				bar = int(clip.bar)
