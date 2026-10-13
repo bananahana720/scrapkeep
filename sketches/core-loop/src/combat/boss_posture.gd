@@ -34,6 +34,8 @@ var stagger_seconds := STAGGER_SECONDS
 var shatter_tier := SHATTER_TIER
 var curve := 1.0
 var ram_shatters := true
+var contact_gain_scale := 0.0
+var contact_gain_floor := 0.0
 
 var posture := 0.0
 var staggered := false
@@ -66,6 +68,8 @@ func _init(numbers := {}) -> void:
 	shatter_tier = int(numbers.get("shatter_tier", SHATTER_TIER))
 	curve = float(numbers.get("curve", 1.0))
 	ram_shatters = bool(numbers.get("ram_shatters", true))
+	contact_gain_scale = float(numbers.get("contact_gain_scale", 0.0))
+	contact_gain_floor = float(numbers.get("contact_gain_floor", 0.0))
 
 
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
@@ -92,6 +96,8 @@ func judge(hit: Dictionary) -> Dictionary:
 	if contact:
 		hit_base = smash_base if bool(hit.get("smash", false)) else float(base[kind])
 	var gain := hit_base * pow(clampf(ratio, mult_min, mult_max), curve)
+	if contact and contact_gain_scale > 0.0:
+		gain *= 1.0 + contact_gain_scale * maxf(0.0, clampf(ratio, mult_min, mult_max) - contact_gain_floor)
 	if contact and frame == gain_frame:
 		gain = maxf(0.0, gain - gain_in_frame)
 	result["gain"] = gain

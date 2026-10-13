@@ -1,7 +1,8 @@
 # smoke: solo timeout=360s (nine stage-5 bot runs in child processes at once; a loaded machine slows them)
-# KNOWN RED (2026-10-11, wave 13 KF-BOT): the two band checks ("grown breaks it in 25 to 45 s", "small takes at
-# least twice grown's time") fail on stage 5 with the anchor on and stay gating on purpose; the pins are [report]
-# prints (header below). Owner tuning call; the test keeps its QUARANTINE.tsv row.
+# 2026-10-13 WT-BANDS: re-pinned small 0.0 -> 101.5 s, grown 0.0 -> 42.7 s.
+# Three consecutive passing sweeps: small [101.5, 101.9, 96.1], grown [41.0, 42.7, 42.7].
+# Load start/end [18.73/13.18, 13.18/11.72, 5.45/12.19]. Both arms agree within 10 percent.
+# Earlier measurements remain in the WT-BANDS round 2 report. Bands and arms stay unchanged.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -51,8 +52,8 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # tune inside 20 percent reaches the band.
 # 2026-10-11 (wave 13 KF4, anchor off): measured 66.4 / 49.4 s (small/grown 1.34) with the tilt; the same arms with
 # no driver measured 78.6 / 41.5 s (1.89).
-const EXPECT_SMALL_S := 0.0
-const EXPECT_GROWN_S := 0.0
+const EXPECT_SMALL_S := 101.5
+const EXPECT_GROWN_S := 42.7
 const TOLERANCE := 0.10
 
 var _settings := {}
@@ -138,7 +139,7 @@ func _parent() -> void:
 	t.check("small takes at least twice grown's time (median)", grown > 0.0 and small >= 2.0 * grown,
 		"small %.1f s, grown %.1f s, ratio %.2f" % [small, grown, small / grown if grown > 0.0 else 0.0])
 	t.eq("the camper never breaks it", broke.get("camper", -1), 0)
-	# No pin while the sweeps disagree by more than TOLERANCE (header): the medians print for the record.
+	# The WT-BANDS pins are live after three agreeing sweeps (header).
 	if EXPECT_SMALL_S > 0.0:
 		t.check("small median within 10 percent of the pin", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
 			"small %.1f s, pin %.1f s" % [small, EXPECT_SMALL_S])
