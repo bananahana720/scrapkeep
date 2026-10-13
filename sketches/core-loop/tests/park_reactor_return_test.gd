@@ -1,33 +1,46 @@
 # smoke: solo timeout=90s
 extends SceneTree
-const SheetTest = preload("res://tests/park_reactor_sheet_test.gd")
+const Game = preload("res://src/game.gd")
+const BotDriver = preload("res://tools/bot_driver.gd")
 const Reactor = preload("res://src/combat/warden_reactor.gd")
-const Tuning = preload("res://src/movement/tuning.gd")
 const T = preload("res://tests/support/t.gd")
 var t = T.new("park_reactor_return_test")
-func _initialize() -> void:
-	var mount = SheetTest.Mount.new()
-	mount.target.tuning = Tuning.new()
-	var sheet = Reactor.new()
-	sheet.sheet_left = Reactor.SHEET_SECONDS
-	sheet.sheet_dir = Vector3.FORWARD
-	var gravity: float = mount.target.tuning.f("gravity")
-	for along in [Reactor.SHEET_TOP, Reactor.SHEET_TOP * 0.5]:
-		mount.target.at = mount.home + sheet.sheet_dir * along
-		mount.target.at.y = Tuning.RADIUS
-		mount.target.rigid.linear_velocity = -sheet.sheet_dir * mount.target.tuning.f("cruise")
-		sheet.riding = false
-		var rise: float = mount.family_point_at().y - mount.target.at.y
-		var maximum_lift := sqrt(2.0 * gravity * rise)
-		sheet._ride(mount, 1.0 / Engine.physics_ticks_per_second)
-		var velocity: Vector3 = mount.target.rigid.linear_velocity
-		t.check("late reacquisition cannot launch above core from " + str(along), velocity.y > 0.0 and velocity.y <= maximum_lift + 0.0001, "got %s, ballistic bound %s" % [velocity.y, maximum_lift])
-		t.near("late reacquisition preserves entry speed from " + str(along), Vector2(velocity.x, velocity.z).length(), mount.target.tuning.f("cruise"))
-	mount.target.at = mount.home + sheet.sheet_dir * Reactor.SHEET_TOP
-	mount.target.at.y = Tuning.RADIUS
-	var jump: float = sqrt(2.0 * gravity * (mount.family_point_at().y - Tuning.RADIUS)) + mount.target.tuning.f("jump_speed")
-	mount.target.rigid.linear_velocity = -sheet.sheet_dir * mount.target.tuning.f("cruise") + Vector3.UP * jump
-	sheet._ride(mount, 1.0 / Engine.physics_ticks_per_second)
-	t.near("lift bound never brakes an existing upward jump", mount.target.rigid.linear_velocity.y, jump)
-	mount.free()
+class Hands extends BotDriver:
+	var steer_seen := Vector3.INF
+	func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true) -> void:
+		steer_seen = steer
+		super._act(steer, aim, delta, fight, evade)
+func _initialize() -> void: _run.call_deferred()
+func _run() -> void:
+	var game = Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	game.ctx.calm = true
+	game.flow.force_warden = true
+	var bot = Hands.new(game, "skipper", 1)
+	bot.start()
+	for i in 40: await physics_frame
+	var w = game.flow.warden
+	var sheet = w.mount_driver
+	var dir: Vector3 = sheet._face_heading(w)
+	var runup: float = minf(BotDriver.RUNUP, Reactor.SHEET_RUN - BotDriver.RUNUP_EDGE)
+	var foot: Vector3 = w.home + dir * runup
+	game.player.reset_to(game.ctx.terrain.drop_point(foot.x, foot.z, game.player.tuning.RADIUS), Vector3.ZERO)
+	for i in 2: await physics_frame
+	var tick := 1.0 / Engine.physics_ticks_per_second
+	bot._fight(w, tick)
+	var dry_steer: Vector3 = bot.steer_seen
+	for i in ceili(w.PULSE_CYCLE * 2.0 / tick):
+		if w.state_name() == "charging": break
+		bot.tick(tick)
+		await physics_frame
+	t.check("return control reaches a natural charge", w.state_name() == "charging" and not sheet.sheet_live())
+	bot._fight(w, tick)
+	var charged: Vector3 = bot.steer_seen
+	t.near("charging keeps the same return foot", Vector2(charged.x - w.home.x, charged.z - w.home.z).length(), runup)
+	t.near("charging never moves the return target outward", Vector2(charged.x - dry_steer.x, charged.z - dry_steer.z).length(), 0.0)
+	t.check("charging return target stays within the pulse ring", Vector2(charged.x - w.home.x, charged.z - w.home.z).length() <= w.pulse_radius)
+	t.check("charging still reserves boost for the live sheet", not bot.source.press.get("shift_pressed", false) and not bot.source.hold.get("shift_held", false))
+	game.free()
 	quit(t.verdict())
