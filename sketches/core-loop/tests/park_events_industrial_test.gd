@@ -76,6 +76,7 @@ func _land(w: World, row: Dictionary) -> bool:
 	var announced := false
 	var early := false
 	var warning = null
+	var warning_geometry: Array = []
 	for i in 2000:
 		var ctx := _context()
 		ctx.warden_phases = ["chunk_2"] if i == 0 else []
@@ -85,16 +86,44 @@ func _land(w: World, row: Dictionary) -> bool:
 			if fact.kind == "announced":
 				announced = true
 				warning = w.event_families.industrial.active.get(row.id, {}).get("hazard")
+				warning_geometry = _committed_geometry(warning)
 			elif fact.kind == "started":
 				var hazard = w.event_families.industrial.active.get(row.id, {}).get("hazard")
 				t.check("%s telegraphs then lands without early damage or swap" % row.id, announced and not early and w.ctx.run.mass == 20)
 				t.check("%s warning and live damage use one committed hazard" % row.id,
-					is_instance_valid(hazard) and hazard == warning and hazard.is_live() and hazard.painter() != null
-					and w.event_families.industrial.commits.get(row.id, 0) == 1)
+					is_instance_valid(hazard) and hazard == warning and hazard.is_live() and hazard.painter() != null)
+				t.eq("%s landing preserves warning committed geometry" % row.id,
+					_committed_geometry(hazard), warning_geometry)
 				return true
 		early = early or w.terrain.overlays.has(str(row.effect.swap) + "_after") or w.ctx.run.mass != 20
 	t.check("%s lands within the run" % row.id, false)
 	return false
+
+func _committed_geometry(hazard) -> Array:
+	return [hazard.attack_id, hazard.type, hazard.shape, hazard.centre, hazard.r_in,
+		hazard.r_out, hazard.a_from, hazard.a_to, hazard.heading, hazard.back,
+		hazard.length, hazard.half_width, hazard.reach, hazard.live_seconds]
+
+func _commit_source_checks() -> void:
+	var source := FileAccess.get_file_as_string("res://src/world/events/industrial.gd")
+	var telegraph := source.get_slice("func _telegraph(", 1).get_slice("\n\nfunc ", 0)
+	var branches := telegraph.get_slice("\tif spec.form == \"cone\":\n", 1).split("\n\telse:\n")
+	var calls := RegEx.new()
+	calls.compile("\\bcommit_[a-z_]+\\s*\\(")
+	var sector := RegEx.new()
+	sector.compile("\\bcommit_sector\\s*\\(")
+	var annulus := RegEx.new()
+	annulus.compile("\\bcommit_annulus\\s*\\(")
+	t.eq("industrial telegraph has one sector commit callsite", sector.search_all(telegraph).size(), 1)
+	t.eq("industrial telegraph has one annulus commit callsite", annulus.search_all(telegraph).size(), 1)
+	t.check("industrial commit callsites are in mutually exclusive cone and else branches",
+		branches.size() == 2 and calls.search_all(branches[0]).size() == 1
+		and sector.search_all(branches[0]).size() == 1 and calls.search_all(branches[1]).size() == 1
+		and annulus.search_all(branches[1]).size() == 1)
+	t.eq("industrial handler has no other commit callsites", calls.search_all(source).size(), 2)
+	var bookkeeping := RegEx.new()
+	bookkeeping.compile("(?m)^var commits\\b|^\\s*commits\\[")
+	t.eq("industrial handler has no test commit bookkeeping", bookkeeping.search_all(source).size(), 0)
 
 func _route_checks(w: World, row: Dictionary) -> void:
 	var opened := 0
@@ -152,6 +181,7 @@ func _fill_ground_checks(w: World, hazard, row: Dictionary) -> void:
 		max_error < 0.0001, "max error=%.6f vertices=%d" % [max_error, vertices.size()])
 
 func _run() -> void:
+	_commit_source_checks()
 	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(FIXTURE))
 	var rows: Array = fixture.rows
 	t.eq("fixture holds six industrial rows", rows.size(), 6)
@@ -202,5 +232,5 @@ func _run() -> void:
 			ended and not is_instance_valid(hazard) and not w.terrain.overlays.has(swap + "_after"))
 		w.event_families.industrial.release()
 		w.free()
-	t.eq("test runs all expected checks", t.checks + 1, 101)
+	t.eq("test runs all expected checks", t.checks + 1, 112)
 	quit(t.verdict())
