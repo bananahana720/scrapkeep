@@ -395,6 +395,7 @@ func span_clearance_pins() -> void:
 	t.eq("span releases landing after clearance", state.phase, director.LIVE)
 	world._publish(director.advance(0.5, clear, Vector3.ZERO, context))
 	var swap: Dictionary = world.terrain.map().swaps["trestle_ramp"]
+	t.check("clearance pause tested during partial fall", float(swap.progress) > 0.0 and float(swap.progress) < 1.0)
 	for spec in [["midpoint", centre, Vector3.ZERO], ["low end", low_end, Vector3.ZERO], ["two second crossing", crossing, -across * 30.0]]:
 		var before: float = swap.progress
 		var vertices: PackedVector3Array = swap.surface.vertices if swap.has("surface") else swap.body.get_child(0).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
