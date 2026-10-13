@@ -70,7 +70,7 @@ func _run() -> void:
 				t.near("stage %d light contact retains legacy gain" % stage, warden.posture(), baseline, 0.001)
 			await physics_frame
 		if stage < 5:
-			for ratio in [0.50, 0.60]:
+			for ratio in [0.50, 0.58, 0.60]:
 				warden = await _fresh(stage, t)
 				game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
 				var damage: Array = game.combat.STRIKE_DAMAGE["ram"]
@@ -80,7 +80,7 @@ func _run() -> void:
 					var expected: float = BossPosture.BASE["ram"] * pow(ratio, float(numbers["curve"]))
 					t.near("stage %d moderate small contact retains legacy gain" % stage, warden.posture(), expected, 0.001)
 				else:
-					t.check("stage %d medium grown contact fills at least half the bar" % stage, warden.posture() >= BossPosture.FULL / 2.0,
+					t.check("stage %d medium grown contact %.2f fills at least half the bar" % [stage, ratio], warden.posture() >= BossPosture.FULL / 2.0,
 						"landed %.3f, two contacts need %.3f each" % [warden.posture(), BossPosture.FULL / 2.0])
 				await physics_frame
 		if stage >= 5:
