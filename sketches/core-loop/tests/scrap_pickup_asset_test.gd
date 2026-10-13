@@ -5,7 +5,9 @@ const Field := preload("res://src/build/scrap_field.gd")
 const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/scrap_pickups.glb"
 const NAMES := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
-const LOGIC_SHA := "72d047987ebb56ef71b7304b840436fcb1d27654a0e8ec5ce89bc1d7c90f672a"
+# Re-pinned 2026-10-13 (IDENTITY-DET): a caught piece's swirl side now comes from the bot's sign or the
+# field's catch serial instead of its object id; layout, magnet, collection, value and timing unchanged.
+const LOGIC_SHA := "c2b705ded8be0c7a9a73639f344849b6faee6d9141040809d49d828e444707f3"
 
 var failures: Array[String] = []
 var game

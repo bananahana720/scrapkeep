@@ -86,7 +86,9 @@ func _commit(_to_ball: Vector3) -> Node3D:
 
 
 func _go_live() -> void:
-	_phase0 = float(get_instance_id() % 628) * 0.01
+	# The drift phase comes from where the jammer stands, never from its runtime identity.
+	var p := global_position
+	_phase0 = fposmod(p.x * 0.37 + p.z * 0.61, TAU)
 
 
 func _live(_delta: float) -> bool:
