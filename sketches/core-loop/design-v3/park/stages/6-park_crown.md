@@ -344,18 +344,18 @@ The committed traversal tool has SHA-256 `37e98e4ac7e0a5d4141d97828f5834a083d326
 
 | Measure | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| reached_warden | pending; FIX | pending; FIX | pending; FIX | 8/8; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| time_to_warden_s | pending; FIX | pending; FIX | pending; FIX | 85.52 (worst seed 4: 86.32); min 84.63 seed 2, max 86.32 seed 4; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| segment_s | pending; FIX | pending; FIX | pending; FIX | 15.03/41.06/29.385; seed ranges 14.98 to 15.08/40.53 to 41.13/29.0 to 30.15; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| flow_share | pending; FIX | pending; FIX | pending; FIX | 0.8438 (worst seed 3: 0.8357); min 0.8357 seed 3, max 0.8451 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| airborne_share | pending; FIX | pending; FIX | pending; FIX | 0.241 (worst seed 7: 0.2393); min 0.2393 seed 7, max 0.2457 seed 2; MISS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| dead_stops | pending; FIX | pending; FIX | pending; FIX | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| peak_speed_mps | pending; FIX | pending; FIX | pending; FIX | 42.81 (worst seed 1: 42.25); min 42.25 seed 1, max 43.72 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| tier3_s | pending; FIX | pending; FIX | pending; FIX | 9.56 (worst seed 4: 9.43); min 9.43 seed 4, max 9.68 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| quiet_max_s | pending; FIX | pending; FIX | pending; FIX | 5.845 (worst seed 1: 6.69); min 5.76 seed 4, max 6.69 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| max_anchor_gap_m | pending; FIX | pending; FIX | pending; FIX | 20.9 (worst seed 3: 21.4); min 18.9 seed 2, max 21.4 seed 3; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| distinct_verbs | pending; FIX | pending; FIX | pending; FIX | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
-| length_ratio | pending; FIX | pending; FIX | pending; FIX | 1.58 (worst seed 1: 1.58); min 1.58 seed 1, max 1.59 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| reached_warden | 8/8; PASS | 8/8; PASS | pending; FIX | 8/8; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| time_to_warden_s | 61.67 (worst seed 2: 62.85); min 56.19 seed 4, max 62.85 seed 2; PASS | 70.475 (worst seed 3: 70.97); min 70.47 seed 4, max 70.97 seed 3; PASS | pending; FIX | 85.52 (worst seed 4: 86.32); min 84.63 seed 2, max 86.32 seed 4; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| segment_s | 18.12/21.4/22.13; seed ranges 18.12 to 19.05/16.11 to 23.07/20.72 to 22.25; PASS | 16.63/39.5/14.31; seed ranges 16.35 to 16.64/39.36 to 39.67/14.3 to 14.8; PASS | pending; FIX | 15.03/41.06/29.385; seed ranges 14.98 to 15.08/40.53 to 41.13/29.0 to 30.15; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| flow_share | 0.9503 (worst seed 1: 0.9401); min 0.9401 seed 1, max 0.9504 seed 7; PASS | 0.8756 (worst seed 1: 0.8658); min 0.8658 seed 1, max 0.8837 seed 6; PASS | pending; FIX | 0.8438 (worst seed 3: 0.8357); min 0.8357 seed 3, max 0.8451 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| airborne_share | 0.304 (worst seed 4: 0.1817); min 0.1817 seed 4, max 0.3132 seed 2; PASS | 0.3399 (worst seed 3: 0.3274); min 0.3274 seed 3, max 0.3533 seed 1; PASS | pending; FIX | 0.241 (worst seed 7: 0.2393); min 0.2393 seed 7, max 0.2457 seed 2; MISS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| dead_stops | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | pending; FIX | 0.0 (worst seed 1: 0); min 0 seed 1, max 0 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| peak_speed_mps | 51.79 (worst seed 2: 51.43); min 51.43 seed 2, max 53.28 seed 4; PASS | 43.75 (worst seed 2: 43.57); min 43.57 seed 2, max 44.77 seed 1; PASS | pending; FIX | 42.81 (worst seed 1: 42.25); min 42.25 seed 1, max 43.72 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| tier3_s | 31.71 (worst seed 2: 31.16); min 31.16 seed 2, max 33.24 seed 4; PASS | 9.975 (worst seed 3: 9.32); min 9.32 seed 3, max 9.99 seed 4; PASS | pending; FIX | 9.56 (worst seed 4: 9.43); min 9.43 seed 4, max 9.68 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| quiet_max_s | 4.31 (worst seed 4: 6.4); min 4.31 seed 3, max 6.4 seed 4; PASS | 5.695 (worst seed 6: 6.49); min 5.57 seed 4, max 6.49 seed 6; PASS | pending; FIX | 5.845 (worst seed 1: 6.69); min 5.76 seed 4, max 6.69 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| max_anchor_gap_m | 37.2 (worst seed 1: 37.2); min 37.2 seed 1, max 37.2 seed 1; PASS | 38.55 (worst seed 4: 39.0); min 35.9 seed 1, max 39.0 seed 4; PASS | pending; FIX | 20.9 (worst seed 3: 21.4); min 18.9 seed 2, max 21.4 seed 3; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| distinct_verbs | 5.0 (worst seed 4: 4); min 4 seed 4, max 5 seed 1; PASS | 5.0 (worst seed 1: 5); min 5 seed 1, max 5 seed 1; PASS | pending; FIX | 4.0 (worst seed 1: 4); min 4 seed 1, max 4 seed 1; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
+| length_ratio | 1.49 (worst seed 4: 1.46); min 1.46 seed 4, max 1.5 seed 7; PASS | 1.25 (worst seed 1: 1.25); min 1.25 seed 1, max 1.26 seed 3; MISS | pending; FIX | 1.58 (worst seed 1: 1.58); min 1.58 seed 1, max 1.59 seed 2; PASS | pending; FIX | pending; FIX | pending; FIX; reported, pilot band, not the floor's |
 | Distinct lines, at least 3 | pending eight-seed tick witness; FIX | | | | | | |
 | Floor own row: all seeds reach, time within 2 x Rivet median, zero stops | | | | | | | pending; FIX |
 
@@ -366,14 +366,14 @@ Mandatory smoke is 7/8: the imported `park_table_test` fails the park/arena post
 | Pilot | Measure and value | Unchanged band | Final receipt | Attempts, owner and status |
 | --- | --- | --- | --- | --- |
 | tarn | airborne_share 0.24105 | 0.25 to 0.6 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/final-tarn/tarn.json` | Two withdrawn round-5 west launches; third round-6 launch withdrawn for 46 m gap; restored with one anchor under T1. No fourth launch repair. Crown dressing unit owns closure. MISS; conditional carry awaits the other acceptance criteria. |
-| rivet | length_ratio 1.25 diagnostic MISS; final pending, FIX | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/baseline-rivet/rivet.json; superseded diagnostic only` | Two round-5 ride attempts withdrawn for stops and a 63.7 m gap. T2 authorizes carry only. Crown dressing unit owns closure. pending; FIX. |
+| rivet | length_ratio 1.25 | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/final-rivet/rivet.json` | Two round-5 ride attempts withdrawn for stops and a 63.7 m gap. T2 authorizes carry only. Crown dressing unit owns closure. MISS; conditional carry awaits the other acceptance criteria. |
 | kest | length_ratio 1.28 diagnostic MISS; final pending, FIX | 1.3 to 2.0 | `/home/andrew/scratch/w13/sol/kd6-crown-r7/baseline-kest/kest.json; superseded diagnostic only` | Two round-5 launch/ride attempts; retained slope removes stops. T2 authorizes carry only. Crown dressing unit owns closure. pending; FIX. |
 
 Measured misses remain MISS in the table. The bounded attempts are retained in `/home/andrew/scratch/w13/sol/kd6-crown-r5/REPORT.md` and `/home/andrew/scratch/w13/sol/kd6-crown-r6/REPORT.md`.
 
 ### Current stops and replay
 
-8 final seed rows are retained, with 0 recorded dead stops. Unmeasured seeds have no zero-stop qualification. Terrain stops must be zero; no enemy-pack exemption is claimed. Full raw-result equality controls: 2/33, FIX. Receipts: `/home/andrew/scratch/w13/sol/kd6-crown-r7/analysis.json`. Every disagreement with identical inputs stops qualification.
+24 final seed rows are retained, with 0 recorded dead stops. Unmeasured seeds have no zero-stop qualification. Terrain stops must be zero; no enemy-pack exemption is claimed. Full raw-result equality controls: 2/33, FIX. Receipts: `/home/andrew/scratch/w13/sol/kd6-crown-r7/analysis.json`. Every disagreement with identical inputs stops qualification.
 
 ### Current distinctness
 
