@@ -24,6 +24,7 @@ func _setup(heft: float) -> void:
 	game.player.source = Intent.Scripted.new()
 	game.ctx.spawner.heft_override = heft
 	for i in 40: await physics_frame
+	t.near("the pilot has the requested actual heft", game.run.heft(), heft)
 func _run() -> void:
 	await _setup(Run.HEFT_CLASS_AT[2])
 	var w = game.flow.warden
