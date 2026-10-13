@@ -1,6 +1,8 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const SliceSweep := preload("res://tools/posture_sweep.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const MindBands := preload("res://tests/posture_bands_mind_test.gd")
@@ -120,6 +122,7 @@ func _run() -> void:
 	t.check("Mind remains a smoke failure when red", not quarantine.contains("posture_bands_mind_test\t"))
 	t.check("reactor remains a smoke failure when red", not quarantine.contains("posture_bands_reactor_test\t"))
 	game.free()
+	await _slice_record_regression(t)
 	quit(t.verdict())
 
 
@@ -163,3 +166,54 @@ func _slice_ratio_regression(t) -> void:
 		var actual = assertion.execute([float(live[0]) / 1000.0, float(live[1]) / 1000.0, swept, float(saved[1])])
 		t.check("slice %s evaluates" % case["name"], not assertion.has_execute_failed())
 		t.eq("slice %s" % case["name"], actual, expected)
+
+
+func _slice_record_regression(t) -> void:
+	var row: Dictionary = SliceDefs.of(1)
+	var numbers: Dictionary = row["posture"]
+	var drain := float(numbers.get("drain_rate", BossPosture.DRAIN_RATE))
+	t.check("slice records stronger regeneration for light buildup", drain > BossPosture.DRAIN_RATE,
+		"record drain %.3f, legacy %.3f" % [drain, BossPosture.DRAIN_RATE])
+	var table := SliceSweep.Table.new()
+	table.plating = float(row["warden_plating"])
+	table.posture = {"curve": float(numbers["curve"]), "ram_shatters": bool(numbers["ram_shatters"])}
+	var measured: Dictionary = table.of(1)["posture"]
+	t.eq("slice sweep preserves the owner's regeneration", measured.get("drain_rate"), numbers.get("drain_rate"))
+	t.eq("slice sweep leaves owner posture untouched", SliceDefs.of(1)["posture"], numbers)
+	game = Game.new()
+	game.test_mode = true
+	game.table = "slice"
+	root.add_child(game)
+	while game.flow == null:
+		await physics_frame
+	game.ctx.calm = true
+	game.flow.force_warden = true
+	game.player.source = Intent.Scripted.new()
+	game.flow.press_start()
+	game.flow.choose_class(1)
+	game.events.posture_changed.connect(func(_enemy, value: float, _open: bool): published.append(value))
+	for ratio in [0.35, 0.75]:
+		game.flow.enter_stage(1, Vector3.ZERO, false)
+		await physics_frame
+		await physics_frame
+		var warden = game.flow.warden
+		t.near("slice normal setup reads record regeneration", warden._posture.drain_rate, drain, 0.001)
+		t.eq("slice keeps owner health", warden.max_hp, row["warden_hp"])
+		t.eq("slice keeps owner plating", warden.plating, row["warden_plating"])
+		game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
+		game.combat.heft_override = 1.0
+		var damage: Array = game.combat.STRIKE_DAMAGE["ram"]
+		var force: float = (ratio * warden.plating - damage[0]) / damage[1]
+		var expected := BossPosture.BASE["ram"] * ratio * ratio
+		published.clear()
+		game.combat.strike(warden, "ram", force)
+		t.near("slice landed contact %.2f retains its weight" % ratio, warden.posture(), expected, 0.001)
+		t.check("slice publishes landed posture %.2f" % ratio, not published.is_empty() and absf(float(published.back()) - expected) < 0.001)
+		warden._posture.posture = 50.0
+		warden._posture.step(BossPosture.DRAIN_DELAY + 1.0)
+		t.near("slice live regeneration follows owner arithmetic", warden.posture(), 50.0 - drain, 0.001)
+		var swept_rule := BossPosture.new(measured)
+		swept_rule.posture = 50.0
+		swept_rule.step(BossPosture.DRAIN_DELAY + 1.0)
+		t.near("slice measured regeneration equals normal setup", swept_rule.posture, 50.0 - drain, 0.001)
+	game.free()
