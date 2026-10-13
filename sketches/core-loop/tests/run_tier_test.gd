@@ -82,7 +82,7 @@ func _initialize() -> void:
 			only_seed = int(arg.trim_prefix("--seed="))
 		if arg.begins_with("--section="):
 			section = arg.trim_prefix("--section=")
-	if only_seed >= 0 or section in ["card", "variants", "persistence"]:
+	if only_seed >= 0 or section in ["card", "variants", "persistence", "format"]:
 		_create_game()
 	call_deferred("_run")
 
@@ -423,6 +423,36 @@ func _persistence() -> void:
 	loaded.events.free()
 	game.flow.store = null
 
+func _tier_zero_format() -> void:
+	for switch_back in [false, true]:
+		var label := "switch to tier zero" if switch_back else "fresh tier zero"
+		game.flow.store = Flow.RunStore.new("user://tier-format-%d-%s.json" % [OS.get_process_id(), str(switch_back)])
+		_begin(705, 0)
+		var checkpoint: Dictionary = game.flow.store.load()
+		game.run.cogs += 13
+		game.run.scrap += 17
+		game.run.hp -= 1.0
+		game.run.add_event_core(Vector3.ZERO)
+		game.run.reroll_start_pick()
+		if switch_back:
+			t.check(label + " tier-one selection", game.flow.choose_run_tier(1))
+			var hard: Dictionary = game.flow.store.load()
+			t.eq(label + " tier-one checkpoint grants", hard.get("event_core_grants", -1), 0)
+			hard.erase("run_tier")
+			hard.erase("event_core_grants")
+			t.eq(label + " tier-one preserves checkpoint", hard, checkpoint)
+		t.check(label + " production selection", game.flow.choose_run_tier(0))
+		t.eq(label + " saves successfully", game.flow.store_error, "")
+		var saved: Dictionary = game.flow.store.load()
+		t.check(label + " omits both tier fields", not saved.has("run_tier") and not saved.has("event_core_grants"))
+		t.eq(label + " original checkpoint unchanged", saved, checkpoint)
+		t.check(label + " Continue eligible", not game.flow.saved_run().is_empty(), game.flow.saved_run_why)
+		game.flow.state = Flow.TITLE
+		t.check(label + " Continue resumes", game.flow.resume_run())
+		t.eq(label + " Continue uses checkpoint cogs", game.run.cogs, int(checkpoint.cogs))
+		t.eq(label + " Continue tier", game.run.selected_run_tier(), 0)
+	game.flow.store = null
+
 func _variants() -> void:
 	_begin(703, 0)
 	var base: Resource = Parts.def("loose_trigger")
@@ -488,6 +518,8 @@ func _run() -> void:
 		_variants()
 	if not record and section in ["all", "persistence"]:
 		_persistence()
+	if not record and section in ["all", "format"]:
+		_tier_zero_format()
 	if game != null:
 		game.free()
 	quit(t.verdict())
