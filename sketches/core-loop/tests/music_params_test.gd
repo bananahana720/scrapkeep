@@ -115,6 +115,8 @@ func _run() -> void:
 		_ultimate_fixture(pilot)
 		_heft_fixture(pilot)
 	_warden_snapshot_fixture()
+	_ace_contract_fixture()
+	_ace_legacy_ultimate_fixture()
 	_stopped_ultimate_fixture()
 	_handback_hum_fixture()
 	if OS.get_environment("KE10_UNIT_ONLY") == "1":
@@ -378,3 +380,86 @@ func _warden_snapshot_fixture() -> void:
 	t.eq("Warden pending snapshot waits for phrase", engine.parameter_committed_values, committed)
 	engine.render(1)
 	t.eq("Warden pending snapshot commits on phrase", engine.parameter_committed_values, feed)
+
+
+# Scheduling uses the shipped manifest in both configurations; PCM is checked by the Game fixture.
+func _manifest_scheduler():
+	var seq := Ace.new("")
+	seq.manifest = JSON.parse_string(FileAccess.get_file_as_string(Rows.ROWS["1-1"].ace_manifest))
+	seq.clips = seq.manifest.clips
+	seq.sections = seq.manifest.sections
+	seq.breath = seq.manifest.breath_default
+	seq.stems = []
+	seq.parameter_enabled = true
+	return seq
+
+
+func _scheduler_to(seq, until: int) -> void:
+	while seq.clock < until:
+		seq.render(mini(4096, until - seq.clock))
+
+
+func _scheduler_join(seq, outgoing: String, incoming: String) -> int:
+	var ms: float = seq.manifest.join_ms
+	var breath: Dictionary = seq.manifest.breath[seq.breath]
+	if seq.manifest.sections[incoming].profile == "breath":
+		ms = maxf(ms, float(breath.ramp_in_ms))
+	if outgoing != "" and seq.manifest.sections[outgoing].profile == "breath":
+		ms = maxf(ms, float(breath.ramp_out_ms))
+	return mini(maxi(1, roundi(ms * Harmony.RATE / 1000.0)), int(seq.manifest.pre_roll))
+
+
+func _ace_contract_fixture() -> void:
+	var seq = _manifest_scheduler()
+	var committed := {"threat": 0.7, "approach": 0.0, "armour": 1.0}
+	var pending_values := {"threat": 1.0, "approach": 1.0, "armour": 0.2}
+	seq.parameters = committed.duplicate()
+	seq.pressure = committed.threat
+	seq.start_boss(0)
+	var pivot_at := _scheduler_join(seq, "", "pivot")
+	var build_at: int = pivot_at + int(seq.manifest.clips.pivot.bar)
+	var clip: Dictionary = seq.manifest.clips[seq.manifest.sections.build.clip]
+	_scheduler_to(seq, build_at + int(clip.bar) + 1234)
+	var parameter_at: int = build_at + int(clip.bar) * Harmony.PHRASE_BARS
+	seq.commit_parameters(parameter_at, pending_values, false, false, "")
+	for state in ["telegraph", "open", "closed"]:
+		var incoming: String = "build" if state == "closed" else state
+		var outgoing: String = seq.section
+		var join := _scheduler_join(seq, outgoing, incoming)
+		var unit: int = clip.beat if seq.manifest.sections[incoming].enter == "beat" else clip.bar
+		var boundary: int = build_at + ceili(float(seq.clock + join - build_at) / unit) * unit
+		seq.set_warden_state(state)
+		t.eq("manifest scheduler Warden landing " + state, seq.pending.get("at", -1), boundary)
+		t.eq("manifest scheduler Warden join " + state, seq.pending.get("begin", -1), boundary - join)
+		_scheduler_to(seq, boundary + 1)
+		t.eq("manifest scheduler Warden enters " + state, seq.section, incoming)
+		t.eq("manifest scheduler Warden retains snapshot " + state, seq.parameters, committed)
+		_scheduler_to(seq, boundary + int(clip.beat) + 1234)
+	_scheduler_to(seq, parameter_at)
+	t.eq("manifest scheduler Warden snapshot waits", seq.parameters, committed)
+	_scheduler_to(seq, parameter_at + 1)
+	t.eq("manifest scheduler Warden snapshot commits", seq.parameters, pending_values)
+
+
+func _ace_legacy_ultimate_fixture() -> void:
+	var seq = _manifest_scheduler()
+	var committed := {"threat": 0.0, "approach": 0.0, "armour": 1.0}
+	var pending_values := {"threat": 1.0, "approach": 1.0, "armour": 0.2}
+	seq.parameters = committed.duplicate()
+	seq.start_level(0)
+	_scheduler_to(seq, int(seq.manifest.clips[seq.manifest.sections.calm.clip].bar) + 1234)
+	var parameter_at: int = seq.origin + seq.grid_bar * Harmony.PHRASE_BARS
+	seq.commit_parameters(parameter_at, pending_values, false, false, "")
+	for on in [true, false]:
+		var incoming: String = "travel" if on else "calm"
+		var join := _scheduler_join(seq, seq.section, incoming)
+		var boundary: int = seq.origin + ceili(float(seq.clock + join - seq.origin) / seq.grid_bar) * seq.grid_bar
+		seq.set_ultimate_lift(on)
+		t.eq("shared ACE ultimate keeps manifest landing " + incoming, seq.pending.get("at", -1), boundary)
+		_scheduler_to(seq, boundary + 1)
+		t.eq("shared ACE ultimate enters " + incoming, seq.section, incoming)
+		t.eq("shared ACE ultimate retains snapshot " + incoming, seq.parameters, committed)
+	_scheduler_to(seq, parameter_at)
+	t.eq("shared ACE ultimate snapshot waits", seq.parameters, committed)
+	_scheduler_to(seq, parameter_at + 1)
+	t.eq("shared ACE ultimate snapshot commits", seq.parameters, pending_values)
