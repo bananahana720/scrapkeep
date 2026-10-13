@@ -354,7 +354,9 @@ func span_clearance_pins() -> void:
 	var director = world.events
 	director._park_states = director._park_states.filter(func(s): return s.row.id == "hollow_trestle_collapse")
 	var state: Dictionary = director._park_states[0]
-	var centre := Vector3(-115.0, 44.0, 5.5)
+	var intact := intact_span_heights(world)
+	var deck_y: float = intact[2]
+	var centre := Vector3(-115.0, deck_y, 5.5)
 	var along := Vector3(sin(deg_to_rad(30.6)), 0.0, cos(deg_to_rad(30.6)))
 	var across := Vector3(cos(deg_to_rad(30.6)), 0.0, -sin(deg_to_rad(30.6)))
 	var context := {"clock_tier": 2, "grounded": true, "bar_s": 240.0 / 172.0, "bar_origin_s": 0.0}
@@ -372,14 +374,18 @@ func span_clearance_pins() -> void:
 			var low := Vector2.INF
 			var high := -Vector2.INF
 			var deck_agrees := not vertices.is_empty()
+			var warning_above_intact := not vertices.is_empty()
 			for vertex: Vector3 in vertices:
 				var delta: Vector3 = outline.global_transform * vertex - record.mark.position - centre
 				var local := Vector2(delta.dot(across), delta.dot(along))
 				low = low.min(local)
 				high = high.max(local)
 				deck_agrees = deck_agrees and absf(delta.y) < 0.001
+				var warning_y: float = (outline.global_transform * vertex).y
+				warning_above_intact = warning_above_intact and warning_y > deck_y and warning_y - deck_y <= 0.2
 			t.check("warning footprint matches physical span", low.distance_to(Vector2(-4.0, -186.5)) < 0.01 and high.distance_to(Vector2(4.0, 186.5)) < 0.01)
 			t.check("warning projects onto baseline deck", deck_agrees)
+			t.check("warning lies above independently measured intact top within 0.2 m", warning_above_intact)
 	t.check("span midpoint holds landing after due time", warning_checked and state.phase == director.ANNOUNCED and director.stage_time > state.due_s)
 	var low_end: Vector3 = centre + along * 176.5
 	var crossing: Vector3 = centre + across * 45.0
@@ -387,7 +393,7 @@ func span_clearance_pins() -> void:
 		for step in 40:
 			world._publish(director.advance(0.05, spec[1], spec[2], context))
 		t.eq("span " + spec[0] + " holds landing", state.phase, director.ANNOUNCED)
-	var clear := Vector3(600.0, 44.0, -600.0)
+	var clear := Vector3(600.0, deck_y, -600.0)
 	for step in 80:
 		world._publish(director.advance(0.05, clear, Vector3.ZERO, context))
 		if state.phase == director.LIVE:
@@ -431,9 +437,10 @@ func collapse_event_pins() -> void:
 	var times := {}
 	var land_s := -1.0
 	var observations := {}
+	var intact := intact_span_heights(world)
 	var floor_y := baked_floor(Vector2(-115.0, 5.5))
 	var authored: Dictionary = world.terrain.map().park.event_rows.filter(func(r): return r.id == "hollow_trestle_collapse")[0]
-	t.check("collapse depth independently matches committed floor", absf(float(authored.effect.depth_m) - (44.0 - floor_y)) < 0.00001)
+	t.check("collapse depth independently matches committed floor", absf(float(authored.effect.depth_m) - (float(intact[2]) - floor_y)) < 0.00001)
 	t.eq("collapse authorized fill seconds", float(authored.effect.fill_s), 2.0)
 	for phase in ["telegraph", "land"]:
 		t.check("authored collapse " + phase + " music cue available", not MusicRows.cue(authored.music_cue[phase]).is_empty())
@@ -462,7 +469,7 @@ func collapse_event_pins() -> void:
 			for sample in [0.0, 0.5, 1.0, 2.0]:
 				if not observations.has(sample) and elapsed + 0.00001 >= sample:
 					observations[sample] = true
-					observe_span(world, elapsed, floor_y)
+					observe_span(world, elapsed, floor_y, intact)
 			if elapsed + 0.00001 >= 2.0:
 				break
 	for spec in [["trestle_groan", "trestle_landed", 6.0], ["reactor_overload", "reactor_landed", 5.0]]:
@@ -496,6 +503,42 @@ static func collider_y(faces: PackedVector3Array, point: Vector2) -> float:
 	return -INF
 
 
+static func highest_triangle_y(faces: PackedVector3Array, transform: Transform3D, point: Vector2) -> float:
+	var highest := -INF
+	for k in range(0, faces.size(), 3):
+		var triangle := PackedVector3Array([transform * faces[k], transform * faces[k + 1], transform * faces[k + 2]])
+		highest = maxf(highest, collider_y(triangle, point))
+	return highest
+
+
+func intact_span_heights(world) -> Array:
+	var body: Node3D = world.terrain.geometry_root(world.terrain.stage).find_child("Park_flume_hollow_reach", true, false)
+	var mesh_nodes := body.find_children("*", "MeshInstance3D", true, false)
+	var colliders := body.find_children("*", "CollisionShape3D", true, false)
+	var centre := Vector2(-115.0, 5.5)
+	var axis := Vector2.DOWN.rotated(-deg_to_rad(30.6))
+	var heights := []
+	for fraction in [0.0, 0.25, 0.5, 0.75, 1.0]:
+		var point: Vector2 = centre + axis * (fraction - 0.5) * 373.0
+		var mesh_top := -INF
+		var collider_top := -INF
+		for view: MeshInstance3D in mesh_nodes:
+			mesh_top = maxf(mesh_top, highest_triangle_y(view.mesh.get_faces(), view.global_transform, point))
+		for collider: CollisionShape3D in colliders:
+			var faces := PackedVector3Array()
+			if collider.shape is BoxShape3D:
+				var box := BoxMesh.new()
+				box.size = collider.shape.size
+				faces = box.get_faces()
+			elif collider.shape is ConcavePolygonShape3D:
+				faces = collider.shape.get_faces()
+			collider_top = maxf(collider_top, highest_triangle_y(faces, collider.global_transform, point))
+		print("[intact top] fraction %.2f mesh %.6f collider %.6f" % [fraction, mesh_top, collider_top])
+		t.check("independent intact mesh/collider top %.2f" % fraction, is_finite(mesh_top) and is_finite(collider_top) and absf(mesh_top - collider_top) < 0.001)
+		heights.append(mesh_top)
+	return heights
+
+
 static func baked_floor(point: Vector2) -> float:
 	var bake: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BAKE_DIR + "/bake.json"))
 	var grid: Dictionary = bake.grid
@@ -516,7 +559,7 @@ static func baked_floor(point: Vector2) -> float:
 	return y
 
 
-func observe_span(world, elapsed: float, floor_y: float) -> void:
+func observe_span(world, elapsed: float, floor_y: float, intact: Array) -> void:
 	var swap: Dictionary = world.terrain.map().swaps.get("trestle_ramp", {})
 	if not t.check("span exists at elapsed %.2f" % elapsed, not swap.is_empty()):
 		return
@@ -532,10 +575,13 @@ func observe_span(world, elapsed: float, floor_y: float) -> void:
 	var progress := clampf(elapsed / 2.0, 0.0, 1.0)
 	for fraction in [0.0, 0.25, 0.5, 0.75, 1.0]:
 		var point: Vector2 = centre + axis * (fraction - 0.5) * 373.0
-		var expected: float = 44.0 - (44.0 - floor_y) * fraction * progress
+		var original: float = intact[int(round(fraction * 4.0))]
+		var expected: float = original - (original - floor_y) * fraction * progress
 		var drawn := collider_y(mesh_vertices, point)
 		var physical := collider_y(faces, point)
 		print("[fallen ramp] elapsed %.2f fraction %.2f xz %s expected %.6f mesh %.6f collider %.6f" % [elapsed, fraction, point, expected, drawn, physical])
+		if elapsed < 0.00001:
+			t.check("replacement starts continuously from intact top %.2f" % fraction, absf(drawn - original) < 0.001 and absf(physical - original) < 0.001)
 		t.check("fallen ramp mesh %.2f at %.2fs" % [fraction, elapsed], absf(drawn - expected) < 0.05)
 		t.check("fallen ramp collider %.2f at %.2fs" % [fraction, elapsed], absf(physical - expected) < 0.05)
 
