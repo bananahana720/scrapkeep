@@ -36,6 +36,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_output_fixture()
+	if OS.get_environment("KE10_OUTPUT_ONLY") == "1":
+		quit(t.verdict())
+		return
 	if OS.get_environment("KE10_ABSENCE_ONLY") == "1":
 		await _absence_fixture()
 		quit(t.verdict())
@@ -82,7 +86,7 @@ func _run() -> void:
 		if frames > 0:
 			audio._render_music(frames, audio.ace != null and audio.ace.active())
 		if frame % 1800 == 0:
-			var progress := FileAccess.open(OS.get_environment("TMPDIR").path_join("ke10-trace-progress.txt"), FileAccess.WRITE)
+			var progress := FileAccess.open(_trace_path("ke10-trace-progress.txt"), FileAccess.WRITE)
 			progress.store_string("frame=%d clock=%d engaged=%s broke=%s clamps=%d" % [frame, engine.clock, engaged, broke, engine.parameter_clamps])
 			progress.close()
 	await process_frame
@@ -95,7 +99,7 @@ func _run() -> void:
 		"transport_samples": engine.clock, "transport_steps": engine._parameter_step,
 		"run_seconds": game.run.run_time, "bot_outcome": bot.outcome,
 		"clamps": engine.parameter_clamps, "samples": samples, "layer_changes": changes}
-	var trace_path := OS.get_environment("TMPDIR").path_join("ke10-park-dam-trace.json")
+	var trace_path := _trace_path("ke10-park-dam-trace.json")
 	var file := FileAccess.open(trace_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(record))
 	file.close()
@@ -115,6 +119,17 @@ func _run() -> void:
 	await _release_fixture()
 	await _absence_fixture()
 	quit(t.verdict())
+
+
+func _trace_path(filename: String) -> String:
+	return OS.get_environment("TMPDIR").path_join(filename)
+
+
+func _output_fixture() -> void:
+	var user_dir := ProjectSettings.globalize_path("user://")
+	for filename in ["ke10-park-dam-trace.json", "ke10-trace-progress.txt"]:
+		var path := _trace_path(filename)
+		t.check("trace output stays under user data: %s" % filename, path.is_absolute_path() and path.begins_with(user_dir), path)
 
 
 func _release_fixture() -> void:
