@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const MindBands := preload("res://tests/posture_bands_mind_test.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -102,5 +103,9 @@ func _run() -> void:
 	var legacy := BossPosture.new()
 	var hit := {"kind": "ram", "punch": 75.0, "plating": 100.0}
 	t.near("missing fields preserve other Wardens", float(legacy.judge(hit)["gain"]), BossPosture.BASE["ram"] * 0.75)
+	t.check("Mind enables its small median pin", MindBands.EXPECT_SMALL_S > 0.0)
+	t.check("Mind enables its grown median pin", MindBands.EXPECT_GROWN_S > 0.0)
+	var quarantine := FileAccess.get_file_as_string("res://tests/QUARANTINE.tsv")
+	t.check("Mind remains a smoke failure when red", not quarantine.contains("posture_bands_mind_test\t"))
 	game.free()
 	quit(t.verdict())
