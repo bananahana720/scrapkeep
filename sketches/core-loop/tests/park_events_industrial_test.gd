@@ -10,7 +10,7 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const T := preload("res://tests/support/t.gd")
 const FIXTURE := "res://tests/fixtures/park_events_industrial_rows.json"
 const INDUSTRIAL := "res://src/world/events/industrial.gd"
-const EXPECTED_BEFORE_FINAL := 35
+const EXPECTED_BEFORE_FINAL := 36
 const BAR := 240.0 / 172.0
 const H := 0.05
 const FAR := Vector3(1000.0, 1.0, 1000.0)
@@ -36,6 +36,23 @@ class Run:
 		var lost := mini(amount, mass)
 		mass -= lost
 		return lost
+
+
+class SpyNatural:
+	extends Natural
+	# Counts overlay-end calls that reach natural after its own release (the release-order check).
+	var release_end_calls := 0
+	var released := false
+
+	func release() -> void:
+		released = true
+		super.release()
+
+	func _set_overlay(row: Dictionary, changed: bool) -> void:
+		if released and not changed:
+			release_end_calls += 1
+			return
+		super._set_overlay(row, changed)
 
 
 class Context:
@@ -85,7 +102,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
-func _world(rows: Array, sites: Array) -> World:
+func _world(rows: Array, sites: Array, spy := false) -> World:
 	var w := World.new()
 	root.add_child(w)
 	w.ctx.root = w
@@ -95,7 +112,7 @@ func _world(rows: Array, sites: Array) -> World:
 		"weather_rows": [], "routes": [{"id": "main", "from": "drop_in", "to": "landmark"}]}
 	w.terrain.maps = [map]
 	w.events = Director.new(823, {}, map, 14.0, Callable(w.terrain, "height"))
-	var natural = Natural.new()
+	var natural = SpyNatural.new() if spy else Natural.new()
 	w.add_child(natural)
 	natural.setup(w)
 	var industrial = load(INDUSTRIAL).new()
@@ -230,8 +247,10 @@ func _run() -> void:
 	w = _world([ring_row], sites)
 	_drive(w, RING, false)
 	var hazard = w.event_families.industrial.active.get(RING, {}).get("hazard")
-	t.check("fallout_ring commits its authored [outer, inner] band (zero width, flagged in report)",
-		hazard != null and hazard.r_out == ring_outer and hazard.r_in == float(ring_row.effect.hazard_m[1]),
+	# Strict band: the authored row must commit a real annulus (r_out > r_in). It fails while the
+	# authored annex_reactor_blow row is zero width (hazard_m [20,20]); the owner ruling fixes the row.
+	t.check("fallout_ring commits its authored [outer, inner] band as a real annulus (owner ruling pending on annex_reactor_blow)",
+		hazard != null and hazard.r_out == ring_outer and hazard.r_in == float(ring_row.effect.hazard_m[1]) and hazard.r_out > hazard.r_in,
 		"r_in %s r_out %s" % [hazard.r_in if hazard != null else "none", hazard.r_out if hazard != null else "none"])
 	w.free()
 
@@ -265,6 +284,21 @@ func _run() -> void:
 	w = _world([cone_row], sites)
 	_drive(w, CONE, false)
 	t.check("control (b) restored: the declared swap lands", w.terrain.overlays.has(declared + "_after"), declared)
+	w.free()
+
+	# Release order (families.gd builds natural before industrial, so natural releases first): a
+	# landed swap must not break industrial's release, and its hazard must be freed.
+	w = _world([cone_row], sites, true)
+	_drive(w, CONE, false)
+	industrial = w.event_families.industrial
+	var live_hazard = industrial.active.get(CONE, {}).get("hazard")
+	var was_live := is_instance_valid(live_hazard)
+	var spy = w.event_families.natural
+	spy.release()
+	industrial.release()
+	t.check("industrial release makes no overlay call into a released natural (calls %d)" % spy.release_end_calls,
+		was_live and spy.release_end_calls == 0 and not is_instance_valid(live_hazard),
+		"live before %s, overlay calls after natural release %d" % [str(was_live), spy.release_end_calls])
 	w.free()
 
 	t.check("test executes its expected checks", t.checks == EXPECTED_BEFORE_FINAL, str(t.checks))

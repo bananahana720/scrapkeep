@@ -100,8 +100,10 @@ func _end(row: Dictionary) -> void:
 		return
 	var state: Dictionary = active[row.id]
 	if state.swap != "":
+		# natural releases before industrial in families.gd and clears its overlay record, so
+		# a missing record means there is no overlay left to take down.
 		var natural = _natural()
-		if natural != null:
+		if natural != null and natural._prepared.has(row.id):
 			natural._set_overlay(row, false)
 			natural._prepared.erase(row.id)
 	state.hazard.finish()
