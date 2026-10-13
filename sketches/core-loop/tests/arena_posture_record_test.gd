@@ -171,14 +171,17 @@ func _slice_ratio_regression(t) -> void:
 func _slice_record_regression(t) -> void:
 	var row: Dictionary = SliceDefs.of(1)
 	var numbers: Dictionary = row["posture"]
-	var drain := float(numbers.get("drain_rate", BossPosture.DRAIN_RATE))
-	t.check("slice records stronger regeneration for light buildup", drain > BossPosture.DRAIN_RATE,
-		"record drain %.3f, legacy %.3f" % [drain, BossPosture.DRAIN_RATE])
+	var ram_base := float(numbers.get("base", {}).get("ram", BossPosture.BASE["ram"]))
+	var scale := float(numbers.get("contact_gain_scale", 0.0))
+	var floor_ratio := float(numbers.get("contact_gain_floor", 0.0))
+	t.check("slice records light-contact separation", ram_base < float(BossPosture.BASE["ram"]) and ram_base > 0.0)
+	t.check("slice records grown-contact compensation", scale > 0.0 and numbers.has("contact_gain_floor"))
 	var table := SliceSweep.Table.new()
 	table.plating = float(row["warden_plating"])
 	table.posture = {"curve": float(numbers["curve"]), "ram_shatters": bool(numbers["ram_shatters"])}
 	var measured: Dictionary = table.of(1)["posture"]
-	t.eq("slice sweep preserves the owner's regeneration", measured.get("drain_rate"), numbers.get("drain_rate"))
+	for key in ["base", "contact_gain_scale", "contact_gain_floor"]:
+		t.eq("slice sweep preserves owner %s" % key, measured.get(key), numbers.get(key))
 	t.eq("slice sweep leaves owner posture untouched", SliceDefs.of(1)["posture"], numbers)
 	game = Game.new()
 	game.test_mode = true
@@ -192,28 +195,31 @@ func _slice_record_regression(t) -> void:
 	game.flow.press_start()
 	game.flow.choose_class(1)
 	game.events.posture_changed.connect(func(_enemy, value: float, _open: bool): published.append(value))
-	for ratio in [0.35, 0.75]:
+	for ratio in [0.35, 1.10]:
 		game.flow.enter_stage(1, Vector3.ZERO, false)
 		await physics_frame
 		await physics_frame
 		var warden = game.flow.warden
-		t.near("slice normal setup reads record regeneration", warden._posture.drain_rate, drain, 0.001)
+		t.eq("slice normal setup reads record contact base", warden._posture.base["ram"], ram_base)
+		t.eq("slice normal setup reads record contact scale", warden._posture.contact_gain_scale, scale)
+		t.eq("slice normal setup reads record contact floor", warden._posture.contact_gain_floor, floor_ratio)
 		t.eq("slice keeps owner health", warden.max_hp, row["warden_hp"])
 		t.eq("slice keeps owner plating", warden.plating, row["warden_plating"])
 		game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
 		game.combat.heft_override = 1.0
 		var damage: Array = game.combat.STRIKE_DAMAGE["ram"]
 		var force: float = (ratio * warden.plating - damage[0]) / damage[1]
-		var expected := BossPosture.BASE["ram"] * ratio * ratio
+		var legacy: float = BossPosture.BASE["ram"] * ratio * ratio
+		var expected: float = ram_base * ratio * ratio * (1.0 + scale * maxf(0.0, ratio - floor_ratio))
 		published.clear()
 		game.combat.strike(warden, "ram", force)
-		t.near("slice landed contact %.2f retains its weight" % ratio, warden.posture(), expected, 0.001)
+		t.near("slice landed contact %.2f follows owner arithmetic" % ratio, warden.posture(), expected, 0.001)
 		t.check("slice publishes landed posture %.2f" % ratio, not published.is_empty() and absf(float(published.back()) - expected) < 0.001)
-		warden._posture.posture = 50.0
-		warden._posture.step(BossPosture.DRAIN_DELAY + 1.0)
-		t.near("slice live regeneration follows owner arithmetic", warden.posture(), 50.0 - drain, 0.001)
+		if ratio < 1.0:
+			t.check("slice light contact still moves posture with less buildup", warden.posture() > 0.0 and warden.posture() < legacy)
+		else:
+			t.check("slice grown contact retains at least legacy weight", warden.posture() >= legacy)
 		var swept_rule := BossPosture.new(measured)
-		swept_rule.posture = 50.0
-		swept_rule.step(BossPosture.DRAIN_DELAY + 1.0)
-		t.near("slice measured regeneration equals normal setup", swept_rule.posture, 50.0 - drain, 0.001)
+		var hit := {"kind": "ram", "punch": ratio * warden.plating, "plating": warden.plating}
+		t.near("slice measured gain equals normal setup", float(swept_rule.judge(hit)["gain"]), expected, 0.001)
 	game.free()
