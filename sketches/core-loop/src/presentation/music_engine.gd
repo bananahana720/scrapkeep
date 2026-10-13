@@ -330,6 +330,7 @@ var _class_counter: Array = []
 # One band at a time: while the ACE sequencer plays, the band starts no notes and mixes
 # nothing, and stingers land on the ACE beat in its key (grid is the sequencer, which
 # answers next_beat() and key_at() in this engine's transport samples).
+var bot_skip_samples := false
 var band_muted := false
 var grid: Object = null
 
@@ -2578,6 +2579,11 @@ func _mix(offset: int, n: int) -> void:
 			if voice.pos >= voice.end:
 				finished.append(voice)
 			continue
+		if bot_skip_samples:
+			voice.pos += count
+			if voice.pos >= voice.end:
+				finished.append(voice)
+			continue
 		var buf := voice.buf
 		var pos := voice.pos
 		var release_at := voice.end - RELEASE if voice.end < buf.size() else voice.end
@@ -2639,6 +2645,8 @@ func _mix(offset: int, n: int) -> void:
 		var b := build_level()
 		target = minf(target, lerpf(BUILD_LOW_HZ, TONE_OPEN_HZ, b * b))
 	_cutoff = lerpf(_cutoff, target, minf(1.0, float(n) / 2048.0))
+	if bot_skip_samples:
+		return
 	if _cutoff < TONE_OPEN_HZ * 0.95:
 		# Two one-pole low-passes per side.
 		var a := 1.0 - exp(-TAU * _cutoff / Harmony.RATE)
@@ -2669,6 +2677,8 @@ func _mix(offset: int, n: int) -> void:
 
 
 func _finish(frames: int) -> void:
+	if bot_skip_samples:
+		return
 	if band_muted:
 		out_music.fill(Vector2.ZERO)
 	else:

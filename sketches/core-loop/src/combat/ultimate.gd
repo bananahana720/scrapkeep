@@ -82,6 +82,7 @@ var _ult_rows := {
 	"outpost": {"tech": _sable_tech, "peak": _sable_peak, "landing": _outpost_landing, "release": _sable_release},
 	# --- end Sable ---
 	# --- P-C Rivet ultimate ---
+	# Rows are installed from RivetKit.SHAPE_DISPATCH in setup.
 	# --- end Rivet ---
 	# --- P-C Kest ultimate ---
 	# --- end Kest ---
@@ -150,6 +151,11 @@ var _record_fill := 0.0
 func setup(ctx_ref, combat_ref) -> void:
 	ctx = ctx_ref
 	combat = combat_ref
+	# --- P-C Rivet ultimate ---
+	var rivet = load("res://src/combat/rivet_kit.gd")
+	for id in rivet.SHAPE_DISPATCH:
+		_ult_rows[id] = rivet.ultimate_row(combat, id)
+	# --- end Rivet ---
 	stakes = Stakes.new()
 	ctx.root.add_child(stakes)
 	stakes.setup(ctx, combat, self)

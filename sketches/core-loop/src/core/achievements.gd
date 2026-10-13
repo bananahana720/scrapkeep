@@ -125,6 +125,12 @@ const ROWS := {
 	"ach_sable_switchback": {"name": "Switchback", "text": "Bank Shot off a stake your Cable Run left.", "on": "synergy_discovered", "where": {"synergy_id": "switchback"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_sable_felt"}},
 	# --- end pylon_engineer ---
 	# --- runner_gunner (Rivet): P-C Rivet adds its grant rows here ---
+	"ach_rivet_line_true": {"name": "Line True", "text": "Land ten Line Drive punches in one stage.", "on": "synergy_discovered",
+		"where": {"synergy_id": "rivet_line_true"}, "count": 1, "reward": {"cosmetic": "trail_rivet_swarf"}},
+	"ach_rivet_shrugged": {"name": "Shrugged Off", "text": "Shrug off thirty holds and knocks in one run.", "on": "synergy_discovered",
+		"where": {"synergy_id": "rivet_shrugged"}, "count": 1, "reward": {"cosmetic": "outfit_rivet_hood"}},
+	"ach_rivet_full_breach": {"name": "Full Breach", "text": "Land one Foundry Cutter on six machines.", "on": "ultimate_landed",
+		"where": {"ultimate_id": "foundry_cutter"}, "at_least": {"hits": 6}, "count": 1, "reward": {"cosmetic": "shell_rivet_calibrated"}},
 	# --- end runner_gunner ---
 	# --- demolitions_caster (Kest): P-C Kest adds its grant rows here ---
 	"ach_kest_blast_vault": {"name": "Blast Vault", "text": "Let your own Cable Charge throw you clear.", "hidden": true, "on": "synergy_discovered", "where": {"synergy_id": "kest_blast_vault"}, "count": 1, "reward": {"cosmetic": "trail_kest_fuse_smoke"}},
