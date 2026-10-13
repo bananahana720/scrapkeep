@@ -33,6 +33,7 @@ const GraphTool := preload("res://tools/park_graph.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
 const Kinds := preload("res://src/core/event_kinds.gd")
 const Bay := preload("res://src/world/bay.gd")
 
@@ -344,6 +345,14 @@ func collapse_event_pins() -> void:
 	var facts_seen := []
 	var times := {}
 	var land_s := -1.0
+	var observations := {}
+	var floor_y := baked_floor(Vector2(-115.0, 5.5))
+	var authored: Dictionary = world.terrain.map().park.event_rows.filter(func(r): return r.id == "hollow_trestle_collapse")[0]
+	t.check("collapse depth independently matches committed floor", absf(float(authored.effect.depth_m) - (44.0 - floor_y)) < 0.00001)
+	t.eq("collapse authorized fill seconds", float(authored.effect.fill_s), 2.0)
+	for phase in ["telegraph", "land"]:
+		t.check("authored collapse " + phase + " music cue available", not MusicRows.cue(authored.music_cue[phase]).is_empty())
+	t.check("unknown cue control rejected", MusicRows.cue("flume_missing_cue_control").is_empty())
 	var reactor_live_at_land := false
 	var ball: Vector3 = game.player.ball_position()
 	for step in 2400:
@@ -363,8 +372,14 @@ func collapse_event_pins() -> void:
 				reactor_live_at_land = not active.is_empty() and active.hazard.is_live() and world.events.route_open("annex_ramp_line")
 			if fact.kind == "started" and fact.id == "hollow_trestle_collapse":
 				land_s = fact.time_s
-		if land_s >= 0.0 and world.events.stage_time >= land_s + 2.1:
-			break
+		if land_s >= 0.0:
+			var elapsed: float = world.events.stage_time - land_s
+			for sample in [0.0, 0.5, 1.0, 2.0]:
+				if not observations.has(sample) and elapsed + 0.00001 >= sample:
+					observations[sample] = true
+					observe_span(world, elapsed, floor_y)
+			if elapsed + 0.00001 >= 2.0:
+				break
 	for spec in [["trestle_groan", "trestle_landed", 6.0], ["reactor_overload", "reactor_landed", 5.0]]:
 		t.check(spec[0] + " telegraph and land facts", facts_seen.count(spec[0]) == 1 and facts_seen.count(spec[1]) == 1)
 		t.check(spec[0] + " authored lead", float(times.get(spec[1], -1000.0)) - float(times.get(spec[0], 0.0)) >= float(spec[2]))
@@ -375,24 +390,8 @@ func collapse_event_pins() -> void:
 	var swap: Dictionary = map.swaps.get("trestle_ramp", {}) if "swaps" in map else {}
 	if t.check("collapse has a physical swapped surface", not swap.is_empty() and swap.has("target")):
 		t.check("collapse fully lands in two seconds", is_equal_approx(float(swap.progress), 1.0) and swap.body.visible)
-		var faces: PackedVector3Array = swap.body.get_child(1).shape.get_faces()
-		var view: MeshInstance3D = swap.body.get_child(0)
-		var mesh_vertices: PackedVector3Array = view.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
-		for k in faces.size():
-			faces[k] = swap.body.global_transform * faces[k]
-		for k in mesh_vertices.size():
-			mesh_vertices[k] = view.global_transform * mesh_vertices[k]
-		# Independent design geometry: 373 m span, y 44 deck, measured baked floor at its midpoint.
-		var centre := Vector2(-115.0, 5.5)
-		var axis := Vector2.DOWN.rotated(-deg_to_rad(30.6))
-		for fraction in [0.0, 0.25, 0.5, 0.75, 1.0]:
-			var point: Vector2 = centre + axis * (fraction - 0.5) * 373.0
-			var expected := lerpf(44.0, 23.5586042404175, fraction)
-			var drawn := collider_y(mesh_vertices, point)
-			var physical := collider_y(faces, point)
-			print("[fallen ramp] fraction %.2f xz %s expected %.6f mesh %.6f collider %.6f" % [fraction, point, expected, drawn, physical])
-			t.check("fallen ramp mesh at %.2f" % fraction, absf(drawn - expected) < 0.05)
-			t.check("fallen ramp collider at %.2f" % fraction, absf(physical - expected) < 0.05)
+
+	t.eq("physical fall sampled at four elapsed times", observations.size(), 4)
 	game.free()
 
 
@@ -410,3 +409,47 @@ static func collider_y(faces: PackedVector3Array, point: Vector2) -> float:
 		if u >= -0.00001 and v >= -0.00001 and u + v <= 1.00001:
 			return a.y + u * (faces[k + 1].y - a.y) + v * (faces[k + 2].y - a.y)
 	return -INF
+
+
+static func baked_floor(point: Vector2) -> float:
+	var bake: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BAKE_DIR + "/bake.json"))
+	var grid: Dictionary = bake.grid
+	var f := FileAccess.open_compressed(BAKE_DIR + "/ground.bin", FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+	var side := int(grid.side)
+	var heights := f.get_buffer(side * side * 4).to_float32_array()
+	var cell := (point + Vector2.ONE * float(grid.half_m)) / float(grid.step_m)
+	var i := floori(cell.x)
+	var j := floori(cell.y)
+	var u := cell.x - i
+	var v := cell.y - j
+	var a := heights[j * side + i]
+	var b := heights[j * side + i + 1]
+	var c := heights[(j + 1) * side + i]
+	var d := heights[(j + 1) * side + i + 1]
+	var y := a + (b - a) * u + (c - a) * v if u + v <= 1.0 else d + (c - d) * (1.0 - u) + (b - d) * (1.0 - v)
+	print("[independent floor] ", JSON.stringify({"grid": grid, "cell": [i, j], "fraction": [u, v], "vertices": [a, b, c, d], "floor_y": y}))
+	return y
+
+
+func observe_span(world, elapsed: float, floor_y: float) -> void:
+	var swap: Dictionary = world.terrain.map().swaps.get("trestle_ramp", {})
+	if not t.check("span exists at elapsed %.2f" % elapsed, not swap.is_empty()):
+		return
+	var faces: PackedVector3Array = swap.body.get_child(1).shape.get_faces()
+	var view: MeshInstance3D = swap.body.get_child(0)
+	var mesh_vertices: PackedVector3Array = view.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	for k in faces.size():
+		faces[k] = swap.body.global_transform * faces[k]
+	for k in mesh_vertices.size():
+		mesh_vertices[k] = view.global_transform * mesh_vertices[k]
+	var centre := Vector2(-115.0, 5.5)
+	var axis := Vector2.DOWN.rotated(-deg_to_rad(30.6))
+	var progress := clampf(elapsed / 2.0, 0.0, 1.0)
+	for fraction in [0.0, 0.25, 0.5, 0.75, 1.0]:
+		var point: Vector2 = centre + axis * (fraction - 0.5) * 373.0
+		var expected := 44.0 - (44.0 - floor_y) * fraction * progress
+		var drawn := collider_y(mesh_vertices, point)
+		var physical := collider_y(faces, point)
+		print("[fallen ramp] elapsed %.2f fraction %.2f xz %s expected %.6f mesh %.6f collider %.6f" % [elapsed, fraction, point, expected, drawn, physical])
+		t.check("fallen ramp mesh %.2f at %.2fs" % [fraction, elapsed], absf(drawn - expected) < 0.05)
+		t.check("fallen ramp collider %.2f at %.2fs" % [fraction, elapsed], absf(physical - expected) < 0.05)
