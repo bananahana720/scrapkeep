@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "f2b14e630869f2379e3d59eb3f597cdb29ca305442f22c9da0e6bd924dded339",
+  "bake_sha256": "81b288af807d8562f5eaa4ce24c95fd331c2c9adfc1045a3fbd51682aad8939f",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1101194,
-  "edges": 319816,
+  "bytes": 1100899,
+  "edges": 319814,
   "first_failed": "",
   "flags": {
     "deck": 754,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 1771,
   "full_visit_ratio": "1.252",
-  "graph_sha256": "d92709c7824797491ff0a3a40e3ddcb073c1e1603318352fa9b87541c375e8f1",
+  "graph_sha256": "bfd174a93aad13cecc3295015384401f0953ba202a0ad814f72b4c8c8ce976c4",
   "line_errors": [],
   "line_path_nodes": 125,
   "longest_est_m": 2495,
   "map": "park_flume",
   "nodes": 41155,
-  "park_sha256": "6b4fbe608bcba00d3dccd1349ea2b5b41127975d92b59fb020d3c35d288869a4",
+  "park_sha256": "de5a00f35744453f6cd8ee4cfdebf9dbeaa9128b3e3dc255d733d69a26d55669",
   "pockets": [
     {
       "clear_ring": [],
@@ -350,9 +350,17 @@
         "viable": false
       },
       {
-        "cost": 986.3,
+        "cost": 986.4,
         "d_landmark": 441.3,
         "name": "siphon_return_pier",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 940.9,
+        "d_landmark": 467.6,
+        "name": "siphon_turn_bank",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -734,11 +742,11 @@
         "viable": false
       }
     ],
-    "count": 156,
+    "count": 157,
     "crossings": {
       "drop": 50,
       "ride": 79,
-      "walk": 231
+      "walk": 232
     },
     "hidden": [
       {
