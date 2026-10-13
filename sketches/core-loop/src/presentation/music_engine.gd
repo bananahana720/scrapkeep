@@ -217,6 +217,20 @@ var bar_origin := 0
 var mode := IDLE
 var pressure := 0.0
 var applied_pressure := 0.0
+const PARAMETER_SAMPLES_PER_BAR := 4
+const ARMOUR_STRIP_AT := 0.3
+var parameter_source := Callable()
+var parameters := {}
+var parameter_clamps := 0
+var parameter_sample_count := 0
+var parameter_sample_log: Array[Dictionary] = []
+var parameter_layer_log: Array[Dictionary] = []
+var parameter_layer_reads := {}
+var _parameter_step := 0
+var _parameter_phrase_due := false
+var _parameter_danger := ""
+var _parameter_danger_floor := 0.0
+var _parameter_released := false
 var master := 0.8
 var pause_gain := 1.0
 var overcharge := 0
@@ -529,6 +543,43 @@ func set_pressure(value: float) -> void:
 		if before[layer] < 0.05 and after[layer] >= 0.05:
 			_riser_into(next_bar())
 			break
+
+
+func set_parameter_source(source: Callable) -> void:
+	parameter_source = source
+	_parameter_step = 0
+	parameters.clear()
+
+
+func _sample_parameters() -> void:
+	var raw: Dictionary = parameter_source.call()
+	parameters = {}
+	for id in ["threat", "approach", "armour"]:
+		if not raw.has(id):
+			continue
+		var value := float(raw[id])
+		if not is_finite(value) or value < 0.0 or value > 1.0:
+			parameter_clamps += 1
+		parameters[id] = clampf(value, 0.0, 1.0) if is_finite(value) else 0.0
+	set_pressure(float(parameters.get("threat", 0.0)))
+	parameter_sample_count += 1
+	parameter_sample_log.append({"at": clock, "step": _parameter_step, "values": parameters.duplicate()})
+	if parameter_sample_log.size() > 4096:
+		parameter_sample_log.pop_front()
+
+
+func parameter_danger(id: String) -> void:
+	if not parameter_source.is_valid() or not MusicRows.danger(id):
+		return
+	_parameter_danger = id
+	_parameter_danger_floor = 1.0
+	applied_pressure = pressure
+	_retarget()
+	_parameter_danger = ""
+
+
+func parameters_warden_broken() -> void:
+	_parameter_released = true
 
 
 func _riser_into(bar: int) -> void:
@@ -924,6 +975,7 @@ func drop_now(bars: int, weight: float, then := {}, next_theme := -1, change := 
 # The Warden breaks: the heaviest drop in the stage, eight bars back home in D, then
 # the kill cadence resolves home to the level at 172.
 func unseal_drop() -> int:
+	parameters_warden_broken()
 	return drop_now(8, 1.0, {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}}, -1, {"unseal": true})
 
 
@@ -1272,6 +1324,12 @@ func _run_due() -> void:
 
 func _on_step() -> void:
 	_step_clock = clock
+	if parameter_source.is_valid():
+		var phrase_steps := Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR
+		var sample_steps := phrase_steps / (Harmony.PHRASE_BARS * PARAMETER_SAMPLES_PER_BAR)
+		if _parameter_step % sample_steps == 0:
+			_sample_parameters()
+		_parameter_step += 1
 	# A tempo ramp moves one beat at a time, so every beat starts where the last ended.
 	if _bar_step % Harmony.STEPS_PER_BEAT == 0 and not _ramp.is_empty():
 		var left: int = _ramp["beats"]
@@ -1302,6 +1360,13 @@ func _on_step() -> void:
 		if not then.is_empty():
 			_run(then.duplicate())
 			_step_clock = clock
+	if parameter_source.is_valid():
+		_parameter_phrase_due = _bar_step % (Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR) == 0
+		if _parameter_phrase_due:
+			_parameter_danger_floor = 0.0
+			applied_pressure = pressure
+			_retarget()
+		_parameter_phrase_due = false
 	var s := _bar_step % Harmony.STEPS_PER_BAR
 	var bar := _bar_step / Harmony.STEPS_PER_BAR
 	# A build stacks layers as it rises.
@@ -1367,6 +1432,7 @@ func _run(action: Dictionary) -> void:
 			_start(buf, buf.size(), -1, db_to_linear(SfxBank.trim_db(id)), 0.0, true)
 			events_log.append(["door_tick", clock, id])
 		"park_cue":
+			parameter_danger(action.id)
 			var live_key: int = key if grid == null else grid.key_at(clock)
 			var buf := park_cue_samples(action, live_key)
 			var row: Dictionary = action.row
@@ -1389,6 +1455,8 @@ func _run(action: Dictionary) -> void:
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
 		"restart":
+			_parameter_released = false
+			_parameter_danger_floor = 0.0
 			_dominant_held = false
 			_reset_escalation()
 			_bar_queue.clear()
@@ -1643,7 +1711,8 @@ func _on_bar() -> void:
 		_riser_into(clock + bar_len())
 	if track == "warden" and section == "build" and local % 4 == 3 and not building():
 		_riser_into(clock + bar_len())
-	applied_pressure = pressure
+	if not parameter_source.is_valid():
+		applied_pressure = pressure
 	_retarget()
 	if local % Harmony.PHRASE_BARS == 0:
 		_groove = _rng.randi() % 3
@@ -1665,7 +1734,12 @@ func _floor() -> float:
 
 
 func _retarget() -> void:
+	if parameter_source.is_valid() and not _parameter_phrase_due and _parameter_danger == "":
+		return
+	var previous := _targets.duplicate()
 	var effective := maxf(applied_pressure, _floor()) if mode == PLAY else applied_pressure
+	if parameter_source.is_valid():
+		effective = maxf(effective, _parameter_danger_floor)
 	if mode == PLAY and building():
 		effective = maxf(effective, build_level())
 	if mode == PLAY:
@@ -1700,6 +1774,24 @@ func _retarget() -> void:
 			for layer in gains.size():
 				_targets[layer] = gains[layer] * MODE_MASK[DEAD][layer]
 		_targets[LEAD] = 0.0 if lost else (TITLE_LEAD_GAIN if track == "title" else SUMMARY_LEAD_GAIN)
+	if parameter_source.is_valid():
+		parameter_layer_reads = {}
+		if mode == PLAY:
+			if parameters.has("approach"):
+				parameter_layer_reads["approach"] = true
+				_targets[PAD] = maxf(_targets[PAD], float(parameters.approach))
+			var strip := _parameter_released
+			if parameters.has("armour"):
+				parameter_layer_reads["armour"] = true
+				strip = strip or float(parameters.armour) < ARMOUR_STRIP_AT
+			if strip:
+				for layer in [KEYS, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET]:
+					_targets[layer] = 0.0
+		if previous != _targets:
+			parameter_layer_log.append({"at": clock, "step": _parameter_step, "phrase_step": _bar_step, "phrase": _parameter_phrase_due,
+				"danger": _parameter_danger, "targets": Array(_targets), "reads": parameter_layer_reads.duplicate()})
+			if parameter_layer_log.size() > 4096:
+				parameter_layer_log.pop_front()
 
 
 func _lounge_live() -> bool:

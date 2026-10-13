@@ -8,6 +8,7 @@ const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -256,6 +257,13 @@ var drop_log: Array = []
 var _ult_lift := false
 var _ult_armed := false
 var _pressure := 0.0
+# Lab knobs: facing is weighted by proximity, so a distant face cannot dominate.
+var parameter_threat_weights := Vector2(0.8, 0.2)
+var parameter_threat_range := 48.0
+var _parameter_graph
+var _parameter_map := ""
+var _parameter_run := ""
+var _parameter_armour_peak := 100.0
 var _miniboss: Node3D
 var _park_cues := {}
 var _park_transport_snapshot := {}
@@ -291,6 +299,8 @@ func setup(ctx_ref) -> void:
 	_make_buses()
 	live_output = AudioServer.get_driver_name() != "Dummy"
 	engine = MusicEngine.new()
+	if ctx.has_method("aim_forward"):
+		engine.set_parameter_source(sample_run_parameters)
 	_music_player = _generator_player("Music", "MusicStream")
 	_stinger_player = _generator_player("SFX", "StingerStream")
 	_sfx_player = _poly_player("SFX", "SfxVoices")
@@ -1098,6 +1108,7 @@ func wire_optional() -> void:
 	_listen_optional(events, "vent_charging", func(at: Vector3, _seconds: float):
 		if _is_warden_at(at):
 			_warden_charging = true
+			engine.parameter_danger("warden_charge")
 		play("vent_charging")
 		engine.set_reactor_pedal(true))
 	_listen_optional(events, "vent_erupted", func(at: Vector3):
@@ -1155,6 +1166,7 @@ func wire_optional() -> void:
 		play("element_resolved", 0.0, 1.0, "SFX", Rows.element_sound(behaviour)))
 	_listen_optional(events, "warden_engaged", func(_stage: int):
 		_begin_boss("warden_engaged", "warden")
+		engine.parameter_danger("warden_engaged")
 		if ace_playing():
 			ace.commit_warden())
 	_listen_optional(events, "boss_arena_entered", func():
@@ -2352,6 +2364,8 @@ func _on_heft_dropped(heft_class: int, _heft: float) -> void:
 # Danger is never quantized: the telegraph sounds the frame the boss winds up, and
 # the shorter the warning the higher it sits, so a quick swing reads as urgent.
 func _on_boss_telegraph(_attack_id: String, seconds_until: float) -> void:
+	if engine.track == "warden":
+		engine.parameter_danger("boss_attack_telegraphed")
 	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))))
 
 
@@ -2378,10 +2392,53 @@ func _on_synergy(_id: String, _category: String, first_time: bool) -> void:
 	on_beat("synergy_discovered", 0.0 if first_time else -6.0)
 
 
+func sample_run_parameters() -> Dictionary:
+	if ctx.run == null or ctx.player == null or ctx.flow == null or not ctx.flow.in_play():
+		return {}
+	var at: Vector3 = ctx.player.ball_position()
+	var forward: Vector3 = ctx.aim_forward()
+	var enemies: Array = get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []
+	var values := {"threat": run_threat(at, forward, enemies, parameter_threat_weights, parameter_threat_range)}
+	var map_id: String = ctx.flow.stage_def().get("map", "")
+	if map_id != _parameter_map:
+		_parameter_map = map_id
+		_parameter_graph = null
+		var path := "res://assets/park/%s/graph.bin" % map_id
+		if map_id.begins_with("park_") and FileAccess.file_exists(path):
+			_parameter_graph = ParkGraph.read(path)
+	if _parameter_graph != null:
+		var span: float = _parameter_graph.d_landmark(_parameter_graph.spawn_node)
+		var remaining: float = _parameter_graph.d_landmark(at)
+		if span > 0.0 and is_finite(remaining):
+			values["approach"] = 1.0 - remaining / span
+	if ctx.run.run_id != _parameter_run:
+		_parameter_run = ctx.run.run_id
+		_parameter_armour_peak = 100.0
+	if ctx.run.armor_mode:
+		_parameter_armour_peak = maxf(_parameter_armour_peak, ctx.run.mass)
+		values["armour"] = ctx.run.mass / _parameter_armour_peak
+	return values
+
+
+static func run_threat(at: Vector3, forward: Vector3, enemies: Array, weights := Vector2(0.8, 0.2), radius := 48.0) -> float:
+	var safe := 1.0
+	var total := maxf(weights.x + weights.y, 0.001)
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion() or not enemy.has_method("is_dead") or enemy.is_dead():
+			continue
+		var offset: Vector3 = enemy.global_position - at
+		var proximity := maxf(0.0, 1.0 - offset.length() / maxf(radius, 0.001))
+		var facing := maxf(0.0, forward.normalized().dot(offset.normalized()))
+		var value := proximity * (weights.x + weights.y * facing) / total
+		safe *= 1.0 - value
+	return 1.0 - safe
+
+
 func _on_pressure(pressure: float) -> void:
 	_pressure = pressure
 	cue_log.append(["pressure_changed", "music_pressure", "music", engine.clock, 1.0])
-	engine.set_pressure(pressure)
+	if not engine.parameter_source.is_valid():
+		engine.set_pressure(pressure)
 	if ace_playing():
 		ace.set_pressure(pressure)
 
@@ -2468,6 +2525,7 @@ func _flush_flow() -> void:
 					engine.menu_theme("title", true, at)
 					_ace_named("title", at)
 			"unseal":
+				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()
 				if ace_playing():
 					ace.warden_broken()

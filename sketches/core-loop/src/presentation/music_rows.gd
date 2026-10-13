@@ -8,23 +8,33 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 # trim_sound names an existing bank level; priority comes from the triggering fact.
 const CUES := {
 	"riser_natural": {"family": "natural", "rise": true, "voice": "stage", "notes": [62, 65, 69, 72, 74, 77, 81, 86], "trim_sound": "build_riser"},
-	"drop_flood": {"family": "natural", "rise": false, "voice": "stage", "notes": [50, 62, 57], "accent": "kick", "trim_sound": "slam_boom"},
+	"drop_flood": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [50, 62, 57], "accent": "kick", "trim_sound": "slam_boom"},
 	"riser_fleet": {"family": "fleet", "rise": true, "voice": "brass", "notes": [50, 51, 62, 63, 74, 75, 86, 87], "accent": "anvil", "trim_sound": "fleet_motif"},
-	"drop_fleet": {"family": "fleet", "rise": false, "voice": "brass", "notes": [50], "sound": "fleet_motif", "trim_sound": "fleet_motif"},
+	"drop_fleet": {"danger": true, "family": "fleet", "rise": false, "voice": "brass", "notes": [50], "sound": "fleet_motif", "trim_sound": "fleet_motif"},
 	"riser_ancient": {"family": "ancient", "rise": true, "voice": "sub", "notes": [44, 56], "trim_sound": "reactor_erupt"},
-	"drop_ancient": {"family": "ancient", "rise": false, "voice": "sub", "notes": [44], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
+	"drop_ancient": {"danger": true, "family": "ancient", "rise": false, "voice": "sub", "notes": [44], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
 	"riser_industrial": {"family": "industrial", "rise": true, "voice": "steam_whistle", "notes": [62, 65, 67, 69, 74, 77, 81, 86], "trim_sound": "threat_whistle"},
-	"drop_industrial": {"family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50], "sound": "smash_crack", "trim_sound": "smash_crack"},
+	"drop_industrial": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50], "sound": "smash_crack", "trim_sound": "smash_crack"},
 	"drop_flash_flood": {"alias": "drop_flood"},
 	"drop_fleet_anvil": {"alias": "drop_fleet"},
 	"riser_mind_quote": {"alias": "riser_ancient"},
 	"drop_mind_wrong": {"alias": "drop_ancient"},
 	"drop_boiler": {"alias": "drop_industrial"},
-	"stinger_lightning": {"family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
+	"stinger_lightning": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
 }
 const ANCIENT_VOICES := {"reactor_relic": "reactor", "swarm_remnant": "swarm", "mind_hand": "mind"}
 const ANCIENT_DROPS := {"reactor": "reactor_erupt", "swarm": "swarm_lock", "mind": "mind_"}
 const STAGE_VOICES := ["lead", "brass", "talk"]
+
+
+const WARDEN_CUES := {"warden_engaged": {"danger": true}, "warden_charge": {"danger": true}, "boss_attack_telegraphed": {"danger": true}}
+
+
+static func danger(id: String) -> bool:
+	var row: Dictionary = CUES.get(id, WARDEN_CUES.get(id, {}))
+	if row.has("alias"):
+		return danger(row.alias)
+	return bool(row.get("danger", false))
 
 
 static func cue(id: String, context: Dictionary = {}) -> Dictionary:
