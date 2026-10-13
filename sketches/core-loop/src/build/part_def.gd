@@ -149,7 +149,7 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.reads = row.get("reads", def._read_stats())
 	var player_global: bool = def.max_hp_bonus != 0.0 or not def.effect.is_empty() \
 		or not def.charges.is_empty() or def.trigger != "" or def.magnet != 1.0 \
-		or def.cooldown_scale != 1.0 or def.kill_scrap != 1.0
+		or def.cooldown_scale != 1.0 or def.kill_scrap != 1.0 or row.has("relay")
 	for key in def.mods:
 		if not key in WEAPON_MODS:
 			player_global = true

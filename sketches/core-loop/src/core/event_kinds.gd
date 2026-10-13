@@ -1021,6 +1021,8 @@ const ANCIENT_LIGHT := Palette.ANCIENT
 const WORLD_ROWS := {
 	# PARK section 5: hostile warnings fall with a pure tone; landed forms keep
 	# the same family's colour. Priority is consumed by the existing audio grammar.
+	"ground_slump": {"group": "event", "color": Palette.HAZARD, "shape": "bar", "pattern": "dust_crack", "dust_height_m": 3.0, "crack_width_m": 0.3, "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 2},
+	"ground_slump_landed": {"group": "event", "color": Palette.HAZARD, "shape": "bar", "pattern": "dust_crack", "dust_height_m": 3.0, "crack_width_m": 0.3, "sound": "slam_boom", "sound_next": "rockfall_boom", "hud": "", "objective": "", "priority": 2},
 	"flood_rising": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "threat_whistle", "sound_next": "flood_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"flood_landed": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "slam_boom", "sound_next": "flood_drop", "hud": "", "objective": "", "priority": 2},
 	"fleet_inbound": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "fleet_falling_pure", "hud": "", "objective": "", "priority": 2},
@@ -1031,6 +1033,18 @@ const WORLD_ROWS := {
 	"boiler_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "steam_whistle_percussion_drop", "hud": "", "objective": "", "priority": 2},
 	"lightning_charge": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "lightning_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"lightning_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "lightning_strike", "hud": "", "objective": "", "priority": 2},
+	# KE-FORMS: authored park telegraph forms with no record (PARK section 5). Hostile warnings fall with a pure
+	# tone and take the hazard colour; the drain opens a route, so it is a ride in sandstone with a rising breath.
+	"crust_crack": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 2},
+	"crust_crack_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "rockfall_boom", "hud": "", "objective": "", "priority": 2},
+	"drain_gurgle": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_glide_wind", "hud": "", "objective": "", "priority": 1},
+	"drain_landed": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "found_chime", "sound_next": "found_chime", "hud": "", "objective": "", "priority": 1},
+	"trestle_groan": {"group": "event", "color": Palette.HAZARD, "shape": "bar", "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 2},
+	"trestle_landed": {"group": "event", "color": Palette.HAZARD, "shape": "bar", "sound": "slam_boom", "sound_next": "rockfall_boom", "hud": "", "objective": "", "priority": 2},
+	"lightning_mark": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "lightning_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"lightning_mark_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "lightning_strike", "hud": "", "objective": "", "priority": 2},
+	"reactor_overload": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "boiler_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"reactor_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "crater_crump_sub_boom", "hud": "", "objective": "", "priority": 2},
 	# The shell's resolved air factor moved (Build.shell_air_changed): one fact for S4, K5 and R6. The ring on the
 	# hero pod, its colour and the released-spring sound read this row; direction is the ring's motion and the pitch.
 	"shell_air_shift": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "shell_spring", "hud": "", "objective": "", "priority": 1},
