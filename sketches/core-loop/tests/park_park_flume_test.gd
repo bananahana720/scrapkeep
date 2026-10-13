@@ -636,6 +636,41 @@ for k,seed in [('sable',1),('rivet',5),('sable',4),('tally',5),('floor',1)]:
   assert not any('SCRIPT ERROR' in x or x.startswith('ERROR:') for x in logs[0].read_text().splitlines()),'rejected named replay '+name
   if mode=='trace':
    assert (folder/(k+'-seed-'+str(seed)+'-trace.json')).exists(),'missing named replay trace '+name
+import math
+
+def directed_share(a,b):
+ bins={}
+ for x,z in b:
+  bins.setdefault((math.floor(x/8),math.floor(z/8)),[]).append((x,z))
+ hits=0
+ for x,z in a:
+  i,j=math.floor(x/8),math.floor(z/8)
+  hits+=any((x-u)**2+(z-v)**2<=64 for di in [-1,0,1] for dj in [-1,0,1] for u,v in bins.get((i+di,j+dj),[]))
+ return hits/len(a)
+
+def distinct_lines(paths):
+ shares={(a,b):directed_share(paths[a],paths[b]) for a in paths for b in paths if a!=b}
+ return shares,all(v<.5 for v in shares.values())
+
+selected=[('sable',1),('rivet',5),('tally',5)]
+paths={}
+for k,seed in selected:
+ name='solo-'+k+str(seed)+'-trace'
+ receipt=p/'solos'/name/(k+'-seed-'+str(seed)+'-trace.json')
+ ticks=json.loads(receipt.read_text())['ticks']
+ assert ticks,'empty distinct-line trace '+name
+ paths[k]=[(t['at'][0],t['at'][2]) for t in ticks]
+ assert str(receipt) in b,'missing distinct-line receipt '+name
+shares,distinct=distinct_lines(paths)
+assert distinct,'fewer than three mutually distinct lines'
+assert 'Mutually distinct lines: sable / seed 1, rivet / seed 5, tally / seed 5; PASS.' in b,'missing current distinct-line result'
+for (a,c),share in shares.items():
+ line='| '+a+' → '+c+' | '+format(share,'.5f')+' |'
+ assert b.count(line)==1,'missing or wrong directed overlap '+a+' to '+c
+control=dict(paths);control['tally']=paths['sable']
+assert not distinct_lines(control)[1],'duplicated-path negative control accepted'
+print('CURRENT DISTINCT LINES: PASS (3 mutually distinct, maximum directed share '+format(max(shares.values()),'.5f')+'; duplicated-path control rejected)')
+
 stops=json.loads((p/'stop-classification.json').read_text())
 raw_stops=[(k,r['seed'],s) for k,rows in pop.items() for r in rows for s in r['dead_stop_at']]
 assert len(stops)==len(raw_stops),'missing stop classification'
