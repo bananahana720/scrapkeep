@@ -511,6 +511,23 @@ for k,seed,s in raw_stops:
  trace=Path(item['receipt']); traced=json.loads((trace.parent/(k+'.json')).read_text())['runs']
  row=next(r for r in pop[k] if r['seed']==seed)
  assert traced==[row],'stop traced row mismatch'
+ plain=Path(item['plain_receipt']);probe=Path(item['probe_receipt'])
+ assert json.loads(plain.read_text())['runs']==[row],'stop plain row mismatch'
+ assert json.loads((probe.parent/(k+'.json')).read_text())['runs']==[row],'stop probe row mismatch'
+ ticks=json.loads(trace.read_text())['ticks'];observed=json.loads((probe.parent/(k+'-seed-'+str(seed)+'-trace.json')).read_text())['ticks']
+ assert ticks==observed,'stop probe changes trace'
+ for folder in [trace.parent,plain.parent,probe.parent]:
+  logs=list((folder/'children').glob('*/child.log'))
+  assert len(logs)==1,'missing solo child log'
+  assert not any('SCRIPT ERROR' in x or x.startswith('ERROR:') for x in logs[0].read_text().splitlines()),'unqualified solo log'
+ increments=[tick for i,tick in enumerate(ticks) if tick['dead_stops']>(ticks[i-1]['dead_stops'] if i else 0)]
+ stop=next(tick for tick in increments if abs(tick['time']-s['time'])<.02)
+ contacts=[body for observation in json.loads(probe.read_text())['contacts'] if stop['tick']-90<=observation['tick']<=stop['tick'] for body in observation['bodies']]
+ enemy=[body for body in contacts if body.get('kind') and body.get('spawn',{}).get('director')]
+ assert item['classification']==('pack' if enemy else 'terrain'),'unsupported stop classification'
+ if enemy:
+  assert item['enemy_kind'] in [body['kind'] for body in enemy],'wrong enemy kind'
+  assert item['provenance']==('home' if any(body['spawn'].get('home_ids') for body in enemy) else 'director'),'wrong spawning provenance'
  assert str(trace) in b and item['classification'] in b,'stop missing from publication'
  if item['classification']=='pack':
   assert item.get('enemy_kind') and item.get('provenance') in ['home','director'],'anonymous pack exemption'
@@ -536,7 +553,7 @@ for k,rs in pop.items():
 assert '| Band | '+' | '.join(keys)+' |' in b,'missing complete table header'
 for label in labels:
  line='| '+label+' | '+' | '.join(expected[label][k] for k in keys)+' |'
- assert line in b,'missing or wrong measured row: '+label
+ assert b.count(line)==1,'missing, duplicate or wrong measured row: '+label
 assert meta['head'] in b and meta['tool_sha256'] in b,'missing provenance'
 for seed in [1,2,3]:
  receipt=p/('win-seed-'+str(seed))/'bots.ndjson'
