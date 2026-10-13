@@ -520,10 +520,13 @@ func _pump() -> void:
 		var now := Time.get_ticks_usec()
 		var owed := int((now - _virtual_usec) * Harmony.RATE / 1000000.0)
 		if owed > 0:
-			_virtual_usec += int(owed * 1000000.0 / Harmony.RATE)
-			_unmute_for_handover(mini(owed, 8192))
-			engine.render(mini(owed, 8192))
-			_ace_render(mini(owed, 8192), ace_live)
+			var requested := mini(owed, 8192)
+			var frames := _park_render_limit(requested)
+			_virtual_usec += int((owed - requested + frames) * 1000000.0 / Harmony.RATE)
+			if frames > 0:
+				_unmute_for_handover(frames)
+				engine.render(frames)
+				_ace_render(frames, ace_live)
 		return
 	if _music_pb == null or _stinger_pb == null:
 		return
@@ -534,7 +537,7 @@ func _pump() -> void:
 	else:
 		_deepen_on_skip()
 		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, queue_target), _stinger_pb.get_frames_available())
-	frames = mini(frames, 8192)
+	frames = _park_render_limit(mini(frames, 8192))
 	if frames <= 0:
 		return
 	var from := engine.clock
@@ -1560,6 +1563,24 @@ func _guard_park_bookings() -> void:
 			cue.booked = cue.due >= engine.clock
 			if cue.booked:
 				_book_park_drop(event_id, cue)
+
+
+# Leave the booked sample unrendered until physics commits or cancels the landing.
+# A clearance check cannot revoke samples already pushed into a device's ring.
+func _park_render_limit(frames: int) -> int:
+	var director = _park_director()
+	if director == null:
+		return frames
+	for action in engine._actions:
+		if action.get("type") != "park_cue" or action.row.rise:
+			continue
+		var owner: String = action.get("owner", "")
+		if not _park_cues.has(owner) or not _park_cues[owner].booked:
+			continue
+		var state := _park_event_state(owner)
+		if not state.is_empty() and state.phase == director.ANNOUNCED:
+			frames = mini(frames, maxi(0, int(action.at) - engine.clock))
+	return frames
 
 
 func _park_event_land(event_id: String) -> bool:
