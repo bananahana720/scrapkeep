@@ -339,7 +339,8 @@ func _physics_process(delta: float) -> void:
 		events.set_clock_tier(director.effective_tier())
 		_publish(events.advance(delta, ball, velocity, {
 			"grounded": player.state.grounded, "ball_radius_m": player.Tuning.RADIUS,
-		}))
+		}.merged(ctx.root.presentation.audio.park_transport(events.stage_time + delta)
+			if ctx.root.get("presentation") != null else {})))
 	if contraptions.has(ctx.flow.stage()) and contraptions[ctx.flow.stage()].live:
 		var steering: bool = player.intent.move.length() > 0.1 or player.intent.jump_pressed
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):

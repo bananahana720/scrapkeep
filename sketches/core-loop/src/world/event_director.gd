@@ -596,7 +596,8 @@ func _park_at(state: Dictionary) -> Vector3:
 
 func _park_fact(state: Dictionary, kind: String) -> Dictionary:
 	var fact := {"kind": kind, "id": state.row.id, "family": "weather" if state.weather else state.row.family,
-		"event_kind": state.row.kind, "time_s": stage_time, "at": _park_at(state), "row": state.row.duplicate(true)}
+		"event_kind": state.row.kind, "time_s": stage_time, "landing_s": state.due_s,
+		"at": _park_at(state), "row": state.row.duplicate(true)}
 	if not state.weather:
 		fact.route_change = state.row.route_change.duplicate(true)
 	return fact
@@ -635,7 +636,11 @@ func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: D
 	return true
 
 
-func _park_route_safe(proposed: Dictionary, withdrawing := false) -> bool:
+func route_open(route_id: String) -> bool:
+	return bool(_park_routes_open().get(route_id, false))
+
+
+func _park_routes_open(proposed: Dictionary = {}, withdrawing := false) -> Dictionary:
 	var open := {}
 	for route in _park.get("routes", []):
 		open[route.id] = true
@@ -652,6 +657,11 @@ func _park_route_safe(proposed: Dictionary, withdrawing := false) -> bool:
 	for change in changes:
 		for id in change.closes:
 			open[id] = false
+	return open
+
+
+func _park_route_safe(proposed: Dictionary, withdrawing := false) -> bool:
+	var open := _park_routes_open(proposed, withdrawing)
 	var reached := {"drop_in": true}
 	var pending := ["drop_in"]
 	while not pending.is_empty():
