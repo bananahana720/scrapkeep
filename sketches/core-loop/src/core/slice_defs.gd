@@ -6,8 +6,8 @@ const Worlds := preload("res://src/core/worlds.gd")
 # Same shape as stage_defs.gd. It repeats that file's two lookups because a base script's
 # static functions would read the base's own DEFS, not this one's. The Warden's plating,
 # hp and posture are the slice's own, tuned against ball size by a bot sweep
-# (posture_bands_test pins them); they match the alpha's Cable Reach row, stage 2 of
-# alpha_defs.gd, not its stage 1. The slice has no timed events and no vault, and its
+# (posture_bands_test pins them). Health and plating match the alpha's Cable Reach,
+# stage 2; the slice owns its contact-gain separation. It has no timed events or vault, and its
 # enemies arrive as the authored packs below, drawn by the director instead of its
 # clock, its build tilt and its unlock rules.
 
@@ -47,7 +47,8 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "pressure": {"elite_rate": 0.0}, "warden_hint": "Break its guard, then smash the core."},
+		"posture": {"curve": 2.0, "ram_shatters": false, "base": {"ram": 25.0},
+			"contact_gain_scale": 0.5, "contact_gain_floor": 0.65}, "pressure": {"elite_rate": 0.0}, "warden_hint": "Break its guard, then smash the core."},
 ]
 
 
