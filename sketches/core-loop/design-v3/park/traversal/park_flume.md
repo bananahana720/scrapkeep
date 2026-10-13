@@ -11,6 +11,20 @@ Every earlier table remains historical. Round 6 reruns use the committed `res://
 
 Coordinator F2 corrects the stale two-of-three break requirement. Ruling 23 requires every seed to reach and engage the Warden with no traversal-cause stall; breaks are reported separately under the unchanged 600 s wrapper. Warden fight duration belongs to the Warden fight units and Andrew's task #5.
 
+<!-- current-win-results -->
+## Current win results, round 6
+
+Measured with the unchanged scratch `win_600.gd`, which only sets `stage_limit = 600.0` before tick 1. Each process uses `--table=park --from-stage=2 --stages=2 --policy=completionist`. Coordinator F2 and ruling 23 require engagement; breaks are reported separately. Historical proofs below remain historical.
+
+| Seed | Engage s | Break s | Engage to break s | Outcome | Stage stop | Receipt |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 116.69 | 299.4 | 182.71 | stalled | gates | `/home/andrew/scratch/w13/sol/kd2-flume-r6/win-seed-1/bots.ndjson` |
+| 2 | 118.64 | not broken in 600 s | not applicable | stalled | beacon | `/home/andrew/scratch/w13/sol/kd2-flume-r6/win-seed-2/bots.ndjson` |
+| 3 | 110.52 | not broken in 600 s | not applicable | stalled | beacon | `/home/andrew/scratch/w13/sol/kd2-flume-r6/win-seed-3/bots.ndjson` |
+
+Every seed reaches and engages the Warden; none stalls before engagement. The logs contain no `get_rid` script error. Each win log contains the shared missing `drop_collapse` music cue. The reach/engagement observations satisfy ruling 23; these runs do not establish error-free whole-stage execution or the physical fallen ramp. Post-engagement beacon or gate stalls are reported above. Warden break duration stays with the Warden fight units and Andrew's task #5.
+<!-- /current-win-results -->
+
 **Historical round 5 qualification: BLOCKED.** STEP 0 merged candidate `3debeb86e30a63756e7e83c9950e37a79d656b68` at `56a4b80f8e9313cea755f11133dffb157eedcab7`, without conflicts. Every earlier traversal measurement is superseded by ruling 28. The bake and graph were rebuilt; the committed measuring tool is `tools/traversal_line.gd`, SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. The first fresh Sable and Rivet children throw at `natural.gd:267` because the authored hollow-collapse effect lacks `depth_m`. TRAV-DET2 rejects those rows as INCONCLUSIVE. The population was stopped, so there is no accepted round-5 population, replay equality, band verdict or stop classification. No geometry repair was made. Evidence and input hashes are under `/home/andrew/scratch/w13/sol/kd2-flume-r5/`.
 
 The real-stage stepped probe loads stage 2 and advances its director with tier 2 and one `chunk_2` notification. It records the reactor telegraph at 0.0611 s and land at 5.6111 s, with a live fallout hazard and `annex_ramp_line` open. It records the collapse telegraph at 0.2611 s and land fact at 13.9611 s, with `flume_mid` closed and `trestle_ramp_line` open. The collapse throws on missing `depth_m` during setup and `fill_s` at land. Its emitted facts do not prove a working fallen ramp. `events-stage-red.log`, `events-stage.json` and `events-verdict.json` retain the runtime result; the error-aware qualification is FAIL despite the probe's eight fact assertions passing.
