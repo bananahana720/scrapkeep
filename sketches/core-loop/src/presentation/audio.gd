@@ -713,7 +713,11 @@ func ace_ready() -> bool:
 	ace.ultimate_lift = _ult_lift
 	ace.parameter_enabled = engine.parameter_source.is_valid()
 	if ace.parameter_enabled:
-		ace.commit_parameters(engine.clock, engine.parameter_committed_values, engine.parameter_committed_released, engine.ultimate_lift, "")
+		ace.parameters = engine.parameter_committed_values.duplicate()
+		ace.parameter_released = engine.parameter_committed_released
+		ace._parameter_danger_floor = engine.parameter_committed_danger_floor
+		ace.pressure = float(ace.parameters.get("threat", 0.0))
+		ace.ultimate_lift = engine.ultimate_lift
 	return true
 
 

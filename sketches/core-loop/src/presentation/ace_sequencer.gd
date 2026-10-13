@@ -231,7 +231,7 @@ func start_level(at: int) -> void:
 	hold_until = -1
 	warden_state = "closed"
 	threat = 0
-	pressure = 0.0
+	pressure = float(parameters.get("threat", 0.0)) if parameter_enabled else 0.0
 	in_bay = false
 	_schedule(_desired(), maxi(at, earliest))
 
@@ -820,6 +820,13 @@ func _run(action: Dictionary) -> void:
 			_parameter_follow_now = false
 			if section != "":
 				_retarget(STOP_RAMP)
+			if not pending.is_empty():
+				var profile := _profile(String(pending.section))
+				for voice: Voice in pending.voices:
+					if voice.stem == "other":
+						var gain := _gain_of(profile.other, "other")
+						if voice.target != gain:
+							_ramp_to(voice, gain, STOP_RAMP)
 			if previous != parameters or previous_released != parameter_released or previous_lift != ultimate_lift or previous_gain != parameter_gain("other"):
 				var targets := {}
 				var performing: Array = pending.get("voices", voices) if int(pending.get("begin", -1)) == clock else voices

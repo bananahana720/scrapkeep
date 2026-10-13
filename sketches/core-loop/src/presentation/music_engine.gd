@@ -337,6 +337,7 @@ var _parameter_curve_play := false
 var _parameter_last_ultimate := false
 var parameter_committed_values := {}
 var parameter_committed_released := false
+var parameter_committed_danger_floor := 0.0
 var _mid := PackedFloat32Array()
 var _left := PackedFloat32Array()
 var _right := PackedFloat32Array()
@@ -1853,6 +1854,7 @@ func _retarget() -> void:
 				parameter_layer_log.pop_front()
 		parameter_committed_values = parameters.duplicate()
 		parameter_committed_released = _parameter_released
+		parameter_committed_danger_floor = _parameter_danger_floor
 		parameter_commit.emit(clock, parameter_committed_values, parameter_committed_released, ultimate_lift, _parameter_danger)
 
 
