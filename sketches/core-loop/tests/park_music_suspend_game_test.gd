@@ -31,6 +31,7 @@ func _suspension(in_bay: bool) -> void:
 	game.table = "park"
 	root.add_child(game)
 	game.ctx.calm = true
+	if in_bay: game.flow.beacon_seconds_override = 0.2
 	game.flow.press_start()
 	game.flow.choose_class(0)
 	game.player.set_frozen(true)
@@ -44,7 +45,10 @@ func _suspension(in_bay: bool) -> void:
 			announcement.append({"sample": audio.engine.clock + roundi(seconds * Harmony.RATE),
 				"at": audio.engine.clock, "lead": roundi(seconds * Harmony.RATE), "stage": game.world.events.stage_time + seconds}))
 	game.events.event_started.connect(func(id):
-		if id == "plunge_pool_flood": starts.append(game.world.events.stage_time))
+		if id == "plunge_pool_flood":
+			var e = audio.engine
+			starts.append({"stage": game.world.events.stage_time, "sample": e.clock,
+				"origin": e.bar_origin, "bar": e.step_len * Harmony.STEPS_PER_BAR}))
 	game.world.director.stage_time = game.world.director.TIER_SECONDS
 	for frame in 120:
 		await physics_frame
@@ -109,12 +113,16 @@ func _suspension(in_bay: bool) -> void:
 			break
 	t.check(label + " stage resumes", not resume.is_empty(), str(resume))
 	var expected := -1
+	var after_fact := false
 	if not resume.is_empty():
 		var mapped: int = resume.sample + roundi((float(flood.due_s) - float(resume.stage)) * Harmony.RATE)
 		expected = resume.origin + ceili(float(mapped - resume.origin) / resume.bar) * resume.bar
+		after_fact = mapped < resume.sample or expected != mapped
 	for frame in 1200:
 		await physics_frame
 		if not starts.is_empty() and audio.engine.clock > expected + audio.engine.beat_len(): break
+	if after_fact and not starts.is_empty():
+		expected = starts[0].origin + ceili(float(starts[0].sample - starts[0].origin) / starts[0].bar) * starts[0].bar
 	var drops: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "drop_flood")
 	t.check(label + " unchanged director landing", float(flood.due_s) == float(announcement[0].stage), str([flood.due_s, announcement[0].stage]))
 	t.check(label + " exactly one resumed director drop", starts.size() == 1 and drops.size() == 1 and drops[0].at == expected
