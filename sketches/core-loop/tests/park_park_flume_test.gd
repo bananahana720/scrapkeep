@@ -376,14 +376,19 @@ func collapse_event_pins() -> void:
 	if t.check("collapse has a physical swapped surface", not swap.is_empty() and swap.has("target")):
 		t.check("collapse fully lands in two seconds", is_equal_approx(float(swap.progress), 1.0) and swap.body.visible)
 		var faces: PackedVector3Array = swap.body.get_child(1).shape.get_faces()
-		var surface = map.profiles["trestle_ramp_after"].surface
+		var view: MeshInstance3D = swap.body.get_child(0)
+		var mesh_vertices: PackedVector3Array = view.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for k in faces.size():
+			faces[k] = swap.body.global_transform * faces[k]
+		for k in mesh_vertices.size():
+			mesh_vertices[k] = view.global_transform * mesh_vertices[k]
 		# Independent design geometry: 373 m span, y 44 deck, measured baked floor at its midpoint.
 		var centre := Vector2(-115.0, 5.5)
 		var axis := Vector2.DOWN.rotated(-deg_to_rad(30.6))
 		for fraction in [0.0, 0.25, 0.5, 0.75, 1.0]:
 			var point: Vector2 = centre + axis * (fraction - 0.5) * 373.0
 			var expected := lerpf(44.0, 23.5586042404175, fraction)
-			var drawn: float = surface.height(point)
+			var drawn := collider_y(mesh_vertices, point)
 			var physical := collider_y(faces, point)
 			print("[fallen ramp] fraction %.2f xz %s expected %.6f mesh %.6f collider %.6f" % [fraction, point, expected, drawn, physical])
 			t.check("fallen ramp mesh at %.2f" % fraction, absf(drawn - expected) < 0.05)
