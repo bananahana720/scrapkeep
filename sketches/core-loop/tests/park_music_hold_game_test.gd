@@ -182,6 +182,13 @@ func _recovery(before_deadline: bool, direct_live := false) -> void:
 			break
 	t.check(label + " cancelled before recovery", not audio.engine._actions.any(func(a): return a.get("type") == "park_cue" and a.owner == "plunge_pool_flood" and not a.row.rise)
 		and (game.world.events.stage_time < announcement[0].stage if before_deadline else flood.holding), str([flood.holding, game.world.events.stage_time]))
+	if before_deadline:
+		for block in 64:
+			audio._virtual_usec -= int(8192.0 * 1000000.0 / Harmony.RATE)
+			audio._pump()
+			if audio.engine.clock >= announcement[0].sample:
+				break
+		t.check(label + " cancelled deadline remains unrendered", audio.engine.clock == announcement[0].sample, str([audio.engine.clock, announcement[0].sample]))
 	if not before_deadline:
 		for frame in 12:
 			await physics_frame
