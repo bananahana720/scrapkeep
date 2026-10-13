@@ -45,11 +45,11 @@ func _run() -> void:
 		for key in ["contact_gain_scale", "contact_gain_floor", "drain_rate"]:
 			t.eq("stage %d shares family %s" % [stage, key], numbers.get(key), pair.get(key))
 		for ratio in [0.35, 0.75]:
+			warden = await _fresh(stage, t)
 			t.eq("stage %d isolated contact starts with untouched live posture" % stage, warden.posture(), 0.0)
 			t.eq("stage %d setup reads contact gain" % stage, warden._posture.contact_gain_scale, float(numbers.get("contact_gain_scale", 0.0)))
 			t.eq("stage %d setup reads contact floor" % stage, warden._posture.contact_gain_floor, float(numbers.get("contact_gain_floor", 0.0)))
 			t.eq("stage %d setup reads drain rate" % stage, warden._posture.drain_rate, float(numbers.get("drain_rate", BossPosture.DRAIN_RATE)))
-			warden._posture = BossPosture.new(numbers)
 			game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
 			game.combat.heft_override = 1.0
 			var damage: Array = game.combat.STRIKE_DAMAGE["ram"]
@@ -71,7 +71,7 @@ func _run() -> void:
 			await physics_frame
 		if stage < 5:
 			for ratio in [0.50, 0.60]:
-				warden._posture = BossPosture.new(numbers)
+				warden = await _fresh(stage, t)
 				game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
 				var damage: Array = game.combat.STRIKE_DAMAGE["ram"]
 				var force: float = (ratio * warden.plating - damage[0]) / damage[1]
@@ -84,14 +84,20 @@ func _run() -> void:
 						"landed %.3f, two contacts need %.3f each" % [warden.posture(), BossPosture.FULL / 2.0])
 				await physics_frame
 		if stage >= 5:
-			warden._posture = BossPosture.new(numbers)
+			warden = await _fresh(stage, t)
 			game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
 			var damage: Array = game.combat.STRIKE_DAMAGE["ram"]
 			var force: float = (0.60 * warden.plating - damage[0]) / damage[1]
 			game.combat.strike(warden, "ram", force)
 			t.check("stage %d medium Mind contact leaves room for another hit" % stage, warden.posture() > 0.0 and warden.posture() < BossPosture.FULL,
 				"landed %.3f of %.3f" % [warden.posture(), BossPosture.FULL])
-			warden._posture = BossPosture.new(numbers)
+			warden = await _fresh(stage, t)
+			var expected := minf(BossPosture.FULL, BossPosture.BASE["ram"] * pow(0.60, float(numbers["curve"]))
+				* (1.0 + float(numbers["contact_gain_scale"]) * maxf(0.0, 0.60 - float(numbers["contact_gain_floor"]))))
+			published.clear()
+			game.combat.strike(warden, "ram", force)
+			t.near("stage %d live regeneration case first lands record gain" % stage, warden.posture(), expected, 0.001)
+			t.check("stage %d regeneration case publishes landed gain" % stage, not published.is_empty() and absf(float(published.back()) - expected) < 0.001)
 			warden._posture.posture = 50.0
 			warden._posture.step(BossPosture.DRAIN_DELAY + 1.0)
 			var drain := float(numbers.get("drain_rate", BossPosture.DRAIN_RATE))
@@ -113,3 +119,18 @@ func _run() -> void:
 	t.check("Mind remains a smoke failure when red", not quarantine.contains("posture_bands_mind_test\t"))
 	game.free()
 	quit(t.verdict())
+
+
+func _fresh(stage: int, t):
+	game.flow.enter_stage(stage, Vector3.ZERO, false)
+	await physics_frame
+	await physics_frame
+	var warden = game.flow.warden
+	var numbers: Dictionary = AlphaDefs.DEFS[stage - 1]["posture"]
+	t.eq("stage %d fresh setup starts empty" % stage, warden.posture(), 0.0)
+	t.eq("stage %d fresh setup reads contact gain" % stage, warden._posture.contact_gain_scale, float(numbers.get("contact_gain_scale", 0.0)))
+	t.eq("stage %d fresh setup reads contact floor" % stage, warden._posture.contact_gain_floor, float(numbers.get("contact_gain_floor", 0.0)))
+	t.eq("stage %d fresh setup reads drain rate" % stage, warden._posture.drain_rate, float(numbers.get("drain_rate", BossPosture.DRAIN_RATE)))
+	game.player.reset_to(warden.global_position + Vector3.UP * 80.0)
+	game.combat.heft_override = 1.0
+	return warden
