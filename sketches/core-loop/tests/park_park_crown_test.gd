@@ -143,6 +143,12 @@ func _run() -> void:
 	for row in park["park_rows"]:
 		by_row[String(row["id"])] = row
 	var clear_zones := ParkRecipes.clear_zones(park)
+	var t1_anchors: Array = park["park_rows"].filter(func(row: Dictionary) -> bool: return row["id"] == "tarn_west_gap_anchor")
+	t.eq("T1 adds exactly one midpoint anchor row", t1_anchors.size(), 1)
+	if t1_anchors.size() == 1:
+		t.eq("T1 midpoint anchor preserves its clearance placement", t1_anchors[0]["at"], [-131.894, -237.941])
+		t.eq("T1 anchor field builds exactly one physical post", ParkRecipes.anchor_posts(t1_anchors[0], clear_zones).size(), 1)
+		t.eq("T1 anchor does not reshape the flight ground", String(t1_anchors[0]["stamp"]), "")
 	t.eq("T1 restores the third Tarn launch without another launch redesign", by_row["kick_wmid_3"]["size"], [60.0, 32.0, 36.0])
 	t.eq("T1 preserves the measured third-trial entry height", float(by_row["kick_wmid_3"]["y"]), 56.118102)
 	var heights := ParkTerrain._read_zstd(BAKE_DIR + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
