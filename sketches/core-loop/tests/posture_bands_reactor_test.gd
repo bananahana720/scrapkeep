@@ -48,7 +48,11 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # Base small medians 59.3 / 55.6 / 59.3, grown 35.8 each. Small seed 0 and seed 2 vary run to run (55.6 or 59.3;
 # 53.5 to 62.1). The ratio band, small at least twice grown, fails on head and base alike at 1.55 to 1.74: that
 # is the band, not a pin, so it stays a red check for the coordinator (no row: QUARANTINE.tsv is at its cap).
-const EXPECT_SMALL_S := 59.3
+# 2026-10-13 WT-BANDS round 5: small re-pin 59.3 -> 69.80 s after IDENTITY-DET.
+# Three unchanged controls: small [69.80, 69.80, 69.80], grown [33.94, 33.94, 33.94],
+# ratio 2.05657 in each; both median spreads 0 percent. Small seed 2 reaches CAP in each.
+# Grown pin 35.8, tuning, arms, seeds, bands and tolerance stay unchanged.
+const EXPECT_SMALL_S := 69.80
 const EXPECT_GROWN_S := 35.8
 const TOLERANCE := 0.10
 const WALL_S := 330.0

@@ -12,6 +12,8 @@ var announced := []
 var started := []
 var announced_s := -1.0
 var started_s := -1.0
+# Music bar grid the director booked the landing on, read at the announcement (KE8 moved landings onto it).
+var landing_grid := {}
 var warning_samples := []
 var forms := []
 var geometry_samples := []
@@ -33,7 +35,9 @@ func _run() -> void:
 	game.player.source = Intent.Scripted.new()
 	game.events.event_announced.connect(func(id, _lead):
 		announced.append(id)
-		if id == "tailings_slump": announced_s = game.world.events.stage_time)
+		if id == "tailings_slump":
+			announced_s = game.world.events.stage_time
+			landing_grid = game.presentation.audio._park_transport_snapshot.duplicate())
 	game.events.event_started.connect(func(id):
 		started.append(id)
 		if id == "tailings_slump":
@@ -102,7 +106,13 @@ func _run() -> void:
 	t.check("tailings_slump telegraphs through real Game loop", announced.has("tailings_slump"), str(announced))
 	t.check("tailings_slump lands through real Game loop", started.has("tailings_slump"), str(started))
 	t.check("slump lead precedes landing", started_s - announced_s >= float(authored.telegraph.lead_s), str(started_s - announced_s))
-	t.near("slump lands on the canonical downbeat", fposmod(started_s, Director.PARK_BAR_S), 0.0, 0.2)
+	# Since KE8 (1f09c265) the director books park landings on the live music bar grid, whose origin is the
+	# audio clock's next bar, not stage time zero. The downbeat is judged on the grid as booked at the
+	# announcement: at Engine.time_scale 10 the audio clock does not speed up, so the grid read later drifts.
+	t.check("landing read the music bar grid", landing_grid.has("bar_s") and landing_grid.has("bar_origin_s"), str(landing_grid))
+	var grid_bar := float(landing_grid.get("bar_s", Director.PARK_BAR_S))
+	var grid_phase := fposmod(started_s - float(landing_grid.get("bar_origin_s", 0.0)), grid_bar)
+	t.near("slump lands on the canonical downbeat", minf(grid_phase, grid_bar - grid_phase), 0.0, 0.2)
 	t.check("slump sight and sound facts read canonical forms", forms.has(authored.telegraph.form) and forms.has(Director.PARK_LAND_FACTS[authored.telegraph.form]), str(forms))
 	t.check("slump warning has dust and crack meshes", warning_samples.size() > 2)
 	if warning_samples.size() > 2:

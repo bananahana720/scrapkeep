@@ -151,6 +151,7 @@ func _run() -> void:
 	ult._on_stage_entered(stage, true)
 	_audio._on_stage_entered(stage, true)
 	await process_frame
+	_t.eq("retry-to-empty director reads the restored meter before rendering", _audio._ult_lift, ult.meter.full())
 	engine.render(Harmony.BAR + Harmony.STEP)
 	_t.check("17 a retry to an empty entry value drops a lift the mid-stage fill raised", lift_before and not ult.meter.full() and not engine.ultimate_lift,
 		"before %s, meter %.1f, lift %s" % [lift_before, ult.meter.value, engine.ultimate_lift])
@@ -162,6 +163,7 @@ func _run() -> void:
 	ult._on_stage_entered(stage, true)
 	_audio._on_stage_entered(stage, true)
 	await process_frame
+	_t.eq("retry-to-full director reads the restored meter before rendering", _audio._ult_lift, ult.meter.full())
 	engine.render(Harmony.BAR + Harmony.STEP)
 	_t.check("18 a retry to a full entry value brings back a lift the death cancel cleared", cleared and ult.meter.full() and engine.ultimate_lift,
 		"cleared %s, meter %.1f, lift %s" % [cleared, ult.meter.value, engine.ultimate_lift])
