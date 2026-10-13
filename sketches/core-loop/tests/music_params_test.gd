@@ -175,8 +175,8 @@ func _landmark_hum_fixture() -> void:
 	var voices: Array = hum._voices.filter(func(v): return v.layer == layer)
 	t.check("record-selected beacon hum starts on phrase", not voices.is_empty())
 	if not voices.is_empty():
-		t.eq("landmark hum uses record-selected existing samples", voices.back().buf, preload("res://src/presentation/sfx_bank.gd").samples("beacon_hum"))
-		t.near("landmark hum uses shared sound trim", voices.back().gl, db_to_linear(preload("res://src/presentation/sfx_bank.gd").trim_db("beacon_hum")) * 1.41 * cos(PI * 0.25))
+		t.check("landmark hum uses record-selected existing samples", voices.back().buf == preload("res://src/presentation/sfx_bank.gd").samples("beacon_hum"))
+		t.near("landmark hum uses shared sound trim", voices.back().gl, db_to_linear(preload("res://src/presentation/sfx_bank.gd").trim_db("beacon_hum")))
 	input.armour = 0.2
 	_advance(hum, boundary * 2 + 1)
 	t.eq("low armour releases landmark hum", hum.layer_target(layer), 0.0)
@@ -191,7 +191,10 @@ func _landmark_hum_fixture() -> void:
 	absent.schedule_restart(0, Music.PLAY, 0)
 	_advance(absent, boundary + 1)
 	t.check("no graph has no hum reader or contribution", not absent.parameter_layer_reads.has("approach") and absent.layer_target(layer) == 0.0 and absent.layer_starts[layer] == 0)
-	input = {"threat": 0.0, "armour": 1.0}
+	input = {"threat": 0.0, "approach": 1.0}
 	hum.parameters_stage_entered()
 	_advance(hum, boundary * 5 + 1)
+	t.check("absent armour has no reader and permits landmark hum", not hum.parameter_layer_reads.has("armour") and hum.layer_target(layer) == 1.0)
+	input = {"threat": 0.0}
+	_advance(hum, boundary * 6 + 1)
 	t.check("graph removal clears hum contribution and reader", not hum.parameter_layer_reads.has("approach") and hum.layer_target(layer) == 0.0)

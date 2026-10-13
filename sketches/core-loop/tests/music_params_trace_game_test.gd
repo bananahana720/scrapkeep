@@ -141,14 +141,24 @@ func _release_fixture() -> void:
 	engine.set_overcharge(2)
 	engine.set_fleet_ticks(3)
 	engine.parameter_danger("warden_engaged")
-	t.check("release fixture starts with busy layers", engine.layer_target(Music.LEAD) > 0.0)
+	game.player.reset_to(graph.position(graph.beacon_node))
+	var initial_enemy := ThreatEnemy.new()
+	root.add_child(initial_enemy)
+	initial_enemy.add_to_group("enemy")
+	initial_enemy.global_position = game.player.ball_position() + game.ctx.aim_forward() * 0.1
+	var busy_deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS
+	while engine.clock <= busy_deadline:
+		engine.render(mini(4096, busy_deadline + 1 - engine.clock))
+	t.check("release fixture starts with busy layers", [Music.KEYS, Music.LEAD, Music.WARM, Music.FLEET, Music.LANDMARK_HUM].all(func(layer): return engine.layer_target(layer) > 0.0) and engine.fleet_ticks == 3)
+
 	game.flow._unseal()
 	audio._flush_flow()
 	var deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS
 	while engine.clock <= deadline:
 		engine.render(mini(4096, deadline + 1 - engine.clock))
-	t.check("scripted Warden break releases within one phrase", Music.MELODIC.all(func(layer): return engine.layer_target(layer) == 0.0) and [Music.KEYS, Music.WARM, Music.WOB, Music.FLEET].all(func(layer): return engine.layer_target(layer) == 0.0))
+	t.check("scripted Warden break releases within one phrase", Music.MELODIC.all(func(layer): return engine.layer_target(layer) == 0.0) and [Music.KEYS, Music.WARM, Music.WOB, Music.FLEET, Music.LANDMARK_HUM].all(func(layer): return engine.layer_target(layer) == 0.0))
 	print("KE10_RELEASE scripted Game beacon_unsealed clock=%d deadline=%d" % [engine.clock, deadline])
+	initial_enemy.free()
 	game.events.launched.emit(Vector3.FORWARD * 30.0)
 	t.check("scripted launch arms stage transition", audio._launch_armed)
 	game.flow._finish_stage()
@@ -194,7 +204,7 @@ func _release_fixture() -> void:
 	var recovery_deadline: int = engine.clock + engine.bar_len() * Harmony.PHRASE_BARS * 2
 	while engine.clock <= recovery_deadline:
 		engine.render(mini(4096, recovery_deadline + 1 - engine.clock))
-	t.check("next stage restores eligible layers after landing", [Music.KEYS, Music.LEAD, Music.ARP, Music.WARM, Music.PAD, Music.CHOIR, Music.ECHO, Music.COUNTER, Music.FLEET].all(func(layer): return engine.layer_target(layer) > 0.0), str(engine._targets))
+	t.check("next stage restores eligible layers after landing", [Music.KEYS, Music.LEAD, Music.ARP, Music.WARM, Music.PAD, Music.CHOIR, Music.ECHO, Music.COUNTER, Music.FLEET, Music.LANDMARK_HUM].all(func(layer): return engine.layer_target(layer) > 0.0), str(engine._targets))
 	enemy.free()
 	game.flow.retry_stage()
 	audio._flush_flow()
@@ -221,6 +231,6 @@ func _absence_fixture() -> void:
 	var values: Dictionary = audio.sample_run_parameters()
 	t.check("no graph means no approach feed", not values.has("approach"), str(values))
 	t.check("armour off means no armour feed", not values.has("armour"), str(values))
-	t.check("absent Game feeds have no layer reader", not audio.engine.parameter_layer_reads.has("approach") and not audio.engine.parameter_layer_reads.has("armour"))
+	t.check("absent Game feeds have no layer reader", not audio.engine.parameter_layer_reads.has("approach") and not audio.engine.parameter_layer_reads.has("armour") and audio.engine.layer_target(Music.LANDMARK_HUM) == 0.0 and audio.engine.layer_starts[Music.LANDMARK_HUM] == 0)
 	game.queue_free()
 	await process_frame

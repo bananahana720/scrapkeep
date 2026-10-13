@@ -3,6 +3,7 @@ extends RefCounted
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 
 # The band. A sample-exact sequencer that mixes pre-rendered notes from synth.gd on a
@@ -32,12 +33,12 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 # beat of silence, and their payoff is the full texture plus the bass. A restrained
 # grid-locked wobble is kept only inside the Warden and Brindle drops.
 
-enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET }
+enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET, LANDMARK_HUM }
 # Tone-pending placeholders reuse Brindle's score with a different lead timbre.
 const BOSS_TRACKS := ["brindle", "waking", "mind"]
 const BOSS_LEAD_VOICES := {"brindle": "brass", "waking": "mallet", "mind": "talk"}
 
-const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter", "fleet"]
+const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter", "fleet", "landmark_hum"]
 # gain = floor + (1 - floor) * smoothstep(from, to, pressure). Each curve is monotonic.
 # The bass figure (layer 5) has a floor: it never leaves.
 const CURVES := [
@@ -56,12 +57,13 @@ const CURVES := [
 	[0.0, 0.7, 0.9],
 	[0.0, 0.8, 1.0],
 	[1.0, 0.0, 1.0],
+	[0.0, 0.0, 1.0],
 ]
 # The warm and wobble rows are placeholders: _retarget sets them from the overcharge
 # and the drop; the fleet row is gated by the difficulty ticks instead (set_fleet_ticks).
 # The melodic layers, in the order they enter: pad, arp, choir, lead, echo, counter.
 const MELODIC := [PAD, ARP, CHOIR, LEAD, ECHO, COUNTER]
-const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18, 0.3]
+const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18, 0.3, 1.0]
 # The restrained wobble: only in the Warden's and Brindle's drops, at half level.
 const WOB_DROP_GAIN := 0.5
 # The warm layer is not pressure: it is the overcharge, one step per bonus core.
@@ -72,9 +74,9 @@ const MODE_NAMES := ["idle", "play", "dead"]
 # What each mode lets through, per layer. Menus keep keys, sub, a light hat and the
 # restrained bass riff; death keeps the keys alone, so the band waits with you.
 const MODE_MASK := [
-	[1.0, 0.7, 0.4, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0],
-	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0],
+	[1.0, 0.7, 0.4, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0],
+	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0],
 ]
 const BASS_LAYERS := [SUB, REESE, WOB]
 # The build's own voices (riser, snare roll, launch tune) skip the tone filter.
@@ -233,6 +235,7 @@ var _parameter_danger_floor := 0.0
 var _parameter_released := false
 var _parameter_fleet_pending := 0
 var _parameter_logged_fleet := -1
+var landmark_hum_sound := ""
 var master := 0.8
 var pause_gain := 1.0
 var overcharge := 0
@@ -1392,6 +1395,9 @@ func _on_step() -> void:
 	if _gap:
 		return
 	var chord := _chord(bar)
+	if _targets[LANDMARK_HUM] > 0.0 and s % Harmony.STEPS_PER_BEAT == 0:
+		var hum := SfxBank.samples(landmark_hum_sound)
+		_start(hum, hum.size(), LANDMARK_HUM, db_to_linear(SfxBank.trim_db(landmark_hum_sound)), 0.0, false)
 	if fleet_ticks > 0 and _targets[FLEET] > 0.0 and track == "level" and _cadence_bar < 0 and not _lounge_live():
 		_fleet_layer(s, chord)
 	if not _drop.is_empty():
@@ -1789,18 +1795,22 @@ func _retarget() -> void:
 			for layer in gains.size():
 				_targets[layer] = gains[layer] * MODE_MASK[DEAD][layer]
 		_targets[LEAD] = 0.0 if lost else (TITLE_LEAD_GAIN if track == "title" else SUMMARY_LEAD_GAIN)
+	_targets[LANDMARK_HUM] = 0.0
+	landmark_hum_sound = ""
 	if parameter_source.is_valid():
 		parameter_layer_reads = {}
 		if mode == PLAY:
 			if parameters.has("approach"):
 				parameter_layer_reads["approach"] = true
-				_targets[PAD] = maxf(_targets[PAD], float(parameters.approach))
+				landmark_hum_sound = String(EventKinds.world_row("landmark_hum").get("sound", ""))
+				if not landmark_hum_sound.is_empty():
+					_targets[LANDMARK_HUM] = float(parameters.approach)
 			var strip := _parameter_released
 			if parameters.has("armour"):
 				parameter_layer_reads["armour"] = true
 				strip = strip or float(parameters.armour) < ARMOUR_STRIP_AT
 			if strip:
-				for layer in [KEYS, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET]:
+				for layer in [KEYS, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET, LANDMARK_HUM]:
 					_targets[layer] = 0.0
 		if previous != _targets or _parameter_logged_fleet != fleet_ticks:
 			_parameter_logged_fleet = fleet_ticks
