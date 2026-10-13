@@ -48,7 +48,7 @@ const DEFS := [
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
 		"posture": {"curve": 2.0, "ram_shatters": false, "base": {"ram": 25.0},
-			"contact_gain_scale": 0.5, "contact_gain_floor": 0.65}, "pressure": {"elite_rate": 0.0}, "warden_hint": "Break its guard, then smash the core."},
+			"contact_gain_scale": 4.0 / 7.0, "contact_gain_floor": 0.65}, "pressure": {"elite_rate": 0.0}, "warden_hint": "Break its guard, then smash the core."},
 ]
 
 
