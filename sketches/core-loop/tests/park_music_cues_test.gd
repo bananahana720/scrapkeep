@@ -4,6 +4,7 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
+const Synth := preload("res://src/presentation/synth.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Game := preload("res://src/game.gd")
@@ -65,8 +66,7 @@ func _fixture_checks() -> void:
 			if e._voices.is_empty():
 				continue
 			var voice = e._voices[0]
-			var expected: PackedFloat32Array = e.call("park_cue_samples", a, 3)
-			_check(id + " live key", voice.buf == expected and voice.buf != e.call("park_cue_samples", a, 0), "key 3 PCM and root control")
+			_check_voice_key(id, voice.buf, a, 3, e.step_len, e.theme)
 			var trim: float = Bank.trim_db(a.row.trim_sound) + Audio.PRIORITY_DB[Rows.priority("event_announced")]
 			_check(id + " trim plus priority", absf(linear_to_db(voice.gl) - trim) < 0.01, "%.3f vs %.3f" % [linear_to_db(voice.gl), trim])
 			if first_pcm.is_empty():
@@ -85,6 +85,18 @@ func _fixture_checks() -> void:
 		_check(id + " rise timing", not log.is_empty() and log[0].at == 0 and abs(log[-1].end - LEAD) <= Harmony.BEAT,
 			str(log.map(func(a): return [a.at, a.end])))
 		var land: String = "drop_flood" if family == "natural" else "drop_" + family
+		var drop_engine = MusicEngine.new()
+		drop_engine.key = 3
+		drop_engine.band_muted = true
+		drop_engine.park_cue(land, 0, 0, {}, Audio.PRIORITY_DB[Rows.priority("event_started")])
+		var drop_action: Dictionary = drop_engine._actions[0]
+		drop_engine._run(drop_action)
+		_check(land + " voice observed", drop_engine._voices.size() == 1, str(drop_engine._voices.size()))
+		if not drop_engine._voices.is_empty():
+			var drop_voice = drop_engine._voices[0]
+			_check_voice_key(land, drop_voice.buf, drop_action, 3, drop_engine.step_len, drop_engine.theme)
+			var trim: float = Bank.trim_db(drop_action.row.trim_sound) + Audio.PRIORITY_DB[Rows.priority("event_started")]
+			_check(land + " trim plus priority", absf(linear_to_db(drop_voice.gl) - trim) < 0.01, "%.3f vs %.3f" % [linear_to_db(drop_voice.gl), trim])
 		e.call("park_cue", land, 0, LEAD + Harmony.BAR, {}, Audio.PRIORITY_DB[Rows.priority("event_started")])
 		e.render(Harmony.BAR + Harmony.BEAT * 3)
 		var drops: Array = e.get("park_cue_log").filter(func(a): return a.id == land)
@@ -101,6 +113,64 @@ func _fixture_checks() -> void:
 	for event in park.event_rows:
 		for phase in event.music_cue:
 			_check(event.id + "/" + phase + " authored cue resolves", not MusicRows.new().call("cue", event.music_cue[phase], {}).is_empty(), event.music_cue[phase])
+
+
+func _check_voice_key(id: String, pcm: PackedFloat32Array, action: Dictionary, live_key: int, step: int, theme: int) -> void:
+	if action.row.has("sound"):
+		var expected := Bank.samples_at(action.row.sound, step, live_key, theme)
+		var root_pcm := Bank.samples_at(action.row.sound, step, 0, theme)
+		_check(id + " live key", pcm == expected and pcm != root_pcm, "actual bank voice PCM at live key versus key zero")
+	elif action.row.voice == "steam_whistle":
+		var expected_hz := Harmony.hz(action.row.notes[action.cell]) * Harmony.ratio(live_key) * lerpf(1.0, Harmony.ratio(2), 0.5)
+		var measured := _peak_frequency(pcm, expected_hz)
+		_check(id + " live key", absf(measured / expected_hz - 1.0) < 0.035, "actual whistle PCM %.2f Hz versus live-key sweep %.2f Hz" % [measured, expected_hz])
+	else:
+		var expected := _recipe_pcm(action, live_key)
+		var root_pcm := _recipe_pcm(action, 0)
+		_check(id + " live key", not expected.is_empty() and pcm == expected and pcm != root_pcm, "actual Synth recipe PCM transposed by Harmony.ratio versus key zero")
+
+
+func _recipe_pcm(action: Dictionary, live_key: int) -> PackedFloat32Array:
+	var row: Dictionary = action.row
+	var hz := Harmony.hz(row.notes[action.cell]) * Harmony.ratio(live_key)
+	var midi := roundi(69.0 + 12.0 * log(hz / 440.0) / log(2.0))
+	var pcm := PackedFloat32Array()
+	match row.voice:
+		"lead": pcm = Synth.lead(midi, action.length)
+		"brass": pcm = Synth.brass(midi, action.length)
+		"talk": pcm = Synth.talk(midi, action.length)
+		"sub": pcm = Synth.sub(midi, action.length)
+		"buzz": pcm = Synth.buzz(midi, action.length, 0.0)
+		"chime": pcm = Synth.chime(midi, action.length)
+	if row.has("accent"):
+		Synth.add_into(pcm, Synth.drum(row.accent), 0, 0.35)
+	pcm = Synth.normalize(pcm)
+	if row.rise:
+		for i in pcm.size():
+			pcm[i] *= lerpf(0.25, 1.0, float(action.progress) + float(i) / maxi(1, pcm.size()) / row.notes.size())
+	return Synth.declick(pcm)
+
+
+func _peak_frequency(pcm: PackedFloat32Array, expected_hz: float) -> float:
+	var n := mini(4096, pcm.size())
+	var start := (pcm.size() - n) / 2
+	var peak := -1.0
+	var frequency := 0.0
+	for bin in 121:
+		var hz := expected_hz * (0.72 + float(bin) * 0.0035)
+		var coefficient := 2.0 * cos(TAU * hz / Harmony.RATE)
+		var s1 := 0.0
+		var s2 := 0.0
+		for i in n:
+			var window := 0.5 - 0.5 * cos(TAU * i / maxi(1, n - 1))
+			var s0 := float(pcm[start + i]) * window + coefficient * s1 - s2
+			s2 = s1
+			s1 = s0
+		var power := s1 * s1 + s2 * s2 - coefficient * s1 * s2
+		if power > peak:
+			peak = power
+			frequency = hz
+	return frequency
 
 func _physics_process(_delta: float) -> bool:
 	if _game == null or _game.flow == null:
