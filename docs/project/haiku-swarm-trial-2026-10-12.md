@@ -63,4 +63,6 @@ Where Haiku stopped, Codex Sol finished: KC10 in one round, KE-FAM (the KE3 to K
 
 **Confounds.** Machine load 28 to 45 from the park loops caused at least two smoke timeouts. Haiku units came later in the wave, on a candidate with more tests and stricter pins. Sample sizes: 17 Haiku units against 26 merged baseline units, unpaired.
 
-**Recommended routing (not applied until Andrew agrees):** Haiku writers, verifier and gate pipeline for record tables, single-file determinism fixes and other units whose files and pattern are named; Codex Sol for anything crossing files or needing design; Haiku scouts for readiness triage; the Opus gate unchanged. **What would reverse it:** five consecutive cross-file units admitted by Haiku inside the pipeline with a clean merge check.
+**Routing, adopted by Andrew 2026-10-13 (task #7):** Haiku writers, verifier and gate pipeline for record tables, single-file determinism fixes and other units whose files and pattern are named; Codex Sol for anything crossing files or needing design; Haiku scouts for readiness triage; the Opus gate unchanged. **What would reverse it:** five consecutive cross-file units admitted by Haiku inside the pipeline with a clean merge check.
+
+Later units, after the interim reading: SR11 admitted after one fix round; SG14 quarantined on a real measurement (band b), so writers stand at 6 of 19 inside the pipeline. A Haiku scout called SQ8 mechanical; the coordinator held it as cross-file.
