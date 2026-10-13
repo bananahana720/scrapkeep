@@ -300,7 +300,10 @@ func _warden_state_fixture(manifest_path: String) -> void:
 	_seq_to(seq, build_at + bar + 1234)
 	t.eq("source-enabled Warden fixture starts in build", seq.section, "build")
 	t.eq("Warden fixture has committed threat", seq.parameters, committed)
-	t.check("Warden fixture has no pending parameter commit", seq.actions.all(func(a): return a.type != "parameters"))
+	var pending_values := {"threat": 1.0, "approach": 1.0, "armour": 0.2}
+	var parameter_at := build_at + bar * Harmony.PHRASE_BARS
+	seq.commit_parameters(parameter_at, pending_values, false, false, "")
+	t.check("Warden fixture has a pending parameter commit", seq.actions.any(func(a): return a.type == "parameters"))
 	for state in ["telegraph", "open", "closed"]:
 		var incoming: String = "build" if state == "closed" else state
 		var outgoing: String = seq.section
@@ -332,6 +335,10 @@ func _warden_state_fixture(manifest_path: String) -> void:
 		t.eq("Warden retains manifest clip entry " + state, seq.voices[0].pos - 1, entry)
 		t.eq("Warden state admits no new parameters " + state, seq.parameters, committed)
 		_seq_to(seq, boundary + beat + 1234)
+	_seq_to(seq, parameter_at)
+	t.eq("Warden pending snapshot waits for phrase", seq.parameters, committed)
+	_seq_to(seq, parameter_at + 1)
+	t.eq("Warden pending snapshot commits at phrase", seq.parameters, pending_values)
 	var held := Ace.new(manifest_path)
 	held.parameter_enabled = true
 	held.parameters = committed.duplicate()

@@ -113,6 +113,8 @@ func _run() -> void:
 	_fleet_fixture(false)
 	for pilot in Harmony.CLASS_MOTIFS:
 		_ultimate_fixture(pilot)
+		_heft_fixture(pilot)
+	_warden_snapshot_fixture()
 	_stopped_ultimate_fixture()
 	_handback_hum_fixture()
 	if OS.get_environment("KE10_UNIT_ONLY") == "1":
@@ -311,3 +313,68 @@ func _landmark_hum_fixture() -> void:
 	input = {"threat": 0.0}
 	_advance(hum, boundary * 6 + 1)
 	t.check("graph removal clears hum contribution and reader", not hum.parameter_layer_reads.has("approach") and hum.layer_target(layer) == 0.0)
+
+
+func _curve_expected(layer: int, intensity: float) -> float:
+	var curve: Array = Music.CURVES[layer]
+	var x := clampf((intensity - float(curve[1])) / (float(curve[2]) - float(curve[1])), 0.0, 1.0)
+	return float(curve[0]) + (1.0 - float(curve[0])) * x * x * (3.0 - 2.0 * x)
+
+
+func _heft_fixture(pilot: String) -> void:
+	var engine := Music.new()
+	var committed := {"threat": 0.3, "approach": 0.0, "armour": 1.0}
+	var feed := committed.duplicate()
+	engine.set_parameter_source(func(): return feed.duplicate())
+	engine.set_class_motif(pilot)
+	engine.schedule_restart(0, Music.PLAY, 0)
+	_advance(engine, Harmony.BAR + 1)
+	feed.threat = 1.0
+	feed.approach = 1.0
+	feed.armour = 0.2
+	for steps in [1, 0]:
+		var boundary := (floori(float(engine.clock) / Harmony.BAR) + 1) * Harmony.BAR
+		var before := engine._targets.duplicate()
+		engine.set_heft_lift(steps)
+		_advance(engine, boundary)
+		t.eq("heft waits for next bar %s %d" % [pilot, steps], engine._targets, before)
+		engine.render(1)
+		for layer in [Music.KEYS, Music.ARP, Music.LEAD]:
+			var intensity := minf(1.0, float(committed.threat) + Music.HEFT_STEP * steps)
+			t.near("heft next-bar gain %s %d layer %d" % [pilot, steps, layer], engine.layer_target(layer), _curve_expected(layer, intensity))
+		t.eq("heft admits no pending approach %s %d" % [pilot, steps], engine.layer_target(Music.LANDMARK_HUM), 0.0)
+		t.eq("heft retains committed snapshot %s %d" % [pilot, steps], engine.parameter_committed_values, committed)
+	_advance(engine, Harmony.BAR * Harmony.PHRASE_BARS)
+	t.eq("heft pending snapshot waits for phrase " + pilot, engine.parameter_committed_values, committed)
+	engine.render(1)
+	t.eq("heft pending snapshot commits on phrase " + pilot, engine.parameter_committed_values, feed)
+	t.eq("heft pending armour strips on phrase " + pilot, engine.layer_target(Music.KEYS), 0.0)
+
+
+func _warden_snapshot_fixture() -> void:
+	var engine := Music.new()
+	var committed := {"threat": 0.3, "approach": 0.0, "armour": 1.0}
+	var feed := committed.duplicate()
+	engine.set_parameter_source(func(): return feed.duplicate())
+	engine.schedule_restart(0, Music.PLAY, 0)
+	engine.render(1)
+	engine.force_track("warden", 0, "build", true)
+	engine.render(1)
+	var origin := engine.bar_origin
+	var phrase := origin + engine.bar_len() * Harmony.PHRASE_BARS
+	_advance(engine, origin + engine.bar_len() + 1)
+	feed.threat = 1.0
+	feed.approach = 1.0
+	feed.armour = 0.2
+	_advance(engine, engine.clock + engine.beat_len())
+	var asked := engine.clock
+	t.eq("Warden open keeps immediate synth contract", engine.warden_section("open"), asked)
+	for layer in [Music.KEYS, Music.ARP, Music.LEAD]:
+		t.near("Warden open gains use committed armour layer %d" % layer, engine.layer_target(layer), float(Music.OPEN_GAINS[layer]))
+	t.eq("Warden open admits no pending snapshot", engine.parameter_committed_values, committed)
+	t.eq("Warden close keeps immediate synth contract", engine.warden_section("build"), asked)
+	t.eq("Warden close admits no pending snapshot", engine.parameter_committed_values, committed)
+	_advance(engine, phrase)
+	t.eq("Warden pending snapshot waits for phrase", engine.parameter_committed_values, committed)
+	engine.render(1)
+	t.eq("Warden pending snapshot commits on phrase", engine.parameter_committed_values, feed)
