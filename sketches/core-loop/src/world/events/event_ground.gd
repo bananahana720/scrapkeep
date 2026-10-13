@@ -127,7 +127,7 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 											if overlay_map.profiles.has(id):
 												y = maxf(y, overlay_map.profiles[id].surface.height(point))
 								if geometry.has("marker_surface"):
-									y = maxf(y, geometry.marker_surface.height(point))
+									y = geometry.marker_surface.height(point) if geometry.get("span", false) else maxf(y, geometry.marker_surface.height(point))
 								if offset.is_valid():
 									y += maxf(0.0, float(offset.call((point - centre).rotated(yaw), y)))
 								face.append(Vector3(point.x, y, point.y))
@@ -317,9 +317,16 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	var geometry: Dictionary = record.geometry
 	var site: Dictionary = record.site
 	if kind_of_span(row):
-		site = current.park.park_rows.filter(func(r): return r.id == "flume_hollow_reach")[0]
-		geometry = {"site": site, "at": Vector3(float(site.at[0]), float(site.y), float(site.at[1])),
-			"half": ParkMap.footprint_half_extents(site), "yaw": deg_to_rad(float(site.yaw_deg)), "span": true}
+		var span: Dictionary = current.park.park_rows.filter(func(r): return r.id == "flume_hollow_reach")[0]
+		site = record.site.duplicate(true)
+		site.id = span.id
+		site.y = span.y
+		geometry = record.geometry.duplicate()
+		geometry.site = site
+		geometry.at = Vector3(float(site.at[0]), float(site.y), float(site.at[1]))
+		geometry.span = true
+		record.geometry = geometry
+		record.at = geometry.at
 	var half: Vector2 = geometry.half
 	var radius := minf(half.x, half.y)
 	var at: Vector3 = geometry.at
@@ -337,6 +344,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		Callable() if kind == "collapse" else func(local, base): return float(height.call(local.x, local.y)) - base)
 	if geometry.get("span", false):
 		surface = span_surface(site, 0.0)
+		geometry.marker_surface = surface
 	var body := StaticBody3D.new()
 	body.name = "Natural_" + row.id
 	var view := MeshInstance3D.new()
