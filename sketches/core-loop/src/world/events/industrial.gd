@@ -84,6 +84,7 @@ func _land(row: Dictionary, ctx: Dictionary) -> void:
 	var swap := String(row.effect.get("swap", ""))
 	if swap != "":
 		_swap(row, state, swap)
+	hazard.painter().paint(Threat.marks(hazard.descriptor(), false), Threat.STATIC_LAYERS)
 	hazard.step(0.0)
 	_strike(row, state, ctx)
 
