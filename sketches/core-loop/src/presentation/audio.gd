@@ -711,6 +711,11 @@ func ace_ready() -> bool:
 	ace.clock = engine.clock
 	ace.set_breath(breath())
 	ace.ultimate_lift = _ult_lift
+	_prime_band_parameters()
+	return true
+
+
+func _prime_band_parameters() -> void:
 	ace.parameter_enabled = engine.parameter_source.is_valid()
 	if ace.parameter_enabled:
 		ace.parameters = engine.parameter_committed_values.duplicate()
@@ -718,7 +723,6 @@ func ace_ready() -> bool:
 		ace._parameter_danger_floor = engine.parameter_committed_danger_floor
 		ace.pressure = float(ace.parameters.get("threat", 0.0))
 		ace.ultimate_lift = engine.ultimate_lift
-	return true
 
 
 var _music_warned := {}
@@ -796,6 +800,7 @@ func _ace_stage(stage: int, at: int) -> void:
 	if _ace_package_for(stage) != "" and ace_ready():
 		_ace_flight = false
 		_handover_at = -1
+		_prime_band_parameters()
 		ace.start_level(at if at >= 0 else engine.clock)
 		engine.grid = ace
 		return
@@ -824,6 +829,7 @@ func _ace_named(id: String, at: int, boss := false, won := true) -> void:
 			return
 		_ace_flight = false
 		_handover_at = -1
+		_prime_band_parameters()
 		if boss:
 			ace.start_boss(at)
 		else:
@@ -2045,7 +2051,7 @@ func _set_ult_lift(on: bool) -> void:
 	engine.set_ultimate_lift(on)
 	# Written whether or not the band plays: a level band that ended for the flight keeps its
 	# sequencer, and a resume must not carry a lift the landing already released.
-	if ace != null and not engine.parameter_source.is_valid():
+	if ace != null and (not ace.parameter_enabled or not ace.active()):
 		ace.set_ultimate_lift(on)
 
 
