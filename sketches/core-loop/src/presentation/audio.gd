@@ -258,6 +258,7 @@ var _ult_armed := false
 var _pressure := 0.0
 var _miniboss: Node3D
 var _park_cues := {}
+var _park_transport_snapshot := {}
 var park_cue_late: Array[Dictionary] = []
 
 var _event_id := ""
@@ -1465,6 +1466,7 @@ func _on_hotwire_offered(_part_id: String, _recycle: int) -> void:
 
 # Stage seconds and transport samples meet at the advance that schedules the event.
 func park_transport(stage_s: float) -> Dictionary:
+	_sync_park_deadlines()
 	if sound_ready:
 		_flush_flow()
 	var bar: int = engine.bar_len()
@@ -1472,8 +1474,43 @@ func park_transport(stage_s: float) -> Dictionary:
 	if engine.grid != null:
 		origin = engine.grid.next_bar(engine.clock)
 		bar = engine.grid.next_bar(origin + 1) - origin
-	return {"bar_s": float(bar) / Harmony.RATE,
-		"bar_origin_s": stage_s + float(origin - engine.clock) / Harmony.RATE}
+	_park_transport_snapshot = {"bar_s": float(bar) / Harmony.RATE,
+		"bar_origin_s": stage_s + float(origin - engine.clock) / Harmony.RATE,
+		"origin": origin}
+	return {"bar_s": _park_transport_snapshot.bar_s, "bar_origin_s": _park_transport_snapshot.bar_origin_s}
+
+
+func _park_sample_at(landing_s: float, snapshot: Dictionary) -> int:
+	return int(snapshot.origin) + roundi((landing_s - float(snapshot.bar_origin_s)) * Harmony.RATE)
+
+
+func _update_park_deadline(event_id: String, cue: Dictionary, state: Dictionary) -> void:
+	if float(state.due_s) == float(cue.landing_s):
+		return
+	engine.cancel_park_drop(event_id)
+	cue.landing_s = float(state.due_s)
+	cue.transport = _park_transport_snapshot.duplicate()
+	cue.due = _park_sample_at(cue.landing_s, cue.transport)
+	cue.booked = false
+
+
+# The previous advance can reschedule without publishing a new fact. Capture it
+# before the next scheduling snapshot replaces the one that committed its deadline.
+func _sync_park_deadlines() -> void:
+	for event_id in _park_cues:
+		var state := _park_event_state(event_id)
+		if not state.is_empty():
+			_update_park_deadline(event_id, _park_cues[event_id], state)
+
+
+func _restore_park_drop(event_id: String, cue: Dictionary) -> void:
+	if cue.booked:
+		return
+	if int(cue.due) < engine.clock:
+		park_cue_late.append({"id": event_id, "due": cue.due, "clock": engine.clock})
+		return
+	_book_park_drop(event_id, cue)
+	cue.booked = true
 
 
 func _park_director():
@@ -1525,7 +1562,9 @@ func _on_event_announced(event_id: String, seconds: float) -> void:
 		landing_s = float(fact.landing_s)
 		lead = roundi((landing_s - float(fact.time_s)) * Harmony.RATE)
 	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead,
-		"landing_s": landing_s, "booked": true}
+		"landing_s": landing_s, "booked": true, "transport": _park_transport_snapshot.duplicate()}
+	if landing_s >= 0.0 and not _park_transport_snapshot.is_empty():
+		_park_cues[event_id].due = _park_sample_at(landing_s, _park_transport_snapshot)
 	engine.park_cue(row.music_cue.telegraph, lead, engine.clock, options,
 		PRIORITY_DB[Rows.priority("event_announced")], event_id)
 	_book_park_drop(event_id, _park_cues[event_id])
@@ -1550,7 +1589,9 @@ func _guard_park_bookings() -> void:
 			engine.cancel_park_cue(event_id)
 			_park_cues.erase(event_id)
 			continue
+		_update_park_deadline(event_id, cue, state)
 		if state.phase == director.LIVE:
+			_restore_park_drop(event_id, cue)
 			continue
 		var safe: bool = not state.holding and director.stage_time >= director._park_quiet_until \
 			and director._park_capacity(state) and director._park_route_safe(state) \
@@ -1558,13 +1599,8 @@ func _guard_park_bookings() -> void:
 		if not safe:
 			engine.cancel_park_drop(event_id)
 			cue.booked = false
-		elif float(state.due_s) != float(cue.landing_s) or not cue.booked:
-			engine.cancel_park_drop(event_id)
-			cue.landing_s = state.due_s
-			cue.due = engine.clock + roundi((float(state.due_s) - director.stage_time) * Harmony.RATE)
-			cue.booked = cue.due >= engine.clock
-			if cue.booked:
-				_book_park_drop(event_id, cue)
+		else:
+			_restore_park_drop(event_id, cue)
 
 
 # Leave the booked sample unrendered until physics commits or cancels the landing.
@@ -1573,22 +1609,21 @@ func _park_render_limit(frames: int) -> int:
 	var director = _park_director()
 	if director == null:
 		return frames
-	for action in engine._actions:
-		if action.get("type") != "park_cue" or action.row.rise:
-			continue
-		var owner: String = action.get("owner", "")
-		if not _park_cues.has(owner) or not _park_cues[owner].booked:
-			continue
+	for owner in _park_cues:
 		var state := _park_event_state(owner)
-		if not state.is_empty() and state.phase == director.ANNOUNCED:
-			frames = mini(frames, maxi(0, int(action.at) - engine.clock))
+		if not state.is_empty() and state.phase == director.ANNOUNCED and not state.holding:
+			frames = mini(frames, maxi(0, int(_park_cues[owner].due) - engine.clock))
 	return frames
 
 
 func _park_event_land(event_id: String) -> bool:
 	if not _park_cues.has(event_id):
 		return false
-	# The prebooked action may already be in the rendered block. Never cancel or replay it.
+	var cue: Dictionary = _park_cues[event_id]
+	var state := _park_event_state(event_id)
+	if not state.is_empty():
+		_update_park_deadline(event_id, cue, state)
+	_restore_park_drop(event_id, cue)
 	_park_cues.erase(event_id)
 	return true
 
@@ -1646,6 +1681,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	for event_id in _park_cues:
 		engine.cancel_park_cue(event_id)
 	_park_cues.clear()
+	_park_transport_snapshot.clear()
 	_line_was = ""
 	# A retry restores the meter to its stage-entry value silently; the lift follows the meter
 	# once every stage_entered handler has run (SKILL-BAR section 4, one fact for every layer).
