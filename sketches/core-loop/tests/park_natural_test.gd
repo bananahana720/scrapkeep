@@ -51,6 +51,10 @@ class Terrain:
 	func map():
 		return maps[stage - 1]
 	func height(x: float, z: float) -> float:
+		if map().has_method("cave_height"):
+			var roof: float = map().cave_height(x, z)
+			if roof > -INF:
+				return roof
 		var h := ground(x, z)
 		for id in overlays:
 			h = maxf(h, map().overlay_height(id, x, z, 0.0))
