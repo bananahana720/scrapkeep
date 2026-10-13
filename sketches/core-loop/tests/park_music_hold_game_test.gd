@@ -39,6 +39,14 @@ func _run() -> void:
 		if due >= 0:
 			break
 	t.check("real Game drop booked before hold", booked.size() == 1 and booked[0].at == due, str([booked, due]))
+	# A queued output block can reach the deadline before the next physics decision.
+	# Exercise the real headless pump with that buffered lead, then enter the site.
+	for block in 64:
+		audio._virtual_usec -= int(8192.0 * 1000000.0 / Harmony.RATE)
+		audio._pump()
+		if audio.engine.clock >= due:
+			break
+	t.check("uncommitted drop blocks rendering at its deadline", audio.engine.clock == due and not audio.engine.park_cue_log.any(func(a): return a.id == "drop_flood"), str([audio.engine.clock, due]))
 	var flood: Dictionary = game.world.events._park_states.filter(func(s): return s.row.id == "plunge_pool_flood")[0]
 	var at: Vector3 = game.world.events._park_at(flood)
 	game.player.reset_to(at + Vector3.UP * game.player.Tuning.RADIUS)
