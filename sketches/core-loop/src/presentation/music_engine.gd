@@ -1671,6 +1671,8 @@ func _set_key(next: int) -> void:
 
 func _reset_bar() -> void:
 	bar_origin = clock
+	if parameter_source.is_valid():
+		grid_origin = clock
 	_bar_step = 0
 	_step_clock = -1
 
