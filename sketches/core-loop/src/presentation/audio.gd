@@ -257,6 +257,12 @@ var _ult_lift := false
 var _ult_armed := false
 var _pressure := 0.0
 var _miniboss: Node3D
+var _park_cues := {}
+var _park_transport_snapshot := {}
+var park_cue_late: Array[Dictionary] = []
+# The Music-bus block after selecting or mixing the recorded and synthesized bands.
+var out_music := PackedVector2Array()
+
 var _event_id := ""
 var _event_started_ms := -1
 var _event_progress_live := false
@@ -504,6 +510,7 @@ func _process(delta: float) -> void:
 # sample-locked. The synth band fills its ring; the ACE band keeps it at the POC's
 # QUEUE_TARGET, so a contact reaches the speaker sooner.
 func _pump() -> void:
+	_guard_park_bookings()
 	if _ace_arrival_stage > 0 and _ace_arrival_at >= 0 and engine.clock > _ace_arrival_at and not engine.in_drop():
 		var stage := _ace_arrival_stage
 		_ace_arrival_stage = 0
@@ -517,10 +524,11 @@ func _pump() -> void:
 		var now := Time.get_ticks_usec()
 		var owed := int((now - _virtual_usec) * Harmony.RATE / 1000000.0)
 		if owed > 0:
-			_virtual_usec += int(owed * 1000000.0 / Harmony.RATE)
-			_unmute_for_handover(mini(owed, 8192))
-			engine.render(mini(owed, 8192))
-			_ace_render(mini(owed, 8192), ace_live)
+			var requested := mini(owed, 8192)
+			var frames := _park_render_limit(requested)
+			_virtual_usec += int((owed - requested + frames) * 1000000.0 / Harmony.RATE)
+			if frames > 0:
+				_render_music(frames, ace_live)
 		return
 	if _music_pb == null or _stinger_pb == null:
 		return
@@ -531,21 +539,26 @@ func _pump() -> void:
 	else:
 		_deepen_on_skip()
 		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, queue_target), _stinger_pb.get_frames_available())
-	frames = mini(frames, 8192)
+	frames = _park_render_limit(mini(frames, 8192))
 	if frames <= 0:
 		return
+	_render_music(frames, ace_live)
+	_music_pb.push_buffer(out_music)
+	_stinger_pb.push_buffer(engine.out_stinger)
+
+
+func _render_music(frames: int, ace_live: bool) -> void:
 	var from := engine.clock
 	_unmute_for_handover(frames)
 	engine.render(frames)
 	var music := _ace_render(frames, ace_live)
 	_fade_in_band(from, frames)
 	if not ace_live:
-		_music_pb.push_buffer(engine.out_music)
+		out_music = engine.out_music
 	elif engine.band_muted:
-		_music_pb.push_buffer(music)
+		out_music = music
 	else:
-		_music_pb.push_buffer(_with_band(music, from))
-	_stinger_pb.push_buffer(engine.out_stinger)
+		out_music = _with_band(music, from)
 
 
 # One band at a time, handed over without a hole: the synth band plays until the ACE
@@ -1037,7 +1050,7 @@ func _connect_all(events) -> void:
 	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
 	events.reward_offered.connect(_on_offered)
 	events.reward_chosen.connect(func(_part: String): play("reward_chosen"))
-	events.event_announced.connect(func(_event_id: String, _seconds: float): on_beat("event_announced"))
+	events.event_announced.connect(_on_event_announced)
 	events.event_started.connect(_on_event_started)
 	events.event_ended.connect(_on_event_ended)
 	events.launched.connect(_on_launched)
@@ -1456,7 +1469,222 @@ func _on_hotwire_offered(_part_id: String, _recycle: int) -> void:
 	play("hotwire_offer", 0.0, 1.0, "SFX", "hotwire_offer")
 
 
+# Stage seconds and transport samples meet at the advance that schedules the event.
+func park_transport(stage_s: float) -> Dictionary:
+	_sync_park_deadlines()
+	if sound_ready:
+		_flush_flow()
+	var bar: int = engine.bar_len()
+	var origin: int = engine.next_bar()
+	if engine.grid != null:
+		origin = engine.grid.next_bar(engine.clock)
+		bar = engine.grid.next_bar(origin + 1) - origin
+	_park_transport_snapshot = {"bar_s": float(bar) / Harmony.RATE,
+		"bar_origin_s": stage_s + float(origin - engine.clock) / Harmony.RATE,
+		"origin": origin}
+	_remap_suspended_park_cues()
+	return {"bar_s": _park_transport_snapshot.bar_s, "bar_origin_s": _park_transport_snapshot.bar_origin_s}
+
+
+func _park_stage_suspended() -> bool:
+	if get_tree().paused:
+		return true
+	if ctx == null or ctx.get("root") == null:
+		return false
+	var world = ctx.root.get("world")
+	return world != null and world.bay != null and world.bay.inside
+
+
+# Resumption changes the stage-to-sample mapping, never the director's deadline.
+func _remap_suspended_park_cues() -> void:
+	if _park_stage_suspended():
+		return
+	for event_id in _park_cues:
+		var cue: Dictionary = _park_cues[event_id]
+		if not cue.get("remap", false):
+			continue
+		var state := _park_event_state(event_id)
+		if state.is_empty():
+			continue
+		cue.landing_s = float(state.due_s)
+		cue.transport = _park_transport_snapshot.duplicate()
+		var mapped := _park_sample_at(cue.landing_s, cue.transport)
+		var bar := roundi(float(cue.transport.bar_s) * Harmony.RATE)
+		cue.due = int(cue.transport.origin) + ceili(float(mapped - int(cue.transport.origin)) / bar) * bar
+		if engine.grid != null:
+			cue.due = engine.grid.next_bar(maxi(mapped, engine.clock))
+		cue.after_land = mapped < engine.clock or int(cue.due) != mapped
+		cue.remap = false
+
+
+func _park_sample_at(landing_s: float, snapshot: Dictionary) -> int:
+	return int(snapshot.origin) + roundi((landing_s - float(snapshot.bar_origin_s)) * Harmony.RATE)
+
+
+func _update_park_deadline(event_id: String, cue: Dictionary, state: Dictionary) -> void:
+	if float(state.due_s) == float(cue.landing_s):
+		return
+	engine.cancel_park_drop(event_id)
+	cue.landing_s = float(state.due_s)
+	cue.transport = _park_transport_snapshot.duplicate()
+	cue.due = _park_sample_at(cue.landing_s, cue.transport)
+	cue.booked = false
+	cue.after_land = false
+
+
+# The previous advance can reschedule without publishing a new fact. Capture it
+# before the next scheduling snapshot replaces the one that committed its deadline.
+func _sync_park_deadlines() -> void:
+	for event_id in _park_cues:
+		var state := _park_event_state(event_id)
+		if not state.is_empty() and not _park_cues[event_id].get("remap", false):
+			_update_park_deadline(event_id, _park_cues[event_id], state)
+
+
+func _restore_park_drop(event_id: String, cue: Dictionary) -> void:
+	if cue.booked or cue.get("remap", false):
+		return
+	if cue.get("after_land", false):
+		var state := _park_event_state(event_id)
+		var director = _park_director()
+		if state.is_empty() or director == null or state.phase != director.LIVE:
+			return
+		cue.due = engine.next_bar() if engine.grid == null else engine.grid.next_bar(engine.clock)
+		cue.after_land = false
+	if int(cue.due) < engine.clock:
+		park_cue_late.append({"id": event_id, "due": cue.due, "clock": engine.clock})
+		return
+	_book_park_drop(event_id, cue)
+	cue.booked = true
+
+
+func _park_director():
+	if ctx == null or ctx.get("root") == null:
+		return null
+	var world = ctx.root.get("world")
+	return world.events if world != null else null
+
+
+func _park_event_state(event_id: String) -> Dictionary:
+	var director = _park_director()
+	if director != null:
+		for state in director._park_states:
+			if state.row.id == event_id and not state.weather:
+				return state
+	return {}
+
+
+func _park_event_row(event_id: String) -> Dictionary:
+	var state := _park_event_state(event_id)
+	if not state.is_empty():
+		return state.row
+	if ctx == null or ctx.get("terrain") == null:
+		return {}
+	var map = ctx.terrain.map()
+	if not "park" in map:
+		return {}
+	for row in map.park.get("event_rows", []):
+		if row.id == event_id:
+			return row
+	return {}
+
+
+func _on_event_announced(event_id: String, seconds: float) -> void:
+	var state := _park_event_state(event_id)
+	var row := _park_event_row(event_id)
+	if row.is_empty():
+		on_beat("event_announced")
+		return
+	if sound_ready:
+		_flush_flow()
+	engine.cancel_park_cue(event_id)
+	var options := {"theme": engine.theme, "motif": _motif,
+		"ancient": MusicRows.ANCIENT_VOICES.get(row.effect.get("miniboss", ""), "reactor")}
+	var lead := roundi(seconds * Harmony.RATE)
+	var landing_s := -1.0
+	if not state.is_empty():
+		var fact: Dictionary = _park_director()._park_fact(state, "announced")
+		landing_s = float(fact.landing_s)
+		lead = roundi((landing_s - float(fact.time_s)) * Harmony.RATE)
+	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead,
+		"landing_s": landing_s, "booked": true, "transport": _park_transport_snapshot.duplicate()}
+	if landing_s >= 0.0 and not _park_transport_snapshot.is_empty():
+		_park_cues[event_id].due = _park_sample_at(landing_s, _park_transport_snapshot)
+	engine.park_cue(row.music_cue.telegraph, lead, engine.clock, options,
+		PRIORITY_DB[Rows.priority("event_announced")], event_id)
+	_book_park_drop(event_id, _park_cues[event_id])
+	_duck(0.6, seconds)
+
+
+func _book_park_drop(event_id: String, cue: Dictionary) -> void:
+	engine.park_cue(cue.row.music_cue.land, 0, cue.due, cue.options,
+		PRIORITY_DB[Rows.priority("event_started")], event_id)
+
+
+# Check the director's exact guards before a block can render the predicted impact.
+# Holding starts at the deadline; checking clearance during the lead protects the ring.
+func _guard_park_bookings() -> void:
+	var director = _park_director()
+	if director == null:
+		return
+	for event_id in _park_cues.keys():
+		var cue: Dictionary = _park_cues[event_id]
+		var state := _park_event_state(event_id)
+		if state.is_empty() or state.phase not in [director.ANNOUNCED, director.LIVE]:
+			engine.cancel_park_cue(event_id)
+			_park_cues.erase(event_id)
+			continue
+		if state.phase == director.ANNOUNCED and _park_stage_suspended():
+			engine.cancel_park_drop(event_id)
+			cue.booked = false
+			cue.remap = true
+			continue
+		if cue.get("remap", false):
+			continue
+		_update_park_deadline(event_id, cue, state)
+		if state.phase == director.LIVE:
+			_restore_park_drop(event_id, cue)
+			continue
+		var safe: bool = not state.holding and director.stage_time >= director._park_quiet_until \
+			and director._park_capacity(state) and director._park_route_safe(state) \
+			and director._park_clear(state, ctx.player.ball_position(), ctx.player.state.velocity, state.context)
+		if not safe:
+			engine.cancel_park_drop(event_id)
+			cue.booked = false
+		else:
+			_restore_park_drop(event_id, cue)
+
+
+# Leave the booked sample unrendered until physics commits or cancels the landing.
+# A clearance check cannot revoke samples already pushed into a device's ring.
+func _park_render_limit(frames: int) -> int:
+	var director = _park_director()
+	if director == null or _park_stage_suspended():
+		return frames
+	for owner in _park_cues:
+		var state := _park_event_state(owner)
+		var cue: Dictionary = _park_cues[owner]
+		if not state.is_empty() and state.phase == director.ANNOUNCED and not state.holding \
+			and not cue.get("remap", false) and not cue.get("after_land", false):
+			frames = mini(frames, maxi(0, int(cue.due) - engine.clock))
+	return frames
+
+
+func _park_event_land(event_id: String) -> bool:
+	if not _park_cues.has(event_id):
+		return false
+	var cue: Dictionary = _park_cues[event_id]
+	var state := _park_event_state(event_id)
+	if not state.is_empty():
+		_update_park_deadline(event_id, cue, state)
+	_restore_park_drop(event_id, cue)
+	_park_cues.erase(event_id)
+	return true
+
+
 func _on_event_started(event_id: String) -> void:
+	if _park_event_land(event_id):
+		return
 	on_beat("event_started")
 	if event_id in EVENT_SECONDS:
 		_event_id = event_id
@@ -1466,6 +1694,10 @@ func _on_event_started(event_id: String) -> void:
 # A win drops back into the level with the milestone stinger on the drop beat; a pass
 # or a loss settles home gracefully, with no punishing sting.
 func _on_event_ended(event_id: String, outcome: String) -> void:
+	if not _park_event_row(event_id).is_empty():
+		engine.cancel_park_cue(event_id)
+		_park_cues.erase(event_id)
+		return
 	var participatory := event_id == _event_id
 	_event_id = ""
 	if not participatory or not sound_ready:
@@ -1500,6 +1732,10 @@ func _on_flow_changed(state: String) -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	for event_id in _park_cues:
+		engine.cancel_park_cue(event_id)
+	_park_cues.clear()
+	_park_transport_snapshot.clear()
 	_line_was = ""
 	# A retry restores the meter to its stage-entry value silently; the lift follows the meter
 	# once every stage_entered handler has run (SKILL-BAR section 4, one fact for every layer).
