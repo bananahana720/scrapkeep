@@ -337,7 +337,78 @@ static func line_failures(park: Dictionary, lines: Dictionary) -> Array:
 	return out
 
 
+func span_clearance_pins() -> void:
+	var game := Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	game.presentation.audio.bake_now()
+	game.player.source = Intent.Scripted.new()
+	game.flow.press_start()
+	game.flow.choose_class(1)
+	game.flow.enter_stage(2, Vector3.ZERO, false)
+	await physics_frame
+	await physics_frame
+	game.process_mode = Node.PROCESS_MODE_DISABLED
+	var world = game.world
+	var director = world.events
+	director._park_states = director._park_states.filter(func(s): return s.row.id == "hollow_trestle_collapse")
+	var state: Dictionary = director._park_states[0]
+	var centre := Vector3(-115.0, 44.0, 5.5)
+	var along := Vector3(sin(deg_to_rad(30.6)), 0.0, cos(deg_to_rad(30.6)))
+	var across := Vector3(cos(deg_to_rad(30.6)), 0.0, -sin(deg_to_rad(30.6)))
+	var context := {"clock_tier": 2, "grounded": true, "bar_s": 240.0 / 172.0, "bar_origin_s": 0.0}
+	var warning_checked := false
+	for step in 260:
+		world._publish(director.advance(0.05, centre, Vector3.ZERO, context))
+		if not warning_checked and world.event_families.natural.active.has(state.row.id):
+			warning_checked = true
+			var record: Dictionary = world.event_families.natural.active[state.row.id]
+			t.eq("span retains authored event site", state.row.site, "trestle_hollow")
+			t.check("warning record uses span centre", record.geometry.at.distance_to(centre) < 0.001)
+			t.check("warning record uses span half extents", record.geometry.half.distance_to(Vector2(4.0, 186.5)) < 0.001)
+			var outline: MeshInstance3D = record.mark.get_node("Footprint").get_child(0)
+			var vertices: PackedVector3Array = outline.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+			var low := Vector2.INF
+			var high := -Vector2.INF
+			var deck_agrees := not vertices.is_empty()
+			for vertex: Vector3 in vertices:
+				var delta: Vector3 = outline.global_transform * vertex - record.mark.position - centre
+				var local := Vector2(delta.dot(across), delta.dot(along))
+				low = low.min(local)
+				high = high.max(local)
+				deck_agrees = deck_agrees and absf(delta.y) < 0.001
+			t.check("warning footprint matches physical span", low.distance_to(Vector2(-4.0, -186.5)) < 0.01 and high.distance_to(Vector2(4.0, 186.5)) < 0.01)
+			t.check("warning projects onto baseline deck", deck_agrees)
+	t.check("span midpoint holds landing after due time", warning_checked and state.phase == director.ANNOUNCED and director.stage_time > state.due_s)
+	var low_end: Vector3 = centre + along * 176.5
+	var crossing: Vector3 = centre + across * 45.0
+	for spec in [["low end", low_end, Vector3.ZERO], ["two second crossing", crossing, -across * 30.0], ["20 m margin", centre + across * 23.0, Vector3.ZERO]]:
+		for step in 40:
+			world._publish(director.advance(0.05, spec[1], spec[2], context))
+		t.eq("span " + spec[0] + " holds landing", state.phase, director.ANNOUNCED)
+	var clear := Vector3(600.0, 44.0, -600.0)
+	for step in 80:
+		world._publish(director.advance(0.05, clear, Vector3.ZERO, context))
+		if state.phase == director.LIVE:
+			break
+	t.eq("span releases landing after clearance", state.phase, director.LIVE)
+	world._publish(director.advance(0.5, clear, Vector3.ZERO, context))
+	var swap: Dictionary = world.terrain.map().swaps["trestle_ramp"]
+	for spec in [["midpoint", centre, Vector3.ZERO], ["low end", low_end, Vector3.ZERO], ["two second crossing", crossing, -across * 30.0]]:
+		var before: float = swap.progress
+		var vertices: PackedVector3Array = swap.surface.vertices if swap.has("surface") else swap.body.get_child(0).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		world._publish(director.advance(0.25, spec[1], spec[2], context))
+		t.eq("span " + spec[0] + " pauses fall progress", float(swap.progress), before)
+		t.eq("span " + spec[0] + " keeps physical mesh while held", swap.body.get_child(0).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX], vertices)
+	var before: float = swap.progress
+	world._publish(director.advance(0.1, clear, Vector3.ZERO, context))
+	t.check("span fall resumes after clearance", float(swap.progress) > before)
+	game.free()
+
+
 func collapse_event_pins() -> void:
+	await span_clearance_pins()
 	var game := Game.new()
 	game.test_mode = true
 	game.table = "park"
