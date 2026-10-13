@@ -596,7 +596,8 @@ func _park_at(state: Dictionary) -> Vector3:
 
 func _park_fact(state: Dictionary, kind: String) -> Dictionary:
 	var fact := {"kind": kind, "id": state.row.id, "family": "weather" if state.weather else state.row.family,
-		"event_kind": state.row.kind, "time_s": stage_time, "at": _park_at(state), "row": state.row.duplicate(true)}
+		"event_kind": state.row.kind, "time_s": stage_time, "landing_s": state.due_s,
+		"at": _park_at(state), "row": state.row.duplicate(true)}
 	if not state.weather:
 		fact.route_change = state.row.route_change.duplicate(true)
 	return fact
