@@ -17,6 +17,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Flow := preload("res://src/core/flow.gd")
 const StartCard := preload("res://src/ui/start_pick_card.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
+const Cards := preload("res://src/world/director_cards.gd")
 
 # Filled from the unchanged 5838892 production schedule and settlement fixture.
 const BASE_SCHEDULE := [
@@ -288,7 +290,7 @@ func _runtime() -> void:
 		t.check("bit-identical whole-run default seed %d" % seed_value, BASE_RUN.size() == SEEDS and base.hash == BASE_RUN[seed_value])
 		t.check("higher threat seed %d" % seed_value, b.members > a.members and hard.threat > base.threat)
 		t.check("higher pay seed %d" % seed_value, hard.pay > base.pay and hard.cores > base.cores and hard.rare_share > base.rare_share)
-		t.check("pay cap seed %d" % seed_value, hard.pay / base.pay <= 1.5)
+		t.check("pay cap seed %d" % seed_value, hard.pay / base.pay <= RunTier.PAY_GAIN_CAP)
 		print("MEASURE " + JSON.stringify({"seed": seed_value, "tier0": base, "tier1": hard, "ratio": hard.pay / base.pay,
 			"schedule0": a.hash, "schedule1": b.hash, "measure": "settled event bonus cores + rare parts / 2400 production draws; all six stages"}))
 
@@ -329,8 +331,11 @@ func _card() -> void:
 	for node in card.get_children():
 		if node is Label and node.visible:
 			labels.append(node.text)
-	t.check("rendered pre-choice threat/pay", "Threat: 25% more crowd, 20% shorter intervals" in labels
-		and "Pay: 25% more event cores and rare weight; gain cap 1.5x" in labels and game.run.selected_run_tier() == 0)
+	var hard: Dictionary = Cards.RUN_TIERS[1]
+	var expected_threat := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
+	var expected_pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
+	t.check("rendered pre-choice threat/pay", expected_threat in labels
+		and expected_pay in labels and game.run.selected_run_tier() == 0)
 	var host = game.get_node("Workshop")
 	t.check("start card sits above workshop", card.get_parent().layer > host.layer)
 	t.eq("start card handles input during workshop pause", card.process_mode, Node.PROCESS_MODE_ALWAYS)
@@ -509,12 +514,22 @@ func _mouse_tiles() -> void:
 	paused = false
 	game.bot_driven = true
 
+func _expected_modifier(held: Array, key: String, tier_value: int) -> float:
+	var expected := 1.0
+	for id in held:
+		var mods: Dictionary = Parts.CATALOGUE[id].get("mods", {})
+		if tier_value == 1 and RunTier.ENHANCED.has(id):
+			mods = mods.duplicate()
+			mods.merge(RunTier.ENHANCED[id].mods, true)
+		expected *= float(mods.get(key, 1.0))
+	return expected
+
 func _variants() -> void:
 	_begin(703, 0)
 	var base: Resource = Parts.def("loose_trigger")
 	var original: Dictionary = Parts.rows()["loose_trigger"].duplicate(true)
 	var base_rows := {}
-	for id in ["loose_trigger", "long_barrel"]:
+	for id in RunTier.ENHANCED:
 		base_rows[id] = Parts.row(id).duplicate(true)
 	if game.flow.has_method("choose_run_tier"):
 		game.flow.choose_run_tier(1)
@@ -531,26 +546,28 @@ func _variants() -> void:
 		var built = Sheet.from_parts([id])
 		for key in policy[id].mods:
 			t.check("variant %s improves %s" % [id, key], policy[id].mods[key] > Parts.CATALOGUE[id].mods[key])
-			t.near("variant %s applied once by build" % id, built.mods[key], policy[id].mods[key])
+			t.near("variant %s applied once by build" % id, built.mods[key], _expected_modifier([id], key, 1))
+			t.near("variant %s two base-id copies fold independently" % id, Sheet.from_parts([id, id]).mods[key], _expected_modifier([id, id], key, 1))
 	game.run.add_part("loose_trigger", "tier_test")
 	game.run.add_part("loose_trigger@tier1", "tier_test")
 	t.check("one-version acquisition", game.run.parts == ["loose_trigger"])
 	var sheet = Sheet.from_parts(game.run.parts)
-	t.near("one-version effective build", sheet.mods.weapon_rate, 1.15)
+	var expected_rate := _expected_modifier(["loose_trigger"], "weapon_rate", 1)
+	t.near("one-version effective build", sheet.mods.weapon_rate, expected_rate)
 	var doc: Dictionary = game.run.to_entrance_doc()
 	var loaded := RunState.new(GameEvents.new(), 8)
 	loaded.begin(ClassDef.all()[0])
 	t.check("enhanced reconstruction loads", loaded.from_entrance_doc(doc))
 	t.check("one-version reconstruction", loaded.parts == ["loose_trigger"])
-	t.near("reconstruction enhanced effect once", Sheet.from_parts(loaded.parts).mods.get("weapon_rate", 1.0), 1.15)
+	t.near("reconstruction enhanced effect once", Sheet.from_parts(loaded.parts).mods.get("weapon_rate", 1.0), expected_rate)
 	loaded.restore()
-	t.near("retry enhanced effect once", Sheet.from_parts(loaded.parts).mods.get("weapon_rate", 1.0), 1.15)
+	t.near("retry enhanced effect once", Sheet.from_parts(loaded.parts).mods.get("weapon_rate", 1.0), expected_rate)
 	# Deliberately attempt a second version through a save boundary.
 	var invalid := doc.duplicate(true)
 	invalid.parts.append("loose_trigger@tier1")
 	t.check("both-version entrance rejected", not loaded.from_entrance_doc(invalid))
 	loaded.begin(ClassDef.all()[0])
-	t.near("tier-zero cache does not leak", Parts.def("loose_trigger").mods.weapon_rate, 1.1)
+	t.near("tier-zero cache does not leak", Parts.def("loose_trigger").mods.weapon_rate, _expected_modifier(["loose_trigger"], "weapon_rate", 0))
 	t.check("cached base row immutable", Parts.rows()["loose_trigger"] == original)
 	loaded.events.free()
 
