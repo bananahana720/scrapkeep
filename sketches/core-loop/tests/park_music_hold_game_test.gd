@@ -200,7 +200,7 @@ func _recovery(before_deadline: bool, direct_live := false) -> void:
 				var frames: int = mini(4096, target - audio.engine.clock)
 				audio.engine.render(frames)
 			# Prevent wall-clock rounding from moving the head before the scheduling tick.
-			audio._virtual_usec = Time.get_ticks_usec() + 1000000
+			audio._virtual_usec += 1000000
 	game.player.reset_to(safe_at)
 	game.player.set_frozen(true)
 	var expected: int = announcement[0].sample
