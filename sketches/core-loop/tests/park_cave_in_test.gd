@@ -59,7 +59,8 @@ func _run() -> void:
 	await _sample("telegraph", 0.0, false)
 	handler.handle("land", row, ctx)
 	await _sample("land", 0.0, true)
-	for elapsed in [1.5, 3.0, 5.0]:
+	var fill_s := float(row.effect.fill_s)
+	for elapsed in [fill_s * 0.5, fill_s, fill_s + 2.0]:
 		ctx.delta_s = elapsed - float(samples[-1].elapsed)
 		ctx.rise_s = float(samples[-1].elapsed)
 		handler.handle("step", row, ctx)
@@ -68,7 +69,7 @@ func _run() -> void:
 	out.store_string(JSON.stringify(samples, "  ") + "\n")
 	out.close()
 	handler.handle("end", row, ctx)
-	await _sample("ended", 5.0, true)
+	await _sample("ended", fill_s + 2.0, true)
 	handler.release()
 	w.free()
 	var result := t.verdict()
@@ -92,6 +93,9 @@ func _sample(label: String, elapsed: float, landed: bool) -> void:
 	t.check(label + " real downward ray hits", not hit.is_empty())
 	t.near(label + " ray agrees", ray_y, height, 0.05)
 	t.near(label + " drawn mesh agrees", drawn, height, 0.05)
+	if landed and handler.active.has(row.id):
+		var feedback := _mesh_height(handler.active[row.id].mark.get_node("Style"), point)
+		t.near(label + " landing feedback follows roof", feedback, height + 0.15 + 0.3, 0.05)
 	if not landed:
 		t.near(label + " pre-event terrain baseline b3b840d", height, BASELINE_B3B840D, 0.05)
 		t.near(label + " pre-event collider baseline b3b840d", ray_y, BASELINE_B3B840D, 0.05)
