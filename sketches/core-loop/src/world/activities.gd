@@ -8,6 +8,8 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const PocketFog := preload("res://src/world/events/pocket_fog.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
 # stand lit from the stage's first frame, finish on an action the player already knows and pay
@@ -29,6 +31,43 @@ const Parts := preload("res://src/build/parts.gd")
 const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
 const RULES := {
+	"movement_course": {
+		"starts": "ring", "ring": 8.0, "finishes": "course", "bundle": ["course", "chest"],
+		"cue": {"view": "surge_run", "word": "Course", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["common"], "tier": 1, "parts": 1, "source": "pocket_course", "where": "stand"},
+	},
+	"arena": {
+		"starts": "ring", "ring": 8.0, "finishes": "arena", "pack": ["chaser", "chaser", "lobber"], "bundle": ["spawners", "hazard", "heal", "chest"],
+		"cue": {"view": "enemy_camp", "word": "Arena", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["rare"], "tier": 2, "parts": 1, "source": "pocket_arena", "where": "stand"},
+	},
+	"elite_arena": {
+		"starts": "ring", "ring": 8.0, "finishes": "elite", "pack": ["chaser", "lobber", "miniboss"], "bundle": ["elite", "spawners", "hazard", "heal", "chest"],
+		"cue": {"view": "hauler_bounty", "word": "Elite arena", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["rare"], "tier": 3, "parts": 2, "source": "pocket_elite", "where": "stand"},
+	},
+	"objective_limit": {
+		"starts": "ring", "ring": 8.0, "finishes": "timed_pickup", "limit_ticks": 600, "bundle": ["timed_pickup", "chest"],
+		"cue": {"view": "cracked_cache", "word": "Pickup course", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["rare"], "tier": 4, "parts": 3, "source": "pocket_objective", "where": "stand"},
+	},
+	"round_arena": {
+		"starts": "ring", "ring": 8.0, "finishes": "rounds", "rounds": 3, "base": 12.0, "step": 6.0, "difficulty_cap": 3.0, "enemy_credit": 6.0,
+		"elements": ["chaser", "lobber", "plated_brute"], "bundle": ["spawners", "hazard", "safe_zone", "heal", "round_chests"],
+		"cue": {"view": "enemy_camp", "word": "Round arena", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["rare"], "tier": 2, "parts": 1, "source": "pocket_round", "where": "safe_zone"},
+	},
+	"ambush": {
+		"starts": "ring", "ring": 8.0, "finishes": "waves", "waves": [["chaser"], ["chaser", "lobber", "chaser"], ["chaser", "lobber", "chaser", "lobber", "chaser"]],
+		"bundle": ["spawners", "hazard", "heal", "chest"],
+		"cue": {"view": "ambush_altar", "word": "Ambush", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["rare"], "tier": 2, "parts": 1, "source": "pocket_ambush", "where": "stand"},
+	},
+	"scattered_marks": {
+		"starts": "none", "ring": 8.0, "finishes": "marks", "bundle": ["marks", "chest"],
+		"cue": {"view": "cracked_cache", "word": "Scattered marks", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["rare"], "tier": 2, "parts": 1, "source": "pocket_marks", "where": "stand"},
+	},
 	"enemy_camp": {
 		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "chaser"], "finishes": "pack_dead",
 		"pay": {"scrap": PAY_SCRAP, "named": "hot_rivets", "rarities": PAY_RARITIES, "source": "activity_camp", "where": "camp"},
@@ -78,6 +117,17 @@ var ctx
 var sites: Array = []
 var _piece_paid := false
 var _pending_stage := false
+var _elite_arrivals := 0
+var _graph
+var _graph_map := ""
+var _mark_pools := {}
+
+const POCKET_HEAL_SHARE := 0.15
+const POCKET_FOG_SIZE := Vector3(32, 8, 32)
+const POCKET_SAFE_M := 4.0
+const POCKET_DAMAGE_PER_S := 8.0
+const MARK_SPACING_M := 80.0
+const MARK_POOL_SIZE := 16
 
 
 # One standing activity: its rule, its look, its state and, once it has finished, its pay.
@@ -93,10 +143,39 @@ class Site extends Node3D:
 	var pedestal := Vector3.ZERO
 	var pickup: Node3D
 	var pickup_part := ""
+	var pickup_parts: Array = []
+	var reward_parts: Array = []
 	var cap: Node3D
 	var pickup_taken := false
 	var inside_pickup := true
 	var fired_glow: StandardMaterial3D
+	var hazards: Array = []
+	var fog
+	var graph
+	var targets: Array = []
+	var target_views: Array = []
+	var taken := {}
+	var marks_taken := 0
+	var next_target := 0
+	var ticks := 0
+	var failed := false
+	var heal_paid := false
+	var tier_label: Label3D
+	var difficulty := 1.0
+	var round := 0
+	var round_elements: Array = []
+	var round_credits := 0.0
+	var round_payments := 0
+	var round_rewards: Array = []
+	var awaiting_round := false
+	var wave := 0
+	var spawn_positions: Array = []
+	var phase_view: Node3D
+
+	func _exit_tree() -> void:
+		for enemy in pack:
+			if is_instance_valid(enemy):
+				enemy.queue_free()
 
 
 func setup(ctx_ref) -> void:
@@ -109,10 +188,17 @@ func setup(ctx_ref) -> void:
 
 func _on_stage_entered(_stage: int, retry: bool) -> void:
 	clear()
+	_elite_arrivals = 0
 	# A retry does not re-arm the piece, so dying cannot farm one.
 	if not retry:
 		_piece_paid = false
 	var map = ctx.terrain.map()
+	_graph = null
+	_graph_map = ""
+	_mark_pools.clear()
+	if "park" in map and not map.park.is_empty():
+		_graph_map = String(map.park.map)
+		_graph = ParkGraph.read("res://assets/park/%s/graph.bin" % _graph_map)
 	if not "activity_sites" in map:
 		return
 	for spec in map.activity_sites:
@@ -129,6 +215,11 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 func clear() -> void:
 	for site in sites:
 		if is_instance_valid(site):
+			for hazard in site.hazards:
+				hazard.stop()
+			for enemy in site.pack:
+				if is_instance_valid(enemy):
+					enemy.queue_free()
 			site.queue_free()
 	sites.clear()
 	_pending_stage = false
@@ -155,7 +246,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.id = id
 	s.rule = RULES[id]
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id == "enemy_camp" or not spec_pay.is_empty():
+	if id == "enemy_camp" or not spec_pay.is_empty() or s.rule.has("bundle"):
 		s.rule = s.rule.duplicate(true)
 	if id == "enemy_camp":
 		s.rule["pack"] = spec.get("pack", s.rule["pack"])
@@ -169,7 +260,11 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
 	s.view = ActivityView.new()
 	s.add_child(s.view)
-	s.view.build(id, float(s.rule["ring"]))
+	s.view.build(String(s.rule.cue.view) if s.rule.has("cue") else id, float(s.rule["ring"]))
+	if s.rule.has("bundle"):
+		_build_pocket(s, spec)
+	elif id == "enemy_camp" and spec.has("site"):
+		_build_hazard(s)
 	match id:
 		"ambush_altar":
 			_build_altar(s)
@@ -250,7 +345,7 @@ func _mesh_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, m
 	parent.add_child(mesh)
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if ctx == null or not ctx.flow.in_stage():
 		return
 	if _pending_stage and ctx.spawner != null and not ctx.calm:
@@ -263,17 +358,342 @@ func _physics_process(_delta: float) -> void:
 		if not is_instance_valid(s):
 			continue
 		s.view.near(ball)
+		if s.rule.has("bundle"):
+			step_pocket(s, delta, ball)
+			_watch_pickup(s, ball)
+			continue
 		if not s.done:
 			match String(s.rule["finishes"]):
 				"pack_dead":
 					_watch_ambush(s, ball)
 				"wall_broken":
 					_watch_wall(s, ball)
+			_advance_hazards(s, delta, ball)
 		_watch_pickup(s, ball)
 
 
 func _planar(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
+
+
+func _build_pocket(s: Site, spec: Dictionary) -> void:
+	s.graph = spec.get("graph", _graph)
+	s.difficulty = clampf(float(spec.get("difficulty", 1.0)), 1.0, float(s.rule.get("difficulty_cap", 3.0)))
+	s.tier_label = s.view.word
+	_show_reward(s)
+	if "hazard" in s.rule.bundle:
+		_build_hazard(s)
+	match s.id:
+		"movement_course":
+			for offset in [12.0, 24.0, 36.0]:
+				s.targets.append(ctx.terrain.drop_point(s.global_position.x + offset, s.global_position.z, 0.0))
+		"objective_limit":
+			s.targets.append(ctx.terrain.drop_point(s.global_position.x + 24.0, s.global_position.z, 0.0))
+		"scattered_marks":
+			if s.graph != null:
+				var graph_id: int = s.graph.get_instance_id()
+				if not _mark_pools.has(graph_id):
+					_mark_pools[graph_id] = mark_candidates(s.graph)
+				var pool: Array = _mark_pools[graph_id]
+				for n in draw_marks(s.graph, ctx.rng.seed, pool):
+					s.targets.append(s.graph.position(n))
+			if s.targets.size() < 3:
+				s.failed = true
+	for target in s.targets:
+		var marker := ActivityView.gem(String(s.rule.cue.view))
+		s.add_child(marker)
+		marker.global_position = target
+		s.target_views.append(marker)
+
+
+func _show_reward(s: Site) -> void:
+	var suffix := "round_%d" % maxi(1, s.round) if s.id == "round_arena" else "clear"
+	s.reward_parts = _reward_parts(s, suffix)
+	var shown := stand_odds(s)
+	s.tier_label.text = "%s — Tier %d (%s)" % [s.rule.cue.word, shown.tier, shown.reward_text]
+	s.tier_label.modulate = ItemGen.RARITY[shown.reward_rarity].color
+
+
+func step_pocket(s: Site, delta: float, ball: Vector3) -> void:
+	_watch_round_pickups(s, ball)
+	if s.done or s.failed:
+		return
+	if s.id == "scattered_marks":
+		for i in s.targets.size():
+			if not s.taken.has(i) and _touches(ball, s.targets[i]):
+				s.taken[i] = true
+				s.marks_taken += 1
+				s.target_views[i].visible = false
+				_cue(s, "telegraph")
+		if s.marks_taken == s.targets.size() and s.marks_taken >= 3:
+			_finish(s, s.global_position)
+		return
+	if not s.started:
+		if _planar(ball, s.global_position) > float(s.rule.ring) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
+			return
+		if s.id in ["arena", "elite_arena", "round_arena", "ambush"] and (ctx.calm or ctx.spawner == null):
+			return
+		if s.id == "elite_arena" and _elite_arrivals >= 3:
+			return
+		s.started = true
+		_cue(s, "telegraph")
+		match s.id:
+			"arena", "elite_arena":
+				_spawn_pocket_pack(s, s.rule.pack)
+				if s.pack.is_empty():
+					s.started = false
+					return
+				s.fog.begin(1)
+				if s.id == "elite_arena":
+					_elite_arrivals += 1
+					s.brute = s.pack.back()
+					s.brute.died.connect(func(_at, _scrap): _elite_clear(s))
+			"round_arena":
+				_begin_round(s)
+			"ambush":
+				s.fog.begin(1)
+				_next_wave(s)
+	_advance_hazards(s, delta, ball)
+	match String(s.rule.finishes):
+		"course":
+			if s.next_target < s.targets.size() and _touches(ball, s.targets[s.next_target]):
+				s.target_views[s.next_target].visible = false
+				s.next_target += 1
+			if s.next_target == s.targets.size():
+				_finish(s, s.global_position)
+		"timed_pickup":
+			s.ticks += 1
+			if s.ticks > int(s.rule.limit_ticks):
+				s.failed = true
+				s.view.finish()
+				for marker in s.target_views:
+					marker.visible = false
+			elif _touches(ball, s.targets[0]):
+				s.target_views[0].visible = false
+				_finish(s, s.global_position)
+		"arena":
+			if _alive(s.pack) == 0:
+				_finish(s, s.global_position)
+		"elite":
+			if is_instance_valid(s.brute) and s.brute.is_dead():
+				_elite_clear(s)
+		"waves":
+			if _alive(s.pack) == 0:
+				if s.wave == s.rule.waves.size():
+					_finish(s, s.global_position)
+				else:
+					_next_wave(s)
+		"rounds":
+			if s.awaiting_round:
+				if s.fog.active:
+					s.awaiting_round = false
+					var kinds := []
+					for i in maxi(s.round_elements.size(), floori(s.round_credits / float(s.rule.enemy_credit))):
+						kinds.append(s.round_elements[i % s.round_elements.size()])
+					_spawn_pocket_pack(s, kinds)
+			elif _alive(s.pack) == 0:
+				_pay_round(s)
+				if s.round == int(s.rule.rounds):
+					_finish(s, s.global_position)
+				else:
+					_begin_round(s)
+
+
+func _touches(ball: Vector3, at: Vector3) -> bool:
+	return _planar(ball, at) <= PICKUP_REACH and absf(ball.y - at.y) <= PICKUP_HEIGHT
+
+
+func _build_hazard(s: Site) -> void:
+	s.fog = PocketFog.new()
+	s.add_child(s.fog)
+	s.fog.setup(s.global_position, POCKET_FOG_SIZE, POCKET_SAFE_M, POCKET_DAMAGE_PER_S, ctx.rng.seed)
+	s.hazards.append(s.fog)
+
+
+func _advance_hazards(s: Site, delta: float, ball: Vector3) -> void:
+	for hazard in s.hazards:
+		for fact in hazard.advance(delta, ball):
+			if fact.kind == "world":
+				ctx.events.world_fact.emit(fact.fact, fact.at)
+		var damage: float = hazard.damage_at(ball) * delta
+		if damage > 0.0:
+			ctx.run.damage(damage, "pocket_veil")
+
+
+func _cue(s: Site, phase: String) -> void:
+	var kind := String(s.rule.cue[phase])
+	var row := EventKinds.row(kind)
+	var presentation: Node = ctx.root.get_node_or_null("Presentation")
+	if presentation != null:
+		presentation.audio.play(kind)
+	if is_instance_valid(s.phase_view):
+		s.phase_view.queue_free()
+	s.phase_view = ActivityView._glyph(String(row.shape), row.color)
+	s.add_child(s.phase_view)
+	s.phase_view.position = Vector3.UP * 2.0
+	if s.view.word != null:
+		s.view.word.modulate = row.color
+
+
+func _pocket_roll(s: Site, suffix: String, count := 1) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, s.id + suffix)
+	return Parts.roll(rng, pay_table(s).rarities, ctx.run.class_id(), ctx.run.parts, count)
+
+
+func _reward_parts(s: Site, suffix: String) -> Array:
+	var table := pay_table(s)
+	if table.named != "":
+		return [table.named]
+	return _pocket_roll(s, suffix, int(s.rule.pay.parts))
+
+
+func _heal(s: Site) -> void:
+	if s.heal_paid or not "heal" in s.rule.get("bundle", []):
+		return
+	ctx.run.heal(ctx.run.max_hp * POCKET_HEAL_SHARE)
+	s.heal_paid = true
+
+
+func _elite_clear(s: Site) -> void:
+	if not is_instance_valid(s) or s.done:
+		return
+	for enemy in s.pack:
+		if is_instance_valid(enemy) and enemy != s.brute:
+			enemy.queue_free()
+	s.pack.clear()
+	_finish(s, s.global_position)
+
+
+func _spawn_pocket_pack(s: Site, kinds: Array) -> void:
+	s.pack.clear()
+	var positions := pocket_positions(s, kinds.size())
+	if positions.size() != kinds.size():
+		s.failed = true
+		for hazard in s.hazards:
+			hazard.stop()
+		return
+	for i in kinds.size():
+		var spot: Vector3 = positions[i]
+		var enemy = ctx.spawner.spawn_enemy(String(kinds[i]), ctx.terrain.drop_point(spot.x, spot.z, SPAWN_CLEARANCE))
+		if enemy != null:
+			s.pack.append(enemy)
+			s.spawn_positions.append(enemy.global_position)
+
+
+func pocket_positions(s: Site, count: int) -> Array:
+	var result := []
+	for i in count:
+		var angle := PACK_TURN + TAU * float(i) / count
+		var point := s.global_position + Vector3(cos(angle), 0, sin(angle)) * float(s.rule.ring)
+		if s.id == "ambush":
+			if s.graph == null:
+				return []
+			var candidates: PackedInt32Array = s.graph.disc_nodes(Vector2(point.x, point.z), float(s.rule.ring))
+			var eligible := PackedInt32Array()
+			for n in candidates:
+				if s.graph.flags(n) & ParkGraph.DOOR_OK != 0 and s.graph.flags(n) & ParkGraph.LINE == 0:
+					eligible.append(n)
+			var node: int = s.graph.nearest_in(eligible, point)
+			if node < 0:
+				return []
+			point = s.graph.position(node)
+		result.append(point)
+	return result
+
+
+func _next_wave(s: Site) -> void:
+	var kinds: Array = s.rule.waves[s.wave]
+	s.wave += 1
+	_spawn_pocket_pack(s, kinds)
+
+
+func _begin_round(s: Site) -> void:
+	s.round += 1
+	s.round_elements.append(s.rule.elements[s.round - 1])
+	s.round_credits = (float(s.rule.base) + float(s.rule.step) * (s.round - 1)) * s.difficulty
+	s.awaiting_round = true
+	s.fog.begin(s.round)
+	_show_reward(s)
+
+
+func _pay_round(s: Site) -> void:
+	s.fog.stop()
+	s.heal_paid = false
+	_heal(s)
+	var picks: Array = s.reward_parts.duplicate()
+	var pickup := ActivityView.gem(String(s.rule.cue.view))
+	s.add_child(pickup)
+	pickup.global_position = s.fog.committed.safe_at
+	s.round_rewards.append({"pickup": pickup, "parts": picks, "inside": _touches(ctx.player.ball_position(), pickup.global_position)})
+	s.round_payments += 1
+	_cue(s, "clear")
+
+
+func _watch_round_pickups(s: Site, ball: Vector3) -> void:
+	for reward in s.round_rewards.duplicate():
+		var now := _touches(ball, reward.pickup.global_position)
+		if now and not reward.inside:
+			for part in reward.parts:
+				ctx.run.add_part(part, String(s.rule.pay.source))
+			_pay_scrap(s, reward.pickup.global_position)
+			reward.pickup.queue_free()
+			s.round_rewards.erase(reward)
+			_cue(s, "pay")
+		else:
+			reward.inside = now
+
+
+static func mark_far_m(graph) -> float:
+	var farthest := 0.0
+	for n in graph.node_count():
+		if graph.flags(n) & ParkGraph.DOOR_OK != 0 and is_finite(graph.d_spawn_node(n)):
+			farthest = maxf(farthest, graph.d_spawn_node(n))
+	return farthest * 0.5
+
+
+static func mark_candidates(graph) -> Array:
+	var far := mark_far_m(graph)
+	var nodes := []
+	for n in graph.node_count():
+		if graph.flags(n) & ParkGraph.DOOR_OK != 0 and is_finite(graph.d_spawn_node(n)) and is_finite(graph.d_landmark_node(n)) and graph.d_spawn_node(n) >= far:
+			nodes.append(n)
+	nodes.sort_custom(func(a, b): return graph.d_spawn_node(a) < graph.d_spawn_node(b))
+	var pool := []
+	if nodes.is_empty():
+		return pool
+	var anchor := PackedInt32Array([nodes[0]])
+	var from_anchor: PackedByteArray = graph.reach(anchor)
+	var to_anchor: PackedFloat32Array = graph.search(anchor, true)
+	# All marks must be mutually reachable, including directed ride/drop edges.
+	# The entry drop need not be reachable again after the ball leaves it.
+	nodes = nodes.filter(func(n): return from_anchor[n] != 0 and is_finite(to_anchor[n]))
+	for i in mini(MARK_POOL_SIZE, nodes.size()):
+		pool.append(nodes[roundi(float(i) * (nodes.size() - 1) / (MARK_POOL_SIZE - 1))])
+	return pool
+
+
+static func draw_marks(graph, seed_value: int, pool: Array = []) -> Array:
+	if pool.is_empty():
+		pool = mark_candidates(graph)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var count := rng.randi_range(3, 4)
+	var candidates := pool.duplicate()
+	for i in range(candidates.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var swap = candidates[i]
+		candidates[i] = candidates[j]
+		candidates[j] = swap
+	var marks := []
+	for n in candidates:
+		# Difference in shortest spawn distances is a lower bound on path separation;
+		# unlike Euclidean spacing, it preserves the park's authored path measure.
+		if marks.all(func(other): return absf(graph.d_spawn_node(n) - graph.d_spawn_node(other)) >= MARK_SPACING_M):
+			marks.append(n)
+			if marks.size() == count:
+				return marks
+	return marks
 
 
 # ---- The ambush ----
@@ -304,6 +724,8 @@ func _spawn_pack(s: Site) -> void:
 		if enemy != null:
 			s.pack.append(enemy)
 	s.started = not s.pack.is_empty()
+	if s.started and s.fog != null:
+		s.fog.begin(1)
 
 
 static func _alive(pack: Array) -> int:
@@ -395,22 +817,57 @@ func stand_odds(s: Site) -> Dictionary:
 	var table := pay_table(s)
 	var odds: Array = ItemGen.odds(table["rarities"]) if table["named"] != "" \
 			else OddsReadout.odds_for(table["rarities"], ctx.run.class_id())
-	return {"named": table["named"], "rarities": table["rarities"], "odds": odds, "text": OddsReadout.text(odds)}
+	var result := {"named": table["named"], "rarities": table["rarities"], "odds": odds, "text": OddsReadout.text(odds)}
+	if s.rule.has("bundle"):
+		var picks: Array = s.reward_parts
+		var rung := 0
+		var descriptions := []
+		var rarity := "common"
+		for part in picks:
+			var part_rarity := Parts.rarity_of(part)
+			if int(ItemGen.RARITY[part_rarity].rung) >= rung:
+				rung = int(ItemGen.RARITY[part_rarity].rung)
+				rarity = part_rarity
+			if not part_rarity in descriptions:
+				descriptions.append(part_rarity)
+		result["tier"] = picks.size() + rung
+		result["parts"] = picks.size()
+		result["reward_rarity"] = rarity
+		result["reward_text"] = Parts.display_name(String(table.named)) if table.named != "" else "%d %s parts" % [picks.size(), "/".join(descriptions)]
+	return result
 
 func _finish(s: Site, at: Vector3) -> void:
 	if s.done:
 		return
 	s.done = true
+	for hazard in s.hazards:
+		hazard.stop()
+	if s.rule.has("bundle"):
+		_heal(s)
+		if s.id != "round_arena":
+			_cue(s, "clear")
 	s.view.finish()
+	if s.tier_label != null:
+		s.tier_label.visible = false
 	if s.cap != null:
 		s.cap.visible = false
+	if s.id == "round_arena":
+		_pay_piece()
+		ctx.events.activity_done.emit(s.id, at)
+		return
 	var table := pay_table(s)
 	if table["named"] != "":
 		s.pickup_part = table["named"]
+		if s.rule.has("bundle"):
+			s.pickup_parts = [s.pickup_part]
 	else:
-		s.pickup_part = _roll(s.id, table["rarities"])
+		if s.rule.has("bundle"):
+			s.pickup_parts = s.reward_parts.duplicate()
+			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
+		else:
+			s.pickup_part = _roll(s.id, table["rarities"])
 	if s.pickup_part != "":
-		s.pickup = ActivityView.gem(s.id)
+		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") else s.id)
 		s.add_child(s.pickup)
 		s.pickup.global_position = at
 		s.inside_pickup = _planar(ctx.player.ball_position(), at) <= PICKUP_REACH
@@ -457,7 +914,13 @@ func _watch_pickup(s: Site, ball: Vector3) -> void:
 		s.pickup_taken = true
 		s.pickup.queue_free()
 		s.pickup = null
-		ctx.run.add_part(s.pickup_part, String(s.rule["pay"]["source"]))
+		if s.rule.has("bundle"):
+			for part in s.pickup_parts:
+				ctx.run.add_part(part, String(s.rule.pay.source))
+		else:
+			ctx.run.add_part(s.pickup_part, String(s.rule["pay"]["source"]))
 		_pay_scrap(s, at)
+		if s.rule.has("bundle"):
+			_cue(s, "pay")
 		return
 	s.inside_pickup = now

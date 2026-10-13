@@ -121,18 +121,15 @@ func _stepped_facts(park: Dictionary) -> void:
 	for f in d.end_all():
 		_observe(f, park, live, started, bad)
 	var missing := []
-	# Coordinator ruling 2026-10-12: toe_vents_wake holds on real lines; stage fix owed by KD1.
-	var expected_holds := ["toe_vents_wake"] if park.map == "park_dam" else []
-	var held_ok := true
 	for row in park.event_rows:
-		if row.id in expected_holds:
-			held_ok = held_ok and announced.has(row.id) and not started.has(row.id) and not landing_world.has(row.id) and not land_hooks.has(row.id)
-			continue
 		if not started.has(row.id):
 			missing.append(row.id)
-	_check(park.map + " expected authored corridor holds", held_ok, "expected=%s announced=%s landed=%s land_hooks=%s" % [expected_holds, announced.keys(), landing_world.keys(), land_hooks])
-	_check(park.map + " route after every event fact", bad.is_empty() and missing.is_empty() and not started.is_empty() and held_ok,
-		"starts=%s expected_holds=%s missing=%s disconnected=%s" % [started.keys(), expected_holds, missing, bad])
+	if park.map == "park_dam":
+		_check("toe_vents_wake announces, starts and lands", announced.has("toe_vents_wake")
+			and started.has("toe_vents_wake") and landing_world.has("toe_vents_wake") and land_hooks.has("toe_vents_wake"),
+			"announced=%s started=%s landed=%s land_hooks=%s" % [announced.keys(), started.keys(), landing_world.keys(), land_hooks])
+	_check(park.map + " route after every event fact", bad.is_empty() and missing.is_empty() and not started.is_empty(),
+		"starts=%s missing=%s disconnected=%s" % [started.keys(), missing, bad])
 
 
 func _observe(f: Dictionary, park: Dictionary, live: Dictionary, started: Dictionary, bad: Array) -> void:
