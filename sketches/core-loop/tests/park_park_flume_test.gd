@@ -31,6 +31,9 @@ const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const Kinds := preload("res://src/core/event_kinds.gd")
 const Bay := preload("res://src/world/bay.gd")
 
 const MAP := "park_flume"
@@ -138,6 +141,7 @@ func _run() -> void:
 	print("[planted rules] %s" % "; ".join(planted_rules))
 	t.check("planted pocket rows break the 2.12 rules", planted_rules.size() >= 3, "%d: %s" % [planted_rules.size(), "; ".join(planted_rules)])
 	await dock_site_pins()
+	await collapse_event_pins()
 	quit(t.verdict())
 
 
@@ -317,3 +321,84 @@ static func line_failures(park: Dictionary, lines: Dictionary) -> Array:
 		if pts.is_empty() or pts[0] != "drop_in":
 			out.append("%s does not start at drop_in" % key)
 	return out
+
+
+func collapse_event_pins() -> void:
+	var game := Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	game.presentation.audio.bake_now()
+	game.player.source = Intent.Scripted.new()
+	game.flow.press_start()
+	game.flow.choose_class(1)
+	game.flow.enter_stage(2, Vector3.ZERO, false)
+	await physics_frame
+	await physics_frame
+	game.process_mode = Node.PROCESS_MODE_DISABLED
+	var world = game.world
+	var registered := []
+	for state in world.events._park_states:
+		registered.append(state.row.id)
+	t.check("real stage registers collapse and reactor", registered.has("hollow_trestle_collapse") and registered.has("annex_reactor_blow"))
+	var facts_seen := []
+	var times := {}
+	var land_s := -1.0
+	var ball: Vector3 = game.player.ball_position()
+	for step in 2400:
+		var context := {"clock_tier": 2, "grounded": false, "bar_s": 240.0 / 172.0, "bar_origin_s": 0.0,
+			"warden_phases": ["chunk_2"] if step == 0 else []}
+		var facts: Array = world.events.advance(0.05, ball, Vector3.ZERO, context)
+		world._publish(facts)
+		for fact in facts:
+			if fact.id not in ["hollow_trestle_collapse", "annex_reactor_blow"]:
+				continue
+			print("[flume event] ", JSON.stringify(fact))
+			if fact.has("fact"):
+				facts_seen.append(fact.fact)
+				times[fact.fact] = fact.time_s
+			if fact.kind == "started" and fact.id == "hollow_trestle_collapse":
+				land_s = fact.time_s
+		if land_s >= 0.0 and world.events.stage_time >= land_s + 2.1:
+			break
+	for spec in [["trestle_groan", "trestle_landed", 6.0], ["reactor_overload", "reactor_landed", 5.0]]:
+		t.check(spec[0] + " telegraph and land facts", facts_seen.count(spec[0]) == 1 and facts_seen.count(spec[1]) == 1)
+		t.check(spec[0] + " authored lead", float(times.get(spec[1], -1000.0)) - float(times.get(spec[0], 0.0)) >= float(spec[2]))
+		t.check(spec[0] + " presentation uses common kind records", not Kinds.world_row(spec[0]).is_empty() and not Kinds.world_row(spec[1]).is_empty())
+	t.check("collapse route flags", world.events.route_open("trestle_ramp_line") and not world.events.route_open("flume_mid"))
+	var industrial: Dictionary = world.event_families.industrial.active.get("annex_reactor_blow", {})
+	t.check("reactor fallout and annex route", not industrial.is_empty() and industrial.hazard.is_live() and world.events.route_open("annex_ramp_line"))
+	var map = world.terrain.map()
+	var swap: Dictionary = map.swaps.get("trestle_ramp", {}) if "swaps" in map else {}
+	if t.check("collapse has a physical swapped surface", not swap.is_empty() and swap.has("target")):
+		t.check("collapse fully lands in two seconds", is_equal_approx(float(swap.progress), 1.0) and swap.body.visible)
+		var faces: PackedVector3Array = swap.body.get_child(1).shape.get_faces()
+		var surface = map.profiles["trestle_ramp_after"].surface
+		# Independent design geometry: 373 m span, y 44 deck, measured baked floor at its midpoint.
+		var centre := Vector2(-115.0, 5.5)
+		var axis := Vector2.RIGHT.rotated(-deg_to_rad(30.6))
+		for fraction in [0.0, 0.25, 0.5, 0.75, 1.0]:
+			var point: Vector2 = centre + axis * (fraction - 0.5) * 373.0
+			var expected := lerpf(23.5586042404175, 44.0, fraction)
+			var drawn: float = surface.height(point)
+			var physical := collider_y(faces, point)
+			print("[fallen ramp] fraction %.2f xz %s expected %.6f mesh %.6f collider %.6f" % [fraction, point, expected, drawn, physical])
+			t.check("fallen ramp mesh at %.2f" % fraction, absf(drawn - expected) < 0.05)
+			t.check("fallen ramp collider at %.2f" % fraction, absf(physical - expected) < 0.05)
+	game.free()
+
+
+static func collider_y(faces: PackedVector3Array, point: Vector2) -> float:
+	for k in range(0, faces.size(), 3):
+		var a := faces[k]
+		var b := Vector2(faces[k + 1].x - a.x, faces[k + 1].z - a.z)
+		var c := Vector2(faces[k + 2].x - a.x, faces[k + 2].z - a.z)
+		var d := point - Vector2(a.x, a.z)
+		var determinant := b.cross(c)
+		if absf(determinant) < 0.0000001:
+			continue
+		var u := d.cross(c) / determinant
+		var v := b.cross(d) / determinant
+		if u >= -0.00001 and v >= -0.00001 and u + v <= 1.00001:
+			return a.y + u * (faces[k + 1].y - a.y) + v * (faces[k + 2].y - a.y)
+	return -INF
