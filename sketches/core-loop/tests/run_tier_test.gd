@@ -139,8 +139,8 @@ func _runtime() -> void:
 			"schedule0": a.hash, "schedule1": b.hash, "measure": "settled event bonus cores + rare parts / 400 production draws"}))
 
 func _card() -> void:
-	_begin(701, 0)
 	game.ctx.root.bot_driven = false
+	_begin(701, 0)
 	if not game.flow.has_method("show_start_card"):
 		t.check("production start card appears", false)
 		return
@@ -177,6 +177,7 @@ func _card() -> void:
 	t.check("selected tier entrance load", loaded.from_entrance_doc(doc) and loaded.selected_run_tier() == 1)
 	loaded.restore()
 	t.eq("selected tier retry survives", loaded.selected_run_tier(), 1)
+	loaded.events.free()
 	game.flow.retry_stage()
 	t.eq("actual flow retry preserves tier", game.run.selected_run_tier(), 1)
 	game.ctx.root.bot_driven = true
@@ -212,6 +213,7 @@ func _variants() -> void:
 	loaded.begin(ClassDef.all()[0])
 	t.near("tier-zero cache does not leak", Parts.def("loose_trigger").mods.weapon_rate, 1.1)
 	t.check("cached base row immutable", Parts.rows()["loose_trigger"] == original)
+	loaded.events.free()
 
 func _run() -> void:
 	if record or section in ["all", "runtime"]:

@@ -7,6 +7,7 @@ const Worlds := preload("res://src/core/worlds.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
@@ -33,6 +34,7 @@ const NET_DECK_SLACK := 2.0
 const NET_DAMP := 0.5
 
 var ctx
+var start_card
 var beacon
 var state := TITLE
 var classes: Array[Resource] = []
@@ -101,6 +103,14 @@ func setup(ctx_ref, beacon_ref) -> void:
 	ctx = ctx_ref
 	beacon = beacon_ref
 	classes = ClassDef.all()
+	var layer := CanvasLayer.new()
+	layer.layer = 3
+	add_child(layer)
+	start_card = StartPickCard.new()
+	layer.add_child(start_card)
+	start_card.pick_requested.connect(take_start_pick)
+	start_card.reroll_requested.connect(reroll_start_pick)
+	start_card.tier_requested.connect(choose_run_tier)
 	ctx.events.player_died.connect(_on_player_died)
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
 	ctx.events.launched.connect(_on_launched)
@@ -239,14 +249,36 @@ func new_run() -> void:
 	_begin_run(ctx.run.class_def)
 
 
+func show_start_card() -> void:
+	var interactive: bool = not ctx.root.bot_driven
+	start_card.set_interactive(interactive)
+	start_card.show_picks(ctx.run, ctx.profile)
+	start_card.position = Vector2((get_viewport().get_visible_rect().size.x - start_card.size.x) * 0.5, 160.0)
+	if not interactive or not in_stage():
+		start_card.hide_card()
+
+
+func take_start_pick(index: int) -> bool:
+	var taken: bool = in_stage() and ctx.run.take_start_pick(index)
+	show_start_card()
+	return taken
+
+
+func reroll_start_pick() -> bool:
+	var rerolled: bool = in_stage() and ctx.run.reroll_start_pick()
+	show_start_card()
+	return rerolled
+
+
 func choose_run_tier(value: int) -> bool:
-	if not ctx.run.select_run_tier(value, ctx.profile):
+	if not in_stage() or not ctx.run.select_run_tier(value, ctx.profile):
 		return false
 	if ctx.build != null:
 		ctx.build.recompute()
 	if store != null and not _entrance.is_empty():
 		_entrance["run_tier"] = value
 		_save(_entrance)
+	show_start_card()
 	return true
 
 
@@ -266,6 +298,7 @@ func _begin_run(chosen: Resource) -> void:
 		warn_once("run_prev_backup", "flow: could not keep the old run: %s" % store.last_error)
 	var heading: Vector3 = ctx.terrain.entry_heading(1)
 	enter_stage(1, heading * ctx.tuning.f("cruise") * FIRST_DROP_SPEED, false)
+	show_start_card()
 
 
 # The saved run the title can offer, or {} with saved_run_cause naming why not: "" for no
@@ -453,6 +486,7 @@ func retry_stage() -> void:
 	ctx.camera.yaw = ctx.run.snapshot_value("camera_yaw")
 	_place_beacon()
 	_set_state(STAGE)
+	show_start_card()
 
 
 # Replays a stage from the first start the run kept for it, as the boss death screen's
@@ -854,6 +888,8 @@ func objective_text() -> String:
 
 
 func _set_state(next: int) -> void:
+	if start_card != null and (next not in [STAGE, BEACON] or ctx.run.stage != 1):
+		start_card.hide_card()
 	if state == next:
 		return
 	state = next
