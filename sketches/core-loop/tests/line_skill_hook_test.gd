@@ -1,11 +1,12 @@
 # 2026-10-13 RED-COMBAT: 9000ca2 gives Sable Bank Shot; PC-RIVET gives Rivet
 # Line Drive in 20d4273 (design-v3/pilots/rivet.md:76-84, :109). Keep the shared hook
-# checks on the merged kit: delayed ram punch and a 24 m/s world haul.
+# checks on the merged kit: delayed ram punch and the specified straight haul.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -109,7 +110,7 @@ func _line_hits(enemy: Node3D) -> int:
 
 func _punch_arrives(enemy: Node3D) -> void:
 	var kit = _combat.get_node("RivetKit")
-	var delay: float = _player.ball_position().distance_to(enemy.global_position) / 150.0
+	var delay: float = _player.ball_position().distance_to(enemy.global_position) / Weapons.LINE_PULSE_SPEED
 	kit._step_pulses(maxf(0.0, delay - 0.0001))
 	_t.eq("the cable pulse cannot hit before its travel time", _line_hits(enemy), 0)
 	kit._step_pulses(0.0002)
@@ -212,10 +213,10 @@ func _run() -> void:
 	_t.check("13 a loaded world bite fires on the world", _fired.size() == 1 and _fired[0][2] == "world",
 		"fired %s" % [_fired])
 	_t.check("13 the world haul has a committed ride", not haul.is_empty())
-	_t.check("13 a loaded world bite hauls toward the anchor at 24 m/s", toward >= 24.0 - 0.0001,
+	_t.check("13 a loaded world bite delivers the specified haul speed toward the anchor", toward >= Weapons.LINE_HAUL_SPEED - 0.0001,
 		"fired %s, speed toward anchor %.2f" % [_fired, toward])
 	_t.check("13 the world haul stops at the minimum rope distance", not haul.is_empty()
-		and absf(haul["ride"].target.distance_to(anchor) - 2.5) < 0.0001)
+		and absf(haul["ride"].target.distance_to(anchor) - Augments.MIN_ROPE) < 0.0001)
 
 	# 9. The flavour scales by the chain multiplier at the moment it fires.
 	_fresh()
