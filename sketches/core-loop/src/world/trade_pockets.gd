@@ -152,3 +152,82 @@ static func stage_site(graph, map, run, layout_seed: int, pool: PackedInt32Array
 			appear(run.trade_memory, offer)
 	run.trade_memory.offers[key] = spec.duplicate(true)
 	return spec
+
+static func to_doc(mem: Dictionary) -> Dictionary:
+	var doc: Dictionary = mem.duplicate(true)
+	for key in doc.offers:
+		var spec: Dictionary = doc.offers[key]
+		if not spec.is_empty():
+			doc.offers[key] = {"node": spec.node, "at": [spec.at.x, spec.at.y], "trade": spec.trade.duplicate(true)}
+	return doc
+
+static func from_doc(doc: Dictionary) -> Dictionary:
+	var mem: Dictionary = doc.duplicate(true)
+	for key in ["last_appeared", "last_seen", "last_refused"]:
+		mem[key] = int(mem[key])
+	for key in mem.offers:
+		var saved: Dictionary = mem.offers[key]
+		if not saved.is_empty():
+			var offer: Dictionary = saved.trade
+			mem.offers[key] = Library.site_spec(Library.trade(offer.interior_id)).merged({
+				"node": int(saved.node), "at": Vector2(saved.at[0], saved.at[1]),
+				"id": "curse" if offer.curse else "sacrifice" if offer.sacrifice else "trade_" + String(offer.family), "trade": offer})
+	return mem
+
+static func _stage_ok(value, entrance: int) -> bool:
+	return (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) and is_finite(value) and value == floorf(value) and value >= 1 and value <= entrance
+
+static func _offer_ok(offer, entrance: int) -> bool:
+	if not offer is Dictionary or not _stage_ok(offer.get("stage"), entrance):
+		return false
+	var family = offer.get("family")
+	if not family is String or not FAMILIES.has(family) or offer.get("interior_id") not in FAMILIES[family]:
+		return false
+	for key in ["curse", "sacrifice", "full_health_bump"]:
+		if not offer.get(key) is bool:
+			return false
+	if offer.curse != (offer.interior_id == "curse_counter") or offer.sacrifice != (offer.interior_id == "sacrifice_counter"):
+		return false
+	for key in ["chance", "recency", "safe_share", "refusal_weight", "skip_time", "sacrifice_chance", "pool_floor"]:
+		var value = offer.get(key)
+		if not (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) or not is_finite(value) or value < 0.0 or value > 1.0:
+			return false
+	return offer.skip_time == 0.0 and _stage_ok(offer.get("tier"), 3)
+
+static func validate_doc(doc, entrance: int) -> String:
+	if not doc is Dictionary or not doc.get("risk_taken") is bool:
+		return "invalid trade risk memory"
+	for key in ["last_appeared", "last_seen", "last_refused"]:
+		var value = doc.get(key)
+		if not _stage_ok(value, entrance) and not ((typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) and value == -100):
+			return "invalid trade timestamp: " + key
+	if not doc.get("seen") is Array or not doc.get("offers") is Dictionary or not doc.get("decisions") is Dictionary:
+		return "invalid trade history"
+	var seen := {}
+	for offer in doc.seen:
+		if not _offer_ok(offer, entrance) or seen.has(int(offer.stage)):
+			return "invalid seen trade"
+		seen[int(offer.stage)] = true
+	for key in doc.decisions:
+		if not key is String or not key.is_valid_int() or key != str(int(key)) or not _stage_ok(int(key), entrance) or not doc.decisions[key] is bool:
+			return "invalid trade decision"
+	for key in doc.offers:
+		if not key is String or not key.is_valid_int() or key != str(int(key)) or not _stage_ok(int(key), entrance):
+			return "invalid trade offer stage"
+		var spec = doc.offers[key]
+		if not spec is Dictionary:
+			return "invalid trade placement"
+		if spec.is_empty():
+			continue
+		if not _offer_ok(spec.get("trade"), entrance) or int(spec.trade.stage) != int(key):
+			return "invalid placed trade"
+		var node = spec.get("node")
+		if not (typeof(node) == TYPE_INT or typeof(node) == TYPE_FLOAT) or not is_finite(node) or node < 0 or node != floorf(node):
+			return "invalid trade node"
+		var at = spec.get("at")
+		if not at is Array or at.size() != 2:
+			return "invalid trade position"
+		for value in at:
+			if not (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) or not is_finite(value):
+				return "invalid trade position"
+	return ""
