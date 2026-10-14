@@ -4,6 +4,7 @@ const Pattern := preload("res://src/combat/pattern.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Attachments := preload("res://src/build/attachments.gd")
 
 # The class kits as data. Weapon ids come from class_def.gd; `pylon_turret` is the
 # engineer's weapon while mounted. Each weapon is a base Pattern plus the strike kind
@@ -240,8 +241,35 @@ const MORTAR_REACH := 0.5
 const RECITAL_SECONDS := 6.0
 
 
-static func base(weapon_id: String) -> Resource:
-	return Pattern.make(BASE.get(weapon_id, BASE[RAPID_LASER]))
+static func base(weapon_id: String, loadout := {}) -> Resource:
+	return Pattern.make(_attached(weapon_id, loadout, {}))
+
+
+# SQ11: the top tier's second fire mode over the attached primary; null below the top tier
+# or for a loadout that belongs to another weapon.
+static func second_mode(weapon_id: String, loadout: Dictionary) -> Resource:
+	if String(loadout.get("weapon", "")) != weapon_id:
+		return null
+	var mode: Dictionary = Attachments.second_mode(loadout)
+	if mode.is_empty():
+		return null
+	return Pattern.make(_attached(weapon_id, loadout, mode["mods"]))
+
+
+# The BASE row with the loadout's attachment mods (attachments.gd), then `extra`, multiplied in.
+# A loadout for another weapon, or none, leaves the row untouched.
+static func _attached(weapon_id: String, loadout: Dictionary, extra: Dictionary) -> Dictionary:
+	var row: Dictionary = BASE.get(weapon_id, BASE[RAPID_LASER])
+	if String(loadout.get("weapon", "")) != weapon_id:
+		return row
+	var scales: Dictionary = Attachments.mods(loadout)
+	if scales.is_empty() and extra.is_empty():
+		return row
+	var out := row.duplicate()
+	for table in [scales, extra]:
+		for field in table:
+			out[field] = float(out.get(field, Pattern.new().get(field))) * float(table[field])
+	return out
 
 
 static func color(weapon_id: String) -> Color:
