@@ -412,7 +412,7 @@ func _physics_process(delta: float) -> void:
 		if not is_instance_valid(s):
 			continue
 		if not s.interior.is_empty() and not s.interior_collision_ready:
-			var local := s.to_local(ball)
+			var local: Vector3 = s.to_local(ball)
 			if absf(local.x) <= s.footprint.x * 0.5 and absf(local.z) <= s.footprint.z * 0.5 \
 					and local.y >= 0.0 and local.y <= s.footprint.y:
 				_activate_interior_collision(s)
