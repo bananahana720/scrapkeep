@@ -46,6 +46,13 @@ def alter_contacts(fight, **values):
             contact[key] = change(contact[key])
 
 
+def duplicate_first_contact(fight, zero_gain=False):
+    contact = copy.deepcopy(fight["contacts"][0])
+    if zero_gain:
+        contact.update(gain=0.0, requested_gain=0.0)
+    fight["contacts"].insert(1, contact)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("first", type=Path)
@@ -66,6 +73,7 @@ def main():
         "inconsistent resulting posture": lambda fight: alter_contacts(fight, posture=lambda value: value + 1),
         "premature shatter": lambda fight: fight["contacts"][0].update(shatter=True),
         "wrong break timestamp": lambda fight: fight["contacts"][-1].update(t=fight["started"] + fight["seconds"] - 1),
+        "same-frame double gain": duplicate_first_contact,
     } if args.gains else {}
     failures = 0
     result, output = check(args.first, args.second)
@@ -73,8 +81,15 @@ def main():
     if result != 0:
         print(output)
         failures += 1
+    if args.gains:
+        result, output = check(args.first, args.second, fight_mutate=lambda fight: duplicate_first_contact(fight, True))
+        print("valid same-frame accumulated gain: " + ("PASS" if result == 0 else "FAIL"))
+        if result != 0:
+            print(output)
+            failures += 1
     for name, mutate in mutations.items():
-        result, output = check(args.first, args.second, mutate)
+        remove_contacts = (lambda fight: fight.update(contacts=[row for row in fight["contacts"] if row["cycle"] != 1])) if name == "removed cycle" else None
+        result, output = check(args.first, args.second, mutate, remove_contacts)
         print(name + ": " + ("PASS rejected" if result == 1 else "FAIL accepted"))
         print(output.strip())
         failures += result != 1
@@ -83,7 +98,7 @@ def main():
         print(name + ": " + ("PASS rejected" if result == 1 else "FAIL accepted"))
         print(output.strip())
         failures += result != 1
-    print(f"park_reactor_ideal_check_test: {'FAIL' if failures else 'PASS'} ({len(mutations)+len(fight_mutations)+1} controls)")
+    print(f"park_reactor_ideal_check_test: {'FAIL' if failures else 'PASS'} ({len(mutations)+len(fight_mutations)+1+int(args.gains)} controls)")
     return int(bool(failures))
 
 

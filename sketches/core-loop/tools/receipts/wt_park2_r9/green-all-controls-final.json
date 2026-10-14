@@ -1,0 +1,27 @@
+{
+  "command": [
+    "timeout",
+    "--signal=TERM",
+    "--kill-after=10s",
+    "1200s",
+    "nice",
+    "-n",
+    "10",
+    "python3",
+    "-B",
+    "sketches/core-loop/tools/park_reactor_ideal_check_test.py",
+    "sketches/core-loop/tools/receipts/wt_park2_r9/ideal-a",
+    "sketches/core-loop/tools/receipts/wt_park2_r9/ideal-b",
+    "--gains"
+  ],
+  "head": "6e611f586803f260c20bfe1b86fc24820b0e953b",
+  "exit_code": 0,
+  "wall_seconds": 25.366618156433105,
+  "environment": {
+    "XDG_CONFIG_HOME": "/home/andrew/scratch/w13/sol/wt-park2-r9/env/green-all-controls-final/config",
+    "XDG_DATA_HOME": "/home/andrew/scratch/w13/sol/wt-park2-r9/env/green-all-controls-final/data",
+    "XDG_CACHE_HOME": "/home/andrew/scratch/w13/sol/wt-park2-r9/env/green-all-controls-final/cache",
+    "TMPDIR": "/home/andrew/scratch/w13/sol/wt-park2-r9/env/green-all-controls-final/tmp"
+  },
+  "log": "/home/andrew/scratch/w13/sol/wt-park2-r9/green-all-controls-final.log"
+}
