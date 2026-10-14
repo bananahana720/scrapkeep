@@ -11,15 +11,19 @@ extends RefCounted
 #           pickup (scrap, cogs, a part, a finished activity). Owner: scrap_field.gd.
 #   find    the rest of that stretch: roaming for the Warden and the activities. Owner:
 #           activities.gd, whose sites the roam looks for.
-#   hold    the Warden is engaged and its guard has not yet broken: hold your ground while
-#           posture builds. Owner: boss_posture.gd, the rule that opens the window.
-#   fight   from the Warden's first stagger to its break: the open window and the smashes.
-#           Owner: warden.gd.
+#   hold    the Warden is engaged and its posture is under the half mark: hold your ground while
+#           the bar builds. Owner: boss_posture.gd, the rule that runs the bar.
+#   fight   from the first time its posture reaches the half mark (Objectives.Struggle.CLEAR_AT,
+#           the mark the plate already uses) or it staggers, to its break. The skipper often
+#           breaks a Warden at posture 100 with no stagger window, so the stagger alone cannot
+#           open this beat. Owner: warden.gd.
 #   leave   the gates and the launch, from the break to the stage's exit. Owner: launch.gd.
 #
-# A stage that never staggers its Warden has no fight beat and says so in `skipped`; that is
+# A stage whose Warden posture never reaches the half mark has no fight beat and says so in `skipped`; that is
 # a finding the bot report prints, not something this file hides. dead, summary, boss and
 # any other flow state count for no beat.
+
+const Objectives := preload("res://src/core/objectives.gd")
 
 const BEATS := ["arrive", "loot", "find", "hold", "fight", "leave"]
 
@@ -41,7 +45,7 @@ static func owner_of(beat: String) -> String:
 
 
 # The beat a tick belongs to, or "" for a tick no beat owns. The reading's keys: state
-# (flow.state_name()), landed, engaged and staggered (this attempt, once true they stay true),
+# (flow.state_name()), landed, engaged and guard_broken (this attempt, once true they stay true),
 # since_pickup (ticks since the last pickup) and loot_tail (ticks a pickup keeps loot alive).
 static func classify(reading: Dictionary) -> String:
 	var state: String = reading["state"]
@@ -52,7 +56,7 @@ static func classify(reading: Dictionary) -> String:
 	if not reading["landed"]:
 		return "arrive"
 	if reading["engaged"]:
-		return "fight" if reading["staggered"] else "hold"
+		return "fight" if reading["guard_broken"] else "hold"
 	if int(reading["since_pickup"]) <= int(reading["loot_tail"]):
 		return "loot"
 	return "find"
@@ -117,7 +121,7 @@ class Recorder:
 	var _state := ""
 	var _landed := false
 	var _engaged := false
-	var _staggered := false
+	var _guard_broken := false
 	var _since_pickup := 1 << 30
 
 	func _init(events, flow, loot_tail_ticks: int = -1) -> void:
@@ -140,7 +144,7 @@ class Recorder:
 			return
 		_since_pickup += 1
 		var beat: String = load("res://src/core/stage_beats.gd").classify({"state": _state, "landed": _landed, "engaged": _engaged,
-			"staggered": _staggered, "since_pickup": _since_pickup, "loot_tail": loot_tail})
+			"guard_broken": _guard_broken, "since_pickup": _since_pickup, "loot_tail": loot_tail})
 		if beat == "":
 			return
 		_row["ticks"][beat] += 1
@@ -173,7 +177,7 @@ class Recorder:
 		_state = "stage"
 		_landed = false
 		_engaged = false
-		_staggered = false
+		_guard_broken = false
 		_since_pickup = 1 << 30
 
 	func _on_stage_cleared(stage: int) -> void:
@@ -205,6 +209,12 @@ class Recorder:
 	func _on_engaged(_stage: int) -> void:
 		_engaged = true
 
-	func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
-		if staggered and enemy != null and enemy == _flow.warden:
-			_staggered = true
+	func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
+		if (staggered or posture >= Objectives.Struggle.CLEAR_AT) and enemy != null and enemy == _flow.warden:
+			_guard_broken = true
+
+	# Ends the log: a row entered but never ticked (a run that ended on a stage's entry) is not an attempt.
+	func finish() -> void:
+		if not _row.is_empty() and int(_row["total"]) == 0:
+			rows.pop_back()
+			_row = {}

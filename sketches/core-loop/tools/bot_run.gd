@@ -242,6 +242,7 @@ func _physics_process(delta: float) -> bool:
 		return false
 	var wall := float(Time.get_ticks_msec() - _started_msec) / 1000.0
 	var record: Dictionary = _driver.record(wall)
+	_beats.finish()
 	record["beats"] = _beats.rows
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
