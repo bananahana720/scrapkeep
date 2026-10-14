@@ -1409,10 +1409,15 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 			and target.mount_driver.has_method("sheet_live"):
 		var sheet = target.mount_driver
 		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
-		var runup: float = float(sheet.SHEET_RUN) + RUNUP_EDGE if target.state_name() == "charging" else minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
+		var runup: float = minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
 		var foot: Vector3 = at + dir * runup
 		var live: bool = sheet.sheet_live()
-		var steer: Vector3 = target.family_point_at() if live else _ground_point(foot.x, foot.z)
+		var until_pulse: float = target._charge_len - target._charge_time if target._charging else target.PULSE_CYCLE - target._pulse_clock
+		if live and sheet.entered_sheet_cycle == sheet.gates_opened and game.player.body().get_colliding_bodies().has(target):
+			_fight_phase = "sheet return %d" % sheet.gates_opened
+		var rammed: bool = _fight_phase == "sheet return %d" % sheet.gates_opened
+		var launching: bool = (live and not rammed) or (not live and target._charging and until_pulse <= DROP_WAIT)
+		var steer: Vector3 = target.family_point_at() if launching else _ground_point(foot.x, foot.z)
 		if kit.hooked:
 			source.press["harpoon_released"] = true
 		_harpoon_held = false
@@ -1422,13 +1427,22 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		var boost_clock := _boost_clock
 		var ignore_walls := _ignore_walls
 		_boost_clock = maxf(_boost_clock, delta)
-		_ignore_walls = live
+		_ignore_walls = launching
 		_slow_time = 0.0
 		_detour_time = 0.0
 		_act(steer, target, delta, target, false)
 		_ignore_walls = ignore_walls
 		_boost_clock = boost_clock
-		if not live:
+		var offset := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z)
+		var planar: Vector3 = game.player.planar_velocity()
+		var desired := offset.normalized() * minf(game.player.tuning.f("cruise"), offset.length() * RUNUP_DROP)
+		var change := desired - planar
+		var wish := change.normalized() if change.length() > game.player.tuning.RADIUS / RUNUP_DROP else Vector3.ZERO
+		var yaw: float = game.camera.yaw
+		var forward := Vector3(-sin(yaw), 0.0, -cos(yaw))
+		var right := Vector3(cos(yaw), 0.0, -sin(yaw))
+		source.hold["move"] = Vector2(wish.dot(right), wish.dot(forward))
+		if not launching:
 			source.press.erase("shift_pressed")
 			source.hold.erase("shift_held")
 			_boost_clock = 0.0
@@ -1437,8 +1451,9 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 				source.hold["brake_held"] = true
 		else:
 			source.hold.erase("brake_held")
-			var outbound: bool = game.player.planar_velocity().dot(dir) > 0.0
-			if not outbound and _boost_clock <= 0.0 and game.player.state.grounded and game.player.verb_ready("boost"):
+			if live and ball.y >= target.family_point_at().y:
+				source.hold["brake_held"] = true
+			if -planar.dot(dir) >= sheet.RIDE_MIN_SPEED and _boost_clock <= 0.0 and game.player.state.grounded and game.player.verb_ready("boost"):
 				source.press["shift_pressed"] = true
 				source.hold["shift_held"] = true
 				_boost_clock = BOOST_GAP
