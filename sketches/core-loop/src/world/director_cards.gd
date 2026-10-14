@@ -4,6 +4,11 @@ extends RefCounted
 const I0 := 1.20
 const K := 0.08
 const ELITE_MULTIPLIER := 2.0
+# The interval arm and settled rewards share the selected run's row.
+const RUN_TIERS := {
+	0: {"cap_weight": 1.0, "interval_weight": 1.0, "event_core_multiplier": 1.0, "rare_weight": 1.0},
+	1: {"cap_weight": 1.25, "interval_weight": 0.8, "event_core_multiplier": 1.25, "rare_weight": 1.25},
+}
 # stage_cap bounds members of this kind in one purchase, separately from the shared alive cap.
 const CARDS := {
 	"chaser": {"cost": 1, "weight": 1.0, "stage_cap": 4},

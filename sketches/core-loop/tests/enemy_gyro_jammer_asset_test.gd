@@ -7,10 +7,6 @@ const Gyro := preload("res://src/combat/gyro_jammer.gd")
 const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/enemy_gyro_jammer.glb"
 const BASE_CONSTS := {"FIELD_RADIUS": 7.0, "DRIFT": 11.0, "DRIFT_HZ": 0.7, "HP": 40.0}
-const BASE_INHERITED := {
-	"counter": "5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554",
-	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
-}
 const BASE_CONFIGURE := """func _configure(threat: float) -> void:
 	_set_health(HP * threat)
 	scrap_value = 4
@@ -19,12 +15,15 @@ const BASE_CONFIGURE := """func _configure(threat: float) -> void:
 	live_seconds = 3.0
 	rest_seconds = 3.8
 	attack_range = 20.0"""
+# Re-pinned 2026-10-13: _go_live takes its drift phase from position (IDENTITY-DET, 24af02f1), on purpose.
 const BASE_GAMEPLAY := """func _commit(_to_ball: Vector3) -> Node3D:
 	return _commit_ring(Threat.Type.INSTANT, _ball(), FIELD_RADIUS, 4.0)
 
 
 func _go_live() -> void:
-	_phase0 = float(get_instance_id() % 628) * 0.01
+	# The drift phase comes from where the jammer stands, never from its runtime identity.
+	var p := global_position
+	_phase0 = fposmod(p.x * 0.37 + p.z * 0.61, TAU)
 
 
 func _live(_delta: float) -> bool:
@@ -197,8 +196,7 @@ func _check_base(jammer: Node3D) -> void:
 	_check("func _configure" + config == BASE_CONFIGURE, "base configure source literals")
 	_check("func _commit" + source.get_slice("func _commit", 1).strip_edges() == BASE_GAMEPLAY,
 		"base gameplay and pose source literals")
-	for file in BASE_INHERITED:
-		_check(FileAccess.get_sha256("res://src/combat/" + file + ".gd") == BASE_INHERITED[file], "base inherited source " + file)
+	# Shared combat files are not pinned here; the merge-time fence owns shared-file changes (2026-10-13, ENEMY-PINS).
 	for key in BASE_CONSTS:
 		_check(source.split("\n").has("const %s := %.1f" % [key, BASE_CONSTS[key]]), "base constant source " + key)
 

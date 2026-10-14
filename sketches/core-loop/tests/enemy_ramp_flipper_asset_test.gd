@@ -5,10 +5,6 @@ extends SceneTree
 const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
 const BASE_MECHANIC_SHA := "b52181b178e4e9fab039ae3ae2acb13ccdb56d3d4dc3c6bbbacc4e4c56a16bde"
-const BASE_PARENTS := {
-	"counter": "5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554",
-	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
-}
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}
 const BASE_VALUES := {"radius": .8, "half_height": 1.1, "weight": 1.2, "scrap_value": 4,
@@ -111,8 +107,7 @@ func _mechanic_source(source: String) -> String:
 func _base(enemy: Node3D) -> void:
 	var source := FileAccess.get_file_as_string("res://src/combat/ramp_flipper.gd")
 	_check(_mechanic_source(source).sha256_text() == BASE_MECHANIC_SHA, "base source literals and all non-mesh code unchanged")
-	for name in BASE_PARENTS:
-		_check(FileAccess.get_sha256("res://src/combat/%s.gd" % name) == BASE_PARENTS[name], "base inherited %s source unchanged" % name)
+	# Shared combat files are not pinned here; the merge-time fence owns shared-file changes (2026-10-13, ENEMY-PINS).
 	var constants: Dictionary = enemy.get_script().get_script_constant_map()
 	for key in BASE_CONSTS:
 		_check(constants.has(key) and is_equal_approx(float(constants[key]), BASE_CONSTS[key]), "base constant %s = %s" % [key, BASE_CONSTS[key]])
