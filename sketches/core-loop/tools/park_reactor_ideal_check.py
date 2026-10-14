@@ -60,14 +60,46 @@ def read_case(folder, size, seed):
     assert fight["initial_heft"] == expected["hefts"][2 if size == "grown" else 0]
     for key in ("pulse_cycle", "sheet_seconds", "sheet_ram_breaks", "curve", "mult_min", "mult_max", "core_radius", "ball_radius"):
         assert fight["constants"][key] == expected[key], f"{case}: wrong {key}"
-    for ram in rams:
+    assert len(rams) == len(fight["contacts"]), f"{case}: ideal pilot has a non-sheet contact"
+    posture = trace[0]["posture"]
+    assert math.isfinite(posture) and 0 <= posture < expected["full"], f"{case}: invalid initial posture"
+    sampled = {row["frame"]: row for row in trace}
+    frame_gain = {}
+    contact_posture = {}
+    previous = (first - 1, -math.inf)
+    for index, ram in enumerate(rams):
         assert ram["live"] and ram["entered"] == ram["cycle"] and ram["solver_contact"], f"{case}: unqualified contact"
+        frame, time = ram["frame"], ram["t"]
+        assert math.isfinite(time) and (frame, time) >= previous, f"{case}: contact order differs"
+        previous = (frame, time)
+        assert frame in sampled, f"{case}: contact outside trace"
+        sample = sampled[frame]
+        assert sample["live"] and sample["cycle"] == ram["cycle"] and sample["entered"] == ram["entered"], f"{case}: contact disagrees with sampled cycle"
+        assert abs(time - fight["started"] - sample["t"]) < TOLERANCE, f"{case}: contact timestamp differs"
         punch, plating, heft = ram["punch"], ram["plating"], ram["heft"]
-        ratio = punch / plating
-        grown_ratio = punch / heft * expected["hefts"][2] / plating
+        assert all(math.isfinite(value) for value in (punch, plating, heft, ram["requested_gain"], ram["gain"], ram["posture"])), f"{case}: nonfinite contact"
+        assert punch >= 0 and heft > 0, f"{case}: invalid punch or heft"
+        ratio = punch / plating if plating > 0 else expected["mult_max"]
+        grown_ratio = punch / heft * expected["hefts"][2] / plating if plating > 0 else expected["mult_max"]
         clamp = lambda value: min(expected["mult_max"], max(expected["mult_min"], value))
         gain = expected["full"] / expected["sheet_ram_breaks"] * (clamp(ratio) / clamp(grown_ratio)) ** expected["curve"]
-        assert abs(ram["requested_gain"] - gain) < 0.0001, f"{case}: owner-derived gain differs"
+        requested = max(0.0, gain - frame_gain.get(frame, 0.0))
+        assert abs(ram["requested_gain"] - requested) < TOLERANCE, f"{case}: owner-derived gain differs"
+        after = min(expected["full"], posture + requested)
+        assert abs(ram["gain"] - (after - posture)) < TOLERANCE, f"{case}: applied gain differs"
+        assert abs(ram["posture"] - after) < TOLERANCE, f"{case}: resulting posture differs"
+        full = abs(after - expected["full"]) < TOLERANCE
+        assert ram["shatter"] == full and (not full or index == len(rams) - 1), f"{case}: premature or missing shatter"
+        frame_gain[frame] = frame_gain.get(frame, 0.0) + requested
+        posture = after
+        contact_posture[frame] = posture
+    posture = trace[0]["posture"]
+    for row in trace:
+        posture = contact_posture.get(row["frame"], posture)
+        assert math.isfinite(row["posture"]) and abs(row["posture"] - posture) < TOLERANCE, f"{case}: trace posture differs at frame {row['frame']}"
+    assert abs(posture - expected["full"]) < TOLERANCE, f"{case}: break below FULL"
+    assert rams[-1]["frame"] == terminal, f"{case}: break frame differs"
+    assert abs(rams[-1]["t"] - fight["started"] - fight["seconds"]) < TOLERANCE, f"{case}: break timestamp differs"
     cycles = sorted({row["cycle"] for row in trace if row["live"]})
     assert cycles == list(range(1, fight["cycles"] + 1)), f"{case}: missing cycle coverage"
     assert all(later["cycle"] - earlier["cycle"] in (0, 1) for earlier, later in zip(trace, trace[1:])), f"{case}: cycle discontinuity"
