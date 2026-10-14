@@ -5,7 +5,8 @@ extends RefCounted
 # A headless test steps a whole stage in a loop instead of in real seconds.
 #
 # Honesty rules (demo spec, Director honesty):
-# - Enemy HP comes from the stage's threat only; the clock never toughens an enemy.
+# - Tier 0 enemy HP comes from stage threat only. The opt-in run tier adds capped
+#   per-world health, damage and rest dials; the clock never toughens an enemy.
 # - The clock's tier is clamped at +2, and every rise, the beacon spike included, is
 #   recorded for the world to announce with threat_rose. Nothing rises silently.
 # - 60% of spawns land ahead of the ball, within 35 degrees of where it is rolling,
@@ -28,7 +29,8 @@ extends RefCounted
 #   strongly the build leans on the axis the pack tests, so the build's own axis comes
 #   up to twice as often and every other unlocked pack still comes: fair, never a hard
 #   counter. With no build read every pack weighs the same.
-# - HP stays the stage's threat only; the clock adds packs, never toughness.
+# - HP reads stage threat and the opt-in world's health dial; the clock adds packs,
+#   never toughness.
 #
 # Authored packs (slice table): with `authored` set, every arrival is one whole pack from
 # that list and nothing else spawns: no single draws, no unlock clock, no build tilt, no
@@ -46,6 +48,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
@@ -119,9 +122,10 @@ var credits := 0.0
 var credits_accrued := 0.0
 var credits_spent := 0.0
 var spike := false
-# The stage's threat dial from stage_defs.gd: more enemies alive, arriving sooner, and
-# the one input to enemy HP.
+# The stage's threat: more enemies alive, arriving sooner, and base enemy HP.
 var threat := 1.0
+var world := 1
+var dial_steps := StageDefs.RUN_TIER_DIAL_STEPS
 # From run.heft_class(): a heavier ball earns a bigger crowd to roll through.
 var heft_class := 1
 var play_rect := Rect2(-150.0, -150.0, 300.0, 300.0)
@@ -188,9 +192,23 @@ func effective_tier() -> int:
 	return tier() + (SPIKE_TIERS if spike else 0)
 
 
-# The multiplier combat applies to enemy HP: the stage's threat, and nothing else.
+# The clock has no part in these dials. Tier 0 keeps the original values exactly.
 func hp_scale() -> float:
-	return threat
+	if run_tier() < RunTier.HARD:
+		return threat
+	return threat * minf(RunTier.HEALTH_DIAL_CAP, 1.0 + world * float(dial_steps.health))
+
+
+func damage_scale() -> float:
+	if run_tier() < RunTier.HARD:
+		return 1.0
+	return minf(RunTier.DAMAGE_DIAL_CAP, 1.0 + world * float(dial_steps.damage))
+
+
+func rest_scale() -> float:
+	if run_tier() < RunTier.HARD:
+		return 1.0
+	return maxf(RunTier.REST_DIAL_FLOOR, 1.0 - world * float(dial_steps.aggression))
 
 
 func cap() -> int:
@@ -443,6 +461,7 @@ func use_row(row: Dictionary, breath_option := "", tier_reader := Callable()) ->
 	if tier_reader.is_valid():
 		set_run_tier_reader(tier_reader)
 	row = RunTier.stage_row(row, run_tier())
+	world = int(row.get("world", 1))
 	_row = {}
 	if row.has("unlock_base") and row.has("ancient"):
 		_row = {"unlock_base": int(row["unlock_base"]), "ancient": String(row["ancient"])}

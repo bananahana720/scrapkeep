@@ -105,7 +105,6 @@ The corrected candidate tests judge the music bar grid booked at announcement. B
 <!-- /flume-current-table -->
 
 
-The corrected candidate tests judge the music bar grid booked at announcement. Both ground-slump game fixtures and the complete Z1 shared suite pass. The eight-file smoke remains blocked by four inherited park_table_test posture comparisons. Rivet also emits missing Fin.L/Fin.R control diagnostics, which the wrapper reports separately as a partial skip; all 111 flume geometry checks run and pass. KD2 leaves those shared files unchanged. The table/test owner must reconcile the posture comparisons before the eight-file smoke can pass.
 
 ## Riding surface correction, round 9
 

@@ -8,6 +8,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -338,13 +339,14 @@ var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
 var _harpoon_commit := false
-# Only the explorer changes hands: bite, jump, release at the apex, bite again, haul.
+# Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
 var chain_hand_enabled := true
 var _chain_phase := ""
 var _chain_first: Node3D = null
 var _chain_second: Node3D = null
 var _chain_rose := false
+var _chain_launch_y := 0.0
 # The latch arm (_anchor_fight): the anchor Warden's last height, its vertical speed as the
 # ball sees it, whether the ball was on its line last tick, how long a staggered line has hung
 # below the open point, the haul made in this stagger (and whether from over the open point)
@@ -1674,15 +1676,20 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
-		_count("harpoon_bites")
-		if chain_hand_enabled and policy == "completionist" and target.is_in_group("enemy") and game.player.verb_ready("jump"):
+		if chain_hand_enabled and policy == "completionist" and not _in_boss() \
+				and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump"):
 			var second := _chain_partner(target)
 			if second != null:
-				_chain_phase = "first"
+				_chain_phase = "takeoff"
 				_chain_first = target
 				_chain_second = second
 				_chain_rose = false
+				_chain_launch_y = game.player.ball_position().y
+				source.press.erase("harpoon_pressed")
+				_harpoon_held = false
 				source.press["jump_pressed"] = true
+		if source.press.get("harpoon_pressed", false):
+			_count("harpoon_bites")
 
 
 func _smash_pending() -> bool:
@@ -1744,7 +1751,7 @@ func _explorer_chain(delta: float) -> void:
 	if not is_instance_valid(_chain_second) or (_chain_second.has_method("is_dead") and _chain_second.is_dead()):
 		var first: Node3D = _chain_first if is_instance_valid(_chain_first) else null
 		_chain_second = _chain_partner(first)
-	if _chain_second == null or player.frozen() or not player.chain.active():
+	if _chain_second == null or player.frozen() or (_chain_phase != "takeoff" and not player.chain.active()):
 		_clear_chain_hand()
 		source.hold = {}
 		return
@@ -1752,6 +1759,21 @@ func _explorer_chain(delta: float) -> void:
 	_harpoon_held = false
 	_harpoon_commit = false
 	match _chain_phase:
+		"takeoff":
+			var up: float = player.body().linear_velocity.y
+			_chain_rose = _chain_rose or (not player.state.grounded and up > 0.0)
+			if not is_instance_valid(_chain_first) or (_chain_rose and up <= 0.0):
+				_clear_chain_hand()
+				source.hold = {}
+				return
+			# A jump sets grounded false before the downcast clears the floor.
+			# Wait for visible clearance; hit-stop can leave it inside that cast for several ticks.
+			if not player.state.grounded and player.ball_position().y > _chain_launch_y + Tuning.RADIUS \
+					and kit.aim.get("body") == _chain_first and player.verb_ready("harpoon"):
+				_chain_phase = "first"
+				source.press["harpoon_pressed"] = true
+				_harpoon_held = true
+				_count("harpoon_bites")
 		"first", "rise":
 			_chain_phase = "rise"
 			var up: float = player.body().linear_velocity.y
@@ -1777,7 +1799,7 @@ func _explorer_chain(delta: float) -> void:
 			_harpoon_commit = kit.hooked
 			if not kit.hooked:
 				_clear_chain_hand()
-	_drive(player.ball_position(), _chain_second, delta)
+	_drive(player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
 	source.hold.erase("fire_held")
 	source.hold.erase("shift_held")
 	source.press.erase("shift_pressed")
@@ -2251,7 +2273,7 @@ func _to_gate(delta: float) -> void:
 func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true) -> void:
 	var player = game.player
 	if policy == "completionist" and _chain_phase != "":
-		_drive(player.ball_position(), _chain_second, delta)
+		_drive(player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
 		source.hold.erase("fire_held")
 		source.hold.erase("shift_held")
 		source.press.erase("shift_pressed")
@@ -2720,7 +2742,7 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 			hold["jump_held"] = true
 	# Jump, boost and movement abilities cancel a committed body-line haul. Outside a boss
 	# the explorer's two-hook hand keeps them: it jumps and boosts off its lines on purpose.
-	var chain_hand: bool = policy == "completionist" and chain_hand_enabled and not _in_boss()
+	var chain_hand: bool = policy == "completionist" and chain_hand_enabled and _chain_phase != "" and not _in_boss()
 	if not chain_hand and (_harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH)):
 		source.press.erase("jump_pressed")
 		source.press.erase("shift_pressed")

@@ -1,4 +1,8 @@
 # smoke: timeout=360s (about 250 game seconds of stepped fights)
+# 2026-10-13 RED-COMBAT: WT-BANDS 907bfef changes posture gain, not BRAKE_DROP
+# (merge message; design-v3/wardens/swarm.md section 3). A stronger hit now
+# opens during hit-stop. Measure the row in physics delta seconds, as the
+# hoist does, rather than assuming every observed frame is a full-speed tick.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -30,6 +34,12 @@ var _failures := 0
 var _damage_frames: Array = []
 var _facts: Array = []
 var _out := Vector3.LEFT
+var _sim_seconds := 0.0
+
+
+func _physics_process(delta: float) -> bool:
+	_sim_seconds += delta
+	return false
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -238,6 +248,7 @@ func _hoist_drop() -> void:
 			await physics_frame
 		var high: bool = _offset() > driver.RISE - 0.01
 		var opened := Engine.get_physics_frames()
+		var opened_seconds := _sim_seconds
 		var dropping := -1
 		var landed := -1
 		for i in _ticks(row + 1.0):
@@ -251,7 +262,7 @@ func _hoist_drop() -> void:
 		drop_damage += _damage_frames.size()
 		_damage_frames.clear()
 		cue_gaps.append(dropping - opened if high and dropping >= 0 else 99)
-		lengths.append(float(landed - dropping + 1) * _tick() if high and landed >= 0 and dropping >= 0 else INF)
+		lengths.append(_sim_seconds - opened_seconds if high and landed >= 0 and dropping >= 0 else INF)
 		while _warden.staggered():
 			_player.reset_to(stand)
 			await physics_frame
