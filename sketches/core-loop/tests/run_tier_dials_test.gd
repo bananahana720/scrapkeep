@@ -22,15 +22,16 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	var constants := RunTier.get_script_constant_map()
+	var constants: Dictionary = load("res://src/core/run_tier.gd").get_script_constant_map()
+	var stage_constants: Dictionary = load("res://src/core/stage_defs.gd").get_script_constant_map()
 	limits = {"health": constants.get("HEALTH_DIAL_CAP", 1.6),
 		"damage": constants.get("DAMAGE_DIAL_CAP", 1.3),
 		"aggression": constants.get("REST_DIAL_FLOOR", 0.75)}
-	steps = StageDefs.get_script_constant_map().get("RUN_TIER_DIAL_STEPS", {"health": 0.2, "damage": 0.1, "aggression": 0.1})
+	steps = stage_constants.get("RUN_TIER_DIAL_STEPS", {"health": 0.2, "damage": 0.1, "aggression": 0.1})
 	t.eq("named health cap", constants.get("HEALTH_DIAL_CAP"), 1.6)
 	t.eq("named damage cap", constants.get("DAMAGE_DIAL_CAP"), 1.3)
 	t.eq("named rest floor", constants.get("REST_DIAL_FLOOR"), 0.75)
-	t.check("world steps in stage_defs", StageDefs.get_script_constant_map().has("RUN_TIER_DIAL_STEPS"))
+	t.check("world steps in stage_defs", stage_constants.has("RUN_TIER_DIAL_STEPS"))
 	for key in steps:
 		t.check("positive world step " + key, float(steps[key]) > 0.0)
 	_sweeps()
@@ -54,7 +55,7 @@ func _director(row: Dictionary, tier_value: int):
 	return d
 
 func _measure(d) -> Array:
-	var rest := d.rest_scale() if d.has_method("rest_scale") else 1.0
+	var rest: float = d.rest_scale() if d.has_method("rest_scale") else 1.0
 	var c := Counter.new()
 	c.spec = {"rest_scale": rest}
 	c.rest_seconds = 3.0
