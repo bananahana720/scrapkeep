@@ -13,7 +13,7 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # The number of checks this file makes. A run that makes any other number fails.
-const EXPECTED := 97
+const EXPECTED := 100
 const TAIL := 20
 
 var _nodes: Array[Node] = []
@@ -187,6 +187,12 @@ func _skipped(t) -> void:
 	ev2.posture_changed.emit(rig2["flow"].warden, 10.0, false)
 	_steps(rig2, 1)
 	t.eq("the fight stays open when posture drains again", rig2["rec"].rows[0]["ticks"]["fight"], 3)
+	var capped := _rig()
+	_play_full(capped, 1)
+	_play_full(capped, 2)
+	t.eq("within keeps stages up to the cap", StageBeats.within(capped["rec"].rows, 1).size(), 1)
+	t.eq("within keeps the capped stage's data", int(StageBeats.within(capped["rec"].rows, 1)[0]["stage"]), 1)
+	t.eq("a cap of zero or less keeps every stage", StageBeats.within(capped["rec"].rows, 0).size(), 2)
 	var rig3 := _rig()
 	rig3["events"].stage_entered.emit(5, false)
 	rig3["rec"].finish()

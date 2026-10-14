@@ -243,7 +243,8 @@ func _physics_process(delta: float) -> bool:
 	var wall := float(Time.get_ticks_msec() - _started_msec) / 1000.0
 	var record: Dictionary = _driver.record(wall)
 	_beats.finish()
-	record["beats"] = _beats.rows
+	# --stages=N and --until=N end the run a tick or two into the next stage; that sliver is not an attempt.
+	record["beats"] = StageBeats.within(_beats.rows, int(_settings.get("stages", _settings.get("until", "0"))))
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()

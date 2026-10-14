@@ -62,6 +62,14 @@ static func classify(reading: Dictionary) -> String:
 	return "find"
 
 
+# The rows of stages up to last_stage. A run capped by --stages or --until ends a tick or two after the
+# next stage is entered, and that sliver is not an attempt. A last_stage of zero or less keeps every row.
+static func within(rows: Array, last_stage: int) -> Array:
+	if last_stage <= 0:
+		return rows.duplicate()
+	return rows.filter(func(row): return int(row["stage"]) <= last_stage)
+
+
 static func sum_ticks(row: Dictionary) -> int:
 	var sum := 0
 	for beat in BEATS:
