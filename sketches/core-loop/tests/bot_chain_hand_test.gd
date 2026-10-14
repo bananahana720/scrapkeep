@@ -9,6 +9,7 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Flow := preload("res://src/core/flow.gd")
 
 # Rule: the explorer re-bites a different enemy during airborne grace and pays a
 # two-link chain; the seed repeats and the skipper/camper records are the same with the
@@ -217,6 +218,19 @@ func _check_hand() -> void:
 		and driver.source.press.get("harpoon_pressed", false)
 		and not driver.source.press.get("jump_pressed", false), "the Warden bite stays ordinary, with no two-hook detour")
 	_hand_game.flow.warden = warden_before
+	driver._clear_chain_hand()
+	driver.source.press.clear()
+	driver.source.hold.clear()
+	driver._cast_phase = ""
+	var state_before: int = _hand_game.flow.state
+	_hand_game.flow.state = Flow.BOSS
+	driver.boss_note = {"fixture": true}
+	driver._harpoon_hand(first, 1.0 / 90.0)
+	_report("boss hand stays on its finisher", driver._chain_phase == ""
+		and driver.source.press.get("harpoon_pressed", false)
+		and not driver.source.press.get("jump_pressed", false), "the boss keeps the ordinary bite, as the drive's boss guard requires")
+	_hand_game.flow.state = state_before
+	driver.boss_note.clear()
 	first.free()
 	second.free()
 
