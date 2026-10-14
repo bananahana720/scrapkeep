@@ -137,7 +137,8 @@ func _runtime(_specs: Array) -> void:
 	var game = Game.new()
 	game.test_mode = true
 	game.table = "park"
-	game.run_store_path = "user://pocket-draw-%d.json" % Time.get_ticks_usec()
+	game.run_store_path = "user://pocket-draw-continue.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(game.run_store_path))
 	root.add_child(game)
 	while game.flow == null:
 		await physics_frame
