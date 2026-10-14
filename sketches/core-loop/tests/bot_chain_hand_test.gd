@@ -196,6 +196,27 @@ func _check_hand() -> void:
 	driver.source.poll(player.intent)
 	player._read_grammar()
 	_report("hand smash", player.kit.line_state == Augments.LINE_SMASH, "Ctrl commits the second anchor's smash")
+	# A committed Warden fight finishes its body line instead of detouring to an add.
+	driver._clear_chain_hand()
+	driver.source.press.clear()
+	driver.source.hold.clear()
+	driver._cast_phase = ""
+	driver._off_line = 99.0
+	player.kit.drop_line("reset")
+	player.kit.rewind_left = 0.0
+	player.chain.reset()
+	player.state.grounded = true
+	player._brake_was_held = false
+	player.abilities.refill()
+	player.abilities.snap_back("test")
+	player.kit.aim = {"body": first, "point": first.global_position, "normal": Vector3.UP, "state": Augments.AIM_BODY}
+	var warden_before = _hand_game.flow.warden
+	_hand_game.flow.warden = first
+	driver._harpoon_hand(first, 1.0 / 90.0)
+	_report("Warden hand stays on its finisher", driver._chain_phase == ""
+		and driver.source.press.get("harpoon_pressed", false)
+		and not driver.source.press.get("jump_pressed", false), "the Warden bite stays ordinary, with no two-hook detour")
+	_hand_game.flow.warden = warden_before
 	first.free()
 	second.free()
 
