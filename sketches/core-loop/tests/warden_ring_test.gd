@@ -14,7 +14,9 @@ const T := preload("res://tests/support/t.gd")
 # chunk_cracked(); lit arcs take the open colour exactly while staggered(); every arc colour
 # equals the plate's own reader for that state; the ring is freed with its Warden.
 
-const PLATING := 45.0
+# 2026-10-13 RED-COMBAT: WT-BANDS 907bfef tunes the slice's ram gain
+# (src/core/slice_defs.gd:50-51). Fill against the live 110 plating, not the
+# obsolete 45-plating fixture; chunk counts below remain exact.
 
 var _t := T.new("warden_ring_test")
 # F6 2026-10-04: the plating Warden case is gone; every Warden fights on posture and wears a ring.
@@ -47,7 +49,7 @@ func _seconds(seconds: float) -> void:
 
 func _matched_force() -> float:
 	var force := 1.0
-	while _combat.punch_of("ram", force) < PLATING:
+	while _combat.punch_of("ram", force) < float(_warden.plating):
 		force += 0.05
 	return force
 

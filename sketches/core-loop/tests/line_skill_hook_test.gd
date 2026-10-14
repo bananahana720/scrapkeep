@@ -1,14 +1,17 @@
-# 2026-10-12 FIXTURE-ADAPT: 24cc872 gave Sable Bank Shot; Rivet still carries the shared line_reel.
+# 2026-10-13 RED-COMBAT: 9000ca2 gives Sable Bank Shot; PC-RIVET gives Rivet
+# Line Drive in 20d4273 (design-v3/pilots/rivet.md:76-84, :109). Keep the shared hook
+# checks on the merged kit: delayed ram punch and the specified straight haul.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The line skill hook (design-v3/SKILL-BAR.md section 3), wave P-B unit B1, 2026-10-10.
-# Rivet's slot 3 carries the shared line_reel placeholder. Scripted through a real Game's
+# Rivet's slot 3 carries Line Drive. Scripted through a real Game's
 # router, harpoon and combat: a cast with a line standing fires along it now; with none it
 # loads, the next bite within 4.0 s carries it, a dry fire keeps the load, and the load
 # expires between 3.99 and 4.01 s. A loaded bite adds exactly one chain link, the flavour
@@ -92,6 +95,8 @@ func _fresh() -> void:
 	_combat._line_load = {}
 	_combat._bite_pending = false
 	_combat.last_line = {}
+	_combat.get_node("RivetKit").pulses.clear()
+	_combat.get_node("RivetKit").haul.clear()
 	_loaded.clear()
 	_fired.clear()
 	_expired.clear()
@@ -100,7 +105,15 @@ func _fresh() -> void:
 
 
 func _line_hits(enemy: Node3D) -> int:
-	return _struck.filter(func(r): return r[0] == enemy.get_instance_id() and r[1] == "line").size()
+	return _struck.filter(func(r): return r[0] == enemy.get_instance_id() and r[1] == "ram").size()
+
+
+func _punch_arrives(enemy: Node3D) -> void:
+	var kit = _combat.get_node("RivetKit")
+	var delay: float = _player.ball_position().distance_to(enemy.global_position) / Weapons.LINE_PULSE_SPEED
+	kit._step_pulses(maxf(0.0, delay - 0.0001))
+	_t.eq("the cable pulse cannot hit before its travel time", _line_hits(enemy), 0)
+	kit._step_pulses(0.0002)
 
 
 func _run() -> void:
@@ -125,16 +138,17 @@ func _run() -> void:
 	_game.events.enemy_struck.connect(func(enemy: Node3D, kind: String, _force: float): _struck.append([enemy.get_instance_id(), kind]))
 	_player.set_physics_process(false)
 	var a := _enemy(0.0)
-	_t.eq("setup: Rivet's slot 3 is the shared line_reel", [_player.abilities.id_of("line"), _player.kit.on(Augments.GRAPPLE)],
-		["line_reel", true])
+	_t.eq("setup: Rivet's slot 3 is Line Drive", [_player.abilities.id_of("line"), _player.kit.on(Augments.GRAPPLE)],
+		["line_drive", true])
 
 	# 1. A line stands on a body: the cast fires now along it, and adds no chain link.
 	_fresh()
 	_bite(a)
 	var links: int = _player.chain.links
 	_cast()
-	_t.eq("01 on a body line the cast fires now", [_fired, _loaded, _combat.line_load()], [[["line_reel", a.get_instance_id(), "body"]], [], {}])
+	_t.eq("01 on a body line the cast fires now", [_fired, _loaded, _combat.line_load()], [[["line_drive", a.get_instance_id(), "body"]], [], {}])
 	_t.eq("02 the on-line flavour adds no chain link", _player.chain.links, links)
+	_punch_arrives(a)
 	_t.eq("03 the flavour strikes the latched enemy once", _line_hits(a), 1)
 
 	# 2. The cast spends slot 3 and its cooldown is 8 s.
@@ -145,15 +159,16 @@ func _run() -> void:
 	# 3. No line: the cast loads for 4 s and spends now.
 	_fresh()
 	_cast()
-	_t.eq("05 with no line the cast loads", [_loaded, _fired, String(_combat.line_load().get("id", ""))], [[["line_reel", 4.0]], [], "line_reel"])
+	_t.eq("05 with no line the cast loads", [_loaded, _fired, String(_combat.line_load().get("id", ""))], [[["line_drive", 4.0]], [], "line_drive"])
 	_t.eq("06 the load spends slot 3 at the cast", _player.abilities.ready("line"), false)
 
 	# 4. The next bite carries it, and the bite adds exactly one link.
 	links = _player.chain.links
 	_bite(a)
 	_tick()
-	_t.eq("07 the loaded bite fires the flavour on the body", [_fired, _combat.line_load()], [[["line_reel", a.get_instance_id(), "body"]], {}])
+	_t.eq("07 the loaded bite fires the flavour on the body", [_fired, _combat.line_load()], [[["line_drive", a.get_instance_id(), "body"]], {}])
 	_t.eq("08 a loaded bite adds exactly one chain link", _player.chain.links, links + 1)
+	_punch_arrives(a)
 	_t.eq("09 the flavour from a loaded bite strikes once", _line_hits(a), 1)
 
 	# 5. A second cast while a load waits is refused.
@@ -172,7 +187,7 @@ func _run() -> void:
 	var at_399: bool = not _combat.line_load().is_empty()
 	_tick({}, 0.02)
 	_t.eq("11 the load holds at 3.99 s and expires at 4.01 s",
-		[at_399, _combat.line_load(), _expired, _player.abilities.ready("line")], [true, {}, ["line_reel"], false])
+		[at_399, _combat.line_load(), _expired, _player.abilities.ready("line")], [true, {}, ["line_drive"], false])
 
 	# 7. A dry fire keeps the load, and the next bite still carries it.
 	_fresh()
@@ -183,19 +198,25 @@ func _run() -> void:
 	_player.chain.miss_left = 0.0
 	_bite(a)
 	_tick()
-	_t.check("12 a dry fire keeps the load", kept and _fired == [["line_reel", a.get_instance_id(), "body"]],
+	_t.check("12 a dry fire keeps the load", kept and _fired == [["line_drive", a.get_instance_id(), "body"]],
 		"kept %s, fired %s" % [kept, _fired.size()])
 
-	# 8. On the world, the default reel burst pulls the ball toward the anchor.
+	# 8. Line Drive replaces the reel burst with the specified straight haul.
 	_fresh()
 	_cast()
 	var body: RigidBody3D = _player.body()
-	body.linear_velocity = Vector3.ZERO
+	body.set_velocity_now(Vector3.ZERO)
 	var anchor := _wall()
 	_tick()
-	var toward: float = body.linear_velocity.dot((anchor - body.global_position).normalized())
-	_t.check("13 a loaded world bite reel-bursts toward the anchor", _fired.size() == 1 and _fired[0][2] == "world" and toward > 7.0,
+	var haul: Dictionary = _combat.get_node("RivetKit").haul
+	var toward: float = _player.state.velocity.dot((anchor - body.global_position).normalized())
+	_t.check("13 a loaded world bite fires on the world", _fired.size() == 1 and _fired[0][2] == "world",
+		"fired %s" % [_fired])
+	_t.check("13 the world haul has a committed ride", not haul.is_empty())
+	_t.check("13 a loaded world bite delivers the specified haul speed toward the anchor", toward >= Weapons.LINE_HAUL_SPEED - 0.0001,
 		"fired %s, speed toward anchor %.2f" % [_fired, toward])
+	_t.check("13 the world haul stops at the minimum rope distance", not haul.is_empty()
+		and absf(haul["ride"].target.distance_to(anchor) - Augments.MIN_ROPE) < 0.0001)
 
 	# 9. The flavour scales by the chain multiplier at the moment it fires.
 	_fresh()
