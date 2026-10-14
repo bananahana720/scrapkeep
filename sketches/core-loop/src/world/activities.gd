@@ -174,7 +174,6 @@ class Site extends Node3D:
 	var phase_view: Node3D
 	var interior := {}
 	var footprint := POCKET_FOG_SIZE
-	var entry_elapsed := 0.0
 
 	func _exit_tree() -> void:
 		for enemy in pack:
@@ -400,7 +399,7 @@ func _physics_process(delta: float) -> void:
 		if not s.done:
 			match String(s.rule["finishes"]):
 				"pack_dead":
-					_watch_ambush(s, ball, delta)
+					_watch_ambush(s, ball)
 				"wall_broken":
 					_watch_wall(s, ball)
 			_advance_hazards(s, delta, ball)
@@ -465,8 +464,6 @@ func step_pocket(s: Site, delta: float, ball: Vector3) -> void:
 		return
 	if not s.started:
 		if _planar(ball, s.global_position) > float(s.rule.ring) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
-			return
-		if not _entry_ready(s, delta):
 			return
 		if s.id in ["arena", "elite_arena", "round_arena", "ambush"] and (ctx.calm or ctx.spawner == null):
 			return
@@ -561,13 +558,6 @@ func _build_hazard(s: Site) -> void:
 	s.hazards.append(s.fog)
 
 
-func _entry_ready(s: Site, delta: float) -> bool:
-	if s.interior.is_empty():
-		return true
-	s.entry_elapsed += delta
-	return s.entry_elapsed >= 2.2
-
-
 func _begin_hazards(s: Site, round_number: int) -> void:
 	for hazard in s.hazards:
 		hazard.begin(round_number)
@@ -645,6 +635,8 @@ func _spawn_pocket_pack(s: Site, kinds: Array) -> void:
 
 
 func pocket_positions(s: Site, count: int) -> Array:
+	if not s.interior.is_empty():
+		return _library_positions(s, count)
 	var result := []
 	for i in count:
 		var angle := PACK_TURN + TAU * float(i) / count
@@ -662,6 +654,17 @@ func pocket_positions(s: Site, count: int) -> Array:
 				return []
 			point = s.graph.position(node)
 		result.append(point)
+	return result
+
+
+func _library_positions(s: Site, count: int) -> Array:
+	var entry := Vector2(s.interior.entry_spot[0], s.interior.entry_spot[1])
+	var rear := entry.angle() + PI
+	var radius := maxf(float(s.rule.ring), minf(s.footprint.x, s.footprint.z) * 0.35)
+	var result := []
+	for i in count:
+		var angle := rear - PI * 0.25 + PI * 0.5 * (float(i) + 0.5) / count
+		result.append(s.to_global(Vector3(cos(angle), 0, sin(angle)) * radius))
 	return result
 
 
@@ -762,13 +765,11 @@ static func draw_marks(graph, seed_value: int, pool: Array = []) -> Array:
 
 # ---- The ambush ----
 
-func _watch_ambush(s: Site, ball: Vector3, delta := 1.0 / 90.0) -> void:
+func _watch_ambush(s: Site, ball: Vector3) -> void:
 	if not s.started:
 		if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
 			return
 		if _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
-			return
-		if not _entry_ready(s, delta):
 			return
 		_spawn_pack(s)
 		return
