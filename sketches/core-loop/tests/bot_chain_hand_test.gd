@@ -221,6 +221,17 @@ func _check_hand() -> void:
 	driver._clear_chain_hand()
 	driver.source.press.clear()
 	driver.source.hold.clear()
+	driver._harpoon_commit = true
+	driver.source.press["jump_pressed"] = true
+	driver.source.press["shift_pressed"] = true
+	driver._drive(player.ball_position(), first, 1.0 / 90.0)
+	_report("ordinary haul keeps its committed inputs", driver.source.hold.get("brake_held", false)
+		and not driver.source.press.get("jump_pressed", false)
+		and not driver.source.press.get("shift_pressed", false)
+		and not driver.source.hold.get("shift_held", false), "outside an active two-hook hand, jump and boost cannot cancel the haul")
+	driver._clear_chain_hand()
+	driver.source.press.clear()
+	driver.source.hold.clear()
 	driver._cast_phase = ""
 	var state_before: int = _hand_game.flow.state
 	_hand_game.flow.state = Flow.BOSS
