@@ -139,6 +139,8 @@ func _production() -> void:
 				game.flow.enter_stage(int(row.stage), Vector3(0.0, 0.0, 20.0), false)
 			var want := _expected(int(row.world), tier_value, steps)
 			var pos: Vector3 = game.player.ball_position()
+			pos.y = game.combat.ground.height_at(pos) + 1.0
+			game.player._rigid.global_position = pos
 			var e = game.combat.spawn_enemy("chaser", pos)
 			var hp_want: float = Chaser.HP * float(row.threat) if tier_value == 0 else Chaser.HP * (float(row.threat) * want[0])
 			t.eq("production health tier %d stage %d" % [tier_value, row.stage], var_to_bytes(e.hp), var_to_bytes(hp_want))
