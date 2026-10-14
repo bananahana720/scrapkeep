@@ -1,2 +1,0 @@
-retained_loss_recalculation: PASS (56/100 missed, 49 entered, 417.57 s dry-inclusive waiting, zero regeneration)
-{'seed': 1, 'cycle': 3, 'samples': 31, 'had_entry': True, 'max_y': 114.95369720459, 'max_abs_vy': 100.27693939209, 'goals': ['ride spillway sheet', 'wait spillway sheet'], 'source': '/home/andrew/scratch/w13/cgate/wt-park2-r7/fights-a/skipper-1/fight-trace.ndjson'}

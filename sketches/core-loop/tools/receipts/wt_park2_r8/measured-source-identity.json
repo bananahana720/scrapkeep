@@ -1,9 +1,0 @@
-{
-  "verdict": "PASS",
-  "source": "sketches/core-loop/tools/park_reactor_ideal.gd",
-  "sha256_by_head": {
-    "6f9cd68d": "d1999eca751219154e4f26ce78822d3111afd6048a4da771e98587e02244d127",
-    "2a74f641": "d1999eca751219154e4f26ce78822d3111afd6048a4da771e98587e02244d127",
-    "HEAD": "d1999eca751219154e4f26ce78822d3111afd6048a4da771e98587e02244d127"
-  }
-}

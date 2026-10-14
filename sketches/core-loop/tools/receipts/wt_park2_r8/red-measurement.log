@@ -1,9 +1,0 @@
-[Errno 2] No such file or directory: '/home/andrew/scratch/w13/sol/wt-park2-r8/ideal-a/grown-1/fight.json'
-[Errno 2] No such file or directory: '/home/andrew/scratch/w13/sol/wt-park2-r8/ideal-a/grown-2/fight.json'
-[Errno 2] No such file or directory: '/home/andrew/scratch/w13/sol/wt-park2-r8/ideal-a/grown-3/fight.json'
-[Errno 2] No such file or directory: '/home/andrew/scratch/w13/sol/wt-park2-r8/ideal-a/grown-4/fight.json'
-[Errno 2] No such file or directory: '/home/andrew/scratch/w13/sol/wt-park2-r8/ideal-a/small-1/fight.json'
-[Errno 2] No such file or directory: '/home/andrew/scratch/w13/sol/wt-park2-r8/ideal-a/small-2/fight.json'
-[Errno 2] No such file or directory: '/home/andrew/scratch/w13/sol/wt-park2-r8/ideal-a/small-3/fight.json'
-[Errno 2] No such file or directory: '/home/andrew/scratch/w13/sol/wt-park2-r8/ideal-a/small-4/fight.json'
-park_reactor_ideal_check: FAIL (0/8 complete identical cases)

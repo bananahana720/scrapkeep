@@ -1,4 +1,0 @@
-Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
-
-{"beacon":{"closed":0,"decks":0,"nodes":45,"ok":true,"radius_m":30.0,"reasons":[],"rise_m":1.37999987602234},"checked":["beacon_ok","spawn"],"first_failed":"","ok":true,"spawn":{"d_landmark":1351.74047851562,"farther_share":0.1319521794015,"ok":true,"open":40401}}
-park_dam_graph_check: PASS
