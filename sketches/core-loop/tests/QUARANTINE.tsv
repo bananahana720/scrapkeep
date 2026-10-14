@@ -1,4 +1,4 @@
 test	owner	reason	added	deadline
-slot_growth_sweep_test	SG14-BAL	pair margin 134% and 150% at worlds 2 and 3 against the 15 to 40% band (storm_lattice); decide tune or model	2026-10-13	wave 13 close
+slot_growth_sweep_test	SG14-CONTRACT	the sweep judges BuildSheet.power(), which overstates world 2 and 3 builds by 106 to 1657% against measured combat (tools/pattern_dps.gd); Storm Lattice's sheet chain level never reaches combat; no single part value fixes the band (2,968-case search)	2026-10-13	wave 15 close
 park_reactor_fight_test	WT-PARK-BOT	ordinary skipper median 168.890 s, 3/4 breaks against 53.7 s; D10 ordinary speed deferred	2026-10-14	wave 14
 park_reactor_repeat_test	WT-PARK-BOT	ordinary skipper median 168.890 s, 3/4 breaks against 53.7 s; D10 ordinary speed deferred; repeat 1/2 size breaks, grown 25.646111 s and small unbroken at 53.615556 s	2026-10-14	wave 14
