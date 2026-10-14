@@ -30,6 +30,8 @@ var mult_min := MULT_MIN
 var mult_max := MULT_MAX
 var drain_delay := DRAIN_DELAY
 var drain_rate := DRAIN_RATE
+# Set by a mounted driver before step; zero keeps the ordinary idle clock and drain.
+var contact_drain_delay := 0.0
 var stagger_seconds := STAGGER_SECONDS
 var shatter_tier := SHATTER_TIER
 var curve := 1.0
@@ -64,6 +66,7 @@ func _init(numbers := {}) -> void:
 	mult_max = float(numbers.get("mult_max", MULT_MAX))
 	drain_delay = float(numbers.get("drain_delay", DRAIN_DELAY))
 	drain_rate = float(numbers.get("drain_rate", DRAIN_RATE))
+	contact_drain_delay = float(numbers.get("contact_drain_delay", 0.0))
 	stagger_seconds = float(numbers.get("stagger_seconds", STAGGER_SECONDS))
 	shatter_tier = int(numbers.get("shatter_tier", SHATTER_TIER))
 	curve = float(numbers.get("curve", 1.0))
@@ -150,6 +153,9 @@ func step(delta: float) -> void:
 		stagger_left -= delta
 		if stagger_left <= 0.0:
 			_end_stagger()
+		return
+	if contact_drain_delay > 0.0:
+		idle = 0.0
 		return
 	idle += delta
 	var draining := minf(delta, idle - drain_delay)
