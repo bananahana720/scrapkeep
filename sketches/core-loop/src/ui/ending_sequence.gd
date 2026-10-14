@@ -68,9 +68,11 @@ var crater: Node3D
 var cannon_answered := false
 var cannon_answer_at := -1.0
 var _crater_placed := false
-# Holds the crater scenes so placement uses their cached resources.
+# Holds the loaded crater scenes so the cache keeps them for the placement on the credits roll.
 var _crater_files: Array = []
 var _crater_requests: Array[String] = []
+# Headless only: crater GLBs load on the main thread at placement instead of on a loader thread.
+var _crater_serial := false
 
 
 func start(game_ref) -> void:
@@ -251,15 +253,31 @@ func _build_worlds() -> void:
 
 
 # KC10: Meteor Crater is the credits' set only. Its holder sits in this viewport's own scene, never in a stage's terrain.
-# Queue its GLBs until credits, outside the timed prepare window. Serial main-thread loads avoid racing
-# Godot's headless DummyMesh RID owner with live meshes and the snapshot's render-server queue flushes.
-# Its -col collider is stripped so the sequence stays physics free.
+# start() only requests the GLBs on a thread, so the timed prepare window stays free of the bowl's load; the bowl is
+# placed on the first credits frame after the load finishes, and its -col collider is stripped so the sequence stays
+# physics free (the test's _physics_free check).
+# Headless only: the headless display server installs the dummy rasterizer, whose mesh RID owner is not thread-safe
+# (Godot 4.7.2 servers/rendering/dummy/storage/mesh_storage.h:50, RID_Owner<DummyMesh> without THREAD_SAFE). A
+# loader-thread mesh_allocate races the main thread's queued mesh_initialize and snapshot meshes ("Attempting to
+# initialize the wrong RID", core/templates/rid_owner.h:240). There the GLBs load serially on the main thread at
+# placement. Real renderers keep the threaded load: their mesh owners are thread-safe (renderer_rd mesh_storage.h:181,
+# gles3 mesh_storage.h:254). The rendering driver name still reads "vulkan" under --headless, so the display server
+# name decides.
 func _build_crater() -> void:
 	crater = Node3D.new()
 	crater.name = "MeteorCrater"
 	crater.visible = false
 	_scene.add_child(crater)
-	_crater_requests.append_array(_crater_paths())
+	_crater_serial = DisplayServer.get_name() == "headless"
+	if _crater_serial:
+		_crater_requests.append_array(_crater_paths())
+		return
+	for path in _crater_paths():
+		var error := ResourceLoader.load_threaded_request(path)
+		if error == OK:
+			_crater_requests.append(path)
+		else:
+			push_warning("ending_sequence: crater_ending GLB %s request failed (error %d)" % [path, error])
 
 
 func _crater_paths() -> Array:
@@ -269,18 +287,37 @@ func _crater_paths() -> Array:
 	return out.filter(func(path): return ResourceLoader.exists(path))
 
 
-# Load and place the bowl on the first credits frame.
+# True once the bowl is placed. Returns false while a crater GLB is still loading, so the roll shows the sky a little longer.
 func _place_crater() -> bool:
 	if _crater_placed:
 		return true
+	if _crater_serial:
+		_crater_placed = true
+		for path in _crater_requests:
+			var scene := load(path) as PackedScene
+			if scene != null:
+				_crater_files.append(scene)
+			else:
+				push_warning("ending_sequence: crater_ending GLB %s did not load" % path)
+		_crater_requests.clear()
+		return _lay_crater()
+	for path in _crater_requests:
+		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return false
 	_crater_placed = true
 	for path in _crater_requests:
-		var scene := load(path) as PackedScene
-		if scene != null:
-			_crater_files.append(scene)
+		var status := ResourceLoader.load_threaded_get_status(path)
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			_crater_files.append(ResourceLoader.load_threaded_get(path))
 		else:
-			push_warning("ending_sequence: crater_ending GLB %s did not load" % path)
+			push_warning("ending_sequence: crater_ending GLB %s did not load (status %d)" % [path, status])
+			if status != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				ResourceLoader.load_threaded_get(path)
 	_crater_requests.clear()
+	return _lay_crater()
+
+
+func _lay_crater() -> bool:
 	var placed := ParkRecipes.place(CRATER_ROW, crater, Callable(), Callable())
 	if placed == null:
 		push_warning("ending_sequence: crater_ending placed nothing; the credits roll over the sky")
@@ -292,6 +329,11 @@ func _place_crater() -> bool:
 
 
 func _release_crater_requests() -> void:
+	if not _crater_serial:
+		for path in _crater_requests:
+			if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				# Collection joins an unfinished load and releases its threaded request.
+				ResourceLoader.load_threaded_get(path)
 	_crater_requests.clear()
 	_crater_files.clear()
 
