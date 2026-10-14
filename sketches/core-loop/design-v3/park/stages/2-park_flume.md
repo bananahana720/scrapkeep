@@ -2,16 +2,119 @@
 
 World 1, Spillway Works, the world's last stage before Brindle. Warden kind `reactor` on the `flume` mounting, variant `meltdown`. Time of day `morning`. Storyboard board id `park-2-park_flume`. Status: draft for Andrew's approval (unit K-W1, 2026-10-10). Every number is a starting value to tune in play unless a file:line backs it.
 
+<!-- flume-current-table -->
+## Current measurements and qualification, round 9
+
+<!-- flume-current-receipts
+{
+  "receipt_root": "/home/andrew/scratch/w13/sol/kd2-flume-r9",
+  "head": "e3a292d736c42dec397d3c3108591e2c1d886f96",
+  "tool_sha256": "37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a"
+}
+-->
+
+Measured runtime head `e3a292d736c42dec397d3c3108591e2c1d886f96`, merged from candidate `e8471670d479b0609d7a4f078e1066c84cb5479d`, at `0617cf3b1f1ab30264ac12b71d4c57c5822053fe`. Committed traversal tool SHA256 `37e98e4ac7e0a5d4141d97828f5834a083d3267e83a90efccc26248b69ec574a`. The final source, tool and bake inputs match all final batch, replay and win manifests. Subsequent documentation and regression commits do not change these runtime inputs.
+
+All 56 untraced seed rows pass error qualification from their child logs. Acceptance also requires the five named replay comparisons reported below. Each pilot uses seeds 1–8 in a fresh child process. The cells show median / worst seed and a measured verdict. Per-seed criteria use the worst seed. Segments, airborne share, tier-3 time and length retain their explicitly median-based criteria. The floor is judged only by arrival, maximum time against twice Rivet median and zero terrain stops; its other cells are reports.
+
+The committed stage fixture independently checks this publication with `--docs`. It reads the saved seed receipts, input manifests, child logs and traced stop probes, then recomputes the table and saved win values. Marker-only tables and rejected populations fail.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden, 8/8 | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass | 8 / 8 pass |
+| Time s, median 60–120; worst ≤150 | 62.36 / 65.06 pass | 96.675 / 99.57 pass | 85.785 / 92.01 pass | 80.5 / 81.5 pass | 93.085 / 96.22 pass | 81.515 / 84.82 pass | 96.245 / 98.49, reported, pilot band, not the floor's |
+| Segments s, each median 12–45 | [21.6, 20.84, 19.9] / [21.89, 22.29, 21.68] pass | [27.28, 36.245, 33.31] / [28.71, 37.16, 34.47] pass | [25.6, 35.34, 25.005] / [29.29, 35.82, 26.89] pass | [23.38, 26.86, 29.98] / [24.81, 27.12, 30.5] pass | [27.83, 31.155, 34.65] / [29.12, 32.36, 34.91] pass | [25.64, 36.795, 18.91] / [25.87, 37.2, 22.19] pass | [28.38, 30.3, 37.63] / [28.86, 31.08, 38.86], reported, pilot band, not the floor's |
+| Flow, median ≥.70; worst ≥.60 | 0.9333 / 0.931 pass | 0.7482 / 0.7349 pass | 0.7223 / 0.6587 pass | 0.94145 / 0.9307 pass | 0.70875 / 0.6193 pass | 0.93295 / 0.9075 pass | 0.59015 / 0.5654, reported, pilot band, not the floor's |
+| Airborne, median .12–.45 | 0.2536 / [0.236, 0.2608] pass | 0.12685 / [0.1212, 0.1296] pass | 0.1608 / [0.143, 0.1645] pass | 0.17245 / [0.1652, 0.1807] pass | 0.13185 / [0.1231, 0.1448] pass | 0.1625 / [0.1313, 0.1768] pass | 0.1234 / [0.1169, 0.1321], reported, pilot band, not the floor's |
+| Terrain or unclassified stops, every seed 0 | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass | 0.0 / 0 pass |
+| Peak m/s, worst ≥26.6 | 54.5 / 54.25 pass | 37.11 / 32.24 pass | 31.305 / 31.08 pass | 33.76 / 31.8 pass | 32.82 / 32.6 pass | 32.25 / 31.26 pass | 34.69 / 32.8, reported, pilot band, not the floor's |
+| Tier-3 s, median ≥3 | 47.14 / 46.44 pass | 7.79 / 7.59 pass | 6.975 / 3.99 pass | 9.46 / 8.34 pass | 8.42 / 6.12 pass | 11.31 / 8.18 pass | 8.155 / 7.87, reported, pilot band, not the floor's |
+| Quiet s, worst ≤20 | 7.7 / 8.21 pass | 11.715 / 12.13 pass | 17.385 / 17.57 pass | 8.72 / 8.87 pass | 15.205 / 15.48 pass | 12.53 / 13.2 pass | 12.48 / 12.82, reported, pilot band, not the floor's |
+| Anchor gap m, worst ≤40 | 31.3 / 32.9 pass | 30.6 / 33.5 pass | 25.25 / 30.3 pass | 35.7 / 35.7 pass | 32.05 / 35.3 pass | 20.75 / 31.6 pass | 31.4 / 34.8, reported, pilot band, not the floor's |
+| Ride facts, worst ≥3 | 5.0 / 5 pass | 5.0 / 5 pass | 4.0 / 4 pass | 5.0 / 5 pass | 5.0 / 5 pass | 4.5 / 4 pass | 5.0 / 5, reported, pilot band, not the floor's |
+| Length ratio, median 1.3–2.0 | 1.51 / [1.51, 1.54] pass | 1.43 / [1.43, 1.44] pass | 1.33 / [1.32, 1.37] pass | 1.35 / [1.35, 1.36] pass | 1.34 / [1.33, 1.34] pass | 1.33 / [1.33, 1.34] pass | 1.35 / [1.35, 1.36], reported, pilot band, not the floor's |
+| Floor, ≤2× Rivet median; zero terrain stops | not applicable | not applicable | not applicable | not applicable | not applicable | not applicable | 96.245 / max 98.49; cap 193.35 pass |
+
+| Line | Qualified population receipt | Input provenance |
+| --- | --- | --- |
+| sable | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population/sable/sable.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population-sable-inputs.json` |
+| rivet | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population/rivet/rivet.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population-rivet-inputs.json` |
+| kest | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population/kest/kest.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population-kest-inputs.json` |
+| tarn | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population/tarn/tarn.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population-tarn-inputs.json` |
+| tally | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population/tally/tally.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population-tally-inputs.json` |
+| cannon | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population/cannon/cannon.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population-cannon-inputs.json` |
+| floor | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population/floor/floor.json` | `/home/andrew/scratch/w13/sol/kd2-flume-r9/population-floor-inputs.json` |
+
+### Distinct pilot lines
+
+Mutually distinct lines: sable / seed 1, rivet / seed 5, tally / seed 5; PASS.
+
+Each directed share counts all source trace ticks with any target tick within 8 m in XZ. All six directed shares are below 0.5. The committed documentation check recomputes the shares from qualified final-input traces and rejects a duplicated path.
+
+| Directed overlap | Share within 8 m |
+| --- | --- |
+| sable → rivet | 0.27254 |
+| sable → tally | 0.22590 |
+| rivet → sable | 0.31723 |
+| rivet → tally | 0.40292 |
+| tally → sable | 0.25958 |
+| tally → rivet | 0.43564 |
+Trace receipt: `/home/andrew/scratch/w13/sol/kd2-flume-r9/solos/solo-sable1-trace/sable-seed-1-trace.json`.
+Trace receipt: `/home/andrew/scratch/w13/sol/kd2-flume-r9/solos/solo-rivet5-trace/rivet-seed-5-trace.json`.
+Trace receipt: `/home/andrew/scratch/w13/sol/kd2-flume-r9/solos/solo-tally5-trace/tally-seed-5-trace.json`.
+
+### Stop classification
+
+| Line / seed | Time s | Position XZ m | Classification | Enemy kind | Home or director provenance | Matching traced receipt |
+| --- | --- | --- | --- | --- | --- | --- |
+| All 56 seeds | none | none | zero observed stops | not applicable | not applicable | population receipts above |
+
+No stops were observed in the final 56 qualified seeds, so no pack exemption or stop probe is required. Stop-replay records are in `/home/andrew/scratch/w13/sol/kd2-flume-r9/stop-replay-comparisons.json`. A pack exemption would require a matching traced solo, an observed enemy kind and spawning provenance inside the preceding 90 ticks. Ground-only contacts would count as terrain. The final population uses no exemption.
+
+### Named replay qualification
+
+| Line / seed | Batch / plain / traced equality | Qualification |
+| --- | --- | --- |
+| sable / 1 | equal | error-free qualified |
+| rivet / 5 | equal | error-free qualified |
+| sable / 4 | equal | error-free qualified |
+| tally / 5 | equal | error-free qualified |
+| floor / 1 | equal | error-free qualified |
+
+Named replay acceptance: 5/5 qualified comparisons complete. Complete population cells above come from the 56 qualified child receipts; no rejected or missing row fills a cell.
+
+Replay receipts and error qualification: `/home/andrew/scratch/w13/sol/kd2-flume-r9/replay-qualification.json`. Full runtime-input equality: `/home/andrew/scratch/w13/sol/kd2-flume-r9/input-equality.json`.
+
+<!-- current-win-results -->
+### Current win results, round 9
+
+The unchanged scratch `win_600.gd` only sets the bot stage limit to 600 s before tick 1. Runs use `--table=park --from-stage=2 --stages=2 --policy=completionist`. Ruling 23 judges reach and engagement without a traversal-cause stall. Warden break times are reported separately and belong to the fight units and Andrew's task #5.
+
+| Seed | Engage s | Break s | Engage to break s | Outcome | Stage stop | Receipt |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 116.69 | 289.03 | 172.34 | stalled | gates | `/home/andrew/scratch/w13/sol/kd2-flume-r9/win-seed-1/bots.ndjson` |
+| 2 | 116.74 | not broken in 600 s | not applicable | stalled | beacon | `/home/andrew/scratch/w13/sol/kd2-flume-r9/win-seed-2/bots.ndjson` |
+| 3 | 112.25 | not broken in 600 s | not applicable | stalled | beacon | `/home/andrew/scratch/w13/sol/kd2-flume-r9/win-seed-3/bots.ndjson` |
+
+Every win seed reaches and engages. Child logs contain no collapse script error or missing park-cue error. ACE stem files are absent in this worktree, so these runs use the existing synth fallback. Listening is not qualified. Post-engagement fight or gate outcomes are reported above and do not change the stage traversal criterion.
+<!-- /current-win-results -->
+
+The physical event regression observes finite matching deck-to-floor mesh and collider surfaces at five span positions at landing, 0.5 s, 1 s and 2 s. Its independent grid interpolation defines the authorized depth. The stage keeps its authored form, trigger, six-second lead, 20 m hold-clear distance, swap and route changes. Both authored music cue IDs resolve through the common runtime event/music path.
+
+The corrected candidate tests judge the music bar grid booked at announcement. Both ground-slump game fixtures and the complete Z1 shared suite pass. The candidate supplies the shared posture-comparison and Warden-wiring corrections. The complete eight-file stage smoke passes. Rivet also emits missing Fin.L/Fin.R control diagnostics, which the wrapper reports separately as a partial skip; all 127 flume geometry checks run and pass. KD2 leaves those shared files unchanged. The retained round-8 baseline and head failure logs establish the inherited defect before that candidate correction.
+<!-- /flume-current-table -->
+
+
 The corrected candidate tests judge the music bar grid booked at announcement. Both ground-slump game fixtures and the complete Z1 shared suite pass. The eight-file smoke remains blocked by four inherited park_table_test posture comparisons. Rivet also emits missing Fin.L/Fin.R control diagnostics, which the wrapper reports separately as a partial skip; all 111 flume geometry checks run and pass. KD2 leaves those shared files unchanged. The table/test owner must reconcile the posture comparisons before the eight-file smoke can pass.
 
 ## Riding surface correction, round 9
 
 Coordinator ruling V1 defines the intact riding surface as base plus height. The span remains at base y=44 m with height 2 m, so its mesh and solid collider top are 46 m. The warning sits 0.15 m above that top. The prepared replacement begins at the independently measured intact surface with zero fall progress. It falls continuously over the unchanged two seconds to the baked hollow floor, 23.5586042404175 m, giving depth 22.4413957595825 m. The 20 m hold-clear margin, predicted crossing hold, partial-fall pause, authored site, trigger, form, lead, swap and route changes remain fixed.
 
-<!-- flume-current-table -->
-## Current measurements and qualification, round 8
+<!-- flume-historical-table-r8 -->
+## Historical measurements and qualification, round 8
 
-<!-- flume-current-receipts
+<!-- flume-historical-receipts-r8
 {
   "receipt_root": "/home/andrew/scratch/w13/sol/kd2-flume-r8",
   "head": "395ba57bc8da9c6c260776ea04cc8c9520f427d0",
@@ -73,8 +176,8 @@ Named replay acceptance: 5/5 qualified comparisons complete. Complete population
 
 Replay receipts and error qualification: `/home/andrew/scratch/w13/sol/kd2-flume-r8/replay-qualification.json`. Full runtime-input equality: `/home/andrew/scratch/w13/sol/kd2-flume-r8/input-equality.json`.
 
-<!-- current-win-results -->
-### Current win results, round 8
+<!-- historical-win-results-r8 -->
+### Historical win results, round 8
 
 The unchanged scratch `win_600.gd` only sets the bot stage limit to 600 s before tick 1. Runs use `--table=park --from-stage=2 --stages=2 --policy=completionist`. Ruling 23 judges reach and engagement without a traversal-cause stall. Warden break times are reported separately and belong to the fight units and Andrew's task #5.
 
@@ -85,11 +188,11 @@ The unchanged scratch `win_600.gd` only sets the bot stage limit to 600 s before
 | 3 | 112.25 | not broken in 600 s | not applicable | stalled | beacon | `/home/andrew/scratch/w13/sol/kd2-flume-r8/win-seed-3/bots.ndjson` |
 
 Every win seed reaches and engages. Child logs contain no collapse script error or missing park-cue error. ACE stem files are absent in this worktree, so these runs use the existing synth fallback. Listening is not qualified. Post-engagement fight or gate outcomes are reported above and do not change the stage traversal criterion.
-<!-- /current-win-results -->
+<!-- /historical-win-results-r8 -->
 
 The physical event regression observes finite matching deck-to-floor mesh and collider surfaces at five span positions at landing, 0.5 s, 1 s and 2 s. Its independent grid interpolation defines the authorized depth. The stage keeps its authored form, trigger, six-second lead, 20 m hold-clear distance, swap and route changes. Both authored music cue IDs resolve through the common runtime event/music path.
 
-<!-- /flume-current-table -->
+<!-- /flume-historical-table-r8 -->
 
 
 <!-- flume-historical-table-r7 -->

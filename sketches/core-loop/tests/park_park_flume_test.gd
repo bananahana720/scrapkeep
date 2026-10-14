@@ -636,6 +636,7 @@ for k,seed in [('sable',1),('rivet',5),('sable',4),('tally',5),('floor',1)]:
   assert not any('SCRIPT ERROR' in x or x.startswith('ERROR:') for x in logs[0].read_text().splitlines()),'rejected named replay '+name
   if mode=='trace':
    assert (folder/(k+'-seed-'+str(seed)+'-trace.json')).exists(),'missing named replay trace '+name
+print('NAMED REPLAY QUALIFICATION: PASS (5/5 batch/plain/traced comparisons)')
 import math
 
 def directed_share(a,b):
@@ -657,7 +658,9 @@ paths={}
 for k,seed in selected:
  name='solo-'+k+str(seed)+'-trace'
  receipt=p/'solos'/name/(k+'-seed-'+str(seed)+'-trace.json')
- ticks=json.loads(receipt.read_text())['ticks']
+ trace=json.loads(receipt.read_text())
+ assert trace['pilot']==k and trace['seed']==seed,'wrong distinct-line trace identity '+name
+ ticks=trace['ticks']
  assert ticks,'empty distinct-line trace '+name
  paths[k]=[(t['at'][0],t['at'][2]) for t in ticks]
  assert str(receipt) in b,'missing distinct-line receipt '+name
