@@ -3622,6 +3622,12 @@ func _clear_devices() -> void:
 
 func _rebuild_patterns() -> void:
 	var ids := active_transformers()
+	# Combat hears part_gained before Build. Derive from the current held list so a
+	# newly completed lattice works on its first volley and retry cannot retain it.
+	if ctx != null and ctx.run != null:
+		var sheet: RefCounted = preload("res://src/build/build_sheet.gd").from_parts(ctx.run.parts)
+		for _jump in sheet.lattice_chain_jumps():
+			ids.append("chain_arc")
 	for weapon in Weapons.ALL:
 		var p: Resource = Weapons.base(weapon).transformed(ids)
 		# Tree pattern ops land after the parts; the clarity caps hold whatever stacked.

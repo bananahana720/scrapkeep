@@ -4,13 +4,14 @@ const BuildSweep := preload("res://tools/build_sweep.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const BuildSheet := preload("res://src/build/build_sheet.gd")
 
 # SG14-BAL: real combat ticks and HP removal, with motion and world activity frozen.
 # The target is the ordinary unplated enemy capsule, not a receiver for emitted damage.
 # Near and far runs expose the aim/spread dependence a single scalar cannot express.
 # Run with --headless --path sketches/core-loop --script res://tools/pattern_dps.gd.
 # -- --neighbours=3 adds chain recipients; --arm-only or --proposal-input emits inputs.
-const DT := 1.0 / 90.0
+const DT := 1.0 / BuildSheet.POWER_CONTRACT["ticks_per_second"]
 const SECONDS := 30.0
 const WARMUP := 1.0
 const DISTANCES := [5.0, 20.0]
@@ -60,6 +61,17 @@ func _physics_process(_delta: float) -> bool:
 	if "--arm-only" in OS.get_cmdline_user_args():
 		_game.free()
 		quit(0)
+		return true
+	var contract_rows := measure_contract(_game)
+	for row in contract_rows:
+		print("pattern_dps contract: " + JSON.stringify(row))
+	if "--contract-only" in OS.get_cmdline_user_args():
+		var ok := contract_rows.size() == 18
+		for row in contract_rows:
+			ok = ok and valid_row(row) and absf(row["difference_pct"]) <= 10.0
+		print("pattern_dps: %s (%d contract rows)" % ["PASS" if ok else "FAIL", contract_rows.size()])
+		_game.free()
+		quit(0 if ok else 1)
 		return true
 	var neighbours := 3 if "--neighbours=3" in OS.get_cmdline_user_args() else 0
 	var rows := measure(_game, cases(BASELINE_SETS), DISTANCES, neighbours)
@@ -126,20 +138,37 @@ static func measure(game, scenarios: Array, distances := DISTANCES, neighbours :
 	return rows
 
 
+static func measure_contract(game) -> Array:
+	return measure(game, cases(BASELINE_SETS), [BuildSheet.POWER_CONTRACT["distance_m"]],
+		BuildSheet.POWER_CONTRACT["neighbours"])
+
+
+static func valid_row(row: Dictionary) -> bool:
+	return row["dps"] > 0.0 and row["hits"] > 0 and row["retired"] == 0 \
+		and row["stationary"] and row["ledger_agrees"] and row["parts_match"] \
+		and row["weapon"] == BuildSheet.POWER_CONTRACT["weapon"]
+
+
 static func _measure_one(game, scenario: Dictionary, distance: float, neighbours: int) -> Dictionary:
 	var combat = game.ctx.spawner
 	var build = game.ctx.build
 	game.run.parts.assign(scenario["parts"])
 	build.recompute()
-	combat._rebuild_patterns()
 	if scenario.get("no_lattice", false):
 		build.sheet.transformers.erase("storm_lattice")
 		build.sheet.synergies.erase("storm_lattice")
 		build.sheet.patterns["chain_arc"] = maxi(0, build.sheet.pattern_level("chain_arc") - 1)
+	combat._rebuild_patterns()
+	if scenario.get("no_lattice", false):
+		# Disable only the lattice bonus. Held parts, base Chain Arc, rate and damage stay.
+		# Production reconstruction above is also exercised by every enabled row.
+		for weapon in Weapons.ALL:
+			combat._patterns[weapon] = Weapons.base(weapon).transformed(combat.active_transformers())
 	var targets: Array = []
 	var positions: Array = []
 	for i in neighbours + 1:
-		var at: Vector3 = BALL + Vector3.FORWARD * distance + Vector3.RIGHT * 3.0 * i
+		var at: Vector3 = BALL + Vector3.FORWARD * distance \
+			+ Vector3.RIGHT * BuildSheet.POWER_CONTRACT["neighbour_spacing_m"] * i
 		targets.append(_dummy(game, at))
 		positions.append(at)
 	combat.bolts.clear()
