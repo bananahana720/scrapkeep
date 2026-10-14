@@ -13,6 +13,11 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	var model = load(MODEL)
+	if "--entrance-only" in OS.get_cmdline_user_args():
+		_entrance_round_trip(model)
+		quit(t.verdict())
+		return
+	_entrance_round_trip(model)
 	var memory: Dictionary = model.memory()
 	model.decide(memory, {"stage": 1, "family": "risk"}, true)
 	t.eq("risk trade closes safe family", model.odds(memory, 2).safe_share, 0.0)
@@ -332,3 +337,74 @@ func _render_summary(model) -> void:
 	await _summary(game, model, Library.rows().filter(func(entry): return entry.kind == "trade"))
 	game.free()
 	await process_frame
+
+func _entrance_round_trip(model) -> void:
+	var Run = load("res://src/core/run_state.gd")
+	var ClassDef = load("res://src/core/class_def.gd")
+	var Library = load("res://src/world/pockets/pocket_library.gd")
+	var Map = load("res://src/world/park/park_map.gd")
+	var Graph = load("res://src/world/park/park_graph.gd")
+	var run = Run.new()
+	run.begin(ClassDef.all()[0])
+	var risk := {"stage": 1, "family": "risk", "interior_id": "blood_counter", "chance": 0.45, "recency": 1.0, "safe_share": 0.5, "refusal_weight": 1.0, "skip_time": 0.0, "curse": false, "sacrifice": false, "sacrifice_chance": 11.0 / 28.0, "full_health_bump": true, "pool_floor": 0.0, "tier": 1}
+	var refused := risk.merged({"stage": 2, "interior_id": "scrap_counter", "recency": 0.25, "chance": 0.1125, "safe_share": 0.0}, true)
+	model.appear(run.trade_memory, risk)
+	model.see(run.trade_memory, risk)
+	model.decide(run.trade_memory, risk, true)
+	run.enter_stage(2)
+	model.appear(run.trade_memory, refused)
+	model.see(run.trade_memory, refused)
+	model.decide(run.trade_memory, refused, false)
+	# A completed stage's cached placement includes native vectors, lost by raw JSON.
+	run.trade_memory.offers["2"] = Library.site_spec(Library.trade("scrap_counter")).merged({"node": 11224, "at": Vector2(128, -32), "id": "trade_risk", "trade": refused})
+	run.enter_stage(3)
+	var prior: Dictionary = run.trade_memory.duplicate(true)
+	run.snapshot(Vector3(1, 2, 3), Vector3(0, 0, 20), 0.5)
+	var map = Map.new("res://src/world/park/park_pit.json")
+	var graph = Graph.read("res://assets/park/park_pit/graph.bin")
+	var pool: PackedInt32Array = model.candidates(graph, map)
+	var placed := {}
+	for seed_value in 100:
+		run.run_seed = seed_value
+		run.trade_memory = prior.duplicate(true)
+		placed = model.stage_site(graph, map, run, 78000, pool)
+		if not placed.is_empty():
+			break
+	t.check("Continue fixture entrance has a seeded offer", not placed.is_empty())
+	if placed.is_empty():
+		return
+	model.see(run.trade_memory, placed.trade)
+	model.decide(run.trade_memory, placed.trade, true)
+	var doc: Dictionary = JSON.parse_string(JSON.stringify(run.to_entrance_doc()))
+	t.check("entrance document serializes checkpoint trade memory", doc.has("trade_memory"))
+	t.eq("trade entrance JSON validates", Run.validate_entrance_doc(doc), "")
+	var restored = Run.new()
+	t.check("trade entrance JSON restores", restored.from_entrance_doc(doc))
+	t.eq("Continue keeps same run identity", restored.run_id, run.run_id)
+	t.eq("Continue keeps entrance stage", restored.stage, 3)
+	t.eq("Continue prior risk purchase keeps safe odds zero", model.odds(restored.trade_memory, 3).safe_share, 0.0)
+	t.eq("Continue retains prior appearance timestamp", restored.trade_memory.last_appeared, 2)
+	t.eq("Continue retains prior refusal timestamp", restored.trade_memory.last_refused, 2)
+	t.eq("Continue retains prior seen timestamp", restored.trade_memory.last_seen, 2)
+	t.eq("Continue prior seen records reach results", restored.summary().trade_pockets, [risk, refused])
+	t.eq("Continue restores all prior checkpoint trade memory", restored.trade_memory, prior)
+	t.check("Continue rolls back current-stage purchase", not restored.trade_memory.decisions.has("3"))
+	t.check("Continue rolls back current-stage appearance cache", not restored.trade_memory.offers.has("3"))
+	var replayed: Dictionary = model.stage_site(graph, map, restored, 78000, pool)
+	t.eq("Continue rebuilds identical entrance offer", replayed, placed)
+	restored.restore()
+	t.eq("Continue retry restores banked trade memory", restored.trade_memory, prior)
+	var legacy: Dictionary = doc.duplicate(true)
+	legacy.erase("trade_memory")
+	var old = Run.new()
+	t.check("older entrance without trades remains valid", old.from_entrance_doc(legacy))
+	t.eq("older entrance defaults to fresh trade memory", old.trade_memory, {"risk_taken": false, "last_appeared": -100, "last_seen": -100, "last_refused": -100, "seen": [], "offers": {}, "decisions": {}})
+	# Reject malformed optional memory before applying any of the entrance.
+	var valid := {"risk_taken": true, "last_appeared": 2, "last_seen": 2, "last_refused": 2, "seen": [risk, refused], "offers": {}, "decisions": {"1": true, "2": false}}
+	for change in [{"risk_taken": "true"}, {"last_appeared": 2.5}, {"last_refused": 4}, {"seen": [risk, risk]}, {"seen": [risk.merged({"interior_id": "ward_counter"}, true)]}, {"seen": [risk.merged({"recency": "bad"}, true)]}, {"decisions": {"1": "true"}}, {"offers": {"2": {"at": [1], "node": 1, "trade": refused}}}]:
+		var bad: Dictionary = doc.duplicate(true)
+		bad["trade_memory"] = valid.merged(change, true)
+		t.check("malformed trade entrance rejected " + str(change.keys()), not Run.validate_entrance_doc(bad).is_empty())
+		var untouched = Run.new()
+		untouched.run_id = "unchanged"
+		t.check("malformed trade entrance is atomic " + str(change.keys()), not untouched.from_entrance_doc(bad) and untouched.run_id == "unchanged")
