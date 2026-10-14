@@ -14,6 +14,12 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Brute := preload("res://src/combat/plated_brute.gd")
 const SPAWNS := 50
 const TICK := 1.0 / 90.0
+const EDGE_STEP := 0.05
+const EXPECTED_GEOMETRY := {
+	"stamp": {"shape": Telegraph.Shape.RING, "radius": 2.8, "reach": 2.2},
+	"rail": {"shape": Telegraph.Shape.LANE, "length": 14.0, "width": 2.4, "reach": 2.2},
+	"rearblast": {"shape": Telegraph.Shape.RING, "radius": 4.0, "offset": 5.0, "reach": 2.2},
+}
 # Independent oracle for the stat changed by each affix.
 const EXPECTED := {
 	"stamp": ["walk_speed", [3.8, 4.4, 5.0], 5.0, "target_stamp", "Target-stamp Fast Plated Brute"],
@@ -183,10 +189,19 @@ func _solo(id: String, world: int) -> void:
 	var misses := 0
 	var hits := 0
 	var unchanged := 0
+	var boundary_misses := 0
+	var nearby_hits := 0
 	for spawn_index in SPAWNS:
 		_clear()
 		var enemy = _spawn(id)
+		enemy.rotation.y = float(spawn_index % 4) * PI * 0.5
 		enemy._rest = 0.0
+		var sample := {}
+		enemy.attack_phase.connect(func(fact: Dictionary):
+			if fact.phase == "windup" and enemy._affix_attack:
+				sample["target"] = enemy.target.ball_position()
+				sample["origin"] = enemy.global_position
+				sample["facing"] = enemy.global_basis.z)
 		var damage := []
 		enemy.hit_player.connect(func(amount: float, shove: Vector3): damage.append([amount, shove]))
 		var start := -1
@@ -194,6 +209,10 @@ func _solo(id: String, world: int) -> void:
 		var descriptor := {}
 		var onset := false
 		for frame in 360:
+			if start < 0 and enemy.phase == enemy.Phase.ROAM:
+				var aim: Vector3 = enemy.target.ball_position() - enemy.global_position
+				aim.y = 0.0
+				sample["aim"] = aim.normalized()
 			await physics_frame
 			if start < 0 and enemy.phase == enemy.Phase.WARN:
 				start = Engine.get_physics_frames()
@@ -201,9 +220,11 @@ func _solo(id: String, world: int) -> void:
 				descriptor = tele.descriptor()
 				t.eq("added tell tag", tele.mechanic_tag, Affixes.row(id).mechanic_tag)
 				t.eq("added tell type", tele.type, Affixes.row(id).telegraph)
+				_geometry(id, tele, sample)
 				# Leave the original target while the committed warning runs.
 				game.player.reset_to(ball_at + Vector3.RIGHT * 60.0)
 			if start >= 0 and enemy.phase == enemy.Phase.LIVE:
+				enemy.process_mode = Node.PROCESS_MODE_DISABLED
 				onset = true
 				shortest = minf(shortest, float(Engine.get_physics_frames() - start) * TICK)
 				var current: Dictionary = tele.descriptor()
@@ -222,6 +243,9 @@ func _solo(id: String, world: int) -> void:
 				enemy._go_live()
 				if damage.size() == 1 and damage[0][0] == Affixes.row(id).damage and tele.contains(inside):
 					hits += 1
+				var probes := _boundaries(id, world, spawn_index, enemy, tele, damage)
+				boundary_misses += probes[0]
+				nearby_hits += probes[1]
 				break
 		t.check("solo attack happened " + id, onset)
 		# The next attack remains the original slam.
@@ -235,4 +259,85 @@ func _solo(id: String, world: int) -> void:
 	t.eq("outside committed shape cannot hit", misses, SPAWNS)
 	t.eq("inside committed shape delivers damage", hits, SPAWNS)
 	t.eq("committed shape never retargets", unchanged, SPAWNS)
-	print("SOLO affix=%s world=%d spawns=%d min_lead=%.6f outside_misses=%d inside_hits=%d same_geometry=%d" % [id, world, SPAWNS, shortest, misses, hits, unchanged])
+	var probes_per_spawn := 6 if id == "stamp" else 5
+	t.eq("all boundary misses %s world %d" % [id, world], boundary_misses, SPAWNS * probes_per_spawn)
+	t.eq("all nearby positive hits %s world %d" % [id, world], nearby_hits, SPAWNS * probes_per_spawn)
+	print("SOLO affix=%s world=%d spawns=%d min_lead=%.6f outside_misses=%d inside_hits=%d same_geometry=%d boundary_misses=%d nearby_hits=%d" % [id, world, SPAWNS, shortest, misses, hits, unchanged, boundary_misses, nearby_hits])
+
+
+func _geometry(id: String, tele, sample: Dictionary) -> void:
+	var row: Dictionary = Affixes.row(id)
+	var want: Dictionary = EXPECTED_GEOMETRY[id]
+	t.eq("committed shape " + id, tele.shape, want.shape)
+	for key in ["radius", "length", "width", "reach", "offset"]:
+		if not want.has(key):
+			continue
+		t.near("published geometry %s %s" % [id, key], row[key], want[key])
+		if key != "offset":
+			t.near("committed geometry %s %s" % [id, key], tele.get("reach_up" if key == "reach" else key), want[key])
+	var centre: Vector3 = sample.target if id == "stamp" else sample.origin
+	if id == "rearblast":
+		centre -= sample.facing * want.offset
+	centre.y = game.combat.ground.height_at(centre)
+	t.near("committed centre x " + id, tele.center.x, centre.x)
+	t.near("committed centre y " + id, tele.center.y, centre.y)
+	t.near("committed centre z " + id, tele.center.z, centre.z)
+	if id == "rail":
+		t.near("sampled lane heading x", tele.dir.x, sample.aim.x)
+		t.near("sampled lane heading z", tele.dir.z, sample.aim.z)
+
+
+func _boundaries(id: String, world: int, spawn_index: int, enemy, tele, damage: Array) -> Array:
+	var pairs := []
+	var inside: Vector3 = tele.center
+	if tele.shape == Telegraph.Shape.RING:
+		for dir in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK]:
+			pairs.append(["ring " + str(dir), tele.center + dir * (tele.radius + EDGE_STEP),
+				tele.center + dir * (tele.radius - EDGE_STEP)])
+		if id == "stamp":
+			var toward: Vector3 = enemy.global_position - tele.center
+			toward.y = 0.0
+			toward = toward.normalized()
+			var beyond: Vector3 = tele.center + toward * (tele.radius + EDGE_STEP)
+			var from_brute := Vector2(beyond.x - enemy.global_position.x, beyond.z - enemy.global_position.z)
+			t.check("stamp boundary probe inside original 6 m slam", from_brute.length() < 6.0)
+			pairs.append(["stamp outside ring inside original slam", beyond,
+				tele.center + toward * (tele.radius - EDGE_STEP)])
+	else:
+		var side: Vector3 = tele.dir.cross(Vector3.UP)
+		inside += tele.dir * tele.length * 0.5
+		for sign_value in [-1.0, 1.0]:
+			pairs.append(["lane side " + str(sign_value), inside + side * sign_value * (tele.width * 0.5 + EDGE_STEP),
+				inside + side * sign_value * (tele.width * 0.5 - EDGE_STEP)])
+		pairs.append(["lane back end", tele.center - tele.dir * EDGE_STEP, tele.center + tele.dir * EDGE_STEP])
+		pairs.append(["lane front end", tele.center + tele.dir * (tele.length + EDGE_STEP),
+			tele.center + tele.dir * (tele.length - EDGE_STEP)])
+	for pair in pairs:
+		for index in [1, 2]:
+			var point: Vector3 = pair[index]
+			point.y = game.combat.ground.height_at(point) + 1.05
+			pair[index] = point
+	var ground: float = game.combat.ground.height_at(inside)
+	pairs.append(["above reach_up", Vector3(inside.x, ground + tele.reach_up + EDGE_STEP, inside.z),
+		Vector3(inside.x, ground + tele.reach_up - EDGE_STEP, inside.z)])
+	var misses := 0
+	var hits := 0
+	for pair in pairs:
+		var label := "%s world %d spawn %d %s" % [id, world, spawn_index, pair[0]]
+		var outside: Vector3 = pair[1]
+		var nearby: Vector3 = pair[2]
+		t.check("negative probe outside tele.contains " + label, not tele.contains(outside))
+		game.player.reset_to(outside)
+		game.player._rigid.global_position = outside
+		var before := damage.size()
+		enemy._go_live()
+		if t.eq("boundary no damage " + label, damage.size(), before):
+			misses += 1
+		t.check("nearby positive inside tele.contains " + label, tele.contains(nearby))
+		game.player.reset_to(nearby)
+		game.player._rigid.global_position = nearby
+		before = damage.size()
+		enemy._go_live()
+		if t.check("nearby positive damage " + label, damage.size() == before + 1 and damage[before][0] == 10.0):
+			hits += 1
+	return [misses, hits]
