@@ -282,7 +282,7 @@ func _end() -> void:
 	_clear_telegraph()
 	phase = Phase.ROAM
 	_t = 0.0
-	_rest = rest_seconds
+	_rest = rest_seconds * float(spec.get("rest_scale", 1.0))
 
 
 # --- Holds ----------------------------------------------------------------------------
