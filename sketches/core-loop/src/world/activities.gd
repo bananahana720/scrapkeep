@@ -325,6 +325,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	if not s.interior.is_empty():
 		_build_interior(s)
 		if spec.get("drawn", false):
+			s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
 			s.rotation.y = -spec.get("turn", 0) * PI * 0.5
 	if s.rule.finishes == "trade":
 		_build_trade(s)
