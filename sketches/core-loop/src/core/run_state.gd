@@ -53,6 +53,7 @@ var scrap := 0
 var mass := 0.0
 # Bonus cores from events and vaults this stage; each one overcharges the beacon.
 var bonus_cores := 0
+var pocket_draw_cache := {}
 var trade_memory := preload("res://src/world/trade_pockets.gd").memory()
 var run_id := ""
 var parts: Array[String] = []
@@ -187,6 +188,7 @@ func begin(chosen_class: Resource) -> void:
 	_heft_class = 1
 	class_rewarded = 1
 	_stage_starts = {}
+	pocket_draw_cache = {}
 	trade_memory = preload("res://src/world/trade_pockets.gd").memory()
 	# The suffix also seeds device luck; presentation must never choose it.
 	if run_seed_override != null:
@@ -676,6 +678,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 	_snapshot = {
 		"stage": stage,
 		"trade_memory": trade_memory.duplicate(true),
+		"pocket_draw_cache": pocket_draw_cache.duplicate(true),
 		"max_hp": max_hp,
 		"hp": hp,
 		"scrap": scrap,
@@ -737,6 +740,7 @@ func snapshot_value(key: String):
 
 func restore() -> void:
 	escape_window_left = 0.0
+	pocket_draw_cache = (_snapshot.get("pocket_draw_cache", pocket_draw_cache) as Dictionary).duplicate(true)
 	trade_memory = (_snapshot.get("trade_memory", preload("res://src/world/trade_pockets.gd").memory()) as Dictionary).duplicate(true)
 	stage = _snapshot["stage"]
 	max_hp = _snapshot["max_hp"]
@@ -818,7 +822,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -875,6 +879,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"event_core_grants": event_core_grants,
 		"run_tallies": tallies(),
 		"seen_wardens": _seen_wardens.keys(),
+		"pocket_draw_cache": preload("res://src/world/pockets/pocket_draw.gd").to_doc(pocket_draw_cache),
 		"trade_memory": preload("res://src/world/trade_pockets.gd").to_doc(_snapshot.get("trade_memory", trade_memory)),
 	}, true)
 	if run_tier == 0:
@@ -936,6 +941,10 @@ static func validate_entrance_doc(doc) -> String:
 	for key in ENTRANCE_OPTIONAL:
 		if doc.has(key) and not _entrance_kind_ok(doc[key], ENTRANCE_OPTIONAL[key]):
 			return "wrong type for %s (expected %s)" % [key, ENTRANCE_OPTIONAL[key]]
+	if doc.has("pocket_draw_cache"):
+		var draw_error := preload("res://src/world/pockets/pocket_draw.gd").validate_doc(doc.pocket_draw_cache, int(doc.stage))
+		if not draw_error.is_empty():
+			return draw_error
 	if doc.has("trade_memory"):
 		var trade_error := preload("res://src/world/trade_pockets.gd").validate_doc(doc.trade_memory, int(doc.stage))
 		if not trade_error.is_empty():
@@ -1026,6 +1035,7 @@ func from_entrance_doc(doc) -> bool:
 	since_damage = 99.0
 	# The loaded entrance is the checkpoint a retry rewinds to.
 	_stage_starts = {}
+	pocket_draw_cache = preload("res://src/world/pockets/pocket_draw.gd").from_doc(doc.pocket_draw_cache) if doc.has("pocket_draw_cache") else {}
 	trade_memory = preload("res://src/world/trade_pockets.gd").from_doc(doc.trade_memory) if doc.has("trade_memory") else preload("res://src/world/trade_pockets.gd").memory()
 	_snapshot = {}
 	snapshot(Vector3(p[0], p[1], p[2]), Vector3(v[0], v[1], v[2]), float(doc["camera_yaw"]))

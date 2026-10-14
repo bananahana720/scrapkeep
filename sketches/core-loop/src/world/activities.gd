@@ -12,6 +12,7 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
+const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
@@ -127,6 +128,8 @@ var _pending_stage := false
 var _elite_arrivals := 0
 var _graph
 var _graph_map := ""
+var _draw_layout := {}
+var _draw_map := ""
 var _mark_pools := {}
 
 const POCKET_HEAL_SHARE := 0.15
@@ -234,6 +237,14 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
 		if not trade_spec.is_empty():
 			sites.append(_build(trade_spec.id, trade_spec.at, trade_spec))
+		if _draw_map != _graph_map:
+			_draw_layout.clear()
+			_draw_map = _graph_map
+		if _draw_layout.is_empty() and ctx.run.stage > 1:
+			_draw_layout = PocketDraw.prepare(_graph, map)
+		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout):
+			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
+				sites.append(_build(drawn_spec.id, drawn_spec.at, drawn_spec))
 	_pending_stage = true
 
 

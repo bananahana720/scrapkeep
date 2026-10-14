@@ -48,12 +48,12 @@ func _run() -> void:
 			var again = Run.new()
 			again.stage = stage
 			again.run_seed = seed_value
-			t.eq("same seed reconstructs sites", model.stage_sites(graph, map, again, 78000, trade, prepared), specs)
-			t.eq("cache survives a changed layout seed", model.stage_sites(graph, map, run, 123, trade, prepared), specs)
+			t.check("same seed reconstructs sites", model.stage_sites(graph, map, again, 78000, trade, prepared) == specs)
+			t.check("cache survives a changed layout seed", model.stage_sites(graph, map, run, 123, trade, prepared) == specs)
 			var doc: Dictionary = JSON.parse_string(JSON.stringify(model.to_doc(run.pocket_draw_cache)))
 			t.eq("draw cache document validates", model.validate_doc(doc, stage), "")
 			var restored: Dictionary = model.from_doc(doc)
-			t.eq("JSON cache round trip", restored, run.pocket_draw_cache)
+			t.check("JSON cache round trip", restored == run.pocket_draw_cache)
 			if stage == 6 and seed_value == 0:
 				_failure(model, prepared, map, graph)
 				var bad: Dictionary = doc.duplicate(true)
@@ -163,8 +163,8 @@ func _runtime(specs: Array) -> void:
 	var doc: Dictionary = JSON.parse_string(JSON.stringify(game.run.to_entrance_doc()))
 	var Run = load("res://src/core/run_state.gd")
 	var loaded = Run.new()
-	t.check("Continue accepts entrance with draw cache", loaded.apply_entrance_doc(doc))
-	t.eq("Continue preserves actual drawn sites", loaded.pocket_draw_cache, game.run.pocket_draw_cache)
+	t.check("Continue accepts entrance with draw cache", loaded.from_entrance_doc(doc))
+	t.check("Continue preserves actual drawn sites", loaded.pocket_draw_cache == game.run.pocket_draw_cache)
 	game.free()
 
 func _bodies(node: Node) -> int:

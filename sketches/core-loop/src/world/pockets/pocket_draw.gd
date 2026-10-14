@@ -1,0 +1,276 @@
+extends RefCounted
+
+const Library := preload("res://src/world/pockets/pocket_library.gd")
+const Graph := preload("res://src/world/park/park_graph.gd")
+const Park := preload("res://src/core/park_defs.gd")
+const Trade := preload("res://src/world/trade_pockets.gd")
+const Placement := preload("res://tools/park_graph.gd")
+const CREDITS := 150
+const CHANCE := 0.25
+
+static func cost(entry: Dictionary) -> int:
+	var side: float = Library.FOOTPRINTS[entry.footprint]
+	return ceili(side * side / Library.FOOTPRINTS.small)
+
+static func entries(map) -> Array:
+	var assigned := {}
+	for spec in map.activity_sites:
+		var entry := Library.for_site(map.park.map, spec.row)
+		if not entry.is_empty():
+			assigned[entry.id] = true
+	return Library.rows().filter(func(entry): return entry.kind != "trade" and not assigned.has(entry.id))
+
+static func _path(graph, sources: PackedInt32Array, targets: PackedInt32Array) -> PackedInt32Array:
+	var prev := PackedInt32Array()
+	prev.resize(graph.node_count())
+	prev.fill(-1)
+	var end := {}
+	for n in targets:
+		end[n] = true
+	var queue := sources.duplicate()
+	for n in sources:
+		prev[n] = n
+	var head := 0
+	while head < queue.size():
+		var n := queue[head]
+		head += 1
+		if end.has(n):
+			var out := PackedInt32Array([n])
+			while prev[n] != n:
+				n = prev[n]
+				out.append(n)
+			return out
+		for e in range(graph.off[n], graph.off[n + 1]):
+			var to: int = graph.to[e]
+			if prev[to] < 0:
+				prev[to] = n
+				queue.append(to)
+	return PackedInt32Array()
+
+static func prepare(graph, map) -> Dictionary:
+	var out := {"anchors": [], "fits": {}, "routes": PackedByteArray(), "from_line": PackedFloat32Array()}
+	if graph == null or map == null or map.park.is_empty():
+		return out
+	var line := PackedInt32Array()
+	var routes := PackedByteArray()
+	routes.resize(graph.node_count())
+	for n in graph.node_count():
+		if graph.flags(n) & Graph.LINE != 0:
+			line.append(n)
+			routes[n] = 1
+	# Keep a connected path for every authored route step, including ride edges.
+	var index := Placement.Index.new(graph, map.park)
+	var steps := {}
+	for route in map.park.routes:
+		var seq := Graph.route_sequence(route)
+		for i in range(1, seq.size()):
+			var key := [seq[i - 1], seq[i]]
+			if not steps.has(key):
+				steps[key] = _path(graph, index.place_nodes(seq[i - 1]), index.place_nodes(seq[i]))
+			for n in steps[key]:
+				routes[n] = 1
+	out.routes = routes
+	out.from_line = graph.search(line)
+	var hazards := PackedInt32Array()
+	for home in map.park.home_rows:
+		hazards.append_array(index.row_nodes(home.site))
+	for event in map.park.event_rows:
+		if event.kind in Placement.DESTRUCTIVE_EVENTS:
+			hazards.append_array(index.row_nodes(event.site))
+	for c in map.park.contraption_rows:
+		if c.kind in Placement.HAZARD_CONTRAPTIONS:
+			hazards.append_array(graph.disc_nodes(Vector2(c.at[0], c.at[1]), float(c.get("radius", 0.0))))
+	var hazard_out: PackedFloat32Array = graph.search(hazards, false, Placement.RING_M)
+	var hazard_in: PackedFloat32Array = graph.search(hazards, true, Placement.RING_M)
+	var doors := Trade.doors(map)
+	for n in range(Graph.SIDE * Graph.SIDE):
+		var f: int = graph.flags(n)
+		if f & Graph.DOOR_OK == 0 or f & (Graph.LINE | Graph.WARDEN | Graph.GUARDED | Graph.UNDER | Graph.DECK) != 0:
+			continue
+		if out.from_line[n] < Placement.DETOUR_MIN_M or out.from_line[n] > Placement.DETOUR_MAX_M:
+			continue
+		var p: Vector3 = graph.position(n)
+		var at := Vector2(p.x, p.z)
+		var sizes := {}
+		for size in Library.FOOTPRINTS:
+			var half: float = Library.FOOTPRINTS[size] * 0.5
+			var door := at + Vector2(0, half)
+			var dn: int = graph.nearest(door)
+			var df: int = graph.flags(dn)
+			if df & (Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK) != (Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK) or df & (Graph.LINE | Graph.WARDEN | Graph.GUARDED | Graph.UNDER | Graph.DECK) != 0:
+				continue
+			if graph.d_spawn_node(dn) < Placement.DOOR_SPAWN_M or graph.d_landmark_node(dn) < Placement.DOOR_BEACON_M or graph.d_spawn_node(dn) == INF or graph.d_landmark_node(dn) == INF:
+				continue
+			if hazard_out[dn] <= Placement.RING_M or hazard_in[dn] <= Placement.RING_M:
+				continue
+			var box := Rect2(at - Vector2.ONE * half, Vector2.ONE * half * 2.0)
+			if doors.any(func(d): return _box_distance(box, d.at) <= Placement.RING_M or door.distance_to(d.at) < Placement.DOOR_DOOR_M):
+				continue
+			var fits: bool = map.play_rect.encloses(box)
+			for k in graph.box_nodes(box.position - Vector2.ONE * Graph.STEP_M, box.end + Vector2.ONE * Graph.STEP_M):
+				if routes[k] == 1 or graph.flags(k) & Graph.OPEN == 0 or graph.flags(k) & (Graph.UNDER | Graph.DECK | Graph.GUARDED | Graph.WARDEN) != 0 or absf(graph.py[k] - p.y) > Placement.CLIMB_M:
+					fits = false
+					break
+			if fits:
+				sizes[size] = true
+		if not sizes.is_empty():
+			out.anchors.append({"node": n, "at": at})
+			out.fits[n] = sizes
+	return out
+
+static func _box_distance(box: Rect2, at: Vector2) -> float:
+	var nearest := Vector2(clampf(at.x, box.position.x, box.end.x), clampf(at.y, box.position.y, box.end.y))
+	return nearest.distance_to(at)
+
+static func _fits(prepared: Dictionary, entry: Dictionary, spot: Dictionary, placed: Array, trade: Dictionary) -> bool:
+	if not prepared.fits.get(spot.node, {}).has(entry.footprint):
+		return false
+	var half: float = Library.FOOTPRINTS[entry.footprint] * 0.5
+	var door: Vector2 = spot.at + Vector2(0, half)
+	var box := Rect2(spot.at - Vector2.ONE * half, Vector2.ONE * half * 2.0)
+	if not trade.is_empty():
+		var trade_half: float = Library.FOOTPRINTS[trade.interior.footprint] * 0.5
+		var other := Rect2(trade.at - Vector2.ONE * trade_half, Vector2.ONE * trade_half * 2.0)
+		if spot.node == trade.node or box.grow(Placement.RING_M).intersects(other, true) or door.distance_to(trade.at) < Placement.DOOR_DOOR_M + trade_half:
+			return false
+	for spec in placed:
+		var other_door: Vector2 = spec.at + Vector2(spec.interior.entrances[0].at[0], spec.interior.entrances[0].at[1])
+		if door.distance_to(other_door) < Placement.DOOR_DOOR_M or _box_distance(box, other_door) <= Placement.RING_M:
+			return false
+	return true
+
+static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = []) -> Dictionary:
+	var result := {"sites": [], "metrics": {"initial_credits": CREDITS, "remaining_credits": CREDITS, "failed_placements": 0, "refunded_credits": 0, "chance_opportunities": 0, "chance_hits": 0, "anchors": prepared.anchors.size()}}
+	if stage < 1 or stage > Park.COUNT or map.park.map != Park.of(stage).map:
+		return result
+	var slots := maxi(0, mini(8, stage + 2) - map.activity_sites.size())
+	if slots == 0:
+		return result
+	var pool := entries(map)
+	var picked := []
+	var available := CREDITS
+	while picked.size() < slots:
+		var affordable: Array = pool.filter(func(entry): return cost(entry) <= available)
+		if affordable.is_empty():
+			break
+		var total := 0.0
+		for entry in affordable:
+			total += float(entry.weight)
+		var roll := rng.randf() * total
+		var chosen: Dictionary = affordable.back()
+		for entry in affordable:
+			roll -= float(entry.weight)
+			if roll < 0.0:
+				chosen = entry
+				break
+		picked.append(chosen)
+		available -= cost(chosen)
+		pool.erase(chosen)
+	picked.sort_custom(func(a, b): return cost(a) > cost(b) or (cost(a) == cost(b) and a.id < b.id))
+	var candidates: Array = anchors.duplicate() if not anchors.is_empty() else prepared.anchors.duplicate()
+	# Fisher-Yates stays on the named stream, including anchor order.
+	if anchors.is_empty():
+		for i in range(candidates.size() - 1, 0, -1):
+			var j := rng.randi_range(0, i)
+			var swap = candidates[i]
+			candidates[i] = candidates[j]
+			candidates[j] = swap
+	var pending := false
+	for spot in candidates:
+		if picked.is_empty():
+			break
+		if not pending:
+			result.metrics.chance_opportunities += 1
+			if rng.randf() >= CHANCE:
+				continue
+			result.metrics.chance_hits += 1
+			pending = true
+		var entry: Dictionary = picked.front()
+		var price := cost(entry)
+		result.metrics.remaining_credits -= price
+		if not _fits(prepared, entry, spot, result.sites, trade):
+			result.metrics.failed_placements += 1
+			result.metrics.remaining_credits += price
+			result.metrics.refunded_credits += price
+			continue
+		var spec := Library.site_spec(entry).merged(spot).merged({"id": entry.activity, "drawn": true, "pay": {"named": "", "rarities": Placement.PAY_FAR.duplicate()}})
+		result.sites.append(spec)
+		picked.pop_front()
+		pending = false
+	return result
+
+static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}) -> Array:
+	if graph == null or map == null or map.park.is_empty() or run.stage < 1 or run.stage > Park.COUNT or map.park.map != Park.of(run.stage).map:
+		return []
+	var key := str(run.stage)
+	if run.pocket_draw_cache.has(key):
+		return run.pocket_draw_cache[key].sites.duplicate(true)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([layout_seed, run.run_seed, run.stage, "pocket_draw"])
+	var layout: Dictionary = prepared
+	if layout.is_empty():
+		layout = prepare(graph, map) if run.stage > 1 else {"anchors": [], "fits": {}}
+	var result := draw(layout, map, run.stage, rng, trade)
+	run.pocket_draw_cache[key] = {"sites": result.sites.duplicate(true)}
+	return result.sites
+
+static func to_doc(cache: Dictionary) -> Dictionary:
+	var doc := {}
+	for key in cache:
+		var sites := []
+		for spec in cache[key].sites:
+			sites.append({"interior": spec.interior.id, "node": spec.node, "at": [spec.at.x, spec.at.y]})
+		doc[key] = {"sites": sites}
+	return doc
+
+static func from_doc(doc: Dictionary) -> Dictionary:
+	var cache := {}
+	var library := {}
+	for entry in Library.rows():
+		library[entry.id] = entry
+	for key in doc:
+		var sites := []
+		for saved in doc[key].sites:
+			var entry: Dictionary = library[saved.interior]
+			sites.append(Library.site_spec(entry).merged({"id": entry.activity, "drawn": true, "node": int(saved.node), "at": Vector2(saved.at[0], saved.at[1]), "pay": {"named": "", "rarities": Placement.PAY_FAR.duplicate()}}))
+		cache[key] = {"sites": sites}
+	return cache
+
+static func _integer(value) -> bool:
+	return (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) and is_finite(value) and value == floorf(value)
+
+static func validate_doc(doc, entrance: int) -> String:
+	if not doc is Dictionary:
+		return "invalid pocket draw cache"
+	var library := {}
+	for entry in Library.rows():
+		if entry.kind != "trade":
+			library[entry.id] = entry
+	for key in doc:
+		if not key is String or not key.is_valid_int() or key != str(int(key)) or int(key) < 1 or int(key) > mini(entrance, Park.COUNT):
+			return "invalid pocket draw stage"
+		var row = doc[key]
+		if not row is Dictionary or not row.get("sites") is Array or row.sites.size() > maxi(0, mini(8, int(key) + 2) - 3):
+			return "invalid pocket draw sites"
+		var seen := {}
+		var spent := 0
+		for spec in row.sites:
+			if not spec is Dictionary or not spec.get("interior") is String or not library.has(spec.interior) or seen.has(spec.interior):
+				return "invalid pocket draw interior"
+			var entry: Dictionary = library[spec.interior]
+			if entry.get("assigned", {}).get("map", "") == Park.of(int(key)).map:
+				return "assigned pocket draw interior"
+			seen[spec.interior] = true
+			spent += cost(entry)
+			if not _integer(spec.get("node")) or spec.node < 0 or spec.node >= Graph.SIDE * Graph.SIDE:
+				return "invalid pocket draw node"
+			if not spec.get("at") is Array or spec.at.size() != 2:
+				return "invalid pocket draw position"
+			for value in spec.at:
+				if not (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) or not is_finite(value) or absf(value) > Graph.HALF_M:
+					return "invalid pocket draw position"
+			if Graph.lattice_index(spec.at[0], spec.at[1]) != int(spec.node):
+				return "pocket draw position differs from node"
+		if spent > CREDITS:
+			return "pocket draw credit exceeded"
+	return ""
