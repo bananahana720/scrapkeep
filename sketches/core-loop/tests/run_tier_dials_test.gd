@@ -40,6 +40,9 @@ func _run() -> void:
 	game.free()
 	quit(t.verdict())
 
+func _same(label: String, got, want) -> void:
+	t.check(label, var_to_bytes(got) == var_to_bytes(want), "byte equality")
+
 # The oracle reads only the approved data, never a Director accessor.
 func _expected(world: int, tier_value: int, dial_steps: Dictionary) -> Array:
 	if tier_value == 0:
@@ -72,7 +75,7 @@ func _sweeps() -> void:
 		return
 	baseline.dial_steps = {"health": 0.0, "damage": 0.0, "aggression": 0.0}
 	var base := _measure(baseline)
-	t.eq("all zero inputs are baseline", var_to_bytes(base), var_to_bytes([1.0, 1.0, 1.0]))
+	_same("all zero inputs are baseline", base, [1.0, 1.0, 1.0])
 	for index in range(3):
 		var key: String = ["health", "damage", "aggression"][index]
 		var saturation: float = (1.0 - float(limits[key])) if key == "aggression" else (float(limits[key]) - 1.0)
@@ -87,7 +90,7 @@ func _sweeps() -> void:
 			t.check("cap " + key + " at " + str(value), got[index] >= limits[key] if key == "aggression" else got[index] <= limits[key])
 			for other in range(3):
 				if other != index:
-					t.eq("one-dial-only " + key + " leaves " + str(other), var_to_bytes(got[other]), var_to_bytes(base[other]))
+					_same("one-dial-only " + key + " leaves " + str(other), got[other], base[other])
 			print("SWEEP %s input=%s outputs=%s" % [key, value, got])
 
 func _boundaries_and_base() -> void:
@@ -97,8 +100,8 @@ func _boundaries_and_base() -> void:
 		var base = _director(row, 0)
 		for elapsed in [0.0, 45.0, 90.0, 180.0, 600.0]:
 			base.stage_time = elapsed
-			t.eq("tier-0 health stage %d time %s" % [row.stage, elapsed], var_to_bytes(base.hp_scale()), var_to_bytes(float(row.threat)))
-			t.eq("tier-0 damage/rest stage %d time %s" % [row.stage, elapsed], var_to_bytes(_measure(base).slice(1)), var_to_bytes([1.0, 1.0]))
+			_same("tier-0 health stage %d time %s" % [row.stage, elapsed], base.hp_scale(), float(row.threat))
+			_same("tier-0 damage/rest stage %d time %s" % [row.stage, elapsed], _measure(base).slice(1), [1.0, 1.0])
 		var hard = _director(row, 1)
 		var got := _measure(hard)
 		var want := _expected(int(row.world), 1, steps)
@@ -111,9 +114,9 @@ func _boundaries_and_base() -> void:
 			print("BOUNDARY stage %d->%d multipliers %s -> %s" % [int(row.stage) - 1, row.stage, previous, got])
 		previous = got
 		previous_world = int(row.world)
-		t.eq("tier annotation preserves stage lists", var_to_bytes(RunTier.stage_row(row, 0)), var_to_bytes(row))
+		_same("tier annotation preserves stage lists", RunTier.stage_row(row, 0), row)
 		if base._park_map != null:
-			t.eq("routes and pockets identical stage " + str(row.stage), var_to_bytes(base._park_map.park), var_to_bytes(hard._park_map.park))
+			_same("routes and pockets identical stage " + str(row.stage), base._park_map.park, hard._park_map.park)
 
 func _production() -> void:
 	game = Game.new()
@@ -143,39 +146,39 @@ func _production() -> void:
 			game.player._rigid.global_position = pos
 			var e = game.combat.spawn_enemy("chaser", pos)
 			var hp_want: float = Chaser.HP * float(row.threat) if tier_value == 0 else Chaser.HP * (float(row.threat) * want[0])
-			t.eq("production health tier %d stage %d" % [tier_value, row.stage], var_to_bytes(e.hp), var_to_bytes(hp_want))
-			t.eq("production max health", var_to_bytes(e.max_hp), var_to_bytes(hp_want))
+			_same("production health tier %d stage %d" % [tier_value, row.stage], e.hp, hp_want)
+			_same("production max health", e.max_hp, hp_want)
 			game.run.armor_mode = false
 			game.run.hp = 100.0
 			hits.clear()
 			e._begin_windup(Vector3.FORWARD)
 			e._check_hit(e._telegraph)
 			var damage_want: float = Chaser.DAMAGE if tier_value == 0 else Chaser.DAMAGE * want[1]
-			t.eq("production delivered hit tier %d stage %d" % [tier_value, row.stage], var_to_bytes(hits), var_to_bytes([[damage_want, "chaser"]]))
-			t.eq("production ball health after hit", var_to_bytes(game.run.hp), var_to_bytes(100.0 - damage_want))
+			_same("production delivered hit tier %d stage %d" % [tier_value, row.stage], hits, [[damage_want, "chaser"]])
+			_same("production ball health after hit", game.run.hp, 100.0 - damage_want)
 			for kind in ["lobber", "miniboss"]:
 				var other = game.combat.spawn_enemy(kind, pos + Vector3.RIGHT * 5.0)
 				var hp_base: float = Lobber.HP if kind == "lobber" else Miniboss.HP
-				t.eq("production " + kind + " health", var_to_bytes(other.hp), var_to_bytes(hp_base * (float(row.threat) * want[0])))
+				_same("production " + kind + " health", other.hp, hp_base * (float(row.threat) * want[0]))
 				other.free()
 			var counter = game.combat.spawn_enemy("mag_trapper", pos + Vector3.RIGHT * 10.0)
 			var counter_constants: Dictionary = counter.get_script().get_script_constant_map()
 			var rating_want: float = counter_constants.RATING_BASE + counter_constants.RATING_PER_THREAT * (float(row.threat) - 1.0)
-			t.eq("health dial leaves counter tool rating", var_to_bytes(counter.rating), var_to_bytes(rating_want))
+			_same("health dial leaves counter tool rating", counter.rating, rating_want)
 			var counter_hp: float = float(counter_constants.HP) * float(row.threat) if tier_value == 0 else float(counter_constants.HP) * (float(row.threat) * want[0])
 			if tier_value == 0:
-				t.eq("production counter health tier-0", var_to_bytes(counter.hp), var_to_bytes(counter_hp))
+				_same("production counter health tier-0", counter.hp, counter_hp)
 			else:
 				t.near("production counter health tier-1", counter.hp, counter_hp)
 			counter._end()
 			var rest_want: float = counter.rest_seconds if tier_value == 0 else counter.rest_seconds * want[2]
-			t.eq("production rest tier %d stage %d" % [tier_value, row.stage], var_to_bytes(counter._rest), var_to_bytes(rest_want))
+			_same("production rest tier %d stage %d" % [tier_value, row.stage], counter._rest, rest_want)
 			var warden = game.combat.spawn_enemy("warden", pos + Vector3.RIGHT * 20.0)
-			t.eq("Warden stays excluded", var_to_bytes(warden.hp), var_to_bytes(float(game.combat.warden_spec(int(row.stage)).hp)))
+			_same("Warden stays excluded", warden.hp, float(game.combat.warden_spec(int(row.stage)).hp))
 			game.run.hp = 100.0
 			hits.clear()
 			warden.hit_player.emit(9.0, Vector3.ZERO)
-			t.eq("Warden damage stays excluded", var_to_bytes(hits), var_to_bytes([[9.0, "warden"]]))
+			_same("Warden damage stays excluded", hits, [[9.0, "warden"]])
 			print("PRODUCTION tier=%d stage=%d hp=%s damage=%s rest=%s" % [tier_value, row.stage, e.hp, damage_want, counter._rest])
 			warden.free()
 			counter.free()
