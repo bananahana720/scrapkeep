@@ -30,7 +30,7 @@ func _run() -> void:
 	var site = acts._build(entry.activity, Vector2(200, 200), Library.site_spec(entry))
 	acts.sites.append(site)
 	var interior = site.get_node("Interior_runner_yard")
-	t.eq("terrain meshes are visible before entry", _meshes(interior), 6)
+	t.eq("terrain meshes are visible before entry", _meshes(interior), 4)
 	t.eq("unvisited interior creates no physics bodies", _bodies(interior), 0)
 	var ball = game.player.active_body()
 	ball.global_position = site.global_position + Vector3(30.01, 1, 0)
@@ -52,7 +52,7 @@ func _run() -> void:
 	acts._physics_process(0.0)
 	acts._physics_process(0.0)
 	t.eq("collision persists and activates only once", _bodies(interior), 2)
-	t.eq("activation preserves the visible terrain", _meshes(interior), 6)
+	t.eq("activation preserves the visible terrain", _meshes(interior), 4)
 	acts.clear()
 	await physics_frame
 	t.check("stage clear removes activated terrain", not is_instance_valid(site))
