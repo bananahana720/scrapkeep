@@ -3,6 +3,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const Activities := preload("res://src/world/activities.gd")
+const ActivityView := preload("res://src/world/activity_view.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
@@ -175,8 +176,8 @@ func _glyph_matches(glyph: Node3D, shape: String) -> bool:
 			return false
 		for axis in 3:
 			var part = glyph.get_child(axis)
-			var size := Vector3.ONE * 0.96
-			size[axis] = 3.2
+			var size := Vector3.ONE * ActivityView.GLYPH_SIZE * 0.3
+			size[axis] = ActivityView.GLYPH_SIZE
 			if not part is MeshInstance3D or not part.mesh is BoxMesh or not part.mesh.size.is_equal_approx(size):
 				return false
 		return true
@@ -184,8 +185,8 @@ func _glyph_matches(glyph: Node3D, shape: String) -> bool:
 		return false
 	var mesh = glyph.get_child(0).mesh
 	if shape == "diamond":
-		return mesh is SphereMesh and mesh.radial_segments == 4 and mesh.rings == 2 and is_equal_approx(mesh.radius, 1.76) and is_equal_approx(mesh.height, 3.52)
-	return shape == "square" and mesh is BoxMesh and mesh.size.is_equal_approx(Vector3.ONE * 2.56)
+		return mesh is SphereMesh and mesh.radial_segments == 4 and mesh.rings == 2 and is_equal_approx(mesh.radius, ActivityView.GLYPH_SIZE * 0.55) and is_equal_approx(mesh.height, ActivityView.GLYPH_SIZE * 1.1)
+	return shape == "square" and mesh is BoxMesh and mesh.size.is_equal_approx(Vector3.ONE * ActivityView.GLYPH_SIZE * 0.8)
 
 func _wiring(entries: Array) -> void:
 	var index: int = game.ctx.terrain.stage - 1
