@@ -211,7 +211,13 @@ func _wiring(entries: Array) -> void:
 				continue
 			var s = acts.sites[i]
 			var side: float = SIZES[entry.footprint]
-			t.check(row_id + " stage-entry merge reaches built pocket", s.interior.get("id", "") == entry.id and s.rule.ring == entry.ring and s.difficulty == SCALE[int(entry.difficulty)] and s.footprint == Vector3(side, 8, side) and s.view.word.text.begins_with(entry.tell.word) and (entry.pack.is_empty() or s.rule.pack == entry.pack))
+			var authored_pack: Array = spec.get("pack", [])
+			var expected_pack: Array = entry.pack if authored_pack.is_empty() else authored_pack
+			var expected_word: String = entry.tell.word if authored_pack.is_empty() else Rows.ACTIVITY_ROWS[spec.id].word
+			if not authored_pack.is_empty():
+				t.eq(row_id + " stage-authored named pack survives library merge", s.rule.pack, authored_pack)
+				t.eq(row_id + " stage-authored pack keeps baseline word", s.view.word.text, expected_word)
+			t.check(row_id + " stage-entry merge reaches built pocket", s.interior.get("id", "") == entry.id and s.rule.ring == entry.ring and s.difficulty == SCALE[int(entry.difficulty)] and s.footprint == Vector3(side, 8, side) and s.view.word.text.begins_with(expected_word) and (expected_pack.is_empty() or s.rule.pack == expected_pack))
 			t.eq(row_id + " stage-entry hazard footprints", s.hazards.size(), entry.hazards.size())
 			var expected_at: Vector3 = game.ctx.terrain.drop_point(spec.at.x, spec.at.y, 0)
 			if spec.id == "cracked_cache":
