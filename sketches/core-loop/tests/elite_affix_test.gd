@@ -32,6 +32,7 @@ func _run() -> void:
 	_schedules()
 	await _boot()
 	_stats()
+	await _rear_above()
 	if not OS.get_cmdline_user_args().has("--records-only"):
 		for id in EXPECTED:
 			for world in range(1, 4):
@@ -161,6 +162,20 @@ func _stats() -> void:
 		t.check("partner never carries affix", not drone.has_meta("elite_affix"))
 		drone.free()
 	game.run.run_tier = 1
+
+func _rear_above() -> void:
+	var enemy = _spawn("rearblast")
+	enemy.process_mode = Node.PROCESS_MODE_DISABLED
+	enemy.rotation.y = PI * 0.5
+	enemy._warn(Vector3.ZERO)
+	var tele = enemy.telegraph()
+	var delta := Vector2(tele.center.x - enemy.global_position.x, tele.center.z - enemy.global_position.z)
+	t.near("rear blast stays 5 m behind with the ball directly above", delta.x, -5.0)
+	t.near("rear blast follows the brute's facing", delta.y, 0.0)
+	await process_frame
+	await process_frame
+	enemy.free()
+
 
 func _solo(id: String, world: int) -> void:
 	game.world.director.world = world
