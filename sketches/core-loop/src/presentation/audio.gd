@@ -13,6 +13,7 @@ const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Streak := preload("res://src/presentation/streak.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 # v2 W3 characters: the vault cap the vault cue is pitched against.
 const Augments := preload("res://src/movement/augments.gd")
@@ -279,7 +280,7 @@ var _weak_last := -100000
 var _flow_queue: Array = []
 var _overlay: Label
 var _overlay_until := 0
-var _virtual_usec := 0
+var _virtual_usec := 0.0
 
 static var _bake_task := -1
 static var _baked := false
@@ -426,7 +427,7 @@ func _on_ready() -> void:
 	# on demand instead, so a test never waits on the worker at quit.
 	if _rest_task < 0 and live_output:
 		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, false, "presentation band bake")
-	_virtual_usec = Time.get_ticks_usec()
+	_virtual_usec = _transport_usec()
 	if not live_output:
 		return
 	_sfx_player.play()
@@ -532,12 +533,13 @@ func _pump(virtual_frames := -1) -> void:
 	_release_grid()
 	if not live_output:
 		# No device: advance the band by the real time that passed, as a speaker would.
-		var now := Time.get_ticks_usec()
+		var now := _transport_usec()
 		var owed := virtual_frames if virtual_frames >= 0 else int((now - _virtual_usec) * Harmony.RATE / 1000000.0)
 		if owed > 0:
 			var requested := mini(owed, 8192)
 			var frames := _park_render_limit(requested)
-			_virtual_usec += int((owed - requested + frames) * 1000000.0 / Harmony.RATE)
+			var elapsed := (owed - requested + frames) * 1000000.0 / Harmony.RATE
+			_virtual_usec += elapsed if SimClock.ticks else int(elapsed)
 			if frames > 0:
 				_render_music(frames, ace_live)
 		return
@@ -556,6 +558,12 @@ func _pump(virtual_frames := -1) -> void:
 	_render_music(frames, ace_live)
 	_music_pb.push_buffer(out_music)
 	_stinger_pb.push_buffer(engine.out_stinger)
+
+
+func _transport_usec() -> int:
+	if SimClock.ticks:
+		return int(Engine.get_physics_frames() * 1000000 / Engine.physics_ticks_per_second)
+	return Time.get_ticks_usec()
 
 
 func _render_music(frames: int, ace_live: bool) -> void:
