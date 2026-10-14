@@ -44,6 +44,7 @@ func _run() -> void:
 	var covered := 0
 	var total_telegraphs := 0
 	var total_evasions := 0
+	var rates := []
 	for offset in range(0, entries.size(), 4):
 		var batch: Array = entries.slice(offset, offset + 4)
 		var jobs := []
@@ -53,7 +54,7 @@ func _run() -> void:
 			if "--pilot" in args:
 				flags.append("--pilot")
 			jobs.append({"script": "res://tests/pocket_entry_test.gd", "args": flags})
-		var results: Array = ChildRuns.run(jobs, 300.0)
+		var results: Array = ChildRuns.run(jobs, 600.0)
 		for i in results.size():
 			var result: Dictionary = results[i]
 			var summary: Dictionary = ChildRuns.summary(result)
@@ -68,9 +69,12 @@ func _run() -> void:
 				print(String(result.log).right(3000))
 				continue
 			print("pocket_entry_rate: " + JSON.stringify(rate))
+			rates.append(rate)
 			var want := 1 if "--pilot" in args else TRIALS
 			t.eq(batch[i].id + " idle and dodger entry count", [int(rate.idle_entries), int(rate.dodger_entries)], [want, want])
 			t.check(batch[i].id + " idle safe in first two seconds", float(rate.idle_safe) / rate.idle_entries >= 0.95)
+			if batch[i].kind == "arena":
+				t.eq(batch[i].id + " every dodger starts the encounter", int(rate.engaged), want)
 			if int(batch[i].difficulty) == 1:
 				t.check(batch[i].id + " difficulty-one dodger clears at least 80 percent", float(rate.dodger_clears) / rate.dodger_entries >= 0.8)
 			elif int(batch[i].difficulty) == 10:
@@ -82,6 +86,13 @@ func _run() -> void:
 	if "--only" not in args:
 		t.eq("all sixteen live interiors", covered, 16)
 		t.check("dodger exercised BotDriver telegraph steering", total_telegraphs > 0 and total_evasions > 0, "seen=%d evasions=%d reaction=%.3fs" % [total_telegraphs, total_evasions, BotDriver.REACTION])
+	var path := OS.get_environment("SQ12_ENTRY_RATES")
+	if path == "":
+		path = "user://pocket-entry-rates.json"
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if t.check("entry rates saved", file != null):
+		file.store_string(JSON.stringify({"rates": rates, "failures": t.failures, "seeds": [71000, 71019], "clear_seconds": CLEAR_SECONDS}, "\t"))
+		file.close()
 	quit(t.verdict())
 
 func _safe_path(entry: Dictionary) -> void:
@@ -118,6 +129,7 @@ func _child(entry: Dictionary, count: int) -> void:
 			entry_damage += amount)
 	var idle_safe := 0
 	var clears := 0
+	var engaged := 0
 	var outcomes := {}
 	for mode in ["idle", "dodger"]:
 		for seed_value in count:
@@ -126,9 +138,10 @@ func _child(entry: Dictionary, count: int) -> void:
 				idle_safe += int(trial.entry_damage == 0.0)
 			else:
 				clears += int(trial.cleared)
+				engaged += int(trial.started)
 				outcomes[trial.outcome] = int(outcomes.get(trial.outcome, 0)) + 1
 			print("pocket_entry_trial: " + JSON.stringify(trial))
-	var rate := {"id": entry.id, "difficulty": entry.difficulty, "idle_entries": count, "idle_safe": idle_safe, "dodger_entries": count, "dodger_clears": clears, "clear_seconds": CLEAR_SECONDS, "telegraphs": seen_telegraphs, "evasions": evasions, "outcomes": outcomes}
+	var rate := {"id": entry.id, "difficulty": entry.difficulty, "idle_entries": count, "idle_safe": idle_safe, "dodger_entries": count, "dodger_clears": clears, "engaged": engaged, "clear_seconds": CLEAR_SECONDS, "telegraphs": seen_telegraphs, "evasions": evasions, "outcomes": outcomes}
 	print("pocket_entry_rate: " + JSON.stringify(rate))
 	game.free()
 	quit(0)
@@ -136,6 +149,7 @@ func _child(entry: Dictionary, count: int) -> void:
 func _trial(entry: Dictionary, mode: String, seed_value: int) -> Dictionary:
 	var acts = game.world.activities
 	acts.clear()
+	acts._elite_arrivals = 0
 	game.combat._start_attempt()
 	game.run.run_seed_override = seed_value
 	game.run.begin(game.run.class_def)
@@ -156,7 +170,7 @@ func _trial(entry: Dictionary, mode: String, seed_value: int) -> Dictionary:
 	game.player.reset_to(at)
 	game.player.active_body().global_position = at
 	game.player.active_body().linear_velocity = Vector3.ZERO
-	game.player.active_body().freeze = mode == "idle"
+	game.player.set_frozen(mode == "idle")
 	game.player.set_physics_process(mode != "idle")
 	var driver := BotDriver.new(game, "completionist", seed_value)
 	driver._cache_phase = "runup"
@@ -181,7 +195,7 @@ func _trial(entry: Dictionary, mode: String, seed_value: int) -> Dictionary:
 		elapsed += H
 	seen_telegraphs += driver._seen.size()
 	evasions += driver._evaded.size()
-	var result := {"id": entry.id, "mode": mode, "seed": seed_value, "entry_damage": entry_damage, "cleared": s.done, "seconds": snappedf(elapsed, 0.01), "outcome": "cleared" if s.done else "capped" if game.run.alive() else "died", "hp": game.run.hp, "seen": driver._seen.size()}
+	var result := {"id": entry.id, "mode": mode, "seed": seed_value, "entry_damage": entry_damage, "cleared": s.done, "started": s.started, "spawned": s.spawn_positions.size(), "wave": s.wave, "round": s.round, "entry_elapsed": s.entry_elapsed, "seconds": snappedf(elapsed, 0.01), "outcome": "cleared" if s.done else "capped" if game.run.alive() else "died", "hp": game.run.hp, "seen": driver._seen.size()}
 	acts.set_physics_process(false)
 	acts.clear()
 	game.combat._start_attempt()
