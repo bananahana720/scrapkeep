@@ -281,12 +281,24 @@ func _snapshot(delta: float) -> Dictionary:
 	var caught := []
 	for item in _game.build.scrap._caught:
 		caught.append({"position": _vector(item.global_position), "side": _game.build.scrap._caught[item]})
+	var field = _game.build.scrap
+	var items := []
+	for item in field._items:
+		items.append({"position": _vector(item.global_position), "caught": field._caught.get(item),
+			"value": field._value.get(item), "age": field._age.get(item), "cogs": field._cogs.get(item)})
+	var events := []
+	for state in _game.world.events._park_states:
+		events.append({"id": state.row.id, "phase": state.phase, "due": state.due_s,
+			"ready": state.ready_s, "elapsed": state.live_elapsed_s, "holding": state.holding})
 	return {"tick": _driver.ticks + 1, "delta": delta, "flow": _game.flow.state_name(),
 		"stage": _game.run.stage, "stage_time": _game.run.stage_time, "paused": paused,
 		"scale": Engine.time_scale, "position": _vector(_game.player.ball_position()),
 		"velocity": _vector(_game.player.body().linear_velocity), "hp": _game.run.hp,
-		"mass": _game.run.mass, "scrap": _game.run.scrap, "caught": caught,
+		"mass": _game.run.mass, "heft": _game.run.heft(), "scrap": _game.run.scrap, "caught": caught,
+		"field": items, "events": events, "music_clock": _game.presentation.audio.engine.clock,
 		"bot_rng": str(_driver.rng.state), "run_rng": str(_game.ctx.rng.state),
+		"loot_rng": str(_game.build.loot_rng.state), "director_rng": str(_game.world.director._rng.state),
+		"event_rng": str(_game.world.events.rng.state), "tree_rng": str(_driver._tree_rng.state),
 		"camera_rng": str(_game.camera._shake_rng.state),
 		"aim_origin": _vector(_game.ctx.aim_origin()), "aim_forward": _vector(_game.ctx.aim_forward()),
 		"yaw": _game.camera.yaw, "pitch": _game.camera.pitch, "enemies": enemies}
