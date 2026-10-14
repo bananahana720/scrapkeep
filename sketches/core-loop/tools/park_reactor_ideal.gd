@@ -32,6 +32,8 @@ var seed_number := 1
 var size := "grown"
 var broken := false
 var engaged_at := -1.0
+var engaged_frame := -1
+var breaking_frame := -1
 
 func _initialize() -> void:
 	SimClock.ticks = true
@@ -51,7 +53,9 @@ func _run() -> void:
 	game.test_mode = true
 	game.table = "park"
 	root.add_child(game)
-	game.events.warden_engaged.connect(func(_stage): engaged_at = game.run.stage_time)
+	game.events.warden_engaged.connect(func(_stage):
+		engaged_at = game.run.stage_time
+		engaged_frame = Engine.get_physics_frames())
 	game.ctx.rng.seed = 20260926 + seed_number * 7919
 	game.ctx.calm = true
 	game.flow.force_warden = true
@@ -72,12 +76,15 @@ func _run() -> void:
 		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 			observed.set(property.name, w._posture.get(property.name))
 	w._posture = observed
-	game.events.beacon_unsealed.connect(func(_stage): broken = true)
+	game.events.beacon_unsealed.connect(func(_stage):
+		broken = true
+		breaking_frame = Engine.get_physics_frames())
 	var started: float = engaged_at
 	assert(started >= 0.0 and game.flow.engaged())
 	var trace = FileAccess.open(out.path_join("trace.ndjson"), FileAccess.WRITE)
+	var sample_count := 0
+	var first_frame := Engine.get_physics_frames()
 	for tick in ceili(120.0 * Engine.physics_ticks_per_second):
-		if broken: break
 		var ball: Vector3 = game.player.ball_position()
 		var velocity: Vector3 = game.player.body().linear_velocity
 		var has_ram: bool = observed.records.any(func(row): return row.sheet_ram and row.cycle == sheet.gates_opened)
@@ -100,6 +107,7 @@ func _run() -> void:
 		if launching and -planar.dot(dir) >= game.player.tuning.f("cruise") * 0.35 and game.player.state.grounded and game.player.verb_ready("boost"):
 			source.press["shift_pressed"] = true
 		trace.store_line(JSON.stringify({"t": game.run.stage_time - started,
+			"frame": Engine.get_physics_frames(), "broken": broken,
 			"cycle": sheet.gates_opened, "live": sheet.sheet_live(), "riding": sheet.riding,
 			"entered": sheet.entered_sheet_cycle, "rammed": has_ram,
 			"inside": sheet.in_sheet(w, ball), "entry_speed": sheet._entry_speed,
@@ -107,12 +115,16 @@ func _run() -> void:
 			"p": Observed.vec(ball), "v": Observed.vec(velocity), "posture": w.posture(),
 			"grounded": game.player.state.grounded, "pulse_clock": w._pulse_clock,
 			"engaged": game.flow.engaged(), "move": [source.hold.move.x, source.hold.move.y]}))
+		sample_count += 1
+		if broken: break
 		await physics_frame
 	trace.close()
 	var record := {"size": size, "seed": seed_number, "heft": game.run.heft(),
 		"initial_heft": heft, "pilot": game.run.class_def.id, "calm": game.ctx.calm,
 		"broken": broken, "seconds": game.run.stage_time - started,
 		"started": started, "cycles": sheet.gates_opened, "contacts": observed.records,
+		"first_frame": first_frame, "terminal_frame": Engine.get_physics_frames(), "sample_count": sample_count,
+		"engaged_frame": engaged_frame, "breaking_frame": breaking_frame,
 		"constants": {"pulse_cycle": Warden.PULSE_CYCLE, "sheet_seconds": Reactor.SHEET_SECONDS,
 			"sheet_ram_breaks": Reactor.MOUNTED_POSTURE.sheet_ram_breaks,
 			"grown_heft": Run.HEFT_CLASS_AT[2], "small_heft": Run.HEFT_CLASS_AT[0],

@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+TOLERANCE = 0.0001
 
 
 def constant(path, name):
@@ -41,7 +42,18 @@ def read_case(folder, size, seed):
     assert fight["broken"], f"{case}: unbroken"
     assert fight["size"] == size and fight["seed"] == seed
     assert fight["fight_resets"] == 0 and fight["setup_resets"] == 1
-    assert trace and all(row["engaged"] for row in trace), f"{case}: left the fight"
+    assert trace and all(row["engaged"] and not row["broken"] for row in trace[:-1]), f"{case}: left the fight"
+    assert trace[-1]["broken"], f"{case}: no breaking tick"
+    assert len(trace) == fight["sample_count"], f"{case}: sample count differs"
+    first, terminal = fight["first_frame"], fight["terminal_frame"]
+    assert all(type(frame) is int for frame in (first, terminal)), f"{case}: invalid frame bounds"
+    assert first == fight["engaged_frame"] + 1 and terminal == fight["breaking_frame"], f"{case}: event coverage differs"
+    assert [row["frame"] for row in trace] == list(range(first, terminal + 1)), f"{case}: incomplete frame coverage"
+    times = [row["t"] for row in trace]
+    assert all(math.isfinite(value) for value in times + [fight["seconds"], fight["started"]]), f"{case}: nonfinite time"
+    assert abs(times[0]) < TOLERANCE, f"{case}: missing engagement"
+    assert all(0 < later - earlier <= 1 / fight["physics_hz"] + TOLERANCE for earlier, later in zip(times, times[1:])), f"{case}: invalid timestamp interval"
+    assert abs(times[-1] - fight["seconds"]) < TOLERANCE, f"{case}: incomplete final interval"
     rams = [row for row in fight["contacts"] if row["sheet_ram"]]
     assert rams and rams[-1]["shatter"], f"{case}: no sheet-ram break"
     expected = owners()
@@ -57,6 +69,8 @@ def read_case(folder, size, seed):
         gain = expected["full"] / expected["sheet_ram_breaks"] * (clamp(ratio) / clamp(grown_ratio)) ** expected["curve"]
         assert abs(ram["requested_gain"] - gain) < 0.0001, f"{case}: owner-derived gain differs"
     cycles = sorted({row["cycle"] for row in trace if row["live"]})
+    assert cycles == list(range(1, fight["cycles"] + 1)), f"{case}: missing cycle coverage"
+    assert all(later["cycle"] - earlier["cycle"] in (0, 1) for earlier, later in zip(trace, trace[1:])), f"{case}: cycle discontinuity"
     assert all(any(ram["cycle"] == cycle for ram in rams) for cycle in cycles), f"{case}: missed live cycle"
     return fight, trace
 
