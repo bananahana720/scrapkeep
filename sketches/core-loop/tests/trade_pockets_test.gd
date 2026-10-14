@@ -358,7 +358,8 @@ func _entrance_round_trip(model) -> void:
 	# A completed stage's cached placement includes native vectors, lost by raw JSON.
 	run.trade_memory.offers["2"] = Library.site_spec(Library.trade("scrap_counter")).merged({"node": 11224, "at": Vector2(128, -32), "id": "trade_risk", "trade": refused})
 	run.enter_stage(3)
-	var prior: Dictionary = run.trade_memory.duplicate(true)
+	var prior := {"risk_taken": true, "last_appeared": 2, "last_seen": 2, "last_refused": 2, "seen": [risk, refused], "offers": {"2": Library.site_spec(Library.trade("scrap_counter")).merged({"node": 11224, "at": Vector2(128, -32), "id": "trade_risk", "trade": refused})}, "decisions": {"1": true, "2": false}}
+	t.eq("Continue fixture prior memory matches literal choices", run.trade_memory, prior)
 	run.snapshot(Vector3(1, 2, 3), Vector3(0, 0, 20), 0.5)
 	var map = Map.new("res://src/world/park/park_pit.json")
 	var graph = Graph.read("res://assets/park/park_pit/graph.bin")
