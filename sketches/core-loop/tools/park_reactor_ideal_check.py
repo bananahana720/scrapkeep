@@ -32,6 +32,7 @@ def owners():
         "hefts": constant("src/core/run_state.gd", "HEFT_CLASS_AT"),
         "core_radius": constant("src/combat/warden.gd", "FAMILY_POINT_RADIUS"),
         "ball_radius": constant("src/movement/tuning.gd", "RADIUS"),
+        "hit_stop_scale": constant("src/game.gd", "HIT_STOP_SCALE"),
     }
 
 
@@ -52,11 +53,15 @@ def read_case(folder, size, seed):
     times = [row["t"] for row in trace]
     assert all(math.isfinite(value) for value in times + [fight["seconds"], fight["started"]]), f"{case}: nonfinite time"
     assert abs(times[0]) < TOLERANCE, f"{case}: missing engagement"
-    assert all(0 < later - earlier <= 1 / fight["physics_hz"] + TOLERANCE for earlier, later in zip(times, times[1:])), f"{case}: invalid timestamp interval"
+    expected = owners()
+    hz = fight["physics_hz"]
+    assert math.isfinite(hz) and hz > 0, f"{case}: invalid physics frequency"
+    steps = (1 / hz, expected["hit_stop_scale"] / hz)
+    assert all(any(abs(later - earlier - step) < TOLERANCE for step in steps)
+               for earlier, later in zip(times, times[1:])), f"{case}: invalid timestamp interval"
     assert abs(times[-1] - fight["seconds"]) < TOLERANCE, f"{case}: incomplete final interval"
     rams = [row for row in fight["contacts"] if row["sheet_ram"]]
     assert rams and rams[-1]["shatter"], f"{case}: no sheet-ram break"
-    expected = owners()
     assert fight["initial_heft"] == expected["hefts"][2 if size == "grown" else 0]
     for key in ("pulse_cycle", "sheet_seconds", "sheet_ram_breaks", "curve", "mult_min", "mult_max", "core_radius", "ball_radius"):
         assert fight["constants"][key] == expected[key], f"{case}: wrong {key}"
