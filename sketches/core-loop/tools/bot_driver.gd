@@ -1621,7 +1621,6 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
-		_count("harpoon_bites")
 		if chain_hand_enabled and policy == "completionist" and target.is_in_group("enemy") and game.player.verb_ready("jump"):
 			var second := _chain_partner(target)
 			if second != null:
@@ -1633,6 +1632,8 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 				source.press.erase("harpoon_pressed")
 				_harpoon_held = false
 				source.press["jump_pressed"] = true
+		if source.press.get("harpoon_pressed", false):
+			_count("harpoon_bites")
 
 
 func _smash_pending() -> bool:
