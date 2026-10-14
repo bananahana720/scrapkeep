@@ -20,7 +20,7 @@ func _run() -> void:
 	var before: float = model.odds(memory, 2).safe_share
 	model.decide(memory, {"stage": 1, "family": "risk"}, false)
 	t.check("refusal raises safe odds at least 1.2x", model.odds(memory, 2).safe_share / before >= 1.2)
-	if "--render-summary" not in OS.get_cmdline_user_args():
+	if "--render-summary" not in OS.get_cmdline_user_args() and "--appearance-only" not in OS.get_cmdline_user_args():
 		_policies(model)
 		_placements(model)
 	if "--render-summary" in OS.get_cmdline_user_args():
@@ -164,19 +164,26 @@ func _runtime(model) -> void:
 	# The park's stage handler appends the seeded trade after authored sites.
 	game.run.trade_memory = model.memory()
 	game.run.run_seed = 0
+	game.run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
 	acts._on_stage_entered(1, false)
 	var actual: Array = acts.sites.filter(func(site): return not site.trade.is_empty())
 	t.check("actual park stage entry appends at most one trade", actual.size() <= 1)
 	if actual.is_empty():
 		game.run.trade_memory = model.memory()
 		game.run.run_seed = 1
+		game.run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
 		acts._on_stage_entered(1, false)
 		actual = acts.sites.filter(func(site): return not site.trade.is_empty())
 	t.eq("actual park stage has one seeded trade", actual.size(), 1)
 	if not actual.is_empty():
 		t.check("trade is appended after authored sites", acts.sites[-1] == actual[0])
+		_appearance_recency(game, model, actual[0])
 	acts.clear()
 	await physics_frame
+	if "--appearance-only" in OS.get_cmdline_user_args():
+		game.free()
+		await process_frame
+		return
 	Engine.time_scale = 4.0
 	var interiors: Array = Library.rows().filter(func(entry): return entry.kind == "trade")
 	t.eq("eight trade interiors", interiors.size(), 8)
@@ -240,6 +247,40 @@ func _runtime(model) -> void:
 	await _summary(game, model, interiors)
 	game.free()
 	await process_frame
+
+func _appearance_recency(game, model, site) -> void:
+	var run = game.run
+	var acts = game.world.activities
+	var outside: Vector3 = site.global_position + Vector3(200.0, 0.0, 200.0)
+	game.player.reset_to(outside)
+	game.player.active_body().global_position = outside
+	t.check("skipped trade player outside approach radius", Vector2(outside.x, outside.z).distance_to(Vector2(site.global_position.x, site.global_position.z)) > site.footprint.z * 0.5 + 16.0)
+	acts._watch_trade(site, game.player.ball_position())
+	t.eq("skipped trade stays unvisited", run.summary().trade_pockets, [])
+	var placed: Dictionary = run.trade_memory.offers["1"].duplicate(true)
+	var after_placement: Dictionary = run.trade_memory.duplicate(true)
+	var cached: Dictionary = model.stage_site(acts._graph, game.ctx.terrain.map(), run, game.ctx.rng.seed, PackedInt32Array())
+	t.eq("cached placement returns identical skipped trade", cached, placed)
+	t.eq("cached placement does not mutate appearance memory", run.trade_memory, after_placement)
+	run.restore()
+	t.eq("retry restores pre-placement appearance odds", model.odds(run.trade_memory, 2).recency, 1.0)
+	acts._on_stage_entered(1, true)
+	t.eq("retry replays identical skipped trade placement", run.trade_memory.offers["1"], placed)
+	var replayed: Array = acts.sites.filter(func(row): return not row.trade.is_empty())
+	t.eq("retry rebuilds one skipped trade", replayed.size(), 1)
+	if not replayed.is_empty():
+		acts._watch_trade(replayed[0], game.player.ball_position())
+	run.enter_stage(2)
+	t.eq("unvisited appearance next-stage multiplier x0.25", model.odds(run.trade_memory, 2).recency, 0.25)
+	t.eq("unvisited appearance next-stage chance", model.odds(run.trade_memory, 2).chance, 0.1125)
+	t.eq("unvisited appearance leaves summary empty next stage", run.summary().trade_pockets, [])
+	run.enter_stage(3)
+	t.eq("unvisited appearance two-stage multiplier x0.5", model.odds(run.trade_memory, 3).recency, 0.5)
+	t.eq("unvisited appearance two-stage chance", model.odds(run.trade_memory, 3).chance, 0.225)
+	t.eq("unvisited appearance leaves summary empty two stages later", run.summary().trade_pockets, [])
+	run.enter_stage(4)
+	t.eq("unvisited appearance penalty expires after two stages", model.odds(run.trade_memory, 4).recency, 1.0)
+	t.eq("expired appearance chance returns to base", model.odds(run.trade_memory, 4).chance, 0.45)
 
 func _summary(game, model, interiors: Array) -> void:
 	game.run.trade_memory = model.memory()
