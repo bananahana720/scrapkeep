@@ -264,7 +264,7 @@ func _bot_column(t) -> void:
 		logs.append(beats)
 		if beats.size() == 1:
 			var row: Dictionary = beats[0]
-			t.eq("bot child %d row is stage 1, still open" % i, [row["stage"], row["exit"]], [1, false])
+			t.eq("bot child %d row is stage 1, still open" % i, [int(row["stage"]), row["exit"]], [1, false])
 			t.eq("bot child %d counted every tick it ran" % i, row["total"], int(record["ticks"]))
 			t.eq("bot child %d beat ticks sum to the total" % i, StageBeats.sum_ticks(row), int(row["total"]))
 			t.check("bot child %d spent ticks arriving and finding" % i, row["ticks"]["arrive"] > 0 and row["ticks"]["find"] + row["ticks"]["loot"] > 0, "%s" % [row["ticks"]])
