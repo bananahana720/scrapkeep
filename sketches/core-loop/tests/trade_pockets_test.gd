@@ -56,7 +56,7 @@ func _policies(model) -> void:
 				count += 1
 				chain = chain or stage == last + 1
 				last = stage
-				model.see(mem, offer)
+				model.appear(mem, offer)
 				var took: bool = policy == "always-risk" and offer.family == "risk"
 				model.decide(mem, offer, took)
 				if took:

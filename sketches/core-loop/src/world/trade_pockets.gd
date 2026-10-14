@@ -14,13 +14,13 @@ const SACRIFICE_CHANCE := 1.0 / 7.0
 const FULL_HEALTH_BUMP := 0.25
 
 static func memory() -> Dictionary:
-	return {"risk_taken": false, "last_seen": -100, "last_refused": -100, "seen": [], "offers": {}, "decisions": {}}
+	return {"risk_taken": false, "last_appeared": -100, "last_seen": -100, "last_refused": -100, "seen": [], "offers": {}, "decisions": {}}
 
 static func recency(age: int) -> float:
 	return 0.25 if age == 1 else 0.5 if age == 2 else 1.0
 
 static func odds(mem: Dictionary, stage: int) -> Dictionary:
-	var recent := recency(stage - int(mem.last_seen))
+	var recent := recency(stage - int(mem.last_appeared))
 	var risk_weight := recency(stage - int(mem.last_refused))
 	return {"chance": BASE_CHANCE * recent, "recency": recent,
 		"safe_share": 0.0 if mem.risk_taken else 1.0 / (1.0 + risk_weight),
@@ -47,6 +47,9 @@ static func draw(mem: Dictionary, stage: int, rng: RandomNumberGenerator, full_h
 		"curse": id == "curse_counter", "sacrifice": id == "sacrifice_counter",
 		"sacrifice_chance": sacrifice_odds, "full_health_bump": full_health,
 		"pool_floor": POOL_FLOOR if id == "curse_counter" else 0.0})
+
+static func appear(mem: Dictionary, offer: Dictionary) -> void:
+	mem.last_appeared = maxi(int(mem.last_appeared), int(offer.stage))
 
 static func see(mem: Dictionary, offer: Dictionary) -> void:
 	if (mem.seen as Array).any(func(row): return row.stage == offer.stage):
@@ -146,5 +149,6 @@ static func stage_site(graph, map, run, layout_seed: int, pool: PackedInt32Array
 			var interior := Library.trade(String(offer.interior_id))
 			offer["tier"] = curse_tier(rng) if offer.curse else 1
 			spec = Library.site_spec(interior).merged(spot).merged({"id": "curse" if offer.curse else "sacrifice" if offer.sacrifice else "trade_" + String(offer.family), "trade": offer})
+			appear(run.trade_memory, offer)
 	run.trade_memory.offers[key] = spec.duplicate(true)
 	return spec
