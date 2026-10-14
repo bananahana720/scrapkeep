@@ -88,7 +88,11 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 		holds.released.connect(_on_hold_released)
 	# The bot supplies its own spawn-order sign; otherwise the sign follows this run's spawn order.
 	_strafe = float(get_meta("bot_strafe")) if has_meta("bot_strafe") else _spawn_order_sign()
-	_configure(threat)
+	# Tool ratings keep raw stage threat; only initialized HP reads the health dial.
+	var stage_threat: float = spec.get("stage_threat", threat)
+	_configure(stage_threat)
+	if spec.has("stage_threat"):
+		_set_health(max_hp / stage_threat * threat)
 	# A unit always closes to where its attack reaches before it circles.
 	keep_far = minf(keep_far, attack_range * 0.9)
 	_rest = first_rest
@@ -282,7 +286,7 @@ func _end() -> void:
 	_clear_telegraph()
 	phase = Phase.ROAM
 	_t = 0.0
-	_rest = rest_seconds
+	_rest = rest_seconds * float(spec.get("rest_scale", 1.0))
 
 
 # --- Holds ----------------------------------------------------------------------------

@@ -20,53 +20,55 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 
-# 2026-10-13, T11: fresh detached 1bee30f replays without SG10, seeds 0..19.
-# Replay at 1bee30f: /home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+# Re-pinned 2026-10-14 (coordinator): the KD2 flume merge c81cec4a changed stage 2's park data, so every
+# whole run moved. SG10 proved tier 0 equal to the pre-SG10 game on the old pins (b8b6605b passes them);
+# these are tier-0 replays at c81cec4a, without SG11, seeds 0..19, with the same script:
+# /home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
 # --headless --path sketches/core-loop --script /home/andrew/scratch/w13/sol/sg10-tier-r5/base_replay.gd
-# -- --record-base --section=runtime --seed=N
+# -- --record-base --section=runtime --seed=N  (log: /home/andrew/scratch/w13/runtier-repin.log)
 const BASE_SCHEDULE := [
-	"7a30c4b6de83d9ef3e0e01a24ffdbde6a7559c113f1c788e4995274c37c9e84e",
-	"89f47353a7272e7974326d65f4d94f17d37f061088c23b2ef6548813f28dc8ce",
-	"cd81aefcb8a622768065a07b6ab2cefb68463d34b89d2ed423e1e0e07141da2a",
-	"d19fe785b347ff95bb6e88b84f789987f29ba90ec6c8ed582b469185eb236360",
-	"438bde3fb9dbbe2e34ddb5891a5cb915e44ebe536bb058ea6023f677253a5ba9",
-	"c54c4d402dbc98ba424db352ebd31e1455e919e587386d8d03db89a78888d50d",
-	"e9ebcdc9f88ff49b45e5d314bbf692a1455a106fe3ab037e6fcdd500ed1413be",
-	"579e983a5d2fb578cac4d128d7f56b83391a65a74b571d6f44feaa5f27b44750",
-	"f973de31105fc987971f83b5d3872caec3af9a6001eac3677501b930e6d5a203",
-	"6ace20e329fe1a3ce396b5e3ba6c472c283de1397cd373a43d979b5c4be54ab5",
-	"69b2152fc6a7876292cbad48e692af344f190ac06963426258425dea2a906a12",
-	"9810b467c1c93c50295a5915cfa8797d91262085c4e552beb72bd033693fc0ba",
-	"32c9d00e7798fdfd9dd4aabe6ccc2d29b8bc7c5327de7f38ba5143f3be98355e",
-	"dd930c5d9ec72b0a9ab59bc2b422c04285e701219a61af39b21441c06e8de4d2",
-	"cbfb0093b69ab4dffb57f193cf6c0c581fadaed3cd3c2054c7eb952d10199c29",
-	"4875f5ff35945b93b2ceae815af5ccf19f47255b15c251d40e6c0734c45e9664",
-	"72289a886dd55ca7d1f3fa43df7c1ab35c334c3f476070301aeec22448f1c929",
-	"6cac5f0209aa3b5bb4f5b71a6533e5f450ceb0cf031b3c19fe346c7c1581abde",
-	"46ac2d574bd60ce8630e484ecf6a81eac3ade1412790328ca7be2a02e62cfccc",
-	"c64477d68846430665f1d96528d33fe8954b5b91ac909bf8dd90cac8032fb8f3",
+	"27fded27dd159ce1cb3e24777f54e110f738e060ee7d3b07885a034250adab6b",
+	"acddac954591f75f1b5762d34f6d0fc2d502e5b3b48d23538c605e274affc627",
+	"dc6b2941cc58a97b4b595902ee8a3b6bddd495dc5ce62bfd250fb3bf6ba7f58d",
+	"8c67b49271d397d47aaffd4556e1902e5a05ded15689e712c9c50389cb636fd4",
+	"d3d116bb8a0a34ef7a723a2ed44f7ff690744ad6bbd92bba384321df2fb9ac10",
+	"77e7f0b0aa905c57e9d46b77f82bbc9a3168ee0479616be731fa60cb4528dc56",
+	"aabfb130c58a4ca14dd679653f268d17bc4f21c7d5f3a6f5efe09061b4748f2d",
+	"8ade94d7543e5ad09f79877a50928d1475cbb33d6c01fec54409f55df464d97f",
+	"d18fa92d9d3657861d5761a65c9665a75aff46383ead92a14ff5203602a0c056",
+	"fa7708dd5dc336ca56a7f1edf8529d94c5d852144b84a34141e1e92b9ff4dffa",
+	"fa112593c52a2f8475770e0fe170a629e8683eacd4bbf82dca0c56abf20e7521",
+	"faaf1276105831144e0d450410b5b216d35db5a258e9f219feecf67323e8c5f8",
+	"8e23b839d781c572b97df5fefad1fe876742c5daa0ce3ee5e43320aeb1604b37",
+	"d16a7e0d2edeb9ea244cba141d73b51cb69cf7c1bcd9a896ba7781be74f8e564",
+	"b65eb8a2ba5833051180d482514bea2b7ec0c0213c323e8dbcb49a1a72e59b8b",
+	"60c21201a4fbd80412680fee0ce1052e7cd4612c00202270841b8c064e2348ae",
+	"ccc3830187b6d39d9292778d9e095531013cf50da5f6fe7980ea12d95d828001",
+	"8cd25296ff1af718818ebdb028835ac55f2a944ee1d7c37708d281c512ad4129",
+	"4073331769e1f2544f0e8a7865c978151542e2496dd3549782bae72a156b0407",
+	"5efc599324737bc1eb0ab170a7b8f434c7ebd30b55a89737529a3925f4ba0967",
 ]
 const BASE_RUN := [
-	"13fdc0ac39b0ed9dd318358520f0f3770617f298b44dc829ea16b6f9fbb832ed",
-	"0f65319145e323f1cea98a519f358e085f94bf5ebc3df66e91f3447f8b5791d4",
-	"49ff93d2f071a825e45a9f33c9496fcf7598852faad4fb7b7ccc8cf8d032af42",
-	"0b6f767c09aeb4cc1ed84b8d5c4752ff0a82fdc6f535ee0fcb1771468b544d54",
-	"d345480f111576b5d1eed674c741a3422b7352971e5a51d343addd3990400507",
-	"82af2b397c1011e09a55abfb93073f36ca858992e68d830d9b909d079f42d1b7",
-	"d0e0357f6737cf0d6eab65756b24cc933ab514ffc323e375cad5197486207187",
-	"3e04761f82c4af72c1c51693bac2536e4244d6083cc4fb53bbf3549ddd0bf0b4",
-	"0ff768c0b972f08dfadbfdafee2dfefec58306c9adf1aaf451add31e80355dc9",
-	"e6ee8ba07ba94aacbf33a98f366ccda61169a0dec12db22e996de5b7f0bdfe0c",
-	"78827bb51953049fbb7d7428c20fb5a64f1146944669d454403bdd37a4740da4",
-	"76709b1cd8e8ede926066b6466834e2daad88fdba9c9bb640c3018f7d429e560",
-	"d0a9e3116c145af8edc41a90ffbc9be620432edea67179c53427b108d01d0770",
-	"7e82af9c3daefa8a74ccc8e04c55fca4d7ce7892007cca1b1358f2e21b52b013",
-	"7bc9a4a73d8be3b085baa335335824ad18fb4bb55bd9e1037d733bd7ae13a458",
-	"e3c20ab5377c14f1f115f9bdb9af03d14c582e9fe018188419ecec05db6328d1",
-	"84ccc88f2e8f966b4e14f8d03472dc351c65d0ca0bad2732afcf224d73cdab2b",
-	"0413f1dffb803e179925b9b36ff804590793c1e569f84551806f6f3d2cb410cc",
-	"03d7ba12cd78381b7f6ef9f60ab250f6c38944f966364fd61b05b117c2719c6e",
-	"0c339f4e3736b309a9d75bcf907813f5ce992dfd7305f64bc1fe43659ee27f06",
+	"4e94e1357c35acb67e1cfa94847ccec1cc45b3536178050a9a6d07e5e0e71d0e",
+	"69997eeb610b7c423a127fcdfad11eb0e053b90e73deccaf4e960797bf94fe43",
+	"5b704c0357db7f919e6c5a5ffd4ff7732a6e7e6244e1a749eab20fe651ecd596",
+	"a8adf8571dd1dd302a05464c098f854dbf1df4ad05955b46a10e013bf388af6a",
+	"987882737d498833e3ae36bc8ec6713d361f5ae28fafe0c4b0f27c2c5e1d32f0",
+	"318a6001d48105235c5469de560801318aafb7313ca558dc31a89926de1eb065",
+	"09a0b9f7e127951ce67890007f61f193e5ae4b74df2b061034222d11b921fe1e",
+	"90a88b949bc3c8193edfbef74df0bcabb21e59a95fdc88214a81b48683ba307a",
+	"0a297838252a3896e5d15e19444c9430bb9b2b7f37f38f9738b0bbab7f0c077b",
+	"b95d13de73a5abc67cda987733836a3fdf3780b7735beb0f1b4b1a65942b6581",
+	"a674b7b99fc754d2d0933bf99f73ad26419a82989a8a8c5a0c2c3e3f5c280607",
+	"d73b3cfe903264890875f025fd4a1e49adf68febaa7b1cdcd77f27f7771d3cf4",
+	"ec38a38f7d9c698b5dab03e1134e48b8a24cadc017ccf87ab46f3bba925e89cb",
+	"c3cca4fedf648a9065db12c2677951cb8ff6783f4706abec7240e22f3a604c1a",
+	"43b9de9908379021b5c6c59379dd90dece7e929095b1a552ec4bf090ab412b31",
+	"6b3d49211b3c43c692ac2551934b1c2c734d596cfcaf9b4dbfe27f070bb97e16",
+	"4aafac60f5ea5a60db2094f4f78d955e6ee0939d87cee63b2714d471ff5f0e4f",
+	"d52787dd1f400494a4753fed230cacf5796c38c262e675c0aa87c1d90ee1427e",
+	"1a0a9475f7a1d650ecd3666c7df3cc4ecd6483b8ec9df6e175373afdf1f83098",
+	"00474c5080c50e064df08542bcf57ad7993d024a56d3dff062efa5a996b4a2f7",
 ]
 const SEEDS := 20
 const DRAWS := 400
@@ -169,7 +171,13 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * Director.MAX_TIME_TIERS) / row.threat * row.pressure.interval_scale * config.interval_weight)
 			t.eq("independent cap seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.cap, cap_expected)
 			t.near("independent interval seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.interval, interval_expected)
-			t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
+			if tier_value == 0:
+				t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
+			else:
+				var dial_steps: Dictionary = load("res://src/core/stage_defs.gd").get_script_constant_map().get("RUN_TIER_DIAL_STEPS", {"health": 0.2})
+				var health_cap: float = load("res://src/core/run_tier.gd").get_script_constant_map().get("HEALTH_DIAL_CAP", 1.6)
+				var health_expected: float = row.threat * minf(health_cap, 1.0 + int(row.world) * float(dial_steps.health))
+				t.near("independent tier-1 health seed %d stage %d" % [seed_value, row.stage], d.hp_scale(), health_expected)
 			t.eq("interval mode retained", d.mode, "interval")
 		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": Parts.SOURCE_RARITIES,
 			"gate_rarities": [Parts.gate_rarities(0), Parts.gate_rarities(1), Parts.gate_rarities(2)],
