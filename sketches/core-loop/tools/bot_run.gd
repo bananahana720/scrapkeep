@@ -284,8 +284,8 @@ func _snapshot(delta: float) -> Dictionary:
 	var field = _game.build.scrap
 	var items := []
 	for item in field._items:
-		items.append({"position": _vector(item.global_position), "caught": field._caught.get(item),
-			"value": field._value.get(item), "age": field._age.get(item), "cogs": field._cogs.get(item)})
+		items.append([_vector(item.global_position), field._caught.get(item),
+			field._value.get(item), field._age.get(item), field._cogs.get(item)])
 	var events := []
 	for state in _game.world.events._park_states:
 		events.append({"id": state.row.id, "phase": state.phase, "due": state.due_s,
@@ -295,7 +295,8 @@ func _snapshot(delta: float) -> Dictionary:
 		"scale": Engine.time_scale, "position": _vector(_game.player.ball_position()),
 		"velocity": _vector(_game.player.body().linear_velocity), "hp": _game.run.hp,
 		"mass": _game.run.mass, "heft": _game.run.heft(), "scrap": _game.run.scrap, "caught": caught,
-		"field": items, "events": events, "music_clock": _game.presentation.audio.engine.clock,
+		"field": items, "field_columns": ["position", "caught", "value", "age", "cogs"],
+		"events": events, "music_clock": _game.presentation.audio.engine.clock,
 		"bot_rng": str(_driver.rng.state), "run_rng": str(_game.ctx.rng.state),
 		"loot_rng": str(_game.build.loot_rng.state), "director_rng": str(_game.world.director._rng.state),
 		"event_rng": str(_game.world.events.rng.state), "tree_rng": str(_driver._tree_rng.state),
