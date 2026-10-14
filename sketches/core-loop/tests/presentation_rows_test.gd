@@ -77,6 +77,7 @@ func _process(_delta: float) -> bool:
 		engine = _audio.engine
 	match _step:
 		0:
+			_game.tuning.set_option("music", "synth")
 			_audio = _game.presentation.audio
 			_audio.bake_now()
 			for name in SIGNALS:
@@ -136,7 +137,7 @@ func _process(_delta: float) -> bool:
 			_check("rows reach cues", missing.is_empty(), "scrap_rip, clank and core_socket now; threat_up on the beat; found_chime now; missing %s" % [missing])
 			var elements: Array = _audio.cue_log.filter(func(c: Array): return c[0] == "element_resolved").map(func(c: Array): return c[1])
 			_check("element voices", elements == ["ice_form", "zap_hum", "shatter"], "freeze, electrify and shatter pick %s" % [elements])
-			_check("overcharge warms", engine.overcharge == 1 and engine.layer_target(MusicEngine.WARM) > 0.5, "one bonus core sets the warm pad target to %.2f" % engine.layer_target(MusicEngine.WARM))
+			_check_overcharge(engine)
 			events.emit_signal("synergy_discovered", "storm_lattice", "build", true)
 			events.emit_signal("beacon_unsealed", 1)
 			_next(600)
@@ -159,6 +160,49 @@ func _process(_delta: float) -> bool:
 			quit(0 if _failures == 0 else 1)
 			return true
 	return false
+
+
+# 2026-10-13: KE10 merge f725a69, K-UNITS.md:368 strips low armour to drums/bass.
+# Its music_params_test.gd:51-54 guards that phrase mask. The core count survives it.
+func _check_overcharge(engine: MusicEngine) -> void:
+	_audio.set_process(false)
+	var skip := engine.bot_skip_samples
+	engine.bot_skip_samples = true
+	_game.run.armor_mode = true
+	_game.run.mass = 20.0
+	var phrase := engine.bar_len() * Harmony.PHRASE_BARS
+	var origin := engine.grid_origin + ceili(float(engine.bar_origin - engine.grid_origin) / engine.step_len) * engine.step_len
+	var boundary := origin + (floori(float(engine.clock - origin) / phrase) + 1) * phrase
+	_advance(engine, boundary + 1)
+	_check("low armour masks overcharge", engine.overcharge == 1
+		and absf(float(engine.parameter_committed_values.get("armour", -1.0)) - 0.2) <= 0.0001
+		and engine.layer_target(MusicEngine.WARM) == 0.0,
+		"one bonus core remains stored while committed armour 0.2 strips the warm pad")
+	_game.run.mass = 100.0
+	_advance(engine, boundary + phrase)
+	_check("warm pad waits for armour phrase", absf(float(engine.parameters.get("armour", -1.0)) - 1.0) <= 0.0001
+		and absf(float(engine.parameter_committed_values.get("armour", -1.0)) - 0.2) <= 0.0001
+		and engine.layer_target(MusicEngine.WARM) == 0.0,
+		"recovered armour is sampled but the low-armour mask persists until the phrase")
+	engine.render(1)
+	_check("overcharge warms", engine.overcharge == 1
+		and absf(engine.layer_target(MusicEngine.WARM) - 0.7) <= 0.0001
+		and absf(float(engine.parameter_committed_values.get("armour", -1.0)) - 1.0) <= 0.0001,
+		"one bonus core restores the existing 0.7 warm target at sample %d, got %.4f" % [boundary + phrase, engine.layer_target(MusicEngine.WARM)])
+	_game.run.mass = 20.0
+	_advance(engine, boundary + phrase * 2)
+	_check("warm pad retains committed recovery", absf(engine.layer_target(MusicEngine.WARM) - 0.7) <= 0.0001,
+		"pending armour loss cannot mute the warm pad early")
+	engine.render(1)
+	_check("low armour remasks warm pad on phrase", engine.overcharge == 1 and engine.layer_target(MusicEngine.WARM) == 0.0,
+		"the phrase reapplies the armour mask without losing the core")
+	engine.bot_skip_samples = skip
+	_audio.set_process(true)
+
+
+func _advance(engine: MusicEngine, at: int) -> void:
+	while engine.clock < at:
+		engine.render(mini(4096, at - engine.clock))
 
 
 func _collider_radius() -> float:
