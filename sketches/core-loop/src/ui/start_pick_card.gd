@@ -1,22 +1,17 @@
 extends Control
 
+signal pick_requested(index: int)
+signal reroll_requested
+signal tier_requested(tier: int)
+
+const RunTier := preload("res://src/core/run_tier.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# SG9's run-start card: the three options on offer as three tiles, each its key, its icon and
-# a name of at most three words, with one pip per reroll left. Like the stage card it only
-# draws: it takes no input and never pauses, so the first drop keeps every bit of its speed
-# and the pick costs one key press at most (memo 3, SG9 FORBIDDEN). The caller routes keys to
-# RunState.take_start_pick and reroll_start_pick and calls show_picks again; once a pick is
-# taken, or a run offers nothing, or the run has left stage 1, the card hides. The tiles take
-# the pilot's colour.
-#
-# Call order for the wiring unit: flow._begin_run calls run.begin(def) and then enter_stage(1)
-# (flow.gd:249-255). Show the card and route keys only after enter_stage(1): RunState refuses
-# take_start_pick before it, because enter_stage zeroes bonus_cores and would wipe a Bonus Core
-# taken in between. Past stage 1 the offer is closed and both take and reroll are refused.
+# The card draws the offer and emits choices. Flow owns the input routes and RunState
+# owns grants and the win check. The noninteractive default preserves SG9's draw-only use.
 
 const ICON := 40.0
 const KEY := 26.0
@@ -28,18 +23,34 @@ const PIP := 5.0
 const KEYS := ["key_1", "key_2", "key_3"]
 
 var _tiles: Array = []
+var _tile_rects: Array[Rect2] = []
 var _rerolls := 0
 var _color := Palette.SAND
+var _interactive := false
+var _profile
+var _run
+var _tier_buttons := {}
+var reroll_button: Button
+
 
 
 func _init() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 	set_process_input(false)
 	set_process_unhandled_input(false)
 
 
-func show_picks(run) -> void:
+func set_interactive(enabled: bool) -> void:
+	_interactive = enabled
+	mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	set_process_input(enabled)
+
+
+func show_picks(run, profile = null) -> void:
+	_run = run
+	_profile = profile
 	_tiles = []
 	var taken := String(run.start_pick.get("taken", ""))
 	var pilot: String = run.class_id()
@@ -55,6 +66,9 @@ func show_picks(run) -> void:
 		_color = run.class_def.color
 	visible = _tiles.size() == StartPicks.OFFERED
 	custom_minimum_size = extent()
+	size = extent()
+	_layout_tiles()
+	_controls()
 	queue_redraw()
 
 
@@ -70,6 +84,24 @@ func tiles() -> Array:
 	return _tiles.duplicate(true)
 
 
+func tile_rects() -> Array[Rect2]:
+	return _tile_rects.duplicate()
+
+
+func _layout_tiles() -> void:
+	var widths := []
+	var total := TILE_GAP * maxf(0.0, _tiles.size() - 1)
+	for tile in _tiles:
+		var width := _tile_width(tile)
+		widths.append(width)
+		total += width
+	_tile_rects.clear()
+	var x := (size.x - total) * 0.5
+	for width in widths:
+		_tile_rects.append(Rect2(x, 0.0, width, ICON + PAD * 2.0))
+		x += width + TILE_GAP
+
+
 func rerolls_left() -> int:
 	return _rerolls
 
@@ -83,7 +115,7 @@ func extent() -> Vector2:
 	for tile in _tiles:
 		w += _tile_width(tile)
 	w += TILE_GAP * maxf(0.0, _tiles.size() - 1)
-	return Vector2(w, ICON + PAD * 2.0 + PIP * 3.0)
+	return Vector2(maxf(w, 780.0) if _interactive else w, ICON + PAD * 2.0 + PIP * 3.0 + (120.0 if _interactive else 0.0))
 
 
 func drawn_words() -> PackedStringArray:
@@ -91,25 +123,95 @@ func drawn_words() -> PackedStringArray:
 	if visible:
 		for tile in _tiles:
 			out.append(String(tile["name"]))
+		if _interactive:
+			out.append(RunTier.threat_text())
+			out.append(RunTier.pay_text())
 	return out
 
 
+func offered_tiers() -> Array:
+	return StartPicks.offered_tiers(_profile)
+
+
+func tier_button(tier: int) -> Button:
+	return _tier_buttons.get(tier)
+
+
+func _button(at: Vector2, extent_value: Vector2, words: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.position = at
+	button.size = extent_value
+	button.text = words
+	button.pressed.connect(action)
+	add_child(button)
+	return button
+
+
+func _label(words: String, y: float) -> void:
+	var label := Label.new()
+	label.text = words
+	label.position = Vector2(0.0, y)
+	label.size = Vector2(size.x, 28.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 20)
+	add_child(label)
+
+
+func _controls() -> void:
+	for child in get_children():
+		remove_child(child)
+		child.queue_free()
+	_tier_buttons.clear()
+	reroll_button = null
+	if not _interactive or not visible:
+		return
+	for index in _tiles.size():
+		var rect := _tile_rects[index]
+		var button := _button(rect.position, rect.size, "", func(): pick_requested.emit(index))
+		button.flat = true
+		button.tooltip_text = "Take " + String(_tiles[index].name)
+	var y := ICON + PAD * 2.0 + PIP * 3.0
+	_label(RunTier.threat_text(), y)
+	_label(RunTier.pay_text(), y + 28.0)
+	var tiers := offered_tiers()
+	var x := size.x * 0.5 - 250.0
+	for tier_value in tiers:
+		var words := "Tier %d%s" % [tier_value, " (selected)" if _run.selected_run_tier() == tier_value else ""]
+		_tier_buttons[tier_value] = _button(Vector2(x, y + 60.0), Vector2(160.0, 38.0), words, func(): tier_requested.emit(tier_value))
+		x += 170.0
+	if not 1 in tiers:
+		_label("Win a run to unlock Tier 1", y + 96.0)
+	reroll_button = _button(Vector2(size.x * 0.5 + 100.0, y + 60.0), Vector2(160.0, 38.0), "Reroll (V)", func(): reroll_requested.emit())
+	reroll_button.disabled = _rerolls <= 0
+
+
+func _input(event: InputEvent) -> void:
+	if not _interactive or not visible or not event is InputEventKey or not event.pressed or event.echo:
+		return
+	var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
+	if key >= KEY_1 and key <= KEY_3:
+		pick_requested.emit(key - KEY_1)
+	elif key == KEY_V:
+		reroll_requested.emit()
+	else:
+		return
+	get_viewport().set_input_as_handled()
+
+
 func _draw() -> void:
-	var w := extent().x
-	var x := (size.x - w) * 0.5
 	var h := ICON + PAD * 2.0
-	for tile in _tiles:
-		var tw := _tile_width(tile)
-		UiDraw.panel(self, Rect2(Vector2(x, 0.0), Vector2(tw, h)))
+	for index in _tiles.size():
+		var tile: Dictionary = _tiles[index]
+		var rect := _tile_rects[index]
+		UiDraw.panel(self, rect)
 		var mid := h * 0.5
-		var cx := x + PAD
+		var cx := rect.position.x + PAD
 		draw_texture_rect(Icons.texture(tile["key"]), Rect2(Vector2(cx, mid - KEY * 0.5), Vector2(KEY, KEY)), false, Palette.SAND)
 		cx += KEY + GAP
 		draw_texture_rect(Icons.texture(tile["icon"]), Rect2(Vector2(cx, mid - ICON * 0.5), Vector2(ICON, ICON)), false,
 			Icons.tint(tile["icon"], _color))
 		cx += ICON + GAP
 		UiDraw.text(self, cx, mid, String(tile["name"]), FONT, _color)
-		x += tw + TILE_GAP
 	# One pip per reroll left, centred under the tiles: a spent reroll leaves an outline.
 	for i in StartPicks.REROLLS:
 		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * 3.0, h + PIP * 1.5)

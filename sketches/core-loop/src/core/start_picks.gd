@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 
 # SG9, the run-start pick of three (comps gunfire/heroes-and-ascensions.md:23 and :75; W13
 # memo 3, SG9). Each pilot has its own short list of small options. At run start three are
@@ -40,6 +41,10 @@ const LISTS := {
 		{"do": "part", "part": "slag_rounds"}, {"do": "part", "part": "rivet_plating"},
 		{"do": "cogs"}, {"do": "core"}],
 }
+
+
+static func offered_tiers(profile) -> Array:
+	return [0, 1] if RunTier.unlocked(profile) else [0]
 
 
 # The pilot's rows, resolved: {"id", "do", "name", "icon"} plus "part" or "amount". The id is

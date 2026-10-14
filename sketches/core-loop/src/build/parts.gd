@@ -1,6 +1,7 @@
 extends RefCounted
 
 const PartDef := preload("res://src/build/part_def.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -259,6 +260,33 @@ const EVOLVED := {
 }
 
 static var _defs := {}
+static var _run_ref: WeakRef
+
+
+static func bind_run(run) -> void:
+	_run_ref = weakref(run)
+
+
+static func active_tier() -> int:
+	var run = _run_ref.get_ref() if _run_ref != null else null
+	return run.selected_run_tier() if run != null else 0
+
+
+static func _pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
+	if active_tier() == 0:
+		return ItemGen.pick_rarity(rng, allowed)
+	var total := 0.0
+	var weights := {}
+	for rarity in allowed:
+		weights[rarity] = ItemGen.weight_of(rarity) * (RunTier.row(active_tier()).rare_weight if rarity == "rare" else 1.0)
+		total += weights[rarity]
+	var x := rng.randf() * total
+	for rarity in allowed:
+		x -= weights[rarity]
+		if x < 0.0:
+			return rarity
+	return allowed[-1]
+
 static var _rows := {}
 # Seams other modules offer ("spawner.extend_cloak"). A row whose needs is not here is
 # never offered; build fills this at setup from what the live modules answer.
@@ -295,7 +323,12 @@ static func rarity_of(part_id: String) -> String:
 	return String(row(part_id).get("rarity", "common"))
 
 
-static func row(part_id: String) -> Dictionary:
+static func row(part_id: String, tier := -1) -> Dictionary:
+	var base := _base_row(part_id)
+	return RunTier.effective_part(part_id, base, active_tier() if tier < 0 else tier)
+
+
+static func _base_row(part_id: String) -> Dictionary:
 	var authored: Dictionary = rows().get(part_id, {})
 	if not authored.is_empty():
 		return authored
@@ -308,12 +341,14 @@ static func row(part_id: String) -> Dictionary:
 
 
 static func def(part_id: String) -> Resource:
-	if not _defs.has(part_id):
-		var r := row(part_id)
+	var tier := active_tier()
+	var key := "1:" + part_id if tier == 1 and RunTier.ENHANCED.has(part_id) else part_id
+	if not _defs.has(key):
+		var r := row(part_id, tier)
 		if r.is_empty():
 			return null
-		_defs[part_id] = PartDef.from_row(part_id, r)
-	return _defs[part_id]
+		_defs[key] = PartDef.from_row(part_id, r)
+	return _defs[key]
 
 
 static func has(part_id: String) -> bool:
@@ -537,7 +572,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	var tries := 0
 	while picks.size() < count and not pool.is_empty() and tries < count * 8:
 		tries += 1
-		var rarity := ItemGen.pick_rarity(rng, rarities)
+		var rarity := _pick_rarity(rng, rarities)
 		if not listed_only() and rng.randf() < GENERATED_SHARE:
 			var recipe := ItemGen.roll_id(rng, rarity)
 			if not recipe in picks and not recipe in exclude:

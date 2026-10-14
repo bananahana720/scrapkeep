@@ -265,6 +265,8 @@ func _collapse_target(row: Dictionary, geometry: Dictionary, baseline: WaterSurf
 	var centre := Vector2(geometry.at.x, geometry.at.z)
 	var yaw: float = geometry.yaw
 	var depth_m := maxf(0.0, float(row.effect.depth_m))
+	if geometry.get("span", false):
+		return EventGround.span_surface(geometry.site, depth_m)
 	var offset := func(local: Vector2, base: float) -> float:
 		var top := Vector2(half.x, local.y).rotated(-yaw) + centre
 		var upper: float = baseline.height(top)

@@ -102,13 +102,17 @@ func _weather_rows() -> Array:
 	names.sort()
 	for page in names:
 		var text := FileAccess.get_file_as_string(PAGES + "/" + page)
+		var park := {}
 		for block in _json_blocks(text):
 			var json := JSON.new()
 			if json.parse(block) != OK:
 				continue
 			var parsed = json.data
 			if parsed is Dictionary and parsed.has("schema"):
-				rows.append_array(parsed.get("weather_rows", []))
+				# 2026-10-13: KD6 merge e8471670, 6-park_crown.md:850-852 keeps the draft
+				# before its shipped snapshot. Match park_schema_test.gd:172-179's last-object reader.
+				park = parsed
+		rows.append_array(park.get("weather_rows", []))
 	return rows
 
 
