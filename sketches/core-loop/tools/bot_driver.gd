@@ -1455,7 +1455,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 			source.hold.erase("brake_held")
 			if live and ball.y >= target.family_point_at().y:
 				source.hold["brake_held"] = true
-			if -planar.dot(dir) >= sheet.RIDE_MIN_SPEED and _boost_clock <= 0.0 and game.player.state.grounded and game.player.verb_ready("boost"):
+			if planar.dot(dir) <= 0.0 and _boost_clock <= 0.0 and game.player.state.grounded and game.player.verb_ready("boost"):
 				source.press["shift_pressed"] = true
 				source.hold["shift_held"] = true
 				_boost_clock = BOOST_GAP
