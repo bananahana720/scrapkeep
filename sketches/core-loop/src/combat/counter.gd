@@ -2,6 +2,7 @@ extends "res://src/combat/enemy.gd"
 
 const Roster := preload("res://src/combat/roster.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
 
 # What every Fleet reinforcement shares (DESIGN-V2 section 10): an animal crew with its
 # anti-ball tool as the biggest shape, and one loop, roam -> warn -> live -> rest.
@@ -31,6 +32,14 @@ const INTERRUPT := 10.0
 # One interrupt window for every ordinary pack kind (W13-INTEGRATION-3 SQ3). Start value
 # from comps/roboquest/enemies-and-telegraphs.md:11 (1.25 s on nearly every row there).
 const STAGGER_WINDOW := 1.25
+# Interrupt priority (W13-INTEGRATION-3 SR3): one integer per state, judged by the rule the
+# ability rows use (AbilityState.strongest): an interrupt lands only when strictly stronger.
+# A hard knock (2) breaks the warning (1) but not the live phase (3); only the player breaking
+# the hold (4) ends a live phase early. Roam (0) takes no interrupt call: a knock there stays a
+# knock, never a stagger.
+const STATE_PRIORITY := [0, 1, 3]
+const KNOCK_PRIORITY := 2
+const BREAK_PRIORITY := 4
 const CREW_RADIUS := 0.8
 const CREW_HALF := 1.1
 const HEAD_RADIUS := 0.38
@@ -119,6 +128,15 @@ func interrupt_speed() -> float:
 	return INTERRUPT * impact_resist if interruptible else INF
 
 
+func state_priority() -> int:
+	return STATE_PRIORITY[phase]
+
+
+# The index of the interrupt in `priorities` that lands on this state this tick, else -1.
+func resolve_interrupt(priorities: Array) -> int:
+	return AbilityState.strongest(state_priority(), priorities)
+
+
 func stunned() -> bool:
 	return stun_left > 0.0
 
@@ -202,7 +220,7 @@ func _physics_process(delta: float) -> void:
 				tele.set_progress(_warn_progress())
 			if tele == null:
 				_end()
-			elif _knocked_speed() >= interrupt_speed():
+			elif _knocked_speed() >= interrupt_speed() and resolve_interrupt([KNOCK_PRIORITY]) == 0:
 				_stagger()
 			elif _t >= warn_seconds:
 				last_warn = _t
@@ -213,7 +231,12 @@ func _physics_process(delta: float) -> void:
 				_go_live()
 		Phase.LIVE:
 			_move(delta, _live_motion(to_ball))
-			if broken_by != "" or not _live(delta) or _t >= live_seconds:
+			var asks := []
+			if broken_by != "":
+				asks.append(BREAK_PRIORITY)
+			if _knocked_speed() >= interrupt_speed():
+				asks.append(KNOCK_PRIORITY)
+			if resolve_interrupt(asks) >= 0 or not _live(delta) or _t >= live_seconds:
 				_end()
 	_pose()
 

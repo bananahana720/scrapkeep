@@ -62,7 +62,7 @@ func _initialize() -> void:
 
 func _finish() -> void:
 	var count := _t.checks
-	_t.check("check count", count == EXPECTED_CHECKS, "ran %d checks before this one, expected %d" % [count, EXPECTED_CHECKS - 1])
+	_t.check("check count", count == EXPECTED_CHECKS - 1, "ran %d checks before this one, expected %d" % [count, EXPECTED_CHECKS - 1])
 	quit(_t.verdict())
 
 
