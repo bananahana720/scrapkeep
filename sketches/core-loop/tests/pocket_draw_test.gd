@@ -27,6 +27,10 @@ func _run() -> void:
 		_detours(tool.draw_arm("all", 1000, 200))
 		quit(t.verdict())
 		return
+	if "--runtime-only" in OS.get_cmdline_user_args():
+		await _runtime([])
+		quit(t.verdict())
+		return
 	var model = load(MODEL)
 	var Run = load("res://src/core/run_state.gd")
 	var coverage := {}
@@ -224,6 +228,13 @@ func _runtime(_specs: Array) -> void:
 	if not rebuilt.is_empty():
 		t.check("Continue rebuilds saved orientation", is_equal_approx(rebuilt[0].rotation.y, -specs[0].get("turn", 0) * PI * 0.5))
 		t.eq("Continue rebuilds saved position", Vector2(rebuilt[0].global_position.x, rebuilt[0].global_position.z), specs[0].at)
+	var cache: Dictionary = Library.rows().filter(func(entry): return entry.kind == "secret")[0]
+	for turn in 4:
+		var at := Vector2(640, 640)
+		var spec: Dictionary = Library.site_spec(cache).merged({"drawn": true, "turn": turn})
+		var built = resumed.world.activities._build(cache.activity, at, spec)
+		t.eq("drawn cache keeps planned centre", Vector2(built.global_position.x, built.global_position.z), at)
+		t.check("drawn cache keeps planned orientation", is_equal_approx(built.rotation.y, -turn * PI * 0.5))
 	resumed.free()
 
 func _bodies(node: Node) -> int:
