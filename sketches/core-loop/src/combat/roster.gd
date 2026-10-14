@@ -13,6 +13,8 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 #
 # - mechanic: what the player must do differently, owned by this row alone (Andrew's
 #   no-reskins rule). `line` says it in one sentence.
+#   A hard-tier director elite adds one behaviour and one non-health stat, named
+#   together in elite_affixes.gd. It keeps its chassis and original mechanic.
 # - faction: the timbre family and the arrival cue. Fleet crews clank and whistle; the
 #   three ancient families hum.
 # - role: what the director pairs. A controller holds or steers you; a punisher hurts a
@@ -32,6 +34,9 @@ const FLEET := "fleet"
 const REACTOR := "reactor"
 const SWARM := "swarm"
 const MIND := "mind"
+
+# Existing baked cues, reserved as mechanic tags only for these three added attacks.
+const AFFIX_TAGS := {"target_stamp": "klaxon", "rail_strike": "build_riser", "rear_blast": "shatter"}
 
 # Cherenkov blue, the ancients' light (DESIGN-V2 section 11). Palette has no ANCIENT
 # constant yet; this is the stand-in until the spine adds one.

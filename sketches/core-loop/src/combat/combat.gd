@@ -32,6 +32,8 @@ const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
+const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const Companion := preload("res://src/core/companion.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
@@ -466,7 +468,7 @@ func setup(ctx_ref) -> void:
 # kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
 # chaser, with a warning, so a typo in an event table never leaves a stage empty. The
 # Warden and the vault sit on the ground under `at`; the others are placed at `at`.
-func spawn_enemy(kind: String, at: Vector3) -> Node3D:
+func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	var enemy: Node3D
 	match kind:
 		"lobber":
@@ -503,6 +505,10 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 		enemy_spec["rest_scale"] = director.rest_scale()
 		if director.run_tier() >= 1:
 			enemy_spec["stage_threat"] = _threat()
+			if kind == "plated_brute" and director.run_tier() >= RunTier.HARD and not EliteAffixes.row(affix_id).is_empty():
+				enemy_spec.merge(RunTier.row(director.run_tier()).elite_stats, true)
+				enemy_spec["affix"] = affix_id
+				enemy_spec["affix_world"] = director.world
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
