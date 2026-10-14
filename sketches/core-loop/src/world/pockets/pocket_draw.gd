@@ -91,8 +91,8 @@ static func prepare(graph, map) -> Dictionary:
 			continue
 		var p: Vector3 = graph.position(n)
 		var at := Vector2(p.x, p.z)
+		var sizes := {}
 		for turn in 4:
-			var sizes := {}
 			for size in Library.FOOTPRINTS:
 				var half: float = Library.FOOTPRINTS[size] * 0.5
 				var door := at + Vector2(0, half).rotated(turn * PI * 0.5)
@@ -113,10 +113,10 @@ static func prepare(graph, map) -> Dictionary:
 						fits = false
 						break
 				if fits:
-					sizes[size] = true
-			if not sizes.is_empty():
-				out.anchors.append({"node": n, "at": at, "turn": turn})
-				out.fits[Vector2i(n, turn)] = sizes
+					sizes.get_or_add(size, []).append(turn)
+		if not sizes.is_empty():
+			out.anchors.append({"node": n, "at": at})
+			out.fits[n] = sizes
 	out.anchors.sort_custom(func(a, b): return out.from_line[a.node] < out.from_line[b.node])
 	return out
 
@@ -125,7 +125,7 @@ static func _box_distance(box: Rect2, at: Vector2) -> float:
 	return nearest.distance_to(at)
 
 static func _fits(prepared: Dictionary, entry: Dictionary, spot: Dictionary, placed: Array, trade: Dictionary) -> bool:
-	if not prepared.fits.get(Vector2i(spot.node, spot.get("turn", 0)), {}).has(entry.footprint):
+	if not spot.get("turn", 0) in prepared.fits.get(spot.node, {}).get(entry.footprint, []):
 		return false
 	var half: float = Library.FOOTPRINTS[entry.footprint] * 0.5
 	var door: Vector2 = spot.at + Vector2(0, half).rotated(spot.get("turn", 0) * PI * 0.5)
@@ -186,12 +186,18 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 		var entry: Dictionary = picked.front()
 		var price := cost(entry)
 		result.metrics.remaining_credits -= price
-		if not _fits(prepared, entry, spot, result.sites, trade):
+		var oriented := {}
+		for turn in prepared.fits.get(spot.node, {}).get(entry.footprint, []):
+			var candidate: Dictionary = spot.merged({"turn": turn})
+			if _fits(prepared, entry, candidate, result.sites, trade):
+				oriented = candidate
+				break
+		if oriented.is_empty():
 			result.metrics.failed_placements += 1
 			result.metrics.remaining_credits += price
 			result.metrics.refunded_credits += price
 			continue
-		var spec := Library.site_spec(entry).merged(spot).merged({"id": entry.activity, "drawn": true, "pay": {"named": "", "rarities": Placement.PAY_FAR.duplicate()}})
+		var spec := Library.site_spec(entry).merged(oriented).merged({"id": entry.activity, "drawn": true, "pay": {"named": "", "rarities": Placement.PAY_FAR.duplicate()}})
 		result.sites.append(spec)
 		picked.pop_front()
 		pending = false
