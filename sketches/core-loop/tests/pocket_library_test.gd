@@ -43,6 +43,12 @@ func _run() -> void:
 	acts.set_physics_process(false)
 	acts.clear()
 	await _built_stock(entries)
+	var probe: Dictionary = entries.filter(func(entry): return entry.id == "runner_yard")[0].duplicate(true)
+	probe.tell = {"word": "Selected record", "record": "cracked_cache"}
+	var selected = _build(probe)
+	_tell_on_entry(probe, selected)
+	acts.clear()
+	await physics_frame
 	await _wiring(entries)
 	await _unchanged()
 	game.free()
@@ -104,15 +110,17 @@ func _built_stock(entries: Array) -> void:
 	for entry in entries:
 		if entry.kind == "trade":
 			continue
-		var s = _build(entry)
+		var built_entry: Dictionary = entry.duplicate(true)
+		if "--substitute-tell" in OS.get_cmdline_user_args():
+			built_entry.tell.record = "enemy_camp" if Rows.ACTIVITY_ROWS[entry.tell.record].shape == "diamond" else "cracked_cache"
+		var s = _build(built_entry)
 		var side: float = SIZES[entry.footprint]
 		t.check(entry.id + " built ring scale footprint and tell", s.rule.ring == entry.ring and s.difficulty == SCALE[int(entry.difficulty)] and s.footprint == Vector3(side, 8, side) and s.view.word.text.begins_with(entry.tell.word))
 		var dash: Vector3 = s.view.ring.get_child(0).position
 		t.near(entry.id + " rendered ring radius", Vector2(dash.x, dash.z).length(), entry.ring)
 		var interior = s.get_node("Interior_" + String(entry.id))
 		t.eq(entry.id + " built authored terrain and entrance markers", interior.get_child_count(), entry.terrain.size() + entry.entrances.size() * 2)
-		s.view.near(s.global_position)
-		t.check(entry.id + " tell visible on entry with shared record", s.view.word.visible and s.view.cue_record.sound == Rows.ACTIVITY_ROWS[entry.tell.record].sound and s.view.cue_record.shape == Rows.ACTIVITY_ROWS[entry.tell.record].shape)
+		_tell_on_entry(entry, s)
 		if entry.kind == "arena":
 			t.eq(entry.id + " built authored pack", s.rule.pack, entry.pack)
 			acts._spawn_pocket_pack(s, s.rule.pack)
@@ -139,6 +147,44 @@ func _built_stock(entries: Array) -> void:
 				rises = rises and current.count > lower.count and current.health > lower.health and current.health / lower.health >= float(current.count) / lower.count - 0.000001
 			t.check(current.id + " health rises at least as fast as count", rises, JSON.stringify({"current": current, "previous": previous}))
 	print("pocket health bands: " + JSON.stringify(bands))
+
+func _tell_on_entry(entry: Dictionary, s) -> void:
+	var expected: Dictionary = Rows.ACTIVITY_ROWS[entry.tell.record]
+	var audio = game.presentation.audio
+	audio._last_start.clear()
+	var since: int = audio.cue_log.size()
+	var at: Vector3 = s.to_global(Vector3(entry.entry_spot[0], 0, entry.entry_spot[1]))
+	s.view.near(at)
+	var cues: Array = audio.cue_log.slice(since).filter(func(c): return c[0] == "interaction_found")
+	if "--suppress-tell-audio" in OS.get_cmdline_user_args():
+		audio.cue_log.resize(since)
+		cues = audio.cue_log.slice(since)
+	t.check(entry.id + " authored word visible at transformed entry", s.view.word.visible and s.view.word.text.split(" — Tier ")[0] == entry.tell.word, "at=%s text=%s" % [at, s.view.word.text])
+	t.check(entry.id + " rendered entry glyph matches selected record", _glyph_matches(s.view.glyph, String(expected.shape)), "expected=%s" % expected.shape)
+	t.check(entry.id + " entry audio request matches selected record", cues.size() == 1 and cues[0][1] == expected.sound and cues[0][2] == "now", "cues=%s expected=%s" % [cues, expected.sound])
+	var after: int = audio.cue_log.size()
+	s.view.near(at)
+	t.eq(entry.id + " entry cue sounds once", audio.cue_log.size(), after)
+
+func _glyph_matches(glyph: Node3D, shape: String) -> bool:
+	if not glyph.visible:
+		return false
+	if shape == "cross":
+		if glyph.get_child_count() != 3:
+			return false
+		for axis in 3:
+			var part = glyph.get_child(axis)
+			var size := Vector3.ONE * 0.96
+			size[axis] = 3.2
+			if not part is MeshInstance3D or not part.mesh is BoxMesh or not part.mesh.size.is_equal_approx(size):
+				return false
+		return true
+	if glyph.get_child_count() != 1 or not glyph.get_child(0) is MeshInstance3D:
+		return false
+	var mesh = glyph.get_child(0).mesh
+	if shape == "diamond":
+		return mesh is SphereMesh and mesh.radial_segments == 4 and mesh.rings == 2 and is_equal_approx(mesh.radius, 1.76) and is_equal_approx(mesh.height, 3.52)
+	return shape == "square" and mesh is BoxMesh and mesh.size.is_equal_approx(Vector3.ONE * 2.56)
 
 func _wiring(entries: Array) -> void:
 	var index: int = game.ctx.terrain.stage - 1
