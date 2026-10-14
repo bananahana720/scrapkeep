@@ -1,4 +1,6 @@
-# smoke: solo (two separate bot children; at most 40 seconds each)
+# smoke: solo timeout=240s (two separate bot children; at most 90 seconds each)
+# 2026-10-14 DET-HEFT: full-field traces take 35-37 s directly; the 40 s harness cap
+# cut both isolated children short. Only the wall budget changes, not the 6000-tick comparison.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -19,7 +21,7 @@ func _initialize() -> void:
 			OS.set_environment(key, folder.path_join(kind.to_lower()))
 		var results := ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": [
 			"--out=" + folder, "--policy=brawler", "--seeds=3", "--table=slice",
-			"--trace-ticks=1", "--ticks=%d" % TICKS, "--allocation-noise=%d" % i]}], 40.0)
+			"--trace-ticks=1", "--ticks=%d" % TICKS, "--allocation-noise=%d" % i]}], 90.0)
 		for key in previous:
 			if previous[key].is_empty():
 				OS.unset_environment(key)
