@@ -53,6 +53,12 @@ def duplicate_first_contact(fight, zero_gain=False):
     fight["contacts"].insert(1, contact)
 
 
+def compress_fight_time(fight):
+    fight["seconds"] *= 0.5
+    for contact in fight["contacts"]:
+        contact["t"] = fight["started"] + 0.5 * (contact["t"] - fight["started"])
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("first", type=Path)
@@ -87,6 +93,12 @@ def main():
         if result != 0:
             print(output)
             failures += 1
+    result, output = check(args.first, args.second,
+                           lambda rows: [dict(row, t=row["t"] * 0.5) for row in rows],
+                           compress_fight_time)
+    print("coordinated timestamp compression: " + ("PASS rejected" if result == 1 else "FAIL accepted"))
+    print(output.strip())
+    failures += result != 1
     for name, mutate in mutations.items():
         remove_contacts = (lambda fight: fight.update(contacts=[row for row in fight["contacts"] if row["cycle"] != 1])) if name == "removed cycle" else None
         result, output = check(args.first, args.second, mutate, remove_contacts)
@@ -98,7 +110,7 @@ def main():
         print(name + ": " + ("PASS rejected" if result == 1 else "FAIL accepted"))
         print(output.strip())
         failures += result != 1
-    print(f"park_reactor_ideal_check_test: {'FAIL' if failures else 'PASS'} ({len(mutations)+len(fight_mutations)+1+int(args.gains)} controls)")
+    print(f"park_reactor_ideal_check_test: {'FAIL' if failures else 'PASS'} ({len(mutations)+len(fight_mutations)+2+int(args.gains)} controls)")
     return int(bool(failures))
 
 
