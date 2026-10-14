@@ -216,6 +216,9 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 		var built_spec: Dictionary = spec
 		if not entry.is_empty() and entry.activity == id:
 			built_spec = spec.merged(PocketLibrary.site_spec(entry), true)
+			if not spec.get("pack", []).is_empty():
+				built_spec.pack = spec.pack.duplicate()
+				built_spec.tell = spec.get("tell", {}).duplicate(true)
 		sites.append(_build(id, spec["at"], built_spec))
 	_pending_stage = true
 
@@ -265,7 +268,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 			s.rule["pack"] = spec.pack.duplicate()
 			if id == "ambush":
 				s.rule["waves"] = [spec.pack.slice(0, 1), spec.pack.slice(0, ceili(spec.pack.size() * 0.5)), spec.pack.duplicate()]
-		if s.rule.has("cue"):
+		if s.rule.has("cue") and not spec.get("tell", {}).is_empty():
 			s.rule.cue.word = spec.tell.word
 	if id == "enemy_camp":
 		s.rule["pack"] = spec.get("pack", s.rule["pack"])
