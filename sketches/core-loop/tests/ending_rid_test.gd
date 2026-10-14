@@ -4,6 +4,10 @@ const Sequence := preload("res://src/ui/ending_sequence.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
 
+# Cold crater GLBs allocate dummy-renderer mesh RIDs on loader threads while
+# the live effect and ending snapshot use the same owner on the main thread.
+const COLD_ENDINGS := 128
+
 
 func _initialize() -> void:
 	if "--child" in OS.get_cmdline_user_args():
@@ -38,7 +42,7 @@ func _child() -> void:
 	var effect := MeshInstance3D.new()
 	effect.name = "LiveEffect"
 	source.add_child(effect)
-	for i in 32:
+	for i in COLD_ENDINGS:
 		var seq := Sequence.new()
 		root.add_child(seq)
 		seq._scene = Node3D.new()
@@ -54,6 +58,19 @@ func _child() -> void:
 			await process_frame
 		t.check("cold crater %d has draw meshes" % i,
 			not seq.crater.find_children("*", "MeshInstance3D", true, false).is_empty())
+		var invalid := _invalid_meshes(seq.crater)
+		invalid.append_array(_invalid_meshes(source))
+		if not invalid.is_empty():
+			t.check("cold ending %d keeps mesh RID surfaces" % i, false, str(invalid))
 		seq.free()
 	source.free()
 	quit(t.verdict())
+
+
+func _invalid_meshes(parent: Node) -> Array:
+	var invalid := []
+	for view: MeshInstance3D in parent.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh != null and RenderingServer.mesh_get_surface_count(view.mesh.get_rid()) != view.mesh.get_surface_count():
+			invalid.append("%s mesh=%s resource=%s rid=%s skin=%s skeleton=%s" % [view.get_path(),
+				view.mesh.get_class(), view.mesh.resource_path, view.mesh.get_rid(), view.skin, view.skeleton])
+	return invalid
