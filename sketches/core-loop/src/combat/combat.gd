@@ -495,7 +495,15 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 	# Fodder sees the player through its sight, which Kest's cloak can fool; the Warden
 	# and the vault are set pieces and always see the ball.
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
-	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), fleet.dress(kind, _spec_for(kind)))
+	var health_scale := _threat()
+	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
+	if kind not in ["warden", "vault"]:
+		var director = ctx.root.get_node("World").director
+		health_scale = director.hp_scale()
+		enemy_spec["rest_scale"] = director.rest_scale()
+		if director.run_tier() >= 1:
+			enemy_spec["stage_threat"] = _threat()
+	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
@@ -3380,6 +3388,8 @@ static func _pinnable(enemy) -> bool:
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
+	if source not in ["warden", "vault"]:
+		amount *= ctx.root.get_node("World").director.damage_scale()
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
 	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).

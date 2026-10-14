@@ -159,6 +159,14 @@ func _production() -> void:
 				t.eq("production " + kind + " health", var_to_bytes(other.hp), var_to_bytes(hp_base * (float(row.threat) * want[0])))
 				other.free()
 			var counter = game.combat.spawn_enemy("mag_trapper", pos + Vector3.RIGHT * 10.0)
+			var counter_constants: Dictionary = counter.get_script().get_script_constant_map()
+			var rating_want: float = counter_constants.RATING_BASE + counter_constants.RATING_PER_THREAT * (float(row.threat) - 1.0)
+			t.eq("health dial leaves counter tool rating", var_to_bytes(counter.rating), var_to_bytes(rating_want))
+			var counter_hp: float = float(counter_constants.HP) * float(row.threat) if tier_value == 0 else float(counter_constants.HP) * (float(row.threat) * want[0])
+			if tier_value == 0:
+				t.eq("production counter health tier-0", var_to_bytes(counter.hp), var_to_bytes(counter_hp))
+			else:
+				t.near("production counter health tier-1", counter.hp, counter_hp)
 			counter._end()
 			var rest_want: float = counter.rest_seconds if tier_value == 0 else counter.rest_seconds * want[2]
 			t.eq("production rest tier %d stage %d" % [tier_value, row.stage], var_to_bytes(counter._rest), var_to_bytes(rest_want))
