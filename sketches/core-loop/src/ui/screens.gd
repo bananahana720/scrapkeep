@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const ResultsOdds := preload("res://src/ui/results_odds.gd")
+
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
@@ -277,6 +279,9 @@ func _on_flow_changed(state: String) -> void:
 			_show(String(boss.get("title", "BOSS ROUTED")), EventKinds.color("boss_defeated"), String(boss.get("victory", "")))
 		"summary":
 			var body := String(game.run.summary()["class"])
+			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets)
+			if trade_lines != "":
+				body += "\n" + trade_lines
 			var epitaph := String(_victory_boss.get("epitaph", ""))
 			if epitaph != "":
 				body += "\n" + epitaph

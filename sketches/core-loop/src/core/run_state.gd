@@ -53,6 +53,7 @@ var scrap := 0
 var mass := 0.0
 # Bonus cores from events and vaults this stage; each one overcharges the beacon.
 var bonus_cores := 0
+var trade_memory := preload("res://src/world/trade_pockets.gd").memory()
 var run_id := ""
 var parts: Array[String] = []
 # RL2: the relic held in each kit slot, slot name to relic id. One per slot (Relics.can_hold).
@@ -186,6 +187,7 @@ func begin(chosen_class: Resource) -> void:
 	_heft_class = 1
 	class_rewarded = 1
 	_stage_starts = {}
+	trade_memory = preload("res://src/world/trade_pockets.gd").memory()
 	# The suffix also seeds device luck; presentation must never choose it.
 	if run_seed_override != null:
 		run_id = "bot-%d" % int(run_seed_override)
@@ -657,6 +659,10 @@ func record_milestone(event_id: String) -> void:
 
 # Flow calls this as a stage begins (not on a retry): cores are stage-scoped.
 func enter_stage(index: int) -> void:
+	if index != stage:
+		for offer in trade_memory.seen:
+			if int(offer.stage) == stage and not trade_memory.decisions.has(str(stage)):
+				preload("res://src/world/trade_pockets.gd").decide(trade_memory, offer, false)
 	stage = index
 	bonus_cores = 0
 	event_core_grants = 0
@@ -669,6 +675,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 	stage_time = 0.0
 	_snapshot = {
 		"stage": stage,
+		"trade_memory": trade_memory.duplicate(true),
 		"max_hp": max_hp,
 		"hp": hp,
 		"scrap": scrap,
@@ -730,6 +737,7 @@ func snapshot_value(key: String):
 
 func restore() -> void:
 	escape_window_left = 0.0
+	trade_memory = (_snapshot.get("trade_memory", preload("res://src/world/trade_pockets.gd").memory()) as Dictionary).duplicate(true)
 	stage = _snapshot["stage"]
 	max_hp = _snapshot["max_hp"]
 	hp = _snapshot["hp"]
@@ -792,6 +800,7 @@ func summary() -> Dictionary:
 		"time": run_time,
 		"retries": retries,
 		"tallies": tallies(),
+		"trade_pockets": (trade_memory.seen as Array).duplicate(true),
 	}
 
 
@@ -809,7 +818,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -866,6 +875,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"event_core_grants": event_core_grants,
 		"run_tallies": tallies(),
 		"seen_wardens": _seen_wardens.keys(),
+		"trade_memory": preload("res://src/world/trade_pockets.gd").to_doc(_snapshot.get("trade_memory", trade_memory)),
 	}, true)
 	if run_tier == 0:
 		doc.erase("run_tier")
@@ -926,6 +936,10 @@ static func validate_entrance_doc(doc) -> String:
 	for key in ENTRANCE_OPTIONAL:
 		if doc.has(key) and not _entrance_kind_ok(doc[key], ENTRANCE_OPTIONAL[key]):
 			return "wrong type for %s (expected %s)" % [key, ENTRANCE_OPTIONAL[key]]
+	if doc.has("trade_memory"):
+		var trade_error := preload("res://src/world/trade_pockets.gd").validate_doc(doc.trade_memory, int(doc.stage))
+		if not trade_error.is_empty():
+			return trade_error
 	for part_id in doc["parts"]:
 		if RunTier.is_variant_id(part_id):
 			return "part versions must share the base id"
@@ -1012,6 +1026,7 @@ func from_entrance_doc(doc) -> bool:
 	since_damage = 99.0
 	# The loaded entrance is the checkpoint a retry rewinds to.
 	_stage_starts = {}
+	trade_memory = preload("res://src/world/trade_pockets.gd").from_doc(doc.trade_memory) if doc.has("trade_memory") else preload("res://src/world/trade_pockets.gd").memory()
 	_snapshot = {}
 	snapshot(Vector3(p[0], p[1], p[2]), Vector3(v[0], v[1], v[2]), float(doc["camera_yaw"]))
 	return true

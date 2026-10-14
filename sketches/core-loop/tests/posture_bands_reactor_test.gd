@@ -52,7 +52,11 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # Three unchanged controls: small [69.80, 69.80, 69.80], grown [33.94, 33.94, 33.94],
 # ratio 2.05657 in each; both median spreads 0 percent. Small seed 2 reaches CAP in each.
 # Grown pin 35.8, tuning, arms, seeds, bands and tolerance stay unchanged.
-const EXPECT_SMALL_S := 69.80
+# 2026-10-14 coordinator, at the SQ12 restore: small re-pin 69.80 -> 88.32 s. Spillway's camp is now
+# the library's runner_yard interior; small seed 1 broke at 88.32 s (was 69.80). Two identical runs,
+# one at the SQ12-FIX merge without SI1 and one with it: small [55.41, 88.32, 120.00], grown
+# [33.94, 50.29, 18.61]. Bands hold: grown 33.9 s in 25 to 45, ratio 2.60, camper 0 breaks.
+const EXPECT_SMALL_S := 88.32
 const EXPECT_GROWN_S := 35.8
 const TOLERANCE := 0.10
 const WALL_S := 330.0

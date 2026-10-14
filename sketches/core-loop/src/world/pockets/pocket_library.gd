@@ -31,3 +31,10 @@ static func site_spec(entry: Dictionary) -> Dictionary:
 	return {"interior": entry.duplicate(true), "ring": float(entry.ring),
 		"difficulty": DIFFICULTIES[int(entry.difficulty)], "pack": entry.pack.duplicate(),
 		"tell": entry.tell.duplicate(true), "footprint": Vector3(side, 8.0, side)}
+
+
+static func trade(id: String) -> Dictionary:
+	for entry in rows():
+		if entry.kind == "trade" and entry.id == id:
+			return entry
+	return {}
