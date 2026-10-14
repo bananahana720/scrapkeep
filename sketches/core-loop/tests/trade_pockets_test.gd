@@ -376,7 +376,7 @@ func _entrance_round_trip(model) -> void:
 		return
 	model.see(run.trade_memory, placed.trade)
 	model.decide(run.trade_memory, placed.trade, true)
-	var doc: Dictionary = JSON.parse_string(JSON.stringify(run.to_entrance_doc()))
+	var doc: Dictionary = JSON.parse_string(JSON.stringify(run.to_entrance_doc(), "", true, true))
 	t.check("entrance document serializes checkpoint trade memory", doc.has("trade_memory"))
 	t.eq("trade entrance JSON validates", Run.validate_entrance_doc(doc), "")
 	var restored = Run.new()
