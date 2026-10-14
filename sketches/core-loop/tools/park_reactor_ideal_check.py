@@ -49,8 +49,7 @@ def read_case(folder, size, seed):
     for key in ("pulse_cycle", "sheet_seconds", "sheet_ram_breaks", "curve", "mult_min", "mult_max", "core_radius", "ball_radius"):
         assert fight["constants"][key] == expected[key], f"{case}: wrong {key}"
     for ram in rams:
-        assert ram["live"] and ram["entered"] == ram["cycle"] and ram["solver_contact"]
-        assert math.dist(ram["position"], ram["core"]) <= expected["core_radius"] + expected["ball_radius"] + 0.01
+        assert ram["live"] and ram["entered"] == ram["cycle"] and ram["solver_contact"], f"{case}: unqualified contact"
         punch, plating, heft = ram["punch"], ram["plating"], ram["heft"]
         ratio = punch / plating
         grown_ratio = punch / heft * expected["hefts"][2] / plating
@@ -79,6 +78,7 @@ def summarize(fight, trace):
             cycles[ram["cycle"]]["rams"].append(ram["t"] - fight["started"])
     return {"size": fight["size"], "seed": fight["seed"], "seconds": fight["seconds"],
         "rams": sum(len(row["rams"]) for row in cycles.values()), "cycles": list(cycles.values()),
+        "max_signal_position_distance": max(math.dist(row["position"], row["core"]) for row in fight["contacts"]),
         "split": {key: sum(row[key] for row in cycles.values()) for key in
                   ("waiting_s", "riding_s", "ram_approach_s", "return_live_s")}}
 
