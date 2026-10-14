@@ -30,7 +30,7 @@ func _run() -> void:
 	w._charge_time = 0.0
 	sheet.sheet_left = 0.0
 	bot._fight(w, 1.0 / Engine.physics_ticks_per_second)
-	t.check("charging return foot stays inside the pulse ring", bot._flat(bot.steer_seen, w.home) < sheet.SHEET_RUN, str(bot.steer_seen))
+	t.check("charging return foot stays inside the pulse ring", bot._flat(bot.steer_seen, w.home) < w.pulse_radius, str(bot.steer_seen))
 	w._charge_time = w._charge_len - BotDriver.DROP_WAIT / 2.0
 	bot._fight(w, 1.0 / Engine.physics_ticks_per_second)
 	t.check("inbound starts before the sheet opens", not sheet.sheet_live() and bot.steer_seen.is_equal_approx(w.family_point_at()), str(bot.steer_seen))
