@@ -163,6 +163,8 @@ func _check_hand() -> void:
 	player._read_grammar()
 	_report("hand rising clearance", not player.kit.hooked and not player.chain.active(),
 		"the jump's first airborne flag still waits for visible height")
+	_report("hand takeoff counts no bite", int(driver._note.get("harpoon_bites", 0)) == 0,
+		"a jump without a harpoon press records zero bites")
 	# Stage the observed clearance, independently of the pending jump impulse.
 	player.state.grounded = false
 	player.body().global_position += Vector3.UP * Tuning.RADIUS * 2.0
@@ -172,6 +174,8 @@ func _check_hand() -> void:
 	driver.source.poll(player.intent)
 	player._read_grammar()
 	_report("hand anchor A", player.kit.hooked and player.kit.anchor_body == first, "first input bites A")
+	_report("hand first bite counted once", int(driver._note.get("harpoon_bites", 0)) == 1,
+		"the first airborne harpoon press records one bite")
 	# Staged apex and reticle isolate the hand from terrain, camera and jump physics.
 	player.state.grounded = false
 	player.body().linear_velocity = Vector3.ZERO
