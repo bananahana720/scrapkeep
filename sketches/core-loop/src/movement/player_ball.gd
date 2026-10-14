@@ -143,6 +143,11 @@ var _line_anchor := Vector3.ZERO
 var _line_hold := 0.0
 var _line_standing := false
 var _bow: Area3D
+# The speed bank (SQ9, Tuning.BANK_ROWS): {row, t, bonus0, bonus} while one runs, else empty.
+# bonus is the planar speed the bank has added and not yet taken back.
+var speed_bank := {}
+var _speed_bank_landed := false
+var _speed_bank_jumped := false
 var _bow_check_queued := false
 var _crushing := {}
 
@@ -193,6 +198,8 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	events.player_died.connect(func(): snap_slots("reset"))
 	events.run_ended.connect(func(_won: bool): snap_slots("reset"))
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))
+	_rigid.landed.connect(func(_impact: float): _speed_bank_landed = true)
+	_rigid.jumped.connect(func(air: bool): _speed_bank_jumped = _speed_bank_jumped or not air)
 
 	# Everything under the player is placed per frame in _process, which interpolation
 	# must leave alone; only the body is ticked by physics and interpolated.
@@ -299,6 +306,7 @@ func frozen() -> bool:
 
 func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_bank_pending = {}
+	_clear_speed_bank()
 	state.reset()
 	kit.clear_runtime()
 	chain.clear_active()
@@ -319,6 +327,7 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 # no "broke" (SKILL-BAR section 4, line cut cause).
 func set_velocity_now(velocity: Vector3, cause := "launched") -> void:
 	cut_line(cause)
+	_clear_speed_bank()
 	_rigid.set_velocity_now(velocity)
 
 
@@ -501,6 +510,7 @@ func _physics_process(delta: float) -> void:
 	if kit.mounted and tree.knob("mounted_recharge") > 1.0:
 		abilities.refund(AbilityState.SPECIAL, delta * (tree.knob("mounted_recharge") - 1.0))
 	state.tick_timers(delta)
+	_tick_speed_bank(delta)
 	if intent.jump_pressed:
 		state.jump_buffer = Tuning.JUMP_BUFFER
 	_rigid.drive_basis = drive_basis
@@ -513,6 +523,74 @@ func _physics_process(delta: float) -> void:
 	_recheck_bow()
 	_tick_face_tags(delta)
 	_mark_slots()
+
+
+func _clear_speed_bank() -> void:
+	speed_bank = {}
+	_speed_bank_landed = false
+	_speed_bank_jumped = false
+
+
+# The speed bank (Tuning.BANK_ROWS). The rigid ball's landed and jumped facts arrive inside the
+# physics step, so they are read here on the next tick. A landing at BANK_ARM x cruise or
+# faster tops the planar speed up to the pilot's burst; each grounded tick then takes back
+# only what the bank added, along the pilot's decay curve, and never speed the roll already
+# lost on its own (spin damping and rolling resistance), so the take-back stops at the curve. In the air
+# the bank's clock waits. A ground jump spends it: inside the last BANK_WINDOW of the decay
+# the planar speed is topped back up to the burst and kept; earlier, the unspent bonus goes.
+func _tick_speed_bank(delta: float) -> void:
+	var landed := _speed_bank_landed
+	var jumped := _speed_bank_jumped
+	_speed_bank_landed = false
+	_speed_bank_jumped = false
+	var cruise: float = tuning.f("cruise")
+	if _frozen or kit.hooked or Augments.holding(kit) or in_set_piece():
+		speed_bank = {}
+		return
+	var planar := planar_velocity()
+	var speed := planar.length()
+	if not speed_bank.is_empty() and jumped:
+		var row: Dictionary = speed_bank["row"]
+		var u: float = speed_bank["t"] / float(row["decay_s"])
+		if u >= 1.0 - Tuning.BANK_WINDOW:
+			_bank_push(planar, maxf(0.0, float(row["ratio"]) * cruise - speed))
+		else:
+			_bank_push(planar, -minf(float(speed_bank["bonus"]), maxf(0.0, speed - cruise)))
+		speed_bank = {}
+		return
+	if speed_bank.is_empty():
+		if not landed or not state.grounded or speed < Tuning.BANK_ARM * cruise:
+			return
+		var row := Tuning.bank_row(class_def.id if class_def != null else "")
+		var bonus := float(row["ratio"]) * cruise - speed
+		if bonus <= 0.0:
+			return
+		_bank_push(planar, bonus)
+		speed_bank = {"row": row, "t": 0.0, "bonus0": bonus, "bonus": bonus}
+		return
+	if not state.grounded:
+		return
+	var row: Dictionary = speed_bank["row"]
+	speed_bank["t"] += delta
+	var left: float = float(speed_bank["bonus0"]) * Tuning.bank_share(row, speed_bank["t"] / float(row["decay_s"]))
+	var give_back: float = float(speed_bank["bonus"]) - left
+	speed_bank["bonus"] = left
+	_bank_push(planar, -minf(give_back, maxf(0.0, speed - (cruise + left))))
+	if speed_bank["t"] >= float(row["decay_s"]):
+		speed_bank = {}
+
+
+# Changes the planar speed by dv along the ball's heading, spin included, so the contact
+# patch neither slips the burst away nor brakes the take-back.
+func _bank_push(planar: Vector3, dv: float) -> void:
+	if absf(dv) < 0.0001 or planar.length_squared() < 0.0001:
+		return
+	var push := planar.normalized() * dv
+	_rigid.apply_central_impulse(push * _rigid.mass)
+	var axis := Rules.roll_axis(push, Vector3.UP)
+	if axis != Vector3.ZERO:
+		_rigid.angular_velocity += axis / Tuning.RADIUS
+	state.velocity += push
 
 
 # The slot states the ability bar reads that no spend or gauge sets: the grapple is

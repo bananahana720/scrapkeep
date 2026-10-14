@@ -88,6 +88,44 @@ const RADIUS := 1.0
 const ANCHOR_MIN_ROPE := 6.0
 const SKIN := 0.12
 
+# The speed bank (SQ9, comps/roboquest/movement-and-feel.md): a landing rolling at
+# BANK_ARM x cruise or faster banks speed. The roll starts at `ratio` x cruise and decays
+# back to cruise over `decay_s`: flat for the first `hold` of the decay, then as
+# ((1 - u) / (1 - hold)) ^ `exp`. A ground jump inside the last BANK_WINDOW of the decay
+# keeps the burst; a jump before it spends the bank back to cruise. Per pilot so the six
+# traces differ in shape, not only scale. Every row is a start value to tune in play.
+const BANK_ARM := 0.9
+const BANK_WINDOW := 0.25
+const BANK_DEFAULT := {"ratio": 1.25, "decay_s": 1.2, "hold": 0.0, "exp": 1.0}
+const BANK_ROWS := {
+	# Sable: a straight ramp, she leaves each launch point faster and spends it evenly.
+	"pylon_engineer": {"ratio": 1.25, "decay_s": 1.2, "hold": 0.0, "exp": 1.0},
+	# Rivet: the push holds, then falls away late; the longest bank.
+	"runner_gunner": {"ratio": 1.22, "decay_s": 1.6, "hold": 0.35, "exp": 2.0},
+	# Kest: the biggest, shortest kick, held high and dropped at the end.
+	"demolitions_caster": {"ratio": 1.29, "decay_s": 0.8, "hold": 0.0, "exp": 0.5},
+	# Tarn: a short clamp of speed that bleeds off fast.
+	"tarn": {"ratio": 1.24, "decay_s": 1.0, "hold": 0.15, "exp": 3.0},
+	# Tally: a flywheel run-down, early loss easing out.
+	"tally": {"ratio": 1.21, "decay_s": 1.4, "hold": 0.0, "exp": 1.6},
+	# The Cannon: half the decay at full burst, then a straight fall.
+	"remembered_cannon": {"ratio": 1.28, "decay_s": 1.1, "hold": 0.5, "exp": 1.0},
+}
+
+
+static func bank_row(class_id: String) -> Dictionary:
+	return BANK_ROWS.get(class_id, BANK_DEFAULT)
+
+
+# The bank's share left at u (0 to 1) of its decay: 1 at the burst, 0 back at cruise.
+static func bank_share(row: Dictionary, u: float) -> float:
+	var hold: float = row["hold"]
+	if u <= hold:
+		return 1.0
+	if u >= 1.0:
+		return 0.0
+	return pow((1.0 - u) / (1.0 - hold), float(row["exp"]))
+
 var _values := {}
 # Parts scale knobs through mods rather than by moving the sliders, so the F1 panel
 # keeps showing the base value and a recompute from the part list is idempotent.
