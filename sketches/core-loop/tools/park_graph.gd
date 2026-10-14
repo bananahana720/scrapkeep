@@ -154,7 +154,10 @@ func _initialize() -> void:
 		return
 	if draw_mode:
 		var arm := draw_arm(map_id, draw_seeds, placement_seeds)
-		print("pocket_draw_arm: " + JSON.stringify(arm))
+		var summary := arm.duplicate(true)
+		for row in summary.templates:
+			row.erase("samples")
+		print("pocket_draw_arm: " + JSON.stringify(summary))
 		if not draw_out.is_empty():
 			var file := FileAccess.open(draw_out, FileAccess.WRITE)
 			if file == null:
@@ -1878,7 +1881,7 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 		var sets := {}
 		var detours := []
 		var union_blocks := {}
-		var row := {"stage": stage, "map": id, "exempt": stage == 1, "stage_samples": seeds, "placement_samples": placement_seeds, "draw_count": 0, "nonempty_stages": 0, "counts_in_3_to_8": 0, "distinct_sets": 0, "detour_p10": 0.0, "detour_p90": 0.0, "detour_ratio": 0.0, "failed_placements": 0, "credit_lost": 0, "chance_opportunities": 0, "chance_hits": 0, "chance_rate": 0.0, "placement_draws": 0, "rule_breaches": 0, "route_cuts": 0, "door_ring_breaches": 0, "placement_example": {}, "samples": []}
+		var row := {"stage": stage, "map": id, "exempt": stage == 1, "stage_samples": seeds, "placement_samples": placement_seeds, "draw_count": 0, "nonempty_stages": 0, "counts_in_3_to_8": 0, "distinct_sets": 0, "detour_p10": 0.0, "detour_p90": 0.0, "detour_ratio": 0.0, "failed_placements": 0, "credit_lost": 0, "chance_opportunities": 0, "chance_hits": 0, "chance_rate": 0.0, "placement_draws": 0, "rule_samples": seeds, "rule_breaches": 0, "route_cuts": 0, "door_ring_breaches": 0, "placement_example": {}, "samples": []}
 		for seed_value in seeds:
 			var run = Run.new()
 			run.run_seed = seed_value
@@ -1902,6 +1905,12 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 			var count: int = map.activity_sites.size() + specs.size()
 			row.counts_in_3_to_8 += int(count >= 3 and count <= 8)
 			row.samples.append({"seed": seed_value, "interiors": interior_ids, "nodes": nodes, "non_trade_count": count})
+			var breaches := drawn_rules(graph, map, specs, trade, prepared.from_line, index, ring_cache)
+			row.rule_breaches += breaches.size()
+			for b in breaches:
+				row.door_ring_breaches += int(b.rule == "door_ring")
+				if result.errors.size() < 20:
+					result.errors.append({"map": id, "seed": seed_value, "breach": b})
 			if seed_value < placement_seeds:
 				row.placement_draws += specs.size()
 				row.failed_placements += int(drawn.metrics.failed_placements)
@@ -1917,14 +1926,8 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 						for n in graph.box_nodes(at - half - Vector2.ONE * ParkGraph.STEP_M, at + half + Vector2.ONE * ParkGraph.STEP_M):
 							union_blocks[n] = true
 				row.credit_lost += absi(150 - spent - int(drawn.metrics.remaining_credits))
-				var breaches := drawn_rules(graph, map, specs, trade, prepared.from_line, index, ring_cache)
-				row.rule_breaches += breaches.size()
-				for b in breaches:
-					row.door_ring_breaches += int(b.rule == "door_ring")
-					if result.errors.size() < 20:
-						result.errors.append({"map": id, "seed": seed_value, "breach": b})
 				row.samples.back()["placement"] = drawn.metrics.duplicate()
-				row.samples.back()["rule_breaches"] = breaches
+			row.samples.back()["rule_breaches"] = breaches
 			if seed_value == 0:
 				var examples := []
 				for spec in specs:
