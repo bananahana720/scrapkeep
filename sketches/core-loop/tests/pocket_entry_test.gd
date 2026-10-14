@@ -74,6 +74,7 @@ func _run() -> void:
 			t.eq(batch[i].id + " idle and dodger entry count", [int(rate.idle_entries), int(rate.dodger_entries)], [want, want])
 			t.check(batch[i].id + " idle safe in first two seconds", float(rate.idle_safe) / rate.idle_entries >= 0.95)
 			if batch[i].kind == "arena":
+				t.eq(batch[i].id + " every idle starts inside two seconds", int(rate.idle_engaged), want)
 				t.eq(batch[i].id + " every dodger starts the encounter", int(rate.engaged), want)
 			if int(batch[i].difficulty) == 1:
 				t.check(batch[i].id + " difficulty-one dodger clears at least 80 percent", float(rate.dodger_clears) / rate.dodger_entries >= 0.8)
@@ -128,25 +129,34 @@ func _child(entry: Dictionary, count: int) -> void:
 		if elapsed <= 2.0:
 			entry_damage += amount)
 	var idle_safe := 0
+	var idle_engaged := 0
 	var clears := 0
 	var engaged := 0
 	var outcomes := {}
+	if "--unsafe-entry" in OS.get_cmdline_user_args():
+		var control: Dictionary = await _trial(entry, "idle", 71000, true)
+		print("pocket_entry_control: " + JSON.stringify(control))
+		t.check(entry.id + " unsafe entry idle safety", control.started and control.entry_damage == 0.0)
+		game.free()
+		quit(t.verdict())
+		return
 	for mode in ["idle", "dodger"]:
 		for seed_value in count:
 			var trial: Dictionary = await _trial(entry, mode, 71000 + seed_value)
 			if mode == "idle":
 				idle_safe += int(trial.entry_damage == 0.0)
+				idle_engaged += int(trial.started)
 			else:
 				clears += int(trial.cleared)
 				engaged += int(trial.started)
 				outcomes[trial.outcome] = int(outcomes.get(trial.outcome, 0)) + 1
 			print("pocket_entry_trial: " + JSON.stringify(trial))
-	var rate := {"id": entry.id, "difficulty": entry.difficulty, "idle_entries": count, "idle_safe": idle_safe, "dodger_entries": count, "dodger_clears": clears, "engaged": engaged, "clear_seconds": CLEAR_SECONDS, "telegraphs": seen_telegraphs, "evasions": evasions, "outcomes": outcomes}
+	var rate := {"id": entry.id, "difficulty": entry.difficulty, "idle_entries": count, "idle_safe": idle_safe, "idle_engaged": idle_engaged, "dodger_entries": count, "dodger_clears": clears, "engaged": engaged, "clear_seconds": CLEAR_SECONDS, "telegraphs": seen_telegraphs, "evasions": evasions, "outcomes": outcomes}
 	print("pocket_entry_rate: " + JSON.stringify(rate))
 	game.free()
 	quit(0)
 
-func _trial(entry: Dictionary, mode: String, seed_value: int) -> Dictionary:
+func _trial(entry: Dictionary, mode: String, seed_value: int, unsafe_entry := false) -> Dictionary:
 	var acts = game.world.activities
 	acts.clear()
 	acts._elite_arrivals = 0
@@ -179,7 +189,12 @@ func _trial(entry: Dictionary, mode: String, seed_value: int) -> Dictionary:
 	elapsed = 0.0
 	entry_damage = 0.0
 	var limit := 2.0 if mode == "idle" else CLEAR_SECONDS
+	var control_placed := false
 	while elapsed < limit and game.run.alive() and not s.done:
+		if unsafe_entry and s.started and not control_placed and not s.pack.is_empty():
+			var enemy = s.pack[0]
+			enemy.global_position = game.ctx.terrain.drop_point(at.x, at.z, enemy.half_height)
+			control_placed = true
 		if mode != "idle":
 			driver.ticks += 1
 			driver._boost_clock -= H
@@ -195,7 +210,7 @@ func _trial(entry: Dictionary, mode: String, seed_value: int) -> Dictionary:
 		elapsed += H
 	seen_telegraphs += driver._seen.size()
 	evasions += driver._evaded.size()
-	var result := {"id": entry.id, "mode": mode, "seed": seed_value, "entry_damage": entry_damage, "cleared": s.done, "started": s.started, "spawned": s.spawn_positions.size(), "wave": s.wave, "round": s.round, "entry_elapsed": s.entry_elapsed, "seconds": snappedf(elapsed, 0.01), "outcome": "cleared" if s.done else "capped" if game.run.alive() else "died", "hp": game.run.hp, "seen": driver._seen.size()}
+	var result := {"id": entry.id, "mode": mode, "seed": seed_value, "entry_damage": entry_damage, "cleared": s.done, "started": s.started, "spawned": s.spawn_positions.size(), "wave": s.wave, "round": s.round, "seconds": snappedf(elapsed, 0.01), "outcome": "cleared" if s.done else "capped" if game.run.alive() else "died", "hp": game.run.hp, "seen": driver._seen.size(), "control_placed": control_placed}
 	acts.set_physics_process(false)
 	acts.clear()
 	game.combat._start_attempt()

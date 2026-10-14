@@ -119,6 +119,11 @@ func _built_stock(entries: Array) -> void:
 			var health := 0.0
 			for enemy in s.pack:
 				health += enemy.max_hp
+				var local: Vector3 = s.to_local(enemy.global_position)
+				var start := Vector2(entry.entry_spot[0], entry.entry_spot[1])
+				var point := Vector2(local.x, local.z)
+				var closest := start * clampf(point.dot(start) / start.length_squared(), 0.0, 1.0)
+				t.check(entry.id + " enemy body clears four metre entry corridor", point.distance_to(closest) >= 2.0 + enemy.radius, "point=%s entry=%s radius=%s" % [point, start, enemy.radius])
 			bands[int(entry.difficulty)].append({"id": entry.id, "count": s.pack.size(), "health": health})
 			t.eq(entry.id + " built hazard footprints", s.hazards.size(), entry.hazards.size())
 			for i in s.hazards.size():
