@@ -34,10 +34,10 @@ const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
 const RULES := {
-	"trade_risk": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_risk"}, "cue": {"view": "cracked_cache"}},
-	"trade_safe": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_safe"}, "cue": {"view": "cracked_cache"}},
-	"curse": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "curse"}, "cue": {"view": "cracked_cache"}},
-	"sacrifice": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "sacrifice"}, "cue": {"view": "cracked_cache"}},
+	"trade_risk": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_risk", "where": "device"}, "cue": {"view": "cracked_cache"}},
+	"trade_safe": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_safe", "where": "device"}, "cue": {"view": "cracked_cache"}},
+	"curse": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "curse", "where": "device"}, "cue": {"view": "cracked_cache"}},
+	"sacrifice": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "sacrifice", "where": "device"}, "cue": {"view": "cracked_cache"}},
 	"movement_course": {
 		"starts": "ring", "ring": 8.0, "finishes": "course", "bundle": ["course", "chest"],
 		"cue": {"view": "surge_run", "word": "Course", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
