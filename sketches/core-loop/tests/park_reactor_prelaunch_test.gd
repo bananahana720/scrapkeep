@@ -34,5 +34,10 @@ func _run() -> void:
 	w._charge_time = w._charge_len - BotDriver.DROP_WAIT / 2.0
 	bot._fight(w, 1.0 / Engine.physics_ticks_per_second)
 	t.check("inbound starts before the sheet opens", not sheet.sheet_live() and bot.steer_seen.is_equal_approx(w.family_point_at()), str(bot.steer_seen))
+	w._charging = false
+	for family in ["swarm", "mind"]:
+		w.family = family
+		bot._fight(w, 1.0 / Engine.physics_ticks_per_second)
+		t.check(family + " never selects the dam sheet hand", not bot._goal.contains("spillway sheet"), bot._goal)
 	game.free()
 	quit(t.verdict())
