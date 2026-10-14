@@ -63,7 +63,8 @@ func _run() -> void:
 	bot.source.press.clear()
 	bot.source.hold.clear()
 	var waiting: Vector3=w.home+sheet.sheet_dir*(sheet.SHEET_RUN+BotDriver.RUNUP_EDGE)
-	game.player.reset_to(game.ctx.terrain.drop_point(waiting.x,waiting.z,game.player.tuning.RADIUS))
+	var pulse_wait: Vector3=w.home+sheet.sheet_dir.cross(Vector3.UP)*sheet.SHEET_WIDTH
+	game.player.reset_to(game.ctx.terrain.drop_point(pulse_wait.x,pulse_wait.z,game.player.tuning.RADIUS))
 	var next_charge:=false
 	for i in ceili(w.PULSE_CYCLE*2.0*Engine.physics_ticks_per_second):
 		next_charge=next_charge or w.state_name()=="charging"
@@ -85,7 +86,10 @@ func _run() -> void:
 		t.check(control+" fresh cycle drives to the visible core",bot.steer_seen.is_equal_approx(w.family_point_at()),str(bot.steer_seen))
 	bot.source.press.clear()
 	bot.source.hold.clear()
-	sheet.sheet_left=0.0
+	for i in ceili(sheet.SHEET_SECONDS*Engine.physics_ticks_per_second):
+		if not sheet.sheet_live(): break
+		await physics_frame
+	t.check("the real sheet expires before family controls",not sheet.sheet_live())
 	for family in ["swarm","mind"]:
 		w.family=family
 		bot._fight(w,1.0/Engine.physics_ticks_per_second)
