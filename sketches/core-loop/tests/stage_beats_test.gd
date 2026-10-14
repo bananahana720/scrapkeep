@@ -13,7 +13,7 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # The number of checks this file makes. A run that makes any other number fails.
-const EXPECTED := 84
+const EXPECTED := 92
 const TAIL := 20
 
 var _nodes: Array[Node] = []
@@ -34,6 +34,7 @@ func _initialize() -> void:
 	_determinism(t)
 	_audit(t)
 	_bot_column(t)
+	_report(t)
 	if t.checks != EXPECTED:
 		t.check("check count", false, "ran %d checks, expected %d" % [t.checks, EXPECTED])
 	for node in _nodes:
@@ -238,6 +239,46 @@ func _audit(t) -> void:
 
 func row_for_text() -> Dictionary:
 	return {"ticks": {"arrive": 90, "loot": 180, "find": 45, "hold": 0, "fight": 0, "leave": 9}}
+
+
+# balance_report's beats section on a fixture of two runs: one clean over two stages, one whose
+# stage 1 skipped the fight beat and whose stage 2 never reached its exit. The section prints the
+# acceptance lines against their thresholds (every stage exits, no beat skipped, 50 runs logged).
+func _report(t) -> void:
+	var dir := OS.get_user_data_dir().path_join("stage-beats-report-%d" % OS.get_process_id())
+	DirAccess.make_dir_recursive_absolute(dir)
+	var clean := [_beat_row(1, [90, 300, 600, 200, 100, 50], [], true), _beat_row(2, [90, 300, 600, 200, 100, 50], [], true)]
+	var gapped := [_beat_row(1, [90, 300, 600, 200, 0, 50], ["fight"], true), _beat_row(2, [90, 0, 600, 0, 0, 0], ["loot", "hold", "fight", "leave"], false)]
+	var file := FileAccess.open(dir.path_join("bots.ndjson"), FileAccess.WRITE)
+	var n := 0
+	for beats in [clean, gapped]:
+		n += 1
+		file.store_line(JSON.stringify({"run_id": "fixture-%d" % n, "policy": "skipper", "profile": "", "seed": n, "class": "runner_gunner",
+			"outcome": "stages_done", "stage_reached": 3, "ticks": 2000, "game_seconds": 22.2, "wall_seconds": 30.0, "stages": [],
+			"boss": null, "reaction_s": 0.2, "beats": beats}))
+	file.close()
+	var result: Dictionary = ChildRuns.run([{"script": "res://tools/balance_report.gd", "args": ["--in=" + dir, "--label=beats", "--out-dir=" + dir]}], 120.0)[0]
+	# The report loads tests/build_power_curve_test.gd for its heft band, which the repository does not hold at this
+	# base, so its log carries that error whatever the fixture; the exit code is the clean-run reading here.
+	t.check("balance_report exited 0 on the fixture", result["code"] == 0 and not result["timed_out"], "exit %s" % result["code"])
+	var path := dir.path_join("balance-beats.md")
+	var text := FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
+	t.check("the report holds a stage beats section", text.contains("## Stage beats"), "%d chars" % text.length())
+	t.check("exit line reads 3 of 4 and fails", text.contains("- Every logged stage reached its exit: FAIL (3 of 4)"), "")
+	t.check("skipped line reads 5 and fails", text.contains("- No beat skipped: FAIL (5 skipped beats)"), "")
+	t.check("runs line reads 2 of 50 and fails", text.contains("- Runs logged: FAIL (2 of 50)"), "")
+	t.check("stage 1 row averages two runs", text.contains("| 1 | 2 | 1.0 | 3.3 | 6.7 | 2.2 | 0.6 | 0.6 | 1 |"), "")
+	t.check("stage 2 row averages two runs", text.contains("| 2 | 2 | 1.0 | 1.7 | 6.7 | 1.1 | 0.6 | 0.3 | 4 |"), "")
+	t.check("the failing lines are also flags", text.contains("- Stage beats:"), "")
+
+
+func _beat_row(stage: int, ticks: Array, skipped: Array, exited: bool) -> Dictionary:
+	var by := {}
+	var total := 0
+	for i in StageBeats.BEATS.size():
+		by[StageBeats.BEATS[i]] = ticks[i]
+		total += int(ticks[i])
+	return {"stage": stage, "attempts": 1, "ticks": by, "first": {}, "total": total, "skipped": skipped, "exit": exited}
 
 
 # bot_run's beats column: two children of the same seed on the park table, 450 ticks each, log the
