@@ -10,6 +10,8 @@ const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
+const TradePockets := preload("res://src/world/trade_pockets.gd")
+const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
@@ -32,6 +34,10 @@ const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
 const RULES := {
+	"trade_risk": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_risk"}, "cue": {"view": "cracked_cache"}},
+	"trade_safe": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_safe"}, "cue": {"view": "cracked_cache"}},
+	"curse": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "curse"}, "cue": {"view": "cracked_cache"}},
+	"sacrifice": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "sacrifice"}, "cue": {"view": "cracked_cache"}},
 	"movement_course": {
 		"starts": "ring", "ring": 8.0, "finishes": "course", "bundle": ["course", "chest"],
 		"cue": {"view": "surge_run", "word": "Course", "telegraph": "event_announced", "clear": "event_ended", "pay": "reward_chosen"},
@@ -173,6 +179,8 @@ class Site extends Node3D:
 	var spawn_positions: Array = []
 	var phase_view: Node3D
 	var interior := {}
+	var trade := {}
+	var trade_devices: Array = []
 	var footprint := POCKET_FOG_SIZE
 
 	func _exit_tree() -> void:
@@ -220,12 +228,19 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 				built_spec.pack = spec.pack.duplicate()
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
 		sites.append(_build(id, spec["at"], built_spec))
+	if _graph != null:
+		var pool := TradePockets.candidates(_graph, map)
+		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
+		if not trade_spec.is_empty():
+			sites.append(_build(trade_spec.id, trade_spec.at, trade_spec))
 	_pending_stage = true
 
 
 func clear() -> void:
 	for site in sites:
 		if is_instance_valid(site):
+			for device in site.trade_devices:
+				ctx.root.get_node("Interact").unregister(device)
 			for hazard in site.hazards:
 				hazard.stop()
 			for enemy in site.pack:
@@ -257,6 +272,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.id = id
 	s.rule = RULES[id]
 	s.interior = spec.get("interior", {})
+	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
 	if id == "enemy_camp" or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
@@ -296,7 +312,44 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 			_build_cache(s)
 	if not s.interior.is_empty():
 		_build_interior(s)
+	if s.rule.finishes == "trade":
+		_build_trade(s)
 	return s
+
+
+func _build_trade(s: Site) -> void:
+	var words := []
+	for i in TradePockets.devices(s.trade).size():
+		var spec: Dictionary = TradePockets.devices(s.trade)[i].duplicate()
+		spec["id"] = "trade_%d_%s_%d" % [ctx.run.stage, s.trade.interior_id, i]
+		var device := StakeDevices.new()
+		s.add_child(device)
+		device.position = Vector3(-4.0 if i == 0 else 4.0, 0.0, 0.0)
+		device.setup(ctx, ctx.root.get_node("Interact"), spec)
+		ctx.root.get_node("Interact").register(device)
+		s.trade_devices.append(device)
+		words.append(device.words())
+	var door: Array = s.interior.entrances[0].at
+	var label := Label3D.new()
+	label.name = "TradePrices"
+	label.position = Vector3(door[0], 3.4, door[1] + 1.0)
+	label.text = "%s (%s)\n%s\nHold E at a device" % [s.interior.tell.word, s.trade.family, "\n".join(words)]
+	label.font_size = 36
+	label.outline_size = 8
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	s.add_child(label)
+	s.view.word.text = "%s: %s" % [s.interior.tell.word, " / ".join(words)]
+
+
+func _watch_trade(s: Site, ball: Vector3) -> void:
+	if not s.started and _planar(ball, s.global_position) <= s.footprint.z * 0.5 + 16.0:
+		s.started = true
+		TradePockets.see(ctx.run.trade_memory, s.trade)
+	if not s.done and s.trade_devices.any(func(device): return device.spent):
+		s.done = true
+		TradePockets.see(ctx.run.trade_memory, s.trade)
+		TradePockets.decide(ctx.run.trade_memory, s.trade, true)
 
 
 func _build_interior(s: Site) -> void:
@@ -397,6 +450,9 @@ func _physics_process(delta: float) -> void:
 		if not is_instance_valid(s):
 			continue
 		s.view.near(ball)
+		if s.rule.finishes == "trade":
+			_watch_trade(s, ball)
+			continue
 		if s.rule.has("bundle"):
 			step_pocket(s, delta, ball)
 			_watch_pickup(s, ball)

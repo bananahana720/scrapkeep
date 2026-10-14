@@ -53,6 +53,7 @@ var scrap := 0
 var mass := 0.0
 # Bonus cores from events and vaults this stage; each one overcharges the beacon.
 var bonus_cores := 0
+var trade_memory := preload("res://src/world/trade_pockets.gd").memory()
 var run_id := ""
 var parts: Array[String] = []
 # RL2: the relic held in each kit slot, slot name to relic id. One per slot (Relics.can_hold).
@@ -186,6 +187,7 @@ func begin(chosen_class: Resource) -> void:
 	_heft_class = 1
 	class_rewarded = 1
 	_stage_starts = {}
+	trade_memory = preload("res://src/world/trade_pockets.gd").memory()
 	# The suffix also seeds device luck; presentation must never choose it.
 	if run_seed_override != null:
 		run_id = "bot-%d" % int(run_seed_override)
@@ -657,6 +659,10 @@ func record_milestone(event_id: String) -> void:
 
 # Flow calls this as a stage begins (not on a retry): cores are stage-scoped.
 func enter_stage(index: int) -> void:
+	if index != stage:
+		for offer in trade_memory.seen:
+			if int(offer.stage) == stage and not trade_memory.decisions.has(str(stage)):
+				preload("res://src/world/trade_pockets.gd").decide(trade_memory, offer, false)
 	stage = index
 	bonus_cores = 0
 	event_core_grants = 0
@@ -669,6 +675,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 	stage_time = 0.0
 	_snapshot = {
 		"stage": stage,
+		"trade_memory": trade_memory.duplicate(true),
 		"max_hp": max_hp,
 		"hp": hp,
 		"scrap": scrap,
@@ -730,6 +737,7 @@ func snapshot_value(key: String):
 
 func restore() -> void:
 	escape_window_left = 0.0
+	trade_memory = (_snapshot.get("trade_memory", preload("res://src/world/trade_pockets.gd").memory()) as Dictionary).duplicate(true)
 	stage = _snapshot["stage"]
 	max_hp = _snapshot["max_hp"]
 	hp = _snapshot["hp"]
@@ -792,6 +800,7 @@ func summary() -> Dictionary:
 		"time": run_time,
 		"retries": retries,
 		"tallies": tallies(),
+		"trade_pockets": (trade_memory.seen as Array).duplicate(true),
 	}
 
 
@@ -1012,6 +1021,7 @@ func from_entrance_doc(doc) -> bool:
 	since_damage = 99.0
 	# The loaded entrance is the checkpoint a retry rewinds to.
 	_stage_starts = {}
+	trade_memory = preload("res://src/world/trade_pockets.gd").memory()
 	_snapshot = {}
 	snapshot(Vector3(p[0], p[1], p[2]), Vector3(v[0], v[1], v[2]), float(doc["camera_yaw"]))
 	return true
