@@ -375,6 +375,8 @@ func _build_interior(s: Site) -> void:
 	for entrance in s.interior.entrances:
 		for side in [-1.0, 1.0]:
 			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), Palette.solid(EventKinds.activity_color(s.view.id)))
+	# The interior builds after the site's own dressing pass, so it dresses its own blocks (2026-10-14).
+	load("res://src/presentation/spillway_scenery.gd").dress_props(root)
 
 
 func _activate_interior_collision(s: Site) -> void:
