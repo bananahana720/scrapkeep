@@ -204,15 +204,18 @@ func _run() -> void:
 	_fresh()
 	_cast()
 	var body: RigidBody3D = _player.body()
-	body.linear_velocity = Vector3.ZERO
+	body.set_velocity_now(Vector3.ZERO)
 	var anchor := _wall()
 	_tick()
 	var haul: Dictionary = _combat.get_node("RivetKit").haul
-	# Read the committed ride, which is handed to the physics body on its next tick.
-	var toward: float = haul["ride"].velocity.dot((anchor - body.global_position).normalized()) if not haul.is_empty() else 0.0
-	_t.check("13 a loaded world bite hauls toward the anchor at 24 m/s", _fired.size() == 1 and _fired[0][2] == "world" and toward >= 24.0 - 0.0001
-		and absf(haul["ride"].target.distance_to(anchor) - 2.5) < 0.0001,
+	var toward: float = _player.state.velocity.dot((anchor - body.global_position).normalized())
+	_t.check("13 a loaded world bite fires on the world", _fired.size() == 1 and _fired[0][2] == "world",
+		"fired %s" % [_fired])
+	_t.check("13 the world haul has a committed ride", not haul.is_empty())
+	_t.check("13 a loaded world bite hauls toward the anchor at 24 m/s", toward >= 24.0 - 0.0001,
 		"fired %s, speed toward anchor %.2f" % [_fired, toward])
+	_t.check("13 the world haul stops at the minimum rope distance", not haul.is_empty()
+		and absf(haul["ride"].target.distance_to(anchor) - 2.5) < 0.0001)
 
 	# 9. The flavour scales by the chain multiplier at the moment it fires.
 	_fresh()
