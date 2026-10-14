@@ -54,6 +54,7 @@ var mass := 0.0
 # Bonus cores from events and vaults this stage; each one overcharges the beacon.
 var bonus_cores := 0
 var pocket_draw_cache := {}
+var _pocket_draw_entrance_doc := {}
 var trade_memory := preload("res://src/world/trade_pockets.gd").memory()
 var run_id := ""
 var parts: Array[String] = []
@@ -189,6 +190,7 @@ func begin(chosen_class: Resource) -> void:
 	class_rewarded = 1
 	_stage_starts = {}
 	pocket_draw_cache = {}
+	_pocket_draw_entrance_doc = {}
 	trade_memory = preload("res://src/world/trade_pockets.gd").memory()
 	# The suffix also seeds device luck; presentation must never choose it.
 	if run_seed_override != null:
@@ -716,6 +718,11 @@ func set_snapshot_entry(entry_position: Vector3, entry_velocity: Vector3, camera
 			record["entry_position"] = entry_position
 			record["entry_velocity"] = entry_velocity
 			record["camera_yaw"] = camera_yaw
+			record["pocket_draw_cache"] = pocket_draw_cache.duplicate(true)
+	# Flow creates the entrance doc before stage assembly, then fills its entry pose here.
+	# Refresh that doc's shared cache dictionary before Flow writes it to disk.
+	_pocket_draw_entrance_doc.clear()
+	_pocket_draw_entrance_doc.merge(preload("res://src/world/pockets/pocket_draw.gd").to_doc(pocket_draw_cache))
 
 
 func has_stage_start(index: int) -> bool:
@@ -841,6 +848,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 	var spent := {}
 	for w in retries_spent:
 		spent[str(int(w))] = int(retries_spent[w])
+	_pocket_draw_entrance_doc = preload("res://src/world/pockets/pocket_draw.gd").to_doc(pocket_draw_cache)
 	var doc := {}
 	for key in extra:
 		doc[key] = extra[key]
@@ -879,7 +887,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"event_core_grants": event_core_grants,
 		"run_tallies": tallies(),
 		"seen_wardens": _seen_wardens.keys(),
-		"pocket_draw_cache": preload("res://src/world/pockets/pocket_draw.gd").to_doc(pocket_draw_cache),
+		"pocket_draw_cache": _pocket_draw_entrance_doc,
 		"trade_memory": preload("res://src/world/trade_pockets.gd").to_doc(_snapshot.get("trade_memory", trade_memory)),
 	}, true)
 	if run_tier == 0:

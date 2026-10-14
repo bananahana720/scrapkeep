@@ -157,7 +157,13 @@ func _runtime(_specs: Array) -> void:
 	var acts = game.world.activities
 	acts.set_physics_process(false)
 	var saved: Dictionary = game.flow.store.load()
-	var expected_doc: Dictionary = model.to_doc(game.run.pocket_draw_cache)
+	var expected_doc := {}
+	for key in game.run.pocket_draw_cache:
+		var placed := []
+		for spec in game.run.pocket_draw_cache[key].sites:
+			placed.append({"interior": spec.interior.id, "node": spec.node, "at": [spec.at.x, spec.at.y]})
+		expected_doc[key] = {"sites": placed}
+	expected_doc = JSON.parse_string(JSON.stringify(expected_doc))
 	t.eq("stage-entry disk save includes current draw cache", saved.get("pocket_draw_cache", {}), expected_doc)
 	var authored: int = game.world.terrain.map().activity_sites.size()
 	var specs: Array = game.run.pocket_draw_cache["2"].sites
