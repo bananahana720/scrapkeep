@@ -37,17 +37,27 @@ func _run() -> void:
 	acts._physics_process(0.0)
 	await physics_frame
 	t.eq("outside word reach still creates no physics bodies", _bodies(interior), 0)
+	ball.global_position = site.global_position + Vector3(20, 1, 0)
+	acts._physics_process(0.0)
+	await physics_frame
+	t.eq("reading the word outside the pocket creates no physics bodies", _bodies(interior), 0)
 	var block: Dictionary = entry.terrain[0]
 	var center: Vector3 = site.to_global(Vector3(block.at[0], block.size[1] * 0.5, block.at[1]))
 	var start := center - Vector3(float(block.size[0]) * 0.5 + 0.5, 0, 0)
 	var end := center + Vector3(float(block.size[0]) * 0.5 + 0.5, 0, 0)
 	t.check("unvisited block cannot intercept an enemy or bot", _ray(site, start, end).is_empty())
-	ball.global_position = site.global_position + Vector3(30, 1, 0)
+	ball.global_position = site.global_position + Vector3(16, 1, 0)
 	acts._physics_process(0.0)
 	await physics_frame
-	t.eq("at word reach both authored blocks become solid", _bodies(interior), 2)
+	t.eq("at the authored pocket boundary both blocks become solid", _bodies(interior), 2)
 	var hit := _ray(site, start, end)
 	t.check("entered terrain blocks the physical collision layer", not hit.is_empty() and interior.is_ancestor_of(hit.get("collider")), str(hit))
+	acts._spawn_pocket_pack(site, ["chaser"])
+	var enemy = site.pack[0]
+	for actor in [ball, enemy]:
+		var query := PhysicsRayQueryParameters3D.create(start, end, actor.collision_mask)
+		var actor_hit: Dictionary = site.get_world_3d().direct_space_state.intersect_ray(query)
+		t.check("entered block collides with " + actor.get_class(), not actor_hit.is_empty() and interior.is_ancestor_of(actor_hit.get("collider")))
 	ball.global_position = site.global_position + Vector3(50, 1, 0)
 	acts._physics_process(0.0)
 	acts._physics_process(0.0)
