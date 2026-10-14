@@ -40,8 +40,9 @@ func _child() -> void:
 	source.add_child(effect)
 	for i in 32:
 		var seq := Sequence.new()
+		root.add_child(seq)
 		seq._scene = Node3D.new()
-		root.add_child(seq._scene)
+		seq.add_child(seq._scene)
 		seq._build_crater()
 		for j in 64:
 			effect.mesh = BoxMesh.new()
@@ -49,8 +50,10 @@ func _child() -> void:
 			seq._scene.add_child(copy)
 			seq._snapshot(source, copy, true)
 			copy.free()
-		seq._release_crater_requests()
-		seq._scene.free()
+		while not seq._place_crater():
+			await process_frame
+		t.check("cold crater %d has draw meshes" % i,
+			not seq.crater.find_children("*", "MeshInstance3D", true, false).is_empty())
 		seq.free()
 	source.free()
 	quit(t.verdict())
