@@ -42,6 +42,9 @@ func _run() -> void:
 	acts = game.world.activities
 	acts.set_physics_process(false)
 	acts.clear()
+	var audio_deadline := Time.get_ticks_msec() + 30000
+	while not game.presentation.audio.sound_ready and Time.get_ticks_msec() < audio_deadline:
+		await process_frame
 	await _built_stock(entries)
 	var probe: Dictionary = entries.filter(func(entry): return entry.id == "runner_yard")[0].duplicate(true)
 	probe.tell = {"word": "Selected record", "record": "cracked_cache"}
