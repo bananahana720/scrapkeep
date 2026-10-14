@@ -23,6 +23,8 @@ const SLOT_KEY_H := 24.0
 const NOTCH := 9.0
 const WIDTH := 340.0
 const HEIGHT := 390.0
+# Under a take_or_skip card: the player may decline, and the offer does not come back.
+const SKIP_PROMPT := "Take it or skip. No reroll."
 
 var node := {}
 var key := ""
@@ -31,11 +33,12 @@ var color := Palette.SAND
 var _name: Label
 var _effect: Label
 var _set_piece: Label
+var _skip_prompt: Label
 var _depth_table: Button
 var _lift := 0.0
 
 
-func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES, pilot := "") -> void:
+func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES, pilot := "", offer_kind := UpgradeTree.OFFER_PAIR) -> void:
 	node = node_row
 	key = key_id
 	color = class_color
@@ -68,6 +71,10 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	_set_piece = _text(piece, 16, Color(Palette.SAND, 0.85))
 	_set_piece.visible = piece != ""
 	box.add_child(_set_piece)
+	# The skip prompt of a take_or_skip offer (SG8): one short line, hidden on a plain pair.
+	_skip_prompt = _text(SKIP_PROMPT if offer_kind == UpgradeTree.OFFER_TAKE_OR_SKIP else "", 16, Palette.AMBER)
+	_skip_prompt.visible = offer_kind == UpgradeTree.OFFER_TAKE_OR_SKIP
+	box.add_child(_skip_prompt)
 	_depth_table = BuildReadout.new()
 	_depth_table.text = "Build · World/depth: " + " · ".join(depth_rows().map(func(row): return "%d/%d" % [row["world"], row["depth"]]))
 	_depth_table.add_theme_font_override("font", UiFonts.bold())
@@ -100,6 +107,15 @@ func set_piece_text() -> String:
 
 func set_piece_visible() -> bool:
 	return _set_piece.visible
+
+
+# The skip prompt as drawn: "" on a plain pair (label hidden).
+func skip_prompt_text() -> String:
+	return _skip_prompt.text if _skip_prompt.visible else ""
+
+
+func skip_prompt_visible() -> bool:
+	return _skip_prompt.visible
 
 
 static func depth_rows() -> Array:

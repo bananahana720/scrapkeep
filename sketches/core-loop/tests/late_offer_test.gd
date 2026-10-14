@@ -76,11 +76,10 @@ func _initialize() -> void:
 	t.check("4 no reroll door on the tree", not probe.has_method("reroll") and not probe.has_method("reroll_offer"), "")
 	var idle = _fresh("tarn", true, null)
 	t.check("5 nothing opens without a checkpoint (no elapsed-time offer)",
-		not idle.pending() and idle.offered("tarn", 1).is_empty() and not idle.skip(), "pending %s" % idle.pending())
+		not idle.pending() and not idle.skip() and idle.picks.is_empty(), "pending %s" % idle.pending())
 	# The card's skip prompt.
 	var take_node = UpgradeTree.nodes("tarn")[14]
-	var card_script: Script = TreeCard
-	var late_card = card_script.callv("new", [take_node, "key_1", Color.ORANGE, 4, false, false, TreeCard.WorldOneCards.SET_PIECE_LINES, "tarn", "take_or_skip"])
+	var late_card = TreeCard.new(take_node, "key_1", Color.ORANGE, 4, false, false, TreeCard.WorldOneCards.SET_PIECE_LINES, "tarn", "take_or_skip")
 	root.add_child(late_card)
 	var pair_card = TreeCard.new(take_node, "key_1", Color.ORANGE, 4)
 	root.add_child(pair_card)

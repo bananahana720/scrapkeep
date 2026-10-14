@@ -48,6 +48,11 @@ const KEYS := ["weapon", "movement", "special", "smash", "line", "ultimate"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.
 const TAGS := ["air", "burst", "close", "ranged", "mobility", "mounted", "sustain", "cc_immune", "traps", "stealth"]
+# The offer kinds (W13-INTEGRATION-3 SG8). A pair is the two-card pick. A take_or_skip offer is the
+# depth-4 pair with a free skip: no reroll, no second offer after a skip, and only a checkpoint
+# opens it, never elapsed time (BIBLE.md growth paragraph, TADR-010).
+const OFFER_PAIR := "pair"
+const OFFER_TAKE_OR_SKIP := "take_or_skip"
 const NAME_WORDS := 3
 const EFFECT_WORDS := 8
 
@@ -121,12 +126,16 @@ var allowed := 0
 var max_depth := DEPTHS
 # The world-one node tables in force; world.gd sets it beside max_depth only in world one.
 var world_one := false
+# The late forced-or-skip offer in force (SG8): off keeps every depth a plain pair. A run-level
+# switch sets it; the full tree only, since world one never reaches depth 4.
+var late_offer := false
 var events
 
 var _knobs := {}
 var _procs: Array = []
 var _patterns := {}
 var _tags: Array[String] = []
+var _late_skipped := false
 
 # A pick landed; the ball fits its slot ops (swap, charges, cooldown) onto the kit.
 signal picked(node: Dictionary)
@@ -375,12 +384,13 @@ func reset(for_class: String) -> void:
 	class_id = for_class
 	picks.clear()
 	allowed = 0
+	_late_skipped = false
 	_resolve()
 
 
 # A checkpoint (class select, or a workshop visit) opens the next pick and offers it.
 func open_checkpoint() -> void:
-	if allowed >= max_depth or class_id == "":
+	if allowed >= max_depth or class_id == "" or _late_skipped:
 		return
 	allowed += 1
 	if pending():
@@ -390,13 +400,37 @@ func open_checkpoint() -> void:
 
 func pending() -> bool:
 	# A pilot with no tree has nothing to offer, so no pick is ever owed.
-	return picks.size() < allowed and picks.size() < max_depth and not nodes(class_id, world_one).is_empty()
+	return picks.size() < allowed and picks.size() < max_depth and not _late_skipped \
+		and not nodes(class_id, world_one).is_empty()
+
+
+# How the offer at this depth is made: take_or_skip only at depth 4, only with late_offer on and
+# never in the world-one profile; every other depth is a plain pair.
+func offer_kind(depth: int) -> String:
+	if late_offer and not world_one and depth == DEPTHS:
+		return OFFER_TAKE_OR_SKIP
+	return OFFER_PAIR
+
+
+# The player declines the open take_or_skip offer. Free: no pick, no charge, no event. Final: the
+# run is never offered that depth again. A pair offer, or no open offer, refuses.
+func skip() -> bool:
+	if not pending() or offer_kind(picks.size() + 1) != OFFER_TAKE_OR_SKIP:
+		return false
+	_late_skipped = true
+	return true
+
+
+func late_skipped() -> bool:
+	return _late_skipped
 
 
 # The two choices at this depth for the path this run has taken: the children of the
 # pick one level up. A depth already picked answers with the pair it offered.
 func offered(for_class: String, depth: int) -> Array:
 	if for_class != class_id or depth < 1 or depth > max_depth or depth > picks.size() + 1:
+		return []
+	if _late_skipped and depth == picks.size() + 1:
 		return []
 	var list := nodes(for_class, world_one)
 	if list.is_empty():
