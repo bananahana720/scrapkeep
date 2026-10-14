@@ -1,8 +1,37 @@
 """Check complete isolated ideal-pilot repeats without executing gameplay formulas."""
 
 import argparse
+import ast
 import json
+import math
+import re
 from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def constant(path, name):
+    text = (ROOT / path).read_text()
+    return ast.literal_eval(re.search(rf"^const {name} := (.+)$", text, re.M)[1])
+
+
+def owners():
+    posture = "src/combat/boss_posture.gd"
+    park = (ROOT / "src/core/park_defs.gd").read_text()
+    pressure = float(re.search(r'"posture_curve": ([0-9.]+)', park)[1])
+    return {
+        "pulse_cycle": constant("src/combat/warden.gd", "PULSE_CYCLE"),
+        "sheet_seconds": constant("src/combat/warden_reactor.gd", "SHEET_SECONDS"),
+        "sheet_ram_breaks": constant("src/combat/warden_reactor.gd", "MOUNTED_POSTURE")["sheet_ram_breaks"],
+        "full": constant(posture, "FULL"),
+        "mult_min": constant(posture, "MULT_MIN"),
+        "mult_max": constant(posture, "MULT_MAX"),
+        "curve": constant("src/core/park_defs.gd", "POSTURE_CURVE") * pressure,
+        "hefts": constant("src/core/run_state.gd", "HEFT_CLASS_AT"),
+        "core_radius": constant("src/combat/warden.gd", "FAMILY_POINT_RADIUS"),
+        "ball_radius": constant("src/movement/tuning.gd", "RADIUS"),
+    }
 
 
 def read_case(folder, size, seed):
@@ -15,27 +44,66 @@ def read_case(folder, size, seed):
     assert trace and all(row["engaged"] for row in trace), f"{case}: left the fight"
     rams = [row for row in fight["contacts"] if row["sheet_ram"]]
     assert rams and rams[-1]["shatter"], f"{case}: no sheet-ram break"
+    expected = owners()
+    assert fight["initial_heft"] == expected["hefts"][2 if size == "grown" else 0]
+    for key in ("pulse_cycle", "sheet_seconds", "sheet_ram_breaks", "curve", "mult_min", "mult_max", "core_radius", "ball_radius"):
+        assert fight["constants"][key] == expected[key], f"{case}: wrong {key}"
+    for ram in rams:
+        assert ram["live"] and ram["entered"] == ram["cycle"] and ram["solver_contact"]
+        assert math.dist(ram["position"], ram["core"]) <= expected["core_radius"] + expected["ball_radius"] + 0.01
+        punch, plating, heft = ram["punch"], ram["plating"], ram["heft"]
+        ratio = punch / plating
+        grown_ratio = punch / heft * expected["hefts"][2] / plating
+        clamp = lambda value: min(expected["mult_max"], max(expected["mult_min"], value))
+        gain = expected["full"] / expected["sheet_ram_breaks"] * (clamp(ratio) / clamp(grown_ratio)) ** expected["curve"]
+        assert abs(ram["requested_gain"] - gain) < 0.0001, f"{case}: owner-derived gain differs"
     cycles = sorted({row["cycle"] for row in trace if row["live"]})
     assert all(any(ram["cycle"] == cycle for ram in rams) for cycle in cycles), f"{case}: missed live cycle"
     return fight, trace
+
+
+def summarize(fight, trace):
+    cycles = {}
+    for index, row in enumerate(trace):
+        stop = trace[index + 1]["t"] if index + 1 < len(trace) else fight["seconds"]
+        seconds = stop - row["t"]
+        cycle = cycles.setdefault(row["cycle"], {"cycle": row["cycle"], "waiting_s": 0.0,
+            "riding_s": 0.0, "ram_approach_s": 0.0, "return_live_s": 0.0, "rams": []})
+        phase = "waiting_s" if not row["live"] else (
+            "return_live_s" if row["rammed"] else "riding_s" if row["riding"] else "ram_approach_s")
+        cycle[phase] += seconds
+        if row["live"]:
+            cycle.setdefault("live_at", row["t"])
+    for ram in fight["contacts"]:
+        if ram["sheet_ram"]:
+            cycles[ram["cycle"]]["rams"].append(ram["t"] - fight["started"])
+    return {"size": fight["size"], "seed": fight["seed"], "seconds": fight["seconds"],
+        "rams": sum(len(row["rams"]) for row in cycles.values()), "cycles": list(cycles.values()),
+        "split": {key: sum(row[key] for row in cycles.values()) for key in
+                  ("waiting_s", "riding_s", "ram_approach_s", "return_live_s")}}
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("first", type=Path)
     parser.add_argument("second", type=Path)
+    parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     failures = []
+    rows = []
     for size in ("grown", "small"):
         for seed in range(1, 5):
             try:
                 first = read_case(args.first, size, seed)
                 second = read_case(args.second, size, seed)
                 assert first == second, f"{size}-{seed}: duplicate differs"
+                rows.append(summarize(*first))
             except (OSError, ValueError, KeyError, AssertionError) as error:
                 failures.append(str(error))
     for failure in failures:
         print(failure)
+    if args.report:
+        args.report.write_text(json.dumps({"failures": failures, "owners": owners(), "rows": rows}, indent=2) + "\n")
     print(f"park_reactor_ideal_check: {'FAIL' if failures else 'PASS'} ({8-len(failures)}/8 complete identical cases)")
     return int(bool(failures))
 
