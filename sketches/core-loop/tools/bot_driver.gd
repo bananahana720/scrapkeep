@@ -1621,7 +1621,8 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
-		if chain_hand_enabled and policy == "completionist" and target.is_in_group("enemy") and game.player.verb_ready("jump"):
+		if chain_hand_enabled and policy == "completionist" and not _in_boss() \
+				and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump"):
 			var second := _chain_partner(target)
 			if second != null:
 				_chain_phase = "takeoff"
@@ -2686,7 +2687,7 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 			hold["jump_held"] = true
 	# Jump, boost and movement abilities cancel a committed body-line haul. Outside a boss
 	# the explorer's two-hook hand keeps them: it jumps and boosts off its lines on purpose.
-	var chain_hand: bool = policy == "completionist" and chain_hand_enabled and not _in_boss()
+	var chain_hand: bool = policy == "completionist" and chain_hand_enabled and _chain_phase != "" and not _in_boss()
 	if not chain_hand and (_harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH)):
 		source.press.erase("jump_pressed")
 		source.press.erase("shift_pressed")
