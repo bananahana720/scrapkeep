@@ -25,12 +25,16 @@ var glyph: Node3D
 var ring: Node3D
 var word: Label3D
 var shown := true
+var cue_record := {}
 
 
-func build(activity_id: String, ring_radius: float) -> void:
+func build(activity_id: String, ring_radius: float, tell := {}) -> void:
 	id = activity_id
 	name = "View_" + id
-	var row := EventKinds.activity_row(id)
+	var row := EventKinds.activity_row(id).duplicate(true)
+	if not tell.is_empty():
+		row["word"] = tell.word
+	cue_record = row
 	var color := EventKinds.activity_color(id)
 	column = MeshInstance3D.new()
 	column.name = "Column"

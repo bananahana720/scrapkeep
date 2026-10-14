@@ -10,6 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
+const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
 # stand lit from the stage's first frame, finish on an action the player already knows and pay
@@ -171,6 +172,9 @@ class Site extends Node3D:
 	var wave := 0
 	var spawn_positions: Array = []
 	var phase_view: Node3D
+	var interior := {}
+	var footprint := POCKET_FOG_SIZE
+	var entry_elapsed := 0.0
 
 	func _exit_tree() -> void:
 		for enemy in pack:
@@ -208,7 +212,12 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 		# Calm mode spawns nothing, so the ambush and the bounty could never be paid there.
 		if ctx.calm and String(RULES[id]["finishes"]) != "wall_broken":
 			continue
-		sites.append(_build(id, spec["at"], spec))
+		var map_id := _graph_map if _graph_map != "" else String(ctx.stages.of(ctx.terrain.stage).get("map", ""))
+		var entry := PocketLibrary.for_site(map_id, String(spec.get("row", id)))
+		var built_spec: Dictionary = spec
+		if not entry.is_empty() and entry.activity == id:
+			built_spec = spec.merged(PocketLibrary.site_spec(entry), true)
+		sites.append(_build(id, spec["at"], built_spec))
 	_pending_stage = true
 
 
@@ -245,9 +254,20 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	var s := Site.new()
 	s.id = id
 	s.rule = RULES[id]
+	s.interior = spec.get("interior", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id == "enemy_camp" or not spec_pay.is_empty() or s.rule.has("bundle"):
+	if id == "enemy_camp" or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
+	if not s.interior.is_empty():
+		s.footprint = spec.footprint
+		s.difficulty = clampf(float(spec.get("difficulty", 1.0)), 1.0, float(s.rule.get("difficulty_cap", 3.0)))
+		s.rule["ring"] = spec.ring
+		if not spec.pack.is_empty():
+			s.rule["pack"] = spec.pack.duplicate()
+			if id == "ambush":
+				s.rule["waves"] = [spec.pack.slice(0, 1), spec.pack.slice(0, ceili(spec.pack.size() * 0.5)), spec.pack.duplicate()]
+		if s.rule.has("cue"):
+			s.rule.cue.word = spec.tell.word
 	if id == "enemy_camp":
 		s.rule["pack"] = spec.get("pack", s.rule["pack"])
 	# PARK.md 2.12: the park row authors the pay ladder (rarities, or a named part that wins when the
@@ -260,17 +280,32 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
 	s.view = ActivityView.new()
 	s.add_child(s.view)
-	s.view.build(String(s.rule.cue.view) if s.rule.has("cue") else id, float(s.rule["ring"]))
+	s.view.build(String(s.rule.cue.view) if s.rule.has("cue") else id, float(s.rule["ring"]), spec.get("tell", {}))
 	if s.rule.has("bundle"):
 		_build_pocket(s, spec)
-	elif id == "enemy_camp" and spec.has("site"):
+	elif id == "enemy_camp" and (spec.has("site") or not s.interior.is_empty()):
 		_build_hazard(s)
 	match id:
 		"ambush_altar":
 			_build_altar(s)
 		"cracked_cache":
 			_build_cache(s)
+	if not s.interior.is_empty():
+		_build_interior(s)
 	return s
+
+
+func _build_interior(s: Site) -> void:
+	var root := Node3D.new()
+	root.name = "Interior_" + String(s.interior.id)
+	s.add_child(root)
+	for block in s.interior.terrain:
+		var size := Vector3(block.size[0], block.size[1], block.size[2])
+		var at := Vector3(block.at[0], size.y * 0.5, block.at[1])
+		_mesh_box(root, size, at, Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL), true)
+	for entrance in s.interior.entrances:
+		for side in [-1.0, 1.0]:
+			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), Palette.solid(EventKinds.activity_color(s.view.id)))
 
 
 func _build_altar(s: Site) -> void:
@@ -365,7 +400,7 @@ func _physics_process(delta: float) -> void:
 		if not s.done:
 			match String(s.rule["finishes"]):
 				"pack_dead":
-					_watch_ambush(s, ball)
+					_watch_ambush(s, ball, delta)
 				"wall_broken":
 					_watch_wall(s, ball)
 			_advance_hazards(s, delta, ball)
@@ -431,6 +466,8 @@ func step_pocket(s: Site, delta: float, ball: Vector3) -> void:
 	if not s.started:
 		if _planar(ball, s.global_position) > float(s.rule.ring) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
 			return
+		if not _entry_ready(s, delta):
+			return
 		if s.id in ["arena", "elite_arena", "round_arena", "ambush"] and (ctx.calm or ctx.spawner == null):
 			return
 		if s.id == "elite_arena" and _elite_arrivals >= 3:
@@ -443,7 +480,7 @@ func step_pocket(s: Site, delta: float, ball: Vector3) -> void:
 				if s.pack.is_empty():
 					s.started = false
 					return
-				s.fog.begin(1)
+				_begin_hazards(s, 1)
 				if s.id == "elite_arena":
 					_elite_arrivals += 1
 					s.brute = s.pack.back()
@@ -451,7 +488,7 @@ func step_pocket(s: Site, delta: float, ball: Vector3) -> void:
 			"round_arena":
 				_begin_round(s)
 			"ambush":
-				s.fog.begin(1)
+				_begin_hazards(s, 1)
 				_next_wave(s)
 	_advance_hazards(s, delta, ball)
 	match String(s.rule.finishes):
@@ -490,6 +527,10 @@ func step_pocket(s: Site, delta: float, ball: Vector3) -> void:
 					var kinds := []
 					for i in maxi(s.round_elements.size(), floori(s.round_credits / float(s.rule.enemy_credit))):
 						kinds.append(s.round_elements[i % s.round_elements.size()])
+					if not s.interior.is_empty():
+						kinds.clear()
+						for i in maxi(s.rule.pack.size(), floori(s.round_credits / float(s.rule.enemy_credit))):
+							kinds.append(s.rule.pack[i % s.rule.pack.size()])
 					_spawn_pocket_pack(s, kinds)
 			elif _alive(s.pack) == 0:
 				_pay_round(s)
@@ -504,10 +545,32 @@ func _touches(ball: Vector3, at: Vector3) -> bool:
 
 
 func _build_hazard(s: Site) -> void:
+	if not s.interior.is_empty():
+		for box in s.interior.hazards:
+			var hazard := PocketFog.new()
+			s.add_child(hazard)
+			var centre := s.global_position + Vector3(box.at[0], 0, box.at[1])
+			hazard.setup(centre, Vector3(box.size[0], box.size[1], box.size[2]), POCKET_SAFE_M, POCKET_DAMAGE_PER_S, ctx.rng.seed)
+			s.hazards.append(hazard)
+		if not s.hazards.is_empty():
+			s.fog = s.hazards[0]
+		return
 	s.fog = PocketFog.new()
 	s.add_child(s.fog)
-	s.fog.setup(s.global_position, POCKET_FOG_SIZE, POCKET_SAFE_M, POCKET_DAMAGE_PER_S, ctx.rng.seed)
+	s.fog.setup(s.global_position, s.footprint, POCKET_SAFE_M, POCKET_DAMAGE_PER_S, ctx.rng.seed)
 	s.hazards.append(s.fog)
+
+
+func _entry_ready(s: Site, delta: float) -> bool:
+	if s.interior.is_empty():
+		return true
+	s.entry_elapsed += delta
+	return s.entry_elapsed >= 2.2
+
+
+func _begin_hazards(s: Site, round_number: int) -> void:
+	for hazard in s.hazards:
+		hazard.begin(round_number)
 
 
 func _advance_hazards(s: Site, delta: float, ball: Vector3) -> void:
@@ -586,7 +649,7 @@ func pocket_positions(s: Site, count: int) -> Array:
 	for i in count:
 		var angle := PACK_TURN + TAU * float(i) / count
 		var point := s.global_position + Vector3(cos(angle), 0, sin(angle)) * float(s.rule.ring)
-		if s.id == "ambush":
+		if s.id == "ambush" and s.interior.is_empty():
 			if s.graph == null:
 				return []
 			var candidates: PackedInt32Array = s.graph.disc_nodes(Vector2(point.x, point.z), float(s.rule.ring))
@@ -613,12 +676,13 @@ func _begin_round(s: Site) -> void:
 	s.round_elements.append(s.rule.elements[s.round - 1])
 	s.round_credits = (float(s.rule.base) + float(s.rule.step) * (s.round - 1)) * s.difficulty
 	s.awaiting_round = true
-	s.fog.begin(s.round)
+	_begin_hazards(s, s.round)
 	_show_reward(s)
 
 
 func _pay_round(s: Site) -> void:
-	s.fog.stop()
+	for hazard in s.hazards:
+		hazard.stop()
 	s.heal_paid = false
 	_heal(s)
 	var picks: Array = s.reward_parts.duplicate()
@@ -698,11 +762,13 @@ static func draw_marks(graph, seed_value: int, pool: Array = []) -> Array:
 
 # ---- The ambush ----
 
-func _watch_ambush(s: Site, ball: Vector3) -> void:
+func _watch_ambush(s: Site, ball: Vector3, delta := 1.0 / 90.0) -> void:
 	if not s.started:
 		if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
 			return
 		if _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
+			return
+		if not _entry_ready(s, delta):
 			return
 		_spawn_pack(s)
 		return
@@ -711,6 +777,12 @@ func _watch_ambush(s: Site, ball: Vector3) -> void:
 
 
 func _spawn_pack(s: Site) -> void:
+	if not s.interior.is_empty():
+		_spawn_pocket_pack(s, s.rule.pack)
+		s.started = not s.pack.is_empty()
+		if s.started:
+			_begin_hazards(s, 1)
+		return
 	var kinds: Array = s.rule["pack"]
 	s.pack.clear()
 	# The ring's first spot lies 30 degrees past the point opposite the ball's entry, so none of the
