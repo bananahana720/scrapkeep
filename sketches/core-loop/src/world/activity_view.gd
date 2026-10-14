@@ -2,7 +2,6 @@ extends Node3D
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
-const PresentationRows := preload("res://src/presentation/rows.gd")
 
 # What a standing activity looks like (LEGIBILITY section 7 and 9): an amber light column from
 # the site's first frame, the row's glyph at its top, a dashed ground ring and, within WORD_REACH,
@@ -26,20 +25,13 @@ var glyph: Node3D
 var ring: Node3D
 var word: Label3D
 var shown := true
-var cue_record := {}
-var _tell_audio
-var _tell_heard := false
 
 
-func build(activity_id: String, ring_radius: float, tell := {}, tell_audio = null) -> void:
+func build(activity_id: String, ring_radius: float) -> void:
 	id = activity_id
 	name = "View_" + id
-	var row := EventKinds.activity_row(String(tell.get("record", id))).duplicate(true)
-	if not tell.is_empty():
-		row["word"] = tell.word
-	cue_record = row
-	_tell_audio = tell_audio
-	var color := EventKinds.role_color(String(row.color))
+	var row := EventKinds.activity_row(id)
+	var color := EventKinds.activity_color(id)
 	column = MeshInstance3D.new()
 	column.name = "Column"
 	var cm := BoxMesh.new()
@@ -73,8 +65,6 @@ func near(ball: Vector3) -> void:
 	if word == null or not shown:
 		return
 	word.visible = Vector2(ball.x - global_position.x, ball.z - global_position.z).length() <= WORD_REACH
-	if word.visible and _tell_audio != null and not _tell_heard:
-		_tell_heard = _tell_audio.play("interaction_found", 0.0, 1.0, "SFX", PresentationRows.heard(cue_record, _tell_audio.cue_context()))
 
 
 func finish() -> void:
