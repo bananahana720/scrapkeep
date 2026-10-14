@@ -1,5 +1,11 @@
 extends RefCounted
 
+
+# A clock regression can elapse wall time without advancing the caller's scene tree.
+static func elapse_wall(msec: int) -> void:
+	OS.delay_msec(msec)
+
+
 # Runs headless child scripts side by side, each at a fixed 90 fps (the physics rate, so
 # the same ticks as real time, but not held to the clock) and logging to its own file.
 # Returns one {code, log, timed_out} per job, in order. A job is {script, args}.
