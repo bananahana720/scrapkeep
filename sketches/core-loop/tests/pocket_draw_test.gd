@@ -40,6 +40,10 @@ func _run() -> void:
 		if not t.check(map.park.map + " graph loads", graph != null):
 			continue
 		var prepared: Dictionary = model.prepare(graph, map)
+		var anchor_nodes := {}
+		for anchor in prepared.anchors:
+			anchor_nodes[anchor.node] = true
+		t.eq("one chance anchor per graph site", prepared.anchors.size(), anchor_nodes.size())
 		var from_line := _from_line(graph)
 		var trade_pool := Trade.candidates(graph, map)
 		var authored: Array = map.activity_sites.duplicate(true)
