@@ -19,6 +19,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const Breach := preload("res://src/world/breach.gd")
 const EventFamilies := preload("res://src/world/events/families.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -230,13 +231,13 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	# entry draws a fresh plan from the run's stream.
 	if not retry or _stage_seed == 0:
 		_stage_seed = ctx.rng.randi()
-	var def: Dictionary = ctx.flow.stage_def()
+	var def: Dictionary = RunTier.stage_row(ctx.flow.stage_def(), ctx.run.selected_run_tier())
 	var map = terrain.map()
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
 	event_families = EventFamilies.build(self, events)
 	director = Director.new(_stage_seed ^ 0x5eed)
 	_author_director(def)
-	director.use_row(def, ctx.tuning.option(Director.Tuning.BREATH_KEY) if ctx.tuning != null else "")
+	director.use_row(def, ctx.tuning.option(Director.Tuning.BREATH_KEY) if ctx.tuning != null else "", Callable(ctx.run, "selected_run_tier"))
 	director.threat = def["threat"]
 	director.play_rect = map.play_rect
 	flood.cycle = events.flood
@@ -392,7 +393,7 @@ func _publish(facts: Array) -> void:
 			"milestone":
 				ctx.run.record_milestone(fact["id"])
 				var at: Vector2 = fact["at"]
-				ctx.run.add_core("event", terrain.drop_point(at.x, at.y, 1.0))
+				ctx.run.add_event_core(terrain.drop_point(at.x, at.y, 1.0))
 			"scrap":
 				ctx.run.add_scrap(fact["amount"], fact["at"])
 				ctx.run.add_cogs(int(fact["amount"]))

@@ -45,6 +45,7 @@ enum { CHASER, LOBBER }
 const Roster := preload("res://src/combat/roster.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Cards := preload("res://src/world/director_cards.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
@@ -113,6 +114,7 @@ const BREATH := {
 
 var stage_time := 0.0
 var mode := "interval"
+var _run_tier_reader := Callable()
 var credits := 0.0
 var credits_accrued := 0.0
 var credits_spent := 0.0
@@ -170,6 +172,14 @@ func _init(seed_value := 20260922) -> void:
 	_rng.seed = seed_value
 
 
+func set_run_tier_reader(reader: Callable) -> void:
+	_run_tier_reader = reader
+
+
+func run_tier() -> int:
+	return int(_run_tier_reader.call()) if _run_tier_reader.is_valid() else 0
+
+
 func tier() -> int:
 	return mini(int(stage_time / TIER_SECONDS), MAX_TIME_TIERS)
 
@@ -185,11 +195,15 @@ func hp_scale() -> float:
 
 func cap() -> int:
 	var base := int(round((6 + effective_tier() * 2) * threat * scale("pack_scale")))
+	if run_tier() != 0:
+		base = int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * RunTier.row(run_tier()).cap_weight))
 	return mini(HARD_CAP, base + HEFT_CAP_STEP * maxi(0, heft_class - 1))
 
 
 func interval() -> float:
-	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale"))
+	if run_tier() == 0:
+		return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale"))
+	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale") * RunTier.row(run_tier()).interval_weight)
 
 
 func lobber_share() -> float:
@@ -425,7 +439,10 @@ func _draw_authored() -> Dictionary:
 # The world hands the director the stage's table row on stage entry: its counter unlock
 # level and its ancient enemy come from the row, so a stage past the third reads its own. The
 # row's pressure and the Breath option scale the pacing (scale()).
-func use_row(row: Dictionary, breath_option := "") -> void:
+func use_row(row: Dictionary, breath_option := "", tier_reader := Callable()) -> void:
+	if tier_reader.is_valid():
+		set_run_tier_reader(tier_reader)
+	row = RunTier.stage_row(row, run_tier())
 	_row = {}
 	if row.has("unlock_base") and row.has("ancient"):
 		_row = {"unlock_base": int(row["unlock_base"]), "ancient": String(row["ancient"])}
