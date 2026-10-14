@@ -131,11 +131,13 @@ func _failure(model, prepared: Dictionary, map, graph) -> void:
 	t.eq("zero-credit-lost: failed placements refund", int(drawn.metrics.remaining_credits) + spent, 150)
 	t.check("failed anchor tries next anchor", not drawn.sites.is_empty())
 
-func _runtime(specs: Array) -> void:
+func _runtime(_specs: Array) -> void:
 	var Game = load("res://src/game.gd")
+	var model = load(MODEL)
 	var game = Game.new()
 	game.test_mode = true
 	game.table = "park"
+	game.run_store_path = "user://pocket-draw-%d.json" % Time.get_ticks_usec()
 	root.add_child(game)
 	while game.flow == null:
 		await physics_frame
@@ -146,31 +148,63 @@ func _runtime(specs: Array) -> void:
 	game.flow.set_physics_process(false)
 	game.player.set_physics_process(false)
 	game.player.set_frozen(true)
+	game.camera.set_physics_process(false)
+	game.presentation.process_mode = Node.PROCESS_MODE_DISABLED
+	game.ctx.rng.seed = 78000
+	game.run.run_seed = 0
+	game.flow.enter_stage(2, Vector3.ZERO, false)
+	await physics_frame
 	var acts = game.world.activities
 	acts.set_physics_process(false)
-	acts.clear()
-	await physics_frame
-	if not t.check("runtime has actual drawn sites", not specs.is_empty()):
+	var saved: Dictionary = game.flow.store.load()
+	var expected_doc: Dictionary = model.to_doc(game.run.pocket_draw_cache)
+	t.eq("stage-entry disk save includes current draw cache", saved.get("pocket_draw_cache", {}), expected_doc)
+	var authored: int = game.world.terrain.map().activity_sites.size()
+	var specs: Array = game.run.pocket_draw_cache["2"].sites
+	var actual: Array = acts.sites.filter(func(site): return not site.interior.is_empty() and site.interior.id == specs[0].interior.id) if not specs.is_empty() else []
+	if not t.check("production stage entry appends actual drawn sites", actual.size() == specs.size() and not actual.is_empty()):
 		game.free()
 		return
-	var spec: Dictionary = specs[0]
-	var s = acts._build(spec.id, spec.at, spec)
-	acts.sites.append(s)
-	var interior: Node = s.get_node("Interior_" + String(spec.interior.id))
+	t.check("drawn sites appended after authored and trade", acts.sites.find(actual[0]) >= authored)
+	var trade: Dictionary = game.run.trade_memory.offers["2"]
+	if not trade.is_empty():
+		var trade_sites: Array = acts.sites.filter(func(site): return not site.trade.is_empty())
+		t.eq("production trade still placed once", trade_sites.size(), 1)
+		t.check("production draw follows trade", acts.sites.find(actual[0]) > acts.sites.find(trade_sites[0]))
+	var before: int = game.ctx.rng.state
+	acts._on_stage_entered(2, false)
+	t.eq("draw stage assembly leaves ctx RNG unchanged", game.ctx.rng.state, before)
+	await physics_frame
+	var s = acts.sites.filter(func(site): return not site.interior.is_empty() and site.interior.id == specs[0].interior.id)[0]
+	var interior: Node = s.get_node("Interior_" + String(s.interior.id))
 	t.eq("drawn unvisited interior has no collision", _bodies(interior), 0)
 	game.player.active_body().global_position = s.global_position + Vector3(0, 1, 0)
 	acts._physics_process(0.0)
 	await physics_frame
-	t.eq("drawn entered terrain has collision", _bodies(interior), spec.interior.terrain.size())
-	game.run.stage = 6
-	game.run.pocket_draw_cache["6"] = {"sites": specs.duplicate(true)}
-	game.run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
-	var doc: Dictionary = JSON.parse_string(JSON.stringify(game.run.to_entrance_doc()))
+	t.eq("drawn entered terrain has collision", _bodies(interior), s.interior.terrain.size())
 	var Run = load("res://src/core/run_state.gd")
 	var loaded = Run.new()
-	t.check("Continue accepts entrance with draw cache", loaded.from_entrance_doc(doc))
-	t.check("Continue preserves actual drawn sites", loaded.pocket_draw_cache == game.run.pocket_draw_cache)
+	t.check("Continue accepts actual saved entrance", loaded.from_entrance_doc(saved))
+	t.check("Continue preserves saved drawn sites", loaded.pocket_draw_cache == game.run.pocket_draw_cache)
+	game.flow.retry_stage()
+	t.check("retry preserves current stage draw", game.run.pocket_draw_cache["2"].sites == specs)
+	var path: String = game.run_store_path
 	game.free()
+	var resumed = Game.new()
+	resumed.test_mode = true
+	resumed.table = "park"
+	resumed.run_store_path = path
+	root.add_child(resumed)
+	while resumed.flow == null:
+		await physics_frame
+	resumed.ctx.rng.seed = 123
+	t.check("real Continue flow resumes", resumed.flow.resume_run())
+	t.check("Continue reconstructs identical cached draw despite new layout seed", resumed.run.pocket_draw_cache.get("2", {}).get("sites", []) == specs)
+	var rebuilt: Array = resumed.world.activities.sites.filter(func(site): return not site.interior.is_empty() and site.interior.id == specs[0].interior.id)
+	t.check("Continue rebuilds saved drawn interior", rebuilt.size() == specs.size())
+	if not rebuilt.is_empty():
+		t.eq("Continue rebuilds saved position", Vector2(rebuilt[0].global_position.x, rebuilt[0].global_position.z), specs[0].at)
+	resumed.free()
 
 func _bodies(node: Node) -> int:
 	var count := int(node is PhysicsBody3D)
