@@ -1920,11 +1920,9 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 				for spec in specs:
 					var side: float = Library.FOOTPRINTS[spec.interior.footprint]
 					spent += ceili(side * side / Library.FOOTPRINTS.small)
-					for block in spec.interior.terrain:
-						var at: Vector2 = spec.at + Vector2(block.at[0], block.at[1])
-						var half := Vector2(block.size[0], block.size[2]) * 0.5
-						for n in graph.box_nodes(at - half - Vector2.ONE * ParkGraph.STEP_M, at + half + Vector2.ONE * ParkGraph.STEP_M):
-							union_blocks[n] = true
+					var half := Vector2.ONE * side * 0.5
+					for n in graph.box_nodes(spec.at - half - Vector2.ONE * ParkGraph.STEP_M, spec.at + half + Vector2.ONE * ParkGraph.STEP_M):
+						union_blocks[n] = true
 				row.credit_lost += absi(150 - spent - int(drawn.metrics.remaining_credits))
 				row.samples.back()["placement"] = drawn.metrics.duplicate()
 			row.samples.back()["rule_breaches"] = breaches
