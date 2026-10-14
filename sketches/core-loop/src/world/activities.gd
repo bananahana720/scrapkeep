@@ -173,6 +173,7 @@ class Site extends Node3D:
 	var spawn_positions: Array = []
 	var phase_view: Node3D
 	var interior := {}
+	var interior_collision_ready := false
 	var footprint := POCKET_FOG_SIZE
 
 	func _exit_tree() -> void:
@@ -306,10 +307,24 @@ func _build_interior(s: Site) -> void:
 	for block in s.interior.terrain:
 		var size := Vector3(block.size[0], block.size[1], block.size[2])
 		var at := Vector3(block.at[0], size.y * 0.5, block.at[1])
-		_mesh_box(root, size, at, Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL), true)
+		_mesh_box(root, size, at, Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL))
 	for entrance in s.interior.entrances:
 		for side in [-1.0, 1.0]:
 			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), Palette.solid(EventKinds.activity_color(s.view.id)))
+
+
+func _activate_interior_collision(s: Site) -> void:
+	var root := s.get_node("Interior_" + String(s.interior.id))
+	for i in s.interior.terrain.size():
+		var block: Dictionary = s.interior.terrain[i]
+		var body := StaticBody3D.new()
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = Vector3(block.size[0], block.size[1], block.size[2])
+		shape.shape = box
+		body.add_child(shape)
+		root.get_child(i).add_child(body)
+	s.interior_collision_ready = true
 
 
 func _build_altar(s: Site) -> void:
@@ -396,6 +411,11 @@ func _physics_process(delta: float) -> void:
 	for s in sites:
 		if not is_instance_valid(s):
 			continue
+		if not s.interior.is_empty() and not s.interior_collision_ready:
+			var local: Vector3 = s.to_local(ball)
+			if absf(local.x) <= s.footprint.x * 0.5 and absf(local.z) <= s.footprint.z * 0.5 \
+					and local.y >= 0.0 and local.y <= s.footprint.y:
+				_activate_interior_collision(s)
 		s.view.near(ball)
 		if s.rule.has("bundle"):
 			step_pocket(s, delta, ball)
