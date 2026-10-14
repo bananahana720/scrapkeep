@@ -23,6 +23,10 @@ func _run() -> void:
 		t.check("draw arm implementation exists", tool.has_method("draw_arm"))
 		quit(t.verdict())
 		return
+	if "--detour-only" in OS.get_cmdline_user_args():
+		_detours(tool.draw_arm("all", 1000, 200))
+		quit(t.verdict())
+		return
 	var model = load(MODEL)
 	var Run = load("res://src/core/run_state.gd")
 	var coverage := {}
@@ -69,6 +73,7 @@ func _run() -> void:
 				bad["7"] = {"sites": []}
 				t.check("future stage cache rejected", model.validate_doc(bad, stage) != "")
 				await _runtime(specs)
+	_detours(tool.draw_arm("all", 1000, 200))
 	print("pocket_draw_coverage: " + JSON.stringify(coverage.keys()))
 	quit(t.verdict())
 
@@ -218,3 +223,43 @@ func _bodies(node: Node) -> int:
 	for child in node.get_children():
 		count += _bodies(child)
 	return count
+
+func _detours(arm: Dictionary) -> void:
+	t.eq("detour arm retains stage sample count", arm.stage_samples, 6000)
+	t.eq("detour arm retains placement sample count", arm.placement_samples, 1200)
+	t.eq("detour arm includes every template", arm.templates.size(), Park.COUNT)
+	for row in arm.templates:
+		if row.stage == 1:
+			t.check("D8 stage 1 exempt with zero draws", row.exempt and row.draw_count == 0)
+			continue
+		if not t.check("D10 bound and floor reported: " + row.map, row.has("detour_bound") and row.has("detour_floor")):
+			continue
+		var graph = Graph.read("res://assets/park/%s/graph.bin" % row.map)
+		var distance := _from_line(graph)
+		# Reverse the probe: start at permissive doors, then enumerate possible pay centres.
+		var low := INF
+		var high := 0.0
+		var reach := 0.0
+		for side in Library.FOOTPRINTS.values():
+			reach = maxf(reach, side * 0.5 + Graph.STEP_M / sqrt(2.0))
+		var cells := ceili(reach / Graph.STEP_M)
+		for door in range(Graph.SIDE * Graph.SIDE):
+			if graph.flags(door) & (Graph.SIGHT_OK | Graph.DOOR_OK) != (Graph.SIGHT_OK | Graph.DOOR_OK) or graph.d_spawn_node(door) < Rules.DOOR_SPAWN_M or graph.d_landmark_node(door) < Rules.DOOR_BEACON_M:
+				continue
+			for dz in range(-cells, cells + 1):
+				for dx in range(-cells, cells + 1):
+					if Vector2(dx, dz).length() * Graph.STEP_M > reach:
+						continue
+					var x := door % Graph.SIDE + dx
+					var z := door / Graph.SIDE + dz
+					if x < 0 or x >= Graph.SIDE or z < 0 or z >= Graph.SIDE:
+						continue
+					var value: float = distance[z * Graph.SIDE + x]
+					if value >= Rules.DETOUR_MIN_M and value <= Rules.DETOUR_MAX_M:
+						low = minf(low, value)
+						high = maxf(high, value)
+		var bound := high / low
+		t.check("D10 independent permissive bound: " + row.map, is_equal_approx(row.detour_bound, bound), str(row.detour_bound) + " vs " + str(bound))
+		var floor_value := minf(2.0, 0.9 * bound)
+		t.check("D10 floor derivation: " + row.map, is_equal_approx(row.detour_floor, floor_value))
+		t.check("D10 measured detour meets floor: " + row.map, row.detour_ratio >= floor_value, "%.6f >= %.6f" % [row.detour_ratio, floor_value])
