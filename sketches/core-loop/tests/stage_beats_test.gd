@@ -1,3 +1,4 @@
+# smoke: solo timeout=240s (two bot children of 450 ticks each, side by side)
 extends SceneTree
 
 # SR13 2026-10-14: a stage's six beats (arrive, loot, find, hold, fight, leave) each have one
@@ -9,10 +10,13 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # The number of checks this file makes. A run that makes any other number fails.
-const EXPECTED := 77
+const EXPECTED := 84
 const TAIL := 20
+
+var _nodes: Array[Node] = []
 
 
 class FlowStub:
@@ -29,8 +33,11 @@ func _initialize() -> void:
 	_retry(t)
 	_determinism(t)
 	_audit(t)
+	_bot_column(t)
 	if t.checks != EXPECTED:
 		t.check("check count", false, "ran %d checks, expected %d" % [t.checks, EXPECTED])
+	for node in _nodes:
+		node.free()
 	quit(t.verdict())
 
 
@@ -75,6 +82,8 @@ func _rig() -> Dictionary:
 	var events := GameEvents.new()
 	var flow := FlowStub.new()
 	flow.warden = Node3D.new()
+	_nodes.append(events)
+	_nodes.append(flow.warden)
 	var rec := StageBeats.Recorder.new(events, flow, TAIL)
 	return {"events": events, "flow": flow, "rec": rec}
 
@@ -155,6 +164,7 @@ func _skipped(t) -> void:
 	t.eq("skipped beats have no first tick", row["first"].has("loot") or row["first"].has("find") or row["first"].has("fight"), false)
 	t.eq("the stage still reached its exit", row["exit"], true)
 	var other := Node3D.new()
+	_nodes.append(other)
 	var rig2 := _rig()
 	var ev2 = rig2["events"]
 	ev2.stage_entered.emit(1, false)
@@ -167,7 +177,7 @@ func _skipped(t) -> void:
 	_steps(rig2, 3)
 	t.eq("posture below the stagger does not open the fight", rig2["rec"].rows[0]["ticks"]["fight"], 0)
 	t.eq("the guard phase keeps counting as hold", rig2["rec"].rows[0]["ticks"]["hold"], 6)
-	other.free()
+
 
 
 func _retry(t) -> void:
@@ -228,3 +238,34 @@ func _audit(t) -> void:
 
 func row_for_text() -> Dictionary:
 	return {"ticks": {"arrive": 90, "loot": 180, "find": 45, "hold": 0, "fight": 0, "leave": 9}}
+
+
+# bot_run's beats column: two children of the same seed on the park table, 450 ticks each, log the
+# same stage beats to the frame. The 50-seed sweep with its acceptance lines is the tool run.
+func _bot_column(t) -> void:
+	var base := OS.get_user_data_dir().path_join("stage-beats-%d" % OS.get_process_id())
+	var jobs := []
+	for i in 2:
+		jobs.append({"script": "res://tools/bot_run.gd", "args": ["--out=" + base.path_join(str(i)), "--policy=skipper",
+			"--seeds=1", "--table=park", "--ticks=450"]})
+	var results := ChildRuns.run(jobs, 200.0)
+	var logs := []
+	for i in 2:
+		var result: Dictionary = results[i]
+		var errors: Array = ChildRuns.summary(result)["errors"]
+		t.check("bot child %d ran clean" % i, result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
+			"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], errors])
+		var path := base.path_join(str(i)).path_join("bots.ndjson")
+		var rows := FileAccess.get_file_as_string(path).split("\n", false) if FileAccess.file_exists(path) else PackedStringArray()
+		var record = JSON.parse_string(rows[0]) if rows.size() == 1 else null
+		t.check("bot child %d wrote one record" % i, record is Dictionary, "%d rows in %s" % [rows.size(), path])
+		var beats: Array = record.get("beats", []) if record is Dictionary else []
+		t.eq("bot child %d logged one stage" % i, beats.size(), 1)
+		logs.append(beats)
+		if beats.size() == 1:
+			var row: Dictionary = beats[0]
+			t.eq("bot child %d row is stage 1, still open" % i, [row["stage"], row["exit"]], [1, false])
+			t.eq("bot child %d counted every tick it ran" % i, row["total"], int(record["ticks"]))
+			t.eq("bot child %d beat ticks sum to the total" % i, StageBeats.sum_ticks(row), int(row["total"]))
+			t.check("bot child %d spent ticks arriving and finding" % i, row["ticks"]["arrive"] > 0 and row["ticks"]["find"] + row["ticks"]["loot"] > 0, "%s" % [row["ticks"]])
+	t.check("the same seed logs the same beat timings to the frame", logs.size() == 2 and StageBeats.same_timings(logs[0], logs[1]) and logs[0].size() == 1, "")
