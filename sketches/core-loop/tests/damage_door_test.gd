@@ -165,12 +165,16 @@ func _check_order(combat, door) -> void:
 		var rest: Array = trace.slice(door.ORDER.size())
 		if stages == door.ORDER and rest.all(func(s): return String(s).begins_with("hook:")):
 			ordered += 1
-		var health_at: int = trace.find("health")
+		# A stage's name is traced as it starts, so health has finished only once the stage
+		# after it has started.
+		var health_done: int = trace.find(door.ORDER[door.ORDER.find("health") + 1])
 		for j in trace.size():
-			if String(trace[j]).begins_with("hook:") and j < health_at:
+			if String(trace[j]).begins_with("hook:") and (health_done < 0 or j < health_done):
 				early += 1
 		var per := {}
-		for s in rest:
+		for s in trace:
+			if not String(s).begins_with("hook:"):
+				continue
 			var event := String(s).split(":")[1]
 			per[event] = int(per.get(event, 0)) + 1
 		for event in per:
@@ -212,6 +216,8 @@ func _owner_state() -> Dictionary:
 
 
 func _check_respawn(combat, door) -> void:
+	# A held part makes "unchanged" mean something; an empty inventory stays empty trivially.
+	_game.run.add_part("boost_coil", "test")
 	var before := _owner_state()
 	var anchor: Vector3 = _game.player.ball_position()
 	var kills_before := int(_hook_calls["kill"])
@@ -224,7 +230,7 @@ func _check_respawn(combat, door) -> void:
 	var after := _owner_state()
 	_t.eq("kill-and-respawn cycles killed every foe", dead, CYCLES)
 	_t.eq("kill hooks ran on every cycle", int(_hook_calls["kill"]) - kills_before, CYCLES * int(_probes["kill"]))
-	_t.check("owner inventory unchanged", after["parts"] == before["parts"] and after["relics"] == before["relics"]
+	_t.check("owner inventory unchanged", not (before["parts"] as Array).is_empty() and after["parts"] == before["parts"] and after["relics"] == before["relics"]
 			and after["tree_picks"] == before["tree_picks"],
 		"parts %s -> %s, relics %s -> %s" % [before["parts"], after["parts"], before["relics"], after["relics"]])
 	_t.eq("companion unchanged", after["companion"], before["companion"])

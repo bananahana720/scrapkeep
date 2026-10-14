@@ -33,6 +33,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
 const Companion := preload("res://src/core/companion.gd")
+const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -302,6 +303,18 @@ var _pulse_left := 0.0
 var _cloak_held := 0.0
 # UpgradeTree.ACTIONS name -> Callable(scale).
 var _actions := {}
+# SR1: every strike passes this door (damage_door.gd), which runs the stages below in its
+# declared order and then its hooks; the primer mesh and the companion ram ride as "hit" hooks.
+var door := DamageDoor.new()
+var _strike_stages := {}
+
+
+func _init() -> void:
+	_strike_stages = {"armour": _door_armour, "caps": _door_caps, "crit": _door_crit,
+		"announce": _door_announce, "plates": _door_plates, "health": _door_health,
+		"execute": _door_execute, "events": _door_events}
+	door.hook("hit", "primer_mesh", _hook_primer_mesh)
+	door.hook("hit", "companion_ram", _hook_companion_ram)
 
 
 func _stage_table():
@@ -541,54 +554,92 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 			and enemy.has_method("staggered") and not enemy.staggered():
 		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part))
 		return
-	var result := resolve(enemy, kind, force, part)
-	var cls := _classify_source(kind, source if source != "" else _forced_source)
-	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, kind, cls)
-	if kind in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
+	door.pass_hit({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source,
+		"impact": impact}, _strike_stages)
+
+
+# --- SR1: strike()'s stages, in damage_door.gd's ORDER --------------------------------
+
+func _door_armour(hit: Dictionary) -> void:
+	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"])
+	hit["cls"] = _classify_source(hit["kind"], hit["source"] if hit["source"] != "" else _forced_source)
+
+
+func _door_caps(hit: Dictionary) -> void:
+	var enemy: Node3D = hit["enemy"]
+	var result: Dictionary = hit["result"]
+	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, hit["kind"], hit["cls"])
+	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_exposed.erase(enemy.get_instance_id())
-	var spent := _primer_hit(enemy, kind, cls)
-	var at := enemy.global_position
-	var struck_id := enemy.get_instance_id()
+
+
+func _door_crit(hit: Dictionary) -> void:
+	hit["spent"] = _primer_hit(hit["enemy"], hit["kind"], hit["cls"])
+
+
+# review finding 1, fix round 2: a Brindle piece's hp is a getter over the boss's one
+# shared pool (boss_target.gd), and a listener on enemy_struck can remove HP from that
+# pool synchronously (boss.gd's _on_enemy_struck -> _defeat, the scooter catch) before
+# take_damage() ever runs. hp_before is read before the emit so the health stage's
+# measure (DamageDoor.health) catches that removal too.
+func _door_announce(hit: Dictionary) -> void:
+	var enemy: Node3D = hit["enemy"]
+	var kind: String = hit["kind"]
+	var force: float = hit["force"]
+	var result: Dictionary = hit["result"]
+	hit["at"] = enemy.global_position
+	hit["id"] = enemy.get_instance_id()
 	_detect_before(enemy, kind, result)
 	var outer := _pending
 	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"]}
-	# review finding 1, fix round 2: a Brindle piece's hp is a getter over the boss's one
-	# shared pool (boss_target.gd), and a listener on enemy_struck can remove HP from that
-	# pool synchronously (boss.gd's _on_enemy_struck -> _defeat, the scooter catch) before
-	# take_damage() ever runs, outside take_damage()'s own return-value accounting. Reading
-	# hp before the emit and again after take_damage() catches that removal too, clamped
-	# the same way overkill already is; for every ordinary target this equals what
-	# take_damage() itself returned, so the maxf below never double-counts. hp_after is
-	# floored at 0 before the subtraction: enemy.gd's own take_damage() subtracts past 0
-	# rather than clamping (unlike the removed value it returns and unlike boss.gd's own
-	# floor clamp), so an unclamped delta would read the full overkill swing as "removed"
-	# on every ordinary kill.
-	var hp_before := _hp_of(enemy)
+	hit["hp_before"] = _hp_of(enemy)
 	var outer_impact := last_impact
-	last_impact = {"key": impact, "enemy": enemy.get_instance_id()} if impact != "" else {}
+	last_impact = {"key": hit["impact"], "enemy": enemy.get_instance_id()} if hit["impact"] != "" else {}
 	ctx.events.enemy_struck.emit(enemy, kind, force)
 	last_impact = outer_impact
 	if not result["full"]:
 		deflections += 1
 		ctx.events.strike_deflected.emit(enemy, kind, result["punch"], result["plating"])
 	_pending = outer
+
+
+func _door_plates(hit: Dictionary) -> void:
+	var enemy: Node3D = hit["enemy"]
+	var result: Dictionary = hit["result"]
 	if enemy.has_method("on_struck"):
-		enemy.on_struck(kind, result["part"], result)
+		enemy.on_struck(hit["kind"], result["part"], result)
 	# Counted before take_damage() because a killing hit unseals the stage
 	# (beacon_unsealed, which snapshots this count) inside it.
-	if kind in ["stomp", "slam"] and float(result["dealt"]) > 0.0 and _target_class(enemy) == "Warden":
+	if hit["kind"] in ["stomp", "slam"] and float(result["dealt"]) > 0.0 and _target_class(enemy) == "Warden":
 		_warden_slam_hits += 1
-	var removed: float = enemy.take_damage(result["dealt"])
-	if is_instance_valid(enemy):
-		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
+
+
+func _door_health(hit: Dictionary) -> void:
+	hit["removed"] = DamageDoor.health(hit["enemy"], hit["result"]["dealt"], hit["hp_before"])
+
+
+func _door_execute(hit: Dictionary) -> void:
+	hit["killed"] = DamageDoor.dead(hit["enemy"])
+
+
+func _door_events(hit: Dictionary) -> void:
+	var enemy: Node3D = hit["enemy"]
+	var result: Dictionary = hit["result"]
 	if result.get("shred", true):
 		_add_shred(enemy, result["punch"])
-	_detect_after(enemy, kind, result)
-	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source)
-	if spent == "primer_mesh":
-		_primer_mesh(at, struck_id, float(result["dealt"]))
-	_companion_ram(enemy, kind, result)
+	_detect_after(enemy, hit["kind"], result)
+	_record_delivered(enemy, hit["kind"], hit["removed"], result["dealt"],
+		hit["source"] if hit["source"] != "" else _forced_source)
+
+
+func _hook_primer_mesh(hit: Dictionary) -> void:
+	if hit["spent"] == "primer_mesh":
+		_primer_mesh(hit["at"], hit["id"], float(hit["result"]["dealt"]))
+
+
+func _hook_companion_ram(hit: Dictionary) -> void:
+	_companion_ram(hit["enemy"], hit["kind"], hit["result"])
 
 
 # --- Companion: conductive primer (companion.gd PRIMER_*) ---------------------------
@@ -795,10 +846,7 @@ func spring_armed() -> bool:
 # scenery-guard's plain Node3D, which never reaches here because it fails the
 # has_method("take_damage") check above) reads 0.0 and never inflates a delta.
 func _hp_of(enemy: Node3D) -> float:
-	if not is_instance_valid(enemy):
-		return 0.0
-	var v = enemy.get("hp")
-	return float(v) if v != null else 0.0
+	return DamageDoor.hp_of(enemy)
 
 
 # --- M0: delivered-damage ledger (see the constants above for the categories) --------
@@ -824,11 +872,9 @@ func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float
 # the hit because a kill retires a boss add's tag. Action "spark", source persistent_actor.
 func _trail_deal(enemy: Node3D, amount: float, action := "spark", source := "persistent_actor") -> float:
 	var target_class := _target_class(enemy)
-	var hp_before := _hp_of(enemy)
-	var removed: float = enemy.take_damage(amount)
-	# Same measure as strike(): a Brindle piece's return value undercounts (M0 delivered damage).
-	if is_instance_valid(enemy):
-		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
+	# Same measure as strike()'s health stage: a Brindle piece's return value undercounts (M0
+	# delivered damage). The bypass takes no door pass and fires no door hook.
+	var removed := DamageDoor.health(enemy, amount, _hp_of(enemy))
 	_record_delivered(enemy, action, removed, amount, source, target_class)
 	return removed
 
