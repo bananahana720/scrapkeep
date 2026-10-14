@@ -13,7 +13,7 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # The number of checks this file makes. A run that makes any other number fails.
-const EXPECTED := 92
+const EXPECTED := 97
 const TAIL := 20
 
 var _nodes: Array[Node] = []
@@ -54,7 +54,7 @@ func _table(t) -> void:
 
 
 func _reading(state: String, landed: bool, engaged: bool, staggered: bool, since: int) -> Dictionary:
-	return {"state": state, "landed": landed, "engaged": engaged, "staggered": staggered, "since_pickup": since, "loot_tail": TAIL}
+	return {"state": state, "landed": landed, "engaged": engaged, "guard_broken": staggered, "since_pickup": since, "loot_tail": TAIL}
 
 
 func _classifier(t) -> void:
@@ -176,8 +176,25 @@ func _skipped(t) -> void:
 	t.eq("another enemy's stagger does not open the fight", rig2["rec"].rows[0]["ticks"]["fight"], 0)
 	ev2.posture_changed.emit(rig2["flow"].warden, 40.0, false)
 	_steps(rig2, 3)
-	t.eq("posture below the stagger does not open the fight", rig2["rec"].rows[0]["ticks"]["fight"], 0)
+	t.eq("posture below the half mark does not open the fight", rig2["rec"].rows[0]["ticks"]["fight"], 0)
 	t.eq("the guard phase keeps counting as hold", rig2["rec"].rows[0]["ticks"]["hold"], 6)
+	ev2.posture_changed.emit(rig2["flow"].warden, 49.9, false)
+	_steps(rig2, 1)
+	t.eq("posture just under the half mark is still hold", rig2["rec"].rows[0]["ticks"]["fight"], 0)
+	ev2.posture_changed.emit(rig2["flow"].warden, 50.0, false)
+	_steps(rig2, 2)
+	t.eq("posture at the half mark opens the fight with no stagger", rig2["rec"].rows[0]["ticks"]["fight"], 2)
+	ev2.posture_changed.emit(rig2["flow"].warden, 10.0, false)
+	_steps(rig2, 1)
+	t.eq("the fight stays open when posture drains again", rig2["rec"].rows[0]["ticks"]["fight"], 3)
+	var rig3 := _rig()
+	rig3["events"].stage_entered.emit(5, false)
+	rig3["rec"].finish()
+	t.eq("finish drops a row entered but never ticked", rig3["rec"].rows.size(), 0)
+	rig3["events"].stage_entered.emit(5, false)
+	_steps(rig3, 2)
+	rig3["rec"].finish()
+	t.eq("finish keeps a row that ticked", rig3["rec"].rows.size(), 1)
 
 
 
