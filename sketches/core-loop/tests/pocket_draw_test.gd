@@ -18,6 +18,11 @@ func _run() -> void:
 	if not t.check("draw implementation exists", FileAccess.file_exists(MODEL)):
 		quit(t.verdict())
 		return
+	var tool = load("res://tools/park_graph.gd")
+	if "--arm-only" in OS.get_cmdline_user_args():
+		t.check("draw arm implementation exists", tool.has_method("draw_arm"))
+		quit(t.verdict())
+		return
 	var model = load(MODEL)
 	var Run = load("res://src/core/run_state.gd")
 	var coverage := {}
