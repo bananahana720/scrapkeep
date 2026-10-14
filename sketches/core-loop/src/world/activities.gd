@@ -279,7 +279,9 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
 	s.view = ActivityView.new()
 	s.add_child(s.view)
-	s.view.build(String(s.rule.cue.view) if s.rule.has("cue") else id, float(s.rule["ring"]), spec.get("tell", {}))
+	var presentation: Node = ctx.root.get_node_or_null("Presentation")
+	var tell_audio = presentation.audio if presentation != null and not s.interior.is_empty() else null
+	s.view.build(String(s.rule.cue.view) if s.rule.has("cue") else id, float(s.rule["ring"]), spec.get("tell", {}), tell_audio)
 	if s.rule.has("bundle"):
 		_build_pocket(s, spec)
 	elif id == "enemy_camp" and (spec.has("site") or not s.interior.is_empty()):

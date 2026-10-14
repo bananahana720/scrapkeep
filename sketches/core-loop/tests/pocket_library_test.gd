@@ -156,9 +156,6 @@ func _tell_on_entry(entry: Dictionary, s) -> void:
 	var at: Vector3 = s.to_global(Vector3(entry.entry_spot[0], 0, entry.entry_spot[1]))
 	s.view.near(at)
 	var cues: Array = audio.cue_log.slice(since).filter(func(c): return c[0] == "interaction_found")
-	if "--suppress-tell-audio" in OS.get_cmdline_user_args():
-		audio.cue_log.resize(since)
-		cues = audio.cue_log.slice(since)
 	t.check(entry.id + " authored word visible at transformed entry", s.view.word.visible and s.view.word.text.split(" — Tier ")[0] == entry.tell.word, "at=%s text=%s" % [at, s.view.word.text])
 	t.check(entry.id + " rendered entry glyph matches selected record", _glyph_matches(s.view.glyph, String(expected.shape)), "expected=%s" % expected.shape)
 	t.check(entry.id + " entry audio request matches selected record", cues.size() == 1 and cues[0][1] == expected.sound and cues[0][2] == "now", "cues=%s expected=%s" % [cues, expected.sound])
