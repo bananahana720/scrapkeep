@@ -324,6 +324,8 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 			_build_cache(s)
 	if not s.interior.is_empty():
 		_build_interior(s)
+		if spec.get("drawn", false):
+			s.rotation.y = -spec.get("turn", 0) * PI * 0.5
 	if s.rule.finishes == "trade":
 		_build_trade(s)
 	return s

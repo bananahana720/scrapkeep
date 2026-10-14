@@ -70,10 +70,16 @@ func _run() -> void:
 					bad[str(stage)].sites[0].at = ["bad", 0]
 					t.check("invalid cached coordinate rejected", model.validate_doc(bad, stage) != "")
 				bad = doc.duplicate(true)
+				if not bad[str(stage)].sites.is_empty():
+					bad[str(stage)].sites[0].turn = 4
+					t.check("invalid cached orientation rejected", model.validate_doc(bad, stage) != "")
+				bad = doc.duplicate(true)
 				bad["7"] = {"sites": []}
 				t.check("future stage cache rejected", model.validate_doc(bad, stage) != "")
-				await _runtime(specs)
-	_detours(tool.draw_arm("all", 1000, 200))
+				if not "--placement-only" in OS.get_cmdline_user_args():
+					await _runtime(specs)
+	if not "--placement-only" in OS.get_cmdline_user_args():
+		_detours(tool.draw_arm("all", 1000, 200))
 	print("pocket_draw_coverage: " + JSON.stringify(coverage.keys()))
 	quit(t.verdict())
 
@@ -99,7 +105,7 @@ func _audit(graph, map, specs: Array, trade: Dictionary, from_line: PackedFloat3
 			t.check("no stage assigned interior drawn", Library.for_site(map.park.map, authored.row).get("id", "") != entry.id)
 		t.check("non-trade library entry", entry.kind != "trade")
 		var half: float = Library.FOOTPRINTS[entry.footprint] * 0.5
-		var door: Vector2 = spec.at + Vector2(entry.entrances[0].at[0], entry.entrances[0].at[1])
+		var door: Vector2 = spec.at + Vector2(entry.entrances[0].at[0], entry.entrances[0].at[1]).rotated(spec.get("turn", 0) * PI * 0.5)
 		var dn: int = graph.nearest(door)
 		t.check("drawn door off-line, open, door-ok and sight-ok", graph.flags(dn) & (Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK) == (Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK) and graph.flags(dn) & (Graph.LINE | Graph.WARDEN | Graph.GUARDED) == 0)
 		t.check("door distance to spawn", graph.d_spawn_node(dn) >= Rules.DOOR_SPAWN_M)
@@ -112,7 +118,7 @@ func _audit(graph, map, specs: Array, trade: Dictionary, from_line: PackedFloat3
 			t.check("door to existing door minimum", door.distance_to(existing.at) >= Rules.DOOR_DOOR_M)
 		for other in specs:
 			if other != spec:
-				var od: Vector2 = other.at + Vector2(other.interior.entrances[0].at[0], other.interior.entrances[0].at[1])
+				var od: Vector2 = other.at + Vector2(other.interior.entrances[0].at[0], other.interior.entrances[0].at[1]).rotated(other.get("turn", 0) * PI * 0.5)
 				t.check("drawn doors separated", door.distance_to(od) >= Rules.DOOR_DOOR_M)
 		var route_clear := true
 		for n in graph.box_nodes(box.position, box.end):
@@ -167,7 +173,7 @@ func _runtime(_specs: Array) -> void:
 	for key in game.run.pocket_draw_cache:
 		var placed := []
 		for spec in game.run.pocket_draw_cache[key].sites:
-			placed.append({"interior": spec.interior.id, "node": spec.node, "at": [spec.at.x, spec.at.y]})
+			placed.append({"interior": spec.interior.id, "node": spec.node, "at": [spec.at.x, spec.at.y], "turn": spec.get("turn", 0)})
 		expected_doc[key] = {"sites": placed}
 	expected_doc = JSON.parse_string(JSON.stringify(expected_doc))
 	t.eq("stage-entry disk save includes current draw cache", saved.get("pocket_draw_cache", {}), expected_doc)
@@ -188,6 +194,7 @@ func _runtime(_specs: Array) -> void:
 	t.eq("draw stage assembly leaves ctx RNG unchanged", game.ctx.rng.state, before)
 	await physics_frame
 	var s = acts.sites.filter(func(site): return not site.interior.is_empty() and site.interior.id == specs[0].interior.id)[0]
+	t.check("drawn orientation built", is_equal_approx(s.rotation.y, -specs[0].get("turn", 0) * PI * 0.5))
 	var interior: Node = s.get_node("Interior_" + String(s.interior.id))
 	t.eq("drawn unvisited interior has no collision", _bodies(interior), 0)
 	game.player.active_body().global_position = s.global_position + Vector3(0, 1, 0)
@@ -215,6 +222,7 @@ func _runtime(_specs: Array) -> void:
 	var rebuilt: Array = resumed.world.activities.sites.filter(func(site): return not site.interior.is_empty() and site.interior.id == specs[0].interior.id)
 	t.check("Continue rebuilds saved drawn interior", rebuilt.size() == specs.size())
 	if not rebuilt.is_empty():
+		t.check("Continue rebuilds saved orientation", is_equal_approx(rebuilt[0].rotation.y, -specs[0].get("turn", 0) * PI * 0.5))
 		t.eq("Continue rebuilds saved position", Vector2(rebuilt[0].global_position.x, rebuilt[0].global_position.z), specs[0].at)
 	resumed.free()
 

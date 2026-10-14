@@ -91,31 +91,33 @@ static func prepare(graph, map) -> Dictionary:
 			continue
 		var p: Vector3 = graph.position(n)
 		var at := Vector2(p.x, p.z)
-		var sizes := {}
-		for size in Library.FOOTPRINTS:
-			var half: float = Library.FOOTPRINTS[size] * 0.5
-			var door := at + Vector2(0, half)
-			var dn: int = graph.nearest(door)
-			var df: int = graph.flags(dn)
-			if df & (Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK) != (Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK) or df & (Graph.LINE | Graph.WARDEN | Graph.GUARDED | Graph.UNDER | Graph.DECK) != 0:
-				continue
-			if graph.d_spawn_node(dn) < Placement.DOOR_SPAWN_M or graph.d_landmark_node(dn) < Placement.DOOR_BEACON_M or graph.d_spawn_node(dn) == INF or graph.d_landmark_node(dn) == INF:
-				continue
-			if hazard_out[dn] <= Placement.RING_M or hazard_in[dn] <= Placement.RING_M:
-				continue
-			var box := Rect2(at - Vector2.ONE * half, Vector2.ONE * half * 2.0)
-			if doors.any(func(d): return _box_distance(box, d.at) <= Placement.RING_M or door.distance_to(d.at) < Placement.DOOR_DOOR_M):
-				continue
-			var fits: bool = map.play_rect.encloses(box)
-			for k in graph.box_nodes(box.position - Vector2.ONE * Graph.STEP_M, box.end + Vector2.ONE * Graph.STEP_M):
-				if routes[k] == 1 or graph.flags(k) & Graph.OPEN == 0 or graph.flags(k) & (Graph.UNDER | Graph.DECK | Graph.GUARDED | Graph.WARDEN) != 0 or absf(graph.py[k] - p.y) > Placement.CLIMB_M:
-					fits = false
-					break
-			if fits:
-				sizes[size] = true
-		if not sizes.is_empty():
-			out.anchors.append({"node": n, "at": at})
-			out.fits[n] = sizes
+		for turn in 4:
+			var sizes := {}
+			for size in Library.FOOTPRINTS:
+				var half: float = Library.FOOTPRINTS[size] * 0.5
+				var door := at + Vector2(0, half).rotated(turn * PI * 0.5)
+				var dn: int = graph.nearest(door)
+				var df: int = graph.flags(dn)
+				if df & (Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK) != (Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK) or df & (Graph.LINE | Graph.WARDEN | Graph.GUARDED | Graph.UNDER | Graph.DECK) != 0:
+					continue
+				if graph.d_spawn_node(dn) < Placement.DOOR_SPAWN_M or graph.d_landmark_node(dn) < Placement.DOOR_BEACON_M or graph.d_spawn_node(dn) == INF or graph.d_landmark_node(dn) == INF:
+					continue
+				if hazard_out[dn] <= Placement.RING_M or hazard_in[dn] <= Placement.RING_M:
+					continue
+				var box := Rect2(at - Vector2.ONE * half, Vector2.ONE * half * 2.0)
+				if doors.any(func(d): return _box_distance(box, d.at) <= Placement.RING_M or door.distance_to(d.at) < Placement.DOOR_DOOR_M):
+					continue
+				var fits: bool = map.play_rect.encloses(box)
+				for k in graph.box_nodes(box.position - Vector2.ONE * Graph.STEP_M, box.end + Vector2.ONE * Graph.STEP_M):
+					if routes[k] == 1 or graph.flags(k) & Graph.OPEN == 0 or graph.flags(k) & (Graph.UNDER | Graph.DECK | Graph.GUARDED | Graph.WARDEN) != 0:
+						fits = false
+						break
+				if fits:
+					sizes[size] = true
+			if not sizes.is_empty():
+				out.anchors.append({"node": n, "at": at, "turn": turn})
+				out.fits[Vector2i(n, turn)] = sizes
+	out.anchors.sort_custom(func(a, b): return out.from_line[a.node] < out.from_line[b.node])
 	return out
 
 static func _box_distance(box: Rect2, at: Vector2) -> float:
@@ -123,10 +125,10 @@ static func _box_distance(box: Rect2, at: Vector2) -> float:
 	return nearest.distance_to(at)
 
 static func _fits(prepared: Dictionary, entry: Dictionary, spot: Dictionary, placed: Array, trade: Dictionary) -> bool:
-	if not prepared.fits.get(spot.node, {}).has(entry.footprint):
+	if not prepared.fits.get(Vector2i(spot.node, spot.get("turn", 0)), {}).has(entry.footprint):
 		return false
 	var half: float = Library.FOOTPRINTS[entry.footprint] * 0.5
-	var door: Vector2 = spot.at + Vector2(0, half)
+	var door: Vector2 = spot.at + Vector2(0, half).rotated(spot.get("turn", 0) * PI * 0.5)
 	var box := Rect2(spot.at - Vector2.ONE * half, Vector2.ONE * half * 2.0)
 	if not trade.is_empty():
 		var trade_half: float = Library.FOOTPRINTS[trade.interior.footprint] * 0.5
@@ -134,7 +136,7 @@ static func _fits(prepared: Dictionary, entry: Dictionary, spot: Dictionary, pla
 		if spot.node == trade.node or box.grow(Placement.RING_M).intersects(other, true) or door.distance_to(trade.at) < Placement.DOOR_DOOR_M + trade_half:
 			return false
 	for spec in placed:
-		var other_door: Vector2 = spec.at + Vector2(spec.interior.entrances[0].at[0], spec.interior.entrances[0].at[1])
+		var other_door: Vector2 = spec.at + Vector2(spec.interior.entrances[0].at[0], spec.interior.entrances[0].at[1]).rotated(spec.get("turn", 0) * PI * 0.5)
 		if door.distance_to(other_door) < Placement.DOOR_DOOR_M or _box_distance(box, other_door) <= Placement.RING_M:
 			return false
 	return true
@@ -168,13 +170,9 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 		pool.erase(chosen)
 	picked.sort_custom(func(a, b): return cost(a) > cost(b) or (cost(a) == cost(b) and a.id < b.id))
 	var candidates: Array = anchors.duplicate() if not anchors.is_empty() else prepared.anchors.duplicate()
-	# Fisher-Yates stays on the named stream, including anchor order.
-	if anchors.is_empty():
-		for i in range(candidates.size() - 1, 0, -1):
-			var j := rng.randi_range(0, i)
-			var swap = candidates[i]
-			candidates[i] = candidates[j]
-			candidates[j] = swap
+	# Alternate near-first and far-first traversals on the private stage stream.
+	if anchors.is_empty() and rng.randi_range(0, 1) == 1:
+		candidates.reverse()
 	var pending := false
 	for spot in candidates:
 		if picked.is_empty():
@@ -219,7 +217,7 @@ static func to_doc(cache: Dictionary) -> Dictionary:
 	for key in cache:
 		var sites := []
 		for spec in cache[key].sites:
-			sites.append({"interior": spec.interior.id, "node": spec.node, "at": [spec.at.x, spec.at.y]})
+			sites.append({"interior": spec.interior.id, "node": spec.node, "at": [spec.at.x, spec.at.y], "turn": spec.get("turn", 0)})
 		doc[key] = {"sites": sites}
 	return doc
 
@@ -232,7 +230,7 @@ static func from_doc(doc: Dictionary) -> Dictionary:
 		var sites := []
 		for saved in doc[key].sites:
 			var entry: Dictionary = library[saved.interior]
-			sites.append(Library.site_spec(entry).merged({"id": entry.activity, "drawn": true, "node": int(saved.node), "at": Vector2(saved.at[0], saved.at[1]), "pay": {"named": "", "rarities": Placement.PAY_FAR.duplicate()}}))
+			sites.append(Library.site_spec(entry).merged({"id": entry.activity, "drawn": true, "node": int(saved.node), "turn": int(saved.get("turn", 0)), "at": Vector2(saved.at[0], saved.at[1]), "pay": {"named": "", "rarities": Placement.PAY_FAR.duplicate()}}))
 		cache[key] = {"sites": sites}
 	return cache
 
@@ -262,6 +260,8 @@ static func validate_doc(doc, entrance: int) -> String:
 				return "assigned pocket draw interior"
 			seen[spec.interior] = true
 			spent += cost(entry)
+			if not _integer(spec.get("turn", 0)) or spec.get("turn", 0) < 0 or spec.get("turn", 0) > 3:
+				return "invalid pocket draw orientation"
 			if not _integer(spec.get("node")) or spec.node < 0 or spec.node >= Graph.SIDE * Graph.SIDE:
 				return "invalid pocket draw node"
 			if not spec.get("at") is Array or spec.at.size() != 2:

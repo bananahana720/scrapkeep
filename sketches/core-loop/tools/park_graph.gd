@@ -1851,6 +1851,35 @@ static func jitter_text(result: Dictionary) -> String:
 		"in target" if result["reroll_share"] <= REROLL_MAX else "OUT OF TARGET"]
 
 
+# Permissive envelope of every quantized entrance offset, including lattice rounding.
+# This deliberately ignores footprint, route, ring and terrain restrictions.
+static func draw_detour_bound(graph, from_line: PackedFloat32Array) -> Dictionary:
+	var Library = load("res://src/world/pockets/pocket_library.gd")
+	var reach := 0.0
+	for side in Library.FOOTPRINTS.values():
+		reach = maxf(reach, float(side) * 0.5 + ParkGraph.STEP_M * sqrt(2.0) * 0.5)
+	var offsets := []
+	var cells := ceili(reach / ParkGraph.STEP_M)
+	for dx in range(-cells, cells + 1):
+		for dz in range(-cells, cells + 1):
+			var offset := Vector2(dx, dz) * ParkGraph.STEP_M
+			if offset.length() <= reach:
+				offsets.append(offset)
+	var low := INF
+	var high := 0.0
+	for n in range(ParkGraph.SIDE * ParkGraph.SIDE):
+		if from_line[n] < DETOUR_MIN_M or from_line[n] > DETOUR_MAX_M:
+			continue
+		var at := Vector2(graph.px[n], graph.pz[n])
+		for offset in offsets:
+			var dn: int = graph.nearest(at + offset)
+			if graph.flags(dn) & (ParkGraph.SIGHT_OK | ParkGraph.DOOR_OK) == (ParkGraph.SIGHT_OK | ParkGraph.DOOR_OK) and graph.d_spawn_node(dn) >= DOOR_SPAWN_M and graph.d_landmark_node(dn) >= DOOR_BEACON_M:
+				low = minf(low, from_line[n])
+				high = maxf(high, from_line[n])
+				break
+	return {"min": low, "max": high, "ratio": high / low}
+
+
 # SQ14 runs on the committed graphs; this arm never rebakes or rewrites them.
 static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> Dictionary:
 	var Park = load("res://src/core/park_defs.gd")
@@ -1882,6 +1911,13 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 		var detours := []
 		var union_blocks := {}
 		var row := {"stage": stage, "map": id, "exempt": stage == 1, "stage_samples": seeds, "placement_samples": placement_seeds, "draw_count": 0, "nonempty_stages": 0, "counts_in_3_to_8": 0, "distinct_sets": 0, "detour_p10": 0.0, "detour_p90": 0.0, "detour_ratio": 0.0, "failed_placements": 0, "credit_lost": 0, "chance_opportunities": 0, "chance_hits": 0, "chance_rate": 0.0, "placement_draws": 0, "rule_samples": seeds, "rule_breaches": 0, "route_cuts": 0, "door_ring_breaches": 0, "placement_example": {}, "samples": []}
+		var envelope := draw_detour_bound(graph, prepared.from_line)
+		row.detour_bound = envelope.ratio
+		row.detour_bound_min = envelope.min
+		row.detour_bound_max = envelope.max
+		row.detour_floor = minf(2.0, 0.9 * row.detour_bound)
+		if not is_equal_approx(row.detour_floor, minf(2.0, 0.9 * envelope.max / envelope.min)):
+			result.errors.append("floor derivation requirement: " + id)
 		for seed_value in seeds:
 			var run = Run.new()
 			run.run_seed = seed_value
@@ -1955,7 +1991,7 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 			cut.off.append(cut.to.size())
 		row.route_cuts = route_breaks(cut, map.park).size()
 		if stage != 1:
-			if row.distinct_sets < 8 or row.counts_in_3_to_8 < seeds * 0.95 or row.detour_ratio < 2.0:
+			if row.distinct_sets < 8 or row.counts_in_3_to_8 < seeds * 0.95 or row.detour_ratio < row.detour_floor:
 				result.errors.append("variety/count/detour requirement: " + id)
 			if row.chance_opportunities == 0 or absf(row.chance_rate - 0.25) > 0.03:
 				result.errors.append("chance rate requirement: " + id)
@@ -2002,7 +2038,7 @@ static func drawn_rules(graph, map, specs: Array, trade: Dictionary, from_line: 
 			if Library.for_site(map.park.map, authored.row).get("id", "") == entry.id:
 				out.append(_breach(entry.id, "assignment", "stage assigned interior drawn"))
 		var half: float = Library.FOOTPRINTS[entry.footprint] * 0.5
-		var door: Vector2 = spec.at + Vector2(entry.entrances[0].at[0], entry.entrances[0].at[1])
+		var door: Vector2 = spec.at + Vector2(entry.entrances[0].at[0], entry.entrances[0].at[1]).rotated(spec.get("turn", 0) * PI * 0.5)
 		var dn: int = graph.nearest(door)
 		var flags: int = graph.flags(dn)
 		if flags & (ParkGraph.OPEN | ParkGraph.DOOR_OK | ParkGraph.SIGHT_OK) != (ParkGraph.OPEN | ParkGraph.DOOR_OK | ParkGraph.SIGHT_OK) or flags & (ParkGraph.LINE | ParkGraph.GUARDED | ParkGraph.WARDEN) != 0:
@@ -2024,7 +2060,7 @@ static func drawn_rules(graph, map, specs: Array, trade: Dictionary, from_line: 
 				out.append(_breach(entry.id, "door_to_door", "existing door too close"))
 		for other in specs:
 			if other != spec:
-				var od: Vector2 = other.at + Vector2(other.interior.entrances[0].at[0], other.interior.entrances[0].at[1])
+				var od: Vector2 = other.at + Vector2(other.interior.entrances[0].at[0], other.interior.entrances[0].at[1]).rotated(other.get("turn", 0) * PI * 0.5)
 				if door.distance_to(od) < DOOR_DOOR_M:
 					out.append(_breach(entry.id, "door_to_door", "drawn doors too close"))
 		for n in graph.box_nodes(box.position, box.end):
