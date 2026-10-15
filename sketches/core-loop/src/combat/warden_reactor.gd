@@ -41,6 +41,10 @@ const SHEET_TOP := 14.0
 const RIDE_MIN_SPEED := 3.0
 # How hard the ride pulls the ball onto its profile, per second of height error.
 const RIDE_GAIN := 8.0
+# The dam ride's upward speed is capped at what carries the ball to the core's height plus this
+# margin, under its own gravity: inside the core's contact reach, so the ride lifts the ball onto
+# the core and never flings it over the dam (unit BS1). Only the mounted dam sheet is capped.
+const RIDE_TOP_MARGIN := 2.0
 # A face steeper than this (metres of rise per metre) gives the sheet its heading.
 const FACE_SLOPE := 0.15
 const POUR_OFFSET := Vector3(0.0, 0.0, -6.0)
@@ -258,8 +262,9 @@ func _ride(warden, delta: float) -> void:
 	if along > top:
 		var base: float = warden.terrain.height(ball.x, ball.z) + Tuning.RADIUS if warden.terrain != null else ball.y
 		rise = maxf(0.0, core - base) * 2.0 * (1.0 - t) / (SHEET_RUN - top) * closing
-	var want_vy := rise + RIDE_GAIN * (height - ball.y)
 	var gravity: float = target.tuning.f("gravity") if "tuning" in target and target.tuning != null else 9.8
+	var lift_cap := sqrt(2.0 * gravity * maxf(0.0, core + RIDE_TOP_MARGIN - ball.y)) if mounted else INF
+	var want_vy := minf(rise + RIDE_GAIN * (height - ball.y), lift_cap)
 	var up := (want_vy - v.y) / delta + gravity
 	# The water keeps the planar speed the ball came in with: it adds back what rolling lost.
 	var push := Vector3.ZERO
