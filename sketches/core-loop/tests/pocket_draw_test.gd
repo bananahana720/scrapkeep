@@ -239,6 +239,22 @@ func _runtime(_specs: Array) -> void:
 		var built = resumed.world.activities._build(cache.activity, at, spec)
 		t.eq("drawn cache keeps planned centre", Vector2(built.global_position.x, built.global_position.z), at)
 		t.check("drawn cache keeps planned orientation", is_equal_approx(built.rotation.y, -turn * PI * 0.5))
+		var expected := at + _turned(Vector2(0, -resumed.world.activities.PEDESTAL_BACK), turn)
+		var rendered: MeshInstance3D
+		for child in built.get_children():
+			if child is MeshInstance3D and child.mesh is CylinderMesh:
+				rendered = child
+		if t.check("drawn cache renders pedestal turn %d" % turn, rendered != null):
+			t.check("drawn cache rendered pedestal at owned offset turn %d" % turn, Vector2(rendered.global_position.x, rendered.global_position.z).distance_to(expected) < 0.001)
+			t.check("drawn cache reward and rendered pedestal agree turn %d" % turn, Vector2(built.pedestal.x, built.pedestal.z).distance_to(expected) < 0.001)
+			var before_parts: int = resumed.run.parts.size()
+			resumed.world.activities._break_wall(built)
+			if t.check("drawn cache wall releases reward turn %d" % turn, built.pickup != null):
+				t.check("drawn cache reward appears at rendered pedestal turn %d" % turn, Vector2(built.pickup.global_position.x, built.pickup.global_position.z).distance_to(expected) < 0.001)
+				resumed.world.activities._watch_pickup(built, Vector3(expected.x + 10, built.pedestal.y, expected.y))
+				resumed.world.activities._watch_pickup(built, Vector3(expected.x, built.pedestal.y, expected.y))
+				t.check("drawn cache reward collectible at rendered pedestal turn %d" % turn, built.pickup_taken and resumed.run.parts.size() > before_parts)
+
 	_hazard_geometry(resumed.world.activities)
 	resumed.free()
 
