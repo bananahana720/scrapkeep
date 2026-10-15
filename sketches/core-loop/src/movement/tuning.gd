@@ -88,13 +88,15 @@ const RADIUS := 1.0
 const ANCHOR_MIN_ROPE := 6.0
 const SKIN := 0.12
 
-# The speed bank (SQ9, comps/roboquest/movement-and-feel.md): a landing rolling at
-# BANK_ARM x cruise or faster banks speed. The roll starts at `ratio` x cruise and decays
+# The speed bank (SQ9, comps/roboquest/movement-and-feel.md): a chosen jump/slide
+# landing at BANK_ARM x cruise, or a stick start below BANK_REST x cruise, banks speed.
+# The roll starts at `ratio` x cruise and decays
 # back to cruise over `decay_s`: flat for the first `hold` of the decay, then as
 # ((1 - u) / (1 - hold)) ^ `exp`. A ground jump inside the last BANK_WINDOW of the decay
 # keeps the burst; a jump before it spends the bank back to cruise. Per pilot so the six
 # traces differ in shape, not only scale. Every row is a start value to tune in play.
 const BANK_ARM := 0.9
+const BANK_REST := 0.2
 const BANK_WINDOW := 0.25
 const BANK_DEFAULT := {"ratio": 1.25, "decay_s": 1.2, "hold": 0.0, "exp": 1.0}
 const BANK_ROWS := {
