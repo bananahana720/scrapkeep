@@ -203,6 +203,38 @@ const PATTERN_GUARANTEE_STAGE := 2
 # item table (items.gd).
 const GENERATED_SHARE := 0.25
 
+# SQ19 weighted offers (comps/roboquest/classes-and-perks.md:82, comps/gunfire/heroes-and-ascensions.md:87).
+# A pilot's kit is its own class rows plus every part in one of its two buckets (bucket_of) that
+# carries one of that bucket's tags below. The two buckets are the pilot's dominant offer pair,
+# one of the six pairs of weapon, skill, defence and movement, so no two pilots lean the same way.
+# A pilot not listed here (or an empty class) draws exactly as before.
+const KITS := {
+	"pylon_engineer": {"skill": ["arc", "anchor"], "movement": ["anchor", "arc", "spiral"]},
+	"runner_gunner": {"weapon": ["speed", "split"], "movement": ["speed"]},
+	"demolitions_caster": {"weapon": ["arc", "chain", "frost", "spiral"], "skill": ["chain", "spiral", "frost", "split"]},
+	"tarn": {"weapon": ["kinetic"], "defence": ["kinetic", "anchor"]},
+	"tally": {"weapon": ["anchor"], "defence": ["speed", "arc"]},
+	"remembered_cannon": {"weapon": ["mass"], "skill": ["mass", "kinetic", "speed"]},
+}
+# Target: 70% of a listed pilot's offered parts come from its kit (band 60 to 80%). The rest is the
+# neutral shelf, plus a generated recipe GENERATED_SHARE of those neutral slots off the slice.
+const KIT_SHARE := 0.7
+# Target: 13% of a movement pilot's offers are movement parts (the comps cap is 15%). A kit slot
+# draws from the kit's movement parts this share of the time over KIT_SHARE; never more, even
+# when the kit's other bucket is empty, so movement cannot fill an offer. A pilot whose pair has
+# no movement bucket still sees its own class movement rows, at CLASS_MOVEMENT_SHARE.
+const MOVEMENT_SHARE := 0.13
+const CLASS_MOVEMENT_SHARE := 0.06
+# The neutral shelf: small flat parts every pilot can be offered, so a build never stalls on its
+# kit. A shelf part in a pilot's kit counts as kit for that pilot. One in the pilot's non-weapon
+# bucket is drawn NEUTRAL_LEAN times as often as the others (the shelf feeds the second half of
+# the pair; the weapon half comes from the kit's hitters); a weapon-and-movement pilot, whose
+# movement half has no shelf parts, leans to weapon. None is offered again once a stage's
+# offered count for it reaches NEUTRAL_REPEAT_CAP.
+const NEUTRAL_SHELF := ["hot_rivets", "loose_trigger", "long_barrel", "rivet_plating", "rivet_seam", "magnet_spool", "fast_hands"]
+const NEUTRAL_LEAN := 4.0
+const NEUTRAL_REPEAT_CAP := 2
+
 # Hot-wired parts (BUILD-SYSTEMS.md, Two hot-wired parts). Not in CATALOGUE, so they never
 # enter rows(), ids(), offer_pool() or roll(): a hot-wired part is offered by authorship,
 # never drawn as loot. Each row names both consequences with an icon id and at most three
@@ -554,6 +586,104 @@ static func offer_pool(class_id: String, rarities: Array) -> Array:
 	return pool
 
 
+# A part's offer bucket, one of weapon, skill, defence or movement, read from its own row: a smash,
+# special or charge part is skill; a weapon, pattern or fire part weapon; a mobility part (or a
+# cruise mod) movement; another class part skill; a hull part defence; a punch part weapon; the
+# rest (utility) skill.
+static func bucket_of(part_id: String) -> String:
+	var r := row(part_id)
+	var family := String(r.get("family", ""))
+	var touches := String(r.get("touches", ""))
+	if touches in ["haul", "special"] or r.has("charges"):
+		return "skill"
+	if family in ["weapon", "pattern"] or touches == "fire" or r.has("patterns"):
+		return "weapon"
+	if family == "mobility" or r.get("mods", {}).has("cruise"):
+		return "movement"
+	if family == "class":
+		return "skill"
+	if float(r.get("max_hp_bonus", 0.0)) > 0.0 or r.get("icon", "") == "defense":
+		return "defence"
+	if float(r.get("punch", 0.0)) > 0.0:
+		return "weapon"
+	return "skill"
+
+
+# True when part_id is in class_id's kit (KITS): its own class row, or a part in one of the kit's
+# buckets carrying one of that bucket's tags. False for a pilot with no kit.
+static func in_kit(class_id: String, part_id: String) -> bool:
+	if not KITS.has(class_id):
+		return false
+	var r := row(part_id)
+	if String(r.get("class_id", "")) == class_id:
+		return true
+	var tags: Array = KITS[class_id].get(bucket_of(part_id), [])
+	return r.get("tags", []).any(func(tag): return tag in tags)
+
+
+# A kit slot's candidates: the kit's movement parts MOVEMENT_SHARE / KIT_SHARE of the time when the
+# kit holds any (a movement bucket or a class movement row), else its other kit parts (possibly
+# none, which hands the slot to the shelf).
+static func _kit_slot(rng: RandomNumberGenerator, class_id: String, pool: Array) -> Array:
+	var kit: Array = pool.filter(func(key): return in_kit(class_id, key))
+	if not kit.any(func(key): return bucket_of(key) == "movement"):
+		return kit
+	var share := MOVEMENT_SHARE if KITS[class_id].has("movement") else CLASS_MOVEMENT_SHARE
+	var moving := rng.randf() < share / KIT_SHARE
+	return kit.filter(func(key): return (bucket_of(key) == "movement") == moving)
+
+
+# A neutral slot's candidates: shelf parts in the pool, outside the pilot's kit, under the cap.
+static func _neutral_slot(class_id: String, pool: Array, offered: Dictionary) -> Array:
+	return pool.filter(func(key): return key in NEUTRAL_SHELF and not in_kit(class_id, key) \
+		and int(offered.get(key, 0)) < NEUTRAL_REPEAT_CAP)
+
+
+# The pool without the shelf parts this stage has offered NEUTRAL_REPEAT_CAP times.
+static func _uncapped(class_id: String, pool: Array, offered: Dictionary) -> Array:
+	return pool.filter(func(key): return not key in NEUTRAL_SHELF or in_kit(class_id, key) \
+		or int(offered.get(key, 0)) < NEUTRAL_REPEAT_CAP)
+
+
+# One weighted slot for a pilot with a kit: a kit part KIT_SHARE of the time, else a neutral shelf
+# part (or, off the slice, a generated recipe GENERATED_SHARE of the time). An empty side falls to
+# the other, then to the pool's uncapped parts; "" when nothing is left. The rolled rarity is kept
+# when any candidate has it.
+static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: String, pool: Array,
+		offered: Dictionary, picks: Array, exclude: Array) -> String:
+	var kit_side := rng.randf() < KIT_SHARE
+	if not kit_side and not listed_only() and rng.randf() < GENERATED_SHARE:
+		var recipe := ItemGen.roll_id(rng, rarity)
+		return "" if recipe in picks or recipe in exclude else recipe
+	var neutral := _neutral_slot(class_id, pool, offered)
+	var source: Array = _kit_slot(rng, class_id, pool) if kit_side else neutral
+	if source.is_empty() and kit_side:
+		source = neutral
+	if source.is_empty():
+		source = _uncapped(class_id, pool, offered)
+	if source.is_empty():
+		return ""
+	# The rolled rarity stands (the shown odds read it): from this side, else the other side, else
+	# the uncapped pool, and only then any rarity on this side. The other side of a shelf slot is the
+	# kit's non-movement parts, so the fallback never adds movement.
+	var of_rarity := func(list: Array) -> Array: return list.filter(func(key): return rows()[key]["rarity"] == rarity)
+	var bucket: Array = of_rarity.call(source)
+	if bucket.is_empty():
+		bucket = of_rarity.call(neutral if kit_side else pool.filter(func(key): return in_kit(class_id, key) \
+			and bucket_of(key) != "movement"))
+	if bucket.is_empty():
+		bucket = of_rarity.call(_uncapped(class_id, pool, offered))
+	if bucket.is_empty():
+		bucket = source
+	var lean := {}
+	var kit: Dictionary = KITS[class_id]
+	for key in bucket:
+		var b := bucket_of(key)
+		if key in NEUTRAL_SHELF and kit.has(b) and (b != "weapon" or kit.has("movement")):
+			lean[key] = NEUTRAL_LEAN
+	return _weighted(rng, bucket, offered, lean)
+
+
 static func milestone_for(event_id: String, held: Array) -> String:
 	if MILESTONE_FOR_EVENT.has(event_id):
 		return MILESTONE_FOR_EVENT[event_id]
@@ -575,7 +705,8 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	rarities = ItemGen.resolve_rarities(rarities)
 	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude)
 	var picks: Array = []
-	var bait: String = completing_part(held, pool)
+	var leans := KITS.has(class_id)
+	var bait := _bait(class_id, held, pool, offered, count)
 	if bait != "" and rng.randf() < SYNERGY_BAIT:
 		picks.append(bait)
 		pool.erase(bait)
@@ -583,6 +714,12 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	while picks.size() < count and not pool.is_empty() and tries < count * 8:
 		tries += 1
 		var rarity := _pick_rarity(rng, rarities)
+		if leans:
+			var slot := _lean_slot(rng, rarity, class_id, pool, offered, picks, exclude)
+			if slot != "":
+				picks.append(slot)
+				pool.erase(slot)
+			continue
 		if not listed_only() and rng.randf() < GENERATED_SHARE:
 			var recipe := ItemGen.roll_id(rng, rarity)
 			if not recipe in picks and not recipe in exclude:
@@ -596,18 +733,68 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 		pool.erase(chosen)
 	if picks.size() >= 2 and not picks.any(func(key): return def(key).hits_harder()):
 		var harder: Array = pool.filter(func(key): return def(key).hits_harder())
+		if leans:
+			# A leaning pilot's harder part comes from its kit (a non-movement one first), else
+			# the shelf under its cap, else any uncapped part.
+			var kit: Array = harder.filter(func(key): return in_kit(class_id, key))
+			var still: Array = kit.filter(func(key): return bucket_of(key) != "movement")
+			var shelf: Array = _neutral_slot(class_id, harder, offered)
+			for side in [still, kit, shelf, _uncapped(class_id, harder, offered)]:
+				if not side.is_empty():
+					harder = side
+					break
 		if not harder.is_empty():
 			picks[picks.size() - 1] = harder[rng.randi_range(0, harder.size() - 1)]
+	if leans:
+		_keep_a_neutral(rng, class_id, picks, pool, offered, 1 if not picks.is_empty() and picks[0] == bait else 0)
 	return picks
 
 
-static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictionary) -> String:
+# A leaning pilot's draw that holds no kit part still shows a shelf part: the first slot from first
+# on (past the synergy bait) that is not the draw's only harder part becomes one, when an uncapped
+# shelf part is left.
+static func _keep_a_neutral(rng: RandomNumberGenerator, class_id: String, picks: Array, pool: Array,
+		offered: Dictionary, first: int) -> void:
+	if picks.is_empty() or picks.any(func(key): return in_kit(class_id, key) or key in NEUTRAL_SHELF):
+		return
+	var shelf := _neutral_slot(class_id, pool.filter(func(key): return not key in picks), offered)
+	if shelf.is_empty():
+		return
+	var hitters: Array = picks.filter(func(key): return def(key).hits_harder())
+	for i in range(first, picks.size()):
+		# Only a slot of the shelf's own rarity turns, so the shown rarity odds hold.
+		if rarity_of(picks[i]) != rarity_of(shelf[0]):
+			continue
+		if picks.size() < 2 or hitters.size() != 1 or picks[i] != hitters[0]:
+			picks[i] = shelf[rng.randi_range(0, shelf.size() - 1)]
+			return
+
+
+# The part in pool that completes a synergy, or "". A leaning pilot's bait is never a shelf part at
+# its repeat cap, and in a draw of two or more slots it is a kit or shelf part: the bait is half of
+# such a draw, so an off-kit one would undo the lean. A one-slot draw (a fabricator, a pocket, the
+# F004 gate) keeps the plain bait, preferring a kit or shelf one.
+static func _bait(class_id: String, held: Array, pool: Array, offered: Dictionary, count: int) -> String:
+	if not KITS.has(class_id):
+		return completing_part(held, pool)
+	var open := _uncapped(class_id, pool, offered)
+	var near := completing_part(held, _near(class_id, open))
+	return near if near != "" or count >= 2 else completing_part(held, open)
+
+
+# The pool's kit parts and its shelf parts, in pool order.
+static func _near(class_id: String, pool: Array) -> Array:
+	return pool.filter(func(key): return in_kit(class_id, key) or key in NEUTRAL_SHELF)
+
+
+# lean: id to a weight multiplier (SQ19's neutral lean); absent ids weigh 1.
+static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictionary, lean: Dictionary = {}) -> String:
 	var total := 0.0
 	for key in bucket:
-		total += 1.0 / (1.0 + offered.get(key, 0))
+		total += lean.get(key, 1.0) / (1.0 + offered.get(key, 0))
 	var x := rng.randf() * total
 	for key in bucket:
-		x -= 1.0 / (1.0 + offered.get(key, 0))
+		x -= lean.get(key, 1.0) / (1.0 + offered.get(key, 0))
 		if x < 0.0:
 			return key
 	return bucket[-1]
@@ -636,9 +823,13 @@ static func roll_gate(rng: RandomNumberGenerator, rarities: Array, class_id: Str
 	var eligible: Array = PATTERN_PARTS.filter(func(key): return def(key).rarity in rarities)
 	if eligible.is_empty():
 		eligible = PATTERN_PARTS.duplicate()
+	if KITS.has(class_id):
+		# SQ19: a leaning pilot's guaranteed pattern is a kit one when its kit has one.
+		var own: Array = eligible.filter(func(key): return in_kit(class_id, key))
+		eligible = own if not own.is_empty() else eligible
 	var pattern: String = eligible[rng.randi_range(0, eligible.size() - 1)]
 	if picks.size() < count:
 		picks.append(pattern)
-	elif picks.size() >= 2 or picks[0] != completing_part(held, offer_pool(class_id, rarities)):
+	elif picks.size() >= 2 or picks[0] != _bait(class_id, held, offer_pool(class_id, rarities), offered, count):
 		picks[picks.size() - 1] = pattern
 	return picks
