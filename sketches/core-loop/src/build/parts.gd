@@ -206,14 +206,18 @@ const GENERATED_SHARE := 0.25
 # SQ19 weighted offers (comps/roboquest/classes-and-perks.md:82, comps/gunfire/heroes-and-ascensions.md:87).
 # A pilot's kit is its own class rows plus every part in one of its two buckets (bucket_of) that
 # carries one of that bucket's tags below. The two buckets are the pilot's dominant offer pair,
-# one of the six pairs of weapon, skill, defence and movement, so no two pilots lean the same way.
+# one of the six pairs of weapon, skill, defence and movement, and each pilot declares a different
+# one. Tally's defence + movement pair cannot be its measured pair while every gate pair holds a
+# part that hits harder (offer_weights_test PAIRS); it is declared so the six stay distinct.
+# Kest's movement half is its class rows only: Frost Vane as a kit part came back as synergy bait
+# often enough to put Kest's random-bot movement at 15.2%, over the 15% cap.
 # A pilot not listed here (or an empty class) draws exactly as before.
 const KITS := {
-	"pylon_engineer": {"skill": ["arc", "anchor"], "movement": ["anchor", "arc", "spiral"]},
-	"runner_gunner": {"weapon": ["speed", "split"], "movement": ["speed"]},
-	"demolitions_caster": {"weapon": ["arc", "chain", "frost", "spiral"], "skill": ["chain", "spiral", "frost", "split"]},
+	"pylon_engineer": {"skill": ["arc", "anchor"], "defence": ["arc", "anchor", "mass"]},
+	"runner_gunner": {"skill": ["speed"], "movement": ["speed"]},
+	"demolitions_caster": {"weapon": ["arc", "chain", "frost", "spiral"], "movement": []},
 	"tarn": {"weapon": ["kinetic"], "defence": ["kinetic", "anchor"]},
-	"tally": {"weapon": ["anchor"], "defence": ["speed", "arc"]},
+	"tally": {"defence": ["speed", "arc", "mass"], "movement": ["speed"]},
 	"remembered_cannon": {"weapon": ["mass"], "skill": ["mass", "kinetic", "speed"]},
 }
 # Target: 70% of a listed pilot's offered parts come from its kit (band 60 to 80%). The rest is the
@@ -222,11 +226,12 @@ const KIT_SHARE := 0.7
 # The most of one slot's odds a single kit part may hold (start value): on a short part list a
 # one-part kit would otherwise put that part in nearly every draw.
 const KIT_PART_CAP := 0.25
-# Target: 13% of a movement pilot's offers are movement parts (the comps cap is 15%). A kit slot
+# Target: 11% of a movement pilot's offers are movement parts (the comps cap is 15%; bait and the
+# generated recipes add a few points on top). A kit slot
 # draws from the kit's movement parts this share of the time over KIT_SHARE; never more, even
 # when the kit's other bucket is empty, so movement cannot fill an offer. A pilot whose pair has
 # no movement bucket still sees its own class movement rows, at CLASS_MOVEMENT_SHARE.
-const MOVEMENT_SHARE := 0.13
+const MOVEMENT_SHARE := 0.11
 const CLASS_MOVEMENT_SHARE := 0.06
 # The neutral shelf: small flat parts every pilot can be offered, so a build never stalls on its
 # kit. A shelf part in a pilot's kit counts as kit for that pilot. One in the pilot's non-weapon
@@ -589,26 +594,30 @@ static func offer_pool(class_id: String, rarities: Array) -> Array:
 	return pool
 
 
-# A part's offer bucket, one of weapon, skill, defence or movement, read from its own row: a smash,
-# special or charge part is skill; a weapon, pattern or fire part weapon; a mobility part (or a
-# cruise mod) movement; another class part skill; a hull part defence; a punch part weapon; the
-# rest (utility) skill.
+# A part's offer bucket, one of weapon, skill, defence or movement, read from its row's family,
+# touches and mods: a smash or special verb (touches haul or special) is skill; a class part skill
+# (the pilot's own kit, whatever verb it touches); a weapon or pattern part, or one that touches
+# fire, weapon; a mobility part, or a cruise mod, movement. A stat or milestone row has no verb
+# of its own, so its family's shown category (the row's icon, else PartDef.ICON_FOR_FAMILY) splits
+# it: defense is defence, damage or transform weapon, mobility movement, the rest skill.
 static func bucket_of(part_id: String) -> String:
 	var r := row(part_id)
 	var family := String(r.get("family", ""))
 	var touches := String(r.get("touches", ""))
-	if touches in ["haul", "special"] or r.has("charges"):
+	if touches in ["haul", "special"] or family == "class":
 		return "skill"
-	if family in ["weapon", "pattern"] or touches == "fire" or r.has("patterns"):
+	if family in ["weapon", "pattern"] or touches == "fire":
 		return "weapon"
 	if family == "mobility" or r.get("mods", {}).has("cruise"):
 		return "movement"
-	if family == "class":
-		return "skill"
-	if float(r.get("max_hp_bonus", 0.0)) > 0.0 or r.get("icon", "") == "defense":
-		return "defence"
-	if float(r.get("punch", 0.0)) > 0.0:
-		return "weapon"
+	var shown: String = r.get("icon", PartDef.ICON_FOR_FAMILY.get(family, "utility"))
+	match shown:
+		"defense":
+			return "defence"
+		"damage", "transform":
+			return "weapon"
+		"mobility":
+			return "movement"
 	return "skill"
 
 

@@ -23,16 +23,21 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 #     milestone with both bots.
 # On the alpha list (the 19 parts the default table offers) the same draws run; movement, the
 # repeat cap, the neutral fallback and class parts are checked, and share, overlap and pairs are
-# printed as measured. Overlap there cannot pass by arithmetic: Kest, Tarn and Cannon each have a
-# 10-part common pool, the same 10 shared parts, so each one's top-10 is that whole pool and any
-# two of them overlap 1.00. Whether SQ19 covers the alpha list is a coordinator ruling (2026-10-15).
+# printed as measured. Overlap there cannot pass by arithmetic: Kest, Tarn and Cannon have the
+# same 10-part common pool (no class part on the list), and the pattern guarantee adds Chain Arc,
+# so each one's top-10 holds at least 9 of the same 11 parts and any two overlap at least 0.90.
+# Whether SQ19 covers the alpha list is a coordinator ruling (2026-10-15).
 # PAIRS (2026-10-15, SQ19): the pair line is asserted. Measured against it: every two-slot gate draw
 # holds a part that hits harder (build_catalogue_test "gate pairs hit harder"), and no common part
 # that hits harder sits in the defence bucket, so in every pilot's offers weapon + skill + movement
 # is at least 50%. A defence + movement pair needs weapon and skill each below movement, which is
 # at most 15%, so under 45% in all: no pilot can hold that pair, and six distinct pairs cannot all
-# hold while the pair rule and the 15% movement cap stand. The checks stay red on that pilot until
-# the coordinator rules.
+# hold while the pair rule and the 15% movement cap stand. Tally declares that pair, so its pair
+# checks stay red, and its weighted share with them: no common part that hits harder is in its
+# kit, so the hitter in each gate pair is off-kit and its share sits near 0.37. Measured, not
+# proven: Rivet's skill + movement pair loses to weapon, because the stage-2 pattern guarantee
+# shows an off-kit pattern in each gate until the run holds one, and the greedy bot never takes
+# it (weapon 0.215 greedy against movement 0.083). These checks wait on the coordinator's ruling.
 # Evidence limit: the offer draw only. Whether each pilot still wins its bot
 # runs is bot_six_*_test's claim, and how the lean feels is Andrew's to play.
 
