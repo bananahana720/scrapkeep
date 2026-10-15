@@ -36,9 +36,11 @@ const BUILD_SIZE := 6
 const OFFER_SIZE := 2
 const SEED := 1
 const SHARE3_TARGET := 0.30
-# The frame budget the perf tests hold (tests/stage_gorge_perf_test.gd BUDGET_MS).
-const BUDGET_MS := 16.7
-const BUDGET_TICKS := 200
+# The frame budget as work, not wall time (sketch-lint L1): per live bolt a tick the bit
+# layer reads one tell per bit and one pair row per pair, so a full pool of the worst
+# build reads at most MAX_LIVE * (3 + 3) rows, however many parts are held.
+const READS_PER_BOLT_CAP := 6
+const LONG_BUILD := 20
 # A runtime script error aborts a check function without failing the run, so every
 # check must report: fewer than this many verdicts is itself a failure.
 const EXPECTED_REPORTS := 11
@@ -284,24 +286,30 @@ func _check_compose() -> void:
 
 func _check_frame_budget() -> void:
 	# The bit layer's per-tick work for the worst build at a full pool: every live bolt
-	# spawns a child that copies the set, and every child's tells are read.
+	# spawns a child that copies the set, and every child's tells and pairs are read.
+	# A 20-part build of every bit must cost no more than the worst 6-part build.
 	var Bolts: Script = load(BOLTS)
 	var worst: int = get_meta("worst", S.ALL)
-	var parent := {"origin": Vector3.ZERO, "dir": Vector3.FORWARD, "speed": 40.0, "bits": worst}
-	var worst_ms := 0.0
-	var total_ms := 0.0
-	for t in BUDGET_TICKS:
-		var start := Time.get_ticks_usec()
+	var long_masks: Array = []
+	for i in LONG_BUILD:
+		long_masks.append(S.bit(S.NAMES[i % S.NAMES.size()]))
+	var long_bits: int = S.shot(long_masks)["bits"]
+	var reads := {}
+	# The positive control: the raw OR of the long build, uncapped, must overrun the cap.
+	for build in [["worst", worst], ["long", long_bits], ["uncapped", S.ALL]]:
+		var parent := {"origin": Vector3.ZERO, "dir": Vector3.FORWARD, "speed": 40.0, "bits": build[1]}
+		var n := 0
 		for i in Bolts.MAX_LIVE:
 			var child: Dictionary = Bolts.child(parent, {"damage": 1.0})
-			S.tells(child["bits"])
-			S.unspecified_pairs(child["bits"])
-		var ms := (Time.get_ticks_usec() - start) / 1000.0
-		worst_ms = maxf(worst_ms, ms)
-		total_ms += ms
-	_report("worst build inside the frame budget", worst_ms < BUDGET_MS,
-		"worst build %s, %d bolts a tick, worst tick %.3f ms, mean %.3f ms, budget %.1f ms"
-			% [S.names(worst), Bolts.MAX_LIVE, worst_ms, total_ms / BUDGET_TICKS, BUDGET_MS])
+			n += S.tells(child["bits"]).size()
+			var held: int = S.count(child["bits"])
+			n += held * (held - 1) / 2
+		reads[build[0]] = n
+	var cap: int = Bolts.MAX_LIVE * READS_PER_BOLT_CAP
+	_report("worst build inside the frame budget", reads["worst"] <= cap and reads["long"] <= cap
+		and reads["long"] <= reads["worst"] and reads["uncapped"] > cap,
+		"worst build %s, %d bolts a tick, %d table reads; a %d-part build of every bit %s, %d reads; cap %d; uncapped control %d reads"
+			% [S.names(worst), Bolts.MAX_LIVE, reads["worst"], LONG_BUILD, S.names(long_bits), reads["long"], cap, reads["uncapped"]])
 
 
 func _check_set_operations() -> void:
