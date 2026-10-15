@@ -131,9 +131,11 @@ class Recorder:
 	var _engaged := false
 	var _guard_broken := false
 	var _since_pickup := 1 << 30
+	var _outer
 
 	func _init(events, flow, loot_tail_ticks: int = -1) -> void:
 		_flow = flow
+		_outer = load("res://src/core/stage_beats.gd")
 		loot_tail = loot_tail_ticks if loot_tail_ticks >= 0 else int(ceil(LOOT_TAIL_S * Engine.physics_ticks_per_second))
 		events.stage_entered.connect(_on_stage_entered)
 		events.stage_cleared.connect(_on_stage_cleared)
@@ -151,7 +153,7 @@ class Recorder:
 		if _row.is_empty():
 			return
 		_since_pickup += 1
-		var beat: String = load("res://src/core/stage_beats.gd").classify({"state": _state, "landed": _landed, "engaged": _engaged,
+		var beat: String = _outer.classify({"state": _state, "landed": _landed, "engaged": _engaged,
 			"guard_broken": _guard_broken, "since_pickup": _since_pickup, "loot_tail": loot_tail})
 		if beat == "":
 			return
@@ -159,7 +161,7 @@ class Recorder:
 		_row["total"] += 1
 		if not _row["first"].has(beat):
 			_row["first"][beat] = _row["total"]
-		_row["skipped"] = _missing(_row)
+			_row["skipped"] = _missing(_row)
 
 	static func _missing(row: Dictionary) -> Array:
 		var out := []
