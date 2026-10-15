@@ -165,10 +165,14 @@ func _check_milestones() -> void:
 
 # Growth: one early part is modest, a late build multiplies into an absurd one, and
 # gate offers climb in tier with bonus cores.
+# 2026-10-15 SG14-CONTRACT ruling C10: the late floor is 20x (was 25x). power() now tracks
+# measured combat on its declared contract; the late build measures 22.95x the bare laser
+# (1927.8 DPS / 84 DPS, live HP removal) with Cross Split at 0.6 per fragment. The old 25x
+# was set against an estimate that overstated late builds by 106 to 1657 percent.
 func _check_trajectory() -> void:
 	var early: float = BuildSheet.from_parts(["hot_rivets"]).power()
 	var late: float = BuildSheet.from_parts(LATE_BUILD).power()
-	_report("growth curve", early <= 1.5 and late >= 25.0,
+	_report("growth curve", early <= 1.5 and late >= 20.0,
 		"estimated weapon output: one Hot Rivets x%.2f; a ten-part late build x%.1f" % [early, late])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 11

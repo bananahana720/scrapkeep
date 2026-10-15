@@ -1,5 +1,8 @@
 extends SceneTree
-# smoke: solo timeout=360s
+# smoke: bots timeout=1200s
+# 2026-10-15 RT-CAP: a 20-seed whole-run replay (five batches of four child games) ran at 359.5 s
+# of the 360 s solo ceiling on a normal machine and timed out at load 55 to 59, so it moved to the
+# bot tier (npm run sketch:bots; sketch:gate runs both). Every check is unchanged.
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
@@ -115,7 +118,8 @@ func _parallel_runtime() -> void:
 			if record:
 				args.append("--record-base")
 			jobs.append({"script": "res://tests/run_tier_test.gd", "args": args})
-		var results := ChildRuns.run(jobs, 70.0)
+		# 150 s per batch of four (70 s before RT-CAP): the cap catches a hang, not a slow machine.
+		var results := ChildRuns.run(jobs, 150.0)
 		for i in results.size():
 			var result: Dictionary = results[i]
 			var summary := ChildRuns.summary(result)

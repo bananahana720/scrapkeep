@@ -129,8 +129,20 @@ const PAY_FAR := ["rare"]
 func _initialize() -> void:
 	var map_id := ""
 	var jitter_seeds := 0
+	var draw_mode := false
+	var draw_seeds := 1000
+	var placement_seeds := 200
+	var draw_out := ""
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--map="):
+		if arg == "--pockets=draw":
+			draw_mode = true
+		elif arg.begins_with("--seeds="):
+			draw_seeds = int(arg.trim_prefix("--seeds="))
+		elif arg.begins_with("--placement-seeds="):
+			placement_seeds = int(arg.trim_prefix("--placement-seeds="))
+		elif arg.begins_with("--out="):
+			draw_out = arg.trim_prefix("--out=")
+		elif arg.begins_with("--map="):
 			map_id = arg.trim_prefix("--map=")
 		elif arg == "--jitter":
 			jitter_seeds = JITTER_SEEDS
@@ -139,6 +151,23 @@ func _initialize() -> void:
 	if map_id.is_empty():
 		printerr("park_graph: pass --map=<map_id>")
 		quit(2)
+		return
+	if draw_mode:
+		var arm := draw_arm(map_id, draw_seeds, placement_seeds)
+		var summary := arm.duplicate(true)
+		for row in summary.templates:
+			row.erase("samples")
+		print("pocket_draw_arm: " + JSON.stringify(summary))
+		if not draw_out.is_empty():
+			var file := FileAccess.open(draw_out, FileAccess.WRITE)
+			if file == null:
+				printerr("park_graph: cannot save draw arm to " + draw_out)
+				quit(2)
+				return
+			file.store_string(JSON.stringify(arm, "\t"))
+			file.close()
+		print("pocket_draw_arm: %s (%d stage samples, %d placement samples)" % ["PASS" if arm.ok else "FAIL", arm.stage_samples, arm.placement_samples])
+		quit(0 if arm.ok else 1)
 		return
 	var park_path := "%s/%s.json" % [PARK_DIR, map_id]
 	var dir := "%s/%s" % [OUT_DIR, map_id]
@@ -1820,3 +1849,226 @@ static func jitter_text(result: Dictionary) -> String:
 		result["seeds"], ", ".join(result["anchors"]), 100.0 * result["top2_share"], 100.0 * JITTER_TOP2_MIN,
 		"in target" if result["top2_share"] >= JITTER_TOP2_MIN else "OUT OF TARGET", 100.0 * result["reroll_share"], 100.0 * REROLL_MAX,
 		"in target" if result["reroll_share"] <= REROLL_MAX else "OUT OF TARGET"]
+
+
+# Permissive envelope of every quantized entrance offset, including lattice rounding.
+# This deliberately ignores footprint, route, ring and terrain restrictions.
+static func draw_detour_bound(graph, from_line: PackedFloat32Array) -> Dictionary:
+	var Library = load("res://src/world/pockets/pocket_library.gd")
+	var reach := 0.0
+	for side in Library.FOOTPRINTS.values():
+		reach = maxf(reach, float(side) * 0.5 + ParkGraph.STEP_M * sqrt(2.0) * 0.5)
+	var offsets := []
+	var cells := ceili(reach / ParkGraph.STEP_M)
+	for dx in range(-cells, cells + 1):
+		for dz in range(-cells, cells + 1):
+			var offset := Vector2(dx, dz) * ParkGraph.STEP_M
+			if offset.length() <= reach:
+				offsets.append(offset)
+	var low := INF
+	var high := 0.0
+	for n in range(ParkGraph.SIDE * ParkGraph.SIDE):
+		if from_line[n] < DETOUR_MIN_M or from_line[n] > DETOUR_MAX_M:
+			continue
+		var at := Vector2(graph.px[n], graph.pz[n])
+		for offset in offsets:
+			var dn: int = graph.nearest(at + offset)
+			if graph.flags(dn) & (ParkGraph.SIGHT_OK | ParkGraph.DOOR_OK) == (ParkGraph.SIGHT_OK | ParkGraph.DOOR_OK) and graph.d_spawn_node(dn) >= DOOR_SPAWN_M and graph.d_landmark_node(dn) >= DOOR_BEACON_M:
+				low = minf(low, from_line[n])
+				high = maxf(high, from_line[n])
+				break
+	return {"min": low, "max": high, "ratio": high / low}
+
+
+# SQ14 runs on the committed graphs; this arm never rebakes or rewrites them.
+static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> Dictionary:
+	var Park = load("res://src/core/park_defs.gd")
+	var Map = load("res://src/world/park/park_map.gd")
+	var Run = load("res://src/core/run_state.gd")
+	var Trade = load("res://src/world/trade_pockets.gd")
+	var Draw = load("res://src/world/pockets/pocket_draw.gd")
+	var Library = load("res://src/world/pockets/pocket_library.gd")
+	var result := {"ok": true, "stage_samples": 0, "placement_samples": 0, "templates": [], "coverage": [], "errors": [], "layout_seed": 78000, "seed_start": 0, "detour_population": "path distance from main line to each drawn pay point; trade excluded"}
+	var covered := {}
+	if seeds <= 0 or placement_seeds <= 0 or placement_seeds > seeds:
+		result.errors.append("require 0 < placement seeds <= stage seeds")
+		result.ok = false
+		return result
+	for stage in range(1, Park.COUNT + 1):
+		var id: String = Park.of(stage).map
+		if map_id != "all" and map_id != id:
+			continue
+		var map = Map.new("res://src/world/park/%s.json" % id)
+		var graph = ParkGraph.read("res://assets/park/%s/graph.bin" % id)
+		if graph == null or not map.ok:
+			result.errors.append("graph or map missing: " + id)
+			continue
+		var prepared: Dictionary = Draw.prepare(graph, map)
+		var pool: PackedInt32Array = Trade.candidates(graph, map)
+		var index := Index.new(graph, map.park)
+		var ring_cache := {}
+		var sets := {}
+		var detours := []
+		var union_blocks := {}
+		var row := {"stage": stage, "map": id, "exempt": stage == 1, "stage_samples": seeds, "placement_samples": placement_seeds, "draw_count": 0, "nonempty_stages": 0, "counts_in_3_to_8": 0, "distinct_sets": 0, "detour_p10": 0.0, "detour_p90": 0.0, "detour_ratio": 0.0, "failed_placements": 0, "credit_lost": 0, "chance_opportunities": 0, "chance_hits": 0, "chance_rate": 0.0, "placement_draws": 0, "rule_samples": seeds, "rule_breaches": 0, "route_cuts": 0, "door_ring_breaches": 0, "placement_example": {}, "samples": []}
+		var envelope := draw_detour_bound(graph, prepared.from_line)
+		row.detour_bound = envelope.ratio
+		row.detour_bound_min = envelope.min
+		row.detour_bound_max = envelope.max
+		row.detour_floor = minf(2.0, 0.9 * row.detour_bound)
+		if not is_equal_approx(row.detour_floor, minf(2.0, 0.9 * envelope.max / envelope.min)):
+			result.errors.append("floor derivation requirement: " + id)
+		for seed_value in seeds:
+			var run = Run.new()
+			run.run_seed = seed_value
+			run.stage = stage
+			var trade: Dictionary = Trade.stage_site(graph, map, run, 78000, pool)
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash([78000, seed_value, stage, "pocket_draw"])
+			var drawn: Dictionary = Draw.draw(prepared, map, stage, rng, trade)
+			var specs: Array = drawn.sites
+			var interior_ids := []
+			var nodes := []
+			for spec in specs:
+				interior_ids.append(spec.interior.id)
+				nodes.append(spec.node)
+				covered[spec.interior.id] = true
+				detours.append(float(prepared.from_line[spec.node]))
+			interior_ids.sort()
+			sets[JSON.stringify(interior_ids)] = true
+			row.draw_count += specs.size()
+			row.nonempty_stages += int(not specs.is_empty())
+			var count: int = map.activity_sites.size() + specs.size()
+			row.counts_in_3_to_8 += int(count >= 3 and count <= 8)
+			row.samples.append({"seed": seed_value, "interiors": interior_ids, "nodes": nodes, "non_trade_count": count})
+			var breaches := drawn_rules(graph, map, specs, trade, prepared.from_line, index, ring_cache)
+			row.rule_breaches += breaches.size()
+			for b in breaches:
+				row.door_ring_breaches += int(b.rule == "door_ring")
+				if result.errors.size() < 20:
+					result.errors.append({"map": id, "seed": seed_value, "breach": b})
+			if seed_value < placement_seeds:
+				row.placement_draws += specs.size()
+				row.failed_placements += int(drawn.metrics.failed_placements)
+				row.chance_opportunities += int(drawn.metrics.chance_opportunities)
+				row.chance_hits += int(drawn.metrics.chance_hits)
+				var spent := 0
+				for spec in specs:
+					var side: float = Library.FOOTPRINTS[spec.interior.footprint]
+					spent += ceili(side * side / Library.FOOTPRINTS.small)
+					var half := Vector2.ONE * side * 0.5
+					for n in graph.box_nodes(spec.at - half - Vector2.ONE * ParkGraph.STEP_M, spec.at + half + Vector2.ONE * ParkGraph.STEP_M):
+						union_blocks[n] = true
+				row.credit_lost += absi(150 - spent - int(drawn.metrics.remaining_credits))
+				row.samples.back()["placement"] = drawn.metrics.duplicate()
+			row.samples.back()["rule_breaches"] = breaches
+			if seed_value == 0:
+				var examples := []
+				for spec in specs:
+					examples.append({"interior": spec.interior.id, "node": spec.node, "at": [spec.at.x, spec.at.y], "detour_m": prepared.from_line[spec.node], "footprint": spec.interior.footprint})
+				row.placement_example = {"seed": 0, "sites": examples, "trade_node": trade.get("node", -1)}
+		row.distinct_sets = sets.size()
+		detours.sort()
+		if not detours.is_empty():
+			row.detour_p10 = detours[floori((detours.size() - 1) * 0.1)]
+			row.detour_p90 = detours[floori((detours.size() - 1) * 0.9)]
+			row.detour_ratio = row.detour_p90 / row.detour_p10
+		if row.chance_opportunities > 0:
+			row.chance_rate = float(row.chance_hits) / row.chance_opportunities
+		# The union of all 200 placement samples is a stronger route check than each separately.
+		var cut = ParkGraph.from_bytes(graph.to_bytes())
+		cut.off = PackedInt32Array([0])
+		cut.to.clear()
+		cut.length.clear()
+		cut.ride.clear()
+		for n in graph.node_count():
+			if not union_blocks.has(n):
+				for e in range(graph.off[n], graph.off[n + 1]):
+					if not union_blocks.has(graph.to[e]):
+						cut.to.append(graph.to[e])
+						cut.length.append(graph.length[e])
+						cut.ride.append(graph.ride[e])
+			cut.off.append(cut.to.size())
+		row.route_cuts = route_breaks(cut, map.park).size()
+		if stage != 1:
+			if row.distinct_sets < 8 or row.counts_in_3_to_8 < seeds * 0.95 or row.detour_ratio < row.detour_floor:
+				result.errors.append("variety/count/detour requirement: " + id)
+			if row.chance_opportunities == 0 or absf(row.chance_rate - 0.25) > 0.03:
+				result.errors.append("chance rate requirement: " + id)
+		elif row.draw_count != 0:
+			result.errors.append("D8 stage 1 must draw nothing")
+		if row.credit_lost != 0 or row.rule_breaches != 0 or row.route_cuts != 0:
+			result.errors.append("credit/rules/routes requirement: " + id)
+		result.stage_samples += seeds
+		result.placement_samples += placement_seeds
+		result.templates.append(row)
+		var compact := row.duplicate()
+		compact.erase("samples")
+		print("pocket_draw_template: " + JSON.stringify(compact))
+	result.coverage = covered.keys()
+	result.coverage.sort()
+	if map_id == "all":
+		for entry in Library.rows():
+			if entry.kind != "trade" and not covered.has(entry.id):
+				result.errors.append("interior never drawn: " + entry.id)
+	if result.templates.is_empty():
+		result.errors.append("no park template selected")
+	result.ok = result.errors.is_empty()
+	return result
+
+
+# The generated-set rules use the same owners as park_pockets_test, without calling the draw.
+static func drawn_rules(graph, map, specs: Array, trade: Dictionary, from_line: PackedFloat32Array, index, ring_cache: Dictionary) -> Array:
+	var Library = load("res://src/world/pockets/pocket_library.gd")
+	var Trade = load("res://src/world/trade_pockets.gd")
+	var out := []
+	var seen := {}
+	var existing: Array = Trade.doors(map)
+	if not trade.is_empty():
+		existing.append({"at": trade.at})
+	var far := -1.0
+	for spec in specs:
+		far = maxf(far, from_line[spec.node])
+	for spec in specs:
+		var entry: Dictionary = spec.interior
+		if seen.has(entry.id):
+			out.append(_breach(entry.id, "distinctness", "repeated interior"))
+		seen[entry.id] = true
+		for authored in map.activity_sites:
+			if Library.for_site(map.park.map, authored.row).get("id", "") == entry.id:
+				out.append(_breach(entry.id, "assignment", "stage assigned interior drawn"))
+		var half: float = Library.FOOTPRINTS[entry.footprint] * 0.5
+		var door: Vector2 = spec.at + Vector2(entry.entrances[0].at[0], entry.entrances[0].at[1]).rotated(spec.get("turn", 0) * PI * 0.5)
+		var dn: int = graph.nearest(door)
+		var flags: int = graph.flags(dn)
+		if flags & (ParkGraph.OPEN | ParkGraph.DOOR_OK | ParkGraph.SIGHT_OK) != (ParkGraph.OPEN | ParkGraph.DOOR_OK | ParkGraph.SIGHT_OK) or flags & (ParkGraph.LINE | ParkGraph.GUARDED | ParkGraph.WARDEN) != 0:
+			out.append(_breach(entry.id, "door", "door flags"))
+		if graph.d_spawn_node(dn) < DOOR_SPAWN_M or graph.d_landmark_node(dn) < DOOR_BEACON_M:
+			out.append(_breach(entry.id, "distance", "spawn or beacon minimum"))
+		if from_line[spec.node] < DETOUR_MIN_M or from_line[spec.node] > DETOUR_MAX_M:
+			out.append(_breach(entry.id, "detour", "pay point outside band"))
+		if not ring_cache.has(dn):
+			ring_cache[dn] = _ring(graph, map.park, index, dn)
+		if not ring_cache[dn].is_empty():
+			out.append(_breach(entry.id, "clear_ring", str(ring_cache[dn])))
+		var box := Rect2(spec.at - Vector2.ONE * half, Vector2.ONE * half * 2.0)
+		for d in existing:
+			var closest := Vector2(clampf(d.at.x, box.position.x, box.end.x), clampf(d.at.y, box.position.y, box.end.y))
+			if closest.distance_to(d.at) <= RING_M:
+				out.append(_breach(entry.id, "door_ring", "drawn footprint inside existing ring"))
+			if door.distance_to(d.at) < DOOR_DOOR_M:
+				out.append(_breach(entry.id, "door_to_door", "existing door too close"))
+		for other in specs:
+			if other != spec:
+				var od: Vector2 = other.at + Vector2(other.interior.entrances[0].at[0], other.interior.entrances[0].at[1]).rotated(other.get("turn", 0) * PI * 0.5)
+				if door.distance_to(od) < DOOR_DOOR_M:
+					out.append(_breach(entry.id, "door_to_door", "drawn doors too close"))
+		for n in graph.box_nodes(box.position, box.end):
+			if graph.flags(n) & ParkGraph.LINE != 0:
+				out.append(_breach(entry.id, "route", "footprint cuts line"))
+				break
+		var pay: Dictionary = _pay(spec.pay)
+		var allowed: Array = PAY_FAR if from_line[spec.node] == far else PAY_NEAR
+		if not _within(pay.rarities, allowed):
+			out.append(_breach(entry.id, "pay", "pay ladder"))
+	return out
