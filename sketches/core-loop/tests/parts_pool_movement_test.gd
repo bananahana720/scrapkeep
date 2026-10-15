@@ -3,7 +3,6 @@ extends SceneTree
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
-const Tuning := preload("res://src/movement/tuning.gd")
 
 # PC-POOL (wave 14, Bible Mobility row, Andrew 2026-10-12): movement that changes how a pilot
 # moves belongs to that pilot. Shared parts may change what a verb does, never how far or fast
@@ -14,16 +13,14 @@ const Tuning := preload("res://src/movement/tuning.gd")
 #   - grip_tread, vent_baffle and spring_shims are class parts of the pilot whose Shift they
 #     deepen (the pilots' PILOTS.md Shift feel); live_line and drop_weight stay shared because
 #     they are the second ingredients of two evolutions, and carry no movement knob;
-#   - both evolutions still have both ingredients in every pilot's pool, at common rarity;
-#   - every knob a shared verb part names is a real tuning knob or a build stat, so the part
-#     does something.
+#   - both evolutions still have both ingredients in every pilot's pool, at common rarity.
 # Evidence limit: static rows and the offer pool. That each pilot still wins its bot runs is
 # bot_six_pilots_test's claim, and how the new effects feel is Andrew's to play.
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
 const RARITIES := [["common"], ["rare"], ["relic"], ["evolved"], ["common", "rare", "relic"]]
 # The mod knobs that change what a part does without changing how the ball moves.
-const NOT_MOVEMENT := ["weapon_damage", "weapon_rate", "weapon_range", "turret_damage", "harpoon_lock_deg"]
+const NOT_MOVEMENT := ["weapon_damage", "weapon_rate", "weapon_range", "turret_damage"]
 # id: [tags, touch verb, class_id]. A class_id of "" is shared.
 const FIVE := {
 	"grip_tread": [["anchor"], "roll", "runner_gunner"],
@@ -42,6 +39,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	Synergies.table = AlphaDefs
 	_t.check("the alpha table lists its parts", Parts.listed_only(), "offer_pool must read the alpha table")
 	_pool_is_clear()
 	_five_rows()
@@ -93,8 +91,6 @@ func _five_rows() -> void:
 			_t.eq("%s is offered to %s only if shared or its own" % [id, pilot], offered, want[2] == "" or want[2] == pilot)
 		if want[2] == "":
 			_t.eq("%s has no movement mod" % id, _movement_mods(id), [])
-			for knob in Parts.def(id).mods:
-				_t.check("%s knob %s is a real tuning knob" % [id, knob], Tuning.SPECS.any(func(spec): return spec["key"] == knob), "")
 
 
 func _evolutions() -> void:

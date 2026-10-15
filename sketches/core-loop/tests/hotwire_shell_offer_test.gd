@@ -107,7 +107,9 @@ func _loot_parity() -> void:
 	print("[loot digest] ids %d rows %d sha256 %s" % [Parts.ids().size(), Parts.rows().size(), digest])
 	# 2026-10-12 SR9 merge: relay_convergence adds one id and one row (98 and 98); it waits on the
 	# relay.convergence seam, so pools and rolls are unchanged. Was a443c521 (GP5, 2026-10-08).
-	_check("loot parity", digest == "f45eadc3eca9e5ff01a2a735ae0cb33418cf7e65fa928b16649447f5cb4d4d06", "digest matches the SR9 pin (2026-10-12: one seam-gated part added; GP5 pin was a443c521, RR1 pin was e65c5020)")
+	# 2026-10-15 PC-POOL re-pin: five wave 11 verb rows changed (three became class parts, Live Line
+	# and Drop Weight changed knob), so the pool list and the seeded rolls moved. Was f45eadc3 (SR9).
+	_check("loot parity", digest == "7bb9a5f9a8397d241366df232a9a1226539012aae7f6a1cdb06b6c26dd9e3552", "digest matches the PC-POOL pin (2026-10-15: five verb rows changed; SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
 
 
 func _preview() -> void:
