@@ -203,6 +203,53 @@ const PATTERN_GUARANTEE_STAGE := 2
 # item table (items.gd).
 const GENERATED_SHARE := 0.25
 
+# SQ19 weighted offers (comps/roboquest/classes-and-perks.md:82, comps/gunfire/heroes-and-ascensions.md:87).
+# A pilot's kit is its own class rows plus every part in one of its two buckets (bucket_of) that
+# carries one of that bucket's tags below. The two buckets are the pilot's dominant offer pair,
+# one of the pairs of weapon, skill, defence and movement. Defence + movement cannot be a measured
+# pair while every gate pair holds a part that hits harder (offer_weights_test PAIRS), so five pairs
+# are reachable for six pilots (coordinator ruling W8, 2026-10-15): Tarn and Tally share weapon +
+# defence, kinetic hitters against split ones, and every other pilot's pair is its own. Each kit
+# holds a common part that hits harder, so the hitter in a gate pair can come from the kit.
+# Pylon's defence half leaves the mass plates to the shelf: with them its top offers shared half
+# their parts with Rivet's.
+# Kest's movement half is its class rows only: Frost Vane as a kit part came back as synergy bait
+# often enough to put Kest's random-bot movement at 15.2%, over the 15% cap.
+# A pilot not listed here (or an empty class) draws exactly as before.
+const KITS := {
+	"pylon_engineer": {"skill": ["arc", "anchor"], "defence": ["arc", "anchor", "kinetic"]},
+	"runner_gunner": {"skill": ["speed"], "movement": ["speed"]},
+	"demolitions_caster": {"weapon": ["arc", "chain", "frost", "spiral"], "movement": []},
+	"tarn": {"weapon": ["kinetic"], "defence": ["kinetic", "anchor"]},
+	"tally": {"weapon": ["split"], "defence": ["speed", "mass"]},
+	"remembered_cannon": {"weapon": ["mass"], "skill": ["mass", "kinetic", "speed"]},
+}
+# Target: 70% of a listed pilot's offered parts come from its kit (band 60 to 80%). The rest is the
+# neutral shelf, plus a generated recipe GENERATED_SHARE of those neutral slots off the slice.
+const KIT_SHARE := 0.7
+# The most of one slot's odds a single kit part may hold (start value): on a short part list a
+# one-part kit would otherwise put that part in nearly every draw.
+const KIT_PART_CAP := 0.25
+# Target: 12% of a movement pilot's offers are movement parts (the comps cap is 15%; bait and the
+# generated recipes add a few points on top). A kit slot
+# draws from the kit's movement parts this share of the time over KIT_SHARE; never more, even
+# when the kit's other bucket is empty, so movement cannot fill an offer. A pilot whose pair has
+# no movement bucket still sees its own class movement rows, at CLASS_MOVEMENT_SHARE.
+const MOVEMENT_SHARE := 0.12
+const CLASS_MOVEMENT_SHARE := 0.06
+# The neutral shelf: small flat parts every pilot can be offered, so a build never stalls on its
+# kit. A shelf part in a pilot's kit counts as kit for that pilot. One in the pilot's non-weapon
+# bucket is drawn NEUTRAL_LEAN times as often as the others (the shelf feeds the second half of
+# the pair; the weapon half comes from the kit's hitters); a weapon-and-movement pilot, whose
+# movement half has no shelf parts, leans to weapon. For a pilot whose pair has no weapon half, a
+# weapon shelf part weighs NEUTRAL_WEAPON_EASE: the stage-2 pattern and any off-kit hitter
+# already bring it weapon, so the shelf feeds its own pair instead. None is offered again
+# once a stage's offered count for it reaches NEUTRAL_REPEAT_CAP.
+const NEUTRAL_SHELF := ["hot_rivets", "loose_trigger", "long_barrel", "rivet_plating", "rivet_seam", "magnet_spool", "fast_hands"]
+const NEUTRAL_LEAN := 4.0
+const NEUTRAL_WEAPON_EASE := 0.1
+const NEUTRAL_REPEAT_CAP := 2
+
 # Hot-wired parts (BUILD-SYSTEMS.md, Two hot-wired parts). Not in CATALOGUE, so they never
 # enter rows(), ids(), offer_pool() or roll(): a hot-wired part is offered by authorship,
 # never drawn as loot. Each row names both consequences with an icon id and at most three
@@ -554,6 +601,150 @@ static func offer_pool(class_id: String, rarities: Array) -> Array:
 	return pool
 
 
+# A part's offer bucket, one of weapon, skill, defence or movement, read from its row's family,
+# touches and mods: a smash or special verb (touches haul or special) is skill; a class part skill
+# (the pilot's own kit, whatever verb it touches); a weapon or pattern part, or one that touches
+# fire, weapon; a mobility part, or a cruise mod, movement. A stat or milestone row has no verb
+# of its own, so its family's shown category (the row's icon, else PartDef.ICON_FOR_FAMILY) splits
+# it: defense is defence, damage or transform weapon, mobility movement, the rest skill.
+static func bucket_of(part_id: String) -> String:
+	var r := row(part_id)
+	var family := String(r.get("family", ""))
+	var touches := String(r.get("touches", ""))
+	if touches in ["haul", "special"] or family == "class":
+		return "skill"
+	if family in ["weapon", "pattern"] or touches == "fire":
+		return "weapon"
+	if family == "mobility" or r.get("mods", {}).has("cruise"):
+		return "movement"
+	var shown: String = r.get("icon", PartDef.ICON_FOR_FAMILY.get(family, "utility"))
+	match shown:
+		"defense":
+			return "defence"
+		"damage", "transform":
+			return "weapon"
+		"mobility":
+			return "movement"
+	return "skill"
+
+
+# True when part_id is in class_id's kit (KITS): its own class row, or a part in one of the kit's
+# buckets carrying one of that bucket's tags. False for a pilot with no kit.
+static func in_kit(class_id: String, part_id: String) -> bool:
+	if not KITS.has(class_id):
+		return false
+	var r := row(part_id)
+	if String(r.get("class_id", "")) == class_id:
+		return true
+	var tags: Array = KITS[class_id].get(bucket_of(part_id), [])
+	return r.get("tags", []).any(func(tag): return tag in tags)
+
+
+# A neutral slot's candidates: shelf parts in the pool, outside the pilot's kit, under the cap.
+static func _neutral_slot(class_id: String, pool: Array, offered: Dictionary) -> Array:
+	return pool.filter(func(key): return key in NEUTRAL_SHELF and not in_kit(class_id, key) \
+		and int(offered.get(key, 0)) < NEUTRAL_REPEAT_CAP)
+
+
+# The pool without the shelf parts this stage has offered NEUTRAL_REPEAT_CAP times.
+static func _uncapped(class_id: String, pool: Array, offered: Dictionary) -> Array:
+	return pool.filter(func(key): return not key in NEUTRAL_SHELF or in_kit(class_id, key) \
+		or int(offered.get(key, 0)) < NEUTRAL_REPEAT_CAP)
+
+
+# One weighted slot for a pilot with a kit, drawn with a single rng.randf() so a listed slot costs
+# the rarity draw and one pick, as before. Off the slice a generated recipe first takes its share
+# of the shelf's part (one more draw). The rolled rarity's uncapped parts split into four groups:
+# the kit's movement parts (MOVEMENT_SHARE, CLASS_MOVEMENT_SHARE for a pilot whose pair has no
+# movement), its other parts (the rest of KIT_SHARE), the shelf (1 - KIT_SHARE) and the rest of the
+# pool (0). An empty group's share moves on: kit to shelf, shelf to kit, both to the rest; movement's
+# own share goes to the kit's other parts, and movement never takes another group's share unless
+# nothing else is left. Inside a group a part weighs 1 / (1 + times offered this stage), times
+# NEUTRAL_LEAN for a shelf part in the pilot's lean bucket. No part of the rolled rarity: any rarity.
+static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: String, pool: Array,
+		offered: Dictionary, picks: Array, exclude: Array) -> String:
+	var kit: Dictionary = KITS[class_id]
+	if not listed_only() and rng.randf() < (1.0 - KIT_SHARE) * GENERATED_SHARE:
+		var recipe := ItemGen.roll_id(rng, rarity)
+		return "" if recipe in picks or recipe in exclude else recipe
+	var open := _uncapped(class_id, pool, offered)
+	var candidates: Array = open.filter(func(key): return rows()[key]["rarity"] == rarity)
+	if candidates.is_empty():
+		candidates = open
+	if candidates.is_empty():
+		return ""
+	var groups := {"moving": [], "still": [], "shelf": [], "rest": []}
+	for key in candidates:
+		if in_kit(class_id, key):
+			groups["moving" if bucket_of(key) == "movement" else "still"].append(key)
+		elif key in NEUTRAL_SHELF:
+			groups["shelf"].append(key)
+		else:
+			groups["rest"].append(key)
+	var moving := MOVEMENT_SHARE if kit.has("movement") else CLASS_MOVEMENT_SHARE
+	var share := {"moving": moving, "still": KIT_SHARE - moving, "shelf": 1.0 - KIT_SHARE, "rest": 0.0}
+	if groups["moving"].is_empty():
+		share["still"] += share["moving"]
+		share["moving"] = 0.0
+	if groups["still"].is_empty():
+		share["shelf"] += share["still"]
+		share["still"] = 0.0
+	if groups["shelf"].is_empty():
+		share["still"] += share["shelf"]
+		share["shelf"] = 0.0
+	if groups["still"].is_empty() and groups["shelf"].is_empty():
+		share["rest"] += share["still"] + share["shelf"]
+	if groups["rest"].is_empty() and share["rest"] > 0.0:
+		share["moving"] += share["rest"]
+	var weights := {}
+	for name in groups:
+		var raw := {}
+		var sum := 0.0
+		for key in groups[name]:
+			var b := bucket_of(key)
+			var lean := 1.0
+			if name == "shelf" and kit.has(b) and (b != "weapon" or kit.has("movement")):
+				lean = NEUTRAL_LEAN
+			elif name == "shelf" and b == "weapon" and not kit.has("weapon"):
+				lean = NEUTRAL_WEAPON_EASE
+			raw[key] = lean / (1.0 + offered.get(key, 0))
+			sum += raw[key]
+		for key in raw:
+			weights[key] = share[name] * raw[key] / sum
+	# No kit part takes more than KIT_PART_CAP of a slot (a one-part kit on a short list would
+	# otherwise show that part in almost every draw); the excess goes to the shelf, else the rest.
+	var excess := 0.0
+	for key in groups["moving"] + groups["still"]:
+		if weights[key] > KIT_PART_CAP:
+			excess += weights[key] - KIT_PART_CAP
+			weights[key] = KIT_PART_CAP
+	for name in ["shelf", "rest"]:
+		if excess > 0.0 and not groups[name].is_empty():
+			var room := 0.0
+			for key in groups[name]:
+				room += weights[key]
+			for key in groups[name]:
+				weights[key] += excess * (weights[key] / room if room > 0.0 else 1.0 / groups[name].size())
+			excess = 0.0
+	return _pick_weight(rng, candidates, weights)
+
+
+# One draw over keys by weight; a zero total picks uniformly by the same draw.
+static func _pick_weight(rng: RandomNumberGenerator, keys: Array, weights: Dictionary) -> String:
+	var total := 0.0
+	for key in keys:
+		total += weights.get(key, 0.0)
+	var x := rng.randf()
+	if total <= 0.0:
+		return keys[mini(int(x * keys.size()), keys.size() - 1)]
+	x *= total
+	for key in keys:
+		x -= weights.get(key, 0.0)
+		if x < 0.0:
+			return key
+	return keys[-1]
+
+
 static func milestone_for(event_id: String, held: Array) -> String:
 	if MILESTONE_FOR_EVENT.has(event_id):
 		return MILESTONE_FOR_EVENT[event_id]
@@ -575,7 +766,8 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	rarities = ItemGen.resolve_rarities(rarities)
 	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude)
 	var picks: Array = []
-	var bait: String = completing_part(held, pool)
+	var leans := KITS.has(class_id)
+	var bait := _bait(class_id, held, pool, offered, count)
 	if bait != "" and rng.randf() < SYNERGY_BAIT:
 		picks.append(bait)
 		pool.erase(bait)
@@ -583,6 +775,12 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	while picks.size() < count and not pool.is_empty() and tries < count * 8:
 		tries += 1
 		var rarity := _pick_rarity(rng, rarities)
+		if leans:
+			var slot := _lean_slot(rng, rarity, class_id, pool, offered, picks, exclude)
+			if slot != "":
+				picks.append(slot)
+				pool.erase(slot)
+			continue
 		if not listed_only() and rng.randf() < GENERATED_SHARE:
 			var recipe := ItemGen.roll_id(rng, rarity)
 			if not recipe in picks and not recipe in exclude:
@@ -596,18 +794,77 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 		pool.erase(chosen)
 	if picks.size() >= 2 and not picks.any(func(key): return def(key).hits_harder()):
 		var harder: Array = pool.filter(func(key): return def(key).hits_harder())
+		if leans:
+			# A leaning pilot's harder part comes from its kit (a non-movement one first), else
+			# the shelf under its cap, else any uncapped part.
+			var kit: Array = harder.filter(func(key): return in_kit(class_id, key))
+			var still: Array = kit.filter(func(key): return bucket_of(key) != "movement")
+			var shelf: Array = _neutral_slot(class_id, harder, offered)
+			for side in [still, kit, shelf, _uncapped(class_id, harder, offered)]:
+				if not side.is_empty():
+					harder = side
+					break
+		# A leaning pilot's harder part takes the last slot past the bait that is not a kit
+		# movement part, so the swap does not eat the kit's movement share; else the last slot.
+		var at := picks.size() - 1
+		if leans:
+			var first := 1 if picks[0] == bait else 0
+			for i in range(picks.size() - 1, first - 1, -1):
+				if not (in_kit(class_id, picks[i]) and bucket_of(picks[i]) == "movement"):
+					at = i
+					break
 		if not harder.is_empty():
-			picks[picks.size() - 1] = harder[rng.randi_range(0, harder.size() - 1)]
+			picks[at] = harder[rng.randi_range(0, harder.size() - 1)]
+	if leans:
+		_keep_a_neutral(rng, class_id, picks, pool, offered, 1 if not picks.is_empty() and picks[0] == bait else 0)
 	return picks
 
 
-static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictionary) -> String:
+# A leaning pilot's draw that holds no kit part still shows a shelf part: the first slot from first
+# on (past the synergy bait) that is not the draw's only harder part becomes one, when an uncapped
+# shelf part is left.
+static func _keep_a_neutral(rng: RandomNumberGenerator, class_id: String, picks: Array, pool: Array,
+		offered: Dictionary, first: int) -> void:
+	if picks.is_empty() or picks.any(func(key): return in_kit(class_id, key) or key in NEUTRAL_SHELF):
+		return
+	var shelf := _neutral_slot(class_id, pool.filter(func(key): return not key in picks), offered)
+	if shelf.is_empty():
+		return
+	var hitters: Array = picks.filter(func(key): return def(key).hits_harder())
+	for i in range(first, picks.size()):
+		# Only a slot of the shelf's own rarity turns, so the shown rarity odds hold.
+		if rarity_of(picks[i]) != rarity_of(shelf[0]):
+			continue
+		if picks.size() < 2 or hitters.size() != 1 or picks[i] != hitters[0]:
+			picks[i] = shelf[rng.randi_range(0, shelf.size() - 1)]
+			return
+
+
+# The part in pool that completes a synergy, or "". A leaning pilot's bait is never a shelf part at
+# its repeat cap, and in a draw of two or more slots it is a kit or shelf part: the bait is half of
+# such a draw, so an off-kit one would undo the lean. A one-slot draw (a fabricator, a pocket, the
+# F004 gate) keeps the plain bait, preferring a kit or shelf one.
+static func _bait(class_id: String, held: Array, pool: Array, offered: Dictionary, count: int) -> String:
+	if not KITS.has(class_id):
+		return completing_part(held, pool)
+	var open := _uncapped(class_id, pool, offered)
+	var near := completing_part(held, _near(class_id, open))
+	return near if near != "" or count >= 2 else completing_part(held, open)
+
+
+# The pool's kit parts and its shelf parts, in pool order.
+static func _near(class_id: String, pool: Array) -> Array:
+	return pool.filter(func(key): return in_kit(class_id, key) or key in NEUTRAL_SHELF)
+
+
+# lean: id to a weight multiplier (SQ19's neutral lean); absent ids weigh 1.
+static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictionary, lean: Dictionary = {}) -> String:
 	var total := 0.0
 	for key in bucket:
-		total += 1.0 / (1.0 + offered.get(key, 0))
+		total += lean.get(key, 1.0) / (1.0 + offered.get(key, 0))
 	var x := rng.randf() * total
 	for key in bucket:
-		x -= 1.0 / (1.0 + offered.get(key, 0))
+		x -= lean.get(key, 1.0) / (1.0 + offered.get(key, 0))
 		if x < 0.0:
 			return key
 	return bucket[-1]
@@ -636,9 +893,13 @@ static func roll_gate(rng: RandomNumberGenerator, rarities: Array, class_id: Str
 	var eligible: Array = PATTERN_PARTS.filter(func(key): return def(key).rarity in rarities)
 	if eligible.is_empty():
 		eligible = PATTERN_PARTS.duplicate()
+	if KITS.has(class_id):
+		# SQ19: a leaning pilot's guaranteed pattern is a kit one when its kit has one.
+		var own: Array = eligible.filter(func(key): return in_kit(class_id, key))
+		eligible = own if not own.is_empty() else eligible
 	var pattern: String = eligible[rng.randi_range(0, eligible.size() - 1)]
 	if picks.size() < count:
 		picks.append(pattern)
-	elif picks.size() >= 2 or picks[0] != completing_part(held, offer_pool(class_id, rarities)):
+	elif picks.size() >= 2 or picks[0] != _bait(class_id, held, offer_pool(class_id, rarities), offered, count):
 		picks[picks.size() - 1] = pattern
 	return picks
