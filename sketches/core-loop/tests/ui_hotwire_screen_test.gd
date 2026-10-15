@@ -104,6 +104,8 @@ func _process(_delta: float) -> bool:
 		1:
 			if not _game.presentation.audio.sound_ready:
 				return false
+			# 2026-10-14: SG10 shows the human start-pick card before the Warden.
+			Push.key(root, KEY_1)
 			_check("no offer, no screen", _pending()["state"] == "" and not _screen().is_open() and not paused,
 				"state \"%s\", open %s, paused %s" % [_pending()["state"], _screen().is_open(), paused])
 			_offer()

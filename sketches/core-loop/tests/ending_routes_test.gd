@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const T := preload("res://tests/support/t.gd")
+const Push := preload("res://tests/workshop/push.gd")
 
 var _t := T.new("ending_routes_test")
 var _game
@@ -42,6 +43,8 @@ func _run() -> void:
 	# Quit follows the existing pause-menu action. SceneTree.quit schedules the exit,
 	# so we can assert no ending or run-end save was triggered before it returns.
 	_game.flow.new_run()
+	# SG10 (2026-10-14): the human answers the new run's start-pick card before opening pause.
+	Push.key(root, KEY_1)
 	var ended := [0]
 	_game.events.run_ended.connect(func(_won): ended[0] += 1)
 	var menu = _game.get_node("PauseMenu")
