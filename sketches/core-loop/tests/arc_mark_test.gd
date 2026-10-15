@@ -27,7 +27,7 @@ const T := preload("res://tests/support/t.gd")
 
 const BIG := 1.0e9
 const TOL := 1.0e-4
-const EXPECTED_CHECKS := 33
+const EXPECTED_CHECKS := 34
 # [label, kind, force, source] as each source's real caller hands it to strike().
 const PROBES := [
 	["contact", "ram", 20.0, ""],
@@ -129,7 +129,8 @@ func _run_instant_checks() -> void:
 	# 1 and 2: the marking hit, and the row it leaves in the one table.
 	var plain := _dummy(Vector3(9.0, 0.0, 0.0))
 	var marked := _dummy(Vector3(-9.0, 0.0, 0.0))
-	var arc_base := _dealt(plain, "arc", 5.0, "")
+	# An arc hit marks what it strikes, so its base is read on a dummy of its own.
+	var arc_base := _dealt(_dummy(Vector3(0.0, 0.0, -12.0)), "arc", 5.0, "")
 	var arc_first := _mark(marked)
 	calls += 2
 	_t.near("the marking arc hit deals base damage", arc_first, arc_base)
@@ -140,9 +141,9 @@ func _run_instant_checks() -> void:
 		"row %s" % [row])
 	_t.near("the mark lasts the declared window", float(row.get("until", 0.0)) - _combat._clock, _seconds)
 	var arc_again := _mark(marked)
-	var arc_plain := _dealt(plain, "arc", 5.0, "")
-	calls += 2
-	_t.near("a later arc hit on the marked dummy rises by the fraction", arc_again, arc_plain * _mult(), TOL * arc_plain)
+	calls += 1
+	_t.near("a later arc hit on the marked dummy rises by the fraction", arc_again, arc_base * _mult(), TOL * arc_base)
+	_t.check("the plain dummy carries no mark", _row(plain).is_empty(), "%s" % [_row(plain)])
 
 	# 3: every source rises by the same fraction while marked.
 	for probe in PROBES:
