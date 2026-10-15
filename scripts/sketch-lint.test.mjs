@@ -11,8 +11,14 @@ import {
   lintL5,
   lintL6,
   lintL6Owners,
+  lintL7,
   parseTuning,
 } from "./sketch-lint.mjs";
+
+test("L7 flags a game file that loads from tools/, and passes src paths and comments", () => {
+  assert.equal(lintL7("a.gd", 'const P := preload("res://tools/park_graph.gd")\nvar s = load("res://tools/x.gd")\n').length, 2);
+  assert.deepEqual(lintL7("a.gd", 'const P := preload("res://src/world/park/park_placement.gd")\n# was res://tools/park_graph.gd\n'), []);
+});
 
 const tuningText = `
 const ROWS := [

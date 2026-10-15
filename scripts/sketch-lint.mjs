@@ -41,6 +41,16 @@ export function lintL2(file, text) {
     .map((line) => finding("L2", file, line.number, "raw file write; saves go through SafeStore.write_atomic"));
 }
 
+const toolsLoad = /res:\/\/tools\//;
+
+// L7: a game file under src/ that names a res://tools/ path. The release pack leaves tools/ out,
+// so the shipped game would fail to compile (wave-13 close: pocket_draw.gd preloaded park_graph.gd).
+export function lintL7(file, text) {
+  return codeLines(text)
+    .filter((line) => toolsLoad.test(line.raw))
+    .map((line) => finding("L7", file, line.number, "game code names a res://tools/ path, which the release pack leaves out; move the shared code under src/"));
+}
+
 export function parseTuning(text) {
   const table = text.match(/const FLAGS\s*:?=\s*\{([\s\S]*?)\n\}/);
   const flags = table ? [...table[1].matchAll(/^\s*"([a-z][a-z0-9-]*)"\s*:/gm)].map((match) => match[1]) : [];
@@ -236,6 +246,7 @@ export function lintSketch(sketch) {
   const lit = new Set();
   for (const file of sources(path.join(directory, "src"), new Set([".gd"]))) {
     if (file.path !== `${relative}/src/core/safe_store.gd`) findings.push(...lintL2(file.path, file.text));
+    findings.push(...lintL7(file.path, file.text));
     // LIGHT_OWNERS describes core-loop; another sketch has no owner table yet.
     if (sketch !== "core-loop") continue;
     const rel = file.path.slice(relative.length + 1);
