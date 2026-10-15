@@ -14,18 +14,25 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 #   - the top-10 most-offered parts of any two pilots overlap under 50% (of the smaller top list);
 #   - movement is at most 15% of each pilot's offers;
 #   - no neutral shelf part is offered more than Parts.NEUTRAL_REPEAT_CAP times in one stage;
-#   - a draw with every kit part excluded still shows a neutral shelf part;
+#   - each pilot's two dominant buckets (Parts.bucket_of) are its declared kit pair, and the six
+#     pairs differ (the six kits also declare six different pairs);
+#   - a draw with every kit part excluded still shows a neutral shelf part, and _keep_a_neutral
+#     on its own turns an off-kit draw's plain slot into a shelf part;
 #   - no offer is another class's part;
-#   - every pilot's upgrade tree reaches a depth-4 endpoint by the last milestone with both bots.
+#   - every pilot's upgrade tree reaches a depth-4 endpoint in each of its four slots by the last
+#     milestone with both bots.
 # On the alpha list (the 19 parts the default table offers) the same draws run; movement, the
 # repeat cap, the neutral fallback and class parts are checked, and share, overlap and pairs are
-# printed as measured: there Kest, Tarn and Cannon draw from the same 14 shared parts, so any two
-# of their top-10 lists share at least 6.
-# PAIRS (2026-10-15, SQ19): each pilot's two dominant buckets (Parts.bucket_of) are printed, not
-# asserted. The block wants six different pairs; it cannot pass while roll() keeps the gate pair
-# rule (build_catalogue_test "gate pairs hit harder"): Rivet, Kest, Tarn, Tally and Cannon have no
-# common non-weapon part that hits harder, so every two-slot draw holds a weapon part, weapon is
-# at least half their offers and sits in all five pairs, and only three pairs hold weapon.
+# printed as measured. Overlap there cannot pass by arithmetic: Kest, Tarn and Cannon each have a
+# 10-part common pool, the same 10 shared parts, so each one's top-10 is that whole pool and any
+# two of them overlap 1.00. Whether SQ19 covers the alpha list is a coordinator ruling (2026-10-15).
+# PAIRS (2026-10-15, SQ19): the pair line is asserted. Measured against it: every two-slot gate draw
+# holds a part that hits harder (build_catalogue_test "gate pairs hit harder"), and no common part
+# that hits harder sits in the defence bucket, so in every pilot's offers weapon + skill + movement
+# is at least 50%. A defence + movement pair needs weapon and skill each below movement, which is
+# at most 15%, so under 45% in all: no pilot can hold that pair, and six distinct pairs cannot all
+# hold while the pair rule and the 15% movement cap stand. The checks stay red on that pilot until
+# the coordinator rules.
 # Evidence limit: the offer draw only. Whether each pilot still wins its bot
 # runs is bot_six_*_test's claim, and how the lean feels is Andrew's to play.
 
@@ -49,9 +56,21 @@ func _initialize() -> void:
 	_t.check("the kit share is a declared constant inside the band",
 		Parts.KIT_SHARE >= SHARE_BAND[0] and Parts.KIT_SHARE <= SHARE_BAND[1], str(Parts.KIT_SHARE))
 	_t.check("every pilot declares a kit of two buckets", PILOTS.all(func(p): return Parts.KITS.has(p) and Parts.KITS[p].size() == 2), "")
+	var declared := {}
+	for pilot in PILOTS:
+		declared[str(_declared(pilot))] = pilot
+	_t.check("the six kits declare six different bucket pairs", declared.size() == PILOTS.size(), str(declared))
+	var defence_hitters := {}
+	for pilot in PILOTS:
+		for id in Parts.offer_pool(pilot, ["common"]):
+			if Parts.def(id).hits_harder() and Parts.bucket_of(id) == "defence":
+				defence_hitters[id] = true
+	# The premise of the PAIRS note: if this goes red, re-measure the pair line before trusting it.
+	_t.eq("no common part that hits harder is in the defence bucket (PAIRS premise)", defence_hitters.keys(), [])
 	var full := _measure("full")
 	_judge("full", full, true)
 	_fallback("full")
+	_keep_neutral()
 	Synergies.table = AlphaDefs
 	_t.check("the alpha table lists its parts", Parts.listed_only(), "")
 	var alpha := _measure("alpha")
@@ -199,14 +218,19 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 		var others: Array = PILOTS.filter(func(p): return p != pilot).map(func(p): return pairs[p][0])
 		var ok: bool = pairs[pilot][1] and not pairs[pilot][0] in others
 		var detail := "%s, others %s" % [pairs[pilot][0], others]
-		# Measured, not asserted (see PAIRS below): the gate pair rule puts a weapon part in every
-		# draw for five pilots, and three bucket pairs hold weapon.
-		print("[%s %s dominant pair] %s, declared %s (measured; %s)" % [label, pilot, detail, _declared(pilot),
-			"its own" if ok else "not its own"])
+		if strict:
+			_t.check("%s %s dominant pair is its own" % [label, pilot], ok, detail)
+			_t.eq("%s %s dominant pair is its declared kit" % [label, pilot], pairs[pilot][0], _declared(pilot))
+		else:
+			print("[%s %s dominant pair] %s, declared %s (measured; %s)" % [label, pilot, detail, _declared(pilot),
+				"its own" if ok else "not its own"])
 	var distinct := {}
 	for pilot in PILOTS:
 		distinct[str(pairs[pilot][0])] = true
-	print("[%s dominant pairs] %d distinct of %d pilots (measured)" % [label, distinct.size(), PILOTS.size()])
+	if strict:
+		_t.check("%s six distinct dominant pairs" % label, distinct.size() == PILOTS.size(), "%d distinct: %s" % [distinct.size(), distinct.keys()])
+	else:
+		print("[%s dominant pairs] %d distinct of %d pilots (measured)" % [label, distinct.size(), PILOTS.size()])
 
 
 func _declared(pilot: String) -> Array:
@@ -231,8 +255,46 @@ func _fallback(label: String) -> void:
 			"%d of 50 draws (kit of %d excluded)" % [shown, kit.size()])
 
 
-# Every pilot's tree reaches a depth-4 endpoint by the last milestone, picking the first child
-# (greedy) or a random child at each of the four picks.
+# _keep_a_neutral on its own: a two-slot draw of non-kit, non-shelf commons (one hitter, one not)
+# with an uncapped shelf part left in the pool turns its non-hitter slot into a shelf part. The
+# _fallback draws above exclude the whole kit, so _lean_slot already takes the shelf and they
+# cannot tell whether _keep_a_neutral runs; this check can.
+func _keep_neutral() -> void:
+	for pilot in PILOTS:
+		var pool: Array = Parts.offer_pool(pilot, ["common"])
+		var off: Array = pool.filter(func(id): return not Parts.in_kit(pilot, id) and not id in Parts.NEUTRAL_SHELF)
+		var hitter: Array = off.filter(func(id): return Parts.def(id).hits_harder())
+		var plain: Array = off.filter(func(id): return not Parts.def(id).hits_harder())
+		var shelf: Array = pool.filter(func(id): return id in Parts.NEUTRAL_SHELF and not Parts.in_kit(pilot, id))
+		if hitter.is_empty() or plain.is_empty() or shelf.is_empty():
+			_t.check("%s has an off-kit hitter, an off-kit plain part and a shelf part to test _keep_a_neutral" % pilot, false,
+				"%d hitters, %d plain, %d shelf" % [hitter.size(), plain.size(), shelf.size()])
+			continue
+		var picks: Array = [hitter[0], plain[0]]
+		var rest: Array = shelf.duplicate()
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 7900
+		Parts._keep_a_neutral(rng, pilot, picks, rest, {}, 0)
+		_t.check("%s _keep_a_neutral turns the plain slot of an off-kit draw into a shelf part" % pilot,
+			picks[0] == hitter[0] and picks[1] in Parts.NEUTRAL_SHELF, "%s from %s" % [picks, [hitter[0], plain[0]]])
+		var capped := {}
+		for id in shelf:
+			capped[id] = Parts.NEUTRAL_REPEAT_CAP
+		var held: Array = [hitter[0], plain[0]]
+		Parts._keep_a_neutral(rng, pilot, held, rest, capped, 0)
+		_t.eq("%s _keep_a_neutral leaves the draw alone when every shelf part is at its cap" % pilot, held, [hitter[0], plain[0]])
+
+
+# Every pilot's tree reaches a depth-4 endpoint in each of the four slots (weapon, movement,
+# special, smash) by the last milestone, with both bots. Tree picks do not read part offers:
+# UpgradeTree.offered() (src/core/upgrade_tree.gd:455) builds each pair from the tree and the
+# run's earlier picks, and upgrade_tree.gd never calls Parts, so the weighted offers cannot move
+# this result; the walk is over the tree itself. A bot aiming at a slot picks, at each depth, a
+# child whose subtree holds a depth-4 node of that slot: greedy the first such child, random a
+# random one. A positive control: a slot no depth-4 node carries ("line") is never reached.
+const TREE_SLOTS := ["weapon", "movement", "special", "smash"]
+
+
 func _trees() -> void:
 	var cap := UpgradeTree.depth_cap(3)
 	_t.eq("the last milestone opens depth 4", cap, UpgradeTree.DEPTHS)
@@ -242,16 +304,33 @@ func _trees() -> void:
 		for bot in ["greedy", "random"]:
 			var rng := RandomNumberGenerator.new()
 			rng.seed = 5100 + pi
-			var reached := 0
-			for _run in RUNS:
-				var index := rng.randi_range(0, 1)
-				if bot == "greedy":
-					index = 0
-				for _depth in range(1, cap):
-					var kids := UpgradeTree.children_of(index)
-					index = kids[0] if bot == "greedy" else kids[rng.randi_range(0, 1)]
-				if index < list.size() and UpgradeTree.depth_of(index) == UpgradeTree.DEPTHS \
-						and UpgradeTree.children_of(index)[0] >= list.size():
-					reached += 1
-			_t.check("%s %s bot reaches a tree endpoint by the last milestone" % [pilot, bot], reached == RUNS,
-				"%d of %d runs, %d nodes" % [reached, RUNS, list.size()])
+			for slot in TREE_SLOTS:
+				var reached := 0
+				for _run in RUNS:
+					if _walk(list, slot, cap, bot, rng):
+						reached += 1
+				_t.check("%s %s bot reaches a %s endpoint by the last milestone" % [pilot, bot, slot], reached == RUNS,
+					"%d of %d runs, %d nodes" % [reached, RUNS, list.size()])
+			_t.check("%s %s bot never reaches a line endpoint (control)" % [pilot, bot], not _walk(list, "line", cap, bot, rng), "")
+
+
+# One run's walk of cap picks toward slot; true when it ends on a depth-4 leaf of that slot.
+func _walk(list: Array, slot: String, cap: int, bot: String, rng: RandomNumberGenerator) -> bool:
+	var choices: Array = [0, 1]
+	var index := -1
+	for _pick in cap:
+		var aimed: Array = choices.filter(func(i): return _holds(list, i, slot))
+		var from: Array = aimed if not aimed.is_empty() else choices
+		index = from[0] if bot == "greedy" else from[rng.randi_range(0, from.size() - 1)]
+		choices = UpgradeTree.children_of(index).filter(func(i): return i < list.size())
+	return index >= 0 and index < list.size() and UpgradeTree.depth_of(index) == UpgradeTree.DEPTHS \
+		and choices.is_empty() and String(list[index].get("key", "")) == slot
+
+
+# True when the subtree under index holds a depth-4 node of slot.
+func _holds(list: Array, index: int, slot: String) -> bool:
+	if index >= list.size():
+		return false
+	if UpgradeTree.depth_of(index) == UpgradeTree.DEPTHS:
+		return String(list[index].get("key", "")) == slot
+	return UpgradeTree.children_of(index).any(func(i): return _holds(list, i, slot))
