@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (four fresh game processes on --table=park, timed one after another)
+# smoke: bots timeout=1200s (four fresh game processes on --table=park, timed one after another; load-sensitive, moved to the bot tier per R14b)
 extends SceneTree
 
 # SR14 2026-10-15: quick restart, measured. BIBLE.md:582 and ruling R14 (Andrew's veto list,
