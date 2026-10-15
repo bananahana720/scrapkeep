@@ -1,4 +1,4 @@
-# smoke: timeout=360s (six pilots, seventeen input fixtures each)
+# smoke: timeout=360s (six pilots, nineteen input fixtures each)
 extends SceneTree
 
 const GameEvents := preload("res://src/core/game_events.gd")
@@ -11,8 +11,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # shared brake/slide on this ball. The slide rolls off a 2 m ledge; the kicker is
 # an unpowered ramp, and the ride uses the world's velocity handoff.
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
-const RUNS := ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "window", "early", "late", "drop", "kicker", "ride", "pad", "grapple", "knock", "brake_release_drop", "slide_stop_drop"]
-const EXPECTED_CHECKS := 109
+const RUNS := ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "window", "early", "late", "drop", "kicker", "ride", "pad", "grapple", "knock", "brake_release_drop", "slide_stop_drop", "gentle_drop", "gentle_jump"]
+const EXPECTED_CHECKS := 133
 const RATIO_BAND := [1.2, 1.3]
 const KEEP := 0.9
 const WINDOW_U := 0.875
@@ -111,16 +111,20 @@ func _planar() -> float:
 
 func _start(pilot: String, run: String) -> void:
 	_player.fit_class(ClassDef.by_id(pilot))
+	# Short fixture hops return through the ground probe below the impact signal's
+	# 4 m/s threshold. Bank rows and thresholds retain their production values.
+	_tuning.set_value("jump_speed", 4.0 if run.begins_with("gentle_") else 13.0)
 	var cruise: float = _tuning.f("cruise")
-	_ledge.collision_layer = 1 if run in ["slide", "brake_release_drop", "slide_stop_drop"] else 0
+	var long_ledge := run in ["slide_stop_drop", "gentle_drop", "gentle_jump"]
+	_ledge.collision_layer = 1 if long_ledge or run in ["slide", "brake_release_drop"] else 0
 	var ledge_box: BoxShape3D = _ledge.get_child(0).shape
-	ledge_box.size.z = 56.0 if run == "slide_stop_drop" else 28.0
-	_ledge.position.z = 168.0 if run == "slide_stop_drop" else 154.0
+	ledge_box.size.z = 56.0 if long_ledge else 28.0
+	_ledge.position.z = 168.0 if long_ledge else 154.0
 	_kicker.collision_layer = 1 if run == "kicker" else 0
-	var start := START + Vector3.UP * (2.0 if run in ["slide", "drop", "air_jump", "brake_release_drop", "slide_stop_drop"] else 0.0)
+	var start := START + Vector3.UP * (2.0 if long_ledge or run in ["slide", "drop", "air_jump", "brake_release_drop"] else 0.0)
 	if run == "slide":
 		start.z = 142.8
-	elif run == "slide_stop_drop":
+	elif long_ledge:
 		start.z = 188.0
 	var velocity := Vector3.ZERO
 	if run == "roll_reverse":
@@ -129,6 +133,8 @@ func _start(pilot: String, run: String) -> void:
 		velocity = Vector3(cruise * 0.19, 0.0, 0.0)
 	elif run != "roll":
 		var entry_ratio := 1.2 if run in ["slide", "kicker"] else 1.0
+		if run == "gentle_drop":
+			entry_ratio = 0.3
 		velocity = Vector3(0.0, 0.0, -cruise * entry_ratio)
 	_player.reset_to(start, velocity)
 	_source.hold = {} if run.begins_with("roll") else {"move": Vector2(0.0, 1.0)}
@@ -193,9 +199,9 @@ func _step(delta: float) -> void:
 			"slide", "brake_release_drop", "slide_stop_drop":
 				_source.hold["brake_held"] = true
 				if run == "slide_stop_drop":
-					_source.hold.erase("move")
+					_source.hold["move"] = Vector2(0.0, -1.0)
 				_run["action_started"] = true
-			"jump", "window", "early", "late", "ride", "pad", "grapple", "knock":
+			"jump", "window", "early", "late", "ride", "pad", "grapple", "knock", "gentle_drop", "gentle_jump":
 				_source.press = {"jump_pressed": true}
 				_run["action_started"] = true
 		return
@@ -207,18 +213,36 @@ func _step(delta: float) -> void:
 		if _run["slide_ticks"] >= 3:
 			_run["released_grounded"] = grounded
 			_source.hold.erase("brake_held")
-	if run == "slide_stop_drop" and not _run.has("history_expired"):
-		if not _run.has("resumed"):
-			if grounded and _planar() <= Tuning.BANK_REST * _tuning.f("cruise"):
+	if run == "slide_stop_drop" and not _run.has("resumed"):
+		if grounded and _planar() <= Tuning.BANK_REST * _tuning.f("cruise"):
+			_run["stop_ticks"] = _run.get("stop_ticks", 0) + 1
+			if _run["stop_ticks"] >= 2:
 				_run["stopped_grounded"] = true
+				_check("%s slide stop consumes" % _run["pilot"],
+					_source.hold.get("brake_held", false) and _player._speed_bank_chosen == _player.BankMove.NONE and _player.speed_bank.is_empty(),
+					"move held, brake held, grounded at %.2f m/s; eligibility=%d, bank=%s" % [_planar(), _player._speed_bank_chosen, _player.speed_bank])
 				_run["resumed"] = true
-				_source.hold = {"move": Vector2(0.0, 1.0)}
-			return
-		if not _player.speed_bank.is_empty():
-			_run["roll_bank_seen"] = true
-		elif _run.get("roll_bank_seen", false):
-			_run["history_expired"] = grounded
-			_run["burst_seen"] = false
+				_source.hold["move"] = Vector2(0.0, 1.0)
+				_source.hold.erase("brake_held")
+		return
+	if run.begins_with("gentle_") and not _run.has("gentle_landed"):
+		if not grounded:
+			_run["airborne"] = true
+		elif _run["airborne"]:
+			# Sample one tick after the probe return so PlayerBall has consumed it.
+			_run["gentle_ground_ticks"] = _run.get("gentle_ground_ticks", 0) + 1
+			if _run["gentle_ground_ticks"] < 2:
+				return
+			_run["gentle_landed"] = true
+			var gentle: bool = _landing_count == _run["landings_before"]
+			if run == "gentle_drop":
+				_check("%s gentle landing consumes" % _run["pilot"], gentle and _planar() < Tuning.BANK_ARM * _tuning.f("cruise") and _player._speed_bank_chosen == _player.BankMove.NONE and _player.speed_bank.is_empty(),
+					"first probe landing %.2f m/s, impact events=%d, eligibility=%d, bank=%s" % [_planar(), _landing_count - _run["landings_before"], _player._speed_bank_chosen, _player.speed_bank])
+				_run["gentle_no_impact"] = gentle
+				_run["airborne"] = false
+			else:
+				_run["gentle_no_impact"] = gentle
+				_run["landed_t"] = 0.0
 		return
 	if run in ["ride", "pad", "grapple", "knock"] and not _run.has("ride_exit") and _player.ball_position().y >= 3.0:
 		# Interrupt a chosen jump so the external motion must cancel its landing eligibility.
@@ -250,7 +274,7 @@ func _step(delta: float) -> void:
 	_run["t"] += delta
 	var t: float = _run["t"]
 	_run["trace"].append([t, _planar()])
-	if run in ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock", "brake_release_drop", "slide_stop_drop"]:
+	if run in ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock", "brake_release_drop", "slide_stop_drop", "gentle_drop", "gentle_jump"]:
 		if t >= _run["decay"] + 0.6:
 			_run["done"] = true
 		return
@@ -268,7 +292,7 @@ func _finish() -> void:
 	var cruise: float = _tuning.f("cruise")
 	var run: String = _run["run"]
 	var trace: Array = _run["trace"]
-	if run in ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock", "brake_release_drop", "slide_stop_drop"]:
+	if run in ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock", "brake_release_drop", "slide_stop_drop", "gentle_drop", "gentle_jump"]:
 		var peak := 0.0
 		for sample in trace:
 			if sample[0] <= 0.3:
@@ -281,15 +305,19 @@ func _finish() -> void:
 		if run == "slide":
 			_check("%s slide leaves held" % pilot, _run.get("slide_left_held", false),
 				"brake held through departure: %s" % _run.get("slide_left_held", false))
-		if run in ["drop", "kicker", "ride", "pad", "grapple", "knock", "brake_release_drop", "slide_stop_drop"]:
+		if run in ["drop", "kicker", "ride", "pad", "grapple", "knock", "brake_release_drop", "slide_stop_drop", "gentle_drop"]:
 			var history_ok: bool = _run.get("released_grounded", false) if run == "brake_release_drop" else true
 			if run == "slide_stop_drop":
-				history_ok = _run.get("stopped_grounded", false) and _run.get("history_expired", false)
+				history_ok = _run.get("stopped_grounded", false) and _run.get("resumed", false)
+			elif run == "gentle_drop":
+				history_ok = _run.get("gentle_landed", false) and _run.get("gentle_no_impact", false)
 			completed = completed and history_ok
 			_check("%s %s no burst" % [pilot, run], completed and _landing_speed >= Tuning.BANK_ARM * cruise and not _run["burst_seen"] and ratio < RATIO_BAND[0],
 				"landed=%s at %.2f m/s, bank_seen=%s, peak %.2f m/s = %.3f x cruise (want <1.2 and no bank)"
 					% [completed, _landing_speed, _run["burst_seen"], peak, ratio])
 		else:
+			if run == "gentle_jump":
+				completed = completed and _run.get("gentle_no_impact", false)
 			_check("%s %s ratio" % [pilot, run], completed and (_run["action_grounded"] or run == "air_jump") and trace[-1][1] <= cruise * 1.02 and ratio >= RATIO_BAND[0] and ratio <= RATIO_BAND[1],
 				"scripted %s from ground=%s, burst %.2f m/s = %.3f x %.1f cruise (band %.1f to %.1f); decay %.2f s"
 					% [run, _run["action_grounded"], peak, ratio, cruise, RATIO_BAND[0], RATIO_BAND[1], _run["decay"]])
