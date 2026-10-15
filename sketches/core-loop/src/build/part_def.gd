@@ -1,6 +1,7 @@
 extends Resource
 
 const ShotBits := preload("res://src/build/shot_bits.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 
 # One part, as data (TADR-008). A part never holds run state: the run's part list says
 # how many copies are held, and build_sheet.gd folds every held copy into one derived
@@ -66,7 +67,9 @@ const WEAPON_MODS := ["weapon_damage", "weapon_rate", "weapon_range", "turret_da
 const SPIKE_MAX_MULTIPLE := 8.0
 const SPIKE_GROWTH := 2.0
 const SPIKES_PER_TIER := 1
-const ICON_CATEGORIES := ["damage", "mobility", "defense", "utility", "charge", "transform"]
+# SI5: the build-sheet categories a part can touch (stat_cache.gd refolds each alone).
+const STAT_CATEGORIES := ["mods", "cooldown", "patterns", "elements", "magnet", "kill_scrap", "max_hp", "punch", "synergy"]
+const ICON_CATEGORIES :=["damage", "mobility", "defense", "utility", "charge", "transform"]
 @export var trigger := ""
 @export var proc_coeff := 1.0
 @export var stack_rule := "linear"
@@ -88,6 +91,10 @@ const ICON_CATEGORIES := ["damage", "mobility", "defense", "utility", "charge", 
 # SI4 shot bits (shot_bits.gd): zero to two behaviour bits as a set mask. A row may
 # name them ("bits": ["pierce"]); otherwise they come from its tags.
 @export var bits := 0
+# SI5 stat cache (stat_cache.gd): the build-sheet categories this part's fold can move,
+# derived from its fields in from_row so a new field cannot go undeclared. Not the row's
+# "touches" key, which names the verb the build readout shows.
+@export var stat_touches: Array = []
 
 # SG3, comps/gunfire/scrolls-and-synergies.md:54. These name existing inputs;
 # they do not grant eligibility or change a part's effect.
@@ -153,6 +160,7 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.shop_only = row.get("shop_only", false)
 	def.reads = row.get("reads", def._read_stats())
 	def.bits = ShotBits.part_mask(def.tags, row.get("bits"))
+	def.stat_touches = def._stat_touches()
 	var player_global: bool = def.max_hp_bonus != 0.0 or not def.effect.is_empty() \
 		or not def.charges.is_empty() or def.trigger != "" or def.magnet != 1.0 \
 		or def.cooldown_scale != 1.0 or def.kill_scrap != 1.0 or row.has("relay")
@@ -197,6 +205,42 @@ func _read_stats() -> Array:
 		if not stat in unique:
 			unique.append(stat)
 	return unique
+
+
+# The sheet categories build_sheet.gd folds this part into. synergy covers the tag sets,
+# the named synergies whose shown part this is and the evolutions it feeds or completes.
+func _stat_touches() -> Array:
+	var out: Array = []
+	if not mods.is_empty():
+		out.append("mods")
+	if cooldown_scale != 1.0:
+		out.append("cooldown")
+	if not patterns.is_empty():
+		out.append("patterns")
+	if not elements.is_empty():
+		out.append("elements")
+	if magnet != 1.0:
+		out.append("magnet")
+	if kill_scrap != 1.0:
+		out.append("kill_scrap")
+	if max_hp_bonus != 0.0:
+		out.append("max_hp")
+	if punch != 0.0:
+		out.append("punch")
+	if not tags.is_empty() or _in_synergy_rows():
+		out.append("synergy")
+	return out
+
+
+func _in_synergy_rows() -> bool:
+	for key in Synergies.ROWS:
+		var row: Dictionary = Synergies.ROWS[key]
+		if row.get("shown", "") == id:
+			return true
+		var evo: Dictionary = row.get("evolution", {})
+		if evo.get("into", "") == id or id in evo.get("parts", []):
+			return true
+	return false
 
 
 # True when the part only scales numbers: no punch, pattern, element or behaviour. Only
