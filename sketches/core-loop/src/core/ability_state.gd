@@ -63,6 +63,18 @@ const STAGE_REFUND_CAP := 20.0
 const REFUND_SLOTS := [MOVEMENT, LINE]
 # The kind each refund record carries (event_kinds UI_ROWS row; the chip flash reads it).
 const REFUND_KIND := "cooldown_refunded"
+# Interrupt priority (W13-INTEGRATION-3 SR3; TADR-008 keeps it one integer per row, no tags or
+# framework). A row's `priority` (default PRIORITY) is held by the ability state it starts; a
+# request() lands on the next tick only when strictly stronger than the state running, the first
+# strongest request winning, and a tick changes the state at most once. `cancels_sprint` (default
+# false: Run and Gun and the full blast fire through a sprint) marks a row whose activation ends
+# the sprint; the kit reads it through take_sprint_cancel(). A running state lasts its row's
+# duration over attack_speed.
+const PRIORITY := 1
+const IDLE_PRIORITY := -1
+const MIN_ATTACK_SPEED := 0.05
+# A run ends on the tick its seconds reach this close to zero, so float drift costs no tick.
+const RUN_EPSILON := 0.000001
 # A skill shot draws exactly its committed geometry; the hit test forgives a hull this
 # share beyond the drawn edge, so what you see is never bigger than what can hit.
 const FORGIVENESS := 0.18
@@ -228,7 +240,11 @@ class Slot:
 	var icon := ""
 	var cooldown := 0.0
 	var cooldown_scale := 1.0
+	# duration is the row's base_duration over the state's attack speed (SR3).
+	var base_duration := 0.0
 	var duration := 0.0
+	var priority := PRIORITY
+	var cancels_sprint := false
 	var max_charges := 1
 	var charges := 1
 	# Seconds into the charge now recharging.
@@ -263,6 +279,16 @@ var meter = null
 # yet read: {kind, slot, id, source, seconds}, oldest first.
 var stage_refunded := 0.0
 var _refunds := []
+# The interrupt record (SR3): the attack speed durations divide by, the slot whose ability state
+# runs ("" when idle) and its seconds left, state changes so far, sprint cancels so far, the
+# requests waiting for the next tick and the sprint cancel the kit has not read.
+var attack_speed := 1.0
+var running := ""
+var running_left := 0.0
+var state_changes := 0
+var sprint_cancels := 0
+var _requests := []
+var _sprint_cancel := false
 
 
 func _init() -> void:
@@ -301,7 +327,10 @@ func swap(name: String, id: String) -> void:
 	s.id = id
 	s.icon = row.get("icon", "")
 	s.cooldown = row.get("cooldown", 0.0)
-	s.duration = row.get("duration", 0.0)
+	s.base_duration = row.get("duration", 0.0)
+	s.duration = s.base_duration / attack_speed
+	s.priority = priority_of(id)
+	s.cancels_sprint = cancels_sprint_of(id)
 	var charge_max: float = row.get("charge_max", 0.0)
 	if charge_max > 0.0:
 		s.gauge = Gauge.new(charge_max)
@@ -421,6 +450,10 @@ func drain_refunds() -> Array:
 
 func refill() -> void:
 	stage_refunded = 0.0
+	running = ""
+	running_left = 0.0
+	_requests = []
+	_sprint_cancel = false
 	for name in SLOTS:
 		var s: Slot = _slots[name]
 		s.charges = s.max_charges
@@ -443,8 +476,89 @@ func set_cooldown_scale(name: String, scale: float) -> void:
 
 
 func tick(delta: float) -> void:
+	_resolve(delta)
 	for name in SLOTS:
 		_recharge(_slots[name], delta)
+
+
+# --- Interrupt priority (SR3) ----------------------------------------------------------
+
+static func priority_of(id: String) -> int:
+	return int(ABILITIES.get(id, {}).get("priority", PRIORITY))
+
+
+static func cancels_sprint_of(id: String) -> bool:
+	return bool(ABILITIES.get(id, {}).get("cancels_sprint", false))
+
+
+# The one interrupt rule, shared with the Fleet counters: the index of the first strongest of
+# `priorities` when it is strictly stronger than `current`, else -1.
+static func strongest(current: int, priorities: Array) -> int:
+	var win := -1
+	for i in priorities.size():
+		if int(priorities[i]) > current and (win < 0 or int(priorities[i]) > int(priorities[win])):
+			win = i
+	return win
+
+
+# Every running state lasts its base duration over this; picks and items set it.
+func set_attack_speed(speed: float) -> void:
+	attack_speed = maxf(MIN_ATTACK_SPEED, speed)
+	for name in SLOTS:
+		var s: Slot = _slots[name]
+		s.duration = s.base_duration / attack_speed
+
+
+func duration_of(name: String) -> float:
+	return (_slots[name] as Slot).base_duration / attack_speed
+
+
+func running_priority() -> int:
+	return IDLE_PRIORITY if running == "" else (_slots[running] as Slot).priority
+
+
+# Asks to start the ability in `name`; the next tick decides.
+func request(name: String) -> void:
+	if _slots.has(name):
+		_requests.append(name)
+
+
+# True once after an activation whose row cancels the sprint.
+func take_sprint_cancel() -> bool:
+	var was := _sprint_cancel
+	_sprint_cancel = false
+	return was
+
+
+# At most one state change: the strongest ready request replaces a weaker running state (spending
+# its charge), or else the running state counts down and ends.
+func _resolve(delta: float) -> void:
+	if _requests.is_empty() and running == "":
+		return
+	var names := []
+	var priorities := []
+	for name in _requests:
+		if ready(name):
+			names.append(name)
+			priorities.append((_slots[name] as Slot).priority)
+	_requests = []
+	var win := strongest(running_priority(), priorities)
+	if win >= 0:
+		var name: String = names[win]
+		spend(name)
+		running = name
+		running_left = duration_of(name)
+		state_changes += 1
+		if (_slots[name] as Slot).cancels_sprint:
+			_sprint_cancel = true
+			sprint_cancels += 1
+		return
+	if running != "":
+		running_left -= delta
+		if running_left <= RUN_EPSILON:
+			running = ""
+			running_left = 0.0
+			state_changes += 1
 
 
 # One charge at a time: time only ever fills the charge now recharging.
