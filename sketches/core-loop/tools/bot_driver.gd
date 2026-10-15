@@ -125,6 +125,17 @@ const RUNUP_EDGE := 6.0
 const RUNUP_DROP := 2.0
 const RUNUP_STEP := 2.0
 const RUNUP_MIN := 8.0
+# The dam Warden's spillway sheet hand (_anchor_fight) takes the stick within SHEET_HAND_REACH of
+# the sheet's foot; farther out the ball rolls there as on any other approach. On the dam the hand
+# runs through a stagger too: the sheet ram is the only break, so a stagger opened inside a live
+# sheet is converted by riding it into the core, and one opened outside it waits at the foot.
+const SHEET_HAND_REACH := 60.0
+# The launch presses the go verb from a standstill, or rolling with its heading within this
+# cosine of the core's.
+const SHEET_LAUNCH_LINED := 0.97
+# At this posture or more the hand holds fire on the dam Warden: a weapon, cast or ultimate hit
+# that fills the bar opens a stagger, not the break.
+const SHEET_HOLD_FIRE := 90.0
 # A Warden charge beyond RUNUP that gains less than CHARGE_PROGRESS on its best distance for
 # CHARGE_WINDOW seconds is pinned (a cache pocket's back wall, a pit): the ball moves fast enough
 # to dodge the stuck detour without getting anywhere. It recovers: back RECOVER_BACK off the
@@ -1406,7 +1417,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		if not game.player.state.grounded:
 			_count("latch_bites_air")
 	_anchor_lined = lined
-	if not staggered and target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
+	if target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
 			and target.spec.get("park_landmark", false) and target.mount_driver != null \
 			and target.mount_driver.has_method("sheet_live"):
 		var sheet = target.mount_driver
@@ -1414,18 +1425,30 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		var runup: float = minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
 		var foot: Vector3 = at + dir * runup
 		var live: bool = sheet.sheet_live()
+		if kit.hooked:
+			source.press["harpoon_released"] = true
 		var until_pulse: float = target._charge_len - target._charge_time if target._charging else target.PULSE_CYCLE - target._pulse_clock
 		if live and sheet.entered_sheet_cycle == sheet.gates_opened and game.player.body().get_colliding_bodies().has(target):
 			_fight_phase = "sheet return %d" % sheet.gates_opened
 		var rammed: bool = _fight_phase == "sheet return %d" % sheet.gates_opened
-		var launching: bool = (live and not rammed) or (not live and target._charging and until_pulse <= DROP_WAIT)
+		# In a stagger a second ram in the same live sheet is the break, so the ball goes again.
+		var launching: bool = (live and (not rammed or staggered)) or (not live and target._charging and until_pulse <= DROP_WAIT)
 		var steer: Vector3 = target.family_point_at() if launching else _ground_point(foot.x, foot.z)
-		if kit.hooked:
-			source.press["harpoon_released"] = true
 		_harpoon_held = false
 		_harpoon_commit = false
 		_anchor_below = 0.0
+		if _flat(ball, foot) > SHEET_HAND_REACH:
+			# The roll to the dam is an ordinary roll, boosts and all; the sheet hand's cruise-capped
+			# stick starts at the apron.
+			_goal = "roll to spillway sheet"
+			_act(steer, target, delta, target)
+			return
 		_goal = "ride spillway sheet" if live else "wait spillway sheet"
+		if trace and ticks % (Engine.physics_ticks_per_second / 4) == 0:
+			var bv: Vector3 = game.player.body().linear_velocity
+			print("    sheet t=%.2f live=%s launch=%s phase=%s ball=(%.1f, %.1f, %.1f) v=(%.1f, %.1f, %.1f) grounded=%s posture=%.1f staggered=%s entered=%d gates=%d riding=%s foot=(%.1f, %.1f)" % [
+				game.run.stage_time, live, launching, _fight_phase, ball.x, ball.y, ball.z, bv.x, bv.y, bv.z,
+				game.player.state.grounded, target.posture(), staggered, sheet.entered_sheet_cycle, sheet.gates_opened, sheet.riding, foot.x, foot.z])
 		var boost_clock := _boost_clock
 		var ignore_walls := _ignore_walls
 		_boost_clock = maxf(_boost_clock, delta)
@@ -1435,6 +1458,12 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_act(steer, target, delta, target, false)
 		_ignore_walls = ignore_walls
 		_boost_clock = boost_clock
+		if staggered or float(target.posture()) >= SHEET_HOLD_FIRE:
+			# Near a full bar, and in a stagger, any hit but the sheet ram only opens or spends a
+			# stagger that resets the bar (Tarn's claw, seed 3): the weapon, casts and ultimate wait.
+			source.hold.erase("fire_held")
+			source.press.erase("fire_pressed")
+			source.press.erase("ultimate_pressed")
 		var offset := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z)
 		var planar: Vector3 = game.player.planar_velocity()
 		var desired := offset.normalized() * minf(game.player.tuning.f("cruise"), offset.length() * RUNUP_DROP)
@@ -1455,7 +1484,15 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 			source.hold.erase("brake_held")
 			if live and ball.y >= target.family_point_at().y:
 				source.hold["brake_held"] = true
-			if planar.dot(dir) <= 0.0 and _boost_clock <= 0.0 and game.player.state.grounded and game.player.verb_ready("boost"):
+			if not game.player.state.grounded:
+				# Off the ground the sheet carries the ball: a held go verb only adds to it (Tarn's
+				# claw pull, aimed at the core, hauled the ball over it, seed 9).
+				source.hold.erase("shift_held")
+				_shift_left = 0.0
+			# The go verb fires along the aim, so a rolling ball waits until it rolls straight at the
+			# core: pressed mid-turn it threw the ball wide of the sheet (Tally's surge, seed 4).
+			var at_core: bool = planar.length() <= 1.0 or planar.normalized().dot(offset.normalized()) >= SHEET_LAUNCH_LINED
+			if at_core and _boost_clock <= 0.0 and game.player.state.grounded and game.player.verb_ready("boost"):
 				source.press["shift_pressed"] = true
 				source.hold["shift_held"] = true
 				_boost_clock = BOOST_GAP
