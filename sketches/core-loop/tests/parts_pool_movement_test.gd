@@ -1,0 +1,110 @@
+extends SceneTree
+
+const Parts := preload("res://src/build/parts.gd")
+const Synergies := preload("res://src/build/synergies.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+
+# PC-POOL (wave 14, Bible Mobility row, Andrew 2026-10-12): movement that changes how a pilot
+# moves belongs to that pilot. Shared parts may change what a verb does, never how far or fast
+# the ball moves. Checks:
+#   - no part every pilot can be offered carries a movement mod: a tuning knob outside
+#     NOT_MOVEMENT, or a cooldown scale (it feeds the boost cooldown). Class parts are exempt;
+#   - the five wave 11 verb parts keep their ids, tags and touch verbs;
+#   - grip_tread, vent_baffle and spring_shims are class parts of the pilot whose Shift they
+#     deepen (the pilots' PILOTS.md Shift feel); live_line and drop_weight stay shared because
+#     they are the second ingredients of two evolutions, and carry no movement knob;
+#   - both evolutions still have both ingredients in every pilot's pool, at common rarity;
+#   - every knob a shared verb part names is a real tuning knob or a build stat, so the part
+#     does something.
+# Evidence limit: static rows and the offer pool. That each pilot still wins its bot runs is
+# bot_six_pilots_test's claim, and how the new effects feel is Andrew's to play.
+
+const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
+const RARITIES := [["common"], ["rare"], ["relic"], ["evolved"], ["common", "rare", "relic"]]
+# The mod knobs that change what a part does without changing how the ball moves.
+const NOT_MOVEMENT := ["weapon_damage", "weapon_rate", "weapon_range", "turret_damage", "harpoon_lock_deg"]
+# id: [tags, touch verb, class_id]. A class_id of "" is shared.
+const FIVE := {
+	"grip_tread": [["anchor"], "roll", "runner_gunner"],
+	"live_line": [["arc"], "harpoon", ""],
+	"vent_baffle": [["speed"], "boost", "tally"],
+	"spring_shims": [["spiral"], "jump", "pylon_engineer"],
+	"drop_weight": [["mass"], "haul", ""],
+}
+const EVOLUTIONS := {"tesla_pylon": ["focus_lens", "live_line"], "lightning_rod": ["arc_coil", "drop_weight"]}
+
+var _t := preload("res://tests/support/t.gd").new("parts_pool_movement_test")
+
+
+func _initialize() -> void:
+	_run()
+
+
+func _run() -> void:
+	_t.check("the alpha table lists its parts", Parts.listed_only(), "offer_pool must read the alpha table")
+	_pool_is_clear()
+	_five_rows()
+	_evolutions()
+	quit(_t.verdict())
+
+
+func _movement_mods(part_id: String) -> Array:
+	var d: Resource = Parts.def(part_id)
+	var found: Array = []
+	for knob in d.mods:
+		if not knob in NOT_MOVEMENT:
+			found.append(knob)
+	if d.cooldown_scale != 1.0:
+		found.append("cooldown_scale")
+	return found
+
+
+func _pool_is_clear() -> void:
+	var offered := 0
+	var bad: Array = []
+	for pilot in PILOTS:
+		for rarities in RARITIES:
+			for id in Parts.offer_pool(pilot, rarities):
+				offered += 1
+				var only: String = Parts.row(id).get("class_id", "")
+				if only == "" and not _movement_mods(id).is_empty():
+					bad.append("%s offered to %s with %s" % [id, pilot, _movement_mods(id)])
+	_t.check("the pools are not empty", offered > 0, str(offered))
+	_t.eq("no shared part in any pilot's pool carries a movement mod", bad, [])
+	var listed_bad: Array = []
+	for id in AlphaDefs.PARTS:
+		var row: Dictionary = Parts.row(id)
+		if row.get("class_id", "") == "" and not _movement_mods(id).is_empty():
+			listed_bad.append(id)
+	_t.eq("no shared part on the alpha list carries a movement mod", listed_bad, [])
+
+
+func _five_rows() -> void:
+	for id in FIVE:
+		var want: Array = FIVE[id]
+		var row: Dictionary = Parts.row(id)
+		_t.check("%s is on the alpha list" % id, id in AlphaDefs.PARTS, "")
+		_t.eq("%s tags" % id, row.get("tags", []), want[0])
+		_t.eq("%s touches" % id, row.get("touches", ""), want[1])
+		_t.eq("%s class_id" % id, row.get("class_id", ""), want[2])
+		for pilot in PILOTS:
+			var offered: bool = id in Parts.offer_pool(pilot, ["common"])
+			_t.eq("%s is offered to %s only if shared or its own" % [id, pilot], offered, want[2] == "" or want[2] == pilot)
+		if want[2] == "":
+			_t.eq("%s has no movement mod" % id, _movement_mods(id), [])
+			for knob in Parts.def(id).mods:
+				_t.check("%s knob %s is a real tuning knob" % [id, knob], Tuning.SPECS.any(func(spec): return spec["key"] == knob), "")
+
+
+func _evolutions() -> void:
+	for synergy in EVOLUTIONS:
+		for pilot in PILOTS:
+			var pool: Array = Parts.offer_pool(pilot, ["common"])
+			for ingredient in EVOLUTIONS[synergy]:
+				_t.check("%s ingredient %s is in %s's common pool" % [synergy, ingredient, pilot], ingredient in pool, "")
+		var into: String = ""
+		for key in Synergies.ROWS:
+			if key == synergy:
+				into = String(Synergies.ROWS[key].get("evolution", {}).get("into", ""))
+		_t.check("%s still evolves" % synergy, into != "" and Parts.has(into), into)
