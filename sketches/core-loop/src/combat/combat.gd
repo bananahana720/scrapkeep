@@ -75,6 +75,14 @@ const MUZZLE := 1.25
 const AIM_SLACK := 14.0
 const KINDS := ["chaser", "lobber", "miniboss", "warden", "vault"]
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
+# SG1 arc mark (comps/gunfire/elements-and-fusion.md, shock +10% for 5 s, a start value): an
+# "arc" strike marks its target for ARC_MARK_SECONDS, and while the mark holds every strike
+# through the damage door deals 1 + ARC_MARK_FRACTION. The mark is its own entry kind in
+# _exposed, read once in the door's caps stage (_strike_mult). The wear trail and primer-mesh
+# shares bypass the door (_trail_deal), so the mark never raises them.
+const ARC_MARK_FRACTION := 0.10
+const ARC_MARK_SECONDS := 5.0
+const ARC_MARK_KIND := "arc"
 # Mass-K: radius bonus at full mass, and the mass that counts as full (BUILD-SYSTEMS.md).
 const MASS_K_RADIUS := 0.25
 const MASS_K_SATURATION := 990.0
@@ -253,6 +261,8 @@ var _clamped := {}
 # expose, verb, window, and the commit's seed, target, centre, radius and phase}), how many it has committed (its seed counter),
 # and plate-exposed enemies (instance id -> {until, verb}) that take MindAttacks.BRACE_MULT
 # from any contact strike. _exposed clears on run start and every attempt; a kill drops its entry.
+# SG1's arc mark rides the same table under _arc_key(id) ({kind, id, until, window, radius,
+# mark}), so a plate row and an arc row on one enemy never collide.
 var _cannon := []
 var _cannon_count := 0
 var _exposed := {}
@@ -532,6 +542,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 		_record_retirement(_class_for_id(id, kind))
 		_clamped.erase(id)
 		_exposed.erase(id)
+		_exposed.erase(_arc_key(id))
 		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
@@ -578,6 +589,10 @@ func _door_caps(hit: Dictionary) -> void:
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_exposed.erase(enemy.get_instance_id())
+	# SG1: the mark was read above, so the hit that sets or refreshes it is never raised by
+	# its own mark.
+	if hit["kind"] == ARC_MARK_KIND:
+		_arc_mark(enemy)
 
 
 func _door_crit(hit: Dictionary) -> void:
@@ -692,8 +707,8 @@ func _primer_consumes(enemy: Node3D, kind: String, cls: String) -> String:
 
 # What strike() multiplies resolve()'s dealt by, beyond the plating rule: the cannon's
 # plate exposure (any contact deals BRACE_MULT while the window holds; the damage scales,
-# not the force, because a contact's punch is affine in its force) and a seated primer
-# coil consuming a live prime. Reads only, so would_crush() asks the same question the
+# not the force, because a contact's punch is affine in its force), a seated primer
+# coil consuming a live prime, and SG1's arc mark on every kind. Reads only, so would_crush() asks the same question the
 # strike will answer (F005).
 func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 	var mult := 1.0
@@ -701,6 +716,8 @@ func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 		mult *= MindAttacks.BRACE_MULT
 	if _primer_consumes(enemy, kind, cls) == "primer_coil":
 		mult *= Companion.PRIMER_COIL_MULT
+	if _arc_marked(enemy):
+		mult *= 1.0 + ARC_MARK_FRACTION
 	return mult
 
 
@@ -1989,15 +2006,76 @@ func _cannon_expose(enemy: Node3D, window: float, verb: String) -> void:
 	_exposed[id] = {"until": _clock + window, "verb": verb, "window": window, "mark": mark}
 
 
+# --- SG1 arc mark ----------------------------------------------------------------------
+# The committed geometry is the marked enemy's hull (_hull, the radius area hits test
+# against), recorded once on the row; the ring is drawn at that radius under the enemy and
+# lives exactly as long as the row, so what is drawn and what raises damage are one record.
+static var _arc_mark_mesh: ArrayMesh
+
+
+static func _arc_key(id: int) -> String:
+	return "arc:%d" % id
+
+
+func _arc_marked(enemy: Node3D) -> bool:
+	return float(_exposed.get(_arc_key(enemy.get_instance_id()), {}).get("until", -INF)) > _clock
+
+
+func _arc_mark(enemy: Node3D) -> void:
+	if not is_instance_valid(enemy):
+		return
+	var id := enemy.get_instance_id()
+	var radius := _hull(enemy)
+	var mark: MeshInstance3D = enemy.get_node_or_null("ArcMark")
+	if mark == null or mark.is_queued_for_deletion():
+		mark = MeshInstance3D.new()
+		mark.name = "ArcMark"
+		mark.mesh = _arc_ring()
+		enemy.add_child(mark)
+	# Scale against the enemy's own, so the drawn radius is the committed one in world units.
+	var parent_scale: Vector3 = enemy.global_basis.get_scale()
+	mark.scale = Vector3(radius / maxf(parent_scale.x, 0.0001), 1.0, radius / maxf(parent_scale.z, 0.0001))
+	mark.set_instance_shader_parameter("left", 1.0)
+	_exposed[_arc_key(id)] = {"kind": ARC_MARK_KIND, "id": id, "until": _clock + ARC_MARK_SECONDS,
+		"window": ARC_MARK_SECONDS, "radius": radius, "mark": mark}
+
+
+# A unit-radius dashed ring (outer edge 1.0), tinted the arc colour and fading with "left".
+static func _arc_ring() -> ArrayMesh:
+	if _arc_mark_mesh != null:
+		return _arc_mark_mesh
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in 16:
+		if i % 4 == 3:
+			continue
+		var a := TAU * i / 16.0
+		var b := TAU * (i + 0.7) / 16.0
+		for p in [Vector2(a, 0.86), Vector2(b, 0.86), Vector2(a, 1.0),
+			Vector2(b, 0.86), Vector2(b, 1.0), Vector2(a, 1.0)]:
+			surface.add_vertex(Vector3(cos(p.x) * p.y, 0.14, sin(p.x) * p.y))
+	_arc_mark_mesh = surface.commit()
+	var material := ShaderMaterial.new()
+	var shader := Shader.new()
+	shader.code = "shader_type spatial; render_mode unshaded, cull_disabled; uniform vec4 tint : source_color; instance uniform float left = 1.0; void fragment(){ ALBEDO = tint.rgb; ALPHA = left; }"
+	material.shader = shader
+	material.set_shader_parameter("tint", Palette.ARC)
+	_arc_mark_mesh.surface_set_material(0, material)
+	return _arc_mark_mesh
+
+
 func _step_cannon_exposure() -> void:
-	for id in _exposed.keys():
-		var row: Dictionary = _exposed[id]
+	for key in _exposed.keys():
+		var row: Dictionary = _exposed[key]
 		var left := float(row["until"]) - _clock
 		var mark = row.get("mark")
-		if left <= 0.0 or not is_instance_valid(instance_from_id(id)):
+		if left <= 0.0 or not is_instance_valid(instance_from_id(int(row.get("id", key)))):
 			if is_instance_valid(mark):
+				# Out of the tree now, so a mark set again this frame takes the name at once.
+				if mark.get_parent() != null:
+					mark.get_parent().remove_child(mark)
 				mark.queue_free()
-			_exposed.erase(id)
+			_exposed.erase(key)
 		elif is_instance_valid(mark):
 			mark.set_instance_shader_parameter("left", left / float(row["window"]))
 

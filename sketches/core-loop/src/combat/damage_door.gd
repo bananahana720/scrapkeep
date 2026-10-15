@@ -6,7 +6,8 @@ extends RefCounted
 # rule: each stage is the owner's existing code, so the numbers are the owner's.
 #
 #   armour    the plating rule (punch against plating less shred, or a posture judge)
-#   caps      multipliers and exposures on what got through
+#   caps      multipliers and exposures on what got through; SG1's arc mark is applied here
+#             and only here, once per hit whatever its source (combat.gd ARC_MARK_FRACTION)
 #   crit      a consumed bonus (today the companion's prime; weapon crits ride in the force)
 #   announce  the bus facts, before health so a kill never publishes a freed node
 #   plates    the target's own reply: a plate pop, posture or boss pressure
