@@ -144,6 +144,16 @@ static func _fits(prepared: Dictionary, entry: Dictionary, spot: Dictionary, pla
 			return false
 	return true
 
+static func _owned_pay(entry: Dictionary) -> Dictionary:
+	var pay: Dictionary = load("res://src/world/activities.gd").RULES[entry.activity].pay.duplicate(true)
+	if not pay.has("named"):
+		pay.rarities = pay.rarities.filter(func(r): return r in Placement.PAY_FAR)
+	return pay
+
+static func _named_common(entry: Dictionary) -> bool:
+	var pay := _owned_pay(entry)
+	return not Placement._within(Placement._pay(pay).rarities, Placement.PAY_FAR)
+
 static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = []) -> Dictionary:
 	var result := {"sites": [], "metrics": {"initial_credits": CREDITS, "remaining_credits": CREDITS, "failed_placements": 0, "refunded_credits": 0, "chance_opportunities": 0, "chance_hits": 0, "anchors": prepared.anchors.size()}}
 	if stage < 1 or stage > Park.COUNT or map.park.map != Park.of(stage).map:
@@ -155,7 +165,7 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 	var picked := []
 	var available := CREDITS
 	while picked.size() < slots:
-		var affordable: Array = pool.filter(func(entry): return cost(entry) <= available)
+		var affordable: Array = pool.filter(func(entry): return cost(entry) <= available and (slots > 1 or not _named_common(entry)) and (not picked.is_empty() or not _named_common(entry)))
 		if affordable.is_empty():
 			break
 		var total := 0.0
@@ -200,10 +210,38 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 			result.metrics.remaining_credits += price
 			result.metrics.refunded_credits += price
 			continue
-		var spec := Library.site_spec(entry).merged(oriented).merged({"id": entry.activity, "drawn": true, "pay": {"named": "", "rarities": Placement.PAY_FAR.duplicate()}})
+		var spec := Library.site_spec(entry).merged(oriented).merged({"id": entry.activity, "drawn": true, "pay": _owned_pay(entry)})
 		result.sites.append(spec)
 		picked.pop_front()
 		pending = false
+	# A named common reward cannot own the greatest detour, even when rolls allow rare.
+	var far := -INF
+	for spec in result.sites:
+		if not _named_common(spec.interior):
+			far = maxf(far, prepared.from_line[spec.node])
+	for spec in result.sites.duplicate():
+		if _named_common(spec.interior) and prepared.from_line[spec.node] >= far:
+			result.sites.erase(spec)
+			result.metrics.failed_placements += 1
+			result.metrics.remaining_credits += cost(spec.interior)
+			result.metrics.refunded_credits += cost(spec.interior)
+			for spot in candidates:
+				if prepared.from_line[spot.node] >= far:
+					continue
+				result.metrics.remaining_credits -= cost(spec.interior)
+				var replacement := {}
+				for turn in prepared.fits.get(spot.node, {}).get(spec.interior.footprint, []):
+					var candidate: Dictionary = spot.merged({"turn": turn})
+					if _fits(prepared, spec.interior, candidate, result.sites, trade):
+						replacement = spec.merged(candidate, true)
+						break
+				if not replacement.is_empty():
+					result.sites.append(replacement)
+					break
+				result.metrics.failed_placements += 1
+				result.metrics.remaining_credits += cost(spec.interior)
+				result.metrics.refunded_credits += cost(spec.interior)
+	result.sites.sort_custom(func(a, b): return cost(a.interior) > cost(b.interior) or (cost(a.interior) == cost(b.interior) and a.interior.id < b.interior.id))
 	return result
 
 static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}) -> Array:
@@ -239,7 +277,7 @@ static func from_doc(doc: Dictionary) -> Dictionary:
 		var sites := []
 		for saved in doc[key].sites:
 			var entry: Dictionary = library[saved.interior]
-			sites.append(Library.site_spec(entry).merged({"id": entry.activity, "drawn": true, "node": int(saved.node), "turn": int(saved.get("turn", 0)), "at": Vector2(saved.at[0], saved.at[1]), "pay": {"named": "", "rarities": Placement.PAY_FAR.duplicate()}}))
+			sites.append(Library.site_spec(entry).merged({"id": entry.activity, "drawn": true, "node": int(saved.node), "turn": int(saved.get("turn", 0)), "at": Vector2(saved.at[0], saved.at[1]), "pay": _owned_pay(entry)}))
 		cache[key] = {"sites": sites}
 	return cache
 
