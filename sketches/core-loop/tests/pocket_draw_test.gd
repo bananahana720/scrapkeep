@@ -288,6 +288,7 @@ func _runtime(_specs: Array) -> void:
 		if t.check("drawn cache renders pedestal turn %d" % turn, rendered != null):
 			t.check("drawn cache rendered pedestal at owned offset turn %d" % turn, Vector2(rendered.global_position.x, rendered.global_position.z).distance_to(expected) < 0.001)
 			t.check("drawn cache reward and rendered pedestal agree turn %d" % turn, Vector2(built.pedestal.x, built.pedestal.z).distance_to(expected) < 0.001)
+			t.check("drawn cache pedestal world position agrees turn %d" % turn, (rendered.global_position - Vector3.UP * rendered.mesh.height * 0.5).distance_to(built.pedestal) < 0.001)
 			var before_parts: int = resumed.run.parts.size()
 			resumed.world.activities._break_wall(built)
 			if t.check("drawn cache wall releases reward turn %d" % turn, built.pickup != null):
@@ -338,7 +339,10 @@ func _hazard_geometry(acts) -> void:
 			t.check("hazard visual extents turn %d" % turn, Vector2(bounds.size.x, bounds.size.z).distance_to(extent) < 0.001)
 			t.check("hazard committed centre turn %d" % turn, Vector2(hazard.committed.site.at[0], hazard.committed.site.at[1]).distance_to(centre) < 0.001)
 			t.check("hazard committed extents turn %d" % turn, Vector2(hazard.committed.site.size[2], hazard.committed.site.size[0]).distance_to(extent) < 0.001)
+			t.near("hazard visual and committed floor agree turn %d" % turn, bounds.position.y, hazard.committed.floor_y)
+			t.near("hazard visual and committed height agree turn %d" % turn, bounds.size.y, hazard.committed.height)
 			var safe: Vector3 = hazard.committed.safe_at
+			t.check("hazard safe disc uses transformed centre turn %d" % turn, Vector2(safe.x, safe.z).distance_to(centre) < 0.001)
 			t.check("hazard safe disc matches visual shader turn %d" % turn, visual.material_override.get_shader_parameter("safe_at").distance_to(Vector2(safe.x, safe.z)) < 0.001)
 			for x in [-1.1, -0.8, 0.0, 0.8, 1.1]:
 				for z in [-1.1, -0.8, 0.0, 0.8, 1.1]:
