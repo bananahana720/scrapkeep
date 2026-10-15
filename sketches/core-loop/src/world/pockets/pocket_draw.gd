@@ -92,6 +92,7 @@ static func prepare(graph, map) -> Dictionary:
 		var p: Vector3 = graph.position(n)
 		var at := Vector2(p.x, p.z)
 		var sizes := {}
+		var footprint_ok := {}
 		for turn in 4:
 			for size in Library.FOOTPRINTS:
 				var half: float = Library.FOOTPRINTS[size] * 0.5
@@ -107,12 +108,14 @@ static func prepare(graph, map) -> Dictionary:
 				var box := Rect2(at - Vector2.ONE * half, Vector2.ONE * half * 2.0)
 				if doors.any(func(d): return _box_distance(box, d.at) <= Placement.RING_M or door.distance_to(d.at) < Placement.DOOR_DOOR_M):
 					continue
-				var fits: bool = map.play_rect.encloses(box)
-				for k in graph.box_nodes(box.position - Vector2.ONE * Graph.STEP_M, box.end + Vector2.ONE * Graph.STEP_M):
-					if routes[k] == 1 or graph.flags(k) & Graph.OPEN == 0 or graph.flags(k) & (Graph.UNDER | Graph.DECK | Graph.GUARDED | Graph.WARDEN) != 0:
-						fits = false
-						break
-				if fits:
+				if not footprint_ok.has(size):
+					var fits: bool = map.play_rect.encloses(box)
+					for k in graph.box_nodes(box.position - Vector2.ONE * Graph.STEP_M, box.end + Vector2.ONE * Graph.STEP_M):
+						if routes[k] == 1 or graph.flags(k) & Graph.OPEN == 0 or graph.flags(k) & (Graph.UNDER | Graph.DECK | Graph.GUARDED | Graph.WARDEN) != 0:
+							fits = false
+							break
+					footprint_ok[size] = fits
+				if footprint_ok[size]:
 					sizes.get_or_add(size, []).append(turn)
 		if not sizes.is_empty():
 			out.anchors.append({"node": n, "at": at})
