@@ -1,7 +1,7 @@
 extends SceneTree
 # 2026-10-10 (w13 KC0): a park row's recipe places a GLB or a greybox stand-in (design-v3/PARK.md sections 2.2, 4, 9).
 # (a) The registry: park_recipes.ROWS holds every starting recipe id park_schema accepts, each in a park budget class, and
-# tools/asset_budgets.json carries park_large and hero_landmark at the section 9 numbers plus every park class's ranges.
+# assets/asset_budgets.json carries park_large and hero_landmark at the section 9 numbers plus every park class's ranges.
 # (b) The four new ride facts are WORLD_ROWS rows in the ROWS schema.
 # (c) A greybox:<element> id places a primitive of the row's size at its transform with a collider of the same extent;
 # a greybox id naming no element places nothing; a recipe whose GLB is missing falls back to its element's greybox.
@@ -58,7 +58,7 @@ func _check_registry() -> void:
 		if String(id).begins_with("landmark_") and ParkRecipes.ROWS[id]["budget"] != "hero_landmark":
 			bad.append(id)
 	_t.check("(a) every row names a park budget class, landmarks hero_landmark", bad.is_empty(), str(bad))
-	var budgets: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tools/asset_budgets.json"))
+	var budgets: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/asset_budgets.json"))
 	var classes: Dictionary = budgets["classes"]
 	_t.check("(a) park_large is 16,000 triangles and 2 draws", classes.has("park_large")
 		and int(classes["park_large"]["tris"]) == 16000 and int(classes["park_large"]["draws"]) == 2, str(classes.get("park_large")))

@@ -124,7 +124,7 @@ func _planted_rows() -> void:
 		func(p): _row(p, "contraption_rows", "deck_cannon").erase("target"))
 
 
-# Pilot lines for the fixture, built here (tools/park_lines/park_test.json is KB7's).
+# Pilot lines for the fixture, built here (assets/park/park_test/lines.json is KB7's).
 func _fixture_lines() -> Dictionary:
 	var pilots := {}
 	for pilot in ParkSchema.PILOTS:

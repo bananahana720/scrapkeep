@@ -5,7 +5,7 @@ second take): a tripod, an ivory platform, a caged lantern, an upright halo ring
 Same route as ore_cart.py: kit.Surface parts, COLOR_0 vertex colour, materials named for dig_scenery.gd SLOTS.
 The frame is two draws (steel: legs, feet, collar, cage bars, brackets, halo ring, cap; enamel: platform and
 lantern housing); the lens is one glass draw placed at the frame's socket_lens. Class "landmark" in
-tools/asset_budgets.json. No lights: the ring and cap are painted the steel shader's state key, so each
+assets/asset_budgets.json. No lights: the ring and cap are painted the steel shader's state key, so each
 instance shows its beacon state colour through `state_tint` (EventKinds STATE_ROWS: open amber, sealed slate).
 
 The Warden clamps the beacon at socket_clamp, its seat on the axis (wave 12 BEACON-CLAMP). Every family's weak

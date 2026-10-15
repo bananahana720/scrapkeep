@@ -1,5 +1,5 @@
 """Detail layer 1 for the valve wheel (wave 12-D RECIPE-WAVE, DETAIL-CART loop): two additive shells, one per moving
-frame, each one steel draw in the `detail` class (tools/asset_budgets.json):
+frame, each one steel draw in the `detail` class (assets/asset_budgets.json):
 - valve_wheel_detail1.glb in the wheel frame (axle +Y, like valve_wheel_wheel.glb): inner rim beads, spoke root
   flares at hub and rim, the hub nut and back boss, a jagged crack branch on both faces.
 - valve_wheel_detail1m.glb in the mount frame (foot origin): flange bolts, gasket ribs, the outlet lip, slab bolts.

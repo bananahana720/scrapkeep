@@ -22,7 +22,7 @@ func check(label: String, ok: bool) -> void:
 
 
 func _initialize() -> void:
-	var budget = JSON.parse_string(FileAccess.get_file_as_string("res://tools/asset_budgets.json"))
+	var budget = JSON.parse_string(FileAccess.get_file_as_string("res://assets/asset_budgets.json"))
 	check("warden_kit budget row exists", budget is Dictionary and budget.get("classes", {}).has("warden_kit"))
 	if not budget is Dictionary or not budget.get("classes", {}).has("warden_kit"):
 		print("dress_mwa_assets_test: FAIL")

@@ -505,7 +505,7 @@ The queue holds card 1's lock for the run and exports `CUDA_VISIBLE_DEVICES` (`t
 | Seconds of animation per GLB | 9.17 | 20.9 to 23.4 | none |
 | Animation data per GLB | 46 to 97 KB | about 106 KB (Cannon) to 248 KB (Tarn) | 300 KB |
 | GLB size | 310 to 366 KB | about 370 KB (Cannon) to 503 KB (Tarn) | 640 KB |
-| Pilot mesh | 4,600 tris, 3,100 verts, 5 draws (`tools/asset_budgets.json:45-49`) | unchanged | unchanged |
+| Pilot mesh | 4,600 tris, 3,100 verts, 5 draws (`assets/asset_budgets.json:45-49`) | unchanged | unchanged |
 
 The projection scales each pilot's measured rate (Tarn 10.6 KB per second of animation, the Cannon 5.1, likely because its rigid cast keeps every scale constant) by the new seconds in 1.2. Godot's import keeps `animation/remove_immutable_tracks=true` and `animation/fps=30` (`assets/models/pilot_tarn_anim.glb.import`), which drops constant tracks.
 

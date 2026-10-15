@@ -29,7 +29,7 @@ extends SceneTree
 #              mounting with harpoon_anchor true (mind.md section 3).
 #   toppled    the split spire's strike opens the toppled route and its last fan (ruling R6), and
 #              the spire_top_ramp row it swaps in exists.
-#   lines      every named waypoint of tools/park_lines/park_crown.json resolves on the park
+#   lines      every named waypoint of assets/park/park_crown/lines.json resolves on the park
 #              file (drop_in, landmark, a waymark, a park row or an activity), every line starts
 #              at drop_in and ends at the landmark, and the six pilots and the floor are present.
 #
@@ -53,7 +53,7 @@ const Terrain := preload("res://src/world/terrain.gd")
 
 const PARK_PATH := "res://src/world/park/park_crown.json"
 const BAKE_DIR := "res://assets/park/park_crown"
-const LINES_PATH := "res://tools/park_lines/park_crown.json"
+const LINES_PATH := "res://assets/park/park_crown/lines.json"
 const PLANT_PATH := "user://park_crown_plant.json"
 
 const WAYMARKS := ["drop_in", "turnstone", "split_spire", "landmark"]

@@ -10,7 +10,7 @@ Differences are absolute channel differences on a 0..255 scale. RGB is
 premultiplied by alpha; alpha is also compared, so invisible RGB is ignored
 but transparency discontinuities fail. Each pair must pass BOTH its mean and
 peak cap. Defaults (mean 8, peak 32) are provisional production tolerances,
-not visual approval. Size defaults to tools/asset_budgets.json texture.max_side.
+not visual approval. Size defaults to assets/asset_budgets.json texture.max_side.
 This checks boundary discontinuities, not slopes, mips, UVs or artistic quality.
 No historical asset is silently exempted and no input file is modified.
 """
@@ -159,7 +159,7 @@ def main(argv=None):
         root = args.project_root.resolve()
         max_side = args.max_side
         if max_side is None:
-            budget = json.loads((root / "tools/asset_budgets.json").read_text())["texture"]["max_side"]
+            budget = json.loads((root / "assets/asset_budgets.json").read_text())["texture"]["max_side"]
             if type(budget) is not int or budget < 2:
                 raise ValueError("texture.max_side must be an integer of at least 2")
             max_side = budget

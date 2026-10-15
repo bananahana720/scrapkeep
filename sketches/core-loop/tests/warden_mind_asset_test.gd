@@ -19,13 +19,13 @@ extends SceneTree
 #             6 m above the grip (the fingers' palm-side face on the perch top, mind.md section 1)
 #             and PERCH_LENS_OFFSET_Y above the Warden's centre; WeakPoint and Hardpoint0..2 present.
 #   seams     four finger seam materials the loader can put out one at a time, plus the thumb's.
-#   budget    tris, verts and draws within the registry row's class in tools/asset_budgets.json.
+#   budget    tris, verts and draws within the registry row's class in assets/asset_budgets.json.
 #   no light  no Light3D anywhere in the imported scene.
 # A missing GLB fails loud.
 
 const GLB := "res://assets/models/warden_mind.glb"
 const REGISTRY := "res://assets/registry.json"
-const BUDGETS := "res://tools/asset_budgets.json"
+const BUDGETS := "res://assets/asset_budgets.json"
 const ID := "warden_mind"
 const RADIUS := 2.8
 const HALF_HEIGHT := 1.6

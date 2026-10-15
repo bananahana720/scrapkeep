@@ -315,7 +315,7 @@ The original design estimated every pilot line inside PARK.md's ratio band of 1.
 | Distinct verbs at least 3 | 4 to 6 per line |
 | Distinct lines at least 3 | Sable, Rivet and Kest share no middle or last fan |
 
-**Current `tools/park_lines/park_crown.json`.** Waypoints are [x,z] or a waymark id.
+**Current `assets/park/park_crown/lines.json`.** Waypoints are [x,z] or a waymark id.
 
 ```json
 {

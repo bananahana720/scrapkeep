@@ -6,7 +6,7 @@ extends SceneTree
 # tools/park_graph.gd) has no breach, every route connected, the spawn in the farthest quarter,
 # and the four pockets in their PARK.md 2.12 roles with their distances inside the rule; the
 # landmark is the Hanging Isle with the mind Warden hung under it as a harpoon anchor; and every
-# named waypoint of the seven pilot and floor lines (tools/park_lines/park_islands.json) resolves
+# named waypoint of the seven pilot and floor lines (assets/park/park_islands/lines.json) resolves
 # on the park file. Each fact is checked by a function that a planted copy must fail, so a pin
 # that cannot go red is caught here (the plants are the positive controls).
 #
@@ -27,7 +27,7 @@ const GraphTool := preload("res://tools/park_graph.gd")
 const MAP := "park_islands"
 const PARK := "res://src/world/park/park_islands.json"
 const DIR := "res://assets/park/park_islands"
-const LINES := "res://tools/park_lines/park_islands.json"
+const LINES := "res://assets/park/park_islands/lines.json"
 const BAKE_TOOL := "res://tools/park_bake.gd"
 const GRAPH_TOOL := "res://tools/park_graph.gd"
 const STAGE_SPEC := "res://design-v3/park/stages/5-park_islands.md"

@@ -4,7 +4,7 @@ boat with a teal hull and floor, a cream inner wall, an amber rim band with hook
 black round thruster knobs at one end.
 
 Same route as lantern_beacon.py: kit.Surface parts, COLOR_0 vertex colour, materials named for dig_scenery.gd SLOTS.
-barge.glb is two draws, class "landmark" in tools/asset_budgets.json: enamel (hull, strake, rim, inner wall, floor)
+barge.glb is two draws, class "landmark" in assets/asset_budgets.json: enamel (hull, strake, rim, inner wall, floor)
 and steel (latches and rim hooks, copper by the lore rule). barge_fenders.glb is one elastomer draw (side pads and the
 thruster knobs) at the same origin, the cart's body-and-tyre split, because three slots exceed the class's two draws.
 

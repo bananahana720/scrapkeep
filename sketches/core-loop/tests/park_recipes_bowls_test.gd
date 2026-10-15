@@ -20,7 +20,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
 
 const REGISTRY := "res://assets/registry.json"
-const BUDGETS := "res://tools/asset_budgets.json"
+const BUDGETS := "res://assets/asset_budgets.json"
 const LANE := 300.0
 const START_Z := -40.0
 const ENTRY_SPEED := 14.0

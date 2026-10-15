@@ -1,5 +1,5 @@
 """Detail layer 1 for the gauge dial (wave 12-D RECIPE-WAVE, DETAIL-CART loop): one additive steel shell in the
-`detail` class (tools/asset_budgets.json), in the foot frame of gauge_dial_stand/_bezel/_face (static parts only; the
+`detail` class (assets/asset_budgets.json), in the foot frame of gauge_dial_stand/_bezel/_face (static parts only; the
 needle turns, so nothing here rides it). Closes gap list A lines A1 to A6 and A9 to A12
 (artifacts/local/alpha/push/w12/units/rc-gauge_dial/gaps_A.md): face screws, hub seat, spigot threads, a round arm
 boss, a block service plate (Switchback Enclaves: the service bolts stay in sight), the bezel's service bolt row, a

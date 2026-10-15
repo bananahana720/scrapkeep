@@ -14,7 +14,7 @@ level, and falls on a ramp back to y 0 at z LENGTH. Open edge on +x, the cliff o
 lane (at least 8 m of x); the rooms, the wall and the mesa back stand outside it. A recipe is built at its own size and the
 loader does not scale it, so a park row's `size` names the footprint the row wants and a longer line is a chain of rows.
 
-Files per recipe id (the names park_recipes.gd reads, tools/asset_budgets.json class landform / detail):
+Files per recipe id (the names park_recipes.gd reads, assets/asset_budgets.json class landform / detail):
   <id>.glb          the render mesh `<id>` (one draw, vertex colour in the material `enamel`, the slot role whose StandardMaterial reads vertex colour as albedo,
                     park_recipes.gd maps it to) and the collision mesh `<id>-col` (low-poly trimesh, never drawn)
   <id>_detail1.glb  the mid shell (door frames, parapets, talus, sage), one mesh, visible to 120 m
@@ -47,7 +47,7 @@ MODELS = Path(common.SKETCH) / "assets/models/park"
 SHELF_Y = 2.5
 LANDFORM_TRIS = 8000
 DETAIL_TRIS = 1500
-DETAIL_VERTS = 3000        # tools/asset_budgets.json class detail; flat shading splits vertices, so about 3 per triangle
+DETAIL_VERTS = 3000        # assets/asset_budgets.json class detail; flat shading splits vertices, so about 3 per triangle
 MIN_DEPTH = 8.0
 CLEAR_ABOVE = 5.5          # nothing solid over the lane lower than this: ball top 2 m + a full jump (13^2 / (2 * 26) = 3.25 m, tuning.gd) + 0.25 m
 LANE_PAD = 0.6

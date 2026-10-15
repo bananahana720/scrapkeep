@@ -45,7 +45,7 @@ import shell_base as sb  # noqa: E402
 from common import Part  # noqa: E402
 
 # hero_assets_test holds every world-one pilot shell to 3,000..6,500 tris without the pilot;
-# the shell class caps the variant at 11,000 (tools/asset_budgets.json).
+# the shell class caps the variant at 11,000 (assets/asset_budgets.json).
 BASE_BAND = (3000, 6500)
 VARIANT_BAND = (3000, 11000)
 LATTICE_OUT = sb.LATTICE_OUTER

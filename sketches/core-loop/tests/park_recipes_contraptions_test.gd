@@ -3,7 +3,7 @@ extends SceneTree
 # assets/models/park/contraptions/, recipes under tools/blender/park/contraptions/).
 # (a) Files: each recipe id ships <id>.glb, <id>_detail1.glb and <id>_detail2.glb (the trebuchet also its arm); each loads, holds
 #     meshes and no light, no -col mesh (a contraption keeps its primitive collider), and wears the enamel slot only.
-# (b) Budget: every GLB is inside its class in tools/asset_budgets.json (triangles, vertices, draws). Base class by size.
+# (b) Budget: every GLB is inside its class in assets/asset_budgets.json (triangles, vertices, draws). Base class by size.
 # (c) Convention: +Y up, +Z the aim, origin at the contraption's code anchor; the gauge face stays clear of the needle, the lift
 #     deck top is the collider top, the barge floor is y 1.0, the geyser collar stays inside the ring, and the trebuchet frame
 #     stays out of the arm's swing.
@@ -19,7 +19,7 @@ const T := preload("res://tests/support/t.gd")
 const DIR := "res://assets/models/park/contraptions/"
 const META := "contraption_recipe"
 const META_ID := "contraption_id"
-const BUDGETS := "res://tools/asset_budgets.json"
+const BUDGETS := "res://assets/asset_budgets.json"
 const EPS := 0.06
 # recipe id -> [base class, extra base GLBs]
 const RECIPES := {

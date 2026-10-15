@@ -18,7 +18,7 @@ extends SceneTree
 #   dock       a cradle within 3 m of the gate ground height and a deck clear at 0 or 18 m lift.
 #              --plant-dock inserts a blocking collider before that check, making it fail.
 #              cradle and deck use the active park boundary, including a boundary control.
-#   lines      every named waypoint of tools/park_lines/park_flume.json resolves on the park
+#   lines      every named waypoint of assets/park/park_flume/lines.json resolves on the park
 #              file (drop_in, landmark, a waymark, a park row or an activity), every line ends at
 #              the landmark, and the six pilots and the floor line are present.
 #
@@ -40,7 +40,7 @@ const Bay := preload("res://src/world/bay.gd")
 const MAP := "park_flume"
 const PARK_PATH := "res://src/world/park/park_flume.json"
 const BAKE_DIR := "res://assets/park/park_flume"
-const LINES_PATH := "res://tools/park_lines/park_flume.json"
+const LINES_PATH := "res://assets/park/park_flume/lines.json"
 const PLANT_PATH := "user://park_flume_plant.json"
 
 const WAYMARKS := ["drop_in", "butte_gap", "siphon_camp", "landmark"]

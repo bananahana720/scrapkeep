@@ -8,7 +8,7 @@ inspect = "scripts/asset-inspect.mjs"
 default_category = "prop"
 # Optional, used when the checkout has them (proto/alpha does, main does not): per-class model
 # caps that replace the model bands below, and the registry fragment directory promote writes to.
-budgets = "sketches/core-loop/tools/asset_budgets.json"
+budgets = "sketches/core-loop/assets/asset_budgets.json"
 registry = "sketches/core-loop/assets/registry.d"
 # Review images stay out of assets/, which ships with the game and is scanned by the registry test.
 previews = "sketches/core-loop/tools/blender/forge/previews"

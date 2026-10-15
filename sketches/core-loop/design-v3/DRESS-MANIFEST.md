@@ -4,7 +4,7 @@ The board for the dress-and-finish push (decisions P-R1 to P-R4). One row per un
 
 Every visual unit owns its recipe, GLB and test, and writes its registry entry as a fragment `sketches/core-loop/assets/registry.d/<id>.json`. One wiring unit per wave folds the fragments into `assets/registry.json` and the hook map in `src/presentation/hero_assets.gd`, so no two writers share a file.
 
-Acceptance for a visual unit: a Blender CLI recipe that reruns the same output, a GLB within `tools/asset_budgets.json`, a registry fragment, a named headless test that loads it and can fail, a capture through `tools/asset_capture.gd` (coordinator, GPU lock), and a blind judge score against its sheet.
+Acceptance for a visual unit: a Blender CLI recipe that reruns the same output, a GLB within `assets/asset_budgets.json`, a registry fragment, a named headless test that loads it and can fail, a capture through `tools/asset_capture.gd` (coordinator, GPU lock), and a blind judge score against its sheet.
 
 ## Direction (wave 1)
 

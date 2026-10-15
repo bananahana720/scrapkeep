@@ -181,7 +181,7 @@ The following tables retain the earlier measured numbers. Their headers identify
 
 # Traversal table: park_dam (world 1, stage 1)
 
-The bands are PARK.md section 8. Each line ran 8 seeds (1 to 8) through `tools/traversal_line.gd -- --table=park --stage=1` at `--fixed-fps 90`; the waypoints are `tools/park_lines/park_dam.json`. Each cell gives the median, the worst seed in brackets, and pass or miss.
+The bands are PARK.md section 8. Each line ran 8 seeds (1 to 8) through `tools/traversal_line.gd -- --table=park --stage=1` at `--fixed-fps 90`; the waypoints are `assets/park/park_dam/lines.json`. Each cell gives the median, the worst seed in brackets, and pass or miss.
 
 ## Greybox fix round, 2026-10-12 (superseded by round 3)
 

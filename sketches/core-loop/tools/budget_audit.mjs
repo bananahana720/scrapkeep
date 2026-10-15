@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Headless budget audit (W13 SQ17). Measures every promoted asset in assets/registry.json
-// by category, checks it against tools/asset_budgets.json and prints the comparison table
+// by category, checks it against assets/asset_budgets.json and prints the comparison table
 // next to the three-game reference rows. It reads the budget files and never writes them.
 //
 //   node sketches/core-loop/tools/budget_audit.mjs [--budgets file.json] [--root repo]
@@ -49,7 +49,7 @@ export function summarize(values) {
 
 export function loadBudgets(root, file) {
   return JSON.parse(
-    fs.readFileSync(file ?? path.join(root, SKETCH, "tools/asset_budgets.json"), "utf8"),
+    fs.readFileSync(file ?? path.join(root, SKETCH, "assets/asset_budgets.json"), "utf8"),
   );
 }
 

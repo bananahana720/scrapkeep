@@ -273,7 +273,7 @@ def spherical(name, kit, animal, extras=()):
 # from the centre for Hub and Gap. Blender +Y forward, +Z up; Godot -Z forward, +Y up.
 # Draws (one per slot per mesh): Core paint, copper, rubber; Pod paint, rubber, copper; Gyro
 # rubber; WeaponRing paint, rubber, copper. That is 10, the shell class cap
-# (tools/asset_budgets.json). A slot a recipe adds to any of these meshes costs a draw.
+# (assets/asset_budgets.json). A slot a recipe adds to any of these meshes costs a draw.
 
 # Copper keeps its colour under any equipped paint (ROSTER-LOOK section 6); hero_assets.SLOTS
 # carries the runtime row.

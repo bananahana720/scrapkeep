@@ -28,7 +28,7 @@ func run() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--mnd-fixture-dir="):
 			fixture_dir = arg.trim_prefix("--mnd-fixture-dir=")
-	var budgets = JSON.parse_string(FileAccess.get_file_as_string("res://tools/asset_budgets.json"))
+	var budgets = JSON.parse_string(FileAccess.get_file_as_string("res://assets/asset_budgets.json"))
 	for row in [["boss_mind_base.glb", BASE_NODES, BASE_CLIPS, "warden_base"], ["boss_mind_kit.glb", KIT_NODES, KIT_CLIPS, "warden_kit"]]:
 		var cap: Dictionary = budgets.classes[row[3]]
 		check(row[3] + " allocation matches BUILD-SPEC", Vector3i(cap.tris, cap.verts, cap.draws) == SPEC_CAPS[row[3]])

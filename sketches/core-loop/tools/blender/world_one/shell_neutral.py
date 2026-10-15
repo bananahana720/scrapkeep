@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import common  # noqa: E402
 import shell_base as sb  # noqa: E402
 
-# Shell class cap (tools/asset_budgets.json): 11,000 tris. The 6,600 base target is reported.
+# Shell class cap (assets/asset_budgets.json): 11,000 tris. The 6,600 base target is reported.
 SHELL_BAND = (3000, 11000)
 TARGET_TRIS = 6600
 

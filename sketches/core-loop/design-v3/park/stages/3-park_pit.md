@@ -240,7 +240,7 @@ Two pieces of geometry were moved to clear dead stops. The canal channel is 16 m
 
 **Tricks it offers each pilot.** Unchanged in intent from the draft. Sable vaults the camp dive lip at 45 m/s and lands on bench 2 beside the camp. Rivet sprints the rim road to the zip. Kest rides two cables in a row down the west side, then glides up `dust_devil_floor` on the floor for height before the collar. Tarn and Tally take the skip cable down two benches at once. The Cannon recoils off the east dives.
 
-**Draft for `tools/park_lines/park_pit.json`.** This block is the shipped file; every `bar` is the canonical object, PARK.md section 8 with this stage's airborne band of 0.12 to 0.45.
+**Draft for `assets/park/park_pit/lines.json`.** This block is the shipped file; every `bar` is the canonical object, PARK.md section 8 with this stage's airborne band of 0.12 to 0.45.
 
 ```
 {"map": "park_pit", "stage": 3, "pilots": {

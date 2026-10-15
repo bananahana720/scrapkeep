@@ -1,6 +1,6 @@
 # Traversal: park_flume (stage 2)
 
-KD2's table (ruling R8): the 13 bands of PARK.md section 8 for the six pilot lines and the floor line, 8 seeds each through the committed `tools/traversal_line.gd` (`--table=park --stage=2 --seeds=1,2,3,4,5,6,7,8`, `--fixed-fps 90`). Current batches are untraced; separate traced solos qualify replay and stop attribution. Each cell is median / worst seed, then pass or MISS. The lines are `tools/park_lines/park_flume.json`.
+KD2's table (ruling R8): the 13 bands of PARK.md section 8 for the six pilot lines and the floor line, 8 seeds each through the committed `tools/traversal_line.gd` (`--table=park --stage=2 --seeds=1,2,3,4,5,6,7,8`, `--fixed-fps 90`). Current batches are untraced; separate traced solos qualify replay and stop attribution. Each cell is median / worst seed, then pass or MISS. The lines are `assets/park/park_flume/lines.json`.
 
 <!-- flume-current-table -->
 ## Current measurements and qualification, round 9

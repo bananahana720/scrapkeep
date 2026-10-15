@@ -241,7 +241,7 @@ Clock positions are as seen from the chase camera, with 12 at the top. "Glow" is
 
 Durability is scrap armour (design principle 19), so panels say how much armour you carry. Heft classes are set at heft 1.0, 1.5, 2.2, 3.2 and 4.6 (`src/core/run_state.gd:21`). Panels follow the class signals `heft_class_changed` and `heft_class_dropped` (`src/core/game_events.gd:36-37`).
 
-A **detail shell** is an extra GLB layer drawn on top of a base asset, with its own budget class (`tools/asset_budgets.json:75`, `docs/decisions.tsv:363`). A layer GLB has the same top-level Core and Pod split as the base (`CUSTOMIZE.md` section 6).
+A **detail shell** is an extra GLB layer drawn on top of a base asset, with its own budget class (`assets/asset_budgets.json:75`, `docs/decisions.tsv:363`). A layer GLB has the same top-level Core and Pod split as the base (`CUSTOMIZE.md` section 6).
 
 | Class | Stage | What it adds | Mounted on | File | Budget |
 | --- | --- | --- | --- | --- | --- |
@@ -261,7 +261,7 @@ A **detail shell** is an extra GLB layer drawn on top of a base asset, with its 
 | 3 | 4,320 | 1,800 | 2,900 | about 9,000 |
 | 5 (the §0.7 density) | 7,200 | 1,800 | 2,900 | about 11,900, past the cap |
 
-Every row is over the 6,600 target, and the §0.7 density is over the 11,000 cap. HOBERMAN-BASE reports the pairs per link that fit. The cut order is: first one X-pair per link, then cheaper hubs and bars (8-tri bars, 5-sided hub drums), then raise the base target to about 9,000. That last step takes class V to about 18,400 tris, over the old 16,000 ceiling. The registry checks class caps and has no pod class (`tools/asset_budgets.json`), so the gate is the frame-time ratio in §8. It is a coordinator call.
+Every row is over the 6,600 target, and the §0.7 density is over the 11,000 cap. HOBERMAN-BASE reports the pairs per link that fit. The cut order is: first one X-pair per link, then cheaper hubs and bars (8-tri bars, 5-sided hub drums), then raise the base target to about 9,000. That last step takes class V to about 18,400 tris, over the old 16,000 ceiling. The registry checks class caps and has no pod class (`assets/asset_budgets.json`), so the gate is the frame-time ratio in §8. It is a coordinator call.
 
 **One surface per plate shell.** Each heft layer (the detail shell that holds a class's panels) is one mesh on one slot per part, so it costs one draw per part. Bolt heads and rubbed edges ride vertex colour. Panels use `paint`, so the equipped paint carries onto them. The Cannon's panels use `ancient_enamel`.
 

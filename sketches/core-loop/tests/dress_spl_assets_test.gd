@@ -343,7 +343,7 @@ func _run() -> void:
 	# A scratch GLB directory exercises missing-node/clip failures through the same importer.
 	if OS.has_environment("SPL_ASSET_DIR"):
 		asset_dir = OS.get_environment("SPL_ASSET_DIR").trim_suffix("/") + "/"
-	var budgets = JSON.parse_string(FileAccess.get_file_as_string("res://tools/asset_budgets.json"))
+	var budgets = JSON.parse_string(FileAccess.get_file_as_string("res://assets/asset_budgets.json"))
 	_check(budgets is Dictionary and budgets.has("classes"), "budget source exists")
 	if not (budgets is Dictionary and budgets.has("classes")):
 		print("dress_spl_assets_test: FAIL")

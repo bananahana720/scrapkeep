@@ -5,7 +5,7 @@ extends SceneTree
 # four pockets keep their PARK.md 2.12 roles (cache_lip reward, switchback_camp_site on-line, bench3_altar risk,
 # adit_valve hidden) with no breach and the reward's detour longer than the risk's; every route is connected and the
 # spawn lies in the farthest quarter; the landmark is the 120 m headframe over the 100 m pit with the swarm Warden on
-# its headframe mounting, harpoon anchor on; and every waypoint of tools/park_lines/park_pit.json resolves, six
+# its headframe mounting, harpoon anchor on; and every waypoint of assets/park/park_pit/lines.json resolves, six
 # pilots and the floor, each line from drop_in through the waymarks in order to landmark, each point on an open
 # graph node with a finite path to the beacon. Three planted controls run first: a moved row turns the bake stale, a
 # swapped waymark order fails the order pin, a waypoint off the play square fails to resolve. K-UNITS KD3,
@@ -18,7 +18,7 @@ const T := preload("res://tests/support/t.gd")
 const MAP := "park_pit"
 const PARK := "res://src/world/park/park_pit.json"
 const BAKED := "res://assets/park/park_pit"
-const LINES := "res://tools/park_lines/park_pit.json"
+const LINES := "res://assets/park/park_pit/lines.json"
 const SCRATCH := "user://park_park_pit_test"
 const BAKE_TOOL := "res://tools/park_bake.gd"
 const GRAPH_TOOL := "res://tools/park_graph.gd"

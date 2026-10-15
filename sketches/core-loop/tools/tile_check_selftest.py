@@ -31,7 +31,7 @@ class TileCheckTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "assets/textures/nested").mkdir(parents=True)
         (self.root / "tools").mkdir()
-        (self.root / "tools/asset_budgets.json").write_text(json.dumps({"texture": {"max_side": 64}}))
+        (self.root / "assets/asset_budgets.json").write_text(json.dumps({"texture": {"max_side": 64}}))
         self.rows = []
         self.registry()
 

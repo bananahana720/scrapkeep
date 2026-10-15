@@ -34,7 +34,7 @@ from common import Part  # noqa: E402
 import shell_base as sb  # noqa: E402
 import shell_tarn as st  # noqa: E402
 
-LAYER_CAP = (1500, 3000)      # detail class tris and verts (tools/asset_budgets.json)
+LAYER_CAP = (1500, 3000)      # detail class tris and verts (assets/asset_budgets.json)
 PANEL_OUT = 0.92
 PANEL_IN = 0.88
 PANEL_SHRINK = 0.80           # corner pull toward the gap centre, so struts frame the slab

@@ -38,7 +38,7 @@ const PARK_FIELDS := ["airborne_share", "peak_speed_mps", "tier3_s", "segment_s"
 const PARK_BANDS := ["reached_warden", "time_to_warden_s", "segment_s", "flow_share", "airborne_share", "dead_stops", "peak_speed_mps", "tier3_s", "quiet_max_s", "max_anchor_gap_m", "distinct_verbs", "length_ratio"]
 const PILOT_CLASSES := {"sable": "pylon_engineer", "rivet": "runner_gunner", "kest": "demolitions_caster",
 	"tarn": "tarn", "tally": "tally", "cannon": "remembered_cannon"}
-const FIXTURE_LINES := "res://tools/park_lines/park_test.json"
+const FIXTURE_LINES := "res://assets/park/park_test/lines.json"
 const FIXTURE_PARK := "res://src/world/park/park_test.json"
 const FIXTURE_TICKS := 90 * 2
 # A line point inside the Cable Reach's satellite tower (TRAVERSAL.md:80).

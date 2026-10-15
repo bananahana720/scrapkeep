@@ -296,7 +296,7 @@ Every completed seed uses the scratch wrapper with a 600 s stage limit before th
 
 Three line re-cuts on the KB9 head, each from a traced seed. Sable's line goes straight at `domes_camp` from [-60, -450]: at 40 m/s she passed 16.6 m from the camp and looped for 75 s to come back within the bot's 12 m. Her east turn on the shelf loop moves to [-25, -555], short of `domes_fin_east`. Her wash entry point moves onto the wash axis at [-137, -190]. Cannon's descent turns east at [120, 285] and [145, 350], so she lands east of `powerhouse_stair` and clear of the `rim_zip` head, and her bench points ([150, 410], [156, 470]) keep 10 m off the `canal_lips` ridge.
 
-The shipped pilot lines (`tools/park_lines/park_dam.json`):
+The shipped pilot lines (`assets/park/park_dam/lines.json`):
 
 ```json
 {
@@ -382,7 +382,7 @@ Draft text for the lore pass, in the tone of `SOUND-STORY.md:212`. Fragment ids 
 | `rescue_sites` | Rivet's cage at (60, -150), `map_spillway.gd:99-100`; Rivet unlocks by it (`class_def.gd:48`) | Must stay. Put the cage at [60, -600] on the top shelf, flat, 120 m east of every line. Needs a park key or a derived field (open question) |
 | `vault` | (-5, -130), `map_spillway.gd:67` | A plinth at [-260, -520] on the shelf's west side, off the fall line with a downhill way back (`stage_map.gd:26-27`) |
 | `unique_events` | `scrap_stampede`, `hold_the_relay`, `map_spillway.gd:86-97` | Retire into this page's event rows and the activities; the stampede's hauler becomes stage 2's `hauler_bounty` |
-| `scrap_lines` | four short lines, `map_spillway.gd:80-85` | Derive from the pilot lines in `tools/park_lines/park_dam.json` |
+| `scrap_lines` | four short lines, `map_spillway.gd:80-85` | Derive from the pilot lines in `assets/park/park_dam/lines.json` |
 | `basin` | the flood bowl, `map_spillway.gd:77-78` | Replaced by `plunge_pool_flood` |
 | `beacon_floor` | 15 m, `map_spillway.gd:66` | The toe apron's height, read from the bake |
 

@@ -343,7 +343,7 @@ func _site_corridors() -> void:
 
 func _toe_vents_wake() -> void:
 	var park: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_dam.json"))
-	var lines: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tools/park_lines/park_dam.json"))
+	var lines: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/park/park_dam/lines.json"))
 	var places := {"drop_in": park.spawn.at, "landmark": park.landmark.beacon}
 	for table in ["park_rows", "activity_rows"]:
 		for row in park[table]:

@@ -173,7 +173,7 @@ Start the sitting with harpoon into an ordinary pack to judge the revised feedba
 | A3 | Achievement and cosmetic rows with validators | `src/core/achievements.gd`, `cosmetics.gd` (new) |
 | A5 | Export recipe and the ACE path fix | `export_presets.cfg`, `scripts/sketch-export.mjs` (new), `src/presentation/ace_sequencer.gd` |
 | AR | Copy the asset sheet and judge files from the visual clone into the repo, then merge the clone's accepted assets, rig and clip recipes as one serial integrator merge | `assets/models/`, `tools/blender/`, `src/presentation/pilot_reactions.gd` |
-| AB | Asset registry, budget classes and a registry test | `assets/registry.json`, `tools/asset_budgets.json` |
+| AB | Asset registry, budget classes and a registry test | `assets/registry.json`, `assets/asset_budgets.json` |
 | AM | Reproducible music packaging from a committed sources file | `tools/ace/package_music.py`, `tools/ace/sources.json` |
 | P1, P2 | Terrain probes. A Dig tunnel with a second floor and a Highdraft island with a net deck. Check camera, collider and bot pathing. | throwaway branch, findings only |
 | T1 to T8 | Test tooling. See the testing section. T1 and T2 run first. | `scripts/`, `tests/`, rule files |

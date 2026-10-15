@@ -4,7 +4,7 @@ picture artifacts/local/alpha/push/w12/concepts/boards/alpha-props/fabricator_ho
 splayed feet with pale pads.
 
 Same route as lantern_beacon.py: kit.Surface parts, COLOR_0 vertex colour, materials named for dig_scenery.gd SLOTS.
-Two draws, class "landmark" in tools/asset_budgets.json: steel (ring, crown nut, feet and pads) and enamel (footings
+Two draws, class "landmark" in assets/asset_budgets.json: steel (ring, crown nut, feet and pads) and enamel (footings
 and their plates). The ring is painted the steel shader's state key, so each instance shows its live state through
 `state_tint` (mint when the part is affordable, slate when not, LEGIBILITY.md:24,263); the nut and feet stay brass.
 

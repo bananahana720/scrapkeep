@@ -265,7 +265,7 @@ func _process(_delta: float) -> bool:
 	if _done:
 		return true
 	_done = true
-	var budgets: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tools/asset_budgets.json"))
+	var budgets: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/asset_budgets.json"))
 	var pilot := _load_asset(PILOT, "SCRAPKEEP_TEST_RIG")
 	var shell := _load_asset(SHELL, "SCRAPKEEP_TEST_SHELL")
 	root.add_child(pilot)

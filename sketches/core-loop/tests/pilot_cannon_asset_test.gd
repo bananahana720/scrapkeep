@@ -17,7 +17,7 @@ extends SceneTree
 const PILOT := "res://assets/models/pilot_cannon_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_cannon.glb"
 const CHOIR := "res://assets/models/world_one/shell_cannon_choir.glb"
-const BUDGETS := "res://tools/asset_budgets.json"
+const BUDGETS := "res://assets/asset_budgets.json"
 const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
 const PARENTS := {
 	"root": "", "pelvis": "root", "spine_01": "pelvis", "spine_02": "spine_01",

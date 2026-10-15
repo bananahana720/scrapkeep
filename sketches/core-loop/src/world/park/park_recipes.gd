@@ -4,7 +4,7 @@ extends RefCounted
 # GLB recipe from assets/models/park/ or, for `greybox:<element>` and for a recipe whose GLB has not landed, a greybox
 # primitive of the row's size. Either way the node carries a world collider and, when the row's ride fact is a
 # WORLD_ROWS kind, a ride sensor that publishes it once each time the ball enters. Placement reads only the row; the
-# visibility ranges come from the row's budget class in tools/asset_budgets.json, so retuning a range is one edit there.
+# visibility ranges come from the row's budget class in assets/asset_budgets.json, so retuning a range is one edit there.
 #
 # The origin conversion (KC-INT, 2026-10-11; PARK.md:77): a row's `at` is always the centre of its footprint, and its
 # ride sensor, greybox and every footprint reader (bake stamps, holes, keep-out) stay centred there. A GLB recipe whose
@@ -18,7 +18,7 @@ const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Stamps := preload("res://src/world/park/park_stamps.gd")
 
-const BUDGETS_PATH := "res://tools/asset_budgets.json"
+const BUDGETS_PATH := "res://assets/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
 const REGISTRY_PATH := "res://assets/registry.json"
 # A registry row's `origin`: where its GLB's origin sits on the footprint. Absent means ORIGIN_CENTRE.
@@ -116,7 +116,7 @@ static var _origins := {}
 static var _origins_read := false
 
 
-# A budget class's visibility ranges from tools/asset_budgets.json: base_end and base_margin for the base views,
+# A budget class's visibility ranges from assets/asset_budgets.json: base_end and base_margin for the base views,
 # shells as [[end, margin], ...] for detail shells 1 and 2, and for hero_landmark mid_end and mid_margin. {} when absent.
 static func ranges(budget: String) -> Dictionary:
 	if _budgets.is_empty():

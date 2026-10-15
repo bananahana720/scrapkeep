@@ -40,7 +40,7 @@ const KEEP_STATION := 4.0
 # The park's contraption skins (design-v3/PARK.md section 4, KC9): a spec with a `recipe` key draws that recipe's GLBs in
 # place of the code primitive; a spec without one, or whose GLBs are missing, draws the primitive it always drew. The
 # skin changes the picture only: colliders, positions, cycles and gauges stay the code's. Each GLB wears the enamel slot
-# (recipe_props.gd) and takes its visibility ranges from its budget class in tools/asset_budgets.json, as park_recipes.gd.
+# (recipe_props.gd) and takes its visibility ranges from its budget class in assets/asset_budgets.json, as park_recipes.gd.
 # Origins: the lift and barge at the body centre, a launcher at its mouth point, the gauge on the ground under its post.
 const SKIN_DIR := "res://assets/models/park/contraptions/"
 const SKIN_META := "contraption_recipe"

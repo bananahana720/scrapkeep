@@ -41,7 +41,7 @@ import common  # noqa: E402
 import shell_base as sb  # noqa: E402
 from common import Part  # noqa: E402
 
-# Shell class (tools/asset_budgets.json): 11,000 tris with the placeholder pilot. The base without
+# Shell class (assets/asset_budgets.json): 11,000 tris with the placeholder pilot. The base without
 # the pilot stays under hero_assets_test's 6,500 band, so the hubs and caps are 6-sided (the
 # ROSTER-LOOK section 5 cut order: cheaper hubs before raising the target).
 SHELL_BAND = (3000, 11000)

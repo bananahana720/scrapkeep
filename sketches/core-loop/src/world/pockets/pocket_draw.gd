@@ -4,7 +4,7 @@ const Library := preload("res://src/world/pockets/pocket_library.gd")
 const Graph := preload("res://src/world/park/park_graph.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
-const Placement := preload("res://tools/park_graph.gd")
+const Placement := preload("res://src/world/park/park_placement.gd")
 const CREDITS := 150
 const CHANCE := 0.25
 

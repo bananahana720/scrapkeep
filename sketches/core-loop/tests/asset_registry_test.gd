@@ -2,12 +2,12 @@ extends SceneTree
 # 2026-10-09 (VX-WIRE): the scan also reads .hdr, so the registry row for the Poly Haven sky (assets/sky) is held to "listed and present".
 
 # Alpha R12 AB. Every .glb and texture under assets/ is listed in assets/registry.json with a budget class from
-# tools/asset_budgets.json. A shipped model fails on any triangle, vertex or draw (surface) count over its class,
+# assets/asset_budgets.json. A shipped model fails on any triangle, vertex or draw (surface) count over its class,
 # or over its own exception in the registry. Counts are taken after Godot import, the way the per-asset tests take
 # them: surface index count / 3 triangles, surface vertex count, one draw per surface. Env SCRAPKEEP_AB_MEASURE=1
 # prints the table and fails nothing on caps, for deriving a cap from its members.
 const REGISTRY := "res://assets/registry.json"
-const BUDGETS := "res://tools/asset_budgets.json"
+const BUDGETS := "res://assets/asset_budgets.json"
 const ROOT := "res://assets"
 var failures := 0
 

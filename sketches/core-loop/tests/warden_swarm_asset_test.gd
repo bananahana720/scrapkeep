@@ -9,7 +9,7 @@ extends SceneTree
 # - the queen: WeakPoint sits at warden_kit.gd's swarm point_offset plus warden.gd HALF_HEIGHT
 #   (the body's base is the collider's floor, as hero_assets.gd places the clamp base), and the
 #   queen's lit core is there;
-# - the budget rows from the folded assets/registry.json and tools/asset_budgets.json;
+# - the budget rows from the folded assets/registry.json and assets/asset_budgets.json;
 # - no light node. A missing GLB fails loud.
 
 const Warden := preload("res://src/combat/warden.gd")
@@ -19,7 +19,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const BODY := "res://assets/models/warden_swarm.glb"
 const KIT := "res://assets/models/warden_swarm_kit_drones.glb"
 const REGISTRY := "res://assets/registry.json"
-const BUDGETS := "res://tools/asset_budgets.json"
+const BUDGETS := "res://assets/asset_budgets.json"
 # Section 5: pulse is the 2.0 s charge then the 0.4 s pulse in one clip; active loops at 4.0 s
 # (the sheet gives no length); brood_dark is 1.0 s and holds its last pose.
 const CLIPS := {"idle": 4.0, "pulse": 2.4, "active": 4.0, "hoist_ride": 2.0, "snip": 2.0,

@@ -7,7 +7,7 @@ extends SceneTree
 # the line, rim_cache the reward, bench_altar the risk, gallery_valve the hidden pocket) with no
 # breach; the landmark is the dam with its beacon at [0, 575] and the reactor Warden mounted on the
 # dam face as a harpoon anchor; every waypoint of the six pilot lines and the floor line in
-# tools/park_lines/park_dam.json resolves to a point of the park file, each line starts at drop_in,
+# assets/park/park_dam/lines.json resolves to a point of the park file, each line starts at drop_in,
 # ends at landmark and passes every waymark in order; KD0's stand-in park_dam_stage1.json is gone.
 # Two runtime facts since KB9 places the rows (park_recipes.gd place_row): every placed greybox row
 # but a kicker wedge or an anchor field carries a stamp, because an unstamped greybox stand-in is a
@@ -30,7 +30,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const MAP := "park_dam"
 const PARK := "res://src/world/park/park_dam.json"
 const BAKED := "res://assets/park/park_dam"
-const LINES := "res://tools/park_lines/park_dam.json"
+const LINES := "res://assets/park/park_dam/lines.json"
 const STAND_IN := "res://assets/park/park_dam_stage1.json"
 const WAYMARKS := ["drop_in", "domes_camp", "the_eye", "landmark"]
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]

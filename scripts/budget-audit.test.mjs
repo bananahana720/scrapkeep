@@ -20,7 +20,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "..");
 const sketch = path.join(repo, "sketches/core-loop");
 const tool = path.join(sketch, "tools/budget_audit.mjs");
-const budgetFile = path.join(sketch, "tools/asset_budgets.json");
+const budgetFile = path.join(sketch, "assets/asset_budgets.json");
 const packFile = path.join(repo, "tools/asset-forge/packs/core-loop.toml");
 const sha = (f) => createHash("sha256").update(fs.readFileSync(f)).digest("hex");
 

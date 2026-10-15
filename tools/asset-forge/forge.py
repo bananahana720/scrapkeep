@@ -36,7 +36,7 @@ def now():
 
 # --- params and version setup ---------------------------------------------------------
 def budget_classes(pack, kind):
-    """The sketch's per-class triangle/vertex/draw caps (tools/asset_budgets.json), when the
+    """The sketch's per-class triangle/vertex/draw caps (assets/asset_budgets.json), when the
     checkout has them; the registry test measures promoted models against these."""
     rel = pack.get("budgets")
     if kind["bands_key"] != "model" or not rel:

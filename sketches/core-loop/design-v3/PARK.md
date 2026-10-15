@@ -213,7 +213,7 @@ Wind that pushes the ball is never weather. A visible wind lane is a `thermal` c
 | Time-of-day light | `src/presentation/world_look.gd`, a new `TIME_ROWS` table keyed by the six ids | the world look on stage entry; `ROWS` stays per world for sky kind, air and fog (`world_look.gd:14-46`) |
 | Music cues | `src/presentation/music_rows.gd`, a new `CUES` table | the music engine |
 | Warden kind, variant, numbers | `src/core/alpha_defs.gd` rows | combat's `warden_spec` (`src/combat/combat.gd:2458-2480`), `warden.gd` |
-| Pilot lines and bars | `tools/park_lines/<map_id>.json`, one per stage | `tools/traversal_line.gd` |
+| Pilot lines and bars | `assets/park/<map_id>/lines.json`, one per stage | `tools/traversal_line.gd` |
 
 `src/world/park/park_map.gd` extends `stage_map.gd`, loads the JSON once, and fills every field today's systems already read (`spawn`, `heading`, `beacon`, `play_rect`, `contraptions`, `kickers`, `gate_slots`, `activity_sites`, `landmark`, `scatter`), so the bay, flow, director and contraptions keep their interfaces.
 
@@ -502,7 +502,7 @@ The three variants keep their codex entries (`slag_hop`, `brood_dark`, `choir_sw
 
 The traversal measure (`design-v3/TRAVERSAL.md`) carries over with its definitions: flow share, dead stop, max anchor gap, and the bot's 0.15 s reaction and 0.4 s press gap (`TRAVERSAL.md:9-20`). The park adds measures and runs on every stage for every pilot.
 
-**The lines.** Each stage has one line per pilot in `tools/park_lines/<map_id>.json`: `{"map", "stage", "pilots": {pilot: {"waypoints": [[x, z] or waymark id], "bar": {"band": "PARK.md section 8", "airborne_share": [lo, hi]}}}, "floor": {"waypoints": [...]}}`. Pilot keys are `sable`, `rivet`, `kest`, `tarn`, `tally`, `cannon` (class ids `pylon_engineer`, `runner_gunner`, `demolitions_caster`, `tarn`, `tally`, `remembered_cannon`, `src/core/class_def.gd:87-122`). Every line starts at `drop_in`, names each of the stage's waymark ids in order and ends at `landmark`. The `bar` object carries only what varies by stage (the airborne band); every other band is the table below. The `floor` line is ridden with no harpoon and no contraption.
+**The lines.** Each stage has one line per pilot in `assets/park/<map_id>/lines.json`: `{"map", "stage", "pilots": {pilot: {"waypoints": [[x, z] or waymark id], "bar": {"band": "PARK.md section 8", "airborne_share": [lo, hi]}}}, "floor": {"waypoints": [...]}}`. Pilot keys are `sable`, `rivet`, `kest`, `tarn`, `tally`, `cannon` (class ids `pylon_engineer`, `runner_gunner`, `demolitions_caster`, `tarn`, `tally`, `remembered_cannon`, `src/core/class_def.gd:87-122`). Every line starts at `drop_in`, names each of the stage's waymark ids in order and ends at `landmark`. The `bar` object carries only what varies by stage (the airborne band); every other band is the table below. The `floor` line is ridden with no harpoon and no contraption.
 
 **The bands** per pilot per stage, 8 seeds (start):
 
@@ -542,7 +542,7 @@ Absolute numbers come only from Andrew's display. On card 1 under the GPU queue,
 | Static memory | at most 350 MB more than the base with two stages resident (start). Estimate, not measured: a 1.28 million triangle trimesh is about 46 MB of faces plus its BVH, roughly 100 MB a stage; four 1024 m regions of height, control and colour maps are about 48 MB a stage; two stages land near 300 MB, so KB6 measures before any stage is built | `Performance.MEMORY_STATIC` |
 | Video memory | at most 300 MB more than the base (start) | `Performance.RENDER_VIDEO_MEM_USED` |
 | Stage swap | no main-thread frame over 33 ms during the launch flight; next stage ready within 20 s of Warden engage | KB6 swap probe |
-| Recipes | `landform` 8,000 triangles, 1 draw (exists); `park_large` 16,000 triangles, 2 draws (new); `hero_landmark` 24,000 triangles, 6 draws, mid mesh 6,000, far mesh 1,500 (new); `detail` 1,500, 1 draw (exists) | `tools/asset_budgets.json` |
+| Recipes | `landform` 8,000 triangles, 1 draw (exists); `park_large` 16,000 triangles, 2 draws (new); `hero_landmark` 24,000 triangles, 6 draws, mid mesh 6,000, far mesh 1,500 (new); `detail` 1,500, 1 draw (exists) | `assets/asset_budgets.json` |
 
 New bench scenes: p1 is the drop-in vista with the landmark across the park and no fight; p2 is a dense fight at the landmark with one event live.
 
@@ -564,11 +564,11 @@ Every unit writes in its own worktree, gets a verifier and one fix round; the co
 
 **KB6 Perf and memory probe on card 1.** SCOPE: `tools/perf_bench.gd` (scenes p1 and p2), evidence under `artifacts/local/alpha/push/w13/`. ACCEPTANCE: section 9 ratios against the recorded base; memory and swap numbers reported; the collider fallback decision written down. Order: after KB5.
 
-**KB7 Traversal tool for parks.** SCOPE: `tools/traversal_line.gd`, `src/core/run_log.gd` (Traversal fields only), `tests/traversal_measure_test.gd`, `tools/park_lines/park_test.json`. ACCEPTANCE: the new measures on the fixture, with a planted dead stop caught. Order: after lane 1's bot adapter (B4) merges, because both touch the bot's presses; `run_log.gd` is also edited by B3, so KB7 merges after B3. Conflicts: `tools/bot_driver.gd` (read only here), `run_log.gd`.
+**KB7 Traversal tool for parks.** SCOPE: `tools/traversal_line.gd`, `src/core/run_log.gd` (Traversal fields only), `tests/traversal_measure_test.gd`, `assets/park/park_test/lines.json`. ACCEPTANCE: the new measures on the fixture, with a planted dead stop caught. Order: after lane 1's bot adapter (B4) merges, because both touch the bot's presses; `run_log.gd` is also edited by B3, so KB7 merges after B3. Conflicts: `tools/bot_driver.gd` (read only here), `run_log.gd`.
 
 ### Wave K-C, landform recipes (after the family look is approved on the first stage board)
 
-**KC0 Placement and registry.** SCOPE: `src/world/park/park_recipes.gd` (load GLBs, trimesh from `-col`, visibility ranges, detail shells, `greybox:` stand-ins), `tools/asset_budgets.json` (`park_large`, `hero_landmark`), `src/core/event_kinds.gd` (new ride facts `ride_bowl`, `ride_drop`, `ride_ledge`, `ride_hop`), `tests/park_recipes_test.gd`. Order: first in K-C. Conflicts: `event_kinds.gd` and `asset_budgets.json` (KC0 only; lane 1 edits to `event_kinds.gd` merge serially).
+**KC0 Placement and registry.** SCOPE: `src/world/park/park_recipes.gd` (load GLBs, trimesh from `-col`, visibility ranges, detail shells, `greybox:` stand-ins), `assets/asset_budgets.json` (`park_large`, `hero_landmark`), `src/core/event_kinds.gd` (new ride facts `ride_bowl`, `ride_drop`, `ride_ledge`, `ride_hop`), `tests/park_recipes_test.gd`. Order: first in K-C. Conflicts: `event_kinds.gd` and `asset_budgets.json` (KC0 only; lane 1 edits to `event_kinds.gd` merge serially).
 
 **KC1 to KC8, one per family** (section 4). SCOPE each: `tools/blender/park/<family>.py`, `assets/models/park/<recipe>*.glb`, a registry fragment, a look subject fragment. ACCEPTANCE: `npm run asset:inspect -- <glb> --max-tris <class>` passes; the collider is the `-col` trimesh; a headless roll along each recipe fires its ride fact with no dead stop; blind pairs read at close, mid and far. Order: parallel, GPU jobs through `gpu_queue.sh`. Conflicts: the registry fold and `tools/look_subjects.gd` are folded serially by the coordinator.
 
@@ -578,7 +578,7 @@ Every unit writes in its own worktree, gets a verifier and one fix round; the co
 
 **KD0 Park table.** The coordinator adds `src/core/park_defs.gd` (alpha rows with the six park map ids and the KF0 Warden columns) and the `--table=park` option. Order: before KD1.
 
-**KD1 to KD6, one per stage.** SCOPE each: `src/world/park/<map_id>.json`, `assets/park/<map_id>/`, `tools/park_lines/<map_id>.json`, `tests/park_<map_id>_test.gd`, `design-v3/park/stages/<n>-<map_id>.md`. ACCEPTANCE: schema and freshness green; the greybox traversal bands met for all six pilots and the floor line; sight share and density tests green; the route test green; a win proof on `--table=park` for the stage; then recipes swapped in and the bands met again; stage tests re-pinned with dated headers. Order: parallel, each gated on its storyboard. Conflicts: none between units; `park_defs.gd` edits are the coordinator's.
+**KD1 to KD6, one per stage.** SCOPE each: `src/world/park/<map_id>.json`, `assets/park/<map_id>/`, `assets/park/<map_id>/lines.json`, `tests/park_<map_id>_test.gd`, `design-v3/park/stages/<n>-<map_id>.md`. ACCEPTANCE: schema and freshness green; the greybox traversal bands met for all six pilots and the floor line; sight share and density tests green; the route test green; a win proof on `--table=park` for the stage; then recipes swapped in and the bands met again; stage tests re-pinned with dated headers. Order: parallel, each gated on its storyboard. Conflicts: none between units; `park_defs.gd` edits are the coordinator's.
 
 **KD7 Switch.** When all six pass: `alpha_defs.gd` takes the park map ids, `park_defs.gd` is deleted, and the old `map_*.gd` files retire with their tests (subtract to add). Coordinator, with an Opus gate read.
 

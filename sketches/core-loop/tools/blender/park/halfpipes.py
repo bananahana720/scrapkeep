@@ -52,7 +52,7 @@ import common
 import kit
 
 MODELS = kit.SKETCH / "assets/models/park"
-LANDFORM = [8000, 24000, 2]       # tris, verts, draws: tools/asset_budgets.json landform, draws 2 for the -col mesh
+LANDFORM = [8000, 24000, 2]       # tris, verts, draws: assets/asset_budgets.json landform, draws 2 for the -col mesh
 DETAIL = [1500, 3000, 1]
 SLOT = "enamel"                   # the material name park_recipes.gd turns into the enamel slot: vertex colour as albedo
 GRADE = 0.03                      # the fall of every channel floor along its path

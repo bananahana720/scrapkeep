@@ -186,7 +186,7 @@ Each unit writes in its own worktree, gets a verifier and one fix round; red-the
 - No change touches the posture numbers in `boss_posture.gd`.
 
 **KF7 Mind body.** SCOPE: `tools/blender/warden_mind.py`, `assets/models/warden_mind.glb` with the section 5 clips and both poses, the `hero_assets.gd` row (the stage 5 and 6 mantles, `hero_assets.gd:14-15`, retire once the body lands), a look subject. ACCEPTANCE:
-- `npm run asset:inspect` passes the `warden_base` class (5,000 triangles, 32 draws) for the body and `warden_kit` (1,500, 18) for any kit part (`tools/asset_budgets.json:27-36`).
+- `npm run asset:inspect` passes the `warden_base` class (5,000 triangles, 32 draws) for the body and `warden_kit` (1,500, 18) for any kit part (`assets/asset_budgets.json:27-36`).
 - No visible finger reaches more than 1 m past a collider, so the hand the ball sees is the hand it meets (the mounted form of `warden_look.gd:31-32`).
 - Every clip in section 5 exists with its length; four finger seams can go dark one at a time.
 - Blind pairs read "hand", not "pile" or "hive", at 20, 60 and 150 m, and "Warden", not "field hand", against the `mind_hand` model at 60 m.

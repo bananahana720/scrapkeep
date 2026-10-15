@@ -278,7 +278,7 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	return out
 
 
-# Pilot lines for one stage (tools/park_lines/<map_id>.json) against its park file: every line
+# Pilot lines for one stage (assets/park/<map_id>/lines.json) against its park file: every line
 # starts at drop_in, names the stage's waymarks in order, ends at landmark, and its bar points
 # at the section 8 bands.
 static func validate_lines(lines: Dictionary, park: Dictionary) -> Array:

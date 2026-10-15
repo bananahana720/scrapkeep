@@ -37,7 +37,7 @@ One citation fix the coordinator should carry. The packet and two CS-03 notes ci
 | 24c | Forced-or-skip late offer | Tree offers open at safe grounded moments (`BIBLE.md:538`) | park | No late-world offer type exists to make forced; revisit with depth-4 content | None |
 | 25a | Elite affix named on enemy | The elite is an authored pack, once at `elite_arrival`, repeating at 0.1 x `elite_rate` (`director.gd:99-101`, `:288-292`); every roster row owns one mechanic, no reskins (`src/combat/roster.gd:12-15`) | park | An affix layer is a new enemy feature and needs the no-reskins rule restated first | None |
 | 25b | Boss phases at thresholds, one read | Warden phases are triggers: `engaged`, `stagger`, `chunk_1` to `chunk_3`, `broken` (`PARK.md:365`), with posture bands per kind (KF2 to KF4) | already_done | None | None |
-| 26 | Second budget point, stylized game | Enemy class cap 1,100 tris, 3 draws, set from Scrapkeep's own members (`tools/asset_budgets.json:3-8`); the pack's rig at `tools/asset-forge/packs/core-loop.toml:166` is the 25-bone pilot rig, so static enemy meshes are implied by the model kind, not stated there | park | Delta 4 waits for the per-pilot sum (row 35c); its proposal is section 3f | None until the sum reports |
+| 26 | Second budget point, stylized game | Enemy class cap 1,100 tris, 3 draws, set from Scrapkeep's own members (`assets/asset_budgets.json:3-8`); the pack's rig at `tools/asset-forge/packs/core-loop.toml:166` is the 25-bone pilot rig, so static enemy meshes are implied by the model kind, not stated there | park | Delta 4 waits for the per-pilot sum (row 35c); its proposal is section 3f | None until the sum reports |
 | 27 | Closable entrance sockets per zone | No zone library, no builder; stages are authored park files; live route changes come from event rows (`PARK.md:138`, `:350`) | park | Only matters if stages assemble from zones at run time; would change an approved journey | Re-roll under 10% and at most half the fixed-entrance rate (`comps/roboquest/stage-anatomy.md:125`, start) |
 | 28 | Fixed content bundle per kind | Each activity kind already has one rule: what starts it, what finishes it, what it pays (`activities.gd:29-46`). The trade-pocket bundle carries TADR-011's crew workbench | already_done | The workbench is rejected for the alpha under ruling (a) | None |
 | 29a | World pool, secret map tint | Pockets authored per stage; no map UI (the HUD pointers are edge markers, `src/ui/edge_markers.gd:8-12`) | park | Pool: as row 18. Tint: no map exists; if wanted, an amber edge marker inside the 240 m `sight_ok` range (`PARK.md:265`), never the 60 m comps value | None |
@@ -196,7 +196,7 @@ A boss hazard warns for at least 1.0 s (`src/boss/hazard.gd:19`). Pack kinds set
 **Target: `P-UNITS.md` PD common rules, after the bullet that begins `- **C5, budgets.**`.**
 
 ```markdown
-- **C5b, per-pilot sum (comps rows 26 and 35).** The REPORT carries one table per pilot at classes I, III and V: base shell, each heft layer present, pilot body, and the totals of tris and draws, read from Common VERIFY step (2)'s inspect calls and the pilot row in `tools/asset_budgets.json` (`:45-50`). Report only: no cap or class changes.
+- **C5b, per-pilot sum (comps rows 26 and 35).** The REPORT carries one table per pilot at classes I, III and V: base shell, each heft layer present, pilot body, and the totals of tris and draws, read from Common VERIFY step (2)'s inspect calls and the pilot row in `assets/asset_budgets.json` (`:45-50`). Report only: no cap or class changes.
 ```
 
 **Target: `tools/asset-forge/packs/core-loop.toml`, insert before the line `# Real-world size sanity per category: longest bounding-box edge in metres, [low, high].`. A forge pack change proposal for the forge owner, inert as comments; it becomes live keys only under its condition.**
@@ -204,7 +204,7 @@ A boss hazard warns for at least 1.0 s (`src/boss/hazard.gd:19`). Pack kinds set
 ```toml
 # PROPOSED (comps rows 26 and 35, W13-INTEGRATION-2.md section 3f), not applied.
 # Condition: apply only after every PD pilot unit has reported its C5b per-pilot sum and the
-# forge owner has read it. tools/asset_budgets.json wins every conflict: its class caps replace
+# forge owner has read it. assets/asset_budgets.json wins every conflict: its class caps replace
 # these bands whenever the checkout has it (budgets = ... above), and nothing here edits it.
 # 1. hero: replace [3000, 6500] with [low, high] taken from the measured class V sums
 #    (shell + four heft layers + pilot body); the band predates the Hoberman shell

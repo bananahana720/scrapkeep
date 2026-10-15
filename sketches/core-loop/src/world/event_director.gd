@@ -674,7 +674,7 @@ func _park_route_safe(proposed: Dictionary, withdrawing := false) -> bool:
 
 
 func _park_read_lines() -> void:
-	var path := "res://tools/park_lines/%s.json" % _park.get("map", "")
+	var path := "res://assets/park/%s/lines.json" % _park.get("map", "")
 	if not FileAccess.file_exists(path):
 		return
 	var read := ParkSchema.read_file(path)

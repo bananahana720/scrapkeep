@@ -556,7 +556,7 @@ The winch drone is the flume's natural enemy: it is the one kind whose threat is
 
 ## 9. Traversal lines
 
-Four waymarks: `drop_in`, `butte_gap`, `siphon_camp`, `landmark`. The lines are `tools/park_lines/park_flume.json` (KD2 fix round, 2026-10-11). Segment 1 (drop-in to the butte gap): Sable takes the flume reaches off the weir; the other five and the floor line take the mesa ramp and the rim road. Segment 2 (gap to the siphon): Rivet and Kest the rim road and the bend, the Cannon the bend zip at [50, -170], Tarn and the floor line the trebuchet side and the hollow, Tally the trebuchet side then east across the fields, Sable the canal. Segment 3 (siphon to the drum): Sable, Rivet, Tarn and the floor line the bench and the forecourt, Kest the bluff, Tally the bench then the forecourt pads, the Cannon the forecourt geyser.
+Four waymarks: `drop_in`, `butte_gap`, `siphon_camp`, `landmark`. The lines are `assets/park/park_flume/lines.json` (KD2 fix round, 2026-10-11). Segment 1 (drop-in to the butte gap): Sable takes the flume reaches off the weir; the other five and the floor line take the mesa ramp and the rim road. Segment 2 (gap to the siphon): Rivet and Kest the rim road and the bend, the Cannon the bend zip at [50, -170], Tarn and the floor line the trebuchet side and the hollow, Tally the trebuchet side then east across the fields, Sable the canal. Segment 3 (siphon to the drum): Sable, Rivet, Tarn and the floor line the bench and the forecourt, Kest the bluff, Tally the bench then the forecourt pads, the Cannon the forecourt geyser.
 
 | Line | Waypoints |
 | --- | --- |
@@ -689,11 +689,11 @@ The `ref_` texts need a fact check before they ship.
 
 **Tests to re-pin** (names from the `tests/` listing; KD2 confirms): `alpha_posture_bands_test.gd`, `warden_variants_test.gd`, `warden_meltdown_slag_test.gd`, `warden_family_test.gd`, `world_one_wardens_test.gd`, `world_warden_flow_test.gd`, `stage_bay_test.gd`, `hero_warden_assets_test.gd`, `boss_flow_test.gd` (the hand-off to Brindle), and the win proof on `--table=park`.
 
-**Fields today's map carries that the park file has no table for:** the Reach's three authored lines (`map_reach.gd:5-14`) retire into the pilot lines; its 13 `scrap_lines` (`map_reach.gd:120-134`) derive from `tools/park_lines/park_flume.json`; its kicker (`map_reach.gd:135`) becomes kicker rows. The four swing pillars at today's Warden site (`map_reach.gd:11`) become the head house's roof-truss anchors.
+**Fields today's map carries that the park file has no table for:** the Reach's three authored lines (`map_reach.gd:5-14`) retire into the pilot lines; its 13 `scrap_lines` (`map_reach.gd:120-134`) derive from `assets/park/park_flume/lines.json`; its kicker (`map_reach.gd:135`) becomes kicker rows. The four swing pillars at today's Warden site (`map_reach.gd:11`) become the head house's roof-truss anchors.
 
 ## 13. The shipped park file
 
-The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026-10-12, 219 park rows) and the lines are `tools/park_lines/park_flume.json`; the stage test `tests/park_park_flume_test.gd` pins them. Changes from the draft:
+The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026-10-12, 219 park rows) and the lines are `assets/park/park_flume/lines.json`; the stage test `tests/park_park_flume_test.gd` pins them. Changes from the draft:
 
 - Removed `cliff_rooms` and `viga_beams`; added the crew camp (`crew_ledges`, `crane_booms`), the three terraces, `bend_rim_ledge`, `drum_lip_kicker` and sized filler rows (no tiled saguaro grid).
 - Removed `bend_far_rim`: the bend cache moved onto `bend_rim_ledge` [42, -142] beside the rim line.

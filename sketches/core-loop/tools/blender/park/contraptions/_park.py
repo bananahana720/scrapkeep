@@ -1,6 +1,6 @@
 """Shared helpers for the six contraption skin recipes (KC9, design-v3/PARK.md section 4): kit.Surface parts in one enamel
 draw with COLOR_0 vertex colour, the tubes, rings and rounded plans the six recipes share, and the export that checks the
-class budget from tools/asset_budgets.json and prints one PARK_EXPORT row per GLB (sha256 for the determinism log).
+class budget from assets/asset_budgets.json and prints one PARK_EXPORT row per GLB (sha256 for the determinism log).
 
 Convention for the whole family (kept the same in every recipe header): metres at game scale, Godot +Y up, +Z the contraption's
 aim (the launcher's aim, the gauge's face, the barge's lane is free), origin at the contraption's code anchor: the mouth point for
@@ -23,7 +23,7 @@ from mathutils import Vector
 
 SKETCH = kit.SKETCH
 MODELS = SKETCH / "assets/models/park/contraptions"
-CLASSES = json.loads((SKETCH / "tools/asset_budgets.json").read_text())["classes"]
+CLASSES = json.loads((SKETCH / "assets/asset_budgets.json").read_text())["classes"]
 SLOT = "enamel"
 
 TONES = {

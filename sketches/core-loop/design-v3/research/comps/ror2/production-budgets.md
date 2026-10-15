@@ -1,6 +1,6 @@
 # Production budgets: what a shipped 3D roguelite spends per category
 
-Evidence: measured data (level 4). Counts and statistics were computed from unpacked asset metadata by a script; no asset was exported, copied or viewed. Method, category rules and rerun command are in the source report `production-budgets.md` under the study tree's reports folder. The Scrapkeep side comes from the asset forge's pack file on the branch `claude/reverse-engineer-asset-pipeline-a5025f` and from `sketches/core-loop/VISUAL-SLICE.md:11`. `sketches/core-loop/tools/asset_budgets.json` does not exist in this worktree, so it was not compared.
+Evidence: measured data (level 4). Counts and statistics were computed from unpacked asset metadata by a script; no asset was exported, copied or viewed. Method, category rules and rerun command are in the source report `production-budgets.md` under the study tree's reports folder. The Scrapkeep side comes from the asset forge's pack file on the branch `claude/reverse-engineer-asset-pipeline-a5025f` and from `sketches/core-loop/VISUAL-SLICE.md:11`. `sketches/core-loop/assets/asset_budgets.json` does not exist in this worktree, so it was not compared.
 
 Read the tables with three caveats. Each row is one Unity object in one bundle, so assets that ship in several bundles count once per bundle. Mesh rows are per mesh piece, not per character, so a character's total is a sum of pieces and is larger than any row. Skinned-renderer rows have no container path, so their categories come from bundle names and are approximate.
 

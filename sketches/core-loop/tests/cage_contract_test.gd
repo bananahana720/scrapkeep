@@ -36,7 +36,7 @@ const NEUTRAL := "res://assets/models/world_one/shell_neutral.glb"
 # lattice once Sable's row points at her Hoberman shell. It is now the legacy VD-01 root glass
 # shell below, which no pilot's SHELLS row names, so the check no longer moves with the roster.
 const GLASS := "res://assets/models/shell_sable.glb"
-const BUDGETS := "res://tools/asset_budgets.json"
+const BUDGETS := "res://assets/asset_budgets.json"
 const EXPECTED_CHECKS := 45
 const CORE_LIMIT := 0.985
 const STRUT_PAIR := 0.035

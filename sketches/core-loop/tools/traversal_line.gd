@@ -45,7 +45,7 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 # Stage 1 to 6 is the park table's row. Stage 0 is the park_test fixture: the park table has no
 # fixture row (park_defs.gd), so the tool reloads park_defs.gd in this process with stage 1's map
 # named park_test, and the fixture rides as stage 1. The line comes from
-# tools/park_lines/<map_id>.json (--lines= names another file), its named waymarks resolve
+# assets/park/<map_id>/lines.json (--lines= names another file), its named waymarks resolve
 # through the park file, and the default out is artifacts/local/traversal/park/<map_id>, one
 # <pilot>.json or floor.json. With --floor, --pilot picks the class that rolls (Rivet when
 # absent) and --ref the pilot whose summary in the same out directory sets the floor band
@@ -84,7 +84,7 @@ const FLOOR := "floor"
 const FLOOR_CLASS := "rivet"
 const FLOOR_HANDS := ["move", "brake_held"]
 const PARK_DEFS := "res://src/core/park_defs.gd"
-const PARK_LINES := "res://tools/park_lines/%s.json"
+const PARK_LINES := "res://assets/park/%s/lines.json"
 const PARK_OUT := "res://../../artifacts/local/traversal/park"
 const FIXTURE_STAGE := 0
 const FIXTURE_MAP := "park_test"

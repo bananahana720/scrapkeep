@@ -459,7 +459,7 @@ bot_run: completionist seed 3 (tarn) -> stages_done at stage 5, 23155 ticks (257
 
 ## Appendix: the shipped park file
 
-The park file and pilot lines as shipped (KD4 greybox, fix round 2026-10-12), copied byte for byte from `sketches/core-loop/src/world/park/park_sinkhole.json` and `sketches/core-loop/tools/park_lines/park_sinkhole.json`; `park_schema_test` loads both blocks. Its bake and graph are in `sketches/core-loop/assets/park/park_sinkhole/` and its measured bands in `sketches/core-loop/design-v3/park/traversal/park_sinkhole.md`.
+The park file and pilot lines as shipped (KD4 greybox, fix round 2026-10-12), copied byte for byte from `sketches/core-loop/src/world/park/park_sinkhole.json` and `sketches/core-loop/assets/park/park_sinkhole/lines.json`; `park_schema_test` loads both blocks. Its bake and graph are in `sketches/core-loop/assets/park/park_sinkhole/` and its measured bands in `sketches/core-loop/design-v3/park/traversal/park_sinkhole.md`.
 
 ```json
 {

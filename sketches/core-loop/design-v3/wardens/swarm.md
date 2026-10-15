@@ -207,7 +207,7 @@ Order: after KF1.
 
 **KF6 Swarm body.** SCOPE: `tools/blender/warden_swarm.py`, `assets/models/warden_swarm.glb` with the section 5 clips, the `hero_assets.gd` row, a look subject. ACCEPTANCE:
 
-- `npm run asset:inspect` passes the `warden_base` class (5,000 triangles, 32 draws) for the dome and `warden_kit` (1,500, 18) for the drone dressing (`tools/asset_budgets.json`).
+- `npm run asset:inspect` passes the `warden_base` class (5,000 triangles, 32 draws) for the dome and `warden_kit` (1,500, 18) for the drone dressing (`assets/asset_budgets.json`).
 - Below 2 m nothing passes the 2.8 m collider radius (`warden.gd:38`, `warden_look.gd:31-32`).
 - Every clip in section 7 exists with its length.
 - The queen sits at the kit's point offset so `family_point_at()` lands on it (`warden.gd:176-180`).
