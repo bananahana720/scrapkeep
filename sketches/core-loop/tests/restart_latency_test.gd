@@ -29,6 +29,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 const RETRY_TARGET_S := 2.0
 const EXIT_TARGET_S := 6.0
@@ -54,6 +55,7 @@ func _initialize() -> void:
 # ---- the parent: four children, then the checks ----
 
 func _parent() -> void:
+	print("restart_latency_test: machine load at start (1 min) %s" % FileAccess.get_file_as_string("/proc/loadavg").split(" ")[0])
 	var runs: Array[Dictionary] = []
 	for seed_value in SEEDS + [REPLAY_SEED]:
 		runs.append(_run_child(seed_value))
@@ -117,15 +119,16 @@ func _run_child(seed_value: int) -> Dictionary:
 # ---- the child: one fresh game, four timed events ----
 
 func _probe(seed_value: int) -> void:
-	# Red first: the probe reports nothing yet.
-	quit(0)
-	return
+	# The replay setup bot_run.gd uses: physics-tick hit-stop gates, a seeded global RNG, a finished audio bake.
+	SimClock.ticks = true
+	seed(seed_value)
 	_game = Game.new()
 	_game.test_mode = true
 	_game.table = "park"
 	root.add_child(_game)
 	await physics_frame
 	await physics_frame
+	_game.presentation.audio.bake_now()
 	_game.run.run_seed_override = seed_value
 	_game.player.source = Intent.Scripted.new()
 	var out := {"seed": seed_value}
@@ -171,6 +174,12 @@ func _exit(next_stage: int) -> Dictionary:
 			await physics_frame
 			waited += 1
 		build_s = (Time.get_ticks_usec() - b0) / 1e6
+	# The build wait lasts a different number of ticks each run (worker threads), and the ball moves
+	# through them, so the ball is put back on a fixed pose before the exit: the replay then compares
+	# the exit's own path, not the wait's length.
+	var here: int = _game.flow.stage()
+	_game.player.reset_to(terrain.spawn_point(here) + Vector3.UP * 2.0, Vector3(0.0, 0.0, 6.0))
+	await _ticks(2)
 	var m: Dictionary = await _timed(func(): _game.flow._finish_stage(), next_stage)
 	m["build_s"] = build_s
 	return m
