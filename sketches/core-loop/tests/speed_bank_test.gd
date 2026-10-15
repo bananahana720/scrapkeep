@@ -1,3 +1,4 @@
+# smoke: timeout=360s (six pilots, thirteen input fixtures each)
 extends SceneTree
 
 const GameEvents := preload("res://src/core/game_events.gd")
@@ -10,8 +11,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # shared brake/slide on this ball. The slide rolls off a 2 m ledge; the kicker is
 # an unpowered ramp, and the ride uses the world's velocity handoff.
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
-const RUNS := ["roll", "slide", "jump", "window", "early", "late", "drop", "kicker", "ride", "pad", "grapple", "knock"]
-const EXPECTED_CHECKS := 73
+const RUNS := ["roll", "slide", "jump", "air_jump", "window", "early", "late", "drop", "kicker", "ride", "pad", "grapple", "knock"]
+const EXPECTED_CHECKS := 79
 const RATIO_BAND := [1.2, 1.3]
 const KEEP := 0.9
 const WINDOW_U := 0.875
@@ -34,6 +35,7 @@ var _player
 var _tuning
 var _source := Intent.Scripted.new()
 var _landing_count := 0
+var _landing_speed := 0.0
 var _checks := 0
 var _failures := 0
 var _queue := []
@@ -68,13 +70,15 @@ func _initialize() -> void:
 		Vector3(-8, -1, 146), Vector3(8, -1, 146),
 		Vector3(-8, -1, 134), Vector3(8, -1, 134),
 		Vector3(-8, 0, 146), Vector3(8, 0, 146),
-		Vector3(-8, 4, 134), Vector3(8, 4, 134)])
+		Vector3(-8, 2, 134), Vector3(8, 2, 134)])
 	ramp_shape.shape = ramp
 	_kicker.add_child(ramp_shape)
 	_world.add_child(_kicker)
 	_events = GameEvents.new()
 	_world.add_child(_events)
-	_events.landed.connect(func(_impact: float): _landing_count += 1)
+	_events.landed.connect(func(_impact: float):
+		_landing_count += 1
+		_landing_speed = _planar())
 	_player = PlayerBall.new()
 	_world.add_child(_player)
 	_tuning = Tuning.new()
@@ -110,8 +114,8 @@ func _start(pilot: String, run: String) -> void:
 	var cruise: float = _tuning.f("cruise")
 	_ledge.collision_layer = 1 if run == "slide" else 0
 	_kicker.collision_layer = 1 if run == "kicker" else 0
-	var start := START + Vector3.UP * (2.0 if run in ["slide", "drop"] else 0.0)
-	_player.reset_to(start, Vector3.ZERO if run == "roll" else Vector3(0.0, 0.0, -cruise * (1.1 if run == "kicker" else 1.0)))
+	var start := START + Vector3.UP * (2.0 if run in ["slide", "drop", "air_jump"] else 0.0)
+	_player.reset_to(start, Vector3.ZERO if run == "roll" else Vector3(0.0, 0.0, -cruise * (1.2 if run == "kicker" else 1.0)))
 	_source.hold = {} if run == "roll" else {"move": Vector2(0.0, 1.0)}
 	_source.press = {}
 	var decay := _decay(pilot)
@@ -125,7 +129,7 @@ func _start(pilot: String, run: String) -> void:
 			press_at = decay + LATE_S
 	_run = {"pilot": pilot, "run": run, "decay": decay, "press_at": press_at, "airborne": false,
 		"landed_t": -1.0, "t": 0.0, "trace": [], "pressed_tick": -1, "ticks": 0, "done": false,
-		"prepared": run == "drop", "ground_ticks": 0, "slide_ticks": 0, "burst_seen": false,
+		"prepared": run in ["drop", "air_jump"], "ground_ticks": 0, "slide_ticks": 0, "burst_seen": false,
 		"action_started": run == "drop" or run == "kicker", "action_grounded": false, "landings_before": _landing_count}
 
 
@@ -155,12 +159,16 @@ func _step(delta: float) -> void:
 		return
 	var grounded: bool = _player.state.grounded
 	var run: String = _run["run"]
+	if run == "air_jump" and not _run["action_started"] and not grounded:
+		_source.press = {"jump_pressed": true}
+		_run["action_started"] = true
 	if not _run["prepared"]:
 		if grounded:
 			_run["ground_ticks"] += 1
 		if _run["ground_ticks"] < 12:
 			return
 		_run["prepared"] = true
+		_run["landings_before"] = _landing_count
 		_run["action_grounded"] = grounded
 		match run:
 			"roll":
@@ -208,7 +216,7 @@ func _step(delta: float) -> void:
 	_run["t"] += delta
 	var t: float = _run["t"]
 	_run["trace"].append([t, _planar()])
-	if run in ["roll", "slide", "jump", "drop", "kicker", "ride", "pad", "grapple", "knock"]:
+	if run in ["roll", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock"]:
 		if t >= _run["decay"] + 0.6:
 			_run["done"] = true
 		return
@@ -226,7 +234,7 @@ func _finish() -> void:
 	var cruise: float = _tuning.f("cruise")
 	var run: String = _run["run"]
 	var trace: Array = _run["trace"]
-	if run in ["roll", "slide", "jump", "drop", "kicker", "ride", "pad", "grapple", "knock"]:
+	if run in ["roll", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock"]:
 		var peak := 0.0
 		for sample in trace:
 			if sample[0] <= 0.3:
@@ -237,11 +245,11 @@ func _finish() -> void:
 		var ratio := peak / cruise
 		var completed: bool = _run["landed_t"] >= 0.0 and _run["action_started"] and not trace.is_empty()
 		if run in ["drop", "kicker", "ride", "pad", "grapple", "knock"]:
-			_check("%s %s no burst" % [pilot, run], completed and not _run["burst_seen"] and ratio < RATIO_BAND[0],
-				"landed=%s, bank_seen=%s, peak %.2f m/s = %.3f x cruise (want <1.2 and no bank)"
-					% [completed, _run["burst_seen"], peak, ratio])
+			_check("%s %s no burst" % [pilot, run], completed and _landing_speed >= Tuning.BANK_ARM * cruise and not _run["burst_seen"] and ratio < RATIO_BAND[0],
+				"landed=%s at %.2f m/s, bank_seen=%s, peak %.2f m/s = %.3f x cruise (want <1.2 and no bank)"
+					% [completed, _landing_speed, _run["burst_seen"], peak, ratio])
 		else:
-			_check("%s %s ratio" % [pilot, run], completed and _run["action_grounded"] and trace[-1][1] <= cruise * 1.02 and ratio >= RATIO_BAND[0] and ratio <= RATIO_BAND[1],
+			_check("%s %s ratio" % [pilot, run], completed and (_run["action_grounded"] or run == "air_jump") and trace[-1][1] <= cruise * 1.02 and ratio >= RATIO_BAND[0] and ratio <= RATIO_BAND[1],
 				"scripted %s from ground=%s, burst %.2f m/s = %.3f x %.1f cruise (band %.1f to %.1f); decay %.2f s"
 					% [run, _run["action_grounded"], peak, ratio, cruise, RATIO_BAND[0], RATIO_BAND[1], _run["decay"]])
 		_run = {}
@@ -256,7 +264,8 @@ func _finish() -> void:
 	if run == "window":
 		_check("%s window keeps" % pilot, pressed and share >= KEEP, detail + " (want at least %d%%)" % int(KEEP * 100.0))
 	else:
-		_check("%s %s spends" % [pilot, run], pressed and share < KEEP, detail + " (want under %d%%)" % int(KEEP * 100.0))
+		var spent := kept < float(_run.get("speed_at_press", 0.0)) - 0.25 if run == "early" else true
+		_check("%s %s spends" % [pilot, run], pressed and share < KEEP and spent, detail + " (want under %d%%)" % int(KEEP * 100.0))
 	_run = {}
 
 

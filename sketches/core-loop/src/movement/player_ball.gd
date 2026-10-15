@@ -211,7 +211,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.jumped.connect(func(air: bool):
 		if not air:
 			_speed_bank_jumped = true
-			_speed_bank_chosen = true)
+		_speed_bank_chosen = true)
 
 	# Everything under the player is placed per frame in _process, which interpolation
 	# must leave alone; only the body is ticked by physics and interpolated.
@@ -551,7 +551,7 @@ func _clear_speed_bank() -> void:
 	_speed_bank_chosen = false
 
 
-# Only a chosen ground jump or brake/slide can pay its next landing. External
+# Only a chosen jump or ground brake/slide can pay its next landing. External
 # motion clears that eligibility. A fresh stick input near rest banks immediately.
 # Air pauses decay; a ground jump spends it using the original per-pilot curve.
 func _tick_speed_bank(delta: float) -> void:
