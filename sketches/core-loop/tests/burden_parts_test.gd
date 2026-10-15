@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
@@ -125,7 +126,7 @@ func _stats(count: int) -> Dictionary:
 	var sheet := BuildSheet.from_parts(held)
 	var dps: float = BASE_DPS * sheet.power()
 	var ttk: float = TARGET_HP / dps
-	var ceiling: float = BuildSheet.BASE_MAX_HP + sheet.max_hp_bonus
+	var ceiling: float = ClassDef.by_id("pylon_engineer").base_hp + sheet.max_hp_bonus
 	var survived := 0
 	var taken_total := 0.0
 	for seed_value in ENCOUNTER_SEEDS:
@@ -153,7 +154,7 @@ func _sweep() -> void:
 	var ten := _stats(10)
 	_t.check("10 burdens cost something real", ten["ceiling"] < zero["ceiling"] or ten["dps"] < zero["dps"], "ceiling %.1f vs %.1f" % [ten["ceiling"], zero["ceiling"]])
 	# The check can fail: a harsh stand-in ceiling must drop survival, or the survival bar proves nothing.
-	var harsh_ceiling: float = BuildSheet.BASE_MAX_HP - 80.0
+	var harsh_ceiling: float = ClassDef.by_id("pylon_engineer").base_hp - 80.0
 	var harsh := 0
 	for seed_value in ENCOUNTER_SEEDS:
 		var rng := RandomNumberGenerator.new()

@@ -50,8 +50,7 @@ const CANNON_COLOR := Palette.ANCIENT
 @export var starter := false
 # The baseline (SQ8, design-v3/PILOTS.md section 7): the hull a run starts with and the
 # hull gained per heft class above I, both (start) values stated as ratios to Sable. A
-# heavier hull never grows slower. Nothing reads them yet: run_state.gd, build_sheet.gd
-# and build.gd still start every pilot at one shared 100 until the wiring unit lands.
+# heavier hull never grows slower. RunState owns the live base; builds add part bonuses.
 @export var base_hp := 100.0
 @export var hp_growth := 10.0
 

@@ -835,7 +835,7 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 	if mass_hp != _mass_hp:
 		sheet.max_hp_bonus += mass_hp - _mass_hp
 		_mass_hp = mass_hp
-		ctx.run.set_max_hp(BuildSheet.BASE_MAX_HP + sheet.max_hp_bonus)
+		ctx.run.set_max_hp(ctx.run.base_max_hp() + sheet.max_hp_bonus)
 	_redraw()
 
 

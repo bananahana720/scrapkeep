@@ -131,7 +131,7 @@ func _check_stacking_and_retry() -> void:
 	var parts_before: Array = run.parts.duplicate()
 	_game.flow.retry_stage()
 	_report("retry restores the build", run.parts.is_empty() and is_equal_approx(_game.tuning.mod("weapon_damage"), 1.0)
-			and is_equal_approx(_game.player.grapple_range(), _game.tuning.base("rope_range")) and is_equal_approx(run.max_hp, 100.0),
+			and is_equal_approx(_game.player.grapple_range(), _game.tuning.base("rope_range")) and is_equal_approx(run.max_hp, run.base_max_hp()),
 		"retry from %d parts back to the stage-start build %s: weapon_damage x%.2f, grapple %.1f m, max hp %.0f"
 			% [parts_before.size(), run.parts, _game.tuning.mod("weapon_damage"), _game.player.grapple_range(), run.max_hp])
 

@@ -2,6 +2,9 @@ extends SceneTree
 
 const ClassDef := preload("res://src/core/class_def.gd")
 const RunState := preload("res://src/core/run_state.gd")
+const Events := preload("res://src/core/game_events.gd")
+const BuildSheet := preload("res://src/build/build_sheet.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
 
 # SQ8 Baseline ratios (W13-INTEGRATION-3.md, unit sq8-baseline-ratios). Each pilot's baseline
@@ -10,13 +13,9 @@ const T := preload("res://tests/support/t.gd")
 # layer and that the heavier class also grows faster per level; Scrapkeep states its own
 # start values and copies none of the source's numbers.
 #
-# Checks: the class_def rows, the PILOTS.md section 7 table against them, the spread and
-# the order rule. The live reading (a run begun as each pilot starts at its base_hp) is
-# printed for every pilot and asserted only once GATE_LIVE is true: run_state.gd begin(),
-# build_sheet.gd BASE_MAX_HP and build.gd's ceiling still read one shared 100, and those
-# files sit outside SQ8's scope. The wiring unit flips GATE_LIVE.
+# Checks: declared ratios, live starts, growth, build recomputes and checkpoint restores.
 
-const GATE_LIVE := false # The wiring unit (run_state, build_sheet, build) flips this to true.
+const GATE_LIVE := true
 const REFERENCE := "pylon_engineer"
 const PILOT_NAMES := {"pylon_engineer": "Sable", "runner_gunner": "Rivet", "demolitions_caster": "Kest",
 	"tarn": "Tarn", "tally": "Tally", "remembered_cannon": "The Cannon"}
@@ -28,8 +27,7 @@ const LIVE_TOLERANCE := 0.02
 # most SPREAD_MAX (readable-capped scaling: no pilot doubles another).
 const SPREAD_MIN := 1.5
 const SPREAD_MAX := 2.0
-# 6 pilots x 2 row checks, 1 readable, 1 heading, 1 row count, 6 x 2 ratio cells, spread
-# min, spread max, order rule. GATE_LIVE adds 6 live checks.
+# Declaration checks; each live pilot adds one ratio and 19 lifecycle checks.
 const EXPECTED_CHECKS := 30
 
 
@@ -121,7 +119,51 @@ func _initialize() -> void:
 			live[def.id], live_ratio, want, "inside" if inside else "NOT WIRED"])
 		if GATE_LIVE:
 			t.check("%s begun run reads its hull ratio" % def.id, inside, "%.3f vs %.3f" % [live_ratio, want])
+			_check_growth(t, def)
 
-	var expected := EXPECTED_CHECKS + (6 if GATE_LIVE else 0)
+	var expected := EXPECTED_CHECKS + (120 if GATE_LIVE else 0)
 	t.eq("check count", t.checks, expected)
 	quit(t.verdict())
+
+
+func _check_growth(t, def: Resource) -> void:
+	var events := Events.new()
+	var run := RunState.new(events)
+	run.begin(def)
+	var tuning := Tuning.new()
+	var sheet := BuildSheet.from_parts([])
+	sheet.max_hp_bonus = 25.0
+	# Both pickup consumers recompute before RunState publishes the new heft class.
+	run.events.scrap_collected.connect(func(_a, _p, _s): sheet.apply(tuning, run))
+	run.events.part_gained.connect(func(_id, _source): sheet.apply(tuning, run))
+	t.near("%s starts full at declared hull" % def.id, run.hp, def.base_hp)
+	for rank in range(2, 6):
+		var mass := int(ceil((RunState.HEFT_CLASS_AT[rank - 1] - 1.0) / RunState.HEFT_PER_MASS))
+		run.add_scrap(mass - int(run.mass), Vector3.ZERO)
+		var want: float = def.base_hp + def.hp_growth * (rank - 1) + 25.0
+		t.near("%s class %d growth" % [def.id, rank], run.max_hp, want)
+		t.near("%s class %d gained hull is filled" % [def.id, rank], run.hp, want)
+		run.hp -= 3.0
+		sheet.apply(tuning, run)
+		sheet.apply(tuning, run)
+		t.near("%s class %d recompute keeps damage" % [def.id, rank], run.hp, want - 3.0)
+		run.heal(3.0)
+	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
+	run.lose_scrap(int(run.mass), Vector3.ZERO, "test")
+	sheet.apply(tuning, run)
+	t.near("%s drop recalculates the base" % def.id, run.max_hp, def.base_hp + 25.0)
+	run.restore()
+	sheet.apply(tuning, run)
+	t.near("%s retry restores grown hull" % def.id, run.max_hp, def.base_hp + def.hp_growth * 4.0 + 25.0)
+	run.begin(def)
+	run.grant_start_mass(1000.0)
+	t.near("%s opening heft grants growth" % def.id, run.max_hp, def.base_hp + def.hp_growth * 3.0)
+	run.begin(def)
+	run.add_part("hot_rivets", "test")
+	run.add_part("hot_rivets", "test")
+	run.add_part("hot_rivets", "test")
+	t.near("%s parts can raise heft class" % def.id, run.max_hp, def.base_hp + def.hp_growth + 25.0)
+	run.begin(def)
+	t.near("%s new run clears growth and bonuses" % def.id, run.max_hp, def.base_hp)
+	t.near("%s new run resets hp" % def.id, run.hp, def.base_hp)
+	events.free()

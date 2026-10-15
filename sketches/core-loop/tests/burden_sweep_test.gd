@@ -3,6 +3,7 @@ extends SceneTree
 const Parts := preload("res://src/build/parts.gd")
 const Build := preload("res://src/build/build.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const Triggers := preload("res://src/build/triggers.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
@@ -97,7 +98,7 @@ func _measure(held: Array, proc := 1.0, refresh_before: Array = []) -> Dictionar
 	rng.seed = 9000
 	bus.run(effects.resolve, rng)
 	var result := {"bonus": target.damage / hit, "power": build.sheet.power() * (1.0 + target.damage / hit),
-		"ceiling": BuildSheet.BASE_MAX_HP + build.sheet.max_hp_bonus, "hits": recorder.hits, "kinds": recorder.kinds.duplicate(),
+		"ceiling": ClassDef.by_id("pylon_engineer").base_hp + build.sheet.max_hp_bonus, "hits": recorder.hits, "kinds": recorder.kinds.duplicate(),
 		"procs": effects.procs.duplicate(), "pending": bus.pending.size()}
 	build.free()
 	recorder.free()
