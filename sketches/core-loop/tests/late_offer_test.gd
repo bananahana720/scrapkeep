@@ -111,7 +111,9 @@ func _draw(pilot: String, policy: String, path_seed: int) -> Dictionary:
 	return out
 
 
-# L2: save after a skip, load into a fresh run, replay the way flow.gd's _apply_tree_picks does.
+# L2: save after a skip, load into a fresh run, and replay the loaded picks onto a fresh tree by
+# hand. This does not go through flow.gd: its _apply_tree_picks does not call restore_late_skip
+# yet (coordinator follow-up), so a live resume with late_offer on would offer the item again.
 func _save_resume(t, pilot: String, path_seed: int) -> void:
 	var tree = _fresh(pilot, true, Bus.new())
 	var rng := RandomNumberGenerator.new()
@@ -129,7 +131,7 @@ func _save_resume(t, pilot: String, path_seed: int) -> void:
 		applied and RunState.validate_entrance_doc(doc) == "" and parsed.get("tree_late_skipped", false) == true \
 		and loaded.tree_late_skipped and loaded.tree_picks == tree.picks and loaded.tree_allowed == 4,
 		"applied %s, doc %s, loaded %s" % [applied, parsed.get("tree_late_skipped"), loaded.tree_late_skipped])
-	# Resume: the skip goes onto the fresh tree before the replay, then the owed pick reopens.
+	# Resume by hand: the skip goes onto the fresh tree before the replay, then the owed pick reopens.
 	var bus := Bus.new()
 	var resumed = _fresh(pilot, true, bus)
 	resumed.restore_late_skip(loaded.tree_late_skipped)
