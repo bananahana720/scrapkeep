@@ -6,6 +6,7 @@ const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const StageBeats := preload("res://src/core/stage_beats.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -40,7 +41,9 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # are pointed at --out, the way test mode points them at a per-process folder; --out may
 # be an absolute path or a user:// path. Next to the spine's two logs the runner writes:
 #   bots.ndjson          one line per run: run_id, policy, seed, class, outcome, stage
-#                        reached, ticks, game and wall seconds, and per-stage bot notes.
+#                        reached, ticks, game and wall seconds, per-stage bot notes, and the
+#                        beats column (src/core/stage_beats.gd): per stage entered, the physics
+#                        ticks of arrive, loot, find, hold, fight and leave and whether it exited.
 #   codex-entries.json   every declared codex entry (id, category, name, clue), so the
 #                        report can name entries no run discovered.
 # A run ends on run_ended (won or lost), death, stall, or --until/--stages; a stalled
@@ -65,6 +68,7 @@ var _scrap_serial := 0
 var _counter_serial := 0
 var _bot_options
 var _allocation_noise: Array[RefCounted] = []
+var _beats
 
 
 func _initialize() -> void:
@@ -215,12 +219,14 @@ func _physics_process(delta: float) -> bool:
 			_audit = BotAudit.new()
 			_audit.setup(_game.events, _driver, _out.path_join("events-%d.ndjson" % _seeds[_index]))
 		_bot_options.apply_audio(_game.presentation.audio)
+		_beats = StageBeats.Recorder.new(_game.events, _game.flow)
 		_driver.start(resume)
 		if _settings.has("from-stage") and not resume and int(_settings["from-stage"]) != 1:
 			_game.flow.enter_stage(int(_settings["from-stage"]), Vector3.ZERO, false)
 		return false
 	if _tick_trace != null:
 		_tick_trace.store_line(JSON.stringify(_snapshot(delta)))
+	_beats.step()
 	var over: bool = _driver.tick(delta)
 	if not over and _settings.has("ticks") and _driver.ticks >= int(_settings["ticks"]):
 		_driver._end("ticks_done")
@@ -236,6 +242,9 @@ func _physics_process(delta: float) -> bool:
 		return false
 	var wall := float(Time.get_ticks_msec() - _started_msec) / 1000.0
 	var record: Dictionary = _driver.record(wall)
+	_beats.finish()
+	# --stages=N and --until=N end the run a tick or two into the next stage; that sliver is not an attempt.
+	record["beats"] = StageBeats.within(_beats.rows, int(_settings.get("stages", _settings.get("until", "0"))))
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()

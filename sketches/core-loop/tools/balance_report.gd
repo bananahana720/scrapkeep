@@ -2,6 +2,7 @@ extends SceneTree
 
 const RunState := preload("res://src/core/run_state.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const StageBeats := preload("res://src/core/stage_beats.gd")
 
 # The balance report (DEMO-SPEC, "Balance report"). It reads what the bot runs left in
 # one folder (tools/bot_run.gd): the spine's runs.ndjson and codex-log.ndjson, plus the
@@ -173,6 +174,7 @@ func _build() -> bool:
 		_stage_section(runs, stage, band)
 	_boss_section(runs)
 	_hands_section(runs)
+	_beats_section(runs)
 	_damage_section(runs)
 	_hurt_section(runs)
 	_delivered_damage_section(runs)
@@ -595,6 +597,67 @@ func _hands_section(runs: Array[Dictionary]) -> void:
 				cells.append("%.1f" % (float(sums.get(key, 0.0)) / stages))
 			_lines.append("| %s | %s | %d | %s |" % [policy, class_id, stages, " | ".join(cells)])
 	_lines.append("")
+
+
+# SR13: the stage beats column (src/core/stage_beats.gd). Mean seconds each of the six beats took
+# per stage, and the acceptance lines against their thresholds: every logged stage reached its exit,
+# no beat was skipped, and BEATS_RUNS runs were logged. A run with no beats column (an older bot)
+# is left out; with no logged column at all the section says so and checks nothing.
+const BEATS_RUNS := 50
+
+func _beats_section(runs: Array[Dictionary]) -> void:
+	var rows_by_stage := {}
+	var all_rows := []
+	var logged := 0
+	for run in runs:
+		var beats: Array = run["bot"].get("beats", [])
+		if beats.is_empty():
+			continue
+		logged += 1
+		for row in beats:
+			all_rows.append(row)
+			var stage := int(row["stage"])
+			if not rows_by_stage.has(stage):
+				rows_by_stage[stage] = []
+			rows_by_stage[stage].append(row)
+	_lines.append("## Stage beats (mean seconds per stage entered)")
+	_lines.append("")
+	if all_rows.is_empty():
+		_lines.append("No run logged a beats column.")
+		_lines.append("")
+		return
+	var tps := Engine.physics_ticks_per_second
+	_lines.append("| Stage | Rows | " + " | ".join(StageBeats.BEATS) + " | Skipped beats |")
+	_lines.append("| --- | --- | " + " | ".join(StageBeats.BEATS.map(func(_b): return "---")) + " | --- |")
+	var stages := rows_by_stage.keys()
+	stages.sort()
+	for stage in stages:
+		var rows: Array = rows_by_stage[stage]
+		var cells := []
+		for beat in StageBeats.BEATS:
+			var ticks := 0.0
+			for row in rows:
+				ticks += float(row["ticks"][beat])
+			cells.append("%.1f" % (ticks / rows.size() / tps))
+		var skipped := 0
+		for row in rows:
+			skipped += (row["skipped"] as Array).size()
+		_lines.append("| %d | %d | %s | %d |" % [stage, rows.size(), " | ".join(cells), skipped])
+	_lines.append("")
+	var audit: Dictionary = StageBeats.audit(all_rows)
+	var checks := [
+		["Every logged stage reached its exit", audit["exits"] == audit["stages"], "%d of %d" % [audit["exits"], audit["stages"]]],
+		["No beat skipped", audit["skipped"] == 0, "%d skipped beat%s" % [audit["skipped"], "" if audit["skipped"] == 1 else "s"]],
+		["Runs logged", logged >= BEATS_RUNS, "%d of %d" % [logged, BEATS_RUNS]],
+	]
+	var failed := []
+	for check in checks:
+		_lines.append("- %s: %s (%s)" % [check[0], "PASS" if check[1] else "FAIL", check[2]])
+		if not check[1]:
+			failed.append("%s %s" % [check[0].to_lower(), check[2]])
+	_lines.append("")
+	if not failed.is_empty():
+		_flags.append("Stage beats: " + "; ".join(failed))
 
 
 func _codex_section(runs: Array[Dictionary], entries: Array) -> void:
