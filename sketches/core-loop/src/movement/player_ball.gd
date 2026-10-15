@@ -585,14 +585,17 @@ func _tick_speed_bank(delta: float) -> void:
 	if speed_bank.is_empty():
 		if not state.grounded or not (roll_start or (landed and speed >= Tuning.BANK_ARM * cruise)):
 			return
-		if roll_start:
-			var heading := Rules.wish_direction(intent, drive_basis, state)
-			planar = Vector3(heading.x, 0.0, heading.z).normalized()
 		var row := Tuning.bank_row(class_def.id if class_def != null else "")
 		var bonus := float(row["ratio"]) * cruise - speed
 		if bonus <= 0.0:
 			return
-		_bank_push(planar, bonus)
+		if roll_start:
+			var heading := Rules.wish_direction(intent, drive_basis, state)
+			var target := Vector3(heading.x, 0.0, heading.z).normalized() * float(row["ratio"]) * cruise
+			var push := target - planar
+			_bank_push(push, push.length())
+		else:
+			_bank_push(planar, bonus)
 		var banked := minf(bonus, (float(row["ratio"]) - 1.0) * cruise)
 		speed_bank = {"row": row, "t": 0.0, "bonus0": banked, "bonus": banked}
 		return
