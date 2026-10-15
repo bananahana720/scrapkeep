@@ -16,7 +16,9 @@ class Body extends RefCounted:
 	func get_colliding_bodies() -> Array: return touching
 class Ball extends RefCounted:
 	var rigid := Body.new()
-	var heft_of := func() -> float: return Run.HEFT_CLASS_AT[2]
+	var heft_of: Callable
+	func _init() -> void: heft_of = Callable(self, "heft")
+	func heft() -> float: return Run.HEFT_CLASS_AT[2]
 	func body(): return rigid
 class Mount extends RefCounted:
 	var mount_driver = Reactor.new()
@@ -36,6 +38,10 @@ func _hit(kind: String, frame: int) -> Dictionary:
 		"frame": frame, "hp": 400.0, "max_hp": 400.0, "point": "core"}
 
 func _run() -> void:
+	_checks()
+	quit(t.verdict())
+
+func _checks() -> void:
 	var cases := [["ram, sheet dry", "ram", false, false], ["stomp, sheet dry", "stomp", false, false],
 		["ram, sheet live but not entered this cycle", "ram", true, false], ["weapon hit, sheet dry", "shot", false, false]]
 	for row in cases:
@@ -55,6 +61,7 @@ func _run() -> void:
 		t.check("and does not shatter: " + row[0], not result.get("shatter", false) and not result.get("sheet_ram", false) \
 			and posture.chunks == posture.CHUNKS and posture.shatter_frame < 0 and float(result.get("dealt", 0.0)) == 0.0,
 			"result %s, chunks %d, shatter frame %d" % [result, posture.chunks, posture.shatter_frame])
+		mount.target.rigid.touching.clear()
 	# Positive control: the same bar and a ram inside a live sheet the ball entered this cycle.
 	var mount := Mount.new()
 	var driver = mount.mount_driver
@@ -68,4 +75,4 @@ func _run() -> void:
 	posture.apply(result, 10)
 	t.check("control: a sheet ram that fills the bar shatters", result.get("sheet_ram", false) and result.get("shatter", false) \
 		and float(result.get("dealt", 0.0)) == 400.0 and posture.shatter_frame == 10 and not posture.staggered, str(result))
-	quit(t.verdict())
+	mount.target.rigid.touching.clear()

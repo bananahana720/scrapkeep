@@ -1484,11 +1484,6 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 			source.hold.erase("brake_held")
 			if live and ball.y >= target.family_point_at().y:
 				source.hold["brake_held"] = true
-			if not game.player.state.grounded:
-				# Off the ground the sheet carries the ball: a held go verb only adds to it (Tarn's
-				# claw pull, aimed at the core, hauled the ball over it, seed 9).
-				source.hold.erase("shift_held")
-				_shift_left = 0.0
 			# The go verb fires along the aim, so a rolling ball waits until it rolls straight at the
 			# core: pressed mid-turn it threw the ball wide of the sheet (Tally's surge, seed 4).
 			var at_core: bool = planar.length() <= 1.0 or planar.normalized().dot(offset.normalized()) >= SHEET_LAUNCH_LINED
