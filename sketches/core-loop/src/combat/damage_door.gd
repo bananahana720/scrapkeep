@@ -63,11 +63,17 @@ func hooks(event: String) -> Array:
 func pass_hit(hit: Dictionary, stages: Dictionary) -> Dictionary:
 	var trace := []
 	for stage in ORDER:
+		var fn: Callable = stages.get(stage, Callable())
+		# A dropped stage fails loud and leaves a gap in the trace, so ORDER is never traced
+		# for a stage that did not run.
+		if not fn.is_valid():
+			push_error("damage door: missing stage %s" % stage)
+			if trace_on:
+				trace.append("missing:%s" % stage)
+			continue
 		if trace_on:
 			trace.append(stage)
-		var fn: Callable = stages.get(stage, Callable())
-		if fn.is_valid():
-			fn.call(hit)
+		fn.call(hit)
 	for event in EVENTS:
 		if not _raised(hit, event):
 			continue

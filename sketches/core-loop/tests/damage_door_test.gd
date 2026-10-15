@@ -11,8 +11,12 @@ extends SceneTree
 # 3. hooks per event per hit stay at or under HOOK_CAP, and a hook past the cap is refused;
 # 4. the wear trail keeps its bypass: a patch hit removes HP through the door's one health
 #    measure but makes no door pass, runs no hook and publishes no enemy_struck;
-# 5. 100 kill-and-respawn cycles leave the run owner's parts, relics, tree picks and
-#    companion unchanged.
+# 5. combat's stage table maps every ORDER stage to its own _door_<stage> method, so the
+#    traced order is the order the real stage code ran in (a swapped entry fails);
+# 6. 100 kill-and-respawn cycles leave the run owner's parts, relics, tree picks and
+#    companion unchanged: each cycle kills a chaser through the door, then the owner's own
+#    body dies through run.damage (flow goes DEAD) and flow.retry_stage() respawns it at the
+#    stage checkpoint (flow back to STAGE).
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -25,7 +29,7 @@ const KILL_EVERY := 10
 const DEFLECT_EVERY := 7
 const CYCLES := 100
 const BIG := 1.0e9
-const EXPECTED_CHECKS := 26
+const EXPECTED_CHECKS := 31
 
 var _t := T.new("damage_door_test")
 var _game
@@ -86,6 +90,7 @@ func _run_checks() -> void:
 		quit(_t.verdict())
 		return
 	_check_declared(door)
+	_check_mapping(combat, door)
 	_check_cap(door)
 	_check_order(combat, door)
 	_check_bypass(combat, door)
@@ -100,6 +105,23 @@ func _check_declared(door) -> void:
 	_t.eq("declared events", door.EVENTS, ["hit", "deflect", "kill"])
 	_t.check("hooks run only after health", door.ORDER.find("health") < door.ORDER.size() - 1,
 		"health at %d of %d stages; hooks follow the last" % [door.ORDER.find("health"), door.ORDER.size()])
+
+
+# The trace names a stage as pass_hit calls it, so the trace alone cannot tell which code ran
+# under each name: the table is checked against ORDER directly.
+func _check_mapping(combat, door) -> void:
+	var table: Dictionary = combat.get("_strike_stages")
+	var keys: Array = table.keys()
+	keys.sort()
+	var want: Array = door.ORDER.duplicate()
+	want.sort()
+	_t.eq("combat's stage table names exactly the ORDER stages", keys, want)
+	var wrong := []
+	for stage in door.ORDER:
+		var fn: Callable = table.get(stage, Callable())
+		if not fn.is_valid() or fn.get_method() != "_door_" + stage:
+			wrong.append("%s->%s" % [stage, fn.get_method() if fn.is_valid() else "none"])
+	_t.check("each stage runs its own _door_ method", wrong.is_empty(), "mismatched %s" % [wrong])
 
 
 # Fills every event to its cap with recording hooks; the production hooks already seated
@@ -216,20 +238,48 @@ func _owner_state() -> Dictionary:
 
 
 func _check_respawn(combat, door) -> void:
+	var flow = _game.flow
+	var run = _game.ctx.run
 	# A held part makes "unchanged" mean something; an empty inventory stays empty trivially.
-	_game.run.add_part("boost_coil", "test")
-	var before := _owner_state()
+	# The checkpoint is retaken after the part and the companion are seeded (the way
+	# enter_stage takes it), so a retry's restore() puts back exactly what the owner held and
+	# any loss on the death-and-respawn path shows.
+	run.add_part("boost_coil", "test")
 	var anchor: Vector3 = _game.player.ball_position()
+	run.snapshot(Vector3.ZERO, Vector3.ZERO, _game.ctx.camera.yaw)
+	run.set_snapshot_entry(anchor, Vector3.ZERO, _game.ctx.camera.yaw)
+	var before := _owner_state()
 	var kills_before := int(_hook_calls["kill"])
 	var dead := 0
+	var deaths := 0
+	var respawns := 0
+	var died_count := [0]
+	var on_died := func(): died_count[0] += 1
+	_game.ctx.events.player_died.connect(on_died)
 	for i in CYCLES:
 		var foe := _spawn("chaser", Vector3(2.0, 0.0, 2.0), false)
 		combat.strike(foe, "arc", foe.max_hp * 10.0, "", "weapon")
 		dead += 1 if foe.is_dead() else 0
-		_game.player.reset_to(anchor)
+		# The owner's body dies through the real damage path; a ward may hold the hull once.
+		if flow.state != flow.STAGE:
+			continue
+		var blows := 0
+		while flow.state != flow.DEAD and blows < 4:
+			run.damage(BIG * 1000.0, "test")
+			blows += 1
+		if flow.state != flow.DEAD:
+			continue
+		deaths += 1
+		flow.retry_stage()
+		if flow.state == flow.STAGE and run.alive():
+			respawns += 1
+	_game.ctx.events.player_died.disconnect(on_died)
 	var after := _owner_state()
 	_t.eq("kill-and-respawn cycles killed every foe", dead, CYCLES)
 	_t.eq("kill hooks ran on every cycle", int(_hook_calls["kill"]) - kills_before, CYCLES * int(_probes["kill"]))
+	_t.eq("the owner died on every cycle (flow DEAD)", deaths, CYCLES)
+	_t.eq("player_died published once per death", died_count[0], CYCLES)
+	_t.eq("retry_stage respawned the owner on every cycle (flow STAGE, alive)", respawns, CYCLES)
 	_t.check("owner inventory unchanged", not (before["parts"] as Array).is_empty() and after["parts"] == before["parts"] and after["relics"] == before["relics"]
 			and after["tree_picks"] == before["tree_picks"],
 		"parts %s -> %s, relics %s -> %s" % [before["parts"], after["parts"], before["relics"], after["relics"]])
