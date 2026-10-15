@@ -1,3 +1,4 @@
 test	owner	reason	added	deadline
 park_reactor_fight_test	WT-PARK-BOT	ordinary skipper median 168.890 s, 3/4 breaks against 53.7 s; D10 ordinary speed deferred	2026-10-14	wave 14
 park_reactor_repeat_test	WT-PARK-BOT	ordinary skipper median 168.890 s, 3/4 breaks against 53.7 s; D10 ordinary speed deferred; repeat 1/2 size breaks, grown 25.646111 s and small unbroken at 53.615556 s	2026-10-14	wave 14
+bot_six_tally_test	TALLY-BRINDLE	Tally wins 2 of 4 (seeds 3 and 4 boss_stalled at stage 2); the stage-2 Brindle posture fight runs near the 420 s boss-stall cap on 3 of 4 seeds even at base 89715a6f (seed 3 won by 10 s), and PC-POOL's live_line rework tipped seed 3; fix the fight length, not the seed set	2026-10-15	wave 15
