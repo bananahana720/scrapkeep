@@ -74,15 +74,16 @@ const CATALOGUE := {
 	# their numbers and become class parts of the pilot whose Shift they deepen (Rivet's sprint,
 	# Tally's surge, Sable's vault). Live Line and Drop Weight stay shared, because they are the
 	# second ingredients of two evolutions, and change what the verb does instead of how fast
-	# the ball moves: how far a shot reaches, how hard a smash throws its pins.
+	# the ball moves: how wide the harpoon's lock cone opens (it targets more, the ball goes no
+# farther or faster), how hard a smash throws its pins (drop_weight's base row was slam_speed 1.15).
 	"grip_tread": {"name": "Grip Tread", "verb": "Bite the floor", "pitch": "Tread bites harder", "touches": "roll",
 		"text": "+15% drive acceleration", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "runner_gunner", "tags": ["anchor"],
 		"mods": {"drive_accel": 1.15}},
-	"live_line": {"name": "Live Line", "verb": "Reach down the line", "pitch": "Shots reach farther", "touches": "fire",
-		"text": "+10% weapon reach", "icon": "mobility",
+	"live_line": {"name": "Live Line", "verb": "Wider lock on the line", "pitch": "Harpoon grabs wider", "touches": "harpoon",
+		"text": "+25% harpoon lock cone", "icon": "mobility",
 		"rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
-		"mods": {"weapon_range": 1.1}},
+		"mods": {"harpoon_lock_deg": 1.25}},
 	"vent_baffle": {"name": "Vent Baffle", "verb": "Boost again sooner", "pitch": "Boost breathes quicker", "touches": "boost",
 		"text": "boost recharges 12% faster", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["speed"],

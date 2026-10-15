@@ -21,7 +21,7 @@ const STAT_WORDS := {
 	"dial.shatter_damage": "Shatter damage", "discovery_state": "Discoveries", "domino.chance": "Domino chance",
 	"drive_accel": "Acceleration", "drone.chance": "Drone chance", "echo_release.chance": "Echo chance",
 	"elapsed_seconds": "Elapsed time", "extra_hit.chance": "Extra hit chance", "glide_gravity": "Glide fall rate",
-	"heal_back.chance": "Healing chance", "hit_damage": "Hit damage", "hp": "Current health",
+	"harpoon_lock_deg": "Harpoon lock cone", "heal_back.chance": "Healing chance", "hit_damage": "Hit damage", "hp": "Current health",
 	"hp_per_mass": "Health per scrap mass", "hp_per_mass.per": "Health per scrap mass", "impact_force": "Impact force",
 	"jump_speed": "Jump speed", "kill_count": "Kills", "kill_scrap": "Scrap per kill",
 	"last_word.bonus": "Low health hit damage", "magnet": "Scrap pickup reach", "magnet_reach": "Scrap pickup reach",
