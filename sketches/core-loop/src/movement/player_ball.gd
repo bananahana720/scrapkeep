@@ -148,7 +148,8 @@ var _bow: Area3D
 var speed_bank := {}
 var _speed_bank_landed := false
 var _speed_bank_jumped := false
-var _speed_bank_chosen := false
+enum BankMove { NONE, JUMP, SLIDE, SLIDE_FLIGHT }
+var _speed_bank_chosen := BankMove.NONE
 var _speed_bank_move_held := false
 var _speed_bank_brake_held := false
 var _bow_check_queued := false
@@ -206,12 +207,12 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 			_clear_speed_bank())
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))
 	_rigid.landed.connect(func(_impact: float):
-		_speed_bank_landed = _speed_bank_chosen
-		_speed_bank_chosen = false)
+		_speed_bank_landed = _speed_bank_chosen != BankMove.NONE
+		_speed_bank_chosen = BankMove.NONE)
 	_rigid.jumped.connect(func(air: bool):
 		if not air:
 			_speed_bank_jumped = true
-		_speed_bank_chosen = true)
+		_speed_bank_chosen = BankMove.JUMP)
 
 	# Everything under the player is placed per frame in _process, which interpolation
 	# must leave alone; only the body is ticked by physics and interpolated.
@@ -548,7 +549,7 @@ func _clear_speed_bank() -> void:
 	speed_bank = {}
 	_speed_bank_landed = false
 	_speed_bank_jumped = false
-	_speed_bank_chosen = false
+	_speed_bank_chosen = BankMove.NONE
 
 
 # Only a chosen jump or ground brake/slide can pay its next landing. External
@@ -570,8 +571,13 @@ func _tick_speed_bank(delta: float) -> void:
 		return
 	var planar := planar_velocity()
 	var speed := planar.length()
+	if _speed_bank_chosen == BankMove.SLIDE:
+		if not state.grounded:
+			_speed_bank_chosen = BankMove.SLIDE_FLIGHT
+		elif not intent.brake_held or speed <= Tuning.BANK_REST * cruise:
+			_speed_bank_chosen = BankMove.NONE
 	if slide_start and state.grounded and speed >= Tuning.BANK_ARM * cruise:
-		_speed_bank_chosen = true
+		_speed_bank_chosen = BankMove.SLIDE
 	roll_start = roll_start and state.grounded and not intent.brake_held and speed <= Tuning.BANK_REST * cruise
 	if not speed_bank.is_empty() and jumped:
 		var row: Dictionary = speed_bank["row"]
@@ -608,7 +614,7 @@ func _tick_speed_bank(delta: float) -> void:
 	speed_bank["bonus"] = left
 	_bank_push(planar, -minf(give_back, maxf(0.0, speed - (cruise + left))))
 	if speed_bank["t"] >= float(row["decay_s"]):
-		speed_bank = {}
+		_clear_speed_bank()
 
 
 # Match the added spin to the contact plane as well as the planar impulse.
