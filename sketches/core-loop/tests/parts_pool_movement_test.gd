@@ -24,7 +24,7 @@ const NOT_MOVEMENT := ["weapon_damage", "weapon_rate", "weapon_range", "turret_d
 # id: [tags, touch verb, class_id]. A class_id of "" is shared.
 const FIVE := {
 	"grip_tread": [["anchor"], "roll", "runner_gunner"],
-	"live_line": [["arc"], "harpoon", ""],
+	"live_line": [["arc"], "fire", ""],
 	"vent_baffle": [["speed"], "boost", "tally"],
 	"spring_shims": [["spiral"], "jump", "pylon_engineer"],
 	"drop_weight": [["mass"], "haul", ""],
@@ -43,6 +43,7 @@ func _run() -> void:
 	_t.check("the alpha table lists its parts", Parts.listed_only(), "offer_pool must read the alpha table")
 	_pool_is_clear()
 	_five_rows()
+	_shared_verbs_act()
 	_evolutions()
 	quit(_t.verdict())
 
@@ -91,6 +92,18 @@ func _five_rows() -> void:
 			_t.eq("%s is offered to %s only if shared or its own" % [id, pilot], offered, want[2] == "" or want[2] == pilot)
 		if want[2] == "":
 			_t.eq("%s has no movement mod" % id, _movement_mods(id), [])
+
+
+# Round 2 (gate finding): a shared part's touches field must name a verb its own change acts on.
+# live_line's reach is the weapon's, so it touches fire (no harpoon-side trigger exists in
+# parts.gd's scope); drop_weight acts on the smash itself: on_smash arms the pins it throws.
+func _shared_verbs_act() -> void:
+	var live: Dictionary = Parts.row("live_line")
+	_t.eq("live_line changes weapon reach and touches fire", [live.get("touches", ""), live.get("mods", {}).has("weapon_range")], ["fire", true])
+	var drop: Dictionary = Parts.row("drop_weight")
+	_t.eq("drop_weight fires on a smash", drop.get("trigger", ""), "on_smash")
+	_t.eq("drop_weight arms the pins a smash throws", drop.get("effect", {}).get("do", ""), "pin_bonus")
+	_t.check("drop_weight no longer adds hull", not drop.has("max_hp_bonus"), "")
 
 
 func _evolutions() -> void:
