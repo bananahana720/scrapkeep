@@ -63,6 +63,23 @@ func _run() -> void:
 		t.check("posture %.0f: the hand %s" % [row[0], "fires" if row[1] else "holds fire"],
 			bot.source.hold.get("fire_held", false) == row[1] and (row[1] or not bot.source.press.get("fire_pressed", false)),
 			"goal %s, hold %s, press %s" % [bot._goal, bot.source.hold, bot.source.press])
+	# The go verb waits while the ball still drifts away from the core, even slowly: pressed then
+	# it launched a tick early and moved the first grown ram inside the core's contact reach. The
+	# same drift toward the core presses it (the control).
+	w._posture.posture = 0.0
+	w._posture.staggered = false
+	for row in [[1.0, false], [-1.0, true]]:
+		await _place(game, bot, foot, sheet.sheet_dir * 0.5 * row[0])
+		sheet.on_pulse(w, false)
+		bot._fight_phase = "charge"
+		var drift: float = game.player.planar_velocity().dot(sheet.sheet_dir)
+		var ready: bool = game.player.state.grounded and game.player.verb_ready("boost")
+		bot._fight(w, dt)
+		t.check("drifting %s the core at %.2f m/s the hand %s the go verb" % ["away from" if row[0] > 0.0 else "toward", absf(drift), "presses" if row[1] else "holds"],
+			ready and signf(drift) == signf(row[0]) and bot._goal == "ride spillway sheet" and bot.source.press.get("shift_pressed", false) == row[1],
+			"ready %s, drift %.2f, goal %s, press %s" % [ready, drift, bot._goal, bot.source.press])
+		sheet.sheet_left = 0.0
+		sheet._close_sheet()
 	# A stagger opened inside a live sheet: the hand rides the sheet into the core.
 	await _place(game, bot, foot, -sheet.sheet_dir * game.player.tuning.f("cruise"))
 	w._posture.posture = w._posture.FULL
