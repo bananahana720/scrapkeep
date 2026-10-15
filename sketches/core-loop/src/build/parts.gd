@@ -206,18 +206,22 @@ const GENERATED_SHARE := 0.25
 # SQ19 weighted offers (comps/roboquest/classes-and-perks.md:82, comps/gunfire/heroes-and-ascensions.md:87).
 # A pilot's kit is its own class rows plus every part in one of its two buckets (bucket_of) that
 # carries one of that bucket's tags below. The two buckets are the pilot's dominant offer pair,
-# one of the six pairs of weapon, skill, defence and movement, and each pilot declares a different
-# one. Tally's defence + movement pair cannot be its measured pair while every gate pair holds a
-# part that hits harder (offer_weights_test PAIRS); it is declared so the six stay distinct.
+# one of the pairs of weapon, skill, defence and movement. Defence + movement cannot be a measured
+# pair while every gate pair holds a part that hits harder (offer_weights_test PAIRS), so five pairs
+# are reachable for six pilots (coordinator ruling W8, 2026-10-15): Tarn and Tally share weapon +
+# defence, kinetic hitters against split ones, and every other pilot's pair is its own. Each kit
+# holds a common part that hits harder, so the hitter in a gate pair can come from the kit.
+# Pylon's defence half leaves the mass plates to the shelf: with them its top offers shared half
+# their parts with Rivet's.
 # Kest's movement half is its class rows only: Frost Vane as a kit part came back as synergy bait
 # often enough to put Kest's random-bot movement at 15.2%, over the 15% cap.
 # A pilot not listed here (or an empty class) draws exactly as before.
 const KITS := {
-	"pylon_engineer": {"skill": ["arc", "anchor"], "defence": ["arc", "anchor", "mass"]},
+	"pylon_engineer": {"skill": ["arc", "anchor"], "defence": ["arc", "anchor", "kinetic"]},
 	"runner_gunner": {"skill": ["speed"], "movement": ["speed"]},
 	"demolitions_caster": {"weapon": ["arc", "chain", "frost", "spiral"], "movement": []},
 	"tarn": {"weapon": ["kinetic"], "defence": ["kinetic", "anchor"]},
-	"tally": {"defence": ["speed", "arc", "mass"], "movement": ["speed"]},
+	"tally": {"weapon": ["split"], "defence": ["speed", "mass"]},
 	"remembered_cannon": {"weapon": ["mass"], "skill": ["mass", "kinetic", "speed"]},
 }
 # Target: 70% of a listed pilot's offered parts come from its kit (band 60 to 80%). The rest is the
@@ -226,21 +230,24 @@ const KIT_SHARE := 0.7
 # The most of one slot's odds a single kit part may hold (start value): on a short part list a
 # one-part kit would otherwise put that part in nearly every draw.
 const KIT_PART_CAP := 0.25
-# Target: 11% of a movement pilot's offers are movement parts (the comps cap is 15%; bait and the
+# Target: 12% of a movement pilot's offers are movement parts (the comps cap is 15%; bait and the
 # generated recipes add a few points on top). A kit slot
 # draws from the kit's movement parts this share of the time over KIT_SHARE; never more, even
 # when the kit's other bucket is empty, so movement cannot fill an offer. A pilot whose pair has
 # no movement bucket still sees its own class movement rows, at CLASS_MOVEMENT_SHARE.
-const MOVEMENT_SHARE := 0.11
+const MOVEMENT_SHARE := 0.12
 const CLASS_MOVEMENT_SHARE := 0.06
 # The neutral shelf: small flat parts every pilot can be offered, so a build never stalls on its
 # kit. A shelf part in a pilot's kit counts as kit for that pilot. One in the pilot's non-weapon
 # bucket is drawn NEUTRAL_LEAN times as often as the others (the shelf feeds the second half of
 # the pair; the weapon half comes from the kit's hitters); a weapon-and-movement pilot, whose
-# movement half has no shelf parts, leans to weapon. None is offered again once a stage's
-# offered count for it reaches NEUTRAL_REPEAT_CAP.
+# movement half has no shelf parts, leans to weapon. For a pilot whose pair has no weapon half, a
+# weapon shelf part weighs NEUTRAL_WEAPON_EASE: the stage-2 pattern and any off-kit hitter
+# already bring it weapon, so the shelf feeds its own pair instead. None is offered again
+# once a stage's offered count for it reaches NEUTRAL_REPEAT_CAP.
 const NEUTRAL_SHELF := ["hot_rivets", "loose_trigger", "long_barrel", "rivet_plating", "rivet_seam", "magnet_spool", "fast_hands"]
 const NEUTRAL_LEAN := 4.0
+const NEUTRAL_WEAPON_EASE := 0.1
 const NEUTRAL_REPEAT_CAP := 2
 
 # Hot-wired parts (BUILD-SYSTEMS.md, Two hot-wired parts). Not in CATALOGUE, so they never
@@ -695,7 +702,11 @@ static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: Str
 		var sum := 0.0
 		for key in groups[name]:
 			var b := bucket_of(key)
-			var lean := NEUTRAL_LEAN if name == "shelf" and kit.has(b) and (b != "weapon" or kit.has("movement")) else 1.0
+			var lean := 1.0
+			if name == "shelf" and kit.has(b) and (b != "weapon" or kit.has("movement")):
+				lean = NEUTRAL_LEAN
+			elif name == "shelf" and b == "weapon" and not kit.has("weapon"):
+				lean = NEUTRAL_WEAPON_EASE
 			raw[key] = lean / (1.0 + offered.get(key, 0))
 			sum += raw[key]
 		for key in raw:
@@ -793,8 +804,17 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 				if not side.is_empty():
 					harder = side
 					break
+		# A leaning pilot's harder part takes the last slot past the bait that is not a kit
+		# movement part, so the swap does not eat the kit's movement share; else the last slot.
+		var at := picks.size() - 1
+		if leans:
+			var first := 1 if picks[0] == bait else 0
+			for i in range(picks.size() - 1, first - 1, -1):
+				if not (in_kit(class_id, picks[i]) and bucket_of(picks[i]) == "movement"):
+					at = i
+					break
 		if not harder.is_empty():
-			picks[picks.size() - 1] = harder[rng.randi_range(0, harder.size() - 1)]
+			picks[at] = harder[rng.randi_range(0, harder.size() - 1)]
 	if leans:
 		_keep_a_neutral(rng, class_id, picks, pool, offered, 1 if not picks.is_empty() and picks[0] == bait else 0)
 	return picks

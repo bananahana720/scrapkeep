@@ -28,7 +28,9 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # printed as measured. Overlap there cannot pass by arithmetic: Kest, Tarn and Cannon have the
 # same 10-part common pool (no class part on the list), and the pattern guarantee adds Chain Arc,
 # so each one's top-10 holds at least 9 of the same 11 parts and any two overlap at least 0.90.
-# Whether SQ19 covers the alpha list is a coordinator ruling (2026-10-15).
+# Coordinator ruling W7 (2026-10-15): the alpha list holds class rows only for Sable and Rivet, a
+# content gap owned by SQ19b (alpha kit rows); its printed share, overlap and pairs are SQ19b's
+# baseline.
 # PAIRS (2026-10-15, SQ19, coordinator ruling W8): every two-slot gate draw holds a part that hits
 # harder (build_catalogue_test "gate pairs hit harder"), and no common part that hits harder sits
 # in the defence bucket, so in every pilot's offers weapon + skill + movement is at least 50%. A
