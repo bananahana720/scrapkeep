@@ -61,6 +61,8 @@ func _fresh(speed := 20.0) -> void:
 	_player.drive_basis = Basis.looking_at(Vector3.FORWARD)
 	_combat._line_load = {}
 	_combat._bite_pending = false
+	# 2026-10-15 SG1 merge: each check starts on an unmarked target, as every attempt does in play.
+	_combat._exposed = {}
 	_loaded.clear()
 	_fired.clear()
 	_expired.clear()
