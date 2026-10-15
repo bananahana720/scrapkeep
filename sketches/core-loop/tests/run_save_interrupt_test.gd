@@ -1,4 +1,8 @@
 extends SceneTree
+# smoke: bots timeout=1200s
+# 2026-10-15 RS-CAP: the whole-flow interrupt replays ran at 131 s at load 3 and about 160 s under
+# load, and hit the 180 s default limit in three smokes, so the test moved to the bot tier
+# (npm run sketch:bots; sketch:gate runs both). Every check is unchanged.
 
 const Intent := preload("res://src/movement/intent.gd")
 const RunStore := preload("res://src/core/run_store.gd")
