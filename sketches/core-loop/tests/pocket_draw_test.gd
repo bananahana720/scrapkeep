@@ -266,8 +266,25 @@ func _runtime(_specs: Array) -> void:
 				resumed.world.activities._watch_pickup(built, Vector3(expected.x, built.pedestal.y, expected.y))
 				t.check("drawn cache reward collectible at rendered pedestal turn %d" % turn, built.pickup_taken and resumed.run.parts.size() > before_parts)
 
+	_owned_rewards(resumed.world.activities, model)
 	_hazard_geometry(resumed.world.activities)
 	resumed.free()
+
+func _owned_rewards(acts, model) -> void:
+	for entry in Library.rows():
+		if entry.kind == "trade":
+			continue
+		var cache: Dictionary = model.from_doc({"2": {"sites": [{"interior": entry.id, "node": 0, "at": [640, 640], "turn": 0}]}})
+		var spec: Dictionary = cache["2"].sites[0]
+		var built = acts._build(entry.activity, spec.at, spec)
+		var owner: Dictionary = acts.RULES[entry.activity].pay
+		for key in owner:
+			if key != "rarities":
+				t.eq("restored built pay preserves owner " + key, built.rule.pay.get(key), owner[key])
+		if entry.activity == "enemy_camp":
+			t.eq("built drawn camp named Hot Rivets", built.rule.pay.get("named", ""), "hot_rivets")
+			t.eq("built drawn camp pays effective common Hot Rivets", acts.pay_table(built), {"named": "hot_rivets", "rarities": ["common"]})
+		built.free()
 
 func _turned(at: Vector2, turn: int) -> Vector2:
 	return [at, Vector2(-at.y, at.x), -at, Vector2(at.y, -at.x)][turn]
