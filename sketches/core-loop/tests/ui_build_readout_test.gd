@@ -19,6 +19,8 @@ const EXPECTED_LAYERS := {
 	"hot_rivets": "local", "loose_trigger": "local", "long_barrel": "local",
 	"long_spool": "global", "tread_plating": "global", "boost_coil": "global",
 	"dash_vane": "global", "rivet_plating": "global", "magnet_spool": "global",
+	# 2026-10-15 PC-POOL re-pin: live_line was a global reel_speed mod, now a harpoon_lock_deg mod,
+	# which is not a weapon mod, so it stays global (re-pinned again on coordinator ruling P4; round 1 had it local).
 	"grip_tread": "global", "live_line": "global", "vent_baffle": "global",
 	"spring_shims": "global", "drop_weight": "global", "slag_rounds": "local",
 	"double_feed": "local", "focus_lens": "local", "cross_split": "local",

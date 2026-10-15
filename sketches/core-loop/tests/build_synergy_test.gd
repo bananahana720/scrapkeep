@@ -139,6 +139,9 @@ func _numbers(part_id: String) -> Array:
 		out.append("charges:" + String(slot))
 	for pattern in d.patterns:
 		out.append("pattern:" + String(pattern))
+	# 2026-10-15 PC-POOL re-pin: drop_weight's one number is an effect (pin_bonus), counted as one.
+	if not d.effect.is_empty():
+		out.append("effect:" + String(d.effect.get("do", "")))
 	return out
 
 

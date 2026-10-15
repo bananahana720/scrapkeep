@@ -67,28 +67,36 @@ const CATALOGUE := {
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["arc"], "needs": "relay.convergence",
 		"stack": "capped", "cap": 3, "relay": {"radius_div": 2.0, "charge_per": 0.3}},
 	# Wave 11 GP2: one part for each verb the alpha pool barely touched (roll, harpoon, boost,
-	# jump, haul; special is the rare Spare Cell). Each changes how its verb feels through one
-	# tuning knob and adds no key. "touches" is the Bindings verb, "pitch" the shelf's three words.
+	# jump, haul; special is the rare Spare Cell). Each changes its verb through one number and
+	# adds no key. "touches" is the Bindings verb, "pitch" the shelf's three words.
+	# 2026-10-15 (wave 14 PC-POOL, Bible Mobility row, Andrew 2026-10-12): movement that changes
+	# how a pilot moves belongs to that pilot. Grip Tread, Vent Baffle and Spring Shims keep
+	# their numbers and become class parts of the pilot whose Shift they deepen (Rivet's sprint,
+	# Tally's surge, Sable's vault). Live Line and Drop Weight stay shared, because they are the
+	# second ingredients of two evolutions, and change what the verb does instead of how fast
+	# the ball moves: how wide the harpoon's lock cone opens (it targets more, the ball goes no
+# farther or faster), how hard a smash throws its pins (drop_weight's base row was slam_speed 1.15).
 	"grip_tread": {"name": "Grip Tread", "verb": "Bite the floor", "pitch": "Tread bites harder", "touches": "roll",
 		"text": "+15% drive acceleration", "icon": "mobility",
-		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["anchor"],
+		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "runner_gunner", "tags": ["anchor"],
 		"mods": {"drive_accel": 1.15}},
-	"live_line": {"name": "Live Line", "verb": "Winch in faster", "pitch": "Line hums back", "touches": "harpoon",
-		"text": "+25% winch top speed", "icon": "mobility",
+	"live_line": {"name": "Live Line", "verb": "Wider lock on the line", "pitch": "Harpoon grabs wider", "touches": "harpoon",
+		"text": "+25% harpoon lock cone", "icon": "mobility",
 		"rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
-		"mods": {"reel_speed": 1.25}},
+		"mods": {"harpoon_lock_deg": 1.25}},
 	"vent_baffle": {"name": "Vent Baffle", "verb": "Boost again sooner", "pitch": "Boost breathes quicker", "touches": "boost",
 		"text": "boost recharges 12% faster", "icon": "mobility",
-		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["speed"],
+		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["speed"],
 		"cooldown_scale": 0.88},
 	"spring_shims": {"name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
 		"text": "+10% jump speed", "icon": "mobility",
-		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["spiral"],
+		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "pylon_engineer", "tags": ["spiral"],
 		"mods": {"jump_speed": 1.1}},
-	"drop_weight": {"name": "Drop Weight", "verb": "Slam down faster", "pitch": "Slams land sooner", "touches": "haul",
-		"text": "+15% slam speed", "icon": "mobility",
+	"drop_weight": {"name": "Drop Weight", "verb": "Smash on ballast", "pitch": "Pins hit harder", "touches": "haul",
+		"text": "After a smash, pins hit 25% harder", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["mass"],
-		"mods": {"slam_speed": 1.15}},
+		"trigger": "on_smash", "stack": "linear", "cap": 3,
+		"effect": {"do": "pin_bonus", "bonus": 0.25, "window": 1.5}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
 	"slag_rounds": {"name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
