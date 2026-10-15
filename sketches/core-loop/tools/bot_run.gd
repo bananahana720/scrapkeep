@@ -32,6 +32,9 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 # on the headless display. Camera, HUD, hit-stop and collision work remain active.
 # --gate=1 enables all three switches, unless individually overridden with =0.
 # --chain-hand=0 turns off the explorer's two-hook hand (bot_driver's control switch).
+# --late-offer=take|skip (SG8) turns the tree's late_offer on, has the bot take a random branch at
+# each plain offer so depth 4 can open, and answers the take_or_skip offer with that policy;
+# bots.ndjson then carries a late_offer row. Without it the bot is unchanged.
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
 # same args (tuning.gd's FLAGS).
@@ -208,6 +211,14 @@ func _physics_process(delta: float) -> bool:
 		if _driver.trace:
 			_game.events.world_entered.connect(func(world: int): print("  trace world %d entered" % world))
 		_driver.chain_hand_enabled = String(_settings.get("chain-hand", "1")) != "0"
+		if _settings.has("late-offer"):
+			var late := String(_settings["late-offer"])
+			if late not in ["take", "skip"]:
+				printerr("bot_run: --late-offer must be take or skip")
+				quit(2)
+				return true
+			_driver.late_offer_policy = late
+			_driver.tree_policy = "random"
 		_game.presentation.audio.bake_now()
 		_game.run.run_seed_override = _seeds[_index]
 		_started_msec = Time.get_ticks_msec()

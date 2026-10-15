@@ -393,6 +393,8 @@ func _apply_tree_picks() -> void:
 	tree.world_one = ctx.tuning.world_one() and world == 1
 	var saved: Array[String] = ctx.run.tree_picks.duplicate()
 	var allowed: int = ctx.run.tree_allowed
+	# A saved late skip goes back first, so the replay and the owed pick see the forced sibling (SG8).
+	tree.restore_late_skip(ctx.run.tree_late_skipped)
 	tree.allowed = saved.size()
 	for id in saved:
 		if not tree.pick(id):
