@@ -39,13 +39,15 @@ const MAX_ARMS := 8
 @export var chain_jumps := 0
 @export var chain_range := 0.0
 @export var chain_falloff := 0.7
+# Zero means no lattice bonus; its final jump can differ from the weapon falloff.
+@export var lattice_chain_falloff := 0.0
 # Class-mod scales the specials read: the pylon's opening burst and the runner's overdrive.
 @export var burst_scale := 1.0
 @export var special_scale := 1.0
 
 const FIELDS := ["count", "spread_deg", "arms", "arm_offset_deg", "rotation_deg", "spin_deg",
 	"wave_amp", "wave_hz", "damage", "rate", "range_m", "speed", "bolt_radius", "knock",
-	"chain_jumps", "chain_range", "chain_falloff", "burst_scale", "special_scale"]
+	"chain_jumps", "chain_range", "chain_falloff", "lattice_chain_falloff", "burst_scale", "special_scale"]
 
 # The transformer catalogue. Each row is pure data: `add` then `mul` then `min` (a
 # floor), applied in that order, once per stack. Writer B's parts name these ids.

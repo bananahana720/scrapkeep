@@ -2,6 +2,8 @@ extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
+const Pattern := preload("res://src/combat/pattern.gd")
 
 # The derived build: every held part and live synergy folded into one sheet. It is a
 # pure function of the part list, so a retry that restores the list restores the build
@@ -10,9 +12,13 @@ const Synergies := preload("res://src/build/synergies.gd")
 # transformers and element triggers are read from this sheet through the build API.
 
 const BASE_MAX_HP := 100.0
-# The class weapon's base per-hit damage before parts, for the output estimate only;
-# combat owns the real number.
-const BASE_HIT := 14.0
+# 2026-10-14 SG14-CONTRACT C1: power is rapid-laser DPS / bare rapid-laser DPS.
+# Stationary unplated enemy at 5 m; three neighbours, each 3 m right of the last.
+# tools/pattern_dps.gd measures actual HP removal at 90 Hz under this contract.
+const POWER_CONTRACT := {
+	"weapon": Weapons.RAPID_LASER, "distance_m": 5.0, "neighbours": 3,
+	"neighbour_spacing_m": 3.0, "ticks_per_second": 90,
+}
 
 var parts: Array = []
 var mods := {}
@@ -120,14 +126,22 @@ func dial(key: String) -> float:
 	return dials.get(key, 1.0)
 
 
-# An estimate of weapon output against a bare weapon, for the growth curve: damage
-# times rate times a shot multiplier per pattern level. It is a model for tuning the
-# trajectory, not combat's truth; combat caps what it actually draws.
+func lattice_chain_jumps() -> int:
+	if not "storm_lattice" in transformers or pattern_level("cross_split") == 0:
+		return 0
+	return Synergies.ROWS["storm_lattice"]["patterns"]["chain_arc"]
+
+
+# All emitted bolts land in POWER_CONTRACT. Each visits at most three neighbours.
+# Rapid-laser bolts do not read punch, so it contributes no weapon output here.
 func power() -> float:
-	var shots := (1.0 + 1.0 * pattern_level("cross_split")) \
-		* (1.0 + 0.6 * pattern_level("spiral_wave")) \
-		* (1.0 + 0.5 * pattern_level("chain_arc"))
-	if "storm_lattice" in transformers:
-		shots *= 1.5
-	var hit := (BASE_HIT + punch) / BASE_HIT
-	return hit * mod("weapon_damage") * mod("weapon_rate") * shots
+	var ids: Array = parts.duplicate()
+	for _jump in lattice_chain_jumps():
+		ids.append("chain_arc")
+	var base: Resource = Weapons.base(POWER_CONTRACT["weapon"])
+	var pattern: Resource = base.transformed(ids)
+	var chain := 1.0
+	for jump in mini(pattern.chain_jumps, POWER_CONTRACT["neighbours"]):
+		chain += pow(pattern.chain_falloff, jump + 1)
+	var rate: float = minf(pattern.rate * mod("weapon_rate"), Pattern.MAX_RATE) / base.rate
+	return pattern.damage / base.damage * mod("weapon_damage") * rate * pattern.volley_size() * chain
