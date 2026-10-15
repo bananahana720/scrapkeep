@@ -239,7 +239,44 @@ func _runtime(_specs: Array) -> void:
 		var built = resumed.world.activities._build(cache.activity, at, spec)
 		t.eq("drawn cache keeps planned centre", Vector2(built.global_position.x, built.global_position.z), at)
 		t.check("drawn cache keeps planned orientation", is_equal_approx(built.rotation.y, -turn * PI * 0.5))
+	_hazard_geometry(resumed.world.activities)
 	resumed.free()
+
+func _turned(at: Vector2, turn: int) -> Vector2:
+	return [at, Vector2(-at.y, at.x), -at, Vector2(at.y, -at.x)][turn]
+
+func _hazard_geometry(acts) -> void:
+	var entry: Dictionary = Library.rows().filter(func(e): return e.id == "round_foundry")[0]
+	var origin := Vector2(640, 640)
+	for turn in 4:
+		var spec: Dictionary = Library.site_spec(entry).merged({"drawn": true, "turn": turn})
+		var site = acts._build(entry.activity, origin, spec)
+		for i in entry.hazards.size():
+			var box: Dictionary = entry.hazards[i]
+			var centre := origin + _turned(Vector2(box.at[0], box.at[1]), turn)
+			var extent := Vector2(box.size[0], box.size[2]) if turn % 2 == 0 else Vector2(box.size[2], box.size[0])
+			var hazard = site.hazards[i]
+			hazard.begin(2)
+			hazard.active = true
+			var visual: MeshInstance3D = hazard._visual
+			var bounds: AABB = visual.global_transform * visual.get_aabb()
+			t.check("hazard visual centre turn %d" % turn, Vector2(bounds.get_center().x, bounds.get_center().z).distance_to(centre) < 0.001)
+			t.check("hazard visual extents turn %d" % turn, Vector2(bounds.size.x, bounds.size.z).distance_to(extent) < 0.001)
+			t.check("hazard committed centre turn %d" % turn, Vector2(hazard.committed.site.at[0], hazard.committed.site.at[1]).distance_to(centre) < 0.001)
+			t.check("hazard committed extents turn %d" % turn, Vector2(hazard.committed.site.size[2], hazard.committed.site.size[0]).distance_to(extent) < 0.001)
+			var safe: Vector3 = hazard.committed.safe_at
+			t.check("hazard safe disc matches visual shader turn %d" % turn, visual.material_override.get_shader_parameter("safe_at").distance_to(Vector2(safe.x, safe.z)) < 0.001)
+			for x in [-1.1, -0.8, 0.0, 0.8, 1.1]:
+				for z in [-1.1, -0.8, 0.0, 0.8, 1.1]:
+					var delta := Vector2(x * extent.x * 0.5, z * extent.y * 0.5)
+					var at := centre + delta
+					var inside: bool = absf(x) < 1.0 and absf(z) < 1.0 and delta.length() > acts.POCKET_SAFE_M
+					t.eq("hazard damage agrees with visible bounds turn %d" % turn, hazard.damage_at(Vector3(at.x, bounds.position.y + 1, at.y)) > 0.0, inside)
+			for step in 12:
+				var at := origin + _turned(Vector2(0, step * 2), turn)
+				t.eq("transformed safe corridor damage-free turn %d" % turn, hazard.damage_at(Vector3(at.x, bounds.position.y + 1, at.y)), 0.0)
+			hazard.stop()
+		site.free()
 
 func _bodies(node: Node) -> int:
 	var count := int(node is PhysicsBody3D)
