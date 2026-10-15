@@ -1,4 +1,4 @@
-# smoke: timeout=360s (six pilots, thirteen input fixtures each)
+# smoke: timeout=360s (six pilots, fifteen input fixtures each)
 extends SceneTree
 
 const GameEvents := preload("res://src/core/game_events.gd")
@@ -11,8 +11,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # shared brake/slide on this ball. The slide rolls off a 2 m ledge; the kicker is
 # an unpowered ramp, and the ride uses the world's velocity handoff.
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
-const RUNS := ["roll", "slide", "jump", "air_jump", "window", "early", "late", "drop", "kicker", "ride", "pad", "grapple", "knock"]
-const EXPECTED_CHECKS := 79
+const RUNS := ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "window", "early", "late", "drop", "kicker", "ride", "pad", "grapple", "knock"]
+const EXPECTED_CHECKS := 91
 const RATIO_BAND := [1.2, 1.3]
 const KEEP := 0.9
 const WINDOW_U := 0.875
@@ -115,8 +115,15 @@ func _start(pilot: String, run: String) -> void:
 	_ledge.collision_layer = 1 if run == "slide" else 0
 	_kicker.collision_layer = 1 if run == "kicker" else 0
 	var start := START + Vector3.UP * (2.0 if run in ["slide", "drop", "air_jump"] else 0.0)
-	_player.reset_to(start, Vector3.ZERO if run == "roll" else Vector3(0.0, 0.0, -cruise * (1.2 if run == "kicker" else 1.0)))
-	_source.hold = {} if run == "roll" else {"move": Vector2(0.0, 1.0)}
+	var velocity := Vector3.ZERO
+	if run == "roll_reverse":
+		velocity = Vector3(0.0, 0.0, cruise * 0.19)
+	elif run == "roll_side":
+		velocity = Vector3(cruise * 0.19, 0.0, 0.0)
+	elif run != "roll":
+		velocity = Vector3(0.0, 0.0, -cruise * (1.2 if run == "kicker" else 1.0))
+	_player.reset_to(start, velocity)
+	_source.hold = {} if run.begins_with("roll") else {"move": Vector2(0.0, 1.0)}
 	_source.press = {}
 	var decay := _decay(pilot)
 	var press_at := -1.0
@@ -171,7 +178,7 @@ func _step(delta: float) -> void:
 		_run["landings_before"] = _landing_count
 		_run["action_grounded"] = grounded
 		match run:
-			"roll":
+			"roll", "roll_reverse", "roll_side":
 				_source.hold = {"move": Vector2(0.0, 1.0)}
 				_run["landed_t"] = 0.0
 				_run["action_started"] = true
@@ -216,7 +223,7 @@ func _step(delta: float) -> void:
 	_run["t"] += delta
 	var t: float = _run["t"]
 	_run["trace"].append([t, _planar()])
-	if run in ["roll", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock"]:
+	if run in ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock"]:
 		if t >= _run["decay"] + 0.6:
 			_run["done"] = true
 		return
@@ -234,7 +241,7 @@ func _finish() -> void:
 	var cruise: float = _tuning.f("cruise")
 	var run: String = _run["run"]
 	var trace: Array = _run["trace"]
-	if run in ["roll", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock"]:
+	if run in ["roll", "roll_reverse", "roll_side", "slide", "jump", "air_jump", "drop", "kicker", "ride", "pad", "grapple", "knock"]:
 		var peak := 0.0
 		for sample in trace:
 			if sample[0] <= 0.3:
