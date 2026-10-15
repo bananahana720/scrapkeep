@@ -169,7 +169,7 @@ func _unit_checks() -> void:
 	fast_run.grant_start_mass(500.0)
 	for i in 3600:
 		fast_run.wear_step(1.0 / 60.0, 60.0, 14.0, true)
-	_check("wear over a minute", absf(worn.metrics["wear_loss"] - 30.0) <= 1.0 and idle.mass == 500.0 and absf(fast_run.metrics["wear_loss"] - 30.0) <= 1.0 and worn.hp == 100.0,
+	_check("wear over a minute", absf(worn.metrics["wear_loss"] - 30.0) <= 1.0 and idle.mass == 500.0 and absf(fast_run.metrics["wear_loss"] - 30.0) <= 1.0 and worn.hp == worn.base_max_hp(),
 		"cruise lost %.0f, inactive lost %.0f, 4x cruise lost %.0f, hull %.0f" % [worn.metrics["wear_loss"], 500.0 - idle.mass, fast_run.metrics["wear_loss"], worn.hp])
 	# Class hysteresis: mass 225 is heft 1.5 (class II). Wear drains across it with no flicker.
 	var h := _run(true, true)
@@ -303,7 +303,7 @@ func _armor_game_checks() -> void:
 	var spill_from: float = run.mass
 	run.damage(10.0, "test")
 	_check("hit spills", build.scrap.recovery_count() >= 1 and build.scrap.recovery_count() <= 6 and run.mass < spill_from
-			and build.scrap.recovery_value() == int(round((spill_from - run.mass) * 0.75)) and run.hp == 100.0,
+			and build.scrap.recovery_value() == int(round((spill_from - run.mass) * 0.75)) and run.hp == run.base_max_hp(),
 		"mass %.0f -> %.0f, %d clusters worth %d, hull %.0f" % [spill_from, run.mass, build.scrap.recovery_count(), build.scrap.recovery_value(), run.hp])
 	# Mass lost to the hit above must not lower the hull ceiling at the next recompute.
 	_check("hud armour readout", _game.hud._armor.visible and _game.hud._armor_flash > 0.0 and _game.hud._armor.label == ""
