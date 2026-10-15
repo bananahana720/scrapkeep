@@ -11,6 +11,7 @@ const Parts := preload("res://src/build/parts.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
+const StatCache := preload("res://src/build/stat_cache.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Triggers := preload("res://src/build/triggers.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
@@ -103,6 +104,9 @@ var fabricators
 var field
 var accretion
 var sheet
+# SI5: the derived sheet between part-list changes; recompute() reads it, so pickup,
+# respec, run start and stage entry refold only the categories the changed parts touch.
+var stat_cache = StatCache.new()
 # v2 W4 loot: the trigger bus, what held items do, and the loot's own seeded stream
 # (reseeded each stage entry, so a retry replays the same procs and never draws from
 # the run's shared ctx.rng).
@@ -181,7 +185,7 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Build"
 	Synergies.table = ctx.stages
-	sheet = BuildSheet.from_parts([])
+	sheet = stat_cache.sync([])
 	scrap = ScrapField.new()
 	scrap.name = "Scrap"
 	ctx.root.add_child(scrap)
@@ -492,7 +496,7 @@ func _step_loot(delta: float) -> void:
 # the first time this run is announced as armed.
 func recompute() -> void:
 	_sync_scrap_flags()
-	sheet = BuildSheet.from_parts(ctx.run.parts)
+	sheet = stat_cache.sync(ctx.run.parts)
 	effects.refresh(ctx.run.parts)
 	var mass_hp: float = effects.mass_health(ctx.run.mass)
 	# Armour mode: mass lost to hits or wear never lowers the hull ceiling, so the
