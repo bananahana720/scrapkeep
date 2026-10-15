@@ -13,6 +13,7 @@ extends Node3D
 #   in HAZARD, the colour telegraphs own.
 
 const Density := preload("res://src/presentation/density.gd")
+const ShotBits := preload("res://src/build/shot_bits.gd")
 
 const MAX_LIVE := 64
 const PRIORITY := 0
@@ -81,8 +82,11 @@ func clear() -> void:
 
 
 # bolt needs: origin, dir, speed, max_dist, damage, kind, weapon_id, radius, knock,
-# chain_jumps, chain_range, chain_falloff, color, wave_amp, wave_hz, phase.
+# chain_jumps, chain_range, chain_falloff, color, wave_amp, wave_hz, phase; bits, the
+# shot's ShotBits set, is optional and defaults to the empty set.
 func fire(bolt: Dictionary) -> void:
+	if not bolt.has("bits"):
+		bolt["bits"] = 0
 	if _bolts.size() >= MAX_LIVE:
 		_bolts.pop_front()
 		retired += 1
@@ -96,6 +100,19 @@ func fire(bolt: Dictionary) -> void:
 	_bolts.append(bolt)
 	fired += 1
 	peak_live = maxi(peak_live, _bolts.size())
+
+
+# A child bolt (a split, a chain jump) from its parent: the parent's record with the
+# overrides applied and its flight restarted, and always the parent's ShotBits set, so a
+# child can neither gain nor lose a bit (SI4).
+static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
+	var out := parent.duplicate()
+	for key in ["travelled", "age", "shown", "right", "up"]:
+		out.erase(key)
+	for key in overrides:
+		out[key] = overrides[key]
+	out["bits"] = ShotBits.union(0, int(parent.get("bits", 0)))
+	return out
 
 
 func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells: Array = []) -> void:

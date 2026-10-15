@@ -1,5 +1,7 @@
 extends Resource
 
+const ShotBits := preload("res://src/build/shot_bits.gd")
+
 # One part, as data (TADR-008). A part never holds run state: the run's part list says
 # how many copies are held, and build_sheet.gd folds every held copy into one derived
 # sheet. A new value is a row edit in parts.gd; a new kind of effect is a code change.
@@ -83,6 +85,9 @@ const ICON_CATEGORIES := ["damage", "mobility", "defense", "utility", "charge", 
 @export var shop_only := false
 @export var layer := "global"
 @export var reads: Array = []
+# SI4 shot bits (shot_bits.gd): zero to two behaviour bits as a set mask. A row may
+# name them ("bits": ["pierce"]); otherwise they come from its tags.
+@export var bits := 0
 
 # SG3, comps/gunfire/scrolls-and-synergies.md:54. These name existing inputs;
 # they do not grant eligibility or change a part's effect.
@@ -147,6 +152,7 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.needs = row.get("needs", "")
 	def.shop_only = row.get("shop_only", false)
 	def.reads = row.get("reads", def._read_stats())
+	def.bits = ShotBits.part_mask(def.tags, row.get("bits"))
 	var player_global: bool = def.max_hp_bonus != 0.0 or not def.effect.is_empty() \
 		or not def.charges.is_empty() or def.trigger != "" or def.magnet != 1.0 \
 		or def.cooldown_scale != 1.0 or def.kill_scrap != 1.0 or row.has("relay")
