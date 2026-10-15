@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (four bot runs in child processes at once, 30000 ticks each; a loaded machine slows them: 128 s alone, over 180 s beside a gate on 2026-10-08)
+# smoke: bots timeout=1200s (four bot runs in child processes at once, 30000 ticks each; a loaded machine slows them: 128 s alone, over 180 s beside a gate on 2026-10-08, one child 366.9 s wall and the parent killed at the 360 s solo ceiling on 2026-10-15; moved to the bot tier with run_tier_test, RT-CAP)
 # F6 2026-10-04: no row picks a fight; posture is the only rule.
 extends SceneTree
 

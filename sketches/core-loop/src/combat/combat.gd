@@ -32,6 +32,8 @@ const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
+const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const Companion := preload("res://src/core/companion.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
@@ -466,7 +468,7 @@ func setup(ctx_ref) -> void:
 # kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
 # chaser, with a warning, so a typo in an event table never leaves a stage empty. The
 # Warden and the vault sit on the ground under `at`; the others are placed at `at`.
-func spawn_enemy(kind: String, at: Vector3) -> Node3D:
+func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	var enemy: Node3D
 	match kind:
 		"lobber":
@@ -503,6 +505,10 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 		enemy_spec["rest_scale"] = director.rest_scale()
 		if director.run_tier() >= 1:
 			enemy_spec["stage_threat"] = _threat()
+			if kind == "plated_brute" and director.run_tier() >= RunTier.HARD and not EliteAffixes.row(affix_id).is_empty():
+				enemy_spec.merge(RunTier.row(director.run_tier()).elite_stats, true)
+				enemy_spec["affix"] = affix_id
+				enemy_spec["affix_world"] = director.world
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
@@ -1274,7 +1280,7 @@ func _fire(weapon: String, source := "weapon") -> void:
 			"origin": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": reach,
 			"damage": damage, "kind": kind, "weapon_id": weapon, "radius": p.bolt_radius,
 			"knock": p.knock, "chain_jumps": p.chain_jumps, "chain_range": p.chain_range,
-			"chain_falloff": p.chain_falloff, "color": color,
+			"chain_falloff": p.chain_falloff, "lattice_chain_falloff": p.lattice_chain_falloff, "color": color,
 			"wave_amp": 0.0 if entry["centre"] else p.wave_amp, "wave_hz": p.wave_hz, "phase": entry["phase"],
 			"source": source,
 		})
@@ -1323,9 +1329,13 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 # chain_falloff of its damage per jump.
 func _chain(first: Node3D, from: Vector3, bolt: Dictionary) -> void:
 	var visited := [first]
-	var damage: float = bolt["damage"] * bolt["chain_falloff"]
+	var damage: float = bolt["damage"]
 	var at := from
-	for _jump in int(bolt["chain_jumps"]):
+	for jump in int(bolt["chain_jumps"]):
+		var falloff: float = bolt["chain_falloff"]
+		if jump == int(bolt["chain_jumps"]) - 1 and float(bolt.get("lattice_chain_falloff", 0.0)) > 0.0:
+			falloff = bolt["lattice_chain_falloff"]
+		damage *= falloff
 		var next := _nearest(at, bolt["chain_range"], visited)
 		if next == null:
 			return
@@ -1333,7 +1343,6 @@ func _chain(first: Node3D, from: Vector3, bolt: Dictionary) -> void:
 		var to: Vector3 = next.global_position
 		effects.arc(at, to, bolt["color"])
 		_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * 0.5, "", bolt.get("source", "weapon"))
-		damage *= bolt["chain_falloff"]
 		at = to
 
 
@@ -3302,7 +3311,8 @@ func _tick_sentry(delta: float) -> void:
 		"origin": from, "dir": dir, "speed": p.speed, "max_dist": Weapons.SENTRY_REACH,
 		"damage": p.damage * _damage_mod(Weapons.PYLON_TURRET), "kind": Weapons.strike_kind(Weapons.PYLON_TURRET),
 		"weapon_id": Weapons.PYLON_TURRET, "radius": p.bolt_radius, "knock": p.knock, "chain_jumps": p.chain_jumps,
-		"chain_range": p.chain_range, "chain_falloff": p.chain_falloff, "color": Weapons.color(Weapons.PYLON_TURRET),
+		"chain_range": p.chain_range, "chain_falloff": p.chain_falloff,
+		"lattice_chain_falloff": p.lattice_chain_falloff, "color": Weapons.color(Weapons.PYLON_TURRET),
 		"wave_amp": 0.0, "wave_hz": 0.0, "phase": 0.0,
 		"source": "persistent_actor",
 	})
@@ -3622,8 +3632,17 @@ func _clear_devices() -> void:
 
 func _rebuild_patterns() -> void:
 	var ids := active_transformers()
+	var lattice_falloff := 0.0
+	# Combat hears part_gained before Build. Derive from the current held list so a
+	# newly completed lattice works on its first volley and retry cannot retain it.
+	if ctx != null and ctx.run != null:
+		var sheet: RefCounted = preload("res://src/build/build_sheet.gd").from_parts(ctx.run.parts)
+		for _jump in sheet.lattice_chain_jumps():
+			ids.append("chain_arc")
+			lattice_falloff = Pattern.new().chain_falloff
 	for weapon in Weapons.ALL:
 		var p: Resource = Weapons.base(weapon).transformed(ids)
+		p.lattice_chain_falloff = lattice_falloff
 		# Tree pattern ops land after the parts; the clarity caps hold whatever stacked.
 		if ctx != null:
 			for row in ctx.player.tree.pattern_ops(weapon):

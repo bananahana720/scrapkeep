@@ -12,6 +12,7 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
+const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
@@ -127,6 +128,8 @@ var _pending_stage := false
 var _elite_arrivals := 0
 var _graph
 var _graph_map := ""
+var _draw_layout := {}
+var _draw_map := ""
 var _mark_pools := {}
 
 const POCKET_HEAL_SHARE := 0.15
@@ -178,6 +181,7 @@ class Site extends Node3D:
 	var wave := 0
 	var spawn_positions: Array = []
 	var phase_view: Node3D
+	var drawn := false
 	var interior := {}
 	var interior_collision_ready := false
 	var trade := {}
@@ -234,6 +238,14 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
 		if not trade_spec.is_empty():
 			sites.append(_build(trade_spec.id, trade_spec.at, trade_spec))
+		if _draw_map != _graph_map:
+			_draw_layout.clear()
+			_draw_map = _graph_map
+		if _draw_layout.is_empty() and ctx.run.stage > 1:
+			_draw_layout = PocketDraw.prepare(_graph, map)
+		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout):
+			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
+				sites.append(_build(drawn_spec.id, drawn_spec.at, drawn_spec))
 	_pending_stage = true
 
 
@@ -273,6 +285,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.id = id
 	s.rule = RULES[id]
 	s.interior = spec.get("interior", {})
+	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
 	if id == "enemy_camp" or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
@@ -297,6 +310,8 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.name = "Activity_" + id
 	add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
+	if s.drawn:
+		s.rotation.y = -spec.get("turn", 0) * PI * 0.5
 	s.view = ActivityView.new()
 	s.add_child(s.view)
 	var presentation: Node = ctx.root.get_node_or_null("Presentation")
@@ -389,10 +404,11 @@ func _build_altar(s: Site) -> void:
 
 
 func _build_cache(s: Site) -> void:
-	var face: Vector2 = s.rule["face"]
-	s.rotation.y = atan2(face.x, face.y)
-	s.global_position += s.global_basis.z * CACHE_LANE_OFFSET
-	s.global_position.y = ctx.terrain.height(s.global_position.x, s.global_position.z)
+	if not s.drawn:
+		var face: Vector2 = s.rule["face"]
+		s.rotation.y = atan2(face.x, face.y)
+		s.global_position += s.global_basis.z * CACHE_LANE_OFFSET
+		s.global_position.y = ctx.terrain.height(s.global_position.x, s.global_position.z)
 	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 	var tall := WALL_HEIGHT + WALL_SINK
 	var mid := tall * 0.5 - WALL_SINK
@@ -630,7 +646,13 @@ func _build_hazard(s: Site) -> void:
 			var hazard := PocketFog.new()
 			s.add_child(hazard)
 			var centre := s.global_position + Vector3(box.at[0], 0, box.at[1])
-			hazard.setup(centre, Vector3(box.size[0], box.size[1], box.size[2]), POCKET_SAFE_M, POCKET_DAMAGE_PER_S, ctx.rng.seed)
+			var size := Vector3(box.size[0], box.size[1], box.size[2])
+			if s.drawn:
+				centre = s.to_global(Vector3(box.at[0], 0, box.at[1]))
+				size = (s.global_basis * size).abs()
+				hazard.top_level = true
+				hazard.global_transform = Transform3D.IDENTITY
+			hazard.setup(centre, size, POCKET_SAFE_M, POCKET_DAMAGE_PER_S, ctx.rng.seed)
 			s.hazards.append(hazard)
 		if not s.hazards.is_empty():
 			s.fog = s.hazards[0]

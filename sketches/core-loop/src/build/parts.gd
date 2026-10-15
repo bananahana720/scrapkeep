@@ -101,9 +101,11 @@ const CATALOGUE := {
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["anchor"], "punch": 6.0,
 		"mods": {"weapon_range": 1.25}},
 	# Pattern transformers. The part id is the pattern id, and each copy adds a level.
+	# 2026-10-15 C7: round-1 arm at 0.6 gives worlds 1-3 margins 28.8%,
+	# last/first 2.25x, null pair -14.1%. Coordinator-authorized scalar.
 	"cross_split": {"touches": "fire", "name": "Cross Split", "verb": "Split shots into a cross", "text": "shots split four ways on impact",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["split"],
-		"patterns": {"cross_split": 1}},
+		"patterns": {"cross_split": 1}, "mods": {"weapon_damage": 0.6}},
 	"spiral_wave": {"touches": "fire", "name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["spiral"],
 		"patterns": {"spiral_wave": 1}},

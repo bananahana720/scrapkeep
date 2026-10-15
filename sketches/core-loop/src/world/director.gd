@@ -48,6 +48,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
@@ -160,6 +161,7 @@ var _rises: Array[int] = []
 var _spike_time := 0.0
 var _pack_seq := 0
 var _arrivals_made := 0
+var _elite_packs_made := 0
 var _next_pack := {}
 var _last_pack_id := ""
 var _last_was_elite := false
@@ -263,7 +265,10 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 		if a["left"] <= 0.0:
 			arrivals.erase(a)
 			if (a["at"] as Vector2).distance_to(ball) >= MIN_GAP and not _kind_stopped(a["kind"]):
-				due.append({"kind": a["kind"], "at": a["at"]})
+				var spawn := {"kind": a["kind"], "at": a["at"]}
+				if a.has("affix"):
+					spawn["affix"] = a["affix"]
+				due.append(spawn)
 	if paused:
 		return due
 	if mode == "credit":
@@ -327,7 +332,7 @@ func _credit_advance(delta: float, alive_count: int, ball: Vector2, velocity: Ve
 		if at == Vector2.INF:
 			return
 		var first := arrivals.size()
-		var queued := _place_pack(at, kinds, ball)
+		var queued := _place_pack(at, kinds, ball, is_elite)
 		if queued == 0:
 			return
 		var placed := []
@@ -383,8 +388,9 @@ func _draw_credit() -> Dictionary:
 
 
 # One pack's members side by side across the line from the ball, on one ring timer.
-func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> int:
+func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false) -> int:
 	var queued := 0
+	var affixed := false
 	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
 	var side := Vector2(-heading.y, heading.x)
 	var home_spots := _home_pack_spots(kinds, ball, side) if _park_map != null and not _forward_homes.is_empty() else {}
@@ -411,11 +417,17 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> int:
 				spot = home_spots.get(i, Vector2.INF)
 			if spot == Vector2.INF or not _park_safe(spot) or spot.distance_to(ball) < MIN_GAP or not _pack_gap(spot, assigned):
 				continue
-		arrivals.append({"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq})
+		var arrival := {"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq}
+		if is_elite and run_tier() >= RunTier.HARD and kinds[i] == "plated_brute":
+			arrival["affix"] = EliteAffixes.for_arrival(_elite_packs_made)
+			affixed = true
+		arrivals.append(arrival)
 		assigned.append(spot)
 		queued += 1
 	if _park_map == null or queued > 0:
 		_pack_seq += 1
+	if affixed:
+		_elite_packs_made += 1
 	return queued
 
 
@@ -429,7 +441,7 @@ func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vec
 	var at := spawn_spot(ball, velocity, forward)
 	if at == Vector2.INF:
 		return
-	var queued := _place_pack(at, kinds, ball)
+	var queued := _place_pack(at, kinds, ball, _next_pack == elite)
 	if _park_map != null and queued == 0:
 		return
 	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})
