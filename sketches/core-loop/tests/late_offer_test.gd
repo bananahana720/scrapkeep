@@ -6,24 +6,27 @@ const RunState := preload("res://src/core/run_state.gd")
 const TreeCard := preload("res://src/ui/tree_card.gd")
 const T := preload("res://tests/support/t.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
+const Flow := preload("res://src/core/flow.gd")
 
-# The late forced-or-skip offer (W13-INTEGRATION-3 SG8), wave 14 unit SG8, round 3, 2026-10-15.
-# With UpgradeTree.late_offer on, depth 4 opens with one take_or_skip item: an endpoint from the
-# neighbouring depth-3 branch, never one of the run's own depth-4 pair. Take it and it is the
-# fourth pick. Skip it (free) and the ordinary depth-4 pair opens, so the run still makes its
-# fourth pick (BIBLE.md:538, coordinator ruling L1); the skipped item never returns and nothing
-# rerolls it. The skip rides the entrance save beside tree_picks and tree_allowed (L2).
-# Two named policies, always-take and always-skip, 200 draws per pilot each (L3); a draw's seeded
-# stream only chooses the path to depth 3, never the late decision.
-# Evidence limit: the tree's rules, the card's prompt and the save round trip, headless. Win
-# rates per policy come from the bot_run --late-offer sweep, not from this file.
+# The late forced-or-skip offer (W13-INTEGRATION-3 SG8), wave 14 unit SG8, round 5, 2026-10-15.
+# With UpgradeTree.late_offer on, depth 4 opens with one take_or_skip item: one child of the run's
+# own depth-3 pick (coordinator ruling L4). Take it and it is the fourth pick. Skip it (free) and
+# its sibling, the other child of that same depth-3 pick, opens as a single forced pick with no
+# reroll, so the run still makes its fourth pick on one connected path (BIBLE.md "four connected
+# binary picks" and :538, rulings L1 and L4); the skipped item never returns. The skip rides the
+# entrance save beside tree_picks and tree_allowed (L2) and flow's _apply_tree_picks puts it back
+# before the replay (L5). Two named policies, always-take and always-skip, 200 draws per pilot
+# each (L3); a draw's seeded stream only chooses the path to depth 3, never the late decision.
+# Evidence limit: the tree's rules, the card's prompt, the bot driver's handler and the save
+# round trip through flow, headless. Win rates per policy are unmeasured (L6): no bot
+# configuration reaches depth 4 yet.
 
 const DRAWS := 200
 const SEED := 20261014
 const POLICIES := ["always-take", "always-skip"]
-# The API check, 11 shared checks (8 tree and card, 3 bot driver), 6 pilots x (4 path checks + 2 policies x 3 checks + 4 save
+# The API check, 11 shared checks (8 tree and card, 3 bot driver), 6 pilots x (5 path checks + 2 policies x 3 checks + 4 save
 # checks), and the count check itself.
-const EXPECTED_CHECKS := 1 + 11 + 6 * (4 + 2 * 3 + 4) + 1
+const EXPECTED_CHECKS := 1 + 11 + 6 * (5 + 2 * 3 + 4) + 1
 
 
 class Bus:
@@ -48,6 +51,37 @@ class StubGame:
 	extends RefCounted
 	var bot_driven := false
 	var player := StubPlayer.new()
+
+
+# Just enough of flow's ctx for _apply_tree_picks: the live player tree, the loaded run, the
+# stage table's world lookup and the full-tree profile.
+class StubStages:
+	extends RefCounted
+	func world_of(_stage: int) -> int:
+		return 3
+
+
+class StubTuning:
+	extends RefCounted
+	func world_one() -> bool:
+		return false
+
+
+class StubCtx:
+	extends RefCounted
+	var player := StubPlayer.new()
+	var run
+	var stages := StubStages.new()
+	var tuning := StubTuning.new()
+
+
+# The children of the run's own depth-3 pick, as node ids; [] before depth 3 is picked.
+static func _depth_three_children(tree) -> Array:
+	if tree.picks.size() < 3:
+		return []
+	var list: Array = UpgradeTree.nodes(tree.class_id)
+	return UpgradeTree.children_of(UpgradeTree.index_of(tree.class_id, tree.picks[2])) \
+		.filter(func(i): return i < list.size()).map(func(i): return list[i]["id"])
 
 
 # A bot driver on a tree walked to its open depth-4 offer, under one --late-offer policy.
@@ -105,9 +139,15 @@ func _draw(pilot: String, policy: String, path_seed: int) -> Dictionary:
 	var late: Array = _ids(tree.offered(pilot, 4))
 	var late_id: String = late[0] if late.size() == 1 else ""
 	var late_index := UpgradeTree.index_of(pilot, late_id)
-	# One item, an unheld depth-4 endpoint outside the run's own pair, the same on every read.
-	out["single"] = late.size() == 1 and late_id not in pair and late_id not in tree.picks \
+	var kids: Array = _depth_three_children(tree)
+	var sibling: String = ""
+	if kids.size() == 2 and late_id in kids:
+		sibling = String(kids[1 - kids.find(late_id)])
+	# One item, an unheld depth-4 endpoint, the same on every read.
+	out["single"] = late.size() == 1 and late_id not in tree.picks \
 		and late_index >= 0 and UpgradeTree.depth_of(late_index) == 4 and tree.offer_kind(4) == "take_or_skip"
+	# L4: the late item and its forced sibling are the two children of the run's own depth-3 pick.
+	out["connected"] = kids.size() == 2 and sibling != "" and sibling != late_id and kids == pair
 	out["steady"] = late == _ids(tree.offered(pilot, 4)) and late_id == String(tree.late_item().get("id", "")) \
 		and bus.offers.size() > 0 and bus.offers[-1] == [4, late]
 	var early = _fresh(pilot, true, Bus.new())
@@ -123,29 +163,30 @@ func _draw(pilot: String, policy: String, path_seed: int) -> Dictionary:
 	var allowed_before: int = tree.allowed
 	var skipped: bool = tree.skip()
 	out["took"] = false
-	# Free: no pick, no charge, the opened count unchanged; the only event is the pair's offer.
+	# Free: no pick, no charge, the opened count unchanged; the only event is the sibling's offer.
 	out["free"] = skipped and tree.late_skipped() and tree.picks.size() == 3 and tree.allowed == allowed_before \
-		and bus.picked == picked_before and bus.offers.size() == offers_before + 1 and bus.offers[-1] == [4, pair]
-	# The ordinary pair is open, the late item is gone for good, nothing rerolls.
+		and bus.picked == picked_before and bus.offers.size() == offers_before + 1 and bus.offers[-1] == [4, [sibling]]
+	# The forced sibling alone is open, the late item is gone for good, nothing rerolls.
 	tree.open_checkpoint()
 	var after: Array = _ids(tree.offered(pilot, 4))
-	out["final"] = after == pair and tree.offer_kind(4) == "pair" and tree.pending() and not tree.skip() \
-		and not tree.pick(late_id) and late_id not in after
-	# ACCEPTANCE 2: a run through a skip still records four picks.
-	out["four"] = tree.pick(String(pair[path_seed % 2])) and tree.picks.size() == 4 and late_id not in tree.picks \
-		and not tree.pending()
+	out["final"] = sibling != "" and after == [sibling] and tree.offer_kind(4) == "forced" and tree.pending() \
+		and not tree.skip() and not tree.pick(late_id) and late_id not in after
+	# ACCEPTANCE 2: a run through a skip still records four picks, the fourth the forced sibling.
+	out["four"] = tree.pick(sibling) and tree.picks.size() == 4 and tree.picks[3] == sibling \
+		and late_id not in tree.picks and not tree.pending()
 	return out
 
 
-# L2: save after a skip, load into a fresh run, and replay the loaded picks onto a fresh tree by
-# hand. This does not go through flow.gd: its _apply_tree_picks does not call restore_late_skip
-# yet (coordinator follow-up), so a live resume with late_offer on would offer the item again.
+# L2 and L5: save after a skip, load into a fresh run, and resume through flow's own
+# _apply_tree_picks onto a fresh live tree with late_offer on.
 func _save_resume(t, pilot: String, path_seed: int) -> void:
 	var tree = _fresh(pilot, true, Bus.new())
 	var rng := RandomNumberGenerator.new()
 	rng.seed = path_seed
 	_to_depth_four(tree, rng)
 	var late_id: String = String(tree.late_item().get("id", ""))
+	var kids: Array = _depth_three_children(tree)
+	var sibling: String = String(kids[1 - kids.find(late_id)]) if kids.size() == 2 and late_id in kids else ""
 	tree.skip()
 	var run := RunState.new(null)
 	run._loaded_class_id = pilot
@@ -157,38 +198,39 @@ func _save_resume(t, pilot: String, path_seed: int) -> void:
 		applied and RunState.validate_entrance_doc(doc) == "" and parsed.get("tree_late_skipped", false) == true \
 		and loaded.tree_late_skipped and loaded.tree_picks == tree.picks and loaded.tree_allowed == 4,
 		"applied %s, doc %s, loaded %s" % [applied, parsed.get("tree_late_skipped"), loaded.tree_late_skipped])
-	# Resume by hand: the skip goes onto the fresh tree before the replay, then the owed pick reopens.
 	var bus := Bus.new()
-	var resumed = _fresh(pilot, true, bus)
-	resumed.restore_late_skip(loaded.tree_late_skipped)
-	resumed.allowed = loaded.tree_picks.size()
-	for id in loaded.tree_picks:
-		resumed.pick(id)
-	if loaded.tree_allowed > resumed.picks.size():
-		resumed.allowed = loaded.tree_allowed - 1
-		resumed.open_checkpoint()
-	var pair: Array = _ids(_fresh_pair(pilot, loaded.tree_picks))
+	var resumed = _resume_through_flow(pilot, loaded, bus)
 	var after: Array = _ids(resumed.offered(pilot, 4))
-	t.check("%s save 2 resume offers the ordinary pair, not the skipped item" % pilot,
-		resumed.picks.size() == 3 and after == pair and pair.size() == 2 and late_id != "" and late_id not in after \
-		and not resumed.pick(late_id) and not bus.offers.is_empty() and bus.offers[-1] == [4, pair],
-		"offered %s, pair %s, late %s" % [after, pair, late_id])
+	t.check("%s save 2 resume through flow offers the forced sibling, not the skipped item" % pilot,
+		resumed.picks.size() == 3 and sibling != "" and after == [sibling] and late_id not in after \
+		and resumed.late_skipped() and not resumed.pick(late_id) and not resumed.skip() \
+		and not bus.offers.is_empty() and bus.offers[-1] == [4, [sibling]],
+		"offered %s, sibling %s, late %s, last offer %s" % [after, sibling, late_id, bus.offers.back() if not bus.offers.is_empty() else []])
 	t.check("%s save 3 the resumed run reaches its fourth pick" % pilot,
-		resumed.pick(String(pair[0])) and resumed.picks.size() == 4, "picks %s" % [resumed.picks])
-	# An old save without the field loads as no skip, so its late item is still offered.
+		resumed.pick(sibling) and resumed.picks.size() == 4 and resumed.picks[3] == sibling, "picks %s" % [resumed.picks])
+	# An old save without the field loads as no skip, so flow's resume offers its late item again.
 	var old: Dictionary = parsed.duplicate(true)
 	old.erase("tree_late_skipped")
 	var old_run := RunState.new(null)
+	var old_loaded: bool = old_run.from_entrance_doc(old)
+	var old_tree = _resume_through_flow(pilot, old_run, Bus.new())
 	t.check("%s save 4 a save without the field means no skip" % pilot,
-		old_run.from_entrance_doc(old) and not old_run.tree_late_skipped, "")
+		old_loaded and not old_run.tree_late_skipped and not old_tree.late_skipped() \
+		and _ids(old_tree.offered(pilot, 4)) == [late_id], "offered %s" % [_ids(old_tree.offered(pilot, 4))])
 
 
-func _fresh_pair(pilot: String, picks: Array) -> Array:
-	var plain = _fresh(pilot, false, null)
-	plain.allowed = picks.size() + 1
-	for id in picks:
-		plain.pick(id)
-	return plain.offered(pilot, 4)
+# Flow's resume step on a stub ctx: a fresh live tree with late_offer on, the loaded run, and
+# flow._apply_tree_picks as resume_run calls it.
+func _resume_through_flow(pilot: String, loaded, bus):
+	var live = _fresh(pilot, true, bus)
+	var ctx := StubCtx.new()
+	ctx.player.tree = live
+	ctx.run = loaded
+	var flow = Flow.new()
+	flow.ctx = ctx
+	flow._apply_tree_picks()
+	flow.free()
+	return live
 
 
 func _initialize() -> void:
@@ -248,7 +290,7 @@ func _initialize() -> void:
 	walk.seed = SEED
 	_to_depth_four(skipper, walk)
 	skipper.skip()
-	t.eq("8 after a skip depth 4 is a plain pair (the skip declines the item, not the pick)", skipper.offer_kind(4), "pair")
+	t.eq("8 after a skip depth 4 is one forced pick (the skip declines the item, not the pick)", skipper.offer_kind(4), "forced")
 	# bot_run --late-offer (L3): the driver answers only the take_or_skip offer by its policy.
 	var dt: Array = _driver_at_four("tarn", "take")
 	var take_late: String = String(dt[1].late_item().get("id", ""))
@@ -258,13 +300,15 @@ func _initialize() -> void:
 		and dt[0].late_offer_counts == {"offered": 1, "taken": 1, "declined": 0}, "picks %s, counts %s" % [dt[1].picks, dt[0].late_offer_counts])
 	var ds: Array = _driver_at_four("tarn", "skip")
 	var skip_late: String = String(ds[1].late_item().get("id", ""))
+	var skip_kids: Array = _depth_three_children(ds[1])
 	ds[0]._on_tree_offered("tarn", 4, [skip_late])
 	var declined: bool = ds[1].late_skipped() and ds[1].picks.size() == 3 and ds[0].tree_picks.is_empty()
-	var skip_pair: Array = _ids(ds[1].offered("tarn", 4))
-	ds[0]._on_tree_offered("tarn", 4, skip_pair)
-	t.check("10 driver --late-offer=skip declines, then picks from the ordinary pair",
-		skip_late != "" and declined and ds[1].picks.size() == 4 and ds[1].picks[3] in skip_pair and skip_late not in ds[1].picks \
-		and ds[0].late_offer_counts == {"offered": 1, "taken": 0, "declined": 1}, "picks %s, counts %s" % [ds[1].picks, ds[0].late_offer_counts])
+	var forced: Array = _ids(ds[1].offered("tarn", 4))
+	ds[0]._on_tree_offered("tarn", 4, forced)
+	t.check("10 driver --late-offer=skip declines, then takes the forced sibling",
+		skip_late != "" and declined and forced.size() == 1 and forced[0] in skip_kids and forced[0] != skip_late \
+		and ds[1].picks.size() == 4 and ds[1].picks[3] == forced[0] and skip_late not in ds[1].picks \
+		and ds[0].late_offer_counts == {"offered": 1, "taken": 0, "declined": 1}, "picks %s, forced %s, counts %s" % [ds[1].picks, forced, ds[0].late_offer_counts])
 	var dd: Array = _driver_at_four("tarn", "")
 	var choices: Array = _ids(dd[1].offered("tarn", 4))
 	dd[0]._on_tree_offered("tarn", 4, choices)
@@ -280,14 +324,17 @@ func _initialize() -> void:
 		for _draw in DRAWS:
 			seeds.append(rng.randi())
 		var by_policy := {}
+		var keys := ["single", "connected", "steady", "refused", "took", "four", "final", "free"]
 		for policy in POLICIES:
-			var tally := {"paths": 0, "single": 0, "steady": 0, "refused": 0, "took": 0, "four": 0, "final": 0, "free": 0}
+			var tally := {"paths": 0}
+			for key in keys:
+				tally[key] = 0
 			for s in seeds:
 				var d := _draw(pilot, policy, s)
 				if not d["ok_path"]:
 					continue
 				tally["paths"] += 1
-				for key in ["single", "steady", "refused", "took", "four", "final", "free"]:
+				for key in keys:
 					if d.get(key, false):
 						tally[key] += 1
 			by_policy[policy] = tally
@@ -295,21 +342,23 @@ func _initialize() -> void:
 		var skip: Dictionary = by_policy["always-skip"]
 		for policy in POLICIES:
 			var tl: Dictionary = by_policy[policy]
-			print("late_offer %s %s: took %d of %d draws (%.1f%%), fourth pick on %d of %d"
-				% [pilot, policy, tl["took"], DRAWS, 100.0 * tl["took"] / DRAWS, tl["four"], DRAWS])
+			print("late_offer %s %s: took %d of %d draws (%.1f%%), connected %d of %d, fourth pick on %d of %d"
+				% [pilot, policy, tl["took"], DRAWS, 100.0 * tl["took"] / DRAWS, tl["connected"], DRAWS, tl["four"], DRAWS])
 		t.check("%s 1 every draw reaches depth 4 under both policies" % pilot,
 			take["paths"] == DRAWS and skip["paths"] == DRAWS, "%d, %d" % [take["paths"], skip["paths"]])
-		t.check("%s 2 the late offer is one item outside the run's own pair" % pilot,
+		t.check("%s 2 the late offer is one unheld depth-4 item" % pilot,
 			take["single"] == DRAWS and skip["single"] == DRAWS, "%d, %d" % [take["single"], skip["single"]])
-		t.check("%s 3 the late item is not rerolled" % pilot,
+		t.check("%s 3 the late item and the forced sibling are both children of the run's depth-3 pick" % pilot,
+			take["connected"] == DRAWS and skip["connected"] == DRAWS, "%d, %d" % [take["connected"], skip["connected"]])
+		t.check("%s 4 the late item is not rerolled" % pilot,
 			take["steady"] == DRAWS and skip["steady"] == DRAWS, "%d, %d" % [take["steady"], skip["steady"]])
-		t.check("%s 4 refused at depth 1 to 3 and with the flag off" % pilot,
+		t.check("%s 5 refused at depth 1 to 3 and with the flag off" % pilot,
 			take["refused"] == DRAWS and skip["refused"] == DRAWS, "%d, %d" % [take["refused"], skip["refused"]])
 		t.eq("%s always-take: take rate" % pilot, "%d of %d" % [take["took"], DRAWS], "%d of %d" % [DRAWS, DRAWS])
 		t.check("%s always-take: the fourth pick is the late item" % pilot, take["four"] == DRAWS, "%d of %d" % [take["four"], DRAWS])
 		t.check("%s always-take: no skip after a take" % pilot, take["final"] == DRAWS, "%d of %d" % [take["final"], DRAWS])
 		t.eq("%s always-skip: take rate" % pilot, "%d of %d" % [skip["took"], DRAWS], "0 of %d" % DRAWS)
-		t.check("%s always-skip: skip is free and opens the ordinary pair; the item never returns" % pilot,
+		t.check("%s always-skip: skip is free and opens the forced sibling; the item never returns" % pilot,
 			skip["free"] == DRAWS and skip["final"] == DRAWS, "free %d, final %d of %d" % [skip["free"], skip["final"], DRAWS])
 		t.check("%s always-skip: the run still records four picks" % pilot, skip["four"] == DRAWS, "%d of %d" % [skip["four"], DRAWS])
 		_save_resume(t, pilot, seeds[0])
