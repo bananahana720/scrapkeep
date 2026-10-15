@@ -1,5 +1,7 @@
 extends "res://src/combat/counter.gd"
 
+const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
+
 # The plated brute (DESIGN-V2 section 10): a mini-Warden, bolted plate layers visibly
 # one layer more than any other crew. It keeps the Warden's plating grammar (a punch
 # below its plating chips 20%, the class-colour rim and open crack say "breaks now")
@@ -18,6 +20,11 @@ const HP := 110.0
 var plates := 1
 var plates_popped := 0
 var slams := 0
+var slam_shove := SLAM_SHOVE
+var affix := {}
+var affix_attacks := 0
+var _affix_attack := false
+var _next_affix := true
 # A hauler bounty's brute (world/activities.gd): it stands at bounty_home until the ball comes
 # within bounty_wake or it is hit, follows the ball while the ball is within bounty_leash of
 # home, and walks back at bounty_return_speed once the ball is further. Unset, it is an
@@ -54,6 +61,14 @@ func _configure(threat: float) -> void:
 	live_seconds = 0.15
 	rest_seconds = 2.8
 	interruptible = false
+	affix = EliteAffixes.row(String(spec.get("affix", "")))
+	if not affix.is_empty():
+		var step := clampi(int(spec.get("affix_world", 1)), 1, 3) - 1
+		for stat in affix.stats:
+			set(stat, affix.stats[stat][step])
+		set_meta("enemy_name", affix.name)
+		set_meta("elite_affix", String(spec.affix))
+		set_meta("elite_stat", {"id": affix.stat, "value": get(affix.stat), "world": step + 1})
 
 
 # C15 dressing (enemy_plated_brute.glb). The counter's capsule crew is replaced by the glb's
@@ -212,19 +227,41 @@ func _roam(to_ball: Vector3) -> Vector3:
 
 func _commit(to_ball: Vector3) -> Node3D:
 	_facing(to_ball)
+	_affix_attack = not affix.is_empty() and _next_affix
+	if not affix.is_empty():
+		_next_affix = not _next_affix
+		warn_seconds = float(affix.warn_seconds) if _affix_attack else 1.1
+	if _affix_attack:
+		match String(affix.behaviour):
+			"target_stamp":
+				return _commit_ring(affix.telegraph, _ball(), affix.radius, affix.reach)
+			"rail_strike":
+				return _commit_lane(affix.telegraph, global_position, to_ball, affix.length, affix.width, affix.reach)
+			"rear_blast":
+				return _commit_ring(affix.telegraph, global_position - global_basis.z * float(affix.offset), affix.radius, affix.reach)
 	return _commit_ring(Threat.Type.INSTANT, global_position, SLAM_RADIUS, 2.2)
 
 
+func _voice(tele: Node3D) -> void:
+	super(tele)
+	if _affix_attack:
+		tele.mechanic_tag = String(affix.mechanic_tag)
+		tele.warn_seconds = float(affix.warn_seconds)
+
+
 func _go_live() -> void:
-	slams += 1
+	if _affix_attack:
+		affix_attacks += 1
+	else:
+		slams += 1
 	var ring := telegraph()
 	var ball := _real_ball()
 	if ring == null or not ring.contains(ball):
 		return
-	var out := ball - global_position
+	var out: Vector3 = ball - (ring.center if _affix_attack else global_position)
 	out.y = 0.0
 	var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
-	hit_player.emit(SLAM_DAMAGE, dir * SLAM_SHOVE + Vector3.UP * 3.0)
+	hit_player.emit(float(affix.damage) if _affix_attack else SLAM_DAMAGE, dir * slam_shove + Vector3.UP * 3.0)
 
 
 func on_struck(_kind: String, _part: String, result: Dictionary) -> void:

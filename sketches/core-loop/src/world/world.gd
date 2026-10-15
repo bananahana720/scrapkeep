@@ -542,7 +542,7 @@ func _step_director(delta: float) -> void:
 		if ctx.calm or ctx.spawner == null:
 			continue
 		var at: Vector2 = spawn["at"]
-		ctx.spawner.spawn_enemy(Director.KIND_NAMES[spawn["kind"]], terrain.drop_point(at.x, at.y, 2.4))
+		ctx.spawner.spawn_enemy(Director.KIND_NAMES[spawn["kind"]], terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")))
 	var pressure: float = minf(1.0, director.pressure(alive) + events.pressure_bonus())
 	if absf(pressure - _pressure) >= PRESSURE_STEP:
 		_pressure = pressure
