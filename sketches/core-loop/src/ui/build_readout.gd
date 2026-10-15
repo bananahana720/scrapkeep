@@ -6,6 +6,7 @@ const BuildSheet := preload("res://src/build/build_sheet.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const Attachments := preload("res://src/build/attachments.gd")
 
 const STAT_WORDS := {
 	"ability_charges": "Ability charges", "air_control": "Air steering", "air_jumps": "Air jumps",
@@ -111,11 +112,14 @@ func visible_text() -> String:
 	return "\n".join(_rows.get_children().map(func(row): return row.text))
 
 
-func show_build(held: Array) -> void:
+func show_build(held: Array, loadout := {}) -> void:
 	_data = describe(held)
 	for child in _rows.get_children():
 		_rows.remove_child(child)
 		child.queue_free()
+	if not loadout.is_empty():
+		_data["attachments"] = describe_attachments(loadout)
+		_line(_data["attachments"])
 	for key in _data["pools"]:
 		var words: String = _data["pools"][key]["text"]
 		if words != "":
@@ -135,6 +139,41 @@ func _line(words: String) -> void:
 	label.add_theme_font_size_override("font_size", 16)
 	label.add_theme_color_override("font_color", Palette.SAND)
 	_rows.add_child(label)
+
+
+# SQ11: the weapon-local layer in words. The tier, how many attachments it holds out of its
+# range, each fitted attachment, and at the top tier the second mode. Tiers are words only.
+static func describe_attachments(loadout: Dictionary) -> String:
+	var tier := int(loadout.get("tier", 1))
+	var limits: Array = Attachments.TIER_COUNT[tier]
+	var held: Array = loadout.get("attachments", [])
+	var words := "%s weapon-local · %s · %d attachments (%s)" % [_weapon_words(String(loadout.get("weapon", ""))),
+		Attachments.TIER_WORDS[tier], held.size(), _range_words(limits)]
+	for id in held:
+		var row: Dictionary = Attachments.ROWS.get(id, {})
+		words += "\n%s: %s" % [row.get("name", id), row.get("text", "")]
+	var mode: Dictionary = Attachments.second_mode(loadout)
+	if not mode.is_empty():
+		words += "\nSecond mode: %s, %s" % [mode["name"], mode["text"]]
+	return words
+
+
+# What a tier gives a weapon, shown before anything is equipped.
+static func preview_tier(weapon_id: String, tier: int) -> String:
+	var limits: Array = Attachments.TIER_COUNT[clampi(tier, 1, Attachments.TOP_TIER)]
+	var words := "%s %s holds %s attachments" % [_weapon_words(weapon_id), Attachments.TIER_WORDS[clampi(tier, 1, Attachments.TOP_TIER)], _range_words(limits)]
+	var mode: Dictionary = Attachments.second_mode(Attachments.empty(weapon_id, tier))
+	if not mode.is_empty():
+		words += "\nSecond mode: %s, %s" % [mode["name"], mode["text"]]
+	return words
+
+
+static func _range_words(limits: Array) -> String:
+	return str(limits[0]) if int(limits[0]) == int(limits[1]) else "%d to %d" % [int(limits[0]), int(limits[1])]
+
+
+static func _weapon_words(weapon_id: String) -> String:
+	return weapon_id.capitalize()
 
 
 # SG3, comps/gunfire/elements-and-fusion.md:69. Totals come from the same
