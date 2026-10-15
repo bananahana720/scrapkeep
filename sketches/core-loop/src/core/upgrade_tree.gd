@@ -49,12 +49,13 @@ const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.
 const TAGS := ["air", "burst", "close", "ranged", "mobility", "mounted", "sustain", "cc_immune", "traps", "stealth"]
 # The offer kinds (W13-INTEGRATION-3 SG8). A pair is the two-card pick. A take_or_skip offer opens
-# depth 4 with one item from the neighbouring depth-3 branch: take it as the fourth pick, or skip it
-# for free and the ordinary depth-4 pair opens, so the run still makes its fourth pick (BIBLE.md
-# growth paragraph). No reroll; the skipped item never returns; only a checkpoint opens either
-# offer, never elapsed time (TADR-010).
+# depth 4 with one child of the run's own depth-3 pick: take it as the fourth pick, or skip it for
+# free and its sibling (the other child) opens as a forced pick, so the run's four picks stay one
+# connected path and it still makes its fourth pick (BIBLE.md growth paragraph). No reroll; the
+# skipped item never returns; only a checkpoint opens any offer, never elapsed time (TADR-010).
 const OFFER_PAIR := "pair"
 const OFFER_TAKE_OR_SKIP := "take_or_skip"
+const OFFER_FORCED := "forced"
 const NAME_WORDS := 3
 const EFFECT_WORDS := 8
 
@@ -406,10 +407,15 @@ func pending() -> bool:
 	return picks.size() < allowed and picks.size() < max_depth and not nodes(class_id, world_one).is_empty()
 
 
-# How the offer at this depth is made: take_or_skip only at depth 4, only with late_offer on, never
-# in the world-one profile, and not after the run skipped its late item; otherwise a plain pair.
+# How the offer at this depth is made: take_or_skip only at depth 4, only with late_offer on and
+# never in the world-one profile; after the run skipped its late item, depth 4 is one forced pick
+# (the sibling), also when the saved skip loads under a run with late_offer off. Otherwise a pair.
 func offer_kind(depth: int) -> String:
-	if late_offer and not world_one and depth == DEPTHS and not _late_skipped:
+	if world_one or depth != DEPTHS:
+		return OFFER_PAIR
+	if _late_skipped:
+		return OFFER_FORCED
+	if late_offer:
 		return OFFER_TAKE_OR_SKIP
 	return OFFER_PAIR
 
@@ -423,8 +429,9 @@ func late_item() -> Dictionary:
 	return list[i] if i >= 0 else {}
 
 
-# The player declines the open take_or_skip item. Free: no pick, no charge. The ordinary depth-4
-# pair opens at once (its tree_offered goes out), and the item never comes back. Refused on a pair.
+# The player declines the open take_or_skip item. Free: no pick, no charge. Its sibling opens at
+# once as the forced fourth pick (its tree_offered goes out), and the item never comes back.
+# Refused on a pair or a forced pick.
 func skip() -> bool:
 	if not pending() or picks.size() + 1 != DEPTHS or late_item().is_empty():
 		return false
@@ -443,17 +450,22 @@ func late_skipped() -> bool:
 
 
 # The two choices at this depth for the path this run has taken: the children of the
-# pick one level up. A depth already picked answers with the pair it offered.
+# pick one level up. A depth already picked answers with the pair it offered. At depth 4 a
+# take_or_skip offer is the late item alone and a forced offer its sibling alone.
 func offered(for_class: String, depth: int) -> Array:
 	if for_class != class_id or depth < 1 or depth > max_depth or depth > picks.size() + 1:
 		return []
 	var list := nodes(for_class, world_one)
 	if list.is_empty():
 		return []
-	if depth == DEPTHS and offer_kind(depth) == OFFER_TAKE_OR_SKIP:
-		var late := _late_index(for_class, list)
-		return [list[late]] if late >= 0 else []
 	var pair := _pair_indices(for_class, list, depth)
+	if pair.is_empty():
+		return []
+	match offer_kind(depth):
+		OFFER_TAKE_OR_SKIP:
+			return [list[pair[_LATE]]]
+		OFFER_FORCED:
+			return [list[pair[1 - _LATE]]]
 	return pair.map(func(i): return list[i])
 
 
@@ -473,21 +485,14 @@ func _pair_indices(for_class: String, list: Array, depth: int) -> Array:
 	return pair
 
 
-# The take_or_skip item: the first endpoint under the depth-3 sibling of the run's own branch,
-# else the first depth-4 endpoint outside the ordinary pair. Held picks before depth 4 never count,
-# so a taken item answers the same id on a later read.
+# Which child of the run's own depth-3 pick is the take_or_skip item (L4); the other is the
+# forced sibling. Both come from the run's own depth-4 pair, so the four picks stay one path.
+const _LATE := 0
+
+
 func _late_index(for_class: String, list: Array) -> int:
 	var pair := _pair_indices(for_class, list, DEPTHS)
-	if pair.is_empty():
-		return -1
-	var held := picks.slice(0, DEPTHS - 1)
-	var sibling: int = ((int(pair[0]) - 2) >> 1) ^ 1
-	var order: Array = children_of(sibling)
-	order.append_array(range(list.size()))
-	for i in order:
-		if i >= 0 and i < list.size() and depth_of(i) == DEPTHS and i not in pair and list[i]["id"] not in held:
-			return i
-	return -1
+	return int(pair[_LATE]) if not pair.is_empty() else -1
 
 
 func _pair_fits(pair: Array, list: Array, depth: int) -> bool:

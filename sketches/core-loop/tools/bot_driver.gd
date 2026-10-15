@@ -502,7 +502,7 @@ func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
 	var tree = game.player.tree
 	if late_offer_policy != "" and tree.offer_kind(depth) == tree.OFFER_TAKE_OR_SKIP:
 		late_offer_counts["offered"] += 1
-		# A skip opens the ordinary pair, whose tree_offered lands back here as a plain pick.
+		# A skip opens the forced sibling, whose tree_offered lands back here as a one-card pick.
 		if late_offer_policy == "skip":
 			if tree.skip():
 				late_offer_counts["declined"] += 1
