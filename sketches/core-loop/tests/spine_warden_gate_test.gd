@@ -13,7 +13,7 @@ class BareSpawner:
 
 	var ctx
 
-	func spawn_enemy(kind: String, at: Vector3) -> Node3D:
+	func spawn_enemy(kind: String, at: Vector3, _affix_id := "") -> Node3D:
 		var enemy := Node3D.new()
 		enemy.set_meta("kind", kind)
 		ctx.root.add_child(enemy)

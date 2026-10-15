@@ -45,7 +45,7 @@ func setup(ctx_ref) -> void:
 	name = "SpawnerDouble"
 
 
-func spawn_enemy(kind: String, at: Vector3) -> Node3D:
+func spawn_enemy(kind: String, at: Vector3, _affix_id := "") -> Node3D:
 	var enemy := DoubleEnemy.new()
 	enemy.kind = kind
 	var def: Dictionary = ctx.flow.stage_def()

@@ -32,7 +32,7 @@ class StubSpawner extends RefCounted:
 	var calls: Array = []
 	var fleet := Combat.Fleet.new()
 
-	func spawn_enemy(kind: String, at: Vector3) -> Node3D:
+	func spawn_enemy(kind: String, at: Vector3, _affix_id := "") -> Node3D:
 		if kind not in Combat.KINDS and not fleet.makes(kind):
 			return null
 		var node := Node3D.new()

@@ -234,11 +234,11 @@ func _commit(to_ball: Vector3) -> Node3D:
 	if _affix_attack:
 		match String(affix.behaviour):
 			"target_stamp":
-				return _commit_ring(affix.telegraph, _ball(), affix.radius, affix.reach)
+				return _commit_ring(Threat.Type.INSTANT, _ball(), affix.radius, affix.reach)
 			"rail_strike":
-				return _commit_lane(affix.telegraph, global_position, to_ball, affix.length, affix.width, affix.reach)
+				return _commit_lane(Threat.Type.LANE, global_position, to_ball, affix.length, affix.width, affix.reach)
 			"rear_blast":
-				return _commit_ring(affix.telegraph, global_position - global_basis.z * float(affix.offset), affix.radius, affix.reach)
+				return _commit_ring(Threat.Type.INSTANT, global_position - global_basis.z * float(affix.offset), affix.radius, affix.reach)
 	return _commit_ring(Threat.Type.INSTANT, global_position, SLAM_RADIUS, 2.2)
 
 

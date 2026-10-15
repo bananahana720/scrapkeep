@@ -29,7 +29,7 @@ const AUDIT := {
 	# v2 W7 counter units and ancients: one telegraph each, in its threat type.
 	"res://src/combat/mag_trapper.gd": ["INSTANT"],
 	"res://src/combat/netcaster.gd": ["INSTANT"],
-	"res://src/combat/plated_brute.gd": ["INSTANT"],
+	"res://src/combat/plated_brute.gd": ["INSTANT", "LANE", "INSTANT", "INSTANT"],  # 2026-10-15 (w13 close): SG6's stamp, rail and rear-blast sites, then the slam.
 	"res://src/combat/gyro_jammer.gd": ["INSTANT"],
 	"res://src/combat/swatter.gd": ["INSTANT"],
 	"res://src/combat/ramp_flipper.gd": ["INSTANT"],

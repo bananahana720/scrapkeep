@@ -53,7 +53,7 @@ func setup(ctx_ref) -> void:
 	name = "BossSpawnerDouble"
 
 
-func spawn_enemy(kind: String, at: Vector3) -> Node3D:
+func spawn_enemy(kind: String, at: Vector3, _affix_id := "") -> Node3D:
 	if kind != "lobber":
 		return null
 	var marker := Marker.new()
