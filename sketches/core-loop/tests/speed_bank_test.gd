@@ -6,21 +6,12 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
-# SQ9, the speed bank (comps/roboquest/movement-and-feel.md, "A speed bank with a spend
-# window"). Each pilot's real rigid ball rolls at cruise off a 2 m drop onto open floor with
-# the stick held forward. The landing banks speed: the roll starts above cruise and decays to
-# it. Four runs per pilot:
-#   trace   log planar speed per tick from the landing to past the decay
-#   window  Space inside the last 25% of the decay (u = 0.875): keeps at least 90% of the burst
-#   early   Space at u = 0.3, outside the window: does not keep 90%
-#   late    Space 0.3 s after the decay ended: does not keep 90%
-# Checks per pilot: the burst-to-cruise ratio inside 1.2 to 1.3, then the three jumps. One
-# more check reads the six traces on each pilot's own decay clock: every pair must differ
-# in shape by at least SHAPE_GAP, so no trace is another's rescaled. 6 x 4 + 1 = 25 checks.
-
+# SQ9: real rigid-ball inputs, one fixed start per fixture and pilot. Ctrl is the
+# shared brake/slide on this ball. The slide rolls off a 2 m ledge; the kicker is
+# an unpowered ramp, and the ride uses the world's velocity handoff.
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
-const RUNS := ["trace", "window", "early", "late"]
-const EXPECTED_CHECKS := 25
+const RUNS := ["roll", "slide", "jump", "window", "early", "late", "drop", "kicker", "ride"]
+const EXPECTED_CHECKS := 55
 const RATIO_BAND := [1.2, 1.3]
 const KEEP := 0.9
 const WINDOW_U := 0.875
@@ -30,11 +21,14 @@ const LATE_S := 0.3
 const READ_TICKS := 15
 const SHAPE_SAMPLES := [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 const SHAPE_GAP := 0.08
-const START := Vector3(0.0, 3.0, 150.0)
+const START := Vector3(0.0, 1.03, 158.0)
+const RideRail := preload("res://src/world/ride_rail.gd")
 # Used only when the tuning has no bank row (the red run before SQ9): a 1 s decay.
 const FALLBACK_DECAY := 1.0
 
 var _world: Node3D
+var _ledge: StaticBody3D
+var _kicker: StaticBody3D
 var _events
 var _player
 var _tuning
@@ -58,6 +52,25 @@ func _initialize() -> void:
 	shape.shape = box
 	floor_body.add_child(shape)
 	_world.add_child(floor_body)
+	_ledge = StaticBody3D.new()
+	var ledge_shape := CollisionShape3D.new()
+	var ledge_box := BoxShape3D.new()
+	ledge_box.size = Vector3(16.0, 2.0, 28.0)
+	ledge_shape.shape = ledge_box
+	_ledge.position = Vector3(0.0, 1.0, 154.0)
+	_ledge.add_child(ledge_shape)
+	_world.add_child(_ledge)
+	_kicker = StaticBody3D.new()
+	var ramp_shape := CollisionShape3D.new()
+	var ramp := ConvexPolygonShape3D.new()
+	ramp.points = PackedVector3Array([
+		Vector3(-8, -1, 146), Vector3(8, -1, 146),
+		Vector3(-8, -1, 134), Vector3(8, -1, 134),
+		Vector3(-8, 0, 146), Vector3(8, 0, 146),
+		Vector3(-8, 4, 134), Vector3(8, 4, 134)])
+	ramp_shape.shape = ramp
+	_kicker.add_child(ramp_shape)
+	_world.add_child(_kicker)
 	_events = GameEvents.new()
 	_world.add_child(_events)
 	_player = PlayerBall.new()
@@ -93,8 +106,11 @@ func _planar() -> float:
 func _start(pilot: String, run: String) -> void:
 	_player.fit_class(ClassDef.by_id(pilot))
 	var cruise: float = _tuning.f("cruise")
-	_player.reset_to(START, Vector3(0.0, 0.0, -cruise))
-	_source.hold = {"move": Vector2(0.0, 1.0)}
+	_ledge.collision_layer = 1 if run == "slide" else 0
+	_kicker.collision_layer = 1 if run == "kicker" else 0
+	var start := START + Vector3.UP * (2.0 if run in ["slide", "drop"] else 0.0)
+	_player.reset_to(start, Vector3.ZERO if run == "roll" else Vector3(0.0, 0.0, -cruise))
+	_source.hold = {} if run == "roll" else {"move": Vector2(0.0, 1.0)}
 	_source.press = {}
 	var decay := _decay(pilot)
 	var press_at := -1.0
@@ -106,7 +122,9 @@ func _start(pilot: String, run: String) -> void:
 		"late":
 			press_at = decay + LATE_S
 	_run = {"pilot": pilot, "run": run, "decay": decay, "press_at": press_at, "airborne": false,
-		"landed_t": -1.0, "t": 0.0, "trace": [], "pressed_tick": -1, "ticks": 0, "done": false}
+		"landed_t": -1.0, "t": 0.0, "trace": [], "pressed_tick": -1, "ticks": 0, "done": false,
+		"prepared": run == "drop", "ground_ticks": 0, "slide_ticks": 0, "burst_seen": false,
+		"action_started": run == "drop" or run == "kicker", "action_grounded": false}
 
 
 func _physics_process(delta: float) -> bool:
@@ -118,7 +136,7 @@ func _physics_process(delta: float) -> bool:
 			var counted := _checks == EXPECTED_CHECKS
 			if not counted:
 				print("[count] %d checks ran, expected %d -> FAIL" % [_checks, EXPECTED_CHECKS])
-			print("speed_bank_test: %s" % ("PASS" if _failures == 0 and counted else "FAIL (%d)" % (_failures + (0 if counted else 1))))
+			print("speed_bank_test: %s, %d checks" % [("PASS" if _failures == 0 and counted else "FAIL (%d)" % (_failures + (0 if counted else 1))), _checks])
 			quit(0 if _failures == 0 and counted else 1)
 			return true
 		var next: Array = _queue.pop_front()
@@ -134,6 +152,42 @@ func _step(delta: float) -> void:
 		_run["done"] = true
 		return
 	var grounded: bool = _player.state.grounded
+	var run: String = _run["run"]
+	if not _run["prepared"]:
+		if grounded:
+			_run["ground_ticks"] += 1
+		if _run["ground_ticks"] < 12:
+			return
+		_run["prepared"] = true
+		_run["action_grounded"] = grounded
+		match run:
+			"roll":
+				_source.hold = {"move": Vector2(0.0, 1.0)}
+				_run["landed_t"] = 0.0
+				_run["action_started"] = true
+			"slide":
+				_source.hold["brake_held"] = true
+				_run["action_started"] = true
+			"jump", "window", "early", "late", "ride":
+				_source.press = {"jump_pressed": true}
+				_run["action_started"] = true
+		return
+	if run == "slide" and _source.hold.get("brake_held", false):
+		_run["slide_ticks"] += 1
+		if _run["slide_ticks"] >= 3:
+			_source.hold.erase("brake_held")
+	if run == "ride" and not _run.has("ride_exit"):
+		# Override a chosen jump with a ride, so stale jump eligibility must be cancelled.
+		var at: Vector3 = _player.ball_position()
+		var ride = RideRail.arc("cannon", at, at + Vector3(0, 0, -20), _tuning.f("cruise"),
+			_tuning.f("cruise"), 0.5, _tuning.f("gravity"))
+		ride.time = ride.flight
+		_player.set_velocity_now(ride.release_velocity(), "ride_exit")
+		_run["ride_exit"] = true
+		_run["airborne"] = false
+		return
+	if not _player.speed_bank.is_empty():
+		_run["burst_seen"] = true
 	if _run["landed_t"] < 0.0:
 		if not grounded:
 			_run["airborne"] = true
@@ -143,7 +197,7 @@ func _step(delta: float) -> void:
 	_run["t"] += delta
 	var t: float = _run["t"]
 	_run["trace"].append([t, _planar()])
-	if _run["run"] == "trace":
+	if run in ["roll", "slide", "jump", "drop", "kicker", "ride"]:
 		if t >= _run["decay"] + 0.6:
 			_run["done"] = true
 		return
@@ -161,30 +215,37 @@ func _finish() -> void:
 	var cruise: float = _tuning.f("cruise")
 	var run: String = _run["run"]
 	var trace: Array = _run["trace"]
-	if run == "trace":
+	if run in ["roll", "slide", "jump", "drop", "kicker", "ride"]:
 		var peak := 0.0
 		for sample in trace:
 			if sample[0] <= 0.3:
 				peak = maxf(peak, sample[1])
-		_traces[pilot] = trace
-		_peaks[pilot] = peak
+		if run == "roll":
+			_traces[pilot] = trace
+			_peaks[pilot] = peak
 		var ratio := peak / cruise
-		_check("%s ratio" % pilot, ratio >= RATIO_BAND[0] and ratio <= RATIO_BAND[1],
-			"landing at %.1f m/s cruise banks a burst of %.2f m/s, %.3f x cruise (band %.1f to %.1f); decay %.2f s"
-				% [cruise, peak, ratio, RATIO_BAND[0], RATIO_BAND[1], _run["decay"]])
+		var completed: bool = _run["landed_t"] >= 0.0 and _run["action_started"]
+		if run in ["drop", "kicker", "ride"]:
+			_check("%s %s no burst" % [pilot, run], completed and not _run["burst_seen"] and ratio < RATIO_BAND[0],
+				"landed=%s, bank_seen=%s, peak %.2f m/s = %.3f x cruise (want <1.2 and no bank)"
+					% [completed, _run["burst_seen"], peak, ratio])
+		else:
+			_check("%s %s ratio" % [pilot, run], completed and _run["action_grounded"] and ratio >= RATIO_BAND[0] and ratio <= RATIO_BAND[1],
+				"scripted %s from ground=%s, burst %.2f m/s = %.3f x %.1f cruise (band %.1f to %.1f); decay %.2f s"
+					% [run, _run["action_grounded"], peak, ratio, cruise, RATIO_BAND[0], RATIO_BAND[1], _run["decay"]])
 		_run = {}
 		return
 	# Never below the band's floor, so a ball with no bank cannot keep "90%" of cruise.
 	var burst: float = maxf(_peaks.get(pilot, 0.0), cruise * RATIO_BAND[0])
 	var kept: float = _run.get("kept", 0.0)
 	var share := kept / burst
-	var landed: bool = _run["pressed_tick"] >= 0
+	var pressed: bool = _run["pressed_tick"] >= 0
 	var detail := "Space at %.2f s of a %.2f s decay (%s), %.2f m/s at the press, %.2f m/s %d ticks later = %.1f%% of the %.2f m/s burst" \
 		% [_run["press_at"], _run["decay"], run, _run.get("speed_at_press", 0.0), kept, READ_TICKS, share * 100.0, burst]
 	if run == "window":
-		_check("%s window keeps" % pilot, landed and share >= KEEP, detail + " (want at least %d%%)" % int(KEEP * 100.0))
+		_check("%s window keeps" % pilot, pressed and share >= KEEP, detail + " (want at least %d%%)" % int(KEEP * 100.0))
 	else:
-		_check("%s %s spends" % [pilot, run], landed and share < KEEP, detail + " (want under %d%%)" % int(KEEP * 100.0))
+		_check("%s %s spends" % [pilot, run], pressed and share < KEEP, detail + " (want under %d%%)" % int(KEEP * 100.0))
 	_run = {}
 
 
