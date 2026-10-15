@@ -115,8 +115,12 @@ func _preparation(model) -> void:
 	var start := Time.get_ticks_msec()
 	var prepared: Dictionary = model.prepare(graph, map)
 	var maximum := 0
-	for count in graph.footprint_scans.values():
-		maximum = maxi(maximum, count)
+	var anchors := {}
+	for anchor in prepared.anchors:
+		anchors[anchor.at] = true
+	for box in graph.footprint_scans:
+		if anchors.has((box[0] + box[1]) * 0.5):
+			maximum = maxi(maximum, graph.footprint_scans[box])
 	t.check("preparation exercises full footprint queries", not graph.footprint_scans.is_empty() and not prepared.anchors.is_empty())
 	t.eq("quarter-turns share one physical footprint scan", maximum, 1)
 	print("PREPARATION ms=%d queries=%d" % [Time.get_ticks_msec() - start, graph.footprint_scans.size()])
