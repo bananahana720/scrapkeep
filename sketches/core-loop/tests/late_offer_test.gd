@@ -5,6 +5,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const TreeCard := preload("res://src/ui/tree_card.gd")
 const T := preload("res://tests/support/t.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
 
 # The late forced-or-skip offer (W13-INTEGRATION-3 SG8), wave 14 unit SG8, round 3, 2026-10-15.
 # With UpgradeTree.late_offer on, depth 4 opens with one take_or_skip item: an endpoint from the
@@ -20,9 +21,9 @@ const T := preload("res://tests/support/t.gd")
 const DRAWS := 200
 const SEED := 20261014
 const POLICIES := ["always-take", "always-skip"]
-# The API check, 8 shared checks, 6 pilots x (4 path checks + 2 policies x 3 checks + 4 save
+# The API check, 11 shared checks (8 tree and card, 3 bot driver), 6 pilots x (4 path checks + 2 policies x 3 checks + 4 save
 # checks), and the count check itself.
-const EXPECTED_CHECKS := 1 + 8 + 6 * (4 + 2 * 3 + 4) + 1
+const EXPECTED_CHECKS := 1 + 11 + 6 * (4 + 2 * 3 + 4) + 1
 
 
 class Bus:
@@ -35,6 +36,31 @@ class Bus:
 	func _init() -> void:
 		tree_offered.connect(func(_c, d, n): offers.append([d, n]))
 		tree_picked.connect(func(_c, _n, _d): picked += 1)
+
+
+# Just enough of a game for BotDriver's tree handler: the flag it sets and the player's tree.
+class StubPlayer:
+	extends RefCounted
+	var tree
+
+
+class StubGame:
+	extends RefCounted
+	var bot_driven := false
+	var player := StubPlayer.new()
+
+
+# A bot driver on a tree walked to its open depth-4 offer, under one --late-offer policy.
+func _driver_at_four(pilot: String, late_policy: String) -> Array:
+	var tree = _fresh(pilot, true, Bus.new())
+	var walk := RandomNumberGenerator.new()
+	walk.seed = SEED
+	_to_depth_four(tree, walk)
+	var game := StubGame.new()
+	game.player.tree = tree
+	var driver = BotDriver.new(game, "skipper", 1)
+	driver.late_offer_policy = late_policy
+	return [driver, tree]
 
 
 func _fresh(pilot: String, late: bool, bus):
@@ -223,6 +249,28 @@ func _initialize() -> void:
 	_to_depth_four(skipper, walk)
 	skipper.skip()
 	t.eq("8 after a skip depth 4 is a plain pair (the skip declines the item, not the pick)", skipper.offer_kind(4), "pair")
+	# bot_run --late-offer (L3): the driver answers only the take_or_skip offer by its policy.
+	var dt: Array = _driver_at_four("tarn", "take")
+	var take_late: String = String(dt[1].late_item().get("id", ""))
+	dt[0]._on_tree_offered("tarn", 4, [take_late])
+	t.check("9 driver --late-offer=take takes the late item as the fourth pick",
+		take_late != "" and dt[1].picks.size() == 4 and dt[1].picks[3] == take_late and dt[0].tree_picks == [take_late] \
+		and dt[0].late_offer_counts == {"offered": 1, "taken": 1, "declined": 0}, "picks %s, counts %s" % [dt[1].picks, dt[0].late_offer_counts])
+	var ds: Array = _driver_at_four("tarn", "skip")
+	var skip_late: String = String(ds[1].late_item().get("id", ""))
+	ds[0]._on_tree_offered("tarn", 4, [skip_late])
+	var declined: bool = ds[1].late_skipped() and ds[1].picks.size() == 3 and ds[0].tree_picks.is_empty()
+	var skip_pair: Array = _ids(ds[1].offered("tarn", 4))
+	ds[0]._on_tree_offered("tarn", 4, skip_pair)
+	t.check("10 driver --late-offer=skip declines, then picks from the ordinary pair",
+		skip_late != "" and declined and ds[1].picks.size() == 4 and ds[1].picks[3] in skip_pair and skip_late not in ds[1].picks \
+		and ds[0].late_offer_counts == {"offered": 1, "taken": 0, "declined": 1}, "picks %s, counts %s" % [ds[1].picks, ds[0].late_offer_counts])
+	var dd: Array = _driver_at_four("tarn", "")
+	var choices: Array = _ids(dd[1].offered("tarn", 4))
+	dd[0]._on_tree_offered("tarn", 4, choices)
+	t.check("11 driver without --late-offer keeps its plain pick and counts nothing",
+		choices.size() == 1 and dd[1].picks.size() == 4 and dd[0].tree_picks == [choices[0]] and not dd[1].late_skipped() \
+		and dd[0].late_offer_counts == {"offered": 0, "taken": 0, "declined": 0}, "picks %s, counts %s" % [dd[1].picks, dd[0].late_offer_counts])
 	# Per pilot: two named policies, 200 draws each, on the same 200 seeded paths.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SEED
