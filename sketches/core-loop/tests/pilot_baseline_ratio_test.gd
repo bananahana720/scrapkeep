@@ -28,7 +28,7 @@ const LIVE_TOLERANCE := 0.02
 const SPREAD_MIN := 1.5
 const SPREAD_MAX := 2.0
 # Declaration checks; each live pilot adds one ratio and 19 lifecycle checks.
-const EXPECTED_CHECKS := 30
+const EXPECTED_CHECKS := 54
 
 
 func _ratio(def: Resource, ref: Resource, key: String) -> float:
@@ -67,6 +67,7 @@ func _initialize() -> void:
 
 	print("")
 	print("BASELINE  pilot  base_hp  hull ratio  hp_growth  growth ratio  declared hull  declared growth")
+	var published := {}
 	for def in defs:
 		if ref == null or def.get("base_hp") == null or def.get("hp_growth") == null:
 			continue
@@ -74,6 +75,15 @@ func _initialize() -> void:
 		var grow := _ratio(def, ref, "hp_growth")
 		var cells: PackedStringArray = (rows_md.get(def.id, "") as String).split("|")
 		# | Pilot | base_hp | hull ratio | hp_growth | growth ratio | why |
+		var hull_cell := cells[2].strip_edges() if cells.size() > 6 else ""
+		var growth_cell := cells[4].strip_edges() if cells.size() > 6 else ""
+		t.check("%s published Hull is numeric" % def.id, hull_cell.is_valid_float(), hull_cell)
+		t.check("%s published Growth is numeric" % def.id, growth_cell.is_valid_float(), growth_cell)
+		var base_hp := float(hull_cell) if hull_cell.is_valid_float() else -1.0
+		var hp_growth := float(growth_cell) if growth_cell.is_valid_float() else -1.0
+		published[def.id] = {"base_hp": base_hp, "hp_growth": hp_growth}
+		t.near("%s published Hull matches class_def" % def.id, float(def.base_hp), base_hp)
+		t.near("%s published Growth matches class_def" % def.id, float(def.hp_growth), hp_growth)
 		var d_hull := float(cells[3].strip_edges()) if cells.size() > 6 else -1.0
 		var d_grow := float(cells[5].strip_edges()) if cells.size() > 6 else -1.0
 		print("BASELINE  %s  %.0f  %.2f  %.1f  %.2f  %.2f  %.2f" % [PILOT_NAMES.get(def.id, def.id),
@@ -113,20 +123,20 @@ func _initialize() -> void:
 		if def.get("base_hp") == null or ref == null:
 			continue
 		var live_ratio: float = live[def.id] / maxf(0.0001, ref_live)
-		var want := _ratio(def, ref, "base_hp")
+		var want: float = published[def.id].base_hp / maxf(0.0001, published[REFERENCE].base_hp)
 		var inside := absf(live_ratio - want) <= LIVE_TOLERANCE
 		print("LIVE  %s  begun max_hp %.0f  ratio %.2f  declared %.2f  %s" % [PILOT_NAMES.get(def.id, def.id),
 			live[def.id], live_ratio, want, "inside" if inside else "NOT WIRED"])
 		if GATE_LIVE:
 			t.check("%s begun run reads its hull ratio" % def.id, inside, "%.3f vs %.3f" % [live_ratio, want])
-			_check_growth(t, def)
+			_check_growth(t, def, published[def.id].base_hp, published[def.id].hp_growth)
 
 	var expected := EXPECTED_CHECKS + (120 if GATE_LIVE else 0)
 	t.eq("check count", t.checks, expected)
 	quit(t.verdict())
 
 
-func _check_growth(t, def: Resource) -> void:
+func _check_growth(t, def: Resource, base_hp: float, hp_growth: float) -> void:
 	var events := Events.new()
 	var run := RunState.new(events)
 	run.begin(def)
@@ -136,11 +146,11 @@ func _check_growth(t, def: Resource) -> void:
 	# Both pickup consumers recompute before RunState publishes the new heft class.
 	run.events.scrap_collected.connect(func(_a, _p, _s): sheet.apply(tuning, run))
 	run.events.part_gained.connect(func(_id, _source): sheet.apply(tuning, run))
-	t.near("%s starts full at declared hull" % def.id, run.hp, def.base_hp)
+	t.near("%s starts full at declared hull" % def.id, run.hp, base_hp)
 	for rank in range(2, 6):
 		var mass := int(ceil((RunState.HEFT_CLASS_AT[rank - 1] - 1.0) / RunState.HEFT_PER_MASS))
 		run.add_scrap(mass - int(run.mass), Vector3.ZERO)
-		var want: float = def.base_hp + def.hp_growth * (rank - 1) + 25.0
+		var want: float = base_hp + hp_growth * (rank - 1) + 25.0
 		t.near("%s class %d growth" % [def.id, rank], run.max_hp, want)
 		t.near("%s class %d gained hull is filled" % [def.id, rank], run.hp, want)
 		run.hp -= 3.0
@@ -151,19 +161,19 @@ func _check_growth(t, def: Resource) -> void:
 	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
 	run.lose_scrap(int(run.mass), Vector3.ZERO, "test")
 	sheet.apply(tuning, run)
-	t.near("%s drop recalculates the base" % def.id, run.max_hp, def.base_hp + 25.0)
+	t.near("%s drop recalculates the base" % def.id, run.max_hp, base_hp + 25.0)
 	run.restore()
 	sheet.apply(tuning, run)
-	t.near("%s retry restores grown hull" % def.id, run.max_hp, def.base_hp + def.hp_growth * 4.0 + 25.0)
+	t.near("%s retry restores grown hull" % def.id, run.max_hp, base_hp + hp_growth * 4.0 + 25.0)
 	run.begin(def)
 	run.grant_start_mass(1000.0)
-	t.near("%s opening heft grants growth" % def.id, run.max_hp, def.base_hp + def.hp_growth * 3.0)
+	t.near("%s opening heft grants growth" % def.id, run.max_hp, base_hp + hp_growth * 3.0)
 	run.begin(def)
 	run.add_part("hot_rivets", "test")
 	run.add_part("hot_rivets", "test")
 	run.add_part("hot_rivets", "test")
-	t.near("%s parts can raise heft class" % def.id, run.max_hp, def.base_hp + def.hp_growth + 25.0)
+	t.near("%s parts can raise heft class" % def.id, run.max_hp, base_hp + hp_growth + 25.0)
 	run.begin(def)
-	t.near("%s new run clears growth and bonuses" % def.id, run.max_hp, def.base_hp)
-	t.near("%s new run resets hp" % def.id, run.hp, def.base_hp)
+	t.near("%s new run clears growth and bonuses" % def.id, run.max_hp, base_hp)
+	t.near("%s new run resets hp" % def.id, run.hp, base_hp)
 	events.free()
