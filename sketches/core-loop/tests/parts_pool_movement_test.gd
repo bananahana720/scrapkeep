@@ -20,11 +20,13 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
 const RARITIES := [["common"], ["rare"], ["relic"], ["evolved"], ["common", "rare", "relic"]]
 # The mod knobs that change what a part does without changing how the ball moves.
-const NOT_MOVEMENT := ["weapon_damage", "weapon_rate", "weapon_range", "turret_damage"]
+# 2026-10-15 PC-POOL (coordinator ruling P4): harpoon_lock_deg widens the harpoon's targeting
+# cone; it moves the ball neither farther nor faster.
+const NOT_MOVEMENT := ["weapon_damage", "weapon_rate", "weapon_range", "turret_damage", "harpoon_lock_deg"]
 # id: [tags, touch verb, class_id]. A class_id of "" is shared.
 const FIVE := {
 	"grip_tread": [["anchor"], "roll", "runner_gunner"],
-	"live_line": [["arc"], "fire", ""],
+	"live_line": [["arc"], "harpoon", ""],
 	"vent_baffle": [["speed"], "boost", "tally"],
 	"spring_shims": [["spiral"], "jump", "pylon_engineer"],
 	"drop_weight": [["mass"], "haul", ""],
@@ -94,12 +96,14 @@ func _five_rows() -> void:
 			_t.eq("%s has no movement mod" % id, _movement_mods(id), [])
 
 
-# Round 2 (gate finding): a shared part's touches field must name a verb its own change acts on.
-# live_line's reach is the weapon's, so it touches fire (no harpoon-side trigger exists in
-# parts.gd's scope); drop_weight acts on the smash itself: on_smash arms the pins it throws.
+# Round 2 (gate finding) and coordinator ruling P4 (2026-10-15): a shared part's touches field must
+# name a verb its own change acts on. live_line widens the harpoon lock cone (harpoon_lock_deg,
+# which the harpoon reads through tuning); drop_weight acts on the smash itself: its base row
+# was slam_speed 1.15, now on_smash arms the pins it throws.
 func _shared_verbs_act() -> void:
 	var live: Dictionary = Parts.row("live_line")
-	_t.eq("live_line changes weapon reach and touches fire", [live.get("touches", ""), live.get("mods", {}).has("weapon_range")], ["fire", true])
+	_t.eq("live_line widens the harpoon lock cone and touches harpoon", [live.get("touches", ""), live.get("mods", {}).has("harpoon_lock_deg")], ["harpoon", true])
+	_t.check("live_line no longer duplicates focus_lens's weapon range", not live.get("mods", {}).has("weapon_range"), "")
 	var drop: Dictionary = Parts.row("drop_weight")
 	_t.eq("drop_weight fires on a smash", drop.get("trigger", ""), "on_smash")
 	_t.eq("drop_weight arms the pins a smash throws", drop.get("effect", {}).get("do", ""), "pin_bonus")
