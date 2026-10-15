@@ -10,7 +10,9 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # and an attempted pick beyond the cap. All pilots retain 30 nodes and 16 full
 # endpoints; world one's Sable duplicate stays below its offered depths.
 # Evidence limit: independent per-world paths and the live cap-setting calls;
-# this does not qualify saved-path migration or the across-world pick schedule.
+# this does not qualify saved-path migration. The across-world pick schedule lives in
+# pick_pace_test. _open_pick(99) stays a cap-only sentinel: 99 is never the first stage
+# of a world, so it sets the cap and table and opens no pick.
 
 var _game
 var _done := false

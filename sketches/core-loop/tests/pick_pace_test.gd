@@ -100,6 +100,9 @@ func _visits(label: String) -> void:
 		_game.flow.retry_stage()
 		_game.run.stage = stage
 		_game.world._open_pick(stage)
+		# A pick queued while the retried ball is airborne lands on the next calm frame.
+		_game.player.state.grounded = true
+		_game.world._physics_process(0.0)
 		var gained: int = tree.allowed - before
 		trail.append(gained)
 		ok = ok and gained <= 1

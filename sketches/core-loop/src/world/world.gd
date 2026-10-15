@@ -708,22 +708,35 @@ func _on_flow_changed(state: String) -> void:
 # The workshop visit after each stage opens the upgrade tree's next pick (W3), once per
 # stage per run: on boarding the bay, or at the stage's clear if the bay was skipped,
 # so no pick is lost and a retried visit never opens a second one. Under --world-one-builds
-# the tree stops at two depths (the start and the visit after stage 1), and a pick that
-# falls due while the ball is airborne waits for the next calm frame (grounded, or in the
-# bay), so the choice screen never pauses a jump.
+# only the first stage of each world opens one (stages 1, 3 and 5 on the six-stage tables),
+# so allowed reads 2, 3 and 4 and a run that clears stage 5 holds its fourth pick before
+# the final boss (BIBLE.md:538); the cap per world still bounds it. A pick that falls due
+# while the ball is airborne waits for the next calm frame (grounded, or in the bay), so
+# the choice screen never pauses a jump.
 func _open_pick(stage: int) -> void:
 	var tree = ctx.player.tree if "tree" in ctx.player else null
 	if tree == null:
 		return
 	tree.max_depth = UpgradeTree.depth_cap(ctx.stages.world_of(ctx.run.stage)) if ctx.tuning.world_one() else UpgradeTree.DEPTHS
 	tree.world_one = ctx.tuning.world_one() and ctx.stages.world_of(ctx.run.stage) == 1
-	if stage >= tree.max_depth or _picks_opened.has(stage):
+	if _picks_opened.has(stage):
+		return
+	if ctx.tuning.world_one():
+		# One stage-checkpoint pick per world, at its first stage; the cap itself is
+		# enforced by the tree's open_checkpoint.
+		if not _first_of_world(stage):
+			return
+	elif stage >= tree.max_depth:
 		return
 	_picks_opened[stage] = true
 	if ctx.tuning.world_one() and not _pick_calm():
 		_picks_waiting.append(stage)
 		return
 	tree.open_checkpoint()
+
+
+func _first_of_world(stage: int) -> bool:
+	return stage <= 1 or ctx.stages.world_of(stage - 1) != ctx.stages.world_of(stage)
 
 
 # The slice table: each heft class the run has not been rewarded for opens one pick, so a
