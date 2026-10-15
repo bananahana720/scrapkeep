@@ -84,6 +84,14 @@ func _parent() -> void:
 		print("restart_latency_test: %s median %.3f s max %.3f s (target %.1f s)" % [name, median, walls[2], target])
 		_t.eq("%s reached control within %d ticks in all runs" % [name, WAIT_TICKS_MAX], capped, 0)
 		_t.check("%s median under %.1f s" % [name, target], median <= target, "median %.3f s, max %.3f s" % [median, walls[2]])
+	# Where each event lands. Stage 2 closes world 1, so its exit is the Brindle arena entry, not a stage 3 build.
+	for i in 3:
+		var r: Dictionary = runs[i]
+		var tag := "seed %d" % r["seed"]
+		_t.eq("%s retry_1 stays on stage 1" % tag, r["retry_1"]["stage"], 1)
+		_t.eq("%s exit_1 lands on stage 2" % tag, r["exit_1"]["stage"], 2)
+		_t.eq("%s retry_2 stays on stage 2" % tag, r["retry_2"]["stage"], 2)
+		_t.check("%s exit_2 enters the Brindle arena" % tag, r["exit_2"]["arena"] == true, "state %s" % r["exit_2"]["state"])
 	_replay(runs)
 	quit(_t.verdict())
 
