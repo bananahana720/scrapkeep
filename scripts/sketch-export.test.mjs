@@ -29,7 +29,19 @@ import {
   winProofFailures,
   winProofLine,
   WIN_PROOFS,
+  proofLibraries,
 } from "./sketch-export.mjs";
+
+test("proofLibraries picks each add-on's linux debug library and nothing else", () => {
+  const files = [
+    "addons/terrain_3d/bin/libterrain.linux.debug.x86_64.so",
+    "addons/terrain_3d/bin/libterrain.linux.release.x86_64.so",
+    "addons/terrain_3d/bin/libterrain.windows.debug.x86_64.dll",
+    "addons/terrain_3d/terrain.gdextension",
+    "src/world/terrain.gd",
+  ];
+  assert.deepEqual(proofLibraries(files), ["addons/terrain_3d/bin/libterrain.linux.debug.x86_64.so"]);
+});
 
 const manifest = {
   stems: ["drums", "bass"],

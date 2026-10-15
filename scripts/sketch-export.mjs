@@ -196,6 +196,14 @@ export function proofPresetDrift(presets) {
   return drift;
 }
 
+// The win proof runs the exported pack on the editor binary, a debug-features build, which loads
+// each GDExtension's linux debug library relative to its working directory. The pack carries no
+// libraries, so these copy beside it (wave-13 close: Terrain3D's library was missing and every
+// proof printed three ERROR lines). files is the project's paths relative to the sketch.
+export function proofLibraries(files) {
+  return files.filter((rel) => /^addons\/[^/]+\/.*\.linux\.debug\.x86_64\.so$/.test(rel));
+}
+
 export function winProofFailures(output, status, rowsText) {
   const failures = [];
   if (status !== 0) failures.push("bot run exited " + status);
@@ -594,6 +602,14 @@ async function playWinProof(base, pack, proof) {
   const state = path.join(base, "state");
   for (const dir of ["data", "config", "cache"])
     await mkdir(path.join(state, dir), { recursive: true });
+  const addons = path.join(project, "addons");
+  const addonFiles = existsSync(addons)
+    ? readdirSync(addons, { recursive: true }).map((rel) => path.join("addons", String(rel)).split(path.sep).join("/"))
+    : [];
+  for (const rel of proofLibraries(addonFiles)) {
+    await mkdir(path.join(path.dirname(pack), path.dirname(rel)), { recursive: true });
+    await copyFile(path.join(project, rel), path.join(path.dirname(pack), rel));
+  }
   const out = path.join(base, "run");
   const bot = run(
     binary,
