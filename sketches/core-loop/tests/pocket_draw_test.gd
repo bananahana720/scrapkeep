@@ -9,6 +9,16 @@ const Map := preload("res://src/world/park/park_map.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Rules := preload("res://tools/park_graph.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
+class MeasuredGraph extends "res://src/world/park/park_graph.gd":
+	var footprint_scans := {}
+	func box_nodes(lo: Vector2, hi: Vector2) -> PackedInt32Array:
+		var span := hi - lo
+		for side in Library.FOOTPRINTS.values():
+			if span.is_equal_approx(Vector2.ONE * (side + Graph.STEP_M * 2.0)):
+				var key := [lo, hi]
+				footprint_scans[key] = footprint_scans.get(key, 0) + 1
+		return super.box_nodes(lo, hi)
+
 var t := T.new("pocket_draw_test")
 
 func _initialize() -> void:
@@ -32,6 +42,10 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	var model = load(MODEL)
+	_preparation(model)
+	if "--preparation-only" in OS.get_cmdline_user_args():
+		quit(t.verdict())
+		return
 	var Run = load("res://src/core/run_state.gd")
 	var coverage := {}
 	for stage in range(1, Park.COUNT + 1):
@@ -90,6 +104,22 @@ func _run() -> void:
 		_detours(tool.draw_arm("all", 1000, 200))
 	print("pocket_draw_coverage: " + JSON.stringify(coverage.keys()))
 	quit(t.verdict())
+
+func _preparation(model) -> void:
+	var map = Map.new("res://src/world/park/park_flume.json")
+	var original = Graph.read("res://assets/park/park_flume/graph.bin")
+	var graph := MeasuredGraph.new()
+	for property in original.get_property_list():
+		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			graph.set(property.name, original.get(property.name))
+	var start := Time.get_ticks_msec()
+	var prepared: Dictionary = model.prepare(graph, map)
+	var maximum := 0
+	for count in graph.footprint_scans.values():
+		maximum = maxi(maximum, count)
+	t.check("preparation exercises full footprint queries", not graph.footprint_scans.is_empty() and not prepared.anchors.is_empty())
+	t.eq("quarter-turns share one physical footprint scan", maximum, 1)
+	print("PREPARATION ms=%d queries=%d" % [Time.get_ticks_msec() - start, graph.footprint_scans.size()])
 
 func _from_line(graph) -> PackedFloat32Array:
 	var nodes := PackedInt32Array()
