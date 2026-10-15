@@ -152,6 +152,10 @@ enum BankMove { NONE, JUMP, SLIDE, SLIDE_FLIGHT }
 var _speed_bank_chosen := BankMove.NONE
 var _speed_bank_move_held := false
 var _speed_bank_brake_held := false
+# The grounded rest before a roll start: ticks the ball has sat grounded below BANK_REST,
+# and whether the brake held it on any of them.
+var _speed_bank_rest_ticks := 0
+var _speed_bank_rest_braked := false
 var _bow_check_queued := false
 var _crushing := {}
 
@@ -321,6 +325,8 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_clear_speed_bank()
 	_speed_bank_move_held = false
 	_speed_bank_brake_held = false
+	_speed_bank_rest_ticks = 0
+	_speed_bank_rest_braked = false
 	state.reset()
 	kit.clear_runtime()
 	chain.clear_active()
@@ -551,7 +557,11 @@ func _clear_speed_bank() -> void:
 
 
 # Only a chosen jump or ground brake/slide can pay its next landing. External
-# motion clears that eligibility. A fresh stick input near rest banks immediately.
+# motion clears that eligibility. A fresh stick input from a free rest banks
+# immediately: the ball sat grounded below BANK_REST before the press, and the brake
+# held it on none of those ticks. A braked stop is a placed ball, so a timed launch
+# from it (the dam sheet's foot) starts clean; a press before the first grounded rest
+# after a reset is not a start from rest.
 # Air pauses decay; a ground jump spends it using the original per-pilot curve.
 func _tick_speed_bank(delta: float) -> void:
 	var landed := false
@@ -565,9 +575,18 @@ func _tick_speed_bank(delta: float) -> void:
 	var cruise: float = tuning.f("cruise")
 	if _frozen or kit.hooked or Augments.holding(kit) or in_set_piece():
 		_clear_speed_bank()
+		_speed_bank_rest_ticks = 0
+		_speed_bank_rest_braked = false
 		return
 	var planar := planar_velocity()
 	var speed := planar.length()
+	var free_rest := _speed_bank_rest_ticks > 0 and not _speed_bank_rest_braked
+	if state.grounded and speed <= Tuning.BANK_REST * cruise:
+		_speed_bank_rest_ticks += 1
+		_speed_bank_rest_braked = _speed_bank_rest_braked or intent.brake_held
+	else:
+		_speed_bank_rest_ticks = 0
+		_speed_bank_rest_braked = false
 	var probe_grounded := false
 	for i in _rigid._probe.get_collision_count():
 		if _rigid._probe.get_collision_normal(i).y > Tuning.MAX_SLOPE_DOT:
@@ -589,7 +608,7 @@ func _tick_speed_bank(delta: float) -> void:
 	if slide_start and state.grounded and speed >= Tuning.BANK_ARM * cruise:
 		_speed_bank_chosen = BankMove.SLIDE
 		_speed_bank_airborne = false
-	roll_start = roll_start and state.grounded and not intent.brake_held and speed <= Tuning.BANK_REST * cruise
+	roll_start = roll_start and free_rest and state.grounded and not intent.brake_held and speed <= Tuning.BANK_REST * cruise
 	if not speed_bank.is_empty() and jumped:
 		var row: Dictionary = speed_bank["row"]
 		var u: float = speed_bank["t"] / float(row["decay_s"])

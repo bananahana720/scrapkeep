@@ -89,7 +89,8 @@ const ANCHOR_MIN_ROPE := 6.0
 const SKIN := 0.12
 
 # The speed bank (SQ9, comps/roboquest/movement-and-feel.md): a chosen jump/slide
-# landing at BANK_ARM x cruise, or a stick start below BANK_REST x cruise, banks speed.
+# landing at BANK_ARM x cruise, or a stick start from a free rest below BANK_REST x cruise
+# (grounded there before the press, never held by the brake), banks speed.
 # The roll starts at `ratio` x cruise and decays
 # back to cruise over `decay_s`: flat for the first `hold` of the decay, then as
 # ((1 - u) / (1 - hold)) ^ `exp`. A ground jump inside the last BANK_WINDOW of the decay
