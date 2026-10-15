@@ -404,10 +404,11 @@ func _build_altar(s: Site) -> void:
 
 
 func _build_cache(s: Site) -> void:
-	var face: Vector2 = s.rule["face"]
-	s.rotation.y = atan2(face.x, face.y)
-	s.global_position += s.global_basis.z * CACHE_LANE_OFFSET
-	s.global_position.y = ctx.terrain.height(s.global_position.x, s.global_position.z)
+	if not s.drawn:
+		var face: Vector2 = s.rule["face"]
+		s.rotation.y = atan2(face.x, face.y)
+		s.global_position += s.global_basis.z * CACHE_LANE_OFFSET
+		s.global_position.y = ctx.terrain.height(s.global_position.x, s.global_position.z)
 	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 	var tall := WALL_HEIGHT + WALL_SINK
 	var mid := tall * 0.5 - WALL_SINK
