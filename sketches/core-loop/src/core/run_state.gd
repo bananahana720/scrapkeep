@@ -130,6 +130,8 @@ var extra := {}
 # Upgrade-tree picks and the opened-pick count as last read from the tree or a loaded doc.
 var tree_picks: Array[String] = []
 var tree_allowed := 0
+# The run skipped its late take_or_skip item (SG8); a save without the field means no skip.
+var tree_late_skipped := false
 var _loaded_class_id := ""
 
 var _snapshot := {}
@@ -215,6 +217,7 @@ func begin(chosen_class: Resource) -> void:
 	_loaded_class_id = ""
 	tree_picks.clear()
 	tree_allowed = 0
+	tree_late_skipped = false
 	parts.clear()
 	relics = {}
 	kills = 0
@@ -809,7 +812,7 @@ func summary() -> Dictionary:
 
 const ENTRANCE_SCHEMA := 1
 # key: expected kind. "int" accepts a whole float, "num" any number, "vec3" three numbers,
-# "strs" an array of strings, "dict" a Dictionary, "str" a String.
+# "strs" an array of strings, "dict" a Dictionary, "str" a String, "bool" true or false.
 const ENTRANCE_KEYS := {
 	"schema": "int", "run_id": "str", "class_id": "str", "seed": "int", "stage": "int",
 	"world": "int", "max_hp": "num", "hp": "num", "mass": "num", "scrap": "int",
@@ -818,7 +821,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "tree_late_skipped": "bool"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -827,6 +830,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 	if tree != null:
 		tree_picks.assign(tree.picks)
 		tree_allowed = int(tree.allowed)
+		tree_late_skipped = tree.has_method("late_skipped") and tree.late_skipped()
 	var pos := Vector3.ZERO
 	var vel := Vector3.ZERO
 	var yaw := 0.0
@@ -865,6 +869,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"camera_yaw": yaw,
 		"tree_picks": Array(tree_picks),
 		"tree_allowed": tree_allowed,
+		"tree_late_skipped": tree_late_skipped,
 		"retries_spent": spent,
 		"cogs": cogs,
 		"companion": companion.duplicate(true),
@@ -893,6 +898,8 @@ static func _entrance_kind_ok(value, kind: String) -> bool:
 			return is_num and is_finite(value)
 		"str":
 			return t == TYPE_STRING
+		"bool":
+			return t == TYPE_BOOL
 		"dict":
 			return t == TYPE_DICTIONARY
 		"vec3", "strs":
@@ -1005,6 +1012,7 @@ func from_entrance_doc(doc) -> bool:
 	retries = int(doc["retries"])
 	tree_picks.assign(doc["tree_picks"])
 	tree_allowed = int(doc["tree_allowed"])
+	tree_late_skipped = bool(doc.get("tree_late_skipped", false))
 	retries_spent = {}
 	for w in doc["retries_spent"]:
 		retries_spent[int(str(w))] = int(doc["retries_spent"][w])
