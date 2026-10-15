@@ -146,7 +146,7 @@ var _bow: Area3D
 # The speed bank (SQ9, Tuning.BANK_ROWS): {row, t, bonus0, bonus} while one runs, else empty.
 # bonus is the planar speed the bank has added and not yet taken back.
 var speed_bank := {}
-var _speed_bank_landed := false
+var _speed_bank_airborne := false
 var _speed_bank_jumped := false
 enum BankMove { NONE, JUMP, SLIDE, SLIDE_FLIGHT }
 var _speed_bank_chosen := BankMove.NONE
@@ -206,13 +206,11 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 			"kicker_launch", "ride_glide_drop", "thermal_ride", "ride_hop", "crater_ride", "lift_fired"]:
 			_clear_speed_bank())
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))
-	_rigid.landed.connect(func(_impact: float):
-		_speed_bank_landed = _speed_bank_chosen != BankMove.NONE
-		_speed_bank_chosen = BankMove.NONE)
 	_rigid.jumped.connect(func(air: bool):
 		if not air:
 			_speed_bank_jumped = true
-		_speed_bank_chosen = BankMove.JUMP)
+		_speed_bank_chosen = BankMove.JUMP
+		_speed_bank_airborne = false)
 
 	# Everything under the player is placed per frame in _process, which interpolation
 	# must leave alone; only the body is ticked by physics and interpolated.
@@ -547,7 +545,7 @@ func _physics_process(delta: float) -> void:
 
 func _clear_speed_bank() -> void:
 	speed_bank = {}
-	_speed_bank_landed = false
+	_speed_bank_airborne = false
 	_speed_bank_jumped = false
 	_speed_bank_chosen = BankMove.NONE
 
@@ -556,9 +554,8 @@ func _clear_speed_bank() -> void:
 # motion clears that eligibility. A fresh stick input near rest banks immediately.
 # Air pauses decay; a ground jump spends it using the original per-pilot curve.
 func _tick_speed_bank(delta: float) -> void:
-	var landed := _speed_bank_landed
+	var landed := false
 	var jumped := _speed_bank_jumped
-	_speed_bank_landed = false
 	_speed_bank_jumped = false
 	var moving := intent.move.length_squared() >= 0.02
 	var roll_start := moving and not _speed_bank_move_held
@@ -571,6 +568,19 @@ func _tick_speed_bank(delta: float) -> void:
 		return
 	var planar := planar_velocity()
 	var speed := planar.length()
+	var probe_grounded := false
+	for i in _rigid._probe.get_collision_count():
+		if _rigid._probe.get_collision_normal(i).y > Tuning.MAX_SLOPE_DOT:
+			probe_grounded = true
+	# Grounding consumes the chosen flight even when the impact is too gentle to
+	# publish landed. Jump changes state.grounded before the probe leaves ground.
+	if _speed_bank_chosen != BankMove.NONE:
+		if not probe_grounded:
+			_speed_bank_airborne = true
+		elif _speed_bank_airborne:
+			landed = true
+			_speed_bank_chosen = BankMove.NONE
+			_speed_bank_airborne = false
 	if _speed_bank_chosen == BankMove.SLIDE:
 		if not state.grounded:
 			_speed_bank_chosen = BankMove.SLIDE_FLIGHT
@@ -578,6 +588,7 @@ func _tick_speed_bank(delta: float) -> void:
 			_speed_bank_chosen = BankMove.NONE
 	if slide_start and state.grounded and speed >= Tuning.BANK_ARM * cruise:
 		_speed_bank_chosen = BankMove.SLIDE
+		_speed_bank_airborne = false
 	roll_start = roll_start and state.grounded and not intent.brake_held and speed <= Tuning.BANK_REST * cruise
 	if not speed_bank.is_empty() and jumped:
 		var row: Dictionary = speed_bank["row"]
