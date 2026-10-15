@@ -11,7 +11,6 @@ const Pattern := preload("res://src/combat/pattern.gd")
 # Movement and weapon multipliers go out through tuning mods; pattern levels,
 # transformers and element triggers are read from this sheet through the build API.
 
-const BASE_MAX_HP := 100.0
 # 2026-10-14 SG14-CONTRACT C1: power is rapid-laser DPS / bare rapid-laser DPS.
 # Stationary unplated enemy at 5 m; three neighbours, each 3 m right of the last.
 # tools/pattern_dps.gd measures actual HP removal at 90 Hz under this contract.
@@ -106,8 +105,8 @@ func apply(tuning, run) -> void:
 	for knob in mods:
 		tuning.set_mod(knob, mods[knob])
 	tuning.boost_cooldown_scale = cooldown_scale
-	if run != null and not is_equal_approx(run.max_hp, BASE_MAX_HP + max_hp_bonus):
-		run.set_max_hp(BASE_MAX_HP + max_hp_bonus)
+	if run != null and not is_equal_approx(run.max_hp, run.base_max_hp() + max_hp_bonus):
+		run.set_max_hp(run.base_max_hp() + max_hp_bonus)
 
 
 func mod(knob: String) -> float:

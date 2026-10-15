@@ -182,9 +182,11 @@ func _unix_time() -> float:
 
 func begin(chosen_class: Resource) -> void:
 	class_def = chosen_class
+	_loaded_class_id = ""
 	stage = 1
-	max_hp = MAX_HP
-	hp = MAX_HP
+	_heft_class = 1
+	max_hp = base_max_hp()
+	hp = max_hp
 	scrap = 0
 	mass = 0.0
 	bonus_cores = 0
@@ -246,6 +248,16 @@ func alive() -> bool:
 
 func class_id() -> String:
 	return class_def.id if class_def != null else _loaded_class_id
+
+
+# Use the published class: pickup consumers run before the class-change publication.
+func base_max_hp() -> float:
+	var pilot := class_def
+	if pilot == null and _loaded_class_id != "":
+		pilot = preload("res://src/core/class_def.gd").by_id(_loaded_class_id)
+	if pilot == null or pilot.get("base_hp") == null:
+		return MAX_HP
+	return float(pilot.base_hp) + float(pilot.hp_growth) * (_heft_class - 1)
 
 
 func advance(delta: float) -> void:
@@ -339,8 +351,10 @@ func _publish_heft_class() -> void:
 	var c := heft_class()
 	if c == _heft_class:
 		return
+	var previous_base := base_max_hp()
 	var rose := c > _heft_class
 	_heft_class = c
+	set_max_hp(max_hp + base_max_hp() - previous_base)
 	metrics["class_changes"] += 1
 	if not rose:
 		metrics["class_drops"] += 1
@@ -639,8 +653,10 @@ func wear_step(delta: float, speed: float, cruise: float, active: bool) -> void:
 
 # The fixed route's opening mass (tuning `start_mass`): mass only, no wallet, no procs.
 func grant_start_mass(amount: float) -> void:
+	var previous_base := base_max_hp()
 	mass = maxf(0.0, amount)
 	_heft_class = raw_heft_class(heft())
+	set_max_hp(max_hp + base_max_hp() - previous_base)
 
 
 # True only while enemy_killed is emitting for a kill a wear spark landed: the item and tree

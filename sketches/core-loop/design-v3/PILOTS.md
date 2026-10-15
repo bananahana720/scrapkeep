@@ -100,3 +100,20 @@ Say "veto" on a line and it changes. These are the calls most worth reversing; e
 10. Tally's seven existing icons move from Brindle's brass to her ledger cream.
 11. Each world's pack scale rises by the start values in section 3: +0.05, +0.05, then +0.10.
 12. Ancient light stays uranium-glass green, your 2026-10-09 call, over the brief's Cherenkov blue.
+
+## 7. Baseline ratios
+
+Wave 14 unit SQ8, 2026-10-14. A pilot is a baseline, a kit and a tree. The kit and tree differ already (sections 1 and 2); this table makes the baseline differ too. Each pilot states two numbers as ratios to Sable, the starter: **hull**, the health a run starts with (`base_hp` on the row in `src/core/class_def.gd`), and **growth**, the hull gained per heft class above I (`hp_growth`). All values are (start). The shape comes from `research/comps/roboquest/classes-and-perks.md` (a class baseline is health plus health per level, and the heavier class grows faster); none of its numbers are used.
+
+| Pilot | Hull | Hull ratio | Growth | Growth ratio | Why |
+| --- | --- | --- | --- | --- | --- |
+| **Sable** | 100 | 1.00 | 10 | 1.00 | the reference; today's shared 100 stays the starter's hull |
+| **Rivet** | 115 | 1.15 | 12 | 1.20 | an unstoppable machinist who shrugs off holds and fights at mid range |
+| **Kest** | 80 | 0.80 | 7 | 0.70 | hides in smoke and places damage from far; the lightest hull |
+| **Tarn** | 135 | 1.35 | 15 | 1.50 | committed close contact; the heaviest hull and the fastest growth |
+| **Tally** | 90 | 0.90 | 8 | 0.80 | a caster who pays pressure and works from her plate |
+| **The Cannon** | 105 | 1.05 | 10 | 1.00 | a rebuilt ancient that fires from lanes; near Sable |
+
+**Rules, checked by `tests/pilot_baseline_ratio_test.gd`.** Each ratio cell matches the code within 0.005. The heaviest hull is 1.5x to 2.0x the lightest (today 1.69x, Tarn over Kest), so the pilots differ without one doubling another. A lighter hull never grows faster per heft class than a heavier one.
+
+**Live hull, 2026-10-15 coordinator scope extension.** `RunState.begin()` starts full at the chosen pilot's `base_hp`. `RunState.base_max_hp()` adds `hp_growth` for each published heft class above I; a drop removes those class bonuses, and a retry restores the checkpoint's class and hull. Build recomputes and Scrap Armor add their bonuses to that same base. A class rise fills the added hull through `set_max_hp()`. `GATE_LIVE` is on; the test checks starts, growth through class V, pickup event ordering, recomputes, drops, retries and new runs. Live start ratios use a 0.02 tolerance. At later heft classes the declared ratio is `(base_hp + hp_growth * (class - 1))` divided by Sable's value at that class, before part bonuses.
