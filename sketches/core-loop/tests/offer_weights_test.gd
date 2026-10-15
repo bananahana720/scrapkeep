@@ -14,8 +14,10 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 #   - the top-10 most-offered parts of any two pilots overlap under 50% (of the smaller top list);
 #   - movement is at most 15% of each pilot's offers;
 #   - no neutral shelf part is offered more than Parts.NEUTRAL_REPEAT_CAP times in one stage;
-#   - each pilot's two dominant buckets (Parts.bucket_of) are its declared kit pair, and the six
-#     pairs differ (the six kits also declare six different pairs);
+#   - each pilot's two dominant buckets (Parts.bucket_of) are its declared kit pair; the six
+#     measured pairs hold at least MIN_DISTINCT_PAIRS different pairs and no pair is held by more
+#     than MAX_PILOTS_PER_PAIR pilots (the six kits declare the same, and none declares
+#     UNREACHABLE_PAIR); every pilot's kit holds a common part that hits harder;
 #   - a draw with every kit part excluded still shows a neutral shelf part, and _keep_a_neutral
 #     on its own turns an off-kit draw's plain slot into a shelf part;
 #   - no offer is another class's part;
@@ -27,17 +29,15 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # same 10-part common pool (no class part on the list), and the pattern guarantee adds Chain Arc,
 # so each one's top-10 holds at least 9 of the same 11 parts and any two overlap at least 0.90.
 # Whether SQ19 covers the alpha list is a coordinator ruling (2026-10-15).
-# PAIRS (2026-10-15, SQ19): the pair line is asserted. Measured against it: every two-slot gate draw
-# holds a part that hits harder (build_catalogue_test "gate pairs hit harder"), and no common part
-# that hits harder sits in the defence bucket, so in every pilot's offers weapon + skill + movement
-# is at least 50%. A defence + movement pair needs weapon and skill each below movement, which is
-# at most 15%, so under 45% in all: no pilot can hold that pair, and six distinct pairs cannot all
-# hold while the pair rule and the 15% movement cap stand. Tally declares that pair, so its pair
-# checks stay red, and its weighted share with them: no common part that hits harder is in its
-# kit, so the hitter in each gate pair is off-kit and its share sits near 0.37. Measured, not
-# proven: Rivet's skill + movement pair loses to weapon, because the stage-2 pattern guarantee
-# shows an off-kit pattern in each gate until the run holds one, and the greedy bot never takes
-# it (weapon 0.215 greedy against movement 0.083). These checks wait on the coordinator's ruling.
+# PAIRS (2026-10-15, SQ19, coordinator ruling W8): every two-slot gate draw holds a part that hits
+# harder (build_catalogue_test "gate pairs hit harder"), and no common part that hits harder sits
+# in the defence bucket, so in every pilot's offers weapon + skill + movement is at least 50%. A
+# defence + movement pair needs weapon and skill each below movement, which is at most 15%, so
+# under 45% in all: no pilot can hold that pair, which leaves five reachable pairs for six pilots.
+# W8 rules the pair line as: at least 5 distinct measured pairs, none held by more than two
+# pilots, no pilot declaring defence + movement, and every pilot measuring the pair it declares.
+# A kit with no common hitter puts the hitter of every gate pair off-kit (Tally's old kit measured
+# a 0.37 share), so each kit must hold one.
 # Evidence limit: the offer draw only. Whether each pilot still wins its bot
 # runs is bot_six_*_test's claim, and how the lean feels is Andrew's to play.
 
@@ -51,6 +51,9 @@ const SHARE_BAND := [0.60, 0.80]
 const OVERLAP_MAX := 0.5
 const MOVEMENT_MAX := 0.15
 const TOP := 10
+const MIN_DISTINCT_PAIRS := 5
+const MAX_PILOTS_PER_PAIR := 2
+const UNREACHABLE_PAIR := ["defence", "movement"]
 
 var _t := preload("res://tests/support/t.gd").new("offer_weights_test")
 
@@ -63,8 +66,11 @@ func _initialize() -> void:
 	_t.check("every pilot declares a kit of two buckets", PILOTS.all(func(p): return Parts.KITS.has(p) and Parts.KITS[p].size() == 2), "")
 	var declared := {}
 	for pilot in PILOTS:
-		declared[str(_declared(pilot))] = pilot
-	_t.check("the six kits declare six different bucket pairs", declared.size() == PILOTS.size(), str(declared))
+		declared[pilot] = _declared(pilot)
+		_t.check("%s does not declare the unreachable defence + movement pair" % pilot, declared[pilot] != UNREACHABLE_PAIR, str(declared[pilot]))
+		var hitters: Array = Parts.offer_pool(pilot, ["common"]).filter(func(id): return Parts.in_kit(pilot, id) and Parts.def(id).hits_harder())
+		_t.check("%s kit holds a common part that hits harder" % pilot, not hitters.is_empty(), str(hitters))
+	_pair_spread("declared", declared, true)
 	var defence_hitters := {}
 	for pilot in PILOTS:
 		for id in Parts.offer_pool(pilot, ["common"]):
@@ -219,23 +225,31 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 				_t.check("%s top-%d overlap %s and %s under 50%%" % [label, TOP, PILOTS[i], PILOTS[j]], overlap < OVERLAP_MAX, detail)
 			else:
 				print("[%s top-%d overlap %s and %s] %s (measured)" % [label, TOP, PILOTS[i], PILOTS[j], detail])
+	var measured := {}
 	for pilot in PILOTS:
-		var others: Array = PILOTS.filter(func(p): return p != pilot).map(func(p): return pairs[p][0])
-		var ok: bool = pairs[pilot][1] and not pairs[pilot][0] in others
-		var detail := "%s, others %s" % [pairs[pilot][0], others]
+		measured[pilot] = pairs[pilot][0]
+		var detail := "%s, declared %s" % [pairs[pilot][0], _declared(pilot)]
 		if strict:
-			_t.check("%s %s dominant pair is its own" % [label, pilot], ok, detail)
+			_t.check("%s %s second dominant bucket is strictly above the third" % [label, pilot], pairs[pilot][1], detail)
 			_t.eq("%s %s dominant pair is its declared kit" % [label, pilot], pairs[pilot][0], _declared(pilot))
 		else:
-			print("[%s %s dominant pair] %s, declared %s (measured; %s)" % [label, pilot, detail, _declared(pilot),
-				"its own" if ok else "not its own"])
-	var distinct := {}
+			print("[%s %s dominant pair] %s (measured; second above third %s)" % [label, pilot, detail, pairs[pilot][1]])
+	_pair_spread(label, measured, strict)
+
+
+# pilot -> sorted pair. At least MIN_DISTINCT_PAIRS distinct, none held by over MAX_PILOTS_PER_PAIR.
+func _pair_spread(label: String, pairs: Dictionary, strict: bool) -> void:
+	var holders := {}
 	for pilot in PILOTS:
-		distinct[str(pairs[pilot][0])] = true
+		var key := str(pairs[pilot])
+		holders[key] = holders.get(key, []) + [pilot]
+	var crowded: Array = holders.keys().filter(func(key): return holders[key].size() > MAX_PILOTS_PER_PAIR)
+	var detail := "%d distinct: %s" % [holders.size(), holders]
 	if strict:
-		_t.check("%s six distinct dominant pairs" % label, distinct.size() == PILOTS.size(), "%d distinct: %s" % [distinct.size(), distinct.keys()])
+		_t.check("%s pairs hold at least %d distinct" % [label, MIN_DISTINCT_PAIRS], holders.size() >= MIN_DISTINCT_PAIRS, detail)
+		_t.eq("%s no pair held by more than %d pilots" % [label, MAX_PILOTS_PER_PAIR], crowded, [])
 	else:
-		print("[%s dominant pairs] %d distinct of %d pilots (measured)" % [label, distinct.size(), PILOTS.size()])
+		print("[%s dominant pairs] %s, crowded %s (measured)" % [label, detail, crowded])
 
 
 func _declared(pilot: String) -> Array:
