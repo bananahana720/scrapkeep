@@ -260,6 +260,10 @@ var trace := false
 # "" or "random"; set before start(). tree_picks lists the node ids taken, in order.
 var tree_policy := ""
 var tree_picks: Array[String] = []
+# SG8's lab switch (bot_run --late-offer): "" leaves the tree's late_offer off and the bot as it
+# was; "take" or "skip" turns late_offer on and answers only the take_or_skip offer that way.
+var late_offer_policy := ""
+var late_offer_counts := {"offered": 0, "taken": 0, "declined": 0}
 var _tree_rng := RandomNumberGenerator.new()
 
 # The sweep's limits. stage_limit replaces STAGE_LIMIT. fight_limit, when above zero, ends the
@@ -482,6 +486,8 @@ func start(resume := false) -> void:
 	events.scrap_lost.connect(func(amount: int, _at: Vector3, _total: int, cause: String):
 		if cause == "crane":
 			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
+	if late_offer_policy != "":
+		game.player.tree.late_offer = true
 	if tree_policy == "random":
 		_connect_optional("tree_offered", _on_tree_offered)
 	if resume and game.flow.resume_run():
@@ -490,8 +496,20 @@ func start(resume := false) -> void:
 	game.flow.choose_class(class_index)
 
 
-func _on_tree_offered(_class_id: String, _depth: int, choices: Array) -> void:
+func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
 	if choices.is_empty():
+		return
+	var tree = game.player.tree
+	if late_offer_policy != "" and tree.offer_kind(depth) == tree.OFFER_TAKE_OR_SKIP:
+		late_offer_counts["offered"] += 1
+		# A skip opens the ordinary pair, whose tree_offered lands back here as a plain pick.
+		if late_offer_policy == "skip":
+			if tree.skip():
+				late_offer_counts["declined"] += 1
+			return
+		if tree.pick(String(choices[0])):
+			tree_picks.append(String(choices[0]))
+			late_offer_counts["taken"] += 1
 		return
 	var choice: String = choices[_tree_rng.randi() % choices.size()]
 	if game.player.tree.pick(choice):
@@ -2899,7 +2917,7 @@ static func _flat(a: Vector3, b: Vector3) -> float:
 
 # The sidecar record: who drove, what happened, how long it took.
 func record(wall_seconds: float) -> Dictionary:
-	return {
+	var row := {
 		"run_id": game.run.run_id, "policy": policy, "profile": profile, "seed": seed_value, "class": class_id(),
 		"outcome": outcome, "stage_reached": game.run.stage, "ticks": ticks,
 		"game_seconds": snappedf(float(ticks) / float(Engine.physics_ticks_per_second), 0.01),
@@ -2916,3 +2934,7 @@ func record(wall_seconds: float) -> Dictionary:
 		# reading why a fill band is red; no hand reads either.
 		"ult_sources": _meter_sources(), "ult_sources_first_fill": _first_fill_sources,
 	}
+	if late_offer_policy != "":
+		row["late_offer"] = {"policy": late_offer_policy, "tree_picks": tree_picks.size()}
+		row["late_offer"].merge(late_offer_counts)
+	return row
