@@ -132,6 +132,12 @@ func _audit(graph, map, specs: Array, trade: Dictionary, from_line: PackedFloat3
 		for n in graph.box_nodes(box.position, box.end):
 			route_clear = route_clear and graph.flags(n) & Graph.LINE == 0
 		t.check("drawn footprint does not cut main route", route_clear)
+		var owner: Dictionary = load("res://src/world/activities.gd").RULES[entry.activity].pay
+		for key in owner:
+			if key != "rarities":
+				t.eq("drawn pay preserves owner " + key, spec.pay.get(key), owner[key])
+		if entry.activity == "enemy_camp":
+			t.eq("drawn camp preserves named Hot Rivets", spec.pay.get("named", ""), "hot_rivets")
 		var pay: Dictionary = Rules._pay(spec.pay)
 		var allowed: Array = Rules.PAY_FAR if spec == sorted.back() else Rules.PAY_NEAR
 		t.check("drawn set pay ladder", not pay.rarities.is_empty() and pay.rarities.all(func(r): return r in allowed))
@@ -203,6 +209,11 @@ func _runtime(_specs: Array) -> void:
 	await physics_frame
 	var s = acts.sites.filter(func(site): return not site.interior.is_empty() and site.interior.id == specs[0].interior.id)[0]
 	t.check("drawn orientation built", is_equal_approx(s.rotation.y, -specs[0].get("turn", 0) * PI * 0.5))
+	var owner: Dictionary = acts.RULES[s.id].pay
+	for key in owner:
+		if key != "rarities":
+			t.eq("built drawn pay preserves owner " + key, s.rule.pay.get(key), owner[key])
+
 	var interior: Node = s.get_node("Interior_" + String(s.interior.id))
 	t.eq("drawn unvisited interior has no collision", _bodies(interior), 0)
 	game.player.active_body().global_position = s.global_position + Vector3(0, 1, 0)
