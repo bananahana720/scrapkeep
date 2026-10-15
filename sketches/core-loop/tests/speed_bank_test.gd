@@ -109,6 +109,13 @@ func _planar() -> float:
 	return _player.planar_velocity().length()
 
 
+func _probe_grounded() -> bool:
+	for i in _player._rigid._probe.get_collision_count():
+		if _player._rigid._probe.get_collision_normal(i).y > Tuning.MAX_SLOPE_DOT:
+			return true
+	return false
+
+
 func _start(pilot: String, run: String) -> void:
 	_player.fit_class(ClassDef.by_id(pilot))
 	# Short fixture hops return through the ground probe below the impact signal's
@@ -178,7 +185,7 @@ func _step(delta: float) -> void:
 	if _run["ticks"] > 90 * (16 if _run["run"].ends_with("_drop") else 8):
 		_run["done"] = true
 		return
-	var grounded: bool = _player.state.grounded
+	var grounded := _probe_grounded()
 	var run: String = _run["run"]
 	if run == "air_jump" and not _run["action_started"] and not grounded:
 		_source.press = {"jump_pressed": true}
@@ -268,7 +275,7 @@ func _step(delta: float) -> void:
 	if _run["landed_t"] < 0.0:
 		if not grounded:
 			_run["airborne"] = true
-		elif _run["airborne"] and _landing_count > _run["landings_before"]:
+		elif _run["airborne"] and (_landing_count > _run["landings_before"] or run in ["slide", "jump", "air_jump", "window", "early", "late"]):
 			_run["landed_t"] = 0.0
 		return
 	_run["t"] += delta
