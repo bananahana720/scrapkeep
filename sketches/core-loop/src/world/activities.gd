@@ -181,6 +181,7 @@ class Site extends Node3D:
 	var wave := 0
 	var spawn_positions: Array = []
 	var phase_view: Node3D
+	var drawn := false
 	var interior := {}
 	var interior_collision_ready := false
 	var trade := {}
@@ -284,6 +285,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.id = id
 	s.rule = RULES[id]
 	s.interior = spec.get("interior", {})
+	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
 	if id == "enemy_camp" or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
@@ -308,6 +310,8 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.name = "Activity_" + id
 	add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
+	if s.drawn:
+		s.rotation.y = -spec.get("turn", 0) * PI * 0.5
 	s.view = ActivityView.new()
 	s.add_child(s.view)
 	var presentation: Node = ctx.root.get_node_or_null("Presentation")
@@ -324,9 +328,6 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 			_build_cache(s)
 	if not s.interior.is_empty():
 		_build_interior(s)
-		if spec.get("drawn", false):
-			s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
-			s.rotation.y = -spec.get("turn", 0) * PI * 0.5
 	if s.rule.finishes == "trade":
 		_build_trade(s)
 	return s
@@ -644,7 +645,13 @@ func _build_hazard(s: Site) -> void:
 			var hazard := PocketFog.new()
 			s.add_child(hazard)
 			var centre := s.global_position + Vector3(box.at[0], 0, box.at[1])
-			hazard.setup(centre, Vector3(box.size[0], box.size[1], box.size[2]), POCKET_SAFE_M, POCKET_DAMAGE_PER_S, ctx.rng.seed)
+			var size := Vector3(box.size[0], box.size[1], box.size[2])
+			if s.drawn:
+				centre = s.to_global(Vector3(box.at[0], 0, box.at[1]))
+				size = (s.global_basis * size).abs()
+				hazard.top_level = true
+				hazard.global_transform = Transform3D.IDENTITY
+			hazard.setup(centre, size, POCKET_SAFE_M, POCKET_DAMAGE_PER_S, ctx.rng.seed)
 			s.hazards.append(hazard)
 		if not s.hazards.is_empty():
 			s.fog = s.hazards[0]
