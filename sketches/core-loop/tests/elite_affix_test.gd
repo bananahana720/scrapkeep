@@ -77,6 +77,7 @@ func _records() -> void:
 func _schedules() -> void:
 	for mode in ["interval", "credit"]:
 		for tier_value in [0, 1]:
+			_pack_affixes(mode, tier_value)
 			var d := Director.new(71)
 			d.mode = mode
 			d.set_run_tier_reader(func(): return tier_value)
@@ -84,19 +85,50 @@ func _schedules() -> void:
 			d.elite = {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
 			d.elite_arrival = 3
 			var seen := []
-			var ordinary := 0
+			var drones := 0
 			for step in 1800:
 				for arrival in d.advance(0.5, 0):
 					if arrival.has("affix"):
 						t.eq("affix bearer " + mode, Director.KIND_NAMES[arrival.kind], "plated_brute")
 						seen.append(arrival.affix)
-					else:
-						ordinary += 1
+					if Director.KIND_NAMES[arrival.kind] == "winch_drone":
+						t.check("scheduled partner drone remains unmarked " + mode, not arrival.has("affix"))
+						drones += 1
 			if tier_value == 0:
 				t.eq("tier-0 no arrival affix " + mode, seen, [])
 			else:
-				t.check("all three rotate in director " + mode, seen.size() >= 3 and seen.slice(0, 3) == Affixes.IDS, str(seen))
-			t.check("ordinary brutes and drones remain unmarked " + mode, ordinary > 0)
+				t.check("all three rotate in director " + mode, seen.size() >= 3 and seen.slice(0, 3) == ["stamp", "rail", "rearblast"], str(seen))
+			t.check("scheduled partner drones exist " + mode, drones > 0)
+
+func _pack_affixes(mode: String, tier_value: int) -> void:
+	var d := Director.new(71)
+	d.mode = mode
+	d.set_run_tier_reader(func(): return tier_value)
+	var expected_affixes := ["stamp", "rail", "rearblast"]
+	for serial in expected_affixes.size():
+		for is_elite in [false, true]:
+			var label := "%s tier %d pack %d %s" % [mode, tier_value, serial, "elite" if is_elite else "ordinary"]
+			var start := d.arrivals.size()
+			t.eq("pack has both arrivals " + label,
+				d._place_pack(Vector2(20.0, 0.0), ["plated_brute", "winch_drone"], Vector2.ZERO, is_elite), 2)
+			var brutes := 0
+			var drones := 0
+			for arrival in d.arrivals.slice(start):
+				t.eq("arrival belongs to expected pack " + label, arrival.pack, serial * 2 + int(is_elite))
+				match Director.KIND_NAMES[arrival.kind]:
+					"plated_brute":
+						brutes += 1
+						if not is_elite:
+							t.check("ordinary plated_brute remains unmarked " + label, not arrival.has("affix"))
+						elif tier_value == 0:
+							t.check("tier-0 elite plated_brute remains unmarked " + label, not arrival.has("affix"))
+						else:
+							t.eq("elite plated_brute expected affix " + label, arrival.get("affix", ""), expected_affixes[serial])
+					"winch_drone":
+						drones += 1
+						t.check("pack winch_drone remains unmarked " + label, not arrival.has("affix"))
+			t.eq("ordinary or elite plated_brute exists " + label, brutes, 1)
+			t.eq("ordinary or elite winch_drone exists " + label, drones, 1)
 
 func _boot() -> void:
 	game = Game.new()
