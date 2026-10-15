@@ -1485,8 +1485,10 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 			if live and ball.y >= target.family_point_at().y:
 				source.hold["brake_held"] = true
 			# The go verb fires along the aim, so a rolling ball waits until it rolls straight at the
-			# core: pressed mid-turn it threw the ball wide of the sheet (Tally's surge, seed 4).
-			var at_core: bool = planar.length() <= 1.0 or planar.normalized().dot(offset.normalized()) >= SHEET_LAUNCH_LINED
+			# core: pressed mid-turn it threw the ball wide of the sheet (Tally's surge, seed 4). It
+			# never fires while the ball still drifts away from the core, however slowly.
+			var at_core: bool = planar.dot(dir) <= 0.0 \
+					and (planar.length() <= 1.0 or planar.normalized().dot(offset.normalized()) >= SHEET_LAUNCH_LINED)
 			if at_core and _boost_clock <= 0.0 and game.player.state.grounded and game.player.verb_ready("boost"):
 				source.press["shift_pressed"] = true
 				source.hold["shift_held"] = true
