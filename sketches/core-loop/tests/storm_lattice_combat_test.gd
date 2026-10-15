@@ -5,6 +5,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 
 const EXPECTED_CHECKS := 14
 const FALL_OFF := 0.7
+const CROSS_DAMAGE := 0.6
 const ERROR_MAX := 0.10
 
 var _game
@@ -40,7 +41,7 @@ func _physics_process(_delta: float) -> bool:
 		for level in [1, 2]:
 			var enabled: Dictionary = rows[2 * level - 1]
 			var control: Dictionary = rows[2 * level]
-			var direct: float = rows[0]["dps"] * 5.0
+			var direct: float = rows[0]["dps"] * 5.0 * CROSS_DAMAGE
 			# The bonus continues Chain Arc's falloff: the second jump is 0.7^2,
 			# and the third is 0.7^3, on each of the five real Cross Split bolts.
 			var expected := direct * pow(FALL_OFF, level + 1) if neighbours > 0 else 0.0
@@ -93,9 +94,10 @@ func _check_mounted_turret() -> void:
 		and Measurement.valid_row(control, Weapons.PYLON_TURRET) \
 		and enabled["chain_jumps"] == 4 and control["chain_jumps"] == 3,
 		JSON.stringify(rows))
-	# Independent HP expectations: five fragments, 11 damage, 9 volleys/s. Each
+	# Independent HP expectations: five fragments, 11 damage, 9 volleys/s,
+	# and the C7 Cross Split damage multiplier 0.6. Each
 	# existing turret jump keeps 0.75; only the fourth jump multiplies by 0.7.
-	var direct := 5.0 * 11.0 * 9.0
+	var direct := 5.0 * 11.0 * 9.0 * CROSS_DAMAGE
 	for jump in range(4):
 		var expected := direct * pow(0.75, jump)
 		var actual: float = enabled["target_dps"][jump]
