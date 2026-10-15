@@ -325,6 +325,14 @@ static func slot_of(mesh: Mesh, surface: int) -> String:
 	return mat.resource_name if mat != null else ""
 
 
+# Metadata keeps surface materials alive until after the rendering instance is freed.
+static func _surface_material(view: MeshInstance3D, surface: int, mat: Material) -> void:
+	view.set_surface_override_material(surface, mat)
+	var held: Dictionary = view.get_meta("hero_surface_materials", {})
+	held[surface] = mat
+	view.set_meta("hero_surface_materials", held)
+
+
 # Paints every surface under root from SLOTS. tints: {"class": Color, "rarity": Color}.
 func paint(root: Node, tints: Dictionary) -> void:
 	var stack: Array[Node] = [root]
@@ -341,7 +349,7 @@ func paint(root: Node, tints: Dictionary) -> void:
 				var from: String = SLOTS[slot].get("from", "")
 				if slot == "paint":
 					from = "paint"
-				mi.set_surface_override_material(i, material(slot, tints.get(from, Color.WHITE)))
+				_surface_material(mi, i, material(slot, tints.get(from, Color.WHITE)))
 				if slot == "glass":
 					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
@@ -580,7 +588,7 @@ func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE)
 	if ring != null:
 		for i in ring.mesh.get_surface_count():
 			if slot_of(ring.mesh, i) == "paint":
-				ring.set_surface_override_material(i, kest_band_material(paint_tint))
+				_surface_material(ring, i, kest_band_material(paint_tint))
 		ring.set_instance_shader_parameter("lit_count", int(state["lit_count"]))
 		ring.set_instance_shader_parameter("heft_class", int(state["heft_class"]))
 	var mortar := pod.get_node_or_null("WeaponRing/Mortar") as MeshInstance3D
@@ -591,7 +599,7 @@ func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE)
 		mortar.rotation.x = -float(state["mortar_pitch"])
 		for i in mortar.mesh.get_surface_count():
 			if slot_of(mortar.mesh, i) == "class_accent":
-				mortar.set_surface_override_material(i, kest_fuse_material(bool(state["fuse_boost"])))
+				_surface_material(mortar, i, kest_fuse_material(bool(state["fuse_boost"])))
 		mortar.set_instance_shader_parameter("fuse_glow", float(state["fuse_glow"]))
 		mortar.set_instance_shader_parameter("fuse_loaded", bool(state["fuse_blink"]))
 
@@ -1109,15 +1117,15 @@ func _glow_rec(rec: Dictionary, on: bool) -> int:
 			for i in mi.mesh.get_surface_count():
 				var current: Material = mi.get_surface_override_material(i)
 				if on and current == calm:
-					mi.set_surface_override_material(i, lit)
+					_surface_material(mi, i, lit)
 					swapped += 1
 				elif not on and current == lit:
-					mi.set_surface_override_material(i, calm)
+					_surface_material(mi, i, calm)
 					swapped += 1
 				elif current != null and current.resource_name in ["kest_fuse", "kest_fuse_ready"]:
 					var fuse := kest_fuse_material(on)
 					if current != fuse:
-						mi.set_surface_override_material(i, fuse)
+						_surface_material(mi, i, fuse)
 						swapped += 1
 	return swapped
 
@@ -1958,7 +1966,7 @@ func _paint_body(root: Node, rec: Dictionary) -> void:
 			if not rec.materials.has(slot):
 				var own := slot.begins_with("ancient_light") or slot == "ancient_enamel"
 				rec.materials[slot] = material(slot).duplicate() if own else material(slot)
-			mi.set_surface_override_material(i, rec.materials[slot])
+			_surface_material(mi, i, rec.materials[slot])
 			if slot == "glass":
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
@@ -2340,7 +2348,7 @@ func _paint_mantle(root: Node, rec: Dictionary, seam: Material, tool: Material) 
 				"bare_metal":
 					mat = material(slot)
 			if mat != null:
-				root.set_surface_override_material(i, mat)
+				_surface_material(root, i, mat)
 	for child in root.get_children():
 		_paint_mantle(child, rec, seam, tool)
 
@@ -2535,7 +2543,7 @@ func _paint_warden(root: Node, rec: Dictionary, kit := false) -> void:
 					key += "_jaw" if String(root.name).begins_with("Jaw") or String(root.name).begins_with("ArmourSegment") else "_base"
 			if not rec.materials.has(key):
 				rec.materials[key] = material(slot).duplicate() if slot in ["ancient_light", "ancient_enamel"] else material(slot)
-			root.set_surface_override_material(i, rec.materials[key])
+			_surface_material(root, i, rec.materials[key])
 	for child in root.get_children():
 		_paint_warden(child, rec, kit)
 
@@ -2647,7 +2655,7 @@ func _paint_warden_inner(inner: MeshInstance3D) -> void:
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Palette.CHARCOAL if slot_of(inner.mesh, surface) == "rubber" else EventKinds.role_color("rust").lerp(Palette.CHARCOAL, 0.55)
 		mat.roughness = 0.95
-		inner.set_surface_override_material(surface, mat)
+		_surface_material(inner, surface, mat)
 
 
 func _warden_chunk_mark(segment: MeshInstance3D) -> Node3D:
@@ -2717,7 +2725,7 @@ func _throw_warden_segment(rec: Dictionary, index: int) -> void:
 			var mat := material(slot).duplicate() as StandardMaterial3D
 			mat.emission_enabled = false
 			_materials[key] = mat
-		fragment.set_surface_override_material(surface, _materials[key])
+		_surface_material(fragment, surface, _materials[key])
 	add_child(fragment)
 	fragment.global_transform = segment.global_transform
 	var centre := segment.to_global(segment.mesh.get_aabb().get_center())

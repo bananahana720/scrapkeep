@@ -200,7 +200,9 @@ func _release_fixture() -> void:
 	game.run.mass = 100.0
 	game.player.set_frozen(true)
 	audio.sample_run_parameters()
-	t.check("flume has no graph and no approach", audio._parameter_graph == null and not audio.sample_run_parameters().has("approach"))
+	# 2026-10-14 coordinator: KD2 (c81cec4a) made the flume a full park stage with its own graph, so
+	# the flume now supplies one; the graphless case stays covered by _absence_fixture.
+	t.check("flume supplies its own graph", audio._parameter_graph != null)
 	game.events.landed.emit(12.0)
 	var flume_deadline: int = engine.clock + engine.step_len * Harmony.STEPS_PER_BAR * Harmony.PHRASE_BARS * 2
 	engine.set_overcharge(2)
