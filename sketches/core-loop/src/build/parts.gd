@@ -74,12 +74,12 @@ const CATALOGUE := {
 	# their numbers and become class parts of the pilot whose Shift they deepen (Rivet's sprint,
 	# Tally's surge, Sable's vault). Live Line and Drop Weight stay shared, because they are the
 	# second ingredients of two evolutions, and change what the verb does instead of how fast
-	# the ball moves: how far a shot reaches, how much hull a landing leaves.
+	# the ball moves: how far a shot reaches, how hard a smash throws its pins.
 	"grip_tread": {"name": "Grip Tread", "verb": "Bite the floor", "pitch": "Tread bites harder", "touches": "roll",
 		"text": "+15% drive acceleration", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "runner_gunner", "tags": ["anchor"],
 		"mods": {"drive_accel": 1.15}},
-	"live_line": {"name": "Live Line", "verb": "Reach down the line", "pitch": "Shots reach farther", "touches": "harpoon",
+	"live_line": {"name": "Live Line", "verb": "Reach down the line", "pitch": "Shots reach farther", "touches": "fire",
 		"text": "+10% weapon reach", "icon": "mobility",
 		"rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"mods": {"weapon_range": 1.1}},
@@ -91,10 +91,11 @@ const CATALOGUE := {
 		"text": "+10% jump speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "pylon_engineer", "tags": ["spiral"],
 		"mods": {"jump_speed": 1.1}},
-	"drop_weight": {"name": "Drop Weight", "verb": "Land on ballast", "pitch": "Landings hit softer", "touches": "haul",
-		"text": "+10 max health", "icon": "mobility",
+	"drop_weight": {"name": "Drop Weight", "verb": "Smash on ballast", "pitch": "Pins hit harder", "touches": "haul",
+		"text": "After a smash, pins hit 25% harder", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["mass"],
-		"max_hp_bonus": 10.0},
+		"trigger": "on_smash", "stack": "linear", "cap": 3,
+		"effect": {"do": "pin_bonus", "bonus": 0.25, "window": 1.5}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
 	"slag_rounds": {"name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
