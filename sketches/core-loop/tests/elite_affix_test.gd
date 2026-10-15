@@ -332,7 +332,7 @@ func _boundaries(id: String, world: int, spawn_index: int, enemy, tele, damage: 
 			toward = toward.normalized()
 			var beyond: Vector3 = tele.center + toward * (tele.radius + EDGE_STEP)
 			var from_brute := Vector2(beyond.x - enemy.global_position.x, beyond.z - enemy.global_position.z)
-			t.check("stamp boundary probe inside original 6 m slam", from_brute.length() < 6.0)
+			t.check("stamp boundary probe inside original slam", from_brute.length() < Brute.SLAM_RADIUS)
 			pairs.append(["stamp outside ring inside original slam", beyond,
 				tele.center + toward * (tele.radius - EDGE_STEP)])
 	else:
