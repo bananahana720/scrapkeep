@@ -29,7 +29,7 @@ func _run(armor: bool, wear := false) -> RunState:
 	var events := GameEvents.new()
 	_nodes.append(events)
 	var run := RunState.new(events)
-	run.begin(load("res://src/core/class_def.gd").new())
+	run.begin(load("res://src/core/class_def.gd").by_id("pylon_engineer"))
 	run.armor_mode = armor
 	run.wear_on = wear
 	return run
