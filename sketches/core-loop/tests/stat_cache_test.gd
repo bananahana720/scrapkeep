@@ -28,6 +28,8 @@ const PICKUP_TICKS := {60: "hot_rivets", 140: "long_spool", 220: "frost_vane", 3
 const RESPEC_TICK := 380
 const RETRY_TICK := 460
 const QUIET_RETRY_TICK := 520
+# After the four pickups, before the respec: the live sheet is read here.
+const LIVE_CHECK_TICK := 340
 
 var _game
 var _build
@@ -41,6 +43,8 @@ var _refolds := {}
 var _pickup_frames: Array = []
 var _quiet_frame := -1
 var _respec_frame := -1
+var _live_diffs := ["unread"]
+var _live_held: Array = []
 
 
 class TierRun:
@@ -117,6 +121,9 @@ func _drive_tick() -> void:
 	if PICKUP_TICKS.has(_ticks):
 		_pickup_frames.append(Engine.get_physics_frames())
 		run.add_part(PICKUP_TICKS[_ticks], "test")
+	elif _ticks == LIVE_CHECK_TICK:
+		_live_held = run.parts.duplicate()
+		_live_diffs = _sheet_diffs(_build.sheet, BuildSheet.from_parts(_live_held), ["max_hp_bonus"])
 	elif _ticks == RESPEC_TICK:
 		# Respec through the shop's sell path: the part leaves run.parts and the build recomputes.
 		_allow("respec")
@@ -161,11 +168,9 @@ func _check_driven_run() -> void:
 		"selling Long Spool refolded %s" % [_refolds.get(_respec_frame, [])])
 	_report("an unchanged restore refolds nothing", _quiet_frame > 0 and _refolds.get(_quiet_frame, []).is_empty(),
 		"second retry with the same part list refolded %s" % [_refolds.get(_quiet_frame, [])])
-	var held: Array = _game.run.parts
-	var full: RefCounted = BuildSheet.from_parts(held)
-	var diffs := _sheet_diffs(_build.sheet, full, ["max_hp_bonus"])
-	_report("the live sheet is the cached fold", diffs.is_empty(),
-		"build.sheet over %s against a full recompute (max_hp_bonus carries Scrap Armor): differs in %s" % [held, diffs])
+	_report("the live sheet is the cached fold", _live_diffs.is_empty() and _live_held.size() >= PICKUP_TICKS.size(),
+		"build.sheet at tick %d over %s against a full recompute (max_hp_bonus carries Scrap Armor): differs in %s"
+			% [LIVE_CHECK_TICK, _live_held, _live_diffs])
 
 
 # ---- 1. Declared touches are complete ----
@@ -291,6 +296,10 @@ func _check_random_builds() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20261015
 	var pool := _all_ids()
+	# Evolution ingredients, drawn often enough that consumed pairs come and go.
+	var ingredients: Array = []
+	for key in Synergies.evolution_ids():
+		ingredients += Synergies.ROWS[key]["evolution"]["parts"]
 	var tier_run := TierRun.new()
 	Parts.bind_run(tier_run)
 	var mismatches: Array = []
@@ -309,7 +318,8 @@ func _check_random_builds() -> void:
 			var before: Array = held.duplicate()
 			var roll := rng.randf()
 			if roll < 0.6 and held.size() < MAX_HELD or held.is_empty():
-				held.append(pool[rng.randi() % pool.size()])
+				var from: Array = ingredients if rng.randf() < 0.25 else pool
+				held.append(from[rng.randi() % from.size()])
 				for evolved in Synergies.evolutions_ready(held):
 					held.append(evolved)
 					evolutions += 1
@@ -336,7 +346,7 @@ func _check_random_builds() -> void:
 				restale += 1
 	Parts.bind_run(null)
 	var full: int = steps * _categories().size()
-	_report("cached stats equal a full recompute", mismatches.is_empty() and steps >= BUILDS * STEPS_PER_BUILD,
+	_report("cached stats equal a full recompute", mismatches.is_empty() and steps >= BUILDS * STEPS_PER_BUILD and evolutions >= 100,
 		"%d builds, %d pickup, respec, restore and tier steps (%d evolutions granted); mismatches %s (first 4 of %d)"
 			% [BUILDS, steps, evolutions, mismatches.slice(0, 4), mismatches.size()])
 	_report("only touched categories refold", overreach.is_empty() and restale == 0 and folds < full,
