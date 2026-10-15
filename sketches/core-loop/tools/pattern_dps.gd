@@ -89,11 +89,11 @@ func _physics_process(_delta: float) -> bool:
 	return true
 
 
-static func prepare(game) -> void:
+static func prepare(game, class_index := 1) -> void:
 	game.ctx.calm = true
 	game.player.source = Intent.Scripted.new()
 	game.flow.press_start()
-	game.flow.choose_class(1)
+	game.flow.choose_class(class_index)
 	# All future simulation advances explicitly below. No wall-clock or rendering cadence.
 	game.process_mode = Node.PROCESS_MODE_DISABLED
 	game.player.reset_to(BALL)
@@ -143,10 +143,10 @@ static func measure_contract(game) -> Array:
 		BuildSheet.POWER_CONTRACT["neighbours"])
 
 
-static func valid_row(row: Dictionary) -> bool:
+static func valid_row(row: Dictionary, weapon: String = BuildSheet.POWER_CONTRACT["weapon"]) -> bool:
 	return row["dps"] > 0.0 and row["hits"] > 0 and row["retired"] == 0 \
 		and row["stationary"] and row["ledger_agrees"] and row["parts_match"] \
-		and row["weapon"] == BuildSheet.POWER_CONTRACT["weapon"]
+		and row["weapon"] == weapon
 
 
 static func _measure_one(game, scenario: Dictionary, distance: float, neighbours: int) -> Dictionary:
@@ -181,6 +181,7 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 	for _tick in roundi(WARMUP / DT):
 		_tick_combat(game)
 	var before := _health(targets)
+	var target_hp_before: Array = targets.map(func(target): return target.hp)
 	var ledger_before: float = combat.delivered_damage()["total"]
 	var hits_before: int = combat.delivered_damage()["hits"]
 	var volleys_before: int = combat.volleys
@@ -191,6 +192,10 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 	var stationary: bool = game.player.ball_position() == BALL
 	for i in targets.size():
 		stationary = stationary and targets[i].global_position == positions[i]
+	var target_dps: Array = []
+	for i in targets.size():
+		target_dps.append((target_hp_before[i] - targets[i].hp) / SECONDS)
+	var pattern: Resource = combat.pattern(combat.active_weapon())
 	var row := {
 		"id": scenario["id"], "parts": scenario["parts"], "distance_m": distance,
 		"neighbours": neighbours,
@@ -201,8 +206,9 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 		"stationary": stationary,
 		"ledger_agrees": absf(removed - ledger_damage) < 0.001,
 		"parts_match": game.run.parts == scenario["parts"],
-		"volley_size": combat.pattern(Weapons.RAPID_LASER).volley_size(),
-		"chain_jumps": combat.pattern(Weapons.RAPID_LASER).chain_jumps,
+		"target_dps": target_dps,
+		"volley_size": pattern.volley_size(),
+		"chain_jumps": pattern.chain_jumps,
 		"lattice": build.has_transformer("storm_lattice"),
 	}
 	for target in targets:

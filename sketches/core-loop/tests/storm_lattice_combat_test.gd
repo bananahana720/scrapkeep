@@ -3,7 +3,7 @@ extends SceneTree
 const Measurement := preload("res://tools/pattern_dps.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
-const EXPECTED_CHECKS := 8
+const EXPECTED_CHECKS := 14
 const FALL_OFF := 0.7
 const ERROR_MAX := 0.10
 
@@ -61,6 +61,7 @@ func _physics_process(_delta: float) -> bool:
 	_game.flow.retry_stage()
 	_report("retry removes lattice", _game.run.parts.is_empty() \
 		and _game.ctx.spawner.pattern(Weapons.RAPID_LASER).chain_jumps == 0, "no retained jump after retry")
+	_check_mounted_turret()
 	if _checks != EXPECTED_CHECKS:
 		_failures += 1
 	print("storm_lattice_combat_test: %s (%d checks, %d failures)" \
@@ -75,3 +76,39 @@ func _report(label: String, ok: bool, detail: String) -> void:
 	print("%s %s: %s" % ["PASS" if ok else "FAIL", label, detail])
 	if not ok:
 		_failures += 1
+
+
+func _check_mounted_turret() -> void:
+	_game.flow._begin_run(_game.flow.classes[0])
+	Measurement.prepare(_game, 0)
+	_game.player.kit.mounted = true
+	var rows := Measurement.measure(_game, [
+		{"id": "bare", "parts": []},
+		{"id": "turret_lattice", "parts": ["cross_split", "chain_arc"]},
+		{"id": "turret_control", "parts": ["cross_split", "chain_arc"], "no_lattice": true},
+	], [5.0], 4)
+	var enabled: Dictionary = rows[1]
+	var control: Dictionary = rows[2]
+	_report("mounted turret measurements", Measurement.valid_row(enabled, Weapons.PYLON_TURRET) \
+		and Measurement.valid_row(control, Weapons.PYLON_TURRET) \
+		and enabled["chain_jumps"] == 4 and control["chain_jumps"] == 3,
+		JSON.stringify(rows))
+	# Independent HP expectations: five fragments, 11 damage, 9 volleys/s. Each
+	# existing turret jump keeps 0.75; only the fourth jump multiplies by 0.7.
+	var direct := 5.0 * 11.0 * 9.0
+	for jump in range(4):
+		var expected := direct * pow(0.75, jump)
+		var actual: float = enabled["target_dps"][jump]
+		var removed: float = control["target_dps"][jump]
+		_report("turret preserved hit %d" % jump,
+			absf(actual - expected) <= 0.001 \
+			and absf(removed - expected) <= 0.001 \
+			and is_equal_approx(actual, removed),
+			"enabled %.6f, control %.6f, expected %.6f DPS" % [actual, removed, expected])
+	var bonus := direct * pow(0.75, 3) * FALL_OFF
+	var actual: float = enabled["target_dps"][4]
+	_report("turret lattice bonus", absf(actual - bonus) <= 0.001 \
+		and is_zero_approx(control["target_dps"][4]) \
+		and absf(enabled["dps"] - control["dps"] - bonus) <= 0.001,
+		"added %.6f, expected %.6f DPS; fourth neighbour %.6f, control %.6f" \
+		% [enabled["dps"] - control["dps"], bonus, actual, control["target_dps"][4]])
