@@ -38,7 +38,7 @@ const CATALOGUE := {
 	"loose_trigger": {"touches": "fire", "name": "Loose Trigger", "verb": "Fire faster", "text": "+10% fire rate",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["speed"],
 		"mods": {"weapon_rate": 1.1}},
-	"long_barrel": {"name": "Long Barrel", "verb": "Shoot farther", "text": "+12% weapon range",
+	"long_barrel": {"touches": "fire", "name": "Long Barrel", "verb": "Shoot farther", "text": "+12% weapon range",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["anchor"],
 		"mods": {"weapon_range": 1.12}},
 	"long_spool": {"name": "Long Spool", "verb": "Grapple farther", "text": "+30% grapple range",
@@ -56,7 +56,7 @@ const CATALOGUE := {
 	"rivet_plating": {"touches": "roll", "name": "Rivet Plating", "verb": "Bolt on armour", "text": "+15 max health",
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"max_hp_bonus": 15.0},
-	"magnet_spool": {"name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
+	"magnet_spool": {"touches": "roll", "name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
 		"icon": "utility", "rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"magnet": 1.5},
 	# W13 SR9: a copy tightens the Hold the Relay ring and speeds its charge. The numbers
@@ -88,6 +88,13 @@ const CATALOGUE := {
 		"text": "boost recharges 12% faster", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["speed"],
 		"cooldown_scale": 0.88},
+	# 2026-10-15 (wave 14 SQ19b, BIBLE.md Mobility row): Tally's own winch. A trial with reel_speed
+	# at 1.25 while held took Tally's stage-2 Brindle fight from 340 s to 80 s. A class part,
+	# like Vent Baffle, because a faster haul changes how fast the ball moves.
+	"winch_pawl": {"name": "Winch Pawl", "verb": "Reel in faster", "pitch": "Winch hauls quicker", "touches": "harpoon",
+		"text": "+25% winch top speed", "icon": "mobility",
+		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["anchor"],
+		"mods": {"reel_speed": 1.25}},
 	"spring_shims": {"name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
 		"text": "+10% jump speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "pylon_engineer", "tags": ["spiral"],
@@ -99,7 +106,7 @@ const CATALOGUE := {
 		"effect": {"do": "pin_bonus", "bonus": 0.25, "window": 1.5}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
-	"slag_rounds": {"name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
+	"slag_rounds": {"touches": "fire", "name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 10.0,
 		"mods": {"weapon_damage": 1.25}},
 	"double_feed": {"touches": "fire", "name": "Double Feed", "verb": "Feed two rounds a trigger", "text": "+3 punch, +25% fire rate",
@@ -117,7 +124,7 @@ const CATALOGUE := {
 	"spiral_wave": {"touches": "fire", "name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["spiral"],
 		"patterns": {"spiral_wave": 1}},
-	"chain_arc": {"name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
+	"chain_arc": {"touches": "fire", "name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["chain", "arc"],
 		"patterns": {"chain_arc": 1}},
 	"frost_vane": {"name": "Frost Vane", "verb": "Dash trails frost", "text": "air dash freezes water into road",
@@ -234,7 +241,10 @@ const KIT_PART_CAP := 0.25
 # generated recipes add a few points on top). A kit slot
 # draws from the kit's movement parts this share of the time over KIT_SHARE; never more, even
 # when the kit's other bucket is empty, so movement cannot fill an offer. A pilot whose pair has
-# no movement bucket still sees its own class movement rows, at CLASS_MOVEMENT_SHARE.
+# no movement bucket still sees its own class movement rows, at CLASS_MOVEMENT_SHARE each.
+# 2026-10-15 (wave 14 SQ19b, coordinator ruling S2): each class movement row in the slot's
+# candidates brings its own CLASS_MOVEMENT_SHARE, up to MOVEMENT_SHARE in all, so Tally's second
+# movement row (Winch Pawl) adds to Vent Baffle's share instead of splitting it.
 const MOVEMENT_SHARE := 0.12
 const CLASS_MOVEMENT_SHARE := 0.06
 # The neutral shelf: small flat parts every pilot can be offered, so a build never stalls on its
@@ -655,8 +665,8 @@ static func _uncapped(class_id: String, pool: Array, offered: Dictionary) -> Arr
 # One weighted slot for a pilot with a kit, drawn with a single rng.randf() so a listed slot costs
 # the rarity draw and one pick, as before. Off the slice a generated recipe first takes its share
 # of the shelf's part (one more draw). The rolled rarity's uncapped parts split into four groups:
-# the kit's movement parts (MOVEMENT_SHARE, CLASS_MOVEMENT_SHARE for a pilot whose pair has no
-# movement), its other parts (the rest of KIT_SHARE), the shelf (1 - KIT_SHARE) and the rest of the
+# the kit's movement parts (MOVEMENT_SHARE; for a pilot whose pair has no movement,
+# CLASS_MOVEMENT_SHARE per class movement row, at most MOVEMENT_SHARE), its other parts (the rest of KIT_SHARE), the shelf (1 - KIT_SHARE) and the rest of the
 # pool (0). An empty group's share moves on: kit to shelf, shelf to kit, both to the rest; movement's
 # own share goes to the kit's other parts, and movement never takes another group's share unless
 # nothing else is left. Inside a group a part weighs 1 / (1 + times offered this stage), times
@@ -681,7 +691,8 @@ static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: Str
 			groups["shelf"].append(key)
 		else:
 			groups["rest"].append(key)
-	var moving := MOVEMENT_SHARE if kit.has("movement") else CLASS_MOVEMENT_SHARE
+	var moving := MOVEMENT_SHARE if kit.has("movement") \
+		else minf(MOVEMENT_SHARE, CLASS_MOVEMENT_SHARE * groups["moving"].size())
 	var share := {"moving": moving, "still": KIT_SHARE - moving, "shelf": 1.0 - KIT_SHARE, "rest": 0.0}
 	if groups["moving"].is_empty():
 		share["still"] += share["moving"]

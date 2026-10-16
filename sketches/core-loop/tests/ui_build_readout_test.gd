@@ -22,6 +22,8 @@ const EXPECTED_LAYERS := {
 	# 2026-10-15 PC-POOL re-pin: live_line was a global reel_speed mod, now a harpoon_lock_deg mod,
 	# which is not a weapon mod, so it stays global (re-pinned again on coordinator ruling P4; round 1 had it local).
 	"grip_tread": "global", "live_line": "global", "vent_baffle": "global",
+	# 2026-10-15 SQ19b: Tally's winch_pawl is a reel_speed mod, not a weapon mod, so global.
+	"winch_pawl": "global",
 	"spring_shims": "global", "drop_weight": "global", "slag_rounds": "local",
 	"double_feed": "local", "focus_lens": "local", "cross_split": "local",
 	"spiral_wave": "local", "chain_arc": "local", "frost_vane": "global",

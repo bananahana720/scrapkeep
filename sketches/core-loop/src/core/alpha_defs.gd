@@ -31,6 +31,12 @@ const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom"
 # Weight are the second ingredients of the Storm Mast and Grounding Spike evolutions. A
 # synergy completes from this list for every pilot. Generated recipes and milestone parts are out.
 # 2026-10-11 (alpha wave 13 SG5): Load Dividend joins the normal parts as the burden payout.
+# 2026-10-15 (wave 14 SQ19b): 19 to 45 parts, so each pilot's offers lean to its own kit
+# (Parts.KITS) by the 60 to 80% band on this list too; at 19 the kit share ran 0.12 to 0.69. The
+# additions are existing commons that carry one pilot's kit tags, grouped by that pilot below,
+# four more neutral shelf parts so a pilot's leftover slots spread instead of repeating the same
+# three, and Tally's Winch Pawl. offer_weights_test asserts the band, the movement cap and a
+# top-10 overlap of at most 0.40 between any two pilots on this list.
 const PARTS := [
 	"double_feed", "focus_lens", "spiral_wave", "cross_split", "arc_coil",
 	"hot_rivets", "loose_trigger", "rivet_plating",
@@ -38,6 +44,20 @@ const PARTS := [
 	"sunforged_core", "gatling_heart",
 	"grip_tread", "live_line", "vent_baffle", "spare_cell", "spring_shims", "drop_weight",
 	"load_dividend",
+	# SQ19b neutral shelf (Parts.NEUTRAL_SHELF).
+	"long_barrel", "rivet_seam", "magnet_spool", "fast_hands",
+	# Sable: arc and anchor skill parts, and its own grapple coil.
+	"cap_relay", "beacon_lamp", "echo_locator", "grapple_coil",
+	# Rivet: its own sprint cell.
+	"sprint_cell",
+	# Kest: arc, frost and chain hitters, and its own glide vane.
+	"static_burr", "frost_barb", "chain_arc", "glide_vane",
+	# Tarn: kinetic hitters, and a kinetic plate it shares with Sable and Tally.
+	"pin_setter", "hairline_fracture", "impact_driver", "slag_rounds", "brace_frame",
+	# Tally: a split hitter, mass plates and its own winch.
+	"barrage_spring", "deflect_plate", "ballast_drum", "scrap_armor", "winch_pawl",
+	# The Cannon: a mass hitter and mass-carrying skill parts.
+	"overpressure", "cache_key", "re_rack",
 ]
 
 # SG4 burden parts: a second list beside PARTS, so the normal loot list (build_synergy_test pins

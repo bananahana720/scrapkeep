@@ -14,6 +14,9 @@ extends RefCounted
 # charges   ability slot to extra max_charges per copy.
 # class     only this class is offered the part.
 # needs     the other module's seam it waits on; the part is never offered without it.
+# touches   the Bindings verb the part changes. 2026-10-15 (wave 14 SQ19b): set on the rows the
+#           alpha list offers (build_synergy_test); each keeps the row's offer bucket
+#           (Parts.bucket_of): fire only on weapon rows, special only on skill rows.
 #
 # Where I2's effect needs a hook no unit owns yet, the row keeps I2's intent with the
 # nearest build-owned effect, and DESIGN-NOTES v2 W4 names each adaptation.
@@ -24,12 +27,12 @@ const KEST := "demolitions_caster"
 
 const TABLE := {
 	# Charge-stockpile (8).
-	"cap_relay": {"base": "charge", "rarity": "uncommon", "stack": "capped", "cap": 3, "tags": ["arc"],
+	"cap_relay": {"touches": "special", "base": "charge", "rarity": "uncommon", "stack": "capped", "cap": 3, "tags": ["arc"],
 		"verb": "Stock a spare special", "text": "+1 special charge", "charges": {"special": 1}},
 	"vault_battery": {"base": "charge", "rarity": "rare", "stack": "capped", "cap": 2, "tags": ["anchor", "speed"],
 		"class": SABLE, "needs": "player.set_vault_charges",
 		"verb": "Bank a second vault", "text": "+1 vault kick charge", "effect": {"do": "vault_charges", "count": 1}},
-	"sprint_cell": {"base": "charge", "rarity": "uncommon", "stack": "capped", "cap": 3, "tags": ["speed"],
+	"sprint_cell": {"touches": "boost", "base": "charge", "rarity": "uncommon", "stack": "capped", "cap": 3, "tags": ["speed"],
 		"class": RIVET, "verb": "Stock a spare sprint", "text": "+1 sprint charge", "charges": {"movement": 1}},
 	"cloak_flask": {"base": "charge", "rarity": "rare", "stack": "capped", "cap": 2, "tags": ["speed", "anchor"],
 		"class": KEST, "verb": "Stock a spare blink", "text": "+1 blink charge, more cloak", "charges": {"movement": 1}},
@@ -46,7 +49,7 @@ const TABLE := {
 		"effect": {"do": "grant_charge", "slot": "movement", "every": 6.0}},
 
 	# Momentum and bowling (8), tagged bwl for the balance report.
-	"pin_setter": {"base": "weapon", "rarity": "uncommon", "trigger": "on_smash", "stack": "linear", "cap": 3,
+	"pin_setter": {"touches": "fire", "base": "weapon", "rarity": "uncommon", "trigger": "on_smash", "stack": "linear", "cap": 3,
 		"tags": ["kinetic"], "punch": 5.0, "bwl": true, "verb": "Set the pins", "text": "After a smash, pins hit 50% harder",
 		"effect": {"do": "pin_bonus", "bonus": 0.5, "window": 1.5}},
 	"spring_hull": {"base": "defense", "rarity": "common", "trigger": "on_rebound", "stack": "linear", "cap": 5,
@@ -61,12 +64,12 @@ const TABLE := {
 	"ten_pin": {"base": "weapon", "rarity": "rare_plus", "trigger": "on_smash", "stack": "capped", "cap": 3,
 		"tags": ["kinetic", "chain"], "punch": 10.0, "bwl": true, "verb": "Knock down all ten",
 		"text": "Pins knock three more pins", "effect": {"do": "pin_chain", "count": 3, "speed": 9.0, "window": 1.5}},
-	"ballast_drum": {"base": "defense", "rarity": "common", "stack": "linear", "cap": 5, "tags": ["mass"], "bwl": true,
+	"ballast_drum": {"touches": "roll", "base": "defense", "rarity": "common", "stack": "linear", "cap": 5, "tags": ["mass"], "bwl": true,
 		"verb": "Roll a ballast drum", "text": "Bolts on 40 mass of ballast", "effect": {"do": "ballast", "mass": 40}},
 	"strike_pocket": {"base": "weapon", "rarity": "rare", "trigger": "on_rebound", "stack": "capped", "cap": 1,
 		"tags": ["kinetic", "speed"], "punch": 8.0, "bwl": true, "verb": "Hit the pocket",
 		"text": "Third rebound in 4s strikes double", "effect": {"do": "rebound_crit", "count": 3, "window": 4.0, "mult": 2.0}},
-	"re_rack": {"base": "utility", "rarity": "uncommon", "trigger": "on_land", "stack": "capped", "cap": 1,
+	"re_rack": {"touches": "jump", "base": "utility", "rarity": "uncommon", "trigger": "on_land", "stack": "capped", "cap": 1,
 		"tags": ["kinetic", "mass"], "bwl": true, "verb": "Re-rack the pins", "text": "Landing near a pin relaunches it",
 		"effect": {"do": "relaunch_pin", "radius": 7.0, "speed": 10.0, "window": 2.0}},
 
@@ -99,22 +102,22 @@ const TABLE := {
 		"text": "20% chance a pin chains once more", "effect": {"do": "domino", "chance": 0.2, "speed": 10.0, "window": 1.5}},
 
 	# Damage (10).
-	"hairline_fracture": {"base": "weapon", "rarity": "common", "trigger": "on_hit", "stack": "linear", "cap": 5,
+	"hairline_fracture": {"touches": "fire", "base": "weapon", "rarity": "common", "trigger": "on_hit", "stack": "linear", "cap": 5,
 		"tags": ["kinetic"], "punch": 3.0, "verb": "Find the hairline", "text": "+6% chance a hit lands twice",
 		"effect": {"do": "extra_hit", "chance": 0.06, "mult": 1.0}},
-	"barrage_spring": {"base": "weapon", "rarity": "uncommon", "trigger": "on_kill", "stack": "capped", "cap": 1,
+	"barrage_spring": {"touches": "fire", "base": "weapon", "rarity": "uncommon", "trigger": "on_kill", "stack": "capped", "cap": 1,
 		"tags": ["speed", "split"], "punch": 6.0, "verb": "Spring the next shot", "text": "A kill refunds a weapon charge",
 		"effect": {"do": "grant_charge", "slot": "weapon", "every": 1.0}},
 	"warhead_slug": {"base": "weapon", "rarity": "rare", "trigger": "on_smash", "stack": "linear", "cap": 3,
 		"tags": ["kinetic", "mass"], "punch": 10.0, "verb": "Slam a warhead home", "text": "Smashes hit plating 35% harder",
 		"effect": {"do": "burst", "radius": 5.0, "damage": 14.0}},
-	"static_burr": {"base": "weapon", "rarity": "common", "trigger": "on_hit", "element": "arc", "stack": "capped", "cap": 3,
+	"static_burr": {"touches": "fire", "base": "weapon", "rarity": "common", "trigger": "on_hit", "element": "arc", "stack": "capped", "cap": 3,
 		"tags": ["arc"], "punch": 3.0, "verb": "Burr every round", "text": "10% chance a hit arcs on",
 		"effect": {"do": "zap", "chance": 0.1, "damage": 8.0, "reach": 10.0}},
-	"frost_barb": {"base": "weapon", "rarity": "common", "trigger": "on_hit", "element": "frost", "stack": "capped", "cap": 3,
+	"frost_barb": {"touches": "fire", "base": "weapon", "rarity": "common", "trigger": "on_hit", "element": "frost", "stack": "capped", "cap": 3,
 		"tags": ["frost"], "punch": 3.0, "verb": "Barb shots with frost", "text": "10% chance a hit spreads frost",
 		"effect": {"do": "burst", "chance": 0.1, "radius": 3.0, "damage": 4.0}},
-	"overpressure": {"base": "weapon", "rarity": "uncommon", "trigger": "timed", "stack": "capped", "cap": 1,
+	"overpressure": {"touches": "fire", "base": "weapon", "rarity": "uncommon", "trigger": "timed", "stack": "capped", "cap": 1,
 		"tags": ["mass", "anchor"], "punch": 6.0, "verb": "Build overpressure", "text": "Every 8s, next hit +60%",
 		"effect": {"do": "arm_hit", "every": 8.0, "bonus": 0.6}},
 	"clean_break": {"base": "weapon", "rarity": "rare", "trigger": "on_kill", "stack": "capped", "cap": 1,
@@ -122,7 +125,7 @@ const TABLE := {
 		"effect": {"do": "burst", "radius": 6.0, "damage": 10.0}},
 	"tracer_round": {"base": "weapon", "rarity": "common", "stack": "linear", "cap": 5, "tags": ["anchor"],
 		"verb": "Trace the long shot", "text": "+8% weapon range", "mods": {"weapon_range": 1.08}},
-	"impact_driver": {"base": "weapon", "rarity": "uncommon", "trigger": "on_rebound", "stack": "linear", "cap": 3,
+	"impact_driver": {"touches": "fire", "base": "weapon", "rarity": "uncommon", "trigger": "on_rebound", "stack": "linear", "cap": 3,
 		"tags": ["kinetic", "speed"], "punch": 6.0, "verb": "Drive the impact", "text": "Rebounds deal a weapon hit",
 		"effect": {"do": "rebound_strike", "mult": 1.0}},
 	"last_word": {"base": "weapon", "rarity": "rare_plus", "trigger": "on_damage_taken", "stack": "capped", "cap": 1,
@@ -132,10 +135,10 @@ const TABLE := {
 	# Mobility (8).
 	"light_frame": {"base": "mobility", "rarity": "common", "stack": "linear", "cap": 5, "tags": ["speed"],
 		"verb": "Shave the frame", "text": "+6% cruise speed", "mods": {"cruise": 1.06}},
-	"glide_vane": {"base": "mobility", "rarity": "uncommon", "stack": "linear", "cap": 3, "tags": ["speed", "frost"],
+	"glide_vane": {"touches": "jump", "base": "mobility", "rarity": "uncommon", "stack": "linear", "cap": 3, "tags": ["speed", "frost"],
 		"class": KEST, "punch": 3.0, "verb": "Widen the glide vane", "text": "+20% glide time, +3 punch",
 		"mods": {"glide_gravity": 0.83}},
-	"grapple_coil": {"base": "mobility", "rarity": "common", "stack": "linear", "cap": 4, "tags": ["anchor"],
+	"grapple_coil": {"touches": "harpoon", "base": "mobility", "rarity": "common", "stack": "linear", "cap": 4, "tags": ["anchor"],
 		"class": SABLE, "verb": "Coil a longer rope", "text": "+20% grapple range", "mods": {"rope_range": 1.2}},
 	"tumbler_bearing": {"base": "mobility", "rarity": "uncommon", "trigger": "on_land", "stack": "capped", "cap": 1,
 		"tags": ["speed", "mass"], "verb": "Tumble into a hop", "text": "Hard landings give back an air jump",
@@ -153,7 +156,7 @@ const TABLE := {
 		"verb": "Ride low", "text": "+5% cruise speed", "mods": {"cruise": 1.05}},
 
 	# Defense (8).
-	"rivet_seam": {"base": "defense", "rarity": "common", "stack": "linear", "cap": 6, "tags": ["mass"],
+	"rivet_seam": {"touches": "roll", "base": "defense", "rarity": "common", "stack": "linear", "cap": 6, "tags": ["mass"],
 		"verb": "Seam the hull", "text": "+15 max health", "max_hp_bonus": 15.0},
 	"shock_liner": {"base": "defense", "rarity": "uncommon", "trigger": "on_damage_taken", "element": "arc", "stack": "capped",
 		"cap": 3, "tags": ["arc", "mass"], "verb": "Line the hull live", "text": "Hits taken arc back at them",
@@ -161,13 +164,13 @@ const TABLE := {
 	"crush_guard": {"base": "defense", "rarity": "rare", "stack": "hyperbolic", "cap": 0.3, "tags": ["mass", "anchor"],
 		"verb": "Guard against the crush", "text": "Take about 10% less damage",
 		"effect": {"do": "damage_reduction", "per": 0.111}},
-	"deflect_plate": {"base": "defense", "rarity": "common", "trigger": "on_damage_taken", "stack": "capped", "cap": 3,
+	"deflect_plate": {"touches": "roll", "base": "defense", "rarity": "common", "trigger": "on_damage_taken", "stack": "capped", "cap": 3,
 		"tags": ["mass"], "verb": "Angle the plate", "text": "5% chance a hit glances off",
 		"effect": {"do": "heal_back", "chance": 0.05, "share": 1.0}},
-	"brace_frame": {"base": "defense", "rarity": "uncommon", "trigger": "on_land", "stack": "capped", "cap": 1,
+	"brace_frame": {"touches": "jump", "base": "defense", "rarity": "uncommon", "trigger": "on_land", "stack": "capped", "cap": 1,
 		"tags": ["mass", "kinetic"], "verb": "Brace on landing", "text": "Big drops blunt hits for 1s",
 		"effect": {"do": "brace", "min_impact": 11.0, "window": 1.0, "share": 0.2}},
-	"scrap_armor": {"base": "defense", "rarity": "common", "stack": "linear", "cap": 2, "tags": ["mass"],
+	"scrap_armor": {"touches": "roll", "base": "defense", "rarity": "common", "stack": "linear", "cap": 2, "tags": ["mass"],
 		"verb": "Wear your scrap", "text": "+1 max health per 50 mass", "effect": {"do": "hp_per_mass", "per": 1.0, "mass": 50.0, "cap_hp": 40.0}},
 	"rebound_skin": {"base": "defense", "rarity": "rare", "trigger": "on_rebound", "stack": "capped", "cap": 1,
 		"tags": ["mass", "speed"], "verb": "Skin off the heavy", "text": "After a rebound, its hits glance 1s",
@@ -179,15 +182,15 @@ const TABLE := {
 	# Utility (8).
 	"magnet_coil": {"base": "utility", "rarity": "common", "stack": "linear", "cap": 4, "tags": ["mass", "anchor"],
 		"verb": "Wind the magnet", "text": "Scrap magnet reaches 30% further", "magnet": 1.3},
-	"cache_key": {"base": "utility", "rarity": "uncommon", "trigger": "on_kill", "stack": "capped", "cap": 3,
+	"cache_key": {"touches": "roll", "base": "utility", "rarity": "uncommon", "trigger": "on_kill", "stack": "capped", "cap": 3,
 		"tags": ["mass"], "verb": "Pick the cache", "text": "6% of kills drop bonus mass",
 		"effect": {"do": "bonus_scrap", "chance": 0.06, "amount": 12}},
-	"beacon_lamp": {"base": "utility", "rarity": "common", "trigger": "timed", "stack": "capped", "cap": 1, "tags": ["arc"],
+	"beacon_lamp": {"touches": "roll", "base": "utility", "rarity": "common", "trigger": "timed", "stack": "capped", "cap": 1, "tags": ["arc"],
 		"verb": "Light the beacon", "text": "Every 6s, the beacon pings", "effect": {"do": "ping", "every": 6.0, "target": "beacon"}},
-	"fast_hands": {"base": "utility", "rarity": "common", "stack": "linear", "cap": 3, "tags": ["speed"],
+	"fast_hands": {"touches": "roll", "base": "utility", "rarity": "common", "stack": "linear", "cap": 3, "tags": ["speed"],
 		"verb": "Haggle with fast hands", "text": "Fabricator and shop prices -8%",
 		"effect": {"do": "price_scale", "per": 0.08}},
-	"echo_locator": {"base": "utility", "rarity": "uncommon", "trigger": "timed", "stack": "capped", "cap": 1,
+	"echo_locator": {"touches": "roll", "base": "utility", "rarity": "uncommon", "trigger": "timed", "stack": "capped", "cap": 1,
 		"tags": ["arc", "anchor"], "verb": "Ping the vault", "text": "Every 12s, the nearest vault pings",
 		"effect": {"do": "ping", "every": 12.0, "target": "vault"}},
 	"synergy_lens": {"base": "utility", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["chain", "split"],

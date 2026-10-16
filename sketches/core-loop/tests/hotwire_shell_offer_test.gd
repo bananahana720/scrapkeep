@@ -109,7 +109,10 @@ func _loot_parity() -> void:
 	# relay.convergence seam, so pools and rolls are unchanged. Was a443c521 (GP5, 2026-10-08).
 	# 2026-10-15 PC-POOL re-pin: five wave 11 verb rows changed (three became class parts, Live Line
 	# and Drop Weight changed knob), so the pool list and the seeded rolls moved. Was f45eadc3 (SR9).
-	_check("loot parity", digest == "7bb9a5f9a8397d241366df232a9a1226539012aae7f6a1cdb06b6c26dd9e3552", "digest matches the PC-POOL pin (2026-10-15: five verb rows changed; SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
+	# 2026-10-15 SQ19b re-pin: Tally's winch_pawl adds one id and one row (99 and 99); a diff of
+	# this digest's input at base and head shows only the size line and the id list move, with
+	# winch_pawl the one new id, and the five sable pools and 50 rolls unchanged. Was 7bb9a5f9 (PC-POOL).
+	_check("loot parity", digest == "4f7ed07d870028fd06c757379c94bbcb457ae792ea7cd06b48a0c41019d6a8fb", "digest matches the SQ19b pin (2026-10-15: winch_pawl id and row; PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
 
 
 func _preview() -> void:
