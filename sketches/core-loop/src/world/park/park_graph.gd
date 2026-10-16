@@ -103,24 +103,6 @@ var _members := []
 # The search heap, (distance, node) pairs, ordered by distance then node.
 var _hd := PackedFloat32Array()
 var _hn := PackedInt32Array()
-# One read graph per path for the game's readers (activities, audio). Main thread only: a
-# search writes the instance's heap, so a worker may read its own graph and hand it in through
-# adopt(), but never touch a shared one.
-static var _shared := {}
-
-
-# The game's copy of a baked graph, read once per path (about 50 ms a map) and shared by
-# every reader. Readers treat it as read-only; read() still gives a private copy.
-static func shared(path: String):
-	if not _shared.has(path):
-		_shared[path] = read(path) if FileAccess.file_exists(path) else null
-	return _shared[path]
-
-
-# A graph a worker read for this path becomes the shared one, unless one is already shared.
-static func adopt(path: String, graph) -> void:
-	if graph != null and _shared.get(path) == null:
-		_shared[path] = graph
 
 
 static func read(path: String):

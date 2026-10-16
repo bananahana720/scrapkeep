@@ -135,8 +135,12 @@ var _mark_pools := {}
 # for a map played past stage 1, the pocket-draw layout. All three read only the graph and the
 # map's authored rows, so a worker builds them for the next stage's map while this one plays,
 # from a copy taken on the main thread, and hands them back as plain data. Map id -> {"task",
-# "out"} while the worker runs, then {"pool", "layout"}; the graph goes to ParkGraph.shared.
+# "out"} while the worker runs, then {"pool", "layout"}; the graph goes to shared_graph.
 var _prep := {}
+# One read graph per path for the game's readers (activities, audio's parameter sampler). Main
+# thread only: a search writes the graph's own heap, so a worker reads a private graph and hands
+# it in through _adopt_graph. Here, not in park_graph.gd, whose source the baked graphs hash.
+static var _shared_graphs := {}
 # The main-thread time of the last stage_entered handler, for stage_entry_budget_test.
 var last_entry_usec := 0
 
@@ -216,7 +220,7 @@ func _exit_tree() -> void:
 		if _prep[id].has("task"):
 			WorkerThreadPool.wait_for_task_completion(_prep[id].task)
 			var done: Dictionary = _prep[id].out
-			ParkGraph.adopt(graph_path(id), done.graph)
+			_adopt_graph(graph_path(id), done.graph)
 			_prep[id] = {"pool": done.pool, "layout": done.layout}
 
 
@@ -231,6 +235,20 @@ func _prepare_stage(stage_number: int) -> void:
 
 static func graph_path(map_id: String) -> String:
 	return "res://assets/park/%s/graph.bin" % map_id
+
+
+# The game's copy of a baked graph, read once per path (about 50 ms a map) and shared by every
+# reader, which treats it as read-only. ParkGraph.read still gives a private copy.
+static func shared_graph(path: String):
+	if not _shared_graphs.has(path):
+		_shared_graphs[path] = ParkGraph.read(path) if FileAccess.file_exists(path) else null
+	return _shared_graphs[path]
+
+
+# A graph a worker read for this path becomes the shared one, unless one is already shared.
+static func _adopt_graph(path: String, graph) -> void:
+	if graph != null and _shared_graphs.get(path) == null:
+		_shared_graphs[path] = graph
 
 
 # Starts the worker for a park map's entry data. stage_number says whether the pocket-draw
@@ -264,9 +282,9 @@ func _entry_data(map) -> Dictionary:
 	if _prep.has(id) and _prep[id].has("task"):
 		WorkerThreadPool.wait_for_task_completion(_prep[id].task)
 		var done: Dictionary = _prep[id].out
-		ParkGraph.adopt(graph_path(id), done.graph)
+		_adopt_graph(graph_path(id), done.graph)
 		_prep[id] = {"pool": done.pool, "layout": done.layout}
-	var graph = ParkGraph.shared(graph_path(id))
+	var graph = shared_graph(graph_path(id))
 	if not _prep.has(id):
 		_prep[id] = {"pool": TradePockets.candidates(graph, map) if graph != null else PackedInt32Array(), "layout": {}}
 	return _prep[id]
@@ -292,7 +310,7 @@ func _enter_stage(retry: bool) -> void:
 	if "park" in map and not map.park.is_empty():
 		_graph_map = String(map.park.map)
 		entry_data = _entry_data(map)
-		_graph = ParkGraph.shared(graph_path(_graph_map))
+		_graph = shared_graph(graph_path(_graph_map))
 	# The next stage's worker starts now, so it has this whole stage to finish.
 	if "stage" in ctx.terrain:
 		_prepare_stage(int(ctx.terrain.stage) + 1)
