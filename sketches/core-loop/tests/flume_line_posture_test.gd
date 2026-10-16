@@ -6,6 +6,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Run := preload("res://src/core/run_state.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The stage-2 park Warden (the flume mounting, hung 12 m over the drum floor) breaks from the harpoon
@@ -77,15 +78,25 @@ func _run() -> void:
 		1.5 * float(Weapons.BASE["rapid_laser"]["damage"]) / reference * rivet_rate, 0.01)
 
 	# FL3: at the reference heft, every pilot's base kit fills the bar at Rivet's posture per second.
+	# A pressure weapon fires at its refill rate (ruling BL1), every other weapon at its row rate.
 	var pays := []
 	for def in ClassDef.all():
 		var row: Dictionary = Weapons.BASE[def.weapon_id]
 		var pay := _pay(w, String(Weapons.STRIKE_KIND.get(def.weapon_id, "shot")), float(row["damage"]), false, def)
-		var per_s := pay * float(row["rate"])
-		pays.append("%s %s %.0f x %.1f/s -> %.3f a bolt, %.3f/s" % [def.id, def.weapon_id, float(row["damage"]), float(row["rate"]), pay, per_s])
+		var per_s := pay * _fire_rate(def.weapon_id)
+		pays.append("%s %s %.0f x %.1f/s -> %.3f a bolt, %.3f/s" % [def.id, def.weapon_id, float(row["damage"]), _fire_rate(def.weapon_id), pay, per_s])
 		t.check("latched, %s: the base kit fills the bar within 1 percent of Rivet's posture per second" % def.id,
 			absf(per_s - rivet_per_s) <= 0.01 * rivet_per_s, "%.3f/s against %.3f/s" % [per_s, rivet_per_s])
 	print("[report] per-pilot pay at reference heft %.2f: %s" % [game.run.heft(), pays])
+	# BL1: Tally's reader spends pressure that time never refills, so latched (airborne, no rolling refill)
+	# she fires one card per PRESSURE_ROLL_S at best (measured 0.50 a second on the park table, seed 1).
+	# Red at cac3f3de: her bolt was paid by the row's 2.5 a second and filled 1.41 a second.
+	var tally = _def("tally")
+	var tally_row: Dictionary = Weapons.BASE[tally.weapon_id]
+	var tally_per_s := _pay(w, String(Weapons.STRIKE_KIND.get(tally.weapon_id, "shot")), float(tally_row["damage"]), false, tally) \
+		/ Weapons.PRESSURE_ROLL_S
+	t.near("latched, Tally: one card per %.1f s fills %.2f posture per second" % [Weapons.PRESSURE_ROLL_S, rivet_per_s],
+		tally_per_s, 7.07, 0.0707)
 
 	# A planted +50 percent weapon-damage part raises the pilot's posture per second by 50 percent.
 	var pilot = game.run.class_def
@@ -148,6 +159,12 @@ func _pilot_damage() -> Dictionary:
 	for def in ClassDef.all():
 		out[def.weapon_id] = float(Weapons.BASE[def.weapon_id]["damage"])
 	return out
+
+
+static func _fire_rate(weapon: String) -> float:
+	if AbilityState.ABILITIES.get(weapon, {}).has("pressure"):
+		return 1.0 / Weapons.PRESSURE_ROLL_S
+	return float(Weapons.BASE[weapon]["rate"])
 
 
 func _reference_damage() -> float:
