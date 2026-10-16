@@ -2,6 +2,7 @@ extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const PartSets := preload("res://src/build/part_sets.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 
@@ -35,6 +36,8 @@ var synergies: Array = []
 var consumed: Array = []
 # Unnamed tag rules live right now (Synergies.TAG_RULES).
 var rules: Array = []
+# SI6 sets complete right now (PartSets.SETS), folded after the tag rules.
+var sets: Array = []
 # Flat per-hit weapon damage from parts, before the weapon multipliers.
 var punch := 0.0
 
@@ -74,6 +77,9 @@ static func from_parts(held: Array) -> RefCounted:
 		rows.append(Synergies.ROWS[key])
 	for key in sheet.rules:
 		rows.append(Synergies.TAG_RULES[key])
+	sheet.sets = PartSets.complete(held)
+	for key in sheet.sets:
+		rows.append(PartSets.row(key))
 	for row in rows:
 		sheet._fold(row.get("mods", {}), row.get("patterns", {}), row.get("elements", {}))
 		for t in row.get("transformers", []):
