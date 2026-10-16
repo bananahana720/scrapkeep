@@ -364,6 +364,7 @@ func set_velocity_now(velocity: Vector3, cause := "launched") -> void:
 var _bank_pending := {}
 var bank_last := {}
 var _deep: PhysicsShapeQueryParameters3D
+var _inside := {}
 var _bank_logging_deferred := false
 
 
@@ -562,18 +563,15 @@ func _physics_process(delta: float) -> void:
 # A pass-through (a crush, Rivet's drive through a staggered Warden) can end with the ball's
 # centre inside the body. The solver then holds the ball there or pushes it through the floor,
 # and nothing the player presses moves it (BITE-PIN: a Warden held the ball for 130 s). An
-# enemy body the ball touches and is half sunk in is set beside, on the side nearest the ball,
-# keeping its velocity. A body still passing the ball reports no contact, so a pass-through
-# runs on. Brindle's hull keeps its own exception until the ball is clear (boss.gd
-# _step_ghost); this is that rule for every body.
+# enemy body the ball's centre went half deep into without touching it (passing through, its
+# contact excepted) and that touches it now, still that deep, sets the ball beside it on the
+# side nearest the ball, keeping its velocity. A ram met from outside (the reactor sheet's
+# core) touches the shell before it sinks that deep, so it lands as before. Brindle's hull
+# keeps its own exception until the ball is clear (boss.gd _step_ghost); this is that rule for
+# every other pass-through.
 func _leave_bodies() -> void:
 	if _frozen or not _rigid.is_inside_tree():
-		return
-	var touching: Array = []
-	for body in _rigid.get_colliding_bodies():
-		if body is PhysicsBody3D and body.is_in_group("enemy"):
-			touching.append(body)
-	if touching.is_empty():
+		_inside = {}
 		return
 	var at := ball_position()
 	if _deep == null:
@@ -584,10 +582,23 @@ func _leave_bodies() -> void:
 		_deep.collision_mask = ENEMY_LAYER_MASK
 	_deep.transform = Transform3D(Basis.IDENTITY, at)
 	var space: PhysicsDirectSpaceState3D = _rigid.get_world_3d().direct_space_state
-	for hit in space.intersect_shape(_deep, 4):
-		if touching.has(hit["collider"]):
-			_set_beside(hit["collider"], at, space)
+	var hits := space.intersect_shape(_deep, 4)
+	if hits.is_empty():
+		_inside = {}
+		return
+	var touching: Array = _rigid.get_colliding_bodies()
+	var inside := {}
+	for hit in hits:
+		var body = hit["collider"]
+		if not (body is PhysicsBody3D and body.is_in_group("enemy")):
+			continue
+		var passed_in: bool = _inside[body] if _inside.has(body) else not touching.has(body)
+		if passed_in and touching.has(body):
+			_inside = {}
+			_set_beside(body, at, space)
 			return
+		inside[body] = passed_in
+	_inside = inside
 
 
 func _set_beside(body: PhysicsBody3D, at: Vector3, space: PhysicsDirectSpaceState3D) -> void:
