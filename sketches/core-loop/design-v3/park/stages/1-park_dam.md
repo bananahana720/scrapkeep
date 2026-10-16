@@ -111,7 +111,7 @@ The three activities, signposted from the drop-in: the domes camp (`enemy_camp`,
 
 ## 5. `park_rows` (136 rows, greybox round 5, 2026-10-12)
 
-The shipped rows are in `src/world/park/park_dam.json`; this table follows that file. Every non-ground row carries `greybox:<element>` (R10). Heights are metres above the base plain; `size` is [length along the facing, height, width].
+The shipped rows are in `src/world/park/park_dam.json`; this table follows that file. Every non-ground row carries `greybox:<element>` (R10), except the three rows the KD1-DRESS pilot dressed with landform recipes on 2026-10-16 (`west_wash`, `upper_slot`, `corkscrew_slot`; section 15). Heights are metres above the base plain; `size` is [length along the facing, height, width].
 
 **Runtime placement (KB9, re-cut 2026-10-11).** Since KB9 the stage places its rows at runtime (`park_recipes.gd` `place_row`): a stamped greybox row keeps its ride sensor and drops its box, because the stamp is its shape, while an unstamped greybox row stands as a solid box of its whole size. The first greybox cut left 19 rows unstamped, and on the KB9 head `slickrock_domes` stood as a 24 m wall across every line (Rivet stalled 20 m from the drop on every seed). So every placed row except an anchor field now carries a stamp, which keeps the bake, the graph and the runtime in agreement:
 
@@ -468,9 +468,9 @@ The shipped park file:
   {"id": "dome_25", "element": "bank", "landform": "slickrock", "society": "none", "at": [-35, -330], "y": null, "size": [40, 16, 40], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:bank", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "shelf_lip", "element": "kicker", "landform": "slickrock", "society": "none", "at": [-90, -300], "y": null, "size": [20, 0, 30], "yaw_deg": 0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "detail", "routes": ["shelf"], "fragment": ""},
   {"id": "shelf_lip_ramp", "element": "ground", "landform": "slickrock", "society": "none", "at": [-90, -300], "y": null, "size": [20, 6, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "west_wash", "element": "half_pipe", "landform": "arroyo", "society": "dam_era", "at": [-102.5, -75.0], "y": null, "size": [397.0, 10, 44], "yaw_deg": 16.8, "verb": "pump", "ride_fact": "ride_chute", "home": "culvert_chasers", "recipe": "greybox:half_pipe", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["west_wash_run"], "fragment": "dam_era_wash_liner"},
-  {"id": "upper_slot", "element": "flow_line", "landform": "slot_canyon", "society": "none", "at": [-45.0, -75.0], "y": null, "size": [384.7, 2, 30], "yaw_deg": 9.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["upper_slot_run"], "fragment": ""},
-  {"id": "corkscrew_slot", "element": "flow_line", "landform": "slot_canyon", "society": "none", "at": [15.0, -75.0], "y": null, "size": [380.1, 2, 34], "yaw_deg": 1.5, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["corkscrew_run"], "fragment": ""},
+  {"id": "west_wash", "element": "half_pipe", "landform": "arroyo", "society": "dam_era", "at": [-102.5, -75.0], "y": null, "size": [397.0, 10, 44], "yaw_deg": 16.8, "verb": "pump", "ride_fact": "ride_chute", "home": "culvert_chasers", "recipe": "half_pipe_concrete", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["west_wash_run"], "fragment": "dam_era_wash_liner"},
+  {"id": "upper_slot", "element": "flow_line", "landform": "slot_canyon", "society": "none", "at": [-45.0, -75.0], "y": null, "size": [384.7, 2, 30], "yaw_deg": 9.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "slot_canyon_flow", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["upper_slot_run"], "fragment": ""},
+  {"id": "corkscrew_slot", "element": "flow_line", "landform": "slot_canyon", "society": "none", "at": [15.0, -75.0], "y": null, "size": [380.1, 2, 34], "yaw_deg": 1.5, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "slot_canyon_flow", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["corkscrew_run"], "fragment": ""},
   {"id": "wash_fin_west", "element": "elevated_line", "landform": "slickrock", "society": "none", "at": [-157.5, -70.0], "y": null, "size": [358.9, 26, 22], "yaw_deg": 18.7, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:elevated_line", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "slot_fin_west", "element": "elevated_line", "landform": "slickrock", "society": "none", "at": [-74.2, -55.6], "y": null, "size": [300.0, 26, 22], "yaw_deg": 14.0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:elevated_line", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "slot_fin_east", "element": "elevated_line", "landform": "slickrock", "society": "none", "at": [-18.5, -75.0], "y": null, "size": [331.6, 26, 22], "yaw_deg": 5.7, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:elevated_line", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
@@ -633,3 +633,73 @@ Board `park-1-park_dam`, panels per PARK.md:406. `p1_overhead` is plotted from s
 **Frame 6, the Warden fight.** From the toe apron looking up the face: the gates over the relic open, a white water sheet pouring down the face, and the ball riding up the sheet toward the relic's open core, a harpoon line taut from a gate pier to the ball.
 
 **Frame 7, the exit.** After the break: the three gates on the apron, Moss's bay hovering behind them, and the ball arcing up the face and over the crest, the reservoir and a far mesa with a weir on it in the morning haze.
+
+## 15. Dressing pass, KD1-DRESS (2026-10-16)
+
+The dressing pilot for PARK.md:581's "then recipes swapped in and the bands met again". Base `cand/alpha-w15` at `e357a8c8`. Evidence: `/home/andrew/scratch/w15/kd1dress/` (scripts, logs and per-seed JSON; local, not committed).
+
+**The rule applied.** A row swaps from `greybox:<element>` to a landform recipe only when both hold. First, this page or the PARK.md section 4 family names that recipe for the row's element and landform. Second, the recipe's GLB seats on the stage as placed today: `park_recipes.gd` puts a GLB row's node on the ground at the row's centre (`row_transform`, `place_row`'s `seat`) and its origin on the entry lip (`ride_frame`), and it never scales the GLB to the row's `size`. The read-only probe `swap_probe.gd` measured every named candidate against the committed bake and the seven lines (`swap_probe.log`). No footprint, stamp, ride, line or Warden number changed; the bake and graph moved only by the park file's hash (the graph does not read `recipe`).
+
+**Swapped (3 rows).**
+
+| Row | Old recipe | New recipe | Named by | Probe: GLB against ground and lines |
+| --- | --- | --- | --- | --- |
+| `west_wash` | `greybox:half_pipe` | `half_pipe_concrete` | section 2 (wash liner), Frame 3 ("concrete-lined arroyo half-pipe"), the half-pipe family (dam-crew liners) | 60 m of the 397 m row from its entry lip; collider bottom at least 3.7 m under the ground everywhere (never floats), up to 5 m of its walls buried at the top end; Sable and Tally ride within 1.3 m |
+| `upper_slot` | `greybox:flow_line` | `slot_canyon_flow` | section 1 (two slot canyons), the half-pipe family (slot canyons) | 48 m of the 384.7 m row; floor at least 4 m under the ground, walls at least 6 m above it; Rivet, Tarn and the floor line ride within 1.1 m |
+| `corkscrew_slot` | `greybox:flow_line` | `slot_canyon_flow` | as `upper_slot` | 48 m of the 380.1 m row; floor at least 8 m under, walls at least 2 m above; Kest and Cannon within 9.4 m |
+
+**Kept greybox (104 rows), with the reason.**
+
+| Rows | Reason |
+| --- | --- |
+| `canal_lips` (grind_line, canal) | Named (`canal_lip`) and the footprint fits (120.1 by 8.8 m against 120 by 8), but the row lies on a 43 m fall (ground 43.9 m at the lip, 0.4 m at the far end): seated at the centre, the flat GLB floats 14.9 m at one end and buries 19.9 m at the other, 12.5 m from the Cannon line |
+| `pipeline_bridge` (grind_line, pipeline) | Named (`pipeline_rail`), but the GLB is 120.5 m on an 80 m row: it overruns 40.5 m past the exit, floats up to 29.5 m and comes within 0.3 m of the Cannon line |
+| `spillway_tunnel` (tunnel, spillway_tunnel) | Named (`spillway_tunnel`), but the 90 by 15 m GLB with its 36 m fall seats at the centre's ground (35.1 m), 47.5 m under the ground at its lip (82.6 m): the tunnel stands buried |
+| `cliff_rooms_west` (elevated_line, cliff_dwelling) | Named (`cliff_dwelling_row`), but the 60 m GLB on a 160 m row seats 29.3 m under the ground at its lip (43.1 m against 72.4 m): the rooms stand buried |
+| `service_ledge`, `lobber_ledge` (ledge, mesa_rim) | Named family (`mesa_rim_ledge`), but on the 24 m plateaus the GLB hangs 16 m over the ground at the service ledge's lip and runs 60 m on the lobber ledge's 30 m row, into the wall behind it |
+| `viga_span` (anchor_field, cliff_dwelling) | `viga_pivot` is named for the beams, but the row is an anchor field: swapping drops the post lattice `place_row` builds for Tarn's swing (the max-anchor-gap band), and the GLB seats up to 89 m off the ground at the ledge foot |
+| `crest_rail` (rail, dam_face) | No family recipe is a dam-crest parapet; `pipeline_rail` would cover 120.5 m of the 300 m crest |
+| `tailwater_bar` (flow_line, dry_wash) | The half-pipe family names three recipes and none for a dry-wash bar; `wash_dropin_lip` would sit wholly under the ground, 0.5 m from the Rivet line |
+| 7 kickers (`shelf_lip`, `domes_kicker`, `wash_kicker`, `upper_slot_step`, `corkscrew_step`, `outlet_bucket`, `apron_kicker`) | `mesa_lip_kicker` is a sky-island recipe (mesas and buttes, not slickrock, slots or the outlet), and section 5 measured a wedge on the canyon descent bouncing Rivet off `apron_kicker` on 2 of 8 seeds; the kick stays in each `_ramp` ground row |
+| `the_eye` (tunnel, slickrock) | No tunnel recipe is a hole worn through a sandstone fin (lava tube, adit, shaft and spillway tunnel only) |
+| `top_shelf_deck`, `construction_incline`, `east_haul_road` (drop) | No recipe names a survey deck, a construction incline or a haul road; `shaft_drop` is a 26 m mine shaft |
+| `plunge_pool`, `toe_vent_pits` (bowl, dam_face) | The bowl family is open-pit mine benches and tailings, stage 3's; none names a plunge pool or a vent pit |
+| `east_abutment`, `powerhouse` (ledge, dam_face) | No recipe names a dam abutment or a powerhouse; both belong to the landmark asset unit |
+| 21 elevated lines: 9 slickrock fins (`wash_fin_west`, `slot_fin_west`, `slot_fin_east`, `slot_fin_far`, `domes_fin_west`, `domes_fin_mid`, `domes_fin_east`, `eye_fin_west`, `eye_fin_east`), 3 mesa-rim fins (`west_lane_fin`, `east_lane_fin`, `incline_spine`), 4 river-canyon pieces (`eye_chute_west`, `eye_chute_east`, `eye_fall_spire_west`, `eye_fall_spire_east`), 4 toe pieces (`pool_rock`, `pool_pillar`, `training_wall_west`, `training_wall_east`) and `cliff_rooms_west` above | They are lane walls, fins and spires; the ledge family's recipes are rideable shelves at least 8 m deep, not walls, and the fins carry the measured line clearances of section 9 |
+| 32 banks (`slickrock_domes`, `dome_1` to `dome_25`, `west_rim_bench`, `east_rim_bench`, `toe_apron`, `powerhouse_roof_ramp`, `dam_face_quarter`, `gate_row_apron`) | No family lists `bank`; a bank is its height stamp |
+| 29 anchor fields (13 hoodoo fields, 14 saguaro stands, `gate_piers`, `viga_span` above) | An anchor field is a post lattice built at runtime (`place_anchor_field`); no recipe replaces it |
+
+The landmark (`landmark_dam`) still has no GLB and stands in as greybox (`park_recipes.gd:184-186`); it is a separate asset unit.
+
+**Bands, eight seeds per line, before (`e357a8c8`) and after (this candidate).** Fixed 90 FPS through the CPU queue at nice 10; audit `audit_bands.py`, 56 seed rows and 82 checks on each side; distinct lines from traced seed 1 (`distinct_lines.py`).
+
+| Line | time_to_warden_s median (max) | flow_share median (min) | airborne min to max | peak_speed min | tier3_s median | quiet_max_s | anchor gap max | dead stops |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 64.8 (64.8) / 64.8 (64.8) | 0.9335 (0.9335) / same | 0.2229 to 0.2647 / same | 54.05 / 54.05 | 47.36 / 47.36 | 8.41 / 8.41 | 36.4 / 36.4 | 0 / 0 |
+| rivet | 82.51 (92.11) / 82.11 (83.29) | 0.8183 (0.7624) / 0.8165 (0.7978) | 0.1475 to 0.1708 / 0.1602 to 0.17 | 41.68 / 42.3 | 10.19 / 10.54 | 12.14 / 12.14 | 33.2 / 33.2 | 1 (seed 4) / 0 |
+| kest | 83.36 (86.58) / 85.25 (86.58) | 0.7789 (0.7002) / 0.7873 (0.7002) | 0.2117 to 0.3222 / same | 27.07 / 27.07 | 6.57 / 4.01 | 12.31 / 12.31 | 36.8 / 36.8 | 2 seeds / 2 seeds |
+| tarn | 74.56 (77.71) / same | 0.938 (0.913) / same | 0.2128 to 0.2227 / same | 39.13 / 39.13 | 13.16 / 13.16 | 10.84 / 10.84 | 35.6 / 35.6 | 8 seeds / 8 seeds |
+| tally | 80.11 (83.38) / 84.78 (87.21) | 0.7956 (0.7101) / 0.7273 (0.6715) | 0.1628 to 0.1765 / 0.1676 to 0.1715 | 43.93 / 44.1 | 8.88 / 8.7 | 12.49 / 12.49 | 33.7 / 33.7 | 0 / 0 |
+| cannon | 84.16 (84.83) / same | 0.9371 (0.916) / same | 0.1699 to 0.1725 / same | 35.35 / 35.35 | 12.93 / 12.93 | 11.82 / 11.82 | 35.0 / 35.0 | 0 / 0 |
+| floor | 87.02 (89.26), cap 165.02 / 86.59 (89.26), cap 164.22 | 0.7453 to 0.7975 / 0.7453 to 0.7962 | reported | reported | reported | reported | reported | 7 seeds / 7 seeds |
+
+Segments, length ratios and distinct ride facts stay inside their bands on both sides; distinct lines are 4 mutually distinct on both (sable, rivet, kest, tally). Every band holds after the swap except dead stops, and that miss is the base's: the same stops at the same place and time on both sides (Kest seeds 2 and 3, all eight Tarn seeds and seven floor seeds at about [-57, -403], 31 to 40 s in), 8 m from `domes_camp` ([-51, -396]) and 140 m before the first dressed row's lip at z -265. Section 9's round-5 sweep had none, so it arrived with a later merge; most likely the camp's chaser pack, an inference this pass did not trace. Rivet's base seed-4 stop at [-40.6, 412.3] does not recur. Tally's flow lost the most margin (median 0.7956 to 0.7273, worst seed 0.6715 against the 0.60 floor); her line rides the dressed west wash.
+
+**Win proof on `--table=park`.** `bot_run.gd --policy=skipper --table=park --from-stage=1 --stages=1`, seeds 1 to 3 in separate processes: all three `stages_done` at stage 2 (runner_gunner 126.98 s, demolitions_caster 157.82 s, tarn 206.53 s), no `get_rid` error and no `park_recipes` stand-in warning in any log.
+
+**Tests.** `npm run sketch:smoke -- --sketch core-loop` with every `park_park_dam*`, `park_dam*`, `park_reactor*` and `park_graph*` test and the park schema, bake, route, sight, density, pockets, place, recipes, dressing pin, table, map, events, gates and Warden tests, `SMOKE_BOT=1`: 42 runs, 0 failed, every test with a verdict line and a nonzero check count. `park_park_dam_test` is re-pinned (dated header 2026-10-16): exactly `DRESSED` names a GLB recipe and each base GLB loads, with a planted reverted row and a planted extra swap both turning it red.
+
+**Graph ratios.** Unchanged by the swap: `full_visit_ratio` 1.694 (at most 3.0) holds; `reward_ratio` 0.841 misses its 1.5 start target on the base and on this candidate. The pocket that causes it is `rim_cache`, the reward pocket at 1,065 m from the spawn against a spawn-to-objective path of about 1,266 m (1,065 / 0.841), so the reward sits nearer than the objective. Moving it is greybox work (decisions.tsv:683), not dressing.
+
+**Perf, p1 on card 1** (`perf_bench.gd`, two interleaved rounds, ratios to the same round's s3, memory p1 at open less s3 at open; KB6 caps 1.3, 350 MB static, 300 MB video):
+
+| Run | GPU p99 ratio | frame p99 ratio | draws p99 (ratio) | static MB | video MB |
+| --- | --- | --- | --- | --- | --- |
+| before a | 0.516 | 0.765 | 365 (0.404) | +131.4 | +67.8 |
+| before b | 0.514 | 0.823 | 365 (0.320) | +133.5 | +93.2 |
+| after a | 0.511 | 0.697 | 368 (0.402) | +132.8 | +92.9 |
+| after b | 0.545 | 0.826 | 371 (0.331) | +130.9 | +85.9 |
+
+Three GLBs with their shells add 3 to 6 draws and no measurable memory; frame times ran with other writers on the machine, so only the ratios count.
+
+**Cost, for KD2 to KD6.** 3 rows swapped of 107 greybox rows. About 1.2 hours of wall time, nearly all of it machine time: two eight-seed sweeps of 56 rows (about 12 minutes each under the shared queue), the 42-run smoke (19 minutes), two perf series and the win proof. The edit itself is three recipe fields; the rebake takes 5.6 s for the bake and 8.6 s for the graph, and two rebakes give identical bytes. What blocked more swaps is placement, not assets: a GLB row seats on the ground at its centre and is never scaled, so a fixed-length GLB on a long or sloped row floats or buries, and only rows whose GLB seats within a few metres of the ground at its lip can swap without a footprint change.

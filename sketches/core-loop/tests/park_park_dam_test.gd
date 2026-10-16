@@ -14,9 +14,15 @@ extends SceneTree
 # solid box of the row's whole size (slickrock_domes stood as a 24 m wall across every line); and no
 # anchor post (park_recipes.gd anchor_posts) stands within LINE_CLEAR_M of a pilot or floor line.
 #
+# Re-pinned 2026-10-16 for the KD1-DRESS dressing pilot (design-v3/park/stages/1-park_dam.md section 15):
+# exactly the rows in DRESSED name a landform GLB recipe, each GLB's base file exists so the row does not
+# fall back to greybox, and every other park row stays a greybox stand-in. A new swap updates DRESSED and
+# the stage page's swap and keep lists together. A row with recipe "" (a ground row) places nothing.
+#
 # Planted: a copy of the park with the Warden's family changed, one with two waymarks swapped, a
-# lines copy naming a row the park lacks, a pocket role changed, a stamp dropped from a placed row
-# and a line bent through an anchor field each turn the pins red.
+# lines copy naming a row the park lacks, a pocket role changed, a stamp dropped from a placed row,
+# a line bent through an anchor field, a dressed row reverted to greybox and a kept row swapped to a
+# GLB each turn the pins red.
 
 const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
@@ -41,6 +47,8 @@ const SIGHT_SHARE := 0.85
 # of drift either side of a line before it meets a post.
 const LINE_CLEAR_M := 15.0
 const UNSTAMPED_OK := ["kicker", "anchor_field"]
+# KD1-DRESS, 2026-10-16: the rows dressed with a landform recipe GLB, and the recipe each names.
+const DRESSED := {"west_wash": "half_pipe_concrete", "upper_slot": "slot_canyon_flow", "corkscrew_slot": "slot_canyon_flow"}
 
 var t := T.new("park_park_dam_test")
 
@@ -107,6 +115,18 @@ func _run() -> void:
 			row["size"][0] = 65.0
 	var wall_misses := pins(planted, lines, graph, cells)
 	t.check("planted old wall tip fails Kest landing clearance", wall_misses.any(func(miss): return String(miss).begins_with("training_wall_east Kest landing clearance:")), str(wall_misses))
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "west_wash":
+			row["recipe"] = ParkRecipes.GREYBOX + "half_pipe"
+	var undressed := pins(planted, lines, graph, cells)
+	t.check("planted greybox west_wash fails the dressing pin", undressed.any(func(miss): return String(miss).begins_with("dressing:")), str(undressed))
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "canal_lips":
+			row["recipe"] = "canal_lip"
+	var overdressed := pins(planted, lines, graph, cells)
+	t.check("planted canal_lip swap fails the dressing pin", overdressed.any(func(miss): return String(miss).begins_with("dressing:")), str(overdressed))
 	quit(t.verdict())
 
 
@@ -181,6 +201,14 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary, cells: 
 		var recipe := String(row.get("recipe", ""))
 		if recipe.begins_with(ParkRecipes.GREYBOX) and not UNSTAMPED_OK.has(row["element"]) and String(row.get("stamp", "")) == "":
 			out.append("%s is a greybox %s with no stamp: KB9 builds it as a solid box" % [row["id"], row["element"]])
+		# KD1-DRESS: the dressed rows name their GLB and it loads; every other row stays greybox.
+		if DRESSED.has(row["id"]):
+			if recipe != DRESSED[row["id"]]:
+				out.append("dressing: %s names %s, want %s" % [row["id"], recipe, DRESSED[row["id"]]])
+			elif ParkRecipes.stands_in(row):
+				out.append("dressing: %s names %s but its base GLB is missing, so it stands in as greybox" % [row["id"], recipe])
+		elif recipe != "" and not recipe.begins_with(ParkRecipes.GREYBOX):
+			out.append("dressing: %s names %s, but only %s are dressed" % [row["id"], recipe, DRESSED.keys()])
 		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
 	for row in park.get("activity_rows", []) + park.get("contraption_rows", []):
 		if row.has("at"):
