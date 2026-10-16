@@ -11,6 +11,7 @@ import { existsSync, readdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkPreset } from "./export-include-check.mjs";
 
 // npm run sketch:export: a Linux x86_64 release of sketches/core-loop under
 // artifacts/local/core-loop-export/<run>/, the ACE stems beside it in music_ace/, booted
@@ -46,6 +47,7 @@ const manifestRel = "spillway/manifest.json";
 const preset = "Linux x64";
 const proofPreset = "Linux x64 proof";
 const WIN_POLICY = "skipper";
+const WIN_STAGE = 6;
 const WIN_SEED = 1;
 const CANNON_SEED = 11;
 const CANNON_PILOT = "remembered_cannon";
@@ -62,6 +64,19 @@ export const WIN_PROOFS = [
   },
   { label: "win proof (tally)", seed: TALLY_SEED, pilot: TALLY_PILOT, dir: "tally" },
 ];
+// The park table (--table=park) reads its ground from assets/park/*/*.bin, which the shipped recipe
+// once dropped (wave-14 release). Its win proof is behind --park-win-proof because no pilot wins
+// that table yet: the 2026-10-16 probe played nine dev-build runs (skipper on runner_gunner seeds
+// 1 and 2, tally 1, remembered_cannon 11, tarn 1 and 3, demolitions_caster 1, pylon_engineer 1,
+// and completionist on runner_gunner 1) and every one ended "stalled" (stage 2 beacon, or tarn
+// seed 3 at the stage 1 gates). Move this entry into WIN_PROOFS once a pilot and seed win.
+export const PARK_WIN_PROOF = {
+  label: "win proof (park)",
+  seed: 1,
+  pilot: "runner_gunner",
+  table: "park",
+  dir: "park",
+};
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 export const BOSS_SMOKE = ["bowl", "waking", "mind"];
 export const BOSS_SMOKE_QUEUE_WAIT_S = 600;
@@ -93,9 +108,11 @@ export function parseArgs(argv) {
   let stemsFrom = null;
   let winProof = false;
   let bossSmokeOnly = false;
+  let parkWinProof = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--win-proof") winProof = true;
+    else if (arg === "--park-win-proof") parkWinProof = true;
     else if (arg === "--boss-smoke-only") bossSmokeOnly = true;
     else if (arg.startsWith("--stems-from="))
       stemsFrom = arg.slice("--stems-from=".length);
@@ -103,7 +120,7 @@ export function parseArgs(argv) {
       stemsFrom = argv[++i];
     else throw new Error("unknown argument: " + arg);
   }
-  return { stemsFrom, winProof, bossSmokeOnly };
+  return { stemsFrom, winProof, bossSmokeOnly, ...(parkWinProof ? { parkWinProof } : {}) };
 }
 
 export function defaultStemsFrom(gitCommonDir) {
@@ -225,6 +242,8 @@ export function winProofFailures(output, status, rowsText) {
     failures.push(
       `outcome ${row.outcome} at stage ${row.stage_reached}, not won`,
     );
+  else if (row.stage_reached !== WIN_STAGE)
+    failures.push(`won at stage ${row.stage_reached}, not stage ${WIN_STAGE}`);
   return failures;
 }
 
@@ -366,7 +385,8 @@ export function packageName(sha7, dirty = false) {
 
 export function winProofLine(row, pack, proof = WIN_PROOFS[0]) {
   const pilot = proof.pilot ? ` pilot ${proof.pilot}` : "";
-  return `${proof.label}: ${row.outcome} at stage ${row.stage_reached}, ${row.ticks} ticks, ${row.wall_seconds} s wall, policy ${WIN_POLICY} seed ${proof.seed}${pilot}, pack ${pack}`;
+  const table = proof.table ? ` table ${proof.table}` : "";
+  return `${proof.label}: ${row.outcome} at stage ${row.stage_reached}, ${row.ticks} ticks, ${row.wall_seconds} s wall, policy ${WIN_POLICY} seed ${proof.seed}${pilot}${table}, pack ${pack}`;
 }
 
 export function tarArgs(outDir, sha7, dirty = false) {
@@ -471,6 +491,14 @@ async function main() {
     }
   }
 
+  // Raw data files the game opens must reach the pack (RELEASE-PARK); see export-include-check.mjs.
+  const presetText = await readFile(path.join(project, "export_presets.cfg"), "utf8");
+  for (const name of [preset, proofPreset]) {
+    const included = checkPreset({ sketch: project, presetText, presetName: name });
+    if (included.problems.length > 0)
+      fail(`export include check "${name}"\n` + included.problems.join("\n"));
+  }
+
   const imported = run(binary, ["--headless", "--path", project, "--editor", "--import"]);
   if (imported.status !== 0 || errorLine.test(imported.stdout + imported.stderr))
     fail("editor import failed\n" + (imported.stdout + imported.stderr).slice(-2000));
@@ -511,6 +539,14 @@ async function main() {
   if (boot.status !== 0) failures.push("boot exit " + boot.status);
   if (failures.length > 0) fail(failures.join("; ") + "\n" + bootText.slice(-2000));
 
+  // The park table reads assets/park/*.bin from the pack; a dropped file prints a park_terrain
+  // ERROR and the run still exits 0, so the boot output is scanned (RELEASE-PARK).
+  const parkBoot = run(exe, ["--headless", "--table=park", "--quit-after", "600"], { cwd: outDir });
+  const parkText = parkBoot.stdout + parkBoot.stderr;
+  const parkErrors = parkText.split("\n").filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line));
+  if (parkBoot.status !== 0 || parkErrors.length > 0)
+    fail("park table boot exit " + parkBoot.status + "\n" + parkErrors.join("\n") + "\n" + parkText.slice(-1000));
+
   const head = run("git", ["-C", root, "rev-parse", "HEAD"]);
   if (head.status !== 0) fail("git HEAD not found\n" + head.stderr);
   const sha = head.stdout.trim();
@@ -525,7 +561,7 @@ async function main() {
   if (status.status !== 0) fail("git status failed\n" + status.stderr);
   const dirty = status.stdout.trim() !== "";
   const version = sha7 + (dirty ? "-dirty" : "");
-  const proofLine = args.winProof ? await winProof(outDir) : null;
+  const proofLine = args.winProof ? await winProof(outDir, args.parkWinProof) : null;
   await writeFile(
     path.join(outDir, "BUILD.txt"),
     buildStamp({
@@ -567,7 +603,7 @@ async function main() {
   if (proofLine) console.log(proofLine);
 }
 
-async function winProof(outDir) {
+async function winProof(outDir, parkWinProof = false) {
   const drift = proofPresetDrift(
     parsePresets(
       await readFile(path.join(project, "export_presets.cfg"), "utf8"),
@@ -593,7 +629,7 @@ async function winProof(outDir) {
     fail("proof pack export failed\n" + exportText.slice(-2000));
 
   const lines = [];
-  for (const proof of WIN_PROOFS)
+  for (const proof of parkWinProof ? [...WIN_PROOFS, PARK_WIN_PROOF] : WIN_PROOFS)
     lines.push(await playWinProof(path.join(proofDir, proof.dir), pack, proof));
   return lines.join("\n");
 }
@@ -626,6 +662,7 @@ async function playWinProof(base, pack, proof) {
       "--policy=" + WIN_POLICY,
       "--seeds=" + proof.seed,
       ...(proof.pilot ? ["--pilot=" + proof.pilot] : []),
+      ...(proof.table ? ["--table=" + proof.table] : []),
     ],
     {
       cwd: path.dirname(pack),
