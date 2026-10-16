@@ -25,7 +25,8 @@ const Run := preload("res://src/core/run_state.gd")
 #   recover facts and their geometry all read the one channel. The body never leaves home (KF2b:
 #   moving it for the pour let a stagger opened on the landing tick strand it at the pour channel
 #   and spike anchor_velocity). slag_hop is untouched. The core window is MELTDOWN_WINDOW times longer (warden.gd's
-#   setup already does this).
+#   setup already does this). On the park, hung out of ram reach, the line bolts are the fight
+#   (FlumePosture below, card FLUME-POSTURE).
 
 const SHEET_SECONDS := 3.0
 const SHEET_WIDTH := 24.0
@@ -82,6 +83,35 @@ class DamPosture extends "res://src/combat/boss_posture.gd":
 			stagger_left = 0.0
 			shatter_frame = frame
 
+# The mounted flume's line fight (card FLUME-POSTURE, ruling FL1; reactor.md:80). Hung 12 m over the
+# drum, the relic is out of ram reach, so the bolts a latched ball fires are the fight. A line bolt pays
+# the stage's other_base (other_base_charging while the relic charges) times its damage over
+# line_reference_damage(), the mean of the six pilots' base weapon damage (17.83), so posture per second
+# follows a weapon's damage output rather than its fire rate. Plating does not enter: the generic rule's
+# punch-over-plating paid a 7 to 10 punch bolt about 0.06 against plating 110, and the bar drained
+# between pulses (register row 747: never broken in 600 s). The pay is also scaled by the ball's heft
+# over LINE_REFERENCE_HEFT to the stage's own posture curve, as a ram's heft-scaled punch is: with no ram
+# in reach, heft is what keeps the posture bands' "small takes at least twice grown". The finisher's fixed
+# seconds compress that ratio, so the dam's flatter heft_curve 1.0 is not enough here (measured small
+# 78.6 s against grown 41.2 s, ratio 1.91; 1.25 gave a band ratio of 1.61). While the ball is engaged and
+# latched the bar does not drain. A bolt from off the line keeps the generic rule, so the camper never
+# breaks it.
+class FlumePosture extends "res://src/combat/boss_posture.gd":
+	var mounted_warden: WeakRef
+	var line_held := false
+	func judge(hit: Dictionary) -> Dictionary:
+		var result := super.judge(hit)
+		var w = mounted_warden.get_ref()
+		if w != null and line_held and not staggered and not result.get("contact", false):
+			w.mount_driver.judge_line_bolt(w, self, hit, result)
+		return result
+
+const Weapons := preload("res://src/combat/weapons.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+static var _line_reference := -1.0
+# The second heft class's floor: a park skipper reaches stage 2 at heft 1.1 to 1.4.
+const LINE_REFERENCE_HEFT := 1.5
+
 var gates_opened := 0
 var rides := 0
 var sheet_left := 0.0
@@ -126,6 +156,18 @@ func step(warden, delta: float) -> void:
 					core.radius = warden.FAMILY_POINT_RADIUS
 					child.shape = core
 				child.global_position = warden.family_point_at()
+	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "flume":
+		if not warden._posture is FlumePosture:
+			var flume := FlumePosture.new(warden.spec.get("posture", {}))
+			for property in warden._posture.get_property_list():
+				if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+					flume.set(property.name, warden._posture.get(property.name))
+			flume.mounted_warden = weakref(warden)
+			warden._posture = flume
+		var held: bool = warden.fleet != null and warden.fleet.ctx.flow.engaged() \
+				and warden._in_play() and warden.hp > 0.0 and _line_on(warden)
+		warden._posture.line_held = held
+		warden._posture.contact_drain_delay = delta if held else 0.0
 	if sheet_left > 0.0:
 		sheet_left = maxf(0.0, sheet_left - delta)
 		if sheet_left <= 0.0:
@@ -347,3 +389,35 @@ func pour_point(warden) -> Vector3:
 # warden.gd's _leave_slag asks for this: every slag lane is laid from the pour channel.
 func lane_origin(warden) -> Vector3:
 	return pour_point(warden)
+
+
+# --- flume: the line fight -------------------------------------------------------------------
+
+# The damage a line bolt is paid against: the mean of the six pilots' base weapon damage.
+static func line_reference_damage() -> float:
+	if _line_reference < 0.0:
+		var total := 0.0
+		var pilots: Array = ClassDef.all()
+		for def in pilots:
+			total += float(Weapons.BASE[def.weapon_id]["damage"])
+		_line_reference = total / pilots.size()
+	return _line_reference
+
+
+# Whether the ball's line is bitten into this Warden.
+func _line_on(warden) -> bool:
+	var target = warden.target
+	var kit = target.get("kit") if target != null else null
+	return kit != null and kit.hooked and kit.on_body and kit.anchor_body == warden
+
+
+func judge_line_bolt(warden, posture, hit: Dictionary, result: Dictionary) -> void:
+	var pay: float = posture.other_base_charging if bool(hit.get("charging", false)) else posture.other_base
+	var heft := LINE_REFERENCE_HEFT
+	var target = warden.target
+	if target != null and target.has_method("heft"):
+		heft = sheet_heft(warden, target.heft())
+	var share := pow(heft / LINE_REFERENCE_HEFT, posture.curve)
+	result["gain"] = pay * float(hit.get("punch", 0.0)) / line_reference_damage() * share
+	result["glance"] = false
+	result["full"] = true
