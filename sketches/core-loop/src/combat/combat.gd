@@ -1809,6 +1809,15 @@ func _fire_cannon_lane(weapon: String) -> void:
 		target = centre + _flat_aim() * 10.0
 	var entry := _commit_cannon("lane", target, centre, reach, Weapons.LANE_DAMAGE, "weapon")
 	var h = entry["hazards"][0]
+	# The body the ball's line holds is struck when the lane's footprint covers it, however high it
+	# hangs: the lane reaches 3 m over the ground, and the stage-2 flume relic hangs 12 m over the
+	# drum floor, so latched lanes landed 0 of about 80 (ruling BL2). The line charge strikes its
+	# anchor the same way (_cannon_line_fire's "forced").
+	var kit = ctx.player.kit
+	if kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
+		var held: Vector3 = kit.anchor_body.global_position
+		if h.contains(Vector3(held.x, h.ground_at(held) + 1.0, held.z)):
+			entry["options"] = {"forced": kit.anchor_body}
 	var end: Vector3 = h.centre + h.heading * h.length
 	var muzzle: Vector3 = ball + h.heading * MUZZLE
 	volleys += 1

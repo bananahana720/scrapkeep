@@ -407,9 +407,13 @@ static func line_reference_damage() -> float:
 	return _line_reference
 
 
-# A weapon's base damage per second, from its Weapons.BASE row.
+# A weapon's base damage per second, from its Weapons.BASE row. A pressure weapon (Tally's reader)
+# fires at its refill rate, one charge per Weapons.PRESSURE_ROLL_S, not its row rate: time never
+# refills pressure, so latched she measured 0.5 shots a second against the row's 2.5 (ruling BL1).
 static func base_dps(weapon: String) -> float:
 	var row: Dictionary = Weapons.BASE[weapon]
+	if preload("res://src/core/ability_state.gd").ABILITIES.get(weapon, {}).has("pressure"):
+		return float(row["damage"]) / Weapons.PRESSURE_ROLL_S
 	return float(row["damage"]) * float(row["rate"])
 
 

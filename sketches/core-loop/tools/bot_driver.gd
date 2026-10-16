@@ -235,6 +235,11 @@ const CAMP_LAST := 1000.0
 const CLIMB_STEP := 4.0
 const CLIMB_PAD := 100.0
 const CLIMB_SLOPE := 0.5
+# A greybox kicker rises exactly CLIMB_SLOPE (14 m over 28 m); the slack keeps rounding from closing it.
+const SLOPE_SLACK := 0.001
+# How far past a kicker's lip its launch lands, clear of the gap a lip leaves before the next floor.
+const KICKER_LAUNCH := 8.0
+const KICKER_JUMP_AT := 3.0
 const CLIMB_REACHED := 6.0
 # A fight target on a shelf more than LEVEL_BAND above the ball is climbed to the same way, the
 # route replanned every FIGHT_CLIMB_REPLAN seconds while the ball stays below: on the Highdraft
@@ -341,6 +346,7 @@ var _climb: Array[Vector3] = []
 var _climb_for := ""
 var _fight_climb: Array[Vector3] = []
 var _fight_climb_clock := 0.0
+var _route_lips: Array[Vector3] = []
 var _plate_hand := {}
 var _ignore_walls := false
 # Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
@@ -1181,6 +1187,7 @@ func _approach(s, ball: Vector3) -> Vector3:
 			_climb = _climb_route(ball, at)
 	while not _climb.is_empty() and _flat(ball, _climb[0]) < CLIMB_REACHED:
 		_climb.pop_front()
+	_kicker_jump(ball)
 	return at if _climb.is_empty() else _climb[0]
 
 
@@ -1191,6 +1198,9 @@ func _approach(s, ball: Vector3) -> Vector3:
 # Each step's rise is read on both of its halves (the heights are sampled at half a step), so a
 # face narrower than CLIMB_STEP is not averaged into a gentle slope: the Highdraft ramp's 3 m side
 # skirt passed as a climbable step and held Tarn below the Warden's island for a whole stage.
+# A park kicker is a placed wedge the terrain's heights do not hold, so its ramp is laid over them
+# and its lip carries a one-way launch edge KICKER_LAUNCH past it: the Flume's warden exit rises
+# 14 m up drum_lip_kicker and flies its 3 m gap to the gate lip, a way the heights alone never had.
 func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 	var terrain = game.ctx.terrain
 	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD
@@ -1202,10 +1212,11 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 	graph.reserve_space(nx * nz)
 	var half := PackedFloat32Array()
 	half.resize(hx * (2 * nz - 1))
+	var kickers := _kickers_within(lo, hi)
 	for j in 2 * nz - 1:
 		for i in hx:
 			var p := lo + Vector2(i, j) * CLIMB_STEP * 0.5
-			half[j * hx + i] = terrain.height(p.x, p.y)
+			half[j * hx + i] = maxf(terrain.height(p.x, p.y), _kicker_height(kickers, p))
 	for j in nz:
 		for i in nx:
 			graph.add_point(j * nx + i, lo + Vector2(i, j) * CLIMB_STEP)
@@ -1227,17 +1238,99 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 				var drop := absf(hb - ha) / CLIMB_STEP
 				var high := a if ha > hb else b
 				graph.set_point_weight_scale(high, maxf(graph.get_point_weight_scale(high), 1.0 + drop))
-				if up <= CLIMB_SLOPE and down <= CLIMB_SLOPE:
+				if up <= CLIMB_SLOPE + SLOPE_SLACK and down <= CLIMB_SLOPE + SLOPE_SLACK:
 					graph.connect_points(a, b)
-				elif up <= CLIMB_SLOPE:
+				elif up <= CLIMB_SLOPE + SLOPE_SLACK:
 					graph.connect_points(a, b, false)
-				elif down <= CLIMB_SLOPE:
+				elif down <= CLIMB_SLOPE + SLOPE_SLACK:
 					graph.connect_points(b, a, false)
-	var path := graph.get_point_path(graph.get_closest_point(Vector2(from.x, from.z)), graph.get_closest_point(Vector2(to.x, to.z)))
+	# Each kicker's lip and landing are two more points: the ramp's cells climb to the lip, the lip
+	# launches one way to the landing, and the landing joins the cells beside it on its own level.
+	var lifted := {}
+	var lips := {}
+	for k in kickers:
+		var lip: Vector3 = k["lip"]
+		var land2: Vector2 = Vector2(lip.x, lip.z) + Vector2(k["dir"].x, k["dir"].z) * KICKER_LAUNCH
+		var land_y: float = terrain.height(land2.x, land2.y)
+		if land_y > lip.y + CLIMB_LEVEL:
+			continue
+		var lip_id := graph.get_available_point_id()
+		graph.add_point(lip_id, Vector2(lip.x, lip.z))
+		var land_id := graph.get_available_point_id()
+		graph.add_point(land_id, land2)
+		graph.connect_points(lip_id, land_id, false)
+		lifted[lip_id] = lip.y
+		lifted[land_id] = land_y
+		lips[lip_id] = true
+		for j in nz:
+			for i in nx:
+				var c := lo + Vector2(i, j) * CLIMB_STEP
+				var hc: float = half[2 * j * hx + 2 * i]
+				var to_lip := c.distance_to(Vector2(lip.x, lip.z))
+				if to_lip <= CLIMB_STEP * 1.5 and lip.y - hc <= (CLIMB_SLOPE + SLOPE_SLACK) * maxf(to_lip, 0.01) \
+						and hc - lip.y <= CLIMB_SLOPE * maxf(to_lip, 0.01):
+					graph.connect_points(j * nx + i, lip_id, false)
+				var to_land := c.distance_to(land2)
+				if to_land <= CLIMB_STEP * 1.5 and absf(hc - land_y) <= CLIMB_SLOPE * maxf(to_land, 0.01):
+					graph.connect_points(land_id, j * nx + i)
+	var ids := graph.get_id_path(graph.get_closest_point(Vector2(from.x, from.z)), graph.get_closest_point(Vector2(to.x, to.z)))
 	var out: Array[Vector3] = []
-	for k in range(1, path.size(), 2):
-		out.append(_ground_point(path[k].x, path[k].y))
+	_route_lips.clear()
+	# Every cell on a ramp and the one before it is kept: cut between kept cells, the line from the
+	# floor to a ramp cell crosses the wedge's side face, which stands up to its full rise.
+	var ramp := []
+	for id in ids:
+		var at := graph.get_point_position(id)
+		ramp.append(not lifted.has(id) and _kicker_height(kickers, at) > terrain.height(at.x, at.y) + CLIMB_LEVEL)
+	for k in range(1, ids.size()):
+		var id: int = ids[k]
+		var at := graph.get_point_position(id)
+		if lifted.has(id):
+			out.append(Vector3(at.x, float(lifted[id]) + 1.0, at.y))
+			if lips.has(id):
+				_route_lips.append(out.back())
+		elif k % 2 == 1 or ramp[k] or (k + 1 < ids.size() and ramp[k + 1]):
+			out.append(_ground_point(at.x, at.y))
 	return out
+
+
+# The greybox kickers of this stage's park map whose footprint reaches the box lo..hi: each one's
+# placed transform, its half width and half length, its rise and its lip (top, at the facing end).
+func _kickers_within(lo: Vector2, hi: Vector2) -> Array:
+	var out := []
+	var terrain = game.ctx.terrain
+	var map = terrain.map()
+	if map == null or not "park" in map or not terrain.has_method("geometry_root"):
+		return out
+	var root: Node3D = terrain.geometry_root(terrain.stage)
+	if root == null:
+		return out
+	for row in map.park.get("park_rows", []):
+		if row.get("element") != "kicker" or not String(row.get("recipe", "")).begins_with("greybox:"):
+			continue
+		var node := root.find_child("Park_" + String(row["id"]), true, false) as Node3D
+		if node == null:
+			continue
+		var xf: Transform3D = node.global_transform
+		var half_len := float(row["size"][0]) * 0.5
+		var reach := Vector2(float(row["size"][0]), float(row["size"][2])).length() * 0.5
+		var at := Vector2(xf.origin.x, xf.origin.z)
+		if at.x + reach < lo.x or at.x - reach > hi.x or at.y + reach < lo.y or at.y - reach > hi.y:
+			continue
+		out.append({"xf": xf, "hw": float(row["size"][2]) * 0.5, "hl": half_len, "rise": float(row["size"][1]),
+			"dir": xf.basis.z.normalized(), "lip": xf * Vector3(0.0, float(row["size"][1]), half_len)})
+	return out
+
+
+# The top of the highest kicker ramp over a ground point, or -INF off every kicker.
+static func _kicker_height(kickers: Array, p: Vector2) -> float:
+	var top := -INF
+	for k in kickers:
+		var xf: Transform3D = k["xf"]
+		var local: Vector3 = xf.affine_inverse() * Vector3(p.x, xf.origin.y, p.y)
+		if absf(local.x) <= float(k["hw"]) and absf(local.z) <= float(k["hl"]):
+			top = maxf(top, xf.origin.y + float(k["rise"]) * (local.z + float(k["hl"])) / (2.0 * float(k["hl"])))
+	return top
 
 
 # Past ENGAGE_BY on a map with standing activities, only the Warden is left to do.
@@ -2045,7 +2138,19 @@ func _fight_way_up(ball: Vector3, at: Vector3, delta: float) -> Vector3:
 		_fight_climb_clock = FIGHT_CLIMB_REPLAN
 	while not _fight_climb.is_empty() and _flat(ball, _fight_climb[0]) < CLIMB_REACHED:
 		_fight_climb.pop_front()
+	_kicker_jump(ball)
 	return at if _fight_climb.is_empty() else _fight_climb[0]
+
+
+# At the top of a kicker on the route, jump: rolled off the lip, a ball slowed by the climb drops
+# into the gap before the next floor (the Flume's drum lip, 3 m short of the gate lip).
+func _kicker_jump(ball: Vector3) -> void:
+	if not game.player.state.grounded or not game.player.verb_ready("jump"):
+		return
+	for lip in _route_lips:
+		if _flat(ball, lip) < KICKER_JUMP_AT and ball.y > lip.y - KICKER_JUMP_AT:
+			source.press["jump_pressed"] = true
+			return
 
 
 # Whether the ground RUNUP_EDGE past the runup point and to either side of it is level with the
