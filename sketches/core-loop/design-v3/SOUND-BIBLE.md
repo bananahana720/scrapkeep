@@ -18,6 +18,30 @@ Andrew, 2026-10-16: carefree, experimental and **melodramatic, like an anime ope
 
 Andrew loves both title themes, so there is no single title. Each title theme pairs with its own alternate title screen, and the game picks one per launch: A (sax noir), B (machine lead), and C (anime opening, the melodramatic one, at the band's 172 BPM). Never play the same one twice in a row.
 
+The themes also have jobs past the title screen, matching the tone bible (`tone/TONE-BIBLE.md` in the project library, draft of 2026-10-16), which wins on feel:
+
+| Theme | Belongs to | Where its hook returns |
+| --- | --- | --- |
+| A, sax lead | the pilots and the worlds: the keepers | each world's sax lead quotes it, and the pilot answers in every boss duel |
+| B, machine lead, sax answering | the bosses and the Furnace Fleet: the machine calls | each boss states it first, and the keepers answer |
+| C, anime opening | the swing itself | the run summary and the ending play its fanfare, sad break and key change |
+
+Boss fights are call-and-response duels, the game's bass battle: the boss states B's phrase, the pilot's A motif answers, and the exchange tightens as phases fall.
+
+## The swing, in music
+
+The tone bible's five-beat swing map, scored. It fits in about 20 seconds and is used for intros, boss arrivals, the run summary and the ending.
+
+| Beat | Music |
+| --- | --- |
+| Hype | Kick drum enters with a fanfare stab and the hook's first phrase |
+| Collision | Everything drops except the bass. The rival's B phrase enters. |
+| Crash | One sax line held a bar too long over a held chord: Bbmaj7 or the hanging A7b9 |
+| Wink | A bell, a pipe clank or a drawn sound-effect word answers on the off-beat |
+| Back up | Hard cut on the downbeat into the full band, a whole step up when the moment earned it |
+
+Every crash resolves home: to D in menus, Spillway and the run summary, or to its own world's tonic, E in the Dig and G in the Highdraft. No silence during play lasts longer than a bar.
+
 ## Palette
 
 | Layer | What it is | The rule |
@@ -33,7 +57,7 @@ Never: vocals, wobble or growl bass as the main texture, lounge-piano softness, 
 
 ## Tempo and key
 
-All house music runs at **129 BPM**, the game's club tempo: one 172 BPM band bar equals three 129 beats, so the engine's pivot bar (AUDIO-V3 §1) still lands. Worlds differ by feel rather than tempo: the Dig sits in a half-time feel over the same 129 kick, the Highdraft pushes with faster lead runs. Keys follow the in-game themes so the harmony system keeps working: title and Spillway in D (Dorian, home chord Dm9, dominant A7b9), the Dig in E, the Highdraft in G.
+Two grids, as the engine already has them: in-run roaming plays on the **172 BPM** band, and combat and boss fights pivot onto the **129 BPM** house grid. One 172 bar equals three 129 beats, so the pivot bar (AUDIO-V3 §1) lands. Titles A and B and the three world tracks in this pass are the 129 house layer, and title C is at 172. Worlds differ by feel rather than tempo: the Dig sits in a half-time feel over the same 129 kick, the Highdraft pushes with faster lead runs. Keys follow the in-game themes so the harmony system keeps working: title and Spillway in D (Dorian, home chord Dm9, dominant A7b9), the Dig in E, the Highdraft in G.
 
 ## The three worlds
 
@@ -45,11 +69,13 @@ All house music runs at **129 BPM**, the game's club tempo: one 172 BPM band bar
 
 ## Boss themes
 
-A boss plays a threatening version of its world's hook, then states a contrasting boss phrase. Phases follow the game's posture and stagger thresholds, never a soundtrack timer.
+A boss plays a threatening version of its world's hook, then states its own B-family phrase. Phases follow the game's posture and stagger thresholds, never a soundtrack timer. Nobody is evil (tone bible), so each theme sounds like a person who is sincere and wrong, woken or lonely, not a villain.
 
-- **Spillway's boss** (the reactor family): the alto hook moves to baritone, the Ab pedal from AUDIO-V3 goes under the bass, and the brass answers arrive early, interrupting the call.
-- **The Dig's boss** (the hive family): the bass riff compresses into 3+3+2 accents, the stacked-fourths hum becomes the chord, and the flat second takes over the cadence.
-- **The Mind**: the only boss whose theme is built from the player's own hook, inverted and played back on sine. The last phase restates the title melody, now harmonised in the Mind's wrong chord, before the final drop resolves to D major.
+- **Admiral Brindle, Spillway**: sincere arithmetic. B's machine lead plays dead-straight eighth notes that refuse to swing, while the pilot's alto answers swing harder each phase. His collapse is a brass fanfare that rounds up one note too many.
+- **The Waking, the Dig**: something old, woken. The bass riff compresses into 3+3+2 accents, a stacked-fourths hum becomes the chord, and a Phrygian flat second takes over the cadence, floor by floor.
+- **The Mind, the Highdraft**: lonely. The only boss built from the player's own hook, inverted and played back on sine. The last phase restates the title melody in the Mind's wrong chord, then the final drop resolves to G major, the Highdraft's home.
+
+The Warden families in AUDIO-V3 (reactor, hive, Mind) keep their own per-state sounds under these themes. The 2026-10-11 boss previews remain comparison material.
 
 The four boss previews from 2026-10-11 remain comparison material for this section.
 
