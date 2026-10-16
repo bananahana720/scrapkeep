@@ -5,7 +5,7 @@
  "time_of_day": "golden",
  "spawn": {"at": [0, -720], "heading_deg": 0},
  "play_rect": [-560, -780, 1120, 1540],
- "landmark": {"id": "hanging_isle", "kind": "sky_island", "at": [0, 520], "size": [180, 318, 180], "yaw_deg": 0, "recipe": "landmark_sky_island", "budget": "hero_landmark", "sight_top": [0, 400, 520], "sight_share": 0.85, "beacon": [0, 530], "reach_m": 120, "warden": {"mounting": "under_island", "anchor": [0, 80, 520], "path": [], "hardpoints": 3, "family": "mind", "harpoon_anchor": true}, "bay_dock": {"at": [0, 650], "facing_deg": 0}, "gate_slots": [{"at": [-20, 720], "facing_deg": 0}, {"at": [0, 720], "facing_deg": 0}, {"at": [20, 720], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "ancient_keel_grip"},
+ "landmark": {"id": "hanging_isle", "kind": "sky_island", "at": [0, 520], "size": [180, 318, 180], "yaw_deg": 0, "recipe": "landmark_sky_island", "budget": "hero_landmark", "sight_top": [0, 400, 520], "sight_share": 0.85, "beacon": [0, 530], "reach_m": 120, "warden": {"mounting": "under_island", "anchor": [0, 66, 520], "path": [], "hardpoints": 3, "family": "mind", "harpoon_anchor": true}, "bay_dock": {"at": [0, 650], "facing_deg": 0}, "gate_slots": [{"at": [-20, 720], "facing_deg": 0}, {"at": [0, 720], "facing_deg": 0}, {"at": [20, 720], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "ancient_keel_grip"},
  "waymarks": ["drop_in", "saddle", "anvil_rock", "landmark"],
  "routes": [
   {"id": "main", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_lip", "slickrock_run", "run_turn_wash", "saddle", "twin_fins", "fin_chute", "fin_nose_kicker", "net_deck", "anvil_rock", "net_post_run", "net_bowl"]},
