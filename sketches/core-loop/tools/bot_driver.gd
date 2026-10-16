@@ -93,11 +93,6 @@ const CHARGE_CLOSE := 3.8
 const HARPOON_FLOOR := 30.0
 const LINE_REACH := 50.0
 const DROP_MEMORY := 6.0
-# A bite that did not take a line is pressed again no sooner than BITE_RETRY, a player's re-click;
-# a line that stood is followed at once, as Brindle's hull fight needs. Pressed every tick against
-# a refusal in the stage-6 boss (Rivet, seed 1, late offer taken), the ball sat at a fixed velocity
-# and the run slowed past its 1400 s wall cap.
-const BITE_RETRY := 0.25
 # The latch arm on a harpoon-anchor Warden (_anchor_fight): a bite within LATCH_REACH of the body
 # (inside the 45 m rope), the body reads hung when it stands more than HUNG_ABOVE over the ground
 # under it and rising or falling past ANCHOR_MOVING m/s; from the ground the ball waits for a hung
@@ -366,7 +361,6 @@ var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
 var _harpoon_commit := false
-var _bite_wait := 0.0
 # Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
 var chain_hand_enabled := true
@@ -605,7 +599,6 @@ func tick(delta: float) -> bool:
 	_boost_clock -= delta
 	_play_clock += delta
 	_ult_wait -= delta
-	_bite_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
 	_plant_cool -= delta
@@ -1709,8 +1702,6 @@ func _note_shred(target: Node3D, delta: float) -> void:
 # frozen ball), so a bite counts only when it can land.
 func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
-	if kit.hooked:
-		_bite_wait = 0.0
 	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
 	if _cast_phase == "await_smash":
 		_cast_phase = ""
@@ -1748,9 +1739,8 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
 	if special != null and special.charging:
 		swallowed = true
-	if not swallowed and _bite_wait <= 0.0 and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
+	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
 			and _off_line > DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
-		_bite_wait = BITE_RETRY
 		# A movement exit waits for the haul; other line skills load on the bite.
 		if not bank_shot:
 			_cast(3)
