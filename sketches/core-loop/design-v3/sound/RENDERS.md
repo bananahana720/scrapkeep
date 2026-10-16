@@ -1,6 +1,6 @@
 # Sound bible renders, 2026-10-16
 
-Audio lives outside the repo in `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`, the same way the existing `music_ace/` manifests point at renders outside it. The render job is that folder's `ace.json`. ACE-Step 1.5 XL turbo ran in draft mode (int8 DiT, planner on, instrumental) on the RTX 4080 with seeds 2101 and 2102. Title C came from a second round, `ace.py lab . round2`, with seeds 2201 and 2202 at the band's 172 BPM. The tempo search only covers 120 to 138 BPM, so its tempo is not measured. Each MP3 is loudness-matched to -16 LUFS with one constant gain.
+Audio lives outside the repo in `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`, the same way the existing `music_ace/` manifests point at renders outside it. The render job is that folder's `ace.json`. ACE-Step 1.5 XL turbo ran in draft mode (int8 DiT, planner on, instrumental) on the RTX 4080 with seeds 2101 and 2102. Title C came from a second round, `ace.py lab . round2`, with seeds 2201 and 2202 at the band's 172 BPM. The tempo search only covers 120 to 138 BPM, so its tempo is not measured. Andrew rejected that first title C as "way too Asian-inspired", so it is superseded. A third round, `ace.py lab . round3` with seeds 2301 to 2304, rewrote the caption around opening-sequence tropes without the word "anime" and excluded pentatonic and East Asian colour. Its readings near 129 could mean the takes fell to the house tempo, or could be a 3:4 reading of 172; that needs an ear. Each MP3 is loudness-matched to -16 LUFS with one constant gain.
 
 ## Measurements
 
@@ -14,6 +14,10 @@ These come from [cut_loops.py](cut_loops.py), whose tempo search read a syntheti
 | title-b-machine-lead-s2102 | 92 s | 128.0 | 2.1 s | |
 | title-c-anime-opening-s2201 | 92 s | not measured, asked for 172 | 4.0 s | |
 | title-c-anime-opening-s2202 | 92 s | not measured, asked for 172 | 2.5 s | |
+| title-c2-show-opening-s2301 | 92 s | 129.1 read, asked for 172 | 1.8 s | |
+| title-c2-show-opening-s2302 | 92 s | 127.5 read, asked for 172 | 2.0 s | |
+| title-c2-show-opening-s2303 | 92 s | 128.7 read, asked for 172 | 3.4 s | |
+| title-c2-show-opening-s2304 | 92 s | 127.1 read, asked for 172 | 3.8 s | |
 | spillway-loop-s2101 | 62 s | 127.0 | 1.6 s | -1.6 dB, candidate |
 | spillway-loop-s2102 | 62 s | 128.0 | 2.0 s | -15.2 dB, rejected |
 | dig-loop-s2101 | 62 s | 128.0 | 2.4 s | -17.6 dB, rejected |
@@ -35,6 +39,10 @@ e216e1533c9615f628f80eaa9b40fa905f109bb0953ee913479fce0c7080bd37  renders/sketch
 7a3b8610316c386f46f04dcf6fb1b3559ef0fed0c67975dfaa20cf6891bdfb75  renders/sketch-1/title-b-machine-lead-s2102.mp3
 edd0023ae039408290dbf1f11dc1dab84e6e9fb190318382db43aeb969f2c41b  renders/lab-round2-1/title-c-anime-opening-s2201.mp3
 de1f4c9d97e81c404d7dff4a9b8d4a102dc4e9e54400a66a8e0696646e957eda  renders/lab-round2-1/title-c-anime-opening-s2202.mp3
+ef57e9353bf1c377cdbb2fddc585e3cffc2d6f9708d26810ee50aae9054511d1  renders/lab-round3-1/title-c2-show-opening-s2301.mp3
+acff4c224ca65755fdef94b1ef0bc6afe94cae6cb53225e36db71cb467636c00  renders/lab-round3-1/title-c2-show-opening-s2302.mp3
+dc2fcb5fe9f924e73f4d663a5daa7cf5006cf608cef1bb1cc281affbd43735c5  renders/lab-round3-1/title-c2-show-opening-s2303.mp3
+ba2fe1d5d970999419c53251ec6f0fd4e28c5a41ac3c406f40b3c47fbb1ae6cb  renders/lab-round3-1/title-c2-show-opening-s2304.mp3
 5afc9ac451f14a36545ccc6dd47a3ec132b5e89a3d6e270a1689bc9e9defc768  renders/sketch-1/spillway-loop-s2101.mp3
 160ee71d08827399c4b9f6cc08ad2fc3037a2cc0cbfa68b1e587801d350699b5  renders/sketch-1/spillway-loop-s2102.mp3
 025fb9d530937e60923ff9d4af31fceac7d4b08534774125dbc0ea9a3c2ea49f  renders/sketch-1/dig-loop-s2101.mp3

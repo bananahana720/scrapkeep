@@ -8,7 +8,9 @@ A house pulse you can't sit still to, played by a rusty machine band whose lead 
 
 ## Tone: a game that loves having fun
 
-Andrew, 2026-10-16: carefree, experimental and **melodramatic, like an anime opening**, with real swings into intensity, anger, despair or sadness. The sadness is self-aware and a little corny, and the whole game is trying to make you smile. This applies to every beat of the game, not just the music. In practice:
+Andrew, 2026-10-16: carefree, experimental and **melodramatic, like an anime opening**, with real swings into intensity, anger, despair or sadness. The sadness is self-aware and a little corny, and the whole game is trying to make you smile. This applies to every beat of the game, not just the music.
+
+**Borrow the tropes, not the sound** (Andrew, 2026-10-16, after the first title C came out "way too Asian-inspired"). Take an anime opening's patterns and keep Scrapkeep's own genre mix: a one-bar cold open of the hook, a fanfare hit, a racing verse, a rising pre-chorus, one beat of silence before the chorus, an octave leap on the hook, a sudden ballad break, a key change up and a final unison hit. Never pentatonic or East Asian melodic colour, East Asian instruments or J-pop production. Never use the word "anime" in a render caption, because the model reads it as a sound. In practice:
 
 - **Go big on contrast.** A track can drop from a full chorus to one lonely sax over soft Rhodes, then key-change up into a bigger finale. The dip earns the joy.
 - **Sad moments wink.** A defeat sighs down a chromatic line on a hanging A7b9, then one bright bell answers: go again.
@@ -16,7 +18,7 @@ Andrew, 2026-10-16: carefree, experimental and **melodramatic, like an anime ope
 
 ## Title screens rotate
 
-Andrew loves both title themes, so there is no single title. Each title theme pairs with its own alternate title screen, and the game picks one per launch: A (sax noir), B (machine lead), and C (anime opening, the melodramatic one, at the band's 172 BPM). Never play the same one twice in a row.
+Andrew loves both title themes, so there is no single title. Each title theme pairs with its own alternate title screen, and the game picks one per launch: A (sax noir), B (machine lead), and C (the show opening, built from opening-sequence tropes, at the band's 172 BPM). Never play the same one twice in a row.
 
 The themes also have jobs past the title screen, matching the tone bible (`tone/TONE-BIBLE.md` in the project library, draft of 2026-10-16), which wins on feel:
 
@@ -24,7 +26,7 @@ The themes also have jobs past the title screen, matching the tone bible (`tone/
 | --- | --- | --- |
 | A, sax lead | the pilots and the worlds: the keepers | each world's sax lead quotes it, and the pilot answers in every boss duel |
 | B, machine lead, sax answering | the bosses and the Furnace Fleet: the machine calls | each boss states it first, and the keepers answer |
-| C, anime opening | the swing itself | the run summary and the ending play its fanfare, sad break and key change |
+| C, show opening | the swing itself | the run summary and the ending play its fanfare, sad break and key change |
 
 Boss fights are call-and-response duels, the game's bass battle: the boss states B's phrase, the pilot's A motif answers, and the exchange tightens as phases fall.
 
