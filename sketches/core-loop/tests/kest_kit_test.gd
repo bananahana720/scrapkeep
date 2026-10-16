@@ -20,7 +20,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DT := 1.0 / 60.0
 # 2026-10-11 (PC-KEST): quiet loads, bite events and the fourteen-second reload, including a twelve-second guard.
-const EXPECTED_CHECKS := 71
+const EXPECTED_CHECKS := 72
 
 class HandHull:
 	extends Node3D
@@ -341,22 +341,19 @@ func _grants() -> void:
 	var progress := Progress.new()
 	root.add_child(progress)
 	progress.setup(events, run, profile, Callable(), codex)
-	# Re-pinned 2026-10-16: the Rigger Harness is cut for alpha (COSMETICS-ART-BRIEFS port note 4),
-	# so Homecoming unlocks with no item and Kest's two grants are the trail and the Roost Frame.
-	var ids := ["kest_blast_vault", "kest_tick_tick_boom"]
-	var items := ["trail_kest_fuse_smoke", "shell_kest_roost"]
-	codex.mark_discovered("kest_homecoming")
-	_t.check("Homecoming unlocks with no item", profile.earned("ach_kest_homecoming") and Achievements.reward_of("ach_kest_homecoming").is_empty()
-		and Cosmetics.row("outfit_kest_rigger").is_empty())
-	for i in 2:
+	var ids := ["kest_blast_vault", "kest_homecoming", "kest_tick_tick_boom"]
+	# Re-pinned 2026-10-16: the Rigger Harness is cut for alpha, so Homecoming pays Rigger Blue paint.
+	var items := ["trail_kest_fuse_smoke", "paint_kest_rigger", "shell_kest_roost"]
+	for i in 3:
 		_t.check("item starts locked " + items[i], not profile.has_cosmetic(items[i]))
 		codex.mark_discovered(ids[i])
 		codex.mark_discovered(ids[i])
 		_t.check("discovery grants once " + items[i], profile.has_cosmetic(items[i]) and profile.earned("ach_" + ids[i]))
 	var again := Profile.new(profile.path)
 	_t.check("earned items reload from the saved profile", again.load_profile() and items.all(func(id): return again.has_cosmetic(id)))
-	_t.check("grants do not require a first-ever discovery", (ids + ["kest_homecoming"]).all(func(id): return not Achievements.ROWS["ach_" + id].get("where", {}).has("first_time")))
-	_t.check("undelivered trail is pending art", Cosmetics.PENDING_ART.has("trail_kest_fuse_smoke"))
+	_t.check("grants do not require a first-ever discovery", ids.all(func(id): return not Achievements.ROWS["ach_" + id].get("where", {}).has("first_time")))
+	_t.check("undelivered trail is pending art; a paint needs none", Cosmetics.PENDING_ART.has("trail_kest_fuse_smoke") and not Cosmetics.PENDING_ART.has("paint_kest_rigger"))
+	_t.check("the Rigger Harness is cut", Cosmetics.row("outfit_kest_rigger").is_empty())
 	_t.check("delivered Roost Frame is live", not Cosmetics.is_pending("shell_kest_roost") and FileAccess.file_exists("res://assets/models/world_one/shell_kest_roost.glb"))
 	progress.free()
 	codex.free()

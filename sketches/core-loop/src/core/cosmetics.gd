@@ -86,7 +86,8 @@ const ROWS := {
 	# --- demolitions_caster (Kest): P-C Kest adds its rows here ---
 	"trail_kest_fuse_smoke": {"slot": "trail", "pilot": "demolitions_caster", "name": "Fuse Smoke", "starter": false, "tint": Color("8c8577"), "asset": "trail_kest_fuse_smoke"},
 	# Rigger Harness (outfit_kest_rigger) cut for alpha, Andrew 2026-10-16: the pod and ring hide a body outfit
-	# and its straps clash with the wing fans (COSMETICS-ART-BRIEFS.md). Homecoming still unlocks, with no item.
+	# and its straps clash with the wing fans (COSMETICS-ART-BRIEFS.md). Homecoming pays this paint instead.
+	"paint_kest_rigger": {"slot": "paint", "pilot": "demolitions_caster", "name": "Rigger Blue", "starter": false, "tint": Color("4f6f9a")},
 	"shell_kest_roost": {"slot": "shell", "pilot": "demolitions_caster", "name": "Roost Frame", "starter": false, "tint": Color("8c8577"), "asset": "shell_kest_roost"},
 	# --- end demolitions_caster ---
 	# --- tarn (Tarn): P-C Tarn adds its rows here ---
