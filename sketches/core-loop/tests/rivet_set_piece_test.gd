@@ -846,8 +846,9 @@ func _run() -> void:
 	_t.check("Full Breach grants on one base Foundry Cutter landing of six machines",
 		breach.get("on") == "ultimate_landed" and breach.get("where") == {"ultimate_id": "foundry_cutter"} and breach.get("at_least") == {"hits": 6}
 		and int(breach.get("count", 0)) == 1 and Achievements.reward_of("ach_rivet_full_breach").get("cosmetic", "") == "shell_rivet_calibrated", str(breach))
-	grants["ach_rivet_full_breach"] = "shell_rivet_calibrated"
-	_t.check("the items wait for their art", grants.values().all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	# Re-pinned 2026-10-16 (COSMETICS-ART-BRIEFS port note 1): only the trail and hood wait; Calibrated is live.
+	_t.check("the trail and hood wait for their art", grants.values().all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("Calibrated is live", not Cosmetics.is_pending("shell_rivet_calibrated") and FileAccess.file_exists("res://assets/models/world_one/shell_rivet_calibrated.glb"))
 	_t.check("both line cues are keyed and read the Rivet motif", Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["punch"]) and Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["arrive"])
 		and Audio.RIVET_LINE["motif"] == ClassDef.by_id("runner_gunner").motif)
 	_finish()

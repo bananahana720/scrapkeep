@@ -341,17 +341,22 @@ func _grants() -> void:
 	var progress := Progress.new()
 	root.add_child(progress)
 	progress.setup(events, run, profile, Callable(), codex)
-	var ids := ["kest_blast_vault", "kest_homecoming", "kest_tick_tick_boom"]
-	var items := ["trail_kest_fuse_smoke", "outfit_kest_rigger", "shell_kest_roost"]
-	for i in 3:
+	# Re-pinned 2026-10-16: the Rigger Harness is cut for alpha (COSMETICS-ART-BRIEFS port note 4),
+	# so Homecoming unlocks with no item and Kest's two grants are the trail and the Roost Frame.
+	var ids := ["kest_blast_vault", "kest_tick_tick_boom"]
+	var items := ["trail_kest_fuse_smoke", "shell_kest_roost"]
+	codex.mark_discovered("kest_homecoming")
+	_t.check("Homecoming unlocks with no item", profile.earned("ach_kest_homecoming") and Achievements.reward_of("ach_kest_homecoming").is_empty()
+		and Cosmetics.row("outfit_kest_rigger").is_empty())
+	for i in 2:
 		_t.check("item starts locked " + items[i], not profile.has_cosmetic(items[i]))
 		codex.mark_discovered(ids[i])
 		codex.mark_discovered(ids[i])
 		_t.check("discovery grants once " + items[i], profile.has_cosmetic(items[i]) and profile.earned("ach_" + ids[i]))
 	var again := Profile.new(profile.path)
 	_t.check("earned items reload from the saved profile", again.load_profile() and items.all(func(id): return again.has_cosmetic(id)))
-	_t.check("grants do not require a first-ever discovery", ids.all(func(id): return not Achievements.ROWS["ach_" + id].get("where", {}).has("first_time")))
-	_t.check("undelivered trail and outfit are pending art", items.slice(0, 2).all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("grants do not require a first-ever discovery", (ids + ["kest_homecoming"]).all(func(id): return not Achievements.ROWS["ach_" + id].get("where", {}).has("first_time")))
+	_t.check("undelivered trail is pending art", Cosmetics.PENDING_ART.has("trail_kest_fuse_smoke"))
 	_t.check("delivered Roost Frame is live", not Cosmetics.is_pending("shell_kest_roost") and FileAccess.file_exists("res://assets/models/world_one/shell_kest_roost.glb"))
 	progress.free()
 	codex.free()

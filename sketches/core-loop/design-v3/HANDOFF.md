@@ -58,7 +58,7 @@ At a6b75ea: tarball scrapkeep-core-loop-a6b75ea.tar.gz 46.4 MiB, ACE_CHECK ready
 
 ### Next
 
-Pacing: Claude was at 96 to 97% of its week (resets Thu 22:00) and Codex is out until 2026-10-11, so no writer wave was started after this. The next wave: the four remaining placeholders, the cosmetics runtime (CUS, lost to the Codex limit), music rows for the ten new tracks, GPU captures from each unit's `artifacts/local/dress-capture/<unit>.md` plus the blind judge, then animation and effects. Follow-ups from P-R9 and P-R10.
+Pacing: Claude was at 96 to 97% of its week (resets Thu 22:00) and Codex is out until 2026-10-11, so no writer wave was started after this. The next wave: the four remaining placeholders, the cosmetics runtime (CUS, lost to the Codex limit; superseded 2026-10-16: paint tints landed in wave 14 as cosmetics-paint dd359b6, and the eight-slot model, `CosmeticWear.worn`, shell variants and outfits are in the code, per [research/PAINT-TRACE-2026-10-16.md](research/PAINT-TRACE-2026-10-16.md)), music rows for the ten new tracks, GPU captures from each unit's `artifacts/local/dress-capture/<unit>.md` plus the blind judge, then animation and effects. Follow-ups from P-R9 and P-R10.
 
 ## Wave 20 landed (2026-10-06, d03422d)
 

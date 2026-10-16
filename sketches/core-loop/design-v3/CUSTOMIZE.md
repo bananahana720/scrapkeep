@@ -24,7 +24,7 @@ Eight slots. The first four exist; the last four are new.
 
 | Slot id | Node it changes | Owner and saved key | How it renders | Budget class |
 | --- | --- | --- | --- | --- |
-| `paint` | every `paint` surface on HeroCore, HeroPod and every heft layer | per pilot, `<pilot>/paint` | the cached `paint` material for that tint (`hero_assets.gd:174-250`), attached by `paint()` (`:259-277`). Lattice struts and gap panels use `paint`, so a class-up keeps your colour (ROSTER-LOOK section 5) | none, a tint |
+| `paint` | every `paint` surface on HeroCore, HeroPod and every heft layer | per pilot, `<pilot>/paint` | the cached `paint` material for that tint (`hero_assets.gd:174-250`), attached by `paint()` (`:259-277`). Lattice struts and gap panels use `paint`, so a class-up keeps your colour (ROSTER-LOOK section 5). A tinted paint lerps the baked vertex colour `PAINT_TAKE` (0.6, start) toward the tint instead of multiplying, so the dark lattice takes the hue (2026-10-16, PAINT-TRACE card A2; `cosmetic_apply_test` checks it reads on every pilot) | none, a tint |
 | `trail` | `BallTrail`, a top-level pool beside the ball (`cosmetic_presentation.gd:36-39`) | per pilot, `<pilot>/trail` | pooled cards, at most 24, never instanced per frame (`:5`, `:225-311`). New: it also draws along a set piece's flight (section 4) | `scenery`, 120 tris and 2 draws per card, as the delivered trails are (`assets/registry.json:114-116`) |
 | `decal` | Pod > `DecalPlate`, the seat-back plate P-D adds (ROSTER-LOOK section 7). Fallback: the same projection onto the `paint` surfaces of the gap panels and the ring band, never the tumbling Core lattice (`cosmetic_presentation.gd:109-112` projects onto Core today) | per pilot, `<pilot>/decal` | a mask tile on one cached decal material per tile and tint. Tile size shrinks from 0.65 m (`:87`) to the plate's 0.36 m | a tile in the mask atlas; tiles 0 to 15 (today 0 to 7, `cosmetics.gd:111`) |
 | `outfit` | the pilot's `Skeleton3D` under Pod > AnimatedPilot: one `BoneAttachment3D` per top-level outfit node, named for a `pilot-v1` bone such as `head` or `spine_02` (`tools/blender/PILOT-RIG.md:23-40`) | per pilot, `<pilot>/outfit`; a row must name a pilot | painted from the shared cache. An optional `AnimationPlayer` in the outfit holds clips named like the pilot's clips; `react()` plays the outfit clip with the same name (`hero_assets.gd:572-595`), so Rivet's hood snaps down on `ult_windup`, as both his hands take the copper lap bar (Q: Foundry Cutter). A node named `Replace.<name>` hides the pilot's node `<name>` while the outfit is worn (section 6) | `detail` (cap 1,500 tris, 1 draw); target 400 tris (start) |
@@ -360,7 +360,7 @@ Twenty-one rows: three per pilot from the sheets, and three shared rows for the 
 | Item id | Name | Slot | Grant row | Route and condition | Art from |
 | --- | --- | --- | --- | --- | --- |
 | `trail_kest_fuse_smoke` | Fuse Smoke | trail, tint `8c8577` | `ach_kest_blast_vault` "Blast Vault", hidden: "Let your own Cable Charge throw you clear." | discovery `kest_blast_vault` (`pilots/kest.md:402`) | trail art unit |
-| `outfit_kest_rigger` | Rigger Harness | outfit | `ach_kest_homecoming` "Homecoming": "Fly Kest into the Highdraft." | discovery `kest_homecoming`, detected in `kest_kit.gd` on entering world 3 (`pilots/kest.md:389`) | outfit art unit |
+| ~~`outfit_kest_rigger`~~ | ~~Rigger Harness~~ | outfit | `ach_kest_homecoming` "Homecoming": "Fly Kest into the Highdraft." | discovery `kest_homecoming`, detected in `kest_kit.gd` on entering world 3 (`pilots/kest.md:389`) | **Cut for alpha** (Andrew, 2026-10-16; [COSMETICS-ART-BRIEFS.md](COSMETICS-ART-BRIEFS.md)). The row and the reward are removed; Homecoming still unlocks, with no item |
 | `shell_kest_roost` | Roost Frame | shell | `ach_kest_tick_tick_boom` "Tick, Tick, Boom": "Strike eight machines with one Windhover." | discovery `kest_tick_tick_boom`. **Changed from the sheet's achievement** (`pilots/kest.md:390`): eight different enemies across the volleys and the landing span several events, which a row cannot see; Kest's code counts distinct targets for the set piece and fires the discovery | P-D Kest |
 
 Kest's amber cannot be a tint: it sits 0.09 from brass, inside the 0.2 refusal (`pilots/kest.md:384`). Her items use smoke grey and bone. Every new tint in this section sits 0.39 or more from brass and 0.53 or more from hazard in RGB (`src/core/palette.gd:19`, `:21`), clear of the refusal.
@@ -491,6 +491,8 @@ All under `sketches/core-loop/`.
 | Loader | zero lights after fit; holder instance ids stable; perf ratio under 1.3x |
 
 ### Not owned by any unit yet
+
+Update 2026-10-16: the five built shell variants are live, and the Rigger Harness is cut for alpha, so 13 items wait in `PENDING_ART`: seven trails, two decal tiles, three outfits and one companion skin ([COSMETICS-ART-BRIEFS.md](COSMETICS-ART-BRIEFS.md)). The original note follows.
 
 Seven trails, two decal tiles, four outfits and one companion skin need art. P-D builds the six shell variants and their layers. Nothing in the plan builds the other fourteen. One art unit (or a Codex visual-track wave once Codex reopens on 2026-10-11) should own them. Until then those rows sit in `PENDING_ART`, the grants still record, and nothing breaks.
 

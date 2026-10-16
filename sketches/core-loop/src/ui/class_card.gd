@@ -9,6 +9,7 @@ const ClassKit := preload("res://src/ui/class_kit.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
@@ -357,24 +358,14 @@ func bind_profile(profile) -> void:
 func paint_options() -> Array:
 	var out: Array = [""]
 	for id in Cosmetics.for_slot("paint", def.id):
-		if owns(_profile, id):
+		if CosmeticWear.owns(_profile, id):
 			out.append(id)
 	return out
 
 
-static func owns(profile, id: String) -> bool:
-	var row := Cosmetics.row(id)
-	if row.is_empty() or profile == null:
-		return false
-	return bool(row.get("starter", false)) or profile.has_cosmetic(id)
-
-
 # The equipped paint id, or "" when none or one this profile does not own.
 func paint_shown() -> String:
-	if _profile == null:
-		return ""
-	var id: String = _profile.equipped(def.id, "paint")
-	return id if id != "" and owns(_profile, id) else ""
+	return CosmeticWear.worn(_profile, def.id, "paint")
 
 
 # The next owned paint (or none), equipped and saved.

@@ -24,7 +24,7 @@ const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
-const PENDING_ART := ["trail_rivet_swarf", "outfit_rivet_hood", "shell_rivet_calibrated", "trail_tally_punch_tape", "outfit_tally_eyeshade", "shell_tally_abacus", "trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_cannon_recital", "shell_cannon_choir", "trail_kest_fuse_smoke", "outfit_kest_rigger", "trail_sable_cable", "decal_sable_spool", "shell_sable_felt"]
+const PENDING_ART := ["trail_rivet_swarf", "outfit_rivet_hood", "trail_tally_punch_tape", "outfit_tally_eyeshade", "trail_tarn_claw_marks", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_cannon_recital", "trail_kest_fuse_smoke", "trail_sable_cable", "decal_sable_spool"]
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -85,7 +85,8 @@ const ROWS := {
 	# --- end runner_gunner ---
 	# --- demolitions_caster (Kest): P-C Kest adds its rows here ---
 	"trail_kest_fuse_smoke": {"slot": "trail", "pilot": "demolitions_caster", "name": "Fuse Smoke", "starter": false, "tint": Color("8c8577"), "asset": "trail_kest_fuse_smoke"},
-	"outfit_kest_rigger": {"slot": "outfit", "pilot": "demolitions_caster", "name": "Rigger Harness", "starter": false, "tint": Color("d2c5a5"), "asset": "outfit_kest_rigger"},
+	# Rigger Harness (outfit_kest_rigger) cut for alpha, Andrew 2026-10-16: the pod and ring hide a body outfit
+	# and its straps clash with the wing fans (COSMETICS-ART-BRIEFS.md). Homecoming still unlocks, with no item.
 	"shell_kest_roost": {"slot": "shell", "pilot": "demolitions_caster", "name": "Roost Frame", "starter": false, "tint": Color("8c8577"), "asset": "shell_kest_roost"},
 	# --- end demolitions_caster ---
 	# --- tarn (Tarn): P-C Tarn adds its rows here ---

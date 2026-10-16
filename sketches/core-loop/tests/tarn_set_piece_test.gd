@@ -246,7 +246,10 @@ func _grants() -> void:
 	_t.check("all three grants earned", grant_ids.all(func(id): return store.earned(id)))
 	var items := ["trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap"]
 	_t.check("all three looks unlocked", items.all(func(id): return store.has_cosmetic(id)))
-	_t.check("pending art hidden and no price", items.all(func(id): return Cosmetics.PENDING_ART.has(id) and not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
+	# Re-pinned 2026-10-16 (COSMETICS-ART-BRIEFS port note 1): the shell is live; the trail and outfit wait.
+	_t.check("pending art hidden on the trail and outfit", items.filter(func(id): return id != "shell_tarn_redjaw_teeth").all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("the shell is live", not Cosmetics.is_pending("shell_tarn_redjaw_teeth") and FileAccess.file_exists("res://assets/models/world_one/shell_tarn_redjaw_teeth.glb"))
+	_t.check("no price", items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
 	var reload_store := Profile.new(store.path)
 	reload_store.load_profile()
 	_t.check("grants survive reload", grant_ids.all(func(id): return reload_store.earned(id)) and items.all(func(id): return reload_store.has_cosmetic(id)))
