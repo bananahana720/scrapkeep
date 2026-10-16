@@ -47,7 +47,10 @@ if ! python3 -I -c 'import bpy, sys; sys.exit(bpy.app.version_string != "5.2.2 L
 fi
 
 cd "$repo"
-npm install --no-audit --no-fund --loglevel=error
+# npm ci keeps package-lock.json untouched; npm install rewrites it and dirties the tree.
+if [ ! -f node_modules/.package-lock.json ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
+  npm ci --no-audit --no-fund --loglevel=error
+fi
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   {
