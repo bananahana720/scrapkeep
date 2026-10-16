@@ -56,14 +56,30 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #                        attacking); respawns are switched off as they enter the tree.
 #   --no-trails          vfx.trails = false: the ball trail and speed lines are not built.
 # Synthetic attacks recycle and never resolve damage. HP is topped up every tick.
+#
+# Park scenes (PARK.md section 9, unit KB6) run on the park table with ctx.calm set, so no enemy arrives:
+#   p1   stage 1 standing: the ball frozen at the drop-in, the camera on the landmark.
+#   p2   p1's stand, then the swap: the recorded window opens with terrain.prepare(2) (what the Warden's
+#        wake does), so two park stages are resident while stage 2 builds; once its ground, scatter and
+#        rows are in, the real launch fires (flow LAUNCH, world's launch rail) and the window runs on
+#        through the 0.6 s flight, terrain.use(2) and the landing. Each sample carries its segment
+#        (build, flight, landing, after); the window lasts RECORD_FRAMES or until 30 frames past the landing.
+# Every scene records memory at the window's open and close; p2 also at two_stages (stage 2 built, stage 1
+# active) and after_swap (stage 1 freed).
+
+const Flow := preload("res://src/core/flow.gd")
 
 const WARM_FRAMES := 120
 const RECORD_FRAMES := 600
-const HARD_TIMEOUT := 300.0
+const SWAP_FRAMES_MAX := 3000
+const LANDED_FRAMES := 30
+const HARD_TIMEOUT := 600.0
 const SCENES := {
-	"s1": {"packs": 1, "per_type": 0, "warden": false},
-	"s2": {"packs": 3, "per_type": 4, "warden": false},
-	"s3": {"packs": 6, "per_type": 8, "warden": true},
+	"s1": {"packs": 1, "per_type": 0, "warden": false, "view": "fight"},
+	"s2": {"packs": 3, "per_type": 4, "warden": false, "view": "fight"},
+	"s3": {"packs": 6, "per_type": 8, "warden": true, "view": "fight"},
+	"p1": {"packs": 0, "per_type": 0, "warden": false, "view": "stand", "table": "park"},
+	"p2": {"packs": 0, "per_type": 0, "warden": false, "view": "swap", "table": "park"},
 }
 const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band"]
 const PACK_ORDER := ["grounded", "strung", "netted", "rebound", "reeled", "wobble", "flung", "cupped"]
@@ -141,6 +157,13 @@ var _warm_seconds := 0.0
 var _warm_usec := 0
 # The sound bank and band bake on a worker; the scene waits for them so every run has audio.
 var _sound_ready_s := -1.0
+var _view := "fight"
+var _memory := {}
+# p2's segment ("" until the window opens), the frame each began, and the swap's own timings.
+var _segment := ""
+var _segment_at := {}
+var _landed := 0
+var _swap := {}
 
 
 func _initialize() -> void:
@@ -163,9 +186,12 @@ func _initialize() -> void:
 	_out = settings.get("out", "")
 	_table = String(settings.get("table", ""))
 	if not SCENES.has(_scene_id) or not _out.is_absolute_path() or not _out.ends_with(".json"):
-		printerr("perf_bench: needs -- --scene=s1|s2|s3 --out=<absolute .json path>")
+		printerr("perf_bench: needs -- --scene=s1|s2|s3|p1|p2 --out=<absolute .json path>")
 		quit(2)
 		return
+	_view = String(SCENES[_scene_id]["view"])
+	if _table == "":
+		_table = String(SCENES[_scene_id].get("table", ""))
 	DirAccess.make_dir_recursive_absolute(_out.get_base_dir())
 	_native = DisplayServer.get_name() != "headless"
 	for asset in ["shell_sable", "shell_rivet", "shell_kest"]:
@@ -221,6 +247,8 @@ func _process(delta: float) -> bool:
 				_game.presentation.audio.engine = SilentBand.new()
 			_driver = BotDriver.new(_game, "skipper", RIVET_SEED)
 			_driver.start()
+			if _view != "fight":
+				_game.ctx.calm = true
 			_phase = "drop"
 			_phase_usec = begin
 		"drop":
@@ -242,6 +270,8 @@ func _process(delta: float) -> bool:
 			_step_threats(delta)
 			if _off.has("no-vfx") and _game.combat.effects != null:
 				_game.combat.effects.clear()
+			if _view == "swap" and _phase == "record":
+				_step_swap()
 	_harness_usec = Time.get_ticks_usec() - begin
 	return false
 
@@ -251,7 +281,10 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	_game.run.hp = _game.run.max_hp
 	if _phase in ["settle", "warm", "record"]:
-		_hold_fire()
+		if _view == "fight":
+			_hold_fire()
+		else:
+			_driver.source.hold = {}
 	return false
 
 
@@ -287,16 +320,19 @@ func _process_end() -> void:
 			_phase = "record"
 			_frame = 0
 			_probe_open = _checks()
+			_memory["at_open"] = _snapshot()
 			_materials_at_record = Threat.Painter.materials_built
 		return
 	if sample["perf_process_ms"] != _last_perf:
 		_perf_updates += 1
 		_last_perf = sample["perf_process_ms"]
+	sample["segment"] = _segment
 	_samples.append(sample)
 	if _frame % LOAD_CHECK_EVERY == 0:
 		_check_load()
-	if _frame >= RECORD_FRAMES:
+	if _record_done():
 		_probe_close = _checks()
+		_memory["at_close"] = _snapshot()
 		if Threat.Painter.materials_built != _materials_at_record:
 			_errors.append("%d mark materials were built during the recorded window (warm-up missed a key)" % (Threat.Painter.materials_built - _materials_at_record))
 		_finish()
@@ -337,7 +373,119 @@ func _ground(p: Vector3, lift := 2.4) -> Vector3:
 	return _game.ctx.terrain.drop_point(p.x, p.z, lift)
 
 
+func _build_stand() -> void:
+	var terrain = _game.ctx.terrain
+	var drop_in: Vector3 = terrain.spawn_point(1)
+	_game.player.reset_to(_ground(drop_in))
+	_game.player.set_frozen(true)
+	var mark: Vector3 = terrain.landmark_point(1)
+	var heading := Vector3.FORWARD
+	if mark != Vector3.INF and Vector2(mark.x - drop_in.x, mark.z - drop_in.z).length() > 1.0:
+		heading = Vector3(mark.x - drop_in.x, 0.0, mark.z - drop_in.z).normalized()
+	_game.camera.snap(heading)
+	_swap["landmark"] = [mark.x, mark.y, mark.z] if mark != Vector3.INF else []
+	_swap["drop_in"] = [drop_in.x, drop_in.y, drop_in.z]
+
+
+func _record_done() -> bool:
+	if _view != "swap":
+		return _frame >= RECORD_FRAMES
+	if _frame >= SWAP_FRAMES_MAX:
+		_errors.append("p2 reached %d frames in segment %s without landing" % [SWAP_FRAMES_MAX, _segment])
+		return true
+	return _frame >= RECORD_FRAMES and _segment == "after"
+
+
+func _resident() -> int:
+	var count := 0
+	for root in _game.ctx.terrain._roots:
+		if root != null:
+			count += 1
+	return count
+
+
+func _snapshot() -> Dictionary:
+	# procfs reports a size of 0, so the status file is read line by line, not whole.
+	var rss_kb := -1
+	var status := FileAccess.open("/proc/self/status", FileAccess.READ)
+	while status != null and rss_kb < 0:
+		var line := status.get_line()
+		if line.begins_with("VmRSS:"):
+			rss_kb = int(line.split(":")[1].strip_edges().split(" ")[0])
+		elif line == "" and status.eof_reached():
+			break
+	var mb := 1.0 / 1048576.0
+	return {
+		"frame": _frame, "segment": _segment, "stage": _game.ctx.terrain.stage, "resident_stages": _resident(),
+		"static_mb": snappedf(Performance.get_monitor(Performance.MEMORY_STATIC) * mb, 0.01),
+		"static_max_mb": snappedf(Performance.get_monitor(Performance.MEMORY_STATIC_MAX) * mb, 0.01),
+		"video_mb": snappedf(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) * mb, 0.01),
+		"texture_mb": snappedf(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) * mb, 0.01),
+		"buffer_mb": snappedf(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) * mb, 0.01),
+		"rss_mb": snappedf(rss_kb / 1024.0, 0.01),
+		"objects": Performance.get_monitor(Performance.OBJECT_COUNT),
+		"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+	}
+
+
+func _enter_segment(segment: String) -> void:
+	_segment = segment
+	_segment_at[segment] = _frame + 1
+
+
+func _step_swap() -> void:
+	var terrain = _game.ctx.terrain
+	match _segment:
+		"":
+			_memory["one_stage"] = _snapshot()
+			_enter_segment("build")
+			var started := Time.get_ticks_usec()
+			terrain.prepare(2)
+			_swap["prepare_ms"] = (Time.get_ticks_usec() - started) / 1000.0
+		"build":
+			var ground = terrain.park_ground(2)
+			var scatter: Node = terrain.geometry_root(2).get_node_or_null("GroundScatter") if terrain.is_ready(2) else null
+			if ground == null or not terrain.is_ready(2) or not terrain.rows_ready(2) or scatter == null or not scatter.is_ready():
+				return
+			_memory["two_stages"] = _snapshot()
+			_swap["build_ground_frame_max_ms"] = ground.frame_usec_max / 1000.0
+			_swap["build_ground_step_max_ms"] = ground.slowest_usec / 1000.0
+			_swap["build_ground_step_at"] = ground.slowest_step
+			_swap["build_worker_pieces"] = ground.worker_pieces
+			_swap["build_scatter_step_max_ms"] = scatter.slowest_usec / 1000.0
+			_swap["build_scatter_frame_max_ms"] = scatter.frame_usec_max / 1000.0
+			var rows: Node = terrain.park_rows(2)
+			_swap["build_rows_step_max_ms"] = rows.slowest_usec / 1000.0
+			_swap["build_rows_frame_max_ms"] = rows.frame_usec_max / 1000.0
+			_swap["build_rows_threaded_loads"] = rows.threaded_loads
+			_enter_segment("flight")
+			_game.player.set_frozen(false)
+			_game.flow._set_state(Flow.LAUNCH)
+			_game.world._on_reward_chosen("")
+			_swap["launched"] = _game.flow._launched
+		"flight":
+			if terrain.stage != 2:
+				return
+			_swap["use_ms"] = terrain.last_use_usec / 1000.0
+			_swap["stage_1_freed"] = terrain.park_ground(1) == null
+			_enter_segment("landing")
+		"landing":
+			if not _game.player.state.grounded:
+				_landed = 0
+				return
+			_landed += 1
+			if _landed < LANDED_FRAMES:
+				return
+			_memory["after_swap"] = _snapshot()
+			var ground = terrain.park_ground(2)
+			_swap["after_ground_frame_max_ms"] = ground.frame_usec_max / 1000.0
+			_enter_segment("after")
+
+
 func _build_scene() -> void:
+	if _view != "fight":
+		_build_stand()
+		return
 	var scene: Dictionary = SCENES[_scene_id]
 	var home: Vector3 = _game.ctx.terrain.beacon_point(1) + Vector3(0, 0, 22)
 	_game.player.reset_to(_ground(home))
@@ -638,6 +786,17 @@ func _stats(key: String) -> Dictionary:
 		"max": snappedf(values.back(), 0.001)}
 
 
+static func _segment_stats(rows: Array) -> Dictionary:
+	var out := {"n": rows.size()}
+	if rows.is_empty():
+		return out
+	for key in ["frame_ms", "process_ms", "physics_ms", "render_cpu_ms", "gpu_ms", "draws"]:
+		var values: Array = rows.map(func(s): return float(s[key]))
+		values.sort()
+		out[key] = {"p99": snappedf(_pct(values, 0.99), 0.001), "max": snappedf(values.back(), 0.001)}
+	return out
+
+
 static func _pct(sorted: Array, q: float) -> float:
 	return sorted[mini(int(floor(q * (sorted.size() - 1) + 0.5)), sorted.size() - 1)]
 
@@ -646,8 +805,13 @@ func _finish() -> void:
 	if _phase == "finished":
 		return
 	_phase = "finished"
-	if _samples.size() != RECORD_FRAMES:
+	if _samples.size() < RECORD_FRAMES:
 		_errors.append("recorded %d of %d frames" % [_samples.size(), RECORD_FRAMES])
+	var segments := {}
+	if _view == "swap":
+		for segment in ["build", "flight", "landing", "after"]:
+			segments[segment] = _segment_stats(_samples.filter(func(s): return s["segment"] == segment))
+		segments["flight_and_landing"] = _segment_stats(_samples.filter(func(s): return s["segment"] in ["flight", "landing"]))
 	if not _load_ok:
 		_errors.append("load fell below target during the window")
 	var stats := {}
@@ -686,6 +850,7 @@ func _finish() -> void:
 			"res://src/presentation/vfx.gd": FileAccess.get_sha256("res://src/presentation/vfx.gd")},
 		"stats": stats, "frame_ms_by_ticks": by_ticks,
 		"ablation_notes": _ablation_notes, "checks": _check_delta(),
+		"view": _view, "memory": _memory, "swap": _swap, "segments": segments, "segment_starts": _segment_at,
 	}
 	var file := FileAccess.open(_out, FileAccess.WRITE)
 	if file == null:
