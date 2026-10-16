@@ -64,7 +64,8 @@ func _fight(heft: float, label: String) -> Dictionary:
 		var grown_punch: float = (float(strike[0]) + float(hit.force) * float(strike[1])) * Run.HEFT_CLASS_AT[2]
 		var low: float = numbers.get("mult_min", Posture.MULT_MIN)
 		var high: float = numbers.get("mult_max", Posture.MULT_MAX)
-		var curve: float = numbers.get("curve", 1.0)
+		# 2026-10-15 WT-PARK-BOT merge: the sheet ram uses the mount's own heft curve, not the stage's.
+		var curve: float = Reactor.MOUNTED_POSTURE.heft_curve
 		var plating: float = stage.warden_plating
 		var expected: float = Posture.FULL / float(Reactor.MOUNTED_POSTURE.sheet_ram_breaks) * pow(clampf(punch / plating, low, high), curve) / pow(clampf(grown_punch / plating, low, high), curve)
 		t.near(label + " boundary solver contact receives class-scaled sheet gain", w.posture() - float(hit.before), expected)
