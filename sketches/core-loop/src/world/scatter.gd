@@ -289,6 +289,15 @@ class Chunked extends Node3D:
 	var threaded_loads := 0
 	# Slot materials loaded on the loader thread instead of on the main thread at the first attach.
 	var threaded_materials := 0
+	# The headless dummy renderer's RID owners are not thread-safe: a loader thread building a glb or a material
+	# raced the main thread's meshes and textures ("Attempting to initialize the wrong RID", "Parameter m is null";
+	# none on GLES3, HEADLESS-LOADER). There a threaded build loads them on the main thread, one a LOADING step,
+	# metered apart from slowest_usec, which stays the cost a player's renderer pays with the loader thread.
+	var serial_loads := 0
+	var serial_materials := 0
+	var serial_usec_max := 0
+	var _serial := DisplayServer.get_name() == "headless"
+	var _serial_usec := 0
 
 	func is_ready() -> bool:
 		return phase == Phase.READY
@@ -314,7 +323,10 @@ class Chunked extends Node3D:
 			var spec: String = group["spec"]
 			if threaded and spec.begins_with("glb:") and ResourceLoader.exists(spec.trim_prefix("glb:")):
 				var path := spec.trim_prefix("glb:")
-				if ResourceLoader.load_threaded_request(path, "PackedScene", false, ResourceLoader.CACHE_MODE_IGNORE) == OK:
+				if _serial:
+					group["path"] = path
+					serial_loads += 1
+				elif ResourceLoader.load_threaded_request(path, "PackedScene", false, ResourceLoader.CACHE_MODE_IGNORE) == OK:
 					group["path"] = path
 					threaded_loads += 1
 			if not group.has("path"):
@@ -323,12 +335,15 @@ class Chunked extends Node3D:
 			# loader thread too; the other slots are built in code and cost well under a millisecond.
 			var slot_row: Dictionary = Colours.SLOT_TABLE.row(group["slot"])
 			if threaded and String(slot_row.get("kind", "")) == "resource" and ResourceLoader.exists(String(slot_row["path"])):
-				if ResourceLoader.load_threaded_request(String(slot_row["path"]), "Material") == OK:
+				if _serial:
+					group["material_path"] = String(slot_row["path"])
+					serial_materials += 1
+				elif ResourceLoader.load_threaded_request(String(slot_row["path"]), "Material") == OK:
 					group["material_path"] = String(slot_row["path"])
 					threaded_materials += 1
 		_results.resize(Tiles.TILE_COUNT)
 		if threaded:
-			if threaded_loads + threaded_materials > 0:
+			if threaded_loads + threaded_materials + serial_loads + serial_materials > 0:
 				phase = Phase.LOADING
 			else:
 				_launch()
@@ -356,6 +371,9 @@ class Chunked extends Node3D:
 
 	# Turns each finished load into its kind's source; with block, waits for the loader thread.
 	func _poll_loading(block: bool) -> void:
+		if _serial:
+			_load_serial(block)
+			return
 		var waiting := false
 		for group: Dictionary in _groups:
 			if group.has("path"):
@@ -379,6 +397,28 @@ class Chunked extends Node3D:
 						(group["material"] as Material).resource_name = String(group["slot"])
 		if not waiting:
 			_launch()
+
+	# The dummy renderer's loads, on the main thread: one a step, or all with block.
+	func _load_serial(block: bool) -> void:
+		for group: Dictionary in _groups:
+			for key: String in ["path", "material_path"]:
+				if not group.has(key):
+					continue
+				var t0 := Time.get_ticks_usec()
+				if key == "path":
+					group["source"] = Self._scene_source(ResourceLoader.load(group[key], "PackedScene", ResourceLoader.CACHE_MODE_IGNORE) as PackedScene)
+				else:
+					var material := ResourceLoader.load(group[key], "Material") as Material
+					if material != null:
+						group["material"] = material
+						material.resource_name = String(group["slot"])
+				group.erase(key)
+				var spent := Time.get_ticks_usec() - t0
+				serial_usec_max = maxi(serial_usec_max, spent)
+				_serial_usec += spent
+				if not block:
+					return
+		_launch()
 
 	func finish() -> void:
 		while phase == Phase.LOADING:
@@ -404,6 +444,7 @@ class Chunked extends Node3D:
 			frame_usec_max = maxi(frame_usec_max, t0 - _last_frame_usec)
 		_last_frame_usec = t0
 		var was := phase
+		_serial_usec = 0
 		match phase:
 			Phase.LOADING:
 				_poll_loading(false)
@@ -414,7 +455,7 @@ class Chunked extends Node3D:
 					phase = Phase.ATTACHING
 			Phase.ATTACHING:
 				_attach_step(t0 + ATTACH_BUDGET_USEC)
-		_meter(Time.get_ticks_usec() - t0, "%s chunk %d" % [Phase.keys()[was], _next])
+		_meter(Time.get_ticks_usec() - t0 - _serial_usec, "%s chunk %d" % [Phase.keys()[was], _next])
 
 	func _meter(spent: int, step: String) -> void:
 		if spent > slowest_usec:

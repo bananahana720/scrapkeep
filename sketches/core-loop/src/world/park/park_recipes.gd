@@ -987,6 +987,12 @@ class Placer extends Node3D:
 	var frame_usec_max := 0
 	# Resources requested on the loader thread, and the frames the rows took to place (one when not threaded).
 	var threaded_loads := 0
+	# The headless dummy renderer's RID owners are not thread-safe, so there a threaded build loads on the main thread,
+	# one resource a LOADING step, metered apart from slowest_usec (scatter.gd Chunked, HEADLESS-LOADER).
+	var serial_loads := 0
+	var serial_usec_max := 0
+	var _serial := DisplayServer.get_name() == "headless"
+	var _serial_usec := 0
 	var build_frames := 0
 	# The costliest single row on the main thread.
 	var row_usec_max := 0
@@ -1030,7 +1036,10 @@ class Placer extends Node3D:
 		# RIDs ("Attempting to initialize the wrong RID" in place_greybox, and a null material on a part's free): 2 of 96
 		# park_holes_test runs six at a time before, 0 of 216 after (artifacts/local/alpha/push/w13/place/rid_sync/).
 		for path: String in (wanted if threaded else []):
-			if ResourceLoader.load_threaded_request(path) == OK:
+			if _serial:
+				_pending.append(path)
+				serial_loads += 1
+			elif ResourceLoader.load_threaded_request(path) == OK:
 				_pending.append(path)
 				threaded_loads += 1
 		if threaded:
@@ -1069,7 +1078,7 @@ class Placer extends Node3D:
 	# request here, so none stays open on the loader.
 	func _exit_tree() -> void:
 		_wait_posts()
-		for path: String in _pending:
+		for path: String in ([] if _serial else _pending):
 			ResourceLoader.load_threaded_get(path)
 		_pending.clear()
 		_held.clear()
@@ -1080,6 +1089,7 @@ class Placer extends Node3D:
 			frame_usec_max = maxi(frame_usec_max, t0 - _last_frame_usec)
 		_last_frame_usec = t0
 		var was := phase
+		_serial_usec = 0
 		match phase:
 			Phase.LOADING:
 				_poll_loading(false)
@@ -1087,7 +1097,7 @@ class Placer extends Node3D:
 				if _task == -1 or WorkerThreadPool.is_task_completed(_task):
 					_wait_posts()
 					_build_step(t0 + BUILD_BUDGET_USEC)
-		_meter(Time.get_ticks_usec() - t0, "%s row %d" % [Phase.keys()[was], _next])
+		_meter(Time.get_ticks_usec() - t0 - _serial_usec, "%s row %d" % [Phase.keys()[was], _next])
 
 	func _meter(spent: int, step: String) -> void:
 		if spent > slowest_usec:
@@ -1095,6 +1105,20 @@ class Placer extends Node3D:
 			slowest_step = step
 
 	func _poll_loading(block: bool) -> void:
+		if _serial:
+			while not _pending.is_empty():
+				var t0 := Time.get_ticks_usec()
+				var loaded := ResourceLoader.load(_pending.pop_front())
+				if loaded != null:
+					_held.append(loaded)
+				var spent := Time.get_ticks_usec() - t0
+				serial_usec_max = maxi(serial_usec_max, spent)
+				_serial_usec += spent
+				if not block:
+					break
+			if _pending.is_empty():
+				phase = Phase.BUILDING
+			return
 		var still := []
 		for path: String in _pending:
 			var status := ResourceLoader.load_threaded_get_status(path)
