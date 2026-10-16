@@ -44,6 +44,13 @@ const HALF := 800.0
 const RIDGE_BAR_M := 12.0
 const NARROW_M := 4.0
 const KNOWN := {"park_sinkhole": {"axis": "z", "z": 400.0}}
+# Wave-16 card PARK-SINKHOLE-BAKE: park_sinkhole's channel-fill edge leaves ten 20 m one-cell points
+# (a stamp edge counts as inside, so the fill and the ground beside it share a row). Pinned by exact
+# coordinate (x, z) beside the z=400 line; park_stamps.gd edge rules stay untouched this wave. Each
+# pin must still fire, so the card that fixes the bake deletes the pins and this test says so.
+const KNOWN_POINTS := {"park_sinkhole": [
+	Vector2i(52, -384), Vector2i(-56, -14), Vector2i(-56, -12), Vector2i(-56, -10), Vector2i(-56, -8),
+	Vector2i(126, 272), Vector2i(126, 274), Vector2i(126, 276), Vector2i(126, 278), Vector2i(126, 280)]}
 
 var t := T.new("park_bake_spike_test")
 
@@ -63,13 +70,16 @@ func _run() -> void:
 		if not t.eq("%s ground.bin is 801 by 801 float32" % map_id, h.size(), SIDE * SIDE):
 			continue
 		var exempt := _narrow(PARK_DIR + "/" + map_id + ".json")
-		var worst := scan(h, exempt, KNOWN.get(map_id, {}))
-		print("park_bake_spike_test: %s worst %.3f m at (%.0f, %.0f) height %.3f across %s, %d points over %.1f m, %d narrow-row points exempt, %d on the known line" % [
-			map_id, worst["excess"], worst["x"], worst["z"], worst["height"], worst["axis"], worst["over"], RIDGE_BAR_M, worst["narrow"], worst["known"]])
+		var pins: Array = KNOWN_POINTS.get(map_id, [])
+		var worst := scan(h, exempt, KNOWN.get(map_id, {}), pins)
+		print("park_bake_spike_test: %s worst %.3f m at (%.0f, %.0f) height %.3f across %s, %d points over %.1f m, %d narrow-row points exempt, %d on the known line, %d pinned points" % [
+			map_id, worst["excess"], worst["x"], worst["z"], worst["height"], worst["axis"], worst["over"], RIDGE_BAR_M, worst["narrow"], worst["known"], worst["pinned"]])
 		t.check("%s has no one-cell spike or wall over %.1f m" % [map_id, RIDGE_BAR_M], worst["over"] == 0,
 			"%d points, worst %.3f m at (%.0f, %.0f) across %s; first points %s" % [worst["over"], worst["excess"], worst["x"], worst["z"], worst["axis"], str(worst["points"])])
 		if KNOWN.has(map_id):
 			t.check("%s known wall at z=%.0f is still there (delete its KNOWN pin once fixed)" % [map_id, KNOWN[map_id]["z"]], worst["known"] > 0, "%d points" % worst["known"])
+		if not pins.is_empty():
+			t.check("%s pinned points are all still spikes (delete KNOWN_POINTS once PARK-SINKHOLE-BAKE lands)" % map_id, worst["pinned"] == pins.size(), "%d of %d" % [worst["pinned"], pins.size()])
 		if plant_map.is_empty():
 			plant_map = map_id
 			plant_h = h
@@ -129,8 +139,8 @@ static func excess_at(h: PackedFloat32Array, k: int, d: int) -> float:
 
 
 # The worst unexempted excess, where it is, and how many unexempted points exceed RIDGE_BAR_M.
-static func scan(h: PackedFloat32Array, exempt: PackedByteArray, known: Dictionary) -> Dictionary:
-	var worst := {"excess": -INF, "x": 0.0, "z": 0.0, "height": 0.0, "axis": "", "over": 0, "narrow": 0, "known": 0, "points": []}
+static func scan(h: PackedFloat32Array, exempt: PackedByteArray, known: Dictionary, pins: Array = []) -> Dictionary:
+	var worst := {"excess": -INF, "x": 0.0, "z": 0.0, "height": 0.0, "axis": "", "over": 0, "narrow": 0, "known": 0, "pinned": 0, "points": []}
 	var known_j := -1
 	if not known.is_empty():
 		known_j = int((float(known["z"]) + HALF) / STEP)
@@ -150,6 +160,9 @@ static func scan(h: PackedFloat32Array, exempt: PackedByteArray, known: Dictiona
 			if j == known_j and ez > RIDGE_BAR_M and ez >= ex:
 				worst["known"] += 1
 				continue
+			if e > RIDGE_BAR_M and pins.has(Vector2i(int(-HALF + STEP * i), int(-HALF + STEP * j))):
+				worst["pinned"] += 1
+				continue
 			if e > RIDGE_BAR_M:
 				worst["over"] += 1
 				if worst["points"].size() < 24:
@@ -167,7 +180,8 @@ func _planted(map_id: String, base: PackedFloat32Array, exempt: PackedByteArray)
 	if not t.check("a shipped ground to plant on", base.size() == SIDE * SIDE, map_id):
 		return
 	var known: Dictionary = KNOWN.get(map_id, {})
-	var clean := scan(base, exempt, known)
+	var pins: Array = KNOWN_POINTS.get(map_id, [])
+	var clean := scan(base, exempt, known, pins)
 	# The spike goes on the first interior point, scanning from the map's middle row, whose 5 by 5
 	# neighbourhood is flat within 0.5 m and not exempt, so the slope term cannot hide it.
 	var c := -1
@@ -188,7 +202,7 @@ func _planted(map_id: String, base: PackedFloat32Array, exempt: PackedByteArray)
 		return
 	var spike := base.duplicate()
 	spike[c] = base[c] + RIDGE_BAR_M + 1.0
-	var got := scan(spike, exempt, known)
+	var got := scan(spike, exempt, known, pins)
 	t.check("planted: one injected cell spike fails the scan (%s)" % map_id, got["over"] > clean["over"],
 		"over %d (clean %d), worst %.2f at (%.0f, %.0f)" % [got["over"], clean["over"], got["excess"], got["x"], got["z"]])
 	var wall := base.duplicate()
@@ -200,6 +214,6 @@ func _planted(map_id: String, base: PackedFloat32Array, exempt: PackedByteArray)
 			continue
 		wall[k] = maxf(base[k - SIDE], base[k + SIDE]) + absf(base[k - SIDE] - base[k - 2 * SIDE]) + absf(base[k + SIDE] - base[k + 2 * SIDE]) + RIDGE_BAR_M + 1.0
 		added += 1
-	var walled := scan(wall, exempt, known)
+	var walled := scan(wall, exempt, known, pins)
 	t.check("planted: a one-row wall fails the scan (%s)" % map_id, added > 150 and walled["over"] - clean["over"] >= added,
 		"over %d (clean %d), %d wall points" % [walled["over"], clean["over"], added])
