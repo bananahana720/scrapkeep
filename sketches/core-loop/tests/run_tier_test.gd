@@ -29,27 +29,29 @@ const Cards := preload("res://src/world/director_cards.gd")
 # /home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
 # --headless --path sketches/core-loop --script /home/andrew/scratch/w13/sol/sg10-tier-r5/base_replay.gd
 # -- --record-base --section=runtime --seed=N  (log: /home/andrew/scratch/w13/runtier-repin.log)
+# 2026-10-16 wave-15 re-pin (ruling RT1): the schedule hash now leaves out each park row's presentation
+# fields (recipe, fit); KD1-DRESS's three recipe renames had moved all 20. Whole runs unchanged.
 const BASE_SCHEDULE := [
-	"27fded27dd159ce1cb3e24777f54e110f738e060ee7d3b07885a034250adab6b",
-	"acddac954591f75f1b5762d34f6d0fc2d502e5b3b48d23538c605e274affc627",
-	"dc6b2941cc58a97b4b595902ee8a3b6bddd495dc5ce62bfd250fb3bf6ba7f58d",
-	"8c67b49271d397d47aaffd4556e1902e5a05ded15689e712c9c50389cb636fd4",
-	"d3d116bb8a0a34ef7a723a2ed44f7ff690744ad6bbd92bba384321df2fb9ac10",
-	"77e7f0b0aa905c57e9d46b77f82bbc9a3168ee0479616be731fa60cb4528dc56",
-	"aabfb130c58a4ca14dd679653f268d17bc4f21c7d5f3a6f5efe09061b4748f2d",
-	"8ade94d7543e5ad09f79877a50928d1475cbb33d6c01fec54409f55df464d97f",
-	"d18fa92d9d3657861d5761a65c9665a75aff46383ead92a14ff5203602a0c056",
-	"fa7708dd5dc336ca56a7f1edf8529d94c5d852144b84a34141e1e92b9ff4dffa",
-	"fa112593c52a2f8475770e0fe170a629e8683eacd4bbf82dca0c56abf20e7521",
-	"faaf1276105831144e0d450410b5b216d35db5a258e9f219feecf67323e8c5f8",
-	"8e23b839d781c572b97df5fefad1fe876742c5daa0ce3ee5e43320aeb1604b37",
-	"d16a7e0d2edeb9ea244cba141d73b51cb69cf7c1bcd9a896ba7781be74f8e564",
-	"b65eb8a2ba5833051180d482514bea2b7ec0c0213c323e8dbcb49a1a72e59b8b",
-	"60c21201a4fbd80412680fee0ce1052e7cd4612c00202270841b8c064e2348ae",
-	"ccc3830187b6d39d9292778d9e095531013cf50da5f6fe7980ea12d95d828001",
-	"8cd25296ff1af718818ebdb028835ac55f2a944ee1d7c37708d281c512ad4129",
-	"4073331769e1f2544f0e8a7865c978151542e2496dd3549782bae72a156b0407",
-	"5efc599324737bc1eb0ab170a7b8f434c7ebd30b55a89737529a3925f4ba0967",
+	"b29ee950817ce88cc2fb7560ee7b848cdeec7c9b8a8e8203bd6d47ba5e10f2a1",
+	"bd3b43b498f9e792291db0edabf21b204d37ea2f3d3850d99a32c281dc7ad2fb",
+	"e85504855f87a8ae9b3d374f2e1153dee114431bb5247db4dd7d7ffc1999da45",
+	"6a1095b1044c34e295eae2daeead8abb9d171ef4ca3d67fb7d490ee6a9d5ca66",
+	"c1bdb087ced6cc2ce23dfa17ebe74c9f61c9ac9c39150dfd423d95636fb6b765",
+	"0a8e3dd733b432194870e7f0a2070152f027cea495e7deb760d068694525f6fa",
+	"c8607c8286e1705fa84ae5ad31aacfcefbf986dc1734115e423c55dd52ebe5bb",
+	"6105bd8fa219735ac8d11b5df11d301f0565b7dc0c3ac38ad3cb297640120e14",
+	"59afec02e3452900706cb68cea9ebc2a2357ee16f8a0d5b0c81989b4b5d0bf7d",
+	"d2022e383a4f3733a7df567e333d594cb9639af0b70574c14b61e1260d7b9ea5",
+	"72b50d5bc041f70bab191d4de032a139a9570db0fa6c58edf74036eff5f55f5a",
+	"1058586ab647106c220ae46a270298a0c57c84ce665ea680136633fad97f56bf",
+	"f334f3bf89172d74d4051f6cb092f279c5b19fc81c3f333bcc1db3574621c971",
+	"2a3826aa2d31378a82d5e333cc14a8250e4040e00b0b54c90424f4364f796c57",
+	"0d1331ccd650405a5a6a2f2fc63afab44e67e16557015f8a1ffbf4599aace42a",
+	"7b38d4e6bb4b5100b9d02141fb2b26ef70218f10e620072a9a99682a2f28baf6",
+	"e13430b7c19c832ecd01ce51e675257da831f5da94ab4912c4c797cdf5c39e65",
+	"6692ae57ac07791a8bc6a265c8b536d94355da44f1b2eefae09813a0f6056280",
+	"1ca4162e27f3e72c2546c7f613f3bc8154e17b918eaef1bb4100d279db5c3c1a",
+	"7d262f2b26609bb3dbcca46a6183e658303b3531c41a400e6cc306c957b3adac",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
@@ -137,6 +139,20 @@ func _hash(value) -> String:
 	digest.update(var_to_bytes(value))
 	return digest.finish().hex_encode()
 
+# 2026-10-16 (ruling RT1): the park rows without their presentation fields. A row's recipe and fit pick
+# the art it draws with and never reach the director, so a dressing swap must not move the schedule pin
+# (KD1-DRESS moved all 20 by renaming three recipes).
+const PRESENTATION_FIELDS := ["recipe", "fit"]
+
+static func _director_rows(rows: Array) -> Array:
+	var kept := []
+	for row in rows:
+		var copy: Dictionary = row.duplicate(true)
+		for field in PRESENTATION_FIELDS:
+			copy.erase(field)
+		kept.append(copy)
+	return kept
+
 func _schedule(d, steps := 1200) -> Dictionary:
 	var ball: Vector2 = d._park_map.beacon if d._park_map != null else Vector2.ZERO
 	if d._park_map != null:
@@ -189,7 +205,7 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			"gate_rarities": [Parts.gate_rarities(0), Parts.gate_rarities(1), Parts.gate_rarities(2)],
 			"milestones": Parts.MILESTONE_FOR_EVENT}
 		if d._park_map != null:
-			pay["park_rows"] = d._park_map.park.park_rows
+			pay["park_rows"] = _director_rows(d._park_map.park.park_rows)
 		stages.append({"stage": row.stage, "mode": d.mode, "schedule": measured.schedule,
 			"pay_rows": pay, "cap": measured.cap, "interval": measured.interval})
 	return {"hash": _hash(stages), "members": members}
