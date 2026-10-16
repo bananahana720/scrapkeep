@@ -1010,16 +1010,17 @@ func drive_step(ball: Vector3) -> int:
 	selected_shapes.clear()
 	var heading := _flat(_heading()).normalized()
 	var heft: float = Ultimate.HEFT_MULT[_class() - 1]
-	var body: PhysicsBody3D = ctx.player.body()
+	var held = ctx.player.exceptions
 	var rams := 0
 	for enemy in _enemies():
 		var to := _flat(enemy.global_position - ball)
 		var closed_guard: bool = _warden(enemy) and not enemy.staggered()
+		# A guard that closes on the ball keeps passing it until the ball is clear (BITE-PIN).
 		if closed_guard and _excepted.has(enemy):
-			body.remove_collision_exception_with(enemy)
+			held.release(enemy)
 			_excepted.erase(enemy)
 		if enemy is PhysicsBody3D and not closed_guard and not _excepted.has(enemy) and to.length() < Weapons.DRIVE_WAVE_AHEAD * 2.0:
-			body.add_collision_exception_with(enemy)
+			held.hold(enemy)
 			_excepted.append(enemy)
 	var shape := _commit_sector(ball, heading, drive_reach(), PI, 0.0, ctx.player.tuning.RADIUS)
 	_draw_shape("rivet_ram", shape)
@@ -1042,11 +1043,12 @@ func drive_step(ball: Vector3) -> int:
 	return rams
 
 
+# Held by the ball until it is clear of each body, never dropped with the ball inside one.
 func _release_exceptions() -> void:
-	var body = ctx.player.body() if ctx != null and ctx.player != null else null
+	var held = ctx.player.exceptions if ctx != null and ctx.player != null else null
 	for enemy in _excepted:
-		if body != null and is_instance_valid(enemy):
-			body.remove_collision_exception_with(enemy)
+		if held != null:
+			held.release(enemy)
 	_excepted.clear()
 
 
