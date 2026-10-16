@@ -115,6 +115,8 @@ func _run() -> void:
 	var run = _game.ctx.run
 	_before_exit = {"trade_memory": run.trade_memory.duplicate(true), "pocket_draw_cache": run.pocket_draw_cache.duplicate(true),
 		"hp": run.hp, "max_hp": run.max_hp, "run_seed": run.run_seed}
+	var helper = _game.world.contraptions[1]._cache_rules if _game.world.contraptions.has(1) else null
+	var stage_1_helper: int = helper.get_instance_id() if is_instance_valid(helper) else 0
 	_game.flow._finish_stage()
 	var exit_1 := _times()
 	_report("exit into stage 2", exit_1)
@@ -126,6 +128,7 @@ func _run() -> void:
 	_check_natural_fresh("exit into stage 2")
 	_check_dressing_fresh("exit into stage 2")
 	await _ticks(SETTLE_TICKS)
+	_check_caches_survive_exit(stage_1_helper)
 
 	_game.flow.retry_stage()
 	var retry_2 := _times()
@@ -194,6 +197,22 @@ func _check_stage_two_workers() -> void:
 	var park: Dictionary = parks.get(_park_id(), {}) if parks is Dictionary else {}
 	_t.check("stage 2's director map came from a worker", park.get("worker", false) and not park.get("park", {}).is_empty(), str(park.keys()))
 	_t.check("the director's graph is the shared one", _game.world.director.has_method("_graph") and _game.world.director.call("_graph") == _game.world.activities._graph)
+
+
+# SWAP-HITCH-3: freeing stage 1's root also frees its contraptions' cache helper (an Activities
+# without setup). At 95053a4b that helper's _exit_tree released the game-wide caches, so the stage
+# 2 retry planned its natural surfaces again on the main thread (427 to 455 ms). The caches stay
+# until the Game's own Activities leaves the tree.
+func _check_caches_survive_exit(helper_id: int) -> void:
+	_t.check("stage 1 had a contraption cache helper, freed with its stage", helper_id != 0 and not is_instance_id_valid(helper_id),
+		"helper %s" % ("none" if helper_id == 0 else "still live" if is_instance_id_valid(helper_id) else "freed"))
+	var natural = load(NATURAL_PATH)
+	var key: int = natural.call("_root_key", _game.ctx.terrain, 2)
+	_t.check("after stage 1 is freed, stage 2's natural plan is still held for a retry", natural.get("_plans").get(key, {}).has("plan"),
+		"key %d, held %s" % [key, str(natural.get("_plans").keys())])
+	var park: Dictionary = load(DIRECTOR_PATH).get("_parks").get(_park_id(), {})
+	_t.check("after stage 1 is freed, stage 2's director map is still held", not park.get("park", {}).is_empty(), str(park.keys()))
+	_t.check("after stage 1 is freed, the dressing's shared rock mesh is still held", _game.presentation.set_dressing.get_script().get("_broken_rock") != null)
 
 
 # The natural handler's installed surfaces equal a fresh plan of the live stage 2 ground.
