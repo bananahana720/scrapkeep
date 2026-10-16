@@ -77,6 +77,18 @@ A boss plays a threatening version of its world's hook, then states its own B-fa
 - **The Waking, the Dig**: something old, woken. The bass riff compresses into 3+3+2 accents, a stacked-fourths hum becomes the chord, and a Phrygian flat second takes over the cadence, floor by floor.
 - **The Mind, the Highdraft**: lonely. The only boss built from the player's own hook, inverted and played back on sine. The last phase restates the title melody in the Mind's wrong chord, then the final drop resolves to G major, the Highdraft's home.
 
+### Versus battles and combat hype
+
+Andrew, 2026-10-16: boss and fight music in the spirit of the versus-battle duels in the Scott Pilgrim film, with Roboquest's driving production. It should be blood-pumping, so that rolling, stomping and bashing into walls and enemies feels unstoppable. Borrow the tropes, not the sound:
+
+- **The announcer stinger.** Every boss fight opens on a one-bar brass or metal fanfare under the intro card's freeze frame.
+- **The duel.** A boss fight is a musical fight: the boss's bass or machine lead states, the pilot's sax answers, and the exchanges shorten as phases fall.
+- **Game inside the game.** Chiptune square-wave arpeggios flick between phrases, the comic-book layer in sound.
+- **Phase escalation, Roboquest-style.** More percussion layers, a lower-register weight and a bigger hook each phase, with a tense break before the last one.
+- **The knockout.** A final unison hit lands on the stagger that ends the fight, then the wink.
+
+Ordinary fights use a combat hype loop: relentless kick, layered toms and claps, overdriven slap bass, the tenor sax hook with brass blasts, and no breakdown. The 2026-10-11 mechanical swing track Andrew approved is its reference, and one render conditions on it directly.
+
 The Warden families in AUDIO-V3 (reactor, hive, Mind) keep their own per-state sounds under these themes. The 2026-10-11 boss previews remain comparison material.
 
 The four boss previews from 2026-10-11 remain comparison material for this section.
@@ -99,6 +111,10 @@ The sounds come from code, [sound/event_sounds.py](sound/event_sounds.py), so pi
 ## Renders from this pass
 
 ACE-Step 1.5 XL turbo on the RTX 4080, draft mode, two seeds each. Files sit in `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`, outside the repo like every other music render. [sound/RENDERS.md](sound/RENDERS.md) lists them with checksums. They are linear previews. Seamless loops, stems and final bf16 renders come after Andrew picks by ear.
+
+## Sound that answers play
+
+The full event set (49 cues, named after the game's `sfx_bank.gd` keys) and the plan for wiring music to play live in [sound/INTEGRATION.md](sound/INTEGRATION.md). In short: gameplay sound on the frame, music on the beat, the drums follow rolling speed, the sax follows the combo, kill chains and scrap streaks play rising D Dorian phrases, and every boss fight is a duel that ends on a knockout hit. Two targets are checked by tools: every instant cue's onset is within 5 ms of its start, and every musical stinger starts on the next beat.
 
 ## Wiring notes for the wave coordinator
 

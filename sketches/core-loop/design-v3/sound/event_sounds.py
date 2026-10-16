@@ -18,7 +18,7 @@ RNG = np.random.default_rng(1016)
 
 def hz(note):
     names = {"C": 0, "C#": 1, "D": 2, "Eb": 3, "E": 4, "F": 5, "F#": 6, "G": 7,
-             "G#": 8, "A": 9, "Bb": 10, "B": 11}
+             "G#": 8, "Ab": 8, "A": 9, "Bb": 10, "B": 11}
     return 440.0 * 2 ** ((names[note[:-1]] + 12 * (int(note[-1]) + 1) - 69) / 12)
 
 

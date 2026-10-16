@@ -1,9 +1,9 @@
 """Measure ACE-Step takes and cut a 16-bar loop from each world take.
 
-    python cut_loops.py <render_dir> <out_dir>
+    python cut_loops.py <render_dir> <out_dir> [<lo_bpm> <hi_bpm>]
 
 Reads <render_dir>/manifest.json. For every take it reports the tempo the kick actually
-plays (searched 120 to 138 BPM), the longest stretch quieter than -50 dBFS and the
+plays (searched 120 to 138 BPM unless a range is given), the longest stretch quieter than -50 dBFS and the
 peak. For the world loops it finds the kick's downbeat phase, cuts 16 bars starting at
 bar 8 and crossfades 20 ms of the following audio into the head so the seam is
 continuous. The loop length is set by the measured tempo, so a take that drifts gets a
@@ -26,9 +26,9 @@ def onset_envelope(mono, sr, hop=256):
     return flux, sr / hop
 
 
-def tempo(flux, rate):
+def tempo(flux, rate, lo=120.0, hi=138.0):
     best = None
-    for bpm in np.arange(120.0, 138.01, 0.05):
+    for bpm in np.arange(lo, hi + 0.01, 0.05):
         lag = rate * 60 / bpm
         idx = np.arange(0, len(flux) - 4 * lag, lag)
         score = sum(np.mean(np.interp(idx + k * lag, np.arange(len(flux)), flux)) for k in range(4))
@@ -56,6 +56,7 @@ def longest_quiet(mono, sr, floor_db=-50.0, win=0.05):
 
 def main():
     render_dir, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
+    lo, hi = (float(v) for v in sys.argv[3:5]) if len(sys.argv) > 4 else (120.0, 138.0)
     out_dir.mkdir(parents=True, exist_ok=True)
     report = []
     for job in json.loads((render_dir / "manifest.json").read_text()):
@@ -63,7 +64,7 @@ def main():
             audio, sr = sf.read(take["path"], always_2d=True)
             mono = audio.mean(axis=1)
             flux, rate = onset_envelope(mono, sr)
-            bpm = tempo(flux, rate)
+            bpm = tempo(flux, rate, lo, hi)
             row = dict(take=f"{job['name']}-s{take['seed']}", seconds=round(len(mono) / sr, 2),
                        bpm=round(bpm, 2), quiet_s=round(longest_quiet(mono, sr), 2),
                        peak_db=round(20 * np.log10(np.max(np.abs(audio))), 2))
