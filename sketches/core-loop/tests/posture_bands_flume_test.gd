@@ -31,8 +31,12 @@ const WALL_S := 1100.0
 # base weapon damage per second (every base kit fills the bar at Rivet's 7.07 per second at heft 1.5):
 # small [64.85 Sable, 62.41 Rivet, 86.43 Kest] median 64.9, grown [26.27, 27.37, 45.94] median 27.4,
 # ratio 2.37, campers never broke. Rivet's runs are unchanged from the first pin, as FL3 intends.
-const EXPECT_SMALL_S := 64.9
-const EXPECT_GROWN_S := 27.4
+# 2026-10-16 (merge 16b44f36 into cand/alpha-w15): re-pinned on the candidate, which carries park data
+# merges the card's base 6d7c7a0c lacked (KD1-DRESS, PARK-SEAT, DOMES-STOP, PARK-TILE). Two identical runs:
+# small [71.63, 72.22, 97.91] median 72.2, grown [23.9, 25.57, 33.97] median 25.6, ratio 2.82, campers
+# never broke. Every design band holds; only the pin moved.
+const EXPECT_SMALL_S := 72.2
+const EXPECT_GROWN_S := 25.6
 const TOLERANCE := 0.10
 
 
