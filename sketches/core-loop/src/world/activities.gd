@@ -146,7 +146,7 @@ var last_entry_usec := 0
 # The trade interior's block material, built once instead of a checker texture a block;
 # dress_props reads its two colours and replaces it, so every block can share it.
 static var _interior_block: StandardMaterial3D
-static var _interior_wall: PhysicsMaterial
+static var _wall: PhysicsMaterial
 # True on the Game's own instance (setup ran), whose _exit_tree is the Game's teardown. A
 # contraption's cache helper (contraptions.gd) leaves with its stage root on a stage exit, and
 # releasing the shared caches there dropped the next stage's plans before its retry (SWAP-HITCH-3).
@@ -158,7 +158,6 @@ const POCKET_SAFE_M := 4.0
 const POCKET_DAMAGE_PER_S := 8.0
 const MARK_SPACING_M := 80.0
 const MARK_POOL_SIZE := 16
-const INTERIOR_WALL_BOUNCE := 0.75
 
 
 # One standing activity: its rule, its look, its state and, once it has finished, its pay.
@@ -238,7 +237,7 @@ func _exit_tree() -> void:
 	load("res://src/world/events/natural.gd").release_plans()
 	load("res://src/presentation/set_dressing.gd").release_shared()
 	_interior_block = null
-	_interior_wall = null
+	_wall = null
 
 
 # Waits once on a map's entry-data worker and takes its results. worker_layout records that the
@@ -512,16 +511,16 @@ func _build_interior(s: Site) -> void:
 	load("res://src/presentation/spillway_scenery.gd").dress_props(root)
 
 
-# A pocket block is a plain vertical box face. With the default wall material (the ball's
-# friction 0.9, bounce 0.25) a 20 m/s strike on it left a third of the speed: a dead stop
-# (PARK-PIPEVAULT, stage-5 pipe vault). This wall has no grip and a bounce that sums with the
-# ball's to 1.0, so the strike reflects at nearly full speed.
-func _interior_wall_material() -> PhysicsMaterial:
-	if _interior_wall == null:
-		_interior_wall = PhysicsMaterial.new()
-		_interior_wall.friction = 0.0
-		_interior_wall.bounce = INTERIOR_WALL_BOUNCE
-	return _interior_wall
+# Interior blocks and the cache's walls are plain vertical box faces. On the default wall
+# material the ball's friction (0.9) held a glancing 20 m/s strike to a third of its speed: a dead
+# stop (PARK-PIPEVAULT, stage-5 pipe vault). A frictionless wall with no bounce of its own still
+# stops a head-on hit, but a glancing one slides along it.
+func _wall_material() -> PhysicsMaterial:
+	if _wall == null:
+		_wall = PhysicsMaterial.new()
+		_wall.friction = 0.0
+		_wall.bounce = 0.0
+	return _wall
 
 
 func _activate_interior_collision(s: Site) -> void:
@@ -529,7 +528,7 @@ func _activate_interior_collision(s: Site) -> void:
 	for i in s.interior.terrain.size():
 		var block: Dictionary = s.interior.terrain[i]
 		var body := StaticBody3D.new()
-		body.physics_material_override = _interior_wall_material()
+		body.physics_material_override = _wall_material()
 		var shape := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		box.size = Vector3(block.size[0], block.size[1], block.size[2])
@@ -593,6 +592,7 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 	var bs := BoxShape3D.new()
 	bs.size = size
 	shape.shape = bs
+	body.physics_material_override = _wall_material()
 	body.add_child(shape)
 	body.add_child(mesh)
 	body.position = at
