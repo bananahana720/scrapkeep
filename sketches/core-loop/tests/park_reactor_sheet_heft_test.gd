@@ -16,9 +16,52 @@ var game
 # A heft-1.0 ball needs ceil(3 x 2.2) = 7, the posture bands' "at least twice grown" and no
 # more; a grown ball that wore one unit of mass but still holds the grown class needs 3.
 
+class Body extends RefCounted:
+	var touching: Array = []
+	func get_colliding_bodies() -> Array: return touching
+class Ball extends RefCounted:
+	var rigid := Body.new()
+	var heft_of: Callable
+	func _init() -> void: heft_of = Callable(self, "heft")
+	func heft() -> float: return Run.HEFT_CLASS_AT[0]
+	func body(): return rigid
+class Mount extends RefCounted:
+	var mount_driver = Reactor.new()
+	var target := Ball.new()
+	func family_point() -> String: return "core"
+
 func _initialize() -> void: _run.call_deferred()
 
+# One sheet pays one ram: the ball's contacts on successive frames of one live sheet (the double
+# count seen in the fight test's traces) add no second ram's gain; the next cycle's sheet pays again.
+func _one_sheet_one_ram() -> void:
+	var mount := Mount.new()
+	var driver = mount.mount_driver
+	driver.gates_opened = 2
+	driver.sheet_left = Reactor.SHEET_SECONDS
+	driver.entered_sheet_cycle = 2
+	mount.target.rigid.touching = [mount]
+	var posture = Reactor.DamPosture.new({})
+	posture.mounted_warden = weakref(mount)
+	var hit := {"kind": "stomp", "punch": 40.0, "plating": 90.0, "smash": false, "tier": 1, "charging": false,
+		"frame": 10, "hp": 650.0, "max_hp": 650.0, "point": "core"}
+	var gains := []
+	for frame in [10, 11]:
+		hit["frame"] = frame
+		var result: Dictionary = posture.judge(hit)
+		posture.apply(result, frame)
+		gains.append(snappedf(float(result.get("gain", -1.0)), 0.0001))
+	driver.gates_opened = 3
+	driver.entered_sheet_cycle = 3
+	hit["frame"] = 400
+	var next: Dictionary = posture.judge(hit)
+	gains.append(snappedf(float(next.get("gain", -1.0)), 0.0001))
+	t.check("a second contact in the same sheet adds no second ram; the next sheet pays again",
+		gains[0] > 0.0 and gains[1] == 0.0 and gains[2] == gains[0], str(gains))
+	mount.target.rigid.touching.clear()
+
 func _run() -> void:
+	_one_sheet_one_ram()
 	var small: Dictionary = await _rams(Run.HEFT_CLASS_AT[0], 0)
 	t.check("a heft-1.0 ball breaks the dam on its seventh sheet ram", small.broken and small.rams == 7, str(small))
 	var worn: Dictionary = await _rams(Run.HEFT_CLASS_AT[2], 1)
