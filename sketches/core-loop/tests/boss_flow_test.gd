@@ -98,7 +98,8 @@ func _run_checks() -> void:
 	_run_to_boss()
 	var flow = _game.flow
 	_report("arena entry", flow.state_name() == "boss" and _log.slice(0, 2) == ["arena_entered", "phase_1"] and _phases[0]["name"] == "Requisition"
-			and flow.boss_active and flow.boss_plating == 120.0 and _boss.phase == 1 and _boss.arena != null,
+			# Re-pinned 2026-10-15 (BRINDLE-SCUTTLE): hull plating 120 to 110 in boss_rules.gd.
+			and flow.boss_active and flow.boss_plating == 110.0 and _boss.phase == 1 and _boss.arena != null,
 		"stage 3's end entered %s; published %s; boss_active %s, boss_plating %.0f" % [flow.state_name(), str(_log), flow.boss_active, flow.boss_plating])
 	var kept: Vector3 = _game.run.snapshot_value("entry_position")
 	var placed: Vector3 = _boss.arena.entry_point()

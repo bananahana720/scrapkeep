@@ -21,7 +21,13 @@ const PHASE_MIN_SECONDS := [28.0, 24.0, 22.0]
 const INTRO_SECONDS := 3.0
 
 # The Warden grammar. The hull is plated; each weak point opens to one verb.
-const HULL_PLATING := 120.0
+# 2026-10-15 (BRINDLE-SCUTTLE): 110, down from 120. A ram pilot arrives at stage 2 at
+# about heft 2.5, and its ram at the 24 m/s top roll is (14 + 24 * 1.3) * 2.5 = 113: at
+# 120 it never met the plating and the posture bar filled at ratio 0.94 squared, slowly
+# enough that the Furnace slag drained the ball's heft before the chunk broke (Tally seed
+# 3 stalled at the 420 s cap). At 110 that ram meets the plating; a cruise ram or a bare
+# ball does not (tests/brindle_heavy_ram_test.gd).
+const HULL_PLATING := 110.0
 const CLASH_PUNCH := 150.0
 const CLASH_STUN := 2.0
 const WALL_STUN := 3.0
