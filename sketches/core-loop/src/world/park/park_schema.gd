@@ -137,8 +137,9 @@ const PARK_FIELDS := {
 	"stamp": STAMPS, "hole": "b", "budget": BUDGETS, "routes": "a", "fragment": "s",
 }
 # Optional on a park row, absent on every row that places as before: "seat" seats a GLB recipe on the ground at its
-# entry and exit (park_recipes.gd seat_fit).
-const FITS := ["seat"]
+# entry and exit (park_recipes.gd seat_fit); "tile" repeats a shorter GLB recipe end to end, each copy seated on the
+# ground at its own ends (park_recipes.gd tile_fit).
+const FITS := ["seat", "tile"]
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -368,7 +369,8 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		if not routes.has(route):
 			_add(out, id, "reference", "route %s is no route" % str(route))
 	_recipe(out, id, row["recipe"])
-	# The one optional park row field: "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16).
+	# The one optional park row field: "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16) or
+	# its tile fit (PARK-TILE, 2026-10-16).
 	if row.has("fit"):
 		if not FITS.has(row["fit"]):
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))

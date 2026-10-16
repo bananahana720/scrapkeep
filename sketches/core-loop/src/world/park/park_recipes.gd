@@ -21,6 +21,15 @@ extends RefCounted
 # footprint). A stretch outside STRETCH_MIN to STRETCH_MAX of the GLB's authored length refuses the fit: the row stands
 # in as its greybox and says why (seat_refusal). The views, the shells and the collider take the one fit transform.
 # A row without `fit` places exactly as before.
+#
+# The tile fit (PARK-TILE, coordinator ruling TI1, 2026-10-16): a row that says `"fit": "tile"` and names a GLB recipe
+# shorter than the row places N copies of it end to end along ride_frame's entry to exit, N = round(row length /
+# authored length) and at least TILE_MIN, each copy stretched along its own Z by row length / (N x authored length) and
+# seated like the seat fit on the ground at its own entry and exit, so the chain follows the ground piecewise and
+# consecutive copies meet at one ground point. A recipe tiles only when its -col mesh's cross-section at its authored
+# entry and at its exit match within TILE_MATCH_M in width and height (tile_ends); a recipe that does not, or a stretch
+# outside STRETCH_MIN to STRETCH_MAX, refuses the fit and the row stands in as its greybox and says why (tile_refusal).
+# Every copy carries its own base views, detail shells and collider faces, each view with the budget's ranges.
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
@@ -50,6 +59,12 @@ const STRETCH_MIN := 0.75
 const STRETCH_MAX := 1.5
 const SOCKET_ENTRY := "socket_entry"
 const SOCKET_EXIT := "socket_exit"
+# The tile fit (header): the row field value, the fewest copies, how closely the entry and exit cross-sections must
+# match, and how far inside each authored end the cross-section is cut (an end cap lying in the plane cuts to nothing).
+const FIT_TILE := "tile"
+const TILE_MIN := 2
+const TILE_MATCH_M := 0.25
+const TILE_SLICE_IN_M := 0.05
 
 # The registry: every starting recipe id of section 4 and the six hero landmarks, with its family and budget class.
 # park_schema.gd RECIPES names the same ids until the coordinator folds the GLBs into assets/registry.json.
@@ -131,6 +146,8 @@ static var _origins := {}
 static var _origins_read := false
 # authored_ends() of each recipe's base GLB, read once (stands_in and place ask before any part loads).
 static var _ends := {}
+# tile_ends() of each recipe's base GLB, read once.
+static var _tiles := {}
 
 
 # A budget class's visibility ranges from assets/asset_budgets.json: base_end and base_margin for the base views,
@@ -267,6 +284,138 @@ static func seat_fit(row: Dictionary, ends: Dictionary, ground := Callable()) ->
 	return {"ok": true, "reason": "", "stretch": stretch, "lip_y": lip_y, "exit_y": exit_y, "transform": xf}
 
 
+# Whether a row opts in to the tile fit (header).
+static func fits_tile(row: Dictionary) -> bool:
+	return String(row.get("fit", "")) == FIT_TILE
+
+
+# Every -col mesh's trimesh faces of a recipe scene, in the scene's own space.
+static func col_faces(scene: Node) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		if source.mesh != null and String(source.name).ends_with(COL_SUFFIX):
+			out.append_array(_relative(source, scene) * _trimesh(source).get_faces())
+	return out
+
+
+# The cross-section of triangle faces on the plane z = z0: {"min": Vector2(x, y), "max": Vector2(x, y), "width",
+# "height"} over every point where a triangle edge meets the plane, {} when none does.
+static func cross_section(faces: PackedVector3Array, z0: float) -> Dictionary:
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	var hit := false
+	for t in range(0, faces.size() - 2, 3):
+		for k in 3:
+			var a := faces[t + k]
+			var b := faces[t + (k + 1) % 3]
+			var da := a.z - z0
+			var db := b.z - z0
+			var p: Vector3
+			if da == 0.0:
+				p = a
+			elif da * db < 0.0:
+				p = a.lerp(b, da / (da - db))
+			else:
+				continue
+			lo = Vector2(minf(lo.x, p.x), minf(lo.y, p.y))
+			hi = Vector2(maxf(hi.x, p.x), maxf(hi.y, p.y))
+			hit = true
+	if not hit:
+		return {}
+	return {"min": lo, "max": hi, "width": hi.x - lo.x, "height": hi.y - lo.y}
+
+
+# Whether a recipe scene tiles (header): {"entry": cross_section, "exit": cross_section, "tileable", "reason"}, the
+# -col cross-sections cut TILE_SLICE_IN_M inside its authored entry and exit, tileable when both exist and their widths
+# and heights each match within TILE_MATCH_M. {} with no -col mesh.
+static func tile_ends(scene: Node, lip: bool) -> Dictionary:
+	var ends := authored_ends(scene, lip)
+	if ends.is_empty():
+		return {}
+	var faces := col_faces(scene)
+	var entry := cross_section(faces, (ends["entry"] as Vector3).z + TILE_SLICE_IN_M)
+	var exit := cross_section(faces, (ends["exit"] as Vector3).z - TILE_SLICE_IN_M)
+	var reason := ""
+	if entry.is_empty() or exit.is_empty():
+		reason = "the -col mesh has no cross-section at its %s" % ("entry" if entry.is_empty() else "exit")
+	else:
+		var dw := absf(float(exit["width"]) - float(entry["width"]))
+		var dh := absf(float(exit["height"]) - float(entry["height"]))
+		if dw > TILE_MATCH_M or dh > TILE_MATCH_M:
+			reason = "entry %.2f x %.2f m and exit %.2f x %.2f m cross-sections differ by more than %.2f m" % [
+				float(entry["width"]), float(entry["height"]), float(exit["width"]), float(exit["height"]), TILE_MATCH_M]
+	return {"entry": entry, "exit": exit, "tileable": reason == "", "reason": reason}
+
+
+# tile_ends() of a recipe's base GLB, cached; {} when the GLB is missing or has no -col mesh.
+static func recipe_tile(recipe: String) -> Dictionary:
+	if not _tiles.has(recipe):
+		var scenes := _load(GLB_DIR + recipe + ".glb")
+		_tiles[recipe] = tile_ends(scenes[0], origin(recipe) == ORIGIN_ENTRY_LIP) if not scenes.is_empty() else {}
+		for scene: Node in scenes:
+			scene.free()
+	return _tiles[recipe]
+
+
+# How many copies tile a row of length over a GLB of authored length: round(length / authored), at least TILE_MIN.
+static func tile_count(length: float, authored: float) -> int:
+	return maxi(TILE_MIN, roundi(length / authored))
+
+
+# Why a tile-fit row cannot tile its GLB, "" when it can: the GLB needs a length, the recipe must be tileable
+# (tile_ends), and each copy's stretch, row length / (N x authored length), must lie in STRETCH_MIN to STRETCH_MAX.
+# It reads no ground, so the stand-in decision is the same at bake and at runtime.
+static func tile_refusal(row: Dictionary, ends: Dictionary, tile: Dictionary) -> String:
+	var authored := float(ends.get("length", 0.0))
+	if authored <= 0.0 or tile.is_empty():
+		return "the GLB has no -col mesh or no length along +Z"
+	if not bool(tile["tileable"]):
+		return "not tileable: " + String(tile["reason"])
+	var length := float(row["size"][0])
+	var n := tile_count(length, authored)
+	var stretch := length / (n * authored)
+	if stretch < STRETCH_MIN or stretch > STRETCH_MAX:
+		return "%d copies stretch %.2f outside %.2f to %.2f (row %.1f m, GLB %.1f m)" % [n, stretch, STRETCH_MIN, STRETCH_MAX, length, authored]
+	return ""
+
+
+# The tile fit of a row whose GLB has authored ends: {"ok", "reason", "count", "stretch", "copies"}, each copy
+# {"transform", "z0", "z1", "lip_y", "exit_y"}: transform takes the GLB's own space to the row node's, z0 and z1 are
+# the copy's entry and exit along the node's Z (copy k runs from -L/2 + k L/N to -L/2 + (k + 1) L/N), and lip_y and
+# exit_y are the ground under them relative to the node. Each copy is the seat fit's shear on its own ends. A row with
+# an absolute y, or no ground, tiles flat at the node.
+static func tile_fit(row: Dictionary, ends: Dictionary, tile: Dictionary, ground := Callable()) -> Dictionary:
+	var reason := tile_refusal(row, ends, tile)
+	if reason != "":
+		return {"ok": false, "reason": reason}
+	var length := float(row["size"][0])
+	var authored := float(ends["length"])
+	var n := tile_count(length, authored)
+	var piece := length / n
+	var stretch := piece / authored
+	var frame := row_transform(row, ground)
+	var on_ground := row.get("y") == null and ground.is_valid()
+	var e: Vector3 = ends["entry"]
+	var x: Vector3 = ends["exit"]
+	var heights: Array[float] = []
+	for k in n + 1:
+		var y := 0.0
+		if on_ground:
+			var w := frame * Vector3(0, 0, -length * 0.5 + k * piece)
+			y = float(ground.call(w.x, w.z)) - frame.origin.y
+		heights.append(y)
+	var copies := []
+	for k in n:
+		var z0 := -length * 0.5 + k * piece
+		var z1 := -length * 0.5 + (k + 1) * piece
+		var a := heights[k] - e.y
+		var shear := (heights[k + 1] - heights[k] - (x.y - e.y)) / authored
+		var basis := Basis(Vector3.RIGHT, Vector3.UP, Vector3(0, shear, stretch))
+		var xf := Transform3D(basis, Vector3(0, a - shear * e.z, z0 - stretch * e.z))
+		copies.append({"transform": xf, "z0": z0, "z1": z1, "lip_y": heights[k], "exit_y": heights[k + 1]})
+	return {"ok": true, "reason": "", "count": n, "stretch": stretch, "copies": copies}
+
+
 # Places a park row (or the landmark object) under parent and returns its node, or null when the recipe is "" or a
 # greybox id names no element. publish(kind, at) is called when the ball enters the ride sensor; the stage passes
 # its bus's world_fact.emit. A recipe whose base GLB is missing stands in as its element's greybox, with a warning.
@@ -289,6 +438,14 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 			if stand != null:
 				stand.set_meta("seat_refused", refusal)
 			return stand
+	if fits_tile(row):
+		var refusal := tile_refusal(row, recipe_ends(recipe), recipe_tile(recipe))
+		if refusal != "":
+			push_warning("park_recipes: %s cannot tile %s (%s), stands in as greybox" % [row.get("id", ""), recipe, refusal])
+			var stand := place_greybox(row, String(row.get("element", "")), parent, ground, publish)
+			if stand != null:
+				stand.set_meta("tile_refused", refusal)
+			return stand
 	var parts :={"base": _load(p["base"]), "shells": [], "mid": [], "far": []}
 	for path: String in p["shells"]:
 		parts["shells"].append_array(_load(path))
@@ -307,8 +464,9 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 # the budget class's range. Views and colliders sit at the GLB origin ride_frame() gives, or for a seat-fit row on the
 # seat fit transform (seat_fit, from the base scene's authored ends), with the colliders' faces moved by it so no
 # collision shape carries a stretch or a shear; the node keeps that transform as meta "seat_fit". A seat-fit row whose
-# fit is refused places unfitted here: place() stands it in before it gets here. The caller keeps ownership of the
-# part scenes.
+# fit is refused places unfitted here: place() stands it in before it gets here. A tile-fit row places every part once
+# per copy on that copy's transform (tile_fit), views named <mesh>_tile<k>, and keeps the copies' transforms as meta
+# "tile_fit"; a refused tile fit likewise places unfitted here. The caller keeps ownership of the part scenes.
 static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, ground := Callable(), publish := Callable()) -> Node3D:
 	var node := _node(row, parent, ground)
 	var body := _body(node)
@@ -322,28 +480,48 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			baked = true
 			node.set_meta("seat_fit", at_origin)
 			node.set_meta("seat_stretch", fit["stretch"])
+	# Each placement of the parts: [GLB-to-node transform, view name suffix]. One, except for a tile fit's copies.
+	var fits := [[at_origin, ""]]
+	if fits_tile(row) and not (parts.get("base", []) as Array).is_empty():
+		var lip := origin(String(row.get("recipe", ""))) == ORIGIN_ENTRY_LIP
+		var tile := tile_fit(row, authored_ends(parts["base"][0], lip), tile_ends(parts["base"][0], lip), ground)
+		if tile["ok"]:
+			baked = true
+			fits = []
+			var xfs := []
+			for k in (tile["copies"] as Array).size():
+				var xf: Transform3D = tile["copies"][k]["transform"]
+				fits.append([xf, "_tile%d" % k])
+				xfs.append(xf)
+			node.set_meta("tile_fit", xfs)
+			node.set_meta("tile_count", tile["count"])
+			node.set_meta("tile_stretch", tile["stretch"])
 	var r :=ranges(String(row.get("budget", "landform")))
 	var base_end := float(r.get("base_end", 0.0))
 	var mid_end := float(r.get("mid_end", 0.0))
 	for scene: Node in parts.get("base", []):
-		for view in _views(scene, node, body, at_origin, baked):
-			_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
-			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		for f: Array in fits:
+			for view in _views(scene, node, body, f[0], baked, f[1]):
+				_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
+				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var shell_ranges: Array = r.get("shells", [])
 	var shells: Array = parts.get("shells", [])
 	for k in shells.size():
 		var sr: Array = shell_ranges[k] if k < shell_ranges.size() else [0.0, 0.0]
-		for view in _views(shells[k], node, body, at_origin, baked):
-			_range(view, 0.0, float(sr[0]), float(sr[1]))
-			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for f: Array in fits:
+			for view in _views(shells[k], node, body, f[0], baked, f[1]):
+				_range(view, 0.0, float(sr[0]), float(sr[1]))
+				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for scene: Node in parts.get("mid", []):
-		for view in _views(scene, node, body, at_origin, baked):
-			_range(view, base_end, mid_end, float(r.get("mid_margin", 0.0)))
-			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		for f: Array in fits:
+			for view in _views(scene, node, body, f[0], baked, f[1]):
+				_range(view, base_end, mid_end, float(r.get("mid_margin", 0.0)))
+				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for scene: Node in parts.get("far", []):
-		for view in _views(scene, node, body, at_origin, baked):
-			_range(view, mid_end, 0.0, 0.0)
-			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		for f: Array in fits:
+			for view in _views(scene, node, body, f[0], baked, f[1]):
+				_range(view, mid_end, 0.0, 0.0)
+				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_sensor(node, row, publish)
 	return node
 
@@ -409,8 +587,8 @@ static func _body(node: Node3D) -> StaticBody3D:
 # One view per drawn mesh of scene under node, at its place in the scene moved to the GLB origin at_origin; each -col
 # mesh goes to body as a trimesh. A surface whose GLB material names a material slot wears that slot (recipe_props.gd).
 # baked (a seat fit): each trimesh is a new shape with its faces moved by xf and an identity transform, because a
-# collision shape takes no stretch or shear.
-static func _views(scene: Node, node: Node3D, body: StaticBody3D, at_origin: Transform3D, baked := false) -> Array[MeshInstance3D]:
+# collision shape takes no stretch or shear. suffix ends each view's name (a tile fit's copy index).
+static func _views(scene: Node, node: Node3D, body: StaticBody3D, at_origin: Transform3D, baked := false, suffix := "") -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
 	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		if source.mesh == null:
@@ -430,7 +608,7 @@ static func _views(scene: Node, node: Node3D, body: StaticBody3D, at_origin: Tra
 			body.add_child(shape)
 			continue
 		var view := MeshInstance3D.new()
-		view.name = source.name
+		view.name = String(source.name) + suffix
 		view.mesh = source.mesh
 		for i in source.mesh.get_surface_count():
 			var original := source.mesh.surface_get_material(i)
@@ -749,13 +927,15 @@ static func seat(row: Dictionary, ground: Callable) -> Callable:
 
 
 # Whether a row places as a greybox: a greybox id, a recipe whose base GLB has not landed, or a seat-fit row whose
-# fit is refused (seat_refusal).
+# fit is refused (seat_refusal), or a tile-fit row whose fit is refused (tile_refusal).
 static func stands_in(row: Dictionary) -> bool:
 	var recipe := String(row.get("recipe", ""))
 	if recipe == "" or recipe.begins_with(GREYBOX):
 		return recipe != ""
 	if not ResourceLoader.exists(paths(recipe, _budget(row))["base"]):
 		return true
+	if fits_tile(row):
+		return tile_refusal(row, recipe_ends(recipe), recipe_tile(recipe)) != ""
 	return fits_seat(row) and seat_refusal(row, recipe_ends(recipe)) != ""
 
 
