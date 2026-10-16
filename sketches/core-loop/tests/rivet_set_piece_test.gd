@@ -40,11 +40,13 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # 2026-10-12 (FU-RIVET-SHADOW r2): 223 -> 226, the selection path (_in_shape, hull_boundary
 # shadows) checked directly: hulls behind the terrain contact select nothing from the empty-shadow
 # cell, the unshadowed cell selects two of them, and an in-front hull is still selected.
+# 2026-10-16 (BITE-PIN): 226 -> 229. A guard re-closed on the ball, and the landing, hold the
+# exceptions of bodies the ball is inside until it is clear (exception_hold.gd).
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 226
+	_expected_checks = 229
 	super._initialize()
 
 
@@ -692,7 +694,10 @@ func _run() -> void:
 	_t.near("Shoulder widens the corridor to 5 m", _kit.drive_reach(), 5.0)
 	ult._strike(_player.ball_position())
 	_t.check("crowd control slides off 2.0 s past the recovery", _player.immune_left >= Ultimate.RECOVER_SECONDS + 2.0 - 0.001, str(_player.immune_left))
-	_t.check("the collisions come back after the landing", _player.body().get_collision_exceptions().is_empty())
+	_t.check("the landing hands every collision back, held only while the ball is inside", _kit._excepted.is_empty() and _player.body().get_collision_exceptions().all(func(b): return _player.exceptions.releasing(b)))
+	_player.reset_to(_player.ball_position() - Vector3.RIGHT * 10.0)
+	_player.exceptions.step(DT)
+	_t.check("the collisions come back once the ball is clear", _player.body().get_collision_exceptions().is_empty())
 
 	# The framework appends the encore before the first strike and emits started only once.
 	await _fresh()
@@ -713,7 +718,10 @@ func _run() -> void:
 	_t.check("the encore also excepts its new machine", _kit._excepted.has(second_ram) and _player.body().get_collision_exceptions().has(second_ram))
 	_knob("ult_encore", false)
 	ult._land(_player.ball_position())
-	_t.check("the last leg releases all Drive state and collisions", _kit._piece == "" and _kit._excepted.is_empty() and _player.body().get_collision_exceptions().is_empty())
+	_t.check("the last leg releases all Drive state, holding collisions only while the ball is inside", _kit._piece == "" and _kit._excepted.is_empty() and _player.body().get_collision_exceptions().all(func(b): return _player.exceptions.releasing(b)))
+	_player.reset_to(_player.ball_position() - Vector3.RIGHT * 10.0)
+	_player.exceptions.step(DT)
+	_t.check("the last leg's collisions come back once the ball is clear", _player.body().get_collision_exceptions().is_empty())
 
 	await _fresh()
 	_piece("juggernaut_drive")
@@ -727,7 +735,10 @@ func _run() -> void:
 
 	warden._posture.staggered = false
 	_kit.drive_step(_player.ball_position())
-	_t.check("a re-closed guard removes both exceptions before ram dedup", not _player.body().get_collision_exceptions().has(warden) and not _kit._excepted.has(warden))
+	_t.check("a guard re-closed on the ball leaves the drive and passes the ball until it is clear", not _kit._excepted.has(warden) and _player.exceptions.releasing(warden) and _player.body().get_collision_exceptions().has(warden))
+	_player.reset_to(_player.ball_position() - Vector3.RIGHT * 10.0)
+	_player.exceptions.step(DT)
+	_t.check("once clear the guard blocks the ball again", not _player.exceptions.holding(warden) and not _player.body().get_collision_exceptions().has(warden))
 
 	# ult_beats: two more beats in the plan.
 	await _fresh()

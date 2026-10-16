@@ -19,6 +19,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const ChainState := preload("res://src/combat/chain.gd")
 const CombatRules := preload("res://src/combat/combat.gd")
+const ExceptionHold := preload("res://src/movement/exception_hold.gd")
 
 # Rigid physics only (TADR-006; entry 6 kept it for its arcade weight). The ball owns
 # movement and publishes each movement fact on the bus; what a collision does to an
@@ -158,6 +159,8 @@ var _speed_bank_rest_ticks := 0
 var _speed_bank_rest_braked := false
 var _bow_check_queued := false
 var _crushing := {}
+# Every collision exception the ball takes goes through here, so none ends with the ball inside.
+var exceptions
 
 
 func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
@@ -168,6 +171,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid = RigidBall.new()
 	_rigid.name = "RigidBall"
 	add_child(_rigid)
+	exceptions = ExceptionHold.new(_rigid, Tuning.RADIUS)
 	_rigid.setup(tuning, state)
 	_rigid.intent = intent
 	_rigid.kit = kit
@@ -523,6 +527,7 @@ func grapple_range() -> float:
 
 
 func _physics_process(delta: float) -> void:
+	exceptions.step(delta)
 	source.poll(intent)
 	_route_slots(delta)
 	abilities.movement_key = _burst_key()
@@ -1138,7 +1143,7 @@ func _try_crush(body: Node3D) -> void:
 	_crushing[id] = true
 	if kit.sprinting:
 		kit.sprint_left += tree.knob("crush_refund")
-	_rigid.add_collision_exception_with(body)
+	exceptions.hold(body)
 	var closing := kit.line_closing
 	var landing := _begin_landing(body)
 	if landing:
@@ -1151,12 +1156,12 @@ func _try_crush(body: Node3D) -> void:
 
 
 # Bound by id: the crushed enemy is usually freed by now, and a freed exception
-# leaves the physics server with it.
+# leaves the physics server with it. One that lives is let go once the ball is clear of it.
 func _end_crush(id: int) -> void:
 	_crushing.erase(id)
 	var body := instance_from_id(id)
 	if is_instance_valid(body) and body is PhysicsBody3D:
-		_rigid.remove_collision_exception_with(body)
+		exceptions.release(body)
 
 
 func _build_augment_visuals() -> void:
