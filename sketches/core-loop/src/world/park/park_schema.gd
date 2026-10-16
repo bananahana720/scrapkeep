@@ -136,6 +136,9 @@ const PARK_FIELDS := {
 	"size": "v3", "yaw_deg": "n", "verb": VERBS, "ride_fact": "s", "home": "s", "recipe": "s",
 	"stamp": STAMPS, "hole": "b", "budget": BUDGETS, "routes": "a", "fragment": "s",
 }
+# Optional on a park row, absent on every row that places as before: "seat" seats a GLB recipe on the ground at its
+# entry and exit (park_recipes.gd seat_fit).
+const FITS := ["seat"]
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -365,6 +368,12 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		if not routes.has(route):
 			_add(out, id, "reference", "route %s is no route" % str(route))
 	_recipe(out, id, row["recipe"])
+	# The one optional park row field: "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16).
+	if row.has("fit"):
+		if not FITS.has(row["fit"]):
+			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
+		elif String(row["recipe"]) == "" or String(row["recipe"]).begins_with("greybox:"):
+			_add(out, id, "fit", "fit %s needs a GLB recipe, not %s" % [row["fit"], str(row["recipe"])])
 	if GUARDED_SOCIETIES.has(row["society"]):
 		if row["home"] != "":
 			_add(out, id, "guardrail", "a %s row houses no home (%s)" % [row["society"], row["home"]])
