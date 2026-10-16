@@ -502,6 +502,11 @@ async function main() {
   const gateFailures = releaseGateFailures(gate.stdout + gate.stderr, gate.status);
   if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 
+  // Report only until wave 20 (Andrew, 2026-10-16): print the placeholder count, never block on it.
+  const placeholders = run("node", [path.join(root, "scripts/placeholder-gate.mjs"), "--project", project, "--limit", "0"]);
+  const placeholderLine = (placeholders.stdout + placeholders.stderr).trim().split("\n").pop();
+  console.log("placeholder report (not blocking): " + placeholderLine);
+
   const smoke = bossSmoke(crash);
 
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
