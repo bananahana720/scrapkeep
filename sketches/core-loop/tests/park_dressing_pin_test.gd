@@ -13,7 +13,14 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Stage -> [map, batch count, hash], from the 7dbdebae builder.
-const PINS := {}
+const PINS := {
+	1: ["park_dam", 13, 2427938025],
+	2: ["park_flume", 13, 1284262125],
+	3: ["park_pit", 13, 3689678730],
+	4: ["park_sinkhole", 13, 2757620411],
+	5: ["park_islands", 13, 3297821718],
+	6: ["park_crown", 13, 1104816985],
+}
 
 var _t := T.new("park_dressing_pin_test")
 
