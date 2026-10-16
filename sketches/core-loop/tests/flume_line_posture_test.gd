@@ -1,0 +1,192 @@
+# smoke: solo timeout=180s
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
+const Run := preload("res://src/core/run_state.gd")
+const Augments := preload("res://src/movement/augments.gd")
+const T := preload("res://tests/support/t.gd")
+
+# The stage-2 park Warden (the flume mounting, hung 12 m over the drum floor) breaks from the harpoon
+# line (card FLUME-POSTURE, coordinator ruling FL1; design-v3/wardens/reactor.md:80). A ball latched on
+# the mounted Warden pays posture by each line bolt's damage: the pilot-average base weapon bolt (the
+# mean of the six pilots' rows in Weapons.BASE, computed here, not read from the driver) pays 1.5, or
+# 3.0 while the relic charges, at the reference heft 1.5 (the second heft class's floor); a heavier ball's
+# bolt pays its heft over 1.5 to the stage's posture curve (2.0) more. While the ball is engaged and latched the bar does not
+# drain, as on the dam. Unlatched, a bolt keeps the generic rule (punch over plating 110, curve 2.0),
+# and a ball that never hits leaves the bar at zero: the camper never breaks it.
+#
+# Ruling FL3 (2026-10-16): the pay is also divided by the pilot's base weapon damage per second and
+# multiplied by Rivet's, so at the reference heft every pilot's base kit fills the bar at Rivet's FL1
+# rate (7.07 posture per second), and a damage part still raises it in proportion.
+#
+# Red at 6d7c7a0c (measured 2026-10-16): the reference bolt paid 0.06 and the latched bar drained.
+# Red at 390d9d4e for the FL3 checks: posture per second followed each weapon's damage per second.
+
+# Run.HEFT_CLASS_AT indexes: the reference heft, then the grown ball.
+const REFERENCE := 1
+const GROWN := 2
+const HEFT_CURVE := 2.0
+const HOLD_SECONDS := 6.0
+const HOLD_START := 50.0
+const CAMPER_SECONDS := 12.0
+
+var t := T.new("flume_line_posture_test")
+var game
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	game = Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	game.ctx.calm = true
+	game.flow.force_warden = true
+	game.flow.press_start()
+	game.flow.choose_class(0)
+	game.run.grant_start_mass((Run.HEFT_CLASS_AT[REFERENCE] - Run.HEFT_CLASS_AT[0]) / Run.HEFT_PER_MASS)
+	game.flow.enter_stage(2, Vector3.ZERO, false)
+	game.player.set_frozen(true)
+	for i in 5:
+		await physics_frame
+	var w = game.flow.warden
+	if not t.check("stage 2 stands the mounted flume Warden", is_instance_valid(w) and w.family == "reactor"
+			and w.mounting == "flume" and bool(w.spec.get("park_landmark", false)),
+			"warden %s" % [w]):
+		quit(t.verdict())
+		return
+	var reference := _reference_damage()
+	print("[report] reference damage %.4f (mean of the six pilots' base weapon damage %s); heft %.2f" % [reference,
+		_pilot_damage().values(), game.run.heft()])
+	game.flow._engage()
+	_latch(w)
+	await physics_frame
+
+	# Pay per bolt, latched, reference heft, Rivet's pilot (FL1's numbers, which FL3 keeps for Rivet).
+	var rivet = _def("runner_gunner")
+	t.near("latched, Rivet: the reference bolt pays 1.5", _pay(w, "runner", reference, false, rivet), 1.5, 0.01)
+	t.near("latched, Rivet: the reference bolt pays 3.0 while the relic charges", _pay(w, "runner", reference, true, rivet), 3.0, 0.02)
+	var rivet_rate := float(Weapons.BASE["rapid_laser"]["rate"])
+	var rivet_per_s := _pay(w, "runner", float(Weapons.BASE["rapid_laser"]["damage"]), false, rivet) * rivet_rate
+	t.near("latched, Rivet: the base kit fills %.3f posture per second, as under FL1" % rivet_per_s, rivet_per_s,
+		1.5 * float(Weapons.BASE["rapid_laser"]["damage"]) / reference * rivet_rate, 0.01)
+
+	# FL3: at the reference heft, every pilot's base kit fills the bar at Rivet's posture per second.
+	var pays := []
+	for def in ClassDef.all():
+		var row: Dictionary = Weapons.BASE[def.weapon_id]
+		var pay := _pay(w, String(Weapons.STRIKE_KIND.get(def.weapon_id, "shot")), float(row["damage"]), false, def)
+		var per_s := pay * float(row["rate"])
+		pays.append("%s %s %.0f x %.1f/s -> %.3f a bolt, %.3f/s" % [def.id, def.weapon_id, float(row["damage"]), float(row["rate"]), pay, per_s])
+		t.check("latched, %s: the base kit fills the bar within 1 percent of Rivet's posture per second" % def.id,
+			absf(per_s - rivet_per_s) <= 0.01 * rivet_per_s, "%.3f/s against %.3f/s" % [per_s, rivet_per_s])
+	print("[report] per-pilot pay at reference heft %.2f: %s" % [game.run.heft(), pays])
+
+	# A planted +50 percent weapon-damage part raises the pilot's posture per second by 50 percent.
+	var pilot = game.run.class_def
+	var rate := float(Weapons.BASE[pilot.weapon_id]["rate"])
+	var kind := String(Weapons.STRIKE_KIND.get(pilot.weapon_id, "shot"))
+	var plain := _pay(w, kind, float(game.combat.punch_now()), false, pilot) * rate
+	game.ctx.tuning.set_mod("weapon_damage", 1.5)
+	var planted_damage := float(game.combat.punch_now())
+	var planted := _pay(w, kind, planted_damage, false, pilot) * rate
+	game.ctx.tuning.set_mod("weapon_damage", 1.0)
+	print("[report] %s with a +50%% damage part: bolt %.1f, %.3f/s against %.3f/s" % [pilot.id, planted_damage, planted, plain])
+	t.near("a +50 percent damage part raises posture per second by 50 percent", planted / plain if plain > 0.0 else 0.0, 1.5, 0.015)
+
+	# The bar holds while engaged and latched.
+	w._posture.posture = HOLD_START
+	w._posture.idle = 0.0
+	for i in ceili(HOLD_SECONDS * Engine.physics_ticks_per_second):
+		_latch(w)
+		await physics_frame
+	t.check("latched and engaged: the bar does not drain over %.0f s" % HOLD_SECONDS, w._posture.posture >= HOLD_START - 0.01
+			and not w._posture.staggered, "posture %.2f from %.2f" % [w._posture.posture, HOLD_START])
+
+	# Unlatched: the generic rule, and the bar drains.
+	_unlatch()
+	await physics_frame
+	var loose := _pay(w, "runner", reference, false, rivet)
+	t.check("unlatched: the reference bolt keeps the generic rule (under 0.2)", loose < 0.2, "pay %.3f" % loose)
+	w._posture.posture = HOLD_START
+	w._posture.idle = 0.0
+	for i in ceili(HOLD_SECONDS * Engine.physics_ticks_per_second):
+		await physics_frame
+	t.check("unlatched: the bar drains", w._posture.posture < HOLD_START - 1.0, "posture %.2f" % w._posture.posture)
+
+	# The camper: no hits, the bar never fills.
+	w._posture.posture = 0.0
+	var staggers: int = w._posture.staggers
+	for i in ceili(CAMPER_SECONDS * Engine.physics_ticks_per_second):
+		await physics_frame
+	t.check("the camper never breaks it", w._posture.staggers == staggers and w._posture.posture == 0.0
+			and w._posture.chunks == 4, "staggers %d, posture %.2f, chunks %d" % [w._posture.staggers - staggers,
+			w._posture.posture, w._posture.chunks])
+
+	# A heavier ball's bolt pays its heft share more (the grant lands the run at about heft 1.7).
+	game.run.grant_start_mass((Run.HEFT_CLASS_AT[GROWN] - Run.HEFT_CLASS_AT[REFERENCE]) / Run.HEFT_PER_MASS)
+	_latch(w)
+	await physics_frame
+	var heavy_heft: float = game.run.heft()
+	var heavy_pay := _pay(w, "runner", reference, false, rivet)
+	print("[report] heft %.2f: the reference bolt pays %.3f" % [heavy_heft, heavy_pay])
+	t.check("latched, heavier: the ball is past the reference heft", heavy_heft > Run.HEFT_CLASS_AT[REFERENCE] + 0.1,
+		"heft %.2f" % heavy_heft)
+	t.eq("the stage's posture curve is the heft exponent", w._posture.curve, HEFT_CURVE)
+	t.near("latched, heavier: the reference bolt pays 1.5 times its heft share", heavy_pay,
+		1.5 * pow(heavy_heft / Run.HEFT_CLASS_AT[REFERENCE], HEFT_CURVE), 0.02)
+	quit(t.verdict())
+
+
+func _pilot_damage() -> Dictionary:
+	var out := {}
+	for def in ClassDef.all():
+		out[def.weapon_id] = float(Weapons.BASE[def.weapon_id]["damage"])
+	return out
+
+
+func _reference_damage() -> float:
+	var damages: Array = _pilot_damage().values()
+	return damages.reduce(func(acc, d): return acc + d, 0.0) / damages.size()
+
+
+# What one bolt of `damage` pays the bar now, without changing it.
+# The bolt is judged as `pilot`'s: the run's class is swapped for the judge only.
+func _pay(w, kind: String, damage: float, charging: bool, pilot) -> float:
+	var was: bool = w._charging
+	var was_pilot = game.run.class_def
+	w._charging = charging
+	game.run.class_def = pilot
+	var result: Dictionary = w.judge_hit(kind, damage, false, 0, "")
+	game.run.class_def = was_pilot
+	w._charging = was
+	return float(result.get("gain", 0.0))
+
+
+func _def(id: String):
+	for def in ClassDef.all():
+		if def.id == id:
+			return def
+	return null
+
+
+func _latch(w) -> void:
+	var kit = game.player.kit
+	kit.hooked = true
+	kit.on_body = true
+	kit.anchor_body = w
+	kit.line_state = Augments.LINE_LATCHED
+	kit.anchor = w.hardpoint_at(0)
+
+
+func _unlatch() -> void:
+	var kit = game.player.kit
+	kit.hooked = false
+	kit.on_body = false
+	kit.anchor_body = null
+	kit.line_state = Augments.LINE_IDLE
