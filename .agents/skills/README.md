@@ -10,7 +10,7 @@ Each directory here is one skill that Claude Code and Codex both load. Claude re
 | `scrapkeep-lab` | project | run, extend, gate or port the headless Godot lab |
 | `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
 
-`reactive-model-loop` is a mirror. Since 2026-09-26 its canonical copy is the pstack plugin (`/home/andrew/.config/pstack/plugin/skills/reactive-model-loop`), so every project on both hosts gets it. Change the pstack copy first, then copy it here byte for byte; `python /home/andrew/.config/pstack/verify.py --project <this repo>` fails when the two differ. The RML origin map in `scrapkeep-lab/references/lessons.md` still covers every lesson id.
+`reactive-model-loop` is a mirror. Since 2026-09-26 its canonical copy is the A stack plugin (`/home/andrew/.config/astack/plugin/skills/reactive-model-loop`), so every project on both hosts gets it. Change the A stack copy first, then copy it here byte for byte; `python /home/andrew/.config/astack/verify.py --project <this repo>` fails when the two differ. The RML origin map in `scrapkeep-lab/references/lessons.md` still covers every lesson id.
 
 ## Decide whether it is a skill
 
