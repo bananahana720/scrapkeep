@@ -46,6 +46,18 @@ if ! python3 -I -c 'import bpy, sys; sys.exit(bpy.app.version_string != "5.2.2 L
   python3 -m pip install --quiet --disable-pip-version-check --root-user-action=ignore bpy==5.2.2
 fi
 
+# Godot sizes its worker pool from the CPU count. On this 4 vCPU container the game's
+# low-priority audio tasks starve and audio_rescue_test, audio_achievement_test and
+# audio_bake_cancel_test hang at quit or race. A larger pool matches Andrew's machine.
+# override.cfg is read only by local runs, kept out of git and out of export packs.
+override="$repo/sketches/core-loop/override.cfg"
+if [ ! -f "$override" ]; then
+  printf '; Written by .claude/hooks/session-start.sh for cloud sessions only.\n[threading]\n\nworker_pool/max_threads=16\n' > "$override"
+fi
+exclude="$(git -C "$repo" rev-parse --path-format=absolute --git-path info/exclude)"
+mkdir -p "$(dirname "$exclude")"
+grep -qxF sketches/core-loop/override.cfg "$exclude" 2>/dev/null || echo sketches/core-loop/override.cfg >> "$exclude"
+
 cd "$repo"
 # npm ci keeps package-lock.json untouched; npm install rewrites it and dirties the tree.
 if [ ! -f node_modules/.package-lock.json ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then

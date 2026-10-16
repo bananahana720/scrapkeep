@@ -6,6 +6,7 @@
 - The Linux export templates under `~/.local/share/godot/export_templates/4.7.2.stable/`.
 - Blender 5.2.2 LTS as the `bpy` wheel from PyPI (same build hash, `d13f752e3b9c`), with `scripts/cloud/blender` on `PATH` as the `blender` command. `download.blender.org` is outside the default network policy, so the full binary is not used.
 - Locked npm dependencies.
+- `sketches/core-loop/override.cfg` (git-excluded, cloud only) raising Godot's worker pool to 16 threads. With the default pool sized from 4 vCPUs, `audio_rescue_test` and `audio_achievement_test` hang at quit and `audio_bake_cancel_test` races.
 
 The container has no GPU. What runs here:
 
