@@ -11,6 +11,22 @@ class Surface:
 	var mesh: ArrayMesh
 	var vertices := PackedVector3Array()
 	var cells := {}
+	# A surface a worker projected carries its mesh arrays here until finish() builds the mesh on
+	# the main thread (no worker touches the rendering server).
+	var arrays := []
+	func finish() -> Surface:
+		if mesh == null:
+			mesh = ArrayMesh.new()
+		if not arrays.is_empty() and not vertices.is_empty():
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		arrays = []
+		return self
+	# The vertices and cells alone, for a worker's private copy of a cave roof.
+	func copy() -> Surface:
+		var out := Surface.new()
+		out.vertices = vertices.duplicate()
+		out.cells = cells.duplicate(true)
+		return out
 	func height(point: Vector2) -> float:
 		var cell := Vector2i(floori(point.x / ParkTerrain.STEP), floori(point.y / ParkTerrain.STEP))
 		var faces: Array = []
@@ -61,11 +77,72 @@ class OverlayMap:
 		return p.surface.height(Vector2(x, z))
 
 
+# A park stage's floor as plain data, read by project_surface on a worker thread in place of the live
+# terrain (SWAP-HITCH-2). It answers the terrain calls project_surface, _water_ground and the natural
+# plan make, through terrain.gd's own static functions, for a stage entered with no overlay down,
+# which is every park stage on entry. Built on the main thread by snapshot().
+class Ground:
+	extends RefCounted
+	var stage := 1
+	var overlays: Array[String] = []
+	var _heights: Array = []
+	var _holes: Array = []
+	var _under: Array = []
+	var _roofs: Array = []
+	var _terrain: Script
+	func map() -> RefCounted:
+		return null
+	func height(x: float, z: float) -> float:
+		return _floor(0, x, z)
+	func _ensure(_index: int) -> int:
+		return 0
+	func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
+		return _terrain._grid_height(heights, x, z)
+	# terrain.gd _floor for a park stage: the highest cave roof over the retained ground, else the floor.
+	func _floor(_i: int, x: float, z: float) -> float:
+		var roof_y := -INF
+		for roof: Surface in _roofs:
+			roof_y = maxf(roof_y, roof.height(Vector2(x, z)))
+		if roof_y > -INF:
+			return maxf(roof_y, _terrain._retained_park_height(_heights[0], _holes[0], x, z))
+		return _terrain._park_height(_heights[0], _holes[0], _under[0], x, z)
+
+
+class Snapshot:
+	extends RefCounted
+	var terrain: Ground
+
+
+# A built park stage's ground for a worker: the stage's grids (copy on write, never written after the
+# build) and private copies of its cave roofs. Main thread only.
+static func snapshot(terrain, index: int) -> Snapshot:
+	var i := index - 1
+	var ground := Ground.new()
+	ground._heights = [terrain._heights[i]]
+	ground._holes = [terrain._holes[i]]
+	ground._under = [terrain._under[i]]
+	for roof in terrain._cave_roofs.get(i, {}).values():
+		ground._roofs.append(roof.surface.copy())
+	ground._terrain = terrain.get_script()
+	var out := Snapshot.new()
+	out.terrain = ground
+	return out
+
+
+# True when no cave roof of the stage has been lowered, so its floor is the one it was built with.
+static func pristine(terrain, index: int) -> bool:
+	for roof in terrain._cave_roofs.get(index - 1, {}).values():
+		if roof.surface != roof.baseline:
+			return false
+	return true
+
+
 static func _rectangle(low: Vector2, high: Vector2) -> Array:
 	return [low, Vector2(high.x, low.y), high, Vector2(low.x, high.y)]
 
 
-static func project_surface(world, geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: Surface = null, overlay_map: OverlayMap = null, mesh: ArrayMesh = null) -> Surface:
+# deferred leaves the mesh to Surface.finish, for a worker.
+static func project_surface(world, geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: Surface = null, overlay_map: OverlayMap = null, mesh: ArrayMesh = null, deferred := false) -> Surface:
 	if overlay_map == null and world.terrain.map() is OverlayMap:
 		overlay_map = world.terrain.map()
 	var surface := Surface.new()
@@ -141,10 +218,10 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 							normal = normal.normalized()
 							normals.append_array([normal, normal, normal])
 	surface.vertices = vertices
-	return mesh_surface(surface, normals, mesh)
+	return mesh_surface(surface, normals, mesh, deferred)
 
 
-static func mesh_surface(surface: Surface, normals: PackedVector3Array, mesh: ArrayMesh = null) -> Surface:
+static func mesh_surface(surface: Surface, normals: PackedVector3Array, mesh: ArrayMesh = null, deferred := false) -> Surface:
 	var vertices := surface.vertices
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -158,10 +235,9 @@ static func mesh_surface(surface: Surface, normals: PackedVector3Array, mesh: Ar
 	for k in vertices.size():
 		indices.append(k)
 	arrays[Mesh.ARRAY_INDEX] = indices
-	surface.mesh = mesh if mesh != null else ArrayMesh.new()
-	if not vertices.is_empty():
-		surface.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	return surface
+	surface.arrays = arrays
+	surface.mesh = mesh
+	return surface if deferred else surface.finish()
 
 
 static func _clip_edge(polygon: Array, a: Vector2, b: Vector2) -> Array:
@@ -286,7 +362,9 @@ static func lower_roof(roof: Dictionary, drop: float) -> void:
 				collider.shape = surface.mesh.create_trimesh_shape()
 
 
-static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable()) -> OverlayMap:
+# prepared holds surfaces the caller projected ahead (natural.gd plan: "surface", "target") and the
+# collider shape a previous entry made ("shape", written back here), so a stage entry skips them.
+static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable(), prepared := {}) -> OverlayMap:
 	var id: String = str(row.effect.get("swap", row.id))
 	if id == "":
 		id = row.id
@@ -327,31 +405,24 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		geometry.span = true
 		record.geometry = geometry
 		record.at = geometry.at
-	var half: Vector2 = geometry.half
-	var radius := minf(half.x, half.y)
-	var at: Vector3 = geometry.at
-	var yaw: float = geometry.yaw
-	var terrain = world.terrain
 	var kind: String = row.kind
-	# Collider vertices and terrain.height use this identical surface function.
-	var height := func(x: float, z: float) -> float:
-		var world_xz := Vector2(x, z).rotated(-yaw) + Vector2(at.x, at.z)
-		var base: float = terrain.height(world_xz.x, world_xz.y)
-		if kind == "impact":
-			return base + maxf(0.0, Gorge.crater_profile(Vector2(x, z).length() * Gorge.CRATER_OUT / radius))
-		return base + Gorge.rubble_profile(Vector2(x, z).length() * Gorge.RUBBLE_RADIUS / radius)
-	var surface := project_surface(world, geometry, [_rectangle(-half, half)],
-		Callable() if kind == "collapse" else func(local, base): return float(height.call(local.x, local.y)) - base)
+	var surface: Surface
 	if geometry.get("span", false):
 		surface = span_surface(site, 0.0)
 		geometry.marker_surface = surface
+	elif prepared.has("surface"):
+		surface = prepared.surface
+	else:
+		surface = overlay_surface(world, kind, geometry)
 	var body := StaticBody3D.new()
 	body.name = "Natural_" + row.id
 	var view := MeshInstance3D.new()
 	view.mesh = surface.mesh
 	view.material_override = Palette.ground_material()
 	var collider := CollisionShape3D.new()
-	collider.shape = surface.mesh.create_trimesh_shape()
+	collider.shape = prepared.get("shape", null) if prepared.has("shape") else surface.mesh.create_trimesh_shape()
+	if not prepared.is_empty():
+		prepared["shape"] = collider.shape
 	body.add_child(view)
 	body.add_child(collider)
 	owner.add_child(body)
@@ -363,7 +434,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		"before_visible": before.visible if is_instance_valid(before) else false, "owners": {},
 		"baseline": surface, "geometry": geometry, "progress": 0.0, "collapse": kind == "collapse"}
 	if kind == "collapse":
-		overlay_map.swaps[id].target = collapse_target.call(row, geometry, surface)
+		overlay_map.swaps[id].target = prepared.target if prepared.has("target") else collapse_target.call(row, geometry, surface)
 	overlay_map.profiles[id + "_after"] = {"site": site, "surface": surface}
 	body.position += Vector3.DOWN * Gorge.SWAP_PARK
 	body.visible = false
@@ -371,6 +442,26 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	record.swap = id
 	record.overlay_map = overlay_map
 	return overlay_map
+
+
+# A collapse or impact overlay's ground before it lands: the stage's floor, raised by the impact's
+# crater rim or the rubble profile. Collider vertices and terrain.height use this identical surface
+# function. A span collapse uses span_surface instead.
+static func overlay_surface(world, kind: String, geometry: Dictionary, deferred := false) -> Surface:
+	var half: Vector2 = geometry.half
+	var radius := minf(half.x, half.y)
+	var at: Vector3 = geometry.at
+	var yaw: float = geometry.yaw
+	var terrain = world.terrain
+	var height := func(x: float, z: float) -> float:
+		var world_xz := Vector2(x, z).rotated(-yaw) + Vector2(at.x, at.z)
+		var base: float = terrain.height(world_xz.x, world_xz.y)
+		if kind == "impact":
+			return base + maxf(0.0, Gorge.crater_profile(Vector2(x, z).length() * Gorge.CRATER_OUT / radius))
+		return base + Gorge.rubble_profile(Vector2(x, z).length() * Gorge.RUBBLE_RADIUS / radius)
+	return project_surface(world, geometry, [_rectangle(-half, half)],
+		Callable() if kind == "collapse" else func(local, base): return float(height.call(local.x, local.y)) - base,
+		false, null, null, null, deferred)
 
 
 static func install_surface(overlay_map: OverlayMap, id: String, surface: Surface) -> void:

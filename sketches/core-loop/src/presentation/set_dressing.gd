@@ -33,12 +33,25 @@ var _dust: MultiMeshInstance3D
 var _clock := 0.0
 var _active := true
 var _ground: Callable
-var _rng := RandomNumberGenerator.new()
-var _spacing := 0.0
 # What the current children were built for: stage, map, preset and ground root (_build_stage).
 var _built_for := []
 # The main-thread time of the last stage_entered handler, for stage_entry_budget_test.
 var last_entry_usec := 0
+# The next stage's plan (plan()) while a worker draws it: {"key", "task", "out"}, else empty.
+var _prep := {}
+# Whether the current children were built from a worker's plan, for stage_entry_budget_test.
+var built_from_worker := false
+# The clutter kit's meshes and their target materials, read once (_kit_meshes).
+var _kit := {}
+var _kit_materials: Array[ShaderMaterial] = []
+static var _broken_rock: ArrayMesh
+
+# A dressing plan's draw state: the map's seeded stream, the stage's ground and the cluster spacing.
+class Plan:
+	extends RefCounted
+	var rng := RandomNumberGenerator.new()
+	var ground: Callable
+	var spacing := 0.0
 
 func setup(context) -> void:
 	ctx = context
@@ -64,7 +77,7 @@ func _build_stage() -> void:
 	# The dressing is a pure function of the stage's map, ground and preset, so a stage that is
 	# entered again on the ground it was built for (setup then the first entry, every retry)
 	# keeps what it has: the build costs 250 to 600 ms (SWAP-HITCH).
-	var key := [stage, ctx.stages.of(stage).map, Preset.current, root.get_instance_id()]
+	var key := _key(stage, root)
 	if key == _built_for and get_child_count() > 0:
 		_update_protection()
 		return
@@ -76,68 +89,191 @@ func _build_stage() -> void:
 	_dust = null
 	map_id = ctx.stages.of(stage).map
 	seed_value = map_id.hash()
-	_rng.seed = seed_value
 	_ground = ctx.terrain.ground_callable(stage)
 	var map = ctx.terrain.map_for(stage)
-	if Preset.PRESETS[Preset.current].get("set_dressing", false):
-		_build_props(map, stage)
-	if Preset.PRESETS[Preset.current].get("air_motes", false):
-		_build_dust()
-	if Preset.PRESETS[Preset.current].get("air_streaks", false):
-		_build_streaks(map)
+	var planned := _take_plan(key)
+	built_from_worker = not planned.is_empty()
+	if planned.is_empty():
+		planned = plan(map_rows(map), keepouts(map, stage), _ground, seed_value, _flags())
+	if planned.has("rock"):
+		_build_props(planned)
+	if planned.has("dust"):
+		_dust = _batch("DustMotes", _quad(Vector2.ONE), planned.dust, Palette.SAND, true)
+		_dust.material_override.set_shader_parameter("opacity", 0.025)
+	if planned.has("streaks"):
+		var streaks := _batch("SandStreaks", _quad(Vector2(1.8, 0.10)), planned.streaks, Palette.SAND, true)
+		streaks.material_override.set_shader_parameter("ground_streak", true)
+		streaks.material_override.set_shader_parameter("opacity", 0.018)
 	_update_protection()
 
-func _build_props(map, stage: int) -> void:
-	var rect: Rect2 = map.play_rect
-	var rows := keepouts(map, stage)
-	var clusters := _cluster_centres(map, rect, rows)
-	var meshes := _kit_meshes()
-	var lists := {}
-	for kit_name in KIT_ORDER:
-		lists[kit_name] = []
-	for centre: Vector2 in clusters:
-		_place_cluster(centre, rect, rows, lists)
-	for kit_name in KIT_ORDER:
-		_clutter_batch("Clutter_" + kit_name, meshes.get(kit_name), lists[kit_name])
-	var pebble := SphereMesh.new()
-	pebble.radius = 0.5
-	pebble.height = 1.0
-	pebble.radial_segments = 7
-	pebble.rings = 3
-	var rocks := []
-	for i in 700:
-		var x := _rng.randf_range(-192.0, 192.0)
-		var z := _rng.randf_range(-192.0, 192.0)
-		var at := Vector2(x, z)
-		if rect.grow(10.0).has_point(at) or _normal(x, z).y >= Tuning.MAX_SLOPE_DOT or not _near_flat(at):
-			continue
-		var size := _rng.randf_range(0.75, 1.9)
-		var tr := Transform3D(Basis(Vector3.UP, _rng.randf_range(0.0, TAU)) * Basis.from_scale(Vector3(size, size * 0.7, size * 0.8)), _ground.call(x, z, size * 0.15))
-		rocks.append(tr)
-	_batch("BrokenRock", _broken_mesh(pebble), rocks, Palette.SANDSTONE.lerp(Palette.CHARCOAL, 0.28), false)
+func _key(stage: int, root: Node3D) -> Array:
+	return [stage, ctx.stages.of(stage).map, Preset.current, root.get_instance_id()]
 
-# The kit's meshes by node name, each with the target copy of its slot materials.
+func _flags() -> Dictionary:
+	var preset: Dictionary = Preset.PRESETS[Preset.current]
+	return {"props": preset.get("set_dressing", false), "dust": preset.get("air_motes", false), "streaks": preset.get("air_streaks", false)}
+
+# What plan() reads of a map, copied, so a worker shares no live object.
+static func map_rows(map) -> Dictionary:
+	return {"play_rect": map.play_rect, "scatter": map.scatter.duplicate(true), "structures": structure_points(map)}
+
+# The plan a worker drew for this key, waiting once on a worker still drawing. A plan for another
+# key is never waited on here: _prepare_next drops it once its worker is done. Empty when none.
+func _take_plan(key: Array) -> Dictionary:
+	if _prep.is_empty() or _prep.key != key:
+		return {}
+	WorkerThreadPool.wait_for_task_completion(_prep.task)
+	var planned: Dictionary = _prep.out
+	_prep = {}
+	return planned
+
+# Once the next stage's ground is built (world.gd starts it when the Warden wakes), a worker draws
+# its plan from the stage's ground callable (static terrain functions over its grids) and a copy of
+# its rows, so entering it builds only the MultiMeshes.
+func _prepare_next() -> void:
+	var terrain = ctx.terrain
+	if not "maps" in terrain or not terrain.has_method("is_ready") or not "stage" in terrain:
+		return
+	var next: int = terrain.stage + 1
+	var key := _key(next, terrain.geometry_root(next)) if next <= terrain.maps.size() and terrain.is_ready(next) else []
+	# A plan no stage can take any more (a new run, a preset change) is dropped once its worker is
+	# done, so no frame waits on it.
+	if not _prep.is_empty():
+		if _prep.key != key and WorkerThreadPool.is_task_completed(_prep.task):
+			WorkerThreadPool.wait_for_task_completion(_prep.task)
+			_prep = {}
+		return
+	if key.is_empty() or key == _built_for:
+		return
+	var map = terrain.map_for(next)
+	var rows := map_rows(map)
+	var keep := keepouts(map, next)
+	var ground: Callable = terrain.ground_callable(next)
+	var seed_next: int = String(ctx.stages.of(next).map).hash()
+	var flags := _flags()
+	var out := {}
+	_prep = {"key": key, "out": out,
+		"task": WorkerThreadPool.add_task(func(): out.merge(plan(rows, keep, ground, seed_next, flags)), false, "set dressing plan")}
+
+func _exit_tree() -> void:
+	if not _prep.is_empty():
+		WorkerThreadPool.wait_for_task_completion(_prep.task)
+		_prep = {}
+
+# Teardown (activities.gd): the shared rock mesh goes with the Game.
+static func release_shared() -> void:
+	_broken_rock = null
+
+# Every batch's instance buffer, drawn from the map's seeded stream in the order the batches are
+# built (SWAP-HITCH-2: 250 to 430 ms of a new stage's entry). Pure: map is map_rows(), rows the
+# stage's keepouts and ground the stage's ground callable, so a worker can draw it.
+static func plan(map: Dictionary, rows: Array, ground: Callable, seed_number: int, flags: Dictionary) -> Dictionary:
+	var p := Plan.new()
+	p.rng.seed = seed_number
+	p.ground = ground
+	var out := {}
+	if flags.props:
+		var rect: Rect2 = map.play_rect
+		var clusters := _cluster_centres(p, map, rect, rows)
+		var lists := {}
+		for kit_name in KIT_ORDER:
+			lists[kit_name] = []
+		for centre: Vector2 in clusters:
+			_place_cluster(p, centre, rect, rows, lists)
+		out.clutter = {}
+		for kit_name in KIT_ORDER:
+			out.clutter[kit_name] = _instance_buffer(p, lists[kit_name], "")
+		var rocks := []
+		for i in 700:
+			var x := p.rng.randf_range(-192.0, 192.0)
+			var z := p.rng.randf_range(-192.0, 192.0)
+			var at := Vector2(x, z)
+			if rect.grow(10.0).has_point(at) or _normal(p, x, z).y >= Tuning.MAX_SLOPE_DOT or not _near_flat(p, at):
+				continue
+			var size := p.rng.randf_range(0.75, 1.9)
+			var tr := Transform3D(Basis(Vector3.UP, p.rng.randf_range(0.0, TAU)) * Basis.from_scale(Vector3(size, size * 0.7, size * 0.8)), p.ground.call(x, z, size * 0.15))
+			rocks.append(tr)
+		out.rock = _instance_buffer(p, rocks, "shade")
+	if flags.dust:
+		var transforms := []
+		for i in 160:
+			var size := p.rng.randf_range(0.03, 0.07)
+			transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), Vector3(p.rng.randf_range(-10.0, 10.0), p.rng.randf_range(-2.0, 5.0), -p.rng.randf_range(2.0, 29.0))))
+		out.dust = _instance_buffer(p, transforms, "air")
+	if flags.streaks:
+		var transforms := []
+		var rect: Rect2 = map.play_rect
+		var wind_angle := atan2(-WIND.y, WIND.x)
+		for i in 800:
+			var x := p.rng.randf_range(rect.position.x, rect.end.x)
+			var z := p.rng.randf_range(rect.position.y, rect.end.y)
+			# Both ends of the 3 m drift remain on open, almost level ground.
+			if _normal(p, x, z).y < 0.98 or _normal(p, x + WIND.x * 4.0, z + WIND.y * 4.0).y < 0.98 or blocked(rows, Vector2(x, z), 0.0) != "":
+				continue
+			var basis := Basis(Vector3.UP, wind_angle) * Basis(Vector3.RIGHT, -PI / 2.0)
+			transforms.append(Transform3D(basis, p.ground.call(x, z, 0.07)))
+		out.streaks = _instance_buffer(p, transforms, "air")
+	return out
+
+# A MultiMesh buffer: 12 floats a transform, then for a dressing batch 4 more drawn per instance,
+# a grey shade ("shade") or an air batch's phase ("air").
+static func _instance_buffer(p: Plan, transforms: Array, extra: String) -> PackedFloat32Array:
+	var buffer := PackedFloat32Array()
+	for tr: Transform3D in transforms:
+		buffer.append_array(PackedFloat32Array([
+			tr.basis.x.x, tr.basis.y.x, tr.basis.z.x, tr.origin.x,
+			tr.basis.x.y, tr.basis.y.y, tr.basis.z.y, tr.origin.y,
+			tr.basis.x.z, tr.basis.y.z, tr.basis.z.z, tr.origin.z]))
+		if extra == "air":
+			buffer.append_array(PackedFloat32Array([p.rng.randf(), 0.0, 0.0, 0.0]))
+		elif extra == "shade":
+			var shade := p.rng.randf_range(0.85, 1.0)
+			buffer.append_array(PackedFloat32Array([shade, shade, shade, 1.0]))
+	return buffer
+
+func _build_props(planned: Dictionary) -> void:
+	var meshes := _kit_meshes()
+	for kit_name in KIT_ORDER:
+		_clutter_batch("Clutter_" + kit_name, meshes.get(kit_name), planned.clutter[kit_name])
+	if _broken_rock == null:
+		var pebble := SphereMesh.new()
+		pebble.radius = 0.5
+		pebble.height = 1.0
+		pebble.radial_segments = 7
+		pebble.rings = 3
+		_broken_rock = _broken_mesh(pebble)
+	_batch("BrokenRock", _broken_rock, planned.rock, Palette.SANDSTONE.lerp(Palette.CHARCOAL, 0.28), false)
+
+static func _quad(size: Vector2) -> QuadMesh:
+	var mesh := QuadMesh.new()
+	mesh.size = size
+	return mesh
+
+# The kit's meshes by node name, each with the target copy of its slot materials, read once.
 func _kit_meshes() -> Dictionary:
-	var result := {}
-	var scene := (load(KIT_PATH) as PackedScene).instantiate()
-	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
-		var mesh := view.mesh.duplicate() as ArrayMesh
-		for surface in mesh.get_surface_count():
-			var material := Palette.target_clutter_material(view.mesh.surface_get_material(surface))
-			if material not in _materials:
-				_materials.append(material)
-			mesh.surface_set_material(surface, material)
-		result[String(view.name)] = mesh
-	scene.free()
-	return result
+	if _kit.is_empty():
+		var scene := (load(KIT_PATH) as PackedScene).instantiate()
+		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+			var mesh := view.mesh.duplicate() as ArrayMesh
+			for surface in mesh.get_surface_count():
+				var material := Palette.target_clutter_material(view.mesh.surface_get_material(surface))
+				if material not in _kit_materials:
+					_kit_materials.append(material)
+				mesh.surface_set_material(surface, material)
+			_kit[String(view.name)] = mesh
+		scene.free()
+	for material in _kit_materials:
+		if material not in _materials:
+			_materials.append(material)
+	return _kit
 
 # Where clutter gathers: the foot of a cliff, the base of a post, wall or tower, and the
 # edge of each ride line just outside its clear strip. Everything else stays bare.
-func _cluster_centres(map, rect: Rect2, rows: Array) -> Array[Vector2]:
+static func _cluster_centres(p: Plan, map: Dictionary, rect: Rect2, rows: Array) -> Array[Vector2]:
 	var centres: Array[Vector2] = []
-	_spacing = float(map.scatter["spacing"])
-	for point in structure_points(map):
-		_try_centre(centres, point, rect, rows, 4.0)
+	p.spacing = float(map.scatter["spacing"])
+	for point in map.structures:
+		_try_centre(p, centres, point, rect, rows, 4.0)
 	for row in rows:
 		if not row.ride:
 			continue
@@ -147,73 +283,73 @@ func _cluster_centres(map, rect: Rect2, rows: Array) -> Array[Vector2]:
 			var steps := int(length / 9.0)
 			var along := (points[i + 1] - points[i]).normalized()
 			for k in steps:
-				if _rng.randf() > float(map.scatter["edge_share"]):
+				if p.rng.randf() > float(map.scatter["edge_share"]):
 					continue
-				var side := Vector2(-along.y, along.x) * (1.0 if _rng.randf() < 0.5 else -1.0)
-				var at: Vector2 = points[i] + along * (float(k) + _rng.randf()) * 9.0 + side * (float(row.radius) + _rng.randf_range(2.0, 5.0))
-				_try_centre(centres, at, rect, rows, 4.0)
+				var side := Vector2(-along.y, along.x) * (1.0 if p.rng.randf() < 0.5 else -1.0)
+				var at: Vector2 = points[i] + along * (float(k) + p.rng.randf()) * 9.0 + side * (float(row.radius) + p.rng.randf_range(2.0, 5.0))
+				_try_centre(p, centres, at, rect, rows, 4.0)
 	var limit := centres.size() + int(map.scatter["clusters"])
 	for i in 40000:
 		if centres.size() >= limit:
 			break
-		var at := Vector2(_rng.randf_range(rect.position.x, rect.end.x), _rng.randf_range(rect.position.y, rect.end.y))
-		if _at_cliff_foot(at):
-			_try_centre(centres, at, rect, rows, 4.0)
+		var at := Vector2(p.rng.randf_range(rect.position.x, rect.end.x), p.rng.randf_range(rect.position.y, rect.end.y))
+		if _at_cliff_foot(p, at):
+			_try_centre(p, centres, at, rect, rows, 4.0)
 	return centres
 
-func _try_centre(centres: Array[Vector2], at: Vector2, rect: Rect2, rows: Array, margin: float) -> void:
-	if not rect.grow(-6.0).has_point(at) or _normal(at.x, at.y).y < 0.9 or blocked(rows, at, margin) != "":
+static func _try_centre(p: Plan, centres: Array[Vector2], at: Vector2, rect: Rect2, rows: Array, margin: float) -> void:
+	if not rect.grow(-6.0).has_point(at) or _normal(p, at.x, at.y).y < 0.9 or blocked(rows, at, margin) != "":
 		return
 	for other in centres:
-		if other.distance_to(at) < _spacing:
+		if other.distance_to(at) < p.spacing:
 			return
 	centres.append(at)
 
 # Flat footing with a steep face a few metres off: the foot of a cliff or rock family.
-func _at_cliff_foot(at: Vector2) -> bool:
-	if _normal(at.x, at.y).y < 0.93:
+static func _at_cliff_foot(p: Plan, at: Vector2) -> bool:
+	if _normal(p, at.x, at.y).y < 0.93:
 		return false
 	for k in 8:
 		for reach: float in [3.0, 5.0, 7.0]:
 			var probe: Vector2 = at + Vector2.from_angle(k * TAU / 8.0) * reach
-			if _normal(probe.x, probe.y).y < 0.6:
+			if _normal(p, probe.x, probe.y).y < 0.6:
 				return true
 	return false
 
 # One big piece with small ones about its feet.
-func _place_cluster(centre: Vector2, rect: Rect2, rows: Array, lists: Dictionary) -> void:
+static func _place_cluster(p: Plan, centre: Vector2, rect: Rect2, rows: Array, lists: Dictionary) -> void:
 	var placed: Array = []
-	var anchor: String = ANCHORS[_rng.randi() % ANCHORS.size()]
-	_place_piece(anchor, centre, ANCHOR_SCALE[anchor], rect, rows, lists, placed)
+	var anchor: String = ANCHORS[p.rng.randi() % ANCHORS.size()]
+	_place_piece(p, anchor, centre, ANCHOR_SCALE[anchor], rect, rows, lists, placed)
 	if placed.is_empty():
 		return
 	var reach: float = placed[0].z
-	for i in _rng.randi_range(CLUSTER_SMALL.x, CLUSTER_SMALL.y):
-		var kit_name: String = SMALL[_rng.randi() % SMALL.size()]
+	for i in p.rng.randi_range(CLUSTER_SMALL.x, CLUSTER_SMALL.y):
+		var kit_name: String = SMALL[p.rng.randi() % SMALL.size()]
 		for attempt in 4:
-			var at := centre + Vector2.from_angle(_rng.randf_range(0.0, TAU)) * (reach + _rng.randf_range(0.2, 3.2))
-			if _place_piece(kit_name, at, SMALL_SCALE[kit_name], rect, rows, lists, placed):
+			var at := centre + Vector2.from_angle(p.rng.randf_range(0.0, TAU)) * (reach + p.rng.randf_range(0.2, 3.2))
+			if _place_piece(p, kit_name, at, SMALL_SCALE[kit_name], rect, rows, lists, placed):
 				break
 
 # placed holds Vector3(x, z, footprint radius) per piece, so a cluster does not overlap itself.
-func _place_piece(kit_name: String, at: Vector2, span: Vector2, rect: Rect2, rows: Array, lists: Dictionary, placed: Array) -> bool:
-	var size := _rng.randf_range(span.x, span.y)
-	var stretch := Vector3(_rng.randf_range(0.9, 1.15), _rng.randf_range(0.9, 1.15), _rng.randf_range(0.9, 1.15)) * size
+static func _place_piece(p: Plan, kit_name: String, at: Vector2, span: Vector2, rect: Rect2, rows: Array, lists: Dictionary, placed: Array) -> bool:
+	var size := p.rng.randf_range(span.x, span.y)
+	var stretch := Vector3(p.rng.randf_range(0.9, 1.15), p.rng.randf_range(0.9, 1.15), p.rng.randf_range(0.9, 1.15)) * size
 	var footprint: float = KIT_FOOTPRINT[kit_name] * size * 0.5
-	if not rect.grow(-4.0).has_point(at) or _normal(at.x, at.y).y < 0.85 or blocked(rows, at, footprint) != "":
+	if not rect.grow(-4.0).has_point(at) or _normal(p, at.x, at.y).y < 0.85 or blocked(rows, at, footprint) != "":
 		return false
 	for other: Vector3 in placed:
 		if Vector2(other.x, other.y).distance_to(at) < (other.z + footprint) * 0.75:
 			return false
-	var basis := Basis(Vector3.UP, _rng.randf_range(0.0, TAU))
-	basis = basis * Basis(Vector3.RIGHT, _rng.randf_range(-0.08, 0.08)) * Basis(Vector3.FORWARD, _rng.randf_range(-0.08, 0.08))
+	var basis := Basis(Vector3.UP, p.rng.randf_range(0.0, TAU))
+	basis = basis * Basis(Vector3.RIGHT, p.rng.randf_range(-0.08, 0.08)) * Basis(Vector3.FORWARD, p.rng.randf_range(-0.08, 0.08))
 	basis = basis.scaled_local(stretch)
 	# Stand on the lowest ground under the footprint: the high side is buried, nothing floats.
 	var low := INF
 	for k in 8:
 		var spot: Vector2 = at + Vector2.from_angle(k * TAU / 8.0) * footprint * 0.8
-		low = minf(low, (_ground.call(spot.x, spot.y, 0.0) as Vector3).y)
-	low = minf(low, (_ground.call(at.x, at.y, 0.0) as Vector3).y)
+		low = minf(low, (p.ground.call(spot.x, spot.y, 0.0) as Vector3).y)
+	low = minf(low, (p.ground.call(at.x, at.y, 0.0) as Vector3).y)
 	lists[kit_name].append(Transform3D(basis, Vector3(at.x, low - 0.03 * size, at.y)))
 	placed.append(Vector3(at.x, at.y, footprint))
 	return true
@@ -318,17 +454,17 @@ static func distance_to_row(row: Dictionary, at: Vector2) -> float:
 	return best
 
 # Broken rock belongs at the foot of a cliff, never up on its face.
-func _near_flat(at: Vector2) -> bool:
+static func _near_flat(p: Plan, at: Vector2) -> bool:
 	for k in 12:
 		for reach: float in [3.0, 6.0]:
 			var probe: Vector2 = at + Vector2.from_angle(k * TAU / 12.0) * reach
-			if _normal(probe.x, probe.y).y > 0.8:
+			if _normal(p, probe.x, probe.y).y > 0.8:
 				return true
 	return false
 
-func _normal(x: float, z: float) -> Vector3:
-	var dx: float = (_ground.call(x + 0.25, z, 0.0) as Vector3).y - (_ground.call(x - 0.25, z, 0.0) as Vector3).y
-	var dz: float = (_ground.call(x, z + 0.25, 0.0) as Vector3).y - (_ground.call(x, z - 0.25, 0.0) as Vector3).y
+static func _normal(p: Plan, x: float, z: float) -> Vector3:
+	var dx: float = (p.ground.call(x + 0.25, z, 0.0) as Vector3).y - (p.ground.call(x - 0.25, z, 0.0) as Vector3).y
+	var dz: float = (p.ground.call(x, z + 0.25, 0.0) as Vector3).y - (p.ground.call(x, z - 0.25, 0.0) as Vector3).y
 	return Vector3(-dx, 0.5, -dz).normalized()
 
 static func _broken_mesh(source: Mesh) -> ArrayMesh:
@@ -352,24 +488,13 @@ static func _tuft_mesh() -> ArrayMesh:
 	st.generate_normals()
 	return st.commit()
 
-func _batch(label: String, mesh: Mesh, transforms: Array, color: Color, air: bool) -> MultiMeshInstance3D:
+func _batch(label: String, mesh: Mesh, buffer: PackedFloat32Array, color: Color, air: bool) -> MultiMeshInstance3D:
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
 	multi.use_colors = not air
 	multi.use_custom_data = air
 	multi.mesh = mesh
-	multi.instance_count = transforms.size()
-	var buffer := PackedFloat32Array()
-	for tr: Transform3D in transforms:
-		buffer.append_array(PackedFloat32Array([
-			tr.basis.x.x, tr.basis.y.x, tr.basis.z.x, tr.origin.x,
-			tr.basis.x.y, tr.basis.y.y, tr.basis.z.y, tr.origin.y,
-			tr.basis.x.z, tr.basis.y.z, tr.basis.z.z, tr.origin.z]))
-		if air:
-			buffer.append_array(PackedFloat32Array([_rng.randf(), 0.0, 0.0, 0.0]))
-		else:
-			var shade := _rng.randf_range(0.85, 1.0)
-			buffer.append_array(PackedFloat32Array([shade, shade, shade, 1.0]))
+	multi.instance_count = buffer.size() / 16
 	multi.buffer = buffer
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://assets/shaders/target_air.gdshader") if air else preload("res://assets/shaders/target_dressing.gdshader")
@@ -390,17 +515,11 @@ func _batch(label: String, mesh: Mesh, transforms: Array, color: Color, air: boo
 	_materials.append(material)
 	return view
 
-func _clutter_batch(label: String, mesh: Mesh, transforms: Array) -> MultiMeshInstance3D:
+func _clutter_batch(label: String, mesh: Mesh, buffer: PackedFloat32Array) -> MultiMeshInstance3D:
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
 	multi.mesh = mesh
-	multi.instance_count = transforms.size()
-	var buffer := PackedFloat32Array()
-	for tr: Transform3D in transforms:
-		buffer.append_array(PackedFloat32Array([
-			tr.basis.x.x, tr.basis.y.x, tr.basis.z.x, tr.origin.x,
-			tr.basis.x.y, tr.basis.y.y, tr.basis.z.y, tr.origin.y,
-			tr.basis.x.z, tr.basis.y.z, tr.basis.z.z, tr.origin.z]))
+	multi.instance_count = buffer.size() / 12
 	multi.buffer = buffer
 	var view := MultiMeshInstance3D.new()
 	view.name = label
@@ -414,36 +533,8 @@ func _clutter_batch(label: String, mesh: Mesh, transforms: Array) -> MultiMeshIn
 	batches.append(view)
 	return view
 
-func _build_dust() -> void:
-	var mesh := QuadMesh.new()
-	mesh.size = Vector2.ONE
-	var transforms := []
-	for i in 160:
-		var size := _rng.randf_range(0.03, 0.07)
-		transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), Vector3(_rng.randf_range(-10.0, 10.0), _rng.randf_range(-2.0, 5.0), -_rng.randf_range(2.0, 29.0))))
-	_dust = _batch("DustMotes", mesh, transforms, Palette.SAND, true)
-	_dust.material_override.set_shader_parameter("opacity", 0.025)
-
-func _build_streaks(map) -> void:
-	var mesh := QuadMesh.new()
-	mesh.size = Vector2(1.8, 0.10)
-	var transforms := []
-	var rect: Rect2 = map.play_rect
-	var wind_angle := atan2(-WIND.y, WIND.x)
-	var rows := keepouts(map, ctx.terrain.stage)
-	for i in 800:
-		var x := _rng.randf_range(rect.position.x, rect.end.x)
-		var z := _rng.randf_range(rect.position.y, rect.end.y)
-		# Both ends of the 3 m drift remain on open, almost level ground.
-		if _normal(x, z).y < 0.98 or _normal(x + WIND.x * 4.0, z + WIND.y * 4.0).y < 0.98 or blocked(rows, Vector2(x, z), 0.0) != "":
-			continue
-		var basis := Basis(Vector3.UP, wind_angle) * Basis(Vector3.RIGHT, -PI / 2.0)
-		transforms.append(Transform3D(basis, _ground.call(x, z, 0.07)))
-	var streaks := _batch("SandStreaks", mesh, transforms, Palette.SAND, true)
-	streaks.material_override.set_shader_parameter("ground_streak", true)
-	streaks.material_override.set_shader_parameter("opacity", 0.018)
-
 func _process(delta: float) -> void:
+	_prepare_next()
 	visible = _active and ctx.flow.in_play()
 	if not visible:
 		return

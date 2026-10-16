@@ -33,6 +33,12 @@ var _water_field := WaterField.new()
 var _original_flood
 var _audio
 var _world_sound := Callable()
+var _next_checked := false
+# Natural plans (plan()) by park stage root, the instance id of terrain's geometry root for the
+# stage, so a rebuilt stage plans again: {"task", "out"} while a worker plans the next stage, then
+# {"plan"}. Shared across handlers because each stage's handler is freed on the next entry. A
+# stage's handler starts the worker for the next stage once that stage's ground is built.
+static var _plans := {}
 
 
 class WaterClock:
@@ -93,23 +99,16 @@ func setup(world_ref) -> void:
 	_original_flood = world.terrain.flood
 	for site in _original_map.park.park_rows:
 		_sites[site.id] = site
+	var planned := _planned()
 	for row in _original_map.park.event_rows:
 		if row.family != "natural" or not KINDS.has(row.kind):
 			continue
-		var site: Dictionary = NaturalFootprint.resolve(row, _sites[row.site])
-		var at := _at(site)
-		var geometry := {"site": site, "at": at, "half": ParkMap.footprint_half_extents(site),
-			"yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": maxf(0.0, float(row.effect.get("strike_m", 0.0)))}
-		if row.kind == "lightning":
-			geometry.half = Vector2.ONE * geometry.strike_m
-			geometry.yaw = 0.0
-		var record := {"site": site, "at": at, "geometry": geometry, "overlay": null}
-		if row.kind in ["flood_fill", "drain", "flash_flood"]:
-			record.water_surface = _prepare_water(geometry)
-		if row.kind == "collapse":
-			geometry.crack_foot_x = _bench_face_foot(geometry)
+		var entry: Dictionary = planned[row.id]
+		var record := {"site": entry.site, "at": entry.at, "geometry": entry.geometry.duplicate(), "overlay": null}
+		if entry.has("water"):
+			record.water_surface = entry.water
 		if row.kind in ["cave_in", "collapse", "impact"]:
-			_prepare_overlay(row, record)
+			_prepare_overlay(row, record, entry)
 		_prepared[row.id] = record
 	world.terrain.flood = _water_field
 	# Replace the generic world's sound listener for this stage, preserving its other cues.
@@ -122,6 +121,125 @@ func setup(world_ref) -> void:
 				world.ctx.events.world_fact.disconnect(_world_sound)
 				world.ctx.events.world_fact.connect(_on_world_sound)
 				break
+
+
+# Where each natural row stands and the ground surfaces it projects (330 to 1,040 ms a stage for the
+# floods and collapses, SWAP-HITCH-2), as plain data: world is the live world or an
+# EventGround.Snapshot, park the map's park rows, and neither is written, so a worker can run it.
+# Surfaces carry mesh arrays only; _finish builds their meshes on the main thread.
+static func plan(world, park: Dictionary) -> Dictionary:
+	var terrain = world.terrain
+	var sites := {}
+	for site in park.park_rows:
+		sites[site.id] = site
+	var out := {}
+	for row in park.event_rows:
+		if row.family != "natural" or not KINDS.has(row.kind):
+			continue
+		var site: Dictionary = NaturalFootprint.resolve(row, sites[row.site])
+		var at := _at(terrain, site)
+		var geometry := {"site": site, "at": at, "half": ParkMap.footprint_half_extents(site),
+			"yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": maxf(0.0, float(row.effect.get("strike_m", 0.0)))}
+		if row.kind == "lightning":
+			geometry.half = Vector2.ONE * geometry.strike_m
+			geometry.yaw = 0.0
+		var entry := {"site": site, "at": at, "geometry": geometry}
+		if row.kind in ["flood_fill", "drain", "flash_flood"]:
+			entry.water = EventGround.project_surface(world, geometry, [EventGround._rectangle(-geometry.half, geometry.half)], Callable(), true, null, null, null, true)
+		if row.kind == "collapse":
+			geometry.crack_foot_x = _bench_face_foot(terrain, geometry)
+		if row.kind in ["collapse", "impact"] and not EventGround.kind_of_span(row):
+			entry.surface = EventGround.overlay_surface(world, row.kind, geometry, true)
+			if row.kind == "collapse":
+				entry.target = _collapse_surface(world, row, geometry, entry.surface, true)
+		out[row.id] = entry
+	return out
+
+
+static func _finish(planned: Dictionary) -> void:
+	for entry in planned.values():
+		for key in ["water", "surface", "target"]:
+			if entry.has(key):
+				entry[key].finish()
+
+
+# This stage's plan: the one a worker made while the previous stage played, the one the last entry
+# made (a retry), or one made here. A stage whose cave roof has dropped, or whose rows changed since
+# the plan (a test fixture edits them), plans on its live ground.
+func _planned() -> Dictionary:
+	var terrain = world.terrain
+	var key := _root_key(terrain, terrain.stage)
+	var rows := _rows_hash(_original_map.park)
+	if key != 0:
+		_settle(key)
+		if _plans.has(key) and _plans[key].rows == rows and EventGround.pristine(terrain, terrain.stage):
+			return _plans[key].plan
+	var planned := plan(world, _original_map.park)
+	_finish(planned)
+	if key != 0 and EventGround.pristine(terrain, terrain.stage):
+		_plans[key] = {"plan": planned, "rows": rows}
+	return planned
+
+
+static func _rows_hash(park: Dictionary) -> int:
+	return hash([park.park_rows, park.event_rows])
+
+
+# The plan key of a built park stage on the game's terrain, or 0 (a test double, an old map).
+static func _root_key(terrain, index: int) -> int:
+	if not "_cave_roofs" in terrain or index < 1 or index > terrain.maps.size():
+		return 0
+	var i: int = index - 1
+	if not terrain._is_park[i] or terrain._roots[i] == null or terrain._heights[i].is_empty():
+		return 0
+	return terrain._roots[i].get_instance_id()
+
+
+static func _settle(key: int) -> void:
+	if not _plans.has(key) or not _plans[key].has("task"):
+		return
+	WorkerThreadPool.wait_for_task_completion(_plans[key].task)
+	var planned: Dictionary = _plans[key].out
+	_finish(planned)
+	_plans[key] = {"plan": planned, "rows": _plans[key].rows, "worker": true}
+
+
+# Once the next stage's ground is built (world.gd starts it when the Warden wakes), its plan runs on
+# a worker from a snapshot of that ground and a copy of its rows.
+func _prepare_next() -> void:
+	if _next_checked or world == null:
+		return
+	var terrain = world.terrain
+	if not "_cave_roofs" in terrain or terrain.stage >= terrain.maps.size() or not terrain.is_ready(terrain.stage + 1):
+		return
+	_next_checked = true
+	var next: int = terrain.stage + 1
+	var key := _root_key(terrain, next)
+	var map = terrain.map_for(next)
+	if key == 0 or _plans.has(key) or not "park" in map or map.park.is_empty():
+		return
+	# A freed stage's plan goes once its worker is done; one still running waits for a later poll.
+	for old in _plans.keys():
+		if not is_instance_id_valid(old) and (not _plans[old].has("task") or WorkerThreadPool.is_task_completed(_plans[old].task)):
+			_settle(old)
+			_plans.erase(old)
+	var snapshot := EventGround.snapshot(terrain, next)
+	var park: Dictionary = map.park.duplicate(true)
+	var out := {}
+	_plans[key] = {"task": WorkerThreadPool.add_task(func(): out.merge(plan(snapshot, park)), false, "natural plan"), "out": out, "rows": _rows_hash(map.park)}
+
+
+# A handler leaves on every stage change, so a plan still running is left for the handler that
+# enters its stage (_planned) or the next poll; activities.gd waits on what is left at teardown.
+static func settle_plans() -> void:
+	for key in _plans.keys():
+		_settle(key)
+
+
+# Teardown: waits on every plan, then drops them, meshes and shapes with them.
+static func release_plans() -> void:
+	settle_plans()
+	_plans.clear()
 
 
 func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
@@ -165,6 +283,10 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 
 
 func _process(_delta: float) -> void:
+	_prepare_next()
+	for key in _plans:
+		if _plans[key].has("task") and WorkerThreadPool.is_task_completed(_plans[key].task):
+			_settle(key)
 	for state in active.values():
 		if state.phase != "telegraph" or not state.mark.has_node("DustCurtain"):
 			continue
@@ -185,7 +307,7 @@ func _process(_delta: float) -> void:
 			[_rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, progress)))]).mesh
 
 
-func _bench_face_foot(geometry: Dictionary) -> float:
+static func _bench_face_foot(terrain, geometry: Dictionary) -> float:
 	var half: Vector2 = geometry.half
 	var centre := Vector2(geometry.at.x, geometry.at.z)
 	var count := ceili(2.0 * half.x / (ParkTerrain.STEP * 0.5))
@@ -193,11 +315,11 @@ func _bench_face_foot(geometry: Dictionary) -> float:
 	var steepest := -INF
 	var previous := -half.x
 	var point := Vector2(previous, 0.0).rotated(-float(geometry.yaw)) + centre
-	var previous_y: float = world.terrain.height(point.x, point.y)
+	var previous_y: float = terrain.height(point.x, point.y)
 	for i in range(1, count + 1):
 		var x := lerpf(-half.x, half.x, float(i) / count)
 		point = Vector2(x, 0.0).rotated(-float(geometry.yaw)) + centre
-		var y: float = world.terrain.height(point.x, point.y)
+		var y: float = terrain.height(point.x, point.y)
 		var slope := (y - previous_y) / (x - previous)
 		if slope > steepest:
 			steepest = slope
@@ -207,10 +329,10 @@ func _bench_face_foot(geometry: Dictionary) -> float:
 	return foot
 
 
-func _at(site: Dictionary) -> Vector3:
+static func _at(terrain, site: Dictionary) -> Vector3:
 	var x := float(site.at[0])
 	var z := float(site.at[1])
-	return Vector3(x, float(site.y) if site.y != null else world.terrain.height(x, z), z)
+	return Vector3(x, float(site.y) if site.y != null else terrain.height(x, z), z)
 
 
 func _land_water(row: Dictionary, state: Dictionary) -> void:
@@ -246,21 +368,21 @@ func _rectangle(low: Vector2, high: Vector2) -> Array:
 	return [low, Vector2(high.x, low.y), high, Vector2(low.x, high.y)]
 
 
-func _prepare_water(geometry: Dictionary) -> WaterSurface:
-	return _project_surface(geometry, [_rectangle(-geometry.half, geometry.half)], Callable(), true)
-
-
 # Clip each shape to the terrain's actual 2 m triangles before projecting. The resulting
 # triangles, including their interiors, share terrain.gd's b-c diagonal and interpolation.
 func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: WaterSurface = null) -> WaterSurface:
 	return EventGround.project_surface(world, geometry, shapes, offset, water, baseline, _overlay_map, ArrayMesh.new())
 
 
-func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
-	_overlay_map = EventGround.prepare_overlay(world, self, row, record, Callable(self, "_collapse_target"))
+func _prepare_overlay(row: Dictionary, record: Dictionary, entry: Dictionary) -> void:
+	_overlay_map = EventGround.prepare_overlay(world, self, row, record, Callable(self, "_collapse_target"), entry)
 
 
 func _collapse_target(row: Dictionary, geometry: Dictionary, baseline: WaterSurface) -> WaterSurface:
+	return _collapse_surface(world, row, geometry, baseline)
+
+
+static func _collapse_surface(world, row: Dictionary, geometry: Dictionary, baseline: WaterSurface, deferred := false) -> WaterSurface:
 	var half: Vector2 = geometry.half
 	var centre := Vector2(geometry.at.x, geometry.at.z)
 	var yaw: float = geometry.yaw
@@ -272,7 +394,7 @@ func _collapse_target(row: Dictionary, geometry: Dictionary, baseline: WaterSurf
 		var upper: float = baseline.height(top)
 		var ramp := upper - depth_m * (half.x - local.x) / (2.0 * half.x)
 		return maxf(0.0, ramp - base)
-	return _project_surface(geometry, [_rectangle(-half, half)], offset, false, baseline)
+	return EventGround.project_surface(world, geometry, [EventGround._rectangle(-half, half)], offset, false, baseline, null, null, deferred)
 
 
 func _advance_collapse(row: Dictionary, progress: float) -> void:

@@ -116,7 +116,11 @@ func _boundaries_and_base() -> void:
 		previous_world = int(row.world)
 		_same("tier annotation preserves stage lists", RunTier.stage_row(row, 0), row)
 		if base._park_map != null:
-			_same("routes and pockets identical stage " + str(row.stage), base._park_map.park, hard._park_map.park)
+			# Directors share one parsed map per id (director.gd read_park), so each tier's rows are
+			# held against a fresh parse of the park file: a tier that edited the shared rows fails here.
+			var fresh = load("res://src/world/park/park_map.gd").new("res://src/world/park/%s.json" % String(row.map))
+			_same("routes and pockets identical stage %d tier 0" % row.stage, base._park_map.park, fresh.park)
+			_same("routes and pockets identical stage %d tier 1" % row.stage, hard._park_map.park, fresh.park)
 
 func _production() -> void:
 	game = Game.new()
