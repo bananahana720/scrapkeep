@@ -35,6 +35,10 @@ var _active := true
 var _ground: Callable
 var _rng := RandomNumberGenerator.new()
 var _spacing := 0.0
+# What the current children were built for: stage, map, preset and ground root (_build_stage).
+var _built_for := []
+# The main-thread time of the last stage_entered handler, for stage_entry_budget_test.
+var last_entry_usec := 0
 
 func setup(context) -> void:
 	ctx = context
@@ -44,21 +48,32 @@ func setup(context) -> void:
 	_build_stage()
 
 func _stage_entered(_stage: int, _retry: bool) -> void:
+	var started := Time.get_ticks_usec()
 	_active = true
 	_build_stage()
+	last_entry_usec = Time.get_ticks_usec() - started
 
 func _clear_stage(_reason: String) -> void:
 	_active = false
 	visible = false
 
 func _build_stage() -> void:
+	var stage: int = ctx.terrain.stage
+	var root: Node3D = ctx.terrain.geometry_root(stage)
+	_active = root.visible
+	# The dressing is a pure function of the stage's map, ground and preset, so a stage that is
+	# entered again on the ground it was built for (setup then the first entry, every retry)
+	# keeps what it has: the build costs 250 to 600 ms (SWAP-HITCH).
+	var key := [stage, ctx.stages.of(stage).map, Preset.current, root.get_instance_id()]
+	if key == _built_for and get_child_count() > 0:
+		_update_protection()
+		return
+	_built_for = key
 	for child in get_children():
 		child.free()
 	batches.clear()
 	_materials.clear()
 	_dust = null
-	var stage: int = ctx.terrain.stage
-	_active = ctx.terrain.geometry_root(stage).visible
 	map_id = ctx.stages.of(stage).map
 	seed_value = map_id.hash()
 	_rng.seed = seed_value
