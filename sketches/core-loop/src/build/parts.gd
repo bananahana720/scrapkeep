@@ -241,7 +241,10 @@ const KIT_PART_CAP := 0.25
 # generated recipes add a few points on top). A kit slot
 # draws from the kit's movement parts this share of the time over KIT_SHARE; never more, even
 # when the kit's other bucket is empty, so movement cannot fill an offer. A pilot whose pair has
-# no movement bucket still sees its own class movement rows, at CLASS_MOVEMENT_SHARE.
+# no movement bucket still sees its own class movement rows, at CLASS_MOVEMENT_SHARE each.
+# 2026-10-15 (wave 14 SQ19b, coordinator ruling S2): each class movement row in the slot's
+# candidates brings its own CLASS_MOVEMENT_SHARE, up to MOVEMENT_SHARE in all, so Tally's second
+# movement row (Winch Pawl) adds to Vent Baffle's share instead of splitting it.
 const MOVEMENT_SHARE := 0.12
 const CLASS_MOVEMENT_SHARE := 0.06
 # The neutral shelf: small flat parts every pilot can be offered, so a build never stalls on its
@@ -352,17 +355,6 @@ static func _pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
 	return allowed[-1]
 
 static var _rows := {}
-# 2026-10-15 (wave 14 SQ19b): the Bindings verb each item-table row on the alpha list touches.
-# Every alpha part names one (build_synergy_test); items.gd rows carry none. Each verb keeps
-# the row's offer bucket (bucket_of): fire only on weapon rows, haul and special only on rows
-# already in skill, so the full catalogue's kits do not move.
-const ITEM_TOUCHES := {
-	"cap_relay": "special", "sprint_cell": "boost", "beacon_lamp": "roll", "echo_locator": "roll",
-	"cache_key": "roll", "fast_hands": "roll", "re_rack": "jump", "grapple_coil": "harpoon", "glide_vane": "jump",
-	"static_burr": "fire", "frost_barb": "fire", "pin_setter": "fire", "hairline_fracture": "fire",
-	"impact_driver": "fire", "barrage_spring": "fire", "overpressure": "fire",
-	"brace_frame": "jump", "deflect_plate": "roll", "ballast_drum": "roll", "scrap_armor": "roll", "rivet_seam": "roll",
-}
 # Seams other modules offer ("spawner.extend_cloak"). A row whose needs is not here is
 # never offered; build fills this at setup from what the live modules answer.
 static var seams := {}
@@ -376,8 +368,6 @@ static func rows() -> Dictionary:
 			_rows[key] = _settled(CATALOGUE[key])
 		for key in Items.TABLE:
 			_rows[key] = _settled(ItemGen.finish(key, Items.TABLE[key]))
-			if ITEM_TOUCHES.has(key):
-				_rows[key]["touches"] = ITEM_TOUCHES[key]
 		for key in Items.CELLS:
 			_rows[key] = _settled(ItemGen.finish(key, Items.CELLS[key]))
 	return _rows
@@ -675,8 +665,8 @@ static func _uncapped(class_id: String, pool: Array, offered: Dictionary) -> Arr
 # One weighted slot for a pilot with a kit, drawn with a single rng.randf() so a listed slot costs
 # the rarity draw and one pick, as before. Off the slice a generated recipe first takes its share
 # of the shelf's part (one more draw). The rolled rarity's uncapped parts split into four groups:
-# the kit's movement parts (MOVEMENT_SHARE, CLASS_MOVEMENT_SHARE for a pilot whose pair has no
-# movement), its other parts (the rest of KIT_SHARE), the shelf (1 - KIT_SHARE) and the rest of the
+# the kit's movement parts (MOVEMENT_SHARE; for a pilot whose pair has no movement,
+# CLASS_MOVEMENT_SHARE per class movement row, at most MOVEMENT_SHARE), its other parts (the rest of KIT_SHARE), the shelf (1 - KIT_SHARE) and the rest of the
 # pool (0). An empty group's share moves on: kit to shelf, shelf to kit, both to the rest; movement's
 # own share goes to the kit's other parts, and movement never takes another group's share unless
 # nothing else is left. Inside a group a part weighs 1 / (1 + times offered this stage), times
@@ -701,7 +691,8 @@ static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: Str
 			groups["shelf"].append(key)
 		else:
 			groups["rest"].append(key)
-	var moving := MOVEMENT_SHARE if kit.has("movement") else CLASS_MOVEMENT_SHARE
+	var moving := MOVEMENT_SHARE if kit.has("movement") \
+		else minf(MOVEMENT_SHARE, CLASS_MOVEMENT_SHARE * groups["moving"].size())
 	var share := {"moving": moving, "still": KIT_SHARE - moving, "shelf": 1.0 - KIT_SHARE, "rest": 0.0}
 	if groups["moving"].is_empty():
 		share["still"] += share["moving"]
