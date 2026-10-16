@@ -146,6 +146,10 @@ var last_entry_usec := 0
 # The trade interior's block material, built once instead of a checker texture a block;
 # dress_props reads its two colours and replaces it, so every block can share it.
 static var _interior_block: StandardMaterial3D
+# True on the Game's own instance (setup ran), whose _exit_tree is the Game's teardown. A
+# contraption's cache helper (contraptions.gd) leaves with its stage root on a stage exit, and
+# releasing the shared caches there dropped the next stage's plans before its retry (SWAP-HITCH-3).
+var _owns_shared := false
 
 const POCKET_HEAL_SHARE := 0.15
 const POCKET_FOG_SIZE := Vector3(32, 8, 32)
@@ -211,6 +215,7 @@ class Site extends Node3D:
 
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
+	_owns_shared = true
 	name = "Activities"
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear())
@@ -224,6 +229,8 @@ func setup(ctx_ref) -> void:
 func _exit_tree() -> void:
 	for id in _prep:
 		_settle(id)
+	if not _owns_shared:
+		return
 	# No static keeps a map, mesh, shape or material once the Game is freed.
 	load("res://src/world/director.gd").release_parks()
 	load("res://src/world/events/natural.gd").release_plans()
