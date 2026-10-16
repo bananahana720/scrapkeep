@@ -374,6 +374,18 @@ export function packageName(sha7, dirty = false) {
   return "scrapkeep-core-loop-" + sha7 + (dirty ? "-dirty" : "");
 }
 
+// The bot_run.gd arguments after "--" for one proof; the local and cloud exports both build from this,
+// so a proof field such as table cannot reach one export and not the other.
+export function winProofBotArgs(proof, out) {
+  return [
+    "--out=" + out,
+    "--policy=" + WIN_POLICY,
+    "--seeds=" + proof.seed,
+    ...(proof.pilot ? ["--pilot=" + proof.pilot] : []),
+    ...(proof.table ? ["--table=" + proof.table] : []),
+  ];
+}
+
 export function winProofLine(row, pack, proof = WIN_PROOFS[0]) {
   const pilot = proof.pilot ? ` pilot ${proof.pilot}` : "";
   const table = proof.table ? ` table ${proof.table}` : "";
@@ -503,8 +515,8 @@ async function main() {
   if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 
   // Report only until wave 20 (Andrew, 2026-10-16): print the placeholder count, never block on it.
-  const placeholders = run("node", [path.join(root, "scripts/placeholder-gate.mjs"), "--project", project, "--limit", "0"]);
-  const placeholderLine = (placeholders.stdout + placeholders.stderr).trim().split("\n").pop();
+  const placeholders = run(process.execPath, [path.join(root, "scripts/placeholder-gate.mjs"), "--project", project, "--limit", "0"]);
+  const placeholderLine = ((placeholders.stdout ?? "") + (placeholders.stderr ?? "")).trim().split("\n").pop() || "no output";
   console.log("placeholder report (not blocking): " + placeholderLine);
 
   const smoke = bossSmoke(crash);
@@ -654,11 +666,7 @@ async function playWinProof(base, pack, proof) {
       "--script",
       "res://tools/bot_run.gd",
       "--",
-      "--out=" + out,
-      "--policy=" + WIN_POLICY,
-      "--seeds=" + proof.seed,
-      ...(proof.pilot ? ["--pilot=" + proof.pilot] : []),
-      ...(proof.table ? ["--table=" + proof.table] : []),
+      ...winProofBotArgs(proof, out),
     ],
     {
       cwd: path.dirname(pack),

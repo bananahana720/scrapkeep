@@ -29,6 +29,7 @@ import {
   winProofFailures,
   winProofLine,
   WIN_PROOFS,
+  winProofBotArgs,
   proofLibraries,
 } from "./sketch-export.mjs";
 
@@ -466,6 +467,19 @@ test("the park win proof is mandatory, pins pylon_engineer seed 1 and the park t
   assert.throws(() => parseArgs(["--win-proof", "--park-win-proof"]), /unknown argument/);
   const won = { outcome: "won", stage_reached: 6, ticks: 1, wall_seconds: 2 };
   assert.match(winProofLine(won, "/x/proof.pck", park), /pilot pylon_engineer table park, pack/);
+});
+
+test("every win proof's bot args carry its pilot and table, and the cloud export builds them the same way", () => {
+  for (const proof of WIN_PROOFS) {
+    const args = winProofBotArgs(proof, "/x/run");
+    assert.ok(args.includes("--seeds=" + proof.seed), proof.label);
+    assert.equal(args.includes("--pilot=" + proof.pilot), Boolean(proof.pilot), proof.label);
+    assert.equal(args.includes("--table=" + proof.table), Boolean(proof.table), proof.label);
+  }
+  assert.ok(winProofBotArgs(WIN_PROOFS.find((proof) => proof.table === "park"), "/x/run").includes("--table=park"));
+  const cloud = readFileSync(new URL("./cloud/export-headless.mjs", import.meta.url), "utf8");
+  assert.match(cloud, /\.\.\.winProofBotArgs\(proof, out\)/);
+  assert.doesNotMatch(cloud, /"--seeds=" \+/);
 });
 
 test("buildStamp records the boss smoke lines before the win proof", () => {
