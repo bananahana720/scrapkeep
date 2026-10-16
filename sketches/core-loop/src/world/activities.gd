@@ -131,6 +131,14 @@ var _graph_map := ""
 var _draw_layout := {}
 var _draw_map := ""
 var _mark_pools := {}
+# A park map's stage-entry data (SWAP-HITCH): the baked graph, the trade-pocket candidates and,
+# for a map played past stage 1, the pocket-draw layout. All three read only the graph and the
+# map's authored rows, so a worker builds them for the next stage's map while this one plays,
+# from a copy taken on the main thread, and hands them back as plain data. Map id -> {"task",
+# "out"} while the worker runs, then {"pool", "layout"}; the graph goes to ParkGraph.shared.
+var _prep := {}
+# The main-thread time of the last stage_entered handler, for stage_entry_budget_test.
+var last_entry_usec := 0
 
 const POCKET_HEAL_SHARE := 0.15
 const POCKET_FOG_SIZE := Vector3(32, 8, 32)
@@ -200,9 +208,77 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear())
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
+	_prepare_stage(1)
+
+
+func _exit_tree() -> void:
+	for id in _prep:
+		if _prep[id].has("task"):
+			WorkerThreadPool.wait_for_task_completion(_prep[id].task)
+			var done: Dictionary = _prep[id].out
+			ParkGraph.adopt(graph_path(id), done.graph)
+			_prep[id] = {"pool": done.pool, "layout": done.layout}
+
+
+# Starts the worker for a stage's map when the terrain has that stage (a test double may not).
+func _prepare_stage(stage_number: int) -> void:
+	var terrain = ctx.terrain
+	if terrain == null or not "maps" in terrain or not terrain.has_method("map_for"):
+		return
+	if stage_number >= 1 and stage_number <= terrain.maps.size():
+		_prepare_map(terrain.map_for(stage_number), stage_number)
+
+
+static func graph_path(map_id: String) -> String:
+	return "res://assets/park/%s/graph.bin" % map_id
+
+
+# Starts the worker for a park map's entry data. stage_number says whether the pocket-draw
+# layout is wanted (only past stage 1, as _on_stage_entered asks for it). The worker reads its
+# own graph and a deep copy of the rows, so no live object is shared with it.
+func _prepare_map(map, stage_number: int) -> void:
+	if map == null or not "park" in map or map.park.is_empty():
+		return
+	var id := String(map.park.map)
+	if _prep.has(id):
+		return
+	var rows := {"park": map.park.duplicate(true), "activity_sites": map.activity_sites.duplicate(true), "play_rect": map.play_rect}
+	var out := {}
+	var path := graph_path(id)
+	var layout := stage_number > 1
+	_prep[id] = {"task": WorkerThreadPool.add_task(func(): out.merge(prepare_data(path, rows, layout)), false, "activities prep " + id), "out": out}
+
+
+# The pure part of a park map's stage entry, safe on a worker: no node, no tree, no shared graph.
+static func prepare_data(path: String, map, layout: bool) -> Dictionary:
+	var graph = ParkGraph.read(path) if FileAccess.file_exists(path) else null
+	if graph == null:
+		return {"graph": null, "pool": PackedInt32Array(), "layout": {}}
+	return {"graph": graph, "pool": TradePockets.candidates(graph, map), "layout": PocketDraw.prepare(graph, map) if layout else {}}
+
+
+# This map's entry data, waiting on its worker when one is still running (a stage reached before
+# its worker finished), or computed here when none was started (a direct use in a test).
+func _entry_data(map) -> Dictionary:
+	var id := String(map.park.map)
+	if _prep.has(id) and _prep[id].has("task"):
+		WorkerThreadPool.wait_for_task_completion(_prep[id].task)
+		var done: Dictionary = _prep[id].out
+		ParkGraph.adopt(graph_path(id), done.graph)
+		_prep[id] = {"pool": done.pool, "layout": done.layout}
+	var graph = ParkGraph.shared(graph_path(id))
+	if not _prep.has(id):
+		_prep[id] = {"pool": TradePockets.candidates(graph, map) if graph != null else PackedInt32Array(), "layout": {}}
+	return _prep[id]
 
 
 func _on_stage_entered(_stage: int, retry: bool) -> void:
+	var started := Time.get_ticks_usec()
+	_enter_stage(retry)
+	last_entry_usec = Time.get_ticks_usec() - started
+
+
+func _enter_stage(retry: bool) -> void:
 	clear()
 	_elite_arrivals = 0
 	# A retry does not re-arm the piece, so dying cannot farm one.
@@ -212,9 +288,14 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 	_graph = null
 	_graph_map = ""
 	_mark_pools.clear()
+	var entry_data := {}
 	if "park" in map and not map.park.is_empty():
 		_graph_map = String(map.park.map)
-		_graph = ParkGraph.read("res://assets/park/%s/graph.bin" % _graph_map)
+		entry_data = _entry_data(map)
+		_graph = ParkGraph.shared(graph_path(_graph_map))
+	# The next stage's worker starts now, so it has this whole stage to finish.
+	if "stage" in ctx.terrain:
+		_prepare_stage(int(ctx.terrain.stage) + 1)
 	if not "activity_sites" in map:
 		return
 	for spec in map.activity_sites:
@@ -234,15 +315,17 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
 		sites.append(_build(id, spec["at"], built_spec))
 	if _graph != null:
-		var pool := TradePockets.candidates(_graph, map)
+		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
 		if not trade_spec.is_empty():
 			sites.append(_build(trade_spec.id, trade_spec.at, trade_spec))
 		if _draw_map != _graph_map:
-			_draw_layout.clear()
+			_draw_layout = {}
 			_draw_map = _graph_map
 		if _draw_layout.is_empty() and ctx.run.stage > 1:
-			_draw_layout = PocketDraw.prepare(_graph, map)
+			if entry_data.layout.is_empty():
+				entry_data.layout = PocketDraw.prepare(_graph, map)
+			_draw_layout = entry_data.layout
 		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout):
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
 				sites.append(_build(drawn_spec.id, drawn_spec.at, drawn_spec))
