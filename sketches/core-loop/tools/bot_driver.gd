@@ -93,6 +93,11 @@ const CHARGE_CLOSE := 3.8
 const HARPOON_FLOOR := 30.0
 const LINE_REACH := 50.0
 const DROP_MEMORY := 6.0
+# A bite that did not take a line is pressed again no sooner than BITE_RETRY, a player's re-click;
+# a line that stood is followed at once, as Brindle's hull fight needs. Pressed every tick against
+# a refusal in the stage-6 boss (Rivet, seed 1, late offer taken), the ball sat at a fixed velocity
+# and the run slowed past its 1400 s wall cap.
+const BITE_RETRY := 0.25
 # The latch arm on a harpoon-anchor Warden (_anchor_fight): a bite within LATCH_REACH of the body
 # (inside the 45 m rope), the body reads hung when it stands more than HUNG_ABOVE over the ground
 # under it and rising or falling past ANCHOR_MOVING m/s; from the ground the ball waits for a hung
@@ -192,6 +197,13 @@ const PLANT_TIMEOUT := 5.0
 const PLANT_EVERY := 10.0
 const TURRET_SECONDS := 3.5
 const FACE_TILT := 0.866
+# Leaving a plant, the engineer reads the aim cone (kit.slingshot_aim, the direction and speed the
+# HUD draws) and follows its arc in SLING_STEP steps for up to SLING_FLIGHT seconds. When it comes
+# down more than LEVEL_BAND below both the ball's ground and the fight's floor, she drops off the
+# post (E) instead: a stacked Pylon Capacitor slingshot leaves the Highdraft crown at 45 to 66 m/s
+# and lands on the net, a 20 to 40 s climb back to the Warden.
+const SLING_STEP := 0.05
+const SLING_FLIGHT := 4.0
 # Specials.
 const CROWD := 2
 const CROWD_RADIUS := 12.0
@@ -354,6 +366,7 @@ var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
 var _harpoon_commit := false
+var _bite_wait := 0.0
 # Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
 var chain_hand_enabled := true
@@ -592,6 +605,7 @@ func tick(delta: float) -> bool:
 	_boost_clock -= delta
 	_play_clock += delta
 	_ult_wait -= delta
+	_bite_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
 	_plant_cool -= delta
@@ -1181,21 +1195,27 @@ func _approach(s, ball: Vector3) -> Vector3:
 # steeper than CLIMB_SLOPE (falling is free), every other cell kept. Empty when there is none.
 # A cell costs more the further it drops to a neighbour, so a route up a ramp keeps to its middle,
 # not the rim of its skirt where a ball cutting the corner at the foot slides back to the deck.
+# Each step's rise is read on both of its halves (the heights are sampled at half a step), so a
+# face narrower than CLIMB_STEP is not averaged into a gentle slope: the Highdraft ramp's 3 m side
+# skirt passed as a climbable step and held Tarn below the Warden's island for a whole stage.
 func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 	var terrain = game.ctx.terrain
 	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD
 	var hi := Vector2(maxf(from.x, to.x), maxf(from.z, to.z)) + Vector2.ONE * CLIMB_PAD
 	var nx := int(ceilf((hi.x - lo.x) / CLIMB_STEP)) + 1
 	var nz := int(ceilf((hi.y - lo.y) / CLIMB_STEP)) + 1
+	var hx := 2 * nx - 1
 	var graph := AStar2D.new()
 	graph.reserve_space(nx * nz)
-	var heights := PackedFloat32Array()
-	heights.resize(nx * nz)
+	var half := PackedFloat32Array()
+	half.resize(hx * (2 * nz - 1))
+	for j in 2 * nz - 1:
+		for i in hx:
+			var p := lo + Vector2(i, j) * CLIMB_STEP * 0.5
+			half[j * hx + i] = terrain.height(p.x, p.y)
 	for j in nz:
 		for i in nx:
-			var p := lo + Vector2(i, j) * CLIMB_STEP
-			heights[j * nx + i] = terrain.height(p.x, p.y)
-			graph.add_point(j * nx + i, p)
+			graph.add_point(j * nx + i, lo + Vector2(i, j) * CLIMB_STEP)
 	for j in nz:
 		for i in nx:
 			var a := j * nx + i
@@ -1205,16 +1225,21 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 				if bi < 0 or bi >= nx or bj >= nz:
 					continue
 				var b := bj * nx + bi
-				var rise: float = (heights[b] - heights[a]) / (Vector2(step).length() * CLIMB_STEP)
-				var drop := absf(heights[b] - heights[a]) / CLIMB_STEP
-				var high := a if heights[a] > heights[b] else b
+				var ha: float = half[2 * j * hx + 2 * i]
+				var hm: float = half[(2 * j + step.y) * hx + 2 * i + step.x]
+				var hb: float = half[2 * bj * hx + 2 * bi]
+				var run := Vector2(step).length() * CLIMB_STEP * 0.5
+				var up := maxf(hm - ha, hb - hm) / run
+				var down := maxf(ha - hm, hm - hb) / run
+				var drop := absf(hb - ha) / CLIMB_STEP
+				var high := a if ha > hb else b
 				graph.set_point_weight_scale(high, maxf(graph.get_point_weight_scale(high), 1.0 + drop))
-				if absf(rise) <= CLIMB_SLOPE:
+				if up <= CLIMB_SLOPE and down <= CLIMB_SLOPE:
 					graph.connect_points(a, b)
-				elif rise > 0.0:
-					graph.connect_points(b, a, false)
-				else:
+				elif up <= CLIMB_SLOPE:
 					graph.connect_points(a, b, false)
+				elif down <= CLIMB_SLOPE:
+					graph.connect_points(b, a, false)
 	var path := graph.get_point_path(graph.get_closest_point(Vector2(from.x, from.z)), graph.get_closest_point(Vector2(to.x, to.z)))
 	var out: Array[Vector3] = []
 	for k in range(1, path.size(), 2):
@@ -1684,6 +1709,8 @@ func _note_shred(target: Node3D, delta: float) -> void:
 # frozen ball), so a bite counts only when it can land.
 func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
+	if kit.hooked:
+		_bite_wait = 0.0
 	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
 	if _cast_phase == "await_smash":
 		_cast_phase = ""
@@ -1721,8 +1748,9 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
 	if special != null and special.charging:
 		swallowed = true
-	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
+	if not swallowed and _bite_wait <= 0.0 and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
 			and _off_line > DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+		_bite_wait = BITE_RETRY
 		# A movement exit waits for the haul; other line skills load on the bite.
 		if not bank_shot:
 			_cast(3)
@@ -2475,7 +2503,8 @@ func _plant(fight: Node3D, delta: float) -> Vector3:
 	return Vector3.INF
 
 
-# Mounted: turret on the aim, then slingshot off toward it.
+# Mounted: turret on the aim, then slingshot off toward it, or drop off the post when the
+# slingshot would come down off the fight's floor (_sling_lands_low).
 func _turret(aim, delta: float) -> void:
 	if _plant_state != "mounted":
 		_plant_state = "mounted"
@@ -2489,9 +2518,33 @@ func _turret(aim, delta: float) -> void:
 	for h in _threats():
 		threatened = true
 	if _plant_clock > TURRET_SECONDS or threatened or not _aim_valid(aim):
-		source.press["jump_pressed"] = true
+		if _sling_lands_low():
+			source.press["mount_pressed"] = true
+		else:
+			source.press["jump_pressed"] = true
 		_plant_state = "idle"
 		_plant_cool = PLANT_EVERY
+
+
+func _sling_lands_low() -> bool:
+	var cone: Dictionary = game.player.kit.slingshot_aim
+	if cone.is_empty():
+		return false
+	var p: Vector3 = game.player.ball_position()
+	var low: float = _ground_point(p.x, p.z).y
+	if is_instance_valid(_plant_target):
+		low = minf(low, _ground_point(_plant_target.global_position.x, _plant_target.global_position.z).y)
+	var v: Vector3 = (cone["dir"] as Vector3) * float(cone["speed"])
+	var gravity: float = game.player.tuning.f("gravity")
+	var t := 0.0
+	while t < SLING_FLIGHT:
+		p += v * SLING_STEP
+		v.y -= gravity * SLING_STEP
+		t += SLING_STEP
+		var ground: float = _ground_point(p.x, p.z).y
+		if v.y < 0.0 and p.y <= ground:
+			return ground < low - LEVEL_BAND
+	return true
 
 
 # A steep face (a pylon can bite: |normal.y| < FACE_TILT) within PLANT_SEARCH, the one
