@@ -3,9 +3,10 @@ extends SceneTree
 
 # SWAP-HITCH (KB6, measured 2026-10-15 at f0d5cecb): entering a park stage froze the main thread
 # for about 2 s, on the launch into stage 2 and on every retry, because the stage_entered
-# handlers redid per-map work synchronously. This test plays the park table headless, wraps the
-# real stage_entered listeners with a timer and checks the time each one spends on a retry of
-# stage 1, the exit into stage 2 and a retry of stage 2.
+# handlers redid per-map work synchronously. This test plays the park table headless through the
+# real flow and reads the main-thread time activities and the set dressing record for their own
+# stage_entered handler (last_entry_usec) on the first entry, a retry of stage 1, the exit into
+# stage 2 and a retry of stage 2.
 #
 # What is checked is the per-map work this unit moved, not the 33 ms frame, which stage entry
 # still misses. At f0d5cecb activities spent 230 to 930 ms an entry (graph read about 50 ms,
@@ -16,8 +17,9 @@ extends SceneTree
 # (palette.gd, spillway_scenery.gd) are outside this unit. Budgets: activities RETRY_MS on a retry
 # and FIRST_MS on the exit into stage 2, the set dressing DRESSING_MS on a stage it already dressed.
 # World's handler (the natural event family's setup, about 750 ms; natural.gd, event_ground.gd)
-# and the set dressing's first build of a new stage (about 250 ms; _build_props) are printed, not
-# checked: they are the follow-up that brings stage entry under 33 ms.
+# and the set dressing's first build of a new stage (about 250 ms; _build_props) are
+# measured by tools/perf_bench.gd, not here: they are the follow-up that brings stage entry
+# under 33 ms.
 #
 # Also checked: the worker's results equal the synchronous computation on the live map, and the
 # audio and activities share one graph per map.
@@ -35,12 +37,10 @@ const FIRST_MS := 150.0
 const DRESSING_MS := 4.0
 const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
-const TIMED := ["activities.gd", "set_dressing.gd", "world.gd"]
+const TIMED := ["activities", "set_dressing"]
 
 var _game
 var _t := T.new("stage_entry_budget_test")
-# Script file name -> ms of its last stage_entered call.
-var _last := {}
 
 
 func _initialize() -> void:
@@ -60,22 +60,21 @@ func _run() -> void:
 	_game.presentation.audio.bake_now()
 	_game.run.run_seed_override = 11
 	_game.player.source = Intent.Scripted.new()
-	_wrap()
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	await _ticks(SETTLE_TICKS)
 	_t.check("the run is on park stage 1", _game.flow.stage() == 1 and _park_id() != "", "stage %d map %s" % [_game.flow.stage(), _park_id()])
-	_t.check("every timed handler is wired", _last.size() == TIMED.size(), str(_last.keys()))
+	_t.check("both handlers record their entry time", _times().size() == TIMED.size(), str(_times()))
 
-	var first := _last.duplicate()
+	var first := _times()
 	_report("first entry, stage 1", first)
-	_t.check("first entry of stage 1: the set dressing keeps its setup build", first.get("set_dressing.gd", INF) <= DRESSING_MS, _ms(first, "set_dressing.gd"))
+	_t.check("first entry of stage 1: the set dressing keeps its setup build", first.get("set_dressing", INF) <= DRESSING_MS, _ms(first, "set_dressing"))
 
 	_game.flow.retry_stage()
-	var retry_1 := _last.duplicate()
+	var retry_1 := _times()
 	_report("retry, stage 1", retry_1)
-	_t.check("retry of stage 1: activities within %.0f ms" % RETRY_MS, retry_1.get("activities.gd", INF) <= RETRY_MS, _ms(retry_1, "activities.gd"))
-	_t.check("retry of stage 1: set dressing within %.0f ms" % DRESSING_MS, retry_1.get("set_dressing.gd", INF) <= DRESSING_MS, _ms(retry_1, "set_dressing.gd"))
+	_t.check("retry of stage 1: activities within %.0f ms" % RETRY_MS, retry_1.get("activities", INF) <= RETRY_MS, _ms(retry_1, "activities"))
+	_t.check("retry of stage 1: set dressing within %.0f ms" % DRESSING_MS, retry_1.get("set_dressing", INF) <= DRESSING_MS, _ms(retry_1, "set_dressing"))
 	await _ticks(SETTLE_TICKS)
 
 	# The next stage builds the way play does (world.gd starts it when the Warden wakes).
@@ -88,18 +87,18 @@ func _run() -> void:
 	_game.player.reset_to(terrain.spawn_point(1) + Vector3.UP * 2.0, Vector3(0.0, 0.0, 6.0))
 	await _ticks(2)
 	_game.flow._finish_stage()
-	var exit_1 := _last.duplicate()
+	var exit_1 := _times()
 	_report("exit into stage 2", exit_1)
 	_t.check("the exit entered park stage 2", _game.flow.stage() == 2 and _park_id() != "", "stage %d map %s" % [_game.flow.stage(), _park_id()])
-	_t.check("exit into stage 2: activities within %.0f ms" % FIRST_MS, exit_1.get("activities.gd", INF) <= FIRST_MS, _ms(exit_1, "activities.gd"))
+	_t.check("exit into stage 2: activities within %.0f ms" % FIRST_MS, exit_1.get("activities", INF) <= FIRST_MS, _ms(exit_1, "activities"))
 	_check_prepared()
 	await _ticks(SETTLE_TICKS)
 
 	_game.flow.retry_stage()
-	var retry_2 := _last.duplicate()
+	var retry_2 := _times()
 	_report("retry, stage 2", retry_2)
-	_t.check("retry of stage 2: activities within %.0f ms" % RETRY_MS, retry_2.get("activities.gd", INF) <= RETRY_MS, _ms(retry_2, "activities.gd"))
-	_t.check("retry of stage 2: set dressing within %.0f ms" % DRESSING_MS, retry_2.get("set_dressing.gd", INF) <= DRESSING_MS, _ms(retry_2, "set_dressing.gd"))
+	_t.check("retry of stage 2: activities within %.0f ms" % RETRY_MS, retry_2.get("activities", INF) <= RETRY_MS, _ms(retry_2, "activities"))
+	_t.check("retry of stage 2: set dressing within %.0f ms" % DRESSING_MS, retry_2.get("set_dressing", INF) <= DRESSING_MS, _ms(retry_2, "set_dressing"))
 	await _ticks(SETTLE_TICKS)
 
 	# Audio's parameter sampler reads the same graph instance activities entered with.
@@ -113,20 +112,15 @@ func _run() -> void:
 	quit(_t.verdict())
 
 
-# Disconnect every stage_entered listener and reconnect it in the same order behind a timer.
-func _wrap() -> void:
-	var events = _game.ctx.events
-	for connection in events.get_signal_connection_list("stage_entered"):
-		var callable: Callable = connection["callable"]
-		var object: Object = callable.get_object()
-		var script: Script = object.get_script() if object != null else null
-		var file := script.resource_path.get_file() if script != null else ""
-		events.disconnect("stage_entered", callable)
-		events.connect("stage_entered", func(stage: int, retry: bool):
-			var t0 := Time.get_ticks_usec()
-			callable.call(stage, retry)
-			if file in TIMED:
-				_last[file] = (Time.get_ticks_usec() - t0) / 1000.0)
+# Each handler's recorded time of the last stage entry, in ms; a handler that records none is absent.
+func _times() -> Dictionary:
+	var out := {}
+	var modules := {"activities": _game.world.activities, "set_dressing": _game.presentation.set_dressing}
+	for key in TIMED:
+		var module = modules[key]
+		if module != null and "last_entry_usec" in module:
+			out[key] = module.last_entry_usec / 1000.0
+	return out
 
 
 # The worker's pool and layout for the stage just entered match a fresh synchronous computation.
