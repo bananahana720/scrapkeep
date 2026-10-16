@@ -49,7 +49,13 @@ const RIDE_TOP_MARGIN := 2.0
 const FACE_SLOPE := 0.15
 const POUR_OFFSET := Vector3(0.0, 0.0, -6.0)
 const SHEET_COLOR := Palette.SANDSTONE
-const MOUNTED_POSTURE := {"sheet_ram_breaks": 3}
+# A grown ball breaks the mounted bar in sheet_ram_breaks sheet rams; a lighter one's ram pays
+# its heft share of that to the power heft_curve, so a heft-1.0 ball needs 2.2 times the rams
+# (7), the posture bands' "small takes at least twice grown" (section 7). The stage's own
+# posture curve (2.0) asked 4.84 times (15 rams, about 90 s), past the arena allowance for any
+# pilot (unit WT-PARK-BOT). A ball still holding its class through wear hysteresis rams at that
+# class's heft, as the HUD reads it.
+const MOUNTED_POSTURE := {"sheet_ram_breaks": 3, "heft_curve": 1.0}
 
 class DamPosture extends "res://src/combat/boss_posture.gd":
 	var mounted_warden: WeakRef
@@ -128,13 +134,14 @@ func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 	var target = warden.target
 	if target == null or not target.body().get_colliding_bodies().has(warden):
 		return
-	var heft: float = target.heft_of.call()
+	var heft: float = sheet_heft(warden, target.heft_of.call())
 	var plating: float = hit["plating"]
 	var grown_punch: float = float(hit["punch"]) / heft * Run.HEFT_CLASS_AT[2]
 	var grown_ratio: float = grown_punch / plating if plating > 0.0 else posture.mult_max
 	var ratio: float = float(hit["punch"]) / plating if plating > 0.0 else posture.mult_max
-	var relative_gain: float = pow(clampf(ratio, posture.mult_min, posture.mult_max), posture.curve) \
-			/ pow(clampf(grown_ratio, posture.mult_min, posture.mult_max), posture.curve)
+	var curve: float = MOUNTED_POSTURE["heft_curve"]
+	var relative_gain: float = pow(clampf(ratio, posture.mult_min, posture.mult_max), curve) \
+			/ pow(clampf(grown_ratio, posture.mult_min, posture.mult_max), curve)
 	var gain: float = posture.FULL / float(MOUNTED_POSTURE["sheet_ram_breaks"]) * relative_gain
 	if int(hit["frame"]) == posture.gain_frame:
 		gain = maxf(0.0, gain - posture.gain_in_frame)
@@ -145,6 +152,14 @@ func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 	if result["shatter"]:
 		result["dealt"] = float(hit["hp"])
 		result["part"] = warden.family_point()
+
+
+# The heft a sheet ram is judged at: the ball's own, or the floor of the class it still holds.
+func sheet_heft(warden, heft: float) -> float:
+	var run = warden.fleet.ctx.run if warden.fleet != null and warden.fleet.ctx != null else null
+	if run == null:
+		return heft
+	return maxf(heft, float(Run.HEFT_CLASS_AT[run.heft_class() - 1]))
 
 
 func on_charge(warden, seconds: float) -> void:
