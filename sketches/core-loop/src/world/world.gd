@@ -120,6 +120,10 @@ func setup(ctx_ref) -> void:
 	ctx.player.interact_claim = interact.claims
 	director = Director.new(ctx.rng.randi())
 	_author_director()
+	# The mark pipelines compile here, off the first stage entry; an entry re-warms only after the
+	# telegraph row flips the look (Threat.follow_row).
+	Threat.follow_row(ctx.tuning)
+	Threat.Painter.warm_up(ctx.root)
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
@@ -206,7 +210,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	if retry:
 		_class_picks_owed = 0
 	Threat.follow_row(ctx.tuning)
-	# Compile every threat mark pipeline before play (Threat.Painter.warm_up), once.
+	# Compile every threat mark pipeline before play (Threat.Painter.warm_up), once a look.
 	Threat.Painter.warm_up(ctx.root)
 	if events != null:
 		_publish(events.end_all())

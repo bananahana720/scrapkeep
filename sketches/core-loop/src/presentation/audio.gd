@@ -2438,7 +2438,7 @@ func sample_run_parameters() -> Dictionary:
 		var path := "res://assets/park/%s/graph.bin" % map_id
 		# Shared with activities, which reads it on stage entry, so the first sample costs no read.
 		if map_id.begins_with("park_") and FileAccess.file_exists(path):
-			_parameter_graph = load("res://src/world/activities.gd").shared_graph(path)
+			_parameter_graph = Activities.shared_graph(path)
 	if _parameter_graph != null:
 		var span: float = _parameter_graph.d_landmark(_parameter_graph.spawn_node)
 		var remaining: float = _parameter_graph.d_landmark(at)

@@ -143,6 +143,9 @@ var _prep := {}
 static var _shared_graphs := {}
 # The main-thread time of the last stage_entered handler, for stage_entry_budget_test.
 var last_entry_usec := 0
+# The trade interior's block material, built once instead of a checker texture a block;
+# dress_props reads its two colours and replaces it, so every block can share it.
+static var _interior_block: StandardMaterial3D
 
 const POCKET_HEAL_SHARE := 0.15
 const POCKET_FOG_SIZE := Vector3(32, 8, 32)
@@ -212,16 +215,27 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear())
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
+	# The trade devices' plate finish neutralises its texture pixel by pixel on first use (about
+	# 55 ms, SWAP-HITCH-2); Palette caches it, so it is made here rather than on a stage entry.
+	Palette.look_texture("rusted-salvaged-plate-worn", true)
 	_prepare_stage(1)
 
 
 func _exit_tree() -> void:
 	for id in _prep:
-		if _prep[id].has("task"):
-			WorkerThreadPool.wait_for_task_completion(_prep[id].task)
-			var done: Dictionary = _prep[id].out
-			_adopt_graph(graph_path(id), done.graph)
-			_prep[id] = {"pool": done.pool, "layout": done.layout}
+		_settle(id)
+	load("res://src/world/director.gd").settle_parks()
+
+
+# Waits once on a map's entry-data worker and takes its results. worker_layout records that the
+# worker computed the layout, so a test can tell it from one _enter_stage computes later.
+func _settle(id: String) -> void:
+	if not _prep.has(id) or not _prep[id].has("task"):
+		return
+	WorkerThreadPool.wait_for_task_completion(_prep[id].task)
+	var done: Dictionary = _prep[id].out
+	_adopt_graph(graph_path(id), done.graph)
+	_prep[id] = {"pool": done.pool, "layout": done.layout, "worker_layout": not done.layout.is_empty()}
 
 
 # Starts the worker for a stage's map when the terrain has that stage (a test double may not).
@@ -265,6 +279,8 @@ func _prepare_map(map, stage_number: int) -> void:
 	var path := graph_path(id)
 	var layout := stage_number > 1
 	_prep[id] = {"task": WorkerThreadPool.add_task(func(): out.merge(prepare_data(path, rows, layout)), false, "activities prep " + id), "out": out}
+	# The director's read of the same map (its rows and corridor reader) goes on a worker too.
+	load("res://src/world/director.gd").prepare_park(id)
 
 
 # The pure part of a park map's stage entry, safe on a worker: no node, no tree, no shared graph.
@@ -279,11 +295,7 @@ static func prepare_data(path: String, map, layout: bool) -> Dictionary:
 # its worker finished), or computed here when none was started (a direct use in a test).
 func _entry_data(map) -> Dictionary:
 	var id := String(map.park.map)
-	if _prep.has(id) and _prep[id].has("task"):
-		WorkerThreadPool.wait_for_task_completion(_prep[id].task)
-		var done: Dictionary = _prep[id].out
-		_adopt_graph(graph_path(id), done.graph)
-		_prep[id] = {"pool": done.pool, "layout": done.layout}
+	_settle(id)
 	var graph = shared_graph(graph_path(id))
 	if not _prep.has(id):
 		_prep[id] = {"pool": TradePockets.candidates(graph, map) if graph != null else PackedInt32Array(), "layout": {}}
@@ -476,7 +488,9 @@ func _build_interior(s: Site) -> void:
 	for block in s.interior.terrain:
 		var size := Vector3(block.size[0], block.size[1], block.size[2])
 		var at := Vector3(block.at[0], size.y * 0.5, block.at[1])
-		_mesh_box(root, size, at, Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL))
+		if _interior_block == null:
+			_interior_block = Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
+		_mesh_box(root, size, at, _interior_block)
 	for entrance in s.interior.entrances:
 		for side in [-1.0, 1.0]:
 			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), Palette.solid(EventKinds.activity_color(s.view.id)))

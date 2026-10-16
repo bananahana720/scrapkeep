@@ -168,7 +168,11 @@ var _last_was_elite := false
 var homes: Array[Dictionary] = []
 var _park_map
 var _park_graph
+var _graph_path := ""
 var _corridors
+# read_park results by map id, shared by every director: {"task", "out"} while a worker reads one,
+# then {"park"} (SWAP-HITCH-2: the read cost 58 to 85 ms a stage entry).
+static var _parks := {}
 var _home_sites := {}
 var _forward_homes: Array[Dictionary] = []
 var _stopped_kinds := {}
@@ -490,14 +494,11 @@ func _read_homes(map_id: String) -> void:
 	_park_map = null
 	_park_graph = null
 	_corridors = null
-	var path := "res://src/world/park/%s.json" % map_id
-	if not map_id.begins_with("park_") or not FileAccess.file_exists(path):
+	_graph_path = ""
+	var park := _park_for(map_id)
+	if park.is_empty():
 		return
-	# Runtime loads avoid the schema's preload of Director forming a cycle.
-	var map_script = load("res://src/world/park/park_map.gd")
-	var map = map_script.new(path)
-	if not map.ok:
-		return
+	var map = park.map
 	_park_map = map
 	for row in map.park.park_rows:
 		_home_sites[row.id] = row
@@ -505,11 +506,60 @@ func _read_homes(map_id: String) -> void:
 		var home: Dictionary = row.duplicate(true)
 		home.broken = false
 		homes.append(home)
+	# The graph is the game's shared copy (Activities.shared_graph), taken on first use: by then
+	# activities has adopted the one its worker read for this map, so the entry reads none.
 	var graph_path := "res://assets/park/%s/graph.bin" % map_id
 	if FileAccess.file_exists(graph_path):
-		_park_graph = load("res://src/world/park/park_graph.gd").read(graph_path)
-	# KE1 owns both the pilot-line reader and the corridor clearance.
-	_corridors = load("res://src/world/event_director.gd").new(0, {}, map, 0.0, Callable())
+		_graph_path = graph_path
+	_corridors = park.corridors
+
+
+# A park map's parsed rows and its corridor reader (KE1 owns both the pilot-line reader and the
+# corridor clearance), read once a process and read-only after: {"map", "corridors"}, or {} for a
+# map that is not a park or fails its schema. Pure, so a worker can read it (prepare_park).
+static func read_park(map_id: String) -> Dictionary:
+	var path := "res://src/world/park/%s.json" % map_id
+	if not map_id.begins_with("park_") or not FileAccess.file_exists(path):
+		return {}
+	# Runtime loads avoid the schema's preload of Director forming a cycle.
+	var map = load("res://src/world/park/park_map.gd").new(path)
+	if not map.ok:
+		return {}
+	return {"map": map, "corridors": load("res://src/world/event_director.gd").new(0, {}, map, 0.0, Callable())}
+
+
+# Starts a worker reading a park map the game will enter (activities.gd asks for the next stage's).
+static func prepare_park(map_id: String) -> void:
+	if _parks.has(map_id) or not map_id.begins_with("park_"):
+		return
+	var out := {}
+	_parks[map_id] = {"task": WorkerThreadPool.add_task(func(): out.merge(read_park(map_id)), false, "director park " + map_id), "out": out}
+
+
+static func _park_for(map_id: String) -> Dictionary:
+	settle_park(map_id)
+	if not _parks.has(map_id):
+		_parks[map_id] = {"park": read_park(map_id)}
+	return _parks[map_id].park
+
+
+# Waits once on a park read still running, so the read is never waited on twice or left open.
+static func settle_park(map_id: String) -> void:
+	if _parks.has(map_id) and _parks[map_id].has("task"):
+		WorkerThreadPool.wait_for_task_completion(_parks[map_id].task)
+		_parks[map_id] = {"park": _parks[map_id].out, "worker": true}
+
+
+static func settle_parks() -> void:
+	for map_id in _parks.keys():
+		settle_park(map_id)
+
+
+func _graph():
+	if _park_graph == null and _graph_path != "":
+		_park_graph = load("res://src/world/activities.gd").shared_graph(_graph_path)
+		_graph_path = ""
+	return _park_graph
 
 
 func home_live(id: String) -> bool:
@@ -551,9 +601,10 @@ func _home_at(home: Dictionary) -> Vector2:
 
 
 func _ahead(at: Vector2, ball: Vector2) -> bool:
-	if _park_graph == null:
+	var graph = _graph()
+	if graph == null:
 		return false
-	var ahead: float = _park_graph.d_landmark(ball) - _park_graph.d_landmark(at)
+	var ahead: float = graph.d_landmark(ball) - graph.d_landmark(at)
 	return is_finite(ahead) and ahead >= HOME_WINDOW.x and ahead <= HOME_WINDOW.y
 
 
