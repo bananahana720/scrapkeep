@@ -164,19 +164,25 @@ static func _finish(planned: Dictionary) -> void:
 
 
 # This stage's plan: the one a worker made while the previous stage played, the one the last entry
-# made (a retry), or one made here. A stage whose cave roof has dropped plans on its live ground.
+# made (a retry), or one made here. A stage whose cave roof has dropped, or whose rows changed since
+# the plan (a test fixture edits them), plans on its live ground.
 func _planned() -> Dictionary:
 	var terrain = world.terrain
 	var key := _root_key(terrain, terrain.stage)
+	var rows := _rows_hash(_original_map.park)
 	if key != 0:
 		_settle(key)
-		if _plans.has(key) and EventGround.pristine(terrain, terrain.stage):
+		if _plans.has(key) and _plans[key].rows == rows and EventGround.pristine(terrain, terrain.stage):
 			return _plans[key].plan
 	var planned := plan(world, _original_map.park)
 	_finish(planned)
 	if key != 0 and EventGround.pristine(terrain, terrain.stage):
-		_plans[key] = {"plan": planned}
+		_plans[key] = {"plan": planned, "rows": rows}
 	return planned
+
+
+static func _rows_hash(park: Dictionary) -> int:
+	return hash([park.park_rows, park.event_rows])
 
 
 # The plan key of a built park stage on the game's terrain, or 0 (a test double, an old map).
@@ -195,7 +201,7 @@ static func _settle(key: int) -> void:
 	WorkerThreadPool.wait_for_task_completion(_plans[key].task)
 	var planned: Dictionary = _plans[key].out
 	_finish(planned)
-	_plans[key] = {"plan": planned, "worker": true}
+	_plans[key] = {"plan": planned, "rows": _plans[key].rows, "worker": true}
 
 
 # Once the next stage's ground is built (world.gd starts it when the Warden wakes), its plan runs on
@@ -219,7 +225,7 @@ func _prepare_next() -> void:
 	var snapshot := EventGround.snapshot(terrain, next)
 	var park: Dictionary = map.park.duplicate(true)
 	var out := {}
-	_plans[key] = {"task": WorkerThreadPool.add_task(func(): out.merge(plan(snapshot, park)), false, "natural plan"), "out": out}
+	_plans[key] = {"task": WorkerThreadPool.add_task(func(): out.merge(plan(snapshot, park)), false, "natural plan"), "out": out, "rows": _rows_hash(map.park)}
 
 
 func _exit_tree() -> void:
