@@ -228,7 +228,9 @@ func _prepare_next() -> void:
 	_plans[key] = {"task": WorkerThreadPool.add_task(func(): out.merge(plan(snapshot, park)), false, "natural plan"), "out": out, "rows": _rows_hash(map.park)}
 
 
-func _exit_tree() -> void:
+# A handler leaves on every stage change, so a plan still running is left for the handler that
+# enters its stage (_planned) or the next poll; activities.gd waits on what is left at teardown.
+static func settle_plans() -> void:
 	for key in _plans.keys():
 		_settle(key)
 

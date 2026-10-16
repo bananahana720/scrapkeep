@@ -225,6 +225,7 @@ func _exit_tree() -> void:
 	for id in _prep:
 		_settle(id)
 	load("res://src/world/director.gd").settle_parks()
+	load("res://src/world/events/natural.gd").settle_plans()
 
 
 # Waits once on a map's entry-data worker and takes its results. worker_layout records that the
