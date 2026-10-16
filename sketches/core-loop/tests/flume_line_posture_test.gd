@@ -17,7 +17,12 @@ const T := preload("res://tests/support/t.gd")
 # drain, as on the dam. Unlatched, a bolt keeps the generic rule (punch over plating 110, curve 2.0),
 # and a ball that never hits leaves the bar at zero: the camper never breaks it.
 #
+# Ruling FL3 (2026-10-16): the pay is also divided by the pilot's base weapon damage per second and
+# multiplied by Rivet's, so at the reference heft every pilot's base kit fills the bar at Rivet's FL1
+# rate (7.07 posture per second), and a damage part still raises it in proportion.
+#
 # Red at 6d7c7a0c (measured 2026-10-16): the reference bolt paid 0.06 and the latched bar drained.
+# Red at 390d9d4e for the FL3 checks: posture per second followed each weapon's damage per second.
 
 # Run.HEFT_CLASS_AT indexes: the reference heft, then the grown ball.
 const REFERENCE := 1
@@ -62,16 +67,37 @@ func _run() -> void:
 	_latch(w)
 	await physics_frame
 
-	# Pay per bolt, latched, reference heft.
-	t.near("latched: the reference bolt pays 1.5", _pay(w, "runner", reference, false), 1.5, 0.01)
-	t.near("latched: the reference bolt pays 3.0 while the relic charges", _pay(w, "runner", reference, true), 3.0, 0.02)
+	# Pay per bolt, latched, reference heft, Rivet's pilot (FL1's numbers, which FL3 keeps for Rivet).
+	var rivet = _def("runner_gunner")
+	t.near("latched, Rivet: the reference bolt pays 1.5", _pay(w, "runner", reference, false, rivet), 1.5, 0.01)
+	t.near("latched, Rivet: the reference bolt pays 3.0 while the relic charges", _pay(w, "runner", reference, true, rivet), 3.0, 0.02)
+	var rivet_rate := float(Weapons.BASE["rapid_laser"]["rate"])
+	var rivet_per_s := _pay(w, "runner", float(Weapons.BASE["rapid_laser"]["damage"]), false, rivet) * rivet_rate
+	t.near("latched, Rivet: the base kit fills %.3f posture per second, as under FL1" % rivet_per_s, rivet_per_s,
+		1.5 * float(Weapons.BASE["rapid_laser"]["damage"]) / reference * rivet_rate, 0.01)
+
+	# FL3: at the reference heft, every pilot's base kit fills the bar at Rivet's posture per second.
 	var pays := []
-	for weapon in _pilot_damage():
-		var damage: float = _pilot_damage()[weapon]
-		var pay := _pay(w, String(Weapons.STRIKE_KIND.get(weapon, "shot")), damage, false)
-		pays.append("%s %.0f -> %.3f" % [weapon, damage, pay])
-		t.near("latched: a %s bolt pays its damage share" % weapon, pay, 1.5 * damage / reference, 0.01)
-	print("[report] per-pilot bolt pay at reference heft %.2f: %s" % [game.run.heft(), pays])
+	for def in ClassDef.all():
+		var row: Dictionary = Weapons.BASE[def.weapon_id]
+		var pay := _pay(w, String(Weapons.STRIKE_KIND.get(def.weapon_id, "shot")), float(row["damage"]), false, def)
+		var per_s := pay * float(row["rate"])
+		pays.append("%s %s %.0f x %.1f/s -> %.3f a bolt, %.3f/s" % [def.id, def.weapon_id, float(row["damage"]), float(row["rate"]), pay, per_s])
+		t.check("latched, %s: the base kit fills the bar within 1 percent of Rivet's posture per second" % def.id,
+			absf(per_s - rivet_per_s) <= 0.01 * rivet_per_s, "%.3f/s against %.3f/s" % [per_s, rivet_per_s])
+	print("[report] per-pilot pay at reference heft %.2f: %s" % [game.run.heft(), pays])
+
+	# A planted +50 percent weapon-damage part raises the pilot's posture per second by 50 percent.
+	var pilot = game.run.class_def
+	var rate := float(Weapons.BASE[pilot.weapon_id]["rate"])
+	var kind := String(Weapons.STRIKE_KIND.get(pilot.weapon_id, "shot"))
+	var plain := _pay(w, kind, float(game.combat.punch_now()), false, pilot) * rate
+	game.ctx.tuning.set_mod("weapon_damage", 1.5)
+	var planted_damage := float(game.combat.punch_now())
+	var planted := _pay(w, kind, planted_damage, false, pilot) * rate
+	game.ctx.tuning.set_mod("weapon_damage", 1.0)
+	print("[report] %s with a +50%% damage part: bolt %.1f, %.3f/s against %.3f/s" % [pilot.id, planted_damage, planted, plain])
+	t.near("a +50 percent damage part raises posture per second by 50 percent", planted / plain if plain > 0.0 else 0.0, 1.5, 0.015)
 
 	# The bar holds while engaged and latched.
 	w._posture.posture = HOLD_START
@@ -85,7 +111,7 @@ func _run() -> void:
 	# Unlatched: the generic rule, and the bar drains.
 	_unlatch()
 	await physics_frame
-	var loose := _pay(w, "runner", reference, false)
+	var loose := _pay(w, "runner", reference, false, rivet)
 	t.check("unlatched: the reference bolt keeps the generic rule (under 0.2)", loose < 0.2, "pay %.3f" % loose)
 	w._posture.posture = HOLD_START
 	w._posture.idle = 0.0
@@ -107,7 +133,7 @@ func _run() -> void:
 	_latch(w)
 	await physics_frame
 	var heavy_heft: float = game.run.heft()
-	var heavy_pay := _pay(w, "runner", reference, false)
+	var heavy_pay := _pay(w, "runner", reference, false, rivet)
 	print("[report] heft %.2f: the reference bolt pays %.3f" % [heavy_heft, heavy_pay])
 	t.check("latched, heavier: the ball is past the reference heft", heavy_heft > Run.HEFT_CLASS_AT[REFERENCE] + 0.1,
 		"heft %.2f" % heavy_heft)
@@ -130,12 +156,23 @@ func _reference_damage() -> float:
 
 
 # What one bolt of `damage` pays the bar now, without changing it.
-func _pay(w, kind: String, damage: float, charging: bool) -> float:
+# The bolt is judged as `pilot`'s: the run's class is swapped for the judge only.
+func _pay(w, kind: String, damage: float, charging: bool, pilot) -> float:
 	var was: bool = w._charging
+	var was_pilot = game.run.class_def
 	w._charging = charging
+	game.run.class_def = pilot
 	var result: Dictionary = w.judge_hit(kind, damage, false, 0, "")
+	game.run.class_def = was_pilot
 	w._charging = was
 	return float(result.get("gain", 0.0))
+
+
+func _def(id: String):
+	for def in ClassDef.all():
+		if def.id == id:
+			return def
+	return null
 
 
 func _latch(w) -> void:

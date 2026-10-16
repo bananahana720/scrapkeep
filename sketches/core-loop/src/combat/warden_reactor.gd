@@ -83,11 +83,12 @@ class DamPosture extends "res://src/combat/boss_posture.gd":
 			stagger_left = 0.0
 			shatter_frame = frame
 
-# The mounted flume's line fight (card FLUME-POSTURE, ruling FL1; reactor.md:80). Hung 12 m over the
-# drum, the relic is out of ram reach, so the bolts a latched ball fires are the fight. A line bolt pays
-# the stage's other_base (other_base_charging while the relic charges) times its damage over
-# line_reference_damage(), the mean of the six pilots' base weapon damage (17.83), so posture per second
-# follows a weapon's damage output rather than its fire rate. Plating does not enter: the generic rule's
+# The mounted flume's line fight (card FLUME-POSTURE, rulings FL1 to FL3; reactor.md:80). Hung 12 m over
+# the drum, the relic is out of ram reach, so the bolts a latched ball fires are the fight. A line bolt
+# pays the stage's other_base (other_base_charging while the relic charges) times its damage over the
+# pilot's base weapon damage per second, times LINE_REFERENCE_WEAPON's over line_reference_damage(). So at the
+# reference heft every pilot's base kit fills the bar at the same posture per second (Rivet's under FL1,
+# 7.07), and a part that raises damage or fire rate still raises it. Plating does not enter: the generic rule's
 # punch-over-plating paid a 7 to 10 punch bolt about 0.06 against plating 110, and the bar drained
 # between pulses (register row 747: never broken in 600 s). The pay is also scaled by the ball's heft
 # over LINE_REFERENCE_HEFT to the stage's own posture curve, as a ram's heft-scaled punch is: with no ram
@@ -111,6 +112,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 static var _line_reference := -1.0
 # The second heft class's floor: a park skipper reaches stage 2 at heft 1.1 to 1.4.
 const LINE_REFERENCE_HEFT := 1.5
+# The pilot whose FL1 posture per second FL3 keeps: Rivet's rapid_laser, 7 x 12 = 84 damage per second.
+const LINE_REFERENCE_WEAPON := "rapid_laser"
 
 var gates_opened := 0
 var rides := 0
@@ -404,6 +407,12 @@ static func line_reference_damage() -> float:
 	return _line_reference
 
 
+# A weapon's base damage per second, from its Weapons.BASE row.
+static func base_dps(weapon: String) -> float:
+	var row: Dictionary = Weapons.BASE[weapon]
+	return float(row["damage"]) * float(row["rate"])
+
+
 # Whether the ball's line is bitten into this Warden.
 func _line_on(warden) -> bool:
 	var target = warden.target
@@ -418,6 +427,12 @@ func judge_line_bolt(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 	if target != null and target.has_method("heft"):
 		heft = sheet_heft(warden, target.heft())
 	var share := pow(heft / LINE_REFERENCE_HEFT, posture.curve)
-	result["gain"] = pay * float(hit.get("punch", 0.0)) / line_reference_damage() * share
+	var reference_dps := base_dps(LINE_REFERENCE_WEAPON)
+	var fleet = warden.get("fleet")
+	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
+	var def = run.class_def if run != null else null
+	# Without a pilot the bolt is paid as the reference pilot's.
+	var pilot_dps := base_dps(def.weapon_id) if def != null and Weapons.BASE.has(def.weapon_id) else reference_dps
+	result["gain"] = pay * float(hit.get("punch", 0.0)) / pilot_dps * reference_dps / line_reference_damage() * share
 	result["glance"] = false
 	result["full"] = true

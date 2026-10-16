@@ -27,8 +27,12 @@ const WALL_S := 1100.0
 # ratio 2.06, campers never broke. Kest's sticky charge lands too little damage per second to break it
 # small inside the CAP. Earlier exponents on the same runs: 1.0 gave Sable small 109.9 / grown 65.4 and
 # Rivet 78.6 / 41.2; 1.25 gave medians 69.8 / 43.4, ratio 1.61.
-const EXPECT_SMALL_S := 75.9
-const EXPECT_GROWN_S := 36.8
+# 2026-10-16 (FLUME-POSTURE fix round, ruling FL3): re-pinned after the pay was normalized by the pilot's
+# base weapon damage per second (every base kit fills the bar at Rivet's 7.07 per second at heft 1.5):
+# small [64.85 Sable, 62.41 Rivet, 86.43 Kest] median 64.9, grown [26.27, 27.37, 45.94] median 27.4,
+# ratio 2.37, campers never broke. Rivet's runs are unchanged from the first pin, as FL3 intends.
+const EXPECT_SMALL_S := 64.9
+const EXPECT_GROWN_S := 27.4
 const TOLERANCE := 0.10
 
 
