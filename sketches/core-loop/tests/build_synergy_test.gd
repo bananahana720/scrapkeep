@@ -168,7 +168,9 @@ func _check_alpha_parts() -> void:
 	for part_id in AlphaDefs.PARTS:
 		distinct[part_id] = true
 	# 2026-10-11 (alpha wave 13 SG5): load_dividend; was 18 parts and 18 distinct ids.
-	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 19 and distinct.size() == 19 and added.size() == 6,
+	# 2026-10-15 (wave 14 SQ19b): 45 parts (kit commons, four shelf parts, Tally's winch_pawl, the
+	# seventh part with a pitch); was 19 parts, 19 distinct ids and 6 with a pitch.
+	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 45 and distinct.size() == 45 and added.size() == 7,
 		"%d parts by verb %s, %d with a pitch %s; problems %s" % [AlphaDefs.PARTS.size(), families, added.size(), added, bad])
 
 

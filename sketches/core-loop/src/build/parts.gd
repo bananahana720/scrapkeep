@@ -38,7 +38,7 @@ const CATALOGUE := {
 	"loose_trigger": {"touches": "fire", "name": "Loose Trigger", "verb": "Fire faster", "text": "+10% fire rate",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["speed"],
 		"mods": {"weapon_rate": 1.1}},
-	"long_barrel": {"name": "Long Barrel", "verb": "Shoot farther", "text": "+12% weapon range",
+	"long_barrel": {"touches": "fire", "name": "Long Barrel", "verb": "Shoot farther", "text": "+12% weapon range",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["anchor"],
 		"mods": {"weapon_range": 1.12}},
 	"long_spool": {"name": "Long Spool", "verb": "Grapple farther", "text": "+30% grapple range",
@@ -56,7 +56,7 @@ const CATALOGUE := {
 	"rivet_plating": {"touches": "roll", "name": "Rivet Plating", "verb": "Bolt on armour", "text": "+15 max health",
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"max_hp_bonus": 15.0},
-	"magnet_spool": {"name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
+	"magnet_spool": {"touches": "roll", "name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
 		"icon": "utility", "rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"magnet": 1.5},
 	# W13 SR9: a copy tightens the Hold the Relay ring and speeds its charge. The numbers
@@ -88,7 +88,14 @@ const CATALOGUE := {
 		"text": "boost recharges 12% faster", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["speed"],
 		"cooldown_scale": 0.88},
-	"spring_shims": {"name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
+	# 2026-10-15 (wave 14 SQ19b, BIBLE.md Mobility row): Tally's own winch. A trial with reel_speed
+	# at 1.25 while held took Tally's stage-2 Brindle fight from 340 s to 80 s. A class part,
+	# like Vent Baffle, because a faster haul changes how fast the ball moves.
+	"winch_pawl": {"name": "Winch Pawl", "verb": "Reel in faster", "pitch": "Winch hauls quicker", "touches": "harpoon",
+		"text": "+25% winch top speed", "icon": "mobility",
+		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["anchor"],
+		"mods": {"reel_speed": 1.25}},
+	"spring_shims":{"name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
 		"text": "+10% jump speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "pylon_engineer", "tags": ["spiral"],
 		"mods": {"jump_speed": 1.1}},
@@ -99,7 +106,7 @@ const CATALOGUE := {
 		"effect": {"do": "pin_bonus", "bonus": 0.25, "window": 1.5}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
-	"slag_rounds": {"name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
+	"slag_rounds": {"touches": "fire", "name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 10.0,
 		"mods": {"weapon_damage": 1.25}},
 	"double_feed": {"touches": "fire", "name": "Double Feed", "verb": "Feed two rounds a trigger", "text": "+3 punch, +25% fire rate",
@@ -117,7 +124,7 @@ const CATALOGUE := {
 	"spiral_wave": {"touches": "fire", "name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["spiral"],
 		"patterns": {"spiral_wave": 1}},
-	"chain_arc": {"name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
+	"chain_arc": {"touches": "fire", "name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["chain", "arc"],
 		"patterns": {"chain_arc": 1}},
 	"frost_vane": {"name": "Frost Vane", "verb": "Dash trails frost", "text": "air dash freezes water into road",
@@ -345,6 +352,17 @@ static func _pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
 	return allowed[-1]
 
 static var _rows := {}
+# 2026-10-15 (wave 14 SQ19b): the Bindings verb each item-table row on the alpha list touches.
+# Every alpha part names one (build_synergy_test); items.gd rows carry none. Each verb keeps
+# the row's offer bucket (bucket_of): fire only on weapon rows, haul and special only on rows
+# already in skill, so the full catalogue's kits do not move.
+const ITEM_TOUCHES := {
+	"cap_relay": "special", "sprint_cell": "boost", "beacon_lamp": "roll", "echo_locator": "roll",
+	"cache_key": "roll", "fast_hands": "roll", "re_rack": "jump", "grapple_coil": "harpoon", "glide_vane": "jump",
+	"static_burr": "fire", "frost_barb": "fire", "pin_setter": "fire", "hairline_fracture": "fire",
+	"impact_driver": "fire", "barrage_spring": "fire", "overpressure": "fire",
+	"brace_frame": "jump", "deflect_plate": "roll", "ballast_drum": "roll", "scrap_armor": "roll", "rivet_seam": "roll",
+}
 # Seams other modules offer ("spawner.extend_cloak"). A row whose needs is not here is
 # never offered; build fills this at setup from what the live modules answer.
 static var seams := {}
@@ -358,6 +376,8 @@ static func rows() -> Dictionary:
 			_rows[key] = _settled(CATALOGUE[key])
 		for key in Items.TABLE:
 			_rows[key] = _settled(ItemGen.finish(key, Items.TABLE[key]))
+			if ITEM_TOUCHES.has(key):
+				_rows[key]["touches"] = ITEM_TOUCHES[key]
 		for key in Items.CELLS:
 			_rows[key] = _settled(ItemGen.finish(key, Items.CELLS[key]))
 	return _rows

@@ -23,14 +23,20 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 #   - no offer is another class's part;
 #   - every pilot's upgrade tree reaches a depth-4 endpoint in each of its four slots by the last
 #     milestone with both bots.
-# On the alpha list (the 19 parts the default table offers) the same draws run; movement, the
-# repeat cap, the neutral fallback and class parts are checked, and share, overlap and pairs are
-# printed as measured. Overlap there cannot pass by arithmetic: Kest, Tarn and Cannon have the
-# same 10-part common pool (no class part on the list), and the pattern guarantee adds Chain Arc,
-# so each one's top-10 holds at least 9 of the same 11 parts and any two overlap at least 0.90.
-# Coordinator ruling W7 (2026-10-15): the alpha list holds class rows only for Sable and Rivet, a
-# content gap owned by SQ19b (alpha kit rows); its printed share, overlap and pairs are SQ19b's
-# baseline.
+# On the alpha list (AlphaDefs.PARTS, the parts the default table offers) the same draws run.
+# 2026-10-15 (wave 14 SQ19b): the list grew from 19 to 45 parts so every kit has commons on it,
+# and the alpha checks are asserted: the weighted share inside 60 to 80% for every pilot and bot,
+# movement at most 15%, the repeat cap, the neutral fallback, no other class's part, and top-10
+# overlap at most ALPHA_OVERLAP_MAX for any two pilots. Tally's movement share is printed against
+# Parts.MOVEMENT_SHARE (12%), and Tally's Winch Pawl must show in Tally's offers and no one else's.
+# At 19 parts the share ran 0.12 to 0.69 and any two top-10s overlapped 0.70 to 1.00.
+# The alpha pairs are asserted at ALPHA_MIN_PAIRS distinct, not MIN_DISTINCT_PAIRS: the fifth
+# pair is Rivet's movement + skill, and on this list Rivet's weapon share stays above its movement
+# share. Movement is held to Parts.MOVEMENT_SHARE of a slot, about 0.10 to 0.11 of Rivet's offers,
+# and the stage-2 pattern guarantee alone puts about 0.09 in weapon (the greedy bot never picks an
+# off-kit pattern, so every stage-2 gate gets one). Measured at SQ19b: weapon 0.113, movement
+# 0.106. The full catalogue reaches it because its skill shelf parts lean Rivet's spare slots
+# away from weapon and defence; on the alpha list the margin is under one point either way.
 # PAIRS (2026-10-15, SQ19, coordinator ruling W8): every two-slot gate draw holds a part that hits
 # harder (build_catalogue_test "gate pairs hit harder"), and no common part that hits harder sits
 # in the defence bucket, so in every pilot's offers weapon + skill + movement is at least 50%. A
@@ -56,6 +62,10 @@ const TOP := 10
 const MIN_DISTINCT_PAIRS := 5
 const MAX_PILOTS_PER_PAIR := 2
 const UNREACHABLE_PAIR := ["defence", "movement"]
+# 2026-10-15 SQ19b: the alpha list's own bars (see the header).
+const ALPHA_OVERLAP_MAX := 0.40
+const ALPHA_MIN_PAIRS := 4
+const TALLY_PART := "winch_pawl"
 
 var _t := preload("res://tests/support/t.gd").new("offer_weights_test")
 
@@ -88,6 +98,7 @@ func _initialize() -> void:
 	_t.check("the alpha table lists its parts", Parts.listed_only(), "")
 	var alpha := _measure("alpha")
 	_judge("alpha", alpha, false)
+	_tally_part(alpha)
 	_fallback("alpha")
 	Synergies.table = null
 	_trees()
@@ -204,10 +215,7 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 			_t.check("%s %s %s draws" % [label, pilot, bot], s["draws"] == RUNS * STAGES * GATES_PER_STAGE and s["slots"] > s["draws"], "%d draws, %d slots" % [s["draws"], s["slots"]])
 			var share := _share(s, "kit")
 			var in_band: bool = share >= SHARE_BAND[0] and share <= SHARE_BAND[1]
-			if strict:
-				_t.check("%s %s %s weighted share inside 60 to 80%%" % [label, pilot, bot], in_band, "%.3f" % share)
-			else:
-				print("[%s %s %s weighted share] %.3f (measured; %s the band)" % [label, pilot, bot, share, "inside" if in_band else "outside"])
+			_t.check("%s %s %s weighted share inside 60 to 80%%" % [label, pilot, bot], in_band, "%.3f" % share)
 			_t.check("%s %s %s movement at most 15%%" % [label, pilot, bot], _bucket_share(s, "movement") <= MOVEMENT_MAX, "%.3f" % _bucket_share(s, "movement"))
 			_t.check("%s %s %s no neutral part over its repeat cap" % [label, pilot, bot], s["neutral_max"] <= Parts.NEUTRAL_REPEAT_CAP,
 				"max %d a stage, cap %d" % [s["neutral_max"], Parts.NEUTRAL_REPEAT_CAP])
@@ -226,7 +234,8 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 			if strict:
 				_t.check("%s top-%d overlap %s and %s under 50%%" % [label, TOP, PILOTS[i], PILOTS[j]], overlap < OVERLAP_MAX, detail)
 			else:
-				print("[%s top-%d overlap %s and %s] %s (measured)" % [label, TOP, PILOTS[i], PILOTS[j], detail])
+				_t.check("%s top-%d overlap %s and %s at most %.2f" % [label, TOP, PILOTS[i], PILOTS[j], ALPHA_OVERLAP_MAX],
+					overlap <= ALPHA_OVERLAP_MAX + 0.0001, detail)
 	var measured := {}
 	for pilot in PILOTS:
 		measured[pilot] = pairs[pilot][0]
@@ -251,7 +260,26 @@ func _pair_spread(label: String, pairs: Dictionary, strict: bool) -> void:
 		_t.check("%s pairs hold at least %d distinct" % [label, MIN_DISTINCT_PAIRS], holders.size() >= MIN_DISTINCT_PAIRS, detail)
 		_t.eq("%s no pair held by more than %d pilots" % [label, MAX_PILOTS_PER_PAIR], crowded, [])
 	else:
+		_t.check("%s pairs hold at least %d distinct (target %d, see header)" % [label, ALPHA_MIN_PAIRS, MIN_DISTINCT_PAIRS],
+			holders.size() >= ALPHA_MIN_PAIRS, detail)
 		print("[%s dominant pairs] %s, crowded %s (measured)" % [label, detail, crowded])
+
+
+# Tally's Winch Pawl (SQ19b, BIBLE.md Mobility row): a Tally class part, so it shows in Tally's
+# alpha offers and in no other pilot's. Tally's movement share is printed against the 12% target.
+func _tally_part(stats: Dictionary) -> void:
+	_t.eq("%s is a Tally class part on the alpha list" % TALLY_PART,
+		[TALLY_PART in AlphaDefs.PARTS, String(Parts.row(TALLY_PART).get("class_id", "")), Parts.bucket_of(TALLY_PART)], [true, "tally", "movement"])
+	for pilot in PILOTS:
+		var seen := 0
+		for bot in stats[pilot]:
+			seen += int(stats[pilot][bot]["counts"].get(TALLY_PART, 0))
+		if pilot == "tally":
+			_t.check("alpha tally is offered %s" % TALLY_PART, seen > 0, "%d offers" % seen)
+		else:
+			_t.check("alpha %s is never offered %s" % [pilot, TALLY_PART], seen == 0, "%d offers" % seen)
+	var m := _merged(stats, "tally")
+	print("[alpha tally movement share] %.3f against the %.2f target (cap %.2f)" % [_bucket_share(m, "movement"), Parts.MOVEMENT_SHARE, MOVEMENT_MAX])
 
 
 func _declared(pilot: String) -> Array:
