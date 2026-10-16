@@ -29,6 +29,16 @@ const MAX_PER_LINE := 14
 # swirl. The homing term is unchanged, so the pull takes as long as it did.
 const ARC_SIDE := 0.6
 const ARC_LIFT := 0.3
+# Readable cap (SCRAP-LEAK): kills and drops that nobody collects must not grow the scene
+# without bound (SR2's soak reached 21,000 nodes in 10 minutes). Past MAX_PIECES loose
+# pieces or MAX_GEARS loose gears, the oldest uncaught one folds its value into the piece
+# just dropped, so the newest scrap stays where the fight is and no value is lost. The
+# stage layout is never folded (it is under the cap) and nothing here draws rng.
+const MAX_PIECES := 400
+const MAX_GEARS := 200
+# The live caps; a test's planted control raises them to prove the cap is what holds the count.
+var max_pieces := MAX_PIECES
+var max_gears := MAX_GEARS
 
 var magnet_scale := 1.0
 # The run's heft; build sets it every tick.
@@ -64,6 +74,8 @@ var cog_values: Array[int] = []
 var _value := {}
 var _age := {}
 var _cogs := {}
+# Units a folded piece carries beyond its own one (plain pieces only; gears fold into _cogs).
+var _units := {}
 var _cog_material: StandardMaterial3D
 var _cog_mesh: CylinderMesh
 var _cluster_material: Material
@@ -194,6 +206,7 @@ func clear() -> void:
 	_value.clear()
 	_age.clear()
 	_cogs.clear()
+	_units.clear()
 
 
 # Scrap pieces and recovery clusters on the field; gears are counted apart.
@@ -218,6 +231,7 @@ func drop_cogs(at: Vector3, amount: int) -> void:
 	for i in amount:
 		var angle := TAU * i / float(maxi(1, amount))
 		_add_cog(at + Vector3(cos(angle) * COG_RING, 1.2, sin(angle) * COG_RING), 1)
+	_fold_gears()
 
 
 # A Warden's cogs along the same line as its scrap, offset to one side.
@@ -227,6 +241,7 @@ func drop_cogs_line(at: Vector3, heading: Vector3, length: float, amount: int) -
 	for i in amount:
 		var t := (i + 0.5) / float(maxi(1, amount))
 		_add_cog(at + flat * length * t + side + Vector3.UP * 1.2, 1)
+	_fold_gears()
 
 
 # Live recovery clusters, and the scrap they hold.
@@ -266,6 +281,7 @@ func drop_recovery(terrain, from: Vector3, heading: Vector3, amount: int, count:
 func drop(at: Vector3, amount: int, rng: RandomNumberGenerator) -> void:
 	for i in amount:
 		_add(at + Vector3(rng.randf_range(-2.0, 2.0), 1.2, rng.randf_range(-2.0, 2.0)))
+	_fold_pieces()
 
 
 # The heft part of the reach, monotonic in heft and capped at 18 m.
@@ -288,6 +304,7 @@ func drop_line(at: Vector3, heading: Vector3, length: float, amount: int, rng: R
 	for i in amount:
 		var t := (i + 0.5) / float(maxi(1, amount))
 		_add(at + flat * length * t + Vector3(rng.randf_range(-1.5, 1.5), 1.2, rng.randf_range(-1.5, 1.5)))
+	_fold_pieces()
 
 
 # Returns where each piece was taken this tick; the run state owns the total.
@@ -320,7 +337,8 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 			elif _cogs.has(item):
 				cog_values.append(int(_cogs[item]))
 			else:
-				taken.append(item.global_position)
+				for _unit in 1 + int(_units.get(item, 0)):
+					taken.append(item.global_position)
 			_forget(item)
 			_items.remove_at(i)
 			_caught.erase(item)
@@ -353,6 +371,60 @@ func _forget(item: MeshInstance3D) -> void:
 	_value.erase(item)
 	_age.erase(item)
 	_cogs.erase(item)
+	_units.erase(item)
+
+
+# Loose scrap pieces: no recovery cluster, no gear.
+func _piece_total() -> int:
+	return _items.size() - _cogs.size() - _value.size()
+
+
+# Folds the oldest uncaught loose pieces into the newest until the field is at the cap.
+func _fold_pieces() -> void:
+	var over := _piece_total() - max_pieces
+	var newest: MeshInstance3D = null
+	var i := _items.size() - 1
+	while i >= 0 and newest == null:
+		if not _cogs.has(_items[i]) and not _value.has(_items[i]):
+			newest = _items[i]
+		i -= 1
+	var j := 0
+	while over > 0 and newest != null and j < _items.size():
+		var item := _items[j]
+		if item == newest:
+			break
+		if _cogs.has(item) or _value.has(item) or _caught.has(item):
+			j += 1
+			continue
+		_units[newest] = int(_units.get(newest, 0)) + 1 + int(_units.get(item, 0))
+		_forget(item)
+		_items.remove_at(j)
+		item.queue_free()
+		over -= 1
+
+
+# The same for gears: the folded gear's cogs add to the newest gear's value.
+func _fold_gears() -> void:
+	var over := _cogs.size() - max_gears
+	var newest: MeshInstance3D = null
+	var i := _items.size() - 1
+	while i >= 0 and newest == null:
+		if _cogs.has(_items[i]):
+			newest = _items[i]
+		i -= 1
+	var j := 0
+	while over > 0 and newest != null and j < _items.size():
+		var item := _items[j]
+		if item == newest:
+			break
+		if not _cogs.has(item) or _caught.has(item):
+			j += 1
+			continue
+		_cogs[newest] = int(_cogs[newest]) + int(_cogs[item])
+		_forget(item)
+		_items.remove_at(j)
+		item.queue_free()
+		over -= 1
 
 
 func _add_cog(at: Vector3, value: int) -> void:
