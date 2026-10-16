@@ -29,7 +29,6 @@ import {
   winProofFailures,
   winProofLine,
   WIN_PROOFS,
-  PARK_WIN_PROOF,
   proofLibraries,
 } from "./sketch-export.mjs";
 
@@ -298,13 +297,14 @@ test("winProofLine formats a won row", () => {
   );
 });
 
-test("WIN_PROOFS plays Rivet's seed 1 first, then the cannon and Tally pinned by --pilot", () => {
+test("WIN_PROOFS plays Rivet's seed 1 first, then the cannon, Tally and the park pilot pinned by --pilot", () => {
   assert.deepEqual(
     WIN_PROOFS.map((proof) => [proof.label, proof.seed, proof.pilot ?? null]),
     [
       ["win proof", 1, null],
       ["win proof (cannon)", 11, "remembered_cannon"],
       ["win proof (tally)", 1, "tally"],
+      ["win proof (park)", 1, "pylon_engineer"],
     ],
   );
   assert.equal(new Set(WIN_PROOFS.map((proof) => proof.dir)).size, WIN_PROOFS.length);
@@ -455,14 +455,17 @@ test("a won row below stage 6 fails the win proof", () => {
   assert.equal(winProofFailures("", 0, row("won", 5)).length, 1);
 });
 
-test("--park-win-proof is read, is absent by default and the park proof pins the park table", () => {
-  assert.equal(parseArgs(["--win-proof"]).parkWinProof, undefined);
-  assert.equal(parseArgs(["--win-proof", "--park-win-proof"]).parkWinProof, true);
-  assert.equal(PARK_WIN_PROOF.table, "park");
-  assert.equal(WIN_PROOFS.some((proof) => proof.table), false);
-  assert.ok(!WIN_PROOFS.some((proof) => proof.dir === PARK_WIN_PROOF.dir));
+test("the park win proof is mandatory, pins pylon_engineer seed 1 and the park table, and has its own folder", () => {
+  const parkProofs = WIN_PROOFS.filter((proof) => proof.table === "park");
+  assert.equal(parkProofs.length, 1);
+  const [park] = parkProofs;
+  assert.equal(park.pilot, "pylon_engineer");
+  assert.equal(park.seed, 1);
+  assert.equal(WIN_PROOFS.filter((proof) => proof.dir === park.dir).length, 1);
+  assert.equal(WIN_PROOFS.filter((proof) => proof.table).length, 1);
+  assert.throws(() => parseArgs(["--win-proof", "--park-win-proof"]), /unknown argument/);
   const won = { outcome: "won", stage_reached: 6, ticks: 1, wall_seconds: 2 };
-  assert.match(winProofLine(won, "/x/proof.pck", PARK_WIN_PROOF), /pilot runner_gunner table park, pack/);
+  assert.match(winProofLine(won, "/x/proof.pck", park), /pilot pylon_engineer table park, pack/);
 });
 
 test("buildStamp records the boss smoke lines before the win proof", () => {
