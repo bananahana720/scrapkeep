@@ -31,6 +31,14 @@ const SLAM := "slam"
 const BOW_REACH := 1.0
 # How long a crushed enemy is ignored by the ball's collider while it dies.
 const CRUSH_PASS := 0.3
+# Enemies' physics layer (enemy.gd: layer 3), and how a ball whose centre is left inside one
+# is walked out beside it.
+const ENEMY_LAYER_MASK := 1 << 2
+const LEAVE_STEP := 0.25
+const LEAVE_REACH := 16.0
+# A ball is inside a body when the body reaches this share of its radius in from its shell:
+# contacts the solver resolves sink a few centimetres, not half the ball.
+const LEAVE_DEPTH := 0.5
 # A contact is a stomp when the ball was coming down faster than this onto an enemy
 # below its centre.
 const STOMP_SPEED := 3.0
@@ -355,6 +363,7 @@ func set_velocity_now(velocity: Vector3, cause := "launched") -> void:
 # pivot until the paid contact publishes harpoon_smashed.
 var _bank_pending := {}
 var bank_last := {}
+var _deep: PhysicsShapeQueryParameters3D
 var _bank_logging_deferred := false
 
 
@@ -523,6 +532,7 @@ func grapple_range() -> float:
 
 
 func _physics_process(delta: float) -> void:
+	_leave_bodies()
 	source.poll(intent)
 	_route_slots(delta)
 	abilities.movement_key = _burst_key()
@@ -547,6 +557,64 @@ func _physics_process(delta: float) -> void:
 	_recheck_bow()
 	_tick_face_tags(delta)
 	_mark_slots()
+
+
+# A pass-through (a crush, Rivet's drive through a staggered Warden) can end with the ball's
+# centre inside the body. The solver then holds the ball there or pushes it through the floor,
+# and nothing the player presses moves it (BITE-PIN: a Warden held the ball for 130 s). An
+# enemy body the ball touches and is half sunk in is set beside, on the side nearest the ball,
+# keeping its velocity. A body still passing the ball reports no contact, so a pass-through
+# runs on. Brindle's hull keeps its own exception until the ball is clear (boss.gd
+# _step_ghost); this is that rule for every body.
+func _leave_bodies() -> void:
+	if _frozen or not _rigid.is_inside_tree():
+		return
+	var touching: Array = []
+	for body in _rigid.get_colliding_bodies():
+		if body is PhysicsBody3D and body.is_in_group("enemy"):
+			touching.append(body)
+	if touching.is_empty():
+		return
+	var at := ball_position()
+	if _deep == null:
+		_deep = PhysicsShapeQueryParameters3D.new()
+		var core := SphereShape3D.new()
+		core.radius = Tuning.RADIUS * LEAVE_DEPTH
+		_deep.shape = core
+		_deep.collision_mask = ENEMY_LAYER_MASK
+	_deep.transform = Transform3D(Basis.IDENTITY, at)
+	var space: PhysicsDirectSpaceState3D = _rigid.get_world_3d().direct_space_state
+	for hit in space.intersect_shape(_deep, 4):
+		if touching.has(hit["collider"]):
+			_set_beside(hit["collider"], at, space)
+			return
+
+
+func _set_beside(body: PhysicsBody3D, at: Vector3, space: PhysicsDirectSpaceState3D) -> void:
+	var centre: Vector3 = body.global_position
+	var out := Vector3(at.x - centre.x, 0.0, at.z - centre.z)
+	if out.length() < 0.05:
+		var v: Vector3 = _rigid.linear_velocity
+		out = Vector3(-v.x, 0.0, -v.z) if Vector2(v.x, v.z).length() > 0.1 else drive_basis.z
+		out.y = 0.0
+	out = out.normalized()
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sphere
+	query.collision_mask = body.collision_layer
+	var reach := Vector2(at.x - centre.x, at.z - centre.z).length()
+	while reach <= LEAVE_REACH:
+		var spot := Vector3(centre.x + out.x * reach, at.y, centre.z + out.z * reach)
+		query.transform = Transform3D(Basis.IDENTITY, spot)
+		var clear := true
+		for hit in space.intersect_shape(query, 8):
+			if hit["collider"] == body:
+				clear = false
+		if clear:
+			_rigid.teleport(spot, _rigid.linear_velocity)
+			return
+		reach += LEAVE_STEP
 
 
 func _clear_speed_bank() -> void:

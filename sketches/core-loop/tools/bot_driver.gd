@@ -9,6 +9,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -174,6 +175,11 @@ const PREDICT := 0.35
 const FIELD_RADIUS := 20.0
 const ESCAPE_DIRECTIONS := 16
 const ESCAPE_REACH := [5.0, 9.0, 13.0, 18.0]
+# A committed boss ring the ball is clear of is not rolled into: the steer stops this far short
+# of it, read in RING_STEP samples up to RING_LOOK along the way.
+const RING_HOLD := 3.0
+const RING_STEP := 1.0
+const RING_LOOK := 40.0
 # The caps loop: slam from this close to the Warden's centre.
 const CAP_JUMP := 4.6
 # Beside the body (Warden radius 2.8 + ball 1.0) and the approach point on a cap's line.
@@ -2355,6 +2361,8 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 		_plant_state = "idle"
 	_ultimate_hands(fight)
 	_line_hands()
+	if evade:
+		steer = _short_of_rings(steer)
 	var threats := _threats() if evade else []
 	if not threats.is_empty():
 		for h in threats:
@@ -2378,6 +2386,34 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 				steer = planted
 	_specials(fight, false)
 	_drive(steer, aim, delta)
+
+
+# The steer held on the ball's side of a committed boss ring (Brindle's slag, painted or
+# burning) it would otherwise roll across: a player waits out a painted ring. Escape only
+# fires once the ball is in a ring or about to be, too late at ram speed (unit BITE-PIN).
+func _short_of_rings(steer: Vector3) -> Vector3:
+	var boss = _boss() if game.flow.state_name() == "boss" else null
+	if boss == null or not boss.has_method("active_hazards"):
+		return steer
+	var ball: Vector3 = game.player.ball_position()
+	var rings: Array = []
+	for h in boss.active_hazards():
+		if is_instance_valid(h) and h.shape == Hazard.Shape.ANNULUS and not h.contains(ball):
+			rings.append(h)
+	var way := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z)
+	var length := minf(way.length(), RING_LOOK)
+	if rings.is_empty() or length < RING_STEP:
+		return steer
+	var dir := way.normalized()
+	var d := RING_STEP
+	while d <= length:
+		var at := _ground_point(ball.x + dir.x * d, ball.z + dir.z * d)
+		for h in rings:
+			if h.contains(at):
+				var hold := maxf(0.0, d - RING_HOLD)
+				return _ground_point(ball.x + dir.x * hold, ball.z + dir.z * hold)
+		d += RING_STEP
+	return steer
 
 
 # Every committed telegraph the ball is in, or will be within PREDICT, among those seen
