@@ -9,11 +9,12 @@ var t := T.new("pipe_vault_wall_test")
 
 # PARK-PIPEVAULT. A stage-5 floor run (SQ9 round 5) crossed the pipe vault's corner at 20 m/s and
 # the traversal detector counted a dead stop on a terrain block's vertical face. The wall now has
-# no friction and no bounce of its own: a glancing hit slides along it, a head-on hit stays a wall.
+# no friction and a small bounce: glancing (60) and 22 degree hits keep moving, a head-on hit stays a wall.
 # Each case runs on the real pipe_vault site (its terrain block and its cache's cracked face),
 # rolled 20 m/s at the face, scored with RunLog.Traversal.
 const SPEED := 20.0
 const GLANCING := 60.0
+const STRIKE := 22.0 # the SQ9 round-5 trace: 22 degrees off the face normal, red at the base
 const HEAD_ON := 10.0
 const WINDOW_S := 0.15
 
@@ -67,9 +68,12 @@ func _run() -> void:
 		var glance := await _strike(case[1], case[2], GLANCING)
 		t.check("%s glancing (%d degrees): kept %.0f%% of its planar speed, %d dead stops, %.1f m/s rebound" % [case[0], GLANCING, glance.kept * 100.0, glance.dead_stops, glance.rebound],
 			glance.reached and glance.kept >= 0.8 and glance.dead_stops == 0)
+		var strike := await _strike(case[1], case[2], STRIKE)
+		t.check("%s strike (%d degrees): %d dead stops, kept %.0f%%, %.1f m/s rebound" % [case[0], STRIKE, strike.dead_stops, strike.kept * 100.0, strike.rebound],
+			strike.reached and strike.dead_stops == 0)
 		var head := await _strike(case[1], case[2], HEAD_ON)
 		t.check("%s head-on (%d degrees): rebound %.1f m/s of %.0f, kept %.0f%%" % [case[0], HEAD_ON, head.rebound, SPEED, head.kept * 100.0],
-			head.reached and head.rebound <= 0.35 * SPEED)
+			head.reached and head.rebound <= 0.4 * SPEED)
 	game.free()
 	quit(t.verdict())
 

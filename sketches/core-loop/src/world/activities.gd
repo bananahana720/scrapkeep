@@ -513,13 +513,14 @@ func _build_interior(s: Site) -> void:
 
 # Interior blocks and the cache's walls are plain vertical box faces. On the default wall
 # material the ball's friction (0.9) held a glancing 20 m/s strike to a third of its speed: a dead
-# stop (PARK-PIPEVAULT, stage-5 pipe vault). A frictionless wall with no bounce of its own still
-# stops a head-on hit, but a glancing one slides along it.
+# stop (PARK-PIPEVAULT, stage-5 pipe vault). A frictionless wall slides a glancing hit along it. Its
+# small bounce (0.3, on top of the ball's) lifts a 22 degree strike above the half-speed dead-stop
+# line (bounce 0 left it at 36%) while a head-on hit still rebounds under 40% of its speed.
 func _wall_material() -> PhysicsMaterial:
 	if _wall == null:
 		_wall = PhysicsMaterial.new()
 		_wall.friction = 0.0
-		_wall.bounce = 0.0
+		_wall.bounce = 0.3
 	return _wall
 
 
