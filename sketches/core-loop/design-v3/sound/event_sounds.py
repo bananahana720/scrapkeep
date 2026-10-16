@@ -123,6 +123,24 @@ def run_complete():
     return out
 
 
+def run_failed():
+    """Melodramatic and self-aware: the sax sighs down a chromatic line over Bbmaj7 to A7,
+    the last note droops, then one bright bell answers on D6, a wink that says go again."""
+    out = np.zeros(int(2.8 * SR))
+    line = [("A4", 0.00, 0.36), ("G#4", 0.36, 0.36), ("G4", 0.72, 0.36), ("F#4", 1.08, 0.9)]
+    for note, at, length in line:
+        place(out, sax(note, length, 0.3, bend=0.02), at)
+    t = t_of(0.9)
+    droop = np.sin(2 * np.pi * np.cumsum(hz("F#4") * (1 - 0.06 * np.minimum(t / 0.9, 1) ** 2)) / SR)
+    place(out, 0.12 * droop * np.minimum((0.9 - t) / 0.3, 1).clip(0, 1), 1.08)
+    for note in ("Bb2", "D3", "F3", "A3"):               # Bbmaj7, the tragic flat six
+        place(out, rhodes(note, 1.0, 0.12), 0.0)
+    for note in ("A2", "C#3", "G3", "Bb3"):              # A7b9, left hanging
+        place(out, rhodes(note, 1.4, 0.12), 1.08)
+    place(out, bell("D6", 0.5, ratio=2.0, level=0.25), 2.25)
+    return out
+
+
 def menu_move():
     """A soft woody tick with a D5 Rhodes blip. About 0.08 s."""
     out = np.zeros(int(0.09 * SR))
@@ -142,7 +160,7 @@ def menu_confirm():
 
 
 SOUNDS = {"scrap-pickup": scrap_pickup, "harpoon-hit": harpoon_hit, "run-complete": run_complete,
-          "menu-move": menu_move, "menu-confirm": menu_confirm}
+          "menu-move": menu_move, "menu-confirm": menu_confirm, "run-failed": run_failed}
 
 
 def main():
