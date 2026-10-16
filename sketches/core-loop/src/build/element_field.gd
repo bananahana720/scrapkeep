@@ -14,6 +14,9 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # register_material(), and ctx.terrain.material_at(point) when the world offers it.
 
 signal resolved(result: Dictionary)
+# SG2: a pair of statuses fused on an enemy, at the frame it commits its area (the result
+# carries behaviour, kind, at, radius, seconds, damage and the drawn preview node).
+signal fused(result: Dictionary)
 
 const ICE := Color("c8f0ff")
 const FROST := Color("e9f8ff")
@@ -45,6 +48,14 @@ var _puff_mesh: SphereMesh
 var _shard_material: StandardMaterial3D
 var _puff_material: StandardMaterial3D
 var _flicker := 0.0
+# SG2 statuses and fusions. _statuses: enemy instance id -> {element, until}, at most one each
+# (a second fuses and spends both). _fusions: committed areas waiting to land or still running.
+# _held: enemy instance id -> {enemy, until, resume}, the lock's hold.
+var _clock := 0.0
+var _statuses := {}
+var _fusions: Array[Dictionary] = []
+var _held := {}
+var _preview_mesh: ArrayMesh
 
 
 func setup(ctx_ref) -> void:
@@ -56,6 +67,8 @@ func setup(ctx_ref) -> void:
 	_puff_mesh.radius = 0.45
 	_puff_mesh.height = 0.9
 	_puff_material = Palette.unshaded(Color(FROST.r, FROST.g, FROST.b, 0.7))
+	if ctx != null and ctx.events != null:
+		ctx.events.enemy_struck.connect(_on_enemy_struck)
 
 
 # A provider is func(point: Vector3) -> Dictionary: {"surface_y": float} when the point
@@ -86,6 +99,13 @@ func clear() -> void:
 			if is_instance_valid(fx["node"]):
 				fx["node"].queue_free()
 		list.clear()
+	_statuses.clear()
+	for fusion in _fusions:
+		if is_instance_valid(fusion["preview"]):
+			fusion["preview"].queue_free()
+	_fusions.clear()
+	for id in _held.keys():
+		_release(id)
 
 
 func slab_count() -> int:
@@ -124,6 +144,8 @@ func material_at(point: Vector3, reach := REACH) -> Dictionary:
 # The one entry point: apply an element at a point, resolve the table once, leave the
 # result in the world and return it ({} when nothing happens).
 func apply(element_id: String, at: Vector3, source := "") -> Dictionary:
+	if element_id in Elements.TOUCH_ELEMENTS:
+		_touch_near(element_id, at)
 	var hit := material_at(at)
 	if hit.is_empty():
 		return {}
@@ -324,8 +346,180 @@ func flash_ring(at: Vector3, radius: float, color: Color) -> void:
 	_puffs.append({"node": node, "left": PUFF_SECONDS, "grow": radius})
 
 
+# --- SG2 statuses and fusions ---------------------------------------------------------
+
+func status_of(enemy: Node3D) -> String:
+	var status: Dictionary = _statuses.get(enemy.get_instance_id(), {})
+	return String(status.get("element", "")) if float(status.get("until", -INF)) > _clock else ""
+
+
+func is_held(enemy: Node3D) -> bool:
+	return is_instance_valid(enemy) and _held.has(enemy.get_instance_id())
+
+
+# Fusions committed and not yet finished (their preview still drawn).
+func active_count() -> int:
+	return _fusions.size()
+
+
+func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	if Elements.STATUS_KINDS.has(kind):
+		touch(enemy, Elements.STATUS_KINDS[kind])
+
+
+func _touch_near(element_id: String, at: Vector3) -> void:
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		var p: Vector3 = (enemy as Node3D).global_position
+		if Vector2(p.x - at.x, p.z - at.z).length() <= Elements.TOUCH_RADIUS and absf(p.y - at.y) <= Elements.TOUCH_RADIUS + 1.5:
+			touch(enemy, element_id)
+
+
+# The one status entry: an element reaches an enemy. With no live status it leaves one; with
+# the same element it refreshes; with a different one the pair fuses once and both are spent.
+# Returns the fusion result, or {}.
+func touch(enemy: Node3D, element_id: String) -> Dictionary:
+	if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		return {}
+	var id := enemy.get_instance_id()
+	var held := status_of(enemy)
+	var row := Elements.fuse(held, element_id) if held != "" else {}
+	if row.is_empty():
+		_statuses[id] = {"element": element_id, "until": _clock + Elements.STATUS_SECONDS}
+		return {}
+	_statuses.erase(id)
+	return _commit_fusion(row, Elements.fusion_key(held, element_id), enemy)
+
+
+# Commits the area once, at the enemy where the pair met, and draws it now; step() lands the
+# damage and hold FUSION_LEAD_FRAMES later on that same area.
+func _commit_fusion(row: Dictionary, key: String, enemy: Node3D) -> Dictionary:
+	var at := enemy.global_position
+	var preview := MeshInstance3D.new()
+	preview.name = "FusionPreview"
+	preview.mesh = _preview_ring()
+	preview.material_override = Palette.unshaded(Color(Palette.ARC.r, Palette.ARC.g, Palette.ARC.b, 0.7))
+	add_child(preview)
+	preview.global_position = at + Vector3.UP * 0.1
+	preview.scale = Vector3(row["radius"], 1.0, row["radius"])
+	var result := {
+		"key": key, "behaviour": row["behaviour"], "kind": row["kind"], "at": at,
+		"radius": float(row["radius"]), "seconds": float(row.get("seconds", 0.0)), "damage": float(row["damage"]),
+		"interval": float(row.get("interval", 0.0)), "elite_share": float(row.get("elite_share", 1.0)),
+		"commit_frame": Engine.get_physics_frames(),
+		"land_frame": Engine.get_physics_frames() + Elements.FUSION_LEAD_FRAMES,
+		"preview": preview, "landed": false, "left": 0.0, "beat": 0.0,
+	}
+	_fusions.append(result)
+	fused.emit(result)
+	return result
+
+
+# Every enemy whose position is inside the committed area, the same test for damage and hold.
+func _in_area(fusion: Dictionary) -> Array:
+	var at: Vector3 = fusion["at"]
+	var found := []
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		var p: Vector3 = (enemy as Node3D).global_position
+		if Vector2(p.x - at.x, p.z - at.z).length() <= fusion["radius"] and absf(p.y - at.y) <= fusion["radius"]:
+			found.append(enemy)
+	return found
+
+
+static func _elite(enemy: Node3D) -> bool:
+	return Elements.elite_rules(String(enemy.get("kind")) if "kind" in enemy else "", enemy.has_meta("elite_affix"))
+
+
+func _fusion_strike(enemy: Node3D, damage: float) -> void:
+	if ctx != null and ctx.spawner != null and damage > 0.0:
+		ctx.spawner.strike(enemy, Elements.FUSION_STRIKE, damage, "", "item_proc")
+
+
+func _land(fusion: Dictionary) -> void:
+	fusion["landed"] = true
+	fusion["left"] = fusion["seconds"]
+	flash_ring(fusion["at"], fusion["radius"], Palette.ARC)
+	for enemy in _in_area(fusion):
+		match fusion["behaviour"]:
+			"lock":
+				_fusion_strike(enemy, fusion["damage"])
+				if not _elite(enemy):
+					_hold(enemy, fusion["seconds"])
+			"overload":
+				_fusion_strike(enemy, fusion["damage"])
+	if fusion["behaviour"] == "grind":
+		_grind(fusion)
+
+
+func _grind(fusion: Dictionary) -> void:
+	fusion["beat"] = fusion["interval"]
+	for enemy in _in_area(fusion):
+		_fusion_strike(enemy, fusion["damage"] * (fusion["elite_share"] if _elite(enemy) else 1.0))
+
+
+# The lock: the enemy stops thinking and moving until the hold ends. One that was already
+# still (not processing physics) is left that way on release.
+func _hold(enemy: Node3D, seconds: float) -> void:
+	var id := enemy.get_instance_id()
+	var resume: bool = _held[id]["resume"] if _held.has(id) else enemy.is_physics_processing()
+	_held[id] = {"enemy": enemy, "until": _clock + seconds, "resume": resume}
+	enemy.set_physics_process(false)
+	if enemy.has_method("flash"):
+		enemy.flash()
+
+
+func _release(id: int) -> void:
+	var hold: Dictionary = _held[id]
+	_held.erase(id)
+	if is_instance_valid(hold["enemy"]) and hold["resume"]:
+		hold["enemy"].set_physics_process(true)
+
+
+func _step_fusions(delta: float) -> void:
+	var frame := Engine.get_physics_frames()
+	var i := _fusions.size() - 1
+	while i >= 0:
+		var fusion: Dictionary = _fusions[i]
+		if not fusion["landed"]:
+			if frame >= fusion["land_frame"]:
+				_land(fusion)
+		else:
+			fusion["left"] -= delta
+			if fusion["behaviour"] == "grind" and fusion["left"] > 0.0:
+				fusion["beat"] -= delta
+				if fusion["beat"] <= 0.0:
+					_grind(fusion)
+		if fusion["landed"] and fusion["left"] <= 0.0:
+			if is_instance_valid(fusion["preview"]):
+				fusion["preview"].queue_free()
+			_fusions.remove_at(i)
+		i -= 1
+	for id in _held.keys():
+		if float(_held[id]["until"]) <= _clock or not is_instance_valid(_held[id]["enemy"]):
+			_release(id)
+	for id in _statuses.keys():
+		if float(_statuses[id]["until"]) <= _clock:
+			_statuses.erase(id)
+
+
+# A unit-radius flat ring (outer edge 1.0), scaled to the committed radius.
+func _preview_ring() -> ArrayMesh:
+	if _preview_mesh != null:
+		return _preview_mesh
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in 32:
+		var a := TAU * i / 32.0
+		var b := TAU * (i + 1) / 32.0
+		for p in [Vector2(a, 0.9), Vector2(b, 0.9), Vector2(a, 1.0), Vector2(b, 0.9), Vector2(b, 1.0), Vector2(a, 1.0)]:
+			surface.add_vertex(Vector3(cos(p.x) * p.y, 0.0, sin(p.x) * p.y))
+	_preview_mesh = surface.commit()
+	return _preview_mesh
+
+
 # Physics step: effect windows count down here, and electrified water strikes on its beat.
 func step(delta: float) -> void:
+	_clock += delta
+	_step_fusions(delta)
 	var i := _slabs.size() - 1
 	while i >= 0:
 		_slabs[i]["left"] -= delta
