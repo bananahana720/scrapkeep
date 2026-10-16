@@ -124,9 +124,15 @@ func _negative_cases(map) -> void:
 		if site.id == "enemy_camp":
 			site.pay.named = "not_a_part"
 	_report("unknown camp part fails guard", "camp reward in play" in _errors(map), str(_errors(map)))
+	# 2026-10-16 (wave 14 merge check): the excluded part is the first catalogue row not in play,
+	# not a named one; SQ19b put glide_vane, the old fixture, on the alpha list.
+	var excluded := ""
+	for id in Parts.rows():
+		if not _game.ctx.stages.part_in_play(id):
+			excluded = id
+			break
 	for site in map.activity_sites:
 		if site.id == "enemy_camp":
-			site.pay.named = "glide_vane"
-	_report("excluded camp part fails guard", Parts.rows().has("glide_vane") and not _game.ctx.stages.part_in_play("glide_vane")
-		and "camp reward in play" in _errors(map), str(_errors(map)))
+			site.pay.named = excluded
+	_report("excluded camp part fails guard", excluded != "" and "camp reward in play" in _errors(map), "%s: %s" % [excluded, _errors(map)])
 	map.activity_sites = sites
