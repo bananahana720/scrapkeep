@@ -29,6 +29,7 @@ import {
   winProofFailures,
   winProofLine,
   WIN_PROOFS,
+  PARK_WIN_PROOF,
   proofLibraries,
 } from "./sketch-export.mjs";
 
@@ -448,6 +449,20 @@ test("runBossSmoke builds the crash command only for the boss the control names"
 
 test("parseArgs reads --boss-smoke-only", () => {
   assert.deepEqual(parseArgs(["--boss-smoke-only"]), { stemsFrom: null, winProof: false, bossSmokeOnly: true });
+});
+
+test("a won row below stage 6 fails the win proof", () => {
+  assert.equal(winProofFailures("", 0, row("won", 5)).length, 1);
+});
+
+test("--park-win-proof is read, is absent by default and the park proof pins the park table", () => {
+  assert.equal(parseArgs(["--win-proof"]).parkWinProof, undefined);
+  assert.equal(parseArgs(["--win-proof", "--park-win-proof"]).parkWinProof, true);
+  assert.equal(PARK_WIN_PROOF.table, "park");
+  assert.equal(WIN_PROOFS.some((proof) => proof.table), false);
+  assert.ok(!WIN_PROOFS.some((proof) => proof.dir === PARK_WIN_PROOF.dir));
+  const won = { outcome: "won", stage_reached: 6, ticks: 1, wall_seconds: 2 };
+  assert.match(winProofLine(won, "/x/proof.pck", PARK_WIN_PROOF), /pilot runner_gunner table park, pack/);
 });
 
 test("buildStamp records the boss smoke lines before the win proof", () => {
