@@ -148,8 +148,8 @@ func _rows() -> Array:
 	return rows
 
 
-# The defs from_parts folds, in held order: an Evolved part only while consumed, and no
-# copy past a linear or capped row's stack_cap.
+# The defs from_parts folds, in held order: an Evolved part only while consumed, no copy
+# past a linear or capped row's stack_cap, and a levelled row once at its held level.
 func _counted(held: Array) -> Array:
 	var out: Array = []
 	var copies := {}
@@ -160,7 +160,11 @@ func _counted(held: Array) -> Array:
 		if d.rarity == "evolved" and not Synergies.evolution_of(part_id) in _sheet.consumed:
 			continue
 		copies[part_id] = copies.get(part_id, 0) + 1
-		if d.stack_rule != "hyperbolic" and d.stack_cap >= 1.0 and copies[part_id] > int(d.stack_cap):
+		if not d.levels.is_empty():
+			if copies[part_id] > 1:
+				continue
+			d = Parts.def_at(part_id, Parts.level_of(part_id, held))
+		elif d.stack_rule != "hyperbolic" and d.stack_cap >= 1.0 and copies[part_id] > int(d.stack_cap):
 			continue
 		out.append(d)
 	return out
