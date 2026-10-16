@@ -208,7 +208,7 @@ func _check_schema() -> void:
 	grey["recipe"] = "greybox:flow_line"
 	out = []
 	ParkSchema._park_row(out, "grey", grey, {}, {})
-	_t.check("(f) a tile fit on a greybox row is refused", out.size() == 1 and str(out[0]).contains("fit"), str(out))
+	_t.check("(f) a tile fit on a greybox row is refused for its recipe", out.size() == 1 and str(out[0]).contains("needs a GLB recipe"), str(out))
 
 
 # The GLB-to-node transform of the placed base view named <mesh><suffix>: its transform times its source's place in the
