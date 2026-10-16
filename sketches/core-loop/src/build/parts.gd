@@ -95,7 +95,7 @@ const CATALOGUE := {
 		"text": "+25% winch top speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["anchor"],
 		"mods": {"reel_speed": 1.25}},
-	"spring_shims":{"name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
+	"spring_shims": {"name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
 		"text": "+10% jump speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "pylon_engineer", "tags": ["spiral"],
 		"mods": {"jump_speed": 1.1}},

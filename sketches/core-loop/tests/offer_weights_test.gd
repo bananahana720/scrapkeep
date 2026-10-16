@@ -279,6 +279,16 @@ func _tally_part(stats: Dictionary) -> void:
 		else:
 			_t.check("alpha %s is never offered %s" % [pilot, TALLY_PART], seen == 0, "%d offers" % seen)
 	var m := _merged(stats, "tally")
+	# 2026-10-15 SQ19b ruling S2: each class movement row brings its own CLASS_MOVEMENT_SHARE (at
+	# most MOVEMENT_SHARE in all). Tally holds two on this list, so its movement share sits at or
+	# above 1.5 of one row's share; a flat CLASS_MOVEMENT_SHARE measured 0.072 here.
+	var rows: Array = Parts.offer_pool("tally", ["common"]).filter(func(id): return String(Parts.row(id).get("class_id", "")) == "tally" \
+		and Parts.bucket_of(id) == "movement")
+	_t.eq("alpha tally holds two class movement rows", rows.size(), 2)
+	var moved := _bucket_share(m, "movement")
+	_t.check("alpha tally movement share is at least 1.5 x CLASS_MOVEMENT_SHARE and at most MOVEMENT_SHARE",
+		moved >= 1.5 * Parts.CLASS_MOVEMENT_SHARE and moved <= Parts.MOVEMENT_SHARE,
+		"%.3f, bounds %.3f to %.3f, rows %s" % [moved, 1.5 * Parts.CLASS_MOVEMENT_SHARE, Parts.MOVEMENT_SHARE, rows])
 	print("[alpha tally movement share] %.3f against the %.2f target (cap %.2f)" % [_bucket_share(m, "movement"), Parts.MOVEMENT_SHARE, MOVEMENT_MAX])
 
 

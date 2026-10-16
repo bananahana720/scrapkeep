@@ -165,7 +165,9 @@ func _check_label() -> void:
 # 2026-10-08 (alpha wave 11 GP2): six new parts; was arc 14, spiral 7, anchor 17, speed 31, mass 33
 # 2026-10-11 (alpha wave 13 SG5): load_dividend; was mass 35
 # 2026-10-12 (alpha wave 13 SR9): relay_convergence, seam-gated on relay.convergence; was arc 15
-const TAG_COUNTS := {"frost": 5, "arc": 16, "kinetic": 19, "split": 5, "spiral": 8, "chain": 9, "anchor": 18,
+# 2026-10-15 (wave 14 SQ19b, coordinator ruling): Tally's winch_pawl carries anchor (the winch
+# and harpoon family); was anchor 18
+const TAG_COUNTS := {"frost": 5, "arc": 16, "kinetic": 19, "split": 5, "spiral": 8, "chain": 9, "anchor": 19,
 	"speed": 32, "mass": 36}
 const KINETIC_SHARE_MAX := 0.25
 
