@@ -8,11 +8,13 @@ const Hazard := preload("res://src/boss/hazard.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 
 # Brindle does not scale: his four chunks are the same for a bare ball and a built one.
-# The hull plate is the posture rule's plating (98 glances short of 120 and moves the bar
+# The hull plate is the posture rule's plating (98 glances short of 110 and moves the bar
 # less than 144; a gun never takes a chunk) and the arena says so at entry. A crane
 # catch takes mass and heft, the spill trail pays it back, and a shot on a magnet that
 # still holds scrap drops the rest and presses the hull's bar. Driven tick by tick.
 # Repointed 2026-10-03 (F2a): HP floors gave way to the posture chunk count.
+# Re-pinned 2026-10-15 (BRINDLE-SCUTTLE): hull plating 120 to 110 in boss_rules.gd; the
+# readout and deflection pins read 110, and 98 and 144 still sit either side of it.
 
 const DT := 1.0 / 90.0
 const TRAIL_WINDOW := 8.0
@@ -78,7 +80,7 @@ func _run_checks() -> void:
 	_boss.advance(DT)
 	var shown: String = _boss.ship.plate.text
 	var objective: String = _boss.objective_text()
-	_report("hull readout", shown == "BRINDLE · plating 120" and objective.contains("Punch 77 / hull plating 120") and _game.flow.boss_plating == 120.0 and _game.flow.boss_active,
+	_report("hull readout", shown == "BRINDLE · plating 110" and objective.contains("Punch 77 / hull plating 110") and _game.flow.boss_plating == 110.0 and _game.flow.boss_active,
 		"at arena entry the plate reads \"%s\" and the objective \"%s\", flow.boss_plating %.0f" % [shown, objective, _game.flow.boss_plating])
 	_double.punch_override = -1.0
 
@@ -86,11 +88,11 @@ func _run_checks() -> void:
 	var before: float = _boss.posture()
 	_double.strike(hull, "arc", 98.0)
 	var chip: float = _boss.posture() - before
-	var deflected_98: bool = _deflected.size() == 1 and is_equal_approx(_deflected[0][0], 98.0) and _deflected[0][1] == 120.0
+	var deflected_98: bool = _deflected.size() == 1 and is_equal_approx(_deflected[0][0], 98.0) and _deflected[0][1] == 110.0
 	before = _boss.posture()
 	_double.strike(hull, "arc", 144.0)
 	var full: float = _boss.posture() - before
-	_report("hull plating 120", chip > 0.0 and full > chip and deflected_98 and _deflected.size() == 1 and _boss.chunks_left() == 4 and _boss.hp == bare,
+	_report("hull plating 110", chip > 0.0 and full > chip and deflected_98 and _deflected.size() == 1 and _boss.chunks_left() == 4 and _boss.hp == bare,
 		"punch 98 moved the bar %.2f (deflected against %s), punch 144 moved it %.2f; chunks left %d, hp %.0f"
 			% [chip, str(_deflected[0]) if _deflected.size() > 0 else "none", full, _boss.chunks_left(), _boss.hp])
 

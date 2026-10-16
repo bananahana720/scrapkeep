@@ -79,7 +79,8 @@ func _advance(seconds: float, ball = null) -> void:
 func _live_objective_checks(expected_phase: int) -> void:
 	var text: String = _boss.objective_text() if _has("objective_text") else ""
 	var plating: float = _boss.live_plating() if _has("live_plating") else -1.0
-	_report("objective phase %d" % expected_phase, text.contains("crane magnets") and text.contains("plating 120") and plating == Rules.HULL_PLATING and _game.flow.boss_plating == Rules.HULL_PLATING,
+	# Re-pinned 2026-10-15 (BRINDLE-SCUTTLE): hull plating 120 to 110 in boss_rules.gd.
+	_report("objective phase %d" % expected_phase, text.contains("crane magnets") and text.contains("plating 110") and plating == Rules.HULL_PLATING and _game.flow.boss_plating == Rules.HULL_PLATING,
 		"objective \"%s\", live plating %.0f, flow.boss_plating %.0f" % [text, plating, _game.flow.boss_plating])
 
 

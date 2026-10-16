@@ -108,7 +108,8 @@ func _final_stage_checks() -> void:
 	var begin := Time.get_ticks_usec()
 	var replayed: bool = flow.replay_stage(3)
 	var took := Time.get_ticks_usec() - begin
-	_report("death gap line", warden_text.contains("plating %d" % int(StageDefs.of(3)["warden_plating"])) and boss_text.contains("plating 120") and boss_text.contains("T   replay stage 3"),
+	# Re-pinned 2026-10-15 (BRINDLE-SCUTTLE merge): hull plating 120 to 110 in boss_rules.gd.
+	_report("death gap line", warden_text.contains("plating %d" % int(StageDefs.of(3)["warden_plating"])) and boss_text.contains("plating 110") and boss_text.contains("T   replay stage 3"),
 		"warden death reads \"%s\"; boss death offers T %s" % [warden_text.get_slice("\n", 0), boss_text.contains("T   replay")])
 	_report("replay stage 3", offered and replayed and flow.state_name() == "stage" and run.stage == 3 and run.mass == start["mass"]
 			and run.parts == start["parts"] and is_equal_approx(run.hp, start["hp"]) and took < SECOND_USEC,

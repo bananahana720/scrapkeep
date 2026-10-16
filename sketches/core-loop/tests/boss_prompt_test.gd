@@ -58,8 +58,9 @@ func _run() -> void:
 	await physics_frame
 	var short: Color = _plate().get_theme_color("font_color")
 	_double.punch_override = -1.0
-	_report("colour carries the gap", beats == Palette.AMBER and short != Palette.AMBER and _plate().text.contains("plating 120"),
-		"plate \"%s\": amber at punch 130, %s at punch 40 against plating 120" % [_plate().text, short.to_html(false)])
+	# Re-pinned 2026-10-15 (BRINDLE-SCUTTLE merge): hull plating 120 to 110 in boss_rules.gd; punch 130 and 40 still sit either side.
+	_report("colour carries the gap", beats == Palette.AMBER and short != Palette.AMBER and _plate().text.contains("plating 110"),
+		"plate \"%s\": amber at punch 130, %s at punch 40 against plating 110" % [_plate().text, short.to_html(false)])
 	_check_shred()
 	await _check_shred_charging()
 	_boss.jump_to_phase(4)
@@ -90,8 +91,8 @@ func _check_shred() -> void:
 	var got: float = _boss.hull_plating_now()
 	_boss._update_readout()
 	var text: String = _plate().text
-	_report("plate holds under rams", shred == 0.0 and absf(got - 120.0) < 0.01 and text.contains("plating 120"),
-		"after 8 ram strikes shred %.2f: hull_plating_now %.2f (want 120), plate \"%s\"" % [shred, got, text])
+	_report("plate holds under rams", shred == 0.0 and absf(got - 110.0) < 0.01 and text.contains("plating 110"),
+		"after 8 ram strikes shred %.2f: hull_plating_now %.2f (want 110), plate \"%s\"" % [shred, got, text])
 	_game.ctx.spawner = _double
 
 
