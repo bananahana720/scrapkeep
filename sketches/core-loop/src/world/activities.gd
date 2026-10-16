@@ -224,8 +224,11 @@ func setup(ctx_ref) -> void:
 func _exit_tree() -> void:
 	for id in _prep:
 		_settle(id)
-	load("res://src/world/director.gd").settle_parks()
-	load("res://src/world/events/natural.gd").settle_plans()
+	# No static keeps a map, mesh, shape or material once the Game is freed.
+	load("res://src/world/director.gd").release_parks()
+	load("res://src/world/events/natural.gd").release_plans()
+	load("res://src/presentation/set_dressing.gd").release_shared()
+	_interior_block = null
 
 
 # Waits once on a map's entry-data worker and takes its results. worker_layout records that the

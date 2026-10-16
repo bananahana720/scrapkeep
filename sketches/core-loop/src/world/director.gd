@@ -532,6 +532,10 @@ static func read_park(map_id: String) -> Dictionary:
 static func prepare_park(map_id: String) -> void:
 	if _parks.has(map_id) or not map_id.begins_with("park_"):
 		return
+	# The schema's registry and the recipes' origins fill lazily and set their read flag first, so
+	# the main thread fills them before a worker can be their first reader.
+	load("res://src/world/park/park_schema.gd")._registry()
+	load("res://src/world/park/park_recipes.gd").origin("")
 	var out := {}
 	_parks[map_id] = {"task": WorkerThreadPool.add_task(func(): out.merge(read_park(map_id)), false, "director park " + map_id), "out": out}
 
@@ -553,6 +557,12 @@ static func settle_park(map_id: String) -> void:
 static func settle_parks() -> void:
 	for map_id in _parks.keys():
 		settle_park(map_id)
+
+
+# Teardown: waits on every read, then lets the parsed maps go with the Game.
+static func release_parks() -> void:
+	settle_parks()
+	_parks.clear()
 
 
 func _graph():

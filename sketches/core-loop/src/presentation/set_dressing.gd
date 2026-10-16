@@ -117,13 +117,13 @@ func _flags() -> Dictionary:
 static func map_rows(map) -> Dictionary:
 	return {"play_rect": map.play_rect, "scatter": map.scatter.duplicate(true), "structures": structure_points(map)}
 
-# The plan a worker drew for this key, waiting once on a worker still drawing; a plan drawn for
-# another key is dropped. Empty when there is none.
+# The plan a worker drew for this key, waiting once on a worker still drawing. A plan for another
+# key is never waited on here: _prepare_next drops it once its worker is done. Empty when none.
 func _take_plan(key: Array) -> Dictionary:
-	if _prep.is_empty():
+	if _prep.is_empty() or _prep.key != key:
 		return {}
 	WorkerThreadPool.wait_for_task_completion(_prep.task)
-	var planned: Dictionary = _prep.out if _prep.key == key else {}
+	var planned: Dictionary = _prep.out
 	_prep = {}
 	return planned
 
@@ -132,13 +132,18 @@ func _take_plan(key: Array) -> Dictionary:
 # its rows, so entering it builds only the MultiMeshes.
 func _prepare_next() -> void:
 	var terrain = ctx.terrain
-	if not _prep.is_empty() or not "maps" in terrain or not terrain.has_method("is_ready") or not "stage" in terrain:
+	if not "maps" in terrain or not terrain.has_method("is_ready") or not "stage" in terrain:
 		return
 	var next: int = terrain.stage + 1
-	if next > terrain.maps.size() or not terrain.is_ready(next):
+	var key := _key(next, terrain.geometry_root(next)) if next <= terrain.maps.size() and terrain.is_ready(next) else []
+	# A plan no stage can take any more (a new run, a preset change) is dropped once its worker is
+	# done, so no frame waits on it.
+	if not _prep.is_empty():
+		if _prep.key != key and WorkerThreadPool.is_task_completed(_prep.task):
+			WorkerThreadPool.wait_for_task_completion(_prep.task)
+			_prep = {}
 		return
-	var key := _key(next, terrain.geometry_root(next))
-	if key == _built_for:
+	if key.is_empty() or key == _built_for:
 		return
 	var map = terrain.map_for(next)
 	var rows := map_rows(map)
@@ -154,6 +159,10 @@ func _exit_tree() -> void:
 	if not _prep.is_empty():
 		WorkerThreadPool.wait_for_task_completion(_prep.task)
 		_prep = {}
+
+# Teardown (activities.gd): the shared rock mesh goes with the Game.
+static func release_shared() -> void:
+	_broken_rock = null
 
 # Every batch's instance buffer, drawn from the map's seeded stream in the order the batches are
 # built (SWAP-HITCH-2: 250 to 430 ms of a new stage's entry). Pure: map is map_rows(), rows the

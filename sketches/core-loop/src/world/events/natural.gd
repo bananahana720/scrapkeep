@@ -218,8 +218,9 @@ func _prepare_next() -> void:
 	var map = terrain.map_for(next)
 	if key == 0 or _plans.has(key) or not "park" in map or map.park.is_empty():
 		return
+	# A freed stage's plan goes once its worker is done; one still running waits for a later poll.
 	for old in _plans.keys():
-		if not is_instance_id_valid(old):
+		if not is_instance_id_valid(old) and (not _plans[old].has("task") or WorkerThreadPool.is_task_completed(_plans[old].task)):
 			_settle(old)
 			_plans.erase(old)
 	var snapshot := EventGround.snapshot(terrain, next)
@@ -233,6 +234,12 @@ func _prepare_next() -> void:
 static func settle_plans() -> void:
 	for key in _plans.keys():
 		_settle(key)
+
+
+# Teardown: waits on every plan, then drops them, meshes and shapes with them.
+static func release_plans() -> void:
+	settle_plans()
+	_plans.clear()
 
 
 func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
