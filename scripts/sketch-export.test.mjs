@@ -480,6 +480,9 @@ test("every win proof's bot args carry its pilot and table, and the cloud export
   const cloud = readFileSync(new URL("./cloud/export-headless.mjs", import.meta.url), "utf8");
   assert.match(cloud, /\.\.\.winProofBotArgs\(proof, out\)/);
   assert.doesNotMatch(cloud, /"--seeds=" \+/);
+  const local = readFileSync(new URL("./sketch-export.mjs", import.meta.url), "utf8");
+  assert.match(local, /\.\.\.winProofBotArgs\(proof, out\)/);
+  assert.equal(local.match(/"--seeds=" \+/g).length, 1);
 });
 
 test("buildStamp records the boss smoke lines before the win proof", () => {
