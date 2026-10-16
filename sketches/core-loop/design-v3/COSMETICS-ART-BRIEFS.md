@@ -12,7 +12,7 @@ The game has 19 cosmetics with no visible art. They are the `PENDING_ART` list (
 
 **Fourteen need new art:** seven trails, two decal tiles, four outfits and one companion skin. Every slot's loader already exists (`hero_assets.gd:1185` outfits, `:1274` companion skin; `cosmetic_presentation.gd:357` trails; the decal atlas). All fourteen are art-only except where a brief says otherwise. The trail atlas has 10 free tiles and the decal atlas has 8, so nothing needs a new texture.
 
-**Recommendation:** ship 18, cut 1. Un-hide the five shells now. Build the seven trails and two decals in one extension of the existing cosmetics recipe. Build three outfits and the Till Bell. Cut Kest's Rigger Harness for alpha (reason in its brief). That leaves 13 new pieces of art, nine of which are 2-triangle cards or atlas tiles.
+**Decided 2026-10-16:** Andrew confirmed the cut of Kest's Rigger Harness on the project-chat card for this PR. Ship 18, cut 1. Un-hide the five shells now. Build the seven trails and two decals in one extension of the existing cosmetics recipe. Build three outfits and the Till Bell. Cut Kest's Rigger Harness for alpha (reason in its brief). That leaves 13 new pieces of art, nine of which are 2-triangle cards or atlas tiles.
 
 ## The 19 at a glance
 
@@ -37,7 +37,7 @@ Cost: **none** (a port line), **S** (an atlas tile or card in `build_cua.py`), *
 | `outfit_rivet_hood` | Welding Hood | outfit | Rivet | no art | M | keep |
 | `outfit_tally_eyeshade` | Eyeshade | outfit | Tally | no art | M | keep |
 | `outfit_tarn_steady_cap` | Steady Cap | outfit | Tarn | no art | M | keep |
-| `outfit_kest_rigger` | Rigger Harness | outfit | Kest | no art | M | **cut for alpha** |
+| `outfit_kest_rigger` | Rigger Harness | outfit | Kest | no art | M | **cut for alpha (confirmed)** |
 | `companion_skin_till_bell` | Till Bell | companion skin | SPIL-9 | no art | M | keep |
 
 After this, each pilot has a shell variant and a trail, Sable has a decal, and every slot except bay decoration has at least one earned item, so each slot is proven end to end.
@@ -169,7 +169,7 @@ Each is one new recipe under `tools/blender/` that exports `assets/cosmetics/out
 - **Budget:** about 250 triangles.
 - **Call: keep.** The split it needs already exists, and the before-and-after read is the joke ("Hold still. The machine, I mean.").
 
-### Rigger Harness (`outfit_kest_rigger`), Kest. **Cut for alpha**
+### Rigger Harness (`outfit_kest_rigger`), Kest. **Cut for alpha (confirmed by Andrew, 2026-10-16)**
 
 - **Look:** a load rigger's harness with carabiners and a coil of tag line (`pilots/kest.md:396`).
 - **Part:** `spine_02`, `shoulder.R` and `shoulder.L`.
@@ -205,7 +205,7 @@ This PR adds only this file. These are the lines other files need, in order.
    - Then run `customization_system_test` and `ui_customize_page_test`, which check that every non-pending row resolves to real art.
 2. **Trails and decals.** `tools/blender/cosmetics/build_cua.py`: add the seven `TRAILS` rows and their `trail_shape()` branches, and add `DECALS` indices 8 and 9 with their `decal_shape()` branches (change the bare `else` to `elif index == 7`). Re-export, then re-run `inspect_cua.py --compare` and `dress_cua_assets_test`. Then remove the nine ids from `PENDING_ART`.
 3. **Outfits and skin.** One recipe each and one registry row each, in `registry.d` or `assets/registry.json`, whichever the coordinator uses for new rows. Remove each id from `PENDING_ART` as its art lands.
-4. **The cut (if Andrew confirms).** Remove `outfit_kest_rigger` from `ROWS` (`cosmetics.gd:88`) and `PENDING_ART`, and remove the reward from `ach_kest_homecoming` in `achievements.gd`. Update the CUSTOMIZE.md section 8 totals (outfits 3) and re-pin `kest_kit_test.gd:345-354`.
+4. **The cut (confirmed by Andrew, 2026-10-16).** Remove `outfit_kest_rigger` from `ROWS` (`cosmetics.gd:88`) and `PENDING_ART`, and remove the reward from `ach_kest_homecoming` in `achievements.gd`. Update the CUSTOMIZE.md section 8 totals (outfits 3) and re-pin `kest_kit_test.gd:345-354`.
 5. **Optional extras, not part of alpha:** beat-spaced Downbeat emission, a thicker Swarf Curl while sprinting, the muffled roll for Felt Rig.
 
 ## How this was checked
