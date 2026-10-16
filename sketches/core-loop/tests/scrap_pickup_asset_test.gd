@@ -7,7 +7,8 @@ const GLB := "res://assets/models/world_one/scrap_pickups.glb"
 const NAMES := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
 # Re-pinned 2026-10-13 (IDENTITY-DET): a caught piece's swirl side now comes from the bot's sign or the
 # field's catch serial instead of its object id; layout, magnet, collection, value and timing unchanged.
-const LOGIC_SHA := "c2b705ded8be0c7a9a73639f344849b6faee6d9141040809d49d828e444707f3"
+# Re-pinned 2026-10-16 (SCRAP-LEAK): drops fold the oldest loose piece past a cap into the newest; layout, magnet, collection, value and timing unchanged.
+const LOGIC_SHA := "d001aa5e62f990fdce8378c9fdbf6577d39d19d3e45f77c901cd598c5287dbe9"
 
 var failures: Array[String] = []
 var game
