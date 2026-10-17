@@ -80,7 +80,14 @@ const PACK_SPREAD := 4.5
 const HABIT_AXES := {"ram": ["contact", "speed", "heft"], "rebound": ["contact"], "stomp": ["contact", "air"],
 	"smash": ["contact"], "vault": ["air"], "weapon": ["weapon"], "special": ["weapon"], "jump": ["air"],
 	"air": ["air"], "boost": ["speed", "steer"], "grapple": ["steer"], "glide": ["air"]}
-const CLASS_AXIS := {"sable": "steer", "rivet": "speed", "kest": "air"}
+# Keyed by ClassDef id (what fleet.gd build_read() reads from run.class_def.id), one row per
+# pilot. 2026-10-17 CLASS-TILT: the wave-3 keys were display names, so no real run ever matched.
+# Tarn, Tally and the Cannon are new rows, a design call for Andrew's veto:
+#   tarn  contact: claw melee, clamp and rend slam live at arm's length.
+#   tally  weapon: the ledger reader and link clips are a caster's aimed fire.
+#   remembered_cannon  heft: plate, rush ring and recoil are about mass and holding ground.
+const CLASS_AXIS := {"pylon_engineer": "steer", "runner_gunner": "speed", "demolitions_caster": "air",
+	"tarn": "contact", "tally": "weapon", "remembered_cannon": "heft"}
 # W3's upgrade-tree tags (upgrade_tree.gd TAGS) and the axes each leans on.
 const TAG_AXES := {"air": ["air"], "burst": ["weapon"], "close": ["contact"], "ranged": ["weapon"],
 	"mobility": ["steer", "speed"], "mounted": ["weapon"], "sustain": ["heft"], "cc_immune": ["speed"],

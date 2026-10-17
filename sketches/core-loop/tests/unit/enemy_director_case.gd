@@ -2,6 +2,7 @@ extends RefCounted
 
 const Director := preload("res://src/world/director.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # Pack composition respects the clock (DESIGN-V2 sections 10.5 and 15.4-15.5), stepped
 # headless like the stage steps it:
@@ -28,6 +29,7 @@ func run(t) -> void:
 	_pairs()
 	_ancients()
 	_build_tilt()
+	_class_tilt()
 
 
 func _report(check: String, ok: bool, detail: String) -> void:
@@ -115,7 +117,7 @@ func _ancients() -> void:
 
 func _build_tilt() -> void:
 	var plain := _draw({})
-	var air := _draw({"class": "kest", "habits": {"air": 0.5, "jump": 0.3, "ram": 0.2}, "branch_tags": []})
+	var air := _draw({"class": "demolitions_caster", "habits": {"air": 0.5, "jump": 0.3, "ram": 0.2}, "branch_tags": []})
 	var air_packs: Array = Director.PACKS.keys().filter(func(id): return Director.PACKS[id]["tests"] == "air")
 	var plain_air := 0
 	var tilted_air := 0
@@ -131,6 +133,28 @@ func _build_tilt() -> void:
 		tree_count += int(tree_air.get(id, 0))
 	_report("reads W3's branch tags", tree_count > plain_air * 1.4,
 		"air packs drawn %d of %d for a tree tagged air twice, %d with no build read" % [tree_count, DRAWS, plain_air])
+
+
+# CLASS-TILT: the class id fleet.gd build_read() sends is ClassDef.id, so every real pilot id
+# must resolve to an axis and, alone (no habits, no tags), tilt that axis's packs up.
+func _class_tilt() -> void:
+	var plain := _draw({})
+	var ids: Array = []
+	var bad: Array = []
+	for def in ClassDef.all():
+		var id := String(def.id)
+		ids.append(id)
+		var axis: String = Director.CLASS_AXIS.get(id, "")
+		var axis_packs: Array = Director.PACKS.keys().filter(func(k): return Director.PACKS[k]["tests"] == axis)
+		var drawn := _draw({"class": id, "habits": {}, "branch_tags": []})
+		var got := 0
+		var base := 0
+		for k in axis_packs:
+			got += int(drawn.get(k, 0))
+			base += int(plain.get(k, 0))
+		if axis == "" or axis_packs.is_empty() or got <= base * 1.3:
+			bad.append("%s axis [%s] drew %d vs %d plain" % [id, axis, got, base])
+	_report("class ids tilt", ids.size() == 6 and bad.is_empty(), "six real pilot ids %s; misses %s" % [ids, bad])
 
 
 func _draw(build: Dictionary) -> Dictionary:
