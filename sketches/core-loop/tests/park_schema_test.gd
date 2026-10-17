@@ -119,6 +119,23 @@ func _planted_rows() -> void:
 	# K-CRITIC: event water is at most 1.2 m deep.
 	_plant("event water over 1.2 m", "pool_flood", "water_depth",
 		func(p): _row(p, "event_rows", "pool_flood")["effect"]["depth_m"] = 3.0)
+	# A row's music_layer is a layer_* WORLD_ROWS kind (2026-10-17, crown authored pass).
+	_plant("music layer of no kind", "lip", "music_layer", func(p): _row(p, "park_rows", "lip")["music_layer"] = "layer_nowhere")
+	_plant("music layer not a layer", "lip", "music_layer", func(p): _row(p, "park_rows", "lip")["music_layer"] = "ride_bowl")
+	# The optional rescue_rows: the site resolves and the pilot is a class id.
+	var cage := {"id": "test_cage", "site": "deck", "at": [0, 0], "face": [0, 1], "quest": "test", "pilot": "tally", "prompt": "free the test"}
+	_plant("rescue at no site", "test_cage", "reference", func(p):
+		var row := cage.duplicate(true)
+		row["site"] = "nowhere"
+		p["rescue_rows"] = [row])
+	_plant("rescue of no pilot", "test_cage", "reference", func(p):
+		var row := cage.duplicate(true)
+		row["pilot"] = "nobody"
+		p["rescue_rows"] = [row])
+	var good: Dictionary = _fixture.duplicate(true)
+	good["rescue_rows"] = [cage.duplicate(true)]
+	_row(good, "park_rows", "lip")["music_layer"] = "layer_crown_ramp"
+	_report("a rescue row and a music layer load", ParkSchema.validate(good).is_empty(), ParkSchema.describe(ParkSchema.validate(good)))
 	# The kind's spec keys contraptions.gd reads.
 	_plant("launcher without target", "deck_cannon", "missing",
 		func(p): _row(p, "contraption_rows", "deck_cannon").erase("target"))

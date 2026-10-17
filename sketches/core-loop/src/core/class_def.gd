@@ -45,6 +45,8 @@ const CANNON_COLOR := Palette.ANCIENT
 # (at most UNLOCK_LABEL_WORDS words). Only Sable starts open; Rivet opens on the world-one
 # rescue, Kest on the Dig rescue, Tarn after Brindle, Tally after the third ledger leaf and
 # the remembered cannon after the Mind. unlock_row is the one place a by meets achievements.gd.
+# An optional "or" names a second rule that opens the same pilot (Tally: the sky-islands rescue
+# or three ledger leaves, Andrew's "Either path", 2026-10-17); the card's count reads by.
 @export var unlock := {}
 # Playable from a fresh profile: set by make from unlock.by == "start".
 @export var starter := false
@@ -54,7 +56,7 @@ const CANNON_COLOR := Palette.ANCIENT
 @export var base_hp := 100.0
 @export var hp_growth := 10.0
 
-const UNLOCK_BYS := ["start", "rescue:rivet", "rescue:dig", "boss:brindle", "leaves:3", "boss:mind"]
+const UNLOCK_BYS := ["start", "rescue:rivet", "rescue:dig", "rescue:isles", "boss:brindle", "leaves:3", "boss:mind"]
 const UNLOCK_LABEL_WORDS := 9
 
 
@@ -74,6 +76,8 @@ static func unlock_row(by: String) -> String:
 			return "rivet_rescued"
 		"rescue:dig":
 			return "dig_rescued"
+		"rescue:isles":
+			return "isles_rescued"
 		"boss:brindle":
 			return "brindle_routed"
 		"leaves:3":
@@ -89,6 +93,13 @@ static func unlock_met(by: String, earned: Callable) -> bool:
 		return true
 	var row := unlock_row(by)
 	return row != "" and bool(earned.call(row))
+
+
+# True when a class row's unlock opens: its by rule, or its optional "or" rule.
+static func unlock_open(unlock: Dictionary, earned: Callable) -> bool:
+	if unlock_met(String(unlock.get("by", "")), earned):
+		return true
+	return unlock.has("or") and unlock_met(String(unlock["or"]), earned)
 
 
 static func all() -> Array[Resource]:
@@ -132,7 +143,7 @@ static func all() -> Array[Resource]:
 			"base_hp": 90.0, "hp_growth": 8.0,
 			"color": TALLY_COLOR, "shape": "square", "motif": "tally", "sound": "cog_tick",
 			"bible_home": "Tally, mechanical program cards",
-			"unlock": {"by": "leaves:3", "label": "Hand Moss three ledger leaves. The books must balance."},
+			"unlock": {"by": "leaves:3", "or": "rescue:isles", "label": "Open the Fleet's cage, or balance Moss's books."},
 			"synergy_hooks": PackedStringArray(["on_card_run", "on_link_arc", "on_stamp_contact"])}),
 		make({"id": "remembered_cannon", "display_name": "Cannon", "role": "Boss-mirror cannon", "species": "rebuilt ancient",
 			"pitch": "The Mind's own guns, remembered. Call a lane, cut a split behind you, plate what you hit, ring the ground when you land.",

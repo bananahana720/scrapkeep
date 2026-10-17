@@ -52,6 +52,10 @@ const ROWS := {
 	# rescue_site.gd emits rescue_completed("dig") for this quest.
 	"dig_rescued": {"name": "Digger Rescued", "text": "Rescue the buried digger.", "on": "rescue_completed",
 		"where": {"quest_id": "dig"}, "count": 1, "beat": "Kest dug out. Says the wall knocked back the whole time.", "reward": {"pilot": "demolitions_caster"}},
+	# rescue_site.gd emits rescue_completed("isles") at the Moorings cage (park_islands.json rescue_rows). It is
+	# Tally's "or" rule (class_def.gd), so the row carries no pilot reward; ledger_balanced keeps hers.
+	"isles_rescued": {"name": "Inventory Returned", "text": "Free the bookkeeper the Fleet filed as cargo.", "on": "rescue_completed",
+		"where": {"quest_id": "isles"}, "count": 1, "beat": "Tally signed her own release form. Stamped it PAID.", "reward": {}},
 	"kills_100": {"name": "Hundred Down", "text": "Break 100 machines across all your runs.", "on": "enemy_killed",
 		"count": 100, "reward": {"cosmetic": "paint_rivet_forge"}},
 	"kills_1000": {"name": "Thousand Down", "text": "Break 1000 machines across all your runs.", "on": "enemy_killed",

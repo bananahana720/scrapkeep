@@ -180,7 +180,7 @@ func open_met_pilots() -> int:
 	var earned := Callable(_profile, "earned")
 	var opened := 0
 	for def in ClassDef.all():
-		if not def.starter and not _profile.has_pilot(def.id) and ClassDef.unlock_met(String(def.unlock.get("by", "")), earned):
+		if not def.starter and not _profile.has_pilot(def.id) and ClassDef.unlock_open(def.unlock, earned):
 			_profile.unlock_pilot(def.id)
 			opened += 1
 	return opened
@@ -322,6 +322,9 @@ func _earn(id: String, row: Dictionary) -> void:
 	var reward: Dictionary = row.get("reward", {})
 	for kind in reward:
 		grant_once("reward:%s:%s" % [id, kind], String(kind), String(reward[kind]))
+	# A row that is a pilot's "or" rule carries no pilot reward (one row per pilot reward), so its earn opens
+	# the pilot here.
+	open_met_pilots()
 	if not _profile.save():
 		warnings += 1
 		push_warning("progress: %s earned but not saved: %s" % [id, _profile.last_error])

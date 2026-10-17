@@ -78,7 +78,8 @@ func _run() -> void:
 	# (CUSTOMIZE section 8, Shared), 36 + 3.
 	# 2026-10-11 (w13 SG12, merge re-pin): the four ach_meta_* between-run option grants, 39 + 4.
 	# 2026-10-12 (W13 coordinator): the pin holds the shared rows; P-C kit rows sit in marked blocks.
-	_t.eq("P3-3 forty-three rows today", PilotBlocks.shared(rows.keys(), "res://src/core/achievements.gd").size(), 43)
+	# 2026-10-17 (crown authored pass): isles_rescued, Tally's sky-islands rescue, 43 + 1.
+	_t.eq("P3-3 forty-four rows today", PilotBlocks.shared(rows.keys(), "res://src/core/achievements.gd").size(), 44)
 	await _frames(2)
 	_t.check("Back stays visible during page entry", root.get_visible_rect().encloses(page.back.get_global_rect()))
 	await _reach_rows(page)
