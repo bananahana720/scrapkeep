@@ -155,6 +155,17 @@ static func _director_rows(rows: Array) -> Array:
 		kept.append(copy)
 	return kept
 
+# 2026-10-17 (SQ2, PR #15): each due spawn carries its arrival's pack number for the attacker
+# budget (attack_budget.gd). It copies a tag the director already drew and moves no spawn, so the
+# schedule pin leaves it out, as RT1 leaves out presentation fields.
+static func _without_pack(due: Array) -> Array:
+	var kept: Array[Dictionary] = []
+	for spawn in due:
+		var copy: Dictionary = spawn.duplicate(true)
+		copy.erase("pack")
+		kept.append(copy)
+	return kept
+
 func _schedule(d, steps := 1200) -> Dictionary:
 	var ball: Vector2 = d._park_map.beacon if d._park_map != null else Vector2.ZERO
 	if d._park_map != null:
@@ -165,7 +176,7 @@ func _schedule(d, steps := 1200) -> Dictionary:
 		var due: Array = d.advance(0.5, 0, ball)
 		members += due.size()
 		if not due.is_empty():
-			schedule.append([step, due])
+			schedule.append([step, _without_pack(due)])
 	return {"schedule": schedule, "members": members, "cap": d.cap(), "interval": d.interval()}
 
 func _config(tier_value: int) -> Dictionary:

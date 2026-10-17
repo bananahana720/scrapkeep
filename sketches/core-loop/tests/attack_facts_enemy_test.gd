@@ -103,6 +103,9 @@ func _next_stage() -> bool:
 	_stage_done = false
 	_acted = false
 	_seen = {}
+	# Each stage is its own encounter: the attacker budget's 0.2 s gap between warnings (SQ2) must
+	# not carry over from the last stage's cancelled windup into this one's first ask.
+	root.remove_meta("attack_budget_last")
 	if _stage > LAST_STAGE:
 		return _finish()
 	_game.player.reset_to(_ball)
