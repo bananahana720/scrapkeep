@@ -73,6 +73,7 @@ func _init() -> void:
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(buttons)
 	play_button = ChoiceButton.new("play", "key_space", "Play")
+	play_button.focus_mode = Control.FOCUS_NONE
 	buttons.add_child(play_button)
 	for i in DETENTS.size():
 		var detent := ChoiceButton.new("detent_%d" % i, "key_%d" % (i + 1), DETENTS[i])

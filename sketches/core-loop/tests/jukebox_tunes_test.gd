@@ -205,7 +205,7 @@ func _run() -> void:
 	_t.check("and announced on the record plate", plate.any(func(t): return String(t).begins_with("Lights On")), str(plate))
 	await _settle(1.0)
 	var count: int = (hud.tune_waiting() + hud.ach_toasts()).filter(func(t): return String(t).begins_with("Lights On")).size()
-	_t.check("once", count <= 1, str(hud.tune_waiting()))
+	_t.eq("once", count, 1)
 
 	# Seed two more records so the crate has a pick.
 	profile.hear_tune("roam-1-1")
@@ -246,6 +246,13 @@ func _run() -> void:
 	audio.engine.force_track("warden", 0)
 	await _settle(TuneEar.HOLD + 0.5)
 	_t.eq("nothing is found while a record spins", profile.tune_ids(), before)
+	page.sleeve("boss-mind").grab_focus()
+	_game._screen_key(KEY_SPACE)
+	_t.eq("Space on a blank sleeve lifts the needle", audio.spinning, "")
+	page.sleeve("roam-1-1").grab_focus()
+	page.play_button.pressed.emit()
+	_t.eq("the Play button plays the focused record", audio.spinning, "roam-1-1")
+	_t.eq("and keeps focus on the sleeve", page.focused_id(), "roam-1-1")
 	_game._screen_key(KEY_SPACE)
 	_t.eq("Space again lifts the needle", audio.spinning, "")
 	page.sleeve("boss-brindle").grab_focus()
@@ -264,7 +271,12 @@ func _run() -> void:
 		_render(audio, 44100 * 2)
 		var row: Dictionary = TuneRows.row(id)
 		_t.eq("%s is what the ear would hear" % id, TuneRows.key_of(audio.music_state().merged({"zone": String(row["source"].get("zone", "1-1"))}, true)), id)
+	audio.spin("lounge")
+	_render(audio, 44100 * 2)
+	_t.check("the lounge record masks the band", audio.engine.lounge)
 	audio.stop_spin()
+	_render(audio, 44100 * 2)
+	_t.check("stopping it never leaves the mask on", not audio.engine.lounge and audio.engine.track == "title")
 	_ace(audio)
 
 	# A run taking the title while a record spins gets the music back.

@@ -556,10 +556,9 @@ func jukebox_key(key: int) -> bool:
 		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
 			var id: String = _jukebox.focused_id()
 			var audio = _audio()
-			if id == "" or (audio != null and audio.spinning == id):
-				_spin_toggle(audio.spinning if audio != null else "")
-			else:
-				_spin_toggle(id)
+			if audio != null and audio.spinning != "" and not _jukebox.is_found(id):
+				id = audio.spinning
+			_spin_toggle(id)
 		KEY_1, KEY_2, KEY_3:
 			var audio = _audio()
 			if audio != null:
