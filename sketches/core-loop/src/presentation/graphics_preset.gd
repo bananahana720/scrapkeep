@@ -134,7 +134,8 @@ static func enter_world(owner: Node, environment: Environment, look: Dictionary,
 	for world in _worlds:
 		if world.environment == environment and world.sun.get_ref() != null:
 			sun = world.sun.get_ref()
-	set_lighting(holder, environment, WorldLook.environment(look, PRESETS[current].air), WorldLook.lights(look, sun), slot)
+	set_lighting(holder, environment, WorldLook.environment(look, PRESETS[current].air),
+		WorldLook.lights(look, sun) + WorldLook.sky_rows(look), slot)
 
 
 static func _lighting_for(environment: Environment) -> Dictionary:

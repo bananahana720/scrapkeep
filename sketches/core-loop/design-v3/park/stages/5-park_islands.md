@@ -508,7 +508,7 @@ Cables use their explicit world coordinates. Balloon lifts and cloud cannons rem
 
 | Weather | Kind | Trigger | Spec |
 | --- | --- | --- | --- |
-| `golden_air` | clear | `{"on": "always"}` | `{"lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#fff1dc"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"}` |
+| `golden_air` | clear | `{"on": "always"}` | `{"lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#f0c08e"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"}` |
 | `cloud_rise` | cloud_deck | `{"on": "clock_tier", "value": 2}` | `{"lead_s": 8.0, "live_s": 60.0, "gap_s": 60.0, "fog": {"density": 0.006, "color": "#ece7da"}, "sky": "clear", "sound": "cloud_hush_bed", "music_layer": "layer_cloud_pad", "event_odds": {"mooring_dropship": 2.0}, "handling": "none"}` |
 
 The cloud deck rises below the net; handling is unchanged. Weather and music are the authored rows, not listening acceptance.
@@ -1288,7 +1288,7 @@ floor: 8 seed rows, stops [].
   {"id": "saddle_seam", "kind": "cracked_wall", "site": "saddle", "recipe": "", "at": [230, -420], "size": [10, 6, 1.4], "turn": 1.2, "cache": {"at": [236, -426]}}
  ],
  "weather_rows": [
-  {"id": "golden_air", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#fff1dc"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
+  {"id": "golden_air", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#f0c08e"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
   {"id": "cloud_rise", "kind": "cloud_deck", "trigger": {"on": "clock_tier", "value": 2}, "lead_s": 8.0, "live_s": 60.0, "gap_s": 60.0, "fog": {"density": 0.006, "color": "#ece7da"}, "sky": "clear", "sound": "cloud_hush_bed", "music_layer": "layer_cloud_pad", "event_odds": {"mooring_dropship": 2.0}, "handling": "none"}
  ],
  "activity_rows": [
