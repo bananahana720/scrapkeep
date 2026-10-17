@@ -67,9 +67,7 @@ func _initialize() -> void:
 		"new pilot": [_page(2, false, 1, "tally"), _page(1, true)],
 		"streak loss": [_page(3), _page(2), _page(1), _page(0, true)],
 		"streak win": [_page(3, true), _page(2, true), _page(1, false)],
-		"quit": [_page(2, false, 1, "runner_gunner", 1), _page(1, true)],
 	}
-	cases["quit"][0]["panels"] = [{"t": 20.0}]
 	for name in cases:
 		var pages: Array = cases[name]
 		var a := CampLines.line_for(pages)
@@ -79,7 +77,7 @@ func _initialize() -> void:
 	_t.check("L1 ledger from stats", CampLines.line_for([], {"deaths": 3.0}) in CampLines.LEDGER)
 	_t.check("L1 streak routes", CampLines.line_for(cases["streak loss"]) in CampLines.STREAK_LOSS and CampLines.line_for(cases["streak win"]) in CampLines.STREAK_WIN)
 	_t.check("L1 world routes", CampLines.line_for(cases["loss2"]) in CampLines.LOSS_2 and CampLines.line_for(cases["loss3"]) in CampLines.LOSS_3)
-	_t.check("L1 quit routes", CampLines.line_for(cases["quit"]) in CampLines.QUIT)
+	_t.check("L1 outcome field wins over won flag", CampLines.is_won({"outcome": "lost", "won": true}) == false and CampLines.is_won({"outcome": "won"}) and CampLines.is_won({"won": true}))
 
 	# Comic page.
 	for n in [0, 1, 4, 5, 6, 9]:

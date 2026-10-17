@@ -21,6 +21,8 @@ var stage: Node3D
 var camera: Camera3D
 var companion: Node3D
 var active := false
+# The camp walk (camp_hub.gd) shows the real world through the chase camera, so the title picture stands down.
+var camp_walk := false
 var _layer: CanvasLayer
 var _picture: TextureRect
 var _sun: DirectionalLight3D
@@ -28,6 +30,7 @@ var _fill: DirectionalLight3D
 var _environment: Environment
 var _clock := 0.0
 var _warned := {}
+var _flow_state := "title"
 
 
 func setup(ctx) -> void:
@@ -72,10 +75,16 @@ func setup(ctx) -> void:
 
 
 func show_flow(state: String) -> void:
-	active = state in ["title", "class_select"]
+	_flow_state = state
+	active = state in ["title", "class_select"] and not camp_walk
 	_layer.visible = active
 	stage.visible = active
 	_sync_dressing()
+
+
+func set_camp_walk(on: bool) -> void:
+	camp_walk = on
+	show_flow(_flow_state)
 
 
 func _sync_dressing() -> void:

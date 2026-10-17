@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Turns build_all.sh's CAMP_EXPORT rows into the assets/registry.d/camp.json fragment (rows sorted by path).
 
-Every camp row ships false: the camp scene, its stations and the pet are machine work (wave 19), so nothing loads these yet.
+Every camp row ships: src/world/camp_hub.gd loads each GLB (the hub ring, its stations, the pet and the dressing).
   python3 registry_fragment.py BUILD_LOG > assets/registry.d/camp.json
 """
 import json
@@ -33,8 +33,8 @@ def main():
             "id": stem,
             "path": "res://assets/models/camp/" + r["file"],
             "class": r["class"],
-            "ships": False,
-            "loader": "none (camp scene wiring pending, wave 19 machine work)",
+            "ships": True,
+            "loader": "src/world/camp_hub.gd",
             "provenance": {
                 "recipe": "tools/blender/camp/%s.py" % recipe_for(stem),
                 "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts "

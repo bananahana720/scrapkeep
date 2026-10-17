@@ -80,6 +80,13 @@ var _settings
 var _camp
 var _jukebox
 var _radio
+# The camp walk (camp_hub.gd): K on the title puts the ball in the 3D camp. The camp page shrinks to a key-hint strip
+# and each station's page opens over the walk and gives it back. _walk_page is a page a feature opened through
+# open_walk_page(), with the call that runs when it closes.
+var _walking := false
+var _walk_page: Control
+var _walk_on_close := Callable()
+var _companion_hooked := false
 var _ending: VBoxContainer
 var _ending_title: Label
 var _ending_body: Label
@@ -164,9 +171,10 @@ func setup(game_ref) -> void:
 	_camp.button_for("achievements").pressed.connect(_press.bind("key_a"))
 	_camp.button_for("settings").pressed.connect(_press.bind("key_s"))
 	_camp.back.pressed.connect(_press.bind("key_k"))
-	_camp.companion_button().pressed.connect(_camp_companion)
+	_camp.companion_button().pressed.connect(walk_companion)
 	_camp.button_for("jukebox").pressed.connect(_press.bind("key_j"))
 	_content.add_child(_camp)
+	_camp.customize.back_requested.connect(_sync_walk)
 	_jukebox = JukeboxPage.new()
 	_jukebox.visible = false
 	_jukebox.sleeve_chosen.connect(_spin_toggle)
@@ -220,6 +228,8 @@ func _row(separation: int) -> HBoxContainer:
 
 
 func _on_flow_changed(state: String) -> void:
+	if _walking:
+		_stop_walk()
 	if is_instance_valid(ending_sequence):
 		ending_sequence.cancel()
 		ending_sequence.queue_free()
@@ -453,8 +463,9 @@ func toggle_achievements() -> void:
 	if _achievements.visible:
 		_achievements.refresh(game.ctx.profile, game.progress)
 		_show("ACHIEVEMENTS", Palette.AMBER, "")
+		_sync_walk()
 	else:
-		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+		_back_to_base()
 	_fade(true)
 
 
@@ -471,27 +482,188 @@ func toggle_settings() -> void:
 		_show("SETTINGS", Palette.AMBER, "")
 		_settings.focus("fullscreen")
 		refresh_lab_row()
+		_sync_walk()
 	else:
 		_breath_row.visible = false
-		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+		_back_to_base()
 	_fade(true)
 
 
-# K on the title swaps its body and actions for the camp page, and back. A, S and H on the
-# camp close it and open their own page, whose Back returns to the title.
+# K on the title opens the camp: a walk through the 3D camp (camp_hub.gd) with a key-hint strip, and K again
+# leaves it. The stations open their pages from their zones; each page's Back returns to the walk.
 func toggle_camp() -> void:
 	if _state != "title" or _help.visible or _achievements.visible or _settings.visible:
 		return
-	_camp.visible = not _camp.visible
-	_actions.visible = not _camp.visible
-	if _camp.visible:
-		_camp.refresh(game)
+	if _walking:
+		if not walk_live():
+			return
+		_end_walk()
+		return
+	_begin_walk()
+
+
+func _begin_walk() -> void:
+	_walking = true
+	_camp.set_walk(true)
+	_camp.refresh(game)
+	_actions.visible = false
+	_show("CAMP", Palette.AMBER, "")
+	game.camp_hub.enter_walk()
+	_hook_companion()
+	get_viewport().gui_release_focus()
+	_sync_walk()
+	_fade(true)
+
+
+func _end_walk() -> void:
+	_stop_walk()
+	_camp.visible = false
+	_actions.visible = true
+	_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+	get_viewport().gui_release_focus()
+	_fade(true)
+
+
+# The walk ends: the hub hides, the ball freezes and the input goes back to the menus. The title is restored by the
+# caller (K) or by the flow change that rebuilds it (Launch).
+func _stop_walk() -> void:
+	if not _walking:
+		return
+	_walking = false
+	if is_instance_valid(_walk_page):
+		_walk_page.visible = false
+	_walk_page = null
+	_walk_on_close = Callable()
+	game.camp_hub.leave_walk()
+	_camp.set_walk(false)
+	_veil.visible = true
+	_title.visible = true
+	_content.alignment = BoxContainer.ALIGNMENT_CENTER
+	game.walk_input(false)
+
+
+func walking() -> bool:
+	return _walking
+
+
+# The walk is live when it shows no page: the ball rolls, the zones answer their keys and the prompts show.
+func walk_live() -> bool:
+	return _walking and not page_open()
+
+
+# A page covers the walk: Help, Achievements, Settings, Jukebox, Mixtapes, Customize, the Companion panel or a page a
+# feature opened with open_walk_page().
+func page_open() -> bool:
+	if _help.visible or _achievements.visible or _settings.visible or _jukebox.visible or _radio.visible:
+		return true
+	if _camp.customize != null and _camp.customize.visible:
+		return true
+	var workshop = game.get_node_or_null("Workshop")
+	if workshop != null and workshop.companion_panel.is_open():
+		return true
+	return is_instance_valid(_walk_page)
+
+
+# Brings the screen in line with the walk: live shows the strip and the prompts and rolls the ball; a page shows
+# the veil and holds the ball.
+func _sync_walk() -> void:
+	if not _walking:
+		return
+	var live := walk_live()
+	var customizing: bool = _camp.customize != null and _camp.customize.visible
+	game.walk_input(live)
+	game.camp_hub.set_prompts_visible(live)
+	_camp.visible = live or customizing
+	_veil.visible = not live
+	_title.visible = not live
+	_content.alignment = BoxContainer.ALIGNMENT_END if live else BoxContainer.ALIGNMENT_CENTER
+	_layout_backdrop()
+
+
+# A page closes: the title when there is no walk, else the walk.
+func _back_to_base() -> void:
+	if _walking:
+		_actions.visible = false
 		_show("CAMP", Palette.AMBER, "")
-		_camp.button_for("launch").grab_focus()
+		_sync_walk()
 	else:
 		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
-		get_viewport().gui_release_focus()
+
+
+# The one way a new page opens over the walk and returns to it: the page is shown over the veil, the ball is held,
+# and Back, Esc or pad B (or close_walk_page()) hides it, runs on_close and gives the walk back with the ball where
+# it was. A page that has its own Back button connects it to close_walk_page.
+func open_walk_page(page: Control, on_close := Callable()) -> void:
+	if not walk_live():
+		return
+	if page.get_parent() == null:
+		_content.add_child(page)
+	page.visible = true
+	_walk_page = page
+	_walk_on_close = on_close
+	_actions.visible = false
+	_show("CAMP", Palette.AMBER, "")
+	_sync_walk()
 	_fade(true)
+
+
+func close_walk_page() -> void:
+	if not is_instance_valid(_walk_page):
+		_walk_page = null
+		return
+	var page := _walk_page
+	var after := _walk_on_close
+	_walk_page = null
+	_walk_on_close = Callable()
+	page.visible = false
+	if after.is_valid():
+		after.call()
+	_back_to_base()
+	_fade(true)
+
+
+func walk_page() -> Control:
+	return _walk_page
+
+
+# The walk's keys, from game._screen_key while the walk is live: K leaves; any other key acts only inside the zone
+# of a station that names it, and the rest go to the ball.
+func walk_key(key: int) -> bool:
+	if key == KEY_K:
+		toggle_camp()
+		return true
+	return game.camp_hub.press_key(key)
+
+
+# Customize at the lockers: the camp page's own customize page, over the walk.
+func walk_customize() -> void:
+	if _camp.customize == null:
+		return
+	_camp.customize._open_from_camp()
+	if _camp.customize.visible:
+		_show("CAMP", Palette.AMBER, "")
+		_sync_walk()
+		_fade(true)
+
+
+# Moss's bench at his stall. The panel refuses under an overlay, so the walk steps aside for the call.
+func walk_companion() -> void:
+	var workshop = game.get_node("Workshop")
+	_walking = false
+	_camp.visible = false
+	var opened: bool = workshop.open_companion()
+	_walking = true
+	_camp.visible = not opened
+	_sync_walk()
+	if not opened:
+		game.hud.toast(CampMenu.NO_PIECES)
+
+
+func _hook_companion() -> void:
+	if _companion_hooked:
+		return
+	_companion_hooked = true
+	game.get_node("Workshop").companion_panel.closed.connect(_sync_walk)
 
 
 func _close_camp_silently() -> void:
@@ -499,20 +671,11 @@ func _close_camp_silently() -> void:
 		_close_jukebox()
 	if _radio.visible:
 		_radio.visible = false
-	if not _camp.visible:
+	if _walking or not _camp.visible:
 		return
 	_camp.visible = false
 	_actions.visible = true
 	get_viewport().gui_release_focus()
-
-
-# The camp's Companion button: the camp steps aside first, since open_companion refuses
-# under an overlay.
-func _camp_companion() -> void:
-	_close_camp_silently()
-	_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
-	_layout_backdrop()
-	game.get_node("Workshop").open_companion()
 
 
 # The summary's Camp: back to the title, with the camp open.
@@ -522,7 +685,7 @@ func open_camp_from_summary() -> void:
 
 
 func camp_open() -> bool:
-	return _camp.visible
+	return _walking or _camp.visible
 
 
 # J on the camp swaps it for Moss's jukebox, and back. Leaving lifts the needle, so the
@@ -530,6 +693,10 @@ func camp_open() -> bool:
 func toggle_jukebox() -> void:
 	if _jukebox.visible:
 		_close_jukebox()
+		if _walking:
+			_back_to_base()
+			_fade(true)
+			return
 		_camp.visible = true
 		_camp.refresh(game)
 		_show("CAMP", Palette.AMBER, "")
@@ -543,6 +710,7 @@ func toggle_jukebox() -> void:
 	_refresh_jukebox()
 	_show("MOSS'S JUKEBOX", Palette.AMBER, "")
 	_jukebox.focus_first()
+	_sync_walk()
 	_fade(true)
 
 
@@ -610,6 +778,10 @@ func toggle_radio() -> void:
 	if _radio.visible:
 		_radio.visible = false
 		_save_radio()
+		if _walking:
+			_back_to_base()
+			_fade(true)
+			return
 		_camp.visible = true
 		_camp.refresh(game)
 		_show("CAMP", Palette.AMBER, "")
@@ -623,6 +795,7 @@ func toggle_radio() -> void:
 	_radio.refresh(game.ctx.profile, game.radio_deck.radio)
 	_show("MIXTAPES", Palette.AMBER, "")
 	_radio.focus_first()
+	_sync_walk()
 	_fade(true)
 
 
@@ -727,7 +900,7 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _camp.visible or _jukebox.visible or _radio.visible or ending_open()
+	return _help.visible or _achievements.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible or ending_open()
 
 
 func ending_open() -> bool:
@@ -805,6 +978,13 @@ func _input(event: InputEvent) -> void:
 		return
 	if prologue_showing():
 		_prologue_input(event)
+		return
+	if is_instance_valid(_walk_page):
+		var back: bool = event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B
+		back = back or (event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE)
+		if back:
+			close_walk_page()
+			get_viewport().set_input_as_handled()
 		return
 	if _settings.visible:
 		if _settings.handle(event):
@@ -987,7 +1167,7 @@ func _fade(show: bool) -> void:
 
 
 func _layout_backdrop() -> void:
-	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible or _jukebox.visible or _radio.visible)
+	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible)
 	_veil.anchor_bottom = 0.5 if title_deck else 1.0
 	_content.anchor_bottom = _veil.anchor_bottom
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)

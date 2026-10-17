@@ -23,6 +23,19 @@ func _frames(n := 2) -> void:
 		await process_frame
 
 
+# The ball set down in the lockers' zone, the walk's Customize station (camp_hub.gd); its key is then C.
+func _enter_lockers() -> void:
+	var hub = _game.camp_hub
+	var toward: Vector3 = hub.root.global_position - hub.zone_position("lockers")
+	toward.y = 0.0
+	var at: Vector3 = hub.zone_position("lockers") + toward.normalized() * 1.5
+	at.y = 1.3
+	_game.player.reset_to(at)
+	_game.player.body().global_position = at
+	for i in 4:
+		await physics_frame
+
+
 func _action(action: String) -> void:
 	for pressed in [true, false]:
 		var event := InputEventAction.new()
@@ -41,6 +54,7 @@ func _run() -> void:
 	profile.unlock_pilot("runner_gunner")
 	_game._screen_key(KEY_K)
 	await _frames()
+	await _enter_lockers()
 	var camp = screens.camp_page()
 	var entry = camp.get_node_or_null("CustomizeButton")
 	var page = camp.get_node_or_null("CustomizePage")
@@ -49,7 +63,7 @@ func _run() -> void:
 		_game.free()
 		quit(_t.verdict())
 		return
-	Push.key(root, KEY_C)
+	_game._screen_key(KEY_C)
 	await _frames()
 	_t.check("CUS-4 C opens Customize", page.is_visible_in_tree() and screens.camp_open())
 	_t.eq("focus starts on pilot", page.focused_id(), "pilot")
@@ -98,11 +112,11 @@ func _run() -> void:
 	_t.eq("SPIL-9 paint shared across pilots", page.selected("companion_paint"), "companion_paint_night")
 	Push.key(root, KEY_ESCAPE)
 	await _frames()
-	_t.check("CUS-4 Esc returns to camp without closing it", not page.visible and screens.camp_open() and entry.visible)
-	_t.check("Back restores entry focus", root.gui_get_focus_owner() == entry)
-	Push.click(root, entry)
+	_t.check("CUS-4 Esc returns to camp without closing it", not page.visible and screens.camp_open() and screens.walk_live() and camp._strip.visible)
+	_t.check("Back returns the walk, not the title", not screens._actions.visible and not entry.visible)
+	_game._screen_key(KEY_C)
 	await _frames()
-	_t.check("mouse opens Customize", page.is_visible_in_tree())
+	_t.check("C in the zone opens Customize again", page.is_visible_in_tree())
 	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 7): mouse first. A click on a slot row
 	# shows its cards; a click on an owned card equips and saves. Every control fits at 1280 by
 	# 720 and 1920 by 1080, not only today's row list.
@@ -131,7 +145,7 @@ func _run() -> void:
 	Push.pad(root, JOY_BUTTON_B)
 	await _frames()
 	_t.check("pad B returns to camp", not page.visible and screens.camp_open())
-	Push.click(root, entry)
+	_game._screen_key(KEY_C)
 	await _frames()
 	_action("ui_cancel")
 	await _frames()

@@ -113,6 +113,8 @@ class Keyboard:
 	extends Source
 
 	var enabled := true
+	# The camp walk (camp_hub.gd): the ball only rolls, jumps, boosts and brakes; no weapon, hook or ability fires.
+	var walk := false
 	# Unused: no key layout reads it; the game still sets it.
 	var tuning
 
@@ -140,3 +142,14 @@ class Keyboard:
 		for i in picks.size():
 			if Input.is_action_just_pressed(picks[i]):
 				out.slot_pick = i
+		if walk:
+			out.mount_pressed = false
+			out.mount_held = false
+			out.fire_pressed = false
+			out.fire_held = false
+			out.fire_released = false
+			out.harpoon_pressed = false
+			out.harpoon_held = false
+			out.harpoon_released = false
+			out.ultimate_pressed = false
+			out.slot_pick = -1

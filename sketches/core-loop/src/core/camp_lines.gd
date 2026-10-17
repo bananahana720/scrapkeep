@@ -4,14 +4,14 @@ extends RefCounted
 # scrapbook's pages (newest first, as ScrapbookStore.load_all makes them) and returns a
 # line. Nothing here touches the tree, the clock or a random stream: the choice is a hash
 # of the newest page's run id, so the same history says the same thing. A page is read for
-# run_id, won, world, pilot, stage_reached and the last panel's t; missing keys read as
-# empty. With no pages it falls back to the profile's lifetime stats (stages_cleared,
+# run_id, outcome ("won" or "lost"; an older page without it reads its won flag), world,
+# pilot and stage_reached; missing keys read as empty. An abandoned run makes no page, so there
+# is no quit line. With no pages it falls back to the profile's lifetime stats (stages_cleared,
 # deaths, kills): a ledger line when there are any, the first-visit line when there are
 # none. Melodrama stays in the scrapbook's captions; these are the log.
 
 const STREAK_LOSSES := 3
 const STREAK_WINS := 2
-const QUIT_SECONDS := 90.0
 
 const FIRST := [
 	"Camp log opened. Nothing in it yet, which is the cleanest it will be.",
@@ -45,6 +45,7 @@ const LOSS_2 := [
 	"Dig took the run and gave back some dust. Dust has been entered as evidence.",
 	"Floor held until it was asked to. Entry closed at that point.",
 	"Came up from the Dig with a pocket of grit and a very polite silence.",
+	"Dig shift ended early. Shovel count unchanged, morale under review.",
 ]
 const LOSS_3 := [
 	"Highdraft kept the hull. The cable is still humming something we know.",
@@ -52,13 +53,6 @@ const LOSS_3 := [
 	"The Mind committed its lanes. We did not commit ours in time.",
 	"Reached the top and the top reached back. Details to follow, once they stop shaking.",
 	"Highdraft log: wind, then a quiet, then us on the bench.",
-]
-const QUIT := [
-	"Run left open. The pilot is back at the fire, which counts as an entry.",
-	"Log shows a run abandoned mid-shift. The shift sheet was signed anyway.",
-	"Walked out early. The gate has been left ajar in case the idea returns.",
-	"Short run. The bench stayed warm and the ladle was still wet.",
-	"Run closed by the person flying it. We note it and do not comment on it.",
 ]
 const NEW_PILOT := [
 	"New name on the roster. Moss has already got the wrong boots out for them.",
@@ -83,7 +77,7 @@ const OUTCOME_LOSS := [LOSS_1, LOSS_2, LOSS_3]
 
 static func all_lines() -> Array:
 	var out: Array = []
-	for group in [FIRST, LEDGER, WIN, LOSS_1, LOSS_2, LOSS_3, QUIT, NEW_PILOT, STREAK_LOSS, STREAK_WIN]:
+	for group in [FIRST, LEDGER, WIN, LOSS_1, LOSS_2, LOSS_3, NEW_PILOT, STREAK_LOSS, STREAK_WIN]:
 		out.append_array(group)
 	return out
 
@@ -96,7 +90,7 @@ static func line_for(pages: Array, stats := {}) -> String:
 		return _pick(LEDGER if played > 0.0 else FIRST, "stats-%d" % int(played))
 	var last: Dictionary = pages[0]
 	var seed_text := String(last.get("run_id", "")) if String(last.get("run_id", "")) != "" else "%s/%s" % [last.get("pilot", ""), last.get("stage_reached", 0)]
-	var won := bool(last.get("won", false))
+	var won := is_won(last)
 	var streak := _streak(pages)
 	if not won and streak >= STREAK_LOSSES:
 		return _pick(STREAK_LOSS, seed_text)
@@ -106,26 +100,23 @@ static func line_for(pages: Array, stats := {}) -> String:
 		return _pick(NEW_PILOT, seed_text)
 	if won:
 		return _pick(WIN, seed_text)
-	if _run_seconds(last) < QUIT_SECONDS:
-		return _pick(QUIT, seed_text)
 	var world := clampi(int(last.get("world", 1)), 1, OUTCOME_LOSS.size())
 	return _pick(OUTCOME_LOSS[world - 1], seed_text)
 
 
-# The last panel's run clock; a page with no panels reads as a long run (no quit line).
-static func _run_seconds(page: Dictionary) -> float:
-	var panels = page.get("panels", [])
-	if panels is Array and not panels.is_empty() and panels.back() is Dictionary:
-		return float(panels.back().get("t", QUIT_SECONDS))
-	return QUIT_SECONDS
+# A page's outcome: the run-end thread's "outcome" field, else the older won flag.
+static func is_won(page: Dictionary) -> bool:
+	if page.has("outcome"):
+		return String(page["outcome"]) == "won"
+	return bool(page.get("won", false))
 
 
 # How many pages from the newest share its outcome (won or not).
 static func _streak(pages: Array) -> int:
-	var won := bool((pages[0] as Dictionary).get("won", false))
+	var won := is_won(pages[0])
 	var n := 0
 	for page in pages:
-		if bool((page as Dictionary).get("won", false)) != won:
+		if is_won(page) != won:
 			break
 		n += 1
 	return n

@@ -61,6 +61,13 @@ const ARENAS := {
 		"sun_color": Color("fff1dc"), "sun_energy": 2.35, "sun_rotation": Vector3(-46.0, 62.0, 0.0),
 		"sun_visible": true, "fill": 0.5, "fill_pitch": -40.0, "fill_color": Color("a9b6c0"), "air": {}},
 }
+# The camp walk (camp_hub.gd): the Spillway's daylight turned toward late afternoon, a warm low sun over the plaza, thin
+# haze and no volumetric air, so the lamps and marquees carry the evening. Entered on the "camp" slot over the stage row.
+const CAMP := {"name": "camp", "sky": "hdri", "background": Color("243b43"),
+	"ambient": Color("c9c0a8"), "energy": 0.3, "exposure": 1.08, "saturation": 1.15,
+	"fog": {"color": Color("d9c5a0"), "density": 0.0005},
+	"sun_color": Color("ffc88a"), "sun_energy": 2.2, "sun_rotation": Vector3(-30.0, -35.0, 0.0),
+	"sun_visible": true, "fill": 0.45, "fill_pitch": -45.0, "fill_color": Color("a9b6c0"), "air": {}}
 # The menu stages own their small worlds; they are never freed with a stage.
 const TITLE := {"energy": ROWS[1]["energy"], "sun_energy": ROWS[1]["sun_energy"], "sun_rotation": ROWS[1]["sun_rotation"],
 	"fill": ROWS[1]["fill"], "background": Color("243b43"), "ambient": Color("9db5cf"), "exposure": 1.1, "contrast": 1.25,
