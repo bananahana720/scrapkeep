@@ -75,6 +75,9 @@ const TRIM_DB := {
 	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0, "tally_break": -3.0, "cannon_break": -3.0,
 	"fleet_motif": -4.0, "reactor_tick": -6.0, "reactor_erupt": -2.0, "swarm_buzz": -9.0, "swarm_lock": -6.0, "swarm_scatter": -8.0,
 	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0, "mind_tally": -5.0, "mind_cannon": -5.0,
+	# --- Glass Lance sounds (src/combat/actives/glass_lance.gd) ---
+	"active_glass_lance": -7.0,
+	# --- end Glass Lance ---
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
@@ -563,6 +566,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _swarm_scatter()
 		"mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon":
 			return _mind_quote(id.get_slice("_", 1))
+		"active_glass_lance":
+			return _glass_lance()
 		"hold_pit", "hold_bola", "hold_tether", "hold_net", "hold_riser":
 			return hold(id.get_slice("_", 1), Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
 		"tenacity_choke":
@@ -1506,6 +1511,19 @@ static func _mind_quote(class_id: String) -> PackedFloat32Array:
 	for cell in Harmony.mind_quote(class_id):
 		score.append([int(cell[0]), int(cell[1]) + 12, int(cell[2]) + 2, "chime", 0.7])
 	return Synth.render_score(score, 2.4)
+
+
+# The Glass Lance: a glass flick, then the Mind's quote in miniature. The first three notes of its
+# quote of Sable (D B G) ring fast on the chime two octaves up, and a clean sine holds the
+# quote's wrong last note: TINNG. No vocals.
+static func _glass_lance() -> PackedFloat32Array:
+	var quote: Array = Harmony.mind_quote("sable")
+	var parts: Array = [[_fm(0.06, _hz(int(quote[0][1]) + 36), 3.5, 3.0, 45.0), 0, 0.5]]
+	for i in 3:
+		parts.append([_cut(_n("chime", int(quote[i][1]) + 24), 0.14), Synth.seconds(0.02 + 0.045 * i), 0.7])
+	var wrong := int(quote[quote.size() - 1][1]) + 36
+	parts.append([_tone(0.9, _hz(wrong), _hz(wrong), "sine", 4.5), Synth.seconds(0.15), 0.55])
+	return _mix(parts)
 
 
 # A hold loop, n samples long. The four counter holds of SOUND-STORY.md section 3 sit

@@ -37,6 +37,12 @@ const ROWS := {
 	# --- Quake Knock (Waking-made) ---
 	# --- end Quake Knock ---
 	# --- Glass Lance (Mind-glass) ---
+	"glass_lance": {
+		"name": "Glass Lance", "maker": "mind_glass", "rarity": "relic",
+		"verb": "Throw a shard of the Mind", "text": "F: a glass lance pierces every machine in a line",
+		"max_charges": 2, "recharge": 11.0, "kill_charge": 0.12, "bonus_cap": 3, "windup": 0.0,
+		"kind": preload("res://src/combat/actives/glass_lance.gd"),
+	},
 	# --- end Glass Lance ---
 }
 
