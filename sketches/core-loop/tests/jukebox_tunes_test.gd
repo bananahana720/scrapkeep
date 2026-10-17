@@ -248,7 +248,8 @@ func _run() -> void:
 	var plate: Array = hud.tune_waiting() + hud.ach_toasts()
 	_t.check("and announced on the record plate", plate.any(func(t): return String(t).begins_with("Lights On")), str(plate))
 	await _settle(1.0)
-	var count: int = (hud.tune_waiting() + hud.ach_toasts()).filter(func(t): return String(t).begins_with("Lights On")).size()
+	# The radio's b-side earned by hearing the title shares the name's opening; it has its own plate.
+	var count: int = (hud.tune_waiting() + hud.ach_toasts()).filter(func(t): return String(t).begins_with("Lights On") and not String(t).contains("On the radio")).size()
 	_t.eq("once", count, 1)
 
 	# Seed two more records so the crate has a pick.

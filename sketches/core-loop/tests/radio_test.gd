@@ -7,6 +7,7 @@ const TuneRows := preload("res://src/core/tune_rows.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Profile := preload("res://src/core/profile.gd")
 const RadioCache := preload("res://src/world/radio_cache.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The pilot radio (Andrew 2026-10-17 20:02Z: a persistent HUD radio to switch, auto, skip and
@@ -28,9 +29,19 @@ var _t := T.new("radio_test")
 var _game
 
 
+# A take plays its own pack once one is packaged at assets/music_ace/<take id>/; until then it
+# has none and the radio plays its parent record. Rows that name a pack keep it.
+func _packs() -> void:
+	var some := String(RadioTakes.take_ids()[0])
+	_t.eq("an unpackaged take has no pack", MusicRows.take_manifest(some), "")
+	_t.eq("a row that names a pack keeps it", MusicRows.take_manifest("1-1"), MusicRows.ROWS["1-1"]["ace_manifest"])
+	_t.eq("an unknown id has no pack", MusicRows.take_manifest("nope"), "")
+
+
 func _initialize() -> void:
 	_catalogue()
 	_model()
+	_packs()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)

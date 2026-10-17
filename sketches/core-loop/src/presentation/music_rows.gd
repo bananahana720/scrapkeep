@@ -162,6 +162,22 @@ static func resolve_pack(row: Dictionary, sidecar_dir := "") -> Dictionary:
 	}
 
 
+# A radio take's own pack (design-v3/sound/radio_takes.py, packaged whole by pack --whole):
+# its row when ROWS names one, else assets/music_ace/<take id>/ with dashes or underscores,
+# whichever is on disk. "" until the take is rendered and packaged.
+static func take_manifest(id: String) -> String:
+	var named := str(ROWS.get(id, {}).get("ace_manifest", ""))
+	if named != "":
+		return named
+	if not id.begins_with("take-"):
+		return ""
+	for dir in [id.replace("-", "_"), id]:
+		var path := "res://assets/music_ace/%s/manifest.json" % dir
+		if resolve_manifest(path) != "":
+			return path
+	return ""
+
+
 # Source first, then the export's music_ace sidecar. Missing packs are silent synth fallback.
 static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
 	if manifest_path == "":

@@ -132,7 +132,7 @@ def main(argv):
                             "--light" if take["tier"] == "b-side" else "--spice"], check=True)
             files.append(f"{name}.wav")
         registry[take["id"]] = dict(id=take["id"], display_name=take["name"], station=take["station"], tier=take["tier"],
-                                    parent=take["parent"], pick=take["pick"], bpm=take["bpm"], key=take["key"],
+                                    parent=take["parent"], source_pick=take["pick"], bpm=take["bpm"], key=take["key"],
                                     takes=files, pick=None)
         print(take["id"], len(files), flush=True)
     order = [t["id"] for t in json.loads(CATALOGUE.read_text())["takes"]]

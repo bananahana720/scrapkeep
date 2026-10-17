@@ -950,7 +950,7 @@ func spin(id: String, live := false, row: Dictionary = {}) -> bool:
 		_ace_end()
 		return true
 	# A place-and-moment pack plays its own recording, else its zone's.
-	var tune: String = MusicRows.ROWS.get(id, {}).get("ace_manifest", "") if kind == "pack" else ""
+	var tune: String = MusicRows.take_manifest(id) if kind == "pack" and id.begins_with("take-") else (MusicRows.ROWS.get(id, {}).get("ace_manifest", "") if kind == "pack" else "")
 	_select_ace_manifest(tune)
 	if tune == "" or not ace_ready():
 		_select_ace_manifest(MusicRows.resolve(zone)["ace_manifest"])
@@ -1014,7 +1014,7 @@ func radio_play(id: String, record: String, pinned := false) -> bool:
 		return false
 	var play_id := record
 	var row := parent
-	if id != record and MusicRows.ROWS.has(id):
+	if id != record and MusicRows.take_manifest(id) != "":
 		var source: Dictionary = parent["source"].duplicate()
 		if source["kind"] != "menu":
 			source["kind"] = "pack"
