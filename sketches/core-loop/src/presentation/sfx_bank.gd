@@ -244,7 +244,7 @@ static func cause_note_id(midi: int) -> String:
 
 # Rendered sounds (design-v3/sound/specials.py and extras.py), 44.1 kHz mono 16-bit WAVs under
 # assets/sfx/. The four presence cues are seamless two-bar loops at 129 BPM.
-const SFX_DIR := "res://assets/sfx/"
+const SFX_DIR := "res://assets/audio/"
 const SPECIALS := ["foreman", "dispatcher", "splitter", "linker"]
 const FILE_SOUNDS := {
 	"foreman_presence": "specials/foreman_presence.wav", "foreman_tell": "specials/foreman_tell.wav",
