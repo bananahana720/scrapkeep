@@ -5,6 +5,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
 const Beacon := preload("res://src/core/beacon.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Profile := preload("res://src/core/profile.gd")
@@ -309,6 +310,8 @@ func continue_refusal() -> String:
 func sitting_save_guard() -> void:
 	if tuning != null and tuning.sitting() and ctx.profile != null:
 		ctx.profile._refuse("sitting profile: this session does not save")
+		# The sitting opens every first-win secret, as it opens every pilot (secrets.gd).
+		Secrets.open_for_sitting(ctx.profile)
 
 
 func pilot_unlocked(def) -> bool:

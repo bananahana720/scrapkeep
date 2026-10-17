@@ -162,6 +162,20 @@ const ROWS := {
 	"ach_cannon_time_on_target": {"name": "Time on Target", "text": "Land a Fire Mission on eight enemies at once.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_time_on_target"}, "count": 1, "reward": {"cosmetic": "paint_cannon_lens"}},
 	"ach_cannon_old_tune": {"name": "Old Tune", "text": "Quiet the Mind with its own gun.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_old_tune"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_cannon_choir"}},
 	# --- end remembered_cannon ---
+	# First-win secrets (secrets.gd): the first won run opens one alternate paint per pilot. Hidden, so a
+	# fresh player sees no hint; progress.gd backfill_secrets earns them for a player who won before they existed.
+	"secret_paint_sable": {"name": "Sable's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_sable_overtime"}},
+	"secret_paint_rivet": {"name": "Rivet's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_rivet_inside_job"}},
+	"secret_paint_kest": {"name": "Kest's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_kest_knock_back"}},
+	"secret_paint_tarn": {"name": "Tarn's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_tarn_unissued"}},
+	"secret_paint_tally": {"name": "Tally's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_tally_carbon"}},
+	"secret_paint_cannon": {"name": "Cannon's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_cannon_velvet"}},
 }
 
 

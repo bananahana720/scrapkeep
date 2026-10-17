@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const Profile := preload("res://src/core/profile.gd")
@@ -73,7 +74,8 @@ func _run() -> void:
 	_t.check("P3-3 the button opens it", screens.achievements_open(), "open %s" % screens.achievements_open())
 	var page = screens.achievements_page()
 	var rows: Dictionary = page.rows
-	_t.eq("P3-3 one row per achievement", rows.keys(), Achievements.ids())
+	# 2026-10-17 (first-win secrets): the six secret paint rows stay off the page until earned.
+	_t.eq("P3-3 one row per achievement", rows.keys(), _listed())
 	# 2026-10-10 (w13 B5 fix round, re-pin): B5 ships the skill bar's three shared grant rows
 	# (CUSTOMIZE section 8, Shared), 36 + 3.
 	# 2026-10-11 (w13 SG12, merge re-pin): the four ach_meta_* between-run option grants, 39 + 4.
@@ -191,7 +193,7 @@ func _reach_rows(page) -> void:
 			page.rows.values()[0].grab_focus()
 			await _frames(3)
 			var reached := []
-			for id in Achievements.ids():
+			for id in _listed():
 				var row: Control = page.rows[id]
 				await _frames(3)
 				if row.has_focus() and page._scroll.get_global_rect().encloses(row.get_global_rect()):
@@ -202,9 +204,14 @@ func _reach_rows(page) -> void:
 				else:
 					Push.key(root, KEY_DOWN)
 			await _frames(3)
-			_t.eq("all rows reachable by %s at %s" % ["pad" if pad else "keyboard", resolution], reached, Achievements.ids())
+			_t.eq("all rows reachable by %s at %s" % ["pad" if pad else "keyboard", resolution], reached, _listed())
 			_t.check("navigation reaches fixed Back at %s" % resolution, page.back.has_focus())
 			_t.check("list scrolls to its final row at %s" % resolution, page._scroll.scroll_vertical > 0)
 	root.size = original
 	root.content_scale_size = original_scale
 	await _frames(5)
+
+
+# The rows the page lists for the game's profile: every row but an unearned first-win secret.
+func _listed() -> Array:
+	return Achievements.ids().filter(func(id): return not Secrets.shut_row(id, _game.ctx.profile))
