@@ -104,7 +104,7 @@ func _run() -> void:
 	t.check("it holds an attacker slot", rig.is_in_group(AttackBudget.ATTACKING))
 	t.eq("one tell, on the frame the ring is up", tells, [["tell", true]])
 	if not facts.is_empty():
-		t.eq("first fact row", facts[0]["row"], "E25")
+		t.eq("first fact row", facts[0]["row"], "E26")
 	var ring = rig.telegraph()
 	t.check("a ring is up", ring != null)
 	if ring != null:
