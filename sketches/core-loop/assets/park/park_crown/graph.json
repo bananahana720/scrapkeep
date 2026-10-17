@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "37c81054c1d5cf4134d72ca52547e0f478191c1426ec1e98565b65a0e3d9bd98",
+  "bake_sha256": "bfc5b436d9fdf092605c879b5ed3fc86942feaeeab073a6a4b42b88c8f47b6a3",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 984636,
-  "edges": 321612,
+  "bytes": 987683,
+  "edges": 321834,
   "first_failed": "",
   "flags": {
     "deck": 701,
     "door_ok": 39550,
     "line": 387,
     "open": 40699,
-    "sight_ok": 8988,
+    "sight_ok": 9071,
     "under": 0
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "12790f5b7aa048c5f91a199864bffebfe2620f1861b1fb905d55f32e8037d64a",
+  "graph_sha256": "4a8be66175ed5ea285c7eff7b6167439c1641ee1c57c2c70ee330c2ac3d2f3e8",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
   "nodes": 41102,
-  "park_sha256": "daa3485fc43357e0eac3adf40257b0397f63445b9b608bd9fbc9a38c2d3e356d",
+  "park_sha256": "f838b4d8c6af3017d88b8bcdd69a991fd11c46bbf3bfd0e8cda37755891f7784",
   "pockets": [
     {
       "clear_ring": [],
@@ -183,9 +183,9 @@
   "zones": {
     "anchors": [
       {
-        "cost": 1353.1,
-        "d_landmark": 120.1,
-        "name": "crown_exit_bank",
+        "cost": 1432.1,
+        "d_landmark": 199.1,
+        "name": "crown_apron",
         "on_route": false,
         "rank": 1,
         "viable": true
@@ -315,7 +315,7 @@
     "crossings": {
       "drop": 21,
       "ride": 7,
-      "walk": 52
+      "walk": 53
     },
     "hidden": [
       {
