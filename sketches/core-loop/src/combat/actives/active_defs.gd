@@ -31,6 +31,12 @@ const ROWS := {
 	# --- Silo Battery (Fleet Surplus) ---
 	# --- end Silo Battery ---
 	# --- Cutting Torch (Redjaw Workshops) ---
+	"cutting_torch": {
+		"name": "Cutting Torch", "maker": "redjaw_workshops", "rarity": "rare",
+		"verb": "Sweep a plate-cutting torch", "text": "F: a guide line, then a beam that burns through plating",
+		"max_charges": 1, "recharge": 11.0, "kill_charge": 0.12, "bonus_cap": 4, "windup": 0.3,
+		"kind": preload("res://src/combat/actives/cutting_torch.gd"),
+	},
 	# --- end Cutting Torch ---
 	# --- Lift Pulse (Highdraft Roosts) ---
 	# --- end Lift Pulse ---
