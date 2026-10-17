@@ -9,9 +9,10 @@ const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
 # build emits hotwire_offered this screen opens over the paused sim with the part's name, the
 # HotwireChoice preview (upside, downside) and two keys:
 #   Fit      E or pad Y (cl_interact), hotwire_fit(): the part stands as a striped gate.
-#   Recycle  F or pad X, hotwire_recycle(): the stated cogs, once. F is the special key and X
-#            the haul button, both unread while the tree is paused, and neither is the fire
-#            button, so a click mashed through the Warden's death cannot recycle by accident.
+#   Recycle  F or pad X, hotwire_recycle(): the stated cogs, once. F is the active's key and X
+#            the haul button, both unread while the tree is paused (the recycle releases
+#            cl_active so the press never reaches the rack), and neither is the fire button,
+#            so a click mashed through the Warden's death cannot recycle by accident.
 # Escape, P or Start closes it with the offer still pending. The offer is not lost: the screen
 # reopens when the stage's gates open (flow_changed "gates"), or at once if the pause menu or
 # the workshop was holding the screen back. hotwire_resolved (build's own signal, not a bus
@@ -222,6 +223,7 @@ func _input(event: InputEvent) -> void:
 	elif (event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F) \
 			or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_X):
 		choose("recycle")
+		Input.action_release("cl_active")
 	else:
 		return
 	get_viewport().set_input_as_handled()

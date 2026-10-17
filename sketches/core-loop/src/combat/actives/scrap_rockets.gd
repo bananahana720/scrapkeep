@@ -38,6 +38,8 @@ var ctx
 var combat
 var rockets: Array = []
 var bursts := 0
+# Bumped by clear(), so a burst whose kill clears the stage mid-step drops the survivors.
+var _generation := 0
 
 
 func setup(context, owner_combat) -> void:
@@ -47,6 +49,7 @@ func setup(context, owner_combat) -> void:
 
 func clear() -> void:
 	rockets.clear()
+	_generation += 1
 
 
 func count_for(bonus: int) -> int:
@@ -83,10 +86,13 @@ func fire(_rack, _row: Dictionary, bonus: int) -> int:
 func step(delta: float) -> void:
 	if rockets.is_empty():
 		return
+	var generation := _generation
 	var flying: Array = []
-	for rocket in rockets:
+	for rocket in rockets.duplicate():
 		if not _fly(rocket, delta):
 			flying.append(rocket)
+		if _generation != generation:
+			return
 	rockets = flying
 
 
