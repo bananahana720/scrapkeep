@@ -1,7 +1,7 @@
 """Mix and master check: a pass/fail row per track, so every cue sits at one loudness, in its own
 frequency and stereo slot, and loops without a click.
 
-    python check_mix.py [--cues] <file|folder> ...      table to stdout, JSON lines to --json <path>
+    python check_mix.py [--cues] [--loops] <file|folder> ...   table to stdout, JSON lines to --json <path>
 
 With --cues, a file whose name starts with a cue id from themes.py (title-a, roam-dig, ...) is
 also checked for key against that cue (check_score.py's scale fit).
@@ -13,7 +13,7 @@ Targets (one table, SCORE.md "Mix and master"):
   width         side/mid energy 0.08 to 0.6: a real stereo stage, never collapsing in mono
   balance       each band's share of energy inside the window of the cue's role (BANDS)
   lead space    2 to 5 kHz energy at least LEAD_MIN of the 250 Hz to 2 kHz energy, so the sax reads
-  loop seam     the last and first 50 ms within 3 dB and spectrally close, for files cut as loops
+  loop seam     with --loops (files cut as loops): last and first 50 ms within 3 dB and spectrally close
   clipping      no run of 3+ samples at full scale
 Standard library, NumPy and ffmpeg only.
 """
@@ -30,14 +30,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 SR = 48000
 TARGET_LUFS, LUFS_TOL, MAX_TP = -16.0, 0.5, -1.0
 LEAD_MIN = 0.06
-# (name, low Hz, high Hz, min share, max share) of total energy. Wide on purpose: they catch a
-# track whose sub swamps everything or whose lead register is empty, not taste.
+# (name, low Hz, high Hz, min share, max share) of total energy. Set around the 36 library takes
+# of 2026-10-17 (sub median 0.08, low 0.57, low-mid 0.24, presence 0.04, air 0.016), wide on
+# purpose: they catch a track whose sub swamps everything or whose lead register is empty, not taste.
 BANDS = [
-    ("sub", 20, 60, 0.03, 0.35),
-    ("low", 60, 250, 0.15, 0.55),
-    ("low-mid", 250, 2000, 0.12, 0.50),
-    ("presence", 2000, 5000, 0.02, 0.20),
-    ("air", 5000, 16000, 0.005, 0.15),
+    ("sub", 20, 60, 0.0, 0.35),
+    ("low", 60, 250, 0.25, 0.75),
+    ("low-mid", 250, 2000, 0.10, 0.60),
+    ("presence", 2000, 5000, 0.015, 0.20),
+    ("air", 5000, 16000, 0.003, 0.08),
 ]
 AUDIO = {".wav", ".mp3", ".flac", ".ogg"}
 
@@ -99,7 +100,7 @@ def cue_of(path):
     return max((c for c in themes.CUES if stem.startswith(c)), key=len, default=None)
 
 
-def check(path, with_cues=False, is_loop=None):
+def check(path, with_cues=False, is_loop=False):
     x = load(path)
     mono = x.mean(axis=1)
     loud, tp = meter(path)
@@ -109,7 +110,7 @@ def check(path, with_cues=False, is_loop=None):
         shares[name] = e / (total + 1e-12)
     lead_space = shares["presence"] / (shares["low-mid"] + 1e-12)
     jump, sim = seam(x)
-    loop = is_loop if is_loop is not None else "loop" in Path(path).stem or "roam" in Path(path).stem
+    loop = bool(is_loop)
     row = {
         "file": Path(path).name,
         "lufs": round(loud, 1), "lufs_ok": abs(loud - TARGET_LUFS) <= LUFS_TOL,
@@ -130,6 +131,7 @@ def check(path, with_cues=False, is_loop=None):
         offset, best, home = check_score.key_offset(check_score.salience(check_score.resample(x.mean(axis=1), SR)),
                                                     check_score.salience(check_score.resample(full, themes.SR)))
         row.update(cue=cue, key_offset=offset, key_ok=offset == 0 or best - home < check_score.KEY_TIE)
+    row = {k: (bool(v) if isinstance(v, np.bool_) else v) for k, v in row.items()}
     row["pass"] = all(v for k, v in row.items() if k.endswith("_ok"))
     row["fails"] = [k[:-3] for k, v in row.items() if k.endswith("_ok") and not v]
     return row
@@ -147,7 +149,7 @@ def main(argv):
     if not paths:
         print(__doc__)
         return 2
-    rows = [check(p, with_cues) for p in paths]
+    rows = [check(p, with_cues, "--loops" in argv) for p in paths]
     print(f"{'file':44} {'LUFS':>6} {'TP':>5} {'lowM':>5} {'width':>5} {'lead':>5}  result")
     for r in rows:
         print(f"{r['file'][:44]:44} {r['lufs']:6} {r['true_peak']:5} {r['low_mono']:5} {r['width']:5} "
