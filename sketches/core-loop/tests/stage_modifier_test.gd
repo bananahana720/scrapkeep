@@ -279,7 +279,10 @@ func _runtime() -> void:
 			if hud.launch_card.title != game.ctx.stages.of(stage)["name"]:
 				world_ok = world_ok and hud.launch_card.line == Modifier.caption(expected)
 				world_cards += 1
-				await create_timer(hud.WORLD_CARD_BEAT + 0.3).timeout
+				for frame in 600:
+					if hud.launch_card.title == game.ctx.stages.of(stage)["name"]:
+						break
+					await process_frame
 			entries += 1
 			var card_line: String = hud.launch_card.line if hud.launch_card.showing() else "<no card>"
 			var ok: bool = acts.stage_modifier == expected and card_line == Modifier.caption(acts.stage_modifier)
