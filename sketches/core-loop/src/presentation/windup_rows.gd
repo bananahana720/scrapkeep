@@ -45,7 +45,7 @@ const ROWS := {
 	"mind_hand": {"color_role": "hazard", "shape": "bar", "sound": "none", "attacks": {"E18": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.035, "beats": 2.0}, "death": {"style": "spin_down", "parts": 6, "seconds": 0.6}},
 	# Declared world 2 and 3 kinds: reserved attack ids, live once each kind is built.
-	"burrower": {"color_role": "hazard", "shape": "bar", "sound": "warn_burrow", "attacks": {"E19": ["warn_seconds"]},
+	"burrower": {"color_role": "hazard", "shape": "ring", "sound": "warn_burrow", "attacks": {"E19": ["warn_seconds"]},
 		"idle": {"style": "breathe", "amplitude": 0.05, "beats": 2.5}, "death": {"style": "collapse", "parts": 5, "seconds": 0.55}},
 	"drill_crew": {"color_role": "hazard", "shape": "square", "sound": "warn_bore", "attacks": {"E20": ["warn_seconds"]},
 		"idle": {"style": "tick", "amplitude": 0.035, "beats": 2.5}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
@@ -57,6 +57,8 @@ const ROWS := {
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"kite_drone": {"color_role": "hazard", "shape": "diamond", "sound": "warn_dive", "attacks": {"E24": ["warn_seconds"]},
 		"idle": {"style": "hover", "amplitude": 0.07, "beats": 2.5}, "death": {"style": "spin_down", "parts": 3, "seconds": 0.45}},
+	"pit_jaw": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E30": ["warn_seconds"]},
+		"idle": {"style": "tick", "amplitude": 0.04, "beats": 2.0}, "death": {"style": "pop", "parts": 4, "seconds": 0.4}},
 }
 
 

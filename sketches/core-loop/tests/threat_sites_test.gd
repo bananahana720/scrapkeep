@@ -43,11 +43,12 @@ const AUDIT := {
 	"res://src/combat/bola_thrower.gd": ["PROJECTILE"],
 	# 2026-10-04 (wave 9): six new enemies, one telegraph each.
 	"res://src/combat/anchor_crew.gd": ["LANE"],
-	"res://src/combat/burrower.gd": ["LANE"],
+	"res://src/combat/burrower.gd": ["INSTANT"],
 	"res://src/combat/drill_crew.gd": ["INSTANT"],
 	"res://src/combat/kite_drone.gd": ["INSTANT"],
 	"res://src/combat/lamp_swarm.gd": ["WAVE"],
 	"res://src/combat/line_cutter.gd": ["PROJECTILE"],
+	"res://src/combat/pit_jaw.gd": ["INSTANT"],
 	# alpha w7 Mind: build() lays each descriptor's own type; DESCRIPTORS audits where it is named.
 	"res://src/boss/mind_attacks.gd": ["descriptor", "descriptor", "descriptor"],
 }

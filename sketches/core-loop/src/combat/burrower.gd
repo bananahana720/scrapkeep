@@ -1,24 +1,35 @@
 extends "res://src/combat/counter.gd"
 
 # The burrower (world 2 row, roster_dig.gd): a Fleet crew that hides under the floor and
-# shows only a flat surface marker. Its wind-up commits a lane from its hiding spot toward
-# the ball; LIVE it bursts up and lunges along that lane. A slam that lands on the marker
-# while it is hidden kills it.
+# shows only a flat surface marker. It hunts a ball that is on the floor (FloorRule) and under
+# cruise: its wind-up commits a ring where the ball is heading, and LIVE it bursts up under
+# that ring, pops a ball still on the floor there into the air, and stands surfaced and
+# rammable for live_seconds. A ball carving a bank or wall, or in the air, is out of its reach
+# (design-v3/WORLD-ROSTERS.md, Andrew's "Commit" tap). A slam that lands on the marker while
+# it is hidden kills it, so a lip drop onto the marker is the clean kill.
+
+const FloorRule := preload("res://src/combat/floor_rule.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 const HP := 45.0
-const LANE_LENGTH := 14.0
-const LANE_WIDTH := 2.2
+const BURST_RADIUS := 2.6
+const LEAD := 0.5
 const MARKER_RADIUS := 1.6
 const BURST_DAMAGE := 10.0
-const SHOVE := 8.0
-const LUNGE_SPEED := 16.0
+const POP := 9.0
+const SHOVE := 3.0
 const SINK := 3.0
+# It tunnels at TUNNEL_SPEED while it roams, and during the wind-up it digs to the ring, which is
+# never farther than BURST_REACH from it: at most BURST_REACH / WARN m/s under the floor.
+const TUNNEL_SPEED := 4.5
+const WARN := 1.0
+const BURST_REACH := 18.0
 
 var hidden := true
 var bursts := 0
 var slam_kills := 0
-# The committed lane contained the ball: rolling off it before the burst is burrow_lane.
-var _lane_had_ball := false
+# The committed ring contained the ball: leaving the floor before the burst is burrow_lane.
+var _ring_had_ball := false
 var _marker: MeshInstance3D
 var _marker_lip := -1
 static var _warned_asset := false
@@ -37,11 +48,11 @@ func _configure(threat: float) -> void:
 	_set_health(HP * threat)
 	scrap_value = 4
 	weight = 1.4
-	walk_speed = 4.5
-	warn_seconds = 1.0
-	live_seconds = 0.6
+	walk_speed = TUNNEL_SPEED
+	warn_seconds = WARN
+	live_seconds = 1.2
 	rest_seconds = 3.0
-	attack_range = 18.0
+	attack_range = BURST_REACH
 
 
 func _build_marker() -> void:
@@ -131,28 +142,48 @@ func _set_hidden(value: bool) -> void:
 		_marker.visible = value
 
 
-func _commit(to_ball: Vector3) -> Node3D:
-	_facing(to_ball)
-	var lane := _commit_lane(Threat.Type.LANE, global_position, to_ball, LANE_LENGTH, LANE_WIDTH)
-	_lane_had_ball = lane != null and lane.contains(_real_ball())
-	return lane
+# It only goes for a ball it can reach: on the floor and under cruise.
+func _wants_attack(to_ball: Vector3) -> bool:
+	var player = _player()
+	if player == null or not FloorRule.on_floor(player.state) or player.speed_tier() >= SpeedTier.CRUISE:
+		return false
+	return to_ball.length() <= attack_range
 
 
+func _commit(_to_ball: Vector3) -> Node3D:
+	var aim: Vector3 = _ball() + target.planar_velocity() * LEAD
+	var reach: Vector3 = aim - global_position
+	reach.y = 0.0
+	if reach.length() > BURST_REACH:
+		aim = global_position + reach.normalized() * BURST_REACH + Vector3.UP * (aim.y - global_position.y)
+	_facing(aim - global_position)
+	var ring := _commit_ring(Threat.Type.INSTANT, aim, BURST_RADIUS, 2.0)
+	_ring_had_ball = ring != null and ring.contains(_real_ball())
+	return ring
+
+
+# It tunnelled to the ring during the wind-up and breaks the floor there.
 func _go_live() -> void:
+	var ring := telegraph()
+	if ring != null:
+		global_position = Vector3(ring.center.x, Telegraph.ground_under(terrain, ring.center) + half_height, ring.center.z)
 	_set_hidden(false)
 	bursts += 1
-	var lane := telegraph()
-	if lane != null and lane.contains(_real_ball()):
-		hit_player.emit(BURST_DAMAGE, lane.dir * SHOVE + Vector3.UP * 4.0)
-	elif lane != null and _lane_had_ball and fleet != null:
-		fleet.discover("burrow_lane", _real_ball())
+	if ring == null:
+		return
+	var player = _player()
+	var ball := _real_ball()
+	if ring.contains(ball) and player != null and FloorRule.on_floor(player.state):
+		var out: Vector3 = ball - ring.center
+		out.y = 0.0
+		var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
+		hit_player.emit(BURST_DAMAGE, dir * SHOVE + Vector3.UP * POP)
+	elif _ring_had_ball and fleet != null and player != null and not FloorRule.on_floor(player.state):
+		fleet.discover("burrow_lane", ball)
 
 
 func _live_motion(_to_ball: Vector3) -> Vector3:
-	var lane := telegraph()
-	if lane == null:
-		return Vector3.ZERO
-	return lane.dir * LUNGE_SPEED
+	return Vector3.ZERO
 
 
 func _on_end() -> void:
