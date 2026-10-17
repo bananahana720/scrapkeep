@@ -39,6 +39,8 @@ const SHOT_WIDTH := 480
 # A still is a frame readback; keep them rare. A better candidate of the same kind replaces
 # the held one only by this margin, and never sooner than SHOT_GAP seconds after any still.
 const SHOT_GAP := 1.0
+# The share of the frame a still keeps, clear of the HUD's bars (top 12%, bottom 22%).
+const SHOT_CROP := Rect2(0.08, 0.12, 0.84, 0.66)
 const BETTER_BY := 1.25
 # The opening still waits this long into the first stage so the ball is in the world.
 const OPENING_AFTER := 1.5
@@ -361,6 +363,9 @@ func _grab_into(row: Dictionary, rare := false) -> void:
 		var image := get_viewport().get_texture().get_image()
 		if image == null or image.is_empty():
 			return
+		# The HUD's top and bottom bands are not part of the picture.
+		var size := Vector2(image.get_size())
+		image = image.get_region(Rect2i(Vector2i(size * SHOT_CROP.position), Vector2i(size * SHOT_CROP.size)))
 		var h := maxi(1, roundi(float(SHOT_WIDTH) * image.get_height() / maxf(1.0, image.get_width())))
 		image.resize(SHOT_WIDTH, h, Image.INTERPOLATE_BILINEAR)
 		row["shot"] = image, CONNECT_ONE_SHOT)
