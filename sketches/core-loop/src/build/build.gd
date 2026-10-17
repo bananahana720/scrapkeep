@@ -214,6 +214,7 @@ func setup(ctx_ref) -> void:
 	ctx.root.add_child(field)
 	field.setup(ctx)
 	field.resolved.connect(_on_element_resolved)
+	field.fused.connect(_on_fused)
 	accretion = Accretion.new()
 	ctx.player.roll_node().add_child(accretion)
 	accretion.setup()
@@ -833,6 +834,11 @@ func _on_element_resolved(result: Dictionary) -> void:
 	var row := Elements.ROWS.get(key, {}) as Dictionary
 	if row.has("found"):
 		_note_found("element:" + key, row["found"])
+
+
+# SG2: a fusion's first fire logs its codex card, which carries the row's elite rule.
+func _on_fused(result: Dictionary) -> void:
+	_note_found("fusion:" + String(result["key"]), Elements.card_text(Elements.FUSIONS[result["key"]]))
 
 
 func _class_id() -> String:

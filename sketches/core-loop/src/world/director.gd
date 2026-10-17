@@ -273,6 +273,8 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				if a.has("affix"):
 					spawn["affix"] = a["affix"]
 				spawn["pack"] = int(a.get("pack", -1))
+				if a.has("elite"):
+					spawn["elite"] = true
 				due.append(spawn)
 	if paused:
 		return due
@@ -423,6 +425,8 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false) ->
 			if spot == Vector2.INF or not _park_safe(spot) or spot.distance_to(ball) < MIN_GAP or not _pack_gap(spot, assigned):
 				continue
 		var arrival := {"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq}
+		if is_elite:
+			arrival["elite"] = true
 		if is_elite and run_tier() >= RunTier.HARD and kinds[i] == "plated_brute":
 			arrival["affix"] = EliteAffixes.for_arrival(_elite_packs_made)
 			affixed = true
