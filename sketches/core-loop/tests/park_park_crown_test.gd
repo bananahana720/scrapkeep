@@ -294,7 +294,7 @@ static func pin_failures(park: Dictionary) -> Array:
 		elif DRESSED.has(id):
 			if recipe != DRESSED[id] or not ResourceLoader.exists(ParkRecipes.GLB_DIR + recipe + ".glb"):
 				out.append("%s carries recipe %s, want %s with its GLB" % [id, recipe, DRESSED[id]])
-		elif recipe != "greybox:" + String(r["element"]):
+		elif recipe != "greybox:" + String(r["element"]) and not (r["element"] == "anchor_field" and ParkRecipes.ANCHOR_KITS.has(recipe)):
 			out.append("%s carries recipe %s, want greybox:%s" % [id, recipe, r["element"]])
 		if id.ends_with("_rise"):
 			out.append("reversed-ramp row %s is back" % id)
@@ -369,7 +369,7 @@ static func physical_perch_failures(park: Dictionary, parent: Node3D, ground: Ca
 			out.append("%s missing" % id)
 			continue
 		var row: Dictionary = rows[0]
-		if row["at"] != PERCH_XZ[i] or row["stamp"] != "" or row["recipe"] != "greybox:anchor_field":
+		if row["at"] != PERCH_XZ[i] or row["stamp"] != "" or not ParkRecipes.is_anchor_field(row):
 			out.append("%s placement changed" % id)
 		var node := ParkRecipes.place_anchor_field(row, parent, ground, zones)
 		var shapes := node.find_children("*", "CollisionShape3D", true, false)

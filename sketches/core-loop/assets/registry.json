@@ -2852,7 +2852,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -2881,7 +2881,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -2910,7 +2910,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -2939,7 +2939,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -2968,7 +2968,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -2997,7 +2997,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3026,7 +3026,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3055,7 +3055,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3084,7 +3084,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3113,7 +3113,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3142,7 +3142,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3171,7 +3171,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3200,7 +3200,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3229,7 +3229,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
@@ -3258,7 +3258,7 @@
    "class": "detail",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place_anchor_field (planned: the post mesh of a greybox:anchor_field row, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells)",
+   "loader": "src/world/park/park_recipes.gd place_anchor_field: the post mesh of an anchor_field row whose recipe is its family (ANCHOR_KITS), one variant per row by row-id hash, one MultiMesh per field, Y scaled by tall / 10 with authored y -1 at the box collider's bottom, quarter turns per post; the -col box is never drawn and the field keeps its BoxShape3D colliders; material enamel; no detail shells",
    "provenance": {
     "recipe": "tools/blender/park/anchors.py",
     "notes": "harpoon anchor posts for the 877 greybox:anchor_field park rows (placeholder burndown); authoring contract in the recipe docstring; build log with sha256: artifacts/local/anchors/build_log.json (local evidence)"
