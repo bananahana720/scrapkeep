@@ -132,9 +132,11 @@ static func piece_for(row: Dictionary) -> String:
 	return ""
 
 
-# The rows these pieces exist for: greybox kickers in the flume, pit, crown and islands, and the sinkhole's lava channels.
+# The rows these pieces exist for: greybox kickers in the flume, pit, crown and islands, and the sinkhole's lava channels,
+# whether they still stand in as the greybox or a park pass has already swapped them onto a piece.
 static func _target(park: String, row: Dictionary) -> bool:
-	if String(row.get("recipe", "")) != "greybox:" + String(row["element"]):
+	var recipe := String(row.get("recipe", ""))
+	if recipe != "greybox:" + String(row["element"]) and not PIECES.has(recipe):
 		return false
 	if park.ends_with("park_sinkhole.json"):
 		return row["element"] == "half_pipe" and String(row["id"]).begins_with("lava_channel_")

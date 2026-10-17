@@ -676,6 +676,15 @@ The stage row keeps theme 1, the sluice palette with the funk slap bass (`alpha_
 | `ref_canal_turnout` | lateral canal | Turnouts let the main canal feed smaller ones; the fields get their water in turn. |
 | `dam_era_crew_bunks` | crew ledges | Flume crew bunks, cut into the mesa face. Bunk 6 has the view. Bunk 6 also has the draught. |
 | `dam_era_boom_tag` | crane booms | Boom 3. Swung every trestle bent into place. Swings other things now. |
+| `dam_era_siphon_span` | siphon span | Siphon span, rated for water at walking pace. Logged one ball at sixty. Span unchanged. Rating unchanged. |
+| `dam_era_bent_board` | flume bent 1, weir end | Bent 1. Counting starts at the weir. Paint the ticks bigger; nobody reads them at speed. |
+| `dam_era_survey_mast` | bend survey mast 1 | Survey mast 1. String from here to the bend, re-strung daily. The bend moved twice. The masts did not. |
+| `dam_era_surge_pylon` | bluff surge pylon 1 | Surge line, pylon 1. Line carries the head house telephone. Head house rings first. |
+| `dam_era_pour_lip` | pour channel | Pour lip. Flume ends here, a hand above the drum floor. The water never minded the drop. |
+| `dam_era_gatehouse_key` | weir gatehouse | Gatehouse key on the inside hook. Door locked from the outside. Crew uses the window. |
+| `dam_era_crib_pier` | siphon bench pier | Crib pier, timber and river rock. Built to hold the siphon still. Holds most things still. |
+| `dam_era_anchor_block` | bench coping pier | Anchor block for a penstock that was never laid. Poured anyway. The pour was already paid for. |
+| `dam_era_intake_gate` | weir intake | Intake gate, hung open. Opened once in the dam's first spring. Nobody has found the crank since. |
 
 The `ref_` texts need a fact check before they ship.
 

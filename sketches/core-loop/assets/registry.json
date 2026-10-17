@@ -3716,6 +3716,42 @@
    }
   },
   {
+   "id": "flume_intake_16",
+   "path": "res://assets/models/park/flume_intake_16.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. dam-era flume intake: a 16 m mouth whose walls and floor flare from 14 m wide and flush to the flume section, so a ball rolling in from open ground is funnelled into the trough; sluice gate hung open overhead."
+   }
+  },
+  {
+   "id": "flume_intake_16_detail1",
+   "path": "res://assets/models/park/flume_intake_16_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of flume_intake_16, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_intake_16_detail2",
+   "path": "res://assets/models/park/flume_intake_16_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of flume_intake_16, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
    "id": "flume_pour_spout",
    "path": "res://assets/models/park/flume_pour_spout.glb",
    "class": "landform",
@@ -3749,6 +3785,42 @@
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
     "note": "Detail shell 2 of flume_pour_spout, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_reach_120",
+   "path": "res://assets/models/park/flume_reach_120.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. level 120 m flume reach with a bent at both ends so it tiles; bents to 11 m below the floor."
+   }
+  },
+  {
+   "id": "flume_reach_120_detail1",
+   "path": "res://assets/models/park/flume_reach_120_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of flume_reach_120, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_reach_120_detail2",
+   "path": "res://assets/models/park/flume_reach_120_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of flume_reach_120, drawn by range (the detail class), additive to the base."
    }
   },
   {
@@ -7698,9 +7770,15 @@
   "flume_bent_50",
   "flume_bent_50_detail1",
   "flume_bent_50_detail2",
+  "flume_intake_16",
+  "flume_intake_16_detail1",
+  "flume_intake_16_detail2",
   "flume_pour_spout",
   "flume_pour_spout_detail1",
   "flume_pour_spout_detail2",
+  "flume_reach_120",
+  "flume_reach_120_detail1",
+  "flume_reach_120_detail2",
   "flume_siphon_span",
   "flume_siphon_span_detail1",
   "flume_siphon_span_detail2",

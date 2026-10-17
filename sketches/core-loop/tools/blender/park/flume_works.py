@@ -31,6 +31,13 @@ C. Flume ride pieces (origin "entry_lip", +Z the ride): the trough cross-section
      flume_pour_spout                14 m, level; the last 2 m of floor curve down 1 m into a pour lip.
      flume_siphon_span               100.8 m; the whole section rides y(z) = 5 - 21 s(z/100.8), s(t) = 3t^2 - 2t^3, built in
                                      stations, bent legs reach 11 m below the local floor.
+     flume_reach_120                 120 m, level, a bent flush inside each end so the -col runs exactly 0..120 and its entry
+                                     and exit sections match (flume_span's do not, so it refuses the tile fit); rows tile it
+                                     end to end. Bent legs reach 11 m below the floor.
+     flume_intake_16                 16 m flared mouth (entry_lip, +Z the ride): floor y 4.4 -> 5, half-width 7.0 -> 1.6 and wall
+                                     height 0 -> 3, each on a smoothstep, ending exactly on the FLUME section so it butts a reach.
+                                     The -col is the lofted walls and floor only (no bents, it sits on the ground); iron gate
+                                     posts and a timber sluice board hung open 6 m overhead are body decoration outside it.
 
 D. Liners (section "D. liners" below; ids liner_<row>, three GLBs each, selected with --liners). Decoration only: no -col mesh, the
    stamped terrain stays the only collider. Registry origin "centre", no fit: park_recipes.gd places the GLB rigidly at the row's
@@ -900,6 +907,7 @@ def smooth(t):
 SIPHON_L = 100.8
 SPOUT_L = 14.0
 SIPHON_STEP = 1.8
+REACH_L = 120.0
 
 
 def siphon_dy(z):
@@ -925,6 +933,10 @@ def spout_floor_stations():
 
 
 def spec_flume(rid):
+    if rid == "flume_reach_120":
+        return {"length": REACH_L, "wall_dy": zero, "floor_dy": zero, "wall_z": stations(REACH_L, 12.0),
+                "floor_z": stations(REACH_L, 12.0), "bents": [0.35] + [12.0 * k for k in range(1, 10)] + [REACH_L - 0.35],
+                "legs": lambda z: FLUME["floor_y"] - 11.0, "rail_n": 10}
     if rid == "flume_pour_spout":
         return {"length": SPOUT_L, "wall_dy": zero, "floor_dy": spout_floor_dy, "wall_z": [0.0, 3.5, 7.0, 10.5, 14.0],
                 "floor_z": spout_floor_stations(), "bents": [0.0, 12.0], "legs": lambda z: FLUME["ground"], "rail_n": 2}
@@ -1054,6 +1066,141 @@ def flume_d2_2(spec):
     return build
 
 
+# ------------------------------------------------------------------ C. flume intake
+
+INTAKE_L = 16.0
+INTAKE_MOUTH_DROP = 0.6        # the floor at the mouth sits this far below the flume floor
+INTAKE_FLARE = 5.4             # the half-width at the mouth is wall_in + this (7.0)
+INTAKE_WALL_H = 3.0            # the wall stands this far above the floor at the flume end (top - floor_y)
+INTAKE_STEP = 1.0
+GATE_X = 3.0                   # gate posts stand this far outside the mouth half-width
+GATE_UP = 7.0                  # post tops above the mouth floor
+GATE_BOARD_UP = 6.0            # the open sluice board hangs this far above the mouth floor
+
+
+def intake_s(z):
+    return smooth(z / INTAKE_L)
+
+
+def intake_floor(z):
+    return FLUME["floor_y"] - INTAKE_MOUTH_DROP * (1.0 - intake_s(z))
+
+
+def intake_half(z):
+    return FLUME["wall_in"] + INTAKE_FLARE * (1.0 - intake_s(z))
+
+
+def intake_h(z):
+    return INTAKE_WALL_H * intake_s(z)
+
+
+def intake_wring(side, z, drop=0.0):
+    """The wring() section on the flared trough: same five points and order, every x and y offset by the local flare."""
+    f, xi, yf, h = FLUME, intake_half(z), intake_floor(z), intake_h(z)
+    pts = [(xi, yf - 1.0), (xi + (f["base_out"] - f["wall_in"]), yf - 1.0), (xi + (f["crest_out"] - f["wall_in"]), yf + h - drop),
+           (xi + (f["crest_in"] - f["wall_in"]), yf + h - drop), (xi, yf)]
+    ring = [(side * x, y, z) for x, y in pts]
+    return ring if side > 0 else ring[::-1]
+
+
+def intake_fring(z):
+    xi, yf = intake_half(z), intake_floor(z)
+    return [(-xi, yf - 1.0, z), (xi, yf - 1.0, z), (xi, yf, z), (-xi, yf, z)]
+
+
+def intake_zs():
+    n = int(round(INTAKE_L / INTAKE_STEP))
+    return [INTAKE_L * i / n for i in range(n + 1)]
+
+
+def intake_col(s):
+    zs = intake_zs()
+    for side in (-1, 1):
+        loft(s, [intake_wring(side, z) for z in zs], DARK)
+    loft(s, [intake_fring(z) for z in zs], DARK)
+
+
+def intake_straps():
+    """Hoop strap stations: only where the wall stands over 1.5 m for the strap's whole width."""
+    return [z for z in (9.0, 11.0, 13.0, 15.0) if intake_h(z - 0.2) > 1.5]
+
+
+def intake_gate(s, paint_iron, paint_timber):
+    """Two iron gate posts outside the wings and a timber sluice board hung open overhead; outside the collider."""
+    yf0 = intake_floor(0.0)
+    px = intake_half(0.0) + GATE_X
+    top = yf0 + GATE_UP
+    for k, side in enumerate((-1, 1)):
+        block(s, side * px - 0.3, side * px + 0.3, yf0 - 1.0, top, 0.2, 0.8, paint_iron(k))
+        block(s, side * px - 0.4, side * px + 0.4, top, top + 0.15, 0.1, 0.9, paint_iron(k + 2))
+    block(s, -px + 0.3, px - 0.3, top - 0.5, top - 0.2, 0.3, 0.7, paint_timber(0))
+    by = yf0 + GATE_BOARD_UP
+    block(s, -px + 0.6, px - 0.6, by, by + 0.7, 0.35, 0.65, paint_timber(1))
+    for k, side in enumerate((-1, 1)):
+        block(s, side * (px - 1.5) - 0.06, side * (px - 1.5) + 0.06, by + 0.7, top - 0.5, 0.47, 0.53, paint_iron(k + 4))
+
+
+def intake_body(s):
+    f = FLUME
+    zs = intake_zs()
+    for j in range(len(zs) - 1):
+        za, zb = zs[j], zs[j + 1]
+        for side in (-1, 1):
+            loft(s, [intake_wring(side, za, 0.04 * intake_s(za)), intake_wring(side, zb, 0.04 * intake_s(zb))], tone(CONCRETE, FORM, j + (side > 0), 0.4))
+        loft(s, [intake_fring(za), intake_fring(zb)], tone(VARNISH, CONCRETE, j, 0.5))
+    for k, z in enumerate(intake_straps()):
+        for side in (-1, 1):
+            def band(zz, side=side):
+                pos = intake_wring(1, zz)
+                a, b = pos[1], pos[2]
+                lo = a[1] + 0.8
+                frac = (lo - a[1]) / (b[1] - a[1])
+                p, q = (a[0] + (b[0] - a[0]) * frac, lo), (b[0] + (a[0] - b[0]) * (0.4 / (b[1] - a[1])), b[1] - 0.4)
+                out = 0.08
+                return [(side * (p[0] + out), p[1], zz), (side * p[0], p[1], zz), (side * q[0], q[1], zz), (side * (q[0] + out), q[1], zz)]
+            hull(s, band(z - 0.2), band(z + 0.2), tone(IRON, DARK, k * 2 + (side > 0)))
+    intake_gate(s, lambda k: tone(IRON, DARK, k), lambda k: tone(TIMBER, TIMBER_DK, k, 0.5))
+
+
+def intake_d1(s):
+    """Drift pins on the outer wall face, one row low, one high, every 2 m."""
+    f = FLUME
+    for j, z in enumerate(intake_zs()[1::2]):
+        yf, h, xi = intake_floor(z), intake_h(z), intake_half(z)
+        x0, y0 = xi + (f["base_out"] - f["wall_in"]), yf - 1.0
+        x1, y1 = xi + (f["crest_out"] - f["wall_in"]), yf + h
+        for row, frac in enumerate((0.3, 0.7)):
+            if row == 1 and h < 0.8:
+                continue
+            x, y = x0 + (x1 - x0) * frac, y0 + (y1 - y0) * frac
+            for side in (-1, 1):
+                nrm = (side * (y1 - y0), -(x1 - x0), 0.0)
+                stud(s, (side * x, y, z), nrm, 0.07, 0.05, tone(IRON, DARK, j + row), 4)
+
+
+def intake_d2(s):
+    """Bolt heads on the gate posts, the board hangers and the hoop straps."""
+    yf0 = intake_floor(0.0)
+    px = intake_half(0.0) + GATE_X
+    for k, v in enumerate((1.0, 2.5, 4.0, 5.5)):
+        for side in (-1, 1):
+            stud(s, (side * (px - 0.3), yf0 + v, 0.5), (-side, 0, 0), 0.06, 0.05, tone(STEEL, DARK, k), 6)
+            stud(s, (side * px, yf0 + v, 0.8), (0, 0, 1), 0.06, 0.05, tone(STEEL, DARK, k + 1), 6)
+    for side in (-1, 1):
+        for dz in (-1, 1):
+            stud(s, (side * (px - 0.7), yf0 + GATE_BOARD_UP + 0.35, 0.5 + dz * 0.15), (0, 0, dz), 0.05, 0.04, STEEL, 6)
+    for k, z in enumerate(intake_straps()):
+        f = FLUME
+        for side in (-1, 1):
+            xi, yf, h = intake_half(z), intake_floor(z), intake_h(z)
+            xa, ya = xi + (f["base_out"] - f["wall_in"]), yf - 1.0
+            xb, yb = xi + (f["crest_out"] - f["wall_in"]), yf + h
+            lo = ya + 0.8
+            frac = (lo - ya) / (yb - ya)
+            x, y = xa + (xb - xa) * frac + 0.08, (lo + yb - 0.4) / 2
+            stud(s, (side * (x + 0.04), y, z + 0.2), (0, 0, 1), 0.06, 0.04, tone(STEEL, DARK, k), 4)
+
+
 # ------------------------------------------------------------------ registry of recipes
 
 def box(rid, size, body, d1, d2):
@@ -1089,12 +1236,16 @@ RECIPES = {
     "rim_road": wedge(None, ROAD, road_body, road_d1, road_d2),
     "flume_pour_spout": {"kind": "flume", "size": [SPOUT_L, 8.0, 8.0]},
     "flume_siphon_span": {"kind": "flume", "size": [SIPHON_L, 8.0, 8.0]},
+    "flume_reach_120": {"kind": "flume", "size": [REACH_L, 8.0, 8.0]},
+    "flume_intake_16": {"kind": "intake", "size": [INTAKE_L, 5.0, 14.0], "col": intake_col, "body": intake_body, "d1": intake_d1, "d2": intake_d2},
 }
 IDS = list(RECIPES)
 for _rid, _spec in RECIPES.items():
     if _spec["kind"] == "flume":
         _f = spec_flume(_rid)
         _spec.update({"col": flume_col2(_f), "body": flume_body2(_f), "d1": flume_d1_2(_f), "d2": flume_d2_2(_f), "flume": _f})
+    elif _spec["kind"] == "intake":
+        pass
     elif _spec["kind"] == "box":
         _spec["col"] = (lambda s, sz=_spec["size"]: box_col(s, sz[2], sz[0], sz[1]))
     else:
@@ -1759,6 +1910,8 @@ def check(rid, out_dir):
     if rid in LINERS:
         return liner_check(rid, out_dir)
     spec = RECIPES[rid]
+    if spec["kind"] == "intake":
+        return intake_check(rid, out_dir)
     fails = []
     L, H, W = spec["size"]
     base = Path(out_dir) / (rid + ".glb")
@@ -1827,6 +1980,43 @@ def check(rid, out_dir):
     return fails
 
 
+def intake_check(rid, out_dir):
+    fails = []
+    f = FLUME
+    doc, binary = read_glb(Path(out_dir) / (rid + ".glb"))
+    pts = mesh_positions(doc, binary, rid + COL_NODE)
+    # The z = 16 section is the FLUME ring (and wring(side, 16, 0) is its source).
+    want = {(round(abs(p[0]), 3), round(p[1], 3)) for side in (-1, 1) for p in wring(side, INTAKE_L, 0.0)}
+    end = [p for p in pts if abs(p[2] - INTAKE_L) < 1e-3]
+    for x, y in want:
+        if not any(abs(abs(p[0]) - x) <= 0.01 and abs(p[1] - y) <= 0.01 for p in end):
+            fails.append("%s: z=16 section point %s missing" % (rid, (x, y)))
+    for p in end:
+        if not any(abs(abs(p[0]) - x) <= 0.01 and abs(p[1] - y) <= 0.01 for x, y in want):
+            fails.append("%s: z=16 section has an extra point %s" % (rid, p))
+    mouth = [p for p in pts if abs(p[2]) < 1e-3]
+    top0 = max(p[1] for p in mouth)
+    if abs(top0 - (f["floor_y"] - INTAKE_MOUTH_DROP)) > 0.01:
+        fails.append("%s: mouth floor %.3f != %.3f" % (rid, top0, f["floor_y"] - INTAKE_MOUTH_DROP))
+    lo, hi = bbox(pts)
+    if lo[2] < -0.36 or hi[2] > INTAKE_L + 0.36 or hi[2] < INTAKE_L - 0.36 or lo[2] > 0.36:
+        fails.append("%s: z extent %s %s" % (rid, lo[2], hi[2]))
+    for p in pts:
+        z = min(INTAKE_L, max(0.0, p[2]))
+        if p[1] > intake_floor(z) + intake_h(z) + 0.01:
+            fails.append("%s: -col vertex above the wall top %s" % (rid, p))
+            break
+    for p in pts:
+        z = min(INTAKE_L, max(0.0, p[2]))
+        if abs(p[0]) < intake_half(z) - 0.01 and p[1] > intake_floor(z) + 0.01:
+            fails.append("%s: -col vertex inside the trough above the floor %s" % (rid, p))
+            break
+    rails = [n for n in doc["nodes"] if n["name"].startswith(rid + "-rail_")]
+    if rails:
+        fails.append("%s: unexpected rail empties" % rid)
+    return fails
+
+
 def liner_registry(rid):
     note = ("Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. "
             + LINER_NOTES[LINERS[rid]["style"]] + LINER_NOTES_EXTRA.get(rid, "") + ".")
@@ -1847,7 +2037,7 @@ def registry_doc():
             rows += liner_registry(rid)
             continue
         spec = RECIPES[rid]
-        origin = "entry_lip" if spec["kind"] == "flume" else "centre"
+        origin = "entry_lip" if spec["kind"] in ("flume", "intake") else "centre"
         notes = {
             "flume_bent_50": "the flume crews' plank-sheathed timber bent tower, 50 m, with bent number board and speed-tick band",
             "flume_bent_32": "the flume crews' plank-sheathed timber bent tower, 32 m, with bent number board and speed-tick band",
@@ -1863,6 +2053,8 @@ def registry_doc():
             "rim_road": "dam-era rim road wedge: graded sand surface, wheel ruts, curb logs, mileposts",
             "flume_pour_spout": "level 14 m flume with a curved pour lip; same trough section as flume_span; rail empties on the crest",
             "flume_siphon_span": "100.8 m flume whose whole section falls 21 m on a smoothstep profile; bents to 11 m below the floor",
+            "flume_reach_120": "level 120 m flume reach with a bent at both ends so it tiles; bents to 11 m below the floor",
+            "flume_intake_16": "dam-era flume intake: a 16 m mouth whose walls and floor flare from 14 m wide and flush to the flume section, so a ball rolling in from open ground is funnelled into the trough; sluice gate hung open overhead",
         }
         note = notes.get(rid, "timber crib pier or wall, squared courses with recessed rock fill and iron drift pins")
         for name, suffix in ((rid, ""), (rid + "_detail1", "d1"), (rid + "_detail2", "d2")):
@@ -1871,7 +2063,7 @@ def registry_doc():
                 "id": name, "path": "res://assets/models/park/%s.glb" % name, "class": "landform" if base else "detail", "origin": origin,
                 "ships": True, "loader": "src/world/park/park_recipes.gd",
                 "provenance": {"recipe": "tools/blender/park/flume_works.py",
-                               "note": ("Procedural, authored in this repository from Blender bmesh solids; no external mesh. " + note + ". Collider identical to the grey box it replaces." if base and spec["kind"] != "flume"
+                               "note": ("Procedural, authored in this repository from Blender bmesh solids; no external mesh. " + note + ". Collider identical to the grey box it replaces." if base and spec["kind"] not in ("flume", "intake")
                                         else "Procedural, authored in this repository from Blender bmesh solids; no external mesh. " + note + "." if base
                                         else "Detail shell %s of %s, drawn by range (the detail class), additive to the base." % (suffix[1], rid))},
             })
