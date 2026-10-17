@@ -57,6 +57,10 @@ func _run() -> void:
 	var loose := await _lane_at(false)
 	_t.eq("control, no line: the same lane misses the body %.0f m up" % HANG, loose["strikes"], 0)
 	_t.eq("control, no line: the body keeps its HP", loose["hp_after"], loose["hp_before"])
+	var inside := await _forced_at(1.0)
+	_t.check("latched, body inside the lane at its real position: not forced", inside["entries"] > 0 and not inside["forced"], str(inside))
+	var high := await _forced_at(HANG)
+	_t.check("latched, body %.0f m up: still forced" % HANG, high["entries"] > 0 and high["forced"], str(high))
 	print("[report] latched %s; control %s" % [held, loose])
 	quit(_t.verdict())
 
@@ -108,3 +112,36 @@ func _unlatch() -> void:
 	kit.on_body = false
 	kit.anchor_body = null
 	kit.line_state = Augments.LINE_IDLE
+
+
+# One held-fire tick with the line on a fresh chaser HANG_M over the ground; reports whether the lane entry forces it.
+func _forced_at(hang_m: float) -> Dictionary:
+	var player = _game.player
+	var ball: Vector3 = player.ball_position()
+	var aim: Vector3 = _game.ctx.aim_forward()
+	aim.y = 0.0
+	aim = aim.normalized()
+	var flat := Vector3(ball.x, 0.0, ball.z) + aim * LEAD
+	var ground: float = _game.ctx.terrain.height(flat.x, flat.z)
+	var target: Node3D = _game.combat.spawn_enemy("chaser", Vector3(flat.x, ground + hang_m, flat.z))
+	target.max_hp = 100000.0
+	target.hp = 100000.0
+	target.process_mode = Node.PROCESS_MODE_DISABLED
+	_game.combat._cooldown = 0.0
+	_game.combat._free_cannon()
+	player.abilities.refill()
+	var forced := false
+	var entries := 0
+	for i in 3:
+		_latch(target)
+		_source.press = {"fire_held": true} if i == 0 else {}
+		_source.hold = {}
+		await physics_frame
+		for entry in _game.combat._cannon:
+			entries += 1
+			if entry["options"].get("forced") == target:
+				forced = true
+	_unlatch()
+	_game.combat._free_cannon()
+	target.remove_from_group("enemy")
+	return {"forced": forced, "entries": entries}
