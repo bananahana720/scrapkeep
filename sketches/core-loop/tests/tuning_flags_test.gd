@@ -22,11 +22,12 @@ const EXPECTED := {
 	"hotwire-tread": ["hotwire_tread", "on", "bogus", "launch"],
 	"companion-stub": ["companion_stub", "on", "bogus", "launch"],
 	"profile": ["profile", "sitting", "bogus", "launch"],
+	"grip": ["grip", "off", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.
 const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "discovery": "cards", "telegraph": "haze",
-	"world_one_builds": "on", "hotwire_shell": "on", "hotwire_tread": "on"}
+	"world_one_builds": "on", "hotwire_shell": "on", "hotwire_tread": "on", "grip": "on"}
 
 var _failures := 0
 
