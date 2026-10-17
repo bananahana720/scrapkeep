@@ -576,9 +576,14 @@ func _on_shot(_weapon: String, from: Vector3, to: Vector3) -> void:
 	glyph("shot_fired", to, 0.5, 1.1, 0.09, Vector3.ZERO, "flash", player.class_color())
 
 
-# A glyph's colour run toward heat; transparent (the row's own colour) when cold.
+# A glyph's colour run toward heat and brightened; transparent (the row's own colour) when cold.
 func _hot(kind: String) -> Color:
-	return Rows.color(kind).lerp(HEAT_GLYPH, heat) if heat > 0.0 else Color(0, 0, 0, 0)
+	if heat <= 0.0:
+		return Color(0, 0, 0, 0)
+	# Hotter and brighter: a grown hit's core carries more light at the same size.
+	var c: Color = Rows.color(kind).lerp(HEAT_GLYPH, heat)
+	var k := 1.0 + 0.6 * heat
+	return Color(c.r * k, c.g * k, c.b * k, c.a)
 
 
 func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:

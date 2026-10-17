@@ -335,7 +335,8 @@ func _boon(at: Vector3) -> void:
 	var p: GPUParticles3D = _boons[_boon_next]
 	_boon_next = (_boon_next + 1) % _boons.size()
 	var pm := p.process_material as ParticleProcessMaterial
-	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(heat_tint(dominant_color()), 1.1))
+	# A hotter build burns a brighter core: same size, more light.
+	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(heat_tint(dominant_color()), 1.1 + 0.7 * heat_k(might)))
 	spawned["boon"] = spawned.get("boon", 0) + 1
 
 
@@ -674,21 +675,28 @@ class ImpactFrame:
 			# Every third line of a hot build burns heat orange; a cold build keeps a few white.
 			var accent := i % (3 if _heat > 0.0 else 7) == 0
 			var ink := INK
-			ink.a = 0.75
+			ink.a = 0.75 + 0.2 * _heat
 			if accent:
 				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
 			draw_colored_polygon(PackedVector2Array([tip, outer + side, outer - side]), ink)
 
-	# A hot build's edge wash: the outer band glows heat orange, fading to nothing before
-	# the middle, so the build's heat reads on every grown hit and the centre stays clear.
+	# A hot build's edge wash: the screen edge dips dark, glows heat orange halfway in and
+	# fades to nothing before the middle, so the build's heat and weight read on every grown
+	# hit and the centre stays clear.
 	func _draw_wash(rect: Vector2, band: float) -> void:
-		var edge := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.35 * _heat)
-		var clear := Color(edge.r, edge.g, edge.b, 0.0)
-		var o := [Vector2.ZERO, Vector2(rect.x, 0), rect, Vector2(0, rect.y)]
-		var i := [Vector2(band, band), Vector2(rect.x - band, band), rect - Vector2(band, band), Vector2(band, rect.y - band)]
+		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
+		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.4 * _heat)
+		var clear := Color(hot.r, hot.g, hot.b, 0.0)
+		_ring(rect, 0.0, band * 0.6, dark, hot)
+		_ring(rect, band * 0.6, band, hot, clear)
+
+	# A screen-edge ring from `outer` to `inner` pixels in, shaded from one colour to the other.
+	func _ring(rect: Vector2, outer: float, inner: float, from: Color, to: Color) -> void:
+		var o := [Vector2(outer, outer), Vector2(rect.x - outer, outer), rect - Vector2(outer, outer), Vector2(outer, rect.y - outer)]
+		var i := [Vector2(inner, inner), Vector2(rect.x - inner, inner), rect - Vector2(inner, inner), Vector2(inner, rect.y - inner)]
 		for k in 4:
 			var n := (k + 1) % 4
-			draw_polygon(PackedVector2Array([o[k], o[n], i[n], i[k]]), PackedColorArray([edge, edge, clear, clear]))
+			draw_polygon(PackedVector2Array([o[k], o[n], i[n], i[k]]), PackedColorArray([from, from, to, to]))
 
 
 # --- Aura --------------------------------------------------------------------------------

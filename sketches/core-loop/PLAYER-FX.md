@@ -16,7 +16,7 @@ This layer adds the player-side effects the tone bible (TONE-BIBLE.md, project f
 | Overdrive | White-hot rim on the ball, flame flecks and a hanging ember trail behind it, an ignition ring, VRAAAM and an impact frame | Speed at or above 60 m/s, off below 54 m/s | Heat ramp: white, orange, deep red, smoke |
 | Carve sparks | A grinding spark spray from the contact point | Grounded on banked ground (normal up share under 0.82) at fast tier or above | Hot brass |
 | Power column | Streaks rise from a ring round the ball | Heft class up, a fusion | Brass, or the fused part's colour |
-| Impact frame | Ink focus lines in the outer fifth of the screen, aimed at the hit, for 3 rendered frames. A hot build adds a heat-orange wash that fades out before the middle | Smash at 32 m/s (18 m/s when mighty), blazing ram, every contact hit and slam from "grown", ultimate landing, bowled rack, overdrive ignition | Ink with a few white lines; a hot build burns every third line orange |
+| Impact frame | Ink focus lines in the outer fifth of the screen, aimed at the hit, for 3 rendered frames. A hot build adds an edge wash: dark at the screen edge, heat orange further in, gone before the middle | Smash at 32 m/s (18 m/s when mighty), blazing ram, every contact hit and slam from "grown", ultimate landing, bowled rack, overdrive ignition | Ink with a few white lines; a hot build burns every third line orange |
 
 ### Pilot voices
 
@@ -43,7 +43,8 @@ Hit-stop and shake stay in `juice.gd`, owned by the Knockback thread.
 Andrew tapped "Presence, centre clear" (17 Oct 17:28Z): a grown hit reads mightier through colour heat, bigger words, edge ink and the part aura. The middle of the screen grows 1.25x at most, so the crowd behind a hit stays visible.
 
 - **Colour heat** is the main lever. `heat_k` runs from 0 at might 0.1 to 1 at might 0.7 (a heft IV, four-part, four-pick build is about 0.8). Boon sparks, aura motes, words, `vfx.gd` hit and kill glyphs and the impact frame's accent lines all run up to 85% of the way to saturated heat orange, never to white.
-- **Edge ink**: from "grown", every contact hit and slam earns the impact frame, with a heat-orange wash in the outer band.
+- **Edge ink**: from "grown", every contact hit and slam earns the impact frame, with bolder ink and an edge wash that dips dark at the edge and glows orange further in.
+- **Brighter cores**: hot hit glyphs carry up to 1.6x the light and boon sparks up to 1.8x, at the same size.
 - **Nothing grows in the middle**: the boon burst keeps its base size and reach, the column no longer rises on a slam, and hit glyphs grow 15% at most.
 - Cannon grows the same way, since its slam already fills the screen.
 
@@ -52,7 +53,7 @@ Andrew tapped "Presence, centre clear" (17 Oct 17:28Z): a grown hit reads mighti
 - **Warnings draw on top** (Andrew, 17 Oct 16:36Z). Every material here sorts at render priority -4, below the threat marks (39 to 42). Words are transparent and write no depth. The test checks this.
 - **The lane ahead stays clear.** A word placed within 2.5 m of the ball's path, up to 30 m ahead, is pushed sideways. Words run away from the ball and stay inside the middle 78% x 70% of the screen. The impact frame draws only in the outer 20% band.
 - **Caps.** At most 2 words alive, 0.35 s between words, 1.2 s before the same word repeats, and no words or boon bursts in the densest density band. Impact frames are at least 0.6 s apart.
-- **The edge wash** is at most 35% opaque at the screen edge and gone before the middle, for the same 3 frames as the ink.
+- **The edge wash** dips the screen edge dark (80% at most), glows orange further in (40% at most) and is gone before the middle, for the same 3 frames as the ink.
 - **Reduced motion** turns off impact frames and the stamp overshoot and slide of the words.
 - Word size is a share of the screen height (7.5% at size 1.0), so a word near the camera never swallows the ball.
 
