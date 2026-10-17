@@ -2,8 +2,8 @@ extends SceneTree
 # 2026-10-16: the three outfits and the Till Bell (design-v3/COSMETICS-ART-BRIEFS.md, recipe
 # tools/blender/outfits/build_outfits.py). Each GLB mounts on its shipped rig through the
 # game's own helper, puts every top-level node on a real bone, stays in the detail budget,
-# carries no light or override, and sits where it was modelled. The registry rows and the
-# PENDING_ART removals are port notes; this test reads the GLB paths directly.
+# carries no light or override, and sits where it was modelled. This test reads the GLB
+# paths directly; the PENDING_ART removals are pinned in the set-piece and Customize tests.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const T := preload("res://tests/support/t.gd")
@@ -16,11 +16,10 @@ const ITEMS := {
 }
 const TRI_CAP := 1500
 const DOME := 0.98
-# hero_assets._mount_on_bones before its port note skips a part whose bone name has a dot
-# (glTF import renames upper_arm.L to upper_arm_L) and leaves an outfit clip's tracks
-# pointing at the GLB's own tree. The port note's patch sets this true; until then the
-# garters and the hood's motion are reported, not required.
-const MOUNT_PATCHED := false
+# 2026-10-17 (unit K): mount-port.patch is applied, so hero_assets._mount_on_bones matches
+# sanitised bone names (upper_arm.L imports as upper_arm_L) and retargets outfit clip tracks;
+# the garters and the hood's motion are required.
+const MOUNT_PATCHED := true
 
 var _t := T.new("outfit_art_test")
 
@@ -96,8 +95,8 @@ func _hood_clips(mounts: Array) -> void:
 	var anim := player.get_animation("ult_windup")
 	_t.near("ult_windup snaps in 0.12 s and holds to the pilot's clip end", anim.length, 1.0 / 3.0, 0.002)
 	# The clip's tracks address the GLB's own tree ("head/HoodShell"); after the mount the part
-	# sits at "Outfit_head/head/HoodShell" under the skeleton. hero_assets.gd needs the
-	# track-path port note before the hood moves in game; this line reports, it does not fail.
+	# sits at "Outfit_head/head/HoodShell" under the skeleton; _retarget_clips rewrites the
+	# tracks, and with MOUNT_PATCHED every track must resolve.
 	var base := player.get_node(player.root_node)
 	var resolved := 0
 	for i in anim.get_track_count():

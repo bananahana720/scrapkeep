@@ -1,6 +1,7 @@
 extends "res://tests/tarn_claw_drag_test.gd"
 
 # 2026-10-11 (PC-TARN): three timing/threshold checks extend the expected count from 50 to 53.
+# 2026-10-17 (unit K): 53 -> 55. The Steady Cap's art landed; price, pending and live split into three checks.
 
 const Enemy := preload("res://src/combat/enemy.gd")
 const Progress := preload("res://src/core/progress.gd")
@@ -247,10 +248,10 @@ func _grants() -> void:
 	_t.check("all three grants earned", grant_ids.all(func(id): return store.earned(id)))
 	var items := ["trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap"]
 	_t.check("all three looks unlocked", items.all(func(id): return store.has_cosmetic(id)))
-	# Re-pinned 2026-10-17 (stage/alpha-w16, #17 + #46): the trail and shell are live; the outfit waits.
-	_t.check("pending art hidden on the outfit only", items.all(func(id): return Cosmetics.is_pending(id) == (id == "outfit_tarn_steady_cap")))
-	_t.check("the shell is live", not Cosmetics.is_pending("shell_tarn_redjaw_teeth") and FileAccess.file_exists("res://assets/models/world_one/shell_tarn_redjaw_teeth.glb"))
+	# Re-pinned 2026-10-17 (stage/alpha-w16, #17 + #46 + unit K): the trail, shell and outfit are all live.
 	_t.check("no price", items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
+	_t.check("no look waits for art", items.all(func(id): return not Cosmetics.is_pending(id)))
+	_t.check("the outfit is live", not Cosmetics.is_pending("outfit_tarn_steady_cap") and FileAccess.file_exists("res://assets/cosmetics/outfits/outfit_tarn_steady_cap.glb"))
 	var reload_store := Profile.new(store.path)
 	reload_store.load_profile()
 	_t.check("grants survive reload", grant_ids.all(func(id): return reload_store.earned(id)) and items.all(func(id): return reload_store.has_cosmetic(id)))

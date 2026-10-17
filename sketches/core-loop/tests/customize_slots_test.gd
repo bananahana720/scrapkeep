@@ -151,7 +151,13 @@ func _equip_refusals() -> void:
 	_t.check("a pilot slot refuses spil9", not Customize.equip(store, "spil9", "trail", "trail_salt_skip"))
 	_t.check("bay decoration refuses spil9", not Customize.equip(store, "spil9", "bay_decor", ""))
 	_t.check("bay decoration clears for the bay", Customize.equip(store, "bay", "bay_decor", ""))
-	_t.check("a pending-art item is refused even when owned", not Customize.equip(store, "spil9", "companion_skin", "companion_skin_till_bell"))
+	# Re-pinned 2026-10-17 (unit K): the Till Bell's art landed, so it equips; any id still pending is refused.
+	_t.check("the delivered Till Bell equips when owned", Customize.equip(store, "spil9", "companion_skin", "companion_skin_till_bell"))
+	for id in Cosmetics.PENDING_ART:
+		var pending: Dictionary = Cosmetics.row(id)
+		var owner := Cosmetics.owner_for(pending["pilot"], pending["slot"])
+		store.unlock_cosmetic(id)
+		_t.check("a pending-art item is refused even when owned: " + id, not Customize.equip(store, owner if owner != "" else SABLE, pending["slot"], id))
 	_t.check("companion skin clears for spil9", Customize.equip(store, "spil9", "companion_skin", ""))
 	_t.check("outfit clears for a pilot", Customize.equip(store, SABLE, "outfit", ""))
 	_t.check("shell clears for a pilot", Customize.equip(store, SABLE, "shell", ""))
