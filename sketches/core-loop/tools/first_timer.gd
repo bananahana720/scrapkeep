@@ -18,7 +18,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # gives every process its own data folder, so the key prompts start from an empty profile.
 #
 # Teach ids, with the tick they first show (tick -1 is before play):
-#   prompt:<verb>     a key prompt drew (events.prompt_shown, ui/key_glyphs.gd)
+#   prompt:<verb>     a key prompt drew (events.prompt_shown: ui/key_glyphs.gd, ui/first_steps.gd)
 #   objective:<id>    the objective plate's row (hud.objective_reading, core/objectives.gd)
 #   screen:dead       the SCRAPPED screen and its Retry key
 #   card:<slot>       a key on the chosen pilot's class card (ui/class_kit.gd card_keys)

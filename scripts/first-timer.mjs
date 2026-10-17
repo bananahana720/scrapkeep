@@ -40,8 +40,7 @@ export const MECHANICS = [
     name: "Roll and steer the ball",
     needed: "required",
     need: "stage_entered",
-    teach: [],
-    note: "Move and camera keys appear only on the Help page (title button H) and the Tab keys page; nothing in play shows them.",
+    teach: ["prompt:roll"],
   },
   {
     id: "warden",
@@ -55,8 +54,7 @@ export const MECHANICS = [
     name: "Slam the open core",
     needed: "required",
     need: "warden_staggered",
-    teach: ["prompt:haul", "prompt:smash", "card:smash"],
-    note: "\"Smash the core\" names the goal, not the key; the smash key is shown only as one chip on the pilot card.",
+    teach: ["prompt:slam", "prompt:haul", "card:smash"],
   },
   {
     id: "gates",
