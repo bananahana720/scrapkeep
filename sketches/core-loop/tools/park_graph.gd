@@ -63,7 +63,7 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const Parts := preload("res://src/build/parts.gd")
 
-const TOOL_FILES := ["res://tools/park_graph.gd", "res://src/world/park/park_graph.gd", "res://src/world/park/park_placement.gd"]
+const TOOL_FILES := ["res://tools/park_graph.gd", "res://src/world/park/park_graph.gd", "res://src/world/park/park_placement.gd", "res://src/combat/warden_swarm.gd"]
 const PARK_DIR := "res://src/world/park"
 const OUT_DIR := "res://assets/park"
 
@@ -84,6 +84,7 @@ const START_REACH_M := 8.0
 const DIRS := [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]
 
 const Placement := preload("res://src/world/park/park_placement.gd")
+const WardenSwarm := preload("res://src/combat/warden_swarm.gd")
 # Placement rules live in park_placement.gd (the game draws pockets with them); kept here under their old names.
 const DOOR_SPAWN_M := Placement.DOOR_SPAWN_M
 const DOOR_BEACON_M := Placement.DOOR_BEACON_M
@@ -1083,11 +1084,18 @@ static func spawn_check(graph, park: Dictionary) -> Dictionary:
 # {"ok", "radius_m", "nodes", "rise_m", "closed", "decks", "reasons"}: closed counts disc nodes
 # that are not open (a roof, a hole), decks the deck nodes inside the disc, rise_m the largest
 # height difference from the beacon's node.
+# A sinkhole mounting whose pit takes the swarm's pool slab (the ground under the pool centre at
+# or below the first floor, warden_swarm.gd's own test) has a rising floor of its own: the pool's
+# nodes count for open but not for rise, and the rise is the spread of the disc's nodes outside
+# the pool. "pool" in the result is that pool, {} when the plain rule ran.
 static func beacon_check(graph, park: Dictionary) -> Dictionary:
 	var at := Vector2(float(park["landmark"]["beacon"][0]), float(park["landmark"]["beacon"][1]))
 	var radius := float(park["landmark"]["reach_m"]) * BEACON_DISC_SHARE
 	var centre: int = ParkGraph.lattice_index(at.x, at.y)
 	var base: float = graph.py[centre]
+	var pool := _beacon_pool(graph, park)
+	var lip_low := INF
+	var lip_high := -INF
 	var nodes := 0
 	var closed := 0
 	var decks := 0
@@ -1098,7 +1106,13 @@ static func beacon_check(graph, park: Dictionary) -> Dictionary:
 		nodes += 1
 		if graph.node_flags[o] & ParkGraph.OPEN == 0:
 			closed += 1
-		rise = maxf(rise, absf(graph.py[o] - base))
+		if pool.is_empty():
+			rise = maxf(rise, absf(graph.py[o] - base))
+		elif Vector2(graph.px[o], graph.pz[o]).distance_to(pool["centre"]) > float(pool["radius_m"]):
+			lip_low = minf(lip_low, graph.py[o])
+			lip_high = maxf(lip_high, graph.py[o])
+	if not pool.is_empty() and lip_high >= lip_low:
+		rise = lip_high - lip_low
 	# A deck row inside the disc (a ledge, a bridge) is a floor of its own: the beacon is then
 	# on a ledge or under one, and the fight has two floors.
 	for o in range(SIDE * SIDE, graph.node_count()):
@@ -1113,7 +1127,24 @@ static func beacon_check(graph, park: Dictionary) -> Dictionary:
 	if rise > BEACON_FLAT_M:
 		reasons.append("the disc rises %.2f m, want at most %.1f m" % [rise, BEACON_FLAT_M])
 	return {"ok": reasons.is_empty() and nodes > 0, "radius_m": radius, "nodes": nodes, "rise_m": rise,
-		"closed": closed, "decks": decks, "reasons": reasons}
+		"closed": closed, "decks": decks, "reasons": reasons, "pool": pool}
+
+
+# The swarm pool a sinkhole mounting fights over, placed as warden_swarm.gd places it (spec
+# pool_centre and pool_floor, else POOL_OFFSET and POOL_BELOW_NEST from the nest anchor), when the
+# ground under its centre takes the slab: {"centre" (Vector2), "floor_y", "radius_m"}, else {}.
+static func _beacon_pool(graph, park: Dictionary) -> Dictionary:
+	var w = park["landmark"].get("warden", {})
+	if not w is Dictionary or w.get("mounting") != WardenSwarm.SINKHOLE or not w.get("anchor") is Array:
+		return {}
+	var anchor := Vector3(float(w["anchor"][0]), float(w["anchor"][1]), float(w["anchor"][2]))
+	var c := anchor + WardenSwarm.POOL_OFFSET
+	if w.get("pool_centre") is Array:
+		c = Vector3(float(w["pool_centre"][0]), 0.0, float(w["pool_centre"][2]))
+	var floor_y := float(w.get("pool_floor", anchor.y - WardenSwarm.POOL_BELOW_NEST))
+	if graph.py[ParkGraph.lattice_index(c.x, c.z)] > floor_y + 0.5:
+		return {}
+	return {"centre": Vector2(c.x, c.z), "floor_y": floor_y, "radius_m": WardenSwarm.POOL_RADIUS}
 
 
 # SR15: the stage rules in order, the beacon before the spawn (the spawn rule measures from the
