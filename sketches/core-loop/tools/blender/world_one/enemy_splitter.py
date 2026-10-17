@@ -16,12 +16,11 @@ Two meshes, two surfaces, both opaque vertex colour:
                  0.4 s split tell. No glow is baked into the file.
 Sockets (empties, no draws): FuseLamp, pod_a/b/c (each piece's spawn point, facing out),
 snout_a/b/c. Procedural bmesh in this repository; no external meshes or textures.
-Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir]
+Rig and clips (crawl, tell, break_split, break_clean): kill_first_motion.splitter.
+Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir] [--sheet dir]
 """
-import json
 import math
 import os
-import struct
 import sys
 
 import bmesh
@@ -105,15 +104,14 @@ assert common.tri_total(root) <= 1100
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_splitter.glb")
-common.export(root, path)
-data = open(path, "rb").read()
-size = struct.unpack_from("<I", data, 12)[0]
-glb = json.loads(data[20:20 + size])
-prims = [p for m in glb["meshes"] for p in m["primitives"]]
-verts = sum(glb["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims)
-tris = sum(glb["accessors"][p["indices"]]["count"] // 3 for p in prims)
-assert verts <= 2100 and tris <= 1100 and len(prims) == 2
-print(f"SPLITTER EXPORTED: {verts} V / {tris} T / {len(prims)} D")
+import kill_first_motion
+import kill_first_rig
+rig = kill_first_motion.splitter(root, body_obj, glow_obj, R, FLOOR, AZ, NAMES)
+stats = rig.export(path, draws=2)
+print(f"SPLITTER EXPORTED: {stats['verts']} V / {stats['tris']} T / {stats['draws']} D, "
+      f"{stats['joints']} joints, clips {stats['clips']}")
+if kill_first_rig.sheet_dir():
+    kill_first_rig.contact_sheet("splitter", rig, FLOOR, kill_first_rig.sheet_dir(), focus=(0, 0, 0.1), scale=4.6, shots=kill_first_motion.SPLITTER_SHOTS, lit_clips=("tell", "break_split"))
 
 if opts["render"]:
     import kill_first_preview

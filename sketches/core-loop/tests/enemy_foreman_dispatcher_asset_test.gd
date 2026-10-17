@@ -72,6 +72,15 @@ func _bounds(points: PackedVector3Array) -> AABB:
 	return box
 
 
+# Rest origin of a rig bone in the scene root's space (the clips move the bone, not a node).
+func _bone(scene: Node3D, bone: String) -> Vector3:
+	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
+	if rig == null or rig.find_bone(bone) < 0:
+		t.check("bone " + bone, false)
+		return Vector3.INF
+	return rig.get_bone_global_rest(rig.find_bone(bone)).origin
+
+
 func _socket(scene: Node3D, name: String) -> Node3D:
 	return scene.find_child(name, true, false) as Node3D
 
@@ -100,7 +109,7 @@ func _foreman() -> void:
 	t.check("foreman cart within the lobber footprint (1.2)", cart <= 1.2001, str(cart))
 	# The clock faces forward (-Z), and its hand pivots on the dial centre.
 	var clock := _socket(scene, "ClockFace").position
-	var hand := _socket(scene, "ForemanHand").position
+	var hand := _bone(scene, "Hand")
 	t.check("clock face leads along -Z", clock.z < -0.45 and absf(clock.x) < 0.01, str(clock))
 	t.check("hand pivots on the dial", Vector2(hand.x, hand.y).distance_to(Vector2(clock.x, clock.y)) < 0.01, str(hand))
 	var horn := _socket(scene, "HornMouth")
@@ -144,7 +153,7 @@ func _dispatcher() -> void:
 	t.check("drop mouth aims down and forward", lead.y < -0.4 and lead.z < -0.4 and absf(lead.x) < 0.01, str(lead))
 	t.check("tube reach within 3.75", -box.position.z <= 3.75, str(box.position.z))
 	# The radar paddle spins on the mast head.
-	var radar := _socket(scene, "DispatcherRadar").position
+	var radar := _bone(scene, "Radar")
 	t.check("radar pivots on RadarPivot", radar.is_equal_approx(_socket(scene, "RadarPivot").position), str(radar))
 	t.check("beacon above the radar", _socket(scene, "Beacon").position.y > radar.y, str(radar))
 	scene.queue_free()

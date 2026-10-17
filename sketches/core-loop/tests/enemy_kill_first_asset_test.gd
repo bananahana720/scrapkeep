@@ -155,9 +155,12 @@ func _linker() -> void:
 			core = maxf(core, Vector2(p.x, p.z).length())
 	t.check("linker post core within 1.1", core <= 1.1, str(core))
 	t.check("linker boom breaks the outline sideways (>= 3.5 m)", reach >= 3.5, str(reach))
-	var dish := scene.find_child("LinkerDish", true, false) as Node3D
+	# The dish turns on the rig's DishAim bone (the runtime's) and DishBrace (the clips').
+	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
 	var hinge := (scene.find_child("LinkerHinge", true, false) as Node3D).position
-	t.check("dish pivots at the hinge", dish.position.is_equal_approx(hinge))
+	for bone in ["DishAim", "DishBrace"]:
+		var at := rig.get_bone_global_rest(rig.find_bone(bone)).origin if rig != null and rig.find_bone(bone) >= 0 else Vector3.INF
+		t.check("dish pivots at the hinge (" + bone + ")", at.is_equal_approx(hinge), str(at))
 	var partner := (scene.find_child("partner_spot", true, false) as Node3D).position
 	var dish_points := _points(scene, "LinkerDish")
 	var centre := Vector3.ZERO
@@ -169,7 +172,8 @@ func _linker() -> void:
 	var base := (scene.find_child("cable_base", true, false) as Node3D).global_position
 	var tip_socket := scene.find_child("cable_dish", true, false) as Node3D
 	var tip := tip_socket.global_position
-	t.check("cable end rides on the dish", tip_socket.get_parent() == dish)
+	var mount := tip_socket.get_parent() as BoneAttachment3D
+	t.check("cable end rides on the dish", mount != null and mount.bone_name == "DishAim")
 	t.check("cable sags below its chord", cut.y < (base.y + tip.y) * 0.5 - 0.5)
 	scene.queue_free()
 
