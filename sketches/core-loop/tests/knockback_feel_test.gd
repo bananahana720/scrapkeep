@@ -10,7 +10,8 @@ const CombatRules := preload("res://src/combat/combat.gd")
 # prints one JSON line per case prefixed "KNOCKLAB " (and appends them to the ndjson file
 # KNOCKLAB_OUT names, when set) for before/after tables, then holds the targets:
 #   speed   a blazing ram throws at least 1.8x as hard as a cruise bump (heft I)
-#   growth  the same ram at heft V flies 1.9x to 2.6x as far as at heft I (Andrew's
+#   growth  the same ram at heft IV (a grown depth-4 build) flies 1.9x to 2.6x as far as at
+#           heft I, and heft V no more than 3x (Andrew's
 #           "Clearly mightier", 16:36Z 17 Oct: late-run knockback about 2x the first fight)
 #   cap     speed past Contact.SOFT_CAP_SPEED adds no throw; no ram passes KNOCK_CEILING
 #   bowling a ram at fast speed or more into a six-pin rack topples all six and lands at
@@ -74,7 +75,7 @@ func _run() -> void:
 	_game.run.set_max_hp(99999.0)
 	_game.events.harpoon_smashed.connect(func(_e: Node3D, _at: Vector3, speed: float): _closing = speed)
 	_base = _game.ctx.terrain.spawn_point(1) + Vector3(20.0, 0.0, 40.0)
-	for heft in HEFTS:
+	for heft in HEFTS + [3.2]:
 		for speed in SPEEDS:
 			await _ram_case(speed, heft)
 	for heft in HEFTS:
@@ -121,11 +122,13 @@ func _judge() -> void:
 		"heft I: a cruise bump throws %.1f m/s (%.1f m), a blazing ram %.1f m/s (%.1f m)"
 			% [cruise["knock"], cruise["fly_m"], blazing["knock"], blazing["fly_m"]])
 	var small := _row("ram", {"speed": 16.0, "heft": 1.0})
-	var grown := _row("ram", {"speed": 16.0, "heft": 4.6})
+	var grown := _row("ram", {"speed": 16.0, "heft": 3.2})
+	var top_heft := _row("ram", {"speed": 16.0, "heft": 4.6})
 	var ratio := float(grown["fly_m"]) / maxf(0.1, float(small["fly_m"]))
-	_check("growth", ratio >= 1.9 and ratio <= 2.6,
-		"a fast ram flies %.1f m at heft I and %.1f m at heft V (%.2fx)"
-			% [small["fly_m"], grown["fly_m"], ratio])
+	var top_ratio := float(top_heft["fly_m"]) / maxf(0.1, float(small["fly_m"]))
+	_check("growth", ratio >= 1.9 and ratio <= 2.6 and top_ratio <= 3.0,
+		"a fast ram flies %.1f m at heft I, %.1f m at heft IV (%.2fx, the power read's grown build) and %.1f m at heft V (%.2fx)"
+			% [small["fly_m"], grown["fly_m"], ratio, top_heft["fly_m"], top_ratio])
 	var top := 0.0
 	for row in _rows:
 		if row["case"] == "ram":

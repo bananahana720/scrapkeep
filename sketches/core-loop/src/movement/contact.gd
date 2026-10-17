@@ -45,7 +45,7 @@ static func contact_cost(velocity: Vector3, normal: Vector3) -> float:
 # landing (the chain's multiplier) may reach LANDING_CEILING.
 const KNOCK_REF_SPEED := 27.0
 const KNOCK_SPEED_EXP := 0.6
-const KNOCK_HEFT_EXP := 0.23
+const KNOCK_HEFT_EXP := 0.30
 const SOFT_CAP_SPEED := 60.0
 const KNOCK_CEILING := 34.0
 const LANDING_CEILING := 42.0
