@@ -54,7 +54,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
 	"swarm_remnant", "mind_hand", "burrower", "drill_crew", "lamp_swarm", "line_cutter", "anchor_crew",
-	"kite_drone"]
+	"kite_drone", "linker"]
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const FAMILY_ANCIENT := ["reactor_relic", "swarm_remnant", "mind_hand"]
@@ -272,6 +272,7 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				var spawn := {"kind": a["kind"], "at": a["at"]}
 				if a.has("affix"):
 					spawn["affix"] = a["affix"]
+				spawn["pack"] = int(a.get("pack", -1))
 				due.append(spawn)
 	if paused:
 		return due

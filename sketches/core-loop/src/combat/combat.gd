@@ -1,6 +1,7 @@
 extends Node
 
 const Chaser := preload("res://src/combat/chaser.gd")
+const EnemyBase := preload("res://src/combat/enemy.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
 const Warden := preload("res://src/combat/warden.gd")
@@ -206,6 +207,8 @@ var _pending := {}
 # Shred by enemy instance id: {amount, cap (the most plating it has shown), idle
 # (seconds since its last landed hit)}.
 var _shred := {}
+# Linker guards (linker.gd): partner instance id -> the Linker whose dish braces over it.
+var _guards := {}
 
 # special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}, or
 # {tap: Callable() -> bool} for a row with no gauge.
@@ -232,6 +235,9 @@ var _rocket_left := 0.0
 var rocket_cooldown_scale := 1.0
 # Pins already paid, "carrier:knock:victim" -> clock, and how many landed this attempt.
 var _pinned := {}
+# Hulks (KNOCKBACK-FEEL): a body a ram or a pin killed keeps flying for a moment and bowls
+# what lies ahead of it. {at, vel, radius, id, hit: {victim id: true}}; cleared each attempt.
+var _hulks: Array = []
 var pins := 0
 # Upgrade-tree state (upgrade_tree.gd): each proc's next allowed time by node:fact, the
 # pending special echo, marked targets (instance id -> clock the mark ends), the blink's
@@ -433,6 +439,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
 	ctx.player.pressure_grant = _grant_pressure
+	ctx.player.hulk_launch = bowl_hulk
 	ctx.player.mass_of = func() -> float: return ctx.run.mass
 	_reset_ledger()
 	ctx.events.demo_slammed.connect(_on_demo_slammed)
@@ -1036,12 +1043,50 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 				if enemy.get_method_argument_count("judge_hit") >= 5 else enemy.judge_hit(kind, punch, smash, tier)
 		if not judged.is_empty():
 			return judged
+	var guard := guard_of(enemy)
+	if guard != null and guard.blocks(kind):
+		return {"punch": punch, "plating": guard.DISH_PLATING, "full": false, "dealt": 0.0, "part": part, "shred": false,
+			"guarded": true}
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
 	var mult: float = enemy.hit_mult(kind, part) if full and enemy.has_method("hit_mult") else 1.0
 	var dealt := punch * mult if full else punch * CHIP
 	return {"punch": punch, "plating": plating, "full": full, "dealt": dealt, "part": part}
+
+
+# The Linker bracing a dish over this enemy, or null (linker.gd; blocks() decides each hit).
+func guard_of(enemy: Node3D) -> Node3D:
+	if enemy == null or not is_instance_valid(enemy):
+		return null
+	var linker = _guards.get(enemy.get_instance_id())
+	if linker == null or not is_instance_valid(linker) or not linker.guarding(enemy):
+		return null
+	return linker
+
+
+# One Linker per partner: a second asks and is refused while the first still holds it.
+func guard(partner: Node3D, linker: Node3D) -> bool:
+	var held = _guards.get(partner.get_instance_id())
+	if held != null and held != linker and is_instance_valid(held) and held.holds_partner(partner):
+		return false
+	_guards[partner.get_instance_id()] = linker
+	return true
+
+
+func guard_holder(enemy: Node3D) -> Node3D:
+	var held = _guards.get(enemy.get_instance_id())
+	return held if held != null and is_instance_valid(held) and held.holds_partner(enemy) else null
+
+
+func unguard(partner: Node3D, linker: Node3D) -> void:
+	if partner == null or not is_instance_valid(partner):
+		for id in _guards.keys():
+			if _guards[id] == linker:
+				_guards.erase(id)
+		return
+	if _guards.get(partner.get_instance_id()) == linker:
+		_guards.erase(partner.get_instance_id())
 
 
 # Punch for a hit of this kind and force: a ball contact scales with heft, a weapon hit
@@ -1236,6 +1281,7 @@ func _physics_process(delta: float) -> void:
 	_step_devices(delta)
 	wear_trail.step(delta, enemies)
 	_pin_step(enemies)
+	_hulk_step(enemies, delta)
 	_bat_by_ball(shells)
 	_decay_shred(delta)
 	_tint()
@@ -3513,12 +3559,68 @@ func _pin_step(enemies: Array) -> void:
 			if _pinned.has(key):
 				continue
 			_pinned[key] = _clock
-			var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed)
-			pins += 1
-			ctx.events.enemy_pinned.emit(victim, damage)
-			victim.knock(to + Vector3.UP * 0.2, speed * Weapons.PIN_CARRY * float(victim.weight))
-			victim.flash()
-			strike(victim, "pin", damage)
+			_pin(victim, to, speed)
+
+
+# One pin: the victim takes the pin strike and flies on at PIN_CARRY of the carrier's speed.
+# A victim the pin kills becomes a hulk in its turn, so a strike runs down a crowd. A hulk's
+# pins hit with the heft that threw it (mult), so a grown ball's strike still kills what it
+# scatters instead of knocking it clear of the roll-up.
+func _pin(victim: Node3D, to: Vector3, speed: float, mult := 1.0) -> void:
+	var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed) * mult
+	pins += 1
+	ctx.events.enemy_pinned.emit(victim, damage)
+	victim.knock(to + Vector3.UP * 0.2, speed * Weapons.PIN_CARRY * float(victim.weight))
+	victim.flash()
+	strike(victim, "pin", damage)
+	if is_instance_valid(victim) and victim.is_dead():
+		bowl_hulk(victim, to, speed * Weapons.PIN_CARRY)
+
+
+# A body killed by a ram, a crush or a pin keeps its throw as a hulk for up to HULK_SECONDS:
+# it travels along `direction` at `speed`, slowing as a knock does, and pins each body it
+# reaches once, as a knocked enemy would. A posture fighter (a Warden) and a boss piece are
+# never a hulk's victims, so stagger timing is untouched. Below PIN_MIN_SPEED it is spent.
+func bowl_hulk(enemy: Node3D, direction: Vector3, speed: float) -> void:
+	var flat := Vector3(direction.x, 0.0, direction.z)
+	if speed <= Weapons.PIN_MIN_SPEED or flat.length_squared() < 0.0001 or not is_instance_valid(enemy) or enemy.get("swarm") != null:
+		return
+	_hulks.append({"at": enemy.global_position, "vel": flat.normalized() * speed, "radius": _hull(enemy),
+		"left": Weapons.HULK_SECONDS, "hit": {enemy.get_instance_id(): true}, "mult": heft()})
+
+
+func _hulk_step(enemies: Array, delta: float) -> void:
+	if _hulks.is_empty():
+		return
+	# A pin that kills launches a new hulk into _hulks; it is stepped from the next tick.
+	var stepping := _hulks
+	_hulks = []
+	var live: Array = []
+	for hulk in stepping:
+		var vel: Vector3 = hulk["vel"]
+		var speed := vel.length()
+		hulk["left"] = float(hulk["left"]) - delta
+		if speed <= Weapons.PIN_MIN_SPEED or float(hulk["left"]) <= 0.0:
+			continue
+		var heading := vel / speed
+		var at: Vector3 = hulk["at"]
+		for victim in enemies:
+			if not _pinnable(victim) or victim.get("weight") == null or (hulk["hit"] as Dictionary).has(victim.get_instance_id()):
+				continue
+			if victim.has_method("fight") and victim.fight() == "posture":
+				continue
+			if victim.get("swarm") != null:
+				continue
+			var to: Vector3 = victim.global_position - at
+			to.y = 0.0
+			if to.length() - float(hulk["radius"]) - _hull(victim) > Weapons.PIN_RADIUS or to.normalized().dot(heading) < 0.5:
+				continue
+			hulk["hit"][victim.get_instance_id()] = true
+			_pin(victim, to, speed, float(hulk["mult"]))
+		hulk["at"] = at + vel * delta
+		hulk["vel"] = vel.move_toward(Vector3.ZERO, EnemyBase.KNOCK_DECAY * delta)
+		live.append(hulk)
+	_hulks = live + _hulks
 
 
 static func _pinnable(enemy) -> bool:
@@ -3716,6 +3818,7 @@ func _start_attempt() -> void:
 	_crushes.clear()
 	_shred.clear()
 	_pinned.clear()
+	_hulks.clear()
 	pins = 0
 	# The upgrade tree's pending specials and clocks belong to the attempt that made
 	# them: no echo, sentry, cloud or marks fire into the next one (F002).

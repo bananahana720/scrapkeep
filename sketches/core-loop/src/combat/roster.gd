@@ -5,6 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const RosterDig := preload("res://src/combat/roster_dig.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
+const RosterSpecials := preload("res://src/combat/roster_specials.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # The enemy roster (DESIGN-V2 sections 10, 11 and 15): one row per spawnable kind, and
@@ -18,7 +19,8 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # - faction: the timbre family and the arrival cue. Fleet crews clank and whistle; the
 #   three ancient families hum.
 # - role: what the director pairs. A controller holds or steers you; a punisher hurts a
-#   ball that is held or off its line.
+#   ball that is held or off its line; a kill_first special makes its pack worse until it
+#   is removed.
 # - telegraph: the W2 attack type its warning draws with.
 # - holds: whether it takes hold of the ball (through holds.gd and the CC door).
 # - breaks: the player's own actions that end its hold, or for a unit that holds
@@ -117,6 +119,12 @@ const BASE_ROWS := {
 		"breaks": ["boost", "smash"], "tag": "ice_form", "tag_next": "tag_cup_snap", "hold": "ice_form", "tests": "speed",
 		"line": "A cup that closes over a ball rolling onto it and holds it dead still; boost or smash out, or break it first."},
 
+	# Kill-first specials (design-v3/ENEMY-PRIORITY.md 4): each makes its pack worse until it
+	# is removed, and never attacks, so it takes no attacker budget.
+	"linker": {"faction": FLEET, "role": "kill_first", "mechanic": "dish_guard", "telegraph": -1, "holds": false,
+		"breaks": [], "tag": "", "tests": "air", "script": "res://src/combat/linker.gd",
+		"line": "Holds a dish over a partner that shrugs off hits through it; cut the cable, come over the top or kill the Linker."},
+
 	# Awakened ancients (DESIGN-V2 section 10): one per family, each its cause's mechanic.
 	"reactor_relic": {"faction": REACTOR, "role": "punisher", "mechanic": "meltdown_vent", "telegraph": T_INSTANT, "holds": false,
 		"breaks": [], "tag": "reactor_erupt", "tag_next": "reactor_erupt", "tests": "speed",
@@ -164,6 +172,7 @@ const CHASSIS := {
 	"swatter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Low paddle arm cocked at the sweep edge"},
 	"ramp_flipper": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Floor plate tilting on its hinge"},
 	"catch_trap": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cup petals opening over the floor"},
+	"linker": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Dish on a long sideways boom braced over another enemy"},
 	"reactor_relic": {"chassis": "heavy", "move_class": "fixed", "threat_feature": "Vent slits glowing before the eruption"},
 	"swarm_remnant": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Drones snapping into one lined-up formation"},
 	"mind_hand": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Raised arm whose lens locks on the ball"},
@@ -173,12 +182,15 @@ const CHASSIS := {
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
+	"dispatcher": {"chassis": "cache", "move_class": "fixed", "threat_feature": "Pneumatic tube curling down off a box on a mast"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const ANCIENTS := ["reactor_relic", "swarm_remnant", "mind_hand"]
+# The kill-first specials (ENEMY-PRIORITY.md 4): rows in this file plus roster_specials.gd; they arrive in packs too.
+static var SPECIALS: Array = ["linker"] + RosterSpecials.ROWS.keys()
 # The family ancient per Warden family.
 const FAMILY_ANCIENT := {REACTOR: "reactor_relic", SWARM: "swarm_remnant", MIND: "mind_hand"}
 
@@ -188,7 +200,7 @@ static var ROWS: Dictionary = _all_rows()
 
 static func _all_rows() -> Dictionary:
 	var rows := BASE_ROWS.duplicate()
-	for table in [RosterDig.ROWS, RosterHighdraft.ROWS]:
+	for table in [RosterDig.ROWS, RosterHighdraft.ROWS, RosterSpecials.ROWS]:
 		for id in table:
 			assert(not rows.has(id), "roster id declared twice: %s" % id)
 			rows[id] = table[id]
@@ -246,7 +258,7 @@ static func is_ancient(name: String) -> bool:
 
 
 static func is_reinforcement(id: String) -> bool:
-	return id in COUNTERS or id in ANCIENTS
+	return id in COUNTERS or id in ANCIENTS or id in SPECIALS
 
 
 # A stage's Warden kind when its row names none: its world's family on the default table

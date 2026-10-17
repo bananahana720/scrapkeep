@@ -62,7 +62,11 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 # fills only from rams in the 4 s low dwell and about 1.5 a second from the line, so a chunk costs two to three
 # hoist cycles. Owner tuning call (no stage-3 tune is in KF-BOT's scope): restate the headframe band near the
 # sheet's own prediction (60 to 85 s, swarm.md:177), raise line-shot posture on an anchor, or shorten the high dwell.
-const EXPECT_SMALL_S := 104.78
+# 2026-10-17 (KNOCKBACK-FEEL, PR #43): small re-pinned 104.78 -> 88.16 s. Cause: hit-stop scaling (juice.gd
+# THROW_STOP_MS), not knockback scatter. With juice.gd at main and the rest of #43 the small median is 109.47 s
+# (in the old pin); with the throw-based stop it is 84.65 to 88.16 s across two sweeps. Grown stays at its pin
+# (38.54 s) and small/grown stays above 2 (2.29). Receipts: /mnt/project-files/gate/knockback-43/.
+const EXPECT_SMALL_S := 88.16
 const EXPECT_GROWN_S := 38.77
 const TOLERANCE := 0.10
 
@@ -224,7 +228,12 @@ func _stage_note(record: Dictionary) -> Dictionary:
 func _fight(record: Dictionary) -> float:
 	for note in record.get("stages", []):
 		if int(note.get("stage", 0)) == STAGE and note.get("warden_broken_s") != null:
-			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0)))
+			# A camper never turns to the Warden, so its note has no warden_fight_s; its fight starts at
+			# the engagement (bot_driver.gd fight_start_of), not at 0, which read a 140 s break as 0 s.
+			var start = note.get("warden_fight_s")
+			if start == null:
+				start = BotDriver.fight_start_of(note)
+			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - float(start if start != null else 0.0))
 	return RUN_CAP_S
 
 
