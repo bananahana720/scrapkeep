@@ -13,12 +13,12 @@ master: one chain for every track, from SCORE.md "Mix and master". With a stems 
 it mixes the stems into their slots first (kick and bass centre and mono, the bass ducking under
 the kick, comping high-passed and dipped at 2 to 4 kHz, the lead centre-left with presence, one
 room per world on a send high-passed at 200 Hz); with a single file it applies the bus stages
-only. Then: the sub and low bands cut back to at most 0.28 and 0.62 of the energy (one owner
-for the low end), the stage widened above 300 Hz toward side/mid 0.16, mono below 150 Hz,
+only. Then: the sub and low bands cut back to at most 0.26 and 0.62 of the energy, by up to 12 dB (one owner
+for the low end), 60 to 250 Hz raised up to 6 dB to at least 0.32, 2 to 5 kHz raised up to 6 dB to at least 0.09 of the 250 Hz to 2 kHz band, the stage widened above 300 Hz toward side/mid 0.16, mono below 150 Hz,
 gentle bus compression, loudness to -16 LUFS by gain measured with ffmpeg's EBU R128 meter,
 and a 4x-oversampled lookahead limiter at -1.2 dBTP. With --loop and --bpm the mix is cut, before loudness, to
-whole bars from the kick downbeat whose wrap is closest in level (at most 16, a multiple of 4), its last 10 ms crossfaded
-into the audio just before the cut.
+whole bars from the kick downbeat whose wrap is closest (at most 16, a multiple of 4), its last 60 ms
+replaced by the audio just before the cut.
 """
 
 import json
@@ -167,16 +167,39 @@ def mix_stems(stems, room_name):
     return room(out, seconds, wet)
 
 
-def shelf_to(x, lo, hi, share_max):
-    """Cut the lo to hi band until its share of total energy is at most share_max, by at most 8 dB:
-    the low end gets one owner instead of swamping the mix."""
+def shelf_to(x, lo, hi, share_max, most_db=12):
+    """Cut the lo to hi band until its share of total energy is at most share_max, by at most
+    most_db: the low end gets one owner instead of swamping the mix."""
     part = band(band(x, "highpass", lo), "lowpass", hi) if lo > 20 else band(x, "lowpass", hi)
     share = (part ** 2).sum() / ((x ** 2).sum() + 1e-12)
     if share <= share_max:
         return x
     # removing a fraction g of the band leaves (1-g)^2 * share of the energy in it
-    keep = max(np.sqrt(share_max * (1 - share) / (share * (1 - share_max))), 10 ** (-8 / 20))
+    keep = max(np.sqrt(share_max * (1 - share) / (share * (1 - share_max))), 10 ** (-most_db / 20))
     return x - (1 - keep) * part
+
+
+def lift_low(x, share_min=0.32, most_db=6):
+    """Raise 60 to 250 Hz until it holds at least share_min of the energy, by at most most_db, so a
+    bass living in the sub band still has its punch where small speakers can play it."""
+    part = band(band(x, "highpass", 60), "lowpass", 250)
+    share = (part ** 2).sum() / ((x ** 2).sum() + 1e-12)
+    if share >= share_min:
+        return x
+    gain = min(np.sqrt(share_min * (1 - share) / (share * (1 - share_min))), 10 ** (most_db / 20))
+    return x + (gain - 1) * part
+
+
+def lift_lead(x, ratio_min=0.09, most_db=6):
+    """Raise 2 to 5 kHz until it holds at least ratio_min of the 250 Hz to 2 kHz energy, by at most
+    most_db, so the sax keeps its own register above the band."""
+    pres = band(band(x, "highpass", 2000), "lowpass", 5000)
+    body = band(band(x, "highpass", 250), "lowpass", 2000)
+    ratio = (pres ** 2).sum() / ((body ** 2).sum() + 1e-12)
+    if ratio >= ratio_min:
+        return x
+    gain = min(np.sqrt(ratio_min / max(ratio, 1e-6)), 10 ** (most_db / 20))
+    return x + (gain - 1) * pres
 
 
 def stage(x, target=0.16):
@@ -194,9 +217,10 @@ def stage(x, target=0.16):
 
 
 def loop_cut(x, bpm, bars=16):
-    """Whole bars from a kick downbeat, the length a multiple of 4 bars, at most `bars`. Of the
-    downbeats that leave room, the one whose last and first 50 ms are closest in level wins, and
-    the last 10 ms crossfade into the audio just before the cut, so the wrap is continuous."""
+    """Whole bars from a kick downbeat, the length a multiple of 4 bars, at most `bars`. The tail is
+    replaced by the 60 ms of audio just before the cut point, reached by a 60 ms equal-power
+    crossfade, so the wrap plays exactly what the source played into that downbeat. Of the downbeats
+    that leave room, the one whose wrap is closest in level and spectrum wins."""
     mono = band(x.mean(axis=1), "lowpass", 150)
     flux, rate = cut_loops.onset_envelope(mono, SR)
     first = int(cut_loops.phase(flux, rate, bpm) * SR)
@@ -205,26 +229,39 @@ def loop_cut(x, bpm, bars=16):
     if count < 4:
         return x
     length = int(round(count * bar))
-    w, f = int(0.05 * SR), int(0.01 * SR)
+    tail, fade = int(0.06 * SR), int(0.06 * SR)
+    w = int(0.05 * SR)
 
-    def db(seg):
-        return 10 * np.log10((seg ** 2).mean() + 1e-12)
+    def build(start):
+        out = x[start:start + length].copy()
+        pre = x[start - tail - fade:start]
+        t = np.linspace(0, np.pi / 2, fade)[:, None]
+        out[-tail - fade:-tail] = out[-tail - fade:-tail] * np.cos(t) + pre[:fade] * np.sin(t)
+        out[-tail:] = pre[fade:]
+        return out
+
+    def wrap(out):
+        head, end = out[:w].mean(axis=1), out[-w:].mean(axis=1)
+        jump = abs(10 * np.log10((head ** 2).mean() + 1e-12) - 10 * np.log10((end ** 2).mean() + 1e-12))
+        sh, st = np.abs(np.fft.rfft(head)), np.abs(np.fft.rfft(end))
+        sim = (sh * st).sum() / (np.linalg.norm(sh) * np.linalg.norm(st) + 1e-12)
+        return jump / 3 + (1 - sim) / 0.5
 
     starts = [first + int(round(k * bar)) for k in range(int((len(x) - first - length) / bar) + 1)]
-    starts = [s for s in starts if s >= f and s + length <= len(x)] or [first]
-    start = min(starts, key=lambda s: abs(db(x[s + length - w:s + length]) - db(x[s:s + w])))
-    out = x[start:start + length].copy()
-    if start >= f:
-        fade = np.linspace(0, 1, f)[:, None]
-        out[-f:] = out[-f:] * (1 - fade) + x[start - f:start] * fade
-    return out
+    starts = [s for s in starts if s >= tail + fade and s + length <= len(x)]
+    if not starts:
+        return x[first:first + length]
+    return min((build(s) for s in starts), key=wrap)
 
 
 def master(src, out, loop=False, room_name="neutral", bpm=None):
     x = mix_stems(src, room_name) if Path(src).is_dir() else room(load(src), *ROOMS[room_name]) if room_name != "neutral" else load(src)
     x = band(x, "highpass", 25)
-    x = shelf_to(x, 20, 60, 0.28)
-    x = shelf_to(x, 60, 250, 0.62)
+    for _ in range(2):
+        x = shelf_to(x, 20, 60, 0.26)
+        x = shelf_to(x, 60, 250, 0.62)
+        x = lift_low(x)
+    x = lift_lead(x)
     x = stage(x)
     x = mono_lows(x)
     x = compress(x)

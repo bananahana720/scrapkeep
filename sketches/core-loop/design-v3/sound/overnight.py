@@ -8,7 +8,8 @@ the mix chain, build the hybrid (kept drums and bass shifted onto the cue's key,
 lead), cover the hybrid with ACE-Step XL in final mode at strengths 0.55 and 0.65 with two seeds,
 and gate every take with gate_cue.py. One cue failing never stops the run: its error goes in
 <render folder>/score/overnight.json and the next cue starts. Cues already in overnight.json with
-a gate are skipped, so a restarted run resumes.
+a gate are skipped, so a restarted run resumes. --hold renders the named cues again at cover
+strengths 0.75 and 0.85, for cues whose melody slipped, under ledger key <cue>+hold.
 """
 
 import json
@@ -72,11 +73,11 @@ def caption(ace, ref, cue, themes):
     return text[:512]
 
 
-def one(cue, root, score, ace, themes):
+def one(cue, root, score, ace, themes, strengths=STRENGTHS, tag=""):
     rel, ref, room, loop = PICKS[cue]
     row = themes.CUES[cue]
     bpm = row["bpm"]
-    work = root / "score" / cue
+    work = root / "score" / cue / tag if tag else root / "score" / cue
     work.mkdir(parents=True, exist_ok=True)
 
     src = root / rel
@@ -108,7 +109,7 @@ def one(cue, root, score, ace, themes):
     hybrid_score = _score(score, hybrid, cue)
     log(f"{cue}: hybrid melody {hybrid_score.get('melody_parent')} vs {hybrid_score.get('melody_control')}")
 
-    rnd = f"score-{cue}"
+    rnd = f"score-{cue}-{tag}" if tag else f"score-{cue}"
     cap = caption(ace, ref, cue, themes)
     base = dict(task_type="cover", src_audio=str(hybrid), bpm=bpm, duration=int(round(seconds)), thinking=False,
                 lyrics="[Instrumental]", caption=cap, keyscale=f"{row['tonic']} {KEYSCALE[row['mode']]}")
@@ -116,7 +117,7 @@ def one(cue, root, score, ace, themes):
     fresh = json.loads(ace_path.read_text())
     fresh["experiments"][rnd] = {"hypothesis": f"Score pass: {cue} hybrid covered onto theme {row['theme']}.",
                                  "variants": [dict(base, name=f"{cue}-c{int(s * 100)}", audio_cover_strength=s)
-                                              for s in STRENGTHS]}
+                                              for s in strengths]}
     ace_path.write_text(json.dumps(fresh, indent=1))
     before = set((root / "renders").glob(f"lab-{rnd}-*"))
     run([HERE / "ace_lab.sh", root, rnd, *SEEDS, "--mode", "final"])
@@ -146,21 +147,25 @@ def main(argv):
     root, score = Path(argv[0]), Path(argv[1])
     sys.path.insert(0, str(score))
     import themes
+    hold = "--hold" in argv  # a second pass at higher cover strengths, for cues whose melody slipped
+    argv = [a for a in argv if a != "--hold"]
     cues = argv[2:] or list(PICKS)
+    strengths, tag = ((0.75, 0.85), "hold") if hold else (STRENGTHS, "")
     ledger_path = root / "score" / "overnight.json"
     ledger = json.loads(ledger_path.read_text()) if ledger_path.exists() else {}
     for cue in cues:
-        if "gate" in ledger.get(cue, {}):
+        key = f"{cue}+{tag}" if tag else cue
+        if "gate" in ledger.get(key, {}):
             log(f"{cue}: already gated, skipping")
             continue
         log(f"{cue}: start")
         try:
-            ledger[cue] = one(cue, root, score, json.loads((root / "ace.json").read_text()), themes)
-            passed = sum(1 for g in ledger[cue]["gate"] if g["score"].get("pass") and g["mix"].get("pass"))
-            log(f"{cue}: done, {passed} of {len(ledger[cue]['gate'])} takes pass both checks")
+            ledger[key] = one(cue, root, score, json.loads((root / "ace.json").read_text()), themes, strengths, tag)
+            passed = sum(1 for g in ledger[key]["gate"] if g["score"].get("pass") and g["mix"].get("pass"))
+            log(f"{cue}: done, {passed} of {len(ledger[key]['gate'])} takes pass both checks")
         except Exception as e:  # one cue never stops the night
             detail = e.stderr[-600:] if isinstance(e, subprocess.CalledProcessError) else traceback.format_exc()[-600:]
-            ledger[cue] = dict(cue=cue, error=detail)
+            ledger[key] = dict(cue=cue, error=detail)
             log(f"{cue}: FAILED {detail.splitlines()[-1] if detail else e}")
         ledger_path.write_text(json.dumps(ledger, indent=1, default=lambda o: o.item()))
 

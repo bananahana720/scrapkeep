@@ -50,14 +50,17 @@ def main(argv):
             mono = x.mean(axis=1) if x.ndim > 1 else x
             flux, rate = cut_loops.onset_envelope(mono, sr)
             read = float(cut_loops.tempo(flux, rate, bpm * 0.85, bpm * 1.15))
-            if abs(read - bpm) > 0.3:
+            if take.exists() and take.stat().st_mtime >= Path(audio["path"]).stat().st_mtime:
+                pass
+            elif abs(read - bpm) > 0.3:
                 subprocess.run(["rubberband", "-q", "--fine", "-T", f"{bpm / read:.5f}", audio["path"], str(take)],
                                check=True, capture_output=True)
             else:
                 sf.write(take, x, sr)
-            subprocess.run(["nice", "-n", "10", str(DEMUCS), "-n", "htdemucs_6s", "-d", "cuda", "-o", str(out / "stems"),
-                            str(take)], check=True, capture_output=True)
             stems = out / "stems" / "htdemucs_6s" / name
+            if not (stems / "other.wav").exists() or (stems / "other.wav").stat().st_mtime < take.stat().st_mtime:
+                subprocess.run(["nice", "-n", "10", str(DEMUCS), "-n", "htdemucs_6s", "-d", "cuda", "-o", str(out / "stems"),
+                                str(take)], check=True, capture_output=True)
             score_row = run_json([PY, "-I", str(score / "check_score.py"), str(stems / "other.wav"), cue])
             master = out / f"{name}-master.wav"
             subprocess.run([PY, "-I", str(HERE / "evolve.py"), "master", str(stems), str(master), "--room", room]
