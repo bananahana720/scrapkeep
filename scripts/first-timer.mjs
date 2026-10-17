@@ -54,7 +54,7 @@ export const MECHANICS = [
     name: "Slam the open core",
     needed: "required",
     need: "warden_staggered",
-    teach: ["prompt:slam", "prompt:haul", "card:smash"],
+    teach: ["prompt:slam", "card:smash"],
   },
   {
     id: "gates",
