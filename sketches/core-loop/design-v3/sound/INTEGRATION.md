@@ -44,7 +44,7 @@ A boss arrival freezes on the intro card under `boss_arena_in`, the versus sting
 
 | Moment | Cue |
 | --- | --- |
-| Launch | one of titles A, B or C, never the same twice in a row |
+| Launch | the opening's theme: the title intro (`title_intros.gd`, `theme`) calls `audio.title_theme`, and title A (sax lead) or B (machine lead) starts on its first bar; with no opening, or no pack for its theme, the plain title |
 | Camp | `camp`, 129 BPM, warm |
 | Stage roaming | `roam-<world>` at 172 |
 | First fight in a stage | the pivot bar into the 129 combat layer: the world track, or the combat hype loop for ordinary fights |

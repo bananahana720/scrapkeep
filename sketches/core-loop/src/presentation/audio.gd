@@ -45,6 +45,8 @@ const TuneMoments := preload("res://src/presentation/tune_moments.gd")
 # "until"}), the one the level band plays now, this run's rare remixes and their own rng (never
 # the run's), and whether this stage's Warden has taken the landmark's place.
 var tune_available: Callable = TuneMoments.available
+# Whether a title row's pack is on disk (title_theme); tests swap it.
+var title_available: Callable = func(row: String) -> bool: return MusicRows.pack_on_disk(MusicRows.resolve(row)["ace_manifest"])
 var _moments: Array = []
 var _moment_seq := 0
 var _moment_playing := ""
@@ -179,6 +181,9 @@ var engine: MusicEngine
 # no pack, or any missing file, plays the synth.
 var ace: AceSequencer
 var ace_manifest := ""
+# The title's music row: "title" until an opening names its theme (title_theme).
+var title_row := "title"
+var _on_title := false
 # The manifest the zone rows last selected. A caller that sets ace_manifest away from it
 # (a test's missing package) keeps its pick across stage entries (fix round D, 2026-10-04).
 var _ace_row_manifest := ""
@@ -860,7 +865,22 @@ func _select_ace_manifest(manifest: String) -> void:
 		_ace_row_manifest = manifest
 
 
+# The title opening (title_stage.gd) names its theme as its intro starts: the title plays that
+# theme's take from its first bar. A theme with no pack on disk keeps the plain title.
+func title_theme(theme: String) -> void:
+	var row := "title-" + theme.to_lower()
+	if not MusicRows.ROWS.has(row) or not title_available.call(row):
+		row = "title"
+	if row == title_row:
+		return
+	title_row = row
+	if _on_title and sound_ready:
+		_ace_named(title_row, engine.next_bar())
+		_on_title = true
+
+
 func _ace_named(id: String, at: int, boss := false, won := true) -> void:
+	_on_title = false
 	_ace_arrival_stage = 0
 	_ace_arrival_at = -1
 	var manifest: String = MusicRows.resolve(id)["ace_manifest"]
@@ -2913,7 +2933,8 @@ func _flush_flow() -> void:
 				# The title's own theme, kept across the class select.
 				if sound_ready:
 					engine.menu_theme("title", true, at)
-					_ace_named("title", at)
+					_ace_named(title_row, at)
+					_on_title = true
 			"unseal":
 				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()

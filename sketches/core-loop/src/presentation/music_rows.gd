@@ -135,6 +135,11 @@ const ROWS := {
 	"secret-highdraft-rain": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/secret_highdraft_rain/manifest.json"},
 	"secret-dig-dub": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/secret_dig_dub/manifest.json"},
 	"title": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title/manifest.json"},
+	# The opening's theme picks the title take (title_intros.gd: "A" sax lead, "B" machine lead);
+	# C is the show-opening take.
+	"title-a": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_a/manifest.json"},
+	"title-b": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_b/manifest.json"},
+	"title-c": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_c/manifest.json"},
 	"summary": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/summary/manifest.json"},
 }
 
