@@ -26,9 +26,10 @@ This is how film and game composers keep a large score coherent: approve a small
 1. **Theme suite.** Three themes plus the pilot motifs already in `harmony.gd`. Nothing else gets its own tune.
 2. **Cue sheet.** Every cue names its parent theme, which bars, the key and mode, the tempo, the devices that transform it and the story beat it carries ([themes.py](themes.py) `CUES`, `python themes.py list`).
 3. **Guide.** `python themes.py guide <cue> <dir>` writes a plain mock-up of the derived cue (lead, the `harmony.gd` chords, bass, four-on-the-floor kick), a lead-only file and a MIDI file.
-4. **Render.** ACE-Step covers the guide, the same mechanism as the round 7 variations, with the sound bible's caption for the cue. The model dresses the written melody instead of inventing one.
+4. **Evolve.** The current picked take stays the production reference and the standing version (Andrew, 03:26Z: keep the progress, make it cohesive). Its drums and bass stems are kept, moved onto the cue's key and grid, and the theme's lead line goes on top; ACE-Step re-renders that hybrid as one production. "Evolve the current tracks" below has the steps.
 5. **Check.** `python check_score.py <take> <cue>`: the take is in the cue's scale, and its lead line beats a control theme by 0.1, the margin `measure_variants.py` already uses.
-6. **Ear.** Andrew picks by ear among the takes that pass, as now.
+6. **Mix and master.** Every kept and new track goes through one mix chain and `check_mix.py` (loudness, peaks, frequency and stereo slots, loop seams, key).
+7. **Ear.** Andrew picks by ear among the takes that pass. A new take replaces a standing pick only when he picks it.
 
 ## The theme suite
 
@@ -93,17 +94,70 @@ The machine side has its own arc. M's lean always falls back down through the ru
 
 Tempos (172 roaming, 129 combat, 138 to 150 boss phases, 140 to 150 for the hype drop), the keys in `harmony.gd`, the event set, the specials, the buffs, the switch-ups, the hype rule and its last-phase drop, and the call-and-response duel are unchanged. The variations system keeps working: each variation now covers a theme-derived parent, so it inherits the written tune.
 
+## Evolve the current tracks
+
+Andrew, 2026-10-17 03:25 to 03:27Z: keep the progress (the current soundtrack sounded awesome in game), use the full production tools for higher quality, more complexity and a bigger sound stage, and bake the production in with everything in its spot. So nothing is thrown away. Each current pick is the standing version and the sound reference until Andrew picks a replacement by ear.
+
+| Tool | Where | Job |
+| --- | --- | --- |
+| `themes.py` | anywhere | The melodic spine: the cue's notes, chords, MIDI, a plain guide and a fuller stereo `preview` |
+| htdemucs (6-stem model where installed) | the 4080 | Split the standing pick into drums, bass, other (and piano, guitar) |
+| Rubber Band (`grid_stretch.py`) | the 4080 | Move kept stems onto the cue's key and grid: the combat loops down 3 semitones from F to D, tempo onto 129 or 172 |
+| ACE-Step 1.5 XL, final quality | the 4080 | Re-render the hybrid as one production. Final quality, not the draft int8 turbo used for auditions. If the installed build has the lego or complete task, use it to add the lead over the kept stems instead of re-rendering everything. |
+| The music thread's mix chain | the 4080 | EQ slots, bus compression, stereo placement, room, limiter, loudness (below). Use what is installed (the existing Python audio scripts; pedalboard or a DAW if present). |
+| `check_score.py`, `check_mix.py` | cloud or the 4080 | Gate every take: key, melody, loudness, peaks, slots, seams |
+
+Per cue:
+
+1. Split the standing pick into stems. If `check_mix.py --cues` reports a key offset, shift the stems by that many semitones.
+2. Build the hybrid source: the kept drums and bass, plus the cue's lead line. For the lead, use `python themes.py preview <cue>`'s sax, or better, an ACE-Step solo render of the guide with a sax-only caption. Add the counter line where the cue has one.
+3. Cover the hybrid with ACE-Step at strength 0.45 to 0.65, using the cue's sound-bible caption, so groove, timbre and production carry over and the melody becomes the theme. Render two to four seeds.
+4. Run `check_score.py` on the new take's "other" stem and `check_mix.py` on the mastered file. Put the passing takes on the soundtrack page beside the standing pick.
+
+Order: `combat-hype` first, because it is the most-heard track and the most off key. Then roam-spillway, the titles, the worlds and roams, the bosses, camp, summaries and ending, and last the variations (re-covered from whichever parent Andrew keeps).
+
+## Mix and master
+
+One chain for every kept and new track, so switches, stingers and the hype drop never jump in level and every element has its own place.
+
+| Element | Frequency slot | Stereo slot | Rule |
+| --- | --- | --- | --- |
+| Kick | 45 to 100 Hz fundamental, click at 3 to 5 kHz | Centre, mono | The bass ducks under it by 3 to 6 dB (sidechain) |
+| Bass, 808, sub | 30 to 250 Hz | Centre, mono below 150 Hz | High-pass everything else below 120 Hz so the lows have one owner |
+| Rhodes, clav, pads | 250 Hz to 2 kHz, dipped 2 to 4 kHz | Wide, left-leaning comping | Cut 2 dB at 2 to 4 kHz to leave the lead's slot |
+| Sax lead | 300 Hz to 5 kHz, presence at 2 to 4 kHz | Centre, slightly left | Loudest melodic element. Nothing else boosts 2 to 4 kHz while it plays. |
+| Brass, counter line | 500 Hz to 3 kHz | Opposite the comping | Answers in the gaps, never doubles the lead's octave |
+| Machine percussion | 3 to 10 kHz | Spread, moving | Tuned and on the grid, as the sound bible says |
+| Room | Return high-passed at 200 Hz | Full width | One shared room per world, so a cue sounds like a place |
+
+Targets, checked by [check_mix.py](check_mix.py):
+
+| Check | Target |
+| --- | --- |
+| Integrated loudness | -16 LUFS ±0.5 on every music cue (the convention RENDERS.md already uses) |
+| True peak | -1 dBTP or lower |
+| Low end below 150 Hz | Mono: L/R correlation at least 0.9 |
+| Stereo width | Side/mid energy 0.08 to 0.6: wide, and never collapsing in mono |
+| Band balance | Each band's share inside the window in `BANDS` (catches a swamping sub or an empty lead register) |
+| Lead space | 2 to 5 kHz energy at least 0.06 of the 250 Hz to 2 kHz energy |
+| Loop seam | For loops: last and first 50 ms within 3 dB and spectrally close |
+| Clipping | No run of three full-scale samples |
+| Key, with `--cues` | The cue's scale |
+
+Stems sum back to the master within 1 dB, so the engine's stem faders (INTEGRATION section 2) play the same mix. Transitions get checked as pairs: the end of the outgoing loop against the start of the incoming one at the switch point, within 1.5 LU.
+
 ## Hand-over to the music thread
 
-1. **One-cue spike first.** Render `roam-spillway` as a cover of `guide-roam-spillway.wav` with its current caption, seeds 2 to 4, strengths 0.45, 0.55 and 0.7. Run `check_score.py` on each take's htdemucs "other" stem. Go on only if at least one take passes and sounds like Scrapkeep to Andrew. If none passes, report the scores; the fallback is a melody-conditioned model or a played sax line over the render.
-2. **Re-render the parents** from their guides: the three titles, the three worlds and roams, camp, combat and champion, the three bosses, the summaries and the ending. Keep each cue's sound-bible caption; replace any melody wording in it with the cue's lead voice from `CUES`.
-3. **Re-cover the variations** from the new parents, as round 7 did.
-4. **Gate every pick** on `check_score.py`; record the scores beside the `measure_variants.py` table in RENDERS.md.
-5. **Sound bible edits** (the music thread owns the file): add a "Score architecture" pointer to this page under "Title screens rotate"; in the Highdraft row, keep "Lydian lift" and note that the current takes read G minor; in "Boss themes", the Mind's final is K upright in G major.
+1. Spike `combat-hype` with the evolve steps above. Report back through the project coordinator with the scores from both checks for every take. If no take keeps the theme, report that too; the fallback is to keep the standing pick and lay a sax lead stem over it.
+2. Work through the order above overnight. The 4080 does ACE-Step, htdemucs and Rubber Band. The cloud threads can run `check_mix.py` and `check_score.py` on anything you send to the project library.
+3. Master every standing pick through the mix chain too, so tracks Andrew keeps as they are still meet the targets.
+4. Record the scores from both checks beside the `measure_variants.py` table in RENDERS.md.
+5. Sound bible edits (the music thread owns the file): add a "Score architecture" pointer to this page under "Title screens rotate". In the Highdraft row, keep "Lydian lift" and note that the current takes read G minor. In "Boss themes", the Mind's main theme is K inverted and its final is K upright in G major. Add the journey arc that Andrew chose with "Build to ending".
 
 ## Limits
 
 - The guides are mock-ups. They prove the notes, not the sound, and nobody has listened to them yet.
-- Whether an ACE-Step cover keeps a plain synth guide's melody is unproven; the round 7 to 9 covers kept real-audio parents (margins 0.05 to 0.17+). The spike in step 1 is the test.
+- Whether an ACE-Step cover of a hybrid source keeps both the kept groove and the theme's melody is unproven; the round 7 to 9 covers kept real-audio parents (margins 0.05 to 0.17+). The spike in step 1 is the test.
 - The scale check proves the note collection, not the tonic: D Dorian and E Phrygian share notes. The melody check is what tells the Dig from the Spillway, and on full mixes it sits close to its control; use the "other" stem.
+- The mix targets are standard starting values (EBU R128 loudness, mono lows, a protected lead band), not tuned to Andrew's taste; the band windows are wide on purpose.
 - Automated checks never stand in for Andrew's ear.

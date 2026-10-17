@@ -4,6 +4,8 @@
     python themes.py guide <cue|all> <out dir> [--seconds 64]
                                                a guide WAV (lead, chords, bass, kick), a lead-only
                                                WAV and a MIDI file per cue
+    python themes.py preview <cue|all> <out dir> [--seconds 16]
+                                               a fuller stereo arrangement of the same notes
     python themes.py notes <cue>               the cue's derived lead line as note names
 
 A cue is a theme plus devices: take some bars, map onto another mode and key, invert, regroup
@@ -316,10 +318,146 @@ def render(cue, seconds=64.0):
     return full / peak * 0.8, lead / (np.abs(lead).max() or 1) * 0.8
 
 
+# preview audio: a fuller stereo mock-up of the same notes, for ears and for a richer cover source.
+# The plain guide above stays the reference check_score.py measures against.
+
+RNG = np.random.default_rng(129)
+
+
+def spectral(x, lo=None, hi=None):
+    """Band-limits a whole buffer in the frequency domain (no SciPy needed)."""
+    spec = np.fft.rfft(x)
+    f = np.fft.rfftfreq(len(x), 1 / SR)
+    gain = np.ones_like(f)
+    if hi:
+        gain /= np.sqrt(1 + (f / hi) ** 4)
+    if lo:
+        gain /= np.sqrt(1 + (lo / np.maximum(f, 1e-3)) ** 4)
+    return np.fft.irfft(spec * gain, len(x))
+
+
+def sax(midi, seconds):
+    """FM reed: a brightness envelope that blooms then settles, a scoop into pitch, delayed
+    vibrato and breath noise. Close enough to read as a horn line in a mock-up."""
+    t = np.arange(int(seconds * SR)) / SR
+    f = 440 * 2 ** ((midi - 69) / 12)
+    scoop = 1 - 0.03 * np.exp(-t * 40)
+    vib = 1 + 0.005 * np.sin(2 * np.pi * 5.2 * t) * np.clip((t - 0.18) / 0.2, 0, 1)
+    phase = 2 * np.pi * f * np.cumsum(scoop * vib) / SR
+    index = 1.2 + 1.6 * np.exp(-t * 6) + 0.4 * np.minimum(t / 0.05, 1)
+    body = np.sin(phase + index * np.sin(phase) + 0.3 * np.sin(2 * phase))
+    breath = spectral(RNG.standard_normal(len(t)), lo=f * 2, hi=f * 6) * 0.08
+    env = np.minimum(t / 0.035, 1) * (0.8 + 0.2 * np.exp(-t * 3)) * np.clip((seconds - t) / 0.04, 0, 1)
+    return (body + breath) * env
+
+
+def rhodes(midi, seconds):
+    t = np.arange(int(seconds * SR)) / SR
+    f = 440 * 2 ** ((midi - 69) / 12)
+    tine = np.sin(2 * np.pi * f * 14 * t) * np.exp(-t * 30) * 0.15
+    body = np.sin(2 * np.pi * f * t + (0.9 * np.exp(-t * 4)) * np.sin(2 * np.pi * f * t))
+    trem = 1 + 0.12 * np.sin(2 * np.pi * 4.5 * t)
+    return (body + tine) * np.exp(-t * 1.2) * trem * np.clip((seconds - t) / 0.05, 0, 1)
+
+
+def mute_brass(midi, seconds):
+    t = np.arange(int(seconds * SR)) / SR
+    f = 440 * 2 ** ((midi - 69) / 12)
+    phase = 2 * np.pi * f * t
+    body = sum(np.sin(k * phase) / k ** 1.3 for k in range(1, 9))
+    return body * np.minimum(t / 0.02, 1) * np.exp(-t * 1.5) * np.clip((seconds - t) / 0.03, 0, 1)
+
+
+def reese(midi, seconds):
+    t = np.arange(int(seconds * SR)) / SR
+    f = 440 * 2 ** ((midi - 69) / 12)
+    saw = sum(np.sin(2 * np.pi * f * d * k * t) / k for d in (0.997, 1.003) for k in range(1, 6))
+    return (np.tanh(1.5 * saw) * 0.6 + np.sin(2 * np.pi * f * t)) * np.exp(-t * 2.5) * np.clip((seconds - t) / 0.01, 0, 1)
+
+
+def drum(kind):
+    t = np.arange(int(0.4 * SR)) / SR
+    if kind == "kick":
+        return np.tanh(2 * np.sin(2 * np.pi * np.cumsum(45 + 120 * np.exp(-t * 35)) / SR) * np.exp(-t * 9))
+    noise = RNG.standard_normal(len(t))
+    if kind == "clap":
+        bursts = sum(np.exp(-np.maximum(t - d, 0) * 60) * (t >= d) for d in (0, 0.011, 0.022))
+        return spectral(noise, lo=900, hi=4000) * (bursts + 0.4 * np.exp(-t * 18)) * 0.9
+    if kind == "hat":
+        return spectral(noise, lo=7000) * np.exp(-t * 70) * 0.5
+    return spectral(noise, lo=6000) * np.exp(-t * 9) * 0.35  # open hat
+
+
+def room(stereo, seconds=1.8, wet=0.35):
+    """Convolution with a decaying noise tail, decorrelated per side: the sound stage."""
+    n = int(seconds * SR)
+    t = np.arange(n) / SR
+    out = stereo.copy()
+    for ch in (0, 1):
+        ir = spectral(RNG.standard_normal(n), lo=200, hi=7000) * np.exp(-t * 6.9 / seconds)
+        ir[: int(0.012 * SR)] = 0
+        size = len(stereo) + n
+        tail = np.fft.irfft(np.fft.rfft(stereo[:, ch], size) * np.fft.rfft(ir, size), size)[: len(stereo)]
+        out[:, ch] += wet * tail / (np.abs(ir).sum() ** 0.5)
+    return out
+
+
+def preview(cue, seconds=16.0):
+    """A stereo arrangement of the cue: sax lead centre-left, muted brass counter right, Rhodes
+    comping left, reese bass and four-on-the-floor centre, clap and hats, kick-sidechained band,
+    room reverb and a soft-clipped master. Same notes as the guide."""
+    notes, chords, swing = derive(cue)
+    under, chords = counter(cue)
+    spb = 60 / CUES[cue]["bpm"]
+    phrase = 4 * len(chords)
+    n = int(seconds * SR)
+    layers = {k: np.zeros(n) for k in ("lead", "counter", "keys", "bass", "kick", "perc")}
+    pan = {"lead": -0.12, "counter": 0.6, "keys": -0.6, "bass": 0, "kick": 0, "perc": 0.3}
+    at = lambda start, beat: (start + swung(beat, swing)) * spb  # noqa: E731
+    for k in range(int(np.ceil(seconds / (phrase * spb)))):
+        start = k * phrase
+        for b, m, d in notes:
+            put(layers["lead"], 0.30 * sax(m, d * spb * 0.97), at(start, b))
+        for b, m, d in under:
+            put(layers["counter"], 0.16 * mute_brass(m, d * spb * 0.9), at(start, b))
+        for i, (_, root, voicing) in enumerate(chords):
+            bar = start + 4 * i
+            for hit, length in ((0, 1.2), (1.5, 2.2)):
+                for j, v in enumerate(voicing):
+                    put(layers["keys"], 0.07 * rhodes(v, length * spb), at(bar, hit) * 1 + j * 0.006)
+            nxt = chords[(i + 1) % len(chords)][1]
+            for beat, note in ((0, root), (1.5, root), (2.5, root + 7), (3.5, nxt - 1)):
+                put(layers["bass"], 0.26 * reese(note, 0.45 * spb), at(bar, beat))
+            for beat in range(4):
+                put(layers["kick"], 0.55 * drum("kick"), (bar + beat) * spb)
+                put(layers["perc"], 0.10 * drum("hat"), at(bar, beat + 0.5) if swing else (bar + beat + 0.5) * spb)
+                put(layers["perc"], 0.05 * drum("hat"), (bar + beat) * spb)
+            for beat in (1, 3):
+                put(layers["perc"], 0.28 * drum("clap"), (bar + beat) * spb)
+            put(layers["perc"], 0.12 * drum("open"), (bar + 3.5) * spb)
+    # House pump: the band ducks under every kick and swells back across the beat.
+    beat_phase = (np.arange(n) / SR % spb) / spb
+    pump = 0.55 + 0.45 * np.minimum(beat_phase / 0.45, 1)
+    for k in ("keys", "bass", "counter"):
+        layers[k] *= pump
+    stereo = np.zeros((n, 2))
+    for k, x in layers.items():
+        p = pan[k]
+        stereo[:, 0] += x * np.sqrt((1 - p) / 2)
+        stereo[:, 1] += x * np.sqrt((1 + p) / 2)
+    dry_low = stereo.copy()
+    stereo = room(stereo)
+    stereo = 0.85 * stereo + 0.15 * dry_low
+    stereo = np.tanh(1.4 * stereo / (np.abs(stereo).max() or 1)) / np.tanh(1.4)
+    return stereo * 0.9
+
+
 def write_wav(path, audio):
+    audio = np.asarray(audio)
+    channels = 1 if audio.ndim == 1 else audio.shape[1]
     data = (np.clip(audio, -1, 1) * 32767).astype("<i2").tobytes()
     with wave.open(str(path), "wb") as w:
-        w.setnchannels(1)
+        w.setnchannels(channels)
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes(data)
@@ -386,6 +524,14 @@ def main(argv):
             write_wav(out / f"lead-{cue}.wav", lead)
             write_midi(out / f"{cue}.mid", cue)
         print(f"wrote guides to {out}")
+        return 0
+    if argv[0] == "preview":
+        out = Path(argv[2])
+        out.mkdir(parents=True, exist_ok=True)
+        seconds = float(argv[argv.index("--seconds") + 1]) if "--seconds" in argv else 16.0
+        for cue in CUES if argv[1] == "all" else [argv[1]]:
+            write_wav(out / f"preview-{cue}.wav", preview(cue, seconds))
+        print(f"wrote previews to {out}")
         return 0
     print(__doc__)
     return 2
