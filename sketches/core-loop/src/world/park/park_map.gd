@@ -10,6 +10,10 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 const FIXTURE := "res://src/world/park/park_test.json"
+# Andrew's "Ride lips only" ruling (2026-10-17 06:16Z): a plain bank, drop, ground shelf or sky island whose height
+# stamp is its whole shape is terrain, not a placeholder, so scatter lands on it as on the open ground. The same rows
+# as scripts/placeholder-gate.mjs PLAIN_SLOPES and isPlainSlope.
+const PLAIN_SLOPES := ["bank", "drop", "ground", "sky_island"]
 
 var path := ""
 var ok := false
@@ -80,15 +84,24 @@ func _fill() -> void:
 			site["pay"] = row["pay"].duplicate(true)
 		activity_sites.append(site)
 
-	# Scatter keeps out of every built footprint (PARK.md 2.9); the kit rows come with KB5.
+	# Scatter keeps out of every built footprint (PARK.md 2.9) but the ground and the plain slopes; the kit rows
+	# come with KB5.
 	scatter = scatter.duplicate(true)
 	var keep_out := []
 	for row in park["park_rows"]:
-		if row["element"] == "ground":
+		if row["element"] == "ground" or plain_slope(row):
 			continue
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))
 	scatter["keep_out"] = keep_out
+
+
+# A stamped plain slope: a PLAIN_SLOPES greybox whose stamp shapes the ground and that has no absolute y, so
+# park_recipes.gd stamp_replaces draws no box for it and the stamped ground is the whole piece.
+static func plain_slope(row: Dictionary) -> bool:
+	var element := String(row.get("element", ""))
+	return element in PLAIN_SLOPES and String(row.get("recipe", "")) == ParkRecipes.GREYBOX + element \
+		and String(row.get("stamp", "")) != "" and row.get("y") == null
 
 
 # One kicker row's lip: the ride's exit, the footprint's far end along the facing, which park_recipes.gd ride_frame (the

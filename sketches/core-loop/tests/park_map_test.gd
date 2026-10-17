@@ -116,8 +116,8 @@ func _activities(map) -> void:
 
 func _scatter(map) -> void:
 	var keep: Array = map.scatter.get("keep_out", [])
-	# 36 park rows, two of them ground, plus the landmark; 25 greybox rows added by KD-T.
-	_report("scatter keeps out of 35 footprints", keep.size() == 35, str(keep.size()))
+	# 36 park rows, two of them ground and two stamped plain slopes (a bank and a drop), plus the landmark.
+	_report("scatter keeps out of 33 footprints", keep.size() == 33, str(keep.size()))
 	_report("scatter keeps today's keys", map.scatter.has("kit") and map.scatter.has("clear") and map.scatter.has("spacing"))
 	var dam: Array = keep.filter(func(f): return f["id"] == "test_dam")
 	_report("landmark footprint", dam.size() == 1 and dam[0]["size"].is_equal_approx(Vector2(120.0, 320.0)), str(dam))

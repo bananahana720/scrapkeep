@@ -20,6 +20,8 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # transforms stay byte-identical to the base.
 
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
 
 # SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted), recorded
 # 2026-10-11 on the untouched base d204cea (KB5). A change here moves an old map's scatter.
@@ -44,6 +46,7 @@ func _initialize() -> void:
 func _run() -> void:
 	# The park section runs first, so the process's resource cache holds none of what the build reads.
 	await _park_chunks()
+	_plain_slopes()
 	var seeds := {}
 	var row_errors := []
 	var relief_errors := []
@@ -367,6 +370,69 @@ func _park_chunks() -> void:
 		% [batches, worst_draws, probe, float(batches) / maxf(1.0, float(probe))])
 	t.check("the merged chunks draw fewer batches than the probe's unmerged chunks", batches > 0 and batches < probe, "%d vs %d" % [batches, probe])
 	holder.free()
+
+
+# "Ride lips only" (Andrew, 2026-10-17 06:16Z): on every park map the stage table uses, a stamped plain slope
+# (ParkMap.plain_slope, the placeholder gate's isPlainSlope) is not in keep_out and gets scatter inside its footprint,
+# while every other built footprint but the ground stays clear; a plain slope left bare has a built piece over it. Placed on flat ground, so each row's whole footprint
+# is in reach; on the real stamp the slope rule still keeps pieces off the steep faces.
+func _plain_slopes() -> void:
+	var flat := func(x: float, z: float, _r: float) -> Vector3: return Vector3(x, 0.0, z)
+	var maps := {}
+	for def: Dictionary in ParkDefs.DEFS:
+		maps[String(def["map"])] = true
+	var plain_total := 0
+	var problems := []
+	for map_id: String in maps:
+		var map = ParkMap.new("res://src/world/park/%s.json" % map_id)
+		if not map.ok:
+			problems.append("%s fails its schema" % map_id)
+			continue
+		var kept := {}
+		for f: Dictionary in map.scatter["keep_out"]:
+			kept[f["id"]] = f
+		var plain := []
+		var built := []
+		for row: Dictionary in map.park["park_rows"]:
+			if ParkMap.plain_slope(row):
+				plain.append(row)
+				if kept.has(row["id"]):
+					problems.append("%s/%s is a plain slope kept out" % [map_id, row["id"]])
+			elif row["element"] != "ground":
+				built.append(row)
+				if not kept.has(row["id"]):
+					problems.append("%s/%s is built but not kept out" % [map_id, row["id"]])
+		plain_total += plain.size()
+		if plain.is_empty():
+			continue
+		# The chunks under the plain slopes' centres, every kit row.
+		var cells := {}
+		for row: Dictionary in plain:
+			var at: Vector2 = ParkMap._v2(row["at"])
+			cells[Vector2i(floori((at.x + ParkTerrain.HALF) / ParkTerrain.TILE_M), floori((at.y + ParkTerrain.HALF) / ParkTerrain.TILE_M))] = true
+		var on_plain := {}
+		var on_built := 0
+		for row: Dictionary in ScatterRows.PARK_KIT:
+			var aabb: AABB = Scatter._source(row["mesh"])["aabb"]
+			for cell: Vector2i in cells:
+				for xf: Transform3D in Scatter.chunk_transforms(row, map, flat, aabb, cell.x, cell.y, []):
+					var p := Vector2(xf.origin.x, xf.origin.z)
+					for slope: Dictionary in plain:
+						if ParkMap.footprint_contains(slope, p):
+							on_plain[slope["id"]] = true
+					for b: Dictionary in built:
+						if Scatter._kept_out([kept[b["id"]]], p):
+							on_built += 1
+		print("scatter_rows_test: %s has scatter on %d of %d stamped plain slopes" % [map_id, on_plain.size(), plain.size()])
+		# A plain slope with no scatter is one a built piece stands on (a half-pipe in a drop, an anchor field on a
+		# bank), so its centre is kept out by that piece.
+		for row: Dictionary in plain:
+			if not on_plain.has(row["id"]) and not Scatter._kept_out(map.scatter["keep_out"], ParkMap._v2(row["at"])):
+				problems.append("%s/%s has no scatter and nothing built on it" % [map_id, row["id"]])
+		if on_built > 0:
+			problems.append("%s %d pieces inside built footprints" % [map_id, on_built])
+	print("scatter_rows_test: %d stamped plain slopes over the stage table's parks" % plain_total)
+	t.check("scatter lands on the stamped plain slopes and stays out of every other built footprint", plain_total > 0 and problems.is_empty(), ", ".join(problems.slice(0, 8)))
 
 
 static func _key(v: Vector3) -> String:
