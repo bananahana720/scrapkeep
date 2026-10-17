@@ -134,6 +134,34 @@ const AIR_CUE_RETURN := [1.9, 0.9]
 const AIR_CUE_RADIUS := 0.62
 const AIR_CUE_NAME := "AirCue"
 
+# An equipped paint lerps the paint surfaces' baked vertex colour this far toward its tint,
+# so a dark lattice takes the hue instead of only darkening (PAINT-TRACE card A2, start value).
+const PAINT_TAKE := 0.6
+# Plate maps average darker than the old neutral value noise; the paint slot lifts once.
+const PAINT_LIFT := 1.2
+const PAINT_SHADER := """shader_type spatial;
+render_mode cull_back, diffuse_burley, specular_schlick_ggx;
+uniform vec4 paint_tint : source_color = vec4(1.0);
+uniform vec4 lift : source_color = vec4(1.0);
+uniform float paint_take = 0.0;
+uniform sampler2D plate_texture : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+varying vec3 local_pos;
+varying vec3 local_normal;
+void vertex() {
+	local_pos = VERTEX;
+	local_normal = NORMAL;
+}
+vec3 painted(vec3 vertex_color, vec3 pos, vec3 normal) {
+	vec3 weights = abs(normalize(normal));
+	weights /= max(weights.x + weights.y + weights.z, 0.001);
+	vec3 p = pos / 1.5;
+	vec3 plate = texture(plate_texture, p.yz).rgb * weights.x
+		+ texture(plate_texture, p.xz).rgb * weights.y
+		+ texture(plate_texture, p.xy).rgb * weights.z;
+	return mix(vertex_color * lift.rgb, paint_tint.rgb, paint_take) * plate;
+}
+"""
+
 const SLOTS := {
 	"paint": {"color": Color.WHITE, "vertex": true, "rough": 0.8},
 	"bare_metal": {"color": Palette.SAND, "lighten": 0.25, "metal": 0.6, "rough": 0.45},
@@ -264,9 +292,19 @@ void fragment() {
 		glass.resource_name = slot
 		_materials[key] = glass
 		return glass
+	if slot == "paint" and tint != Color.WHITE:
+		var painted := ShaderMaterial.new()
+		painted.shader = _paint_shader("paint", PAINT_SHADER + """void fragment() {
+	ALBEDO = painted(COLOR.rgb, local_pos, local_normal);
+	ROUGHNESS = 0.8;
+}
+""")
+		painted.resource_name = slot
+		_paint_parameters(painted, tint)
+		_materials[key] = painted
+		return painted
 	var spec: Dictionary = SLOTS[slot]
 	var color: Color = tint if spec.has("from") else spec["color"]
-	var paint_tint := slot == "paint" and tint != Color.WHITE
 	color = color.lerp(Color.WHITE, spec.get("lighten", 0.0))
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = slot
@@ -300,9 +338,8 @@ void fragment() {
 			mat.uv1_scale = Vector3.ONE / metres
 			# Plate maps average darker than the old neutral value noise; lift them once here
 			# instead of tinting twice.
-			if slot == "paint":  # lift once, not a second tint
-				var lift := Color(1.2, 1.2, 1.2) * (tint if paint_tint else Color.WHITE)
-				mat.albedo_color = Color(lift.r, lift.g, lift.b, mat.albedo_color.a)
+			if slot == "paint":
+				mat.albedo_color = Color(PAINT_LIFT, PAINT_LIFT, PAINT_LIFT, mat.albedo_color.a)
 		else:
 			mat.albedo_texture = Palette.painted_texture(128)
 			mat.uv1_triplanar = true
@@ -432,9 +469,7 @@ func paint_tint(pilot: String, paint_id: String):
 
 
 func _equipped_paint(id: String) -> String:
-	if profile == null:
-		return ""
-	return profile.equipped(id, "paint")
+	return CosmeticWear.worn(profile, id, "paint")
 
 
 # The equipped shell variant's asset id for a pilot, or "" for the default cage.
@@ -608,32 +643,14 @@ func kest_band_material(tint: Color) -> ShaderMaterial:
 	var key := "kest_bands:" + tint.to_html()
 	if _materials.has(key):
 		return _materials[key]
-	var base := material("paint", tint) as StandardMaterial3D
 	var mat := ShaderMaterial.new()
-	var shader := Shader.new()
 	# PD-KEST stores band index in UV2.x and the fourth satchel's class gate in UV2.y.
-	shader.code = """shader_type spatial;
-render_mode cull_back, diffuse_burley, specular_schlick_ggx;
-uniform vec4 paint_tint : source_color = vec4(1.0);
-uniform vec4 class_color : source_color = vec4(1.0);
-uniform sampler2D plate_texture : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+	mat.shader = _paint_shader("kest_bands", PAINT_SHADER + """uniform vec4 class_color : source_color = vec4(1.0);
 instance uniform int lit_count = 0;
 instance uniform int heft_class = 1;
-varying vec3 local_pos;
-varying vec3 local_normal;
-void vertex() {
-	local_pos = VERTEX;
-	local_normal = NORMAL;
-}
 void fragment() {
 	if (UV2.y > float(heft_class) + 0.1) { discard; }
-	vec3 weights = abs(normalize(local_normal));
-	weights /= max(weights.x + weights.y + weights.z, 0.001);
-	vec3 p = local_pos / 1.5;
-	vec3 plate = texture(plate_texture, p.yz).rgb * weights.x
-		+ texture(plate_texture, p.xz).rgb * weights.y
-		+ texture(plate_texture, p.xy).rgb * weights.z;
-	ALBEDO = COLOR.rgb * paint_tint.rgb * plate;
+	ALBEDO = painted(COLOR.rgb, local_pos, local_normal);
 	ROUGHNESS = 0.8;
 	if (UV2.x > 0.5) {
 		bool lit = UV2.x <= float(lit_count) + 0.1;
@@ -641,14 +658,31 @@ void fragment() {
 		EMISSION = lit ? class_color.rgb * 0.5 : vec3(0.0);
 	}
 }
-"""
-	mat.shader = shader
+""")
 	mat.resource_name = "kest_bands"
-	mat.set_shader_parameter("paint_tint", base.albedo_color)
-	mat.set_shader_parameter("plate_texture", base.albedo_texture)
+	_paint_parameters(mat, tint)
 	mat.set_shader_parameter("class_color", ClassDef.KEST_COLOR)
 	_materials[key] = mat
 	return mat
+
+
+# One shader per paint use, shared by every tint, so a new paint adds a material, not a shader.
+func _paint_shader(use: String, code: String) -> Shader:
+	var key := "shader:" + use
+	if not _materials.has(key):
+		var shader := Shader.new()
+		shader.code = code
+		_materials[key] = shader
+	return _materials[key]
+
+
+# White is no paint: the plain lift over the vertex colour, as the StandardMaterial3D draws it.
+static func _paint_parameters(mat: ShaderMaterial, tint: Color) -> void:
+	var lift := Color(PAINT_LIFT, PAINT_LIFT, PAINT_LIFT)
+	mat.set_shader_parameter("paint_tint", Color(PAINT_LIFT * tint.r, PAINT_LIFT * tint.g, PAINT_LIFT * tint.b))
+	mat.set_shader_parameter("lift", lift)
+	mat.set_shader_parameter("paint_take", PAINT_TAKE if tint != Color.WHITE else 0.0)
+	mat.set_shader_parameter("plate_texture", Palette.look_texture("rusted-salvaged-plate", true))
 
 
 func kest_fuse_material(bright: bool) -> ShaderMaterial:

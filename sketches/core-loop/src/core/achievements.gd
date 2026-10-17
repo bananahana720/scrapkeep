@@ -134,7 +134,7 @@ const ROWS := {
 	# --- end runner_gunner ---
 	# --- demolitions_caster (Kest): P-C Kest adds its grant rows here ---
 	"ach_kest_blast_vault": {"name": "Blast Vault", "text": "Let your own Cable Charge throw you clear.", "hidden": true, "on": "synergy_discovered", "where": {"synergy_id": "kest_blast_vault"}, "count": 1, "reward": {"cosmetic": "trail_kest_fuse_smoke"}},
-	"ach_kest_homecoming": {"name": "Homecoming", "text": "Fly Kest into the Highdraft.", "on": "synergy_discovered", "where": {"synergy_id": "kest_homecoming"}, "count": 1, "reward": {"cosmetic": "outfit_kest_rigger"}},
+	"ach_kest_homecoming": {"name": "Homecoming", "text": "Fly Kest into the Highdraft.", "on": "synergy_discovered", "where": {"synergy_id": "kest_homecoming"}, "count": 1, "reward": {"cosmetic": "paint_kest_rigger"}},
 	"ach_kest_tick_tick_boom": {"name": "Tick, Tick, Boom", "text": "Strike eight machines with one Windhover.", "on": "synergy_discovered", "where": {"synergy_id": "kest_tick_tick_boom"}, "count": 1, "reward": {"cosmetic": "shell_kest_roost"}},
 	# --- end demolitions_caster ---
 	# --- tarn (Tarn): P-C Tarn adds its grant rows here ---
