@@ -53,12 +53,40 @@ A boss arrival freezes on the intro card under `boss_arena_in`, the versus sting
 | Run won | `summary-win`, then on the final win the ending |
 | Run lost | `summary-loss`, with its wink |
 
-## 6. Hand-over list for the coordinator
+## 6. Variations: phases, champions, areas, buffs, switch-ups
+
+This builds on section 4. Today `set_boss_state` moves one boss track to its next section. Brindle's phases are now three tracks at three tempos (138, 150, 172), so a phase change is a track swap, not a section jump.
+
+| Trigger | Music does | Where it plugs in |
+| --- | --- | --- |
+| Boss posture phase falls | `boss_phase` stinger now; the next phase track starts on the next downbeat of the stinger's tempo | `set_boss_state`: map phase index to track (Brindle 1 to 3, the Waking and the Mind: final phase on the last posture) |
+| Elite or champion joins a fight | Combat loop crossfades to `champion-hype` over one bar; back when it dies | Director, when an elite affix spawns |
+| Player enters a secret area | World roam crossfades to its `secret-<world>` version, same tempo and bar position | Area trigger volume, keep the playhead |
+| Random event starts | `switch-hit` stinger, then the event track | Event start, ended by its timer |
+| Minigame | `minigame-chiptune` | Minigame scene |
+| Buff active | A bus effect on the music bus for its duration, faded in and out over one beat | Status-effect start and end |
+| Surprise spawn (ambush, out-of-nowhere boss) | Tape stop over 2 beats, `switch-hit-<bpm>`, new track on the hit | Spawn director |
+| Planned change (roam to fight) | `turnaround-<bpm>` over the last bar, new track on the next downbeat | The existing 172 to 129 pivot bar |
+
+Buffs, as stock Godot effects on the music bus:
+
+| Buff | Effects |
+| --- | --- |
+| Overdrive | `AudioEffectDistortion` (mode tan, drive about 0.5, 60% wet), plus a 16th-note hat layer and a brass stab per bar as one-shots |
+| Slow-mo or stun | Music player `pitch_scale` 0.75, `AudioEffectLowPassFilter` at 2.5 kHz |
+| Low hull | `AudioEffectLowPassFilter` at 700 Hz, heartbeat one-shots on each beat |
+| Shield | `AudioEffectHighPassFilter` at 300 Hz, `AudioEffectChorus`, a bell one-shot per bar |
+| Scrap streak | A beat-synced volume duck (sidechain pump), plus a chiptune arpeggio per bar |
+
+Only one buff colours the music at a time. Low hull wins over every other buff, because danger outranks reward.
+
+## 7. Hand-over list for the coordinator
 
 1. Import the picked takes as `music_ace/` theme sources with htdemucs stems, using the grid-stretched WAVs from RENDERS.md.
 2. Register the 49 event WAVs in `sfx_bank.gd` under their existing keys. Cues with tiers (`kill_chain_tier_1` to `_5`, `scrap_tick_1` to `_5`, `rarity_bell_common`, `_rare`, `_epic`) map to the existing tier and rarity arguments. Keep per-cue voice limits.
 3. Feed `set_parameter_source` with rolling speed and chain length for the stem faders in section 2.
 4. Add the two section 1 checks to the test suite.
 5. Special enemies, from `specials.py` (17 WAVs). Play `<name>_presence` as a looping `AudioStreamPlayer3D` on the enemy, with its own voice so it never steals a combat voice, and stop it on death. Fire `<name>_tell` on the same frame as the visual tell: the Foreman's horn on the beat before the shred wipe, the Dispatcher's on each drop, the Splitter's on the seam flare, the Linker's when the cable goes taut. Fire `<name>_break` on death. The Splitter picks `splitter_break_split` when rammed at ground level and `splitter_break_clean` otherwise. Queue `<name>_spawn` on the next beat through the same quantizer as the stomp downbeats in section 3. Cap presence loops at two specials heard at once, nearest first.
+6. Variations: import the picked round-7 takes (RENDERS.md) as tracks and wire the section 6 table.
 
 Not covered here: the in-game mix under real combat noise, and whether the stem faders feel right. Both need Andrew playing.

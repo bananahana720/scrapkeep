@@ -121,6 +121,18 @@ Left 4 Dead's rule (Andrew, 2026-10-17): you hear which special is near before y
 
 Code: [sound/specials.py](sound/specials.py). No East Asian instruments or scales, and every pitch sits in D Dorian or on its tritone.
 
+## Variations: one theme, many twists
+
+Andrew, 2026-10-17: the same themes should come back changed, so a champion, a boss phase, a secret room, a random event, a minigame, a buff or a surprise each sounds like a twist on something you already know. Rule: a variation keeps its parent's melody and changes tempo, instrumentation or treatment. It is rendered as a cover of the picked parent take at strength 0.55 to 0.6, or applied live by the engine. Each one is measured against its parent and against a different parent as a control ([sound/measure_variants.py](sound/measure_variants.py)).
+
+- **Brindle's phases speed up and heat up.** Requisition at 138 is officious, with a marching snare. Furnace at 150 is overdriven, with furnace bellows. Scuttle at 172 sprints on the band's tempo, and his straight machine lead finally cracks into a swing. Each phase is its own track, swapped on the next downbeat under `boss_phase`.
+- **Every boss gets a faster final phase.** The Waking and the Mind take their themes to about 142.
+- **Champions get a golden version** of the combat hype loop: a steel gong hit each phrase and brass doubling the hook a third above.
+- **Secret areas restate their world's roaming tune** on a new instrument at the same tempo. Spillway gets a music box underwater, the Dig an upright piano in a speakeasy, the Highdraft a vibraphone and harp in a cloud chamber.
+- **Random events and minigames reuse a title hook.** Scrap Rush is title B as a game-show countdown. The minigame is title A as 8-bit chiptune.
+- **Buffs are live effects** on whatever is playing: overdrive, slow-mo, low hull, shield and scrap streak (INTEGRATION section 6).
+- **Switch-ups hand one loop to the next on a downbeat.** Out of nowhere: tape stop, record scratch, a beat of silence, a unison hit. Planned: a one-bar turnaround with a brass ii-V.
+
 ## Renders from this pass
 
 ACE-Step 1.5 XL turbo on the RTX 4080, draft mode, two seeds each. Files sit in `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`, outside the repo like every other music render. [sound/RENDERS.md](sound/RENDERS.md) lists them with checksums. They are linear previews. Seamless loops, stems and final bf16 renders come after Andrew picks by ear.

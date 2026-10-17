@@ -172,6 +172,89 @@ b2d189f3a543c7e56037393a1d9fd6aafa12ae697932d18877726645531ad9b3  specials/reel-
 59476cf7b559c3fc902163cd7794cf3f5641a990a6e9276c26ed4693f16f0660  specials/reel-splitter.mp3
 ```
 
+## Variations, round 7, 2026-10-17
+
+Covers of the picked parents (`ace.py lab . round7 --seeds 2701 2702`, draft mode, RTX 4080, about 5 s per take). Each source in `variant-src/` is the parent take stretched with Rubber Band to the variation's tempo and cut to 64 s. Brindle's parent is boss-brindle-s2402. The Waking's is boss-waking-s2401, the Mind's boss-mind-s2402, the champion's combat-hype-cover-mechswing-s2601. Each world's roam s2501 is the parent of its secret area. Title B s2101 is the parent of Scrap Rush, and title A s2101 of the minigame. Strength 0.6 for phases and the champion, 0.55 for areas and the minigame, 0.5 for the event.
+
+`measure_variants.py` scores each take's 12-bin chroma over time against its own parent (parent) and against a different variant's parent (other, the control). All 22 takes score above their control, so every twist kept its parent. Tempo is the kick-onset search within 15% of the request.
+
+| Take | Asked | Tempo read | Parent | Other | Longest quiet | Pick |
+| --- | --- | --- | --- | --- | --- | --- |
+| brindle-p1-requisition-s2701 | 138 | 137.9 | 0.54 | 0.12 | 0.1 s | yes |
+| brindle-p1-requisition-s2702 | 138 | 138.0 | 0.52 | 0.12 | 0.1 s |  |
+| brindle-p2-furnace-s2701 | 150 | 132.3 | 0.48 | 0.25 | 0.7 s |  |
+| brindle-p2-furnace-s2702 | 150 | 150.0 | 0.4 | 0.18 | 0.1 s | yes |
+| brindle-p3-scuttle-s2701 | 172 | 172.0 | 0.54 | 0.21 | 0.0 s |  |
+| brindle-p3-scuttle-s2702 | 172 | 171.9 | 0.67 | 0.25 | 0.2 s | yes |
+| waking-final-s2701 | 142 | 125.0 | 0.35 | 0.09 | 0.0 s |  |
+| waking-final-s2702 | 142 | 129.5 | 0.41 | 0.11 | 0.0 s | yes |
+| mind-final-s2701 | 142 | 141.9 | 0.6 | 0.13 | 0.0 s | yes |
+| mind-final-s2702 | 142 | 132.2 | 0.73 | 0.15 | 0.0 s |  |
+| champion-hype-s2701 | 129 | 129.0 | 0.39 | 0.23 | 0.1 s |  |
+| champion-hype-s2702 | 129 | 129.0 | 0.4 | 0.23 | 0.1 s | yes |
+| secret-spillway-s2701 | 172 | 178.5 | 0.37 | 0.28 | 0.8 s |  |
+| secret-spillway-s2702 | 172 | 146.3 | 0.46 | 0.36 | 0.0 s | yes |
+| secret-dig-s2701 | 172 | 172.0 | 0.55 | 0.03 | 0.0 s |  |
+| secret-dig-s2702 | 172 | 172.0 | 0.58 | 0.07 | 0.1 s | yes |
+| secret-highdraft-s2701 | 172 | 174.0 | 0.41 | 0.06 | 0.1 s | yes |
+| secret-highdraft-s2702 | 172 | 187.5 | 0.5 | 0.09 | 0.0 s |  |
+| event-scrap-rush-s2701 | 172 | 172.0 | 0.36 | 0.28 | 0.2 s |  |
+| event-scrap-rush-s2702 | 172 | 172.0 | 0.52 | 0.33 | 0.0 s | yes |
+| minigame-chiptune-s2701 | 129 | 123.5 | 0.46 | 0.3 | 0.2 s |  |
+| minigame-chiptune-s2702 | 129 | 129.9 | 0.55 | 0.35 | 0.2 s | yes |
+
+Both Waking final takes read near 129 against an asked 142, so the model drifted back toward the parent's tempo. `grid/waking-final-s2702-142bpm.wav` is stretched by 142/129.5 and then reads 139.7. The tempo read is unreliable on that take, so it needs an ear. Secret Spillway take 2 reads 146 against 172, probably a half-time feel; also an ear check.
+
+`variations.py` writes the buff previews (the picked hype loop, 4 bars clean, 8 buffed, 4 clean), the switch-hit and turnaround stingers at 129 and 172, and two demos that splice them between real tracks. Spectrograms show each buff entering at bar 5 and leaving at bar 13.
+
+```text
+a6c13e34aabd62ac248a769d52e9d98a0bfc3277d4bc93e16b8cfbb0f1880a6c  renders/lab-round7-1/brindle-p1-requisition-s2701.mp3
+f3f6980b1b83332ea4ca8a01c32e0f35ddaca23dac66054a1c6fbcf10cb4f57c  renders/lab-round7-1/brindle-p1-requisition-s2702.mp3
+3fcf1704f6594dabc6f738e331e1b173dc399c0e1f17aea16dff4c689bad5b43  renders/lab-round7-1/brindle-p2-furnace-s2701.mp3
+25f5002369ed3eb2d082394da39850d8597d60c83beeab4fbd43816a40365e7a  renders/lab-round7-1/brindle-p2-furnace-s2702.mp3
+bc3250f4898fe84c753fedd9721cde56b775d3ba66c63bda821dcbf6d7b423c3  renders/lab-round7-1/brindle-p3-scuttle-s2701.mp3
+4a612b5958ed9c064b39b9ade936f33f2cefec6403e9a765e2ceb64ab2f9712c  renders/lab-round7-1/brindle-p3-scuttle-s2702.mp3
+5c082acb0f1c8b8ec188b16e691fe948b99064ceadec12a9fa36b8bb875e419c  renders/lab-round7-1/champion-hype-s2701.mp3
+b0c7b3c38d69f7fca3343507e17439be9fb09bb805fe3f0f816dfc278e0f34e0  renders/lab-round7-1/champion-hype-s2702.mp3
+f038a6531ffd4562ac4721aaa00a0ddce51a249c5ac0ba27662042ac7a3ca642  renders/lab-round7-1/event-scrap-rush-s2701.mp3
+796a048dbe6596d06f00c691940a8a372a4cf25c9be1f8ba37fcd36fb53a9caf  renders/lab-round7-1/event-scrap-rush-s2702.mp3
+5abf8dcfb409e2c3fe39096eba9fa6cd9213e6e5ee7d45d7211dcdf4267be6e9  renders/lab-round7-1/mind-final-s2701.mp3
+c3a4d5efc385c87e193665cde949bdef9bd88947cd09cfe7f2215a2267d47b79  renders/lab-round7-1/mind-final-s2702.mp3
+a697e7f3c9b3e8deeb5a4c0eb023c35668431a34e26143b38016ca32e15f6135  renders/lab-round7-1/minigame-chiptune-s2701.mp3
+87a939fc9a2554fb3e95a5292d7eef52ce6e3a475b8f7a8135b96991cc289a92  renders/lab-round7-1/minigame-chiptune-s2702.mp3
+006d760e798d6139da1e08d8a96b65542cc7b013ffeccd49d21703ed137501b4  renders/lab-round7-1/secret-dig-s2701.mp3
+f49222a267da6796d524017f50e52b9a993ed61663bad9baf88fa7c9f598ab25  renders/lab-round7-1/secret-dig-s2702.mp3
+028e84439f24617e682a85658a66cb1cd136e5809a274d3cbd83af254de70803  renders/lab-round7-1/secret-highdraft-s2701.mp3
+9b2f9edc960cbb9cb061b8b9aa78f8a3acec37538062854e4ff5866ed7027a40  renders/lab-round7-1/secret-highdraft-s2702.mp3
+ccda33ed3183892baae310cca5c5484857d9ec7496c317d3d46e49ff4fefa186  renders/lab-round7-1/secret-spillway-s2701.mp3
+eae3745d419bf5c7990df905f3ae6ba1b493b47b60295039807706b28db13dbc  renders/lab-round7-1/secret-spillway-s2702.mp3
+621e4f2fcdc1424fced0030c8999e3bb1b16a6bb0427efd3605bcc9481d591b2  renders/lab-round7-1/waking-final-s2701.mp3
+b6886730801c07d5386fde6f2cb9e53e92ec201ad849b7be112be4cfaf069278  renders/lab-round7-1/waking-final-s2702.mp3
+acb514797835f621f9837ddc420bc1724976188751a191f3ce50d812059b4727  renders/lab-round7-1/grid/waking-final-s2702-142bpm.wav
+da37880badd5e95394d5ff5c95b4d7ce8ec79543cc5cc525379569f069ccf585  variations/buff-low-hull.wav
+8a1022bd080883864a9a2a0ea8d7bc0c44a4147f5634f906d05d8ebfaca2e7cc  variations/buff-overdrive.wav
+9d8893c48edf145db382c8e76401f2918d1a4a805a183f2887fd8144723e20ce  variations/buff-scrap-streak.wav
+8ea3c7762aec09d64e8034dc0af00c6f680d6a7172d255a0cb853c7728b33f05  variations/buff-shield.wav
+536d3050cedf00fb74cf11bd4d4f6580f0c58ff22be760ed3a402f49619409fa  variations/buff-slowmo.wav
+be9906533b7f7c4bd2ce90527ed5cbebebaccba4a0c13bfb67abf89999917598  variations/demo-fight-switchup-boss.wav
+6d7df11e45eab0d1cb86862d64311f4cd65789760430a7f25ad7f01ba61f1404  variations/demo-roam-turnaround-fight.wav
+46cd99caa0ab1987ae0ba736b6861d265da9827bc47cf1d8b26c9b6c9504b936  variations/switch-hit-129.wav
+244136850cc042f0d1404e52e496acd58d70b5a6ec594df59505690ffcab4d67  variations/switch-hit-172.wav
+0365deac34ad0a26dd77f4deb5de097283f62253ac8304d70ae7076eb4d85f55  variations/turnaround-129.wav
+7f9d58fa3817bd24996dc75ee63ebc9f2e11921d82735704d204a46668281ad2  variations/turnaround-172.wav
+03b8154cfa91d2e05602a66d987a46b5dc1cb5eeb47d856ab048a0b3ff56c671  variant-src/brindle-p1-138.wav
+cdbda50daad24185fafe92dad126713e86734615430551f544e5d6a01cd801a7  variant-src/brindle-p2-150.wav
+6f4f2cf9fa2ed8cc12216eb0fdc5706789578918fd8660d69cd44fa895e710bb  variant-src/brindle-p3-172.wav
+611b6ba212b4cb47da03ae891d1e2447513c60070c266e48cf476b57f82cf8aa  variant-src/hype-129.wav
+f541215e8d892405a84fcec5cc6be10de280a98b441b705e3eee02e68918add1  variant-src/mind-final-142.wav
+d1672b7b2a521f8aee9630fd2c826ef5879de4ac236be0f4eb5a845fd8e1f51f  variant-src/roam-dig-172.wav
+595c1caebab76b4a56a07957b6bc9a21f482b08bc112703597a7b39df683ae05  variant-src/roam-highdraft-172.wav
+b7f05b13cc1ec936aeb51c37fe1ade8902ab8a1b25aa246813b43dea29f9abb1  variant-src/roam-spillway-172.wav
+1dd5c20b291e195b21e18b3ff27c8edf3fa54eb8d90a18e56dab4ca146d24235  variant-src/title-a-129.wav
+0c72d3fad5a6f8565531be91a3a425e2210e40aea7d05a0c06d23d14ed4e21f6  variant-src/title-b-172.wav
+d9ec3de2f1a7079b5e50045c4f32c5128c680616ce366887d74a4c1b1153ef11  variant-src/waking-final-142.wav
+```
+
 ## Reproduce
 
 ```bash
@@ -184,6 +267,9 @@ PATH=<shim dir>:$PATH CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python
 ~/.local/share/ACE-Step-1.5/.venv/bin/python -I check_events.py --self-test
 ~/.local/share/ACE-Step-1.5/.venv/bin/python -I specials.py <render folder>/specials
 ~/.local/share/ACE-Step-1.5/.venv/bin/python -I check_events.py <render folder>/specials
+PATH=<shim dir>:$PATH CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 ~/.claude/skills/song-composer/scripts/ace.py lab <render folder> round7 --seeds 2701 2702
+~/.local/share/ACE-Step-1.5/.venv/bin/python -I measure_variants.py <render folder> round7 <render folder>/renders/lab-round7-1
+~/.local/share/ACE-Step-1.5/.venv/bin/python -I variations.py <render folder>
 ```
 
 The shim is a one-line `nvidia-smi` wrapper that adds `-i 0`. Since the RTX 3060 was installed, `ace.py`'s VRAM check fails because it parses one line of `nvidia-smi` output and now gets two.
