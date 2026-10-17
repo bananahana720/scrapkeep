@@ -31,6 +31,15 @@ const CHIRP_LOG_CAP := 256
 const SpecialAudio := preload("res://src/presentation/special_audio.gd")
 # The live kill-first specials: enemy instance id -> {"node", "name", "player"}.
 var _specials := {}
+const PhaseMusic := preload("res://src/presentation/phase_music.gd")
+# The highest boss phase whose track has been started, the stage the band returns to when the
+# champions are gone, and the live champions (enemy id -> node) with the ones already on euro.
+var pack_available: Callable = PhaseMusic.available
+var _phase_music_done := 0
+var _stage_now := 0
+var _champions := {}
+var _champion_hyped := false
+var _champion_euro := {}
 var specials_heard: Array = []
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
@@ -514,6 +523,7 @@ func _process(delta: float) -> void:
 	_tend_tally()
 	_tend_hum()
 	_tend_specials()
+	_tend_champions()
 	_follow_warden()
 	_follow_escalation()
 	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
@@ -1786,6 +1796,10 @@ func _on_flow_changed(state: String) -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	_stage_now = stage
+	_champions.clear()
+	_champion_euro.clear()
+	_champion_hyped = false
 	engine.parameters_stage_entered()
 	for event_id in _park_cues:
 		engine.cancel_park_cue(event_id)
@@ -1903,15 +1917,17 @@ func _on_cogs(amount: int, _total: int) -> void:
 
 # The growl is the Fleet's voice: an ancient (a relic, a drone, a hand, a Warden) never
 # makes it, and its pack arrives on its own family's cue (pack_arrived).
-func _on_enemy_spawned(_enemy: Node3D, kind: String) -> void:
+func _on_enemy_spawned(enemy: Node3D, kind: String) -> void:
 	if SpecialAudio.is_special(kind):
-		special_spawned(_enemy, kind)
+		special_spawned(enemy, kind)
 		return
+	if enemy != null and enemy.get("affix") is Dictionary and not (enemy.get("affix") as Dictionary).is_empty():
+		_champion_joined(enemy)
 	var boss := kind == "miniboss"
 	if not Roster.is_ancient(Roster.faction_of(kind)):
 		play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
 	if boss:
-		_miniboss = _enemy
+		_miniboss = enemy
 	if boss and sound_ready:
 		engine.begin_miniboss()
 
@@ -2002,15 +2018,17 @@ func _begin_boss(kind: String, music: String) -> void:
 		# it restarts the boss music in play mode on the next beat, not the keys alone.
 		engine.cancel_pending()
 		var again := engine.restart_boss(music)
+		_phase_music_done = 1
 		if music in MusicEngine.BOSS_TRACKS:
-			_ace_named(music, again, true)
+			_ace_named(PhaseMusic.entry_track(music, pack_available), again, true)
 		cue_log.append([kind, "restart", "beat", again, 1.0])
 		return
 	var at := engine.begin_boss(music)
 	if at < 0:
 		return
+	_phase_music_done = 1
 	if music in MusicEngine.BOSS_TRACKS:
-		_ace_named(music, at, true)
+		_ace_named(PhaseMusic.entry_track(music, pack_available), at, true)
 	var sound := Rows.sound(kind)
 	if sound != "":
 		engine.schedule_stinger_at(sound, at)
@@ -2022,12 +2040,94 @@ func _on_boss_phase() -> void:
 	_boss_phase += 1
 	on_beat("boss_phase_changed")
 	engine.set_brindle_phase(_boss_phase)
+	phase_music(_boss_phase)
 
 
 func _on_boss_phase_with(phase) -> void:
 	_boss_phase = int(phase)
 	on_beat("boss_phase_changed")
 	engine.set_brindle_phase(_boss_phase)
+	phase_music(_boss_phase)
+
+
+# The ACE band follows the boss phase (INTEGRATION.md section 6): Brindle swaps to its phase
+# track on the next downbeat; in the last phase hype_drop's riser starts so its drop lands on a
+# downbeat and the Eurodance track enters on it, falling back to the base final track (with no
+# drop) when the euro pack is not on disk. A pack that is not on disk changes nothing. Returns
+# the plan it carried out, {} for none.
+func phase_music(phase: int) -> Dictionary:
+	if not sound_ready or phase <= _phase_music_done or not ace_wanted():
+		return {}
+	var boss := engine.track
+	if not boss in MusicEngine.BOSS_TRACKS:
+		return {}
+	_phase_music_done = phase
+	if PhaseMusic.is_final(phase):
+		var plan := PhaseMusic.final_plan(boss, pack_available)
+		if plan["track"] == "":
+			return {}
+		var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
+		if plan["hype"]:
+			engine.schedule_stinger_at("hype_drop", int(when["start"]))
+			cue_log.append(["boss_phase_music", "hype_drop", "beat", int(when["start"]), 1.0])
+		_ace_named(plan["track"], int(when["drop"]), true)
+		cue_log.append(["boss_phase_music", plan["track"], "bar", int(when["drop"]), 1.0])
+		return {"track": plan["track"], "hype": plan["hype"], "at": when["drop"]}
+	var track := PhaseMusic.track_for_phase(boss, phase)
+	if track == "" or not pack_available.call(track):
+		return {}
+	var at := engine.next_bar()
+	_ace_named(track, at, true)
+	cue_log.append(["boss_phase_music", track, "bar", at, 1.0])
+	return {"track": track, "hype": false, "at": at}
+
+
+# A champion (an elite with an affix) joins: the combat band moves to champion-hype on the next
+# downbeat, and back to the stage's band when the last one dies. In its final health third it
+# gets the hype drop and euro-champion. Only on the level track, and only with the packs on disk.
+func _champion_joined(enemy: Node3D) -> void:
+	var id := enemy.get_instance_id()
+	if _champions.has(id):
+		return
+	_champions[id] = enemy
+	if enemy.has_signal("died"):
+		enemy.connect("died", func(_a = null, _b = null): _champion_gone(id))
+	enemy.tree_exiting.connect(_champion_gone.bind(id), CONNECT_ONE_SHOT)
+	if _champion_hyped or not sound_ready or not ace_wanted() or engine.track != "level":
+		return
+	if not pack_available.call(PhaseMusic.CHAMPION):
+		return
+	_champion_hyped = true
+	_ace_named(PhaseMusic.CHAMPION, engine.next_bar(), true)
+	cue_log.append(["champion_joined", PhaseMusic.CHAMPION, "bar", engine.next_bar(), 1.0])
+
+
+func _champion_gone(id: int) -> void:
+	if not _champions.has(id):
+		return
+	_champions.erase(id)
+	_champion_euro.erase(id)
+	if _champions.is_empty() and _champion_hyped:
+		_champion_hyped = false
+		if _stage_now > 0 and engine.track == "level":
+			_ace_stage(_stage_now, engine.next_bar())
+			cue_log.append(["champion_gone", "stage", "bar", engine.next_bar(), 1.0])
+
+
+func _tend_champions() -> void:
+	if not _champion_hyped or not pack_available.call(PhaseMusic.EURO_CHAMPION):
+		return
+	for id in _champions.keys():
+		var enemy = _champions[id]
+		if not is_instance_valid(enemy) or _champion_euro.has(id):
+			continue
+		if PhaseMusic.champion_in_final_third(_num(enemy, "hp", 1.0), _num(enemy, "max_hp", 1.0)):
+			_champion_euro[id] = true
+			var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
+			engine.schedule_stinger_at("hype_drop", int(when["start"]))
+			_ace_named(PhaseMusic.EURO_CHAMPION, int(when["drop"]), true)
+			cue_log.append(["champion_final", PhaseMusic.EURO_CHAMPION, "bar", int(when["drop"]), 1.0])
+			return
 
 
 static func _argc(events: Object, signal_name: String) -> int:
@@ -2322,6 +2422,7 @@ func _follow_brindle() -> void:
 			if next_phase > _boss_phase and next_phase <= 3:
 				_boss_phase = next_phase
 				engine.set_boss_state("%s:%d" % [String(state.get("id", engine.track)), _boss_phase])
+				phase_music(_boss_phase)
 			engine.brindle_hp(float(state["in_phase"]), bool(state["held"]), float(state["phase_seconds"]))
 		return
 	var rules := _boss_rules(boss)

@@ -32,6 +32,7 @@ const STINGER_BEATS := {
 	"warden_theme_in": 4,
 	"boss_arena_in": 4,
 	"boss_phase": 2,
+	"hype_drop": 7,
 	"stinger_boss_defeated": 8,
 	"build_riser": 8,
 	# The world stinger, one id per WORLD_STEPS value (world_stinger names them).
