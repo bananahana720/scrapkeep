@@ -682,6 +682,8 @@ func _hook_companion_ram(hit: Dictionary) -> void:
 func _hook_companion_assist(hit: Dictionary) -> void:
 	if ctx.run.companion.is_empty() or float(hit["result"].get("dealt", 0.0)) <= 0.0:
 		return
+	if is_instance_valid(hit["enemy"]) and _fights_posture(hit["enemy"]):
+		return
 	var kind: String = hit["kind"]
 	if kind == Companion.ASSIST_TRIGGER and assist_ready():
 		_call_assist(hit["at"], float(hit["result"]["dealt"]))
@@ -719,7 +721,10 @@ func _call_assist(at: Vector3, dealt: float) -> void:
 	var dir := travel.normalized() if travel.length_squared() > 0.01 else (at - ball).normalized()
 	if dir.length_squared() < 0.01:
 		dir = Vector3.FORWARD
-	var damage := maxf(dealt, Companion.ASSIST_DAMAGE_FLOOR) * float(power["knock"])
+	var damage := maxf(dealt, Companion.ASSIST_DAMAGE_FLOOR)
+	# Spent before any damage, so nothing a kill sets off can call it twice.
+	assist_charge = 0.0
+	assists += 1
 	var struck := _assist_targets(row["shape"], at, ball, dir, radius)
 	for enemy in struck:
 		_trail_deal(enemy, damage, "companion_assist", "item_proc")
@@ -733,7 +738,7 @@ func _call_assist(at: Vector3, dealt: float) -> void:
 			var away := flat.normalized() if flat.length_squared() > 0.0001 else dir
 			var weight = enemy.get("weight")
 			enemy.knock(away + Vector3.UP * 0.35, Companion.ASSIST_KNOCK * float(power["knock"]) * (float(weight) if weight != null else 1.0))
-	if row["slick"]:
+	if row["slick"] and (escape_lane.is_empty() or _clock >= float(escape_lane["until"])):
 		escape_lane = {"from": ball, "dir": dir, "length": radius * 2.0, "half_width": Companion.ESCAPE_LANE_HALF_WIDTH,
 			"friction": Companion.ESCAPE_LANE_FRICTION, "hold": maxf(travel.dot(dir), Companion.ESCAPE_LANE_FLOOR),
 			"until": _clock + Companion.ASSIST_SLICK_SECONDS}
@@ -741,8 +746,6 @@ func _call_assist(at: Vector3, dealt: float) -> void:
 		effects.arc(ball, ball + dir * radius * 2.0, Palette.VERDIGRIS)
 	else:
 		effects.ring(at, radius, Palette.VERDIGRIS)
-	assist_charge = 0.0
-	assists += 1
 	last_assist = {"id": row["id"], "name": row["name"], "word": row["word"], "cue": row["cue"], "at": at,
 		"radius": radius, "knock": power["knock"], "area": power["area"], "layers": power["layers"],
 		"hits": struck.size(), "mark": int(Companion.mark_of(heft)["mark"])}
@@ -3651,11 +3654,12 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if source not in ["warden", "vault"]:
 		amount *= ctx.root.get_node("World").director.damage_scale()
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
-	_charge_assist("hull")
 	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
 	var riding: bool = ultimate != null and ultimate.active()
 	ctx.run.damage(amount, source)
+	if not riding:
+		_charge_assist("hull")
 	if ctx.calm or riding:
 		return
 	# The damage always lands; what the hit may take is the stop, and that goes through

@@ -194,7 +194,7 @@ func _leader_alive() -> bool:
 
 # Stalled: hover beside the leader's last live spot and wait there, idle.
 func _hold(delta: float, safe: Vector3) -> void:
-	var target := safe + _heading.cross(Vector3.UP).normalized() * SIDE
+	var target := safe + _heading.cross(Vector3.UP).normalized() * SIDE * _grown
 	target.y = safe.y - Tuning.RADIUS + HULL_LIFT
 	if _snap:
 		global_position = target
@@ -306,8 +306,8 @@ func _seat_part(chassis: Node3D, id: String) -> void:
 				break
 	if bone >= 0:
 		var mount := BoneAttachment3D.new()
-		mount.bone_idx = bone
 		skeleton.add_child(mount)
+		mount.bone_name = skeleton.get_bone_name(bone)
 		mount.add_child(part)
 	else:
 		part.position = SOCKET_AT
@@ -351,7 +351,6 @@ func _grow() -> void:
 		var mat := _halo.material_override as StandardMaterial3D
 		var blink := fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
 		mat.emission_energy_multiplier = lerpf(HALO_ENERGY["empty"], HALO_ENERGY["full"], fill) * (1.6 if blink else 1.0)
-		_halo.scale = Vector3.ONE * (1.35 if _mark >= 3 else 1.0)
 
 
 func mark() -> int:
@@ -467,6 +466,13 @@ func _age_words(delta: float) -> void:
 		word.modulate.a = clampf(float(entry[1]) / (WORD_LIFE * 0.4), 0.0, 1.0)
 		keep.append(entry)
 	_words = keep
+
+
+func _exit_tree() -> void:
+	for entry in _words:
+		if is_instance_valid(entry[0]):
+			entry[0].queue_free()
+	_words.clear()
 
 
 func words_shown() -> Array:

@@ -220,6 +220,23 @@ func _check_combat() -> void:
 		_t.eq("grown mark", _assisted[1]["mark"], 5)
 		_t.eq("grown layers", _assisted[1]["layers"], 4)
 
+	# Bare: Bonk hits only the nearest foe. A slick assist leaves a live escape lane alone.
+	_seat([])
+	var before := _assisted.size()
+	combat.assist_charge = Companion.ASSIST_FULL
+	combat.strike(target, "ram", RAM)
+	_t.eq("bare calls bonk", _assisted.back()["id"] if _assisted.size() > before else "", "bonk")
+	_t.eq("bonk hits one", int(_assisted.back()["hits"]) if _assisted.size() > before else -1, 1)
+	_seat(["escape_rail"])
+	var live := {"from": Vector3.ZERO, "dir": Vector3.FORWARD, "length": 6.0, "half_width": 1.5, "friction": 0.2, "hold": 7.0, "until": combat._clock + 5.0}
+	combat.escape_lane = live.duplicate()
+	combat.assist_charge = Companion.ASSIST_FULL
+	combat.strike(target, "ram", RAM)
+	_t.eq("escape alone calls slipstream", _assisted.back()["id"], "slip")
+	_t.eq("a live corridor lane is kept", combat.escape_lane, live)
+	_t.near("the assist's own hits leave the gauge empty", combat.assist_charge, 0.0)
+	combat.escape_lane = {}
+
 	# A hull hit charges; a new attempt clears the gauge.
 	combat.assist_charge = 0.0
 	combat._charge_assist("hull")
@@ -239,7 +256,7 @@ func _check_body() -> void:
 	_t.check("body exists", body != null)
 	if body == null:
 		return
-	_t.eq("both assists shown with their word", body.assists_shown, 2)
+	_t.eq("every assist shown with its word", body.assists_shown, _assisted.size())
 	_t.eq("grown body is mark 5", body.mark(), 5)
 	_t.near("grown body scale", body.grown(), 1.4)
 	_t.eq("mk V kit", body.kit_parts().size(), 7)
