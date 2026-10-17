@@ -28,14 +28,16 @@ func _check_world(t) -> void:
 
 func _check_bosses(t) -> void:
 	var rows := CodexEntries.all()
-	t.eq("all boss rows", rows.size(), 12)
+	t.eq("all boss rows", rows.size(), 14)
 	t.check("boss ids unique", _unique_ids(rows))
 	t.check("world and boss ids unique", _unique_ids(CodexWorld.ENTRIES + rows))
 	for row in rows:
 		t.check("boss fields " + String(row.get("id", "?")), _filled(row, BOSS_FIELDS))
+	# The Waking's own attacks (2026-10-17) added Off the Lip and The Wall Is Home.
+	var counts := {"brindle": 4, "waking": 6, "mind": 4}
 	for boss in ["brindle", "waking", "mind"]:
 		var selected := CodexEntries.for_boss(boss)
-		t.eq("four rows for " + boss, selected.size(), 4)
+		t.eq("%d rows for %s" % [counts[boss], boss], selected.size(), counts[boss])
 		var matching := rows.filter(func(row): return String(row.get("id", "")).begins_with(boss + "_"))
 		t.eq("all includes rows for " + boss, matching, selected)
 		t.check("matching prefix for " + boss, selected.all(func(row): return String(row.get("id", "")).begins_with(boss + "_")))
