@@ -28,6 +28,10 @@ const Companion := preload("res://src/core/companion.gd")
 # ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
 const CHIRP_COOLDOWN := 0.75
 const CHIRP_LOG_CAP := 256
+const SpecialAudio := preload("res://src/presentation/special_audio.gd")
+# The live kill-first specials: enemy instance id -> {"node", "name", "player"}.
+var _specials := {}
+var specials_heard: Array = []
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -509,6 +513,7 @@ func _process(delta: float) -> void:
 	_play_due_notes()
 	_tend_tally()
 	_tend_hum()
+	_tend_specials()
 	_follow_warden()
 	_follow_escalation()
 	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
@@ -1899,6 +1904,9 @@ func _on_cogs(amount: int, _total: int) -> void:
 # The growl is the Fleet's voice: an ancient (a relic, a drone, a hand, a Warden) never
 # makes it, and its pack arrives on its own family's cue (pack_arrived).
 func _on_enemy_spawned(_enemy: Node3D, kind: String) -> void:
+	if SpecialAudio.is_special(kind):
+		special_spawned(_enemy, kind)
+		return
 	var boss := kind == "miniboss"
 	if not Roster.is_ancient(Roster.faction_of(kind)):
 		play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
@@ -1906,6 +1914,82 @@ func _on_enemy_spawned(_enemy: Node3D, kind: String) -> void:
 		_miniboss = _enemy
 	if boss and sound_ready:
 		engine.begin_miniboss()
+
+
+# --- The kill-first specials (INTEGRATION.md section 7, item 5) ----------------------
+
+# A special arrives: its presence loop starts on a player of its own (so it never takes a
+# combat voice), its spawn cue lands on the next beat, and its tell and death are followed.
+func special_spawned(enemy: Node3D, name: String) -> void:
+	if enemy == null or not is_instance_valid(enemy) or not SpecialAudio.is_special(name):
+		return
+	var id := enemy.get_instance_id()
+	if _specials.has(id):
+		return
+	var player: AudioStreamPlayer3D = null
+	if sound_ready:
+		player = SpecialAudio.presence_player(name)
+		enemy.add_child(player)
+	_specials[id] = {"node": enemy, "name": name, "player": player}
+	on_beat("special_spawn", 0.0, false, 1, SpecialAudio.cue(name, "spawn"))
+	if enemy.has_signal("special_tell"):
+		enemy.connect("special_tell", special_tell.bind(enemy))
+	if enemy.has_signal("died"):
+		enemy.connect("died", func(_a = null, _b = null): special_broken(enemy))
+	enemy.tree_exiting.connect(_special_gone.bind(id), CONNECT_ONE_SHOT)
+
+
+# The visual tell shows this frame: the cue sounds this frame, never on the beat.
+func special_tell(enemy: Node3D) -> bool:
+	var row: Dictionary = _specials.get(enemy.get_instance_id(), {})
+	if row.is_empty():
+		return false
+	return play("special_tell", 0.0, 1.0, "SFX", SpecialAudio.cue(row["name"], "tell"))
+
+
+# The special died: its loop stops and its break sounds, the splitter's by how it was rammed.
+func special_broken(enemy: Node3D) -> bool:
+	var id := enemy.get_instance_id()
+	var row: Dictionary = _specials.get(id, {})
+	if row.is_empty():
+		return false
+	_specials.erase(id)
+	var player = row["player"]
+	if player != null and is_instance_valid(player):
+		player.stop()
+	return play("special_break", 0.0, 1.0, "SFX", SpecialAudio.cue(row["name"], "break", SpecialAudio.rammed(enemy)))
+
+
+func _special_gone(id: int) -> void:
+	_specials.erase(id)
+
+
+# At most SpecialAudio.CAP presence loops sound, the nearest to the player first.
+func _tend_specials() -> void:
+	if _specials.is_empty():
+		specials_heard = []
+		return
+	var from := Vector3.ZERO
+	var player = ctx.get("player") if ctx != null else null
+	if player != null and player.has_method("ball_position"):
+		from = player.ball_position()
+	var distances := {}
+	for id in _specials.keys():
+		var row: Dictionary = _specials[id]
+		if not is_instance_valid(row["node"]):
+			_specials.erase(id)
+			continue
+		distances[id] = (row["node"] as Node3D).global_position.distance_to(from)
+	specials_heard = SpecialAudio.heard(distances)
+	for id in _specials:
+		var p = _specials[id]["player"]
+		if p == null or not is_instance_valid(p):
+			continue
+		var loud: bool = id in specials_heard
+		if loud and not p.playing:
+			p.play()
+		elif not loud and p.playing:
+			p.stop()
 
 
 # The boss music begins on the next bar, after the metric modulation when it pivots,
