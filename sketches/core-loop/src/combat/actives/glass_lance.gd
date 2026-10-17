@@ -17,13 +17,17 @@ const Palette := preload("res://src/core/palette.gd")
 const BASE_DAMAGE := 34.0
 const REACH := 40.0
 const HALF_WIDTH := 0.9
-# Metres above or below the band's height a machine's centre may sit and still be pierced.
-const HEIGHT := 2.5
+# Metres above or below the band's height a machine's body may reach past and still be pierced.
+const HEIGHT := 1.5
 # Metres between the band's height samples, and the most it may climb above or dive below the
 # ball over a ledge or a drop.
 const SAMPLE := 2.5
 const CLIMB := 12.0
 const DIVE := 6.0
+# The ride height the band keeps over the ground: the ball's own at the press, held in this
+# range so a press in the air dips to the ground and one under a deck never sinks into it.
+const RIDE_MIN := 0.4
+const RIDE_MAX := 1.6
 const SPEED := 120.0
 # Degrees between fanned lances.
 const FAN_DEG := 7.0
@@ -87,7 +91,7 @@ func _skim(from: Vector3, dir: Vector3) -> PackedFloat32Array:
 	var heights := PackedFloat32Array()
 	var terrain = ctx.terrain
 	var flat: bool = terrain == null or not terrain.has_method("height")
-	var ride: float = 0.0 if flat else from.y - float(terrain.height(from.x, from.z))
+	var ride: float = 0.0 if flat else clampf(from.y - float(terrain.height(from.x, from.z)), RIDE_MIN, RIDE_MAX)
 	for k in int(ceil(REACH / SAMPLE)) + 1:
 		var at := from + dir * minf(REACH, k * SAMPLE)
 		var y: float = from.y if flat or k == 0 else float(terrain.height(at.x, at.z)) + ride
@@ -149,7 +153,7 @@ func _fly(lance: Dictionary, delta: float) -> bool:
 		if along < 0.0 or along > REACH or along > after or along < before - girth - 0.5:
 			continue
 		var lateral := Vector3(rel.x, 0.0, rel.z) - dir * along
-		if lateral.length() > HALF_WIDTH + girth or absf(enemy.global_position.y - band_y(lance, along)) > HEIGHT:
+		if lateral.length() > HALF_WIDTH + girth or absf(enemy.global_position.y - band_y(lance, along)) > HEIGHT + girth:
 			continue
 		lance["hit"][enemy.get_instance_id()] = true
 		_pierce(enemy, lance)
