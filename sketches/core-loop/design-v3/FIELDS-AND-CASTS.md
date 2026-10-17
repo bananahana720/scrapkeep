@@ -52,13 +52,13 @@ A Spillway Fleet crew under a cable spool. It unrolls a live mat where the ball 
 | --- | --- | --- | --- | --- | --- |
 | Live mat (jam) | jolt layer | laid | drops casts and gauges, jams specials 0.5 s | speed, jump, line | Spillway |
 | Wet floor | stage water | laid | arc on water already electrifies it (`elements.gd` `arc:water`); a jolt mat laid on water spreads to the whole puddle | the same, and your own arc uses it too | Spillway |
-| Floodlight (buff) | Foreman's lamp mast, Dig lamp swarm | emitter | crew inside the light gain plating x1.5 | yank them out of the light with the harpoon, or break the lamp | Dig |
-| Mag floor | Dig crew | laid | harpoon bites inside it slip (the line cannot anchor there) | anchor outside and swing in; ride through on speed | Dig |
-| Downdraft column | Highdraft crew | laid | pushes the ball down 12 m/s² (start) while it is airborne | a line attached; carve under it | Highdraft |
-| Updraft (neutral) | stage wind, Highdraft crew | laid | lifts anything in it, ball and drones alike | ride it; or knock a drone into it to fling it | Highdraft |
+| Floodlight (buff) | the floodlight rig (the lamp swarm reworked, proposed by the world 2 and 3 identity thread) | emitter | crew inside the light are plated: they take about 60% from resisted hits | yank them out of the light with the harpoon, or break the lamp | Dig |
+| Dust choke | Dig crew | laid | casts started inside it take 1.5x as long (start) | cast before you enter, or carve through and drop out of it | Dig |
+| Crosswind lane | Highdraft crew | laid | pushes enemies and loose drones along it, never the ball | air-ram a crew into it for a ring-out off the island | Highdraft |
+| Updraft (neutral) | stage wind, as the thermals contraptions already do | laid | lifts anything that enters it, ball and drones alike; the player chooses to ride it | ride it; or knock a drone into it to fling it | Highdraft |
 | Mind echo (buff) | the Mind's hands | emitter | its pack braces the damage family you used most this stage | switch family | Highdraft (Mind) |
 
-The Highdraft downdraft is the only field that pushes the ball, and it pushes down only, never against your line, which `holds.bound()` already guarantees for holds.
+Three standing rulings bind every row: events never stop the ball (PARK.md), abilities have snap, and movement belongs to the pilot (decisions.tsv). So no field takes steering, velocity or the harpoon. A field acts on abilities (the jam, the dust choke), on enemies (the floodlight, the crosswind), or offers movement the player chooses to take (the updraft).
 
 ## 3. The jam (the interrupt)
 
@@ -103,12 +103,12 @@ Each world teaches one idea, tests it, then hands it on. The names (Flow, Plate,
 | World | Motif | What it tests | Fields | Damage family it teaches | Where it returns |
 | --- | --- | --- | --- | --- | --- |
 | Spillway (dam, flumes, Brindle) | **Flow**: water and current; wet machines carry electricity | rolling and momentum: stay fast and fields cannot touch you | live mats, wet floors | **arc**: wet crews are weak to arc (about 150%); arc on water electrifies (already built) | the jolt layer guests in Dig packs beside plated crews |
-| The Dig (mine, the Waking) | **Plate**: armour, pressure and light | abilities and kill order: plates shrug off rams, so you cast, and casting is exactly what mats punish | floodlights, mag floors | **kinetic against plate**: plating resists kinetic, arc finds the seams, frost makes plates brittle | plated elites in the Highdraft |
-| The Highdraft (sky islands, the Mind) | **Wind**: gusts, fliers and edges you can knock things off | the grapple and the air: downdrafts pull you off lines you did not anchor | downdrafts, updrafts, Mind echo | **mix**: light drones fly off islands to kinetic knocks; the Mind braces your favourite family | the final fight uses every motif once |
+| The Dig (mine, the Waking) | **Plate**: armour, pressure and light | abilities and kill order: plates shrug off rams, so you cast, and casting is exactly what mats and dust punish | floodlights, dust chokes | **kinetic against plate**: plating resists kinetic, arc finds the seams, frost makes plates brittle | plated elites in the Highdraft |
+| The Highdraft (sky islands, the Mind) | **Wind**: gusts, fliers and edges you can knock things off | the grapple and the air: swing, air-ram, ring crews out off the edges | crosswind lanes, updrafts, Mind echo | **mix**: light drones fly off islands to kinetic knocks; the Mind braces your favourite family | the final fight uses every motif once |
 
-The harmony, in one line: **speed beats fields, casts beat plates, lines beat the wind, and the Mind makes you use all three.** Each answer becomes the next world's pressure: Spillway teaches speed, the Dig makes you commit to casts, the Highdraft makes you anchor before you fly.
+The harmony, in one line: **speed beats fields, casts beat plates, the wind is a weapon you aim, and the Mind makes you use all three.** Each answer becomes the next world's pressure: Spillway teaches speed, the Dig makes you commit to casts, the Highdraft makes you swing and ram crews off its edges.
 
-**Remix rule (Andrew, 19:52Z: no rehashed enemies).** A motif that returns in a later world comes back changed, never as a plain repeat: a new pairing, a new terrain interaction, or a harder read. The jolt layer in the Dig lays its mat over a mag floor beside a plated crew, so the one safe answer (a line) is gone and you must hold speed while you crack plates; in the Highdraft its cousin hangs the mat under an updraft, so the air answer carries you into a downdraft. The world 2 and 3 identity thread owns the rosters; this page owns how fields, casts and families read in each.
+**Remix rule (Andrew, 19:52Z: no rehashed enemies).** A motif that returns in a later world comes back changed, never as a plain repeat: a new pairing, a new terrain interaction, or a harder read. The jolt layer in the Dig lays its mat beside a dust choke and a plated crew, so the cast you need to crack plates is slow and jammable at once; you cast from speed or before you enter. In the Highdraft the mat covers the only landing pad on an island, so the air answer means swinging to the next island instead of landing. The world 2 and 3 identity thread owns the rosters; this page owns how fields, casts and families read in each.
 
 ### 5.1 Skill areas
 
@@ -118,7 +118,7 @@ A skill area is a short stretch of a park built around one verb, with a reward a
 | --- | --- | --- | --- |
 | Rolling and momentum | a flume run lined with jolt mats: hold FAST tier and none land | | |
 | Abilities and casts | | a plated vault under floodlights: break the lamps, then cast through the seams | |
-| Grapple | | | an island chain under downdrafts: anchor every jump or fall |
+| Grapple | | | an island chain with no floor between: swing every gap |
 | Carving | the Warden bowl rim (ENEMY-PRIORITY section 3a) | | |
 
 ## 6. Damage families and resistances
@@ -167,9 +167,9 @@ This sharpens ENEMY-PRIORITY section 5: the Dig is where five of six pilots hunt
 | Tension | Where | How the design holds it |
 | --- | --- | --- |
 | Cast times reward slowing down | every cast | casts never root or slow; momentum casting (section 4) would make speed shorten them |
-| Plating rewards stopping to aim | the Dig | a blazing ram still cracks a Dig plate; arc and frost are the cheaper answer, not the only one |
+| Plating and dust reward stopping to aim | the Dig | a blazing ram still cracks a Dig plate; arc and frost are the cheaper answer, not the only one |
 | A jam takes your tools mid-carve | Spillway mats | FAST tier slips every pulse; only a slow ball is jolted |
-| Downdrafts pull you out of the air | the Highdraft | they push down only, never against your line, and never when a line is attached |
+| Wind could push the ball off its line | the Highdraft | crosswinds push enemies only; updrafts are ridden by choice |
 | Fields could fill a bowl and stop carving | any arena | placement rule 2: no field on a lip's landing zone or a rail end; at most one live field per pack (start) |
 
 None of these slows the ball. The pillar's hard line: no field, cast or resistance takes velocity away. The 60 m/s soft cap is untouched.
@@ -182,8 +182,8 @@ At most two new enemy behaviours per wave (ENEMY-PRIORITY section 4b). Waves 17 
 | --- | --- | --- |
 | 18 (cloud, now) | the slice: area field component, cast-time field and jam on the ability state, the jolt layer spawnable in the lab | no behaviour reaches play until a pack names it; zero play change |
 | 19 | jolt layer in Spillway packs ("live wire"), damage families in the armour stage, the jolt cues | 19 adds one enemy (the Linker); this is its second |
-| 20 | cast times on the rows the card picks, the floodlight buff on the Foreman | 20 starts poles and flails, a harpoon change, not an enemy |
-| After the sitting | mag floor, downdraft and updraft crews, Mind echo, skill areas, the cleanse item, momentum casting | new bodies or new systems |
+| 20 | the floodlight aura on the floodlight rig | 20 starts poles and flails, a harpoon change, not an enemy |
+| After the sitting | dust choke, crosswind and updraft crews, Mind echo, skill areas, the cleanse item, momentum casting | new bodies or new systems |
 
 ## 9. First slice (this branch)
 
@@ -191,19 +191,21 @@ At most two new enemy behaviours per wave (ENEMY-PRIORITY section 4b). Waves 17 
 | --- | --- | --- |
 | Area field | `src/combat/area_field.gd` | the component and its first row, `static_jam`, with laid and emitter anchors, pulse and lead clocks, and the three breaks |
 | Jolt layer | `src/combat/jolt_layer.gd`, `src/combat/roster_spillway.gd` | a world 1 Fleet controller on the counter loop; spawnable by name, in no pack yet |
-| Cast time | `src/core/ability_state.gd`, `src/combat/combat.gd` | `cast` on a row, `begin_cast`, `cancel_cast`, `take_cast_done`; the tap path casts through it; interrupts drop it with nothing spent. No shipped row has a cast yet |
+| Cast time | `src/core/ability_state.gd`, `src/combat/combat.gd`, `src/combat/ultimate.gd` | `cast` on a row, `begin_cast`, `cancel_cast`, `take_cast_done`; the tap path casts through it; interrupts drop it with nothing spent; a Q row's `cast` is its wind-up |
 | Jam | `src/core/ability_state.gd` | `jam(seconds)` shuts SPECIAL and LINE; their state reads unavailable and a press answers "jammed" |
-| Test | `tests/jolt_layer_test.gd` | 24 checks: cast, jam, field and a live jolt layer that jolts a slow ball and is slipped by air and by a line |
+| Test | `tests/jolt_layer_test.gd`, `tests/tally_kit_test.gd` | 26 checks: cast rows, cast, jam, field, and a live jolt layer that jolts a slow ball, is slipped by air and by a line, and recalls Q in its wind-up; Tally's test waits out the 0.3 s cast |
 
-Not in the slice: pack placement, the jolt cues and its model (it is a greybox, so it counts as a placeholder until wave 20), damage families, the floodlight, Q's interruptible wind-up, momentum casting.
+Added after Andrew's "Big ones only" tap (19:56:59Z): Gather Plate casts in 0.3 s and aims at the press; every depth-3 Q variant winds up 0.5 s (`VARIANT_CAST`, start, until the power read ranks them); a jolt during Q's wind-up recalls Q with a full refund.
+
+Not in the slice: pack placement, the jolt cues and its model (it is a greybox, so it counts as a placeholder until wave 20), damage families, the floodlight, momentum casting.
 
 ## 10. Calls for Andrew
 
 Sent to the coordinator as cards:
 
 1. **Decided 2026-10-17 19:56:52Z, "Jam".** How hard should an electric field hit you? Jam (recommended): charges and casts drop and specials lock 0.5 s, rolling untouched. Short stun: the ball also loses steering for 0.3 s. Slow: the ball loses 20% speed inside the field.
-2. **Which abilities should get cast times?** Big ones only (recommended): Q stays at 0.35 s and becomes interruptible, stronger Q variants cast longer, Gather Plate 0.3 s. Every bar ability: specials and line skills too, 0.2 to 0.5 s. None yet: keep the mechanism, no cast times before the sitting.
+2. **Decided 2026-10-17 19:56:59Z, "Big ones only".** Which abilities should get cast times? Big ones only (recommended): Q stays at 0.35 s and becomes interruptible, stronger Q variants cast longer, Gather Plate 0.3 s. Every bar ability: specials and line skills too, 0.2 to 0.5 s. None yet: keep the mechanism, no cast times before the sitting.
 
 Already asked on the coordinator's design-questions page, so not sent as cards: casting on the move (question 2), world themes (question 3), resistance strength (question 5) and how weaknesses are shown (question 6). This page builds on their recommended options until Andrew answers.
 
-Decided here, reversible: the field component is shared by enemies and items; Q is never jammed; families are a lookup on the existing kind string; the jolt layer stays out of packs until wave 19; momentum casting is off.
+Decided here, reversible: the field component is shared by enemies and items; Q is never jammed; families are a lookup on the existing kind string; the jolt layer stays out of packs until wave 19; momentum casting is off; a ground-targeted cast aims at the press and an invalid aim is refused then.

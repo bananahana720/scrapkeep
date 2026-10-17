@@ -86,6 +86,10 @@ const FORGIVENESS := 0.18
 # drops a gauge. A jam (an enemy field's pulse) shuts the SILENCED slots for its seconds: the
 # weapon, the movement chip, the smash and Q stay open, so a jam never takes the ball's speed.
 const SILENCED := [SPECIAL, LINE]
+# Andrew's "Big ones only" (2026-10-17 19:56:59Z): Q's 0.35 s wind-up stays and a jolt recalls it;
+# the depth-3 Q variants cast longer, at this start value until the power read ranks them (the
+# strongest may go to 0.8 s); Gather Plate casts in 0.3 s; everything else stays instant.
+const VARIANT_CAST := 0.5
 const UNSTARTED := ""
 
 # One row per ability id; the class row names which id fills each slot, and an upgrade
@@ -147,43 +151,43 @@ const ABILITIES := {
 	# --- P-C Sable rows (line skill, ultimate, depth-3 variants) -------------------------
 	"bank_shot": {"icon": "ab_sable_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"cable_run": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"ball_lightning": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["arc"], "variant_of": "cable_run"},
-	"outpost": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "cable_run"},
+	"ball_lightning": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["arc"], "variant_of": "cable_run", "cast": VARIANT_CAST},
+	"outpost": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "cable_run", "cast": VARIANT_CAST},
 	# --- end Sable ---
 	# --- P-C Rivet rows ------------------------------------------------------------------
 	"line_drive": {"icon": "ab_rivet_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"foundry_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"prism_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter"},
-	"juggernaut_drive": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter"},
+	"prism_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter", "cast": VARIANT_CAST},
+	"juggernaut_drive": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter", "cast": VARIANT_CAST},
 	# --- end Rivet ---
 	# --- P-C Kest rows -------------------------------------------------------------------
 	# 2026-10-11 (PC-KEST round 3): fourteen seconds preserves both fixed bands after the contact cap.
 	"cable_charge": {"icon": "ab_kest_line", "cooldown": 14.0, "line": true, "load_seconds": 4.0},
 	"windhover": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "hold_beats": 2},
-	"air_raid": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "windhover"},
-	"minelayer": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "windhover"},
+	"air_raid": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "windhover", "cast": VARIANT_CAST},
+	"minelayer": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "windhover", "cast": VARIANT_CAST},
 	# --- end Kest ---
 	# --- P-C Tarn rows -------------------------------------------------------------------
 	"claw_drag": {"icon": "ab_tarn_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"redjaw_rend": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"rake_run": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "redjaw_rend"},
-	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend"},
+	"rake_run": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST},
+	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST},
 	# --- end Tarn ---
 	# --- P-C Tally rows ------------------------------------------------------------------
 	# pilots/tally.md section 3: Balance Due alone spends pressure; Gather Plate and the Ledger
 	# Clip keep their own cooldowns and pay into it; Q's meter is Plate Return's charge.
 	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3},
-	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 6.0},
+	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 6.0, "cast": 0.3},
 	"link_clips": {"icon": "ab_tally_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"plate_return": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"plate_audit": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "plate_return"},
-	"plate_flywheel": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["arc", "rail", "line"], "variant_of": "plate_return"},
+	"plate_audit": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "plate_return", "cast": VARIANT_CAST},
+	"plate_flywheel": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["arc", "rail", "line"], "variant_of": "plate_return", "cast": VARIANT_CAST},
 	# --- end Tally ---
 	# --- P-C Cannon rows -----------------------------------------------------------------
 	"cannon_lane_charge": {"icon": "ab_cannon_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "family": "lane"},
 	"cannon_fire_mission": {"icon": "ab_cannon_ult", "paths": ["arc", "line", "rail"], "beats": 0},
-	"cannon_creeping_barrage": {"icon": "ab_cannon_ult", "paths": ["line", "rail", "arc"], "beats": 0, "variant_of": "cannon_fire_mission"},
-	"cannon_plate_mortar": {"icon": "ab_cannon_ult", "paths": ["arc"], "beats": 6, "variant_of": "cannon_fire_mission"},
+	"cannon_creeping_barrage": {"icon": "ab_cannon_ult", "paths": ["line", "rail", "arc"], "beats": 0, "variant_of": "cannon_fire_mission", "cast": VARIANT_CAST},
+	"cannon_plate_mortar": {"icon": "ab_cannon_ult", "paths": ["arc"], "beats": 6, "variant_of": "cannon_fire_mission", "cast": VARIANT_CAST},
 	# --- end Cannon ---
 }
 const ICON_DIR := "res://assets/icons/"

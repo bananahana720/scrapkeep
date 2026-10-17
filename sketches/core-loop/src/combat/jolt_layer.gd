@@ -10,6 +10,7 @@ const AreaField := preload("res://src/combat/area_field.gd")
 # with nothing spent and the specials and line skill jam for half a second. Speed (FAST tier),
 # being in the air or a harpoon line attached lets the pulse pass. It never holds or slows
 # the ball, and the weapon, the boost, the smash and Q stay open: a jolt costs a cast, not speed.
+# Q can start inside a mat, but a jolt during its wind-up recalls it with a full refund.
 
 const FIELD := "static_jam"
 const HP := 45.0
@@ -18,6 +19,7 @@ var field = null
 # Pulses that landed on the ball, and pulses it slipped by its own verb, for tests and the lab.
 var jolts := 0
 var slipped := 0
+var recalls := 0
 
 var _spool: MeshInstance3D
 var _coil: MeshInstance3D
@@ -60,9 +62,20 @@ func _live(delta: float) -> bool:
 		"landed":
 			jolts += 1
 			flash()
+			_recall_q()
 		"speed", "air", "line":
 			slipped += 1
 	return true
+
+
+# Q's wind-up is its cast: a jolt that lands during it recalls Q with a full refund (Andrew's
+# "Big ones only", 2026-10-17 19:56:59Z).
+func _recall_q() -> void:
+	var combat = fleet.combat if fleet != null else null
+	var ult = combat.ultimate if combat != null else null
+	if ult != null and ult.winding_up():
+		ult.recall()
+		recalls += 1
 
 
 func _on_end() -> void:

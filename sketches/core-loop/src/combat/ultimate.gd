@@ -389,7 +389,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 		legs = [{"mode": "arc", "to": found["entry"], "beats": first, "seconds": first * each, "strike": false},
 			{"mode": "line", "to": to, "beats": beats - first, "seconds": (beats - first) * each, "strike": true}]
 	return {"path": mode, "from": ball, "to": to, "target": found.get("target"), "beats": beats,
-		"flight": flight, "seconds": WINDUP_SECONDS + flight, "legs": legs}
+		"flight": flight, "seconds": windup_seconds() + flight, "legs": legs}
 
 
 # The flight seconds for a path length: length / 18 m/s clamped to 1.6 to 3.2 s, then whole
@@ -466,7 +466,7 @@ func start(p: Dictionary) -> void:
 	meter.locked = true
 	_was_full = false
 	_phase = WINDUP
-	_left = WINDUP_SECONDS
+	_left = windup_seconds()
 	_leg = 0
 	_ride = null
 	_posture_spent = {}
@@ -500,7 +500,18 @@ func _draw_path(p: Dictionary) -> void:
 		from = leg["to"]
 
 
-# Q in the wind-up: cancel with a full refund.
+# The wind-up is Q's cast (design-v3/FIELDS-AND-CASTS.md section 4, Andrew's "Big ones only"
+# 2026-10-17 19:56:59Z): a row's `cast` when it names one (the stronger depth-3 variants),
+# else WINDUP_SECONDS.
+func windup_seconds() -> float:
+	return float(AbilityState.ABILITIES.get(_ult_id(), {}).get("cast", WINDUP_SECONDS))
+
+
+func winding_up() -> bool:
+	return _phase == WINDUP
+
+
+# Q in the wind-up: cancel with a full refund. A field's jolt calls it too (jolt_layer.gd).
 func recall() -> void:
 	if _phase != WINDUP:
 		return
