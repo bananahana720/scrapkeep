@@ -52,7 +52,7 @@
     "min": -12.0
   },
   "map": "park_crown",
-  "park_sha256": "9ccf510ac6515b72e98fd61f66072d862d955b11c7772ac1e0709d50284e9e02",
+  "park_sha256": "e24898f89b63e0e6bffad617c4e1b59f3b06a29724a04386a16fef5704b1d10f",
   "schema": "scrapkeep-park-bake/1",
   "tool_sha256": "046e7258338a8bcca754c4ca23cb0cf963098dfc29cf88aaa46601fbb4e363c2"
 }

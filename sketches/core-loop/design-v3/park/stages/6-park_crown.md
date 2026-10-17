@@ -478,6 +478,12 @@ Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-2
 | `fleet_toe_lip` | `gauntlet_toe_lip` | Winch crew poured this lip to reach the updraft without a net. Requisition for a net: pending. |
 | `fleet_updraft_lip` | `signal_foot_lip` | Updraft lip, poured so the crew could reach the kite without climbing. Climbing is now optional. Lightning is not. |
 | `net_weaver_scree_lip` | `scree_gust_lip` | Scree lip, cut for the talus run. The talus was here first and is taking it back, slowly. |
+| `net_weaver_watch_lips` | `watch_flank_lip_w` | Two lips off the Watch Butte's flanks, for weavers who are late to the bajada. All weavers are late to the bajada. |
+| `net_weaver_wash_hammock` | `east_wash_hammock` | Hammock strung over the east fields at wash height. The wash has not run in years. The hammock is ready. |
+| `fleet_gauntlet_kite` | `gauntlet_kite_lip` | Kite lip under the east butte. Launch on the whistle. There is no whistle; listen for the crew. |
+| `fleet_rim_net` | `bowl_rim_net` | Rim net, east side of the bowl, for anything the Crown sheds. Itemised daily. The list is getting long. |
+| `fleet_signal_approach` | `signal_approach_lip` | Approach lip for the signal crew, cut so the climb starts at speed. The crew climb slower than the lip. |
+| `net_weaver_rim_lips` | `bajada_rim_lip_e` | Rim lips, both sides of the bajada head, set by weavers who wanted the fields to have a front door. |
 
 The last thirteen rows are the authored pass of 17 October (section 17): the net-weavers and the Fleet's mooring crew as society rows, Andrew's "Now, light" (no new systems).
 
@@ -563,6 +569,8 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
 - *Second hammock cell.* `needle_hammock_2` at [-335, 140] tiles the first cell to the west (the cells share their posts), so the weavers' net is a two-cell string running toward the Signal Butte.
 - *Scree lip.* `scree_gust_lip` on the Turnstone scree ([-232, -306]) throws north-west at the alcove talus, a side door into the west fan off Tarn's line.
 - *Meander cross lip.* `meander_cross_lip` at [150, -180], east of the meander, throws Kest's line across toward the east ribs.
+
+- *Flank lips and rim nets* (islands follow-up, 17 October). The islands pass raised the park median, so the crown takes fourteen more GLB rows in its far fields, all off every pilot line (165 m or more) and placeholder-free: lips off the Watch Butte's flanks (`watch_flank_lip_w`, `_e`), the bajada head's rims (`bajada_rim_lip_w`, `_e`), the east and west slickrock fields (`east_bajada_lip_1`, `_2`, `east_field_lip`, `west_field_lip`, `alcove_foot_lip`), the Fleet's `gauntlet_kite_lip` and `signal_approach_lip`, the weavers' `east_wash_hammock`, and the Fleet's `bowl_rim_net` and `bowl_rim_net_w` on the bowl's outer rims. Authored rows 55 to 69.
 
 **Set piece: the storm kite line** (crown only). The Fleet's mooring crew flies a storm kite off the Signal Butte. `signal_foot_lip` at [-330, 300] pitches the ball west into `signal_updraft`, a 200 m thermal at the butte's sheer east foot ([-366, 300]), which lifts a glider to `storm_kite_line`, a 327 m cable from [-366, 195, 300] down to [-150, 7.9, 420]. It lands outside the engage ring, beside the signal wire's foot, where `kite_runout_lip` throws the ball on toward `crown_updraft` and the bowl. `kite_mooring_deck`, a `net_deck` cell on the butte top (y 190), is the landing for a glider that overshoots. `kite_strike` (lightning, clock tier 1, 3 s on-bar mark, 12 m, 6 damage, every 30 s while live) strikes the butte top: ride the updraft between strikes.
 

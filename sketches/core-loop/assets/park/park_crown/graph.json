@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "3796704380019f265e0cd38c302b5595de270dbf7f23d9edab4c58bc554ad9c5",
+  "bake_sha256": "34f2079bf286839556e6350a72906dbe3858964bd7dc301775cb7b46d76a100b",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 998474,
-  "edges": 325239,
+  "bytes": 1007665,
+  "edges": 328559,
   "first_failed": "",
   "flags": {
-    "deck": 1064,
-    "door_ok": 39614,
+    "deck": 1427,
+    "door_ok": 39657,
     "line": 387,
-    "open": 40763,
+    "open": 40806,
     "sight_ok": 9111,
     "under": 0
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "41dda646d3a48fb268b0209acd058e12a8890f09191a0320f77b6543024cd7f8",
+  "graph_sha256": "09615be059414110c975c9a9623d956cc4ac07f9196d953ff0ad5a6a1006b1ca",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
-  "nodes": 41465,
-  "park_sha256": "9ccf510ac6515b72e98fd61f66072d862d955b11c7772ac1e0709d50284e9e02",
+  "nodes": 41828,
+  "park_sha256": "e24898f89b63e0e6bffad617c4e1b59f3b06a29724a04386a16fef5704b1d10f",
   "pockets": [
     {
       "clear_ring": [],
@@ -255,12 +255,28 @@
         "viable": false
       },
       {
+        "cost": 1091.1,
+        "d_landmark": 641.6,
+        "name": "signal_approach_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 1041.3,
         "d_landmark": 170.7,
         "name": "crown_ramp",
         "on_route": true,
         "rank": 0,
         "viable": true
+      },
+      {
+        "cost": 1003.5,
+        "d_landmark": 664.9,
+        "name": "gauntlet_kite_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 951.3,
@@ -283,6 +299,38 @@
         "d_landmark": 370.7,
         "name": "spire_top_ramp",
         "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 813.1,
+        "d_landmark": 863.4,
+        "name": "alcove_foot_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 792.5,
+        "d_landmark": 794.8,
+        "name": "east_bajada_lip_2",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 789.0,
+        "d_landmark": 985.9,
+        "name": "east_field_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 759.1,
+        "d_landmark": 1024.7,
+        "name": "west_field_lip",
+        "on_route": false,
         "rank": 0,
         "viable": false
       },
@@ -314,6 +362,14 @@
         "cost": 687.1,
         "d_landmark": 724.2,
         "name": "hoodoo_gust_lip_4",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 651.5,
+        "d_landmark": 915.2,
+        "name": "east_bajada_lip_1",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -359,6 +415,38 @@
         "viable": false
       },
       {
+        "cost": 529.1,
+        "d_landmark": 1010.4,
+        "name": "bajada_rim_lip_w",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 518.7,
+        "d_landmark": 1012.8,
+        "name": "bajada_rim_lip_e",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 441.4,
+        "d_landmark": 1096.8,
+        "name": "watch_flank_lip_w",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 427.1,
+        "d_landmark": 1097.0,
+        "name": "watch_flank_lip_e",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 411.6,
         "d_landmark": 789.1,
         "name": "turnstone",
@@ -383,11 +471,11 @@
         "viable": true
       }
     ],
-    "count": 57,
+    "count": 71,
     "crossings": {
-      "drop": 22,
+      "drop": 27,
       "ride": 9,
-      "walk": 66
+      "walk": 77
     },
     "hidden": [
       {
