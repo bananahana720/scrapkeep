@@ -69,7 +69,7 @@ def flare(on):
 
 
 def render(name, root, outdir, floor, focus=(0, 0, 0), scale=5.6, ball_x=None, extras=None,
-           lit=True, game_target=None):
+           lit=True, game_target=None, face_yaw=180):
     scene, cam = _scene(floor)
     ball = _ball(floor, ball_x if ball_x is not None else -scale * 0.42)
     if extras:
@@ -80,14 +80,15 @@ def render(name, root, outdir, floor, focus=(0, 0, 0), scale=5.6, ball_x=None, e
     cam.data.ortho_scale = scale
     scene.render.resolution_x = 900
     scene.render.resolution_y = 900
-    # The asset turns, the camera stays: yaw 0 is its face (Godot -Z, Blender +Y).
-    for label, yaw in [("front", 180), ("three_quarter", 135), ("side", 90), ("back", 0)]:
-        root.rotation_euler = (0, 0, math.radians(yaw))
-        cam.location = focus + Vector((0, -12, 1.2))
+    # The asset turns, the camera stays; face_yaw turns its face to the camera (180 for a
+    # crawler leading along Godot -Z, 0 for an emplacement facing Godot +Z).
+    for label, turn in [("front", 0), ("three_quarter", -45), ("side", -90), ("back", 180)]:
+        root.rotation_euler = (0, 0, math.radians(face_yaw + turn))
+        cam.location = focus + Vector((0, -12, 3.0))
         common._look(cam, focus)
         scene.render.filepath = os.path.join(outdir, "%s_%s.png" % (name, label))
         bpy.ops.render.render(write_still=True)
-    root.rotation_euler = (0, 0, math.radians(150))
+    root.rotation_euler = (0, 0, math.radians(face_yaw - 30))
     ball.location.x = -6
     cam.data.type = "PERSP"
     cam.data.sensor_fit = "VERTICAL"

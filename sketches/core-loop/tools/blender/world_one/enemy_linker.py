@@ -49,11 +49,11 @@ STEEL = "53686d"
 WORN = "a8aaa3"
 CHAR = "charcoal"
 PIVOT = (0.0, 1.25, 0.0)
-TIP = (3.6, 2.85, 0.15)
-HINGE = (3.6, 2.7, 0.35)
+TIP = (3.6, 2.85, 0.75)
+HINGE = (3.6, 2.7, 0.95)
 DISH_R = 1.35
 TILT = math.radians(28)  # the face looks along +Z and this far down, over the partner
-DISH_C = (3.6, 1.75, 1.0)
+DISH_C = (3.6, 1.75, 1.65)
 DRUM = (0.42, -0.35, 0.0)
 PARTNER = (3.6, FLOOR, 0.0)
 
@@ -228,8 +228,8 @@ if opts["render"]:
         for o in bpy.context.selected_objects:
             if o.parent is None:
                 o.parent = root
-                o.location = Vector(g(PARTNER[0], -0.1 + FLOOR + 1.5 - (-0.1), PARTNER[2])) * 1.0
-                o.location.z = FLOOR + 1.5
+                o.location = Vector(g(PARTNER[0], FLOOR + 1.5, PARTNER[2]))
+                o.rotation_euler.z = math.pi
 
-    kill_first_preview.render("linker", root, opts["render"], FLOOR, focus=(1.6, 0, 0.9), scale=7.8,
-                              ball_x=-2.6, extras=partner, game_target=(1.6, 0, 0.6))
+    kill_first_preview.render("linker", root, opts["render"], FLOOR, focus=(0, 0, 1.0), scale=10.5,
+                              ball_x=-3.0, extras=partner, game_target=(1.6, 0, 0.6), face_yaw=0)
