@@ -25,6 +25,10 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const MODEL_DIR := "res://assets/models/companion/assembled/"
 const PART_DIR := "res://assets/models/companion/"
 const BARE := "bare"
+# The rig thread's grown-mark parts (PR #44, registry row spil9_marks): one Hull root whose
+# children are one mesh per mark. Without it the body builds greybox stand-ins.
+const MARKS_PATH := "res://assets/models/companion/spil9_marks.glb"
+const MARK_PARTS := ["Mk1Halo", "Mk2Fins", "Mk3Halo", "Mk4Exhaust", "Mk5CoreCrest"]
 # Socket.01 in the chassis rig, used when the skeleton has no socket bone to follow.
 const SOCKET_AT := Vector3(-0.29, 0.225, 0.0)
 const HALO_LIFT := 0.62
@@ -74,6 +78,8 @@ var _state := "idle"
 var _mark := 0
 var _grown := 1.0
 var _kit: Node3D
+# The mounted spil9_marks parts by name, empty when the GLB or the Hull bone is missing.
+var _mark_parts := {}
 var _halo: MeshInstance3D
 var _words: Array = []
 var _wired := false
@@ -243,6 +249,7 @@ func _rebuild(seats: Array, key: String) -> void:
 	_state = "idle"
 	_kit = null
 	_halo = null
+	_mark_parts = {}
 	_mark = 0
 	visible = key != ""
 	_snap = true
@@ -314,26 +321,70 @@ func _seat_part(chassis: Node3D, id: String) -> void:
 		chassis.add_child(part)
 
 
-# The halo is the assist gauge: dim while it fills, bright and blinking when full.
+# The halo is the assist gauge: dim while it fills, bright and blinking when full. With the
+# real marks mounted, Mk1Halo is the gauge.
 func _add_halo(host: Node3D) -> void:
+	_mark_parts = _mount_marks(host)
+	_kit = Node3D.new()
+	_kit.name = "MarkKit"
+	host.add_child(_kit)
+	if _mark_parts.has("Mk1Halo"):
+		_halo = _mark_parts["Mk1Halo"]
+		_halo.material_override = _halo_material()
+		return
 	_halo = MeshInstance3D.new()
 	_halo.name = "AssistHalo"
 	var ring := TorusMesh.new()
 	ring.inner_radius = HALO_RADIUS - 0.03
 	ring.outer_radius = HALO_RADIUS
 	_halo.mesh = ring
+	_halo.material_override = _halo_material()
+	_halo.position = Vector3(0.0, HALO_LIFT, 0.0)
+	_halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	host.add_child(_halo)
+
+
+func _halo_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.emission_enabled = true
 	mat.albedo_color = EventKinds.UI_ROWS["companion_ready"]["color"]
 	mat.emission = mat.albedo_color
-	_halo.material_override = mat
-	_halo.position = Vector3(0.0, HALO_LIFT, 0.0)
-	_halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	host.add_child(_halo)
-	_kit = Node3D.new()
-	_kit.name = "MarkKit"
-	host.add_child(_kit)
+	return mat
+
+
+# Seats spil9_marks on the chassis Hull bone; returns its parts by name, all hidden until
+# _grow shows them. Empty when the GLB or the bone is missing.
+func _mount_marks(host: Node3D) -> Dictionary:
+	if not ResourceLoader.exists(MARKS_PATH):
+		return {}
+	var skeletons := host.find_children("*", "Skeleton3D", true, false)
+	var skeleton := skeletons.front() as Skeleton3D if not skeletons.is_empty() else null
+	if skeleton == null or skeleton.find_bone("Hull") < 0:
+		return {}
+	var scene := (load(MARKS_PATH) as PackedScene).instantiate()
+	var hull := scene.find_child("Hull", false, false) as Node3D
+	if hull == null:
+		hull = scene as Node3D if scene.name == "Hull" else null
+	if hull == null:
+		scene.free()
+		return {}
+	if hull != scene:
+		scene.remove_child(hull)
+		scene.free()
+	dress_model(hull)
+	var mount := BoneAttachment3D.new()
+	mount.name = "MarksMount"
+	skeleton.add_child(mount)
+	mount.bone_name = "Hull"
+	mount.add_child(hull)
+	var parts := {}
+	for name in MARK_PARTS:
+		var part := hull.find_child(name, true, false) as Node3D
+		if part != null:
+			part.visible = false
+			parts[name] = part
+	return parts
 
 
 # The mark follows the run's heft class: scale, then the add-on parts, rebuilt on a change.
@@ -363,6 +414,9 @@ func grown() -> float:
 
 func kit_parts() -> Array:
 	var out := []
+	for name in _mark_parts:
+		if (_mark_parts[name] as Node3D).visible and name != "Mk1Halo":
+			out.append(name)
 	if _kit != null:
 		for c in _kit.get_children():
 			out.append(String(c.name))
@@ -371,6 +425,9 @@ func kit_parts() -> Array:
 
 func _build_kit(adds: Array) -> void:
 	if _kit == null:
+		return
+	if not _mark_parts.is_empty():
+		_show_marks()
 		return
 	for c in _kit.get_children():
 		_kit.remove_child(c)
@@ -405,6 +462,14 @@ func _build_kit(adds: Array) -> void:
 				core.height = 0.32
 				_kit_part("Core", core, glow, Vector3(0.0, 0.3, 0.05), Vector3.ONE, Vector3.ZERO)
 				_kit_part("Crest", PrismMesh.new(), grey, Vector3(0.0, 0.62, -0.05), Vector3(0.06, 0.4, 0.3), Vector3.ZERO)
+
+
+# Real marks: Mk1Halo always, then each mark's part up to the current one.
+func _show_marks() -> void:
+	for i in MARK_PARTS.size():
+		var part = _mark_parts.get(MARK_PARTS[i])
+		if part != null:
+			part.visible = i == 0 or i < _mark
 
 
 func _kit_part(part_name: String, mesh: Mesh, mat: Material, at: Vector3, size: Vector3, rot: Vector3) -> void:
