@@ -5,6 +5,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const ParkSites := preload("res://src/presentation/park_sites.gd")
 
 # The existing cast slabs keep their exact geometry. Their finishes share the workshop's
 # concrete/paint/shutter kit; the signal insert adds directional safety paint, open grates
@@ -280,15 +281,88 @@ static func build(stage_root: Node3D) -> Node3D:
 	return scenery
 
 
+# The park pass (park_dam, park_flume; the old map's build() is fixed to the stage-1 rim): game.gd
+# builds the old map at boot, and this hook builds a Spillway park stage on the entry that builds its
+# ground, again after a freed stage comes back. Visual only, nothing collides.
+static func hook(ctx) -> void:
+	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
+
+
+static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
+	for row in ctx.stages.DEFS:
+		if int(row["stage"]) != stage:
+			continue
+		var map = ctx.terrain.map_for(stage)
+		if ParkSites.is_park(map) and int(row.get("world", 0)) == 1:
+			var root: Node3D = ctx.terrain.geometry_root(stage)
+			if root.get_node_or_null("SpillwayScenery") == null:
+				build_park(root, map, ctx.terrain.ground_callable(stage), stage)
+		return
+
+
+# The water's edge of a park: cottonwood groves on the flanks of its washes, canals, canyons and
+# the flume, and spill mist where its water drops: below each drop on a wet landform and at the
+# foot of a dam face. The dam itself, the flume spans and the cable cars are park rows and
+# landmark recipes, so the old rim's retaining wall, valve towers and gondolas stay on the old map.
+const PARK_WET := ["river_canyon", "canal", "slot_canyon", "dry_wash", "arroyo", "flume", "dam_face"]
+const PARK_TREES_MAX := 24
+const PARK_MIST_ROWS_MAX := 10
+
+
+static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3D:
+	var scenery := Node3D.new()
+	scenery.name = "SpillwayScenery"
+	stage_root.add_child(scenery)
+	var sites := ParkSites.new(map, ground, stage)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = ("spillway_scenery_" + String(map.park["map"])).hash()
+	var rows := sites.rows([], PARK_WET).filter(func(row): return row["element"] != "anchor_field")
+	var trees := []
+	for row in rows:
+		for seat in sites.flank(row, 2, rng.randf_range(4.0, 12.0), rng):
+			if trees.size() >= PARK_TREES_MAX:
+				break
+			var at: Vector2 = seat["at"]
+			var low := INF
+			var high := -INF
+			for probe in [Vector2.ZERO, Vector2(3, 0), Vector2(-3, 0), Vector2(0, 3), Vector2(0, -3)]:
+				var h := sites.height(at + probe)
+				low = minf(low, h)
+				high = maxf(high, h)
+			if high - low <= 1.5:
+				trees.append({"foot": Vector3(at.x, low, at.y), "size": rng.randf_range(0.6, 1.0)})
+	var mist: Array[Transform3D] = []
+	var drops := rows.filter(func(row): return row["element"] == "drop" or row["landform"] == "dam_face")
+	for row in drops.slice(0, PARK_MIST_ROWS_MAX):
+		var f := ParkSites.frame(row)
+		var foot: Vector2 = f["at"] + f["run"] * float(f["half_length"])
+		var y := sites.height(foot)
+		var face := Basis(Vector3.UP, ParkSites.yaw_toward(-f["run"]))
+		for j in 9:
+			var at := Vector3(foot.x, 0.0, foot.y) + face * Vector3(rng.randf_range(-12.0, 12.0), 0.0, rng.randf_range(-2.0, 8.0))
+			at.y = y + rng.randf_range(2.0, 12.0)
+			mist.append(Transform3D(face * Basis(Vector3.BACK, rng.randf_range(-0.7, 0.7)).scaled(
+				Vector3(rng.randf_range(8.0, 18.0), rng.randf_range(5.0, 11.0), 1.0)), at))
+	if not mist.is_empty():
+		var puff := QuadMesh.new()
+		puff.size = Vector2(2, 2)
+		puff.flip_faces = true
+		_batch(scenery, "WaterMist", puff, mist, Color("bcd4da"))
+	if not trees.is_empty():
+		_cottonwoods(stage_root, trees)
+	return scenery
+
+
 # SWAP-WAVE 12-F: the shoulder cottonwoods are the cottonwood recipe, one tree per hull root under the stage root (not the
 # scenery batches, which bake and merge their children). The base trunk and crown are one MultiMesh per base view, an
 # instance per tree, each surface in the loader's slot material; the detail shells hang per tree under a holder at the
-# tree's frame, so each fades by its own distance.
-static func _cottonwoods(stage_root: Node3D) -> Node3D:
+# tree's frame, so each fades by its own distance. A park passes its own trees.
+static func _cottonwoods(stage_root: Node3D, trees: Array = []) -> Node3D:
 	var group := Node3D.new()
 	group.name = "Cottonwoods"
 	stage_root.add_child(group)
-	var trees := cottonwood_trees()
+	if trees.is_empty():
+		trees = cottonwood_trees()
 	var probe := Node3D.new()
 	for view: GeometryInstance3D in RecipeProps.base("cottonwood", probe, Transform3D.IDENTITY):
 		var source := view as MeshInstance3D
