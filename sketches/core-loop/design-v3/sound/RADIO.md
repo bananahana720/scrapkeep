@@ -77,7 +77,7 @@ A camp page on R, next to Moss's jukebox (`src/ui/radio_page.gd`).
 | | the spire's 30 m waist, outside | Crown Spire, Fusion | take |
 | | the rope bridge between the two highest islands | Crown Footwork | take |
 
-The camp has no place to roll around in yet, so its two takes are earned instead: Lights On, Twelve Ways (legend) when Moss's ledger balances and its trophy goes up, and The Course, Drumline (b-side) for finishing a movement course in a park.
+The camp has no place to roll around in yet, so its two takes are earned instead: Lights On, Twelve Ways (legend) when Moss's ledger balances and its trophy goes up, and The Course, Drumline (b-side) for finishing a movement course in a park. When the camp hub ring (PR #31) becomes a space you can roll in, move both back to Signal caches: under the trophy wall, and behind the course's finish arch.
 
 **Challenges and moments.** The other 60 tracks come from play: every Warden broken, every event type won, all three bosses (beaten, phased, adapted), streaks such as 150 machines in world one or five synergies in one run, a clean win, and hearing each jukebox tune for the first time. The legends from challenges:
 
