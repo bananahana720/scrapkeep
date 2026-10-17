@@ -147,6 +147,18 @@ const TRIM_DB := {
 	"splitter_spawn": -6.0,
 	"linker_presence": -14.0, "linker_tell": -4.0, "linker_break": -3.0, "linker_spawn": -6.0,
 	"hype_drop": -3.0,
+	"jolt_layer_presence": -14.0, "jolt_layer_tell": -4.0, "jolt_layer_jam": -3.0, "jolt_layer_fizzle": -6.0,
+	"jolt_layer_break": -3.0,
+	# The crown's place layers (tools/ace/cut_layers.py): two bars of the crown's own band, under it.
+	"music_layer_crown_hoodoos": -8.0, "music_layer_crown_alcove": -8.0, "music_layer_crown_toppled": -8.0,
+	"music_layer_crown_ramp": -8.0,
+	# The Mind's first quote, its theme inverted over the Spillway's groove (tools/ace/mind_quote.py).
+	"music_layer_mind_quote_spillway": -8.0,
+	# The arrival forms and the prop crew (tools/ace/arrival_sfx.py); a tell ends on its landing frame.
+	"lift_cage_arrive": -3.0, "zipline_whine": -5.0, "zipline_snap": -3.0, "cave_in_rumble": -4.0,
+	"cave_in_debris": -3.0, "prop_crew_presence": -14.0, "prop_crew_strain": -4.0, "prop_crew_collapse": -2.0,
+	# The Highdraft roster (tools/ace/roster_sfx.py); a tell ends on its landing frame.
+	"ballast_brace_tell": -4.0, "ballast_brace_slam": -2.0, "gap_net_charge_tell": -6.0, "gap_net_charge_live": -4.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
@@ -265,15 +277,47 @@ const FILE_SOUNDS := {
 	"linker_presence": "specials/linker_presence.wav", "linker_tell": "specials/linker_tell.wav",
 	"linker_break": "specials/linker_break.wav", "linker_spawn": "specials/linker_spawn.wav",
 	"hype_drop": "hype_drop.wav",
+	"jolt_layer_presence": "specials/jolt_layer_presence.wav", "jolt_layer_tell": "specials/jolt_layer_tell.wav",
+	"jolt_layer_jam": "specials/jolt_layer_jam.wav", "jolt_layer_fizzle": "specials/jolt_layer_fizzle.wav",
+	"jolt_layer_break": "specials/jolt_layer_break.wav",
+	"music_layer_crown_hoodoos": "layers/music_layer_crown_hoodoos.wav", "music_layer_crown_alcove": "layers/music_layer_crown_alcove.wav",
+	"music_layer_crown_toppled": "layers/music_layer_crown_toppled.wav", "music_layer_crown_ramp": "layers/music_layer_crown_ramp.wav",
+	"music_layer_mind_quote_spillway": "layers/music_layer_mind_quote_spillway.wav",
+	"lift_cage_arrive": "foley/lift_cage_arrive.wav", "zipline_whine": "foley/zipline_whine.wav",
+	"zipline_snap": "foley/zipline_snap.wav", "cave_in_rumble": "foley/cave_in_rumble.wav",
+	"cave_in_debris": "foley/cave_in_debris.wav", "prop_crew_presence": "foley/prop_crew_presence.wav",
+	"prop_crew_strain": "foley/prop_crew_strain.wav", "prop_crew_collapse": "foley/prop_crew_collapse.wav",
+	"ballast_brace_tell": "foley/ballast_brace_tell.wav", "ballast_brace_slam": "foley/ballast_brace_slam.wav",
+	"gap_net_charge_tell": "foley/gap_net_charge_tell.wav", "gap_net_charge_live": "foley/gap_net_charge_live.wav",
 }
 # hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
 const HYPE_DROP_LEAD_SECONDS := 2.0
 
 
+# Per-stage park event stingers (tools/ace/cut_stingers.py) are ids of the form
+# "stinger:<zone with _>/<cue>", for example "stinger:3_1/drop_boiler".
+const STINGER_PREFIX := "stinger:"
+
+
+static func stinger_id(zone: String, cue: String) -> String:
+	return "%s%s/%s" % [STINGER_PREFIX, zone.replace("-", "_"), cue]
+
+
+static func file_path(id: String) -> String:
+	if id.begins_with(STINGER_PREFIX):
+		return SFX_DIR + "stingers/" + id.substr(STINGER_PREFIX.length()) + ".wav"
+	return SFX_DIR + String(FILE_SOUNDS[id])
+
+
+static func file_exists(id: String) -> bool:
+	var path := file_path(id)
+	return ResourceLoader.exists(path) or FileAccess.file_exists(path)
+
+
 # The mono samples of a rendered file: the imported resource when the editor or export has
 # one, else the raw RIFF (headless runs without an import cache).
 static func file_samples(id: String) -> PackedFloat32Array:
-	var path: String = SFX_DIR + String(FILE_SOUNDS[id])
+	var path := file_path(id)
 	var out := PackedFloat32Array()
 	var res = load(path) if ResourceLoader.exists(path) else null
 	if res is AudioStreamWAV and (res as AudioStreamWAV).format == AudioStreamWAV.FORMAT_16_BITS:
@@ -392,7 +436,7 @@ static func bake_all(ids: Array) -> void:
 
 
 static func _bake(id: String) -> PackedFloat32Array:
-	if FILE_SOUNDS.has(id):
+	if FILE_SOUNDS.has(id) or id.begins_with(STINGER_PREFIX):
 		var file := file_samples(id)
 		if file.size() > 0:
 			return file
