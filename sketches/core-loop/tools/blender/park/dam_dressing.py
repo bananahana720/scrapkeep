@@ -13,11 +13,12 @@ Eye fins, underside at least 18 m over the ramp) and the spillway portal (a conc
 the wash floor, legs outside the cut).
 
 Placement contract. A greybox stand-in of a stamped row stands on seat(): the ground at its centre less its own stamp's
-raise. A GLB row would stand on the ground itself, which moves its ride sensor up. So every dressed park row gets
-`y` = round(ground(at) - max(own stamp offset at the centre, 0), 0.01) and the vertices here are authored relative to
-the node origin (at.x, y, at.z) turned by yaw_deg exactly as park_recipes.gd row_transform builds it: local x across
-the footprint, local z along the facing, Godot axes (+Y up). Stamps ignore `y`, so the bake does not move. The park
-file edit is `--write-park`; a later dome or bake change is a re-run of this script.
+raise. A GLB row would stand on the ground itself, which moves its ride sensor up, and a `y` on the row would make
+tools/park_graph.gd read a deck. So every dressed park row says `"fit": "drape"` (park_recipes.gd fits_drape), `y` null, and
+seat() puts its node at y0 = round(ground(at) - max(own stamp offset at the centre, 0), 0.01) (this script's base_height,
+the same formula). The vertices here are authored relative to the node origin (at.x, y0, at.z) turned by yaw_deg exactly as
+row_transform builds it: local x across the footprint, local z along the facing, Godot axes (+Y up). The park file edit is
+`--write-park`; a later dome or bake change is a re-run of this script.
 
 Files per recipe (assets/asset_budgets.json class landform, park_large for tunnels and the vent pits, detail for shells):
   <id>.glb          one drawn mesh `<id>`: surface `enamel` carries vertex colour (the slot role park_recipes.gd maps to the
@@ -1201,7 +1202,7 @@ assert len(ROWS) == 41
 # A row the coordinator adds to the park (not a greybox stand-in): written after `the_eye` by --write-park.
 EXTRA_ROWS = {"eye_mouth": {"id": "eye_mouth", "element": "elevated_line", "landform": "slickrock", "society": "ancient", "at": [0, 205], "y": None,
                             "size": [20, 0, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "layer_mind_quote_spillway", "home": "",
-                            "recipe": "dam_eye_mouth", "stamp": "plateau", "hole": False, "budget": "landform", "routes": [], "fragment": ""}}
+                            "recipe": "dam_eye_mouth", "fit": "drape", "stamp": "plateau", "hole": False, "budget": "landform", "routes": [], "fragment": ""}}
 LARGE = {"the_eye", "spillway_tunnel", "toe_vent_pits"}          # park_large: two draws (lens or portal) and the arches' colliders
 GATES = ("dam_survey_gate_red", "dam_survey_gate_blue")
 HAS_COL = {"the_eye", "spillway_tunnel"}
@@ -1662,7 +1663,7 @@ def registry_rows(results):
 
 
 def write_park(rows, ground, out_path):
-    """Sets recipe, y and budget on the 40 dressed rows, one line each, leaving every other byte alone."""
+    """Sets recipe, fit (drape), y (null) and budget on the 40 dressed rows, one line each, leaving every other byte alone."""
     import re
     text = Path(out_path).read_text().split("\n")
     done = set()
@@ -1672,10 +1673,11 @@ def write_park(rows, ground, out_path):
             continue
         rid = m.group(1)
         row = rows[rid]
-        y = base_height(row, ground)
         budget = "park_large" if rid in LARGE else "landform"
         line = re.sub(r'"recipe": "[^"]*"', '"recipe": "dam_%s"' % rid, line, count=1)
-        line = re.sub(r'"y": (null|-?[0-9.]+)', '"y": %s' % repr(y), line, count=1)
+        line = re.sub(r'"y": (null|-?[0-9.]+)', '"y": null', line, count=1)
+        if '"fit"' not in line:
+            line = re.sub(r'("recipe": "dam_%s")' % rid, r'\1, "fit": "drape"', line, count=1)
         line = re.sub(r'"budget": "[^"]*"', '"budget": "%s"' % budget, line, count=1)
         text[k] = line
         done.add(rid)
@@ -1683,7 +1685,6 @@ def write_park(rows, ground, out_path):
         if rid in done:
             continue
         row = rows[rid]
-        row = dict(row, y=base_height(row, ground))
         at = next(k for k, line in enumerate(text) if re.match(r'\s*\{"id": "the_eye"', line))
         text.insert(at + 1, "  " + json.dumps(row) + ",")
         done.add(rid)
@@ -1699,7 +1700,7 @@ def main():
     parser.add_argument("--count-only", action="store_true")
     parser.add_argument("--log", default=None)
     parser.add_argument("--registry", default=None, help="write the registry fragment for the built recipes to this file")
-    parser.add_argument("--write-park", action="store_true", help="set recipe, y and budget on the 40 dressed rows of park_dam.json")
+    parser.add_argument("--write-park", action="store_true", help="set recipe, fit, y and budget on the dressed rows of park_dam.json")
     parser.add_argument("--park", default=str(PARK_FILE))
     args = parser.parse_args(argv)
     sys.path.insert(0, str(HERE.parent))

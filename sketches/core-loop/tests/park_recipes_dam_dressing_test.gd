@@ -63,6 +63,7 @@ func _run() -> void:
 	for row: Dictionary in dressed:
 		var id := String(row["recipe"])
 		_t.eq("%s names dam_<its own id>" % row["id"], id, "dam_" + String(row["id"]))
+		_t.check("%s fits drape, takes no y" % row["id"], ParkRecipes.fits_drape(row) and row["y"] == null)
 		_t.check("%s does not stand in as greybox" % id, not ParkRecipes.stands_in(row))
 		_check_files(id, String(row["budget"]), true)
 		_t.check("%s budget %s is landform or park_large" % [row["id"], row["budget"]], BASE_CAP.has(String(row["budget"])))
@@ -76,10 +77,10 @@ func _run() -> void:
 	_check_eye(rows, ground)
 	_check_portal(rows, ground)
 	# Planted stale cases.
-	var plant: Dictionary = (rows["shelf_lip"] as Dictionary).duplicate(true)
-	plant["y"] = float(plant["y"]) + 1.0
+	var plant: Dictionary = (rows["the_eye"] as Dictionary).duplicate(true)
+	plant.erase("fit")
 	var moved := row_misses(plant, ground, 0.0)
-	_t.check("a row whose y moved 1 m turns the seat check red", (moved["misses"] as Array).any(func(m): return String(m).begins_with("seat")), str(moved["misses"]))
+	_t.check("a row that drops its drape fit turns the seat check red", (moved["misses"] as Array).any(func(m): return String(m).begins_with("seat")), str(moved["misses"]))
 	var lifted := row_misses(rows["shelf_lip"], ground, 0.5)
 	_t.check("a row with every vertex lifted 0.5 m turns the flush check red", (lifted["misses"] as Array).any(func(m): return String(m).begins_with("flush")), str(lifted["misses"]))
 	quit(_t.verdict())
