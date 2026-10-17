@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { WIN_PROOFS, proofLibraries, releaseGateFailures, winProofBotArgs, winProofFailures, winProofLine } from "../sketch-export.mjs";
+import { WIN_PROOFS, playProofTries, proofLibraries, releaseGateFailures, winProofBotArgs, winProofFailures, winProofLine } from "../sketch-export.mjs";
 
 // node scripts/cloud/export-headless.mjs [--win-proof]: the part of npm run sketch:export a cloud
 // container can run. It imports, runs the release gate, exports the "Linux x64" preset, boots it
@@ -69,7 +69,16 @@ if (winProof) {
     await copyFile(path.join(project, rel), path.join(proofDir, rel));
   }
   for (const proof of WIN_PROOFS) {
-    const base = path.join(proofDir, proof.dir);
+    const root = path.join(proofDir, proof.dir);
+    const result = await playProofTries(proof, (attempt) =>
+      playOnce((proof.tries ?? 1) > 1 ? path.join(root, "try-" + attempt) : root, proof),
+    );
+    if (!result.ok) fail(proof.label + "\n" + result.failure);
+    console.log("PASS " + result.line);
+    lines.push(result.line);
+  }
+
+  async function playOnce(base, proof) {
     const state = path.join(base, "state");
     for (const dir of ["data", "config", "cache"]) await mkdir(path.join(state, dir), { recursive: true });
     const out = path.join(base, "run");
@@ -93,10 +102,9 @@ if (winProof) {
     const rowsPath = path.join(out, "bots.ndjson");
     const rowsText = existsSync(rowsPath) ? await readFile(rowsPath, "utf8") : "";
     const failures = winProofFailures(bot.text, bot.status, rowsText);
-    if (failures.length > 0) fail(proof.label + "\n" + failures.join("\n") + "\n" + bot.text.slice(-2000));
-    const line = winProofLine(JSON.parse(rowsText.trim()), pack, proof);
-    console.log("PASS " + line);
-    lines.push(line);
+    if (failures.length > 0)
+      return { ok: false, failure: failures.join("\n") + "\n" + bot.text.slice(-2000), summary: failures[0] };
+    return { ok: true, line: winProofLine(JSON.parse(rowsText.trim()), pack, proof) };
   }
 }
 

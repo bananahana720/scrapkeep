@@ -21,6 +21,7 @@ import {
   missingStemsMessage,
   packageName,
   parseArgs,
+  playProofTries,
   parsePresets,
   proofPresetDrift,
   releaseGateFailures,
@@ -467,6 +468,41 @@ test("the park win proof is mandatory, pins pylon_engineer seed 1 and the park t
   assert.throws(() => parseArgs(["--win-proof", "--park-win-proof"]), /unknown argument/);
   const won = { outcome: "won", stage_reached: 6, ticks: 1, wall_seconds: 2 };
   assert.match(winProofLine(won, "/x/proof.pck", park), /pilot pylon_engineer table park, pack/);
+});
+
+test("only the park proof retries, up to 3 tries, and every try's outcome reaches the summary", async () => {
+  assert.deepEqual(WIN_PROOFS.filter((proof) => (proof.tries ?? 1) > 1).map((proof) => [proof.label, proof.tries]),
+    [["win proof (park)", 3]]);
+  const park = WIN_PROOFS.find((proof) => proof.table === "park");
+  const scripted = (results) => {
+    const seen = [];
+    return { seen, play: async (attempt) => { seen.push(attempt); return results[attempt - 1]; } };
+  };
+  const stall = (stage) => ({ ok: false, failure: "stalled " + stage, summary: "outcome stalled at stage " + stage });
+  const win = { ok: true, line: "win proof (park): won at stage 6" };
+
+  const second = scripted([stall(6), win, win]);
+  const passed = await playProofTries(park, second.play);
+  assert.equal(passed.ok, true);
+  assert.deepEqual(second.seen, [1, 2]);
+  assert.equal(passed.line, "win proof (park): won at stage 6 (try 2 of 3; try 1: outcome stalled at stage 6)");
+
+  const never = scripted([stall(6), stall(3), stall(6)]);
+  const failed = await playProofTries(park, never.play);
+  assert.equal(failed.ok, false);
+  assert.deepEqual(never.seen, [1, 2, 3]);
+  assert.equal(failed.failure, "stalled 6");
+
+  const once = scripted([stall(2), win]);
+  const single = await playProofTries(WIN_PROOFS.find((proof) => proof.dir === "cannon"), once.play);
+  assert.equal(single.ok, false);
+  assert.deepEqual(once.seen, [1]);
+
+  const first = scripted([win]);
+  assert.equal((await playProofTries(park, first.play)).line, "win proof (park): won at stage 6 (try 1 of 3)");
+
+  for (const file of ["./sketch-export.mjs", "./cloud/export-headless.mjs"])
+    assert.match(readFileSync(new URL(file, import.meta.url), "utf8"), /playProofTries\(proof, /, file);
 });
 
 test("every win proof's bot args carry its pilot and table, and the cloud export builds them the same way", () => {
