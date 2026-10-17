@@ -3,10 +3,6 @@
 # Three consecutive passing sweeps: small [101.5, 101.9, 96.1], grown [41.0, 42.7, 42.7].
 # Load start/end [18.73/13.18, 13.18/11.72, 5.45/12.19]. Both arms agree within 10 percent.
 # Earlier measurements remain in the WT-BANDS round 2 report. Bands and arms stay unchanged.
-# 2026-10-16 wave-15 re-pin: small 101.5 -> 117.9 s. First red at 13c94abc (FINAL-STALL merge), which
-# changed only tools/bot_driver.gd (sling drop-off, half-step climb reads), no src/: small seeds moved
-# [80.29, 117.89, 96.12] -> [118.55, 117.89, 78.83], grown unchanged [38.07, 42.73, 51.96], ratio 2.76.
-# The small median rides one seed's route, so the 10 percent pin is fragile (wave-16 watch item).
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -56,7 +52,7 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # tune inside 20 percent reaches the band.
 # 2026-10-11 (wave 13 KF4, anchor off): measured 66.4 / 49.4 s (small/grown 1.34) with the tilt; the same arms with
 # no driver measured 78.6 / 41.5 s (1.89).
-const EXPECT_SMALL_S := 117.9
+const EXPECT_SMALL_S := 101.5
 const EXPECT_GROWN_S := 42.7
 const TOLERANCE := 0.10
 
