@@ -37,7 +37,7 @@ const ENDING := {
 	"title": "RETURN TRIP ENTERED",
 	"log": {
 		1: [
-			"Shift log: Brindle routed, anchors collected. Cableway turns without anyone on the handwheel.",
+			"Shift log: Brindle routed, flume running cool. Head house drum turns without anyone on the handwheel.",
 			"Intake clear. Old flood marks inside the housing are one hand higher.",
 		],
 		2: [
