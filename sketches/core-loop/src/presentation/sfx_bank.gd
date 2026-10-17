@@ -52,7 +52,7 @@ const TRIM_DB := {
 	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
-	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0,
+	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0, "hit_on_beat": -5.0,
 	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -7.0, "hurt": -3.0,
 	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
 	"gate_through": -3.0, "launch_roar": -2.0, "event_start": -3.0, "event_end": -6.0,
@@ -501,6 +501,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[_tone(0.2, _hz(41), _hz(41), "saw_dark", 6.0), Synth.seconds(0.14), 1.0]])
 		"hit_thwack":
 			return _mix([[_noise(0.14, 1300.0, 700.0, 30.0), 0, 0.8], [_tone(0.14, 230.0, 85.0, "sine", 26.0), 0, 1.0]], true)
+		"hit_on_beat":  # Andrew Q10 "Sound only" (2026-10-17): a hit on the beat, the thwack under a bright sax stab
+			return _mix([[_noise(0.12, 2600.0, 1400.0, 34.0), 0, 0.7], [_tone(0.12, 260.0, 110.0, "sine", 28.0), 0, 0.8],
+				[_cut(_n("sax_lounge", 81), 0.16), Synth.seconds(0.008), 0.6], [_cut(_n("sax_lounge", 86), 0.14), Synth.seconds(0.008), 0.45]], true)
 		"weapon_zap":
 			return _fm_sweep(0.1, 1500.0, 480.0, 4.0, 30.0)
 		"special_fire":
