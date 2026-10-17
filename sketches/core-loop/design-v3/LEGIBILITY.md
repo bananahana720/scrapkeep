@@ -93,8 +93,8 @@ The pattern cue carries the class for a colour-blind player. At the 150 m read d
 | E22 | `line_cutter` | circle | projectile | 0.60 | logged: the cutter still flies 1.1 s to its ring | 0.75 |
 | E23 | `anchor_crew` | line | ray | 1.00 | in band | 0.75 |
 | E24 | `kite_drone` | circle | area_burst | 0.80 | logged: no interrupt, then a 0.7 s dive | 0.75 |
-| E31 | `ballast_heavy` | circle | area_burst | 1.10 | logged: the brace is the ram window | 0.75 |
-| E32 | `gap_net` | line | ray | 1.00 | in band | 0.75 |
+| E32 | `ballast_heavy` | circle | area_burst | 1.10 | logged: the brace is the ram window | 0.75 |
+| E33 | `gap_net` | line | ray | 1.00 | in band | 0.75 |
 
 ## 3. The harpoon
 

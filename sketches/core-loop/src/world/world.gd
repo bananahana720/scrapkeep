@@ -244,6 +244,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	director.use_row(def, ctx.tuning.option(Director.Tuning.BREATH_KEY) if ctx.tuning != null else "", Callable(ctx.run, "selected_run_tier"))
 	director.threat = def["threat"]
 	director.play_rect = map.play_rect
+	director.terrain = terrain
 	flood.cycle = events.flood
 	var basin: Dictionary = map.basin
 	if not basin.is_empty():

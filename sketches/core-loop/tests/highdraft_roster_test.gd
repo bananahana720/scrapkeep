@@ -105,6 +105,7 @@ func _post(unit, frames := 240) -> bool:
 func _run() -> void:
 	await _boot()
 	_check_rows()
+	_check_placement()
 	await _ballast()
 	await _ballast_grown()
 	await _gap_net()
@@ -112,6 +113,18 @@ func _run() -> void:
 	await _cutter()
 	game.free()
 	quit(t.verdict())
+
+
+# The director stands a ballast heavy on a rim's post near its pack spot, and leaves a spot with
+# no rim in reach (the open gap far from any island) alone.
+func _check_placement() -> void:
+	var director = game.ctx.root.get_node("World").director
+	var spot: Vector2 = director.rim_spot(Vector2(-5.0, 120.0), Vector2(0.0, 60.0))
+	var from_centre := spot.distance_to(Vector2(0.0, 120.0))
+	t.check("HD-1 the director posts a ballast heavy on the island rim", from_centre > 12.0 and from_centre < 18.0
+		and absf(_ground(spot.x, spot.y) - SPAWN_TOP) < 0.5, "spot %s, %.1f m from the island centre" % [spot, from_centre])
+	var open := Vector2(-140.0, 140.0)
+	t.check("HD-2 no rim in reach keeps the spot", director.rim_spot(open, Vector2.ZERO) == open, str(director.rim_spot(open, Vector2.ZERO)))
 
 
 func _check_rows() -> void:
