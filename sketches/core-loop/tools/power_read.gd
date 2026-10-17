@@ -4,6 +4,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # POWER-READ (alpha-status/ambition-map.md, unit 5): how much mightier one pilot's
 # signature hit reads on a grown build than on the first fight. Every pilot slams the
@@ -21,7 +23,9 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 #            and words), centre (changed share of the middle ninth). The runner reads
 #            presence from energy, heat and ink (Andrew's card "Presence, centre clear",
 #            17 Oct 17:28Z). The same window without a hit is reported as noise. Needs a
-#            display (xvfb-run is fine); --render=0 skips it.
+#            display (xvfb-run is fine); --render=0 skips it. Peaks come from the first
+#            HIT_FRAMES, and telegraphs and committed hazards are hidden while pixels are
+#            read: combat geometry (Cannon's rush ring) is not the hit's look.
 #   knock    metres the chaser actually travels while knockback outranks its own steering
 #            (enemy.gd _move), plus the code's own v^2 / 2a reading of the push it got.
 #   sound    cues the hit fired "now" in audio.cue_log, as entries and distinct sounds.
@@ -45,6 +49,10 @@ const SETTLE_FRAMES := 30
 # Long enough for the stage banner and any part-gained card and bell to clear.
 const QUIET_FRAMES := 360
 const WINDOW := 45
+# Pixel peaks come from the hit's own first frames: its bursts, words and ink live about three
+# frames, and the peak lands by frame 8 for every pilot on main. Later frames hold what the hit
+# leaves behind, such as Cannon's rush zone growing to fill the screen.
+const HIT_FRAMES := 15
 const KNOCK_FRAMES := 240
 const SOUND_WAIT_FRAMES := 600
 # A channel moved by more than this (0 to 1) counts the pixel as changed.
@@ -165,7 +173,8 @@ func _measure(row: Dictionary) -> String:
 		await process_frame
 		if is_instance_valid(target) and target._knocked_speed() >= 1.0:
 			travelled = maxf(travelled, (target.global_position - start).dot(direction))
-		if render:
+		if render and f < HIT_FRAMES:
+			row["telegraphs_hidden"] = maxi(int(row.get("telegraphs_hidden", 0)), _hide_telegraphs())
 			await RenderingServer.frame_post_draw
 			var image: Image = root.get_texture().get_image()
 			var read := _changed(before, image)
@@ -258,12 +267,36 @@ func _window(render: bool, before) -> Dictionary:
 		peak[k] = 0.0
 	for f in WINDOW:
 		await process_frame
-		if render:
+		if render and f < HIT_FRAMES:
+			_hide_telegraphs()
 			await RenderingServer.frame_post_draw
 			var read := _changed(before, root.get_texture().get_image())
 			for k in METRICS:
 				peak[k] = maxf(peak[k], read[k])
 	return peak
+
+
+# Telegraphs, hostile threats and every committed hazard, the player's own included (Cannon's
+# rush ring is a hazard the slam commits): combat geometry, not the hit's look.
+func _hide_telegraphs() -> int:
+	var hidden := 0
+	var nodes: Array = get_nodes_in_group("telegraph") + get_nodes_in_group(Threat.GROUP)
+	nodes.append_array(_hazards(_game))
+	for node in nodes:
+		if node is Node3D and node.visible:
+			node.visible = false
+			hidden += 1
+	return hidden
+
+
+func _hazards(node: Node) -> Array:
+	var out: Array = []
+	for child in node.get_children():
+		if child is Hazard:
+			out.append(child)
+		else:
+			out.append_array(_hazards(child))
+	return out
 
 
 func _grab(render: bool):

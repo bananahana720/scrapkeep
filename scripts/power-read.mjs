@@ -236,7 +236,7 @@ ${summary.damage ? `<p class="finding">Grown builds deal ${fx(summary.damage)} t
 <div class="tiles">${tiles}</div>
 ${cards}
 <footer>
-<span>Pilots meeting each goal. Pixel readings are peaks over the hit's first 0.75 s, minus what the scene changes on its own with no hit. Presence is the geometric mean of strength (how far pixels change), colour heat and edge ink (changed pixels that end dark).</span>
+<span>Pilots meeting each goal. Pixel readings are peaks over the hit's first 0.25 s with combat warnings hidden, minus what the scene changes on its own with no hit. Presence is the geometric mean of strength (how far pixels change), colour heat and edge ink (changed pixels that end dark).</span>
 <span>Measured ${esc(stamp)} on ${esc(version)}${renderer ? `, ${esc(renderer)}` : ""}. Software rendering in the cloud draws the game's GL fallback, not the Vulkan look; ratios compare like with like.</span>
 </footer>
 </main>
