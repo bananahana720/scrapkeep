@@ -390,7 +390,7 @@ static func _selectable_node(node) -> bool:
 # An intro row's zone must be a stage of the table. The Warden line plays at engagement in any
 # zone; the second line is the boss's, voiced at the arena of the world's last zone, and is
 # reserved (valid, unplayed) in the world's earlier zones. It is only valid for the boss that
-# the zone's world owns.
+# the zone's world owns. A row with a pilot is that boss's threat line for one pilot.
 static func _intro_zone(issues: Array, name: String, id: String, row: Dictionary) -> void:
 	var parts := String(row.zone).split("-")
 	var world := int(parts[0]) if parts.size() == 2 and parts[0].is_valid_int() else 0
@@ -405,6 +405,16 @@ static func _intro_zone(issues: Array, name: String, id: String, row: Dictionary
 	var subject: String = row.get("subject", "")
 	if subject != "warden" and subject != String(Worlds.row(world).get("boss", "")):
 		_issue(issues, name, "reachable", id, "second intro line needs a boss row for world %d; '%s' is not it" % [world, subject])
+	if not row.has("pilot"):
+		return
+	# A pilot's threat line is the boss's, voiced only where the arena opens: the world's last zone.
+	_ref(issues, name, id, "pilot", row.pilot, ClassDef.all().map(func(p): return p.id))
+	var last := 0
+	for stage in StageDefs.COUNT:
+		if StageDefs.world_of(stage + 1) == world:
+			last = maxi(last, StageDefs.local(stage + 1))
+	if subject == "warden" or local != last:
+		_issue(issues, name, "reachable", id, "pilot line '%s' needs the boss at world %d's arena zone" % [row.pilot, world])
 
 
 static func _objective_ids() -> Array:

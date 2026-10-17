@@ -133,7 +133,8 @@ func _validate_rules() -> void:
 		_t.check("validate rejects a PENDING_ART id that is not a row (none pending)", Cosmetics.validate(rows, pilots).is_empty())
 		_t.check("validate rejects a PENDING_ART id that is a starter (none pending)", rows.keys().all(func(id): return not Cosmetics.is_pending(id)))
 	else:
-		var pending_id := String(Cosmetics.PENDING_ART[0])
+		var pending: Array = Cosmetics.PENDING_ART
+		var pending_id := String(pending[0])
 		var missing := rows.duplicate(true)
 		missing.erase(pending_id)
 		var problems := Cosmetics.validate(missing, pilots)
