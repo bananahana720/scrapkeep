@@ -1,0 +1,370 @@
+{
+ "format": 1,
+ "theme": "title_a",
+ "bank": "menu",
+ "rate": 44100,
+ "key": "D",
+ "key_offset": 0,
+ "stems": [
+  "drums",
+  "bass",
+  "other"
+ ],
+ "level_db": 0.0,
+ "pre_roll": 4096,
+ "post_roll": 1024,
+ "loop_join": 441,
+ "join_ms": 10.0,
+ "silent_db": -80.0,
+ "sources": {
+  "calm": {
+   "take": "title_a",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/sketch-1/title-a-sax-noir/f91247ea-1d1c-c226-cecc-5635e9a422e4.wav",
+   "pick": "title A, sax noir (s2101)",
+   "trim_samples": 338432,
+   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/drums.wav",
+     "sha256": "bb799a2e8cc7d4ad0ccfad0ff81cb67b09dd21a8395f903fdd5a17e4feb42100"
+    },
+    "bass": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/bass.wav",
+     "sha256": "87e369192d656e16c6f1847e5bfcd37806398bff1bab539ecdb8391c4e205dbb"
+    },
+    "other": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/other.wav",
+     "sha256": "664c981ba4639907be19da520d49d86e38bb230abe23392f3d475a4558a79a99"
+    },
+    "vocals": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/vocals.wav",
+     "sha256": "b8bf95d9069eb0795b11e1c4d3fb6d6d21808ca1fa1c7aed688f7d0d2b1e8fdd"
+    }
+   },
+   "other_stem": "other plus vocals, scaled to peak 1 if over"
+  },
+  "travel": {
+   "take": "title_a",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/sketch-1/title-a-sax-noir/f91247ea-1d1c-c226-cecc-5635e9a422e4.wav",
+   "pick": "title A, sax noir (s2101)",
+   "trim_samples": 1651200,
+   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/drums.wav",
+     "sha256": "bb799a2e8cc7d4ad0ccfad0ff81cb67b09dd21a8395f903fdd5a17e4feb42100"
+    },
+    "bass": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/bass.wav",
+     "sha256": "87e369192d656e16c6f1847e5bfcd37806398bff1bab539ecdb8391c4e205dbb"
+    },
+    "other": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/other.wav",
+     "sha256": "664c981ba4639907be19da520d49d86e38bb230abe23392f3d475a4558a79a99"
+    },
+    "vocals": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/vocals.wav",
+     "sha256": "b8bf95d9069eb0795b11e1c4d3fb6d6d21808ca1fa1c7aed688f7d0d2b1e8fdd"
+    }
+   },
+   "other_stem": "other plus vocals, scaled to peak 1 if over"
+  },
+  "cadence": {
+   "take": "title_a",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/sketch-1/title-a-sax-noir/f91247ea-1d1c-c226-cecc-5635e9a422e4.wav",
+   "pick": "title A, sax noir (s2101)",
+   "trim_samples": 3784448,
+   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/drums.wav",
+     "sha256": "bb799a2e8cc7d4ad0ccfad0ff81cb67b09dd21a8395f903fdd5a17e4feb42100"
+    },
+    "bass": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/bass.wav",
+     "sha256": "87e369192d656e16c6f1847e5bfcd37806398bff1bab539ecdb8391c4e205dbb"
+    },
+    "other": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/other.wav",
+     "sha256": "664c981ba4639907be19da520d49d86e38bb230abe23392f3d475a4558a79a99"
+    },
+    "vocals": {
+     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_a/vocals.wav",
+     "sha256": "b8bf95d9069eb0795b11e1c4d3fb6d6d21808ca1fa1c7aed688f7d0d2b1e8fdd"
+    }
+   },
+   "other_stem": "other plus vocals, scaled to peak 1 if over"
+  }
+ },
+ "clips": {
+  "calm": {
+   "parent": "picked",
+   "take": "title_a",
+   "source_state": "calm",
+   "source_bars": "5-20",
+   "source_start": 338432,
+   "take_start": 338432,
+   "bpm": 129,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 1316864,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 1316864,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "calm.drums.ogg",
+    "bass": "calm.bass.ogg",
+    "other": "calm.other.ogg"
+   }
+  },
+  "travel": {
+   "parent": "picked",
+   "take": "title_a",
+   "source_state": "travel",
+   "source_bars": "21-36",
+   "source_start": 1651200,
+   "take_start": 1651200,
+   "bpm": 129,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 1316864,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 1316864,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "travel.drums.ogg",
+    "bass": "travel.bass.ogg",
+    "other": "travel.other.ogg"
+   }
+  },
+  "cadence": {
+   "parent": "picked",
+   "take": "title_a",
+   "source_state": "cadence",
+   "source_bars": "47-48",
+   "source_start": 3784448,
+   "take_start": 3784448,
+   "bpm": 129,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 2,
+   "entry": 4096,
+   "exit": 168192,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 169216,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "cadence.drums.ogg",
+    "bass": "cadence.bass.ogg",
+    "other": "cadence.other.ogg"
+   }
+  }
+ },
+ "sections": {
+  "calm": {
+   "clip": "calm",
+   "game": "shelf, closed Warden, pressure low",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full"
+  },
+  "travel": {
+   "clip": "travel",
+   "game": "shelf, pressure up",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full"
+  },
+  "pivot": {
+   "clip": "cadence",
+   "game": "boss or Warden entry",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full",
+   "hold_bars": 1,
+   "then": "build"
+  },
+  "build": {
+   "clip": "calm",
+   "game": "bank and lift, the Warden closed",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full",
+   "reenter_bar": 1
+  },
+  "telegraph": {
+   "clip": "calm",
+   "game": "the pulse charging",
+   "enter": "beat",
+   "phase": "keep",
+   "profile": "full"
+  },
+  "open": {
+   "clip": "calm",
+   "game": "window open, the held breath",
+   "enter": "beat",
+   "phase": "keep",
+   "profile": "breath"
+  },
+  "drop": {
+   "clip": "cadence",
+   "game": "landed on the core",
+   "enter": "contact",
+   "phase": "start",
+   "profile": "full",
+   "hold_bars": 1,
+   "then": "follow"
+  },
+  "break": {
+   "clip": "calm",
+   "game": "the Warden breaks: breath before home",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "breath",
+   "bars": 4,
+   "then": "return",
+   "directed": true
+  },
+  "return": {
+   "clip": "cadence",
+   "game": "kill cadence, A7b9 then D",
+   "enter": "then",
+   "phase": "start",
+   "profile": "full",
+   "directed": true,
+   "then": "home"
+  },
+  "home": {
+   "clip": "calm",
+   "game": "back on the shelf at 172",
+   "enter": "then",
+   "phase": "start",
+   "profile": "full",
+   "bars": 8,
+   "then": "release",
+   "directed": true
+  }
+ },
+ "set_piece": [
+  "break",
+  "return",
+  "home"
+ ],
+ "profiles": {
+  "full": {
+   "drums": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  },
+  "lounge": {
+   "drums": {
+    "volume_db": -12.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": -4.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  }
+ },
+ "breath": {
+  "raw": {
+   "stems": {
+    "drums": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "the take as ACE played it: every stem at 0 dB"
+  },
+  "hard": {
+   "stems": {
+    "drums": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": -8.0,
+     "lowpass_hz": 900,
+     "lowpass_order": 2
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "round2/automation/open.json"
+  },
+  "gentle": {
+   "stems": {
+    "drums": {
+     "volume_db": -12.0,
+     "lowpass_hz": 2000,
+     "lowpass_order": 2
+    },
+    "bass": {
+     "volume_db": -6.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 60.0,
+   "ramp_out_ms": 20.0,
+   "source": "round2/automation/open-gentle.json"
+  }
+ },
+ "breath_default": "hard",
+ "cuts": "nominal-unverified",
+ "timing_verified": false
+}
