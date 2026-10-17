@@ -108,7 +108,7 @@ func lamp_material(slot: String, fallback: Material) -> Material:
 
 
 func _on_world_fact(kind: String, at: Vector3) -> void:
-	if kind != "breach_opened" or not active or not available:
+	if kind != "breach_opened" or not active or not available or not "breach_plates" in _map:
 		return
 	for plate in _map.breach_plates:
 		var rect: Rect2 = plate["rect"]

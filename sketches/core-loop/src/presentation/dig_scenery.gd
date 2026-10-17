@@ -4,6 +4,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const DigFx := preload("res://src/presentation/dig_fx.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const ParkSites := preload("res://src/presentation/park_sites.gd")
 
 # The Dig's scenery (alpha dress push, unit WDG): both zones' landmarks, cut faces, rubble,
 # struts, carts, shells and lamp lines along the rim, the drum look on every breach cover, the
@@ -54,15 +55,24 @@ static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
 
 
+# A Dig park stage (park_pit, park_sinkhole) takes the park pass (build_park). A park stage's root
+# is freed when it leaves memory, so its scenery is built again on the entry that rebuilds it.
 static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	for row in ctx.stages.DEFS:
-		if row["stage"] == stage and row["map"] in ["dig", "dig_deep"]:
+		if row["stage"] != stage:
+			continue
+		var map = ctx.terrain.map_for(stage)
+		var park := ParkSites.is_park(map) and int(row.get("world", 0)) == 2
+		if row["map"] in ["dig", "dig_deep"] or park:
 			var root: Node3D = ctx.terrain.geometry_root(stage)
 			if root.get_node_or_null("DigScenery") == null:
-				build(root, ctx.terrain.map_for(stage), row["map"])
+				if park:
+					build_park(root, map, ctx.terrain.ground_callable(stage), stage)
+				else:
+					build(root, map, row["map"])
 			var fx := root.get_node("DigScenery/DigFx")
 			fx.bind_context(ctx, stage)
-			return
+		return
 
 
 static func build(stage_root: Node3D, map: RefCounted, map_id: String) -> Node3D:
@@ -89,6 +99,168 @@ func _build(scenery: Node3D, stage_root: Node3D, map: RefCounted, map_id: String
 	_flush(scenery, batches)
 	_breach_skins(stage_root, map)
 	_fx.finish_build()
+
+
+# The park pass: the same kit seated on the park's own rows (park_sites.gd). Cut faces, rubble,
+# struts and shells stand at the foot of the pit's benches and along the tubes and adits; ore carts
+# park beside the haul roads; lamp lines hang on the walls of the adits (straight rails) and the
+# lava tubes (curved rails), where the world look's lamp pool lights them. A park's ground is its
+# own bake, so the stone beds stay on the old maps, and a park has no breach plates to skin.
+static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3D:
+	var scenery := Node3D.new()
+	scenery.name = "DigScenery"
+	stage_root.add_child(scenery)
+	var builder := new()
+	builder._build_park(scenery, stage_root, map, ground, stage)
+	return scenery
+
+
+func _build_park(scenery: Node3D, stage_root: Node3D, map, ground: Callable, stage: int) -> void:
+	_fx = DigFx.new()
+	_fx.name = "DigFx"
+	scenery.add_child(_fx)
+	_fx.prepare(stage_root, map)
+	var sites := ParkSites.new(map, ground, stage)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = ("dig_scenery_" + String(map.park["map"])).hash()
+	var batches := {}
+	_park_rim(batches, sites, rng)
+	_park_carts(batches, sites, rng)
+	_flush(scenery, batches)
+	_park_lamps(batches, sites)
+	_flush(scenery, batches)
+	_fx.finish_build()
+
+
+# Rows whose flanks wear the cut kit, and how many seats each row draws.
+const PARK_RIM_ROWS := {"bank": ["open_pit", "tailings_bench"], "terrace": ["open_pit", "tailings_bench"],
+	"tunnel": ["lava_tube", "adit"], "half_pipe": ["lava_tube"], "drop": ["shaft", "lava_tube"]}
+const PARK_RIM_SEATS := 3
+const PARK_FACES_MAX := 48
+const PARK_TOE_MAX := 72
+
+
+func _park_rim(batches: Dictionary, sites: ParkSites, rng: RandomNumberGenerator) -> void:
+	var rows := []
+	for element in PARK_RIM_ROWS:
+		rows.append_array(sites.rows([element], PARK_RIM_ROWS[element]))
+	_shuffle(rows, rng)
+	var kinds := {"long": "cut_face_long.glb", "scoop": "cut_face_scoop.glb"}
+	var halves := {"long": 4.0, "scoop": 3.0}
+	var faces := 0
+	var toes := 0
+	for row in rows:
+		for seat in sites.flank(row, PARK_RIM_SEATS, rng.randf_range(2.0, 6.0), rng):
+			var at: Vector2 = seat["at"]
+			var yaw := ParkSites.yaw_toward(seat["inward"])
+			var roll := rng.randf()
+			if roll < 0.4 and faces < PARK_FACES_MAX:
+				var kind := "long" if rng.randf() < 0.5 else "scoop"
+				var s := rng.randf_range(1.7, 2.5)
+				var foot := _park_seat(sites, at, seat["inward"], halves[kind] * s)
+				if foot.y <= 3.0:
+					var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(at.x, foot.x - BURY * s, at.y))
+					if _put(batches, _stone(kinds[kind]), xf):
+						_fx.faces.append(xf * Vector3(0, 3.0, -0.7))
+						faces += 1
+				continue
+			if toes >= PARK_TOE_MAX:
+				continue
+			var path := _stone("rubble_cluster.glb")
+			var s := rng.randf_range(2.2, 3.4)
+			var bury := 0.1
+			var any_yaw := true
+			if roll < 0.7:
+				path = _mech("strut_tall.glb" if rng.randf() < 0.55 else "strut_bent.glb")
+				s = rng.randf_range(2.0, 3.0)
+				any_yaw = false
+			elif roll < 0.85:
+				path = _mech("shell_crescent.glb" if rng.randf() < 0.5 else "shell_saddle.glb")
+				s = rng.randf_range(2.2, 3.2)
+				bury = 0.05
+			var foot := _park_seat(sites, at, seat["inward"], 1.5 * s)
+			if foot.y > 2.5:
+				continue
+			var turn := yaw + (rng.randf_range(0.0, TAU) if any_yaw else rng.randf_range(-0.25, 0.25))
+			_put(batches, path, Transform3D(Basis(Vector3.UP, turn).scaled(Vector3.ONE * s), Vector3(at.x, foot.x - bury * s, at.y)))
+			toes += 1
+
+
+# The haul roads: an ore cart parked beside a pit ramp or a tailings bench, now and then.
+const PARK_CARTS_MAX := 10
+
+
+func _park_carts(batches: Dictionary, sites: ParkSites, rng: RandomNumberGenerator) -> void:
+	var rows := sites.rows(["flow_line", "bank"], ["open_pit", "tailings_bench", "adit"])
+	_shuffle(rows, rng)
+	var carts := 0
+	for row in rows:
+		if carts >= PARK_CARTS_MAX:
+			return
+		for seat in sites.flank(row, 1, rng.randf_range(2.0, 4.0), rng):
+			var at: Vector2 = seat["at"]
+			var s := 2.2
+			var foot := _park_seat(sites, at, seat["inward"], 1.6 * s)
+			if foot.y > 1.5:
+				continue
+			var yaw := ParkSites.yaw_toward(seat["inward"]) + PI * 0.5 + rng.randf_range(-0.2, 0.2)
+			var body := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(at.x, foot.x, at.y))
+			var body_path := cart_dir + "ore_cart_body.glb"
+			if not _put(batches, body_path, body):
+				return
+			for socket: Transform3D in _sockets(body_path, "socket_wheel_"):
+				_put(batches, cart_dir + "ore_cart_wheel.glb", body * socket)
+			_cart_bodies.append(body)
+			carts += 1
+
+
+# A lamp line on each tube, adit or haul-ramp wall: from the row's centre line, walk out until the
+# ground stands LAMP_WALL_M over the floor, and hang the rail there facing the floor. Every other tube
+# section takes one, so the lamps pace the run instead of lining it.
+const LAMP_WALL_M := 3.0
+const PARK_LAMPS_MAX := 32
+
+
+func _park_lamps(batches: Dictionary, sites: ParkSites) -> void:
+	var line := 0
+	var tubes := sites.rows(["tunnel", "half_pipe"], ["lava_tube", "adit", "flooded_shaft"]) + sites.rows(["flow_line"], ["open_pit"])
+	for k in tubes.size():
+		if line >= PARK_LAMPS_MAX:
+			return
+		var row: Dictionary = tubes[k]
+		var curved := String(row["landform"]) == "lava_tube"
+		if curved and k % 2 == 1:
+			continue
+		var f := ParkSites.frame(row)
+		var centre: Vector2 = f["at"]
+		var floor_y := sites.height(centre)
+		var side := 1.0 if line % 2 == 0 else -1.0
+		var c := 0.5
+		var reach := float(f["half_width"]) + 8.0
+		while c < reach and sites.height(centre + f["cross"] * side * c) < floor_y + LAMP_WALL_M:
+			c += 0.5
+		if c >= reach:
+			continue
+		var p: Vector2 = centre + f["cross"] * side * (c - 0.4)
+		var xf := Transform3D(Basis(Vector3.UP, ParkSites.yaw_toward(-f["cross"] * side)), Vector3(p.x, floor_y + LAMP_WALL_M, p.y))
+		for m in (2 if curved else 3):
+			var file := "lamp_curve_module.glb" if curved else "lamp_straight_module.glb"
+			if not _put(batches, _mech(file), xf, line * 0.73, m == 1):
+				break
+			xf = xf * Transform3D(Basis.IDENTITY, Vector3(3.0, 0, -0.35) if curved else Vector3(2.667, 0, 0))
+		line += 1
+
+
+# The lowest ground across a piece's width at a seat, and the spread: (low, high - low).
+static func _park_seat(sites: ParkSites, at: Vector2, inward: Vector2, half: float) -> Vector2:
+	var along := Vector2(-inward.y, inward.x)
+	var low := INF
+	var high := -INF
+	for k in [-1.0, 0.0, 1.0]:
+		var h: float = sites.height(at + along * k * half)
+		low = minf(low, h)
+		high = maxf(high, h)
+	return Vector2(low, high - low)
 
 
 # The ground's beds: the Dig's own stone material over the terrain mesh. The preset system
