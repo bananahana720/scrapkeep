@@ -40,6 +40,7 @@ var _lobber: Node3D
 # The wave 9 units still waiting on the ball's teleport, and where the ball started.
 var _w9_units := {}
 var _w9_home := Vector3.ZERO
+var _roof_fall: Node3D
 # Set by the last case; a script error that aborts a case leaves it false.
 var _last_case_ran := false
 
@@ -82,7 +83,10 @@ func _physics_process(delta: float) -> bool:
 				_step = 3
 		3:
 			_clock += delta
-			if _combat.discovered.has("shell_return") or _clock > 4.0:
+			var roof_done: bool = not is_instance_valid(_roof_fall) or _combat.discovered.has("roof_drop")
+			if (_combat.discovered.has("shell_return") and roof_done) or _clock > 4.0:
+				_report("roof_drop", _combat.discovered.has("roof_drop"),
+					"a rammed prop's roof crushed the drill crew under it")
 				_report("shell_return", _combat.discovered.has("shell_return"),
 					"a batted shell landed on its own lobber and killed it (%.2f s after the bat)" % _clock)
 				_warden_tricks()
@@ -221,6 +225,14 @@ func _w9_tricks() -> void:
 	for node in [rig, cutter, crew]:
 		if is_instance_valid(node):
 			node.queue_free()
+
+	# A rammed prop drops its roof on the drill crew sheltering under it. The roof lands
+	# after its warning, so it reports beside the shell (step 3).
+	var shoring: Node3D = _w9_spawn("prop_crew", home + Vector3(-16.0, 0.0, -12.0))
+	shoring.set_physics_process(false)
+	var mate: Node3D = _w9_spawn("drill_crew", shoring.roof_centre())
+	mate.set_physics_process(false)
+	_roof_fall = shoring.knock_prop()
 	_w10_pack_tricks(home)
 
 	var burrower: Node3D = _w9_spawn("burrower", home + Vector3(8.0, 0.0, 0.0))

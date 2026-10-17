@@ -173,6 +173,7 @@ const CHASSIS := {
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
+	"prop_crew": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Timber prop holding a cracked roof frame over its pack"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.

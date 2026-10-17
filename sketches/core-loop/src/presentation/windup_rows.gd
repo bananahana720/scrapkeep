@@ -57,6 +57,8 @@ const ROWS := {
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"kite_drone": {"color_role": "hazard", "shape": "diamond", "sound": "warn_dive", "attacks": {"E24": ["warn_seconds"]},
 		"idle": {"style": "hover", "amplitude": 0.07, "beats": 2.5}, "death": {"style": "spin_down", "parts": 3, "seconds": 0.45}},
+	"prop_crew": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E31": ["ROOF_WARN"]},
+		"idle": {"style": "sway", "amplitude": 0.03, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 }
 
 

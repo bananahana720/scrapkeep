@@ -31,7 +31,9 @@ const BOSS_SUMMONS := {
 # Roster kinds no table, site or summon reaches today. Each keeps its script and gets no
 # new entry (ST4 ruling 1); the test fails if one becomes reachable, so its entry is written then.
 const NEVER_SPAWNS := ["miniboss", "vault", "netcaster", "bola_thrower", "gyro_jammer", "swatter",
-	"ramp_flipper", "catch_trap", "reactor_relic", "hooker"]
+	"ramp_flipper", "catch_trap", "reactor_relic", "hooker",
+	# No Dig pack carries it until the enemy identity thread places it (WORLD-ROSTERS.md).
+	"prop_crew"]
 
 
 func _initialize() -> void:

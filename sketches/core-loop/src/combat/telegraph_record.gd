@@ -95,6 +95,14 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": ""},
 	"E24": {"kind": "kite_drone", "pre_shoot": 0.8, "cooldown": 2.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A dive that no knock interrupts: the mark lamp paints the spot 0.8 s before the 0.7 s dive."},
+	"E31": {"kind": "prop_crew", "pre_shoot": 1.0, "cooldown": 0.0, "radius": 3.3, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "The player starts it: ramming the prop drops the roof, which warns 1.0 s before it lands. It never repeats, so it has no cooldown."},
+}
+
+# Pack attacks the player starts and the unit never repeats: no cycle to measure, so the
+# record's cooldown is 0 and the recovery check does not apply. Keyed by the ATTACK_ROWS id.
+const PLAYER_STARTED := {
+	"E31": "Prop crew roof drop: a ram on the prop starts it once; the crew has no attack of its own (design-v3/WORLD-ROSTERS.md).",
 }
 
 # Warden attacks keep their own timing (KF2 to KF4 report each one's charge, recovery and

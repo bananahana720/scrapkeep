@@ -101,6 +101,12 @@ const ENTRIES := [
 		"clue": "a circling kite + a shot, or a dive mark + a roll away",
 		"text": "Rides the thermals out of reach and dives on the spot it marks; shoot it while it circles or leave the mark.",
 	},
+	{
+		"id": "roof_drop", "name": "Bring Down the Roof",
+		"hint": "One timber holds up everything over that crew.",
+		"clue": "a prop crew's shored roof + a ram from the wall",
+		"text": "Shores a cracked roof over its pack; ram the prop from the wall side and the roof comes down on them, and on you if you are on the floor.",
+	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
 	{
@@ -276,6 +282,7 @@ const DETECTORS := {
 	"line_cut": {"kind": "line_cutter", "script": "res://src/combat/line_cutter.gd"},
 	"deck_winch": {"kind": "anchor_crew", "script": "res://src/combat/anchor_crew.gd"},
 	"thermal_dive": {"kind": "kite_drone", "script": "res://src/combat/kite_drone.gd"},
+	"roof_drop": {"kind": "prop_crew", "script": "res://src/combat/prop_crew.gd"},
 	"heavy_roll": {"kind": "mag_trapper", "script": "res://src/combat/mag_trapper.gd"},
 	"plate_peel": {"kind": "plated_brute", "script": "res://src/combat/plated_brute.gd"},
 	"cable_snap": {"kind": "winch_drone", "script": "res://src/combat/winch_drone.gd"},
