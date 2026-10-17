@@ -258,6 +258,14 @@ signal escape_acted(piece: String, style: String)
 # The companion's driver rows (Companion.DRIVERS); every module act asks Companion.pick()
 # against this table, so a test or the lab can reorder rows without a code edit.
 var drivers: Dictionary = Companion.DRIVERS
+# COMPANION-GROWS: the assist gauge (0 to Companion.ASSIST_FULL) and the assists called this
+# run. companion_assisted carries {id, name, word, cue, at, radius, knock, layers, hits,
+# mark}; companion_body.gd shows it. The gauge clears on run start and every attempt.
+signal companion_assisted(assist: Dictionary)
+signal companion_assist_full
+var assist_charge := 0.0
+var assists := 0
+var last_assist := {}
 var escape_acts := 0
 var escape_lane := {}
 var _escape := {}
@@ -333,6 +341,7 @@ func _init() -> void:
 		"execute": _door_execute, "events": _door_events}
 	door.hook("hit", "primer_mesh", _hook_primer_mesh)
 	door.hook("hit", "companion_ram", _hook_companion_ram)
+	door.hook("hit", "companion_assist", _hook_companion_assist)
 
 
 func _stage_table():
@@ -458,6 +467,9 @@ func setup(ctx_ref) -> void:
 		_echo = {}
 		_marks = {}
 		_primed = {}
+		assist_charge = 0.0
+		assists = 0
+		last_assist = {}
 		_prow_until = {}
 		_clamped = {}
 		_escape = {}
@@ -668,6 +680,113 @@ func _hook_primer_mesh(hit: Dictionary) -> void:
 
 func _hook_companion_ram(hit: Dictionary) -> void:
 	_companion_ram(hit["enemy"], hit["kind"], hit["result"])
+
+
+# --- Companion: the assist (companion.gd ASSIST_*) ----------------------------------
+# A hit that removed HP fills the gauge; a ram with the gauge full calls the assist at the
+# struck foe. The assist deals through _trail_deal, so it takes no door pass, fires no hook
+# and never refills the gauge. Posture fighters keep their own rules and are left out.
+func _hook_companion_assist(hit: Dictionary) -> void:
+	if ctx.run.companion.is_empty() or float(hit["result"].get("dealt", 0.0)) <= 0.0:
+		return
+	if is_instance_valid(hit["enemy"]) and _fights_posture(hit["enemy"]):
+		return
+	var kind: String = hit["kind"]
+	if kind == Companion.ASSIST_TRIGGER and assist_ready():
+		_call_assist(hit["at"], float(hit["result"]["dealt"]))
+		return
+	_charge_assist(kind)
+
+
+func _charge_assist(kind: String) -> void:
+	if ctx.run.companion.is_empty():
+		return
+	var was := assist_ready()
+	assist_charge = Companion.assist_charge(assist_charge, kind)
+	if assist_ready() and not was:
+		companion_assist_full.emit()
+
+
+func assist_ready() -> bool:
+	return assist_charge >= Companion.ASSIST_FULL
+
+
+# 0 to 1, for the halo.
+func assist_fill() -> float:
+	return clampf(assist_charge / Companion.ASSIST_FULL, 0.0, 1.0)
+
+
+func _call_assist(at: Vector3, dealt: float) -> void:
+	var sockets: Array = ctx.run.companion.get("sockets", [])
+	var row := Companion.assist_of(sockets)
+	var heft: int = ctx.run.heft_class() if ctx.run.has_method("heft_class") else 1
+	var power := Companion.assist_power(heft)
+	var radius: float = power["radius"]
+	var ball: Vector3 = ctx.player.ball_position()
+	var travel: Vector3 = ctx.player.planar_velocity()
+	travel.y = 0.0
+	var dir := travel.normalized() if travel.length_squared() > 0.01 else (at - ball).normalized()
+	if dir.length_squared() < 0.01:
+		dir = Vector3.FORWARD
+	var damage := maxf(dealt, Companion.ASSIST_DAMAGE_FLOOR)
+	# Spent before any damage, so nothing a kill sets off can call it twice.
+	assist_charge = 0.0
+	assists += 1
+	var struck := _assist_targets(row["shape"], at, ball, dir, radius)
+	for enemy in struck:
+		_trail_deal(enemy, damage, "companion_assist", "item_proc")
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		if row["prime"]:
+			_primed[enemy.get_instance_id()] = _clock + Companion.PRIMER_SECONDS
+		if row["shove"] and enemy.has_method("knock"):
+			var flat: Vector3 = enemy.global_position - (ball if row["shape"] == "lane" else at)
+			flat.y = 0.0
+			var away := flat.normalized() if flat.length_squared() > 0.0001 else dir
+			var weight = enemy.get("weight")
+			enemy.knock(away + Vector3.UP * 0.35, Companion.ASSIST_KNOCK * float(power["knock"]) * (float(weight) if weight != null else 1.0))
+	if row["slick"] and (escape_lane.is_empty() or _clock >= float(escape_lane["until"])):
+		escape_lane = {"from": ball, "dir": dir, "length": radius * 2.0, "half_width": Companion.ESCAPE_LANE_HALF_WIDTH,
+			"friction": Companion.ESCAPE_LANE_FRICTION, "hold": maxf(travel.dot(dir), Companion.ESCAPE_LANE_FLOOR),
+			"until": _clock + Companion.ASSIST_SLICK_SECONDS}
+	if row["shape"] == "lane":
+		effects.arc(ball, ball + dir * radius * 2.0, Palette.VERDIGRIS)
+	else:
+		effects.ring(at, radius, Palette.VERDIGRIS)
+	last_assist = {"id": row["id"], "name": row["name"], "word": row["word"], "cue": row["cue"], "at": at,
+		"radius": radius, "knock": power["knock"], "area": power["area"], "layers": power["layers"],
+		"hits": struck.size(), "mark": int(Companion.mark_of(heft)["mark"])}
+	companion_assisted.emit(last_assist)
+
+
+# The foes an assist of this shape hits: the nearest one ("single"), every one within radius
+# of at ("ring"), or every one in a lane from the ball along dir for twice the radius.
+func _assist_targets(shape: String, at: Vector3, ball: Vector3, dir: Vector3, radius: float) -> Array:
+	var found := []
+	var nearest: Node3D = null
+	var best := INF
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()) or _fights_posture(enemy):
+			continue
+		var flat: Vector3 = enemy.global_position - at
+		flat.y = 0.0
+		match shape:
+			"single":
+				if flat.length() <= radius and flat.length() < best:
+					best = flat.length()
+					nearest = enemy
+			"ring":
+				if flat.length() <= radius:
+					found.append(enemy)
+			"lane":
+				var rel: Vector3 = enemy.global_position - ball
+				rel.y = 0.0
+				var along := rel.dot(dir)
+				if along >= 0.0 and along <= radius * 2.0 and (rel - dir * along).length() <= radius * Companion.ASSIST_LANE_HALF_WIDTH:
+					found.append(enemy)
+	if nearest != null:
+		found.append(nearest)
+	return found
 
 
 # --- Companion: conductive primer (companion.gd PRIMER_*) ---------------------------
@@ -3649,6 +3768,8 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
 	var riding: bool = ultimate != null and ultimate.active()
 	ctx.run.damage(amount, source)
+	if not riding:
+		_charge_assist("hull")
 	if ctx.calm or riding:
 		return
 	# The damage always lands; what the hit may take is the stop, and that goes through
@@ -3837,6 +3958,7 @@ func _start_attempt() -> void:
 	_pulse_left = 0.0
 	_prow_until.clear()
 	_primed.clear()
+	assist_charge = 0.0
 	_clamped.clear()
 	_exposed.clear()
 	_spring_until = -1.0
