@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "d1acc7152a3de9b8b3beedec243a12142e90ddaf6ed74d6513fe9568759bcc89",
+  "bake_sha256": "7257082181d0398e24b1ba55555410a3c4686ff858ba3508484f1f4208691da7",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 943367,
-  "edges": 315278,
+  "bytes": 944321,
+  "edges": 315004,
   "first_failed": "",
   "flags": {
-    "deck": 55,
-    "door_ok": 39895,
+    "deck": 37,
+    "door_ok": 39877,
     "line": 417,
-    "open": 40438,
-    "sight_ok": 9696,
+    "open": 40420,
+    "sight_ok": 9715,
     "under": 18
   },
   "full_visit_m": 1909,
   "full_visit_ratio": "1.363",
-  "graph_sha256": "c552b2215db7f31f03f87e7dc5491f464094cff37cce9da3fdf25eab750a6848",
+  "graph_sha256": "ee9f02d1dfdad0472b9d6d0ba57790101ec650232ecb83bf07c1b2d14cb8bd05",
   "line_errors": [],
   "line_path_nodes": 175,
   "longest_est_m": 2038,
   "map": "park_sinkhole",
-  "nodes": 40456,
-  "park_sha256": "87d9bf3dc7d3422a2e9799a7834f4bb942890c55fcae13f213380abe32d857a0",
+  "nodes": 40438,
+  "park_sha256": "33b3da7d47e4806e41a1cca69e5fa1484fd3786d4fcf31c9ff1a8a9c5c484cb2",
   "pockets": [
     {
       "clear_ring": [],
@@ -146,6 +146,7 @@
     "east_haulage": [],
     "east_loop": [],
     "eruption_lip": [],
+    "gallery_lap": [],
     "main": [],
     "main_lower": [],
     "main_upper": [],
@@ -191,14 +192,6 @@
   "tool_sha256": "da6fdfdba7b82b109309fba8b5131587e1d7d174a839b79191201df3d2ea2f9d",
   "zones": {
     "anchors": [
-      {
-        "cost": 1418.1,
-        "d_landmark": 56.0,
-        "name": "pump_gallery",
-        "on_route": false,
-        "rank": 0,
-        "viable": false
-      },
       {
         "cost": 1292.7,
         "d_landmark": 302.3,
@@ -248,11 +241,11 @@
         "viable": false
       }
     ],
-    "count": 151,
+    "count": 184,
     "crossings": {
-      "drop": 22,
+      "drop": 33,
       "ride": 45,
-      "walk": 374
+      "walk": 458
     },
     "hidden": [
       {
