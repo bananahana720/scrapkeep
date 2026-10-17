@@ -9,6 +9,11 @@ const REGISTRY := "res://assets/registry.json"
 
 static var _shipping := {}
 
+# Ids the rule must refuse: an unregistered id, and a real ROWS id whose asset has no ships:true
+# registry entry. A rule that only asks "is it a row" accounts the second and fails.
+const NEGATIVE_ROW := "companion_paint_night"
+const NEGATIVES := ["trail_unregistered_probe", NEGATIVE_ROW]
+
 
 static func shipping_ids() -> Dictionary:
 	if _shipping.is_empty():
