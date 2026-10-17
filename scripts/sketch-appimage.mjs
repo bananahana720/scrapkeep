@@ -61,6 +61,8 @@ export function newestTarball(directory, list = readdirSync, mtime = (file) => s
 }
 
 // Exec names the command on PATH inside the AppDir; install.sh points it at the installed copy.
+// The sitting action (decisions.tsv P-R21 and B7) launches with --profile=sitting, which opens all
+// six pilots and never writes the real save; the plain entry plays the unlock ladder.
 export function desktopEntry({ exec, icon = APP_ID }) {
   return (
     [
@@ -74,6 +76,11 @@ export function desktopEntry({ exec, icon = APP_ID }) {
       "Terminal=false",
       "Categories=Game;ActionGame;",
       "Keywords=scrap;mech;harpoon;roguelite;",
+      "Actions=sitting;",
+      "",
+      "[Desktop Action sitting]",
+      "Name=Scrapkeep sitting (all pilots, save untouched)",
+      "Exec=" + exec + " -- --profile=sitting",
     ].join("\n") + "\n"
   );
 }

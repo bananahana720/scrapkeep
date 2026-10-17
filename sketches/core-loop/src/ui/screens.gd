@@ -997,7 +997,9 @@ func _stamp() -> void:
 
 
 # The release-candidate gate launches the AppImage on a fresh profile and waits for this one
-# line, printed the first time the main menu shows in this process.
+# line, printed the first time the main menu shows in this process. After ms it names the launch
+# set and how many pilots the title opens, so a cold launch shows the unlock ladder (P-R21: 1 on a
+# fresh profile) or the sitting (all six).
 static var _ready_announced := false
 
 
@@ -1005,7 +1007,13 @@ func _announce_ready() -> void:
 	if _ready_announced:
 		return
 	_ready_announced = true
-	print("SCRAPKEEP_MENU_READY ms=%d" % Time.get_ticks_msec())
+	print(ready_line(Time.get_ticks_msec()))
+
+
+func ready_line(ms: int) -> String:
+	var open: int = game.flow.classes.filter(func(def): return game.pilot_unlocked(def)).size()
+	var launch_set := "sitting" if game.tuning != null and game.tuning.sitting() else "default"
+	return "SCRAPKEEP_MENU_READY ms=%d profile=%s pilots=%d/%d" % [ms, launch_set, open, game.flow.classes.size()]
 
 
 func _unstamp() -> void:
