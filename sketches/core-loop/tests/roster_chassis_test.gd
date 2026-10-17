@@ -12,7 +12,7 @@ const T := preload("res://tests/support/t.gd")
 # - no two rows share a threat feature, the no-reskins rule at the silhouette level.
 # The blind still test (20 stills, three reviewers) is a human pass; this file holds the data.
 
-const BASE_ROW_COUNT := 20
+const BASE_ROW_COUNT := 21
 const MIN_FEATURE_CHARS := 12
 
 var _t := T.new("roster_chassis_test")

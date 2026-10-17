@@ -12,11 +12,12 @@ const T := preload("res://tests/support/t.gd")
 # - live, a drill crew (plated) loses 60%, 100% and 150% of the same punch to a kinetic weapon
 #   bolt, a frost hit and an arc hit; a hit that falls short of its plating only chips, unread.
 # - the first resisted and the first weak hit each stamp their word, DENT and ZZAP!, once per
-#   run; the first read discovers the codex entry, and from then on plated crews wear the icon,
+#   run; would_crush asks the same armour question the strike answers (F005);
+#   the first read discovers the codex entry, and from then on plated crews wear the icon,
 #   above the interrupted star and far off the ground telegraphs, on a crew spawned later too.
 
 const PUNCH := 30.0
-const EXPECTED_CHECKS := 16
+const EXPECTED_CHECKS := 17
 
 var _t := T.new("damage_families_test")
 var _game
@@ -107,6 +108,14 @@ func _live() -> void:
 		for w in marks.words:
 			texts.append((w["label"] as Label3D).text)
 	_t.eq("DENT and ZZAP! stamp once each per run", texts, ["DENT", "ZZAP!"])
+	var f := _crew(32.0)
+	f.plates = 0
+	f.plating = 0.0
+	f.hp = 20.0
+	var combat = _game.combat
+	_t.eq("would_crush asks the armour too: 30 kinetic, 15 frost, 15 arc on 20 hp",
+		[combat.would_crush(f, "test_bolt", 30.0), combat.would_crush(f, "frost", 15.0), combat.would_crush(f, "arc", 15.0)],
+		[false, false, true])
 	var e := _crew(24.0)
 	var icon := e.get_node_or_null("ArmourIcon") as Node3D
 	_t.check("a crew spawned after the read wears the icon", icon != null)
