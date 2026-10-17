@@ -46,7 +46,9 @@ func _run() -> void:
 	# The pending id is read at runtime, as achievement_rows_case does for PENDING_PILOTS.
 	var pending: Array = Cosmetics.PENDING_ART.filter(func(id): return Achievements.for_cosmetic(id) != "")
 	if pending.is_empty():
-		_t.check("no granted look waits for art", true)
+		var rewarded: Array = Achievements.ROWS.keys().filter(func(a): return Achievements.beat_of(a) == "" and String(Achievements.reward_of(a).get("cosmetic", "")) != "")
+		var silent: Array = rewarded.filter(func(a): return not Achievements.toast_text(a).contains("\nNew look: "))
+		_t.check("with no pending art, every cosmetic-reward toast names its look", not rewarded.is_empty() and silent.is_empty(), str(silent))
 	else:
 		_t.eq("a pending cosmetic reward toasts its name only", Achievements.toast_text(Achievements.for_cosmetic(pending[0])), Achievements.row(Achievements.for_cosmetic(pending[0]))["name"])
 	var felt := Achievements.for_cosmetic("shell_sable_felt")
