@@ -110,6 +110,14 @@ func _run() -> void:
 	var before := dry.state
 	_t.check("06 a draw with nothing in the pool spends no rng", ActiveOffers.roll(dry, "gate", rows, ["common"], []) == "" and dry.state == before)
 
+	var shipping: Array = ActiveDefs.ROWS.keys()
+	var authored := not shipping.has(TORCH) and not shipping.has(LANCE) and shipping.has(ActiveDefs.SCRAP_ROCKET)
+	for id in shipping:
+		var r: Dictionary = ActiveDefs.row(id)
+		authored = authored and String(r.get("maker", "")) != "" and String(r.get("rarity", "")) in ["rare", "relic"]
+	_t.check("31 the shipping pool holds only authored actives, each rare or relic with a maker, never a stand-in",
+		authored, str(shipping))
+
 	# --- Off: no draw, no rng, parts only -------------------------------------------------
 	_t.eq("07 --actives defaults off", _game.tuning.option("actives"), "off")
 	var off_rng := _seeded(11)
