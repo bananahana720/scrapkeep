@@ -3007,3 +3007,12 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 ## Saved look settings (alpha wave 5, IN1)
 
 - **Call.** Four saved look settings are applied at boot and again after Reset keys; invert affects stick pitch only.
+
+## Overpowered pays (Andrew, 2026-10-17 21:55Z)
+
+- **Call.** A strong build or a lucky run is never punished; a nutty setup always earns something.
+- **Warden ceiling.** Andrew's tap "Lift the ceiling" (22:04Z): posture counts a hit up to 3x the plating it meets (`boss_posture.gd` MULT_MAX, was 1.5) and one set piece fills up to 70 on a closed guard (`ultimate.gd` WARDEN_POSTURE_CAP, was 45). The hull bosses keep 1.5 (`boss_rules.gd` POSTURE). Ordinary pilots keep the per-Warden windows (hive 60-85 s; sinkhole and Mind 45-70 s).
+- **One ordinary hit.** A posture row may set `hit_cap`: one hit at a ratio up to 1.5 adds at most that, and the cap climbs to a full bar at mult_max, so a plain ram never fills the bar but a monster build's still can. No row sets it yet; the Waking's sweep will. The reactor Warden subclasses (`warden_reactor.gd`) rewrite gain after judge and do not apply it.
+- **Dead offers go.** A linear or capped part held at its stack cap is swapped out of every roll for one of the same kit side, bucket, hitter-ness and shelf-ness (`Parts.stacked_out`). Two offer bars moved with it (coordinator ruling (a), 22:54Z): greedy kit share floor 55%, alpha top-10 overlap 0.50.
+- **Overkill pays.** Damage past a kill pays half the kill's scrap again per max-HP of overflow, at most double (`enemy.gd` overkill_scrap); Wardens excluded.
+- **Big hits draw big.** A damage number grows 6 pt per doubling past 40, to 60 (`damage_numbers.gd` font_size).

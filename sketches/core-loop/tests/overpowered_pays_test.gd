@@ -73,6 +73,7 @@ func _maxed_parts() -> void:
 			offered += picks.count(part)
 		_t.eq("%s never draws its stacked-out %s" % [pilot, part], offered, 0)
 	_t.check("some pilot has a capped part to test", tested > 0, str(tested))
+	_harder_kept()
 	var hyperbolic := ""
 	for key in Parts.ids():
 		var d: Resource = Parts.def(key)
@@ -105,3 +106,26 @@ func _numbers() -> void:
 		last = size
 	_t.check("each doubling past BIG_FROM draws bigger", grows, str(last))
 	_t.eq("the biggest hit stops at MEGA_FONT", DamageNumbers.font_size(1.0e9, true), DamageNumbers.MEGA_FONT)
+
+
+# A stacked-out harder hitter swaps for a harder hitter, so every pair still holds one.
+func _harder_kept() -> void:
+	for pilot in PILOTS:
+		var held: Array = []
+		for key in Parts.offer_pool(pilot, ["common", "rare", "relic"]):
+			var d: Resource = Parts.def(key)
+			if d != null and d.hits_harder() and d.levels.is_empty() and d.stack_rule in ["linear", "capped"] and d.stack_cap >= 1.0:
+				for i in int(d.stack_cap):
+					held.append(key)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 2600
+		var pairs := 0
+		var missing := 0
+		for i in DRAWS:
+			var picks: Array = Parts.roll(rng, ["common", "rare", "relic"], pilot, held, 2)
+			if picks.size() < 2:
+				continue
+			pairs += 1
+			if not picks.any(func(key): return Parts.def(key).hits_harder()):
+				missing += 1
+		_t.check("%s pairs keep a harder hitter with its capped hitters stacked out" % pilot, pairs > 0 and missing == 0, "%d of %d pairs without one" % [missing, pairs])

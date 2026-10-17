@@ -58,7 +58,8 @@ const CHOICES := 2
 const SHARE_BAND := [0.60, 0.80]
 # 2026-10-17 (Overpowered pays, Parts._swap_stacked_out): a part held at its stack cap is swapped
 # out of the draw, so a greedy bot that has stacked out its kit sees off-kit parts and its share
-# may sit under the band (Tarn measured 0.573 full, 0.568 alpha). The random bot keeps the band.
+# may sit under the band (Tarn measured 0.573 full, 0.568 alpha) (coordinator ruling (a), 22:54Z).
+# The random bot keeps the band.
 const GREEDY_SHARE_FLOOR := 0.55
 const OVERLAP_MAX := 0.5
 const MOVEMENT_MAX := 0.15
@@ -67,7 +68,10 @@ const MIN_DISTINCT_PAIRS := 5
 const MAX_PILOTS_PER_PAIR := 2
 const UNREACHABLE_PAIR := ["defence", "movement"]
 # 2026-10-15 SQ19b: the alpha list's own bars (see the header).
-const ALPHA_OVERLAP_MAX := 0.40
+# 2026-10-17 (Overpowered pays): 0.50, was 0.40 (coordinator ruling (a), 22:54Z). A stacked-out
+# shelf pick swaps for another shelf part (_keep_a_neutral's promise), so on the 45-part alpha list
+# Demolitions and the Cannon share five top-10 shelf parts (measured 0.50).
+const ALPHA_OVERLAP_MAX := 0.50
 const ALPHA_MIN_PAIRS := 4
 const TALLY_PART := "winch_pawl"
 
