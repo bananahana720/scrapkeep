@@ -168,6 +168,22 @@ func _run() -> void:
 	_t.check("15b the press fires every fanned lance", _fired == [[ID, plain + 1]] and lance.lances.size() == plain + 1, "fired %s" % [_fired])
 	await _sim(0.5)
 
+	# --- A pierce that clears the stage drops the rest of the volley -----------------------
+	await _clear_enemies()
+	var first := _enemy(ball + aim * 6.0)
+	var second := _enemy(ball + aim * 20.0)
+	await physics_frame
+	var clear_once := func(enemy_node: Node3D, kind: String, _force: float):
+		if kind == Lance.KIND and enemy_node == first:
+			lance.clear()
+	ev.enemy_struck.connect(clear_once)
+	_rack.charges = 1
+	await _press()
+	await _sim(0.5)
+	ev.enemy_struck.disconnect(clear_once)
+	_t.check("15c a clear mid-flight drops every lance and pierces nothing more", lance.lances.is_empty() and second.hp == 9999.0,
+		"flying %d second hurt %.1f" % [lance.lances.size(), 9999.0 - second.hp])
+
 	# --- Jam ------------------------------------------------------------------------------
 	_rack.charges = 1
 	_rack.lock(0.5)

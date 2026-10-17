@@ -48,6 +48,8 @@ var ctx
 var combat
 var lances: Array = []
 var pierced := 0
+# Bumped by clear(), so a pierce whose kill clears the stage mid-step drops the survivors.
+var _generation := 0
 
 
 func setup(context, owner_combat) -> void:
@@ -57,6 +59,7 @@ func setup(context, owner_combat) -> void:
 
 func clear() -> void:
 	lances.clear()
+	_generation += 1
 
 
 func count_for(bonus: int) -> int:
@@ -128,10 +131,13 @@ func _tell(lance: Dictionary) -> void:
 func step(delta: float) -> void:
 	if lances.is_empty():
 		return
+	var generation := _generation
 	var flying: Array = []
-	for lance in lances:
+	for lance in lances.duplicate():
 		if not _fly(lance, delta):
 			flying.append(lance)
+		if _generation != generation:
+			return
 	lances = flying
 
 
@@ -144,6 +150,7 @@ func _fly(lance: Dictionary, delta: float) -> bool:
 	var from: Vector3 = lance["from"]
 	var dir: Vector3 = lance["dir"]
 	combat.effects.beam(_point(lance, before), _point(lance, after), SHARD_COLOR, 0.08)
+	var generation := _generation
 	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
 		if enemy.is_dead() or lance["hit"].has(enemy.get_instance_id()):
 			continue
@@ -157,6 +164,8 @@ func _fly(lance: Dictionary, delta: float) -> bool:
 			continue
 		lance["hit"][enemy.get_instance_id()] = true
 		_pierce(enemy, lance)
+		if _generation != generation:
+			return true
 	return after >= REACH
 
 
