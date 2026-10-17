@@ -162,5 +162,23 @@ func _run() -> void:
 	_game.tuning.set_mod("weapon_damage", 2.0)
 	_t.near("20 weapon damage mods scale every strike", kind.damage(), base * 2.0, 0.01)
 	_game.tuning.clear_mods()
+
+	# --- A press during the fall lands the falling strike first; a stage clear drops it ---
+	var target := _enemy(8.0, 0.0)
+	await _sim(0.05)
+	_struck.clear()
+	_rack.charges = 2
+	_rack.press()
+	await _sim(0.55)
+	_t.check("21 the shells are falling", kind.falling > 0.0 and _struck.is_empty())
+	_rack.press()
+	_t.check("22 a second press mid-fall lands the falling strike instead of dropping it",
+		target in _struck and kind.rings.size() == Silo.RINGS, "struck %d rings %d" % [_struck.size(), kind.rings.size()])
+	var held: Array = kind.rings.map(func(e): return e["ring"])
+	_struck.clear()
+	_game.events.stage_content_cleared.emit("test")
+	await _sim(1.2)
+	_t.check("23 a stage clear mid wind-up drops the rings and strikes nothing",
+		kind.rings.is_empty() and _struck.is_empty() and held.all(func(r): return not is_instance_valid(r) or r.is_queued_for_deletion()))
 	_combat.heft_override = -1.0
 	quit(_t.verdict())

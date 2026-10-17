@@ -10,7 +10,8 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 # ahead along the aim. When the wind-up ends the hatch opens and the shells fall for FALL
 # seconds; each lands as one strike on every machine inside its ring. The rings are
 # telegraph.gd nodes, so the drawing and the hit test are the same committed geometry: a
-# machine that walks out of its ring before the landing takes nothing.
+# machine that walks out of its ring before the landing takes nothing. Chain Arc's jumps from a
+# struck machine are the build's own reach, like the rockets' chains, and may leave the rings.
 #
 # It stacks into a strong build ("Overpowered pays"): one more ring per heft class above the
 # first, one per Cross Split level, and one per overflow piece banked when the press began;
@@ -84,6 +85,9 @@ func damage() -> float:
 
 # The wind-up's tell: commits every ring the strike will use.
 func begin(rack, row: Dictionary) -> void:
+	# A charge that refilled during the fall never cancels the strike already falling.
+	if falling >= 0.0:
+		_land()
 	clear()
 	_bonus_at_begin = int(rack.bonus)
 	_warn = float(row.get("windup", 0.0)) + FALL
