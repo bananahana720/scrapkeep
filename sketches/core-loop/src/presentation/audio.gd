@@ -1089,6 +1089,7 @@ func _connect_all(events) -> void:
 	events.enemy_struck.connect(_on_struck)
 	events.shot_fired.connect(_on_shot)
 	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
+	events.active_fired.connect(_on_active_fired)
 	events.reward_offered.connect(_on_offered)
 	events.reward_chosen.connect(func(_part: String): play("reward_chosen"))
 	events.event_announced.connect(_on_event_announced)
@@ -2360,6 +2361,12 @@ func _integrity(enemy: Node3D) -> float:
 	if ctx.spawner != null and ctx.spawner.has_method("integrity_of"):
 		return float(ctx.spawner.integrity_of(enemy))
 	return 1.0
+
+
+# Each active sounds its own launch ("active_" + id) when the bank has it, else the row's.
+func _on_active_fired(active_id: String, _at: Vector3, _count: int) -> void:
+	var sound := "active_" + active_id
+	play("active_fired", 0.0, 1.0, "SFX", sound if SfxBank.has_recipe(sound) else "")
 
 
 func _on_shot(weapon_id: String, _from: Vector3, _to: Vector3) -> void:

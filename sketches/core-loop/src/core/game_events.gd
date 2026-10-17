@@ -189,6 +189,9 @@ signal slot_cast(slot: String, ability_id: String, at: Vector3)
 signal line_skill_loaded(ability_id: String, seconds: float)
 signal line_skill_fired(ability_id: String, target: Node3D, at: Vector3, on: String)
 signal line_skill_expired(ability_id: String)
+# The active slot (src/combat/actives): F fired the racked active at `at`; count is how many
+# pieces left (rockets in a volley). Maker sets and sounds read it; its strikes are enemy_struck.
+signal active_fired(active_id: String, at: Vector3, count: int)
 # The set piece (src/combat/ultimate.gd, wave P-B's ultimate unit): the meter reached full;
 # Q committed the planned path (seconds is wind-up plus flight); the flight's middle beat;
 # the landing strike resolved; a cancel (recall, bail, stage or death) and whether it refunded.

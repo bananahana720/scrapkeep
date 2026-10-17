@@ -146,7 +146,8 @@ func run(t) -> void:
 	t.check("every VERBS intent field exists on Intent", missing_fields.is_empty(), "unknown fields: %s" % [missing_fields])
 	# 2026-10-11 (w13 coordinator, B1 and B3 merged): nine to eleven. select (caps 1, 2, 3) and ultimate (Q)
 	# joined the table and the retired special keeps its row (SKILL-BAR.md section 6; bindings_table_test.gd header).
-	t.check("eleven verbs", Bindings.VERBS.size() == 11, "%d verbs" % Bindings.VERBS.size())
+	# 2026-10-17 (item tiers and actives): the active on F makes twelve.
+	t.check("twelve verbs", Bindings.VERBS.size() == 12, "%d verbs" % Bindings.VERBS.size())
 
 	var states: Array = EventKinds.LINE_ROWS.keys()
 	states.sort()

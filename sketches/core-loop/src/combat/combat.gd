@@ -307,6 +307,8 @@ var _tally_card_frame := -1
 var near_miss
 # The set piece on Q (ultimate.gd), a child like near_miss; it owns the meter.
 var ultimate
+# The active slot on F (src/combat/actives), behind --actives.
+var actives
 var last_player_hit := {}
 var last_impact := {}
 var _cloud := {}
@@ -402,6 +404,9 @@ func setup(ctx_ref) -> void:
 	add_child(ultimate)
 	ultimate.setup(ctx, self)
 	ultimate.register("ult_default", {"tech": _ult_volley, "peak": _ult_peak, "landing": _ult_landing})
+	actives = preload("res://src/combat/actives/active_rack.gd").new()
+	add_child(actives)
+	actives.setup(ctx, self)
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(_anchor: Vector3): _bite_load())

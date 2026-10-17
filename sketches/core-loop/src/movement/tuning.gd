@@ -60,6 +60,9 @@ const SPECS := [
 	# Debug stand-in for run-found companion pieces: on grants one piece per family at run start,
 	# so the intermission assembly screen has something to assemble. Off leaves run.companion {}.
 	{"key": "companion_stub", "label": "Companion stub pieces", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# --actives=on: the active slot on F (src/combat/actives). Off by default until the active
+	# family lands; on, every run opens with the Scrap Rocket Rack racked.
+	{"key": "actives", "label": "Active slot", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# --profile=sitting: every pilot opens on the title for a sitting. It only answers
 	# Game.pilot_unlocked; the saved profile is never read or written differently.
 	{"key": "profile", "label": "Launch set", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["default", "sitting"]},
@@ -170,6 +173,7 @@ const FLAGS := {
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],
 	"hotwire-tread": ["hotwire_tread", "option", "launch"],
 	"companion-stub": ["companion_stub", "option", "launch"],
+	"actives": ["actives", "option", "launch"],
 	"profile": ["profile", "option", "launch"],
 }
 
