@@ -108,7 +108,7 @@ The wave plan in project memory has 17 for SQ2, SI6, SG2, SG15, landmark placeme
 | Wave | Lands | Why there |
 | --- | --- | --- |
 | 17 | hook out; the pilot tilt fix plus nemesis; answer weighting (`answers` tags); the Foreman | all reuse existing bodies and rows; they ride with SQ2's attacker budget, which they share a curve with |
-| 18 | the Dispatcher and perches; the Splitter behaviour on a greybox body; the matchup lab; grip and carve behind its toggle (once card 3 is tapped) | perches arrive with the first dressing, which places the high points; the lab needs the Splitter in to measure it |
+| 18 | the Dispatcher and perches; the Splitter behaviour on a greybox body; the matchup lab; grip and carve behind its toggle | perches arrive with the first dressing, which places the high points; the lab needs the Splitter in to measure it |
 | 19 | the Linker; Splitter and Linker final models; poles and flails | model work sits with the landmark models; the Linker needs perches and partners already in |
 
 ### After the sitting: new bodies or new systems
@@ -147,6 +147,6 @@ The attacker budget thread (PR #15) scales how many attack at once with build st
 
 1. **Decided 2026-10-17 00:01Z, "Nudge loot":** items that answer a pilot's nemesis weigh 1.5 in gates and shops; no guarantee.
 2. **Decided 2026-10-17 00:01Z, "All four":** the Foreman, the Dispatcher, the Splitter and the Linker all land before the sitting (section 4b).
-3. **Open:** how the ball sticks to walls: speed holds you on, automatically (recommended), a held grip key, or grip only as an item or pilot trait.
+3. **Decided 2026-10-17 00:15Z, "Speed holds":** grip is automatic above cruise and peels off when slow (section 3a), with the `grip: on | off` lab toggle for the sitting.
 
 Decided here, reversible: hook out applies per row, not to every hold; the Foreman never attacks; the Dispatcher spends the attacker budget.
