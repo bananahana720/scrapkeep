@@ -3,6 +3,7 @@ extends Node
 const Audio := preload("res://src/presentation/audio.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
@@ -35,6 +36,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #   status_marks   what an enemy's state shows on its body that no table row draws elsewhere:
 #                  the star over a wind-up a hit broke
 #   vfx            trails, speed lines, flashes, rings, sparkles, bursts and the edge flash
+#   player_fx      sound words, overdrive, carve sparks, the might aura and impact frames
 #   streak         the pickup streak and the kill chain audio climbs and juice draws
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
 #   codex_style    category colours, icons and the discovery banner
@@ -46,6 +48,7 @@ var ctx
 var audio
 var juice
 var vfx
+var player_fx
 var line_view
 var status_marks
 var banner
@@ -74,6 +77,9 @@ func setup(ctx_ref) -> void:
 	vfx = Vfx.new()
 	add_child(vfx)
 	vfx.setup(ctx)
+	player_fx = PlayerFx.new()
+	add_child(player_fx)
+	player_fx.setup(ctx, vfx)
 	line_view = LineView.new()
 	add_child(line_view)
 	if ctx.camera != null and ctx.camera.cam != null:

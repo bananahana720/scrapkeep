@@ -76,6 +76,11 @@ var _chain := 0
 var _chain_rung := 0
 var _pip_pop := 0.0
 var edge: Control
+# How grown the build is, 0 to 1 (player_fx.gd might): hit and kill glyphs grow with it, so
+# a late run's hit reads bigger than the first fight's (Andrew, "Clearly mightier").
+# The slam ring stays at the slam's real reach.
+var might := 0.0
+const MIGHT_GLYPH := 1.0
 # False skips the ball trail and speed lines; tools/perf_bench.gd --no-trails sets it.
 var trails := true
 # Every kill's starburst, pop and debris pass through this gate (kill_pop).
@@ -570,7 +575,8 @@ func _on_shot(_weapon: String, from: Vector3, to: Vector3) -> void:
 func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
-	glyph("enemy_struck", enemy.global_position + Vector3.UP * 0.6, 0.4, clampf(0.8 + force * 0.03, 0.8, 1.6), 0.14)
+	var grow := 1.0 + MIGHT_GLYPH * might
+	glyph("enemy_struck", enemy.global_position + Vector3.UP * 0.6, 0.4 * grow, clampf(0.8 + force * 0.03, 0.8, 1.6) * grow, 0.14 + 0.08 * might)
 
 
 # --- Scrap sparkles ------------------------------------------------------------------------
@@ -888,7 +894,7 @@ func _emit_pops() -> void:
 	var row := EventKinds.juice("enemy_killed")
 	for cluster in pops.ready(_clock, Density.live().coalesce_seconds()):
 		var at: Vector3 = cluster["at"]
-		var scale: float = cluster["scale"]
+		var scale: float = cluster["scale"] * (1.0 + MIGHT_GLYPH * might)
 		glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6 * scale, 1.8 * scale, 0.3)
 		burst("pop", at + Vector3.UP * 0.8, EventKinds.color("enemy_killed"), int(ceil(float(row["pop"]) * scale)))
 		burst("debris", at + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(ceil(float(row["debris"]) * scale)))
