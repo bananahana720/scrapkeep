@@ -45,6 +45,12 @@ const ROWS := {
 	},
 	# --- end Cutting Torch ---
 	# --- Lift Pulse (Highdraft Roosts) ---
+	"lift_pulse": {
+		"name": "Lift Pulse", "maker": "highdraft_roosts", "rarity": "rare",
+		"verb": "Pulse a lift fan", "text": "F: a fan cone shoves machines away, harder per heft class",
+		"max_charges": 2, "recharge": 7.0, "kill_charge": 0.15, "bonus_cap": 4, "windup": 0.0,
+		"kind": preload("res://src/combat/actives/lift_pulse.gd"),
+	},
 	# --- end Lift Pulse ---
 	# --- Quake Knock (Waking-made) ---
 	"quake_knock": {
