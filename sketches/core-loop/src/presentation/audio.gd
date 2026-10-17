@@ -89,6 +89,16 @@ const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
 	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
+# Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
+# a hit within ONBEAT_WINDOW_S of a beat the player hears adds the sax stab, rendered by the
+# music session in the home key, and fires hit_on_beat for the comic word. At most once a
+# beat. Damage never reads it.
+signal hit_on_beat(enemy: Node3D, kind: String)
+const ONBEAT_WINDOW_S := 0.08
+const ONBEAT_SOUND := "onbeat_sax_stab"
+# Tests set this to stand in for the beat clock: it returns the signed offset in seconds.
+var beat_offset_hook := Callable()
+var _onbeat_at := -(1 << 40)
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
 const KILL_COMBO_WINDOW_MS := 1500
@@ -2944,8 +2954,41 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 	var db := lerpf(-6.0, 1.0, clampf(force / 30.0, 0.0, 1.0)) if contact else -5.0
 	if _on_posture_fight(enemy):
 		play("enemy_struck", db, _posture_note_ratio(enemy))
+	else:
+		play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+	_pay_beat(enemy, kind)
+
+
+# The hit's own sound has already played, so the beat never delays it.
+func _pay_beat(enemy: Node3D, kind: String) -> void:
+	if absf(beat_offset_s()) > ONBEAT_WINDOW_S or engine.clock - _onbeat_at < engine.beat_len() / 2:
 		return
-	play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+	_onbeat_at = engine.clock
+	var stab := SfxBank.rendered(ONBEAT_SOUND)
+	if stab != null:
+		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")], Harmony.ratio(live_key()), "SFX")
+	else:
+		cue_log.append(["hit_on_beat", ONBEAT_SOUND, "absent", engine.clock, 1.0])
+	hit_on_beat.emit(enemy, kind)
+
+
+# How far the moment the player hears is from its nearest beat, in seconds: negative before
+# the beat, positive after. INF while no music plays.
+func beat_offset_s() -> float:
+	if beat_offset_hook.is_valid():
+		return beat_offset_hook.call()
+	if not sound_ready or engine.mode != MusicEngine.PLAY:
+		return INF
+	var heard := engine.clock
+	if live_output and _music_pb != null:
+		heard -= _ring_capacity - _music_pb.get_frames_available()
+	var length: int = engine.beat_len()
+	var next: int = engine.next_beat()
+	while next - length > heard:
+		next -= length
+	var to_next := next - heard
+	var from_last := heard - (next - length)
+	return (-float(to_next) if to_next < from_last else float(from_last)) / Harmony.RATE
 
 
 func _on_posture_fight(enemy: Node3D) -> bool:

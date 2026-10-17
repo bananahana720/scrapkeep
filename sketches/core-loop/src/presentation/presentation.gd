@@ -87,6 +87,7 @@ func setup(ctx_ref) -> void:
 	player_fx = PlayerFx.new()
 	add_child(player_fx)
 	player_fx.setup(ctx, vfx)
+	audio.hit_on_beat.connect(player_fx.on_beat_hit)
 	line_view = LineView.new()
 	add_child(line_view)
 	if ctx.camera != null and ctx.camera.cam != null:

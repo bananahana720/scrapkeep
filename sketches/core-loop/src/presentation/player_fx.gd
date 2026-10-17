@@ -64,7 +64,11 @@ const WORDS := {
 	"paid": {"text": "PAID", "size": 0.9},
 	"wham": {"text": "WHAM", "size": 1.0},
 	"strike": {"text": "STRIKE", "size": 1.1},
+	"beat": {"text": "BWAP", "size": 0.9},
 }
+# An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
+# when it has one, else BWAP over the sax stab.
+const ONBEAT_GROW := 1.4
 # Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
 # whatever the distance, so a word near the camera never swallows the ball.
 const WORD_SCREEN := 0.075
@@ -377,6 +381,31 @@ func _on_pinned(victim: Node3D, _damage: float) -> void:
 		impact_frame(victim.global_position, 0.8)
 
 
+# audio.gd's hit_on_beat. Deferred, so a word the same hit earns (WHAM, KLANG) stamps first
+# and grows instead of being refused by the gap.
+func on_beat_hit(enemy: Node3D, kind: String) -> void:
+	_on_beat_word.call_deferred(enemy, kind, _clock)
+
+
+func _on_beat_word(enemy: Node3D, _kind: String, at_clock: float) -> void:
+	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
+	for w in _words:
+		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
+			w["size"] = float(w["size"]) * ONBEAT_GROW
+			return
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
+		return
+	if word("beat", enemy.global_position + Vector3.UP * 1.8):
+		_words_by_id("beat")["size"] *= ONBEAT_GROW
+
+
+func _words_by_id(id: String) -> Dictionary:
+	for w in _words:
+		if w.get("id", "") == id and w["t"] < 1.0:
+			return w
+	return {}
+
+
 # Tally stamps PAID when two or more go down together.
 func _on_killed(_kind: String, at: Vector3, _scrap: int) -> void:
 	if _pilot_id() != "tally":
@@ -473,6 +502,7 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 	slot["at"] = placed
 	slot["tilt"] = _rng.randf_range(-0.2, 0.2)
 	slot["size"] = float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
+	slot["born"] = _clock
 	label.visible = true
 	_draw_word(slot)
 	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1

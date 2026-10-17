@@ -183,6 +183,10 @@ static var _lock := Mutex.new()
 # Cues whose notes depend on the level (the synergy fanfare quotes its motif).
 const THEMED := ["synergy_fanfare"]
 static var _streams := {}
+# Sounds the music session renders to files rather than recipes: each plays once its file is
+# in RENDERED_DIR, and the cue that wants it plays without it until then.
+const RENDERED_DIR := "res://assets/audio/sfx/"
+static var _rendered := {}
 # Set on the main thread to abandon a startup bake; the worker checks it between ids.
 static var bake_cancel := false
 
@@ -363,6 +367,14 @@ static func stream(id: String) -> AudioStreamWAV:
 	if not _streams.has(id):
 		_streams[id] = Synth.to_wav(samples(id))
 	return _streams[id]
+
+
+# A rendered sound's stream, or null while its file is not there yet.
+static func rendered(id: String) -> AudioStream:
+	if not _rendered.has(id):
+		var path := RENDERED_DIR + id + ".wav"
+		_rendered[id] = load(path) if ResourceLoader.exists(path) else null
+	return _rendered[id]
 
 
 static func bake_all(ids: Array) -> void:
