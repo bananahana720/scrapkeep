@@ -13,6 +13,11 @@ var impact := 0.0
 var tier := 0
 # Rivet's sprint raises the drive's cruise target by this factor while it runs.
 var cruise_boost := 1.0
+# Seconds of grip left: refilled at the fast tier, run down below it (Tuning.GRIP_PEEL_S).
+var grip_hold := 0.0
+# Riding a surface steeper than 25 degrees at grip speed: the wall lane. Floor threats read
+# this as "not on the floor" (Andrew's "Commit", 2026-10-17). Set whatever the grip toggle.
+var carving := false
 
 
 func speed() -> float:
@@ -45,3 +50,5 @@ func reset() -> void:
 	impact = 0.0
 	tier = 0
 	cruise_boost = 1.0
+	grip_hold = 0.0
+	carving = false

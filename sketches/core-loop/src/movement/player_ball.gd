@@ -593,8 +593,9 @@ func _tick_speed_bank(delta: float) -> void:
 		_speed_bank_rest_ticks = 0
 		_speed_bank_rest_braked = false
 	var probe_grounded := false
+	var floor_dot := Rules.ground_dot(state, tuning)
 	for i in _rigid._probe.get_collision_count():
-		if _rigid._probe.get_collision_normal(i).y > Tuning.MAX_SLOPE_DOT:
+		if _rigid._probe.get_collision_normal(i).y > floor_dot:
 			probe_grounded = true
 	# Grounding consumes the chosen flight even when the impact is too gentle to
 	# publish landed. Jump changes state.grounded before the probe leaves ground.
