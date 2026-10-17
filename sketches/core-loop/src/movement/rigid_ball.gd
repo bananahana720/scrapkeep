@@ -114,11 +114,14 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	gravity_scale = tuning.f("gravity") / 9.8
 	state.velocity = body_state.linear_velocity
 	var origin := body_state.transform.origin
+	Rules.tick_grip(state, tuning, delta)
 	if tuning.on("legacy_spin_probe"):
 		_probe.global_transform = body_state.transform
 	else:
 		_probe.global_transform = Transform3D(Basis.IDENTITY, origin)
-	Rules.probe_ground(_probe, state)
+		Rules.aim_probe(_probe, state, tuning)
+	Rules.probe_ground(_probe, state, Rules.ground_dot(state, tuning), Rules.grip_speed(state, tuning))
+	Rules.grip_contact(state, tuning, body_state)
 
 	var wish := Vector3.ZERO
 	if not Augments.holding(kit):
@@ -145,6 +148,10 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 
 		if external_accel != Vector3.ZERO:
 			body_state.apply_central_force(external_accel * mass)
+
+		var press := Rules.downforce(state, tuning)
+		if press != Vector3.ZERO:
+			body_state.apply_central_force(press * mass)
 	external_accel = Vector3.ZERO
 
 	# The augments run before jump and boost so a pylon jump or a vault kick can claim
