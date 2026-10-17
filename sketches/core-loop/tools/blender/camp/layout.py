@@ -1,0 +1,48 @@
+"""The camp's hub ring layout in Godot space (metres, +Y up, the player wakes at the origin facing -Z, the launch gate).
+
+Andrew's storyboard call (DECISIONS.md, board 7, tapped 2026-10-16 22:36:12Z): "Hub ring: plaza spawn, launch gate straight
+ahead at 70 m". Stations sit on a 48 m ring around a 26 m plaza; each is one short roll off the ring. At cruise (14 m/s) the
+gate is 5 s away by rolling; the mint shortcut ramp launches the ball over the spoke for the 2 s target (DESIGN-V3.md, the
+camp). The time-trial track and the sandbox yard sit outside the ring, east and west, where their size does not crowd it.
+
+Angles are bearings in degrees measured from -Z (straight ahead) turning clockwise seen from above, so 0 is the gate,
+90 is east (+X), 180 is behind the spawn and 270 is west. Every station faces the plaza: its local +Z points at the origin.
+This file is data for recipes and the preview render. The camp scene (machine work) owns the placed copy.
+"""
+import math
+
+RING_R = 48.0
+PLAZA_R = 26.0
+GATE_R = 70.0
+SPOKE_W = 5.0
+
+# id: (bearing, radius). Bearings follow the storyboard ring with the gate at 0.
+STATIONS = {
+    "gate": (0.0, GATE_R),
+    "pet": (55.0, RING_R),
+    "skee": (120.0, RING_R),
+    "settings": (160.0, RING_R),
+    "achieve": (205.0, RING_R),
+    "moss": (250.0, RING_R),
+    "lockers": (305.0, RING_R),
+}
+
+TRIAL_AT = (122.0, 0.0, -20.0)      # the time-trial track's centre, east of the ring
+SANDBOX_AT = (-122.0, 0.0, 10.0)    # the any-enemy sandbox yard's centre, west of the ring
+SHORTCUT_AT = (0.0, 0.0, -31.0)     # the shortcut ramp's foot sits just past the plaza rim on the gate spoke
+
+
+def at(bearing, r):
+    b = math.radians(bearing)
+    return (r * math.sin(b), 0.0, -r * math.cos(b))
+
+
+def yaw_to_centre(x, z):
+    """The yaw (radians about +Y) that turns a piece's local +Z toward the origin."""
+    return math.atan2(-x, -z)
+
+
+def station(sid):
+    bearing, r = STATIONS[sid]
+    x, y, z = at(bearing, r)
+    return (x, y, z), yaw_to_centre(x, z)
