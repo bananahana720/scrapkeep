@@ -36,7 +36,7 @@ A calm stage 1 (no Warden, no director packs). Once the ball has been on the gro
 | target | the special while it lives, then the nearest crew |
 | ignore | the nearest crew while any stands, then the special |
 
-Both arms end on the same clear (everything down) or the cap, so clear time compares too. Bolts and rams hit whatever they hit; "ignore" is about where the bot goes.
+Both arms end on the same clear (everything down, and nothing still to come) or the cap, so clear time compares too. Bolts and rams hit whatever they hit; "ignore" is about where the bot goes. Anything the encounter makes after it starts (a Dispatcher's drop, a Splitter's three pieces) joins the crew, toughened by `--hp-mult` like the rest, and a Splitter's seam flare that has not popped yet keeps the fight open. Each run records `joined` (later spawns) and `special_split`.
 
 **Dodging.** The stock bot answers every telegraph it has seen for 0.25 s and rams constantly, so stage 1 attacks rarely land: in trials at `--dodge=1` neither arm lost any hull. `--dodge` makes it miss a share, each telegraph decided once from the seed, as a player who misses about a third. Hull lost below 5 on the ignore arm reads "too little damage", not a ratio.
 
@@ -64,7 +64,7 @@ Mean hull lost and clear seconds over 8 paired seeds; every run cleared.
 | Dispatcher | model | 1 | 0.0 / 6.8 s | 0.5 / 7.8 s | - | 1 of 8 | too little damage |
 | Dispatcher | model | 3 | 6.3 / 11.8 s | 3.9 / 17.8 s | 0.62 | 3 of 8 | too little damage (would miss) |
 | Dispatcher, 4 s drops | model | 3 | 6.3 / 11.9 s | 3.9 / 17.9 s | 0.62 | 3 of 8 | too little damage (would miss) |
-| Splitter | not built | | | | | | not built |
+| Splitter | not built | | | | | | not built (built since; see below) |
 | Linker | not built | | | | | | not built |
 | Mag trapper (control) | built | 1 | 0.0 / 8.6 s | 0.2 / 11.3 s | - | 1 of 8 | too little damage |
 | Mag trapper (control) | built | 3 | 1.5 / 13.6 s | 2.3 / 16.0 s | 1.53 | 4 of 8 | too little damage |
@@ -75,3 +75,15 @@ What it says:
 - The Foreman's shred wipe makes order matter: ignoring it costs 2 to 3.6 times the hull.
 - The Dispatcher does not: its chasers die before they land a hit (twice the drops, 4 s apart, changed no hull), and the target arm pays for diving through the crew to reach a Dispatcher on the ground. Ignoring it costs about 6 s of clear time, not hull. The design's 6 to 10 m perch and a stream that threatens on its own are what would change that; re-run once both exist.
 - The control misses too: at stage 1 numbers a six-strong pack barely touches the stock bot, so a controller's hold has nothing to set up. Priority matters only where packs can hurt; this is a lab limit and a finding about stage 1 pressure, not about the specials.
+
+### 2026-10-17, the Splitter built (branch claude/splitter-3mgbv8 on cf63e622 plus PR #54 and PR #24), cloud container (4 vCPU, headless), defaults
+
+| Special | Mode | hp x | Target hull / clear | Ignore hull / clear | Ratio | Ignore worse | Verdict |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Splitter | built | 1 | 0.2 / 9.4 s | 3.8 / 10.1 s | 19.0 | 3 of 8 | too little damage |
+| Splitter | built | 3 | 0.8 / 18.8 s | 5.5 / 18.1 s | 6.88 | 5 of 8 | pass |
+
+What it says:
+
+- Leaving the Splitter costs hull: its fuse blast lands while the bot fights the crew. At stage 1 numbers the ignore arm still loses under 5 hull, the same lab limit the control shows; the tougher pack passes.
+- The stock bot rams, so it splits the Splitter in 14 of 16 runs at hp x1 and all 16 at x3, and its three pieces cost almost no hull (each dies to a ram). The proof measures kill order, not the clean-kill answer; the matchup lab (lever 7) is where "from above or from range" gets measured.
