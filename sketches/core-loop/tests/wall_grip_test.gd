@@ -46,6 +46,20 @@ const WALL_AIR := Vector3(FLOOR_HALF + ARC_R - Tuning.RADIUS - 0.4, ARC_R + 9.0,
 const HULL_X := 60.0
 const HULL_AIR := Vector3(HULL_X - Tuning.RADIUS - 0.4, 40.0, -150.0)
 
+# The hull takes the ball's contact like any enemy body.
+class Hull:
+	extends AnimatableBody3D
+
+	var weight := 1.0
+	var radius := 1.0
+
+	func knock(_direction: Vector3, _force: float) -> void:
+		pass
+
+	func flash() -> void:
+		pass
+
+
 var _world: Node3D
 var _events
 var _player
@@ -115,7 +129,7 @@ func _halfpipe() -> void:
 
 
 func _hull() -> void:
-	var body := AnimatableBody3D.new()
+	var body := Hull.new()
 	body.add_to_group("enemy")
 	body.position = Vector3(HULL_X + 1.0, 30.0, 0.0)
 	var collider := CollisionShape3D.new()
