@@ -12,8 +12,9 @@ const T := preload("res://tests/support/t.gd")
 # own launch sound; a press spends the charge and commits one amber ring at the ball that fills
 # over the wind-up while nothing is hurt; the ring hits when the wind-up ends, striking only the
 # machines its committed geometry contains (a machine just outside it is untouched: damage lands
-# only inside the warning shown); the kinetic blow shatters an ice slab inside the ring; weapon
-# damage mods, punch and banked overflow scale it; Cross Split adds an aftershock ring that is
+# only inside the warning shown); the kinetic blow shatters an ice slab inside the ring and leaves
+# one well outside it; weapon damage mods, punch and banked overflow scale it, including overflow
+# banked during the wind-up; Chain Arc jumps only between machines inside the ring; Cross Split adds an aftershock ring that is
 # shown before it lands and reaches a machine the first ring missed; a Jam mid wind-up drops the
 # ring and refunds the charge. Evidence limit: rules in a headless run, not the feel.
 
@@ -72,6 +73,19 @@ func _press() -> void:
 	_source.press = {"active_pressed": true}
 	await physics_frame
 	await physics_frame
+
+
+# The knock throws machines out of the ring: put the ball and the two inside machines back.
+func _regroup(inner: Node3D, edge: Node3D) -> void:
+	_player.reset_to(_ground(0.0) + Vector3.UP)
+	await _sim(0.2)
+	var ball: Vector3 = _player.ball_position()
+	inner.global_position = Vector3(ball.x + 3.0, _ground(3.0, 2.0).y, ball.z + 2.0)
+	edge.global_position = Vector3(ball.x - 5.5, _ground(-5.5, 0.0).y, ball.z)
+	for e in [inner, edge]:
+		if "velocity" in e:
+			e.velocity = Vector3.ZERO
+	await _sim(0.05)
 
 
 func _rings() -> Array:
@@ -150,10 +164,22 @@ func _run() -> void:
 	_water_at = Vector3.INF
 	var slabs_before: int = build.field.slab_count()
 	_t.check("13 a frost slab stands inside the ring", made.get("behaviour", "") == "create_surface" and slabs_before >= 1, str(made))
+	var far_spot := _ground(10.0, 10.0)
+	_water_at = far_spot
+	_water_y = far_spot.y + 0.2
+	var far: Dictionary = build.apply_element("frost", Vector3(far_spot.x, _water_y + 0.5, far_spot.z), "test")
+	_water_at = Vector3.INF
+	await _regroup(inner, edge)
 	_rack.charges = 1
+	var inner_hp: float = inner.hp
 	await _press()
+	_rack.bonus = 3
 	await _sim(0.6)
-	_t.check("14 the knock shatters it", build.field.slab_count() < slabs_before, "slabs %d -> %d" % [slabs_before, build.field.slab_count()])
+	_t.check("14 the knock shatters the slab inside the ring", not build.field.slabs().any(func(sl): return Vector2(sl["at"].x - slab_spot.x, sl["at"].z - slab_spot.z).length() < 1.0),
+		"slabs %d -> %d" % [slabs_before, build.field.slab_count()])
+	_t.check("14b a slab well outside the ring survives", far.get("behaviour", "") == "create_surface"
+		and build.field.slabs().any(func(sl): return Vector2(sl["at"].x - far_spot.x, sl["at"].z - far_spot.z).length() < 1.0), str(far))
+	_t.near("14c overflow banked during the wind-up still hits harder", inner_hp - inner.hp, _kind.damage(3), 0.5)
 
 	# --- A strong build hits harder -----------------------------------------------------
 	var base: float = _kind.damage()
@@ -168,6 +194,18 @@ func _run() -> void:
 		await _sim(0.05)
 		punched = build.punch_bonus() > 0.0 and _kind.damage() > base
 	_t.check("17 punch adds to the knock", punched, "punch %.1f damage %.1f base %.1f" % [build.punch_bonus(), _kind.damage(), base])
+
+	# --- Chain Arc: hits jump between machines inside the same ring -------------------
+	_game.run.add_part("chain_arc", "test")
+	await _sim(0.05)
+	await _regroup(inner, edge)
+	_struck.clear()
+	_rack.charges = 1
+	await _press()
+	await _sim(0.6)
+	_t.check("17b Chain Arc adds jumps, all onto machines inside the ring",
+		_struck.size() > 2 and _struck.all(func(e): return e == inner or e == edge), "struck %d" % _struck.size())
+	await _sim(0.3)
 
 	# --- Cross Split: an aftershock ring, shown before it lands -------------------------
 	_game.run.add_part("cross_split", "test")

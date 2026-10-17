@@ -106,15 +106,20 @@ func begin(rack, row: Dictionary) -> void:
 # The wind-up ended: the first ring hits now; any aftershocks are committed and land later.
 # Returns the rings this fire will hit with. A rack row with no wind-up commits and hits at once.
 func fire(rack, row: Dictionary, bonus: int) -> int:
-	var heads := pending.filter(func(entry): return entry["rack"])
+	var heads := pending.filter(func(entry): return entry["rack"] and is_instance_valid(entry["ring"]))
 	if heads.is_empty():
+		# A wind-up whose ring is gone hits nothing: there is no warning to land inside.
+		if float(row["windup"]) > 0.0:
+			return 0
 		begin(rack, row)
 		heads = pending.filter(func(entry): return entry["rack"])
 	var first: Dictionary = heads[0]
 	pending.erase(first)
 	var ring: Node3D = first["ring"]
 	var rings := 1
-	var dmg: float = first["damage"]
+	# The ring's size was committed at the press; overflow banked since then still hits harder.
+	var dmg := maxf(float(first["damage"]), damage(bonus))
+	var hit := dmg
 	var radius: float = ring.radius
 	for level in _pattern("cross_split"):
 		radius += AFTERSHOCK_GROW
@@ -122,7 +127,7 @@ func fire(rack, row: Dictionary, bonus: int) -> int:
 		var warn := AFTERSHOCK_WARN * (level + 1)
 		pending.append({"ring": _commit(ring.center, radius), "left": warn, "warn": warn, "damage": dmg, "rack": false})
 		rings += 1
-	_strike(ring, float(first["damage"]))
+	_strike(ring, hit)
 	return rings
 
 
@@ -176,7 +181,8 @@ func _strike(ring: Node3D, dmg: float) -> void:
 		if not enemy.is_dead() and ring.contains(enemy.global_position):
 			struck.append(enemy)
 	for enemy in struck:
-		combat._hit(enemy, KIND, dmg, enemy.global_position - ring.center, KNOCK, "", SOURCE, IMPACT)
+		if is_instance_valid(enemy) and not enemy.is_dead():
+			combat._hit(enemy, KIND, dmg, enemy.global_position - ring.center, KNOCK, "", SOURCE, IMPACT)
 	_chain(struck, dmg)
 	_shatter(ring)
 	spent.append([ring, LINGER])
@@ -211,22 +217,20 @@ func _chain(struck: Array, dmg: float) -> void:
 			at = next.global_position
 
 
-# The kinetic blow: the element applied over the ring's floor, the centre and two circles of
-# points spaced closer than an ice slab, so every slab inside the ring is found.
+# The kinetic blow: the element applied once on each ice slab whose centre lies inside the ring,
+# like a slam landing on it. A slab an earlier blow already broke is skipped.
 func _shatter(ring: Node3D) -> void:
-	if ctx.build == null or not ctx.build.has_method("apply_element"):
+	var build = ctx.build
+	if build == null or not build.has_method("apply_element") or build.get("field") == null:
 		return
-	var center: Vector3 = ring.center
-	var points := [center]
-	for band in [0.5, 0.9]:
-		var r: float = ring.radius * band
-		var count := maxi(6, ceili(TAU * r / 3.0))
-		for i in count:
-			var a := TAU * i / count
-			points.append(center + Vector3(cos(a) * r, 0.0, sin(a) * r))
-	for point in points:
-		var ground := Telegraph.ground_under(combat.ground, point)
-		ctx.build.apply_element(ELEMENT, Vector3(point.x, ground + 0.3, point.z), "active")
+	var inside: Array = []
+	for slab in build.field.slabs():
+		var at: Vector3 = slab["at"]
+		if Vector2(at.x - ring.center.x, at.z - ring.center.z).length() <= ring.radius:
+			inside.append(slab)
+	for slab in inside:
+		if build.field.slabs().has(slab):
+			build.apply_element(ELEMENT, Vector3(slab["at"].x, float(slab["top"]) + 0.3, slab["at"].z), "active")
 
 
 # The tell's cracks: jagged lines running out from the centre to the ring's edge as it fills,
