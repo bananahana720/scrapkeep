@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { cueFindings } from "./audio-gate.mjs";
 
 // npm run sketch:placeholders (port note): the alpha's "no placeholders" release check for
 // sketches/core-loop. It reads the tree statically, with no Godot, and fails on anything the
@@ -15,6 +16,8 @@ import { fileURLToPath } from "node:url";
 //   attack     an ATTACK_ROWS row with fields still open (event_kinds.gd PLACEHOLDER "tbd")
 //   ability    a pilot still on the shared stand-in line_reel or ult_default (SKILL-BAR 3 and 4)
 //   text       a player-facing string with TODO, TBD, FIXME, XXX, lorem, placeholder or coming soon
+//   audio      a special-enemy or boss cue from INTEGRATION.md the game cannot play (audio-gate.mjs,
+//              which also measures loudness and loop seams)
 // What it cannot see: a runtime fallback (a capsule, a missing material) that only a running
 // build shows; tests/dress_coverage_test.gd and release_gate_placeholder_test.gd own those.
 // Run: node scripts/placeholder-gate.mjs [--project <dir>] [--json] [--limit <n per group>]
@@ -293,6 +296,7 @@ export function scan(project) {
   for (const s of sources) findings.push(...markedText(s.text, s.rel));
   for (const rel of ["main.tscn", ...walk(path.join(project, "src"), [".tscn"]).map((r) => "src/" + r)])
     if (has(rel)) findings.push(...sceneText(read(rel), rel));
+  findings.push(...cueFindings(project).map((f) => ({ ...f, kind: "audio" })));
   return findings;
 }
 
@@ -305,6 +309,7 @@ export const KIND_TITLES = {
   attack: "Attack rows with open fields",
   ability: "Pilots on stand-in abilities",
   text: "Placeholder words in player-facing text",
+  audio: "Special-enemy and boss cues the game cannot play",
 };
 
 export function report(findings, limit = Infinity) {

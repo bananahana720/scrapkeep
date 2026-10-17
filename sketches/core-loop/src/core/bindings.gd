@@ -58,10 +58,16 @@ const VERBS := {
 	"ultimate": {"intent": "ultimate_pressed", "fail": "verb_fail_ultimate", "glyph": "key_q", "label": "Q", "icon": "",
 		"actions": {"cl_ultimate": {"keys": [KEY_Q], "pad": JOY_BUTTON_LEFT_SHOULDER}}},
 }
-# Actions that belong to no verb: the retry hold (R, RB) and the pause (P and Escape, Start).
+# Actions that belong to no verb: the retry hold (R, RB), the pause (P and Escape, Start) and
+# the pilot radio (radio_deck.gd): period and D-pad down turn the dial on, comma turns it back,
+# slash and L3 skip to the next track, semicolon pins the track on air through a boss.
 const EXTRA_ACTIONS := {
 	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
 	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
+	"cl_radio_next": {"keys": [KEY_PERIOD], "pad": JOY_BUTTON_DPAD_DOWN},
+	"cl_radio_prev": {"keys": [KEY_COMMA]},
+	"cl_radio_skip": {"keys": [KEY_SLASH]},
+	"cl_radio_pin": {"keys": [KEY_SEMICOLON]},
 }
 # The bar slot each select action picks, by its index in Intent.slot_pick.
 const SELECT_ACTIONS := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]

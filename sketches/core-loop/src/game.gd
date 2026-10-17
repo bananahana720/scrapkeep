@@ -29,6 +29,8 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
+const TuneRows := preload("res://src/core/tune_rows.gd")
+const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
@@ -83,6 +85,8 @@ var presentation
 var _session_seed := randi() # lint: session seed
 var hud
 var screens
+# The pilot radio (radio_deck.gd): the HUD dial, the takes a run finds, the playlists.
+var radio_deck
 var notes
 var panel
 var keyboard
@@ -212,6 +216,11 @@ func _ready() -> void:
 	screens.name = "Screens"
 	add_child(screens)
 	screens.setup(self)
+	_listen_for_tunes()
+	radio_deck = RadioDeck.new()
+	radio_deck.name = "RadioDeck"
+	add_child(radio_deck)
+	radio_deck.setup(self)
 	notes = FieldNotes.new()
 	notes.name = "FieldNotes"
 	add_child(notes)
@@ -233,6 +242,25 @@ func _ready() -> void:
 	player.body().global_position = ctx.terrain.spawn_point(1)
 	camera.snap(ctx.terrain.entry_heading(1))
 	flow.show_title()
+
+
+# Moss's jukebox: a tune heard in play long enough is filed in the profile and announced on
+# the HUD's record plate. Tunes the profile holds are never announced again.
+func _listen_for_tunes() -> void:
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio == null or not audio.has_signal("tune_heard"):
+		return
+	for id in ctx.profile.tune_ids():
+		audio.knows_tune(id)
+	audio.tune_heard.connect(_on_tune_heard)
+
+
+func _on_tune_heard(id: String) -> void:
+	if not ctx.profile.hear_tune(id):
+		return
+	if ctx.profile.can_save and not ctx.profile.save():
+		push_warning("game: tune %s heard but not saved: %s" % [id, ctx.profile.last_error])
+	hud.tune_found(String(TuneRows.row(id).get("name", id)))
 
 
 func _chosen_table():
@@ -710,6 +738,16 @@ static func _launch_flag(flag: String) -> bool:
 func _screen_key(key: int) -> bool:
 	match flow.state_name():
 		"title":
+			if screens.jukebox_open():
+				return screens.jukebox_key(key)
+			if screens.radio_open():
+				return screens.radio_key(key)
+			if key == KEY_R and screens.camp_open():
+				screens.toggle_radio()
+				return true
+			if key == KEY_J and screens.camp_open():
+				screens.toggle_jukebox()
+				return true
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()
 				return true

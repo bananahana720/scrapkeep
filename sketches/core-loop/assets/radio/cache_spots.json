@@ -1,0 +1,4 @@
+{
+ "note": "Signal cache positions by take id, [x, y, z] in the park's world space. The park-dressing work fills these in at the spots design-v3/sound/RADIO.md names; a take with no entry has no cache in the world yet.",
+ "spots": {}
+}

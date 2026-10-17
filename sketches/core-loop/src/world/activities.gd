@@ -827,6 +827,9 @@ func _cue(s: Site, phase: String) -> void:
 	var presentation: Node = ctx.root.get_node_or_null("Presentation")
 	if presentation != null:
 		presentation.audio.play(kind)
+		# The site's own tune (an arena's), read by id; audio decides whether it has one.
+		if presentation.audio.has_method("activity_cue"):
+			presentation.audio.activity_cue(s.id, phase)
 	if is_instance_valid(s.phase_view):
 		s.phase_view.queue_free()
 	s.phase_view = ActivityView._glyph(String(row.shape), row.color)
