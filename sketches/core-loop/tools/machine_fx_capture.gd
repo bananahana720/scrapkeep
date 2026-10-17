@@ -65,6 +65,7 @@ func _run() -> void:
 	camera.current = true
 	camera.far = 1800.0
 	ball = game.player.ball_position()
+	game.player._visual_root.visible = false
 	Density.live().force(0.0)
 
 	# 1. A Fleet pack winds up together: six steam jets building on six bodies.
@@ -78,7 +79,12 @@ func _run() -> void:
 		if is_instance_valid(enemy):
 			_freeze(enemy)
 			enemy.attack_phase.emit({"phase": "windup", "progress": 0.8, "row": "", "at": enemy.global_position})
-	await _shot("1-pack-windup", ball + Vector3(-6, 7, -9), ball + Vector3(0, 1.5, 12), 60.0, 0.9)
+	# Frozen bodies report no live attack, so hold each jet at its late wind-up strength.
+	for id in fx._windups.keys():
+		fx._windups[id]["emitter"].amount_ratio = 0.9
+	fx._windups.clear()
+	var mid: Vector3 = crew[2].global_position
+	await _shot("1-pack-windup", mid + Vector3(-4, 4, -9), mid + Vector3(0, 2, 0), 62.0, 0.9)
 
 	# 2. A heavy ram: brass sparks, a steam leak and KLANG.
 	var target: Node3D = crew[0]
@@ -137,9 +143,31 @@ func _run() -> void:
 	# 9. Brindle falls: mid-blasts, then the wink one beat later.
 	var hull := _ground(ball + Vector3(0, 0, 26))
 	fx.boss_fall("brindle", hull)
-	await _shot("9-brindle-fall", hull + Vector3(-14, 8, -18), hull + Vector3(0, 4, 0), 62.0, 0.75)
-	await _shot("10-end-of-shift", hull + Vector3(-14, 8, -18), hull + Vector3(0, 6, 0), 62.0, 0.75)
+	await _shot("9-brindle-fall", hull + Vector3(-12, 10, -16), hull + Vector3(0, 4, 0), 62.0, 0.75)
+	await _shot("10-end-of-shift", hull + Vector3(-12, 10, -16), hull + Vector3(0, 6, 0), 62.0, 1.05)
 	quit(0)
+
+
+# The flattest 30 m square within 80 m of the drop-in, so subjects and the eye share
+# open ground instead of a bank or the pit.
+func _flat_spot(start: Vector3) -> Vector3:
+	var best := start
+	var best_spread := INF
+	for gx in range(-4, 5):
+		for gz in range(-4, 5):
+			var c := start + Vector3(gx * 20.0, 0, gz * 20.0)
+			var lo := INF
+			var hi := -INF
+			for sx in range(-3, 4):
+				for sz in range(-3, 4):
+					var y: float = _ground(c + Vector3(sx * 5.0, 0, sz * 5.0)).y
+					lo = minf(lo, y)
+					hi = maxf(hi, y)
+			if hi - lo < best_spread:
+				best_spread = hi - lo
+				best = _ground(c)
+	print("flat spot ", best, " spread ", best_spread)
+	return best
 
 
 func _body(kind: String, near: Vector3) -> Body:
@@ -165,10 +193,17 @@ func _wait(seconds: float) -> void:
 
 
 func _shot(id: String, eye: Vector3, look: Vector3, fov: float, settle: float) -> void:
+	# Keep the eye above the ground under it, so a shot never starts inside a bank.
+	eye.y = maxf(eye.y, _ground(eye).y + 3.0)
 	camera.global_position = eye
 	camera.look_at(look, Vector3.UP)
 	camera.fov = fov
 	await _wait(settle)
+	for label in root.find_children("*", "Label3D", true, false):
+		if not fx.root.is_ancestor_of(label):
+			label.visible = false
+	for node in root.find_children("*", "CanvasItem", true, false):
+		node.visible = false
 	await RenderingServer.frame_post_draw
 	var image := root.get_texture().get_image()
 	image.save_png(out.path_join(id + ".png"))

@@ -410,7 +410,7 @@ func _price_scale() -> float:
 
 
 func _offer(part_id: String, sold: bool, index: int) -> Dictionary:
-	var d: Resource = Parts.def(part_id)
+	var d: Resource = Parts.offer_def(part_id, ctx.run.parts)
 	return {"index": index, "part_id": part_id, "name": Parts.display_name(part_id), "price": price(part_id),
 		"sold": sold, "rarity": d.rarity if d != null else "common", "text": d.text if d != null else "",
 		"icon": "cat_" + (d.icon_category if d != null else "utility"),

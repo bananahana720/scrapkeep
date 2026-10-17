@@ -101,6 +101,12 @@ const ENTRIES := [
 		"clue": "a circling kite + a shot, or a dive mark + a roll away",
 		"text": "Rides the thermals out of reach and dives on the spot it marks; shoot it while it circles or leave the mark.",
 	},
+	{
+		"id": "shift_over", "name": "Shift Over",
+		"hint": "Every crew has someone blowing the whistle.",
+		"clue": "a Foreman's horn + the Foreman down first",
+		"text": "Never attacks: it horns every 5 s and its crew's cracked plating closes up again; knock it out first and the whole crew clocks out for a breath.",
+	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
 	{
@@ -276,6 +282,7 @@ const DETECTORS := {
 	"line_cut": {"kind": "line_cutter", "script": "res://src/combat/line_cutter.gd"},
 	"deck_winch": {"kind": "anchor_crew", "script": "res://src/combat/anchor_crew.gd"},
 	"thermal_dive": {"kind": "kite_drone", "script": "res://src/combat/kite_drone.gd"},
+	"shift_over": {"kind": "foreman", "script": "res://src/combat/foreman.gd"},
 	"heavy_roll": {"kind": "mag_trapper", "script": "res://src/combat/mag_trapper.gd"},
 	"plate_peel": {"kind": "plated_brute", "script": "res://src/combat/plated_brute.gd"},
 	"cable_snap": {"kind": "winch_drone", "script": "res://src/combat/winch_drone.gd"},

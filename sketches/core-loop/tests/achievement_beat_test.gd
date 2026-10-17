@@ -43,7 +43,7 @@ func _run() -> void:
 	_t.eq("pilot unlock rows", pilots, 5)
 	_t.eq("a row without a beat toasts its name first", Achievements.toast_text("kills_100").split("\n")[0], "Hundred Down")
 	_t.eq("a delivered cosmetic reward toasts New look", Achievements.toast_text("kills_100"), "Hundred Down\nNew look: %s" % Cosmetics.row("paint_rivet_forge")["name"])
-	_t.eq("a pending cosmetic reward toasts its name only", Achievements.toast_text(Achievements.for_cosmetic("trail_any_downbeat")), Achievements.row(Achievements.for_cosmetic("trail_any_downbeat"))["name"])
+	_t.eq("a pending cosmetic reward toasts its name only", Achievements.toast_text(Achievements.for_cosmetic("shell_sable_felt")), Achievements.row(Achievements.for_cosmetic("shell_sable_felt"))["name"])
 
 	var signals := Achievements.bus_signals()
 	var ids: Array = []

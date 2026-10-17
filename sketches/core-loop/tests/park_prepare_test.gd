@@ -16,6 +16,7 @@ const Context := preload("res://src/core/context.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 1, "map": "park_test"},
 	{"stage": 3, "world": 1, "map": "park_test"}]}
@@ -42,8 +43,11 @@ func _run() -> void:
 	ctx.run = RunState.new(events)
 	ctx.tuning = Tuning.new()
 	var terrain = Terrain.new(TABLE)
+	SimClock.ticks = false
 	terrain.build(holder)
 	ctx.terrain = terrain
+	var first_scatter = terrain.geometry_root(1).get_node_or_null("GroundScatter")
+	t.check("played: stage 1's scatter builds on worker threads", first_scatter != null and not first_scatter.is_ready())
 	for n in 3:
 		await process_frame
 	var world := World.new()
@@ -109,7 +113,32 @@ func _run() -> void:
 	var again: Node = world.contraptions.get(1)
 	t.check("the rebuilt stage 1 has a fresh, live Contraptions node", again != null and is_instance_valid(again) and again != first
 		and terrain.geometry_root(1).is_ancestor_of(again))
+	await _check_tick_builds(holder)
 	_finish(holder, events, world)
+
+
+# A bot run (SimClock.ticks) builds a prepared park stage whole in the frame prepare() is called,
+# so the tick it lands on is the same on every run whatever the CPU load.
+func _check_tick_builds(holder: Node3D) -> void:
+	SimClock.ticks = true
+	var ticked = Terrain.new(TABLE)
+	var parent := Node3D.new()
+	holder.add_child(parent)
+	ticked.build(parent)
+	var scatter = ticked._roots[0].get_node_or_null("GroundScatter")
+	t.check("ticks: stage 1's scatter is built at setup", scatter != null and scatter.is_ready())
+	ticked.prepare(2)
+	var ground = ticked.park_ground(2)
+	# _roots, not geometry_root(): geometry_root() finishes a build still in progress.
+	var root = ticked._roots[1]
+	var rows = root.get_node_or_null("ParkRows") if root != null else null
+	var scatter2 = root.get_node_or_null("GroundScatter") if root != null else null
+	t.check("ticks: prepare(2) builds stage 2's ground on the spot", ground != null and ground.is_ready())
+	t.check("ticks: prepare(2) places stage 2's rows on the spot", rows != null and rows.is_ready(), str(rows))
+	t.check("ticks: prepare(2) attaches stage 2's scatter on the spot", scatter2 != null and scatter2.is_ready())
+	SimClock.ticks = false
+	await process_frame
+	parent.queue_free()
 
 
 func _wait_ready(terrain, index: int) -> void:

@@ -17,6 +17,11 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 # brings punch, a pattern, an element or a behaviour. Of every gate pair, at least one
 # part raises punch or transforms a pattern. Tier drives the fabricator price.
 #
+# SG15 levels: a row with "levels" is picked in PartDef.MAX_LEVEL levels, a capped stack of
+# that many copies. levels[n - 1] holds level n's numbers (level 1 repeats the row's own), the
+# copies held pick the level, and the sheet folds that one level once, so a higher level
+# replaces the lower and never adds to it. A part at its top level is never offered again.
+#
 # Scaling: tier 1 is +10 to 15%, tier 2 +25%, tier 3 +50%, and copies multiply;
 # pattern levels and punch add. A stage-1 build is modest and a late one absurd
 # (build_parts_test measures it); combat caps what is drawn.
@@ -34,7 +39,10 @@ const CATALOGUE := {
 	# Common: gate fodder. Only these may be plain percentages.
 	"hot_rivets": {"touches": "fire", "name": "Hot Rivets", "verb": "Hit harder", "text": "+4 punch, +12% weapon damage",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["kinetic"], "punch": 4.0,
-		"mods": {"weapon_damage": 1.12}},
+		"mods": {"weapon_damage": 1.12}, "stack": "capped", "cap": 3, "levels": [
+			{"punch": 4.0, "mods": {"weapon_damage": 1.12}, "text": "+4 punch, +12% weapon damage"},
+			{"punch": 8.0, "mods": {"weapon_damage": 1.25}, "text": "+8 punch, +25% weapon damage"},
+			{"punch": 13.0, "mods": {"weapon_damage": 1.42}, "text": "+13 punch, +42% weapon damage"}]},
 	"loose_trigger": {"touches": "fire", "name": "Loose Trigger", "verb": "Fire faster", "text": "+10% fire rate",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["speed"],
 		"mods": {"weapon_rate": 1.1}},
@@ -55,10 +63,16 @@ const CATALOGUE := {
 		"mods": {"dash_impulse": 1.15}},
 	"rivet_plating": {"touches": "roll", "name": "Rivet Plating", "verb": "Bolt on armour", "text": "+15 max health",
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
-		"max_hp_bonus": 15.0},
+		"max_hp_bonus": 15.0, "stack": "capped", "cap": 3, "levels": [
+			{"max_hp_bonus": 15.0, "text": "+15 max health"},
+			{"max_hp_bonus": 30.0, "text": "+30 max health"},
+			{"max_hp_bonus": 48.0, "text": "+48 max health"}]},
 	"magnet_spool": {"touches": "roll", "name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
 		"icon": "utility", "rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
-		"magnet": 1.5},
+		"magnet": 1.5, "stack": "capped", "cap": 3, "levels": [
+			{"magnet": 1.5, "text": "scrap magnet reaches 50% further"},
+			{"magnet": 2.25, "text": "scrap magnet reaches 125% further"},
+			{"magnet": 3.4, "text": "scrap magnet reaches 240% further"}]},
 	# W13 SR9: a copy tightens the Hold the Relay ring and speeds its charge. The numbers
 	# under "relay" are read by hold_relay.gd tuned(); a capped stack of three copies. The
 	# seam keeps it out of every offer until the director wires the relay (follow-up).
@@ -407,6 +421,89 @@ static func _base_row(part_id: String) -> Dictionary:
 	return _settled(generated) if not generated.is_empty() else generated
 
 
+# SG15 admission for one row: no levels, or exactly PartDef.MAX_LEVEL of them on a capped row
+# with stack_cap MAX_LEVEL; each level names only LEVEL_KEYS the row itself sets (mods only
+# its knobs); level 1 is the row's own numbers; and no number falls from one level to the
+# next. Returns one line per problem; [] is clean.
+static func level_problems(part_id: String, r: Dictionary) -> Array:
+	var levels: Array = r.get("levels", [])
+	if levels.is_empty():
+		return []
+	var out: Array = []
+	if levels.size() != PartDef.MAX_LEVEL:
+		out.append("%s has %d levels, not %d" % [part_id, levels.size(), PartDef.MAX_LEVEL])
+	if r.get("stack", "linear") != "capped" or int(r.get("cap", 0)) != PartDef.MAX_LEVEL:
+		out.append("%s levels need a capped stack of %d" % [part_id, PartDef.MAX_LEVEL])
+	var mods: Dictionary = r.get("mods", {})
+	for i in levels.size():
+		var lv: Dictionary = levels[i]
+		for key in lv:
+			if not key in PartDef.LEVEL_KEYS or not r.has(key):
+				out.append("%s level %d sets %s, which the row does not" % [part_id, i + 1, key])
+		for knob in lv.get("mods", {}):
+			if not mods.has(knob):
+				out.append("%s level %d moves %s, which the row does not" % [part_id, i + 1, knob])
+		if i == 0:
+			for key in lv:
+				if lv[key] != r.get(key):
+					out.append("%s level 1 %s is %s, the row says %s" % [part_id, key, lv[key], r.get(key)])
+			continue
+		var prev: Dictionary = levels[i - 1]
+		for key in ["punch", "max_hp_bonus", "magnet"]:
+			if lv.has(key) and float(lv[key]) < float(prev.get(key, r.get(key, lv[key]))):
+				out.append("%s level %d %s falls" % [part_id, i + 1, key])
+		for knob in lv.get("mods", {}):
+			if float(lv["mods"][knob]) < float(prev.get("mods", mods).get(knob, 1.0)):
+				out.append("%s level %d %s falls" % [part_id, i + 1, knob])
+	return out
+
+
+# The def and the headline an offer card shows for part_id to a run holding held: the level
+# the pick would give (SG15). Every card builder (reward_gates, fabricators, shop) reads these,
+# never def() or headline() on an offered id; part_levels_test guards it.
+static func offer_def(part_id: String, held: Array) -> Resource:
+	return def_at(part_id, next_level(part_id, held))
+
+
+static func offer_headline(part_id: String, held: Array) -> String:
+	return headline(part_id, next_level(part_id, held))
+
+
+# The level taking part_id now would give: one past its level in held. 1 for a part with no levels.
+static func next_level(part_id: String, held: Array) -> int:
+	return mini(level_of(part_id, held) + 1, PartDef.MAX_LEVEL)
+
+
+# part_id's level in held: its copies, at most PartDef.MAX_LEVEL; 0 when not held or not levelled.
+static func level_of(part_id: String, held: Array) -> int:
+	var d: Resource = def(part_id)
+	if d == null or d.levels.is_empty():
+		return 0
+	return mini(held.count(part_id), PartDef.MAX_LEVEL)
+
+
+# True when part_id is levelled and held at its top level: no offer shows it.
+static func maxed(part_id: String, held: Array) -> bool:
+	return level_of(part_id, held) >= PartDef.MAX_LEVEL
+
+
+# part_id's def at level (1 to PartDef.MAX_LEVEL): its row with that level's numbers in place.
+# def() for a part with no levels.
+static func def_at(part_id: String, level: int) -> Resource:
+	var base: Resource = def(part_id)
+	if base == null or base.levels.is_empty():
+		return base
+	level = clampi(level, 1, base.levels.size())
+	var key := "%d@%s:%s" % [active_tier(), level, part_id]
+	if not _defs.has(key):
+		var r := row(part_id).duplicate(true)
+		r.merge(base.levels[level - 1], true)
+		var d: Resource = PartDef.from_row(part_id, r)
+		d.level = level
+		_defs[key] = d
+	return _defs[key]
+
+
 static func def(part_id: String) -> Resource:
 	var tier := active_tier()
 	var key := "1:" + part_id if tier == 1 and RunTier.ENHANCED.has(part_id) else part_id
@@ -525,8 +622,9 @@ static func icon_of(part_id: String) -> String:
 
 
 # The gate label's first line: "{name}: {verb}. Punch +{n}".
-static func headline(part_id: String) -> String:
-	var d: Resource = def(part_id)
+# level picks a levelled part's numbers (SG15: an offer shows the level it would give).
+static func headline(part_id: String, level := 1) -> String:
+	var d: Resource = def_at(part_id, level)
 	if d == null:
 		return display_name(part_id)
 	var line := "%s: %s." % [d.display_name, d.verb]
@@ -775,7 +873,7 @@ static func milestone_for(event_id: String, held: Array) -> String:
 static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
 		exclude: Array = [], offered: Dictionary = {}) -> Array:
 	rarities = ItemGen.resolve_rarities(rarities)
-	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude)
+	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude and not maxed(key, held))
 	var picks: Array = []
 	var leans := KITS.has(class_id)
 	var bait := _bait(class_id, held, pool, offered, count)

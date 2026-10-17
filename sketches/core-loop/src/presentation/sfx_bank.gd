@@ -32,6 +32,7 @@ const STINGER_BEATS := {
 	"warden_theme_in": 4,
 	"boss_arena_in": 4,
 	"boss_phase": 2,
+	"hype_drop": 7,
 	"stinger_boss_defeated": 8,
 	"build_riser": 8,
 	# The world stinger, one id per WORLD_STEPS value (world_stinger names them).
@@ -136,6 +137,13 @@ const TRIM_DB := {
 	# --- P-C Cannon sounds ---
 	# --- end Cannon ---
 	"chunk_low": -2.0,
+	# The kill-first specials and the hype drop are rendered files (FILE_SOUNDS), not recipes.
+	"foreman_presence": -14.0, "foreman_tell": -4.0, "foreman_break": -3.0, "foreman_spawn": -6.0,
+	"dispatcher_presence": -14.0, "dispatcher_tell": -4.0, "dispatcher_break": -3.0, "dispatcher_spawn": -6.0,
+	"splitter_presence": -14.0, "splitter_tell": -4.0, "splitter_break_split": -3.0, "splitter_break_clean": -3.0,
+	"splitter_spawn": -6.0,
+	"linker_presence": -14.0, "linker_tell": -4.0, "linker_break": -3.0, "linker_spawn": -6.0,
+	"hype_drop": -3.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
@@ -153,6 +161,14 @@ const CAUSE_NOTE := "cause_note_"
 # The motif cell a class's whip lands on, when it is not the second (Tarn's first two are one note).
 const WHIP_SECOND := {"tarn": 2}
 const CAUSE_NOTE_DB := -8.0
+
+# SPIL-9's called assists, one sting per move, landed on the next beat by audio.gd. Each
+# grows with heft: two layers at heft class 1 or 2, an 808 sub under them at 3 or 4, and
+# at 5 a sax stab on top quoting the pilot's motif. Ids: companion_assist_<move>_t<tier>,
+# the top tier also _<motif id>. Every pitch reads _hz/_n, so the band's live key holds.
+const ASSIST_STING := "companion_assist_"
+const ASSIST_MOVES := ["bonk", "arc", "pile", "slip", "anvil", "static", "bulldozer"]
+const ASSIST_STING_DB := -7.0
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
 const BABBLE_ROOTS := [50, 52, 53, 55, 57, 48]
@@ -180,12 +196,14 @@ static func break_midis(variant := 0) -> Array:
 
 
 static func has_recipe(id: String) -> bool:
-	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE)
+	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or _assist_parts(id).size() > 0
 
 
 static func trim_db(id: String) -> float:
 	if id.begins_with(CAUSE_NOTE):
 		return CAUSE_NOTE_DB
+	if id.begins_with(ASSIST_STING):
+		return ASSIST_STING_DB
 	return TRIM_DB.get(id, -8.0)
 
 
@@ -197,8 +215,94 @@ static func world_stinger(world: int) -> String:
 	return "%s_%s%d" % [WORLD_STINGER, "up" if step > 0 else "down", absi(step)]
 
 
+# The sting for a called assist at a heft class, or "" for a move without one. motif is
+# the pilot's motif id (audio.gd's _motif); only the top tier quotes it.
+static func assist_sting_id(move: String, heft_class: int, motif := "") -> String:
+	if not move in ASSIST_MOVES:
+		return ""
+	var tier := 1 if heft_class <= 2 else (2 if heft_class <= 4 else 3)
+	var id := "%s%s_t%d" % [ASSIST_STING, move, tier]
+	return id + "_" + (motif if Harmony.MOTIFS.has(motif) else Harmony.CLASS_MOTIFS[0]) if tier == 3 else id
+
+
+# [move, tier, motif] from a sting id, or [] when the id is not one.
+static func _assist_parts(id: String) -> Array:
+	if not id.begins_with(ASSIST_STING):
+		return []
+	var bits := id.trim_prefix(ASSIST_STING).split("_")
+	if bits.size() < 2 or not bits[0] in ASSIST_MOVES or not bits[1] in ["t1", "t2", "t3"]:
+		return []
+	var tier := int(bits[1].substr(1))
+	var motif := bits[2] if bits.size() > 2 else ""
+	if (tier == 3) != (motif != "") or (motif != "" and not Harmony.MOTIFS.has(motif)):
+		return []
+	return [bits[0], tier, motif]
+
+
 static func cause_note_id(midi: int) -> String:
 	return CAUSE_NOTE + str(midi)
+
+
+# Rendered sounds (design-v3/sound/specials.py and extras.py), 44.1 kHz mono 16-bit WAVs under
+# assets/sfx/. The four presence cues are seamless two-bar loops at 129 BPM.
+const SFX_DIR := "res://assets/audio/"
+const SPECIALS := ["foreman", "dispatcher", "splitter", "linker"]
+const FILE_SOUNDS := {
+	"foreman_presence": "specials/foreman_presence.wav", "foreman_tell": "specials/foreman_tell.wav",
+	"foreman_break": "specials/foreman_break.wav", "foreman_spawn": "specials/foreman_spawn.wav",
+	"dispatcher_presence": "specials/dispatcher_presence.wav", "dispatcher_tell": "specials/dispatcher_tell.wav",
+	"dispatcher_break": "specials/dispatcher_break.wav", "dispatcher_spawn": "specials/dispatcher_spawn.wav",
+	"splitter_presence": "specials/splitter_presence.wav", "splitter_tell": "specials/splitter_tell.wav",
+	"splitter_break_split": "specials/splitter_break_split.wav", "splitter_break_clean": "specials/splitter_break_clean.wav",
+	"splitter_spawn": "specials/splitter_spawn.wav",
+	"linker_presence": "specials/linker_presence.wav", "linker_tell": "specials/linker_tell.wav",
+	"linker_break": "specials/linker_break.wav", "linker_spawn": "specials/linker_spawn.wav",
+	"hype_drop": "hype_drop.wav",
+}
+# hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
+const HYPE_DROP_LEAD_SECONDS := 2.0
+
+
+# The mono samples of a rendered file: the imported resource when the editor or export has
+# one, else the raw RIFF (headless runs without an import cache).
+static func file_samples(id: String) -> PackedFloat32Array:
+	var path: String = SFX_DIR + String(FILE_SOUNDS[id])
+	var out := PackedFloat32Array()
+	var res = load(path) if ResourceLoader.exists(path) else null
+	if res is AudioStreamWAV and (res as AudioStreamWAV).format == AudioStreamWAV.FORMAT_16_BITS:
+		return _pcm16(res.data, res.stereo)
+	var bytes := FileAccess.get_file_as_bytes(path)
+	var at := 12
+	while at + 8 <= bytes.size():
+		var size := bytes.decode_u32(at + 4)
+		if bytes.slice(at, at + 4).get_string_from_ascii() == "data":
+			return _pcm16(bytes.slice(at + 8, at + 8 + size), false)
+		at += 8 + size + (size & 1)
+	return out
+
+
+static func _pcm16(data: PackedByteArray, stereo: bool) -> PackedFloat32Array:
+	var frames := data.size() / (4 if stereo else 2)
+	var out := PackedFloat32Array()
+	out.resize(frames)
+	for i in frames:
+		if stereo:
+			out[i] = (data.decode_s16(i * 4) + data.decode_s16(i * 4 + 2)) / 65536.0
+		else:
+			out[i] = data.decode_s16(i * 2) / 32768.0
+	return out
+
+
+# A presence loop: the file as a forward-looping stream, whole file as the loop.
+static func loop_stream(id: String) -> AudioStreamWAV:
+	var key := id + "@loop"
+	if not _streams.has(key):
+		var wav := Synth.to_wav(samples(id))
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_begin = 0
+		wav.loop_end = wav.data.size() / 2
+		_streams[key] = wav
+	return _streams[key]
 
 
 # The hum is the one looping cue: a whole number of cycles in its buffer, so it tiles.
@@ -273,6 +377,11 @@ static func bake_all(ids: Array) -> void:
 
 
 static func _bake(id: String) -> PackedFloat32Array:
+	if FILE_SOUNDS.has(id):
+		var file := file_samples(id)
+		if file.size() > 0:
+			return file
+		return _tone(0.12, _hz(62), _hz(62), "sine", 20.0)
 	if id in ["plate_tally", "clip_tally", "stroke_tally", "settle_tally"]:
 		return tally_recipe(id)
 	if id.begins_with("cable_kest_") or id.begins_with("raid_kest_") or id.begins_with("tick_kest_"):
@@ -631,9 +740,45 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return hold("crater", Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
+	if _assist_parts(id).size() > 0:
+		return _assist_sting(_assist_parts(id))
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
+
+
+# --- Assist stings ------------------------------------------------------------------
+
+# The two layers that say which move it was, short and a little silly.
+static func _assist_base(move: String) -> Array:
+	match move:
+		"bonk":  # a cartoon bonk: a wooden knock bending down over a kick thump
+			return [[_fm(0.22, _hz(74), 1.0, 2.5, 18.0, -7.0), 0, 0.8], [_tone(0.16, 140.0, 55.0, "sine", 24.0), 0, 0.9]]
+		"arc":  # a zap that climbs into a bell
+			return [[_fm_sweep(0.18, 300.0, 2400.0, 3.0, 14.0), 0, 0.6], [_cut(_n("bell", 81), 0.4), Synth.seconds(0.08), 0.7]]
+		"pile":  # three clanks stacking up, low to high
+			return [[_fm(0.12, _hz(57), 1.41, 3.0, 26.0), 0, 0.7], [_fm(0.12, _hz(62), 1.41, 3.0, 26.0), Synth.seconds(0.06), 0.7],
+				[_fm(0.2, _hz(69), 1.41, 3.0, 18.0), Synth.seconds(0.12), 0.75]]
+		"slip":  # a whoosh that slides past, and a little chirp after it
+			return [[_noise(0.4, 600.0, 4800.0, 8.0, 0.05), 0, 0.9], [_tone(0.08, _hz(86), _hz(91), "sine", 30.0), Synth.seconds(0.3), 0.4]]
+		"anvil":  # a ringing metal clang over a roll of thunder
+			return [[_fm(0.6, _hz(69), 1.41, 6.0, 6.0), 0, 0.8], [_noise(0.85, 400.0, 90.0, 3.5, 0.03), Synth.seconds(0.03), 0.9]]
+		"static":  # a crackle and a beep, like a radio catching
+			return [[_noise(0.25, 3500.0, 6000.0, 16.0, 0.002), 0, 0.6], [_tone(0.1, _hz(81), _hz(81), "saw", 22.0), Synth.seconds(0.05), 0.35]]
+		"bulldozer":  # a low growl that shoves forward, then the hit
+			return [[_tone(0.35, 55.0, 95.0, "saw_dark", 6.0), 0, 0.8], [_noise(0.12, 900.0, 300.0, 30.0), Synth.seconds(0.28), 0.8]]
+	return []
+
+
+static func _assist_sting(parts: Array) -> PackedFloat32Array:
+	var layers := _assist_base(String(parts[0]))
+	if int(parts[1]) >= 2:  # heft class 3 and up: an 808 sub drop on home
+		layers.append([_tone(0.7, _hz(38), _hz(31), "sine", 4.5), 0, 0.85])
+	if int(parts[1]) >= 3:  # heft class 5: a sax stab quoting the pilot's motif, three notes
+		var notes := Harmony.motif_notes(String(parts[2]))
+		for i in mini(3, notes.size()):
+			layers.append([_cut(_n("sax_lounge", int(notes[i])), 0.18), Synth.seconds(0.1 + 0.07 * i), 0.55])
+	return _cut(_mix(layers, int(parts[1]) >= 2), 0.95)
 
 
 # --- The harpoon line ------------------------------------------------------------------

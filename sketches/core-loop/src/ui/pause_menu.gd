@@ -25,6 +25,8 @@ const Keycap := preload("res://src/ui/keycap.gd")
 # and punch, Hit-stop every freeze, through juice.set_comfort(), saved beside the volumes.
 # With --music=ace the Breath row (B) flips the Warden open's held breath, raw, hard or
 # gentle, and the open sounding now changes with it, so it can be judged mid-fight.
+# The Radio row (V) turns the pilot radio off and back on to its last station
+# (radio_deck.gd), the same stop as Off on the HUD dial; off silences the music alone.
 # The Settings row (O) swaps the column for settings_pages.gd (Display, Controls and Look
 # pages, opening on the page last used) and Back, Esc or P returns to the column with
 # Settings focused.
@@ -39,6 +41,7 @@ const ROWS := [
 	{"id": "notes", "key": "key_tab", "words": "Field notes"},
 	{"id": "music", "bus": "Music", "glyph": "music", "words": "Music"},
 	{"id": "effects", "bus": "SFX", "glyph": "effects", "words": "Effects"},
+	{"id": "radio", "key": "key_v", "words": "Radio: on"},
 	{"id": "shake", "comfort": "shake", "glyph": "shake", "words": "Screen shake"},
 	{"id": "hitstop", "comfort": "hitstop", "glyph": "hitstop", "words": "Hit-stop"},
 	{"id": "ceremony", "key": "key_c", "words": "Ceremonies: full"},
@@ -200,6 +203,7 @@ func open() -> void:
 	game._capture_mouse(false)
 	_sync_levels()
 	_show_ceremony()
+	_show_radio()
 	_show_breath()
 	_set_live(true)
 	_fade(true)
@@ -249,6 +253,11 @@ func press(id: String) -> void:
 				get_tree().quit()
 		"ceremony":
 			_toggle_ceremony()
+		"radio":
+			if game.get("radio_deck") != null:
+				game.radio_deck.toggle_off()
+			_show_radio()
+			_rows["radio"].grab_focus()
 		"breath":
 			if _rows["breath"].visible:
 				game.cycle_breath()
@@ -297,6 +306,11 @@ func _show_breath() -> void:
 	var row: Control = _rows["breath"]
 	row.visible = game.tuning.option(Tuning.MUSIC_KEY) == "ace"
 	row.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
+
+
+func _show_radio() -> void:
+	var deck = game.get("radio_deck")
+	_rows["radio"].text = "Radio: off" if deck != null and deck.radio.station == "off" else "Radio: on"
 
 
 func _show_ceremony() -> void:
@@ -419,6 +433,9 @@ func _menu_key(event: InputEvent) -> bool:
 				return true
 			KEY_C:
 				press("ceremony")
+				return true
+			KEY_V:
+				press("radio")
 				return true
 			KEY_B:
 				press("breath")

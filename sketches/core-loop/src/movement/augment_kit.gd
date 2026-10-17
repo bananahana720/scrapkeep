@@ -42,6 +42,10 @@ var smash_left := 0.0
 var smash_floor := 0.0
 var line_closing := 0.0
 var lock_body: Node3D = null
+# The grip the standing body line took at its bite: pole, reel or flail (grip.gd); "" on a world line.
+var grip := ""
+# Seconds the standing pole line has been ridden (augments.gd _ride_pole).
+var pole_time := 0.0
 var rewind_left := 0.0
 
 var gliding := false
@@ -161,6 +165,8 @@ func drop_line(end := "let_go") -> void:
 	hooked = false
 	on_body = false
 	anchor_body = null
+	grip = ""
+	pole_time = 0.0
 	line_state = Augments.LINE_IDLE
 	winching = false
 	smash_left = 0.0

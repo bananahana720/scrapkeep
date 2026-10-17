@@ -546,7 +546,13 @@ func _step_director(delta: float) -> void:
 		if ctx.calm or ctx.spawner == null:
 			continue
 		var at: Vector2 = spawn["at"]
-		ctx.spawner.spawn_enemy(Director.KIND_NAMES[spawn["kind"]], terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")))
+		var enemy: Node3D = ctx.spawner.spawn_enemy(Director.KIND_NAMES[spawn["kind"]], terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")))
+		# The attacker budget reads one pack of one kind as one threat (attack_budget.gd).
+		if enemy != null:
+			enemy.set_meta("pack_seq", int(spawn.get("pack", -1)))
+		# SG2: every elite-pack member follows the elite rules (elements.gd elite_rules).
+		if spawn.get("elite", false) and enemy != null:
+			enemy.set_meta("elite_pack", true)
 	var pressure: float = minf(1.0, director.pressure(alive) + events.pressure_bonus())
 	if absf(pressure - _pressure) >= PRESSURE_STEP:
 		_pressure = pressure

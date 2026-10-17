@@ -13,7 +13,6 @@ import {
   appRun,
   buildAppImage,
   desktopEntry,
-  execPath,
   findAppimagetool,
   installPaths,
   missingToolMessage,
@@ -23,11 +22,13 @@ import {
 } from "./sketch-appimage.mjs";
 
 test("parseArgs defaults to the newest tarball, installing, with no named packer", () => {
-  assert.deepEqual(parseArgs([]), { tarball: null, install: true, appimagetool: null });
+  assert.deepEqual(parseArgs([]), { tarball: null, install: true, appimagetool: null, uninstall: false });
+  assert.equal(parseArgs(["--uninstall"]).uninstall, true);
   assert.deepEqual(parseArgs(["--tarball=/a.tar.gz", "--no-install", "--appimagetool", "/t"]), {
     tarball: "/a.tar.gz",
     install: false,
     appimagetool: "/t",
+    uninstall: false,
   });
   assert.throws(() => parseArgs(["--nope"]), /unknown argument: --nope/);
 });
@@ -52,26 +53,20 @@ test("newestTarball picks the most recently written export and ignores other fil
 });
 
 test("the desktop entry names the game, its icon and the Game category", () => {
-  const entry = desktopEntry({ exec: "/h/Scrapkeep.AppImage", tryExec: "/h/Scrapkeep.AppImage" });
+  const entry = desktopEntry({ exec: APP_ID });
   assert.ok(entry.startsWith("[Desktop Entry]\nType=Application\nName=Scrapkeep\n"));
-  assert.match(entry, /^Exec=\/h\/Scrapkeep\.AppImage$/m);
-  assert.match(entry, /^TryExec=\/h\/Scrapkeep\.AppImage$/m);
+  assert.match(entry, /^Exec=scrapkeep$/m);
   assert.match(entry, new RegExp(`^Icon=${APP_ID}$`, "m"));
   assert.match(entry, /^Categories=Game;ActionGame;$/m);
   assert.match(entry, /^Terminal=false$/m);
-  assert.doesNotMatch(desktopEntry({ exec: APP_ID }), /TryExec/);
+  assert.doesNotMatch(entry, /TryExec/);
 });
 
-test("execPath quotes a path the desktop spec would split or expand", () => {
-  assert.equal(execPath("/home/a/.local/share/scrapkeep/Scrapkeep.AppImage"), "/home/a/.local/share/scrapkeep/Scrapkeep.AppImage");
-  assert.equal(execPath("/home/a b/S.AppImage"), '"/home/a b/S.AppImage"');
-  assert.equal(execPath('/h/$x"y'), '"/h/\\$x\\"y"');
-});
-
-test("AppRun runs the game from usr/lib and passes every argument through", () => {
+test("AppRun runs the game from usr/lib and passes every argument through, except --install and --uninstall", () => {
   const text = appRun();
   assert.ok(text.startsWith("#!/bin/sh\n"));
   assert.ok(text.includes(`exec "$HERE/usr/lib/${APP_ID}/${EXECUTABLE}" "$@"`));
+  assert.ok(text.includes(`--install | --uninstall) exec sh "$HERE/usr/bin/${APP_ID}-install"`));
 });
 
 test("findAppimagetool honours the flag, then APPIMAGETOOL, then PATH and the usual folders", () => {
@@ -150,6 +145,57 @@ test("buildAppImage lays out the AppDir, packs it and installs the app-menu entr
   assert.ok(existsSync(path.join(share, "icons/hicolor/scalable/apps/scrapkeep.svg")));
   const entry = readFileSync(path.join(share, "applications/scrapkeep.desktop"), "utf8");
   assert.match(entry, new RegExp(`^Exec=${share.replace(/[.]/g, "\\.")}/scrapkeep/Scrapkeep\\.AppImage$`, "m"));
+  assert.match(entry, new RegExp(`^TryExec=${share.replace(/[.]/g, "\\.")}/scrapkeep/Scrapkeep\\.AppImage$`, "m"));
+  assert.match(entry, /^Categories=Game;ActionGame;$/m);
+  assert.ok(statSync(path.join(appDir, "usr/bin/scrapkeep-install")).mode & 0o100);
+});
+
+// What the AppImage runtime does: runs AppRun with APPDIR and APPIMAGE set.
+function runImage(appDir, image, dataHome, args) {
+  return spawnSync(path.join(appDir, "AppRun"), args, {
+    encoding: "utf8",
+    env: { PATH: process.env.PATH, HOME: path.join(dataHome, "home"), APPDIR: appDir, APPIMAGE: image, XDG_DATA_HOME: dataHome },
+  });
+}
+
+test("the AppImage installs and uninstalls itself with --install and --uninstall, keeping saves", async () => {
+  const { dir, tarball, tool } = fakeExport();
+  const { appDir, output } = await buildAppImage({ tarball, install: false, appimagetool: tool, env: { PATH: process.env.PATH }, log: () => {} });
+  const dataHome = path.join(dir, "a b", "share");
+  const install = runImage(appDir, output, dataHome, ["--install"]);
+  assert.equal(install.status, 0, install.stderr);
+  assert.doesNotMatch(install.stdout, /^game/m);
+  const app = path.join(dataHome, "scrapkeep/Scrapkeep.AppImage");
+  assert.equal(readFileSync(app, "utf8"), "image");
+  const entry = readFileSync(path.join(dataHome, "applications/scrapkeep.desktop"), "utf8");
+  assert.ok(entry.includes(`\nExec="${app}"\nTryExec=${app}\n`), entry);
+  assert.match(entry, /^Name=Scrapkeep$/m);
+  assert.ok(existsSync(path.join(dataHome, "icons/hicolor/scalable/apps/scrapkeep.svg")));
+
+  // Running --install from the installed copy rewrites the entry and leaves the copy in place.
+  const again = runImage(appDir, app, dataHome, ["--install"]);
+  assert.equal(again.status, 0, again.stderr);
+  assert.equal(readFileSync(app, "utf8"), "image");
+
+  const saves = path.join(dataHome, "godot/app_userdata/core-loop");
+  mkdirSync(saves, { recursive: true });
+  writeFileSync(path.join(saves, "profile.json"), "{}");
+  const remove = runImage(appDir, output, dataHome, ["--uninstall"]);
+  assert.equal(remove.status, 0, remove.stderr);
+  assert.match(remove.stdout, /saves and settings are kept/);
+  for (const gone of ["scrapkeep", "applications/scrapkeep.desktop", "icons/hicolor/scalable/apps/scrapkeep.svg"])
+    assert.ok(!existsSync(path.join(dataHome, gone)), gone);
+  assert.ok(existsSync(path.join(saves, "profile.json")));
+});
+
+test("--install without an AppImage to copy fails and writes nothing", async () => {
+  const { dir, tarball, tool } = fakeExport();
+  const { appDir } = await buildAppImage({ tarball, install: false, appimagetool: tool, env: { PATH: process.env.PATH }, log: () => {} });
+  const dataHome = path.join(dir, "share");
+  const run = runImage(appDir, "", dataHome, ["--install"]);
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /no AppImage to install/);
+  assert.ok(!existsSync(dataHome));
 });
 
 test("buildAppImage honours XDG_DATA_HOME and --no-install", async () => {

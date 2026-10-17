@@ -7,17 +7,11 @@ extends RefCounted
 #
 # This is the one hook the behaviours call. Combat attaches every special at spawn, so its
 # presence and its death need no call; a behaviour calls tell(self) on its tell's first
-# frame. tell() starts the body's tell clip and emits the body's special_tell(moment), and
-# every listener (special_voice.gd for the sound, machine_fx.gd for the effects and the word)
-# hears that one emit, so picture and sound share a start frame by construction.
-#
-# Each row names the body's tell clip (the rigs on PR #44 start each clip on the frame its
-# sound starts) and the death moments. Cue ids are also the file names under SOUND_DIR
-# (specials.py on PR #12 renders them; the audio gate on PR #41 counts a missing one as a
-# placeholder).
+# frame and emits nothing itself. tell() emits the body's special_tell("tell") once, and
+# every listener hears that one emit: audio.gd plays the sound, special_rig.gd starts the
+# clip, machine_fx.gd fires the effects and the word. Picture and sound share a start frame
+# by construction. Cue ids are <special>_<moment>, the specials.py renders sfx_bank.gd loads.
 
-const SOUND_DIR := "res://assets/audio/specials/"
-const SOUND_EXT := [".wav", ".ogg"]
 const TELL := "tell"
 const PRESENCE := "presence"
 const SPAWN := "spawn"
@@ -25,12 +19,11 @@ const SPAWN := "spawn"
 const CUES := ["presence", "tell", "death"]
 
 const SPECIALS := {
-	"foreman": {"tell_clip": "tell", "breaks": ["break"]},
-	"dispatcher": {"tell_clip": "tell", "breaks": ["break"]},
+	"foreman": {"breaks": ["break"]},
+	"dispatcher": {"breaks": ["break"]},
 	# Rammed at ground level it splits (break_split); from above or range it dies clean.
-	"splitter": {"tell_clip": "tell", "breaks": ["break_split", "break_clean"]},
-	# The tell is the cable going taut while the dish braces.
-	"linker": {"tell_clip": "brace", "breaks": ["break"]},
+	"splitter": {"breaks": ["break_split", "break_clean"]},
+	"linker": {"breaks": ["break"]},
 }
 
 
@@ -57,13 +50,23 @@ static func sound(special: String, moment: String) -> String:
 	return ""
 
 
-# The death moment a dying body plays. A behaviour marks a ground-level ram with
-# set_meta("split", true) before the Splitter dies.
+# The death moment a dying body plays. A Splitter rammed at ground level says so through
+# rammed_at_ground (a property or a method, the contract special_audio.gd reads) or a
+# "split" meta; audio and machine_fx both read this, so the sting and the burst agree.
 static func break_moment(enemy: Node) -> String:
 	var special := special_of(enemy)
 	if special == "splitter":
-		return "break_split" if bool(enemy.get_meta("split", false)) else "break_clean"
+		return "break_split" if rammed(enemy) else "break_clean"
 	return "break" if special != "" else ""
+
+
+static func rammed(enemy: Object) -> bool:
+	if enemy == null:
+		return false
+	if enemy.has_method("rammed_at_ground"):
+		return bool(enemy.rammed_at_ground())
+	var value = enemy.get("rammed_at_ground")
+	return (value is bool and value) or bool(enemy.get_meta("split", false))
 
 
 # The three cues per special, each with every sound id it may play.
@@ -84,13 +87,6 @@ static func all_sounds() -> Array:
 	return out
 
 
-static func sound_path(id: String) -> String:
-	for ext in SOUND_EXT:
-		if ResourceLoader.exists(SOUND_DIR + id + ext):
-			return SOUND_DIR + id + ext
-	return ""
-
-
 # Gives a special the special_tell signal its listeners connect to on enemy_spawned. Combat
 # calls this before it emits enemy_spawned; a body that declares the signal keeps its own.
 static func attach(enemy: Node) -> bool:
@@ -101,27 +97,14 @@ static func attach(enemy: Node) -> bool:
 	return true
 
 
-# The hook: call on the tell's first frame. Starts the body's tell clip at 0, then emits
-# special_tell("tell") once. Returns the tell's sound id, or "" (with a warning) for a body
-# nobody listens to, which never went through attach() before enemy_spawned.
+# The hook: call on the tell's first frame. Emits special_tell("tell") once. Returns the
+# tell's sound id, or "" (with a warning) for a body nobody listens to, which never went
+# through attach() before enemy_spawned.
 static func tell(enemy: Node) -> String:
 	if not attach(enemy):
 		return ""
 	if enemy.get_signal_connection_list("special_tell").is_empty():
 		push_warning("SpecialCues.tell: %s has no special_tell listeners; attach() it before enemy_spawned" % enemy.name)
 		return ""
-	var special := special_of(enemy)
-	play_clip(enemy, String(SPECIALS[special]["tell_clip"]))
 	enemy.emit_signal("special_tell", TELL)
-	return sound(special, TELL)
-
-
-static func play_clip(enemy: Node, clip: String) -> bool:
-	if clip == "" or not is_instance_valid(enemy):
-		return false
-	for player in enemy.find_children("*", "AnimationPlayer", true, false):
-		if player.has_animation(clip):
-			player.play(clip)
-			player.seek(0.0, true)
-			return true
-	return false
+	return sound(special_of(enemy), TELL)

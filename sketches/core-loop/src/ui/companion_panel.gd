@@ -10,9 +10,9 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # to_dict) after every change. workshop.gd decides when it may open (never in play) and
 # routes the keys; this layer only shows and edits.
 #
-#   Pick a piece to put it in a socket; pick a seated piece, or press U (pad Y), to take
-#   it out. Taking one out opens both sockets at once, since the model assembles a pair
-#   or nothing. A third piece, or a second of one family, is refused with one line.
+#   Pick a piece to put it in a socket; pick a seated piece to take it out, or press U
+#   (pad Y) to empty both. One piece works on its own and SPIL-9 wears it (COMPANION-GROWS).
+#   A third piece, or a second of one family, is refused with one line.
 #   Keys: W/S or the d-pad move, Enter or pad A picks, 1-6 pick directly, Esc or pad B
 #   leaves.
 
@@ -26,7 +26,7 @@ const LINE_NONE := "No companion in this run."
 
 var game
 var model := Companion.new()
-# The pieces seated so far, at most two, always a pair the model accepts.
+# The pieces seated so far, at most two, always a set the model accepts.
 var staged: Array[String] = []
 var cursor := 0
 var message := ""
@@ -131,7 +131,7 @@ func pick(i: int) -> void:
 	var id: String = model.owned[i]
 	if staged.has(id):
 		staged.erase(id)
-		model.unassemble()
+		_seat_staged()
 		message = ""
 	elif staged.size() >= Companion.SOCKETS:
 		message = LINE_FULL
@@ -140,12 +140,18 @@ func pick(i: int) -> void:
 	else:
 		staged.append(id)
 		message = ""
-		if staged.size() == Companion.SOCKETS:
-			var reason := model.assemble(staged)
-			if reason != "":
-				staged.erase(id)
-				message = LINE_FAMILY
+		if model.assemble(staged) != "":
+			staged.erase(id)
+			_seat_staged()
+			message = LINE_FAMILY
 	_commit()
+
+
+func _seat_staged() -> void:
+	if staged.is_empty():
+		model.unassemble()
+	else:
+		model.assemble(staged)
 
 
 # Both sockets empty; the owned pile stays as it is.

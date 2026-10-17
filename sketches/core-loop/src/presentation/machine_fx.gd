@@ -22,8 +22,9 @@ const SpecialCues := preload("res://src/combat/special_cues.gd")
 # arrival rings do, so they share the rings' timing and the 0.2 s gap rule between packs.
 #
 # Timing contract with audio: a special fires its tell through SpecialCues.tell(), which
-# emits the body's special_tell(moment) once; special_voice.gd plays the sound from the same
-# emit, so the picture and the sound come off one frame. SpecialCues names the sound ids.
+# emits the body's special_tell(moment) once; audio.gd (the sound) and special_rig.gd (the
+# clip) answer the same emit, so the picture and the sound come off one frame. SpecialCues
+# names the sound ids.
 
 const FAMILY := {Roster.FLEET: "fleet", Roster.REACTOR: "ancient", Roster.SWARM: "ancient", Roster.MIND: "ancient"}
 # Spec id -> particle count, per family and moment. "windup" and "stagger" are persistent

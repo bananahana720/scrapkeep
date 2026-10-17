@@ -315,7 +315,8 @@ func _grants(enemy: Node3D) -> void:
 	var reload := Profile.new(profile.path)
 	reload.load_profile()
 	_t.check("all three grants survive save", ["trail_sable_cable", "decal_sable_spool", "shell_sable_felt"].all(func(id): return reload.has_cosmetic(id)))
-	_t.check("Felt Rig stays pending until its art lands", Cosmetics.is_pending("shell_sable_felt"))
+	# Re-pinned 2026-10-16 (COSMETICS-ART-BRIEFS port note 1): Felt Rig's art merged in wave 13 unit PD.
+	_t.check("Felt Rig is live", not Cosmetics.is_pending("shell_sable_felt") and FileAccess.file_exists("res://assets/models/world_one/shell_sable_felt.glb"))
 	listener.free()
 
 

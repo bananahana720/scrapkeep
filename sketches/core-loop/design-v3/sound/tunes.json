@@ -1,0 +1,339 @@
+[
+ {
+  "id": "landmark-spillway-dam",
+  "display_name": "Over the Dam",
+  "place": "Spillway Works: the dam",
+  "parent": "roam-spillway",
+  "bpm": 172,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "landmark-spillway-dam-s4101.wav",
+   "landmark-spillway-dam-s4102.wav"
+  ],
+  "pick": "landmark-spillway-dam-s4101.wav"
+ },
+ {
+  "id": "landmark-penstock",
+  "display_name": "Penstock Pressure",
+  "place": "Spillway Works: the penstock tower",
+  "parent": "spillway-loop",
+  "bpm": 129,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "landmark-penstock-s4101.wav",
+   "landmark-penstock-s4102.wav"
+  ],
+  "pick": "landmark-penstock-s4101.wav"
+ },
+ {
+  "id": "landmark-headframe",
+  "display_name": "Down the Headframe",
+  "place": "The Dig: the headframe",
+  "parent": "roam-dig",
+  "bpm": 172,
+  "key": "E minor",
+  "hidden": false,
+  "takes": [
+   "landmark-headframe-s4101.wav",
+   "landmark-headframe-s4102.wav"
+  ],
+  "pick": "landmark-headframe-s4102.wav"
+ },
+ {
+  "id": "landmark-sinkhole",
+  "display_name": "Sinkhole Echo",
+  "place": "The Dig: the sinkhole",
+  "parent": "dig-loop",
+  "bpm": 129,
+  "key": "E minor",
+  "hidden": false,
+  "takes": [
+   "landmark-sinkhole-s4101.wav",
+   "landmark-sinkhole-s4102.wav"
+  ],
+  "pick": "landmark-sinkhole-s4101.wav"
+ },
+ {
+  "id": "landmark-hanging-isle",
+  "display_name": "The Hanging Isle",
+  "place": "The Highdraft: the hanging isle",
+  "parent": "roam-highdraft",
+  "bpm": 172,
+  "key": "G minor",
+  "hidden": false,
+  "takes": [
+   "landmark-hanging-isle-s4101.wav",
+   "landmark-hanging-isle-s4102.wav"
+  ],
+  "pick": "landmark-hanging-isle-s4101.wav"
+ },
+ {
+  "id": "landmark-crown-spire",
+  "display_name": "Crown of the Spire",
+  "place": "The Highdraft: the crown spire",
+  "parent": "highdraft-loop",
+  "bpm": 129,
+  "key": "G minor",
+  "hidden": false,
+  "takes": [
+   "landmark-crown-spire-s4101.wav",
+   "landmark-crown-spire-s4102.wav"
+  ],
+  "pick": "landmark-crown-spire-s4102.wav"
+ },
+ {
+  "id": "event-scrap-stampede",
+  "display_name": "Scrap Stampede",
+  "place": "Event: scrap stampede",
+  "parent": "combat-hype",
+  "bpm": 150,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "event-scrap-stampede-s4101.wav",
+   "event-scrap-stampede-s4102.wav"
+  ],
+  "pick": "event-scrap-stampede-s4101.wav"
+ },
+ {
+  "id": "event-surge-run",
+  "display_name": "Surge Run",
+  "place": "Event: surge run",
+  "parent": "roam-spillway",
+  "bpm": 180,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "event-surge-run-s4101.wav",
+   "event-surge-run-s4102.wav"
+  ],
+  "pick": "event-surge-run-s4102.wav"
+ },
+ {
+  "id": "event-hold-relay",
+  "display_name": "Hold the Relay",
+  "place": "Event: hold the relay",
+  "parent": "boss-brindle",
+  "bpm": 129,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "event-hold-relay-s4101.wav",
+   "event-hold-relay-s4102.wav"
+  ],
+  "pick": "event-hold-relay-s4102.wav"
+ },
+ {
+  "id": "event-flood",
+  "display_name": "Flood Gates",
+  "place": "Event: flood",
+  "parent": "spillway-loop",
+  "bpm": 129,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "event-flood-s4101.wav",
+   "event-flood-s4102.wav"
+  ],
+  "pick": "event-flood-s4101.wav"
+ },
+ {
+  "id": "event-dust-squall",
+  "display_name": "Dust Squall",
+  "place": "Event: dust squall",
+  "parent": "roam-dig",
+  "bpm": 160,
+  "key": "E minor",
+  "hidden": false,
+  "takes": [
+   "event-dust-squall-s4101.wav",
+   "event-dust-squall-s4102.wav"
+  ],
+  "pick": "event-dust-squall-s4101.wav"
+ },
+ {
+  "id": "event-arena",
+  "display_name": "Round Arena",
+  "place": "Event and camp: the arena",
+  "parent": "combat-hype",
+  "bpm": 129,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "event-arena-s4101.wav",
+   "event-arena-s4102.wav"
+  ],
+  "pick": "event-arena-s4101.wav"
+ },
+ {
+  "id": "miniboss",
+  "display_name": "Heavyweight",
+  "place": "Mini-boss fights",
+  "parent": "combat-hype",
+  "bpm": 135,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "miniboss-s4101.wav",
+   "miniboss-s4102.wav"
+  ],
+  "pick": "miniboss-s4102.wav"
+ },
+ {
+  "id": "moss-shop",
+  "display_name": "Moss's Counter",
+  "place": "Moss's shop",
+  "parent": "camp",
+  "bpm": 112,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "moss-shop-s4101.wav",
+   "moss-shop-s4102.wav"
+  ],
+  "pick": "moss-shop-s4102.wav"
+ },
+ {
+  "id": "fabricator",
+  "display_name": "The Fabricator",
+  "place": "The fabricator",
+  "parent": "title-b",
+  "bpm": 120,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "fabricator-s4101.wav",
+   "fabricator-s4102.wav"
+  ],
+  "pick": "fabricator-s4102.wav"
+ },
+ {
+  "id": "camp-course",
+  "display_name": "The Course",
+  "place": "Camp: the movement course",
+  "parent": "title-c",
+  "bpm": 172,
+  "key": "D major",
+  "hidden": false,
+  "takes": [
+   "camp-course-s4101.wav",
+   "camp-course-s4102.wav"
+  ],
+  "pick": "camp-course-s4102.wav"
+ },
+ {
+  "id": "modifier-curse",
+  "display_name": "Cursed Run",
+  "place": "Run modifier: a curse",
+  "parent": "summary-loss",
+  "bpm": 100,
+  "key": "D minor",
+  "hidden": false,
+  "takes": [
+   "modifier-curse-s4101.wav",
+   "modifier-curse-s4102.wav"
+  ],
+  "pick": "modifier-curse-s4102.wav"
+ },
+ {
+  "id": "modifier-par",
+  "display_name": "Beat the Par",
+  "place": "Run modifier: par time",
+  "parent": "title-c",
+  "bpm": 176,
+  "key": "D major",
+  "hidden": false,
+  "takes": [
+   "modifier-par-s4101.wav",
+   "modifier-par-s4102.wav"
+  ],
+  "pick": "modifier-par-s4102.wav"
+ },
+ {
+  "id": "secret-lost-tape",
+  "display_name": "The Lost Tape",
+  "place": "Hidden: the Cable Reach cache",
+  "parent": "title-a",
+  "bpm": 90,
+  "key": "D minor",
+  "hidden": true,
+  "takes": [
+   "secret-lost-tape-s4101.wav",
+   "secret-lost-tape-s4102.wav"
+  ],
+  "pick": "secret-lost-tape-s4102.wav"
+ },
+ {
+  "id": "secret-after-hours",
+  "display_name": "Moss After Hours",
+  "place": "Hidden: Moss's bay jukebox",
+  "parent": "summary-loss",
+  "bpm": 96,
+  "key": "D minor",
+  "hidden": true,
+  "takes": [
+   "secret-after-hours-s4101.wav",
+   "secret-after-hours-s4102.wav"
+  ],
+  "pick": "secret-after-hours-s4101.wav"
+ },
+ {
+  "id": "secret-brindle-swing",
+  "display_name": "Brindle Swings",
+  "place": "Hidden: a rare remix",
+  "parent": "boss-brindle",
+  "bpm": 160,
+  "key": "D minor",
+  "hidden": true,
+  "takes": [
+   "secret-brindle-swing-s4101.wav",
+   "secret-brindle-swing-s4102.wav"
+  ],
+  "pick": "secret-brindle-swing-s4102.wav"
+ },
+ {
+  "id": "secret-chip-keepers",
+  "display_name": "Chiptune Keepers",
+  "place": "Hidden: a rare remix",
+  "parent": "combat-hype",
+  "bpm": 150,
+  "key": "D minor",
+  "hidden": true,
+  "takes": [
+   "secret-chip-keepers-s4101.wav",
+   "secret-chip-keepers-s4102.wav"
+  ],
+  "pick": "secret-chip-keepers-s4101.wav"
+ },
+ {
+  "id": "secret-highdraft-rain",
+  "display_name": "Rain over the Highdraft",
+  "place": "Hidden: a rare remix",
+  "parent": "roam-highdraft",
+  "bpm": 86,
+  "key": "G minor",
+  "hidden": true,
+  "takes": [
+   "secret-highdraft-rain-s4103.wav",
+   "secret-highdraft-rain-s4104.wav",
+   "secret-highdraft-rain-s4105.wav"
+  ],
+  "pick": "secret-highdraft-rain-s4104.wav"
+ },
+ {
+  "id": "secret-dig-dub",
+  "display_name": "Deep Works Dub",
+  "place": "Hidden: a rare remix",
+  "parent": "dig-loop",
+  "bpm": 140,
+  "key": "E minor",
+  "hidden": true,
+  "takes": [
+   "secret-dig-dub-s4101.wav",
+   "secret-dig-dub-s4102.wav"
+  ],
+  "pick": "secret-dig-dub-s4102.wav"
+ }
+]

@@ -8,6 +8,7 @@
 - [DESIGN-V3.md](DESIGN-V3.md): Single current gameplay design and D1 disposition table.
 - [HANDOFF.md](HANDOFF.md): Live coordinator handoff, updated each wave.
 - [HOOK-CHAIN.md](HOOK-CHAIN.md): Detailed chain contract and acceptance work.
+- [POLES-FLAILS.md](POLES-FLAILS.md): Wave 20 proposal for poles and flails on the harpoon.
 - [LEGIBILITY.md](LEGIBILITY.md): Accepted presentation grammar and measurement references.
 - [MACHINE-VFX.md](MACHINE-VFX.md): Enemy and boss effects, the specials' tell contract and their budget.
 - [TRAVERSAL.md](TRAVERSAL.md): Traversal measurements and definitions consumed by code and tests.

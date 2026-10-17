@@ -68,12 +68,22 @@ const BURDEN_PARTS := ["cracked_plating", "thin_pickings", "slack_coil"]
 # A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.
 const PICK_ON_CLASS_UP := true
 
+# The Linker (linker.gd) joins one pack a stage from world 2, beside the heaviest crew of that
+# world's roster (a drill crew, then an anchor crew), so a quarter of authored arrivals there
+# need a kill order (ENEMY-PRIORITY.md 6: none in stage 1, rising after).
 # World 1's packs (stages 1 and 2 use them). KF0 2026-10-10: the deflector's `rebound` pack left
 # world 1, so harpoon-spam answers enter from world 2 (decisions.tsv, "The deflector's rebound pack
 # leaves world 1"; PARK.md section 13 item 2).
 const PACKS := [
 	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
+]
+# Stage 2 adds the Foreman's shift crew (foreman.gd): its horn closes the brute's cracked plating
+# every 5 s until it is knocked out first. None in stage 1 (ENEMY-PRIORITY.md 6).
+const PACKS_SHIFT := [
+	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
+	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
+	{"id": "shift_crew", "kinds": ["foreman", "plated_brute", "chaser", "chaser"]},
 ]
 const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
 # The arrival of each stage that is the elite pack.
@@ -108,7 +118,7 @@ const DEFS := [
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[1]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[1], "warden_hint": "Break its guard, then smash the core.",
-		"packs": PACKS, "elite": ELITE, "warden_variant": "meltdown"},
+		"packs": PACKS_SHIFT, "elite": ELITE, "warden_variant": "meltdown"},
 	{"stage": 3, "world": 2, "music": {"theme": 1, "ace": "dig_upper"}, "warden_family": "swarm", "name": "Dig: the upper bench", "map": "dig", "threat": 1.1,
 		"unlock_base": 2, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -118,6 +128,8 @@ const DEFS := [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower"]},
 			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
+			{"id": "dig_linked", "kinds": ["linker", "drill_crew", "burrower"]},
+			{"id": "dig_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 		], "elite": ELITE, "warden_variant": ""},
 	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": "dig_deep"}, "warden_family": "swarm", "name": "Dig: the deep works", "map": "dig_deep", "threat": 1.2,
 		"unlock_base": 4, "ancient": "swarm_remnant",
@@ -128,6 +140,8 @@ const DEFS := [
 			{"id": "deep_bore", "kinds": ["drill_crew", "burrower", "burrower"]},
 			{"id": "deep_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "burrower"]},
 			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm"]},
+			{"id": "deep_linked", "kinds": ["linker", "drill_crew", "lamp_swarm"]},
+			{"id": "deep_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 		], "elite": ELITE, "warden_variant": "brood"},
 	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": "highdraft"}, "warden_family": "mind", "name": "Highdraft", "map": "highdraft", "threat": 1.3,
 		"unlock_base": 2, "ancient": "mind_hand",
@@ -138,6 +152,7 @@ const DEFS := [
 			{"id": "draft_cut", "kinds": ["line_cutter", "line_cutter", "kite_drone"]},
 			{"id": "draft_anchor", "kinds": ["anchor_crew", "line_cutter"]},
 			{"id": "draft_kites", "kinds": ["kite_drone", "kite_drone", "anchor_crew"]},
+			{"id": "draft_linked", "kinds": ["linker", "anchor_crew", "kite_drone"]},
 		], "elite": ELITE, "warden_variant": ""},
 	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": "highdraft_crown"}, "warden_family": "mind", "name": "Highdraft: the crown", "map": "highdraft_crown", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
@@ -148,6 +163,7 @@ const DEFS := [
 			{"id": "crown_cut", "kinds": ["line_cutter", "kite_drone", "kite_drone"]},
 			{"id": "crown_anchor", "kinds": ["anchor_crew", "anchor_crew", "line_cutter"]},
 			{"id": "crown_kites", "kinds": ["kite_drone", "kite_drone", "line_cutter", "anchor_crew"]},
+			{"id": "crown_linked", "kinds": ["linker", "anchor_crew", "line_cutter", "kite_drone"]},
 		], "elite": ELITE, "warden_variant": "choir"},
 ]
 

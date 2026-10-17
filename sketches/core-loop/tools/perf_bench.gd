@@ -352,10 +352,12 @@ func _prebake_band() -> void:
 		return
 	var audio = _game.presentation.audio
 	if audio.live_output:
+		audio._finish_opening()
 		if audio._rest_task >= 0:
 			WorkerThreadPool.wait_for_task_completion(audio._rest_task)
 			audio._rest_task = -1
 	else:
+		MusicEngine.prepare_opening()
 		MusicEngine.prepare_rest()
 
 
