@@ -146,6 +146,7 @@ var last_entry_usec := 0
 # The trade interior's block material, built once instead of a checker texture a block;
 # dress_props reads its two colours and replaces it, so every block can share it.
 static var _interior_block: StandardMaterial3D
+static var _wall: PhysicsMaterial
 # True on the Game's own instance (setup ran), whose _exit_tree is the Game's teardown. A
 # contraption's cache helper (contraptions.gd) leaves with its stage root on a stage exit, and
 # releasing the shared caches there dropped the next stage's plans before its retry (SWAP-HITCH-3).
@@ -236,6 +237,7 @@ func _exit_tree() -> void:
 	load("res://src/world/events/natural.gd").release_plans()
 	load("res://src/presentation/set_dressing.gd").release_shared()
 	_interior_block = null
+	_wall = null
 
 
 # Waits once on a map's entry-data worker and takes its results. worker_layout records that the
@@ -509,11 +511,25 @@ func _build_interior(s: Site) -> void:
 	load("res://src/presentation/spillway_scenery.gd").dress_props(root)
 
 
+# Interior blocks and the cache's walls are plain vertical box faces. On the default wall
+# material the ball's friction (0.9) held a glancing 20 m/s strike to a third of its speed: a dead
+# stop (PARK-PIPEVAULT, stage-5 pipe vault). A frictionless wall slides a glancing hit along it. Its
+# small bounce (0.3, on top of the ball's) lifts a 22 degree strike above the half-speed dead-stop
+# line (bounce 0 left it at 36%) while a head-on hit still rebounds under 40% of its speed.
+func _wall_material() -> PhysicsMaterial:
+	if _wall == null:
+		_wall = PhysicsMaterial.new()
+		_wall.friction = 0.0
+		_wall.bounce = 0.3
+	return _wall
+
+
 func _activate_interior_collision(s: Site) -> void:
 	var root := s.get_node("Interior_" + String(s.interior.id))
 	for i in s.interior.terrain.size():
 		var block: Dictionary = s.interior.terrain[i]
 		var body := StaticBody3D.new()
+		body.physics_material_override = _wall_material()
 		var shape := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		box.size = Vector3(block.size[0], block.size[1], block.size[2])
@@ -577,6 +593,7 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 	var bs := BoxShape3D.new()
 	bs.size = size
 	shape.shape = bs
+	body.physics_material_override = _wall_material()
 	body.add_child(shape)
 	body.add_child(mesh)
 	body.position = at
@@ -810,6 +827,9 @@ func _cue(s: Site, phase: String) -> void:
 	var presentation: Node = ctx.root.get_node_or_null("Presentation")
 	if presentation != null:
 		presentation.audio.play(kind)
+		# The site's own tune (an arena's), read by id; audio decides whether it has one.
+		if presentation.audio.has_method("activity_cue"):
+			presentation.audio.activity_cue(s.id, phase)
 	if is_instance_valid(s.phase_view):
 		s.phase_view.queue_free()
 	s.phase_view = ActivityView._glyph(String(row.shape), row.color)

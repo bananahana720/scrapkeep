@@ -13,13 +13,15 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Stage -> [map, batch count, hash], from the 7dbdebae builder.
+# 2026-10-16 PARK-WIN re-pin: stage 6 park_crown 1104816985 -> 3361994924, because its dressing
+# follows the PW2 rebaked ground (passes on the 699fded6 ground.bin); stages 1 to 5 unchanged.
 const PINS := {
 	1: ["park_dam", 13, 2427938025],
 	2: ["park_flume", 13, 1284262125],
 	3: ["park_pit", 13, 3689678730],
 	4: ["park_sinkhole", 13, 2757620411],
 	5: ["park_islands", 13, 3297821718],
-	6: ["park_crown", 13, 1104816985],
+	6: ["park_crown", 13, 3361994924],
 }
 
 var _t := T.new("park_dressing_pin_test")
