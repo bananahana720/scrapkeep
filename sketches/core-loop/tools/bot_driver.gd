@@ -243,6 +243,11 @@ const FACE_TILT := 0.866
 const SLING_STEP := 0.05
 const SLING_FLIGHT := 4.0
 const MIND_STAGE := 5
+# A fight climb on the Mind stage that has not reached its target after MIND_CLIMB_GIVE_UP seconds
+# drops the end-height test for the rest of the stage (ISLE-SKIRT): that test reads the east skirt
+# of the Hanging Isle's ramp as one gentle step, and Tarn (completionist seed 36003) shuttled on it
+# from t=100 s to the limit. The Mind fight's own climbs back to the hand finish well inside it.
+const MIND_CLIMB_GIVE_UP := 45.0
 # Specials.
 const CROWD := 2
 const CROWD_RADIUS := 12.0
@@ -404,6 +409,9 @@ var _climb: Array[Vector3] = []
 var _climb_for := ""
 var _fight_climb: Array[Vector3] = []
 var _fight_climb_clock := 0.0
+var _fight_climb_held := 0.0
+var _fight_climb_tick := -1
+var _mind_slope_spent := false
 var _route_lips: Array[Vector3] = []
 var _plate_hand := {}
 var _ignore_walls := false
@@ -792,6 +800,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_climb_for = ""
 	_fight_climb = []
 	_fight_climb_clock = 0.0
+	_fight_climb_held = 0.0
+	_fight_climb_tick = -1
+	_mind_slope_spent = false
 	_wander_clock = 0.0
 	_committed = policy == "skipper"
 	_planned = false
@@ -1280,7 +1291,7 @@ func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vec
 	var nx := int(ceilf((hi.x - lo.x) / CLIMB_STEP)) + 1
 	var nz := int(ceilf((hi.y - lo.y) / CLIMB_STEP)) + 1
 	var hx := 2 * nx - 1
-	var legacy := _in_mind_stage()
+	var legacy := _mind_slope()
 	var graph := AStar2D.new()
 	graph.reserve_space(nx * nz)
 	var half := PackedFloat32Array()
@@ -2228,6 +2239,12 @@ func _climbing(ball: Vector3, at: Vector3) -> bool:
 
 # The next point on the climb to a fight target above the ball, or the target when no way up is found.
 func _fight_way_up(ball: Vector3, at: Vector3, delta: float) -> Vector3:
+	if _fight_climb_tick != ticks:
+		_fight_climb_held = _fight_climb_held + delta if _fight_climb_tick == ticks - 1 else delta
+		_fight_climb_tick = ticks
+	if _fight_climb_held > MIND_CLIMB_GIVE_UP and _in_mind_stage() and not _mind_slope_spent:
+		_mind_slope_spent = true
+		_fight_climb_clock = 0.0
 	_fight_climb_clock -= delta
 	if _fight_climb_clock <= 0.0:
 		_fight_climb = _climb_route_any(ball, at)
@@ -2892,6 +2909,11 @@ func _turret(aim, delta: float) -> void:
 # end-height slope test, and the two-half test moves that median (MIND-ROUTE, 2026-10-16).
 func _in_mind_stage() -> bool:
 	return int(_note.get("stage", 0)) == MIND_STAGE
+
+
+# The end-height test plans the Mind stage's climbs until one runs past MIND_CLIMB_GIVE_UP.
+func _mind_slope() -> bool:
+	return _in_mind_stage() and not _mind_slope_spent
 
 
 func _sling_lands_low() -> bool:
