@@ -3,6 +3,7 @@
 # single plain call with no cd, pipe or heredoc (Andrew, 2026-10-17: no allow-once prompts).
 #
 #   scripts/music/mx spice [cue ...]            remix and master the current picks (spice.py)
+#   scripts/music/mx gapfill [tune id ...]      render, split and master the place and moment twists
 #   scripts/music/mx master <in> <out> [args]   evolve.py master
 #   scripts/music/mx overnight [args]           overnight.py <render folder> <score dir> [args]
 #   scripts/music/mx check [args]               check_mix.py from the score dir
@@ -25,7 +26,7 @@ score="${MX_SCORE:-/tmp/claude-1000/-home-andrew-Projects-scrapkeep--claude-work
 branch="claude/project-thread-d1uvzh"
 
 if [ "$#" -lt 1 ]; then
-    sed -n '2,19p' "${BASH_SOURCE[0]}" >&2
+    sed -n '2,20p' "${BASH_SOURCE[0]}" >&2
     exit 2
 fi
 step="$1"
@@ -34,6 +35,9 @@ shift
 case "$step" in
     spice)
         nice -n 10 "$py" -I "$sound/spice.py" "$renders" "$@"
+        ;;
+    gapfill)
+        nice -n 10 "$py" -I "$sound/gapfill.py" "$renders" "$@"
         ;;
     master)
         nice -n 10 "$py" -I "$sound/evolve.py" master "$@"
