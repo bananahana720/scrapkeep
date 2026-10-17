@@ -106,7 +106,7 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 **Side loop 7a. Mid-pit homes, winzes and Kest's cage (off the chain)**
 - Where: `winze_west`, `winze_north`, `winze_east`, `adit_east`, `conveyor_gallery`, `deep_adit`, `switchback_camp` (3-park_pit.md:106-112, :116).
 - You: off the measured lines, you slam a winze cap to drop one bench, clear a home, ride the conveyor gallery, or free Kest from the cage on bench 4 west (3-park_pit.md:126, :85). The rescue unlocks Kest (ALPHA-PLAN.md:194).
-- You see: white unpooled lamp lenses on the faces and a bright lure bloom in a winze collar's noon shadow (3-park_pit.md:185, :152). Kest's cage at (-150, 110) sits about 54 m from the altar's lit ring at (-170, 60), so the altar signposts the cage (inference from 3-park_pit.md:84-85).
+- You see: white unpooled lamp lenses on the faces and a bright lure bloom in a winze collar's noon shadow (3-park_pit.md:185, :152). Kest's cage at (-144, 110) sits about 56 m from the altar's lit ring at (-170, 60), so the altar signposts the cage (inference from 3-park_pit.md:84-85).
 - Pull in, from the bench lips of Beat 7: the altar's lit ring on bench 4, seen across the pit (3-park_pit.md:87), and the bright lure bloom in the `winze_west` collar's noon shadow (3-park_pit.md:152). Homes to clear on the way: `winze_lamps` (-200, 40) and `adit_drill_crews` (215, 30) (3-park_pit.md:82).
 - Pull out, back to Beat 8: every way down ends on the floor bowl at the headframe's foot, and each winze cap drops you one bench closer to it (3-park_pit.md:201, :126). The headframe stays in view over the floor (inference: it stands 120 m tall on the floor, 3-park_pit.md:43).
 - Pressure: `winze_lamps`, ram at tier 2, 50 hp; `adit_drill_crews`, smash 80 hp, drop on the rig from bench 2 (3-park_pit.md:151-152). At clock tier 2 (90 s): `bench3_drill_barge` with a 10 s telegraph opens `barge_ramp`, and `sump_flood` with a 6 s telegraph closes `sump_floor` (3-park_pit.md:139-140). Tier 3 `deep_adit_wakes` needs veto item 16 (3-park_pit.md:134, :141).
@@ -391,7 +391,7 @@ The plot tool draws each route from the appendix's `routes[].via` row ids, at ea
 | 3 | Cracked cache `cache_lip` | (-134, -215), on the line | Beat 6, at the crest, 6 m off the line (3-park_pit.md:79) |
 | 3 | Enemy camp `switchback_camp_site` | (180, -150), pays `rivet_plating` | Beat 1, its smoke from the dump top (3-park_pit.md:87, :422) |
 | 3 | Ambush altar `bench4_altar` | (-170, 60) | Beat 1, a lit ring on bench 4 across the pit (3-park_pit.md:87) |
-| 3 | Rescue, Kest's cage (not an activity row) | (-150, 110) | Beat 5 at the crest, beside the altar's ring (inference from 3-park_pit.md:84-85) |
+| 3 | Rescue, Kest's cage (`rescue_rows`, not an activity row) | (-144, 110) | Beat 5 at the crest, beside the altar's ring (inference from 3-park_pit.md:84-85) |
 | 4 | Hauler bounty `bounty_great_room` | (6, -20), on every line | Beat 6, in the great room (4-park_sinkhole.md:94) |
 | 4 | Enemy camp `cenote_camp` | (-300, -170), pays `pylon_capacitor` | Beat 5, its lamps from the west gallery (4-park_sinkhole.md:94, :482) |
 | 4 | Cracked cache `trench_cache` | (-520, -120) | Off every measured line; a roaming loop under the granaries (4-park_sinkhole.md:94) |

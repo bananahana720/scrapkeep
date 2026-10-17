@@ -197,5 +197,8 @@
   {"id": "domes_camp", "activity": "enemy_camp", "site": "slickrock_domes", "at": [-51, -396], "pack": ["chaser", "chaser", "chaser"], "pay": {"named": "hot_rivets", "rarities": ["common"]}},
   {"id": "rim_cache", "activity": "cracked_cache", "site": "west_rim_bench", "at": [-206, 300], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bench_altar", "activity": "ambush_altar", "site": "east_rim_bench", "at": [206, 250], "pack": [], "pay": {"rarities": ["common", "rare"]}}
+ ],
+ "rescue_rows": [
+  {"id": "rivet_cage", "site": "dome_7", "at": [60, -594], "face": [-1, 0], "quest": "rivet", "pilot": "runner_gunner", "prompt": "free the runner"}
  ]
 }

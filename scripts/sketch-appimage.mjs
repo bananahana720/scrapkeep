@@ -10,7 +10,9 @@ import { fileURLToPath } from "node:url";
 // Scrapkeep-<sha>-x86_64.AppImage beside it, then installs it for the current user: the AppImage
 // at ~/.local/share/scrapkeep/Scrapkeep.AppImage, the icon under ~/.local/share/icons and the
 // app-menu entry at ~/.local/share/applications/scrapkeep.desktop. --tarball=<path> picks another
-// export, --no-install only builds, --appimagetool=<path> (or APPIMAGETOOL) names the packer.
+// export, --no-install only builds, --appimagetool=<path> (or APPIMAGETOOL) names the packer and
+// --uninstall takes the installed copy, icon and entry out again. Installing runs
+// scripts/appimage/install.sh, the same file the AppImage carries for "Scrapkeep.AppImage --install".
 // The game and its music_ace folder sit side by side in usr/lib/scrapkeep/ as real files, because
 // the sequencer looks for music_ace beside OS.get_executable_path(), which resolves symlinks.
 // appimagetool is not on a stock Arch install and this script never downloads it: without it the
@@ -19,16 +21,18 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
 const iconSource = path.join(root, "scripts/appimage/scrapkeep.svg");
+const installScript = path.join(root, "scripts/appimage/install.sh");
 export const APP_ID = "scrapkeep";
 export const EXECUTABLE = "core-loop.x86_64";
 const tarballName = /^scrapkeep-core-loop-([0-9a-f]{7,40}(?:-dirty)?)\.tar\.gz$/;
 const toolNames = ["appimagetool", "appimagetool-x86_64.AppImage", "appimagetool.AppImage"];
 
 export function parseArgs(argv) {
-  const args = { tarball: null, install: true, appimagetool: null };
+  const args = { tarball: null, install: true, appimagetool: null, uninstall: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--no-install") args.install = false;
+    else if (arg === "--uninstall") args.uninstall = true;
     else if (arg.startsWith("--tarball=")) args.tarball = arg.slice("--tarball=".length);
     else if (arg === "--tarball" && i + 1 < argv.length) args.tarball = argv[++i];
     else if (arg.startsWith("--appimagetool=")) args.appimagetool = arg.slice("--appimagetool=".length);
@@ -56,8 +60,8 @@ export function newestTarball(directory, list = readdirSync, mtime = (file) => s
   return found[0] ?? null;
 }
 
-// Exec names the AppImage when installed, or the command on PATH inside the AppDir.
-export function desktopEntry({ exec, icon = APP_ID, tryExec = null }) {
+// Exec names the command on PATH inside the AppDir; install.sh points it at the installed copy.
+export function desktopEntry({ exec, icon = APP_ID }) {
   return (
     [
       "[Desktop Entry]",
@@ -66,7 +70,6 @@ export function desktopEntry({ exec, icon = APP_ID, tryExec = null }) {
       "GenericName=Roguelite",
       "Comment=Roll a scrap-mech ball through three worlds with a harpoon",
       "Exec=" + exec,
-      ...(tryExec ? ["TryExec=" + tryExec] : []),
       "Icon=" + icon,
       "Terminal=false",
       "Categories=Game;ActionGame;",
@@ -75,12 +78,16 @@ export function desktopEntry({ exec, icon = APP_ID, tryExec = null }) {
   );
 }
 
-// The AppImage runtime mounts the image and runs AppRun with APPDIR set; arguments pass through,
-// so "Scrapkeep.AppImage -- --profile=sitting" still reaches the game.
+// The AppImage runtime mounts the image and runs AppRun with APPDIR and APPIMAGE set; arguments
+// pass through, so "Scrapkeep.AppImage -- --profile=sitting" still reaches the game. A first
+// argument of --install or --uninstall runs the bundled install script instead.
 export function appRun() {
   return [
     "#!/bin/sh",
     'HERE="${APPDIR:-$(dirname "$(readlink -f "$0")")}"',
+    'case "${1:-}" in',
+    `--install | --uninstall) exec sh "$HERE/usr/bin/${APP_ID}-install" "\${1#--}" "\${APPIMAGE:-}" "$HERE" ;;`,
+    "esac",
     `exec "$HERE/usr/lib/${APP_ID}/${EXECUTABLE}" "$@"`,
     "",
   ].join("\n");
@@ -112,11 +119,6 @@ export function installPaths({ dataHome }) {
     icon: path.join(dataHome, "icons/hicolor/scalable/apps", APP_ID + ".svg"),
     desktop: path.join(dataHome, "applications", APP_ID + ".desktop"),
   };
-}
-
-// The desktop spec splits Exec on spaces, so a path with a space or quote is quoted.
-export function execPath(file) {
-  return /[\s"'\\$`]/.test(file) ? '"' + file.replace(/(["\\$`])/g, "\\$1") + '"' : file;
 }
 
 export function appImageToolArgs(appDir, output) {
@@ -157,6 +159,9 @@ export async function buildAppImage({ tarball, install = true, appimagetool = nu
   await chmod(exe, 0o755);
 
   await writeFile(path.join(appDir, "AppRun"), appRun(), { mode: 0o755 });
+  await mkdir(path.join(appDir, "usr/bin"), { recursive: true });
+  await copyFile(installScript, path.join(appDir, "usr/bin", APP_ID + "-install"));
+  await chmod(path.join(appDir, "usr/bin", APP_ID + "-install"), 0o755);
   await writeFile(path.join(appDir, APP_ID + ".desktop"), desktopEntry({ exec: APP_ID }));
   await copyFile(iconSource, path.join(appDir, APP_ID + ".svg"));
   await copyFile(iconSource, path.join(appDir, ".DirIcon"));
@@ -172,20 +177,21 @@ export async function buildAppImage({ tarball, install = true, appimagetool = nu
   log(`appimage: ${output} (${((await stat(output)).size / 1048576).toFixed(1)} MiB)`);
   if (!install) return { version, appDir, output, installed: null };
 
-  const dataHome = env.XDG_DATA_HOME || path.join(home, ".local/share");
-  const installed = installPaths({ dataHome });
-  for (const file of Object.values(installed)) await mkdir(path.dirname(file), { recursive: true });
-  await copyFile(output, installed.appImage + ".part");
-  await chmod(installed.appImage + ".part", 0o755);
-  await rename(installed.appImage + ".part", installed.appImage);
-  await copyFile(iconSource, installed.icon);
-  await writeFile(installed.desktop, desktopEntry({ exec: execPath(installed.appImage), tryExec: installed.appImage }));
-  // Optional refreshes; launchers that watch the folder pick the entry up without them.
-  run("update-desktop-database", [path.dirname(installed.desktop)]);
-  run("gtk-update-icon-cache", ["-q", "-t", path.join(dataHome, "icons/hicolor")]);
-  log("installed: " + installed.appImage);
-  log("app menu: " + installed.desktop);
+  const installed = await runInstallScript(["install", output, appDir], { env, home, log });
   return { version, appDir, output, installed };
+}
+
+export function dataHomeOf(env, home) {
+  return env.XDG_DATA_HOME || path.join(home, ".local/share");
+}
+
+// Runs scripts/appimage/install.sh with HOME and XDG_DATA_HOME pinned to what the caller passed.
+export async function runInstallScript(args, { env = process.env, home = os.homedir(), log = console.log } = {}) {
+  const dataHome = dataHomeOf(env, home);
+  const result = run("sh", [installScript, ...args], { env: { ...env, HOME: home, XDG_DATA_HOME: dataHome } });
+  if (result.status !== 0) throw new AppImageError(`install.sh ${args[0]} exited ${result.status}\n` + result.stdout + result.stderr);
+  for (const line of result.stdout.trim().split("\n")) if (line) log(line);
+  return installPaths({ dataHome });
 }
 
 async function main() {
@@ -194,6 +200,15 @@ async function main() {
     args = parseArgs(process.argv.slice(2));
   } catch (error) {
     fail(error.message);
+  }
+  if (args.uninstall) {
+    try {
+      await runInstallScript(["uninstall"]);
+    } catch (error) {
+      if (error instanceof AppImageError) fail(error.message);
+      throw error;
+    }
+    return;
   }
   const tarball = args.tarball ? path.resolve(args.tarball) : newestTarball(exportRoot);
   if (!tarball) fail(`no scrapkeep-core-loop-*.tar.gz in ${exportRoot}; run npm run sketch:export first`);
