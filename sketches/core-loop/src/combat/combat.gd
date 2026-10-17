@@ -389,7 +389,7 @@ func setup(ctx_ref) -> void:
 		"point_blank": {"geometry": _point_blank_geometry, "fire": _fire_point_blank},
 		"clamp": {"geometry": _clamp_geometry, "fire": _fire_clamp},
 		"cannon_plate": {"geometry": _plate_geometry, "fire": _fire_plate},
-		"gather_plate": {"tap": _tap_gather},
+		"gather_plate": {"tap": _tap_gather, "commit": _card_aim},
 	}
 	# line_id -> {on_body: Callable(target, fraction, chain_mult), on_world: Callable(anchor,
 	# fraction, chain_mult), geometry: Callable(fraction)} (SKILL-BAR section 7). Each pilot owns
@@ -1409,6 +1409,7 @@ func _physics_process(delta: float) -> void:
 		_cooldown += 1.0 / _rate(weapon)
 	if not intent.fire_held:
 		_cooldown = maxf(_cooldown, 0.0)
+	_step_cast()
 	_step_special(intent, delta)
 	_step_line(intent, delta)
 	_step_cannon(delta)
@@ -1644,8 +1645,15 @@ func _step_special(intent, delta: float) -> void:
 		return
 	var row: Dictionary = _specials[id]
 	if gauge == null:
+		# A second press or right mouse drops a running cast with nothing spent, like a gauge.
+		if abilities.casting == AbilityState.SPECIAL:
+			if intent.special_pressed or intent.cancel_pressed:
+				var dropped: String = abilities.cancel_cast()
+				if dropped != "":
+					ctx.events.gauge_cancelled.emit(dropped, "cancel")
+			return
 		if row.has("tap") and intent.special_pressed:
-			_tap(AbilityState.SPECIAL, id, row["tap"])
+			_tap(AbilityState.SPECIAL, id, row["tap"], row.get("commit", Callable()))
 		return
 	if not gauge.charging and intent.special_pressed and not abilities.ready(AbilityState.SPECIAL):
 		_refuse_cast(AbilityState.SPECIAL, "cooling")
@@ -1691,8 +1699,51 @@ func _step_special(intent, delta: float) -> void:
 
 
 # One tap cast on a bar slot: refused while cooling, refused with no target, else spent and
-# published. Nothing is spent on a refusal, and the selection and its timer stay.
-func _tap(slot: String, id: String, cast: Callable) -> void:
+# published. Nothing is spent on a refusal, and the selection and its timer stay. A row with a
+# `cast` time starts its cast here instead and lands through _step_cast when it finishes; an
+# interrupting hit drops it first with nothing spent (FIELDS-AND-CASTS section 4). A row's
+# `commit` aims at the press: an invalid aim is refused then, and the cast lands where it aimed.
+func _tap(slot: String, id: String, cast: Callable, commit := Callable()) -> void:
+	var abilities = ctx.player.abilities
+	if abilities.casting == slot:
+		return
+	if not abilities.ready(slot):
+		_refuse_cast(slot, "cooling")
+		return
+	if abilities.cast_of(slot) > 0.0:
+		var fire := cast
+		if commit.is_valid():
+			var aim: Dictionary = commit.call()
+			if not bool(aim.get("valid", true)):
+				_refuse_cast(slot, "no_target")
+				return
+			fire = cast.bind(aim)
+		if not abilities.begin_cast(slot):
+			_refuse_cast(slot, "cooling")
+			return
+		_cast_pending = {"slot": slot, "id": id, "fire": fire}
+		ctx.events.gauge_charging.emit(id)
+		return
+	_land_tap(slot, id, cast)
+
+
+# A cast that ran its time lands now as the tap it started from, with the same refusals.
+func _step_cast() -> void:
+	var done: String = ctx.player.abilities.take_cast_done()
+	if _cast_pending.is_empty():
+		return
+	if done == "":
+		if ctx.player.abilities.casting == "":
+			_cast_pending = {}
+		return
+	var pending := _cast_pending
+	_cast_pending = {}
+	if done == String(pending["slot"]):
+		ctx.events.gauge_released.emit(String(pending["id"]), 1.0)
+		_land_tap(done, String(pending["id"]), pending["fire"])
+
+
+func _land_tap(slot: String, id: String, cast: Callable) -> void:
 	var abilities = ctx.player.abilities
 	if not abilities.ready(slot):
 		_refuse_cast(slot, "cooling")
@@ -1710,6 +1761,8 @@ func _tap(slot: String, id: String, cast: Callable) -> void:
 # A cast left click asked for that cannot go. Only a click the bar routed answers with a cue;
 # a module test or a bot writing special_* directly hears nothing new.
 func _refuse_cast(slot: String, reason: String) -> void:
+	if reason == "cooling" and ctx.player.abilities.silenced(slot):
+		reason = "jammed"
 	if ctx.player.abilities.selected == slot:
 		ctx.events.verb_failed.emit("fire", reason, ctx.player.ball_position())
 
@@ -2290,6 +2343,8 @@ const LINE_REEL_DAMAGE := 10.0
 const LINE_REEL_KNOCK := 12.0
 const REEL_BURST := 8.0
 
+# The tap whose cast is running, {slot, id, fire}, or {} (FIELDS-AND-CASTS section 4).
+var _cast_pending := {}
 # A bite this tick waits for _step_line, so it fires after the bite's chain link is counted.
 var _bite_pending := false
 
@@ -2579,8 +2634,9 @@ func _card_aim() -> Dictionary:
 
 
 # Slot 2's tap: plant the plate at the aim. The tap path spends slot 2's own charge.
-func _tap_gather() -> bool:
-	var aim := _card_aim()
+func _tap_gather(aim := {}) -> bool:
+	if aim.is_empty():
+		aim = _card_aim()
 	if not _run_gather(aim["point"], aim["valid"]):
 		return false
 	ctx.events.shot_fired.emit("gather_plate", ctx.player.ball_position(), aim["point"])

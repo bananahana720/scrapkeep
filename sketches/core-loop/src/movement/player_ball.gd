@@ -689,7 +689,8 @@ func _mark_slots() -> void:
 func _charging() -> bool:
 	var special = abilities.gauge(AbilityState.SPECIAL)
 	var line = abilities.gauge(AbilityState.LINE)
-	return (special != null and special.charging) or (line != null and line.charging) or kit.slingshot.charging
+	return (special != null and special.charging) or (line != null and line.charging) or kit.slingshot.charging \
+		or abilities.casting != AbilityState.UNSTARTED
 
 
 # --- The skill bar's router (design-v3/SKILL-BAR.md sections 1 and 2) -------------------
@@ -777,7 +778,9 @@ func _pick(slot: String) -> void:
 func _drop_gauge(slot: String, reason: String) -> bool:
 	var gauge = abilities.gauge(slot)
 	if gauge == null or not gauge.cancel():
-		return false
+		# A slot with a cast time drops its running cast the same way (FIELDS-AND-CASTS section 4).
+		if abilities.casting != slot or abilities.cancel_cast() == "":
+			return false
 	indicator.collapse(slot)
 	events.gauge_cancelled.emit(abilities.id_of(slot), reason)
 	return true

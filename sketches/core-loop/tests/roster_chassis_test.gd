@@ -6,7 +6,7 @@ const T := preload("res://tests/support/t.gd")
 # SQ4, the roster's chassis column (W13-INTEGRATION-3, comps/roboquest/enemy-design-grammar.md
 # "A family is a chassis class plus a movement class plus one read"): every roster row names
 # its chassis class, its movement class and one threat feature that is also its warning.
-# - the three fields exist on the 20 base rows and on every declared later-world row;
+# - the three fields exist on the 20 base rows (19 plus the jolt layer) and on every declared later-world row;
 # - chassis and movement class come from the closed vocabularies in roster.gd;
 # - a blank threat feature fails the check (a planted blank row proves it);
 # - no two rows share a threat feature, the no-reskins rule at the silhouette level.

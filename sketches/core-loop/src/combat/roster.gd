@@ -30,7 +30,8 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # - tests: the build axis it tests, which the director weights against the player's
 #   build ("air", "speed", "heft", "contact", "weapon", "steer", "habit").
 # - script, world: a declared later-world kind's behaviour file and world (roster_dig.gd,
-#   roster_highdraft.gd). Such a kind is built, so spawnable, once its script exists.
+#   roster_highdraft.gd); a base row may name them too (the jolt layer). Such a kind is built,
+#   so spawnable, once its script exists.
 #   A kill-first special (roster_specials.gd) has a script and either a "world" or a "priority".
 
 const FLEET := "fleet"
@@ -110,6 +111,11 @@ const BASE_ROWS := {
 	"gyro_jammer": {"faction": FLEET, "role": "controller", "mechanic": "gyro_drift", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "boost", "smash"], "tag": "hold_riser", "tag_next": "tag_gyro_warble", "hold": "hold_riser", "tests": "steer",
 		"line": "Throws your gyroscope off inside its field: steering drifts side to side until you move out or break it."},
+	# The Spillway's field crew (design-v3/FIELDS-AND-CASTS.md section 2.3): spawnable by name, in
+	# no director pack until wave 19.
+	"jolt_layer": {"faction": FLEET, "role": "controller", "mechanic": "static_jam", "telegraph": T_INSTANT, "holds": false,
+		"breaks": ["speed", "jump"], "tag": "", "tests": "speed", "script": "res://src/combat/jolt_layer.gd", "world": 1,
+		"line": "Unrolls a live cable mat that jolts a slow ball: charges and casts drop and specials jam; roll fast, jump or hook out."},
 	"swatter": {"faction": FLEET, "role": "punisher", "mechanic": "paddle_bat", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "boost"], "tag": "hit_thwack", "tag_next": "tag_paddle_swat", "hold": "", "tests": "steer",
 		"line": "Swings a low paddle arm that bats you along its sweep; jump the paddle, or boost to ride the knock."},
@@ -189,6 +195,7 @@ const CHASSIS := {
 	"pit_jaw": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Toothed jaw ring flush with the floor, its lips parting"},
 	"splitter": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Three welded pods whose seams flare white as one buds off"},
 	"splitter_pod": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Lit seams blinking faster as the fuse burns"},
+	"jolt_layer": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cable spool under a coil that swells before each jolt"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.

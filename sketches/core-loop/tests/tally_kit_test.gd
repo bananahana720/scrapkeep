@@ -134,13 +134,15 @@ func _boot() -> void:
 	_game.events.line_skill_expired.connect(func(id: String): _expired.append(id))
 	_check_cues()
 	var tps := Engine.physics_ticks_per_second
+	# Gather Plate casts in 0.3 s (FIELDS-AND-CASTS section 4), so its plate lands that much later.
+	var cast := int(ceil(AbilityState.ABILITIES["gather_plate"]["cast"] * tps))
 	_steps = [
 		[_noop, 1, _check_row],
 		[_pressure_start, 1, _pressure_spend],
 		[_noop, 5 * tps, _check_pressure],
 		[_bar_start, 2, _check_bar],
 		[_noop, 1, _check_cooldowns],
-		[_gather_start, 2, _gather_planted],
+		[_gather_start, 2 + cast, _gather_planted],
 		[_noop, tps, _check_gather],
 		[_noop, 1, _gather_again_press],
 		[_noop, 2, _check_gather_again],

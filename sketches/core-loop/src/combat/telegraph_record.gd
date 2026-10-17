@@ -99,6 +99,8 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": "A fuse, not a burst: the full second is the time to roll out of the ring; the spent husk sits out its recovery and crumbles, so the cooldown never runs."},
 	"E26": {"kind": "dispatcher", "pre_shoot": 1.2, "cooldown": 6.0, "radius": 4.0, "length": 0.0, "marker": "circle", "band": "projectile",
 		"recovery_before": 0.0, "reason": "A tube drop: the ring stands through the 0.45 s suck-up and the pod's 0.75 s flight, the lobber's grammar on a shorter arc. Cooldown is escalation step 0; unanswered drops climb to 2.5 s (step 1) and 1.0 s (step 2)."},
+	"E27": {"kind": "jolt_layer", "pre_shoot": 1.0, "cooldown": 3.25, "radius": 6.0, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "A field, not a burst: the mat's first jolt lands a full pulse after it goes live, each pulse read over its own 0.5 s lead (FIELDS-AND-CASTS section 2.3)."},
 	# E25 to E29 are taken by the specials' branches; the world roster kinds start at E30
 	# (design-v3/WORLD-ROSTERS.md).
 	"E30": {"kind": "pit_jaw", "pre_shoot": 1.0, "cooldown": 3.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",

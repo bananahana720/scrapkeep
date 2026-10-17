@@ -581,6 +581,8 @@ const ATTACK_ROWS := {
 		"pose": "e25_pod_glow", "warn": "atk_e25_warn", "release": "atk_e25_release", "floor": "B", "open": []},
 	"E26": {"label": "Dispatcher tube drop", "group": "enemy", "owner_kind": "roster", "owner": "dispatcher", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
 		"pose": "e26_tube_suck", "warn": "atk_e26_warn", "release": "atk_e26_release", "floor": "B", "open": []},
+	"E27": {"label": "Jolt layer mat", "group": "enemy", "owner_kind": "roster", "owner": "jolt_layer", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e27_coil_swell", "warn": "atk_e27_warn", "release": "atk_e27_release", "floor": "B", "open": []},
 	"E30": {"label": "Pit jaw bite", "group": "enemy", "owner_kind": "roster", "owner": "pit_jaw", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "e30_jaw_part", "warn": "atk_e30_warn", "release": "atk_e30_release", "floor": "B", "open": []},
 	"E31": {"label": "Prop crew roof drop", "group": "enemy", "owner_kind": "roster", "owner": "prop_crew", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,

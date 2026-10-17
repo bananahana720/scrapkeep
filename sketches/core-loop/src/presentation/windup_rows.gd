@@ -73,6 +73,10 @@ const ROWS := {
 		"idle": {"style": "breathe", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "pop", "parts": 3, "seconds": 0.4}},
 	"splitter_pod": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E25": ["warn_seconds"]},
 		"idle": {"style": "bob", "amplitude": 0.05, "beats": 1.5}, "death": {"style": "pop", "parts": 1, "seconds": 0.3}},
+	# The jolt layer's voice is file-backed (src/presentation/jolt_layer_audio.gd, load if
+	# present); its sound names this row once SfxBank registers the jolt_layer_* cues (PR #12).
+	"jolt_layer": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E27": ["warn_seconds"]},
+		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
 }
 
 
