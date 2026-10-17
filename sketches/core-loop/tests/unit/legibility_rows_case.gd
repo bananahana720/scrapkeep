@@ -210,7 +210,7 @@ func run(t) -> void:
 
 	var activity_ids: Array = EventKinds.ACTIVITY_ROWS.keys()
 	activity_ids.sort()
-	t.check("ACTIVITY_ROWS holds the five standing activities", activity_ids == ["ambush_altar", "cracked_cache", "enemy_camp", "hauler_bounty", "surge_run"], "ids: %s" % [activity_ids])
+	t.check("ACTIVITY_ROWS holds the six standing activities", activity_ids == ["ambush_altar", "cracked_cache", "enemy_camp", "hauler_bounty", "hold_the_relay", "surge_run"], "ids: %s" % [activity_ids])
 
 	t.check("harpoon_bit left ROWS", not EventKinds.ROWS.has("harpoon_bit"), "ROWS still holds harpoon_bit")
 	t.check("harpoon_smashed left ROWS", not EventKinds.ROWS.has("harpoon_smashed"), "ROWS still holds harpoon_smashed")
