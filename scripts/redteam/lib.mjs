@@ -301,7 +301,7 @@ export function grade(results, extras = {}) {
   }
 
   for (const a of extras.fuzz ?? []) {
-    const broken = /non_finite|nan|leak|over_cap|bolts|charge|cooldown|stall|crash/i.test(a.kind);
+    const broken = fuzzSeverity(a.kind) === "major";
     const timed = /frame|tick|time/i.test(a.kind);
     add(finding(broken ? "major" : "watch", "in-run growth", "fuzz:" + a.kind, broken ? `Item fuzz broke a rule: ${a.kind}` : `Item fuzz outlier: ${a.kind}`,
       broken ? "A build pushes a number past what the game allows; it can crash or break a fight." : timed ? "A build costs more time per tick than its cap; timed under load on the cloud box, so recheck alone." : "A build runs far past its peers; fun or broken is Andrew's call."), null);
@@ -322,6 +322,13 @@ export function grade(results, extras = {}) {
   if (extras.exportFailure) add(finding("blocker", "stability", "export", "The Linux build did not export or boot", "The game does not start.", { counts: { reason: extras.exportFailure } }), null);
 
   return rank([...found.values()]);
+}
+
+// A fuzz anomaly that breaks a cap the game promises (speed, charges, cooldowns, finite numbers) is a
+// major; an outlier or a tick timed under load is for Andrew's keep-or-kill.
+export function fuzzSeverity(kind) {
+  if (/^outlier_|frame|tick_p99/i.test(kind)) return "watch";
+  return /non_finite|nan|leak|over_cap|bolts|charge|cooldown|floor|stall|crash|speed|reduction|guard/i.test(kind) ? "major" : "watch";
 }
 
 // Spikes at the same run tick (within SAME_MOMENT_TICKS) in two or more runs with different seeds.

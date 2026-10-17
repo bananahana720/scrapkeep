@@ -4,7 +4,7 @@
 // seen in several passes becomes one line with all their runs, at the worst severity any gave it.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { SEVERITIES, carryList, rank, renderMarkdown } from "./lib.mjs";
+import { SEVERITIES, carryList, fuzzSeverity, rank, renderMarkdown } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const out = args.find((a) => a.startsWith("--out="))?.slice(6);
@@ -25,6 +25,14 @@ for (const pass of passes) {
       have.runs.push(...f.runs);
       if (SEVERITIES.indexOf(f.severity) < SEVERITIES.indexOf(have.severity)) have.severity = f.severity;
     }
+  }
+}
+// Re-grade fuzz lines with today's rule, so older passes read the same as new ones.
+for (const f of byKey.values()) {
+  if (f.key.startsWith("fuzz:") && fuzzSeverity(f.key.slice(5)) === "major" && f.severity === "watch") {
+    f.severity = "major";
+    f.title = f.title.replace("Item fuzz outlier", "Item fuzz broke a rule");
+    f.feel = "A build pushes a number past what the game allows; it can crash or break a fight.";
   }
 }
 const findings = rank([...byKey.values()]);
