@@ -928,7 +928,8 @@ func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
 # would; a cell's parts depend on that cell alone, so each cell takes every face in turn. A
 # shadow that a plane of a part, its box or the hull clears by a margin would leave that part
 # unchanged, so it skips the clip. Every part lies inside the cells' first box, and the
-# caller's hull planes are planes every cell lies behind.
+# caller's hull planes are planes every cell lies behind. Shadows too thin for a margin skip by
+# their reach instead (FRUSTUM_MARGIN).
 func _shade(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: Array) -> Array:
 	var reach := AABB()
 	for i in cells.size():
@@ -994,7 +995,8 @@ func _frustum(origin: Vector3, face: Array, far: float) -> Array:
 	var near := INF
 	for i in range(1, face.size() - 1):
 		near = minf(near, origin.distance_to(_closest_triangle(origin, face[0], face[i], face[i + 1])))
-	var push := far / maxf(near, 0.000001) + 1.0
+	# 5% over, for float32 error in near when a face's plane passes close to the origin.
+	var push := far / maxf(near, 0.000001) * 1.05 + 1.0
 	var points: Array = []
 	for v in face:
 		points.append(v)
