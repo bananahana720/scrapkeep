@@ -14,8 +14,8 @@ stretches to a 3 m row along +Z; the width is authored per id because the fit ne
   great_room_deck W 44 L 8 box    great_room_floor: the bank's floor, basalt flags with a polish ring
   haulage_bed     W 16 L 4 box    haulage_rails: the miners' rail bed, sleepers and two copper-capped rails
 
-Run (memory-capped):
-  prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 --python \
+Run (memory-capped with prlimit, 12 GiB of address space):
+  prlimit <address-space cap> -- blender --background --threads 2 --python-exit-code 1 --python \
     sketches/core-loop/tools/blender/park/sinkhole_slabs.py -- [--out DIR] [--only ID[,ID]] [--count-only]
 """
 import argparse

@@ -22,7 +22,8 @@ floor the slow, bitten one, by moving every rope ring and most geyser mouths ont
 
 The dressing (park rows, DRESS): every greybox tube, cavern, drop lip and box row of the sinkhole takes its authored
 piece with the seat fit (tools/blender/park/sinkhole_tubes.py, sinkhole_slabs.py). The lava tubes carry the polish band,
-so they read as the ancients' work (society ancient) and their verb is bank, the carve; the drifts stay the miners'
+so they read as the ancients' work (society ancient) and their verb is bank, the carve, as are the gallery's
+and the lava channel's; the drifts stay the miners'
 floor (roll). The cinder cone's spire and the machine vault's bowl are the ground scatter's to dress; the trench granaries
 tile the cliff dwelling row. FRAGMENTS adds the pass's field notes and COUNTERS rewrites the floor threats' counters for the floor rule.
 
@@ -54,7 +55,7 @@ WASH = {
     ("tunnel", "lava_tube", False): ("lava_wash", "bank", "ancient"),
     ("tunnel", "lava_tube", True): ("lava_wash_short", "bank", "ancient"),
     ("tunnel", "adit", False): ("drift_wash", None, None),
-    ("flooded_cavern", "cenote_pool", False): ("gallery_wash", None, None),
+    ("flooded_cavern", "cenote_pool", False): ("gallery_wash", "bank", None),
 }
 SLABS = {
     "skylight_1": "skylight_lip", "skylight_2": "skylight_lip", "skylight_3": "skylight_lip",
@@ -77,6 +78,21 @@ COUNTERS = {
     "cinder_burrowers": "Carve the channel wall: a ball on the wall band is off the floor and the burrow can't reach it (floor_rule.gd), and the rope fan's rings hang on the band; or slam the marker, and the codex burrow_lane pays for the side roll.",
     "drift_drill_crews": "Ride the drift wall: the rig's ring bores the floor and a carving ball is off it (floor_rule.gd); the wall ropes carry you past, the timber sets every 6 m are claw and harpoon anchors, or smash the rig mid-bore.",
 }
+# The cinder floor ("Wall pays", card 2026-10-17 23:08Z, default while it waits): one contraption whose strips cover the
+# flat middle 40% of every lava tube floor (the lava channel keeps its speed: the run's opening blazing tier needs it); drag is the share of planar speed a rolling ball loses per
+# second (contraptions.gd _on_cinder). The drifts (the drill crews' floor) and the flooded gallery keep theirs.
+CINDER_DRAG = 0.08
+CINDER_RECIPES = ("lava_wash", "lava_wash_short")
+
+
+def cinder_row(park_rows):
+    strips = []
+    for r in park_rows:
+        if r["recipe"] in CINDER_RECIPES and r["stamp"] == "wash":
+            strips.append([r["at"][0], r["at"][1], r["yaw_deg"], r["size"][0], round(0.2 * float(r["size"][2]), 2)])
+    return {"id": "tube_cinder", "kind": "cinder", "site": "lava_channel_1", "recipe": "", "strips": strips, "drag": CINDER_DRAG}
+
+
 # vent id: (on the wall, charge s)
 VENTS = {
     "main_tube_upper_vent": (True, 2.0),
@@ -181,6 +197,11 @@ def dress(row):
 
 
 def tag(row):
+    # the lava channel's walls carry the rope fan, so its skill is the carve too (its piece is the ride pieces thread's)
+    carved = row["recipe"] in ("lava_wash", "lava_wash_short", "gallery_wash") and row["verb"] in ("roll", "swing")
+    if carved or (row["element"] == "half_pipe" and row["id"].startswith("lava_channel_") and row["verb"] == "pump"):
+        row = dict(row)
+        row["verb"] = "bank"
     if row["id"] in FRAGMENTS:
         row = dict(row)
         row["society"], row["fragment"] = FRAGMENTS[row["id"]]
@@ -218,6 +239,8 @@ def main():
                 new += rope_rows(site, old_c, rows[site])
                 done.add(site)
             continue
+        if c["kind"] == "cinder":
+            continue
         if c["id"] in VENTS:
             new.append(vent_row(c, rows[c["site"]]))
             continue
@@ -242,6 +265,8 @@ def main():
     head = lines.index(' "contraption_rows": [')
     first = head + 1
     last = next(i for i in range(first, len(lines)) if lines[i].startswith(" ]")) - 1
+    current = [json.loads(ln.rstrip(",")) for ln in lines if ln.startswith('  {"id": ') and '"element": ' in ln]
+    new.append(cinder_row(current))
     body = ["  " + json.dumps(c, ensure_ascii=False) + "," for c in new]
     body[-1] = body[-1].rstrip(",")
     tail = "," if lines[last].endswith(",") else ""
