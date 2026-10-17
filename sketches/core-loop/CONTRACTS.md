@@ -229,6 +229,10 @@ Per-kind stats, transformer ids and `register_part` are documented in `src/comba
 
 The spine calls all of these defensively (`has_method`). The fallbacks are integrity 1.0, punch 0, plating 0 and would_crush false. The one exception is the objective line and gap line, which show the stage's `warden_plating` when the spawner cannot say.
 
+### Special cues (`src/combat/special_cues.gd`)
+
+The four kill-first specials (Foreman, Dispatcher, Splitter, Linker) each have a presence loop, a tell and a death sting. A body is a special by its `kind`, a `special` meta or its `elite_affix` meta. `spawn_enemy` calls `SpecialCues.attach(enemy)` before it emits `enemy_spawned`, which gives the body a `special_tell(moment: String)` signal if it has none; a body built outside `spawn_enemy` calls `attach` itself first. Presence and death need no call: `presentation/special_voice.gd` and `presentation/machine_fx.gd` start presence on `enemy_spawned` and play the death on the body's `died`. A Splitter rammed at ground level is marked `set_meta("split", true)` before it dies. A behaviour calls `SpecialCues.tell(self)` on the tell's first frame and nothing else: it starts the body's tell clip at 0 and emits `special_tell("tell")` once, and the sound and the effects both start from that emit, on that frame. It returns "" with a warning for a body nobody listens to. Sound ids are `<special>_<moment>` and load from `res://assets/audio/specials/`; a missing file plays nothing and the audio gate counts it as a placeholder.
+
 Every enemy is in group `enemy`, is on physics layer 3, and implements `knock(direction: Vector3, force: float)` and `flash()`. The ball calls those two for contact physics, so collisions have weight whatever combat does with the damage.
 
 ## Terrain API (world, `ctx.terrain`)

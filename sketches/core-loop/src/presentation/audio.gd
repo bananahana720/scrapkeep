@@ -918,6 +918,17 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	return true
 
 
+# A kill-first special's cue (special_voice.gd): a file stream heard now on the SFX bus,
+# under the same voice limits as every cue. A tell is a danger cue and pulls the bass down.
+func play_file(sound: String, stream: AudioStream, db := 0.0, danger := false) -> bool:
+	if stream == null or not _admit("special_cue", sound, 1.0):
+		return false
+	_start("special_cue", sound, stream, db, 1.0, "SFX")
+	if danger:
+		engine.duck_bass(0.3, 0.45)
+	return true
+
+
 # SPIL-9's chirp (SR7): it reads the cue the body shows from the same Companion.CUES row, so
 # animation, chirp and motif cannot drift apart, and sounds a cue at most once per
 # CHIRP_COOLDOWN s (a start value; the lab tunes it). now is seconds; -1 reads the clock.

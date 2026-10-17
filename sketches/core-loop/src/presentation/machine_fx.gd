@@ -6,6 +6,7 @@ const Density := preload("res://src/presentation/density.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const SpecialCues := preload("res://src/combat/special_cues.gd")
 
 # What the machines throw off: how a pack arrives, how a body winds up, takes a hit,
 # staggers and dies, how the four specials tell you what they are about to do, and how
@@ -20,9 +21,9 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 # thinned and always gets its word. One pack's arrival effects start on the frame its
 # arrival rings do, so they share the rings' timing and the 0.2 s gap rule between packs.
 #
-# Timing contract with audio: a special fires its tell from one moment, the body's own
-# special_tell(moment) signal ("tell", "act"). The sound for that moment is
-# SPECIALS[name]["sounds"][moment], so the picture and the sound come off one frame.
+# Timing contract with audio: a special fires its tell through SpecialCues.tell(), which
+# emits the body's special_tell(moment) once; special_voice.gd plays the sound from the same
+# emit, so the picture and the sound come off one frame. SpecialCues names the sound ids.
 
 const FAMILY := {Roster.FLEET: "fleet", Roster.REACTOR: "ancient", Roster.SWARM: "ancient", Roster.MIND: "ancient"}
 # Spec id -> particle count, per family and moment. "windup" and "stagger" are persistent
@@ -55,31 +56,26 @@ const WORDS := {"fleet_heavy": "KLANG", "ancient_heavy": "KRZZT", "stagger": "KR
 const WORD_TINT := {"fleet": Palette.BRASS, "ancient": Palette.ANCIENT}
 
 # The four kill-first specials (ENEMY-PRIORITY.md 4, 4a; SOUND-BIBLE specials). Each
-# moment lists its effects, an optional tint for "row" specs and an optional word; sounds
-# name the PR #12 renders the same moment plays.
+# moment lists its effects, an optional tint for "row" specs and an optional word; the
+# sound each moment plays is SpecialCues.sound(special, moment).
 const SPECIALS := {
 	"foreman": {"family": "fleet", "presence": {"steam_jet": 3},
 		"spawn": {"steam_puff": 8, "brass_spark": 8},
 		"tell": {"steam_puff": 10, "phase_ring": 40}, "tell_tint": Palette.BRASS, "tell_word": "HOOONK",
-		"break": {"steam_puff": 10, "brass_spark": 16}, "break_word": "SHIFT OVER",
-		"sounds": {"presence": "foreman_presence", "spawn": "foreman_spawn", "tell": "foreman_tell", "break": "foreman_break"}},
+		"break": {"steam_puff": 10, "brass_spark": 16}, "break_word": "SHIFT OVER"},
 	"dispatcher": {"family": "fleet", "presence": {},
 		"spawn": {"brass_spark": 8, "phase_ring": 24}, "spawn_tint": Palette.AMBER,
 		"tell": {"steam_puff": 8, "phase_ring": 24}, "tell_tint": Palette.AMBER, "tell_word": "NEXT",
-		"break": {"brass_spark": 16, "steam_puff": 4}, "break_word": "OUT OF ORDER",
-		"sounds": {"presence": "dispatcher_presence", "spawn": "dispatcher_spawn", "tell": "dispatcher_tell", "break": "dispatcher_break"}},
+		"break": {"brass_spark": 16, "steam_puff": 4}, "break_word": "OUT OF ORDER"},
 	"splitter": {"family": "fleet", "presence": {"fuse_sputter": 6},
 		"spawn": {"brass_spark": 8},
 		"tell": {"brass_spark": 16, "phase_ring": 30}, "tell_tint": Palette.SAND, "tell_word": "1+1+1",
 		"break_split": {"brass_spark": 10, "steam_puff": 6}, "break_split_word": "UNION RULES",
-		"break_clean": {"brass_spark": 16, "steam_puff": 3}, "break_clean_word": "CLEAN",
-		"sounds": {"presence": "splitter_presence", "spawn": "splitter_spawn", "tell": "splitter_tell",
-			"break_split": "splitter_break_split", "break_clean": "splitter_break_clean"}},
+		"break_clean": {"brass_spark": 16, "steam_puff": 3}, "break_clean_word": "CLEAN"},
 	"linker": {"family": "fleet", "presence": {},
 		"spawn": {"brass_spark": 8},
 		"tell": {"brass_spark": 10}, "tell_word": "TWANG", "cable": true,
-		"break": {"brass_spark": 16, "plate_chunks": 6}, "break_word": "CLANG",
-		"sounds": {"presence": "linker_presence", "spawn": "linker_spawn", "tell": "linker_tell", "break": "linker_break"}},
+		"break": {"brass_spark": 16, "plate_chunks": 6}, "break_word": "CLANG"},
 }
 
 # The bosses: a phase change and the fall. The fall is played straight first (a run of
@@ -199,20 +195,14 @@ static func family_of_kind(kind: String) -> String:
 	return family_of(String(Roster.row(kind).get("faction", Roster.FLEET)))
 
 
-# The special a body is, by kind or by the elite affix it carries ("" for none).
+# The special a body is ("" for none) and the sound a special's moment plays: one row,
+# SpecialCues, keys audio and these effects.
 static func special_of(enemy: Node) -> String:
-	if not is_instance_valid(enemy):
-		return ""
-	var kind := String(enemy.get("kind")) if enemy.get("kind") != null else ""
-	if SPECIALS.has(kind):
-		return kind
-	var affix := String(enemy.get_meta("elite_affix", ""))
-	return affix if SPECIALS.has(affix) else ""
+	return SpecialCues.special_of(enemy)
 
 
-# The sound a special's moment plays, so audio and these effects key off one row.
 static func special_sound(special: String, moment: String) -> String:
-	return String(SPECIALS.get(special, {}).get("sounds", {}).get(moment, ""))
+	return SpecialCues.sound(special, moment)
 
 
 func clear() -> void:
@@ -384,6 +374,7 @@ func _on_spawned(enemy: Node3D, kind: String) -> void:
 	var at := enemy.global_position
 	var special := special_of(enemy)
 	if special != "":
+		SpecialCues.attach(enemy)
 		special_moment(special, "spawn", enemy)
 		var presence: Dictionary = SPECIALS[special]["presence"]
 		for id in presence:
@@ -466,10 +457,7 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 func _on_died(at: Vector3, _scrap: int, enemy: Node3D, kind: String, family: String) -> void:
 	var special := special_of(enemy)
 	if special != "":
-		var moment := "break"
-		if special == "splitter":
-			moment = "break_split" if bool(enemy.get_meta("split", false)) else "break_clean"
-		special_moment(special, moment, enemy, at)
+		special_moment(special, SpecialCues.break_moment(enemy), enemy, at)
 		return
 	var lifted := at + Vector3.UP * 0.8
 	fire(MOMENTS[family]["death"], lifted)

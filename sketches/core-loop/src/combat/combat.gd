@@ -34,6 +34,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
+const SpecialCues := preload("res://src/combat/special_cues.gd")
 const Companion := preload("res://src/core/companion.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 
@@ -546,6 +547,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
+	# A kill-first special gets its special_tell signal before its listeners hear it arrive.
+	SpecialCues.attach(enemy)
 	ctx.events.enemy_spawned.emit(enemy, kind)
 	fleet.on_spawned(enemy, kind)
 	return enemy
