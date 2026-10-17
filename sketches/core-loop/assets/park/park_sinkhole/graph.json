@@ -1,31 +1,31 @@
 {
-  "bake_sha256": "eb1a2180b6dc0ee756e74e998444254aff6a99310fe354041a938bc06d86b55e",
-  "beacon_ok": true,
+  "bake_sha256": "00bef18b2b7a6d322a9d77b6867a980ba3e8037e67fcc3e2110256c82ceca6ee",
+  "beacon_ok": false,
   "breaches": [],
-  "bytes": 944264,
-  "edges": 315004,
-  "first_failed": "",
+  "bytes": 945570,
+  "edges": 314879,
+  "first_failed": "beacon_ok",
   "flags": {
     "deck": 37,
     "door_ok": 39877,
-    "line": 417,
+    "line": 415,
     "open": 40420,
-    "sight_ok": 9715,
+    "sight_ok": 9663,
     "under": 18
   },
-  "full_visit_m": 1909,
-  "full_visit_ratio": "1.363",
-  "graph_sha256": "e1d647708abca1d6635c2917fca9ef9454a0d91b26cc1ccfbeb5f5be79eb0aa1",
+  "full_visit_m": 1917,
+  "full_visit_ratio": "1.361",
+  "graph_sha256": "e762f35e735ca3a11f41c76e36a7795d66674d51e3cc10c2a44133c7d8d4e8e6",
   "line_errors": [],
   "line_path_nodes": 175,
   "longest_est_m": 2038,
   "map": "park_sinkhole",
   "nodes": 40438,
-  "park_sha256": "16c220df57e64fe81ce5270d2f3daaabcdb6c9c63b99a344104773bd74554e3c",
+  "park_sha256": "d2fa9b51272e471009b6ed9e3de72ee72a3cdf8759d25238015262eefb184b0c",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 375,
+      "d_landmark": 385,
       "d_spawn": 1040,
       "detour_m": 0,
       "door_at": [
@@ -52,7 +52,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 387,
+      "d_landmark": 394,
       "d_spawn": 1213,
       "detour_m": 164,
       "door_at": [
@@ -80,7 +80,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 459,
+      "d_landmark": 467,
       "d_spawn": 941,
       "detour_m": 224,
       "door_at": [
@@ -107,7 +107,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 233,
+      "d_landmark": 241,
       "d_spawn": 1170,
       "detour_m": 79,
       "door_at": [
@@ -131,7 +131,7 @@
       "site": "crosscut_drift"
     }
   ],
-  "reward_ratio": "0.835",
+  "reward_ratio": "0.831",
   "ride_edges": 57,
   "routes": {
     "bore_shaft": [],
@@ -164,29 +164,28 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1401,
-    "farther_share": "0.008",
-    "ok": true,
-    "run": true
+    "d_landmark": -1,
+    "farther_share": "0.000",
+    "ok": false,
+    "run": false
   },
-  "spawn_beacon_m": 1401,
-  "spawn_beacon_share": "0.687",
+  "spawn_beacon_m": 1409,
+  "spawn_beacon_share": "0.691",
   "stage_checked": [
-    "beacon_ok",
-    "spawn"
+    "beacon_ok"
   ],
   "targets": [
     {
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.835
+      "value": 0.831
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.363
+      "value": 1.361
     }
   ],
   "tool_sha256": "da6fdfdba7b82b109309fba8b5131587e1d7d174a839b79191201df3d2ea2f9d",
@@ -194,7 +193,7 @@
     "anchors": [
       {
         "cost": 1292.7,
-        "d_landmark": 302.3,
+        "d_landmark": 310.1,
         "name": "bore_apron",
         "on_route": false,
         "rank": 1,
@@ -202,7 +201,7 @@
       },
       {
         "cost": 1211.8,
-        "d_landmark": 454.9,
+        "d_landmark": 462.7,
         "name": "east_mesa",
         "on_route": false,
         "rank": 2,
@@ -210,7 +209,7 @@
       },
       {
         "cost": 1182.4,
-        "d_landmark": 364.0,
+        "d_landmark": 371.8,
         "name": "east_chamber",
         "on_route": false,
         "rank": 3,
@@ -218,7 +217,7 @@
       },
       {
         "cost": 918.7,
-        "d_landmark": 436.6,
+        "d_landmark": 444.5,
         "name": "west_chamber",
         "on_route": false,
         "rank": 4,
@@ -226,7 +225,7 @@
       },
       {
         "cost": 679.2,
-        "d_landmark": 649.1,
+        "d_landmark": 657.0,
         "name": "west_cenote",
         "on_route": false,
         "rank": 5,
@@ -234,18 +233,18 @@
       },
       {
         "cost": 661.1,
-        "d_landmark": 759.8,
+        "d_landmark": 768.0,
         "name": "trench_granaries",
         "on_route": false,
         "rank": 0,
         "viable": false
       }
     ],
-    "count": 184,
+    "count": 185,
     "crossings": {
-      "drop": 33,
+      "drop": 36,
       "ride": 45,
-      "walk": 458
+      "walk": 457
     },
     "hidden": [
       {
