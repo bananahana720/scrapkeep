@@ -103,20 +103,8 @@ def world_setup(samples, size, sky=True):
     world.use_nodes = True
     nt = world.node_tree
     bg = nt.nodes["Background"]
-    if sky:
-        grad = nt.nodes.new("ShaderNodeTexGradient")
-        tc = nt.nodes.new("ShaderNodeTexCoord")
-        sep = nt.nodes.new("ShaderNodeSeparateXYZ")
-        ramp = nt.nodes.new("ShaderNodeValToRGB")
-        nt.links.new(tc.outputs["Generated"], sep.inputs[0])
-        nt.links.new(sep.outputs["Z"], ramp.inputs["Fac"])
-        ramp.color_ramp.elements[0].position = 0.45
-        ramp.color_ramp.elements[0].color = common.rgba("e9c99a")
-        ramp.color_ramp.elements[1].position = 0.75
-        ramp.color_ramp.elements[1].color = common.rgba("6f9fc8")
-        nt.links.new(ramp.outputs["Color"], bg.inputs["Color"])
-    else:
-        bg.inputs["Color"].default_value = common.rgba(common.mix("sandstone", "bone", 0.5))
+    # A pale desert sky for the layout, a warm neutral for turntables.
+    bg.inputs["Color"].default_value = common.rgba("a9c3d6" if sky else common.mix("sandstone", "bone", 0.5))
     bg.inputs["Strength"].default_value = 0.9
     sun = bpy.data.lights.new("sun", "SUN")
     sun.energy = 4.2
@@ -252,7 +240,19 @@ def layout_shots(o):
     out.mkdir(parents=True, exist_ok=True)
     shot(camera("hero", g2b(0, 110, 95), g2b(0, 0, -8), 62), out / "camp_layout_hero.png")
     shot(camera("spawn", g2b(0, 3.2, 9), g2b(0, 2.5, -40), 75), out / "camp_layout_spawn.png")
-    shot(camera("top", g2b(0, 260, 0.01), g2b(0, 0, 0), 60), out / "camp_layout_top.png")
+    shot(camera("top", g2b(0, 300, 0.01), g2b(0, 0, 0), 62), out / "camp_layout_top.png")
+    # One close shot per station, from the plaza side at chase-camera height (arm about 12 m, a little above).
+    for sid, (dist, h, fov) in {"gate": (30, 6, 60), "lockers": (22, 5, 60), "moss": (17, 4, 60),
+                                "achieve": (18, 4, 60), "settings": (10, 3, 55), "skee": (24, 7, 62),
+                                "pet": (15, 4, 60)}.items():
+        (x, y, z), yaw = L.station(sid)
+        fx, fz = math.sin(yaw), math.cos(yaw)
+        eye = (x + fx * dist, h, z + fz * dist)
+        shot(camera("st_" + sid, g2b(*eye), g2b(x, 2.0, z), fov), out / ("camp_station_%s.png" % sid))
+    tx, _, tz = L.TRIAL_AT
+    shot(camera("trial", g2b(tx - 60, 30, tz + 45), g2b(tx, 0, tz), 55), out / "camp_station_trial.png")
+    sx, _, sz = L.SANDBOX_AT
+    shot(camera("sandbox", g2b(sx + 40, 20, sz + 25), g2b(sx, 0, sz), 60), out / "camp_station_sandbox.png")
 
 
 def main():

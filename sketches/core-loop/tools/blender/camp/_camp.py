@@ -184,6 +184,38 @@ def metrics(path):
             "meshes": sorted(names.values())}
 
 
+def flipped(obj, n=48):
+    """Casts a grid of rays at the drawn mesh from above and from the four sides and counts first hits on a face that points
+    away from the ray (a back face). Godot culls back faces, so each such hit is a hole or an inside-out patch in game.
+    Open sheets lose to recalc_face_normals; build every part as a closed solid. Returns (back-facing hits, hits)."""
+    from mathutils.bvhtree import BVHTree
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.transform(obj.matrix_world)
+    bm.normal_update()
+    tree = BVHTree.FromBMesh(bm)
+    lo = Vector([min(v.co[k] for v in bm.verts) for k in range(3)])
+    hi = Vector([max(v.co[k] for v in bm.verts) for k in range(3)])
+    bm.free()
+    bad = hits = 0
+    for axis, sign in ((2, -1), (0, 1), (0, -1), (1, 1), (1, -1)):
+        a, b = [k for k in range(3) if k != axis]
+        d = Vector((0, 0, 0))
+        d[axis] = sign
+        for i in range(n):
+            for j in range(n):
+                p = Vector((0, 0, 0))
+                p[a] = lo[a] + (hi[a] - lo[a]) * (i + 0.5) / n
+                p[b] = lo[b] + (hi[b] - lo[b]) * (j + 0.5) / n
+                p[axis] = hi[axis] + 1.0 if sign < 0 else lo[axis] - 1.0
+                loc, nrm, _, _ = tree.ray_cast(p, d)
+                if loc is None:
+                    continue
+                hits += 1
+                bad += nrm.dot(d) > 0.2
+    return bad, hits
+
+
 def _file_totals(path):
     """Triangles and vertices over every primitive in the GLB, the way asset-inspect.mjs counts them."""
     data = path.read_bytes()
@@ -218,7 +250,9 @@ def export(name, fn, cls, args, col=None, sockets=None, check=None):
     kit.PARTS.clear()
     root = common.empty(name)
     s.name = "Body"
-    s.finish(root)
+    body = s.finish(root)
+    bad, hits = flipped(body)
+    assert bad <= max(2, 0.003 * hits), (name, "back faces visible from outside", bad, hits)
     if c is not None:
         _col_object(c, COL_NODE % name, root)
     for sname, loc in sorted((sockets or {}).items()):
