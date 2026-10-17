@@ -32,7 +32,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;
 export const MENU_READY = "SCRAPKEEP_MENU_READY";
 export const LAUNCH_BUDGET_S = 5;
-const STEP_TIMEOUT_MS = 90 * 60_000;
+// The full smoke tier takes about 2 h on a 4-core cloud box; a hang still ends, four hours in.
+const STEP_TIMEOUT_MS = 4 * 60 * 60_000;
 const KILL_GRACE_MS = 3000;
 const TAIL_LINES = 12;
 const EXPORTS = path.join(root, "artifacts/local/core-loop-export");
