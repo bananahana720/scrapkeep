@@ -57,7 +57,7 @@ var _model_armour: Array = []
 var _model_magnets: Array = []
 var _model_magnet_meshes: Array = []
 var _model_shield: Node3D
-var _hide_tokens := {}
+var _pending_hides := {}
 
 
 func build(boss) -> void:
@@ -191,21 +191,29 @@ func shed_armour() -> void:
 
 
 # The phase-entry clips fold the model's cranes, blow its armour off and flip its shield; hiding those parts
-# on the entry frame cut the clip before it was seen, so a hide waits for the clip to end.
-# Showing is immediate and cancels a pending hide of the same group.
+# on the entry frame cut the clip before it was seen, so a hide waits for the clip to end, on the
+# player's own clock, or for another clip to cut it. Showing is immediate and cancels a pending hide.
 func _show_model_parts(group: String, parts: Array, on: bool, clip: String) -> void:
-	_hide_tokens[group] = int(_hide_tokens.get(group, 0)) + 1
-	var wait := _anim.get_animation(clip).length if not on and clip != "" and _anim != null and _anim.has_animation(clip) else 0.0
-	if on or wait <= 0.0 or not is_inside_tree() or parts.is_empty() or not (parts[0] as Node3D).visible:
+	_pending_hides.erase(group)
+	var waits := not on and clip != "" and _anim != null and _anim.has_animation(clip)
+	if on or not waits or parts.is_empty() or not (parts[0] as Node3D).visible:
 		for part in parts:
 			(part as Node3D).visible = on
 		return
-	var token: int = _hide_tokens[group]
-	get_tree().create_timer(wait, false).timeout.connect(func() -> void:
-		if is_instance_valid(self) and _hide_tokens.get(group, 0) == token:
-			for part in parts:
-				if is_instance_valid(part):
-					(part as Node3D).visible = false)
+	_pending_hides[group] = {"parts": parts, "clip": clip}
+
+
+# animation_finished (ended) or animation_started (another clip took over): hides waiting on
+# `clip` run, as do those whose clip was cut by a different one.
+func _flush_hides(clip: StringName, ended: bool) -> void:
+	for group in _pending_hides.keys():
+		var row: Dictionary = _pending_hides[group]
+		if (String(clip) == row["clip"]) != ended:
+			continue
+		_pending_hides.erase(group)
+		for part in row["parts"]:
+			if is_instance_valid(part):
+				(part as Node3D).visible = false
 
 
 # `clip` names a phase-entry clip that flips the model's shield away; the hide waits for it.
@@ -242,6 +250,8 @@ func _dress() -> void:
 	if _anim != null:
 		BossModel.own_clips(_anim)
 		BossModel.loop_clip(_anim, "idle_roll")
+		_anim.animation_finished.connect(_flush_hides.bind(true))
+		_anim.animation_started.connect(_flush_hides.bind(false))
 		# Cap lift is the enter_furnace beat; the dip a later clip would reset it to is not.
 		BossModel.strip_tracks(_anim, "Cap0", ["drone_deploy"])
 		BossModel.strip_tracks(_anim, "Cap1", ["drone_deploy"])

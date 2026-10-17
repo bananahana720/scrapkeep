@@ -100,7 +100,7 @@ func _brindle() -> void:
 	_t.check("phase 3 entry keeps the armour up for enter_scuttle to blow off",
 			ship._model_armour.all(func(p): return p.visible))
 	_t.check("phase 3 entry keeps the shield up for enter_scuttle to flip", ship._model_shield.visible)
-	await create_timer(ship._anim.get_animation("enter_scuttle").length + 0.05).timeout
+	ship._anim.advance(ship._anim.get_animation("enter_scuttle").length + 0.05)
 	var armour_shed: bool = ship._model_armour.all(func(p): return not p.visible)
 	_t.check("phase 3 sheds the model's armour and opens its shield", armour_shed and not ship._model_shield.visible,
 			"armour shed %s, shield visible %s" % [armour_shed, ship._model_shield.visible])
