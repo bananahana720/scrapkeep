@@ -59,6 +59,9 @@ const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
 # The Dig's own elite (design-v3/WORLD-ROSTERS.md): two plated rigs and a jaw, so the floor is
 # the danger and the wall the lane. The Foreman joins it once it merges.
 const DIG_ELITE := {"id": "dig_elite", "kinds": ["drill_crew", "drill_crew", "pit_jaw"]}
+# The Highdraft's own elite on stages 5 and 6 (design-v3/WORLD-ROSTERS.md): a heavy to ring out
+# under two kites riding the thermals above it.
+const ELITE_HIGHDRAFT := {"id": "elite_highdraft", "kinds": ["ballast_heavy", "kite_drone", "kite_drone"]}
 # The arrival of each stage that is the elite pack.
 const ELITE_ARRIVAL := 3
 
@@ -123,19 +126,19 @@ const DEFS := [
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[4]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 10.0, "contact_gain_floor": 0.35, "drain_rate": 0.5}, "pressure": PRESSURE[4], "warden_hint": "Break its guard, then smash the core.",
 		"packs": [
 			{"id": "draft_cut", "kinds": ["line_cutter", "line_cutter", "kite_drone"]},
-			{"id": "draft_anchor", "kinds": ["anchor_crew", "line_cutter"]},
-			{"id": "draft_kites", "kinds": ["kite_drone", "kite_drone", "anchor_crew"]},
-		], "elite": ELITE, "warden_variant": ""},
+			{"id": "draft_anchor", "kinds": ["ballast_heavy", "line_cutter"]},
+			{"id": "draft_kites", "kinds": ["kite_drone", "kite_drone", "gap_net"]},
+		], "elite": ELITE_HIGHDRAFT, "warden_variant": ""},
 	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": "highdraft_crown"}, "warden_family": "mind", "name": "Highdraft: the crown", "map": "park_crown", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 190.0, "warden_hp": 1400.0, "warden_lesson": "",
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[5]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 10.0, "contact_gain_floor": 0.35, "drain_rate": 0.5}, "pressure": PRESSURE[5], "warden_hint": "Break its guard, then smash the core.",
 		"packs": [
-			{"id": "crown_cut", "kinds": ["line_cutter", "kite_drone", "kite_drone"]},
-			{"id": "crown_anchor", "kinds": ["anchor_crew", "anchor_crew", "line_cutter"]},
-			{"id": "crown_kites", "kinds": ["kite_drone", "kite_drone", "line_cutter", "anchor_crew"]},
-		], "elite": ELITE, "warden_variant": "choir"},
+			{"id": "crown_cut", "kinds": ["line_cutter", "kite_drone", "gap_net"]},
+			{"id": "crown_anchor", "kinds": ["ballast_heavy", "ballast_heavy", "line_cutter"]},
+			{"id": "crown_kites", "kinds": ["kite_drone", "kite_drone", "gap_net", "ballast_heavy"]},
+		], "elite": ELITE_HIGHDRAFT, "warden_variant": "choir"},
 ]
 
 

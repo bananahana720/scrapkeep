@@ -41,6 +41,8 @@ const SPAWNS := 50
 const SPEED := 8
 const BASE_TICKS := 90
 const OFFSET := Vector3(12.0, 0.0, 0.0)
+# The ballast heavy holds its rim instead of closing on the ball, so it stands in its slam reach.
+const BALLAST_OFFSET := Vector3(3.5, 0.0, 0.0)
 const LOBBER_OFFSET := Vector3(15.0, 0.0, 0.0)
 const FRAME_LIMIT := 600
 const GRID := 16
@@ -231,7 +233,7 @@ func _clear_field() -> void:
 
 func _spawn(kind: String):
 	_game.player.reset_to(_ball_at)
-	var at: Vector3 = _ball_at + (LOBBER_OFFSET if kind == "lobber" else OFFSET)
+	var at: Vector3 = _ball_at + (LOBBER_OFFSET if kind == "lobber" else BALLAST_OFFSET if kind == "ballast_heavy" else OFFSET)
 	# The mind hand braces against the ball's top habit; give it one to read.
 	if kind == "mind_hand":
 		_game.combat.fleet.habits.add("ram", 5.0)

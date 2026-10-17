@@ -77,6 +77,10 @@ const ROWS := {
 	# present); its sound names this row once SfxBank registers the jolt_layer_* cues (PR #12).
 	"jolt_layer": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E27": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
+	"ballast_heavy": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E32": ["warn_seconds"]},
+		"idle": {"style": "breathe", "amplitude": 0.02, "beats": 3.0}, "death": {"style": "collapse", "parts": 8, "seconds": 0.7}},
+	"gap_net": {"color_role": "hazard", "shape": "star", "sound": "none", "attacks": {"E33": ["warn_seconds"]},
+		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
 }
 
 

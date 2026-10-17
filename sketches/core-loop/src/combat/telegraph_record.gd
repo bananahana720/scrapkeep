@@ -107,6 +107,10 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": HOLD_REASON},
 	"E31": {"kind": "prop_crew", "pre_shoot": 1.0, "cooldown": 0.0, "radius": 3.3, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "The player starts it: ramming the prop drops the roof, which warns 1.0 s before it lands. It never repeats, so it has no cooldown."},
+	"E32": {"kind": "ballast_heavy", "pre_shoot": 1.1, "cooldown": 2.45, "radius": 5.0, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "The brace is the answer window: 1.1 s with the slab up, light enough that a cruise ram throws it off the rim."},
+	"E33": {"kind": "gap_net", "pre_shoot": 1.0, "cooldown": 1.25, "radius": 0.6, "length": 14.0, "marker": "line", "band": "ray",
+		"recovery_before": 0.0, "reason": "A net that charges for 1.0 s and holds 3.5 s, then hangs slack for 2.0 s: cross in the slack or faster than it holds."},
 }
 
 # Pack attacks the player starts and the unit never repeats: no cycle to measure, so the

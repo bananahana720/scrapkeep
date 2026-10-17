@@ -33,6 +33,8 @@ const LEGIBILITY_PATH := "res://design-v3/LEGIBILITY.md"
 const SPEED := 8
 const BASE_TICKS := 90
 const OFFSET := Vector3(12.0, 0.0, 0.0)
+# The ballast heavy holds its rim instead of closing on the ball, so it stands in its slam reach.
+const BALLAST_OFFSET := Vector3(3.5, 0.0, 0.0)
 const FRAME_LIMIT := 1500
 # Standing: a hover unit settles a few centimetres after a dive; a walk would cover
 # walk_speed x RECOVERY, about 2.9 m.
@@ -152,7 +154,7 @@ func _structure(kinds: Array) -> void:
 
 func _spawn(kind: String):
 	_game.player.reset_to(_ball_at)
-	var at: Vector3 = _ball_at + OFFSET
+	var at: Vector3 = _ball_at + (BALLAST_OFFSET if kind == "ballast_heavy" else OFFSET)
 	# The mind hand braces against the ball's top habit; give it one to read.
 	if kind == "mind_hand":
 		_game.combat.fleet.habits.add("ram", 5.0)
