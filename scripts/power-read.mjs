@@ -6,9 +6,13 @@ import { fileURLToPath } from "node:url";
 // node scripts/power-read.mjs: POWER-READ (alpha-status/ambition-map.md, unit 5). Plays the same
 // scripted signature hit (one 30 m/s slam on one chaser, sketches/core-loop/tools/power_read.gd)
 // for every pilot on the first-fight build (depth 0) and on a grown depth-4 build, then compares
-// effect screen area, knockback metres and sound layers against Andrew's targets (card "Clearly
-// mightier", 17 Oct 16:36Z: about 3x the size and 2x the knockback; 2x sound layers from the unit
-// brief). Writes report.json, the stills and page.html (a phone page, stills embedded) to --out
+// presence, screen area, knockback metres and sound layers against Andrew's targets. Cards
+// "Clearly mightier" (17 Oct 16:36Z: about 3x the size, 2x the knockback) and "Presence, centre
+// clear" (17:28Z: the 3x is presence, meaning colour heat, word size, edge ink and aura layers,
+// with 1.5 to 2x pixel area). Presence is the geometric mean of the energy, heat and ink ratios;
+// area's goal is the 1.5x floor; 2x sound layers comes from the unit brief. Centre clear is a
+// guard: the grown hit may not change more than CENTRE_LIMIT times the middle ninth of the
+// screen that the first fight's hit does. Writes report.json, the stills and page.html (a phone page, stills embedded) to --out
 // (default artifacts/local/power-read/<stamp>).
 // Rendering: under xvfb-run with the GL compatibility renderer when xvfb-run is on PATH, so a cloud
 // box without a GPU can read pixels; --native uses the machine's own display and renderer;
@@ -31,7 +35,9 @@ export const PILOTS = [
   { id: "remembered_cannon", name: "Cannon" },
 ];
 export const DEPTHS = [0, 4];
-export const TARGETS = { area: 3, knock: 2, layers: 2 };
+export const TARGETS = { presence: 3, area: 1.5, knock: 2, layers: 2 };
+export const CENTRE_LIMIT = 1.25;
+const PRESENCE_PARTS = ["energy", "heat", "ink"];
 export const SIZE = "960x540";
 
 export class PowerReadError extends Error {}
@@ -73,8 +79,15 @@ export function parseRow(stdout) {
 
 const ratio = (grown, first) => (first > 0 ? grown / first : grown > 0 ? Infinity : null);
 
-// Effect area net of what the scene changes on its own in the same window with no hit.
-export const netArea = (row) => (row.rendered ? Math.max(0, row.area_peak - row.noise_peak) : null);
+// A pixel reading net of what the scene changes on its own in the same window with no hit.
+export const net = (row, k) => (row.rendered ? Math.max(0, row[k] - (row[`noise_${k}`] ?? 0)) : null);
+
+function presence(first, grown) {
+  const parts = PRESENCE_PARTS.map((k) => (first.rendered ? ratio(net(grown, k), net(first, k)) : null));
+  if (parts.some((v) => v === null)) return null;
+  if (parts.some((v) => v === Infinity)) return Infinity;
+  return Math.cbrt(parts[0] * parts[1] * parts[2]);
+}
 
 export function summarize(rows, targets = TARGETS) {
   const pilots = [];
@@ -84,13 +97,16 @@ export function summarize(rows, targets = TARGETS) {
     if (!first && !grown) continue;
     const entry = { id: pilot.id, name: pilot.name, first, grown, errors: [first, grown].filter((r) => r?.error).map((r) => r.error) };
     if (first && grown && !entry.errors.length) {
-      const areaFirst = netArea(first);
       entry.ratios = {
-        area: areaFirst === null ? null : ratio(netArea(grown), areaFirst),
+        presence: presence(first, grown),
+        area: first.rendered ? ratio(net(grown, "area"), net(first, "area")) : null,
         knock: ratio(grown.knock_m, first.knock_m),
         layers: ratio(grown.sound_layers, first.sound_layers),
       };
       entry.damage = ratio(grown.damage, first.damage);
+      entry.parts = Object.fromEntries(PRESENCE_PARTS.map((k) => [k, first.rendered ? ratio(net(grown, k), net(first, k)) : null]));
+      const centre = first.rendered ? ratio(net(grown, "centre"), net(first, "centre")) : null;
+      entry.centre = { ratio: centre, clear: centre === null ? null : centre <= CENTRE_LIMIT + 1e-9 };
       entry.meets = Object.fromEntries(Object.entries(entry.ratios).map(([k, v]) => [k, v === null ? null : v >= targets[k] - 1e-9]));
     }
     pilots.push(entry);
@@ -126,7 +142,8 @@ const pct = (v) => (v === null ? "not rendered" : `${(v * 100).toFixed(1)}% of s
 export function renderPage(summary, { images = {}, version = "", stamp = "", renderer = "" } = {}) {
   const t = summary.targets;
   const head = [
-    ["Size", "area", t.area],
+    ["Presence", "presence", t.presence],
+    ["Area", "area", t.area],
     ["Knockback", "knock", t.knock],
     ["Sound", "layers", t.layers],
   ];
@@ -144,11 +161,13 @@ export function renderPage(summary, { images = {}, version = "", stamp = "", ren
 <h2>${esc(p.name)}</h2>
 <div class="pair">${still(p.first, 0, "First fight")}${still(p.grown, 4, "Grown")}</div>
 <div class="meters">
-${meter("Size", p.ratios.area, t.area, `${pct(netArea(p.first))} to ${pct(netArea(p.grown))}`)}
+${meter("Presence", p.ratios.presence, t.presence, `strength ${fx(p.parts.energy)}, colour heat ${fx(p.parts.heat)}, edge ink ${fx(p.parts.ink)}`)}
+${meter("Area", p.ratios.area, t.area, `${pct(net(p.first, "area"))} to ${pct(net(p.grown, "area"))}`)}
 ${meter("Knockback", p.ratios.knock, t.knock, `${p.first.knock_m.toFixed(1)} m to ${p.grown.knock_m.toFixed(1)} m`)}
 ${meter("Sound", p.ratios.layers, t.layers, `${p.first.sound_layers} to ${p.grown.sound_layers} layers: ${p.grown.sounds.join(", ")}`)}
 </div>
-${netArea(p.first) > 0.5 ? `<p class="small">The first-fight hit already changes most of the screen, so its size cannot read 3x bigger.</p>` : ""}
+<p class="small centre ${p.centre.clear === false ? "busy" : ""}">Centre ${p.centre.clear === null ? "not rendered" : p.centre.clear ? "clear" : "busier"}: the grown hit changes ${fx(p.centre.ratio)} as much of the middle of the screen (limit ${CENTRE_LIMIT}x).</p>
+${net(p.first, "area") > 0.5 ? `<p class="small">The first-fight hit already changes most of the screen, so its area cannot grow much; presence has to come from heat and ink.</p>` : ""}
 <p class="small">Damage ${p.first.damage.toFixed(0)} to ${p.grown.damage.toFixed(0)}. Effects spawned ${p.first.fx_spawned} to ${p.grown.fx_spawned}.</p>
 </section>`;
   }).join("\n");
@@ -176,7 +195,9 @@ main { max-width: 760px; margin: 0 auto; padding-block: 20px 40px; padding-left:
 h1 { font: 800 2.6rem/1 var(--display); letter-spacing: .01em; margin: 0; text-transform: uppercase; }
 h1 span { color: var(--accent); }
 .lede { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
-.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.centre.busy { color: var(--short); }
 .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; }
 .tile-n { font: 800 2rem/1 var(--display); font-variant-numeric: tabular-nums; }
 .tile-n small { font-size: 1rem; color: var(--muted); }
@@ -209,13 +230,13 @@ footer { font-size: .78rem; color: var(--muted); display: grid; gap: 4px; }
 <main>
 <header>
 <h1>Power <span>Read</span></h1>
-<p class="lede">The same slam on the same enemy, first fight against a grown build (four picks, four parts, heft class IV). Goals from the "Clearly mightier" card: about ${t.area}x the size, ${t.knock}x the knockback, ${t.layers}x the sound. The orange tick is the goal; the grey line is no change.</p>
+<p class="lede">The same slam on the same enemy, first fight against a grown build (four picks, four parts, heft class IV). Goals from your cards: ${t.presence}x the presence (strength, colour heat, edge ink) with the centre kept clear, at least ${t.area}x the area, ${t.knock}x the knockback and ${t.layers}x the sound. The orange tick is the goal; the grey line is no change.</p>
 ${summary.damage ? `<p class="finding">Grown builds deal ${fx(summary.damage)} the damage on average. The meters show how much of that the player can see, feel and hear.</p>` : ""}
 </header>
 <div class="tiles">${tiles}</div>
 ${cards}
 <footer>
-<span>Pilots meeting each goal. Size is the share of the screen the hit changes at its biggest frame, minus what the scene changes on its own with no hit.</span>
+<span>Pilots meeting each goal. Pixel readings are peaks over the hit's first 0.75 s, minus what the scene changes on its own with no hit. Presence is the geometric mean of strength (how far pixels change), colour heat and edge ink (changed pixels that end dark).</span>
 <span>Measured ${esc(stamp)} on ${esc(version)}${renderer ? `, ${esc(renderer)}` : ""}. Software rendering in the cloud draws the game's GL fallback, not the Vulkan look; ratios compare like with like.</span>
 </footer>
 </main>
@@ -290,7 +311,7 @@ export async function main(argv = process.argv.slice(2)) {
   writeFileSync(path.join(out, "page.html"), renderPage(summary, { images, version: gitVersion(), stamp, renderer }));
   for (const p of summary.pilots) {
     if (!p.ratios) console.log(`${p.name.padEnd(7)} not measured`);
-    else console.log(`${p.name.padEnd(7)} size ${fx(p.ratios.area)}  knock ${fx(p.ratios.knock)}  sound ${fx(p.ratios.layers)}`);
+    else console.log(`${p.name.padEnd(7)} presence ${fx(p.ratios.presence)}  area ${fx(p.ratios.area)}  centre ${fx(p.centre.ratio)}  knock ${fx(p.ratios.knock)}  sound ${fx(p.ratios.layers)}`);
   }
   console.log(`power-read: ${out}/page.html`);
   const failed = rows.some((r) => r.error);

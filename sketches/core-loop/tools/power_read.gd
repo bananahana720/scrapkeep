@@ -8,22 +8,28 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # POWER-READ (alpha-status/ambition-map.md, unit 5): how much mightier one pilot's
 # signature hit reads on a grown build than on the first fight. Every pilot slams the
 # same way and the landing then takes the pilot's flavour (player_ball.gd _on_slammed),
-# so the signature hit here is one scripted slam at 30 m/s on flat ground with one
+# so the signature hit here is one scripted slam at 30 m/s (full flatness, in open air) with one
 # standard chaser 3 m in front of the ball. The hit is identical at both depths; only
 # the build differs:
 #   depth 0  the pilot as chosen: no tree picks, no parts, no mass (heft class I)
 #   depth 4  four tree picks (the left card each time), the first four catalogue parts the
 #            pilot may be offered, and start mass to heft 3.2 (heft class IV)
 # Readings, one JSON line per run ("power_read row: {...}"):
-#   area     changed-pixel fraction of the screen against the frame before the hit, peak
-#            and summed over WINDOW frames, minus nothing: the same window without a hit is
-#            reported as noise. Needs a display (xvfb-run is fine); --render=0 skips it.
+#   pixels   against the frame before the hit, each a peak over WINDOW frames, as a share of
+#            the screen: area (pixels changed), energy (how far they changed), heat (colour
+#            in what changed: max minus min channel), ink (changed pixels now dark: outlines
+#            and words), centre (changed share of the middle ninth). The runner reads
+#            presence from energy, heat and ink (Andrew's card "Presence, centre clear",
+#            17 Oct 17:28Z). The same window without a hit is reported as noise. Needs a
+#            display (xvfb-run is fine); --render=0 skips it.
 #   knock    metres the chaser actually travels while knockback outranks its own steering
 #            (enemy.gd _move), plus the code's own v^2 / 2a reading of the push it got.
 #   sound    cues the hit fired "now" in audio.cue_log, as entries and distinct sounds.
 #   fx       vfx glyphs and fx_ effects spawned by the hit.
 # The chaser's health is raised so neither depth kills it; a kill would add its death
-# effects at one depth only. Camera shake is set to zero so a shake never counts as
+# effects at one depth only. One warm-up slam lands on a throwaway chaser before the quiet
+# wait, so a part's first-fire accent (reward_payoff's bell and ring) never counts as part of
+# the grown hit. Camera shake is set to zero so a shake never counts as
 # effect area; the shake itself is not read. It measures and changes nothing.
 #   xvfb-run -a -s "-screen 0 960x540x24" godot --path sketches/core-loop --rendering-driver opengl3 \
 #     --resolution 960x540 --fixed-fps 60 --script res://tools/power_read.gd -- --pilot=tally --depth=4 [--out=dir]
@@ -43,6 +49,9 @@ const KNOCK_FRAMES := 240
 const SOUND_WAIT_FRAMES := 600
 # A channel moved by more than this (0 to 1) counts the pixel as changed.
 const PIXEL_DELTA := 0.1
+# A changed pixel whose mean channel ends under this (0 to 1) counts as ink.
+const INK_LEVEL := 0.25
+const METRICS := ["area", "energy", "heat", "ink", "centre"]
 const STURDY_HP := 100000.0
 
 var _game
@@ -109,14 +118,24 @@ func _measure(row: Dictionary) -> String:
 		await process_frame
 	row["sound_ready"] = audio.sound_ready
 	await _frames(QUIET_FRAMES)
+	# After the part cards close: a payoff waits while any reward ceremony is still showing.
+	var warm := _spawn_target()
+	await _frames(2)
+	_game.player._on_slammed(_game.player.body().global_position, SLAM_SPEED, 1.0)
+	await _frames(SETTLE_FRAMES)
+	if is_instance_valid(warm):
+		warm.queue_free()
+	_park()
+	await _frames(QUIET_FRAMES)
+	row["payoffs_before_hit"] = _game.presentation.ceremony.payoffs.size()
 
 	# The same window with no hit: what the scene changes on its own.
 	var still := _spawn_target()
 	await _frames(2)
 	var before: Image = await _grab(render)
 	var quiet := await _window(render, before)
-	row["noise_peak"] = quiet["peak"]
-	row["noise_sum"] = quiet["sum"]
+	for k in METRICS:
+		row["noise_" + k] = quiet[k]
 	still.queue_free()
 	_park()
 	await _frames(2)
@@ -137,8 +156,10 @@ func _measure(row: Dictionary) -> String:
 	var direction := flat.normalized() if flat.length() > 0.0 else Vector3.ZERO
 	var travelled := 0.0
 	var shots: Array = []
-	var peak := 0.0
-	var total := 0.0
+	var peak := {}
+	for k in METRICS:
+		peak[k] = 0.0
+	var area_sum := 0.0
 	var peak_frame := -1
 	for f in WINDOW:
 		await process_frame
@@ -147,12 +168,13 @@ func _measure(row: Dictionary) -> String:
 		if render:
 			await RenderingServer.frame_post_draw
 			var image: Image = root.get_texture().get_image()
-			var area := _changed(before, image)
-			total += area
-			if area > peak:
-				peak = area
+			var read := _changed(before, image)
+			area_sum += read["area"]
+			if read["energy"] > peak["energy"]:
 				peak_frame = f
 				shots = [image]
+			for k in METRICS:
+				peak[k] = maxf(peak[k], read[k])
 	for f in KNOCK_FRAMES:
 		if not is_instance_valid(target) or target._knocked_speed() < 1.0:
 			break
@@ -162,9 +184,10 @@ func _measure(row: Dictionary) -> String:
 		row["knock_unfinished"] = true
 	row["knock_m"] = travelled
 	row["damage"] = hp_before - (target.hp if is_instance_valid(target) else 0.0)
-	row["area_peak"] = peak
-	row["area_sum"] = total
-	row["area_peak_frame"] = peak_frame
+	for k in METRICS:
+		row[k] = peak[k]
+	row["area_sum"] = area_sum
+	row["peak_frame"] = peak_frame
 	row["rendered"] = render
 	var fired: Array = audio.cue_log.slice(cues_before)
 	var now := fired.filter(func(c: Array) -> bool: return c[2] == "now")
@@ -176,6 +199,7 @@ func _measure(row: Dictionary) -> String:
 	row["sounds"] = sounds.keys()
 	row["sound_skipped"] = fired.size() - now.size()
 	row["fx_spawned"] = _spawned_total() - spawned_before
+	row["payoffs_in_hit"] = _game.presentation.ceremony.payoffs.size() - int(row["payoffs_before_hit"])
 	if render and _args.has("out"):
 		DirAccess.make_dir_recursive_absolute(_args["out"])
 		before.save_png(_args["out"].path_join("%s-d%d-before.png" % [pilot, depth]))
@@ -229,16 +253,17 @@ func _spawn_target() -> Node3D:
 
 
 func _window(render: bool, before) -> Dictionary:
-	var peak := 0.0
-	var total := 0.0
+	var peak := {}
+	for k in METRICS:
+		peak[k] = 0.0
 	for f in WINDOW:
 		await process_frame
 		if render:
 			await RenderingServer.frame_post_draw
-			var area := _changed(before, root.get_texture().get_image())
-			total += area
-			peak = maxf(peak, area)
-	return {"peak": peak, "sum": total}
+			var read := _changed(before, root.get_texture().get_image())
+			for k in METRICS:
+				peak[k] = maxf(peak[k], read[k])
+	return peak
 
 
 func _grab(render: bool):
@@ -261,18 +286,49 @@ func _spawned_total() -> int:
 	return total
 
 
-# The fraction of pixels where any channel moved by more than PIXEL_DELTA.
-static func _changed(a: Image, b: Image) -> float:
+# Each reading as a share of the screen. A pixel counts as changed when any channel moved by
+# more than PIXEL_DELTA; energy adds how far it moved, heat its colour (max minus min channel,
+# saturation times value), ink whether it ended dark. Centre is the changed share of the
+# middle third by width and height.
+static func _changed(a: Image, b: Image) -> Dictionary:
+	var out := {"area": 0.0, "energy": 0.0, "heat": 0.0, "ink": 0.0, "centre": 0.0}
 	if a == null or b == null or a.get_size() != b.get_size():
-		return 0.0
+		return out
 	var da := a.get_data()
 	var db := b.get_data()
 	var step := 4 if a.get_format() == Image.FORMAT_RGBA8 else 3
+	var width := a.get_width()
+	var height := a.get_height()
+	var box := Rect2i(width / 3, height / 3, width / 3, height / 3)
 	var limit := int(PIXEL_DELTA * 255.0)
+	var ink_level := int(INK_LEVEL * 255.0 * 3.0)
 	var changed := 0
-	var count := 0
-	for i in range(0, da.size(), step):
-		count += 1
-		if absi(da[i] - db[i]) > limit or absi(da[i + 1] - db[i + 1]) > limit or absi(da[i + 2] - db[i + 2]) > limit:
-			changed += 1
-	return float(changed) / float(maxi(count, 1))
+	var energy := 0
+	var heat := 0
+	var ink := 0
+	var centre := 0
+	var i := 0
+	for y in height:
+		var middle_row := y >= box.position.y and y < box.end.y
+		for x in width:
+			var r := absi(da[i] - db[i])
+			var g := absi(da[i + 1] - db[i + 1])
+			var bl := absi(da[i + 2] - db[i + 2])
+			if r > limit or g > limit or bl > limit:
+				changed += 1
+				energy += r + g + bl
+				var hi := maxi(db[i], maxi(db[i + 1], db[i + 2]))
+				var lo := mini(db[i], mini(db[i + 1], db[i + 2]))
+				heat += hi - lo
+				if db[i] + db[i + 1] + db[i + 2] < ink_level:
+					ink += 1
+				if middle_row and x >= box.position.x and x < box.end.x:
+					centre += 1
+			i += step
+	var count := float(maxi(width * height, 1))
+	out["area"] = changed / count
+	out["energy"] = energy / (765.0 * count)
+	out["heat"] = heat / (255.0 * count)
+	out["ink"] = ink / count
+	out["centre"] = centre / float(maxi(box.size.x * box.size.y, 1))
+	return out
