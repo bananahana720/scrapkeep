@@ -134,7 +134,7 @@ func _check_tick_builds(holder: Node3D) -> void:
 	var rows = root.get_node_or_null("ParkRows") if root != null else null
 	var scatter2 = root.get_node_or_null("GroundScatter") if root != null else null
 	t.check("ticks: prepare(2) builds stage 2's ground on the spot", ground != null and ground.is_ready())
-	t.check("ticks: prepare(2) places stage 2's rows on the spot", rows == null or rows.is_ready(), str(rows))
+	t.check("ticks: prepare(2) places stage 2's rows on the spot", rows != null and rows.is_ready(), str(rows))
 	t.check("ticks: prepare(2) attaches stage 2's scatter on the spot", scatter2 != null and scatter2.is_ready())
 	SimClock.ticks = false
 	await process_frame
