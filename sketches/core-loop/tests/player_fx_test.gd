@@ -138,10 +138,12 @@ func _run() -> void:
 	fx.pose = {}
 	s.contact_normal = Vector3.UP
 	fx.might = 0.8
+	fx._might_wait = 10.0
 	var columns: int = fx.spawned.get("column", 0)
 	fx._last_frame = -1.0e9
 	_game.events.slammed.emit(ball, 1.0, 1.0)
 	t.check("a grown slam raises the column", fx.spawned.get("column", 0) == columns + 1)
+	t.check("a grown slam earns the impact frame", fx.spawned.get("impact_frame", 0) >= 1 and fx._frame.active())
 	fx.refresh_might()
 	t.near("vfx glyphs read the same might", _game.presentation.vfx.might, fx.might)
 	t.check("particle ceiling pinned at 440", PlayerFx.ceiling() == 440, str(PlayerFx.ceiling()))

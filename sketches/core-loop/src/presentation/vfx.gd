@@ -80,7 +80,7 @@ var edge: Control
 # a late run's hit reads bigger than the first fight's (Andrew, "Clearly mightier").
 # The slam ring stays at the slam's real reach.
 var might := 0.0
-const MIGHT_GLYPH := 1.0
+const MIGHT_GLYPH := 1.5
 # False skips the ball trail and speed lines; tools/perf_bench.gd --no-trails sets it.
 var trails := true
 # Every kill's starburst, pop and debris pass through this gate (kill_pop).

@@ -11,7 +11,7 @@ This layer adds the player-side effects the tone bible (TONE-BIBLE.md, project f
 | Might | Every layer below scales with one 0 to 1 value built from heft class, parts, tree picks, synergies and fusions | Always | n/a |
 | Aura | One mote per part orbits the ball (12 at most). Motes flare white on each hit. From "grown" they stretch into streamers at speed. A new part drops in from above and settles into the ring | Parts held | The part's element: frost green, arc cyan, kinetic sand; rare and relic parts are lighter |
 | Boon burst | A second spark burst on each hit, up to 40 particles at twice the size | Might 0.25 and up | The build's most common element |
-| Hit glyphs | `vfx.gd` hit and kill glyphs grow by up to 2x with might. The slam ring stays at the slam's real reach | Always | Unchanged |
+| Hit glyphs | `vfx.gd` hit and kill glyphs grow by up to 2.5x with might. The slam ring stays at the slam's real reach | Always | Unchanged |
 | Sound words | Comic words stamped beside big moments: KLANG, WHUMP, KRUNCH, FWOOSH, KA-BOOM, BOING, VRAAAM, KACHUNK, FUSED, KRA-KOOM, WHAM, STRIKE, PAID | Big moments only, never ordinary hits | Pilot colour for your moves; brass for growth; heat orange for overdrive |
 | Overdrive | White-hot rim on the ball, flame flecks and a hanging ember trail behind it, an ignition ring, VRAAAM and an impact frame | Speed at or above 60 m/s, off below 54 m/s | Heat ramp: white, orange, deep red, smoke |
 | Carve sparks | A grinding spark spray from the contact point | Grounded on banked ground (normal up share under 0.82) at fast tier or above | Hot brass |

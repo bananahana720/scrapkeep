@@ -145,6 +145,10 @@ var _last_boon := -1.0e9
 var _frame: Control
 var _last_frame := -1.0e9
 var _kill_times: Array = []
+# Might is recounted this often too, so a growth path with no fact of its own (a tree pick,
+# start mass, a restored snapshot) still shows.
+const MIGHT_REFRESH_S := 0.25
+var _might_wait := 0.0
 var _pin_times: Array = []
 
 
@@ -312,9 +316,11 @@ func _boon(at: Vector3) -> void:
 	var p: GPUParticles3D = _boons[_boon_next]
 	_boon_next = (_boon_next + 1) % _boons.size()
 	var pm := p.process_material as ParticleProcessMaterial
-	pm.scale_min = 0.6 * (1.0 + might)
-	pm.scale_max = 1.2 * (1.0 + might)
-	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(dominant_color(), 1.6))
+	pm.scale_min = 0.6 * (1.0 + 1.5 * might)
+	pm.scale_max = 1.2 * (1.0 + 1.5 * might)
+	pm.initial_velocity_min = 4.0 * (1.0 + 1.2 * might)
+	pm.initial_velocity_max = 9.0 * (1.0 + 1.2 * might)
+	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(dominant_color(), 1.2))
 	spawned["boon"] = spawned.get("boon", 0) + 1
 
 
@@ -451,7 +457,7 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 	slot["id"] = id
 	slot["at"] = placed
 	slot["tilt"] = _rng.randf_range(-0.2, 0.2)
-	slot["size"] = float(WORDS[id]["size"]) * (1.0 + 0.5 * might)
+	slot["size"] = float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
 	label.visible = true
 	_draw_word(slot)
 	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1
@@ -839,7 +845,7 @@ func column(tint: Color, at := Vector3.INF) -> void:
 	var p: GPUParticles3D = _columns[_column_next]
 	_column_next = (_column_next + 1) % _columns.size()
 	var base: Vector3 = player.ball_position() - Vector3.UP * 0.8 if at == Vector3.INF else at
-	p.global_transform = Transform3D(Basis.IDENTITY, base)
+	p.global_transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * (1.0 + might)), base)
 	p.set_instance_shader_parameter("tint", _glow(tint, 1.15))
 	p.amount_ratio = clampf(0.5 + 0.5 * might, 0.0, 1.0)
 	p.restart()
@@ -1000,6 +1006,10 @@ func _process(delta: float) -> void:
 	if player == null or root == null:
 		return
 	_clock += delta
+	_might_wait -= delta
+	if _might_wait <= 0.0:
+		_might_wait = MIGHT_REFRESH_S
+		refresh_might()
 	for w in _words:
 		if w["t"] >= 1.0:
 			continue
