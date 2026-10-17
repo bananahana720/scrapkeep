@@ -81,6 +81,17 @@ const ROWS := {
 	"brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle/manifest.json"},
 	"waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/waking/manifest.json"},
 	"mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/mind/manifest.json"},
+	# Phase, final-phase, champion and Eurodance packs (phase_music.gd). Missing packs are silent.
+	"brindle-p1-requisition": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p1_requisition/manifest.json"},
+	"brindle-p2-furnace": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p2_furnace/manifest.json"},
+	"brindle-p3-scuttle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p3_scuttle/manifest.json"},
+	"waking-final": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/waking_final/manifest.json"},
+	"mind-final": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/mind_final/manifest.json"},
+	"champion-hype": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/champion_hype/manifest.json"},
+	"euro-brindle-p3": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/euro_brindle_p3/manifest.json"},
+	"euro-waking-final": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/euro_waking_final/manifest.json"},
+	"euro-mind-final": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/euro_mind_final/manifest.json"},
+	"euro-champion": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/euro_champion/manifest.json"},
 	"title": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title/manifest.json"},
 	"summary": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/summary/manifest.json"},
 }

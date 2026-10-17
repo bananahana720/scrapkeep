@@ -32,6 +32,7 @@ const STINGER_BEATS := {
 	"warden_theme_in": 4,
 	"boss_arena_in": 4,
 	"boss_phase": 2,
+	"hype_drop": 7,
 	"stinger_boss_defeated": 8,
 	"build_riser": 8,
 	# The world stinger, one id per WORLD_STEPS value (world_stinger names them).
@@ -136,6 +137,13 @@ const TRIM_DB := {
 	# --- P-C Cannon sounds ---
 	# --- end Cannon ---
 	"chunk_low": -2.0,
+	# The kill-first specials and the hype drop are rendered files (FILE_SOUNDS), not recipes.
+	"foreman_presence": -14.0, "foreman_tell": -4.0, "foreman_break": -3.0, "foreman_spawn": -6.0,
+	"dispatcher_presence": -14.0, "dispatcher_tell": -4.0, "dispatcher_break": -3.0, "dispatcher_spawn": -6.0,
+	"splitter_presence": -14.0, "splitter_tell": -4.0, "splitter_break_split": -3.0, "splitter_break_clean": -3.0,
+	"splitter_spawn": -6.0,
+	"linker_presence": -14.0, "linker_tell": -4.0, "linker_break": -3.0, "linker_spawn": -6.0,
+	"hype_drop": -3.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
@@ -235,6 +243,68 @@ static func cause_note_id(midi: int) -> String:
 	return CAUSE_NOTE + str(midi)
 
 
+# Rendered sounds (design-v3/sound/specials.py and extras.py), 44.1 kHz mono 16-bit WAVs under
+# assets/sfx/. The four presence cues are seamless two-bar loops at 129 BPM.
+const SFX_DIR := "res://assets/audio/"
+const SPECIALS := ["foreman", "dispatcher", "splitter", "linker"]
+const FILE_SOUNDS := {
+	"foreman_presence": "specials/foreman_presence.wav", "foreman_tell": "specials/foreman_tell.wav",
+	"foreman_break": "specials/foreman_break.wav", "foreman_spawn": "specials/foreman_spawn.wav",
+	"dispatcher_presence": "specials/dispatcher_presence.wav", "dispatcher_tell": "specials/dispatcher_tell.wav",
+	"dispatcher_break": "specials/dispatcher_break.wav", "dispatcher_spawn": "specials/dispatcher_spawn.wav",
+	"splitter_presence": "specials/splitter_presence.wav", "splitter_tell": "specials/splitter_tell.wav",
+	"splitter_break_split": "specials/splitter_break_split.wav", "splitter_break_clean": "specials/splitter_break_clean.wav",
+	"splitter_spawn": "specials/splitter_spawn.wav",
+	"linker_presence": "specials/linker_presence.wav", "linker_tell": "specials/linker_tell.wav",
+	"linker_break": "specials/linker_break.wav", "linker_spawn": "specials/linker_spawn.wav",
+	"hype_drop": "hype_drop.wav",
+}
+# hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
+const HYPE_DROP_LEAD_SECONDS := 2.0
+
+
+# The mono samples of a rendered file: the imported resource when the editor or export has
+# one, else the raw RIFF (headless runs without an import cache).
+static func file_samples(id: String) -> PackedFloat32Array:
+	var path: String = SFX_DIR + String(FILE_SOUNDS[id])
+	var out := PackedFloat32Array()
+	var res = load(path) if ResourceLoader.exists(path) else null
+	if res is AudioStreamWAV and (res as AudioStreamWAV).format == AudioStreamWAV.FORMAT_16_BITS:
+		return _pcm16(res.data, res.stereo)
+	var bytes := FileAccess.get_file_as_bytes(path)
+	var at := 12
+	while at + 8 <= bytes.size():
+		var size := bytes.decode_u32(at + 4)
+		if bytes.slice(at, at + 4).get_string_from_ascii() == "data":
+			return _pcm16(bytes.slice(at + 8, at + 8 + size), false)
+		at += 8 + size + (size & 1)
+	return out
+
+
+static func _pcm16(data: PackedByteArray, stereo: bool) -> PackedFloat32Array:
+	var frames := data.size() / (4 if stereo else 2)
+	var out := PackedFloat32Array()
+	out.resize(frames)
+	for i in frames:
+		if stereo:
+			out[i] = (data.decode_s16(i * 4) + data.decode_s16(i * 4 + 2)) / 65536.0
+		else:
+			out[i] = data.decode_s16(i * 2) / 32768.0
+	return out
+
+
+# A presence loop: the file as a forward-looping stream, whole file as the loop.
+static func loop_stream(id: String) -> AudioStreamWAV:
+	var key := id + "@loop"
+	if not _streams.has(key):
+		var wav := Synth.to_wav(samples(id))
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_begin = 0
+		wav.loop_end = wav.data.size() / 2
+		_streams[key] = wav
+	return _streams[key]
+
+
 # The hum is the one looping cue: a whole number of cycles in its buffer, so it tiles.
 static func hum_stream() -> AudioStreamWAV:
 	if not _streams.has("line_hum"):
@@ -307,6 +377,11 @@ static func bake_all(ids: Array) -> void:
 
 
 static func _bake(id: String) -> PackedFloat32Array:
+	if FILE_SOUNDS.has(id):
+		var file := file_samples(id)
+		if file.size() > 0:
+			return file
+		return _tone(0.12, _hz(62), _hz(62), "sine", 20.0)
 	if id in ["plate_tally", "clip_tally", "stroke_tally", "settle_tally"]:
 		return tally_recipe(id)
 	if id.begins_with("cable_kest_") or id.begins_with("raid_kest_") or id.begins_with("tick_kest_"):

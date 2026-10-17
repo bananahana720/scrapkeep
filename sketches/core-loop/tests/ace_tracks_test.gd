@@ -24,6 +24,10 @@ func _oggs_in(dir: String) -> int:
 		if file.ends_with(".ogg"):
 			count += 1
 	for sub in DirAccess.get_directories_at(dir):
+		# The single-loop phase packs (flat_pack_test) say nothing about the Warden themes.
+		if FileAccess.file_exists(dir.path_join(sub).path_join("manifest.json")) \
+				and bool(JSON.parse_string(FileAccess.get_file_as_string(dir.path_join(sub).path_join("manifest.json"))).get("flat", false)):
+			continue
 		count += _oggs_in(dir.path_join(sub))
 	return count
 
