@@ -1,6 +1,6 @@
 # Priority proof
 
-Asks one question per kill-first special (design-v3/ENEMY-PRIORITY.md section 4; alpha-status ambition map, unit 7): does a player who kills the special first lose less hull than one who leaves it for last? The target: the ignore arm loses at least 1.25 times the hull the target arm loses, over 8 paired seeds. It feeds the wave 18 matchup lab.
+Asks one question per kill-first special (design-v3/ENEMY-PRIORITY.md section 4; alpha-status ambition map, unit 7): does a player who kills the special first lose less hull than one who leaves it for last? The target: the ignore arm loses at least 1.25 times the hull the target arm loses, over 8 paired seeds. Damage taken is graded beside it the same way (at least 1.25 times, with at least 10 on the ignore arm): the hull only takes what the ball's scrap armour does not, so at low numbers a hull verdict reads noise while the hits that landed still show the cost. Each arm also reports its median hull. The coordinator accepted the Splitter on median hull plus damage taken (2026-10-17). It feeds the wave 18 matchup lab.
 
 Automated; not a feel verdict.
 
@@ -90,5 +90,7 @@ Damage taken (before scrap armour), mean: hp x1 target 10.9, ignore 10.9; hp x3 
 What it says:
 
 - Leaving the Splitter alive is costly in what the pods do: at hp x3 the ignore arm meets about three times the pods, takes twice the damage and clears 10 s (43%) later; its median hull loss is 2.0 against the target arm's 0.
-- The tool's verdict reads the hull mean, and the hull only takes what the scrap armour does not, so it is noisy at these numbers. The target arm's hp x3 mean rides seeds 2 and 8 (8.0 and 23.2 hull), the same in every tuning round, which is the crew, not the Splitter; the ignore mean sits at 4.5, under MIN_HULL 5. At hp x1 every arm stays under 5 hull, the lab limit the control shows too.
+Re-run with the damage column (head after c3a9716b, same numbers): damage verdict **pass** at hp x3 (10.1 / 20.3, ratio 2.01, ignore worse on 6 of 8 seeds) and **miss** at hp x1 (10.9 / 10.9, ratio 1.0, 3 of 8).
+
+- The hull verdict reads the hull mean, and the hull only takes what the scrap armour does not, so it is noisy at these numbers. The target arm's hp x3 mean rides seeds 2 and 8 (8.0 and 23.2 hull), the same in every tuning round, which is the crew, not the Splitter; the ignore mean sits at 4.5, under MIN_HULL 5. At hp x1 every arm stays under 5 hull, the lab limit the control shows too.
 - The stock bot rams, so it splits the Splitter in most runs. The proof measures kill order, not the clean-kill answer; the matchup lab (lever 7) is where "from above or from range" gets measured.
