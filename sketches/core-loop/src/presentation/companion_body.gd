@@ -402,8 +402,10 @@ func _grow() -> void:
 	if _halo != null:
 		var fill: float = combat.assist_fill() if combat != null and combat.has_method("assist_fill") else 0.0
 		var mat := _halo.material_override as StandardMaterial3D
-		var blink := fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
-		mat.emission_energy_multiplier = lerpf(HALO_ENERGY["empty"], HALO_ENERGY["full"], fill) * (1.6 if blink and not FlashGuard.on else 1.0)
+		# The full halo's 2 Hz blink is under FlashGuard's cap; reduce flashes stops it anyway and
+		# holds the full glow, since the fill level already says "full".
+		var blink := not FlashGuard.on and fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
+		mat.emission_energy_multiplier = lerpf(HALO_ENERGY["empty"], HALO_ENERGY["full"], fill) * (1.6 if blink else 1.0)
 
 
 func mark() -> int:

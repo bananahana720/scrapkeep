@@ -106,12 +106,14 @@ func _sites() -> void:
 		enemy.flash()
 		enemy._update_flash(0.0)
 		var mat: StandardMaterial3D = enemy._material
-		lit[mode] = {"energy": mat.emission_energy_multiplier, "white": mat.albedo_color.b}
+		lit[mode] = {"energy": mat.emission_energy_multiplier, "albedo": mat.albedo_color}
 		enemy._flash = 0.001
 		enemy._update_flash(1.0)
-	var rest_blue: float = enemy._material.albedo_color.b
+	var rest: Color = enemy._material.albedo_color
+	var push_off := _distance(lit[false]["albedo"], rest)
+	var push_on := _distance(lit[true]["albedo"], rest)
 	_t.check("RF-6 hit glow is lower", lit[true]["energy"] < lit[false]["energy"] * 0.5 and lit[true]["energy"] > 0.0, "%s" % [lit])
-	_t.check("RF-6 hit whitening is smaller but still there", lit[true]["white"] - rest_blue < (lit[false]["white"] - rest_blue) * 0.5 and lit[true]["white"] >= rest_blue, "%s rest %f" % [lit, rest_blue])
+	_t.check("RF-6 hit whitening keeps the white share and is still there", push_off > 0.0 and absf(push_on - push_off * FlashGuard.WHITE_SHARE) < 0.002, "push %f -> %f" % [push_off, push_on])
 
 	# RF-7: the tenacity bracket's 9 Hz blink holds steady instead.
 	var holds = _game.ctx.spawner.fleet.holds
@@ -153,7 +155,12 @@ func _sites() -> void:
 	# RF-8: no repeating pulse over 3 Hz.
 	_t.check("RF-8 the rate cap is 3 Hz", FlashGuard.rate(20.0) <= 3.0 and FlashGuard.rate(2.0) == 2.0 and FlashGuard.blink(false), "cap")
 	_game.set_reduce_flashes(false)
-	_t.check("RF-8 off, rates and blinks are untouched", FlashGuard.rate(20.0) == 20.0 and not FlashGuard.blink(false), "untouched")
+	_t.check("RF-8 off, every helper returns its input", FlashGuard.rate(20.0) == 20.0 and not FlashGuard.blink(false) and FlashGuard.alpha(0.8) == 0.8 \
+		and FlashGuard.info(0.8) == 0.8 and FlashGuard.spike(1.0, 4.0) == 4.0 and FlashGuard.whiten(0.6) == 0.6 and FlashGuard.period(0.05) == 0.05, "identity")
+
+
+func _distance(a: Color, b: Color) -> float:
+	return Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length()
 
 
 func _finish() -> void:

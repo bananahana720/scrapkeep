@@ -7,8 +7,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # Rendered stills for the Reduce flashes toggle (design question 7): each flash site at its
 # peak with the toggle off and on, each beside a rest still taken the frame before, so
 # still_compare's --peak mode can measure the brightness the flash adds. Sites: the hit edge
-# flash, a pop glyph (the shot and detonation flash), a reach ring glyph, an enemy hit flash
-# and the reward crate burst. It needs a rendered display; in the cloud:
+# flash, a pop glyph (the shot and detonation flash), a reach ring glyph, an enemy hit flash,
+# a comic sound word and the reward crate burst. It needs a rendered display; in the cloud:
 #
 #   xvfb-run -a -s "-screen 0 1920x1080x24" <godot> --rendering-driver opengl3 \
 #     --path sketches/core-loop --script res://tools/flash_capture.gd -- --out=<absolute dir>
@@ -20,7 +20,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # The run is calm (no director spawns) and the tree is paused across each rest and peak pair,
 # so the two stills differ only by the flash.
 
-const SITES := ["edge", "pop_glyph", "ring_glyph", "enemy_hit"]
+const SITES := ["edge", "pop_glyph", "ring_glyph", "enemy_hit", "word"]
 const SETTLE_FRAMES := 10
 
 var _out := ""
@@ -80,7 +80,9 @@ func _plan() -> void:
 	for mode in ["off", "on"]:
 		_at(1, func(): _game.set_reduce_flashes(mode == "on"))
 		for site in SITES:
-			_at(SETTLE_FRAMES, func(): paused = true)
+			_at(SETTLE_FRAMES, func():
+				paused = true
+				_place(site))
 			_at(2, func(): _save("%s-%s-rest" % [site, mode]))
 			_at(1, func(): _fire(site))
 			_at(2, func(): _save("%s-%s-peak" % [site, mode]))
@@ -99,6 +101,12 @@ func _ahead(metres: float) -> Vector3:
 	return _game.ctx.terrain.drop_point(ball.x + ahead.x, ball.z + ahead.z, 1.0)
 
 
+# The enemy stands where the camera looks now, since the ball may have rolled.
+func _place(site: String) -> void:
+	if site == "enemy_hit":
+		_enemy.global_position = _ahead(6.0)
+
+
 func _fire(site: String) -> void:
 	var vfx = _game.presentation.vfx
 	match site:
@@ -111,6 +119,8 @@ func _fire(site: String) -> void:
 		"enemy_hit":
 			_enemy.flash()
 			_enemy._update_flash(0.0)
+		"word":
+			_game.presentation.machine_fx.word("KLANG", _ahead(5.0) + Vector3.UP * 2.0, Color(1.0, 0.85, 0.4), true, 2.0)
 
 
 func _calm(site: String) -> void:
