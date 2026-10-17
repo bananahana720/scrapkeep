@@ -9,6 +9,7 @@
 - [HANDOFF.md](HANDOFF.md): Live coordinator handoff, updated each wave.
 - [HOOK-CHAIN.md](HOOK-CHAIN.md): Detailed chain contract and acceptance work.
 - [LEGIBILITY.md](LEGIBILITY.md): Accepted presentation grammar and measurement references.
+- [MACHINE-VFX.md](MACHINE-VFX.md): Enemy and boss effects, the specials' tell contract and their budget.
 - [TRAVERSAL.md](TRAVERSAL.md): Traversal measurements and definitions consumed by code and tests.
 - [TESTING.md](TESTING.md): Test method and historical runner measurements.
 - [ROADMAP.md](ROADMAP.md): Completion checkpoints and unlock sequence.
