@@ -32,7 +32,7 @@ The recipe reads each rig's rest joint frames and skinned vertices straight from
 
 ## Port notes for the wave coordinator
 
-In order. Nothing here edits `src/`, `assets/registry.json` or `registry.d`.
+In order. Nothing here edits `src/`.
 
 1. **Loader patch (`mount-port.patch`).** `git apply sketches/core-loop/tools/blender/outfits/mount-port.patch` from the repo root. It fixes two gaps in `hero_assets._mount_on_bones` that no outfit had hit yet:
    - glTF import renames a node `upper_arm.L` to `upper_arm_L`, so `find_bone` misses it and the Eyeshade's garters are dropped. The patch matches parts by the sanitised bone name.
@@ -40,14 +40,7 @@ In order. Nothing here edits `src/`, `assets/registry.json` or `registry.d`.
 
    The patch also sets `MOUNT_PATCHED := true` in `outfit_art_test.gd`, which turns the garters and the hood's motion into required checks. Checked here: with the patch, `outfit_art_test` passes 26 checks and `shell_layers_test` 136; without it, `outfit_art_test` passes 23 and reports the two gaps. Without the patch, the visor, hood (static, lifted), cap and bell all still mount.
 
-2. **Registry rows**, one fragment per item, in `assets/registry.d/` (the coordinator folds them):
-
-   ```json
-   {"assets": [{"id": "outfit_rivet_hood", "path": "res://assets/cosmetics/outfits/outfit_rivet_hood.glb", "class": "detail", "ships": true, "loader": "src/presentation/hero_assets.gd fit_outfit (Welding Hood, CUSTOMIZE section 8)", "provenance": {"recipe": "tools/blender/outfits/build_outfits.py outfit_rivet_hood", "brief": "design-v3/COSMETICS-ART-BRIEFS.md"}}]}
-   {"assets": [{"id": "outfit_tally_eyeshade", "path": "res://assets/cosmetics/outfits/outfit_tally_eyeshade.glb", "class": "detail", "ships": true, "loader": "src/presentation/hero_assets.gd fit_outfit (Eyeshade, CUSTOMIZE section 8)", "exception": {"draws": 3}, "exception_why": "the visor plus one garter on each upper arm; each bone's part is its own mesh, so three draws, one surface each", "provenance": {"recipe": "tools/blender/outfits/build_outfits.py outfit_tally_eyeshade", "brief": "design-v3/COSMETICS-ART-BRIEFS.md"}}]}
-   {"assets": [{"id": "outfit_tarn_steady_cap", "path": "res://assets/cosmetics/outfits/outfit_tarn_steady_cap.glb", "class": "detail", "ships": true, "loader": "src/presentation/hero_assets.gd fit_outfit (Steady Cap, Replace_Cap, CUSTOMIZE section 8)", "provenance": {"recipe": "tools/blender/outfits/build_outfits.py outfit_tarn_steady_cap", "brief": "design-v3/COSMETICS-ART-BRIEFS.md"}}]}
-   {"assets": [{"id": "companion_skin_till_bell", "path": "res://assets/cosmetics/companion_skins/companion_skin_till_bell.glb", "class": "detail", "ships": true, "loader": "src/presentation/hero_assets.gd fit_companion_skin (Till Bell on Deck, CUSTOMIZE section 8)", "provenance": {"recipe": "tools/blender/outfits/build_outfits.py companion_skin_till_bell", "brief": "design-v3/COSMETICS-ART-BRIEFS.md"}}]}
-   ```
+2. **Registry rows: done on this branch** (Andrew's 2026-10-17 rule lets cloud threads edit `assets/` and `registry.d` on their own branches). One fragment per item in `assets/registry.d/` (`outfit_rivet_hood.json`, `outfit_tally_eyeshade.json`, `outfit_tarn_steady_cap.json`, `companion_skin_till_bell.json`), class `detail`, folded into `assets/registry.json`. The Eyeshade carries a `draws: 3` exception (visor plus two garters). `asset_registry_test` passes.
 
    If the Eyeshade's draw exception is not wanted, delete the two garter blocks from `tally_eyeshade()` and rebuild: the visor alone is one draw at 360 triangles.
 
