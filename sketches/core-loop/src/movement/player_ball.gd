@@ -10,6 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
+const Grip := preload("res://src/movement/grip.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
@@ -505,6 +506,7 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		return
 	_clear_speed_bank()
 	Augments.attach(kit, ball_position(), point, normal, body)
+	kit.grip = Grip.of(body, heft(), tuning.pole_flail())
 	events.grapple_fired.emit(point)
 	if body != null:
 		if body.has_method("flash"):
@@ -512,6 +514,11 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		events.harpoon_bit.emit(body, point)
 	_publish_chain(chain.link(body != null and not body.is_in_group(Augments.STAKE_GROUP)
 		and not body.is_in_group(Augments.WORLD_ANCHOR_GROUP), state.grounded), body, point)
+
+
+# A flail strike on another enemy is a chain link (POLES-FLAILS section 5; flail.gd).
+func link_chain(body: Node3D) -> void:
+	_publish_chain(chain.link(true, state.grounded), body, body.global_position)
 
 
 func release_grapple() -> void:
@@ -807,6 +814,7 @@ func _read_grammar() -> void:
 		_press_harpoon()
 	elif intent.harpoon_released and kit.hooked:
 		_fling()
+		_pole_exit()
 		release_grapple()
 	# Rope Anchor: winching up to the wall with Ctrl plants the pylon there.
 	if tree.knob("winch_mount") and kit.hooked and kit.winching and not kit.mounted \
@@ -1052,6 +1060,19 @@ func _read_mass() -> void:
 	kit.mass_on = tuning != null and tuning.world_one() and tree.knob("mass_launch")
 	var mass := maxf(0.0, float(mass_of.call())) if kit.mass_on and mass_of.is_valid() else 0.0
 	kit.mass_q = clampf(mass / Augments.MASS_FULL, 0.0, 1.0)
+
+
+# Letting go of a pole slingshots you on along the tangent (POLES-FLAILS section 4): a share
+# of the speed across the line is added along it, never past the soft cap.
+func _pole_exit() -> void:
+	if not Augments.pole_line(kit):
+		return
+	var v: Vector3 = state.velocity
+	var to_body: Vector3 = kit.anchor - ball_position()
+	if to_body.length() < 0.01:
+		return
+	var share := Augments.POLE_EXIT_SABLE if class_def != null and class_def.id == "pylon_engineer" else Augments.POLE_EXIT
+	_rigid.set_velocity_now(Augments.pole_exit(v, to_body.normalized(), share))
 
 
 # Coil Hook: letting go of the rope throws you on along your swing.

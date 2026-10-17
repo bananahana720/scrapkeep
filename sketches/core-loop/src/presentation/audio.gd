@@ -2263,7 +2263,8 @@ func special_spawned(enemy: Node3D, name: String) -> void:
 	_specials[id] = {"node": enemy, "name": name, "player": player}
 	on_beat("special_spawn", 0.0, false, 1, SpecialAudio.cue(name, "spawn"))
 	if enemy.has_signal("special_tell"):
-		enemy.connect("special_tell", special_tell.bind(enemy))
+		# The bodies emit special_tell(moment); the tell cue sounds on the "tell" moment only.
+		enemy.connect("special_tell", func(moment: String): if moment == "tell": special_tell(enemy))
 	if enemy.has_signal("died"):
 		enemy.connect("died", func(_a = null, _b = null): special_broken(enemy))
 	enemy.tree_exiting.connect(_special_gone.bind(id), CONNECT_ONE_SHOT)

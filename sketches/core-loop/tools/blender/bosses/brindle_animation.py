@@ -49,9 +49,9 @@ def restore(root):
                 obj.rotation_euler = rot
 
 
-def offset(obj, up=0, forward=0, pitch=0, yaw=0, roll=0, scale=1):
+def offset(obj, up=0, forward=0, pitch=0, yaw=0, roll=0, scale=1, side=0):
     loc, rot, scl = REST[obj.name]
-    obj.location = loc + Vector((0, forward, up))
+    obj.location = loc + Vector((side, forward, up))
     turn = Euler((rot.x + pitch, rot.y + roll, rot.z + yaw))
     if obj.rotation_mode == "QUATERNION":
         obj.rotation_quaternion = turn.to_quaternion()
@@ -124,12 +124,19 @@ def author_ship(root):
     action(root, "magnet_hold_drip", .2, {
         "Magnet" + s: [(0, {"up": .035}), (.08, {"up": .055}), (.1, {"up": .025}), (.2, {"up": .035})]
         for s in ("Port", "Starboard")})
-    rows = {"Cap%d" % k: [(0, {}), (.6, {"up": .25})] for k in range(3)}
-    rows["CraneMasts"] = vanished(.6)
-    rows["CableSpans"] = vanished(.6)
-    for s in ("Port", "Starboard"):
+    # Phase 2 entry, the Furnace: played straight as an anime power-up. The cranes heave up,
+    # whip round and fold away; the hull clenches, then the caps blow open past their 0.25 m
+    # lift and settle on it. Every end pose is the one the runtime and tests expect.
+    rows = {"Cap%d" % k: [(0, {}), (.12, {"up": -.08}), (.24, {"up": .9}), (.36, {"up": .12}),
+                          (.46, {"up": .36}), (.54, {"up": .22}), (.6, {"up": .25})] for k in range(3)}
+    rows["CraneMasts"] = [(0, {}), (.1, {"scale": 1.06}), (.3, {"scale": .5}), (.45, {"scale": .001}),
+                          (.6, {"scale": .001})]
+    rows["CableSpans"] = [(0, {}), (.15, {}), (.3, {"scale": .001}), (.6, {"scale": .001})]
+    for s, sign in (("Port", 1), ("Starboard", -1)):
         for prefix in ("Crane", "Magnet"):
-            rows[prefix + s] = vanished(.6)
+            rows[prefix + s] = [(0, {}), (.1, {"up": .8, "scale": 1.1}), (.3, {"up": .4, "yaw": sign * 1.6, "scale": .5}),
+                                (.45, {"yaw": sign * 2.4, "scale": .001}), (.6, {"yaw": sign * 2.4, "scale": .001})]
+    rows["Hull"] = [(0, {}), (.1, {"up": -.16}), (.22, {"up": .1, "pitch": .01}), (.4, {}), (.6, {})]
     action(root, "enter_furnace", .6, rows)
     rows = {"SlagThroat": [(0, {}), (2.5, {"up": .25}), (8.5, {"up": .25}), (9, {})]}
     for k in range(3):
@@ -139,9 +146,23 @@ def author_ship(root):
     action(root, "drone_deploy", 1, {"Hatch" + s: [(0, {}), (.85, {"roll": sign * math.pi / 2}),
                                                       (1, {"roll": sign * math.pi / 2})]
         for s, sign in (("L", -1), ("R", 1))})
-    rows = {"Armour%d" % k: [(0, {}), (.35, {"roll": (.3 if k < 2 else -.3)}), (.8, {"scale": .001})]
-            for k in range(4)}
-    rows["CockpitShield"] = [(0, {}), (.8, {"pitch": math.radians(105)})]
+    # Phase 3 entry, the Scuttle: the transformation beat the hype music kicks in on. The hull
+    # crouches, the four armour panels blast off sideways and tumble away, and the cockpit
+    # shield rattles, then flips open past its hinge and settles at 105 degrees.
+    rows = {}
+    for k in range(4):
+        out = -1 if k < 2 else 1
+        tip = .3 if k < 2 else -.3
+        rows["Armour%d" % k] = [(0, {}), (.12, {"side": -out * .08, "scale": .97}),
+                                (.18, {"side": out * 1.6, "up": 1.0, "roll": tip * 2, "scale": 1.05}),
+                                (.4, {"side": out * 3.0, "up": .8, "roll": tip * 4.5}),
+                                (.6, {"side": out * 3.8, "up": -.6, "roll": tip * 6, "scale": .5}),
+                                (.8, {"side": out * 4.2, "up": -1.4, "roll": tip * 7, "scale": .001})]
+    rows["CockpitShield"] = [(0, {}), (.06, {"pitch": .04}), (.12, {"pitch": -.03}), (.2, {"pitch": .05}),
+                             (.25, {}), (.38, {"pitch": math.radians(118)}), (.52, {"pitch": math.radians(100)}),
+                             (.65, {"pitch": math.radians(107)}), (.8, {"pitch": math.radians(105)})]
+    rows["Hull"] = [(0, {}), (.12, {"up": -.14, "pitch": -.008}), (.18, {"up": .1}), (.35, {"up": -.03}),
+                    (.55, {}), (.8, {})]
     rows["CraneMasts"] = absent(.8)
     rows["CableSpans"] = absent(.8)
     for k in range(3):

@@ -18,6 +18,7 @@ const EXPECTED := {
 	"discovery": ["discovery", "cards", "bogus", "launch"],
 	"telegraph": ["telegraph", "haze", "bogus", "launch"],
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],
+	"pole-flail": ["pole_flail", "on", "bogus", "launch"],
 	"hotwire-shell": ["hotwire_shell", "on", "bogus", "launch"],
 	"hotwire-tread": ["hotwire_tread", "on", "bogus", "launch"],
 	"companion-stub": ["companion_stub", "on", "bogus", "launch"],

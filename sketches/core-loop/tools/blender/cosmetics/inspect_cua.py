@@ -10,7 +10,9 @@ import struct
 import zlib
 
 ASSETS = Path(__file__).resolve().parents[3]/"assets/cosmetics"
-EXPECTED = ["salt_skip", "ink_stitch", "plum_curl", "forge_chips", "moth_tuft", "rose_wash"]
+EXPECTED = ["salt_skip", "ink_stitch", "plum_curl", "forge_chips", "moth_tuft", "rose_wash",
+            "sable_cable", "rivet_swarf", "kest_fuse_smoke", "tarn_claw_marks", "tally_punch_tape",
+            "cannon_recital", "any_downbeat"]
 
 
 def glb(path):
@@ -56,7 +58,7 @@ def main():
         if path.suffix == ".png":
             row["dimensions_px"] = png(path)
         files.append(row)
-    assert len(files)==31,(len(files),"expected 31 authored assets")
+    assert len(files)==42,(len(files),"expected 42 authored assets")
     for name in EXPECTED:
         path = ASSETS/"trails"/("trail_"+name+".glb")
         data = glb(path)
@@ -77,7 +79,7 @@ def main():
             "clip":data["animations"][0]["name"]})
     previews = []
     if args.previews:
-        for kind,count in [("trails",6),("decals",8),("paints",6)]:
+        for kind,count in [("trails",13),("decals",10),("paints",6)]:
             doc = json.loads((args.previews/("preview_"+kind+".json")).read_text())
             # Each recipe record is confined to this family.
             doc = [r for r in doc if r["id"].startswith("trail_" if kind=="trails" else "decal_" if kind=="decals" else "companion_paint_")]
@@ -88,7 +90,7 @@ def main():
                     path = args.previews/name
                     assert path.is_file() and path.stat().st_size>1000,path
                     previews.append({"path":name,"bytes":path.stat().st_size,"sha256":hashlib.sha256(path.read_bytes()).hexdigest()})
-        assert len(previews)==72,len(previews)
+        assert len(previews)==113,len(previews)
     result = {"verdict":"PASS","asset_files":files,"budgets":rows,"rerun_identical":bool(args.compare),
         "previews":previews,"limits":"one draw requires later MultiMesh/card batching; shell/companion total budgets and native threat fade require the wiring unit"}
     if args.out:

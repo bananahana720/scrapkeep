@@ -55,6 +55,8 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #                        _process and _physics_process off (no thinking, moving or
 #                        attacking); respawns are switched off as they enter the tree.
 #   --no-trails          vfx.trails = false: the ball trail and speed lines are not built.
+#   --no-machine-fx      presentation MachineFx (enemy and boss steam, sparks, arcs, words):
+#                        process disabled, its root hidden, event listeners cut.
 # Synthetic attacks recycle and never resolve damage. HP is topped up every tick.
 #
 # Park scenes (PARK.md section 9, unit KB6) run on the park table with ctx.calm set, so no enemy arrives:
@@ -81,7 +83,7 @@ const SCENES := {
 	"p1": {"packs": 0, "per_type": 0, "warden": false, "view": "stand", "table": "park"},
 	"p2": {"packs": 0, "per_type": 0, "warden": false, "view": "swap", "table": "park"},
 }
-const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band"]
+const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band", "no-machine-fx"]
 const PACK_ORDER := ["grounded", "strung", "netted", "rebound", "reeled", "wobble", "flung", "cupped"]
 const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart", "double_feed", "arc_coil"]
 const RIVET_SEED := 1
@@ -633,6 +635,11 @@ func _apply_ablations() -> void:
 		vfx.edge.get_parent().visible = false
 		presentation.juice.vfx = null
 		_ablation_notes["no-vfx"] = {"listeners_cut": _cut_listeners(vfx)}
+	if _off.has("no-machine-fx") and presentation.machine_fx != null:
+		var machine = presentation.machine_fx
+		machine.process_mode = Node.PROCESS_MODE_DISABLED
+		machine.root.visible = false
+		_ablation_notes["no-machine-fx"] = {"listeners_cut": _cut_listeners(machine)}
 	if _off.has("no-hud"):
 		_game.hud.process_mode = Node.PROCESS_MODE_DISABLED
 		_game.hud.visible = false

@@ -72,7 +72,7 @@ const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "crac
 const CONTRAPTION_RECIPES := ["", "gauge", "geyser_vent", "cannon", "trebuchet", "lift_platform", "barge"]
 
 # Activity presentation uses an ACTIVITY_ROWS key or the kind's existing cue.view alias.
-const ACTIVITY_KINDS := ["enemy_camp", "surge_run", "ambush_altar", "cracked_cache", "hauler_bounty", "movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
+const ACTIVITY_KINDS := ["enemy_camp", "surge_run", "ambush_altar", "cracked_cache", "hauler_bounty", "movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks", "hold_the_relay"]
 const WEATHER_KINDS := ["clear", "monsoon", "dust_squall", "heat_shimmer", "cave_mist", "cloud_deck", "thunderstorm"]
 
 # The park recipe registry until KC0 folds the park recipes into assets/registry.json: the
@@ -90,6 +90,8 @@ const RECIPES := [
 	"landmark_sky_island", "landmark_spire",
 ]
 const GREYBOX := "greybox:"
+# The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).
+const SCATTER := "scatter"
 const REGISTRY_PATH := "res://assets/registry.json"
 
 # The real-culture guardrail (section 4): these rows house no home, carry only ref_ fragments,
@@ -480,6 +482,8 @@ static func _recipe(out: Array, id: String, recipe: String) -> void:
 	if recipe.begins_with(GREYBOX):
 		if not ELEMENTS.has(recipe.trim_prefix(GREYBOX)):
 			_add(out, id, "recipe", "%s names no park element" % recipe)
+		return
+	if recipe == LANDMARK or recipe == SCATTER:
 		return
 	if not RECIPES.has(recipe) and not _registry().has(recipe):
 		_add(out, id, "recipe", "%s names no registry row" % recipe)

@@ -16,6 +16,7 @@ import {
   missingIcons,
   openAttackRows,
   parkGreybox,
+  isPlainSlope,
   parseArgs,
   pendingEntries,
   report,
@@ -91,6 +92,47 @@ test("parkGreybox groups greybox recipes and recipes with no GLB, and passes bui
       ["1 greybox landmark_dam (recipe landmark_dam has no GLB): dam", 1],
     ],
   );
+});
+
+test("parkGreybox counts a stamped plain slope as terrain and keeps ride pieces and unstamped slopes", () => {
+  const doc = {
+    park_rows: [
+      { id: "bank_stamped", element: "bank", recipe: "greybox:bank", stamp: "raise", y: null },
+      { id: "mesa_stamped", element: "sky_island", recipe: "greybox:sky_island", stamp: "raise" },
+      { id: "bank_flat", element: "bank", recipe: "greybox:bank", stamp: "", y: null },
+      { id: "bank_floating", element: "bank", recipe: "greybox:bank", stamp: "raise", y: 40 },
+      { id: "tube_stamped", element: "tunnel", recipe: "greybox:tunnel", stamp: "cut", y: null },
+    ],
+  };
+  const found = parkGreybox("park_x", doc, () => false);
+  assert.deepEqual(
+    found.map((f) => [f.what, f.count]),
+    [
+      ["2 greybox bank: bank_flat, bank_floating", 2],
+      ["1 greybox tunnel: tube_stamped", 1],
+    ],
+  );
+  assert.equal(isPlainSlope(doc.park_rows[0]), true);
+  assert.equal(isPlainSlope(doc.park_rows[4]), false);
+});
+
+test("parkGreybox counts a landmark-dressed row only until the landmark's GLB lands, and never a scatter-dressed one", () => {
+  const doc = {
+    landmark: { id: "sinkhole", recipe: "landmark_sinkhole" },
+    park_rows: [
+      { id: "deck", element: "ledge", recipe: "landmark" },
+      { id: "wash", element: "ledge", recipe: "scatter" },
+    ],
+  };
+  const bare = parkGreybox("park_sinkhole", doc, () => false);
+  assert.deepEqual(
+    bare.map((f) => f.what),
+    [
+      "1 greybox landmark_sinkhole (recipe landmark_sinkhole has no GLB): sinkhole",
+      "1 greybox ledge (dressed by landmark landmark_sinkhole, which has no GLB): deck",
+    ],
+  );
+  assert.deepEqual(parkGreybox("park_sinkhole", doc, (recipe) => recipe === "landmark_sinkhole"), []);
 });
 
 test("dictKeys reads the keys of one dictionary block and skips comments", () => {

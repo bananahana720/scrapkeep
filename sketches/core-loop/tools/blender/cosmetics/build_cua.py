@@ -28,7 +28,18 @@ TRAILS = [
     ("trail_forge_chips", "Chip", "3a6fb0", (.045, .045), .25, "tumble_fade"),
     ("trail_moth_tuft", "PairedTuft", "a39cb3", (.15, .09), .40, "expand_fade"),
     ("trail_rose_wash", "WashPuff", "d68ab0", (.16, .08), .35, "flatten_fade"),
+    # Sizes are (across, along) the ball's travel. Sable's cable is a deep green,
+    # not field mint: mint is reserved for the collection field.
+    ("trail_sable_cable", "CableDash", "3f8f6a", (.03, .12), .35, "fade"),
+    ("trail_rivet_swarf", "Swarf", "ae7240", (.07, .05), .30, "tumble_fade"),
+    ("trail_kest_fuse_smoke", "SmokeWisp", "8c8577", (.07, .16), .40, "expand_fade"),
+    ("trail_tarn_claw_marks", "ClawPair", "d2c5a5", (.40, .06), .40, "fade"),
+    ("trail_tally_punch_tape", "TapeStrip", "f7f1e3", (.05, .14), .35, "fade"),
+    ("trail_cannon_recital", "RecitalMarks", "6fb3a6", (.30, .07), .45, "fade"),
+    ("trail_any_downbeat", "BeatTick", "8a5a3a", (.10, .025), .30, "fade"),
 ]
+# Atlas cells (column, row) of 128 px. The first six keep their wave 2 cells.
+TRAIL_CELLS = [(0,0),(1,0),(2,0),(0,1),(1,1),(2,1),(3,0),(3,1),(0,2),(1,2),(2,2),(3,2),(0,3)]
 DECALS = [
     ("decal_fern", "d2c5a5", (.44, .55)),
     ("decal_patch", "d2c5a5", (.44, .34)),
@@ -38,6 +49,8 @@ DECALS = [
     ("decal_paw", "d2c5a5", (.42, .42)),
     ("decal_seashell", "d2c5a5", (.46, .42)),
     ("decal_moth", "906681", (.50, .34)),
+    ("decal_sable_spool", "d2c5a5", (.44, .44)),
+    ("decal_curtain_call", "d2c5a5", (.44, .37)),
 ]
 PAINTS = [
     ("companion_paint_night", "2b3a4a"),
@@ -86,6 +99,9 @@ def polygon(x, y, points):
 
 def trail_shape(index, n=128):
     x, y = grid(n)
+    # The new cards are drawn in metres on the card, so round marks stay round.
+    w, h = TRAILS[index][3]
+    mx, my = x*w/2, y*h/2
     if index == 0:
         shape = ellipse(x,y,0,0,.67,.57) | ellipse(x,y,.28,.10,.37,.32)
     elif index == 1:
@@ -96,8 +112,44 @@ def trail_shape(index, n=128):
         shape = polygon(x,y,[(-.72,-.37),(.27,-.65),(.72,.12),(-.13,.73)])
     elif index == 4:
         shape = ellipse(x,y,-.28,.03,.43,.66,-.45) | ellipse(x,y,.29,-.04,.43,.65,.45)
-    else:
+    elif index == 5:
         shape = ellipse(x,y,0,0,.87,.52) | ellipse(x,y,-.22,.12,.61,.47)
+    elif index == 6:
+        # One rounded rope dash; successive samples string into a stitched line.
+        shape = line(mx,my,(0,-.038),(0,.038),.011)
+    elif index == 7:
+        # An open swarf curl of about 1.5 turns.
+        shape = np.zeros(x.shape, dtype=bool)
+        pts = [((.003+.0015*t)*math.cos(t), (.003+.0015*t)*math.sin(t)) for t in np.linspace(0,math.pi*3,90)]
+        for a,b in zip(pts,pts[1:]):
+            shape |= line(mx,my,a,b,.003)
+    elif index == 8:
+        # Two soft lobes with a pinched waist; overlapping cards read as one ribbon.
+        shape = ellipse(mx,my,0,-.03,.026,.036) | ellipse(mx,my,0,.03,.026,.036)
+    elif index == 9:
+        # Two scored claw lines with ragged, uneven ends.
+        shape = np.zeros(x.shape, dtype=bool)
+        for side in (-1,1):
+            shape |= line(mx,my,(side*.165,-.018),(side*.165,.016),.008)
+            shape |= line(mx,my,(side*.165+.007,-.004),(side*.165+.007,.019),.004)
+            shape |= line(mx,my,(side*.165-.006,-.020),(side*.165-.006,.002),.004)
+    elif index == 10:
+        # Ledger tape with three punched holes on its centre line.
+        shape = (abs(mx) <= .021) & (abs(my) <= .058)
+        for cy in (-.035,0,.035):
+            shape &= ~ellipse(mx,my,0,cy,.0065,.0065)
+    elif index == 11:
+        # The Cannon's four family marks in order: bar, V, ring, quarter fan.
+        shape = line(mx,my,(-.105,-.02),(-.105,.02),.006)
+        shape |= line(mx,my,(-.051,.02),(-.035,-.02),.005) | line(mx,my,(-.035,-.02),(-.019,.02),.005)
+        shape |= ellipse(mx,my,.035,0,.02,.02) & ~ellipse(mx,my,.035,0,.011,.011)
+        fan = ellipse(mx,my,.087,-.02,.04,.04) & (mx >= .087) & (my >= -.02)
+        for angle in (math.pi/6, math.pi/3):
+            fan &= ~line(mx,my,(.087,-.02),(.087+.05*math.cos(angle),-.02+.05*math.sin(angle)),.0025)
+        shape |= fan
+    else:
+        # A copper tick laid across the path.
+        shape = line(mx,my,(-.034,0),(.034,0),.008)
     # Soft falloff; a sparse grounded wake is subordinate to committed threats.
     blur = shape.astype(float)
     for _ in range(5):
@@ -151,7 +203,7 @@ def decal_shape(index, n=256):
             mark &= ~line(x,y,(cx,.96),(cx*.13,-.52),.023)
         # Five rib voids stay open at the fan edge.
         mark &= (y < .60 - .05*np.cos(x*15))
-    else:
+    elif index == 7:
         for side in (-1,1):
             mark |= ellipse(x,y,side*.40,.18,.39,.22,side*.31)
             mark |= ellipse(x,y,side*.33,-.30,.26,.25,-side*.4)
@@ -161,6 +213,34 @@ def decal_shape(index, n=256):
                 cx = side*(.10+j*.055)
                 mark |= line(x,y,(cx,cy),(cx+side*.12,cy+.01),.021)
         mark |= ellipse(x,y,0,-.015,.075,.34)
+    elif index == 8:
+        # A cable spool side-on, crossed by an open-ended wrench.
+        for side in (-1,1):
+            mark |= ellipse(x,y,side*.40,0,.075,.52)
+        drum = (abs(x) <= .33) & (abs(y) <= .30)
+        for cy in (-.2,-.1,0,.1,.2):
+            drum &= ~line(x,y,(-.33,cy),(.33,cy),.016)
+        mark |= drum
+        mark &= ~line(x,y,(-.5,-.5),(.5,.5),.13)
+        mark |= line(x,y,(-.36,-.36),(.36,.36),.065)
+        for end in (-1,1):
+            c = end*.48
+            jaw = ellipse(x,y,c,c,.17,.17) & ~ellipse(x,y,c,c,.075,.075)
+            jaw &= ~line(x,y,(c,c),(c+end*.3,c+end*.3),.075)
+            mark |= jaw
+    else:
+        # Curtains drawn apart over a Warden core split by a zigzag crack.
+        for side in (-1,1):
+            drape = polygon(x,y,[(side*.18,.58),(side*.74,.58),(side*.72,-.05),(side*.78,-.62),(side*.50,-.62),(side*.60,-.05)])
+            for fold in (.36,.52):
+                drape &= ~line(x,y,(side*(fold-.02),.50),(side*(fold+.10),-.55),.018)
+            mark |= drape
+        mark |= line(x,y,(-.60,.64),(.60,.64),.045)
+        core = ellipse(x,y,0,-.06,.27,.27)
+        crack = [(-.02,.24),(.07,.12),(-.06,.0),(.06,-.12),(-.04,-.24),(.03,-.36)]
+        for a,b in zip(crack,crack[1:]):
+            core &= ~line(x,y,a,b,.03)
+        mark |= core
     # Broad outline is transparent beyond the low-key underlay, with clear gutter.
     underlay = ellipse(x,y,0,0,.91,.91)
     result = np.zeros((n,n,4),dtype=np.uint8)
@@ -175,8 +255,8 @@ def decal_shape(index, n=256):
 def trail_atlas(out):
     atlas = np.full((512,512,4),255,dtype=np.uint8)
     atlas[:,:,3] = 0
-    for i in range(6):
-        col,row = i%3,i//3
+    for i in range(len(TRAILS)):
+        col,row = TRAIL_CELLS[i]
         atlas[row*128:(row+1)*128,col*128:(col+1)*128] = trail_shape(i)
     png(out/"textures/trail_atlas.png",atlas)
 
@@ -208,7 +288,7 @@ def build_trail(index,out,export=True):
     mesh = bpy.data.meshes.new(node)
     mesh.from_pydata([(-w/2,-h/2,0),(w/2,-h/2,0),(w/2,h/2,0),(-w/2,h/2,0)],[],[(0,1,2),(0,2,3)])
     uv = mesh.uv_layers.new(name="UVMap")
-    col,row = index%3,index//3
+    col,row = TRAIL_CELLS[index]
     coords = [(col/4,1-(row+1)/4),((col+1)/4,1-(row+1)/4),((col+1)/4,1-row/4),(col/4,1-row/4)]
     for poly in mesh.polygons:
         for loop in poly.loop_indices:
@@ -225,13 +305,14 @@ def build_trail(index,out,export=True):
     scene.render.fps = 120
     scene.frame_start,scene.frame_end = 1,1+round(duration*120)
     middle = 1+round(duration*120*.40)
-    for frame,scale,angle in [(1,(1,1,1),0),(middle,(1.15,1.15,1) if index==4 else (1,1,1),20 if index==2 else 0),
-                              (scene.frame_end,(.001,.001,1),20 if index==2 else 0)]:
+    curl = 20 if clip=="rotate_fade" else 0
+    for frame,scale,angle in [(1,(1,1,1),0),(middle,(1.15,1.15,1) if clip=="expand_fade" else (1,1,1),curl),
+                              (scene.frame_end,(.001,.001,1),curl)]:
         obj.scale = scale
         obj.rotation_euler = (0,0,math.radians(angle))
-        if index==3:
+        if clip=="tumble_fade":
             obj.rotation_euler = (math.radians(12*(frame-1)/(scene.frame_end-1)),0,math.radians(24*(frame-1)/(scene.frame_end-1)))
-        if index==5 and frame==middle:
+        if clip=="flatten_fade" and frame==middle:
             obj.scale = (1.12,.65,1)
         obj.keyframe_insert(data_path="scale",frame=frame)
         obj.keyframe_insert(data_path="rotation_euler",frame=frame)
@@ -256,8 +337,8 @@ def build_trail(index,out,export=True):
             export_force_sampling=True,export_anim_slide_to_zero=True,export_extras=True,
             export_cameras=False,export_lights=False)
         common.canonical_indices(str(dest))
-        # All six GLBs reference the one atlas. Embedded images make Godot create
-        # six redundant extracted textures on import.
+        # Every trail GLB references the one atlas. Embedded images make Godot create
+        # redundant extracted textures on import.
         data = dest.read_bytes()
         n = struct.unpack_from("<I",data,12)[0]
         gltf = json.loads(data[20:20+n])
@@ -322,7 +403,7 @@ def manifest(out):
         data["trails"].append({"id":ident,"path":"trails/"+ident+".glb","nodes":["BallTrail",node],
             "clips":[clip],"duration_s":duration,"size_m":size,"tint":"#"+tint,"key_pose_s":round(duration*120*.4)/120,
             "triangles":2,"vertices":4,"draws":1,"selected_max_triangles":48,"selected_max_vertices":96,
-            "uv_rect":[i%3/4,i//3/4,.25,.25]})
+            "uv_rect":[TRAIL_CELLS[i][0]/4,TRAIL_CELLS[i][1]/4,.25,.25]})
     for i,(ident,tint,size) in enumerate(DECALS):
         _,mark = decal_shape(i)
         yy,xx = np.where(mark)
@@ -348,10 +429,10 @@ def main():
     trail_atlas(out)
     build_decals(out)
     build_paints(out)
-    for i in range(6):
+    for i in range(len(TRAILS)):
         build_trail(i,out)
     manifest(out)
-    print("CUA_BUILD: PASS (6 animated trail GLBs, 8 decal resources/masks, 6 tint resources)")
+    print("CUA_BUILD: PASS (%d animated trail GLBs, %d decal resources/masks, %d tint resources)" % (len(TRAILS),len(DECALS),len(PAINTS)))
 
 
 if __name__ == "__main__":

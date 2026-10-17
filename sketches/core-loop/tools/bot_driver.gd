@@ -2511,7 +2511,12 @@ func _to_gate(delta: float) -> void:
 		target = _gate_round_props(ball_at, target, delta)
 	else:
 		_gate_detour_left = 0.0
-	target = _gate_runup(at, facing, rel, ball_at, target, delta)
+	# A ball off the gates' island with a way up follows that way: the run-up's straight
+	# charge would meet the island's cliff (the crown's beacon top stands 25 m over the deck).
+	if _fight_climb.is_empty():
+		target = _gate_runup(at, facing, rel, ball_at, target, delta)
+	else:
+		_gate_run = ""
 	# A gate still untaken after GATE_HOP_SECONDS has something on its line (a kerb, a
 	# bench): hop while rolling at it, as a player clears a low lip.
 	_gate_time += delta

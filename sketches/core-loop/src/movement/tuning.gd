@@ -51,6 +51,10 @@ const SPECS := [
 	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
 	# alone. All three default on. hotwire_shell is read by the build and the tree pick; hotwire_tread is read by the build (HotwireRules.fitted, build.gd) to fit the tread.
 	{"key": "world_one_builds", "label": "World-one builds", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
+	# Poles and flails (design-v3/POLES-FLAILS.md): `--pole-flail=on` lets weight decide what a
+	# held harpoon does to a bitten enemy. Off keeps today's reel on every body until the lab
+	# gate (section 11) passes with it on.
+	{"key": "pole_flail", "label": "Poles and flails", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "hotwire_shell", "label": "Hot-wired shell", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	{"key": "hotwire_tread", "label": "Hot-wired tread", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
@@ -167,6 +171,7 @@ const FLAGS := {
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
 	"world-one-builds": ["world_one_builds", "option", "launch"],
+	"pole-flail": ["pole_flail", "option", "launch"],
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],
 	"hotwire-tread": ["hotwire_tread", "option", "launch"],
 	"companion-stub": ["companion_stub", "option", "launch"],
@@ -213,6 +218,10 @@ func sitting() -> bool:
 
 func world_one() -> bool:
 	return option("world_one_builds") == "on"
+
+
+func pole_flail() -> bool:
+	return option("pole_flail") == "on"
 
 
 func armor() -> bool:

@@ -24,7 +24,7 @@ const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
-const PENDING_ART := ["trail_rivet_swarf", "outfit_rivet_hood", "trail_tally_punch_tape", "outfit_tally_eyeshade", "trail_tarn_claw_marks", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_cannon_recital", "trail_kest_fuse_smoke", "trail_sable_cable", "decal_sable_spool"]
+const PENDING_ART := ["outfit_rivet_hood", "outfit_tally_eyeshade", "outfit_tarn_steady_cap", "companion_skin_till_bell"]
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2

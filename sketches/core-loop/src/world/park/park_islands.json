@@ -468,6 +468,7 @@
  "activity_rows": [
   {"id": "camp_anvil", "activity": "enemy_camp", "site": "anvil_rock", "at": [0, 104], "pack": ["anchor_crew", "anchor_crew", "line_cutter"], "pay": {"named": "rivet_plating"}},
   {"id": "cache_east_wing", "activity": "cracked_cache", "site": "east_wing", "at": [210, 236], "pack": [], "pay": {"rarities": ["rare"]}},
-  {"id": "bounty_ore_bench", "activity": "hauler_bounty", "site": "ore_bench", "at": [186, -60], "pack": [], "pay": {"rarities": ["common", "rare"]}}
+  {"id": "bounty_ore_bench", "activity": "hauler_bounty", "site": "ore_bench", "at": [186, -60], "pack": [], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "saddle_relay", "activity": "hold_the_relay", "site": "saddle_shelf", "at": [-135, -475], "pack": ["line_cutter", "kite_drone", "kite_drone"], "pay": {"rarities": ["common", "rare"]}}
  ]
 }

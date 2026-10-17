@@ -66,6 +66,11 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 # THROW_STOP_MS), not knockback scatter. With juice.gd at main and the rest of #43 the small median is 109.47 s
 # (in the old pin); with the throw-based stop it is 84.65 to 88.16 s across two sweeps. Grown stays at its pin
 # (38.54 s) and small/grown stays above 2 (2.29). Receipts: /mnt/project-files/gate/knockback-43/.
+# 2026-10-17 (SQ2, PR #15): hive defenders skip the attacker budget (Andrew's cards "Swarm campers"
+# 20:52:11Z and "All at hives" 21:19:16Z). Measured over seeds 0 to 7: small 91.27 s of [74.35, 105.61,
+# 187.68, 78.73, 108.58, 76.19, 64.94, 91.27], grown 38.77 s of [34.72, 36.94, 42.94, 37.47, 46.4, 26.12,
+# 38.77, 55.52], 2.35x; the camper broke it on none of seeds 0 to 15 but seed 8 (222 s). Was 104.78 / 38.77.
+# stage/alpha-w16 carries both #43 and #15: #43's 88.16 s stands until the combined sweep re-pins it.
 const EXPECT_SMALL_S := 88.16
 const EXPECT_GROWN_S := 38.77
 const TOLERANCE := 0.10

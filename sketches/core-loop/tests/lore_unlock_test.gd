@@ -11,6 +11,7 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Field notes unlock one per lore moment (the seven below), exchange rows on zone entry.
+# A zone can hold more notes than one run's seven moments; later runs find the rest.
 # The codex half runs without a scene; the HUD half boots the game for the pulse.
 
 const DIR := "user://lore_unlock_test/"
@@ -102,12 +103,12 @@ func _check_codex() -> void:
 	_fresh(DIR)
 	for z in ZONES.size():
 		_events.stage_entered.emit(z + 1, false)
-		for m in 7:
-			_moment(m)
+		for m in _ids("field_note", ZONES[z]).size():
+			_moment(m % 7)
 	var notes := _ids("field_note")
 	var exchanges := _ids("exchange")
-	_t.eq("42 field notes in the table", notes.size(), 42)
-	_t.eq("all 42 field notes known", notes.filter(func(id): return _codex.known(id)).size(), 42)
+	_t.check("at least seven field notes per zone", ZONES.all(func(zone): return _ids("field_note", zone).size() >= 7))
+	_t.eq("all field notes known", notes.filter(func(id): return _codex.known(id)).size(), notes.size())
 	_t.eq("all 18 exchange rows known", exchanges.filter(func(id): return _codex.known(id)).size(), 18)
 	_t.eq("lore_found fired once per note, in row order", _found, notes)
 	var before: Array = _codex.discovered().duplicate()
@@ -115,23 +116,28 @@ func _check_codex() -> void:
 	_t.eq("a moment with nothing unknown changes nothing", _codex.discovered().size(), before.size())
 	_t.eq("no intro row was touched", _ids("intro").filter(func(id): return _codex.known(id)).size(), 0)
 
+	var first := _ids("field_note", "1-1").size()
+	var second := _ids("field_note", "1-2").size()
 	_fresh(DIR)
 	_events.stage_entered.emit(1, false)
 	for m in 7:
 		_moment(m)
-	_t.eq("zone 1-1 full after seven moments", _zone_known("1-1"), 7)
+	_t.eq("seven moments find the first seven 1-1 notes", _found, _ids("field_note", "1-1").slice(0, 7))
+	for m in range(7, first):
+		_moment(m % 7)
+	_t.eq("zone 1-1 full after one moment per note", _zone_known("1-1"), first)
 	_events.stage_entered.emit(2, false)
 	_moment(0)
-	_t.eq("a 1-2 moment unlocks a 1-2 note while 1-1 is full", [_zone_known("1-1"), _zone_known("1-2")], [7, 1])
-	for m in range(1, 7):
-		_moment(m)
-	_t.eq("1-2 full", _zone_known("1-2"), 7)
+	_t.eq("a 1-2 moment unlocks a 1-2 note while 1-1 is full", [_zone_known("1-1"), _zone_known("1-2")], [first, 1])
+	for m in range(1, second):
+		_moment(m % 7)
+	_t.eq("1-2 full", _zone_known("1-2"), second)
 
 	_fresh(DIR)
 	_events.stage_entered.emit(2, false)
-	for m in 7:
-		_moment(m)
-	_t.eq("1-2 full, 1-1 empty", [_zone_known("1-1"), _zone_known("1-2")], [0, 7])
+	for m in second:
+		_moment(m % 7)
+	_t.eq("1-2 full, 1-1 empty", [_zone_known("1-1"), _zone_known("1-2")], [0, second])
 	_moment(0)
 	_t.eq("a moment in full 1-2 unlocks the earliest 1-1 note", [_zone_known("1-1"), _found[-1]], [1, _ids("field_note", "1-1")[0]])
 

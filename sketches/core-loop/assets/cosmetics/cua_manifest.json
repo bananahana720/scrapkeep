@@ -176,6 +176,209 @@
         0.25,
         0.25
       ]
+    },
+    {
+      "id": "trail_sable_cable",
+      "path": "trails/trail_sable_cable.glb",
+      "nodes": [
+        "BallTrail",
+        "CableDash"
+      ],
+      "clips": [
+        "fade"
+      ],
+      "duration_s": 0.35,
+      "size_m": [
+        0.03,
+        0.12
+      ],
+      "tint": "#3f8f6a",
+      "key_pose_s": 0.14166666666666666,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.75,
+        0.0,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_rivet_swarf",
+      "path": "trails/trail_rivet_swarf.glb",
+      "nodes": [
+        "BallTrail",
+        "Swarf"
+      ],
+      "clips": [
+        "tumble_fade"
+      ],
+      "duration_s": 0.3,
+      "size_m": [
+        0.07,
+        0.05
+      ],
+      "tint": "#ae7240",
+      "key_pose_s": 0.11666666666666667,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.75,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_kest_fuse_smoke",
+      "path": "trails/trail_kest_fuse_smoke.glb",
+      "nodes": [
+        "BallTrail",
+        "SmokeWisp"
+      ],
+      "clips": [
+        "expand_fade"
+      ],
+      "duration_s": 0.4,
+      "size_m": [
+        0.07,
+        0.16
+      ],
+      "tint": "#8c8577",
+      "key_pose_s": 0.15833333333333333,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.0,
+        0.5,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_tarn_claw_marks",
+      "path": "trails/trail_tarn_claw_marks.glb",
+      "nodes": [
+        "BallTrail",
+        "ClawPair"
+      ],
+      "clips": [
+        "fade"
+      ],
+      "duration_s": 0.4,
+      "size_m": [
+        0.4,
+        0.06
+      ],
+      "tint": "#d2c5a5",
+      "key_pose_s": 0.15833333333333333,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.25,
+        0.5,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_tally_punch_tape",
+      "path": "trails/trail_tally_punch_tape.glb",
+      "nodes": [
+        "BallTrail",
+        "TapeStrip"
+      ],
+      "clips": [
+        "fade"
+      ],
+      "duration_s": 0.35,
+      "size_m": [
+        0.05,
+        0.14
+      ],
+      "tint": "#f7f1e3",
+      "key_pose_s": 0.14166666666666666,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.5,
+        0.5,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_cannon_recital",
+      "path": "trails/trail_cannon_recital.glb",
+      "nodes": [
+        "BallTrail",
+        "RecitalMarks"
+      ],
+      "clips": [
+        "fade"
+      ],
+      "duration_s": 0.45,
+      "size_m": [
+        0.3,
+        0.07
+      ],
+      "tint": "#6fb3a6",
+      "key_pose_s": 0.18333333333333332,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.75,
+        0.5,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_any_downbeat",
+      "path": "trails/trail_any_downbeat.glb",
+      "nodes": [
+        "BallTrail",
+        "BeatTick"
+      ],
+      "clips": [
+        "fade"
+      ],
+      "duration_s": 0.3,
+      "size_m": [
+        0.1,
+        0.025
+      ],
+      "tint": "#8a5a3a",
+      "key_pose_s": 0.11666666666666667,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.0,
+        0.75,
+        0.25,
+        0.25
+      ]
     }
   ],
   "decals": [
@@ -410,6 +613,64 @@
       "extra_triangles": 0,
       "extra_vertices": 0,
       "extra_draws": 0
+    },
+    {
+      "id": "decal_sable_spool",
+      "path": "decals/decal_sable_spool.tres",
+      "mask": "decals/decal_sable_spool_mask.png",
+      "size_m": [
+        0.44,
+        0.44
+      ],
+      "tint": "#d2c5a5",
+      "atlas_rect_px": [
+        0,
+        512,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        45,
+        45,
+        166,
+        166
+      ],
+      "tile_size_m": [
+        0.6785542168674699,
+        0.6785542168674699
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "decal_curtain_call",
+      "path": "decals/decal_curtain_call.tres",
+      "mask": "decals/decal_curtain_call_mask.png",
+      "size_m": [
+        0.44,
+        0.37
+      ],
+      "tint": "#d2c5a5",
+      "atlas_rect_px": [
+        256,
+        512,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        28,
+        40,
+        200,
+        167
+      ],
+      "tile_size_m": [
+        0.5632,
+        0.567185628742515
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
     }
   ],
   "paints": [
@@ -528,6 +789,16 @@
   },
   "files": [
     {
+      "path": "decals/decal_curtain_call.tres",
+      "bytes": 270,
+      "sha256": "cc5b87c3e187d8bcb5fc2bafd92275c8f0728eaabf1b21913f58aec55ada7e5b"
+    },
+    {
+      "path": "decals/decal_curtain_call_mask.png",
+      "bytes": 1708,
+      "sha256": "eda98618b2c17b49106cd5e92dbe2c66412da0a54d1aab844f07ea26a79a609f"
+    },
+    {
       "path": "decals/decal_fern.tres",
       "bytes": 266,
       "sha256": "94ea0f963480ce2e2ed2f84591291960414961e0d6608028e083ad001dd8fffe"
@@ -576,6 +847,16 @@
       "path": "decals/decal_paw_mask.png",
       "bytes": 1378,
       "sha256": "1852873e94eac5d39a720df69784a4107a1272ce704ac48b03e6c7e444508ee5"
+    },
+    {
+      "path": "decals/decal_sable_spool.tres",
+      "bytes": 268,
+      "sha256": "674a6d3dc9bc81b96f0ac5d8aafed1abf874d44c10a7c3268ee1c823cda0358c"
+    },
+    {
+      "path": "decals/decal_sable_spool_mask.png",
+      "bytes": 1408,
+      "sha256": "e7253f8b19728968cf0640a18a4493e153ad95067d191deda22bacc829bb60f8"
     },
     {
       "path": "decals/decal_seashell.tres",
@@ -639,43 +920,78 @@
     },
     {
       "path": "textures/decal_atlas.png",
-      "bytes": 16005,
-      "sha256": "3b28bc5eb1cd2544f2c10218a5ef6e07524df6e94282c5c0597453b220f28011"
+      "bytes": 19657,
+      "sha256": "229813513cc87206dec9be1798a06bc23d305356d1ca4707435ded2c4a5550bc"
     },
     {
       "path": "textures/trail_atlas.png",
-      "bytes": 6976,
-      "sha256": "786d28d51552698503e40edeeceab13d688348ae34586820406c8d9517dab930"
+      "bytes": 15041,
+      "sha256": "f9958fab0c4e0feb8ae1fab3ec9da2b0576959ecada67363f2467d4d7bb38f56"
+    },
+    {
+      "path": "trails/trail_any_downbeat.glb",
+      "bytes": 18376,
+      "sha256": "67ffc122a215a09ab3006bba61194cbbbb8827db9c449e3bcddc099920aace21"
+    },
+    {
+      "path": "trails/trail_cannon_recital.glb",
+      "bytes": 18672,
+      "sha256": "b90d4c5a95b6a509e20e27c7ff9406f9dba596888a827cb460afaf499a013053"
     },
     {
       "path": "trails/trail_forge_chips.glb",
-      "bytes": 10532,
-      "sha256": "fc9728d7ac72c58d279e6d7e7ac79f7d24cb2c704e836b1848339b2f8b13c6fd"
+      "bytes": 18608,
+      "sha256": "56a4558e8d6baf3dfbf3ddfeb277e45c7bbb7d4177bcd2ad0c12f043ba055737"
     },
     {
       "path": "trails/trail_ink_stitch.glb",
-      "bytes": 10208,
-      "sha256": "bd28e0d66e1650bd7c272eb7b854682cb7dbd064327d1af641ffea0717258862"
+      "bytes": 18284,
+      "sha256": "b61a4600202dfe82a5c9c2eaf5643bb1d2118f63e6fb8de46b8c52d4b4b24487"
+    },
+    {
+      "path": "trails/trail_kest_fuse_smoke.glb",
+      "bytes": 18576,
+      "sha256": "cb96aa143acf4e704b99ba643374cb0d22fa4a9f2dcf62a0c0449ea79d09d45d"
     },
     {
       "path": "trails/trail_moth_tuft.glb",
-      "bytes": 10504,
-      "sha256": "7aa62bf6646cf70a8b9bebbdda29267353f86cb4121becbd7c3a04a9e074973c"
+      "bytes": 18580,
+      "sha256": "8c2acc9b2d5aef5ecf69ff01166ab1de2dc984b92539c1f43005787a2c251ed0"
     },
     {
       "path": "trails/trail_plum_curl.glb",
-      "bytes": 10932,
-      "sha256": "bef28cf72f56825db85a6adba79bd698e4a6d8a12c140748a3c5d839340c0b48"
+      "bytes": 19008,
+      "sha256": "de6571f99c656278f5ec514945825ff18be465a10820ea312af21181fb3f8d78"
+    },
+    {
+      "path": "trails/trail_rivet_swarf.glb",
+      "bytes": 18800,
+      "sha256": "a6a8974863240d1a09ca495a54b42ef6d6cc6195c43d58ba1bb7fcc05215d30d"
     },
     {
       "path": "trails/trail_rose_wash.glb",
-      "bytes": 10408,
-      "sha256": "ca70acf5f8f05c0741914e575851161145db13583b9e6a3e7153cf4441843db2"
+      "bytes": 18480,
+      "sha256": "d37032321065dfc75c833f9d658eb8ffa0dabd70c5e45cc5a96ca7a30ce88637"
+    },
+    {
+      "path": "trails/trail_sable_cable.glb",
+      "bytes": 18476,
+      "sha256": "7fef90b9624db4ee1984865a2797badac3deef65a4baf1e3005b3bb4486fa4e5"
     },
     {
       "path": "trails/trail_salt_skip.glb",
-      "bytes": 10408,
-      "sha256": "26199f218930dff276fe684e23056d4d7bb94060ea6e8885bfb20339872ad73b"
+      "bytes": 18484,
+      "sha256": "7237102c3b7e7197fc0619317ac292bbf1e0eaaa43873f3b27a35498fd430860"
+    },
+    {
+      "path": "trails/trail_tally_punch_tape.glb",
+      "bytes": 18476,
+      "sha256": "9830f2223364a42400d90b7e7dc0730f68d6305a9149badaff2cbaed6950323c"
+    },
+    {
+      "path": "trails/trail_tarn_claw_marks.glb",
+      "bytes": 18568,
+      "sha256": "f733ff5ca0a042bf9f92d2ff54c3c8b9f945522801de37d54d92cb80b01fc902"
     }
   ]
 }

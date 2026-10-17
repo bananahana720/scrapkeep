@@ -353,7 +353,7 @@ func _grants() -> void:
 	var again := Profile.new(profile.path)
 	_t.check("earned items reload from the saved profile", again.load_profile() and items.all(func(id): return again.has_cosmetic(id)))
 	_t.check("grants do not require a first-ever discovery", ids.all(func(id): return not Achievements.ROWS["ach_" + id].get("where", {}).has("first_time")))
-	_t.check("undelivered trail is pending art; a paint needs none", Cosmetics.PENDING_ART.has("trail_kest_fuse_smoke") and not Cosmetics.PENDING_ART.has("paint_kest_rigger"))
+	_t.check("delivered Fuse Smoke trail is live; a paint needs no art", not Cosmetics.is_pending("trail_kest_fuse_smoke") and not Cosmetics.PENDING_ART.has("paint_kest_rigger"))
 	_t.check("the Rigger Harness is cut", Cosmetics.row("outfit_kest_rigger").is_empty())
 	_t.check("delivered Roost Frame is live", not Cosmetics.is_pending("shell_kest_roost") and FileAccess.file_exists("res://assets/models/world_one/shell_kest_roost.glb"))
 	progress.free()

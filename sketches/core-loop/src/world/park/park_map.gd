@@ -88,11 +88,12 @@ func _fill() -> void:
 		rescue_sites.append({"id": row["id"], "quest": row["quest"], "prompt": row["prompt"], "pilot": row["pilot"],
 			"at": _v2(row["at"]), "face": _v2(row["face"]).normalized()})
 
-	# Scatter keeps out of every built footprint (PARK.md 2.9); the kit rows come with KB5.
+	# Scatter keeps out of every built footprint (PARK.md 2.9) but a row the scatter itself dresses; the kit rows come
+	# with KB5.
 	scatter = scatter.duplicate(true)
 	var keep_out := []
 	for row in park["park_rows"]:
-		if row["element"] == "ground":
+		if row["element"] == "ground" or row["recipe"] == ParkRecipes.SCATTER_DRESSED:
 			continue
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))
