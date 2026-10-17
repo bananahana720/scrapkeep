@@ -8,13 +8,20 @@ const RescueSites := preload("res://src/world/rescue_site.gd")
 
 # The park table rescues Rivet and Kest (KD7 makes it the launch default): park_dam and park_pit
 # pass the schema with their rescue_rows, stage 1 (park_dam) stands Rivet's cage and stage 3
-# (park_pit) Kest's, each at its row's site with its pilot seated, and freeing each fires its quest
-# and unlocks its pilot. Every wait is counted in physics frames; none reads the wall clock.
+# (park_pit) Kest's, each at its row's site with its pilot seated. Each cage stands on flat ground
+# with a flat line in along its face, and Sable rolling in on that line at cruise speed, pressing
+# E once the cage is in reach, frees it without mounting a face; that fires its quest and unlocks
+# its pilot. Every wait is counted in physics frames; none reads the wall clock.
 
-# The park cages sit on slopes (a dome top, a bowl floor), so the approach steps in until the
-# dropped ball is inside E's reach; farther out, Sable's E mounts the slope's face instead.
-const STANDOFFS := [6.0, 4.0, 3.0, 2.0]
 const HOLD_FRAMES := 60
+const ROLL_IN := 15.0
+const CRUISE := 14.0
+# Ground within FLAT_RING of the cage stays within FLAT_RISE of its foot; the roll-in line climbs
+# no more than LINE_GRADE per metre.
+const FLAT_RING := 4.0
+const FLAT_RISE := 0.5
+const LINE_GRADE := 0.1
+const ROLL_FRAMES := 240
 const CAGES := [
 	{"stage": 1, "map": "park_dam", "id": "rivet_cage", "quest": "rivet", "pilot": "runner_gunner"},
 	{"stage": 3, "map": "park_pit", "id": "kest_cage", "quest": "dig", "pilot": "demolitions_caster"},
@@ -40,20 +47,57 @@ func _break_frames() -> int:
 	return int(ceil(RescueSites.BREAK_SECONDS * Engine.physics_ticks_per_second)) + 10
 
 
-func _approach(cage) -> void:
-	var f: Vector3 = -_game.camera.yaw_basis().z
-	var forward := Vector3(f.x, 0.0, f.z).normalized()
-	var ball := Vector3.INF
-	for standoff in STANDOFFS:
-		var at: Vector3 = cage.global_position - forward * standoff
-		ball = _game.ctx.terrain.drop_point(at.x, at.z, 1.05)
-		if cage.near(ball):
-			break
-	_game.player.reset_to(ball, Vector3.ZERO)
+func _ring_rise(at: Vector2) -> float:
+	var t = _game.ctx.terrain
+	var foot: float = t.height(at.x, at.y)
+	var rise := 0.0
+	for a in 16:
+		var ang := a * TAU / 16.0
+		for d in [FLAT_RING * 0.5, FLAT_RING]:
+			rise = maxf(rise, absf(t.height(at.x + cos(ang) * d, at.y + sin(ang) * d) - foot))
+	return rise
+
+
+func _line_grade(at: Vector2, face: Vector2) -> float:
+	var t = _game.ctx.terrain
+	var worst := 0.0
+	var prev: float = t.height(at.x, at.y)
+	for m in range(1, int(ROLL_IN) + 2):
+		var p := at + face * m
+		var h: float = t.height(p.x, p.y)
+		worst = maxf(worst, absf(h - prev))
+		prev = h
+	return worst
+
+
+# Rolls Sable in from ROLL_IN out along the cage's face at cruise speed, coasting, and presses and
+# holds E the first frame the cage is in reach, the camera looking down the line as a player rolling
+# in would. Returns whether she ever mounted a face.
+func _roll_in(cage, face: Vector2) -> bool:
+	var dir := Vector3(-face.x, 0.0, -face.y)
+	var start: Vector3 = cage.global_position - dir * ROLL_IN
+	var ball: Vector3 = _game.ctx.terrain.drop_point(start.x, start.z, 1.05)
+	_game.camera.snap(dir)
+	_game.player.reset_to(ball, dir * CRUISE)
 	_game.player.body().global_position = ball
 	_source.hold = {}
 	_source.press = {}
-	await _frames(2)
+	var mounted := false
+	var held := 0
+	for i in ROLL_FRAMES:
+		await physics_frame
+		mounted = mounted or _game.player.kit.mounted
+		if held == 0 and not cage.near(_game.ctx.player.ball_position()):
+			continue
+		if held == 0:
+			_source.press["mount_pressed"] = true
+		_source.hold["mount_held"] = true
+		held += 1
+		if held >= HOLD_FRAMES:
+			break
+	_source.hold = {}
+	_source.press = {}
+	return mounted
 
 
 func _run() -> void:
@@ -93,13 +137,14 @@ func _run() -> void:
 		var pilot = ClassDef.by_id(row["pilot"])
 		_t.check("%s starts locked" % row["pilot"], not profile.has_pilot(row["pilot"]) and not _game.pilot_unlocked(pilot))
 
-		await _approach(cage)
-		var ball: Vector3 = _game.ctx.player.ball_position()
-		_t.check("%s's cage is in E reach of the approach" % label, cage.near(ball), "ball %s reach %s" % [ball, cage.reach_point()])
-		_source.press["mount_pressed"] = true
-		_source.hold["mount_held"] = true
-		await _frames(HOLD_FRAMES)
-		_source.hold = {}
+		var face: Vector2 = map.rescue_sites[0]["face"]
+		var rise := _ring_rise(site)
+		_t.check("%s's cage stands on flat ground" % label, rise <= FLAT_RISE, "rise %.2f m within %.0f m" % [rise, FLAT_RING])
+		var grade := _line_grade(site, face)
+		_t.check("%s's roll-in line is flat" % label, grade <= LINE_GRADE, "worst %.3f m per m over %.0f m" % [grade, ROLL_IN])
+
+		var mounted: bool = await _roll_in(cage, face)
+		_t.check("rolling in at cruise speed never mounts a face at %s" % label, not mounted)
 		await _frames(_break_frames())
 		_t.check("%s's rescue fires %s" % [label, row["quest"]], _rescued.has(row["quest"]), str(_rescued))
 		_t.check("%s is unlocked by the park rescue" % row["pilot"], profile.has_pilot(row["pilot"]) and _game.pilot_unlocked(pilot))

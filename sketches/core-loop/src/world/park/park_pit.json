@@ -178,6 +178,6 @@
   {"id": "bench3_altar", "activity": "ambush_altar", "site": "pit", "at": [-110, -84], "pack": [], "pay": {"rarities": ["common", "rare"]}}
  ],
  "rescue_rows": [
-  {"id": "kest_cage", "site": "floor_sump", "at": [-150, 110], "face": [-0.42, -0.91], "quest": "dig", "pilot": "demolitions_caster", "prompt": "free the digger"}
+  {"id": "kest_cage", "site": "floor_sump", "at": [-144, 110], "face": [1, 0], "quest": "dig", "pilot": "demolitions_caster", "prompt": "free the digger"}
  ]
 }
