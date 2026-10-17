@@ -1,12 +1,25 @@
 extends "res://src/combat/counter.gd"
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const IslandEdge := preload("res://src/combat/island_edge.gd")
+const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 
-# The kite drone (roster_highdraft.gd): it hovers HOVER metres above the ball's height, out of
-# ramming reach, and marks where the ball will be in DIVE + warn seconds. When the mark fills it
-# dives onto it in DIVE seconds. A ball that meets the diving drone at cruise or faster bats it
-# back up to its hover; a slower ball just takes the dive. It reads no thermal: the enemy's
-# terrain has no map access, so it hovers by the ball's own height.
+# The kite drone (roster_highdraft.gd): it marks where the ball will be in DIVE + warn seconds
+# and, when the mark fills, dives onto it in DIVE seconds. A ball that meets the diving drone at
+# cruise or faster bats it back up; a slower ball just takes the dive.
+#
+# Between dives it rides a thermal (design-v3/WORLD-ROSTERS.md): every RETARGET seconds it takes
+# the map's thermal column nearest the ball within THERMAL_REACH and circles it at RIDE_ABOVE over
+# the ground under the ball, held inside the column. That height is fixed while it rides, so a
+# ball that glides up the same column reaches it, and an airborne ball that hits it there (an
+# air ram: AIR_REACH centre to centre, at AIR_RAM_SPEED or more, while the drone is AIR_CLEAR
+# off the ground, so its own dive landing on a hopping ball is no ram) kills it outright. Its pool is deep, so a ground answer
+# (bolts while it circles) still works, slowly. A map with no thermal leaves it hovering HOVER
+# over the ball's own height, as before.
+#
+# Grown remix: it circles over the nearest gap instead (GAP_OUT past the rim nearest the ball),
+# and the air-ram kill drops the ball (DROP_KICK down, FLING on along its heading) toward the
+# next island.
 
 const HOVER := 6.0
 const CLIMB := 4.0
@@ -15,10 +28,30 @@ const MARK_RADIUS := 2.4
 const MARK_REACH := 2.0
 const DIVE_DAMAGE := 9.0
 const BAT_KICK := 12.0
-const HP := 28.0
+const HP := 70.0
+const RETARGET := 2.0
+const THERMAL_REACH := 40.0
+const RIDE_ABOVE := 11.0
+const CIRCLE := 2.5
+const CIRCLE_RATE := 1.2
+const AIR_REACH := 2.6
+const AIR_RAM_SPEED := 5.0
+const AIR_CLEAR := 2.0
+const GAP_REACH := 40.0
+const GAP_OUT := 6.0
+const RIM_DROP := 4.0
+const DROP_KICK := 8.0
+const FLING := 4.0
 
 var dives := 0
 var batted := 0
+var air_rams := 0
+# Where it circles and at what height while riding, or ride_y INF when it hovers by the ball.
+var ride_at := Vector3.ZERO
+var ride_y := INF
+var riding := ""
+var _retarget := 0.0
+var _orbit := 0.0
 var _dive_from := Vector3.ZERO
 var _landed := false
 static var _warned_asset := false
@@ -36,7 +69,7 @@ func _configure(threat: float) -> void:
 	walk_speed = 6.0
 	keep_near = 6.0
 	keep_far = 16.0
-	attack_range = 22.0
+	attack_range = 30.0
 	warn_seconds = 0.8
 	live_seconds = DIVE + 0.3
 	rest_seconds = 3.0
@@ -190,6 +223,87 @@ func _diving() -> bool:
 	return phase == Phase.LIVE and not _landed
 
 
+func _physics_process(delta: float) -> void:
+	super(delta)
+	if _dead or not _in_play() or target == null:
+		return
+	_retarget -= delta
+	if _retarget <= 0.0:
+		_retarget = RETARGET
+		_pick_ride()
+	_watch_air_ram()
+
+
+# The column (or, grown, the gap) it rides until the next retarget.
+func _pick_ride() -> void:
+	var ball := _real_ball()
+	var under: float = terrain.height(ball.x, ball.z) if terrain != null else ball.y
+	if RosterHighdraft.grown(self):
+		var rim := IslandEdge.nearest_rim(terrain, ball, GAP_REACH, RIM_DROP)
+		if not rim.is_empty():
+			riding = "gap"
+			ride_at = (rim["at"] as Vector3) + (rim["dir"] as Vector3) * GAP_OUT
+			ride_y = (rim["at"] as Vector3).y + RIDE_ABOVE
+			return
+	var best := {}
+	var best_d := THERMAL_REACH
+	for spec in _thermals():
+		var at: Vector2 = spec["at"]
+		var d := Vector2(ball.x, ball.z).distance_to(at)
+		if d <= best_d:
+			best_d = d
+			best = spec
+	if best.is_empty():
+		riding = ""
+		ride_y = INF
+		return
+	var at: Vector2 = best["at"]
+	var base: float = terrain.height(at.x, at.y) if terrain != null else 0.0
+	riding = "thermal"
+	ride_at = Vector3(at.x, base, at.y)
+	ride_y = clampf(under + RIDE_ABOVE, base + 4.0, base + float(best["height"]) - 2.0)
+
+
+# The thermals of the stage map. Combat hands enemies its ground (combat/ground.gd), which
+# carries the context; a bare terrain answers map() itself.
+func _thermals() -> Array:
+	var out := []
+	if terrain == null:
+		return out
+	var source = terrain if terrain.has_method("map") else (terrain.get("ctx").terrain if terrain.get("ctx") != null else null)
+	if source == null or not source.has_method("map"):
+		return out
+	var m = source.map()
+	if m == null or m.get("contraptions") == null:
+		return out
+	for spec in m.contraptions:
+		if String(spec.get("kind", "")) == "thermal" and spec.get("at") is Vector2:
+			out.append(spec)
+	return out
+
+
+# An airborne ball that reaches it while it rides kills it outright; the dive and its landing
+# are not riding, so the bat stays the dive's answer.
+func _watch_air_ram() -> void:
+	var player = _player()
+	if player == null or phase == Phase.LIVE or player.state.grounded:
+		return
+	if _real_ball().distance_to(global_position) > AIR_REACH or player.state.velocity.length() < AIR_RAM_SPEED:
+		return
+	if terrain != null and global_position.y - terrain.height(global_position.x, global_position.z) < AIR_CLEAR:
+		return
+	air_rams += 1
+	last_damage_source = "air_ram"
+	if RosterHighdraft.grown(self) and riding == "gap":
+		var heading: Vector3 = player.planar_velocity()
+		heading = heading.normalized() if heading.length() > 0.1 else Vector3.ZERO
+		var tick := 1.0 / float(Engine.physics_ticks_per_second)
+		player.add_external_accel((Vector3.DOWN * DROP_KICK + heading * FLING) / tick)
+	if fleet != null:
+		fleet.discover("thermal_dive", global_position)
+	take_damage(hp + 1.0)
+
+
 func on_struck(kind: String, _part: String, _result: Dictionary) -> void:
 	if kind == "ram" and _diving() and _player().speed_tier() >= SpeedTier.CRUISE:
 		batted += 1
@@ -203,11 +317,16 @@ func _move(delta: float, desired: Vector3) -> void:
 	var horizontal := Vector3(_knock.x, 0.0, _knock.z)
 	if horizontal.length() < 1.0:
 		horizontal = desired
+	if ride_y != INF and phase == Phase.ROAM and horizontal == desired:
+		_orbit += CIRCLE_RATE * delta
+		var goal := ride_at + Vector3(cos(_orbit), 0.0, sin(_orbit)) * CIRCLE - global_position
+		goal.y = 0.0
+		horizontal = goal.normalized() * minf(walk_speed, goal.length() / maxf(delta, 0.001)) if goal.length() > 0.05 else Vector3.ZERO
 	if _diving():
 		velocity = Vector3.ZERO
 	else:
 		var ground: float = terrain.height(global_position.x, global_position.z) if terrain != null else 0.0
-		var height := maxf(ground + 2.0, _ball().y + HOVER)
+		var height := maxf(ground + 2.0, _ball().y + HOVER) if ride_y == INF else ride_y
 		velocity = Vector3(horizontal.x, (height - global_position.y) * CLIMB, horizontal.z)
 		if _knock.y > 0.0:
 			velocity.y = _knock.y

@@ -86,8 +86,8 @@ const ENTRIES := [
 	{
 		"id": "line_cut", "name": "Under the Cutter",
 		"hint": "A spinning blade leaves room beneath its arc.",
-		"clue": "a cutter crossing your air path + a low glide or early landing",
-		"text": "Throws a spinning cutter across your air path that severs your line; glide under its arc or land early.",
+		"clue": "a cutter crossing your line over a gap + a glide under it, or a fresh bite at once",
+		"text": "Throws a spinning cutter that severs your line over a gap; bite a fresh line within half a second and the swing keeps a kick.",
 	},
 	{
 		"id": "deck_winch", "name": "Slip the Hook",
@@ -98,8 +98,20 @@ const ENTRIES := [
 	{
 		"id": "thermal_dive", "name": "Leave the Mark",
 		"hint": "The kite commits to a spot. You do not have to.",
-		"clue": "a circling kite + a shot, or a dive mark + a roll away",
-		"text": "Rides the thermals out of reach and dives on the spot it marks; shoot it while it circles or leave the mark.",
+		"clue": "a circling kite + an air ram off its thermal, or a dive mark + a roll away",
+		"text": "Circles high in a thermal and dives on the spot it marks; ride the same thermal up and ram it in the air to kill it outright.",
+	},
+	{
+		"id": "ring_out", "name": "Over the Edge",
+		"hint": "Nothing that heavy can be worn down. Everything that heavy can fall.",
+		"clue": "a ballast heavy on the rim + a ram while it braces",
+		"text": "A slab crew posted on the island rim that no damage wears down; ram it off the edge, hardest while it braces to slam.",
+	},
+	{
+		"id": "gap_sling", "name": "Faster Than the Net",
+		"hint": "A net holds what it can hold.",
+		"clue": "a live net across a gap + a crossing at full swing",
+		"text": "Strings a live net across a gap that slings a slow crossing back the way it came; cross faster than it can hold and you rip it.",
 	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
@@ -276,6 +288,8 @@ const DETECTORS := {
 	"line_cut": {"kind": "line_cutter", "script": "res://src/combat/line_cutter.gd"},
 	"deck_winch": {"kind": "anchor_crew", "script": "res://src/combat/anchor_crew.gd"},
 	"thermal_dive": {"kind": "kite_drone", "script": "res://src/combat/kite_drone.gd"},
+	"ring_out": {"kind": "ballast_heavy", "script": "res://src/combat/ballast_heavy.gd"},
+	"gap_sling": {"kind": "gap_net", "script": "res://src/combat/gap_net.gd"},
 	"heavy_roll": {"kind": "mag_trapper", "script": "res://src/combat/mag_trapper.gd"},
 	"plate_peel": {"kind": "plated_brute", "script": "res://src/combat/plated_brute.gd"},
 	"cable_snap": {"kind": "winch_drone", "script": "res://src/combat/winch_drone.gd"},

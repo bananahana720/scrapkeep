@@ -346,6 +346,10 @@ func _warden_tricks() -> void:
 		# this staging does not run; tests/discovery_skill_bar_test.gd opens each on its trigger.
 		if id in ["loaded_line", "set_piece", "set_piece_core", "set_piece_cash_in", "set_piece_breakout"]:
 			continue
+		# 2026-10-17 (Highdraft roster): a ring-out needs a rim and a gap sling a gap, which this flat
+		# staging lacks; tests/highdraft_roster_test.gd opens each on the stage 5 islands.
+		if id in ["ring_out", "gap_sling"]:
+			continue
 		# 2026-10-04 (wave 9): detector-pending entries declare a hint but no enemy fires them yet.
 		if CodexEntries.DETECTOR_PENDING.has(id):
 			pending_ok = pending_ok and not _combat.discovered.has(id)

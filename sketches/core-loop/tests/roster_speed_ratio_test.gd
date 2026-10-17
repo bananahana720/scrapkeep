@@ -27,11 +27,12 @@ const SOURCES := {
 	"burrower": {"script": "burrower", "travel": "", "burst": "LUNGE_SPEED"},
 	"lamp_swarm": {"script": "lamp_swarm", "travel": "BLOOM_SPEED", "burst": "SCATTER_SPEED"},
 	"kite_drone": {"script": "kite_drone", "travel": "", "burst": "HOVER/DIVE"},
+	"ballast_heavy": {"script": "ballast_heavy", "travel": "WALK", "burst": ""},
 }
 # Every other kind holds its ground (fixed) or hovers in place (winch_drone).
 const STATIONARY := ["lobber", "vault", "warden", "mag_trapper", "hooker", "netcaster", "bola_thrower",
 	"plated_brute", "deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap",
-	"reactor_relic", "mind_hand", "drill_crew", "line_cutter", "anchor_crew"]
+	"reactor_relic", "mind_hand", "drill_crew", "line_cutter", "anchor_crew", "gap_net"]
 
 var _t := T.new("roster_speed_ratio_test")
 

@@ -95,6 +95,10 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": ""},
 	"E24": {"kind": "kite_drone", "pre_shoot": 0.8, "cooldown": 2.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A dive that no knock interrupts: the mark lamp paints the spot 0.8 s before the 0.7 s dive."},
+	"E31": {"kind": "ballast_heavy", "pre_shoot": 1.1, "cooldown": 2.45, "radius": 5.0, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "The brace is the answer window: 1.1 s with the slab up, light enough that a cruise ram throws it off the rim."},
+	"E32": {"kind": "gap_net", "pre_shoot": 1.0, "cooldown": 1.25, "radius": 0.6, "length": 14.0, "marker": "line", "band": "ray",
+		"recovery_before": 0.0, "reason": "A net that charges for 1.0 s and holds 3.5 s, then hangs slack for 2.0 s: cross in the slack or faster than it holds."},
 }
 
 # Warden attacks keep their own timing (KF2 to KF4 report each one's charge, recovery and

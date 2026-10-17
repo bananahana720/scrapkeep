@@ -100,7 +100,7 @@ func _data() -> void:
 			built.append(id)
 		if Roster.built(id) != has_script:
 			mismatched.append(id)
-	_report("declared kinds are built exactly when their script exists", declared.size() == 6 and mismatched.is_empty(), "declared %s; built %s; mismatched %s" % [declared, built, mismatched])
+	_report("declared kinds are built exactly when their script exists", declared.size() == 8 and mismatched.is_empty(), "declared %s; built %s; mismatched %s" % [declared, built, mismatched])
 
 
 func _physics_process(_delta: float) -> bool:

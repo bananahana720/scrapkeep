@@ -34,6 +34,8 @@ const CARDS := {
 	"line_cutter": {"cost": 3, "weight": 1.0, "stage_cap": 3},
 	"anchor_crew": {"cost": 4, "weight": 1.0, "stage_cap": 2},
 	"kite_drone": {"cost": 2, "weight": 1.0, "stage_cap": 3},
+	"ballast_heavy": {"cost": 5, "weight": 1.0, "stage_cap": 2},
+	"gap_net": {"cost": 3, "weight": 1.0, "stage_cap": 2},
 }
 
 
