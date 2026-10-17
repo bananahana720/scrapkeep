@@ -196,7 +196,6 @@ def bench(s):
         plank(s, k + 3, -1.4, 1.4, 0.62, 0.76, z - 0.16, z + 0.16, "timber_lt")
     lh(s, -1.38, -1.0, 0.56, 0.62, -0.28, 0.28, "timber")
     lh(s, 1.0, 1.38, 0.56, 0.62, -0.28, 0.28, "timber")
-    lh(s, -0.04, 0.04, 0.66, 0.74, 0.31, 0.33, "copper")
 
 
 def bench_col(s):
@@ -213,6 +212,7 @@ def crate(s, cx, cy, cz, size, yaw, k):
         for sz in (-1, 1):
             ox, oz = sx * (h - 0.03), sz * (h - 0.03)
             cp.obox(s, (0.1, size + 0.02, 0.1), (cx + ox * ca + oz * sa, cy + h, cz - ox * sa + oz * ca), cp.jitter_tone("timber", k + 2, 0.1), yaw=yaw)
+    cp.obox(s, (size * 1.1, 0.09, 0.03), (cx + sa * (h + 0.005), cy + h, cz + ca * (h + 0.005)), cp.jitter_tone("timber", k + 5, 0.1), yaw=yaw, roll=math.pi / 4)
     return ca, sa
 
 
@@ -245,8 +245,8 @@ def barrel(s):
     pk.frustum(s, 0.1, 0.1, H, H + 0.04, 6, T["iron"], caps=(False, True), at=(0.17, 0.12))   # bung
     pk.frustum(s, 0.06, 0.06, H, H + 0.03, 5, T["copper_dk"], caps=(False, True), at=(-0.2, -0.1))
     # Dent: a darker pushed-in patch with a lighter rim, on the plaza side.
-    cp.obox(s, (0.34, 0.34, 0.04), (-0.1, 0.78, R - 0.02), "2a4442", yaw=0.0, roll=0.5)
-    cp.obox(s, (0.2, 0.2, 0.03), (-0.1, 0.78, R - 0.005), "1f3331", yaw=0.0, roll=0.5)
+    cp.obox(s, (0.3, 0.2, 0.04), (-0.1, 0.78, R - 0.02), "2a4442", yaw=0.0, roll=0.25)
+    cp.obox(s, (0.18, 0.1, 0.03), (-0.1, 0.78, R - 0.005), "1f3331", yaw=0.0, roll=0.25)
     cp.obox(s, (0.4, 0.05, 0.03), (0.0, 0.2, R), T["oxide"], yaw=0.0, roll=0.15)
 
 
@@ -309,8 +309,7 @@ def tool_rack(s):
         cp.obox(s, (0.05, 0.22, 0.04), (0.75 + sx * 0.1, 0.87, 0.08), T["iron_hi"], roll=-sx * 0.55)
     pk.tube(s, (0.75, 0.82, 0.08), (0.75, 0.9, 0.08), 0.07, 0.07, 6, T["copper"], caps=(False, False))
     # Coil of canvas strap on a hook.
-    pk.frustum(s, 0.2, 0.2, 1.15, 1.3, 8, T["canvas_dk"], caps=(True, True), at=(-0.6, 0.1))
-    lh(s, -0.68, -0.52, 0.4, 0.45, -0.1, 0.3, "timber")
+    pk.frustum(s, 0.2, 0.2, 1.4, 1.62, 8, T["canvas_dk"], caps=(True, True), at=(0.35, 0.1))
 
 
 # ------------------------------------------------------------------------------------------------------------ tarp

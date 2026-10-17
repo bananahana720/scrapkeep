@@ -63,11 +63,11 @@ CROWN_R, CROWN_CY = 14.4, 1.5
 def lane_h(d):
     """Lane surface height at distance d up the lane (0 at the foot)."""
     if d < 0.0:
-        return 0.02 + 0.04 * (d + 0.6) / 0.6
+        return 0.06 + 0.04 * (d + 0.6) / 0.6
     if d <= LANE_L - HUMP_L:
-        return 0.06 + RISE * d / (LANE_L - HUMP_L)
+        return 0.1 + RISE * d / (LANE_L - HUMP_L)
     t = (d - (LANE_L - HUMP_L)) / HUMP_L
-    return 0.06 + RISE + HUMP_H * (0.35 * t + 0.65 * t * t)
+    return 0.1 + RISE + HUMP_H * (0.35 * t + 0.65 * t * t)
 
 
 def lane_rows():
@@ -77,7 +77,7 @@ def lane_rows():
 
 
 def gut_y(z):
-    return 1.4 * (3.5 - z) / 30.0
+    return 0.06 + 1.34 * (3.5 - z) / 30.0
 
 
 def P(u, v, h=0.0):
@@ -89,40 +89,48 @@ def sub(a, b):
     return tuple(x - y for x, y in zip(a, b))
 
 
-def face(s, pts, hint, color):
-    """One polygon wound so its normal agrees with hint (open pieces keep the winding they are given)."""
-    nx = ny = nz = 0.0
-    for i, p in enumerate(pts):
-        q = pts[(i + 1) % len(pts)]
-        nx += (p[1] - q[1]) * (p[2] + q[2])
-        ny += (p[2] - q[2]) * (p[0] + q[0])
-        nz += (p[0] - q[0]) * (p[1] + q[1])
-    if nx * hint[0] + ny * hint[1] + nz * hint[2] < 0:
-        pts = pts[::-1]
-    s.add(list(pts), [tuple(range(len(pts)))], color)
+def sub(a, b):
+    return tuple(x - y for x, y in zip(a, b))
+
+
+def plate(s, pts, drop, color):
+    """A closed prism: the polygon pts extruded by the vector drop. Every piece in this recipe is a closed single-colour solid,
+    so the exporter's normal pass turns every face outward."""
+    n = len(pts)
+    verts = list(pts) + [tuple(p[k] + drop[k] for k in range(3)) for p in pts]
+    faces = [tuple(range(n)), tuple(range(2 * n - 1, n - 1, -1))]
+    faces += [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
+    s.add(verts, faces, color)
+
+
+def thin(s, pts, hint, thick, color):
+    """A decal: pts lies on a surface whose outward normal is hint; the prism goes thick below it."""
+    m = math.sqrt(sum(v * v for v in hint))
+    plate(s, pts, tuple(-v / m * thick for v in hint), color)
+
+
+TL = 0.04      # thickness of the painted top layer on a layered solid
 
 
 def topped(s, top, bot, w0, w1, topcol, sidecol, axis="x"):
     """A closed solid: top polyline (t, y) and bottom polyline (t, y) extruded across w0..w1. axis x: t is z and w is x;
-    axis z: t is x and w is z. topcol may be a list (one colour per top segment)."""
+    axis z: t is x and w is z. When topcol differs from sidecol the top TL metres are separate coloured layers (topcol may be
+    a list, one colour per top segment) so no vertex colour has to blend."""
     def pt(t, y, w):
         return (w, y, t) if axis == "x" else (t, y, w)
-    A = (1, 0, 0) if axis == "x" else (0, 0, 1)
-    Tv = (0, 0, 1) if axis == "x" else (1, 0, 0)
-    sg = 1.0 if top[-1][0] >= top[0][0] else -1.0
-    for i in range(len(top) - 1):
-        c = topcol[i % len(topcol)] if isinstance(topcol, list) else topcol
-        a, b = top[i], top[i + 1]
-        face(s, [pt(a[0], a[1], w0), pt(a[0], a[1], w1), pt(b[0], b[1], w1), pt(b[0], b[1], w0)], (0, 1, 0), c)
-    for i in range(len(bot) - 1):
-        a, b = bot[i], bot[i + 1]
-        face(s, [pt(a[0], a[1], w0), pt(a[0], a[1], w1), pt(b[0], b[1], w1), pt(b[0], b[1], w0)], (0, -1, 0), sidecol)
-    for e, k in ((top[0], bot[0]), (top[-1], bot[-1])):
-        h = tuple((-sg if e is top[0] else sg) * v for v in Tv)
-        face(s, [pt(e[0], e[1], w0), pt(e[0], e[1], w1), pt(k[0], k[1], w1), pt(k[0], k[1], w0)], h, sidecol)
-    for w, sgn in ((w0, -1), (w1, 1)):
-        poly = [pt(t, y, w) for t, y in top] + [pt(t, y, w) for t, y in reversed(bot)]
-        face(s, poly, tuple(sgn * v for v in A), sidecol)
+    layered = isinstance(topcol, list) or topcol != sidecol
+    low = [(t, y - TL) for t, y in top] if layered else list(top)
+    prof = low + list(reversed(bot))
+    m = len(prof)
+    verts = [pt(t, y, w) for w in (w0, w1) for t, y in prof]
+    faces = [tuple(range(m)), tuple(range(2 * m - 1, m - 1, -1))]
+    faces += [(i, (i + 1) % m, m + (i + 1) % m, m + i) for i in range(m)]
+    s.add(verts, faces, sidecol)
+    if layered:
+        for i in range(len(top) - 1):
+            c = topcol[i % len(topcol)] if isinstance(topcol, list) else topcol
+            (a0, a1), (b0, b1) = top[i], top[i + 1]
+            plate(s, [pt(a0, a1, w0), pt(a0, a1, w1), pt(b0, b1, w1), pt(b0, b1, w0)], (0, -TL, 0), c)
 
 
 def zline(z0, z1, f):
@@ -136,7 +144,7 @@ def cup_poly(u, v, r):
 
 
 def board_top(s, color=True):
-    """The board surface with a 16-gon hole per cup: a trapezoid decomposition (every quad lies between two v levels)."""
+    """The board surface with a 16-gon hole per cup: a trapezoid decomposition, each trapezoid a 0.3 m closed prism."""
     polys = [cup_poly(*c) for _, c in sorted(CUPS.items())]
     vs = sorted({round(v, 6) for p in polys for _, v in p} | {0.0, BL})
     k = 0
@@ -159,42 +167,42 @@ def board_top(s, color=True):
             a, b = bounds[i], bounds[i + 1]
             col = cp.jitter_tone("felt", k, 0.05) if color else "felt"
             k += 1
-            face(s, [P(a[0], v0), P(b[0], v0), P(b[1], v1), P(a[1], v1)], (0, CT, ST), col)
+            plate(s, [P(a[0], v0), P(b[0], v0), P(b[1], v1), P(a[1], v1)], (0, -0.3 * CT, -0.3 * ST), col)
 
 
 def cup_body(s):
-    """Each pocket: two rows of wall quads (iron over charcoal) and a floor, all facing in."""
+    """Each pocket: sixteen wall plates (0.12 m thick, outside the opening) and a closed floor plate, so a ball can sit in it."""
     for cid, (u, v, r) in sorted(CUPS.items()):
         poly = cup_poly(u, v, r)
         for i in range(NSEG):
             a, b = poly[i], poly[(i + 1) % NSEG]
-            for row, (h0, h1) in enumerate(((0.0, -DEPTH / 2), (-DEPTH / 2, -DEPTH))):
-                pts = [P(a[0], a[1], h0), P(b[0], b[1], h0), P(b[0], b[1], h1), P(a[0], a[1], h1)]
-                mid = tuple(sum(c[k] for c in pts) / 4 for k in range(3))
-                axis = P(u, v, (h0 + h1) / 2)
-                face(s, pts, sub(axis, mid), "iron_hi" if row == 0 else "charcoal")
-        face(s, [P(x, y, -DEPTH) for x, y in poly], (0, CT, ST), "charcoal")
+            mu, mv = (a[0] + b[0]) / 2 - u, (a[1] + b[1]) / 2 - v
+            m = math.hypot(mu, mv)
+            out = P(mu / m * 0.12, mv / m * 0.12, 0.0)
+            drop = (out[0], out[1] - Y0, out[2] - Z0)
+            plate(s, [P(a[0], a[1], 0.0), P(b[0], b[1], 0.0), P(b[0], b[1], -DEPTH), P(a[0], a[1], -DEPTH)], drop, "iron_hi")
+        plate(s, [P(x, y, -DEPTH) for x, y in poly], (0, -0.3 * CT, -0.3 * ST), "charcoal")
+
+
+def ring_board(s, u, v, r0, r1, h0, h1, color):
+    """A closed rectangular-section ring lying on the board around a cup."""
+    quad = [(r0, h0), (r1, h0), (r1, h1), (r0, h1)]
+    verts = [P(u + r * math.cos((k + 0.5) * math.tau / NSEG), v + r * math.sin((k + 0.5) * math.tau / NSEG), h)
+             for k in range(NSEG) for r, h in quad]
+    faces = []
+    for i in range(NSEG):
+        j = (i + 1) % NSEG
+        for k in range(4):
+            m = (k + 1) % 4
+            faces.append((i * 4 + k, i * 4 + m, j * 4 + m, j * 4 + k))
+    s.add(verts, faces, color)
 
 
 def cup_decor(s):
     for cid, (u, v, r) in sorted(CUPS.items()):
-        for r0, r1, h, col in ((r, r + 0.2, 0.05, "copper"), (r + 0.32, r + 0.52, 0.04, BAND[cid])):
-            ring0, ring1 = cup_poly(u, v, r0), cup_poly(u, v, r1)
-            for i in range(NSEG):
-                j = (i + 1) % NSEG
-                face(s, [P(*ring0[i], h), P(*ring0[j], h), P(*ring1[j], h), P(*ring1[i], h)], (0, CT, ST), col)
-        face(s, [P(x, y, -DEPTH + 0.03) for x, y in cup_poly(u, v, r * 0.45)], (0, CT, ST), "amber")
-
-
-def board_under(s):
-    """Collision only: the underside, front and back of the board slab, so the board is a closed solid."""
-    n = (0, -CT, -ST)
-    under = [P(-W, 0, -1.8), P(W, 0, -1.8), P(W, BL, -1.8), P(-W, BL, -1.8)]
-    face(s, under, n, "iron")
-    face(s, [P(-W, 0), P(W, 0), P(W, 0, -1.8), P(-W, 0, -1.8)], (0, -ST, CT), "iron")
-    face(s, [P(-W, BL), P(W, BL), P(W, BL, -1.8), P(-W, BL, -1.8)], (0, ST, -CT), "iron")
-    for x, hx in ((-W, -1), (W, 1)):
-        face(s, [P(x, 0), P(x, BL), P(x, BL, -1.8), P(x, 0, -1.8)], (hx, 0, 0), "iron")
+        ring_board(s, u, v, r, r + 0.2, -0.1, 0.06, "copper")
+        ring_board(s, u, v, r + 0.34, r + 0.54, -0.02, 0.04, BAND[cid])
+        thin(s, [P(x, y, -DEPTH + 0.04) for x, y in cup_poly(u, v, r * 0.45)], (0, CT, ST), 0.04, "amber")
 
 
 # ----------------------------------------------------------------------------------------------------------- structure
@@ -216,7 +224,7 @@ def structure(s, col=False):
         topped(s, side, flat_bot(side), x0, x1, "timber_lt", "timber", "x")
         topped(s, [(z, y + RAIL_H) for z, y in side], side, x0, x1, "copper", "copper", "x")
     # Trough between the hump and the board: floor tilts toward the gutter (+X), left wall.
-    topped(s, [(-W, 1.9), (3.15, 1.4)], [(-W, 0.0), (3.15, 0.0)], Z0, -LANE_L, "iron_hi", "timber", "z")
+    topped(s, [(-W, 1.7), (3.15, 1.4)], [(-W, 0.0), (3.15, 0.0)], Z0, -LANE_L, "iron_hi", "timber", "z")
     topped(s, [(Z0, 3.05), (-LANE_L, 3.05)], flat_bot([(Z0, 0), (-LANE_L, 0)]), -CAB, -W, "timber_lt", "timber", "x")
     # Return gutter and its outer wall, 1.4 m of slope over 30 m.
     gz = [(Z0, gut_y(Z0)), (3.5, gut_y(3.5))]
@@ -233,22 +241,20 @@ def structure(s, col=False):
     for sx in (-1, 1):
         s.box((0.7, HEAD_Y0, ARCH_Z1 - ARCH_Z0), (sx * (CAB + 0.35), HEAD_Y0 / 2, zc), T["timber"])
     s.box((2 * (CAB + 0.7), HEAD_Y1 - HEAD_Y0, ARCH_Z1 - ARCH_Z0), (0, (HEAD_Y0 + HEAD_Y1) / 2, zc), T["iron"])
-    if col:
-        board_under(s)
 
 
 def strip(s, d0, d1, x0, x1, lift, color):
-    """A flat painted strip on the lane between d0 and d1 (inside one linear or curved row; split at row edges)."""
+    """A flat painted strip on the lane between d0 and d1 (split at the lane's row edges)."""
     cuts = [d0] + [d for d in lane_rows() if d0 < d < d1] + [d1]
     for a, b in zip(cuts, cuts[1:]):
-        face(s, [(x0, lane_h(a) + lift, -a), (x1, lane_h(a) + lift, -a), (x1, lane_h(b) + lift, -b), (x0, lane_h(b) + lift, -b)],
-             (0, 1, 0), color)
+        thin(s, [(x0, lane_h(a) + lift, -a), (x1, lane_h(a) + lift, -a), (x1, lane_h(b) + lift, -b), (x0, lane_h(b) + lift, -b)],
+             (0, 1, 0), 0.02, color)
 
 
 def chevron(s, d, color):
     outer = [(-1.1, d - 0.5), (0.0, d + 0.7), (1.1, d - 0.5)]
     inner = [(1.1, d - 1.0), (0.0, d + 0.2), (-1.1, d - 1.0)]
-    face(s, [(x, lane_h(dd) + 0.025, -dd) for x, dd in outer + inner], (0, 1, 0), color)
+    thin(s, [(x, lane_h(dd) + 0.03, -dd) for x, dd in outer + inner], (0, 1, 0), 0.02, color)
 
 
 def cap(s, pts, x0, x1, lift, color, side="iron"):
@@ -314,8 +320,8 @@ def base(s):
         s.box((0.9, 0.5, 1.6), (sx * (CAB + 0.35), 0.25, zc), T["copper_dk"])
     for x, y, z in bulbs():
         cp.lamp(s, x, y, z, 0.28)
-    # Dark ledge under each board lip and a bone chalk line across the foot of the board.
-    face(s, [P(-W, 0.0, 0.02), P(W, 0.0, 0.02), P(W, 0.25, 0.02), P(-W, 0.25, 0.02)], (0, CT, ST), "copper")
+    # A copper kick strip across the foot of the board.
+    thin(s, [P(-W, 0.0, 0.03), P(W, 0.0, 0.03), P(W, 0.25, 0.03), P(-W, 0.25, 0.03)], (0, CT, ST), 0.05, "copper")
 
 
 def detail1(s):
