@@ -53,12 +53,21 @@ const WARN := SUCK + FLIGHT
 const DROP_RADIUS := 4.0
 const DROP_DAMAGE := 10.0
 const DROP_SHOVE := 6.0
-const ADD_KIND := "chaser"
 const ADD_CAP := 4
+# Escalate (Andrew's card, 17 Oct): each drop landed with no hit on the Dispatcher since the
+# last one climbs a step, so a Dispatcher left alone snowballs; each hit on it steps back
+# down one. A step names the add the next pod opens into, the drop-to-drop interval and the
+# landing's damage (a heavier pod).
+const ESCALATION := [
+	{"kind": "chaser", "every": DROP_EVERY, "damage": DROP_DAMAGE},
+	{"kind": "hooker", "every": 4.5, "damage": 15.0},
+	{"kind": "plated_brute", "every": 3.0, "damage": 20.0},
+]
 const POD_RADIUS := 0.55
 const RADAR_TURN := TAU / 4.0 / (60.0 / 129.0)
 
 var drops := 0
+var escalation := 0
 var landed_hits := 0
 var adds: Array = []
 var perch_top := Vector3.ZERO
@@ -303,8 +312,9 @@ func _go_live() -> void:
 		var out: Vector3 = _real_ball() - landing
 		out.y = 0.0
 		var dir := out.normalized() if out.length() > 0.1 else -global_basis.z
-		hit_player.emit(DROP_DAMAGE, dir * DROP_SHOVE + Vector3.UP * 3.0)
-	var add: Node3D = fleet.combat.spawn_enemy(ADD_KIND, landing + Vector3.UP * 1.2)
+		hit_player.emit(float(ESCALATION[escalation]["damage"]), dir * DROP_SHOVE + Vector3.UP * 3.0)
+	var add: Node3D = fleet.combat.spawn_enemy(String(ESCALATION[escalation]["kind"]), landing + Vector3.UP * 1.2)
+	_escalate(mini(escalation + 1, ESCALATION.size() - 1))
 	if add == null:
 		return
 	# Out of the tube ready to go: its first lunge waits only on the attacker budget. It carries
@@ -315,6 +325,18 @@ func _go_live() -> void:
 	add.set_meta("dispatched_by", get_instance_id())
 	adds.append(add)
 	dispatched.emit(add)
+
+
+# Each hit answers it one step.
+func take_damage(amount: float) -> float:
+	if amount > 0.0 and not _dead:
+		_escalate(maxi(escalation - 1, 0))
+	return super(amount)
+
+
+func _escalate(step: int) -> void:
+	escalation = step
+	rest_seconds = float(ESCALATION[step]["every"]) - WARN - live_seconds
 
 
 func _on_end() -> void:
@@ -334,9 +356,10 @@ func _pose() -> void:
 		_radar.rotate_y(RADAR_TURN * get_physics_process_delta_time())
 	var warn := phase == Phase.WARN
 	if _signal_material != null:
-		_signal_material.emission_enabled = warn
+		# Between drops the lamp holds a glow per escalation step, so a climbing Dispatcher reads.
+		_signal_material.emission_enabled = warn or escalation > 0
 		_signal_material.emission = Palette.AMBER
-		_signal_material.emission_energy_multiplier = 2.5 * clampf(_t / SUCK, 0.0, 1.0) if warn else 0.0
+		_signal_material.emission_energy_multiplier = 2.5 * clampf(_t / SUCK, 0.0, 1.0) if warn else 0.6 * escalation
 	if not warn or _t < SUCK:
 		return
 	var ring := telegraph()

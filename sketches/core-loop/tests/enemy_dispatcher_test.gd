@@ -120,6 +120,19 @@ func _run() -> void:
 		t.eq("it is a chaser", adds[0].kind, "chaser")
 		t.eq("it carries no scrap", adds[0].scrap_value, 0)
 	t.check("the slot went back", not rig.is_in_group(AttackBudget.ATTACKING))
+	# Escalate: an unanswered drop climbs a step (the next pod is a hooker, sooner); each hit steps it down.
+	t.eq("an unanswered drop climbs a step", rig.escalation, 1)
+	t.near("the next drop comes sooner", rig.rest_seconds, float(Dispatcher.ESCALATION[1]["every"]) - Dispatcher.WARN - rig.live_seconds)
+	game.player.reset_to(ball)
+	await _until(func(): return rig.drops > 1)
+	await _frames(2)
+	t.eq("the second pod opens into a hooker", adds.size() > 1 and adds[1].kind == "hooker", true)
+	t.eq("it climbs again", rig.escalation, 2)
+	rig.take_damage(1.0)
+	t.eq("a hit steps it down one", rig.escalation, 1)
+	rig.take_damage(1.0)
+	t.eq("a second hit answers it", rig.escalation, 0)
+	t.near("back to the start cadence", rig.rest_seconds, Dispatcher.DROP_EVERY - Dispatcher.WARN - rig.live_seconds)
 	_clear()
 
 	# A slam in the suck-up breaks the drop: no pod lands.
