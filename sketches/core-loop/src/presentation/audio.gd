@@ -286,6 +286,7 @@ static var _bake_task := -1
 static var _baked := false
 static var _bake_done := false
 static var _rest_task := -1
+static var _opening_task := -1
 
 
 func _init() -> void:
@@ -376,6 +377,20 @@ func _load_ace() -> void:
 	_ace_loaded = AceSequencer.new(_ace_loaded_from)
 
 
+# Blocks until stage 1's whole band is baked, as it is by the time a player leaves the
+# title. A run that starts sooner waits here (run_started), as on a loading frame.
+func bake_opening_now() -> void:
+	bake_now()
+	_finish_opening()
+	MusicEngine.prepare_opening()
+
+
+static func _finish_opening() -> void:
+	if _opening_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_opening_task)
+		_opening_task = -1
+
+
 # Blocks until the bank is baked; the tests call it, the game never needs to.
 func bake_now() -> void:
 	if _bake_task >= 0:
@@ -409,6 +424,7 @@ func _exit_tree() -> void:
 	if _rest_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_rest_task)
 		_rest_task = -1
+	_finish_opening()
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():
 		if child is AudioStreamPlayer:
@@ -423,8 +439,11 @@ func _on_ready() -> void:
 	if sound_ready:
 		return
 	sound_ready = true
-	# The other themes and the bosses bake behind stage 1. Headless runs render them
-	# on demand instead, so a test never waits on the worker at quit.
+	# The rest of stage 1's band bakes behind the title, and the other themes and the
+	# bosses behind stage 1. Headless runs render them on demand instead, so a test never
+	# waits on the worker at quit; bots call bake_opening_now.
+	if live_output and _opening_task < 0:
+		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
 	if _rest_task < 0 and live_output:
 		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, false, "presentation band bake")
 	_virtual_usec = _transport_usec()
@@ -1051,6 +1070,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 func _connect_all(events) -> void:
 	_wire_cannon(events)
 	events.run_started.connect(func(class_id: String):
+		_finish_opening()
 		_heft_class = 1
 		_hull_seen = 0.0
 		_fired_this_run.clear()
