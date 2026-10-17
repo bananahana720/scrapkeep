@@ -15,6 +15,7 @@ const HighdraftMap := preload("res://src/world/map_highdraft.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
+const ParkSites := preload("res://src/presentation/park_sites.gd")
 
 const DIR := "res://assets/models/highdraft/"
 const NODE_NAME := "HighdraftScenery"
@@ -36,6 +37,8 @@ const SKY_RING := 460.0
 # The cloud deck plane lies well under the catch plane and the banks; it never collides.
 const CLOUD_DECK_Y := -32.0
 const CLOUD_DECK_SIZE := 1600.0
+# A park's cloud deck lies this far under its lowest ground.
+const PARK_DECK_DROP := 40.0
 const LOOK := Finishes.LOOK
 
 # Tests point this at a missing folder to prove the fallback; the game never changes it.
@@ -62,21 +65,37 @@ static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
 
 
+# A Highdraft park stage (park_islands, park_crown) takes the park pass (build_park): its islands, nets
+# and anchors are park rows, and world_look.gd's time of day owns its light, so the zone's own
+# environment swap stays on the old maps.
 static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	var terrain = ctx.terrain
 	var map = terrain.map_for(stage)
-	if not is_highdraft(map):
+	var park := ParkSites.is_park(map) and _world(ctx, stage) == 3
+	if not is_highdraft(map) and not park:
 		restore_environment(terrain)
 		return
 	var root: Node3D = terrain.geometry_root(stage)
 	if root.get_node_or_null(NODE_NAME) == null:
 		var world = ctx.root.get("world") if ctx.root != null else null
 		var contraptions = world.contraptions.get(stage) if world != null and "contraptions" in world else null
-		var scenery := build(root, map, contraptions, terrain.ground_callable(stage), ctx.player)
+		var ground: Callable = terrain.ground_callable(stage)
+		var scenery := build_park(root, map, contraptions, ground, ctx.player) if park \
+			else build(root, map, contraptions, ground, ctx.player)
 		var effects := scenery.get_node_or_null("WindEffects")
 		if effects != null and ctx.player != null and ctx.events.has_signal("landed"):
 			ctx.events.connect("landed", effects.on_landed.bind(ctx.player))
-	apply_environment(terrain, root)
+	if park:
+		restore_environment(terrain)
+	else:
+		apply_environment(terrain, root)
+
+
+static func _world(ctx, stage: int) -> int:
+	for row in ctx.stages.DEFS:
+		if int(row["stage"]) == stage:
+			return int(row.get("world", 0))
+	return 0
 
 
 static func apply_environment(terrain, root: Node3D) -> void:
@@ -172,6 +191,33 @@ static func build(stage_root: Node3D, map, contraptions = null, ground := Callab
 	_props(scenery, map)
 	_sky_pieces(scenery)
 	_relief(scenery, stage_root, map)
+	state.fx = HighdraftFx.install(scenery, state, map)
+	return scenery
+
+
+# The park pass: the barge rigs and the thermal vents and air on the park's own contraptions, and the
+# cloud deck and far silhouettes dropped under the park's lowest ground. The chase camera sees 700 m
+# and a park is 1.6 km across, so the sky rides with the ball (Updater) and stays at the old maps'
+# distances, a backdrop that never comes nearer. The wind effects follow the vents and the clouds; a
+# park has no catch plane, so no net sags.
+static func build_park(stage_root: Node3D, map, contraptions = null, ground := Callable(), player = null) -> Node3D:
+	var scenery := Node3D.new()
+	scenery.name = NODE_NAME
+	stage_root.add_child(scenery)
+	var state := Updater.new()
+	state.name = "Presence"
+	state.player = player
+	scenery.add_child(state)
+	if contraptions != null:
+		_barges(contraptions)
+		_thermals(scenery, state, map, contraptions)
+	var rect: Rect2 = map.play_rect
+	var low := INF
+	for i in 17:
+		for j in 17:
+			low = minf(low, _height(ground, map, rect.position.x + rect.size.x * i / 16.0, rect.position.y + rect.size.y * j / 16.0))
+	_sky_pieces(scenery, minf(0.0, low - PARK_DECK_DROP - CLOUD_DECK_Y))
+	state.sky = scenery.get_node("Sky")
 	state.fx = HighdraftFx.install(scenery, state, map)
 	return scenery
 
@@ -841,10 +887,11 @@ static func _keepouts(map) -> Array:
 
 # ---- Sky: cloud deck and distant silhouettes ----
 
-static func _sky_pieces(parent: Node3D) -> void:
+static func _sky_pieces(parent: Node3D, drop := 0.0) -> void:
 	var sky := Node3D.new()
 	sky.name = "Sky"
 	parent.add_child(sky)
+	sky.position.y = drop
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7_310_006
 	# Cloud deck: broad banks under the catch plane, top face at Y -20, never over the playfield.
@@ -929,6 +976,8 @@ class Updater extends Node3D:
 	var anchors: Array[Dictionary] = []
 	var thermals: Array[Dictionary] = []
 	var fx: Node3D
+	# A park's sky, kept centred on the ball (build_park); null on the old maps.
+	var sky: Node3D
 
 	func _process(delta: float) -> void:
 		if not is_visible_in_tree():
@@ -952,6 +1001,8 @@ class Updater extends Node3D:
 			if want != row["state"] and row["player"] != null:
 				(row["player"] as AnimationPlayer).play(want)
 			row["state"] = want
+		if sky != null and ball != Vector3.INF:
+			sky.position = Vector3(ball.x, sky.position.y, ball.z)
 		if fx != null:
 			fx.step(delta, ball)
 

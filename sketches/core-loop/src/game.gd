@@ -183,6 +183,7 @@ func _ready() -> void:
 	for row in ctx.stages.DEFS:
 		if row["map"] == "spillway":
 			preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(row["stage"]))
+	preload("res://src/presentation/spillway_scenery.gd").hook(ctx)
 	preload("res://src/presentation/dig_scenery.gd").hook(ctx)
 	preload("res://src/presentation/highdraft_scenery.gd").hook(ctx)
 	preload("res://src/presentation/world_look.gd").hook(ctx)

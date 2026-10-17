@@ -168,8 +168,8 @@ static func lights(look: Dictionary, sun: DirectionalLight3D) -> Array:
 	return result
 
 
-# Stage entry: the world's row on the stage root's own WorldLook node. Stage roots are parked,
-# never freed, so the Dig's lamp pool lives under that node for the whole run.
+# Stage entry: the world's row on the stage root's own WorldLook node. An old map's root is parked,
+# never freed; a park's root is freed when it leaves memory, and its next entry builds a new one.
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
 
