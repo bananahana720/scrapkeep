@@ -120,8 +120,13 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	else:
 		_probe.global_transform = Transform3D(Basis.IDENTITY, origin)
 		Rules.aim_probe(_probe, state, tuning)
-	Rules.probe_ground(_probe, state, Rules.ground_dot(state, tuning), Rules.grip_speed(state, tuning))
-	Rules.grip_contact(state, tuning, body_state)
+	# Sable's vault kick and a falling slam own the faces the ball meets in the air, so a
+	# wall is taken from the air only without them; carving up from the floor still grips.
+	var take_speed := Rules.grip_speed(state, tuning)
+	if not state.grounded and kit != null and (kit.on(Augments.VAULT) or kit.slamming):
+		take_speed = INF
+	Rules.probe_ground(_probe, state, Rules.ground_dot(state, tuning), take_speed)
+	Rules.grip_contact(state, tuning, body_state, take_speed)
 
 	var wish := Vector3.ZERO
 	if not Augments.holding(kit):

@@ -70,13 +70,15 @@ static func grip_speed(state, tuning) -> float:
 # Floors and banks are always ground. A wall is ground only while gripping, and a ball takes
 # a new wall only running along it at grip speed: a head-on hit runs along nothing, so it
 # still bounces (the pipe vault's head-on bounce stays). A wall it already rides holds until
-# the grip clock runs out.
-static func _takes(state, n: Vector3, floor_dot: float, take_speed: float, on_wall: bool) -> bool:
+# the grip clock runs out. Only the world's faces are walls: an enemy's flank never is.
+static func _takes(state, n: Vector3, floor_dot: float, take_speed: float, on_wall: bool, world: bool) -> bool:
 	if n.y <= floor_dot:
 		return false
-	if n.y > Tuning.MAX_SLOPE_DOT or on_wall:
+	if n.y > Tuning.MAX_SLOPE_DOT:
 		return true
-	return (state.velocity - n * state.velocity.dot(n)).length() >= take_speed
+	if not world:
+		return false
+	return on_wall or (state.velocity - n * state.velocity.dot(n)).length() >= take_speed
 
 
 static func probe_ground(probe: ShapeCast3D, state, floor_dot := Tuning.MAX_SLOPE_DOT, take_speed := INF) -> void:
@@ -87,7 +89,7 @@ static func probe_ground(probe: ShapeCast3D, state, floor_dot := Tuning.MAX_SLOP
 	if probe.is_colliding():
 		for i in probe.get_collision_count():
 			var n: Vector3 = probe.get_collision_normal(i)
-			if n.y > best and _takes(state, n, floor_dot, take_speed, on_wall):
+			if n.y > best and _takes(state, n, floor_dot, take_speed, on_wall, probe.get_collider(i) is StaticBody3D):
 				best = n.y
 				normal = n
 	_set_ground(state, normal if best > -INF else null)
@@ -95,17 +97,16 @@ static func probe_ground(probe: ShapeCast3D, state, floor_dot := Tuning.MAX_SLOP
 
 # Landing on a wall from the air, or meeting one beside the ball, never shows under a probe
 # that looks down: while gripping, a touched world face is taken by the same rule.
-static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D) -> void:
+static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D, take_speed: float) -> void:
 	if state.grounded or not gripping(state, tuning):
 		return
-	var take_speed := grip_speed(state, tuning)
 	var best := -INF
 	var found = null
 	for i in body_state.get_contact_count():
 		if not (body_state.get_contact_collider_object(i) is StaticBody3D):
 			continue
 		var n := body_state.get_contact_local_normal(i)
-		if n.y > best and _takes(state, n, Tuning.GRIP_SLOPE_DOT, take_speed, false):
+		if n.y > best and _takes(state, n, Tuning.GRIP_SLOPE_DOT, take_speed, false, true):
 			best = n.y
 			found = n
 	if found != null:
@@ -243,6 +244,7 @@ static func jump(state, tuning) -> Vector3:
 	state.jump_buffer = 0.0
 	state.coyote = 0.0
 	state.grounded = false
+	state.carving = false
 	# Keep the horizontal run: only the component along the jump direction is set.
 	var along: float = state.velocity.dot(dir)
 	return dir * maxf(0.0, tuning.f("jump_speed") - along)

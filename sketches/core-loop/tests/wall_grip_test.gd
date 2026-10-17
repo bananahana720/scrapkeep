@@ -16,7 +16,10 @@ const BallState := preload("res://src/movement/ball_state.gd")
 #               reports carving, and a jump there pushes straight off the face.
 #   off         the same launch with --grip=off: the wall is never ground (today's ball).
 #   slow        grip on at 15 m/s, under the fast tier: never grips, so never ground past 63 deg.
-#   land        grip on, dropped in the air beside the wall moving along it: the touch grips.
+#   land        grip on, dropped in the air beside the wall moving along it: the touch grips
+#               (Tally). Sable's vault, like a falling slam, keeps the faces met in the air.
+#   bank        a stick press mid-climb starts no speed-bank roll (the bank reads the wall as air):
+#               drive alone adds a few m/s there; the roll start added 17.5 before the fix.
 #   head_on     grip on, straight into the wall: it bounces as before (pipe vault ruling).
 #   peel        every wall tick after the grip clock ran out is airborne (the 0.25 s peel).
 #   speed       grip never adds speed: the carve's top speed is no higher than the same
@@ -64,9 +67,11 @@ func _initialize() -> void:
 	_queue = [
 		{"name": "carve", "grip": "on", "velocity": Vector3(26.0, 0.0, 7.0), "jump_on_wall": true},
 		{"name": "carve_nojump", "grip": "on", "velocity": Vector3(26.0, 0.0, 7.0)},
+		{"name": "carve_steer", "grip": "on", "velocity": Vector3(26.0, 0.0, 0.0), "steer_on_wall": true},
 		{"name": "off", "grip": "off", "velocity": Vector3(26.0, 0.0, 7.0)},
 		{"name": "slow", "grip": "on", "velocity": Vector3(15.0, 0.0, 0.0)},
-		{"name": "land", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": WALL_AIR},
+		{"name": "land", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": WALL_AIR, "class": "tally"},
+		{"name": "land_vault", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": WALL_AIR},
 		{"name": "head_on", "grip": "on", "velocity": Vector3(26.0, 0.0, 0.0), "at": WALL_AIR},
 	]
 
@@ -113,6 +118,7 @@ func _start(run: Dictionary) -> void:
 		"min_normal_y": 1.0, "top_speed": 0.0, "max_y": 0.0, "jumped": false,
 		"wall_normal_x": 0.0, "first_vx_out": 0.0})
 	_tuning.set_option("grip", run["grip"])
+	_player.fit_class(ClassDef.by_id(run.get("class", "pylon_engineer")))
 	_source.hold = {}
 	_player.reset_to(run.get("at", START), run["velocity"])
 	_ticks = 0
@@ -138,6 +144,11 @@ func _sample() -> void:
 			_run["peeled_wall"] += 1
 			if state.grounded:
 				_run["peeled_wall_grounded"] += 1
+		if _run.get("steer_on_wall", false) and _run["wall"] == 10:
+			_run["steer_planar"] = Vector2(state.velocity.x, state.velocity.z).length()
+			_source.hold = {"move": Vector2(0.0, 1.0)}
+		if _run.has("steer_planar"):
+			_run["steer_top"] = maxf(float(_run.get("steer_top", 0.0)), Vector2(state.velocity.x, state.velocity.z).length())
 		if _run.get("jump_on_wall", false) and state.grounded and _run["wall"] >= 4:
 			_run["jumped"] = true
 			_run["jump_vx"] = state.velocity.x
@@ -200,12 +211,20 @@ func _finish() -> void:
 		peeled_grounded += int(_runs[name]["peeled_wall_grounded"])
 	_report("peel", peeled > 0 and peeled_grounded == 0,
 		"%d wall ticks after the grip clock ran out, %d of them grounded" % [peeled, peeled_grounded])
+	var steer: Dictionary = _runs["carve_steer"]
+	_report("bank", steer.has("steer_planar") and float(steer.get("steer_top", 99.0)) <= float(steer["steer_planar"]) + 6.0,
+		"a stick press mid-climb is no roll start: planar speed %.1f -> at most %.1f" % [
+		float(steer.get("steer_planar", 0.0)), float(steer.get("steer_top", 0.0))])
 	var land: Dictionary = _runs["land"]
 	var land_gripped := int(land["wall"]) - int(land["peeled_wall"])
 	_report("land", land_gripped >= 10 and land["wall_grounded"] >= land_gripped * CARVE_GROUNDED_SHARE
 		and land["wall_normal_x"] < -0.9,
 		"dropped beside the wall at 26 m/s along it: %d of %d grip-speed wall ticks grounded, face normal x %.2f" % [
 		land["wall_grounded"], land_gripped, land["wall_normal_x"]])
+	var vault: Dictionary = _runs["land_vault"]
+	_report("land_vault", vault["wall"] >= 10 and vault["wall_grounded"] == 0,
+		"Sable dropped beside the wall: %d wall ticks, %d grounded (her vault kick keeps faces met in the air)" % [
+		vault["wall"], vault["wall_grounded"]])
 	var head: Dictionary = _runs["head_on"]
 	_report("head_on", head["wall_grounded"] == 0 and head["first_vx_out"] < -2.0,
 		"straight into the wall at 26 m/s: %d grounded wall ticks, bounced back at %.1f m/s" % [
@@ -231,7 +250,7 @@ func _rule_table() -> void:
 	_report("overhang", press.dot(-state.contact_normal) > hang,
 		"on a 10 deg overhang the press %.1f m/s^2 beats gravity's pull off it %.1f" % [press.length(), hang])
 	state.contact_normal = Vector3(0.0, 0.8, 0.6)
-	_report("bank", Rules.downforce(state, tuning) == Vector3.ZERO, "no press on a 37 deg bank or a kicker lip")
+	_report("no_press", Rules.downforce(state, tuning) == Vector3.ZERO, "no press on a 37 deg bank or a kicker lip")
 	state.velocity = Vector3(0.0, 10.0, 0.0)
 	var t := 0.0
 	while state.grip_hold > 0.0 and t < 1.0:
