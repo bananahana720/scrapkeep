@@ -176,7 +176,7 @@ func _plate(enemy: Node3D) -> float:
 		return 0.0
 	if enemy.has_method("plating_for"):
 		return maxf(0.0, enemy.plating_for(KIND, "") - combat.shred_of(enemy))
-	return combat.plating_of(enemy)
+	return 0.0
 
 
 func _aim() -> Vector3:

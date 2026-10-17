@@ -156,6 +156,7 @@ func _run() -> void:
 	_rack.charges = 1
 	await _press()
 	await _sim(0.5)
+	_t.check("14c2 a burn is live before the clear", _torch.beam_left > 0.0 and not _layer().is_empty())
 	_game.events.stage_content_cleared.emit("test")
 	_t.check("14d a stage clear drops a live burn and its lane", _torch.beam_left <= 0.0 and _layer().is_empty() and _torch._heat.is_empty())
 
