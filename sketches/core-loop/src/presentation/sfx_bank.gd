@@ -149,6 +149,9 @@ const TRIM_DB := {
 	# The crown's place layers (tools/ace/cut_layers.py): two bars of the crown's own band, under it.
 	"music_layer_crown_hoodoos": -8.0, "music_layer_crown_alcove": -8.0, "music_layer_crown_toppled": -8.0,
 	"music_layer_crown_ramp": -8.0,
+	# The arrival forms and the prop crew (tools/ace/arrival_sfx.py); a tell ends on its landing frame.
+	"lift_cage_arrive": -3.0, "zipline_whine": -5.0, "zipline_snap": -3.0, "cave_in_rumble": -4.0,
+	"cave_in_debris": -3.0, "prop_crew_presence": -14.0, "prop_crew_strain": -4.0, "prop_crew_collapse": -2.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
@@ -268,6 +271,10 @@ const FILE_SOUNDS := {
 	"jolt_layer_break": "specials/jolt_layer_break.wav",
 	"music_layer_crown_hoodoos": "layers/music_layer_crown_hoodoos.wav", "music_layer_crown_alcove": "layers/music_layer_crown_alcove.wav",
 	"music_layer_crown_toppled": "layers/music_layer_crown_toppled.wav", "music_layer_crown_ramp": "layers/music_layer_crown_ramp.wav",
+	"lift_cage_arrive": "foley/lift_cage_arrive.wav", "zipline_whine": "foley/zipline_whine.wav",
+	"zipline_snap": "foley/zipline_snap.wav", "cave_in_rumble": "foley/cave_in_rumble.wav",
+	"cave_in_debris": "foley/cave_in_debris.wav", "prop_crew_presence": "foley/prop_crew_presence.wav",
+	"prop_crew_strain": "foley/prop_crew_strain.wav", "prop_crew_collapse": "foley/prop_crew_collapse.wav",
 }
 # hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
 const HYPE_DROP_LEAD_SECONDS := 2.0
