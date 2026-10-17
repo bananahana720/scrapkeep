@@ -35,6 +35,18 @@ for (const f of byKey.values()) {
     f.feel = "A build pushes a number past what the game allows; it can crash or break a fight.";
   }
 }
+// Passes before the exit-leg rule filed a stall after a broken Warden as a Warden stall.
+for (const [key, f] of [...byKey]) {
+  if (key.startsWith("stall:stage") && f.runs.every((r) => /state gates/.test(r.note ?? ""))) {
+    byKey.delete(key);
+    const exitKey = key.replace(/^stall:/, "exit:");
+    const into = byKey.get(exitKey);
+    if (into) into.runs.push(...f.runs);
+    else byKey.set(exitKey, { ...f, key: exitKey, severity: "major", area: "stage and world design",
+      title: f.title.replace("Stuck on a stage: the Warden never breaks", "Warden broken, but the run never reaches an exit gate"),
+      feel: "You beat the Warden and then cannot find or reach the way out." });
+  }
+}
 const findings = rank([...byKey.values()]);
 const results = passes.flatMap((p) => p.runs).map((r) => ({
   job: r, exit: r.exit, timedOut: r.outcome === "timeout", piles: r.piles ?? [], perf: r.hitches ?? { p99: null },

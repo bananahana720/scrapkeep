@@ -236,12 +236,16 @@ export function grade(results, extras = {}) {
       const inBoss = row.outcome === "boss_stalled";
       const last = (row.stages ?? []).at(-1) ?? {};
       const where = inBoss ? "boss" : `stage ${row.stage_reached}`;
+      // stall_state "gates" (or a stage whose Warden broke) is the leg after the fight: the bot never
+      // reached an exit gate. That is a different bug from a Warden that never breaks.
+      const exitLeg = !inBoss && (last.stall_state === "gates" || last.warden_broken_s != null);
       const hard = ["skipper", "completionist"].includes(job.policy);
-      const sev = hard || inBoss ? "blocker" : "major";
-      const what = inBoss ? "The boss fight never ends" : row.outcome === "fight_capped" ? "A Warden fight runs past its cap" : "Stuck on a stage: the Warden never breaks";
-      add(finding(sev, "Wardens and bosses", `stall:${where}:${job.pilot}`, `${what} (${where}, ${job.pilot})`, inBoss
+      const sev = inBoss || (hard && !exitLeg) ? "blocker" : "major";
+      const what = inBoss ? "The boss fight never ends" : row.outcome === "fight_capped" ? "A Warden fight runs past its cap"
+        : exitLeg ? "Warden broken, but the run never reaches an exit gate" : "Stuck on a stage: the Warden never breaks";
+      add(finding(sev, exitLeg ? "stage and world design" : "Wardens and bosses", `${exitLeg ? "exit" : "stall"}:${where}:${job.pilot}`, `${what} (${where}, ${job.pilot})`, inBoss
         ? "You are in the boss fight and nothing you do finishes it."
-        : "You are on a stage with no way on but quitting.", { candidate: true }), r, `${row.outcome}${last.stall_state ? ", state " + last.stall_state : ""}${last.stuck_detours ? ", " + last.stuck_detours + " stuck detours" : ""}`);
+        : exitLeg ? "You beat the Warden and then cannot find or reach the way out." : "You are on a stage with no way on but quitting.", { candidate: true }), r, `${row.outcome}${last.stall_state ? ", state " + last.stall_state : ""}${last.stuck_detours ? ", " + last.stuck_detours + " stuck detours" : ""}`);
     }
 
     // Route skips: a stage left with no fight beat.

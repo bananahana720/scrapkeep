@@ -42,6 +42,10 @@ test("crashes, timeouts and skipper stalls are blockers; camper stalls without a
   assert.deepEqual(keys.filter((k) => k.startsWith("blocker")).sort(), ["blocker crash", "blocker freeze", "blocker stall:stage 2:tarn"]);
   assert.ok(keys.includes("major stall:stage 3:tally"));
   assert.ok(f.every((x) => !x.key.includes("stage 1")));
+  const exit = grade([result({ job: job({ policy: "completionist", persona: "greedy", pilot: "pylon_engineer" }), row: { outcome: "stalled", stage_reached: 6, stages: [{ stage: 6, stall_state: "gates", warden_broken_s: 230.67 }], beats: [] } })]);
+  assert.equal(exit[0].key, "exit:stage 6:pylon_engineer");
+  assert.equal(exit[0].severity, "major");
+  assert.match(exit[0].title, /never reaches an exit gate/);
 });
 
 test("pile-ups need three hits from two sources worth a third of max HP", () => {
