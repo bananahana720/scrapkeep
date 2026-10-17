@@ -458,6 +458,11 @@ static func level_problems(part_id: String, r: Dictionary) -> Array:
 	return out
 
 
+# The level taking part_id now would give: one past its level in held. 1 for a part with no levels.
+static func next_level(part_id: String, held: Array) -> int:
+	return mini(level_of(part_id, held) + 1, PartDef.MAX_LEVEL)
+
+
 # part_id's level in held: its copies, at most PartDef.MAX_LEVEL; 0 when not held or not levelled.
 static func level_of(part_id: String, held: Array) -> int:
 	var d: Resource = def(part_id)
@@ -606,8 +611,9 @@ static func icon_of(part_id: String) -> String:
 
 
 # The gate label's first line: "{name}: {verb}. Punch +{n}".
-static func headline(part_id: String) -> String:
-	var d: Resource = def(part_id)
+# level picks a levelled part's numbers (SG15: an offer shows the level it would give).
+static func headline(part_id: String, level := 1) -> String:
+	var d: Resource = def_at(part_id, level)
 	if d == null:
 		return display_name(part_id)
 	var line := "%s: %s." % [d.display_name, d.verb]

@@ -9,6 +9,7 @@ const BuildSheet := preload("res://src/build/build_sheet.gd")
 const StatCache := preload("res://src/build/stat_cache.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const StakeDevices := preload("res://src/world/stake_devices.gd")
 
 # SG15 three-level parts (W13-INTEGRATION-3.md SG15). A part is picked in three levels and a
 # higher level replaces the lower, as a capped stack of 3 with per-level numbers, not a
@@ -18,14 +19,18 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 #    the held list, and the cached sheet equals a full recompute; selling a copy drops a level.
 # 3. Offers: 200 draws per pilot per source shape on the alpha list never show a part held at
 #    level 3; the same draws at level 2 do show levelled parts (the control).
-# 4. A driven run: two Hot Rivets give level 2's numbers to the tuning, and an offer of a held
+# 4. Stake devices: a trade chest's part win, drawn when every tier-1 part is held (the
+#    fallback to held parts), never names a part at level 3; at level 2 it does (the control).
+# 5. A driven run: two Hot Rivets give level 2's numbers to the tuning, and an offer of a held
 #    part names the level it would reach.
 
 const DRAWS := 200
 const SEED := 15
 # The offer shapes the sources use: a gate pair, a fabricator or vault single, a shop shelf.
 const SHAPES := [["gate", 2], ["single", 1], ["shelf", 3]]
-const EXPECTED_REPORTS := 8
+const EXPECTED_REPORTS := 11
+# Andrew's ruling (2026-10-16): levels stay on these three neutral shelf parts.
+const LEVELLED := ["hot_rivets", "rivet_plating", "magnet_spool"]
 
 var _game
 var _build
@@ -38,6 +43,7 @@ func _initialize() -> void:
 	_check_admission()
 	_check_replace()
 	_check_offers()
+	_check_stakes()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -86,7 +92,7 @@ func _check_admission() -> void:
 		problems.append_array(Parts.level_problems(key, Parts.rows()[key]))
 		if not AlphaDefs.part_in_play(key):
 			problems.append("%s is not on the alpha list" % key)
-	_report("levelled rows admissible", problems.is_empty() and ids.size() >= 3,
+	_report("levelled rows admissible", problems.is_empty() and ids == LEVELLED,
 		"%d levelled parts %s, problems %s" % [ids.size(), ids, problems])
 	var base := {"punch": 4.0, "mods": {"weapon_damage": 1.1}, "stack": "capped", "cap": 3}
 	var planted := {
@@ -193,6 +199,38 @@ func _check_offers() -> void:
 		"%d draws holding every levelled part at level 2: shown %s of %s" % [mid["total"], mid["shown"].keys(), levelled()])
 
 
+class StakeRun:
+	var parts: Array = []
+	func class_id() -> String:
+		return ""
+
+
+func _stake_wins(level: int) -> Dictionary:
+	var run := StakeRun.new()
+	for key in Parts.offer_pool("", ["common", "rare", "relic"]):
+		if Parts.def(key).tier == 1 and not key in LEVELLED:
+			run.parts.append(key)
+	for key in LEVELLED:
+		run.parts.append_array(_copies(key, level))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SEED
+	var wins := {}
+	for i in DRAWS:
+		var win: String = StakeDevices._pick_part(1, run, rng)
+		if win in LEVELLED:
+			wins[win] = wins.get(win, 0) + 1
+	return wins
+
+
+func _check_stakes() -> void:
+	var top := _stake_wins(PartDef.MAX_LEVEL)
+	var mid := _stake_wins(PartDef.MAX_LEVEL - 1)
+	_report("a stake win never names a part at level 3", top.is_empty(),
+		"%d tier-1 wins with every tier-1 part held and the levelled ones at level 3: levelled wins %s" % [DRAWS, top])
+	_report("a stake win can name a part at level 2", mid.size() == LEVELLED.size(),
+		"the same draws at level 2: levelled wins %s" % [mid])
+
+
 func _check_driven_run() -> void:
 	var run = _game.run
 	var plain: String = _build.offer_mark("hot_rivets")
@@ -207,3 +245,15 @@ func _check_driven_run() -> void:
 		and plain == "" and one == "* level II *" and two == "* level III *",
 		"two Hot Rivets: weapon_damage x%.4f (level 2 x%.2f), punch %s; offer marks %s / %s / %s"
 			% [damage, want, _build.punch_bonus(), [plain], [one], [two]])
+	var ball: Vector3 = _game.player.ball_position()
+	var offers: Array = _build.gates.open(["hot_rivets", "rivet_plating"], ball, Vector3.FORWARD, run.parts)
+	_build.gates.close()
+	var next: Resource = Parts.def_at("hot_rivets", 3)
+	var first: Resource = Parts.def("rivet_plating")
+	var card: Dictionary = offers[0] if offers.size() == 2 else {}
+	var fresh: Dictionary = offers[1] if offers.size() == 2 else {}
+	_report("an offer card shows the level it would give", card.get("text", "") == next.text
+		and is_equal_approx(float(card.get("punch", 0.0)), next.punch) and ("Punch +%d" % int(next.punch)) in String(card.get("headline", ""))
+		and fresh.get("text", "") == first.text,
+		"holding two Hot Rivets, its card reads %s / %s / punch %s (level 3: %s); an unheld Rivet Plating reads %s"
+			% [[card.get("headline", "")], [card.get("text", "")], card.get("punch", 0.0), next.text, [fresh.get("text", "")]])

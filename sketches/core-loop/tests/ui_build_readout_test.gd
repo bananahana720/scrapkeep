@@ -56,7 +56,7 @@ const EXPECTED_LAYERS := {
 	"breaker_drive": "local", "bladestorm_rotor": "local", "storm_mast": "local",
 	"grounding_spike": "local",
 }
-const FIXED_CHECKS := 26
+const FIXED_CHECKS := 27
 const FITTED_PARTS := ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",
 	"crush_guard", "cap_relay", "cap_relay", "cap_relay", "cap_relay", "magnet_spool", "cross_split"]
 
@@ -160,6 +160,29 @@ func _expected_pools(held: Array) -> Dictionary:
 	return expected
 
 
+# SG15: a levelled part's row shows its held level's numbers and text, once, never level 1
+# raised to the copy count. Two and three Hot Rivets, against def_at and the sheet.
+func _check_levels() -> void:
+	var wrong: Array = []
+	for n in [2, 3]:
+		var held: Array = []
+		for i in n:
+			held.append("hot_rivets")
+		var level: Resource = Parts.def_at("hot_rivets", n)
+		var sheet = Sheet.from_parts(held)
+		var row: Dictionary = _readout.describe(held)["parts"][0]
+		var totals := {}
+		for bonus in row["bonuses"]:
+			totals[bonus["text"].get_slice(" · ", 0)] = float(bonus["total"])
+		var punch: float = totals.get(_readout._stat_words("punch"), -1.0)
+		var damage: float = totals.get(_readout._stat_words("weapon_damage"), -1.0)
+		if not (is_equal_approx(punch, level.punch) and is_equal_approx(punch, sheet.punch)
+				and is_equal_approx(damage, level.mods["weapon_damage"]) and is_equal_approx(damage, sheet.mod("weapon_damage"))
+				and level.text in row["text"] and row["copies"] == n):
+			wrong.append("x%d: punch %s damage %s, level %d is %s / %s; text %s" % [n, punch, damage, n, level.punch, level.mods["weapon_damage"], [row["text"]]])
+	_report("levelled part reads its held level", wrong.is_empty(), "two and three Hot Rivets: wrong %s" % [wrong])
+
+
 func _check_build() -> void:
 	var held := _held()
 	_game.run.parts = held
@@ -202,6 +225,7 @@ func _check_build() -> void:
 			capped = row["copies"] == 4 and row["cap"] == 3 and row["at_cap"] and "stops at 3 copies" in row["text"]
 		_report("part %s" % row["id"], row["text"] != "" and row["text"] in view.visible_text(), row["text"])
 	_report("family cap shown", capped, "four Cap Relay copies show stops at 3 copies")
+	_check_levels()
 	for key in pools:
 		var row: Dictionary = pools[key]
 		var neutral := 1.0 if row["pool"] == "multiplying" else 0.0
