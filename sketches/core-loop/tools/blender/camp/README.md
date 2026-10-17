@@ -23,13 +23,13 @@ blender -b -P sketches/core-loop/tools/blender/camp/render.py -- --layout --mode
 
 ## Skee-ball physics check
 
-`scripts/cloud/skee_lab` is a headless Godot 4.7.2 project (Jolt, 90 ticks) that loads the lane's collision as a trimesh and rolls the game's ball (radius 1, mass 6, friction 0.9, bounce 0.25) up the lane at 9 to 20 m/s and three x offsets. It fails if any roll in the 11 to 18 m/s band ends neither in a cup nor back at the return.
+`scripts/cloud/skee_lab` is a headless Godot 4.7.2 project (Jolt, 90 ticks) that loads the lane's collision as a trimesh, stands it on a ground plane and rolls the game's ball up it. The ball mirrors `rigid_ball.gd`: radius 1, mass 6, friction 0.9, bounce 0.25, angular damping 0.25, gravity 26 m/s² (`gravity_scale` 26/9.8), the game's ground probe, rolling resistance 0.30 on the ground and the over-speed drag in the air. The lab header lists each force and what it leaves out. Forward is held to the lip, then released: the drive (torque and force, fading out at cruise 14 m/s) runs until the ball passes the lane's `lip` socket, then all input stops. Every start speed from 9 to 20 m/s, at three x offsets, is rolled twice: forward held alone, and forward held with boost held (one 11 m/s boost at the start, as a held key gives one press). Every roll in both sets is gated. Each must end in a cup or at `return_exit` within 60 s, and a ball at rest anywhere else fails. The run also needs at least 3 distinct cups across both sets.
 
 ```sh
 $GODOT_BIN --headless --path scripts/cloud/skee_lab -s lab.gd -- "$PWD/sketches/core-loop/assets/models/camp/camp_skee_lane.glb"
 ```
 
-On the committed lane, all 27 rolls score or return. Straight rolls reach the 10, 20 and 40 cups; the 50 and 100 cups need the player to steer.
+On the committed lane, all 54 rolls score or return, and the real-time run takes about 10 minutes (612 s). Straight rolls with forward held all reach the 10 cup or the return. With boost held, centre rolls reach the 20 and 50 cups, and offset rolls mostly return. The 30, 40 and 100 cups need the player to steer. Spreading scores across the cups is wave 19 tuning, done with this lab.
 
 ## Conventions
 

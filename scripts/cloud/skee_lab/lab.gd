@@ -1,7 +1,7 @@
 extends SceneTree
 # Physics check for camp_skee_lane.glb, outside the game project so nothing imports: rolls the game's ball up the lane at a
-# sweep of speeds and lateral offsets and reports where each roll ends. The ball mirrors rigid_ball.gd with no input held
-# (steering, drive torque, brake, boost, jump and the augment kit are input or kit actions and are left out):
+# sweep of start speeds and lateral offsets and reports where each roll ends. The player holds forward from the start until
+# the ball passes the lane's lip socket (the kicker lip), then releases all input. The ball mirrors rigid_ball.gd:
 #   - body: mass 6, sphere radius 1 (Tuning.RADIUS), friction 0.9, bounce 0.25, continuous CD, never sleeps (setup)
 #   - damping: linear_damp 0 and angular_damp 0.25, both DAMP_MODE_REPLACE (setup)
 #   - gravity: gravity_scale = tuning gravity 26 / 9.8, so the ball falls at 26 m/s^2 (_integrate_forces)
@@ -11,12 +11,22 @@ extends SceneTree
 #   - airborne: over-speed drag (ball_rules.gd over_speed_drag), an impulse of mass * min(speed, QUAD_DRAG 0.0045 *
 #     (speed - cruise 14 * SpeedTier FAST 1.15)^2 * step) against the velocity, above 16.1 m/s only
 #   - start: linear velocity v up the lane with the matching roll spin, as set_velocity_now hands it over (roll_axis)
-# The ball has no downforce, ground speed cap or ground drag: rigid_ball.gd applies none (Rules.stick and Rules.resistance
-# belong to the kinematic ball). external_accel is the flood's push and is zero in camp.
+#   - forward held, straight ahead, until the lip: wish (0, 0, -1), projected on the ground plane when grounded
+#     (ball_rules.gd wish_direction); head = clamp(1 - v.wish / cruise 14, 0, 1), times air_control 0.25 in the air
+#     (drive_head, drive_scale; no sprint, so cruise_boost 1); torque UP x wish * rigid_torque 220 * head and central force
+#     wish * drive_accel 34 * 0.3 * mass * head (rigid_ball.gd _integrate_forces). The drive adds nothing at or above 14 m/s.
+#   - boost set: every start is rolled twice, forward held alone and forward held with boost (shift) held. Held shift is one
+#     press (player_ball.gd _read_shift reads just_pressed), so the boost fires once at the start: ball_rules.gd boost(), an
+#     impulse of BOOST_IMPULSE 11 m/s * mass along the velocity (along the wish below 2.5 m/s), then a 1.1 s cooldown that
+#     a held key never re-arms. Sprint is a class burst from the augment kit, not the base ball, and is left out.
+#   - after the lip no input at all: steering, brake, boost, jump and the augment kit are never used
+# The ball has no downforce, ground speed cap or ground drag beyond these: rigid_ball.gd applies none (Rules.stick and
+# Rules.resistance belong to the kinematic ball). external_accel is the flood's push and is zero in camp.
 # A roll is "return" only when the ball centre reaches the return_exit socket beside the lane's foot (within HOME_R across,
 # HOME_DY in height). The lane stands on a ground plane at y 0, and each roll starts on that ground 2 m in front of the foot.
-# PASS needs every roll in the sweep (9 to 20 m/s) to end in a cup or at the return within TIME_LIMIT s, and at least
-# MIN_CUPS distinct cups reached; a roll that comes to rest anywhere else (STUCK_TIME), or is still rolling at the limit, fails.
+# PASS needs every roll in both sets (start speeds 9 to 20 m/s, three offsets) to end in a cup or at the return within
+# TIME_LIMIT s, and at least MIN_CUPS distinct cups reached across both sets; a roll that comes to rest anywhere else
+# (STUCK_TIME), or is still rolling at the limit, fails. The cups each set reached are printed.
 #   $GODOT_BIN --headless --path scripts/cloud/skee_lab -s lab.gd -- "$PWD/sketches/core-loop/assets/models/camp/camp_skee_lane.glb"
 var cups := {}
 var start := Vector3.ZERO
@@ -34,6 +44,16 @@ const ROLLING_RESISTANCE := 0.30   # tuning.gd "rolling_resistance"
 const MAX_SLOPE_DOT := 0.45        # tuning.gd Tuning.MAX_SLOPE_DOT
 const QUAD_DRAG := 0.0045          # tuning.gd Tuning.QUAD_DRAG
 const FAST_SPEED := 14.0 * 1.15    # tuning.gd "cruise" * speed_tier.gd MULTIPLES[FAST]
+const CRUISE := 14.0               # tuning.gd "cruise": the drive fades to nothing at this speed along the wish
+const DRIVE_ACCEL := 34.0          # tuning.gd "drive_accel"
+const RIGID_TORQUE := 220.0        # tuning.gd "rigid_torque"
+const AIR_CONTROL := 0.25          # tuning.gd "air_control": drive_scale in the air
+var lip_z := INF
+var released := false
+const BOOST_IMPULSE := 11.0        # tuning.gd Tuning.BOOST_IMPULSE (m/s)
+const BOOST_COOLDOWN := 1.1        # tuning.gd Tuning.BOOST_COOLDOWN (s), boost_cooldown_scale 1
+var boost_cd := 0.0
+var boost_fired := false
 const TIME_LIMIT := 60.0
 const MIN_CUPS := 3
 const HOME_R := 1.0                # ball centre within this of return_exit (xz), and within HOME_DY in height
@@ -63,6 +83,8 @@ func _initialize() -> void:
 			start = (n as Node3D).position
 		elif String(n.name) == "return_exit":
 			ret = (n as Node3D).position
+		elif String(n.name) == "lip":
+			lip_z = (n as Node3D).position.z
 	var ground := StaticBody3D.new()   # the camp ground the lane stands on (y 0)
 	var gs := CollisionShape3D.new()
 	gs.shape = WorldBoundaryShape3D.new()
@@ -70,6 +92,7 @@ func _initialize() -> void:
 	root.add_child(ground)
 	print("collision meshes ", col_count, " cups ", cups.keys(), " return_exit ", ret)
 	assert(ret.z > 0.0 and ret.z < 3.5, "return_exit must sit beside the lane's foot")
+	assert(lip_z != INF, "the lane needs a lip socket: forward is held until the ball passes it")
 	probe = ShapeCast3D.new()   # ball_rules.gd make_probe
 	var ps := SphereShape3D.new()
 	ps.radius = 0.92
@@ -90,7 +113,8 @@ func _initialize() -> void:
 	hi_speed = speeds.max()
 	for speed in speeds:
 		for x in xs:
-			queue.append({"speed": speed, "x": x})
+			for boost in [false, true]:
+				queue.append({"speed": speed, "x": x, "boost": boost})
 	_next()
 
 func _next() -> void:
@@ -100,15 +124,21 @@ func _next() -> void:
 	if queue.is_empty():
 		var fails := 0
 		var seen := {}
+		var seen_set := {false: {}, true: {}}
 		for r in results:
 			print(r.line)
 			if r.where.begins_with("cup_"):
 				seen[r.where] = true
+				seen_set[r.boost][r.where] = true
 			if not r.ok:
 				fails += 1
 		var keys := seen.keys()
 		keys.sort()
 		var enough: bool = keys.size() >= MIN_CUPS
+		for b in [false, true]:
+			var ks: Array = seen_set[b].keys()
+			ks.sort()
+			print("cups reached, %s: %s" % ["boost held" if b else "forward held", ks])
 		print("cups reached: ", keys.size(), " ", keys)
 		var pass_all: bool = fails == 0 and enough
 		print("SKEE_LAB %s: %d of %d rolls (%.0f-%.0f m/s, every roll gated) failed; %d distinct cups reached (need %d)" % [
@@ -117,6 +147,9 @@ func _next() -> void:
 		return
 	cur = queue.pop_front()
 	rest_t = 0.0
+	released = false
+	boost_cd = 0.0
+	boost_fired = false
 	ball = RigidBody3D.new()
 	ball.mass = 6.0
 	ball.gravity_scale = GRAVITY / 9.8
@@ -174,12 +207,38 @@ func _physics_process(delta: float) -> bool:
 	probe.global_transform = Transform3D(Basis.IDENTITY, p)
 	probe.force_shapecast_update()
 	var best := -1.0
+	var normal := Vector3.UP
 	for i in probe.get_collision_count():
-		best = maxf(best, probe.get_collision_normal(i).y)
+		var n := probe.get_collision_normal(i)
+		if n.y > best:
+			best = n.y
+			normal = n
+	var grounded := best > MAX_SLOPE_DOT
 	var v := ball.linear_velocity
 	var speed := v.length()
+	if not released and lip_z != INF and p.z < lip_z:
+		released = true   # the ball has passed the kicker lip: forward is let go
+	if not released and ball.is_inside_tree():
+		# Forward held, straight ahead: ball_rules.gd wish_direction, drive_head and drive_scale, then rigid_ball.gd's torque
+		# and central force for that wish (no sprint, so cruise_boost 1; no brake).
+		var wish := Vector3(0, 0, -1)
+		if grounded:
+			wish = wish - normal * wish.dot(normal)
+			wish = wish.normalized() if wish.length_squared() >= 0.0001 else Vector3.ZERO
+		if wish != Vector3.ZERO:
+			var head := clampf(1.0 - v.dot(wish) / CRUISE, 0.0, 1.0) * (1.0 if grounded else AIR_CONTROL)
+			ball.apply_torque(Vector3.UP.cross(wish) * RIGID_TORQUE * head)
+			ball.apply_central_force(wish * DRIVE_ACCEL * 0.3 * ball.mass * head)
+	boost_cd = maxf(0.0, boost_cd - delta)
+	if cur.boost and not released and not boost_fired and boost_cd <= 0.0 and ball.is_inside_tree():
+		# Boost held with forward: shift held gives one boost_pressed (player_ball.gd _read_shift, just_pressed), then
+		# ball_rules.gd boost(): along the velocity above 2.5 m/s, else along the wish; the cooldown starts.
+		var bdir := v.normalized() if speed > 2.5 else Vector3(0, 0, -1)
+		ball.apply_central_impulse(bdir * BOOST_IMPULSE * ball.mass)
+		boost_cd = BOOST_COOLDOWN
+		boost_fired = true
 	if speed > 1e-3 and ball.is_inside_tree():
-		if best > MAX_SLOPE_DOT:
+		if grounded:
 			ball.apply_central_force(-v / speed * ROLLING_RESISTANCE * ball.mass)
 		elif speed > FAST_SPEED:
 			var loss := QUAD_DRAG * (speed - FAST_SPEED) * (speed - FAST_SPEED) * delta
@@ -196,7 +255,8 @@ func _physics_process(delta: float) -> bool:
 		elif not cup and rest_t < REST_TIME:
 			where = "rolling"   # still moving at the limit, not in a cup and not home
 		var ok := where != "stuck" and where != "rolling"
-		results.append({"speed": cur.speed, "ok": ok, "where": where,
-			"line": "v=%5.1f x=%4.1f  -> %-10s at (%.1f, %.1f, %.1f) t=%.1f" % [cur.speed, cur.x, where, p.x, p.y, p.z, t]})
+		results.append({"speed": cur.speed, "ok": ok, "where": where, "boost": cur.boost,
+			"line": "%s v=%5.1f x=%4.1f  -> %-10s at (%.1f, %.1f, %.1f) t=%.1f" % [
+				"boost  " if cur.boost else "forward", cur.speed, cur.x, where, p.x, p.y, p.z, t]})
 		_next()
 	return false

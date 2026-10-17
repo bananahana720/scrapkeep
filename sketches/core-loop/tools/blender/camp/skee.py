@@ -3,18 +3,21 @@
 One WORKING skee-ball lane, played with the player's own 1 m ball and its own physics. Origin at the lane's foot centre on the
 ground; local +Z faces the plaza (the player rolls in from there), the ball rolls up the lane toward -Z.
 
-The lane: 5.5 m between the rails, 23.5 m long. A gentle 0.9 m rise over 20 m (2.6 degrees, surface y 0.1 to 1.0), then a 1.5 m
-jump hump (top y 2.5) whose curve ends at about 35 degrees and throws the ball over a 3 m trough onto the target board.
-Felt-sage baize with mint lane arrows and a mint start bar, 1.4 m copper rails, timber cabinet sides.
+The lane: 5.5 m between the rails, 23.5 m long. A gentle rise of 1.2 m over 20 m (3.4 degrees, surface y 0.1 to 1.3), then a
+kicker: a 1.5 m hump over 3.5 m whose curve steepens to a lip at about 35 degrees (y 2.8, z -23.5) and throws the ball over a
+3 m trough onto the target board. Felt-sage baize with mint lane arrows and a mint start bar, 1.2 m copper rails, timber
+cabinet sides.
 The board: 11.3 m wide, 14.2 m up the slope, inclined 35 degrees (rising toward -Z), with seven cups cut into it, each a real
 pocket in the collision (a 16-sided tube 1.5 m deep with a floor, so a ball can sit in it). Opening radii (m), across the
 board's u (left/right) and v (up the slope): cup_10 r 2.0 (big, low centre), cup_20 r 1.4, cup_30 and cup_40 r 1.3 (left and
 right), cup_50 r 1.25, cup_100_l and cup_100_r r 1.25 (top corners). The pocket is a 16-gon, so the clear inradius is r cos(pi/16);
 the smallest opening is 2.45 m across and the recipe asserts every pocket fits a 1.1 m-radius sphere. A ball that misses a
-cup rolls down the board into the trough, whose floor falls a steady 5.5% (0.48 m over 8.8 m, y 2.08 at the left wall to 1.6)
-toward the return gutter on the +X side and meets the gutter's head with no step. The gutter (x 3.15 to 5.65) falls one steady
-5.2% with no flat stretch (1.56 m over 30 m, from y 1.6 at its head, z -26.5, to 0.04 at its open end, z 3.5) and carries the
-ball under gravity, against the game's 0.30 rolling resistance, past the return_exit socket beside the lane's foot.
+cup rolls down the board into the trough (z -26.5 to -23.5; the kicker's 1.6 m face above it keeps the ball off the lane),
+whose floor falls a steady 3% toward the return gutter on the +X side (y 1.214 at x -5.65 to 0.95 at x 3.15) and meets the
+gutter's head with no step. The gutter (x 3.15 to 5.65) falls one steady 3% with no flat stretch, 0.9 m over 30 m, from y 0.95
+at its head (z -26.5) to 0.05 at its open end (z 3.5), and carries the ball past the return_exit socket beside the lane's foot.
+3% beats the player ball's rolling resistance: at the game's gravity of 26 m/s^2 a rolling ball runs down it at (5/7) 26 0.03
+= 0.56 m/s^2 against 0.30 (tuning.gd), and check_base asserts the margin.
 The scoreboard arch stands over the board: two posts and a header with blank amber number panels (runtime draws the digits)
 and a copper crown carrying marquee bulbs.
 
@@ -22,10 +25,11 @@ Class park_large for the lane, detail for both shells. Colour: felt-sage lane, m
 timber cabinet sides, amber score panels. No hazard red, no letters.
 Collision (everything solid and closed so the ball cannot tunnel): the lane body, both rails, the hump, the trough, the gutter and
 its walls, the board with its seven pockets, the side walls, the backstop, the arch posts and header.
+Physics check: scripts/cloud/skee_lab/lab.gd (README "Skee-ball physics check").
 Sockets: start (foot centre, y 1.0), cup_10 .. cup_50, cup_100_l, cup_100_r (each at its cup's floor centre), score (scoreboard
-face centre), return_exit (4.4, 1.092, 2.5): the centre of a ball rolling in the gutter beside the lane's foot, 1 m before its
-open end, where the gutter delivers the ball), interact (ball height just in front of the foot) and light_00 .. light_10
-(marquee bulb centres).
+face centre), return_exit (4.4, 1.08, 2.5: the centre of a ball rolling in the gutter beside the lane's foot, 1 m before its
+open end), lip (0, 3.8, -23.5: the ball centre on the kicker lip; the physics lab holds forward until the ball passes it),
+interact (ball height just in front of the foot) and light_00 .. light_10 (marquee bulb centres).
 
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/camp/skee.py [-- --out-dir DIR] [--count-only]
 """
@@ -39,43 +43,13 @@ import _camp as cp
 T = cp.T
 T["amber_dk"] = "9a6a16"
 
-LANE_HW, RAIL_T, RAIL_H = 2.75, 0.4, 1.4
-LANE_L = 12.0                    # foot to kicker lip
-RISE = 0.0                       # rise of the run before the kicker
-KICK_L = 1.8                     # kicker length (the end of the lane)
-KICK_H = 0.72                    # kicker height
-RUN = LANE_L - KICK_L
+LANE_HW, RAIL_T, RAIL_H = 2.75, 0.4, 1.2
+LANE_L, RISE, HUMP_H, HUMP_L = 23.5, 1.2, 1.5, 3.5
 CAB = 6.05                       # cabinet half width, outside of the walls
-W = 5.65                         # clear half width of board, troughs and gutter
-GX = LANE_HW + RAIL_T            # inner edge of the gutter (x), where the troughs drain into it
-# The ball is the player's: gravity 26 m/s^2 and a grounded rolling resistance of 0.30 m/s^2 (tuning.gd). A rolling sphere
-# runs down a fall s at (5/7) g s, so every drain floor falls at least FALL, which beats the resistance by half again.
-G_GAME, RR_GAME = 26.0, 0.30
-FALL = 0.03
-FRONT_L = 2.6                    # front trough (between the kicker and the front wall), along z
-WALL_T = 0.4                     # front wall thickness
-BACK_L = 2.4                     # back channel (between the front wall and the board's foot), along z
-Z_FRONT = -LANE_L - FRONT_L      # far edge of the front trough
-Z_WALL = Z_FRONT - WALL_T        # far face of the front wall
-Z0 = Z_WALL - BACK_L             # board foot z
-GUT_END = 1.0                    # the gutter's open end (z), beside the lane's foot
-RET_Z = 0.5                      # return_exit: the ball centre over the gutter's last half metre
-
-
-def gut_floor(z):
-    """The gutter floor: one steady fall FALL from its head (z0) to its open end."""
-    return 0.05 + FALL * (GUT_END - z)
-
-
-GUT = [(Z0, gut_floor(Z0)), (GUT_END, gut_floor(GUT_END))]      # gutter floor (z, y)
-FRONT = [(-W, gut_floor(Z_FRONT) + FALL * (GX + W)), (GX, gut_floor(Z_FRONT))]   # front trough floor (x, y), falls toward +X
-BACK = [(-W, gut_floor(Z0) + FALL * (GX + W)), (GX, gut_floor(Z0))]               # back channel floor (x, y), falls toward +X
-WALL_H = BACK[0][1] + 0.9        # front wall top: 0.9 m over the back channel's highest point
-TWALL = WALL_H + 0.8             # top of the troughs' left wall and of the cabinet end wall beside the kicker
+W = 5.65                         # clear half width of board, trough and gutter
 TH = math.radians(35.0)
 ST, CT = math.sin(TH), math.cos(TH)
-Y0 = 1.3                         # board foot height: above the back channel, and high enough that cup_10's pocket clears the ground
-BL = 14.2                        # board length up the slope
+Z0, Y0, BL = -26.5, 1.65, 14.2   # board foot z, foot height, length up the slope
 Z_END, Y_END = Z0 - BL * CT, Y0 + BL * ST
 DEPTH = 1.5
 NSEG = 16
@@ -87,7 +61,7 @@ CUPS = {                          # id: (u, v, opening radius)
 BAND = {"cup_10": "bone", "cup_20": "bone", "cup_30": "sandstone", "cup_40": "sandstone", "cup_50": "amber",
         "cup_100_l": "amber", "cup_100_r": "amber"}
 
-ARCH_Z0, ARCH_Z1 = Z0 - 8.9, Z0 - 7.5   # post and header depth
+ARCH_Z0, ARCH_Z1 = -35.4, -34.0      # post and header depth
 HEAD_Y0, HEAD_Y1 = 11.6, 14.4
 FACE_Z = ARCH_Z1 + 0.15
 CROWN_R, CROWN_CY = 14.4, 1.5
@@ -97,16 +71,28 @@ def lane_h(d):
     """Lane surface height at distance d up the lane (0 at the foot)."""
     if d < 0.0:
         return 0.06 + 0.04 * (d + 0.6) / 0.6
-    if d <= RUN:
-        return 0.1 + RISE * d / RUN
-    t = (d - RUN) / KICK_L
-    return 0.1 + RISE + KICK_H * t * t
+    if d <= LANE_L - HUMP_L:
+        return 0.1 + RISE * d / (LANE_L - HUMP_L)
+    t = (d - (LANE_L - HUMP_L)) / HUMP_L
+    return 0.1 + RISE + HUMP_H * (0.35 * t + 0.65 * t * t)
 
 
 def lane_rows():
-    rows = [-0.6, 0.0] + [RUN * k / 4 for k in range(1, 5)]
-    rows += [RUN + KICK_L * i / 7 for i in range(1, 8)]
+    run = LANE_L - HUMP_L
+    rows = [-0.6, 0.0] + [run * k / 5 for k in range(1, 6)]
+    rows += [run + HUMP_L * i / 7 for i in range(1, 8)]
     return rows
+
+
+# The ball is the player's: gravity 26 m/s^2 and a grounded rolling resistance of 0.30 m/s^2 (tuning.gd). A rolling sphere
+# runs down a fall s at (5/7) g s, so every drain floor falls at least FALL, which beats the resistance by half again.
+G_GAME, RR_GAME = 26.0, 0.30
+FALL = 0.03
+GX = LANE_HW + RAIL_T            # inner edge of the gutter (x), where the trough drains into it
+GUT_END = 3.5                    # the gutter's open end (z), beside the lane's foot
+RET_Z = 2.5                      # return_exit: the ball centre over the gutter's last metre
+GUT = [(Z0, 0.05 + FALL * (GUT_END - Z0)), (GUT_END, 0.05)]       # gutter floor (z, y): one steady fall FALL, head to end
+TROUGH = [(-W, GUT[0][1] + FALL * (GX + W)), (GX, GUT[0][1])]    # trough floor (x, y): falls FALL toward the gutter's head
 
 
 def gut_y(z):
@@ -255,18 +241,15 @@ def structure(s, col=False):
         x0, x1 = sorted((sx * LANE_HW, sx * (LANE_HW + RAIL_T)))
         topped(s, side, flat_bot(side), x0, x1, "timber_lt", "timber", "x")
         topped(s, [(z, y + RAIL_H) for z, y in side], side, x0, x1, "copper", "copper", "x")
-    # The front trough catches a ball that drops off the kicker short of the front wall; the back channel at the board's foot
-    # catches a ball that rolls back down the board, and the front wall (0.9 m over it) turns that ball back so it cannot
-    # cross onto the lane. Both floors fall FALL toward +X and meet the gutter with no step up.
-    topped(s, FRONT, flat_bot(FRONT), Z_FRONT, -LANE_L, "iron_hi", "timber", "z")
-    topped(s, BACK, flat_bot(BACK), Z0, Z_WALL, "iron_hi", "timber", "z")
-    topped(s, [(Z_FRONT, WALL_H), (Z_WALL, WALL_H)], flat_bot([(Z_FRONT, 0), (Z_WALL, 0)]), -W, GX, "timber_lt", "timber", "x")
-    topped(s, [(Z0, TWALL), (-LANE_L, TWALL)], flat_bot([(Z0, 0), (-LANE_L, 0)]), -CAB, -W, "timber_lt", "timber", "x")
-    # A cabinet end wall closes the troughs' left side where the kicker ends, so a ball cannot roll off beside the lane.
-    s.box((CAB - GX, TWALL, 0.6), (-(CAB + GX) / 2, TWALL / 2, -LANE_L + 0.3), T["timber"])
-    # Return gutter and its outer wall: one steady FALL from the board's foot to its open end beside the lane's foot.
+    # Trough between the hump and the board: the floor falls FALL toward the gutter (+X) and meets its head at x = 3.15 with
+    # no step; left wall.
+    topped(s, TROUGH, flat_bot(TROUGH), Z0, -LANE_L, "iron_hi", "timber", "z")
+    topped(s, [(Z0, 3.05), (-LANE_L, 3.05)], flat_bot([(Z0, 0), (-LANE_L, 0)]), -CAB, -W, "timber_lt", "timber", "x")
+    # A cabinet end wall closes the trough's left side where the hump ends, so a ball cannot roll off beside the lane.
+    s.box((CAB - 3.15, 3.05, 0.6), (-(CAB + 3.15) / 2, 3.05 / 2, -LANE_L - 0.3 + 0.6), T["timber"])
+    # Return gutter and its outer wall: one steady fall FALL from the trough to its open end beside the lane's foot.
     gz = list(GUT)
-    topped(s, gz, flat_bot(gz), GX, W, "iron_hi", "timber", "x")
+    topped(s, gz, flat_bot(gz), 3.15, W, "iron_hi", "timber", "x")
     topped(s, [(z, y + 1.65) for z, y in gz], flat_bot(gz), W, CAB, "timber_lt", "timber", "x")
     # Board side walls (the plane raised 1.4 m), the backstop, the arch.
     bw = [(Z_END, Y_END + 1.4), (Z0, Y0 + 1.4)]
@@ -324,10 +307,10 @@ def base(s):
     for sx in (-1, 1):
         strip(s, 0.0, LANE_L - 0.6, sx * 2.45 - 0.07, sx * 2.45 + 0.07, 0.015, "bone")
     strip(s, 1.2, 1.8, -2.3, 2.3, 0.02, "mint")
-    for k, f in enumerate((0.3, 0.6, 0.9)):
-        chevron(s, RUN * f, "mint" if k % 2 == 0 else "mint_dk")
-    for f in (0.45, 0.75):
-        strip(s, RUN * f, RUN * f + 0.14, -2.3, 2.3, 0.012, "bone")
+    for k, d in enumerate((3.2, 7.2, 11.2, 15.2, 18.8)):
+        chevron(s, d, "mint" if k % 2 == 0 else "mint_dk")
+    for d in (6.0, 10.0, 14.0, 18.0):
+        strip(s, d, d + 0.14, -2.3, 2.3, 0.012, "bone")
     y6, y7 = lane_h(LANE_L - 0.5), lane_h(LANE_L)
     topped(s, [(-(LANE_L - 0.5), y6 + 0.04), (-LANE_L, y7 + 0.04)], [(-(LANE_L - 0.5), y6), (-LANE_L, y7)],
            -LANE_HW, LANE_HW, "copper", "copper_dk", "x")
@@ -340,8 +323,7 @@ def base(s):
     for x0, x1 in ((-CAB - 0.05, -W + 0.05), (W - 0.05, CAB + 0.05)):
         cap(s, bw, x0, x1, 0.12, "copper", "copper_dk")
     cap(s, gz, W - 0.05, CAB + 0.05, 0.12, "copper", "copper_dk")
-    cap(s, [(Z0, TWALL), (-LANE_L, TWALL)], -CAB - 0.05, -W + 0.05, 0.12, "copper", "copper_dk")
-    cap(s, [(Z_FRONT + 0.05, WALL_H), (Z_WALL - 0.05, WALL_H)], -W, GX, 0.12, "copper", "copper_dk")
+    cap(s, [(Z0, 3.05), (-LANE_L, 3.05)], -CAB - 0.05, -W + 0.05, 0.12, "copper", "copper_dk")
     s.box((2 * CAB + 0.2, 0.18, 0.8), (0, Y_END + 2.69, Z_END - 0.3), T["copper"])
     cup_decor(s)
     # Scoreboard: frame, six blank amber panels (runtime draws digits), copper crown with marquee bulbs.
@@ -366,7 +348,7 @@ def base(s):
 
 def detail1(s):
     side = lane_profile()
-    zs = [-d for d in (1.0, 0.3 * LANE_L, 0.55 * LANE_L, 0.8 * LANE_L)]
+    zs = [-d for d in (1.0, 4.5, 8.0, 11.5, 15.0, 18.5, 21.5)]
     for sx in (-1, 1):
         for z in zs:
             y = lane_h(-z) + RAIL_H * 0.5 + 0.2
@@ -376,12 +358,12 @@ def detail1(s):
         for sx in (-1, 1):
             xo = sx * (LANE_HW + RAIL_T)
             x0, x1 = sorted((xo, xo + sx * 0.03))
-            a, b = (0.0, lane_h(0.0)), (-RUN, lane_h(RUN))
+            a, b = (0.0, lane_h(0.0)), (-20.0, lane_h(20.0))
             topped(s, [(a[0], a[1] * f + 0.03), (b[0], b[1] * f + 0.03)], [(a[0], a[1] * f - 0.03), (b[0], b[1] * f - 0.03)],
                    x0, x1, "timber", "timber", "x")
     for k in range(9):
-        z = Z0 + 2.0 + 3.0 * k
-        if z > GUT_END - 0.5:
+        z = -22.0 + 3.0 * k + 0.0
+        if z > 3.0:
             break
         s.box((2.4, 0.07, 0.22), (4.4, gut_y(z) + 0.035, z), T["iron"])
     for sx in (-1, 1):
@@ -408,6 +390,7 @@ def detail2(s):
 
 def sockets():
     out = {"start": (0.0, 1.0, 0.0), "score": (0.0, 13.0, FACE_Z + 0.1), "return_exit": (4.4, gut_y(RET_Z) + 1.0, RET_Z),
+           "lip": (0.0, lane_h(LANE_L) + 1.0, -LANE_L),
            "interact": (0.0, 1.0, 1.5)}
     for cid, (u, v, r) in sorted(CUPS.items()):
         out[cid] = P(u, v, -DEPTH + 0.0)
@@ -429,15 +412,13 @@ def check_base(s):
     assert 5.0 / 7.0 * G_GAME * FALL >= 1.5 * RR_GAME, "drain fall does not beat rolling resistance"
     for (z0, y0), (z1, y1) in zip(GUT, GUT[1:]):
         assert (y0 - y1) / (z1 - z0) >= FALL - 1e-9, ("gutter falls less than FALL", z0, z1)
-    for floor, z_far in ((FRONT, Z_FRONT), (BACK, Z0)):
-        (x0, y0), (x1, y1) = floor
-        assert (y0 - y1) / (x1 - x0) >= FALL - 1e-9 and y1 >= gut_y(z_far) - 1e-9, ("trough fall or step", floor)
-    assert lane_h(LANE_L) >= FRONT[0][1] - FALL * (W - LANE_HW) + 0.15, "kicker lip must stand over the front trough"
-    assert WALL_H - BACK[0][1] >= 0.85 and Y0 >= BACK[0][1] - 1e-9, "front wall or board foot"
-    assert GUT[0][0] == Z0 and 0.0 < RET_Z < GUT_END, "gutter head or return_exit"
+    for (x0, y0), (x1, y1) in zip(TROUGH, TROUGH[1:]):
+        assert (y0 - y1) / (x1 - x0) >= FALL - 1e-9, ("trough falls less than FALL", x0, x1)
+    assert GUT[0][0] == Z0 and abs(GUT[0][1] - TROUGH[-1][1]) < 1e-9 and 0.0 < RET_Z < GUT_END, "gutter head or return_exit"
+    assert TROUGH[0][1] <= Y0 and lane_h(LANE_L) - TROUGH[0][1] >= 1.0, "trough under the board's foot and the hump's lip"
     lo, hi = cp.bounds(s)
     assert abs(lo[1]) < 0.01 and 15.5 < hi[1] < 16.6, ("height", lo, hi)
-    assert 2 * LANE_HW == 5.5 and abs(lane_h(LANE_L) - lane_h(RUN) - KICK_H) < 1e-6
+    assert 2 * LANE_HW == 5.5 and abs(lane_h(LANE_L) - lane_h(LANE_L - HUMP_L) - HUMP_H) < 1e-6
     assert lo[2] > -39.5 and hi[2] <= 4.0, ("length", lo, hi)
 
 
