@@ -23,6 +23,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const PARK_MAPS_FILE = "src/core/park_defs.gd";
 export const GREYBOX = "greybox:";
+export const LANDMARK_DRESSED = "landmark";
+// park_recipes.gd: the park's ground scatter dresses the row, so it is no stand-in.
+export const SCATTER_DRESSED = "scatter";
 export const TEXT_MARKER = /\b(todo|tbd|fixme|xxx|lorem|placeholders?|coming soon|not yet implemented)\b/i;
 // Calls whose text goes to the log, not the screen.
 export const LOG_CALL = /\b(print|prints|printerr|print_rich|push_warning|push_error|assert|_warn|_warn_once|_fail)\s*\(/;
@@ -123,8 +126,16 @@ export function parkGreybox(map, doc, glbExists) {
     const recipe = row.recipe;
     let element = null;
     let why = "";
+    if (recipe === SCATTER_DRESSED) continue;
     if (recipe.startsWith(GREYBOX)) element = recipe.slice(GREYBOX.length);
-    else if (recipe !== "" && !glbExists(recipe, group)) {
+    else if (recipe === LANDMARK_DRESSED) {
+      // park_recipes.gd: the landmark's own model dresses the row, so it stands in until that GLB lands.
+      const mark = doc.landmark?.recipe ?? "";
+      if (mark === "" || !glbExists(mark, "")) {
+        element = row.element ?? recipe;
+        why = ` (dressed by landmark ${mark || "?"}, which has no GLB)`;
+      }
+    } else if (recipe !== "" && !glbExists(recipe, group)) {
       element = row.element ?? recipe;
       why = ` (recipe ${recipe} has no GLB)`;
     }
