@@ -38,6 +38,7 @@ const Stamps := preload("res://src/world/park/park_stamps.gd")
 const LandmarkProxy := preload("res://src/presentation/landmark_proxy.gd")
 const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
 const WardenMind := preload("res://src/combat/warden_mind.gd")
+const IsleRig := preload("res://src/world/park/isle_rig.gd")
 
 const BUDGETS_PATH := "res://assets/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
@@ -150,6 +151,7 @@ const LANDMARK := "landmark"
 # on the GLB's tether, so the pivot stays put when the hand's anchor moves (PW1 lowered it to 66).
 const BEAM_ROOT := "beam_root"
 const ANCIENT_BEAM := "ancient_beam"
+const TIP_SUFFIX := "_tip"
 
 static var _budgets := {}
 static var _origins := {}
@@ -523,7 +525,24 @@ static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable(
 	node.set_meta("landmark_kind", kind)
 	if String(row.get("light", "")) == ANCIENT_BEAM and root is Vector3:
 		LandmarkBeam.make(node, node.transform * (root as Vector3), float(row["sight_top"][1]), anchor_y)
+	if kind == "sky_island":
+		IsleRig.attach(node, null if node.has_meta("landmark_proxy") else _tip_shape(row))
 	return node
+
+
+# The Hanging Isle's moving tip (ISLE-TIP): the tip GLB's -col trimesh at its place in the landmark node, for
+# isle_rig.gd's IsleTip body; null when the GLB is missing.
+static func _tip_shape(row: Dictionary) -> CollisionShape3D:
+	var out: CollisionShape3D = null
+	for scene: Node in _load(GLB_DIR + String(row["recipe"]) + TIP_SUFFIX + ".glb"):
+		for source: MeshInstance3D in scene.find_children("*" + COL_SUFFIX, "MeshInstance3D", true, false):
+			if out == null and source.mesh != null:
+				out = CollisionShape3D.new()
+				out.name = "TipShape"
+				out.shape = _trimesh(source)
+				out.transform = Transform3D(Basis.IDENTITY, ride_frame(row)["origin"]) * _relative(source, scene)
+		scene.free()
+	return out
 
 
 # The beam_root empty of a landmark GLB, in its own space; null when it has none. Read once per GLB.

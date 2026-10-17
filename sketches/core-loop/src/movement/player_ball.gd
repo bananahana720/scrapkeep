@@ -507,7 +507,8 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		if body.has_method("flash"):
 			body.flash()
 		events.harpoon_bit.emit(body, point)
-	_publish_chain(chain.link(body != null and not (body.is_in_group(Augments.STAKE_GROUP)), state.grounded), body, point)
+	_publish_chain(chain.link(body != null and not body.is_in_group(Augments.STAKE_GROUP)
+		and not body.is_in_group(Augments.WORLD_ANCHOR_GROUP), state.grounded), body, point)
 
 
 func release_grapple() -> void:
