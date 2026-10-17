@@ -99,7 +99,7 @@ func _run() -> void:
 	# --- The row ---------------------------------------------------------------------------
 	var row := ActiveDefs.row(ID)
 	_t.check("01 the torch is a rare Redjaw Workshops active with a 0.3 s wind-up",
-		row.get("maker") == "redjaw_workshops" and row.get("rarity") == "rare" and is_equal_approx(float(row.get("windup", 0.0)), 0.3), str(row))
+		row.get("maker") == "redjaw" and row.get("rarity") == "rare" and is_equal_approx(float(row.get("windup", 0.0)), 0.3), str(row))
 	_t.check("02 its launch sound has a recipe", SfxBank.has_recipe("active_" + ID) and SfxBank.samples("active_" + ID).size() > 0)
 	_t.check("03 the rack takes it", _rack.rack(ID) and _rack.active_id == ID)
 	_torch = _rack._kinds[ID]
