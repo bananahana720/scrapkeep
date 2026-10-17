@@ -12,7 +12,7 @@ sketches/core-loop/tools/blender/camp/build_all.sh /tmp/x     # a scratch build;
 python3 sketches/core-loop/tools/fold_registry.py             # fold the fragment into assets/registry.json
 ```
 
-There are 9 recipes and 34 GLBs. Every recipe rebuilds byte-identically. `build_all.sh` prints one `CAMP_EXPORT` row per GLB, with its sha256. Every GLB is one `enamel` draw with COLOR_0 vertex colour, the same as the park contraptions. Its class budget in `assets/asset_budgets.json` covers the drawn mesh plus the collision mesh, which is what `npm run asset:inspect` counts. Every part is a closed solid: `export` casts a ray grid from above and from four sides and fails the build if more than 0.3% of first hits land on a back face.
+There are 8 recipes and 34 GLBs. Every recipe rebuilds byte-identically. `build_all.sh` prints one `CAMP_EXPORT` row per GLB, with its sha256. Every GLB is one `enamel` draw with COLOR_0 vertex colour, the same as the park contraptions. Its class budget in `assets/asset_budgets.json` covers the drawn mesh plus the collision mesh, which is what `npm run asset:inspect` counts. Every part is a closed solid: `export` casts a ray grid from above and from four sides and fails the build if more than 0.3% of first hits land on a back face.
 
 To render previews with Cycles on the CPU:
 
@@ -37,13 +37,13 @@ On the committed lane, all 27 rolls score or return. Straight rolls reach the 10
 - Facing: local +Z faces the plaza. `layout.yaw_to_centre` turns a piece's +Z toward the spawn.
 - Collision: the node is named `<id>-col-col`. The Godot importer strips one `-col`, so the node becomes `<id>-col`, the name `park_recipes.gd` looks for. It holds only the solids the ball or harpoon should hit.
 - Sockets: empties that the runtime wires to.
-  - `interact` sits at ball height on the plaza side of every station.
+  - `interact` sits at ball height on the plaza side of the lockers, Moss's stall, the trophy wall, the settings console and the call box. The gate uses `launch_trigger`, the pet pen `pet_home`, the skee lane `start`, the trial `start` and the sandbox `entry`.
   - `light_*` empties sit at bulb centres; the runtime adds the lights.
   - Each station has its own named sockets, listed in its recipe header.
 - Colour: the game palette.
-  - Mint marks only what the player uses: the launch pad, the shortcut, thresholds, the skee lane, the trial start, and the console knob, call-box lever and dial.
-  - Amber marks scores and medals.
-  - Copper marks machinery. Brass is used only on the Fleet requisition tag.
+  - The colour law in `design-v3/LEGIBILITY.md`. Mint is live: what the player uses (the launch pad, thresholds, the skee lane, the trial start, the console knob, the call-box lever and dial). Amber is the world offering or paying: scores, medals, rides (the gate marquee, the shortcut and trial chevrons) and firelight.
+  - Pilot class colours appear only on each pilot's own locker, emblem and gear, as the pilot UI already uses them.
+  - Copper marks machinery. Brass is used only on Fleet requisition marks: the tags and the sandbox spawn grate's chevron.
   - There is no hazard red and no lettering. Labels are runtime UI.
 
 ## Layout
@@ -74,10 +74,10 @@ These are for the wave coordinator, who owns `src/` and the camp scene. Each not
 | --- | --- |
 | C1 | Add a camp scene that places the pieces at `layout.py`'s positions and yaws. Take the ground and backdrop from a stage's terrain or a small canyon bench. `camp_menu.gd` says the full camp scene replaces it. |
 | C2 | Each `-col` node becomes a StaticBody3D on the world layer, as `park_recipes.gd` does today. |
-| C3 | Wire every `interact` socket to the screen it stands for: Launch, Customize and the lockers, Moss's shop and Companion, Achievements, Settings. |
+| C3 | Wire every `interact` socket to the screen it stands for: Customize at the lockers, Moss's shop and Companion, Achievements, Settings, and the sandbox enemy picker at the call box. Launch is `launch_trigger` on the gate pad. |
 | C4 | Skee-ball: put sensors at `cup_*`. Each cup's radius is in the `skee.py` header. Scores go to the blank amber panels at `score`, and the ball respawns at `return_exit`. See the [physics check](#skee-ball-physics-check). |
 | C5 | Time trial: put checkpoints at `checkpoint_0..3`, start and finish at `start` and `finish`, and draw the ghost line from `ghost_00..31`. Medal lamps go at `light_bronze`, `light_silver` and `light_gold`. The timer digits go at `timer`. |
 | C6 | Sandbox: the enemy picker sits at `camp_call_box` (`dial`, `lever`). Called enemies spawn at `enemy_spawn_0..3` on the grate. |
-| C7 | Pet: animate the head, tail and paws from the pivot sockets, and add fetch using the toys. The pet idles at the pen's `pet_home`. |
+| C7 | Pet: the drone is one welded mesh, so animate the whole body (hop, tilt, wag-bob) as a node; limb animation needs a split or skinned re-export. Carry toys at `mouth`, put the eye light at `eye`, and idle at the pen's `pet_home`. |
 | C8 | Lights: add an OmniLight3D at each `light_*` socket, warm for lamps and amber for marquees. Keep the count inside the frame budget. |
 | C9 | Registry: `assets/registry.d/camp.json` has 34 rows, all `ships: false` until C1 loads them. **The folded `assets/registry.json` conflicts with every other open registry PR.** Re-run `tools/fold_registry.py` after merging rather than hand-merging. |

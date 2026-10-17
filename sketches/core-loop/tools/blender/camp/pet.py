@@ -8,8 +8,8 @@ round warm lamp eye (glass_lt lens in a copper bezel, never mint), a smile slot,
 it, an antenna "tail" with a bolt on its tip, four stubby legs, and Moss's repairs: a riveted copper patch band round the belly
 and a bone bandage wrap on the front-right leg. One ear is bent and the head sits a little off true: the dent.
 Origin on the ground under its centre, facing +Z. "Left" is the pet's own left, which is +X when it faces +Z. Class enemy, one
-draw, no collision. Sockets: head, eye, tail, mouth (where it carries a toy), paw_fl, paw_fr, paw_bl, paw_br (animation pivots,
-at the paws' ground contact).
+draw, no collision. Sockets: head, eye, tail, mouth (where it carries a toy), paw_fl, paw_fr, paw_bl, paw_br (the paws' ground
+contacts, for footstep dust). The body is one welded mesh, so these mark points; they do not move parts.
 
 camp_pet_pen: the pet's yard, a low ring fence of 9 m radius with a 9 m gap facing +Z (the plaza side), a kennel made from a cut
 oil drum with a little copper roof (entrance facing +Z), a food bowl full of bolts, a toy-bin crate and a worn patch of dirt.
@@ -328,7 +328,6 @@ def tire_col(s):
 
 def main():
     args = cp.options()
-    base = cp.surface("camp_pet", pet)
     cp.export("camp_pet", pet, "enemy", args, sockets=pet_sockets(), check=check_pet)
     cp.export("camp_pet_pen", pen, "detail", args, col=pen_col, sockets=pen_sockets(), check=check_pen)
     cp.export("camp_toy_ball", ball, "prop", args, col=ball_col)

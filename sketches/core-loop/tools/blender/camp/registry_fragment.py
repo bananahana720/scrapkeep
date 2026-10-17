@@ -37,7 +37,7 @@ def main():
             "loader": "none (camp scene wiring pending, wave 19 machine work)",
             "provenance": {
                 "recipe": "tools/blender/camp/%s.py" % recipe_for(stem),
-                "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts "
+                "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts "
                          "(tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. "
                          "sha256 " + r["sha256"],
             },

@@ -29,7 +29,7 @@ STATIONS = {
 
 TRIAL_AT = (122.0, 0.0, -20.0)      # the time-trial track's centre, east of the ring
 SANDBOX_AT = (-122.0, 0.0, 10.0)    # the any-enemy sandbox yard's centre, west of the ring
-SHORTCUT_AT = (0.0, 0.0, -31.0)     # the shortcut ramp's foot sits just past the plaza rim on the gate spoke
+SHORTCUT_AT = (0.0, 0.0, -36.0)     # the shortcut ramp's centre: its foot sits 1 m past the plaza rim, its lip at the ring walk
 
 
 # Dressing on the ring walk's outer edge and round the plaza: (glb stem, bearing, radius, yaw offset in degrees from

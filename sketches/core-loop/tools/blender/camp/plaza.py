@@ -10,7 +10,7 @@ Collision: the slab tops and chamfers (flat, so the ball's rolling feel is the g
 Sockets: spawn (where the ball wakes, facing -Z) and station_<id> on the ring where each spoke meets it.
 
 camp_shortcut: the mint ramp on the gate spoke. A kicker 6 m wide and 18 m long rising to 3 m that throws a cruising ball
-over the spoke so it lands at the gate in about two seconds. Origin at the ramp's foot centre on the ground; +Z faces the
+over the spoke so it lands at the gate in about two seconds. Origin at the ramp's centre on the ground (the foot is 9 m toward +Z, the lip 9 m toward -Z); +Z faces the
 plaza, so the ball runs up it toward -Z. Class detail. Collision: the deck and the cheeks.
 
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/camp/plaza.py [-- --out-dir DIR] [--count-only]
