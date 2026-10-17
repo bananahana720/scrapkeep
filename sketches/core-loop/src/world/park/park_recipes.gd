@@ -88,6 +88,7 @@ const ROWS := {
 	"bench_coping": {"family": "bowls", "budget": "landform"},
 	"tailings_lip": {"family": "bowls", "budget": "landform"},
 	"pit_haul_ramp": {"family": "bowls", "budget": "landform"},
+	"pit_haul_lane": {"family": "bowls", "budget": "landform"},
 	"lava_tube_run": {"family": "tunnels", "budget": "park_large"},
 	"adit_mouth": {"family": "tunnels", "budget": "park_large"},
 	"shaft_drop": {"family": "tunnels", "budget": "park_large"},
@@ -114,6 +115,9 @@ const ROWS := {
 	"anchor_timber": {"family": "anchors", "budget": "detail"},
 	"anchor_saguaro": {"family": "anchors", "budget": "detail"},
 	"anchor_cairn": {"family": "anchors", "budget": "detail"},
+	"ore_bin": {"family": "workings", "budget": "landform"},
+	"ore_bin_row": {"family": "workings", "budget": "landform"},
+	"timber_portal": {"family": "workings", "budget": "detail"},
 }
 
 # Each element's ride fact by its section 4 family; a row's own ride_fact wins. kicker_launch is the kicker's launch

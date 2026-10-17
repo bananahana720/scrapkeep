@@ -80,7 +80,7 @@ const WEATHER_KINDS := ["clear", "monsoon", "dust_squall", "heat_shimmer", "cave
 const RECIPES := [
 	"half_pipe_concrete", "slot_canyon_flow", "wash_dropin_lip",
 	"canal_lip", "flume_span", "penstock_run", "pipeline_rail",
-	"bench_coping", "tailings_lip", "pit_haul_ramp",
+	"bench_coping", "tailings_lip", "pit_haul_ramp", "pit_haul_lane",
 	"lava_tube_run", "adit_mouth", "shaft_drop", "spillway_tunnel",
 	"cenote_pool", "flooded_shaft", "cavern_shell",
 	"cliff_dwelling_row", "mesa_rim_ledge", "viga_pivot",
@@ -89,6 +89,7 @@ const RECIPES := [
 	"landmark_dam", "landmark_penstock_tower", "landmark_headframe", "landmark_sinkhole",
 	"landmark_sky_island", "landmark_spire",
 	"anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn",
+	"ore_bin", "ore_bin_row", "timber_portal",
 ]
 const GREYBOX := "greybox:"
 # The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).

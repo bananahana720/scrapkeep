@@ -1,5 +1,5 @@
 """Headless recipes for the bowls and terraces family (design-v3/PARK.md section 4, unit KC3): bench_coping, tailings_lip
-and pit_haul_ramp, each with two detail shells.
+pit_haul_ramp and pit_haul_lane, each with two detail shells.
 
   bench_coping   an open-pit copper mine bench pair: two blasted benches stepping down 4 m each, a rounded coping lip of
                  1.5 m radius on every crest, windrow berms on both edges, a ragged blast-line crest in plan.
@@ -7,6 +7,9 @@ and pit_haul_ramp, each with two detail shells.
                  toes, a crest that bows in plan so the lip cups a ball toward the centre line.
   pit_haul_ramp  a haul road tile on a 10 percent grade: crowned running surface, windrow berm on the outer edge, ditch
                  and cut bank on the inner edge, and two trolley poles 35 m apart on the berm (harpoon anchors).
+  pit_haul_lane  the haul road tile LEVEL: pit_haul_ramp's cross-section (haul_cross) on a flat 40 m run from the lip, so
+                 the entry and exit -col cross-sections match (park_recipes.gd tile_ends tileable) and the exit is at y 0;
+                 trolley poles at z 2 and 22, 20 m apart within a tile and across copies.
 
 The bowl floor itself is the terrain height stamp (park_bake); these recipes sit on it. Each recipe is one GLB:
   <id>.glb          the drawn mesh (one "stone" surface; the haul ramp's poles are steel and copper by vertex colour) and the
@@ -161,8 +164,17 @@ RECIPES = {
         "xs": [-15, -14.2, -13.2, -12.2, -11, -8.8, -6.6, -4.4, -2.2, 0, 2.2, 4.4, 6.6, 8.8, 10.0, 11.2, 12.3, 13.4, 14.4, 15],
         "size": [56.0, 5.0, 30.0],
     },
+    # Level: the approach z -4..0 and a 40 m flat, so the authored length (lip z 0 to the -col end) is 40 m. A tile
+    # copy's approach lies over the previous copy's last 4 m at the same height and section.
+    "pit_haul_lane": {
+        "segs": [("flat", 4.0), ("flat", 40.0)],
+        "half": 15.0, "cross": haul_cross, "warp": None, "corridor": 10.0, "lip": False, "draws": 2, "level": True,
+        "xs": [-15, -14.2, -13.2, -12.2, -11, -8.8, -6.6, -4.4, -2.2, 0, 2.2, 4.4, 6.6, 8.8, 10.0, 11.2, 12.3, 13.4, 14.4, 15],
+        "size": [40.0, 4.0, 30.0],
+    },
 }
 POLES = [(-14.6, 12.0), (-14.6, 47.0)]      # trolley poles 35 m apart on the outer berm (x, z)
+RECIPE_POLES = {"pit_haul_ramp": POLES, "pit_haul_lane": [(-14.6, 2.0), (-14.6, 22.0)]}
 
 
 # ------------------------------------------------------------------------------------------------------ surface
@@ -324,8 +336,8 @@ def build_base(name, skin):
         low = [drawn.vert((p[0], floor if out[2] == 0 else floor, p[2]), VARNISH) for p in pts]
         for k in range(len(pts) - 1):
             drawn.quad(top[k], top[k + 1], low[k + 1], low[k], out)
-    if name == "pit_haul_ramp":
-        for px, pz in POLES:
+    if name in RECIPE_POLES:
+        for px, pz in RECIPE_POLES[name]:
             build_pole(drawn, col, skin, px, pz)
     return drawn, col
 
@@ -441,7 +453,9 @@ def build_detail(name, skin, which):
     m = Mesh()
     corridor = skin.spec["corridor"]
     half = skin.spec["half"]
-    seed = {"bench_coping": 3, "tailings_lip": 5, "pit_haul_ramp": 7}[name] * 10 + which
+    seed = {"bench_coping": 3, "tailings_lip": 5, "pit_haul_ramp": 7, "pit_haul_lane": 9}[name] * 10 + which
+    # the haul dressing: rut length, rock span from z 2, pebble span from z -3.5 (the lane keeps them inside z 40)
+    run, rocks, grit = (54.0, 52.0, 60.0) if name == "pit_haul_ramp" else (skin.profile[-1][0], skin.profile[-1][0] - 4.0, skin.profile[-1][0] + 3.0)
     if name == "bench_coping":
         if which == 1:
             # bedding ledges across each blasted face, drill collars along each coping crest, toe rubble beside the line
@@ -500,25 +514,25 @@ def build_detail(name, skin, which):
         if which == 1:
             # tyre ruts down the road, large rocks on the windrow and the cut toe, survey stakes
             for rx in (-4.0, 4.0):
-                rill_down(m, skin, rx, 0.0, 54.0, 0.9, 0.0, RUT, lift=0.03)
+                rill_down(m, skin, rx, 0.0, run, 0.9, 0.0, RUT, lift=0.03)
             for k in range(18):
                 x = -(11.6 + 1.5 * h01(k, seed))
-                z = 2.0 + 52.0 * h01(k + 40, seed)
+                z = 2.0 + rocks * h01(k + 40, seed)
                 boulder(m, skin, x, z, 0.7 + 0.8 * h01(k + 80, seed), 0.6 + 0.8 * h01(k + 120, seed), 6.0 * h01(k + 160, seed), VARNISH)
             for k in range(12):
                 x = 12.6 + 1.2 * h01(k + 200, seed)
-                z = 2.0 + 52.0 * h01(k + 240, seed)
+                z = 2.0 + rocks * h01(k + 240, seed)
                 boulder(m, skin, x, z, 0.6 + 0.7 * h01(k + 280, seed), 0.5 + 0.7 * h01(k + 320, seed), 6.0 * h01(k + 360, seed), CUT)
-            for k in range(8):
+            for k in range(int((run - 4.0) / 7.0) + 1):
                 z = 4.0 + 7.0 * k
                 stake(m, skin, -11.8, z)
         else:
             # gravel on the road, cross-drain scours, pebbles
             for k in range(110):
                 x = (h01(k, seed) - 0.5) * 2 * 10.0
-                z = -3.5 + 60.0 * h01(k + 400, seed)
+                z = -3.5 + grit * h01(k + 400, seed)
                 pebble(m, skin, x, z, 0.06 + 0.07 * h01(k + 800, seed), SAND)
-            for zp in [4.0 + 5.0 * k for k in range(10)]:
+            for zp in [4.0 + 5.0 * k for k in range(min(10, int((run - 4.0) / 5.0) + 1))]:
                 ridge_across(m, skin, zp, 0.5, 0.025, -9.0, 9.0, 1.5, RUT)
     return m
 
@@ -542,7 +556,10 @@ def check_surface(name, skin):
     assert abs(skin.y(0.0, -2.0)) < 1e-6, (name, "the approach must sit on the ground at the lip", skin.y(0.0, -2.0))
     assert abs(skin.xs[0] + skin.xs[-1]) < 1e-9 and abs(skin.xs[-1] - spec["half"]) < 1e-9, (name, "centred across x")
     drop = skin.y(0.0, -2.0) - skin.y(0.0, skin.profile[-1][0] - 1.0)
-    assert drop >= (7.5 if name == "bench_coping" else 8.0 if name == "tailings_lip" else 4.0), (name, "drop", drop)
+    if spec.get("level"):
+        assert abs(drop) < 1e-6 and abs(skin.y_end()) < 1e-9, (name, "a level tile ends at y 0", drop)
+    else:
+        assert drop >= (7.5 if name == "bench_coping" else 8.0 if name == "tailings_lip" else 4.0), (name, "drop", drop)
     steepest = 0.0
     prev = skin.y(0.0, -3.5)
     z = -3.5
