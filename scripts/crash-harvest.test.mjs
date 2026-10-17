@@ -75,10 +75,7 @@ test("a crash is a blocker, keyed by its script frame or else its native frames"
   const scripted = crashes.find(
     (f) => f.signature.where === "res://src/player/harpoon_pool.gd:41",
   );
-  assert.match(
-    scripted.signature.message,
-    /signal #: harpoon pool exhausted at slot #/,
-  );
+  assert.match(scripted.signature.message, /^Program crashed with signal 11$/);
   const native = crashes.find((f) => f.runs[0].id === "native-crash");
   assert.equal(
     native.signature.where,
@@ -148,4 +145,83 @@ test("--ignore drops matching signatures and --fail-on sets the exit", () => {
     0,
   );
   assert.equal(main([path.join(out, "missing")], quiet), 2);
+});
+
+test("a stdout line between a header and its at: line does not split the signature", () => {
+  const clean =
+    "SCRIPT ERROR: Invalid call. Nonexistent function 'x' in base 'Nil'.\n          at: boom (res://src/a.gd:5)\n";
+  const split =
+    "SCRIPT ERROR: Invalid call. Nonexistent function 'x' in base 'Nil'.\nbot_run: tick 90\n          at: boom (res://src/a.gd:5)\n";
+  const findings = harvest(
+    [
+      { file: "/x/a.txt", text: clean },
+      { file: "/x/b.txt", text: split },
+    ],
+    { base: "/x" },
+  );
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].signature.where, "res://src/a.gd:5");
+  assert.equal(findings[0].runs.length, 2);
+});
+
+test("a crash keys on its frame, not on the error printed near it", () => {
+  const dump = (before) =>
+    `${before}handle_crash: Program crashed with signal 11\nGDScript backtrace (most recent call first):\n    [0] _claim (res://src/p.gd:41)\n`;
+  const findings = harvest(
+    [
+      {
+        file: "/x/a.txt",
+        text: dump(
+          "ERROR: pool exhausted at slot 3\n   at: push_error (core/v.cpp:1)\n",
+        ),
+      },
+      {
+        file: "/x/b.txt",
+        text: dump("ERROR: other thing\n   at: f (core/w.cpp:2)\n"),
+      },
+      { file: "/x/c.txt", text: dump("") },
+    ],
+    { base: "/x" },
+  );
+  const crashes = byKind(findings, "crash");
+  assert.equal(crashes.length, 1);
+  assert.equal(crashes[0].runs.length, 3);
+});
+
+test("digits in res:// paths stay, so different assets stay different findings", () => {
+  assert.notEqual(
+    normalize("Cannot open file 'res://a/crate_09.tres'."),
+    normalize("Cannot open file 'res://a/crate_10.tres'."),
+  );
+});
+
+test("findings.json carries what scripts/redteam/merge.mjs reads, and runs keep the red team's fields", () => {
+  const out = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-"));
+  assert.equal(
+    main(
+      [`--out=${out}`, "--wave=16", "--commit=cf63e622b0", fixtures],
+      () => {},
+    ),
+    0,
+  );
+  const written = JSON.parse(
+    readFileSync(path.join(out, "findings.json"), "utf8"),
+  );
+  assert.equal(written.wave, 16);
+  assert.equal(typeof written.commit, "string");
+  assert.equal(typeof written.started, "string");
+  assert.equal(written.minutes, 0);
+  assert.deepEqual(written.extras, {});
+  for (const f of written.findings)
+    for (const r of f.runs)
+      for (const key of [
+        "id",
+        "persona",
+        "pilot",
+        "seed",
+        "note",
+        "replay",
+        "carry",
+      ])
+        assert.ok(key in r, key);
 });

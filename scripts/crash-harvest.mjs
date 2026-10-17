@@ -8,7 +8,8 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// node scripts/crash-harvest.mjs [--out=<dir>] [--fail-on=blocker|major|minor] [--ignore=<regex>]... <log or dir>...
+// node scripts/crash-harvest.mjs [--out=<dir>] [--fail-on=blocker|major|minor] [--ignore=<regex>]...
+//   [--wave=<n>] [--commit=<sha>] <log or dir>...
 // Reads Godot output saved by bot, red team and export runs (log.txt, export.txt, *.log, *.out,
 // *.err; folders are walked) and groups every crash, SCRIPT ERROR and ERROR by a stable
 // signature: kind, the first res:// frame (or the engine's file:line), and the message with
@@ -16,7 +17,8 @@ import { fileURLToPath } from "node:url";
 // Severity follows sketches/core-loop/BUG-BAR.md and the red team's grading: a crash is always a
 // blocker, a script error (parse errors and scripts that fail to load included) is a major, an
 // engine ERROR is a minor. WARNING lines are not findings. The findings use the red team's
-// findings.json shape, so scripts/redteam/merge.mjs can join them with a pass.
+// findings.json shape, so scripts/redteam/merge.mjs can join them with a pass. A pass grades its
+// own logs coarsely (err: keys); harvesting that pass's logs too lists each error under both keys.
 // Output: a summary on stdout; with --out, findings.json and findings.md in that folder.
 // Exit 0, or 1 when --fail-on names a severity and a finding at or above it was found, or 2 when
 // no log was read.
@@ -33,11 +35,14 @@ const CRASH = /Program crashed with signal (\d+)/;
 const NATIVE_FRAME = /^\s*\[\d+\] \S+ \(([^)+]+\+[0-9a-f]+)\)/;
 const SAMPLE_LINES = 12;
 
-// Numbers, hex and instance ids change from run to run; the bug does not.
+// Numbers, hex and instance ids change from run to run; the bug does not. A res:// path names
+// the asset or script, so its digits stay.
 export function normalize(message) {
   return message
-    .replace(/0x[0-9a-f]+/gi, "#")
-    .replace(/\d+(\.\d+)?/g, "#")
+    .replace(
+      /(res:\/\/[^\s'"]+)|0x[0-9a-f]+|\d+(\.\d+)?/gi,
+      (m, res) => res ?? "#",
+    )
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 200);
@@ -49,15 +54,30 @@ export function parseLog(text) {
   const events = [];
   let open = null;
   let lastError = null;
-  const close = () => {
-    if (open) events.push(open);
+  let closedAt = -1;
+  const close = (i) => {
+    if (open) {
+      events.push(open);
+      closedAt = i;
+    }
     open = null;
   };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    // stdout and stderr share one buffer, so a stdout line can land between a header and its
+    // at: line; the at: or frame line right after it still belongs to that header.
+    const last = events.at(-1);
+    if (
+      !open &&
+      last &&
+      last.kind !== "crash" &&
+      i - closedAt <= 1 &&
+      (AT.test(line) || FRAME.test(line))
+    )
+      open = events.pop();
     const crash = line.match(CRASH);
     if (crash) {
-      close();
+      close(i);
       open = {
         kind: "crash",
         message: `Program crashed with signal ${crash[1]}`,
@@ -77,7 +97,7 @@ export function parseLog(text) {
         open.sample.push(line);
         continue;
       }
-      close();
+      close(i);
       if (head[1].includes("WARNING")) {
         lastError = null;
         continue;
@@ -111,13 +131,13 @@ export function parseLog(text) {
         line.trim(),
       )
     ) {
-      close();
+      close(i);
       continue;
     }
     open.end = i;
     if (open.sample.length < SAMPLE_LINES) open.sample.push(line);
   }
-  close();
+  close(lines.length);
   return events;
 }
 
@@ -135,11 +155,11 @@ export function where(event) {
   );
 }
 
+// A crash's cause (the ERROR printed just before it) is shown, not keyed: what happened to print
+// nearby varies by run, while the frame pins the bug.
 export function signature(event) {
   const message =
-    event.kind === "crash"
-      ? normalize(event.message + (event.cause ? ": " + event.cause : ""))
-      : normalize(event.message);
+    event.kind === "crash" ? event.message : normalize(event.message);
   return {
     kind: event.kind,
     where: where(event),
@@ -296,10 +316,19 @@ export function collect(inputs) {
 }
 
 export function parseArgs(argv) {
-  const args = { out: null, failOn: null, ignore: [], inputs: [] };
+  const args = {
+    out: null,
+    failOn: null,
+    ignore: [],
+    inputs: [],
+    wave: null,
+    commit: "unknown",
+  };
   for (const arg of argv) {
     if (arg.startsWith("--out=")) args.out = arg.slice(6);
     else if (arg.startsWith("--fail-on=")) args.failOn = arg.slice(10);
+    else if (arg.startsWith("--wave=")) args.wave = Number(arg.slice(7));
+    else if (arg.startsWith("--commit=")) args.commit = arg.slice(9);
     else if (arg.startsWith("--ignore="))
       args.ignore.push(new RegExp(arg.slice(9)));
     else if (arg.startsWith("--")) throw new Error(`unknown option ${arg}`);
@@ -309,7 +338,7 @@ export function parseArgs(argv) {
     throw new Error("--fail-on takes blocker, major or minor");
   if (!args.inputs.length)
     throw new Error(
-      "usage: crash-harvest.mjs [--out=<dir>] [--fail-on=<severity>] [--ignore=<regex>] <log or dir>...",
+      "usage: crash-harvest.mjs [--out=<dir>] [--fail-on=<severity>] [--ignore=<regex>] [--wave=<n>] [--commit=<sha>] <log or dir>...",
     );
   return args;
 }
@@ -328,13 +357,18 @@ export function main(argv, log = console.log) {
     statSync(args.inputs[0], { throwIfNoEntry: false })?.isDirectory()
       ? args.inputs[0]
       : process.cwd();
-  const findings = harvest(
-    files.map((file) => ({ file, text: readFileSync(file, "utf8") })),
-    { base, ignore: args.ignore },
-  );
+  const logs = [];
+  for (const file of files) {
+    try {
+      logs.push({ file, text: readFileSync(file, "utf8") });
+    } catch (error) {
+      skipped.push(`${file} (${error.code ?? error.message})`);
+    }
+  }
+  const findings = harvest(logs, { base, ignore: args.ignore });
   const page = renderMarkdown({
     inputs: args.inputs,
-    logs: files.length,
+    logs: logs.length,
     findings,
     skipped,
   });
@@ -346,10 +380,12 @@ export function main(argv, log = console.log) {
       JSON.stringify(
         {
           tool: "crash-harvest",
+          wave: args.wave,
+          commit: args.commit,
           started: new Date().toISOString(),
           minutes: 0,
           inputs: args.inputs,
-          logs: files.map((f) => path.relative(base, f) || f),
+          logs: logs.map(({ file }) => path.relative(base, file) || file),
           skipped,
           runs: [],
           extras: {},
@@ -362,7 +398,7 @@ export function main(argv, log = console.log) {
     );
   }
   log(page.trimEnd());
-  if (!files.length) return 2;
+  if (!logs.length) return 2;
   if (
     args.failOn &&
     findings.some(
