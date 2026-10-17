@@ -61,6 +61,9 @@ signal shell_air_changed(factor: float, rose: bool)
 signal hotwire_offered(part_id: String, recycle: int)
 signal hotwire_resolved(part_id: String, choice: String, cogs: int)
 const PARTICIPANTS := ["player"]
+# SG15: an offer of a part already held shows the level it would reach, by its current level.
+# A part at its top level is never offered, so it has no entry.
+const LEVEL_NAMES := ["", "II", "III"]
 # The dash leaves frost this long, and drops a visible puff every few ticks of it.
 const FROST_TRAIL := 0.7
 const PUFF_EVERY := 3
@@ -342,6 +345,9 @@ func offer_mark(part_id: String) -> String:
 	var set_id := PartSets.completed_by(part_id, held)
 	if set_id != "":
 		return "* completes %s *" % PartSets.SETS[set_id]["name"]
+	var level := Parts.level_of(part_id, held)
+	if level > 0 and level < LEVEL_NAMES.size():
+		return "* level %s *" % LEVEL_NAMES[level]
 	var ingredient := Parts.ingredient_of(part_id, held)
 	if ingredient != "":
 		var named: bool = is_known(ingredient) or has_perk("lens")
