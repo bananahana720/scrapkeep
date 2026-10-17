@@ -42,7 +42,7 @@ const TUNES := {
 	"moss-shop": {"hook": "shop", "key": "bay", "bpm": 112},
 	"fabricator": {"hook": "fabricator", "key": "fabricator_used", "bpm": 120},
 	"camp-course": {"hook": "", "bpm": 172},
-	"modifier-curse": {"hook": "", "bpm": 100},
+	"modifier-curse": {"hook": "modifier", "key": "curse", "bpm": 100},
 	"modifier-par": {"hook": "modifier", "key": "par", "bpm": 176},
 	"secret-lost-tape": {"hook": "find", "keys": ["reach_pressure_cache", "flume_weir_cache"], "bpm": 90},
 	"secret-after-hours": {"hook": "jukebox", "key": "bay_jukebox", "bpm": 96},
@@ -55,7 +55,6 @@ const TUNES := {
 # The tunes with no game hook yet, and the hook each one needs.
 const UNWIRED := {
 	"camp-course": "a camp movement-course area; the camp is a menu page today (ui/camp_menu.gd)",
-	"modifier-curse": "a curse run modifier or a curse-taken signal; a curse is only a trade-pocket offer today (world/trade_pockets.gd)",
 }
 # event-arena is wired to the in-run arena activities; its camp half needs a camp arena area.
 const PARTLY_WIRED := {"event-arena": "a camp arena area for its camp half"}

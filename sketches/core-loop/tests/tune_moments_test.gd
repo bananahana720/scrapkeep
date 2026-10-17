@@ -66,7 +66,7 @@ func _registry() -> void:
 		_t.check("%s is hidden exactly when tunes.json says" % id, TuneMoments.is_hidden(id) == bool(row.hidden))
 		_t.check("%s has a music row on its own pack" % id, MusicRows.ROWS.has(id) and String(MusicRows.ROWS[id]["ace_manifest"]).ends_with("/%s/manifest.json" % TuneMoments.theme_of(id)))
 	_t.eq("the table holds exactly the tunes.json ids", TuneMoments.TUNES.keys().size(), ids.size())
-	_t.eq("two tunes wait on a hook", TuneMoments.UNWIRED.keys(), ["camp-course", "modifier-curse"])
+	_t.eq("one tune waits on a hook", TuneMoments.UNWIRED.keys(), ["camp-course"])
 
 
 func _pure() -> void:
@@ -77,7 +77,7 @@ func _pure() -> void:
 		"event-scrap-stampede": ["event", "scrap_stampede"], "event-surge-run": ["event", "surge_run"],
 		"event-hold-relay": ["event", "hold_the_relay"], "event-flood": ["event", "flood"],
 		"event-dust-squall": ["event", "dust_squall"], "event-arena": ["activity", "round_arena"],
-		"miniboss": ["miniboss", "miniboss"], "moss-shop": ["shop", "bay"], "modifier-par": ["modifier", "par"],
+		"miniboss": ["miniboss", "miniboss"], "moss-shop": ["shop", "bay"], "modifier-par": ["modifier", "par"], "modifier-curse": ["modifier", "curse"],
 		"fabricator": ["fabricator", "fabricator_used"],
 		"secret-lost-tape": ["find", "flume_weir_cache"], "secret-after-hours": ["jukebox", "bay_jukebox"],
 		"secret-brindle-swing": ["remix", "brindle"], "secret-chip-keepers": ["remix", "champion"],
@@ -125,6 +125,7 @@ func _pure() -> void:
 	_t.eq("another stage keeps its own", TuneMoments.stage_tune("1-1", [], rolled, yes), "")
 	_t.eq("a missing remix pack keeps the stage's own", TuneMoments.stage_tune("3-1", [], rolled, func(_id): return false), "")
 	_t.eq("par plays over a remix", TuneMoments.stage_tune("3-1", ["par"], rolled, yes), "modifier-par")
+	_t.eq("a curse plays over a remix", TuneMoments.stage_tune("3-1", ["curse"], rolled, yes), "modifier-curse")
 	_t.eq("scrapless has no tune", TuneMoments.stage_tune("1-1", ["scrapless"], {}, yes), "")
 	_t.eq("a remix replaces its parent", TuneMoments.remixed("champion", "champion-hype", rolled, yes), "secret-chip-keepers")
 	_t.eq("an unrolled slot keeps its parent", TuneMoments.remixed("brindle", "brindle-p1-requisition", rolled, yes), "brindle-p1-requisition")
