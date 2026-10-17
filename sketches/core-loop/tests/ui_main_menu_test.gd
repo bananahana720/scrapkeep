@@ -41,7 +41,9 @@ func _run() -> void:
 	_t.check("Quit is on Esc", quit != null and quit.key == "key_esc" and quit.text == "Quit")
 	_t.eq("the title reads SCRAPKEEP", screens._title.text, Screens.TITLE)
 
-	await create_timer(Screens.STAMP_TIME + 0.2).timeout
+	# Steps the stamp past its end on the tween's own clock, not the wall clock.
+	screens._stamp_tween.custom_step(Screens.STAMP_TIME + 0.2)
+	await _frames(1)
 	_t.near("the name rests straight", screens._title.rotation, 0.0, 0.001)
 	_t.near("the name rests at full size", screens._title.scale.x, 1.0, 0.001)
 
