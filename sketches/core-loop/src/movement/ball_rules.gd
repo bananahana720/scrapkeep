@@ -89,7 +89,7 @@ static func probe_ground(probe: ShapeCast3D, state, floor_dot := Tuning.MAX_SLOP
 	if probe.is_colliding():
 		for i in probe.get_collision_count():
 			var n: Vector3 = probe.get_collision_normal(i)
-			if n.y > best and _takes(state, n, floor_dot, take_speed, on_wall, probe.get_collider(i) is StaticBody3D):
+			if n.y > best and _takes(state, n, floor_dot, take_speed, on_wall, _world_face(probe.get_collider(i))):
 				best = n.y
 				normal = n
 	_set_ground(state, normal if best > -INF else null)
@@ -103,7 +103,7 @@ static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D, ta
 	var best := -INF
 	var found = null
 	for i in body_state.get_contact_count():
-		if not (body_state.get_contact_collider_object(i) is StaticBody3D):
+		if not _world_face(body_state.get_contact_collider_object(i)):
 			continue
 		var n := body_state.get_contact_local_normal(i)
 		if n.y > best and _takes(state, n, Tuning.GRIP_SLOPE_DOT, take_speed, false, true):
@@ -111,6 +111,12 @@ static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D, ta
 			found = n
 	if found != null:
 		_set_ground(state, found)
+
+
+# A static face of the world. A boss hull is an AnimatableBody3D (a StaticBody3D) in the enemy
+# group, and it stays a body to ram, never a wall to ride.
+static func _world_face(collider) -> bool:
+	return collider is StaticBody3D and not (collider as Node).is_in_group("enemy")
 
 
 static func _set_ground(state, normal) -> void:

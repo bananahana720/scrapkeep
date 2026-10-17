@@ -93,7 +93,7 @@ func _on_wear(removed: float) -> void:
 # One patch where the ball is, if it is on ground. Airborne wear leaves nothing.
 func _place() -> void:
 	var player = _ctx.player
-	if not player.state.grounded:
+	if not player.state.on_floor():
 		return
 	var ball: Vector3 = player.ball_position()
 	var ground: Vector3 = _floor_at.call(ball)

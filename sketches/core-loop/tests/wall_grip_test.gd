@@ -20,6 +20,8 @@ const BallState := preload("res://src/movement/ball_state.gd")
 #               (Tally). Sable's vault, like a falling slam, keeps the faces met in the air.
 #   bank        a stick press mid-climb starts no speed-bank roll (the bank reads the wall as air):
 #               drive alone adds a few m/s there; the roll start added 17.5 before the fix.
+#   hull        a boss hull (an AnimatableBody3D in the enemy group) is never a wall: Kest
+#               rode Brindle's and stalled the fight before the fix.
 #   head_on     grip on, straight into the wall: it bounces as before (pipe vault ruling).
 #   peel        every wall tick after the grip clock ran out is airborne (the 0.25 s peel).
 #   speed       grip never adds speed: the carve's top speed is no higher than the same
@@ -39,6 +41,10 @@ const ON_WALL_Y := ARC_R + 0.5
 const CARVE_GROUNDED_SHARE := 0.8
 # In the air beside the right wall, 9 m up its vertical face, for the landing runs.
 const WALL_AIR := Vector3(FLOOR_HALF + ARC_R - Tuning.RADIUS - 0.4, ARC_R + 9.0, -150.0)
+# A boss hull stand-in: an AnimatableBody3D in the enemy group on the world layer, as
+# boss_target.gd builds Brindle's, with its face at HULL_X.
+const HULL_X := 60.0
+const HULL_AIR := Vector3(HULL_X - Tuning.RADIUS - 0.4, 40.0, -150.0)
 
 var _world: Node3D
 var _events
@@ -56,6 +62,7 @@ func _initialize() -> void:
 	_world = Node3D.new()
 	root.add_child(_world)
 	_halfpipe()
+	_hull()
 	_events = GameEvents.new()
 	_world.add_child(_events)
 	_tuning = Tuning.new()
@@ -72,6 +79,7 @@ func _initialize() -> void:
 		{"name": "slow", "grip": "on", "velocity": Vector3(15.0, 0.0, 0.0)},
 		{"name": "land", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": WALL_AIR, "class": "tally"},
 		{"name": "land_vault", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": WALL_AIR},
+		{"name": "hull", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": HULL_AIR, "class": "tally"},
 		{"name": "head_on", "grip": "on", "velocity": Vector3(26.0, 0.0, 0.0), "at": WALL_AIR},
 	]
 
@@ -106,6 +114,18 @@ func _halfpipe() -> void:
 	_world.add_child(body)
 
 
+func _hull() -> void:
+	var body := AnimatableBody3D.new()
+	body.add_to_group("enemy")
+	body.position = Vector3(HULL_X + 1.0, 30.0, 0.0)
+	var collider := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(2.0, 60.0, LENGTH)
+	collider.shape = box
+	body.add_child(collider)
+	_world.add_child(body)
+
+
 func _report(label: String, ok: bool, detail: String) -> void:
 	if not ok:
 		_failures += 1
@@ -128,6 +148,8 @@ func _sample() -> void:
 	var state = _player.state
 	var at: Vector3 = _player.ball_position()
 	var on_wall := at.x > ON_WALL_X and at.y > ON_WALL_Y
+	if _run["name"] == "hull":
+		on_wall = at.x > HULL_X - Tuning.RADIUS - 0.25
 	_run["top_speed"] = maxf(_run["top_speed"], state.velocity.length())
 	_run["max_y"] = maxf(_run["max_y"], at.y)
 	_run["first_vx_out"] = minf(_run["first_vx_out"], state.velocity.x)
@@ -225,6 +247,10 @@ func _finish() -> void:
 	_report("land_vault", vault["wall"] >= 10 and vault["wall_grounded"] == 0,
 		"Sable dropped beside the wall: %d wall ticks, %d grounded (her vault kick keeps faces met in the air)" % [
 		vault["wall"], vault["wall_grounded"]])
+	var hull: Dictionary = _runs["hull"]
+	_report("hull", hull["wall"] >= 10 and hull["wall_grounded"] == 0,
+		"along a boss hull at 26 m/s: %d touching ticks, %d grounded (a hull is rammed, never ridden)" % [
+		hull["wall"], hull["wall_grounded"]])
 	var head: Dictionary = _runs["head_on"]
 	_report("head_on", head["wall_grounded"] == 0 and head["first_vx_out"] < -2.0,
 		"straight into the wall at 26 m/s: %d grounded wall ticks, bounced back at %.1f m/s" % [

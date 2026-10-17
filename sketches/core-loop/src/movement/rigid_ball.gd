@@ -121,9 +121,10 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		_probe.global_transform = Transform3D(Basis.IDENTITY, origin)
 		Rules.aim_probe(_probe, state, tuning)
 	# Sable's vault kick and a falling slam own the faces the ball meets in the air, so a
-	# wall is taken from the air only without them; carving up from the floor still grips.
+	# wall is taken from the air only without them; carving up from the floor still grips,
+	# and inside the coyote time a one-tick hop off a seam re-takes the wall.
 	var take_speed := Rules.grip_speed(state, tuning)
-	if not state.grounded and kit != null and (kit.on(Augments.VAULT) or kit.slamming):
+	if not state.grounded and state.coyote <= 0.0 and kit != null and (kit.on(Augments.VAULT) or kit.slamming):
 		take_speed = INF
 	Rules.probe_ground(_probe, state, Rules.ground_dot(state, tuning), take_speed)
 	Rules.grip_contact(state, tuning, body_state, take_speed)
@@ -154,8 +155,10 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		if external_accel != Vector3.ZERO:
 			body_state.apply_central_force(external_accel * mass)
 
+		# A ride that lifts the ball off its face (the reactor's sheet, a chute's assist) wins:
+		# the press would hold the ball on the face the ride is carrying it up and away from.
 		var press := Rules.downforce(state, tuning)
-		if press != Vector3.ZERO:
+		if press != Vector3.ZERO and external_accel.dot(state.contact_normal) <= 0.0:
 			body_state.apply_central_force(press * mass)
 	external_accel = Vector3.ZERO
 
