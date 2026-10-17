@@ -6,7 +6,8 @@
 #   sh install.sh uninstall
 # install copies the AppImage to $XDG_DATA_HOME/scrapkeep/Scrapkeep.AppImage (default
 # ~/.local/share), the icon under icons/hicolor and the AppDir's scrapkeep.desktop, with Exec
-# pointed at the copy, to applications/scrapkeep.desktop. uninstall removes those three files and
+# pointed at the copy (the sitting action's too, keeping its --profile=sitting), to
+# applications/scrapkeep.desktop. uninstall removes those three files and
 # nothing else: saves and settings under ~/.local/share/godot/app_userdata/core-loop stay.
 set -eu
 
@@ -51,8 +52,14 @@ install)
 	cp "$appdir/scrapkeep.svg" "$icon"
 	exec_line="Exec=$(exec_path "$app")"
 	# TryExec names the file without quotes; launchers hide the entry once the file is gone.
+	# Every Exec keeps its arguments; the main entry's first Exec also gets TryExec.
 	awk -v exec_line="$exec_line" -v try_exec="TryExec=$app" '
-		/^Exec=/ { print exec_line; print try_exec; next }
+		/^Exec=/ {
+			rest = $0; sub(/^Exec=[^ ]*/, "", rest)
+			print exec_line rest
+			if (!tried) { print try_exec; tried = 1 }
+			next
+		}
 		/^TryExec=/ { next }
 		{ print }
 	' "$appdir/scrapkeep.desktop" >"$desktop.part"

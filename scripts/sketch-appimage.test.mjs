@@ -60,6 +60,8 @@ test("the desktop entry names the game, its icon and the Game category", () => {
   assert.match(entry, /^Categories=Game;ActionGame;$/m);
   assert.match(entry, /^Terminal=false$/m);
   assert.doesNotMatch(entry, /TryExec/);
+  assert.match(entry, /^Actions=sitting;$/m);
+  assert.ok(entry.endsWith("[Desktop Action sitting]\nName=Scrapkeep sitting (all pilots, save untouched)\nExec=scrapkeep -- --profile=sitting\n"), entry);
 });
 
 test("AppRun runs the game from usr/lib and passes every argument through, except --install and --uninstall", () => {
@@ -169,6 +171,8 @@ test("the AppImage installs and uninstalls itself with --install and --uninstall
   assert.equal(readFileSync(app, "utf8"), "image");
   const entry = readFileSync(path.join(dataHome, "applications/scrapkeep.desktop"), "utf8");
   assert.ok(entry.includes(`\nExec="${app}"\nTryExec=${app}\n`), entry);
+  assert.ok(entry.endsWith(`\nExec="${app}" -- --profile=sitting\n`), entry);
+  assert.equal(entry.match(/^TryExec=/gm).length, 1);
   assert.match(entry, /^Name=Scrapkeep$/m);
   assert.ok(existsSync(path.join(dataHome, "icons/hicolor/scalable/apps/scrapkeep.svg")));
 
