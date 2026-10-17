@@ -173,7 +173,8 @@ signal activity_done(id: String, at: Vector3)
 # progress.gd earned an achievement and saved the profile (or tried to). id keys Achievements.ROWS.
 signal achievement_earned(id: String)
 # A world rescue finished (a stranded pilot freed). quest_id names it: "rivet" for world one's
-# runner, "dig" for the later dig rescue. achievements.gd rows key on it to unlock pilots.
+# runner, "dig" for the later dig rescue, "isles" for Tally's cage in the Highdraft. achievements.gd
+# rows key on it to unlock pilots.
 signal rescue_completed(quest_id: String)
 
 # The skill bar and the ultimate (design-v3/SKILL-BAR.md section 7). All ten are declared

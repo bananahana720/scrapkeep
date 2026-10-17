@@ -616,6 +616,12 @@ Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-2
 | `ancient_lens_rock_hum` | `lens_rocks` | The rocks hum one step below whatever you are whistling. |
 | `net_bowl_mends` | `net_bowl` | Mend log: the bowl net under the isle never needs mending. Nobody mends it. |
 | `ancient_keel_grip` | the landmark | The grip marks on the isle's tip are older than the rock they grip. |
+| `net_weaver_post_tags` | `net_posts_1` | Post tag, west gap: TIE HERE. Older tag under it: TIE HERE TOO. |
+| `net_weaver_cairn_count` | `lookout_cairn_1` | Cairn on the Lookout: one stone per crossing. The top stone is warm. |
+| `net_weaver_post_run` | `net_post_run` | Every post on the run leans downwind by the same amount. The weavers call this surveying. |
+| `fleet_cage_manifest` | `mooring_pad` | Mooring manifest: one pack rat, filed under INVENTORY. Inventory disputes the filing. |
+
+**Authored pass, 17 October 2026** (Andrew's "Now, light", "Rescue on the isles" and "Either path"). The net-weavers are a society row now (`net_weaver`): the net carve, the net bowl, the post run, the twelve post fields and the five cairns. The Fleet's mooring crew keeps the Moorings. The file's optional `rescue_rows` stand `tally_cage` on `mooring_mesa` at [-290, 30], facing the pad, 70 m from it and about 100 m off Tarn's line and the floor line. The row names its pilot as data (`"pilot": "tally"`, quest `isles`). Freeing her earns `isles_rescued`, and Tally's class row opens on that or on three ledger leaves, whichever comes first (`class_def.gd` unlock `or`).
 
 Today's 3-1 lore lines (`src/core/lore_rows.gd:232-288`, the post docket at `:274` and the beacon watch at `:278`) stay; they still fit a park of posts and a lens.
 

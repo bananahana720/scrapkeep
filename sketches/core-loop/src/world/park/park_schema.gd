@@ -5,9 +5,11 @@ extends RefCounted
 # tool names the row to fix. An empty array means the park loads.
 #
 # Rule keys: missing, type, enum, duplicate, reference, waymarks, mounting, pack, family,
-# lead_floor, water_depth, handling, recipe, home_landform, guardrail, line.
+# lead_floor, water_depth, handling, recipe, home_landform, guardrail, line, music_layer.
 
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const Director := preload("res://src/world/director.gd")
 
 const SCHEMA := "scrapkeep-park/1"
@@ -21,7 +23,9 @@ const LANDFORMS := ["slot_canyon", "arroyo", "dry_wash", "slickrock", "canal", "
 	"sinkhole", "cenote_pool", "flooded_shaft", "cliff_dwelling", "mesa_rim", "butte", "spire",
 	"hoodoo_field", "saguaro_stand", "travertine_terrace", "horseshoe_bend", "river_canyon", "gooseneck",
 	"meteor_crater", "sky_island"]
-const SOCIETIES := ["none", "hohokam", "ancestral_puebloan", "mining", "dam_era", "fleet", "ancient"]
+# net_weaver: the Highdraft's animals who string the nets, posts and balloon lifts (Andrew's "Now, light" tap,
+# 2026-10-17; stage 6 page section 15 asked for their id).
+const SOCIETIES := ["none", "hohokam", "ancestral_puebloan", "mining", "dam_era", "fleet", "ancient", "net_weaver"]
 const VERBS := ["roll", "pump", "grind", "launch", "drop", "swing", "glide", "lift", "bank", "slam"]
 const STAMPS := ["", "wash", "channel", "ridge", "mesa", "butte", "spire", "bowl", "terrace", "crater",
 	"sinkhole", "ramp", "plateau"]
@@ -140,6 +144,13 @@ const PARK_FIELDS := {
 # entry and exit (park_recipes.gd seat_fit); "tile" repeats a shorter GLB recipe end to end, each copy seated on the
 # ground at its own ends (park_recipes.gd tile_fit).
 const FITS := ["seat", "tile"]
+# Optional on a park row: "music_layer" names a layer_* WORLD_ROWS kind its ride sensor publishes on entry, beside its
+# ride fact; a row with recipe "" gets a listening sensor of its footprint and nothing else (park_recipes.gd
+# place_layer). The music bakes each layer's sound_next; until then its stand-in sound plays.
+const MUSIC_LAYER_PREFIX := "layer_"
+# Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
+# the cage, so who is rescued is data; quest is what rescue_completed carries (achievements.gd keys on it).
+const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -242,6 +253,7 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var weather := _rows(out, park, "weather_rows", WEATHER_FIELDS)
 	var activities := _rows(out, park, "activity_rows", ACTIVITY_FIELDS)
 	var routes := _rows(out, park, "routes", ROUTE_FIELDS)
+	var rescues := _rows(out, park, "rescue_rows", RESCUE_FIELDS) if park.has("rescue_rows") else {}
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)
@@ -279,6 +291,13 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 		_weather_row(out, id, weather[id], events)
 	for id in activities:
 		_site(out, id, activities[id], rows)
+	for id in rescues:
+		_site(out, id, rescues[id], rows)
+		if String(rescues[id]["quest"]) == "":
+			_add(out, id, "missing", "a rescue names its quest")
+		var pilot := String(rescues[id]["pilot"])
+		if pilot != "" and ClassDef.by_id(pilot) == null:
+			_add(out, id, "reference", "pilot %s is no class id" % pilot)
 	return out
 
 
@@ -376,6 +395,10 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
 		elif String(row["recipe"]) == "" or String(row["recipe"]).begins_with("greybox:"):
 			_add(out, id, "fit", "fit %s needs a GLB recipe, not %s" % [row["fit"], str(row["recipe"])])
+	if row.has("music_layer"):
+		var layer = row["music_layer"]
+		if not layer is String or not String(layer).begins_with(MUSIC_LAYER_PREFIX) or not EventKinds.WORLD_ROWS.has(layer):
+			_add(out, id, "music_layer", "music_layer %s is no %s* WORLD_ROWS kind" % [str(layer), MUSIC_LAYER_PREFIX])
 	if GUARDED_SOCIETIES.has(row["society"]):
 		if row["home"] != "":
 			_add(out, id, "guardrail", "a %s row houses no home (%s)" % [row["society"], row["home"]])

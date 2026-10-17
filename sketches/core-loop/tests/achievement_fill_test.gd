@@ -69,9 +69,12 @@ func _tables() -> void:
 	# 2026-10-12 (W13 coordinator): the pins hold the shared rows; each P-C kit's rows sit in its
 	# marked block and its own tests count them (tests/support/pilot_blocks.gd). Was the total,
 	# which every kit merge broke (49 and 47 on 19b3656).
-	_t.eq("F1 forty-three achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 43)
+	# 2026-10-17 (crown authored pass): isles_rescued, Tally's sky-islands rescue; was 43.
+	_t.eq("F1 forty-four achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 44)
 	_t.eq("F1 forty-one cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 41)
-	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty())
+	# A pilot's "or" rule row (class_def.gd unlock) pays that pilot through the class row, so its own reward is empty.
+	var or_rows := ClassDef.all().filter(func(d): return d.unlock.has("or")).map(func(d): return ClassDef.unlock_row(String(d.unlock["or"])))
+	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty() and not or_rows.has(id))
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 
 
