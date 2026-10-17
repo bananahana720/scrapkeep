@@ -568,6 +568,14 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
 
 **Society rows.** The net-weavers own the gust lips, the hoodoo knots, the needle hammock and the Gauntlet net. The Fleet's mooring crew owns the Signal Butte, the mooring deck, the Gauntlet's west butte and shelf, and the toe lip. Their lines are in section 12.
 
+**Signal caches** (design-v3/sound/RADIO.md on PR #66; rows in the format of PR #68's `tools/radio_cache_spots.gd` SPOTS, which casts the heights onto live colliders):
+
+| Take | Spot here | Row | The reach |
+| --- | --- | --- | --- |
+| `take-crown-last-call` | the Fleet's storm collector, the bell-shaped frame lowest on the Crown's flank (the park spire has no bell frames of its own) | `{"stage": 6, "x": 145.0, "z": 470.0, "drop": 120.0}` | the 64 m ledge: shelf cannon or a swing off the perches |
+| `take-crown-spire-fusion` | outside the spire's 30 m waist, west face, 30 m above the bowl floor | `{"stage": 6, "x": -17.0, "z": 470.0, "at": 18.0}` | glide off `crown_updraft` and thread past the waist; 22 m off the hand's perch 2-to-3 lane |
+| `take-crown-footwork` | the Gauntlet net, slung between the two highest buttes | `{"stage": 6, "x": 280.0, "z": 175.0, "drop": 250.0}` | balloon lift or gauntlet updraft to 110 m, then roll the net |
+
 **Music.** A park row's optional `music_layer` (park_schema.gd) names a `layer_*` WORLD_ROWS kind; the row's ride sensor publishes it on entry, and a group row with no recipe (the hoodoo forest, the spire top ramp) gets a sensor of its own (park_recipes.gd `place_layer`). The four new layer ids are in section 11.
 
 ## Appendix: the park file draft

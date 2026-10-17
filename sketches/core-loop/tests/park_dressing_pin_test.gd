@@ -13,6 +13,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Stage -> [map, batch count, hash], from the 7dbdebae builder.
+# 2026-10-17 crown authored pass re-pin: stage 6 park_crown 3361994924 -> 452118366, because the new lips,
+# hammocks and mooring deck join the scatter keep-out (park_map.gd); stages 1 to 5 unchanged.
 # 2026-10-16 PARK-WIN re-pin: stage 6 park_crown 1104816985 -> 3361994924, because its dressing
 # follows the PW2 rebaked ground (passes on the 699fded6 ground.bin); stages 1 to 5 unchanged.
 const PINS := {
@@ -21,7 +23,7 @@ const PINS := {
 	3: ["park_pit", 13, 3689678730],
 	4: ["park_sinkhole", 13, 2757620411],
 	5: ["park_islands", 13, 3297821718],
-	6: ["park_crown", 13, 3361994924],
+	6: ["park_crown", 13, 452118366],
 }
 
 var _t := T.new("park_dressing_pin_test")

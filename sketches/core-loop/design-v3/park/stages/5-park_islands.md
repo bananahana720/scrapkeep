@@ -623,6 +623,14 @@ Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-2
 
 **Authored pass, 17 October 2026** (Andrew's "Now, light", "Rescue on the isles" and "Either path"). The net-weavers are a society row now (`net_weaver`): the net carve, the net bowl, the post run, the twelve post fields and the five cairns. The Fleet's mooring crew keeps the Moorings. The file's optional `rescue_rows` stand `tally_cage` on `mooring_mesa` at [-290, 30], facing the pad, 70 m from it and about 100 m off Tarn's line and the floor line. The row names its pilot as data (`"pilot": "tally"`, quest `isles`). Freeing her earns `isles_rescued`, and Tally's class row opens on that or on three ledger leaves, whichever comes first (`class_def.gd` unlock `or`).
 
+**Signal caches** (RADIO.md on PR #66; rows for PR #68's `tools/radio_cache_spots.gd` SPOTS):
+
+| Take | Spot here | Row | The reach |
+| --- | --- | --- | --- |
+| `take-hanging-isle-liquid` | under the Hanging Isle's tip, 24 m off its axis (clear of the hand's 16 m reach), 28 m over the net bowl | `{"stage": 5, "x": 24.0, "z": 520.0, "at": 70.0}` | glide in off a bowl thermal, or swing on the tip's harpoon anchor |
+| `take-islands-kite-chime` | among the kite anchors on the kite roost, the far west island | `{"stage": 5, "x": -455.0, "z": 490.0, "drop": 250.0}` | ride `roost_thermal` up 50 m and land on the roost |
+| `take-highdraft-first-light` (legend) | above the highest kite tether, 12 m over `roost_line`'s top anchor, above the cloud deck | `{"stage": 5, "x": -420.0, "z": 470.0, "at": 185.0}` | top out the roost thermal, then glide back onto a point 31 m above the roost with no surface under it |
+
 Today's 3-1 lore lines (`src/core/lore_rows.gd:232-288`, the post docket at `:274` and the beacon watch at `:278`) stay; they still fit a park of posts and a lens.
 
 ## 13. What stays from today's stage
