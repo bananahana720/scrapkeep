@@ -4,6 +4,7 @@ const Audio := preload("res://src/presentation/audio.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const MachineFx := preload("res://src/presentation/machine_fx.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
@@ -38,6 +39,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #   vfx            trails, speed lines, flashes, rings, sparkles, bursts and the edge flash
 #   machine_fx     what enemies and bosses throw off: arrival, wind-up, hits, stagger,
 #                  deaths, the four specials' tells, boss phases and falls, comic words
+#   player_fx      sound words, overdrive, carve sparks, the might aura and impact frames
 #   streak         the pickup streak and the kill chain audio climbs and juice draws
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
 #   codex_style    category colours, icons and the discovery banner
@@ -50,6 +52,7 @@ var audio
 var juice
 var vfx
 var machine_fx
+var player_fx
 var line_view
 var status_marks
 var banner
@@ -81,6 +84,9 @@ func setup(ctx_ref) -> void:
 	machine_fx = MachineFx.new()
 	add_child(machine_fx)
 	machine_fx.setup(ctx)
+	player_fx = PlayerFx.new()
+	add_child(player_fx)
+	player_fx.setup(ctx, vfx)
 	line_view = LineView.new()
 	add_child(line_view)
 	if ctx.camera != null and ctx.camera.cam != null:

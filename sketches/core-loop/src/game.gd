@@ -615,6 +615,7 @@ func set_reduced_motion(on: bool) -> void:
 		WorldFx.current.set_quality(WorldFx.current.low, on)
 	if presentation != null and presentation.get("juice") != null:
 		presentation.juice.set_reduced_motion(on)
+		presentation.player_fx.reduced_motion = on
 	elif camera != null:
 		camera.reduced_motion = on
 	for node in find_children("*", "Node3D", true, false):
