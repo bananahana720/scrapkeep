@@ -201,6 +201,12 @@ def write_wav(path, x):
 
 def cut_stage(zone, pack, park, packs_dir, out_dir):
     drops, risers = park_cues(park)
+    import highdraft_stingers  # imported here: it reuses this module's finish and level
+    if zone.split("-")[0] == highdraft_stingers.WORLD:
+        # The Highdraft's anvil and boiler are designed (highdraft_stingers.py) and its Mind cues
+        # play the engine's pilot-aware quote, so neither is cut from the pack.
+        skip = set(highdraft_stingers.DESIGNED) | set(highdraft_stingers.UNCUT)
+        drops, risers = drops - skip, risers - skip
     pack_dir = packs_dir / pack
     manifest = json.loads((pack_dir / "manifest.json").read_text())
     clips = {}
@@ -266,6 +272,9 @@ def main():
     summary = {}
     for zone, pack, park in stage_rows():
         summary[zone.replace("-", "_")] = cut_stage(zone, pack, park, args.packs, args.out)
+    import highdraft_stingers
+    for zone, rows in highdraft_stingers.design(args.out).items():
+        summary[zone]["cues"].update(rows)
     (args.out).mkdir(parents=True, exist_ok=True)
     (args.out / "manifest.json").write_text(json.dumps(summary, indent=1, sort_keys=True) + "\n")
     hashes = {}

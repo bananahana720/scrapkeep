@@ -380,14 +380,10 @@
  "3_1": {
   "cues": {
    "drop_boiler": {
-    "bar": 4,
-    "beat": 3,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -3.22,
-    "kind": "drop",
+    "dbtp": -2.38,
+    "kind": "designed",
     "lufs": -16.0,
-    "samples": 41024
+    "samples": 57330
    },
    "drop_collapse": {
     "bar": 2,
@@ -400,14 +396,10 @@
     "samples": 41024
    },
    "drop_fleet_anvil": {
-    "bar": 1,
-    "beat": 3,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -2.43,
-    "kind": "drop",
+    "dbtp": -2.23,
+    "kind": "designed",
     "lufs": -16.0,
-    "samples": 41024
+    "samples": 61739
    },
    "drop_impact": {
     "bar": 1,
@@ -418,16 +410,6 @@
     "kind": "drop",
     "lufs": -16.0,
     "samples": 20512
-   },
-   "drop_mind_wrong": {
-    "bar": 2,
-    "beat": 1,
-    "beats": 2,
-    "clip": "open",
-    "dbtp": -3.91,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
    },
    "riser_fleet": {
     "bar": 16,
@@ -443,15 +425,6 @@
     "beat": 1,
     "clip": "telegraph",
     "dbtp": -1.0,
-    "kind": "riser",
-    "lufs": -16.0,
-    "samples": 82048
-   },
-   "riser_mind_quote": {
-    "bar": 16,
-    "beat": 1,
-    "clip": "build",
-    "dbtp": -2.17,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -472,24 +445,16 @@
  "3_2": {
   "cues": {
    "drop_boiler": {
-    "bar": 3,
-    "beat": 1,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -3.12,
-    "kind": "drop",
+    "dbtp": -2.42,
+    "kind": "designed",
     "lufs": -16.0,
-    "samples": 41024
+    "samples": 57330
    },
    "drop_fleet_anvil": {
-    "bar": 3,
-    "beat": 3,
-    "beats": 2,
-    "clip": "open",
-    "dbtp": -1.74,
-    "kind": "drop",
+    "dbtp": -2.05,
+    "kind": "designed",
     "lufs": -16.0,
-    "samples": 41024
+    "samples": 61739
    },
    "drop_flood": {
     "bar": 1,
@@ -511,16 +476,6 @@
     "lufs": -16.0,
     "samples": 20512
    },
-   "drop_mind_wrong": {
-    "bar": 2,
-    "beat": 1,
-    "beats": 2,
-    "clip": "open",
-    "dbtp": -2.16,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
-   },
    "riser_fleet": {
     "bar": 16,
     "beat": 1,
@@ -535,15 +490,6 @@
     "beat": 1,
     "clip": "telegraph",
     "dbtp": -1.51,
-    "kind": "riser",
-    "lufs": -16.0,
-    "samples": 82048
-   },
-   "riser_mind_quote": {
-    "bar": 16,
-    "beat": 1,
-    "clip": "build",
-    "dbtp": -1.01,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048

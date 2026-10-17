@@ -10,6 +10,8 @@ const T := preload("res://tests/support/t.gd")
 # synth row is the fallback when a stage has no file for a cue.
 
 var _t := T.new("park_stinger_test")
+# The Highdraft's Mind cues are never cut from its pack, so every pilot hears its own motif quoted.
+const MIND_CUES := ["riser_mind_quote", "drop_mind_wrong"]
 
 
 func _initialize() -> void:
@@ -25,6 +27,11 @@ func _initialize() -> void:
 		_t.check("%s (%s) names park cues" % [zone, map_id], cues.size() >= 8, str(cues))
 		for cue in cues:
 			var row := MusicRows.cue(cue, {"stage": zone, "theme": 0, "ancient": "reactor", "motif": "sable"})
+			if zone.begins_with("3") and cue in MIND_CUES:
+				# No file: the engine's pilot-aware Mind quote plays (tools/ace/highdraft_stingers.py).
+				_t.check("%s %s has no cut file" % [zone, cue], not SfxBank.file_exists(SfxBank.stinger_id(zone, cue)))
+				_t.check("%s %s plays the synth Mind quote" % [zone, cue], not row.get("stinger", false))
+				continue
 			var want := SfxBank.stinger_id(zone, cue)
 			_t.check("%s %s resolves to its own file" % [zone, cue], row.get("stinger", false) and row.get("sound", "") == want, str(row.get("sound", "")))
 			var samples := SfxBank.file_samples(want)
