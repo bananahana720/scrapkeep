@@ -76,6 +76,9 @@ const TRIM_DB := {
 	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0, "tally_break": -3.0, "cannon_break": -3.0,
 	"fleet_motif": -4.0, "reactor_tick": -6.0, "reactor_erupt": -2.0, "swarm_buzz": -9.0, "swarm_lock": -6.0, "swarm_scatter": -8.0,
 	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0, "mind_tally": -5.0, "mind_cannon": -5.0,
+	# The Highdraft's own event drops (music_rows.gd): the anvil, the boiler and the Mind's wrong note.
+	"fleet_anvil": -3.0, "boiler_burst": -3.0,
+	"mind_wrong_sable": -5.0, "mind_wrong_rivet": -5.0, "mind_wrong_kest": -5.0, "mind_wrong_tarn": -5.0, "mind_wrong_tally": -5.0, "mind_wrong_cannon": -5.0,
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
@@ -676,6 +679,12 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _swarm_scatter()
 		"mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon":
 			return _mind_quote(id.get_slice("_", 1))
+		"mind_wrong_sable", "mind_wrong_rivet", "mind_wrong_kest", "mind_wrong_tarn", "mind_wrong_tally", "mind_wrong_cannon":
+			return _mind_wrong(id.get_slice("_", 2))
+		"fleet_anvil":
+			return _fleet_anvil()
+		"boiler_burst":
+			return _boiler_burst()
 		"hold_pit", "hold_bola", "hold_tether", "hold_net", "hold_riser":
 			return hold(id.get_slice("_", 1), Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
 		"tenacity_choke":
@@ -1655,6 +1664,33 @@ static func _mind_quote(class_id: String) -> PackedFloat32Array:
 	for cell in Harmony.mind_quote(class_id):
 		score.append([int(cell[0]), int(cell[1]) + 12, int(cell[2]) + 2, "chime", 0.7])
 	return Synth.render_score(score, 2.4)
+
+
+# The Mind's wrong note: the quote's flattened last note rung alone, with the floor a tritone
+# under it sliding down a semitone more, so the Highdraft's G never arrives.
+static func _mind_wrong(class_id: String) -> PackedFloat32Array:
+	var quote: Array = Harmony.mind_quote(class_id)
+	var wrong: int = (int(quote[-1][1]) if not quote.is_empty() else 61) + 12
+	return _mix([[_cut(_n("bell", wrong), 1.6), 0, 0.8], [_fm(1.6, _hz(wrong - 6), 1.0, 0.4, 1.6, -1.0), 0, 0.5],
+		[_tone(1.2, _hz(wrong - 18), _hz(wrong - 19), "sine", 2.0), Synth.seconds(0.1), 0.6], [Synth.drum("crash"), 0, 0.25]])
+
+
+# The Fleet's mooring anvil (KLANG-KLANG), then its brass a fourth up with the Lydian sharp
+# eleven on top and a pulley whirring away into the wind.
+static func _fleet_anvil() -> PackedFloat32Array:
+	var gap := Synth.seconds(0.17)
+	return _mix([[Synth.drum("anvil"), 0, 1.0], [Synth.drum("anvil"), gap, 0.8], [Synth.drum("boom"), 0, 0.6],
+		[_cut(_n("brass", 50), 0.7), gap, 0.6], [_cut(_n("brass", 57), 0.7), gap, 0.5], [_cut(_n("brass", 68), 0.7), gap, 0.4],
+		[_fm_sweep(0.6, _hz(79), _hz(91), 1.5, 5.0), gap * 2, 0.2]], true)
+
+
+# A boiler or burner giving way: a pressure hiss that swells, the valve pop with a thud under
+# it, the steam roaring off and a two-pipe whistle on D and its tritone.
+static func _boiler_burst() -> PackedFloat32Array:
+	var pop := Synth.seconds(0.22)
+	return _mix([[_noise(0.3, 900.0, 4200.0, 1.0, 0.25), 0, 0.5], [Synth.drum("boom"), pop, 1.0],
+		[_noise(0.9, 5000.0, 600.0, 3.0, 0.003), pop, 0.7], [_tone(0.25, 70.0, 40.0, "sine", 12.0), pop, 0.8],
+		[_tone(0.7, _hz(74), _hz(76), "sine", 3.5), pop, 0.35], [_tone(0.7, _hz(80), _hz(82), "sine", 3.5), pop, 0.25]], true)
 
 
 # A hold loop, n samples long. The four counter holds of SOUND-STORY.md section 3 sit

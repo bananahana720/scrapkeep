@@ -16,10 +16,15 @@ const CUES := {
 	"riser_industrial": {"family": "industrial", "rise": true, "voice": "steam_whistle", "notes": [62, 65, 67, 69, 74, 77, 81, 86], "trim_sound": "threat_whistle"},
 	"drop_industrial": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50], "sound": "smash_crack", "trim_sound": "smash_crack"},
 	"drop_flash_flood": {"alias": "drop_flood"},
-	"drop_fleet_anvil": {"alias": "drop_fleet"},
-	"riser_mind_quote": {"alias": "riser_ancient"},
-	"drop_mind_wrong": {"alias": "drop_ancient"},
-	"drop_boiler": {"alias": "drop_industrial"},
+	# The Highdraft's own four (G home, Lydian lift; D-home notes, so G#/68 is the sharp eleven).
+	# The mooring crew's anvil answers twice and the Fleet brass lifts onto the eleven.
+	"drop_fleet_anvil": {"danger": true, "family": "fleet", "rise": false, "voice": "brass", "notes": [50, 57, 68], "accent": "anvil", "sound": "fleet_anvil", "trim_sound": "fleet_anvil"},
+	# Always the Mind: the player's hook played back inverted, a brushed gust under each note.
+	"riser_mind_quote": {"family": "ancient", "ancient": "mind", "rise": true, "voice": "sub", "notes": [44, 56], "accent": "brush", "trim_sound": "reactor_erupt"},
+	# The quote's flattened last note held alone while the floor slides a tritone under it.
+	"drop_mind_wrong": {"danger": true, "family": "ancient", "ancient": "mind", "drop_sound": "mind_wrong_", "rise": false, "voice": "sub", "notes": [44], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
+	# A pressure vessel giving: hiss swell, valve pop, a tritone steam shriek.
+	"drop_boiler": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50, 56], "sound": "boiler_burst", "trim_sound": "boiler_burst"},
 	"stinger_lightning": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
 	"drop_collapse": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [57, 50, 45], "accent": "crash", "trim_sound": "smash_crack"},
 	"drop_cave_in": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [50, 45, 38], "accent": "kick", "trim_sound": "land_thud"},
@@ -52,7 +57,7 @@ static func cue(id: String, context: Dictionary = {}) -> Dictionary:
 	if row.voice == "stage":
 		row.voice = STAGE_VOICES[clampi(int(context.get("theme", 0)), 0, STAGE_VOICES.size() - 1)]
 	if row.family == "ancient":
-		var ancient: String = context.get("ancient", "reactor")
+		var ancient: String = row.get("ancient", context.get("ancient", "reactor"))
 		var motif := Harmony.motif(ancient)
 		if motif.is_empty():
 			return {}
@@ -64,7 +69,7 @@ static func cue(id: String, context: Dictionary = {}) -> Dictionary:
 		if ancient == "swarm":
 			row.notes.append_array(motif.chord)
 		if not row.rise:
-			row.sound = ANCIENT_DROPS[ancient] + (str(context.get("motif", "sable")) if ancient == "mind" else "")
+			row.sound = String(row.get("drop_sound", ANCIENT_DROPS[ancient])) + (str(context.get("motif", "sable")) if ancient == "mind" else "")
 		row.trim_sound = row.sound if row.has("sound") else {"reactor": "reactor_erupt", "swarm": "swarm_buzz", "mind": "mind_" + str(context.get("motif", "sable"))}[ancient]
 	return row
 
