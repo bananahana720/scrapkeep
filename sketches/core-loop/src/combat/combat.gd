@@ -206,6 +206,8 @@ var _pending := {}
 # Shred by enemy instance id: {amount, cap (the most plating it has shown), idle
 # (seconds since its last landed hit)}.
 var _shred := {}
+# Linker guards (linker.gd): partner instance id -> the Linker whose dish braces over it.
+var _guards := {}
 
 # special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}, or
 # {tap: Callable() -> bool} for a row with no gauge.
@@ -1036,12 +1038,40 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 				if enemy.get_method_argument_count("judge_hit") >= 5 else enemy.judge_hit(kind, punch, smash, tier)
 		if not judged.is_empty():
 			return judged
+	var guard := guard_of(enemy)
+	if guard != null and guard.blocks(kind):
+		return {"punch": punch, "plating": guard.DISH_PLATING, "full": false, "dealt": 0.0, "part": part, "shred": false,
+			"guarded": true}
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
 	var mult: float = enemy.hit_mult(kind, part) if full and enemy.has_method("hit_mult") else 1.0
 	var dealt := punch * mult if full else punch * CHIP
 	return {"punch": punch, "plating": plating, "full": full, "dealt": dealt, "part": part}
+
+
+# The Linker bracing a dish over this enemy, or null (linker.gd; blocks() decides each hit).
+func guard_of(enemy: Node3D) -> Node3D:
+	if enemy == null or not is_instance_valid(enemy):
+		return null
+	var linker = _guards.get(enemy.get_instance_id())
+	if linker == null or not is_instance_valid(linker) or not linker.guarding(enemy):
+		return null
+	return linker
+
+
+func guard(partner: Node3D, linker: Node3D) -> void:
+	_guards[partner.get_instance_id()] = linker
+
+
+func unguard(partner: Node3D, linker: Node3D) -> void:
+	if partner == null or not is_instance_valid(partner):
+		for id in _guards.keys():
+			if _guards[id] == linker:
+				_guards.erase(id)
+		return
+	if _guards.get(partner.get_instance_id()) == linker:
+		_guards.erase(partner.get_instance_id())
 
 
 # Punch for a hit of this kind and force: a ball contact scales with heft, a weapon hit
