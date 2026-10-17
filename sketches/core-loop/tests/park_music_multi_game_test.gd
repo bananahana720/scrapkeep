@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const T := preload("res://tests/support/t.gd")
+const ParkRiser := preload("res://tests/support/park_riser.gd")
 const IDS := ["plunge_pool_flood", "east_bench_dropship"]
 const FAMILY_CUES := ["riser_fleet", "drop_fleet", "drop_fleet_anvil", "riser_ancient", "drop_ancient",
 	"riser_mind_quote", "drop_mind_wrong", "riser_industrial", "drop_industrial", "drop_boiler"]
@@ -102,10 +103,7 @@ func _two_events(band: String) -> void:
 		t.check(band + " " + id + " remains announced with unchanged deadline", state.phase == director.ANNOUNCED and state.due_s == deadlines[id], str([state.phase, state.due_s]))
 		t.check(band + " " + id + " predicted impact cancelled", not audio.engine._actions.any(func(a): return a.get("type") == "park_cue" and a.owner == id and not a.row.rise)
 			and not audio.engine.park_cue_log.any(func(a): return a.owner == id and not MusicRows.cue(a.id).rise), id)
-		var row: Dictionary = MusicRows.cue(state.row.music_cue.telegraph)
-		var expected_cells := []
-		for cell in row.notes.size():
-			expected_cells.append(announcements[id].sample + roundi(float(announcements[id].lead) * cell / row.notes.size()))
+		var expected_cells := ParkRiser.starts(state.row.music_cue.telegraph, ParkRiser.options(audio), announcements[id].lead, announcements[id].sample)
 		var cells: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == id)
 		t.check(band + " " + id + " warning cells complete once", cells.map(func(a): return a.at) == expected_cells, str([cells.map(func(a): return a.at), expected_cells]))
 	game.toggle_pause()

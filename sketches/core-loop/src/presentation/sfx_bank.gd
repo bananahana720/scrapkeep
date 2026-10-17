@@ -263,10 +263,30 @@ const FILE_SOUNDS := {
 const HYPE_DROP_LEAD_SECONDS := 2.0
 
 
+# Per-stage park event stingers (tools/ace/cut_stingers.py) are ids of the form
+# "stinger:<zone with _>/<cue>", for example "stinger:3_1/drop_boiler".
+const STINGER_PREFIX := "stinger:"
+
+
+static func stinger_id(zone: String, cue: String) -> String:
+	return "%s%s/%s" % [STINGER_PREFIX, zone.replace("-", "_"), cue]
+
+
+static func file_path(id: String) -> String:
+	if id.begins_with(STINGER_PREFIX):
+		return SFX_DIR + "stingers/" + id.substr(STINGER_PREFIX.length()) + ".wav"
+	return SFX_DIR + String(FILE_SOUNDS[id])
+
+
+static func file_exists(id: String) -> bool:
+	var path := file_path(id)
+	return ResourceLoader.exists(path) or FileAccess.file_exists(path)
+
+
 # The mono samples of a rendered file: the imported resource when the editor or export has
 # one, else the raw RIFF (headless runs without an import cache).
 static func file_samples(id: String) -> PackedFloat32Array:
-	var path: String = SFX_DIR + String(FILE_SOUNDS[id])
+	var path := file_path(id)
 	var out := PackedFloat32Array()
 	var res = load(path) if ResourceLoader.exists(path) else null
 	if res is AudioStreamWAV and (res as AudioStreamWAV).format == AudioStreamWAV.FORMAT_16_BITS:
@@ -377,7 +397,7 @@ static func bake_all(ids: Array) -> void:
 
 
 static func _bake(id: String) -> PackedFloat32Array:
-	if FILE_SOUNDS.has(id):
+	if FILE_SOUNDS.has(id) or id.begins_with(STINGER_PREFIX):
 		var file := file_samples(id)
 		if file.size() > 0:
 			return file

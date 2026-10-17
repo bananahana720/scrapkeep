@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const T := preload("res://tests/support/t.gd")
+const ParkRiser := preload("res://tests/support/park_riser.gd")
 
 var t := T.new("park_music_hold_game_test")
 var game
@@ -106,11 +107,7 @@ func _warning_through_hold() -> void:
 		await process_frame
 		return
 	var flood: Dictionary = game.world.events._park_states.filter(func(s): return s.row.id == "plunge_pool_flood")[0]
-	var row = preload("res://src/presentation/music_rows.gd").cue("riser_natural", {"theme": audio.engine.theme})
-	var expected := []
-	for cell in row.notes.size():
-		expected.append([warning[0].at + roundi(float(warning[0].lead) * cell / row.notes.size()),
-			warning[0].at + roundi(float(warning[0].lead) * (cell + 1) / row.notes.size())])
+	var expected := ParkRiser.pieces("riser_natural", ParkRiser.options(audio), warning[0].lead, warning[0].at)
 	audio._virtual_usec -= int(8192.0 * 1000000.0 / Harmony.RATE)
 	audio._pump()
 	var voices: Array = audio.engine._voices.filter(func(v): return v.park_owned and v.park_owner == "plunge_pool_flood")

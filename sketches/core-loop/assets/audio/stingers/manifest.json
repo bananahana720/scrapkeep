@@ -1,0 +1,564 @@
+{
+ "1_1": {
+  "cues": {
+   "drop_ancient": {
+    "bar": 2,
+    "beat": 3,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -2.75,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_flash_flood": {
+    "bar": 1,
+    "beat": 1,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -1.06,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_fleet": {
+    "bar": 4,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -1.04,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_flood": {
+    "bar": 4,
+    "beat": 1,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -2.04,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_industrial": {
+    "bar": 2,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -1.0,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "riser_ancient": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -4.07,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_fleet": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -1.16,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_industrial": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -1.25,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_natural": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -3.31,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "stinger_lightning": {
+    "bar": 2,
+    "beat": 1,
+    "beats": 1,
+    "clip": "drop",
+    "dbtp": -3.52,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 20512
+   }
+  },
+  "pack": "spillway",
+  "park": "park_dam"
+ },
+ "1_2": {
+  "cues": {
+   "drop_ancient": {
+    "bar": 2,
+    "beat": 3,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -2.45,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_collapse": {
+    "bar": 1,
+    "beat": 3,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -3.77,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_flash_flood": {
+    "bar": 4,
+    "beat": 1,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -1.27,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_fleet": {
+    "bar": 3,
+    "beat": 3,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -2.39,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_industrial": {
+    "bar": 3,
+    "beat": 1,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -1.4,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "riser_ancient": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -1.83,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_fleet": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -1.45,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_industrial": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -1.0,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_natural": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -1.91,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   }
+  },
+  "pack": "cable_reach",
+  "park": "park_flume"
+ },
+ "2_1": {
+  "cues": {
+   "drop_ancient": {
+    "bar": 2,
+    "beat": 1,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -2.5,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_collapse": {
+    "bar": 3,
+    "beat": 1,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -2.58,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_fleet": {
+    "bar": 4,
+    "beat": 3,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -1.0,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_flood": {
+    "bar": 3,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -3.13,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_industrial": {
+    "bar": 3,
+    "beat": 3,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -1.0,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "riser_ancient": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -3.07,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_fleet": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -1.58,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_industrial": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -1.85,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_natural": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -2.23,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   }
+  },
+  "pack": "dig_upper",
+  "park": "park_pit"
+ },
+ "2_2": {
+  "cues": {
+   "drop_ancient": {
+    "bar": 2,
+    "beat": 1,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -2.14,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_cave_in": {
+    "bar": 3,
+    "beat": 1,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -4.2,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_drain": {
+    "bar": 4,
+    "beat": 1,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -1.42,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_fleet": {
+    "bar": 3,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -1.08,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_industrial": {
+    "bar": 4,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -2.69,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "riser_ancient": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -3.98,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_fleet": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -1.44,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_industrial": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -1.93,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_natural": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -2.89,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   }
+  },
+  "pack": "dig_deep",
+  "park": "park_sinkhole"
+ },
+ "3_1": {
+  "cues": {
+   "drop_boiler": {
+    "bar": 4,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -3.22,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_collapse": {
+    "bar": 2,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -3.81,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_fleet_anvil": {
+    "bar": 1,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -2.43,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_impact": {
+    "bar": 1,
+    "beat": 1,
+    "beats": 1,
+    "clip": "open",
+    "dbtp": -4.28,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 20512
+   },
+   "drop_mind_wrong": {
+    "bar": 2,
+    "beat": 1,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -3.91,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "riser_fleet": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -1.3,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_industrial": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -1.0,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_mind_quote": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -2.17,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_natural": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -1.0,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   }
+  },
+  "pack": "highdraft",
+  "park": "park_islands"
+ },
+ "3_2": {
+  "cues": {
+   "drop_boiler": {
+    "bar": 3,
+    "beat": 1,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -3.12,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_fleet_anvil": {
+    "bar": 3,
+    "beat": 3,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -1.74,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_flood": {
+    "bar": 1,
+    "beat": 3,
+    "beats": 2,
+    "clip": "drop",
+    "dbtp": -2.89,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "drop_lightning": {
+    "bar": 3,
+    "beat": 3,
+    "beats": 1,
+    "clip": "drop",
+    "dbtp": -3.79,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 20512
+   },
+   "drop_mind_wrong": {
+    "bar": 2,
+    "beat": 1,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -2.16,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
+   "riser_fleet": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -1.13,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_industrial": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -1.51,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_mind_quote": {
+    "bar": 16,
+    "beat": 1,
+    "clip": "build",
+    "dbtp": -1.01,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   },
+   "riser_natural": {
+    "bar": 4,
+    "beat": 1,
+    "clip": "telegraph",
+    "dbtp": -2.37,
+    "kind": "riser",
+    "lufs": -16.0,
+    "samples": 82048
+   }
+  },
+  "pack": "highdraft_crown",
+  "park": "park_crown"
+ }
+}

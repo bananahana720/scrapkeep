@@ -3,6 +3,7 @@ extends RefCounted
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const Harmony := preload("res://src/presentation/harmony.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
 # Notes are home-key MIDI. Rise cells divide the full director lead evenly.
 # trim_sound names an existing bank level; priority comes from the triggering fact.
@@ -43,10 +44,26 @@ static func danger(id: String) -> bool:
 	return bool(row.get("danger", false))
 
 
+# context.stage is the zone id ("3-1"). A stage with its own cut of this cue
+# (assets/audio/stingers/<zone>/<cue>.wav, tools/ace/cut_stingers.py) plays that file; any cue
+# without one keeps the synth row, so nothing goes silent. The override is keyed by the id the
+# park names, before aliases resolve, so drop_flash_flood and drop_flood are separate files.
 static func cue(id: String, context: Dictionary = {}) -> Dictionary:
+	var row := synth_cue(id, context)
+	var zone := str(context.get("stage", ""))
+	if row.is_empty() or zone == "":
+		return row
+	var sound := SfxBank.stinger_id(zone, id)
+	if SfxBank.file_exists(sound):
+		row["sound"] = sound
+		row["stinger"] = true
+	return row
+
+
+static func synth_cue(id: String, context: Dictionary = {}) -> Dictionary:
 	var row: Dictionary = CUES.get(id, {}).duplicate(true)
 	if row.has("alias"):
-		return cue(row.alias, context)
+		return synth_cue(row.alias, context)
 	if row.is_empty():
 		return row
 	if row.voice == "stage":
