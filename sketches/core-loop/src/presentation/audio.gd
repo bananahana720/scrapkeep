@@ -1965,7 +1965,8 @@ func _on_event_announced(event_id: String, seconds: float) -> void:
 		_flush_flow()
 	engine.cancel_park_cue(event_id)
 	var options := {"theme": engine.theme, "motif": _motif,
-		"ancient": MusicRows.ANCIENT_VOICES.get(row.effect.get("miniboss", ""), "reactor")}
+		"stage": MusicRows.zone_id(_stage_now, _music_stages()) if _stage_now > 0 else "",
+		"ancient":MusicRows.ANCIENT_VOICES.get(row.effect.get("miniboss", ""), "reactor")}
 	var lead := roundi(seconds * Harmony.RATE)
 	var landing_s := -1.0
 	if not state.is_empty():
