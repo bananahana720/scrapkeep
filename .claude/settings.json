@@ -4,28 +4,27 @@
   "effortLevel": "high",
   "switchModelsOnFlag": false,
   "fallbackModel": [],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "timeout": 900
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/event_sounds.py *)",
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/event_set.py *)",
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/check_events.py *)",
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/specials.py *)",
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/variations.py *)",
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/extras.py *)",
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/measure_variants.py *)",
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/grid_stretch.py *)",
-      "Bash(/home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I /home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/cut_loops.py *)",
-      "Bash(/home/andrew/Projects/scrapkeep/.claude/worktrees/interesting-swartz-495db0/sketches/core-loop/design-v3/sound/ace_lab.sh /home/andrew/Music/Scrapkeep-sound-direction/*)",
-      "Bash(rubberband -q --fine *)",
-      "Bash(ffmpeg -v error *)",
-      "Bash(ffmpeg -loglevel error *)",
-      "Bash(ffprobe -v error *)",
-      "Bash(sha256sum *)",
-      "Bash(nvidia-smi --query-gpu=*)",
-      "Bash(google-chrome-stable --headless=new --window-size=* --screenshot=/tmp/claude-1000/*)",
-      "Bash(git add sketches/core-loop/design-v3*)",
-      "Bash(git commit -q -F /tmp/claude-1000/*)",
-      "Bash(git commit -qa -F /tmp/claude-1000/*)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push -u origin *)",
+      "Bash(git checkout -b *)",
+      "Bash(git switch -c *)",
+      "mcp__github__create_pull_request"
     ],
     "deny": [
       "Bash(git push --force*)",
@@ -37,7 +36,10 @@
       "Bash(gh repo delete*)"
     ],
     "ask": [
-      "Bash(git push*)",
+      "Bash(git push)",
+      "Bash(git push origin main*)",
+      "Bash(git push -u origin main*)",
+      "Bash(git push * HEAD:main*)",
       "Bash(gh repo *)",
       "Bash(gh api *)",
       "Bash(npm install*)",
