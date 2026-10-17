@@ -478,6 +478,11 @@ func _spawn_encounter() -> void:
 	var at := _drop(ball + forward * (CREW_RANGE + SPECIAL_BEHIND))
 	if _mode == "built":
 		_driver.special = _toughen(spawner.spawn_enemy(String(_row["id"]), at))
+		# A built spawner's adds join the crew: the bot fights them and the clear waits on them.
+		if _driver.special != null and _driver.special.has_signal("dispatched"):
+			_driver.special.dispatched.connect(func(add: Node3D):
+				_driver.crew.append(_toughen(add))
+				_dispatched += 1)
 	else:
 		# The model's stand-in: a non-attacking body with no plating and MODEL_HP.
 		var body: Node3D = spawner.spawn_enemy("vault", at)
@@ -540,6 +545,10 @@ func _record() -> void:
 			"special_dead_s": snappedf(_special_dead_s, 0.01), "crew_spawned": _driver.crew.size(),
 			"crew_killed": killed, "wipes": _wipes, "warnings": _warnings, "dispatched": _dispatched,
 			"encounter_s": snappedf(_encounter_s() if _spawned else 0.0, 0.01)}
+	# A built special's own counts, when it keeps them (the Dispatcher's drops and drop hits).
+	for key in ["drops", "landed_hits"]:
+		if is_instance_valid(_driver.special) and key in _driver.special:
+			row[key] = int(_driver.special.get(key))
 	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
 	file.store_string(JSON.stringify(row) + "\n")
 	file.close()

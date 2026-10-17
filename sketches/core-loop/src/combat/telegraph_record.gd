@@ -95,6 +95,8 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": ""},
 	"E24": {"kind": "kite_drone", "pre_shoot": 0.8, "cooldown": 2.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A dive that no knock interrupts: the mark lamp paints the spot 0.8 s before the 0.7 s dive."},
+	"E25": {"kind": "dispatcher", "pre_shoot": 1.2, "cooldown": 6.05, "radius": 4.0, "length": 0.0, "marker": "circle", "band": "projectile",
+		"recovery_before": 0.0, "reason": "A tube drop: the ring stands through the 0.45 s suck-up and the pod's 0.75 s flight, the lobber's grammar on a shorter arc."},
 }
 
 # Warden attacks keep their own timing (KF2 to KF4 report each one's charge, recovery and
