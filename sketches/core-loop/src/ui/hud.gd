@@ -147,6 +147,7 @@ var edge_markers
 var part_name
 var launch_card
 var _world_card_at := -1
+var _cursed := false
 var why_callout
 var hotwire_screen
 # Where each prompt went this frame, for tests: prompt node to its screen rect.
@@ -648,8 +649,7 @@ func _on_world_entered(world: int) -> void:
 	if row.is_empty():
 		return
 	# The world card carries the first stage's modifier, so it is on screen from the drop's start.
-	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, game.run.stage)
-	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"), StageModifier.caption(modifier))
+	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, game.run.stage))
 	_world_card_at = Time.get_ticks_msec()
 
 
@@ -669,10 +669,21 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		_card_for_stage(stage)
 
 
-# The stage's name, and its SI3 modifier read from the same pick the pocket draw applies.
+# The moment a run turns cursed, its card goes up; a retry's rewind or a new run clears it quietly.
+func _step_curse() -> void:
+	var now: bool = game.run != null and game.run.cursed()
+	if now and not _cursed:
+		launch_card.show_card("obj_beacon", StageModifier.CURSE.word, EventKinds.color("stage_entered"), StageModifier.CURSE.line)
+		if game.player != null:
+			StageModifier.announce(game.player.active_body().global_position)
+	_cursed = now
+
+
+# The stage's name, and its SI3 modifier read from the same pick the pocket draw applies, after
+# the cursed line once the run is cursed.
 func _card_for_stage(stage: int) -> void:
 	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
-	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.caption(modifier))
+	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage))
 	if not modifier.is_empty() and game.player != null:
 		StageModifier.announce(game.player.active_body().global_position)
 
@@ -913,6 +924,7 @@ func _process(delta: float) -> void:
 	if size != _laid_out:
 		layout(size)
 	_step_toast(delta)
+	_step_curse()
 	damage_numbers.step(delta)
 	_step_ach(delta)
 	_step_lore(delta)

@@ -104,6 +104,21 @@ static func caption(row: Dictionary) -> String:
 	return "" if row.is_empty() else "%s: %s" % [row.word, row.line]
 
 
+# The run-long cursed state shares the card: its own card when the deal is taken, then a line
+# on every later stage card beside the stage's modifier.
+const CURSE := {"id": "curse", "word": "Cursed Run", "line": "The deal is on the books."}
+
+
+static func card_line(run, terrain, stage: int) -> String:
+	var lines := []
+	if run != null and run.has_method("cursed") and run.cursed():
+		lines.append(caption(CURSE))
+	var own := caption(for_stage(run, terrain, stage))
+	if not own.is_empty():
+		lines.append(own)
+	return "  /  ".join(lines)
+
+
 # World effects (WORLD-FX.md hooks). Each call does nothing until that kit is in the build and a
 # WorldFx is installed for the stage, so the modifier works with or without it.
 static func announce(at: Vector3) -> void:

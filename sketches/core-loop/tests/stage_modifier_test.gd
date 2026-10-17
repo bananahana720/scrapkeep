@@ -314,5 +314,32 @@ func _runtime() -> void:
 	game.flow.retry_stage()
 	await physics_frame
 	t.eq("a retry keeps the stage's modifier", acts.stage_modifier, kept)
+	await _curse(game)
 	game.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://stage-modifier-test.json"))
+
+
+# Taking a curse pocket's deal turns the run cursed: its card goes up at once, the build clock's
+# tags carry "curse" for the music, and later stage cards carry the cursed line. A retry rewinds
+# the stage's trade memory, so a curse taken in the retried stage is undone with it.
+func _curse(game) -> void:
+	var run = game.run
+	var hud = game.hud
+	t.check("a fresh run is not cursed", not run.cursed() and not game.build.clock.tags().has(Modifier.CURSE.id))
+	var offer := {"stage": run.stage, "family": "risk", "interior_id": "curse_counter", "curse": true, "sacrifice": false}
+	run.trade_memory.seen.append(offer)
+	t.check("seeing a curse offer does not curse the run", not run.cursed())
+	run.trade_memory.decisions[str(run.stage)] = true
+	hud.launch_card.visible = false
+	await process_frame
+	await physics_frame
+	t.check("taking the deal curses the run", run.cursed())
+	t.check("the Cursed Run card goes up when the deal is taken", hud.launch_card.showing() and hud.launch_card.title == Modifier.CURSE.word,
+		"card '%s'" % hud.launch_card.title)
+	t.check("the build clock's tags carry curse for the music", game.build.clock.tags().has(Modifier.CURSE.id), str(game.build.clock.tags()))
+	hud.launch_card.visible = false
+	hud._card_for_stage(6)
+	t.check("a later stage card carries the cursed line", hud.launch_card.line.begins_with(Modifier.caption(Modifier.CURSE)), "line '%s'" % hud.launch_card.line)
+	game.flow.retry_stage()
+	await physics_frame
+	t.check("a retry rewinds a curse taken in that stage", not run.cursed() and not game.build.clock.tags().has(Modifier.CURSE.id))
