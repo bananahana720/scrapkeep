@@ -3,6 +3,7 @@ extends RefCounted
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const RosterSpillway := preload("res://src/combat/roster_spillway.gd")
 const RosterDig := preload("res://src/combat/roster_dig.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
@@ -27,7 +28,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 #   standing in until W5 bakes `tag_next`. hold: the hold loop's stand-in.
 # - tests: the build axis it tests, which the director weights against the player's
 #   build ("air", "speed", "heft", "contact", "weapon", "steer", "habit").
-# - script, world: a declared later-world kind's behaviour file and world (roster_dig.gd,
+# - script, world: a declared world kind's behaviour file and world (roster_spillway.gd, roster_dig.gd,
 #   roster_highdraft.gd). Such a kind is built, so spawnable, once its script exists.
 
 const FLEET := "fleet"
@@ -136,8 +137,8 @@ const BASE_ROWS := {
 #   travels or lunges on the floor, airborne hovers or dives);
 # - threat_feature: the one visible part that is also its warning, what a still at game
 #   camera distance must show. Unique per row, so no two silhouettes share a read.
-# The table sits here, beside the rows, so a declared later-world row (roster_dig.gd,
-# roster_highdraft.gd) gets its columns without those files changing; _all_rows merges it in.
+# The table sits here, beside the rows, so a declared later-world row (roster_spillway.gd,
+# roster_dig.gd, roster_highdraft.gd) gets its columns without those files changing; _all_rows merges it in.
 const CHASSIS_CLASSES := ["crawler", "emplacement", "heavy", "hover", "swarm", "burrower", "cache"]
 const MOVE_CLASSES := ["fixed", "ground", "airborne"]
 
@@ -173,6 +174,7 @@ const CHASSIS := {
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
+	"jolt_layer": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cable spool under a coil that swells before each jolt"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.
@@ -188,7 +190,7 @@ static var ROWS: Dictionary = _all_rows()
 
 static func _all_rows() -> Dictionary:
 	var rows := BASE_ROWS.duplicate()
-	for table in [RosterDig.ROWS, RosterHighdraft.ROWS]:
+	for table in [RosterSpillway.ROWS, RosterDig.ROWS, RosterHighdraft.ROWS]:
 		for id in table:
 			assert(not rows.has(id), "roster id declared twice: %s" % id)
 			rows[id] = table[id]

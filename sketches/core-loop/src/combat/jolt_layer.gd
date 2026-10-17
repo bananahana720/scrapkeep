@@ -1,0 +1,77 @@
+extends "res://src/combat/counter.gd"
+
+const AreaField := preload("res://src/combat/area_field.gd")
+
+# The jolt layer (design-v3/FIELDS-AND-CASTS.md section 2.3): a Spillway crew under a cable
+# spool that unrolls a live mat where the ball is going. The warning is an instant ring laid
+# over the ball, the field the mat will cover. Live, the mat pulses every AreaField row
+# `pulse` seconds; the ring fills over each pulse's lead so the jolt is read before it lands.
+# A pulse that finds the ball rolling slow on the mat jolts it: charging gauges and casts drop
+# with nothing spent and the specials and line skill jam for half a second. Speed (FAST tier),
+# being in the air or a harpoon line attached lets the pulse pass. It never holds or slows
+# the ball, and the weapon, the boost, the smash and Q stay open: a jolt costs a cast, not speed.
+
+const FIELD := "static_jam"
+const HP := 45.0
+
+var field = null
+# Pulses that landed on the ball, and pulses it slipped by its own verb, for tests and the lab.
+var jolts := 0
+var slipped := 0
+
+var _spool: MeshInstance3D
+var _coil: MeshInstance3D
+
+
+func _configure(threat: float) -> void:
+	_set_health(HP * threat)
+	scrap_value = 4
+	weight = 1.0
+	warn_seconds = 1.0
+	live_seconds = 3.7
+	rest_seconds = 4.0
+	attack_range = 22.0
+
+
+func _build_tool() -> void:
+	_spool = _cylinder(0.55, 0.5, Palette.CHARCOAL, Vector3(0.0, CREW_HALF + 0.9, -0.25))
+	_spool.rotation.z = PI * 0.5
+	_coil = _cylinder(0.12, 1.6, Palette.ARC, Vector3(0.0, CREW_HALF + 1.6, -0.25), 1.4)
+
+
+func _commit(_to_ball: Vector3) -> Node3D:
+	var at := _ball()
+	field = AreaField.new(FIELD, at, self)
+	return _commit_ring(Threat.Type.INSTANT, at, field.radius(), 4.0)
+
+
+func _live(delta: float) -> bool:
+	var tele := telegraph()
+	if tele == null or field == null:
+		return false
+	var pulsed: bool = field.step(delta)
+	tele.set_progress(field.lead_fraction())
+	if not pulsed:
+		return true
+	var player = _player()
+	if player == null:
+		return true
+	match String(field.pulse_player(player, _real_ball())):
+		"landed":
+			jolts += 1
+			flash()
+		"speed", "air", "line":
+			slipped += 1
+	return true
+
+
+func _on_end() -> void:
+	field = null
+
+
+func _pose() -> void:
+	if _coil != null:
+		var lead: float = field.lead_fraction() if field != null else 0.0
+		_coil.scale = Vector3.ONE * (1.0 + 0.35 * lead)
+	if _spool != null:
+		_spool.rotation.x += 0.25 if phase == Phase.LIVE else 0.02
