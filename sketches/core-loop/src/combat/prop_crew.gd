@@ -222,6 +222,7 @@ func knock_prop() -> Node3D:
 	slab.get_parent().remove_child(slab)
 	slab.position = at
 	slab.basis = turn
+	# E31's pose (event_kinds.gd, e31_prop_kicked): the prop knocked out from under the roof.
 	if _prop != null:
 		if _prop_from_glb:
 			_prop.rotation.x = PI * 0.4
