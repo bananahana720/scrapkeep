@@ -1,6 +1,6 @@
 extends SceneTree
 # World 2 and 3 bodies (WORLD-ROSTERS.md "Who builds what", Bodies): pit jaw, prop crew,
-# gap net and ballast heavy. Asset only: their combat scripts land from the roster threads, so
+# gap net (strung, and the mid-gap curtain cut) and ballast heavy. Asset only: their combat scripts land from the roster threads, so
 # this checks the imported files the wiring will read. Enemy budget, opaque vertex-colour
 # surfaces with no baked glow, unit-scale nodes, the named meshes and sockets each recipe
 # promises, the floor, and the one moving part each behaviour poses.
@@ -9,6 +9,7 @@ const T := preload("res://tests/support/t.gd")
 const PIT_JAW := "res://assets/models/world_two/enemy_pit_jaw.glb"
 const PROP_CREW := "res://assets/models/world_two/enemy_prop_crew.glb"
 const GAP_NET := "res://assets/models/world_three/enemy_gap_net.glb"
+const GAP_NET_CURTAIN := "res://assets/models/world_three/enemy_gap_net_curtain.glb"
 const BALLAST := "res://assets/models/world_three/enemy_ballast_heavy.glb"
 const FLOOR := -1.1
 
@@ -162,6 +163,43 @@ func _gap_net() -> void:
 	scene.queue_free()
 
 
+# The curtain cut: the same nodes and sockets, for a net the runtime hangs mid-gap from the
+# span tile's mesh bounds alone (gap_net.gd _hang: tiles laid along X, stretched over Y).
+func _gap_net_curtain() -> void:
+	var scene := _load(GAP_NET_CURTAIN)
+	if scene == null:
+		return
+	_budget("gap net curtain", scene, ["fleet_paint", "working_tool", "requisition_tag"])
+	_named("gap net curtain", scene, ["GapNetPost", "GapNetBatten", "GapNetSpan", "net_high", "net_low", "post_cut", "sign", "crew_head"])
+	var gear := _all_points(scene, ["GapNetPost", "GapNetBatten"])
+	var stand := _bounds(gear)
+	t.near("curtain post floor", stand.position.y, FLOOR, 0.01)
+	t.check("curtain post stands upright on its rim plate", stand.end.x <= 1.15 and stand.end.y <= 4.3, str(stand))
+	var mi := scene.find_child("GapNetSpan", true, false) as MeshInstance3D
+	var box := mi.mesh.get_aabb()
+	t.near("curtain tile starts at x 0", box.position.x, 0.0, 0.005)
+	t.near("curtain tile is 2 m wide", box.size.x, 2.0, 0.005)
+	t.check("curtain tile drops about 16 m", box.size.y >= 15.5 and box.size.y <= 16.5, str(box.size.y))
+	t.check("curtain tile is pleated, not flat", box.size.z >= 0.4 and box.size.z <= 1.6, str(box.size.z))
+	# Seam: the tile's two edges meet the same pleat, so repeats read as one curtain.
+	var left := PackedFloat32Array()
+	var right := PackedFloat32Array()
+	for v: Vector3 in mi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+		if v.y > box.end.y - 0.4:
+			if v.x < 0.01:
+				left.append(v.z)
+			elif v.x > box.end.x - 0.01:
+				right.append(v.z)
+	left.sort()
+	right.sort()
+	t.check("headrope meets itself at the seam", left.size() > 0 and left.size() == right.size()
+		and absf(left[0] - right[0]) < 0.02 and absf(left[-1] - right[-1]) < 0.02, "%s %s" % [left, right])
+	var high := _socket(scene, "net_high")
+	var low := _socket(scene, "net_low")
+	t.check("sockets mark the headrope and hem", high.y - low.y >= 15.0 and absf(high.y - box.end.y) < 0.3, str([high, low]))
+	scene.queue_free()
+
+
 func _ballast() -> void:
 	var scene := _load(BALLAST)
 	if scene == null:
@@ -188,5 +226,6 @@ func _run() -> void:
 	_pit_jaw()
 	_prop_crew()
 	_gap_net()
+	_gap_net_curtain()
 	_ballast()
 	quit(t.verdict())
