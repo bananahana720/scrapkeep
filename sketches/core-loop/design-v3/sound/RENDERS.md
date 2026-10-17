@@ -140,6 +140,38 @@ a96b8048f316ace2b04cd22c4c9e04a6195aca5120ab7723d9c4dfabfa12a889  event-set/thre
 0709df2f584db81b7619a0d4c32bcb3598ff3783c9dad9de1e44dd527c2da23b  event-set-reel.mp3
 ```
 
+## Special enemies, 2026-10-17
+
+17 cues from `specials.py` in `specials/`, checked by `check_events.py`: 0 failures. Two families are new to the checker. `spawn` must start within 5 ms and last at most 1.5 s. `presence` must last at most 4.0 s and wrap with a sample jump below -24 dB of its peak. The self-test's planted ramp loop trips the seam check. The original 49 event cues still pass.
+
+The first build of the presence loops folded a 1 s tail onto the head of each loop, which doubled the steady drones there. Spectrograms showed it as a step about 1 s in. The fix makes each drone exactly periodic: pitches are rounded to whole cycles per loop, and noise beds are filtered circularly. Only short hits fold now. The first second's loudness against the rest of the loop: Splitter -15.7 against -15.8 dB, Linker -18.6 against -18.5 dB. The Foreman reads +3.3 dB there because its swell is meant to peak at a quarter of the loop. A 25 Hz high-pass removes the DC that the pulse-wave pings carried.
+
+`reel-<name>.mp3` plays each special's presence loop twice, then its tell, break and spawn answer, loudness-matched to -16 LUFS.
+
+```text
+6fe6cff89c6b86ac246c66f2579579a870bbd108af78f071650417a134a1fbc0  specials/dispatcher_break.wav
+20bc611b828f5b4b2d6247ecc6fd7ad58e55d5a174a908263db93455f60a1c45  specials/dispatcher_presence.wav
+734975074c1a37f2d9fb8b5259f7121debea413bdb34f6d698b20247fde9dd3c  specials/dispatcher_spawn.wav
+21dc4052d915073622446c42fcf12b23b5854f086a7a8cdd1aa57716285c5d4d  specials/dispatcher_tell.wav
+3f3124ad5f1028659779b2fe82039b89c02dae0500798f4b615ab8ad0a7eccad  specials/foreman_break.wav
+8238090c2d4a517d2376d2923b4d6de75cc8e6191ab71769a80851dd1dbea63f  specials/foreman_presence.wav
+c1245393bc0b521aea76a0cafd98e8de11c862aba50e3bbf080d6c66c1736e99  specials/foreman_spawn.wav
+b5fb9b9379d5707726b5592c7156c8dbb429bdc433b5fbd106b06143b72c4b4e  specials/foreman_tell.wav
+8664695534dfe523b10c9bcbee0e15b5d78f172af5273d6b0e3cc522be70351a  specials/linker_break.wav
+b8d6f1e3add45e034226dcd64a434f0d3f5be634c7445a5ec912f657a94d9ab7  specials/linker_presence.wav
+660f19c684226559c7cabfa6a26a8cd1bbebc03ab9cedf1924eedc9b08fd7d33  specials/linker_spawn.wav
+03f3724b4640303435e1381cad90c362a6f1c21592f6341385ac29179b4693c3  specials/linker_tell.wav
+80fbff0a02bd8a502122650db78821bad7cd73a1c537fd5997729a01c3523326  specials/splitter_break_clean.wav
+d72de2af83b858981ef18bd11b0ee73cd905deb4a8623d494510c0fb10b9d0ec  specials/splitter_break_split.wav
+83eea248da33d40b8b14d5a8b0e8e8197ba7d48596810220ebe83ef0eecb9bd3  specials/splitter_presence.wav
+09fb23850873286523539dfdbf5bc14671a46862a3cecf2743f46bc0064dad9d  specials/splitter_spawn.wav
+4cb4f0a3f47e034982e1a96ff959d645e74eeb0c9c0f4f78758f36f6c9f21625  specials/splitter_tell.wav
+56570e217e92aac3c017a541ee706dc6fb223520e63b9e42acf1056bb5b644ed  specials/reel-dispatcher.mp3
+4c3b8a02d21a0854bfd774f217a7ad43c7eb9288b59951c5d59bf2ff37d7cd0f  specials/reel-foreman.mp3
+b2d189f3a543c7e56037393a1d9fd6aafa12ae697932d18877726645531ad9b3  specials/reel-linker.mp3
+59476cf7b559c3fc902163cd7794cf3f5641a990a6e9276c26ed4693f16f0660  specials/reel-splitter.mp3
+```
+
 ## Reproduce
 
 ```bash
@@ -150,6 +182,8 @@ PATH=<shim dir>:$PATH CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python
 ~/.local/share/ACE-Step-1.5/.venv/bin/python -I event_set.py <render folder>/event-set
 ~/.local/share/ACE-Step-1.5/.venv/bin/python -I check_events.py <render folder>/event-set
 ~/.local/share/ACE-Step-1.5/.venv/bin/python -I check_events.py --self-test
+~/.local/share/ACE-Step-1.5/.venv/bin/python -I specials.py <render folder>/specials
+~/.local/share/ACE-Step-1.5/.venv/bin/python -I check_events.py <render folder>/specials
 ```
 
 The shim is a one-line `nvidia-smi` wrapper that adds `-i 0`. Since the RTX 3060 was installed, `ace.py`'s VRAM check fails because it parses one line of `nvidia-smi` output and now gets two.

@@ -59,5 +59,6 @@ A boss arrival freezes on the intro card under `boss_arena_in`, the versus sting
 2. Register the 49 event WAVs in `sfx_bank.gd` under their existing keys. Cues with tiers (`kill_chain_tier_1` to `_5`, `scrap_tick_1` to `_5`, `rarity_bell_common`, `_rare`, `_epic`) map to the existing tier and rarity arguments. Keep per-cue voice limits.
 3. Feed `set_parameter_source` with rolling speed and chain length for the stem faders in section 2.
 4. Add the two section 1 checks to the test suite.
+5. Special enemies, from `specials.py` (17 WAVs). Play `<name>_presence` as a looping `AudioStreamPlayer3D` on the enemy, with its own voice so it never steals a combat voice, and stop it on death. Fire `<name>_tell` on the same frame as the visual tell: the Foreman's horn on the beat before the shred wipe, the Dispatcher's on each drop, the Splitter's on the seam flare, the Linker's when the cable goes taut. Fire `<name>_break` on death. The Splitter picks `splitter_break_split` when rammed at ground level and `splitter_break_clean` otherwise. Queue `<name>_spawn` on the next beat through the same quantizer as the stomp downbeats in section 3. Cap presence loops at two specials heard at once, nearest first.
 
 Not covered here: the in-game mix under real combat noise, and whether the stem faders feel right. Both need Andrew playing.

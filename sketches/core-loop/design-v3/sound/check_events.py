@@ -7,7 +7,9 @@ Targets, from SOUND-BIBLE.md "Sound that answers play":
 - impact, danger and boss cues reach -20 dB of their peak within 5 ms of the file start, so
   the asset adds no latency to the engine's one-frame (16.7 ms at 60 fps) answer
 - every cue peaks at or below -1 dBFS
-- length budgets: ui 0.5 s, impact 1.0 s, reward and danger 2.5 s, stinger 3.5 s, boss 4.0 s
+- length budgets: ui 0.5 s, impact 1.0 s, reward and danger 2.5 s, stinger 3.5 s, boss 4.0 s,
+  spawn 1.5 s, presence 4.0 s
+- a presence loop wraps with a sample jump below -24 dB of its peak, so it repeats without a click
 """
 
 import json
@@ -19,8 +21,9 @@ import numpy as np
 import soundfile as sf
 
 ONSET_MS = 5.0
-BUDGET = {"ui": 0.5, "impact": 1.0, "reward": 2.5, "danger": 2.5, "stinger": 3.5, "boss": 4.0}
-INSTANT = {"impact", "danger", "boss"}
+BUDGET = {"ui": 0.5, "impact": 1.0, "reward": 2.5, "danger": 2.5, "stinger": 3.5, "boss": 4.0, "spawn": 1.5, "presence": 4.0}
+INSTANT = {"impact", "danger", "boss", "spawn"}
+SEAM_DB = -24  # a presence loop's wrap jump, relative to its peak
 
 
 def check(event_dir):
@@ -40,6 +43,10 @@ def check(event_dir):
             failures.append(f"{row['cue']}: {seconds:.2f} s over the {row['family']} budget of {BUDGET[row['family']]} s")
         if row["family"] in INSTANT and onset_ms > ONSET_MS:
             failures.append(f"{row['cue']}: onset at {onset_ms:.1f} ms, target {ONSET_MS} ms")
+        if row["family"] == "presence":
+            seam_db = 20 * np.log10(abs(audio[0] - audio[-1]) / peak + 1e-12)
+            if seam_db > SEAM_DB:
+                failures.append(f"{row['cue']}: loop seam jump {seam_db:.1f} dB, limit {SEAM_DB} dB")
     print(f"checked {len(manifest)} cues, {len(failures)} failures")
     for line in failures:
         print("  FAIL", line)
@@ -51,14 +58,16 @@ def self_test():
         d, sr = Path(tmp), 48000
         late = np.concatenate([np.zeros(int(0.03 * sr)), np.ones(int(1.2 * sr)) * 0.999])
         sf.write(d / "planted.wav", late.astype(np.float32), sr, subtype="PCM_16")
-        (d / "manifest.json").write_text(json.dumps([{"cue": "planted", "family": "impact"}]))
+        sf.write(d / "planted_loop.wav", np.linspace(-0.5, 0.5, sr).astype(np.float32), sr, subtype="PCM_16")
+        (d / "manifest.json").write_text(json.dumps([{"cue": "planted", "family": "impact"},
+                                                     {"cue": "planted_loop", "family": "presence"}]))
         failures = check(d)
-    kinds = {"peak", "budget", "onset"}
+    kinds = {"peak", "budget", "onset", "seam"}
     found = {k for k in kinds for f in failures if k in f}
     if found != kinds:
         print(f"self-test FAILED: the planted cue should trip {sorted(kinds)}, tripped {sorted(found)}")
         return 1
-    print("self-test passed: the planted cue tripped peak, budget and onset")
+    print("self-test passed: the planted cue tripped peak, budget, onset and seam")
     return 0
 
 

@@ -108,6 +108,19 @@ Short, a little whimsical and tied to their event, like a rice cooker's end-of-c
 
 The sounds come from code, [sound/event_sounds.py](sound/event_sounds.py), so pitch, key and length stay editable.
 
+### Special enemies
+
+Left 4 Dead's rule (Andrew, 2026-10-17): you hear which special is near before you see it. Each kill-first special owns one register and one texture that no other cue uses, and carries it through four cues. A presence loop plays from its position while it lives. A tell starts on the same frame as its visual tell. A break sound plays when it dies, with the tone bible's wink. A one-beat spawn answer from the band plays on the next beat after it arrives. Danger tells use the tritone, and breaks use the reward family, so killing a special always sounds like a win.
+
+| Special | Register | Presence loop | Tell | Break | Spawn answer |
+| --- | --- | --- | --- | --- | --- |
+| Foreman | Low brass and steam, 70 to 150 Hz, with a punch-clock tick | A steam-horn drone, the clock ticking the beat, and a throat-clearing brass grunt | A factory horn on D and Ab on the beat before each wipe | SHIFT OVER: a punch-clock ka-chunk, a steam sigh, and a corny trombone wah-wah-wah-waaah down to F#3 | Two low brass notes, the shift whistle |
+| Dispatcher | Pulse-wave pings and teleprinter clatter, 1.5 to 3 kHz | A radar beacon on every beat with clatter on the off-beats | A pneumatic tube sucks up, then a D and Ab double ding as the chaser drops | The printer jams, a spring boings, and the beacon falls down a chiptune scale | Morse on the beacon note: short, short, long |
+| Splitter | Fuse hiss at 4 to 8 kHz over three hums that beat against each other | Three in one: hums a hair out of tune with each other, a sputtering fuse, and a lamp blink | Three voices slide up and meet in 0.4 s, matching the white seam flare | Two kills. Rammed: a pop and three chirps scattering in clashing keys (wrong). From above or range: one fat pop and a reward ding (right) | Three notes stacked fast |
+| Linker | Mains buzz on a 120 Hz series and a bowed wire at A5 | The buzz under a singing wire that swells, with arc sparks | The cable twangs and tightens upward a tritone while the dish braces | A snap, the dish clangs down, then rolls off like a lost hubcap, each clank further apart | Two notes joined by a slide |
+
+Code: [sound/specials.py](sound/specials.py). No East Asian instruments or scales, and every pitch sits in D Dorian or on its tritone.
+
 ## Renders from this pass
 
 ACE-Step 1.5 XL turbo on the RTX 4080, draft mode, two seeds each. Files sit in `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`, outside the repo like every other music render. [sound/RENDERS.md](sound/RENDERS.md) lists them with checksums. They are linear previews. Seamless loops, stems and final bf16 renders come after Andrew picks by ear.
