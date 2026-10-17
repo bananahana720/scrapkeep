@@ -15,7 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const sketch = path.join(root, "sketches/core-loop");
 const godot = process.env.GODOT_BIN;
 
-const opts = { wave: null, quick: false, slots: 4, carry: null, export: true, count: null, sweep: false };
+const opts = { wave: null, quick: false, slots: 4, carry: null, export: true, count: null, sweep: false, block: 0 };
 for (const arg of process.argv.slice(2)) {
   const [k, v] = arg.replace(/^--/, "").split("=");
   if (k === "wave") opts.wave = Number(v);
@@ -25,6 +25,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "carry") opts.carry = v;
   else if (k === "no-export") opts.export = false;
   else if (k === "sweep") opts.sweep = true;
+  else if (k === "block") opts.block = Number(v);
   else die("unknown option " + arg);
 }
 if (!godot || !existsSync(godot)) die("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
@@ -36,14 +37,16 @@ function die(message) {
 }
 
 // A sweep defaults to 60 runs: every persona x pilot cell twice. Fuzz seeds sit 500 past its runs.
-const seedOf = opts.sweep ? sweepSeed : waveSeed;
-const fuzzAt = opts.sweep ? 500 : 50;
+// --block=<0-4> splits a sweep across sandboxes: runs start at 100 x block and fuzz at 500 + 50 x block.
+if (!Number.isInteger(opts.block) || opts.block < 0 || opts.block > 4 || (opts.block && !opts.sweep)) die("--block takes 0 to 4 and needs --sweep");
+const seedOf = opts.sweep ? (w, i) => sweepSeed(w, i + 100 * opts.block) : waveSeed;
+const fuzzAt = opts.sweep ? 500 + 50 * opts.block - 100 * opts.block : 50;
 const count = opts.count ?? (opts.quick ? 5 : opts.sweep ? 60 : 10);
 const carry = opts.carry ? JSON.parse(readFileSync(opts.carry, "utf8")).carry ?? [] : [];
 const jobs = planWave({ wave: opts.wave, count, quick: opts.quick, carry, seed: seedOf });
 const started = new Date();
 const stamp = started.toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
-const outDir = path.join(root, "artifacts/local/redteam", `w${opts.wave}${opts.sweep ? "-sweep" : ""}-${stamp}`);
+const outDir = path.join(root, "artifacts/local/redteam", `w${opts.wave}${opts.sweep ? "-sweep" + opts.block : ""}-${stamp}`);
 const jobsDir = path.join(outDir, "jobs");
 mkdirSync(jobsDir, { recursive: true });
 const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
@@ -229,7 +232,8 @@ const page = renderMarkdown({ wave: opts.sweep ? `${opts.wave} (sweep)` : opts.w
 writeFileSync(path.join(outDir, "findings.md"), page);
 writeFileSync(path.join(outDir, "findings.json"), JSON.stringify({
   wave: opts.wave, commit, started: started.toISOString(), minutes, quick: opts.quick, pilots: PILOTS,
-  runs: results.map((r) => ({ ...r.job, outcome: r.timedOut ? "timeout" : r.row?.outcome ?? "crash", stage: r.row?.stage_reached ?? null, exit: r.exit, piles: r.piles, hitches: r.perf })),
+  runs: results.map((r) => ({ ...r.job, outcome: r.timedOut ? "timeout" : r.row?.outcome ?? "crash", stage: r.row?.stage_reached ?? null,
+    game_seconds: r.row?.game_seconds ?? null, hits: (r.row?.stages ?? []).reduce((n, s) => n + (s.hits ?? 0), 0), exit: r.exit, piles: r.piles, hitches: r.perf })),
   extras: { ...extras, fuzz: undefined, fuzzCount: extras.fuzz?.length ?? 0 }, findings, carry: carryList(findings),
 }, null, 2));
 log(`findings: ${path.relative(root, path.join(outDir, "findings.md"))}`);
