@@ -10,7 +10,7 @@ extends SceneTree
 #   must pass it, or the budget would never bind. The whole crowd is ready inside its
 #   first rest, so the peak lands in the first seconds;
 # - capped, at the late cap (heft class 5 in world 3): the same count never passes the cap
-#   on any tick of any seed; no two warnings start within AttackBudget.MIN_GAP (the
+#   on any tick of any seed; no two warnings start on the same frame (AttackBudget.MIN_GAP, the
 #   readability floor); and the line moves: no unit waits longer than WAIT_LIMIT for a
 #   slot, finished or not.
 # Five more seeds run at the early cap (a fresh ball in world 1) with stage 1's packs, so
@@ -87,8 +87,8 @@ func _run() -> void:
 		"uncapped peaks %s, late cap %d" % [uncapped_peaks, late])
 	_test.eq("ticks over the late cap, all seeds", violations, 0)
 	_test.check("capped peak reaches the late cap", capped_peaks.max() == late, "capped peaks %s" % [capped_peaks])
-	_test.check("no two warnings start within the minimum gap", gaps.min() >= AttackBudget.MIN_GAP - 0.5 / BASE_TICKS,
-		"closest warning starts per seed %s, floor %.2f s" % [gaps, AttackBudget.MIN_GAP])
+	_test.check("no two warnings start on the same frame", gaps.min() >= AttackBudget.MIN_GAP - 0.5 / BASE_TICKS,
+		"closest warning starts per seed %s, floor %.3f s" % [gaps, AttackBudget.MIN_GAP])
 	_test.check("no unit waits past the limit", waits.max() <= WAIT_LIMIT, "longest waits %s, limit %.1f s" % [waits, WAIT_LIMIT])
 	# The early cap binds too: a fresh ball in world 1 meets START attackers at most.
 	var early := AttackBudget.cap_at(1, 1)

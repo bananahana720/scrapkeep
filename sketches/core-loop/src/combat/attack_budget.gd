@@ -11,8 +11,11 @@ extends RefCounted
 # growth signal that sizes the director's crowd, and with the world, up to LATE. Every
 # number of the curve is here, for the playtest sitting to tune.
 #
-# Readability is the floor under the chaos: two warnings never start within MIN_GAP of
-# each other, so each telegraph gets its own beat however many units are attacking.
+# Readability is the floor under the chaos: two warnings never start on the same physics
+# frame (MIN_GAP, one 90 Hz step), so each telegraph draws on its own frame however many
+# units are attacking. 2026-10-17 machine gate on PR #15: a 0.2 s gap held the swarm band's
+# grown ball to 46.4 s and the small/grown ratio to 1.83 (rule: at least 2); 0.1 s gave 2.15;
+# one frame leaves both medians equal to main's (small 91.27 s, grown 38.77 s, 2.35x).
 #
 # A unit refused a slot waits in line. The longest waiter gets the next free slot, so a
 # crowd takes turns instead of the scene tree's first units taking every opening.
@@ -21,7 +24,7 @@ const START := 6
 const PER_HEFT_CLASS := 1
 const PER_WORLD := 2
 const LATE := 12
-const MIN_GAP := 0.2
+const MIN_GAP := 1.0 / 90.0
 const ATTACKING := "attack_budget"
 const WAITING := "attack_budget_wait"
 # Test hook: a world root carrying this meta turns the budget off (the uncapped arm).
