@@ -316,8 +316,9 @@ def verts_of(views):
 # the cliff, so the lower face is straight and clads the cliff (DAM_FACE_Z, in front of every cliff point), and the
 # arch is the upper wall standing on the plateau, bowed 25 m upstream at the centre. Its front stays behind the
 # crest_rail row (local z -36, the ridge stamp at 100.75), so the rail's drop down the face stays open. The data's
-# warden anchor [0, 22, 590] is local (0, 22, 30), out over the toe apron: the cradle is a concrete halo hung on cables
-# from the face top, ringing the relic in its own plane, with hp_1 and hp_2 on the halo.
+# warden anchor [0, 22, 590] is local (0, 22, 30), out over the toe apron: the cradle is a concrete halo hung from a steel
+# jib crane cantilevered off the face, ringing the relic in its own plane, with hp_1 and hp_2 on the halo. White water
+# spills from under the radial gates down the face and the ramp (enamel dressing, no collider).
 DAM_FACE_Z = -19.94
 DAM_RAMP_TOP = 30.0
 DAM_PLATEAU = 100.0
@@ -331,6 +332,7 @@ DAM_ANCHOR = (0.0, 22.0, 30.0)
 DAM_HINGE = (44.0, -8.0)    # the radial gates' trunnion axis (y, z)
 DAM_GATE_R = 11.5
 DAM_HALO = (8.6, 11.2, 2.2)  # inner radius, outer radius, depth
+DAM_JIB_TIP = (0.0, 44.0, 30.0)  # the crane's tip, 22 m over the relic
 
 
 def dam_ramp_y(z):
@@ -343,7 +345,8 @@ def dam_arch_z(x):
 
 
 def dam_course(row, colm):
-    return shade("concrete_lt" if row % 2 else "concrete", 1.0, (row, colm, 3), 0.05)
+    """One cast lift: each 16 m monolith keeps its own tone, the lifts in it vary only slightly."""
+    return shade("concrete_lt" if rnd(colm, 5) > 0.5 else "concrete", 1.0 + 0.04 * (rnd(colm, 6) - 0.5), (row, colm, 3), 0.025)
 
 
 def dam_gate(name, x0, x1):
@@ -480,7 +483,7 @@ def build_dam():
     hy, hz = DAM_HINGE
     for x in (-12.4, 0.0, 12.4):
         beam(e, (x, hy, fz), (x, hy, hz - 0.8), 1.2, 2.0, col("concrete_dk"))
-    # the halo: the relic's cradle, hung on four cables from the face top, rims green at hp_1 and hp_2
+    # the halo: the relic's cradle, hung from the jib, rims green at hp_1 and hp_2
     ax, ay, az = DAM_ANCHOR
     r0, r1, dep = DAM_HALO
     segs = 24
@@ -502,10 +505,47 @@ def build_dam():
             a0, a1 = TAU * k / 8, TAU * (k + 1) / 8
             p = lambda r, a: (stud[0] + r * math.cos(a), stud[1] + r * math.sin(a), stud[2])
             exempt["ancient_lens"].poly([p(0.8, a0), p(1.25, a0), p(1.25, a1), p(0.8, a1)], col("lens"), up=(0.0, 0.0, 1.0))
-        top = (ax + sx * r1 * math.sin(0.7), ay + r1 * math.cos(0.7), az)
-        tube(exempt["steel"], top, (sx * 26.0, DAM_PLATEAU + 0.2, fz - 0.5), 0.3, 6, col("cable"))
-        side = (ax + sx * r1, ay, az - dep / 2)
-        tube(exempt["steel"], side, (sx * 34.0, DAM_PLATEAU + 0.2, fz - 0.5), 0.25, 6, col("cable"))
+        top = (ax + sx * r1 * math.sin(0.5), ay + r1 * math.cos(0.5), az)
+        tube(exempt["steel"], top, (sx * 1.2, DAM_JIB_TIP[1] - 1.4, az), 0.3, 6, col("cable"))
+    # the jib: a steel A-frame crane cantilevered off the face, its tip over the halo, so the cradle reads as rigged
+    tip = DAM_JIB_TIP
+    for sx in (-1, 1):
+        roots = [(sx * 22.0, 76.0, fz + 0.3), (sx * 22.0, 52.0, fz + 0.3)]
+        for root in roots:
+            beam(st, root, tip, 1.1, 1.1, col("iron"))
+        lace = 8
+        for k in range(lace):
+            a = vlerp(roots[0], tip, k / lace)
+            b = vlerp(roots[1], tip, (k + 1) / lace) if k % 2 == 0 else vlerp(roots[1], tip, k / lace)
+            beam(st, a, b, 0.35, 0.35, col("iron_hi"), caps=False)
+            if k % 2:
+                beam(st, vlerp(roots[0], tip, k / lace), vlerp(roots[1], tip, k / lace), 0.35, 0.35, col("iron_hi"), caps=False)
+        box(e, (sx * 22.0 - 2.0, 49.0, fz), (sx * 22.0 + 2.0, 79.0, fz + 1.0), col("concrete_dk"))
+    for y in (52.0, 76.0):
+        beam(st, (-22.0, y, fz + 0.3), (22.0, y, fz + 0.3), 0.7, 0.7, col("iron"))
+    box(st, (tip[0] - 1.6, tip[1] - 1.6, tip[2] - 1.6), (tip[0] + 1.6, tip[1] + 1.6, tip[2] + 1.6), col("copper"))
+    wheel(st, (0.0, tip[1] - 1.4, tip[2]), (1.0, 0.0, 0.0), 1.3, 0.25, 4, 12, col("iron"), col("copper_dk"))
+    # spill: white water from under the radial gates, down the face, the ramp and out across the apron
+    gl = e          # on the enamel slot: a sixth draw would push the base over the class cap with the -col mesh counted
+    lip = DAM_HINGE[0] - DAM_GATE_R * math.sin(0.62)
+    for x0, x1 in ((-11.4, -0.6), (0.6, 11.4)):
+        steps = [(lip, fz + 0.18), (DAM_RAMP_TOP + 0.1, fz + 0.18)]
+        for k in range(1, 7):
+            z = fz + 0.2 + (5.0 - fz - 0.2) * k / 6
+            steps.append((dam_ramp_y(z) + 0.1, z))
+        for z in (12.0, 22.0):
+            steps.append((0.1, z))
+        for k in range(len(steps) - 1):
+            (ya, za), (yb, zb) = steps[k], steps[k + 1]
+            spread = 1.4 * max(0.0, (zb - 5.0) / 17.0)
+            spread_a = 1.4 * max(0.0, (za - 5.0) / 17.0)
+            ca = lerp(col("water"), col("mist"), min(1.0, k / 5))
+            cb = lerp(col("water"), col("mist"), min(1.0, (k + 1) / 5))
+            q = [(x0 - spread_a, ya, za), (x1 + spread_a, ya, za), (x1 + spread, yb, zb), (x0 - spread, yb, zb)]
+            face = sky.norm(sky.cross(vsub(q[1], q[0]), vsub(q[3], q[0])))
+            if face[1] < 0 or (abs(face[1]) < 1e-6 and face[2] < 0):
+                face = vscale(face, -1.0)
+            gl.poly(q, [ca, ca, cb, cb], up=face)
     gates = [dam_gate("gate_l", -11.6, -0.4), dam_gate("gate_r", 0.4, 11.6)]
 
     # ---- mid: a 24-segment arch, the face, towers, gantry, closed gates, the halo
@@ -540,7 +580,14 @@ def build_dam():
         ring = lambda r, a: (ax + r * math.sin(a), ay + r * math.cos(a), az + dep / 2)
         me.poly([ring(r0, a0), ring(r1, a0), ring(r1, a1), ring(r0, a1)], col("concrete_lt"), up=(0.0, 0.0, 1.0))
     for sx in (-1, 1):
-        tube(ms, (ax + sx * r1 * math.sin(0.7), ay + r1 * math.cos(0.7), az), (sx * 26.0, DAM_PLATEAU, fz), 0.4, 4, col("cable"))
+        beam(ms, (sx * 22.0, 76.0, fz + 0.3), DAM_JIB_TIP, 1.4, 1.4, col("iron"))
+        beam(ms, (sx * 22.0, 52.0, fz + 0.3), DAM_JIB_TIP, 1.4, 1.4, col("iron"))
+        tube(ms, (ax + sx * r1 * math.sin(0.5), ay + r1 * math.cos(0.5), az), (0.0, DAM_JIB_TIP[1], az), 0.4, 4, col("cable"))
+    for x0, x1 in ((-11.4, -0.6), (0.6, 11.4)):
+        mid["enamel"].poly([(x0, 37.3, fz + 0.18), (x1, 37.3, fz + 0.18), (x1, DAM_RAMP_TOP, fz + 0.18), (x0, DAM_RAMP_TOP, fz + 0.18)],
+                          col("water"), up=(0.0, 0.0, 1.0))
+        mid["enamel"].poly([(x0, DAM_RAMP_TOP + 0.1, fz + 0.2), (x1, DAM_RAMP_TOP + 0.1, fz + 0.2), (x1 + 1.4, 0.1, 22.0), (x0 - 1.4, 0.1, 22.0)],
+                          col("mist"), up=(0.0, 0.83, 0.55))
 
     # ---- far: the drop-in hero silhouette: crest line, tower notches, the face as a pale bar
     fe = far["enamel"]
@@ -561,7 +608,7 @@ def build_dam():
         ring = lambda r, a: (ax + r * math.sin(a), ay + r * math.cos(a), az + dep / 2)
         fe.poly([ring(r0, a0), ring(r1, a0), ring(r1, a1), ring(r0, a1)], col("concrete_lt"), up=(0.0, 0.0, 1.0))
 
-    # ---- shells: service frames, course lines and tower ladders (1); form joints and varnish streaks (2)
+    # ---- shells: course lines and tower ladders (1); monolith joints (2)
     d1, d2 = sky.Surf("landmark_dam_detail1"), sky.Surf("landmark_dam_detail2")
     for j in range(1, rows):
         y = 29.9 + (DAM_PLATEAU + 0.3 - 29.9) * j / rows
@@ -584,14 +631,6 @@ def build_dam():
         x = -DAM_CANYON + 16.0 * i
         card(d2, [(x - 0.08, 29.95, fz + 0.04), (x + 0.08, 29.95, fz + 0.04), (x + 0.08, DAM_PLATEAU, fz + 0.04),
                   (x - 0.08, DAM_PLATEAU, fz + 0.04)], col("joint"), (0.0, 0.0, 1.0))
-    for k in range(40):
-        x = -190.0 + 380.0 * rnd(k, 11)
-        top = DAM_PLATEAU - 2.0 - 10.0 * rnd(k, 12)
-        ln = 15.0 + 45.0 * rnd(k, 13)
-        w = 0.4 + 1.0 * rnd(k, 14)
-        c = lerp(lerp(col("varnish"), col("rust"), rnd(k, 15) * 0.6), col("concrete"), 0.7)
-        card(d2, [(x - w * 0.15, top - ln, fz + 0.05), (x + w * 0.15, top - ln, fz + 0.05), (x + w * 0.6, top, fz + 0.05),
-                  (x - w * 0.6, top, fz + 0.05)], c, (0.0, 0.0, 1.0))
     empties = {
         "sight_top": (0.0, DAM_TOP, gz), "beam_root": DAM_ANCHOR, "warden_anchor": DAM_ANCHOR,
         "hp_0": (ax, ay + 1.6, az), "hp_1": (ax + 10.0, ay, az), "hp_2": (ax - 10.0, ay, az),
@@ -1773,7 +1812,7 @@ def build(rid, out_dir, count_only=False):
         glb[name] = export_glb(out / (name + ".glb"), extra["nodes"], extra["empties"])
     # read back: the base's draws, the class caps, the empties and the -col node
     b = glb[rid]
-    draws = sum(m["draws"] for m in drawn(b).values())
+    draws = sum(m["draws"] for m in b["meshes"].values())      # every primitive, the -col mesh included, as budget_audit counts
     tris = sum(m["tris"] for m in b["meshes"].values())
     verts = sum(m["verts"] for m in b["meshes"].values())
     assert draws <= HERO["draws"] and tris <= HERO["tris"] and verts <= HERO["verts"], (rid, draws, tris, verts)
