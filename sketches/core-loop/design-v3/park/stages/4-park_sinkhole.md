@@ -212,7 +212,7 @@ Advantage and counter text is in each row of the park file. `drift_drill_crews` 
 
 ## 7. `contraption_rows` (shipped)
 
-Spec keys are today's (`src/world/contraptions.gd:86-101`). 26 rows since the authored pass (2026-10-17, "Wall pays"; `tools/park_sinkhole_pass.py` writes the ropes and vents).
+Spec keys are today's (`src/world/contraptions.gd:86-101`). 27 rows since the authored pass (2026-10-17, "Wall pays" and the floor is lava; `tools/park_sinkhole_pass.py` writes the ropes, vents and cinder strips).
 
 | Id | Kind, recipe | Site | Spec | What it is for |
 | --- | --- | --- | --- | --- |
@@ -242,6 +242,7 @@ Spec keys are today's (`src/world/contraptions.gd:86-101`). 26 rows since the au
 | `drift_valve` | valve, `gauge` | `east_drift_3` | at (195.4, -272.1), door at (207.2, -277.5), 10 by 5 by 1 m | opens a side door from the drift into skylight 2's chamber |
 | `cenote_raft` | barge, `barge` | `west_cenote` | a [-335, -84.8, -215] to b [-300, -85.3, -195], travel 6 s, dwell 2 s | a miners' raft across the cenote |
 | `rim_zip` | cable, `""` | `sinkhole_walls` | from [-160, 4.4, 255] to [-60, -97.6, 330], radius 3.4, floor 18 | a drop line from the west rim to the gallery ring, after the cave-in opens the plateau |
+| `tube_cinder` | cinder, `` | `lava_channel_1` | 50 strips over the middle fifth of every `lava_wash` and `lava_wash_short` floor, drag 0.08 | the floor is lava: free to touch, lingering heats (`src/world/cinder_heat.gd`); the light drag keeps the walls the faster line. The lava channel is left out so the opening stays blazing |
 
 Against the draft: the rope fan, eight tube vents and six lower-tube ropes keep the ride chain continuous, now on the walls. Park row sensors also run on this head. `sealed_crosscut` has its own `crosscut_drift` site at (-80, 152), clear of the cave-in ring. The fumarole, lift, valve and raft follow the shipped polylines.
 
@@ -265,6 +266,30 @@ Both rows carry `handling: "none"`. The monsoon changes the view and the sound: 
 - The light column is vertical, 4 m wide, centred on the nest and the Warden's colour. It lights no floor patch along a line.
 
 ## 9. Traversal lines and measurements
+
+### Wall pays and the floor is lava, 2026-10-17
+
+Andrew tapped "Wall pays" (22:37Z) and asked for the floor to be lava (23:24Z): touching the bottom is free, lingering hurts. The rule lives in `src/world/cinder_heat.gd`, and every number is a constant there.
+
+- Contact on a cinder strip, with the ball on the floor by the Dig's floor rule, builds dwell. The first 1.5 s are free; the cinders glow from 0.6 s.
+- After the grace it burns 4 hull per second in 0.5 s pulses, with a sizzle when the burn starts. It never takes the last point of hull.
+- Leaving the floor or landing a hit on an enemy cools it at once, with a hiss and a steam puff, so bowling through a pack or zigzagging never burns.
+- The strips also carry a light drag (0.08 per second of floor speed). Heat alone left the floor line as fast as the walls.
+
+One seed per pilot, `--table=park --stage=4 --seeds=1`, fixed-fps 90, on this branch with the wall grip from #61 merged, riding `lines_carve.json` (the floor line rides `--floor --ref=sable`). Times are to the Warden in seconds; carve is the share of grounded ticks on a bank, wall or lip.
+
+| Pilot | Heat and drag | Carve | Heat only | Carve | Cinder burns |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Sable | 64.7 | 0.28 | 65.0 | 0.20 | 0 |
+| Tarn | 99.9 | 0.43 | 99.2 | 0.43 | 0 |
+| Cannon | 100.2 | 0.36 | 101.5 | 0.36 | 0 |
+| Kest | 105.9 | 0.39 | 109.2 | 0.41 | 0 |
+| Tally | 113.8 | 0.39 | 117.9 | 0.36 | 0 |
+| Rivet | 120.2 | 0.51 | 119.9 | 0.52 | 0 |
+| Floor line | 110.0 | 0.02 | 100.0 | 0.01 | 10 (118 hull) / 11 (110 hull) |
+
+With heat only the floor line ties the fastest carving pilots, so the drag stays. With it, Sable, Tarn, Cannon and Kest beat the floor; Tally and Rivet's carving lines are still slower than the floor and need line work. No carving pilot took heat. The floor bot never fights, so its burn is the worst case. `lines.json` stays the shipped line until #61 lands; `lines_carve.json` replaces it then.
+
 
 ## Qualified round-4 measurement, 2026-10-13
 
