@@ -118,6 +118,7 @@ const TRIM_DB := {
 	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0, "verb_fail_active": -18.0,
 	# The actives' launches (src/combat/actives), one per active: "active_" + its id.
 	"active_scrap_rocket": -8.0,
+	"active_lift_pulse": -7.0,
 	# Each pilot's line-skill and set-piece cues, one marked block per pilot (SKILL-BAR section 12,
 	# item 4); a row here needs its recipe in _bake.
 	# --- P-C Sable sounds ---
@@ -345,6 +346,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"active_scrap_rocket":
 			return _mix([[_noise(0.16, 2400.0, 5200.0, 14.0, 0.004), 0, 0.7], [_tone(0.09, 120.0, 60.0, "sine", 30.0), 0, 0.8],
 				[_tone(0.34, 900.0, 2600.0, "sine", 6.0), Synth.seconds(0.06), 0.35], [_noise(0.3, 1200.0, 3600.0, 8.0, 0.02), Synth.seconds(0.06), 0.4]])
+		# A lift fan's turbine spooling up (a rising whine over rushing air), then the deep thump of
+		# the pulse leaving it: WHUMP.
+		"active_lift_pulse":
+			return _mix([[_fm_sweep(0.22, 180.0, 720.0, 1.2, 4.0), 0, 0.45], [_noise(0.24, 500.0, 2600.0, 6.0, 0.06), 0, 0.35],
+				[_tone(0.3, 95.0, 42.0, "sine", 12.0), Synth.seconds(0.2), 1.0], [_noise(0.22, 1600.0, 300.0, 14.0, 0.004), Synth.seconds(0.2), 0.6]])
 		"verb_fail_ultimate":
 			return _mix([[_fm(0.16, _hz(62), 1.5, 2.5, 20.0, -2.0), 0, 1.0], [_tone(0.06, 180.0, 150.0, "sine", 30.0), Synth.seconds(0.05), 0.6]])
 		"grapple_release":
