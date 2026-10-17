@@ -91,7 +91,7 @@ func _pack_kinds() -> Array:
 	for id in Roster.ROWS:
 		var kind := String(id)
 		# The Warden, the vault and the miniboss keep their own records; a row with no
-		# telegraph (the Linker) never attacks.
+		# telegraph (the Linker, the Foreman) never attacks.
 		if kind in ["warden", "vault", "miniboss"] or int(Roster.row(kind)["telegraph"]) < 0:
 			continue
 		if kind in ["chaser", "lobber"] or _game.combat.fleet.makes(kind):

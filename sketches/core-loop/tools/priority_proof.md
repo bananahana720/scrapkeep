@@ -75,3 +75,21 @@ What it says:
 - The Foreman's shred wipe makes order matter: ignoring it costs 2 to 3.6 times the hull.
 - The Dispatcher does not: its chasers die before they land a hit (twice the drops, 4 s apart, changed no hull), and the target arm pays for diving through the crew to reach a Dispatcher on the ground. Ignoring it costs about 6 s of clear time, not hull. The design's 6 to 10 m perch and a stream that threatens on its own are what would change that; re-run once both exist.
 - The control misses too: at stage 1 numbers a six-strong pack barely touches the stock bot, so a controller's hold has nothing to set up. Priority matters only where packs can hurt; this is a lab limit and a finding about stage 1 pressure, not about the specials.
+
+### 2026-10-17, the Foreman built (branch claude/project-thread-qpwany: cf63e622 plus PR #15, PR #44 and PR #54), cloud container (4 vCPU, headless), `--specials=foreman`, hp x 1 and 3
+
+The Foreman claims the six crew in reach, wipes their plating shred every 5 s (the horn one beat before) and never attacks; killed first, the standing crew clocks out for 1.5 s. Its health is the model's 120 x threat. The table now also reports the median of the paired seeds' own ratios, so a mean carried by one seed shows.
+
+| Seeds | hp x | Target hull / clear | Ignore hull / clear | Ratio | Median seed ratio | Ignore worse | Verdict |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 to 8 | 1 | 5.5 / 13.6 s | 11.5 / 13.3 s | 2.09 | inf | 7 of 8 | pass |
+| 1 to 8 | 3 | 9.0 / 22.6 s | 16.9 / 28.4 s | 1.88 | 1.33 | 5 of 8 | pass |
+| 1 to 16 | 1 | 5.6 / 13.3 s | 8.3 / 14.1 s | 1.48 | 3.9 | 10 of 16 | pass |
+| 1 to 16 | 3 | 9.8 / 23.0 s | 13.5 / 28.0 s | 1.38 | 1.62 | 10 of 16 | pass |
+
+What it says:
+
+- Ignoring the Foreman costs more on most seeds, not one: at hp x3 over 16 seeds the median ignore run lost 11.1 hull against the target run's 5.2, and dropping the worst ignore seed still leaves ignore ahead (11.3 against 9.8). An "inf" median means most target runs lost no hull at all.
+- It costs time too: at hp x3 the ignore arm clears 5 s later, through 3 to 8 wipes a run.
+- The built Foreman reads lower than the model did (1.38 to 2.09 against 1.96 to 3.64): the target arm now walks through a crew to reach a body that stands its ground, and ignoring it is cheaper at 16 seeds than at 8. A pass, with less margin than the model promised.
+- Seeds 3, 11, 14 and 16 go the wrong way at hp x3; in each the target arm took its hits diving through the crew. The wipe only bites on plated crew (the two brutes here), so a Foreman's pack needs plating to matter.

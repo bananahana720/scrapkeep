@@ -35,6 +35,8 @@ const LAST_META := "attack_budget_last"
 const VOLLEY_META := "attack_budget_volley"
 # The director pack a unit arrived with (world.gd); units spawned any other way are their own volley.
 const PACK_META := "pack_seq"
+# The physics frame a clocked-out unit may attack again (foreman.gd: its crew, when it dies).
+const CLOCKED_OUT_META := "clocked_out_until"
 
 
 # The curve: world 1 with a fresh ball is START; each heft class and each world past the
@@ -62,6 +64,9 @@ static func attackers(tree: SceneTree) -> int:
 static func ask(unit: Node) -> bool:
 	if unit.is_in_group(ATTACKING):
 		return true
+	if clocked_out(unit):
+		withdraw(unit)
+		return false
 	if not unit.is_inside_tree() or _off(unit):
 		return true
 	var tree := unit.get_tree()
@@ -100,6 +105,17 @@ static func _joins_volley(unit: Node, tree: SceneTree) -> bool:
 static func withdraw(unit: Node) -> void:
 	if unit.is_in_group(WAITING):
 		unit.remove_from_group(WAITING)
+
+
+# A unit told to stand down for `seconds` starts no attack until they pass; one it has already
+# warned of plays out, since its warning was a promise.
+static func clock_out(unit: Node, seconds: float) -> void:
+	var until := Engine.get_physics_frames() + ceili(seconds * Engine.physics_ticks_per_second)
+	unit.set_meta(CLOCKED_OUT_META, maxi(until, int(unit.get_meta(CLOCKED_OUT_META, 0))))
+
+
+static func clocked_out(unit: Node) -> bool:
+	return Engine.get_physics_frames() < int(unit.get_meta(CLOCKED_OUT_META, 0))
 
 
 static func release(unit: Node) -> void:

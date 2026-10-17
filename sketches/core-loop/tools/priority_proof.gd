@@ -321,13 +321,20 @@ static func summarize(rows: Array, results: Array, cap: float) -> Dictionary:
 					"outcomes": outcomes}
 		var worse := 0
 		var paired := 0
+		var seed_ratios := []
 		for s in by_arm["target"]:
 			if by_arm["ignore"].has(s):
 				paired += 1
-				if float(by_arm["ignore"][s]["hull_lost"]) > float(by_arm["target"][s]["hull_lost"]):
+				var ti := float(by_arm["target"][s]["hull_lost"])
+				var ii := float(by_arm["ignore"][s]["hull_lost"])
+				if ii > ti:
 					worse += 1
+				seed_ratios.append(ii / ti if ti > 0.0 else (INF if ii > 0.0 else 1.0))
 		item["paired_seeds"] = paired
 		item["ignore_worse_seeds"] = worse
+		# The paired seeds' own ratios, middle value: above 1 means most seeds went the right way,
+		# so the mean is not carried by one seed.
+		item["median_ratio"] = snappedf(median(seed_ratios), 0.01) if not seed_ratios.is_empty() else 1.0
 		var t: float = item["target"]["hull_mean"]
 		var i: float = item["ignore"]["hull_mean"]
 		item["ratio"] = snappedf(i / t, 0.01) if t > 0.0 else (INF if i > 0.0 else 1.0)
@@ -342,15 +349,25 @@ static func summarize(rows: Array, results: Array, cap: float) -> Dictionary:
 
 
 static func table(report: Dictionary) -> Array:
-	var lines := ["priority_proof: special | mode | target hull/clear | ignore hull/clear | ratio | ignore worse | verdict"]
+	var lines := ["priority_proof: special | mode | target hull/clear | ignore hull/clear | ratio | median seed ratio | ignore worse | verdict"]
 	for item in report["specials"]:
 		if item["verdict"] == "not built":
 			lines.append("  %s | not built | - | - | - | - | not built" % item["name"])
 			continue
-		lines.append("  %s | %s | %.1f / %.1fs | %.1f / %.1fs | %s | %d of %d | %s" % [item["name"], item["mode"],
+		lines.append("  %s | %s | %.1f / %.1fs | %.1f / %.1fs | %s | %s | %d of %d | %s" % [item["name"], item["mode"],
 				item["target"]["hull_mean"], item["target"]["clear_mean_s"], item["ignore"]["hull_mean"],
-				item["ignore"]["clear_mean_s"], str(item["ratio"]), item["ignore_worse_seeds"], item["paired_seeds"], item["verdict"]])
+				item["ignore"]["clear_mean_s"], str(item["ratio"]), str(item["median_ratio"]), item["ignore_worse_seeds"],
+				item["paired_seeds"], item["verdict"]])
 	return lines
+
+
+static func median(values: Array) -> float:
+	if values.is_empty():
+		return 0.0
+	var sorted := values.duplicate()
+	sorted.sort()
+	var mid := sorted.size() / 2
+	return float(sorted[mid]) if sorted.size() % 2 == 1 else (float(sorted[mid - 1]) + float(sorted[mid])) * 0.5
 
 
 static func mean(values: Array) -> float:
@@ -483,6 +500,9 @@ func _spawn_encounter() -> void:
 			_driver.special.dispatched.connect(func(add: Node3D):
 				_driver.crew.append(_toughen(add))
 				_dispatched += 1)
+		# A built buffer reports its own wipes (foreman.gd), as the model counts its stand-in's.
+		if _driver.special != null and _driver.special.has_signal("wiped"):
+			_driver.special.wiped.connect(func(_members: Array): _wipes += 1)
 	else:
 		# The model's stand-in: a non-attacking body with no plating and MODEL_HP.
 		var body: Node3D = spawner.spawn_enemy("vault", at)
