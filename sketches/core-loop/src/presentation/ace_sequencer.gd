@@ -66,6 +66,8 @@ class Voice:
 
 
 var manifest := {}
+# A single-loop pack (phase_music.gd): one looping clip, section "main", no Warden sections.
+var flat := false
 # The resolved manifest selected for this band, even when its Oggs are absent.
 var manifest_source := ""
 var clips := {}
@@ -151,6 +153,7 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 		_report()
 		return
 	manifest = parsed
+	flat = bool(manifest.get("flat", false))
 	clips = manifest["clips"]
 	sections = manifest["sections"]
 	stems = manifest["stems"]
@@ -257,8 +260,10 @@ func start_menu(at: int, won := true) -> void:
 	_cancel_pending()
 	actions.clear()
 	mode = "menu"
-	var name := "calm"
-	if manifest.get("theme", "") == "summary":
+	var name := "main" if flat else "calm"
+	if flat:
+		pass
+	elif manifest.get("theme", "") == "summary":
 		name = "return" if won else "travel"
 	_schedule(name, maxi(at, clock + _join_frames(name)))
 
@@ -268,7 +273,8 @@ func start_boss(at: int) -> void:
 	_cancel_pending()
 	actions.clear()
 	mode = "warden"
-	_schedule("pivot", maxi(at, clock + _join_frames("pivot")))
+	var first := "main" if flat else "pivot"
+	_schedule(first, maxi(at, clock + _join_frames(first)))
 
 
 # The band stops at transport sample at: the sounding section plays to it and fades over
@@ -325,7 +331,7 @@ func set_bay(on: bool) -> void:
 
 # The ball committed to a drop line, or the Warden engaged: the pivot at the next bar.
 func commit_warden() -> void:
-	if mode != "level":
+	if flat or mode != "level":
 		return
 	mode = "warden"
 	_cancel_pending(GAP_RAMP, true)
@@ -341,7 +347,7 @@ func set_warden_state(state: String) -> void:
 # beat. Returns the drop's transport sample, or -1 when nothing plays or the break has
 # begun.
 func drop_now() -> int:
-	if mode in ["off", "menu"] or (mode == "piece" and not piece_after_drop and section in ["break", "return", "home"]):
+	if flat or mode in ["off", "menu"] or (mode == "piece" and not piece_after_drop and section in ["break", "return", "home"]):
 		return -1
 	if mode == "piece" and pending.get("section", "") == "break":
 		piece_after_drop = true
@@ -363,7 +369,7 @@ func drop_now() -> int:
 # The Warden broke: the directed set piece, once. After a drop still sounding, it waits
 # for the drop's end; otherwise it enters on the next bar.
 func warden_broken() -> void:
-	if mode in ["off", "piece", "menu"]:
+	if flat or mode in ["off", "piece", "menu"]:
 		return
 	mode = "piece"
 	if pending.get("section", "") == "drop" or (section == "drop" and pending.is_empty()):
@@ -620,6 +626,8 @@ static func lowpass_coeffs(hz: float) -> PackedFloat64Array:
 
 # What systemic play asks for now.
 func _desired() -> String:
+	if flat:
+		return "main" if mode in ["level", "warden", "menu"] else ""
 	match mode:
 		"level":
 			var up: bool = section == "travel" or pending.get("section", "") == "travel"
