@@ -42,11 +42,12 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # cell, the unshadowed cell selects two of them, and an in-front hull is still selected.
 # 2026-10-16 (BITE-PIN): 226 -> 229. A guard re-closed on the ball, and the landing, hold the
 # exceptions of bodies the ball is inside until it is clear (exception_hold.gd).
+# 2026-10-17 (unit K): 229 -> 230. The Welding Hood's art landed; it is checked live on its own.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 229
+	_expected_checks = 230
 	super._initialize()
 
 
@@ -847,7 +848,10 @@ func _run() -> void:
 		breach.get("on") == "ultimate_landed" and breach.get("where") == {"ultimate_id": "foundry_cutter"} and breach.get("at_least") == {"hits": 6}
 		and int(breach.get("count", 0)) == 1 and Achievements.reward_of("ach_rivet_full_breach").get("cosmetic", "") == "shell_rivet_calibrated", str(breach))
 	grants["ach_rivet_full_breach"] = "shell_rivet_calibrated"
+	# Re-pinned 2026-10-17 (unit K): the Welding Hood's art landed (tools/blender/outfits), so it is live.
+	grants.erase("ach_rivet_shrugged")
 	_t.check("the items wait for their art", grants.values().all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("the Welding Hood is live", not Cosmetics.is_pending("outfit_rivet_hood") and FileAccess.file_exists("res://assets/cosmetics/outfits/outfit_rivet_hood.glb"))
 	_t.check("both line cues are keyed and read the Rivet motif", Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["punch"]) and Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["arrive"])
 		and Audio.RIVET_LINE["motif"] == ClassDef.by_id("runner_gunner").motif)
 	_finish()

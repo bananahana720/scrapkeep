@@ -190,9 +190,15 @@ func _page_checks(page, profile, screens) -> void:
 	page._select_slot("paint")
 	for id in Cosmetics.PENDING_ART:
 		_t.check("pending %s has no card" % id, page.card_for(id) == null and not id in page.shown_ids(Cosmetics.row(id)["slot"]))
+	# Re-pinned 2026-10-17 (unit K): three outfits and the Till Bell are delivered, so those slots show
+	# wherever a row fits; a slot with nothing that fits still hides with its heading.
 	for slot in ["shell", "outfit", "companion_skin", "bay_decor"]:
-		_t.check("empty slot %s is hidden" % slot, not page.rows[slot].visible and not slot in page.order())
-	_t.check("an empty owner group is hidden", not page._group_labels["PILOT"].visible and not page._group_labels["BAY"].visible)
+		var fits: bool = not page.shown_ids(slot).is_empty()
+		_t.check("slot %s shows only when a row fits" % slot, page.rows[slot].visible == fits and (slot in page.order()) == fits)
+	_t.check("the Till Bell's slot shows", page.rows["companion_skin"].visible)
+	_t.check("a delivered outfit's pilot shows the outfit slot", page.rows["outfit"].visible == (page.pilot in ["runner_gunner", "tally", "tarn"]), page.pilot)
+	_t.check("the pilot heading follows its outfit slot", page._group_labels["PILOT"].visible == page.rows["outfit"].visible)
+	_t.check("an empty owner group is hidden", not page._group_labels["BAY"].visible)
 	# New marks clear after 0.6 s on screen and seen saves once, on close.
 	var fresh := "paint_any_night"
 	profile.unlock_cosmetic(fresh)

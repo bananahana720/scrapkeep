@@ -28,7 +28,8 @@ const T := preload("res://tests/support/t.gd")
 # own (11 movers), and a 20-copy sweep per depth-4 leaf (16). Measured 107 checks (was 63).
 # 2026-10-12 (PC-TALLY round 3): live unspent three-clip settle pays once, no arc.
 # 2026-10-12 (PC-TALLY round 3): Flywheel peak pull ring includes its landing bonus.
-const EXPECTED_CHECKS := 109
+# 2026-10-17 (unit K): 109 -> 111. The Eyeshade's art landed; price, pending and live split into three checks.
+const EXPECTED_CHECKS := 111
 const DT := 1.0 / 60.0
 const SHELF := Vector3(-45.0, 122.0, 6.0)
 
@@ -642,7 +643,10 @@ func _grants() -> void:
 	_t.check("all three grants earned", grant_ids.all(func(id): return store.earned(id)), str(grant_ids.map(func(id): return store.earned(id))))
 	var items := ["trail_tally_punch_tape", "outfit_tally_eyeshade", "shell_tally_abacus"]
 	_t.check("all three looks unlocked", items.all(func(id): return store.has_cosmetic(id)))
-	_t.check("pending art hidden and no price", items.all(func(id): return Cosmetics.PENDING_ART.has(id) and not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
+	# Re-pinned 2026-10-17 (unit K): the outfit's art landed (tools/blender/outfits), so it is live.
+	_t.check("no price", items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
+	_t.check("pending art hidden", items.filter(func(id): return id != "outfit_tally_eyeshade").all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("the outfit is live", not Cosmetics.is_pending("outfit_tally_eyeshade") and FileAccess.file_exists("res://assets/cosmetics/outfits/outfit_tally_eyeshade.glb"))
 	var reload_store := Profile.new(store.path)
 	reload_store.load_profile()
 	_t.check("grants survive reload", grant_ids.all(func(id): return reload_store.earned(id)) and items.all(func(id): return reload_store.has_cosmetic(id)))
