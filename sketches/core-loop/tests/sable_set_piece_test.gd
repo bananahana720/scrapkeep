@@ -182,7 +182,7 @@ func _run() -> void:
 	for i in 9:
 		_combat._ult_hit(warden, "arc", 12.0, warden.global_position, false)
 	_combat._ult_hit(warden, "arc", 60.0, warden.global_position, true)
-	_t.check("closed Warden gains at most 45 once", warden.posture() - before > 0.0 and warden.posture() - before <= 45.001 and warden.chunks_left() == 4)
+	_t.check("closed Warden gains at most the cap once", warden.posture() - before > 0.0 and warden.posture() - before <= Ultimate.WARDEN_POSTURE_CAP + 0.001 and warden.chunks_left() == 4)
 	warden._apply_posture({"gain": 100.0, "contact": false})
 	await physics_frame
 	_combat._ult_hit(warden, "arc", 60.0, warden.global_position, true)

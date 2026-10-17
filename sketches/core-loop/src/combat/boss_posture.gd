@@ -11,7 +11,10 @@ const SMASH_BASE := 45.0
 const OTHER_BASE := 1.5
 const OTHER_BASE_CHARGING := 3.0
 const MULT_MIN := 0.2
-const MULT_MAX := 1.5
+# Overpowered pays (Andrew's tap "Lift the ceiling", 17 Oct 22:04Z): a hit counts up to 3x
+# the plating it meets, so a monster build staggers a Warden well under the 45-70 s an
+# ordinary pilot takes; it was 1.5x. The hull bosses keep 1.5 in boss_rules.gd POSTURE.
+const MULT_MAX := 3.0
 const DRAIN_DELAY := 3.0
 const DRAIN_RATE := 12.0
 const STAGGER_SECONDS := 4.0

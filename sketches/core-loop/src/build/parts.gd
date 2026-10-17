@@ -863,6 +863,16 @@ static func milestone_for(event_id: String, held: Array) -> String:
 	return MILESTONE_ORDER[0]
 
 
+# Overpowered pays (17 Oct): a linear or capped part held at stack_cap copies adds nothing
+# more (BuildSheet.from_parts), so no source offers it again and a lucky stacking run never
+# draws a dead slot. Hyperbolic and spike rows keep growing, so they stay in the pool.
+static func maxed(part_id: String, held: Array) -> bool:
+	var d: Resource = def(part_id)
+	if d == null or not d.stack_rule in ["linear", "capped"] or d.stack_cap < 1.0:
+		return false
+	return held.count(part_id) >= int(d.stack_cap)
+
+
 # Picks count distinct parts from the pool at these rarities. One slot may go to the
 # part that completes a synergy the run is one piece from. Every other slot draws its
 # rarity by the rarity weights (common 87, rare 10, relic 3), then is
@@ -892,7 +902,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 			continue
 		if not listed_only() and rng.randf() < GENERATED_SHARE:
 			var recipe := ItemGen.roll_id(rng, rarity)
-			if not recipe in picks and not recipe in exclude:
+			if not recipe in picks and not recipe in exclude and not maxed(recipe, held):
 				picks.append(recipe)
 			continue
 		var bucket: Array = pool.filter(func(key): return rows()[key]["rarity"] == rarity)

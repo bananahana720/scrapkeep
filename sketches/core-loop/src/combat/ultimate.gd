@@ -56,8 +56,9 @@ const ARC_REACH := [40.0, 47.0, 55.0, 62.0, 70.0]
 const LANDING_RADIUS := [6.0, 7.0, 8.0, 9.0, 10.0]
 const DAMAGE_TAKEN := 0.2
 # On a closed Warden guard one set piece adds at most this much posture, volleys and landing
-# together (section 12, item 7). Volleys on a Warden deal half damage; a boss takes half.
-const WARDEN_POSTURE_CAP := 45.0
+# together (section 12, item 7); 70 since Andrew's tap "Lift the ceiling" (17 Oct 22:04Z),
+# was 45. Volleys on a Warden deal half damage; a boss takes half.
+const WARDEN_POSTURE_CAP := 70.0
 const WARDEN_VOLLEY := 0.5
 const BOSS_MULT := 0.5
 const CONTACT_GAP := 0.5
@@ -754,7 +755,7 @@ func defend(amount: float, hp: float) -> float:
 	return clampf(amount * DAMAGE_TAKEN, 0.0, maxf(0.0, hp - 1.0))
 
 
-# Posture a hit on a closed Warden guard may still add in this set piece: the 45 cap counts
+# Posture a hit on a closed Warden guard may still add in this set piece: the cap counts
 # volleys and landing together. Applies `result` (the Warden's own judge) with its gain cut
 # to what is left.
 func warden_posture(warden: Node3D, result: Dictionary) -> void:

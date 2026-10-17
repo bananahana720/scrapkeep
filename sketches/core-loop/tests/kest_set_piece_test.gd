@@ -188,7 +188,7 @@ func _cases() -> void:
 		c["_inert"] = false
 		_ult._detonate_payload(_ult.payloads.take(c))
 	_ult.landing(b, 1.0, 1.0)
-	_t.check("whole set piece adds no more than 45 closed posture", w.posture() - before <= 45.001 and w.chunks_left() == 4)
+	_t.check("whole set piece adds no more than the closed posture cap", w.posture() - before <= preload("res://src/combat/ultimate.gd").WARDEN_POSTURE_CAP + 0.001 and w.chunks_left() == 4)
 	w._apply_posture({"gain": 100.0, "contact": false})
 	await physics_frame
 	c = _ult._drop(b, 12.0, 2.5)

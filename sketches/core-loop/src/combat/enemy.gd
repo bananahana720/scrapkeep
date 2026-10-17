@@ -26,6 +26,8 @@ const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
+const OVERKILL_PAY := 0.5
+const OVERKILL_MAX_RATIO := 2.0
 # The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
 # an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
 # crack. The tint_state names ("amber" for will break, "slate" for glances) stay as combat
@@ -450,6 +452,17 @@ func telegraph() -> Node3D:
 # that same tick, so a crush exception can never end inside a live collider. Any death
 # visual belongs to presentation, reading enemy_killed; this node is gone at frame end.
 # The break-up (EnemyMotion.scatter) lives in its own detached node and frees itself.
+# Overpowered pays (17 Oct): damage past the kill is not thrown away. Each max-HP of
+# overflow pays OVERKILL_PAY of the kill's scrap again, up to OVERKILL_MAX_RATIO of them, so
+# a monster build that one-shots everything rolls up to double the scrap off every kill.
+# A Warden dies chunk by chunk on its posture fight, so it has no overflow to pay.
+static func overkill_scrap(base: int, overflow: float, body_hp: float, enemy_kind: String) -> int:
+	if enemy_kind == "warden" or base <= 0 or overflow <= 0.0 or body_hp <= 0.0:
+		return 0
+	var ratio := minf(overflow / body_hp, OVERKILL_MAX_RATIO)
+	return int(floor(base * OVERKILL_PAY * ratio))
+
+
 func _die() -> void:
 	_dead = true
 	_facts_end(true)
@@ -457,7 +470,7 @@ func _die() -> void:
 	collision_mask = 0
 	_clear_telegraph()
 	EnemyMotion.scatter(self, kind, _death_direction())
-	died.emit(global_position, scrap_value)
+	died.emit(global_position, scrap_value + overkill_scrap(scrap_value, -hp, max_hp, kind))
 	queue_free()
 
 
