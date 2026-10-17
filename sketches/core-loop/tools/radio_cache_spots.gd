@@ -37,11 +37,10 @@ const SPOTS := {
 	"take-headframe-full-depth": {"stage": 3, "x": 0.0, "z": 268.0, "drop": -62.0},
 	# The sinkhole: the caisson bowl's centre, its drain.
 	"take-sinkhole-trip": {"stage": 4, "x": 0.0, "z": 350.0, "drop": -40.0},
-	# Over the gallery ring, under the lip. The ring itself (y -107.74) lies under this bake's ground until
-	# the gallery rebake (PR #29) opens it; rerun then, and this lands on the first open surface.
-	"take-sinkhole-drain-dub": {"stage": 4, "x": 0.0, "z": 300.0, "drop": 250.0},
+	# The gallery ring's first ledge, under the lip.
+	"take-sinkhole-drain-dub": {"stage": 4, "x": 0.0, "z": 296.5, "drop": 250.0},
 	# Legend: the pump gallery ledge on the bowl's east wall, reached by carving up the bowl.
-	"take-cave-in-version": {"stage": 4, "x": 60.0, "z": 350.0, "drop": -40.0},
+	"take-cave-in-version": {"stage": 4, "x": 73.0, "z": 350.0, "drop": -40.0},
 	# The islands and the crown, from the crown pass.
 	"take-hanging-isle-liquid": {"stage": 5, "x": 24.0, "z": 520.0, "at": 70.0},
 	"take-islands-kite-chime": {"stage": 5, "x": -455.0, "z": 490.0, "drop": 250.0},
