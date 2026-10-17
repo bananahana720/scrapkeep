@@ -94,6 +94,7 @@ const ROWS := {
 	# plant discharge rides mounted (the plant clack and the motif's first notes).
 	"enemy_rebounded": {"group": "combat", "color": Palette.SAND, "shape": "chevron", "sound": "shell_spring", "sound_next": "rebound_spring_snap", "hud": "", "objective": "", "priority": 1},
 	"enemy_pinned": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "hit_thwack", "sound_next": "pin_double_thwack", "hud": "", "objective": "", "priority": 1},
+	"enemy_ringed_out": {"group": "combat", "color": Palette.COPPER, "shape": "arrow", "sound": "near_whoosh", "hud": "", "objective": "", "priority": 1},
 	"vault_kicked": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "pylon_eject", "sound_next": "sable_octave_leap", "hud": "", "objective": "", "priority": 1},
 	"gauge_charging": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "motif_accumulate", "hud": "", "objective": "", "priority": 1},
 	"gauge_released": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "sound_next": "motif_release", "hud": "", "objective": "", "priority": 1},
@@ -328,6 +329,7 @@ const WEIGHTED := {
 	"hold_broken": {"class": "hit", "allegiance": "player", "visual": ""},
 	"swarm_scattered": {"class": "hit", "allegiance": "player", "visual": ""},
 	"enemy_pinned": {"class": "hit", "allegiance": "player", "visual": ""},
+	"enemy_ringed_out": {"class": "heavy", "allegiance": "player", "visual": ""},
 	"arc_slammed": {"class": "none", "allegiance": "player", "visual": ""},
 	"skid_smashed": {"class": "none", "allegiance": "player", "visual": ""},
 	"demo_slammed": {"class": "none", "allegiance": "player", "visual": ""},

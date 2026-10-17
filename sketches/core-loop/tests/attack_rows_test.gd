@@ -27,7 +27,7 @@ const FIELDS_HASH := 4081964357
 # 2026-10-04: re-pinned again for the cogs_collected row (CG2, alpha wave 5 fix round).
 # 2026-10-04: re-pinned for the achievement_earned and rescue_completed rows hearing their own cues (alpha wave 7, snd-achievement-rescue).
 # 2026-10-04: re-pinned for the world_entered row hearing the world stinger at priority 3 (alpha wave 11 fix, zone-entry cue).
-const ROWS_HASH := 997489691  # 2026-10-09 (wave 12 VX-SURF): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value of weak_point_opened, landmark_hum and reactor_vented; rows otherwise unchanged (restoring the old colour restores the old hash); was 1079977938
+const ROWS_HASH := 970866342  # 2026-10-17 (ring-outs, design-v3/WORLD-ROSTERS.md): the enemy_ringed_out row; was 997489691, 2026-10-09 (wave 12 VX-SURF): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value of weak_point_opened, landmark_hum and reactor_vented; rows otherwise unchanged (restoring the old colour restores the old hash); was 1079977938
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]

@@ -143,7 +143,7 @@ const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "ga
 # also drive the reactor pedal (v2 W5b), and hold_started and pack_arrived resolve by
 # who holds or arrives (v2 W9), so they get their own listeners below.
 const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
-	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
+	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened", "enemy_ringed_out"]
 
 var ctx
 # Per posture Warden, the stagger and chunk count the last posture_changed showed.

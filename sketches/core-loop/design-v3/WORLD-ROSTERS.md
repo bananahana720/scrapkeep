@@ -65,6 +65,16 @@ These world motifs match the fields and cast-times design (`design-v3/FIELDS-AND
 | Kite drone | rework in place | Rides thermals. A ball riding the same thermal reaches it, and an air ram at the top kills it outright. Ground answers still work, but slowly. | Ride the thermal, air-ram | Circles over downdrafts, so the kill drops you toward the next island |
 | Gap net (new id `gap_net`, from the netcaster) | new behaviour, new body | Two posts on facing island rims with a live net across the gap. It catches an airborne ball crossing the gap below its tear speed and slings it back the way it came. Above tear speed you rip through it and it breaks. | Cross fast (swing or launch); smash; cut a post | Nets stack two deep on a long gap |
 
+### Ring-outs (built 17 Oct)
+
+In the Highdraft (world 3), any enemy knocked off an island edge is gone, and it counts as the pilot's kill (`enemy.gd` `_rings_out`, `ring_out`).
+- **What opens it:** only a knock does, meaning the enemy's knocked speed is at least 1 m/s. Any knock path counts: ram, slam, Lift Pulse, Quake Knock, pins and the kit pushes.
+- **When it fires:** the enemy rings out once it falls `RING_OUT_DROP` (4 m) below the height it was knocked from. Health and plating don't matter.
+- **What closes it:** once the enemy is back on a floor with the knock spent, a later fall no longer counts. So a throw that lands back on the island is safe, and an enemy that walks off with no knock is still rescued.
+- **Always rescued:** bosses, Wardens and their relics (`reactor_relic`, `swarm_remnant`, `mind_hand`), plus the kill-first specials (`RING_OUT_KEPT`). Boss arenas and the Spillway and Dig keep today's rescue.
+- **Tell:** the fall itself, then the break-up. The `enemy_ringed_out` event row plays the falling whoosh, and `enemy_killed` follows with the kill pop. No attack id is claimed, because a ring-out is not an attack.
+- **Tests:** `tests/ring_out_test.gd`.
+
 - Highdraft elite: `ballast_heavy` plus two `kite_drone`, replacing the Spillway elite on stages 5 and 6.
 - Highdraft fleet landing becomes a zipline drop from the barge. Impacts knock heavies toward edges.
 - Specials in the Highdraft: Splitter pods can be rung out; the Dispatcher perches on a moving island tip; the Linker strings its cable across a gap.
