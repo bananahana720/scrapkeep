@@ -278,7 +278,7 @@ static func pin_failures(park: Dictionary) -> Array:
 		if UNPLACED.has(id):
 			if recipe != "":
 				out.append("%s carries recipe %s, want none (left unplaced)" % [id, recipe])
-		elif recipe != "greybox:" + String(r["element"]):
+		elif recipe != "greybox:" + String(r["element"]) and not (r["element"] == "anchor_field" and ParkRecipes.ANCHOR_KITS.has(recipe)):
 			out.append("%s carries recipe %s, want greybox:%s" % [id, recipe, r["element"]])
 		if id.ends_with("_rise"):
 			out.append("reversed-ramp row %s is back" % id)
