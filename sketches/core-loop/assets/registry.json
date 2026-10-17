@@ -3073,7 +3073,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp, 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp as the 2 m bake grid draws it (walls side 0 to 2 m), 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -3085,7 +3085,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp, 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp as the 2 m bake grid draws it (walls side 0 to 2 m), 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -3097,7 +3097,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp, 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp as the 2 m bake grid draws it (walls side 0 to 2 m), 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {

@@ -511,7 +511,7 @@ def build(rid, out_dir, count_only=False):
     for sh in shells:
         assert len(sh.t) <= SHELL_BUDGET[0] and len(sh.v) <= SHELL_BUDGET[1], (sh.name, len(sh.t), len(sh.v))
     worst = check_surfaces(k, base, col_s, shells)
-    row = {"recipe": rid, "size": [k["L"], k["H"], k["W"]], "seat_m": [round(0.75 * k["L"], 2), round(1.5 * k["L"], 2)],
+    row = {"recipe": rid, "size": [k["L"], k["H"], k["W"]], "seat_m": [round(0.75 * k["extent"][1][2], 2), round(1.5 * k["extent"][1][2], 2)],
            "ride_surface_worst_m": round(worst, 5),
            "counts": {s.name: {"tris": len(s.t), "verts": len(s.v)} for s in [base, col_s] + shells}}
     if count_only:

@@ -4,7 +4,7 @@ Each GLB is one row size, because the seat fit stretches a GLB along its ride on
 
   lava_channel             58 x 4 x 28 wash, chained: the lava_channel_* rows (51 to 60 m long), whose stamps overlap end
                            to end, so it is measured from the floor centre with no end taper and its -col is two deep end slabs.
-  lava_trench_420x6x40     420 x 6 x 40 channel stamp: west_trench.
+  lava_trench_420x6x40     420 x 6 x 40 channel stamp: west_trench, its walls as the 2 m bake grid draws them.
   dry_wash_1500x4x60       1500 x 4 x 60 wash in the dry_wash landform: south_flats.
   lava_chute_3x0p5x8       3 x 0.5 x 8, no stamp: lava_chute, a small basalt trough standing on its own.
 
@@ -53,6 +53,7 @@ COL_DROP = 0.15
 CREST_CLEAR = 0.5
 CARVE_DEG = 25.8              # FloorRule.on_floor: normal.y >= 0.9, so steeper than acos(0.9) is a wall
 END_SLAB = (6.0, 0.2)         # a chained piece's -col: slabs this far under the floor, this thick
+BAKE_GRID = 2.0               # the park bake's height sample spacing, m
 SKIRT = 0.6                   # the shell's outer skirt reaches this far under the crest
 
 si.HEX.update({
@@ -73,6 +74,11 @@ class Piece:
         self.crest = self.H if chained else 0.0
         self.run = max(min(self.W, 0.25 * self.L), 0.001)
         self.wall = max(min(0.2 * self.H, 0.25 * self.W), 0.001)
+        if stamp == "channel":
+            # The bake samples the stamp on its 2 m grid (tools/park_bake.gd), so a channel wall narrower than that bakes as a
+            # straight ramp from node to node. west_trench's sides fall on grid nodes (at x -560, W 40, yaw 0), so its baked
+            # wall runs side_m 0 to BAKE_GRID: the liner follows the bake, not the analytic stamp.
+            self.wall = max(self.wall, BAKE_GRID)
         lo, hi = 0.0, self.W / 2  # where the carve band starts across the width, mid-run: the floor's last safe line
         for _ in range(40):
             mid = 0.5 * (lo + hi)
@@ -155,7 +161,7 @@ def lava_colour(p, x, z):
         return lerp(col("glass"), col("glass_hi"), 0.6 * streak ** 3)
     if p.cross(x) >= 0.999:
         seam = abs(x + 1.1 * math.sin(0.19 * z) + 0.5 * math.sin(0.61 * z + 1.1))
-        glow = max(0.0, 1.0 - seam / 0.9)
+        glow = max(0.0, 1.0 - seam / max(0.9, 0.04 * p.W))  # wider on wide floors, so the coarse facets keep it whole
         crust = 0.55 + 0.45 * math.sin(1.7 * z + 3.0 * x)
         c = lerp(rock, col("lava_deep"), min(1.0, 2.0 * glow))
         return lerp(c, lerp(col("lava"), col("lava_hot"), crust), max(0.0, 2.0 * glow - 1.0))
@@ -346,13 +352,17 @@ def build_chute_base(_p=None):
     s = Surf(CHUTE["id"])
     L, hw = CHUTE["L"], CHUTE["W"] / 2
     xs = chute_xs()
-    zs = [L * j / 4 for j in range(5)]
+    zs = [L * j / 12 for j in range(13)]
+
+    def tone(x, z):  # the hot seam wandering down the floor, glassy walls, basalt between; sampled per vertex so it blends
+        glow = max(0.0, 1.0 - abs(x + 0.3 * math.sin(2.0 * z)) / 0.6)
+        rock = col("glass") if chute_top(x) > 0.06 else lerp(col("basalt_lo"), col("basalt_hi"), 0.5 + 0.5 * math.sin(3.0 * z + x))
+        return lerp(rock, lerp(col("lava_deep"), col("lava_hot"), glow), min(1.0, 1.6 * glow))
+
     for z0, z1 in zip(zs, zs[1:]):
         for x0, x1 in zip(xs, xs[1:]):
-            xm = 0.5 * (x0 + x1)
-            seam = abs(xm + 0.3 * math.sin(2.0 * z0)) < 0.45
-            c = col("lava") if seam else (col("glass") if chute_top(xm) > 0.06 else lerp(col("basalt_lo"), col("basalt_hi"), rnd(int(x0 * 4), int(z0 * 4))))
-            s.poly([(x0, chute_top(x0), z0), (x0, chute_top(x0), z1), (x1, chute_top(x1), z1), (x1, chute_top(x1), z0)], c, up=UP)
+            pts = [(x0, chute_top(x0), z0), (x0, chute_top(x0), z1), (x1, chute_top(x1), z1), (x1, chute_top(x1), z0)]
+            s.poly(pts, [tone(q[0], q[2]) for q in pts], up=UP)
     inside = (0.0, -0.4, L / 2)
     for z, flip in ((0.0, 1), (L, -1)):  # the end faces down to the trough's base, 0.4 m under the floor
         for x0, x1 in zip(xs, xs[1:]):
