@@ -308,7 +308,9 @@ func _snapshot(delta: float) -> Dictionary:
 		items.append([_vector(item.global_position), field._caught.get(item),
 			field._value.get(item), field._age.get(item), field._cogs.get(item)])
 	var events := []
-	for state in _game.world.events._park_states:
+	# world.gd holds no event director between stages (its events is null from a stage's end to the next entry).
+	var director = _game.world.events
+	for state in (director._park_states if director != null else []):
 		events.append({"id": state.row.id, "phase": state.phase, "due": state.due_s,
 			"ready": state.ready_s, "elapsed": state.live_elapsed_s, "holding": state.holding})
 	return {"tick": _driver.ticks + 1, "delta": delta, "flow": _game.flow.state_name(),
@@ -320,7 +322,7 @@ func _snapshot(delta: float) -> Dictionary:
 		"events": events, "music_clock": _game.presentation.audio.engine.clock,
 		"bot_rng": str(_driver.rng.state), "run_rng": str(_game.ctx.rng.state),
 		"loot_rng": str(_game.build.loot_rng.state), "director_rng": str(_game.world.director._rng.state),
-		"event_rng": str(_game.world.events.rng.state), "tree_rng": str(_driver._tree_rng.state),
+		"event_rng": str(director.rng.state) if director != null else null, "tree_rng": str(_driver._tree_rng.state),
 		"camera_rng": str(_game.camera._shake_rng.state),
 		"aim_origin": _vector(_game.ctx.aim_origin()), "aim_forward": _vector(_game.ctx.aim_forward()),
 		"yaw": _game.camera.yaw, "pitch": _game.camera.pitch, "enemies": enemies}
