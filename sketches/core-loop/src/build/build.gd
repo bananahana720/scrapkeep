@@ -24,6 +24,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const Relics := preload("res://src/build/relics.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
+const MakerBonuses := preload("res://src/build/maker_bonuses.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -126,6 +127,8 @@ var effects
 var clock
 var shop
 var lanes
+# Maker sets (maker_sets.gd, maker_bonuses.gd): the completed sets' bonuses.
+var makers
 # The challenge modifiers the class screen chose for the next run (RunClock.MODIFIERS).
 var _next_modifiers := {}
 # Parts offered at this stage's gates, id to count, so a stage rarely repeats one.
@@ -228,6 +231,7 @@ func setup(ctx_ref) -> void:
 	clock = RunClock.new()
 	shop = Shop.new(ctx, self)
 	lanes = Lanes.new()
+	makers = MakerBonuses.new(self)
 	ctx.build = self
 	ctx.set_meta("build", self)
 	ctx.events.stage_entered.connect(_on_stage_entered)
@@ -253,6 +257,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.beacon_unsealed.connect(_on_warden_broken_hotwire)
 	ctx.events.enemy_struck.connect(_on_tread_struck)
 	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
+	makers.setup()
 
 
 # ---- Build API (for combat, presentation and world; see SEAMS.md) ----
@@ -382,6 +387,22 @@ func item_hit(enemy: Node3D, damage: float, element := "") -> void:
 # A part's live effect numbers for a card or the fuzzer: {id, trigger, procs}.
 func item_procs() -> Dictionary:
 	return effects.procs.duplicate()
+
+
+# Maker sets: maker id to distinct pieces held (parts, relics and the racked active), the live
+# bonus ids, and the active rack's open-frame question (fired in the air, fire twice).
+func maker_counts() -> Dictionary:
+	makers.refresh()
+	return makers.counted.duplicate()
+
+
+func maker_bonuses() -> Array:
+	makers.refresh()
+	return makers.live.duplicate()
+
+
+func maker_fires_twice() -> bool:
+	return makers.fires_twice()
 
 
 func trigger_stats() -> Dictionary:
@@ -1187,6 +1208,7 @@ func _physics_process(delta: float) -> void:
 		if shell_fitted():
 			_refresh_air_mod()
 	_step_tread(delta)
+	makers.step(delta)
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
 	scrap.magnet_scale = sheet.magnet * effects.magnet_boost()

@@ -207,7 +207,11 @@ func press() -> String:
 
 
 func _release() -> void:
-	var count: int = _kinds[active_id].fire(self, _row(active_id), bonus)
+	var row := _row(active_id)
+	var count: int = _kinds[active_id].fire(self, row, bonus)
+	# Open Frame (the Highdraft Roosts set, maker_sets.gd): an active fired in the air fires twice.
+	if ctx.build != null and ctx.build.has_method("maker_fires_twice") and ctx.build.maker_fires_twice():
+		count += int(_kinds[active_id].fire(self, row, bonus))
 	bonus = 0
 	fires += 1
 	ctx.events.active_fired.emit(active_id, ctx.player.ball_position(), count)
