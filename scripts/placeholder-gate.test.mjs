@@ -18,6 +18,7 @@ import {
   parkGreybox,
   isPlainSlope,
   recipeGlbs,
+  isMesaEdge,
   parseArgs,
   pendingEntries,
   report,
@@ -110,6 +111,18 @@ test("parkGreybox passes an anchors kit row only when all three variants have la
     found.map((f) => [f.what, f.count]),
     [["1 greybox anchor_field (recipe anchor_cairn has no GLB): cairns", 1]],
   );
+});
+
+test("parkGreybox counts a mesa edge spanning the play rect as terrain and keeps narrower lips", () => {
+  const rect = [-800, -800, 1600, 1600];
+  const edge = { id: "fan_step_lip_1", element: "kicker", recipe: "greybox:kicker", stamp: "plateau", y: null, yaw_deg: 0, size: [12, 0.01, 1600] };
+  const narrow = { ...edge, id: "fin_nose_kicker", size: [12, 0.01, 56] };
+  const unstamped = { ...edge, id: "loose_lip", stamp: "" };
+  assert.equal(isMesaEdge(edge, rect), true);
+  assert.equal(isMesaEdge(narrow, rect), false);
+  assert.equal(isMesaEdge(unstamped, rect), false);
+  const found = parkGreybox("park_islands", { play_rect: rect, park_rows: [edge, narrow, unstamped] }, () => false);
+  assert.deepEqual(found.map((f) => [f.what, f.count]), [["2 greybox kicker: fin_nose_kicker, loose_lip", 2]]);
 });
 
 test("parkGreybox counts a stamped plain slope as terrain and keeps ride pieces and unstamped slopes", () => {
