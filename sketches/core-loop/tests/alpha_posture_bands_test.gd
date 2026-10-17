@@ -35,7 +35,11 @@ const ALPHA_TICKS := 30000
 # [28.72, 32.57]. The w23 test, whose Warden band derives from REACH_SKIPPER_S, measured stage 3 (now
 # the swarm remnant) 53.5 s and stage 5 (the Mind's hand, no choir) 93.6 s, two of six pilots past
 # 125 s. All inside their windows, so the bands stay: they are fixed, not fit to results.
-const SPILLWAY_SKIPPER_S := Vector2(50.0, 90.0)
+# 2026-10-17 (SQ2, PR #15): floor 50 -> 45 s. With the attacker budget fewer adds attack at once, so
+# the skipper breaks the Spillway Warden in 45.2 and 48.5 s (main cf63e622: 51.1 and 55.2 s). Andrew's
+# posture-family ruling "Stage-page timing, Andrew tapped 15:34:22Z 17 Oct (~45-70 s first stagger)";
+# the ceiling stays.
+const SPILLWAY_SKIPPER_S := Vector2(45.0, 90.0)
 const REACH_SKIPPER_S := Vector2(35.0, 80.0)
 # The Reach completionist's median fight is at most this many times the skipper's.
 const REACH_COMPLETIONIST_FACTOR := 1.25

@@ -35,6 +35,10 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Stamps := preload("res://src/world/park/park_stamps.gd")
+const LandmarkProxy := preload("res://src/presentation/landmark_proxy.gd")
+const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
+const WardenMind := preload("res://src/combat/warden_mind.gd")
+const IsleRig := preload("res://src/world/park/isle_rig.gd")
 
 const BUDGETS_PATH := "res://assets/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
@@ -44,6 +48,11 @@ const ORIGIN_CENTRE := "centre"
 const ORIGIN_ENTRY_LIP := "entry_lip"
 const ORIGINS := [ORIGIN_CENTRE, ORIGIN_ENTRY_LIP]
 const GREYBOX := "greybox:"
+# Rows something else dresses place only their ride sensor: "landmark", the landmark's own model (the sinkhole's
+# gallery deck); "scatter", the park's ground scatter, which park_map.gd then lets into the footprint.
+const LANDMARK_DRESSED := "landmark"
+const SCATTER_DRESSED := "scatter"
+const SENSOR_ONLY := [LANDMARK_DRESSED, SCATTER_DRESSED]
 # A recipe's collision mesh is the node named "<name>-col". Godot 4.7.2 keeps that node as a MeshInstance3D and adds a
 # StaticBody3D child holding its ConcavePolygonShape3D (probed 2026-10-10); placement takes the shape and never draws it.
 const COL_SUFFIX := "-col"
@@ -140,6 +149,14 @@ const ANCHOR_EDGE_STEP_M := 12.0
 # The waymark names that are no row: the spawn and the landmark (park_schema.gd DROP_IN and LANDMARK).
 const DROP_IN := "drop_in"
 const LANDMARK := "landmark"
+# The landmark's y datum (LANDMARK-CARDS.md fact 6, port note P3) when its park object gives no `y`: where its GLB
+# origin sits. The plateau or toe for the dam, the tower and the sinkhole; the pit floor under the headframe, which is
+# its sight point less its height; the crown's bowl floor; and the isle's tilt pivot, PIVOT_HEIGHT above its tip
+# (warden_mind.gd), so its deck, size[1] - PIVOT_HEIGHT above the pivot, is at sight_top. The hand hangs under the tip
+# on the GLB's tether, so the pivot stays put when the hand's anchor moves (PW1 lowered it to 66).
+const BEAM_ROOT := "beam_root"
+const ANCIENT_BEAM := "ancient_beam"
+const TIP_SUFFIX := "_tip"
 
 static var _budgets := {}
 static var _origins := {}
@@ -425,6 +442,10 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 		return null
 	if recipe.begins_with(GREYBOX):
 		return place_greybox(row, recipe.trim_prefix(GREYBOX), parent, ground, publish)
+	if SENSOR_ONLY.has(recipe):
+		var dressed := _node(row, parent, ground)
+		_sensor(dressed, row, publish)
+		return dressed
 	var budget := String(row.get("budget", ROWS.get(recipe, {}).get("budget", "landform")))
 	var p := paths(recipe, budget)
 	if not ResourceLoader.exists(p["base"]):
@@ -457,6 +478,97 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 		for scene: Node in parts[key]:
 			scene.free()
 	return node
+
+
+# The landmark object as a row place() reads: the park's `landmark` with its y datum, {} when it places nothing.
+static func landmark_row(park: Dictionary) -> Dictionary:
+	var mark: Dictionary = park.get("landmark", {})
+	if String(mark.get("recipe", "")) == "":
+		return {}
+	var row := mark.duplicate(true)
+	row["y"] = landmark_datum(mark)
+	return row
+
+
+# The landmark's y datum (header): its own `y` when it gives one, else its kind's rule.
+static func landmark_datum(mark: Dictionary) -> float:
+	if mark.get("y") != null:
+		return float(mark["y"])
+	var kind := String(mark.get("kind", ""))
+	var warden: Dictionary = mark.get("warden", {})
+	match kind:
+		"headframe":
+			return float(mark["sight_top"][1]) - float(mark["size"][1])
+		"spire":
+			return float(warden.get("bowl_floor", 0.0))
+		"sky_island":
+			return float(mark["sight_top"][1]) - (float(mark["size"][1]) - WardenMind.PIVOT_HEIGHT)
+	return 0.0
+
+
+# Places a park's hero landmark under parent (port notes P1 and P2): its GLB through place() when the base has landed,
+# views and -col collider and all, else its visual-only proxy (landmark_proxy.gd); then, when its light is the ancient
+# beam, the beam from the GLB's beam_root empty (or the proxy's) up past sight_top. The node is Landmark_<id> with meta
+# "landmark_proxy" true while it stands in. null when the park's landmark names no recipe.
+static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable()) -> Node3D:
+	var row := landmark_row(park)
+	if row.is_empty():
+		return null
+	var kind := String(row.get("kind", ""))
+	var p := paths(String(row["recipe"]), String(row.get("budget", "hero_landmark")))
+	var node: Node3D = null
+	var root = null
+	if ResourceLoader.exists(p["base"]):
+		node = place(row, parent, ground)
+		root = _beam_root(p["base"])
+		if root is Vector3:
+			root = ride_frame(row)["origin"] + (root as Vector3)
+	var warden: Dictionary = row.get("warden", {})
+	var anchor_y := float(warden["anchor"][1]) if warden.get("anchor") is Array else -INF
+	if node == null:
+		node = _node(row, parent, ground)
+		LandmarkProxy.build(kind, node, node.transform, ground, anchor_y)
+		node.set_meta("landmark_proxy", true)
+		root = LandmarkProxy.BEAM_ROOT.get(kind)
+	node.name = "Landmark_%s" % String(row.get("id", "landmark"))
+	node.set_meta("landmark_kind", kind)
+	if String(row.get("light", "")) == ANCIENT_BEAM and root is Vector3:
+		LandmarkBeam.make(node, node.transform * (root as Vector3), float(row["sight_top"][1]), anchor_y)
+	if kind == "sky_island":
+		IsleRig.attach(node, null if node.has_meta("landmark_proxy") else _tip_shape(row))
+	return node
+
+
+# The Hanging Isle's moving tip (ISLE-TIP): the tip GLB's -col trimesh at its place in the landmark node, for
+# isle_rig.gd's IsleTip body; null when the GLB is missing.
+static func _tip_shape(row: Dictionary) -> CollisionShape3D:
+	var out: CollisionShape3D = null
+	for scene: Node in _load(GLB_DIR + String(row["recipe"]) + TIP_SUFFIX + ".glb"):
+		for source: MeshInstance3D in scene.find_children("*" + COL_SUFFIX, "MeshInstance3D", true, false):
+			if out == null and source.mesh != null:
+				out = CollisionShape3D.new()
+				out.name = "TipShape"
+				out.shape = _trimesh(source)
+				out.transform = Transform3D(Basis.IDENTITY, ride_frame(row)["origin"]) * _relative(source, scene)
+		scene.free()
+	return out
+
+
+# The beam_root empty of a landmark GLB, in its own space; null when it has none. Read once per GLB.
+static var _beam_roots := {}
+
+static func _beam_root(path: String):
+	if _beam_roots.has(path):
+		return _beam_roots[path]
+	var scenes := _load(path)
+	var out = null
+	for scene: Node in scenes:
+		var found := scene.find_child(BEAM_ROOT, true, false)
+		if out == null and found is Node3D:
+			out = _relative(found, scene).origin
+		scene.free()
+	_beam_roots[path] = out
+	return out
 
 
 # Places instantiated recipe scenes: parts is {"base": [Node], "shells": [Node, ...], "mid": [Node], "far": [Node]}.
@@ -715,7 +827,8 @@ static func _relative(node: Node3D, top: Node) -> Transform3D:
 # stamped row places its node and ride sensor but no solid: the stamp replaces it (PARK.md section 4: a landform is
 # "height stamp plus a recipe"; the stamp shapes the ground, and a greybox has no lip or rim to add). A greybox
 # anchor_field becomes a post field (place_anchor_field). A GLB recipe stands where place() puts it, its -col mesh on
-# top of the stamped ground. Only the park file's schema fields are read, never a stage's ids.
+# top of the stamped ground. Only the park file's schema fields are read, never a stage's ids. After the rows the
+# park's landmark places once (place_landmark): its GLB loads with the rows' GLBs, and placed_rows never names it.
 
 
 # The park rows that place something: recipe not "".
@@ -932,6 +1045,8 @@ static func stands_in(row: Dictionary) -> bool:
 	var recipe := String(row.get("recipe", ""))
 	if recipe == "" or recipe.begins_with(GREYBOX):
 		return recipe != ""
+	if SENSOR_ONLY.has(recipe):
+		return false
 	if not ResourceLoader.exists(paths(recipe, _budget(row))["base"]):
 		return true
 	if fits_tile(row):
@@ -946,7 +1061,7 @@ static func _budget(row: Dictionary) -> String:
 # Every GLB a row's placement reads.
 static func row_paths(row: Dictionary) -> Array:
 	var recipe := String(row.get("recipe", ""))
-	if recipe == "" or recipe.begins_with(GREYBOX):
+	if recipe == "" or SENSOR_ONLY.has(recipe) or recipe.begins_with(GREYBOX):
 		return []
 	var p := paths(recipe, _budget(row))
 	var out: Array = [p["base"]]
@@ -992,6 +1107,10 @@ class Placer extends Node3D:
 	var row_usec_max := 0
 	var _last_frame_usec := 0
 	var _rows: Array = []
+	# The landmark's row (landmark_row), placed after the rows; {} when there is none.
+	var _landmark: Dictionary = {}
+	var _park: Dictionary = {}
+	var landmark: Node3D = null
 	var _zones: Array = []
 	var _ground: Callable
 	var _publish: Callable
@@ -1014,8 +1133,10 @@ class Placer extends Node3D:
 		_ground = ground
 		_publish = publish
 		_threaded = threaded
+		_landmark = Self.landmark_row(park)
+		_park = park
 		var wanted := []
-		for row: Dictionary in _rows:
+		for row: Dictionary in _rows + ([_landmark] if not _landmark.is_empty() else []):
 			for path: String in Self.row_paths(row):
 				if not wanted.has(path):
 					wanted.append(path)
@@ -1129,6 +1250,18 @@ class Placer extends Node3D:
 			row_usec_max = maxi(row_usec_max, last)
 			_next += 1
 			added += 1
+		# The landmark costs more than a row (a hero GLB), so it takes a step of its own unless nothing waits on a frame.
+		if not _landmark.is_empty() and landmark == null:
+			if deadline >= 0 and added > 0:
+				return
+			var r0 := Time.get_ticks_usec()
+			var holder := Node3D.new()
+			landmark = Self.place_landmark(_park, holder, _ground)
+			if landmark != null:
+				holder.remove_child(landmark)
+				add_child(landmark)
+			holder.free()
+			row_usec_max = maxi(row_usec_max, Time.get_ticks_usec() - r0)
 		_held.clear()
 		phase = Phase.READY
 		set_process(false)

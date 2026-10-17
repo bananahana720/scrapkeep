@@ -90,3 +90,15 @@ About two minutes. Do it once on Sable and once on Tally.
 4. If you have unlocked any paint (Night Slate, Cobalt and so on), equip it and say whether it reads at speed.
 
 Log it in playtest entry 13 under the cosmetics area. "Lattice stays dark" means run cards B then A. "Reads fine" means run C and D only.
+
+## Outcome (2026-10-16, same day)
+
+Cards B, A2, C, D and E landed together on branch `claude/pilot-paint-adk8qg`.
+
+- **B:** `cosmetic_apply_test` now models what each paint surface renders (vertex colour through the material) and requires Cobalt and every starter paint to pull each pilot's Core at least half the way to the lifted tint. On the old multiply it failed all 18 pairs (every paint darkened the lattice away from its tint); with A2 all 18 pass at 0.57 to 0.76.
+- **A2:** an equipped paint is a `ShaderMaterial` named `paint` that lerps the vertex colour `PAINT_TAKE` (0.6, start) toward the lifted tint, over the same triplanar plate map. Kest's ring bands use the same formula. Unpainted surfaces keep the `StandardMaterial3D`. One shader per use, one cached material per tint.
+- **C:** kept Salt White and Ledger Cream as they are: with A2 they turn the dark lattice pale, so neither reads as Default any more (the test covers both).
+- **D:** `hero_assets._equipped_paint` and `class_card.paint_shown` ask `CosmeticWear.worn`; the card's own `owns` copy is gone. `paint_tint` keeps its warn-once reasons.
+- **E:** `HANDOFF.md:61` is marked superseded.
+
+Stills: [paint-stills/](paint-stills/), Sable (Default, Lagoon, Salt White) and Tally (Default, Ledger Cream, Cobalt), before and after, from `tools/paint_still.gd`. They were rendered by Godot 4.7.2's Compatibility renderer on Mesa llvmpipe in the cloud (no GPU), not Forward+ on Vulkan, so the light and tone differ from the game; the tint difference is the point. Andrew's check at the sitting above still stands.

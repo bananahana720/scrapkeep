@@ -53,8 +53,12 @@ const STAKE_GROUP := "sable_stake"
 
 const MIN_ROPE := 2.5
 # A body joins this group to be a harpoon anchor (PARK.md section 7): its line rides as a
-# world line that follows it. Warden.setup adds an anchor Warden; nothing else does.
+# world line that follows it. Warden.setup adds an anchor Warden, Sable's stakes join it, and so
+# does a world solid that moves (WORLD_ANCHOR_GROUP).
 const ANCHOR_GROUP := "harpoon_anchor"
+# A moving world solid (the Hanging Isle's tip, isle_rig.gd): any hook ray or assist that lands on
+# it bites the body, so the line rides the moving point; it is no enemy and links no chain.
+const WORLD_ANCHOR_GROUP := "world_anchor"
 # A harpoon line is idle, latched to a world point or a body, or committed to a smash
 # haul on a body. SMASH_MAX bounds a haul; a line stretched past BREAK_STRETCH times the
 # rope range lets go; ground under this normal.y is walkable and cannot be hooked.
@@ -63,6 +67,16 @@ const LINE_LATCHED := 1
 const LINE_SMASH := 2
 const SMASH_MAX := 1.2
 const BREAK_STRETCH := 1.5
+# Poles (POLES-FLAILS section 4, start values): brace after two laps at cruise, snap after the
+# creak, the outward kick, the hull clearance and the exit bonus on a let-go.
+const POLE_BRACE := 1.6
+const POLE_SNAP := 0.4
+const POLE_KICK := 4.0
+const POLE_CLEAR := 1.5
+const POLE_EXIT := 0.15
+const POLE_EXIT_SABLE := 0.25
+# The speed soft cap (Andrew, 2026-10-17 07:17Z): a pole exit never pushes the ball past it.
+const POLE_EXIT_CAP := 60.0
 const WALKABLE_Y := 0.7
 const FACE_REACH := 1.5
 # sin 60 deg: the face leans less than 60 degrees off vertical, so a pylon can bite.
@@ -365,8 +379,11 @@ static func commit_smash(kit, tuning, velocity: Vector3) -> void:
 
 
 # Whether Ctrl may commit the haul on the line now: always on an enemy line, only inside the
-# stagger on an anchor line.
+# stagger on an anchor line, never on a flail line (the flail hangs behind the ball; its slam is
+# a later unit, POLES-FLAILS section 5).
 static func haul_open(kit) -> bool:
+	if kit.grip == "flail":
+		return false
 	var body = kit.anchor_body
 	return not (kit.on_body and anchor_line(body)) or (body.has_method("staggered") and body.staggered())
 
@@ -388,7 +405,7 @@ static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forw
 		var body = centre["collider"]
 		if mask != WORLD_MASK and body is Node3D and (body.is_in_group("enemy") or body.is_in_group(STAKE_GROUP)):
 			return {"state": AIM_BODY, "point": centre["position"], "normal": centre["normal"], "body": body}
-		return {"state": AIM_REACH, "point": centre["position"], "normal": centre["normal"]}
+		return _world_aim(AIM_REACH, centre)
 	if assist_deg <= 0.0:
 		return no_aim()
 	var side := forward.cross(Vector3.UP)
@@ -413,8 +430,17 @@ static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forw
 				nearest = gap
 				best = hit
 		if not best.is_empty():
-			return {"state": AIM_ASSIST, "point": best["position"], "normal": best["normal"]}
+			return _world_aim(AIM_ASSIST, best)
 	return no_aim()
+
+
+# A world hit's aim record; one on a moving world solid carries it as the body the line rides.
+static func _world_aim(state: int, hit: Dictionary) -> Dictionary:
+	var out := {"state": state, "point": hit["position"], "normal": hit["normal"]}
+	var body = hit.get("collider")
+	if body is Node3D and body.is_in_group(WORLD_ANCHOR_GROUP):
+		out["body"] = body
+	return out
 
 
 # An enemy the line can bite: alive, in the enemy group, and on the enemy layer so the ball can touch it.
@@ -688,7 +714,9 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 			_haul(kit, tuning, intent, body_state, step)
 		elif anchor_line(kit.anchor_body):
 			_ride_anchor(kit, tuning, intent, body_state, step)
-		elif intent.harpoon_held:
+		elif pole_line(kit):
+			_ride_pole(kit, tuning, intent, body_state, step)
+		elif intent.harpoon_held and kit.grip != "flail":
 			_winch_body(kit, tuning, body_state, step)
 		return
 	var to_anchor: Vector3 = kit.anchor - origin
@@ -727,15 +755,59 @@ static func anchor_line(body) -> bool:
 # ball's outward speed measured against the moving anchor, so a moving mounting drags the
 # ball on the rope's tension. The keyboard holds the harpoon for as long as the line stands.
 static func _ride_anchor(kit, tuning, intent, body_state, step: float) -> void:
+	_ride(kit, tuning, intent, body_state, step, kit.anchor_body.anchor_velocity(), Tuning.ANCHOR_MIN_ROPE)
+
+
+# A pole (POLES-FLAILS section 4): a bitten enemy heavier than the ball rides as an anchor line
+# on the body's own velocity, held off its hull at pole_rope. Unlike a Warden anchor the smash
+# stays open (haul_open). After POLE_BRACE the body braces; POLE_SNAP later it snaps the line
+# and kicks the ball outward at POLE_KICK.
+static func _ride_pole(kit, tuning, intent, body_state, step: float) -> void:
+	var body = kit.anchor_body
+	kit.pole_time += step
+	if kit.pole_time >= POLE_BRACE + POLE_SNAP:
+		var away: Vector3 = body_state.transform.origin - body.global_position
+		if away.length() > 0.01:
+			body_state.linear_velocity += away.normalized() * POLE_KICK
+		kit.drop_line("brace")
+		return
+	var carried: Vector3 = body.velocity if body is CharacterBody3D else Vector3.ZERO
+	_ride(kit, tuning, intent, body_state, step, carried, pole_rope(body))
+
+
+static func pole_line(kit) -> bool:
+	return kit.on_body and kit.grip == "pole" and kit.line_state == LINE_LATCHED and not anchor_line(kit.anchor_body)
+
+
+# The let-go velocity off a pole: `share` of the speed across the line added along it, capped
+# at POLE_EXIT_CAP unless the ball was already faster.
+static func pole_exit(v: Vector3, to_body: Vector3, share: float) -> Vector3:
+	var across := v - to_body * v.dot(to_body)
+	var out := v + across * share
+	if out.length() > POLE_EXIT_CAP:
+		out = out.normalized() * maxf(v.length(), POLE_EXIT_CAP)
+	return out
+
+
+static func pole_bracing(kit) -> bool:
+	return pole_line(kit) and kit.pole_time >= POLE_BRACE
+
+
+# The orbit radius: ANCHOR_MIN_ROPE, or clear of a wide hull.
+static func pole_rope(body) -> float:
+	var r = body.get("radius")
+	return maxf(Tuning.ANCHOR_MIN_ROPE, (float(r) if r != null else 0.0) + Tuning.RADIUS + POLE_CLEAR)
+
+
+static func _ride(kit, tuning, intent, body_state, step: float, carried: Vector3, floor_rope: float) -> void:
 	var to_anchor: Vector3 = kit.anchor - body_state.transform.origin
 	var dist := to_anchor.length()
 	if dist < 0.001:
 		return
 	var dir := to_anchor / dist
-	var carried: Vector3 = kit.anchor_body.anchor_velocity()
 	if intent.harpoon_held:
-		_winch_body(kit, tuning, body_state, step, Tuning.ANCHOR_MIN_ROPE)
-		_arrive(kit, tuning, body_state, dir, dist, carried)
+		_winch_body(kit, tuning, body_state, step, floor_rope)
+		_arrive(kit, tuning, body_state, dir, dist, carried, floor_rope)
 	if dist <= kit.rope:
 		return
 	var v: Vector3 = body_state.linear_velocity
@@ -750,10 +822,10 @@ static func _ride_anchor(kit, tuning, intent, body_state, step: float) -> void:
 # on the anchor is capped at what the winch's own pull could stop in the length left, so the
 # reel ends hanging or orbiting there instead of carrying the reel speed into the body.
 # Speed across the line is untouched, which is what keeps the orbit.
-static func _arrive(kit, tuning, body_state, dir: Vector3, dist: float, carried: Vector3) -> void:
+static func _arrive(kit, tuning, body_state, dir: Vector3, dist: float, carried: Vector3, floor_rope := Tuning.ANCHOR_MIN_ROPE) -> void:
 	var v: Vector3 = body_state.linear_velocity
 	var closing := (v - carried).dot(dir)
-	var cap := sqrt(2.0 * tuning.f("reel_force") * maxf(0.0, dist - Tuning.ANCHOR_MIN_ROPE))
+	var cap := sqrt(2.0 * tuning.f("reel_force") * maxf(0.0, dist - floor_rope))
 	if closing > cap:
 		body_state.linear_velocity = v - dir * (closing - cap)
 
@@ -775,7 +847,7 @@ static func _follow(kit, tuning, origin: Vector3) -> bool:
 	if dist > BREAK_STRETCH * tuning.f("rope_range"):
 		kit.drop_line("out_of_reach")
 		return false
-	if kit.line_state == LINE_LATCHED and not anchor_line(body):
+	if kit.line_state == LINE_LATCHED and not anchor_line(body) and not kit.grip in ["pole", "flail"]:
 		var radius = body.get("radius")
 		var centre_dist := origin.distance_to(body.global_position)
 		if centre_dist <= MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0):

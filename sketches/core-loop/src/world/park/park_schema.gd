@@ -8,6 +8,7 @@ extends RefCounted
 # lead_floor, water_depth, handling, recipe, home_landform, guardrail, line.
 
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const Director := preload("res://src/world/director.gd")
 
 const SCHEMA := "scrapkeep-park/1"
@@ -71,7 +72,7 @@ const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "crac
 const CONTRAPTION_RECIPES := ["", "gauge", "geyser_vent", "cannon", "trebuchet", "lift_platform", "barge"]
 
 # Activity presentation uses an ACTIVITY_ROWS key or the kind's existing cue.view alias.
-const ACTIVITY_KINDS := ["enemy_camp", "surge_run", "ambush_altar", "cracked_cache", "hauler_bounty", "movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
+const ACTIVITY_KINDS := ["enemy_camp", "surge_run", "ambush_altar", "cracked_cache", "hauler_bounty", "movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks", "hold_the_relay"]
 const WEATHER_KINDS := ["clear", "monsoon", "dust_squall", "heat_shimmer", "cave_mist", "cloud_deck", "thunderstorm"]
 
 # The park recipe registry until KC0 folds the park recipes into assets/registry.json: the
@@ -89,6 +90,8 @@ const RECIPES := [
 	"landmark_sky_island", "landmark_spire",
 ]
 const GREYBOX := "greybox:"
+# The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).
+const SCATTER := "scatter"
 const REGISTRY_PATH := "res://assets/registry.json"
 
 # The real-culture guardrail (section 4): these rows house no home, carry only ref_ fragments,
@@ -140,6 +143,9 @@ const PARK_FIELDS := {
 # entry and exit (park_recipes.gd seat_fit); "tile" repeats a shorter GLB recipe end to end, each copy seated on the
 # ground at its own ends (park_recipes.gd tile_fit).
 const FITS := ["seat", "tile"]
+# Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
+# the cage, so who is rescued is data; quest is what rescue_completed carries (achievements.gd keys on it).
+const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -242,6 +248,7 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var weather := _rows(out, park, "weather_rows", WEATHER_FIELDS)
 	var activities := _rows(out, park, "activity_rows", ACTIVITY_FIELDS)
 	var routes := _rows(out, park, "routes", ROUTE_FIELDS)
+	var rescues := _rows(out, park, "rescue_rows", RESCUE_FIELDS) if park.has("rescue_rows") else {}
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)
@@ -279,6 +286,13 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 		_weather_row(out, id, weather[id], events)
 	for id in activities:
 		_site(out, id, activities[id], rows)
+	for id in rescues:
+		_site(out, id, rescues[id], rows)
+		if String(rescues[id]["quest"]) == "":
+			_add(out, id, "missing", "a rescue names its quest")
+		var pilot := String(rescues[id]["pilot"])
+		if pilot != "" and ClassDef.by_id(pilot) == null:
+			_add(out, id, "reference", "pilot %s is no class id" % pilot)
 	return out
 
 
@@ -468,6 +482,8 @@ static func _recipe(out: Array, id: String, recipe: String) -> void:
 	if recipe.begins_with(GREYBOX):
 		if not ELEMENTS.has(recipe.trim_prefix(GREYBOX)):
 			_add(out, id, "recipe", "%s names no park element" % recipe)
+		return
+	if recipe == LANDMARK or recipe == SCATTER:
 		return
 	if not RECIPES.has(recipe) and not _registry().has(recipe):
 		_add(out, id, "recipe", "%s names no registry row" % recipe)

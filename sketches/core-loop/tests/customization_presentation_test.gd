@@ -208,8 +208,8 @@ func _materials(view, node: Node) -> Array:
 
 func _has_paint(view, node: Node, tint: Color) -> bool:
 	for mat in _materials(view, node):
-		if mat is StandardMaterial3D and mat.resource_name == "paint":
-			return mat.albedo_color.is_equal_approx(Color(tint.r * 1.2, tint.g * 1.2, tint.b * 1.2))
+		if mat is ShaderMaterial and mat.resource_name == "paint":
+			return (mat.get_shader_parameter("paint_tint") as Color).is_equal_approx(Color(tint.r * 1.2, tint.g * 1.2, tint.b * 1.2))
 	return false
 
 

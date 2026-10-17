@@ -420,10 +420,22 @@ def pose(clip,t,root,snapshot):
         idx={"phase_break":0,"phase_break_2":1,"phase_break_3":2}[clip]
         slab=obj("Mantle%d"%idx)
         if slab:
-            u=max(0,(t-.2)/.8)
-            slab.location+=B(((-1 if idx%2==0 else 1)*4*u,-5*u*u,1.5*u))
-            slab.rotation_euler.x=.65*u
-            slab.scale=Vector((1,1,1))*max(.015,1-u**3)
+            # A mantle break as a melodramatic beat: the slab shudders against its seat, cracks
+            # loose with a kick, then drifts out and falls away tumbling. End pose unchanged.
+            side=-1 if idx%2==0 else 1
+            if t<.2:
+                k=t/.2
+                slab.rotation_euler.x=.05*k*math.sin(math.tau*15*t)
+                slab.location+=B((side*.06*k*math.sin(math.tau*11*t),0,.04*k))
+            else:
+                u=(t-.2)/.8
+                kick=min(1,u/.12)
+                lateral=.18*kick*(2-kick)+.82*u**1.4
+                lift=.35*math.sin(math.pi*min(1,u/.5))*(1-u)
+                slab.location+=B((side*4*lateral,-5*u*u+lift,1.5*lateral))
+                slab.rotation_euler.x=.65*u+.25*math.sin(math.pi*u)*(1-u)
+                slab.rotation_euler.z=side*.3*math.sin(math.pi*u)
+                slab.scale=Vector((1,1,1))*max(.015,1-u**6)
     if clip=="final_quiet":
         for i in range(6):
             slab=obj("Mantle%d"%i)
@@ -497,7 +509,7 @@ def animate(root,snapshot):
             o.animation_data.action=act
             act.use_fake_user=True
             frames=sorted(set([1,1+round(duration*30*.2),1+round(duration*30*.55),1+round(duration*30)]))
-            if clip.startswith("choir_change"):
+            if clip.startswith("choir_change") or clip.startswith("phase_break"):
                 frames=list(range(1,round(duration*30)+2))
             for f in frames:
                 pose(clip,(f-1)/(duration*30),root,snapshot)

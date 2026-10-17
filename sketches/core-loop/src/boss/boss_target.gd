@@ -49,7 +49,9 @@ func setup(boss_ref, role_name: String, id: String, body_size: Vector3, capsule:
 	name = "Brindle_%s" % (id if id != "" else role_name)
 	radius = capsule.x
 	half_height = capsule.y
-	sync_to_physics = true
+	# boss.gd moves the ship, the parent, every tick; a synced body ignores a parent's motion
+	# and stays near the arena centre, so each piece follows its node directly.
+	sync_to_physics = false
 	collision_layer = 0
 	collision_mask = 0
 	if body_size != Vector3.ZERO:

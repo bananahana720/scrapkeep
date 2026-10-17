@@ -1,6 +1,7 @@
 extends SceneTree
 # F6 2026-10-04: magnet_break and the Warden cap stomp are gone with the plating fight.
 
+const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
@@ -221,7 +222,15 @@ func _w9_tricks() -> void:
 	fleet.holds.snap(crew, "jump")
 	_report("deck_winch", _combat.discovered.has("deck_winch") and hooked and crew.broken_by == "jump",
 		"an anchor crew hooked the ball (%s), then a jump slipped it (%s)" % [hooked, crew.broken_by])
-	for node in [rig, cutter, crew]:
+	# A Foreman knocked out while its crew stands clocks them out.
+	var foreman: Node3D = _w9_spawn("foreman", home + Vector3(-8.0, 0.0, -14.0))
+	var hand: Node3D = _w9_spawn("chaser", home + Vector3(-12.0, 0.0, -14.0))
+	foreman._claimed = true
+	foreman._hire(hand)
+	foreman.take_damage(1.0e6)
+	_report("shift_over", _combat.discovered.has("shift_over") and AttackBudget.clocked_out(hand),
+		"a Foreman fell with its crew standing (crew clocked out %s)" % AttackBudget.clocked_out(hand))
+	for node in [rig, cutter, crew, hand]:
 		if is_instance_valid(node):
 			node.queue_free()
 	_w10_pack_tricks(home)

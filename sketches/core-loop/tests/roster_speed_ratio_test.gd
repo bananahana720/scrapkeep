@@ -31,7 +31,7 @@ const SOURCES := {
 # Every other kind holds its ground (fixed) or hovers in place (winch_drone).
 const STATIONARY := ["lobber", "vault", "warden", "mag_trapper", "hooker", "netcaster", "bola_thrower",
 	"plated_brute", "deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap",
-	"reactor_relic", "mind_hand", "drill_crew", "line_cutter", "anchor_crew", "jolt_layer"]
+	"reactor_relic", "mind_hand", "drill_crew", "line_cutter", "anchor_crew", "linker", "dispatcher", "foreman", "jolt_layer"]
 
 var _t := T.new("roster_speed_ratio_test")
 

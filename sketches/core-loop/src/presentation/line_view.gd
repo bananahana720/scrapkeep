@@ -10,6 +10,7 @@ const Augments := preload("res://src/movement/augments.gd")
 #
 #   cable      the line from the ball to the anchor, slack and sagging or taut and bright
 #   brackets   live corners closing on a target the press would bite; they pulse
+#              with a ring inside for a pole grip, or a hook below for a flail
 #   barb       the head seated in a body, with a steady collar that tightens as the gap closes
 #   post_ring  a steady ring on the world post the line stands on
 #   dry fire, let go, broke and the smash landing are short beats of their own
@@ -30,6 +31,10 @@ const LOCK_FROM_SCALE := 1.8
 const BRACKET_BASE := 0.9
 const BRACKET_PER_METRE := 0.015
 const BRACKET_TICK := 0.45
+# The grip marks: a pole rings the target inside the brackets; a flail hangs a hook below them.
+const POLE_RING := 0.7
+const HOOK_DROP := 1.15
+const HOOK_SIZE := 0.5
 const MARK_PX := 3.0
 const PULSE_HZ := 2.0
 const PULSE_DEPTH := 0.14
@@ -317,7 +322,20 @@ func _draw_lock(kit) -> void:
 		var reach := half * BRACKET_TICK * 2.0
 		_bar(mesh, tip, tip - right * corner.x * reach, up, width)
 		_bar(mesh, tip, tip - up * corner.y * reach, right, width)
+	if kit.aim.get("grip", "") == "flail":
+		_hook_mark(mesh, at - up * half * HOOK_DROP, right, up, half * HOOK_SIZE, width)
 	mesh.surface_end()
+	if kit.aim.get("grip", "") == "pole":
+		_circle(mesh, at, half * POLE_RING, camera.global_position)
+
+
+# The flail mark (POLES-FLAILS section 10): a hook hanging under the brackets, so the yank
+# reads by shape before the press, not by colour.
+func _hook_mark(mesh: ImmediateMesh, top: Vector3, right: Vector3, up: Vector3, size: float, width: float) -> void:
+	var bottom := top - up * size
+	_bar(mesh, top, bottom, right, width)
+	_bar(mesh, bottom, bottom - right * size * 0.6, up, width)
+	_bar(mesh, bottom - right * size * 0.6, bottom - right * size * 0.6 + up * size * 0.4, right, width)
 
 
 func _draw_latch(kit, ball: Vector3) -> void:

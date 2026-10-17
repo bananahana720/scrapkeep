@@ -1,6 +1,7 @@
 extends Node
 
 const Chaser := preload("res://src/combat/chaser.gd")
+const EnemyBase := preload("res://src/combat/enemy.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
 const Warden := preload("res://src/combat/warden.gd")
@@ -23,6 +24,7 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
+const Flail := preload("res://src/combat/flail.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const KestKit := preload("res://src/combat/kest_kit.gd")
@@ -207,6 +209,8 @@ var _pending := {}
 # Shred by enemy instance id: {amount, cap (the most plating it has shown), idle
 # (seconds since its last landed hit)}.
 var _shred := {}
+# Linker guards (linker.gd): partner instance id -> the Linker whose dish braces over it.
+var _guards := {}
 
 # special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}, or
 # {tap: Callable() -> bool} for a row with no gauge.
@@ -233,6 +237,9 @@ var _rocket_left := 0.0
 var rocket_cooldown_scale := 1.0
 # Pins already paid, "carrier:knock:victim" -> clock, and how many landed this attempt.
 var _pinned := {}
+# Hulks (KNOCKBACK-FEEL): a body a ram or a pin killed keeps flying for a moment and bowls
+# what lies ahead of it. {at, vel, radius, id, hit: {victim id: true}}; cleared each attempt.
+var _hulks: Array = []
 var pins := 0
 # Upgrade-tree state (upgrade_tree.gd): each proc's next allowed time by node:fact, the
 # pending special echo, marked targets (instance id -> clock the mark ends), the blink's
@@ -253,6 +260,14 @@ signal escape_acted(piece: String, style: String)
 # The companion's driver rows (Companion.DRIVERS); every module act asks Companion.pick()
 # against this table, so a test or the lab can reorder rows without a code edit.
 var drivers: Dictionary = Companion.DRIVERS
+# COMPANION-GROWS: the assist gauge (0 to Companion.ASSIST_FULL) and the assists called this
+# run. companion_assisted carries {id, name, word, cue, at, radius, knock, layers, hits,
+# mark}; companion_body.gd shows it. The gauge clears on run start and every attempt.
+signal companion_assisted(assist: Dictionary)
+signal companion_assist_full
+var assist_charge := 0.0
+var assists := 0
+var last_assist := {}
 var escape_acts := 0
 var escape_lane := {}
 var _escape := {}
@@ -306,6 +321,7 @@ var _tally_card_frame := -1
 # whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
 # empty outside that emission and for a strike that names no row. All read only.
 var near_miss
+var flail
 # The set piece on Q (ultimate.gd), a child like near_miss; it owns the meter.
 var ultimate
 var last_player_hit := {}
@@ -328,6 +344,7 @@ func _init() -> void:
 		"execute": _door_execute, "events": _door_events}
 	door.hook("hit", "primer_mesh", _hook_primer_mesh)
 	door.hook("hit", "companion_ram", _hook_companion_ram)
+	door.hook("hit", "companion_assist", _hook_companion_assist)
 
 
 func _stage_table():
@@ -361,6 +378,10 @@ func setup(ctx_ref) -> void:
 	wear_trail.deal = _trail_deal
 	near_miss = NearMiss.new()
 	add_child(near_miss)
+	flail = Flail.new()
+	flail.name = "Flail"
+	add_child(flail)
+	flail.setup(ctx, self)
 	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
 	_specials = {
 		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},
@@ -434,6 +455,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
 	ctx.player.pressure_grant = _grant_pressure
+	ctx.player.hulk_launch = bowl_hulk
 	ctx.player.mass_of = func() -> float: return ctx.run.mass
 	_reset_ledger()
 	ctx.events.demo_slammed.connect(_on_demo_slammed)
@@ -452,6 +474,9 @@ func setup(ctx_ref) -> void:
 		_echo = {}
 		_marks = {}
 		_primed = {}
+		assist_charge = 0.0
+		assists = 0
+		last_assist = {}
 		_prow_until = {}
 		_clamped = {}
 		_escape = {}
@@ -534,6 +559,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 				enemy_spec["affix"] = affix_id
 				enemy_spec["affix_world"] = director.world
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
+	# Poles and flails weigh a body by its stage threat, as the trap ratings do (movement/grip.gd).
+	if "threat_level" in enemy:
+		enemy.threat_level = _threat()
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
@@ -683,6 +711,113 @@ func _hook_primer_mesh(hit: Dictionary) -> void:
 
 func _hook_companion_ram(hit: Dictionary) -> void:
 	_companion_ram(hit["enemy"], hit["kind"], hit["result"])
+
+
+# --- Companion: the assist (companion.gd ASSIST_*) ----------------------------------
+# A hit that removed HP fills the gauge; a ram with the gauge full calls the assist at the
+# struck foe. The assist deals through _trail_deal, so it takes no door pass, fires no hook
+# and never refills the gauge. Posture fighters keep their own rules and are left out.
+func _hook_companion_assist(hit: Dictionary) -> void:
+	if ctx.run.companion.is_empty() or float(hit["result"].get("dealt", 0.0)) <= 0.0:
+		return
+	if is_instance_valid(hit["enemy"]) and _fights_posture(hit["enemy"]):
+		return
+	var kind: String = hit["kind"]
+	if kind == Companion.ASSIST_TRIGGER and assist_ready():
+		_call_assist(hit["at"], float(hit["result"]["dealt"]))
+		return
+	_charge_assist(kind)
+
+
+func _charge_assist(kind: String) -> void:
+	if ctx.run.companion.is_empty():
+		return
+	var was := assist_ready()
+	assist_charge = Companion.assist_charge(assist_charge, kind)
+	if assist_ready() and not was:
+		companion_assist_full.emit()
+
+
+func assist_ready() -> bool:
+	return assist_charge >= Companion.ASSIST_FULL
+
+
+# 0 to 1, for the halo.
+func assist_fill() -> float:
+	return clampf(assist_charge / Companion.ASSIST_FULL, 0.0, 1.0)
+
+
+func _call_assist(at: Vector3, dealt: float) -> void:
+	var sockets: Array = ctx.run.companion.get("sockets", [])
+	var row := Companion.assist_of(sockets)
+	var heft: int = ctx.run.heft_class() if ctx.run.has_method("heft_class") else 1
+	var power := Companion.assist_power(heft)
+	var radius: float = power["radius"]
+	var ball: Vector3 = ctx.player.ball_position()
+	var travel: Vector3 = ctx.player.planar_velocity()
+	travel.y = 0.0
+	var dir := travel.normalized() if travel.length_squared() > 0.01 else (at - ball).normalized()
+	if dir.length_squared() < 0.01:
+		dir = Vector3.FORWARD
+	var damage := maxf(dealt, Companion.ASSIST_DAMAGE_FLOOR)
+	# Spent before any damage, so nothing a kill sets off can call it twice.
+	assist_charge = 0.0
+	assists += 1
+	var struck := _assist_targets(row["shape"], at, ball, dir, radius)
+	for enemy in struck:
+		_trail_deal(enemy, damage, "companion_assist", "item_proc")
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		if row["prime"]:
+			_primed[enemy.get_instance_id()] = _clock + Companion.PRIMER_SECONDS
+		if row["shove"] and enemy.has_method("knock"):
+			var flat: Vector3 = enemy.global_position - (ball if row["shape"] == "lane" else at)
+			flat.y = 0.0
+			var away := flat.normalized() if flat.length_squared() > 0.0001 else dir
+			var weight = enemy.get("weight")
+			enemy.knock(away + Vector3.UP * 0.35, Companion.ASSIST_KNOCK * float(power["knock"]) * (float(weight) if weight != null else 1.0))
+	if row["slick"] and (escape_lane.is_empty() or _clock >= float(escape_lane["until"])):
+		escape_lane = {"from": ball, "dir": dir, "length": radius * 2.0, "half_width": Companion.ESCAPE_LANE_HALF_WIDTH,
+			"friction": Companion.ESCAPE_LANE_FRICTION, "hold": maxf(travel.dot(dir), Companion.ESCAPE_LANE_FLOOR),
+			"until": _clock + Companion.ASSIST_SLICK_SECONDS}
+	if row["shape"] == "lane":
+		effects.arc(ball, ball + dir * radius * 2.0, Palette.VERDIGRIS)
+	else:
+		effects.ring(at, radius, Palette.VERDIGRIS)
+	last_assist = {"id": row["id"], "name": row["name"], "word": row["word"], "cue": row["cue"], "at": at,
+		"radius": radius, "knock": power["knock"], "area": power["area"], "layers": power["layers"],
+		"hits": struck.size(), "mark": int(Companion.mark_of(heft)["mark"])}
+	companion_assisted.emit(last_assist)
+
+
+# The foes an assist of this shape hits: the nearest one ("single"), every one within radius
+# of at ("ring"), or every one in a lane from the ball along dir for twice the radius.
+func _assist_targets(shape: String, at: Vector3, ball: Vector3, dir: Vector3, radius: float) -> Array:
+	var found := []
+	var nearest: Node3D = null
+	var best := INF
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()) or _fights_posture(enemy):
+			continue
+		var flat: Vector3 = enemy.global_position - at
+		flat.y = 0.0
+		match shape:
+			"single":
+				if flat.length() <= radius and flat.length() < best:
+					best = flat.length()
+					nearest = enemy
+			"ring":
+				if flat.length() <= radius:
+					found.append(enemy)
+			"lane":
+				var rel: Vector3 = enemy.global_position - ball
+				rel.y = 0.0
+				var along := rel.dot(dir)
+				if along >= 0.0 and along <= radius * 2.0 and (rel - dir * along).length() <= radius * Companion.ASSIST_LANE_HALF_WIDTH:
+					found.append(enemy)
+	if nearest != null:
+		found.append(nearest)
+	return found
 
 
 # --- Companion: conductive primer (companion.gd PRIMER_*) ---------------------------
@@ -1058,12 +1193,50 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 				if enemy.get_method_argument_count("judge_hit") >= 5 else enemy.judge_hit(kind, punch, smash, tier)
 		if not judged.is_empty():
 			return judged
+	var guard := guard_of(enemy)
+	if guard != null and guard.blocks(kind):
+		return {"punch": punch, "plating": guard.DISH_PLATING, "full": false, "dealt": 0.0, "part": part, "shred": false,
+			"guarded": true}
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
 	var mult: float = enemy.hit_mult(kind, part) if full and enemy.has_method("hit_mult") else 1.0
 	var dealt := punch * mult if full else punch * CHIP
 	return {"punch": punch, "plating": plating, "full": full, "dealt": dealt, "part": part}
+
+
+# The Linker bracing a dish over this enemy, or null (linker.gd; blocks() decides each hit).
+func guard_of(enemy: Node3D) -> Node3D:
+	if enemy == null or not is_instance_valid(enemy):
+		return null
+	var linker = _guards.get(enemy.get_instance_id())
+	if linker == null or not is_instance_valid(linker) or not linker.guarding(enemy):
+		return null
+	return linker
+
+
+# One Linker per partner: a second asks and is refused while the first still holds it.
+func guard(partner: Node3D, linker: Node3D) -> bool:
+	var held = _guards.get(partner.get_instance_id())
+	if held != null and held != linker and is_instance_valid(held) and held.holds_partner(partner):
+		return false
+	_guards[partner.get_instance_id()] = linker
+	return true
+
+
+func guard_holder(enemy: Node3D) -> Node3D:
+	var held = _guards.get(enemy.get_instance_id())
+	return held if held != null and is_instance_valid(held) and held.holds_partner(enemy) else null
+
+
+func unguard(partner: Node3D, linker: Node3D) -> void:
+	if partner == null or not is_instance_valid(partner):
+		for id in _guards.keys():
+			if _guards[id] == linker:
+				_guards.erase(id)
+		return
+	if _guards.get(partner.get_instance_id()) == linker:
+		_guards.erase(partner.get_instance_id())
 
 
 # Punch for a hit of this kind and force: a ball contact scales with heft, a weapon hit
@@ -1126,6 +1299,14 @@ func shred_of(enemy: Node3D) -> float:
 	if not is_instance_valid(enemy):
 		return 0.0
 	return float(_shred.get(enemy.get_instance_id(), {}).get("amount", 0.0))
+
+
+# Puts back all the plating hits have stripped off this enemy (foreman.gd's wipe).
+func wipe_shred(enemy: Node3D) -> void:
+	if not is_instance_valid(enemy):
+		return
+	_shred.erase(enemy.get_instance_id())
+	_show_shred(enemy, 0.0)
 
 
 # hp / max_hp, 1.0 for an invalid enemy (as the spec says), 0.0 for a dead one.
@@ -1259,6 +1440,7 @@ func _physics_process(delta: float) -> void:
 	_step_devices(delta)
 	wear_trail.step(delta, enemies)
 	_pin_step(enemies)
+	_hulk_step(enemies, delta)
 	_bat_by_ball(shells)
 	_decay_shred(delta)
 	_tint()
@@ -2826,6 +3008,18 @@ func _piece_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> fl
 	return damage
 
 
+# A flail strike (flail.gd, POLES-FLAILS section 5): a swung or thrown body, not a weapon, so
+# the habit read never counts it. A Warden or a boss takes it through its posture like a volley.
+func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> void:
+	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
+		_ult_hit(enemy, "flail", damage, from, false)
+		return
+	if not (enemy.has_method("knock") and enemy.has_method("flash")):
+		strike(enemy, "flail", damage, "", "flail")
+		return
+	_hit(enemy, "flail", damage, enemy.global_position - from, knock, "", "flail")
+
+
 # Ground under the ball within AUDIT_GROUND_REACH, or null.
 func _audit_ground(ball: Vector3):
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
@@ -3591,12 +3785,68 @@ func _pin_step(enemies: Array) -> void:
 			if _pinned.has(key):
 				continue
 			_pinned[key] = _clock
-			var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed)
-			pins += 1
-			ctx.events.enemy_pinned.emit(victim, damage)
-			victim.knock(to + Vector3.UP * 0.2, speed * Weapons.PIN_CARRY * float(victim.weight))
-			victim.flash()
-			strike(victim, "pin", damage)
+			_pin(victim, to, speed)
+
+
+# One pin: the victim takes the pin strike and flies on at PIN_CARRY of the carrier's speed.
+# A victim the pin kills becomes a hulk in its turn, so a strike runs down a crowd. A hulk's
+# pins hit with the heft that threw it (mult), so a grown ball's strike still kills what it
+# scatters instead of knocking it clear of the roll-up.
+func _pin(victim: Node3D, to: Vector3, speed: float, mult := 1.0) -> void:
+	var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed) * mult
+	pins += 1
+	ctx.events.enemy_pinned.emit(victim, damage)
+	victim.knock(to + Vector3.UP * 0.2, speed * Weapons.PIN_CARRY * float(victim.weight))
+	victim.flash()
+	strike(victim, "pin", damage)
+	if is_instance_valid(victim) and victim.is_dead():
+		bowl_hulk(victim, to, speed * Weapons.PIN_CARRY)
+
+
+# A body killed by a ram, a crush or a pin keeps its throw as a hulk for up to HULK_SECONDS:
+# it travels along `direction` at `speed`, slowing as a knock does, and pins each body it
+# reaches once, as a knocked enemy would. A posture fighter (a Warden) and a boss piece are
+# never a hulk's victims, so stagger timing is untouched. Below PIN_MIN_SPEED it is spent.
+func bowl_hulk(enemy: Node3D, direction: Vector3, speed: float) -> void:
+	var flat := Vector3(direction.x, 0.0, direction.z)
+	if speed <= Weapons.PIN_MIN_SPEED or flat.length_squared() < 0.0001 or not is_instance_valid(enemy) or enemy.get("swarm") != null:
+		return
+	_hulks.append({"at": enemy.global_position, "vel": flat.normalized() * speed, "radius": _hull(enemy),
+		"left": Weapons.HULK_SECONDS, "hit": {enemy.get_instance_id(): true}, "mult": heft()})
+
+
+func _hulk_step(enemies: Array, delta: float) -> void:
+	if _hulks.is_empty():
+		return
+	# A pin that kills launches a new hulk into _hulks; it is stepped from the next tick.
+	var stepping := _hulks
+	_hulks = []
+	var live: Array = []
+	for hulk in stepping:
+		var vel: Vector3 = hulk["vel"]
+		var speed := vel.length()
+		hulk["left"] = float(hulk["left"]) - delta
+		if speed <= Weapons.PIN_MIN_SPEED or float(hulk["left"]) <= 0.0:
+			continue
+		var heading := vel / speed
+		var at: Vector3 = hulk["at"]
+		for victim in enemies:
+			if not _pinnable(victim) or victim.get("weight") == null or (hulk["hit"] as Dictionary).has(victim.get_instance_id()):
+				continue
+			if victim.has_method("fight") and victim.fight() == "posture":
+				continue
+			if victim.get("swarm") != null:
+				continue
+			var to: Vector3 = victim.global_position - at
+			to.y = 0.0
+			if to.length() - float(hulk["radius"]) - _hull(victim) > Weapons.PIN_RADIUS or to.normalized().dot(heading) < 0.5:
+				continue
+			hulk["hit"][victim.get_instance_id()] = true
+			_pin(victim, to, speed, float(hulk["mult"]))
+		hulk["at"] = at + vel * delta
+		hulk["vel"] = vel.move_toward(Vector3.ZERO, EnemyBase.KNOCK_DECAY * delta)
+		live.append(hulk)
+	_hulks = live + _hulks
 
 
 static func _pinnable(enemy) -> bool:
@@ -3617,6 +3867,8 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
 	var riding: bool = ultimate != null and ultimate.active()
 	ctx.run.damage(amount, source)
+	if not riding:
+		_charge_assist("hull")
 	if ctx.calm or riding:
 		return
 	# The damage always lands; what the hit may take is the stop, and that goes through
@@ -3794,6 +4046,7 @@ func _start_attempt() -> void:
 	_crushes.clear()
 	_shred.clear()
 	_pinned.clear()
+	_hulks.clear()
 	pins = 0
 	# The upgrade tree's pending specials and clocks belong to the attempt that made
 	# them: no echo, sentry, cloud or marks fire into the next one (F002).
@@ -3804,6 +4057,7 @@ func _start_attempt() -> void:
 	_pulse_left = 0.0
 	_prow_until.clear()
 	_primed.clear()
+	assist_charge = 0.0
 	_clamped.clear()
 	_exposed.clear()
 	_spring_until = -1.0

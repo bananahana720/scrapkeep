@@ -1,6 +1,7 @@
 extends "res://src/combat/enemy.gd"
 
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
+const AttackBudget := preload("res://src/combat/attack_budget.gd")
 
 # The lobber stands and shells. Its job is to make a predictable line expensive: its
 # muzzle glows for TELEGRAPH seconds, then it commits a landing ring LEAD of the way
@@ -144,6 +145,9 @@ func _physics_process(delta: float) -> void:
 		_show_charge(0.0)
 		return
 	_clock += delta
+	# Clocked out (its Foreman fell): the muzzle does not start to glow; a glow already lit fires.
+	if charge <= 0.0 and AttackBudget.clocked_out(self):
+		_clock = minf(_clock, CYCLE - TELEGRAPH)
 	if recovering():
 		recover_left = maxf(0.0, recover_left - delta)
 		_show_charge(0.0)

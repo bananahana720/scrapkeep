@@ -54,7 +54,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
 	"swarm_remnant", "mind_hand", "burrower", "drill_crew", "lamp_swarm", "line_cutter", "anchor_crew",
-	"kite_drone"]
+	"kite_drone", "linker", "foreman"]
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const FAMILY_ANCIENT := ["reactor_relic", "swarm_remnant", "mind_hand"]
@@ -80,7 +80,14 @@ const PACK_SPREAD := 4.5
 const HABIT_AXES := {"ram": ["contact", "speed", "heft"], "rebound": ["contact"], "stomp": ["contact", "air"],
 	"smash": ["contact"], "vault": ["air"], "weapon": ["weapon"], "special": ["weapon"], "jump": ["air"],
 	"air": ["air"], "boost": ["speed", "steer"], "grapple": ["steer"], "glide": ["air"]}
-const CLASS_AXIS := {"sable": "steer", "rivet": "speed", "kest": "air"}
+# Keyed by ClassDef id (what fleet.gd build_read() reads from run.class_def.id), one row per
+# pilot. 2026-10-17 CLASS-TILT: the wave-3 keys were display names, so no real run ever matched.
+# Tarn, Tally and the Cannon are new rows, a design call for Andrew's veto:
+#   tarn  contact: claw melee, clamp and rend slam live at arm's length.
+#   tally  weapon: the ledger reader and link clips are a caster's aimed fire.
+#   remembered_cannon  heft: plate, rush ring and recoil are about mass and holding ground.
+const CLASS_AXIS := {"pylon_engineer": "steer", "runner_gunner": "speed", "demolitions_caster": "air",
+	"tarn": "contact", "tally": "weapon", "remembered_cannon": "heft"}
 # W3's upgrade-tree tags (upgrade_tree.gd TAGS) and the axes each leans on.
 const TAG_AXES := {"air": ["air"], "burst": ["weapon"], "close": ["contact"], "ranged": ["weapon"],
 	"mobility": ["steer", "speed"], "mounted": ["weapon"], "sustain": ["heft"], "cc_immune": ["speed"],
@@ -272,6 +279,9 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				var spawn := {"kind": a["kind"], "at": a["at"]}
 				if a.has("affix"):
 					spawn["affix"] = a["affix"]
+				spawn["pack"] = int(a.get("pack", -1))
+				if a.has("elite"):
+					spawn["elite"] = true
 				due.append(spawn)
 	if paused:
 		return due
@@ -422,6 +432,8 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false) ->
 			if spot == Vector2.INF or not _park_safe(spot) or spot.distance_to(ball) < MIN_GAP or not _pack_gap(spot, assigned):
 				continue
 		var arrival := {"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq}
+		if is_elite:
+			arrival["elite"] = true
 		if is_elite and run_tier() >= RunTier.HARD and kinds[i] == "plated_brute":
 			arrival["affix"] = EliteAffixes.for_arrival(_elite_packs_made)
 			affixed = true

@@ -28,7 +28,8 @@ const T := preload("res://tests/support/t.gd")
 # own (11 movers), and a 20-copy sweep per depth-4 leaf (16). Measured 107 checks (was 63).
 # 2026-10-12 (PC-TALLY round 3): live unspent three-clip settle pays once, no arc.
 # 2026-10-12 (PC-TALLY round 3): Flywheel peak pull ring includes its landing bonus.
-const EXPECTED_CHECKS := 109
+# 2026-10-16 (pilot paint): Abacus Lattice is live; the pending check splits into three.
+const EXPECTED_CHECKS := 111
 const DT := 1.0 / 60.0
 const SHELF := Vector3(-45.0, 122.0, 6.0)
 
@@ -642,7 +643,10 @@ func _grants() -> void:
 	_t.check("all three grants earned", grant_ids.all(func(id): return store.earned(id)), str(grant_ids.map(func(id): return store.earned(id))))
 	var items := ["trail_tally_punch_tape", "outfit_tally_eyeshade", "shell_tally_abacus"]
 	_t.check("all three looks unlocked", items.all(func(id): return store.has_cosmetic(id)))
-	_t.check("pending art hidden and no price", items.all(func(id): return Cosmetics.PENDING_ART.has(id) and not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
+	# Re-pinned 2026-10-17 (stage/alpha-w16, #17 + #46): the trail and shell are live; the outfit waits.
+	_t.check("pending art hidden on the outfit only", items.all(func(id): return Cosmetics.is_pending(id) == (id == "outfit_tally_eyeshade")))
+	_t.check("the shell is live", not Cosmetics.is_pending("shell_tally_abacus") and FileAccess.file_exists("res://assets/models/world_one/shell_tally_abacus.glb"))
+	_t.check("no price", items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
 	var reload_store := Profile.new(store.path)
 	reload_store.load_profile()
 	_t.check("grants survive reload", grant_ids.all(func(id): return reload_store.earned(id)) and items.all(func(id): return reload_store.has_cosmetic(id)))

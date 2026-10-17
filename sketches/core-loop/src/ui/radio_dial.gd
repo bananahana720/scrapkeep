@@ -1,0 +1,123 @@
+extends Control
+
+const Palette := preload("res://src/core/palette.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const RadioTakes := preload("res://src/core/radio_takes.gd")
+const Radio := preload("res://src/core/radio.gd")
+
+# The pilot radio on the HUD, in the top band's right corner (screen_regions.gd): a knob whose
+# needle points at the station, the call sign in the station's colour, the track on air, and
+# four meter bars that are the band's own layers (drums, bass, keys, lead) as the run drives
+# them, so the dial shows the music following speed and combo. A change swells it for SWELL
+# seconds with the station's name and blurb and stamps a drawn KSSHT on the turn (the tone
+# bible's comic-book pillar); then it settles back to a chip. Off draws the knob dark and the
+# bars flat. radio_deck.gd owns the state; this only reads deck.reading().
+
+const CHIP := Vector2(320.0, 46.0)
+const SWOLLEN := Vector2(380.0, 98.0)
+const MARGIN := 18.0
+const SWELL := 2.6
+const STAMP := 0.5
+const WORD := "KSSHT!"
+# music_engine.gd's layer indices: kick, bass, keys, lead.
+const METER := [3, 5, 0, 6]
+const LAYERS := 4
+
+var deck
+var _swell := 0.0
+var _stamp := 0.0
+var _read := {}
+var _bars := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+
+
+func _init() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	size = CHIP
+
+
+func swell() -> void:
+	_swell = SWELL
+	_stamp = STAMP
+
+
+func swollen() -> bool:
+	return _swell > 0.0
+
+
+const TINTS := {"AMBER": Palette.AMBER, "COPPER": Palette.COPPER, "SANDSTONE": Palette.SANDSTONE, "LEDGER": Palette.LEDGER,
+	"ARC": Palette.ARC, "MINT": Palette.ARC, "BRASS": Palette.BRASS, "SLATE": Palette.SLATE, "RUST": Palette.RUST,
+	"VERDIGRIS": Palette.VERDIGRIS, "SAND": Palette.SAND}
+
+
+static func tint(name: String) -> Color:
+	return TINTS.get(name, Palette.ARC)
+
+
+func _process(delta: float) -> void:
+	visible = deck != null and deck._live()
+	if not visible:
+		return
+	_swell = maxf(0.0, _swell - delta)
+	_stamp = maxf(0.0, _stamp - delta)
+	_read = deck.reading()
+	var engine = deck._audio.engine if deck._audio != null else null
+	for i in LAYERS:
+		var want := 0.0
+		if engine != null and not _read.get("off", false):
+			want = clampf(float(engine.layer_gain(METER[i])), 0.0, 1.0)
+			# A small kick on each beat so the bars breathe with the band.
+			var beat: int = maxi(1, engine.beat_len())
+			want *= 0.75 + 0.25 * (1.0 - float(engine.clock % beat) / beat)
+		_bars[i] = move_toward(_bars[i], want, delta * 6.0)
+	var target := SWOLLEN if swollen() else CHIP
+	size = size.lerp(target, clampf(delta * 12.0, 0.0, 1.0))
+	var screen := get_viewport().get_visible_rect().size
+	var top := ScreenRegions.rect("top", screen)
+	position = Vector2(screen.x - size.x - MARGIN, top.position.y + 12.0)
+	queue_redraw()
+
+
+func _draw() -> void:
+	if _read.is_empty():
+		return
+	var color := tint(String(_read.get("color", "")))
+	var off: bool = _read.get("off", false)
+	var edge := Palette.SLATE if off else color
+	var plate := Rect2(Vector2.ZERO, size)
+	draw_rect(plate, Color(Palette.CHARCOAL, 0.86))
+	draw_rect(plate, edge, false, 2.0)
+	# The knob, its needle on the station's place round the dial.
+	var knob := Vector2(23.0, 23.0)
+	draw_circle(knob, 15.0, Palette.CABLE)
+	draw_circle(knob, 12.0, Color(0.08, 0.09, 0.09) if off else color.darkened(0.45))
+	var stops := Radio.dial()
+	var at := float(maxi(0, stops.find(_read.get("station", ""))))
+	var angle := lerpf(deg_to_rad(140.0), deg_to_rad(400.0), at / maxf(1.0, stops.size() - 1.0))
+	draw_line(knob, knob + Vector2(cos(angle), sin(angle)) * 11.0, Palette.SAND if not off else Palette.SLATE, 2.5)
+	var font := UiFonts.bold()
+	var x := 46.0
+	draw_string(font, Vector2(x, 21.0), String(_read.get("call", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, edge)
+	var dial_words := String(_read.get("dial", ""))
+	if dial_words != "":
+		draw_string(font, Vector2(x + UiFonts.width(String(_read.get("call", "")), 19) + 8.0, 21.0), dial_words, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(Palette.SAND, 0.6))
+	var meter_w := 4.0 * 7.0
+	var line_w := size.x - x - meter_w - 18.0
+	draw_string(font, Vector2(x, 39.0), String(_read.get("line", "")), HORIZONTAL_ALIGNMENT_LEFT, line_w, 15, Palette.SLATE if off else Palette.SAND)
+	if _read.get("pinned", false):
+		draw_string(font, Vector2(size.x - meter_w - 52.0, 21.0), "PIN", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Palette.BRASS)
+	for i in LAYERS:
+		var h := 4.0 + _bars[i] * 26.0
+		var bx := size.x - meter_w - 10.0 + i * 7.0
+		draw_rect(Rect2(bx, 40.0 - h, 5.0, h), Color(color, 0.35 + 0.65 * _bars[i]) if not off else Color(Palette.SLATE, 0.4))
+	if swollen() and size.y > 70.0:
+		var a := clampf(_swell / 0.4, 0.0, 1.0)
+		draw_string(font, Vector2(12.0, 64.0), String(_read.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, 16, Color(color, a))
+		var blurb := String(RadioTakes.station(String(_read.get("station", ""))).get("blurb", ""))
+		draw_string(font, Vector2(12.0, 84.0), blurb, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, 13, Color(Palette.SAND, 0.75 * a))
+	if _stamp > 0.0:
+		var s := clampf(_stamp / STAMP * 1.6, 0.0, 1.0)
+		draw_set_transform(Vector2(-86.0, 30.0), -0.14, Vector2.ONE * lerpf(1.0, 1.3, s))
+		draw_string(font, Vector2(2, 2), WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(Palette.CHARCOAL, s))
+		draw_string(font, Vector2.ZERO, WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(Palette.AMBER, s))
+		draw_set_transform(Vector2.ZERO)
