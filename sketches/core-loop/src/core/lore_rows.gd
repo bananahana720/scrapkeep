@@ -145,6 +145,34 @@ const ROWS := [
 		"text": "Fleet tally: flume flow, eleven hundred buckets an hour. Rounded to twelve. Crew asked where the hundred went.",
 	},
 	{
+		"id": "lore.park_flume.note.wasteway", "kind": "field_note", "zone": "1-2",
+		"text": "Wasteway log: weir dumped at first light. Chute ran full for a minute. Floor dry when the crew arrived. Gauge still reading high.",
+	},
+	{
+		"id": "lore.park_flume.note.surge", "kind": "field_note", "zone": "1-2",
+		"text": "Surge tower card: green light on top since the relic came in. Bulb removed for inspection. Light stayed on. Bulb filed under spares.",
+	},
+	{
+		"id": "lore.park_flume.note.penstocks", "kind": "field_note", "zone": "1-2",
+		"text": "Penstock inspection: four pipes down the bluff to the gorge. Flow measured at the bottom. Water arrives before the gate is opened.",
+	},
+	{
+		"id": "lore.park_flume.note.catwalk", "kind": "field_note", "zone": "1-2",
+		"text": "Catwalk ticket: hollow lift raised to the trestle walk. Lift stops a hand short of the top every trip. Lift was built level.",
+	},
+	{
+		"id": "lore.park_flume.note.squall", "kind": "field_note", "zone": "1-2",
+		"text": "Weather card: dust squall from the south at mid-morning. Flume carried sand the length of the run. Head house received it sorted by size.",
+	},
+	{
+		"id": "lore.park_flume.note.zip", "kind": "field_note", "zone": "1-2",
+		"text": "Zip line tag: mesa line tested with a sandbag. Bag arrived at the butte gap. Second bag arrived first.",
+	},
+	{
+		"id": "lore.park_flume.note.culvert", "kind": "field_note", "zone": "1-2",
+		"text": "Culvert notice: the wall beside the wasteway is not a door. Wall disagrees at speed. Repairs billed to the wall.",
+	},
+	{
 		"id": "lore.park_flume.intro.warden", "kind": "intro", "zone": "1-2", "subject": "warden",
 		"text": "Head House Warden. Flume boiling. Flow still logged as normal.",
 	},
@@ -472,6 +500,30 @@ const ROWS := [
 	{
 		"id": "lore.park_crown.note.fleet", "kind": "field_note", "zone": "3-2",
 		"text": "Collector tag: storm delivered twelve strikes. Fleet billed for eleven. The Admiral rounded up.",
+	},
+	{
+		"id": "lore.park_crown.note.hoodoos", "kind": "field_note", "zone": "3-2",
+		"text": "Hoodoo count: caps checked after the wind. All present. One cap now faces the other way. Stone underneath has not turned.",
+	},
+	{
+		"id": "lore.park_crown.note.turnstone", "kind": "field_note", "zone": "3-2",
+		"text": "Turnstone watch: rock balanced on its point all night. Crew balanced a cup beside it. Cup fell. Rock logged as steady, cup as weather.",
+	},
+	{
+		"id": "lore.park_crown.note.masts", "kind": "field_note", "zone": "3-2",
+		"text": "Signal mast log: wire strung mast to mast toward the Crown. Message sent down the wire at dusk. Reply came back up it before dark.",
+	},
+	{
+		"id": "lore.park_crown.note.updraft", "kind": "field_note", "zone": "3-2",
+		"text": "Updraft card: column at the Crown's foot tested with smoke. Smoke rose straight, stopped level with the perch tops, then waited.",
+	},
+	{
+		"id": "lore.park_crown.note.cloudburst", "kind": "field_note", "zone": "3-2",
+		"text": "Cloudburst report: rain on the Watch Butte, rain on the bajada, none in the bowl. Bowl floor wet by morning. Gauge empty.",
+	},
+	{
+		"id": "lore.park_crown.note.cannon", "kind": "field_note", "zone": "3-2",
+		"text": "Shelf cannon docket: fired toward the bowl for range. Shot landed one ball's width short. Every shot since lands in the same mark.",
 	},
 	{
 		"id": "lore.highdraft_core.note.5", "kind": "field_note", "zone": "3-2",

@@ -4,7 +4,7 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 
 # Every declared zone has unique ids, capped words, three skippable exchange
-# lines, at least seven scraps, and Warden/world-boss intros.
+# lines, at least fourteen scraps, and Warden/world-boss intros.
 # This pure data check does not instantiate the game or approve the writing's tone.
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
@@ -108,10 +108,10 @@ func _initialize() -> void:
 				if intros[zone].has(subject):
 					intros[zone][subject] += 1
 	var live_digest := "\n".join(rewritten_texts).sha256_text()
-	_report("rewritten text count", rewritten_texts.size() == 75, "%d texts; need 75" % rewritten_texts.size())
+	_report("rewritten text count", rewritten_texts.size() == 81, "%d texts; need 81" % rewritten_texts.size())
 	_report("world 2/3 rewritten", live_digest != OLD_DIGEST, "old %s; live %s" % [OLD_DIGEST, live_digest])
 	for zone in ZONES:
-		_report(zone + " notes", notes[zone] >= 7, "%d notes; need at least 7" % notes[zone])
+		_report(zone + " notes", notes[zone] >= 14, "%d notes; need at least 14" % notes[zone])
 		_report(zone + " one exchange", exchanges[zone].size() == 1, "%d exchanges" % exchanges[zone].size())
 		for exchange in exchanges[zone]:
 			var speakers: Array = exchanges[zone][exchange]
