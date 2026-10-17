@@ -24,6 +24,7 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
+const Flail := preload("res://src/combat/flail.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const KestKit := preload("res://src/combat/kest_kit.gd")
@@ -319,6 +320,7 @@ var _tally_card_frame := -1
 # whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
 # empty outside that emission and for a strike that names no row. All read only.
 var near_miss
+var flail
 # The set piece on Q (ultimate.gd), a child like near_miss; it owns the meter.
 var ultimate
 var last_player_hit := {}
@@ -375,6 +377,10 @@ func setup(ctx_ref) -> void:
 	wear_trail.deal = _trail_deal
 	near_miss = NearMiss.new()
 	add_child(near_miss)
+	flail = Flail.new()
+	flail.name = "Flail"
+	add_child(flail)
+	flail.setup(ctx, self)
 	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
 	_specials = {
 		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},
@@ -552,6 +558,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 				enemy_spec["affix"] = affix_id
 				enemy_spec["affix_world"] = director.world
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
+	# Poles and flails weigh a body by its stage threat, as the trap ratings do (movement/grip.gd).
+	if "threat_level" in enemy:
+		enemy.threat_level = _threat()
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
@@ -2919,6 +2928,18 @@ func _piece_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> fl
 		return damage
 	_hit(enemy, "ledger", damage, enemy.global_position - from, knock, "", "special")
 	return damage
+
+
+# A flail strike (flail.gd, POLES-FLAILS section 5): a swung or thrown body, not a weapon, so
+# the habit read never counts it. A Warden or a boss takes it through its posture like a volley.
+func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> void:
+	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
+		_ult_hit(enemy, "flail", damage, from, false)
+		return
+	if not (enemy.has_method("knock") and enemy.has_method("flash")):
+		strike(enemy, "flail", damage, "", "flail")
+		return
+	_hit(enemy, "flail", damage, enemy.global_position - from, knock, "", "flail")
 
 
 # Ground under the ball within AUDIT_GROUND_REACH, or null.

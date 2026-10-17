@@ -14,6 +14,7 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
+const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
@@ -387,6 +388,7 @@ func restart_hold_fraction() -> float:
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
 		get_tree().get_nodes_in_group("enemy"), from, forward, player.ball_position())
+	Grip.mark(player.kit.aim, player.heft(), tuning.pole_flail())
 	return player.kit.aim
 
 
