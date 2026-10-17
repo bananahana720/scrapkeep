@@ -201,7 +201,7 @@ Not in the slice: pack placement, the jolt cues and its model (it is a greybox, 
 
 Sent to the coordinator as cards:
 
-1. **How hard should an electric field hit you?** Jam (recommended): charges and casts drop and specials lock 0.5 s, rolling untouched. Short stun: the ball also loses steering for 0.3 s. Slow: the ball loses 20% speed inside the field.
+1. **Decided 2026-10-17 19:56:52Z, "Jam".** How hard should an electric field hit you? Jam (recommended): charges and casts drop and specials lock 0.5 s, rolling untouched. Short stun: the ball also loses steering for 0.3 s. Slow: the ball loses 20% speed inside the field.
 2. **Which abilities should get cast times?** Big ones only (recommended): Q stays at 0.35 s and becomes interruptible, stronger Q variants cast longer, Gather Plate 0.3 s. Every bar ability: specials and line skills too, 0.2 to 0.5 s. None yet: keep the mechanism, no cast times before the sitting.
 
 Already asked on the coordinator's design-questions page, so not sent as cards: casting on the move (question 2), world themes (question 3), resistance strength (question 5) and how weaknesses are shown (question 6). This page builds on their recommended options until Andrew answers.
