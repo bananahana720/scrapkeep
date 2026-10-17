@@ -63,7 +63,13 @@ const DRESSED := {"hoodoo_gust_lip_1": "mesa_lip_kicker", "hoodoo_gust_lip_2": "
 	"hoodoo_gust_lip_3": "mesa_lip_kicker", "hoodoo_gust_lip_4": "mesa_lip_kicker", "needle_gust_lip": "mesa_lip_kicker",
 	"gauntlet_toe_lip": "mesa_lip_kicker", "signal_foot_lip": "mesa_lip_kicker", "kite_runout_lip": "mesa_lip_kicker",
 	"scree_gust_lip": "mesa_lip_kicker", "meander_cross_lip": "mesa_lip_kicker", "needle_hammock": "net_deck",
-	"needle_hammock_2": "net_deck", "kite_mooring_deck": "net_deck"}
+	"needle_hammock_2": "net_deck", "kite_mooring_deck": "net_deck",
+	# 2026-10-17 islands follow-up: the flank lips and nets that keep the crown over half the park median.
+	"watch_flank_lip_w": "mesa_lip_kicker", "watch_flank_lip_e": "mesa_lip_kicker", "east_bajada_lip_1": "mesa_lip_kicker",
+	"east_bajada_lip_2": "mesa_lip_kicker", "gauntlet_kite_lip": "mesa_lip_kicker", "alcove_foot_lip": "mesa_lip_kicker",
+	"east_wash_hammock": "net_deck", "bowl_rim_net": "net_deck", "west_field_lip": "mesa_lip_kicker",
+	"signal_approach_lip": "mesa_lip_kicker", "bajada_rim_lip_w": "mesa_lip_kicker", "bajada_rim_lip_e": "mesa_lip_kicker",
+	"east_field_lip": "mesa_lip_kicker", "bowl_rim_net_w": "net_deck"}
 const POCKETS := {
 	"camp_signal": {"role": "online", "rarities": ["common"]},
 	"cache_turnstone": {"role": "reward", "rarities": ["rare"]},

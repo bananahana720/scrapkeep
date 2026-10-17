@@ -620,8 +620,35 @@ Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-2
 | `net_weaver_cairn_count` | `lookout_cairn_1` | Cairn on the Lookout: one stone per crossing. The top stone is warm. |
 | `net_weaver_post_run` | `net_post_run` | Every post on the run leans downwind by the same amount. The weavers call this surveying. |
 | `fleet_cage_manifest` | `mooring_pad` | Mooring manifest: one pack rat, filed under INVENTORY. Inventory disputes the filing. |
+| `dam_era_spill_lips` | `lookout_spill_lip_w` | Survey note: two spill lips cut at the lookout's shoulders, for runoff. The runoff uses the stairs. |
+| `dam_era_watch_net` | `lookout_watch_net` | Standing order: log anything that falls off the mesa. Net added in '31. The log got shorter. |
+| `fleet_kite_lip` | `shelf_kite_lip` | Fleet notice: this lip launches kites, not crew. Crew launched to date: 9. Notice amended. |
+| `net_weaver_shelf_hammock` | `shelf_hammock` | One hammock, slung where the hoodoos drop things. They have dropped a pilot. Logged as a thing. |
+| `fleet_cage_approach` | `cage_approach_lip_s` | The bookkeeper's cage faces the pad so she can audit landings. Four complaints filed about the landings. |
+| `fleet_catch_net` | `cage_catch_net` | Under-mooring net, rated for cargo. Pilots count as cargo under Fleet circular 12. |
+| `fleet_ledger_lip` | `ledger_lip` | Lip entered in the ledger: one launch, outgoing. Incoming not yet reconciled. |
+| `mining_saddle_spoil` | `saddle_spoil_lip` | Spoil bank, east saddle. Graded smooth, then graded into a ramp by somebody who was not the grader. |
+| `net_weaver_spoil_net` | `tram_spoil_net` | The weavers re-strung the tram's old spoil net and kept the ore it caught. They call it rent. |
+| `mining_assay_lip` | `assay_lip` | Assay office sign: SAMPLES BY HAND ONLY. Under it, a lip. Samples arrive faster now. |
+| `net_weaver_wing_hammocks` | `wing_hammock_e` | Wing hammocks, east and west, at the cloud line. What misses the wash lands in the weavers' record. |
+| `fleet_roost_launch` | `roost_launch_lip` | Roost launch lip: point at the isle, release on the gust. Gust schedule posted. The gust has not read it. |
+| `fleet_drying_net` | `roost_drying_net` | Kite sails dry here. One has been drying since the Fleet arrived. Do not ask whose. |
+| `ancient_lens_lip` | `lens_lip` | The lip points at the lens rocks. Nobody cut it. The grain runs the wrong way for weather. |
+| `net_weaver_keel_nets` | `keel_net_w` | Two nets flank the keel bench, knotted to the bowl's count. The count is still 40,112. |
+| `net_weaver_field_lips` | `post_field_lip_1` | Post fields, four corners, a lip in each. Weavers ride them to inspect the knots. Inspection is the excuse. |
 
 **Authored pass, 17 October 2026** (Andrew's "Now, light", "Rescue on the isles" and "Either path"). The net-weavers are a society row now (`net_weaver`): the net carve, the net bowl, the post run, the twelve post fields and the five cairns. The Fleet's mooring crew keeps the Moorings, the west shelf and the kite roost (its kite drones are Fleet stock). The weavers also cut the net carve's steps and set the three knuckle banks round the net bowl, and the dam-era lookout crew built the lookout steps below the fire lookout. Natural landforms stay `none`. Society share over hand-built rows goes from 11% to 37%. The file's optional `rescue_rows` stand `tally_cage` on `mooring_mesa` at [-290, 30], facing the pad, 70 m from it and about 100 m off Tarn's line and the floor line. The row names its pilot as data (`"pilot": "tally"`, quest `isles`). Freeing her earns `isles_rescued`, and Tally's class row opens on that or on three ledger leaves, whichever comes first (`class_def.gd` unlock `or`).
+
+**Islands authored pass, 17 October 2026** (follow-up to the crown pass; the w16 intent check put the Highdraft at 152 hand-built rows against the 187 that 70% of the Spillway asks). Thirty-eight GLB rows (`mesa_lip_kicker` seat-fit lips and `net_deck` nets), all `routes: []`, at least 39 m off every pilot line and the floor line, and placeholder-free, so the placeholder total holds at 1442. Each lip throws into something: a net, a thermal, the cage, or the next fan.
+
+- *The rescue approach.* `cage_approach_lip_s` at [-325, -130] throws north up the Moorings toward Tally's cage; `cage_approach_lip_w` at [-400, -20] throws east onto the mesa from the post field; `cage_catch_net` (y 115, [-400, 100]) catches a short throw under the moorings; `ledger_lip` and `manifest_lip` carry a freed pilot back to the west wing.
+- *The Lookout.* The dam-era crew's `lookout_spill_lip_w` and `_e` on the mesa's shoulders, `lookout_pine_lip` off the pines, and `lookout_watch_net` (y 249) east of the fire lookout.
+- *The shelves and the saddle.* `saddle_gust_lip_w`, the mine's `saddle_spoil_lip`, the Fleet's `shelf_kite_lip` into the west post field, the weavers' `shelf_hammock` (y 199) and `saddle_hammock_e` (y 224), and `hoodoo_cap_lip` past the hoodoo garden.
+- *The mine.* `tram_head_lip`, `assay_lip`, `adit_spill_lip`, `chute_trestle_lip`, and the weavers' `tram_spoil_net` (y 194).
+- *The wings.* `wing_gust_lip_w` and `_e` toss off the wing mesas into `wing_hammock_w` (y 89) and `wing_hammock_e` (y 85) at the cloud line.
+- *The far flanks.* The Fleet's `roost_launch_lip` on top of the kite roost, aimed at the isle, with `roost_foot_lip` and `roost_drying_net` at its foot; the lens rocks' `lens_lip`, `lens_foot_lip` and the weavers' `lens_hum_net`; `keel_net_w` and `_e` flanking the keel bench; one lip in each corner post field (`post_field_lip_1` to `_4`) and `east_post_lip` and `west_post_lip` on the middle fields.
+
+Every new row has a society (net-weavers 19, Fleet 9, mining 5, dam-era 3, ancient 2). Islands hand-built rows go from 97 to 135 and its society share from 37% to 55%; the Highdraft totals 204 against the 187 bar. The crown takes fourteen flank rows in the same PR so it stays over half the raised park median (stage 6 page section 17).
 
 **Signal caches** (RADIO.md on PR #66; rows for PR #68's `tools/radio_cache_spots.gd` SPOTS):
 
