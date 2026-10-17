@@ -389,7 +389,7 @@ def nose_pts():
 
 def build_shelf_base(k):
     s = Surf(k["id"])
-    L, W, top = SHELF["L"], SHELF["W"], SHELF["TOP"]
+    L, W, top = SHELF["L"], k["W"], SHELF["TOP"]
     hw = W / 2
     n = int(W / SHELF["BLOCK"])
     prof = nose_pts()
@@ -410,7 +410,7 @@ def build_shelf_base(k):
 
 def build_shelf_col(k):
     s = Surf(k["id"] + "-col")
-    L, W, top = SHELF["L"], SHELF["W"], SHELF["TOP"]
+    L, W, top = SHELF["L"], k["W"], SHELF["TOP"]
     hw = W / 2
     s.poly([(-hw, -0.3, -0.4), (-hw, top, 0.0), (hw, top, 0.0), (hw, -0.3, -0.4)], col("cream"), up=UP)
     s.poly([(-hw, top, 0.0), (-hw, top, L), (hw, top, L), (hw, top, 0.0)], col("cream"), up=UP)
@@ -422,9 +422,9 @@ def build_shelf_col(k):
 
 def build_shelf_d1(k):
     s = Surf(k["id"] + "_detail1")
-    hw = SHELF["W"] / 2
+    hw = k["W"] / 2
     for q in range(70):  # spalled caprock blocks fallen at the foot of the nose and sat on the back edge
-        x = -hw + SHELF["W"] * (q + rnd(q, 1)) / 70
+        x = -hw + k["W"] * (q + rnd(q, 1)) / 70
         if q % 2:
             s.chunk((x, -SHELF["NOSE"], SHELF["L"] + 1.2 + 1.4 * rnd(q, 2)), (0.9, 0.6, 0.8), rnd(q, 3) * math.tau, q, lerp(col("cream"), col("sandstone"), rnd(q, 4)), top=0.7)
         else:
@@ -435,9 +435,9 @@ def build_shelf_d1(k):
 
 def build_shelf_d2(k):
     s = Surf(k["id"] + "_detail2")
-    hw = SHELF["W"] / 2
+    hw = k["W"] / 2
     for q in range(60):  # tufts in the joints behind the coping and varnish streaks down the nose
-        x = -hw + SHELF["W"] * (q + 0.5) / 60
+        x = -hw + k["W"] * (q + 0.5) / 60
         if q % 3:
             s.tuft((x, 0.0, -0.8), 0.7, 5, col("dry_sage" if q % 2 else "sage"), 500 + q)
         else:
@@ -464,9 +464,11 @@ for _L, _H, _W in MESA_SIZES:
     _k.update(base=build_mesa_base, col=build_kicker_col, d=(build_mesa_d1, build_mesa_d2), material="elastomer",
               extent=((-_W / 2, 0.0, 0.0), (_W / 2, _H, _L)))
     RECIPES[_id] = _k
-RECIPES["mesa_shelf_edge"] = {"id": "mesa_shelf_edge", "family": "mesa_shelf_edge", "L": SHELF["L"], "H": SHELF["TOP"], "W": SHELF["W"],
-                              "base": build_shelf_base, "col": build_shelf_col, "d": (build_shelf_d1, build_shelf_d2), "material": "elastomer",
-                              "extent": ((-SHELF["W"] / 2, -SHELF["NOSE"], -0.4), (SHELF["W"] / 2, SHELF["TOP"], SHELF["L"] + 0.7))}
+for _id, _W in (("mesa_shelf_edge", SHELF["W"]), ("mesa_shelf_edge_12x0p01x840", 840.0), ("mesa_shelf_edge_12x0p01x720", 720.0)):
+    # the full 1600 m step lip, and the two halves of run_step_lip_3 split around run_turn_wash (the seat fit keeps width)
+    RECIPES[_id] = {"id": _id, "family": "mesa_shelf_edge", "L": SHELF["L"], "H": SHELF["TOP"], "W": _W,
+                    "base": build_shelf_base, "col": build_shelf_col, "d": (build_shelf_d1, build_shelf_d2), "material": "elastomer",
+                    "extent": ((-_W / 2, -SHELF["NOSE"], -0.4), (_W / 2, SHELF["TOP"], SHELF["L"] + 0.7))}
 
 
 def ride_top(k, z):
@@ -478,7 +480,8 @@ def check_surfaces(k, base, col_s, shells):
     rivet height; no shell stands more than SHELL_PROUD over it inside the footprint."""
     hw = k["W"] / 2
     if k["family"] == "mesa_shelf_edge":
-        probes = [(-hw + 0.5 + 37.3 * i, 0.3 + 0.9 * j) for i in range(43) for j in range(13)]
+        nb = int(k["W"] / SHELF["BLOCK"])  # probe block faces, off the 0.06 m joints between blocks
+        probes = [(-hw + SHELF["BLOCK"] * ((nb - 1) * i // 42) + 0.5 + 0.17 * (i % 40), 0.3 + 0.9 * j) for i in range(43) for j in range(13)]
     else:
         probes = [(-hw + k["W"] * (i + 0.37) / 31, k["L"] * (j + 0.21) / 33) for i in range(31) for j in range(33)]
     # a chord of the parabola over the longest facet step (0.6 m on the deck, a chevron's 1.1 m) sags H / L^2 * dz^2 / 4

@@ -3632,6 +3632,78 @@
    }
   },
   {
+   "id": "mesa_shelf_edge_12x0p01x720",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x720_detail1",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x720_detail2",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840_detail1",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840_detail2",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
    "id": "mesa_shelf_edge_detail1",
    "path": "res://assets/models/park/mesa_shelf_edge_detail1.glb",
    "class": "detail",
@@ -6040,6 +6112,12 @@
   "mesa_rim_ledge_detail1",
   "mesa_rim_ledge_detail2",
   "mesa_shelf_edge",
+  "mesa_shelf_edge_12x0p01x720",
+  "mesa_shelf_edge_12x0p01x720_detail1",
+  "mesa_shelf_edge_12x0p01x720_detail2",
+  "mesa_shelf_edge_12x0p01x840",
+  "mesa_shelf_edge_12x0p01x840_detail1",
+  "mesa_shelf_edge_12x0p01x840_detail2",
   "mesa_shelf_edge_detail1",
   "mesa_shelf_edge_detail2",
   "mind_hand",

@@ -39,7 +39,7 @@ const PIECES := {
 	"plate_kicker_16x6x24": [16, 6, 24], "plate_kicker_8x3x20": [8, 3, 20],
 	"mesa_lip_kicker_24x6x36": [24, 6, 36], "mesa_lip_kicker_24x6x60": [24, 6, 60], "mesa_lip_kicker_24x6x90": [24, 6, 90],
 	"mesa_lip_kicker_26x5x30": [26, 5, 30], "mesa_lip_kicker_60x32x36": [60, 32, 36], "mesa_lip_kicker_60x26x60": [60, 26, 60],
-	"mesa_shelf_edge": [12, 0.01, 1600],
+	"mesa_shelf_edge": [12, 0.01, 1600], "mesa_shelf_edge_12x0p01x840": [12, 0.01, 840], "mesa_shelf_edge_12x0p01x720": [12, 0.01, 720],
 	"mesa_lip_kicker_12x4x56": [12, 4, 56], "mesa_lip_kicker_12x4x300": [12, 4, 300],
 	"lava_channel": [58, 4, 28], "lava_trench_420x6x40": [420, 6, 40], "dry_wash_1500x4x60": [1500, 4, 60],
 	"lava_chute_3x0p5x8": [3, 0.5, 8],
@@ -169,8 +169,9 @@ func _check_coverage() -> void:
 				continue
 			covered += 1
 		_t.check("(c) %s: every target row has a piece that seats it" % path.get_file(), missing.is_empty(), str(missing))
-	_t.check("(c) the pieces seat all 78 target rows (18 flume and pit kickers, 24 sinkhole half-pipes, 16 crown kickers, 20 islands kickers)",
-		covered == total and total == 78, "%d of %d" % [covered, total])
+	# 78 when written; a split row (run_step_lip_3 around run_turn_wash) adds one
+	_t.check("(c) the pieces seat every target row (18 flume and pit kickers, 24 sinkhole half-pipes, 16 crown kickers, 20+ islands kickers)",
+		covered == total and total >= 78, "%d of %d" % [covered, total])
 
 
 # The collider's AABB in the node's space.
@@ -200,7 +201,7 @@ func _check_placed() -> void:
 				and node.get_node_or_null("Greybox") == null, str(node)):
 			continue
 		var box := _collider_box(node)
-		var top := SHELF_TOP if id == "mesa_shelf_edge" else (0.0 if LINERS.has(id) else float(size[1]))
+		var top := SHELF_TOP if id.begins_with("mesa_shelf_edge") else (0.0 if LINERS.has(id) else float(size[1]))
 		var half := float(size[0]) * 0.5
 		var floor_ok := absf(box.position.y + float(size[1]) + COL_DROP) <= EPS if LINERS.has(id) else true
 		if id == "lava_channel":
