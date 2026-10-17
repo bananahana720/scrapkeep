@@ -118,13 +118,13 @@ const CATALOGUE := {
 	# Pattern transformers. The part id is the pattern id, and each copy adds a level.
 	# 2026-10-15 C7: round-1 arm at 0.6 gives worlds 1-3 margins 28.8%,
 	# last/first 2.25x, null pair -14.1%. Coordinator-authorized scalar.
-	"cross_split": {"touches": "fire", "name": "Cross Split", "verb": "Split shots into a cross", "text": "shots split four ways on impact",
+	"cross_split": {"maker": "redjaw", "touches": "fire", "name": "Cross Split", "verb": "Split shots into a cross", "text": "shots split four ways on impact",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["split"],
 		"patterns": {"cross_split": 1}, "mods": {"weapon_damage": 0.6}},
-	"spiral_wave": {"touches": "fire", "name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
+	"spiral_wave": {"maker": "waking", "touches": "fire", "name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["spiral"],
 		"patterns": {"spiral_wave": 1}},
-	"chain_arc": {"touches": "fire", "name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
+	"chain_arc": {"maker": "mind_glass", "touches": "fire", "name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["chain", "arc"],
 		"patterns": {"chain_arc": 1}},
 	"frost_vane": {"name": "Frost Vane", "verb": "Dash trails frost", "text": "air dash freezes water into road",
@@ -197,6 +197,13 @@ const MILESTONE_ORDER := ["scrap_gravity", "tempest_core", "rime_heart"]
 # How often an offer slot is spent on the part that completes a synergy, when one is
 # a single part away. Isaac's "one more piece" pull, kept off a sure thing.
 const SYNERGY_BAIT := 0.5
+
+# "Nudge loot" for maker sets (maker_sets.gd): once MAKER_NUDGE_AT distinct pieces of one maker
+# are held, that maker's other pieces weigh MAKER_NUDGE times as much inside whichever group or
+# bucket a slot draws from, the same lean matchup counters get. The groups' shares do not move,
+# so a pilot's kit, shelf and movement shares hold.
+const MAKER_NUDGE_AT := 2
+const MAKER_NUDGE := 1.5
 
 # The pattern guarantee (balance loop, B4): a run that reaches stage 2's gates holding no
 # pattern transformer is offered one of these in that pair. Bots without a pattern took
@@ -672,7 +679,7 @@ static func _uncapped(class_id: String, pool: Array, offered: Dictionary) -> Arr
 # nothing else is left. Inside a group a part weighs 1 / (1 + times offered this stage), times
 # NEUTRAL_LEAN for a shelf part in the pilot's lean bucket. No part of the rolled rarity: any rarity.
 static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: String, pool: Array,
-		offered: Dictionary, picks: Array, exclude: Array) -> String:
+		offered: Dictionary, picks: Array, exclude: Array, nudge: Dictionary = {}) -> String:
 	var kit: Dictionary = KITS[class_id]
 	if not listed_only() and rng.randf() < (1.0 - KIT_SHARE) * GENERATED_SHARE:
 		var recipe := ItemGen.roll_id(rng, rarity)
@@ -718,7 +725,7 @@ static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: Str
 				lean = NEUTRAL_LEAN
 			elif name == "shelf" and b == "weapon" and not kit.has("weapon"):
 				lean = NEUTRAL_WEAPON_EASE
-			raw[key] = lean / (1.0 + offered.get(key, 0))
+			raw[key] = lean * float(nudge.get(key, 1.0)) / (1.0 + offered.get(key, 0))
 			sum += raw[key]
 		for key in raw:
 			weights[key] = share[name] * raw[key] / sum
@@ -778,6 +785,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude)
 	var picks: Array = []
 	var leans := KITS.has(class_id)
+	var nudge := maker_nudge(held, pool)
 	var bait := _bait(class_id, held, pool, offered, count)
 	if bait != "" and rng.randf() < SYNERGY_BAIT:
 		picks.append(bait)
@@ -787,7 +795,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 		tries += 1
 		var rarity := _pick_rarity(rng, rarities)
 		if leans:
-			var slot := _lean_slot(rng, rarity, class_id, pool, offered, picks, exclude)
+			var slot := _lean_slot(rng, rarity, class_id, pool, offered, picks, exclude, nudge)
 			if slot != "":
 				picks.append(slot)
 				pool.erase(slot)
@@ -800,7 +808,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 		var bucket: Array = pool.filter(func(key): return rows()[key]["rarity"] == rarity)
 		if bucket.is_empty():
 			bucket = pool
-		var chosen := _weighted(rng, bucket, offered)
+		var chosen := _weighted(rng, bucket, offered, nudge)
 		picks.append(chosen)
 		pool.erase(chosen)
 	if picks.size() >= 2 and not picks.any(func(key): return def(key).hits_harder()):
@@ -868,7 +876,25 @@ static func _near(class_id: String, pool: Array) -> Array:
 	return pool.filter(func(key): return in_kit(class_id, key) or key in NEUTRAL_SHELF)
 
 
-# lean: id to a weight multiplier (SQ19's neutral lean); absent ids weigh 1.
+# Offer-weight multipliers for pool given held: MAKER_NUDGE on each pool part not held whose
+# maker has MAKER_NUDGE_AT or more distinct pieces in held. Empty when no maker is that far along.
+static func maker_nudge(held: Array, pool: Array) -> Dictionary:
+	var pieces := {}
+	for part_id in held:
+		var maker := String(rows().get(part_id, {}).get("maker", ""))
+		if maker != "":
+			if not pieces.has(maker):
+				pieces[maker] = {}
+			pieces[maker][part_id] = true
+	var out := {}
+	for part_id in pool:
+		var maker := String(rows().get(part_id, {}).get("maker", ""))
+		if maker != "" and (pieces.get(maker, {}) as Dictionary).size() >= MAKER_NUDGE_AT and not part_id in held:
+			out[part_id] = MAKER_NUDGE
+	return out
+
+
+# lean: id to a weight multiplier (SQ19's neutral lean, a maker's nudge); absent ids weigh 1.
 static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictionary, lean: Dictionary = {}) -> String:
 	var total := 0.0
 	for key in bucket:
