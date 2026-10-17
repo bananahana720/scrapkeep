@@ -29,6 +29,8 @@ var _linker: Node3D
 var _tells: Array = []
 var _deflected := 0
 var _warned_ever := false
+var _second: Node3D
+var _drill: Node3D
 
 
 func _initialize() -> void:
@@ -73,6 +75,12 @@ func _physics_process(delta: float) -> bool:
 			if (_linker.partner == _lobber and _linker.braced) or _clock > LIMIT:
 				_check_relink()
 		8:
+			if (_linker.braced and _second.braced) or _clock > LIMIT:
+				_check_one_per_partner()
+		9:
+			if _clock > 0.5:
+				_check_freed_partner()
+		10:
 			return _finish()
 	return false
 
@@ -196,6 +204,32 @@ func _check_relink() -> void:
 	_report("a dead linker guards nothing", _combat.guard_of(_lobber) == null and _combat._guards.is_empty(),
 		"%d guards left" % _combat._guards.size())
 	_report("never warns or attacks", not _warned_ever, "a telegraph seen: %s" % _warned_ever)
+	# Two Linkers beside one heavy partner and one light one: only one may hold the heavy one.
+	_game.player.reset_to(_ball_at)
+	_drill = _spawn("plated_brute", Vector3(0.0, 0.0, 12.0))
+	_spawn("chaser", Vector3(6.0, 0.0, 14.0))
+	_linker = _spawn("linker", Vector3(3.0, 0.0, 16.0))
+	_second = _spawn("linker", Vector3(-3.0, 0.0, 16.0))
+	_next()
+
+
+func _check_one_per_partner() -> void:
+	var on_brute := [_linker, _second].filter(func(l): return l.partner == _drill)
+	var other: Node3D = _second if _linker.partner == _drill else _linker
+	_report("one linker per partner", on_brute.size() == 1 and _combat.guard_holder(_drill) == on_brute[0]
+		and other.partner != _drill, "%d on the brute, the other holds %s" % [on_brute.size(),
+		other.partner.get("kind") if other.partner != null else "nothing"])
+	_drill.queue_free()
+	_next()
+
+
+func _check_freed_partner() -> void:
+	var holder: Node3D = _linker if _linker.partner == null or not is_instance_valid(_linker.partner) else _second
+	var stale := 0
+	for id in _combat._guards:
+		if not is_instance_valid(instance_from_id(id)):
+			stale += 1
+	_report("a freed partner leaves no guard", stale == 0, "%d stale guards; holder partner %s" % [stale, holder.partner])
 	_next()
 
 

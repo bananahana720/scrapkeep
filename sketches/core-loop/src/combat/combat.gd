@@ -1060,8 +1060,18 @@ func guard_of(enemy: Node3D) -> Node3D:
 	return linker
 
 
-func guard(partner: Node3D, linker: Node3D) -> void:
+# One Linker per partner: a second asks and is refused while the first still holds it.
+func guard(partner: Node3D, linker: Node3D) -> bool:
+	var held = _guards.get(partner.get_instance_id())
+	if held != null and held != linker and is_instance_valid(held) and held.holds_partner(partner):
+		return false
 	_guards[partner.get_instance_id()] = linker
+	return true
+
+
+func guard_holder(enemy: Node3D) -> Node3D:
+	var held = _guards.get(enemy.get_instance_id())
+	return held if held != null and is_instance_valid(held) and held.holds_partner(enemy) else null
 
 
 func unguard(partner: Node3D, linker: Node3D) -> void:

@@ -25,12 +25,15 @@ extends "res://src/combat/counter.gd"
 signal special_tell(moment: String)
 
 const MODEL := "res://assets/models/world_one/enemy_linker.glb"
-# The specials' cue layer (CONTRACTS.md "Special cues"): tell() on the tell's first frame plays
-# the linker_tell render; presence and death are its own. Read when it is in the build.
+# The specials' cue layer (CONTRACTS.md "Special cues", stacked on PR #51): tell() on the
+# tell's first frame plays the linker_tell render; presence and death are its own. Read when
+# it is in the build.
 const CUES := "res://src/combat/special_cues.gd"
 const HP := 120.0
 const BOOM := 3.6
 const BRACE_SLACK := 1.2
+# A braced dish lets go only this much further out, so a partner on the edge does not re-tell.
+const LET_GO_MARGIN := 1.0
 const LINK_RANGE := 18.0
 const RELINK_S := 1.0
 const SCAN_S := 0.5
@@ -53,6 +56,8 @@ var cut_by := ""
 var dish_yaw := 0.0
 
 var _combat
+# Set from a link until it is let go; a freed partner still reads as linked here.
+var _linked := false
 var _scan := 0.0
 var _relink := 0.0
 var _model: Node3D
@@ -116,10 +121,10 @@ func _physics_process(delta: float) -> void:
 		# The boom reaches along local +X: turn the whole body so its tip sits over the partner.
 		rotation.y = atan2(-to_partner.z, to_partner.x)
 	_turn_dish(delta)
-	var reach := absf(to_partner.length() - BOOM) <= BRACE_SLACK
-	if reach and not braced:
+	var off_seat := absf(to_partner.length() - BOOM)
+	if off_seat <= BRACE_SLACK and not braced:
 		_brace()
-	elif not reach and braced:
+	elif off_seat > BRACE_SLACK + LET_GO_MARGIN and braced:
 		_slack()
 	_aim_model()
 
@@ -136,7 +141,12 @@ func _turn_dish(delta: float) -> void:
 # --- The guard combat reads -------------------------------------------------------------
 
 func guarding(enemy: Node3D) -> bool:
-	return braced and not cut and not _dead and enemy == partner
+	return braced and holds_partner(enemy)
+
+
+# Linked to this enemy, braced or not: no other Linker may take it.
+func holds_partner(enemy: Node3D) -> bool:
+	return not cut and not _dead and enemy == partner
 
 
 # True when a hit of this kind on the partner meets the dish: the ball is inside the dish's
@@ -231,29 +241,31 @@ func _find_partner() -> Node3D:
 
 func _can_partner(enemy: Node3D) -> bool:
 	var other_kind := String(enemy.get("kind"))
-	if other_kind in ["linker", "vault", "warden"] or not Roster.has(other_kind) or Roster.is_boss_piece(other_kind):
+	if other_kind in ["linker", "vault", "warden"] or not Roster.has(other_kind) or Roster.is_boss_piece(other_kind) \
+			or Roster.is_ancient(Roster.faction_of(other_kind)):
 		return false
-	return _combat == null or _combat.guard_of(enemy) == null
+	return _combat == null or _combat.guard_holder(enemy) == null
 
 
 func _link(enemy: Node3D) -> void:
-	if enemy == null:
+	if enemy == null or (_combat != null and not _combat.guard(enemy, self)):
 		return
 	partner = enemy
+	_linked = true
 	var to_ball: Vector3 = _real_ball() - partner.global_position
 	dish_yaw = atan2(to_ball.x, to_ball.z)
-	if _combat != null:
-		_combat.guard(partner, self)
 
 
 func _unlink() -> void:
-	if partner != null:
-		if braced:
-			_slack()
-		if _combat != null:
-			_combat.unguard(partner, self)
-		partner = null
-		_relink = RELINK_S
+	if not _linked:
+		return
+	_linked = false
+	if braced:
+		_slack()
+	if _combat != null:
+		_combat.unguard(partner if is_instance_valid(partner) else null, self)
+	partner = null
+	_relink = RELINK_S
 
 
 func _brace() -> void:
@@ -298,12 +310,14 @@ func _build_model() -> void:
 	painted.vertex_color_use_as_albedo = true
 	for found in _model.find_children("*", "MeshInstance3D", true, false):
 		var mesh := found as MeshInstance3D
+		if mesh.mesh == null:
+			continue
 		for i in mesh.mesh.get_surface_count():
 			var surface := mesh.mesh.surface_get_material(i)
 			var slot := surface.resource_name if surface != null else ""
 			if slot == "fleet_paint":
 				mesh.set_surface_override_material(i, _material)
-			elif slot == "requisition_tag":
+			elif slot == "requisition_tag" and mesh.name == "LinkerCable":
 				_cable_material = Palette.solid(Palette.BRASS)
 				mesh.set_surface_override_material(i, _cable_material)
 			else:
@@ -378,7 +392,8 @@ func _socket_at(socket: String) -> Vector3:
 func _aim_model() -> void:
 	var relative := wrapf(dish_yaw - rotation.y, -PI, PI)
 	if _skeleton != null and _aim_bone >= 0:
-		_skeleton.set_bone_pose_rotation(_aim_bone, Quaternion(Vector3.UP, relative))
+		_skeleton.set_bone_pose_rotation(_aim_bone, _skeleton.get_bone_rest(_aim_bone).basis.get_rotation_quaternion() \
+			* Quaternion(Vector3.UP, relative))
 	elif is_instance_valid(_dish):
 		_dish.rotation.y = relative
 	_fit_greybox_cable()
@@ -419,8 +434,8 @@ func _die() -> void:
 
 
 func _exit_tree() -> void:
-	if partner != null and _combat != null and is_instance_valid(_combat):
-		_combat.unguard(partner, self)
+	if _linked and _combat != null and is_instance_valid(_combat):
+		_combat.unguard(partner if is_instance_valid(partner) else null, self)
 	if is_instance_valid(_reaction_bus) and _reaction_bus.harpoon_bit.is_connected(_on_harpoon_bit):
 		_reaction_bus.harpoon_bit.disconnect(_on_harpoon_bit)
 	super._exit_tree()
