@@ -5,6 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const RosterDig := preload("res://src/combat/roster_dig.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
+const RosterSpecials := preload("res://src/combat/roster_specials.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # The enemy roster (DESIGN-V2 sections 10, 11 and 15): one row per spawnable kind, and
@@ -181,14 +182,15 @@ const CHASSIS := {
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
+	"dispatcher": {"chassis": "cache", "move_class": "fixed", "threat_feature": "Pneumatic tube curling down off a box on a mast"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const ANCIENTS := ["reactor_relic", "swarm_remnant", "mind_hand"]
-# The kill-first specials built so far (ENEMY-PRIORITY.md 4); they arrive in packs too.
-const SPECIALS := ["linker"]
+# The kill-first specials (ENEMY-PRIORITY.md 4): rows in this file plus roster_specials.gd; they arrive in packs too.
+static var SPECIALS: Array = ["linker"] + RosterSpecials.ROWS.keys()
 # The family ancient per Warden family.
 const FAMILY_ANCIENT := {REACTOR: "reactor_relic", SWARM: "swarm_remnant", MIND: "mind_hand"}
 
@@ -198,7 +200,7 @@ static var ROWS: Dictionary = _all_rows()
 
 static func _all_rows() -> Dictionary:
 	var rows := BASE_ROWS.duplicate()
-	for table in [RosterDig.ROWS, RosterHighdraft.ROWS]:
+	for table in [RosterDig.ROWS, RosterHighdraft.ROWS, RosterSpecials.ROWS]:
 		for id in table:
 			assert(not rows.has(id), "roster id declared twice: %s" % id)
 			rows[id] = table[id]

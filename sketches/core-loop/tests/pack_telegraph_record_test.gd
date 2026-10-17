@@ -246,8 +246,10 @@ func _recovery(kind: String) -> Dictionary:
 				if swarm == null and p[1] == "recover":
 					ended = int(p[0])
 			if ended >= 0:
+				# A Dispatcher's landed chaser is a new unit with its own attack, not part of the tail.
 				for unit in get_nodes_in_group("enemy"):
-					positions[unit] = unit.global_position
+					if not unit.has_meta("dispatched_by"):
+						positions[unit] = unit.global_position
 				if _recovering(enemy, swarm):
 					frames = 1
 					# An expired cycle must still be unable to start another attack in the tail.

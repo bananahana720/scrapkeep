@@ -4463,6 +4463,28 @@
    "loader": "src/combat/deflector.gd (load of this path)"
   },
   {
+   "id": "enemy_dispatcher",
+   "path": "res://assets/models/world_one/enemy_dispatcher.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/vault.gd dispatcher behaviour, wave 18)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_dispatcher.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4, lever 4 (PR #23)"
+   }
+  },
+  {
+   "id": "enemy_foreman",
+   "path": "res://assets/models/world_one/enemy_foreman.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/lobber.gd elite affix (Foreman), wave 17)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_foreman.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4, lever 3 (PR #23)"
+   }
+  },
+  {
    "id": "enemy_gyro_jammer",
    "path": "res://assets/models/world_one/enemy_gyro_jammer.glb",
    "class": "enemy",
@@ -5385,7 +5407,9 @@
   "enemy_anchor_crew",
   "enemy_burrower",
   "enemy_catch_trap",
+  "enemy_dispatcher",
   "enemy_drill_crew",
+  "enemy_foreman",
   "enemy_gyro_jammer",
   "enemy_kite_drone",
   "enemy_lamp_swarm",
