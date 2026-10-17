@@ -310,7 +310,7 @@ static func _span() -> Dictionary:
 static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
-	var path := "res://assets/models/world_three/enemy_gap_net.glb"
+	var path := "res://assets/models/world_three/enemy_gap_net_curtain.glb"
 	if not ResourceLoader.exists(path):
 		return _shared
 	var packed := load(path) as PackedScene
