@@ -12,10 +12,10 @@ extends "res://src/combat/counter.gd"
 #
 # The effects contract (design-v3/MACHINE-VFX.md, PR #51, and the special cues): the
 # committed-telegraph frame fires special_tell("tell") and SpecialCues.tell(self), and meta
-# "split" is set before died goes out. Pieces are made by
-# the spawner as ordinary chasers, then shrunk (make_piece), so each is an attacker in its own
-# right; they keep the Splitter's director pack, so the attacker budget reads them as one
-# volley. A piece is light (PIECE_WEIGHT), so a grown ball's harpoon swings it as a flail.
+# "split" is set before died goes out. Pieces are made by the spawner as ordinary chasers,
+# then shrunk and dressed (make_piece), so each is an attacker in its own right; they keep
+# the Splitter's director pack, so the attacker budget reads them as one volley. A piece is
+# light (PIECE_WEIGHT), so a grown ball's harpoon swings it as a flail.
 
 const ChaserScript := preload("res://src/combat/chaser.gd")
 # The specials' cue hub (CONTRACTS.md "Special cues"); loaded only once that file lands.
@@ -47,6 +47,8 @@ const SEAM_IDLE := 0.4
 const SEAM_FLARE := 4.0
 const SEAM_WHITE := Color("f4efe2")
 const SEAM_BRASS := Palette.BRASS
+# A seam flare not yet popped: enemies still to come, so a fight is not over while one stands.
+const PENDING := "enemy_pending"
 
 var blasts := 0
 var split := false
@@ -262,6 +264,7 @@ class Pop extends Node3D:
 	var _shell: MeshInstance3D
 
 	func _ready() -> void:
+		add_to_group(PENDING)
 		var sphere := SphereMesh.new()
 		sphere.radius = BODY_RADIUS * 1.1
 		sphere.height = BODY_RADIUS * 2.2

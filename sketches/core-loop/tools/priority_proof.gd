@@ -138,6 +138,9 @@ var _wipes := 0
 var _warnings := 0
 var _dispatched := 0
 var _joined := 0
+# True once the crew and the special stand, so only what comes after joins.
+var _encounter_up := false
+var _special_split := false
 var _model_clock := 0.0
 var _scrap_serial := 0
 var _counter_serial := 0
@@ -455,7 +458,7 @@ var _grounded_s := 0.0
 # joins the crew, toughened like the rest: the bot fights it and the clear waits for it. A
 # Splitter piece scales its health from the toughened chaser, so --hp-mult carries through.
 func _on_enemy_spawned(enemy: Node3D, _kind: String) -> void:
-	if _spawned and _driver.special != null and enemy != _driver.special and enemy not in _driver.crew:
+	if _encounter_up and enemy not in _driver.crew:
 		_driver.crew.append(_toughen(enemy))
 		_joined += 1
 
@@ -464,7 +467,10 @@ func _encounter_s() -> float:
 	return _game.run.stage_time - _start_s
 
 
+# Clear means everything down and nothing still to come (a Splitter's flare yet to pop).
 func _cleared() -> bool:
+	if not _game.get_tree().get_nodes_in_group("enemy_pending").is_empty():
+		return false
 	for enemy in _driver.crew:
 		if PriorityDriver.alive(enemy):
 			return false
@@ -489,12 +495,15 @@ func _spawn_encounter() -> void:
 	var at := _drop(ball + forward * (CREW_RANGE + SPECIAL_BEHIND))
 	if _mode == "built":
 		_driver.special = _toughen(spawner.spawn_enemy(String(_row["id"]), at))
+		var special: Node3D = _driver.special
+		special.died.connect(func(_where: Vector3, _scrap: int): _special_split = bool(special.get_meta("split", false)))
 	else:
 		# The model's stand-in: a non-attacking body with no plating and MODEL_HP.
 		var body: Node3D = spawner.spawn_enemy("vault", at)
 		body.plating = 0.0
 		body._set_health(MODEL_HP * float(_settings.get("hp-mult", "1")))
 		_driver.special = body
+	_encounter_up = true
 
 
 
@@ -549,7 +558,7 @@ func _record() -> void:
 			"class": _driver.class_id(), "outcome": _driver.outcome, "hull_lost": snappedf(lost, 0.1),
 			"hits": _hits, "damage_taken": snappedf(_taken, 0.1), "clear_s": snappedf(_cleared_s, 0.01),
 			"special_dead_s": snappedf(_special_dead_s, 0.01), "crew_spawned": _driver.crew.size(),
-			"crew_killed": killed, "wipes": _wipes, "warnings": _warnings, "dispatched": _dispatched, "joined": _joined,
+			"crew_killed": killed, "wipes": _wipes, "warnings": _warnings, "dispatched": _dispatched, "joined": _joined, "special_split": _special_split,
 			"encounter_s": snappedf(_encounter_s() if _spawned else 0.0, 0.01)}
 	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
 	file.store_string(JSON.stringify(row) + "\n")
