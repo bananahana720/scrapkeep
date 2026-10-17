@@ -15,6 +15,10 @@ const MULT_MIN := 0.2
 # the plating it meets, so a monster build staggers a Warden well under the 45-70 s an
 # ordinary pilot takes; it was 1.5x. The hull bosses keep 1.5 in boss_rules.gd POSTURE.
 const MULT_MAX := 3.0
+# A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
+# from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
+# monster build's still can. Without the key a hit may fill it, as before.
+const ORDINARY_RATIO := 1.5
 const DRAIN_DELAY := 3.0
 const DRAIN_RATE := 12.0
 const STAGGER_SECONDS := 4.0
@@ -41,6 +45,7 @@ var curve := 1.0
 var ram_shatters := true
 var contact_gain_scale := 0.0
 var contact_gain_floor := 0.0
+var hit_cap := FULL
 
 var posture := 0.0
 var staggered := false
@@ -76,6 +81,7 @@ func _init(numbers := {}) -> void:
 	ram_shatters = bool(numbers.get("ram_shatters", true))
 	contact_gain_scale = float(numbers.get("contact_gain_scale", 0.0))
 	contact_gain_floor = float(numbers.get("contact_gain_floor", 0.0))
+	hit_cap = float(numbers.get("hit_cap", FULL))
 
 
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
@@ -104,10 +110,19 @@ func judge(hit: Dictionary) -> Dictionary:
 	var gain := hit_base * pow(clampf(ratio, mult_min, mult_max), curve)
 	if contact and contact_gain_scale > 0.0:
 		gain *= 1.0 + contact_gain_scale * maxf(0.0, clampf(ratio, mult_min, mult_max) - contact_gain_floor)
+	gain = minf(gain, cap_for(ratio))
 	if contact and frame == gain_frame:
 		gain = maxf(0.0, gain - gain_in_frame)
 	result["gain"] = gain
 	return result
+
+
+# The most one hit at this ratio may add (see ORDINARY_RATIO).
+func cap_for(ratio: float) -> float:
+	if hit_cap >= FULL or mult_max <= ORDINARY_RATIO:
+		return FULL
+	var t := clampf((ratio - ORDINARY_RATIO) / (mult_max - ORDINARY_RATIO), 0.0, 1.0)
+	return lerpf(hit_cap, FULL, t)
 
 
 func _judge_core(result: Dictionary, hit: Dictionary) -> void:
