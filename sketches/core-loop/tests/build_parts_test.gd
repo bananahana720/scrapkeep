@@ -121,8 +121,10 @@ func _check_stacking_and_retry() -> void:
 	run.add_part("hot_rivets", "test")
 	run.add_part("hot_rivets", "test")
 	var stacked: float = _game.tuning.mod("weapon_damage")
-	_report("copies stack", is_equal_approx(stacked, 1.12 * 1.12) and is_equal_approx(_build.weapon_mod("weapon_damage"), stacked),
-		"two Hot Rivets: weapon_damage x%.4f (1.12^2 = %.4f)" % [stacked, 1.12 * 1.12])
+	# SG15: Hot Rivets is levelled, so a second copy is level 2, whose numbers replace level 1's.
+	var level_two: float = Parts.def_at("hot_rivets", 2).mods["weapon_damage"]
+	_report("copies stack", is_equal_approx(stacked, level_two) and is_equal_approx(_build.weapon_mod("weapon_damage"), stacked),
+		"two Hot Rivets: weapon_damage x%.4f (level 2 x%.4f)" % [stacked, level_two])
 	_build.recompute()
 	_build.recompute()
 	_report("recompute is idempotent", is_equal_approx(_game.tuning.mod("weapon_damage"), stacked)
