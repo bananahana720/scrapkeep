@@ -17,9 +17,12 @@ extends "res://src/combat/counter.gd"
 #   brings its own dispatch mast, PERCH_HEIGHT tall, a world collider the harpoon can bite, so
 #   reaching it means going up: grapple, vault or a long gun.
 # - special_tell("tell") fires on the committed-telegraph frame (design-v3/MACHINE-VFX.md, the
-#   specials contract); `dispatched` reports each chaser it lands.
+#   specials contract), through SpecialCues.tell(self) once special_cues.gd is in the tree
+#   (CONTRACTS.md "Special cues"); `dispatched` reports each chaser it lands.
 
 const Projectile := preload("res://src/combat/projectile.gd")
+# Loaded, not preloaded, until the special cues branch lands; then this becomes a preload.
+const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 
 signal special_tell(moment: String)
 signal dispatched(enemy: Node3D)
@@ -277,7 +280,10 @@ func _commit(to_ball: Vector3) -> Node3D:
 func _voice(tele: Node3D) -> void:
 	super(tele)
 	tele.warn_seconds = WARN
-	special_tell.emit("tell")
+	if ResourceLoader.exists(SPECIAL_CUES):
+		load(SPECIAL_CUES).tell(self)
+	else:
+		special_tell.emit("tell")
 
 
 func _face(to_ball: Vector3) -> void:
