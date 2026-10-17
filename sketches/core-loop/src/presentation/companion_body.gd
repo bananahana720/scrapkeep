@@ -15,6 +15,7 @@ extends Node3D
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # One GLB per ordered socket pair, named <socket 0>__<socket 1> in table order.
 const MODEL_DIR := "res://assets/models/companion/assembled/"
@@ -270,7 +271,7 @@ func _light(lamp: String) -> void:
 	var mat := _lamp.material_override as StandardMaterial3D
 	mat.albedo_color = row["color"].darkened(0.6) if lamp == "spent" else row["color"]
 	mat.emission = row["color"]
-	mat.emission_energy_multiplier = LAMP_ENERGY[lamp]
+	mat.emission_energy_multiplier = FlashGuard.spike(LAMP_ENERGY["ready"], LAMP_ENERGY[lamp]) if lamp != "spent" else LAMP_ENERGY[lamp]
 	_lamp.scale = LAMP_SCALE[lamp]
 
 

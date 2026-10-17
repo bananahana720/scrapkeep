@@ -28,6 +28,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
@@ -561,6 +562,7 @@ func apply_saved_display(args: Array = []) -> void:
 	if saved.fullscreen():
 		set_fullscreen(true)
 	set_reduced_motion(saved.reduced_motion())
+	set_reduce_flashes(saved.reduce_flashes())
 
 
 # 0 High, 1 Low.
@@ -582,6 +584,12 @@ func set_reduced_motion(on: bool) -> void:
 	for node in find_children("*", "Node3D", true, false):
 		if node.get_script() == HighdraftFx:
 			node.reduced_motion = on
+
+
+# Reduce flashes: every flash, white pop and strobe reads FlashGuard when it fires, so the
+# switch takes effect on the next flash without touching live nodes.
+func set_reduce_flashes(on: bool) -> void:
+	FlashGuard.on = on
 
 
 func set_fullscreen(on: bool) -> void:
