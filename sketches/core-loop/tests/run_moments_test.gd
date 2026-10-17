@@ -82,6 +82,8 @@ func _full_run() -> void:
 	ev.posture_changed.emit(target, 1.0, true)
 	run.run_time = 60.0
 	ev.boss_defeated.emit()
+	# The victory beat runs on before the summary; the ledger must not land after the finale.
+	run.run_time = 63.0
 	_game.flow._end_run(true)
 	var moments = _game.run_moments
 	var page: Dictionary = moments.last_page

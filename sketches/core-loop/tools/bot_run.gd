@@ -49,7 +49,8 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 #                        reached, ticks, game and wall seconds, per-stage bot notes, and the
 #                        beats column (src/core/stage_beats.gd): per stage entered, the physics
 #                        ticks of arrive, loot, find, hold, fight and leave and whether it exited.
-#   scrapbook/<run_id>/  the run-end comic page (src/core/run_moments.gd) of a run that ended.
+#   scrapbook/           the run-end comic page (src/core/run_moments.gd) of a run that ended:
+#                        <run_id>.json and its stills <run_id>_<i>.png.
 #   codex-entries.json   every declared codex entry (id, category, name, clue), so the
 #                        report can name entries no run discovered.
 # A run ends on run_ended (won or lost), death, stall, or --until/--stages; a stalled

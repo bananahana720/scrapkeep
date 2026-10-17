@@ -17,6 +17,9 @@ extends Node
 # when no still was taken). save() hands the page to the scrapbook; page_ready tells the
 # summary screen it can draw it.
 #
+# A Continued run starts its moments at the resume (run_started resets them), so its opening
+# is the stage it resumed on.
+#
 # Every run has an opening and a finale; the middle takes up to four of the rest by PRIORITY,
 # and the ledger and top speed always exist, so a page is never under four panels.
 
@@ -90,7 +93,8 @@ var _pending_death := {}
 var _boss_down := {}
 var _opening_due := false
 var _shot_wait := 0.0
-var _shot_for := ""
+# Stills asked for and not yet read back (frame_post_draw).
+var _grabs_pending := 0
 var _top_speed := 0.0
 
 
@@ -122,7 +126,6 @@ func _reset() -> void:
 	_boss_down = {}
 	_opening_due = false
 	_shot_wait = 0.0
-	_shot_for = ""
 	_top_speed = 0.0
 	last_page = {}
 	last_page_path = ""
@@ -134,7 +137,7 @@ func _physics_process(delta: float) -> void:
 		return
 	if _opening_due and run.stage_time >= OPENING_AFTER:
 		_opening_due = false
-		_offer("opening", 1.0, {})
+		_offer("opening", 1.0, {}, true)
 	if player != null and player.state != null:
 		var v: Vector3 = player.state.velocity
 		var planar := Vector2(v.x, v.z).length()
@@ -202,6 +205,9 @@ func _on_boss_defeated() -> void:
 
 
 func _on_run_ended(won: bool) -> void:
+	# A still asked for this frame (the final death's) lands after it draws; fold after that.
+	if _grabs_pending > 0:
+		await RenderingServer.frame_post_draw
 	var finale: Dictionary
 	if won:
 		finale = _boss_down if not _boss_down.is_empty() else _moment("finale", 1.0, {})
@@ -213,7 +219,9 @@ func _on_run_ended(won: bool) -> void:
 	# On a loss the last few hits before the end are the finale's own run-up, not a panel.
 	if not won and _best.has("near_death") and float(finale["t"]) - float(_best["near_death"]["t"]) < FINALE_RUNUP:
 		_best.erase("near_death")
-	_keep("ledger", _moment("ledger", 1.0, {"kills": int(run.kills), "scrap": int(run.scrap)}))
+	var ledger := _moment("ledger", 1.0, {"kills": int(run.kills), "scrap": int(run.scrap)})
+	ledger["t"] = minf(float(ledger["t"]), float(finale["t"]))
+	_keep("ledger", ledger)
 	last_page = build_page(won, finale)
 	last_page_path = save(last_page)
 	page_ready.emit(last_page)
@@ -242,6 +250,9 @@ func build_page(won: bool, finale: Dictionary) -> Dictionary:
 		rows.append(_best["opening"])
 	else:
 		rows.append(_moment("opening", 1.0, {}).merged({"t": 0.0, "stage": _first_stage(), "world": _world_of(_first_stage())}, true))
+	# Starting parts can land before the opening still; the opening still opens the page.
+	if not middle.is_empty() and float(middle[0]["t"]) < float(rows[0]["t"]):
+		rows[0] = rows[0].merged({"t": float(middle[0]["t"])}, true)
 	rows.append_array(middle)
 	rows.append(finale)
 	var panels: Array = []
@@ -315,7 +326,8 @@ func save(page: Dictionary) -> String:
 func _offer(kind: String, score: float, facts: Dictionary, rare := false) -> void:
 	var held: Dictionary = _best.get(kind, {})
 	if not held.is_empty():
-		var need := float(held["score"]) * (1.0 if rare or held.get("shot") == null else BETTER_BY)
+		var stilled: bool = held.get("shot") != null or held.get("grabbing", false)
+		var need := float(held["score"]) * (BETTER_BY if stilled and not rare else 1.0)
 		if score <= need:
 			return
 	var row := _moment(kind, score, facts)
@@ -339,7 +351,13 @@ func _grab_into(row: Dictionary, rare := false) -> void:
 	if not stills or (_shot_wait > 0.0 and not rare) or DisplayServer.get_name() == "headless" or not is_inside_tree():
 		return
 	_shot_wait = SHOT_GAP
+	_grabs_pending += 1
+	row["grabbing"] = true
 	RenderingServer.frame_post_draw.connect(func():
+		_grabs_pending = maxi(0, _grabs_pending - 1)
+		row.erase("grabbing")
+		if not is_inside_tree():
+			return
 		var image := get_viewport().get_texture().get_image()
 		if image == null or image.is_empty():
 			return
