@@ -7,6 +7,7 @@ const Flow := preload("res://src/core/flow.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
+const RunMoments := preload("res://src/core/run_moments.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -88,6 +89,8 @@ var panel
 var keyboard
 var codex
 var run_log
+# The run-end comic page's moments (src/core/run_moments.gd).
+var run_moments
 var progress
 var _progress_ready := false
 # Where the codex and the run log write: user:// in play, a per-process folder the
@@ -166,6 +169,9 @@ func _ready() -> void:
 	add_child(run_log)
 	run_log.setup(events, run, player, codex, storage_dir)
 	ctx.run_log = run_log
+	run_moments = RunMoments.new()
+	add_child(run_moments)
+	run_moments.setup(events, run, player, flow, ctx.stages, storage_dir)
 	ctx.profile = Profile.new(storage_dir.path_join("profile.json"))
 	if not ctx.profile.load_profile():
 		push_warning("profile: %s" % ctx.profile.last_error)
@@ -286,6 +292,13 @@ func _exit_tree() -> void:
 		return
 	for file in dir.get_files():
 		dir.remove(file)
+	# The scrapbook keeps one folder per run (run_moments.gd).
+	var book := storage_dir.path_join(RunMoments.DIR)
+	for run_dir in DirAccess.get_directories_at(book):
+		for file in DirAccess.get_files_at(book.path_join(run_dir)):
+			DirAccess.remove_absolute(book.path_join(run_dir).path_join(file))
+		DirAccess.remove_absolute(book.path_join(run_dir))
+	DirAccess.remove_absolute(book)
 	DirAccess.remove_absolute(storage_dir)
 
 

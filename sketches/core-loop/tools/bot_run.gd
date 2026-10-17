@@ -24,6 +24,8 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
 # writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
 # diagnostic run. --fixed-fps 90 makes one frame one physics tick, faster than real time.
+# --comic-page=1 ends a run cut short as a loss so it folds a comic page (run_moments.gd); with a
+# rendering display (not --headless) the panels carry real stills.
 # --bot-profile=1 writes runner/tick timings and sampled Performance monitors.
 # --bot-audit=1 writes full-precision committed bus events with stable object tokens.
 # --bot-no-mix=1 skips sample arithmetic while retaining music transport.
@@ -47,6 +49,7 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 #                        reached, ticks, game and wall seconds, per-stage bot notes, and the
 #                        beats column (src/core/stage_beats.gd): per stage entered, the physics
 #                        ticks of arrive, loot, find, hold, fight and leave and whether it exited.
+#   scrapbook/<run_id>/  the run-end comic page (src/core/run_moments.gd) of a run that ended.
 #   codex-entries.json   every declared codex entry (id, category, name, clue), so the
 #                        report can name entries no run discovered.
 # A run ends on run_ended (won or lost), death, stall, or --until/--stages; a stalled
@@ -204,6 +207,7 @@ func _physics_process(delta: float) -> bool:
 		# Point the codex and the run log at --out; nothing has been written yet.
 		_game.codex.storage_dir = _out
 		_game.run_log.storage_dir = _out
+		_game.run_moments.storage_dir = _out
 		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), _seeds[_index])
 		if _settings.has("pilot"):
 			_driver.class_index = BotDriver.class_index_for(_seeds[_index], String(_settings["pilot"]))
@@ -256,6 +260,13 @@ func _physics_process(delta: float) -> bool:
 	_beats.finish()
 	# --stages=N and --until=N end the run a tick or two into the next stage; that sliver is not an attempt.
 	record["beats"] = StageBeats.within(_beats.rows, int(_settings.get("stages", _settings.get("until", "0"))))
+	# --comic-page=1 folds a comic page from a run cut short (--ticks, --until, a stall) as a
+	# loss, so a short rendered run can show its stills.
+	if _settings.has("comic-page") and not _game.run.over:
+		_game.flow._end_run(false)
+	# The run-end comic page (run_moments.gd): its panel count and where it was saved.
+	record["comic_panels"] = (_game.run_moments.last_page.get("panels", []) as Array).size()
+	record["comic_page"] = _game.run_moments.last_page_path
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()
