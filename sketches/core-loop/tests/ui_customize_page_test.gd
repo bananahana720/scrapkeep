@@ -193,15 +193,32 @@ func _page_checks(page, profile, screens) -> void:
 	page._select_slot("paint")
 	for id in Cosmetics.PENDING_ART:
 		_t.check("pending %s has no card" % id, page.card_for(id) == null and not id in page.shown_ids(Cosmetics.row(id)["slot"]))
-	# Re-pinned 2026-10-17 (unit K): three outfits and the Till Bell are delivered, so those slots show
-	# wherever a row fits; a slot with nothing that fits still hides with its heading.
-	for slot in ["shell", "outfit", "companion_skin", "bay_decor"]:
-		var fits: bool = not page.shown_ids(slot).is_empty()
-		_t.check("slot %s shows only when a row fits" % slot, page.rows[slot].visible == fits and (slot in page.order()) == fits)
-	_t.check("the Till Bell's slot shows", page.rows["companion_skin"].visible)
-	_t.check("a delivered outfit's pilot shows the outfit slot", page.rows["outfit"].visible == (page.pilot in ["runner_gunner", "tally", "tarn"]), page.pilot)
-	_t.check("the pilot heading follows its outfit slot", page._group_labels["PILOT"].visible == page.rows["outfit"].visible)
+	# With PENDING_ART empty, the test seam plants a shown outfit so the hiding path still runs.
+	var outfits: Array = page.shown_ids("outfit")
+	_t.check("an outfit is shown before the plant", not outfits.is_empty(), str(outfits))
+	if not outfits.is_empty():
+		var planted: String = outfits[0]
+		Cosmetics._test_pending = [planted]
+		page._select_slot("outfit")
+		_t.check("planted pending %s has no card" % planted, page.card_for(planted) == null and not planted in page.shown_ids("outfit"))
+		Cosmetics._test_pending = []
+		page._select_slot("paint")
+		page._select_slot("outfit")
+		_t.check("cleared %s shows its card again" % planted, page.card_for(planted) != null and planted in page.shown_ids("outfit"))
+	page._select_slot("paint")
+	_t.check("the shell slot shows its built variant", page.rows["shell"].visible and "shell" in page.order())
+	_t.check("empty slot bay_decor is hidden", not page.rows["bay_decor"].visible and not "bay_decor" in page.order())
 	_t.check("an empty owner group is hidden", not page._group_labels["BAY"].visible)
+	# The delivered outfit and companion skin art is no longer pending: both slots and their groups show.
+	var delivered := {"outfit": ["outfit_rivet_hood", "outfit_tally_eyeshade", "outfit_tarn_steady_cap"], "companion_skin": ["companion_skin_till_bell"]}
+	for slot in delivered:
+		var shown: Array = page.shown_ids(slot)
+		_t.check("slot %s shows delivered ids" % slot, not shown.is_empty() and shown.all(func(id): return id in delivered[slot]), str(shown))
+		_t.check("slot %s row is visible and ordered" % slot, page.rows[slot].visible and slot in page.order())
+		page._select_slot(slot)
+		_t.check("slot %s has a card for each shown id" % slot, shown.all(func(id): return page.card_for(id) != null))
+	_t.check("the PILOT and SPIL-9 groups show", page._group_labels["PILOT"].visible and page._group_labels["SPIL-9"].visible)
+	page._select_slot("paint")
 	# New marks clear after 0.6 s on screen and seen saves once, on close.
 	var fresh := "paint_any_night"
 	profile.unlock_cosmetic(fresh)

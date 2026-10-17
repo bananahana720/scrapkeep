@@ -13,6 +13,31 @@ const Synth := preload("res://src/presentation/synth.gd")
 
 const RATE := Harmony.RATE
 
+# The 49 event-set WAVs (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
+# RENDERS.md), registered under their cue keys. A file cue replaces the recipe of the
+# same key. The file is decoded to the bank's rate at bake time, so stingers, streams and
+# the keyed bakes read it like any other cue. Peak -1 dBFS, like the recipes' 0.9.
+const EVENT_DIR := "res://assets/audio/event_set/"
+const FILE_RATE := 48000
+const EVENT_CUES := [
+	"achievement_chime", "armor_shed", "boost_whoosh", "boss_arena_in", "boss_phase", "boss_weak_hit",
+	"callout_chime", "crit_ping", "dash_whoosh", "death", "found_chime", "hit_thwack", "hop", "hurt",
+	"kill_chain_tier_1", "kill_chain_tier_2", "kill_chain_tier_3", "kill_chain_tier_4", "kill_chain_tier_5",
+	"kill_pop", "land_thud", "lore_found", "near_whoosh", "part_get", "pickup_fountain", "pilot_unlocked",
+	"rarity_bell_common", "rarity_bell_epic", "rarity_bell_rare", "rescue_fanfare", "scrap_tick_1",
+	"scrap_tick_2", "scrap_tick_3", "scrap_tick_4", "scrap_tick_5", "shop_bell", "slam_boom", "smash_crack",
+	"stinger_boss_defeated", "stinger_clear", "stinger_milestone", "stinger_run_end", "stinger_run",
+	"stinger_stage", "stinger_world", "synergy_fanfare", "threat_whistle", "ui_tick", "verb_fail",
+]
+# Tiered cues: the base key keeps its recipe and its pitch-ladder callers; resolve() picks
+# the tier's file from the rung the caller already sends (the scrap and kill ladders, and
+# the rarity rung: common 0, rare up to 4, epic from the relic's 5).
+const TIER_CUES := {
+	"scrap_tick": ["scrap_tick_1", "scrap_tick_2", "scrap_tick_3", "scrap_tick_4", "scrap_tick_5"],
+	"kill_chain_tier": ["kill_chain_tier_1", "kill_chain_tier_2", "kill_chain_tier_3", "kill_chain_tier_4", "kill_chain_tier_5"],
+	"rarity_bell": ["rarity_bell_common", "rarity_bell_rare", "rarity_bell_epic"],
+}
+
 # Stingers written on the grid. The audio director starts them on a beat through the
 # music engine; beats is how long they hold the stinger lane.
 const STINGER_BEATS := {
@@ -224,7 +249,7 @@ static func break_midis(variant := 0) -> Array:
 
 
 static func has_recipe(id: String) -> bool:
-	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or _assist_parts(id).size() > 0
+	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or _assist_parts(id).size() > 0 or id in EVENT_CUES
 
 
 static func trim_db(id: String) -> float:
@@ -232,7 +257,82 @@ static func trim_db(id: String) -> float:
 		return CAUSE_NOTE_DB
 	if id.begins_with(ASSIST_STING):
 		return ASSIST_STING_DB
-	return TRIM_DB.get(id, -8.0)
+	return TRIM_DB.get(id, TRIM_DB.get(base_key(id), -8.0))
+
+
+# The key a tier's file belongs to (scrap_tick_3 -> scrap_tick), else the id itself. A
+# tier file keeps its base key's trim.
+static func base_key(id: String) -> String:
+	for base in TIER_CUES:
+		if id in TIER_CUES[base]:
+			return base
+	return id
+
+
+# The res:// path of an event-set cue.
+static func event_path(id: String) -> String:
+	return EVENT_DIR + id + ".wav"
+
+
+# The file a sound id plays and the pitch it plays at. A tiered key reads the rung the
+# caller already sends as its pitch (Harmony.ratio of a pentatonic step): the tier's file
+# is already stepped, so it plays at 1.0. Every other id passes through.
+static func resolve(sound: String, pitch: float) -> Dictionary:
+	if not TIER_CUES.has(sound) or pitch <= 0.0:
+		return {"id": sound, "pitch": pitch}
+	var files: Array = TIER_CUES[sound]
+	var rung := ladder_rung(pitch)
+	var index := clampi(rung, 0, files.size() - 1)
+	if sound == "rarity_bell":
+		index = 0 if rung <= 0 else (1 if rung < 5 else 2)
+	# A tier whose file is missing plays the base recipe on the caller's rung, pitch kept.
+	if not _has_file(files[index]):
+		return {"id": sound, "pitch": pitch}
+	return {"id": files[index], "pitch": 1.0}
+
+
+static var _file_present := {}
+
+
+static func _has_file(id: String) -> bool:
+	if not _file_present.has(id):
+		_file_present[id] = ResourceLoader.exists(event_path(id))
+	return _file_present[id]
+
+
+# The pentatonic rung whose ratio is nearest this pitch ratio.
+static func ladder_rung(pitch: float) -> int:
+	var steps := 12.0 * log(maxf(pitch, 0.001)) / log(2.0)
+	var best := 0
+	for rung in range(0, 12):
+		if absf(float(Harmony.pentatonic_step(rung)) - steps) < absf(float(Harmony.pentatonic_step(best)) - steps):
+			best = rung
+	return best
+
+
+# An event-set WAV as float samples at the bank rate (linear resample from the file rate), moved shift semitones.
+# Empty when the file is absent or is not 16-bit mono.
+static func _event_samples(id: String, shift := 0) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	var path := event_path(id)
+	if not ResourceLoader.exists(path):
+		return out
+	var wav := ResourceLoader.load(path, "AudioStreamWAV", ResourceLoader.CACHE_MODE_IGNORE) as AudioStreamWAV
+	if wav == null or wav.format != AudioStreamWAV.FORMAT_16_BITS or wav.stereo:
+		return out
+	var count := wav.data.size() / 2
+	# A keyed bake (shift in semitones) is a varispeed of the file, like pitch_scale in play.
+	var step := float(wav.mix_rate) / float(RATE) * pow(2.0, float(shift) / 12.0)
+	var length := int(floor(float(count - 1) / step)) + 1
+	out.resize(length)
+	for i in length:
+		var at := float(i) * step
+		var lo := int(at)
+		var hi := mini(lo + 1, count - 1)
+		var a := wav.data.decode_s16(lo * 2) / 32768.0
+		var b := wav.data.decode_s16(hi * 2) / 32768.0
+		out[i] = lerpf(a, b, at - lo)
+	return out
 
 
 # The world stinger's id for a world: the plain row sound at step 0, else the step named.
@@ -324,8 +424,11 @@ static func file_exists(id: String) -> bool:
 
 
 # The mono samples of a rendered file: the imported resource when the editor or export has
-# one, else the raw RIFF (headless runs without an import cache).
-static func file_samples(id: String) -> PackedFloat32Array:
+# one, else the raw RIFF (headless runs without an import cache). An id outside FILE_SOUNDS
+# and the stingers is an event-set cue (EVENT_CUES), read at the bank rate and moved shift semitones.
+static func file_samples(id: String, shift := 0) -> PackedFloat32Array:
+	if not FILE_SOUNDS.has(id) and not id.begins_with(STINGER_PREFIX):
+		return _event_samples(id, shift)
 	var path := file_path(id)
 	var out := PackedFloat32Array()
 	var res = load(path) if ResourceLoader.exists(path) else null
@@ -450,6 +553,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 		if file.size() > 0:
 			return file
 		return _tone(0.12, _hz(62), _hz(62), "sine", 20.0)
+	if id in EVENT_CUES:
+		var recorded := file_samples(id, _shift)
+		if not recorded.is_empty():
+			return recorded
+		# A missing or unreadable file never leaves the cue silent: a tier falls back to
+		# its base recipe, a plain key to its own.
+		if base_key(id) != id:
+			return _bake(base_key(id))
 	if id in ["plate_tally", "clip_tally", "stroke_tally", "settle_tally"]:
 		return tally_recipe(id)
 	if id.begins_with("cable_kest_") or id.begins_with("raid_kest_") or id.begins_with("tick_kest_"):
