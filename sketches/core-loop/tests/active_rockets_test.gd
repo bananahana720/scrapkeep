@@ -197,6 +197,10 @@ func _run() -> void:
 	await _sim(0.7)
 	_t.check("25 a Jam mid wind-up cancels the fire and refunds the charge", _fired.is_empty() and slow.charges == cap - 1 and slow.winding == 0.0,
 		"fired %s charges %d" % [_fired, slow.charges])
+	slow.press()
+	slow.charges = cap
+	slow.lock(0.5)
+	_t.eq("26 a Jam refund never lifts charges past the cap", slow.charges, cap)
 	slow.queue_free()
 
 	# --- A new run clears the rack -------------------------------------------------------
