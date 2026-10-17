@@ -1042,19 +1042,53 @@ def build_headframe():
 # those planes 0.08 m inside; coping lies on the rims where the plateau reads y 0 (the east and west rims from local z
 # -50, the south rim within x +-104). The gallery ring is full (Andrew 2026-10-16): timber decking round the pool from r
 # 42 to 49, its top 0.1 m over the floor, so it needs no collider and moves no line. The pool cylinder (r 40, y -120 to
-# -100) stays empty; the nest's cells sit on the south wall, more than 8 m from the anchor.
+# -100) stays empty. Refit to the sinkhole bake of 2026-10-17 (claude/sinkhole-bake-rkry23, rows gallery_ring to
+# gallery_ring_24, gallery_cut_1 to _15, gallery_post_1 to _11): the ring lane runs r 46 to 61, so the deck spans it and
+# the lamps stand inside it at r LAMP_R; the south wall is cut back into an alcove (SINK_ALCOVE, the floor line where the
+# bake's wall meets y -100, sampled every 3 m, the same 0.02 lean as the planes). The nest's comb hangs on a timber gantry
+# over the lane at the anchor (legs on the caisson lip and behind the ring, nothing in the lane below SINK_LANE_TOP), and
+# its cells carry on into the alcove wall. The headgear stands east of the pump gallery (now at x 73), over its far end.
 SINK_FLOOR = -100.0
-SINK_RING = (42.0, 49.0)
+SINK_RING = (46.0, 61.0)
+SINK_LANE_TOP = -92.0
 SINK_POOL = (40.0, -120.0, -100.0)
 SINK_ANCHOR = (0.0, -99.0, 38.0)
+LAMP_R = 44.2
+SINK_HEAD_X = 100.0
+SINK_ALCOVE = [(0.0, 66.0), (12.0, 66.0), (15.0, 65.0), (18.0, 64.0), (21.0, 63.0), (24.0, 62.0), (27.0, 61.0),
+               (30.0, 60.0), (33.0, 59.0), (36.0, 58.0), (39.0, 55.0), (42.0, 54.0), (45.0, 49.0), (46.5, 48.0)]
 
 
 def sink_wall_x(y):
     return 124.0 + 0.02 * (y - SINK_FLOOR)
 
 
-def sink_wall_z(y):
-    return 48.0 + 0.02 * (y - SINK_FLOOR)
+def sink_wall_z(y, x=None):
+    """The south wall at height y: the plane z 48, or the alcove's floor line where x falls inside it."""
+    z = 48.0
+    ax = abs(x) if x is not None else 99.0
+    for (xa, za), (xb, zb) in zip(SINK_ALCOVE, SINK_ALCOVE[1:]):
+        if xa <= ax <= xb:
+            z = max(z, za + (zb - za) * (ax - xa) / (xb - xa))
+    return z + 0.02 * (y - SINK_FLOOR)
+
+
+def sink_south_xs(step):
+    """Column breaks along the south wall: the planes in about step-metre columns, the alcove at its sampled knots."""
+    edge = sink_wall_x(-97.0) - 0.4
+    n = max(1, round((edge - SINK_ALCOVE[-1][0]) / step))
+    plane = [SINK_ALCOVE[-1][0] + (edge - SINK_ALCOVE[-1][0]) * i / n for i in range(n + 1)]
+    knots = [x for x, _ in SINK_ALCOVE][::1 if step <= 12.0 else 2]
+    if knots[-1] != SINK_ALCOVE[-1][0]:
+        knots.append(SINK_ALCOVE[-1][0])
+    half = sorted(set(knots[1:] + plane))
+    return [-x for x in reversed(half)] + [0.0] + half
+
+
+def sink_south_normal(xa, xb):
+    """The horizontal normal into the hole of the south wall between xa and xb."""
+    dz = sink_wall_z(SINK_FLOOR, xb) - sink_wall_z(SINK_FLOOR, xa)
+    return sky.norm((dz, 0.0, -(xb - xa)))
 
 
 STRATA_SINK = [("basalt_dk", 4.0), ("basalt", 6.0), ("lime_dk", 3.0), ("lime", 9.0), ("ochre", 2.5), ("lime", 7.0),
@@ -1078,15 +1112,33 @@ def sink_walls(s, cols, rows, inset, color_fn, y_top=-3.0, y_bot=-97.0):
     for sx in (-1, 1):
         z0, z1 = -100.0, sink_wall_z(y_bot) - 0.4
         walls.append((("E" if sx > 0 else "W"), lambda a, y, sx=sx: (sx * (sink_wall_x(y) - inset), y, a), z0, z1, (-sx, 0.0, 0.0)))
-    walls.append(("S", lambda a, y: (a, y, sink_wall_z(y) - inset), -sink_wall_x(y_bot) + 0.4, sink_wall_x(y_bot) - 0.4, (0.0, 0.0, -1.0)))
     for name, at, a0, a1, normal in walls:
-        n_cols = cols if name == "S" else max(4, int(cols * 0.6))
+        n_cols = max(4, int(cols * 0.6))
         for i in range(n_cols):
             for j in range(rows):
                 aa, ab = a0 + (a1 - a0) * i / n_cols, a0 + (a1 - a0) * (i + 1) / n_cols
                 ya, yb = y_bot + (y_top - y_bot) * j / rows, y_bot + (y_top - y_bot) * (j + 1) / rows
                 c = color_fn(name, i, j, (ya + yb) / 2)
                 card(s, [at(aa, ya), at(ab, ya), at(ab, yb), at(aa, yb)], c, normal)
+    # the south wall follows the alcove: one card per column break, each facing into the hole
+    xs = sink_south_xs(2.0 * sink_wall_x(y_bot) / cols)
+    at = lambda a, y: (a, y, sink_wall_z(y, a) - inset)
+    for i, (aa, ab) in enumerate(zip(xs, xs[1:])):
+        normal = sink_south_normal(aa, ab)
+        for j in range(rows):
+            ya, yb = y_bot + (y_top - y_bot) * j / rows, y_bot + (y_top - y_bot) * (j + 1) / rows
+            c = color_fn("S", i, j, (ya + yb) / 2)
+            card(s, [at(aa, ya), at(ab, ya), at(ab, yb), at(aa, yb)], c, normal)
+
+
+def sink_alcove_rim(s, step, color_fn):
+    """Coping slabs on the plateau round the alcove's rim (top 0.08 m over grade, no collider), step metres apart."""
+    xs = [x for x in sink_south_xs(step) if abs(x) <= SINK_ALCOVE[-1][0]]
+    for k, (xa, xb) in enumerate(zip(xs, xs[1:])):
+        n = sink_south_normal(xa, xb)
+        za, zb = sink_wall_z(0.0, xa) + 0.1, sink_wall_z(0.0, xb) + 0.1
+        w = 2.4 + 1.6 * rnd(k, 24)
+        slab(s, [(xa, za), (xb, zb), (xb - n[0] * w, zb - n[2] * w), (xa - n[0] * w, za - n[2] * w)], -0.6, 0.08, color_fn(k))
 
 
 def build_sinkhole():
@@ -1107,9 +1159,9 @@ def build_sinkhole():
         c = lerp(col(stains[int(rnd(k, 4) * len(stains)) % len(stains)]), col("lime_dk"), 0.55)
         if wall == "S":
             a = -100.0 + 200.0 * rnd(k, 5)
-            pts = [(a - w, bot, sink_wall_z(bot) - 0.14), (a + w, bot, sink_wall_z(bot) - 0.14),
-                   (a + w * 0.4, top, sink_wall_z(top) - 0.14), (a - w * 0.4, top, sink_wall_z(top) - 0.14)]
-            card(sto, pts, c, (0.0, 0.0, -1.0))
+            pts = [(a - w, bot, sink_wall_z(bot, a - w) - 0.14), (a + w, bot, sink_wall_z(bot, a + w) - 0.14),
+                   (a + w * 0.4, top, sink_wall_z(top, a + w * 0.4) - 0.14), (a - w * 0.4, top, sink_wall_z(top, a - w * 0.4) - 0.14)]
+            card(sto, pts, c, sink_south_normal(a - w, a + w))
         else:
             sx = 1 if wall == "E" else -1
             a = -95.0 + 140.0 * rnd(k, 5)
@@ -1130,7 +1182,9 @@ def build_sinkhole():
             k += 1
     for sx in (-1, 1):
         coping(sto, -50.0, 48.0, 5.0, lambda a, w, sx=sx: (sx * (126.1 + w), a), 10 + sx)
-    coping(sto, -104.0, 104.0, 5.0, lambda a, w: (a, 50.1 + w), 20)
+    for sx in (-1, 1):
+        coping(sto, SINK_ALCOVE[-1][0] + 0.6, 104.0, 5.0, lambda a, w, sx=sx: (sx * a, 50.1 + w), 20 + sx)
+    sink_alcove_rim(sto, 3.0, lambda k: shade("basalt", 1.0, (k, 23), 0.1))
     # the full gallery ring round the pool: radial planks on sleepers, flush (FLUSH-safe), with lamp posts
     fe = exempt["enamel"]
     annulus(fe, (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 120,
@@ -1140,7 +1194,7 @@ def build_sinkhole():
             lambda i: shade("steel", 1.0, (i, 51), 0.06))
     for k in range(16):
         a = TAU * (k + 0.5) / 16
-        p = (48.4 * math.sin(a), SINK_FLOOR + 0.1, 48.4 * math.cos(a))
+        p = (LAMP_R * math.sin(a), SINK_FLOOR + 0.1, LAMP_R * math.cos(a))
         box(e, (p[0] - 0.12, p[1], p[2] - 0.12), (p[0] + 0.12, p[1] + 2.6, p[2] + 0.12), col("timber_dk"))
         box(e, (p[0] - 0.35, p[1] + 2.6, p[2] - 0.35), (p[0] + 0.35, p[1] + 3.1, p[2] + 0.35), col("amber"))
     # copper anchor eyes on the two ring posts (the anchor rows ring_post_w and ring_post_e): one meaning, one look
@@ -1148,14 +1202,15 @@ def build_sinkhole():
         c = (sx * 20.0, SINK_FLOOR + 8.4, 43.0)
         wheel(st, c, (0.0, 0.0, 1.0), 0.75, 0.16, 0, 10, col("copper"), col("copper_dk"))
     # headgear: two timber A-frames, a cap beam and a sheave over the pump gallery's far end
+    hx = SINK_HEAD_X
     for z in (-11.0, 11.0):
-        for x in (78.0, 94.0):
-            beam(e, (x, SINK_FLOOR - 1.0, z), (86.0, -72.0, z), 0.9, 0.9, col("timber"))
-            beam(colm, (x, SINK_FLOOR - 1.0, z), (86.0, -72.0, z), 0.9, 0.9, col("timber"))
-        beam(e, (78.0 + 3.0, -90.0, z), (94.0 - 3.0, -90.0, z), 0.6, 0.6, col("timber_dk"))
-    beam(e, (86.0, -71.4, -12.0), (86.0, -71.4, 12.0), 1.0, 1.2, col("timber_dk"))
-    wheel(st, (86.0, -68.6, 0.0), (0.0, 0.0, 1.0), 2.4, 0.3, 6, 16, col("iron"), col("copper"))
-    tube(st, (83.6, -68.6, 0.0), (66.0, -94.0, 0.0), 0.12, 4, col("cable"))
+        for x in (hx - 8.0, hx + 8.0):
+            beam(e, (x, SINK_FLOOR - 1.0, z), (hx, -72.0, z), 0.9, 0.9, col("timber"))
+            beam(colm, (x, SINK_FLOOR - 1.0, z), (hx, -72.0, z), 0.9, 0.9, col("timber"))
+        beam(e, (hx - 5.0, -90.0, z), (hx + 5.0, -90.0, z), 0.6, 0.6, col("timber_dk"))
+    beam(e, (hx, -71.4, -12.0), (hx, -71.4, 12.0), 1.0, 1.2, col("timber_dk"))
+    wheel(st, (hx, -68.6, 0.0), (0.0, 0.0, 1.0), 2.4, 0.3, 6, 16, col("iron"), col("copper"))
+    tube(st, (hx - 2.4, -68.6, 0.0), (78.0, -94.0, 0.0), 0.12, 4, col("cable"))
     # the nest socket on the south wall: broken hex cells, green rims on the central ones, timbers through them
     cells = []
     for i in range(-9, 10):
@@ -1167,7 +1222,7 @@ def build_sinkhole():
             cells.append((x, y, i, j))
     for x, y, i, j in cells:
         depth = 0.6 + 1.4 * rnd(i, j, 62)
-        z = sink_wall_z(y) - 0.05
+        z = sink_wall_z(y, x) - 0.05
         dist = math.sqrt(x * x + (y - SINK_ANCHOR[1]) ** 2 + (z - depth - SINK_ANCHOR[2]) ** 2)
         if dist < CLEAR + 0.3:
             depth = max(0.2, depth - (CLEAR + 0.3 - dist))
@@ -1177,7 +1232,32 @@ def build_sinkhole():
     for k in range(6):
         x = -14.0 + 28.0 * rnd(k, 66)
         y = SINK_FLOOR + 3.0 + 9.0 * rnd(k, 67)
-        beam(e, (x, y, sink_wall_z(y) - 0.1), (x + 2.5 * (rnd(k, 68) - 0.5), y - 1.5, sink_wall_z(y) - 2.2), 0.4, 0.4, col("timber_dk"))
+        beam(e, (x, y, sink_wall_z(y, x) - 0.1), (x + 2.5 * (rnd(k, 68) - 0.5), y - 1.5, sink_wall_z(y, x) - 2.2), 0.4, 0.4, col("timber_dk"))
+    # the comb over the lane: a timber gantry with legs on the caisson lip (r 44) and behind the ring (r 64), cap beams
+    # at y -83, and a hex comb hung from the front beam facing the anchor; nothing in the lane below SINK_LANE_TOP
+    gx, gz0, gz1, gy = 10.5, 42.6, 63.5, -83.0
+    for sx in (-1, 1):
+        for z in (gz0, gz1):
+            beam(e, (sx * gx, SINK_FLOOR, z), (sx * gx, gy, z), 0.7, 0.7, col("timber"))
+        beam(e, (sx * gx, gy, gz0 - 0.4), (sx * gx, gy, gz1 + 0.4), 0.8, 0.9, col("timber_dk"))
+        beam(e, (sx * gx, gy - 4.0, gz1), (sx * gx, gy - 0.5, gz1 - 3.5), 0.4, 0.4, col("timber_dk"))
+        beam(e, (sx * gx, gy - 4.0, gz0), (sx * gx, gy - 0.5, gz0 + 3.5), 0.4, 0.4, col("timber_dk"))
+        box(e, (sx * gx - 0.35, gy + 0.45, gz1 - 0.35), (sx * gx + 0.35, gy + 0.95, gz1 + 0.35), col("amber"))
+    for z in (gz0, 44.6, gz1):
+        beam(e, (-gx - 0.4, gy, z), (gx + 0.4, gy, z), 0.8, 0.9, col("timber_dk"))
+    box(sto, (-8.0, -93.0, 44.6), (8.0, gy - 0.45, 45.0), shade("basalt_dk", 0.8, (0, 69), 0.0))
+    for i in range(-4, 5):
+        for j in range(6):
+            x = i * 1.9 + (0.95 if j % 2 else 0.0)
+            y = -92.0 + j * 1.65
+            if abs(x) > 7.0 or rnd(i, j, 70) < 0.12:
+                continue
+            depth = 0.4 + 0.8 * rnd(i, j, 71)
+            dist = math.sqrt(x * x + (y - SINK_ANCHOR[1]) ** 2 + (44.6 - depth - SINK_ANCHOR[2]) ** 2)
+            if dist < CLEAR + 0.3:
+                depth = max(0.2, depth - (CLEAR + 0.3 - dist))
+            hexcell(sto, (x, y, 44.6), (0.0, 0.0, -1.0), 0.92, depth, shade("basalt_dk", 1.0, (i, j, 72), 0.12),
+                    rim=(ln, col("lens")) if abs(x) < 4.0 and rnd(i, j, 73) > 0.3 else None, open_end=rnd(i, j, 74) > 0.5)
 
     # ---- mid: coping, coarse strata, the ring deck, the caisson band, the headgear's outline
     sink_walls(mid["stone"], 6, 5, 0.08, wall_colour, y_top=-0.6)
@@ -1185,16 +1265,20 @@ def build_sinkhole():
     annulus(mid["steel"], (0.0, 0.0), SINK_POOL[0] + 0.15, SINK_POOL[0] + 1.1, SINK_FLOOR, SINK_FLOOR + 0.08, 32, lambda i: col("steel"), sides=False)
     for sx in (-1, 1):
         box(mid["stone"], (min(sx * 126.1, sx * 129.0), -0.6, -50.0), (max(sx * 126.1, sx * 129.0), 0.08, 48.0), col("basalt"))
-    box(mid["stone"], (-104.0, -0.6, 50.1), (104.0, 0.08, 53.0), col("basalt"))
+    for sx in (-1, 1):
+        box(mid["stone"], (min(sx * 47.1, sx * 104.0), -0.6, 50.1), (max(sx * 47.1, sx * 104.0), 0.08, 53.0), col("basalt"))
+    sink_alcove_rim(mid["stone"], 9.0, lambda k: col("basalt"))
     for z in (-11.0, 11.0):
-        for x in (78.0, 94.0):
-            beam(mid["enamel"], (x, SINK_FLOOR - 1.0, z), (86.0, -72.0, z), 1.0, 1.0, col("timber"), caps=False)
-    beam(mid["enamel"], (86.0, -71.4, -12.0), (86.0, -71.4, 12.0), 1.0, 1.2, col("timber_dk"))
+        for x in (SINK_HEAD_X - 8.0, SINK_HEAD_X + 8.0):
+            beam(mid["enamel"], (x, SINK_FLOOR - 1.0, z), (SINK_HEAD_X, -72.0, z), 1.0, 1.0, col("timber"), caps=False)
+    beam(mid["enamel"], (SINK_HEAD_X, -71.4, -12.0), (SINK_HEAD_X, -71.4, 12.0), 1.0, 1.2, col("timber_dk"))
 
     # ---- far: the rim coping as a dark lip and the cap band under it, so the U reads from the plateau
     for sx in (-1, 1):
         box(far["stone"], (min(sx * 126.1, sx * 129.0), -0.6, -50.0), (max(sx * 126.1, sx * 129.0), 0.08, 48.0), col("basalt"))
-    box(far["stone"], (-104.0, -0.6, 50.1), (104.0, 0.08, 53.0), col("basalt"))
+    for sx in (-1, 1):
+        box(far["stone"], (min(sx * 47.1, sx * 104.0), -0.6, 50.1), (max(sx * 47.1, sx * 104.0), 0.08, 53.0), col("basalt"))
+    sink_alcove_rim(far["stone"], 15.0, lambda k: col("basalt"))
     sink_walls(far["stone"], 4, 2, 0.08, lambda name, i, j, y: col("basalt_dk") if j else col("lime"), y_top=-0.6, y_bot=-20.0)
 
     # ---- shells: plank seams, lamp brackets, rubble at the wall foot (1); caisson rivets and drips (2)
@@ -1209,14 +1293,15 @@ def build_sinkhole():
         wall = k % 3
         sz = 0.2 + 0.25 * rnd(k, 71)
         if wall == 2:
-            p = (-110.0 + 220.0 * rnd(k, 72), SINK_FLOOR, sink_wall_z(SINK_FLOOR) - 0.8 - 2.0 * rnd(k, 73))
+            x = -110.0 + 220.0 * rnd(k, 72)
+            p = (x, SINK_FLOOR, sink_wall_z(SINK_FLOOR, x) - 0.8 - 2.0 * rnd(k, 73))
         else:
             sx = 1 if wall == 0 else -1
             p = (sx * (sink_wall_x(SINK_FLOOR) - 0.8 - 2.0 * rnd(k, 73)), SINK_FLOOR, -40.0 + 85.0 * rnd(k, 72))
         s1.chunk(p, (sz * 1.6, sz, sz * 1.3), rnd(k, 74) * TAU, k, shade("basalt", 1.0, (k, 75), 0.1), jitter=0.2, top=0.7)
     for k in range(16):
         a = TAU * (k + 0.5) / 16
-        p = (48.4 * math.sin(a), SINK_FLOOR + 2.2, 48.4 * math.cos(a))
+        p = (LAMP_R * math.sin(a), SINK_FLOOR + 2.2, LAMP_R * math.cos(a))
         t = (math.sin(a), 0.0, math.cos(a))
         beam(s1, p, vadd(p, t, 0.6), 0.08, 0.08, col("iron"), caps=False)
     for k in range(96):
@@ -1675,7 +1760,11 @@ def check_card(rid, spec):
         assert not inside, (rid, "geometry in the pool cylinder", inside[:3])
         deck = max(v[1] for s, _ in spec["exempt"].surfs() for v in s.v)
         assert deck <= SINK_FLOOR + FLUSH, (rid, "ring deck not flush", deck)
-        assert all(v[0] > 70.0 for v in spec["col"].v), (rid, "the sinkhole collides only at the headgear (no pilot line within 20 m)")
+        assert all(v[0] > 88.0 for v in spec["col"].v), (rid, "the sinkhole collides only at the headgear (no pilot line within 20 m)")
+        posts = [(-20.0, 43.0), (20.0, 43.0)]
+        lane = [v for v in every if SINK_RING[0] < math.hypot(v[0], v[2]) < SINK_RING[1] and SINK_FLOOR + 0.2 < v[1] < SINK_LANE_TOP
+                and min(math.hypot(v[0] - px, v[2] - pz) for px, pz in posts) > 2.5]
+        assert not lane, (rid, "geometry in the ring lane under its clear height", lane[:3])
         out["ring_deck_proud_m"] = round(deck - SINK_FLOOR, 3)
     if rid == "landmark_sky_island":
         tip, piv = spec["empties"]["tip"], spec["empties"]["pivot"]
