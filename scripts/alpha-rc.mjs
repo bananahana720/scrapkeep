@@ -170,6 +170,8 @@ export function judgeRedteam(findings, head, previous) {
   const shaped = (f) => f && Array.isArray(f.findings) && Array.isArray(f.runs) && typeof f.commit === "string";
   if (!shaped(findings) || findings.runs.length === 0) return { status: "fail", note: "--redteam is not a red team findings.json (findings, runs, commit)" };
   if (!shaped(previous) || !Array.isArray(previous.carry)) return { status: "fail", note: "--carry-from is not a red team findings.json with a carry list" };
+  if (previous.commit === findings.commit || !(Number(previous.wave) < Number(findings.wave)))
+    return { status: "fail", note: `--carry-from (wave ${previous.wave}) is not an earlier wave than --redteam (wave ${findings.wave})` };
   if (!head) return { status: "not run", note: "no git HEAD to match the findings against" };
   if (findings.commit !== head) return { status: "not run", note: `findings are for ${findings.commit.slice(0, 8) || "no commit"}, candidate is ${head.slice(0, 8)}` };
   if (findings.quick) return { status: "not run", note: "a --quick pass does not count for a release candidate" };
@@ -280,15 +282,18 @@ export function runProcess(step, timeoutMs = STEP_TIMEOUT_MS) {
       clearTimeout(timer);
       resolve({ exit: null, output, error: error.message });
     });
-    child.on("exit", (code) => {
+    let done = false;
+    const settle = (code) => {
+      if (done) return;
+      done = true;
       clearTimeout(timer);
-      // Give the pipes a moment to drain, then let go even if an orphan still holds them.
-      setTimeout(() => {
-        child.stdout.destroy();
-        child.stderr.destroy();
-        resolve({ exit: timedOut ? null : code, output });
-      }, 200);
-    });
+      child.stdout.destroy();
+      child.stderr.destroy();
+      resolve({ exit: timedOut ? null : code, output });
+    };
+    // close fires once the pipes have drained; an orphan holding them open gets a short grace.
+    child.on("close", settle);
+    child.on("exit", (code) => setTimeout(() => settle(code), 2000));
   });
 }
 
@@ -318,7 +323,7 @@ export function renderPage({ head, startedAt, cloud, results, outcome }) {
   return lines.join("\n") + "\n";
 }
 
-export async function runAlphaRc(args, { git = gitState(), run = runProcess, launch = launchAppImage, find, log = console.log, outDir } = {}) {
+export async function runAlphaRc(args, { git = gitState(), recheck = gitState, run = runProcess, launch = launchAppImage, find, log = console.log, outDir } = {}) {
   const startedAt = new Date().toISOString();
   const results = [];
   if (outDir) mkdirSync(outDir, { recursive: true });
@@ -352,6 +357,9 @@ export async function runAlphaRc(args, { git = gitState(), run = runProcess, lau
     log(`alpha:rc ${MARK[result.status]} ${step.label}: ${cell(result.note)}`);
     results.push(result);
   }
+  const after = recheck?.();
+  if (after && git.clean && !after.clean)
+    results.push({ id: "tree-after", label: "Clean checkout after the run", criterion: "the page names what was tested", status: "fail", note: `a step changed tracked files: ${after.dirty.slice(0, 5).join(", ")}`, ms: 0 });
   const outcome = verdict(results, args);
   const page = renderPage({ head: git.head, startedAt, cloud: args.cloud, results, outcome });
   if (outDir) {

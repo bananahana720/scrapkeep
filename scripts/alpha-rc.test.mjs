@@ -2,7 +2,7 @@
 // every step passed on a clean tree.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -28,6 +28,8 @@ const head = "79161558ad10650a38fae04d95908db003d59097";
 const git = { head, clean: true, dirty: [], commitTime: 1_000 };
 const pass = (extra = {}) => ({ wave: 21, commit: head, quick: false, runs: [{ id: "speedrunner-tally-2600", pilot: "tally", seed: 2600 }], findings: [], carry: [], ...extra });
 const previous = { wave: 20, commit: "c".repeat(40), runs: [{ id: "x" }], findings: [], carry: [] };
+// The w15 pass stands in as an earlier wave for the real-file test.
+const wave14 = { ...previous, wave: 14 };
 
 function inputs() {
   const dir = tmp();
@@ -42,7 +44,7 @@ function inputs() {
   return { dir, flags: [`--capture=${capture}`, `--redteam=${redteam}`, `--carry-from=${carryFrom}`, `--appimage=${appimage}`] };
 }
 
-const allPass = { git, run: async () => ({ exit: 0, output: "[]" }), launch: async () => ({ status: "pass", note: "menu", ms: 900, output: "" }), find: () => null, log: () => {} };
+const allPass = { git, recheck: () => git, run: async () => ({ exit: 0, output: "[]" }), launch: async () => ({ status: "pass", note: "menu", ms: 900, output: "" }), find: () => null, log: () => {} };
 
 test("parseArgs rejects unknown flags and unknown skip ids", () => {
   assert.throws(() => parseArgs(["--nope"]), /unknown argument/);
@@ -92,6 +94,9 @@ test("a dirty tree or a missing HEAD keeps it off GO", async () => {
   assert.equal(dirty.outcome.verdict, "NO-GO");
   assert.match(dirty.results[0].note, /src\/game\.gd/);
   assert.equal(judgeTree({ head: null, clean: false, dirty: [] }).status, "not run");
+  const changed = await runAlphaRc(parseArgs(flags), { ...allPass, recheck: () => ({ ...git, clean: false, dirty: ["project.godot"] }) });
+  assert.equal(changed.outcome.verdict, "NO-GO");
+  assert.match(changed.results.at(-1).note, /project\.godot/);
 });
 
 test("a cloud run that passes everything is only a rehearsal", async () => {
@@ -159,6 +164,8 @@ test("red team: shape, commit, quick, blockers and carry replays", () => {
   assert.equal(judgeRedteam({}, head, previous).status, "fail");
   assert.equal(judgeRedteam(pass({ runs: [] }), head, previous).status, "fail");
   assert.equal(judgeRedteam(pass(), head, {}).status, "fail");
+  assert.match(judgeRedteam(pass(), head, { ...previous, wave: 21 }).note, /not an earlier wave/);
+  assert.equal(judgeRedteam(pass(), head, { ...previous, commit: head }).status, "fail");
   assert.equal(judgeRedteam(pass({ commit: "" }), head, previous).status, "not run");
   assert.equal(judgeRedteam(pass({ commit: head.slice(0, 8) }), head, previous).status, "not run");
   assert.equal(judgeRedteam(pass(), null, previous).status, "not run");
@@ -172,8 +179,8 @@ test("red team: shape, commit, quick, blockers and carry replays", () => {
 const W15 = "/mnt/project-files/redteam/w15/findings.json";
 test("the real w15 findings: zero blockers on their own commit, not run on another", { skip: !existsSync(W15) && "w15 findings not mounted" }, () => {
   const w15 = JSON.parse(readFileSync(W15, "utf8"));
-  assert.equal(judgeRedteam(w15, w15.commit, { ...previous, carry: [] }).status, "pass");
-  assert.equal(judgeRedteam(w15, "cf63e622" + "0".repeat(32), { ...previous, carry: [] }).status, "not run");
+  assert.equal(judgeRedteam(w15, w15.commit, wave14).status, "pass");
+  assert.equal(judgeRedteam(w15, "cf63e622" + "0".repeat(32), wave14).status, "not run");
 });
 
 test("gitState reads HEAD and dirtiness through git, including in a linked worktree", () => {
@@ -189,6 +196,7 @@ test("gitState reads HEAD and dirtiness through git, including in a linked workt
   assert.equal(gitState(wt).head, sha);
   writeFileSync(path.join(wt, "stray"), "");
   assert.deepEqual(gitState(wt).dirty, ["stray"]);
+  rmSync(wt, { recursive: true, force: true });
   assert.equal(gitState(tmp()).head, null);
 });
 
