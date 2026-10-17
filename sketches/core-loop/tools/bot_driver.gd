@@ -230,6 +230,12 @@ const FACE_TILT := 0.866
 # and lands on the net, a 20 to 40 s climb back to the Warden.
 const SLING_STEP := 0.05
 const SLING_FLIGHT := 4.0
+const MIND_STAGE := 5
+# A fight climb on the Mind stage that has not reached its target after MIND_CLIMB_GIVE_UP seconds
+# drops the end-height test for the rest of the stage (ISLE-SKIRT): that test reads the east skirt
+# of the Hanging Isle's ramp as one gentle step, and Tarn (completionist seed 36003) shuttled on it
+# from t=100 s to the limit. The Mind fight's own climbs back to the hand finish well inside it.
+const MIND_CLIMB_GIVE_UP := 45.0
 # Specials.
 const CROWD := 2
 const CROWD_RADIUS := 12.0
@@ -386,6 +392,9 @@ var _climb: Array[Vector3] = []
 var _climb_for := ""
 var _fight_climb: Array[Vector3] = []
 var _fight_climb_clock := 0.0
+var _fight_climb_held := 0.0
+var _fight_climb_tick := -1
+var _mind_slope_spent := false
 var _route_lips: Array[Vector3] = []
 var _plate_hand := {}
 var _ignore_walls := false
@@ -774,6 +783,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_climb_for = ""
 	_fight_climb = []
 	_fight_climb_clock = 0.0
+	_fight_climb_held = 0.0
+	_fight_climb_tick = -1
+	_mind_slope_spent = false
 	_wander_clock = 0.0
 	_committed = policy == "skipper"
 	_planned = false
@@ -1252,8 +1264,6 @@ func _approach(s, ball: Vector3) -> Vector3:
 # Each step's rise is read on both of its halves (the heights are sampled at half a step), so a
 # face narrower than CLIMB_STEP is not averaged into a gentle slope: the Highdraft ramp's 3 m side
 # skirt passed as a climbable step and held Tarn below the Warden's island for a whole stage.
-# The Mind stage kept the end-height test for a while (MIND-ROUTE), and the east skirt of the
-# Hanging Isle's ramp held Tarn (completionist seed 36003) the same way, from t=100 s to the limit.
 # A park kicker is a placed wedge the terrain's heights do not hold, so its ramp is laid over them
 # and its lip carries a one-way launch edge KICKER_LAUNCH past it: the Flume's warden exit rises
 # 14 m up drum_lip_kicker and flies its 3 m gap to the gate lip, a way the heights alone never had.
@@ -1264,6 +1274,7 @@ func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vec
 	var nx := int(ceilf((hi.x - lo.x) / CLIMB_STEP)) + 1
 	var nz := int(ceilf((hi.y - lo.y) / CLIMB_STEP)) + 1
 	var hx := 2 * nx - 1
+	var legacy := _mind_slope()
 	var graph := AStar2D.new()
 	graph.reserve_space(nx * nz)
 	var half := PackedFloat32Array()
@@ -1294,7 +1305,16 @@ func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vec
 				var drop := absf(hb - ha) / CLIMB_STEP
 				var high := a if ha > hb else b
 				graph.set_point_weight_scale(high, maxf(graph.get_point_weight_scale(high), 1.0 + drop))
-				if up <= slope + SLOPE_SLACK and down <= slope + SLOPE_SLACK:
+				if legacy:
+					# Mind stage: the pre-13c94abc test, one slope from the end heights.
+					up = (hb - ha) / (run * 2.0)
+					if absf(up) <= slope:
+						graph.connect_points(a, b)
+					elif up > 0.0:
+						graph.connect_points(b, a, false)
+					else:
+						graph.connect_points(a, b, false)
+				elif up <= slope + SLOPE_SLACK and down <= slope + SLOPE_SLACK:
 					graph.connect_points(a, b)
 				elif up <= slope + SLOPE_SLACK:
 					graph.connect_points(a, b, false)
@@ -2202,6 +2222,12 @@ func _climbing(ball: Vector3, at: Vector3) -> bool:
 
 # The next point on the climb to a fight target above the ball, or the target when no way up is found.
 func _fight_way_up(ball: Vector3, at: Vector3, delta: float) -> Vector3:
+	if _fight_climb_tick != ticks:
+		_fight_climb_held = _fight_climb_held + delta if _fight_climb_tick == ticks - 1 else delta
+		_fight_climb_tick = ticks
+	if _fight_climb_held > MIND_CLIMB_GIVE_UP and _in_mind_stage() and not _mind_slope_spent:
+		_mind_slope_spent = true
+		_fight_climb_clock = 0.0
 	_fight_climb_clock -= delta
 	if _fight_climb_clock <= 0.0:
 		_fight_climb = _climb_route_any(ball, at)
@@ -2811,6 +2837,17 @@ func _turret(aim, delta: float) -> void:
 			source.press["jump_pressed"] = true
 		_plant_state = "idle"
 		_plant_cool = PLANT_EVERY
+
+
+# The Hanging Isle (stage 5) holds the Mind fight: its small-ball pin was measured with the
+# end-height slope test, and the two-half test moves that median (MIND-ROUTE, 2026-10-16).
+func _in_mind_stage() -> bool:
+	return int(_note.get("stage", 0)) == MIND_STAGE
+
+
+# The end-height test plans the Mind stage's climbs until one runs past MIND_CLIMB_GIVE_UP.
+func _mind_slope() -> bool:
+	return _in_mind_stage() and not _mind_slope_spent
 
 
 func _sling_lands_low() -> bool:
