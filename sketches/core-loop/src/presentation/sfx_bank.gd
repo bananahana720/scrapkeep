@@ -239,7 +239,19 @@ static func resolve(sound: String, pitch: float) -> Dictionary:
 	var index := clampi(rung, 0, files.size() - 1)
 	if sound == "rarity_bell":
 		index = 0 if rung <= 0 else (1 if rung < 5 else 2)
+	# A tier whose file is missing plays the base recipe on the caller's rung, pitch kept.
+	if not _has_file(files[index]):
+		return {"id": sound, "pitch": pitch}
 	return {"id": files[index], "pitch": 1.0}
+
+
+static var _file_present := {}
+
+
+static func _has_file(id: String) -> bool:
+	if not _file_present.has(id):
+		_file_present[id] = ResourceLoader.exists(event_path(id))
+	return _file_present[id]
 
 
 # The pentatonic rung whose ratio is nearest this pitch ratio.

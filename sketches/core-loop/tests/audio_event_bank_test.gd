@@ -66,5 +66,11 @@ func _tiers() -> void:
 	var rarity := {0: "rarity_bell_common", 4: "rarity_bell_rare", 5: "rarity_bell_epic", 7: "rarity_bell_epic"}
 	for rung in rarity:
 		t.eq("rarity rung %d rings %s" % [rung, rarity[rung]], SfxBank.resolve("rarity_bell", Harmony.ratio(Harmony.pentatonic_step(rung)))["id"], rarity[rung])
+	# A missing tier file plays the base recipe on the caller's rung, pitch kept.
+	var rung3 := Harmony.ratio(Harmony.pentatonic_step(2))
+	SfxBank._file_present["scrap_tick_3"] = false
+	var fallback := SfxBank.resolve("scrap_tick", rung3)
+	SfxBank._file_present.erase("scrap_tick_3")
+	t.check("a missing tier file keeps the rung's pitch on the base recipe", fallback["id"] == "scrap_tick" and fallback["pitch"] == rung3)
 	var plain := SfxBank.resolve("hurt", 1.25)
 	t.check("an untiered key passes through", plain["id"] == "hurt" and plain["pitch"] == 1.25)
