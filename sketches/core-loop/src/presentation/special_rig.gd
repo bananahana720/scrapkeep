@@ -7,6 +7,7 @@ extends Node
 # A tell returns to the body's loop when it ends; a break holds its last pose for the death.
 # Presentation only: nothing here moves a collider or the committed telegraph.
 
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const CLIPS := {
 	"foreman": {"loop": "idle", "tell": "tell", "break": "break"},
 	"dispatcher": {"loop": "idle", "tell": "tell", "break": "break"},
@@ -61,6 +62,11 @@ func _play(clip: String, loop: bool) -> void:
 	if loop:
 		_loop = clip
 		player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		if EnemyMotion.motion_scale <= 0.0:
+			# Reduced motion: no idle, as enemy_motion.gd. Tells and breaks still play; they are reads.
+			skeleton.reset_bone_poses()
+			player.stop()
+			return
 	# The importer drops constant tracks, so a clip that never keys a bone would inherit the
 	# last clip's pose for it. Every switch starts from rest.
 	skeleton.reset_bone_poses()

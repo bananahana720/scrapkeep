@@ -129,6 +129,7 @@ var _idle_pose := Basis.IDENTITY
 var _posed := ""
 var _posing := false
 var _posed_struck := false
+var _posed_instance := -1
 var _release_age := -1.0
 var _idle_clock := -1.0
 var _idle_period := 0.0
@@ -289,6 +290,10 @@ func _attack_pose() -> Basis:
 	var pose := EventKinds.attack_pose(String(_atk["row"]))
 	if not WindupPoses.has_pose(pose):
 		return Basis.IDENTITY
+	if int(_atk["instance"]) != _posed_instance:
+		# A new attack opened straight off the last one: its strike is its own.
+		_posed_instance = int(_atk["instance"])
+		_posed_struck = false
 	_posed = pose
 	_posing = true
 	_release_age = -1.0
