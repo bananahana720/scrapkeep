@@ -48,7 +48,7 @@ const LIP_SCALE := 0.6
 const LANDING_ATTACK := 1.2
 # The Warden's posture gains, scaled so the first stagger lands in the 45 to 70 s band
 # (Andrew, 19:42Z 17 Oct). Before the attacks, bots staggered it at 23 to 36 s.
-const POSTURE_GAIN := 0.6
+const POSTURE_GAIN := 0.565
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
 
 var floors: WakingFloors
@@ -85,6 +85,7 @@ var _carved_at := -INF
 var _base_plating := 0.0
 # Families ridden out while carving, for the Wall Is Home find.
 var _banked := {}
+var _pulse_charging := false
 
 
 func setup(ctx_ref) -> void:
@@ -130,6 +131,7 @@ func exit_arena() -> void:
 	_dropped_at = -INF
 	_breach_floors.clear()
 	_clear_attacks()
+	landings.clear()
 	_family = ""
 	_last_warn = -INF
 	warnings.clear()
@@ -137,6 +139,7 @@ func exit_arena() -> void:
 	_jammed_until = -INF
 	_carved_at = -INF
 	_banked.clear()
+	_pulse_charging = false
 	super()
 
 
@@ -166,6 +169,7 @@ func _physics_process(delta: float) -> void:
 			_clear_attacks()
 			_attack_clock = LANDING_ATTACK
 	phase = clampi(floors.shattered + 1, 1, WakingAttacks.PIT_PHASE)
+	_read_pulse()
 	_read_ball()
 	_step_attacks(delta)
 	_lay_pending()
@@ -179,9 +183,27 @@ func _physics_process(delta: float) -> void:
 	_commit_attack()
 
 
-# A warning may start now: none started in the last GAP seconds.
+# A warning may start now: none started in the last GAP seconds, and the Warden's own pulse
+# ring is not due within GAP (warden.gd commits it PULSE_TELEGRAPH before each PULSE_CYCLE).
 func _warn_open() -> bool:
-	return clock - _last_warn >= GAP - 0.0001
+	return clock - _last_warn >= GAP - 0.0001 and not _pulse_due()
+
+
+func _pulse_due() -> bool:
+	if not is_instance_valid(warden) or warden.staggered() or warden.state_name() == "charging":
+		return false
+	# A charge a driver holds back past its due time stops holding warnings after GAP more.
+	var due: float = Warden.PULSE_CYCLE - Warden.PULSE_TELEGRAPH
+	return warden._pulse_clock >= due - GAP and warden._pulse_clock < due + GAP and warden.flat_to_ball().length() <= warden.reach
+
+
+# The Warden's pulse ring is a warning too: its start holds the next one off for GAP.
+func _read_pulse() -> void:
+	var charging: bool = is_instance_valid(warden) and warden.state_name() == "charging"
+	if charging and not _pulse_charging:
+		_last_warn = clock
+		warnings.append({"id": "warden_pulse", "at": clock})
+	_pulse_charging = charging
 
 
 func _warned(id: String, seconds: float) -> void:
@@ -250,7 +272,7 @@ func _step_attacks(delta: float) -> void:
 				continue
 			h.step(delta)
 			if h.is_live() and h.contains(ball):
-				if on_floor and not attack["landed"]:
+				if on_floor and not state.carving and not attack["landed"]:
 					attack["landed"] = true
 					landings.append({"id": h.attack_id, "frame": Engine.get_physics_frames()})
 					ctx.run.damage(float(WakingAttacks.DAMAGE[attack["family"]]), "waking_%s" % attack["family"])
