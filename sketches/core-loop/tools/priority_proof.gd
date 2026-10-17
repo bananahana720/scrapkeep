@@ -137,6 +137,7 @@ var _cleared_s := -1.0
 var _wipes := 0
 var _warnings := 0
 var _dispatched := 0
+var _joined := 0
 var _model_clock := 0.0
 var _scrap_serial := 0
 var _counter_serial := 0
@@ -413,6 +414,7 @@ func _physics_process(delta: float) -> bool:
 			if _spawned:
 				_hits += 1
 				_taken += amount)
+		_game.ctx.events.enemy_spawned.connect(_on_enemy_spawned)
 		_game.run.run_seed_override = _run_seed
 		_driver.start()
 		return false
@@ -447,6 +449,15 @@ func _physics_process(delta: float) -> bool:
 
 var _start_s := 0.0
 var _grounded_s := 0.0
+
+
+# Whatever the encounter makes after it starts (a Dispatcher's drop, a Splitter's pieces)
+# joins the crew, toughened like the rest: the bot fights it and the clear waits for it. A
+# Splitter piece scales its health from the toughened chaser, so --hp-mult carries through.
+func _on_enemy_spawned(enemy: Node3D, _kind: String) -> void:
+	if _spawned and _driver.special != null and enemy != _driver.special and enemy not in _driver.crew:
+		_driver.crew.append(_toughen(enemy))
+		_joined += 1
 
 
 func _encounter_s() -> float:
@@ -522,7 +533,7 @@ func _step_model(delta: float) -> void:
 				standing += 1
 		if standing < int(model["alive_cap"]):
 			var from: Vector3 = _driver.special.global_position
-			_driver.crew.append(_toughen(_game.combat.spawn_enemy(String(model["spawn"]), _drop(from + Vector3(2.5, 0.0, 0.0)))))
+			_game.combat.spawn_enemy(String(model["spawn"]), _drop(from + Vector3(2.5, 0.0, 0.0)))
 			_dispatched += 1
 
 
@@ -538,7 +549,7 @@ func _record() -> void:
 			"class": _driver.class_id(), "outcome": _driver.outcome, "hull_lost": snappedf(lost, 0.1),
 			"hits": _hits, "damage_taken": snappedf(_taken, 0.1), "clear_s": snappedf(_cleared_s, 0.01),
 			"special_dead_s": snappedf(_special_dead_s, 0.01), "crew_spawned": _driver.crew.size(),
-			"crew_killed": killed, "wipes": _wipes, "warnings": _warnings, "dispatched": _dispatched,
+			"crew_killed": killed, "wipes": _wipes, "warnings": _warnings, "dispatched": _dispatched, "joined": _joined,
 			"encounter_s": snappedf(_encounter_s() if _spawned else 0.0, 0.01)}
 	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
 	file.store_string(JSON.stringify(row) + "\n")

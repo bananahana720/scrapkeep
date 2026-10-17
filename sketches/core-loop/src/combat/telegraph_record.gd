@@ -95,6 +95,8 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": ""},
 	"E24": {"kind": "kite_drone", "pre_shoot": 0.8, "cooldown": 2.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A dive that no knock interrupts: the mark lamp paints the spot 0.8 s before the 0.7 s dive."},
+	"E25": {"kind": "splitter", "pre_shoot": 1.0, "cooldown": 1.85, "radius": 4.5, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "A kill-first blast: the full second of fuse is the time to leave the ring or to take the Splitter clean from above."},
 }
 
 # Warden attacks keep their own timing (KF2 to KF4 report each one's charge, recovery and

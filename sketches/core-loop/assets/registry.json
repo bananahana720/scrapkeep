@@ -4224,7 +4224,7 @@
    "path": "res://assets/models/world_one/enemy_splitter.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "none (runtime integration pending; src/combat/splitter.gd, wave 18)",
+   "loader": "src/combat/splitter.gd:body_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_splitter.py",
     "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
@@ -4235,7 +4235,7 @@
    "path": "res://assets/models/world_one/enemy_splitter_piece.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "none (runtime integration pending; src/combat/splitter.gd pieces, wave 18)",
+   "loader": "src/combat/splitter.gd:piece_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_splitter_piece.py",
     "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"

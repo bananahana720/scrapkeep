@@ -218,6 +218,11 @@ func _w9_tricks() -> void:
 	fleet.holds.snap(crew, "jump")
 	_report("deck_winch", _combat.discovered.has("deck_winch") and hooked and crew.broken_by == "jump",
 		"an anchor crew hooked the ball (%s), then a jump slipped it (%s)" % [hooked, crew.broken_by])
+	var splitter: Node3D = _w9_spawn("splitter", home + Vector3(-8.0, 0.0, -6.0))
+	splitter.hp = 1.0
+	_combat.strike(splitter, "stomp", 30.0)
+	_report("split_pop", _combat.discovered.has("split_pop") and splitter.get_meta("split", true) == false,
+		"a stomp killed a Splitter clean (split %s)" % splitter.get_meta("split", null))
 	for node in [rig, cutter, crew]:
 		if is_instance_valid(node):
 			node.queue_free()
