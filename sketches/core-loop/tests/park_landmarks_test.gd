@@ -7,7 +7,8 @@ extends SceneTree
 # collider of any kind, so no route, line or posture band moves. Five stages (all but the pit) carry one ancient beam:
 # unshaded uranium green, fog off, no shadow, its bottom at least CLEAR_ABOVE_M over the Warden's anchor, its top over
 # sight_top; past 90% of the far plane it draws as its impostor, scaled about the eye so it projects the same. The
-# headframe's legs reach the baked ground and keep out of the hive well; the spire keeps its 30 m waist to y 60.
+# proxy headframe's legs reach the baked ground and keep out of the hive well, and the proxy spire keeps its 30 m waist
+# to y 60 (the GLB recipe pins its own, tools/blender/park/landmarks.py).
 # The rows themselves place exactly as before: ParkRows holds placed_rows plus the one landmark.
 
 const T := preload("res://tests/support/t.gd")
@@ -51,7 +52,7 @@ func _run() -> void:
 		t.near("%s landmark stands on its datum" % map_id, node.position.y, DATUM[map_id], 0.001)
 		_proxy(map_id, mark, node)
 		_beam(map_id, mark, node)
-		if map_id == "park_pit":
+		if map_id == "park_pit" and node.get_meta("landmark_proxy", false):
 			_headframe(node, ground)
 		elif map_id == "park_islands":
 			var tip := node.position.y - WardenMind.PIVOT_HEIGHT

@@ -792,7 +792,8 @@ static func _relative(node: Node3D, top: Node) -> Transform3D:
 # stamped row places its node and ride sensor but no solid: the stamp replaces it (PARK.md section 4: a landform is
 # "height stamp plus a recipe"; the stamp shapes the ground, and a greybox has no lip or rim to add). A greybox
 # anchor_field becomes a post field (place_anchor_field). A GLB recipe stands where place() puts it, its -col mesh on
-# top of the stamped ground. Only the park file's schema fields are read, never a stage's ids.
+# top of the stamped ground. Only the park file's schema fields are read, never a stage's ids. After the rows the
+# park's landmark places once (place_landmark): its GLB loads with the rows' GLBs, and placed_rows never names it.
 
 
 # The park rows that place something: recipe not "".
