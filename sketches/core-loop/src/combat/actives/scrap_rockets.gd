@@ -1,5 +1,6 @@
 extends RefCounted
 
+const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # The Scrap Rocket Rack (Spillway Works): pressure bottles packed with scrap whose noses are
@@ -72,7 +73,7 @@ func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	var side := forward.cross(Vector3.UP).normalized()
 	var targets: Array = combat._nearest_list(ball, LOCK_REACH, count)
 	for target in targets:
-		combat.effects.spark(target.global_position + Vector3.UP, COLOR)
+		combat.effects.spark(target.global_position + Vector3.UP, ActiveFx.peak(COLOR))
 	var dmg := damage()
 	for i in count:
 		var spread := 0.0 if count == 1 else lerpf(-1.0, 1.0, float(i) / float(count - 1))
@@ -141,7 +142,7 @@ func _burst(rocket: Dictionary, struck) -> void:
 	var at: Vector3 = rocket["pos"]
 	var dmg: float = rocket["damage"]
 	var push: Vector3 = rocket["vel"]
-	combat.effects.ring(at, BLAST_RADIUS, COLOR)
+	combat.effects.ring(at, BLAST_RADIUS, ActiveFx.peak(COLOR))
 	if struck != null:
 		combat._hit(struck, KIND, dmg, push, KNOCK, "", SOURCE)
 	for enemy in combat._nearest_list(at, BLAST_RADIUS, 16):

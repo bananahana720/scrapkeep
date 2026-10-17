@@ -1,5 +1,6 @@
 extends RefCounted
 
+const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -175,7 +176,7 @@ func _commit(at: Vector3, radius: float) -> Node3D:
 func _strike(ring: Node3D, dmg: float) -> void:
 	knocks += 1
 	ring.set_progress(1.0)
-	combat.effects.ring(ring.center, ring.radius, COLOR)
+	combat.effects.ring(ring.center, ring.radius, ActiveFx.peak(COLOR))
 	var struck: Array = []
 	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
 		if not enemy.is_dead() and ring.contains(enemy.global_position):

@@ -1,5 +1,6 @@
 extends RefCounted
 
+const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # The Lift Pulse (Highdraft Roosts): a cargo lift fan turned sideways. A fire commits one cone
@@ -171,7 +172,7 @@ func _draw(shape: Dictionary) -> void:
 	var forward: Vector3 = shape["forward"]
 	var reach: float = shape["range"]
 	var half := deg_to_rad(float(shape["half_angle"]))
-	combat.effects.ring(origin, FAN_RADIUS, COLOR)
+	combat.effects.ring(origin, FAN_RADIUS, ActiveFx.peak(COLOR))
 	var lift := Vector3.UP * 0.4
 	for side in [-1.0, 1.0]:
 		var edge := forward.rotated(Vector3.UP, half * side)

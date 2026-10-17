@@ -1,5 +1,6 @@
 extends RefCounted
 
+const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
@@ -107,7 +108,7 @@ func fire(rack, row: Dictionary, bonus: int) -> int:
 	var shells := 0
 	for entry in rings:
 		shells += int(entry["shells"])
-		combat.effects.spark(entry["at"] + Vector3.UP * 6.0, COLOR)
+		combat.effects.spark(entry["at"] + Vector3.UP * 6.0, ActiveFx.peak(COLOR))
 	return shells
 
 
@@ -133,7 +134,7 @@ func _land() -> void:
 		if not is_instance_valid(ring):
 			continue
 		var at: Vector3 = entry["at"]
-		combat.effects.ring(at, RADIUS, COLOR)
+		combat.effects.ring(at, RADIUS, ActiveFx.peak(COLOR))
 		var inside: Array = []
 		for enemy in combat.get_tree().get_nodes_in_group("enemy"):
 			if not enemy.is_dead() and ring.contains(enemy.global_position):
