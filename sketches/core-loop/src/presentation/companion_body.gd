@@ -25,6 +25,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const MODEL_DIR := "res://assets/models/companion/assembled/"
 const PART_DIR := "res://assets/models/companion/"
 const BARE := "bare"
+const CHASSIS_PATH := "res://assets/models/companion/spil9.glb"
 # The rig thread's grown-mark parts (PR #44, registry row spil9_marks): one Hull root whose
 # children are one mesh per mark. Without it the body builds greybox stand-ins.
 const MARKS_PATH := "res://assets/models/companion/spil9_marks.glb"
@@ -255,7 +256,7 @@ func _rebuild(seats: Array, key: String) -> void:
 	_snap = true
 	if key == "":
 		return
-	var path := model_path(seats, model_dir) if seats.size() == Companion.SOCKETS else PART_DIR + Companion.CHASSIS + ".glb"
+	var path := model_path(seats, model_dir) if seats.size() == Companion.SOCKETS else CHASSIS_PATH
 	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 	if packed != null:
 		_model = packed.instantiate() as Node3D
@@ -496,6 +497,10 @@ func _wire() -> void:
 # so it never covers a telegraph (tone bible guardrails; BIBLE.md:795).
 func _on_assisted(assist: Dictionary) -> void:
 	cue(String(assist.get("cue", "")))
+	if _anim != null and _anim.current_animation == "assist_rise":
+		for clip in ["assist_drop", "assist_return"]:
+			if _anim.has_animation(clip):
+				_anim.queue(clip)
 	assists_shown += 1
 	var host := get_parent()
 	if host == null:

@@ -90,15 +90,15 @@ const CUES := {
 	"escape_rearm": {"clip": "escape_rearm", "chirp": ""},
 	"stalled": {"clip": "idle", "chirp": ""},
 	"rejoined": {"clip": "follow", "chirp": "companion_ready"},
-	# The assist rows borrow the spring and prow clips until the rig thread adds assist clips.
+	# A called assist plays assist_rise; the body queues assist_drop and assist_return after it.
 	"assist_full": {"clip": "spring_arm", "chirp": "companion_ready"},
-	"assist_bonk": {"clip": "prow_response", "chirp": "companion_ready"},
-	"assist_arc": {"clip": "prow_response", "chirp": "companion_ready"},
-	"assist_pile": {"clip": "prow_response", "chirp": "companion_ready"},
-	"assist_slip": {"clip": "prow_response", "chirp": "companion_ready"},
-	"assist_anvil": {"clip": "prow_response", "chirp": "companion_ready"},
-	"assist_static": {"clip": "prow_response", "chirp": "companion_ready"},
-	"assist_bulldozer": {"clip": "prow_response", "chirp": "companion_ready"},
+	"assist_bonk": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_arc": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_pile": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_slip": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_anvil": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_static": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_bulldozer": {"clip": "assist_rise", "chirp": "companion_ready"},
 }
 
 # COMPANION-GROWS (Andrew's taps 16:36Z and 16:44Z, 17 Oct 2026; storyboard

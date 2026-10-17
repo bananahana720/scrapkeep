@@ -825,8 +825,8 @@
    "id": "spil9",
    "path": "res://assets/models/companion/spil9.glb",
    "class": "enemy",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd (load of this path)",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -836,8 +836,12 @@
    "id": "spil9_marks",
    "path": "res://assets/models/companion/spil9_marks.glb",
    "class": "enemy",
-   "ships": false,
-   "loader": "none (grown-mark add-ons for SPIL-9; seat via hero_assets._mount_on_bones, runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd (load of this path)",
+   "exception": {
+    "draws": 7
+   },
+   "exception_why": "five grown-mark parts in one GLB, hidden until their heft mark; all draw only at Mk V (COMPANION-GROWS, PR #45)",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py --asset spil9_marks"
    }
