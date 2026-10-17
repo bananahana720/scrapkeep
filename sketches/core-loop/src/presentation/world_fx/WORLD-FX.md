@@ -48,7 +48,11 @@ mast.add_child(fx)
 fx.set_level(relay.progress(), not relay.inside)   # motes thicken, column climbs faster; pauses when empty
 ```
 
-Weather and modifiers lay air over the world's own: `world_fx.set_overlay(kind)` with a weather sky id (`dust`, `storm_build`) or a modifier kind (`plenty`, `scarce`, `hidden`); `""` clears it. `mod_far` is an anchor set: a brass flare to drop at each of a "farthest anchors" modifier's specials.
+Weather and modifiers lay air over the world's own: `WorldFx.lay_overlay(kind)` with a weather sky id (`dust`, `storm_build`) or a modifier kind (`plenty`, `scarce`, `hidden`); `""` clears it. Weather rows already do this (`weather.gd` land and end).
+
+## Wiring in the game
+
+`game.gd` calls `WorldFx.hook(ctx)` once, beside the other scenery hooks. That installs one `WorldFx` under the game root. On each stage entry it swaps the air to that stage's world (a stage in the same world keeps its emitters), clears the overlay, and follows the chase camera and the ball. It rests (hidden, no new particles) on the title, class select, summary, death and victory screens. The graphics preset reaches it through `GraphicsPreset.register_dressing_host`, and `Game.set_reduced_motion` sets `WorldFx.preferred`. `mod_far` is an anchor set: a brass flare to drop at each of a "farthest anchors" modifier's specials.
 
 ## Sets for dressing
 
@@ -75,4 +79,4 @@ Cables: `add_child(WorldFxCable.make(a, b, sag_m))`. Decoration only: no collisi
 
 - Stills are from software rendering on greybox stand-ins. Look, scale and frame time need a check on the 4080 once the landmark GLBs (PRs #26, #28) are in.
 - Orbit velocity drew no visible spiral in the software renderer, so the sinkhole reads as inflow, not a whirlpool. Check on Vulkan before adding a tangential push.
-- Nothing is wired into the game yet. Wiring is a short list: install `WorldFx` with each stage, `bind` the chase camera and ball, forward weather `land`/`end` to `set_overlay`, fire the hooks above, and place the landmark anchors in dressing.
+- The world air and weather overlays are wired in. The event hooks (relay, modifiers, secrets, title, summaries) and the landmark anchors wait on the threads that own those systems and the dressing.

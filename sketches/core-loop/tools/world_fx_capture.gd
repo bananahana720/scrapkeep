@@ -189,7 +189,7 @@ func _define() -> Array:
 		"sun": Vector3(-60, 30, 0), "sun_colour": Color("ffc27a"), "sun_energy": 0.9}
 	var high := {"sky": Color("b8d3e3"), "ground": Color("c9d6dd"), "deck": true, "ambient": Color("b5c3cc"), "fog": 0.0012}
 	var shots: Array = []
-	shots.append(spill.merged({"name": "01-spillway-air", "world": 0, "cam": [Vector3(0, 5.5, 13), Vector3(0, 1.5, -6)], "frames": 60,
+	shots.append(spill.merged({"name": "01-spillway-air", "world": 1, "cam": [Vector3(0, 5.5, 13), Vector3(0, 1.5, -6)], "frames": 60,
 		"setup": func(s):
 			_water(s, Vector2(40, 24), Vector3(0, 0.05, -18))
 			_box(s, Vector3(40, 9, 3), Vector3(0, 4.5, -30), Palette.SANDSTONE)
@@ -197,10 +197,10 @@ func _define() -> Array:
 			_fx(s, "spill_pool", Vector3(-6, 0.08, -18))
 			_box(s, Vector3(0.6, 0.6, 3), Vector3(7, 4, -12), Palette.RUST)
 			_fx(s, "spill_pipe", Vector3(7, 3.6, -10.6))}))
-	shots.append(spill.merged({"name": "02-spillway-splash", "world": 0, "cam": [Vector3(4, 3.5, 8), Vector3(0, 1, -4)], "frames": 40,
+	shots.append(spill.merged({"name": "02-spillway-splash", "world": 1, "cam": [Vector3(4, 3.5, 8), Vector3(0, 1, -4)], "frames": 40,
 		"fire": [[30, "ball_splash", Vector3(0, 0.1, -4)]], "ball": Vector3(0, 0.6, -4),
 		"setup": func(s): _water(s, Vector2(30, 30), Vector3(0, 0.05, -4))}))
-	shots.append(dig.merged({"name": "03-dig-air", "world": 1, "cam": [Vector3(0, 4.5, 11), Vector3(0, 2, -8)], "frames": 60,
+	shots.append(dig.merged({"name": "03-dig-air", "world": 2, "cam": [Vector3(0, 4.5, 11), Vector3(0, 2, -8)], "frames": 60,
 		"setup": func(s):
 			_box(s, Vector3(30, 14, 2), Vector3(0, 7, -16), Color("6d523c"))
 			_box(s, Vector3(5, 1.2, 2.4), Vector3(-6, 9, -14), Color("5a4532"))
@@ -215,25 +215,25 @@ func _define() -> Array:
 			(lamp.material_override as StandardMaterial3D).emission_enabled = true
 			(lamp.material_override as StandardMaterial3D).emission = Palette.AMBER
 			_fx(s, "dig_lamp", Vector3(2, 4.3, -6))}))
-	shots.append(high.merged({"name": "04-highdraft-air", "world": 2, "cam": [Vector3(0, 6, 14), Vector3(0, 2, -10)], "frames": 70,
+	shots.append(high.merged({"name": "04-highdraft-air", "world": 3, "cam": [Vector3(0, 6, 14), Vector3(0, 2, -10)], "frames": 70,
 		"setup": func(s):
 			_cyl(s, 0.3, 14, Vector3(-9, 7, -12), Palette.CHARCOAL)
 			_cyl(s, 0.3, 11, Vector3(12, 5.5, -22), Palette.CHARCOAL)
 			s.add_child(Cable.make(Vector3(-9, 13.5, -12), Vector3(12, 10.8, -22), 3.5))
 			s.add_child(Cable.make(Vector3(-9, 12.0, -12), Vector3(12, 9.5, -22), 4.5))
 			_fx(s, "hd_cable", Vector3(1, 9.0, -17))}))
-	shots.append(spill.merged({"name": "05-landmark-dam", "world": 0, "cam": [Vector3(26, 10, 46), Vector3(0, 16, -20)], "frames": 110,
+	shots.append(spill.merged({"name": "05-landmark-dam", "world": 1, "cam": [Vector3(26, 10, 46), Vector3(0, 16, -20)], "frames": 110,
 		"sun": Vector3(-30, 150, 0),
 		"setup": func(s):
 			_box(s, Vector3(70, 40, 10), Vector3(0, 20, -30), Color("9f8d74"))
 			_water(s, Vector2(120, 80), Vector3(0, 0.05, 20))
 			_fx(s, "landmark_dam", Vector3(0, 38, -24.5))}))
-	shots.append(spill.merged({"name": "06-landmark-penstock", "world": 0, "cam": [Vector3(-26, 10, 40), Vector3(0, 22, -6)], "frames": 120,
+	shots.append(spill.merged({"name": "06-landmark-penstock", "world": 1, "cam": [Vector3(-26, 10, 40), Vector3(0, 22, -6)], "frames": 120,
 		"setup": func(s):
 			_cyl(s, 5, 46, Vector3(0, 23, -10), Color("8c7b67"))
 			_cyl(s, 1.2, 4, Vector3(5.5, 34, -10), Palette.RUST)
 			_fx(s, "landmark_penstock_tower", Vector3(6.5, 34, -10))}))
-	shots.append(dig.merged({"name": "07-landmark-headframe", "world": 1, "cam": [Vector3(18, 8, 30), Vector3(0, 14, -6)], "frames": 120,
+	shots.append(dig.merged({"name": "07-landmark-headframe", "world": 2, "cam": [Vector3(18, 8, 30), Vector3(0, 14, -6)], "frames": 120,
 		"setup": func(s):
 			for x in [-5.0, 5.0]:
 				_box(s, Vector3(0.8, 30, 0.8), Vector3(x, 15, -8), Palette.RUST)
@@ -241,20 +241,20 @@ func _define() -> Array:
 			_cyl(s, 3, 0.6, Vector3(0, 32, -8), Palette.CHARCOAL).rotation_degrees.x = 90
 			_fx(s, "landmark_headframe", Vector3(0, 26, -8))
 			_fx(s, "landmark_headframe", Vector3(0, 32, -8)).set_meta("note", "sheave")}))
-	shots.append(dig.merged({"name": "08-landmark-sinkhole", "world": 1, "cam": [Vector3(0, 48, 72), Vector3(0, -6, 0)], "frames": 150,
+	shots.append(dig.merged({"name": "08-landmark-sinkhole", "world": 2, "cam": [Vector3(0, 48, 72), Vector3(0, -6, 0)], "frames": 150,
 		"fog": 0.004,
 		"setup": func(s):
 			_cyl(s, 48, 2, Vector3(0, 0.6, 0), Color("2a211b"), 40)
 			_cyl(s, 36, 30, Vector3(0, -14, 0), Color("17120f"), 20)
 			_fx(s, "landmark_sinkhole", Vector3(0, 3.0, 0))}))
-	shots.append(high.merged({"name": "09-landmark-sky-island", "world": 2, "cam": [Vector3(40, 10, 70), Vector3(0, 30, -10)], "frames": 140,
+	shots.append(high.merged({"name": "09-landmark-sky-island", "world": 3, "cam": [Vector3(40, 10, 70), Vector3(0, 30, -10)], "frames": 140,
 		"setup": func(s):
 			_cyl(s, 18, 14, Vector3(0, 52, -10), Color("8a7f72"), 22)
 			_cyl(s, 14, 18, Vector3(0, 38, -10), Color("6e6458"), 2)
 			s.add_child(Cable.make(Vector3(10, 45, -10), Vector3(40, 0, -30), 6.0, 0.25, Palette.CABLE))
 			_fx(s, "landmark_sky_island", Vector3(0, 30, -10))
 			_fx(s, "landmark_sky_island", Vector3(10, 45, -10)).name = "TetherSparks"}))
-	shots.append(high.merged({"name": "10-landmark-spire", "world": 2, "cam": [Vector3(0, 30, 80), Vector3(0, 45, 0)], "frames": 120,
+	shots.append(high.merged({"name": "10-landmark-spire", "world": 3, "cam": [Vector3(0, 30, 80), Vector3(0, 45, 0)], "frames": 120,
 		"setup": func(s):
 			_cyl(s, 30, 40, Vector3(0, 20, 0), Color("7d7468"), 15)
 			_cyl(s, 15, 30, Vector3(0, 55, 0), Color("837a6e"), 26)
@@ -262,29 +262,29 @@ func _define() -> Array:
 			_fx(s, "landmark_spire", Vector3(0, 48, 0))}))
 	for step in [["11-relay-charge-30", 0.3, []], ["12-relay-charge-90", 0.9, []],
 			["13-relay-full", 1.0, [[48, "relay_full", Vector3(0, 0.5, 0)]]]]:
-		shots.append(spill.merged({"name": step[0], "world": 0, "cam": [Vector3(0, 18, 38), Vector3(0, 3, 0)], "frames": 60,
+		shots.append(spill.merged({"name": step[0], "world": 1, "cam": [Vector3(0, 18, 38), Vector3(0, 3, 0)], "frames": 60,
 			"level": [[1, step[1]]], "fire": step[2], "ball": Vector3(6, 1.1, 8),
 			"setup": func(s):
 				_cyl(s, 1.6, 9, Vector3(0, 4.5, 0), Palette.CHARCOAL, 0.8)
 				_cyl(s, 24, 0.1, Vector3(0, 0.06, 0), Color("a88c69"))
 				_fx(s, "relay", Vector3(0, 0.3, 0))}))
-	shots.append(spill.merged({"name": "14-relay-stake", "world": 0, "cam": [Vector3(0, 8, 20), Vector3(0, 4, 0)], "frames": 46,
+	shots.append(spill.merged({"name": "14-relay-stake", "world": 1, "cam": [Vector3(0, 8, 20), Vector3(0, 4, 0)], "frames": 46,
 		"fire": [[30, "relay_stake", Vector3(0, 9, 0)]], "ball": Vector3(4, 1.1, 6),
 		"setup": func(s): _cyl(s, 1.6, 9, Vector3(0, 4.5, 0), Palette.CHARCOAL, 0.8)}))
-	shots.append(spill.merged({"name": "15-modifier-shown", "world": 0, "cam": [Vector3(0, 4, 10), Vector3(0, 3, 0)], "frames": 42,
+	shots.append(spill.merged({"name": "15-modifier-shown", "world": 1, "cam": [Vector3(0, 4, 10), Vector3(0, 3, 0)], "frames": 42,
 		"fire": [[30, "modifier_shown", Vector3(0, 1, 0)]], "ball": Vector3(0, 1.1, 0), "setup": func(_s): pass}))
-	for o in [["16-overlay-plenty", "plenty", 0, spill], ["17-overlay-scarce", "scarce", 1, dig],
-			["18-overlay-hidden", "hidden", 0, spill], ["19-weather-dust", "dust", 0, spill],
-			["20-weather-storm", "storm_build", 2, high]]:
+	for o in [["16-overlay-plenty", "plenty", 1, spill], ["17-overlay-scarce", "scarce", 2, dig],
+			["18-overlay-hidden", "hidden", 1, spill], ["19-weather-dust", "dust", 1, spill],
+			["20-weather-storm", "storm_build", 3, high]]:
 		shots.append(o[3].merged({"name": o[0], "world": o[2], "overlay": o[1], "cam": [Vector3(0, 5, 12), Vector3(0, 1.5, -6)],
 			"frames": 70, "setup": func(s): _box(s, Vector3(8, 6, 8), Vector3(-10, 3, -18), Palette.SANDSTONE)}))
-	shots.append(spill.merged({"name": "21-secret-glint", "world": 0, "cam": [Vector3(3, 3, 12), Vector3(-2, 2, -6)], "frames": 70,
+	shots.append(spill.merged({"name": "21-secret-glint", "world": 1, "cam": [Vector3(3, 3, 12), Vector3(-2, 2, -6)], "frames": 70,
 		"ball": Vector3(4, 1.1, 2),
 		"setup": func(s):
 			_box(s, Vector3(10, 7, 2), Vector3(-2, 3.5, -10), Palette.SANDSTONE)
 			_box(s, Vector3(2.2, 3, 2.2), Vector3(-2, 1.5, -9), Palette.CHARCOAL)
 			_fx(s, "secret", Vector3(-2, 1.8, -7.6))}))
-	shots.append(spill.merged({"name": "22-secret-found", "world": 0, "cam": [Vector3(3, 3, 9), Vector3(-1, 2.5, -4)], "frames": 46,
+	shots.append(spill.merged({"name": "22-secret-found", "world": 1, "cam": [Vector3(3, 3, 9), Vector3(-1, 2.5, -4)], "frames": 46,
 		"fire": [[30, "secret_found", Vector3(-1, 1, -4)]], "ball": Vector3(-1, 1.1, -4),
 		"setup": func(s): _box(s, Vector3(10, 7, 2), Vector3(-2, 3.5, -10), Palette.SANDSTONE)}))
 	shots.append({"name": "23-camp", "sky": Color("2b3346"), "ground": Color("5e5240"), "ambient": Color("47506a"),

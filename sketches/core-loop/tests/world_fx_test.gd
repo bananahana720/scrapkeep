@@ -23,6 +23,7 @@ func _run() -> void:
 	_readability()
 	_budgets()
 	await _runtime()
+	await _wiring()
 	_anchors()
 	_cable()
 	quit(t.verdict())
@@ -134,7 +135,7 @@ func _runtime() -> void:
 	t.check("fire with nothing installed is a no-op", WorldFx.current == null)
 	var stage := Node3D.new()
 	root.add_child(stage)
-	var fx := WorldFx.install(stage, 2)
+	var fx := WorldFx.install(stage, 3)
 	t.check("install makes it current", WorldFx.current == fx)
 	t.eq("the Highdraft's air installs", fx.ambient.map(func(p): return p.get_meta("world_fx")), Specs.SETS["highdraft"])
 	t.check("ambient emits at the high preset", fx.ambient.all(func(p): return p.emitting and is_equal_approx(p.amount_ratio, 1.0)))
@@ -174,6 +175,92 @@ func _runtime() -> void:
 	stage.queue_free()
 	await process_frame
 	t.check("current clears when the stage goes", WorldFx.current == null)
+
+
+class FakeEvents extends Node:
+	signal stage_entered(stage: int, retry: bool)
+	signal flow_changed(state: String)
+	signal event_started(event_id: String)
+	signal event_ended(event_id: String, outcome: String)
+	signal event_progress(event_id: String, fraction: float)
+
+
+class FakeRelay:
+	var relay := Vector2(30, -40)
+	var ring_radius := 12.0
+	var inside := true
+
+
+class FakeDirector:
+	var relay := FakeRelay.new()
+	func offer(id: String) -> Dictionary:
+		return {"id": id, "model": relay} if id == "hold_the_relay" else {}
+
+
+class FakeTerrain:
+	func height(_x: float, _z: float) -> float:
+		return 5.0
+
+
+class FakeGame extends Node3D:
+	var world := {"events": FakeDirector.new()}
+
+
+class FakeStages:
+	static func world_of(stage: int) -> int:
+		return [1, 1, 2, 2, 3, 3][stage - 1]
+
+
+# The game's wiring (game.gd calls WorldFx.hook): the air follows the stage's world, weather lays its
+# overlay, and menus rest it.
+func _wiring() -> void:
+	for d in load("res://src/core/park_defs.gd").DEFS:
+		t.check("park world %s has air" % d["world"], Specs.WORLD_SETS.has(int(d["world"])))
+	var game := FakeGame.new()
+	root.add_child(game)
+	var events := FakeEvents.new()
+	game.add_child(events)
+	var cam := Camera3D.new()
+	game.add_child(cam)
+	var ball := Node3D.new()
+	game.add_child(ball)
+	var ctx := {"root": game, "events": events, "stages": FakeStages, "camera": cam, "player": ball, "terrain": FakeTerrain.new()}
+	var fx := WorldFx.hook(ctx)
+	t.check("hook installs one WorldFx under the game", fx.get_parent() == game and WorldFx.current == fx)
+	events.stage_entered.emit(3, false)
+	t.eq("stage 3 breathes the Dig's air", fx.ambient.map(func(p): return p.get_meta("world_fx")), Specs.SETS["dig"])
+	var first: GPUParticles3D = fx.ambient[0]
+	events.stage_entered.emit(4, true)
+	t.check("a stage in the same world keeps its emitters", fx.ambient[0] == first)
+	WorldFx.lay_overlay("storm_build")
+	t.check("weather lands its overlay", fx.overlay_kind == "storm_build" and fx.overlay.size() == 1)
+	WorldFx.lay_overlay("")
+	t.check("weather ending clears it", fx.overlay.is_empty())
+	events.flow_changed.emit("summary")
+	t.check("the summary rests the air", not fx.visible and fx.ambient.all(func(p): return not p.emitting))
+	fx.set_quality(false, false)
+	t.check("a preset change while resting keeps it resting", fx.ambient.all(func(p): return not p.emitting))
+	events.stage_entered.emit(5, false)
+	t.check("the next stage wakes the Highdraft's air", fx.visible and fx.world == 3
+		and fx.ambient.all(func(p): return p.emitting))
+	events.event_started.emit("hold_the_relay")
+	var relay: Node3D = fx._relay
+	t.check("the relay starting drops its anchor at the mast foot, sized to the ring", relay != null
+		and relay.global_position.is_equal_approx(Vector3(30, 5, -40)) and is_equal_approx(relay.scale.x, 0.5))
+	events.event_progress.emit("hold_the_relay", 0.3)
+	t.check("progress feeds the charge level", is_equal_approx(relay.level, 0.3) and not relay.paused)
+	t.check("crossing a quarter traces the ring", fx._bursts.has("relay_ring_tick")
+		and fx._bursts["relay_ring_tick"][0].emitting)
+	game.world["events"].relay.inside = false
+	events.event_progress.emit("hold_the_relay", 0.35)
+	t.check("out of the ring the charge effects pause", relay.paused)
+	events.event_ended.emit("hold_the_relay", "won")
+	t.check("a win fires the full burst at the mast", fx._bursts["relay_full_burst"][0].emitting
+		and fx._bursts["relay_full_burst"][0].global_position.is_equal_approx(Vector3(30, 5, -40)) and fx._relay == null)
+	events.event_started.emit("flood")
+	t.check("other events place no relay", fx._relay == null)
+	game.queue_free()
+	await process_frame
 
 
 func _anchors() -> void:

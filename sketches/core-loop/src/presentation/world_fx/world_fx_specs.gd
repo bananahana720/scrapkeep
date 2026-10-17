@@ -328,8 +328,8 @@ const EXTRAS := {
 	"landmark_dam": [{"shape": "arc", "size": Vector2(70, 70), "colour": "MIST", "alpha": 0.3, "at": Vector3(0, -26, 22)}],
 }
 
-# The world each ambient set belongs to, by the game's world index (world_look.gd ROWS).
-const WORLD_SETS := {0: "spillway", 1: "dig", 2: "highdraft"}
+# The world each ambient set belongs to, by the game's world number (park_defs.gd, world_look.gd ROWS).
+const WORLD_SETS := {1: "spillway", 2: "dig", 3: "highdraft"}
 
 # Overlays: a stage modifier's kind or a weather sky id adds air to the world's own.
 const OVERLAYS := {

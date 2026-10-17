@@ -28,6 +28,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
@@ -182,6 +183,7 @@ func _ready() -> void:
 	preload("res://src/presentation/dig_scenery.gd").hook(ctx)
 	preload("res://src/presentation/highdraft_scenery.gd").hook(ctx)
 	preload("res://src/presentation/world_look.gd").hook(ctx)
+	WorldFx.hook(ctx)
 	combat = _module(Combat)
 	build = _module(Build)
 	# Wave 4's boss module sets up after build and before presentation when it exists.
@@ -575,6 +577,9 @@ func set_quality(level: int) -> void:
 func set_reduced_motion(on: bool) -> void:
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
+	WorldFx.preferred = on
+	if is_instance_valid(WorldFx.current):
+		WorldFx.current.set_quality(WorldFx.current.low, on)
 	if presentation != null and presentation.get("juice") != null:
 		presentation.juice.set_reduced_motion(on)
 	elif camera != null:
