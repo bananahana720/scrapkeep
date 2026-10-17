@@ -23,6 +23,7 @@ const Lanes := preload("res://src/build/lanes.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Relics := preload("res://src/build/relics.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -204,6 +205,7 @@ func setup(ctx_ref) -> void:
 	ctx.root.add_child(gates)
 	gates.setup(ctx.terrain)
 	gates.mark_for = offer_mark
+	gates.active_row = _active_row
 	gates.chosen.connect(_on_gate_chosen)
 	fabricators = Fabricators.new()
 	fabricators.name = "Fabricators"
@@ -969,6 +971,29 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		if not picks.is_empty() and not scrapless():
 			ctx.run.add_part(picks[0], "vault")
 		ctx.run.add_core("vault", at)
+		var active := active_offer("vault", Parts.SOURCE_RARITIES["vault"], ctx.rng)
+		if active != "" and not scrapless():
+			active_rack().take(active, ctx.player.ball_position())
+
+
+# The active rack (src/combat/actives) while --actives is on, else null.
+func active_rack():
+	var rack = ctx.spawner.get("actives") if ctx.spawner != null else null
+	return rack if rack != null and rack.enabled() else null
+
+
+# An active offer id for a draw from `source` at these rarities (ActiveOffers), or "" with
+# --actives off, when none fits, or when the draw's share misses.
+func active_offer(source: String, rarities: Array, rng: RandomNumberGenerator) -> String:
+	var rack = active_rack()
+	if rack == null:
+		return ""
+	return ActiveOffers.roll(rng, source, rack.rows(), rarities, rack.held())
+
+
+func _active_row(id: String) -> Dictionary:
+	var rack = active_rack()
+	return rack.row_of(id) if rack != null else {}
 
 
 # The gates open when flow enters its gates state, never on the charge reading: a
@@ -983,13 +1008,20 @@ func _on_flow_changed(state: String) -> void:
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
+	var active := active_offer("gate", rarities, ctx.rng)
+	if active != "":
+		picks.append(active)
 	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))
 
 
 # Scrapless still rolls through a gate to launch (the handshake needs reward_chosen);
 # it just takes nothing.
 func _on_gate_chosen(part_id: String) -> void:
-	if not scrapless():
+	if ActiveOffers.is_offer(part_id):
+		var rack = active_rack()
+		if rack != null and not scrapless():
+			rack.take(part_id, ctx.player.ball_position())
+	elif not scrapless():
 		ctx.run.add_part(part_id, "gate")
 	ctx.events.reward_chosen.emit(part_id)
 
