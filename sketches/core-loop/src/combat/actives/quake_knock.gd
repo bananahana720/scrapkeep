@@ -213,7 +213,7 @@ func _chain(struck: Array, dmg: float) -> void:
 			if next == null:
 				break
 			visited.append(next)
-			combat.effects.arc(at, next.global_position, COLOR)
+			combat.effects.arc(at, next.global_position, ActiveFx.peak(COLOR))
 			combat._hit(next, KIND, hit, next.global_position - at, KNOCK * 0.5, "", SOURCE, IMPACT)
 			at = next.global_position
 
@@ -242,13 +242,13 @@ func _cracks(ring: Node3D, progress: float) -> void:
 	var seed := float(knocks) * 2.39996
 	for i in CRACKS:
 		var a := seed + TAU * i / CRACKS
-		combat.effects.arc(center, center + Vector3(cos(a), 0.0, sin(a)) * reach, COLOR)
+		combat.effects.arc(center, center + Vector3(cos(a), 0.0, sin(a)) * reach, ActiveFx.peak(COLOR))
 	var rim := ceili(CRACKS * 2 * progress)
 	for i in rim:
 		var a0 := seed + TAU * i / (CRACKS * 2)
 		var a1 := seed + TAU * (i + 1) / (CRACKS * 2)
 		combat.effects.arc(center + Vector3(cos(a0), 0.0, sin(a0)) * ring.radius,
-			center + Vector3(cos(a1), 0.0, sin(a1)) * ring.radius, COLOR)
+			center + Vector3(cos(a1), 0.0, sin(a1)) * ring.radius, ActiveFx.peak(COLOR))
 
 
 func _free(ring) -> void:

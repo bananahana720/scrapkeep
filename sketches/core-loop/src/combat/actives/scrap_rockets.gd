@@ -115,7 +115,7 @@ func _fly(rocket: Dictionary, delta: float) -> bool:
 		heading = want if angle <= turn else heading.slerp(want, turn / angle).normalized()
 	vel = heading * speed
 	var next := pos + vel * delta
-	combat.effects.arc(pos, next, COLOR)
+	combat.effects.arc(pos, next, ActiveFx.peak(COLOR))
 	rocket["pos"] = next
 	rocket["vel"] = vel
 	rocket["fuel"] = float(rocket["fuel"]) - delta
@@ -151,7 +151,7 @@ func _burst(rocket: Dictionary, struck) -> void:
 	var jumps := _pattern("chain_arc")
 	if struck != null and jumps > 0:
 		combat._chain(struck, at, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
-			"chain_falloff": CHAIN_FALLOFF, "color": COLOR, "kind": KIND, "knock": KNOCK, "source": SOURCE})
+			"chain_falloff": CHAIN_FALLOFF, "color": ActiveFx.peak(COLOR), "kind": KIND, "knock": KNOCK, "source": SOURCE})
 
 
 func _pattern(id: String) -> int:

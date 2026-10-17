@@ -178,7 +178,7 @@ func _pierce(enemy: Node3D, lance: Dictionary) -> void:
 	var jumps := _pattern("chain_arc")
 	if jumps > 0:
 		combat._chain(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
-			"chain_falloff": CHAIN_FALLOFF, "color": COLOR, "kind": KIND, "knock": KNOCK, "source": SOURCE})
+			"chain_falloff": CHAIN_FALLOFF, "color": ActiveFx.peak(COLOR), "kind": KIND, "knock": KNOCK, "source": SOURCE})
 
 
 func _girth(enemy: Node3D) -> float:

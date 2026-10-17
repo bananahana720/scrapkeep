@@ -130,7 +130,7 @@ func _chain(shape: Dictionary, first: Node3D, jumps: int) -> void:
 		if next == null:
 			return
 		visited.append(next)
-		combat.effects.arc(at, next.global_position, COLOR)
+		combat.effects.arc(at, next.global_position, ActiveFx.peak(COLOR))
 		combat._hit(next, KIND, dmg, next.global_position - at, float(shape["knock"]) * 0.3, "", SOURCE, IMPACT)
 		chain_hits += 1
 		at = next.global_position
@@ -178,12 +178,12 @@ func _draw(shape: Dictionary) -> void:
 		var edge := forward.rotated(Vector3.UP, half * side)
 		var steps := ceili(reach / EDGE_STEP)
 		for i in steps:
-			combat.effects.arc(origin + lift + edge * reach * float(i) / steps, origin + lift + edge * reach * float(i + 1) / steps, COLOR)
+			combat.effects.arc(origin + lift + edge * reach * float(i) / steps, origin + lift + edge * reach * float(i + 1) / steps, ActiveFx.peak(COLOR))
 	var arc_steps := maxi(2, ceili(reach * half * 2.0 / EDGE_STEP))
 	for i in arc_steps:
 		var a := forward.rotated(Vector3.UP, lerpf(-half, half, float(i) / arc_steps))
 		var b := forward.rotated(Vector3.UP, lerpf(-half, half, float(i + 1) / arc_steps))
-		combat.effects.arc(origin + lift + a * reach, origin + lift + b * reach, COLOR)
+		combat.effects.arc(origin + lift + a * reach, origin + lift + b * reach, ActiveFx.peak(COLOR))
 
 
 func _pattern(id: String) -> int:

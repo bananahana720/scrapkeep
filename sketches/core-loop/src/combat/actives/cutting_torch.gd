@@ -146,7 +146,7 @@ func _commit() -> void:
 		lanes.append(lane)
 		ctx.player.indicator.set_shape(LAYER % i, ctx.player.yours(lane.duplicate()))
 		if not guiding:
-			combat.effects.arc(from + Vector3.UP * LIFT, lane["to"] + Vector3.UP * LIFT, COLOR)
+			combat.effects.arc(from + Vector3.UP * LIFT, lane["to"] + Vector3.UP * LIFT, ActiveFx.peak(COLOR))
 
 
 func _reach(from: Vector3, dir: Vector3) -> Vector3:
