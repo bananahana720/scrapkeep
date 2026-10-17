@@ -1518,4 +1518,5 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 	shockwave.emit(enemy.global_position, 0.8)
 	if SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
+		_bowl_if_killed(enemy, away, Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult))
 	events.enemy_rebounded.emit(enemy, out.length())

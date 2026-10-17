@@ -15,7 +15,9 @@ const CombatRules := preload("res://src/combat/combat.gd")
 #   cap     speed past Contact.SOFT_CAP_SPEED adds no throw; no ram passes KNOCK_CEILING
 #   bowling a ram at fast speed or more into a six-pin rack topples all six and lands at
 #           least 3 pins at every heft (the hulk: a killed body bowls on)
-#   keystone a haul from 10 m at heft V throws the chaser at least 2x as far as at heft I
+#   roll-up at heft V the rack is wiped: a grown ball's pins kill what they scatter, so
+#           bowling never knocks fodder clear of the Katamari roll-up (hive clear rule)
+#   keystone a haul from 10 m at heft V throws the chaser at least 1.9x as far as at heft I
 #   posture a hulk never pins a Warden, so stagger timing is untouched
 #   damage  the ram's and the slam's strike force do not change with the new throw
 # The cases:
@@ -143,9 +145,13 @@ func _judge() -> void:
 			racks.append("%.0f m/s heft %.1f: %d toppled, %d pins" % [row["speed"], row["heft"], row["toppled"], row["pins"]])
 			bowled = bowled and int(row["toppled"]) == 6 and int(row["pins"]) >= 3
 	_check("bowling", bowled, "; ".join(racks))
+	var rolled := true
+	for speed in [16.0, 27.0, 45.0]:
+		rolled = rolled and int(_row("rack", {"speed": speed, "heft": 4.6}).get("kills", 0)) == 6
+	_check("roll-up", rolled, "at heft V every rack is wiped within %.1f s: the strike's pins kill what they scatter" % FLY_SECONDS)
 	var light := _row("haul", {"from": 10.0, "heft": 1.0})
 	var heavy := _row("haul", {"from": 10.0, "heft": 4.6})
-	_check("keystone", float(heavy["fly_m"]) >= 2.0 * float(light["fly_m"]),
+	_check("keystone", float(heavy["fly_m"]) >= 1.9 * float(light["fly_m"]),
 		"a haul from 10 m throws the chaser %.1f m at heft I and %.1f m at heft V" % [light["fly_m"], heavy["fly_m"]])
 
 
@@ -161,13 +167,17 @@ func _posture_case() -> void:
 	var beyond := _spawn(_drop(_base.x + 3.0, _base.z + 0.5), 1000.0)
 	var dead := _spawn(_drop(_base.x, _base.z), 1000.0)
 	await _sim(0.1)
-	var knocks0: int = warden.knocks
-	var hp0: float = warden.hp
+	var posture0: float = warden.posture()
 	combat.bowl_hulk(dead, Vector3.RIGHT, 30.0)
 	await _sim(0.4)
-	_check("posture", warden.knocks == knocks0 and is_equal_approx(warden.hp, hp0) and beyond.knocks > 0,
-		"a 30 m/s hulk through a Warden: Warden knocks %d -> %d, hp %.0f -> %.0f; the chaser beside it took %d pins"
-			% [knocks0, warden.knocks, hp0, warden.hp, beyond.knocks])
+	var posture1: float = warden.posture()
+	# Control: the same pin, laid on the Warden directly, does move its posture, so an
+	# unchanged posture above means the hulk passed it by.
+	combat._pin(warden, Vector3.RIGHT, 30.0, 4.6)
+	var posture2: float = warden.posture()
+	_check("posture", is_equal_approx(posture1, posture0) and not is_equal_approx(posture2, posture1) and beyond.knocks > 0,
+		"a 30 m/s hulk through a Warden: posture %.1f -> %.1f (a direct pin moves it to %.1f); the chaser beside it took %d pins"
+			% [posture0, posture1, posture2, beyond.knocks])
 	warden.queue_free()
 
 

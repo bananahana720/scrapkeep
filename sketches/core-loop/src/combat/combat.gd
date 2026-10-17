@@ -3523,9 +3523,11 @@ func _pin_step(enemies: Array) -> void:
 
 
 # One pin: the victim takes the pin strike and flies on at PIN_CARRY of the carrier's speed.
-# A victim the pin kills becomes a hulk in its turn, so a strike runs down a crowd.
-func _pin(victim: Node3D, to: Vector3, speed: float) -> void:
-	var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed)
+# A victim the pin kills becomes a hulk in its turn, so a strike runs down a crowd. A hulk's
+# pins hit with the heft that threw it (mult), so a grown ball's strike still kills what it
+# scatters instead of knocking it clear of the roll-up.
+func _pin(victim: Node3D, to: Vector3, speed: float, mult := 1.0) -> void:
+	var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed) * mult
 	pins += 1
 	ctx.events.enemy_pinned.emit(victim, damage)
 	victim.knock(to + Vector3.UP * 0.2, speed * Weapons.PIN_CARRY * float(victim.weight))
@@ -3544,14 +3546,17 @@ func bowl_hulk(enemy: Node3D, direction: Vector3, speed: float) -> void:
 	if speed <= Weapons.PIN_MIN_SPEED or flat.length_squared() < 0.0001 or not is_instance_valid(enemy):
 		return
 	_hulks.append({"at": enemy.global_position, "vel": flat.normalized() * speed, "radius": _hull(enemy),
-		"left": Weapons.HULK_SECONDS, "hit": {enemy.get_instance_id(): true}})
+		"left": Weapons.HULK_SECONDS, "hit": {enemy.get_instance_id(): true}, "mult": heft()})
 
 
 func _hulk_step(enemies: Array, delta: float) -> void:
 	if _hulks.is_empty():
 		return
+	# A pin that kills launches a new hulk into _hulks; it is stepped from the next tick.
+	var stepping := _hulks
+	_hulks = []
 	var live: Array = []
-	for hulk in _hulks:
+	for hulk in stepping:
 		var vel: Vector3 = hulk["vel"]
 		var speed := vel.length()
 		hulk["left"] = float(hulk["left"]) - delta
@@ -3569,11 +3574,11 @@ func _hulk_step(enemies: Array, delta: float) -> void:
 			if to.length() - float(hulk["radius"]) - _hull(victim) > Weapons.PIN_RADIUS or to.normalized().dot(heading) < 0.5:
 				continue
 			hulk["hit"][victim.get_instance_id()] = true
-			_pin(victim, to, speed)
+			_pin(victim, to, speed, float(hulk["mult"]))
 		hulk["at"] = at + vel * delta
 		hulk["vel"] = vel.move_toward(Vector3.ZERO, EnemyBase.KNOCK_DECAY * delta)
 		live.append(hulk)
-	_hulks = live
+	_hulks = live + _hulks
 
 
 static func _pinnable(enemy) -> bool:
