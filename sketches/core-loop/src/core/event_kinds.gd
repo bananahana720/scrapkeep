@@ -1063,6 +1063,10 @@ const WORLD_ROWS := {
 	"layer_undercroft": {"group": "event", "color": Palette.VERDIGRIS, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_reese_sub", "hud": "", "objective": "", "priority": 0},
 	"layer_shelf": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_theme", "hud": "", "objective": "", "priority": 0},
 	"layer_sky": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_bells_arp", "hud": "", "objective": "", "priority": 0},
+	# The Mind's first musical quote (Andrew's Q9, "A musical quote"): the dam's eye_mouth row publishes it as its ride
+	# fact as the ball leaves the Eye, which every line crosses once and downhill; its file renders on the music PR (#12),
+	# and until then ui_tick stands in.
+	"layer_mind_quote_spillway": {"group": "event", "color": ANCIENT_LIGHT, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_mind_quote_spillway", "hud": "", "objective": "", "priority": 0},
 	"ride_grapple_line": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "grapple_clink", "sound_next": "ride_cable_clink", "hud": "", "objective": "", "priority": 1},
 	"ride_glide_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_glide_wind", "hud": "", "objective": "", "priority": 1},
 	"ride_skylight": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rail_hum", "hud": "", "objective": "", "priority": 1},

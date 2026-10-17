@@ -196,7 +196,10 @@ The shipped rows are in `src/world/park/park_dam.json`; this table follows that 
 | The toe | `gate_piers` | anchor_field / dam_face / dam_era | none | [0, 605], [10, 8, 44], 0 | swing | routes `face`, `powerhouse_floor`, `roof_ramp_line` |
 | The toe | `gate_row_apron` | bank / dam_face / dam_era | bowl | [0, 540], [30, 2, 60], 0 | bank, `ride_bowl` |  |
 | The toe | `crest_rail` | rail / dam_face / dam_era | ridge | [0, 655], [300, 1, 4], 90 | grind, `ride_grapple_line` | routes `crest_line` |
-| Filler | `dome_1` to `dome_25` | bank / slickrock / none | spire | 40 by 16 by 40 each | bank, `ride_hop` | the rollers and anchor faces of the shelf |
+| The slalom (section 16) | `dome_5`, `dome_6`, `dome_15`, `dome_18`, `dome_19`, `dome_24`, `dome_25` | bank / slickrock / dam_era | spire | 40 by 16 by 40 each | roll, `ride_hop` | the survey stations the rolling line turns round; a red or blue survey flag on each summit; `dam_era_station_marks` (dome_5), `dam_era_gate_flags` (dome_24) |
+| The slalom (section 16) | `dome_11` | bank / slickrock / dam_era | spire | 40 by 16 by 40 | roll, `ride_hop` | the benchmark, the shelf's west end, off every line but Sable's; `dam_era_benchmark` |
+| The slalom (section 16) | `dome_7` | bank / slickrock / none | spire | 40 by 16 by 40 | roll, `ride_hop` | Rivet's cage stands at its north foot (`rescue_rows`) |
+| The slalom (section 16) | the other 16 domes | bank / slickrock / none | spire | 40 by 16 by 40 each | roll, `ride_hop` | the wide lines' turning marks and the anchor faces of the shelf |
 | Filler | 37 hoodoo fields, saguaro stands and hoodoo stacks | anchor_field or ground / hoodoo_field, saguaro_stand | none, or spire for a stack | fields 320 by 320 (four cut back off the domes shelf, size as length north to south by width east to west: `hoodoo_25` 60 by 320 at [-60, -750], `saguaro_6` 320 by 80 at [-470, -640], `saguaro_22` 320 by 160 at [230, -700], `hoodoo_23` 320 by 190 at [245, -420]; and `saguaro_26` 70 by 380 at [-290, -755], the strip south of the drop), stacks 26 by 9 by 26 | swing, roll | the density rows of the open country (PARK.md section 8) |
 | Shelf run-out | `sable_shelf_runout_anchor` | anchor_field / saguaro_stand / none | none | [-100, -236], [8, 18, 8], 0 | swing | round-2 greybox anchor retained |
 
@@ -366,6 +369,9 @@ Draft text for the lore pass, in the tone of `SOUND-STORY.md:212`. Fragment ids 
 | `ref_cliff_rooms` | cliff rooms | Rooms built into an alcove of the canyon wall, stone laid in mud mortar, sheltered from sun and flood by the overhang above. |
 | `ref_viga_beams` | viga span | Roof beams carried from far uplands, their ends left long past the wall. |
 | `dam_era_canal_headworks` | canal lips | Headworks 2. The canal feeds fields nobody plants now. Gate oiled weekly anyway. |
+| `dam_era_station_marks` | dome 5, the first slalom gate | Traverse, deck to lip. One station per dome, numbered as we went. Chainman rolled it on a barrel. Chief says that is not surveying. The numbers check. |
+| `dam_era_gate_flags` | dome 24, the last slalom gate | Flags stay up after the survey. Roll between each pair, red then blue. Nobody asked who for. |
+| `dam_era_benchmark` | dome 11, the benchmark | Benchmark, elevation 152.0. Highest station on the shelf. Do not move this dome. |
 
 ## 12. What stays from today's stage, and what has no table yet
 
