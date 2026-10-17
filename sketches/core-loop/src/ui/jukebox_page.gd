@@ -106,23 +106,29 @@ func _label(font_size: int, color: Color, words := "") -> Label:
 
 # Found and blank sleeves, the count, the dial and what is on the deck, from the profile's
 # tunes and the band.
-static func reading(profile, playing := "", detent := 2) -> Dictionary:
+# A shut secret (TuneRows.shut) not yet found has no sleeve and no place in the count.
+static func reading(profile, playing := "", detent := 2, sitting := false) -> Dictionary:
 	var found: Array = []
+	var shown: Array = []
 	for id in TuneRows.ids():
-		if profile != null and profile.has_tune(id):
+		var has: bool = profile != null and profile.has_tune(id)
+		if has:
 			found.append(id)
-	return {"found": found, "total": TuneRows.ROWS.size(), "playing": playing, "detent": detent,
-		"count": "Records found: %d of %d" % [found.size(), TuneRows.ROWS.size()]}
+		if has or not TuneRows.shut(id, profile, sitting):
+			shown.append(id)
+	return {"found": found, "shown": shown, "total": shown.size(), "playing": playing, "detent": detent,
+		"count": "Records found: %d of %d" % [found.size(), shown.size()]}
 
 
-func refresh(profile, playing := "", detent := 2) -> void:
-	var read := reading(profile, playing, detent)
+func refresh(profile, playing := "", detent := 2, sitting := false) -> void:
+	var read := reading(profile, playing, detent, sitting)
 	_found.clear()
 	for id in read["found"]:
 		_found[id] = true
 	_playing = playing
 	_count.text = read["count"]
 	for id in _sleeves:
+		_sleeves[id].visible = id in read["shown"]
 		_sleeves[id].set_state(_found.has(id), id == playing)
 	for i in _detents.size():
 		_detents[i].set_pressed_no_signal(i == detent)
