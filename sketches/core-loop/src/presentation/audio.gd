@@ -2362,7 +2362,7 @@ func activity_cue(activity_id: String, phase: String) -> void:
 func jukebox_flipped() -> void:
 	if _moments.any(func(m): return m.kind == "jukebox"):
 		end_moment("jukebox")
-	elif not TuneRows.shut("secret-after-hours", ctx.profile, _sitting()):
+	elif not TuneRows.shut("secret-after-hours", ctx.get("profile"), _sitting()):
 		begin_moment("jukebox", "bay_jukebox", "secret-after-hours")
 
 
