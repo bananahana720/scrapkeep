@@ -97,6 +97,8 @@ const ACH_TOP := 14.0
 const ACH_WORD := "Achievement"
 # A jukebox record found in play shares the achievement plate, after any achievement waiting.
 const TUNE_WORD := "New record"
+# A radio take found in play: the same plate, its own word, louder for a legend.
+const TAKE_WORDS := {"b-side": "New B-side", "take": "New take", "legend": "Legendary take"}
 # A new field note: the Tab cap and these words under the achievement slot, 3 s, faded in and out.
 const LORE_WORDS := "New field note"
 const LORE_TOTAL := 3.0
@@ -166,6 +168,7 @@ var _ach_panel: PanelContainer
 var _ach_name: Label
 var _ach_queue: Array[String] = []
 var _tune_queue: Array[String] = []
+var _take_words := {}
 var _ach_word: Label
 var _ach_icon: TextureRect
 var _ach_entry := {}
@@ -449,6 +452,13 @@ func tune_waiting() -> Array[String]:
 	return _tune_queue.duplicate()
 
 
+# A take found for the pilot radio: its name, then the station it airs on.
+func take_found(take_name: String, station_name: String, tier := "take") -> void:
+	var text := "%s\nOn the radio: %s" % [take_name, station_name]
+	_take_words[text] = TAKE_WORDS.get(tier, TAKE_WORDS["take"])
+	_tune_queue.append(text)
+
+
 # A fight is live while the Warden is engaged and still standing.
 func _fight_live() -> bool:
 	return game.flow != null and game.flow.engaged() and game.flow.sealed
@@ -470,7 +480,7 @@ func _step_ach(delta: float) -> void:
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
 		_ach_name.text = _ach_entry["text"]
-		_ach_word.text = TUNE_WORD if tune else ACH_WORD
+		_ach_word.text = (String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ACH_WORD)
 		_ach_icon.texture = Icons.shape("wave" if tune else "star")
 		_ach_panel.visible = true
 	if _ach_entry.is_empty():

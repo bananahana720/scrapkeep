@@ -62,6 +62,8 @@ const SPIN_ENERGY := [0.15, 0.5, 0.9]
 
 # A jukebox tune heard in play for long enough to count (tune_ear.gd); fires once per id.
 signal tune_heard(id: String)
+# The pilot radio's track gave the air back to the score: a boss, a death, the run's end.
+signal radio_yielded(reason: String)
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -320,6 +322,15 @@ var _ear := TuneEar.new()
 var spinning := ""
 var spin_detent := 2
 var _spin_restore := Callable()
+# The pilot radio (radio_deck.gd): the track it holds over the run, "" while the score plays.
+# While it holds, the stage, moment, champion and miniboss cues leave the band alone (their
+# stingers still sound); a boss or a Warden takes the air back unless the track is pinned.
+# Off mutes the Music bus alone: hits, stingers and musical answers ride the SFX bus.
+var radio_hold := ""
+var radio_pinned := false
+var radio_silenced := false
+var _radio_args := []
+var _radio_respin_due := false
 
 static var _bake_task := -1
 static var _baked := false
@@ -843,6 +854,8 @@ func _ace_package_for(stage: int) -> String:
 # A stage whose row names an ACE package starts the ACE band at transport sample at; any
 # other stage hands back to the synth, except that the band held through a launch's flight waits for the landing.
 func _ace_stage(stage: int, at: int) -> void:
+	if radio_hold != "":
+		return
 	# The live moment's tune, else the stage's remix or modifier tune, else the stage's own pack.
 	_moment_playing = TuneMoments.top(_moments, tune_available)
 	var tune := level_tune(stage)
@@ -903,14 +916,18 @@ func knows_tune(id: String) -> void:
 # Puts a found record on: the band cuts to its track now (a needle drop, not a phrase), at
 # the dial's energy. The ACE band plays the recorded take when its package is on disk; the
 # synth plays it otherwise. False when the id names no row or the band is not baked yet.
-func spin(id: String) -> bool:
-	var row := TuneRows.row(id)
+# live keeps the run's parameters (speed, combo, threat) driving the band, for the radio; a row
+# stands in for the id's own (a radio take played over its parent record's source).
+func spin(id: String, live := false, row: Dictionary = {}) -> bool:
+	if row.is_empty():
+		row = TuneRows.row(id)
 	if row.is_empty() or not sound_ready:
 		return false
 	if spinning == "":
 		_spin_restore = engine.parameter_source
 	spinning = id
-	engine.set_parameter_source(func(): return {"threat": SPIN_ENERGY[spin_detent]})
+	if not live:
+		engine.set_parameter_source(func(): return {"threat": SPIN_ENERGY[spin_detent]})
 	engine.cancel_pending()
 	if ace_playing():
 		ace.set_bay(false)
@@ -981,6 +998,105 @@ func _release_spin() -> void:
 	_spin_restore = Callable()
 	if ace_playing():
 		ace.set_bay(false)
+
+
+# --- The pilot radio ------------------------------------------------------------------
+# radio_deck.gd decides; these carry it out. A radio track is a needle drop on the band (the
+# jukebox's spin) with the run's own parameters still driving it, so drums follow speed and the
+# lead follows the combo, and every hit and musical answer lands on the radio track's beat.
+
+# Puts a track on: id is what the radio names (a take or a jukebox record), record the jukebox
+# record whose source the band plays. A take with its own recorded pack plays that pack over
+# its record's source; until then its record stands in. False when the band cannot play it.
+func radio_play(id: String, record: String, pinned := false) -> bool:
+	var parent := TuneRows.row(record)
+	if parent.is_empty() or not sound_ready:
+		return false
+	var play_id := record
+	var row := parent
+	if id != record and MusicRows.ROWS.has(id):
+		var source: Dictionary = parent["source"].duplicate()
+		if source["kind"] != "menu":
+			source["kind"] = "pack"
+			source["pack"] = id
+		row = parent.duplicate()
+		row["source"] = source
+		play_id = id
+	if not spin(play_id, true, row):
+		return false
+	radio_hold = id
+	radio_pinned = pinned
+	_radio_args = [id, record, pinned]
+	_radio_respin_due = false
+	cue_log.append(["radio", id, "needle", engine.clock, 1.0])
+	return true
+
+
+func _radio_respin() -> void:
+	if _radio_args.size() == 3:
+		radio_play(_radio_args[0], _radio_args[1], _radio_args[2])
+
+
+# The score takes the air back on the next beat: the stage's band (or the Warden's, or the
+# miniboss's darkened level) with the live moment's tune, as if the radio had never played.
+func radio_release() -> void:
+	if radio_hold == "":
+		return
+	_radio_drop("")
+	if not sound_ready or _stage_now <= 0 or ctx == null or ctx.get("flow") == null or not ctx.flow.in_play():
+		return
+	engine.cancel_pending()
+	if is_instance_valid(_miniboss):
+		engine.force_track("level", _stage_theme(_stage_now))
+		engine.begin_miniboss()
+	else:
+		engine.force_track("warden" if _warden_engaged and ctx.flow.get("sealed") else "level", _stage_theme(_stage_now))
+	_moment_playing = ""
+	_ace_stage(_stage_now, engine.next_bar())
+	cue_log.append(["radio", "score", "bar", engine.next_bar(), 1.0])
+
+
+# The hold ends with no music of its own: the cue that ended it (a boss, a death, the run's
+# end) plays next. reason "" is the deck's own release.
+func _radio_drop(reason: String) -> void:
+	if radio_hold == "":
+		return
+	radio_hold = ""
+	radio_pinned = false
+	_radio_args = []
+	_radio_respin_due = false
+	_release_spin()
+	if reason != "":
+		radio_yielded.emit(reason)
+
+
+func set_radio_silenced(on: bool) -> void:
+	if radio_silenced == on:
+		return
+	radio_silenced = on
+	_apply_volumes()
+
+
+# The record the score plays, or is about to play, here: the live moment's tune, else the
+# stage's roam (the Warden's once it is engaged), else "" outside a stage.
+func score_tune_wanted() -> String:
+	var top := TuneMoments.top(_moments, tune_available)
+	if top != "":
+		return top
+	if _stage_now <= 0 or ctx == null or ctx.get("run") == null:
+		return ""
+	var zone := MusicRows.zone_id(_stage_now, _music_stages())
+	return ("warden-" if _warden_engaged else "roam-") + zone
+
+
+# A place or moment tune is live (a landmark in reach, an event, a miniboss, the bay).
+func moment_live() -> bool:
+	return TuneMoments.top(_moments, tune_available) != ""
+
+
+# A record the ear has not reported and the profile does not hold.
+func tune_unheard(id: String) -> bool:
+	return id != "" and not TuneRows.row(id).is_empty() and not _ear.heard(id)
 
 
 func _ace_named(id: String, at: int, boss := false, won := true) -> void:
@@ -1940,7 +2056,7 @@ func _on_event_progress(event_id: String, fraction: float) -> void:
 
 
 func _on_flow_changed(state: String) -> void:
-	if state != "title":
+	if state != "title" and radio_hold == "":
 		_release_spin()
 	if state in MENU_STATES:
 		play("flow_changed", 0.0, 1.0, "UI")
@@ -2088,7 +2204,7 @@ func _on_enemy_spawned(enemy: Node3D, kind: String) -> void:
 		play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
 	if boss:
 		_miniboss = enemy
-	if boss and sound_ready:
+	if boss and sound_ready and radio_hold == "":
 		engine.begin_miniboss()
 	if boss and enemy != null:
 		var key := str(enemy.get_instance_id())
@@ -2177,6 +2293,11 @@ func _tend_specials() -> void:
 func _begin_boss(kind: String, music: String) -> void:
 	if not sound_ready:
 		return
+	if radio_hold != "":
+		if radio_pinned:
+			on_beat(kind, 0.0, true)
+			return
+		_radio_drop("boss")
 	if engine.track == music or engine.mode != MusicEngine.PLAY:
 		# A retry into the fight: the band left DEAD (or never left the boss track), so
 		# it restarts the boss music in play mode on the next beat, not the keys alone.
@@ -2220,6 +2341,8 @@ func _on_boss_phase_with(phase) -> void:
 # drop) when the euro pack is not on disk. A pack that is not on disk changes nothing. Returns
 # the plan it carried out, {} for none.
 func phase_music(phase: int) -> Dictionary:
+	if radio_hold != "":
+		return {}
 	if not sound_ready or phase <= _phase_music_done or not ace_wanted():
 		return {}
 	var boss := engine.track
@@ -2257,7 +2380,7 @@ func _champion_joined(enemy: Node3D) -> void:
 	if enemy.has_signal("died"):
 		enemy.connect("died", func(_a = null, _b = null): _champion_gone(id))
 	enemy.tree_exiting.connect(_champion_gone.bind(id), CONNECT_ONE_SHOT)
-	if _champion_hyped or not sound_ready or not ace_wanted() or engine.track != "level":
+	if radio_hold != "" or _champion_hyped or not sound_ready or not ace_wanted() or engine.track != "level":
 		return
 	# A run that rolled the chiptune remix hears it in the champion's place.
 	var champion := TuneMoments.remixed("champion", PhaseMusic.CHAMPION, _remixes, tune_available)
@@ -2334,7 +2457,7 @@ func end_moment(kind: String, key := "", refresh := true) -> void:
 
 
 func _refresh_moment() -> void:
-	if not sound_ready or not ace_wanted() or _champion_hyped or _stage_now <= 0:
+	if radio_hold != "" or not sound_ready or not ace_wanted() or _champion_hyped or _stage_now <= 0:
 		return
 	if not engine.track in ["level", "miniboss"]:
 		return
@@ -2426,6 +2549,7 @@ static func _argc(events: Object, signal_name: String) -> int:
 
 
 func _on_boss_defeated() -> void:
+	_radio_drop("victory")
 	on_beat("boss_defeated", 0.0, true)
 	engine.victory()
 
@@ -2495,7 +2619,10 @@ func _on_landed(impact: float) -> void:
 # in the new stage's theme.
 func _land_drop() -> void:
 	var touchdown := engine.clock
-	var at := engine.drop_now(4, 0.85, {}, _landing_theme)
+	if _radio_respin_due:
+		_radio_respin_due = false
+		_radio_respin()
+	var at := engine.drop_now(4, 0.85, {}, _landing_theme if radio_hold == "" else -1)
 	if _ace_arrival_stage > 0:
 		_ace_arrival_at = at
 	drop_log.append([touchdown, at])
@@ -2969,6 +3096,7 @@ func _flush_flow() -> void:
 	for item in burst:
 		match item[0]:
 			"run":
+				_radio_drop("flow")
 				_disarm_launch()
 				engine.cancel_pending()
 				var start := on_beat("run_started", 0.0, true)
@@ -2984,6 +3112,16 @@ func _flush_flow() -> void:
 				var stage: int = item[1]
 				var retry: bool = item[2]
 				if not retry and "run" in kinds:
+					continue
+				if radio_hold != "":
+					# The radio keeps the air: the stage hit sounds on its beat, and the track
+					# drops back in on the landing after a launch, else now.
+					on_beat("stage_entered", 0.0, true, clampi(stage, 1, 4))
+					if not retry and _launch_stage:
+						_launch_stage = false
+						_radio_respin_due = true
+					else:
+						_radio_respin()
 					continue
 				if not retry and _launch_stage:
 					# The landing drop announces this stage.
@@ -3011,6 +3149,7 @@ func _flush_flow() -> void:
 				if start >= 0 and not _launch_armed:
 					engine.schedule_cadence(start)
 			"end":
+				_radio_drop("flow")
 				_ace_end()
 				var won: bool = item[1]
 				var start := on_beat("run_ended", 0.0, true) if won else -1
@@ -3027,11 +3166,13 @@ func _flush_flow() -> void:
 						engine.menu_theme("summary", won, at)
 						_ace_named("summary", at, false, won)
 			"dead":
+				_radio_drop("flow")
 				_ace_end()
 				_disarm_launch()
 				engine.cancel_pending()
 				engine.death_break()
 			"idle":
+				_radio_drop("flow")
 				var at := engine.next_beat()
 				engine.schedule_mode(at, MusicEngine.IDLE)
 				# The title's own theme, kept across the class select.
@@ -3105,7 +3246,7 @@ func _apply_volumes() -> void:
 		if index < 0:
 			continue
 		AudioServer.set_bus_volume_linear(index, volumes[bus] * db_to_linear(BUSES[bus]))
-		AudioServer.set_bus_mute(index, muted)
+		AudioServer.set_bus_mute(index, muted or (radio_silenced and bus == "Music"))
 
 
 # The pause menu's volume rows set a bus to a level; the keys above nudge it.

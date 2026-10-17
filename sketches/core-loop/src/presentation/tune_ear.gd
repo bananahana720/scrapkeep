@@ -28,3 +28,7 @@ func listen(key: String, delta: float) -> String:
 # A tune the profile already holds: the ear stays quiet about it.
 func knows(id: String) -> void:
 	_reported[id] = true
+
+
+func heard(id: String) -> bool:
+	return _reported.has(id)

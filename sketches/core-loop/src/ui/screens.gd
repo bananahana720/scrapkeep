@@ -16,6 +16,7 @@ const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
 const JukeboxPage := preload("res://src/ui/jukebox_page.gd")
+const RadioPage := preload("res://src/ui/radio_page.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -78,6 +79,7 @@ var _achievements
 var _settings
 var _camp
 var _jukebox
+var _radio
 var _ending: VBoxContainer
 var _ending_title: Label
 var _ending_body: Label
@@ -173,6 +175,16 @@ func setup(game_ref) -> void:
 		_jukebox.detent_button(i).pressed.connect(_press.bind("key_%d" % (i + 1)))
 	_jukebox.back.pressed.connect(_press.bind("key_j"))
 	_content.add_child(_jukebox)
+	_camp.button_for("radio").pressed.connect(_press.bind("key_r"))
+	_radio = RadioPage.new()
+	_radio.visible = false
+	_radio.track_chosen.connect(_radio_track)
+	_radio.tape_chosen.connect(func(i: int): radio_key(KEY_1 + i))
+	_radio.new_button.pressed.connect(_press.bind("key_n"))
+	_radio.shuffle_button.pressed.connect(_press.bind("key_x"))
+	_radio.tune_button.pressed.connect(_press.bind("key_t"))
+	_radio.back.pressed.connect(_press.bind("key_r"))
+	_content.add_child(_radio)
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
 	_ending.add_theme_constant_override("separation", 26)
@@ -220,6 +232,7 @@ func _on_flow_changed(state: String) -> void:
 	_settings.visible = false
 	_camp.visible = false
 	_jukebox.visible = false
+	_radio.visible = false
 	_ending.visible = false
 	_ending_left = 0.0
 	_prologue_line = -1
@@ -484,6 +497,8 @@ func toggle_camp() -> void:
 func _close_camp_silently() -> void:
 	if _jukebox.visible:
 		_close_jukebox()
+	if _radio.visible:
+		_radio.visible = false
 	if not _camp.visible:
 		return
 	_camp.visible = false
@@ -590,6 +605,92 @@ func _audio():
 	return presentation.get("audio") if presentation != null else null
 
 
+# R on the camp swaps it for the radio's mixtapes, and back. The radio keeps what was changed.
+func toggle_radio() -> void:
+	if _radio.visible:
+		_radio.visible = false
+		_save_radio()
+		_camp.visible = true
+		_camp.refresh(game)
+		_show("CAMP", Palette.AMBER, "")
+		_camp.button_for("radio").grab_focus()
+		_fade(true)
+		return
+	if not _camp.visible or game.get("radio_deck") == null:
+		return
+	_camp.visible = false
+	_radio.visible = true
+	_radio.refresh(game.ctx.profile, game.radio_deck.radio)
+	_show("MIXTAPES", Palette.AMBER, "")
+	_radio.focus_first()
+	_fade(true)
+
+
+func radio_open() -> bool:
+	return _radio.visible
+
+
+func radio_page():
+	return _radio
+
+
+# The mixtape keys, from game._screen_key while the page is open: Space or Enter takes the
+# focused track on or off the tape, comma and period move a tape track, 1 to 6 pick a tape, N
+# starts one, X shuffles, T tunes the radio to it, R and Esc go back. Every other key is
+# swallowed so the title's keys stay off the camp behind it.
+func radio_key(key: int) -> bool:
+	var radio = game.radio_deck.radio
+	var focused: String = _radio.focused_id()
+	match key:
+		KEY_R, KEY_ESCAPE:
+			toggle_radio()
+			return true
+		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+			if focused != "":
+				_radio_track(focused.substr(2), focused[0] == "t")
+			return true
+		KEY_COMMA, KEY_PERIOD:
+			if focused.begins_with("t:"):
+				radio.nudge(radio.mixtape, focused.substr(2), -1 if key == KEY_COMMA else 1)
+		KEY_N:
+			var made: int = radio.new_mixtape()
+			if made >= 0:
+				radio.mixtape = made
+		KEY_X:
+			var rng := RandomNumberGenerator.new()
+			rng.randomize()
+			radio.shuffle(radio.mixtape, rng)
+		KEY_T:
+			radio.tune(radio.MIXTAPE)
+		_:
+			if key >= KEY_1 and key < KEY_1 + radio.mixtapes.size():
+				radio.mixtape = key - KEY_1
+			else:
+				return true
+	_radio.refresh(game.ctx.profile, radio)
+	if focused != "":
+		_radio.focus(focused[0] == "t", focused.substr(2))
+	return true
+
+
+func _radio_track(id: String, on_tape: bool) -> void:
+	var radio = game.radio_deck.radio
+	if on_tape:
+		radio.remove_from(radio.mixtape, id)
+	elif not radio.add_to(radio.mixtape, id):
+		radio.remove_from(radio.mixtape, id)
+	var audio = _audio()
+	if audio != null:
+		audio.play("flow_changed", 0.0, 1.0, "UI")
+	_radio.refresh(game.ctx.profile, radio)
+	_radio.focus(on_tape, id)
+
+
+func _save_radio() -> void:
+	if game.get("radio_deck") != null:
+		game.radio_deck._save()
+
+
 func camp_page():
 	return _camp
 
@@ -626,7 +727,7 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _camp.visible or _jukebox.visible or ending_open()
+	return _help.visible or _achievements.visible or _camp.visible or _jukebox.visible or _radio.visible or ending_open()
 
 
 func ending_open() -> bool:
@@ -707,6 +808,14 @@ func _input(event: InputEvent) -> void:
 		return
 	if _settings.visible:
 		if _settings.handle(event):
+			get_viewport().set_input_as_handled()
+		return
+	if _radio.visible:
+		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+			toggle_radio()
+			get_viewport().set_input_as_handled()
+		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+			toggle_radio()
 			get_viewport().set_input_as_handled()
 		return
 	if _jukebox.visible:
@@ -878,7 +987,7 @@ func _fade(show: bool) -> void:
 
 
 func _layout_backdrop() -> void:
-	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible or _jukebox.visible)
+	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible or _jukebox.visible or _radio.visible)
 	_veil.anchor_bottom = 0.5 if title_deck else 1.0
 	_content.anchor_bottom = _veil.anchor_bottom
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
@@ -927,6 +1036,8 @@ func button_for(action: String) -> Button:
 			return _camp.back
 		if _jukebox.visible:
 			return _jukebox.back
+		if _radio.visible:
+			return _radio.back
 		return _achievements.back if _achievements.visible else _help.back
 	if action == "breath":
 		return _breath_row if _breath_row.visible else null

@@ -4,7 +4,8 @@ extends RefCounted
 # pilots, worlds and cosmetics, earned achievements, equipped cosmetics, stats and the
 # last pilot, the between-run nodes opened (SG12, an id list added inside schema 4: a
 # file without it reads as none opened) and the jukebox tunes heard (tune_rows.gd, an id
-# list added the same way). Preferences live in settings_store.gd. The store knows no starters and
+# list added the same way; the pilot radio's takes join that list) and the radio's dial and
+# mixtapes (radio.gd's to_dict, a dict added the same way). Preferences live in settings_store.gd. The store knows no starters and
 # reads no clock; the caller passes the time an achievement was earned. Mutators change
 # memory and save() writes. A store cannot save until it has loaded, and a save that finds
 # a newer generation on disk merges it in instead of replacing it. A file this build
@@ -37,6 +38,7 @@ const SHAPE := {
 	"seen": SafeStore.STRINGS,
 	"options": SafeStore.STRINGS,
 	"tunes": SafeStore.STRINGS,
+	"radio": SafeStore.DICT,
 }
 
 var path := ""
@@ -433,6 +435,15 @@ func tune_ids() -> Array:
 	return _doc["tunes"].duplicate()
 
 
+# The pilot radio's station and mixtapes as Radio.to_dict makes them; {} until one is stored.
+func radio() -> Dictionary:
+	return _doc["radio"].duplicate(true)
+
+
+func set_radio(doc: Dictionary) -> void:
+	_doc["radio"] = doc.duplicate(true)
+
+
 func rewards_settled() -> bool:
 	return bool(_doc["rewards_settled"])
 
@@ -541,6 +552,7 @@ func _defaults() -> Dictionary:
 		"seen": [],
 		"options": [],
 		"tunes": [],
+		"radio": {},
 	}
 
 

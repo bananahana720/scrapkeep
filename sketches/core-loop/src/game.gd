@@ -30,6 +30,7 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
+const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
@@ -84,6 +85,8 @@ var presentation
 var _session_seed := randi() # lint: session seed
 var hud
 var screens
+# The pilot radio (radio_deck.gd): the HUD dial, the takes a run finds, the playlists.
+var radio_deck
 var notes
 var panel
 var keyboard
@@ -214,6 +217,10 @@ func _ready() -> void:
 	add_child(screens)
 	screens.setup(self)
 	_listen_for_tunes()
+	radio_deck = RadioDeck.new()
+	radio_deck.name = "RadioDeck"
+	add_child(radio_deck)
+	radio_deck.setup(self)
 	notes = FieldNotes.new()
 	notes.name = "FieldNotes"
 	add_child(notes)
@@ -733,6 +740,11 @@ func _screen_key(key: int) -> bool:
 		"title":
 			if screens.jukebox_open():
 				return screens.jukebox_key(key)
+			if screens.radio_open():
+				return screens.radio_key(key)
+			if key == KEY_R and screens.camp_open():
+				screens.toggle_radio()
+				return true
 			if key == KEY_J and screens.camp_open():
 				screens.toggle_jukebox()
 				return true
