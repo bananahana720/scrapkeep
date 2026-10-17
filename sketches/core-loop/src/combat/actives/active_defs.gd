@@ -29,6 +29,12 @@ const ROWS := {
 	},
 	# One marked block per active, so each active's unit edits only its own.
 	# --- Silo Battery (Fleet Surplus) ---
+	"silo_battery": {
+		"name": "Silo Battery", "maker": "fleet_surplus", "rarity": "relic",
+		"verb": "Call down a silo strike", "text": "F: rings mark the ground, then the sky answers",
+		"max_charges": 1, "recharge": 14.0, "kill_charge": 0.1, "bonus_cap": 3, "windup": 0.5,
+		"kind": preload("res://src/combat/actives/silo_battery.gd"),
+	},
 	# --- end Silo Battery ---
 	# --- Cutting Torch (Redjaw Workshops) ---
 	"cutting_torch": {

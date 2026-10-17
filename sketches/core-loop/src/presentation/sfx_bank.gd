@@ -123,6 +123,7 @@ const TRIM_DB := {
 	# The actives' launches (src/combat/actives), one per active: "active_" + its id.
 	"active_scrap_rocket": -8.0,
 	"active_cutting_torch": -10.0, "active_cutting_torch_heat": -14.0,
+	"active_silo_battery": -6.0,
 	# Each pilot's line-skill and set-piece cues, one marked block per pilot (SKILL-BAR section 12,
 	# item 4); a row here needs its recipe in _bake.
 	# --- P-C Sable sounds ---
@@ -523,6 +524,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 		# Hot metal spitting under the flame: a short sizzle; audio climbs it with the heat.
 		"active_cutting_torch_heat":
 			return _mix([[_noise(0.14, 3400.0, 5200.0, 18.0, 0.004), 0, 1.0], [_noise(0.08, 1800.0, 2600.0, 30.0), Synth.seconds(0.02), 0.4]])
+		# A two-note klaxon chirp, the hatch's clank, two shells whistling down, and the landing
+		# FALL (silo_battery.gd) after the hatch opens: KA-THOOM.
+		"active_silo_battery":
+			return _mix([[_tone(0.07, 740.0, 720.0, "square_dark", 12.0), 0, 0.45], [_tone(0.07, 990.0, 960.0, "square_dark", 12.0), Synth.seconds(0.07), 0.45],
+				[_fm(0.2, _hz(43), 2.76, 3.0, 16.0), Synth.seconds(0.12), 0.8], [_noise(0.05, 3200.0, 1800.0, 60.0), Synth.seconds(0.12), 0.5],
+				[_tone(0.3, 2600.0, 900.0, "sine", 2.0), Synth.seconds(0.15), 0.28], [_tone(0.26, 2200.0, 760.0, "sine", 2.0), Synth.seconds(0.19), 0.24],
+				[_tone(0.45, 95.0, 36.0, "sine", 6.0), Synth.seconds(0.45), 1.0], [_noise(0.4, 900.0, 180.0, 8.0, 0.003), Synth.seconds(0.45), 0.8],
+				[_noise(0.06, 4200.0, 2200.0, 50.0), Synth.seconds(0.45), 0.4]], true)
 		"verb_fail_ultimate":
 			return _mix([[_fm(0.16, _hz(62), 1.5, 2.5, 20.0, -2.0), 0, 1.0], [_tone(0.06, 180.0, 150.0, "sine", 30.0), Synth.seconds(0.05), 0.6]])
 		"grapple_release":
