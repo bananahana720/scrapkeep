@@ -17,6 +17,17 @@ const T := preload("res://tests/support/t.gd")
 
 const FLAT_SHELF := Vector3(-45.0, 15.0, 6.0)
 
+
+# The rocket rack with a 0.5 s wind-up, standing in for the big actives that wind up.
+class WindupRack:
+	extends "res://src/combat/actives/active_rack.gd"
+
+	func _row(id: String) -> Dictionary:
+		var out: Dictionary = super._row(id).duplicate()
+		out["windup"] = 0.5
+		return out
+
+
 var _t := T.new("active_rockets_test")
 var _game
 var _player
@@ -165,6 +176,28 @@ func _run() -> void:
 	var base: float = kind.damage()
 	_game.tuning.set_mod("weapon_damage", 2.0)
 	_t.near("19 weapon damage mods scale every rocket", kind.damage(), base * 2.0, 0.01)
+
+	# --- A big active winds up; a Jam during the wind-up cancels it and refunds -------
+	_game.tuning.clear_mods()
+	var slow := WindupRack.new()
+	_combat.add_child(slow)
+	slow.setup(_game.ctx, _combat)
+	slow._granted = true
+	slow.rack(ActiveDefs.SCRAP_ROCKET)
+	_fired.clear()
+	_t.eq("21 a wind-up press fires nothing yet and spends the charge", [slow.press(), _fired.size(), slow.charges], ["", 0, cap - 1])
+	_t.eq("22 the chip reads active while it winds up", slow.slot_record()["state"], "active")
+	await _sim(0.3)
+	_t.eq("23 still nothing before the wind-up ends", _fired.size(), 0)
+	await _sim(0.3)
+	_t.eq("24 it fires once when the wind-up ends", _fired.size(), 1)
+	_fired.clear()
+	slow.press()
+	slow.lock(0.5)
+	await _sim(0.7)
+	_t.check("25 a Jam mid wind-up cancels the fire and refunds the charge", _fired.is_empty() and slow.charges == cap - 1 and slow.winding == 0.0,
+		"fired %s charges %d" % [_fired, slow.charges])
+	slow.queue_free()
 
 	# --- A new run clears the rack -------------------------------------------------------
 	ev.run_started.emit("pylon_engineer")
