@@ -6,14 +6,18 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 # The Cutting Torch (Redjaw Workshops): a shipbreaker's plate torch on the ball's nose. The press
 # winds up for WINDUP (the row's) with a guide line out along the aim, the outline of exactly the
 # lane the beam will burn; then the beam lights for BEAM_SECONDS and sweeps after the aim at up to
-# SWEEP radians a second. Damage lands only inside the lane drawn this tick (hull forgiveness, as
-# the player's other committed shapes), and a wall stops the lane where it stops the drawing.
+# SWEEP radians a second. Damage lands only inside the lane drawn this tick, tested by combat's
+# shared lane rule (Combat.in_line: flat, hull and forgiveness as every lane skill), and a wall
+# stops the lane where it stops the drawing.
 #
 # It beats plating: every machine in the lane soaks heat at the torch's burn rate, and a cut
-# lands when the heat reaches the machine's plating (combat's own plating rule, shred taken
-# off), so each cut lands in full and plating only delays the first bite; the damage a second
-# is the same on any plate. That suits the Dig, the Plate world. A posture fighter (a Warden, a
-# boss) is cut on the plain cadence and keeps its own rules.
+# lands when its heat reaches the machine's plating (combat's own plating rule, shred taken off),
+# so every cut lands in full and plating only sets the size of each bite; heat over time is the
+# same on any plate. A machine keeps its heat between burns until the stage clears, so a plate
+# heavier than one burn delivers (a stage-3 miniboss, a last vault) is cut by the next burn, never
+# shrugged off. That suits the Dig, the Plate world. A posture fighter (a Warden, a boss) is cut
+# on the plain cadence and keeps its own rules. A press during a live burn ends it and winds up
+# the next; the heat carries over.
 #
 # It stacks into a strong build: weapon damage mods and punch raise the burn, Spiral Wave fans out
 # one more beam per level, and a full ultimate meter's overflow (the rack's bonus) burns longer.
@@ -28,8 +32,6 @@ const SWEEP := 3.5
 const BURN := 60.0
 const CUT_DAMAGE := 7.5
 const FAN_DEG := 12.0
-# How far above or below the lane a machine's centre can sit and still be in it.
-const HEIGHT := 2.5
 const LIFT := 0.5
 const KNOCK := 0.0
 const COLOR := Palette.HAZARD
@@ -56,15 +58,21 @@ func setup(context, owner_combat) -> void:
 	combat = owner_combat
 
 
+# A stage clear, a death or a new run: the burn, its drawing and every machine's heat go.
 func clear() -> void:
+	_heat.clear()
+	_end()
+
+
+# A Jam in the wind-up: the guide goes; heat already built stays.
+func cancel() -> void:
+	_end()
+
+
+func _end() -> void:
 	guiding = false
 	beam_left = 0.0
-	_heat.clear()
 	_erase()
-
-
-func cancel() -> void:
-	clear()
 
 
 func beams_for() -> int:
@@ -93,7 +101,6 @@ func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	guiding = false
 	_burn = burn()
 	beam_left = BEAM_SECONDS + BONUS_SECONDS * bonus
-	_heat.clear()
 	_commit()
 	return _beams
 
@@ -108,7 +115,7 @@ func step(delta: float) -> void:
 	_cut(delta)
 	beam_left -= delta
 	if beam_left <= 0.0:
-		clear()
+		_end()
 
 
 func _turn(delta: float) -> void:
@@ -155,17 +162,9 @@ func _cut(delta: float) -> void:
 
 
 func _in_lanes(enemy: Node3D) -> bool:
-	var at := enemy.global_position
 	var hull: float = combat._hull(enemy)
 	for lane in lanes:
-		var from: Vector3 = lane["from"]
-		if absf(at.y - from.y) > HEIGHT + hull:
-			continue
-		var a := Vector2(from.x, from.z)
-		var b := Vector2(lane["to"].x, lane["to"].z)
-		var p := Vector2(at.x, at.z)
-		var t := clampf((p - a).dot(b - a) / maxf((b - a).length_squared(), 0.0001), 0.0, 1.0)
-		if p.distance_to(a.lerp(b, t)) <= float(lane["width"]) * 0.5 + hull:
+		if combat.in_line(lane["from"], lane["to"], lane["width"], enemy.global_position, hull):
 			return true
 	return false
 
