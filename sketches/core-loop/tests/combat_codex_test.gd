@@ -205,6 +205,9 @@ func _w9_tricks() -> void:
 	_combat.strike(rig, "slam", 14.0)
 	_report("bore_breach", _combat.discovered.has("bore_breach") and rig.stopped == 1,
 		"a slam on a drill crew mid-bore stopped it (stopped %d)" % rig.stopped)
+	# 2026-10-17 (damage families, PR #65): a hit past the rig's plating reads its armour.
+	_combat.strike(rig, "test_bolt", 40.0, "", "weapon")
+	_report("armour_plated", _combat.discovered.has("armour_plated"), "a full hit on a plated drill crew reads it")
 
 	var cutter: Node3D = _w9_spawn("line_cutter", home + Vector3(-10.0, 0.0, 8.0))
 	cutter._warn(_w9_to(cutter))

@@ -72,15 +72,17 @@ Why not a stun. A stun in a rolling game takes the ball away, which breaks the s
 
 ## 4. Cast times
 
-**The rule, one line: a cast commits you to a moment, never to standing still.**
+**The rule, one line: a cast commits you to a moment; only a heavy pilot plants for it.**
 
-A row's `cast` is the seconds between the press and the effect. The ball rolls at full speed the whole time. Nothing is spent until the cast lands; an interrupting hit (a jolt, a knock) drops it with nothing spent, exactly as it drops a hold gauge today. The slot reads active while it casts, and the selection timer pauses.
+A row's `cast` is the seconds between the press and the effect. The ball rolls at full speed the whole time, except where the pilot plants (below).
+
+**Who plants (Andrew's Q2, "Depends on the pilot", 22:12:39Z).** Tarn and the Cannon plant for their heavy casts: the four depth-3 Q variants that carry `plant` (Rake Run, Vice Leap, Creeping Barrage, Plate Mortar) brake the ball to a stop within 0.15 s and hold it through the 0.5 s wind-up. Sable, Kest, Rivet and Tally cast on the move. The plant is the pilot's own choice of stance, the only cast that stops the ball, so the standing rulings hold: no field, item or enemy takes the ball's speed. Checked by `tests/cast_motion_test.gd` for all six pilots. Nothing is spent until the cast lands; an interrupting hit (a jolt, a knock) drops it with nothing spent, exactly as it drops a hold gauge today. The slot reads active while it casts, and the selection timer pauses.
 
 | Rule | Value (start) | Why |
 | --- | --- | --- |
 | Where the effect lands | ground-targeted casts commit their geometry at the press; self-centred casts fire where the ball is when the cast lands | damage and telegraphs consume the same committed geometry; at 30 m/s a 0.4 s cast travels 12 m, so the player must see where it lands |
 | What drops a cast | any interrupting hit through the crowd-control door, a second press, a slot swap | one rule shared with gauges |
-| What does not | rolling, steering, boosting, jumping | the speed pillar |
+| What does not | rolling, steering, boosting, jumping | the speed pillar (a planting pilot stops by its own choice) |
 | Indicator | the bar slot fills over the cast; the ground shape draws at the press | the player sees both clocks |
 
 **Which abilities, proposal.** Cast times are a balancing lever for the big activatables only. Small ones stay instant.
@@ -147,7 +149,9 @@ A second axis already exists: the source class (`combat.gd _classify_source`: co
 
 The rule stays one judgement per hit, owned by the existing hooks. No enemy is immune to a family; the worst case is 60%, and below plating today's 20% chip.
 
-**Reading a weakness** (design-questions page, question 6, recommended "Learn on first hit"): your first hit on a kind stamps a comic word, DENT when resisted and ZZAP! when weak, and the codex records it; after that a small icon shows on that kind.
+**Reading a weakness** (Andrew's Q6, "Learn on first hit", 22:12:39Z): the first resisted and the first weak hit on an armour class each run stamp a comic word over the body, DENT and ZZAP! (STATE_ROWS `dented`, `zzapped`); the first read discovers the codex entry "Plated", and from then on, across runs, every enemy of that class wears a small slate icon 3.1 m up (STATE_ROWS `plated`), above the interrupted star at 2.4 m and far off the ground telegraphs.
+
+**As built (Q5 "Lean, never a wall", 22:12:39Z).** `src/combat/damage_families.gd` owns the numbers (`RESISTED` 0.6, `WEAK` 1.5), the family of each kind and the ARMOUR rows; combat's caps stage applies them to a hit that beat the plating, and nothing reads below 60%. The ability source is the special class (slots 2 and 3 and the set piece); the weapon is not an ability. Weak beats resisted on one hit, so a kinetic ability on plate is weak: casts beat plates. Armour is placed on purpose, not everywhere: the Spillway's Flow conducts through water (`elements.gd` arc:water), not armour; the Dig's Plate is the `plated` row, first on the drill crew (its own plate still takes the first breaking hit whole; its 22 plating still decides whether a hit gets through, the armour row how much of it counts), and any enemy can name its class with an `armour_class()` method, which the elites of "World 2 and 3 enemy identity" will use; synergy and item procs count as kinetic; the Highdraft's Wind is ring-outs, not armour. Checked by `tests/damage_families_test.gd`.
 
 ### 6.3 Pilot reads
 
@@ -193,11 +197,13 @@ At most two new enemy behaviours per wave (ENEMY-PRIORITY section 4b). Waves 17 
 | Jolt layer | `src/combat/jolt_layer.gd`, its `roster.gd` row, `tools/blender/world_one/enemy_jolt_layer.py` | a world 1 Fleet controller on the counter loop with its own model; spawnable by name, in no pack yet |
 | Cast time | `src/core/ability_state.gd`, `src/combat/combat.gd`, `src/combat/ultimate.gd` | `cast` on a row, `begin_cast`, `cancel_cast`, `take_cast_done`; the tap path casts through it; interrupts drop it with nothing spent; a Q row's `cast` is its wind-up |
 | Jam | `src/core/ability_state.gd` | `jam(seconds)` shuts SPECIAL and LINE; their state reads unavailable and a press answers "jammed" |
-| Test | `tests/jolt_layer_test.gd`, `tests/tally_kit_test.gd` | 26 checks: cast rows, cast, jam, field, and a live jolt layer that jolts a slow ball, is slipped by air and by a line, and recalls Q in its wind-up; Tally's test waits out the 0.3 s cast |
+| Plant | `src/combat/ultimate.gd`, `plant` on four `ability_state.gd` rows | Q2: Tarn's and the Cannon's variant wind-ups brake the ball to a stop; `tests/cast_motion_test.gd` checks all six pilots |
+| Damage families | `src/combat/damage_families.gd`, `src/combat/combat.gd` caps stage, `src/presentation/armour_marks.gd`, codex `armour_plated` | Q5 and Q6: plated resists kinetic (0.6) and is weak to arc and abilities (1.5); DENT and ZZAP! on the first reads; the codex entry and the icon; `tests/damage_families_test.gd` |
+| Test | `tests/jolt_layer_test.gd`, `tests/tally_kit_test.gd` | 28 checks: cast rows, cast, jam, field, and a live jolt layer that jolts a slow ball, is slipped by air and by a line, and recalls Q in its wind-up; Tally's test waits out the 0.3 s cast |
 
 Added after Andrew's "Big ones only" tap (19:56:59Z): Gather Plate casts in 0.3 s and aims at the press; every depth-3 Q variant winds up 0.5 s (`VARIANT_CAST`, start, until the power read ranks them); a jolt during Q's wind-up recalls Q with a full refund.
 
-Not in the slice: pack placement, damage families, the floodlight, momentum casting. The model is in (a procedural world-one body with its own coil mesh), and so is its voice: presence loop, tell 1.0 s before each pulse, jam, the Q-recall fizzle and the death break, loaded from assets/audio/specials/jolt_layer_*.wav when present (rendered on PR #12).
+Not in the slice: pack placement, the floodlight, frost brittleness, momentum casting. The model is in (a procedural world-one body with its own coil mesh), and so is its voice: presence loop, tell 1.0 s before each pulse, jam, the Q-recall fizzle and the death break, loaded from assets/audio/specials/jolt_layer_*.wav when present (rendered on PR #12).
 
 ## 10. Calls for Andrew
 
