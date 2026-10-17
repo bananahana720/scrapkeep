@@ -4,7 +4,8 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 
 # Every declared zone has unique ids, capped words, three skippable exchange
-# lines, seven scraps, and Warden/world-boss intros.
+# lines, seven scraps, and Warden/world-boss intros. Per-pilot boss threat lines are extra
+# intro rows, checked in intro_lines_test.
 # This pure data check does not instantiate the game or approve the writing's tone.
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
@@ -73,7 +74,7 @@ func _initialize() -> void:
 		_report(id + " text", row.get("text") is String and WordBudget.words_in(text) > 0, text)
 		for marker in FORBIDDEN_TEXT:
 			_report(id + " final text", not text.to_lower().contains(marker), "no " + marker)
-		if zone in REWRITTEN_ZONES:
+		if zone in REWRITTEN_ZONES and not row.has("pilot"):
 			rewritten_texts.append(text)
 			_report(id + " final id", not id.to_lower().contains("placeholder"), "no placeholder")
 		if CAPS.has(kind):
@@ -96,7 +97,7 @@ func _initialize() -> void:
 			"intro":
 				var subject := String(row.get("subject", ""))
 				_report(id + " intro subject", row.get("subject") is String and intros[zone].has(subject), subject)
-				if intros[zone].has(subject):
+				if intros[zone].has(subject) and not row.has("pilot"):
 					intros[zone][subject] += 1
 	var live_digest := "\n".join(rewritten_texts).sha256_text()
 	_report("rewritten text count", rewritten_texts.size() == 48, "%d texts; need 48" % rewritten_texts.size())

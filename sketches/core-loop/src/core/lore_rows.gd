@@ -346,4 +346,99 @@ const ROWS := [
 		"subject": "mind",
 		"text": "Lookout scrap: island lights blink in order. Count starts before the first.",
 	},
+	# Boss threat lines, one per boss and pilot (Andrew's design answer 12, "One line each",
+	# 2026-10-17). Each sits at the world's last zone, where the arena opens, and wins over the
+	# boss row without a pilot, which stays as the fallback. The Mind's lines answer its tune
+	# hidden backwards in the Spillway music (answer 9).
+	# TONE-READ: boss threat lines; every line awaits Andrew's read.
+	{
+		"id": "lore.reach.intro.brindle.pylon_engineer", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "pylon_engineer",
+		"text": "Brindle: Fastest fox on record. I've rounded you up to two.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.runner_gunner", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "runner_gunner",
+		"text": "Brindle: Rivet, a perfect record. Fleet policy is to audit perfect records.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.demolitions_caster", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "demolitions_caster",
+		"text": "Brindle: Take your time measuring, Kest. The Fleet bills by the hour.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.tarn", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "tarn",
+		"text": "Brindle: A gentle tiger in a snarling machine. I'll address the machine.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.tally", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "tally",
+		"text": "Brindle: Tally. My rival ledger. Tonight we see whose columns balance.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.remembered_cannon", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "remembered_cannon",
+		"text": "Brindle: Ancient ordnance, unregistered. I'll log you as a gift.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.pylon_engineer", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "pylon_engineer",
+		"text": "Waking: Fast fox. Your pylons were planted in my back.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.runner_gunner", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "runner_gunner",
+		"text": "Waking: Another mole digging in my dark. At least you aim.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.demolitions_caster", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "demolitions_caster",
+		"text": "Waking: Kest. I knocked back the whole time. You never knocked again.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.tarn", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "tarn",
+		"text": "Waking: Your machine growls at me, tiger. You only said sorry.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.tally", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "tally",
+		"text": "Waking: Itemize this, Tally. Floor. Floor. Ceiling.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.remembered_cannon", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "remembered_cannon",
+		"text": "Waking: I know your rings, old gun. You shook my sleep.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.pylon_engineer", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "pylon_engineer",
+		"text": "Mind: My gun remembered you, fox. I've hummed you since the Spillway.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.runner_gunner", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "runner_gunner",
+		"text": "Mind: Lift the visor, Rivet. I'd like to see who listened.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.demolitions_caster", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "demolitions_caster",
+		"text": "Mind: Welcome home, Kest. I kept your sky. Commit to staying.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.tarn", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "tarn",
+		"text": "Mind: Quiet tiger. Let the machine snarl. I only want the duet.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.tally", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "tally",
+		"text": "Mind: Tally, enter one more line. Likes: you. Balance that.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.remembered_cannon", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "remembered_cannon",
+		"text": "Mind: You were my gun. Now you play my song backwards.",
+	},
 ]

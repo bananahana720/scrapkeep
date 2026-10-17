@@ -89,7 +89,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.REACTIONS": "d69f61edda9075f25e0724226f87be0d35cb9688f1d840b76da4003371b92189",
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
-	"lore_rows.ROWS": "e19ddad31b36bb6462e736c355c11a0370ad547ec7343302016dc494643ef054",  # 2026-10-08 (wave 10 ST6): Dig and Highdraft lore take the approved sample lines; was 2026-10-04 (wave 11): world 2 and 3 lore final
+	"lore_rows.ROWS": "db179508439f6295ba28af703f3f62c35cfe1b7b8bb8129e4e07b50e5ed298cd",  # 2026-10-17 (boss threat lines): 18 per-pilot boss intro rows; was e19ddad3, 2026-10-08 (wave 10 ST6): Dig and Highdraft lore take the approved sample lines; was 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "f9e1cca796c86aa8044002aee416b6999ab8554aab078fc87545d8f59a3ec7ea",
 	"windup_rows.ROWS": "a38f788e68affd8fb5c71c0ff4e0f0883cbeac1eac85a4bb8d7c45a9ae62cfc8",  # 2026-10-08 (wave 10 GP6 and AU2): idle, death and wind-up cue fields per kind
 	"upgrade_tree.TREES": "e6b7f8d5b9484ad01af835ee32846a5c40f9c1f153a257dced7c727b57b31279",  # 2026-10-12 PC-RIVET merge (Rivet's kit rows); was 9d9d5f89, 2026-10-12, PC-TALLY merge 80634ba: Tally's achievements, cosmetics, tree, world-one cards and codex rows; event_kinds.WORLD_ROWS moved at the KE1 merge 61eaef0 (12 event kinds added), re-pinned here; was 034688e2, 2026-10-12 W13 coordinator: PC-SABLE round 7 (0ad68fa) merged onto Kest and the Cannon; was 41980464, 2026-10-12 W13 coordinator: PC-KEST round 4 (ef725b8) merged onto the Cannon kit; was ac75dc7b, 2026-10-12 PC-CANNON merge (5e18183): Cannon kit rows; was 10a325b3, 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 55786d60, 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
@@ -390,7 +390,7 @@ static func _selectable_node(node) -> bool:
 # An intro row's zone must be a stage of the table. The Warden line plays at engagement in any
 # zone; the second line is the boss's, voiced at the arena of the world's last zone, and is
 # reserved (valid, unplayed) in the world's earlier zones. It is only valid for the boss that
-# the zone's world owns.
+# the zone's world owns. A row with a pilot is that boss's threat line for one pilot.
 static func _intro_zone(issues: Array, name: String, id: String, row: Dictionary) -> void:
 	var parts := String(row.zone).split("-")
 	var world := int(parts[0]) if parts.size() == 2 and parts[0].is_valid_int() else 0
@@ -405,6 +405,16 @@ static func _intro_zone(issues: Array, name: String, id: String, row: Dictionary
 	var subject: String = row.get("subject", "")
 	if subject != "warden" and subject != String(Worlds.row(world).get("boss", "")):
 		_issue(issues, name, "reachable", id, "second intro line needs a boss row for world %d; '%s' is not it" % [world, subject])
+	if not row.has("pilot"):
+		return
+	# A pilot's threat line is the boss's, voiced only where the arena opens: the world's last zone.
+	_ref(issues, name, id, "pilot", row.pilot, ClassDef.all().map(func(p): return p.id))
+	var last := 0
+	for stage in StageDefs.COUNT:
+		if StageDefs.world_of(stage + 1) == world:
+			last = maxi(last, StageDefs.local(stage + 1))
+	if subject == "warden" or local != last:
+		_issue(issues, name, "reachable", id, "pilot line '%s' needs the boss at world %d's arena zone" % [row.pilot, world])
 
 
 static func _objective_ids() -> Array:
