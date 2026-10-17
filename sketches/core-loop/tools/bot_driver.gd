@@ -192,6 +192,18 @@ const GATE_RUNUP_BACK := 70.0
 const GATE_RUNUP_SECONDS := 12.0
 const GATE_CHARGE_SECONDS := 10.0
 const GATE_DETOUR_SECONDS := 6.0
+# A gate the ball has rolled off the gates' island beside GATE_SWITCH_FALLS times is given up
+# for the next offer: the crown's relic cache stands beside the east gate's run-in, and a bot
+# that keeps going round it at speed keeps leaving the beacon top by its east rim.
+const GATE_SWITCH_FALLS := 2
+# A gate still untaken after GATE_SWITCH_SECONDS is given up for the next offer the same way:
+# the cache's walls can hold a bot that keeps rounding them on the beacon top.
+const GATE_SWITCH_SECONDS := 40.0
+# Level with a gate and within GATE_CALM_RANGE of it, the bot rolls in without boosting and brakes
+# above GATE_CALM_SPEED, as a player eases up near a rim: the crown's gates stand 5 m in from a
+# 25 m drop, and a heavy ball boosted at its run-in point overshoots it off the beacon top.
+const GATE_CALM_RANGE := 25.0
+const GATE_CALM_SPEED := 12.0
 const VAULT_SECONDS := 45.0
 const EVENT_PURSUIT_SECONDS := 40.0
 const EVENT_LATEST := 150.0
@@ -348,6 +360,11 @@ var _gate_detour := Vector3.ZERO
 var _gate_detour_left := 0.0
 var _gate_run := ""
 var _gate_run_clock := 0.0
+var _gate_on_top := false
+# Whether this stage's gates stand on a sky island's top (a Highdraft map: the crown's beacon,
+# 25 m over the deck). The climb-back, calm, back-out and gate-switch rules apply only there.
+var _island_gates := false
+var _gate_falls := 0
 var _stage := 0
 var _fight_phase := "charge"
 var _fight_target: Node3D = null
@@ -2462,6 +2479,14 @@ func _on_offers(offers: Array) -> void:
 	_gate_detour_left = 0.0
 	_gate_run = ""
 	_gate_run_clock = 0.0
+	_gate_on_top = false
+	_gate_falls = 0
+	var map = game.ctx.terrain.map_for(game.run.stage)
+	_island_gates = map != null and map.has_method("_islands")
+	if _island_gates:
+		# A climb planned in the Warden fight is not the way to the gates.
+		_fight_climb.clear()
+		_fight_climb_clock = 0.0
 
 
 func _choose_gate(offers: Array) -> int:
@@ -2502,9 +2527,15 @@ func _to_gate(delta: float) -> void:
 	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
 	var ball_at: Vector3 = game.player.ball_position()
 	if _climbing(ball_at, at):
+		if _gate_on_top and _island_gates:
+			_gate_on_top = false
+			_gate_falls += 1
+			if _gate_falls >= GATE_SWITCH_FALLS:
+				_switch_gate()
 		target = _fight_way_up(ball_at, target, delta)
 		_goal += " climb"
 	else:
+		_gate_on_top = true
 		_fight_climb.clear()
 		_fight_climb_clock = 0.0
 	if rel.length() < GATE_PROBE_NEAR:
@@ -2513,7 +2544,7 @@ func _to_gate(delta: float) -> void:
 		_gate_detour_left = 0.0
 	# A ball off the gates' island with a way up follows that way: the run-up's straight
 	# charge would meet the island's cliff (the crown's beacon top stands 25 m over the deck).
-	if _fight_climb.is_empty():
+	if _fight_climb.is_empty() or not _island_gates:
 		target = _gate_runup(at, facing, rel, ball_at, target, delta)
 	else:
 		_gate_run = ""
@@ -2521,6 +2552,8 @@ func _to_gate(delta: float) -> void:
 	# bench): hop while rolling at it, as a player clears a low lip.
 	_gate_time += delta
 	_gate_hop -= delta
+	if _gate_time > GATE_SWITCH_SECONDS and _gate_on_top and _island_gates:
+		_switch_gate()
 	if _gate_time > GATE_HOP_SECONDS and _gate_hop <= 0.0 and game.player.state.grounded and along < 0.0 and along > -14.0:
 		_gate_hop = GATE_HOP_EVERY
 		source.press["jump_pressed"] = true
@@ -2529,7 +2562,27 @@ func _to_gate(delta: float) -> void:
 		print("    gate %d at=(%.1f, %.1f, %.1f) facing=(%.2f, %.2f, %.2f) ball=(%.1f, %.1f, %.1f) along=%.1f side=%.1f dy=%.1f ground=%.1f target=(%.1f, %.1f, %.1f)"
 			% [_gate_pick, at.x, at.y, at.z, facing.x, facing.y, facing.z, ball.x, ball.y, ball.z, along, side, rel.y,
 				game.ctx.terrain.height(ball.x, ball.z), target.x, target.y, target.z])
+	var calm: bool = _island_gates and _gate_on_top and _gate_run == "" and absf(rel.y) < 3.0 and rel.length() < GATE_CALM_RANGE
+	if not calm:
+		_act(target, null, delta)
+		return
+	var boost_clock := _boost_clock
+	_boost_clock = maxf(_boost_clock, delta)
 	_act(target, null, delta)
+	_boost_clock = boost_clock
+	if game.player.state.grounded and game.player.planar_velocity().length() > GATE_CALM_SPEED:
+		source.hold["brake_held"] = true
+
+
+# Gives up the picked gate for the next offer, with a fresh clock, run-up and detour.
+func _switch_gate() -> void:
+	_gate_falls = 0
+	_gate_time = 0.0
+	_gate_run = ""
+	_gate_detour_left = 0.0
+	if _offers.size() > 1:
+		_gate_pick = (_gate_pick + 1) % _offers.size()
+		_count("gate_switches")
 
 
 # The run-up for a gate up a face: "runup" drives to GATE_RUNUP_BACK metres down the gate's
@@ -2616,7 +2669,15 @@ func _gate_round_props(ball: Vector3, target: Vector3, delta: float) -> Vector3:
 	var hit := _gate_probe(ball, line, reach)
 	if hit.is_empty():
 		return target
-	var box := _prop_footprint(hit["collider"]).grow(GATE_MARGIN)
+	var walls := _prop_footprint(hit["collider"])
+	if _island_gates and walls.has_point(Vector2(ball.x, ball.z)):
+		# Inside a prop's pocket (the crown's relic cache is walled on three sides): no corner is
+		# in sight from in there, so back out the way the ball came in, away from the gate.
+		_gate_detour = ball - line * (walls.size.length() * 0.5 + GATE_MARGIN)
+		_gate_detour_left = GATE_DETOUR_SECONDS
+		_count("gate_backouts")
+		return _gate_detour
+	var box := walls.grow(GATE_MARGIN)
 	var best_cost := INF
 	var best := Vector3.ZERO
 	if box.has_area():
