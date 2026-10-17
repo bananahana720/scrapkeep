@@ -2270,13 +2270,14 @@
    "pick": "title-a",
    "tier": "legend",
    "world": 0,
-   "place": "Camp: under the trophy wall",
+   "place": "Camp: the trophy wall, once Moss's ledger balances",
    "found": {
-    "on": "cache",
-    "park": "camp",
-    "spot": "under the camp's trophy wall"
+    "on": "achievement_earned",
+    "where": {
+     "id": "ledger_balanced"
+    }
    },
-   "where": "The trophy wall has a gap at the bottom.",
+   "where": "A trophy for balancing Moss's ledger hangs a record on the wall.",
    "sleeve": "Theme and variations. Moss stopped counting at nine.",
    "bpm": 129,
    "key": "D minor",
@@ -2668,13 +2669,14 @@
    "pick": "title-c",
    "tier": "b-side",
    "world": 0,
-   "place": "Camp: behind the course's finish arch",
+   "place": "Any park: a movement course's finish arch",
    "found": {
-    "on": "cache",
-    "park": "camp",
-    "spot": "behind the movement course's finish arch"
+    "on": "activity_done",
+    "where": {
+     "id": "movement_course"
+    }
    },
-   "where": "Finish the course and look behind you.",
+   "where": "Finish a movement course and listen behind you.",
    "sleeve": "The course has a marching band. Nobody told the course.",
    "bpm": 172,
    "key": "D major",

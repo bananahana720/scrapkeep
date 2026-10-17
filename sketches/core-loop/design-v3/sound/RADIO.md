@@ -15,7 +15,7 @@ The house band follows you live by default, and everything you find out in the w
 | Next station | `.` | D-pad down | Turns the dial one station on, Radio Off included |
 | Previous station | `,` | (none) | Turns the dial back one station |
 | Skip track | `/` | none yet (L3 is a rebind target) | Next track on this station or mixtape |
-| Pin track | `;` | (mixtape page) | The track on air plays through bosses and Wardens |
+| Pin track | `;` | (mixtape page) | The track on air plays through bosses and Wardens, until a boss's final phase |
 | Off | dial to Off, or the pause menu's Radio row (V) | dial to Off, or the pause menu | Music bus silent |
 
 Every radio key is an InputMap action in `bindings.gd` (`cl_radio_next`, `cl_radio_prev`, `cl_radio_skip`, `cl_radio_pin`), so a rebinding page can reach them.
@@ -28,7 +28,7 @@ Every radio key is an InputMap action in `bindings.gd` (`cl_radio_next`, `cl_rad
 
 1. **KEEP Live is the default.** It is the adaptive score itself: drums follow speed, the sax enters with combo, hit sounds land within 5 ms, answers on the next beat.
 2. **Found tracks still play with you.** A radio track plays through the same band, so the band's parameters still drive it. Where a take has stems (drums, bass, other), speed lifts the drums and combo opens the lead layer, as the score does.
-3. **Bosses and Wardens keep their own score** (Brindle, the Waking, the Mind with the hype rule's Eurodance finals, and every Warden's build and unseal drop) unless you pin a track. A pinned track plays through the fight, phases and finals included. The radio comes back when the fight ends; beating a boss always plays its victory.
+3. **Bosses and Wardens keep their own score** (Brindle, the Waking, the Mind with the hype rule's Eurodance finals, and every Warden's build and unseal drop) unless you pin a track. A pinned track plays through Wardens and a boss's earlier phases. A boss's final phase always takes the air, the Eurodance final where there is one, even over a pin; the pin plays again after the fight. Beating a boss always plays its victory.
 4. **A tune you have not heard yet always cuts in.** When a stage, landmark, event or boss has a tune you have not found, the radio steps aside for it, and the chip reads "New signal. Listen in." It holds the score until that moment moves on (the next stage, the moment ending) or you touch a radio key. So the radio never stops you collecting.
 5. **Auto Scan** picks found tracks that fit the world you are in, and steps aside for every moment (landmarks, events, fights), like a DJ watching the room.
 6. **Harder challenges and stranger places award bigger tracks.** See the tiers below.
@@ -76,8 +76,8 @@ A camp page on R, next to Moss's jukebox (`src/ui/radio_page.gd`).
 | Highdraft crown (park_crown) | the spire's lowest bell frame | Crown, Last Call | take |
 | | the spire's 30 m waist, outside | Crown Spire, Fusion | take |
 | | the rope bridge between the two highest islands | Crown Footwork | take |
-| Camp | under the trophy wall | Lights On, Twelve Ways | legend |
-| | behind the movement course's finish arch | The Course, Drumline | b-side |
+
+The camp has no place to roll around in yet, so its two takes are earned instead: Lights On, Twelve Ways (legend) when Moss's ledger balances and its trophy goes up, and The Course, Drumline (b-side) for finishing a movement course in a park.
 
 **Challenges and moments.** The other 60 tracks come from play: every Warden broken, every event type won, all three bosses (beaten, phased, adapted), streaks such as 150 machines in world one or five synergies in one run, a clean win, and hearing each jukebox tune for the first time. The legends from challenges:
 
@@ -127,13 +127,13 @@ Per take: the parent pick is stretched to the take's tempo with Rubber Band and 
 
 ## Placement still to do
 
-Cache spots are named here but have no coordinates yet. `assets/radio/cache_spots.json` maps a take id to `[x, y, z]`; the park-dressing work fills it in at the spots above, and a take with no entry has no cache in the world. Until then the 21 cache takes cannot be found in play; the other 60 can.
+Cache spots are named here but have no coordinates yet. `assets/radio/cache_spots.json` maps a take id to `[x, y, z]`; the park-dressing work fills it in at the spots above, and a take with no entry has no cache in the world. Until then the 19 cache takes cannot be found in play; the other 62 can.
 
-## Open calls for Andrew
+## Andrew's rulings (cards, 17 Oct)
 
-1. **Wordless vocal textures.** Six rows use wordless pitched vocal pads or chopped vocal sounds (the layered Frank Ocean feel you described). The sound bible says no vocals. The render job skips these rows until you rule. Recommended: allow wordless textures on the radio only, never words.
-2. **Wardens and the radio.** Built: a Warden takes the air back like a boss unless you pin. The other option keeps your station playing into Warden fights, which loses the Warden's build and unseal drop.
-3. **A pinned track through a boss's final phase.** Built: a pin plays through everything, the Eurodance final included. The other option lets the Eurodance final cut in even over a pin.
+1. **Wordless vocals: radio only** (20:52:33Z). The six wordless-vocal takes keep voices as texture, never words; the score stays vocal-free. The render job takes them with `--wordless`.
+2. **Wardens take the air** (20:52:37Z) like bosses, unless a track is pinned.
+3. **The finale wins** (20:52:55Z). A boss's final phase takes the air even from a pinned track; the pin plays again after the fight.
 
 ## Ideas parked for later
 

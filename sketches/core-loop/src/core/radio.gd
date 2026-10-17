@@ -9,6 +9,7 @@ extends RefCounted
 # The rules, in order:
 #   Off silences the music bus only; hits and musical answers keep sounding.
 #   A tune the player has not heard yet cuts in, so collecting never stalls behind the radio.
+#   A boss's final phase always has the air, even over a pin; the pin plays again after.
 #   A boss or a Warden keeps its own score unless the track on air is pinned.
 #   Auto steps aside for every live moment, like a DJ watching the room.
 #   A station with nothing found on it plays the score under its call sign: no signal yet.
@@ -54,6 +55,7 @@ static func station_name(id: String) -> String:
 # What the band plays now. context:
 #   found  ids the profile holds (records and takes)
 #   boss   a boss fight is on
+#   finale the boss is in its final phase (the Eurodance final where there is one)
 #   world  1 to 3 in a run, 0 elsewhere
 #   fresh  the score is playing, or about to play, a tune the player has not heard
 #   moment a place or moment tune is live (a landmark, an event, a miniboss): Auto steps aside
@@ -61,6 +63,8 @@ static func station_name(id: String) -> String:
 func decide(context: Dictionary) -> Dictionary:
 	if station == OFF:
 		return _plan("silence", "", "off")
+	if bool(context.get("boss", false)) and bool(context.get("finale", false)):
+		return _plan("score", "", "finale")
 	if bool(context.get("fresh", false)):
 		return _plan("score", "", "new_signal")
 	if station == LIVE:

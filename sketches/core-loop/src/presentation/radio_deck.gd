@@ -225,7 +225,8 @@ func context() -> Dictionary:
 	var flow = game.flow
 	var boss: bool = flow.state_name() == "boss" or (flow.has_method("engaged") and flow.engaged() and bool(flow.get("sealed")))
 	var moment: bool = _audio != null and _audio.has_method("moment_live") and _audio.moment_live()
-	return {"found": game.ctx.profile.tune_ids(), "world": world, "boss": boss, "fresh": fresh, "moment": moment}
+	var finale: bool = _audio != null and bool(_audio.get("radio_finale"))
+	return {"found": game.ctx.profile.tune_ids(), "world": world, "boss": boss, "fresh": fresh, "moment": moment, "finale": finale}
 
 
 func _process(delta: float) -> void:
@@ -305,6 +306,8 @@ func reading() -> Dictionary:
 			line = "New signal. Listen in."
 		"boss":
 			line = "The fight has the air"
+		"finale":
+			line = "The finale has the air"
 		"no_signal":
 			line = "No signal yet. " + _hint(station)
 		"moment":

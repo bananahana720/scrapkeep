@@ -331,6 +331,10 @@ var radio_pinned := false
 var radio_silenced := false
 var _radio_args := []
 var _radio_respin_due := false
+# A boss's final phase has the air (Andrew, card 20:52:55Z 17 Oct: the finale wins over a pin);
+# the boss music a pinned track held off, as [kind, music], to start when the finale takes over.
+var radio_finale := false
+var _radio_boss := []
 
 static var _bake_task := -1
 static var _baked := false
@@ -1064,6 +1068,7 @@ func _radio_drop(reason: String) -> void:
 	radio_hold = ""
 	radio_pinned = false
 	_radio_args = []
+	_radio_boss = []
 	_radio_respin_due = false
 	_release_spin()
 	if reason != "":
@@ -2293,9 +2298,12 @@ func _tend_specials() -> void:
 func _begin_boss(kind: String, music: String) -> void:
 	if not sound_ready:
 		return
+	if kind == "boss_arena_entered":
+		radio_finale = false
 	if radio_hold != "":
 		if radio_pinned:
 			on_beat(kind, 0.0, true)
+			_radio_boss = [kind, music]
 			return
 		_radio_drop("boss")
 	if engine.track == music or engine.mode != MusicEngine.PLAY:
@@ -2341,11 +2349,21 @@ func _on_boss_phase_with(phase) -> void:
 # drop) when the euro pack is not on disk. A pack that is not on disk changes nothing. Returns
 # the plan it carried out, {} for none.
 func phase_music(phase: int) -> Dictionary:
+	var boss := engine.track
+	if PhaseMusic.is_final(phase) and sound_ready:
+		if radio_hold != "" and not _radio_boss.is_empty():
+			# The finale takes the air from a pinned track: the boss music it held off starts
+			# now, and the final track lands on it. The deck puts the pin back after the fight.
+			var held: Array = _radio_boss
+			_radio_drop("finale")
+			_begin_boss(held[0], held[1])
+			_phase_music_done = 1
+			boss = String(held[1])
+		radio_finale = true
 	if radio_hold != "":
 		return {}
 	if not sound_ready or phase <= _phase_music_done or not ace_wanted():
 		return {}
-	var boss := engine.track
 	if not boss in MusicEngine.BOSS_TRACKS:
 		return {}
 	_phase_music_done = phase
@@ -2550,6 +2568,7 @@ static func _argc(events: Object, signal_name: String) -> int:
 
 func _on_boss_defeated() -> void:
 	_radio_drop("victory")
+	radio_finale = false
 	on_beat("boss_defeated", 0.0, true)
 	engine.victory()
 
