@@ -224,7 +224,12 @@ func _stage_note(record: Dictionary) -> Dictionary:
 func _fight(record: Dictionary) -> float:
 	for note in record.get("stages", []):
 		if int(note.get("stage", 0)) == STAGE and note.get("warden_broken_s") != null:
-			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0)))
+			# A camper never turns to the Warden, so its note has no warden_fight_s; its fight starts at
+			# the engagement (bot_driver.gd fight_start_of), not at 0, which read a 140 s break as 0 s.
+			var start = note.get("warden_fight_s")
+			if start == null:
+				start = BotDriver.fight_start_of(note)
+			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - float(start if start != null else 0.0))
 	return RUN_CAP_S
 
 

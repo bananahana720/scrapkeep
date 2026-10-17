@@ -49,7 +49,9 @@ func setup(boss_ref, role_name: String, id: String, body_size: Vector3, capsule:
 	name = "Brindle_%s" % (id if id != "" else role_name)
 	radius = capsule.x
 	half_height = capsule.y
-	sync_to_physics = true
+	# The ship moves this body's parent, which sync_to_physics never follows: synced, the
+	# collider stayed at the arena centre while the hull it belongs to moved away.
+	sync_to_physics = false
 	collision_layer = 0
 	collision_mask = 0
 	if body_size != Vector3.ZERO:
