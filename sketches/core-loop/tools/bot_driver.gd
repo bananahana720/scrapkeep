@@ -78,6 +78,10 @@ const STAGE_LIMIT := 240.0
 # Warden gets GATE_LIMIT seconds after the break to reach an exit gate, so a late break is not
 # a stall (one run broke at 232.6 s and stalled in "gates" 7 s later).
 const PARK_MIND_LIMIT := 480.0
+# The roll to the gates is a leg of its own: completionist seed 35118 (Pylon) broke the stage-6
+# Warden at 230.7 s and was cut off at 240 s on its way to gate 1. A gate the bot cannot reach
+# still stalls, GATE_LIMIT after the break, with stall_state "gates". 90 s, not PR #34's 60 s:
+# STAGE6's measured exits took up to 26 s plus the exit-bank run-up (merge, 2026-10-17).
 const GATE_LIMIT := 90.0
 const BOSS_LIMIT := 420.0
 const STUCK_SPEED := 2.5
@@ -260,6 +264,11 @@ const CAMP_LAST := 1000.0
 const CLIMB_STEP := 4.0
 const CLIMB_PAD := 100.0
 const CLIMB_SLOPE := 0.5
+# When no way up stays within CLIMB_SLOPE, the plan is retried at each of these steeper limits
+# before the ball is steered straight at the target: Spillway stage 1 (Tarn, random seed 35221)
+# has a basin whose way out climbs between 0.5 and 0.55, and the straight line from it meets the 14 m face
+# under the Warden's shelf, which held the ball for the rest of the stage.
+const CLIMB_SLOPE_RETRY := [0.6, 0.75]
 # A greybox kicker rises exactly CLIMB_SLOPE (14 m over 28 m); the slack keeps rounding from closing it.
 const SLOPE_SLACK := 0.001
 # How far past a kicker's lip its launch lands, clear of the gap a lip leaves before the next floor.
@@ -1227,7 +1236,7 @@ func _approach(s, ball: Vector3) -> Vector3:
 		_climb_for = s.id
 		_climb.clear()
 		if at.y - ball.y > LEVEL_BAND:
-			_climb = _climb_route(ball, at)
+			_climb = _climb_route_any(ball, at)
 	while not _climb.is_empty() and _flat(ball, _climb[0]) < CLIMB_REACHED:
 		_climb.pop_front()
 	_kicker_jump(ball)
@@ -1235,7 +1244,7 @@ func _approach(s, ball: Vector3) -> Vector3:
 
 
 # A grid path over the terrain's heights from the ball to the site that never climbs a step
-# steeper than CLIMB_SLOPE (falling is free), every other cell kept. Empty when there is none.
+# steeper than slope (CLIMB_SLOPE unless given; falling is free), every other cell kept. Empty when there is none.
 # A cell costs more the further it drops to a neighbour, so a route up a ramp keeps to its middle,
 # not the rim of its skirt where a ball cutting the corner at the foot slides back to the deck.
 # Each step's rise is read on both of its halves (the heights are sampled at half a step), so a
@@ -1244,7 +1253,7 @@ func _approach(s, ball: Vector3) -> Vector3:
 # A park kicker is a placed wedge the terrain's heights do not hold, so its ramp is laid over them
 # and its lip carries a one-way launch edge KICKER_LAUNCH past it: the Flume's warden exit rises
 # 14 m up drum_lip_kicker and flies its 3 m gap to the gate lip, a way the heights alone never had.
-func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
+func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vector3]:
 	var terrain = game.ctx.terrain
 	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD
 	var hi := Vector2(maxf(from.x, to.x), maxf(from.z, to.z)) + Vector2.ONE * CLIMB_PAD
@@ -1285,17 +1294,17 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 				if legacy:
 					# Mind stage: the pre-13c94abc test, one slope from the end heights.
 					up = (hb - ha) / (run * 2.0)
-					if absf(up) <= CLIMB_SLOPE:
+					if absf(up) <= slope:
 						graph.connect_points(a, b)
 					elif up > 0.0:
 						graph.connect_points(b, a, false)
 					else:
 						graph.connect_points(a, b, false)
-				elif up <= CLIMB_SLOPE + SLOPE_SLACK and down <= CLIMB_SLOPE + SLOPE_SLACK:
+				elif up <= slope + SLOPE_SLACK and down <= slope + SLOPE_SLACK:
 					graph.connect_points(a, b)
-				elif up <= CLIMB_SLOPE + SLOPE_SLACK:
+				elif up <= slope + SLOPE_SLACK:
 					graph.connect_points(a, b, false)
-				elif down <= CLIMB_SLOPE + SLOPE_SLACK:
+				elif down <= slope + SLOPE_SLACK:
 					graph.connect_points(b, a, false)
 	# Each kicker's lip and landing are two more points: the ramp's cells climb to the lip, the lip
 	# launches one way to the landing, and the landing joins the cells beside it on its own level.
@@ -1320,11 +1329,11 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 				var c := lo + Vector2(i, j) * CLIMB_STEP
 				var hc: float = half[2 * j * hx + 2 * i]
 				var to_lip := c.distance_to(Vector2(lip.x, lip.z))
-				if to_lip <= CLIMB_STEP * 1.5 and lip.y - hc <= (CLIMB_SLOPE + SLOPE_SLACK) * maxf(to_lip, 0.01) \
-						and hc - lip.y <= CLIMB_SLOPE * maxf(to_lip, 0.01):
+				if to_lip <= CLIMB_STEP * 1.5 and lip.y - hc <= (slope + SLOPE_SLACK) * maxf(to_lip, 0.01) \
+						and hc - lip.y <= slope * maxf(to_lip, 0.01):
 					graph.connect_points(j * nx + i, lip_id, false)
 				var to_land := c.distance_to(land2)
-				if to_land <= CLIMB_STEP * 1.5 and absf(hc - land_y) <= CLIMB_SLOPE * maxf(to_land, 0.01):
+				if to_land <= CLIMB_STEP * 1.5 and absf(hc - land_y) <= slope * maxf(to_land, 0.01):
 					graph.connect_points(land_id, j * nx + i)
 	var ids := graph.get_id_path(graph.get_closest_point(Vector2(from.x, from.z)), graph.get_closest_point(Vector2(to.x, to.z)))
 	var out: Array[Vector3] = []
@@ -1344,6 +1353,16 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 				_route_lips.append(out.back())
 		elif k % 2 == 1 or ramp[k] or (k + 1 < ids.size() and ramp[k + 1]):
 			out.append(_ground_point(at.x, at.y))
+	return out
+
+
+# _climb_route at CLIMB_SLOPE, then at each CLIMB_SLOPE_RETRY limit until one finds a way.
+func _climb_route_any(from: Vector3, to: Vector3) -> Array[Vector3]:
+	var out := _climb_route(from, to)
+	for slope in CLIMB_SLOPE_RETRY:
+		if not out.is_empty():
+			break
+		out = _climb_route(from, to, slope)
 	return out
 
 
@@ -2187,7 +2206,7 @@ func _climbing(ball: Vector3, at: Vector3) -> bool:
 func _fight_way_up(ball: Vector3, at: Vector3, delta: float) -> Vector3:
 	_fight_climb_clock -= delta
 	if _fight_climb_clock <= 0.0:
-		_fight_climb = _climb_route(ball, at)
+		_fight_climb = _climb_route_any(ball, at)
 		_fight_climb_clock = FIGHT_CLIMB_REPLAN
 	while not _fight_climb.is_empty() and _flat(ball, _fight_climb[0]) < CLIMB_REACHED:
 		_fight_climb.pop_front()
