@@ -8,12 +8,13 @@ const T := preload("res://tests/support/t.gd")
 # The crown's place layers (stage 6 page sections 11 and 17; journey board gap 9): a park row's music_layer is
 # published by its ride sensor beside its ride fact, and a group row with no recipe (the hoodoo forest) gets a sensor
 # that publishes the layer alone. The toppled route's layer waits for the strike's runtime swap: on the unswapped
-# spire_top_ramp its sensor sat on the main line and played before any strike (bot audit, 2026-10-17). The ball entering is driven by emitting the sensor's
+# spire_top_ramp its sensor sat on the main line and played before any strike (bot audit, 2026-10-17). The crown ramp's
+# layer waits too: the ramp sits inside the Warden's bowl, the ball re-crossed it mid-fight, and each layer change moved
+# the on-bar telegraphs (skipper stage 6 seed 2 broke the Warden at fight tick 14410 instead of 6262). The ball entering is driven by emitting the sensor's
 # body_entered by hand; whether the music thread's render plays is not checked here.
 
 const CROWN := "res://src/world/park/park_crown.json"
-const LAYERS := {"hoodoo_forest": "layer_crown_hoodoos", "alcove_ledge": "layer_crown_alcove",
-	"crown_ramp": "layer_crown_ramp"}
+const LAYERS := {"hoodoo_forest": "layer_crown_hoodoos", "alcove_ledge": "layer_crown_alcove"}
 
 var _t := T.new("park_music_layers_test")
 
@@ -35,6 +36,7 @@ func _run() -> void:
 	_t.eq("the layer-only rows are the recipe-less ones", ParkRecipes.layer_rows(park).map(func(r): return r["id"]),
 		["hoodoo_forest"])
 	_t.check("the unswapped spire top ramp carries no layer yet", not rows["spire_top_ramp"].has("music_layer"), "")
+	_t.check("the in-arena crown ramp carries no layer", not rows["crown_ramp"].has("music_layer"), "")
 
 	var parent := Node3D.new()
 	root.add_child(parent)
