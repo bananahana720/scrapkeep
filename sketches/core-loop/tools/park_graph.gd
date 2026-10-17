@@ -100,6 +100,9 @@ const FULL_VISIT_RATIO_MAX := Placement.FULL_VISIT_RATIO_MAX
 const ONLINE_KINDS := Placement.ONLINE_KINDS
 const REWARD_KINDS := Placement.REWARD_KINDS
 const RISK_KINDS := Placement.RISK_KINDS
+# Opt-in events a park stands beside its four pockets (W13 SR10): not counted as a pocket, but
+# their door keeps the sight and clear-ring rules.
+const EVENT_KINDS := ["hold_the_relay"]
 const HIDDEN_KINDS := Placement.HIDDEN_KINDS
 const DESTRUCTIVE_EVENTS := Placement.DESTRUCTIVE_EVENTS
 const HAZARD_CONTRAPTIONS := Placement.HAZARD_CONTRAPTIONS
@@ -1190,6 +1193,8 @@ static func pockets(graph, park: Dictionary, rows_only := false) -> Dictionary:
 			role = "reward"
 		elif RISK_KINDS.has(act["activity"]):
 			role = "risk"
+		elif EVENT_KINDS.has(act["activity"]):
+			role = "event"
 		var pay := _pay(act.get("pay", {}))
 		rows.append({"id": String(act["id"]), "role": role, "kind": String(act["activity"]),
 			"site": String(act["site"]), "at": act["at"], "pay_at": act["at"], "pay_rarities": pay["rarities"], "pay_named": pay["named"]})
@@ -1265,7 +1270,7 @@ static func pockets(graph, park: Dictionary, rows_only := false) -> Dictionary:
 			breaches.append(_breach(id, "sight", "no clear ray from the door to a line node within %d m" % SIGHT_M))
 		if not row["clear_ring"].is_empty():
 			breaches.append(_breach(id, "clear_ring", "within %d m of the door: %s" % [RING_M, ", ".join(row["clear_ring"])]))
-		if role == "online" or role == "extra":
+		if role in ["online", "extra", "event"]:
 			continue
 		if row["d_spawn"] < DOOR_SPAWN_M:
 			breaches.append(_breach(id, "spawn", "%s m from the spawn, want at least %d" % [_m(row["d_spawn"]), DOOR_SPAWN_M]))

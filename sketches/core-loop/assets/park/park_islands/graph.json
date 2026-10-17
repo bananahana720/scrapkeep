@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "166c0a2333c0e8497aee772353ee15da7cb05ac4f773ba091acad30ae362fc74",
+  "bake_sha256": "f325f3510315ec5edbd76bd255151c5eeb191ab3386bf2ac77358497d36deae9",
   "beacon_ok": true,
   "breaches": [],
   "bytes": 859843,
@@ -13,15 +13,15 @@
     "sight_ok": 10239,
     "under": 0
   },
-  "full_visit_m": 1715,
-  "full_visit_ratio": "1.313",
+  "full_visit_m": 2010,
+  "full_visit_ratio": "1.539",
   "graph_sha256": "87e6b5d5ab3a18141bcabe323d3fbea5775e3322a85a42a9146d042aa389a9eb",
   "line_errors": [],
   "line_path_nodes": 157,
   "longest_est_m": 2356,
   "map": "park_islands",
   "nodes": 40401,
-  "park_sha256": "19dded17c7040fde5a940d4a3a9ca7195b22285e2c3e5f327a7f8486bdb6e0d3",
+  "park_sha256": "e4a80a65ee3bcfea78f0d9482021f54495b7ed547de3767350792e32fbed70ac",
   "pockets": [
     {
       "clear_ring": [],
@@ -107,6 +107,34 @@
     },
     {
       "clear_ring": [],
+      "d_landmark": 1094,
+      "d_spawn": 310,
+      "detour_m": 120,
+      "door_at": [
+        -136,
+        -472
+      ],
+      "door_m": 120,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "saddle_relay",
+      "kind": "hold_the_relay",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "event",
+      "sight_ok": true,
+      "site": "saddle_shelf"
+    },
+    {
+      "clear_ring": [],
       "d_landmark": 1073,
       "d_spawn": 408,
       "detour_m": 240,
@@ -172,10 +200,10 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.313
+      "value": 1.539
     }
   ],
-  "tool_sha256": "4461666e87db0beb7981a7f75bf3ba9b1e5bdb7a15c2947f1272a818aaa4a3d8",
+  "tool_sha256": "e056e2d0e353848614f7ccc875c31d5fe46fc569d2a5b3e53fbe86c83b57c5cb",
   "zones": {
     "anchors": [
       {
