@@ -4,14 +4,23 @@ extends "res://src/world/device.gd"
 # relay's ring. Hold E to add one stack, up to the most, then one more hold clears the stake. The
 # prompt names what the hold does before it commits; rolling into the ring starts the
 # charge and locks the stake (hold_relay.gd), so the post stands spent while it runs.
+# The dressed post (tools/blender/world_one/relay_stake.py) shows the stake: one glass ring lights
+# per stack, low to high, and the hand-height dial's needle steps one mark per stack, 0 to 4. The
+# primitive mast and coil stand in only when the GLB is missing. Nothing here stops the ball.
 
 const Cards := preload("res://src/world/director_cards.gd")
 
 const MAST_HEIGHT := 16.0
 const COIL_RADIUS := 2.2
+const MODEL := "res://assets/models/world_one/relay_stake_post.glb"
+const STAKE_RINGS := ["Stake1", "Stake2", "Stake3", "Stake4"]
+const STAKE_SWEEP := 0.5
+const RING_LIT := 3.0
 
 var relay
 var _coil_mat: StandardMaterial3D
+var _ring_mats: Array[StandardMaterial3D] = []
+var _needle: Node3D
 
 
 func _init() -> void:
@@ -19,6 +28,27 @@ func _init() -> void:
 
 
 func build() -> void:
+	if ResourceLoader.exists(MODEL):
+		var model := (load(MODEL) as PackedScene).instantiate() as Node3D
+		var rings: Array[MeshInstance3D] = []
+		for ring_name in STAKE_RINGS:
+			rings.append(model.find_child(ring_name, true, false) as MeshInstance3D)
+		var glow := model.find_child("CoilGlow", true, false) as MeshInstance3D
+		_needle = model.find_child("StakeNeedle", true, false) as Node3D
+		if glow != null and _needle != null and not rings.has(null):
+			add_child(model)
+			for ring in rings:
+				var mat := Palette.solid(Palette.ARC, RING_LIT)
+				mat.albedo_color = Palette.ARC.darkened(0.6)
+				ring.material_override = mat
+				_ring_mats.append(mat)
+			_coil_mat = Palette.solid(Palette.ARC, 0.3)
+			glow.material_override = _coil_mat
+			_show_stakes(0)
+			return
+		push_warning("relay_stake: %s lacks a stake ring, the dial needle or the coil; keeping the primitive post" % MODEL)
+		model.free()
+		_needle = null
 	var mast := MeshInstance3D.new()
 	var cyl := CylinderMesh.new()
 	cyl.top_radius = 0.6
@@ -62,10 +92,20 @@ func fire() -> bool:
 	return true
 
 
+# The lit rings and the dial needle: k stacks light the lowest k rings and turn the needle k marks.
+func _show_stakes(k: int) -> void:
+	for i in _ring_mats.size():
+		_ring_mats[i].emission_enabled = i < k
+		_ring_mats[i].albedo_color = Palette.ARC if i < k else Palette.ARC.darkened(0.6)
+	if _needle != null:
+		_needle.rotation.z = -STAKE_SWEEP * float(k)
+
+
 # The coil brightens with each stack and while the relay charges.
 func tick(_delta: float) -> void:
 	if relay == null or _coil_mat == null:
 		return
+	_show_stakes(int(relay.stakes))
 	var glow: float = 0.3 + 0.5 * float(relay.stakes)
 	if relay.charging():
 		glow += 1.5 * relay.progress()
