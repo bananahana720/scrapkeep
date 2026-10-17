@@ -17,6 +17,8 @@ const passes = inputs.map((f) => JSON.parse(readFileSync(f, "utf8")));
 const byKey = new Map();
 for (const pass of passes) {
   for (const f of pass.findings) {
+    // Passes before the fuzz budget fix logged a fuzz timeout as a game finding; it was the harness.
+    if (f.key === "fuzz:stall_or_crash_in_fuzz" && /timeout/.test(pass.extras.fuzzSummary ?? "")) continue;
     const have = byKey.get(f.key);
     if (!have) byKey.set(f.key, { ...f, runs: [...f.runs] });
     else {

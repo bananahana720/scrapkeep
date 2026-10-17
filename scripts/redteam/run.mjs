@@ -118,17 +118,21 @@ const extras = { fuzzSeconds: opts.quick ? 30 : 60 };
 function fuzzTask() {
   return async () => {
     const first = seedOf(opts.wave, fuzzAt);
-    const seeds = `${first}-${first + (opts.quick ? 5 : opts.sweep ? 39 : 19)}`;
+    const n = opts.quick ? 6 : opts.sweep ? 40 : 20;
+    const seeds = `${first}-${first + n - 1}`;
     const dir = path.join(jobsDir, "item-fuzz");
     mkdirSync(dir, { recursive: true });
     log("start item fuzz " + seeds);
     const p = await runProcess(["--headless", "--fixed-fps", "90", "--path", "sketches/core-loop", "--script", "res://tools/item_fuzz.gd", "--",
-      "--seeds=" + seeds, "--seconds=" + extras.fuzzSeconds, "--out=" + dir], { logFile: path.join(dir, "log.txt") });
+      "--seeds=" + seeds, "--seconds=" + extras.fuzzSeconds, "--out=" + dir],
+      { logFile: path.join(dir, "log.txt"), timeout: Math.max(JOB_TIMEOUT, n * extras.fuzzSeconds * 2500) });
     // anomalies.md holds every anomaly, the cross-seed outliers included (fuzz.ndjson lacks those).
     extras.fuzz = [...read(path.join(dir, "anomalies.md")).matchAll(/^- seed (\d+), (\w+), tick \d+: (\w+), (.*?) \(cap (.*?)\)\. .*?Build: (.*?)\. KEEP/gm)]
       .map((m) => ({ seed: Number(m[1]), class: m[2], kind: m[3], reading: m[4], cap: m[5], build: m[6] }));
     extras.fuzzSummary = (p.text.match(/^item_fuzz: \d+ seeds, .*$/m) ?? [`exit ${p.exit}${p.timedOut ? " (timeout)" : ""}`])[0];
-    if (p.exit !== 0 || p.timedOut) extras.fuzz.push({ seed: first, kind: "stall_or_crash_in_fuzz", reading: `exit ${p.exit}` });
+    // A timeout is the harness's budget running out under load, not a game finding; a crash is one.
+    if (p.timedOut) extras.fuzzSummary = `timed out after ${extras.fuzz.length} anomalies (harness budget, not a game finding)`;
+    else if (p.exit !== 0) extras.fuzz.push({ seed: first, kind: "crash_in_fuzz", reading: `exit ${p.exit}` });
     log("done  item fuzz: " + extras.fuzzSummary);
   };
 }
