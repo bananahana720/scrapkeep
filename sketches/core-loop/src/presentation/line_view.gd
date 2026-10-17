@@ -2,6 +2,7 @@ extends Node3D
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # What the harpoon line looks like in the world, state by state (LEGIBILITY section 3). Every
 # colour and every motion is read from the line's EventKinds row, so the sight, the sound and the
@@ -252,7 +253,7 @@ func _draw_cable(kit, ball: Vector3, smash: bool) -> void:
 		cable_radius = TAUT_RADIUS if taut else SLACK_RADIUS
 		var color := live.lightened(TAUT_LIGHTEN) if taut else live.darkened(SLACK_DIM)
 		if smash:
-			color = EventKinds.line_color("smash_committed").lightened(1.0 - clampf(_smash_age / SMASH_FLASH, 0.0, 1.0))
+			color = EventKinds.line_color("smash_committed").lightened(FlashGuard.whiten(1.0 - clampf(_smash_age / SMASH_FLASH, 0.0, 1.0)))
 		var sag: float = 0.0 if taut else minf(maxf(kit.rope - gap, 0.0) * SAG_PER_SLACK, MAX_SAG)
 		_cable_material.albedo_color = color
 		_ribbon(mesh, ball, kit.anchor, sag, cable_radius)

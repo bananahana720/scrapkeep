@@ -20,6 +20,7 @@ extends Node3D
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # One GLB per ordered socket pair, named <socket 0>__<socket 1> in table order.
 const MODEL_DIR := "res://assets/models/companion/assembled/"
@@ -401,7 +402,9 @@ func _grow() -> void:
 	if _halo != null:
 		var fill: float = combat.assist_fill() if combat != null and combat.has_method("assist_fill") else 0.0
 		var mat := _halo.material_override as StandardMaterial3D
-		var blink := fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
+		# The full halo's 2 Hz blink is under FlashGuard's cap; reduce flashes stops it anyway and
+		# holds the full glow, since the fill level already says "full".
+		var blink := not FlashGuard.on and fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
 		mat.emission_energy_multiplier = lerpf(HALO_ENERGY["empty"], HALO_ENERGY["full"], fill) * (1.6 if blink else 1.0)
 
 
@@ -582,7 +585,7 @@ func _light(lamp: String) -> void:
 	var mat := _lamp.material_override as StandardMaterial3D
 	mat.albedo_color = row["color"].darkened(0.6) if lamp == "spent" else row["color"]
 	mat.emission = row["color"]
-	mat.emission_energy_multiplier = LAMP_ENERGY[lamp]
+	mat.emission_energy_multiplier = FlashGuard.spike(LAMP_ENERGY["ready"], LAMP_ENERGY[lamp]) if lamp != "spent" else LAMP_ENERGY[lamp]
 	_lamp.scale = LAMP_SCALE[lamp]
 
 

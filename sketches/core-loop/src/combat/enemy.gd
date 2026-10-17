@@ -6,6 +6,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
@@ -543,10 +544,10 @@ func _update_flash(delta: float) -> void:
 		return
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta * 2.5)
-		_material.albedo_color = _base_color.lerp(Color(1.0, 1.0, 0.85), _flash)
+		_material.albedo_color = _base_color.lerp(Color(1.0, 1.0, 0.85), FlashGuard.whiten(_flash))
 		_material.emission_enabled = true
 		_material.emission = EventKinds.role_color("neutral")
-		_material.emission_energy_multiplier = _flash * 2.0
+		_material.emission_energy_multiplier = FlashGuard.spike(0.0, _flash * 2.0)
 		if _flash <= 0.0:
 			_apply_rest_look()
 

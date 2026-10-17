@@ -5,6 +5,7 @@ const Parts := preload("res://src/build/parts.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Density := preload("res://src/presentation/density.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
 # committed fact or the ball's own motion and never decides an outcome (TADR-008).
@@ -515,7 +516,7 @@ func _word_color(id: String) -> Color:
 			return HEAT_COLOR
 		"heft_up", "fused":
 			return Palette.BRASS
-	return player.class_color().lerp(Color.WHITE, 0.2)
+	return player.class_color().lerp(Color.WHITE, FlashGuard.whiten(0.2))
 
 
 func _beside_ball() -> Vector3:
@@ -612,7 +613,8 @@ func _draw_word(slot: Dictionary) -> void:
 	basis = basis * Basis(Vector3.BACK, slot["tilt"])
 	# The label's font is 96 px at 0.01 m a pixel, so ~0.7 m of cap height at scale 1.
 	label.global_transform = Transform3D(basis.scaled(Vector3.ONE * metres * scale / 0.7), at)
-	label.modulate.a = alpha
+	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
+	label.modulate.a = FlashGuard.info(alpha)
 	label.outline_modulate = Color(INK.r, INK.g, INK.b, alpha)
 
 
@@ -708,6 +710,7 @@ class ImpactFrame:
 			ink.a = 0.75 + 0.2 * _heat
 			if accent:
 				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
+				ink.a = FlashGuard.alpha(ink.a)
 			draw_colored_polygon(PackedVector2Array([tip, outer + side, outer - side]), ink)
 
 	# A hot build's edge wash: the screen edge dips dark, glows heat orange halfway in and
@@ -715,7 +718,7 @@ class ImpactFrame:
 	# hit and the centre stays clear.
 	func _draw_wash(rect: Vector2, band: float) -> void:
 		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
-		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.4 * _heat)
+		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, FlashGuard.alpha(0.4 * _heat))
 		var clear := Color(hot.r, hot.g, hot.b, 0.0)
 		_ring(rect, 0.0, band * 0.6, dark, hot)
 		_ring(rect, band * 0.6, band, hot, clear)
@@ -788,7 +791,7 @@ func _draw_aura(delta: float) -> void:
 		basis = basis.scaled(Vector3(size, size, size * stretch))
 		mm.set_instance_transform(i, Transform3D(basis, at))
 		var c: Color = heat_tint(_mote_colors[i])
-		mm.set_instance_color(i, c.lerp(Color.WHITE, 0.6 * _mote_flare))
+		mm.set_instance_color(i, c.lerp(Color.WHITE, FlashGuard.whiten(0.6 * _mote_flare)))
 
 
 # --- Overdrive ---------------------------------------------------------------------------

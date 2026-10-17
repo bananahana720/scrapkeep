@@ -3,6 +3,9 @@ extends Node3D
 const Elements := preload("res://src/build/elements.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+# Melting ice blinks at this rate; reduce flashes slows it to FlashGuard's cap.
+const ICE_BLINK_HZ := 28.0 / TAU
 
 # Resolves the element x material table in the world, once per application, and owns
 # what the result leaves behind: ice slabs (real StaticBody3D ground on physics layer
@@ -342,7 +345,7 @@ func flash_ring(at: Vector3, radius: float, color: Color) -> void:
 	torus.outer_radius = 1.0
 	torus.rings = 48
 	node.mesh = torus
-	node.material_override = Palette.unshaded(color)
+	node.material_override = Palette.unshaded(Color(color, FlashGuard.info(color.a)))
 	add_child(node)
 	node.global_position = at
 	_puffs.append({"node": node, "left": PUFF_SECONDS, "grow": radius})
@@ -573,12 +576,12 @@ func _process(delta: float) -> void:
 		var alpha := 0.85
 		# Melting ice blinks for its last beat, so losing the ground is never a surprise.
 		if slab["left"] < slab["fade"]:
-			alpha = 0.35 + 0.5 * (0.5 + 0.5 * sin(_flicker * 28.0))
+			alpha = 0.35 + 0.5 * (0.5 + 0.5 * sin(_flicker * TAU * FlashGuard.rate(ICE_BLINK_HZ)))
 		mat.albedo_color.a = alpha
 	for zone in _zones:
 		var node: MeshInstance3D = zone["node"]
 		if is_instance_valid(node):
-			node.visible = fmod(_flicker * 20.0, 1.0) > 0.25
+			node.visible = FlashGuard.blink(fmod(_flicker * 20.0, 1.0) > 0.25)
 	for list in [_shards, _puffs, _zaps]:
 		var i: int = list.size() - 1
 		while i >= 0:

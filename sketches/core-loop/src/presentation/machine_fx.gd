@@ -7,6 +7,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpecialCues := preload("res://src/combat/special_cues.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # What the machines throw off: how a pack arrives, how a body winds up, takes a hit,
 # staggers and dies, how the four specials tell you what they are about to do, and how
@@ -362,7 +363,8 @@ func _draw_word(slot: Dictionary) -> void:
 			at += (side + Vector3.UP) * leave * 1.2
 	label.global_position = at
 	label.scale = Vector3.ONE * size
-	label.modulate.a = 1.0 - leave
+	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
+	label.modulate.a = FlashGuard.info(1.0 - leave)
 	label.outline_modulate.a = 1.0 - leave
 
 
