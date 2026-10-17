@@ -9,14 +9,14 @@ This layer adds the player-side effects the tone bible (TONE-BIBLE.md, project f
 | Layer | What you see | When | Colour means |
 | --- | --- | --- | --- |
 | Might | Every layer below scales with one 0 to 1 value built from heft class, parts, tree picks, synergies and fusions | Always | n/a |
-| Aura | One mote per part orbits the ball (12 at most). Motes flare white on each hit. From "grown" they stretch into streamers at speed. A new part drops in from above and settles into the ring | Parts held | The part's element: frost green, arc cyan, kinetic sand; rare and relic parts are lighter |
-| Boon burst | A second spark burst on each hit, up to 40 particles at twice the size | Might 0.25 and up | The build's most common element |
-| Hit glyphs | `vfx.gd` hit and kill glyphs grow by up to 2.5x with might. The slam ring stays at the slam's real reach | Always | Unchanged |
+| Aura | One mote per part orbits the ball (12 at most). Motes flare white on each hit. From "grown" they stretch into streamers at speed. A new part drops in from above and settles into the ring | Parts held | The part's element: frost green, arc cyan, kinetic sand; rare and relic parts are lighter. Runs toward heat orange as the build grows |
+| Boon burst | A second spark burst on each hit, up to 40 particles at their base size and reach | Might 0.25 and up | The build's most common element, run toward heat orange |
+| Hit glyphs | `vfx.gd` hit and kill glyphs grow by 15% at most with might. The slam ring stays at the slam's real reach | Always | Run toward heat orange as the build grows |
 | Sound words | Comic words stamped beside big moments: KLANG, WHUMP, KRUNCH, FWOOSH, KA-BOOM, BOING, VRAAAM, KACHUNK, FUSED, KRA-KOOM, WHAM, STRIKE, PAID | Big moments only, never ordinary hits | Pilot colour for your moves; brass for growth; heat orange for overdrive |
 | Overdrive | White-hot rim on the ball, flame flecks and a hanging ember trail behind it, an ignition ring, VRAAAM and an impact frame | Speed at or above 60 m/s, off below 54 m/s | Heat ramp: white, orange, deep red, smoke |
 | Carve sparks | A grinding spark spray from the contact point | Grounded on banked ground (normal up share under 0.82) at fast tier or above | Hot brass |
-| Power column | Streaks rise from a ring round the ball | Heft class up, a fusion, a grown slam | Brass, or the fused part's colour |
-| Impact frame | Ink focus lines in the outer fifth of the screen, aimed at the hit, for 3 rendered frames | Smash at 32 m/s (18 m/s when mighty), blazing ram, grown slam, ultimate landing, bowled rack, overdrive ignition | Ink, with a few white lines |
+| Power column | Streaks rise from a ring round the ball | Heft class up, a fusion | Brass, or the fused part's colour |
+| Impact frame | Ink focus lines in the outer fifth of the screen, aimed at the hit, for 3 rendered frames. A hot build adds a heat-orange wash that fades out before the middle | Smash at 32 m/s (18 m/s when mighty), blazing ram, every contact hit and slam from "grown", ultimate landing, bowled rack, overdrive ignition | Ink with a few white lines; a hot build burns every third line orange |
 
 ### Pilot voices
 
@@ -40,13 +40,19 @@ Hit-stop and shake stay in `juice.gd`, owned by the Knockback thread.
 
 ## Growth rule
 
-Andrew tapped "Presence, centre clear" (17 Oct 17:28Z): a grown hit reads mightier through colour heat (boon sparks and aura motes run toward the heat ramp as the build grows), bigger words, edge ink (every contact hit earns the impact frame from "grown") and the part aura. Bursts stay their current size, so the crowd behind a hit stays visible. Cannon grows the same way, since its slam already fills the screen.
+Andrew tapped "Presence, centre clear" (17 Oct 17:28Z): a grown hit reads mightier through colour heat, bigger words, edge ink and the part aura. The middle of the screen grows 1.25x at most, so the crowd behind a hit stays visible.
+
+- **Colour heat** is the main lever. `heat_k` runs from 0 at might 0.1 to 1 at might 0.7 (a heft IV, four-part, four-pick build is about 0.8). Boon sparks, aura motes, words, `vfx.gd` hit and kill glyphs and the impact frame's accent lines all run up to 85% of the way to saturated heat orange, never to white.
+- **Edge ink**: from "grown", every contact hit and slam earns the impact frame, with a heat-orange wash in the outer band.
+- **Nothing grows in the middle**: the boon burst keeps its base size and reach, the column no longer rises on a slam, and hit glyphs grow 15% at most.
+- Cannon grows the same way, since its slam already fills the screen.
 
 ## Readability rules
 
 - **Warnings draw on top** (Andrew, 17 Oct 16:36Z). Every material here sorts at render priority -4, below the threat marks (39 to 42). Words are transparent and write no depth. The test checks this.
 - **The lane ahead stays clear.** A word placed within 2.5 m of the ball's path, up to 30 m ahead, is pushed sideways. Words run away from the ball and stay inside the middle 78% x 70% of the screen. The impact frame draws only in the outer 20% band.
 - **Caps.** At most 2 words alive, 0.35 s between words, 1.2 s before the same word repeats, and no words or boon bursts in the densest density band. Impact frames are at least 0.6 s apart.
+- **The edge wash** is at most 35% opaque at the screen edge and gone before the middle, for the same 3 frames as the ink.
 - **Reduced motion** turns off impact frames and the stamp overshoot and slide of the words.
 - Word size is a share of the screen height (7.5% at size 1.0), so a word near the camera never swallows the ball.
 
@@ -68,7 +74,7 @@ The particle ceiling is 440, beside `vfx.gd`'s 752. No lights. Script cost measu
 
 ## Checks
 
-- `tests/player_fx_test.gd` (36 checks): might, the word caps and lane rule, the pilot voices, the knockback moments, overdrive hysteresis, carving, render order and the particle ceiling.
+- `tests/player_fx_test.gd` (42 checks): might, the word caps and lane rule, the pilot voices, the knockback moments, overdrive hysteresis, carving, render order and the particle ceiling.
 - `xvfb-run -a -s "-screen 0 1280x720x24" godot --rendering-driver opengl3 --path sketches/core-loop -s tools/player_fx_capture.gd -- --out=DIR [--pilot=N]` writes the stills. They use the Compatibility renderer on llvmpipe, a slowed clock and a frozen ball posed through `PlayerFx.pose`, so they show shape, colour and placement, not Forward+ glow.
 
 ## Open

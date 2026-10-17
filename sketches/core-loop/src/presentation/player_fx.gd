@@ -37,7 +37,10 @@ const CARVE_NORMAL_Y := 0.82
 const MOTES := 12
 const MOTE_RADIUS := 1.65
 const ELEMENT_COLORS := {"frost": Palette.ANCIENT, "arc": Palette.ARC, "kinetic": Palette.SAND}
-const HEAT_COLOR := Color(1.0, 0.62, 0.24)
+const HEAT_COLOR := Color(1.0, 0.5, 0.12)
+# How much of a colour the heat takes at full heat_k: saturated orange, never white, so the
+# heat reads as colour and not as brightness.
+const HEAT_SHARE := 0.85
 const INK := Color(0.07, 0.07, 0.08)
 
 # Below every threat mark (threat_grammar PRIORITY 40, under-lines 39): enemy warnings
@@ -214,6 +217,7 @@ func refresh_might() -> void:
 	might = might_from(heft_class, parts.size(), synergies, _evolutions, picks)
 	if vfx != null and "might" in vfx:
 		vfx.might = might
+		vfx.heat = HEAT_SHARE * heat_k(might)
 	_mote_colors.clear()
 	for id in parts:
 		if _mote_colors.size() >= MOTES:
@@ -231,9 +235,14 @@ static func part_color(part_id: String) -> Color:
 
 
 # Colour heat (Andrew, "Presence, centre clear", 17 Oct 17:28Z): a grown build's colours
-# run hotter, toward the heat ramp, instead of its bursts growing past their size.
+# run hotter, toward the heat ramp, instead of its bursts growing past their size. Heat
+# starts at might 0.1 and is full from 0.7, so a "grown" build already runs mostly hot.
+static func heat_k(value: float) -> float:
+	return clampf((value - 0.1) / 0.6, 0.0, 1.0)
+
+
 func heat_tint(color: Color) -> Color:
-	return color.lerp(HEAT_COLOR, 0.45 * might_tier(might) / 3.0)
+	return color.lerp(HEAT_COLOR, HEAT_SHARE * heat_k(might))
 
 
 # The colour most of the build's parts share: the colour a boon spark takes.
@@ -326,31 +335,26 @@ func _boon(at: Vector3) -> void:
 	var p: GPUParticles3D = _boons[_boon_next]
 	_boon_next = (_boon_next + 1) % _boons.size()
 	var pm := p.process_material as ParticleProcessMaterial
-	pm.scale_min = 0.6 * (1.0 + 1.5 * might)
-	pm.scale_max = 1.2 * (1.0 + 1.5 * might)
-	pm.initial_velocity_min = 4.0 * (1.0 + 1.2 * might)
-	pm.initial_velocity_max = 9.0 * (1.0 + 1.2 * might)
-	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(heat_tint(dominant_color()), 1.2))
+	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(heat_tint(dominant_color()), 1.1))
 	spawned["boon"] = spawned.get("boon", 0) + 1
 
 
-# A slam: WHUMP when it is a real one; a grown build also throws its element colour up out
-# of the crater and, from "grown", earns the impact frame. The ring of the slam's real
-# reach stays vfx.gd's, true to who it hit.
+# A slam: WHUMP when it is a real one; a grown build also throws hot sparks out of the
+# crater and, from "grown", earns the impact frame. No column here: the centre stays clear
+# (Andrew, "Presence, centre clear"). The ring of the slam's real reach stays vfx.gd's,
+# true to who it hit.
 func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.5:
 		return
 	word("slam", at + Vector3.UP * 1.6)
 	if might >= 0.25 and not _mote_colors.is_empty():
-		column(dominant_color(), at)
 		_boon(at + Vector3.UP * 0.4)
 	if might_tier(might) >= 2:
 		impact_frame(at, clampf(0.5 + 0.5 * might, 0.0, 1.0))
 
 
-# Andrew's "Clearly mightier" (17 Oct 16:36Z): a late run's hit reads about 3x the first
-# fight's. The boon burst is the growing share: none when small, up to BOON particles at
-# twice the size when mighty, on top of vfx.gd's fixed sparks.
+# Andrew's "Clearly mightier" (17 Oct 16:36Z), read as "Presence, centre clear": the boon
+# burst grows in count and heat, never in size or reach, on top of vfx.gd's fixed sparks.
 static func boon_count(value: float) -> int:
 	return int(round(BOON * clampf(value, 0.0, 1.0)))
 
@@ -461,7 +465,7 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 	slot["away"] = 1.0 if right_of_ball else -1.0
 	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
 	slot["width_px"] = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
-	var tint: Color = color if color.a > 0.0 else _word_color(id)
+	var tint: Color = color if color.a > 0.0 else heat_tint(_word_color(id))
 	label.modulate = tint
 	slot["t"] = 0.0
 	slot["id"] = id
@@ -589,7 +593,7 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 	if camera == null or camera.cam == null or camera.cam.is_position_behind(at):
 		return false
 	_last_frame = _clock
-	_frame.fire(camera.cam.unproject_position(at), strength, _rng.randi())
+	_frame.fire(camera.cam.unproject_position(at), strength, _rng.randi(), heat_k(might))
 	spawned["impact_frame"] = spawned.get("impact_frame", 0) + 1
 	return true
 
@@ -605,6 +609,7 @@ class ImpactFrame:
 
 	var _focus := Vector2.ZERO
 	var _strength := 0.0
+	var _heat := 0.0
 	var _left := 0
 	var _seed := 0
 
@@ -613,9 +618,10 @@ class ImpactFrame:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		visible = false
 
-	func fire(focus: Vector2, strength: float, seed_value: int) -> void:
+	func fire(focus: Vector2, strength: float, seed_value: int, heat_value := 0.0) -> void:
 		_focus = focus
 		_strength = strength
+		_heat = heat_value
 		_left = FRAME_FRAMES
 		_seed = seed_value
 		position = Vector2.ZERO
@@ -643,6 +649,8 @@ class ImpactFrame:
 		var focus := _focus.clamp(Vector2.ZERO, rect)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _seed
+		if _heat > 0.0:
+			_draw_wash(rect, band)
 		for i in int(LINES * _strength):
 			var angle := TAU * (float(i) + rng.randf() * 0.8) / float(LINES * _strength)
 			var dir := Vector2(cos(angle), sin(angle))
@@ -663,9 +671,24 @@ class ImpactFrame:
 			var side := Vector2(-dir.y, dir.x) * width
 			var tip := focus + dir * inner
 			var outer := focus + dir * (exit + width * 2.0)
-			var ink := INK if i % 7 != 0 else Color(1, 1, 1)
-			ink.a = 0.75 if i % 7 != 0 else 0.5
+			# Every third line of a hot build burns heat orange; a cold build keeps a few white.
+			var accent := i % (3 if _heat > 0.0 else 7) == 0
+			var ink := INK
+			ink.a = 0.75
+			if accent:
+				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
 			draw_colored_polygon(PackedVector2Array([tip, outer + side, outer - side]), ink)
+
+	# A hot build's edge wash: the outer band glows heat orange, fading to nothing before
+	# the middle, so the build's heat reads on every grown hit and the centre stays clear.
+	func _draw_wash(rect: Vector2, band: float) -> void:
+		var edge := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.35 * _heat)
+		var clear := Color(edge.r, edge.g, edge.b, 0.0)
+		var o := [Vector2.ZERO, Vector2(rect.x, 0), rect, Vector2(0, rect.y)]
+		var i := [Vector2(band, band), Vector2(rect.x - band, band), rect - Vector2(band, band), Vector2(band, rect.y - band)]
+		for k in 4:
+			var n := (k + 1) % 4
+			draw_polygon(PackedVector2Array([o[k], o[n], i[n], i[k]]), PackedColorArray([edge, edge, clear, clear]))
 
 
 # --- Aura --------------------------------------------------------------------------------
@@ -855,8 +878,8 @@ func column(tint: Color, at := Vector3.INF) -> void:
 	var p: GPUParticles3D = _columns[_column_next]
 	_column_next = (_column_next + 1) % _columns.size()
 	var base: Vector3 = player.ball_position() - Vector3.UP * 0.8 if at == Vector3.INF else at
-	p.global_transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * (1.0 + might)), base)
-	p.set_instance_shader_parameter("tint", _glow(tint, 1.15))
+	p.global_transform = Transform3D(Basis.IDENTITY, base)
+	p.set_instance_shader_parameter("tint", _glow(heat_tint(tint), 1.15))
 	p.amount_ratio = clampf(0.5 + 0.5 * might, 0.0, 1.0)
 	p.restart()
 	p.emitting = true

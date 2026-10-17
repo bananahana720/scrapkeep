@@ -142,10 +142,18 @@ func _run() -> void:
 	var columns: int = fx.spawned.get("column", 0)
 	fx._last_frame = -1.0e9
 	_game.events.slammed.emit(ball, 1.0, 1.0)
-	t.check("a grown slam raises the column", fx.spawned.get("column", 0) == columns + 1)
+	t.check("a grown slam keeps the centre clear: no column", fx.spawned.get("column", 0) == columns)
 	t.check("a grown slam earns the impact frame", fx.spawned.get("impact_frame", 0) >= 1 and fx._frame.active())
+	t.check("a grown build's edge ink burns hot", fx._frame._heat > 0.9, str(fx._frame._heat))
+	# Colour heat, not size: the depth-4 build already runs mostly hot; a fresh pilot is cold.
+	t.check("heat is cold for a fresh pilot and mostly hot at depth 4", PlayerFx.heat_k(0.0) == 0.0
+		and PlayerFx.heat_k(PlayerFx.might_from(4, 4, 0, 0, 4)) >= 0.75, str(PlayerFx.heat_k(PlayerFx.might_from(4, 4, 0, 0, 4))))
+	var hot: Color = fx.heat_tint(Color(0.2, 0.6, 1.0))
+	t.check("a grown build's colours run toward heat orange", hot.r > 0.8 and hot.b < 0.4, str(hot))
 	fx.refresh_might()
 	t.near("vfx glyphs read the same might", _game.presentation.vfx.might, fx.might)
+	t.near("vfx glyphs read the same heat", _game.presentation.vfx.heat, PlayerFx.HEAT_SHARE * PlayerFx.heat_k(fx.might))
+	t.check("hit glyphs grow by a quarter at most", 1.0 + _game.presentation.vfx.MIGHT_GLYPH <= 1.25)
 	t.check("particle ceiling pinned at 440", PlayerFx.ceiling() == 440, str(PlayerFx.ceiling()))
 	t.check("no boon burst for a small pilot; a mighty one throws the full burst", PlayerFx.boon_count(0.0) == 0 and PlayerFx.boon_count(1.0) == PlayerFx.BOON)
 	# Enemy warnings draw on top: every player-effect material sorts under the threat marks.
