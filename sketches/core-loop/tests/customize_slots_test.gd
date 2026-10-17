@@ -127,11 +127,17 @@ func _validate_rules() -> void:
 		_t.check("validate rejects %s" % label, not problems.is_empty(), str(problems))
 	_t.eq("a decal mask of 15 is valid", Cosmetics.validate(_bad(rows, "decal_fern", {"mask": 15}), pilots), [])
 	# PENDING_ART is a const; validate reads it, so a table missing a pending id is the typo case.
+	# The pending id is read at runtime, as achievement_rows_case does for PENDING_PILOTS.
+	var pending_ids: Array = Cosmetics.PENDING_ART.duplicate()
+	if pending_ids.is_empty():
+		_t.check("no pending art, so the real table has no pending typo", Cosmetics.validate(rows, pilots).is_empty())
+		return
+	var waiting: String = pending_ids[0]
 	var missing := rows.duplicate(true)
-	missing.erase("outfit_kest_rigger")
+	missing.erase(waiting)
 	var problems := Cosmetics.validate(missing, pilots)
-	_t.check("validate rejects a PENDING_ART id that is not a row", problems.any(func(p): return String(p).contains("PENDING_ART id outfit_kest_rigger is not a row")), str(problems))
-	var starter_pending := _bad(rows, "outfit_rivet_hood", {"slot": "paint", "starter": true})
+	_t.check("validate rejects a PENDING_ART id that is not a row", problems.any(func(p): return String(p).contains("PENDING_ART id %s is not a row" % waiting)), str(problems))
+	var starter_pending := _bad(rows, waiting, {"slot": "paint", "starter": true, "mask": null})
 	problems = Cosmetics.validate(starter_pending, pilots)
 	_t.check("validate rejects a PENDING_ART id that is a starter", problems.any(func(p): return String(p).contains("is a starter")), str(problems))
 
@@ -151,7 +157,11 @@ func _equip_refusals() -> void:
 	_t.check("a pilot slot refuses spil9", not Customize.equip(store, "spil9", "trail", "trail_salt_skip"))
 	_t.check("bay decoration refuses spil9", not Customize.equip(store, "spil9", "bay_decor", ""))
 	_t.check("bay decoration clears for the bay", Customize.equip(store, "bay", "bay_decor", ""))
-	_t.check("a pending-art item is refused even when owned", not Customize.equip(store, "spil9", "companion_skin", "companion_skin_till_bell"))
+	for waiting in Cosmetics.PENDING_ART:
+		store.unlock_cosmetic(waiting)
+		var row := Cosmetics.row(waiting)
+		_t.check("a pending-art item is refused even when owned: " + waiting, not Customize.equip(store, Cosmetics.OWNERS.get(row["slot"], row["pilot"]), row["slot"], waiting))
+	_t.check("the delivered Till Bell equips for spil9", Customize.equip(store, "spil9", "companion_skin", "companion_skin_till_bell"))
 	_t.check("companion skin clears for spil9", Customize.equip(store, "spil9", "companion_skin", ""))
 	_t.check("outfit clears for a pilot", Customize.equip(store, SABLE, "outfit", ""))
 	_t.check("shell clears for a pilot", Customize.equip(store, SABLE, "shell", ""))

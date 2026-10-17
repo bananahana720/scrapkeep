@@ -24,7 +24,7 @@ const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
-const PENDING_ART := ["outfit_rivet_hood", "outfit_tally_eyeshade", "outfit_tarn_steady_cap", "companion_skin_till_bell"]
+const PENDING_ART := []
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -69,7 +69,7 @@ const ROWS := {
 	"companion_paint_salt": {"slot": "companion_paint", "pilot": "", "name": "Salt White", "starter": false, "tint": Color("e9ecea"), "asset": "companion_paint_salt"},
 	"companion_paint_dusk": {"slot": "companion_paint", "pilot": "", "name": "Dusk Pink", "starter": false, "tint": Color("d68ab0"), "asset": "companion_paint_dusk"},
 	"companion_paint_moth": {"slot": "companion_paint", "pilot": "", "name": "Moth Grey", "starter": false, "tint": Color("a39cb3"), "asset": "companion_paint_moth"},
-	# Shared: the skill bar's three earned items (CUSTOMIZE.md section 8). Pending art.
+	# Shared: the skill bar's three earned items (CUSTOMIZE.md section 8). Art delivered.
 	"trail_any_downbeat": {"slot": "trail", "pilot": "", "name": "Downbeat", "starter": false, "tint": Color("8a5a3a"), "asset": "trail_any_downbeat"},
 	"decal_curtain_call": {"slot": "decal", "pilot": "", "name": "Curtain Call", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_curtain_call_mask.png", "mask": 9},
 	"companion_skin_till_bell": {"slot": "companion_skin", "pilot": "", "name": "Till Bell", "starter": false, "tint": Color("8a5a3a"), "asset": "companion_skin_till_bell"},
