@@ -25,6 +25,10 @@ const T := preload("res://tests/support/t.gd")
 #   - every source kind plays its own track: menu, level, warden, boss, lounge and miniboss;
 #     a recorded-only pack wins over the synth track under it, and its boss stands in on
 #     the synth when the pack is not on disk;
+#   - the 21 place-and-moment tunes the music thread wired (tunes.json ids and names) are
+#     records, found while their pack plays; the three still unwired (fabricator, camp
+#     course, curse) are not; each hidden one is rare and its hint says where to listen;
+#     on the deck a place tune with no pack on disk plays its zone's roam on the synth;
 #   - leaving the title while a record spins hands the music back to the game.
 
 const STORE_DIR := "user://jukebox_tunes_test/"
@@ -60,7 +64,7 @@ func _source_state(row: Dictionary) -> Dictionary:
 		"miniboss":
 			return {"mode": "play", "track": "miniboss", "section": "", "lounge": false, "zone": "3-1"}
 		"pack":
-			return {"mode": "play", "track": source["boss"], "section": "3", "lounge": false, "zone": "1-2", "pack": source["pack"]}
+			return {"mode": "play", "track": source.get("boss", "level"), "section": "3", "lounge": bool(source.get("lounge", false)), "zone": source.get("zone", "1-2"), "pack": source["pack"]}
 	return {}
 
 
@@ -87,6 +91,34 @@ func _rows() -> void:
 	_t.eq("the death break's keys are no record", TuneRows.key_of({"mode": "dead", "track": "level", "zone": "1-1"}), "")
 	_t.eq("a zone's own recorded pack leaves the roam record", TuneRows.key_of({"mode": "play", "track": "level", "zone": "1-1", "pack": "spillway"}), "roam-1-1")
 	_t.eq("a recorded-only pack wins over the boss under it", TuneRows.key_of({"mode": "play", "track": "brindle", "zone": "1-2", "pack": "euro-brindle-p3"}), "euro-brindle-p3")
+	var place := {
+		"landmark-spillway-dam": "Over the Dam", "landmark-penstock": "Penstock Pressure",
+		"landmark-headframe": "Down the Headframe", "landmark-sinkhole": "Sinkhole Echo",
+		"landmark-hanging-isle": "The Hanging Isle", "landmark-crown-spire": "Crown of the Spire",
+		"event-scrap-stampede": "Scrap Stampede", "event-surge-run": "Surge Run",
+		"event-hold-relay": "Hold the Relay", "event-flood": "Flood Gates",
+		"event-dust-squall": "Dust Squall", "event-arena": "Round Arena",
+		"moss-shop": "Moss's Counter", "modifier-par": "Beat the Par",
+		"secret-lost-tape": "The Lost Tape", "secret-after-hours": "Moss After Hours",
+		"secret-brindle-swing": "Brindle Swings", "secret-chip-keepers": "Chiptune Keepers",
+		"secret-highdraft-rain": "Rain over the Highdraft", "secret-dig-dub": "Deep Works Dub",
+		"miniboss": "Heavyweight",
+	}
+	var named := {}
+	for id in place:
+		named[id] = String(TuneRows.row(id).get("name", ""))
+	_t.eq("the 21 wired tunes are records under their tunes.json names", named, place)
+	_t.eq("the unwired tunes are not records yet", ["fabricator", "camp-course", "modifier-curse"].filter(func(id): return not TuneRows.row(id).is_empty()), [])
+	_t.eq("the crate holds 50 records", TuneRows.ROWS.size(), 50)
+	for id in place:
+		if String(id).begins_with("secret-"):
+			_t.check("%s is rare" % id, bool(TuneRows.row(id)["rare"]))
+	_t.check("the Lost Tape's hint names the Cable Reach", "Cable Reach" in String(TuneRows.row("secret-lost-tape")["where"]))
+	_t.check("the Brindle remix's hint says sometimes", String(TuneRows.row("secret-brindle-swing")["where"]).begins_with("Sometimes"))
+	_t.eq("a landmark pack is its record over the roam under it", TuneRows.key_of({"mode": "play", "track": "level", "zone": "1-1", "pack": "landmark-spillway-dam"}), "landmark-spillway-dam")
+	_t.eq("a remix replacing Brindle's opening is its record", TuneRows.key_of({"mode": "play", "track": "brindle", "section": "1", "zone": "1-2", "pack": "secret-brindle-swing"}), "secret-brindle-swing")
+	_t.eq("the shop pack wins over the lounge mask", TuneRows.key_of({"mode": "play", "track": "level", "lounge": true, "zone": "1-1", "pack": "moss-shop"}), "moss-shop")
+	_t.eq("the miniboss pack is the Heavyweight record", TuneRows.key_of({"mode": "play", "track": "level", "zone": "2-1", "pack": "miniboss"}), "miniboss")
 	_t.eq("an unknown zone is no record", TuneRows.key_of({"mode": "play", "track": "level", "zone": "9-9"}), "")
 	_t.eq("a stopped level (menu mode) is no roam record", TuneRows.key_of({"mode": "idle", "track": "level", "zone": "1-1"}), "")
 
@@ -186,7 +218,7 @@ func _ace(audio) -> void:
 	_t.check("ACE: warden-1-1 spins", audio.spin("warden-1-1"))
 	_render(audio, 44100)
 	_t.check("ACE: the Warden take plays", audio.ace_playing() and audio.ace.mode == "warden")
-	for id in ["brindle-p2-furnace", "euro-mind-final", "champion-hype"]:
+	for id in ["brindle-p2-furnace", "euro-mind-final", "champion-hype", "landmark-spillway-dam", "secret-lost-tape"]:
 		if MusicRows.resolve(id)["ace_manifest"] != "":
 			_t.check("ACE: %s spins" % id, audio.spin(id))
 			_render(audio, 44100)
@@ -285,6 +317,15 @@ func _run() -> void:
 		_t.eq("%s is what the ear would hear" % id, TuneRows.key_of(audio.music_state().merged({"zone": String(row["source"].get("zone", "1-1"))}, true)), id)
 	_t.check("a recorded-only record spins", audio.spin("brindle-p2-furnace"))
 	_t.eq("its boss stands in on the synth", audio.engine.track, "brindle")
+	for id in ["landmark-sinkhole", "event-dust-squall", "secret-highdraft-rain"]:
+		_t.check("%s spins" % id, audio.spin(id))
+		var zone := String(TuneRows.row(id)["source"]["zone"])
+		_t.eq("%s plays its zone's roam on the synth" % id, [audio.engine.track, audio.engine.theme], ["level", MusicRows.stage_theme(zone)])
+	_t.check("a remix of a boss spins", audio.spin("secret-brindle-swing"))
+	_t.eq("and the boss stands in", audio.engine.track, "brindle")
+	audio.spin("secret-after-hours")
+	_render(audio, 44100)
+	_t.check("the bay's B-side masks the band like the lounge", audio.engine.lounge)
 	audio.spin("lounge")
 	_render(audio, 44100 * 2)
 	_t.check("the lounge record masks the band", audio.engine.lounge)

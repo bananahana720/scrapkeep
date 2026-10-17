@@ -1161,6 +1161,9 @@ func _physics_process(delta: float) -> void:
 
 func _step_fabricators(ball: Vector3, delta: float) -> void:
 	for fab in fabricators.step(ball, delta, ctx.run.cogs, ctx.run.parts):
+		# The ball rolled through a stocked hoop, bought or not: the fabricator tune's cue
+		# (tunes.json "fabricator"). No WORLD_ROWS row, so it plays no sound of its own.
+		ctx.events.world_fact.emit("fabricator_used", fab["at"])
 		var part_id: String = fab["part_id"]
 		if ctx.run.spend_cogs(Fabricators.price(part_id, ctx.run.parts.size())):
 			fabricators.sold(fab)

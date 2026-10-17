@@ -10,9 +10,9 @@ extends RefCounted
 #   boss    a world boss's fight
 #   lounge  Moss's bay, a layer mask over the zone the bay docks at
 #   miniboss  the mini-boss fight, the level darkened (synth band only for now)
-#   pack    a recorded-only track (a boss phase, a final, the champion, a Eurodance drop):
-#           heard only while its ACE pack plays; on the deck the synth plays its boss as a
-#           stand-in when the pack is not on disk
+#   pack    a recorded-only track (a boss phase, a final, the champion, a Eurodance drop, a
+#           place-and-moment tune): heard only while its ACE pack plays; on the deck the
+#           synth plays its boss, or its zone's roam, as a stand-in when the pack is not on disk
 # A new track (a secret area, a champion, a final phase) is one more row with its own source
 # kind and one more branch in key_of; nothing else changes. Ids and names follow the music
 # thread's registry, design-v3/sound/tunes.json, as each of its tracks is wired. where is the dry hint a blank
@@ -49,6 +49,49 @@ const ROWS := [
 		"where": "Wear a champion down to its last third.",
 		"sleeve": "Nobody told the crowd there was a crowd.",
 		"source": {"kind": "pack", "pack": "euro-champion", "boss": "brindle"}},
+	# The place-and-moment tunes (tune_moments.gd on the music branch): each a recorded pack
+	# named by its tunes.json id, heard while that pack plays. On the deck the zone (or boss)
+	# stands in on the synth when the pack is not on disk.
+	{"id": "event-scrap-stampede", "name": "Scrap Stampede", "shelf": 0, "rare": false,
+		"where": "Get caught in a scrap stampede.",
+		"sleeve": "Recorded mid-stampede. Some percussion was debris.",
+		"source": {"kind": "pack", "pack": "event-scrap-stampede", "zone": "1-1"}},
+	{"id": "event-surge-run", "name": "Surge Run", "shelf": 0, "rare": false,
+		"where": "Race a surge run.",
+		"sleeve": "Tempo set by the surge, not the band.",
+		"source": {"kind": "pack", "pack": "event-surge-run", "zone": "1-1"}},
+	{"id": "event-hold-relay", "name": "Hold the Relay", "shelf": 0, "rare": false,
+		"where": "Hold a relay until it finishes.",
+		"sleeve": "Every bar is a bar the relay stayed up.",
+		"source": {"kind": "pack", "pack": "event-hold-relay", "zone": "1-1"}},
+	{"id": "event-flood", "name": "Flood Gates", "shelf": 0, "rare": false,
+		"where": "Be there when the flood comes.",
+		"sleeve": "Waterproof sleeve. Contents not.",
+		"source": {"kind": "pack", "pack": "event-flood", "zone": "1-2"}},
+	{"id": "event-dust-squall", "name": "Dust Squall", "shelf": 0, "rare": false,
+		"where": "Ride out a dust squall.",
+		"sleeve": "Grit in the grooves, kept for authenticity.",
+		"source": {"kind": "pack", "pack": "event-dust-squall", "zone": "2-1"}},
+	{"id": "event-arena", "name": "Round Arena", "shelf": 0, "rare": false,
+		"where": "Step into a round arena.",
+		"sleeve": "Ring bell sold separately.",
+		"source": {"kind": "pack", "pack": "event-arena", "zone": "1-1"}},
+	{"id": "moss-shop", "name": "Moss's Counter", "shelf": 0, "rare": false,
+		"where": "Stop at Moss's counter.",
+		"sleeve": "Plays while you browse. Moss insists it helps.",
+		"source": {"kind": "pack", "pack": "moss-shop", "zone": "1-1", "lounge": true}},
+	{"id": "modifier-par", "name": "Beat the Par", "shelf": 0, "rare": false,
+		"where": "Start a run on par time.",
+		"sleeve": "Stopwatch included. Starts itself.",
+		"source": {"kind": "pack", "pack": "modifier-par", "zone": "1-1"}},
+	{"id": "secret-after-hours", "name": "Moss After Hours", "shelf": 0, "rare": true,
+		"where": "Moss's bay jukebox has a B-side.",
+		"sleeve": "Closing time. Moss stays for one more.",
+		"source": {"kind": "pack", "pack": "secret-after-hours", "zone": "1-1", "lounge": true}},
+	{"id": "secret-chip-keepers", "name": "Chiptune Keepers", "shelf": 0, "rare": true,
+		"where": "Sometimes a champion arrives in eight bits.",
+		"sleeve": "Rare pressing. Found in a cartridge slot.",
+		"source": {"kind": "pack", "pack": "secret-chip-keepers", "boss": "brindle"}},
 	{"id": "roam-1-1", "name": "Top Shelf", "shelf": 1, "rare": false,
 		"where": "Roll the Spillway's top shelf.",
 		"sleeve": "Logged at flood stage. Drums ride the current.",
@@ -85,6 +128,22 @@ const ROWS := [
 		"where": "Hold on through Brindle's last phase.",
 		"sleeve": "The Admiral discovers four on the floor.",
 		"source": {"kind": "pack", "pack": "euro-brindle-p3", "boss": "brindle"}},
+	{"id": "landmark-spillway-dam", "name": "Over the Dam", "shelf": 1, "rare": false,
+		"where": "Roll up to the Spillway dam.",
+		"sleeve": "Recorded on the crest. The spillway did backing vocals.",
+		"source": {"kind": "pack", "pack": "landmark-spillway-dam", "zone": "1-1"}},
+	{"id": "landmark-penstock", "name": "Penstock Pressure", "shelf": 1, "rare": false,
+		"where": "Get close to the penstock tower.",
+		"sleeve": "Gauge in the red the whole take.",
+		"source": {"kind": "pack", "pack": "landmark-penstock", "zone": "1-2"}},
+	{"id": "secret-lost-tape", "name": "The Lost Tape", "shelf": 1, "rare": true,
+		"where": "Something is cached on the Cable Reach.",
+		"sleeve": "Label worn off. Nobody admits recording it.",
+		"source": {"kind": "pack", "pack": "secret-lost-tape", "zone": "1-2"}},
+	{"id": "secret-brindle-swing", "name": "Brindle Swings", "shelf": 1, "rare": true,
+		"where": "Sometimes Brindle opens with a different swing.",
+		"sleeve": "The Admiral, off duty, with a horn section.",
+		"source": {"kind": "pack", "pack": "secret-brindle-swing", "boss": "brindle"}},
 	{"id": "roam-2-1", "name": "Upper Bench", "shelf": 2, "rare": false,
 		"where": "Roll the Dig's upper bench.",
 		"sleeve": "Recorded underground. The rock kept time.",
@@ -113,6 +172,18 @@ const ROWS := [
 		"where": "Stay alive in the Waking's last phase.",
 		"sleeve": "Bass drop logged by the seismograph.",
 		"source": {"kind": "pack", "pack": "euro-waking-final", "boss": "waking"}},
+	{"id": "landmark-headframe", "name": "Down the Headframe", "shelf": 2, "rare": false,
+		"where": "Find the Dig's headframe.",
+		"sleeve": "Recorded on the way down. Cable creak left in.",
+		"source": {"kind": "pack", "pack": "landmark-headframe", "zone": "2-1"}},
+	{"id": "landmark-sinkhole", "name": "Sinkhole Echo", "shelf": 2, "rare": false,
+		"where": "Stand at the edge of the sinkhole.",
+		"sleeve": "Every note came back twice.",
+		"source": {"kind": "pack", "pack": "landmark-sinkhole", "zone": "2-2"}},
+	{"id": "secret-dig-dub", "name": "Deep Works Dub", "shelf": 2, "rare": true,
+		"where": "Sometimes the deep works drop into dub.",
+		"sleeve": "Same works, more echo, less hurry.",
+		"source": {"kind": "pack", "pack": "secret-dig-dub", "zone": "2-2"}},
 	{"id": "roam-3-1", "name": "Highdraft", "shelf": 3, "rare": false,
 		"where": "Ride the Highdraft.",
 		"sleeve": "Mastered at altitude. Ears may pop.",
@@ -141,6 +212,18 @@ const ROWS := [
 		"where": "Stay alive in the Mind's last phase.",
 		"sleeve": "Overthinking, set to a beat.",
 		"source": {"kind": "pack", "pack": "euro-mind-final", "boss": "mind"}},
+	{"id": "landmark-hanging-isle", "name": "The Hanging Isle", "shelf": 3, "rare": false,
+		"where": "Get under the hanging isle.",
+		"sleeve": "Recorded upside down, allegedly.",
+		"source": {"kind": "pack", "pack": "landmark-hanging-isle", "zone": "3-1"}},
+	{"id": "landmark-crown-spire", "name": "Crown of the Spire", "shelf": 3, "rare": false,
+		"where": "Reach the crown spire.",
+		"sleeve": "Thin air, thinner reverb.",
+		"source": {"kind": "pack", "pack": "landmark-crown-spire", "zone": "3-2"}},
+	{"id": "secret-highdraft-rain", "name": "Rain over the Highdraft", "shelf": 3, "rare": true,
+		"where": "Sometimes it rains over the Highdraft.",
+		"sleeve": "Forecast: slow, with scattered keys.",
+		"source": {"kind": "pack", "pack": "secret-highdraft-rain", "zone": "3-1"}},
 ]
 
 const BOSSES := ["brindle", "waking", "mind"]
@@ -168,7 +251,7 @@ static func on_shelf(shelf: int) -> Array:
 # jukebox is playing: the death break's keys, a track no row names.
 static func key_of(state: Dictionary) -> String:
 	var pack := String(state.get("pack", ""))
-	if pack != "" and String(row(pack).get("source", {}).get("kind", "")) == "pack":
+	if pack != "" and not row(pack).is_empty():
 		return pack
 	var mode := String(state.get("mode", ""))
 	var track := String(state.get("track", ""))

@@ -888,7 +888,7 @@ func spin(id: String) -> bool:
 		engine.menu_theme(source["pack"], won, engine.clock)
 		_ace_named(source["pack"], engine.clock, false, won)
 		return true
-	if kind == "boss" or kind == "pack":
+	if kind == "boss" or (kind == "pack" and source.has("boss")):
 		var boss := String(source["boss"])
 		engine.force_track(boss, MusicRows.stage_theme(boss), "1", true)
 		_ace_named(String(source.get("pack", boss)), engine.clock, true)
@@ -898,7 +898,11 @@ func spin(id: String) -> bool:
 	if kind == "miniboss":
 		_ace_end()
 		return true
-	_select_ace_manifest(MusicRows.resolve(zone)["ace_manifest"])
+	# A place-and-moment pack plays its own recording, else its zone's.
+	var tune: String = MusicRows.ROWS.get(id, {}).get("ace_manifest", "") if kind == "pack" else ""
+	_select_ace_manifest(tune)
+	if tune == "" or not ace_ready():
+		_select_ace_manifest(MusicRows.resolve(zone)["ace_manifest"])
 	if ace_ready():
 		_ace_flight = false
 		_handover_at = -1
@@ -909,7 +913,7 @@ func spin(id: String) -> bool:
 			ace.commit_warden()
 	else:
 		_ace_end()
-	if kind == "lounge":
+	if kind == "lounge" or source.get("lounge", false):
 		engine.set_lounge(true)
 		if ace_playing():
 			ace.set_bay(true)
