@@ -6,7 +6,7 @@ Moves the alpha's zero-placeholder criterion. Applying every line clears all 51 
 
 ## How to apply
 
-A ready patch for everything except the `prop_fan` code change is in the project's shared folder at `alpha-status/wire-or-cut/apply-on-cf63e622.patch` (39 files: 37 registry fragments, the folded `registry.json`, `event_kinds.gd`, and the `content_registry.gd` re-pin). It passes `git apply --check` on `cf63e622`. To produce it by hand instead:
+Applied on this branch (PR #46), including the `prop_fan` fan: one spinning yard fan per medium or large Highdraft island, on its own seed so existing props and sails keep their places, checked by `highdraft_scenery_test.gd`. The original patch, without the fan, is in the project's shared folder at `alpha-status/wire-or-cut/apply-on-cf63e622.patch` (39 files: 37 registry fragments, the folded `registry.json`, `event_kinds.gd`, and the `content_registry.gd` re-pin). It passes `git apply --check` on `cf63e622`. To produce it by hand instead:
 
 1. Run `python3 tools/coordinator/registry_sweep.py sketches/core-loop --write`. It flips the two Mind arena rows (group A1) by itself.
 2. Edit the remaining `registry.d` fragments as the tables below say, then run `python3 tools/fold_registry.py --root sketches/core-loop`.
@@ -43,7 +43,7 @@ To stop A2 and A3 from going stale again, add one name-built rule to `registry_s
 
 | Row | Recommendation | Reason |
 | --- | --- | --- |
-| `prop_fan` | Wire in wave 19 dressing: add it to the Highdraft yard prop table in `highdraft_scenery.gd` (about line 699, weight 1, size about 2.0) and autoplay its `spin_loop` clip, then flip the row to `ships: true` with that loader. | Every other Highdraft yard prop is already placed there. The fan is the only one with a loop clip (`tools/blender/highdraft/props.py:332-335`), so it adds motion to a windy world for one table line. If wave 19 runs out of room, relabel it "unplaced yard prop" instead. |
+| `prop_fan` | Wire in wave 19 dressing: add it to the Highdraft yard prop table in `highdraft_scenery.gd` (about line 699, weight 1, size about 2.0) and autoplay its `spin_loop` clip, then flip the row to `ships: true` with that loader. | Every other Highdraft yard prop is already placed there. The fan is the only one with a loop clip (`spin`, built by `tools/blender/highdraft/props.py:332-335`), so it adds motion to a windy world for one table line. If wave 19 runs out of room, relabel it "unplaced yard prop" instead. |
 
 ### C. Relabel: not game content, or superseded (24)
 
@@ -56,7 +56,7 @@ To stop A2 and A3 from going stale again, add one name-built rule to `registry_s
 | `breach_wedge_a`, `breach_wedge_b`, `breach_wedge_c` | `superseded by the _12x12 and _14x10 sized wedges` | The sized variants ship through `dig_scenery.gd`. The base wedges carry the circular opening that P-R6 replaced (`dig_mechanical/manifest.json`, `ruling`). |
 | `travel_vane` | `cut by P-R9 for readability (decisions.tsv 2026-10-06T20:55)` | The barge travel vane was already cut by that ruling. Only the registry row was never updated. |
 | `spil9`, `primer_coil`, `primer_mesh`, `escape_rail`, `escape_vent` | `source piece for assets/models/companion/assembled/ pairs` | At runtime SPIL-9 loads only the 24 assembled `<socket0>__<socket1>.glb` pairs (`companion_body.gd:20`, `:209`). The single pieces are inputs to that build. `ram_prow` and `ram_spring` are listed as shipping with the same loader, but they are in the same position; relabel those two the same way for consistency (they are not in the gate count). |
-| `scrap_crate`, `crate_icon_sheet`, `scrap_coin`, `sand_ground_albedo`, `sand_ground_ao`, `sand_ground_height`, `sand_ground_normal`, `sand_ground_roughness` | `asset-forge pipeline proof; not game content` | **Card for Andrew (below).** The forge test pieces have no place in the current game. Crates are already covered by `bet_crate.glb` and the Highdraft `prop_crate`. The scrap icon is the drawn `res_scrap.svg` in the icon set's SVG style. No icon id in the contract needs a crate. The ground is the `Palette.ground_material()` shader, so a photo-style sand set would add a second ground look. |
+| `scrap_crate`, `crate_icon_sheet`, `scrap_coin`, `sand_ground_albedo`, `sand_ground_ao`, `sand_ground_height`, `sand_ground_normal`, `sand_ground_roughness` | `asset-forge pipeline proof; not game content` | Andrew tapped "Keep them out" (2026-10-17 17:02Z). The forge test pieces have no place in the current game. Crates are already covered by `bet_crate.glb` and the Highdraft `prop_crate`. The scrap icon is the drawn `res_scrap.svg` in the icon set's SVG style. No icon id in the contract needs a crate. The ground is the `Palette.ground_material()` shader, so a photo-style sand set would add a second ground look. |
 
 Count: A 16 + B 1 + C 24 = 41.
 
@@ -82,7 +82,7 @@ No consumer reads `pose` or `floor` yet (the rows are a frozen contract; `enemy.
 - When PR #19 lands, two new decals (`decal_curtain_call`, `decal_sable_spool`) have rows that name `*_mask.png` ids, but neither a registry row nor a manifest entry carries those ids. The cosmetic check will flag them. Add two registry rows (path `res://assets/cosmetics/decals/<id>_mask.png`, loader `src/core/cosmetics.gd`) when it merges.
 - SPIL-9 is invisible until both sockets hold a module (`companion_body.gd:131` and `:205`, `visible = key != ""`). If the companion card picks "grow the one SPIL-9", COMPANION-GROWS can show `spil9.glb` alone and in single-module variants. Re-wire the chassis row then.
 
-## Card for the project coordinator
+## Card for the project coordinator (answered: "Keep them out", 2026-10-17 17:02Z)
 
 **Should the asset-forge test pieces go into the game?**
 
