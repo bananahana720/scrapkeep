@@ -960,7 +960,7 @@ func active_offer(source: String, rarities: Array, rng: RandomNumberGenerator) -
 	var rack = active_rack()
 	if rack == null:
 		return ""
-	return ActiveOffers.roll(rng, source, rack.rows(), rarities, rack.active_id)
+	return ActiveOffers.roll(rng, source, rack.rows(), rarities, rack.held())
 
 
 func _active_row(id: String) -> Dictionary:

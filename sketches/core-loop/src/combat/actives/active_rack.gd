@@ -36,6 +36,9 @@ var _granted := false
 var _kinds := {}
 # Actives dropped by a swap, lying where the ball stood: {id, charges, progress, at, armed, node}.
 var dropped: Array = []
+# The rack as the current attempt began (a stage, or an arena), so a retry rewinds it with the
+# run's parts and cogs: {id, charges, progress, bonus, granted}.
+var _saved := {}
 
 
 func setup(context, owner_combat) -> void:
@@ -47,10 +50,13 @@ func setup(context, owner_combat) -> void:
 		_kinds[id] = kind
 	ctx.events.run_started.connect(func(_class_id: String): reset())
 	ctx.events.enemy_killed.connect(_on_killed)
-	ctx.events.stage_content_cleared.connect(func(_reason: String):
+	ctx.events.stage_content_cleared.connect(func(reason: String):
 		_clear_flight()
-		_clear_dropped())
-	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): _clear_dropped())
+		_clear_dropped()
+		_attempt(reason == "arena_retry"))
+	ctx.events.stage_entered.connect(func(_stage: int, retry: bool):
+		_clear_dropped()
+		_attempt(retry))
 	ctx.events.player_died.connect(_clear_flight)
 
 
@@ -67,6 +73,7 @@ func reset() -> void:
 	_locked = 0.0
 	winding = 0.0
 	_granted = false
+	_saved = {}
 	_clear_flight()
 	_clear_dropped()
 
@@ -83,13 +90,15 @@ func rack(id: String) -> bool:
 
 # Takes an offered active (a gate, the vault or Moss's shelf, by its offer id or its active id):
 # racks it full, and the active it replaces drops at `at` keeping its charges, so rolling back
-# over it swaps again without a free refill. False when it is not an active or already racked.
+# over it swaps again without a free refill. A drop lasts the stage; a gate launches the ball on,
+# so taking a gate's active leaves the old one behind for good. False when it is not an active or
+# already racked.
 func take(id: String, at: Vector3) -> bool:
 	var new_id := ActiveOffers.active_of(id) if ActiveOffers.is_offer(id) else id
 	if new_id == active_id or _row(new_id).is_empty():
 		return false
-	var old := {"id": active_id, "charges": charges, "progress": progress}
 	_cancel_windup()
+	var old := {"id": active_id, "charges": charges, "progress": progress}
 	rack(new_id)
 	_granted = true
 	if old["id"] != "":
@@ -100,6 +109,30 @@ func take(id: String, at: Vector3) -> bool:
 # Every active a draw may offer; a test may add rows.
 func rows() -> Dictionary:
 	return ActiveDefs.ROWS
+
+
+# The actives this run already holds, racked or lying dropped: a draw never offers them.
+func held() -> Array:
+	var out: Array = [active_id] if active_id != "" else []
+	for entry in dropped:
+		out.append(entry["id"])
+	return out
+
+
+# A fresh attempt saves the rack; a retry rewinds it to that save, as run_state rewinds the
+# parts and cogs that paid for what it racked.
+func _attempt(retry: bool) -> void:
+	if not retry:
+		_saved = {"id": active_id, "charges": charges, "progress": progress, "bonus": bonus, "granted": _granted}
+		return
+	if _saved.is_empty():
+		return
+	_cancel_windup()
+	active_id = _saved["id"]
+	charges = _saved["charges"]
+	progress = _saved["progress"]
+	bonus = _saved["bonus"]
+	_granted = _saved["granted"]
 
 
 func row_of(id: String) -> Dictionary:
@@ -235,8 +268,8 @@ func _pick_up(entry: Dictionary, ball: Vector3) -> void:
 	dropped.erase(entry)
 	if is_instance_valid(entry["node"]):
 		entry["node"].queue_free()
-	var old := {"id": active_id, "charges": charges, "progress": progress}
 	_cancel_windup()
+	var old := {"id": active_id, "charges": charges, "progress": progress}
 	active_id = entry["id"]
 	charges = int(entry["charges"])
 	progress = float(entry["progress"])

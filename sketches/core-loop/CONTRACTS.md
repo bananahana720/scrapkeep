@@ -554,8 +554,8 @@ The shop is an economy with no geometry.
 | --- | --- |
 | `enter()` (W6, the ball enters the bay) | stocks the shelf and the hook, pauses the difficulty clock, returns the greeting line |
 | `leave()` (W6, the exit pad) | returns the leaving bark and restarts the clock |
-| `shelf_offers()` (W1) | three `{index, part_id, name, price, sold, rarity, text, icon, trigger_icon, element_icon, affordable}` |
-| `buy(index)` | spends scrap and adds the part with source `shop` |
+| `shelf_offers()` (W1) | three `{index, part_id, name, price, sold, rarity, text, icon, trigger_icon, element_icon, affordable}`; with --actives on the last may be an active offer (`part_id` `active:<id>`), which adds `active`, `maker` and `headline` |
+| `buy(index)` | spends scrap and adds the part with source `shop`; an active offer is racked instead (`combat.actives.take`) |
 | `reroll_price()`, `reroll()` | one reroll per visit: 12 scrap, times 1.5 for each visit after the first |
 | `charge_offers()`, `buy_charge(slot)` | `{slot, part_id, price, cells, cap, max_charges, icon, can}` for each slot that recharges; a cell is a shop-only part, at most 2 per slot, and the slot's ceiling is 4 charges |
 | `sell_offers()`, `sell_quote(part_id)`, `sell(part_id)` | half the part's current price back; heft drops with the part |

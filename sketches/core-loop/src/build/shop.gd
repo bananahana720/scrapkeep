@@ -449,12 +449,13 @@ func _stock() -> Array:
 	var odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
 	for part_id in picks:
 		out.append({"part_id": part_id, "sold": false, "odds": odds})
-	# With --actives on, Moss may shelve one active beside the parts (ActiveOffers).
+	# With --actives on, Moss may shelve one active in the shelf's last slot (ActiveOffers), so
+	# the shelf keeps its three tiles.
 	var rack = _rack()
-	if rack != null:
-		var active := ActiveOffers.roll(_rng, "shop", rack.rows(), SHELF_RARITIES, rack.active_id)
+	if rack != null and not out.is_empty():
+		var active := ActiveOffers.roll(_rng, "shop", rack.rows(), SHELF_RARITIES, rack.held())
 		if active != "":
-			out.append({"part_id": active, "sold": false, "odds": odds})
+			out[-1] = {"part_id": active, "sold": false, "odds": odds}
 	return out
 
 

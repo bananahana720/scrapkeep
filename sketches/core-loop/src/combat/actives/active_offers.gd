@@ -33,22 +33,28 @@ static func offer_id(active_id: String) -> String:
 
 
 # The actives a draw at these rarities may offer: every row whose rarity is among them, except
-# the racked one, in row order.
-static func pool(rows: Dictionary, rarities: Array, racked: String) -> Array:
+# the ones held (racked or dropped), in row order.
+static func pool(rows: Dictionary, rarities: Array, held: Array) -> Array:
 	rarities = ItemGen.resolve_rarities(rarities)
 	var out: Array = []
 	for id in rows:
-		if id != racked and ItemGen.resolve_rarity(String(rows[id]["rarity"])) in rarities:
+		if not id in held and ItemGen.resolve_rarity(String(rows[id]["rarity"])) in rarities:
 			out.append(id)
 	return out
 
 
 # One active offer id for a draw from `source`, or "". Spends the rng only when an active fits.
-static func roll(rng: RandomNumberGenerator, source: String, rows: Dictionary, rarities: Array, racked: String) -> String:
-	var ids := pool(rows, rarities, racked)
+static func roll(rng: RandomNumberGenerator, source: String, rows: Dictionary, rarities: Array, held: Array) -> String:
+	var ids := pool(rows, rarities, held)
 	if ids.is_empty() or rng.randf() >= float(SHARE.get(source, 0.0)):
 		return ""
 	return offer_id(ids[rng.randi_range(0, ids.size() - 1)])
+
+
+# The row's rarity id; an unknown or missing one reads as rare.
+static func rarity_of(row: Dictionary) -> String:
+	var id := ItemGen.resolve_rarity(String(row.get("rarity", "rare")))
+	return id if id != "" else "rare"
 
 
 # "Spillway Works" from "spillway_works".
@@ -67,14 +73,13 @@ static func gate_record(id: String, row: Dictionary) -> Dictionary:
 		"part_id": id, "active": active_of(id), "maker": String(row.get("maker", "")),
 		"name": row.get("name", ""), "headline": "%s: %s" % [row.get("name", ""), row.get("verb", "")],
 		"verb": row.get("verb", ""), "punch": 0.0, "text": row.get("text", ""),
-		"rarity": ItemGen.resolve_rarity(String(row.get("rarity", "rare"))), "hotwired": false,
-		"tier": int(ItemGen.RARITY[ItemGen.resolve_rarity(String(row.get("rarity", "rare")))]["tier"]),
+		"rarity": rarity_of(row), "hotwired": false, "tier": int(ItemGen.RARITY[rarity_of(row)]["tier"]),
 		"synergy": "", "mark": mark(row), "family": "active", "icon": ICON, "trigger_icon": "", "element_icon": "",
 	}
 
 
 # Moss's price: a part of the active's tier at the run's part count.
 static func price(row: Dictionary, parts_held: int) -> int:
-	var tier: int = ItemGen.RARITY[ItemGen.resolve_rarity(String(row.get("rarity", "rare")))]["tier"]
+	var tier: int = ItemGen.RARITY[rarity_of(row)]["tier"]
 	var c: Dictionary = Fabricators.COG_PRICES
 	return int(round(c["part_base"] * c["part_tier"].get(tier, 1.0) * pow(c["part_growth"], parts_held)))

@@ -12,8 +12,8 @@ const T := preload("res://tests/support/t.gd")
 # the racked one; with --actives off no draw spends the rng and a gate shows only parts; on, a
 # gate draw adds one active arch beside the parts, tagged with its maker; rolling through it
 # racks the active, adds no part and drops the old active where the ball stands with its
-# charges; rolling back over the drop swaps them again; Moss's shelf sells an active the same
-# way. Two stand-in rows (a relic and a rare from other makers) fire as the rocket rack, since
+# charges; rolling back over the drop swaps them again; a held active (racked or dropped) is never
+# offered; Moss's shelf sells an active in its last slot; a retry rewinds the rack. Two stand-in rows (a relic and a rare from other makers) fire as the rocket rack, since
 # only the Scrap Rocket Rack is authored yet. Evidence limit: rules in a headless run, not feel.
 
 const FLAT_SHELF := Vector3(-45.0, 15.0, 6.0)
@@ -89,15 +89,15 @@ func _run() -> void:
 
 	# --- The pool: rarity and the racked active ------------------------------------------
 	var rows := {"a": {"rarity": "rare"}, "b": {"rarity": "relic"}, "c": {"rarity": "rare"}}
-	_t.eq("01 a common-only draw offers no active", ActiveOffers.pool(rows, ["common"], ""), [])
-	_t.eq("02 a common-or-rare draw offers the rare actives", ActiveOffers.pool(rows, ["common", "rare"], ""), ["a", "c"])
-	_t.eq("03 the racked active is never offered", ActiveOffers.pool(rows, ["rare", "relic"], "a"), ["b", "c"])
+	_t.eq("01 a common-only draw offers no active", ActiveOffers.pool(rows, ["common"], []), [])
+	_t.eq("02 a common-or-rare draw offers the rare actives", ActiveOffers.pool(rows, ["common", "rare"], []), ["a", "c"])
+	_t.eq("03 a held active (racked or dropped) is never offered", ActiveOffers.pool(rows, ["rare", "relic"], ["a", "c"]), ["b"])
 	_t.check("04 an offer id names its active and is never a part id",
 		ActiveOffers.is_offer("active:b") and ActiveOffers.active_of("active:b") == "b" and not ActiveOffers.is_offer("b"))
 	var hits := 0
 	var rng := _seeded(7)
 	for i in 400:
-		var got := ActiveOffers.roll(rng, "gate", rows, ["rare", "relic"], "a")
+		var got := ActiveOffers.roll(rng, "gate", rows, ["rare", "relic"], ["a"])
 		if got != "":
 			hits += 1
 			if not got in ["active:b", "active:c"]:
@@ -106,7 +106,7 @@ func _run() -> void:
 		"%d of 400" % hits)
 	var dry := _seeded(9)
 	var before := dry.state
-	_t.check("06 a draw with nothing in the pool spends no rng", ActiveOffers.roll(dry, "gate", rows, ["common"], "") == "" and dry.state == before)
+	_t.check("06 a draw with nothing in the pool spends no rng", ActiveOffers.roll(dry, "gate", rows, ["common"], []) == "" and dry.state == before)
 
 	# --- Off: no draw, no rng, parts only -------------------------------------------------
 	_t.eq("07 --actives defaults off", _game.tuning.option("actives"), "off")
@@ -186,7 +186,7 @@ func _run() -> void:
 	for i in shelf.size():
 		if ActiveOffers.is_offer(shelf[i]["part_id"]):
 			at = i
-	_t.check("23 Moss shelves an active beside his parts", at >= 0 and shelf.size() == shop.SHELF_SIZE + 1, str(shelf))
+	_t.check("23 Moss shelves an active in his last slot; the shelf stays three", at == shop.SHELF_SIZE - 1 and shelf.size() == shop.SHELF_SIZE, str(shelf))
 	if at >= 0:
 		shop.inside = true
 		shop.shelf = shelf
@@ -204,6 +204,12 @@ func _run() -> void:
 	# --- Clearing ---------------------------------------------------------------------------
 	_game.events.stage_entered.emit(2, false)
 	_t.check("27 a new stage leaves the drops behind", rack.dropped.is_empty())
+	var at_start: Array = [rack.active_id, rack.charges]
+	rack.take(TORCH, _player.ball_position())
+	_t.check("29 a dropped active is never offered again while it lies there",
+		not ActiveOffers.pool(rack.rows(), ["rare", "relic"], rack.held()).has(at_start[0]) and not ActiveOffers.pool(rack.rows(), ["rare", "relic"], rack.held()).has(TORCH))
+	_game.events.stage_entered.emit(2, true)
+	_t.eq("30 a retry rewinds the rack to how the stage began", [rack.active_id, rack.charges], at_start)
 	_game.events.run_started.emit("pylon_engineer")
 	_t.check("28 a new run empties the rack and the drops", rack.active_id == "" and rack.dropped.is_empty())
 	quit(_t.verdict())

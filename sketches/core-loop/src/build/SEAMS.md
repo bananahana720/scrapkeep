@@ -79,6 +79,8 @@ A stage event that brings an element uses the same table through `build.apply_el
 - `synergy`: the name of the named synergy this gate would complete, or `""`
 - `mark`: the label's star line: `* completes X *`, `* ingredient: ??? *`, `* ingredient: X *` once discovered, or `""`
 
+With --actives on, a gate may stand one more arch for an active (`src/combat/actives/active_offers.gd`): its `part_id` is `active:<id>`, `family` is `active`, `active` and `maker` name it, `rarity` is `rare` or `relic`, and `mark` is `* active, <Maker> *`. Rolling through racks it (`combat.actives.take`) and adds no part.
+
 `build.part_info(part_id)` returns `{id, name, verb, text, punch, tags, rarity, tier, family}` for a toast, a sound or a card.
 
 ## Rarity by source
@@ -89,7 +91,7 @@ A stage event that brings an element uses the same table through `build.apply_el
 | Gate, 1 bonus core | uncommon or rare |
 | Gate, 2 or more | rare or rare-plus |
 | Fabricator | uncommon |
-| Vault (`enemy_killed` kind `vault`) | one rare part, `add_part(id, "vault")` |
+| Vault (`enemy_killed` kind `vault`) | one rare part, `add_part(id, "vault")`; with --actives on, sometimes a rare active too, racked at once |
 | Won event (`milestone_won`) | rare-plus |
 
 The gate reads `ctx.run.gate_tier_bonus()`.
