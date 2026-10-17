@@ -33,7 +33,8 @@ var _environment: Environment
 var _clock := 0.0
 var _warned := {}
 # The rotating opening (title_intros.gd). It autoplays once per launch on the first title
-# screen, never for bots or tests (bot_driven) and never with --no-intro.
+# screen, never for bots or tests (bot_driven, test_mode, a headless display) and never with
+# --no-intro.
 var intro: Node
 var intro_autoplay := true
 var _intro_tried := false
@@ -43,9 +44,8 @@ var _ctx
 func setup(ctx) -> void:
 	name = "TitleStage"
 	_ctx = ctx
-	intro_autoplay = not bool(ctx.root.get("bot_driven")) if ctx.root != null else false
-	if "--no-intro" in OS.get_cmdline_user_args():
-		intro_autoplay = false
+	intro_autoplay = ctx.root != null and not bool(ctx.root.get("bot_driven")) and not bool(ctx.root.get("test_mode")) \
+		and DisplayServer.get_name() != "headless" and not "--no-intro" in OS.get_cmdline_user_args()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	viewport = SubViewport.new()
 	viewport.name = "TitleViewport"
@@ -117,14 +117,18 @@ func play_intro(id := "") -> bool:
 			var def = ClassDef.by_id(pilot)
 			return def != null and root != null and root.has_method("pilot_unlocked") and root.pilot_unlocked(def)
 		id = TitleIntros.pick(TitleIntros.facts_from(profile, flyable))
+	intro.reduced_motion = HighdraftFx.preferred
+	if not intro.play(id, viewport.get_texture()):
+		return false
 	if profile != null:
 		TitleIntros.mark_shown(profile, id)
 		if profile.can_save:
 			profile.save()
-	intro.reduced_motion = HighdraftFx.preferred
-	if not intro.play(id, viewport.get_texture()):
-		return false
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# The music side starts title take A or B on bar 1; a no-op until audio carries title_theme.
+	var audio = get_parent().get("audio") if get_parent() != null else null
+	if audio != null and audio.has_method("title_theme"):
+		audio.title_theme(intro.theme)
 	return true
 
 
@@ -136,9 +140,9 @@ func _intro_finished(_id: String, _skipped: bool) -> void:
 func _boss_met() -> void:
 	var run = _ctx.run if _ctx != null else null
 	var boss: Dictionary = Worlds.boss_of(int(run.world)) if run != null else {}
-	var profile = _ctx.profile
-	if profile != null and TitleIntros.mark_met(profile, String(boss.get("kind", ""))) and profile.can_save:
-		profile.save()
+	# Memory only: the run's own save carries it, so a boss entry never adds a disk write.
+	if _ctx.profile != null:
+		TitleIntros.mark_met(_ctx.profile, String(boss.get("kind", "")))
 
 
 func _sync_dressing() -> void:

@@ -123,6 +123,12 @@ func _playback(capture: String) -> void:
 		rows = OS.get_environment("TTL_INTRO_ROWS").split(",")
 	for id in rows:
 		await _play_row(game, display, String(id), capture)
+	await _workshop_key(game, display)
+	var saved: int = game.ctx.profile.generation()
+	game.ctx.run.world = 1
+	game.ctx.events.boss_arena_entered.emit()
+	_t.check("entering a boss arena marks it met", game.ctx.profile.is_seen(TitleIntros.MET_PREFIX + "brindle"))
+	_t.eq("and adds no disk write", game.ctx.profile.generation(), saved)
 	_t.eq("body count unchanged after the openings", _bodies(root), bodies)
 	_t.check("played opening is recorded as shown", game.ctx.profile.is_seen(TitleIntros.SEEN_PREFIX + String(rows[0])))
 	_t.check("an opening refuses to start off the title", (func() -> bool:
@@ -165,15 +171,40 @@ func _play_row(game: Node, display, id: String, capture: String) -> void:
 	press.physical_keycode = KEY_ENTER
 	press.pressed = true
 	var state: String = game.flow.state_name()
+	# A human's press: test_mode off, so game._input would start a run if the press got through.
+	game.test_mode = false
 	Input.parse_input_event(press)
 	await process_frame
 	await process_frame
+	game.test_mode = true
 	_t.check(id + " any key skips", not display.intro_playing())
 	_t.eq(id + " the skip press does not also start a run", game.flow.state_name(), state)
 	await process_frame
 	_t.check(id + " removes its set and layer", display.stage.get_node_or_null("IntroSet") == null
 		and display.get_node_or_null("TitleIntroPlayer/TitleIntro") == null)
 	_t.check(id + " cuts back to the deck", display.camera.position.distance_to(held.origin) < 1.5)
+
+
+# The workshop's companion key (M) runs before the title stage in tree order; the opening must
+# still take it as a skip and the panel must stay shut.
+func _workshop_key(game: Node, display) -> void:
+	_t.check("plays again for the workshop key", display.play_intro("spillway"))
+	var key := InputEventKey.new()
+	key.keycode = KEY_M
+	key.physical_keycode = KEY_M
+	key.pressed = true
+	game.test_mode = false
+	Input.parse_input_event(key)
+	await process_frame
+	await process_frame
+	game.test_mode = true
+	var panel_open := false
+	for child in game.get_children():
+		if child.get("companion_panel") != null and child.companion_panel.is_open():
+			panel_open = true
+	_t.check("the companion key skips the opening", not display.intro_playing())
+	_t.check("and does not open the companion panel", not panel_open)
+	await process_frame
 
 
 func _seen_card(player, shots: Array) -> bool:

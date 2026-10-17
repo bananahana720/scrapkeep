@@ -28,7 +28,8 @@ const WORLD_PROOF := {2: ["ach_d7_mushroom"], 3: ["highdraft_reached", "ach_d7_m
 const BOSS_PROOF := {"brindle": "brindle_routed", "waking": "waking_stilled", "mind": "mind_quieted"}
 const ENDING_PROOF := "mind_quieted"
 
-# Reel order is rough progression order, so "furthest along" reads as "newest".
+# Reel order is rough progression order, so "furthest along" reads as "newest". The saved
+# round-robin pointer is a reel index: add rows at the end rather than reordering.
 # card: who, what, then three stats (one true, one deadpan, one at the subject's expense).
 # lines: postcard caption, the crash caption, the wink caption.
 const ROWS := [

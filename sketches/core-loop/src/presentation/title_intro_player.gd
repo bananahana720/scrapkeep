@@ -17,6 +17,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
 # The set stands far enough off the deck that no deck shot sees it, and the reverse.
 const SET_AT := Vector3(600.0, 0.0, 0.0)
@@ -41,6 +42,13 @@ const BOSS_MODELS := {
 const SCOOTER := "res://assets/models/bosses/boss_brindle_scooter.glb"
 const CHASER := "res://assets/models/world_one/enemy_chaser.glb"
 const BARGE := "res://assets/models/moss_hover_barge.glb"
+# The set's GLBs keep their colour in vertex colours and import with white materials, so each
+# surface gets the finish the game gives it in play: the Dig's machine parts their slot library,
+# the dam its slot tints (spillway_scenery.gd), everything else its vertex colours.
+const DIG_PARTS := "res://assets/models/dig_mechanical/"
+const DIG_SLOTS := ["stone", "steel", "enamel", "elastomer", "glass"]
+const DAM_TINT := {"paint": Color.WHITE, "bare_metal": Color("7a7a70"), "rubber": Color("454943")}
+const DAM_ROUGHNESS := {"paint": 0.8, "bare_metal": 0.45, "rubber": 0.95}
 const ROLLCALL_AT := Vector3(-300.0, 0.0, 0.0)
 # The stage is tonemapped bright for the deck; sky colours read true at this energy.
 const SKY_ENERGY := 0.5
@@ -68,6 +76,10 @@ var _overlay: Control
 var _lines: Control
 var _saved := {}
 var _tweens: Array[Tween] = []
+# One shared finish per source material for the life of the game, as boss_model.gd keeps them;
+# a fresh copy per opening tripped the headless renderer when its set was freed.
+static var _finishes := {}
+var _catcher: Node
 
 
 func setup(stage_host: Node) -> void:
@@ -96,6 +108,12 @@ func play(intro_id: String, picture: Texture2D) -> bool:
 		"energy": environment.background_energy_multiplier}
 	_build_set()
 	_build_layer(picture)
+	# Input reaches the tree root's last child first, so the catcher sits there and every press
+	# skips before any menu, workshop or panel handler sees it.
+	_catcher = Catcher.new()
+	_catcher.name = "TitleIntroCatcher"
+	_catcher.player = self
+	get_tree().root.add_child(_catcher)
 	playing = true
 	clock = 0.0
 	shot_index = -1
@@ -144,20 +162,19 @@ func advance(delta: float) -> void:
 		_lines.queue_redraw()
 
 
-func _input(event: InputEvent) -> void:
-	if not playing:
-		return
-	var press: bool = (event is InputEventKey and event.pressed and not event.echo) \
+static func skips(event: InputEvent) -> bool:
+	return (event is InputEventKey and event.pressed and not event.echo) \
 		or (event is InputEventMouseButton and event.pressed) \
-		or (event is InputEventJoypadButton and event.pressed)
-	if press:
-		get_viewport().set_input_as_handled()
-		skip()
+		or (event is InputEventJoypadButton and event.pressed) \
+		or (event is InputEventScreenTouch and event.pressed)
 
 
 func _finish(skipped: bool) -> void:
 	playing = false
 	set_process(false)
+	if is_instance_valid(_catcher):
+		_catcher.queue_free()
+	_catcher = null
 	for tween in _tweens:
 		if tween.is_valid():
 			tween.kill()
@@ -286,6 +303,7 @@ func _model(path: String, label: String, fit: float) -> Node3D:
 	_set.add_child(holder)
 	holder.add_child(model)
 	host._freeze_visual(model)
+	_dress(model, path)
 	var box := _bounds(model)
 	var side := maxf(box.size.x, maxf(box.size.y, box.size.z))
 	if side > 0.001:
@@ -294,6 +312,38 @@ func _model(path: String, label: String, fit: float) -> Node3D:
 		model.position = Vector3(-box.get_center().x * s, -box.position.y * s, -box.get_center().z * s)
 	_props[label] = holder
 	return holder
+
+
+func _dress(model: Node, path: String) -> void:
+	for view: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh == null:
+			continue
+		for i in view.mesh.get_surface_count():
+			var drawn := _finished(view.mesh.surface_get_material(i), path)
+			if drawn != null:
+				view.set_surface_override_material(i, drawn)
+
+
+func _finished(source: Material, path: String) -> Material:
+	if not (source is BaseMaterial3D):
+		return null
+	var slot := String(source.resource_name)
+	var key := "%d:%s" % [source.get_instance_id(), path.get_base_dir()]
+	if _finishes.has(key):
+		return _finishes[key]
+	var drawn: Material = null
+	if path.begins_with(DIG_PARTS) and slot in DIG_SLOTS:
+		var library: String = MaterialSlots.row(slot).get("path", "")
+		drawn = load(library) as Material if library != "" and ResourceLoader.exists(library) else null
+	if drawn == null:
+		var copy := source.duplicate() as BaseMaterial3D
+		copy.vertex_color_use_as_albedo = true
+		if path.ends_with("dam.glb"):
+			copy.albedo_color = DAM_TINT.get(slot, Color.WHITE)
+			copy.roughness = DAM_ROUGHNESS.get(slot, 1.0)
+		drawn = copy
+	_finishes[key] = drawn
+	return drawn
 
 
 func _fallback(label: String, color: Color) -> Node3D:
@@ -664,6 +714,22 @@ func _pop(node: Control, from: float) -> void:
 	var tween := create_tween()
 	tween.tween_property(node, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_tweens.append(tween)
+
+
+# Takes every press while the opening plays; frees itself if the player is gone.
+class Catcher extends Node:
+	var player
+
+	func _ready() -> void:
+		process_mode = Node.PROCESS_MODE_ALWAYS
+
+	func _input(event: InputEvent) -> void:
+		if not is_instance_valid(player) or not player.playing:
+			queue_free()
+			return
+		get_viewport().set_input_as_handled()
+		if player.skips(event):
+			player.skip()
 
 
 # Speed lines burst from the centre; rain falls on one spot only.
