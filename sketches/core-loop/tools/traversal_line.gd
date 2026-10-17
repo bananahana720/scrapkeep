@@ -8,6 +8,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const FloorRule := preload("res://src/combat/floor_rule.gd")
 
 # The traversal measure (design-v3/TRAVERSAL.md): one pilot's traversal bot crosses the slice
 # table's stage once per seed, from the spawn to the Warden's engagement, and one JSON file
@@ -61,7 +62,9 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 # PARK_RIDE_FACTS, the count the distinct-verbs band judges), blazing_mps (the blazing tier's speed, 1.9 times the tuned
 # cruise, the peak band's threshold), length_ratio (path over the straight distance from the drop to the engage centre),
 # dead_stop_at (stage second and place of each dead stop) and progress_m (the drop in the stage
-# graph's d_landmark per second; null without assets/park/<map_id>/graph.bin, said once). The
+# graph's d_landmark per second; null without assets/park/<map_id>/graph.bin, said once), floor_share
+# (ticks on the Dig floor rule's floor, FloorRule.on_floor, over all counted ticks) and carve_share (grounded ticks
+# off that floor, on a bank, a wall or a lip, over all grounded ticks; the sinkhole's carving test reads it). The
 # summary holds each measure's median and names every band with whether its median is inside.
 
 const TABLE := "slice"
@@ -169,6 +172,8 @@ class Sampler:
 	var _straight := 0.0
 	var _graph_start = null
 	var cruise := 0.0
+	var _floor_ticks := 0
+	var _grounded_ticks := 0
 
 	func _init(game_ref) -> void:
 		game = game_ref
@@ -264,6 +269,10 @@ class Sampler:
 		_furthest_z = maxf(_furthest_z, ball.z)
 		_uphill = maxf(_uphill, _furthest_z - ball.z)
 		var grounded: bool = player.state.grounded
+		if grounded:
+			_grounded_ticks += 1
+			if FloorRule.on_floor(player.state):
+				_floor_ticks += 1
 		if _was_grounded and not grounded and game.ctx.terrain.map().near_kicker_lip(Vector2(ball.x, ball.z)):
 			if not KICKER_LAUNCH in _rides:
 				_rides.append(KICKER_LAUNCH)
@@ -425,6 +434,8 @@ class Sampler:
 			"length_ratio": snappedf(_path / _straight, 0.01) if _straight > 0.0 else null,
 			"dead_stop_at": dead_stop_at.duplicate(true),
 			"progress_m": _progress(),
+			"floor_share": snappedf(float(_floor_ticks) / float(traversal.ticks), 0.0001) if traversal.ticks > 0 else 0.0,
+			"carve_share": snappedf(1.0 - float(_floor_ticks) / float(_grounded_ticks), 0.0001) if _grounded_ticks > 0 else 0.0,
 		}
 
 
@@ -476,7 +487,8 @@ static func park_document(pilot: String, map_id: String, stage: int, commit: Str
 	doc["stage"] = stage
 	var medians := {}
 	for key in ["time_to_warden_s", "flow_share", "airborne_share", "peak_speed_mps", "tier3_s", "segment_s", "quiet_max_s",
-			"distinct_verbs", "distinct_ride_facts", "max_anchor_gap_m", "length_ratio", "progress_m", "path_length_m", "dead_stops", "blazing_mps"]:
+			"distinct_verbs", "distinct_ride_facts", "max_anchor_gap_m", "length_ratio", "progress_m", "path_length_m", "dead_stops", "blazing_mps",
+			"floor_share", "carve_share"]:
 		var values := _values(runs, key)
 		medians[key] = snappedf(median(values), 0.0001) if not values.is_empty() else null
 	var segment_medians: Array = []
@@ -957,9 +969,9 @@ func _physics_process(delta: float) -> bool:
 		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"],
 			run["path_length_m"], run["rides"], run["uphill_m"]])
 	if _park:
-		print("traversal_line: %s seed %d park: airborne %.3f, peak %.1f m/s (blazing %s), tier 3 %.1f s, segments %s s (longest %s), quiet max %.1f s, verbs %d %s (ride facts %d), length ratio %s, progress %s, dead stops at %s"
+		print("traversal_line: %s seed %d park: airborne %.3f, peak %.1f m/s (blazing %s), tier 3 %.1f s, segments %s s (longest %s), quiet max %.1f s, verbs %d %s (ride facts %d), length ratio %s, progress %s, floor %.3f, carve %.3f, dead stops at %s"
 			% [_pilot, run["seed"], run["airborne_share"], run["peak_speed_mps"], run["blazing_mps"], run["tier3_s"], run["segments_s"], run["segment_s"],
-				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["distinct_ride_facts"], run["length_ratio"], run["progress_m"], run["dead_stop_at"]])
+				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["distinct_ride_facts"], run["length_ratio"], run["progress_m"], run["floor_share"], run["carve_share"], run["dead_stop_at"]])
 	_game.free()
 	_game = null
 	_finish()
