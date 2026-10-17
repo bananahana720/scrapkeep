@@ -49,6 +49,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
+const DIG_WORLD := 2
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
@@ -425,6 +426,8 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false) ->
 		if is_elite and run_tier() >= RunTier.HARD and kinds[i] == "plated_brute":
 			arrival["affix"] = EliteAffixes.for_arrival(_elite_packs_made)
 			affixed = true
+		elif is_elite and world == DIG_WORLD:
+			arrival["affix"] = EliteAffixes.PLATED
 		arrivals.append(arrival)
 		assigned.append(spot)
 		queued += 1

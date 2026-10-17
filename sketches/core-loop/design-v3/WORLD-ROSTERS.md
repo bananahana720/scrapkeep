@@ -52,7 +52,7 @@ These world motifs match the fields and cast-times design (`design-v3/FIELDS-AND
 | Pit jaw (new id `pit_jaw`, from the catch trap) | new behaviour, new body | A toothed jaw flush with the floor that snaps on a ball rolling over it **on the floor**. A ball on a bank, a wall or in the air passes over. A slam from above onto the open jaw kills it. | Carve round it; smash or boost out if held; a slam kills | Jaws line the bowl floor, so the wall is the only lane |
 | Prop crew (new id `prop_crew`) | new behaviour, new body | Holds shoring over its pack. Ram the prop and the roof comes down on everything under it, the player included if on the floor. | Ram the prop from the wall side | The prop sits on a floor the burrowers own |
 
-- Dig elite: `drill_crew` plus the Foreman under a floodlight, replacing the Spillway elite on stages 3 and 4. Until the Foreman merges: `drill_crew`, `drill_crew`, `pit_jaw`.
+- Dig elite: `drill_crew` plus the Foreman under a floodlight, replacing the Spillway elite on stages 3 and 4. Until the Foreman merges: `drill_crew`, `drill_crew`, `pit_jaw`. Every member of a Dig elite pack arrives plated, following Andrew's Q3 answer "Flow, Plate, Wind": `EliteAffixes.PLATED` sets spec armour `plated`, which `enemy.armour_class()` hands to `damage_families.gd` on PR #65. Kinetic hits are resisted, and arc and abilities are weak (`tests/dig_plated_elite_test.gd`).
 - Dig fleet landing becomes a lift cage rising from the pit. Cave-ins start where a burrower surfaces.
 - Specials in the Dig: Splitter pods burrow; the Dispatcher hangs from a ceiling rig; the Linker joins plated crews.
 

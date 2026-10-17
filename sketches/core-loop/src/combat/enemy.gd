@@ -341,6 +341,12 @@ func plating_now() -> float:
 	return plating
 
 
+# The armour row damage_families.gd reads (its armour_of falls through to the kind table on
+# ""): a Dig elite arrives with spec armour "plated".
+func armour_class() -> String:
+	return String(spec.get("armour", ""))
+
+
 # The plating one hit meets. `part` is "" for the body or a weak point id.
 func plating_for(_kind: String, _part: String) -> float:
 	return plating_now()
