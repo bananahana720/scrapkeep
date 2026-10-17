@@ -166,6 +166,13 @@ The lock already shows before the press (`harpoon.gd` `target()` feeds the retic
 
 PF1 lands first and alone (it touches the harpoon). PF2 and PF3 follow on disjoint functions, then PF4 to PF6.
 
+**Built so far (2026-10-17, PR #35).** Everything sits behind the `--pole-flail` launch option (Tuning `pole_flail`, default off), so today's harpoon is unchanged until the gate passes.
+
+- PF1: `src/movement/grip.gd` holds the chassis hefts and the rule (heft read at the bite, +0.4 per threat step, +0.5 elite, trap ratings as their own heft, Warden and vault never flail, a pole only on an opted-in anchor); `line_view.gd` draws a ring for a pole and a hook for a flail. Test `pole_flail_grip_test.gd`. Bracket stills wait for a GPU render on the PC.
+- PF2: `augments.gd` `_ride_pole` orbits the enemy, braces at 1.6 s, snaps at 2.0 s with an outward kick; let-go adds the exit share (Sable's larger). Test `pole_ride_test.gd`.
+- PF3: `src/combat/flail.gd` carries the flail 5 m behind the ball, strikes touching enemies (own `flail` strike kind and IMPACT row), costs the flail a quarter of its health per strike, throws after 3 strikes or 2.5 s, and frees its attacker-budget slot while held. Ctrl does not smash a flail line. Test `flail_swing_test.gd`.
+- Deferred: Ctrl slam with a flail, poled enemies turning, tow turn rate, brace creak and collar visuals, PF4 sounds and words, PF5 answers, PF6 lab arm and gate. The attacker budget group only exists on PR #15; the release is a no-op until that lands. Knockback and bowling hits use the knockback thread's `Contact.ram_knock` and `spawner.bowl_hulk` once its branch lands; until then the flail uses its own knock row.
+
 **Hard targets for the gate** (no thread grades itself; a tool check plus an independent reviewer):
 
 1. Grown ball still clears hives at least 2x faster than small, and no more than 3x (flails must not trivialise the late game).

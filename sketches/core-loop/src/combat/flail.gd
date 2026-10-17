@@ -7,13 +7,17 @@ const Augments := preload("res://src/movement/augments.gd")
 # ball, bitten and held, flies to the ball and swings behind it on the line. While it hangs it
 # is out of the fight: its warning is cancelled, its own processing stops, it leaves the
 # attacker count and it cannot touch the ball. It strikes what it swings through, harder the
-# faster the ball rolls and the heavier the flail, each strike costing it a third of its
-# health; after HITS strikes or HOLD_MAX it is thrown, and a let-go throws it at once. A
-# thrown flail strikes each enemy it meets once more for THROW_FLIGHT.
+# faster the ball rolls and the heavier the flail, each strike costing it SELF_COST of its
+# health, so a full-health flail lives through HITS strikes; after HITS strikes or HOLD_MAX it
+# is thrown, and a let-go throws it at once. A thrown flail strikes each enemy it meets once
+# more for THROW_FLIGHT. An enemy counts as one chain link per chain, and only in the air.
 
 const HANG := 5.0
 const YANK_SPEED := 16.0
 const HITS := 3
+const SELF_COST := 0.25
+# The thrown body starts nothing for this long, chaser or counter alike.
+const THROW_OPEN := 1.25
 const HIT_GAP := 0.4
 const HOLD_MAX := 2.5
 const THROW_FLIGHT := 1.2
@@ -36,9 +40,9 @@ var _hits := 0
 var _last_hit := {}
 var _linked := {}
 var _layer := 0
-var _prev := Vector3.ZERO
-var _speed := 0.0
 var _flying: Array = []
+var _clock := 0.0
+var _budgeted := false
 
 
 func setup(ctx_ref, combat_ref) -> void:
@@ -53,9 +57,10 @@ func holding(node: Node3D) -> bool:
 func _physics_process(delta: float) -> void:
 	if ctx == null or ctx.player == null:
 		return
+	_clock += delta
 	var player = ctx.player
 	var kit = player.kit
-	if body != null and (not is_instance_valid(body) or not kit.hooked or kit.anchor_body != body):
+	if body != null and (not is_instance_valid(body) or _dead(body) or not kit.hooked or kit.anchor_body != body):
 		_let_go(player)
 	if body == null and _flail_line(kit) and player.intent.harpoon_held:
 		_take(kit.anchor_body)
@@ -74,17 +79,23 @@ static func _flail_line(kit) -> bool:
 			and is_instance_valid(kit.anchor_body)
 
 
+static func _dead(node) -> bool:
+	return node.has_method("is_dead") and node.is_dead()
+
+
 func _take(node: Node3D) -> void:
 	body = node
 	flailed += 1
 	_held = 0.0
 	_hits = 0
 	_last_hit.clear()
-	_linked.clear()
-	_prev = node.global_position
+	if ctx.player.chain.combo == 0:
+		_linked.clear()
+	_flying = _flying.filter(func(f): return f["body"] != node)
 	_cancel_attack(node)
 	node.set_physics_process(false)
-	if node.is_in_group(BUDGET_GROUP):
+	_budgeted = node.is_in_group(BUDGET_GROUP)
+	if _budgeted:
 		node.remove_from_group(BUDGET_GROUP)
 	if node is CollisionObject3D:
 		_layer = node.collision_layer
@@ -114,30 +125,28 @@ func _carry(delta: float, player) -> void:
 	var goal := ball + back * HANG
 	var step := maxf(YANK_SPEED, v.length() + 10.0) * delta
 	body.global_position = body.global_position.move_toward(goal, step)
-	_speed = body.global_position.distance_to(_prev) / maxf(delta, 0.0001)
-	_prev = body.global_position
 
 
 func _swing(player) -> void:
-	var cruise: float = player.tuning.f("cruise")
-	var clock := Time.get_ticks_msec() * 0.001
+	var scale := maxf(MIN_SPEED_SCALE, player.state.velocity.length() / player.tuning.f("cruise"))
 	for other in get_tree().get_nodes_in_group("enemy"):
 		if other == body or not is_instance_valid(other) or (other.has_method("is_dead") and other.is_dead()):
 			continue
 		if not _touching(body, other):
 			continue
 		var id: int = other.get_instance_id()
-		if clock - float(_last_hit.get(id, -INF)) < HIT_GAP:
+		if _clock - float(_last_hit.get(id, -INF)) < HIT_GAP:
 			continue
-		_last_hit[id] = clock
-		_strike(other, maxf(MIN_SPEED_SCALE, _speed / cruise))
+		_last_hit[id] = _clock
+		_strike(other, scale)
 		_hits += 1
-		if not _linked.has(id):
+		if not _linked.has(id) and not player.state.grounded:
 			_linked[id] = true
 			player.link_chain(other)
-		if is_instance_valid(body) and body.has_method("take_damage"):
-			body.take_damage(float(body.get("max_hp")) / float(HITS) if body.get("max_hp") != null else 0.0)
-		if body == null or not is_instance_valid(body) or (body.has_method("is_dead") and body.is_dead()):
+		if body.has_method("take_damage") and body.get("max_hp") != null:
+			body.last_damage_source = "flail"
+			body.take_damage(float(body.max_hp) * SELF_COST)
+		if _dead(body):
 			body = null
 			return
 		if _hits >= HITS:
@@ -165,17 +174,21 @@ func _let_go(player) -> void:
 	body = null
 	if node == null or not is_instance_valid(node):
 		return
+	node.set_physics_process(true)
+	if _dead(node):
+		return
 	if node is CollisionObject3D:
 		node.collision_layer = _layer
-	node.set_physics_process(true)
-	if node.has_method("is_dead") and node.is_dead():
-		return
+	if _budgeted:
+		node.add_to_group(BUDGET_GROUP)
 	var v: Vector3 = player.state.velocity
 	if node.has_method("knock") and v.length() > 0.5:
 		var w = node.get("weight")
 		node.knock(v, v.length() * (float(w) if w != null else 1.0))
 	if node.get("stun_left") != null:
-		node.stun_left = maxf(float(node.stun_left), 1.25)
+		node.stun_left = maxf(float(node.stun_left), THROW_OPEN)
+	if node.get("_rest") != null:
+		node._rest = maxf(float(node._rest), THROW_OPEN)
 	thrown += 1
 	_flying.append({"body": node, "left": THROW_FLIGHT, "hit": {}, "scale": maxf(MIN_SPEED_SCALE, v.length() / player.tuning.f("cruise"))})
 
@@ -188,7 +201,7 @@ func _fly(delta: float) -> void:
 		if f["left"] <= 0.0 or not is_instance_valid(node) or (node.has_method("is_dead") and node.is_dead()):
 			continue
 		for other in get_tree().get_nodes_in_group("enemy"):
-			if other == node or not is_instance_valid(other) or f["hit"].has(other.get_instance_id()):
+			if other == node or other == body or not is_instance_valid(other) or f["hit"].has(other.get_instance_id()):
 				continue
 			if other.has_method("is_dead") and other.is_dead():
 				continue

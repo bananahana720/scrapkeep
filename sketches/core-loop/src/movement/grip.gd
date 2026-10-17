@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Roster := preload("res://src/combat/roster.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
 # Poles and flails (design-v3/POLES-FLAILS.md section 3): what holding the harpoon does to a
 # bitten enemy, decided by weight (Andrew's card "Weight", 2026-10-17). A ball at most BAND
@@ -48,7 +49,8 @@ static func heft_of(body) -> float:
 
 
 # The grip a ball of `ball_heft` takes on a body of `body_heft`. An infinite heft is a pole
-# only where the body can carry an anchor line; otherwise the line reels as today.
+# only on an opted-in anchor (augments.gd anchor_line); otherwise the line reels as today, so
+# arena Wardens, park Wardens that have not opted in, the vault and bosses are unchanged.
 static func grip(ball_heft: float, body_heft: float, can_anchor := true) -> String:
 	if body_heft == INF:
 		return POLE if can_anchor else REEL
@@ -65,7 +67,7 @@ static func of(body, ball_heft: float, on := true) -> String:
 		return ""
 	if not on:
 		return REEL
-	return grip(ball_heft, heft_of(body), body.has_method("anchor_point"))
+	return grip(ball_heft, heft_of(body), Augments.anchor_line(body))
 
 
 # Adds the grip a press would take to an aim record that holds a body.

@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Grip := preload("res://src/movement/grip.gd")
+const Augments := preload("res://src/movement/augments.gd")
 const T := preload("res://tests/support/t.gd")
 
 # PF1 (design-v3/POLES-FLAILS.md section 11): weight decides the grip a held harpoon takes on
@@ -21,11 +22,6 @@ class FakeTrap extends FakeEnemy:
 	var rating := 1.6
 
 
-class FakeAnchor extends FakeEnemy:
-	func anchor_point(point: Vector3, _from = null) -> Vector3:
-		return point
-
-
 func _initialize() -> void:
 	_run()
 	quit(_t.verdict())
@@ -38,6 +34,12 @@ func _enemy(kind: String, threat := 1.0, affix := "", script = FakeEnemy) -> Nod
 	body.spec = {"affix": affix} if affix != "" else {}
 	body.add_to_group("enemy")
 	root.add_child(body)
+	return body
+
+
+func _anchor() -> Node3D:
+	var body := _enemy("warden")
+	body.add_to_group(Augments.ANCHOR_GROUP)
 	return body
 
 
@@ -62,8 +64,8 @@ func _run() -> void:
 		["threat raises heft", 1.6, _enemy("chaser", 2.0), Grip.REEL],
 		["trap rating stands in for chassis", 3.0, _trap(2.0), Grip.FLAIL],
 		["even with the trap rating reels", 2.0, _trap(2.0), Grip.REEL],
-		["huge ball never flails a Warden", 9.0, _enemy("warden", 1.0, "", FakeAnchor), Grip.POLE],
-		["a Warden with no anchor reels", 9.0, _enemy("warden"), Grip.REEL],
+		["huge ball never flails an anchor Warden", 9.0, _anchor(), Grip.POLE],
+		["a Warden that is no anchor reels", 9.0, _enemy("warden"), Grip.REEL],
 		["a boss body never flails", 9.0, _enemy("brindle_hull"), Grip.REEL],
 		["the vault never flails", 9.0, _enemy("vault"), Grip.REEL],
 	]

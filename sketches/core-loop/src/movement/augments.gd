@@ -375,8 +375,11 @@ static func commit_smash(kit, tuning, velocity: Vector3) -> void:
 
 
 # Whether Ctrl may commit the haul on the line now: always on an enemy line, only inside the
-# stagger on an anchor line.
+# stagger on an anchor line, never on a flail line (the flail hangs behind the ball; its slam is
+# a later unit, POLES-FLAILS section 5).
 static func haul_open(kit) -> bool:
+	if kit.grip == "flail":
+		return false
 	var body = kit.anchor_body
 	return not (kit.on_body and anchor_line(body)) or (body.has_method("staggered") and body.staggered())
 
