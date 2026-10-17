@@ -53,6 +53,11 @@ const TITLE := "SCRAPKEEP: FIRST RUN"
 const ENDING_HOLD := 1.0
 const PROLOGUE_TITLE := "FIRST SHIFT"
 # Start is the one filled button on the title: the primary action reads first and biggest.
+# The run-end comic page (run_moments.gd) on the summary, drawn by the camp's comic_page.gd
+# when the build has it: 3:4, at most this share of the screen's height.
+const COMIC_PAGE_PATH := "res://src/ui/comic_page.gd"
+const COMIC_HEIGHT := 0.5
+const COMIC_MAX_HEIGHT := 540.0
 const PRIMARY_FONT := 26
 const PRIMARY_HEIGHT := 60.0
 
@@ -65,6 +70,7 @@ var _title: Label
 var _body: Label
 var _stats: HBoxContainer
 var _choices: HBoxContainer
+var _comic_row: HBoxContainer
 var _actions: HFlowContainer
 # Under the title's buttons: why a saved run was refused, so New run is the plain next step.
 var _refusal: Label
@@ -115,6 +121,8 @@ func setup(game_ref) -> void:
 	_content.add_child(_body)
 	_stats = _row(30)
 	_content.add_child(_stats)
+	_comic_row = _row(0)
+	_content.add_child(_comic_row)
 	_choices = _row(CARD_GAP)
 	_content.add_child(_choices)
 	_actions = HFlowContainer.new()
@@ -177,6 +185,8 @@ func setup(game_ref) -> void:
 	_content.add_child(_ending)
 	game.events.flow_changed.connect(_on_flow_changed)
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
+	if game.run_moments != null:
+		game.run_moments.page_ready.connect(_show_comic_page)
 
 
 func _label(font_size: int) -> Label:
@@ -219,7 +229,7 @@ func _on_flow_changed(state: String) -> void:
 	_choices.visible = true
 	_actions.visible = true
 	_fit_actions()
-	for row in [_stats, _choices, _actions]:
+	for row in [_stats, _comic_row, _choices, _actions]:
 		for child in row.get_children():
 			row.remove_child(child)
 			child.queue_free()
@@ -722,6 +732,22 @@ func _press(key: String) -> void:
 # no boss beaten (a table with no boss, an unbuilt world) shows no epitaph.
 func _beaten_boss() -> Dictionary:
 	return game.flow.boss_row(game.ctx.stages.world_of(game.run.stage))
+
+
+# The page folds at run_ended, after the summary has opened, so it arrives on its own row.
+func _show_comic_page(page: Dictionary) -> void:
+	if _state != "summary" or not ResourceLoader.exists(COMIC_PAGE_PATH):
+		return
+	var comic: Control = load(COMIC_PAGE_PATH).new()
+	var height := minf(COMIC_MAX_HEIGHT, _screen().y * COMIC_HEIGHT)
+	comic.custom_minimum_size = Vector2(height * 0.75, height)
+	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_comic_row.add_child(comic)
+	comic.show_page(page)
+
+
+func comic_page() -> Control:
+	return _comic_row.get_child(0) if _comic_row.get_child_count() > 0 else null
 
 
 # The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and

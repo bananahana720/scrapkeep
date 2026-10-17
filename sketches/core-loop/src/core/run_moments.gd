@@ -6,17 +6,21 @@ extends Node
 # thread owns drawing pages and the scrapbook store; this file owns what goes on a page.
 #
 # Page document (schema 1), the contract the scrapbook reads:
-#   {schema, run_id, ended_unix, pilot, pilot_name, won, stage_reached, world, world_name,
-#    title, panels: [4..6 panel rows in run order]}
+#   {schema, run_id, ended_unix, pilot, pilot_name, won, outcome, stage_reached, world,
+#    world_name, title, panels: [4..6 panel rows in run order]}
+# outcome is "won" or "lost": a page folds only at run_ended, so a run abandoned mid-way
+# makes none.
 #   panel: {kind, t, stage, world, world_name, caption, sfx, size, facts, shot}
 # kind is one of KINDS. caption is the narrator box (TONE-BIBLE: deadpan words, loud
 # pictures), sfx the drawn sound word ("" for none), size a layout hint (wide, tall,
 # square), facts a small dict of numbers, shot an Image (SHOT_WIDTH wide, null headless or
-# when no still was taken). save() writes the page JSON with each shot as a PNG beside it
-# ("shot" becomes the PNG's file name) under <storage_dir>/scrapbook/<run_id>/.
+# when no still was taken). save() hands the page to the scrapbook; page_ready tells the
+# summary screen it can draw it.
 #
 # Every run has an opening and a finale; the middle takes up to four of the rest by PRIORITY,
 # and the ledger and top speed always exist, so a page is never under four panels.
+
+signal page_ready(page: Dictionary)
 
 const Worlds := preload("res://src/core/worlds.gd")
 const Parts := preload("res://src/build/parts.gd")
@@ -24,7 +28,8 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 
 const SCHEMA := 1
 const DIR := "scrapbook"
-const PAGE_FILE := "page.json"
+# The camp's scrapbook store and page drawing (camp hub thread); both optional until merged.
+const STORE_PATH := "res://src/core/scrapbook_store.gd"
 const MIN_PANELS := 4
 const MAX_PANELS := 6
 const SHOT_WIDTH := 480
@@ -211,6 +216,7 @@ func _on_run_ended(won: bool) -> void:
 	_keep("ledger", _moment("ledger", 1.0, {"kills": int(run.kills), "scrap": int(run.scrap)}))
 	last_page = build_page(won, finale)
 	last_page_path = save(last_page)
+	page_ready.emit(last_page)
 
 
 # The page from the held moments: opening and finale bracket up to four middle panels by
@@ -249,6 +255,7 @@ func build_page(won: bool, finale: Dictionary) -> Dictionary:
 		"pilot": run.class_id(),
 		"pilot_name": _pilot_name(),
 		"won": won,
+		"outcome": "won" if won else "lost",
 		"stage_reached": int(run.stage),
 		"world": world,
 		"world_name": _world_name(world),
@@ -274,26 +281,29 @@ func _panel(row: Dictionary) -> Dictionary:
 	}
 
 
-# Writes the page JSON and each panel's still as panel-<n>.png beside it. Returns the JSON's
-# path, or "" when the folder or file could not be written.
+# Saves through the camp's scrapbook store (scrapbook_store.gd) when the build has it; until
+# then the same layout by hand: <storage_dir>/scrapbook/<run_id>.json, each still beside it as
+# <run_id>_<i>.png named in its panel's shot. Returns the JSON's path, or "".
 func save(page: Dictionary) -> String:
-	var id := String(page.get("run_id", ""))
-	if id == "":
-		id = "run-%d" % int(page.get("ended_unix", 0.0))
-	var dir := storage_dir.path_join(DIR).path_join(id)
-	if DirAccess.make_dir_recursive_absolute(dir) != OK:
-		push_warning("run_moments: could not make %s" % dir)
+	if ResourceLoader.exists(STORE_PATH):
+		var store = load(STORE_PATH).new(storage_dir)
+		var saved := String(store.save(page))
+		if saved == "":
+			push_warning("run_moments: scrapbook refused the page: %s" % store.last_error)
+		return saved
+	var id := String(page.get("run_id", "")).validate_filename()
+	var dir := storage_dir.path_join(DIR)
+	if id == "" or DirAccess.make_dir_recursive_absolute(dir) != OK:
+		push_warning("run_moments: could not save page %s in %s" % [id, dir])
 		return ""
 	var doc := page.duplicate(true)
 	for i in doc["panels"].size():
 		var panel: Dictionary = doc["panels"][i]
 		var shot = page["panels"][i].get("shot")
 		panel["shot"] = ""
-		if shot is Image:
-			var file := "panel-%d.png" % (i + 1)
-			if (shot as Image).save_png(dir.path_join(file)) == OK:
-				panel["shot"] = file
-	var path := dir.path_join(PAGE_FILE)
+		if shot is Image and (shot as Image).save_png(dir.path_join("%s_%d.png" % [id, i])) == OK:
+			panel["shot"] = "%s_%d.png" % [id, i]
+	var path := dir.path_join(id + ".json")
 	if SafeStore.write_atomic(path, JSON.stringify(doc, "\t")) != OK:
 		push_warning("run_moments: could not write %s" % path)
 		return ""

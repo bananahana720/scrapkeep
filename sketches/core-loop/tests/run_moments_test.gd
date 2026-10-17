@@ -108,6 +108,10 @@ func _full_run() -> void:
 	_t.check("page saved under scrapbook/", path.contains("/%s/" % RunMoments.DIR) and FileAccess.file_exists(path), path)
 	var doc = JSON.parse_string(FileAccess.get_file_as_string(path)) if path != "" else null
 	_t.check("saved page parses with its panels", doc is Dictionary and (doc["panels"] as Array).size() == panels.size() and int(doc["schema"]) == RunMoments.SCHEMA, "%s" % [doc])
+	_t.eq("page outcome", page.get("outcome"), "won")
+	# The camp's drawing lands on its own branch; the summary shows the page once the build has it.
+	var drawn = _game.screens.comic_page()
+	_t.check("summary draws the page when the build has the drawing", (drawn != null) == ResourceLoader.exists(_game.screens.COMIC_PAGE_PATH), "drawn %s" % [drawn != null])
 	print("run_moments_test page: %s" % JSON.stringify(doc))
 	target.queue_free()
 

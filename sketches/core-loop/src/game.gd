@@ -292,13 +292,12 @@ func _exit_tree() -> void:
 		return
 	for file in dir.get_files():
 		dir.remove(file)
-	# The scrapbook keeps one folder per run (run_moments.gd).
+	# The scrapbook's pages and stills (run_moments.gd).
 	var book := storage_dir.path_join(RunMoments.DIR)
-	for run_dir in DirAccess.get_directories_at(book):
-		for file in DirAccess.get_files_at(book.path_join(run_dir)):
-			DirAccess.remove_absolute(book.path_join(run_dir).path_join(file))
-		DirAccess.remove_absolute(book.path_join(run_dir))
-	DirAccess.remove_absolute(book)
+	if DirAccess.dir_exists_absolute(book):
+		for file in DirAccess.get_files_at(book):
+			DirAccess.remove_absolute(book.path_join(file))
+		DirAccess.remove_absolute(book)
 	DirAccess.remove_absolute(storage_dir)
 
 
