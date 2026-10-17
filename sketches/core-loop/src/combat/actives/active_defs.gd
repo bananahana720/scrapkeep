@@ -17,6 +17,8 @@ extends RefCounted
 # kind         the script that fires it: setup(ctx, combat), fire(rack, row, bonus) -> pieces
 #              launched, step(delta), clear(); optional begin(rack, row) draws the wind-up's tell
 #              (the same geometry fire() will hit) and cancel() drops it.
+#              fire() may run twice in one release (Open Frame, maker_sets.gd: fired in the
+#              air, an active fires twice), so a kind keeps no per-release state across it.
 
 const SCRAP_ROCKET := "scrap_rocket"
 

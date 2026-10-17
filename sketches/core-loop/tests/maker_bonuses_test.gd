@@ -146,12 +146,19 @@ func _run() -> void:
 	_t.check("14 Tremor is live", "tremor" in _build.maker_bonuses())
 	var quake := _enemy(4.0, 0.0)
 	await _sim(0.05)
+	# The ball's own settling may already have rippled; count from here, past the re-ripple gap.
+	await _sim(MakerBonuses.TREMOR_GAP + 0.05)
+	quake.hp = 9999.0
+	var ripples := int(_build.makers.fires.get("tremor", 0))
 	ev.landed.emit(2.0)
-	_t.check("15 a soft landing sends no ripple", is_equal_approx(float(quake.hp), 9999.0) and int(_build.makers.fires.get("tremor", 0)) == 0)
+	_t.check("15 a soft landing sends no ripple", is_equal_approx(float(quake.hp), 9999.0) and int(_build.makers.fires.get("tremor", 0)) == ripples,
+		"hp %.1f ripples %d -> %d" % [quake.hp, ripples, int(_build.makers.fires.get("tremor", 0))])
+	# A ripple from the ball's own settling may have shoved it away: put it back in reach.
+	quake.global_position = _player.ball_position() + Vector3(3.0, 0.0, 0.0)
 	ev.landed.emit(10.0)
 	await _sim(0.1)
-	_t.check("16 a real landing ripples the ground", float(quake.hp) < 9999.0 and int(_build.makers.fires.get("tremor", 0)) == 1,
-		"hp %.1f" % quake.hp)
+	_t.check("16 a real landing ripples the ground", float(quake.hp) < 9999.0 and int(_build.makers.fires.get("tremor", 0)) == ripples + 1,
+		"hp %.1f ripples %d -> %d" % [quake.hp, ripples, int(_build.makers.fires.get("tremor", 0))])
 	quake.queue_free()
 
 	# --- Noticed (Mind-glass) ---------------------------------------------------------------
@@ -199,6 +206,11 @@ func _run() -> void:
 	# --- Every set at once ------------------------------------------------------------------
 	_t.eq("28 all seven bonuses live together", _build.maker_bonuses(),
 		["full_pressure", "rounded_up", "bench_teeth", "open_frame", "tremor", "noticed", "packed_a_spare"])
+	var swapped: Array = _game.ctx.run.parts.duplicate()
+	swapped[swapped.find("rivet_seam")] = "gen:weapon:rare:arc:on_hit"
+	_game.ctx.run.parts.assign(swapped)
+	_t.check("29 swapping a piece out at the same part count (a retry, a sale) is recounted",
+		not "rounded_up" in _build.maker_bonuses() and _build.maker_counts().get(MakerSets.FLEET, 0) == 2, str(_build.maker_counts()))
 	ev.run_started.emit("pylon_engineer")
-	_t.eq("29 a new run clears the sets' firings", _build.makers.fires, {})
+	_t.eq("30 a new run clears the sets' firings", _build.makers.fires, {})
 	quit(_t.verdict())

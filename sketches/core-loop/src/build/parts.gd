@@ -199,11 +199,14 @@ const MILESTONE_ORDER := ["scrap_gravity", "tempest_core", "rime_heart"]
 const SYNERGY_BAIT := 0.5
 
 # "Nudge loot" for maker sets (maker_sets.gd): once MAKER_NUDGE_AT distinct pieces of one maker
-# are held, that maker's other pieces weigh MAKER_NUDGE times as much inside whichever group or
-# bucket a slot draws from, the same lean matchup counters get. The groups' shares do not move,
-# so a pilot's kit, shelf and movement shares hold.
+# are held, that maker's other pieces weigh MAKER_NUDGE times their offer bucket's other parts
+# inside whichever group a slot draws from, the same lean matchup counters get. Each bucket keeps
+# its total weight in each group (_nudged), so a pilot's kit, shelf, movement and pair shares hold
+# (offer_weights_test): the nudge picks which piece of a bucket shows, never which bucket.
 const MAKER_NUDGE_AT := 2
 const MAKER_NUDGE := 1.5
+# Off only for a measurement that needs the kit lean alone on a fixed seed (offer_weights_test).
+static var maker_nudge_on := true
 
 # The pattern guarantee (balance loop, B4): a run that reaches stage 2's gates holding no
 # pattern transformer is offered one of these in that pair. Bots without a pattern took
@@ -725,7 +728,7 @@ static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: Str
 				lean = NEUTRAL_LEAN
 			elif name == "shelf" and b == "weapon" and not kit.has("weapon"):
 				lean = NEUTRAL_WEAPON_EASE
-			raw[key] = lean * float(nudge.get(key, 1.0)) / (1.0 + offered.get(key, 0))
+			raw[key] = lean / (1.0 + offered.get(key, 0))
 			sum += raw[key]
 		for key in raw:
 			weights[key] = share[name] * raw[key] / sum
@@ -744,6 +747,16 @@ static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: Str
 			for key in groups[name]:
 				weights[key] += excess * (weights[key] / room if room > 0.0 else 1.0 / groups[name].size())
 			excess = 0.0
+	# The maker nudge goes last, on the settled weights, inside each group's buckets: it never
+	# feeds the cap's excess to the shelf, so every group and bucket keeps its share.
+	if not nudge.is_empty():
+		for name in groups:
+			var part: Dictionary = {}
+			for key in groups[name]:
+				part[key] = weights[key]
+			part = _nudged(part, nudge)
+			for key in part:
+				weights[key] = part[key]
 	return _pick_weight(rng, candidates, weights)
 
 
@@ -808,7 +821,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 		var bucket: Array = pool.filter(func(key): return rows()[key]["rarity"] == rarity)
 		if bucket.is_empty():
 			bucket = pool
-		var chosen := _weighted(rng, bucket, offered, nudge)
+		var chosen := _weighted(rng, bucket, offered, {}, nudge)
 		picks.append(chosen)
 		pool.erase(chosen)
 	if picks.size() >= 2 and not picks.any(func(key): return def(key).hits_harder()):
@@ -879,6 +892,8 @@ static func _near(class_id: String, pool: Array) -> Array:
 # Offer-weight multipliers for pool given held: MAKER_NUDGE on each pool part not held whose
 # maker has MAKER_NUDGE_AT or more distinct pieces in held. Empty when no maker is that far along.
 static func maker_nudge(held: Array, pool: Array) -> Dictionary:
+	if not maker_nudge_on:
+		return {}
 	var pieces := {}
 	for part_id in held:
 		var maker := String(rows().get(part_id, {}).get("maker", ""))
@@ -894,14 +909,41 @@ static func maker_nudge(held: Array, pool: Array) -> Dictionary:
 	return out
 
 
-# lean: id to a weight multiplier (SQ19's neutral lean, a maker's nudge); absent ids weigh 1.
-static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictionary, lean: Dictionary = {}) -> String:
+# raw (id to weight) with each nudged id's weight times its nudge, then every offer bucket
+# rescaled to the total it had before, so the nudge moves weight between a bucket's own parts
+# only. A bucket whose parts are all nudged, or none, is unchanged. raw itself when no nudge.
+static func _nudged(raw: Dictionary, nudge: Dictionary) -> Dictionary:
+	if nudge.is_empty() or not raw.keys().any(func(key): return nudge.has(key)):
+		return raw
+	var before := {}
+	var after := {}
+	var out := {}
+	for key in raw:
+		var b := bucket_of(key)
+		out[key] = float(raw[key]) * float(nudge.get(key, 1.0))
+		before[b] = float(before.get(b, 0.0)) + float(raw[key])
+		after[b] = float(after.get(b, 0.0)) + out[key]
+	for key in out:
+		var b := bucket_of(key)
+		if after[b] > 0.0:
+			out[key] *= before[b] / after[b]
+	return out
+
+
+# lean: id to a weight multiplier (SQ19's neutral lean); nudge: a maker's offer nudge, applied
+# inside each offer bucket (_nudged); absent ids weigh 1.
+static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictionary, lean: Dictionary = {},
+		nudge: Dictionary = {}) -> String:
+	var raw := {}
 	var total := 0.0
 	for key in bucket:
-		total += lean.get(key, 1.0) / (1.0 + offered.get(key, 0))
+		raw[key] = lean.get(key, 1.0) / (1.0 + offered.get(key, 0))
+	raw = _nudged(raw, nudge)
+	for key in bucket:
+		total += raw[key]
 	var x := rng.randf() * total
 	for key in bucket:
-		x -= lean.get(key, 1.0) / (1.0 + offered.get(key, 0))
+		x -= raw[key]
 		if x < 0.0:
 			return key
 	return bucket[-1]

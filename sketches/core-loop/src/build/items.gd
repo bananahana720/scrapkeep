@@ -14,6 +14,7 @@ extends RefCounted
 # charges   ability slot to extra max_charges per copy.
 # class     only this class is offered the part.
 # needs     the other module's seam it waits on; the part is never offered without it.
+# maker     the workshop that made it (maker_sets.gd): its set counts the row as a piece.
 # touches   the Bindings verb the part changes. 2026-10-15 (wave 14 SQ19b): set on the rows the
 #           alpha list offers (build_synergy_test); each keeps the row's offer bucket
 #           (Parts.bucket_of): fire only on weapon rows, special only on skill rows.

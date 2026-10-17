@@ -11,7 +11,7 @@ const Relics := preload("res://src/build/relics.gd")
 # bonuses.gd does what each bonus does. A copy of a piece already held is not a second piece:
 # a set is a collection, so it pays for range, and luck still pays through the offer nudge.
 #
-# Overpowered pays: a set never switches off, and a bonus has no falloff.
+# Overpowered pays: a set stays on while its pieces are held, and a bonus has no falloff.
 
 const SPILLWAY := "spillway_works"
 const FLEET := "fleet_surplus"

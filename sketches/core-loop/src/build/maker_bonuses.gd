@@ -83,8 +83,8 @@ func setup() -> void:
 	ctx.events.stage_content_cleared.connect(func(_reason: String): _clear_flight())
 	ctx.events.run_started.connect(func(_class_id: String): reset())
 	var door = ctx.spawner.get("door") if ctx.spawner != null else null
-	if door != null and door.has_method("hook"):
-		door.hook("hit", HOOK, _on_door_hit)
+	if door != null and door.has_method("hook") and not door.hook("hit", HOOK, _on_door_hit):
+		push_error("maker sets: the damage door refused the %s hook; Rounded Up and Noticed are off" % HOOK)
 
 
 func reset() -> void:
@@ -104,7 +104,8 @@ func has(bonus_id: String) -> bool:
 # Recounts the pieces when the parts, relics or racked active changed. Cheap when nothing did.
 func refresh() -> void:
 	var active := _racked_maker()
-	var signature := "%d|%s|%s" % [ctx.run.parts.size(), str(ctx.run.relics), active]
+	# The parts themselves, not their count: a retry or a sale can swap one part for another.
+	var signature := "%d|%s|%s" % [ctx.run.parts.hash(), str(ctx.run.relics), active]
 	if signature == _signature:
 		return
 	_signature = signature
@@ -179,6 +180,8 @@ func _on_active_fired(_active_id: String, at: Vector3, _count: int) -> void:
 		fx.ring(at, STEAM_RADIUS, Palette.SAND)
 		fx.ring(at, STEAM_RADIUS * 0.6, Palette.SAND)
 	for enemy in build.enemies_near(at, STEAM_RADIUS, 32):
+		if not is_instance_valid(enemy):
+			continue
 		var away: Vector3 = enemy.global_position - at
 		away.y = 0.0
 		if enemy.has_method("knock"):
@@ -245,6 +248,8 @@ func _step_teeth(delta: float) -> void:
 	for tooth in _teeth:
 		tooth["life"] -= delta
 	_teeth = _teeth.filter(func(tooth): return float(tooth["life"]) > 0.0)
+	if _teeth.is_empty():
+		_bitten.clear()
 	if not has("bench_teeth") or not ctx.flow.in_play():
 		_last_ball = Vector3.INF
 		return
@@ -298,6 +303,8 @@ func _on_landed(impact: float) -> void:
 		fx.ring(at, radius * 0.5, Palette.ANCIENT)
 	var scale := clampf(impact / TREMOR_REF, 0.75, 2.0)
 	for enemy in build.enemies_near(at, radius, 32):
+		if not is_instance_valid(enemy):
+			continue
 		var away: Vector3 = enemy.global_position - at
 		away.y = 0.0
 		if enemy.has_method("knock"):
@@ -308,15 +315,25 @@ func _on_landed(impact: float) -> void:
 
 # ---- Packed a Spare (Moss's Spares, 2 pieces) ----
 
-# The piece that completes the set is not its own spare: the arming is read before the recount.
+# The piece that completes the set is not its own spare: the set must already have been live
+# before this part's recount (a nested part_gained, an evolution grant, may have recounted first).
 func _on_part_gained(part_id: String, source: String) -> void:
-	var armed := _spare_armed
+	var was_live := _live_without(part_id, MakerSets.MOSS)
 	refresh()
-	if not armed or not _spare_armed or source in MOSS_SOURCES_SKIPPED or MakerSets.maker_of(part_id) == "":
+	if not was_live or not _spare_armed or source in MOSS_SOURCES_SKIPPED or MakerSets.maker_of(part_id) == "":
 		return
 	_spare_armed = false
 	ctx.run.add_part(part_id, "spare")
 	note_fire("packed_a_spare", null, ctx.player.ball_position())
+
+
+# True when maker's set is complete without one copy of part_id: the set held before it came.
+func _live_without(part_id: String, maker: String) -> bool:
+	var parts: Array = ctx.run.parts.duplicate()
+	parts.erase(part_id)
+	var active := _racked_maker()
+	var counted_before := MakerSets.counts(parts, ctx.run.relics, [active] if active != "" else [])
+	return int(counted_before.get(maker, 0)) >= int(MakerSets.SETS[maker]["pieces"])
 
 
 func _effects():
