@@ -19,6 +19,13 @@ extends RefCounted
 # Why: a strict gap between pack mates slowed the swarm band's grown ball (46.4 s, small to
 # grown 1.83x against the 2x rule; machine gate on PR #15).
 #
+# Who the budget counts (Andrew's rulings): counters and Dispatcher chasers do; the Foreman and
+# Linker, the Warden and bosses never ask. Hive defenders skip the whole budget, cap and gap: a
+# unit within DEFEND_RADIUS of a live swarm-family Warden (the stage 3 hive, the stage 4 brood nest)
+# attacks whenever it is ready, for every pilot (Andrew, 2026-10-17: 20:52:11Z card "Swarm campers",
+# a ranged-only pilot must not break a hive; 21:19:16Z card "All at hives", the gap goes too, since
+# with it a camper still broke the hive by luck). They take no slot from the crowd elsewhere.
+#
 # A unit refused a slot waits in line. The longest waiter gets the next free slot, so a
 # crowd takes turns instead of the scene tree's first units taking every opening.
 
@@ -33,6 +40,11 @@ const WAITING := "attack_budget_wait"
 const OFF_META := "attack_budget_off"
 const LAST_META := "attack_budget_last"
 const VOLLEY_META := "attack_budget_volley"
+# Hive Wardens are harpoon anchors (warden.gd set_harpoon_anchor); this is augments.gd ANCHOR_GROUP.
+const ANCHOR_GROUP := "harpoon_anchor"
+const HIVE_FAMILY := "swarm"
+# The hive's reach (warden.gd DEFAULT_REACH, 30 m) plus a lunge, so a unit on a camper at range counts.
+const DEFEND_RADIUS := 40.0
 # The director pack a unit arrived with (world.gd); units spawned any other way are their own volley.
 const PACK_META := "pack_seq"
 # The physics frame a clocked-out unit may attack again (foreman.gd: its crew, when it dies).
@@ -70,9 +82,11 @@ static func ask(unit: Node) -> bool:
 	if not unit.is_inside_tree() or _off(unit):
 		return true
 	var tree := unit.get_tree()
+	if defends_hive(unit, tree):
+		withdraw(unit)
+		return true
 	_queue(unit)
-	var free := cap_for(unit) - attackers(tree)
-	if free <= 0:
+	if cap_for(unit) - attackers(tree) <= 0:
 		return false
 	var joins := _joins_volley(unit, tree)
 	if not joins:
@@ -87,6 +101,18 @@ static func ask(unit: Node) -> bool:
 	tree.root.set_meta(LAST_META, Engine.get_physics_frames())
 	tree.root.set_meta(VOLLEY_META, volley_of(unit))
 	return true
+
+
+static func defends_hive(unit: Node, tree: SceneTree) -> bool:
+	var at: Vector3 = (unit as Node3D).global_position
+	for hive in tree.get_nodes_in_group(ANCHOR_GROUP):
+		if hive.get("kind") != "warden" or hive.get("family") != HIVE_FAMILY or not is_instance_valid(hive):
+			continue
+		if hive.has_method("is_dead") and hive.is_dead():
+			continue
+		if (hive as Node3D).global_position.distance_to(at) <= DEFEND_RADIUS:
+			return true
+	return false
 
 
 # One threat: the unit's director pack and kind. A unit with no pack is a volley of one.

@@ -104,6 +104,15 @@ func _run() -> void:
 		early_peaks.append(first.peak)
 	_test.eq("ticks over the early cap", early_over, 0)
 	_test.check("capped peak reaches the early cap", early_peaks.max() == early, "early peaks %s, cap %d" % [early_peaks, early])
+	# Hive defenders skip the whole budget (2026-10-17 cards "Swarm campers" and "All at hives"): with a
+	# live hive at the ball the crowd passes the late cap and distinct warnings may share a beat.
+	var hive := _hive()
+	var defended: Dictionary = await _encounter(0, crowd, true, LATE_HEFT, LATE_WORLD, SECONDS)
+	hive.queue_free()
+	await process_frame
+	_test.check("hive defenders pass the cap", defended.peak > late, "peak %d beside a live hive, late cap %d" % [defended.peak, late])
+	_test.check("hive defenders skip the gap", defended.min_gap < AttackBudget.MIN_GAP - 0.5 / BASE_TICKS,
+		"closest distinct warning starts %.2f s" % defended.min_gap)
 	print("uncapped peak: min %d, median %d, max %d of %d units; late cap %d; longest wait max %.2f s"
 		% [uncapped_peaks.min(), _median(uncapped_peaks), uncapped_peaks.max(), crowd, late, waits.max()])
 	_finish()
@@ -182,6 +191,18 @@ func _boot() -> bool:
 
 
 # Stage 6's director at the park table's highest tier: top time tier, spike on, hard run tier.
+# A stand-in hive: what attack_budget.gd reads of a swarm-family Warden, at the ball.
+func _hive() -> Node3D:
+	var script := GDScript.new()
+	script.source_code = "extends Node3D\nvar kind := \"warden\"\nvar family := \"swarm\"\nfunc is_dead() -> bool:\n\treturn false\n"
+	script.reload()
+	var hive: Node3D = script.new()
+	_game.ctx.root.add_child(hive)
+	hive.global_position = _ball_at
+	hive.add_to_group(AttackBudget.ANCHOR_GROUP)
+	return hive
+
+
 func _crowd_size() -> int:
 	var row: Dictionary = Park.of(6)
 	var d = Director.new(6)
