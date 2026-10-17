@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 # or core.
 #
 # (a) 100 seeds x k = 0 to 4: pack credit and miniboss credit equal base x (1 + k), rewards 1 + k.
-# (b) no price changes: every card's cost and every pack price read the same at any stake.
+# (b) no price changes: every card's cost reads the same at any stake.
 # (c) the stake clamps to 0 to 4 and stake_up wraps from 4 back to 0.
 # (d) the stake locks once charging starts and frees after a loss.
 # (e) the stake shows before commit: the line names the multiplier and the part rolls.
