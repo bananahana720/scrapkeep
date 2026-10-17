@@ -171,6 +171,7 @@ signal posture_changed(enemy: Node3D, posture: float, staggered: bool)
 # where its pay appears. Once per activity per stage attempt.
 signal activity_done(id: String, at: Vector3)
 # progress.gd earned an achievement and saved the profile (or tried to). id keys Achievements.ROWS.
+# The first-win secret paint rows (secrets.gd PAINT_ROWS) earn silently and never emit it.
 signal achievement_earned(id: String)
 # A world rescue finished (a stranded pilot freed). quest_id names it: "rivet" for world one's
 # runner, "dig" for the later dig rescue. achievements.gd rows key on it to unlock pilots.
