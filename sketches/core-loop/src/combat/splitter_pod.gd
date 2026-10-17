@@ -118,6 +118,8 @@ func _physics_process(delta: float) -> void:
 		_die()
 
 
+# E25 e25_pod_glow: the seam glow blinks faster and burns brighter as the fuse runs, then
+# goes dark on the spent husk. It reads the counter's warn clock; no timer of its own.
 func _pose() -> void:
 	if _glow == null:
 		return

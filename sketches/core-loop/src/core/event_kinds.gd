@@ -574,9 +574,10 @@ const ATTACK_ROWS := {
 		"pose": "e23_hook_swing", "warn": "atk_e23_warn", "release": "atk_e23_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
 	"E24": {"label": "Kite drone dive", "group": "enemy", "owner_kind": "roster", "owner": "kite_drone", "allegiance": "hostile", "threat": "threat_instant", "glyph": "diamond", "color": Palette.HAZARD,
 		"pose": "e24_wings_fold", "warn": "atk_e24_warn", "release": "atk_e24_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
-	# Kill-first specials (roster_specials.gd): pose and floor stay open until the final model.
+	# Kill-first specials (roster_specials.gd). E25's pose is the pod's seam glow blinking
+	# faster as the fuse burns (splitter_pod.gd _pose); its ring marks the floor both ways.
 	"E25": {"label": "Splitter pod fuse blast", "group": "enemy", "owner_kind": "roster", "owner": "splitter_pod", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
-		"pose": "e25_pod_glow", "warn": "atk_e25_warn", "release": "atk_e25_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
+		"pose": "e25_pod_glow", "warn": "atk_e25_warn", "release": "atk_e25_release", "floor": "B", "open": []},
 	"W01": {"label": "Reactor Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w01_vents_lift", "warn": "atk_w01_warn", "release": "atk_w01_release", "floor": "B", "open": []},
 	"W02": {"label": "Hive Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
