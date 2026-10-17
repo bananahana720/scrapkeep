@@ -13,7 +13,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
 const CLASSES := ["none", "hit", "heavy", "massive", "climax"]
 const FIELDS := ["stop_ms", "shake", "kick", "punch_fov", "fx_scale", "body", "body_st"]
-const EXPECTED_CHECKS := 35
+const EXPECTED_CHECKS := 36
 const OWNER := {
 	"enemy_struck": "neutral", "enemy_killed": "neutral", "gauge_released": "neutral",
 	"posture_changed": "neutral", "posture_break": "neutral", "ultimate_landed": "neutral",
@@ -136,7 +136,14 @@ func run(t) -> void:
 	t.check("harpoon smash frame cues", frame.ok, str(frame))
 	var shared_slam := _measure(Rows.sound("slammed"))
 	var kest_slam := _measure("slam_boom")
-	t.check("shared slam acoustic weight", not shared_slam.is_empty() and shared_slam.peak_db >= -3.0 and absf(shared_slam.rms_db - kest_slam.rms_db) <= 3.0 and shared_slam.onset_ms <= 20.0, str([shared_slam, kest_slam]))
+	# 2026-10-17 SOUND-INT: slam_boom is now the event-set file (rms -15.3 dB), not the recipe
+	# this check was written against (rms -11.0 dB), so the shared slam is held to a floor
+	# rather than a +-3 dB band: it must read at least as heavy as Kest's file slam, and a
+	# heavier shared slam (added layers) passes.
+	t.check("shared slam acoustic weight", _slam_weight_ok(shared_slam, kest_slam), str([shared_slam, kest_slam]))
+	var light_body := shared_slam.duplicate()
+	light_body.rms_db = _measure("ui_tick").get("rms_db", 0.0)
+	t.check("shared slam weight planted light control", not _slam_weight_ok(_measure("ui_tick"), kest_slam) and not _slam_weight_ok(light_body, kest_slam), "a tick, or the slam's peak with a tick's body, fails")
 	var ultimate: Dictionary = event_script.call("weigh", "ultimate_landed", {})
 	var slam_cue := _measure(Rows.sound("slammed"))
 	var ultimate_cue := _measure(ultimate.sound)
@@ -255,6 +262,10 @@ func _body_measurements(weights: Dictionary) -> Array:
 		measured["class"] = key
 		out.append(measured)
 	return out
+
+
+func _slam_weight_ok(shared: Dictionary, kest: Dictionary) -> bool:
+	return not shared.is_empty() and not kest.is_empty() and shared.peak_db >= -3.0 and shared.rms_db >= kest.rms_db and shared.onset_ms <= 20.0
 
 
 func _measure(id: String, ratio := 1.0) -> Dictionary:
