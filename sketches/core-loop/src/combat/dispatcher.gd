@@ -68,6 +68,7 @@ const RADAR_TURN := TAU / 4.0 / (60.0 / 129.0)
 
 var drops := 0
 var escalation := 0
+var _hit_since_drop := false
 var landed_hits := 0
 var adds: Array = []
 var perch_top := Vector3.ZERO
@@ -314,7 +315,9 @@ func _go_live() -> void:
 		var dir := out.normalized() if out.length() > 0.1 else -global_basis.z
 		hit_player.emit(float(ESCALATION[escalation]["damage"]), dir * DROP_SHOVE + Vector3.UP * 3.0)
 	var add: Node3D = fleet.combat.spawn_enemy(String(ESCALATION[escalation]["kind"]), landing + Vector3.UP * 1.2)
-	_escalate(mini(escalation + 1, ESCALATION.size() - 1))
+	if not _hit_since_drop:
+		_escalate(mini(escalation + 1, ESCALATION.size() - 1))
+	_hit_since_drop = false
 	if add == null:
 		return
 	# Out of the tube ready to go: its first lunge waits only on the attacker budget. It carries
@@ -327,16 +330,21 @@ func _go_live() -> void:
 	dispatched.emit(add)
 
 
-# Each hit answers it one step.
+# Each hit answers it one step, and a drop after any hit does not climb.
 func take_damage(amount: float) -> float:
 	if amount > 0.0 and not _dead:
+		_hit_since_drop = true
 		_escalate(maxi(escalation - 1, 0))
 	return super(amount)
 
 
 func _escalate(step: int) -> void:
+	var before := rest_seconds
 	escalation = step
 	rest_seconds = float(ESCALATION[step]["every"]) - WARN - live_seconds
+	# A step down between drops pushes the running countdown back now, not a cycle late.
+	if phase == Phase.ROAM and rest_seconds > before:
+		_rest += rest_seconds - before
 
 
 func _on_end() -> void:

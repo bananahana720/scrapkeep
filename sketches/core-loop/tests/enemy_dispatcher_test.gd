@@ -132,6 +132,13 @@ func _run() -> void:
 	t.eq("a hit steps it down one", rig.escalation, 1)
 	rig.take_damage(1.0)
 	t.eq("a second hit answers it", rig.escalation, 0)
+	# Answered between drops: one hit, then the next landing does not climb.
+	rig.take_damage(1.0)
+	var landed: int = rig.drops
+	game.player.reset_to(ball)
+	await _until(func(): return rig.drops > landed)
+	await _frames(2)
+	t.eq("a drop after a hit does not climb", rig.escalation, 0)
 	t.near("back to the start cadence", rig.rest_seconds, Dispatcher.DROP_EVERY - Dispatcher.WARN - rig.live_seconds)
 	_clear()
 
