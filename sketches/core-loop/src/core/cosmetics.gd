@@ -25,6 +25,9 @@ const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
 const PENDING_ART := []
+# Test-only: ids treated as extra PENDING_ART so tests reach the pending paths while the list is
+# empty. Production never sets it; a test that sets it clears it before it finishes.
+static var _test_pending: Array[String] = []
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -183,7 +186,7 @@ static func validate(rows: Dictionary, pilots: Array) -> Array:
 	if starter_paints < 1:
 		problems.append("table: needs at least one starter paint")
 	# Table-level: content_registry validates one row at a time and skips "table:" problems.
-	for id in PENDING_ART:
+	for id in PENDING_ART + _test_pending:
 		if not rows.has(id):
 			problems.append("table: PENDING_ART id %s is not a row" % id)
 		elif rows[id].get("starter", false) == true:
@@ -192,7 +195,7 @@ static func validate(rows: Dictionary, pilots: Array) -> Array:
 
 
 static func is_pending(id: String) -> bool:
-	return PENDING_ART.has(id)
+	return PENDING_ART.has(id) or _test_pending.has(id)
 
 
 static func owner_for(pilot: String, slot: String) -> String:

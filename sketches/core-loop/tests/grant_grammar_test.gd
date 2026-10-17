@@ -210,7 +210,12 @@ func _toast() -> void:
 	else:
 		var pending_grant := Achievements.for_cosmetic(pending[0])
 		_t.eq("a pending item's toast shows the row name only", Achievements.toast_text(pending_grant), String(Achievements.row(pending_grant)["name"]))
-	_t.eq("a delivered shell's toast names the look", Achievements.toast_text("ach_sable_switchback"), "Switchback\nNew look: Felt Rig")
+	# The test seam plants the hood as pending: its toast shows the row name only.
+	var hood_grant := Achievements.for_cosmetic("outfit_rivet_hood")
+	Cosmetics._test_pending = ["outfit_rivet_hood"]
+	_t.eq("a planted pending item's toast shows the row name only", Achievements.toast_text(hood_grant), String(Achievements.row(hood_grant)["name"]))
+	Cosmetics._test_pending = []
+	_t.eq("a delivered shell's toast names the look",Achievements.toast_text("ach_sable_switchback"), "Switchback\nNew look: Felt Rig")
 	_t.eq("a delivered outfit's toast names the look", Achievements.toast_text(Achievements.for_cosmetic("outfit_rivet_hood")),
 		"%s\nNew look: Welding Hood" % Achievements.row(Achievements.for_cosmetic("outfit_rivet_hood"))["name"])
 	_t.eq("an unknown row toasts its id", Achievements.toast_text("not_a_row"), "not_a_row")

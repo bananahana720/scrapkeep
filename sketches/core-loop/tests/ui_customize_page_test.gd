@@ -193,6 +193,19 @@ func _page_checks(page, profile, screens) -> void:
 	page._select_slot("paint")
 	for id in Cosmetics.PENDING_ART:
 		_t.check("pending %s has no card" % id, page.card_for(id) == null and not id in page.shown_ids(Cosmetics.row(id)["slot"]))
+	# With PENDING_ART empty, the test seam plants a shown outfit so the hiding path still runs.
+	var outfits: Array = page.shown_ids("outfit")
+	_t.check("an outfit is shown before the plant", not outfits.is_empty(), str(outfits))
+	if not outfits.is_empty():
+		var planted: String = outfits[0]
+		Cosmetics._test_pending = [planted]
+		page._select_slot("outfit")
+		_t.check("planted pending %s has no card" % planted, page.card_for(planted) == null and not planted in page.shown_ids("outfit"))
+		Cosmetics._test_pending = []
+		page._select_slot("paint")
+		page._select_slot("outfit")
+		_t.check("cleared %s shows its card again" % planted, page.card_for(planted) != null and planted in page.shown_ids("outfit"))
+	page._select_slot("paint")
 	_t.check("the shell slot shows its built variant", page.rows["shell"].visible and "shell" in page.order())
 	_t.check("empty slot bay_decor is hidden", not page.rows["bay_decor"].visible and not "bay_decor" in page.order())
 	_t.check("an empty owner group is hidden", not page._group_labels["BAY"].visible)
