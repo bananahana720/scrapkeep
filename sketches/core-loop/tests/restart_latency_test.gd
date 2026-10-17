@@ -182,9 +182,11 @@ func _exit(next_stage: int) -> Dictionary:
 			await physics_frame
 			waited += 1
 		build_s = (Time.get_ticks_usec() - b0) / 1e6
-	# The build wait lasts a different number of ticks each run (worker threads), and the ball moves
-	# through them, so the ball is put back on a fixed pose before the exit: the replay then compares
-	# the exit's own path, not the wait's length.
+	# Under SimClock.ticks (set in the probe) terrain.prepare() builds the stage whole inside the
+	# call (terrain.gd _worker_builds), so the wait loop above ends at once and build_s is that one
+	# blocking build, not a threaded build's frames. The exit is still timed with the next stage
+	# built, as play has it, so the exit target is unaffected. The ball is put back on a fixed pose
+	# before the exit so the replay compares the exit's own path.
 	var here: int = _game.flow.stage()
 	_game.player.reset_to(terrain.spawn_point(here) + Vector3.UP * 2.0, Vector3(0.0, 0.0, 6.0))
 	await _ticks(2)
