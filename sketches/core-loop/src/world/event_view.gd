@@ -19,6 +19,7 @@ const FOG_COLOR := Color("c8a878")
 const PILLAR_ALPHA := 0.45
 const PILLAR_FADE := Vector2(4.0, 20.0)
 const ARRIVAL_RADIUS := 3.0
+const RELAY_MAST := "res://assets/models/world_one/relay_mast.glb"
 const VAULT_PROMPT_REACH := 60.0
 
 var director
@@ -151,6 +152,19 @@ func _build_surge(entry: Dictionary, model) -> void:
 
 func _build_relay(entry: Dictionary, model) -> void:
 	var foot := _ground(model.relay)
+	var coil_mat := Palette.solid(Palette.ARC, 0.3)
+	entry["coil_mat"] = coil_mat
+	# The dressed mast (tools/blender/world_one/relay_stake.py): a lattice tower with its coil's orb 17 m
+	# up, where the primitive coil sat. The primitives stand in only when the GLB is missing.
+	if ResourceLoader.exists(RELAY_MAST):
+		var dressed := (load(RELAY_MAST) as PackedScene).instantiate() as Node3D
+		var glow := dressed.find_child("CoilGlow", true, false) as MeshInstance3D
+		if glow != null:
+			glow.material_override = coil_mat
+			dressed.position = foot
+			entry["root"].add_child(dressed)
+			return
+		dressed.free()
 	var mast := MeshInstance3D.new()
 	var cyl := CylinderMesh.new()
 	cyl.top_radius = 0.6
@@ -165,11 +179,9 @@ func _build_relay(entry: Dictionary, model) -> void:
 	sphere.radius = 2.2
 	sphere.height = 4.4
 	coil.mesh = sphere
-	var coil_mat := Palette.solid(Palette.ARC, 0.3)
 	coil.material_override = coil_mat
 	coil.position = foot + Vector3.UP * 17.0
 	entry["root"].add_child(coil)
-	entry["coil_mat"] = coil_mat
 
 
 func _build_hauler(entry: Dictionary) -> void:
