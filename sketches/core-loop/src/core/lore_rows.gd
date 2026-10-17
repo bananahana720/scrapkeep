@@ -173,6 +173,38 @@ const ROWS := [
 		"text": "Culvert notice: the wall beside the wasteway is not a door. Wall disagrees at speed. Repairs billed to the wall.",
 	},
 	{
+		"id": "lore.park_flume.note.shadows", "kind": "field_note", "zone": "1-2",
+		"text": "Morning card: trestle shadows fall west across the fields. Shadow count matches the bents until noon. After noon, one extra, standing still.",
+	},
+	{
+		"id": "lore.park_flume.note.gap", "kind": "field_note", "zone": "1-2",
+		"text": "Butte gap survey: flume clears the gap by a hand's width each side. Clearance measured again in wind. Buttes leaned in to look.",
+	},
+	{
+		"id": "lore.park_flume.note.bend", "kind": "field_note", "zone": "1-2",
+		"text": "Bend overlook: crew lunch taken on the rim. Echo from the river below repeated the grace, then asked for seconds.",
+	},
+	{
+		"id": "lore.park_flume.note.gorge", "kind": "field_note", "zone": "1-2",
+		"text": "Gorge rope tally: ninety-five metres paid down the bluff to the river. Rope came back wet to the top knot. River is lower than that.",
+	},
+	{
+		"id": "lore.park_flume.note.annex", "kind": "field_note", "zone": "1-2",
+		"text": "Annex shift: heat exchanger run cold all night to keep the relic calm. Coffee left on it came back boiling.",
+	},
+	{
+		"id": "lore.park_flume.note.forecourt", "kind": "field_note", "zone": "1-2",
+		"text": "Forecourt notice: heavy plant parks clear of the drum doors. The heavy plant parked itself. It is still there.",
+	},
+	{
+		"id": "lore.park_flume.note.drones", "kind": "field_note", "zone": "1-2",
+		"text": "Bent inspection: winch drones roosting under trestles 12 to 19. Crew asked them to move. They moved down one bent and kept the count.",
+	},
+	{
+		"id": "lore.park_flume.note.south_bench", "kind": "field_note", "zone": "1-2",
+		"text": "Fleet notice, south bench: landing pads painted overnight. Bench was rock yesterday. Today it is listed as a Fleet asset, rock included.",
+	},
+	{
 		"id": "lore.park_flume.intro.warden", "kind": "intro", "zone": "1-2", "subject": "warden",
 		"text": "Head House Warden. Flume boiling. Flow still logged as normal.",
 	},
@@ -524,6 +556,38 @@ const ROWS := [
 	{
 		"id": "lore.park_crown.note.cannon", "kind": "field_note", "zone": "3-2",
 		"text": "Shelf cannon docket: fired toward the bowl for range. Shot landed one ball's width short. Every shot since lands in the same mark.",
+	},
+	{
+		"id": "lore.park_crown.note.kite", "kind": "field_note", "zone": "3-2",
+		"text": "Mooring crew log: storm kite up off the Signal Butte. Lightning took the kite line instead of the masts. Line logged as a mast.",
+	},
+	{
+		"id": "lore.park_crown.note.kite_strike", "kind": "field_note", "zone": "3-2",
+		"text": "Strike card, Signal Butte top: lightning every thirty seconds, on the mark. Crew set the kettle by it. Kettle never late.",
+	},
+	{
+		"id": "lore.park_crown.note.deck_lease", "kind": "field_note", "zone": "3-2",
+		"text": "Mooring deck lease: weavers lend the deck to the Fleet for one storm. Lease renewed every storm. Nobody has seen a dry day.",
+	},
+	{
+		"id": "lore.park_crown.note.winch", "kind": "field_note", "zone": "3-2",
+		"text": "Winch post tally: six posts on the west butte, hooks facing the Crown. Crew turned them round at dusk. By dawn, facing the Crown.",
+	},
+	{
+		"id": "lore.park_crown.note.weaver_knots", "kind": "field_note", "zone": "3-2",
+		"text": "Weaver rule card: tie every knot twice, once for the line and once for whoever rides it. A third knot turns up on every post. Nobody ties three.",
+	},
+	{
+		"id": "lore.park_crown.note.hammock", "kind": "field_note", "zone": "3-2",
+		"text": "Hammock check: needle hammock slack at dusk, taut after the first strike. Weavers say the storm sits in it. They leave it a blanket.",
+	},
+	{
+		"id": "lore.park_crown.note.lips", "kind": "field_note", "zone": "3-2",
+		"text": "Gust lip survey: weavers cut the lips where the wind already jumped. Wind now jumps a hand early, to be helpful.",
+	},
+	{
+		"id": "lore.park_crown.note.trade", "kind": "field_note", "zone": "3-2",
+		"text": "Trade ledger, Gauntlet shelf: one Fleet winch for one weaver net. Winch returned oiled. Net returned with a Fleet number stencilled on every knot.",
 	},
 	{
 		"id": "lore.highdraft_core.note.5", "kind": "field_note", "zone": "3-2",
