@@ -62,7 +62,11 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 # fills only from rams in the 4 s low dwell and about 1.5 a second from the line, so a chunk costs two to three
 # hoist cycles. Owner tuning call (no stage-3 tune is in KF-BOT's scope): restate the headframe band near the
 # sheet's own prediction (60 to 85 s, swarm.md:177), raise line-shot posture on an anchor, or shorten the high dwell.
-const EXPECT_SMALL_S := 104.78
+# 2026-10-17 (SQ2, PR #15): hive defenders skip the attacker budget (Andrew's cards "Swarm campers"
+# 20:52:11Z and "All at hives" 21:19:16Z). Measured over seeds 0 to 7: small 91.27 s of [74.35, 105.61,
+# 187.68, 78.73, 108.58, 76.19, 64.94, 91.27], grown 38.77 s of [34.72, 36.94, 42.94, 37.47, 46.4, 26.12,
+# 38.77, 55.52], 2.35x; the camper broke it on none of seeds 0 to 15 but seed 8 (222 s). Was 104.78 / 38.77.
+const EXPECT_SMALL_S := 91.27
 const EXPECT_GROWN_S := 38.77
 const TOLERANCE := 0.10
 
