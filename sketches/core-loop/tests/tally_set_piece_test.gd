@@ -642,7 +642,8 @@ func _grants() -> void:
 	_t.check("all three grants earned", grant_ids.all(func(id): return store.earned(id)), str(grant_ids.map(func(id): return store.earned(id))))
 	var items := ["trail_tally_punch_tape", "outfit_tally_eyeshade", "shell_tally_abacus"]
 	_t.check("all three looks unlocked", items.all(func(id): return store.has_cosmetic(id)))
-	_t.check("pending art hidden and no price", items.all(func(id): return Cosmetics.PENDING_ART.has(id) and not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
+	_t.check("delivered trail is live, other art pending, none priced", not Cosmetics.is_pending(items[0]) and items.slice(1).all(func(id): return Cosmetics.PENDING_ART.has(id))
+		and items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
 	var reload_store := Profile.new(store.path)
 	reload_store.load_profile()
 	_t.check("grants survive reload", grant_ids.all(func(id): return reload_store.earned(id)) and items.all(func(id): return reload_store.has_cosmetic(id)))

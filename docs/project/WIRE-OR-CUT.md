@@ -77,9 +77,12 @@ No consumer reads `pose` or `floor` yet (the rows are a frozen contract; `enemy.
 | P11 Ram, crush and stomp | keep glyph `arrow`, color `Palette.SAND` | This is an all-pilot row, and P12 already closes the same way with fixed values. The hull colour is SAND, which fits contact damage. |
 | P13 Pilot upgrade attacks | glyph `diamond`, color `Palette.SAND` (keep both); pose `p13_parent_pose`; warn `NONE`; release `NONE`; floor `L` | ATTACK-READS line 103 says upgrade procs reuse the parent pilot's pose and cue, instant procs get zero lead, and child blasts use the parent's floor once committed. The P13 row adds no cue of its own, so it uses NONE (the W07 precedent). `L` is the minimum floor, which keeps proc blasts from taking over an enemy warning. All values pass `attack_rows_test.gd` `_check_fields` and pose uniqueness. |
 
+## PR #19's nine cosmetics (added 17:20Z)
+
+PR #19 registers seven earned trails and two decals with the pending loader. This branch merges #19's head and wires all nine the same way as A2 and A3 (`ships: true`, loader `src/core/cosmetics.gd`), and drops them from `Cosmetics.PENDING_ART`. Their art is real: `dress_cua_assets_test` and `asset_registry_test` import every GLB and mask. Seven tests that pinned these items as missing art now pin a still-pending item instead (Switchback, Rigger, Welding Hood) or check that the trail is live. With #19 in, the gate reads 1,382: those nine and the nine `PENDING_ART` entries are gone. Ten outfits and shells remain pending art.
+
 ## Follow-ups found along the way
 
-- When PR #19 lands, two new decals (`decal_curtain_call`, `decal_sable_spool`) have rows that name `*_mask.png` ids, but neither a registry row nor a manifest entry carries those ids. The cosmetic check will flag them. Add two registry rows (path `res://assets/cosmetics/decals/<id>_mask.png`, loader `src/core/cosmetics.gd`) when it merges.
 - SPIL-9 is invisible until both sockets hold a module (`companion_body.gd:131` and `:205`, `visible = key != ""`). If the companion card picks "grow the one SPIL-9", COMPANION-GROWS can show `spil9.glb` alone and in single-module variants. Re-wire the chassis row then.
 
 ## Card for the project coordinator (answered: "Keep them out", 2026-10-17 17:02Z)

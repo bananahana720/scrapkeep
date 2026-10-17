@@ -4,8 +4,8 @@
    "id": "decal_sable_spool_mask.png",
    "path": "res://assets/cosmetics/decals/decal_sable_spool_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "brief": "design-v3/COSMETICS-ART-BRIEFS.md"

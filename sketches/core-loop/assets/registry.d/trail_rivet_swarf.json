@@ -4,8 +4,8 @@
    "id": "trail_rivet_swarf",
    "path": "res://assets/cosmetics/trails/trail_rivet_swarf.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
