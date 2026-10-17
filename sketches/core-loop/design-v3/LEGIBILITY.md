@@ -87,12 +87,13 @@ The pattern cue carries the class for a colour-blind player. At the 150 m read d
 | E16 | `reactor_relic` | circle | area_burst | 2.40 | logged: no interrupt, a 5 s crater | 0.75 |
 | E17 | `swarm_remnant` | line | ray | 1.20 | in band | 0.75 |
 | E18 | `mind_hand` | line | ray | 1.40 | in band | 0.75 |
-| E19 | `burrower` | line | ray | 1.00 | in band | 0.75 |
+| E19 | `burrower` | circle | area_burst | 1.00 | logged: a floor burst that a bank, a wall or the air escapes | 0.75 |
 | E20 | `drill_crew` | circle | area_burst | 1.20 | logged: no interrupt | 0.75 |
 | E21 | `lamp_swarm` | circle | area_burst | 0.90 | logged: a wave whose front runs outward | 0.75 |
 | E22 | `line_cutter` | circle | projectile | 0.60 | logged: the cutter still flies 1.1 s to its ring | 0.75 |
 | E23 | `anchor_crew` | line | ray | 1.00 | in band | 0.75 |
 | E24 | `kite_drone` | circle | area_burst | 0.80 | logged: no interrupt, then a 0.7 s dive | 0.75 |
+| E30 | `pit_jaw` | circle | area_burst | 1.00 | logged: a hold | 0.75 |
 
 ## 3. The harpoon
 

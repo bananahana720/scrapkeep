@@ -83,8 +83,8 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": ""},
 	"E18": {"kind": "mind_hand", "pre_shoot": 1.4, "cooldown": 2.25, "radius": 1.3, "length": 18.0, "marker": "line", "band": "ray",
 		"recovery_before": 0.0, "reason": ""},
-	"E19": {"kind": "burrower", "pre_shoot": 1.0, "cooldown": 2.25, "radius": 1.1, "length": 14.0, "marker": "line", "band": "ray",
-		"recovery_before": 0.0, "reason": ""},
+	"E19": {"kind": "burrower", "pre_shoot": 1.0, "cooldown": 2.25, "radius": 2.6, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "A burst from under the floor: the ring swells 1.0 s first, and a ball that reaches a bank, a wall or the air is already out of it."},
 	"E20": {"kind": "drill_crew", "pre_shoot": 1.2, "cooldown": 2.25, "radius": 3.0, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A breach that no knock interrupts: the lowering bit is the only answer window."},
 	"E21": {"kind": "lamp_swarm", "pre_shoot": 0.9, "cooldown": 2.75, "radius": 9.0, "length": 0.0, "marker": "circle", "band": "area_burst",
@@ -95,6 +95,10 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": ""},
 	"E24": {"kind": "kite_drone", "pre_shoot": 0.8, "cooldown": 2.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A dive that no knock interrupts: the mark lamp paints the spot 0.8 s before the 0.7 s dive."},
+	# E25 to E29 are taken by the specials' branches; the world roster kinds start at E30
+	# (design-v3/WORLD-ROSTERS.md).
+	"E30": {"kind": "pit_jaw", "pre_shoot": 1.0, "cooldown": 3.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": HOLD_REASON},
 }
 
 # Warden attacks keep their own timing (KF2 to KF4 report each one's charge, recovery and

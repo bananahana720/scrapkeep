@@ -13,7 +13,7 @@ Andrew (19:52Z, 17 Oct): enemy design for worlds 2 and 3 must not rehash or reus
 - `burrower`, `drill_crew` and `kite_drone` are half new. `line_cutter` is the only fully native enemy.
 - All six stages use the same elite pack, `plated_brute` plus `winch_drone` (`src/core/alpha_defs.gd` ELITE).
 - Every park carries `fleet_landing`, `machine_eruption` and `boiler_burst` (`src/world/park/*.json` event_rows).
-- The six world 2 and 3 rows have `"tag": ""`, so none has a warning sound of its own.
+- The six world 2 and 3 rows have `"tag": ""`, but each has its own wind-up sound in `src/presentation/windup_rows.gd` (`warn_burrow`, `warn_bore`, `warn_lure`, `warn_cut`, `warn_winch`, `warn_dive`).
 - Eight Spillway gear rows are built but never spawn on the alpha table (authored packs only).
 
 ## Decisions
@@ -71,7 +71,7 @@ These world motifs match the fields and cast-times design (`design-v3/FIELDS-AND
 
 ## Every Dig and Highdraft enemy gets
 
-- its own warning sound (`tag`, `tag_next` in the row), requested from the music thread;
+- a wind-up sound that matches its attack (`windup_rows.gd`; new kinds request one from the music thread);
 - a grown-pilot remix, one row in `src/combat/elite_affixes.gd`;
 - a lab check (behaviour test) and an independent review before it reaches a candidate.
 
