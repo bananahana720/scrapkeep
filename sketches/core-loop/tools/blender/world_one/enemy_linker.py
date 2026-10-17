@@ -14,19 +14,18 @@ Collider core: radius 0.8 round the post (the tripod feet splay to 1.1), floor Y
 Three meshes, three surfaces, opaque vertex colour:
   LinkerBody   fleet_paint: tripod, post, winch drum, operator cab with its crew, boom and
                counterweight. Flashes with the enemy.
-  LinkerDish   working_tool: the dish, its hazard rim and hanger. Origin at the hinge under
-               the boom tip, so the brace swings it and a cut cable drops it whole.
+  LinkerDish   working_tool: the dish, its hazard rim and hanger, skinned whole to the
+               DishBrace bone (clips) under DishAim (runtime aim), both at the hinge.
   LinkerCable  requisition_tag: the slack cable from the drum to the dish, with a coupling
                sleeve at mid-span (the cut mark). Brass at rest; the runtime lights it while
                the dish is braced and may redraw it between cable_base and cable_dish.
 Sockets (empties, no draws): LinkerHinge, boom_tip, cable_base, cable_dish, cable_cut,
 partner_spot, LinkerCab. Procedural bmesh in this repository; no external meshes or textures.
-Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir]
+Rig and clips (idle, brace, braced, slack, cut): kill_first_motion.linker.
+Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir] [--sheet dir]
 """
-import json
 import math
 import os
-import struct
 import sys
 
 import bmesh
@@ -211,15 +210,15 @@ assert common.tri_total(root) <= 1100
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_linker.glb")
-common.export(root, path)
-data = open(path, "rb").read()
-size = struct.unpack_from("<I", data, 12)[0]
-glb = json.loads(data[20:20 + size])
-prims = [p for m in glb["meshes"] for p in m["primitives"]]
-verts = sum(glb["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims)
-tris = sum(glb["accessors"][p["indices"]]["count"] // 3 for p in prims)
-assert verts <= 2100 and tris <= 1100 and len(prims) == 3
-print(f"LINKER EXPORTED: {verts} V / {tris} T / {len(prims)} D")
+import kill_first_motion
+import kill_first_rig
+rig = kill_first_motion.linker(root, body_obj, dish_obj, cable_obj, start, end, SAG, HINGE, DISH_C, FLOOR, PIVOT)
+stats = rig.export(path, draws=3)
+print(f"LINKER EXPORTED: {stats['verts']} V / {stats['tris']} T / {stats['draws']} D, "
+      f"{stats['joints']} joints, clips {stats['clips']}")
+if kill_first_rig.sheet_dir():
+    kill_first_rig.contact_sheet("linker", rig, FLOOR, kill_first_rig.sheet_dir(), focus=(1.6, 0, 0.9), scale=8.5,
+                                 shots=kill_first_motion.LINKER_SHOTS, yaw=145, lit_clips=("brace", "braced"))
 
 if opts["render"]:
     import kill_first_preview

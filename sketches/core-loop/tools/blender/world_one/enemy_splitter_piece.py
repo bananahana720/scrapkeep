@@ -13,12 +13,11 @@ Two meshes, two surfaces, opaque vertex colour:
   SplitterPieceBody  fleet_paint: shell, legs, strap, snout.
   SplitterPieceGlow  requisition_tag: eye slit and the torn seam edges; lit at runtime.
 Sockets: snout (lunge lead). Procedural bmesh in this repository.
-Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir]
+Rig and clips (scurry, pop_in): kill_first_motion.piece.
+Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir] [--sheet dir]
 """
-import json
 import math
 import os
-import struct
 import sys
 
 import bmesh
@@ -72,15 +71,15 @@ assert common.tri_total(root) <= 600
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_splitter_piece.glb")
-common.export(root, path)
-data = open(path, "rb").read()
-size = struct.unpack_from("<I", data, 12)[0]
-glb = json.loads(data[20:20 + size])
-prims = [p for m in glb["meshes"] for p in m["primitives"]]
-verts = sum(glb["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims)
-tris = sum(glb["accessors"][p["indices"]]["count"] // 3 for p in prims)
-assert verts <= 1200 and tris <= 600 and len(prims) == 2
-print(f"PIECE EXPORTED: {verts} V / {tris} T / {len(prims)} D")
+import kill_first_motion
+import kill_first_rig
+rig = kill_first_motion.piece(root, body_obj, glow_obj, FLOOR)
+stats = rig.export(path, draws=2)
+assert stats["verts"] <= 1200 and stats["tris"] <= 600
+print(f"PIECE EXPORTED: {stats['verts']} V / {stats['tris']} T / {stats['draws']} D, "
+      f"{stats['joints']} joints, clips {stats['clips']}")
+if kill_first_rig.sheet_dir():
+    kill_first_rig.contact_sheet("splitter_piece", rig, FLOOR, kill_first_rig.sheet_dir(), focus=(0, 0, -0.1), scale=2.6, shots=kill_first_motion.PIECE_SHOTS)
 
 if opts["render"]:
     import kill_first_preview

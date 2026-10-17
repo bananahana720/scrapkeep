@@ -1354,6 +1354,16 @@
    }
   },
   {
+   "id": "spil9_marks",
+   "path": "res://assets/models/companion/spil9_marks.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (grown-mark add-ons for SPIL-9; seat via hero_assets._mount_on_bones, runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py --asset spil9_marks"
+   }
+  },
+  {
    "id": "cottonwood_crown",
    "path": "res://assets/models/cottonwood_crown.glb",
    "class": "prop",
