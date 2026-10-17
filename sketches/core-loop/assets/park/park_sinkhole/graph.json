@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "c1a629098ec40956404d5664c72bcc5cde6eefa3db0b3f69cae693b1abff1f41",
+  "bake_sha256": "2bcdac15b99da7da9916a6f1729d675f8b3d7bafb2512ee03705f4377a29a646",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 946847,
-  "edges": 314841,
+  "bytes": 947011,
+  "edges": 314835,
   "first_failed": "",
   "flags": {
     "deck": 37,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 1913,
   "full_visit_ratio": "1.361",
-  "graph_sha256": "edd3676bff7e2d24a870df1985aa0a52e27e5a16a86c1c268f7230b721a0cedc",
+  "graph_sha256": "0aff3a9583461ca47eb56773682d1b4433141d23adbc00848facdd7fc6b3200d",
   "line_errors": [],
   "line_path_nodes": 175,
-  "longest_est_m": 2038,
+  "longest_est_m": 2039,
   "map": "park_sinkhole",
   "nodes": 40438,
-  "park_sha256": "b95495f61529fe1ff06e4204521a801abd54c9d713e8bdcd81d2f1ee2308920e",
+  "park_sha256": "767d3d4c5bbed831d70ceda7e48e27fd8966e45f0e95d467753529a0860c416a",
   "pockets": [
     {
       "clear_ring": [],
@@ -132,7 +132,7 @@
     }
   ],
   "reward_ratio": "0.832",
-  "ride_edges": 57,
+  "ride_edges": 51,
   "routes": {
     "bore_shaft": [],
     "breach_caps": [],
@@ -189,11 +189,11 @@
       "value": 1.361
     }
   ],
-  "tool_sha256": "e056e2d0e353848614f7ccc875c31d5fe46fc569d2a5b3e53fbe86c83b57c5cb",
+  "tool_sha256": "4461666e87db0beb7981a7f75bf3ba9b1e5bdb7a15c2947f1272a818aaa4a3d8",
   "zones": {
     "anchors": [
       {
-        "cost": 1292.7,
+        "cost": 1292.8,
         "d_landmark": 307.2,
         "name": "bore_apron",
         "on_route": false,
@@ -244,7 +244,7 @@
     "count": 185,
     "crossings": {
       "drop": 33,
-      "ride": 45,
+      "ride": 41,
       "walk": 460
     },
     "hidden": [
