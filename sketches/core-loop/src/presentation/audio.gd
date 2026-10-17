@@ -352,7 +352,10 @@ func _start_bake() -> void:
 	if _baked or _bake_task >= 0:
 		return
 	_bake_done = false
-	_bake_task = WorkerThreadPool.add_task(_bake_everything.bind(_sound_ids()), false, "presentation audio bake")
+	# The startup jobs here and below are high priority on purpose: a low-priority one
+	# queues behind the bake on a small pool (the pool reserves a few low-priority threads,
+	# one on 2 to 4), and a process that quits with it still queued never exits.
+	_bake_task = WorkerThreadPool.add_task(_bake_everything.bind(_sound_ids()), true, "presentation audio bake")
 
 
 static func _poll_bake() -> bool:
@@ -369,7 +372,7 @@ func _start_ace_load() -> void:
 	if ace_manifest == "" or _ace_task >= 0 or _ace_loaded != null or ace != null or _ace_failed or not ace_wanted():
 		return
 	_ace_loaded_from = ace_manifest
-	_ace_task = WorkerThreadPool.add_task(_load_ace, false, "presentation ACE stems")
+	_ace_task = WorkerThreadPool.add_task(_load_ace, true, "presentation ACE stems")
 
 
 func _load_ace() -> void:
@@ -426,7 +429,7 @@ func _on_ready() -> void:
 	# The other themes and the bosses bake behind stage 1. Headless runs render them
 	# on demand instead, so a test never waits on the worker at quit.
 	if _rest_task < 0 and live_output:
-		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, false, "presentation band bake")
+		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, true, "presentation band bake")
 	_virtual_usec = _transport_usec()
 	if not live_output:
 		return
