@@ -20,6 +20,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DT := 1.0 / 60.0
 # 2026-10-11 (PC-KEST): quiet loads, bite events and the fourteen-second reload, including a twelve-second guard.
+# 2026-10-16 (pilot paint): the Rigger Harness is cut; one check added, 71 -> 72.
 const EXPECTED_CHECKS := 72
 
 class HandHull:
