@@ -4,7 +4,7 @@ extends SceneTree
 # ram", 17 Oct 2026). Rules:
 # - One seated piece is a legal companion; two need different families, as before.
 # - Each heft class is a mark: scale 1.0 to 1.4 and one more add-on, cumulative.
-# - Every family set calls one named assist; class 5 is 3x the area and 2x the knockback of
+# - Every family set calls one named assist; class 5 is 2x the area and 2x the knockback of
 #   class 1, with 2 sound layers growing to 4.
 # - Landed hits fill the gauge (a hull hit faster); with it full, the next ram calls the
 #   assist at the struck foe, empties the gauge, and the assist's own damage never refills it.
@@ -75,8 +75,8 @@ func _check_assists() -> void:
 	_t.eq("pair order does not matter", Companion.assist_of(["ram_prow", "primer_coil"])["id"], "anvil")
 	var low := Companion.assist_power(1)
 	var high := Companion.assist_power(5)
-	_t.near("class 5 is 3x the area", float(high["area"]) / float(low["area"]), 3.0)
-	_t.near("class 5 radius matches the area", pow(float(high["radius"]) / float(low["radius"]), 2.0), 3.0, 0.001)
+	_t.near("class 5 is 2x the area", float(high["area"]) / float(low["area"]), 2.0)
+	_t.near("class 5 radius matches the area", pow(float(high["radius"]) / float(low["radius"]), 2.0), 2.0, 0.001)
 	_t.near("class 5 is 2x the knockback", float(high["knock"]) / float(low["knock"]), 2.0)
 	var layers := []
 	for heft in range(1, 6):
@@ -174,6 +174,9 @@ func _seat(pieces: Array) -> void:
 
 func _check_combat() -> void:
 	var combat = _combat()
+	var shown = _game.presentation.get_node_or_null("CompanionBody")
+	if shown != null:
+		_step(shown)
 	_seat(["primer_coil", "ram_prow"])
 	combat.assist_charge = 0.0
 	var target := _spawn(Vector3(0, 0, -4))
@@ -206,7 +209,7 @@ func _check_combat() -> void:
 	_t.eq("class 1 radius", a["radius"], Companion.ASSIST_RADIUS)
 	_t.eq("one assist this run", combat.assists, 1)
 
-	# A grown run: class 5 rings 3x the area, and the same ram on an empty gauge only charges.
+	# A grown run: class 5 rings 2x the area, and the same ram on an empty gauge only charges.
 	combat.strike(target, "ram", RAM)
 	_t.eq("an empty gauge does not call it", _assisted.size(), 1)
 	_t.near("that ram charged instead", combat.assist_charge, Companion.ASSIST_PER_CONTACT)
@@ -216,7 +219,7 @@ func _check_combat() -> void:
 	combat.strike(target, "ram", RAM)
 	_t.eq("grown ram calls it", _assisted.size(), 2)
 	if _assisted.size() >= 2:
-		_t.near("grown area is 3x", pow(float(_assisted[1]["radius"]) / Companion.ASSIST_RADIUS, 2.0), 3.0, 0.001)
+		_t.near("grown area is 2x", pow(float(_assisted[1]["radius"]) / Companion.ASSIST_RADIUS, 2.0), 2.0, 0.001)
 		_t.eq("grown mark", _assisted[1]["mark"], 5)
 		_t.eq("grown layers", _assisted[1]["layers"], 4)
 
@@ -256,6 +259,7 @@ func _check_body() -> void:
 	_t.check("body exists", body != null)
 	if body == null:
 		return
+	_step(body)
 	_t.eq("every assist shown with its word", body.assists_shown, _assisted.size())
 	_t.eq("grown body is mark 5", body.mark(), 5)
 	_t.near("grown body scale", body.grown(), 1.4)
@@ -264,8 +268,15 @@ func _check_body() -> void:
 	_t.eq("key of one", body.key_of(["ram_prow"]), "ram_prow")
 
 
+# Physics ticks can outrun process frames on a loaded runner, so the body takes one frame
+# step of its own before it is read.
+func _step(body) -> void:
+	body._process(0.0)
+
+
 func _check_single() -> void:
 	var body = _game.presentation.get_node_or_null("CompanionBody")
+	_step(body)
 	_t.check("one seated piece shows the real chassis", body.is_real() and body.visible)
 	_t.eq("one seated piece is bolted on", body.find_children("SeatedPart", "", true, false).size(), 1)
 	_t.eq("still one child", body.get_child_count(), 1)
@@ -273,6 +284,7 @@ func _check_single() -> void:
 
 func _check_bare() -> void:
 	var body = _game.presentation.get_node_or_null("CompanionBody")
+	_step(body)
 	_t.check("bare chassis shows", body.is_real() and body.visible)
 	_t.eq("bare has no seated part", body.find_children("SeatedPart", "", true, false).size(), 0)
 	_t.eq("bare keeps the grown mark", body.mark(), 5)

@@ -122,12 +122,13 @@ const ASSIST_PER_HULL_HIT := 4.0
 const ASSIST_TRIGGER := "ram"
 # At heft class 1 the ring is ASSIST_RADIUS m and shoves at ASSIST_KNOCK; damage is the
 # calling ram's dealt (at least ASSIST_DAMAGE_FLOOR), which already grows with heft. Per
-# class above 1 the area grows by ASSIST_AREA_STEP and knockback by ASSIST_KNOCK_STEP, so class 5 is 3x the area
-# and 2x the knockback ("Clearly mightier"). Sound layers: 2, 2, 3, 3, 4.
+# class above 1 the area grows by ASSIST_AREA_STEP and knockback by ASSIST_KNOCK_STEP, so class 5 is 2x the area
+# and 2x the knockback ("Presence, centre clear", 17:28Z: late growth reads through heat,
+# words and aura, and area stays within 1.5-2x). Sound layers: 2, 2, 3, 3, 4.
 const ASSIST_RADIUS := 2.6
 const ASSIST_KNOCK := 10.0
 const ASSIST_DAMAGE_FLOOR := 10.0
-const ASSIST_AREA_STEP := 0.5
+const ASSIST_AREA_STEP := 0.25
 const ASSIST_KNOCK_STEP := 0.25
 const ASSIST_LANE_HALF_WIDTH := 0.4
 const ASSIST_SLICK_SECONDS := 1.2
