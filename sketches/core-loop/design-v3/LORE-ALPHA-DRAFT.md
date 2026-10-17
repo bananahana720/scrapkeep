@@ -1,6 +1,8 @@
 # Lore alpha draft: the six park stages and the three worlds
 
-**Status: DRAFT for Andrew's review. Nothing here is approved or ported.** Written 2026-10-16 on `claude/lore-alpha-draft-k6merj` from `main` at `77b99de`. The alpha scope puts story work after Andrew's playtest sitting, so this file waits for that sitting. Andrew marks each row keep, change or cut. The coordinator then ports the kept rows into `src/core/lore_rows.gd`. This file edits no game code.
+**Status: PORTED 2026-10-17 (wave 20) under LORE-REPLACE (`docs/decisions.tsv`).** Every row below is in `src/core/lore_rows.gd` except four intros whose slot holds an approved tone-sample line: `lore.park_pit.intro.warden`, `lore.park_sinkhole.intro.waking`, `lore.park_islands.intro.warden` and `lore.park_crown.intro.mind`. The old `lore.reach.*` set and the 3-2 island, bridge and barge notes are gone. The rest of this file is the original draft.
+
+~~Status: DRAFT for Andrew's review. Nothing here is approved or ported.~~ Written 2026-10-16 on `claude/lore-alpha-draft-k6merj` from `main` at `77b99de`. The alpha scope puts story work after Andrew's playtest sitting, so this file waits for that sitting. Andrew marks each row keep, change or cut. The coordinator then ports the kept rows into `src/core/lore_rows.gd`. This file edits no game code.
 
 Sources:
 

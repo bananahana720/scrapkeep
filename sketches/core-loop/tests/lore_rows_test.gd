@@ -4,7 +4,7 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 
 # Every declared zone has unique ids, capped words, three skippable exchange
-# lines, seven scraps, and Warden/world-boss intros.
+# lines, at least seven scraps, and Warden/world-boss intros.
 # This pure data check does not instantiate the game or approve the writing's tone.
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
@@ -14,6 +14,10 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 const OLD_DIGEST := "dc73b5d0ed3104f72f0dab51d1463144a320de10e061244daf1d2627a64aca14"
 const REWRITTEN_ZONES := ["2-1", "2-2", "3-1", "3-2"]
 const FORBIDDEN_TEXT := ["placeholder", "todo", "tone-pending"]
+# LORE-REPLACE (decisions.tsv): the parks have no cableway, and the crown's notes leave
+# the islands, bridges and barge to stage 5.
+const REMOVED_PLACES := ["cableway", "cable reach"]
+const CROWN_NOTE_REMOVED := ["island", "bridge", "barge"]
 
 # Three worlds of two zones, independent of the live table's current COUNT.
 class SixZones extends RefCounted:
@@ -73,6 +77,11 @@ func _initialize() -> void:
 		_report(id + " text", row.get("text") is String and WordBudget.words_in(text) > 0, text)
 		for marker in FORBIDDEN_TEXT:
 			_report(id + " final text", not text.to_lower().contains(marker), "no " + marker)
+		for place in REMOVED_PLACES:
+			_report(id + " park place", not text.to_lower().contains(place), "no " + place)
+		if zone == "3-2" and kind == "field_note":
+			for place in CROWN_NOTE_REMOVED:
+				_report(id + " crown place", not text.to_lower().contains(place), "no " + place)
 		if zone in REWRITTEN_ZONES:
 			rewritten_texts.append(text)
 			_report(id + " final id", not id.to_lower().contains("placeholder"), "no placeholder")
@@ -99,10 +108,10 @@ func _initialize() -> void:
 				if intros[zone].has(subject):
 					intros[zone][subject] += 1
 	var live_digest := "\n".join(rewritten_texts).sha256_text()
-	_report("rewritten text count", rewritten_texts.size() == 48, "%d texts; need 48" % rewritten_texts.size())
+	_report("rewritten text count", rewritten_texts.size() == 75, "%d texts; need 75" % rewritten_texts.size())
 	_report("world 2/3 rewritten", live_digest != OLD_DIGEST, "old %s; live %s" % [OLD_DIGEST, live_digest])
 	for zone in ZONES:
-		_report(zone + " notes", notes[zone] == 7, "%d notes; need 7" % notes[zone])
+		_report(zone + " notes", notes[zone] >= 7, "%d notes; need at least 7" % notes[zone])
 		_report(zone + " one exchange", exchanges[zone].size() == 1, "%d exchanges" % exchanges[zone].size())
 		for exchange in exchanges[zone]:
 			var speakers: Array = exchanges[zone][exchange]

@@ -6,6 +6,8 @@ const INTRO_LINE_WORD_CAP := 12
 
 # One row per readable line. Exchange lines share an exchange id and follow array order.
 # Zone ids name the alpha route, independently of the sketch's current stage slots.
+# Park era (LORE-REPLACE, decisions.tsv): park notes lead each zone; approved sample
+# lines keep their slots; the old cableway set and 3-2 island notes are gone.
 const ROWS := [
 	{
 		"id": "lore.spillway.moss.spare", "kind": "exchange", "zone": "1-1",
@@ -21,6 +23,46 @@ const ROWS := [
 		"id": "lore.spillway.moss.yesterday", "kind": "exchange", "zone": "1-1",
 		"exchange": "lore.spillway.exchange", "speaker": "Moss", "skippable": true,
 		"text": "Yesterday's seal is in my bucket. Take today's.",
+	},
+	{
+		"id": "lore.park_dam.note.gate_log", "kind": "field_note", "zone": "1-1",
+		"text": "Gate log: spillway gates opened four times before breakfast. Wheel chained. Chain still warm.",
+	},
+	{
+		"id": "lore.park_dam.note.plumb", "kind": "field_note", "zone": "1-1",
+		"text": "Survey deck: plumb bob hangs toward the dam. Wind from the south. Bob reported to the foreman.",
+	},
+	{
+		"id": "lore.park_dam.note.slot", "kind": "field_note", "zone": "1-1",
+		"text": "Slot canyon tag: flood line painted at the narrows. Line repainted higher each season. The rim has not moved.",
+	},
+	{
+		"id": "lore.park_dam.note.eye", "kind": "field_note", "zone": "1-1",
+		"text": "Eye inspection: wind through the fin whistles one note. Crew tuned the compressor to match. Compressor now refuses other notes.",
+	},
+	{
+		"id": "lore.park_dam.note.incline", "kind": "field_note", "zone": "1-1",
+		"text": "Incline ticket: brake shoes replaced. Bucket went down anyway. Bucket came back up full of river.",
+	},
+	{
+		"id": "lore.park_dam.note.apron", "kind": "field_note", "zone": "1-1",
+		"text": "Toe apron stencil: STAND CLEAR OF THE FACE. Chalk tally underneath counts the balls that didn't.",
+	},
+	{
+		"id": "lore.park_dam.note.fleet", "kind": "field_note", "zone": "1-1",
+		"text": "Fleet docket: east bench cleared for landing. Dam listed as surplus concrete. Relic listed twice.",
+	},
+	{
+		"id": "lore.world_spillway.note.water_board", "kind": "field_note", "zone": "1-1",
+		"text": "Water board ledger: dam fills the reservoir, reservoir feeds the flume, flume feeds the head house. Head house returns more than it was sent.",
+	},
+	{
+		"id": "lore.world_spillway.note.roster", "kind": "field_note", "zone": "1-1",
+		"text": "Crew roster, Spillway: dam shift, flume shift, one keeper on the ball. Keeper column left blank. Moss fills it in after supper.",
+	},
+	{
+		"id": "lore.world_spillway.note.notice", "kind": "field_note", "zone": "1-1",
+		"text": "Fleet notice, posted at both ends of the river: ALL WATER IS NOW INVENTORY. Below it, in chalk: Tell the river.",
 	},
 	{
 		"id": "lore.spillway.note.shift", "kind": "field_note", "zone": "1-1",
@@ -51,63 +93,64 @@ const ROWS := [
 		"text": "Stores ledger: spare bearings requisitioned. Pump still expected to run. Filed request for spare expectations.",
 	},
 	{
-		"id": "lore.spillway.intro.warden", "kind": "intro", "zone": "1-1", "subject": "warden",
-		"text": "Spillway Warden. Intake closed. Local authorization no longer recognized.",
+		"id": "lore.park_dam.intro.warden", "kind": "intro", "zone": "1-1", "subject": "warden",
+		"text": "Dam Warden. Gates open on its count, not ours.",
 	},
 	{
 		"id": "lore.spillway.intro.brindle", "kind": "intro", "zone": "1-1", "subject": "brindle",
 		"text": "Brindle: Your repair reserve is now Fleet inventory. Thank you.",
 	},
+
 	{
-		"id": "lore.reach.crew.cable", "kind": "exchange", "zone": "1-2",
-		"exchange": "lore.reach.exchange", "speaker": "Cable crew", "skippable": true,
-		"text": "Fleet weighed the cable. Forgot to count who was hanging from it.",
+		"id": "lore.park_flume.crew.warm", "kind": "exchange", "zone": "1-2",
+		"exchange": "lore.park_flume.exchange", "speaker": "Flume crew", "skippable": true,
+		"text": "Flume's running warm today. Fish came down the trestles cooked.",
 	},
 	{
-		"id": "lore.reach.moss.count", "kind": "exchange", "zone": "1-2",
-		"exchange": "lore.reach.exchange", "speaker": "Moss", "skippable": true,
-		"text": "I've counted. You're all here. Sit down; I'll mend the harnesses.",
+		"id": "lore.park_flume.moss.flask", "kind": "exchange", "zone": "1-2",
+		"exchange": "lore.park_flume.exchange", "speaker": "Moss", "skippable": true,
+		"text": "Then don't drink from it. I packed you a flask.",
 	},
 	{
-		"id": "lore.reach.crew.kettle", "kind": "exchange", "zone": "1-2",
-		"exchange": "lore.reach.exchange", "speaker": "Cable crew", "skippable": true,
-		"text": "Kettle's still on the far side.",
+		"id": "lore.park_flume.crew.weir", "kind": "exchange", "zone": "1-2",
+		"exchange": "lore.park_flume.exchange", "speaker": "Flume crew", "skippable": true,
+		"text": "Flask's warm too. You filled it at the weir.",
 	},
 	{
-		"id": "lore.reach.note.load", "kind": "field_note", "zone": "1-2",
-		"text": "Load docket: three housings across, two back. Third now a roof. Roof crew declined return shipment.",
+		"id": "lore.park_flume.note.weir", "kind": "field_note", "zone": "1-2",
+		"text": "Weir gauge: reservoir steady. Flume carrying more than the weir lets through. Difference logged as rain. No rain.",
 	},
 	{
-		"id": "lore.reach.note.swing", "kind": "field_note", "zone": "1-2",
-		"text": "Wall stencil: NO SWINGING FROM SERVICE HOOKS. Inspection note: stencil only visible from service hook.",
+		"id": "lore.park_flume.note.bents", "kind": "field_note", "zone": "1-2",
+		"text": "Trestle crew: bents numbered downhill. Count comes out one higher walking back up.",
 	},
 	{
-		"id": "lore.reach.note.anchor", "kind": "field_note", "zone": "1-2",
-		"text": "Anchor tag: fourth repair, same bolt. Whoever made the first thread had a steady hand.",
+		"id": "lore.park_flume.note.siphon", "kind": "field_note", "zone": "1-2",
+		"text": "Siphon card: water goes under the hollow and comes up warmer. Pipe is cold the whole way.",
 	},
 	{
-		"id": "lore.reach.note.bell", "kind": "field_note", "zone": "1-2",
-		"text": "Inspection scrap: bell rang below the empty shaft. No wire on this side. No volunteer for the other.",
+		"id": "lore.park_flume.note.milepost", "kind": "field_note", "zone": "1-2",
+		"text": "Rim road milepost: someone painted the bend's depth on it. Crossed out. Painted deeper.",
 	},
 	{
-		"id": "lore.reach.note.roll", "kind": "field_note", "zone": "1-2",
-		"text": "Freight tally: drum rolled itself downhill. Marked as delivered. Recipient disputes address.",
+		"id": "lore.park_flume.note.boom", "kind": "field_note", "zone": "1-2",
+		"text": "Crane boom log: boom 3 locked for the night. Found swung toward the tower by morning. Lock still on.",
 	},
 	{
-		"id": "lore.reach.note.hands", "kind": "field_note", "zone": "1-2",
-		"text": "Crew log: cable guide patched in three different hands. None signed. All left room for the next patch.",
+		"id": "lore.park_flume.note.drum", "kind": "field_note", "zone": "1-2",
+		"text": "Head house log: flume poured onto the drum floor all shift. Floor dry by supper. Drains never fitted.",
 	},
 	{
-		"id": "lore.reach.note.requisition", "kind": "field_note", "zone": "1-2",
-		"text": "Fleet manifest: cableway classified as idle metal. Attached crew tally covers both sides in grease.",
+		"id": "lore.park_flume.note.fleet", "kind": "field_note", "zone": "1-2",
+		"text": "Fleet tally: flume flow, eleven hundred buckets an hour. Rounded to twelve. Crew asked where the hundred went.",
 	},
 	{
-		"id": "lore.reach.intro.warden", "kind": "intro", "zone": "1-2", "subject": "warden",
-		"text": "Cable Reach Warden. Still guarding a shift nobody remembers starting.",
+		"id": "lore.park_flume.intro.warden", "kind": "intro", "zone": "1-2", "subject": "warden",
+		"text": "Head House Warden. Flume boiling. Flow still logged as normal.",
 	},
 	{
-		"id": "lore.reach.intro.brindle", "kind": "intro", "zone": "1-2", "subject": "brindle",
-		"text": "Brindle: A working cableway. Excellent. We'll collect the anchors first.",
+		"id": "lore.park_flume.intro.brindle", "kind": "intro", "zone": "1-2", "subject": "brindle",
+		"text": "Brindle: A boiling flume. Twelve hundred tons of steam. Thank you.",
 	},
 
 	{
@@ -130,6 +173,46 @@ const ROWS := [
 		"speaker": "Moss",
 		"skippable": true,
 		"text": "Good. Put the tools down when it answers.",
+	},
+	{
+		"id": "lore.park_pit.note.haul", "kind": "field_note", "zone": "2-1",
+		"text": "Haul road log: last truck down at shift end. Engine heard climbing all night. No truck at the top.",
+	},
+	{
+		"id": "lore.park_pit.note.rope", "kind": "field_note", "zone": "2-1",
+		"text": "Hoist ticket: rope paid out to the collar. Drum kept turning. Rope length now exceeds shaft.",
+	},
+	{
+		"id": "lore.park_pit.note.sheave", "kind": "field_note", "zone": "2-1",
+		"text": "Sheave inspection: both wheels true. One turns when the other stops. Rope not threaded yet.",
+	},
+	{
+		"id": "lore.park_pit.note.devil", "kind": "field_note", "zone": "2-1",
+		"text": "Dust devil report: spun up on bench 2, crossed the floor, climbed the haul road at posted speed.",
+	},
+	{
+		"id": "lore.park_pit.note.seam", "kind": "field_note", "zone": "2-1",
+		"text": "Face survey: turquoise seam on the north wall moved a bench lower overnight. Survey pins stayed put.",
+	},
+	{
+		"id": "lore.park_pit.note.belt", "kind": "field_note", "zone": "2-1",
+		"text": "Conveyor sign-out: belt stopped for lunch. Lunch tins arrived at the hoist house anyway.",
+	},
+	{
+		"id": "lore.park_pit.note.fleet", "kind": "field_note", "zone": "2-1",
+		"text": "Fleet docket: drill barge assigned to bench 3. Pit listed as a hole, pre-dug. Crew credit withheld.",
+	},
+	{
+		"id": "lore.world_dig.note.mine_plan", "kind": "field_note", "zone": "2-1",
+		"text": "Mine plan: open pit above, deep works below, one buried lens between. Plan stamped APPROVED by a hand older than the stamp.",
+	},
+	{
+		"id": "lore.world_dig.note.assay", "kind": "field_note", "zone": "2-1",
+		"text": "Assay office: copper from the pit, copper from the tubes. Same seam. Seam runs toward the sinkhole and does not stop.",
+	},
+	{
+		"id": "lore.world_dig.note.headcount", "kind": "field_note", "zone": "2-1",
+		"text": "Shift change rule: count heads at the collar and again at the gallery ring. Write both numbers down. Do not compare them.",
 	},
 	{
 		"id": "lore.dig_entry.note.1", "kind": "field_note", "zone": "2-1",
@@ -169,26 +252,49 @@ const ROWS := [
 		"subject": "waking",
 		"text": "Waking: I heard the sweepings. You can put the broom down.",
 	},
+
 	{
-		"id": "lore.dig_depths.exchange.1", "kind": "exchange", "zone": "2-2",
-		"exchange": "lore.dig_depths.exchange",
-		"speaker": "Lift crew",
-		"skippable": true,
-		"text": "Second ramp's clear. Something carried our chalk down ahead of us.",
+		"id": "lore.park_sinkhole.moss.skylights", "kind": "exchange", "zone": "2-2",
+		"exchange": "lore.park_sinkhole.exchange", "speaker": "Moss", "skippable": true,
+		"text": "Long dark ride today. I'll hang a lamp at every skylight.",
 	},
 	{
-		"id": "lore.dig_depths.exchange.2", "kind": "exchange", "zone": "2-2",
-		"exchange": "lore.dig_depths.exchange",
-		"speaker": "Moss",
-		"skippable": true,
-		"text": "Take the east ramp. I'll keep a lamp at the top.",
+		"id": "lore.park_sinkhole.crew.caisson", "kind": "exchange", "zone": "2-2",
+		"exchange": "lore.park_sinkhole.exchange", "speaker": "Pump crew", "skippable": true,
+		"text": "Pumped the caisson dry at shift change. It's filling from the bottom.",
 	},
 	{
-		"id": "lore.dig_depths.exchange.3", "kind": "exchange", "zone": "2-2",
-		"exchange": "lore.dig_depths.exchange",
-		"speaker": "Lift crew",
-		"skippable": true,
-		"text": "Keep two. The first one has started casting its own shadow.",
+		"id": "lore.park_sinkhole.moss.ring", "kind": "exchange", "zone": "2-2",
+		"exchange": "lore.park_sinkhole.exchange", "speaker": "Moss", "skippable": true,
+		"text": "Then get your boots up on the gallery ring.",
+	},
+	{
+		"id": "lore.park_sinkhole.note.skylight", "kind": "field_note", "zone": "2-2",
+		"text": "Skylight log: noon light through skylight three. Lamp swarm under it went dark. Then lit, one at a time.",
+	},
+	{
+		"id": "lore.park_sinkhole.note.echo", "kind": "field_note", "zone": "2-2",
+		"text": "Great room ticket: echo test passed. Shout returned in the foreman's voice. Foreman was outside.",
+	},
+	{
+		"id": "lore.park_sinkhole.note.ring", "kind": "field_note", "zone": "2-2",
+		"text": "Gallery ring card: hundred-metre shelf checked. Water mark on the timbers sits above the shelf. Pool has never reached it. Yet.",
+	},
+	{
+		"id": "lore.park_sinkhole.note.mist", "kind": "field_note", "zone": "2-2",
+		"text": "Mist report: cave mist settles in rings above the pool. Ring count matches the pump strokes. Pump is off.",
+	},
+	{
+		"id": "lore.park_sinkhole.note.monsoon", "kind": "field_note", "zone": "2-2",
+		"text": "Monsoon card: rain poured into the sinkhole all afternoon. Pool level unchanged. Gauge noted it was busy.",
+	},
+	{
+		"id": "lore.park_sinkhole.note.rack", "kind": "field_note", "zone": "2-2",
+		"text": "Lamp rack: every lamp hung back facing the sinkhole. The rack faces the door.",
+	},
+	{
+		"id": "lore.park_sinkhole.note.fleet", "kind": "field_note", "zone": "2-2",
+		"text": "Fleet docket: drill barge to bore the east plateau. Hole requested for the hole below. Request approved in duplicate.",
 	},
 	{
 		"id": "lore.dig_depths.note.1", "kind": "field_note", "zone": "2-2",
@@ -219,15 +325,15 @@ const ROWS := [
 		"text": "Last shift: lamp left at the second ramp. Found it facing uphill. Nobody volunteered to turn it back.",
 	},
 	{
-		"id": "lore.dig_depths.intro.warden", "kind": "intro", "zone": "2-2",
-		"subject": "warden",
-		"text": "Brood Warden. Deep works closed. The brood has counted every bolt.",
+		"id": "lore.park_sinkhole.intro.warden", "kind": "intro", "zone": "2-2", "subject": "warden",
+		"text": "Brood Warden. The pool rises a step each time it breaks.",
 	},
 	{
 		"id": "lore.dig_depths.intro.waking", "kind": "intro", "zone": "2-2",
 		"subject": "waking",
 		"text": "Pump report: water clear. Sediment forms neat circles around every bolt.",
 	},
+
 	{
 		"id": "lore.highdraft_deck.exchange.1", "kind": "exchange", "zone": "3-1",
 		"exchange": "lore.highdraft_deck.exchange",
@@ -248,6 +354,42 @@ const ROWS := [
 		"speaker": "Deck crew",
 		"skippable": true,
 		"text": "Had our initials on it already.",
+	},
+	{
+		"id": "lore.park_islands.note.lookout", "kind": "field_note", "zone": "3-1",
+		"text": "Fire lookout log: isle's waterfall seen from the tower. Mist never reaches the net. Net is wet anyway.",
+	},
+	{
+		"id": "lore.park_islands.note.balloon", "kind": "field_note", "zone": "3-1",
+		"text": "Balloon lift ticket: envelope patched again. Patch came back sewn in a stitch nobody here knows.",
+	},
+	{
+		"id": "lore.park_islands.note.tram", "kind": "field_note", "zone": "3-1",
+		"text": "Tram ticket: cable sags toward the isle at golden hour. Straightens after dark. Towers not adjusted.",
+	},
+	{
+		"id": "lore.park_islands.note.thermal", "kind": "field_note", "zone": "3-1",
+		"text": "Thermal card: column over the Anvil lifts at golden hour only. Kest's roost crew calls it the evening lift. Logged as weather.",
+	},
+	{
+		"id": "lore.park_islands.note.tilt", "kind": "field_note", "zone": "3-1",
+		"text": "Pendulum note: isle tipped ten degrees toward the lookout. Then back. Lookout had only waved.",
+	},
+	{
+		"id": "lore.park_islands.note.fleet", "kind": "field_note", "zone": "3-1",
+		"text": "Mooring tag: balloon reclassified as cargo. Cargo reclassified as ballast. Ballast keeps trying to leave.",
+	},
+	{
+		"id": "lore.world_highdraft.note.roost_chart", "kind": "field_note", "zone": "3-1",
+		"text": "Roost chart, Highdraft: islands at golden hour, the Crown at dusk. Every bearing on the chart ends at the Crown, including north.",
+	},
+	{
+		"id": "lore.world_highdraft.note.handbook", "kind": "field_note", "zone": "3-1",
+		"text": "Net crew handbook: strung under every gap from the Lookout to the Crown. Rule one, check the knots. Rule two, check who checked them.",
+	},
+	{
+		"id": "lore.world_highdraft.note.wind", "kind": "field_note", "zone": "3-1",
+		"text": "Fleet weather report: Highdraft wind requisitioned for fleet sails. Wind declined. Report filed under weather.",
 	},
 	{
 		"id": "lore.highdraft_deck.note.1", "kind": "field_note", "zone": "3-1",
@@ -287,59 +429,57 @@ const ROWS := [
 		"subject": "mind",
 		"text": "Mind: I entered your return trip. Please leave the time blank.",
 	},
+
 	{
-		"id": "lore.highdraft_core.exchange.1", "kind": "exchange", "zone": "3-2",
-		"exchange": "lore.highdraft_core.exchange",
-		"speaker": "Moss",
-		"skippable": true,
-		"text": "Long crossing today. Tie your tools before the crown takes them.",
+		"id": "lore.park_crown.moss.storm", "kind": "exchange", "zone": "3-2",
+		"exchange": "lore.park_crown.exchange", "speaker": "Moss", "skippable": true,
+		"text": "Storm's building over the Crown. Last crossing. I'll wait at the gates.",
 	},
 	{
-		"id": "lore.highdraft_core.exchange.2", "kind": "exchange", "zone": "3-2",
-		"exchange": "lore.highdraft_core.exchange",
-		"speaker": "Signal crew",
-		"skippable": true,
-		"text": "Tied them. Knot came back with somebody else's hands in it.",
+		"id": "lore.park_crown.crew.beat", "kind": "exchange", "zone": "3-2",
+		"exchange": "lore.park_crown.exchange", "speaker": "Signal crew", "skippable": true,
+		"text": "Lightning's keeping time. Struck the masts on the beat all evening.",
 	},
 	{
-		"id": "lore.highdraft_core.exchange.3", "kind": "exchange", "zone": "3-2",
-		"exchange": "lore.highdraft_core.exchange",
-		"speaker": "Moss",
-		"skippable": true,
-		"text": "Set it down. I'll mend your gloves after we cross.",
+		"id": "lore.park_crown.moss.offbeat", "kind": "exchange", "zone": "3-2",
+		"exchange": "lore.park_crown.exchange", "speaker": "Moss", "skippable": true,
+		"text": "Then roll on the off-beat. Supper's after.",
 	},
 	{
-		"id": "lore.highdraft_core.note.1", "kind": "field_note", "zone": "3-2",
-		"text": "Crown survey: islands stand higher than the lower watch. Net deck unchanged. Fall estimate returned in another hand.",
+		"id": "lore.park_crown.note.watch", "kind": "field_note", "zone": "3-2",
+		"text": "Watch log: storm cell over the Crown since noon. Wind from every side. Cloud has not moved.",
 	},
 	{
-		"id": "lore.highdraft_core.note.2", "kind": "field_note", "zone": "3-2",
-		"text": "Bridge repair: both long spans checked. Middle island crew heard boots stop halfway. No weight on either span.",
+		"id": "lore.park_crown.note.bajada", "kind": "field_note", "zone": "3-2",
+		"text": "Bajada card: a hundred washes, one fan. Every wash runs toward the Crown, including the uphill ones.",
 	},
 	{
-		"id": "lore.highdraft_core.note.3", "kind": "field_note", "zone": "3-2",
-		"text": "Barge log: vault run completed. Empty hull rode low on return. Cargo sheet lists the crew's names.",
+		"id": "lore.park_crown.note.meander", "kind": "field_note", "zone": "3-2",
+		"text": "Meander card: flash flood filled the gooseneck in minutes. Drained in hours. Left one ball track, going upstream.",
 	},
 	{
-		"id": "lore.highdraft_core.note.4", "kind": "field_note", "zone": "3-2",
-		"text": "Thermal card: all three columns clear the highest island. Loose tally sheet stayed overhead, turning its own pages.",
+		"id": "lore.park_crown.note.needles", "kind": "field_note", "zone": "3-2",
+		"text": "Needle survey: forty needles counted at dusk. Recount by lightning: forty-one. The new one is taller.",
+	},
+	{
+		"id": "lore.park_crown.note.perches", "kind": "field_note", "zone": "3-2",
+		"text": "Perch inspection: three spire tops, three palm-wide dishes. Two dry after rain. One warm.",
+	},
+	{
+		"id": "lore.park_crown.note.gauntlet", "kind": "field_note", "zone": "3-2",
+		"text": "Gauntlet net mends: every tear stitched from the Crown side. No crew posted on the Crown side.",
+	},
+	{
+		"id": "lore.park_crown.note.fleet", "kind": "field_note", "zone": "3-2",
+		"text": "Collector tag: storm delivered twelve strikes. Fleet billed for eleven. The Admiral rounded up.",
 	},
 	{
 		"id": "lore.highdraft_core.note.5", "kind": "field_note", "zone": "3-2",
 		"text": "West cable inspection: knots hold. Voice in the line asks which knot belongs to which worker.",
 	},
 	{
-		"id": "lore.highdraft_core.note.6", "kind": "field_note", "zone": "3-2",
-		"text": "Post service: rim hooks greased. Choir repeated the crew count. Each answer came from the next island.",
-	},
-	{
-		"id": "lore.highdraft_core.note.7", "kind": "field_note", "zone": "3-2",
-		"text": "Final watch: beacon reached by both bridges. Supper kept warm. Empty place has a glove folded beside it.",
-	},
-	{
-		"id": "lore.highdraft_core.intro.warden", "kind": "intro", "zone": "3-2",
-		"subject": "warden",
-		"text": "Choir Warden. Crown watch closed. The choir answers for the crew.",
+		"id": "lore.park_crown.intro.warden", "kind": "intro", "zone": "3-2", "subject": "warden",
+		"text": "Crown Warden. One hand, three perches. It keeps the count.",
 	},
 	{
 		"id": "lore.highdraft_core.intro.mind", "kind": "intro", "zone": "3-2",
