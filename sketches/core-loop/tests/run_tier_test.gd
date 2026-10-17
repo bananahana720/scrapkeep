@@ -159,7 +159,7 @@ static func _director_rows(rows: Array) -> Array:
 # budget (attack_budget.gd). It copies a tag the director already drew and moves no spawn, so the
 # schedule pin leaves it out, as RT1 leaves out presentation fields.
 static func _without_pack(due: Array) -> Array:
-	var kept := []
+	var kept: Array[Dictionary] = []
 	for spawn in due:
 		var copy: Dictionary = spawn.duplicate(true)
 		copy.erase("pack")
