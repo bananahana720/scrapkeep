@@ -12,9 +12,6 @@ Rewrites src/world/park/park_sinkhole.json in place, one row per line as the fil
   gallery_cut_1..15                  the south wall cut back to radius 66 between x -45 and 45,
                                      so the ring passes behind the nest. Columns 6 m wide with
                                      edges on odd metres, so no 2 m bake vertex sits in two cuts.
-  gallery_post_1..11                 harpoon posts on the ring's outer edge (radius 63) every 15
-                                     degrees, on the far arc only (105 to 255 degrees): the north
-                                     arc is where the tubes arrive, and the pump gallery stands east.
   pump_gallery                       moved 13 m east to (73, 350), outside the ring.
   route gallery_lap                  gallery_ring round all 24 segments to the landmark.
 
@@ -35,8 +32,6 @@ SEGMENTS = 24
 CUT_R = 66.0
 CUT_Z0 = 399.0
 CUT_EDGES = list(range(-45, 46, 6))
-POST_R = 63.0
-POST_ARC = (105, 255)
 PUMP_AT = [73, 350]
 
 KEYS = ["id", "element", "landform", "society", "at", "y", "size", "yaw_deg", "verb", "ride_fact", "home",
@@ -85,14 +80,6 @@ def cut_rows():
     return out
 
 
-def post_rows():
-    out = []
-    for n, deg in enumerate(range(POST_ARC[0], POST_ARC[1] + 1, 15), 1):
-        out.append(row(id="gallery_post_%d" % n, element="anchor_field", at=polar(POST_R, deg), size=[3, 8, 3],
-                       yaw_deg=0, verb="swing", recipe="greybox:anchor_field", budget="detail"))
-    return out
-
-
 def dumps(obj):
     return json.dumps(obj, ensure_ascii=False)
 
@@ -104,9 +91,9 @@ def main():
     lines = [ln for ln in lines if not ln.startswith('  {"id": "gallery_lap", ')]
     at = next(i for i, ln in enumerate(lines) if ln.startswith('  {"id": "gallery_ring", '))
     old = json.loads(lines[at].rstrip(","))
-    new = cut_rows() + ring_rows(old) + post_rows()
+    new = cut_rows() + ring_rows(old)
     lines[at:at + 1] = ["  " + dumps(r) + "," for r in new]
-    # The last park row has no comma; keep whatever the old gallery_ring line had on the last new row.
+    # The last park row has no comma: drop it from the last new row when no row follows.
     if not lines[at + len(new) - 1 + 1].lstrip().startswith("{"):
         lines[at + len(new) - 1] = lines[at + len(new) - 1].rstrip(",")
     pump = next(i for i, ln in enumerate(lines) if ln.startswith('  {"id": "pump_gallery", '))
@@ -118,8 +105,9 @@ def main():
     lap = {"id": "gallery_lap", "from": "gallery_ring", "to": "landmark",
            "via": ["gallery_ring"] + ["gallery_ring_%d" % (k + 1) for k in range(1, SEGMENTS)]}
     lines.insert(warden + 1, "  " + dumps(lap) + ",")
-    PARK.write_text("\n".join(lines))
-    json.loads(PARK.read_text())
+    text = "\n".join(lines)
+    json.loads(text)
+    PARK.write_text(text)
 
 
 if __name__ == "__main__":

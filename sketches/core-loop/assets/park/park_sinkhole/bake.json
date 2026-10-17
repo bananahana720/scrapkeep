@@ -52,7 +52,7 @@
     "min": -107.810111999512
   },
   "map": "park_sinkhole",
-  "park_sha256": "33b3da7d47e4806e41a1cca69e5fa1484fd3786d4fcf31c9ff1a8a9c5c484cb2",
+  "park_sha256": "16c220df57e64fe81ce5270d2f3daaabcdb6c9c63b99a344104773bd74554e3c",
   "schema": "scrapkeep-park-bake/1",
   "tool_sha256": "046e7258338a8bcca754c4ca23cb0cf963098dfc29cf88aaa46601fbb4e363c2"
 }
