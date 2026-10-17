@@ -252,8 +252,9 @@ func _fight_to_the_end() -> void:
 
 
 # 2026-10-17 BRINDLE-HULL: the bodies follow the ship now, so the ball stands above the
-# cockpit end of the moving hull, clear of every vent cap (a ram over a cap is a cap hit
-# and never reaches the cockpit). It used to hover above the arena centre, which only
-# worked while the bodies stayed behind there.
+# cockpit end of the moving hull. This is a trap of the test double, not of real play:
+# boss_spawner_double.gd never calls judge_hit, so it routes a ram through contact_part,
+# and a ram from above a vent cap becomes a cap hit that never cracks the cockpit. The
+# old arena-centre spot only worked while the bodies stayed behind there.
 func _above_cockpit() -> Vector3:
 	return _boss.ship.to_global(Vector3(0.0, 40.0, 4.8))
