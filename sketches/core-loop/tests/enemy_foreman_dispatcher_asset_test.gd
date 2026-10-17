@@ -92,7 +92,9 @@ func _foreman() -> void:
 	t.check("foreman stands over its crew (top 5.5 to 5.95)", box.end.y >= 5.5 and box.end.y <= 5.95, str(box.end.y))
 	# The cart and cabinet (below the hat brim) keep to the lobber's 2.4 m footprint.
 	var cart := 0.0
-	for p in _points(scene, "ForemanBody"):
+	var parts := _points(scene, "ForemanBody")
+	parts.append_array(_points(scene, "ForemanSignal"))
+	for p in parts:
 		if p.y < 3.6:
 			cart = maxf(cart, maxf(absf(p.x), absf(p.z)))
 	t.check("foreman cart within the lobber footprint (1.2)", cart <= 1.2001, str(cart))
@@ -101,8 +103,10 @@ func _foreman() -> void:
 	var hand := _socket(scene, "ForemanHand").position
 	t.check("clock face leads along -Z", clock.z < -0.45 and absf(clock.x) < 0.01, str(clock))
 	t.check("hand pivots on the dial", Vector2(hand.x, hand.y).distance_to(Vector2(clock.x, clock.y)) < 0.01, str(hand))
-	var horn := _socket(scene, "HornMouth").position
-	t.check("horn mouth at the mast head", horn.y > 5.0, str(horn))
+	var horn := _socket(scene, "HornMouth")
+	var blow := horn.basis * Vector3.FORWARD
+	t.check("horn mouth at the mast head", horn.position.y > 5.0, str(horn.position))
+	t.check("horn blows up and forward", blow.y > 0.7 and blow.z < -0.2, str(blow))
 	# Four tether reels, one per deck corner.
 	var corners := {}
 	for name in ["tether_a", "tether_b", "tether_c", "tether_d"]:
@@ -138,7 +142,7 @@ func _dispatcher() -> void:
 	var lead := mouth.basis * Vector3.FORWARD
 	t.check("drop mouth out front", mouth.position.z < -3.0 and mouth.position.y > -1.5, str(mouth.position))
 	t.check("drop mouth aims down and forward", lead.y < -0.4 and lead.z < -0.4 and absf(lead.x) < 0.01, str(lead))
-	t.check("tube reach within 3.8", -box.position.z <= 3.8, str(box.position.z))
+	t.check("tube reach within 3.75", -box.position.z <= 3.75, str(box.position.z))
 	# The radar paddle spins on the mast head.
 	var radar := _socket(scene, "DispatcherRadar").position
 	t.check("radar pivots on RadarPivot", radar.is_equal_approx(_socket(scene, "RadarPivot").position), str(radar))

@@ -10,8 +10,10 @@ player can find the boss of the pack from across the bowl.
 
 Godot metres (X,Y,Z) map to Blender (X,-Z,Y). It faces Godot -Z (the clock face, the horn
 bells); it can share the lobber's 2.4 x 7 x 2.4 m collider box: wheels on Y = -2, the cart
-and cabinet within |x|, |z| <= 1.2 and Y <= 3.6; the horn mast rises past the box top (5.0)
-and the bells top out at 5.95, so the Foreman stands over its crew.
+and cabinet within |x|, |z| <= 1.2 and Y <= 3.6; the mast stops at 4.5 and only the horn bells
+rise past the box top (5.0), topping out under 5.95, so the Foreman stands over its crew.
+The lobber's own model fronts Godot +Z; this one fronts -Z like the other specials, so the
+lobber.gd affix turns it half a turn if it reuses the lobber's facing.
 Three meshes, three surfaces, all opaque vertex colour:
   ForemanBody    fleet_paint: cart, cabinet, dial, hard hat, mast, reels, the bristle
                  moustache. Flashes with the enemy.
@@ -20,7 +22,7 @@ Three meshes, three surfaces, all opaque vertex colour:
   ForemanSignal  requisition_tag: both horn bells, the dial rim, the tether reel caps and
                  the steam valve. Brass at rest; the runtime lights it on the beat before
                  each wipe, with foreman_tell. No glow is baked into the file.
-Sockets (empties, no draws): HornMouth (steam puff), ClockFace (where the SHIFT OVER stamp
+Sockets (empties, no draws): HornMouth (steam puff; its -Z blows out of the big bell), ClockFace (where the SHIFT OVER stamp
 lands), tether_a..d (where each crew tether leaves its reel), SteamValve.
 Procedural bmesh in this repository; no external meshes or textures.
 Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir]
@@ -33,7 +35,7 @@ import sys
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
@@ -106,10 +108,8 @@ for sx in (-1, 1):
 hull(body, "fleet_paint", block(1.2, 3.05, 0.68, 0.6, 0.48, 0.42), OXIDE)
 body.cyl("fleet_paint", DIAL_R, DIAL_R, 0.06, segs=12, loc=g(*DIAL), rot=(math.pi / 2, 0, 0), color=BONE)
 # Twelve and six o'clock pips.
-for k in (0, 2):
-    a = k * math.pi / 2
-    p = Vector(DIAL) + Vector((math.sin(a) * 0.32, math.cos(a) * 0.32, -0.04))
-    gbox(body, "fleet_paint", (0.05, 0.05, 0.03) if k % 2 else (0.04, 0.09, 0.03), loc=g(*p), color=CHAR)
+for y in (0.32, -0.32):
+    gbox(body, "fleet_paint", (0.04, 0.09, 0.03), loc=g(DIAL[0], DIAL[1] + y, DIAL[2] - 0.04), color=CHAR)
 signal.ring("requisition_tag", DIAL_R - 0.02, DIAL_R + 0.07, 0.09, segs=12, loc=g(*DIAL),
             rot=(math.pi / 2, 0, 0), color=BRASS)
 # Card slot under the dial, and a rack of time cards on the right flank.
@@ -138,7 +138,6 @@ body.rod("fleet_paint", G(0.17, 1.2, 0.78), G(0.17, 4.2, 0.78), 0.045, segs=4, c
 gbox(body, "fleet_paint", (0.5, 0.12, 0.4), loc=g(0, 4.4, 0.72), color=CHAR)
 signal.cyl("requisition_tag", 0.14, 0.14, 0.24, segs=8, loc=g(0.17, 4.12, 0.78), color=BRASS)
 
-# Twin horns: a big low bell leaning forward over the cabinet and a smaller one beside it.
 HORN_PROFILE = [(0.0, 1.0), (0.66, 1.4), (0.84, 2.2), (0.95, 3.6), (1.0, 4.4)]
 
 
@@ -193,7 +192,11 @@ bmesh.ops.translate(hand.bm, vec=Vector(g(*DIAL)) + Vector(g(0, 0, -0.06)), vert
 hand_obj = hand.to_object(origin=g(DIAL[0], DIAL[1], DIAL[2] - 0.06), parent=root)
 
 big_mouth, big_dir = HORNS[0]
-common.empty("HornMouth", G(*big_mouth), parent=root)
+horn_socket = common.empty("HornMouth", G(*big_mouth), parent=root)
+# -Z along the bell, found in Godot axes and conjugated into Blender axes for the empty.
+horn_socket.rotation_euler = (Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0))) @
+                              Vector((0, 0, -1)).rotation_difference(big_dir).to_matrix() @
+                              Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0)))).to_euler()
 common.empty("ClockFace", G(DIAL[0], DIAL[1], DIAL[2] - 0.08), parent=root)
 common.empty("SteamValve", G(0.17, 4.26, 0.78), parent=root)
 for name, at in TETHERS:

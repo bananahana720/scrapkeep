@@ -9,7 +9,7 @@ the one enemy whose outline says "things come out of here". It never moves.
 
 Godot metres (X,Y,Z) map to Blender (X,-Z,Y). It faces Godot -Z. The body is the vault's
 octagon (2.88 m across, Y -1.15 to 1.15); four magnet clamps put its floor at Y = -1.5.
-The tube reaches 3.4 m out front and its mouth stays above the floor, so any flat perch top
+The tube reaches 3.7 m out front, its mouth aimed down and forward and kept above the floor, so any flat perch top
 works; set it with the front toward the drop and the tube clears the edge.
 Three meshes, three surfaces, all opaque vertex colour:
   DispatcherBody    fleet_paint: the box, lid, clamps, headset and mic boom, ticket printer and
@@ -111,7 +111,7 @@ for sx in (-1, 1):
     for sz in (-1, 1):
         body.rod("fleet_paint", G(sx * 0.95, -1.2, sz * 0.95), G(sx * 1.2, -1.36, sz * 1.2), 0.1,
                  segs=4, color=CHAR)
-        body.cyl("fleet_paint", 0.3, 0.3, 0.08, segs=4, loc=g(sx * 1.2, FLOOR + 0.04, sz * 1.2), color=CHAR)
+        body.cyl("fleet_paint", 0.3, 0.3, 0.08, segs=6, loc=g(sx * 1.2, FLOOR + 0.04, sz * 1.2), color=CHAR)
 
 # Pneumatic tube: out of the lower front, forward and down off the perch edge. Round elbows,
 # a brass collar past each and a flared brass lip on the mouth.
@@ -130,9 +130,6 @@ mouth = Vector(TUBE[-1])
 signal.rod("requisition_tag", G(*(mouth - out * 0.12)), G(*(mouth + out * 0.14)), 0.42, segs=8, r2=0.58,
            color=BRASS)
 body.rod("fleet_paint", G(*(mouth - out * 0.3)), G(*(mouth + out * 0.12)), 0.2, segs=6, r2=0.46, color=CHAR)
-# A feed line from the lid down to the tube's root: the pneumatic system's supply.
-body.rod("fleet_paint", G(1.1, 1.15, -0.9), G(0.9, 0.2, -1.5), 0.09, segs=4, color=OXIDE)
-body.rod("fleet_paint", G(0.9, 0.2, -1.5), G(0.66, -0.3, -1.6), 0.09, segs=4, color=OXIDE)
 
 # Radar mast at the rear of the lid, beacon on its tip above the spinning paddle.
 body.rod("fleet_paint", G(0, 1.15, 0.7), G(*PIVOT), 0.11, segs=6, color=CHAR)
@@ -174,7 +171,7 @@ high = max(p.z for p in points)
 reach = max(p.y for p in points)
 tris = common.tri_total(root)
 print("DISPATCHER floor %.3f top %.3f front reach %.3f tris %d" % (low, high, reach, tris))
-assert low >= FLOOR - 1e-4 and high <= 3.2 and reach <= 3.8
+assert low >= FLOOR - 1e-4 and high <= 3.2 and reach <= 3.75
 assert tris <= 1100
 
 opts = common.args()
