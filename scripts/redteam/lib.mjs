@@ -1,0 +1,418 @@
+// The red team's pure half: which runs a wave gets, and how what they left behind becomes a
+// ranked findings page. scripts/redteam/run.mjs does the running; nothing here starts Godot.
+// Severities and areas are the alpha bug bar's (sketches/core-loop/BUG-BAR.md).
+
+export const PILOTS = ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"];
+
+// A persona is a bot policy played for a reason. stages caps the run (null plays to the end).
+export const PERSONAS = [
+  { id: "speedrunner", policy: "skipper", stages: null, args: [], hunts: "stalls, softlocks and route skips on the fastest line" },
+  { id: "first-timer", policy: "random", stages: null, args: [], hunts: "getting lost, crowd deaths and odd choices" },
+  { id: "cautious", policy: "camper", stages: 3, args: [], hunts: "stalls after a Warden breaks, from a player who never closes in" },
+  { id: "greedy", policy: "completionist", stages: null, args: ["--late-offer=take"], hunts: "degenerate builds and long-run stability" },
+  // The traversal pilot rides from the drop to the beacon and never fights, so it gets one stage,
+  // picked by the seed, for 90 s of game time; it is there to find spots the ball gets stuck.
+  { id: "line-rider", policy: "traversal", stages: null, route: true, args: [], hunts: "spots the ball gets stuck on the way to the Warden" },
+];
+
+export const SEVERITIES = ["blocker", "major", "minor", "watch"];
+export const AREAS = [
+  "stability", "Wardens and bosses", "core feel", "clarity", "difficulty and pacing", "stage and world design",
+  "in-run growth", "pilots", "look", "sound and music", "progression across runs",
+];
+
+export const TICKS_PER_SECOND = 90;
+export const HITCH_MS = 33;
+export const CPU_P99_MS = 10;
+export const PILE_WINDOW_TICKS = 90;
+export const PILE_SHARE = 0.35;
+export const PILE_DEATH_TICKS = 270;
+export const LOST_FIND_S = 90;
+export const ONE_SHOT_S = 2;
+export const PARK_STAGES = 6;
+export const ROUTE_TICKS = 90 * TICKS_PER_SECOND;
+export const STUCK_DETOURS = 3;
+const SETTLE_TICKS = 90;
+const SAME_MOMENT_TICKS = 2;
+
+// Seeds no gate uses: wave w owns 1000 + 100w .. 1000 + 100w + 99, so no two waves share one.
+export function waveSeed(wave, index) {
+  return 1000 + wave * 100 + index;
+}
+
+// The persona x pilot grid has 30 cells. k % 5 and k % 6 walk every cell once in 30 steps, so
+// consecutive waves take the next `count` cells and the whole grid turns over every 30/count waves.
+export function planWave({ wave, count = 10, quick = false, carry = [] }) {
+  if (!Number.isInteger(wave) || wave < 0 || wave > 89) throw new Error("--wave must be an integer from 0 to 89");
+  const jobs = [];
+  for (let i = 0; i < count; i++) {
+    const k = (wave * count + i) % (PERSONAS.length * PILOTS.length);
+    const persona = PERSONAS[k % PERSONAS.length];
+    jobs.push(botJob(persona, PILOTS[k % PILOTS.length], waveSeed(wave, i), quick));
+  }
+  for (const [i, c] of carry.entries()) {
+    const persona = PERSONAS.find((p) => p.id === c.persona);
+    if (!persona || !PILOTS.includes(c.pilot)) continue;
+    const job = botJob(persona, c.pilot, c.seed, quick);
+    job.id = "carry-" + i + "-" + job.id;
+    job.carry = c.title;
+    jobs.push(job);
+  }
+  return jobs;
+}
+
+function botJob(persona, pilot, seed, quick) {
+  if (persona.route) {
+    const stage = 1 + (seed % PARK_STAGES);
+    return {
+      id: `${persona.id}-${pilot}-${seed}`, kind: "bot", persona: persona.id, policy: persona.policy, pilot, seed, stages: stage,
+      args: ["--from-stage=" + stage, "--ticks=" + (quick ? ROUTE_TICKS / 3 : ROUTE_TICKS)],
+    };
+  }
+  const stages = quick ? 1 : persona.stages;
+  return {
+    id: `${persona.id}-${pilot}-${seed}`, kind: "bot", persona: persona.id, policy: persona.policy, pilot, seed, stages,
+    args: [...persona.args, ...(stages ? ["--stages=" + stages] : [])],
+  };
+}
+
+export function botArgs(job, out) {
+  return [
+    "--headless", "--fixed-fps", "90", "--path", "sketches/core-loop", "--script", "res://tools/bot_run.gd", "--",
+    "--out=" + out, "--policy=" + job.policy, "--seeds=" + job.seed, "--pilot=" + job.pilot,
+    "--bot-audit=1", "--bot-profile=1", ...job.args,
+  ];
+}
+
+export function replayCommand(job) {
+  return "$GODOT_BIN " + botArgs(job, "artifacts/local/replay").filter((a) => !a.startsWith("--bot-")).join(" ");
+}
+
+// --- reading one bot job -------------------------------------------------------------------
+
+export function parseNdjson(text) {
+  const rows = [];
+  for (const line of (text ?? "").split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      rows.push(JSON.parse(line));
+    } catch {
+      // A line cut short by a crash is itself evidence; the caller reads the exit.
+    }
+  }
+  return rows;
+}
+
+// Godot prints a SCRIPT ERROR with its message on the same line and the frames after it.
+export function logErrors(text) {
+  const out = new Map();
+  for (const line of (text ?? "").split("\n")) {
+    const m = line.match(/^(SCRIPT ERROR|ERROR): (.*)$/);
+    if (!m) continue;
+    const key = m[1] + ": " + m[2].replace(/\d+(\.\d+)?/g, "#").slice(0, 160);
+    out.set(key, (out.get(key) ?? 0) + 1);
+  }
+  return [...out].map(([message, count]) => ({ script: message.startsWith("SCRIPT"), message, count }));
+}
+
+// The stage each tick belongs to, from the audit's stage_entered events.
+export function stageAt(events) {
+  const marks = events.filter((e) => e.event === "stage_entered").map((e) => [e.tick, e.args[0]]);
+  const arena = events.find((e) => e.event === "boss_arena_entered");
+  return (tick) => {
+    if (arena && tick >= arena.tick) return "boss";
+    let stage = null;
+    for (const [t, s] of marks) if (t <= tick) stage = s;
+    return stage;
+  };
+}
+
+// Many hits from several sources inside one window, adding up to a large share of max HP:
+// the moment a player says "what hit me". A death soon after makes it one they could not read.
+export function pileUps(events, maxHpByStage) {
+  const where = stageAt(events);
+  const hits = events.filter((e) => e.event === "player_hit");
+  const deaths = events.filter((e) => e.event === "player_died").map((e) => e.tick);
+  const out = [];
+  let i = 0;
+  while (i < hits.length) {
+    const start = hits[i].tick;
+    const window = hits.filter((h) => h.tick >= start && h.tick < start + PILE_WINDOW_TICKS);
+    const sources = new Set(window.map((h) => String(h.args[1])));
+    const amount = window.reduce((sum, h) => sum + Number(h.args[0] || 0), 0);
+    const stage = where(start);
+    const maxHp = maxHpByStage[stage] ?? maxHpByStage.default ?? 100;
+    if (window.length >= 3 && sources.size >= 2 && amount >= PILE_SHARE * maxHp) {
+      const died = deaths.some((d) => d >= start && d <= start + PILE_DEATH_TICKS);
+      out.push({ tick: start, stage, hits: window.length, sources: [...sources].sort(), share: amount / maxHp, died });
+      i += window.length;
+    } else {
+      i += 1;
+    }
+  }
+  return out;
+}
+
+// Per-tick main-thread cost with the bot's own work taken out. A tick over HITCH_MS is a frame
+// over budget whatever the GPU does. Ticks just after a stage loads are counted apart.
+export function hitches(profile, events) {
+  const wall = profile?.samples?.tick_wall;
+  if (!wall) return { spikes: [], loads: 0, p99: null };
+  const bot = profile.samples.bot_driver;
+  const botBy = new Map((bot?.ticks ?? []).map((t, i) => [t, bot.usec[i]]));
+  const where = stageAt(events);
+  const loadTicks = events.filter((e) => ["stage_entered", "world_entered", "run_started"].includes(e.event)).map((e) => e.tick);
+  const costs = [];
+  const spikes = [];
+  let loads = 0;
+  wall.ticks.forEach((tick, i) => {
+    const ms = (wall.usec[i] - (botBy.get(tick) ?? 0)) / 1000;
+    if (tick <= SETTLE_TICKS * 2) return;
+    costs.push(ms);
+    if (ms <= HITCH_MS) return;
+    if (loadTicks.some((t) => tick >= t && tick < t + SETTLE_TICKS)) loads += 1;
+    else spikes.push({ tick, stage: where(tick), ms: Math.round(ms) });
+  });
+  costs.sort((a, b) => a - b);
+  const p99 = costs.length ? Math.round(costs[Math.floor(costs.length * 0.99)] * 10) / 10 : null;
+  return { spikes, loads, p99 };
+}
+
+// One bot job's outcome, read from what it left: { job, status, row, run, errors, piles, perf }.
+export function readBotJob(job, files) {
+  const rows = parseNdjson(files.bots);
+  const row = rows.at(-1) ?? null;
+  const runs = parseNdjson(files.runs);
+  const events = parseNdjson(files.events);
+  const maxHp = { default: row?.stages?.[0]?.max_hp ?? 100 };
+  for (const s of row?.stages ?? []) maxHp[s.stage] = s.max_hp;
+  maxHp.boss = row?.stages?.at(-1)?.max_hp ?? maxHp.default;
+  return {
+    job, exit: files.exit, timedOut: files.timedOut, row, run: runs.at(-1) ?? null, errors: logErrors(files.log),
+    piles: pileUps(events, maxHp), perf: hitches(files.profile, events), events: events.length,
+  };
+}
+
+// --- turning results into findings -----------------------------------------------------------
+
+const STALLS = new Set(["stalled", "boss_stalled", "fight_capped"]);
+
+function finding(severity, area, key, title, feel, extra = {}) {
+  return { severity, area, key, title, feel, runs: [], ...extra };
+}
+
+// Each playbook adds to a map keyed by root cause, so twelve runs hitting one bug read as one line.
+export function grade(results, extras = {}) {
+  const found = new Map();
+  const add = (f, result, note) => {
+    const have = found.get(f.key) ?? f;
+    if (result) have.runs.push({ id: result.job.id, persona: result.job.persona, pilot: result.job.pilot, seed: result.job.seed, note, replay: replayCommand(result.job), carry: result.job.carry ?? null });
+    found.set(f.key, have);
+  };
+
+  for (const r of results) {
+    const { job, row } = r;
+    // Crashes and freezes.
+    if (r.timedOut) add(finding("blocker", "stability", "freeze", "A run froze and never ended", "The game hangs mid-run and has to be killed."), r, "no end within the job timeout");
+    else if (r.exit !== 0 || row === null) add(finding("blocker", "stability", "crash", "A run crashed", "The game closes or dies mid-run."), r, `exit ${r.exit}, ${row ? "row written" : "no bots.ndjson row"}`);
+    for (const e of r.errors.filter((e) => e.script)) {
+      add(finding("major", "stability", "err:" + e.message, "Script error in play: " + e.message.replace(/^SCRIPT ERROR: /, ""), "Something in the game logic broke; the effect may be invisible or may not be."), r, `${e.count}x`);
+    }
+    for (const e of r.errors.filter((e) => !e.script)) {
+      add(finding("minor", "stability", "err:" + e.message, "Engine error: " + e.message.replace(/^ERROR: /, ""), "Usually nothing on screen; worth a look if it repeats."), r, `${e.count}x`);
+    }
+    if (!row) continue;
+
+    // Stalls and softlocks.
+    const brokeWarden = (row.stages ?? []).some((s) => s.warden_broken_s != null);
+    if (row.outcome === "boss") {
+      add(finding("blocker", "Wardens and bosses", "boss-missing", "The boss arena had no boss", "The run reaches the end and there is nothing to fight."), r, "outcome boss");
+    } else if (STALLS.has(row.outcome) && job.policy !== "traversal" && !(job.policy === "camper" && !brokeWarden)) {
+      const inBoss = row.outcome === "boss_stalled";
+      const last = (row.stages ?? []).at(-1) ?? {};
+      const where = inBoss ? "boss" : `stage ${row.stage_reached}`;
+      const hard = ["skipper", "completionist"].includes(job.policy);
+      const sev = hard || inBoss ? "blocker" : "major";
+      const what = inBoss ? "The boss fight never ends" : row.outcome === "fight_capped" ? "A Warden fight runs past its cap" : "Stuck on a stage: the Warden never breaks";
+      add(finding(sev, "Wardens and bosses", `stall:${where}:${job.pilot}`, `${what} (${where}, ${job.pilot})`, inBoss
+        ? "You are in the boss fight and nothing you do finishes it."
+        : "You are on a stage with no way on but quitting.", { candidate: true }), r, `${row.outcome}${last.stall_state ? ", state " + last.stall_state : ""}${last.stuck_detours ? ", " + last.stuck_detours + " stuck detours" : ""}`);
+    }
+
+    // Route skips: a stage left with no fight beat.
+    for (const b of row.beats ?? []) {
+      if (b.exit && (b.skipped ?? []).includes("fight")) {
+        add(finding("watch", "stage and world design", `skip:${b.stage}`, `Stage ${b.stage} cleared without a fight beat`, "A fast player can leave the stage without ever fighting its Warden properly."), r, `beats skipped: ${b.skipped.join(", ")}`);
+      }
+      const findS = (b.ticks?.find ?? 0) / TICKS_PER_SECOND;
+      if (job.persona === "first-timer" && findS > LOST_FIND_S) {
+        add(finding("watch", "clarity", `lost:${b.stage}`, `Slow to find the Warden on stage ${b.stage}`, "A new player wanders before finding what to fight."), r, `${Math.round(findS)} s roaming`);
+      }
+    }
+
+    // Degenerate builds: a Warden or boss erased in an instant.
+    // warden_fight_s is the stage clock when the bot turned on the Warden, not a duration.
+    for (const s of row.stages ?? []) {
+      const from = Math.max(s.warden_engaged_s ?? -1, s.warden_fight_s ?? -1);
+      const took = s.warden_broken_s != null && from >= 0 ? s.warden_broken_s - from : null;
+      if (took !== null && took < ONE_SHOT_S) {
+        add(finding("watch", "in-run growth", `oneshot:${s.stage}`, `Warden on stage ${s.stage} broken in under ${ONE_SHOT_S} s`, "The build deletes the Warden before it can do anything."), r, `${took.toFixed(2)} s, parts: ${(s.parts ?? []).join(" ") || "none"}`);
+      }
+      if ((s.stuck_detours ?? 0) >= STUCK_DETOURS) {
+        add(finding("minor", "stage and world design", `stuck:${s.stage}`, `The ball gets stuck on stage ${s.stage} geometry`, "You roll into a spot and have to back out and steer around, again and again."), r, `${s.stuck_detours} stuck detours as ${job.persona}`);
+      }
+    }
+
+    // Crowd moments.
+    for (const p of r.piles) {
+      const sev = p.died ? "major" : "minor";
+      add(finding(sev, "clarity", `pile:${p.stage}:${p.died ? "dead" : "hurt"}`, p.died ? `Died to a pile-up on ${label(p.stage)}` : `Pile-up hits on ${label(p.stage)}`,
+        p.died ? "Several things hit at once and the run ends before you can read what happened." : "Several things hit at once and a big chunk of health goes in a second."),
+        r, `${p.hits} hits from ${p.sources.join(", ")}, ${Math.round(p.share * 100)}% HP in 1 s${p.died ? ", then died" : ""}`);
+    }
+
+    if (r.perf.p99 !== null && r.perf.p99 > CPU_P99_MS) {
+      add(finding("watch", "stability", "cpu-p99", `Main-thread tick p99 over ${CPU_P99_MS} ms on the cloud box`, "Headroom is thin; check with MangoHud on Andrew's PC."), r, `p99 ${r.perf.p99} ms`);
+    }
+  }
+
+  for (const f of found.values()) {
+    if (f.key.startsWith("pile:") && f.severity === "minor" && f.runs.length >= 3) f.severity = "major";
+  }
+
+  // Frame-time spikes. Load on a shared box lands at random moments; a hitch the game causes lands
+  // at the same run moment for different seeds and pilots. Only those are graded (the bar's
+  // repeating hitch); the rest is one watch line.
+  const { shared, scattered } = sharedHitches(results);
+  for (const [r, list] of shared) {
+    const t = extras.hitchTriage;
+    add(finding("major", "stability", "hitch:shared", `Hitch over ${HITCH_MS} ms at the same moment in several runs`,
+      "A stutter in play that comes back on a beat, whoever is playing.", { candidate: true,
+        counts: t ? { "replayed alone: moments": t.tested, "still hitched": t.alone, "still hitched without the music mix": t.noMix } : undefined }),
+    r, `${list.length} shared moment(s), e.g. ${list.slice(0, 4).map((s) => `${(s.tick / TICKS_PER_SECOND).toFixed(1)} s (${s.ms} ms, ${label(s.stage)})`).join(", ")}`);
+  }
+  if (scattered > 0) {
+    add(finding("watch", "stability", "hitch:scattered", `${scattered} scattered ticks over ${HITCH_MS} ms`, "Most likely the shared cloud box; MangoHud on Andrew's PC is the check."), null);
+  }
+
+  for (const a of extras.fuzz ?? []) {
+    const broken = /non_finite|nan|leak|over_cap|bolts|charge|cooldown|stall/i.test(a.kind);
+    const timed = /frame|tick|time/i.test(a.kind);
+    add(finding(broken ? "major" : "watch", "in-run growth", "fuzz:" + a.kind, broken ? `Item fuzz broke a rule: ${a.kind}` : `Item fuzz outlier: ${a.kind}`,
+      broken ? "A build pushes a number past what the game allows; it can crash or break a fight." : timed ? "A build costs more time per tick than its cap; timed under load on the cloud box, so recheck alone." : "A build runs far past its peers; fun or broken is Andrew's call."), null);
+    found.get("fuzz:" + a.kind).runs.push({ id: "item_fuzz", seed: a.seed, pilot: a.class, note: `${a.reading ?? ""} (cap ${a.cap ?? "-"})${a.build ? ", build " + String(a.build).split(/,\s*/).slice(0, 4).join(" ") + " ..." : ""}`, replay: `$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=${a.seed} --seconds=${extras.fuzzSeconds ?? 60} --out=artifacts/local/replay` });
+  }
+  for (const s of extras.sweep ?? []) {
+    add(finding("major", "in-run growth", "sweep:" + s, "Build sweep: " + s, "A build rule the sweep checks is broken."), null);
+  }
+  const ph = extras.placeholders;
+  if (ph && ph.total > 0) {
+    add(finding("major", "look", "placeholders", `${ph.total} placeholders still in the build`, "Greybox, stand-in art or text where finished content belongs. Expected until wave 20.", { counts: ph.byKind }), null);
+  }
+  if (extras.perfBench) {
+    const pb = extras.perfBench;
+    if (pb.error) add(finding("blocker", "stability", "perfbench-crash", "The dense-fight bench crashed", "The densest fight in the game falls over."), null);
+    else if (pb.max > HITCH_MS) add(finding(pb.p99 > HITCH_MS ? "major" : "watch", "stability", "perfbench", `Dense fight CPU frame p99 ${pb.p99} ms, max ${pb.max} ms`, "The biggest crowd the game builds costs more than a frame.", { counts: pb }), null);
+  }
+  if (extras.exportFailure) add(finding("blocker", "stability", "export", "The Linux build did not export or boot", "The game does not start.", { counts: { reason: extras.exportFailure } }), null);
+
+  return rank([...found.values()]);
+}
+
+// Spikes at the same run tick (within SAME_MOMENT_TICKS) in two or more runs with different seeds.
+export function sharedHitches(results) {
+  const shared = new Map();
+  let scattered = 0;
+  for (const r of results) {
+    const mine = [];
+    for (const s of r.perf.spikes) {
+      const again = results.some((o) => o !== r && o.job.seed !== r.job.seed && !o.job.args.some((a) => a.startsWith("--from-stage"))
+        && o.perf.spikes.some((x) => Math.abs(x.tick - s.tick) <= SAME_MOMENT_TICKS));
+      if (again && !r.job.args.some((a) => a.startsWith("--from-stage"))) mine.push(s);
+      else scattered += 1;
+    }
+    if (mine.length) shared.set(r, mine);
+  }
+  return { shared, scattered };
+}
+
+function label(stage) {
+  return stage === "boss" ? "the boss" : stage == null ? "an unknown stage" : `stage ${stage}`;
+}
+
+export function rank(findings) {
+  return findings.sort((a, b) =>
+    SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity)
+    || b.runs.length - a.runs.length
+    || AREAS.indexOf(a.area) - AREAS.indexOf(b.area)
+    || a.key.localeCompare(b.key));
+}
+
+// --- the page --------------------------------------------------------------------------------
+
+export function renderMarkdown({ wave, commit, started, minutes, results, findings, extras = {} }) {
+  const count = (s) => findings.filter((f) => f.severity === s).length;
+  const lines = [
+    `# Red team, wave ${wave}`,
+    "",
+    `Build \`${commit.slice(0, 10)}\`, ${started}, ${minutes} min in a 4-core cloud container. ` +
+      `${results.length} bot runs across ${new Set(results.map((r) => r.job.persona)).size} personas and ${new Set(results.map((r) => r.job.pilot)).size} pilots.`,
+    "",
+    `**${count("blocker")} blocker, ${count("major")} major, ${count("minor")} minor, ${count("watch")} to watch.**`,
+    "",
+    "## What Andrew would feel, worst first",
+    "",
+  ];
+  const bugs = findings.filter((f) => f.severity !== "watch");
+  if (bugs.length === 0) lines.push("Nothing the bug bar grades.", "");
+  bugs.forEach((f, i) => lines.push(...findingLines(f, i + 1)));
+  const watch = findings.filter((f) => f.severity === "watch");
+  if (watch.length) {
+    lines.push("## Watch (not bugs on the bar; taste or tuning)", "");
+    watch.forEach((f, i) => lines.push(...findingLines(f, i + 1)));
+  }
+  lines.push("## Runs", "", "| Persona | Pilot | Seed | Outcome | Stage | Game min | Hits/piles | Tick p99 ms |", "| --- | --- | --- | --- | --- | --- | --- | --- |");
+  for (const r of results) {
+    const row = r.row;
+    const outcome = r.timedOut ? "TIMEOUT" : row ? row.outcome : `CRASH (exit ${r.exit})`;
+    lines.push(`| ${r.job.persona}${r.job.carry ? " (carry)" : ""} | ${r.job.pilot} | ${r.job.seed} | ${outcome} | ${row?.stage_reached ?? "-"} | ${row ? (row.game_seconds / 60).toFixed(1) : "-"} | ${(row?.stages ?? []).reduce((n, s) => n + (s.hits ?? 0), 0)}/${r.piles.length} | ${r.perf.p99 ?? "-"} |`);
+  }
+  lines.push("");
+  if (extras.fuzzSummary) lines.push(`Item fuzz: ${extras.fuzzSummary}.`, "");
+  if (extras.placeholders) lines.push(`Placeholders by kind: ${Object.entries(extras.placeholders.byKind).map(([k, n]) => `${k} ${n}`).join(", ") || "none"}.`, "");
+  lines.push(
+    "## Limits",
+    "",
+    "Bots play the real game from the source tree headless, so this finds stalls, crashes, script errors, pile-ups, rule-breaking builds and CPU hitches. " +
+      "It does not see the GPU, the picture or feel: hitches are main-thread ticks on a shared 4-core box, and a stall is a candidate until a replay confirms it. " +
+      "Andrew's sitting and MangoHud on his PC decide those.",
+    "",
+  );
+  return lines.join("\n");
+}
+
+function findingLines(f, n) {
+  const sev = f.severity.toUpperCase();
+  const lines = [`${n}. **${sev}** · ${f.area} · ${f.title}${f.candidate ? " (candidate, replay to confirm)" : ""}`, `   ${f.feel}`];
+  if (f.runs.length) {
+    const seen = f.runs.slice(0, 3).map((r) => `${r.pilot ?? "-"} seed ${r.seed}${r.persona ? " as " + r.persona : ""}: ${r.note ?? ""}`.trim());
+    lines.push(`   Seen in ${f.runs.length}: ${seen.join("; ")}${f.runs.length > 3 ? "; ..." : ""}`);
+    if (f.runs[0].replay) lines.push("   Replay: `" + f.runs[0].replay + "`");
+  }
+  if (f.counts) lines.push("   " + Object.entries(f.counts).map(([k, v]) => `${k} ${v}`).join(", "));
+  lines.push("");
+  return lines;
+}
+
+// The runs a later wave replays: every blocker and major that came from a bot run.
+export function carryList(findings) {
+  const out = [];
+  for (const f of findings) {
+    if (!["blocker", "major"].includes(f.severity)) continue;
+    const run = f.runs.find((r) => r.persona && r.pilot && Number.isInteger(r.seed));
+    if (run && !out.some((c) => c.persona === run.persona && c.pilot === run.pilot && c.seed === run.seed)) {
+      out.push({ persona: run.persona, pilot: run.pilot, seed: run.seed, title: f.title });
+    }
+  }
+  return out.slice(0, 4);
+}
