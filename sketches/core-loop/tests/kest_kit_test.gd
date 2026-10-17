@@ -20,7 +20,8 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DT := 1.0 / 60.0
 # 2026-10-11 (PC-KEST): quiet loads, bite events and the fourteen-second reload, including a twelve-second guard.
-const EXPECTED_CHECKS := 71
+# 2026-10-16 (pilot paint): the Rigger Harness is cut; one check added, 71 -> 72.
+const EXPECTED_CHECKS := 72
 
 class HandHull:
 	extends Node3D
@@ -342,7 +343,8 @@ func _grants() -> void:
 	root.add_child(progress)
 	progress.setup(events, run, profile, Callable(), codex)
 	var ids := ["kest_blast_vault", "kest_homecoming", "kest_tick_tick_boom"]
-	var items := ["trail_kest_fuse_smoke", "outfit_kest_rigger", "shell_kest_roost"]
+	# Re-pinned 2026-10-16: the Rigger Harness is cut for alpha, so Homecoming pays Rigger Blue paint.
+	var items := ["trail_kest_fuse_smoke", "paint_kest_rigger", "shell_kest_roost"]
 	for i in 3:
 		_t.check("item starts locked " + items[i], not profile.has_cosmetic(items[i]))
 		codex.mark_discovered(ids[i])
@@ -351,7 +353,8 @@ func _grants() -> void:
 	var again := Profile.new(profile.path)
 	_t.check("earned items reload from the saved profile", again.load_profile() and items.all(func(id): return again.has_cosmetic(id)))
 	_t.check("grants do not require a first-ever discovery", ids.all(func(id): return not Achievements.ROWS["ach_" + id].get("where", {}).has("first_time")))
-	_t.check("undelivered trail and outfit are pending art", items.slice(0, 2).all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("undelivered trail is pending art; a paint needs none", Cosmetics.PENDING_ART.has("trail_kest_fuse_smoke") and not Cosmetics.PENDING_ART.has("paint_kest_rigger"))
+	_t.check("the Rigger Harness is cut", Cosmetics.row("outfit_kest_rigger").is_empty())
 	_t.check("delivered Roost Frame is live", not Cosmetics.is_pending("shell_kest_roost") and FileAccess.file_exists("res://assets/models/world_one/shell_kest_roost.glb"))
 	progress.free()
 	codex.free()

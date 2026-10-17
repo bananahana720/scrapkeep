@@ -26,6 +26,12 @@ const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2", 3: "_mig
 # Frozen history, not a rule: a returning v2 profile keeps them under the v3 locks.
 const V2_FREE_PILOTS := ["runner_gunner", "demolitions_caster"]
 
+# Cosmetic ids a cut item left in saves, to the id that replaces it. Every read swaps them, so
+# a save that earned the old item owns the new one; the new one stays unseen so it glows as new,
+# and a slot still wearing the old id is cleared. 2026-10-16: the Rigger Harness was cut for
+# alpha, and Homecoming pays Rigger Blue instead (COSMETICS-ART-BRIEFS.md).
+const RETIRED_COSMETICS := {"outfit_kest_rigger": "paint_kest_rigger"}
+
 const SHAPE := {
 	"pilots": SafeStore.STRINGS,
 	"worlds": SafeStore.STRINGS,
@@ -520,7 +526,21 @@ func _read() -> Dictionary:
 	doc["generation"] = int(doc["generation"])
 	for id in doc["achievements"]:
 		doc["achievements"][id] = int(floorf(doc["achievements"][id]))
+	_retire_cosmetics(doc)
 	return {"state": "ok", "doc": doc, "from_version": from_version, "bytes": bytes}
+
+
+static func _retire_cosmetics(doc: Dictionary) -> void:
+	for old in RETIRED_COSMETICS:
+		if not doc["cosmetics"].has(old):
+			continue
+		doc["cosmetics"].erase(old)
+		doc["seen"].erase(old)
+		if not doc["cosmetics"].has(RETIRED_COSMETICS[old]):
+			doc["cosmetics"].append(RETIRED_COSMETICS[old])
+		for slot in doc["equipped"]:
+			if doc["equipped"][slot] == old:
+				doc["equipped"][slot] = ""
 
 
 func _shape_ok(doc: Dictionary) -> bool:
