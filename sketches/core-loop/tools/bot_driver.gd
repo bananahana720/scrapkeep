@@ -73,6 +73,12 @@ const TURN_RATE := 5.0
 const SENSITIVITY := 0.0022
 # A stage longer than this is a stall: the bot could not break the Warden.
 const STAGE_LIMIT := 240.0
+# The Mind's crown (stage 6) takes the park Mind 127 to 232 s to break (parkwin and parkboss
+# receipts, 2026-10-16/17), against the 240 s limit: its fight gets PARK_MIND_LIMIT. Any broken
+# Warden gets GATE_LIMIT seconds after the break to reach an exit gate, so a late break is not
+# a stall (one run broke at 232.6 s and stalled in "gates" 7 s later).
+const PARK_MIND_LIMIT := 480.0
+const GATE_LIMIT := 90.0
 const BOSS_LIMIT := 420.0
 const STUCK_SPEED := 2.5
 const STUCK_SECONDS := 2.0
@@ -161,6 +167,24 @@ const WAYPOINT_REACHED := 9.0
 const WAYPOINT_SECONDS := 14.0
 const GATE_HOP_SECONDS := 6.0
 const GATE_HOP_EVERY := 1.5
+# A static prop on the line to a gate (the crown's relic cache stands on the beacon island's
+# approach and, once its wall is cracked, is a pocket the line runs into) is steered round:
+# the line is probed GATE_PROBE metres ahead, and a blocked one goes round the prop's nearest
+# visible corner (GATE_MARGIN off its walls), held up to GATE_DETOUR_SECONDS so the turn does
+# not flip back at the mouth; with no corner in sight it turns by GATE_TURN steps instead.
+const GATE_PROBE := 9.0
+const GATE_PROBE_NEAR := 30.0
+const GATE_TURN := 30.0
+const GATE_MARGIN := 4.0
+# A gate on a rise the ball cannot climb from a standstill (the park crown's exit bank is a
+# 27 degree face below its gates, 14 to 22 m up in 16 m) is taken as a player takes it: back
+# off GATE_RUNUP_BACK metres down the line, then charge it at speed. Tried once the gate has
+# stood untaken GATE_RUNUP_AFTER seconds with the ball more than 3 m below it.
+const GATE_RUNUP_AFTER := 14.0
+const GATE_RUNUP_BACK := 70.0
+const GATE_RUNUP_SECONDS := 12.0
+const GATE_CHARGE_SECONDS := 10.0
+const GATE_DETOUR_SECONDS := 6.0
 const VAULT_SECONDS := 45.0
 const EVENT_PURSUIT_SECONDS := 40.0
 const EVENT_LATEST := 150.0
@@ -308,6 +332,10 @@ var _offers: Array = []
 var _gate_pick := -1
 var _gate_time := 0.0
 var _gate_hop := 0.0
+var _gate_detour := Vector3.ZERO
+var _gate_detour_left := 0.0
+var _gate_run := ""
+var _gate_run_clock := 0.0
 var _stage := 0
 var _fight_phase := "charge"
 var _fight_target: Node3D = null
@@ -594,7 +622,7 @@ func tick(delta: float) -> bool:
 	# Every stage state, the gates included: a gate the bot cannot reach (seed 5 random put
 	# gate 1 behind a Spillway chute kerb) once ran a process forever, since only the
 	# Warden fight had a limit. stall_state says which state ran out.
-	if flow.in_stage() and game.run.stage_time > stage_limit:
+	if flow.in_stage() and game.run.stage_time > _stage_cap():
 		_note_set("stall_state", state)
 		_end("stalled")
 		return true
@@ -644,6 +672,20 @@ func tick(delta: float) -> bool:
 			source.hold = {}
 	_set_piece_hands()
 	return outcome != ""
+
+
+# The stall limit now. A sweep's own stage_limit is kept; the default one stretches for the
+# Mind's crown and for the gates after a break.
+func _stage_cap() -> float:
+	if stage_limit != STAGE_LIMIT:
+		return stage_limit
+	var cap := stage_limit
+	if game.run.stage == 6:
+		cap = PARK_MIND_LIMIT
+	var broken = _note.get("warden_broken_s")
+	if broken != null:
+		cap = maxf(stage_limit, float(broken) + GATE_LIMIT)
+	return cap
 
 
 # A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
@@ -2391,6 +2433,9 @@ func _on_offers(offers: Array) -> void:
 	_gate_pick = _choose_gate(offers)
 	_gate_time = 0.0
 	_gate_hop = 0.0
+	_gate_detour_left = 0.0
+	_gate_run = ""
+	_gate_run_clock = 0.0
 
 
 func _choose_gate(offers: Array) -> int:
@@ -2436,6 +2481,11 @@ func _to_gate(delta: float) -> void:
 	else:
 		_fight_climb.clear()
 		_fight_climb_clock = 0.0
+	if rel.length() < GATE_PROBE_NEAR:
+		target = _gate_round_props(ball_at, target, delta)
+	else:
+		_gate_detour_left = 0.0
+	target = _gate_runup(at, facing, rel, ball_at, target, delta)
 	# A gate still untaken after GATE_HOP_SECONDS has something on its line (a kerb, a
 	# bench): hop while rolling at it, as a player clears a low lip.
 	_gate_time += delta
@@ -2449,6 +2499,120 @@ func _to_gate(delta: float) -> void:
 			% [_gate_pick, at.x, at.y, at.z, facing.x, facing.y, facing.z, ball.x, ball.y, ball.z, along, side, rel.y,
 				game.ctx.terrain.height(ball.x, ball.z), target.x, target.y, target.z])
 	_act(target, null, delta)
+
+
+# The run-up for a gate up a face: "runup" drives to GATE_RUNUP_BACK metres down the gate's
+# line, "charge" rolls the line at speed; each phase gives up after its seconds and the other
+# takes over, so a stalled charge is a fresh run-up.
+func _gate_runup(at: Vector3, facing: Vector3, rel: Vector3, ball: Vector3, target: Vector3, delta: float) -> Vector3:
+	if _gate_time < GATE_RUNUP_AFTER or rel.y > -3.0:
+		_gate_run = ""
+		return target
+	var start := at - facing * GATE_RUNUP_BACK
+	start.y = ball.y
+	if _gate_run == "":
+		_gate_run = "runup"
+		_gate_run_clock = 0.0
+		_count("gate_runups")
+	_gate_run_clock += delta
+	if _gate_run == "runup" and (_flat(ball, start) < 8.0 or _gate_run_clock > GATE_RUNUP_SECONDS):
+		_gate_run = "charge"
+		_gate_run_clock = 0.0
+	elif _gate_run == "charge" and _gate_run_clock > GATE_CHARGE_SECONDS:
+		_gate_run = "runup"
+		_gate_run_clock = 0.0
+		_count("gate_runups")
+	_goal += " " + _gate_run
+	if _gate_run == "runup":
+		return start
+	return at + facing * 10.0
+
+
+# The static prop on the gate line, or an empty Dictionary. Ground is not a prop.
+func _gate_probe(from: Vector3, heading: Vector3, length: float) -> Dictionary:
+	var origin := from + Vector3.UP * 0.5
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + heading * length)
+	var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return {}
+	var node := hit["collider"] as Node
+	if "/Ground" in str(node.get_path()):
+		return {}
+	return hit
+
+
+# The prop's footprint on the ground plane: its parent's collision boxes when it is a small
+# device (a cache is four walls and a roof), else the body alone.
+func _prop_footprint(body: Node) -> Rect2:
+	var owner_node: Node = body.get_parent()
+	var shapes: Array = []
+	if owner_node != null and owner_node.get_child_count() <= 12:
+		for child in owner_node.get_children():
+			if child is CollisionObject3D:
+				shapes.append_array(child.find_children("*", "CollisionShape3D", false, false))
+	if shapes.is_empty():
+		shapes = body.find_children("*", "CollisionShape3D", false, false)
+	var box := Rect2()
+	var first := true
+	for cs in shapes:
+		var bs := (cs as CollisionShape3D).shape as BoxShape3D
+		if bs == null:
+			continue
+		for sx in [-0.5, 0.5]:
+			for sz in [-0.5, 0.5]:
+				var corner: Vector3 = (cs as CollisionShape3D).global_transform * Vector3(bs.size.x * sx, 0.0, bs.size.z * sz)
+				if first:
+					box = Rect2(Vector2(corner.x, corner.z), Vector2.ZERO)
+					first = false
+				else:
+					box = box.expand(Vector2(corner.x, corner.z))
+	return box
+
+
+# Returns where to steer for the gate: the target, or a way round a prop on the line: the
+# corner of its footprint (GATE_MARGIN off the walls) the ball sees and that makes the
+# shortest trip to the target, else the nearest clear heading.
+func _gate_round_props(ball: Vector3, target: Vector3, delta: float) -> Vector3:
+	_gate_detour_left -= delta
+	if _gate_detour_left > 0.0 and _flat(ball, _gate_detour) > 3.0:
+		return _gate_detour
+	var line := target - ball
+	line.y = 0.0
+	if line.length() < 1.0:
+		return target
+	var reach := minf(line.length(), GATE_PROBE)
+	line = line.normalized()
+	var hit := _gate_probe(ball, line, reach)
+	if hit.is_empty():
+		return target
+	var box := _prop_footprint(hit["collider"]).grow(GATE_MARGIN)
+	var best_cost := INF
+	var best := Vector3.ZERO
+	if box.has_area():
+		for corner in [box.position, box.position + Vector2(box.size.x, 0.0), box.position + Vector2(0.0, box.size.y), box.end]:
+			var at := Vector3(corner.x, ball.y, corner.y)
+			var way := at - ball
+			way.y = 0.0
+			if way.length() < 1.0 or not _gate_probe(ball, way.normalized(), way.length()).is_empty():
+				continue
+			var cost := way.length() + _flat(at, target)
+			if cost < best_cost:
+				best_cost = cost
+				best = at
+	if best_cost < INF:
+		_gate_detour = best
+		_gate_detour_left = GATE_DETOUR_SECONDS
+		_count("gate_detours")
+		return best
+	for step in range(1, 7):
+		for side in [1.0, -1.0]:
+			var heading := line.rotated(Vector3.UP, deg_to_rad(GATE_TURN * step * side))
+			if _gate_probe(ball, heading, GATE_PROBE).is_empty():
+				_gate_detour = ball + heading * GATE_PROBE
+				_gate_detour_left = 1.0
+				_count("gate_detours")
+				return _gate_detour
+	return target
 
 
 # --- acting: telegraphs first, then the class kit, then the stick --------------------
