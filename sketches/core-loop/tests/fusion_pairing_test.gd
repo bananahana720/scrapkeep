@@ -13,12 +13,18 @@ extends SceneTree
 # 5. an elite dummy takes no control effect and at most 10% of the normal dummy's sustained
 #    damage; the immunity text on the codex card equals the data row;
 # 6. every defence bar class reads its multiplier from LAYER_MULT (150 / 100 / 75 shape) and
-#    defence_bars.gd carries no private multiplier.
+#    defence_bars.gd carries no private multiplier;
+# 7. review round 1: a fusion strike procs no item; the cards name no order and repeat no
+#    element card's opening; each fusion draws in the mix of its own elements' colours; and
+#    the director carries the elite flag to every member of its elite pack.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Elements := preload("res://src/build/elements.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
+const Triggers := preload("res://src/build/triggers.gd")
+const Director := preload("res://src/world/director.gd")
+const ElementField := preload("res://src/build/element_field.gd")
 const T := preload("res://tests/support/t.gd")
 
 const BIG := 1.0e9
@@ -28,7 +34,7 @@ const ELITE_SHARE_MAX := 0.10
 # How far a probe sits inside or outside the committed ring.
 const EDGE := 0.4
 const SPACING := 26.0
-const EXPECTED_CHECKS := 62
+const EXPECTED_CHECKS := 70
 
 var _t := T.new("fusion_pairing_test")
 var _game
@@ -63,6 +69,7 @@ func _physics_process(_delta: float) -> bool:
 		_field = _game.build.field
 		_table_checks()
 		_layer_checks()
+		_review_checks()
 		if not _field.has_signal("fused") or not _field.has_method("status_of"):
 			_t.check("the field fuses statuses", false, "no fused signal or status_of on element_field.gd")
 			_t.eq("every check ran", _t.checks + 1, EXPECTED_CHECKS)
@@ -114,6 +121,43 @@ func _table_checks() -> void:
 	for key in fusions:
 		kinds[String(fusions[key].get("kind", ""))] = true
 	_t.check("the rows cover a control, a burst and a sustained fusion", kinds.has("control") and kinds.has("burst") and kinds.has("sustained"), "%s" % [kinds.keys()])
+
+
+func _review_checks() -> void:
+	_t.check("a fusion strike procs no item (an explicit 0.0 row, like synergy)",
+		Triggers.STRIKE_PROC.has(Elements.FUSION_STRIKE) and Triggers.strike_proc(Elements.FUSION_STRIKE) == 0.0, "")
+	var fusions: Dictionary = _consts().get("FUSIONS", {})
+	var openings := []
+	for row_key in Elements.ROWS:
+		openings.append(" ".join(String(Elements.ROWS[row_key]["found"]).split(" ").slice(0, 3)))
+	var worded := true
+	var colours := []
+	for key in fusions:
+		var found := String(fusions[key]["found"])
+		if found.contains(" then ") or found.contains(", then") or " ".join(found.split(" ").slice(0, 3)) in openings:
+			worded = false
+		var colour: Color = ElementField.fusion_colour(key)
+		var pair: PackedStringArray = String(key).split("+")
+		if not colour.is_equal_approx(ElementField.ELEMENT_COLOURS[pair[0]].lerp(ElementField.ELEMENT_COLOURS[pair[1]], 0.5)):
+			colours.append(null)
+		colours.append(colour)
+	_t.check("no fusion card names an order or repeats an element card's opening", worded, "%s" % [openings])
+	_t.check("each fusion's colour is its own elements' mix, and no two match", not colours.has(null)
+		and colours.size() == 3 and not colours[0].is_equal_approx(colours[1]) and not colours[1].is_equal_approx(colours[2])
+		and not colours[0].is_equal_approx(colours[2]), "%s" % [colours])
+	var d := Director.new(71)
+	d.set_run_tier_reader(func(): return 0)
+	d._place_pack(Vector2(30.0, 0.0), ["chaser", "chaser"], Vector2.ZERO, true)
+	d._place_pack(Vector2(-30.0, 0.0), ["chaser"], Vector2.ZERO, false)
+	var marks := []
+	for arrival in d.arrivals:
+		marks.append(arrival.get("elite", false))
+	var delivered := []
+	for step in 40:
+		for spawn in d.advance(0.5, 0):
+			delivered.append(spawn.get("elite", false))
+	_t.eq("every elite-pack arrival carries the elite flag, and no other", marks, [true, true, false])
+	_t.check("the director hands the flag on with each elite spawn", delivered.count(true) == 2 and delivered.count(false) >= 1, "%s" % [delivered])
 
 
 func _layer_checks() -> void:
@@ -211,6 +255,8 @@ func _watch_frame() -> bool:
 			continue
 		var preview = result.get("preview")
 		var drawn: bool = is_instance_valid(preview) and preview.is_visible_in_tree()
+		if drawn and not c.has("drawn_colour"):
+			c["drawn_colour"] = preview.material_override.albedo_color
 		if drawn and c["preview_from"] < 0:
 			c["preview_from"] = _frames
 			var gs: Vector3 = preview.global_basis.get_scale()
@@ -269,6 +315,9 @@ func _finish() -> void:
 			a.has("drawn_radius") and absf(float(a["drawn_radius"]) - float(ra.get("radius", 0.0))) < TOL and a["drawn_round"]
 				and Vector2(a["drawn_at"].x - ra["at"].x, a["drawn_at"].z - ra["at"].z).length() < TOL,
 			"drawn %s committed %s" % [a.get("drawn_radius"), ra.get("radius")])
+		var want: Color = ElementField.fusion_colour(key)
+		_t.check("%s: the drawn ring wears the fusion's colour" % key, a.has("drawn_colour")
+			and Color(a["drawn_colour"].r, a["drawn_colour"].g, a["drawn_colour"].b).is_equal_approx(want), "%s" % [a.get("drawn_colour")])
 		_t.check("%s: a probe just inside the ring is hit" % key, float(a["inside"].hp) < float(a["hp_inside"]) - TOL, "")
 		_t.eq("%s: a probe just outside the ring is untouched" % key, float(a["outside"].hp), float(a["hp_outside"]))
 		# 4: resolved once.
@@ -309,7 +358,7 @@ func _brief(r: Dictionary) -> String:
 func _dummy(offset: Vector3, elite := false) -> Node3D:
 	var e := _dummy_at(_game.player.ball_position() + offset)
 	if elite:
-		e.set_meta("elite_affix", "test")
+		e.set_meta("elite_pack", true)
 	return e
 
 

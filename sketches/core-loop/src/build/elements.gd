@@ -61,14 +61,14 @@ const BOSS_KINDS := ["miniboss", "warden", "vault"]
 
 const FUSIONS := {
 	"arc+frost": {"behaviour": "lock", "kind": "control", "radius": 4.0, "seconds": 2.0, "damage": 10.0,
-		"found": "Arc through frost locks everything near it in place.",
+		"found": "Arc meets frost: everything near locks in place.",
 		"immunity": "Elites and bosses never lock."},
 	"arc+kinetic": {"behaviour": "overload", "kind": "burst", "radius": 5.0, "seconds": 0.0, "damage": 30.0,
-		"found": "Arc, then a heavy hit: the charge overloads in a burst.",
+		"found": "Arc meets a heavy hit: the charge overloads in a burst.",
 		"immunity": "Elites and bosses take the full burst."},
 	"frost+kinetic": {"behaviour": "grind", "kind": "sustained", "radius": 4.5, "seconds": 3.0, "interval": 0.5,
 		"damage": 6.0, "elite_share": 0.1,
-		"found": "Frost, then a heavy hit: the chill grinds everything near it.",
+		"found": "Frost meets a heavy hit: the chill grinds everything near.",
 		"immunity": "Elites and bosses take a tenth of the grind."},
 }
 
@@ -104,8 +104,8 @@ static func card_text(row: Dictionary) -> String:
 	return "%s %s" % [row.get("found", ""), row.get("immunity", "")]
 
 
-# Elites (an elite affix) and bosses take no control effect and only elite_share of a
-# sustained one.
+# Elites (any member of the director's elite pack, or an elite affix) and bosses take no
+# control effect and only elite_share of a sustained one.
 static func elite_rules(kind: String, elite: bool) -> bool:
 	return elite or kind in BOSS_KINDS or kind.begins_with("brindle")
 

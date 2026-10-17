@@ -20,6 +20,8 @@ signal fused(result: Dictionary)
 
 const ICE := Color("c8f0ff")
 const FROST := Color("e9f8ff")
+# What each element draws in: the arc ring, frost puffs and the slam's copper.
+const ELEMENT_COLOURS := {"arc": Palette.ARC, "frost": FROST, "kinetic": Palette.COPPER}
 # An element reaches a surface this far below the point it was applied at, so a dash
 # a few metres over the flood still freezes it.
 const REACH := 4.5
@@ -397,7 +399,8 @@ func _commit_fusion(row: Dictionary, key: String, enemy: Node3D) -> Dictionary:
 	var preview := MeshInstance3D.new()
 	preview.name = "FusionPreview"
 	preview.mesh = _preview_ring()
-	preview.material_override = Palette.unshaded(Color(Palette.ARC.r, Palette.ARC.g, Palette.ARC.b, 0.7))
+	var colour := fusion_colour(key)
+	preview.material_override = Palette.unshaded(Color(colour.r, colour.g, colour.b, 0.7))
 	add_child(preview)
 	preview.global_position = at + Vector3.UP * 0.1
 	preview.scale = Vector3(row["radius"], 1.0, row["radius"])
@@ -407,7 +410,7 @@ func _commit_fusion(row: Dictionary, key: String, enemy: Node3D) -> Dictionary:
 		"interval": float(row.get("interval", 0.0)), "elite_share": float(row.get("elite_share", 1.0)),
 		"commit_frame": Engine.get_physics_frames(),
 		"land_frame": Engine.get_physics_frames() + Elements.FUSION_LEAD_FRAMES,
-		"preview": preview, "landed": false, "left": 0.0, "beat": 0.0,
+		"preview": preview, "colour": colour, "landed": false, "left": 0.0, "beat": 0.0,
 	}
 	_fusions.append(result)
 	fused.emit(result)
@@ -426,7 +429,14 @@ func _in_area(fusion: Dictionary) -> Array:
 
 
 static func _elite(enemy: Node3D) -> bool:
-	return Elements.elite_rules(String(enemy.get("kind")) if "kind" in enemy else "", enemy.has_meta("elite_affix"))
+	return Elements.elite_rules(String(enemy.get("kind")) if "kind" in enemy else "",
+		enemy.has_meta("elite_pack") or enemy.has_meta("elite_affix"))
+
+
+# A fusion wears an even mix of its two elements' colours.
+static func fusion_colour(key: String) -> Color:
+	var pair := key.split("+")
+	return ELEMENT_COLOURS[pair[0]].lerp(ELEMENT_COLOURS[pair[1]], 0.5)
 
 
 func _fusion_strike(enemy: Node3D, damage: float) -> void:
@@ -437,7 +447,7 @@ func _fusion_strike(enemy: Node3D, damage: float) -> void:
 func _land(fusion: Dictionary) -> void:
 	fusion["landed"] = true
 	fusion["left"] = fusion["seconds"]
-	flash_ring(fusion["at"], fusion["radius"], Palette.ARC)
+	flash_ring(fusion["at"], fusion["radius"], fusion["colour"])
 	for enemy in _in_area(fusion):
 		match fusion["behaviour"]:
 			"lock":
