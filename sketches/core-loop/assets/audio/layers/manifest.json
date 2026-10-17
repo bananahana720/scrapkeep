@@ -42,5 +42,16 @@
   "seconds": 3.72,
   "lufs": -16.0,
   "true_peak": -1.2
+ },
+ "music_layer_mind_quote_spillway": {
+  "pack": "spillway",
+  "clip": "travel",
+  "bars": [
+   1,
+   3
+  ],
+  "seconds": 2.79,
+  "lufs": -16.0,
+  "true_peak": -2.66
  }
 }

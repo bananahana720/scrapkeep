@@ -329,6 +329,11 @@ acb514797835f621f9837ddc420bc1724976188751a191f3ce50d812059b4727  variant-src/r7
 e67e6e0a372aca18b339cf539d641156029d188852e147f05008b5187c134f98  variant-src/hype-129-up1.wav
 ```
 
+## Cue sheet notes, 2026-10-17
+
+- **The Mind's first quote, in the Spillway** (Andrew, Q9 "A musical quote"). `music_layer_mind_quote_spillway` is two bars of the Spillway pack's travel clip (bars 1 to 3) with the Mind's line on its sine chime on top: theme K bars 1 and 2 in D Dorian, inverted around its first note, last note a semitone flat (D B G E C | D E F G A Bb), swung, the band's melody stem at 0.45 under it. Made by `tools/ace/mind_quote.py`, -16 LUFS, true peak -2.7 dBTP. It is the first time the player hears the Mind, a world before they meet it. Ear check: Andrew. Where it fires is the Spillway's choice (a landmark or the Warden approach, once per run); it sits in SfxBank as a file sound.
+- **A hit on the beat** (Andrew, Q10 "Sound only"). `hit_on_beat` is a brighter `hit_thwack` under a two-note sax stab (A5, D6) that follows the live key. No damage change. The Player effects thread wires the trigger and the bigger comic word.
+
 ## Reproduce
 
 ```bash
