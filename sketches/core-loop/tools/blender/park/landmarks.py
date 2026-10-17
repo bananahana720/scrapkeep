@@ -603,6 +603,12 @@ def build_dam():
         x0, x1 = sorted((sx * DAM_TOWER[0], sx * DAM_TOWER[1]))
         box(fe, (x0, DAM_PLATEAU, DAM_TOWER_Z[0]), (x1, DAM_TOP, DAM_TOWER_Z[1]), col("concrete"))
     box(far["steel"], (-DAM_TOWER[0], 138.0, gz - 1.5), (DAM_TOWER[0], DAM_TOP, gz + 1.5), col("iron"))
+    for sx in (-1, 1):
+        beam(far["steel"], (sx * 22.0, 76.0, fz + 0.3), DAM_JIB_TIP, 2.0, 2.0, col("iron"))
+        beam(far["steel"], (sx * 22.0, 52.0, fz + 0.3), DAM_JIB_TIP, 2.0, 2.0, col("iron"))
+    for x0, x1 in ((-11.4, -0.6), (0.6, 11.4)):
+        fe.poly([(x0, 37.3, fz + 0.18), (x1, 37.3, fz + 0.18), (x1, DAM_RAMP_TOP, fz + 0.18), (x0, DAM_RAMP_TOP, fz + 0.18)],
+                col("mist"), up=(0.0, 0.0, 1.0))
     for k in range(8):
         a0, a1 = TAU * k / 8, TAU * (k + 1) / 8
         ring = lambda r, a: (ax + r * math.sin(a), ay + r * math.cos(a), az + dep / 2)
