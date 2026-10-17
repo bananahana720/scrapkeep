@@ -582,7 +582,8 @@ func _spin_toggle(id: String) -> void:
 
 func _refresh_jukebox() -> void:
 	var audio = _audio()
-	_jukebox.refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2)
+	var sitting: bool = game.tuning != null and game.tuning.sitting()
+	_jukebox.refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2, sitting)
 
 
 func _audio():

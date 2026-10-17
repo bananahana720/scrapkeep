@@ -2362,8 +2362,13 @@ func activity_cue(activity_id: String, phase: String) -> void:
 func jukebox_flipped() -> void:
 	if _moments.any(func(m): return m.kind == "jukebox"):
 		end_moment("jukebox")
-	else:
+	elif not TuneRows.shut("secret-after-hours", ctx.profile, _sitting()):
 		begin_moment("jukebox", "bay_jukebox", "secret-after-hours")
+
+
+func _sitting() -> bool:
+	var tuning = ctx.get("tuning")
+	return tuning != null and tuning.sitting()
 
 
 # A roll through a stocked fabricator hoop (build.gd world_fact "fabricator_used"): one pass of
