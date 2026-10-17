@@ -159,6 +159,17 @@ export function judgeCommand(step, { exit, output, error }) {
   return { status: "pass", note: "exit 0" };
 }
 
+// The placeholder gate's --json list, counted by kind, reads better than the list's last lines.
+export function placeholderKinds(output) {
+  try {
+    const counts = {};
+    for (const { kind } of JSON.parse(output.slice(output.indexOf("[")))) counts[kind] = (counts[kind] ?? 0) + 1;
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([kind, n]) => `${kind} ${n}`).join("\n");
+  } catch {
+    return tail(output);
+  }
+}
+
 export function judgeTree(git) {
   if (!git.head) return { status: "not run", note: "no git HEAD" };
   if (!git.clean) return { status: "fail", note: `dirty tree: ${git.dirty.slice(0, 5).join(", ")}${git.dirty.length > 5 ? ", ..." : ""}` };
@@ -352,7 +363,7 @@ export async function runAlphaRc(args, { git = gitState(), recheck = gitState, r
         result = { ...base, ...judgeCommand(step, ran), ms: Date.now() - started, output: ran.output };
       }
       if (outDir && result.output != null) writeFileSync(path.join(outDir, `${step.id}.log`), result.output);
-      if (result.status === "fail" && result.output) result.tail = tail(result.output);
+      if (result.status === "fail" && result.output) result.tail = step.id === "placeholders" ? placeholderKinds(result.output) : tail(result.output);
       delete result.output;
     }
     log(`alpha:rc ${MARK[result.status]} ${step.label}: ${cell(result.note)}`);

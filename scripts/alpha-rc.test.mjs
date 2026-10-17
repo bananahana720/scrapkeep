@@ -17,6 +17,7 @@ import {
   judgeTree,
   launchAppImage,
   launchEnv,
+  placeholderKinds,
   parseArgs,
   runAlphaRc,
   runProcess,
@@ -272,4 +273,9 @@ test("verdict order: any fail beats not run; a note with a newline stays one tab
   const launch = async () => ({ status: "fail", note: "line one\nline two", ms: 1, output: "" });
   const { page } = await runAlphaRc(parseArgs(flags), { ...allPass, run, launch });
   assert.match(page, /\| line one line two \|/);
+});
+
+test("placeholder failures list counts by kind", () => {
+  assert.equal(placeholderKinds('[{"kind":"park"},{"kind":"icon"},{"kind":"park"}]'), "park 2\nicon 1");
+  assert.equal(placeholderKinds("not json"), "not json");
 });
