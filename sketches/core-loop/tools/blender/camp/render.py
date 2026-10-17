@@ -231,13 +231,16 @@ def build_layout(models):
         put("cottonwood_detail1.glb", (x, 0, z), math.radians(x + z), 1.0, MODELS)
     put("camp_trial_track.glb", L.TRIAL_AT)
     put("camp_sandbox_yard.glb", L.SANDBOX_AT, math.radians(90))
-    dress = m / "layout_dressing.txt"
-    if dress.exists():
-        for line in dress.read_text().splitlines():
-            if not line.strip() or line.startswith("#"):
-                continue
-            name, x, y, z, yaw = line.split()
-            put(name, (float(x), float(y), float(z)), math.radians(float(yaw)))
+    put("camp_trial_arch.glb", (L.TRIAL_AT[0] - 16.0, 0.08, L.TRIAL_AT[2] + 8.0))
+    sp = L.SANDBOX_AT
+    put("camp_call_box.glb", (sp[0] + 17.6, 0, sp[2] - 6.0), math.radians(90))
+    pos, yaw = L.station("pet")
+    put("camp_pet.glb", (pos[0] * 0.95, 0, pos[2] * 0.95), yaw + 0.6)
+    for k, toy in enumerate(("camp_toy_ball.glb", "camp_toy_wrench.glb", "camp_toy_tire.glb")):
+        put(toy, (pos[0] * 0.9 + 2.5 * math.cos(k * 2.1), 0.3, pos[2] * 0.9 + 2.5 * math.sin(k * 2.1)), k * 1.3)
+    for stem, bearing, r, dyaw in L.DRESSING:
+        x, y, z = L.at(bearing, r)
+        put(stem + ".glb", (x, y, z), L.yaw_to_centre(x, z) + math.radians(dyaw))
 
 
 def layout_shots(o):
