@@ -606,7 +606,7 @@ func set_parameter_source(source: Callable) -> void:
 func _sample_parameters() -> void:
 	var raw: Dictionary = parameter_source.call()
 	parameters = {}
-	for id in ["threat", "approach", "armour"]:
+	for id in ["threat", "approach", "armour", "speed", "chain"]:
 		if not raw.has(id):
 			continue
 		var value := float(raw[id])

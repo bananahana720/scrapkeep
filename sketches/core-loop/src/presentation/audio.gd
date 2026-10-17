@@ -235,6 +235,10 @@ var sound_ready := false
 var _pitch_rng := RandomNumberGenerator.new()
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
+# The process frame of the last play_stream call, so a test can count frames from event to play().
+var last_play_frame := -1
+# The pitch the log shows for a tiered cue (the caller's ladder rung); -1 logs the played pitch.
+var _logged_pitch := -1.0
 var chirp_log: Array = []
 var _chirp_last := {}
 var volumes := {"Music": 0.8, "SFX": 1.0, "UI": 1.0}
@@ -387,6 +391,10 @@ static func _sound_ids() -> Array:
 	for id in SfxBank.TRIM_DB:
 		if not id in ids:
 			ids.append(id)
+	# The event-set files, tier files included (a tier plays by rung, so it must be baked).
+	for id in SfxBank.EVENT_CUES:
+		if not id in ids:
+			ids.append(id)
 	for midi in SfxBank.break_midis(POSTURE_PHRASE):
 		ids.append(SfxBank.cause_note_id(midi))
 	for cause in EventKinds.CAUSE_ROWS:
@@ -407,7 +415,10 @@ func _start_bake() -> void:
 	if _baked or _bake_task >= 0:
 		return
 	_bake_done = false
-	_bake_task = WorkerThreadPool.add_task(_bake_everything.bind(_sound_ids()), false, "presentation audio bake")
+	# The startup jobs here and below are high priority on purpose: a low-priority one
+	# queues behind the bake on a small pool (the pool reserves a few low-priority threads,
+	# one on 2 to 4), and a process that quits with it still queued never exits.
+	_bake_task = WorkerThreadPool.add_task(_bake_everything.bind(_sound_ids()), true, "presentation audio bake")
 
 
 static func _poll_bake() -> bool:
@@ -424,7 +435,7 @@ func _start_ace_load() -> void:
 	if ace_manifest == "" or _ace_task >= 0 or _ace_loaded != null or ace != null or _ace_failed or not ace_wanted():
 		return
 	_ace_loaded_from = ace_manifest
-	_ace_task = WorkerThreadPool.add_task(_load_ace, false, "presentation ACE stems")
+	_ace_task = WorkerThreadPool.add_task(_load_ace, true, "presentation ACE stems")
 
 
 func _load_ace() -> void:
@@ -508,7 +519,7 @@ func _on_ready() -> void:
 	if live_output and _opening_task < 0:
 		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
 	if _rest_task < 0 and live_output:
-		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, false, "presentation band bake")
+		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, true, "presentation band bake")
 	_virtual_usec = _transport_usec()
 	if not live_output:
 		return
@@ -1213,9 +1224,18 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
 	if not _admit(kind, sound, pitch):
 		return false
+	# A tiered key plays its tier's file, picked by the rung the caller sent as its pitch,
+	# before the live key moves that pitch.
+	# The cue log keeps the pitch the caller asked for, so the ladder stays readable there.
+	var tier := SfxBank.resolve(sound, pitch)
+	var asked := pitch
+	pitch = float(tier["pitch"])
 	if sound in KEYED_SOUNDS or sound in KEST_SOUNDS:
 		pitch *= Harmony.ratio(live_key())
-	_start(kind, sound, SfxBank.stream(sound), SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)] + db, pitch, bus)
+		asked *= Harmony.ratio(live_key())
+	_logged_pitch = asked if tier["id"] != sound else -1.0
+	_start(kind, sound, SfxBank.stream(tier["id"]), SfxBank.trim_db(tier["id"]) + PRIORITY_DB[Rows.priority(kind)] + db, pitch, bus)
+	_logged_pitch = -1.0
 	if Rows.priority(kind) >= 2:
 		_duck(0.55, 0.35)
 	if sound in DANGER_SOUNDS:
@@ -1294,7 +1314,8 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
 		_voices[sound] = live
-	cue_log.append([kind, sound, "now", engine.clock, pitch, volume])
+	last_play_frame = Engine.get_process_frames()
+	cue_log.append([kind, sound, "now", engine.clock, pitch if _logged_pitch < 0.0 else _logged_pitch, volume])
 
 
 # Cuts every voice of a sound on the SFX bus at once: a ceremony skipped mid-build drops
@@ -2615,6 +2636,10 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
 	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
+	# Each link past the first adds its tier's stab (INTEGRATION section 3), five rungs.
+	if rung >= 1:
+		var tiers: Array = SfxBank.TIER_CUES["kill_chain_tier"]
+		play("enemy_killed", 0.0, 1.0, "SFX", tiers[mini(rung, tiers.size()) - 1])
 
 
 func _on_died() -> void:
@@ -3088,6 +3113,10 @@ func sample_run_parameters() -> Dictionary:
 	var forward: Vector3 = ctx.aim_forward()
 	var enemies: Array = get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []
 	var values := {"threat": run_threat(at, forward, enemies, parameter_threat_weights, parameter_threat_range)}
+	# The momentum faders: rolling speed as a fraction of top speed drives the drums, and
+	# the chain length ((links - 1) / 3: a third at 2, full at 4) opens the lead stem.
+	values["speed"] = ctx.player.speed_fraction()
+	values["chain"] = chain_fader(int(ctx.player.chain.combo) if ctx.player.get("chain") != null else 0)
 	var map_id: String = ctx.flow.stage_def().get("map", "")
 	if map_id != _parameter_map:
 		_parameter_map = map_id
@@ -3108,6 +3137,10 @@ func sample_run_parameters() -> Dictionary:
 		_parameter_armour_peak = maxf(_parameter_armour_peak, ctx.run.mass)
 		values["armour"] = ctx.run.mass / _parameter_armour_peak
 	return values
+
+
+static func chain_fader(links: int) -> float:
+	return clampf(float(links - 1) / 3.0, 0.0, 1.0)
 
 
 static func run_threat(at: Vector3, forward: Vector3, enemies: Array, weights := Vector2(0.8, 0.2), radius := 48.0) -> float:
