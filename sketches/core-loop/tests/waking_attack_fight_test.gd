@@ -11,9 +11,9 @@ const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The Waking's own attacks in world two's arena, on the real rigid ball.
-#   bank   the ball is set rolling round the rim bank at 28 m/s and must carve it (the ball's
-#          own carving flag). A ring laid over the whole bank goes live on it and lands
-#          nothing: the Dig floor rule spares a carving ball.
+#   bank   the ball is set rolling round the rim bank at 28 m/s and must carve it (waking.gd
+#          carving_now). A ring laid over the whole bank goes live on it and lands nothing:
+#          the Dig floor rule spares a carving ball.
 #   floor  the same ring over a ball parked on the floor lands once, for its family's damage.
 #   fight  the Waking's own clock: the ball waits on each floor until that floor's new family
 #          is telegraphed (burrow on the Spoil, cave-in on the Seam, bore on Bedrock), and on
@@ -72,7 +72,7 @@ func _walk() -> void:
 	var carved := 0
 	for i in 30:
 		await physics_frame
-		carved += 1 if player.state.carving else 0
+		carved += 1 if mod.carving_now() else 0
 	var ring := _ring(mod, "burrow", center, Vector2(Waking.BANK_IN - 1.0, Waking.PAD_RADIUS), 8.0)
 	var live_frames := 0
 	var live_carving := 0
@@ -80,7 +80,7 @@ func _walk() -> void:
 		await physics_frame
 		if ring["hazards"][0].is_live():
 			live_frames += 1
-			live_carving += 1 if player.state.carving else 0
+			live_carving += 1 if mod.carving_now() else 0
 	var r: float = Vector2(player.ball_position().x - center.x, player.ball_position().z - center.z).length()
 	print("bank: carving %d/30 settle, %d/%d live; speed %.1f, r %.1f" % [carved, live_carving, live_frames, player.body().linear_velocity.length(), r])
 	_t.check("the ball carves the bank while the ring is live", live_frames > 0 and live_carving >= live_frames * 0.8,

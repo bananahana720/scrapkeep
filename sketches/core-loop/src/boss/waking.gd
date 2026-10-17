@@ -8,6 +8,7 @@ const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd"
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The Waking's module: the stub's posture Warden, fought floor by floor. Three floors stand
 # stacked above the stub's pad, which is the pit; each shattered chunk telegraphs the highest
@@ -261,6 +262,7 @@ func _step_attacks(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var state = ctx.player.state
 	var on_floor := FloorRule.on_floor(state)
+	var carving := carving_now()
 	var kept: Array = []
 	for attack in attacks:
 		var waiting := false
@@ -272,11 +274,11 @@ func _step_attacks(delta: float) -> void:
 				continue
 			h.step(delta)
 			if h.is_live() and h.contains(ball):
-				if on_floor and not state.carving and not attack["landed"]:
+				if on_floor and not carving and not attack["landed"]:
 					attack["landed"] = true
 					landings.append({"id": h.attack_id, "frame": Engine.get_physics_frames()})
 					ctx.run.damage(float(WakingAttacks.DAMAGE[attack["family"]]), "waking_%s" % attack["family"])
-				elif state.carving:
+				elif carving:
 					_bank_ride(attack["family"], ball)
 			if h.is_live() and attack["family"] == "bore" and h.attack_id.begins_with("waking_bore_0"):
 				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + BORE_JAM
@@ -296,8 +298,18 @@ func _bank_ride(family: String, at: Vector3) -> void:
 
 
 func _read_ball() -> void:
-	if ctx.player.state.carving:
+	if carving_now():
 		_carved_at = clock
+
+
+# The ball's own carving flag once wall grip (PR #61) lands. Until then, the same reading
+# from what the ball already reports: grounded at the fast tier on a face steeper than the
+# floor rule's floor, which on this arena is only the rim bank.
+func carving_now() -> bool:
+	var state = ctx.player.state
+	if "carving" in state:
+		return bool(state.carving)
+	return state.grounded and state.tier >= SpeedTier.FAST and not FloorRule.on_floor(state)
 
 
 func jammed() -> bool:
