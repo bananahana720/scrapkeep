@@ -32,6 +32,7 @@ var _torch
 var _source := Intent.Scripted.new()
 var _fired: Array = []
 var _deflected: Array = []
+var _heat: Array = []
 
 
 func _initialize() -> void:
@@ -88,6 +89,9 @@ func _run() -> void:
 	_rack = _combat.get("actives")
 	var ev = _game.events
 	ev.active_fired.connect(func(id: String, _at: Vector3, count: int): _fired.append([id, count]))
+	ev.active_heat.connect(func(id: String, _at: Vector3, fraction: float):
+		if id == ID:
+			_heat.append(fraction))
 	ev.strike_deflected.connect(func(_e: Node3D, kind: String, _punch: float, _plating: float):
 		if kind == Torch.KIND:
 			_deflected.append(kind))
@@ -148,6 +152,11 @@ func _run() -> void:
 		plated_lost >= front_lost * 0.5, "bare %.1f plated %.1f" % [front_lost, plated_lost])
 	_t.check("14 the burn ends and the lane clears", _torch.beam_left <= 0.0 and _torch.lanes.is_empty() and _layer().is_empty())
 	_t.eq("14b a 119 plate outlasts one burn's heat untouched", heavy.hp, 9999.0)
+	var climbing := _heat.size() >= 3
+	for i in range(1, _heat.size()):
+		climbing = climbing and _heat[i] > 0.0 and _heat[i] <= 1.0
+	_t.check("14b2 but its heat shows while it builds: glow-and-sizzle steps that climb", climbing and _heat.max() >= 0.75
+		and SfxBank.has_recipe("active_cutting_torch_heat") and SfxBank.samples("active_cutting_torch_heat").size() > 0, str(_heat))
 	_rack.charges = 1
 	await _press()
 	await _sim(0.35 + Torch.BEAM_SECONDS + 0.2)

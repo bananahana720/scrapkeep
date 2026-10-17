@@ -118,7 +118,7 @@ const TRIM_DB := {
 	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0, "verb_fail_active": -18.0,
 	# The actives' launches (src/combat/actives), one per active: "active_" + its id.
 	"active_scrap_rocket": -8.0,
-	"active_cutting_torch": -10.0,
+	"active_cutting_torch": -10.0, "active_cutting_torch_heat": -14.0,
 	# Each pilot's line-skill and set-piece cues, one marked block per pilot (SKILL-BAR section 12,
 	# item 4); a row here needs its recipe in _bake.
 	# --- P-C Sable sounds ---
@@ -352,6 +352,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_noise(0.05, 3200.0, 1400.0, 60.0, 0.001), 0, 0.9], [_tone(0.07, 200.0, 90.0, "sine", 40.0), 0, 0.7],
 				[_tone(1.6, _hz(38), _hz(38), "saw_dark", 1.4), Synth.seconds(0.04), 0.6], [_tone(1.6, _hz(45), _hz(45), "square_dark", 1.6), Synth.seconds(0.04), 0.25],
 				[_noise(1.6, 2800.0, 2200.0, 1.2, 0.03), Synth.seconds(0.04), 0.3]])
+		# Hot metal spitting under the flame: a short sizzle; audio climbs it with the heat.
+		"active_cutting_torch_heat":
+			return _mix([[_noise(0.14, 3400.0, 5200.0, 18.0, 0.004), 0, 1.0], [_noise(0.08, 1800.0, 2600.0, 30.0), Synth.seconds(0.02), 0.4]])
 		"verb_fail_ultimate":
 			return _mix([[_fm(0.16, _hz(62), 1.5, 2.5, 20.0, -2.0), 0, 1.0], [_tone(0.06, 180.0, 150.0, "sine", 30.0), Synth.seconds(0.05), 0.6]])
 		"grapple_release":

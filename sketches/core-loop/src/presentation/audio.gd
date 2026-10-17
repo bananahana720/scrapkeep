@@ -1091,6 +1091,7 @@ func _connect_all(events) -> void:
 	events.shot_fired.connect(_on_shot)
 	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
 	events.active_fired.connect(_on_active_fired)
+	events.active_heat.connect(_on_active_heat)
 	events.reward_offered.connect(_on_offered)
 	events.reward_chosen.connect(func(_part: String): play("reward_chosen"))
 	events.event_announced.connect(_on_event_announced)
@@ -2368,6 +2369,14 @@ func _integrity(enemy: Node3D) -> float:
 func _on_active_fired(active_id: String, _at: Vector3, _count: int) -> void:
 	var sound := "active_" + active_id
 	play("active_fired", 0.0, 1.0, "SFX", sound if SfxBank.has_recipe(sound) else "")
+
+
+# An active's heat building on a machine ("active_" + id + "_heat"): it climbs an octave and
+# swells as the heat nears the strike, so a long first burn is heard working.
+func _on_active_heat(active_id: String, _at: Vector3, fraction: float) -> void:
+	var sound := "active_%s_heat" % active_id
+	if SfxBank.has_recipe(sound):
+		play("active_fired", lerpf(-8.0, 0.0, fraction), Harmony.ratio(lerpf(0.0, 12.0, fraction)), "SFX", sound)
 
 
 func _on_shot(weapon_id: String, _from: Vector3, _to: Vector3) -> void:

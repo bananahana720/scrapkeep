@@ -16,7 +16,9 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 # same on any plate. A machine keeps its heat between burns until the stage clears, so a plate
 # heavier than one burn delivers (a stage-3 miniboss, a last vault) is cut by the next burn, never
 # shrugged off. That suits the Dig, the Plate world. A posture fighter (a Warden, a boss) is cut
-# on the plain cadence and keeps its own rules. A press during a live burn ends it and winds up
+# on the plain cadence and keeps its own rules. While a plate's heat builds, a ring tightens onto
+# the machine and warms from rust to the flame's colour in HEAT_STEPS, each with a sizzle
+# (active_heat) that climbs with it, so a first burn on a heavy plate is seen and heard working. A press during a live burn ends it and winds up
 # the next; the heat carries over.
 #
 # It stacks into a strong build: weapon damage mods and punch raise the burn, Spiral Wave fans out
@@ -32,6 +34,9 @@ const SWEEP := 3.5
 const BURN := 60.0
 const CUT_DAMAGE := 7.5
 const FAN_DEG := 12.0
+const HEAT_STEPS := 8
+const GLOW_REACH := 1.6
+const GLOW_COLD := Palette.RUST
 const LIFT := 0.5
 const KNOCK := 0.0
 const COLOR := Palette.HAZARD
@@ -39,6 +44,7 @@ const KIND := "torch"
 const IMPACT := "runner"
 const SOURCE := "special"
 const LAYER := "active_cutting_torch_%d"
+const ID := "cutting_torch"
 
 var ctx
 var combat
@@ -51,6 +57,8 @@ var lanes: Array = []
 var _beams := 1
 var _burn := BURN
 var _heat := {}
+# The heat step each machine last showed.
+var _glow := {}
 
 
 func setup(context, owner_combat) -> void:
@@ -61,6 +69,7 @@ func setup(context, owner_combat) -> void:
 # A stage clear, a death or a new run: the burn, its drawing and every machine's heat go.
 func clear() -> void:
 	_heat.clear()
+	_glow.clear()
 	_end()
 
 
@@ -158,7 +167,22 @@ func _cut(delta: float) -> void:
 			combat.effects.spark(enemy.global_position + Vector3.UP, COLOR)
 			combat._hit(enemy, KIND, heat, enemy.global_position - ctx.player.ball_position(), KNOCK, "", SOURCE, IMPACT)
 			heat = 0.0
+			_glow.erase(id)
+		elif bite > CUT_DAMAGE * _burn / BURN:
+			_show_heat(enemy, id, heat / bite)
 		_heat[id] = heat
+
+
+func _show_heat(enemy: Node3D, id: int, fraction: float) -> void:
+	var shown := floori(fraction * HEAT_STEPS)
+	if shown <= int(_glow.get(id, 0)):
+		return
+	_glow[id] = shown
+	var hot := float(shown) / HEAT_STEPS
+	var at := enemy.global_position
+	combat.effects.ring(at + Vector3.UP * 0.3, combat._hull(enemy) + GLOW_REACH * (1.0 - hot), GLOW_COLD.lerp(COLOR, hot))
+	combat.effects.spark(at + Vector3.UP, GLOW_COLD.lerp(COLOR, hot))
+	ctx.events.active_heat.emit(ID, at, hot)
 
 
 func _in_lanes(enemy: Node3D) -> bool:
