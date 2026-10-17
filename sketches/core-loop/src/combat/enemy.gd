@@ -80,6 +80,18 @@ var scrap_value := 3
 # patch resolves (wear_trail sets it around take_damage). The died handler passes it on.
 var last_damage_source := ""
 var weight := 1.0
+# The stage threat this body was set up at; poles and flails read it for heft (movement/grip.gd).
+var threat_level := 1.0
+
+
+# A pole line (POLES-FLAILS section 4) rides any enemy like an anchor: the bite point is the
+# anchor and the body carries the ball at its own velocity. warden.gd overrides both.
+func anchor_point(point: Vector3, _from = null) -> Vector3:
+	return point
+
+
+func anchor_velocity() -> Vector3:
+	return velocity
 var radius := 1.0
 var half_height := 1.5
 # "", "amber" or "slate", set by combat every physics tick from punch_now().
