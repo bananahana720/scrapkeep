@@ -810,6 +810,7 @@ const ACTIVITY_ROWS := {
 	"ambush_altar": {"color": "amber", "motion": "steady", "shape": "cross", "sound": "found_chime", "word": "Ambush"},
 	"cracked_cache": {"color": "amber", "motion": "steady", "shape": "diamond", "sound": "found_chime", "word": "Cache"},
 	"hauler_bounty": {"color": "amber", "motion": "steady", "shape": "square", "sound": "found_chime", "word": "Bounty"},
+	"hold_the_relay": {"color": "amber", "motion": "steady", "shape": "cross", "sound": "found_chime", "word": "Relay"},
 }
 
 

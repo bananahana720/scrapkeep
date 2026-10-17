@@ -196,6 +196,7 @@
  "activity_rows": [
   {"id": "domes_camp", "activity": "enemy_camp", "site": "slickrock_domes", "at": [-51, -396], "pack": ["chaser", "chaser", "chaser"], "pay": {"named": "hot_rivets", "rarities": ["common"]}},
   {"id": "rim_cache", "activity": "cracked_cache", "site": "west_rim_bench", "at": [-206, 300], "pack": [], "pay": {"rarities": ["rare"]}},
-  {"id": "bench_altar", "activity": "ambush_altar", "site": "east_rim_bench", "at": [206, 250], "pack": [], "pay": {"rarities": ["common", "rare"]}}
+  {"id": "bench_altar", "activity": "ambush_altar", "site": "east_rim_bench", "at": [206, 250], "pack": [], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "shelf_relay", "activity": "hold_the_relay", "site": "shelf_rise", "at": [-155, -385], "pack": [], "pay": {"rarities": ["common", "rare"]}}
  ]
 }

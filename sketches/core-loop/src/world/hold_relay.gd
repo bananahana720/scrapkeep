@@ -53,6 +53,10 @@ func begin() -> void:
 	_charging = true
 
 
+func charging() -> bool:
+	return _charging
+
+
 func set_stakes(k: int) -> bool:
 	if _charging:
 		return false
