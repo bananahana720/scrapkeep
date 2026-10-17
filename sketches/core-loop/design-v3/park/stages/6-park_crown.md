@@ -476,8 +476,10 @@ Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-2
 | `fleet_gauntlet_winch` | `gauntlet_west` | Winch post 4: hooked one ball, two kites, a net. The net refused to come aboard. |
 | `fleet_dropship_manifest` | `gauntlet_shelf` | Dropship manifest, Gauntlet run: crew six, winches four, cargo one Crown. Cargo status: pending. |
 | `fleet_toe_lip` | `gauntlet_toe_lip` | Winch crew poured this lip to reach the updraft without a net. Requisition for a net: pending. |
+| `fleet_updraft_lip` | `signal_foot_lip` | Updraft lip, poured so the crew could reach the kite without climbing. Climbing is now optional. Lightning is not. |
+| `net_weaver_scree_lip` | `scree_gust_lip` | Scree lip, cut for the talus run. The talus was here first and is taking it back, slowly. |
 
-The last eleven rows are the authored pass of 17 October (section 17): the net-weavers and the Fleet's mooring crew as society rows, Andrew's "Now, light" (no new systems).
+The last thirteen rows are the authored pass of 17 October (section 17): the net-weavers and the Fleet's mooring crew as society rows, Andrew's "Now, light" (no new systems).
 
 Today's 3-2 lore lines (`src/core/lore_rows.gd:291-299`, "Tie your tools before the crown takes them" at `:295`) stay; the Crown is now literal.
 
@@ -558,8 +560,11 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
 - *Hoodoo gust lips.* Four `mesa_lip_kicker` rows (`hoodoo_gust_lip_1` to `_4`, seat fit, routes none) at the forest's edges, each turned so its throw carries into the forest or into `hoodoo_chimney`, a 70 m thermal at [-60, -140] between hoodoos 4, 6 and 9. Lip, glide into the chimney, rise, swing off a cap.
 - *Needle lip and hammock.* `needle_gust_lip` at [-90, 160] throws west at `needle_updraft`. `needle_hammock` is one `net_deck` cell slung at y 36 west of the needles ([-255, 140], 80 m), clear of every pilot line: a sagging net to bank on, reached by swinging off needles 3 and 7 or drifting out of the updraft.
 - *Gauntlet toe lip.* `gauntlet_toe_lip` at [200, 40] throws north into `gauntlet_updraft`.
+- *Second hammock cell.* `needle_hammock_2` at [-335, 140] tiles the first cell to the west (the cells share their posts), so the weavers' net is a two-cell string running toward the Signal Butte.
+- *Scree lip.* `scree_gust_lip` on the Turnstone scree ([-232, -306]) throws north-west at the alcove talus, a side door into the west fan off Tarn's line.
+- *Meander cross lip.* `meander_cross_lip` at [150, -180], east of the meander, throws Kest's line across toward the east ribs.
 
-**Set piece: the storm kite line** (crown only). The Fleet's mooring crew flies a storm kite off the Signal Butte. `signal_updraft`, a 200 m thermal at the butte's sheer east foot ([-366, 300]), lifts a glider to `storm_kite_line`, a 327 m cable from [-366, 195, 300] down to [-150, 7.9, 420]. It lands outside the engage ring, beside the signal wire's foot. `kite_mooring_deck`, a `net_deck` cell on the butte top (y 190), is the landing for a glider that overshoots. `kite_strike` (lightning, clock tier 1, 3 s on-bar mark, 12 m, 6 damage, every 30 s while live) strikes the butte top: ride the updraft between strikes.
+**Set piece: the storm kite line** (crown only). The Fleet's mooring crew flies a storm kite off the Signal Butte. `signal_foot_lip` at [-330, 300] pitches the ball west into `signal_updraft`, a 200 m thermal at the butte's sheer east foot ([-366, 300]), which lifts a glider to `storm_kite_line`, a 327 m cable from [-366, 195, 300] down to [-150, 7.9, 420]. It lands outside the engage ring, beside the signal wire's foot, where `kite_runout_lip` throws the ball on toward `crown_updraft` and the bowl. `kite_mooring_deck`, a `net_deck` cell on the butte top (y 190), is the landing for a glider that overshoots. `kite_strike` (lightning, clock tier 1, 3 s on-bar mark, 12 m, 6 damage, every 30 s while live) strikes the butte top: ride the updraft between strikes.
 
 **Society rows.** The net-weavers own the gust lips, the hoodoo knots, the needle hammock and the Gauntlet net. The Fleet's mooring crew owns the Signal Butte, the mooring deck, the Gauntlet's west butte and shelf, and the toe lip. Their lines are in section 12.
 

@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "c0743961bb97a7cdde5a4307f7fa679221c73477bfbe4514dec5c0becf8d3542",
+  "bake_sha256": "68acca46633862e80a4f8ba73436b1373cd9f119cc9e2be80ae2be00d04f6ecb",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 994689,
-  "edges": 323973,
+  "bytes": 998474,
+  "edges": 325239,
   "first_failed": "",
   "flags": {
-    "deck": 943,
-    "door_ok": 39593,
+    "deck": 1064,
+    "door_ok": 39614,
     "line": 387,
-    "open": 40742,
+    "open": 40763,
     "sight_ok": 9111,
     "under": 0
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "9c6c7e9cc47d90de4e19360cfeefe6b880ee3e2f5b43f613b6addc87fe0a029e",
+  "graph_sha256": "41dda646d3a48fb268b0209acd058e12a8890f09191a0320f77b6543024cd7f8",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
-  "nodes": 41344,
-  "park_sha256": "7abf81903d3aed2cedcac2efaf6eb4ea77652549ba53e867e1a8a248722f47a5",
+  "nodes": 41465,
+  "park_sha256": "b53b420812b7fb1a183a36ffee73c44739ece71f91b4dd49743a0350784316f0",
   "pockets": [
     {
       "clear_ring": [],
@@ -215,9 +215,25 @@
         "viable": false
       },
       {
+        "cost": 1231.2,
+        "d_landmark": 152.6,
+        "name": "kite_runout_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 1183.2,
         "d_landmark": 161.2,
         "name": "kick_wlast_12",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1181.3,
+        "d_landmark": 398.0,
+        "name": "signal_foot_lip",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -319,6 +335,14 @@
         "viable": true
       },
       {
+        "cost": 624.0,
+        "d_landmark": 710.1,
+        "name": "meander_cross_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 588.5,
         "d_landmark": 713.7,
         "name": "hoodoo_gust_lip_1",
@@ -327,12 +351,12 @@
         "viable": false
       },
       {
-        "cost": 537.2,
-        "d_landmark": 861.7,
-        "name": "turnstone_scree",
+        "cost": 550.6,
+        "d_landmark": 878.0,
+        "name": "scree_gust_lip",
         "on_route": false,
-        "rank": 6,
-        "viable": true
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 411.6,
@@ -359,11 +383,11 @@
         "viable": true
       }
     ],
-    "count": 52,
+    "count": 57,
     "crossings": {
-      "drop": 21,
+      "drop": 22,
       "ride": 9,
-      "walk": 61
+      "walk": 66
     },
     "hidden": [
       {
