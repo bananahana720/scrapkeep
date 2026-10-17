@@ -5,6 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const RosterDig := preload("res://src/combat/roster_dig.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
+const RosterSpecials := preload("res://src/combat/roster_specials.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # The enemy roster (DESIGN-V2 sections 10, 11 and 15): one row per spawnable kind, and
@@ -18,7 +19,8 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # - faction: the timbre family and the arrival cue. Fleet crews clank and whistle; the
 #   three ancient families hum.
 # - role: what the director pairs. A controller holds or steers you; a punisher hurts a
-#   ball that is held or off its line.
+#   ball that is held or off its line; a kill_first special makes its pack worse until it
+#   is removed.
 # - telegraph: the W2 attack type its warning draws with.
 # - holds: whether it takes hold of the ball (through holds.gd and the CC door).
 # - breaks: the player's own actions that end its hold, or for a unit that holds
@@ -173,12 +175,15 @@ const CHASSIS := {
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
+	"foreman": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Steam-horn mast over a punch clock, tethered to its crew"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const ANCIENTS := ["reactor_relic", "swarm_remnant", "mind_hand"]
+# The kill-first specials (roster_specials.gd).
+static var SPECIALS: Array = RosterSpecials.ROWS.keys()
 # The family ancient per Warden family.
 const FAMILY_ANCIENT := {REACTOR: "reactor_relic", SWARM: "swarm_remnant", MIND: "mind_hand"}
 
@@ -188,7 +193,7 @@ static var ROWS: Dictionary = _all_rows()
 
 static func _all_rows() -> Dictionary:
 	var rows := BASE_ROWS.duplicate()
-	for table in [RosterDig.ROWS, RosterHighdraft.ROWS]:
+	for table in [RosterDig.ROWS, RosterHighdraft.ROWS, RosterSpecials.ROWS]:
 		for id in table:
 			assert(not rows.has(id), "roster id declared twice: %s" % id)
 			rows[id] = table[id]
@@ -246,7 +251,7 @@ static func is_ancient(name: String) -> bool:
 
 
 static func is_reinforcement(id: String) -> bool:
-	return id in COUNTERS or id in ANCIENTS
+	return id in COUNTERS or id in ANCIENTS or id in SPECIALS
 
 
 # A stage's Warden kind when its row names none: its world's family on the default table

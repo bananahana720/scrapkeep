@@ -109,7 +109,7 @@ func _pack_kinds() -> Array:
 	var kinds: Array = []
 	for id in Roster.ROWS:
 		var kind := String(id)
-		if kind in ["warden", "vault", "miniboss"]:
+		if kind in ["warden", "vault", "miniboss"] or int(Roster.row(kind)["telegraph"]) < 0:
 			continue
 		if kind in ["chaser", "lobber"] or _game.combat.fleet.makes(kind):
 			kinds.append(kind)

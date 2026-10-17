@@ -1106,6 +1106,14 @@ func shred_of(enemy: Node3D) -> float:
 	return float(_shred.get(enemy.get_instance_id(), {}).get("amount", 0.0))
 
 
+# Puts back all the plating hits have stripped off this enemy (foreman.gd's wipe).
+func wipe_shred(enemy: Node3D) -> void:
+	if not is_instance_valid(enemy):
+		return
+	_shred.erase(enemy.get_instance_id())
+	_show_shred(enemy, 0.0)
+
+
 # hp / max_hp, 1.0 for an invalid enemy (as the spec says), 0.0 for a dead one.
 func integrity_of(enemy: Node3D) -> float:
 	if not is_instance_valid(enemy):
