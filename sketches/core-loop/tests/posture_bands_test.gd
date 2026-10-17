@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (nine bot runs in child processes, up to six at once; a loaded machine slows them past the 180 s default cap, measured 2026-10-11 w13-wardens at load 36 to 78)
+# smoke: solo timeout=720s (19 bot runs in child processes, up to six at once: small and grown on eight seeds, the camper on three since 2026-10-17; a loaded machine slows them past the 180 s default cap, measured 2026-10-11 w13-wardens at load 36 to 78)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -21,6 +21,9 @@ const T := preload("res://tests/support/t.gd")
 # The cap is 150 s, the small arm's band, so a camper run ends sooner: the smoke run's limit is 120 s.
 # A run that breaks before the cap measures the same at any cap.
 const SEEDS := "0,1,2"
+# The growth ratio is judged over eight seeds (2026-10-17, "Gap wins"): three seeds moved the median by
+# more than the gap did (seeds 0 to 2 read 1.75x where 0 to 7 read 1.88x). The camper stays on SEEDS.
+const GROWTH_SEEDS := "0,1,2,3,4,5,6,7"
 const PILOTS := {0: "pylon_engineer", 1: "runner_gunner", 2: "demolitions_caster"}
 const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 2026-10-05 (wave 15): re-pinned for seeds 0, 1 and 2 after Tarn's claw kit took seed 3; bands unchanged
@@ -73,6 +76,11 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # Warden faster with their own kits, so the median of three moves from Rivet's row to Sable's. Grown stays inside
 # 25 to 45 s and the camper still never breaks it; the slice row and the sweep table are unchanged. The live
 # small/grown ratio is 1.94, under the sweep table's 2.0 band: the same owner tuning item; was 50.0 / 34.5.
+# 2026-10-17 (SQ2, PR #15): the attacker budget's 0.2 s warning gap eases the first Warden for an unbuilt
+# ball (small 57.5 -> 52.4 s over seeds 0 to 7; grown 27.1 -> 27.9 s, seven of eight seeds unchanged). Andrew
+# tapped "Gap wins" at 20:11:31Z 17 Oct: the gap stays everywhere, the first Warden's growth target is
+# GROWTH (1.85x), and hives keep 2x (posture_bands_swarm_test.gd).
+const GROWTH := 1.85
 const EXPECT_SMALL_S := 52.7
 const EXPECT_GROWN_S := 27.1
 const SWEEP := "res://tools/posture_sweep.tsv"
@@ -93,11 +101,15 @@ func _initialize() -> void:
 	var folder := OS.get_user_data_dir().path_join("posture-bands-%d" % OS.get_process_id())
 	DirAccess.make_dir_recursive_absolute(folder)
 	var cells := folder.path_join("cells.tsv")
-	var results := ChildRuns.run([{"script": "res://tools/posture_sweep.gd", "args": ["--out=" + cells,
-		"--runs=" + folder.path_join("runs.tsv"), "--procs=6", "--cap=150", "--seeds=" + SEEDS, "--arms=small,grown,camper",
-		"--plating=%s" % plating, "--curve=%s" % curve, "--shatter=%s" % shatters]}], 600.0)
-	var result: Dictionary = results[0]
-	t.check("the sweep ran", result["code"] == 0 and not result["timed_out"], "exit %s, timed out %s" % [result["code"], result["timed_out"]])
+	var camper_cells := folder.path_join("camper-cells.tsv")
+	var cell_args := ["--cap=150", "--plating=%s" % plating, "--curve=%s" % curve, "--shatter=%s" % shatters]
+	var results := ChildRuns.run([
+		{"script": "res://tools/posture_sweep.gd", "args": ["--out=" + cells, "--runs=" + folder.path_join("runs.tsv"),
+			"--procs=4", "--seeds=" + GROWTH_SEEDS, "--arms=small,grown"] + cell_args},
+		{"script": "res://tools/posture_sweep.gd", "args": ["--out=" + camper_cells, "--runs=" + folder.path_join("camper-runs.tsv"),
+			"--procs=2", "--seeds=" + SEEDS, "--arms=camper"] + cell_args}], 1200.0)
+	for result in results:
+		t.check("the sweep ran", result["code"] == 0 and not result["timed_out"], "exit %s, timed out %s" % [result["code"], result["timed_out"]])
 	var swept := _picked(SWEEP, plating, curve, shatters)
 	var swept_grown := float(swept.get("grown_median_s", "0"))
 	t.check("the sweep table holds the picked cell and it passes every band", swept.get("pass", "") == "pass",
@@ -108,10 +120,10 @@ func _initialize() -> void:
 	var grown := float(cell.get("grown_median_s", "0"))
 	# The band is judged on the fight this run just measured, not on the saved table (WT-BANDS gate, 2026-10-13).
 	t.check("over the sweep seeds grown breaks it in 25 to 45 s", grown >= 25.0 and grown <= 45.0, "live grown median %.1f s" % grown)
-	t.check("over the sweep seeds small takes at least twice grown's time", grown > 0.0 and small >= 2.0 * grown,
+	t.check("over the sweep seeds small takes at least %.2f times grown's time" % GROWTH, grown > 0.0 and small >= GROWTH * grown,
 		"small %.1f s, grown %.1f s" % [small, grown])
-	t.eq("small breaks it in every run", cell.get("small_broke", ""), str(SEEDS.count(",") + 1))
-	t.eq("the camper never breaks it", cell.get("camper_broke", ""), "0")
+	t.eq("small breaks it in every run", cell.get("small_broke", ""), str(GROWTH_SEEDS.count(",") + 1))
+	t.eq("the camper never breaks it", _cell(camper_cells).get("camper_broke", ""), "0")
 	t.check("small median within 10 percent of the sweep's", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
 		"small %.1f s, sweep %.1f s" % [small, EXPECT_SMALL_S])
 	t.check("grown median within 10 percent of the sweep's", absf(grown - EXPECT_GROWN_S) <= TOLERANCE * EXPECT_GROWN_S,
