@@ -15,7 +15,7 @@
   },
   "files": {
     "apron.bin": "c836ef1d89010814f5cebe35fa5a46b64b602bbccebc0768ee4b703cf3a197b4",
-    "ground.bin": "2221ee45d01ecf013072b8799426977e35dc4b2becb863df09f05d35343a6243",
+    "ground.bin": "e817ff254f9513071427148babf8944d40ed40651aa4a858a12fad78673fbe38",
     "holes.bin": "8effdd4b22b7221243c39ceee8fc46c462348659e2883a16c091b0859f0dda26",
     "surface.bin": "52a942409a5e1b50b0a68c839354fee643ba83065cd1f05ffc7a3544d5479826",
     "under.bin": "61d42af97c8eec7a6b2e6056431fb112493124f65bd798408683ad140a47e00a"
@@ -52,7 +52,7 @@
     "min": -120.0
   },
   "map": "park_sinkhole",
-  "park_sha256": "d2fa9b51272e471009b6ed9e3de72ee72a3cdf8759d25238015262eefb184b0c",
+  "park_sha256": "2f2bbb0b74fd8119a0bed36181c5f2e46e7c69cd573bf5cdeaf973dfef506624",
   "schema": "scrapkeep-park-bake/1",
   "tool_sha256": "046e7258338a8bcca754c4ca23cb0cf963098dfc29cf88aaa46601fbb4e363c2"
 }
