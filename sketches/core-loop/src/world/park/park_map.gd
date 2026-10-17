@@ -25,6 +25,9 @@ var bay_dock := {}
 # The engage ring's radius (alpha_defs beacon_radius today).
 var reach_m := 0.0
 var time_of_day := ""
+# The stage's caged pilots for rescue_site.gd, from the park file's optional rescue_rows: {id, quest, prompt, pilot,
+# at: Vector2, face: Vector2}.
+var rescue_sites: Array = []
 
 
 func _init(park_path := FIXTURE) -> void:
@@ -80,11 +83,17 @@ func _fill() -> void:
 			site["pay"] = row["pay"].duplicate(true)
 		activity_sites.append(site)
 
-	# Scatter keeps out of every built footprint (PARK.md 2.9); the kit rows come with KB5.
+	rescue_sites = []
+	for row in park.get("rescue_rows", []):
+		rescue_sites.append({"id": row["id"], "quest": row["quest"], "prompt": row["prompt"], "pilot": row["pilot"],
+			"at": _v2(row["at"]), "face": _v2(row["face"]).normalized()})
+
+	# Scatter keeps out of every built footprint (PARK.md 2.9) but a row the scatter itself dresses; the kit rows come
+	# with KB5.
 	scatter = scatter.duplicate(true)
 	var keep_out := []
 	for row in park["park_rows"]:
-		if row["element"] == "ground":
+		if row["element"] == "ground" or row["recipe"] == ParkRecipes.SCATTER_DRESSED:
 			continue
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))

@@ -65,6 +65,9 @@ func _run() -> void:
 	profile.unlock_cosmetic("trail_salt_skip")
 	profile.unlock_cosmetic("decal_fern")
 	profile.unlock_cosmetic("companion_paint_night")
+	# Re-pinned 2026-10-16: every pilot has a live shell variant now, so Shell sits between Paint and Trail.
+	Push.pad(root, JOY_BUTTON_DPAD_DOWN)
+	_t.eq("pad d-pad moves to shell", page.focused_id(), "shell")
 	Push.pad(root, JOY_BUTTON_DPAD_DOWN)
 	_t.eq("pad d-pad moves to trail", page.focused_id(), "trail")
 	Push.pad(root, JOY_BUTTON_A)
@@ -190,7 +193,8 @@ func _page_checks(page, profile, screens) -> void:
 	page._select_slot("paint")
 	for id in Cosmetics.PENDING_ART:
 		_t.check("pending %s has no card" % id, page.card_for(id) == null and not id in page.shown_ids(Cosmetics.row(id)["slot"]))
-	for slot in ["shell", "outfit", "companion_skin", "bay_decor"]:
+	_t.check("the shell slot shows its built variant", page.rows["shell"].visible and "shell" in page.order())
+	for slot in ["outfit", "companion_skin", "bay_decor"]:
 		_t.check("empty slot %s is hidden" % slot, not page.rows[slot].visible and not slot in page.order())
 	_t.check("an empty owner group is hidden", not page._group_labels["PILOT"].visible and not page._group_labels["BAY"].visible)
 	# New marks clear after 0.6 s on screen and seen saves once, on close.

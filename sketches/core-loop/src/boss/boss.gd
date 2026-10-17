@@ -270,7 +270,7 @@ func _enter_phase(next: int) -> void:
 			_slag_turn = 0
 		3:
 			ship.shed_armour()
-			ship.cockpit_open(true)
+			ship.cockpit_open(true, "enter_scuttle")
 			_charge = {"state": "rest", "timer": Rules.CHARGE_REST}
 	ship.cue_phase(next)
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])

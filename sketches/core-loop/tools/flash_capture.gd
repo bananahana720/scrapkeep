@@ -17,7 +17,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #   <godot> --headless --path sketches/core-loop --script res://tools/still_compare.gd -- \
 #     --peak <out>/<site>-<mode>-rest.png <out>/<site>-<mode>-peak.png
 #
-# The run is calm (no director spawns) and the ball idles, so rest and peak differ by the flash.
+# The run is calm (no director spawns) and the tree is paused across each rest and peak pair,
+# so the two stills differ only by the flash.
 
 const SITES := ["edge", "pop_glyph", "ring_glyph", "enemy_hit"]
 const SETTLE_FRAMES := 10
@@ -79,10 +80,13 @@ func _plan() -> void:
 	for mode in ["off", "on"]:
 		_at(1, func(): _game.set_reduce_flashes(mode == "on"))
 		for site in SITES:
-			_at(SETTLE_FRAMES, func(): _save("%s-%s-rest" % [site, mode]))
+			_at(SETTLE_FRAMES, func(): paused = true)
+			_at(2, func(): _save("%s-%s-rest" % [site, mode]))
 			_at(1, func(): _fire(site))
 			_at(2, func(): _save("%s-%s-peak" % [site, mode]))
-			_at(1, func(): _calm(site))
+			_at(1, func():
+				_calm(site)
+				paused = false)
 	_at(SETTLE_FRAMES, func(): _burst("off", "ram_plow"))
 
 

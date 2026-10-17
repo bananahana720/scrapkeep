@@ -57,3 +57,14 @@ Paint previews use a dimensioned SPIL-9 proxy, and decal previews use material c
 Design note for DESIGN-NOTES: treat customization as one material/atlas composition system. Apply companion swatch tints only to existing Hull/Deck enamel, and compose a selected decal into HeroCore paint with no sticker mesh. Reuse existing motion and state cues. The manifest's visible mask bounds keep decal metre dimensions separate from transparent gutters.
 
 Evidence is untracked under `artifacts/local/dress-preview/CUA/`: `asset-inspection.json`, `godot-test.log`, `godot-direct.log`, three negative logs, three preview manifests, all 72 views, `trails_sheet.png`, `decals_sheet.png`, `paints_sheet.png` and `decals_24px_sheet.png`.
+
+## Wave 19 extension: seven trails and decals 8 and 9
+
+Branch `claude/cosmetics-trails-decals-uaaipf` from `origin/main` at `dfc86d8`, per `design-v3/COSMETICS-ART-BRIEFS.md`. Same recipe, same checks; counts are now 13 trails, 10 decals, 6 paints and 42 files. Every trail GLB re-exports because the shared atlas grew (each GLB still carries the dead embedded atlas bytes the export leaves behind); geometry, UVs and clips of the first six are unchanged. Two calls differ from the brief: Cable Stitch bakes `3f8f6a`, not field mint `8bf0d3`, because mint is reserved (`dress_cua_assets_test` RESERVED, VISUAL-LANGUAGE "Field mint"); Claw Marks sit 0.33 m apart, not 0.34 m, to keep the blur inside the tile.
+
+Port notes for the wave coordinator (this branch edits neither `src/` nor the registry):
+
+1. `assets/registry.d/`: add one fragment per new file, in the shape of `trail_salt_skip.json` and `decal_fern_mask.png.json`, then fold the registry. Trails (`class` scenery, `loader` "none (delivered model; runtime integration pending)"): `trail_sable_cable`, `trail_rivet_swarf`, `trail_kest_fuse_smoke`, `trail_tarn_claw_marks`, `trail_tally_punch_tape`, `trail_cannon_recital`, `trail_any_downbeat`, each at `res://assets/cosmetics/trails/<id>.glb`. Decal masks (`class` texture, `loader` "none (delivered cosmetic texture; runtime integration pending)"): `decal_sable_spool_mask.png`, `decal_curtain_call_mask.png`, at `res://assets/cosmetics/decals/<id>`. Provenance recipe `tools/blender/cosmetics/build_cua.py`. The decal rows matter: `cosmetics.gd` resolves `decal_*_mask.png` through the registry, while trails also resolve through the manifest.
+2. `src/core/cosmetics.gd:27`: remove the nine ids from `PENDING_ART`.
+3. `src/core/cosmetics.gd:77`: set the `trail_sable_cable` tint to `3f8f6a` so the Customize swatch matches the baked card. Andrew chose the deep green on the project-chat card, 2026-10-16 23:22Z.
+4. Then run `customization_system_test` and `ui_customize_page_test`, which check that every non-pending row resolves to real art.

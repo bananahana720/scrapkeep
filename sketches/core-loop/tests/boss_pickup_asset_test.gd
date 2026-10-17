@@ -7,7 +7,9 @@ const ScrapField := preload("res://src/build/scrap_field.gd")
 const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # Re-pinned 2026-10-09 (BUGFIX-BOSS F001): _cancel_hazards now drips out scrap a magnet
 # still holds when phase 1 ends, which only phase 1 used to pay back; pickup meshes unchanged.
-const BASE_LOGIC_SHA := "893127dcaa31283c6662e1594d99087453596a1a7e41a3fbaab7232112246c86"
+# Re-pinned 2026-10-17 (boss phase moments): phase 3 entry passes enter_scuttle to cockpit_open,
+# so the model's shield flips with the clip before it hides; pickup meshes unchanged.
+const BASE_LOGIC_SHA := "5f85f822f5a4d59a31f9d4d10b8568ff9dc8889c11ba1a37f010a421aa4967a4"
 
 var failures := 0
 var game

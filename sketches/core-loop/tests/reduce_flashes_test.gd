@@ -8,7 +8,7 @@ const T := preload("res://tests/support/t.gd")
 # Reduce flashes (Andrew, design question 7, 17 Oct 2026): a saved toggle on the settings
 # page that cuts the brightness of flashes and stops strobes. Measured on the real nodes:
 # the hit edge flash, glyph alphas, an enemy's hit whitening, the tenacity bracket's blink,
-# and FlashGuard's rate cap; plus the save round trip and launch. Rendered peak brightness
+# comic sound words and FlashGuard's rate cap; plus the save round trip and launch. Rendered peak brightness
 # per site comes from tools/flash_capture.gd and still_compare --peak.
 
 var _t := T.new("reduce_flashes_test")
@@ -124,6 +124,31 @@ func _sites() -> void:
 	holds._draw_bracket(ball)
 	_t.check("RF-7 the bracket blinks off normally and holds steady with the toggle", blinked_off and holds._bracket.visible, "off-phase visible %s" % holds._bracket.visible)
 	holds.immune_left = 0.0
+
+	# RF-9: comic sound words (player and machine) dim their coloured face, keep their ink outline.
+	var pfx = _game.presentation.player_fx
+	var mfx = _game.presentation.machine_fx
+	var faces := {}
+	for mode in [false, true]:
+		_game.set_reduce_flashes(mode)
+		for w in pfx._words:
+			w["t"] = 1.0
+			(w["node"] as Label3D).visible = false
+		pfx._last_word = -1.0e9
+		pfx._word_seen = {}
+		var stamped: bool = pfx.word("wham", ball + Vector3.UP * 1.8)
+		var label: Label3D = null
+		for w in pfx._words:
+			if w["id"] == "wham" and (w["node"] as Label3D).visible:
+				label = w["node"]
+		mfx.word("KLANG", ball + Vector3.UP * 2.0, Color(0.9, 0.7, 0.3), true)
+		var mlabel: Label3D = mfx._words[(mfx._word_next - 1 + mfx._words.size()) % mfx._words.size()]["node"]
+		faces[mode] = {"stamped": stamped, "player": label.modulate.a if label != null else -1.0, "player_ink": label.outline_modulate.a if label != null else -1.0,
+			"machine": mlabel.modulate.a, "machine_ink": mlabel.outline_modulate.a}
+	_t.check("RF-9 a player sound word's face keeps the information share, its outline stays", faces[false]["stamped"] and faces[true]["stamped"] \
+		and absf(faces[true]["player"] - faces[false]["player"] * FlashGuard.INFO_SHARE) < 0.001 and faces[true]["player_ink"] == faces[false]["player_ink"], "%s" % [faces])
+	_t.check("RF-9 a machine word's face keeps the information share, its outline stays", absf(faces[true]["machine"] - faces[false]["machine"] * FlashGuard.INFO_SHARE) < 0.001 \
+		and faces[true]["machine_ink"] == faces[false]["machine_ink"], "%s" % [faces])
 
 	# RF-8: no repeating pulse over 3 Hz.
 	_t.check("RF-8 the rate cap is 3 Hz", FlashGuard.rate(20.0) <= 3.0 and FlashGuard.rate(2.0) == 2.0 and FlashGuard.blink(false), "cap")

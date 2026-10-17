@@ -140,12 +140,12 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	for i in _ids.size():
 		var at: Vector3 = plan["spots"][i]
 		var part_id: String = _ids[i]
-		var d: Resource = Parts.def(part_id)
+		var d: Resource = Parts.offer_def(part_id, _held)
 		var completes := Parts.completed_by(part_id, _held)
 		offers.append({
 			"part_id": part_id, "at": at, "facing": facing, "width": WIDTH,
 			"name": Parts.display_name(part_id),
-			"headline": Parts.headline(part_id),
+			"headline": Parts.offer_headline(part_id, _held),
 			"verb": d.verb if d != null else "",
 			"punch": d.punch if d != null else 0.0,
 			"text": d.text if d != null else "",
