@@ -197,7 +197,7 @@ At most two new enemy behaviours per wave (ENEMY-PRIORITY section 4b). Waves 17 
 
 Added after Andrew's "Big ones only" tap (19:56:59Z): Gather Plate casts in 0.3 s and aims at the press; every depth-3 Q variant winds up 0.5 s (`VARIANT_CAST`, start, until the power read ranks them); a jolt during Q's wind-up recalls Q with a full refund.
 
-Not in the slice: pack placement, the jolt cues and its model (it is a greybox, so it counts as a placeholder until wave 20), damage families, the floodlight, momentum casting.
+Not in the slice: pack placement, the jolt cues (presence loop, wind-up tell, death sting; placeholders until they land), damage families, the floodlight, momentum casting. The model is in: a procedural world-one body with its own coil mesh.
 
 ## 10. Calls for Andrew
 
