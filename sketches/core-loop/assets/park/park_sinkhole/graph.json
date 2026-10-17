@@ -1,10 +1,10 @@
 {
   "bake_sha256": "65d819a6d43fa2a2874dc12a1fb612004455ba49547a90aaa72b07bc44413231",
-  "beacon_ok": false,
+  "beacon_ok": true,
   "breaches": [],
   "bytes": 946618,
   "edges": 314861,
-  "first_failed": "beacon_ok",
+  "first_failed": "",
   "flags": {
     "deck": 37,
     "door_ok": 39877,
@@ -164,15 +164,16 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": -1,
-    "farther_share": "0.000",
-    "ok": false,
-    "run": false
+    "d_landmark": 1406,
+    "farther_share": "0.008",
+    "ok": true,
+    "run": true
   },
   "spawn_beacon_m": 1406,
   "spawn_beacon_share": "0.690",
   "stage_checked": [
-    "beacon_ok"
+    "beacon_ok",
+    "spawn"
   ],
   "targets": [
     {
@@ -188,7 +189,7 @@
       "value": 1.361
     }
   ],
-  "tool_sha256": "da6fdfdba7b82b109309fba8b5131587e1d7d174a839b79191201df3d2ea2f9d",
+  "tool_sha256": "4461666e87db0beb7981a7f75bf3ba9b1e5bdb7a15c2947f1272a818aaa4a3d8",
   "zones": {
     "anchors": [
       {
