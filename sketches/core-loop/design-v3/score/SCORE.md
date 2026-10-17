@@ -111,7 +111,7 @@ Per cue:
 
 1. Split the standing pick into stems. If `check_mix.py --cues` reports a key offset, shift the stems by that many semitones.
 2. Build the hybrid source: the kept drums and bass, plus the cue's lead line. For the lead, use `python themes.py preview <cue>`'s sax, or better, an ACE-Step solo render of the guide with a sax-only caption. Add the counter line where the cue has one.
-3. Cover the hybrid with ACE-Step at strength 0.45 to 0.65, using the cue's sound-bible caption, so groove, timbre and production carry over and the melody becomes the theme. Render two to four seeds.
+3. Cover the hybrid with ACE-Step at strength 0.55 to 0.65 (the combat spike, 2026-10-17: at 0.45 the theme washed out, melody 0.44 to 0.48 against a 0.41 to 0.43 control; at 0.55 and 0.65 four of four takes kept it, melody 0.64 to 0.83, and passed the mix check), using the cue's sound-bible caption, so groove, timbre and production carry over and the melody becomes the theme. Render two to four seeds.
 4. Run `check_score.py` on the new take's "other" stem and `check_mix.py` on the mastered file. Put the passing takes on the soundtrack page beside the standing pick.
 
 Order: `combat-hype` first, because it is the most-heard track and the most off key. Then roam-spillway, the titles, the worlds and roams, the bosses, camp, summaries and ending, and last the variations (re-covered from whichever parent Andrew keeps).
@@ -157,7 +157,7 @@ Stems sum back to the master within 1 dB, so the engine's stem faders (INTEGRATI
 ## Limits
 
 - The guides are mock-ups. They prove the notes, not the sound, and nobody has listened to them yet.
-- Whether an ACE-Step cover of a hybrid source keeps both the kept groove and the theme's melody is unproven; the round 7 to 9 covers kept real-audio parents (margins 0.05 to 0.17+). The spike in step 1 is the test.
+- A cover of a hybrid source kept both the groove and the theme on one cue so far (combat-hype, strength 0.55 and 0.65, music thread, 2026-10-17). Other cues may behave differently; each take is gated.
 - The scale check proves the note collection, not the tonic: D Dorian and E Phrygian share notes. The melody check is what tells the Dig from the Spillway, and on full mixes it sits close to its control; use the "other" stem.
 - The mix targets are standard starting values (EBU R128 loudness, mono lows, a protected lead band), not tuned to Andrew's taste; the band windows are wide on purpose.
 - Automated checks never stand in for Andrew's ear.
