@@ -1197,10 +1197,11 @@ def build_sinkhole():
         p = (LAMP_R * math.sin(a), SINK_FLOOR + 0.1, LAMP_R * math.cos(a))
         box(e, (p[0] - 0.12, p[1], p[2] - 0.12), (p[0] + 0.12, p[1] + 2.6, p[2] + 0.12), col("timber_dk"))
         box(e, (p[0] - 0.35, p[1] + 2.6, p[2] - 0.35), (p[0] + 0.35, p[1] + 3.1, p[2] + 0.35), col("amber"))
-    # copper anchor eyes on the two ring posts (the anchor rows ring_post_w and ring_post_e): one meaning, one look
+    # copper anchor eyes where the anchor rows ring_post_w and ring_post_e stand (the swarm's hardpoints; the loader
+    # builds no post inside the landmark's footprint): rings set flush in the deck, so the lane stays open
     for sx in (-1, 1):
-        c = (sx * 20.0, SINK_FLOOR + 8.4, 43.0)
-        wheel(st, c, (0.0, 0.0, 1.0), 0.75, 0.16, 0, 10, col("copper"), col("copper_dk"))
+        annulus(exempt["steel"], (sx * 20.0, 43.0), 0.45, 0.9, SINK_FLOOR, SINK_FLOOR + 0.11, 12,
+                lambda i: col("copper") if i % 2 else col("copper_dk"))
     # headgear: two timber A-frames, a cap beam and a sheave over the pump gallery's far end
     hx = SINK_HEAD_X
     for z in (-11.0, 11.0):
@@ -1761,9 +1762,7 @@ def check_card(rid, spec):
         deck = max(v[1] for s, _ in spec["exempt"].surfs() for v in s.v)
         assert deck <= SINK_FLOOR + FLUSH, (rid, "ring deck not flush", deck)
         assert all(v[0] > 88.0 for v in spec["col"].v), (rid, "the sinkhole collides only at the headgear (no pilot line within 20 m)")
-        posts = [(-20.0, 43.0), (20.0, 43.0)]
-        lane = [v for v in every if SINK_RING[0] < math.hypot(v[0], v[2]) < SINK_RING[1] and SINK_FLOOR + 0.2 < v[1] < SINK_LANE_TOP
-                and min(math.hypot(v[0] - px, v[2] - pz) for px, pz in posts) > 2.5]
+        lane = [v for v in every if SINK_RING[0] < math.hypot(v[0], v[2]) < SINK_RING[1] and SINK_FLOOR + 0.2 < v[1] < SINK_LANE_TOP]
         assert not lane, (rid, "geometry in the ring lane under its clear height", lane[:3])
         out["ring_deck_proud_m"] = round(deck - SINK_FLOOR, 3)
     if rid == "landmark_sky_island":
