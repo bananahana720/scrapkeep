@@ -2784,6 +2784,42 @@
    }
   },
   {
+   "id": "breach_lip",
+   "path": "res://assets/models/park/breach_lip.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the crater breach into the channel (drop wedge W 8 L 3), scoria rubble. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "breach_lip_detail1",
+   "path": "res://assets/models/park/breach_lip_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the crater breach into the channel (drop wedge W 8 L 3), scoria rubble. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "breach_lip_detail2",
+   "path": "res://assets/models/park/breach_lip_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the crater breach into the channel (drop wedge W 8 L 3), scoria rubble. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
    "id": "canal_lip",
    "path": "res://assets/models/park/canal_lip.glb",
    "class": "landform",
@@ -3250,6 +3286,42 @@
    }
   },
   {
+   "id": "drift_wash",
+   "path": "res://assets/models/park/drift_wash.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "drift_wash_detail1",
+   "path": "res://assets/models/park/drift_wash_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "drift_wash_detail2",
+   "path": "res://assets/models/park/drift_wash_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
    "id": "floating_island",
    "path": "res://assets/models/park/floating_island.glb",
    "class": "park_large",
@@ -3356,6 +3428,78 @@
    }
   },
   {
+   "id": "gallery_wash",
+   "path": "res://assets/models/park/gallery_wash.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "gallery_wash_detail1",
+   "path": "res://assets/models/park/gallery_wash_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "gallery_wash_detail2",
+   "path": "res://assets/models/park/gallery_wash_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "great_room_deck",
+   "path": "res://assets/models/park/great_room_deck.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the great room's floor (box W 44 L 8): basalt flags with a polish ring. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "great_room_deck_detail1",
+   "path": "res://assets/models/park/great_room_deck_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the great room's floor (box W 44 L 8): basalt flags with a polish ring. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "great_room_deck_detail2",
+   "path": "res://assets/models/park/great_room_deck_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the great room's floor (box W 44 L 8): basalt flags with a polish ring. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
    "id": "half_pipe_concrete",
    "path": "res://assets/models/park/half_pipe_concrete.glb",
    "class": "landform",
@@ -3389,6 +3533,42 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "haulage_bed",
+   "path": "res://assets/models/park/haulage_bed.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the miners' haulage rail bed (box W 16 L 4): sleepers and two copper rails. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "haulage_bed_detail1",
+   "path": "res://assets/models/park/haulage_bed_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the miners' haulage rail bed (box W 16 L 4): sleepers and two copper rails. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "haulage_bed_detail2",
+   "path": "res://assets/models/park/haulage_bed_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the miners' haulage rail bed (box W 16 L 4): sleepers and two copper rails. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -3841,6 +4021,78 @@
    }
   },
   {
+   "id": "lava_wash",
+   "path": "res://assets/models/park/lava_wash.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "lava_wash_detail1",
+   "path": "res://assets/models/park/lava_wash_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "lava_wash_detail2",
+   "path": "res://assets/models/park/lava_wash_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "lava_wash_short",
+   "path": "res://assets/models/park/lava_wash_short.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "lava_wash_short_detail1",
+   "path": "res://assets/models/park/lava_wash_short_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "lava_wash_short_detail2",
+   "path": "res://assets/models/park/lava_wash_short_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_tubes.py",
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
    "id": "mesa_lip_kicker",
    "path": "res://assets/models/park/mesa_lip_kicker.glb",
    "class": "landform",
@@ -3961,6 +4213,42 @@
      8.8384,
      59.3243
     ]
+   }
+  },
+  {
+   "id": "miners_cap",
+   "path": "res://assets/models/park/miners_cap.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the miners' steel breach cap (drop wedge W 18 L 4) with a stencil band, slammed open. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "miners_cap_detail1",
+   "path": "res://assets/models/park/miners_cap_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the miners' steel breach cap (drop wedge W 18 L 4) with a stencil band, slammed open. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "miners_cap_detail2",
+   "path": "res://assets/models/park/miners_cap_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the miners' steel breach cap (drop wedge W 18 L 4) with a stencil band, slammed open. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -4141,6 +4429,42 @@
    }
   },
   {
+   "id": "skylight_lip",
+   "path": "res://assets/models/park/skylight_lip.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the skylights' broken roof edge (drop wedge W 18 L 4), polished where the ball leaves it. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "skylight_lip_detail1",
+   "path": "res://assets/models/park/skylight_lip_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the skylights' broken roof edge (drop wedge W 18 L 4), polished where the ball leaves it. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "skylight_lip_detail2",
+   "path": "res://assets/models/park/skylight_lip_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the skylights' broken roof edge (drop wedge W 18 L 4), polished where the ball leaves it. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
    "id": "slot_canyon_flow",
    "path": "res://assets/models/park/slot_canyon_flow.glb",
    "class": "landform",
@@ -4315,6 +4639,42 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "tube_mouth_lip",
+   "path": "res://assets/models/park/tube_mouth_lip.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the lava tube's mouth (drop wedge W 16 L 4), crust at the lip. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "tube_mouth_lip_detail1",
+   "path": "res://assets/models/park/tube_mouth_lip_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the lava tube's mouth (drop wedge W 16 L 4), crust at the lip. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "tube_mouth_lip_detail2",
+   "path": "res://assets/models/park/tube_mouth_lip_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat at an absolute y; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells)",
+   "provenance": {
+    "recipe": "tools/blender/park/sinkhole_slabs.py",
+    "notes": "Sinkhole authored pass (2026-10-17): the lava tube's mouth (drop wedge W 16 L 4), crust at the lip. Its -col is exactly the greybox solid it replaces (park_recipes.gd place_greybox). Procedural; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -5777,6 +6137,9 @@
   "boss_pickup",
   "boss_waking_base",
   "boss_waking_kit",
+  "breach_lip",
+  "breach_lip_detail1",
+  "breach_lip_detail2",
   "breach_rim_sector",
   "breach_socket",
   "breach_tab",
@@ -5832,6 +6195,9 @@
   "decal_seashell_mask.png",
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
+  "drift_wash",
+  "drift_wash_detail1",
+  "drift_wash_detail2",
   "enemy_anchor_crew",
   "enemy_burrower",
   "enemy_catch_trap",
@@ -5868,6 +6234,9 @@
   "flume_span",
   "flume_span_detail1",
   "flume_span_detail2",
+  "gallery_wash",
+  "gallery_wash_detail1",
+  "gallery_wash_detail2",
   "gauge_dial_bezel",
   "gauge_dial_detail1",
   "gauge_dial_detail2",
@@ -5879,9 +6248,15 @@
   "geyser_launcher_drum",
   "geyser_launcher_fittings",
   "geyser_launcher_grate",
+  "great_room_deck",
+  "great_room_deck_detail1",
+  "great_room_deck_detail2",
   "half_pipe_concrete",
   "half_pipe_concrete_detail1",
   "half_pipe_concrete_detail2",
+  "haulage_bed",
+  "haulage_bed_detail1",
+  "haulage_bed_detail2",
   "impeller_hub",
   "impeller_rim_sector",
   "impeller_vane",
@@ -5950,6 +6325,12 @@
   "lava_tube_run_bend_p30_detail2",
   "lava_tube_run_detail1",
   "lava_tube_run_detail2",
+  "lava_wash",
+  "lava_wash_detail1",
+  "lava_wash_detail2",
+  "lava_wash_short",
+  "lava_wash_short_detail1",
+  "lava_wash_short_detail2",
   "lift_platform_deck",
   "lift_platform_detail1",
   "lift_platform_detail2",
@@ -5964,6 +6345,9 @@
   "mind_hand",
   "mind_hand_M1_M2_cast_atlas.png",
   "mind_hand_M4_signal_atlas.png",
+  "miners_cap",
+  "miners_cap_detail1",
+  "miners_cap_detail2",
   "moss_hover_barge",
   "moss_hover_barge_detail1",
   "moss_hover_barge_detail2",
@@ -6102,6 +6486,9 @@
   "sky_cradle",
   "sky_loom",
   "sky_mesa",
+  "skylight_lip",
+  "skylight_lip_detail1",
+  "skylight_lip_detail2",
   "slot_canyon_flow",
   "slot_canyon_flow_bend15",
   "slot_canyon_flow_bend15_detail1",
@@ -6135,6 +6522,9 @@
   "trebuchet_launcher_detail2",
   "trebuchet_launcher_frame",
   "trebuchet_launcher_glass",
+  "tube_mouth_lip",
+  "tube_mouth_lip_detail1",
+  "tube_mouth_lip_detail2",
   "valve_wheel_band",
   "valve_wheel_detail1",
   "valve_wheel_detail1m",

@@ -89,6 +89,8 @@ const RECIPES := [
 	"landmark_dam", "landmark_penstock_tower", "landmark_headframe", "landmark_sinkhole",
 	"landmark_sky_island", "landmark_spire",
 	"anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn",
+	"lava_wash", "lava_wash_short", "gallery_wash", "drift_wash",
+	"skylight_lip", "tube_mouth_lip", "breach_lip", "miners_cap", "great_room_deck", "haulage_bed",
 ]
 const GREYBOX := "greybox:"
 # The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).
