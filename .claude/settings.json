@@ -1,6 +1,10 @@
 {
   "model": "opus[1m]",
-  "modelSettings": { "claude-opus-5-5": { "effortLevel": "high" } },
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
+  },
   "effortLevel": "high",
   "switchModelsOnFlag": false,
   "fallbackModel": [],
@@ -24,7 +28,10 @@
       "Bash(git push -u origin *)",
       "Bash(git checkout -b *)",
       "Bash(git switch -c *)",
-      "mcp__github__create_pull_request"
+      "mcp__github__create_pull_request",
+      "Bash(node scripts/crash-harvest.mjs *)",
+      "Bash(node scripts/redteam/run.mjs *)",
+      "Bash(node scripts/redteam/merge.mjs *)"
     ],
     "deny": [
       "Bash(git push --force*)",
