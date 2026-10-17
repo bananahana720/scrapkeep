@@ -933,6 +933,9 @@ func _shade(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: A
 	var reach := AABB()
 	for i in cells.size():
 		reach = cells[i]["bounds"] if i == 0 else reach.merge(cells[i]["bounds"])
+	var far := 0.0
+	for k in 8:
+		far = maxf(far, reach.get_endpoint(k).distance_to(origin))
 	var cuts: Array = []
 	for face in faces:
 		var shadow := _face_shadow(origin, face)
@@ -945,12 +948,20 @@ func _shade(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: A
 			extent = extent.expand(v)
 		if clearance < INF and (_box_clears(reach, extent, origin, clearance) or _planes_clear(hull, origin, face, clearance)):
 			continue
-		cuts.append([face, shadow, clearance, extent])
+		var frustum := _frustum(origin, face, far)
+		var span := AABB(frustum[0], Vector3.ZERO)
+		for point in frustum:
+			span = span.expand(point)
+		span = span.grow(FRUSTUM_MARGIN)
+		if not span.intersects(reach):
+			continue
+		cuts.append([face, shadow, clearance, extent, frustum, span])
 	if cuts.is_empty():
 		return cells
 	var lit: Array = []
 	for cell in cells:
-		lit.append_array(_shade_cell(origin, cuts, [cell]))
+		var bounds: AABB = cell["bounds"]
+		lit.append_array(_shade_cell(origin, cuts.filter(func(cut): return (cut[5] as AABB).intersects(bounds)), [cell]))
 	return lit
 
 
@@ -962,10 +973,47 @@ func _shade_cell(origin: Vector3, cuts: Array, parts: Array) -> Array:
 		for part in parts:
 			if clearance < INF and (_box_clears(part["bounds"], cut[3], origin, clearance) or _planes_clear(part["planes"], origin, face, clearance)):
 				lit.append(part)
+			elif not (cut[5] as AABB).intersects(part["bounds"]) or _frustum_outside(part["planes"], cut[4]):
+				lit.append(part)
 			else:
 				lit.append_array(_subtract_shadow(part, cut[1]))
 		parts = lit
 	return parts
+
+
+# Grazing terrain (a bumpy floor seen from just above it) gives shadows whose corners are too
+# ill-conditioned for a clearance (MIN_DET), so those skip on reach instead. Every part lies
+# within far of the origin, so the shadow that can meet it is the frustum between the face and
+# the face pushed out along the origin's rays past far (scaled from its nearest point). A part
+# whose box misses the frustum's box, or that has a plane with the whole frustum FRUSTUM_MARGIN
+# outside it, keeps its volume, give or take the clip tolerance's sliver.
+const FRUSTUM_MARGIN := 0.001
+
+
+func _frustum(origin: Vector3, face: Array, far: float) -> Array:
+	var near := INF
+	for i in range(1, face.size() - 1):
+		near = minf(near, origin.distance_to(_closest_triangle(origin, face[0], face[i], face[i + 1])))
+	var push := far / maxf(near, 0.000001) + 1.0
+	var points: Array = []
+	for v in face:
+		points.append(v)
+		points.append(origin + ((v as Vector3) - origin) * push)
+	return points
+
+
+func _frustum_outside(planes: Array, frustum: Array) -> bool:
+	for plane in planes:
+		var at: Vector3 = plane["at"]
+		var normal: Vector3 = plane["normal"]
+		var outside := true
+		for point: Vector3 in frustum:
+			if (point - at).dot(normal) < FRUSTUM_MARGIN:
+				outside = false
+				break
+		if outside:
+			return true
+	return false
 
 
 # Clipping keeps points up to SLACK past each plane (0.0001 tolerance plus float32 error), which
