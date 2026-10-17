@@ -15,7 +15,8 @@ import { fileURLToPath } from "node:url";
 //              the warden loop: an audible click
 //   unchecked  a track whose audio is not on disk, or no ffmpeg; never counted as a pass
 // Game clips are measured as the engine plays them: stems summed, plus the manifest's level_db.
-// Clips and files under 10 s are stingers and fanfares, so loudness skips them; seams do not.
+// Loudness skips clips and files under 10 s (stingers, fanfares, short beds), where an integrated
+// reading means little; seams do not.
 // Run: node scripts/audio-gate.mjs [--project <dir>] [--music <dir>]... [--loops <regex>] [--json] [--cues-only]
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -226,7 +227,7 @@ export function gameTracks(manifests) {
   for (const m of manifests)
     for (const [id, clip] of Object.entries(m.clips ?? {})) {
       const files = Object.values(clip.files ?? {}).map((f) => path.join(m.dir, f));
-      tracks.push({ name: `${m.theme}/${id}`, files, rate: clip.rate ?? m.rate, level: m.level_db ?? 0, loop: !!clip.loop, exit: clip.exit, loopAt: clip.loop_offset ?? 0 });
+      tracks.push({ name: `${m.theme}/${id}`, files, rate: clip.rate ?? m.rate, level: m.level_db ?? 0, loop: !!clip.loop, exit: clip.sample_count ?? clip.exit, loopAt: clip.loop_offset ?? 0 });
     }
   return tracks;
 }
@@ -307,9 +308,20 @@ export function parseArgs(argv) {
   return args;
 }
 
+// What the run cannot see, so a wrong path never reads as a pass.
+export function missingInputs(args, manifests) {
+  const found = [];
+  if (!existsSync(path.join(args.project, SFX_BANK)))
+    found.push({ kind: "unchecked", where: args.project, what: `no ${SFX_BANK}; cues not checked` });
+  if (!args.cuesOnly && !manifests.some((m) => Object.keys(m.clips ?? {}).length))
+    found.push({ kind: "unchecked", where: args.project, what: `no ${MUSIC_DIR} manifest with clips; game music not measured` });
+  for (const d of args.music) if (!existsSync(d)) found.push({ kind: "unchecked", where: d, what: "music folder not found" });
+  return found;
+}
+
 export function run(args) {
   const delivered = args.music.flatMap((d) => walk(d, AUDIO_EXT));
-  const findings = cueFindings(args.project, delivered);
+  const findings = [...missingInputs(args, readManifests(args.project)), ...cueFindings(args.project, delivered)];
   const rows = [];
   if (!args.cuesOnly) {
     if (!hasFfmpeg()) findings.push({ kind: "unchecked", where: "ffmpeg", what: "ffmpeg not found; loudness, peaks and seams not measured" });

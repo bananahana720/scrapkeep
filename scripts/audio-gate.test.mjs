@@ -11,6 +11,8 @@ import {
   decode,
   hasFfmpeg,
   judge,
+  missingInputs,
+  run,
   missingCues,
   parseArgs,
   parseEbur128,
@@ -102,6 +104,18 @@ test("cue findings need the game's sound bank and feed the placeholder gate", ()
   } finally {
     rmSync(none, { recursive: true, force: true });
     rmSync(game, { recursive: true, force: true });
+  }
+});
+
+test("a wrong project or music path never reads as a pass", () => {
+  const empty = project({ "README.md": "" });
+  try {
+    const args = parseArgs(["--project", empty, "--music", path.join(empty, "nope"), "--cues-only"]);
+    assert.deepEqual(missingInputs(args, []).map((f) => f.what), ["no src/presentation/sfx_bank.gd; cues not checked", "music folder not found"]);
+    assert.equal(missingInputs({ ...args, cuesOnly: false }, [{ clips: {} }]).length, 3);
+    assert.notEqual(run(args).findings.length, 0);
+  } finally {
+    rmSync(empty, { recursive: true, force: true });
   }
 });
 
