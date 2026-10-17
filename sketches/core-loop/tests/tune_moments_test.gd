@@ -66,7 +66,7 @@ func _registry() -> void:
 		_t.check("%s is hidden exactly when tunes.json says" % id, TuneMoments.is_hidden(id) == bool(row.hidden))
 		_t.check("%s has a music row on its own pack" % id, MusicRows.ROWS.has(id) and String(MusicRows.ROWS[id]["ace_manifest"]).ends_with("/%s/manifest.json" % TuneMoments.theme_of(id)))
 	_t.eq("the table holds exactly the tunes.json ids", TuneMoments.TUNES.keys().size(), ids.size())
-	_t.eq("three tunes wait on a hook", TuneMoments.UNWIRED.keys(), ["fabricator", "camp-course", "modifier-curse"])
+	_t.eq("two tunes wait on a hook", TuneMoments.UNWIRED.keys(), ["camp-course", "modifier-curse"])
 
 
 func _pure() -> void:
@@ -78,6 +78,7 @@ func _pure() -> void:
 		"event-hold-relay": ["event", "hold_the_relay"], "event-flood": ["event", "flood"],
 		"event-dust-squall": ["event", "dust_squall"], "event-arena": ["activity", "round_arena"],
 		"miniboss": ["miniboss", "miniboss"], "moss-shop": ["shop", "bay"], "modifier-par": ["modifier", "par"],
+		"fabricator": ["fabricator", "fabricator_used"],
 		"secret-lost-tape": ["find", "flume_weir_cache"], "secret-after-hours": ["jukebox", "bay_jukebox"],
 		"secret-brindle-swing": ["remix", "brindle"], "secret-chip-keepers": ["remix", "champion"],
 		"secret-highdraft-rain": ["remix", "3-1"], "secret-dig-dub": ["remix", "2-2"],
@@ -205,6 +206,16 @@ func _process(_delta: float) -> bool:
 	events.synergy_discovered.emit("thermal_ride", "world", true)
 	_t.eq("another discovery plays nothing", _last(a), "")
 
+	a.fabricator_used()
+	_t.eq("a fabricator hoop plays The Fabricator", _last(a), "fabricator")
+	var first_until := int(a._moments[0].until)
+	a.engine.clock += TuneMoments.pass_frames("fabricator") / 2
+	a.fabricator_used()
+	_t.check("a second hoop restarts the pass", a._moments.size() == 1 and int(a._moments[0].until) > first_until)
+	a.engine.clock = int(a._moments[0].until)
+	a._tend_moments()
+	_t.eq("after one pass it hands back", _last(a), "")
+
 	# Rare remixes, read where they play.
 	var zone31 := 0
 	for s in range(1, 13):
@@ -234,6 +245,7 @@ func _process(_delta: float) -> bool:
 	none.landmark_moment("headframe", 1.0)
 	none.begin_moment("shop", "bay", "moss-shop")
 	none.jukebox_flipped()
+	none.fabricator_used()
 	ev.synergy_discovered.emit("reach_pressure_cache", "world", true)
 	var mb := FakeElite.new()
 	mb.affix = {}

@@ -1210,7 +1210,9 @@ func wire_optional() -> void:
 	_listen_optional(events, "world_fact", func(kind: String, _at: Vector3):
 		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context()))
 		if kind == "bay_jukebox":
-			jukebox_flipped())
+			jukebox_flipped()
+		elif kind == "fabricator_used":
+			fabricator_used())
 	# The shell's air factor moved (build.gd shell_air_changed): the row's spring, up a fifth on the
 	# rise and down a fourth on the return, so the two read apart without looking.
 	if ctx.get("build") != null and ctx.build.has_signal("shell_air_changed") and not ctx.build.shell_air_changed.is_connected(_on_shell_air):
@@ -2192,7 +2194,7 @@ func begin_moment(kind: String, key: String, id: String) -> void:
 	end_moment(kind, key, false)
 	_moment_seq += 1
 	var until := -1
-	if kind == "find":
+	if kind in TuneMoments.ONE_PASS:
 		until = engine.next_bar() + TuneMoments.pass_frames(id)
 	_moments.append({"id": id, "kind": kind, "key": key, "seq": _moment_seq, "until": until})
 	_refresh_moment()
@@ -2237,6 +2239,12 @@ func jukebox_flipped() -> void:
 		end_moment("jukebox")
 	else:
 		begin_moment("jukebox", "bay_jukebox", "secret-after-hours")
+
+
+# A roll through a stocked fabricator hoop (build.gd world_fact "fabricator_used"): one pass of
+# The Fabricator; another hoop while it plays restarts the pass without restarting the track.
+func fabricator_used() -> void:
+	begin_moment("fabricator", "fabricator_used", TuneMoments.tune_for("fabricator", "fabricator_used"))
 
 
 func tune_found(discovery_id: String) -> void:

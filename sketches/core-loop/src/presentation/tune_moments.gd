@@ -20,7 +20,9 @@ const LANDMARK_IN := 0.8
 const LANDMARK_OUT := 0.7
 
 # The kinds of moment, highest first wins; a tie goes to the newest.
-const PRIORITY := {"miniboss": 5, "event": 4, "find": 4, "jukebox": 3, "shop": 2, "landmark": 1}
+const PRIORITY := {"miniboss": 5, "event": 4, "find": 4, "jukebox": 3, "fabricator": 2, "shop": 2, "landmark": 1}
+# Kinds that play one pass of their tune and hand back; another trigger restarts the pass.
+const ONE_PASS := ["find", "fabricator"]
 
 # Every row of tunes.json: its hook, the key the hook reports, and its bpm.
 const TUNES := {
@@ -38,7 +40,7 @@ const TUNES := {
 	"event-arena": {"hook": "activity", "keys": ["arena", "round_arena"], "bpm": 129},
 	"miniboss": {"hook": "miniboss", "key": "miniboss", "bpm": 135},
 	"moss-shop": {"hook": "shop", "key": "bay", "bpm": 112},
-	"fabricator": {"hook": "", "bpm": 120},
+	"fabricator": {"hook": "fabricator", "key": "fabricator_used", "bpm": 120},
 	"camp-course": {"hook": "", "bpm": 172},
 	"modifier-curse": {"hook": "", "bpm": 100},
 	"modifier-par": {"hook": "modifier", "key": "par", "bpm": 176},
@@ -52,7 +54,6 @@ const TUNES := {
 
 # The tunes with no game hook yet, and the hook each one needs.
 const UNWIRED := {
-	"fabricator": "a fabricator open or dwell signal; today's fabricators are drive-through hoops with no UI (build/fabricators.gd)",
 	"camp-course": "a camp movement-course area; the camp is a menu page today (ui/camp_menu.gd)",
 	"modifier-curse": "a curse run modifier or a curse-taken signal; a curse is only a trade-pocket offer today (world/trade_pockets.gd)",
 }
