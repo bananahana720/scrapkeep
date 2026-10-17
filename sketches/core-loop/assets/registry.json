@@ -5459,6 +5459,17 @@
    "loader": "src/combat/hooker.gd (load of this path)"
   },
   {
+   "id": "enemy_linker",
+   "path": "res://assets/models/world_one/enemy_linker.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/linker.gd, wave 19)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_linker.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
+   }
+  },
+  {
    "path": "res://assets/models/world_one/enemy_lobber.glb",
    "class": "enemy",
    "ships": true,
@@ -5525,6 +5536,28 @@
     "recipe": "tools/blender/world_one/enemy_reactor.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
     "note": "Ported world-one recipe; D3 supplies the shared enemy budget contract."
+   }
+  },
+  {
+   "id": "enemy_splitter",
+   "path": "res://assets/models/world_one/enemy_splitter.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/splitter.gd, wave 18)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_splitter.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
+   }
+  },
+  {
+   "id": "enemy_splitter_piece",
+   "path": "res://assets/models/world_one/enemy_splitter_piece.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/splitter.gd pieces, wave 18)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_splitter_piece.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
    }
   },
   {
@@ -6480,11 +6513,14 @@
   "enemy_kite_drone",
   "enemy_lamp_swarm",
   "enemy_line_cutter",
+  "enemy_linker",
   "enemy_miniboss",
   "enemy_pit_jaw",
   "enemy_prop_crew",
   "enemy_ramp_flipper",
   "enemy_reactor",
+  "enemy_splitter",
+  "enemy_splitter_piece",
   "enemy_swarm_remnant",
   "enemy_swatter",
   "enemy_vault",
