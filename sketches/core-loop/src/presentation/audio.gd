@@ -377,12 +377,21 @@ func _load_ace() -> void:
 	_ace_loaded = AceSequencer.new(_ace_loaded_from)
 
 
-# Blocks until stage 1's whole band is baked, as it is by the time a player leaves the
-# title. A run that starts sooner waits here (run_started), as on a loading frame.
+# Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
+# Bots call it; the headless game never starts the worker.
 func bake_opening_now() -> void:
 	bake_now()
 	_finish_opening()
 	MusicEngine.prepare_opening()
+
+
+# A live run that starts before stage 1's band is baked waits for it, as on a loading frame.
+func _ready_for_run() -> void:
+	if not live_output:
+		return
+	if not sound_ready:
+		bake_now()
+	_finish_opening()
 
 
 static func _finish_opening() -> void:
@@ -1070,7 +1079,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 func _connect_all(events) -> void:
 	_wire_cannon(events)
 	events.run_started.connect(func(class_id: String):
-		_finish_opening()
+		_ready_for_run()
 		_heft_class = 1
 		_hull_seen = 0.0
 		_fired_this_run.clear()

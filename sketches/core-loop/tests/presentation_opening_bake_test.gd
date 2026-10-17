@@ -7,8 +7,8 @@ const Synth := preload("res://src/presentation/synth.gd")
 
 # S1-HITCH: a note the band renders on first use costs 35 to 85 ms in one frame. With the
 # startup bake and the opening bake done, Spillway's band renders no new note through stage
-# 1's arrangements: every pressure, the Warden's lift and drop, the reactor pedal and each
-# pilot's counter-line.
+# 1's arrangements it drives here: three pressures, the Warden's lift and break, the reactor
+# pedal and each pilot's counter-line.
 
 var _t := T.new("presentation_opening_bake_test")
 var _seen := 0

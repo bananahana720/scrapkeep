@@ -375,7 +375,7 @@ func _init() -> void:
 	_lead = _make_track_lead()
 
 
-# Spillway and the cadence: what the title and stage 1 need, before the music starts.
+# Spillway and the cadence: what the title needs, before the music starts.
 static func prepare() -> void:
 	_prepare_chords(Harmony.PROGRESSION + Harmony.CADENCE + [Harmony.MINOR_OF["G13"], Harmony.MINOR_OF["Cmaj9"], Harmony.MINOR_OF["Bbmaj9"]], ["lead"], 0)
 	for drum in Synth.DRUMS:
