@@ -89,7 +89,7 @@ const DEFS := [
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
-			{"id": "dig_bore", "kinds": ["drill_crew", "burrower"]},
+			{"id": "dig_bore", "kinds": ["drill_crew", "burrower", "prop_crew"]},
 			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
 		], "elite": ELITE, "warden_variant": ""},
 	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": "dig_deep"}, "warden_family": "swarm", "name": "Dig: the deep works", "map": "park_sinkhole", "threat": 1.2,
@@ -100,7 +100,7 @@ const DEFS := [
 		"packs": [
 			{"id": "deep_bore", "kinds": ["drill_crew", "burrower", "burrower"]},
 			{"id": "deep_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "burrower"]},
-			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm"]},
+			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm", "prop_crew"]},
 		], "elite": ELITE, "warden_variant": "brood"},
 	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": "highdraft"}, "warden_family": "mind", "name": "Highdraft", "map": "park_islands", "threat": 1.3,
 		"unlock_base": 2, "ancient": "mind_hand",

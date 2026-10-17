@@ -17,6 +17,7 @@ extends Node3D
 # This node also hosts the burrowers' cave-ins (cave_ins.gd): Fleet crews' effects on the
 # world all live here.
 
+const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const Palette := preload("res://src/core/palette.gd")
 const EventGround := preload("res://src/world/events/event_ground.gd")
 const CaveIns := preload("res://src/world/events/cave_ins.gd")
@@ -170,6 +171,7 @@ func _lift(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 			state.cage.position = Vector3.ZERO
 			state.mark.get_node("Vessel").material_override = Palette.unshaded(Palette.SLATE)
 			world.director.activate_home(row.effect.home)
+			FoleyAudio.one_shot("lift_cage_arrive", self, state.mark.global_position if state.mark.is_inside_tree() else Vector3.ZERO)
 		"end":
 			_end(row)
 
@@ -277,6 +279,7 @@ func _zipline(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 			if state.cut:
 				return
 			state.line.get_node("Trolley").position = state.to - Vector3.UP * state.mark.position.y
+			FoleyAudio.one_shot("zipline_snap", self, state.to)
 			state.mark.get_node("Vessel").material_override = Palette.unshaded(Palette.SLATE)
 			world.director.activate_home(row.effect.home)
 			state.knocked = _impact(row, state.to)
@@ -329,6 +332,10 @@ func _step_line(state: Dictionary, delta: float) -> void:
 	var trolley: Node3D = state.line.get_node("Trolley")
 	var rider: Vector3 = state.from.lerp(state.to, f * f)
 	trolley.position = rider - Vector3.UP * state.mark.position.y
+	if not state.has("whine") and state.lead - state.age <= FoleyAudio.WHINE_LEAD:
+		state.whine = FoleyAudio.player("zipline_whine", trolley)
+		if state.whine != null:
+			state.whine.play()
 	var player = world.ctx.player if "ctx" in world and world.ctx != null else null
 	if player == null or not is_instance_valid(player) or player.state.grounded:
 		return
@@ -346,6 +353,10 @@ func cut_line(state: Dictionary) -> void:
 		return
 	state.cut = true
 	lines_cut += 1
+	if state.get("whine") != null and is_instance_valid(state.whine):
+		state.whine.stop()
+	var trolley_at: Vector3 = state.line.get_node("Trolley").global_position if state.line.is_inside_tree() else state.to
+	FoleyAudio.one_shot("zipline_snap", self, trolley_at)
 	state.line.get_node("Cable").visible = false
 	var trolley: Node3D = state.line.get_node("Trolley")
 	trolley.position.y -= 40.0

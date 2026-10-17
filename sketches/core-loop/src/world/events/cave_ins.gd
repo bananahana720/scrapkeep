@@ -88,6 +88,8 @@ func surface_at(at: Vector3) -> Node3D:
 	fall.configure("cave_in_%d" % falls_started, Vector3(at.x, ground_y, at.z), RADIUS_M, WARN_S, world.terrain, player,
 		Callable(self, "_hit_ball"), 0.0, _debris(Vector3(at.x, ground_y + 9.0, at.z)))
 	fall.voice = "clank"
+	fall.warn_sound = "cave_in_rumble"
+	fall.land_sound = "cave_in_debris"
 	add_child(fall)
 	_live.append(fall)
 	_since_last = 0.0

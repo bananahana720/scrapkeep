@@ -11,6 +11,7 @@ extends Node3D
 # - every enemy inside the disc, for enemy_damage (0 spares them).
 # The slab the owner hands over drops from its height to the floor across the warning.
 
+const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
@@ -38,6 +39,12 @@ var tag := ""
 # (the crew that shored the roof); the prop crew reveals its codex entry through it.
 var on_crush := Callable()
 var spare_id := 0
+# Foley ids (foley_audio.gd): warn_sound starts with the warning; land_sound starts
+# land_lead seconds before the roof lands, so its own impact falls on the landing.
+var warn_sound := ""
+var land_sound := ""
+var land_lead := 0.0
+var _land_played := false
 var hazard: Hazard
 var crushed: Array = []
 var hit_ball := false
@@ -81,6 +88,9 @@ func _physics_process(delta: float) -> void:
 		_commit()
 		return
 	hazard.step(delta)
+	if land_sound != "" and not _land_played and hazard.age >= hazard.warn_seconds - land_lead:
+		_land_played = true
+		FoleyAudio.one_shot(land_sound, get_parent(), centre)
 	if _slab != null:
 		var t := clampf(hazard.age / hazard.warn_seconds, 0.0, 1.0)
 		var floor_y := ground_at(centre)
@@ -99,6 +109,8 @@ func _commit() -> void:
 	hazard.mechanic_tag = tag
 	add_child(hazard)
 	WarningGap.stamp(get_tree(), self)
+	if warn_sound != "":
+		FoleyAudio.one_shot(warn_sound, get_parent(), centre)
 	if _slab != null:
 		_slab_from = _slab.global_position.y
 

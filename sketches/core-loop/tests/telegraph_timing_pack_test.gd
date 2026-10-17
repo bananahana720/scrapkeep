@@ -367,6 +367,12 @@ func _run() -> void:
 	for kind in kinds:
 		var id: String = _record.id_of(kind)
 		var rec: Dictionary = _record.ROWS.get(id, {})
+		# A player-started attack never comes from a solo spawn; its own test drives it
+		# (enemy_prop_crew_test: one INSTANT disc the roof's size, landing after its warning).
+		if _record.PLAYER_STARTED.has(id):
+			report[id] = {"kind": kind, "marker": String(rec.get("marker", "")), "band": String(rec.get("band", "")), "pre_shoot": "%.2f" % rec.get("pre_shoot", -1.0)}
+			print("%s | %s | player-started, measured by its own test" % [kind, id])
+			continue
 		var leads: Array = []
 		var overlaps: Array = []
 		var markers := {}

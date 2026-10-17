@@ -12,6 +12,7 @@ extends "res://src/combat/counter.gd"
 # still brings the roof down. It waits for the shared warning gap before it warns.
 
 const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
+const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 
 const HP := 60.0
 # The body (tools/blender/world_two/enemy_prop_crew.py, PR #64) carries a 5.2 m by 4.0 m
@@ -58,6 +59,9 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var presence := FoleyAudio.player("prop_crew_presence", self)
+	if presence != null:
+		presence.autoplay = true
 	var parts := _parts()
 	if not parts.is_empty():
 		_build_body(parts)
@@ -235,6 +239,9 @@ func knock_prop() -> Node3D:
 	fall.voice = Roster.voiced(String(Roster.faction(faction)["voice"]), _motif())
 	fall.tag = String(row.get("tag", ""))
 	fall.on_crush = _crush_discovery(fleet)
+	fall.warn_sound = "prop_crew_strain"
+	fall.land_sound = "prop_crew_collapse"
+	fall.land_lead = FoleyAudio.COLLAPSE_LAND
 	fall.spare_id = get_instance_id()
 	world_root.add_child(fall)
 	slab.global_position = at
