@@ -563,7 +563,10 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 		enemy.threat_level = _threat()
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
-		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
+		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
+		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
+		if source != "fuse":
+			ctx.run.record_kill(kind, where, scrap, source)
 		var id := enemy.get_instance_id()
 		_primed.erase(id)
 		_prow_until.erase(id)
@@ -1109,7 +1112,8 @@ func _target_class_of_kind(kind: String) -> String:
 	# complement of KINDS, so the two names cannot silently drift apart. A kind that is
 	# neither is a real gap (a KINDS or SCRIPTS addition this unit missed), so it still
 	# counts under "adds" but is warned once rather than counted silently.
-	if not Roster.is_reinforcement(kind):
+	# A special's spawn (roster_specials.gd "spawned") is an add, but not a reinforcement.
+	if not Roster.is_reinforcement(kind) and not Roster.row(kind).has("priority"):
 		push_warning("_target_class_of_kind: '%s' is neither a v1 kind nor a Fleet reinforcement; counting it under 'adds'" % kind)
 	return "adds"
 

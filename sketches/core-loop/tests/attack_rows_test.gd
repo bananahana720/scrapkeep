@@ -78,7 +78,8 @@ func _check_ids() -> void:
 			missing.append(id)
 	_report("every id has a row", missing.is_empty(), "%d of %d document ids without a row %s" % [missing.size(), doc.size(), missing])
 	# 2026-10-04, alpha wave 8: an id owned by a declared later-world roster kind (a row with
-	# a "world", roster_dig.gd and roster_highdraft.gd) is reserved ahead of the document.
+	# a "world", roster_dig.gd and roster_highdraft.gd) is reserved ahead of the document, and
+	# so is one owned by a kill-first special (a "priority", roster_specials.gd).
 	var extra: Array[String] = []
 	for id in EventKinds.ATTACK_ROWS:
 		if not seen.has(id) and not _reserved(id):
@@ -103,7 +104,8 @@ func _check_ids() -> void:
 
 func _reserved(id: String) -> bool:
 	var row := EventKinds.attack_row(id)
-	return row["owner_kind"] == "roster" and Roster.row(String(row["owner"])).has("world")
+	var owner := Roster.row(String(row["owner"]))
+	return row["owner_kind"] == "roster" and (owner.has("world") or owner.has("priority"))
 
 
 func _check_fields() -> void:

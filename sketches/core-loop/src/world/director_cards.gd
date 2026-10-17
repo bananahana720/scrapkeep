@@ -40,6 +40,7 @@ const CARDS := {
 	"foreman": {"cost": 3, "weight": 1.0, "stage_cap": 1},
 	"prop_crew": {"cost": 3, "weight": 1.0, "stage_cap": 1},
 	"pit_jaw": {"cost": 3, "weight": 1.0, "stage_cap": 2},
+	"splitter": {"cost": 3, "weight": 1.0, "stage_cap": 2},
 }
 
 

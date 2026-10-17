@@ -69,6 +69,10 @@ const ROWS := {
 		"idle": {"style": "sway", "amplitude": 0.03, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"pit_jaw": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E30": ["warn_seconds"]},
 		"idle": {"style": "tick", "amplitude": 0.04, "beats": 2.0}, "death": {"style": "pop", "parts": 4, "seconds": 0.4}},
+	"splitter": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {},
+		"idle": {"style": "breathe", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "pop", "parts": 3, "seconds": 0.4}},
+	"splitter_pod": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E25": ["warn_seconds"]},
+		"idle": {"style": "bob", "amplitude": 0.05, "beats": 1.5}, "death": {"style": "pop", "parts": 1, "seconds": 0.3}},
 }
 
 

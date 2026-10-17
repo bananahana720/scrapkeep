@@ -31,6 +31,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 #   build ("air", "speed", "heft", "contact", "weapon", "steer", "habit").
 # - script, world: a declared later-world kind's behaviour file and world (roster_dig.gd,
 #   roster_highdraft.gd). Such a kind is built, so spawnable, once its script exists.
+#   A kill-first special (roster_specials.gd) has a script and either a "world" or a "priority".
 
 const FLEET := "fleet"
 const REACTOR := "reactor"
@@ -186,6 +187,8 @@ const CHASSIS := {
 	"foreman": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Steam-horn mast over a punch clock, tethered to its crew"},
 	"prop_crew": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Timber prop holding a cracked roof frame over its pack"},
 	"pit_jaw": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Toothed jaw ring flush with the floor, its lips parting"},
+	"splitter": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Three welded pods whose seams flare white as one buds off"},
+	"splitter_pod": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Lit seams blinking faster as the fuse burns"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.
@@ -193,11 +196,11 @@ const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "net
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const ANCIENTS := ["reactor_relic", "swarm_remnant", "mind_hand"]
 # The kill-first specials (ENEMY-PRIORITY.md 4): rows in this file plus roster_specials.gd; they arrive in packs too.
-static var SPECIALS: Array = ["linker"] + RosterSpecials.ROWS.keys()
+static var SPECIALS: Array = ["linker"] + RosterSpecials.ROWS.keys().filter(func(id): return RosterSpecials.ROWS[id].get("priority", "") != "spawned")
 # The family ancient per Warden family.
 const FAMILY_ANCIENT := {REACTOR: "reactor_relic", SWARM: "swarm_remnant", MIND: "mind_hand"}
 
-# Every row: the base roster plus the declared world 2 and 3 kinds.
+# Every row: the base roster, the declared world 2 and 3 kinds and the kill-first specials.
 static var ROWS: Dictionary = _all_rows()
 
 
@@ -260,6 +263,7 @@ static func is_ancient(name: String) -> bool:
 	return faction(name)["era"] == "ancient"
 
 
+# A kill-first special arrives inside a pack, so it counts as one too; what it spawns does not.
 static func is_reinforcement(id: String) -> bool:
 	return id in COUNTERS or id in ANCIENTS or id in SPECIALS
 

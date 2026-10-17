@@ -575,6 +575,10 @@ const ATTACK_ROWS := {
 		"pose": "e23_hook_swing", "warn": "atk_e23_warn", "release": "atk_e23_release", "floor": "L", "open": []},
 	"E24": {"label": "Kite drone dive", "group": "enemy", "owner_kind": "roster", "owner": "kite_drone", "allegiance": "hostile", "threat": "threat_instant", "glyph": "diamond", "color": Palette.HAZARD,
 		"pose": "e24_wings_fold", "warn": "atk_e24_warn", "release": "atk_e24_release", "floor": "B", "open": []},
+	# Kill-first specials (roster_specials.gd). E25's pose is the pod's seam glow blinking
+	# faster as the fuse burns (splitter_pod.gd _pose); its ring marks the floor both ways.
+	"E25": {"label": "Splitter pod fuse blast", "group": "enemy", "owner_kind": "roster", "owner": "splitter_pod", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e25_pod_glow", "warn": "atk_e25_warn", "release": "atk_e25_release", "floor": "B", "open": []},
 	"E26": {"label": "Dispatcher tube drop", "group": "enemy", "owner_kind": "roster", "owner": "dispatcher", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
 		"pose": "e26_tube_suck", "warn": "atk_e26_warn", "release": "atk_e26_release", "floor": "B", "open": []},
 	"E30": {"label": "Pit jaw bite", "group": "enemy", "owner_kind": "roster", "owner": "pit_jaw", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,

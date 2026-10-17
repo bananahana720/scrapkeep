@@ -94,6 +94,9 @@ func _pack_kinds() -> Array:
 		# telegraph (the Linker, the Foreman) never attacks.
 		if kind in ["warden", "vault", "miniboss"] or int(Roster.row(kind)["telegraph"]) < 0:
 			continue
+		# A kind whose row has no telegraph never attacks (the Splitter only buds its pods).
+		if int(Roster.row(kind).get("telegraph", 0)) == -1:
+			continue
 		if kind in ["chaser", "lobber"] or _game.combat.fleet.makes(kind):
 			kinds.append(kind)
 	return kinds

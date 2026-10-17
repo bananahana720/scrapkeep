@@ -1,6 +1,6 @@
 # Priority proof
 
-Asks one question per kill-first special (design-v3/ENEMY-PRIORITY.md section 4; alpha-status ambition map, unit 7): does a player who kills the special first lose less hull than one who leaves it for last? The target: the ignore arm loses at least 1.25 times the hull the target arm loses, over 8 paired seeds. It feeds the wave 18 matchup lab.
+Asks one question per kill-first special (design-v3/ENEMY-PRIORITY.md section 4; alpha-status ambition map, unit 7): does a player who kills the special first lose less hull than one who leaves it for last? The target: the ignore arm loses at least 1.25 times the hull the target arm loses, over 8 paired seeds. Damage taken is graded beside it the same way (at least 1.25 times, with at least 10 on the ignore arm): the hull only takes what the ball's scrap armour does not, so at low numbers a hull verdict reads noise while the hits that landed still show the cost. Each arm also reports its median hull. The coordinator accepted the Splitter on median hull plus damage taken (2026-10-17). It feeds the wave 18 matchup lab.
 
 Automated; not a feel verdict.
 
@@ -25,7 +25,7 @@ $GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://to
 | `--start-mass=0` | 0 | the ball's opening mass (heft 1) |
 | `--specials=a,b` | all | names from `SPECIALS` |
 
-48 runs (three playable rows) took about 7 minutes at four processes in a 4 vCPU cloud container.
+48 runs (three playable rows, before the Splitter was built) took about 7 minutes at four processes in a 4 vCPU cloud container.
 
 ## The encounter
 
@@ -36,7 +36,7 @@ A calm stage 1 (no Warden, no director packs). Once the ball has been on the gro
 | target | the special while it lives, then the nearest crew |
 | ignore | the nearest crew while any stands, then the special |
 
-Both arms end on the same clear (everything down) or the cap, so clear time compares too. Bolts and rams hit whatever they hit; "ignore" is about where the bot goes.
+Both arms end on the same clear (everything down, and nothing still to come) or the cap, so clear time compares too. Bolts and rams hit whatever they hit; "ignore" is about where the bot goes. Anything the encounter makes after it starts (a Dispatcher's drop, a Splitter's budded or popped pods) joins the crew, toughened by `--hp-mult` like the rest, and a Splitter's seam flare that has not popped yet keeps the fight open. Each run records `joined` (later spawns) and `special_split`.
 
 **Dodging.** The stock bot answers every telegraph it has seen for 0.25 s and rams constantly, so stage 1 attacks rarely land: in trials at `--dodge=1` neither arm lost any hull. `--dodge` makes it miss a share, each telegraph decided once from the seed, as a player who misses about a third. Hull lost below 5 on the ignore arm reads "too little damage", not a ratio.
 
@@ -53,7 +53,7 @@ When the machine lands an enemy, check its row's `id` matches the roster id; the
 
 ## Results
 
-### 2026-10-17, origin/main cf63e622, cloud container (4 vCPU, headless), defaults plus `--hp-mult=3`
+### 2026-10-17, origin/main cf63e622, cloud container (4 vCPU, headless), defaults and `--hp-mult=3` (hp x column)
 
 Mean hull lost and clear seconds over 8 paired seeds; every run cleared.
 
@@ -64,7 +64,7 @@ Mean hull lost and clear seconds over 8 paired seeds; every run cleared.
 | Dispatcher | model | 1 | 0.0 / 6.8 s | 0.5 / 7.8 s | - | 1 of 8 | too little damage |
 | Dispatcher | model | 3 | 6.3 / 11.8 s | 3.9 / 17.8 s | 0.62 | 3 of 8 | too little damage (would miss) |
 | Dispatcher, 4 s drops | model | 3 | 6.3 / 11.9 s | 3.9 / 17.9 s | 0.62 | 3 of 8 | too little damage (would miss) |
-| Splitter | not built | | | | | | not built |
+| Splitter | not built | | | | | | not built (built since; see below) |
 | Linker | not built | | | | | | not built |
 | Mag trapper (control) | built | 1 | 0.0 / 8.6 s | 0.2 / 11.3 s | - | 1 of 8 | too little damage |
 | Mag trapper (control) | built | 3 | 1.5 / 13.6 s | 2.3 / 16.0 s | 1.53 | 4 of 8 | too little damage |
@@ -93,3 +93,22 @@ What it says:
 - It costs time too: at hp x3 the ignore arm clears 5 s later, through 3 to 8 wipes a run.
 - The built Foreman reads lower than the model did (1.38 to 2.09 against 1.96 to 3.64): the target arm now walks through a crew to reach a body that stands its ground, and ignoring it is cheaper at 16 seeds than at 8. A pass, with less margin than the model promised.
 - Seeds 3, 11, 14 and 16 go the wrong way at hp x3; in each the target arm took its hits diving through the crew. The wipe only bites on plated crew (the two brutes here), so a Foreman's pack needs plating to matter.
+
+### 2026-10-17, the Splitter built as the mama (branch claude/splitter-3mgbv8 on cf63e622 plus PR #54 and PR #24), cloud container (4 vCPU, headless), `--specials=splitter`, hp x 1 and 3
+
+The Splitter follows the ball 7 to 13 m out and buds a fuse pod 1.2 s in, then each bud 0.5 s sooner than the last (4 s down to 1.5 s, four standing at most). Each pod chases, lights a 1 s ring of 4.5 m, blows up and crumbles. A ram pops the Splitter into three more pods.
+
+| Special | Mode | hp x | Target hull mean / median / clear | Ignore hull mean / median / clear | Ratio (means) | Ignore worse | Verdict |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Splitter | built | 1 | 0.9 / 0.4 / 11.3 s | 3.1 / 0.8 / 13.1 s | 3.44 | 3 of 8 | too little damage |
+| Splitter | built | 3 | 3.9 / 0.0 / 23.5 s | 4.5 / 2.0 / 33.5 s | 1.13 | 5 of 8 | too little damage |
+
+Damage taken (before scrap armour), mean: hp x1 target 10.9, ignore 10.9; hp x3 target 10.1, ignore 20.3 (ignore higher on 6 of 8 seeds). Later spawns joined, mean: hp x3 target 4.4, ignore 12.5.
+
+What it says:
+
+- Leaving the Splitter alive is costly in what the pods do: at hp x3 the ignore arm meets about three times the pods, takes twice the damage and clears 10 s (43%) later; its median hull loss is 2.0 against the target arm's 0.
+Re-run with the damage column (head after c3a9716b, same numbers): damage verdict **pass** at hp x3 (10.1 / 20.3, ratio 2.01, ignore worse on 6 of 8 seeds) and **miss** at hp x1 (10.9 / 10.9, ratio 1.0, 3 of 8).
+
+- The hull verdict reads the hull mean, and the hull only takes what the scrap armour does not, so it is noisy at these numbers. The target arm's hp x3 mean rides seeds 2 and 8 (8.0 and 23.2 hull), the same in every tuning round, which is the crew, not the Splitter; the ignore mean sits at 4.5, under MIN_HULL 5. At hp x1 every arm stays under 5 hull, the lab limit the control shows too.
+- The stock bot rams, so it splits the Splitter in most runs. The proof measures kill order, not the clean-kill answer; the matchup lab (lever 7) is where "from above or from range" gets measured.
