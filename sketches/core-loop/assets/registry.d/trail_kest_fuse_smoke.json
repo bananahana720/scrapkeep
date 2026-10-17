@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "trail_kest_fuse_smoke",
+   "path": "res://assets/cosmetics/trails/trail_kest_fuse_smoke.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  }
+ ]
+}

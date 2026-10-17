@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "trail_cannon_recital",
+   "path": "res://assets/cosmetics/trails/trail_cannon_recital.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  }
+ ]
+}
