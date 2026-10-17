@@ -1,7 +1,7 @@
 extends RefCounted
 
 # The SPIL-9 companion as pure data: one hover chassis, two unordered module sockets, and
-# any two different families. Pieces are found in runs and acquired without equipping;
+# one piece or any two different families. Pieces are found in runs and acquired without equipping;
 # assemble() runs at intermission. Run state consumes the escape corridor after a
 # survived low-hull hit; it never revives and never
 # spends or refills a retry; the ready/spent flag is what the body and chirp cues show.
@@ -90,6 +90,59 @@ const CUES := {
 	"escape_rearm": {"clip": "escape_rearm", "chirp": ""},
 	"stalled": {"clip": "idle", "chirp": ""},
 	"rejoined": {"clip": "follow", "chirp": "companion_ready"},
+	# The assist rows borrow the spring and prow clips until the rig thread adds assist clips.
+	"assist_full": {"clip": "spring_arm", "chirp": "companion_ready"},
+	"assist_bonk": {"clip": "prow_response", "chirp": "companion_ready"},
+	"assist_arc": {"clip": "prow_response", "chirp": "companion_ready"},
+	"assist_pile": {"clip": "prow_response", "chirp": "companion_ready"},
+	"assist_slip": {"clip": "prow_response", "chirp": "companion_ready"},
+	"assist_anvil": {"clip": "prow_response", "chirp": "companion_ready"},
+	"assist_static": {"clip": "prow_response", "chirp": "companion_ready"},
+	"assist_bulldozer": {"clip": "prow_response", "chirp": "companion_ready"},
+}
+
+# COMPANION-GROWS (Andrew's taps 16:36Z and 16:44Z, 17 Oct 2026; storyboard
+# https://claude.ai/artifact/D3kPhtU161uiv44JS5r8uT). SPIL-9 gains a mark per heft class:
+# a little bigger and one more add-on part, capped at 1.4x so it never hides the ball or a
+# warning. Add-ons are cumulative: a mark shows its own and every earlier one.
+const MARKS := [
+	{"mark": 1, "scale": 1.0, "adds": ""},
+	{"mark": 2, "scale": 1.1, "adds": "fins"},
+	{"mark": 3, "scale": 1.2, "adds": "double_halo"},
+	{"mark": 4, "scale": 1.3, "adds": "exhaust"},
+	{"mark": 5, "scale": 1.4, "adds": "core_crest"},
+]
+# The assist ("Call SPIL-9"): landed hits fill the halo gauge, a hull hit taken fills it
+# faster, and when it is full the next ram calls it in (no new combat key, BIBLE.md:570).
+# Start values for the lab.
+const ASSIST_FULL := 24.0
+const ASSIST_PER_HIT := 1.0
+const ASSIST_PER_CONTACT := 3.0
+const ASSIST_PER_HULL_HIT := 4.0
+const ASSIST_TRIGGER := "ram"
+# At heft class 1 the ring is ASSIST_RADIUS m and shoves at ASSIST_KNOCK; damage is the
+# calling ram's dealt (at least ASSIST_DAMAGE_FLOOR). Per class above 1 the area grows by
+# ASSIST_AREA_STEP and knockback and damage by ASSIST_KNOCK_STEP, so class 5 is 3x the area
+# and 2x the knockback ("Clearly mightier"). Sound layers: 2, 2, 3, 3, 4.
+const ASSIST_RADIUS := 2.6
+const ASSIST_KNOCK := 10.0
+const ASSIST_DAMAGE_FLOOR := 10.0
+const ASSIST_AREA_STEP := 0.5
+const ASSIST_KNOCK_STEP := 0.25
+const ASSIST_LANE_HALF_WIDTH := 0.4
+const ASSIST_SLICK_SECONDS := 1.2
+# One assist per seated family set, keyed by family_key(). shape: "single" hits the nearest
+# foe only, "ring" every foe within the radius of the called hit, "lane" every foe along the
+# ball's travel for twice the radius. prime primes what it hits, shove knocks it out, slick
+# lays the escape lane under the ball. word is the ink sound effect; cue a CUES key.
+const ASSISTS := {
+	"": {"id": "bonk", "name": "Bonk", "word": "BONK!", "shape": "single", "prime": false, "shove": true, "slick": false},
+	CONDUCTIVE_PRIMER: {"id": "arc", "name": "Arc Call", "word": "ZZAK!", "shape": "ring", "prime": true, "shove": false, "slick": false},
+	RAM_BRACE: {"id": "pile", "name": "Pile Driver", "word": "KLANG!", "shape": "ring", "prime": false, "shove": true, "slick": false},
+	ESCAPE_CORRIDOR: {"id": "slip", "name": "Slipstream", "word": "FWOOSH!", "shape": "ring", "prime": false, "shove": true, "slick": true},
+	CONDUCTIVE_PRIMER + "+" + RAM_BRACE: {"id": "anvil", "name": "Thunder Anvil", "word": "KRA-KOOM!", "shape": "ring", "prime": true, "shove": true, "slick": false},
+	CONDUCTIVE_PRIMER + "+" + ESCAPE_CORRIDOR: {"id": "static", "name": "Static Slipstream", "word": "ZZZWAP!", "shape": "ring", "prime": true, "shove": true, "slick": true},
+	RAM_BRACE + "+" + ESCAPE_CORRIDOR: {"id": "bulldozer", "name": "Bulldozer Bow", "word": "WHUMP!", "shape": "lane", "prime": false, "shove": true, "slick": true},
 }
 # The leash (comps/ror2/companions.md:157, "use a Scrapkeep value tuned in the lab"): start
 # values. With no leader the companion stalls after STALL_AFTER s (must stay under 1 s) and
@@ -145,6 +198,53 @@ static func pick(state: Dictionary, table: Dictionary = DRIVERS) -> Dictionary:
 		if met:
 			return row
 	return {}
+
+
+# The MARKS row for a heft class (clamped to the table).
+static func mark_of(heft_class: int) -> Dictionary:
+	return MARKS[clampi(heft_class, 1, MARKS.size()) - 1]
+
+
+# The add-ons a heft class shows: its own and every earlier mark's.
+static func adds_of(heft_class: int) -> Array:
+	var out := []
+	for row in MARKS:
+		if int(row["mark"]) <= clampi(heft_class, 1, MARKS.size()) and row["adds"] != "":
+			out.append(row["adds"])
+	return out
+
+
+# The seated families in FAMILIES order joined by "+": "" bare, one family, or a pair.
+static func family_key(socket_ids: Array) -> String:
+	var fams := []
+	for f in FAMILIES:
+		for id in socket_ids:
+			if typeof(id) == TYPE_STRING and family_of(id) == f and not fams.has(f):
+				fams.append(f)
+	return "+".join(fams)
+
+
+# The assist a socket set calls, with its cue: ASSISTS[family_key] plus "cue".
+static func assist_of(socket_ids: Array) -> Dictionary:
+	var row: Dictionary = ASSISTS.get(family_key(socket_ids), ASSISTS[""]).duplicate()
+	row["cue"] = "assist_" + String(row["id"])
+	return row
+
+
+# How hard the assist hits at a heft class: {area, radius, knock, layers}. area and knock
+# are multipliers on class 1; radius is metres.
+static func assist_power(heft_class: int) -> Dictionary:
+	var steps := clampi(heft_class, 1, MARKS.size()) - 1
+	var area := 1.0 + ASSIST_AREA_STEP * steps
+	return {"area": area, "radius": ASSIST_RADIUS * sqrt(area), "knock": 1.0 + ASSIST_KNOCK_STEP * steps,
+		"layers": 2 + floori(steps / 2.0)}
+
+
+# The gauge after one landed hit or hull hit. kind is the strike kind, or "hull" for a hit
+# taken; a full gauge stays full.
+static func assist_charge(charge: float, kind: String) -> float:
+	var add := ASSIST_PER_HULL_HIT if kind == "hull" else (ASSIST_PER_CONTACT if kind in ["ram", "slam", "stomp"] else ASSIST_PER_HIT)
+	return minf(charge + add, ASSIST_FULL)
 
 
 # Problems in a driver table, empty when it is sound.
@@ -245,19 +345,19 @@ func acquire(id: String) -> bool:
 	return true
 
 
-# Returns "" on success or the refusal reason. Exactly two owned pieces of two different
-# families, in either order; the socket set is stored in table order so order never shows.
+# Returns "" on success or the refusal reason. One owned piece, or two of two different
+# families in either order; the socket set is stored in table order so order never shows.
 func assemble(ids: Array) -> String:
-	if ids.size() != SOCKETS:
-		return "needs exactly %d pieces" % SOCKETS
+	if ids.is_empty() or ids.size() > SOCKETS:
+		return "needs 1 to %d pieces" % SOCKETS
 	for id in ids:
 		if typeof(id) != TYPE_STRING or _row(id).is_empty():
 			return "unknown piece"
 		if not owned.has(id):
 			return "piece not owned: %s" % id
-	if ids[0] == ids[1]:
+	if ids.size() == SOCKETS and ids[0] == ids[1]:
 		return "same piece twice"
-	if family_of(ids[0]) == family_of(ids[1]):
+	if ids.size() == SOCKETS and family_of(ids[0]) == family_of(ids[1]):
 		return "needs two different families"
 	var next: Array[String] = []
 	for p in PIECES:
@@ -382,9 +482,8 @@ func from_dict(d: Dictionary) -> bool:
 	for id in s:
 		if not o.has(id):
 			return false
-	if not s.is_empty():
-		if s.size() != SOCKETS or family_of(s[0]) == family_of(s[1]):
-			return false
+	if s.size() > SOCKETS or (s.size() == SOCKETS and family_of(s[0]) == family_of(s[1])):
+		return false
 	owned = o
 	sockets = s
 	_escape_spent = spent
