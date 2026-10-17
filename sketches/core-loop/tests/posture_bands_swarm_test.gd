@@ -228,9 +228,7 @@ func _stage_note(record: Dictionary) -> Dictionary:
 func _fight(record: Dictionary) -> float:
 	for note in record.get("stages", []):
 		if int(note.get("stage", 0)) == STAGE and note.get("warden_broken_s") != null:
-			# A camper never aims the ball at the Warden, so its fight start stays null; it counts from 0.
-			var start = note.get("warden_fight_s")
-			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - (float(start) if start != null else 0.0))
+			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0)))
 	return RUN_CAP_S
 
 
