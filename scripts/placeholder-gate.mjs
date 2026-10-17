@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 // game still shows as a stand-in:
 //   park       a park row whose recipe is `greybox:<element>`, or names a GLB that has not landed
 //              (park_recipes.gd stands it in as its greybox), on the six park maps park_defs.gd uses;
-//              a stamped plain slope (PLAIN_SLOPES) is terrain, not a placeholder (see below)
+//              a stamped plain slope (PLAIN_SLOPES) is terrain, not a placeholder (see below); an anchors
+//              kit recipe (ANCHOR_KITS) needs all three of its variant GLBs
 //   icon       an icon id with no assets/icons/<id>.svg, so Icons.texture draws the glyph placeholder
 //   pending    an entry in a src/ list named *PENDING* (cosmetics PENDING_ART, codex DETECTOR_PENDING,
 //              SIDE_CONTENT_PENDING, achievements PENDING_PILOTS)
@@ -124,6 +125,15 @@ export function glbPath(recipe, group) {
   return group === "contraption_rows" ? `assets/models/park/contraptions/${recipe}.glb` : `assets/models/park/${recipe}.glb`;
 }
 
+// park_recipes.gd ANCHOR_KITS: an anchors kit recipe has no <recipe>.glb; it is built when all its variants have landed.
+export const ANCHOR_KITS = ["anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn"];
+export const ANCHOR_VARIANTS = ["a", "b", "c"];
+
+// The GLB ids a recipe needs before it stops standing in: an anchors kit's variants, else the recipe itself.
+export function recipeGlbs(recipe) {
+  return ANCHOR_KITS.includes(recipe) ? ANCHOR_VARIANTS.map((v) => `${recipe}_${v}`) : [recipe];
+}
+
 export function isPlainSlope(row) {
   return (
     typeof row.recipe === "string" &&
@@ -143,7 +153,7 @@ export function parkGreybox(map, doc, glbExists) {
     let element = null;
     let why = "";
     if (recipe.startsWith(GREYBOX)) element = recipe.slice(GREYBOX.length);
-    else if (recipe !== "" && !glbExists(recipe, group)) {
+    else if (recipe !== "" && !recipeGlbs(recipe).every((id) => glbExists(id, group))) {
       element = row.element ?? recipe;
       why = ` (recipe ${recipe} has no GLB)`;
     }

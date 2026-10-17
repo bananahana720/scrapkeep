@@ -17,6 +17,7 @@ import {
   openAttackRows,
   parkGreybox,
   isPlainSlope,
+  recipeGlbs,
   parseArgs,
   pendingEntries,
   report,
@@ -91,6 +92,23 @@ test("parkGreybox groups greybox recipes and recipes with no GLB, and passes bui
       ["2 greybox bank: a, b", 2],
       ["1 greybox landmark_dam (recipe landmark_dam has no GLB): dam", 1],
     ],
+  );
+});
+
+test("parkGreybox passes an anchors kit row only when all three variants have landed", () => {
+  assert.deepEqual(recipeGlbs("anchor_cairn"), ["anchor_cairn_a", "anchor_cairn_b", "anchor_cairn_c"]);
+  assert.deepEqual(recipeGlbs("flume_span"), ["flume_span"]);
+  const doc = {
+    park_rows: [
+      { id: "posts", element: "anchor_field", recipe: "anchor_hoodoo" },
+      { id: "cairns", element: "anchor_field", recipe: "anchor_cairn" },
+    ],
+  };
+  const built = new Set(["anchor_hoodoo_a", "anchor_hoodoo_b", "anchor_hoodoo_c", "anchor_cairn_a", "anchor_cairn_b"]);
+  const found = parkGreybox("park_islands", doc, (recipe) => built.has(recipe));
+  assert.deepEqual(
+    found.map((f) => [f.what, f.count]),
+    [["1 greybox anchor_field (recipe anchor_cairn has no GLB): cairns", 1]],
   );
 });
 

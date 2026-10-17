@@ -100,6 +100,11 @@ const ROWS := {
 	"landmark_sinkhole": {"family": "landmark", "budget": "hero_landmark"},
 	"landmark_sky_island": {"family": "landmark", "budget": "hero_landmark"},
 	"landmark_spire": {"family": "landmark", "budget": "hero_landmark"},
+	"anchor_hoodoo": {"family": "anchors", "budget": "detail"},
+	"anchor_basalt": {"family": "anchors", "budget": "detail"},
+	"anchor_timber": {"family": "anchors", "budget": "detail"},
+	"anchor_saguaro": {"family": "anchors", "budget": "detail"},
+	"anchor_cairn": {"family": "anchors", "budget": "detail"},
 }
 
 # Each element's ride fact by its section 4 family; a row's own ride_fact wins. kicker_launch is the kicker's launch
@@ -137,6 +142,15 @@ const ANCHOR_RUNOUT_M := 10.0
 const ANCHOR_SIDE_M := 6.0
 const ROUTE_LANE_HALF_M := 20.0
 const ANCHOR_EDGE_STEP_M := 12.0
+# An anchor field dressed with the anchors kit (tools/blender/park/anchors.py): a row whose recipe is one of
+# ANCHOR_KITS lays out the same posts and box colliders as a greybox anchor field and draws each post as one of the
+# family's three variants (<recipe>_a/_b/_c.glb), one variant per row picked by a hash of the row id (so a field is one
+# MultiMesh, one draw, as its grey posts were), each post turned by a quarter turn picked by a hash of the row id and
+# post index, and stretched along Y only by tall / ANCHOR_AUTHORED_M (authored y -1 sits on the collider's bottom, y 9
+# on its top). Until all three GLBs have landed the row draws grey posts like greybox:anchor_field.
+const ANCHOR_KITS := ["anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn"]
+const ANCHOR_VARIANTS := ["a", "b", "c"]
+const ANCHOR_AUTHORED_M := 10.0
 # The waymark names that are no row: the spawn and the landmark (park_schema.gd DROP_IN and LANDMARK).
 const DROP_IN := "drop_in"
 const LANDMARK := "landmark"
@@ -148,6 +162,8 @@ static var _origins_read := false
 static var _ends := {}
 # tile_ends() of each recipe's base GLB, read once.
 static var _tiles := {}
+# _anchor_mesh() of each anchors kit variant GLB, read once.
+static var _anchor_meshes := {}
 
 
 # A budget class's visibility ranges from assets/asset_budgets.json: base_end and base_margin for the base views,
@@ -425,6 +441,8 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 		return null
 	if recipe.begins_with(GREYBOX):
 		return place_greybox(row, recipe.trim_prefix(GREYBOX), parent, ground, publish)
+	if ANCHOR_KITS.has(recipe):
+		return place_anchor_field(row, parent, ground)
 	var budget := String(row.get("budget", ROWS.get(recipe, {}).get("budget", "landform")))
 	var p := paths(recipe, budget)
 	if not ResourceLoader.exists(p["base"]):
@@ -714,8 +732,8 @@ static func _relative(node: Node3D, top: Node) -> Transform3D:
 # through place(), plus two runtime rules. A greybox stand-in (a greybox: id, or a recipe whose GLB is missing) of a
 # stamped row places its node and ride sensor but no solid: the stamp replaces it (PARK.md section 4: a landform is
 # "height stamp plus a recipe"; the stamp shapes the ground, and a greybox has no lip or rim to add). A greybox
-# anchor_field becomes a post field (place_anchor_field). A GLB recipe stands where place() puts it, its -col mesh on
-# top of the stamped ground. Only the park file's schema fields are read, never a stage's ids.
+# anchor_field, or an anchors kit row, becomes a post field (place_anchor_field). A GLB recipe stands where place() puts
+# it, its -col mesh on top of the stamped ground. Only the park file's schema fields are read, never a stage's ids.
 
 
 # The park rows that place something: recipe not "".
@@ -850,44 +868,119 @@ static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PIT
 	return out
 
 
+# Whether a row is an anchor field placed by place_anchor_field: greybox:anchor_field or an anchors kit recipe.
+static func is_anchor_field(row: Dictionary) -> bool:
+	var recipe := String(row.get("recipe", ""))
+	return recipe == GREYBOX + "anchor_field" or ANCHOR_KITS.has(recipe)
+
+
+# An anchors kit recipe's variant GLBs, [] for any other recipe.
+static func anchor_paths(recipe: String) -> Array:
+	if not ANCHOR_KITS.has(recipe):
+		return []
+	return ANCHOR_VARIANTS.map(func(v: String) -> String: return GLB_DIR + recipe + "_" + v + ".glb")
+
+
+# Whether every variant GLB of an anchors kit recipe has landed.
+static func anchor_kit_ready(recipe: String) -> bool:
+	var p := anchor_paths(recipe)
+	return not p.is_empty() and p.all(func(path: String) -> bool: return ResourceLoader.exists(path))
+
+
 # A greybox anchor field: the row's node with one StaticBody3D of square posts (ANCHOR_POST_M across, the row's
 # height above the ground under each, sunk ANCHOR_SINK_M) and one MultiMesh view of them, greybox tint.
+# An anchors kit row (ANCHOR_KITS) keeps the same posts and colliders and draws its variant's mesh instead.
 # posts: the field's post centres when already worked out (Placer does that on a worker), else anchor_posts() here.
 static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callable(), zones: Array = [], pitch := ANCHOR_PITCH_M, posts = null) -> Node3D:
 	var node := _node(row, parent, ground)
 	var body := _body(node)
 	var tall := float(row["size"][1]) + ANCHOR_SINK_M
 	var extent := Vector3(ANCHOR_POST_M, tall, ANCHOR_POST_M)
-	var mesh := BoxMesh.new()
-	mesh.size = extent
 	if posts == null:
 		posts = anchor_posts(row, zones, pitch)
-	var multi := MultiMesh.new()
-	multi.transform_format = MultiMesh.TRANSFORM_3D
-	multi.mesh = mesh
-	multi.instance_count = posts.size()
 	var inv := node.transform.affine_inverse()
 	var box := BoxShape3D.new()
 	box.size = extent
+	var recipe := String(row.get("recipe", ""))
+	var kit := anchor_kit_ready(recipe)
+	if ANCHOR_KITS.has(recipe) and not kit:
+		push_warning("park_recipes: %s variants missing, %s stands in as grey posts" % [recipe, row.get("id", "")])
 	for k in posts.size():
 		var p: Vector2 = posts[k]
 		var base := float(ground.call(p.x, p.y)) if ground.is_valid() else node.position.y
-		var local := inv * Vector3(p.x, base - ANCHOR_SINK_M + tall * 0.5, p.y)
 		var shape := CollisionShape3D.new()
 		shape.shape = box
-		shape.position = local
+		shape.position = inv * Vector3(p.x, base - ANCHOR_SINK_M + tall * 0.5, p.y)
 		body.add_child(shape)
-		multi.set_instance_transform(k, Transform3D(Basis.IDENTITY, local))
+	var xfs := anchor_draws(row, posts, ground, node.transform, kit)
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
 	var view := MultiMeshInstance3D.new()
 	view.name = "Posts"
+	if kit:
+		var post := _anchor_mesh(anchor_paths(recipe)[anchor_variant(row)])
+		multi.mesh = post[0]
+		if post[1] != null:
+			view.material_override = post[1]
+	else:
+		var mesh := BoxMesh.new()
+		mesh.size = extent
+		multi.mesh = mesh
+		var material := StandardMaterial3D.new()
+		material.albedo_color = GREYBOX_TINT
+		view.material_override = material
+	multi.instance_count = xfs.size()
+	for k in xfs.size():
+		multi.set_instance_transform(k, xfs[k])
 	view.multimesh = multi
-	var material := StandardMaterial3D.new()
-	material.albedo_color = GREYBOX_TINT
-	view.material_override = material
 	view.set_meta(RecipeProps.META_FADE, true)
 	node.add_child(view)
 	node.set_meta("anchor_posts", posts.size())
+	node.set_meta("anchor_kit", kit)
 	return node
+
+
+# A kit row's variant index into ANCHOR_VARIANTS, from a hash of its id, so a field looks the same on every run.
+static func anchor_variant(row: Dictionary) -> int:
+	return hash(String(row.get("id", ""))) % ANCHOR_VARIANTS.size()
+
+
+# The drawn posts' transforms in the node's space (node_xf the row node's transform): a kit row's posts stretched and
+# turned (header), else the unstretched box centres of grey posts.
+static func anchor_draws(row: Dictionary, posts: PackedVector2Array, ground: Callable, node_xf: Transform3D, kit: bool) -> Array:
+	var tall := float(row["size"][1]) + ANCHOR_SINK_M
+	var inv := node_xf.affine_inverse()
+	var out := []
+	var stretch := Basis.IDENTITY.scaled(Vector3(1.0, tall / ANCHOR_AUTHORED_M, 1.0))
+	for k in posts.size():
+		var p: Vector2 = posts[k]
+		var bottom := (float(ground.call(p.x, p.y)) if ground.is_valid() else node_xf.origin.y) - ANCHOR_SINK_M
+		if not kit:
+			out.append(inv * Transform3D(Basis.IDENTITY, Vector3(p.x, bottom + tall * 0.5, p.y)))
+			continue
+		var turn := Basis(Vector3.UP, PI * 0.5 * float(hash("%s:%d" % [row.get("id", ""), k]) % 4))
+		out.append(inv * Transform3D(turn * stretch, Vector3(p.x, bottom + tall / ANCHOR_AUTHORED_M, p.y)))
+	return out
+
+
+# An anchors kit GLB's render mesh (the one mesh not named -col) and the slot material its surface names, or null.
+static func _anchor_mesh(path: String) -> Array:
+	if _anchor_meshes.has(path):
+		return _anchor_meshes[path]
+	var scene := (load(path) as PackedScene).instantiate()
+	var out: Array = [null, null]
+	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		if source.mesh == null or String(source.name).ends_with(COL_SUFFIX):
+			continue
+		out[0] = source.mesh
+		var original := source.mesh.surface_get_material(0)
+		var slot := String(original.resource_name) if original != null else ""
+		if RecipeProps.is_slot_role(slot):
+			out[1] = RecipeProps.slot_material(slot)
+		break
+	scene.free()
+	_anchor_meshes[path] = out
+	return out
 
 
 # One row at runtime: an anchor field's posts, or place(). A greybox stand-in of a stamped row keeps its node and ride
@@ -896,7 +989,7 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 # the stamp raised (seat), so the sensor spans the raise.
 static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), zones: Array = [], posts = null) -> Node3D:
 	var recipe := String(row.get("recipe", ""))
-	if recipe == GREYBOX + "anchor_field":
+	if is_anchor_field(row):
 		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
 	var node := place(row, parent, seat(row, ground), publish)
 	if node != null and stamp_replaces(row):
@@ -926,12 +1019,15 @@ static func seat(row: Dictionary, ground: Callable) -> Callable:
 	return func(x: float, z: float) -> float: return float(ground.call(x, z)) - maxf(Stamps.offset(f, x, z), 0.0)
 
 
-# Whether a row places as a greybox: a greybox id, a recipe whose base GLB has not landed, or a seat-fit row whose
-# fit is refused (seat_refusal), or a tile-fit row whose fit is refused (tile_refusal).
+# Whether a row places as a greybox: a greybox id, a recipe whose base GLB has not landed (for an anchors kit, any of
+# its variants), or a seat-fit row whose fit is refused (seat_refusal), or a tile-fit row whose fit is refused
+# (tile_refusal).
 static func stands_in(row: Dictionary) -> bool:
 	var recipe := String(row.get("recipe", ""))
 	if recipe == "" or recipe.begins_with(GREYBOX):
 		return recipe != ""
+	if ANCHOR_KITS.has(recipe):
+		return not anchor_kit_ready(recipe)
 	if not ResourceLoader.exists(paths(recipe, _budget(row))["base"]):
 		return true
 	if fits_tile(row):
@@ -948,6 +1044,8 @@ static func row_paths(row: Dictionary) -> Array:
 	var recipe := String(row.get("recipe", ""))
 	if recipe == "" or recipe.begins_with(GREYBOX):
 		return []
+	if ANCHOR_KITS.has(recipe):
+		return anchor_paths(recipe).filter(func(path: String) -> bool: return ResourceLoader.exists(path))
 	var p := paths(recipe, _budget(row))
 	var out: Array = [p["base"]]
 	out.append_array(p["shells"])
@@ -1047,7 +1145,7 @@ class Placer extends Node3D:
 
 	func _work_posts() -> void:
 		for i in _rows.size():
-			if String(_rows[i].get("recipe", "")) == Self.GREYBOX + "anchor_field":
+			if Self.is_anchor_field(_rows[i]):
 				_posts[i] = Self.anchor_posts(_rows[i], _zones)
 
 	func _wait_posts() -> void:

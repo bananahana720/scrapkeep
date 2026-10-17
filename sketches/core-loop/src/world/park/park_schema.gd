@@ -87,6 +87,7 @@ const RECIPES := [
 	"mesa_lip_kicker", "net_deck", "floating_island",
 	"landmark_dam", "landmark_penstock_tower", "landmark_headframe", "landmark_sinkhole",
 	"landmark_sky_island", "landmark_spire",
+	"anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn",
 ]
 const GREYBOX := "greybox:"
 const REGISTRY_PATH := "res://assets/registry.json"
