@@ -56,7 +56,7 @@ func _maxed_parts() -> void:
 		var held: Array = []
 		for i in cap - 1:
 			held.append(part)
-		_t.check("%s %s under its cap is not maxed" % [pilot, part], not Parts.maxed(part, held), "%d of %d" % [held.size(), cap])
+		_t.check("%s %s under its cap is not stacked out" % [pilot, part], not Parts.stacked_out(part, held), "%d of %d" % [held.size(), cap])
 		var before := 0
 		var probe := RandomNumberGenerator.new()
 		probe.seed = 900 + tested
@@ -64,14 +64,14 @@ func _maxed_parts() -> void:
 			before += Parts.roll(probe, ["common", "rare", "relic"], pilot, held, 3).count(part)
 		_t.check("%s still draws %s under its cap" % [pilot, part], before > 0, str(before))
 		held.append(part)
-		_t.check("%s %s at its cap is maxed" % [pilot, part], Parts.maxed(part, held), "%d of %d" % [held.size(), cap])
+		_t.check("%s %s at its cap is stacked out" % [pilot, part], Parts.stacked_out(part, held), "%d of %d" % [held.size(), cap])
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 1700 + tested
 		var offered := 0
 		for i in DRAWS:
 			var picks: Array = Parts.roll(rng, ["common", "rare", "relic"], pilot, held, 3)
 			offered += picks.count(part)
-		_t.eq("%s never draws its maxed %s" % [pilot, part], offered, 0)
+		_t.eq("%s never draws its stacked-out %s" % [pilot, part], offered, 0)
 	_t.check("some pilot has a capped part to test", tested > 0, str(tested))
 	var hyperbolic := ""
 	for key in Parts.ids():
@@ -80,8 +80,8 @@ func _maxed_parts() -> void:
 			hyperbolic = key
 			break
 	if hyperbolic != "":
-		_t.check("a hyperbolic part is never maxed", not Parts.maxed(hyperbolic, [hyperbolic, hyperbolic, hyperbolic, hyperbolic, hyperbolic]), hyperbolic)
-	_t.check("an unknown part is never maxed", not Parts.maxed("no_such_part", ["no_such_part"]), "")
+		_t.check("a hyperbolic part is never stacked out", not Parts.stacked_out(hyperbolic, [hyperbolic, hyperbolic, hyperbolic, hyperbolic, hyperbolic]), hyperbolic)
+	_t.check("an unknown part is never stacked out", not Parts.stacked_out("no_such_part", ["no_such_part"]), "")
 
 
 func _overkill() -> void:
