@@ -28,7 +28,7 @@ const SETS := {
 	},
 	"storm_front": {
 		"name": "Storm Front", "color": Palette.SLATE,
-		"text": "Every slam cracks out a frost ring that hits nearby enemies and freezes water.",
+		"text": "Every slam cracks out a frost ring that freezes water and lays ice.",
 		"members": ["static_burr", "frost_barb", "chain_arc", "spiral_wave"],
 		"elements": {"slam": "frost"},
 	},
