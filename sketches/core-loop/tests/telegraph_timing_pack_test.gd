@@ -104,12 +104,13 @@ func _boot() -> bool:
 
 
 # The pack kinds: every roster kind the spawner builds, less the set pieces (the Warden, the
-# vault) and the surge miniboss, which the event director sends as its own beat.
+# vault) and the surge miniboss, which the event director sends as its own beat, and any
+# row with no telegraph (the Linker never attacks).
 func _pack_kinds() -> Array:
 	var kinds: Array = []
 	for id in Roster.ROWS:
 		var kind := String(id)
-		if kind in ["warden", "vault", "miniboss"]:
+		if kind in ["warden", "vault", "miniboss"] or int(Roster.row(kind)["telegraph"]) < 0:
 			continue
 		if kind in ["chaser", "lobber"] or _game.combat.fleet.makes(kind):
 			kinds.append(kind)

@@ -128,10 +128,10 @@ func _validate_rules() -> void:
 	_t.eq("a decal mask of 15 is valid", Cosmetics.validate(_bad(rows, "decal_fern", {"mask": 15}), pilots), [])
 	# PENDING_ART is a const; validate reads it, so a table missing a pending id is the typo case.
 	var missing := rows.duplicate(true)
-	missing.erase("trail_any_downbeat")
+	missing.erase("outfit_kest_rigger")
 	var problems := Cosmetics.validate(missing, pilots)
-	_t.check("validate rejects a PENDING_ART id that is not a row", problems.any(func(p): return String(p).contains("PENDING_ART id trail_any_downbeat is not a row")), str(problems))
-	var starter_pending := _bad(rows, "decal_curtain_call", {"slot": "paint", "mask": null, "starter": true})
+	_t.check("validate rejects a PENDING_ART id that is not a row", problems.any(func(p): return String(p).contains("PENDING_ART id outfit_kest_rigger is not a row")), str(problems))
+	var starter_pending := _bad(rows, "outfit_rivet_hood", {"slot": "paint", "starter": true})
 	problems = Cosmetics.validate(starter_pending, pilots)
 	_t.check("validate rejects a PENDING_ART id that is a starter", problems.any(func(p): return String(p).contains("is a starter")), str(problems))
 

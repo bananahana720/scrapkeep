@@ -170,6 +170,13 @@ func _zone(label: String, map_script: GDScript) -> void:
 				prop_ok = false
 	_t.check("%s %d props, none in a keep-out" % [label, prop_count], prop_ok and prop_count >= 8)
 	_t.check("%s sails stand on at least three islands" % label, scenery.find_children("Sail_*", "Node3D", false, false).size() >= 3)
+	var fans := scenery.find_children("Fan_*", "Node3D", false, false)
+	var fan_ok := not fans.is_empty()
+	for fan: Node3D in fans:
+		var players := fan.find_children("*", "AnimationPlayer", true, false)
+		fan_ok = fan_ok and SetDressing.blocked(rows, Vector2(fan.position.x, fan.position.z), 0.0) == "" \
+			and not players.is_empty() and (players[0] as AnimationPlayer).is_playing()
+	_t.check("%s %d yard fans spin, none in a keep-out" % [label, fans.size()], fan_ok)
 	# Sky: cloud deck under Y -20 and 250 m out, mesas and landmarks well past the play bounds.
 	var sky := scenery.get_node("Sky")
 	var cloud_ok := true

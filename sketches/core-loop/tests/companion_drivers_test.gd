@@ -308,7 +308,8 @@ func _check_cue_events() -> void:
 				usable.append(ev)
 		var audio = body.get_parent().audio
 		for i in SAMPLES / 2:
-			var ev: String = usable[rng.randi_range(0, usable.size() - 1)]
+			# Each usable row once, then random draws, so coverage never rests on the seed.
+			var ev: String = usable[i] if i < usable.size() else usable[rng.randi_range(0, usable.size() - 1)]
 			covered[ev] = true
 			var row: Dictionary = cues[ev]
 			var logged: int = audio.chirp_log.size()

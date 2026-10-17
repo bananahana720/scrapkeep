@@ -201,5 +201,5 @@ func _toast() -> void:
 	_t.eq("a pilot reward keeps its beat line", Achievements.toast_text("brindle_routed"), "Brindle Routed\n%s" % Achievements.beat_of("brindle_routed"))
 	_t.eq("a delivered cosmetic reward names the look", Achievements.toast_text("ach_d7_salt_skip"), "Salt Skip\nNew look: Salt Skip")
 	_t.eq("a paint reward names the look", Achievements.toast_text("warden_broken"), "Warden Breaker\nNew look: Night Slate")
-	_t.eq("a pending item's toast shows the row name only", Achievements.toast_text("ach_any_set_piece"), "Set Piece")
+	_t.eq("a pending item's toast shows the row name only", Achievements.toast_text("ach_sable_switchback"), "Switchback")
 	_t.eq("an unknown row toasts its id", Achievements.toast_text("not_a_row"), "not_a_row")

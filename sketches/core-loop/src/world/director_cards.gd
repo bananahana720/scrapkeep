@@ -4,6 +4,8 @@ extends RefCounted
 const I0 := 1.20
 const K := 0.08
 const ELITE_MULTIPLIER := 2.0
+# A relay stake of k (W13 SR10) multiplies that relay's pack and miniboss credit by 1 + k.
+const RELAY_STAKE_MAX := 4
 # The interval arm and settled rewards share the selected run's row.
 const RUN_TIERS := {
 	0: {"cap_weight": 1.0, "interval_weight": 1.0, "event_core_multiplier": 1.0, "rare_weight": 1.0},
@@ -34,6 +36,8 @@ const CARDS := {
 	"line_cutter": {"cost": 3, "weight": 1.0, "stage_cap": 3},
 	"anchor_crew": {"cost": 4, "weight": 1.0, "stage_cap": 2},
 	"kite_drone": {"cost": 2, "weight": 1.0, "stage_cap": 3},
+	"linker": {"cost": 4, "weight": 1.0, "stage_cap": 2},
+	"foreman": {"cost": 3, "weight": 1.0, "stage_cap": 1},
 }
 
 
@@ -58,3 +62,7 @@ static func weight(kinds: Array) -> float:
 	for kind in kinds:
 		total += CARDS[kind].weight
 	return total / kinds.size()
+
+
+static func staked(base: float, stakes: int) -> float:
+	return base * (1 + clampi(stakes, 0, RELAY_STAKE_MAX))

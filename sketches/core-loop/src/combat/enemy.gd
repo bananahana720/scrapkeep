@@ -6,6 +6,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
+const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -80,6 +81,18 @@ var scrap_value := 3
 # patch resolves (wear_trail sets it around take_damage). The died handler passes it on.
 var last_damage_source := ""
 var weight := 1.0
+# The stage threat this body was set up at; poles and flails read it for heft (movement/grip.gd).
+var threat_level := 1.0
+
+
+# A pole line (POLES-FLAILS section 4) rides any enemy like an anchor: the bite point is the
+# anchor and the body carries the ball at its own velocity. warden.gd overrides both.
+func anchor_point(point: Vector3, _from = null) -> Vector3:
+	return point
+
+
+func anchor_velocity() -> Vector3:
+	return velocity
 var radius := 1.0
 var half_height := 1.5
 # "", "amber" or "slate", set by combat every physics tick from punch_now().
@@ -124,6 +137,12 @@ const LINE_EASE := 0.15
 # its own sim clock, which stops while an attack is open.
 var idle_offset := Vector3.ZERO
 var _idle_pose := Basis.IDENTITY
+# The ATTACK_ROWS pose the open attack leans into, and how long since it struck (-1: none).
+var _posed := ""
+var _posing := false
+var _posed_struck := false
+var _posed_instance := -1
+var _release_age := -1.0
 var _idle_clock := -1.0
 var _idle_period := 0.0
 
@@ -243,7 +262,8 @@ func _update_reaction(delta: float) -> void:
 
 
 # The model breathes between attacks and holds still (or takes its row's pose) through
-# every open attack, so the idle is never read as a telegraph.
+# every open attack, so the idle is never read as a telegraph; the attack's own wind-up pose
+# (windup_poses.gd) is the read instead.
 func _update_idle(delta: float) -> void:
 	idle_offset = Vector3.ZERO
 	_idle_pose = Basis.IDENTITY
@@ -252,12 +272,48 @@ func _update_idle(delta: float) -> void:
 	var row: Dictionary = WindupRows.ROWS.get(kind, {})
 	if winding_up():
 		_idle_pose = EnemyMotion.pose_basis(row)
+		if row.get("pose", {}).is_empty():
+			_idle_pose = _attack_pose()
 		return
+	if _posing:
+		_posing = false
+		# The attack closed: one that struck snaps through its release; a cancelled one lets go.
+		_release_age = 0.0 if _posed_struck else -1.0
+		_posed_struck = false
+		if _release_age < 0.0:
+			_posed = ""
+	if _release_age >= 0.0:
+		_idle_pose = WindupPoses.release(_posed, _release_age, EnemyMotion.motion_scale)
+		_release_age += delta
+		if _release_age >= WindupPoses.RELEASE_SECONDS:
+			_release_age = -1.0
+			_posed = ""
 	if _idle_clock < 0.0:
 		_idle_period = float(row.get("idle", {}).get("beats", 0.0)) * EnemyMotion.attack_clock(kind, self)
 		_idle_clock = float(absi(hash(Vector3i(global_position.round()))) % 97) / 97.0 * _idle_period
 	_idle_clock += delta
 	idle_offset = EnemyMotion.idle_offset(row.get("idle", {}), _idle_clock, _idle_period)
+
+
+# The open attack's whole-body pose (windup_poses.gd), from its row and its telegraph's fill.
+func _attack_pose() -> Basis:
+	if _atk.is_empty():
+		return Basis.IDENTITY
+	var pose := EventKinds.attack_pose(String(_atk["row"]))
+	if not WindupPoses.has_pose(pose):
+		return Basis.IDENTITY
+	if int(_atk["instance"]) != _posed_instance:
+		# A new attack opened straight off the last one: its strike is its own.
+		_posed_instance = int(_atk["instance"])
+		_posed_struck = false
+	_posed = pose
+	_posing = true
+	_release_age = -1.0
+	var tele = _atk.get("tele")
+	var live := tele != null and is_instance_valid(tele)
+	var progress: float = tele.progress if live else float(_atk["progress"])
+	_posed_struck = _posed_struck or String(_atk["phase"]) != PHASE_WINDUP or progress >= 1.0
+	return WindupPoses.windup(pose, progress, tele.age if live else 0.0, EnemyMotion.motion_scale)
 
 
 # An attack is open: a wind-up or strike instance, a committed telegraph, or the state the

@@ -61,6 +61,9 @@ signal shell_air_changed(factor: float, rose: bool)
 signal hotwire_offered(part_id: String, recycle: int)
 signal hotwire_resolved(part_id: String, choice: String, cogs: int)
 const PARTICIPANTS := ["player"]
+# SG15: an offer of a part already held shows the level it would reach, by its current level.
+# A part at its top level is never offered, so it has no entry.
+const LEVEL_NAMES := ["", "II", "III"]
 # The dash leaves frost this long, and drops a visible puff every few ticks of it.
 const FROST_TRAIL := 0.7
 const PUFF_EVERY := 3
@@ -211,6 +214,7 @@ func setup(ctx_ref) -> void:
 	ctx.root.add_child(field)
 	field.setup(ctx)
 	field.resolved.connect(_on_element_resolved)
+	field.fused.connect(_on_fused)
 	accretion = Accretion.new()
 	ctx.player.roll_node().add_child(accretion)
 	accretion.setup()
@@ -342,6 +346,9 @@ func offer_mark(part_id: String) -> String:
 	var set_id := PartSets.completed_by(part_id, held)
 	if set_id != "":
 		return "* completes %s *" % PartSets.SETS[set_id]["name"]
+	var level := Parts.level_of(part_id, held)
+	if level > 0 and level < LEVEL_NAMES.size():
+		return "* level %s *" % LEVEL_NAMES[level]
 	var ingredient := Parts.ingredient_of(part_id, held)
 	if ingredient != "":
 		var named: bool = is_known(ingredient) or has_perk("lens")
@@ -829,6 +836,11 @@ func _on_element_resolved(result: Dictionary) -> void:
 		_note_found("element:" + key, row["found"])
 
 
+# SG2: a fusion's first fire logs its codex card, which carries the row's elite rule.
+func _on_fused(result: Dictionary) -> void:
+	_note_found("fusion:" + String(result["key"]), Elements.card_text(Elements.FUSIONS[result["key"]]))
+
+
 func _class_id() -> String:
 	return ctx.run.class_id()
 
@@ -1177,6 +1189,9 @@ func _physics_process(delta: float) -> void:
 
 func _step_fabricators(ball: Vector3, delta: float) -> void:
 	for fab in fabricators.step(ball, delta, ctx.run.cogs, ctx.run.parts):
+		# The ball rolled through a stocked hoop, bought or not: the fabricator tune's cue
+		# (tunes.json "fabricator"). No WORLD_ROWS row, so it plays no sound of its own.
+		ctx.events.world_fact.emit("fabricator_used", fab["at"])
 		var part_id: String = fab["part_id"]
 		if ctx.run.spend_cogs(Fabricators.price(part_id, ctx.run.parts.size())):
 			fabricators.sold(fab)

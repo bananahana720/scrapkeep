@@ -81,6 +81,42 @@ const ROWS := {
 	"brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle/manifest.json"},
 	"waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/waking/manifest.json"},
 	"mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/mind/manifest.json"},
+	# Phase, final-phase, champion and Eurodance packs (phase_music.gd). Missing packs are silent.
+	"brindle-p1-requisition": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p1_requisition/manifest.json"},
+	"brindle-p2-furnace": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p2_furnace/manifest.json"},
+	"brindle-p3-scuttle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p3_scuttle/manifest.json"},
+	"waking-final": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/waking_final/manifest.json"},
+	"mind-final": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/mind_final/manifest.json"},
+	"champion-hype": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/champion_hype/manifest.json"},
+	"euro-brindle-p3": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/euro_brindle_p3/manifest.json"},
+	"euro-waking-final": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/euro_waking_final/manifest.json"},
+	"euro-mind-final": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/euro_mind_final/manifest.json"},
+	"euro-champion": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/euro_champion/manifest.json"},
+	# Place-and-moment tunes (tune_moments.gd, design-v3/sound/tunes.json ids). Missing packs are silent.
+	"landmark-spillway-dam": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/landmark_spillway_dam/manifest.json"},
+	"landmark-penstock": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/landmark_penstock/manifest.json"},
+	"landmark-headframe": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/landmark_headframe/manifest.json"},
+	"landmark-sinkhole": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/landmark_sinkhole/manifest.json"},
+	"landmark-hanging-isle": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/landmark_hanging_isle/manifest.json"},
+	"landmark-crown-spire": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/landmark_crown_spire/manifest.json"},
+	"event-scrap-stampede": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/event_scrap_stampede/manifest.json"},
+	"event-surge-run": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/event_surge_run/manifest.json"},
+	"event-hold-relay": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/event_hold_relay/manifest.json"},
+	"event-flood": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/event_flood/manifest.json"},
+	"event-dust-squall": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/event_dust_squall/manifest.json"},
+	"event-arena": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/event_arena/manifest.json"},
+	"miniboss": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/miniboss/manifest.json"},
+	"moss-shop": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/moss_shop/manifest.json"},
+	"fabricator": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/fabricator/manifest.json"},
+	"camp-course": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/camp_course/manifest.json"},
+	"modifier-curse": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/modifier_curse/manifest.json"},
+	"modifier-par": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/modifier_par/manifest.json"},
+	"secret-lost-tape": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/secret_lost_tape/manifest.json"},
+	"secret-after-hours": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/secret_after_hours/manifest.json"},
+	"secret-brindle-swing": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/secret_brindle_swing/manifest.json"},
+	"secret-chip-keepers": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/secret_chip_keepers/manifest.json"},
+	"secret-highdraft-rain": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/secret_highdraft_rain/manifest.json"},
+	"secret-dig-dub": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/secret_dig_dub/manifest.json"},
 	"title": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title/manifest.json"},
 	"summary": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/summary/manifest.json"},
 }
@@ -126,6 +162,22 @@ static func resolve_pack(row: Dictionary, sidecar_dir := "") -> Dictionary:
 	}
 
 
+# A radio take's own pack (design-v3/sound/radio_takes.py, packaged whole by pack --whole):
+# its row when ROWS names one, else assets/music_ace/<take id>/ with dashes or underscores,
+# whichever is on disk. "" until the take is rendered and packaged.
+static func take_manifest(id: String) -> String:
+	var named := str(ROWS.get(id, {}).get("ace_manifest", ""))
+	if named != "":
+		return named
+	if not id.begins_with("take-"):
+		return ""
+	for dir in [id.replace("-", "_"), id]:
+		var path := "res://assets/music_ace/%s/manifest.json" % dir
+		if resolve_manifest(path) != "":
+			return path
+	return ""
+
+
 # Source first, then the export's music_ace sidecar. Missing packs are silent synth fallback.
 static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
 	if manifest_path == "":
@@ -140,3 +192,19 @@ static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String
 		if FileAccess.file_exists(sidecar):
 			return sidecar
 	return ""
+
+
+# A pack is playable only when its manifest resolves and every stem file it names is on disk:
+# the Oggs are gitignored, so a checkout can hold manifests with no audio.
+static func pack_on_disk(manifest_path: String) -> bool:
+	var path := resolve_manifest(manifest_path)
+	if path == "":
+		return false
+	var m = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not m is Dictionary or (m.get("clips", {}) as Dictionary).is_empty():
+		return false
+	for clip in m["clips"].values():
+		for file in (clip.get("files", {}) as Dictionary).values():
+			if not FileAccess.file_exists(path.get_base_dir().path_join(String(file))):
+				return false
+	return true

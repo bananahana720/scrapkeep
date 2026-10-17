@@ -15,6 +15,8 @@ const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
+const JukeboxPage := preload("res://src/ui/jukebox_page.gd")
+const RadioPage := preload("res://src/ui/radio_page.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -46,7 +48,13 @@ const SIDE := 60.0
 const ACTION_GAP := 18
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
-const TITLE := "SCRAPKEEP: FIRST RUN"
+const TITLE := "SCRAPKEEP"
+# The title's name lands like an ink stamp (TONE-BIBLE UI motion): it starts big and tilted and
+# snaps down with a short overshoot. It rests straight, because its container's layout resets a
+# child's scale and rotation. Reduced motion skips the slam.
+const STAMP_FROM := 1.35
+const STAMP_TIME := 0.18
+const STAMP_TILT := -6.0
 # A win over the final world's boss opens the summary on the ending page (Worlds.ENDING). For
 # its first ENDING_HOLD seconds no key closes it, so a press meant for the fight cannot skip
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
@@ -76,6 +84,8 @@ var _help
 var _achievements
 var _settings
 var _camp
+var _jukebox
+var _radio
 var _ending: VBoxContainer
 var _ending_title: Label
 var _ending_body: Label
@@ -83,6 +93,7 @@ var _ending_left := 0.0
 var ending_sequence
 var _guard := 0.0
 var _tween: Tween
+var _stamp_tween: Tween
 var _state := ""
 # The prologue (PrologueRows) plays on the first pilot select of a profile. A bot-driven game
 # (the headless tests) skips it unless it opts in, so its Start lands on the cards as before.
@@ -161,7 +172,26 @@ func setup(game_ref) -> void:
 	_camp.button_for("settings").pressed.connect(_press.bind("key_s"))
 	_camp.back.pressed.connect(_press.bind("key_k"))
 	_camp.companion_button().pressed.connect(_camp_companion)
+	_camp.button_for("jukebox").pressed.connect(_press.bind("key_j"))
 	_content.add_child(_camp)
+	_jukebox = JukeboxPage.new()
+	_jukebox.visible = false
+	_jukebox.sleeve_chosen.connect(_spin_toggle)
+	_jukebox.play_button.pressed.connect(_press.bind("key_space"))
+	for i in 3:
+		_jukebox.detent_button(i).pressed.connect(_press.bind("key_%d" % (i + 1)))
+	_jukebox.back.pressed.connect(_press.bind("key_j"))
+	_content.add_child(_jukebox)
+	_camp.button_for("radio").pressed.connect(_press.bind("key_r"))
+	_radio = RadioPage.new()
+	_radio.visible = false
+	_radio.track_chosen.connect(_radio_track)
+	_radio.tape_chosen.connect(func(i: int): radio_key(KEY_1 + i))
+	_radio.new_button.pressed.connect(_press.bind("key_n"))
+	_radio.shuffle_button.pressed.connect(_press.bind("key_x"))
+	_radio.tune_button.pressed.connect(_press.bind("key_t"))
+	_radio.back.pressed.connect(_press.bind("key_r"))
+	_content.add_child(_radio)
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
 	_ending.add_theme_constant_override("separation", 26)
@@ -208,6 +238,8 @@ func _on_flow_changed(state: String) -> void:
 	_achievements.visible = false
 	_settings.visible = false
 	_camp.visible = false
+	_jukebox.visible = false
+	_radio.visible = false
 	_ending.visible = false
 	_ending_left = 0.0
 	_prologue_line = -1
@@ -215,6 +247,7 @@ func _on_flow_changed(state: String) -> void:
 	_breath_row.visible = false
 	_refusal.text = ""
 	_title.visible = true
+	_unstamp()
 	_stats.visible = true
 	_choices.visible = true
 	_actions.visible = true
@@ -232,14 +265,20 @@ func _on_flow_changed(state: String) -> void:
 			_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 			if game.flow.continue_ready:
 				_action("continue", "key_c", "Continue")
+			# The main menu (decisions.tsv 2026-10-16 alpha-scope): Play to pilot select, then
+			# Camp, Settings, Help and Achievements, and Quit last, on the Esc the title already
+			# quits on.
 			var saved: bool = game.flow.continue_ready or game.flow.saved_run_cause != ""
-			_action("start", "key_space", "New run" if saved else "Start")
+			_action("start", "key_space", "New run" if saved else "Play")
+			_action("camp", "key_k", "Camp")
+			_action("settings", "key_s", "Settings")
 			_action("help", "key_h", "Help")
 			_action("achievements", "key_a", "Achievements")
-			_action("settings", "key_s", "Settings")
 			if game.ctx.profile != null and not game.ctx.profile.companion().is_empty():
 				_companion_action()
-			_action("camp", "key_k", "Camp")
+			_action("quit", "key_esc", "Quit")
+			_stamp()
+			_announce_ready()
 			if game.flow.saved_run_cause != "":
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()
@@ -470,6 +509,10 @@ func toggle_camp() -> void:
 
 
 func _close_camp_silently() -> void:
+	if _jukebox.visible:
+		_close_jukebox()
+	if _radio.visible:
+		_radio.visible = false
 	if not _camp.visible:
 		return
 	_camp.visible = false
@@ -494,6 +537,172 @@ func open_camp_from_summary() -> void:
 
 func camp_open() -> bool:
 	return _camp.visible
+
+
+# J on the camp swaps it for Moss's jukebox, and back. Leaving lifts the needle, so the
+# title theme returns with the camp.
+func toggle_jukebox() -> void:
+	if _jukebox.visible:
+		_close_jukebox()
+		_camp.visible = true
+		_camp.refresh(game)
+		_show("CAMP", Palette.AMBER, "")
+		_camp.button_for("jukebox").grab_focus()
+		_fade(true)
+		return
+	if not _camp.visible:
+		return
+	_camp.visible = false
+	_jukebox.visible = true
+	_refresh_jukebox()
+	_show("MOSS'S JUKEBOX", Palette.AMBER, "")
+	_jukebox.focus_first()
+	_fade(true)
+
+
+func _close_jukebox() -> void:
+	_jukebox.visible = false
+	var audio = _audio()
+	if audio != null:
+		audio.stop_spin()
+
+
+func jukebox_open() -> bool:
+	return _jukebox.visible
+
+
+func jukebox_page():
+	return _jukebox
+
+
+# The jukebox's keys, from game._screen_key while it is open: Space or Enter plays the
+# focused sleeve (or stops the deck), 1 to 3 set the dial, J and Esc go back. Every other
+# key is swallowed so the title's keys stay off the camp behind it.
+func jukebox_key(key: int) -> bool:
+	match key:
+		KEY_J, KEY_ESCAPE:
+			toggle_jukebox()
+		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+			var id: String = _jukebox.focused_id()
+			var audio = _audio()
+			if audio != null and audio.spinning != "" and not _jukebox.is_found(id):
+				id = audio.spinning
+			_spin_toggle(id)
+		KEY_1, KEY_2, KEY_3:
+			var audio = _audio()
+			if audio != null:
+				audio.set_spin_detent(key - KEY_1)
+			_refresh_jukebox()
+	return true
+
+
+# A found record goes on the deck; the record already playing comes off; a blank sleeve
+# only shows its hint.
+func _spin_toggle(id: String) -> void:
+	var audio = _audio()
+	if audio == null or id == "":
+		return
+	if audio.spinning == id:
+		audio.stop_spin()
+	elif _jukebox.is_found(id) and audio.spin(id):
+		audio.play("bay_jukebox", 0.0, 1.0, "UI")
+	_refresh_jukebox()
+
+
+func _refresh_jukebox() -> void:
+	var audio = _audio()
+	_jukebox.refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2)
+
+
+func _audio():
+	var presentation = game.get("presentation")
+	return presentation.get("audio") if presentation != null else null
+
+
+# R on the camp swaps it for the radio's mixtapes, and back. The radio keeps what was changed.
+func toggle_radio() -> void:
+	if _radio.visible:
+		_radio.visible = false
+		_save_radio()
+		_camp.visible = true
+		_camp.refresh(game)
+		_show("CAMP", Palette.AMBER, "")
+		_camp.button_for("radio").grab_focus()
+		_fade(true)
+		return
+	if not _camp.visible or game.get("radio_deck") == null:
+		return
+	_camp.visible = false
+	_radio.visible = true
+	_radio.refresh(game.ctx.profile, game.radio_deck.radio)
+	_show("MIXTAPES", Palette.AMBER, "")
+	_radio.focus_first()
+	_fade(true)
+
+
+func radio_open() -> bool:
+	return _radio.visible
+
+
+func radio_page():
+	return _radio
+
+
+# The mixtape keys, from game._screen_key while the page is open: Space or Enter takes the
+# focused track on or off the tape, comma and period move a tape track, 1 to 6 pick a tape, N
+# starts one, X shuffles, T tunes the radio to it, R and Esc go back. Every other key is
+# swallowed so the title's keys stay off the camp behind it.
+func radio_key(key: int) -> bool:
+	var radio = game.radio_deck.radio
+	var focused: String = _radio.focused_id()
+	match key:
+		KEY_R, KEY_ESCAPE:
+			toggle_radio()
+			return true
+		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+			if focused != "":
+				_radio_track(focused.substr(2), focused[0] == "t")
+			return true
+		KEY_COMMA, KEY_PERIOD:
+			if focused.begins_with("t:"):
+				radio.nudge(radio.mixtape, focused.substr(2), -1 if key == KEY_COMMA else 1)
+		KEY_N:
+			var made: int = radio.new_mixtape()
+			if made >= 0:
+				radio.mixtape = made
+		KEY_X:
+			var rng := RandomNumberGenerator.new()
+			rng.randomize()
+			radio.shuffle(radio.mixtape, rng)
+		KEY_T:
+			radio.tune(radio.MIXTAPE)
+		_:
+			if key >= KEY_1 and key < KEY_1 + radio.mixtapes.size():
+				radio.mixtape = key - KEY_1
+			else:
+				return true
+	_radio.refresh(game.ctx.profile, radio)
+	if focused != "":
+		_radio.focus(focused[0] == "t", focused.substr(2))
+	return true
+
+
+func _radio_track(id: String, on_tape: bool) -> void:
+	var radio = game.radio_deck.radio
+	if on_tape:
+		radio.remove_from(radio.mixtape, id)
+	elif not radio.add_to(radio.mixtape, id):
+		radio.remove_from(radio.mixtape, id)
+	var audio = _audio()
+	if audio != null:
+		audio.play("flow_changed", 0.0, 1.0, "UI")
+	_radio.refresh(game.ctx.profile, radio)
+	_radio.focus(on_tape, id)
+
+
+func _save_radio() -> void:
+	if game.get("radio_deck") != null:
+		game.radio_deck._save()
 
 
 func camp_page():
@@ -532,7 +741,7 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _camp.visible or ending_open()
+	return _help.visible or _achievements.visible or _camp.visible or _jukebox.visible or _radio.visible or ending_open()
 
 
 func ending_open() -> bool:
@@ -615,6 +824,22 @@ func _input(event: InputEvent) -> void:
 		if _settings.handle(event):
 			get_viewport().set_input_as_handled()
 		return
+	if _radio.visible:
+		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+			toggle_radio()
+			get_viewport().set_input_as_handled()
+		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+			toggle_radio()
+			get_viewport().set_input_as_handled()
+		return
+	if _jukebox.visible:
+		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+			toggle_jukebox()
+			get_viewport().set_input_as_handled()
+		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+			toggle_jukebox()
+			get_viewport().set_input_as_handled()
+		return
 	if _camp.visible:
 		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
 			toggle_camp()
@@ -680,7 +905,10 @@ func _show(title: String, color: Color, body: String) -> void:
 
 func _action(id: String, key: String, words: String) -> void:
 	var button := ChoiceButton.new(id, key, words)
-	button.pressed.connect(_press.bind(key))
+	if id == "quit":
+		button.pressed.connect(func(): get_tree().quit())
+	else:
+		button.pressed.connect(_press.bind(key))
 	if id == "start":
 		_make_primary(button)
 	_actions.add_child(button)
@@ -755,6 +983,39 @@ func _summary_stats() -> void:
 		_stats.add_child(row)
 
 
+func _stamp() -> void:
+	if game.camera != null and game.camera.reduced_motion:
+		return
+	_stamp_tween = create_tween()
+	_stamp_tween.tween_callback(func():
+		_title.pivot_offset = _title.size / 2.0
+		_title.scale = Vector2.ONE * STAMP_FROM
+		_title.rotation = deg_to_rad(STAMP_TILT))
+	_stamp_tween.set_parallel(true)
+	_stamp_tween.tween_property(_title, "scale", Vector2.ONE, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_stamp_tween.tween_property(_title, "rotation", 0.0, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+# The release-candidate gate launches the AppImage on a fresh profile and waits for this one
+# line, printed the first time the main menu shows in this process.
+static var _ready_announced := false
+
+
+func _announce_ready() -> void:
+	if _ready_announced:
+		return
+	_ready_announced = true
+	print("SCRAPKEEP_MENU_READY ms=%d" % Time.get_ticks_msec())
+
+
+func _unstamp() -> void:
+	if _stamp_tween != null:
+		_stamp_tween.kill()
+		_stamp_tween = null
+	_title.scale = Vector2.ONE
+	_title.rotation = 0.0
+
+
 func _fade(show: bool) -> void:
 	_layout_backdrop()
 	if _tween != null:
@@ -776,7 +1037,7 @@ func _fade(show: bool) -> void:
 
 
 func _layout_backdrop() -> void:
-	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible)
+	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible or _jukebox.visible or _radio.visible)
 	_veil.anchor_bottom = 0.5 if title_deck else 1.0
 	_content.anchor_bottom = _veil.anchor_bottom
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
@@ -823,6 +1084,10 @@ func button_for(action: String) -> Button:
 			return _settings.back
 		if _camp.visible:
 			return _camp.back
+		if _jukebox.visible:
+			return _jukebox.back
+		if _radio.visible:
+			return _radio.back
 		return _achievements.back if _achievements.visible else _help.back
 	if action == "breath":
 		return _breath_row if _breath_row.visible else null
