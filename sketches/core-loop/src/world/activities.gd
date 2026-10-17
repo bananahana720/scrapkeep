@@ -14,6 +14,7 @@ const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
 # stand lit from the stage's first frame, finish on an action the player already knows and pay
@@ -116,6 +117,10 @@ const SLAM_REACH := 7.0
 const SLAM_MIN_PER_CRUISE := 1.0
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
+# The first-win room's log line on the back wall: eye height for the ball, and a wrap width that keeps
+# it inside the wall's 12 m at Label3D's 0.005 m per pixel.
+const ROOM_LOG_HEIGHT := 3.4
+const ROOM_LOG_WIDTH_PX := 1800.0
 # The back wall's own glow once the wall is fired. No light: a per-site OmniLight3D freed on
 # a stage change made Godot 4.7.2 Forward+ segfault on the next boss entry (GPU only), as the
 # wave 9 cage light did.
@@ -357,6 +362,13 @@ func _enter_stage(retry: bool) -> void:
 				built_spec.pack = spec.pack.duplicate()
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
 		sites.append(_build(id, spec["at"], built_spec))
+	if _graph_map != "":
+		var tuning = ctx.get("tuning")
+		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
+		for room_spec in Secrets.room_sites(_graph_map, ctx.get("profile"), sitting):
+			var room := _build("cracked_cache", room_spec["at"], room_spec)
+			_hang_room_log(room, String(room_spec["secret"]))
+			sites.append(room)
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
@@ -576,6 +588,23 @@ func _build_cache(s: Site) -> void:
 	s.fired_glow.albedo_color = Color.BLACK
 	s.fired_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
+
+
+# A first-win room's crew-log line (secrets.gd ROOMS), painted on the inside of its back wall, so it
+# reads only once the cracked face is down and the ball is in the room.
+func _hang_room_log(s: Site, room_id: String) -> void:
+	var room: Dictionary = Secrets.ROOMS[room_id]
+	s.name = "Secret_" + room_id
+	var label := Label3D.new()
+	label.name = "RoomLog"
+	label.text = "%s\n%s" % [String(room["name"]).to_upper(), room["log"]]
+	label.position = Vector3(0.0, ROOM_LOG_HEIGHT, -WALL_DEPTH + 0.06)
+	label.font_size = 30
+	label.outline_size = 6
+	label.width = ROOM_LOG_WIDTH_PX
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.modulate = Palette.SAND
+	s.add_child(label)
 
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:

@@ -68,9 +68,10 @@ func _tables() -> void:
 	# Re-pinned 2026-10-11 (w13 SG12, merge): the four ach_meta_* between-run option grants; was 39.
 	# 2026-10-12 (W13 coordinator): the pins hold the shared rows; each P-C kit's rows sit in its
 	# marked block and its own tests count them (tests/support/pilot_blocks.gd). Was the total,
-	# which every kit merge broke (49 and 47 on 19b3656).
-	_t.eq("F1 forty-three achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 43)
-	_t.eq("F1 forty-one cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 41)
+	# which every kit merge broke (49 and 47 on 19b3656). 2026-10-17 (first-win secrets, Andrew's Q8):
+	# six hidden secret_paint_* rows and their six paints join the shared rows (43 and 41 before).
+	_t.eq("F1 forty-nine achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 49)
+	_t.eq("F1 forty-seven cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 47)
 	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty())
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 

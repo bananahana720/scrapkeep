@@ -1,5 +1,6 @@
 extends VBoxContainer
 
+const Secrets := preload("res://src/core/secrets.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -58,6 +59,8 @@ func refresh(profile, progress) -> void:
 		child.queue_free()
 	rows.clear()
 	for id in Achievements.ids():
+		if Secrets.shut_row(id, profile):
+			continue
 		var row := _row(id, profile, progress)
 		_grid.add_child(row)
 		rows[id] = row
