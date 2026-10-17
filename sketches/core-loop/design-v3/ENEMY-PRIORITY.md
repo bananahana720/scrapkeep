@@ -83,7 +83,33 @@ Effort: S is a row or a constant plus a test; M is a new behaviour on an existin
 | 5 | **Perches.** Kill-first targets spawn on high points the park already has: post tops, ledges, cable towers. The director asks the park for a perch within 40 m of the pack. | the fight pulls you vertical; the gym is where the priority is | M | `director.gd` placement, park rows gain `perch` points (stage builders) |
 | 6 | **Poles and flails.** A harpoon bite on an enemy heavier than the ball (roster weight 3 or more: lobber, miniboss, brute) swings you round it like a pole; a bite on a lighter one yanks it to you. Check today's harpoon first; Tarn's Claw Drag already climbs what it cannot move. | enemies are monkey bars; a big one is a pivot for the hook chain | M | `src/movement/harpoon.gd`, `player_ball.gd` |
 | 7 | **The matchup lab.** A headless duel table: each of the six pilots against each enemy kind alone, 8 seeds, recording time to kill and hull lost. It prints a heatmap. The gate: every pilot has at least one cell marked hard (time to kill over 2x the row median), and the brawler bot wins every hard cell once given that cell's answer item. | proof that each pilot struggles and that every struggle can be beaten | M | `tools/`, headless lab scenarios (scrapkeep-lab) |
-| 8 | **Answer weighting.** Each item gets an `answers` tag (range, spread, fuse, cc, air, plating). Reward gates and shops weigh items that answer the run's pilot nemesis by 1.5 (start). See the decision card. | luck leans your way, so a hard matchup becomes a run where you hunted for the fix | S | `src/build/reward_gates.gd`, `shop.gd`, item rows |
+| 7b | **The Splitter** (kill carefully; Andrew's tap, 00:01Z). A scrap-bomb crawler that bursts into three small chasers when rammed at ground level, but dies clean to a smash from above or a shot from 15 m or more. New body: brief in section 4a. | breeds the innovation Andrew named: you learn to kill it from the air | M plus a model | new `src/combat/splitter.gd`, roster row, director card, a model |
+| 7c | **The Linker** (kill order; Andrew's tap, 00:01Z). A dish on a boom that braces over a partner instead of itself, joined to it by a visible cable. Cut the cable (shoot it, or bite it with the harpoon and yank) or flank through the air. New body: brief in section 4a. | the protected target sits behind the gym, not behind a health bar | M plus a model | new `src/combat/linker.gd` reusing `deflector.gd`'s dish, roster row, a model |
+| 8 | **Answer weighting** (decided: Andrew tapped "Nudge loot", 00:01Z). Each item gets an `answers` tag (range, spread, fuse, cc, air, plating). Reward gates and shops weigh items that answer the run's pilot nemesis by 1.5 (start). No guarantee; it stays luck. | luck leans your way, so a hard matchup becomes a run where you hunted for the fix | S | `src/build/reward_gates.gd`, `shop.gd`, item rows |
+
+### 4a. Bodies for the two new kill-first enemies
+
+Both follow the chassis rule: one chassis class, one move class, one threat feature that a still at game-camera distance shows (`roster.gd` CHASSIS). Budgets as an ordinary enemy in `assets/asset_budgets.json`. Procedural Blender recipes, like the rest of the roster.
+
+| | Splitter | Linker |
+| --- | --- | --- |
+| Chassis, move | `crawler`, `ground` | `emplacement`, `fixed` |
+| Threat feature | three welded sub-hulls with glowing seams, so the split is promised before it happens | a dish on a long boom arm held over another enemy, with a slack cable from base to dish |
+| Silhouette | a fat ball with a stubby fuse lamp; reads as three in one | a short post with a long arm that breaks the outline sideways; nothing else in the roster has a sideways arm |
+| Tell | rammed at ground level: the seams flare white for 0.4 s and it pops into three; struck from above or from range: a clean single pop | the cable goes taut and hums while the dish is braced; cut cable: the dish drops with a clang |
+| Pieces | three small chasers, 0.6 scale, 25 x threat health, keep the lunge lane, each spends attacker budget | none |
+| Tone gag | each piece stamps a tiny "UNION RULES: 3 PER SHIFT" card as it pops | the dropped dish rolls a little way like a lost hubcap |
+| Numbers (start) | 90 x threat health, scrap 6, card cost 3, stage cap 2 | 120 x threat health, scrap 6, card cost 4, stage cap 2; the dish reflects at restitution 0.9 as the deflector does |
+
+### 4b. Where the before-sitting levers land (proposal for the wave coordinator)
+
+The wave plan in project memory has 17 for SQ2, SI6, SG2, SG15, landmark placement, paint fixes and PE-INT; 18 for SR10, SI3, first dressing and the AppImage; 19 for the rest of the dressing, landmark models, the camp, ISLE-TIP and the island tether. Spread so no wave takes more than two new behaviours:
+
+| Wave | Lands | Why there |
+| --- | --- | --- |
+| 17 | hook out; the pilot tilt fix plus nemesis; answer weighting (`answers` tags); the Foreman | all reuse existing bodies and rows; they ride with SQ2's attacker budget, which they share a curve with |
+| 18 | the Dispatcher and perches; the Splitter behaviour on a greybox body; the matchup lab; grip and carve behind its toggle (once card 3 is tapped) | perches arrive with the first dressing, which places the high points; the lab needs the Splitter in to measure it |
+| 19 | the Linker; Splitter and Linker final models; poles and flails | model work sits with the landmark models; the Linker needs perches and partners already in |
 
 ### After the sitting: new bodies or new systems
 
@@ -92,10 +118,8 @@ Effort: S is a row or a constant plus a test; M is a new behaviour on an existin
 | 9 | **Zip Spool** (item). Two harpoon bites within 1 s string a rail between the anchors for 6 s. | build your own grind rails mid-fight | M |
 | 10 | **Tow Hook** (item). A light enemy on your line trails behind you as a flail and hits what it touches. | the yank becomes a weapon | M |
 | 11 | **Pendulum Weight** (item). Swing speed at the bottom of an arc adds to the next smash. | rewards long swings round poles and posts | S |
-| 12 | **The Splitter** (kill carefully). A scrap-bomb chaser that bursts into three small chasers when rammed, but dies clean to a smash from above or a shot from range. | breeds the innovation Andrew named: you learn to kill it from the air | M |
-| 13 | **The Linker** (kill order). A deflector that braces its dish over a partner instead of itself. Flank through the air or break the dish first. | the protected target is behind the gym, not behind a health bar | M |
-| 14 | **Pilot gym twists.** Tally's clipped enemies become anchor nodes (a ledger web); Kest's charges stuck to walls launch her (her `on_rocket_jump` hook); the Cannon's committed lanes become grind rails; Sable's stakes already stand as posts. | each pilot plays the same park a different way | L |
-| 15 | **Altitude bands.** Spillway's kill-first targets sit on the ground, the Dig's under and above you, the Highdraft's in the air, so each world tests a different height. | each world's chaos has its own shape | L |
+| 12 | **Pilot gym twists.** Tally's clipped enemies become anchor nodes (a ledger web); Kest's charges stuck to walls launch her (her `on_rocket_jump` hook); the Cannon's committed lanes become grind rails; Sable's stakes already stand as posts. | each pilot plays the same park a different way | L |
+| 13 | **Altitude bands.** Spillway's kill-first targets sit on the ground, the Dig's under and above you, the Highdraft's in the air, so each world tests a different height. | each world's chaos has its own shape | L |
 
 ## 5. Pilot struggles
 
@@ -119,12 +143,10 @@ The attacker budget thread (PR #15) scales how many attack at once with build st
 - **Binding of Isaac:** spawners and buffers that set the kill order; enemies with one right dodge; item pools that let luck fix a weak character; characters that are bad at some rooms on purpose.
 - **Roboquest:** elites with auras that you remove first; snipers and fliers that make you go vertical; jump pads and the grapple as combat tools.
 
-## 8. Open calls for Andrew
+## 8. Calls for Andrew
 
-Three decision cards go to the project chat through the coordinator:
-
-1. How a pilot's bad matchups get answered: loot nudged toward the answer (recommended), one answer guaranteed in the world 2 shop, or pure luck.
-2. Which kill-first enemies go in before the sitting: the Foreman and the Dispatcher (recommended), all four, or none until after.
-3. How the ball sticks to walls: speed holds you on, automatically (recommended), a held grip key, or grip only as an item or pilot trait.
+1. **Decided 2026-10-17 00:01Z, "Nudge loot":** items that answer a pilot's nemesis weigh 1.5 in gates and shops; no guarantee.
+2. **Decided 2026-10-17 00:01Z, "All four":** the Foreman, the Dispatcher, the Splitter and the Linker all land before the sitting (section 4b).
+3. **Open:** how the ball sticks to walls: speed holds you on, automatically (recommended), a held grip key, or grip only as an item or pilot trait.
 
 Decided here, reversible: hook out applies per row, not to every hold; the Foreman never attacks; the Dispatcher spends the attacker budget.
