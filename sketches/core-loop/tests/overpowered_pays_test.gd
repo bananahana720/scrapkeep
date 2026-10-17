@@ -4,6 +4,8 @@ const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossRules := preload("res://src/boss/boss_rules.gd")
 
 # Overpowered pays (Andrew, 17 Oct 2026): a strong build or a lucky run is never punished.
 #   - A linear or capped part held at its stack cap adds nothing more, so no roll offers it again,
@@ -25,6 +27,7 @@ func _initialize() -> void:
 	_maxed_parts()
 	_overkill()
 	_numbers()
+	_ceiling()
 	quit(_t.verdict())
 
 
@@ -129,3 +132,25 @@ func _harder_kept() -> void:
 			if not picks.any(func(key): return Parts.def(key).hits_harder()):
 				missing += 1
 		_t.check("%s pairs keep a harder hitter with its capped hitters stacked out" % pilot, pairs > 0 and missing == 0, "%d of %d pairs without one" % [missing, pairs])
+
+
+func _gain(numbers: Dictionary, ratio: float, frame := 1) -> float:
+	var rule = BossPosture.new(numbers)
+	return float(rule.judge({"kind": "ram", "punch": ratio * 100.0, "plating": 100.0, "frame": frame})["gain"])
+
+
+# Andrew's tap "Lift the ceiling" (17 Oct 22:04Z): a Warden counts a hit up to 3x its plating, so
+# a monster ram gains more than an ordinary one; an ordinary ram gains what it did; the hull
+# bosses keep the old 1.5 ceiling; hit_cap holds an ordinary hit and opens for a monster one.
+func _ceiling() -> void:
+	var row := {"curve": 2.0}
+	_t.check("a Warden ram at 1.0x plating gains as before", is_equal_approx(_gain(row, 1.0), 30.0), str(_gain(row, 1.0)))
+	var flat := {"curve": 1.0}
+	_t.check("a monster ram at 3x plating gains twice a 1.5x ram", is_equal_approx(_gain(flat, 3.0), 2.0 * _gain(flat, 1.5)), "%.1f vs %.1f" % [_gain(flat, 3.0), _gain(flat, 1.5)])
+	var hull: Dictionary = BossRules.POSTURE
+	_t.check("a hull boss still stops counting at 1.5x", is_equal_approx(_gain(hull, 3.0), _gain(hull, 1.5)), "%.1f" % _gain(hull, 3.0))
+	var capped := {"curve": 2.0, "hit_cap": 20.0, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}
+	_t.check("hit_cap holds an ordinary amplified ram", _gain(capped, 0.9) <= 20.0001, "%.1f" % _gain(capped, 0.9))
+	_t.check("hit_cap opens for a monster ram", _gain(capped, 3.0) >= BossPosture.FULL - 0.001, "%.1f" % _gain(capped, 3.0))
+	_t.check("hit_cap climbs between", _gain(capped, 2.25) > 20.0 and _gain(capped, 2.25) < BossPosture.FULL, "%.1f" % _gain(capped, 2.25))
+	_t.eq("the ultimate fills up to 70 on a closed guard", preload("res://src/combat/ultimate.gd").WARDEN_POSTURE_CAP, 70.0)
