@@ -178,7 +178,7 @@ func _go_live() -> void:
 		out.y = 0.0
 		var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
 		hit_player.emit(BURST_DAMAGE, dir * SHOVE + Vector3.UP * POP)
-	elif _ring_had_ball and fleet != null:
+	elif _ring_had_ball and fleet != null and player != null and not FloorRule.on_floor(player.state):
 		fleet.discover("burrow_lane", ball)
 
 

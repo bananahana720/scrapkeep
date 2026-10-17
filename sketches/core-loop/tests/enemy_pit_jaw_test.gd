@@ -79,6 +79,11 @@ func _bite() -> void:
 	t.eq("it bit the ball once", unit.bitten, 1)
 	t.check("and holds it", unit._holding(), "")
 	t.check("the bite stung", hits >= 1, "hits %d" % hits)
+	game.events.slammed.emit(unit.telegraph().center, 1.0, 1.0)
+	t.check("a slam on a jaw holding the ball does not kill it", not unit.is_dead(), "")
+	unit._release("smash")
+	game.events.slammed.emit(unit.telegraph().center, 1.0, 1.0)
+	t.check("nor does a slam once the ball is out of the bite", not unit.is_dead() and unit.slam_kills == 0, "slam_kills %d" % unit.slam_kills)
 	unit.free()
 
 

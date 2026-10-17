@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 var game
 var t := T.new("enemy_burrower_test")
@@ -135,7 +136,14 @@ func _off_floor() -> void:
 	unit.phase = unit.Phase.LIVE
 	unit._go_live()
 	t.eq("a burst under a ball that left the floor misses", hits, before)
-	t.check("and it surfaced where it rang", not unit.hidden and unit.bursts == 1, "bursts %d" % unit.bursts)
+	var centre: Vector3 = unit.telegraph().center
+	var off := Vector2(unit.global_position.x - centre.x, unit.global_position.z - centre.z).length()
+	t.check("and it surfaced where it rang", not unit.hidden and unit.bursts == 1 and off < 0.05, "bursts %d, %.2f m off the ring" % [unit.bursts, off])
+	state.grounded = true
+	state.contact_normal = Vector3.UP
+	state.tier = SpeedTier.CRUISE
+	var tier: int = game.player.speed_tier()
+	t.check("leaves a ball on the floor at cruise or faster alone", tier == SpeedTier.CRUISE and not unit._wants_attack(unit._flat_to_ball()), "tier %d" % tier)
 	unit.free()
 
 

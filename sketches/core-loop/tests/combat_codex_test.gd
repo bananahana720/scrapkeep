@@ -240,6 +240,8 @@ func _w9_tricks() -> void:
 
 func _w9_after_move() -> void:
 	var burrower: Node3D = _w9_units["burrower"]
+	# The lane is learned by leaving the floor: the ball is off it as the burst lands.
+	_game.player.state.grounded = false
 	burrower.phase = burrower.Phase.LIVE
 	burrower._go_live()
 	_report("burrow_lane", _combat.discovered.has("burrow_lane") and _w9_units["lane_had_ball"] and burrower.bursts == 1,

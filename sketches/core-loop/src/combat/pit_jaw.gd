@@ -133,7 +133,7 @@ func _live(_delta: float) -> bool:
 	var player = _player()
 	var ball := _real_ball()
 	if not _holding():
-		if caught_live == 0 and ring.contains(ball) and FloorRule.on_floor(player.state) and _catch(HOLD):
+		if player != null and caught_live == 0 and ring.contains(ball) and FloorRule.on_floor(player.state) and _catch(HOLD):
 			bitten += 1
 			hit_player.emit(BITE_DAMAGE, Vector3.ZERO)
 		return true
@@ -146,6 +146,10 @@ func _live(_delta: float) -> bool:
 # A slam on the open jaw, before it has bitten, shuts it for good.
 func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
 	if is_dead() or _holding() or (phase != Phase.WARN and phase != Phase.LIVE):
+		return
+	# Once it has bitten this live phase it is shut: a smash out of the bite, or a slam after the
+	# hold runs out, does not kill it.
+	if phase == Phase.LIVE and caught_live > 0:
 		return
 	var ring := telegraph()
 	if ring == null:

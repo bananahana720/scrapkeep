@@ -169,7 +169,7 @@ const CHASSIS := {
 	"mind_hand": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Raised arm whose lens locks on the ball"},
 	"burrower": {"chassis": "burrower", "move_class": "ground", "threat_feature": "Floor ring swelling under a ball on the floor"},
 	"drill_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Drill bit lowered over the bore point"},
-	"lamp_swarm": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Lure lamps blooming in a ring"},
+	"lamp_swarm": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Floodlight heads opening their shutters in a ring"},
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
