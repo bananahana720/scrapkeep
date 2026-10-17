@@ -190,6 +190,8 @@ func _let_go(player) -> void:
 	if node.get("_rest") != null:
 		node._rest = maxf(float(node._rest), THROW_OPEN)
 	thrown += 1
+	if v.length() <= 0.5:
+		return
 	_flying.append({"body": node, "left": THROW_FLIGHT, "hit": {}, "scale": maxf(MIN_SPEED_SCALE, v.length() / player.tuning.f("cruise"))})
 
 
