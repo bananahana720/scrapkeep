@@ -36,6 +36,8 @@ const ROWS := {
 		"idle": {"style": "sway", "amplitude": 0.05, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.55}},
 	"ramp_flipper": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E14": ["warn_seconds"]},
 		"idle": {"style": "bob", "amplitude": 0.05, "beats": 2.5}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
+	"linker": {"color_role": "neutral", "shape": "none", "sound": "none", "attacks": {"none": []},
+		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"catch_trap": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E15": ["warn_seconds"]},
 		"idle": {"style": "tick", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "pop", "parts": 4, "seconds": 0.4}},
 	"reactor_relic": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E16": ["warn_seconds"]},
