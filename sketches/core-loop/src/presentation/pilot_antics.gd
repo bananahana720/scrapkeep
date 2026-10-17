@@ -6,14 +6,17 @@ extends RefCounted
 # openings, the title deck and the pilot select cards.
 #
 # The move is a pure function of t (0 to 1 over LENGTH seconds), so a frame can be sampled
-# anywhere and tests and stills are exact. Positions are in the shell holder's space with the
-# ball's centre at the origin and its radius about one: the top is y 1, the ground y -1.
+# anywhere and tests and stills are exact. Positions are the pilot's origin in the shell holder's
+# space: the ball's centre and the seated pilot are both at the origin, the ball's radius is about
+# one (top y 1, ground y -1) and a pilot's feet are FEET below its origin.
 # Clips are the pilot GLB's own (pilot_<name>_anim.glb); a clip a pilot lacks falls back to
 # big_cheer, then to the rest pose.
 
 const LENGTH := 2.0 * 240.0 / 129.0
-const TOP := 1.0
-const GROUND := -1.0
+const TOP := 0.98
+const GROUND := -0.98
+const FEET := 0.54
+const SEAT := Vector3.ZERO
 const FALLBACK := "big_cheer"
 
 # word: the drawn sound word a title opening stamps over the move.
@@ -40,6 +43,8 @@ var pilot: Node3D
 var animator: AnimationPlayer
 var class_id := ""
 var out := false
+# Reduced motion: the pilot still climbs out, but the ball neither spins, squashes nor shakes.
+var calm := false
 
 var _seat := Transform3D.IDENTITY
 var _scale := Vector3.ONE
@@ -84,6 +89,10 @@ func apply(t: float) -> void:
 	if not out:
 		_climb_out()
 	var pose := pose_at(class_id, t)
+	if calm:
+		pose.spin = 0.0
+		pose.squash = 1.0
+		pose.shake = Vector3.ZERO
 	var basis := Basis.from_euler(Vector3(pose.pitch, pose.yaw, pose.roll)).scaled(_scale)
 	pilot.transform = Transform3D(basis, pose.at)
 	if core != null:
@@ -162,51 +171,51 @@ static func clip_for(player: AnimationPlayer, wanted: String) -> String:
 # The pose at t: {at, yaw, pitch, roll} for the pilot; {spin, squash, shake} for the core.
 # yaw 0 faces the camera side (+z).
 static func pose_at(id: String, t: float) -> Dictionary:
-	var pose := {"at": Vector3(0.0, 0.3, 0.0), "yaw": 0.0, "pitch": 0.0, "roll": 0.0,
+	var pose := {"at": SEAT, "yaw": 0.0, "pitch": 0.0, "roll": 0.0,
 		"spin": 0.0, "squash": 1.0, "shake": Vector3.ZERO}
 	var leave := _span(t, 0.0, 0.16)
 	var back := _span(t, 0.86, 1.0)
 	match id:
 		"pylon_engineer":
 			# Pops onto the top and balances while the ball keeps rolling under her.
-			var top := Vector3(0.0, TOP + 0.02, 0.0)
-			pose.at = _hop(Vector3(0.0, 0.3, 0.0), top, leave, 0.7).lerp(Vector3(0.0, 0.3, 0.0), _ease_in(back))
+			var top := Vector3(0.0, TOP + FEET, 0.0)
+			pose.at = _hop(SEAT, top, leave, 0.7).lerp(SEAT, _ease_in(back))
 			var balance := _span(t, 0.16, 0.86)
 			pose.spin = balance * TAU * 1.5
 			pose.roll = sin(t * 34.0) * 0.28 * balance
 			pose.at.x += sin(t * 17.0) * 0.08 * balance
 		"runner_gunner":
 			# Steps off to the side, leans on the ball facing away, then turns round, surprised.
-			var side := Vector3(1.25, GROUND, 0.35)
-			pose.at = _hop(Vector3(0.0, 0.3, 0.0), side, leave, 0.9).lerp(Vector3(0.0, 0.3, 0.0), _ease_in(back))
+			var side := Vector3(1.2, GROUND + FEET, 0.35)
+			pose.at = _hop(SEAT, side, leave, 0.9).lerp(SEAT, _ease_in(back))
 			var turn := _span(t, 0.6, 0.7)
 			pose.yaw = lerpf(PI * 0.82, -0.25, _ease_out(turn))
 			pose.roll = -0.22 * (1.0 - turn) * _span(t, 0.16, 0.24)
 		"demolitions_caster":
 			# Rises high, hovers through a far too long dramatic pause, then drops on the top: BOOM.
-			var high := Vector3(0.0, TOP + 1.5, 0.15)
+			var high := Vector3(0.0, TOP + FEET + 0.6, 0.15)
 			var hover := _span(t, 0.16, 0.74)
-			pose.at = Vector3(0.0, 0.3, 0.0).lerp(high, _ease_out(leave))
+			pose.at = SEAT.lerp(high, _ease_out(leave))
 			pose.at.y += sin(t * 18.0) * 0.06 * hover
 			pose.yaw = hover * 0.6 - 0.3
 			var drop := _span(t, 0.74, 0.8)
 			if drop > 0.0:
-				pose.at = high.lerp(Vector3(0.0, TOP + 0.02, 0.15), _ease_in(drop))
+				pose.at = high.lerp(Vector3(0.0, TOP + FEET, 0.15), _ease_in(drop))
 			var impact := _span(t, 0.8, 0.9)
 			if impact > 0.0 and impact < 1.0:
 				pose.squash = 1.0 - 0.18 * sin(impact * PI)
-			pose.at = pose.at.lerp(Vector3(0.0, 0.3, 0.0), _ease_in(back))
+			pose.at = pose.at.lerp(SEAT, _ease_in(back))
 		"tarn":
 			# Climbs on top and sits; the machine growls and shakes for both of them; a gentle wave.
-			var perch := Vector3(0.0, TOP - 0.05, 0.0)
-			pose.at = _hop(Vector3(0.0, 0.3, 0.0), perch, leave, 0.4).lerp(Vector3(0.0, 0.3, 0.0), _ease_in(back))
+			var perch := Vector3(0.0, TOP + 0.12, 0.0)
+			pose.at = _hop(SEAT, perch, leave, 0.4).lerp(SEAT, _ease_in(back))
 			var growl := _span(t, 0.22, 0.56) * (1.0 - _span(t, 0.56, 0.6))
 			pose.shake = Vector3(sin(t * 160.0), sin(t * 210.0) * 0.5, cos(t * 140.0)) * 0.035 * growl
 			pose.yaw = 0.15
 		"tally":
 			# Steps off to the other side and stamps the ball three times.
-			var side := Vector3(-1.3, GROUND, 0.3)
-			pose.at = _hop(Vector3(0.0, 0.3, 0.0), side, leave, 0.8).lerp(Vector3(0.0, 0.3, 0.0), _ease_in(back))
+			var side := Vector3(-1.35, GROUND + FEET, 0.3)
+			pose.at = _hop(SEAT, side, leave, 0.8).lerp(SEAT, _ease_in(back))
 			pose.yaw = PI * 0.5 - 0.35
 			for stamp in [0.2, 0.42, 0.64]:
 				var hit := _span(t, stamp + 0.08, stamp + 0.14)
@@ -215,8 +224,8 @@ static func pose_at(id: String, t: float) -> Dictionary:
 		"remembered_cannon":
 			# Rises out of the top very slowly, as if remembering how; waves once.
 			var rise := _ease_out(_span(t, 0.0, 0.78))
-			pose.at = Vector3(0.0, 0.3, 0.0).lerp(Vector3(0.0, TOP + 0.35, 0.0), rise)
-			pose.at = pose.at.lerp(Vector3(0.0, 0.3, 0.0), _ease_in(_span(t, 0.92, 1.0)))
+			pose.at = SEAT.lerp(Vector3(0.0, TOP + 0.4, 0.0), rise)
+			pose.at = pose.at.lerp(SEAT, _ease_in(_span(t, 0.92, 1.0)))
 			pose.yaw = 0.1 * sin(t * 3.0)
 	return pose
 

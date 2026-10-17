@@ -6,6 +6,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
+const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 
 # The class card's portrait and live ability preview: the pilot's real hero shell
 # (hero_assets.gd's glb, painted by its own paint()) in a tiny world of its own. The
@@ -439,8 +440,9 @@ func _process(delta: float) -> void:
 	if ball == null:
 		return
 	_time += delta
-	track_focus()
+	# Before track_focus: seating a pilot stops its animator, which would cut a first-focus unlock.
 	_step_antic()
+	track_focus()
 	_step_look(delta)
 	if playing():
 		clock += delta
@@ -474,7 +476,7 @@ func _step_antic() -> void:
 		return
 	var was_out: bool = antic.out
 	var t := -1.0
-	if not playing() and _time >= ANTIC_PERIOD:
+	if not playing() and _time >= ANTIC_PERIOD and not HighdraftFx.preferred:
 		var phase := fmod(_time + float(hash(String(def.id)) % 1000) / 1000.0 * ANTIC_PERIOD, ANTIC_PERIOD)
 		t = (phase - (ANTIC_PERIOD - PilotAntics.LENGTH)) / PilotAntics.LENGTH
 	antic.apply(t)

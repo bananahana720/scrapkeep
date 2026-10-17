@@ -11,6 +11,7 @@ const TitleIntros := preload("res://src/presentation/title_intros.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
+const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("pilot_antics_test")
@@ -59,8 +60,8 @@ func _moves() -> void:
 		_t.check(id + " has a word and a line", PilotAntics.word(id) != "" and PilotAntics.line(id) != "")
 		var start: Dictionary = PilotAntics.pose_at(id, 0.0)
 		var finish: Dictionary = PilotAntics.pose_at(id, 0.999)
-		_t.check(id + " starts and ends in the pod", start.at.distance_to(Vector3(0.0, 0.3, 0.0)) < 0.05
-			and finish.at.distance_to(Vector3(0.0, 0.3, 0.0)) < 0.1)
+		_t.check(id + " starts and ends in the pod", start.at.distance_to(PilotAntics.SEAT) < 0.05
+			and finish.at.distance_to(PilotAntics.SEAT) < 0.1)
 	for row in TitleIntros.ROWS:
 		if row.kind == "pilot":
 			_t.check(String(row.pilot) + " has a move", PilotAntics.has_move(String(row.pilot)))
@@ -153,6 +154,19 @@ func _deck(game, display) -> void:
 	display._clock = display.ANTIC_PERIOD * 2.0 + 0.5
 	display._step_antics()
 	_t.check("and back in after it", not antics[1].out)
+	var mid: float = display.ANTIC_PERIOD + display.ANTIC_DELAY + PilotAntics.LENGTH * 0.5
+	display._clock = mid
+	display._step_antics()
+	display.active = false
+	display._sync_dressing()
+	_t.check("a deck stopped mid-move puts its pilot back in", not antics[1].out)
+	display.active = true
+	display._sync_dressing()
+	HighdraftFx.preferred = true
+	display._clock = mid
+	display._step_antics()
+	_t.check("reduced motion keeps the deck pilots seated", antics.all(func(a): return not a.out))
+	HighdraftFx.preferred = false
 	var deck_at: Vector3 = display.camera.global_position
 	display.look_begin()
 	display.look_target = 2
@@ -204,6 +218,16 @@ func _cards() -> void:
 	preview._time = 2.0 * preview.ANTIC_PERIOD - phase - PilotAntics.LENGTH * 0.5
 	preview._step_antic()
 	_t.check("a card's pilot climbs out at rest", preview.antic.out)
+	HighdraftFx.preferred = true
+	preview._step_antic()
+	_t.check("reduced motion seats a card's pilot", not preview.antic.out)
+	HighdraftFx.preferred = false
+	preview._step_antic()
+	preview.antic.calm = true
+	preview.antic.apply(0.5)
+	_t.check("calm keeps the ball still while the pilot is out", preview.antic.out
+		and preview._core.transform.is_equal_approx(preview.antic._core_rest))
+	preview.antic.calm = false
 	preview.open = 1.0
 	preview._step_antic()
 	_t.check("and is back in when the card opens", not preview.antic.out)

@@ -186,6 +186,9 @@ func _sync_dressing() -> void:
 	if intro_playing():
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		return
+	if not active or low:
+		# Not stepped again until shown: no pilot left frozen half out of its ball.
+		_seat_deck()
 	set_process(active and not low)
 	if not active:
 		viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -222,6 +225,9 @@ func _frame() -> void:
 
 
 func _step_antics() -> void:
+	if HighdraftFx.preferred:
+		_seat_deck()
+		return
 	var slot := int(_clock / ANTIC_PERIOD)
 	var t := (_clock - slot * ANTIC_PERIOD - ANTIC_DELAY) / PilotAntics.LENGTH
 	for i in deck_antics.size():

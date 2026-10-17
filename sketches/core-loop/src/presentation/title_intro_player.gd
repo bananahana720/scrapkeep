@@ -517,6 +517,7 @@ func _frame_shot(kind: String, t: float) -> void:
 			look = Vector3(0.0, 0.9, 0.0) * s
 			at = at.lerp(look, 0.06 * push)
 			if _antics != null:
+				_antics.calm = reduced_motion
 				_antics.apply(t)
 		"action":
 			at = Vector3(-4.0, 2.4, 9.0) * s
