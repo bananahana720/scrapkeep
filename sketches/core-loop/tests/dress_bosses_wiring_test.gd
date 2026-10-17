@@ -96,6 +96,10 @@ func _brindle() -> void:
 	_t.eq("phase 2 plays enter_furnace", ship._anim.assigned_animation, "enter_furnace")
 	boss.jump_to_phase(3)
 	_t.eq("phase 3 plays enter_scuttle", ship._anim.assigned_animation, "enter_scuttle")
+	# The clip blows the panels off on the model, so they stay visible until it has played.
+	_t.check("phase 3 entry keeps the armour up for enter_scuttle to blow off",
+			ship._model_armour.all(func(p): return p.visible))
+	await create_timer(ship._anim.get_animation("enter_scuttle").length + 0.05).timeout
 	var armour_shed: bool = ship._model_armour.all(func(p): return not p.visible)
 	_t.check("phase 3 sheds the model's armour and opens its shield", armour_shed and not ship._model_shield.visible,
 			"armour shed %s, shield visible %s" % [armour_shed, ship._model_shield.visible])

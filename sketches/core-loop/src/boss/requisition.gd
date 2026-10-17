@@ -57,6 +57,7 @@ var _model_armour: Array = []
 var _model_magnets: Array = []
 var _model_magnet_meshes: Array = []
 var _model_shield: Node3D
+var _hide_tokens := {}
 
 
 func build(boss) -> void:
@@ -171,8 +172,7 @@ func show_cranes(on: bool) -> void:
 	for i in magnets.size():
 		magnets[i].visible = on
 		_cables[i].visible = on
-	for part in _model_cranes:
-		(part as Node3D).visible = on
+	_show_model_parts("cranes", _model_cranes, on, "enter_furnace")
 
 
 func open_caps(open: bool) -> void:
@@ -187,8 +187,25 @@ func open_caps(open: bool) -> void:
 func shed_armour() -> void:
 	for plate in _plates:
 		(plate as MeshInstance3D).visible = false
-	for part in _model_armour:
-		(part as Node3D).visible = false
+	_show_model_parts("armour", _model_armour, false, "enter_scuttle")
+
+
+# The phase-entry clips fold the model's cranes and blow its armour off; hiding those parts
+# on the entry frame cut the clip before it was seen, so a hide waits for the clip to end.
+# Showing is immediate and cancels a pending hide of the same group.
+func _show_model_parts(group: String, parts: Array, on: bool, clip: String) -> void:
+	_hide_tokens[group] = int(_hide_tokens.get(group, 0)) + 1
+	var wait := _anim.get_animation(clip).length if not on and _anim != null and _anim.has_animation(clip) else 0.0
+	if on or wait <= 0.0 or not is_inside_tree() or parts.is_empty() or not (parts[0] as Node3D).visible:
+		for part in parts:
+			(part as Node3D).visible = on
+		return
+	var token: int = _hide_tokens[group]
+	get_tree().create_timer(wait, false).timeout.connect(func() -> void:
+		if is_instance_valid(self) and _hide_tokens.get(group, 0) == token:
+			for part in parts:
+				if is_instance_valid(part):
+					(part as Node3D).visible = false)
 
 
 func cockpit_open(open: bool) -> void:
