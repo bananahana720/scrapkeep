@@ -53,7 +53,8 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 # or missing-boss run has no spine record (the run log writes only at death and run end), so
 # its bots.ndjson line is the only trace. Each seed gets a fresh process and data folder,
 # seeded RNG streams, spawn-order signs instead of object-ID-dependent choices, a
-# completed audio bake, and physics-tick hit-stop gates (src/core/sim_clock.gd).
+# completed audio bake (stage 1's band too, as a player gets behind the title), and
+# physics-tick hit-stop gates (src/core/sim_clock.gd).
 # Replay evidence is specific to the checked machine, build, policy and table.
 
 var _audit
@@ -219,7 +220,7 @@ func _physics_process(delta: float) -> bool:
 				return true
 			_driver.late_offer_policy = late
 			_driver.tree_policy = "random"
-		_game.presentation.audio.bake_now()
+		_game.presentation.audio.bake_opening_now()
 		_game.run.run_seed_override = _seeds[_index]
 		_started_msec = Time.get_ticks_msec()
 		var resume := false
