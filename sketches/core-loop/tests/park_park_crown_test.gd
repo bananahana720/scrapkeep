@@ -353,7 +353,7 @@ static func physical_perch_failures(park: Dictionary, parent: Node3D, ground: Ca
 			out.append("%s missing" % id)
 			continue
 		var row: Dictionary = rows[0]
-		if row["at"] != PERCH_XZ[i] or row["stamp"] != "" or row["recipe"] != "greybox:anchor_field":
+		if row["at"] != PERCH_XZ[i] or row["stamp"] != "" or not ParkRecipes.is_anchor_field(row):
 			out.append("%s placement changed" % id)
 		var node := ParkRecipes.place_anchor_field(row, parent, ground, zones)
 		var shapes := node.find_children("*", "CollisionShape3D", true, false)
