@@ -123,7 +123,7 @@ Renders run on Andrew's 4080 through the music Remote Control thread. ACE-Step s
 2. **Then all legends**: `--tier legend`.
 3. **Then the rest**, ten at a time (`--limit 10`) until none is left. A take already in `radio_renders.json` is skipped, so batches resume after a stop and never render a take twice. Andrew tapped "Hold for all 81" (22:13:51Z): the sitting waits until every take is rendered. The budget and overnight schedule are in the shared render brief, `music/radio/RENDER-BRIEF.md`.
 
-Per take: the parent pick is stretched to the take's tempo with Rubber Band and looped to the take's length, covered in final mode at the row's strength with seeds 5101 and 5102, split with htdemucs_6s, and mastered by `evolve.py` (`--light` for b-sides, `--spice` otherwise). The stems feed the band's layers, so speed and combo keep working on the radio. A picked take is packaged like the other recorded tunes: `assets/music_ace/<id>/manifest.json` plus a MusicRows row. Until then, the radio plays the take's parent tune as a stand-in.
+Per take: the parent pick is stretched to the take's tempo with Rubber Band and looped to the take's length, covered in final mode at the row's strength with seeds 5101 and 5102, split with htdemucs_6s, and mastered by `evolve.py` (`--light` for b-sides, `--spice` otherwise). The stems feed the band's layers, so speed and combo keep working on the radio. The music thread picks the better seed of each take (Andrew, card 22:28:36Z: he is not asked per take; he hears the picks at his sitting). The pick is packaged whole (`pack --whole`) at `assets/music_ace/<id>/manifest.json`, and the game finds it by id with no MusicRows row. Until then, the radio plays the take's parent tune as a stand-in.
 
 ## Placement still to do
 
@@ -134,6 +134,8 @@ Cache spots are named here but have no coordinates yet. `assets/radio/cache_spot
 1. **Wordless vocals: radio only** (20:52:33Z). The six wordless-vocal takes keep voices as texture, never words; the score stays vocal-free. The render job includes them by default.
 2. **Wardens take the air** (20:52:37Z) like bosses, unless a track is pinned.
 3. **The finale wins** (20:52:55Z). A boss's final phase takes the air even from a pinned track; the pin plays again after the fight.
+4. **Hold for all 81** (22:13:51Z). The sitting waits until every take is rendered.
+5. **The music thread picks** (22:28:36Z) the better render of each pair, for all 81.
 
 ## Ideas parked for later
 
