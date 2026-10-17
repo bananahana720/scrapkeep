@@ -78,7 +78,7 @@ Buffs, as stock Godot effects on the music bus:
 | Shield | `AudioEffectHighPassFilter` at 300 Hz, `AudioEffectChorus`, a bell one-shot per bar |
 | Scrap streak | A beat-synced volume duck (sidechain pump), plus a chiptune arpeggio per bar |
 
-Hype rule and extras (sound bible, "The hype rule" and "The four extras"):
+Hype rule and extras (sound bible, "The hype rule" and "The four extras"). Decided 2026-10-17: the `euro-*` tracks play only in the final phase; earlier phases keep their current tracks.
 
 | Trigger | Music does | Where it plugs in |
 | --- | --- | --- |
@@ -101,6 +101,6 @@ Only one buff colours the music at a time. Low hull wins over every other buff, 
 4. Add the two section 1 checks to the test suite.
 5. Special enemies, from `specials.py` (17 WAVs). Play `<name>_presence` as a looping `AudioStreamPlayer3D` on the enemy, with its own voice so it never steals a combat voice, and stop it on death. Fire `<name>_tell` on the same frame as the visual tell: the Foreman's horn on the beat before the shred wipe, the Dispatcher's on each drop, the Splitter's on the seam flare, the Linker's when the cable goes taut. Fire `<name>_break` on death. The Splitter picks `splitter_break_split` when rammed at ground level and `splitter_break_clean` otherwise. Queue `<name>_spawn` on the next beat through the same quantizer as the stomp downbeats in section 3. Cap presence loops at two specials heard at once, nearest first.
 6. Variations: import the picked round-7 takes (RENDERS.md) as tracks and wire the section 6 table.
-7. Hype rule and extras: import the picked round-8 `euro-*` takes and the 13 `extras.py` WAVs, and wire the second section 6 table.
+7. Hype rule and extras: import the final-phase Eurodance picks only (`euro-brindle-p3-s2801`, `euro-waking-final-s2801`, `euro-mind-final-s2801`, `euro-champion-s2901`) and the 13 `extras.py` WAVs, and wire the second section 6 table. The other round-8 takes stay as comparison material.
 
 Not covered here: the in-game mix under real combat noise, and whether the stem faders feel right. Both need Andrew playing.
