@@ -5,9 +5,11 @@ boom arm held over another enemy, with a slack cable from base to dish. Silhouet
 post whose arm breaks the outline sideways; nothing else in the roster has a sideways arm.
 Cut the cable (shot, or a harpoon bite and yank) and the dish drops; flank it through the air.
 
-Godot metres (X,Y,Z) map to Blender (X,-Z,Y). The dish faces Godot +Z, the local axis the
-emplacement turns toward the ball (counter.gd _facing), like the deflector's. The boom
-reaches along +X; the partner stands under it at partner_spot (3.6 m out).
+Godot metres (X,Y,Z) map to Blender (X,-Z,Y). The boom reaches along +X and the partner
+stands under it at partner_spot (3.6 m out), so the whole Linker is yawed once, when it is
+placed, to put partner_spot on its partner; it does not track the ball with counter.gd
+_facing. The dish rests facing Godot +Z, and it is the dish that turns toward the ball: it
+yaws and tilts about LinkerHinge. cable_dish rides on the dish, so a redrawn cable follows.
 Collider core: radius 0.8 round the post (the tripod feet splay to 1.1), floor Y = -1.1.
 Three meshes, three surfaces, opaque vertex colour:
   LinkerBody   fleet_paint: tripod, post, winch drum, operator cab with its crew, boom and
@@ -195,9 +197,9 @@ bmesh.ops.recalc_face_normals(cable.bm, faces=cable.bm.faces[:])
 cable_obj = cable.to_object(parent=root)
 
 for name, pos in [("LinkerHinge", HINGE), ("boom_tip", TIP), ("cable_base", tuple(start)),
-                  ("cable_dish", tuple(end)), ("cable_cut", tuple(mid)), ("partner_spot", PARTNER),
-                  ("LinkerCab", (-0.12, 1.2, 0.3))]:
+                  ("cable_cut", tuple(mid)), ("partner_spot", PARTNER), ("LinkerCab", (-0.12, 1.2, 0.3))]:
     common.empty(name, g(*pos), parent=root)
+common.empty("cable_dish", g(*end), parent=dish_obj)
 
 bpy.context.view_layer.update()
 post = [body_obj.matrix_world @ v.co for v in body_obj.data.vertices]

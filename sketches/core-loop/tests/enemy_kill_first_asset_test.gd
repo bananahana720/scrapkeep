@@ -84,9 +84,13 @@ func _splitter() -> void:
 	var all := _points(scene, "SplitterBody")
 	all.append_array(_points(scene, "SplitterSeams"))
 	t.near("splitter floor", _floor(all), -1.35, 0.01)
+	# Shell: the seams, and the body above the waist strap and snouts (y > 0.3).
 	var core := 0.0
 	for p in _points(scene, "SplitterSeams"):
 		core = maxf(core, Vector2(p.x, p.z).length())
+	for p in _points(scene, "SplitterBody"):
+		if p.y > 0.3:
+			core = maxf(core, Vector2(p.x, p.z).length())
 	var top := -INF
 	var reach := 0.0
 	for p in all:
@@ -102,6 +106,12 @@ func _splitter() -> void:
 	t.check("pod a leads along -Z", a.z < -0.3 and absf(a.x) < 0.01)
 	t.near("pods 120 degrees apart", Vector2(a.x, a.z).angle_to(Vector2(b.x, b.z)), deg_to_rad(120.0), 0.01)
 	t.near("pods evenly spaced", absf(Vector2(b.x, b.z).angle_to(Vector2(c.x, c.z))), deg_to_rad(120.0), 0.01)
+	# Each pod socket's -Z (a piece's lead) points out from the ball, where that piece runs.
+	for name in ["pod_a", "pod_b", "pod_c"]:
+		var pod := scene.find_child(name, true, false) as Node3D
+		var lead := pod.basis * Vector3.FORWARD
+		var out := Vector3(pod.position.x, 0.0, pod.position.z).normalized()
+		t.check(name + " faces out", lead.dot(out) > 0.999 and absf(lead.y) < 0.001, str(lead))
 	scene.queue_free()
 
 
@@ -155,9 +165,11 @@ func _linker() -> void:
 		centre += p
 	centre /= maxf(1.0, dish_points.size())
 	t.check("dish hangs over the partner", absf(centre.x - partner.x) < 0.5 and centre.y > 1.0, str(centre))
-	var cut := (scene.find_child("cable_cut", true, false) as Node3D).position
-	var base := (scene.find_child("cable_base", true, false) as Node3D).position
-	var tip := (scene.find_child("cable_dish", true, false) as Node3D).position
+	var cut := (scene.find_child("cable_cut", true, false) as Node3D).global_position
+	var base := (scene.find_child("cable_base", true, false) as Node3D).global_position
+	var tip_socket := scene.find_child("cable_dish", true, false) as Node3D
+	var tip := tip_socket.global_position
+	t.check("cable end rides on the dish", tip_socket.get_parent() == dish)
 	t.check("cable sags below its chord", cut.y < (base.y + tip.y) * 0.5 - 0.5)
 	scene.queue_free()
 

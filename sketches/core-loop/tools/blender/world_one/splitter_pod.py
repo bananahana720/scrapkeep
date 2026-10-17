@@ -13,7 +13,6 @@ LONS = 5
 OXIDE = "9b513a"
 OXIDE_HI = "a8603f"
 CHAR = "charcoal"
-WORN = "a8aaa3"
 BONE = "bone"
 
 

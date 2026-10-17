@@ -7,7 +7,8 @@ snout leading, and both seam walls edged in the lit slot so it reads torn off.
 
 Godot metres (X,Y,Z) map to Blender (X,-Z,Y). It leads along Godot -Z like the chaser.
 Collider core: radius 0.6, half height 0.9 (0.6 x the chaser's 1.0 / 1.5); floor at
-Y = -0.92. The pod's spine is pushed back 0.42 m so its mass sits on the origin.
+Y = -0.92. The lance overhangs the collider to 0.96 m on purpose, the way a lance leads;
+damage comes from the committed lunge lane, not the mesh. The pod's spine is pushed back 0.42 m so its mass sits on the origin.
 Two meshes, two surfaces, opaque vertex colour:
   SplitterPieceBody  fleet_paint: shell, legs, strap, snout.
   SplitterPieceGlow  requisition_tag: eye slit and the torn seam edges; lit at runtime.

@@ -6,8 +6,9 @@ ground level the seams flare and it pops into three enemy_splitter_piece.glb cha
 a smash from above or a long shot kills it clean.
 
 Godot metres (X,Y,Z) map to Blender (X,-Z,Y). It leads along Godot -Z like the chaser.
-Collider core: radius 1.25 round the shell (legs and snouts splay to 1.65), floor at
-Y = -1.35, top of the lamp at 1.7.
+Origin at the ball's centre. Suggested collider: capsule radius 1.3, half height 1.35, so its floor
+is the feet at Y = -1.35. The shell is within 1.25 above the waist (tested); the waist strap
+stands just proud of it, legs and snouts splay to 1.65 and the lamp tops out at 1.7.
 Two meshes, two surfaces, both opaque vertex colour:
   SplitterBody   fleet_paint: pods (oxide), legs, strap, snouts (charcoal), tally stencils.
   SplitterSeams  requisition_tag: three seam strips, the junction caps, three eyes and the
@@ -115,6 +116,5 @@ assert verts <= 2100 and tris <= 1100 and len(prims) == 2
 print(f"SPLITTER EXPORTED: {verts} V / {tris} T / {len(prims)} D")
 
 if opts["render"]:
-    sys.path.insert(0, HERE)
     import kill_first_preview
     kill_first_preview.render("splitter", root, opts["render"], FLOOR, focus=(0, 0, 0.1))
