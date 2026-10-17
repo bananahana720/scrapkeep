@@ -3007,3 +3007,7 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 ## Saved look settings (alpha wave 5, IN1)
 
 - **Call.** Four saved look settings are applied at boot and again after Reset keys; invert affects stick pitch only.
+
+## Reduce flashes toggle (design question 7, 17 Oct 2026)
+
+- **Call.** Andrew picked "Reduce flashes toggle" as the alpha's comfort setting. It is a Display-page row beside reduced motion, saved as `reduce_flashes` in settings.json, and every bright flash, white pop and strobe reads `FlashGuard` when it fires (rules in VISUAL-LANGUAGE.md section 8). With both toggles on, the hit edge flash takes the lower share, so the hit still reads. The boss finales' Eurodance sections and comic words drive no visuals today, so they need no guard yet; a visual added to either must read FlashGuard. `tools/flash_capture.gd` renders each site off and on, and `still_compare.gd --peak` measures the brightness it adds.
