@@ -873,6 +873,31 @@ static func maxed(part_id: String, held: Array) -> bool:
 	return held.count(part_id) >= int(d.stack_cap)
 
 
+# A maxed pick swaps for an unmaxed part left in the pool, of the same kit side and bucket
+# when one is left, else of the same bucket, else any; with none left the slot goes. The
+# draw keeps its kit and bucket lean, so a strong build's offers keep their shape.
+static func _swap_maxed(rng: RandomNumberGenerator, class_id: String, held: Array, picks: Array, pool: Array) -> Array:
+	var out: Array = []
+	var left: Array = pool.filter(func(key): return not maxed(key, held) and not key in picks)
+	for key in picks:
+		if not maxed(key, held):
+			out.append(key)
+			continue
+		var bucket := bucket_of(key)
+		var kit := in_kit(class_id, key)
+		var same: Array = left.filter(func(k): return bucket_of(k) == bucket and in_kit(class_id, k) == kit)
+		if same.is_empty():
+			same = left.filter(func(k): return bucket_of(k) == bucket)
+		if same.is_empty():
+			same = left
+		if same.is_empty():
+			continue
+		var swap: String = same[rng.randi_range(0, same.size() - 1)]
+		out.append(swap)
+		left.erase(swap)
+	return out
+
+
 # Picks count distinct parts from the pool at these rarities. One slot may go to the
 # part that completes a synergy the run is one piece from. Every other slot draws its
 # rarity by the rarity weights (common 87, rare 10, relic 3), then is
@@ -883,7 +908,7 @@ static func maxed(part_id: String, held: Array) -> bool:
 static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
 		exclude: Array = [], offered: Dictionary = {}) -> Array:
 	rarities = ItemGen.resolve_rarities(rarities)
-	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude and not maxed(key, held))
+	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude)
 	var picks: Array = []
 	var leans := KITS.has(class_id)
 	var bait := _bait(class_id, held, pool, offered, count)
@@ -936,7 +961,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 			picks[at] = harder[rng.randi_range(0, harder.size() - 1)]
 	if leans:
 		_keep_a_neutral(rng, class_id, picks, pool, offered, 1 if not picks.is_empty() and picks[0] == bait else 0)
-	return picks
+	return _swap_maxed(rng, class_id, held, picks, pool)
 
 
 # A leaning pilot's draw that holds no kit part still shows a shelf part: the first slot from first

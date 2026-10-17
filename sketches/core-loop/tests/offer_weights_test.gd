@@ -56,6 +56,10 @@ const STAGES := 4
 const GATES_PER_STAGE := 5
 const CHOICES := 2
 const SHARE_BAND := [0.60, 0.80]
+# 2026-10-17 (Overpowered pays, Parts._swap_maxed): a part held at its stack cap is swapped out of
+# the draw, so a greedy bot that has maxed its kit sees off-kit parts; its share may sit just under
+# the band (Tarn's full catalogue measured 0.590). The random bot keeps the full band.
+const GREEDY_SHARE_FLOOR := 0.55
 const OVERLAP_MAX := 0.5
 const MOVEMENT_MAX := 0.15
 const TOP := 10
@@ -63,7 +67,9 @@ const MIN_DISTINCT_PAIRS := 5
 const MAX_PILOTS_PER_PAIR := 2
 const UNREACHABLE_PAIR := ["defence", "movement"]
 # 2026-10-15 SQ19b: the alpha list's own bars (see the header).
-const ALPHA_OVERLAP_MAX := 0.40
+# 2026-10-17 (Overpowered pays): 0.50, was 0.40. With maxed kit parts swapped out on the 45-part
+# alpha list, Demolitions and the Cannon share five top-10 shelf parts (measured 0.50).
+const ALPHA_OVERLAP_MAX := 0.50
 const ALPHA_MIN_PAIRS := 4
 const TALLY_PART := "winch_pawl"
 
@@ -214,8 +220,9 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 			var s: Dictionary = stats[pilot][bot]
 			_t.check("%s %s %s draws" % [label, pilot, bot], s["draws"] == RUNS * STAGES * GATES_PER_STAGE and s["slots"] > s["draws"], "%d draws, %d slots" % [s["draws"], s["slots"]])
 			var share := _share(s, "kit")
-			var in_band: bool = share >= SHARE_BAND[0] and share <= SHARE_BAND[1]
-			_t.check("%s %s %s weighted share inside 60 to 80%%" % [label, pilot, bot], in_band, "%.3f" % share)
+			var floor_share: float = GREEDY_SHARE_FLOOR if bot == "greedy" else SHARE_BAND[0]
+			var in_band: bool = share >= floor_share and share <= SHARE_BAND[1]
+			_t.check("%s %s %s weighted share inside %d to 80%%" % [label, pilot, bot, roundi(floor_share * 100.0)], in_band, "%.3f" % share)
 			_t.check("%s %s %s movement at most 15%%" % [label, pilot, bot], _bucket_share(s, "movement") <= MOVEMENT_MAX, "%.3f" % _bucket_share(s, "movement"))
 			_t.check("%s %s %s no neutral part over its repeat cap" % [label, pilot, bot], s["neutral_max"] <= Parts.NEUTRAL_REPEAT_CAP,
 				"max %d a stage, cap %d" % [s["neutral_max"], Parts.NEUTRAL_REPEAT_CAP])
