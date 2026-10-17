@@ -180,7 +180,15 @@ func _check_levels() -> void:
 				and is_equal_approx(damage, level.mods["weapon_damage"]) and is_equal_approx(damage, sheet.mod("weapon_damage"))
 				and level.text in row["text"] and row["copies"] == n):
 			wrong.append("x%d: punch %s damage %s, level %d is %s / %s; text %s" % [n, punch, damage, n, level.punch, level.mods["weapon_damage"], [row["text"]]])
-	_report("levelled part reads its held level", wrong.is_empty(), "two and three Hot Rivets: wrong %s" % [wrong])
+	var plates: Array = ["rivet_plating", "rivet_plating", "rivet_plating"]
+	var plate_row: Dictionary = _readout.describe(plates)["parts"][0]
+	var hp := -1.0
+	for bonus in plate_row["bonuses"]:
+		if bonus["text"].begins_with(_readout._stat_words("max_hp_bonus")):
+			hp = float(bonus["total"])
+	if not (is_equal_approx(hp, Parts.def_at("rivet_plating", 3).max_hp_bonus) and is_equal_approx(hp, Sheet.from_parts(plates).max_hp_bonus)):
+		wrong.append("three Rivet Plating: max health %s, level 3 is %s" % [hp, Parts.def_at("rivet_plating", 3).max_hp_bonus])
+	_report("levelled part reads its held level", wrong.is_empty(), "two and three Hot Rivets, three Rivet Plating: wrong %s" % [wrong])
 
 
 func _check_build() -> void:

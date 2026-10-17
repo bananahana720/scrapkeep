@@ -21,14 +21,16 @@ const StakeDevices := preload("res://src/world/stake_devices.gd")
 #    level 3; the same draws at level 2 do show levelled parts (the control).
 # 4. Stake devices: a trade chest's part win, drawn when every tier-1 part is held (the
 #    fallback to held parts), never names a part at level 3; at level 2 it does (the control).
-# 5. A driven run: two Hot Rivets give level 2's numbers to the tuning, and an offer of a held
+# 5. Card builders: the reward gate, fabricator and shop card functions read an offered part
+#    only through Parts.offer_def and offer_headline; a planted Parts.def( is caught.
+# 6. A driven run: two Hot Rivets give level 2's numbers to the tuning, and an offer of a held
 #    part names the level it would reach.
 
 const DRAWS := 200
 const SEED := 15
 # The offer shapes the sources use: a gate pair, a fabricator or vault single, a shop shelf.
 const SHAPES := [["gate", 2], ["single", 1], ["shelf", 3]]
-const EXPECTED_REPORTS := 11
+const EXPECTED_REPORTS := 14
 # Andrew's ruling (2026-10-16): levels stay on these three neutral shelf parts.
 const LEVELLED := ["hot_rivets", "rivet_plating", "magnet_spool"]
 
@@ -44,6 +46,7 @@ func _initialize() -> void:
 	_check_replace()
 	_check_offers()
 	_check_stakes()
+	_check_card_guard()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -199,6 +202,59 @@ func _check_offers() -> void:
 		"%d draws holding every levelled part at level 2: shown %s of %s" % [mid["total"], mid["shown"].keys(), levelled()])
 
 
+# The functions that build an offer card, by file: none may read an offered id through
+# Parts.def( or Parts.headline(, which give level 1.
+const CARD_BUILDERS := {
+	"res://src/build/reward_gates.gd": ["_place"],
+	"res://src/build/fabricators.gd": ["_refresh_label"],
+	"res://src/build/shop.gd": ["_offer"],
+}
+const LEVEL_ONE_READS := ["Parts.def(", "Parts.headline("]
+
+
+# The body of func name in source: from its line to the next top-level line.
+static func _body(source: String, name: String) -> String:
+	var lines := source.split("\n")
+	var out := PackedStringArray()
+	var inside := false
+	for line in lines:
+		if line.begins_with("func %s(" % name) or line.begins_with("static func %s(" % name):
+			inside = true
+		elif inside and line != "" and not line.begins_with("\t") and not line.begins_with("#"):
+			break
+		if inside:
+			out.append(line)
+	return "\n".join(out)
+
+
+# One line per card builder that reads level 1, or that is missing; [] is clean.
+static func card_problems(sources: Dictionary) -> Array:
+	var out: Array = []
+	for path in CARD_BUILDERS:
+		for name in CARD_BUILDERS[path]:
+			var body := _body(sources[path], name)
+			if body == "":
+				out.append("%s has no %s" % [path.get_file(), name])
+			for bad in LEVEL_ONE_READS:
+				if bad in body:
+					out.append("%s %s calls %s" % [path.get_file(), name, bad])
+	return out
+
+
+func _check_card_guard() -> void:
+	var sources := {}
+	for path in CARD_BUILDERS:
+		sources[path] = FileAccess.get_file_as_string(path)
+	var clean := card_problems(sources)
+	var planted := sources.duplicate()
+	var fab := "res://src/build/fabricators.gd"
+	planted[fab] = String(planted[fab]).replace("Parts.offer_headline(part_id, held)", "Parts.headline(part_id)")
+	var caught := card_problems(planted)
+	_report("card builders read offers at the next level", clean.is_empty(), "problems %s" % [clean])
+	_report("a planted level-1 read is caught", caught == ["fabricators.gd _refresh_label calls Parts.headline("],
+		"planting Parts.headline(part_id) in the fabricator card: %s" % [caught])
+
+
 class StakeRun:
 	var parts: Array = []
 	func class_id() -> String:
@@ -246,12 +302,21 @@ func _check_driven_run() -> void:
 		"two Hot Rivets: weapon_damage x%.4f (level 2 x%.2f), punch %s; offer marks %s / %s / %s"
 			% [damage, want, _build.punch_bonus(), [plain], [one], [two]])
 	var ball: Vector3 = _game.player.ball_position()
+	var fab: Dictionary = _build.fabricators.add_at(ball + Vector3(0.0, 0.0, 30.0), Vector3(0.0, 0.0, 1.0), "hot_rivets")
+	_build.fabricators._refresh_label(fab, 0, run.parts)
+	var fab_text: String = fab["text"]
+	_build.fabricators.clear()
+	var shelf: Dictionary = _build.shop._offer("hot_rivets", false, 0)
 	var offers: Array = _build.gates.open(["hot_rivets", "rivet_plating"], ball, Vector3.FORWARD, run.parts)
 	_build.gates.close()
 	var next: Resource = Parts.def_at("hot_rivets", 3)
 	var first: Resource = Parts.def("rivet_plating")
 	var card: Dictionary = offers[0] if offers.size() == 2 else {}
 	var fresh: Dictionary = offers[1] if offers.size() == 2 else {}
+	var punch_words := "Punch +%d" % int(next.punch)
+	_report("fabricator and shop cards show the level it would give", next.text in fab_text and punch_words in fab_text
+		and shelf.get("text", "") == next.text,
+		"holding two Hot Rivets: fabricator card %s; shop card %s (level 3: %s, %s)" % [[fab_text], [shelf.get("text", "")], next.text, punch_words])
 	_report("an offer card shows the level it would give", card.get("text", "") == next.text
 		and is_equal_approx(float(card.get("punch", 0.0)), next.punch) and ("Punch +%d" % int(next.punch)) in String(card.get("headline", ""))
 		and fresh.get("text", "") == first.text,

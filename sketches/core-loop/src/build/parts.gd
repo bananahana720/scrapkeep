@@ -458,6 +458,17 @@ static func level_problems(part_id: String, r: Dictionary) -> Array:
 	return out
 
 
+# The def and the headline an offer card shows for part_id to a run holding held: the level
+# the pick would give (SG15). Every card builder (reward_gates, fabricators, shop) reads these,
+# never def() or headline() on an offered id; part_levels_test guards it.
+static func offer_def(part_id: String, held: Array) -> Resource:
+	return def_at(part_id, next_level(part_id, held))
+
+
+static func offer_headline(part_id: String, held: Array) -> String:
+	return headline(part_id, next_level(part_id, held))
+
+
 # The level taking part_id now would give: one past its level in held. 1 for a part with no levels.
 static func next_level(part_id: String, held: Array) -> int:
 	return mini(level_of(part_id, held) + 1, PartDef.MAX_LEVEL)
