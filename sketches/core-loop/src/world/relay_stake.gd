@@ -1,7 +1,7 @@
 extends "res://src/world/device.gd"
 
-# The relay's stake post (W13 SR10): the copper mast and arc coil at the centre of a park
-# relay. Hold E to add one stack, up to the most, then one more hold clears the stake. The
+# The relay's stake post (W13 SR10): the copper mast and arc coil that stand outside a park
+# relay's ring. Hold E to add one stack, up to the most, then one more hold clears the stake. The
 # prompt names what the hold does before it commits; rolling into the ring starts the
 # charge and locks the stake (hold_relay.gd), so the post stands spent while it runs.
 

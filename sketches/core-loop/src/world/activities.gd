@@ -91,15 +91,18 @@ const RULES := {
 		"starts": "none", "ring": 5.0, "finishes": "wall_broken", "face": Vector2(0.0, -1.0),
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_cache", "where": "pedestal"},
 	},
-	# Hold the Relay in a park (W13 SR10): a stake post at the mast takes 0 to 4 stacks before the
-	# ball rolls into the ring; the ring then charges by hold_relay.gd's rule. The relay's pack
-	# credit (`waves` buys of `pack`) and its miniboss count are both times 1 + k, and it pays
-	# 1 + k part rolls. Packs come every `wave_s` while it charges, never past `alive_cap`
-	# standing at once and never two inside `pack_gap_s`; minibosses come from
-	# `miniboss_at` in steps of `miniboss_step` of the charge. A loss frees the stake to retry.
+	# Hold the Relay in a park (W13 SR10): a stake post `post_out` metres outside the ring, past the
+	# miniboss zone, on the side facing the stage's drop-in, takes 0 to 4 stacks before the ball rolls into the ring; the
+	# ring then charges by hold_relay.gd's rule. The relay's pack credit (`waves` buys of `pack`)
+	# and its miniboss count are both times 1 + k, and it pays 1 + k part rolls. Packs come every
+	# `wave_s` while it charges and never two inside `pack_gap_s`; what the relay stands at once,
+	# minibosses included, stays inside the attacker budget (relay_budget). Minibosses come from
+	# `miniboss_at` in steps of `miniboss_step` of the charge. A loss frees the stake after
+	# `retry_s`.
 	"hold_the_relay": {
 		"starts": "ring", "ring": HoldRelay.RULE["radius"], "finishes": "relay", "pack": ["chaser", "chaser", "lobber"],
-		"waves": 3, "wave_s": 6.0, "pack_gap_s": 0.5, "alive_cap": 12, "miniboss_at": 0.35, "miniboss_step": 0.12,
+		"waves": 3, "wave_s": 6.0, "pack_gap_s": 0.5, "miniboss_at": 0.35, "miniboss_step": 0.12,
+		"post_out": 26.0, "retry_s": 12.0, "budget": {"start": 6, "per_class": 1, "per_world": 2, "cap": 12},
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_relay", "where": "relay"},
 	},
 	"hauler_bounty": {
@@ -230,10 +233,12 @@ class Site extends Node3D:
 	var relay_gap_s := 0.0
 	var relay_wave_left := 0
 	var relay_shown := -1.0
+	var relay_cooldown := 0.0
+	var minibosses_sent := 0
 	var minibosses: Array = []
 
 	func _exit_tree() -> void:
-		for enemy in pack:
+		for enemy in pack + minibosses:
 			if is_instance_valid(enemy):
 				enemy.queue_free()
 
@@ -1100,6 +1105,11 @@ func _build_relay(s: Site) -> void:
 	var post := RelayStake.new()
 	post.relay = s.relay
 	s.add_child(post)
+	var spawn: Vector3 = ctx.terrain.spawn_point(ctx.run.stage)
+	var toward := Vector2(spawn.x, spawn.z) - at
+	toward = toward.normalized() if toward.length() > 0.01 else Vector2(0.0, -1.0)
+	var post_at := at + toward * (float(s.rule["ring"]) + float(s.rule["post_out"]))
+	post.global_position = ctx.terrain.drop_point(post_at.x, post_at.y, 0.0)
 	post.setup(ctx, ctx.root.get_node("Interact"), {"id": "relay_stake_%d_%s" % [ctx.run.stage, s.name]})
 	ctx.root.get_node("Interact").register(post)
 	s.stake_post = post
@@ -1114,10 +1124,25 @@ func relay_miniboss_count(s: Site) -> int:
 	return int(round(s.relay.miniboss_credit(1.0)))
 
 
+# The attacker budget the relay stands inside: a start, one more per heft class past the first
+# and two per world past the first, capped.
+func relay_budget(s: Site) -> int:
+	var b: Dictionary = s.rule["budget"]
+	var world: int = ctx.stages.world_of(ctx.run.stage)
+	return mini(int(b["cap"]), int(b["start"]) + int(b["per_class"]) * maxi(0, ctx.run.heft_class() - 1) + int(b["per_world"]) * maxi(0, world - 1))
+
+
+func relay_standing(s: Site) -> int:
+	return _alive(s.pack) + _alive(s.minibosses)
+
+
 func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 	var relay = s.relay
 	if not s.started:
 		s.view.word.text = relay.stake_line()
+		s.relay_cooldown -= delta
+		if s.relay_cooldown > 0.0:
+			return
 		if ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
 			return
 		if _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > HoldRelay.REACH_UP:
@@ -1128,7 +1153,7 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 		s.relay_wave_s = 0.0
 		s.relay_gap_s = 0.0
 		s.relay_wave_left = 0
-		s.minibosses.clear()
+		s.minibosses_sent = 0
 		s.relay_shown = -1.0
 		ctx.events.event_started.emit(s.id)
 	var outcome: String = relay.step(delta, ball, ctx.player.state.velocity)
@@ -1140,16 +1165,16 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 	s.relay_wave_s -= delta
 	s.relay_gap_s -= delta
 	var cost := relay_pack_cost(s)
+	var room := relay_budget(s) - relay_standing(s)
 	var due: int = mini(relay_miniboss_count(s), int(floor((relay.progress() - float(s.rule["miniboss_at"])) / float(s.rule["miniboss_step"]))) + 1)
 	# A wave is one pack per stack plus one, each pack_gap_s after the last, every wave_s.
 	if s.relay_wave_s <= 0.0 and s.relay_wave_left == 0 and s.relay_credit >= cost - 0.0001:
 		s.relay_wave_left = relay.stakes + 1
 		s.relay_wave_s = float(s.rule["wave_s"])
 	if s.relay_gap_s <= 0.0:
-		if s.minibosses.size() < due:
+		if s.minibosses_sent < due and room >= 1:
 			_relay_miniboss(s)
-		elif s.relay_wave_left > 0 and s.relay_credit >= cost - 0.0001 \
-				and _alive(s.pack) + s.rule["pack"].size() <= int(s.rule["alive_cap"]):
+		elif s.relay_wave_left > 0 and s.relay_credit >= cost - 0.0001 and room >= s.rule["pack"].size():
 			_relay_pack(s, ball)
 			s.relay_credit -= cost
 			s.relay_wave_left -= 1
@@ -1160,6 +1185,7 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 	elif outcome == "lost":
 		ctx.events.event_ended.emit(s.id, "lost")
 		s.started = false
+		s.relay_cooldown = float(s.rule["retry_s"])
 
 
 func _relay_pack(s: Site, ball: Vector3) -> void:
@@ -1180,12 +1206,14 @@ func _relay_pack(s: Site, ball: Vector3) -> void:
 func _relay_miniboss(s: Site) -> void:
 	var zone: Array = s.relay.miniboss_zone()
 	var rng := RandomNumberGenerator.new()
-	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, "%s_miniboss_%d" % [s.id, s.minibosses.size()])
+	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, "%s_miniboss_%d" % [s.id, s.minibosses_sent])
 	var angle := rng.randf() * TAU
 	var dist := rng.randf_range(zone[1].x, zone[1].y)
 	var at: Vector2 = (zone[0] as Vector2) + Vector2(cos(angle), sin(angle)) * dist
 	var enemy = ctx.spawner.spawn_enemy("miniboss", ctx.terrain.drop_point(at.x, at.y, BRUTE_DROP))
-	s.minibosses.append(enemy)
+	s.minibosses_sent += 1
+	if enemy != null:
+		s.minibosses.append(enemy)
 	s.relay_gap_s = float(s.rule["pack_gap_s"])
 
 
