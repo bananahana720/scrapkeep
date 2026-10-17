@@ -5,6 +5,7 @@ const Items := preload("res://src/build/items.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
+const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 
 # Moss's workshop economy (DESIGN-V2 section 12): the shelf, the reroll, charge cells,
 # sell-back, the heft-locked top shelf and the conversation loop. It has no geometry:
@@ -214,12 +215,18 @@ func buy(index: int) -> Dictionary:
 	if index < 0 or index >= shelf.size() or shelf[index]["sold"]:
 		return _result(false, SOLD_OUT)
 	var part_id: String = shelf[index]["part_id"]
+	var rack = _rack() if ActiveOffers.is_offer(part_id) else null
+	if ActiveOffers.is_offer(part_id) and (rack == null or rack.active_id == ActiveOffers.active_of(part_id)):
+		return _result(false, SOLD_OUT, "", part_id)
 	var cost: int = price(part_id)
 	if not ctx.run.spend_cogs(cost):
 		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", part_id, cost)
 	shelf[index]["sold"] = true
 	bought_this_visit += 1
-	ctx.run.add_part(part_id, "shop")
+	if rack != null:
+		rack.take(part_id, ctx.player.ball_position() if ctx.player != null else Vector3.ZERO)
+	else:
+		ctx.run.add_part(part_id, "shop")
 	return _result(true, OK, "moss.bark.buy", part_id, cost)
 
 
@@ -402,6 +409,8 @@ func _variation(beat_id: String, ids: Array) -> String:
 # ---- Prices and records ----
 
 func price(part_id: String) -> int:
+	if ActiveOffers.is_offer(part_id):
+		return int(round(ActiveOffers.price(_active_row(part_id), ctx.run.parts.size()) * _price_scale()))
 	return int(round(Fabricators.price(part_id, ctx.run.parts.size()) * _price_scale()))
 
 
@@ -410,6 +419,12 @@ func _price_scale() -> float:
 
 
 func _offer(part_id: String, sold: bool, index: int) -> Dictionary:
+	if ActiveOffers.is_offer(part_id):
+		var g := ActiveOffers.gate_record(part_id, _active_row(part_id))
+		return {"index": index, "part_id": part_id, "name": g["name"], "price": price(part_id), "sold": sold,
+			"rarity": g["rarity"], "text": g["text"], "icon": g["icon"], "trigger_icon": "", "element_icon": "",
+			"affordable": ctx.run.cogs >= price(part_id), "active": g["active"], "maker": g["maker"],
+			"headline": "%s. %s" % [g["headline"], g["mark"]]}
 	var d: Resource = Parts.def(part_id)
 	return {"index": index, "part_id": part_id, "name": Parts.display_name(part_id), "price": price(part_id),
 		"sold": sold, "rarity": d.rarity if d != null else "common", "text": d.text if d != null else "",
@@ -434,7 +449,23 @@ func _stock() -> Array:
 	var odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
 	for part_id in picks:
 		out.append({"part_id": part_id, "sold": false, "odds": odds})
+	# With --actives on, Moss may shelve one active beside the parts (ActiveOffers).
+	var rack = _rack()
+	if rack != null:
+		var active := ActiveOffers.roll(_rng, "shop", rack.rows(), SHELF_RARITIES, rack.active_id)
+		if active != "":
+			out.append({"part_id": active, "sold": false, "odds": odds})
 	return out
+
+
+func _rack():
+	return build.active_rack() if build != null and build.has_method("active_rack") else null
+
+
+func _active_row(part_id: String) -> Dictionary:
+	var rack = _rack()
+	var id := ActiveOffers.active_of(part_id)
+	return rack.row_of(id) if rack != null else {}
 
 
 func _roll_one(rarities: Array, exclude: Array = []) -> String:

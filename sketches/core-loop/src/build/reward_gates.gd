@@ -7,6 +7,7 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 
 # The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
 # its line; rolling through one takes its part. There is no collider and no menu, so
@@ -60,6 +61,9 @@ const PROMPT_REACH := LOST_BEYOND
 var offers: Array = []
 # Build's offer_mark(part_id) -> String; the star line under an offer, or "".
 var mark_for: Callable
+# Build's active row lookup (id) -> Dictionary, for an active offer (ActiveOffers): one more arch
+# beside the parts, tagged with its maker, that racks the active on F instead of adding a part.
+var active_row: Callable
 
 var _terrain
 var _ids: Array = []
@@ -140,6 +144,11 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	for i in _ids.size():
 		var at: Vector3 = plan["spots"][i]
 		var part_id: String = _ids[i]
+		if ActiveOffers.is_offer(part_id):
+			var row: Dictionary = active_row.call(ActiveOffers.active_of(part_id)) if active_row.is_valid() else {}
+			offers.append(ActiveOffers.gate_record(part_id, row).merged({"at": at, "facing": facing, "width": WIDTH}))
+			_gates.append(_build_gate(at, facing, offers[-1]))
+			continue
 		var d: Resource = Parts.def(part_id)
 		var completes := Parts.completed_by(part_id, _held)
 		offers.append({

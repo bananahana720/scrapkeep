@@ -1,6 +1,10 @@
 extends Node
 
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
+const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
+const Palette := preload("res://src/core/palette.gd")
+const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 # The active slot: one racked active on F (Bindings "active"), behind --actives (off by
 # default). It holds charges that refill over time and from kills, so fighting feeds it,
@@ -11,6 +15,10 @@ const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const REFUSE_NONE := "empty"
 const REFUSE_COOLING := "cooling"
 const REFUSE_JAMMED := "jammed"
+# A dropped active racks again when the ball rolls within PICKUP of it, once the ball has first
+# been REARM away from it, so the drop under the ball never swaps straight back.
+const PICKUP := 2.5
+const REARM := 4.0
 
 var ctx
 var combat
@@ -26,6 +34,8 @@ var _locked := 0.0
 var winding := 0.0
 var _granted := false
 var _kinds := {}
+# Actives dropped by a swap, lying where the ball stood: {id, charges, progress, at, armed, node}.
+var dropped: Array = []
 
 
 func setup(context, owner_combat) -> void:
@@ -37,7 +47,10 @@ func setup(context, owner_combat) -> void:
 		_kinds[id] = kind
 	ctx.events.run_started.connect(func(_class_id: String): reset())
 	ctx.events.enemy_killed.connect(_on_killed)
-	ctx.events.stage_content_cleared.connect(func(_reason: String): _clear_flight())
+	ctx.events.stage_content_cleared.connect(func(_reason: String):
+		_clear_flight()
+		_clear_dropped())
+	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): _clear_dropped())
 	ctx.events.player_died.connect(_clear_flight)
 
 
@@ -55,11 +68,12 @@ func reset() -> void:
 	winding = 0.0
 	_granted = false
 	_clear_flight()
+	_clear_dropped()
 
 
 # Racks `id` full, replacing whatever was racked.
 func rack(id: String) -> bool:
-	if not ActiveDefs.ROWS.has(id):
+	if _row(id).is_empty():
 		return false
 	active_id = id
 	charges = int(_row(id)["max_charges"])
@@ -67,10 +81,40 @@ func rack(id: String) -> bool:
 	return true
 
 
+# Takes an offered active (a gate, the vault or Moss's shelf, by its offer id or its active id):
+# racks it full, and the active it replaces drops at `at` keeping its charges, so rolling back
+# over it swaps again without a free refill. False when it is not an active or already racked.
+func take(id: String, at: Vector3) -> bool:
+	var new_id := ActiveOffers.active_of(id) if ActiveOffers.is_offer(id) else id
+	if new_id == active_id or _row(new_id).is_empty():
+		return false
+	var old := {"id": active_id, "charges": charges, "progress": progress}
+	_cancel_windup()
+	rack(new_id)
+	_granted = true
+	if old["id"] != "":
+		_drop(old, at)
+	return true
+
+
+# Every active a draw may offer; a test may add rows.
+func rows() -> Dictionary:
+	return ActiveDefs.ROWS
+
+
+func row_of(id: String) -> Dictionary:
+	return _row(id)
+
+
 # An electric field's Jam: no fire for `seconds` (the longest lock wins). A wind-up in progress
 # is cancelled and its charge refunded.
 func lock(seconds: float) -> void:
 	_locked = maxf(_locked, seconds)
+	_cancel_windup()
+
+
+# A wind-up in progress stops and refunds its charge.
+func _cancel_windup() -> void:
 	if winding > 0.0:
 		winding = 0.0
 		charges += 1
@@ -94,6 +138,7 @@ func _physics_process(delta: float) -> void:
 		_recharge(delta / float(_row(active_id)["recharge"]))
 	for id in _kinds:
 		_kinds[id].step(delta)
+	_step_dropped(delta)
 	if winding > 0.0:
 		winding -= delta
 		if winding <= 0.0:
@@ -161,6 +206,74 @@ func _on_killed(_kind: String, _at: Vector3, _scrap: int) -> void:
 # The active's row; a test may override it to wind up an active that fires on the press.
 func _row(id: String) -> Dictionary:
 	return ActiveDefs.row(id)
+
+
+func _drop(record: Dictionary, at: Vector3) -> void:
+	var entry := record.duplicate()
+	entry["at"] = at
+	entry["armed"] = false
+	entry["node"] = _drop_node(entry["id"], at)
+	dropped.append(entry)
+
+
+func _step_dropped(delta: float) -> void:
+	if dropped.is_empty() or ctx.player == null:
+		return
+	var ball: Vector3 = ctx.player.ball_position()
+	for entry in dropped.duplicate():
+		if is_instance_valid(entry["node"]):
+			entry["node"].rotate_y(delta * 1.8)
+		var gap := ball.distance_to(entry["at"])
+		if not entry["armed"]:
+			entry["armed"] = gap >= REARM
+		elif gap <= PICKUP:
+			_pick_up(entry, ball)
+			return
+
+
+func _pick_up(entry: Dictionary, ball: Vector3) -> void:
+	dropped.erase(entry)
+	if is_instance_valid(entry["node"]):
+		entry["node"].queue_free()
+	var old := {"id": active_id, "charges": charges, "progress": progress}
+	_cancel_windup()
+	active_id = entry["id"]
+	charges = int(entry["charges"])
+	progress = float(entry["progress"])
+	if old["id"] != "":
+		_drop(old, ball)
+
+
+func _clear_dropped() -> void:
+	for entry in dropped:
+		if is_instance_valid(entry["node"]):
+			entry["node"].queue_free()
+	dropped.clear()
+
+
+# The dropped active on the ground: its rarity's star, spinning, with its name as a prompt.
+func _drop_node(id: String, at: Vector3) -> Node3D:
+	if combat == null or not combat.is_inside_tree():
+		return null
+	var row := _row(id)
+	var tint: Color = ItemGen.RARITY.get(ItemGen.resolve_rarity(String(row.get("rarity", "rare"))), ItemGen.RARITY["rare"])["color"]
+	var node := Node3D.new()
+	node.name = "DroppedActive"
+	combat.add_child(node)
+	node.global_position = at + Vector3.UP * 1.2
+	var star := MeshInstance3D.new()
+	var prism := PrismMesh.new()
+	prism.size = Vector3(1.2, 1.4, 0.3)
+	star.mesh = prism
+	star.material_override = Palette.solid(tint, 2.6)
+	node.add_child(star)
+	var label := WorldPrompt.new()
+	label.name = "Prompt"
+	label.text = "%s\n%s" % [row.get("name", ""), ActiveOffers.mark(row)]
+	label.set_parts(String(row.get("name", "")), "Roll over it to rack it\n" + ActiveOffers.mark(row), ActiveOffers.ICON)
+	label.attach(node, Vector3(0.0, 1.4, 0.0), 30.0)
+	node.add_child(label)
+	return node
 
 
 func _clear_flight() -> void:

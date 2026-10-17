@@ -169,7 +169,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `ultimate_landed` | `ultimate_id: String, at: Vector3, hits: int, damage: float` | ultimate | the landing strike resolved |
 | `ultimate_cancelled` | `ultimate_id: String, reason: String, refunded: bool` | ultimate | `recall`, `bail`, `stage` or `death` |
 | `reward_offered` | `offers: Array` | B | gates are open or moved; offer records below |
-| `reward_chosen` | `part_id: String` | B | a gate was taken, after `run.add_part` |
+| `reward_chosen` | `part_id: String` | B | a gate was taken, after `run.add_part`; an active offer's id (`active:` + active id, `src/combat/actives/active_offers.gd`, --actives on) is racked instead and never added as a part |
 | `element_resolved` | `element_id: String, material_id: String, behaviour: String, at: Vector3` | B | an element met a material (TADR-009); C picks the sound by behaviour (freeze, electrify, shatter) |
 | `event_announced` | `event_id: String, seconds_until: float` | D | a stage event is coming |
 | `event_started` | `event_id: String` | D | it is live |
@@ -192,7 +192,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
    - **Unseal.** When `enemy_killed` arrives with kind `warden` and it is this stage's Warden, flow emits `beacon_unsealed(stage)`, enters `gates` and emits `beacon_charge_changed(1.0)`, wherever the ball is. "This stage's Warden" means `integrity_of(warden)` reads 0, or, for a spawner without `integrity_of`, the kill happened within 6 m of where it stood.
    - **Vanished Warden.** If the Warden leaves the tree with no kill recorded, flow unseals the same way, warns once, and adds a `warden_vanished` anomaly to the run log. If the spawner returns no Warden, or the stage is calm, the stage stays on the unsealed presence path: circling inside the ring charges it over `beacon_seconds`, then flow enters `gates` and emits `beacon_charge_changed(1.0)`.
 2. B opens its gates and emits `reward_offered(offers)`. Each offer is a Dictionary with these keys: `part_id: String`, `at: Vector3` (the gate's ground centre), `facing: Vector3` (the way through, flat and unit length) and `width: float`. B reads `ctx.run.gate_tier_bonus()` when it builds the offers. B emits `reward_offered` again whenever the gates move. `spine_run_test.gd` drives the ball through `offers[0]` using these records.
-3. When the ball rolls through a gate, B calls `run.add_part(id, "gate")`, then emits `reward_chosen(id)`.
+3. When the ball rolls through a gate, B calls `run.add_part(id, "gate")` (or, for an active offer, racks it with `combat.actives.take(id, at)`), then emits `reward_chosen(id)`.
 4. D launches the ball and emits `launched(velocity)`. D may launch from inside its own `reward_chosen` handler, before flow has heard `reward_chosen`. Flow accepts a launch in either `gates` or `launch`.
 5. Flow counts `LAUNCH_FLIGHT` (0.6 s) of flight, emits `stage_cleared`, then enters the next stage. The entry keeps the ball's horizontal speed exactly, turns it onto the new stage's entry heading, keeps the vertical part, and drops the ball in from 14 m above the spawn. After stage 3 it emits `run_ended(true)` instead.
 
