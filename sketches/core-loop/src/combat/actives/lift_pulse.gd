@@ -42,6 +42,7 @@ var combat
 # Committed pulses still to land: {"cone", "at" (seconds until it lands), "share"}.
 var echoes: Array = []
 var pulses := 0
+var chain_hits := 0
 var last_cone := {}
 
 
@@ -104,10 +105,34 @@ func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	if jumps > 0:
 		for enemy in struck:
 			if is_instance_valid(enemy) and not enemy.is_dead():
-				combat._chain(enemy, enemy.global_position, {"damage": float(shape["damage"]), "chain_jumps": jumps,
-					"chain_range": CHAIN_RANGE, "chain_falloff": CHAIN_FALLOFF, "color": COLOR, "kind": KIND,
-					"knock": float(shape["knock"]) * 0.3, "source": SOURCE})
+				_chain(shape, enemy, jumps)
 	return 1 + echo_count
+
+
+# Chain Arc from one struck machine: each jump takes the nearest unvisited machine still inside
+# the committed cone, so a chain never lands outside the drawn warning.
+func _chain(shape: Dictionary, first: Node3D, jumps: int) -> void:
+	var visited := [first]
+	var at: Vector3 = first.global_position
+	var dmg: float = shape["damage"]
+	for jump in jumps:
+		dmg *= CHAIN_FALLOFF
+		var next: Node3D = null
+		var best := CHAIN_RANGE
+		for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+			if enemy in visited or enemy.is_dead() or not inside(shape, enemy.global_position):
+				continue
+			var distance: float = enemy.global_position.distance_to(at)
+			if distance <= best:
+				best = distance
+				next = enemy
+		if next == null:
+			return
+		visited.append(next)
+		combat.effects.arc(at, next.global_position, COLOR)
+		combat._hit(next, KIND, dmg, next.global_position - at, float(shape["knock"]) * 0.3, "", SOURCE, IMPACT)
+		chain_hits += 1
+		at = next.global_position
 
 
 func step(delta: float) -> void:

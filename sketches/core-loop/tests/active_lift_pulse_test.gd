@@ -13,7 +13,8 @@ const T := preload("res://tests/support/t.gd")
 # machines inside the committed cone, straight away from the ball, while machines behind, to the
 # side or past its reach take nothing; the knock grows per heft class, so a heavy flies further
 # off a heavy ball; overflow pieces add knock; weapon damage mods scale the hit; Spiral Wave
-# widens the cone and Cross Split adds an echo through the same cone; a new run clears it.
+# widens the cone, Cross Split adds an echo through the same cone, Chain Arc jumps only inside it;
+# a new run clears it.
 # Evidence limit: rules in a headless run, not the feel, and not the ring-out kill itself (that
 # rule belongs to the island edges and the enemies).
 
@@ -198,16 +199,53 @@ func _run() -> void:
 	_player.reset_to(_ground_at(FLAT_SHELF) + Vector3.UP)
 	await _sim(0.1)
 	ball = _player.ball_position()
-	_enemy(ball + _forward() * 3.0)
+	var echo_target := _enemy(ball + _forward() * 3.0)
 	_fired.clear()
 	_struck.clear()
 	var pulses_before: int = kind.pulses
 	_rack.charges = 1
 	await _press()
 	_t.eq("19 with Cross Split the fire counts a pulse and an echo", _fired, [["lift_pulse", 2]])
+	var first_cone: Dictionary = kind.last_cone
+	var echo_cone: Dictionary = kind.echoes[0]["cone"] if not kind.echoes.is_empty() else {}
+	_t.check("20 the echo is queued on the very cone the first pulse drew", echo_cone == first_cone and _struck.count(echo_target) == 1,
+		"same %s strikes %d" % [echo_cone == first_cone, _struck.count(echo_target)])
 	await _sim(Pulse.ECHO_GAP + 0.1)
-	_t.check("20 the echo lands through the same committed cone", kind.pulses == pulses_before + 2 and kind.echoes.is_empty(),
-		"pulses %d echoes %d" % [kind.pulses - pulses_before, kind.echoes.size()])
+	_t.check("20b the echo lands and strikes the machine again", kind.pulses == pulses_before + 2 and kind.echoes.is_empty()
+		and _struck.count(echo_target) == 2, "pulses %d echoes %d strikes %d" % [kind.pulses - pulses_before, kind.echoes.size(), _struck.count(echo_target)])
+
+	# --- Chain Arc jumps only to machines inside the cone ---------------------------------
+	run.add_part("chain_arc", "test")
+	await physics_frame
+	await _clear_enemies()
+	_player.reset_to(_ground_at(FLAT_SHELF) + Vector3.UP)
+	await _sim(0.1)
+	ball = _player.ball_position()
+	forward = _forward()
+	side = forward.cross(Vector3.UP).normalized()
+	var front := _enemy(ball + forward * 3.0)
+	var behind_close := _enemy(ball - forward * 2.0)
+	await _sim(0.05)
+	_struck.clear()
+	var chains_before: int = kind.chain_hits
+	_rack.charges = 1
+	await _press()
+	_t.check("20c Chain Arc never jumps to a machine outside the cone", front in _struck and not behind_close in _struck
+		and kind.chain_hits == chains_before, "front %s behind %s chains %d" % [front in _struck, behind_close in _struck, kind.chain_hits - chains_before])
+	await _clear_enemies()
+	_player.reset_to(_ground_at(FLAT_SHELF) + Vector3.UP)
+	await _sim(0.1)
+	ball = _player.ball_position()
+	_enemy(ball + forward * 3.0)
+	_enemy(ball + forward * 6.0 + side * 1.0)
+	await _sim(0.05)
+	_rack.charges = 1
+	chains_before = kind.chain_hits
+	await _press()
+	_t.check("20d Chain Arc jumps between machines inside the cone", kind.chain_hits > chains_before,
+		"chains %d" % [kind.chain_hits - chains_before])
+	var punch_base: float = kind.damage()
+	_t.check("20e punch is part of the hit", is_equal_approx(punch_base, (Pulse.BASE_DAMAGE + float(_game.ctx.build.punch_bonus())) * _game.tuning.mod("weapon_damage")))
 
 	# --- A new run clears it ------------------------------------------------------------------
 	_rack.charges = 1
