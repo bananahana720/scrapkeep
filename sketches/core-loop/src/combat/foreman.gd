@@ -11,7 +11,8 @@ extends "res://src/combat/enemy.gd"
 #   are grinding down closes up again. The horn blasts one beat (129 BPM) before each wipe:
 #   SpecialCues.tell(self) on that frame, the signal brass lit until the wipe.
 # - Kill it and its crew clocks out for CLOCK_OUT seconds: none of them starts an attack
-#   (attack_budget.gd clocked_out). machine_fx stamps SHIFT OVER on its death.
+#   (attack_budget.gd clocked_out). The SHIFT OVER stamp and steam sigh on its death are
+#   machine_fx's and special_voice's (the special cues branch, PR #58).
 # - A kill while its crew still stands is the codex trick "shift_over".
 
 # Loaded, not preloaded, until the special cues branch lands; then this becomes a preload.
@@ -103,6 +104,9 @@ func _build_body() -> void:
 # A body that still reads as the Foreman if the model is missing: the cabinet, the mast, the horn.
 func _fallback_body() -> void:
 	var pivot := _visual_parent()
+	_base_color = Palette.RUST
+	_material.vertex_color_use_as_albedo = false
+	_material.albedo_color = _base_color
 	for item in [[Vector3(2.2, 3.4, 2.2), Palette.RUST, Vector3(0.0, -0.3, 0.0)],
 			[Vector3(0.3, 2.6, 0.3), Palette.CHARCOAL, Vector3(0.0, 2.7, 0.0)]]:
 		var mi := MeshInstance3D.new()
@@ -121,7 +125,7 @@ func _fallback_body() -> void:
 	_signal_material = Palette.solid(Palette.BRASS, 0.0)
 	horn.material_override = _signal_material
 	horn.position = Vector3(0.0, 4.4, -0.4)
-	horn.rotation.x = -PI * 0.5
+	horn.rotation.x = PI * 0.5
 	pivot.add_child(horn)
 
 
@@ -174,7 +178,9 @@ func _build_tethers() -> void:
 	_tethers.mesh = _tether_mesh
 	_tethers.top_level = true
 	_tethers.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_tethers.material_override = Palette.solid(Palette.CABLE)
+	var line := Palette.solid(Palette.CABLE)
+	line.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_tethers.material_override = line
 	add_child(_tethers)
 
 
@@ -190,6 +196,9 @@ func _physics_process(delta: float) -> void:
 		return
 	_face(_flat_to_ball())
 	if standing_crew().is_empty():
+		# A pack-less Foreman keeps looking for hands until it has some.
+		if not _in_pack() and Engine.get_physics_frames() % Engine.physics_ticks_per_second == 0:
+			_claim()
 		_clock = 0.0
 		_horned = false
 		_show_signal(0.0)
@@ -252,7 +261,7 @@ func _horn() -> void:
 func _wipe() -> void:
 	wipes += 1
 	# A pack-less Foreman takes on whoever has walked into reach since.
-	if not has_meta(AttackBudget.PACK_META) or int(get_meta(AttackBudget.PACK_META)) < 0:
+	if not _in_pack():
 		_claim()
 	var combat = _combat()
 	var members := standing_crew()
@@ -260,6 +269,10 @@ func _wipe() -> void:
 		for member in members:
 			combat.wipe_shred(member)
 	wiped.emit(members)
+
+
+func _in_pack() -> bool:
+	return int(get_meta(AttackBudget.PACK_META, -1)) >= 0
 
 
 func _combat():
@@ -280,7 +293,7 @@ func _tick_hand(_delta: float) -> void:
 	if _hand == null:
 		return
 	var beats := floorf(float(Engine.get_physics_frames()) / Engine.physics_ticks_per_second / BEAT)
-	_hand.rotation.z = -fposmod(beats, 12.0) * TAU / 12.0
+	_hand.rotation.z = fposmod(beats, 12.0) * TAU / 12.0
 
 
 func _face(to_ball: Vector3) -> void:
@@ -316,4 +329,15 @@ func _die() -> void:
 	crew.clear()
 	if _tether_mesh != null:
 		_tether_mesh.clear_surfaces()
+	# The tethers are not debris: the death scatter takes every visible mesh.
+	if _tethers != null:
+		_tethers.visible = false
 	super._die()
+
+
+# Freed without dying (a stage teardown): its crew are nobody's hands any more.
+func _exit_tree() -> void:
+	for member in crew:
+		if is_instance_valid(member) and int(member.get_meta("foreman", 0)) == get_instance_id():
+			member.remove_meta("foreman")
+	super._exit_tree()
