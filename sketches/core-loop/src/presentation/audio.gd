@@ -893,7 +893,10 @@ func spin(id: String) -> bool:
 		_ace_named(boss, engine.clock, true)
 		return true
 	var zone := String(source["zone"])
-	engine.force_track("warden" if kind == "warden" else "level", MusicRows.stage_theme(zone))
+	engine.force_track({"warden": "warden", "miniboss": "miniboss"}.get(kind, "level"), MusicRows.stage_theme(zone))
+	if kind == "miniboss":
+		_ace_end()
+		return true
 	_select_ace_manifest(MusicRows.resolve(zone)["ace_manifest"])
 	if ace_ready():
 		_ace_flight = false

@@ -22,7 +22,7 @@ const T := preload("res://tests/support/t.gd")
 #     hint, plays a found record (the band cuts to its track), refuses a blank one, sets
 #     the dial on 1 to 3, hears nothing new while it spins, and J lifts the needle and
 #     returns to the camp with the title theme queued;
-#   - every source kind plays its own track: menu, level, warden, boss and the lounge;
+#   - every source kind plays its own track: menu, level, warden, boss, lounge and miniboss;
 #   - leaving the title while a record spins hands the music back to the game.
 
 const STORE_DIR := "user://jukebox_tunes_test/"
@@ -55,12 +55,14 @@ func _source_state(row: Dictionary) -> Dictionary:
 			return {"mode": "play", "track": source["boss"], "section": "2", "lounge": false, "zone": "1-2"}
 		"lounge":
 			return {"mode": "play", "track": "level", "section": "", "lounge": true, "zone": "2-1"}
+		"miniboss":
+			return {"mode": "play", "track": "miniboss", "section": "", "lounge": false, "zone": "3-1"}
 	return {}
 
 
 func _rows() -> void:
 	var seen := {}
-	var kinds := ["menu", "level", "warden", "boss", "lounge"]
+	var kinds := ["menu", "level", "warden", "boss", "lounge", "miniboss"]
 	var long := []
 	for row in TuneRows.ROWS:
 		var id := String(row["id"])
@@ -79,7 +81,6 @@ func _rows() -> void:
 	for shelf in TuneRows.SHELVES.size():
 		_t.check("shelf %d holds records" % shelf, not TuneRows.on_shelf(shelf).is_empty())
 	_t.eq("the death break's keys are no record", TuneRows.key_of({"mode": "dead", "track": "level", "zone": "1-1"}), "")
-	_t.eq("the miniboss's darkened level is no record", TuneRows.key_of({"mode": "play", "track": "miniboss", "zone": "1-1"}), "")
 	_t.eq("an unknown zone is no record", TuneRows.key_of({"mode": "play", "track": "level", "zone": "9-9"}), "")
 	_t.eq("a stopped level (menu mode) is no roam record", TuneRows.key_of({"mode": "idle", "track": "level", "zone": "1-1"}), "")
 
@@ -266,7 +267,7 @@ func _run() -> void:
 	_t.check("the run parameters come back", audio.engine.parameter_source == Callable(audio, "sample_run_parameters"))
 
 	# Every source kind plays its own track.
-	for id in ["summary-loss", "warden-2-2", "lounge", "roam-3-2", "boss-mind"]:
+	for id in ["summary-loss", "warden-2-2", "lounge", "roam-3-2", "boss-mind", "miniboss"]:
 		_t.check("%s spins" % id, audio.spin(id))
 		_render(audio, 44100 * 2)
 		var row: Dictionary = TuneRows.row(id)

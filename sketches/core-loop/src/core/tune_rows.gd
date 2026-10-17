@@ -9,11 +9,13 @@ extends RefCounted
 #   warden  a zone's Warden fight
 #   boss    a world boss's fight
 #   lounge  Moss's bay, a layer mask over the zone the bay docks at
+#   miniboss  the mini-boss fight, the level darkened (synth band only for now)
 # A new track (a secret area, a champion, a final phase) is one more row with its own source
-# kind and one more branch in key_of; nothing else changes. where is the dry hint a blank
+# kind and one more branch in key_of; nothing else changes. Ids and names follow the music
+# thread's registry, design-v3/sound/tunes.json, as each of its tracks is wired. where is the dry hint a blank
 # sleeve shows; sleeve is the note on the record once found.
 
-const SHELVES := ["Camp", "Spillway Works", "The Dig", "The Highdraft"]
+const SHELVES := ["Every Run", "Spillway Works", "The Dig", "The Highdraft"]
 
 const ROWS := [
 	{"id": "title", "name": "Lights On", "shelf": 0, "rare": false,
@@ -32,6 +34,10 @@ const ROWS := [
 		"where": "Moss keeps a record on in the bay.",
 		"sleeve": "Never turned off. The knob is decorative.",
 		"source": {"kind": "lounge", "zone": "1-1"}},
+	{"id": "miniboss", "name": "Heavyweight", "shelf": 0, "rare": false,
+		"where": "Pick a fight with a mini-boss.",
+		"sleeve": "Weigh-in was a formality.",
+		"source": {"kind": "miniboss", "zone": "1-1"}},
 	{"id": "roam-1-1", "name": "Top Shelf", "shelf": 1, "rare": false,
 		"where": "Roll the Spillway's top shelf.",
 		"sleeve": "Logged at flood stage. Drums ride the current.",
@@ -133,6 +139,8 @@ static func key_of(state: Dictionary) -> String:
 				id = "lounge" if bool(state.get("lounge", false)) else "roam-" + zone
 		"warden":
 			id = "warden-" + zone
+		"miniboss":
+			id = "miniboss"
 		_:
 			if track in BOSSES:
 				id = "boss-" + track
