@@ -935,6 +935,12 @@ func chirp(cue: String, now := -1.0) -> bool:
 	if not fired:
 		return false
 	_chirp_last[cue] = now
+	# A called assist plays its own sting on the next beat, grown to the heft class; a move
+	# without one keeps the row's chirp.
+	var sting := SfxBank.assist_sting_id(cue.trim_prefix("assist_"), _heft_class, _motif) if cue.begins_with("assist_") else ""
+	if sting != "":
+		on_beat(kind, 0.0, false, 1, sting)
+		return true
 	play(kind, 0.0, 1.0, "UI")
 	return true
 

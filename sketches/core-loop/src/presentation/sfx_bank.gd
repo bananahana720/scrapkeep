@@ -153,6 +153,14 @@ const CAUSE_NOTE := "cause_note_"
 # The motif cell a class's whip lands on, when it is not the second (Tarn's first two are one note).
 const WHIP_SECOND := {"tarn": 2}
 const CAUSE_NOTE_DB := -8.0
+
+# SPIL-9's called assists, one sting per move, landed on the next beat by audio.gd. Each
+# grows with heft: two layers at heft class 1 or 2, an 808 sub under them at 3 or 4, and
+# at 5 a sax stab on top quoting the pilot's motif. Ids: companion_assist_<move>_t<tier>,
+# the top tier also _<motif id>. Every pitch reads _hz/_n, so the band's live key holds.
+const ASSIST_STING := "companion_assist_"
+const ASSIST_MOVES := ["bonk", "arc", "pile", "slip", "anvil", "static", "bulldozer"]
+const ASSIST_STING_DB := -7.0
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
 const BABBLE_ROOTS := [50, 52, 53, 55, 57, 48]
@@ -180,12 +188,14 @@ static func break_midis(variant := 0) -> Array:
 
 
 static func has_recipe(id: String) -> bool:
-	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE)
+	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or _assist_parts(id).size() > 0
 
 
 static func trim_db(id: String) -> float:
 	if id.begins_with(CAUSE_NOTE):
 		return CAUSE_NOTE_DB
+	if id.begins_with(ASSIST_STING):
+		return ASSIST_STING_DB
 	return TRIM_DB.get(id, -8.0)
 
 
@@ -195,6 +205,30 @@ static func world_stinger(world: int) -> String:
 	if step == 0:
 		return WORLD_STINGER
 	return "%s_%s%d" % [WORLD_STINGER, "up" if step > 0 else "down", absi(step)]
+
+
+# The sting for a called assist at a heft class, or "" for a move without one. motif is
+# the pilot's motif id (audio.gd's _motif); only the top tier quotes it.
+static func assist_sting_id(move: String, heft_class: int, motif := "") -> String:
+	if not move in ASSIST_MOVES:
+		return ""
+	var tier := 1 if heft_class <= 2 else (2 if heft_class <= 4 else 3)
+	var id := "%s%s_t%d" % [ASSIST_STING, move, tier]
+	return id + "_" + (motif if Harmony.MOTIFS.has(motif) else Harmony.CLASS_MOTIFS[0]) if tier == 3 else id
+
+
+# [move, tier, motif] from a sting id, or [] when the id is not one.
+static func _assist_parts(id: String) -> Array:
+	if not id.begins_with(ASSIST_STING):
+		return []
+	var bits := id.trim_prefix(ASSIST_STING).split("_")
+	if bits.size() < 2 or not bits[0] in ASSIST_MOVES or not bits[1] in ["t1", "t2", "t3"]:
+		return []
+	var tier := int(bits[1].substr(1))
+	var motif := bits[2] if bits.size() > 2 else ""
+	if (tier == 3) != (motif != "") or (motif != "" and not Harmony.MOTIFS.has(motif)):
+		return []
+	return [bits[0], tier, motif]
 
 
 static func cause_note_id(midi: int) -> String:
@@ -631,9 +665,45 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return hold("crater", Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
+	if _assist_parts(id).size() > 0:
+		return _assist_sting(_assist_parts(id))
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
+
+
+# --- Assist stings ------------------------------------------------------------------
+
+# The two layers that say which move it was, short and a little silly.
+static func _assist_base(move: String) -> Array:
+	match move:
+		"bonk":  # a cartoon bonk: a wooden knock bending down over a kick thump
+			return [[_fm(0.22, _hz(74), 1.0, 2.5, 18.0, -7.0), 0, 0.8], [_tone(0.16, 140.0, 55.0, "sine", 24.0), 0, 0.9]]
+		"arc":  # a zap that climbs into a bell
+			return [[_fm_sweep(0.18, 300.0, 2400.0, 3.0, 14.0), 0, 0.6], [_cut(_n("bell", 81), 0.4), Synth.seconds(0.08), 0.7]]
+		"pile":  # three clanks stacking up, low to high
+			return [[_fm(0.12, _hz(57), 1.41, 3.0, 26.0), 0, 0.7], [_fm(0.12, _hz(62), 1.41, 3.0, 26.0), Synth.seconds(0.06), 0.7],
+				[_fm(0.2, _hz(69), 1.41, 3.0, 18.0), Synth.seconds(0.12), 0.75]]
+		"slip":  # a whoosh that slides past, and a little chirp after it
+			return [[_noise(0.4, 600.0, 4800.0, 8.0, 0.05), 0, 0.9], [_tone(0.08, _hz(86), _hz(91), "sine", 30.0), Synth.seconds(0.3), 0.4]]
+		"anvil":  # a ringing metal clang over a roll of thunder
+			return [[_fm(0.6, _hz(69), 1.41, 6.0, 6.0), 0, 0.8], [_noise(0.85, 400.0, 90.0, 3.5, 0.03), Synth.seconds(0.03), 0.9]]
+		"static":  # a crackle and a beep, like a radio catching
+			return [[_noise(0.25, 3500.0, 6000.0, 16.0, 0.002), 0, 0.6], [_tone(0.1, _hz(81), _hz(81), "saw", 22.0), Synth.seconds(0.05), 0.35]]
+		"bulldozer":  # a low growl that shoves forward, then the hit
+			return [[_tone(0.35, 55.0, 95.0, "saw_dark", 6.0), 0, 0.8], [_noise(0.12, 900.0, 300.0, 30.0), Synth.seconds(0.28), 0.8]]
+	return []
+
+
+static func _assist_sting(parts: Array) -> PackedFloat32Array:
+	var layers := _assist_base(String(parts[0]))
+	if int(parts[1]) >= 2:  # heft class 3 and up: an 808 sub drop on home
+		layers.append([_tone(0.7, _hz(38), _hz(31), "sine", 4.5), 0, 0.85])
+	if int(parts[1]) >= 3:  # heft class 5: a sax stab quoting the pilot's motif, three notes
+		var notes := Harmony.motif_notes(String(parts[2]))
+		for i in mini(3, notes.size()):
+			layers.append([_cut(_n("sax_lounge", int(notes[i])), 0.18), Synth.seconds(0.1 + 0.07 * i), 0.55])
+	return _cut(_mix(layers, int(parts[1]) >= 2), 0.95)
 
 
 # --- The harpoon line ------------------------------------------------------------------
