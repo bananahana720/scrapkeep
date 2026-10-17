@@ -8,6 +8,8 @@ const NUMBER_LIFT := 1.6
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const Contact := preload("res://src/movement/contact.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
 # Feel: squash and stretch, camera punches and kicks, hit-stop, the pylon's plant and
 # eject, and (v3 W11) how a hit, a kill, a pickup, a dodge and a hit taken land. Every
@@ -44,6 +46,13 @@ const STOP_TRIM_FLOOR_MS := 8.0
 # The harpoon biting a body stops time this long (LEGIBILITY section 3). A world latch sends none.
 const BITE_STOP_MS := 40.0
 const CONTACT_KINDS := ["ram", "stomp", "slam"]
+# KNOCKBACK-FEEL: a ball contact's stop and shake follow its throw (Contact.ram_knock), not
+# its damage, so a heft V slam lands bigger than a heft II one instead of both sitting at
+# the damage cap. A throw of THROW_LO m/s (a cruise bump) or less asks for the low end, the
+# knock ceiling for the high end; the spine's 60 ms cap and SHAKE_CAP still bound both.
+const THROW_LO := 11.0
+const THROW_STOP_MS := [22.0, 58.0]
+const THROW_SHAKE := [0.2, 0.5]
 # Bursts per frame, so a blast through a crowd costs a handful of emitters, not one each.
 const MAX_BURSTS := 6
 # The shell grows a tenth per heft class above I (visual only; the collider never
@@ -350,7 +359,7 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 	var crit := DamageNumbers.is_crit(result, body_plating)
 	var impact := EventKinds.impact(_impact_key(enemy, kind))
 	_hits.append({"at": at + Vector3.UP * 0.6, "contact": _contact_point(enemy, at + Vector3.UP * 0.6), "damage": dealt, "crit": crit, "heavy": impact["stop"] == "heavy", "kind": kind,
-		"stop": impact["stop"] != "none", "shake": float(impact["shake"]), "key": key, "world": at})
+		"stop": impact["stop"] != "none", "shake": float(impact["shake"]), "key": key, "world": at, "throw": _throw_of(kind, force)})
 	_queue_flush()
 
 
@@ -374,6 +383,30 @@ func _impact_key(enemy: Node3D, kind: String) -> String:
 	if last is Dictionary and not last.is_empty() and is_instance_valid(enemy) and int(last.get("enemy", 0)) == enemy.get_instance_id():
 		return String(last["key"])
 	return kind
+
+
+# How hard a ball contact throws, in m/s, the way the ball shoves it; -1 for any other hit.
+func _throw_of(kind: String, force: float) -> float:
+	if not kind in CONTACT_KINDS:
+		return -1.0
+	var heft := 1.0
+	if ctx != null and ctx.spawner != null and ctx.spawner.has_method("heft"):
+		heft = float(ctx.spawner.heft())
+	if kind == "slam":
+		return minf(force * Contact.heft_knock(heft), maxf(force, Contact.KNOCK_CEILING))
+	return Contact.ram_knock(Augments.RAM_KNOCK, force, heft)
+
+
+# A contact's stop and shake at its throw: 0 at THROW_LO, 1 at the knock ceiling.
+static func throw_share(throw: float) -> float:
+	return clampf((throw - THROW_LO) / (Contact.KNOCK_CEILING - THROW_LO), 0.0, 1.0)
+
+
+static func throw_stop_ms(throw: float, crit := false) -> float:
+	var ms := lerpf(THROW_STOP_MS[0], THROW_STOP_MS[1], throw_share(throw))
+	if crit:
+		ms *= float(EventKinds.juice("enemy_struck")["crit"]["stop_mult"])
+	return minf(ms, SPINE_CAP_MS)
 
 
 # The stop a hit asks for, in ms, before the frame coalesces and the gate spaces it.
@@ -425,11 +458,12 @@ func _flush_hits() -> void:
 	var contact := Vector3.ZERO
 	for i in _hits.size():
 		var hit: Dictionary = _hits[i]
+		var throw := float(hit.get("throw", -1.0))
 		if hit["stop"]:
-			stop = maxf(stop, stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]))
+			stop = maxf(stop, stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]) if throw < 0.0 else throw_stop_ms(throw, hit["crit"]))
 			if hit["crit"]:
 				shake = maxf(shake, float(row["crit"]["shake"]))
-		shake = maxf(shake, hit["shake"])
+		shake = maxf(shake, hit["shake"] if throw < 0.0 else lerpf(THROW_SHAKE[0], THROW_SHAKE[1], throw_share(throw)))
 		crit = crit or hit["crit"]
 		if hit["heavy"]:
 			heavy = true

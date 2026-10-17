@@ -20,6 +20,8 @@ const CombatRules := preload("res://src/combat/combat.gd")
 #           bowling never knocks fodder clear of the Katamari roll-up (hive clear rule)
 #   keystone a haul from 10 m at heft V throws the chaser at least 1.9x as far as at heft I
 #   posture a hulk never pins a Warden, so stagger timing is untouched
+#   impact  hit-stop and shake follow the throw: a blazing heft V ram stops 15 ms longer and
+#           shakes harder than a cruise bump, inside the 60 ms and 0.5 caps
 #   damage  the ram's and the slam's strike force do not change with the new throw
 # The cases:
 #   ram:   one chaser, ball speed x heft; the knock speed, how far it flies in 1.2 s,
@@ -129,6 +131,13 @@ func _judge() -> void:
 	_check("growth", ratio >= 1.9 and ratio <= 2.6 and top_ratio <= 3.0,
 		"a fast ram flies %.1f m at heft I, %.1f m at heft IV (%.2fx, the power read's grown build) and %.1f m at heft V (%.2fx)"
 			% [small["fly_m"], grown["fly_m"], ratio, top_heft["fly_m"], top_ratio])
+	var bump := _row("ram", {"speed": 8.0, "heft": 1.0})
+	var mid := _row("ram", {"speed": 8.0, "heft": 2.2})
+	var huge := _row("ram", {"speed": 27.0, "heft": 4.6})
+	_check("impact", float(huge["stop_ms"]) >= float(bump["stop_ms"]) + 15.0 and float(huge["shake"]) > float(bump["shake"])
+			and float(huge["stop_ms"]) > float(mid["stop_ms"]) and float(huge["stop_ms"]) <= 60.0 and float(huge["shake"]) <= 0.5,
+		"hit-stop and shake follow the throw: cruise heft I %.0f ms / %.2f, cruise heft II %.0f ms / %.2f, blazing heft V %.0f ms / %.2f (caps 60 ms, 0.5)"
+			% [bump["stop_ms"], bump["shake"], mid["stop_ms"], mid["shake"], huge["stop_ms"], huge["shake"]])
 	var top := 0.0
 	for row in _rows:
 		if row["case"] == "ram":
@@ -267,7 +276,7 @@ func _ram_case(speed: float, heft: float) -> void:
 		moved = Vector2(d.x, d.z).length()
 	_emit({"case": "ram", "speed": speed, "heft": heft, "knock": snappedf(peak, 0.1),
 		"fly_m": snappedf(moved, 0.1), "dealt": snappedf(hp0 - (enemy.hp if is_instance_valid(enemy) else 0.0), 0.1),
-		"stop_ms": snappedf(_stops.max() if not _stops.is_empty() else 0.0, 0.1)})
+		"stop_ms": snappedf(_stops.max() if not _stops.is_empty() else 0.0, 0.1), "shake": snappedf(_shake_for(peak), 0.01)})
 
 
 func _rack_case(speed: float, heft: float) -> void:
@@ -375,6 +384,16 @@ func _smash_case(closing: float, heft: float) -> void:
 	_emit({"case": "smash", "speed": closing, "heft": heft, "knock_near": snappedf(peaks[0], 0.1),
 		"fly_near_m": fly[0], "fly_far_m": fly[5], "reached": peaks.filter(func(p): return p > 1.0).size(),
 		"stop_ms": snappedf(_stops.max() if not _stops.is_empty() else 0.0, 0.1)})
+
+
+# The shake juice asks for at this throw. Read from juice's own rows: the live camera also
+# shakes for landings and drops in the same window, so its amplitude cannot isolate the hit.
+func _shake_for(throw: float) -> float:
+	var juice: GDScript = load("res://src/presentation/juice.gd")
+	if not juice.get_script_constant_map().has("THROW_SHAKE"):
+		return 0.3
+	var row: Array = juice.get_script_constant_map()["THROW_SHAKE"]
+	return lerpf(row[0], row[1], float(juice.call("throw_share", throw)))
 
 
 func _emit(row: Dictionary) -> void:
