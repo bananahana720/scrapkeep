@@ -201,6 +201,10 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	var entry := cached(shape, transform)
 	if not entry.is_empty():
 		return entry
+	# A moved shape's old build is waited for before its entry is replaced: every task is
+	# waited for once.
+	if (_entries.get(id, {}) as Dictionary).has("task"):
+		WorkerThreadPool.wait_for_task_completion(_entries[id]["task"])
 	if not _watched.has(id):
 		_watched[id] = true
 		shape.changed.connect(_forget.bind(id))
