@@ -11,7 +11,8 @@ size order [length, height, width], with p for a decimal point; a seat-fit row s
                      same red and cream slickrock, strata cheeks and bleached chevrons, repeated across the width.
   mesa_shelf_edge    the islands' 12 x 0.01 x 1600 shelf-edge step lips: a caprock coping band 12 m deep across the full
                      1600 m, its top 0.06 m over y 0, its bevelled back edge buried, and a bullnose that rolls 2.5 m down over
-                     the shelf at z 12.
+                     the shelf at z 12. Its -col reaches z 12.7 over the bullnose, so the seat fit reads 12.7 m as its
+                     authored length (rows 9.5 to 19.05 m) and a 12 m row lands the coping's edge 0.66 m short of the lip.
 
 Convention, the same as mesa_lip_kicker: +Y up, the ride direction +Z (the fall line), x centred, the origin at the entry lip
 with y 0 at the ground there; registry rows say origin entry_lip, so park_recipes.gd ride_frame puts the origin size[0] / 2
@@ -63,6 +64,7 @@ PLATE_SIZES = [  # [L, H, W] of each row size: the pit's dives, then the flume's
 ]
 MESA_SIZES = [  # the crown's kickers: 22 x 6 x 36 (eleven rows) and 30 x 6 seat on 24 x 6; the ribs and two cliff ramps
     (24, 6, 36), (24, 6, 60), (24, 6, 90), (26, 5, 30), (60, 32, 36), (60, 26, 60),
+    (12, 4, 56), (12, 4, 300),  # the fin's nose kicker and the lookout lip
 ]
 SHELF = {"L": 12.0, "W": 1600.0, "TOP": 0.06, "NOSE": 2.5, "BLOCK": 8.0}
 
@@ -240,7 +242,9 @@ def build_plate_d2(k):
             n = int(k["W"] / spacing)
             for i in range(n):
                 x = -hw + spacing * (i + 0.5)
-                s.cone((x, ktop(zz, k), zz), 0.05, RIVET_H, 3, col("iron_hi"), spin=rnd(i, j))
+                # the base ring sits at the deck's lowest point under the head, so no base corner stands off the slope
+                drop = ktop(zz, k) - ktop(zz - 0.05, k)
+                s.cone((x, ktop(zz, k) - drop, zz), 0.05, RIVET_H + drop, 3, col("iron_hi"), spin=rnd(i, j))
     for sign in (-1, 1):  # rust runs down the cheeks from the seams
         for q, z in enumerate(rows):
             h = ktop(z, k)
@@ -310,8 +314,8 @@ def build_mesa_base(k):
     nb = max(14, min(45, round(k["W"] / 2.0)))
     strata_wall(s, [(-hw + k["W"] * i / nb, k["H"]) for i in range(nb + 1)], lambda u, y: (u, y, k["L"]), inside, 1, step)
     s.poly([(-hw, 0.0, 0.0), (hw, 0.0, 0.0), (hw, 0.0, k["L"]), (-hw, 0.0, k["L"])], col("sandstone"), up=(0.0, -1.0, 0.0))
-    # bleached chevrons, one set per 14 m of width, scaled to the length
-    sets = max(1, round(k["W"] / 14.0))
+    # bleached chevrons, one set per 14 m of width (at most twelve, spread wider on the lookout lip), scaled to the length
+    sets = max(1, min(12, round(k["W"] / 14.0)))
     sc = k["L"] / 12.0
     band = 0.5 * min(sc, 1.6)
     n = max(10, round(5 * sc))
@@ -335,8 +339,8 @@ def build_mesa_d1(k):
     for sign in (-1, 1):
         for q in range(n):  # rubble shed from the cheeks, outside the ride footprint
             z = k["L"] * (q + 0.6) / (n + 0.4) + rnd(q, sign) * 0.4
-            x = sign * (hw + 0.35 + 1.9 * rnd(q, 3, sign))
             sz = (0.3 + 0.6 * rnd(q, 4, sign)) * (1.0 + k["H"] / 20.0)
+            x = sign * (hw + 0.35 + 0.85 * sz + 1.9 * rnd(q, 3, sign))  # its inner corner clear of the cheek at any yaw
             s.chunk((x, 0.0, z), (sz, sz * 0.7, sz * 1.1), rnd(q, 5, sign) * math.tau, q + 40 * sign, lerp(col("sandstone"), col("slick_red"), rnd(q, 6, sign)), top=0.7)
     for c, (cx, cz) in enumerate([(hw + 1.1, k["L"] - 0.6), (-hw - 1.4, k["L"] - 1.4)]):  # a bleached cairn at the lip, each side
         for tier in range(4):
@@ -491,6 +495,9 @@ def check_surfaces(k, base, col_s, shells):
         for x, z in probes[::2]:
             h_sh = si.height_at(shell, x, z)
             assert h_sh is None or h_sh - ride_top(k, z) <= SHELL_PROUD + 1e-6, (k["id"], "shell proud", shell.name, x, z, h_sh)
+        for x, y, z in shell.v:  # every shell vertex over the footprint, so a small rock or rivet cannot slip between probes
+            if abs(x) < hw and 0.0 < z < k["L"]:
+                assert y - ride_top(k, z) <= SHELL_PROUD + 1e-6, (k["id"], "shell vertex proud", shell.name, x, y, z)
     return worst
 
 

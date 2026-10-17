@@ -2815,6 +2815,42 @@
    }
   },
   {
+   "id": "dry_wash_1500x4x60",
+   "path": "res://assets/models/park/dry_wash_1500x4x60.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Dry wash for the sinkhole's south_flats row: a silt and sand liner over the wash stamp, 1500 x 4 x 60; seats rows 1125 to 2250 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "dry_wash_1500x4x60_detail1",
+   "path": "res://assets/models/park/dry_wash_1500x4x60_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Dry wash for the sinkhole's south_flats row: a silt and sand liner over the wash stamp, 1500 x 4 x 60; seats rows 1125 to 2250 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "dry_wash_1500x4x60_detail2",
+   "path": "res://assets/models/park/dry_wash_1500x4x60_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Dry wash for the sinkhole's south_flats row: a silt and sand liner over the wash stamp, 1500 x 4 x 60; seats rows 1125 to 2250 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
    "id": "floating_island",
    "path": "res://assets/models/park/floating_island.glb",
    "class": "park_large",
@@ -2965,7 +3001,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava channel half-pipe for the sinkhole's chained lava_channel rows (placeholder unit F): the wash stamp's cross profile, 58 x 4 x 28, measured from the floor centre (origin on the floor, crest at 4 m) with no end taper, so a seated row's ends land on its neighbour's floor; the shell sits 0.2 m over the profile, walls steeper than 25.8 degrees carry the glassy carve band, and the -col is two slabs 6 m under the floor (the seat fit's ends; the baked stamp is the ride). Seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -2977,7 +3013,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava channel half-pipe for the sinkhole's chained lava_channel rows (placeholder unit F): the wash stamp's cross profile, 58 x 4 x 28, measured from the floor centre (origin on the floor, crest at 4 m) with no end taper, so a seated row's ends land on its neighbour's floor; the shell sits 0.2 m over the profile, walls steeper than 25.8 degrees carry the glassy carve band, and the -col is two slabs 6 m under the floor (the seat fit's ends; the baked stamp is the ride). Seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -2989,7 +3025,79 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava channel half-pipe for the sinkhole's chained lava_channel rows (placeholder unit F): the wash stamp's cross profile, 58 x 4 x 28, measured from the floor centre (origin on the floor, crest at 4 m) with no end taper, so a seated row's ends land on its neighbour's floor; the shell sits 0.2 m over the profile, walls steeper than 25.8 degrees carry the glassy carve band, and the -col is two slabs 6 m under the floor (the seat fit's ends; the baked stamp is the ride). Seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_chute_3x0p5x8",
+   "path": "res://assets/models/park/lava_chute_3x0p5x8.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava chute for the sinkhole's lava_chute row: a raised basalt trough with no stamp, 3 x 0.5 x 8, its floor at y 0 and its lips 0.5 m up; seats rows 2.25 to 4.5 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_chute_3x0p5x8_detail1",
+   "path": "res://assets/models/park/lava_chute_3x0p5x8_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava chute for the sinkhole's lava_chute row: a raised basalt trough with no stamp, 3 x 0.5 x 8, its floor at y 0 and its lips 0.5 m up; seats rows 2.25 to 4.5 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_chute_3x0p5x8_detail2",
+   "path": "res://assets/models/park/lava_chute_3x0p5x8_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava chute for the sinkhole's lava_chute row: a raised basalt trough with no stamp, 3 x 0.5 x 8, its floor at y 0 and its lips 0.5 m up; seats rows 2.25 to 4.5 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_trench_420x6x40",
+   "path": "res://assets/models/park/lava_trench_420x6x40.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp, 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_trench_420x6x40_detail1",
+   "path": "res://assets/models/park/lava_trench_420x6x40_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp, 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_trench_420x6x40_detail2",
+   "path": "res://assets/models/park/lava_trench_420x6x40_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp, 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -3110,6 +3218,78 @@
    "provenance": {
     "recipe": "tools/blender/park/skyislands.py",
     "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -3448,7 +3628,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -3460,7 +3640,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -3472,7 +3652,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -5725,6 +5905,9 @@
   "decal_seashell_mask.png",
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
+  "dry_wash_1500x4x60",
+  "dry_wash_1500x4x60_detail1",
+  "dry_wash_1500x4x60_detail2",
   "enemy_anchor_crew",
   "enemy_burrower",
   "enemy_catch_trap",
@@ -5806,6 +5989,12 @@
   "lava_channel",
   "lava_channel_detail1",
   "lava_channel_detail2",
+  "lava_chute_3x0p5x8",
+  "lava_chute_3x0p5x8_detail1",
+  "lava_chute_3x0p5x8_detail2",
+  "lava_trench_420x6x40",
+  "lava_trench_420x6x40_detail1",
+  "lava_trench_420x6x40_detail2",
   "lava_tube_run",
   "lava_tube_run_bend_n30",
   "lava_tube_run_bend_n30_detail1",
@@ -5821,6 +6010,12 @@
   "lift_platform_glass",
   "lift_platform_pump",
   "mesa_lip_kicker",
+  "mesa_lip_kicker_12x4x300",
+  "mesa_lip_kicker_12x4x300_detail1",
+  "mesa_lip_kicker_12x4x300_detail2",
+  "mesa_lip_kicker_12x4x56",
+  "mesa_lip_kicker_12x4x56_detail1",
+  "mesa_lip_kicker_12x4x56_detail2",
   "mesa_lip_kicker_24x6x36",
   "mesa_lip_kicker_24x6x36_detail1",
   "mesa_lip_kicker_24x6x36_detail2",
