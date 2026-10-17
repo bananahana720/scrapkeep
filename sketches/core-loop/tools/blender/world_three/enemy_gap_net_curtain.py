@@ -18,9 +18,9 @@ enemy_gap_net.glb, so the runtime swaps the file:
   GapNetBatten  working_tool: the cable reel on the clamp, with hazard flanges. Origin on the reel's
                 axle, so the sling recoil can shove it.
   GapNetSpan    requisition_tag: one curtain tile, local X 0..2, Y 0 (the bottom of the lead drops)
-                to CURTAIN_H at the headrope, pleated along Z about 0. Object at the root's origin.
+                to the top of the headrope (CURTAIN_H, less a hair), pleated along Z about 0. Object at the root's origin.
                 Tiles join edge to edge along X; at its native 16 m a runtime hang of 9 m below the
-                rim to 7 m above needs no stretch. Brass at rest; the runtime lights or tints it.
+                rim to 7 m above stretches it by about 0.1 per cent. Brass at rest; the runtime lights or tints it.
 Sockets (empties, no draws): net_high and net_low (the tile's headrope and hem, at its centre),
 post_cut, sign, crew_head. Procedural bmesh in this repository; no external meshes or textures.
 Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir]
@@ -49,7 +49,6 @@ root = common.empty("GapNet")
 
 FLOOR = -1.1
 STEEL = "53686d"
-CHAR = "charcoal"
 OXIDE = "9b513a"
 TILE = 2.0
 CURTAIN_H = 16.0
