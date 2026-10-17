@@ -725,7 +725,7 @@ func _collider_faces(shape: Shape3D) -> Array:
 
 # Discover actual terrain faces across the whole volume, not sparse rays in each cell.
 # Include the hull margin in the query so forgiveness cannot reach uncommitted cover.
-func _commit_terrain(origin: Vector3, cells: Array, shadows: Array) -> Array:
+func _commit_terrain(origin: Vector3, cells: Array, shadows: Array, hull: Array = []) -> Array:
 	var bounds := AABB(origin, Vector3.ZERO)
 	for cell in cells:
 		for face in cell["faces"]:
@@ -743,6 +743,7 @@ func _commit_terrain(origin: Vector3, cells: Array, shadows: Array) -> Array:
 	query.collision_mask = Hitscan.WORLD
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var excluded: Array[RID] = []
+	var faces: Array = []
 	while true:
 		query.exclude = excluded
 		var hits := space.intersect_shape(query)
@@ -762,25 +763,110 @@ func _commit_terrain(origin: Vector3, cells: Array, shadows: Array) -> Array:
 					var shape_bounds: AABB = transform * terrain_shape.get_debug_mesh().get_aabb()
 					if not bounds.grow(0.0001).intersects(shape_bounds):
 						continue
-					var faces := _collider_faces(terrain_shape)
-					if faces.is_empty():
+					var local_faces := _collider_faces(terrain_shape)
+					if local_faces.is_empty():
+						# Still record the shadows of the faces found so far.
+						_shade(origin, faces, cells, shadows, hull)
 						return []
-					for local_face in faces:
+					for local_face in local_faces:
 						var face: Array = local_face.map(func(v): return transform * v)
 						var face_bounds := AABB(face[0], Vector3.ZERO)
 						for vertex in face:
 							face_bounds = face_bounds.expand(vertex)
 						if not bounds.grow(0.0001).intersects(face_bounds):
 							continue
-						var shadow := _face_shadow(origin, face)
-						if shadow.is_empty():
-							continue
-						shadows.append(shadow)
-						var lit: Array = []
-						for cell in cells:
-							lit.append_array(_subtract_shadow(cell, shadow))
-						cells = lit
-	return cells
+						faces.append(face)
+	return _shade(origin, faces, cells, shadows, hull)
+
+
+# Subtracts each face's shadow in face order, exactly as one _subtract_shadow pass per face
+# would; a cell's parts depend on that cell alone, so each cell takes every face in turn. A
+# shadow that a plane of a part, its box or the hull clears by a margin would leave that part
+# unchanged, so it skips the clip. Every part lies inside the cells' first box, and the
+# caller's hull planes are planes every cell lies behind.
+func _shade(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: Array) -> Array:
+	var reach := AABB()
+	for i in cells.size():
+		reach = cells[i]["bounds"] if i == 0 else reach.merge(cells[i]["bounds"])
+	var cuts: Array = []
+	for face in faces:
+		var shadow := _face_shadow(origin, face)
+		if shadow.is_empty():
+			continue
+		shadows.append(shadow)
+		var clearance := _clearance(face, shadow)
+		var extent := AABB(face[0], Vector3.ZERO)
+		for v in face:
+			extent = extent.expand(v)
+		if clearance < INF and (_box_clears(reach, extent, origin, clearance) or _planes_clear(hull, origin, face, clearance)):
+			continue
+		cuts.append([face, shadow, clearance, extent])
+	if cuts.is_empty():
+		return cells
+	var lit: Array = []
+	for cell in cells:
+		lit.append_array(_shade_cell(origin, cuts, [cell]))
+	return lit
+
+
+func _shade_cell(origin: Vector3, cuts: Array, parts: Array) -> Array:
+	for cut in cuts:
+		var face: Array = cut[0]
+		var clearance: float = cut[2]
+		var lit: Array = []
+		for part in parts:
+			if clearance < INF and (_box_clears(part["bounds"], cut[3], origin, clearance) or _planes_clear(part["planes"], origin, face, clearance)):
+				lit.append(part)
+			else:
+				lit.append_array(_subtract_shadow(part, cut[1]))
+		parts = lit
+	return parts
+
+
+# Clipping keeps points up to SLACK past each plane (0.0001 tolerance plus float32 error), which
+# loosens the shadow; a corner on three unit planes moves at most 3 * SLACK / |det| (Cramer's rule).
+# A plane clears the shadow when every corner is that far, plus CLEAR_MARGIN, past it.
+const SLACK := 0.0002
+const CLEAR_MARGIN := 0.01
+const MIN_DET := 0.001
+
+
+func _clearance(face: Array, shadow: Array) -> float:
+	var contact: Vector3 = shadow.back()["normal"]
+	var count := face.size()
+	var det := INF
+	for i in count:
+		var before: Vector3 = shadow[(i + count - 1) % count]["normal"]
+		var after: Vector3 = shadow[i]["normal"]
+		det = minf(det, absf(contact.dot(before.cross(after))))
+	return CLEAR_MARGIN + 3.0 * SLACK / det if det >= MIN_DET else INF
+
+
+# The shadow is every point origin + s * (v - origin) for v on the face and s >= 1. It lies past
+# a plane when each face corner is the clearance past it and no corner's ray turns back toward it.
+func _plane_clears(at: Vector3, normal: Vector3, origin: Vector3, face: Array, clearance: float) -> bool:
+	for v in face:
+		if (v - at).dot(normal) < clearance or (v - origin).dot(normal) < 0.0:
+			return false
+	return true
+
+
+func _planes_clear(planes: Array, origin: Vector3, face: Array, clearance: float) -> bool:
+	for plane in planes:
+		if _plane_clears(plane["at"], plane["normal"], origin, face, clearance):
+			return true
+	return false
+
+
+# The box's six planes, read from the face's own box (extent).
+func _box_clears(box: AABB, extent: AABB, origin: Vector3, clearance: float) -> bool:
+	var low := box.position
+	var high := box.end
+	var near := extent.position
+	var far := extent.end
+	return near.x >= maxf(high.x + clearance, origin.x) or far.x <= minf(low.x - clearance, origin.x) \
+		or near.y >= maxf(high.y + clearance, origin.y) or far.y <= minf(low.y - clearance, origin.y) \
+		or near.z >= maxf(high.z + clearance, origin.z) or far.z <= minf(low.z - clearance, origin.z)
 
 
 func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, width: float, inner := 0.0) -> Dictionary:
@@ -803,7 +889,8 @@ func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, wi
 			var a := dir.rotated(up, TAU * float(i) / segments)
 			var b := dir.rotated(up, TAU * float(i + 1) / segments)
 			cells.append(_commit_cell([origin, origin + a * inner, origin + b * inner], up, inner))
-	cells = _commit_terrain(origin, cells, shadows)
+	var slab := maxf(width * 0.5, inner)
+	cells = _commit_terrain(origin, cells, shadows, [{"at": origin + up * slab, "normal": up}, {"at": origin - up * slab, "normal": -up}])
 	var centre := _commit_beam(origin, dir, reach, width)
 	return ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": origin, "direction": dir,
 		"length": reach, "half_angle": half, "width": width, "inner": inner, "up": up, "cells": cells, "shadows": shadows, "centre_endpoint": centre["endpoint"]})

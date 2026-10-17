@@ -42,11 +42,13 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # cell, the unshadowed cell selects two of them, and an in-front hull is still selected.
 # 2026-10-16 (BITE-PIN): 226 -> 229. A guard re-closed on the ball, and the landing, hold the
 # exceptions of bodies the ball is inside until it is clear (exception_hold.gd).
+# 2026-10-17 (RIVET-FREEZE): 229 -> 232. The terrain commit's skipped clips leave parts and
+# shadows byte-identical to a plain subtraction pass.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 229
+	_expected_checks = 232
 	super._initialize()
 
 
@@ -389,6 +391,54 @@ func _alpha_terrain_cost_fixture() -> void:
 	await _fresh()
 
 
+# RIVET-FREEZE: the terrain commit skips clips a margin proves cannot change a part. Its parts
+# and shadows must match one plain _subtract_shadow pass per face, byte for byte, across a flat
+# floor grid cutting the slab, a wall, a sliver, faces behind the origin and seeded strays.
+func _shade_identity_fixture() -> void:
+	var origin := Vector3(0.0, 0.3, 0.0)
+	var dir := Vector3(1.0, -0.15, 0.2).normalized()
+	var side := dir.cross(Vector3.UP).normalized()
+	var up := side.cross(dir).normalized()
+	var cells: Array = []
+	for i in 8:
+		var a := dir.rotated(up, lerpf(-0.6, 0.6, float(i) / 8.0))
+		var b := dir.rotated(up, lerpf(-0.6, 0.6, float(i + 1) / 8.0))
+		var sa := a.cross(up) * 0.4
+		var sb := b.cross(up) * 0.4
+		cells.append(_kit._commit_cell([origin + sa, origin + a * 12.0 + sa, origin + b * 12.0 - sb, origin - sb], up, 0.5))
+	var faces: Array = []
+	for x in range(-2, 14, 2):
+		for z in range(-8, 8, 2):
+			var p := Vector3(x, -0.4, z)
+			faces.append([p, p + Vector3(2.0, 0.0, 0.0), p + Vector3(0.0, 0.0, 2.0)])
+			faces.append([p + Vector3(2.0, 0.0, 0.0), p + Vector3(2.0, 0.0, 2.0), p + Vector3(0.0, 0.0, 2.0)])
+	faces.append([Vector3(9.0, -1.0, -3.0), Vector3(9.0, 2.0, -3.0), Vector3(9.0, 2.0, 3.0), Vector3(9.0, -1.0, 3.0)])
+	faces.append([Vector3(5.0, -0.2, 0.0), Vector3(5.0001, -0.2, 0.0), Vector3(5.0, -0.2, 4.0)])
+	faces.append([Vector3(-3.0, -1.0, -1.0), Vector3(-3.0, 1.0, 0.0), Vector3(-3.0, -1.0, 1.0)])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 36101
+	for i in 40:
+		var at := Vector3(rng.randf_range(-2.0, 13.0), rng.randf_range(-1.5, 1.5), rng.randf_range(-5.0, 5.0))
+		faces.append([at, at + Vector3(rng.randf_range(-2.0, 2.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-2.0, 2.0)), at + Vector3(rng.randf_range(-2.0, 2.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-2.0, 2.0))])
+	var plain := cells.duplicate(true)
+	var plain_shadows: Array = []
+	for face in faces:
+		var shadow: Array = _kit._face_shadow(origin, face)
+		if shadow.is_empty():
+			continue
+		plain_shadows.append(shadow)
+		var lit: Array = []
+		for cell in plain:
+			lit.append_array(_kit._subtract_shadow(cell, shadow))
+		plain = lit
+	var hull := [{"at": origin + up * 0.5, "normal": up}, {"at": origin - up * 0.5, "normal": -up}]
+	var shadows: Array = []
+	var fast: Array = _kit._shade(origin, faces, cells.duplicate(true), shadows, hull)
+	_t.check("shade fixture carves: the floor and wall change the parts", var_to_bytes(plain) != var_to_bytes(cells))
+	_t.check("shade parts match a plain subtraction pass byte for byte", var_to_bytes(fast) == var_to_bytes(plain), "%d vs %d parts" % [fast.size(), plain.size()])
+	_t.check("shade shadows match a plain subtraction pass byte for byte", var_to_bytes(shadows) == var_to_bytes(plain_shadows), "%d vs %d shadows" % [shadows.size(), plain_shadows.size()])
+
+
 # FU-RIVET-SHADOW: the empty-shadow case. The silhouette cone meets the cell, but the whole
 # cell lies in front of the terrain contact plane, so the full shadow intersection is empty
 # and the cell must come back whole. Built from its own geometry, not the kit's cell helpers.
@@ -490,6 +540,7 @@ func _run() -> void:
 	await _boot()
 	# First, so a broken shadow subtraction fails this direct check before a later fixture can stall.
 	_empty_shadow_fixture()
+	_shade_identity_fixture()
 	await _alpha_terrain_cost_fixture()
 	await _cylinder_terrain_fixture()
 	await _shape_dispatch_fixture()
