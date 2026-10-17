@@ -79,6 +79,9 @@ const TRIM_DB := {
 	# The Highdraft's own event drops (music_rows.gd): the anvil, the boiler and the Mind's wrong note.
 	"fleet_anvil": -3.0, "boiler_burst": -3.0,
 	"mind_wrong_sable": -5.0, "mind_wrong_rivet": -5.0, "mind_wrong_kest": -5.0, "mind_wrong_tarn": -5.0, "mind_wrong_tally": -5.0, "mind_wrong_cannon": -5.0,
+	# --- Glass Lance sounds (src/combat/actives/glass_lance.gd) ---
+	"active_glass_lance": -7.0,
+	# --- end Glass Lance ---
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
@@ -769,6 +772,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _fleet_anvil()
 		"boiler_burst":
 			return _boiler_burst()
+		"active_glass_lance":
+			return _glass_lance()
 		"hold_pit", "hold_bola", "hold_tether", "hold_net", "hold_riser":
 			return hold(id.get_slice("_", 1), Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
 		"tenacity_choke":
@@ -1775,6 +1780,17 @@ static func _boiler_burst() -> PackedFloat32Array:
 	return _mix([[_noise(0.3, 900.0, 4200.0, 1.0, 0.25), 0, 0.5], [Synth.drum("boom"), pop, 1.0],
 		[_noise(0.9, 5000.0, 600.0, 3.0, 0.003), pop, 0.7], [_tone(0.25, 70.0, 40.0, "sine", 12.0), pop, 0.8],
 		[_tone(0.7, _hz(74), _hz(76), "sine", 3.5), pop, 0.35], [_tone(0.7, _hz(80), _hz(82), "sine", 3.5), pop, 0.25]], true)
+# The Glass Lance: a glass flick, then the Mind's quote in miniature. The first three notes of its
+# quote of Sable (D B G) ring fast on the chime two octaves up, and a clean sine holds the
+# quote's wrong last note: TINNG. No vocals.
+static func _glass_lance() -> PackedFloat32Array:
+	var quote: Array = Harmony.mind_quote("sable")
+	var parts: Array = [[_fm(0.06, _hz(int(quote[0][1]) + 36), 3.5, 3.0, 45.0), 0, 0.5]]
+	for i in 3:
+		parts.append([_cut(_n("chime", int(quote[i][1]) + 24), 0.14), Synth.seconds(0.02 + 0.045 * i), 0.7])
+	var wrong := int(quote[quote.size() - 1][1]) + 36
+	parts.append([_tone(0.9, _hz(wrong), _hz(wrong), "sine", 4.5), Synth.seconds(0.15), 0.55])
+	return _mix(parts)
 
 
 # A hold loop, n samples long. The four counter holds of SOUND-STORY.md section 3 sit
