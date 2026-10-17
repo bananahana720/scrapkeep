@@ -190,12 +190,12 @@ func shed_armour() -> void:
 	_show_model_parts("armour", _model_armour, false, "enter_scuttle")
 
 
-# The phase-entry clips fold the model's cranes and blow its armour off; hiding those parts
+# The phase-entry clips fold the model's cranes, blow its armour off and flip its shield; hiding those parts
 # on the entry frame cut the clip before it was seen, so a hide waits for the clip to end.
 # Showing is immediate and cancels a pending hide of the same group.
 func _show_model_parts(group: String, parts: Array, on: bool, clip: String) -> void:
 	_hide_tokens[group] = int(_hide_tokens.get(group, 0)) + 1
-	var wait := _anim.get_animation(clip).length if not on and _anim != null and _anim.has_animation(clip) else 0.0
+	var wait := _anim.get_animation(clip).length if not on and clip != "" and _anim != null and _anim.has_animation(clip) else 0.0
 	if on or wait <= 0.0 or not is_inside_tree() or parts.is_empty() or not (parts[0] as Node3D).visible:
 		for part in parts:
 			(part as Node3D).visible = on
@@ -208,10 +208,11 @@ func _show_model_parts(group: String, parts: Array, on: bool, clip: String) -> v
 					(part as Node3D).visible = false)
 
 
-func cockpit_open(open: bool) -> void:
+# `clip` names a phase-entry clip that flips the model's shield away; the hide waits for it.
+func cockpit_open(open: bool, clip := "") -> void:
 	_cockpit.visible = not open
 	if _model_shield != null:
-		_model_shield.visible = not open
+		_show_model_parts("shield", [_model_shield], not open, clip)
 
 
 func set_readout(text: String, color: Color, anchor: Node3D = null, lift := PLATE_LIFT) -> void:

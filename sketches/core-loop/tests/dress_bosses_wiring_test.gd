@@ -99,6 +99,7 @@ func _brindle() -> void:
 	# The clip blows the panels off on the model, so they stay visible until it has played.
 	_t.check("phase 3 entry keeps the armour up for enter_scuttle to blow off",
 			ship._model_armour.all(func(p): return p.visible))
+	_t.check("phase 3 entry keeps the shield up for enter_scuttle to flip", ship._model_shield.visible)
 	await create_timer(ship._anim.get_animation("enter_scuttle").length + 0.05).timeout
 	var armour_shed: bool = ship._model_armour.all(func(p): return not p.visible)
 	_t.check("phase 3 sheds the model's armour and opens its shield", armour_shed and not ship._model_shield.visible,
