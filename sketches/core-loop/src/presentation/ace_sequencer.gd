@@ -800,10 +800,18 @@ func _retarget(frames: int) -> void:
 
 
 # The momentum faders rise over one beat and fall over two bars, so one bump of speed or
-# a single broken link never makes the band stutter (INTEGRATION section 2).
-func _smooth_momentum() -> void:
-	for v: Voice in voices + pending.get("voices", []):
-		if (v.stem == "drums" and parameters.has("speed")) or (v.stem == "other" and parameters.has("chain")):
+# a single broken link never makes the band stutter (INTEGRATION section 2). Only voices
+# already sounding move, and only when their own momentum factor changed: a join's new
+# voices, the threat and armour retargets and the Warden release keep their own ramps.
+func _smooth_momentum(drums_before: float, chain_before: float, stripped_before: bool) -> void:
+	var drums_moved := parameters.has("speed") and parameter_gain("drums") != drums_before
+	var stripped := parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3)
+	var lead_moved := parameters.has("chain") and float(parameters.chain) != chain_before and not stripped and not stripped_before
+	var joining: Array = pending.get("voices", [])
+	for v: Voice in voices:
+		if v in joining:
+			continue
+		if (v.stem == "drums" and drums_moved) or (v.stem == "other" and lead_moved):
 			_ramp_to(v, v.target, grid_beat if v.target > v.gain else grid_bar * 2)
 
 
@@ -838,6 +846,9 @@ func _run(action: Dictionary) -> void:
 	match action["type"]:
 		"parameters":
 			var previous_gain := parameter_gain("other")
+			var drums_before := parameter_gain("drums")
+			var chain_before := float(parameters.get("chain", 0.0))
+			var stripped_before := parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3)
 			var previous := parameters.duplicate()
 			var previous_released := parameter_released
 			var previous_lift := ultimate_lift
@@ -857,7 +868,7 @@ func _run(action: Dictionary) -> void:
 						var gain := _gain_of(profile[voice.stem], voice.stem)
 						if voice.target != gain:
 							_ramp_to(voice, gain, STOP_RAMP)
-			_smooth_momentum()
+			_smooth_momentum(drums_before, chain_before, stripped_before)
 			if previous != parameters or previous_released != parameter_released or previous_lift != ultimate_lift or previous_gain != parameter_gain("other"):
 				var targets := {}
 				var performing: Array = pending.get("voices", voices) if int(pending.get("begin", -1)) == clock else voices
