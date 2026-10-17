@@ -58,11 +58,13 @@ const ARENAS := {
 			"volumetric_fog_length": 90.0, "volumetric_fog_ambient_inject": 0.15, "volumetric_fog_sky_affect": 0.0}},
 	# The Mind's crown is the run's dusk (Andrew's "one day per run", 2026-10-17): the sun on the
 	# dusk bearing but held higher than the stage's dusk row, and the light levels kept near the old
-	# morning fight's, so telegraphs and the boss still read; the dusk lives in the colour and the sky.
+	# morning fight's, so telegraphs and the boss still read. The key is a pale rose, not the dusk
+	# row's orange: an orange-lit floor swallowed the hazard-orange telegraph stripes in the capture,
+	# so the dusk lives in the sky, the long shadows and the cool ambient.
 	"mind": {"name": "mind", "sky": "own", "background": Color("243b43"),
-		"ambient": Color("8e94b8"), "energy": 0.3, "exposure": 1.15, "saturation": 1.05,
+		"ambient": Color("9097bd"), "energy": 0.32, "exposure": 1.15, "saturation": 0.95,
 		"fog": {},
-		"sun_color": Color("f08a5a"), "sun_energy": 2.2, "sun_rotation": Vector3(-14.0, 60.0, 0.0),
+		"sun_color": Color("e6bcae"), "sun_energy": 2.1, "sun_rotation": Vector3(-14.0, 60.0, 0.0),
 		"sun_visible": true, "fill": 0.55, "fill_pitch": -40.0, "fill_color": Color("9ba0cc"), "air": {},
 		"grade": {"top": Color("6c6fae"), "horizon": Color("ffa07a"), "recolor": 0.45, "highlight": 2.0,
 			"glow": Color("b8502a"), "energy": 0.85}},
@@ -196,7 +198,9 @@ static func grade(look: Dictionary) -> Dictionary:
 		"shader_parameter/energy": spec.energy}
 
 
-# The shared HDRI sky's grade as a set_lighting row, so the sky leaves with the stage's look.
+# The shared HDRI sky's grade as a set_lighting row, so the sky leaves with the stage's look. The
+# material is one global object while set_lighting keeps a baseline per Environment, so only one
+# Environment (the game's terrain environment) may enter "hdri" looks at a time.
 static func sky_rows(look: Dictionary) -> Array:
 	var values := grade(look)
 	if values.is_empty() or look.get("sky") != "hdri":

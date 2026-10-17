@@ -62,6 +62,13 @@ func _run() -> void:
 	game.player.body().freeze = true
 	var pad: Vector3 = game.flow._boss_module().pad.global_position + Vector3.UP
 	await _snap("7-mind-crown-dusk", 0, pad, WorldLook.ARENAS.mind.sun_rotation)
+	# The readability read: the live fight through the game's own camera with the HUD up, after the
+	# Mind has had time to start its attacks (telegraphs on the floor).
+	cam.current = false
+	game.player.body().freeze = false
+	for k in 3:
+		await _frames(150 + k * 60)
+		await _shot("%d-mind-fight-hud-%d" % [8 + k, k])
 	var f := FileAccess.open(out.path_join("frames.json"), FileAccess.WRITE)
 	f.store_string(JSON.stringify({"tool": "day_arc_capture.gd", "adapter": RenderingServer.get_video_adapter_name(), "frames": recs}, "\t"))
 	f.close()
@@ -77,7 +84,8 @@ func _snap(id: String, stage: int, at: Vector3, sun_rotation = null) -> void:
 	cam.fov = 68.0
 	cam.current = true
 	paused = true
-	for n in root.find_children("*", "CanvasLayer", true, false):
+	var shown: Array = root.find_children("*", "CanvasLayer", true, false).filter(func(n): return n.visible)
+	for n in shown:
 		n.visible = false
 	for i in 12:
 		await RenderingServer.frame_post_draw
@@ -86,5 +94,15 @@ func _snap(id: String, stage: int, at: Vector3, sun_rotation = null) -> void:
 	var env: Environment = game.ctx.terrain.environment
 	recs.append({"id": id, "stage": stage, "ambient": env.ambient_light_color.to_html(false),
 		"ambient_energy": env.ambient_light_energy, "fog": env.fog_light_color.to_html(false)})
+	for n in shown:
+		n.visible = true
 	paused = false
+	print("snap ", id)
+
+
+func _shot(id: String) -> void:
+	for i in 6:
+		await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(out.path_join(id + ".png"))
+	recs.append({"id": id, "stage": 0})
 	print("snap ", id)

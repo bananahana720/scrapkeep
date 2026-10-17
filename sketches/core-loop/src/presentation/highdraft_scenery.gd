@@ -2,7 +2,7 @@ extends RefCounted
 
 # The Highdraft's dress: the islands, ridge bridges, return ramps and barges skinned with the
 # modelled kit, the thermal vent and air, the net deck, the harpoon anchors, a prop scatter, the
-# cloud deck and distant silhouettes, and the high bright morning sky. Visual only: no collision
+# cloud deck and distant silhouettes, and the open sky. Visual only: no collision
 # shape, body or tuning is touched. Every piece falls back to the greybox the map and contraptions
 # already built when its GLB is missing (the original meshes stay visible until a skin lands).
 # Hooked from game.gd through hook(ctx), which builds the zone on the entry that builds its ground.
@@ -56,7 +56,8 @@ static func is_highdraft(map) -> bool:
 
 
 # Build the zone's dress on the entry that builds its ground, and swap the light for it; any
-# other stage restores the shared environment. Connected after the world module's own handler,
+# other stage restores the shared environment. The stage's world look (world_look.gd, hooked after
+# this in game.gd) is applied later, so its time of day owns the key, ambient and fog colour here. Connected after the world module's own handler,
 # so the stage's contraptions already exist.
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))

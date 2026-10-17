@@ -60,7 +60,7 @@ func _run() -> void:
 	_t.check("fight sky is a textured Highdraft panorama under the dusk grade", _game.ctx.terrain.environment.sky != saved["sky"]
 		and fight_sky != null and fight_sky.get_shader_parameter("panorama") != null
 		and fight_sky.get_shader_parameter("horizon_tint") == WorldLook.ARENAS.mind.grade.horizon)
-	_t.eq("fight ambient is the dusk blue", _game.ctx.terrain.environment.ambient_light_color, Color("8e94b8"))
+	_t.eq("fight ambient is the dusk blue", _game.ctx.terrain.environment.ambient_light_color, Color("9097bd"))
 	_t.check("fight sun has the dusk bearing", _sun().rotation_degrees.is_equal_approx(Vector3(-14.0, 60.0, 0.0)))
 	var seen = Harness.counter(_game)
 	var fight: Dictionary = await Harness.fight(_game, mod, 2000, seen)
