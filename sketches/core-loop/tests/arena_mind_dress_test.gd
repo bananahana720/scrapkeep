@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
 const Dress := preload("res://src/presentation/arena_mind_dress.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("arena_mind_dress_test")
@@ -53,11 +54,14 @@ func _run() -> void:
 	_t.eq("dressing adds no collision shape", dress.find_children("*", "CollisionShape3D", true, false).size(), 0)
 	_surface_checks(dress)
 	_geometry_checks(dress)
-	_t.check("fight sky is a textured Highdraft panorama", _game.ctx.terrain.environment.sky != saved["sky"]
-		and _game.ctx.terrain.environment.sky.sky_material is PanoramaSkyMaterial
-		and _game.ctx.terrain.environment.sky.sky_material.panorama != null)
-	_t.eq("fight ambient is Highdraft cool fill", _game.ctx.terrain.environment.ambient_light_color, Color("b4c0c9"))
-	_t.check("fight sun has morning bearing", _sun().rotation_degrees.is_equal_approx(Vector3(-46.0, 62.0, 0.0)))
+	# 2026-10-17 (one day per run): the crown fight is the run's dusk; its painted panorama is graded
+	# by the time-of-day sky shader with the Mind row's dusk grade.
+	var fight_sky := _game.ctx.terrain.environment.sky.sky_material as ShaderMaterial
+	_t.check("fight sky is a textured Highdraft panorama under the dusk grade", _game.ctx.terrain.environment.sky != saved["sky"]
+		and fight_sky != null and fight_sky.get_shader_parameter("panorama") != null
+		and fight_sky.get_shader_parameter("horizon_tint") == WorldLook.ARENAS.mind.grade.horizon)
+	_t.eq("fight ambient is the dusk blue", _game.ctx.terrain.environment.ambient_light_color, Color("8e94b8"))
+	_t.check("fight sun has the dusk bearing", _sun().rotation_degrees.is_equal_approx(Vector3(-14.0, 60.0, 0.0)))
 	var seen = Harness.counter(_game)
 	var fight: Dictionary = await Harness.fight(_game, mod, 2000, seen)
 	_t.check("the dressed real fight reaches defeat", fight["defeated"])
