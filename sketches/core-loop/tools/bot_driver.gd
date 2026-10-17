@@ -120,6 +120,9 @@ const DROP_ABOVE := 0.0
 const DROP_WAIT := 0.6
 # Off the line in a stagger the ball jumps for the drop within DROP_JUMP_REACH of the open point.
 const DROP_JUMP_REACH := 8.0
+# A jump and the air jump lift the ball about 6 m (measured on the park table, seed 1): an open
+# point higher than DROP_REACH_UP over the ball cannot be jumped over, so the ball bites from below.
+const DROP_REACH_UP := 6.0
 # With the posture bar at LINE_FINISH or more the ball takes the line instead of the ram, from
 # LINE_FINISH_STANDOFF out, so the stagger the shots from the line open finds it hanging and the
 # drop follows (swarm.md section 4: the high dwell is the latch window and the brake-drop carries
@@ -1755,12 +1758,16 @@ func _anchor_bite(target: Node3D, ball: Vector3) -> void:
 
 # The open point off the line: ram it (a fast ram shatters too) and jump beside it once per
 # stagger (the air jump at the top when still short of it); in the air over it, bite (the drop);
-# past the top of the air jump still short of it, or landed again, bite from there.
+# past the top of the air jump still short of it, landed again, or with the point out of jump
+# reach, bite from there.
 func _anchor_open(target: Node3D, short: bool, ball: Vector3, delta: float) -> void:
 	var point := _open_point(target)
 	var grounded: bool = game.player.state.grounded
 	var spent: bool = _drop_jumped and not grounded and game.player.state.air_actions <= 0 and game.player.state.velocity.y < 0.0
-	var bite := (not grounded and ball.y > point.y + DROP_ABOVE) or spent or (grounded and _drop_jumped)
+	# A point beyond the jump's reach (the park stage-3 Warden staggers on a floor 7 to 15 m over
+	# the ball's ground) is bitten from where the ball is.
+	var beyond_jump := point.y - ball.y > DROP_REACH_UP
+	var bite := (not grounded and ball.y > point.y + DROP_ABOVE) or spent or (grounded and _drop_jumped) or beyond_jump
 	_ground_fight(target, short, delta)
 	_goal = "drop climb"
 	if bite:
