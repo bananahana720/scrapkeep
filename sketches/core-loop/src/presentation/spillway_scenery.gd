@@ -307,6 +307,7 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 const PARK_WET := ["river_canyon", "canal", "slot_canyon", "dry_wash", "arroyo", "flume", "dam_face"]
 const PARK_TREES_MAX := 24
 const PARK_MIST_ROWS_MAX := 10
+const PARK_FACE_MIN_M := 20.0
 
 
 static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3D:
@@ -332,14 +333,17 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 			if high - low <= 1.5:
 				trees.append({"foot": Vector3(at.x, low, at.y), "size": rng.randf_range(0.6, 1.0)})
 	var mist: Array[Transform3D] = []
-	var drops := rows.filter(func(row): return row["element"] == "drop" or row["landform"] == "dam_face")
+	# Water falls off a drop, and down the dam's face (its tall bank row), not off the toe's ledges and ramps.
+	var drops := rows.filter(func(row): return row["element"] == "drop" \
+		or (row["landform"] == "dam_face" and row["element"] == "bank" and float(row["size"][1]) >= PARK_FACE_MIN_M))
 	for row in drops.slice(0, PARK_MIST_ROWS_MAX):
 		var f := ParkSites.frame(row)
 		var foot: Vector2 = f["at"] + f["run"] * float(f["half_length"])
 		var y := sites.height(foot)
 		var face := Basis(Vector3.UP, ParkSites.yaw_toward(-f["run"]))
-		for j in 9:
-			var at := Vector3(foot.x, 0.0, foot.y) + face * Vector3(rng.randf_range(-12.0, 12.0), 0.0, rng.randf_range(-2.0, 8.0))
+		var across := clampf(float(f["half_width"]), 12.0, 180.0)
+		for j in 9 * ceili(across / 60.0):
+			var at := Vector3(foot.x, 0.0, foot.y) + face * Vector3(rng.randf_range(-across, across), 0.0, rng.randf_range(-2.0, 8.0))
 			at.y = y + rng.randf_range(2.0, 12.0)
 			mist.append(Transform3D(face * Basis(Vector3.BACK, rng.randf_range(-0.7, 0.7)).scaled(
 				Vector3(rng.randf_range(8.0, 18.0), rng.randf_range(5.0, 11.0), 1.0)), at))

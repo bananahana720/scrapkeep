@@ -6,7 +6,7 @@ extends SceneTree
 # surface (terrain, a row's collider or a landmark), "at" is an absolute height (a point on a rope).
 # The heights come from the live colliders, so a rebake moves them: rerun after any park ground change.
 #   godot --headless --path sketches/core-loop --script res://tools/radio_cache_spots.gd
-# The crown and islands caches belong to the crown pass, the camp's to the camp; their rows are kept.
+# The crown and islands spots come from the crown pass; any other rows already in the file are kept.
 # Brindle's Bolero (the penstock tower's cap, park_flume) waits for the tower's landmark collider: no
 # surface stands at the cap yet, so it has no row and no cache until the landmark lands.
 
@@ -42,6 +42,15 @@ const SPOTS := {
 	"take-sinkhole-drain-dub": {"stage": 4, "x": 0.0, "z": 300.0, "drop": 250.0},
 	# Legend: the pump gallery ledge on the bowl's east wall, reached by carving up the bowl.
 	"take-cave-in-version": {"stage": 4, "x": 60.0, "z": 350.0, "drop": -40.0},
+	# The islands and the crown, from the crown pass.
+	"take-hanging-isle-liquid": {"stage": 5, "x": 24.0, "z": 520.0, "at": 70.0},
+	"take-islands-kite-chime": {"stage": 5, "x": -455.0, "z": 490.0, "drop": 250.0},
+	"take-highdraft-first-light": {"stage": 5, "x": -420.0, "z": 470.0, "at": 185.0},
+	# The Fleet collector ledge at 64 m: the park spire has no bell frames.
+	"take-crown-last-call": {"stage": 6, "x": 145.0, "z": 470.0, "drop": 120.0},
+	# "at": the spire landmark has no collider yet; rerun after it lands, like Brindle's Bolero.
+	"take-crown-spire-fusion": {"stage": 6, "x": -17.0, "z": 470.0, "at": 18.0},
+	"take-crown-footwork": {"stage": 6, "x": 280.0, "z": 175.0, "drop": 250.0},
 }
 
 
@@ -71,7 +80,7 @@ func _run() -> void:
 	if ball is CollisionObject3D:
 		exclude.append(ball.get_rid())
 	var failed := 0
-	for stage in range(1, 5):
+	for stage in range(1, 7):
 		game.flow.enter_stage(stage, Vector3.ZERO, false)
 		var waited := 0
 		while not game.ctx.terrain.rows_ready(stage) and waited < 1200:

@@ -11,6 +11,21 @@
    -94.0,
    350.0
   ],
+  "take-crown-footwork": [
+   280.0,
+   114.0,
+   175.0
+  ],
+  "take-crown-last-call": [
+   145.0,
+   67.0,
+   470.0
+  ],
+  "take-crown-spire-fusion": [
+   -17.0,
+   18.0,
+   470.0
+  ],
   "take-dam-breaks": [
    -150.0,
    -0.8,
@@ -26,6 +41,11 @@
    67.93,
    -437.5
   ],
+  "take-hanging-isle-liquid": [
+   24.0,
+   70.0,
+   520.0
+  ],
   "take-headframe-dubbed": [
    -75.0,
    -84.0,
@@ -35,6 +55,16 @@
    0.0,
    -108.62,
    268.0
+  ],
+  "take-highdraft-first-light": [
+   -420.0,
+   185.0,
+   470.0
+  ],
+  "take-islands-kite-chime": [
+   -455.0,
+   154.0,
+   490.0
   ],
   "take-pickaxe-flip": [
    268.2,
