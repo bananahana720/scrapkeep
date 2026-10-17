@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_FIXED_CHECKS := 1103  # 2026-10-17 (Foreman): three shift packs on park stages 2 to 4; was 1100
+const EXPECTED_FIXED_CHECKS := 1105  # 2026-10-17 (stage/alpha-w16): three Foreman shift packs and two pit jaw packs; was 1100
 
 var _t := T.new("director_credit_test")
 

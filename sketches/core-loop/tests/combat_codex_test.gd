@@ -253,7 +253,7 @@ func _w9_tricks() -> void:
 	lamps.phase = lamps.Phase.LIVE
 	lamps._go_live()
 	_w9_units = {"burrower": burrower, "kite": kite, "lamps": lamps,
-		"lane_had_ball": burrower._lane_had_ball, "mark_had_ball": kite.telegraph().contains(home)}
+		"lane_had_ball": burrower._ring_had_ball, "mark_had_ball": kite.telegraph().contains(home)}
 	var away := Vector3(0.0, 0.0, -4.0)
 	_game.player.reset_to(home + away, away.normalized() * 1.2 * ctx.tuning.f("cruise"))
 	_clock = 0.0
@@ -261,10 +261,12 @@ func _w9_tricks() -> void:
 
 func _w9_after_move() -> void:
 	var burrower: Node3D = _w9_units["burrower"]
+	# The lane is learned by leaving the floor: the ball is off it as the burst lands.
+	_game.player.state.grounded = false
 	burrower.phase = burrower.Phase.LIVE
 	burrower._go_live()
 	_report("burrow_lane", _combat.discovered.has("burrow_lane") and _w9_units["lane_had_ball"] and burrower.bursts == 1,
-		"the lane held the ball at commit (%s) and the burst came up empty" % _w9_units["lane_had_ball"])
+		"the ring held the ball at commit (%s) and the burst came up empty" % _w9_units["lane_had_ball"])
 
 	var kite: Node3D = _w9_units["kite"]
 	kite.phase = kite.Phase.LIVE
@@ -314,7 +316,14 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	fleet.holds.snap(drone, "jump")
 	_report("cable_snap", _combat.discovered.has("cable_snap") and winched and drone.broken_by == "jump",
 		"a winch drone hooked the ball (%s), then a jump snapped the cable (%s)" % [winched, drone.broken_by])
-	for node in [trap, brute, drone]:
+
+	# 2026-10-17 (world rosters): a slam on a pit jaw's open jaw shuts it.
+	var jaw: Node3D = _w9_spawn("pit_jaw", home + Vector3(10.0, 0.0, -2.0))
+	jaw._warn(_w9_to(jaw))
+	_game.events.slammed.emit(jaw.telegraph().center, 1.0, 1.0)
+	_report("jaw_slam", _combat.discovered.has("jaw_slam") and jaw.slam_kills == 1,
+		"a slam on the open jaw shut it (slam_kills %d)" % jaw.slam_kills)
+	for node in [trap, brute, drone, jaw]:
 		if is_instance_valid(node):
 			node.queue_free()
 

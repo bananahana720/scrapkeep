@@ -561,9 +561,9 @@ const ATTACK_ROWS := {
 		"pose": "e17_rack_bow", "warn": "atk_e17_warn", "release": "atk_e17_release", "floor": "B", "open": []},
 	"E18": {"label": "Mind hand strike", "group": "enemy", "owner_kind": "roster", "owner": "mind_hand", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
 		"pose": "e18_elbow_telescope", "warn": "atk_e18_warn", "release": "atk_e18_release", "floor": "L", "open": []},
-	# Reserved for the declared world 2 and 3 kinds (roster_dig.gd, roster_highdraft.gd):
-	# pose and floor stay open until each kind's script lands.
-	"E19": {"label": "Burrower lane burst", "group": "enemy", "owner_kind": "roster", "owner": "burrower", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+	# The declared world 2 and 3 kinds (roster_dig.gd, roster_highdraft.gd): pose and floor
+	# stay open until each kind's script lands. The Dig's floor threats (E19, E20, E30) have.
+	"E19": {"label": "Burrower floor burst", "group": "enemy", "owner_kind": "roster", "owner": "burrower", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "e19_mound_rise", "warn": "atk_e19_warn", "release": "atk_e19_release", "floor": "B", "open": []},
 	"E20": {"label": "Drill crew breach", "group": "enemy", "owner_kind": "roster", "owner": "drill_crew", "allegiance": "hostile", "threat": "threat_instant", "glyph": "square", "color": Palette.HAZARD,
 		"pose": "e20_bit_lower", "warn": "atk_e20_warn", "release": "atk_e20_release", "floor": "B", "open": []},
@@ -577,6 +577,8 @@ const ATTACK_ROWS := {
 		"pose": "e24_wings_fold", "warn": "atk_e24_warn", "release": "atk_e24_release", "floor": "B", "open": []},
 	"E26": {"label": "Dispatcher tube drop", "group": "enemy", "owner_kind": "roster", "owner": "dispatcher", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
 		"pose": "e26_tube_suck", "warn": "atk_e26_warn", "release": "atk_e26_release", "floor": "B", "open": []},
+	"E30": {"label": "Pit jaw bite", "group": "enemy", "owner_kind": "roster", "owner": "pit_jaw", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e30_jaw_part", "warn": "atk_e30_warn", "release": "atk_e30_release", "floor": "B", "open": []},
 	"E31": {"label": "Prop crew roof drop", "group": "enemy", "owner_kind": "roster", "owner": "prop_crew", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
 		"pose": "e31_prop_kicked", "warn": "atk_e31_warn", "release": "atk_e31_release", "floor": "B", "open": []},
 	"W01": {"label": "Reactor Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,

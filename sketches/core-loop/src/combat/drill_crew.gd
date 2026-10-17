@@ -5,6 +5,10 @@ extends "res://src/combat/counter.gd"
 # floor caves in when the wind-up ends. Its plate takes the first breaking hit whole before
 # the body (the plated brute's rule), and a slam on the rig during the wind-up stops the
 # bore. It holds nothing. Dying leaves bore_fact, a read-only dict for the breach system.
+# The cave-in only takes a ball on the floor (FloorRule, design-v3/WORLD-ROSTERS.md): a ball
+# carving the bank or in the air over the ring is past it.
+
+const FloorRule := preload("res://src/combat/floor_rule.gd")
 
 const PLATING := 22.0
 const HP := 90.0
@@ -133,7 +137,8 @@ func _go_live() -> void:
 		return
 	last_bore = {"at": ring.center, "radius": BORE_RADIUS, "frame": Engine.get_physics_frames()}
 	var ball := _real_ball()
-	if not ring.contains(ball):
+	var player = _player()
+	if not ring.contains(ball) or player == null or not FloorRule.on_floor(player.state):
 		return
 	var out: Vector3 = ball - ring.center
 	out.y = 0.0

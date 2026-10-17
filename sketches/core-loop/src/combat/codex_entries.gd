@@ -66,10 +66,10 @@ const ENTRIES := [
 		"text": "The Mind's hands brace against the move you use most this run, and show you which. Change verbs while its lens is open.",
 	},
 	{
-		"id": "burrow_lane", "name": "Off the Bulge",
+		"id": "burrow_lane", "name": "Off the Floor",
 		"hint": "The floor gives away what is coming through it.",
-		"clue": "a burrower's bulging lane + a sideways roll",
-		"text": "Tunnels under the floor along a lane and bursts up under you; roll off the bulging line before it breaks.",
+		"clue": "a burrower's swelling ring + a wall or a jump",
+		"text": "Hunts a slow ball on the floor and bursts up under it; carve the wall or take the air, or slam its marker from above.",
 	},
 	{
 		"id": "bore_breach", "name": "Stop the Bore",
@@ -82,6 +82,12 @@ const ENTRIES := [
 		"hint": "The lamps want your steering. Give them your speed.",
 		"clue": "a lamp swarm's blooming ring + a straight boost",
 		"text": "Blooms a ring of lure lamps that bends your steering toward the light; boost straight through the wave.",
+	},
+	{
+		"id": "jaw_slam", "name": "Shut Its Mouth",
+		"hint": "A jaw in the floor can't bite what lands on it.",
+		"clue": "a pit jaw's open ring + a slam from above",
+		"text": "A jaw in the floor that bites a ball rolling over it; carve round it on the wall, or slam it shut from above.",
 	},
 	{
 		"id": "line_cut", "name": "Under the Cutter",
@@ -285,6 +291,7 @@ const DETECTORS := {
 	"burrow_lane": {"kind": "burrower", "script": "res://src/combat/burrower.gd"},
 	"bore_breach": {"kind": "drill_crew", "script": "res://src/combat/drill_crew.gd"},
 	"lure_bloom": {"kind": "lamp_swarm", "script": "res://src/combat/lamp_swarm.gd"},
+	"jaw_slam": {"kind": "pit_jaw", "script": "res://src/combat/pit_jaw.gd"},
 	"line_cut": {"kind": "line_cutter", "script": "res://src/combat/line_cutter.gd"},
 	"deck_winch": {"kind": "anchor_crew", "script": "res://src/combat/anchor_crew.gd"},
 	"thermal_dive": {"kind": "kite_drone", "script": "res://src/combat/kite_drone.gd"},

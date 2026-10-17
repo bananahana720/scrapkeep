@@ -24,7 +24,7 @@ const SOURCES := {
 	"chaser": {"script": "chaser", "travel": "SPEED", "burst": "LUNGE_LENGTH/LUNGE_TIME"},
 	"miniboss": {"script": "miniboss", "travel": "WALK", "burst": "CHARGE_LENGTH/CHARGE_TIME"},
 	"swarm_remnant": {"script": "swarm_remnant", "travel": "MAX_SPEED", "burst": "MAX_SPEED"},
-	"burrower": {"script": "burrower", "travel": "", "burst": "LUNGE_SPEED"},
+	"burrower": {"script": "burrower", "travel": "TUNNEL_SPEED", "burst": "BURST_REACH/WARN"},
 	"lamp_swarm": {"script": "lamp_swarm", "travel": "BLOOM_SPEED", "burst": "SCATTER_SPEED"},
 	"kite_drone": {"script": "kite_drone", "travel": "", "burst": "HOVER/DIVE"},
 	"prop_crew": {"script": "prop_crew", "travel": "WALK", "burst": ""},
@@ -32,7 +32,7 @@ const SOURCES := {
 # Every other kind holds its ground (fixed) or hovers in place (winch_drone).
 const STATIONARY := ["lobber", "vault", "warden", "mag_trapper", "hooker", "netcaster", "bola_thrower",
 	"plated_brute", "deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap",
-	"reactor_relic", "mind_hand", "drill_crew", "line_cutter", "anchor_crew", "linker", "dispatcher", "foreman"]
+	"reactor_relic", "mind_hand", "drill_crew", "line_cutter", "anchor_crew", "linker", "dispatcher", "foreman", "pit_jaw"]
 
 var _t := T.new("roster_speed_ratio_test")
 

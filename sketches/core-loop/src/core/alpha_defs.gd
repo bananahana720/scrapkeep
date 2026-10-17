@@ -86,6 +86,9 @@ const PACKS_SHIFT := [
 	{"id": "shift_crew", "kinds": ["foreman", "plated_brute", "chaser", "chaser"]},
 ]
 const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
+# The Dig's own elite (design-v3/WORLD-ROSTERS.md): two plated rigs and a jaw, so the floor is
+# the danger and the wall the lane. The Foreman joins it once it merges.
+const DIG_ELITE := {"id": "dig_elite", "kinds": ["drill_crew", "drill_crew", "pit_jaw"]}
 # The arrival of each stage that is the elite pack.
 const ELITE_ARRIVAL := 3
 
@@ -130,7 +133,8 @@ const DEFS := [
 			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
 			{"id": "dig_linked", "kinds": ["linker", "drill_crew", "burrower"]},
 			{"id": "dig_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
-		], "elite": ELITE, "warden_variant": ""},
+			{"id": "dig_jaws", "kinds": ["pit_jaw", "pit_jaw", "burrower"]},
+		], "elite": DIG_ELITE, "warden_variant": ""},
 	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": "dig_deep"}, "warden_family": "swarm", "name": "Dig: the deep works", "map": "dig_deep", "threat": 1.2,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -142,7 +146,8 @@ const DEFS := [
 			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm", "prop_crew"]},
 			{"id": "deep_linked", "kinds": ["linker", "drill_crew", "lamp_swarm"]},
 			{"id": "deep_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
-		], "elite": ELITE, "warden_variant": "brood"},
+			{"id": "deep_jaws", "kinds": ["pit_jaw", "pit_jaw", "drill_crew", "burrower"]},
+		], "elite": DIG_ELITE, "warden_variant": "brood"},
 	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": "highdraft"}, "warden_family": "mind", "name": "Highdraft", "map": "highdraft", "threat": 1.3,
 		"unlock_base": 2, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,

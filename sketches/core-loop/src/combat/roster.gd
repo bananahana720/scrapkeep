@@ -176,15 +176,16 @@ const CHASSIS := {
 	"reactor_relic": {"chassis": "heavy", "move_class": "fixed", "threat_feature": "Vent slits glowing before the eruption"},
 	"swarm_remnant": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Drones snapping into one lined-up formation"},
 	"mind_hand": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Raised arm whose lens locks on the ball"},
-	"burrower": {"chassis": "burrower", "move_class": "ground", "threat_feature": "Bulging floor line running along its lane"},
+	"burrower": {"chassis": "burrower", "move_class": "ground", "threat_feature": "Floor ring swelling under a ball on the floor"},
 	"drill_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Drill bit lowered over the bore point"},
-	"lamp_swarm": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Lure lamps blooming in a ring"},
+	"lamp_swarm": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Floodlight heads opening their shutters in a ring"},
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
 	"dispatcher": {"chassis": "cache", "move_class": "fixed", "threat_feature": "Pneumatic tube curling down off a box on a mast"},
 	"foreman": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Steam-horn mast over a punch clock, tethered to its crew"},
 	"prop_crew": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Timber prop holding a cracked roof frame over its pack"},
+	"pit_jaw": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Toothed jaw ring flush with the floor, its lips parting"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.
