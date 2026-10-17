@@ -19,25 +19,25 @@
  "sources": {
   "calm": {
    "take": "title_b",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/sketch-1/title-b-machine-lead/c955043f-d642-ce30-90b2-116687ac3989.wav",
+   "render": "sound-bible:renders/sketch-1/title-b-machine-lead/c955043f-d642-ce30-90b2-116687ac3989.wav",
    "pick": "title B, machine lead (s2101)",
    "trim_samples": 389728,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/drums.wav",
      "sha256": "2c5dbb5a304b2e507a66da7cfd1366e27f0a777006c6474335371bd5bceba829"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/bass.wav",
      "sha256": "1bfa4fb2f0d039509e2bb3fdeb7b6194e6440f043965e92ad662736284d1dd30"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/other.wav",
      "sha256": "034c062bede263751747062ee16c71a813337f7d71a664118f392d50e23423d3"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/vocals.wav",
      "sha256": "6abc0e56dbcf75aaea5711903acc13bedcd2e9195a3581db2fc95075c36b6e00"
     }
    },
@@ -45,25 +45,25 @@
   },
   "travel": {
    "take": "title_b",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/sketch-1/title-b-machine-lead/c955043f-d642-ce30-90b2-116687ac3989.wav",
+   "render": "sound-bible:renders/sketch-1/title-b-machine-lead/c955043f-d642-ce30-90b2-116687ac3989.wav",
    "pick": "title B, machine lead (s2101)",
    "trim_samples": 1702496,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/drums.wav",
      "sha256": "2c5dbb5a304b2e507a66da7cfd1366e27f0a777006c6474335371bd5bceba829"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/bass.wav",
      "sha256": "1bfa4fb2f0d039509e2bb3fdeb7b6194e6440f043965e92ad662736284d1dd30"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/other.wav",
      "sha256": "034c062bede263751747062ee16c71a813337f7d71a664118f392d50e23423d3"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/vocals.wav",
      "sha256": "6abc0e56dbcf75aaea5711903acc13bedcd2e9195a3581db2fc95075c36b6e00"
     }
    },
@@ -71,25 +71,25 @@
   },
   "cadence": {
    "take": "title_b",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/sketch-1/title-b-machine-lead/c955043f-d642-ce30-90b2-116687ac3989.wav",
+   "render": "sound-bible:renders/sketch-1/title-b-machine-lead/c955043f-d642-ce30-90b2-116687ac3989.wav",
    "pick": "title B, machine lead (s2101)",
    "trim_samples": 3835744,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/drums.wav",
      "sha256": "2c5dbb5a304b2e507a66da7cfd1366e27f0a777006c6474335371bd5bceba829"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/bass.wav",
      "sha256": "1bfa4fb2f0d039509e2bb3fdeb7b6194e6440f043965e92ad662736284d1dd30"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/other.wav",
      "sha256": "034c062bede263751747062ee16c71a813337f7d71a664118f392d50e23423d3"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/title_b/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/title_b/vocals.wav",
      "sha256": "6abc0e56dbcf75aaea5711903acc13bedcd2e9195a3581db2fc95075c36b6e00"
     }
    },

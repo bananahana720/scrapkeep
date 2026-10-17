@@ -58,6 +58,18 @@ BAR_CLIPS = {'calm': (5, 16, 1), 'travel': (21, 16, 1)}
 CADENCE_BARS = 2
 
 
+def named(path):
+    """A committed manifest never holds a home path: a file under a known root is written as
+    'root:relative/path' (sound-bible: the sound-bible render folder, scratch: ~/scratch)."""
+    roots = {'sound-bible': BIBLE.parent, 'scratch': Path.home() / 'scratch'}
+    for name, root in roots.items():
+        try:
+            return f'{name}:{Path(path).resolve().relative_to(root)}'
+        except ValueError:
+            continue
+    raise SystemExit(f'{path}: under no named source root')
+
+
 def prep(work):
     (work / 'src').mkdir(parents=True, exist_ok=True)
     for theme, (source, measured, grid, _key, _what) in PICKS.items():
@@ -146,9 +158,9 @@ def package(work):
                               bars=bars, entry=PRE_ROLL, exit=PRE_ROLL + bars * bar, loop=loop_bar is not None,
                               loop_offset=offset, loop_to_bar=loop_bar, sample_count=count, key=key,
                               key_offset=KEYS[key], files=files)
-            sources[cid] = dict(take=theme, render=str(source), pick=what, trim_samples=start,
+            sources[cid] = dict(take=theme, render=named(source), pick=what, trim_samples=start,
                                 timing='downbeat measured from the drums and bass stems, never heard: unverified',
-                                stems={s: dict(path=str(stem_dir / f'{s}.wav'), sha256=sha(stem_dir / f'{s}.wav'))
+                                stems={s: dict(path=named(stem_dir / f'{s}.wav'), sha256=sha(stem_dir / f'{s}.wav'))
                                        for s in ('drums', 'bass', 'other', 'vocals')},
                                 other_stem='other plus vocals, scaled to peak 1 if over')
             print(f'{theme}/{cid}: bars {first}-{first + bars - 1} at {grid}, downbeat {d}, {count} frames', flush=True)

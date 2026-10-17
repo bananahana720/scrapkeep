@@ -19,25 +19,25 @@
  "sources": {
   "calm": {
    "take": "roam_spillway",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
+   "render": "sound-bible:renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
    "pick": "Spillway roaming (s2501)",
    "trim_samples": 261656,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
      "sha256": "6f902670d107e7b24249ed3a0bf35ced250e4b7983d374728c2214102a944b2f"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
      "sha256": "ebb56f10a3262495f2a37f7916ea391244642f9ff4eb99b836112b89dc915bb3"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
      "sha256": "21cee85698e6e1abbf732e316fe8438126974eaf59aa4dcc7ddc5a6f00728ac0"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
      "sha256": "cbc904f90f528ae4f194ba548761c0a9e1194c2ab19f074ccddf9f65c3b2cc88"
     }
    },
@@ -45,25 +45,25 @@
   },
   "travel": {
    "take": "roam_spillway",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
+   "render": "sound-bible:renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
    "pick": "Spillway roaming (s2501)",
    "trim_samples": 1246232,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
      "sha256": "6f902670d107e7b24249ed3a0bf35ced250e4b7983d374728c2214102a944b2f"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
      "sha256": "ebb56f10a3262495f2a37f7916ea391244642f9ff4eb99b836112b89dc915bb3"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
      "sha256": "21cee85698e6e1abbf732e316fe8438126974eaf59aa4dcc7ddc5a6f00728ac0"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
      "sha256": "cbc904f90f528ae4f194ba548761c0a9e1194c2ab19f074ccddf9f65c3b2cc88"
     }
    },
@@ -71,25 +71,25 @@
   },
   "cadence": {
    "take": "roam_spillway",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
+   "render": "sound-bible:renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
    "pick": "Spillway roaming (s2501)",
    "trim_samples": 2661560,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
      "sha256": "6f902670d107e7b24249ed3a0bf35ced250e4b7983d374728c2214102a944b2f"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
      "sha256": "ebb56f10a3262495f2a37f7916ea391244642f9ff4eb99b836112b89dc915bb3"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
      "sha256": "21cee85698e6e1abbf732e316fe8438126974eaf59aa4dcc7ddc5a6f00728ac0"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
      "sha256": "cbc904f90f528ae4f194ba548761c0a9e1194c2ab19f074ccddf9f65c3b2cc88"
     }
    },

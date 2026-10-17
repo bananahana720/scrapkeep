@@ -19,25 +19,25 @@
  "sources": {
   "calm": {
    "take": "boss_brindle",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
    "pick": "Brindle's theme (s2402)",
    "trim_samples": 370368,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
      "sha256": "afba8581891524e0ff88792afc8f9eaa4f77322835e73c3489ec9fb8e2edcb94"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
      "sha256": "8acf916ae48cba51b8659832a90fed615231b9e5aa6683ce8791af39c58a804d"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
      "sha256": "cbadc556880ecf524532f85b9b816f4bbd6e0a03cae4ddecb3774f8c49bccec8"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
      "sha256": "718982cc4dafda432d7198c040cc6d75e9209f6f1534220fd235477ea78329f2"
     }
    },
@@ -45,25 +45,25 @@
   },
   "travel": {
    "take": "boss_brindle",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
    "pick": "Brindle's theme (s2402)",
    "trim_samples": 1683136,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
      "sha256": "afba8581891524e0ff88792afc8f9eaa4f77322835e73c3489ec9fb8e2edcb94"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
      "sha256": "8acf916ae48cba51b8659832a90fed615231b9e5aa6683ce8791af39c58a804d"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
      "sha256": "cbadc556880ecf524532f85b9b816f4bbd6e0a03cae4ddecb3774f8c49bccec8"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
      "sha256": "718982cc4dafda432d7198c040cc6d75e9209f6f1534220fd235477ea78329f2"
     }
    },
@@ -71,25 +71,25 @@
   },
   "cadence": {
    "take": "boss_brindle",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
    "pick": "Brindle's theme (s2402)",
    "trim_samples": 4144576,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
      "sha256": "afba8581891524e0ff88792afc8f9eaa4f77322835e73c3489ec9fb8e2edcb94"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
      "sha256": "8acf916ae48cba51b8659832a90fed615231b9e5aa6683ce8791af39c58a804d"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
      "sha256": "cbadc556880ecf524532f85b9b816f4bbd6e0a03cae4ddecb3774f8c49bccec8"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
      "sha256": "718982cc4dafda432d7198c040cc6d75e9209f6f1534220fd235477ea78329f2"
     }
    },

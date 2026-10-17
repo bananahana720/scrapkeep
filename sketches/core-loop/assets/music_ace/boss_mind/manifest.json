@@ -19,25 +19,25 @@
  "sources": {
   "calm": {
    "take": "boss_mind",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-mind-s2402-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-mind-s2402-129bpm.wav",
    "pick": "the Mind's theme (s2402)",
    "trim_samples": 348544,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/drums.wav",
      "sha256": "153a1f72b3dcfba7b24e26d46b88846b6a33e3aad0aa3b74b5e6a3f82b857316"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/bass.wav",
      "sha256": "51b0b6ad6d2e0d58d98a7f928a69a00792442c0101ee603564e2c1f40dbbcbeb"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/other.wav",
      "sha256": "c2259305f2072e2d7bcbd52befbd97f0cda7dd2d74c0aeb15dff85292a11dc89"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/vocals.wav",
      "sha256": "71bb71047dbc43f1cd37e51c41a02bfb264c13b8cd32477d9217b1e405d08b1f"
     }
    },
@@ -45,25 +45,25 @@
   },
   "travel": {
    "take": "boss_mind",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-mind-s2402-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-mind-s2402-129bpm.wav",
    "pick": "the Mind's theme (s2402)",
    "trim_samples": 1661312,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/drums.wav",
      "sha256": "153a1f72b3dcfba7b24e26d46b88846b6a33e3aad0aa3b74b5e6a3f82b857316"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/bass.wav",
      "sha256": "51b0b6ad6d2e0d58d98a7f928a69a00792442c0101ee603564e2c1f40dbbcbeb"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/other.wav",
      "sha256": "c2259305f2072e2d7bcbd52befbd97f0cda7dd2d74c0aeb15dff85292a11dc89"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/vocals.wav",
      "sha256": "71bb71047dbc43f1cd37e51c41a02bfb264c13b8cd32477d9217b1e405d08b1f"
     }
    },
@@ -71,25 +71,25 @@
   },
   "cadence": {
    "take": "boss_mind",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-mind-s2402-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-mind-s2402-129bpm.wav",
    "pick": "the Mind's theme (s2402)",
    "trim_samples": 4204800,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/drums.wav",
      "sha256": "153a1f72b3dcfba7b24e26d46b88846b6a33e3aad0aa3b74b5e6a3f82b857316"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/bass.wav",
      "sha256": "51b0b6ad6d2e0d58d98a7f928a69a00792442c0101ee603564e2c1f40dbbcbeb"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/other.wav",
      "sha256": "c2259305f2072e2d7bcbd52befbd97f0cda7dd2d74c0aeb15dff85292a11dc89"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_mind/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_mind/vocals.wav",
      "sha256": "71bb71047dbc43f1cd37e51c41a02bfb264c13b8cd32477d9217b1e405d08b1f"
     }
    },

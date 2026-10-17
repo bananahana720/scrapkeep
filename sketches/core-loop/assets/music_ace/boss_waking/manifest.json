@@ -19,25 +19,25 @@
  "sources": {
   "calm": {
    "take": "boss_waking",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-waking-s2401-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-waking-s2401-129bpm.wav",
    "pick": "the Waking's theme (s2401)",
    "trim_samples": 348832,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/drums.wav",
      "sha256": "c7c9dfcd6550bf698dff3b788ad2473d2611a20aa541a36841df0faa41e04d88"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/bass.wav",
      "sha256": "9d73b9ccfa4188d3f05876f8cd957d8540f9d8bb336bed905a4829cf3f6cd388"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/other.wav",
      "sha256": "d88de74cd5dc972f1e03e07a67216e29b258b0eb5da0f40d9fa983e6a14a1de7"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/vocals.wav",
      "sha256": "5e9cdce305d0b30eacd99a27675c40d5e00b610e7ee1b1c1cd0de82d2c438fdc"
     }
    },
@@ -45,25 +45,25 @@
   },
   "travel": {
    "take": "boss_waking",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-waking-s2401-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-waking-s2401-129bpm.wav",
    "pick": "the Waking's theme (s2401)",
    "trim_samples": 1661600,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/drums.wav",
      "sha256": "c7c9dfcd6550bf698dff3b788ad2473d2611a20aa541a36841df0faa41e04d88"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/bass.wav",
      "sha256": "9d73b9ccfa4188d3f05876f8cd957d8540f9d8bb336bed905a4829cf3f6cd388"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/other.wav",
      "sha256": "d88de74cd5dc972f1e03e07a67216e29b258b0eb5da0f40d9fa983e6a14a1de7"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/vocals.wav",
      "sha256": "5e9cdce305d0b30eacd99a27675c40d5e00b610e7ee1b1c1cd0de82d2c438fdc"
     }
    },
@@ -71,25 +71,25 @@
   },
   "cadence": {
    "take": "boss_waking",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round4-1/grid129/boss-waking-s2401-129bpm.wav",
+   "render": "sound-bible:renders/lab-round4-1/grid129/boss-waking-s2401-129bpm.wav",
    "pick": "the Waking's theme (s2401)",
    "trim_samples": 4123040,
    "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/drums.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/drums.wav",
      "sha256": "c7c9dfcd6550bf698dff3b788ad2473d2611a20aa541a36841df0faa41e04d88"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/bass.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/bass.wav",
      "sha256": "9d73b9ccfa4188d3f05876f8cd957d8540f9d8bb336bed905a4829cf3f6cd388"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/other.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/other.wav",
      "sha256": "d88de74cd5dc972f1e03e07a67216e29b258b0eb5da0f40d9fa983e6a14a1de7"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/soundint/picks/stems/htdemucs/boss_waking/vocals.wav",
+     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_waking/vocals.wav",
      "sha256": "5e9cdce305d0b30eacd99a27675c40d5e00b610e7ee1b1c1cd0de82d2c438fdc"
     }
    },
