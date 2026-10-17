@@ -1,6 +1,17 @@
 {
  "assets": [
   {
+   "id": "decal_curtain_call_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_curtain_call_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "decal_fern_mask.png",
    "path": "res://assets/cosmetics/decals/decal_fern_mask.png",
    "class": "texture",
@@ -53,6 +64,17 @@
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_sable_spool_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_sable_spool_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
@@ -111,6 +133,28 @@
    }
   },
   {
+   "id": "trail_any_downbeat",
+   "path": "res://assets/cosmetics/trails/trail_any_downbeat.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "trail_cannon_recital",
+   "path": "res://assets/cosmetics/trails/trail_cannon_recital.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_forge_chips",
    "path": "res://assets/cosmetics/trails/trail_forge_chips.glb",
    "class": "scenery",
@@ -130,6 +174,17 @@
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_kest_fuse_smoke",
+   "path": "res://assets/cosmetics/trails/trail_kest_fuse_smoke.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
@@ -155,6 +210,17 @@
    }
   },
   {
+   "id": "trail_rivet_swarf",
+   "path": "res://assets/cosmetics/trails/trail_rivet_swarf.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_rose_wash",
    "path": "res://assets/cosmetics/trails/trail_rose_wash.glb",
    "class": "scenery",
@@ -166,6 +232,17 @@
    }
   },
   {
+   "id": "trail_sable_cable",
+   "path": "res://assets/cosmetics/trails/trail_sable_cable.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_salt_skip",
    "path": "res://assets/cosmetics/trails/trail_salt_skip.glb",
    "class": "scenery",
@@ -174,6 +251,28 @@
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_tally_punch_tape",
+   "path": "res://assets/cosmetics/trails/trail_tally_punch_tape.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "trail_tarn_claw_marks",
+   "path": "res://assets/cosmetics/trails/trail_tarn_claw_marks.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
@@ -5033,11 +5132,13 @@
   "cut_face_long",
   "cut_face_scoop",
   "decal_atlas.png",
+  "decal_curtain_call_mask.png",
   "decal_fern_mask.png",
   "decal_moth_mask.png",
   "decal_mushroom_mask.png",
   "decal_patch_mask.png",
   "decal_paw_mask.png",
+  "decal_sable_spool_mask.png",
   "decal_seashell_mask.png",
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
@@ -5300,13 +5401,20 @@
   "tailings_lip_detail2",
   "thermal_air",
   "thermal_vent",
+  "trail_any_downbeat",
   "trail_atlas.png",
+  "trail_cannon_recital",
   "trail_forge_chips",
   "trail_ink_stitch",
+  "trail_kest_fuse_smoke",
   "trail_moth_tuft",
   "trail_plum_curl",
+  "trail_rivet_swarf",
   "trail_rose_wash",
+  "trail_sable_cable",
   "trail_salt_skip",
+  "trail_tally_punch_tape",
+  "trail_tarn_claw_marks",
   "travel_vane",
   "trebuchet_launcher_arm",
   "trebuchet_launcher_detail1",
