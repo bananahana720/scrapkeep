@@ -1,6 +1,17 @@
 {
  "assets": [
   {
+   "id": "companion_skin_till_bell",
+   "path": "res://assets/cosmetics/companion_skins/companion_skin_till_bell.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_companion_skin (Till Bell on Deck, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py companion_skin_till_bell",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "decal_fern_mask.png",
    "path": "res://assets/cosmetics/decals/decal_fern_mask.png",
    "class": "texture",
@@ -86,6 +97,43 @@
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "outfit_rivet_hood",
+   "path": "res://assets/cosmetics/outfits/outfit_rivet_hood.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Welding Hood, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_rivet_hood",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "outfit_tally_eyeshade",
+   "path": "res://assets/cosmetics/outfits/outfit_tally_eyeshade.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Eyeshade, CUSTOMIZE section 8)",
+   "exception": {
+    "draws": 3
+   },
+   "exception_why": "the visor plus one garter on each upper arm; each bone's part is its own mesh, so three draws, one surface each",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_tally_eyeshade",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "outfit_tarn_steady_cap",
+   "path": "res://assets/cosmetics/outfits/outfit_tarn_steady_cap.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Steady Cap, Replace_Cap, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_tarn_steady_cap",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
@@ -6294,6 +6342,7 @@
   "cliff_dwelling_row",
   "cliff_dwelling_row_detail1",
   "cliff_dwelling_row_detail2",
+  "companion_skin_till_bell",
   "cottonwood_crown",
   "cottonwood_detail1",
   "cottonwood_detail2",
@@ -6475,6 +6524,9 @@
   "ore_cart_detail1",
   "ore_cart_detail2",
   "ore_cart_wheel",
+  "outfit_rivet_hood",
+  "outfit_tally_eyeshade",
+  "outfit_tarn_steady_cap",
   "park_contraption_barge",
   "park_contraption_barge_detail1",
   "park_contraption_barge_detail2",
