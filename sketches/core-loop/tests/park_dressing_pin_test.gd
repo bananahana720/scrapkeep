@@ -15,13 +15,14 @@ const Intent := preload("res://src/movement/intent.gd")
 # Stage -> [map, batch count, hash], from the 7dbdebae builder.
 # 2026-10-16 PARK-WIN re-pin: stage 6 park_crown 1104816985 -> 3361994924, because its dressing
 # follows the PW2 rebaked ground (passes on the 699fded6 ground.bin); stages 1 to 5 unchanged.
-# 2026-10-17 sinkhole basin re-pin: stage 4 park_sinkhole 2757620411 -> 562989196, because its
-# dressing follows the 20 m bowl rebake (passes on the 66ed5ac5 ground.bin); the others unchanged.
+# 2026-10-17 sinkhole re-pin: stage 4 park_sinkhole 2757620411 -> 3017710206, because its dressing
+# follows the 20 m bowl rebake and the scatter now dresses the trough, pump_gallery and east_mesa
+# (recipe "scatter"); the others unchanged.
 const PINS := {
 	1: ["park_dam", 13, 2427938025],
 	2: ["park_flume", 13, 1284262125],
 	3: ["park_pit", 13, 3689678730],
-	4: ["park_sinkhole", 13, 562989196],
+	4: ["park_sinkhole", 13, 3017710206],
 	5: ["park_islands", 13, 3297821718],
 	6: ["park_crown", 13, 3361994924],
 }

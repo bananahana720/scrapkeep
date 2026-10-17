@@ -11,7 +11,8 @@ Rewrites src/world/park/park_sinkhole.json in place, one row per line as the fil
                                      home and routes and becomes the north segment. The landmark's
                                      timber deck (landmark_sinkhole) dresses every segment but the
                                      three in the lower tubes' trough (TROUGH): the others carry
-                                     recipe `landmark`, the trough's keep greybox:ledge.
+                                     recipe `landmark`, and the ground scatter dresses the trough's
+                                     (recipe `scatter`), keeping the wash open for the tube mouths.
   gallery_cut_1..15                  the south wall cut back to radius 66 between x -45 and 45,
                                      so the ring passes behind the nest. Columns 6 m wide with
                                      edges on odd metres, so no 2 m bake vertex sits in two cuts.
@@ -70,7 +71,7 @@ def ring_rows(old):
             id="gallery_ring" if first else "gallery_ring_%d" % (k + 1),
             element="ledge", at=polar(mid, deg), size=[length, 0, R_OUT - R_IN],
             yaw_deg=round((90.0 - deg + 180.0) % 360.0 - 180.0, 1), ride_fact="ride_ledge",
-            home=old["home"] if first else "", recipe="greybox:ledge" if k in TROUGH else "landmark", stamp="plateau",
+            home=old["home"] if first else "", recipe="scatter" if k in TROUGH else "landmark", stamp="plateau",
             routes=[r for r in old["routes"] if r != "gallery_lap"] + ["gallery_lap"] if first else ["gallery_lap"],
             fragment=old["fragment"] if first else ""))
     return out

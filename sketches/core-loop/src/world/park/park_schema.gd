@@ -89,6 +89,8 @@ const RECIPES := [
 	"landmark_sky_island", "landmark_spire",
 ]
 const GREYBOX := "greybox:"
+# The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).
+const SCATTER := "scatter"
 const REGISTRY_PATH := "res://assets/registry.json"
 
 # The real-culture guardrail (section 4): these rows house no home, carry only ref_ fragments,
@@ -469,7 +471,7 @@ static func _recipe(out: Array, id: String, recipe: String) -> void:
 		if not ELEMENTS.has(recipe.trim_prefix(GREYBOX)):
 			_add(out, id, "recipe", "%s names no park element" % recipe)
 		return
-	if recipe == LANDMARK:
+	if recipe == LANDMARK or recipe == SCATTER:
 		return
 	if not RECIPES.has(recipe) and not _registry().has(recipe):
 		_add(out, id, "recipe", "%s names no registry row" % recipe)

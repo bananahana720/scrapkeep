@@ -93,10 +93,13 @@ test("parkGreybox groups greybox recipes and recipes with no GLB, and passes bui
   );
 });
 
-test("parkGreybox counts a landmark-dressed row only until the landmark's GLB lands", () => {
+test("parkGreybox counts a landmark-dressed row only until the landmark's GLB lands, and never a scatter-dressed one", () => {
   const doc = {
     landmark: { id: "sinkhole", recipe: "landmark_sinkhole" },
-    park_rows: [{ id: "deck", element: "ledge", recipe: "landmark" }],
+    park_rows: [
+      { id: "deck", element: "ledge", recipe: "landmark" },
+      { id: "wash", element: "ledge", recipe: "scatter" },
+    ],
   };
   const bare = parkGreybox("park_sinkhole", doc, () => false);
   assert.deepEqual(

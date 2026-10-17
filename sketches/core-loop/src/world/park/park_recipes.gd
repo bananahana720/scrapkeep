@@ -44,6 +44,11 @@ const ORIGIN_CENTRE := "centre"
 const ORIGIN_ENTRY_LIP := "entry_lip"
 const ORIGINS := [ORIGIN_CENTRE, ORIGIN_ENTRY_LIP]
 const GREYBOX := "greybox:"
+# Rows something else dresses place only their ride sensor: "landmark", the landmark's own model (the sinkhole's
+# gallery deck); "scatter", the park's ground scatter, which park_map.gd then lets into the footprint.
+const LANDMARK_DRESSED := "landmark"
+const SCATTER_DRESSED := "scatter"
+const SENSOR_ONLY := [LANDMARK_DRESSED, SCATTER_DRESSED]
 # A recipe's collision mesh is the node named "<name>-col". Godot 4.7.2 keeps that node as a MeshInstance3D and adds a
 # StaticBody3D child holding its ConcavePolygonShape3D (probed 2026-10-10); placement takes the shape and never draws it.
 const COL_SUFFIX := "-col"
@@ -425,11 +430,10 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 		return null
 	if recipe.begins_with(GREYBOX):
 		return place_greybox(row, recipe.trim_prefix(GREYBOX), parent, ground, publish)
-	if recipe == LANDMARK:
-		# The landmark's own model dresses this row (the sinkhole's gallery deck): the row keeps only its ride sensor.
-		var deck := _node(row, parent, ground)
-		_sensor(deck, row, publish)
-		return deck
+	if SENSOR_ONLY.has(recipe):
+		var dressed := _node(row, parent, ground)
+		_sensor(dressed, row, publish)
+		return dressed
 	var budget := String(row.get("budget", ROWS.get(recipe, {}).get("budget", "landform")))
 	var p := paths(recipe, budget)
 	if not ResourceLoader.exists(p["base"]):
@@ -937,7 +941,7 @@ static func stands_in(row: Dictionary) -> bool:
 	var recipe := String(row.get("recipe", ""))
 	if recipe == "" or recipe.begins_with(GREYBOX):
 		return recipe != ""
-	if recipe == LANDMARK:
+	if SENSOR_ONLY.has(recipe):
 		return false
 	if not ResourceLoader.exists(paths(recipe, _budget(row))["base"]):
 		return true
@@ -953,7 +957,7 @@ static func _budget(row: Dictionary) -> String:
 # Every GLB a row's placement reads.
 static func row_paths(row: Dictionary) -> Array:
 	var recipe := String(row.get("recipe", ""))
-	if recipe == "" or recipe == LANDMARK or recipe.begins_with(GREYBOX):
+	if recipe == "" or SENSOR_ONLY.has(recipe) or recipe.begins_with(GREYBOX):
 		return []
 	var p := paths(recipe, _budget(row))
 	var out: Array = [p["base"]]
