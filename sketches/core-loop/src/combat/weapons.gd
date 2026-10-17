@@ -347,6 +347,8 @@ const PIN_BASE := 8.0
 const PIN_PER_SPEED := 0.5
 const PIN_CAP := 40.0
 const PIN_CARRY := 0.6
+# A body a ram, crush or pin kills flies on as a hulk this long at most (KNOCKBACK-FEEL).
+const HULK_SECONDS := 0.6
 
 # Rivet's sprint: contact punch is this much higher (the crush bar 20% lower).
 const SPRINT_PUNCH := 1.25
