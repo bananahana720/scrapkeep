@@ -119,7 +119,9 @@ const TRIM_DB := {
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
 	# The skill bar's refusals (SKILL-BAR section 2): a refused pick and a refused Q, each a dull
 	# tick of its own.
-	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0,
+	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0, "verb_fail_active": -18.0,
+	# The actives' launches (src/combat/actives), one per active: "active_" + its id.
+	"active_scrap_rocket": -8.0,
 	# Each pilot's line-skill and set-piece cues, one marked block per pilot (SKILL-BAR section 12,
 	# item 4); a row here needs its recipe in _bake.
 	# --- P-C Sable sounds ---
@@ -505,6 +507,12 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.09, 520.0, 330.0, "sine", 32.0), 0, 1.0], [_noise(0.01, 2500.0, 2000.0, 300.0), 0, 0.4]])
 		"verb_fail_select":
 			return _mix([[_tone(0.05, 300.0, 260.0, "square_dark", 45.0), 0, 1.0], [_noise(0.01, 1800.0, 1200.0, 250.0), 0, 0.3]])
+		"verb_fail_active":
+			return _mix([[_fm(0.12, _hz(67), 1.5, 2.0, 24.0, -2.0), 0, 1.0], [_noise(0.05, 900.0, 600.0, 40.0), 0, 0.3]])
+		# A valve hiss, then a bottle rocket's rising whistle over a low thump: FWOOSH.
+		"active_scrap_rocket":
+			return _mix([[_noise(0.16, 2400.0, 5200.0, 14.0, 0.004), 0, 0.7], [_tone(0.09, 120.0, 60.0, "sine", 30.0), 0, 0.8],
+				[_tone(0.34, 900.0, 2600.0, "sine", 6.0), Synth.seconds(0.06), 0.35], [_noise(0.3, 1200.0, 3600.0, 8.0, 0.02), Synth.seconds(0.06), 0.4]])
 		"verb_fail_ultimate":
 			return _mix([[_fm(0.16, _hz(62), 1.5, 2.5, 20.0, -2.0), 0, 1.0], [_tone(0.06, 180.0, 150.0, "sine", 30.0), Synth.seconds(0.05), 0.6]])
 		"grapple_release":

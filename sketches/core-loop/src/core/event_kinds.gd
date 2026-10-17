@@ -177,6 +177,8 @@ const ROWS := {
 	"line_skill_loaded": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "lock_tick", "sound_next": "line_load", "hud": "", "objective": "", "priority": 1},
 	"line_skill_fired": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "line_bite", "sound_next": "motif_line", "hud": "", "objective": "", "priority": 1},
 	"line_skill_expired": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
+	# The active on F. Its sound is the active's own (audio.gd, "active_" + id); this is the fallback.
+	"active_fired": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "active_scrap_rocket", "hud": "", "objective": "", "priority": 1},
 	"ultimate_ready": {"group": "combat", "color": Palette.ARC, "shape": "ring", "sound": "found_chime", "sound_next": "ultimate_ready", "hud": "", "objective": "", "priority": 1},
 	"ultimate_started": {"group": "combat", "color": Palette.ARC, "shape": "lane", "sound": "launch_roar", "hud": "", "objective": "", "priority": 1},
 	"ultimate_peak": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "sound_next": "motif_stinger", "hud": "", "objective": "", "priority": 1},
@@ -277,6 +279,8 @@ const IMPACT := {
 	"ledger": {"knock": 6.0, "lift": 0.2, "stop": "hit", "shake": 0.05, "react": "stagger"},
 	"flail": {"knock": 14.0, "lift": 0.3, "stop": "hit", "shake": 0.15, "react": "launch"},
 	"cannon": {"knock": 9.0, "lift": 0.25, "stop": "hit", "shake": 0.15, "react": "stagger"},
+	# The Scrap Rocket Rack's blast (src/combat/actives/scrap_rockets.gd): a bomb's stop, a lighter shove.
+	"rocket": {"knock": 14.0, "lift": 0.3, "stop": "hit", "shake": 0.08, "react": "stagger"},
 }
 # Degrees and seconds; enemy weight divides angles by sqrt(max(weight, 1)).
 const REACTIONS := {
@@ -341,6 +345,7 @@ const WEIGHTED := {
 
 const WEIGHT_EXEMPT := {
 	"line_skill_fired": "The line skill's bite; its landed strike is enemy_struck.",
+	"active_fired": "The active's launch cue; its landed strikes are enemy_struck.",
 	"achievement_earned": "Reward and economy ladders own the cue; rewards never stop time.",
 	"activity_done": "World, interaction and activity rows own their contextual glyph and sound.",
 	"ambush_ended": "World, interaction and activity rows own their contextual glyph and sound.",

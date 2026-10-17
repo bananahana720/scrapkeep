@@ -162,6 +162,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `line_skill_loaded` | `ability_id: String, seconds: float` | A | a line skill cast with no line standing loaded the next bite |
 | `line_skill_fired` | `ability_id: String, target: Node3D, at: Vector3, on: String` | A | the line skill fired along the line; on is `body` or `world`; target is null on the world |
 | `line_skill_expired` | `ability_id: String` | A | a load ran out with no bite; nothing is refunded |
+| `active_fired` | `active_id: String, at: Vector3, count: int` | A (`src/combat/actives`) | F fired the racked active; count is the pieces it launched (rockets in a volley) |
 | `ultimate_ready` | `ultimate_id: String` | ultimate (`src/combat/ultimate.gd`, wave P-B B3) | the meter reached full |
 | `ultimate_started` | `ultimate_id: String, path: String, from: Vector3, to: Vector3, seconds: float` | ultimate | Q committed a planned path; seconds is wind-up plus flight |
 | `ultimate_peak` | `ultimate_id: String, at: Vector3` | ultimate | the flight's middle beat |

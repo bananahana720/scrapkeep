@@ -22,6 +22,7 @@ const EXPECTED := {
 	"hotwire-shell": ["hotwire_shell", "on", "bogus", "launch"],
 	"hotwire-tread": ["hotwire_tread", "on", "bogus", "launch"],
 	"companion-stub": ["companion_stub", "on", "bogus", "launch"],
+	"actives": ["actives", "on", "bogus", "launch"],
 	"profile": ["profile", "sitting", "bogus", "launch"],
 }
 
