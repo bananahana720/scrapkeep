@@ -37,12 +37,12 @@ On the committed lane, all 54 rolls score or return, and the real-time run takes
 - Facing: local +Z faces the plaza. `layout.yaw_to_centre` turns a piece's +Z toward the spawn.
 - Collision: the node is named `<id>-col-col`. The Godot importer strips one `-col`, so the node becomes `<id>-col`, the name `park_recipes.gd` looks for. It holds only the solids the ball or harpoon should hit.
 - Sockets: empties that the runtime wires to.
-  - `interact` sits at ball height on the plaza side of the lockers, Moss's stall, the trophy wall, the settings console and the call box. The gate uses `launch_trigger`, the pet pen `pet_home`, the skee lane `start`, the trial `start` and the sandbox `entry`.
+  - `interact` sits at ball height on the plaza side of the lockers, Moss's stall, the trophy wall, the settings console, the call box and the skee lane's foot. The gate uses `launch_trigger`, the pet pen `pet_home`, the trial `start` and the sandbox `entry`.
   - `light_*` empties sit at bulb centres; the runtime adds the lights.
   - Each station has its own named sockets, listed in its recipe header.
 - Colour: the game palette.
-  - The colour law in `design-v3/LEGIBILITY.md`. Mint is live: what the player uses (the launch pad, thresholds, the skee lane, the trial start, the console knob, the call-box lever and dial). Amber is the world offering or paying: scores, medals, rides (the gate marquee, the shortcut and trial chevrons) and firelight.
-  - Pilot class colours appear only on each pilot's own locker, emblem and gear, as the pilot UI already uses them.
+  - The colour law in `design-v3/LEGIBILITY.md`. Mint is live: what the player uses (the launch pad, thresholds, the shortcut deck, the skee lane, the trial start, the console knob, the call-box lever and dial). The shortcut deck is mint because the approved storyboard 7 calls for a mint ramp. Amber is the world offering or paying: scores, medals, rides (the gate marquee, the shortcut and trial chevrons) and firelight.
+  - Pilot identity marks (locker bands, emblems, gear) use each pilot's class colour. Mint, copper and amber also carry the meanings above, and oxide (the same hex as the palette's rust) and ledger also appear as plain world material: Fleet paint on the pet and Moss's stall, felt, wood. Only the lockers carry identity.
   - Copper marks machinery. Brass is used only on Fleet requisition marks: the tags and the sandbox spawn grate's chevron.
   - There is no hazard red and no lettering. Labels are runtime UI.
 
@@ -74,7 +74,7 @@ These are for the wave coordinator, who owns `src/` and the camp scene. Each not
 | --- | --- |
 | C1 | Add a camp scene that places the pieces at `layout.py`'s positions and yaws. Take the ground and backdrop from a stage's terrain or a small canyon bench. `camp_menu.gd` says the full camp scene replaces it. |
 | C2 | Each `-col` node becomes a StaticBody3D on the world layer, as `park_recipes.gd` does today. |
-| C3 | Wire every `interact` socket to the screen it stands for: Customize at the lockers, Moss's shop and Companion, Achievements, Settings, and the sandbox enemy picker at the call box. Launch is `launch_trigger` on the gate pad. |
+| C3 | Wire every `interact` socket to the screen it stands for: Customize at the lockers, Moss's shop and Companion, Achievements, Settings, the sandbox enemy picker at the call box, and the skee-ball start and score screen at the lane's foot. Launch is `launch_trigger` on the gate pad. |
 | C4 | Skee-ball: put sensors at `cup_*`. Each cup's radius is in the `skee.py` header. Scores go to the blank amber panels at `score`, and the ball respawns at `return_exit`. See the [physics check](#skee-ball-physics-check). |
 | C5 | Time trial: put checkpoints at `checkpoint_0..3`, start and finish at `start` and `finish`, and draw the ghost line from `ghost_00..31`. Medal lamps go at `light_bronze`, `light_silver` and `light_gold`. The timer digits go at `timer`. |
 | C6 | Sandbox: the enemy picker sits at `camp_call_box` (`dial`, `lever`). Called enemies spawn at `enemy_spawn_0..3` on the grate. |

@@ -676,7 +676,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/plaza.py",
-    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 eb82f26314099c24ea308863a099d26b771d725aacab115d6b2ef27ca26be8e9"
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 dd8eefb9698017795357cfa72f4d0fac333557868ea7e997fac6b332746f3191"
    }
   },
   {

@@ -16,9 +16,10 @@ extends SceneTree
 #     (drive_head, drive_scale; no sprint, so cruise_boost 1); torque UP x wish * rigid_torque 220 * head and central force
 #     wish * drive_accel 34 * 0.3 * mass * head (rigid_ball.gd _integrate_forces). The drive adds nothing at or above 14 m/s.
 #   - boost set: every start is rolled twice, forward held alone and forward held with boost (shift) held. Held shift is one
-#     press (player_ball.gd _read_shift reads just_pressed), so the boost fires once at the start: ball_rules.gd boost(), an
-#     impulse of BOOST_IMPULSE 11 m/s * mass along the velocity (along the wish below 2.5 m/s), then a 1.1 s cooldown that
-#     a held key never re-arms. Sprint is a class burst from the augment kit, not the base ball, and is left out.
+#     press (intent.gd reads it as just_pressed; player_ball.gd _read_shift maps it to boost for pilots without a class
+#     burst), so the boost fires once at the start: ball_rules.gd boost(), an impulse of BOOST_IMPULSE 11 m/s * mass along
+#     the velocity (along the wish below 2.5 m/s), then a 1.1 s cooldown that a held key never re-arms. Sprint is a class
+#     burst from the augment kit, not the base ball, and is left out.
 #   - after the lip no input at all: steering, brake, boost, jump and the augment kit are never used
 # The ball has no downforce, ground speed cap or ground drag beyond these: rigid_ball.gd applies none (Rules.stick and
 # Rules.resistance belong to the kinematic ball). external_accel is the flood's push and is zero in camp.

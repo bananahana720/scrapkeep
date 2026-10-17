@@ -162,8 +162,8 @@ def shortcut(s):
         # order: bottom (z0: x-, x+; z1: x-, x+), top (same)
         s.add(pts, [(0, 1, 3, 2)[::-1], (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)], col)
     zl, yl = rows[-1]
-    cp.obox(s, (RAMP_W + 1.2, yl, 0.6), (0, yl / 2, zl - 0.3), T["iron"])          # lip wall
-    cp.obox(s, (RAMP_W + 1.4, 0.2, 0.8), (0, yl + 0.05, zl - 0.2), T["copper"])    # copper lip edge
+    cp.obox(s, (RAMP_W + 1.2, yl, 0.6), (0, yl / 2, zl + 0.3), T["iron"])          # lip wall, tucked under the lip so nothing reaches the ring walk
+    cp.obox(s, (RAMP_W + 1.4, 0.2, 0.8), (0, yl + 0.05, zl + 0.4), T["copper"])    # copper lip edge
     # Amber chevrons painted on the deck point up the ramp (toward -Z): thin closed prisms riding the deck.
     chevron = [(-1.3, 0.5), (0.0, -0.8), (1.3, 0.5), (1.3, 1.2), (0.0, -0.1), (-1.3, 1.2)]
     for k in range(3):
