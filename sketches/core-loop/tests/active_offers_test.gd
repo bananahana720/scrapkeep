@@ -13,8 +13,10 @@ const T := preload("res://tests/support/t.gd")
 # gate draw adds one active arch beside the parts, tagged with its maker; rolling through it
 # racks the active, adds no part and drops the old active where the ball stands with its
 # charges; rolling back over the drop swaps them again; a held active (racked or dropped) is never
-# offered; Moss's shelf sells an active in its last slot; a retry rewinds the rack. Two stand-in rows (a relic and a rare from other makers) fire as the rocket rack, since
-# only the Scrap Rocket Rack is authored yet. Evidence limit: rules in a headless run, not feel.
+# offered; Moss's shelf sells an active in its last slot; a retry rewinds the rack. Two stand-in
+# rows (a relic and a rare) join the authored ones and fire as the rocket rack, so the swap checks
+# hold whichever actives are authored; checks on the draw read the pool, never a fixed count.
+# Evidence limit: rules in a headless run, not feel.
 
 const FLAT_SHELF := Vector3(-45.0, 15.0, 6.0)
 const TORCH := "test_torch"
@@ -131,7 +133,14 @@ func _run() -> void:
 		var got: String = build.active_offer("gate", ["rare", "relic"], on_rng)
 		if got != "":
 			drawn[got] = true
-	_t.eq("10 a rare-or-relic gate offers both stand-ins, never the racked starter", drawn.keys().filter(func(k): return true).size(), 2)
+	# Across 200 draws every un-held rare or relic active turns up (the authored rows plus the two
+	# stand-ins); each draw is still one id, so a gate carries at most one active arch.
+	var expected: Array = ActiveOffers.pool(rack.rows(), ["rare", "relic"], rack.held()).map(func(id): return ActiveOffers.offer_id(id))
+	expected.sort()
+	var got_ids: Array = drawn.keys()
+	got_ids.sort()
+	_t.check("10 a rare-or-relic gate draws from every un-held active, stand-ins included",
+		got_ids == expected and drawn.has(ActiveOffers.offer_id(TORCH)) and drawn.has(ActiveOffers.offer_id(LANCE)), "%s vs %s" % [got_ids, expected])
 	_t.check("11 the racked starter is never drawn", not drawn.has(ActiveOffers.offer_id(ActiveDefs.SCRAP_ROCKET)), str(drawn.keys()))
 	_t.eq("12 a gate with no bonus core (common) offers no active", build.active_offer("gate", ["common"], on_rng), "")
 
@@ -191,12 +200,14 @@ func _run() -> void:
 		shop.inside = true
 		shop.shelf = shelf
 		var record: Dictionary = shop.shelf_offers()[at]
+		var shelved: String = ActiveOffers.active_of(shelf[at]["part_id"])
+		var row: Dictionary = rack.row_of(shelved)
 		_t.check("24 the shelf record names the active, its rare rung, maker and price",
-			record["active"] == LANCE and record["rarity"] == "rare" and record["maker"] == "mind_glass" and record["price"] > 0
-				and String(record["headline"]).contains("Mind Glass"), str(record))
+			record["active"] == shelved and record["rarity"] == "rare" and record["maker"] == row.get("maker", "")
+				and record["price"] > 0 and String(record["headline"]).contains(ActiveOffers.maker_name(row)), str(record))
 		_game.ctx.run.add_cogs(record["price"] + 50)
 		var bought: Dictionary = shop.buy(at)
-		_t.check("25 buying it racks it and drops the old one", bought["ok"] and rack.active_id == LANCE
+		_t.check("25 buying it racks it and drops the old one", bought["ok"] and rack.active_id == shelved
 			and rack.dropped.any(func(e): return e["id"] == ActiveDefs.SCRAP_ROCKET), str(bought))
 		_t.eq("26 still no part gained", _game.ctx.run.parts, parts_before)
 		shop.inside = false
