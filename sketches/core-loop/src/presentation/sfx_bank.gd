@@ -144,6 +144,11 @@ const TRIM_DB := {
 	"splitter_spawn": -6.0,
 	"linker_presence": -14.0, "linker_tell": -4.0, "linker_break": -3.0, "linker_spawn": -6.0,
 	"hype_drop": -3.0,
+	"jolt_layer_presence": -14.0, "jolt_layer_tell": -4.0, "jolt_layer_jam": -3.0, "jolt_layer_fizzle": -6.0,
+	"jolt_layer_break": -3.0,
+	# The crown's place layers (tools/ace/cut_layers.py): two bars of the crown's own band, under it.
+	"music_layer_crown_hoodoos": -8.0, "music_layer_crown_alcove": -8.0, "music_layer_crown_toppled": -8.0,
+	"music_layer_crown_ramp": -8.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
@@ -258,6 +263,11 @@ const FILE_SOUNDS := {
 	"linker_presence": "specials/linker_presence.wav", "linker_tell": "specials/linker_tell.wav",
 	"linker_break": "specials/linker_break.wav", "linker_spawn": "specials/linker_spawn.wav",
 	"hype_drop": "hype_drop.wav",
+	"jolt_layer_presence": "specials/jolt_layer_presence.wav", "jolt_layer_tell": "specials/jolt_layer_tell.wav",
+	"jolt_layer_jam": "specials/jolt_layer_jam.wav", "jolt_layer_fizzle": "specials/jolt_layer_fizzle.wav",
+	"jolt_layer_break": "specials/jolt_layer_break.wav",
+	"music_layer_crown_hoodoos": "layers/music_layer_crown_hoodoos.wav", "music_layer_crown_alcove": "layers/music_layer_crown_alcove.wav",
+	"music_layer_crown_toppled": "layers/music_layer_crown_toppled.wav", "music_layer_crown_ramp": "layers/music_layer_crown_ramp.wav",
 }
 # hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
 const HYPE_DROP_LEAD_SECONDS := 2.0
