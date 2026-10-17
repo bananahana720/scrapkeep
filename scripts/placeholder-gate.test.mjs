@@ -16,6 +16,8 @@ import {
   missingIcons,
   openAttackRows,
   parkGreybox,
+  isPlainSlope,
+  recipeGlbs,
   parseArgs,
   pendingEntries,
   report,
@@ -110,6 +112,45 @@ test("parkGreybox counts a landmark-dressed row only until the landmark's GLB la
     ],
   );
   assert.deepEqual(parkGreybox("park_sinkhole", doc, (recipe) => recipe === "landmark_sinkhole"), []);
+});
+
+test("parkGreybox passes an anchors kit row only when all three variants have landed", () => {
+  assert.deepEqual(recipeGlbs("anchor_cairn"), ["anchor_cairn_a", "anchor_cairn_b", "anchor_cairn_c"]);
+  assert.deepEqual(recipeGlbs("flume_span"), ["flume_span"]);
+  const doc = {
+    park_rows: [
+      { id: "posts", element: "anchor_field", recipe: "anchor_hoodoo" },
+      { id: "cairns", element: "anchor_field", recipe: "anchor_cairn" },
+    ],
+  };
+  const built = new Set(["anchor_hoodoo_a", "anchor_hoodoo_b", "anchor_hoodoo_c", "anchor_cairn_a", "anchor_cairn_b"]);
+  const found = parkGreybox("park_islands", doc, (recipe) => built.has(recipe));
+  assert.deepEqual(
+    found.map((f) => [f.what, f.count]),
+    [["1 greybox anchor_field (recipe anchor_cairn has no GLB): cairns", 1]],
+  );
+});
+
+test("parkGreybox counts a stamped plain slope as terrain and keeps ride pieces and unstamped slopes", () => {
+  const doc = {
+    park_rows: [
+      { id: "bank_stamped", element: "bank", recipe: "greybox:bank", stamp: "raise", y: null },
+      { id: "mesa_stamped", element: "sky_island", recipe: "greybox:sky_island", stamp: "raise" },
+      { id: "bank_flat", element: "bank", recipe: "greybox:bank", stamp: "", y: null },
+      { id: "bank_floating", element: "bank", recipe: "greybox:bank", stamp: "raise", y: 40 },
+      { id: "tube_stamped", element: "tunnel", recipe: "greybox:tunnel", stamp: "cut", y: null },
+    ],
+  };
+  const found = parkGreybox("park_x", doc, () => false);
+  assert.deepEqual(
+    found.map((f) => [f.what, f.count]),
+    [
+      ["2 greybox bank: bank_flat, bank_floating", 2],
+      ["1 greybox tunnel: tube_stamped", 1],
+    ],
+  );
+  assert.equal(isPlainSlope(doc.park_rows[0]), true);
+  assert.equal(isPlainSlope(doc.park_rows[4]), false);
 });
 
 test("dictKeys reads the keys of one dictionary block and skips comments", () => {

@@ -238,7 +238,7 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary, cells: 
 	var zones := ParkRecipes.clear_zones(park)
 	var posts := PackedVector2Array()
 	for row in park.get("park_rows", []):
-		if String(row.get("recipe", "")) == ParkRecipes.GREYBOX + "anchor_field":
+		if ParkRecipes.is_anchor_field(row):
 			posts.append_array(ParkRecipes.anchor_posts(row, zones))
 	for key in all:
 		var pts := []
