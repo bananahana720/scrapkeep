@@ -23,6 +23,8 @@ var recalls := 0
 
 var _spool: MeshInstance3D
 var _coil: MeshInstance3D
+static var _warned_asset := false
+static var _shared: Array = []
 
 
 func _configure(threat: float) -> void:
@@ -36,9 +38,55 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var parts := _parts()
+	if not parts.is_empty():
+		_crew.free()
+		_crew = null
+		for part in parts:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			if part.flash >= 0:
+				mi.set_surface_override_material(part.flash, _material)
+			_visual_parent().add_child(mi)
+			if part.name == "JoltCoil":
+				_coil = mi
+		return
 	_spool = _cylinder(0.55, 0.5, Palette.CHARCOAL, Vector3(0.0, CREW_HALF + 0.9, -0.25))
 	_spool.rotation.z = PI * 0.5
 	_coil = _cylinder(0.12, 1.6, Palette.ARC, Vector3(0.0, CREW_HALF + 1.6, -0.25), 1.4)
+
+
+# The model (tools/blender/world_one/enemy_jolt_layer.py), read once and shared: the body
+# flashes on its fleet_paint surface, the coil is its own mesh so it can swell.
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_one/enemy_jolt_layer.glb"
+	if not ResourceLoader.exists(path):
+		return _shared
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return _shared
+	var scene := packed.instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var flash := -1
+		for i in mesh.get_surface_count():
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("jolt_layer: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted)
+		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
+	scene.free()
+	return _shared
 
 
 func _commit(_to_ball: Vector3) -> Node3D:

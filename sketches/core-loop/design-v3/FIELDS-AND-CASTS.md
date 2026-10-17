@@ -64,7 +64,7 @@ Three standing rulings bind every row: events never stop the ball (PARK.md), abi
 
 **The rule, one line: a jolt costs you a cast, never your speed.**
 
-A jam shuts the special and the line skill for its seconds and drops anything charging. The weapon, the boost and movement chip, the smash and Q stay open. It goes through the one crowd-control door (`player_ball.crowd_control`), so Rivet's sprint and every immunity already apply.
+A jam shuts the special and the line skill for its seconds and drops anything charging. The weapon, the boost and movement chip, the smash and Q stay open. It goes through the one crowd-control door (`player_ball.crowd_control`), so Rivet's sprint and every immunity already apply. A smash still lands while jammed, but an upgrade that spends the special on it (Crater Slam's discharge) is skipped, because the special is the jammed slot. Pressing the special again or right mouse drops a running cast with nothing spent, like a charging gauge. In the roster row the field's breaks read `speed` and `jump` (the holds vocabulary); an attached line also lets a pulse pass, which that vocabulary has no word for.
 
 Why not a stun. A stun in a rolling game takes the ball away, which breaks the speed pillar and the "learnable and fair" rule at once: the player cannot react during it. A MOBA silence is the closer fit: you keep moving, you lose your spells. The jam is the silence; the dropped gauge or cast is the interrupt. Both are short, both are telegraphed, and both have three answers the ball already owns.
 
@@ -190,7 +190,7 @@ At most two new enemy behaviours per wave (ENEMY-PRIORITY section 4b). Waves 17 
 | Piece | File | What it does |
 | --- | --- | --- |
 | Area field | `src/combat/area_field.gd` | the component and its first row, `static_jam`, with laid and emitter anchors, pulse and lead clocks, and the three breaks |
-| Jolt layer | `src/combat/jolt_layer.gd`, `src/combat/roster_spillway.gd` | a world 1 Fleet controller on the counter loop; spawnable by name, in no pack yet |
+| Jolt layer | `src/combat/jolt_layer.gd`, its `roster.gd` row, `tools/blender/world_one/enemy_jolt_layer.py` | a world 1 Fleet controller on the counter loop with its own model; spawnable by name, in no pack yet |
 | Cast time | `src/core/ability_state.gd`, `src/combat/combat.gd`, `src/combat/ultimate.gd` | `cast` on a row, `begin_cast`, `cancel_cast`, `take_cast_done`; the tap path casts through it; interrupts drop it with nothing spent; a Q row's `cast` is its wind-up |
 | Jam | `src/core/ability_state.gd` | `jam(seconds)` shuts SPECIAL and LINE; their state reads unavailable and a press answers "jammed" |
 | Test | `tests/jolt_layer_test.gd`, `tests/tally_kit_test.gd` | 26 checks: cast rows, cast, jam, field, and a live jolt layer that jolts a slow ball, is slipped by air and by a line, and recalls Q in its wind-up; Tally's test waits out the 0.3 s cast |

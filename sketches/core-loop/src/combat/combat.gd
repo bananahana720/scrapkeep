@@ -1459,6 +1459,13 @@ func _step_special(intent, delta: float) -> void:
 		return
 	var row: Dictionary = _specials[id]
 	if gauge == null:
+		# A second press or right mouse drops a running cast with nothing spent, like a gauge.
+		if abilities.casting == AbilityState.SPECIAL:
+			if intent.special_pressed or intent.cancel_pressed:
+				var dropped: String = abilities.cancel_cast()
+				if dropped != "":
+					ctx.events.gauge_cancelled.emit(dropped, "cancel")
+			return
 		if row.has("tap") and intent.special_pressed:
 			_tap(AbilityState.SPECIAL, id, row["tap"], row.get("commit", Callable()))
 		return
@@ -1526,6 +1533,7 @@ func _tap(slot: String, id: String, cast: Callable, commit := Callable()) -> voi
 				return
 			fire = cast.bind(aim)
 		if not abilities.begin_cast(slot):
+			_refuse_cast(slot, "cooling")
 			return
 		_cast_pending = {"slot": slot, "id": id, "fire": fire}
 		ctx.events.gauge_charging.emit(id)

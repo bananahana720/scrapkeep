@@ -794,7 +794,7 @@ func slots() -> Array:
 			frac = clampf(1.0 - s.recharge / cd, 0.0, 1.0)
 		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": slot_key(name), "cooldown_frac": frac,
 			"charges": s.charges, "max_charges": s.max_charges, "state": state_of(name),
-			"gauge": s.gauge.fraction() if s.gauge != null else 0.0,
+			"gauge": s.gauge.fraction() if s.gauge != null else (cast_fraction() if name == casting else 0.0),
 			"number": int(NUMBER.get(name, 0)), "group": "bar" if name in BAR else "chip",
 			"selected": name == selected, "select_left": select_left() if name == selected else 0.0})
 	return out

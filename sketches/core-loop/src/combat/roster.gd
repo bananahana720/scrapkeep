@@ -3,7 +3,6 @@ extends RefCounted
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Worlds := preload("res://src/core/worlds.gd")
-const RosterSpillway := preload("res://src/combat/roster_spillway.gd")
 const RosterDig := preload("res://src/combat/roster_dig.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
@@ -28,8 +27,9 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 #   standing in until W5 bakes `tag_next`. hold: the hold loop's stand-in.
 # - tests: the build axis it tests, which the director weights against the player's
 #   build ("air", "speed", "heft", "contact", "weapon", "steer", "habit").
-# - script, world: a declared world kind's behaviour file and world (roster_spillway.gd, roster_dig.gd,
-#   roster_highdraft.gd). Such a kind is built, so spawnable, once its script exists.
+# - script, world: a declared later-world kind's behaviour file and world (roster_dig.gd,
+#   roster_highdraft.gd); a base row may name them too (the jolt layer). Such a kind is built,
+#   so spawnable, once its script exists.
 
 const FLEET := "fleet"
 const REACTOR := "reactor"
@@ -108,6 +108,11 @@ const BASE_ROWS := {
 	"gyro_jammer": {"faction": FLEET, "role": "controller", "mechanic": "gyro_drift", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "boost", "smash"], "tag": "hold_riser", "tag_next": "tag_gyro_warble", "hold": "hold_riser", "tests": "steer",
 		"line": "Throws your gyroscope off inside its field: steering drifts side to side until you move out or break it."},
+	# The Spillway's field crew (design-v3/FIELDS-AND-CASTS.md section 2.3): spawnable by name, in
+	# no director pack until wave 19.
+	"jolt_layer": {"faction": FLEET, "role": "controller", "mechanic": "static_jam", "telegraph": T_INSTANT, "holds": false,
+		"breaks": ["speed", "jump"], "tag": "", "tests": "speed", "script": "res://src/combat/jolt_layer.gd", "world": 1,
+		"line": "Unrolls a live cable mat that jolts a slow ball: charges and casts drop and specials jam; roll fast, jump or hook out."},
 	"swatter": {"faction": FLEET, "role": "punisher", "mechanic": "paddle_bat", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "boost"], "tag": "hit_thwack", "tag_next": "tag_paddle_swat", "hold": "", "tests": "steer",
 		"line": "Swings a low paddle arm that bats you along its sweep; jump the paddle, or boost to ride the knock."},
@@ -137,8 +142,8 @@ const BASE_ROWS := {
 #   travels or lunges on the floor, airborne hovers or dives);
 # - threat_feature: the one visible part that is also its warning, what a still at game
 #   camera distance must show. Unique per row, so no two silhouettes share a read.
-# The table sits here, beside the rows, so a declared later-world row (roster_spillway.gd,
-# roster_dig.gd, roster_highdraft.gd) gets its columns without those files changing; _all_rows merges it in.
+# The table sits here, beside the rows, so a declared later-world row (roster_dig.gd,
+# roster_highdraft.gd) gets its columns without those files changing; _all_rows merges it in.
 const CHASSIS_CLASSES := ["crawler", "emplacement", "heavy", "hover", "swarm", "burrower", "cache"]
 const MOVE_CLASSES := ["fixed", "ground", "airborne"]
 
@@ -190,7 +195,7 @@ static var ROWS: Dictionary = _all_rows()
 
 static func _all_rows() -> Dictionary:
 	var rows := BASE_ROWS.duplicate()
-	for table in [RosterSpillway.ROWS, RosterDig.ROWS, RosterHighdraft.ROWS]:
+	for table in [RosterDig.ROWS, RosterHighdraft.ROWS]:
 		for id in table:
 			assert(not rows.has(id), "roster id declared twice: %s" % id)
 			rows[id] = table[id]
