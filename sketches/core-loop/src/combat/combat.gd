@@ -1,6 +1,7 @@
 extends Node
 
 const Chaser := preload("res://src/combat/chaser.gd")
+const EnemyBase := preload("res://src/combat/enemy.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
 const Warden := preload("res://src/combat/warden.gd")
@@ -232,6 +233,9 @@ var _rocket_left := 0.0
 var rocket_cooldown_scale := 1.0
 # Pins already paid, "carrier:knock:victim" -> clock, and how many landed this attempt.
 var _pinned := {}
+# Hulks (KNOCKBACK-FEEL): a body a ram or a pin killed keeps flying for a moment and bowls
+# what lies ahead of it. {at, vel, radius, id, hit: {victim id: true}}; cleared each attempt.
+var _hulks: Array = []
 var pins := 0
 # Upgrade-tree state (upgrade_tree.gd): each proc's next allowed time by node:fact, the
 # pending special echo, marked targets (instance id -> clock the mark ends), the blink's
@@ -433,6 +437,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
 	ctx.player.pressure_grant = _grant_pressure
+	ctx.player.hulk_launch = bowl_hulk
 	ctx.player.mass_of = func() -> float: return ctx.run.mass
 	_reset_ledger()
 	ctx.events.demo_slammed.connect(_on_demo_slammed)
@@ -1236,6 +1241,7 @@ func _physics_process(delta: float) -> void:
 	_step_devices(delta)
 	wear_trail.step(delta, enemies)
 	_pin_step(enemies)
+	_hulk_step(enemies, delta)
 	_bat_by_ball(shells)
 	_decay_shred(delta)
 	_tint()
@@ -3513,12 +3519,61 @@ func _pin_step(enemies: Array) -> void:
 			if _pinned.has(key):
 				continue
 			_pinned[key] = _clock
-			var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed)
-			pins += 1
-			ctx.events.enemy_pinned.emit(victim, damage)
-			victim.knock(to + Vector3.UP * 0.2, speed * Weapons.PIN_CARRY * float(victim.weight))
-			victim.flash()
-			strike(victim, "pin", damage)
+			_pin(victim, to, speed)
+
+
+# One pin: the victim takes the pin strike and flies on at PIN_CARRY of the carrier's speed.
+# A victim the pin kills becomes a hulk in its turn, so a strike runs down a crowd.
+func _pin(victim: Node3D, to: Vector3, speed: float) -> void:
+	var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed)
+	pins += 1
+	ctx.events.enemy_pinned.emit(victim, damage)
+	victim.knock(to + Vector3.UP * 0.2, speed * Weapons.PIN_CARRY * float(victim.weight))
+	victim.flash()
+	strike(victim, "pin", damage)
+	if is_instance_valid(victim) and victim.is_dead():
+		bowl_hulk(victim, to, speed * Weapons.PIN_CARRY)
+
+
+# A body killed by a ram, a crush or a pin keeps its throw as a hulk for up to HULK_SECONDS:
+# it travels along `direction` at `speed`, slowing as a knock does, and pins each body it
+# reaches once, as a knocked enemy would. A posture fighter (a Warden) and a boss piece are
+# never a hulk's victims, so stagger timing is untouched. Below PIN_MIN_SPEED it is spent.
+func bowl_hulk(enemy: Node3D, direction: Vector3, speed: float) -> void:
+	var flat := Vector3(direction.x, 0.0, direction.z)
+	if speed <= Weapons.PIN_MIN_SPEED or flat.length_squared() < 0.0001 or not is_instance_valid(enemy):
+		return
+	_hulks.append({"at": enemy.global_position, "vel": flat.normalized() * speed, "radius": _hull(enemy),
+		"left": Weapons.HULK_SECONDS, "hit": {enemy.get_instance_id(): true}})
+
+
+func _hulk_step(enemies: Array, delta: float) -> void:
+	if _hulks.is_empty():
+		return
+	var live: Array = []
+	for hulk in _hulks:
+		var vel: Vector3 = hulk["vel"]
+		var speed := vel.length()
+		hulk["left"] = float(hulk["left"]) - delta
+		if speed <= Weapons.PIN_MIN_SPEED or float(hulk["left"]) <= 0.0:
+			continue
+		var heading := vel / speed
+		var at: Vector3 = hulk["at"]
+		for victim in enemies:
+			if not _pinnable(victim) or victim.get("weight") == null or (hulk["hit"] as Dictionary).has(victim.get_instance_id()):
+				continue
+			if victim.has_method("fight") and victim.fight() == "posture":
+				continue
+			var to: Vector3 = victim.global_position - at
+			to.y = 0.0
+			if to.length() - float(hulk["radius"]) - _hull(victim) > Weapons.PIN_RADIUS or to.normalized().dot(heading) < 0.5:
+				continue
+			hulk["hit"][victim.get_instance_id()] = true
+			_pin(victim, to, speed)
+		hulk["at"] = at + vel * delta
+		hulk["vel"] = vel.move_toward(Vector3.ZERO, EnemyBase.KNOCK_DECAY * delta)
+		live.append(hulk)
+	_hulks = live
 
 
 static func _pinnable(enemy) -> bool:
@@ -3716,6 +3771,7 @@ func _start_attempt() -> void:
 	_crushes.clear()
 	_shred.clear()
 	_pinned.clear()
+	_hulks.clear()
 	pins = 0
 	# The upgrade tree's pending specials and clocks belong to the attempt that made
 	# them: no echo, sentry, cloud or marks fire into the next one (F002).

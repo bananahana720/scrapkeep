@@ -90,6 +90,9 @@ var heft_of := Callable()
 var mass_of := Callable()
 # Restores Tally's pressure by a count (the stamp landing); combat wires it to _grant_pressure.
 var pressure_grant := Callable()
+# A body a ram or crush just killed keeps flying as a hulk that bowls what is ahead of it
+# (enemy, direction, knock); combat wires it to bowl_hulk. Unwired, a kill bowls nothing.
+var hulk_launch := Callable()
 # E's first claim (world's interact system, claims(face_in_reach: bool) -> bool): true
 # when an interactable takes this press, so it never also plants a pylon.
 var interact_claim := Callable()
@@ -1149,6 +1152,7 @@ func _try_crush(body: Node3D) -> void:
 	if landing:
 		smash_landing = body
 	struck.emit(body, RAM, _landing_force(RAM, speed))
+	_bowl_if_killed(body, planar_velocity(), Contact.ram_knock(Augments.RAM_KNOCK, speed, heft(), _landing_mult))
 	if landing:
 		_finish_landing(body, closing)
 	smash_landing = null
@@ -1237,7 +1241,7 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
-		var hits := _push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM)
+		var hits := _push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM, Contact.heft_knock(heft()))
 		if hits > 0:
 			events.drop_landed.emit(hits)
 		else:
@@ -1374,7 +1378,8 @@ func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:
 	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK * tree.knob("plant_repel"), "")
 
 
-func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> int:
+# knock_mult scales the shove only; the strike keeps force, so damage is unchanged.
+func _push_enemies(at: Vector3, radius: float, force: float, kind: String, knock_mult := 1.0) -> int:
 	var hits := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		var away: Vector3 = enemy.global_position - at
@@ -1384,7 +1389,8 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> in
 		away.y = 0.0
 		away = away.normalized() if away.length() > 0.01 else Vector3.FORWARD
 		var falloff := 1.0 - reach / radius
-		enemy.knock(away + Vector3.UP * 0.5, force * falloff)
+		# Heft adds throw up to the knock ceiling, never under the plain shove.
+		enemy.knock(away + Vector3.UP * 0.5, minf(force * falloff * knock_mult, maxf(force * falloff, Contact.KNOCK_CEILING)))
 		enemy.flash()
 		hits += 1
 		if kind != "":
@@ -1430,14 +1436,24 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
 		_rebound(enemy, normal, before, planar, away)
 	elif SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
-		enemy.knock(away + Vector3.UP * 0.35, Augments.RAM_KNOCK * _landing_mult)
+		var shove := Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult)
+		enemy.knock(away + Vector3.UP * 0.35, shove)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)
 		# Planar speed, the same measure punch_now and the crush check use (one query).
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
+		_bowl_if_killed(enemy, away, shove)
 	if landing:
 		_finish_landing(enemy, closing)
 	smash_landing = null
+
+
+# A ram that killed hands its shove to the hulk, which bowls on along the ball's travel.
+func _bowl_if_killed(enemy: Node3D, direction: Vector3, shove: float) -> void:
+	if not hulk_launch.is_valid() or not is_instance_valid(enemy) or not enemy.has_method("is_dead") or not enemy.is_dead():
+		return
+	var weight = enemy.get("weight")
+	hulk_launch.call(enemy, Vector3(direction.x, 0.0, direction.z), shove / maxf(float(weight) if weight != null else 1.0, 0.1))
 
 
 # The first contact of a committed haul lets the line go, so the ordinary contact (stomp,
