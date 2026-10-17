@@ -13,12 +13,13 @@ at the paws' ground contact).
 
 camp_pet_pen: the pet's yard, a low ring fence of 9 m radius with a 9 m gap facing +Z (the plaza side), a kennel made from a cut
 oil drum with a little copper roof (entrance facing +Z), a food bowl full of bolts, a toy-bin crate and a worn patch of dirt.
-Origin at the pen's centre on the ground, +Z toward the plaza. Class detail. Collision: fence posts and rails as boxes, the
-kennel as a box. Sockets: kennel (entrance, ball height), bowl, toy_bin, pet_home (where the pet idles, on the dirt patch).
+Origin at the pen's centre on the ground, +Z toward the plaza. Class detail. Collision: the fence as eight chord boxes round
+the ring (gap left open) and the kennel as a box. Sockets: kennel (entrance, ball height), bowl, toy_bin, pet_home (where the pet idles, on the dirt patch).
 
 camp_toy_ball (a 0.6 m striped felt ball), camp_toy_wrench (a chunky squeaky wrench lying flat) and camp_toy_tire (a small tyre
 ring lying flat): pet toys the player can bump. Origin at each toy's centre of mass (so y is symmetric about 0). Class prop each,
-one draw. Collision: a faceted ball (convex lathe), a box, and a 12-sided cylinder.
+one draw. Collision: one box each (the ball's is its bounding cube; the runtime may use a SphereShape3D radius 0.3 instead), kept to a box
+because the class budget covers the collision mesh too.
 
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/camp/pet.py [-- --out-dir DIR] [--count-only]
 """
@@ -240,7 +241,17 @@ def pen_sockets():
 
 
 def pen_col(s):
-    fence(s, col=True)
+    # Eight straight boxes round the ring (the arc from the +30 to the -30 degree gap edge), thick enough to cover the fence
+    # line where a chord drifts inside it; the class budget covers collision too, so no per-post boxes.
+    n, lo, hi = 8, 30.0, 330.0
+    step = math.radians((hi - lo) / n)
+    half = step / 2
+    sag = PEN_R * (1 - math.cos(half))
+    for i in range(n):
+        mid = math.radians(lo) + step * (i + 0.5)
+        ln = 2 * PEN_R * math.sin(half) + 0.35
+        rc = PEN_R * math.cos(half) + sag / 2
+        cp.obox(s, (ln, 1.0, 0.35 + sag), (rc * math.sin(mid), 0.5, rc * math.cos(mid)), T["timber"], yaw=mid)
     kennel_box(s)
 
 
@@ -269,7 +280,8 @@ def ball(s):
 
 
 def ball_col(s):
-    lathe(s, BALL_R, [math.radians(a) for a in (-75, -35, 0, 35, 75)], ["iron"] * 4, 8)
+    # One box: the ball is bumped as a rolling toy and the runtime may use a SphereShape3D (radius 0.3) instead.
+    s.box((2 * BALL_R, 2 * BALL_R, 2 * BALL_R), (0.0, 0.0, 0.0), T["iron"])
 
 
 def wrench(s):
@@ -311,7 +323,7 @@ def tire(s):
 
 
 def tire_col(s):
-    pk.frustum(s, 0.5, 0.5, -TIRE_T, TIRE_T, 12, T["iron"])
+    s.box((1.0, 2 * TIRE_T, 1.0), (0.0, 0.0, 0.0), T["iron"])
 
 
 def main():

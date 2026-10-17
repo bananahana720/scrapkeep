@@ -225,12 +225,11 @@ def crate_stack(s):
     n = (math.sin(0.35), math.cos(0.35))
     cp.obox(s, (0.34, 0.22, 0.03), (fx + n[0] * 0.07, 0.62, fz + n[1] * 0.07), T["brass"], yaw=0.35)
     cp.obox(s, (0.2, 0.05, 0.02), (fx + n[0] * 0.09, 0.62, fz + n[1] * 0.09), T["iron"], yaw=0.35)
-    cp.obox(s, (0.02, 0.18, 0.02), (fx + n[0] * 0.075 - 0.14 * math.cos(0.35), 0.82, fz + n[1] * 0.075 + 0.14 * math.sin(0.35)), T["canvas_dk"], yaw=0.35)
 
 
 def crate_col(s):
-    cp.obox(s, (1.2, 1.2, 1.2), (-0.55, 0.6, 0.0), "iron", yaw=0.05)
-    cp.obox(s, (1.0, 1.0, 1.0), (-0.5, 1.7, -0.05), "iron", yaw=-0.25)
+    # Two boxes (the class budget covers collision too): the two-high stack as one column, the single crate beside it.
+    cp.obox(s, (1.15, 2.2, 1.15), (-0.55, 1.1, -0.02), "iron", yaw=-0.1)
     cp.obox(s, (0.95, 0.95, 0.95), (0.85, 0.475, 0.25), "iron", yaw=0.35)
 
 

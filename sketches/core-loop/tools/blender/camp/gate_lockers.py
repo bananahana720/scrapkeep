@@ -18,7 +18,8 @@ toward +Z), about 22 m wide, in the PILOTS order left to right (-X to +X). Each 
 emblem (ring, chevron, burst, cross, square, lane), a round turntable plinth where the pilot stands, a shelf, a coat
 hook and a timber bench in front; one canvas awning roof over all six. Origin on the ground at the arc's centre line
 (middle of the cabinets' fronts); +Z faces the plaza. Class gate.
-Collision: each bay's back and two side walls as boxes, and each bench. Not the cubby insides.
+Collision: seven boxes: the back wall as two three-bay runs, the two end walls and the benches as two three-bay runs (no
+per-bay dividers; the class budget covers collision too). Not the cubby insides.
 Sockets: locker_<pilot id> at each plinth's top centre, interact (front centre, y 1.0).
 detail1: vents, hinges, padlocks, rivets. detail2: hanging helmet, goggles, scarf and tool silhouettes, stickers.
 
@@ -339,8 +340,8 @@ def bay_shell(b, k, pid, cname, shape):
     bx(b, (3.2, 0.55, 0.3), (0, 3.7, 0.95), T["petrol_dk"])
     bx(b, (3.0, 0.3, 0.06), (0, 3.7, 1.13), T[cname])
     # Turntable: iron drum, copper top ring; the pilot stands at its centre.
-    pk.frustum(b, 0.9, 0.85, 0.0, 0.25, 10, T["iron_hi"], caps=(False, True), at=(0, -0.1))
-    pk.frustum(b, 0.72, 0.72, 0.25, 0.32, 10, T["copper"], caps=(False, True), at=(0, -0.1))
+    pk.frustum(b, 0.9, 0.85, 0.0, 0.25, 8, T["iron_hi"], caps=(False, True), at=(0, -0.1))
+    pk.frustum(b, 0.72, 0.72, 0.25, 0.32, 8, T["copper"], caps=(False, True), at=(0, -0.1))
     # Shelf with two brackets, and the coat hook.
     bx(b, (2.6, 0.1, 0.55), (0, 2.7, BAY_BACK + 0.5), T["timber"])
     for sx in (-1, 1):
@@ -376,12 +377,19 @@ def lockers(s):
 
 
 def lockers_col(s):
-    for k in range(len(cp.PILOTS)):
+    """Seven boxes (the class budget covers collision too): the back wall as two three-bay runs, the two end walls, and the
+    benches as two three-bay runs. A run is one straight box in the middle bay's frame, deep enough to cover the arc's drift
+    (the bays curve toward +Z by up to ~0.4 m at a run's ends), so no per-bay dividers; the cubby insides stay open."""
+    def sag(half):
+        return ARC_R * (1 - math.cos(half / ARC_R))
+    for k in (1, 4):
         b = bay_frame(s, k)
-        for sx in (-1, 1):
-            bx(b, (0.2, 4.0, BAY_FRONT - BAY_BACK), (sx * 1.5, 2.0, (BAY_FRONT + BAY_BACK) / 2), T["iron"])
-        bx(b, (3.5, 4.0, 0.2), (0, 2.0, BAY_BACK + 0.1), T["iron"])
-        bx(b, (2.0, 0.61, 0.5), (0, 0.305, BENCH_Z), T["iron"])
+        d = 0.2 + sag(5.15) / 2
+        bx(b, (10.3, 4.0, d), (0, 2.0, BAY_BACK + d / 2), T["iron"])
+        d = 0.5 + sag(4.4)
+        bx(b, (8.8, 0.61, d), (0, 0.305, BENCH_Z - 0.25 + d / 2), T["iron"])
+    for k, sx in ((0, -1), (5, 1)):
+        bx(bay_frame(s, k), (0.2, 4.0, BAY_FRONT - BAY_BACK), (sx * 1.5, 2.0, (BAY_FRONT + BAY_BACK) / 2), T["iron"])
 
 
 def lockers_sockets():

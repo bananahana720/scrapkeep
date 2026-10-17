@@ -8,7 +8,7 @@ src/core/achievements.gd ROWS has 61 rows (counted from the table, one `"id": {`
 rows left-to-right, top-to-bottom, with 6 plaques in the last row. Two shelf ledges hold trophies: one across the board
 between the third and fourth plaque rows (cups, a ball, a harpoon tip) and one in the empty right end of the last row.
 Plaques are dim on purpose; the runtime lights earned ones. Origin on the ground at the footprint centre, +Z faces the
-plaza. Class gate (2700 tris). Collision: both legs with their footings and the board slab.
+plaza. Class gate (2700 tris). Collision: both legs and the board slab (three boxes; the footings are drawn only).
 Sockets: plaque_00..plaque_60 (centre of each plaque face, in table order), board (face centre), interact (front centre,
 ball height), light_0 and light_1 (the two lamp bulbs).
 
@@ -56,10 +56,10 @@ def cup(s, x, y, z, k, color="copper", k2=1.0):
 
 def ball(s, x, y, z):
     lh(s, x - 0.14, x + 0.14, y, y + 0.05, z - 0.12, z + 0.12, "iron_hi")
-    pk.frustum(s, 0.09, 0.17, y + 0.05, y + 0.14, 8, T["concrete_lt"], caps=(True, False), at=(x, z))
-    pk.frustum(s, 0.17, 0.17, y + 0.14, y + 0.27, 8, T["concrete_lt"], caps=(False, False), at=(x, z))
-    pk.frustum(s, 0.17, 0.09, y + 0.27, y + 0.36, 8, T["concrete_lt"], caps=(False, True), at=(x, z))
-    pk.frustum(s, 0.175, 0.175, y + 0.19, y + 0.22, 8, T["copper"], caps=(False, False), at=(x, z))
+    pk.frustum(s, 0.09, 0.17, y + 0.05, y + 0.14, 6, T["concrete_lt"], caps=(True, False), at=(x, z))
+    pk.frustum(s, 0.17, 0.17, y + 0.14, y + 0.27, 6, T["concrete_lt"], caps=(False, False), at=(x, z))
+    pk.frustum(s, 0.17, 0.09, y + 0.27, y + 0.36, 6, T["concrete_lt"], caps=(False, True), at=(x, z))
+    pk.frustum(s, 0.175, 0.175, y + 0.19, y + 0.22, 6, T["copper"], caps=(False, False), at=(x, z))
 
 
 def harpoon(s, x, y, z):
@@ -167,9 +167,10 @@ def wall_sockets():
 
 
 def wall_col(s):
+    # Three boxes (the class budget covers collision too): each leg from the ground, and the board slab. The low footings
+    # (0.45 m) are drawn only; the ball rolls over their lip into the leg box.
     for sx in (-1, 1):
-        lh(s, sx * LEG_X - 0.7, sx * LEG_X + 0.7, 0.0, 0.45, -0.9, 0.9, "iron")
-        lh(s, sx * LEG_X - 0.3, sx * LEG_X + 0.3, 0.45, 6.6, -0.4, 0.4, "iron")
+        lh(s, sx * LEG_X - 0.3, sx * LEG_X + 0.3, 0.0, 6.6, -0.4, 0.4, "iron")
     lh(s, -6.0, 6.0, 1.0, 6.0, -0.25, 0.3, "iron")
 
 
@@ -285,7 +286,7 @@ def console(s):
     lh(s, 2.45, 2.55, 1.22, 1.3, -0.06, 0.02, "iron_hi")
     # Mast, back left, with a dish and three guys.
     mx, mz = -2.6, -0.8
-    pk.tube(s, (mx, 0.0, mz), (mx, 8.0, mz), 0.13, 0.08, 6, T["iron_hi"], caps=(True, True))
+    pk.tube(s, (mx, 0.0, mz), (mx, 8.0, mz), 0.13, 0.08, 6, T["iron_hi"], caps=(False, True))
     lh(s, mx - 0.4, mx + 0.4, 0.0, 0.2, mz - 0.4, mz + 0.4, "concrete")
     for y in (2.5, 5.0):
         lh(s, mx - 0.5, mx + 0.5, y, y + 0.07, mz - 0.03, mz + 0.03, "copper")
@@ -295,7 +296,7 @@ def console(s):
     d = (0.0, 0.34, 0.94)
     back = dy
     rim = tuple(back[i] + d[i] * 0.3 for i in range(3))
-    pk.tube(s, back, rim, 0.05, 0.6, 8, T["copper_dk"], caps=(True, True))
+    pk.tube(s, back, rim, 0.05, 0.6, 8, T["copper_dk"], caps=(False, True))
     face = tuple(rim[i] + d[i] * 0.01 for i in range(3))
     pk.tube(s, face, tuple(face[i] + d[i] * 0.02 for i in range(3)), 0.5, 0.5, 8, T["concrete_lt"], caps=(True, True))
     horn = tuple(rim[i] + d[i] * 0.35 for i in range(3))

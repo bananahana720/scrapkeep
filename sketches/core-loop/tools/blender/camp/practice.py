@@ -22,7 +22,8 @@ camp_trial_arch (gate): the start/finish arch. Origin on the ground at the centr
 little cages (bronze = copper bulb, silver = bone, gold = amber). Collision: the posts. Sockets: timer, light_bronze,
 light_silver, light_gold.
 
-camp_sandbox_yard (detail): the any-enemy sandbox: a fenced round yard (21.5 m fence radius) with an 8 m entry gap facing +Z,
+camp_sandbox_yard (park_large, like the plaza and trial track: a 44 m walk-on yard with a floor, so it takes the large budget
+rather than detail, and the class cap covers its collision mesh too): the any-enemy sandbox: a fenced round yard (21.5 m fence radius) with an 8 m entry gap facing +Z,
 a raked sand floor slab, iron rails on copper posts, a concrete block and a tyre stack for hard cover, and on the far side a
 6 m round iron spawn grate with a brass Fleet requisition chevron. Origin at the yard centre on the ground; +Z is the entry.
 Collision: fence posts, rails and the two cover pieces. Sockets: entry, spawn_pad, enemy_spawn_0..3, call_box.
@@ -621,7 +622,7 @@ def main():
     args = cp.options()
     cp.export("camp_trial_track", track, "park_large", args, col=track_col, sockets=track_sockets(), check=check_track)
     cp.export("camp_trial_arch", arch, "gate", args, col=arch_col, sockets=arch_sockets(), check=check_arch)
-    cp.export("camp_sandbox_yard", yard, "detail", args, col=yard_col, sockets=yard_sockets(), check=check_yard)
+    cp.export("camp_sandbox_yard", yard, "park_large", args, col=yard_col, sockets=yard_sockets(), check=check_yard)
     cp.export("camp_call_box", call_box, "detail", args, col=call_box_col, sockets=call_box_sockets(), check=check_call_box)
 
 

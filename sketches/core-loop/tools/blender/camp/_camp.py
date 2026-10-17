@@ -184,6 +184,16 @@ def metrics(path):
             "meshes": sorted(names.values())}
 
 
+def _file_totals(path):
+    """Triangles and vertices over every primitive in the GLB, the way asset-inspect.mjs counts them."""
+    data = path.read_bytes()
+    length = int.from_bytes(data[12:16], "little")
+    doc = json.loads(data[20:20 + length])
+    prims = [p for m in doc["meshes"] for p in m["primitives"]]
+    return (sum(doc["accessors"][p["indices"]]["count"] // 3 for p in prims),
+            sum(doc["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims))
+
+
 def export(name, fn, cls, args, col=None, sockets=None, check=None):
     """Builds one GLB: the drawn mesh "Body" (one enamel draw), the optional collision mesh and the socket empties.
     Fails loud when the drawn mesh is over its class or check(surface) refuses it. Returns its metrics row."""
@@ -194,6 +204,9 @@ def export(name, fn, cls, args, col=None, sockets=None, check=None):
     tris = tri_count(s)
     assert tris <= cap["tris"], (name, "triangles", tris, cap["tris"], cls)
     c = surface(name + "-col", col) if col is not None else None
+    # npm run asset:inspect counts every triangle in the file, so the class cap covers the collision mesh too.
+    total = tris + (tri_count(c) if c else 0)
+    assert total <= cap["tris"], (name, "triangles incl. collision", total, cap["tris"], cls)
     lo, hi = bounds(s)
     row = {"file": name + ".glb", "class": cls, "tris": tris, "col_tris": tri_count(c) if c else 0,
            "bounds_min": [round(v, 3) for v in lo], "bounds_max": [round(v, 3) for v in hi],
@@ -215,6 +228,8 @@ def export(name, fn, cls, args, col=None, sockets=None, check=None):
     common.export(root, str(path))
     m = metrics(path)
     assert m["triangles"] <= cap["tris"] and m["vertices"] <= cap["verts"] and m["draws"] <= cap["draws"], (name, m, cap)
+    all_tris, all_verts = _file_totals(path)
+    assert all_tris <= cap["tris"] and all_verts <= cap["verts"], (name, "file totals incl. collision", all_tris, all_verts, cap)
     assert m["materials"] == [SLOT], (name, m["materials"])
     if c is not None:
         assert COL_NODE % name in m["nodes"], (name, "missing collision node")
