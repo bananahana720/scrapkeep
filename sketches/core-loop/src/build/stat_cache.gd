@@ -4,6 +4,7 @@ const BuildSheet := preload("res://src/build/build_sheet.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const PartSets := preload("res://src/build/part_sets.gd")
 
 # SI5 stat cache (W13-INTEGRATION-3 SI5; comps/isaac/items-and-synergies.md). The build's
 # derived sheet, kept between part-list changes. Each part declares the sheet categories
@@ -89,7 +90,7 @@ static func _touching(held: Array, category: String) -> Array:
 	return out
 
 
-# Synergies, consumed evolutions and tag rules, then their transformers and dials. A held
+# Synergies, consumed evolutions, tag rules and sets, then their transformers and dials. A held
 # Evolved part counts only while its pair is consumed, so a consumed change refolds its
 # categories; a changed row set refolds the categories rows feed.
 func _refold_synergy(held: Array, dirty: Array) -> void:
@@ -103,6 +104,7 @@ func _refold_synergy(held: Array, dirty: Array) -> void:
 			_live.append(key)
 	_sheet.synergies = _live.filter(func(key): return not key in _sheet.consumed)
 	_sheet.rules = Synergies.active_rules(sets)
+	_sheet.sets = PartSets.complete(held)
 	_sheet.transformers = []
 	_sheet.dials = {}
 	for row in _rows():
@@ -129,18 +131,20 @@ func _refold_synergy(held: Array, dirty: Array) -> void:
 						dirty.append(category)
 
 
-# The row keys from_parts folds: live synergies (consumed appended), then tag rules.
+# The row keys from_parts folds: live synergies (consumed appended), tag rules, then sets.
 func _row_keys() -> Array:
-	return _live + _sheet.rules
+	return _live + _sheet.rules + _sheet.sets.map(func(key): return PartSets.row_key(key))
 
 
-# The synergy and tag-rule rows, in from_parts order.
+# The synergy, tag-rule and set rows, in from_parts order.
 func _rows() -> Array:
 	var rows: Array = []
 	for key in _live:
 		rows.append(Synergies.ROWS[key])
 	for key in _sheet.rules:
 		rows.append(Synergies.TAG_RULES[key])
+	for key in _sheet.sets:
+		rows.append(PartSets.row(key))
 	return rows
 
 
