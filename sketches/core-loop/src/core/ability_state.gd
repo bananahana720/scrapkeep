@@ -81,7 +81,10 @@ const RUN_EPSILON := 0.000001
 # share beyond the drawn edge, so what you see is never bigger than what can hit.
 const FORGIVENESS := 0.18
 # Cast times and the jam (design-v3/FIELDS-AND-CASTS.md sections 3 and 4). A row's `cast` is the
-# seconds between the press and the effect; the ball keeps rolling at full speed the whole time.
+# seconds between the press and the effect; the ball keeps rolling at full speed the whole time,
+# unless the row has `plant`: Andrew's "Depends on the pilot" (Q2, 2026-10-17 22:12:39Z) has the
+# heavy pilots, Tarn and the Cannon, plant for their heavy casts (their Q variants), braking to a
+# stop through the wind-up by their own choice; Sable, Kest, Rivet and Tally cast on the move.
 # An interrupting hit (the crowd-control door) drops a running cast with nothing spent, as it
 # drops a gauge. A jam (an enemy field's pulse) shuts the SILENCED slots for its seconds: the
 # weapon, the movement chip, the smash and Q stay open, so a jam never takes the ball's speed.
@@ -111,7 +114,8 @@ const UNSTARTED := ""
 #   ultimate  paths (preference order over line, arc, rail), beats (0 lets the path length
 #             set the flight beats, a positive number fixes them), hold_beats (a hold leg
 #             before the last leg), variant_of (a depth-3 row names its base ultimate)
-#   any slot  cast (seconds from the press to the effect, 0 or absent for none), family (lane, split_lane, plate or rush: the Mind family this slot commits),
+#   any slot  cast (seconds from the press to the effect, 0 or absent for none), plant (the
+#             pilot plants, braking to a stop, through that cast), family (lane, split_lane, plate or rush: the Mind family this slot commits),
 #             pool (the slot whose charges this row spends: Tally's slots 2 and 3 spend
 #             slot 1's pressure). A special or line row with no charge_max is a tap: it
 #             casts on the press.
@@ -170,8 +174,8 @@ const ABILITIES := {
 	# --- P-C Tarn rows -------------------------------------------------------------------
 	"claw_drag": {"icon": "ab_tarn_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"redjaw_rend": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"rake_run": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST},
-	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST},
+	"rake_run": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST, "plant": true},
+	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST, "plant": true},
 	# --- end Tarn ---
 	# --- P-C Tally rows ------------------------------------------------------------------
 	# pilots/tally.md section 3: Balance Due alone spends pressure; Gather Plate and the Ledger
@@ -186,8 +190,8 @@ const ABILITIES := {
 	# --- P-C Cannon rows -----------------------------------------------------------------
 	"cannon_lane_charge": {"icon": "ab_cannon_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "family": "lane"},
 	"cannon_fire_mission": {"icon": "ab_cannon_ult", "paths": ["arc", "line", "rail"], "beats": 0},
-	"cannon_creeping_barrage": {"icon": "ab_cannon_ult", "paths": ["line", "rail", "arc"], "beats": 0, "variant_of": "cannon_fire_mission", "cast": VARIANT_CAST},
-	"cannon_plate_mortar": {"icon": "ab_cannon_ult", "paths": ["arc"], "beats": 6, "variant_of": "cannon_fire_mission", "cast": VARIANT_CAST},
+	"cannon_creeping_barrage": {"icon": "ab_cannon_ult", "paths": ["line", "rail", "arc"], "beats": 0, "variant_of": "cannon_fire_mission", "cast": VARIANT_CAST, "plant": true},
+	"cannon_plate_mortar": {"icon": "ab_cannon_ult", "paths": ["arc"], "beats": 6, "variant_of": "cannon_fire_mission", "cast": VARIANT_CAST, "plant": true},
 	# --- end Cannon ---
 }
 const ICON_DIR := "res://assets/icons/"

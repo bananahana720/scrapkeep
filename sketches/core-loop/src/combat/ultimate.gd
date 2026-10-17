@@ -31,6 +31,8 @@ const FLIGHT := "flight"
 const RECOVER := "recover"
 
 const WINDUP_SECONDS := 0.35
+# A planting wind-up (a row's `plant`) brakes the ball's planar speed to a stop within this long.
+const PLANT_STOP_SECONDS := 0.15
 const RECOVER_SECONDS := 0.25
 const FLIGHT_SPEED := 18.0
 const FLIGHT_MIN := 1.6
@@ -511,6 +513,22 @@ func winding_up() -> bool:
 	return _phase == WINDUP
 
 
+# Whether this Q's wind-up plants the pilot (Tarn's and the Cannon's variants).
+func plants() -> bool:
+	return bool(AbilityState.ABILITIES.get(_ult_id(), {}).get("plant", false))
+
+
+# The plant is the pilot's own heavy stance, the one cast that stops the ball, and only while
+# its wind-up runs; the fall stays as it is.
+func _plant(delta: float) -> void:
+	var v: Vector3 = ctx.player.state.velocity
+	var flat := Vector3(v.x, 0.0, v.z)
+	if flat.length() < 0.01:
+		return
+	flat *= maxf(0.0, 1.0 - delta / PLANT_STOP_SECONDS)
+	ctx.player.set_velocity_now(Vector3(flat.x, v.y, flat.z), "ultimate")
+
+
 # Q in the wind-up: cancel with a full refund. A field's jolt calls it too (jolt_layer.gd).
 func recall() -> void:
 	if _phase != WINDUP:
@@ -579,6 +597,8 @@ func step(delta: float) -> void:
 	match _phase:
 		WINDUP:
 			_left -= delta
+			if plants():
+				_plant(delta)
 			if _left <= 0.0:
 				_begin_flight()
 		FLIGHT:

@@ -575,7 +575,7 @@ const ATTACK_ROWS := {
 	"E24": {"label": "Kite drone dive", "group": "enemy", "owner_kind": "roster", "owner": "kite_drone", "allegiance": "hostile", "threat": "threat_instant", "glyph": "diamond", "color": Palette.HAZARD,
 		"pose": "e24_wings_fold", "warn": "atk_e24_warn", "release": "atk_e24_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
 	"E27": {"label": "Jolt layer mat", "group": "enemy", "owner_kind": "roster", "owner": "jolt_layer", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
-		"pose": "e27_coil_swell", "warn": "atk_e27_warn", "release": "atk_e27_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
+		"pose": "e27_coil_swell", "warn": "atk_e27_warn", "release": "atk_e27_release", "floor": "B", "open": []},
 	"W01": {"label": "Reactor Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w01_vents_lift", "warn": "atk_w01_warn", "release": "atk_w01_release", "floor": "B", "open": []},
 	"W02": {"label": "Hive Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
