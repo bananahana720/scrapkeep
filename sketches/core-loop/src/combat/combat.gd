@@ -535,7 +535,10 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
-		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
+		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
+		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
+		if source != "fuse":
+			ctx.run.record_kill(kind, where, scrap, source)
 		var id := enemy.get_instance_id()
 		_primed.erase(id)
 		_prow_until.erase(id)

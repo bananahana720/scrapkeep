@@ -121,6 +121,7 @@ func _run() -> void:
 	var ring_at_hit := []
 	pod.hit_player.connect(func(amount: float, _shove: Vector3): hits.append(amount))
 	var gone := [false]
+	var kills_before: int = game.run.kills
 	pod.died.connect(func(_at: Vector3, scrap: int): gone[0] = true; ring_at_hit.append(scrap))
 	for frame in 600:
 		game.player.reset_to(ball)
@@ -129,6 +130,7 @@ func _run() -> void:
 		await physics_frame
 	t.check("the blast hits a ball inside its ring", hits.size() == 1 and is_equal_approx(hits[0], Pod.BLAST_DAMAGE), str(hits))
 	t.check("the pod is spent by its blast and pays nothing", gone[0] and ring_at_hit == [0], str(ring_at_hit))
+	t.check("a spent pod crumbling is no kill", game.run.kills == kills_before, "%d kills, %d before" % [game.run.kills, kills_before])
 
 	# A ball that leaves the ring during the fuse is not hit.
 	_clear()
@@ -150,6 +152,18 @@ func _run() -> void:
 	var rammed := await _kill("ram", 2.5)
 	t.check("a ram splits it", rammed[0] == true, str(rammed))
 	t.eq("a ram leaves three pods", rammed[1], Splitter.SPLIT_PODS)
+
+	# A stage reset during the seam flare takes the flare with it: no pods pop into the retry.
+	_clear()
+	game.player.reset_to(ball)
+	var doomed := _spawn(Vector3(2.5, 0.0, 0.0))
+	await _frames(2)
+	doomed.hp = 1.0
+	game.combat.strike(doomed, "ram", 60.0)
+	game.ctx.events.stage_content_cleared.emit("test")
+	await _frames(int(ceil(Splitter.POP_DELAY * Engine.physics_ticks_per_second)) + 4)
+	t.eq("a reset mid-flare pops nothing", _pods().size(), 0)
+	t.eq("and leaves no flare", get_nodes_in_group(Splitter.PENDING).size(), 0)
 
 	# A close shot splits it too; a stomp, a slam or any hit from 15 m kills it clean.
 	var close := await _kill("arc", 6.0)

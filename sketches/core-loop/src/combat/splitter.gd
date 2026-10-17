@@ -4,8 +4,8 @@ extends "res://src/combat/counter.gd"
 # 2026-10-17 18:19Z: "they chase the player ... keep splitting ... the one that's the mama"):
 # a fat crawler of three welded pods that chases the ball and keeps budding fuse pods off
 # itself (splitter_pod.gd), each one a small mech that chases you and blows up. The mama is
-# the source: while it lives the pods keep coming, up to POD_CAP at once, so the read is to
-# find it and kill it. How it dies matters too:
+# the source: while it lives the pods keep coming, faster each time, up to POD_CAP at once,
+# so the read is to find it and kill it. How it dies matters too:
 #
 # - killed at ground level from close (a ram, a close shot or claw): its seams flare white
 #   for POP_DELAY and it pops into SPLIT_PODS more pods;
@@ -27,27 +27,34 @@ const PIECE_GLB := "res://assets/models/world_one/enemy_splitter_piece.glb"
 
 signal special_tell(moment: String)
 
-const HP := 90.0
+const HP := 140.0
 const SCRAP := 6
 const WEIGHT := 2.0
 # The recipe's suggested collider (tools/blender/world_one/enemy_splitter.py).
 const BODY_RADIUS := 1.3
 const BODY_HALF := 1.35
 const WALK := 6.0
-const CLOSE := 2.5
-const BUD_FIRST := 2.0
-const BUD_EVERY := 4.5
-const POD_CAP := 3
+# It follows inside this band: close enough to keep its pods coming, far enough that it has
+# to be picked out of the crowd and gone after, not rammed by accident.
+const NEAR := 7.0
+const FAR := 13.0
+# Each bud comes sooner than the last (BUD_STEP), down to BUD_FASTEST: leaving it alone gets
+# worse the longer it lives.
+const BUD_FIRST := 1.2
+const BUD_EVERY := 4.0
+const BUD_STEP := 0.5
+const BUD_FASTEST := 1.5
+const POD_CAP := 4
 const CLEAN_RANGE := 15.0
 const CLEAN_KINDS := ["stomp", "slam"]
 const POP_DELAY := 0.4
 const SPLIT_PODS := 3
-const POD_SPREAD := 1.8
+const POD_SPREAD := 2.1
 const SEAM_IDLE := 0.4
 const SEAM_FLARE := 4.0
 const SEAM_WHITE := Color("f4efe2")
 const SEAM_BRASS := Palette.BRASS
-# A seam flare not yet popped: enemies still to come, so a fight is not over while one stands.
+# A seam flare not yet popped: enemies still to come (the priority proof waits on it).
 const PENDING := "enemy_pending"
 
 var split := false
@@ -64,20 +71,13 @@ func _configure(threat: float) -> void:
 	scrap_value = SCRAP
 	weight = WEIGHT
 	walk_speed = WALK
-	keep_near = 0.0
-	keep_far = 0.0
+	keep_near = NEAR
+	keep_far = FAR
 
 
-# It runs you down; close in, it circles.
+# It follows you in its band and circles there; it stands still while a pod buds.
 func _roam(to_ball: Vector3) -> Vector3:
-	if _flare_left > 0.0:
-		return Vector3.ZERO
-	var distance := to_ball.length()
-	if distance < 0.1:
-		return Vector3.ZERO
-	if distance > CLOSE:
-		return to_ball / distance * walk_speed
-	return (to_ball / distance).cross(Vector3.UP) * _strafe * walk_speed * 0.5
+	return Vector3.ZERO if _flare_left > 0.0 else super(to_ball)
 
 
 func _wants_attack(_to_ball: Vector3) -> bool:
@@ -104,7 +104,7 @@ func _physics_process(delta: float) -> void:
 
 # One pod comes off the side facing the ball and runs at it.
 func _bud() -> void:
-	_bud_clock = BUD_EVERY
+	_bud_clock = bud_interval(buds + 1)
 	if fleet == null or fleet.combat == null:
 		return
 	var to_ball := _flat_to_ball()
@@ -121,6 +121,11 @@ func _bud() -> void:
 static func _join_pack(pod: Node3D, pack: int) -> void:
 	if pack >= 0:
 		pod.set_meta("pack_seq", pack)
+
+
+# Seconds until the next bud once `count` pods have budded.
+static func bud_interval(count: int) -> float:
+	return maxf(BUD_FASTEST, BUD_EVERY - BUD_STEP * (count - 1))
 
 
 func pods() -> Array:
@@ -257,6 +262,9 @@ class Pop extends Node3D:
 
 	func _ready() -> void:
 		add_to_group(PENDING)
+		# A stage reset clears the fight; a flare from the old attempt goes with it.
+		if is_instance_valid(combat) and combat.ctx != null:
+			combat.ctx.events.stage_content_cleared.connect(_on_cleared)
 		var sphere := SphereMesh.new()
 		sphere.radius = BODY_RADIUS * 1.1
 		sphere.height = BODY_RADIUS * 2.2
@@ -264,6 +272,10 @@ class Pop extends Node3D:
 		_shell.mesh = sphere
 		_shell.material_override = Palette.solid(SEAM_WHITE, SEAM_FLARE * 2.0)
 		add_child(_shell)
+
+	func _on_cleared(_reason: String) -> void:
+		set_physics_process(false)
+		queue_free()
 
 	func _physics_process(delta: float) -> void:
 		_left -= delta

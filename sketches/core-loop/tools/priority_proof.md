@@ -78,15 +78,17 @@ What it says:
 
 ### 2026-10-17, the Splitter built as the mama (branch claude/splitter-3mgbv8 on cf63e622 plus PR #54 and PR #24), cloud container (4 vCPU, headless), `--specials=splitter`, hp x 1 and 3
 
-The Splitter chases the ball and buds a fuse pod every 4.5 s (three at most); each pod chases, lights a 1 s ring and blows up. A ram pops the Splitter into three more pods.
+The Splitter follows the ball 7 to 13 m out and buds a fuse pod 1.2 s in, then each bud 0.5 s sooner than the last (4 s down to 1.5 s, four standing at most). Each pod chases, lights a 1 s ring of 4.5 m, blows up and crumbles. A ram pops the Splitter into three more pods.
 
-| Special | Mode | hp x | Target hull / clear | Ignore hull / clear | Ratio | Ignore worse | Verdict |
+| Special | Mode | hp x | Target hull mean / median / clear | Ignore hull mean / median / clear | Ratio (means) | Ignore worse | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Splitter | built | 1 | 0.5 / 9.1 s | 1.4 / 9.2 s | 2.8 | 3 of 8 | too little damage |
-| Splitter | built | 3 | 0.1 / 15.7 s | 8.3 / 19.2 s | 83.0 | 3 of 8 | pass |
+| Splitter | built | 1 | 0.9 / 0.4 / 11.3 s | 3.1 / 0.8 / 13.1 s | 3.44 | 3 of 8 | too little damage |
+| Splitter | built | 3 | 3.9 / 0.0 / 23.5 s | 4.5 / 2.0 / 33.5 s | 1.13 | 5 of 8 | too little damage |
+
+Damage taken (before scrap armour), mean: hp x1 target 10.9, ignore 10.9; hp x3 target 10.1, ignore 20.3 (ignore higher on 6 of 8 seeds). Later spawns joined, mean: hp x3 target 4.4, ignore 12.4.
 
 What it says:
 
-- Leaving the Splitter alive means more pods: the ignore arm met 5 later spawns a run against the target arm's 3, killed the Splitter at 10 s instead of 5 s, and cleared 3.5 s later at hp x3.
-- The pass is thin. Its hull mean rides one seed (seed 3 lost 53 hull to pods fusing on a ball pinned by the crew); the median ignore run lost no hull, and only 3 of 8 seeds went the right way. At stage 1 numbers the ignore arm stays under 5 hull, the lab limit the control shows too.
-- The stock bot rams, so it split the Splitter in 14 of 16 runs at hp x3. The proof measures kill order, not the clean-kill answer; the matchup lab (lever 7) is where "from above or from range" gets measured.
+- Leaving the Splitter alive is costly in what the pods do: at hp x3 the ignore arm meets about three times the pods, takes twice the damage and clears 10 s (43%) later; its median hull loss is 2.0 against the target arm's 0.
+- The tool's verdict reads the hull mean, and the hull only takes what the scrap armour does not, so it is noisy at these numbers. The target arm's hp x3 mean rides seeds 2 and 8 (8.0 and 23.2 hull), the same in every tuning round, which is the crew, not the Splitter; the ignore mean sits at 4.5, under MIN_HULL 5. At hp x1 every arm stays under 5 hull, the lab limit the control shows too.
+- The stock bot rams, so it splits the Splitter in most runs. The proof measures kill order, not the clean-kill answer; the matchup lab (lever 7) is where "from above or from range" gets measured.
