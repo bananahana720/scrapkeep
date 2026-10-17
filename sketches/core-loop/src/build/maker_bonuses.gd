@@ -12,8 +12,9 @@ const Palette := preload("res://src/core/palette.gd")
 # ("set_" + bonus), and each firing as cause_fired, so the run log counts them and presentation
 # can give them a look of their own.
 #
-# Bench Teeth adapts the design page's "carve lines": no carve verb publishes a line yet, so the
-# ball's own fast rolling line lays the teeth. A carve signal can feed lay_tooth() when one lands.
+# Bench Teeth lays its teeth along the ball's carve line: BallState.carving once wall grip (#61)
+# adds it, and until then the ball's own fast ground roll (the same fallback the Waking's
+# carving_now() uses). lay_tooth() is open to any other carve source.
 
 # Full Pressure: the steam ring an active vents.
 const STEAM_RADIUS := 7.0
@@ -254,7 +255,7 @@ func _step_teeth(delta: float) -> void:
 		_last_ball = Vector3.INF
 		return
 	var ball: Vector3 = ctx.player.ball_position()
-	if bool(ctx.player.state.grounded) and ctx.player.speed_tier() >= TOOTH_TIER and _last_ball != Vector3.INF:
+	if _carving() and _last_ball != Vector3.INF:
 		_rolled += Vector2(ball.x - _last_ball.x, ball.z - _last_ball.z).length()
 		if _rolled >= TOOTH_SPACING:
 			_rolled = 0.0
@@ -273,6 +274,13 @@ func _step_teeth(delta: float) -> void:
 			if fx != null:
 				fx.spark(tooth["at"] + Vector3.UP * 0.4, Palette.RUST)
 			note_fire("bench_teeth", enemy, tooth["at"])
+
+
+func _carving() -> bool:
+	var state = ctx.player.state
+	if "carving" in state:
+		return bool(state.carving)
+	return bool(state.grounded) and int(state.tier) >= TOOTH_TIER
 
 
 func lay_tooth(at: Vector3) -> void:
