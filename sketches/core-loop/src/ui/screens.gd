@@ -599,6 +599,9 @@ func _ending_closes(event: InputEvent) -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	# The title opening takes every press first (title_intro_player.gd skips on any input).
+	if _title_intro_playing():
+		return
 	if is_instance_valid(ending_sequence) and ending_sequence.active:
 		ending_sequence.handle(event)
 		get_viewport().set_input_as_handled()
@@ -879,3 +882,9 @@ func body_text() -> String:
 		lines.append("")
 		lines.append(refusal_text())
 	return "\n".join(lines)
+
+
+func _title_intro_playing() -> bool:
+	var presentation = game.get("presentation") if game != null else null
+	var stage = presentation.get("title_stage") if presentation != null else null
+	return stage != null and stage.has_method("intro_playing") and stage.intro_playing()
