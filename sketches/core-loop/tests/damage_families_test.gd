@@ -17,7 +17,7 @@ const T := preload("res://tests/support/t.gd")
 #   above the interrupted star and far off the ground telegraphs, on a crew spawned later too.
 
 const PUNCH := 30.0
-const EXPECTED_CHECKS := 17
+const EXPECTED_CHECKS := 18
 
 var _t := T.new("damage_families_test")
 var _game
@@ -29,6 +29,14 @@ func _initialize() -> void:
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
+
+
+# An enemy naming its armour (a Dig elite from its spawn spec), or naming none.
+class Specced:
+	var kind := "drill_crew"
+	var own := ""
+	func armour_class() -> String:
+		return own
 
 
 func _rows() -> void:
@@ -44,6 +52,12 @@ func _rows() -> void:
 			for source in ["weapon", "special", "ram_or_contact"]:
 				floor = minf(floor, DamageFamilies.mult(armour, kind, source))
 	_t.check("never a wall: nothing reads below 60%", floor >= DamageFamilies.RESISTED, "floor %.2f" % floor)
+	var bare := Specced.new()
+	var named := Specced.new()
+	named.kind = "chaser"
+	named.own = "plated"
+	_t.eq("an own class wins, an empty one falls through to the kind",
+		[DamageFamilies.armour_of(named), DamageFamilies.armour_of(bare)], ["plated", "plated"])
 	_t.eq("the words", [DamageFamilies.word("plated", "resisted"), DamageFamilies.word("plated", "weak")], ["DENT", "ZZAP!"])
 
 

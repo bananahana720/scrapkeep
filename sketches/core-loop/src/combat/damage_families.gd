@@ -44,7 +44,9 @@ static func armour_of(enemy: Object) -> String:
 	if enemy == null:
 		return ""
 	if enemy.has_method("armour_class"):
-		return String(enemy.armour_class())
+		var own := String(enemy.armour_class())
+		if own != "":
+			return own
 	var kind = enemy.get("kind")
 	return String(ARMOUR_OF.get(String(kind), "")) if kind != null else ""
 
