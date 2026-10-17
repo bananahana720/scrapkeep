@@ -28,6 +28,7 @@ const SOURCES := {
 	"lamp_swarm": {"script": "lamp_swarm", "travel": "BLOOM_SPEED", "burst": "SCATTER_SPEED"},
 	"kite_drone": {"script": "kite_drone", "travel": "", "burst": "HOVER/DIVE"},
 	"splitter": {"script": "splitter", "travel": "WALK", "burst": ""},
+	"splitter_pod": {"script": "splitter_pod", "travel": "WALK", "burst": ""},
 }
 # Every other kind holds its ground (fixed) or hovers in place (winch_drone).
 const STATIONARY := ["lobber", "vault", "warden", "mag_trapper", "hooker", "netcaster", "bola_thrower",

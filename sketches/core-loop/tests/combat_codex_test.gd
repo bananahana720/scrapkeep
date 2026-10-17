@@ -223,6 +223,14 @@ func _w9_tricks() -> void:
 	_combat.strike(splitter, "stomp", 30.0)
 	_report("split_pop", _combat.discovered.has("split_pop") and splitter.get_meta("split", true) == false,
 		"a stomp killed a Splitter clean (split %s)" % splitter.get_meta("split", null))
+	# A pod whose ring held the ball at its fuse blows up on an empty ring.
+	var pod: Node3D = _w9_spawn("splitter_pod", home + Vector3(-12.0, 0.0, 6.0))
+	pod._warn(_w9_to(pod))
+	pod._ring_had_ball = true
+	pod.phase = pod.Phase.LIVE
+	pod._go_live()
+	_report("fuse_pod", _combat.discovered.has("fuse_pod") and pod.blasts == 1,
+		"a ball out of a pod's ring when it blew (blasts %d)" % pod.blasts)
 	for node in [rig, cutter, crew]:
 		if is_instance_valid(node):
 			node.queue_free()

@@ -1,25 +1,29 @@
 extends "res://src/combat/counter.gd"
 
-# The Splitter (kill-first special, roster_specials.gd; ENEMY-PRIORITY.md 7b and 4a): a fat
-# scrap-bomb crawler of three welded pods. It crawls in and fuses a scrap blast around
-# itself, again and again, so a Splitter left alone keeps hurting you while you fight its
-# pack. How it dies is the read:
+# The Splitter (kill-first special, roster_specials.gd; ENEMY-PRIORITY.md 7b and 4a; Andrew,
+# 2026-10-17 18:19Z: "they chase the player ... keep splitting ... the one that's the mama"):
+# a fat crawler of three welded pods that chases the ball and keeps budding fuse pods off
+# itself (splitter_pod.gd), each one a small mech that chases you and blows up. The mama is
+# the source: while it lives the pods keep coming, up to POD_CAP at once, so the read is to
+# find it and kill it. How it dies matters too:
 #
 # - killed at ground level from close (a ram, a close shot or claw): its seams flare white
-#   for POP_DELAY and it pops into three pieces, small chasers that keep the lunge lane;
+#   for POP_DELAY and it pops into SPLIT_PODS more pods;
 # - killed by a stomp or slam from above, or by any hit from CLEAN_RANGE or more: one clean
-#   pop and nothing follows.
+#   pop, and nothing follows.
 #
-# The effects contract (design-v3/MACHINE-VFX.md, PR #51, and the special cues): the
-# committed-telegraph frame fires special_tell("tell") and SpecialCues.tell(self), and meta
-# "split" is set before died goes out. Pieces are made by the spawner as ordinary chasers,
-# then shrunk and dressed (make_piece), so each is an attacker in its own right; they keep
-# the Splitter's director pack, so the attacker budget reads them as one volley. A piece is
-# light (PIECE_WEIGHT), so a grown ball's harpoon swings it as a flail.
+# It never attacks itself, so it never asks the attacker budget; each pod asks before its
+# fuse, as every counter does. Pods keep the mama's director pack, so the budget reads pods
+# fusing together as one volley.
+#
+# The effects contract (design-v3/MACHINE-VFX.md, PR #51, and the special cues): each bud's
+# seam flare fires special_tell("tell") and SpecialCues.tell(self) on its first frame, and
+# meta "split" is set before died goes out.
 
-const ChaserScript := preload("res://src/combat/chaser.gd")
 # The specials' cue hub (CONTRACTS.md "Special cues"); loaded only once that file lands.
 const CUES := "res://src/combat/special_cues.gd"
+const POD := "splitter_pod"
+const PIECE_GLB := "res://assets/models/world_one/enemy_splitter_piece.glb"
 
 signal special_tell(moment: String)
 
@@ -29,20 +33,16 @@ const WEIGHT := 2.0
 # The recipe's suggested collider (tools/blender/world_one/enemy_splitter.py).
 const BODY_RADIUS := 1.3
 const BODY_HALF := 1.35
-const WALK := 5.0
-const BLAST_RADIUS := 4.5
-const BLAST_RANGE := 4.0
-const BLAST_DAMAGE := 10.0
-const BLAST_SHOVE := 8.0
-const FUSE := 1.0
+const WALK := 6.0
+const CLOSE := 2.5
+const BUD_FIRST := 2.0
+const BUD_EVERY := 4.5
+const POD_CAP := 3
 const CLEAN_RANGE := 15.0
 const CLEAN_KINDS := ["stomp", "slam"]
 const POP_DELAY := 0.4
-const PIECES := 3
-const PIECE_SCALE := 0.6
-const PIECE_HP := 25.0
-const PIECE_WEIGHT := 0.6
-const PIECE_SPREAD := 1.6
+const SPLIT_PODS := 3
+const POD_SPREAD := 1.8
 const SEAM_IDLE := 0.4
 const SEAM_FLARE := 4.0
 const SEAM_WHITE := Color("f4efe2")
@@ -50,8 +50,11 @@ const SEAM_BRASS := Palette.BRASS
 # A seam flare not yet popped: enemies still to come, so a fight is not over while one stands.
 const PENDING := "enemy_pending"
 
-var blasts := 0
 var split := false
+var buds := 0
+var _bud_clock := BUD_FIRST
+var _flare_left := 0.0
+var _pods: Array = []
 var _last_hit := {}
 var _seam_material: StandardMaterial3D
 
@@ -61,18 +64,72 @@ func _configure(threat: float) -> void:
 	scrap_value = SCRAP
 	weight = WEIGHT
 	walk_speed = WALK
-	keep_near = 1.0
-	keep_far = 30.0
-	attack_range = BLAST_RANGE
-	warn_seconds = FUSE
-	live_seconds = 0.15
-	rest_seconds = 2.6
-	first_rest = 1.0
+	keep_near = 0.0
+	keep_far = 0.0
+
+
+# It runs you down; close in, it circles.
+func _roam(to_ball: Vector3) -> Vector3:
+	if _flare_left > 0.0:
+		return Vector3.ZERO
+	var distance := to_ball.length()
+	if distance < 0.1:
+		return Vector3.ZERO
+	if distance > CLOSE:
+		return to_ball / distance * walk_speed
+	return (to_ball / distance).cross(Vector3.UP) * _strafe * walk_speed * 0.5
+
+
+func _wants_attack(_to_ball: Vector3) -> bool:
+	return false
+
+
+func _physics_process(delta: float) -> void:
+	super(delta)
+	if _dead or not _in_play() or target == null:
+		return
+	_pods = _pods.filter(func(pod): return is_instance_valid(pod) and not pod.is_dead())
+	if _flare_left > 0.0:
+		_flare_left -= delta
+		if _flare_left <= 0.0:
+			_bud()
+	elif not stunned():
+		_bud_clock -= delta
+		if _bud_clock <= 0.0 and _pods.size() < POD_CAP:
+			_flare_left = POP_DELAY
+			special_tell.emit("tell")
+			if ResourceLoader.exists(CUES):
+				load(CUES).tell(self)
+
+
+# One pod comes off the side facing the ball and runs at it.
+func _bud() -> void:
+	_bud_clock = BUD_EVERY
+	if fleet == null or fleet.combat == null:
+		return
+	var to_ball := _flat_to_ball()
+	var out := to_ball.normalized() if to_ball.length() > 0.1 else Vector3.FORWARD
+	var pod: Node3D = fleet.combat.spawn_enemy(POD, global_position + out * POD_SPREAD)
+	if pod == null:
+		return
+	buds += 1
+	_pods.append(pod)
+	_join_pack(pod, int(get_meta("pack_seq", -1)))
+	pod.knock(out, 5.0)
+
+
+static func _join_pack(pod: Node3D, pack: int) -> void:
+	if pack >= 0:
+		pod.set_meta("pack_seq", pack)
+
+
+func pods() -> Array:
+	return _pods.filter(func(pod): return is_instance_valid(pod) and not pod.is_dead())
 
 
 # The body (enemy_splitter.glb, PR #24): the three pods on fleet paint, which flashes, and
-# one lit seam surface (seams, caps, eyes and the fuse lamp) that glows up as the fuse
-# burns. The collider is the recipe's suggested capsule, not the counter crew's.
+# one lit seam surface (seams, caps, eyes and the fuse lamp) that flares white as a pod
+# buds. The collider is the recipe's suggested capsule, not the counter crew's.
 func _build_crew() -> void:
 	radius = BODY_RADIUS
 	half_height = BODY_HALF
@@ -84,7 +141,8 @@ func _build_crew() -> void:
 		mi.name = part.name
 		mi.mesh = part.mesh
 		mi.transform = part.xform
-		mi.set_surface_override_material(0, _material if part.paint else _seam_material)
+		for i in mi.mesh.get_surface_count():
+			mi.set_surface_override_material(i, _material if part.paint else _seam_material)
 		_visual_parent().add_child(mi)
 		if part.paint:
 			_crew = mi
@@ -93,11 +151,17 @@ func _build_crew() -> void:
 	_material.vertex_color_use_as_albedo = true
 
 
-static var _body := {}
-static var _piece := {}
+static var _parts := {}
 
 
-# A glb's meshes, each flagged paint (fleet_paint) or lit (anything else), and its sockets.
+# A glb's meshes, each flagged paint (fleet_paint) or lit (anything else), and its sockets;
+# read once per path.
+static func parts(path: String) -> Dictionary:
+	if not _parts.has(path):
+		_parts[path] = _read(path)
+	return _parts[path]
+
+
 static func _read(path: String) -> Dictionary:
 	var out := {"meshes": [], "sockets": {}}
 	var scene := (load(path) as PackedScene).instantiate()
@@ -118,66 +182,41 @@ static func _read(path: String) -> Dictionary:
 
 
 static func body_parts() -> Dictionary:
-	if _body.is_empty():
-		_body = _read("res://assets/models/world_one/enemy_splitter.glb")
-	return _body
+	return parts("res://assets/models/world_one/enemy_splitter.glb")
 
 
 static func piece_parts() -> Dictionary:
-	if _piece.is_empty():
-		_piece = _read("res://assets/models/world_one/enemy_splitter_piece.glb")
-	return _piece
+	return parts(PIECE_GLB)
 
 
-# Where each piece pops out: straight out from its pod's socket, PIECE_SPREAD from the middle.
+# Where each split pod pops out: straight out from its socket, POD_SPREAD from the middle.
 func pod_offsets() -> Array[Vector3]:
 	var out: Array[Vector3] = []
 	var sockets: Dictionary = body_parts()["sockets"]
-	for i in PIECES:
+	for i in SPLIT_PODS:
 		var name := "pod_" + "abc"[i]
-		var angle := TAU * i / PIECES
+		var angle := TAU * i / SPLIT_PODS
 		var flat := Vector3(cos(angle), 0.0, sin(angle))
 		if sockets.has(name):
 			var at: Vector3 = global_basis * (sockets[name] as Transform3D).origin
 			at.y = 0.0
 			if at.length() > 0.01:
 				flat = at.normalized()
-		out.append(flat * PIECE_SPREAD)
+		out.append(flat * POD_SPREAD)
 	return out
 
 
-func _commit(to_ball: Vector3) -> Node3D:
-	_facing(to_ball)
-	var ring := _commit_ring(Threat.Type.INSTANT, global_position, BLAST_RADIUS, 2.2, Palette.HAZARD)
-	if ring != null:
-		special_tell.emit("tell")
-		if ResourceLoader.exists(CUES):
-			load(CUES).tell(self)
-	return ring
-
-
-func _go_live() -> void:
-	blasts += 1
-	var ring := telegraph()
-	var ball := _real_ball()
-	if ring == null or not ring.contains(ball):
-		return
-	var out: Vector3 = ball - global_position
-	out.y = 0.0
-	var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
-	hit_player.emit(BLAST_DAMAGE, dir * BLAST_SHOVE + Vector3.UP * 3.0)
-
-
-# The seams and lamp glow up and blink faster as the fuse burns down.
+# The seams flare white as a pod buds off.
 func _pose() -> void:
 	if _seam_material == null:
 		return
-	var burn := clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN else 0.0
-	var blink := 0.5 + 0.5 * sin(_t * TAU * lerpf(2.0, 8.0, burn))
-	_seam_material.emission_energy_multiplier = lerpf(SEAM_IDLE, SEAM_FLARE, burn * blink)
+	var flare := 1.0 - clampf(_flare_left / POP_DELAY, 0.0, 1.0) if _flare_left > 0.0 else 0.0
+	_seam_material.albedo_color = SEAM_BRASS.lerp(SEAM_WHITE, flare)
+	_seam_material.emission = _seam_material.albedo_color
+	_seam_material.emission_energy_multiplier = lerpf(SEAM_IDLE, SEAM_FLARE, flare)
 
 
-# Every hit lands here before its damage, so the killing hit is always the last one seen.
+# Every door hit lands here on the frame of its damage, so a kill on this frame is the last one seen.
 func on_struck(kind: String, _part: String, _result: Dictionary) -> void:
 	var ball := _real_ball()
 	_last_hit = {"kind": kind, "range": Vector2(ball.x - global_position.x, ball.z - global_position.z).length(),
@@ -190,76 +229,29 @@ static func clean_kill(hit_kind: String, hit_range: float) -> bool:
 
 
 func _die() -> void:
-	var fresh: bool = not _last_hit.is_empty() and Engine.get_physics_frames() - int(_last_hit["frame"]) <= 1
+	var fresh: bool = not _last_hit.is_empty() and Engine.get_physics_frames() == int(_last_hit["frame"])
 	split = fresh and not clean_kill(String(_last_hit["kind"]), float(_last_hit["range"]))
 	set_meta("split", split)
 	var at := global_position
 	if not split and fresh and fleet != null:
 		fleet.discover("split_pop", at)
+	var offsets := pod_offsets()
 	super()
 	if split and fleet != null and fleet.combat != null and world_root != null:
 		var pop := Pop.new()
 		pop.combat = fleet.combat
-		pop.offsets = pod_offsets()
-		pop.maker = get_script()
+		pop.offsets = offsets
 		pop.pack = int(get_meta("pack_seq", -1))
 		world_root.add_child(pop)
 		pop.global_position = at
 
 
-# A chaser made into a Splitter piece: shrunk body and collider, a share of a chaser's
-# health (so the stage's health dial carries through) and a light body to flail.
-static func make_piece(piece: Node3D) -> void:
-	if piece == null or not is_instance_valid(piece):
-		return
-	piece._set_health(piece.max_hp * PIECE_HP / ChaserScript.HP)
-	piece.weight = PIECE_WEIGHT
-	piece.scrap_value = 1
-	piece.radius *= PIECE_SCALE
-	piece.half_height *= PIECE_SCALE
-	_dress_piece(piece)
-	for child in piece.get_children():
-		if child is CollisionShape3D and child.shape is CapsuleShape3D:
-			var capsule := (child.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
-			capsule.radius *= PIECE_SCALE
-			capsule.height *= PIECE_SCALE
-			child.shape = capsule
-	piece.set_meta("splitter_piece", true)
-
-
-# The piece glb in place of the chaser's wedge, under one rig node that takes the
-# chaser's body pose, so the piece still rears up before its lunge.
-static func _dress_piece(piece: Node3D) -> void:
-	var wedge: Node3D = piece.get("_mesh")
-	if wedge == null:
-		return
-	for child in wedge.get_children():
-		child.free()
-	var rig := Node3D.new()
-	rig.name = "SplitterPiece"
-	wedge.add_child(rig)
-	var glow := Palette.solid(Palette.AMBER, 2.0)
-	for part in piece_parts()["meshes"]:
-		var mi := MeshInstance3D.new()
-		mi.name = part.name
-		mi.mesh = part.mesh
-		mi.transform = part.xform
-		mi.set_surface_override_material(0, piece.get("_material") if part.paint else glow)
-		rig.add_child(mi)
-	piece.set("_pose_parts", {"ChaserBody": {"node": rig, "rest": Transform3D.IDENTITY}})
-	piece.set("_base_color", Color.WHITE)
-	var body_material: StandardMaterial3D = piece.get("_material")
-	body_material.albedo_color = Color.WHITE
-	body_material.vertex_color_use_as_albedo = true
-
-
-# The seam flare: a white shell where the Splitter stood, POP_DELAY long, then the pieces.
+# The seam flare of a rammed Splitter: a white shell where it stood, POP_DELAY long, then
+# its pods.
 class Pop extends Node3D:
 	var combat
 	var pack := -1
 	var offsets: Array[Vector3] = []
-	# This script, for make_piece: an inner class cannot call its outer class's functions.
-	var maker: Script
 	var _left := POP_DELAY
 	var _shell: MeshInstance3D
 
@@ -280,12 +272,12 @@ class Pop extends Node3D:
 			return
 		set_physics_process(false)
 		var flow = combat.ctx.flow if is_instance_valid(combat) else null
-		if flow != null and flow.in_play():
+		if flow != null and flow.in_stage():
 			for offset in offsets:
-				var piece: Node3D = combat.spawn_enemy("chaser", global_position + offset)
-				maker.make_piece(piece)
-				if piece != null and pack >= 0:
-					piece.set_meta("pack_seq", pack)
-				if piece != null:
-					piece.knock(offset, 6.0)
+				var pod: Node3D = combat.spawn_enemy(POD, global_position + offset)
+				if pod == null:
+					continue
+				if pack >= 0:
+					pod.set_meta("pack_seq", pack)
+				pod.knock(offset, 6.0)
 		queue_free()

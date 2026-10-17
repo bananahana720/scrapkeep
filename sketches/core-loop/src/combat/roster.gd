@@ -175,7 +175,8 @@ const CHASSIS := {
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
-	"splitter": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Three welded pods whose seams glow as the fuse burns"},
+	"splitter": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Three welded pods whose seams flare white as one buds off"},
+	"splitter_pod": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Lit seams blinking faster as the fuse burns"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.
@@ -248,9 +249,9 @@ static func is_ancient(name: String) -> bool:
 	return faction(name)["era"] == "ancient"
 
 
-# A kill-first special arrives inside a pack, so it counts as one too.
+# A kill-first special arrives inside a pack, so it counts as one too; what it spawns does not.
 static func is_reinforcement(id: String) -> bool:
-	return id in COUNTERS or id in ANCIENTS or row(id).has("priority")
+	return id in COUNTERS or id in ANCIENTS or row(id).get("priority", "") == "kill_first"
 
 
 # A stage's Warden kind when its row names none: its world's family on the default table

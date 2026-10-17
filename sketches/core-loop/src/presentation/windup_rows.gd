@@ -58,8 +58,10 @@ const ROWS := {
 	"kite_drone": {"color_role": "hazard", "shape": "diamond", "sound": "warn_dive", "attacks": {"E24": ["warn_seconds"]},
 		"idle": {"style": "hover", "amplitude": 0.07, "beats": 2.5}, "death": {"style": "spin_down", "parts": 3, "seconds": 0.45}},
 	# Kill-first specials (roster_specials.gd).
-	"splitter": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E25": ["warn_seconds"]},
+	"splitter": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {},
 		"idle": {"style": "breathe", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "pop", "parts": 3, "seconds": 0.4}},
+	"splitter_pod": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E25": ["warn_seconds"]},
+		"idle": {"style": "bob", "amplitude": 0.05, "beats": 1.5}, "death": {"style": "pop", "parts": 1, "seconds": 0.3}},
 }
 
 

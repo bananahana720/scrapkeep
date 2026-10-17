@@ -93,7 +93,7 @@ The pattern cue carries the class for a colour-blind player. At the 150 m read d
 | E22 | `line_cutter` | circle | projectile | 0.60 | logged: the cutter still flies 1.1 s to its ring | 0.75 |
 | E23 | `anchor_crew` | line | ray | 1.00 | in band | 0.75 |
 | E24 | `kite_drone` | circle | area_burst | 0.80 | logged: no interrupt, then a 0.7 s dive | 0.75 |
-| E25 | `splitter` | circle | area_burst | 1.00 | logged: a kill-first blast, time to leave or kill it clean | 0.75 |
+| E25 | `splitter_pod` | circle | area_burst | 1.00 | logged: a fuse, the second is the time to roll out; the pod is spent by its blast | 0.75 |
 
 ## 3. The harpoon
 

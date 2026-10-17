@@ -49,7 +49,7 @@ const AUDIT := {
 	"res://src/combat/lamp_swarm.gd": ["WAVE"],
 	"res://src/combat/line_cutter.gd": ["PROJECTILE"],
 	# 2026-10-17 (wave 18): the Splitter's fuse blast.
-	"res://src/combat/splitter.gd": ["INSTANT"],
+	"res://src/combat/splitter_pod.gd": ["INSTANT"],
 	# alpha w7 Mind: build() lays each descriptor's own type; DESCRIPTORS audits where it is named.
 	"res://src/boss/mind_attacks.gd": ["descriptor", "descriptor", "descriptor"],
 }

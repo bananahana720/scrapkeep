@@ -105,7 +105,13 @@ const ENTRIES := [
 		"id": "split_pop", "name": "Clean Break",
 		"hint": "Some scrap comes apart the way you hit it.",
 		"clue": "a Splitter + a smash from above, or a shot from far off",
-		"text": "Crawls in and fuses scrap blasts around itself; ram it and it pops into three, so smash it from above or shoot it from 15 m.",
+		"text": "Chases you and keeps budding fuse pods that run at you and blow up; kill it to stop them, by a smash from above or a shot from 15 m, or a ram pops it into three more.",
+	},
+	{
+		"id": "fuse_pod", "name": "Out of the Ring",
+		"hint": "A lit fuse is a promise, not a hit.",
+		"clue": "a Splitter pod + rolling out of its ring",
+		"text": "A torn-off Splitter pod: runs at you, lights a one-second fuse ring and blows up; roll out of the ring.",
 	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
@@ -283,6 +289,7 @@ const DETECTORS := {
 	"deck_winch": {"kind": "anchor_crew", "script": "res://src/combat/anchor_crew.gd"},
 	"thermal_dive": {"kind": "kite_drone", "script": "res://src/combat/kite_drone.gd"},
 	"split_pop": {"kind": "splitter", "script": "res://src/combat/splitter.gd"},
+	"fuse_pod": {"kind": "splitter_pod", "script": "res://src/combat/splitter_pod.gd"},
 	"heavy_roll": {"kind": "mag_trapper", "script": "res://src/combat/mag_trapper.gd"},
 	"plate_peel": {"kind": "plated_brute", "script": "res://src/combat/plated_brute.gd"},
 	"cable_snap": {"kind": "winch_drone", "script": "res://src/combat/winch_drone.gd"},
