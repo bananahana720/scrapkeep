@@ -272,6 +272,7 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				var spawn := {"kind": a["kind"], "at": a["at"]}
 				if a.has("affix"):
 					spawn["affix"] = a["affix"]
+				spawn["pack"] = int(a.get("pack", -1))
 				due.append(spawn)
 	if paused:
 		return due

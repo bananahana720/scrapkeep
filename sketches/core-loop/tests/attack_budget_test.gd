@@ -10,8 +10,9 @@ extends SceneTree
 #   must pass it, or the budget would never bind. The whole crowd is ready inside its
 #   first rest, so the peak lands in the first seconds;
 # - capped, at the late cap (heft class 5 in world 3): the same count never passes the cap
-#   on any tick of any seed; no two warnings start on the same frame (AttackBudget.MIN_GAP, the
-#   readability floor); and the line moves: no unit waits longer than WAIT_LIMIT for a
+#   on any tick of any seed; no two distinct threats (a different director pack, or a
+#   different kind in the same pack) start their warnings within AttackBudget.MIN_GAP, while
+#   pack mates of one kind may share a beat (Andrew's "Pack as one"); and the line moves: no unit waits longer than WAIT_LIMIT for a
 #   slot, finished or not.
 # Five more seeds run at the early cap (a fresh ball in world 1) with stage 1's packs, so
 # the chaser is in the crowd. The curve itself is
@@ -71,6 +72,7 @@ func _run() -> void:
 	var uncapped_peaks: Array = []
 	var capped_peaks: Array = []
 	var gaps: Array = []
+	var joined := 0
 	var violations := 0
 	var waits: Array = []
 	for seed_value in SEEDS:
@@ -79,16 +81,18 @@ func _run() -> void:
 		var shut: Dictionary = await _encounter(seed_value, crowd, true, LATE_HEFT, LATE_WORLD, SECONDS)
 		capped_peaks.append(shut.peak)
 		gaps.append(shut.min_gap)
+		joined += shut.joined
 		violations += shut.over
 		waits.append(shut.longest_wait)
-		print("seed %d: uncapped peak %d (closest warnings %.2f s), capped peak %d (closest warnings %.2f s), ticks over cap %d, longest wait %.2f s, attacks %d uncapped / %d capped"
+		print("seed %d: uncapped peak %d (closest distinct warnings %.2f s), capped peak %d (closest distinct warnings %.2f s), ticks over cap %d, longest wait %.2f s, attacks %d uncapped / %d capped"
 			% [seed_value, open.peak, open.min_gap, shut.peak, shut.min_gap, shut.over, shut.longest_wait, open.attacks, shut.attacks])
 	_test.check("uncapped peak passes the late cap on some seed", uncapped_peaks.max() > late,
 		"uncapped peaks %s, late cap %d" % [uncapped_peaks, late])
 	_test.eq("ticks over the late cap, all seeds", violations, 0)
 	_test.check("capped peak reaches the late cap", capped_peaks.max() == late, "capped peaks %s" % [capped_peaks])
-	_test.check("no two warnings start on the same frame", gaps.min() >= AttackBudget.MIN_GAP - 0.5 / BASE_TICKS,
-		"closest warning starts per seed %s, floor %.3f s" % [gaps, AttackBudget.MIN_GAP])
+	_test.check("no two distinct packs or kinds warn within the gap", gaps.min() >= AttackBudget.MIN_GAP - 0.5 / BASE_TICKS,
+		"closest distinct warning starts per seed %s, floor %.2f s" % [gaps, AttackBudget.MIN_GAP])
+	_test.check("pack mates share a beat", joined > 0, "%d warnings joined their pack mate's beat" % joined)
 	_test.check("no unit waits past the limit", waits.max() <= WAIT_LIMIT, "longest waits %s, limit %.1f s" % [waits, WAIT_LIMIT])
 	# The early cap binds too: a fresh ball in world 1 meets START attackers at most.
 	var early := AttackBudget.cap_at(1, 1)
@@ -194,8 +198,11 @@ func _kinds(rng: RandomNumberGenerator, count: int, stage: int) -> Array:
 	var row: Dictionary = Park.of(stage)
 	var packs: Array = row.packs + [row.elite]
 	var kinds: Array = []
+	var pack_seq := 0
 	while kinds.size() < count:
-		kinds.append_array(packs[rng.randi_range(0, packs.size() - 1)].kinds)
+		for kind in packs[rng.randi_range(0, packs.size() - 1)].kinds:
+			kinds.append([kind, pack_seq])
+		pack_seq += 1
 	return kinds.slice(0, count)
 
 
@@ -213,20 +220,24 @@ func _encounter(seed_value: int, count: int, budget: bool, heft: int, world: int
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7100 + seed_value
 	var units: Array = []
-	for kind in _kinds(rng, count, stage):
+	for drawn in _kinds(rng, count, stage):
+		var kind: String = drawn[0]
 		var angle := rng.randf() * TAU
 		var r := rng.randf_range(RING_MIN, RING_MAX)
 		var at: Vector3 = _ball_at + Vector3(cos(angle) * r, 0.0, sin(angle) * r)
 		var unit = ctx.spawner.spawn_enemy(kind, ctx.terrain.drop_point(at.x, at.z, 1.8))
 		unit._set_health(99999.0)
+		# As world.gd tags a director arrival: the pack it came with.
+		unit.set_meta("pack_seq", int(drawn[1]))
 		units.append(unit)
 	var peak := 0
 	var over := 0
 	var cap_now := AttackBudget.cap_at(heft, world)
 	var warned := {}
 	var was := {}
-	var last_start := -1
+	var latest := {}
 	var min_gap := INF
+	var joined := 0
 	var waiting_since := {}
 	var longest := 0.0
 	var ticks := int(seconds * BASE_TICKS)
@@ -245,9 +256,14 @@ func _encounter(seed_value: int, count: int, budget: bool, heft: int, world: int
 			var now := _attacking(unit)
 			if now and not bool(was.get(id, false)):
 				warned[id] = int(warned.get(id, 0)) + 1
-				if last_start >= 0:
-					min_gap = minf(min_gap, float(i - last_start) / BASE_TICKS)
-				last_start = i
+				var volley := [int(unit.get_meta("pack_seq")), String(unit.kind)]
+				for other in latest:
+					var since := float(i - int(latest[other])) / BASE_TICKS
+					if other != volley:
+						min_gap = minf(min_gap, since)
+					elif since < AttackBudget.MIN_GAP:
+						joined += 1
+				latest[volley] = i
 			was[id] = now
 		if live > cap_now:
 			over += 1
@@ -268,7 +284,7 @@ func _encounter(seed_value: int, count: int, budget: bool, heft: int, world: int
 			attacks += int(warned.get(unit.get_instance_id(), 0))
 	_clear()
 	await _frames(2)
-	return {"peak": peak, "over": over, "attacks": attacks, "longest_wait": longest, "min_gap": min_gap}
+	return {"peak": peak, "over": over, "attacks": attacks, "longest_wait": longest, "min_gap": min_gap, "joined": joined}
 
 
 # The units the budget covers: every counter and the chaser. The lobber's shells keep their

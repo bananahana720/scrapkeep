@@ -11,11 +11,13 @@ extends RefCounted
 # growth signal that sizes the director's crowd, and with the world, up to LATE. Every
 # number of the curve is here, for the playtest sitting to tune.
 #
-# Readability is the floor under the chaos: two warnings never start on the same physics
-# frame (MIN_GAP, one 90 Hz step), so each telegraph draws on its own frame however many
-# units are attacking. 2026-10-17 machine gate on PR #15: a 0.2 s gap held the swarm band's
-# grown ball to 46.4 s and the small/grown ratio to 1.83 (rule: at least 2); 0.1 s gave 2.15;
-# one frame leaves both medians equal to main's (small 91.27 s, grown 38.77 s, 2.35x).
+# Readability is the floor under the chaos: two distinct threats never start their warnings
+# within MIN_GAP of each other, so each gets its own beat to read and answer. One threat is a
+# volley: the units of one director pack of one kind (pack_seq, set by world.gd from the
+# director's arrival). A volley's members wind up on the same beat, together or in a ripple,
+# and the gap counts from its last member (Andrew, 2026-10-17 15:30Z card "Pack as one").
+# Why: a strict gap between pack mates slowed the swarm band's grown ball (46.4 s, small to
+# grown 1.83x against the 2x rule; machine gate on PR #15).
 #
 # A unit refused a slot waits in line. The longest waiter gets the next free slot, so a
 # crowd takes turns instead of the scene tree's first units taking every opening.
@@ -24,12 +26,15 @@ const START := 6
 const PER_HEFT_CLASS := 1
 const PER_WORLD := 2
 const LATE := 12
-const MIN_GAP := 1.0 / 90.0
+const MIN_GAP := 0.2
 const ATTACKING := "attack_budget"
 const WAITING := "attack_budget_wait"
 # Test hook: a world root carrying this meta turns the budget off (the uncapped arm).
 const OFF_META := "attack_budget_off"
 const LAST_META := "attack_budget_last"
+const VOLLEY_META := "attack_budget_volley"
+# The director pack a unit arrived with (world.gd); units spawned any other way are their own volley.
+const PACK_META := "pack_seq"
 
 
 # The curve: world 1 with a fresh ball is START; each heft class and each world past the
@@ -62,16 +67,33 @@ static func ask(unit: Node) -> bool:
 	var tree := unit.get_tree()
 	_queue(unit)
 	var free := cap_for(unit) - attackers(tree)
-	if free <= 0 or not _gap_open(tree):
+	if free <= 0:
 		return false
-	var mine := _ticket(unit)
-	for other in tree.get_nodes_in_group(WAITING):
-		if other != unit and _before(_ticket(other), mine):
+	var joins := _joins_volley(unit, tree)
+	if not joins:
+		if not _gap_open(tree):
 			return false
+		var mine := _ticket(unit)
+		for other in tree.get_nodes_in_group(WAITING):
+			if other != unit and _before(_ticket(other), mine):
+				return false
 	unit.remove_from_group(WAITING)
 	unit.add_to_group(ATTACKING)
 	tree.root.set_meta(LAST_META, Engine.get_physics_frames())
+	tree.root.set_meta(VOLLEY_META, volley_of(unit))
 	return true
+
+
+# One threat: the unit's director pack and kind. A unit with no pack is a volley of one.
+static func volley_of(unit: Node) -> Array:
+	var pack := int(unit.get_meta(PACK_META, -1))
+	return [pack, String(unit.get("kind"))] if pack >= 0 else [-1, unit.get_instance_id()]
+
+
+# A pack mate of the last warning joins its beat while the gap is still running.
+static func _joins_volley(unit: Node, tree: SceneTree) -> bool:
+	return not _gap_open(tree) and int(unit.get_meta(PACK_META, -1)) >= 0 \
+		and tree.root.get_meta(VOLLEY_META, []) == volley_of(unit)
 
 
 # The unit no longer wants a slot this tick (out of range, stunned, recovering).
