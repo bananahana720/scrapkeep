@@ -142,8 +142,9 @@ const PARK_FIELDS := {
 }
 # Optional on a park row, absent on every row that places as before: "seat" seats a GLB recipe on the ground at its
 # entry and exit (park_recipes.gd seat_fit); "tile" repeats a shorter GLB recipe end to end, each copy seated on the
-# ground at its own ends (park_recipes.gd tile_fit).
-const FITS := ["seat", "tile"]
+# ground at its own ends (park_recipes.gd tile_fit); "drape" stands a ground-conforming GLB on the seat of its stamp
+# (park_recipes.gd fits_drape, seat), with no `y`, so the graph reads no deck.
+const FITS := ["seat", "tile", "drape"]
 # Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
 # the cage, so who is rescued is data; quest is what rescue_completed carries (achievements.gd keys on it).
 const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
@@ -385,7 +386,7 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "reference", "route %s is no route" % str(route))
 	_recipe(out, id, row["recipe"])
 	# The one optional park row field: "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16) or
-	# its tile fit (PARK-TILE, 2026-10-16).
+	# its tile fit (PARK-TILE, 2026-10-16) or its drape fit (dam kit, 2026-10-17).
 	if row.has("fit"):
 		if not FITS.has(row["fit"]):
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
