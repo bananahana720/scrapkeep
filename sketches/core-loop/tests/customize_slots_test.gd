@@ -127,13 +127,20 @@ func _validate_rules() -> void:
 		_t.check("validate rejects %s" % label, not problems.is_empty(), str(problems))
 	_t.eq("a decal mask of 15 is valid", Cosmetics.validate(_bad(rows, "decal_fern", {"mask": 15}), pilots), [])
 	# PENDING_ART is a const; validate reads it, so a table missing a pending id is the typo case.
-	var missing := rows.duplicate(true)
-	missing.erase("outfit_kest_rigger")
-	var problems := Cosmetics.validate(missing, pilots)
-	_t.check("validate rejects a PENDING_ART id that is not a row", problems.any(func(p): return String(p).contains("PENDING_ART id outfit_kest_rigger is not a row")), str(problems))
-	var starter_pending := _bad(rows, "outfit_rivet_hood", {"slot": "paint", "starter": true})
-	problems = Cosmetics.validate(starter_pending, pilots)
-	_t.check("validate rejects a PENDING_ART id that is a starter", problems.any(func(p): return String(p).contains("is a starter")), str(problems))
+	# 2026-10-17 (stage/alpha-w16): every look's art has landed, so PENDING_ART is empty and both
+	# guards have nothing to catch; each check then asserts the list really is empty.
+	if Cosmetics.PENDING_ART.is_empty():
+		_t.check("validate rejects a PENDING_ART id that is not a row (none pending)", Cosmetics.validate(rows, pilots).is_empty())
+		_t.check("validate rejects a PENDING_ART id that is a starter (none pending)", rows.keys().all(func(id): return not Cosmetics.is_pending(id)))
+	else:
+		var pending_id := String(Cosmetics.PENDING_ART[0])
+		var missing := rows.duplicate(true)
+		missing.erase(pending_id)
+		var problems := Cosmetics.validate(missing, pilots)
+		_t.check("validate rejects a PENDING_ART id that is not a row", problems.any(func(p): return String(p).contains("PENDING_ART id %s is not a row" % pending_id)), str(problems))
+		var starter_pending := _bad(rows, pending_id, {"slot": "paint", "starter": true})
+		problems = Cosmetics.validate(starter_pending, pilots)
+		_t.check("validate rejects a PENDING_ART id that is a starter", problems.any(func(p): return String(p).contains("is a starter")), str(problems))
 
 
 func _equip_refusals() -> void:
