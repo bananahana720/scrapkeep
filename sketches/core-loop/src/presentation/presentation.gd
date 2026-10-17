@@ -7,6 +7,7 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
 const StatusMarks := preload("res://src/presentation/status_marks.gd")
+const ArmourMarks := preload("res://src/presentation/armour_marks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const TitleStage := preload("res://src/presentation/title_stage.gd")
@@ -48,6 +49,7 @@ var juice
 var vfx
 var line_view
 var status_marks
+var armour_marks
 var banner
 var hero_assets
 var ceremony
@@ -83,6 +85,9 @@ func setup(ctx_ref) -> void:
 	status_marks = StatusMarks.new()
 	add_child(status_marks)
 	status_marks.setup(ctx, vfx)
+	armour_marks = ArmourMarks.new()
+	add_child(armour_marks)
+	armour_marks.setup(ctx)
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)

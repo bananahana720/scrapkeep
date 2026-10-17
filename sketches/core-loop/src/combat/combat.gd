@@ -35,6 +35,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const Companion := preload("res://src/core/companion.gd")
+const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
@@ -586,6 +587,7 @@ func _door_caps(hit: Dictionary) -> void:
 	var enemy: Node3D = hit["enemy"]
 	var result: Dictionary = hit["result"]
 	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, hit["kind"], hit["cls"])
+	_read_armour(enemy, hit, result)
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_exposed.erase(enemy.get_instance_id())
@@ -593,6 +595,26 @@ func _door_caps(hit: Dictionary) -> void:
 	# its own mark.
 	if hit["kind"] == ARC_MARK_KIND:
 		_arc_mark(enemy)
+
+
+# Damage families (DamageFamilies, FIELDS-AND-CASTS section 6): a hit that beat the plating
+# meets its target's armour row, resisted about 60% and weak about 150%. The read rides on the
+# target as meta "armour_read" for this hit's enemy_struck listeners (presentation stamps DENT
+# or ZZAP! on the first of each per run), and the first read of an armour class discovers its
+# codex entry, after which the class wears its icon.
+
+
+func _read_armour(enemy: Node3D, hit: Dictionary, result: Dictionary) -> void:
+	var armour := DamageFamilies.armour_of(enemy)
+	var read := DamageFamilies.verdict(armour, hit["kind"], hit["cls"]) if bool(result.get("full", false)) else ""
+	enemy.set_meta("armour_read", read)
+	if read == "":
+		return
+	result["dealt"] = float(result["dealt"]) * DamageFamilies.mult(armour, hit["kind"], hit["cls"])
+	result["read"] = read
+	match armour:
+		"plated":
+			_discover("armour_plated", enemy.global_position)
 
 
 func _door_crit(hit: Dictionary) -> void:

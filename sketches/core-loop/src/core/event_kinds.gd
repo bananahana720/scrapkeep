@@ -780,6 +780,11 @@ const STATE_ROWS := {
 	"beacon_sealed": {"color": "slate", "motion": "none", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
 	"beacon_open": {"color": "amber", "motion": "steady", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
 	"wearing": {"color": "rust", "motion": "steady", "shape": "chevron", "sound": NONE, "verb": NONE, "word": ""},
+	# Damage families (FIELDS-AND-CASTS section 6): the first resisted and weak hit on an armour
+	# class each run stamp their word; once its codex entry is known the class wears its icon.
+	"dented": {"color": "slate", "motion": "none", "shape": "square", "sound": NONE, "verb": NONE, "word": "DENT"},
+	"zzapped": {"color": "live", "motion": "none", "shape": "cross", "sound": NONE, "verb": NONE, "word": "ZZAP!"},
+	"plated": {"color": "slate", "motion": "steady", "shape": "square", "sound": NONE, "verb": NONE, "word": ""},
 }
 
 # The five synergies the slice keeps, keyed by their ids in build/synergies.gd, which owns the
