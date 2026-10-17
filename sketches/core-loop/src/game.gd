@@ -45,6 +45,10 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const TABLES := {"default": StageDefs, "slice": SliceDefs, "alpha": AlphaDefs, "park": ParkDefs}
+# A launched game with no --table plays the six parks (KD7), so the app-menu entry reaches them.
+# Headless tests and bot runs (test_mode) keep the legacy maps unless they pick a table;
+# --table=default still reaches those maps from a launch.
+const LAUNCH_TABLE := "park"
 
 # The headless tests drive the same scene with a scripted source and no mouse capture.
 var test_mode := false:
@@ -56,7 +60,7 @@ var test_mode := false:
 # pauses while it is set.
 var bot_driven := false
 # The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
-# --table= from the launch args, and no argument is the default table.
+# --table= from the launch args, and no argument is LAUNCH_TABLE (the default table in test_mode).
 var table := ""
 # The dev keys (F1 tuning panel, F3 interpolation, F4 tuning dump, F6 boss tempo) work only when
 # the game was launched with --dev; a test sets it directly. Modules read ctx.dev.
@@ -244,7 +248,7 @@ func _chosen_table():
 			if arg.begins_with("--table="):
 				id = arg.trim_prefix("--table=")
 	if id.is_empty():
-		return StageDefs
+		return StageDefs if test_mode else TABLES[LAUNCH_TABLE]
 	if not TABLES.has(id):
 		push_warning("game: unknown stage table '%s'; using the default" % id)
 		return StageDefs
