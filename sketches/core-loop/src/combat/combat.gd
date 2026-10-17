@@ -1816,7 +1816,8 @@ func _fire_cannon_lane(weapon: String) -> void:
 	var kit = ctx.player.kit
 	if kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
 		var held: Vector3 = kit.anchor_body.global_position
-		if h.contains(Vector3(held.x, h.ground_at(held) + 1.0, held.z)):
+		# A body already inside the lane at its real position takes the normal strike, not the forced one.
+		if h.contains(Vector3(held.x, h.ground_at(held) + 1.0, held.z)) and not h.contains(held):
 			entry["options"] = {"forced": kit.anchor_body}
 	var end: Vector3 = h.centre + h.heading * h.length
 	var muzzle: Vector3 = ball + h.heading * MUZZLE
