@@ -5,7 +5,8 @@ extends Node3D
 # landmark node, stands vertical from its bottom (the GLB's beam_root, or the proxy's) to TOP_ABOVE_M over the sight
 # point, is unshaded, ignores fog and casts no shadow. The chase camera's far plane is 700 m (chase_camera.gd) and every
 # drop-in is 1.17 to 1.43 km from its landmark, so past FAR_SHARE of the far plane the column is drawn as its impostor:
-# scaled toward the camera by far / distance, which projects to the same pixels while staying inside the far plane.
+# scaled toward the camera by far / distance, which projects to the same pixels while staying inside the far plane. The
+# share leaves room for the column's top, which stands farther from the eye than its foot.
 # Its bottom never sits inside the fight: at least CLEAR_ABOVE_M over the Warden's anchor, so the Warden's own window
 # beam stays the only beam in the bowl (LOOP-REDESIGN.md section 2, "It is open now").
 
@@ -17,7 +18,7 @@ const VEIL_RADIUS_M := 9.0
 const VEIL_ALPHA := 0.18
 const TOP_ABOVE_M := 300.0
 const CLEAR_ABOVE_M := 30.0
-const FAR_SHARE := 0.9
+const FAR_SHARE := 0.8
 const SIDES := 16
 
 # The column in world space when it is not an impostor, and its view (top_level, so the impostor moves it alone).

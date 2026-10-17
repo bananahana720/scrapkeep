@@ -510,6 +510,8 @@ static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable(
 	if ResourceLoader.exists(p["base"]):
 		node = place(row, parent, ground)
 		root = _beam_root(p["base"])
+		if root is Vector3:
+			root = ride_frame(row)["origin"] + (root as Vector3)
 	var warden: Dictionary = row.get("warden", {})
 	var anchor_y := float(warden["anchor"][1]) if warden.get("anchor") is Array else -INF
 	if node == null:
@@ -524,8 +526,12 @@ static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable(
 	return node
 
 
-# The beam_root empty of a landmark GLB, in its own space; null when it has none.
+# The beam_root empty of a landmark GLB, in its own space; null when it has none. Read once per GLB.
+static var _beam_roots := {}
+
 static func _beam_root(path: String):
+	if _beam_roots.has(path):
+		return _beam_roots[path]
 	var scenes := _load(path)
 	var out = null
 	for scene: Node in scenes:
@@ -533,6 +539,7 @@ static func _beam_root(path: String):
 		if out == null and found is Node3D:
 			out = _relative(found, scene).origin
 		scene.free()
+	_beam_roots[path] = out
 	return out
 
 
@@ -1213,8 +1220,9 @@ class Placer extends Node3D:
 			row_usec_max = maxi(row_usec_max, last)
 			_next += 1
 			added += 1
+		# The landmark costs more than a row (a hero GLB), so it takes a step of its own unless nothing waits on a frame.
 		if not _landmark.is_empty() and landmark == null:
-			if deadline >= 0 and added > 0 and Time.get_ticks_usec() + last > deadline:
+			if deadline >= 0 and added > 0:
 				return
 			var r0 := Time.get_ticks_usec()
 			var holder := Node3D.new()

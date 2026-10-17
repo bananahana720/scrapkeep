@@ -6,7 +6,7 @@ extends SceneTree
 # its tip, with the hand hanging under the tip. Until a landmark's GLB lands it stands in as a visual-only proxy: no
 # collider of any kind, so no route, line or posture band moves. Five stages (all but the pit) carry one ancient beam:
 # unshaded uranium green, fog off, no shadow, its bottom at least CLEAR_ABOVE_M over the Warden's anchor, its top over
-# sight_top; past 90% of the far plane it draws as its impostor, scaled about the eye so it projects the same. The
+# sight_top; past 80% of the far plane it draws as its impostor, scaled about the eye so it projects the same. The
 # proxy headframe's legs reach the baked ground and keep out of the hive well, and the proxy spire keeps its 30 m waist
 # to y 60 (the GLB recipe pins its own, tools/blender/park/landmarks.py).
 # The rows themselves place exactly as before: ParkRows holds placed_rows plus the one landmark.
@@ -112,14 +112,16 @@ func _headframe(node: Node3D, ground: Callable) -> void:
 	t.eq("park_pit legs keep out of the hive well", in_well, 0)
 
 
-# The impostor: 1.3 km off with a 700 m far plane, the column scales about the eye to 630 m and projects the same.
+# The impostor: 1.3 km off with a 700 m far plane, the column scales about the eye to 560 m and projects the same,
+# its top inside the far plane.
 func _impostor() -> void:
 	var holder := Node3D.new()
 	var beam = ParkRecipes.LandmarkBeam.make(holder, Vector3(0, 50, 0), 141.0, 0.0)
 	var eye := Vector3(0, 150, -1300)
 	var xf: Transform3D = beam.impostor(eye, 700.0)
-	t.near("impostor moves the column to 90% of the far plane", Vector2(xf.origin.x - eye.x, xf.origin.z - eye.z).length(), 630.0, 0.01)
-	t.near("impostor scales by reach over distance", xf.basis.get_scale().x, 630.0 / 1300.0, 0.0001)
+	t.near("impostor moves the column to 80% of the far plane", Vector2(xf.origin.x - eye.x, xf.origin.z - eye.z).length(), 560.0, 0.01)
+	t.near("impostor scales by reach over distance", xf.basis.get_scale().x, 560.0 / 1300.0, 0.0001)
+	t.check("impostor's top stays inside the far plane", ((xf * Vector3(0, beam.height(), 0)) - eye).length() < 700.0)
 	var top := Vector3(0, beam.top_y, 0)
 	var seen := (top - eye).normalized()
 	var drawn := ((xf * Vector3(0, beam.height(), 0)) - eye).normalized()
