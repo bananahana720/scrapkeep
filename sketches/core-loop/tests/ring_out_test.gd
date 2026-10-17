@@ -93,6 +93,33 @@ func _ram() -> void:
 	t.check("a plain ram rings out a lobber at the rim", rung.has("lobber"), "%d frames" % frames)
 
 
+# A ram straight down a beacon ramp (map_highdraft.gd RAMPS, 14 m over 44 m) slides the
+# enemy downhill, part on its feet and part in a hop over the ramp: it drops metres but the
+# ground under it stays close, so it is not rung out.
+func _ramp() -> void:
+	rung.clear()
+	var line: Dictionary = Highdraft.new().ramp_line(Highdraft.RAMPS[0])
+	var rim: Vector2 = line["rim"]
+	var down: Vector2 = ((line["foot"] as Vector2) - rim).normalized()
+	var spot: Vector2 = rim + down * 6.0
+	var at := Vector3(spot.x, game.ctx.terrain.height(spot.x, spot.y) + 1.2, spot.y)
+	var z := spot.y
+	var unit = await _spawn(at)
+	var start: float = unit.global_position.y
+	# A ram at a light enemy's speed: the knock is per weight.
+	unit.knock(Vector3(down.x, 0.0, down.y) + Vector3.UP * 0.35, Augments.RAM_KNOCK * unit.weight)
+	var lowest := start
+	for frame in 150:
+		await physics_frame
+		if not is_instance_valid(unit) or unit.is_dead():
+			break
+		lowest = minf(lowest, unit.global_position.y)
+	t.check("a ram down a ramp carries it more than 4 m downhill", is_instance_valid(unit) and start - lowest > 4.0, "dropped %.1f m from z %.1f" % [start - lowest, z])
+	t.check("and it is not rung out on its feet", rung.is_empty() and is_instance_valid(unit) and not unit.is_dead(), "rung %s" % [rung])
+	if is_instance_valid(unit):
+		unit.free()
+
+
 func _stays() -> void:
 	rung.clear()
 	var unit = await _spawn(_on_island(-2.0))
@@ -116,8 +143,11 @@ func _walks_off() -> void:
 	var past := Vector3(island["at"].x, island["top"] + 1.0, island["at"].y + island["radius"] + Highdraft.SKIRT + 6.0)
 	var unit = game.combat.spawn_enemy("lobber", past)
 	unit.hp = 100000.0
+	await _frames(5)
+	# A bolt knocks it while it falls: the knock struck it in the air, so it opens nothing.
+	unit.knock(Vector3(0.0, 0.0, 1.0), 30.0 * unit.weight)
 	await _frames(120)
-	t.check("one that drops off with no knock is not rung out", is_instance_valid(unit) and not unit.is_dead() and rung.is_empty(), "y %.1f" % unit.global_position.y)
+	t.check("one that drops off with no knock, or is knocked mid-fall, is not rung out", is_instance_valid(unit) and not unit.is_dead() and rung.is_empty(), "y %.1f" % unit.global_position.y)
 	unit.kind = "linker"
 	t.check("the kill-first specials are always rescued", not unit.ring_outs_here(), "")
 	unit.kind = "warden"
@@ -139,6 +169,7 @@ func _run() -> void:
 	await _boot(true)
 	await _edge()
 	await _ram()
+	await _ramp()
 	await _stays()
 	await _walks_off()
 	game.free()

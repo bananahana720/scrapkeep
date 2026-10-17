@@ -68,11 +68,12 @@ These world motifs match the fields and cast-times design (`design-v3/FIELDS-AND
 ### Ring-outs (built 17 Oct)
 
 In the Highdraft (world 3), any enemy knocked off an island edge is gone, and it counts as the pilot's kill (`enemy.gd` `_rings_out`, `ring_out`).
-- **What opens it:** only a knock does, meaning the enemy's knocked speed is at least 1 m/s. Any knock path counts: ram, slam, Lift Pulse, Quake Knock, pins and the kit pushes.
-- **When it fires:** the enemy rings out once it falls `RING_OUT_DROP` (4 m) below the height it was knocked from. Health and plating don't matter.
+- **What opens it:** only a knock that strikes the enemy on a floor does, meaning its knocked speed is at least 1 m/s. Any knock path counts: ram, slam, Lift Pulse, Quake Knock, pins and the kit pushes. Tarn's tow and hurl open it too (`open_ring_out`). A knock that lands while the enemy is already falling opens nothing.
+- **When it fires:** the enemy rings out while it is in the air at least `RING_OUT_DROP` (6 m) below the floor it was knocked from, with the ground under it at least that far down too. Health and plating don't matter. A ram down a ramp or a slope carries it downhill but keeps the ground close under it, so it doesn't count. Every island top sits 12 m or more above the net deck.
+- **Flyers:** kite and winch drones hover, so a knock never drops them and they never ring out. Splitter pods can be rung out, but the mama splitter cannot.
 - **What closes it:** once the enemy is back on a floor with the knock spent, a later fall no longer counts. So a throw that lands back on the island is safe, and an enemy that walks off with no knock is still rescued.
 - **Always rescued:** bosses, Wardens and their relics (`reactor_relic`, `swarm_remnant`, `mind_hand`), plus the kill-first specials (`RING_OUT_KEPT`). Boss arenas and the Spillway and Dig keep today's rescue.
-- **Tell:** the fall itself, then the break-up. The `enemy_ringed_out` event row plays the falling whoosh, and `enemy_killed` follows with the kill pop. No attack id is claimed, because a ring-out is not an attack.
+- **Tell:** the fall itself, then the break-up. The `enemy_ringed_out` event row borrows `near_whoosh`, the near-miss sound, until a dedicated ring-out cue is made. `enemy_killed` follows with the kill pop. Scrap drops where the enemy rang out, over the deck. No attack id is claimed, because a ring-out is not an attack.
 - **Tests:** `tests/ring_out_test.gd`.
 
 - Highdraft elite: `ballast_heavy` plus two `kite_drone`, replacing the Spillway elite on stages 5 and 6.
