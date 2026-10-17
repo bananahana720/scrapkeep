@@ -1,7 +1,7 @@
 """Evolve a standing pick onto its written theme, and master any track to SCORE.md's targets.
 
     python evolve.py hybrid <score dir> <cue> <stems dir> <out.wav> [--shift N] [--lead lead.wav]
-    python evolve.py master <in> <out.wav> [--loop --bpm N] [--room spillway|dig|highdraft|boss|neutral]
+    python evolve.py master <in> <out.wav> [--loop --bpm N] [--spice | --light] [--room spillway|dig|highdraft|boss|neutral]
 
 hybrid: the kept drums and bass stems (htdemucs), pitch-shifted N semitones with Rubber Band,
 plus the cue's lead line (themes.py) and its counter line where the cue has one, with each phrase
@@ -19,6 +19,10 @@ gentle bus compression, loudness to -16 LUFS by gain measured with ffmpeg's EBU 
 and a 4x-oversampled lookahead limiter at -1.2 dBTP. With --loop and --bpm the mix is cut, before loudness, to
 whole bars from the kick downbeat whose wrap is closest (at most 16, a multiple of 4), its last 60 ms
 replaced by the audio just before the cut.
+With --spice the mix leans into the electro side: drums parallel-compressed with the kick lifted,
+the bass saturated with a 900 Hz bump, the chords pumping 6 dB under the kick, sub and low held
+to 0.30 and 0.58 then fitted to 0.26 and 0.62 as check_mix.py measures them, and the drums and bass above 250 Hz ramped up 3 dB from the last big switch-up, and machines.py's piston, steam and whir bed on the
+grid. --light keeps the plain mix and adds only a softer machine bed, for the jazz-club tracks.
 """
 
 import json
@@ -33,6 +37,7 @@ from scipy.signal import butter, resample_poly, sosfiltfilt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cut_loops  # noqa: E402
+import machines  # noqa: E402
 
 SR = 48000
 ROOMS = {"spillway": (1.4, 0.18), "dig": (0.9, 0.14), "highdraft": (2.4, 0.22), "boss": (1.1, 0.12),
@@ -143,15 +148,45 @@ def lufs(x):
     return float(summary.split("I:")[1].split("LUFS")[0])
 
 
-def mix_stems(stems, room_name):
+def saturate(x, drive=2.5, mix=0.5):
+    """Soft-clip a copy and blend it in: grit and upper harmonics, so a bass reads on small speakers."""
+    peak = np.abs(x).max() + 1e-9
+    hot = np.tanh(drive * x / peak) * peak / np.tanh(drive)
+    return (1 - mix) * x + mix * hot
+
+
+def punch(drums):
+    """Parallel-compressed drums under the dry ones, kick lifted at 60 Hz: more slam per hit."""
+    crushed = compress(drums, threshold_db=-30.0, ratio=6.0)
+    crushed *= np.sqrt((drums ** 2).mean() / ((crushed ** 2).mean() + 1e-12))
+    return peaking(drums + 0.45 * crushed, 60, 1.0, q=0.9)
+
+
+def switch_up(x, low):
+    """Where the track's last big switch-up starts: the largest jump in low-band energy between
+    neighbouring 4 s windows in its second half, or 70 percent of the way in when none tops 2 dB."""
+    w = 4 * SR
+    db = [10 * np.log10((low[i:i + w] ** 2).mean() + 1e-12) for i in range(0, len(low) - w, w // 2)]
+    best, at = 0.0, int(0.7 * len(x))
+    for k in range(1, len(db)):
+        start = k * (w // 2)
+        if start > len(x) // 2 and db[k] - db[k - 1] > best:
+            best, at = db[k] - db[k - 1], start
+    return at if best >= 2.0 else int(0.7 * len(x))
+
+
+def mix_stems(stems, room_name, spice=False, light=False):
     s = {p.stem: load(p) for p in Path(stems).glob("*.wav")}
     n = min(len(v) for v in s.values())
     s = {k: v[:n] for k, v in s.items()}
     drums = s.get("drums", np.zeros((n, 2)))
     out = np.zeros((n, 2))
-    out += drums
+    out += punch(drums) if spice else drums
+    bass = np.zeros((n, 2))
     if "bass" in s:
         bass = band(s["bass"], "lowpass", 4000)
+        if spice:  # electro bass: grit and a mid bump so the line reads
+            bass = peaking(saturate(bass), 900, 3.0, q=0.8)
         out += duck(pan(bass, 0.0), drums)
     comp = np.zeros((n, 2))
     for k in ("other", "piano", "guitar"):
@@ -159,10 +194,18 @@ def mix_stems(stems, room_name):
             comp += s[k]
     if comp.any():
         comp = peaking(band(comp, "highpass", 120), 3000, -2.0, q=0.7)
-        out += widen(comp, 1.3) * 0.95
+        comp = widen(comp, 1.3) * 0.95
+        out += duck(comp, drums, 6.0) if spice else comp  # the chords pump with the kick
     if "vocals" in s:  # htdemucs files a sax lead under vocals
         lead = peaking(band(s["vocals"], "highpass", 200), 3000, 1.5, q=0.8)
         out += pan(lead, -0.12)
+    if spice:  # the last switch-up hits harder: drums and bass above 250 Hz ramp up 3 dB over two seconds
+        at = switch_up(out, band(drums + bass, "lowpass", 200).mean(axis=1))
+        ramp = np.clip((np.arange(n) - at) / (2 * SR), 0, 1)[:, None]
+        bite = band(punch(drums) + bass, "highpass", 250)
+        out += (10 ** (3 / 20) - 1) * ramp * bite
+    if spice or light:  # the Keepers' engines play along: pistons, steam, whirs on the grid
+        out += machines.layer(drums, 0.6 if light else 1.0, light)
     seconds, wet = ROOMS[room_name]
     return room(out, seconds, wet)
 
@@ -177,6 +220,27 @@ def shelf_to(x, lo, hi, share_max, most_db=12):
     # removing a fraction g of the band leaves (1-g)^2 * share of the energy in it
     keep = max(np.sqrt(share_max * (1 - share) / (share * (1 - share_max))), 10 ** (-most_db / 20))
     return x - (1 - keep) * part
+
+
+def fit_bands(x, caps=(("sub", 20, 60, 0.26), ("low", 60, 250, 0.62))):
+    """Static linear-phase EQ over the whole track: each capped band is scaled down until its share
+    of the 20 Hz to 16 kHz energy, measured the way check_mix.py measures it, is at most its cap.
+    The gain eases over 10 Hz at each band edge."""
+    spec = np.fft.rfft(x, axis=0)
+    f = np.fft.rfftfreq(len(x), 1 / SR)
+    power = np.abs(spec.mean(axis=1)) ** 2  # the mono sum, as check_mix.py measures
+    full = (f >= 20) & (f < 16000)
+    gain = np.ones_like(f)
+    for _ in range(4):
+        total = (power * gain ** 2)[full].sum()
+        for _, lo, hi, cap in caps:
+            inside = (f >= lo) & (f < hi)
+            share = (power * gain ** 2)[inside].sum() / total
+            if share > cap:
+                g = np.sqrt(cap * (1 - share) / (share * (1 - cap)))
+                edge = np.clip(np.minimum(f - lo + 5, hi + 5 - f) / 10, 0, 1)
+                gain *= 1 - (1 - g) * edge
+    return np.fft.irfft(spec * gain[:, None], len(x), axis=0)
 
 
 def lift_low(x, share_min=0.32, most_db=6):
@@ -254,13 +318,15 @@ def loop_cut(x, bpm, bars=16):
     return min((build(s) for s in starts), key=wrap)
 
 
-def master(src, out, loop=False, room_name="neutral", bpm=None):
-    x = mix_stems(src, room_name) if Path(src).is_dir() else room(load(src), *ROOMS[room_name]) if room_name != "neutral" else load(src)
+def master(src, out, loop=False, room_name="neutral", bpm=None, spice=False, light=False):
+    x = mix_stems(src, room_name, spice, light) if Path(src).is_dir() else room(load(src), *ROOMS[room_name]) if room_name != "neutral" else load(src)
     x = band(x, "highpass", 25)
-    for _ in range(2):
-        x = shelf_to(x, 20, 60, 0.26)
-        x = shelf_to(x, 60, 250, 0.62)
+    for _ in range(3 if spice else 2):
+        x = shelf_to(x, 20, 60, 0.30 if spice else 0.26)
+        x = shelf_to(x, 60, 250, 0.58 if spice else 0.62)
         x = lift_low(x)
+    if spice or light:
+        x = fit_bands(x)
     x = lift_lead(x)
     x = stage(x)
     x = mono_lows(x)
@@ -316,7 +382,7 @@ def main(argv):
         hybrid(Path(argv[1]), argv[2], argv[3], argv[4], int(opt("--shift", 0)), opt("--lead"))
     elif argv[0] == "master":
         bpm = float(opt("--bpm")) if opt("--bpm") else None
-        master(argv[1], argv[2], "--loop" in argv, opt("--room", "neutral"), bpm)
+        master(argv[1], argv[2], "--loop" in argv, opt("--room", "neutral"), bpm, "--spice" in argv, "--light" in argv)
     else:
         sys.exit(__doc__)
 
