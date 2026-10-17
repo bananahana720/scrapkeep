@@ -28,6 +28,9 @@ func _initialize() -> void:
 		if _stems_present(theme, manifest):
 			heard += 1
 			_faders(theme, path)
+		else:
+			# The Oggs are gitignored: say so, so the smoke receipt counts the unrun PCM checks.
+			print("SKIP control %s fader PCM: its Oggs are not in this checkout" % theme)
 	print("MUSIC_PICKS themes=%d heard=%d" % [THEMES.size(), heard])
 	quit(t.verdict())
 
