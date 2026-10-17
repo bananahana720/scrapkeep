@@ -64,11 +64,17 @@ def slowmo(x, bpm):
 
 
 def low_hull(x, bpm):
-    """Low hull: the band goes muffled and far away, a heartbeat thumps lub-dub on each beat."""
+    """Low hull: the band goes muffled and far away while an 808 heartbeat pumps lub-dub on every
+    beat of whatever is playing, and the band ducks under each thump. Locked to the track's tempo,
+    so it races when a boss phase speeds up."""
     y = filt(x, "lowpass", 700) * 0.8
+    t = np.arange(len(x)) / SR
+    phase = (t % (60 / bpm)) / (60 / bpm)
+    y *= 0.45 + 0.55 * np.minimum(phase / 0.5, 1)
+    lub = 60 / bpm * 0.3
     for at in beats(len(x) / SR, bpm):
-        place(y, sub(0.18, 90, 45, 0.08, 0.6), at)
-        place(y, sub(0.14, 80, 40, 0.06, 0.4), at + 0.16)
+        place(y, sub(0.22, 120, 48, 0.1, 0.9), at)
+        place(y, sub(0.16, 100, 44, 0.07, 0.55), at + lub)
     return y
 
 

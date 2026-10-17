@@ -4,8 +4,9 @@ parent's harmony and melody survived.
     python measure_variants.py <render folder> <round> <run dir>
 
 "Parent match" correlates the take's pitch-class profile over time (a 12-bin chroma, 0.19 s frames)
-with its own parent's. "Other parent" scores the same take against a different variant's parent,
-the negative control: a twist that kept its parent scores clearly above that line.
+with its own parent's. "Other parent" scores the same take against a parent from any round that is not its own,
+from another theme family, the negative control: a twist that kept its parent scores clearly above
+that line.
 """
 
 import json
@@ -40,6 +41,14 @@ def chroma(x):
     return out / (out.sum(axis=1, keepdims=True) + 1e-9)
 
 
+def family(src):
+    """The theme a source descends from. A control from the same family is the same melody at
+    another tempo or in another cover, so it would not be independent."""
+    stem = Path(src).stem.removeprefix("r7-").removeprefix("boss-")
+    head = stem.split("-")[0]
+    return {"champion": "hype", "combat": "hype", "mechanical": "hype", "mechswing": "hype"}.get(head, head)
+
+
 def match(a, b):
     n = min(len(a), len(b))
     return float(np.corrcoef(a[:n].ravel(), b[:n].ravel())[0, 1])
@@ -47,22 +56,31 @@ def match(a, b):
 
 def main():
     root, rnd, run = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
-    variants = json.loads((root / "ace.json").read_text())["experiments"][rnd]["variants"]
-    parents = {v["name"]: chroma(mono(v["src_audio"])[0]) for v in variants}
-    names = [v["name"] for v in variants]
+    experiments = json.loads((root / "ace.json").read_text())["experiments"]
+    variants = experiments[rnd]["variants"]
+    sources = sorted({v["src_audio"] for e in experiments.values() for v in e.get("variants", [])
+                      if v.get("src_audio") and Path(v["src_audio"]).exists()})
+    cache = {}
+
+    def parent(src):
+        if src not in cache:
+            cache[src] = chroma(mono(src)[0])
+        return cache[src]
+
     rows = []
     for i, v in enumerate(variants):
-        other = names[(i + 3) % len(names)]
-        if Path(variants[(i + 3) % len(names)]["src_audio"]) == Path(v["src_audio"]):
-            other = names[(i + 4) % len(names)]
+        pool = [s for s in sources if family(s) != family(v["src_audio"])]
+        if not pool:
+            sys.exit(f"{v['name']}: no other parent to use as the control")
+        other = pool[(i * 7 + 3) % len(pool)]
         for take in sorted(run.glob(f"{v['name']}-s*.mp3")):
             x, full, sr = mono(take)
             c = chroma(x)
             flux, rate = cut_loops.onset_envelope(full if full.ndim == 1 else full, sr)
             bpm = cut_loops.tempo(flux, rate, v["bpm"] * 0.85, v["bpm"] * 1.15)
             rows.append(dict(take=take.stem, ask=v["bpm"], tempo=round(float(bpm), 1),
-                             parent=round(match(c, parents[v["name"]]), 2),
-                             other=round(match(c, parents[other]), 2),
+                             parent=round(match(c, parent(v["src_audio"])), 2),
+                             other=round(match(c, parent(other)), 2), control=Path(other).name,
                              quiet=round(float(cut_loops.longest_quiet(full, sr)), 1)))
     if not rows:
         sys.exit("no takes found")

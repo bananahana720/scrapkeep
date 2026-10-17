@@ -133,6 +133,26 @@ Andrew, 2026-10-17: the same themes should come back changed, so a champion, a b
 - **Buffs are live effects** on whatever is playing: overdrive, slow-mo, low hull, shield and scrap streak (INTEGRATION section 6).
 - **Switch-ups hand one loop to the next on a downbeat.** Out of nowhere: tape stop, record scratch, a beat of silence, a unison hit. Planned: a one-bar turnaround with a brass ii-V.
 
+## The hype rule: every fight ends on the drop
+
+Andrew, 2026-10-17: the boss music should feel like Eurodance and electro house, with harder 808s, a pumping bassline and the existing hooks made catchier, so you feel like a badass and want to retry after every death. This is a rule for every encounter, not a separate score.
+
+- **Phase 2 to 3 drops into the hype version.** On every boss, mini-boss and champion fight, the last phase is the Eurodance cover of that fight's own theme: four-on-the-floor kick, 808 sub, an offbeat bassline, supersaw stabs and the same sax hook. The `hype_drop` stinger carries the handover: one bar of riser and snare roll, a beat of silence, then the drop.
+- **Flow, not frenzy.** Hype sections sit at 140 to 150 BPM. The kick, the hats and the bassline repeat without fills inside a phrase, so the groove locks in. The hook plays in call and response with space between phrases. At 172, the drums play a half-time break so the felt pulse stays at 86 and 172, never cluttered.
+- **Warnings keep a lane.** While a telegraph or danger cue plays, the music bus dips 4 dB in the 2 to 4 kHz band, where the tritone warnings live. The groove keeps going and the warning still cuts through.
+- **Dying feeds the hype.** Low hull turns the band muffled while an 808 heartbeat pumps on the track's own beat, so it races when a phase speeds up. Surviving on 1 hull lands `clutch_comeback`: a riser, then the band slams back a half step higher. Retrying lands `retry_kickin`: four climbing kicks, two sax notes and the drop, straight back into the groove.
+
+## The four extras (Andrew's "All four", 2026-10-17)
+
+| Extra | What you hear | When |
+| --- | --- | --- |
+| Pilot quotes | The band plays your pilot's own leitmotif on tenor sax, from the same cells as `Harmony.MOTIFS`, with a brass and kick hit on the last note | A big hit: a crit, a gauge release, a chain milestone |
+| Clutch comeback | A riser out of the muffled band, a breath, then the band back a half step up with a bell wink | Surviving the low-hull state |
+| Machine crowd | Steam whistles on a D chord, clanks on the beat, ratchet applause; three tiers, each bigger | Kill chains at 20, 35 and 50 |
+| Sour honk | One tenor sax Ab3, the tritone off home, sagging a quarter tone | A whiffed smash, on the beat |
+
+Code: [sound/extras.py](sound/extras.py).
+
 ## Renders from this pass
 
 ACE-Step 1.5 XL turbo on the RTX 4080, draft mode, two seeds each. Files sit in `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`, outside the repo like every other music render. [sound/RENDERS.md](sound/RENDERS.md) lists them with checksums. They are linear previews. Seamless loops, stems and final bf16 renders come after Andrew picks by ear.

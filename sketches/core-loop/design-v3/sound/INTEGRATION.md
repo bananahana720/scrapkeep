@@ -78,6 +78,19 @@ Buffs, as stock Godot effects on the music bus:
 | Shield | `AudioEffectHighPassFilter` at 300 Hz, `AudioEffectChorus`, a bell one-shot per bar |
 | Scrap streak | A beat-synced volume duck (sidechain pump), plus a chiptune arpeggio per bar |
 
+Hype rule and extras (sound bible, "The hype rule" and "The four extras"):
+
+| Trigger | Music does | Where it plugs in |
+| --- | --- | --- |
+| Boss, mini-boss or champion enters its last phase | `hype_drop` starts one bar before the next downbeat, then the fight's `euro-*` track starts on the drop | `set_boss_state`: the last posture phase; elites use their final health third |
+| Telegraph or danger cue plays | Music bus band dip: 4 dB at 2 to 4 kHz for the cue's length | An `AudioEffectEQ` on the music bus, gain driven from the cue log |
+| Low hull | The low-hull buff: low-pass 700 Hz, heartbeat one-shots on each beat of the current track, band ducked 55% under each thump | Read the beat length from the playing track, so the heartbeat follows phase tempo |
+| Survive low hull | `clutch_comeback` quantized to the next bar; the current track restarts pitched up a semitone (`pitch_scale` 1.0595) until the phase ends | Low-hull exit with hull above 1 |
+| Retry after death | `retry_kickin` on the first frame of the new run, then the combat or roam track on its downbeat | Restart flow |
+| Big hit (crit, gauge release, chain milestone) | `pilot_quote_<class motif>` on the next beat, at most once per 8 bars | `class_def.motif` already names the row |
+| Kill chain reaches 20, 35, 50 | `crowd_cheer_1`, `_2`, `_3` on the next beat | The existing chain ladder |
+| Smash misses | `whiff_honk` on the next beat | The smash resolver's miss branch |
+
 Only one buff colours the music at a time. Low hull wins over every other buff, because danger outranks reward.
 
 ## 7. Hand-over list for the coordinator
@@ -88,5 +101,6 @@ Only one buff colours the music at a time. Low hull wins over every other buff, 
 4. Add the two section 1 checks to the test suite.
 5. Special enemies, from `specials.py` (17 WAVs). Play `<name>_presence` as a looping `AudioStreamPlayer3D` on the enemy, with its own voice so it never steals a combat voice, and stop it on death. Fire `<name>_tell` on the same frame as the visual tell: the Foreman's horn on the beat before the shred wipe, the Dispatcher's on each drop, the Splitter's on the seam flare, the Linker's when the cable goes taut. Fire `<name>_break` on death. The Splitter picks `splitter_break_split` when rammed at ground level and `splitter_break_clean` otherwise. Queue `<name>_spawn` on the next beat through the same quantizer as the stomp downbeats in section 3. Cap presence loops at two specials heard at once, nearest first.
 6. Variations: import the picked round-7 takes (RENDERS.md) as tracks and wire the section 6 table.
+7. Hype rule and extras: import the picked round-8 `euro-*` takes and the 13 `extras.py` WAVs, and wire the second section 6 table.
 
 Not covered here: the in-game mix under real combat noise, and whether the stem faders feel right. Both need Andrew playing.

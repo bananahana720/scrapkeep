@@ -176,32 +176,32 @@ b2d189f3a543c7e56037393a1d9fd6aafa12ae697932d18877726645531ad9b3  specials/reel-
 
 Covers of the picked parents (`ace.py lab . round7 --seeds 2701 2702`, draft mode, RTX 4080, about 5 s per take). Each source in `variant-src/` is the parent take stretched with Rubber Band to the variation's tempo and cut to 64 s. Brindle's parent is boss-brindle-s2402. The Waking's is boss-waking-s2401, the Mind's boss-mind-s2402, the champion's combat-hype-cover-mechswing-s2601. Each world's roam s2501 is the parent of its secret area. Title B s2101 is the parent of Scrap Rush, and title A s2101 of the minigame. Strength 0.6 for phases and the champion, 0.55 for areas and the minigame, 0.5 for the event.
 
-`measure_variants.py` scores each take's 12-bin chroma over time against its own parent (parent) and against a different variant's parent (other, the control). All 22 takes score above their control, so every twist kept its parent. Tempo is the kick-onset search within 15% of the request.
+`measure_variants.py` scores each take's 12-bin chroma over time against its own parent (parent) and against a different variant's parent (other, the control). The control comes from a different theme family (see `family()` in the script), since a sibling phase is the same melody at another tempo. A take counts as having kept its parent when it beats the control by at least 0.1, because a control in the same key scores higher from shared notes alone. Two picks fall short of that: the Mind's final phase (margin 0.07) and secret Spillway (0.05). The listening page flags both for an ear check. Tempo is the kick-onset search within 15% of the request.
 
-| Take | Asked | Tempo read | Parent | Other | Longest quiet | Pick |
-| --- | --- | --- | --- | --- | --- | --- |
-| brindle-p1-requisition-s2701 | 138 | 137.9 | 0.54 | 0.12 | 0.1 s | yes |
-| brindle-p1-requisition-s2702 | 138 | 138.0 | 0.52 | 0.12 | 0.1 s |  |
-| brindle-p2-furnace-s2701 | 150 | 132.3 | 0.48 | 0.25 | 0.7 s |  |
-| brindle-p2-furnace-s2702 | 150 | 150.0 | 0.4 | 0.18 | 0.1 s | yes |
-| brindle-p3-scuttle-s2701 | 172 | 172.0 | 0.54 | 0.21 | 0.0 s |  |
-| brindle-p3-scuttle-s2702 | 172 | 171.9 | 0.67 | 0.25 | 0.2 s | yes |
-| waking-final-s2701 | 142 | 125.0 | 0.35 | 0.09 | 0.0 s |  |
-| waking-final-s2702 | 142 | 129.5 | 0.41 | 0.11 | 0.0 s | yes |
-| mind-final-s2701 | 142 | 141.9 | 0.6 | 0.13 | 0.0 s | yes |
-| mind-final-s2702 | 142 | 132.2 | 0.73 | 0.15 | 0.0 s |  |
-| champion-hype-s2701 | 129 | 129.0 | 0.39 | 0.23 | 0.1 s |  |
-| champion-hype-s2702 | 129 | 129.0 | 0.4 | 0.23 | 0.1 s | yes |
-| secret-spillway-s2701 | 172 | 178.5 | 0.37 | 0.28 | 0.8 s |  |
-| secret-spillway-s2702 | 172 | 146.3 | 0.46 | 0.36 | 0.0 s | yes |
-| secret-dig-s2701 | 172 | 172.0 | 0.55 | 0.03 | 0.0 s |  |
-| secret-dig-s2702 | 172 | 172.0 | 0.58 | 0.07 | 0.1 s | yes |
-| secret-highdraft-s2701 | 172 | 174.0 | 0.41 | 0.06 | 0.1 s | yes |
-| secret-highdraft-s2702 | 172 | 187.5 | 0.5 | 0.09 | 0.0 s |  |
-| event-scrap-rush-s2701 | 172 | 172.0 | 0.36 | 0.28 | 0.2 s |  |
-| event-scrap-rush-s2702 | 172 | 172.0 | 0.52 | 0.33 | 0.0 s | yes |
-| minigame-chiptune-s2701 | 129 | 123.5 | 0.46 | 0.3 | 0.2 s |  |
-| minigame-chiptune-s2702 | 129 | 129.9 | 0.55 | 0.35 | 0.2 s | yes |
+| Take | Asked | Tempo read | Parent | Control | Margin | Longest quiet | Pick |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| brindle-p1-requisition-s2701 | 138 | 137.9 | 0.54 | 0.14 (boss-waking-s2401-129bpm.wav) | 0.40 | 0.1 s | yes |
+| brindle-p1-requisition-s2702 | 138 | 138.0 | 0.52 | 0.13 (boss-waking-s2401-129bpm.wav) | 0.39 | 0.1 s |  |
+| brindle-p2-furnace-s2701 | 150 | 132.3 | 0.48 | 0.25 (roam-highdraft-172.wav) | 0.23 | 0.7 s |  |
+| brindle-p2-furnace-s2702 | 150 | 150.0 | 0.4 | 0.19 (roam-highdraft-172.wav) | 0.21 | 0.1 s | yes |
+| brindle-p3-scuttle-s2701 | 172 | 172.0 | 0.54 | 0.22 (boss-mind-s2402-129bpm.wav) | 0.32 | 0.0 s |  |
+| brindle-p3-scuttle-s2702 | 172 | 171.9 | 0.67 | 0.23 (boss-mind-s2402-129bpm.wav) | 0.44 | 0.2 s | yes |
+| waking-final-s2701 | 142 | 125.0 | 0.35 | 0.08 (hype-129.wav) | 0.27 | 0.0 s |  |
+| waking-final-s2702 | 142 | 129.5 | 0.41 | 0.11 (hype-129.wav) | 0.30 | 0.0 s | yes |
+| mind-final-s2701 | 142 | 141.9 | 0.6 | 0.53 (roam-highdraft-172.wav) | 0.07 weak | 0.0 s | yes |
+| mind-final-s2702 | 142 | 132.2 | 0.73 | 0.63 (roam-highdraft-172.wav) | 0.10 weak | 0.0 s |  |
+| champion-hype-s2701 | 129 | 129.0 | 0.39 | 0.24 (brindle-p3-172.wav) | 0.15 | 0.1 s |  |
+| champion-hype-s2702 | 129 | 129.0 | 0.4 | 0.22 (brindle-p3-172.wav) | 0.18 | 0.1 s | yes |
+| secret-spillway-s2701 | 172 | 178.5 | 0.37 | 0.36 (r7-brindle-p1-requisition-s2701.wav) | 0.01 weak | 0.8 s |  |
+| secret-spillway-s2702 | 172 | 146.3 | 0.46 | 0.41 (r7-brindle-p1-requisition-s2701.wav) | 0.05 weak | 0.0 s | yes |
+| secret-dig-s2701 | 172 | 172.0 | 0.55 | 0.07 (title-b-172.wav) | 0.48 | 0.0 s |  |
+| secret-dig-s2702 | 172 | 172.0 | 0.58 | 0.11 (title-b-172.wav) | 0.47 | 0.1 s | yes |
+| secret-highdraft-s2701 | 172 | 174.0 | 0.41 | 0.06 (brindle-p2-150.wav) | 0.35 | 0.1 s | yes |
+| secret-highdraft-s2702 | 172 | 187.5 | 0.5 | 0.06 (brindle-p2-150.wav) | 0.44 | 0.0 s |  |
+| event-scrap-rush-s2701 | 172 | 172.0 | 0.36 | 0.37 (r7-brindle-p1-requisition-s2701.wav) | -0.01 weak | 0.2 s |  |
+| event-scrap-rush-s2702 | 172 | 172.0 | 0.52 | 0.4 (r7-brindle-p1-requisition-s2701.wav) | 0.12 | 0.0 s | yes |
+| minigame-chiptune-s2701 | 129 | 123.5 | 0.46 | 0.27 (roam-highdraft-172.wav) | 0.19 | 0.2 s |  |
+| minigame-chiptune-s2702 | 129 | 129.9 | 0.55 | 0.25 (roam-highdraft-172.wav) | 0.30 | 0.2 s | yes |
 
 Both Waking final takes read near 129 against an asked 142, so the model drifted back toward the parent's tempo. `grid/waking-final-s2702-142bpm.wav` is stretched by 142/129.5 and then reads 139.7. The tempo read is unreliable on that take, so it needs an ear. Secret Spillway take 2 reads 146 against 172, probably a half-time feel; also an ear check.
 
@@ -255,6 +255,80 @@ b7f05b13cc1ec936aeb51c37fe1ade8902ab8a1b25aa246813b43dea29f9abb1  variant-src/ro
 d9ec3de2f1a7079b5e50045c4f32c5128c680616ce366887d74a4c1b1153ef11  variant-src/waking-final-142.wav
 ```
 
+## Eurodance bosses and the hype rule, rounds 8 and 9, 2026-10-17
+
+Covers of the picked takes (round 7 picks for Brindle's phases and the final phases, the round 4 grid takes for the Waking and the Mind). Round 9 is the champion pick stretched to 145, the flow band, then covered. Strength 0.55. Seeds 2801 and 2802, then 2901 and 2902. Every take beats its control by at least 0.17 (euro-waking-s2802).
+
+| Take | Asked | Tempo read | Parent | Control | Margin | Longest quiet | Pick |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| euro-brindle-p1-s2801 | 138 | 137.9 | 0.49 | 0.15 (boss-waking-s2401-129bpm.wav) | 0.34 | 0.5 s |  |
+| euro-brindle-p1-s2802 | 138 | 137.9 | 0.61 | 0.22 (boss-waking-s2401-129bpm.wav) | 0.39 | 0.1 s | yes |
+| euro-brindle-p2-s2801 | 150 | 163.6 | 0.65 | 0.2 (roam-highdraft-172.wav) | 0.45 | 0.1 s | yes |
+| euro-brindle-p2-s2802 | 150 | 128.5 | 0.62 | 0.32 (roam-highdraft-172.wav) | 0.30 | 1.2 s |  |
+| euro-brindle-p3-s2801 | 172 | 172.0 | 0.56 | 0.28 (boss-mind-s2402-129bpm.wav) | 0.28 | 0.1 s | yes |
+| euro-brindle-p3-s2802 | 172 | 172.0 | 0.51 | 0.19 (boss-mind-s2402-129bpm.wav) | 0.32 | 0.0 s |  |
+| euro-waking-s2801 | 129 | 129.0 | 0.36 | 0.16 (hype-129.wav) | 0.20 | 0.5 s |  |
+| euro-waking-s2802 | 129 | 129.0 | 0.37 | 0.2 (hype-129.wav) | 0.17 | 0.0 s | yes |
+| euro-waking-final-s2801 | 142 | 140.0 | 0.61 | 0.38 (roam-dig-172.wav) | 0.23 | 1.4 s | yes |
+| euro-waking-final-s2802 | 142 | 140.0 | 0.56 | 0.38 (roam-dig-172.wav) | 0.18 | 1.1 s |  |
+| euro-mind-s2801 | 129 | 129.0 | 0.63 | 0.28 (boss-waking-s2401-129bpm.wav) | 0.35 | 0.0 s | yes |
+| euro-mind-s2802 | 129 | 114.6 | 0.5 | 0.3 (boss-waking-s2401-129bpm.wav) | 0.20 | 0.0 s |  |
+| euro-mind-final-s2801 | 142 | 141.9 | 0.62 | 0.3 (r7-brindle-p3-scuttle-s2702.wav) | 0.32 | 0.0 s | yes |
+| euro-mind-final-s2802 | 142 | 141.9 | 0.62 | 0.29 (r7-brindle-p3-scuttle-s2702.wav) | 0.33 | 0.0 s |  |
+
+| Take | Asked | Tempo read | Parent | Control | Margin | Longest quiet | Pick |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| euro-champion-s2901 | 145 | 145.0 | 0.57 | 0.3 (brindle-p2-150.wav) | 0.27 | 0.6 s | yes |
+| euro-champion-s2902 | 145 | 145.0 | 0.53 | 0.16 (brindle-p2-150.wav) | 0.37 | 0.5 s |  |
+
+The first round 9 measurement scored the take against its own parent as the control, because the round has one variant; the scores were equal (0.57 and 0.57). The script now draws the control from every round's parents, from another theme family.
+
+`extras.py` writes 13 cues to `extras/`, checked by `check_events.py` with 0 failures. The cues are six pilot quotes (cells copied from `Harmony.MOTIFS`), the clutch comeback, three crowd tiers, the honk, the hype drop and the retry kick-in. The checker first failed `hype_drop` on onset (152 ms), because it was filed as a boss cue; it swells in on purpose a bar early, so it is now a stinger. `variant-src/hype-129-up1.wav` is the hype loop a semitone up, for the clutch demo. `variations.py`'s low-hull buff now pumps an 808 heartbeat and ducks the band on each beat.
+
+```text
+2eba19fd3726a39a8196343b822b7ee65579509b113eec1d44aab0e646f1d9df  renders/lab-round8-1/euro-brindle-p1-s2801.mp3
+e83b0f7ae63b57fdc28088ead7c43f82c94d401461bc756e445a04aabe7781fe  renders/lab-round8-1/euro-brindle-p1-s2802.mp3
+92f62734808fcc860da108c26003dd1f0131f7f8f4b77e69d57387e746b7858b  renders/lab-round8-1/euro-brindle-p2-s2801.mp3
+30fe7ec29b35b31cf422d33135496a166a19bcf2b5544ff3002012e2471e2ad3  renders/lab-round8-1/euro-brindle-p2-s2802.mp3
+78b11663cb624fe67d70ca51446c164569462d9021fadda14baaff12816965b9  renders/lab-round8-1/euro-brindle-p3-s2801.mp3
+cf52921afe18ce0f5e31fb4b9bcd37b5c654809ac71d1f1f8d0ce0ef3ddb0a0a  renders/lab-round8-1/euro-brindle-p3-s2802.mp3
+b89b81f76a4a96467eba43a554486f4fb2a26b9f348eb5cbdc1b5025ea08b07d  renders/lab-round8-1/euro-mind-final-s2801.mp3
+253796cb8e6b3fece417d3f14a2c57efccfd585dbf4d0054119d85b1be350a12  renders/lab-round8-1/euro-mind-final-s2802.mp3
+4865434369e1ab0328c7c5b518a2266bc1705e39e8f78639156a6943ba30bddd  renders/lab-round8-1/euro-mind-s2801.mp3
+8d81baf5847ed963731539185aa67cfee3551b5cefe2c8491588a83bf9f5c439  renders/lab-round8-1/euro-mind-s2802.mp3
+e869ff1e9d1e4478dfe2f4b174477da6eb3f5b8608fc914df2010204cfc83389  renders/lab-round8-1/euro-waking-final-s2801.mp3
+39b64dd7195d2e8b5bec1ee6f7a6cf4011d395fdc2e7878bc9ff66cc593fb007  renders/lab-round8-1/euro-waking-final-s2802.mp3
+3acee3863bea6e165e365c0af4d6ea6602da0948a07c1552f8bc2bb01317355d  renders/lab-round8-1/euro-waking-s2801.mp3
+eafe25f6fa754a9bd58799be21d4e5cd2ce3ee5a6ad16c48ae9aca6bdbaccfa9  renders/lab-round8-1/euro-waking-s2802.mp3
+3ad68d8a95a240cc5827ad0b2f623aa18bbce0aa18b70738342862a763664f76  renders/lab-round9-1/euro-champion-s2901.mp3
+a9cac9f62ac8d0fc5cfd0ce0ccc317c2bb4a8594e4c4f172000030bbbade075d  renders/lab-round9-1/euro-champion-s2902.mp3
+3cd6b33d36c4e0c6a0c077cc2518e7b48b418b8d7dbba8a54f662ad12e9b4ccb  extras/clutch_comeback.wav
+ae56e2056c6763b843a715528206bd3b9a438af71775992d77e0622e7bcd3734  extras/crowd_cheer_1.wav
+5f4529e41c51fa423b9bd345886697be360a9b88f0b57ec6bde87a004f0fcbe0  extras/crowd_cheer_2.wav
+267b019ec4e024ef14511473e26116757df9ad443575e93435e2b368d0da0879  extras/crowd_cheer_3.wav
+a0335c6178cc0ca24a811608f7422140403ef0529a9593c19e425f4daef5e5be  extras/demo-clutch.wav
+94209439df7d1819ce0c9dd75607736faa17a2ee62b5da183f426bd67a23b9e7  extras/demo-crowd.wav
+6564b4bfaed4c92c809a90af252a492f3f68bba7804d60a285bdfe841da3bec3  extras/demo-honk.wav
+890a912d8f18e3c81a9c34133115e241180703eeb3a222602812fff485c6ffe4  extras/demo-pilot-quotes.wav
+4ce0e56ebbc5436886d060e0449cb6efc875dd0d140bfd7016703b4374155905  extras/hype_drop.wav
+42fa1d30d7a969a8a685c4ee06e1c3b90139f53770d5ea59f3d69659e11c5d44  extras/pilot_quote_cannon.wav
+fdccd89603ce65c3e7f24fbee83a4e11bbbb2c78b9be1d9197a8c1566c279f4a  extras/pilot_quote_kest.wav
+b5355e30199c76ee4f9686e0a8665840b02ba0d531744d79e87381bde8357b2c  extras/pilot_quote_rivet.wav
+125bbd7134a34082fcee150adb954697ed96afef9212f659d45521a8a194e012  extras/pilot_quote_sable.wav
+144382164782d1bebe36e62cc8e4e3485f9141d9b1e02e5a614ddf7cc3e83375  extras/pilot_quote_tally.wav
+4f80309501d810e1ff8b75329ba55d869c620d11b0535689565ff2dc5a3e69e7  extras/pilot_quote_tarn.wav
+b0cfcfbe5c7042ef8e70656efec29042c4538de3483e64c5be893c237f7a6e0a  extras/retry_kickin.wav
+aa3e67e28cd9df4fd365c979078148eb999465eb60175535ea5d482e6ee127e2  extras/whiff_honk.wav
+ba659c66400a4b59386abd586aaf7ab8f398150e4ce0c451938fae67f48eb888  variations/buff-low-hull.wav
+6b57fea104210c1bd40f0881b25c3fe4cfb53fd9b42f0243dc6081263ff2ae36  variant-src/r7-brindle-p1-requisition-s2701.wav
+e33d1f15ca1d14b81a03b8979cb809b8c21347fd214ab9cbb13027e12f119594  variant-src/r7-brindle-p2-furnace-s2702.wav
+0acaee0f956e750067a5f80813a5eabb35a2ca5d590871d6a905e0ecff47a37e  variant-src/r7-brindle-p3-scuttle-s2702.wav
+72755adf4cf8d333535c950cf13cfcd9a71fea3aed1ad276efd938efa50ada59  variant-src/r7-champion-145.wav
+8a525bdd2164651cd42c8f839a1e8498f5cca111a67e966290281b272b9e5feb  variant-src/r7-mind-final-s2701.wav
+acb514797835f621f9837ddc420bc1724976188751a191f3ce50d812059b4727  variant-src/r7-waking-final.wav
+e67e6e0a372aca18b339cf539d641156029d188852e147f05008b5187c134f98  variant-src/hype-129-up1.wav
+```
+
 ## Reproduce
 
 ```bash
@@ -270,6 +344,9 @@ PATH=<shim dir>:$PATH CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python
 PATH=<shim dir>:$PATH CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 ~/.claude/skills/song-composer/scripts/ace.py lab <render folder> round7 --seeds 2701 2702
 ~/.local/share/ACE-Step-1.5/.venv/bin/python -I measure_variants.py <render folder> round7 <render folder>/renders/lab-round7-1
 ~/.local/share/ACE-Step-1.5/.venv/bin/python -I variations.py <render folder>
+~/.local/share/ACE-Step-1.5/.venv/bin/python -I extras.py <render folder>
+~/.local/share/ACE-Step-1.5/.venv/bin/python -I check_events.py <render folder>/extras
+(ace.py lab <render folder> round8 --seeds 2801 2802, and round9 --seeds 2901 2902, then measure_variants.py for each)
 ```
 
 The shim is a one-line `nvidia-smi` wrapper that adds `-i 0`. Since the RTX 3060 was installed, `ace.py`'s VRAM check fails because it parses one line of `nvidia-smi` output and now gets two.
