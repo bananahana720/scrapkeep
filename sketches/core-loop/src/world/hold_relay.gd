@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const Cards := preload("res://src/world/director_cards.gd")
 
 # Hold the Relay: roll into the relay's ring and it starts to transmit. It charges
 # while you are inside the ring, circling, ramming or turreted on one of its walls,
@@ -13,6 +14,10 @@ const Parts := preload("res://src/build/parts.gd")
 # ring radius, radius_floor the smallest the ring may get, and follower how far the
 # ring shrinks with charge (0 keeps it fixed). The convergence part changes T and the
 # radius through tuned(); the defaults keep today's relay.
+#
+# The risk stack (W13 SR10): before charging, the player may stack the relay 0 to 4 times.
+# A stake of k multiplies the relay's pack and miniboss credit by 1 + k and pays 1 + k part
+# rolls; no scrap or core is staked. The stake locks when charging starts and frees on a loss.
 
 const RULE := {"T": 18.0, "s": 1.0, "discharge": 0.0, "radius": 24.0, "radius_floor": 3.0, "follower": 0.0}
 const WINDOW := 60.0
@@ -31,7 +36,9 @@ var inside := false
 var miniboss_at := 0.35
 # The occupied share of the living, set by the caller; a lone player is 1.0.
 var share := 1.0
+var stakes := 0
 var _relay_y := 0.0
+var _charging := false
 
 
 func _init(site: Dictionary, relay_y: float) -> void:
@@ -43,6 +50,38 @@ func _init(site: Dictionary, relay_y: float) -> void:
 func begin() -> void:
 	held = 0.0
 	elapsed = 0.0
+	_charging = true
+
+
+func set_stakes(k: int) -> bool:
+	if _charging:
+		return false
+	stakes = clampi(k, 0, Cards.RELAY_STAKE_MAX)
+	return true
+
+
+# One more stack, wrapping from the most back to none.
+func stake_up() -> bool:
+	return set_stakes((stakes + 1) % (Cards.RELAY_STAKE_MAX + 1))
+
+
+func pack_credit(base: float) -> float:
+	return Cards.staked(base, stakes)
+
+
+func miniboss_credit(base: float) -> float:
+	return Cards.staked(base, stakes)
+
+
+func rewards() -> int:
+	return 1 + stakes
+
+
+# The stake as the player sees it before rolling in.
+func stake_line() -> String:
+	if stakes == 0:
+		return "No stake. 1 part roll."
+	return "Stake x%d: fight x%d, %d part rolls." % [stakes, 1 + stakes, rewards()]
 
 
 func set_occupancy(inside_count: int, living_count: int) -> void:
@@ -60,6 +99,7 @@ func step(delta: float, ball: Vector3, _velocity: Vector3) -> String:
 	elif float(rule["discharge"]) > 0.0:
 		held = maxf(0.0, held - float(rule["discharge"]) * delta)
 	if elapsed >= WINDOW:
+		_charging = false
 		return "lost"
 	return ""
 
@@ -96,6 +136,8 @@ func spike() -> bool:
 
 func status() -> String:
 	var line := "Relay %d%%. %d s left." % [int(progress() * 100.0), int(ceil(WINDOW - elapsed))]
+	if stakes > 0:
+		line += " Stake x%d." % stakes
 	return line if inside else line + " Back in the ring!"
 
 
