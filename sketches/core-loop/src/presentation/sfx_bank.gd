@@ -118,6 +118,7 @@ const TRIM_DB := {
 	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0, "verb_fail_active": -18.0,
 	# The actives' launches (src/combat/actives), one per active: "active_" + its id.
 	"active_scrap_rocket": -8.0,
+	"active_quake_knock": -7.0,
 	# Each pilot's line-skill and set-piece cues, one marked block per pilot (SKILL-BAR section 12,
 	# item 4); a row here needs its recipe in _bake.
 	# --- P-C Sable sounds ---
@@ -345,6 +346,12 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"active_scrap_rocket":
 			return _mix([[_noise(0.16, 2400.0, 5200.0, 14.0, 0.004), 0, 0.7], [_tone(0.09, 120.0, 60.0, "sine", 30.0), 0, 0.8],
 				[_tone(0.34, 900.0, 2600.0, "sine", 6.0), Synth.seconds(0.06), 0.35], [_noise(0.3, 1200.0, 3600.0, 8.0, 0.02), Synth.seconds(0.06), 0.4]])
+		# The Waking's own floor voice (warn_burrow's low Eb rumble, breach's dry crack), struck by
+		# hand: a muffled knock under the plate, the rumble rolling out, then stone cracking. KRRAK
+		"active_quake_knock":
+			return _mix([[_noise(0.1, 420.0, 200.0, 30.0), 0, 0.9], [_tone(0.5, _hz(39), _hz(34), "saw_dark", 3.5), 0, 0.85],
+				[_noise(0.035, 5200.0, 2200.0, 85.0), Synth.seconds(0.05), 0.9], [_fm(0.1, _hz(63), 2.3, 4.0, 26.0), Synth.seconds(0.05), 0.5],
+				[_noise(0.03, 4400.0, 2000.0, 90.0), Synth.seconds(0.12), 0.6], [_noise(0.4, 1300.0, 200.0, 5.0, 0.02), Synth.seconds(0.1), 0.7]], true)
 		"verb_fail_ultimate":
 			return _mix([[_fm(0.16, _hz(62), 1.5, 2.5, 20.0, -2.0), 0, 1.0], [_tone(0.06, 180.0, 150.0, "sine", 30.0), Synth.seconds(0.05), 0.6]])
 		"grapple_release":
