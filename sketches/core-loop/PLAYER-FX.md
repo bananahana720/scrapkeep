@@ -38,6 +38,10 @@ This layer adds the player-side effects the tone bible (TONE-BIBLE.md, project f
 
 Hit-stop and shake stay in `juice.gd`, owned by the Knockback thread.
 
+## Growth rule
+
+Andrew tapped "Presence, centre clear" (17 Oct 17:28Z): a grown hit reads mightier through colour heat (boon sparks and aura motes run toward the heat ramp as the build grows), bigger words, edge ink (every contact hit earns the impact frame from "grown") and the part aura. Bursts stay their current size, so the crowd behind a hit stays visible. Cannon grows the same way, since its slam already fills the screen.
+
 ## Readability rules
 
 - **Warnings draw on top** (Andrew, 17 Oct 16:36Z). Every material here sorts at render priority -4, below the threat marks (39 to 42). Words are transparent and write no depth. The test checks this.

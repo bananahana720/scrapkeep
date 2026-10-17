@@ -70,6 +70,7 @@ const WORD_SAFE := Vector2(0.78, 0.7)
 # Ram launches and bowling racks, lined up with the Knockback thread (17 Oct): a ram at
 # blazing speed throws 23 to 34 m/s; a killed body bowling on fires enemy_pinned per pin.
 const LAUNCH_KINDS := ["ram", "slam"]
+const CONTACT_KINDS := ["ram", "slam", "stomp"]
 const STRIKE_PINS := 3
 const STRIKE_WINDOW_S := 0.6
 
@@ -229,6 +230,12 @@ static func part_color(part_id: String) -> Color:
 	return color
 
 
+# Colour heat (Andrew, "Presence, centre clear", 17 Oct 17:28Z): a grown build's colours
+# run hotter, toward the heat ramp, instead of its bursts growing past their size.
+func heat_tint(color: Color) -> Color:
+	return color.lerp(HEAT_COLOR, 0.45 * might_tier(might) / 3.0)
+
+
 # The colour most of the build's parts share: the colour a boon spark takes.
 func dominant_color() -> Color:
 	var counts := {}
@@ -302,6 +309,9 @@ func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	if kind in LAUNCH_KINDS and _tier() >= SpeedTier.BLAZING and is_instance_valid(enemy) and enemy.is_inside_tree():
 		word("wham", enemy.global_position + Vector3.UP * 1.8)
 		impact_frame(enemy.global_position, clampf(0.6 + 0.4 * might, 0.0, 1.0))
+	elif kind in CONTACT_KINDS and might_tier(might) >= 2 and is_instance_valid(enemy) and enemy.is_inside_tree():
+		# Grown builds earn the edge ink on every contact hit, not only the biggest.
+		impact_frame(enemy.global_position, 0.4 + 0.4 * might)
 	if _mote_colors.is_empty() or might < 0.25 or _clock - _last_boon < 0.06:
 		return
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
@@ -320,7 +330,7 @@ func _boon(at: Vector3) -> void:
 	pm.scale_max = 1.2 * (1.0 + 1.5 * might)
 	pm.initial_velocity_min = 4.0 * (1.0 + 1.2 * might)
 	pm.initial_velocity_max = 9.0 * (1.0 + 1.2 * might)
-	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(dominant_color(), 1.2))
+	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(heat_tint(dominant_color()), 1.2))
 	spawned["boon"] = spawned.get("boon", 0) + 1
 
 
@@ -716,7 +726,7 @@ func _draw_aura(delta: float) -> void:
 		var basis := Basis.looking_at(along, Vector3.UP if absf(along.y) < 0.95 else Vector3.RIGHT)
 		basis = basis.scaled(Vector3(size, size, size * stretch))
 		mm.set_instance_transform(i, Transform3D(basis, at))
-		var c: Color = _mote_colors[i]
+		var c: Color = heat_tint(_mote_colors[i])
 		mm.set_instance_color(i, c.lerp(Color.WHITE, 0.6 * _mote_flare))
 
 
