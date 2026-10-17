@@ -8,11 +8,13 @@ the mix chain, build the hybrid (kept drums and bass shifted onto the cue's key,
 lead), cover the hybrid with ACE-Step XL in final mode at strengths 0.55 and 0.65 with two seeds,
 and gate every take with gate_cue.py. One cue failing never stops the run: its error goes in
 <render folder>/score/overnight.json and the next cue starts. Cues already in overnight.json with
-a gate are skipped, so a restarted run resumes. --hold renders the named cues again at cover
+a gate are skipped, so a restarted run resumes. --tag NAME keeps a re-run in its own folder
+and ledger key <cue>+NAME, --seeds a,b sets the seeds, and --hold renders the named cues again at cover
 strengths 0.75 and 0.85, for cues whose melody slipped, under ledger key <cue>+hold.
 """
 
 import json
+import re
 import subprocess
 import sys
 import time
@@ -84,7 +86,10 @@ def one(cue, root, score, ace, themes, strengths=STRENGTHS, tag=""):
     x, sr = sf.read(src)
     mono = x.mean(axis=1) if x.ndim > 1 else x
     flux, rate = cut_loops.onset_envelope(mono, sr)
-    read = float(cut_loops.tempo(flux, rate, bpm * 0.85, bpm * 1.15))
+    bars = re.search(r"-(\d+)bar-loop", src.name)
+    # a cut loop is exactly its bar count long; its length gives the tempo a sparse loop's onsets cannot
+    read = (int(bars[1]) * 4 * 60 / (len(mono) / sr) if bars
+            else float(cut_loops.tempo(flux, rate, bpm * 0.85, bpm * 1.15)))
     seconds = min(len(mono) / sr * bpm / read, 96.0)
     standing = work / f"{cue}-standing.wav"
     stretched = work / "stretched.wav"
@@ -148,9 +153,13 @@ def main(argv):
     sys.path.insert(0, str(score))
     import themes
     hold = "--hold" in argv  # a second pass at higher cover strengths, for cues whose melody slipped
-    argv = [a for a in argv if a != "--hold"]
+    tag = argv[argv.index("--tag") + 1] if "--tag" in argv else ("hold" if hold else "")
+    seeds = argv[argv.index("--seeds") + 1].split(",") if "--seeds" in argv else None
+    argv = [a for i, a in enumerate(argv) if a not in ("--hold", "--tag", "--seeds") and argv[i - 1] not in ("--tag", "--seeds")]
     cues = argv[2:] or list(PICKS)
-    strengths, tag = ((0.75, 0.85), "hold") if hold else (STRENGTHS, "")
+    strengths = (0.75, 0.85) if hold else STRENGTHS
+    if seeds:
+        SEEDS[:] = seeds
     ledger_path = root / "score" / "overnight.json"
     ledger = json.loads(ledger_path.read_text()) if ledger_path.exists() else {}
     for cue in cues:

@@ -52,7 +52,7 @@ def main(argv):
             read = float(cut_loops.tempo(flux, rate, bpm * 0.85, bpm * 1.15))
             if take.exists() and take.stat().st_mtime >= Path(audio["path"]).stat().st_mtime:
                 pass
-            elif abs(read - bpm) > 0.3:
+            elif 0.3 < abs(read - bpm) < 0.06 * bpm:  # a bigger gap is a misread of a sparse take, not drift
                 subprocess.run(["rubberband", "-q", "--fine", "-T", f"{bpm / read:.5f}", audio["path"], str(take)],
                                check=True, capture_output=True)
             else:
