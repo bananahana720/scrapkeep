@@ -24,7 +24,10 @@
       "Bash(git push -u origin *)",
       "Bash(git checkout -b *)",
       "Bash(git switch -c *)",
-      "mcp__github__create_pull_request"
+      "mcp__github__create_pull_request",
+      "Bash(npm view *)",
+      "Bash(claude plugin validate *)",
+      "Bash(git merge-base *)"
     ],
     "deny": [
       "Bash(git push --force*)",
