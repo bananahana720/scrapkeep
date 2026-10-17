@@ -45,27 +45,47 @@ def lh(s, x0, x1, y0, y1, z0, z1, color):
     s.box((x1 - x0, y1 - y0, z1 - z0), ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), color)
 
 
+def lathe(s, prof, n, color, at=(0.0, 0.0)):
+    """A closed welded solid of revolution about +Y: prof is a list of (radius, y) from the bottom up; a radius of 0 is a point
+    on the axis (the first and last entries are normally 0 to close the ends)."""
+    verts, rings = [], []
+    for r, y in prof:
+        if r <= 0.0:
+            rings.append([len(verts)] * n)
+            verts.append((at[0], y, at[1]))
+        else:
+            rings.append([len(verts) + k for k in range(n)])
+            verts += [(at[0] + r * math.sin(a), y, at[1] + r * math.cos(a)) for a in pk.around(n, math.pi / n)]
+    faces = []
+    for ra, rb in zip(rings, rings[1:]):
+        for k in range(n):
+            q = [ra[k], ra[(k + 1) % n], rb[(k + 1) % n], rb[k]]
+            q = [v for m, v in enumerate(q) if v != q[m - 1]]
+            if len(set(q)) >= 3:
+                faces.append(tuple(q))
+    s.add(verts, faces, color)
+
+
 # ------------------------------------------------------------------------------------------------------- trophy wall
 
 def cup(s, x, y, z, k, color="copper", k2=1.0):
     lh(s, x - 0.14, x + 0.14, y, y + 0.05, z - 0.1, z + 0.1, "iron_hi")
-    pk.tube(s, (x, y + 0.05, z), (x, y + 0.2 * k2, z), 0.035, 0.035, 6, T["copper_dk"], caps=(False, False))
+    pk.tube(s, (x, y + 0.05, z), (x, y + 0.2 * k2, z), 0.035, 0.035, 4, T["copper_dk"])
     pk.frustum(s, 0.06, 0.15, y + 0.2 * k2, y + 0.46 * k2, 8, T[color], caps=(True, True), at=(x, z))
     lh(s, x - 0.17, x + 0.17, y + 0.34 * k2, y + 0.39 * k2, z - 0.025, z + 0.025, T["copper_dk"])   # handle bar
 
 
 def ball(s, x, y, z):
     lh(s, x - 0.14, x + 0.14, y, y + 0.05, z - 0.12, z + 0.12, "iron_hi")
-    pk.frustum(s, 0.09, 0.17, y + 0.05, y + 0.14, 6, T["concrete_lt"], caps=(True, False), at=(x, z))
-    pk.frustum(s, 0.17, 0.17, y + 0.14, y + 0.27, 6, T["concrete_lt"], caps=(False, False), at=(x, z))
-    pk.frustum(s, 0.17, 0.09, y + 0.27, y + 0.36, 6, T["concrete_lt"], caps=(False, True), at=(x, z))
-    pk.frustum(s, 0.175, 0.175, y + 0.19, y + 0.22, 6, T["copper"], caps=(False, False), at=(x, z))
+    lathe(s, [(0.0, y + 0.05), (0.09, y + 0.05), (0.17, y + 0.14), (0.17, y + 0.27), (0.09, y + 0.36), (0.0, y + 0.36)], 5,
+          T["concrete_lt"], at=(x, z))
+    pk.frustum(s, 0.175, 0.175, y + 0.19, y + 0.22, 5, T["copper"], at=(x, z))
 
 
 def harpoon(s, x, y, z):
     lh(s, x - 0.14, x + 0.14, y, y + 0.05, z - 0.1, z + 0.1, "iron_hi")
-    pk.tube(s, (x, y + 0.05, z), (x, y + 0.3, z), 0.03, 0.03, 4, T["timber_lt"], caps=(False, False))
-    pk.tube(s, (x, y + 0.3, z), (x, y + 0.52, z), 0.1, 0.0001, 4, T["iron_hi"], caps=(True, False))
+    pk.tube(s, (x, y + 0.05, z), (x, y + 0.3, z), 0.03, 0.03, 4, T["timber_lt"])
+    lathe(s, [(0.0, y + 0.3), (0.1, y + 0.3), (0.0, y + 0.52)], 4, T["iron_hi"], at=(x, z))
     for sx in (-1, 1):
         cp.obox(s, (0.035, 0.14, 0.035), (x + sx * 0.08, y + 0.26, z), T["copper"], roll=sx * 0.5)
 
@@ -88,9 +108,9 @@ def laurel(s, cx, cy, z):
 def gooseneck(s, x):
     pts = [(x, 6.0, 0.0), (x, 6.95, 0.0), (x, 7.2, 0.45), (x, 7.05, 1.45)]
     for a, b in zip(pts, pts[1:]):
-        pk.tube(s, a, b, 0.045, 0.045, 5, T["iron_hi"], caps=(False, False))
+        pk.tube(s, a, b, 0.045, 0.045, 4, T["iron_hi"])
     lh(s, x - 0.18, x + 0.18, 5.98, 6.04, -0.18, 0.18, "iron_hi")
-    pk.frustum(s, 0.1, 0.3, 6.78, 7.05, 8, T["copper"], caps=(True, False), at=(x, 1.5))
+    pk.frustum(s, 0.1, 0.3, 6.78, 7.05, 8, T["copper"], at=(x, 1.5))
     cp.lamp(s, x, 6.76, 1.5, 0.13)
 
 

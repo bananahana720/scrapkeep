@@ -57,8 +57,8 @@ def back_wall(s):
         cp.pk.disc_z(s, 0.12, 0.26, BACK_Z + 0.22, BACK_Z + 0.27, 8, T["iron_hi"], at=(x, 2.95 - 0.07 * k))
     cp.obox(s, (1.6, 0.5, 0.05), (-0.6, 3.0, BACK_Z + 0.24), T["iron_hi"], roll=0.08)
     cp.pk.disc_z(s, 0.35, 0.55, BACK_Z + 0.22, BACK_Z + 0.32, 12, T["copper"], at=(1.6, 2.6))
-    s.add([(3.2, 2.0, BACK_Z + 0.24), (3.8, 3.3, BACK_Z + 0.24), (4.4, 2.0, BACK_Z + 0.24), (3.8, 2.4, BACK_Z + 0.24)],
-          [(3, 2, 1, 0)], T["copper"])
+    for cx, r in ((3.5, -0.43), (4.1, 0.43)):          # the spare harpoon tip: two copper bars meeting in a point
+        cp.obox(s, (0.3, 1.43, 0.05), (cx, 2.65, BACK_Z + 0.24), T["copper"], roll=r)
     # Parts bins along the wall foot.
     for k in range(5):
         x = -5.0 + k * 1.5
@@ -81,14 +81,18 @@ def canopy(s):
         for z in (0.6, BACK_Z + 0.1):
             cp.pk.frustum(s, 0.16, 0.16, 0.0, CANOPY_Y, 8, T["iron"], at=(x, z))
             cp.pk.frustum(s, 0.24, 0.24, 0.0, 0.4, 8, T["concrete"], at=(x, z))
-    # Corrugated roof: alternating copper and oxide sheets, sloped down toward the plaza.
+    # Corrugated roof: alternating copper and oxide sheets, sloped down toward the plaza. Each sheet is a closed 6 cm slab that
+    # laps 3 cm over the next (odd sheets ride 1.5 cm higher), so there is no open face and no coincident pair.
     n = 9
     for k in range(n):
         x0 = -W / 2 - 0.4 + k * (W + 0.8) / n
-        x1 = x0 + (W + 0.8) / n
+        x1 = x0 + (W + 0.8) / n + 0.03
         col = cp.jitter_tone("copper" if k % 3 else "oxide", k, 0.1)
-        s.add([(x0, CANOPY_Y + 0.6, BACK_Z - 0.4), (x1, CANOPY_Y + 0.6, BACK_Z - 0.4),
-               (x1, CANOPY_Y - 0.2, 1.4), (x0, CANOPY_Y - 0.2, 1.4)], [(0, 1, 2, 3), (3, 2, 1, 0)], col)
+        up = 0.015 * (k % 2)
+        top = [(x0, CANOPY_Y + 0.6 + up, BACK_Z - 0.4), (x1, CANOPY_Y + 0.6 + up, BACK_Z - 0.4),
+               (x1, CANOPY_Y - 0.2 + up, 1.4), (x0, CANOPY_Y - 0.2 + up, 1.4)]
+        s.add(top + [(x, y - 0.06, z) for x, y, z in top],
+              [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)], col)
     # Corrugation ridges laid along the slope, so the sheets read as tin from above.
     slope = math.atan2(0.8, 1.4 - (BACK_Z - 0.4))
     run = math.hypot(0.8, 1.4 - (BACK_Z - 0.4))

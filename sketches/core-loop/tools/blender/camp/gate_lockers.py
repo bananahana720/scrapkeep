@@ -48,10 +48,10 @@ def bx(s, size, center, color, flat=False):
     s.add(pts, faces[:2] + faces[3:] if flat else faces, color)
 
 
-def stud(s, p, normal, r, h, color, n=5):
-    """A small bolt head standing out along normal (a lean 5-sided version of _park.hexstud)."""
+def stud(s, p, normal, r, h, color, n=4):
+    """A small bolt head standing out along normal (a lean 4-sided closed version of _park.hexstud)."""
     nv = pk.Vector(normal).normalized()
-    pk.tube(s, pk.Vector(p), pk.Vector(p) + nv * h, r, r * 0.85, n, color, caps=(False, True))
+    pk.tube(s, pk.Vector(p), pk.Vector(p) + nv * h, r, r * 0.85, n, color)
 
 
 class Xf:

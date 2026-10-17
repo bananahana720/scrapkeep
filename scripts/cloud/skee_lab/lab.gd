@@ -38,8 +38,15 @@ func _initialize() -> void:
 		elif String(n.name) == "return_exit":
 			ret = (n as Node3D).position
 	print("collision meshes ", col_count, " cups ", cups.keys())
-	for speed in [9.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.5, 18.0, 20.0]:
-		for x in [-1.5, 0.0, 1.5]:
+	var speeds := [9.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.5, 18.0, 20.0]
+	var xs := [-1.5, 0.0, 1.5]
+	if args.size() > 1 and args[1] == "fine":   # optional second argument: a denser sweep for tuning
+		speeds = []
+		for i in range(19):
+			speeds.append(9.0 + 0.5 * i)
+		xs = [-1.5, -0.75, 0.0, 0.75, 1.5]
+	for speed in speeds:
+		for x in xs:
 			queue.append({"speed": speed, "x": x})
 	_next()
 
@@ -110,8 +117,9 @@ func _physics_process(delta: float) -> bool:
 		return false
 	t += delta
 	var p := ball.position
-	var home: bool = Vector2(p.x - ret.x, p.z - ret.z).length() < 3.0
+	var home: bool = Vector2(p.x - ret.x, p.z - ret.z).length() < 3.0 and p.x > 3.0 and p.y < 2.4   # in the gutter, not on the lane or board
 	# Rest means sustained: a ball turning round at the top of a rise is not stuck.
+	if int(t*90)%30==0 and cur.speed==16.0 and cur.x==-1.5 and t>99.0: print('T ',snappedf(t,0.1),p,ball.linear_velocity,ball.angular_velocity)
 	rest_t = rest_t + delta if ball.linear_velocity.length() < REST_SPEED else 0.0
 	if t > 0.5 and (rest_t >= REST_TIME or t > 12.0 or home):
 		var where := _which(p)

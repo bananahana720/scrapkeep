@@ -47,6 +47,27 @@ def col_box(s, x0, x1, y0, y1, z0, z1):
     lh(s, x0, x1, y0, y1, z0, z1, "iron")
 
 
+def lathe(s, prof, n, color, at=(0.0, 0.0)):
+    """A closed welded solid of revolution about +Y: prof is a list of (radius, y) from the bottom up; a radius of 0 is a point
+    on the axis (the first and last entries are normally 0 to close the ends)."""
+    verts, rings = [], []
+    for r, y in prof:
+        if r <= 0.0:
+            rings.append([len(verts)] * n)
+            verts.append((at[0], y, at[1]))
+        else:
+            rings.append([len(verts) + k for k in range(n)])
+            verts += [(at[0] + r * math.sin(a), y, at[1] + r * math.cos(a)) for a in pk.around(n, math.pi / n)]
+    faces = []
+    for ra, rb in zip(rings, rings[1:]):
+        for k in range(n):
+            q = [ra[k], ra[(k + 1) % n], rb[(k + 1) % n], rb[k]]
+            q = [v for m, v in enumerate(q) if v != q[m - 1]]
+            if len(set(q)) >= 3:
+                faces.append(tuple(q))
+    s.add(verts, faces, color)
+
+
 def height_check(lo_h, hi_h):
     def check(s):
         lo, hi = cp.bounds(s)
@@ -67,17 +88,16 @@ def lamp_post(s):
     lh(s, -0.05, 0.05, 4.0, 4.1, 0.1, 1.05, "copper")                   # arm
     pk.strut(s, (0, 3.5, 0.14), (0, 4.02, 0.7), 0.07, 0.07, T["copper"])     # brace
     lh(s, -0.04, 0.04, 3.95, 4.0, 0.98, 1.02, "iron")
-    pk.tube(s, (0, 3.95, 1.0), (0, 4.1, 1.0), 0.02, 0.02, 4, T["iron"], caps=(False, False))
+    pk.tube(s, (0, 3.95, 1.0), (0, 4.1, 1.0), 0.02, 0.02, 4, T["iron"])
     # Caged bulb: top and bottom plates, four corner bars, a glowing bulb inside.
     lh(s, -0.2, 0.2, 3.98, 4.04, 0.8, 1.2, "copper")
     lh(s, -0.17, 0.17, 3.45, 3.5, 0.83, 1.17, "copper")
     for sx in (-1, 1):
         for sz in (-1, 1):
             lh(s, sx * 0.17 - 0.015, sx * 0.17 + 0.015, 3.5, 3.98, 1.0 + sz * 0.17 - 0.015, 1.0 + sz * 0.17 + 0.015, "iron")
-    pk.tube(s, (0, 3.55, 1.0), (0, 3.8, 1.0), 0.04, 0.13, 6, T["glass_lt"], caps=(True, False))
-    pk.tube(s, (0, 3.8, 1.0), (0, 3.95, 1.0), 0.13, 0.05, 6, T["glass_lt"], caps=(False, True))
+    lathe(s, [(0.0, 3.55), (0.04, 3.55), (0.13, 3.8), (0.05, 3.95), (0.0, 3.95)], 6, T["glass_lt"], at=(0.0, 1.0))
     # Roof finial on the lamp.
-    pk.tube(s, (0, 4.04, 1.0), (0, 4.28, 1.0), 0.22, 0.02, 4, T["copper_dk"], caps=(True, False))
+    lathe(s, [(0.0, 4.04), (0.22, 4.04), (0.02, 4.28), (0.0, 4.28)], 4, T["copper_dk"], at=(0.0, 1.0))
 
 
 def lamp_col(s):
@@ -333,16 +353,31 @@ def tarp(s):
             z = TD / 2 - TD * j / NZ
             top[(i, j)] = (x, tarp_y(x, z), z)
     thick = 0.05
+    # One closed welded shell: top grid, underside grid and a rim. Colour is per vertex, so the canvas panels (every second
+    # column) change tone over one column instead of at a hard seam.
+    verts, cols, hi, lo = [], [], {}, {}
+    for i in range(NX + 1):
+        for j in range(NZ + 1):
+            p = top[(i, j)]
+            name = "canvas" if (min(i, NX - 1) // 2) % 2 == 0 else "canvas_dk"
+            hi[i, j] = len(verts)
+            verts.append(p)
+            cols.append(cp.jitter_tone(name, i * 5 + j, 0.05))
+            lo[i, j] = len(verts)
+            verts.append((p[0], p[1] - thick, p[2]))
+            cols.append(cp.jitter_tone(name, i * 5 + j + 3, 0.05))
+    faces = []
     for i in range(NX):
         for j in range(NZ):
-            a, b, c, d = top[(i, j)], top[(i + 1, j)], top[(i + 1, j + 1)], top[(i, j + 1)]
-            col = T["canvas"] if (i // 2) % 2 == 0 else T["canvas_dk"]
-            col = cp.jitter_tone("canvas" if (i // 2) % 2 == 0 else "canvas_dk", i * 5 + j, 0.05)
-            lo = lambda p: (p[0], p[1] - thick, p[2])
-            s.add([a, b, c, d, lo(a), lo(b), lo(c), lo(d)],
-                  [(0, 3, 2, 1), (4, 5, 6, 7)] +
-                  ([(0, 1, 5, 4)] if j == 0 else []) + ([(2, 3, 7, 6)] if j == NZ - 1 else []) +
-                  ([(3, 0, 4, 7)] if i == 0 else []) + ([(1, 2, 6, 5)] if i == NX - 1 else []), col)
+            faces.append((hi[i, j], hi[i, j + 1], hi[i + 1, j + 1], hi[i + 1, j]))
+            faces.append((lo[i, j], lo[i + 1, j], lo[i + 1, j + 1], lo[i, j + 1]))
+    for i in range(NX):
+        faces.append((hi[i, 0], hi[i + 1, 0], lo[i + 1, 0], lo[i, 0]))
+        faces.append((hi[i, NZ], lo[i, NZ], lo[i + 1, NZ], hi[i + 1, NZ]))
+    for j in range(NZ):
+        faces.append((hi[0, j], lo[0, j], lo[0, j + 1], hi[0, j + 1]))
+        faces.append((hi[NX, j], hi[NX, j + 1], lo[NX, j + 1], lo[NX, j]))
+    s.add(verts, faces, colors=cols)
     # Two tall poles at the back corners, copper caps; ropes from the front corners to pegs.
     for sx in (-1, 1):
         px = sx * (TW / 2 + 0.1)

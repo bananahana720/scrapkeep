@@ -48,7 +48,7 @@ DEPTH = 1.5
 NSEG = 16
 
 CUPS = {                          # id: (u, v, opening radius)
-    "cup_10": (0.0, 2.4, 2.0), "cup_20": (0.0, 6.5, 1.4), "cup_30": (-3.4, 8.4, 1.3), "cup_40": (3.4, 8.4, 1.3),
+    "cup_10": (0.0, 2.4, 2.0), "cup_20": (0.0, 6.5, 1.4), "cup_30": (-2.6, 8.8, 1.3), "cup_40": (2.6, 8.8, 1.3),
     "cup_50": (0.0, 10.6, 1.25), "cup_100_l": (-4.0, 12.1, 1.25), "cup_100_r": (4.0, 12.1, 1.25),
 }
 BAND = {"cup_10": "bone", "cup_20": "bone", "cup_30": "sandstone", "cup_40": "sandstone", "cup_50": "amber",
@@ -76,17 +76,20 @@ def lane_rows():
     return rows
 
 
+GUT = [(Z0, 0.35), (-LANE_L, 0.35), (-14.0, 0.06), (3.5, 0.06)]   # gutter floor (z, y), steepest at the top
+TROUGH = [(-W, 1.72), (3.15, 0.35)]                                                                  # trough floor fall toward the gutter, per m
+
+
 def gut_y(z):
-    return 0.06 + 1.34 * (3.5 - z) / 30.0
+    for (z0, y0), (z1, y1) in zip(GUT, GUT[1:]):
+        if z <= z1:
+            return y0 + (y1 - y0) * (z - z0) / (z1 - z0)
+    return GUT[-1][1]
 
 
 def P(u, v, h=0.0):
     """A point on the board: u across, v up the slope, h along the board normal."""
     return (u, Y0 + v * ST + h * CT, Z0 - v * CT + h * ST)
-
-
-def sub(a, b):
-    return tuple(x - y for x, y in zip(a, b))
 
 
 def sub(a, b):
@@ -224,10 +227,13 @@ def structure(s, col=False):
         topped(s, side, flat_bot(side), x0, x1, "timber_lt", "timber", "x")
         topped(s, [(z, y + RAIL_H) for z, y in side], side, x0, x1, "copper", "copper", "x")
     # Trough between the hump and the board: floor tilts toward the gutter (+X), left wall.
-    topped(s, [(-W, 1.7), (3.15, 1.4)], [(-W, 0.0), (3.15, 0.0)], Z0, -LANE_L, "iron_hi", "timber", "z")
+    # The trough floor falls toward +X (7.5 degrees) and meets the gutter at x = 3.15 with no step.
+    topped(s, TROUGH, flat_bot(TROUGH), Z0, -LANE_L, "iron_hi", "timber", "z")
     topped(s, [(Z0, 3.05), (-LANE_L, 3.05)], flat_bot([(Z0, 0), (-LANE_L, 0)]), -CAB, -W, "timber_lt", "timber", "x")
+    # A cabinet end wall closes the trough's left side where the hump ends, so a ball cannot roll off beside the lane.
+    s.box((CAB - 3.15, 3.05, 0.6), (-(CAB + 3.15) / 2, 3.05 / 2, -LANE_L - 0.3 + 0.6), T["timber"])
     # Return gutter and its outer wall, 1.4 m of slope over 30 m.
-    gz = [(Z0, gut_y(Z0)), (3.5, gut_y(3.5))]
+    gz = list(GUT)
     topped(s, gz, flat_bot(gz), 3.15, W, "iron_hi", "timber", "x")
     topped(s, [(z, y + 1.65) for z, y in gz], flat_bot(gz), W, CAB, "timber_lt", "timber", "x")
     # Board side walls (the plane raised 1.4 m), the backstop, the arch.
@@ -235,6 +241,7 @@ def structure(s, col=False):
     for x0, x1 in ((-CAB, -W), (W, CAB)):
         topped(s, bw, flat_bot(bw), x0, x1, "timber_lt", "timber", "x")
     s.box((2 * CAB, Y_END + 2.6, 0.6), (0, (Y_END + 2.6) / 2, Z_END - 0.3), T["timber"])
+    s.box((2 * W, Y0, 0.1), (0, Y0 / 2, Z0 - 0.05), T["timber"])      # the wall under the board's foot
     board_top(s, color=not col)
     cup_body(s)
     zc = (ARCH_Z0 + ARCH_Z1) / 2
@@ -297,7 +304,7 @@ def base(s):
         x0, x1 = sorted((sx * LANE_HW, sx * (LANE_HW + RAIL_T)))
         cap(s, [(z, y + RAIL_H) for z, y in side], x0 - 0.08, x1 + 0.08, 0.1, "iron_hi")
     bw = [(Z_END, Y_END + 1.4), (Z0, Y0 + 1.4)]
-    gz = [(Z0, gut_y(Z0) + 1.65), (3.5, gut_y(3.5) + 1.65)]
+    gz = [(z, y + 1.65) for z, y in GUT]
     for x0, x1 in ((-CAB - 0.05, -W + 0.05), (W - 0.05, CAB + 0.05)):
         cap(s, bw, x0, x1, 0.12, "copper", "copper_dk")
     cap(s, gz, W - 0.05, CAB + 0.05, 0.12, "copper", "copper_dk")
@@ -367,7 +374,7 @@ def detail2(s):
 
 
 def sockets():
-    out = {"start": (0.0, 1.0, 0.0), "score": (0.0, 13.0, FACE_Z + 0.1), "return_exit": (4.4, 1.0, 3.5),
+    out = {"start": (0.0, 1.0, 0.0), "score": (0.0, 13.0, FACE_Z + 0.1), "return_exit": (4.4, 1.0, -23.8),
            "interact": (0.0, 1.0, 1.5)}
     for cid, (u, v, r) in sorted(CUPS.items()):
         out[cid] = P(u, v, -DEPTH + 0.0)

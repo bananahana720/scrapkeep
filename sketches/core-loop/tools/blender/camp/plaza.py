@@ -64,10 +64,10 @@ def slab_strip(s, bearing, r0, r1, w, y, color):
 
 
 def floor(s, solid=False):
-    cp.pk.frustum(s, L.PLAZA_R + CHAMFER, L.PLAZA_R, 0.0, SLAB, 48, T["plaza"], caps=(False, True))
+    cp.pk.frustum(s, L.PLAZA_R + CHAMFER, L.PLAZA_R, 0.0, SLAB, 48, T["plaza"])
     cp.pk.ring_y(s, L.RING_R - 3.0, L.RING_R + 3.0, 0.0, SLAB, 96, T["plaza"])
     for bearing, r0, r1 in spoke_segments():
-        slab_strip(s, bearing, r0, r1, L.SPOKE_W, SLAB, T["plaza"])
+        slab_strip(s, bearing, r0, r1, L.SPOKE_W, SLAB - 0.004, T["plaza"])   # 4 mm under the plaza top, so the end cap is buried
 
 
 def plaza(s):

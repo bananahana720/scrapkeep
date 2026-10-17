@@ -95,9 +95,8 @@ START_S = 6.0         # start line, along the start straight
 RAMP_IN = 10.0        # bank blends in over this many metres, starting 2 m before the turn
 KICK_AT = STR + TURN  # kicker straight begins
 CARVE = 1.8
-U_TOP = [-4.5, -4.15, -3.9, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.3, 3.9, 4.15, 4.5]
+U_TOP = [-4.5, -4.15, -3.9, -2.5, -2.4, -1.5, -0.5, 0.5, 1.5, 2.5, 3.3, 3.9, 4.15, 4.5]
 U_COL = [-4.5, -2.5, -0.5, 1.5, 3.3, 4.5]
-AMBER_SEG = {2, 11}   # profile segment indices of the lane edge stripes
 
 
 def pos(s):
@@ -153,12 +152,13 @@ def deck_y(s, u, b=None):
 
 
 def profile(s, us):
-    """The closed cross-section at s as (u, y) points: inner foot, top at each u in us, wall, outer foot."""
+    """The closed cross-section at s as (u, y) points: inner foot, top at each u in us, wall foot-to-trim, wall cap, back, outer foot.
+    On the straights (no bank) the wall points coincide with the last deck point; the sweep welds them."""
     b = bank(s)
     pts = [(-HALF - 0.5, 0.0)]
     pts += [(u, deck_y(s, u, b)) for u in us]
     ye = deck_y(s, HALF, b) + 0.75 * b
-    pts += [(HALF, ye), (HALF + 0.6 * b, ye), (HALF + 0.6, 0.0)]
+    pts += [(HALF, ye - 0.3 * b), (HALF, ye), (HALF + 0.6 * b, ye), (HALF + 0.6 * b, ye - 0.2 * b), (HALF + 0.6, 0.0)]
     return pts
 
 
@@ -174,7 +174,6 @@ def ring(s, us):
 
 def sample_s(step, dense):
     vals = {round(k * step, 4) for k in range(int(LOOP / step) + 1)}
-    vals.add(round(LOOP, 4))
     for a, b, st in dense:
         k = 0
         while a + k * st <= b + 1e-9:
@@ -183,71 +182,117 @@ def sample_s(step, dense):
     return vals
 
 
+JOINTS = [4.0 + 8.0 * k for k in range(int(LOOP // 8.0) + 1) if abs(4.0 + 8.0 * k - START_S) > 1.5 and 4.0 + 8.0 * k < LOOP]
+
+
 def track_s(drawn):
-    vals = sample_s(1.0, [(KICK_AT + 2.0, KICK_AT + 26.0, 0.5), (8.0, 28.0, 0.5)])
+    vals = sample_s(1.0, [(KICK_AT + 2.0, KICK_AT + 26.0, 0.5), (8.0, 28.0, 0.5)] if drawn else [])
     if drawn:
-        vals |= {round(START_S - 0.5, 4), round(START_S + 0.5, 4)}
-        j = 4.0
-        while j < LOOP:
-            if abs(j - START_S) > 1.5:
-                vals |= {round(j - 0.06, 4), round(j + 0.06, 4)}
-            j += 8.0
-    return sorted(v for v in vals if 0.0 <= v <= LOOP)
+        # Colour rings: the start line, the form-board joints and a soft shoulder either side of each (vertex colour blends).
+        vals |= {round(START_S + d, 4) for d in (-0.7, -0.5, 0.5, 0.7)}
+        for j in JOINTS:
+            vals |= {round(j + d, 4) for d in (-0.25, -0.06, 0.06, 0.25)}
+    return sorted(v for v in vals if 0.0 <= v < LOOP - 1e-3)
+
+
+def ring_kind(sv):
+    if abs(sv - START_S) <= 0.5 + 1e-6:
+        return "line"
+    if any(abs(sv - j) <= 0.06 + 1e-6 for j in JOINTS):
+        return "joint"
+    return "plain"
+
+
+AMBER_U = {-3.9, -2.5, 4.15, 4.5}
+
+
+def point_colour(sv, kind, j, us):
+    nu = len(us)
+    slab = int(sv // 8)
+    if j == 0 or j >= nu + 4:
+        return "concrete_dk"
+    if j <= nu:
+        u = us[j - 1]
+        if j == 1:
+            return cp.jitter_tone("concrete", slab, 0.07)
+        if kind == "line":
+            return "mint"
+        if u in AMBER_U:
+            return "amber"
+        if kind == "joint":
+            return "concrete_dk"
+        return cp.jitter_tone("concrete", slab, 0.07)
+    if j == nu + 1:
+        return cp.jitter_tone("concrete_lt", slab, 0.05)
+    return "copper"
 
 
 def sweep(s, svals, us, drawn):
-    rings = [ring(v, us) for v in svals]
-    for i in range(len(svals) - 1):
-        smid = (svals[i] + svals[i + 1]) / 2
-        (pa, na), (pb, _) = rings[i], rings[i + 1]
-        line = abs(smid - START_S) < 0.5 and drawn
-        joint = (svals[i + 1] - svals[i]) < 0.2 and drawn and not line
-        slab = int(smid // 8)
-        n = len(pa)
-        prof = profile(svals[i], us)
+    """The track as ONE closed welded solid: rings of the closed cross-section, coincident points merged, the last ring
+    joined to the first. Colour is per vertex, so the stripes, joints and start line are soft-edged ring colours."""
+    verts, colors, rings = [], [], []
+    for sv in svals:
+        prof = ring(sv, us)[0]
+        kind = ring_kind(sv) if drawn else "plain"
+        idx, seen = [], {}
+        for j, pt in enumerate(prof):
+            key = tuple(round(c, 5) for c in pt)
+            if key not in seen:
+                seen[key] = len(verts)
+                verts.append(pt)
+                colors.append(point_colour(sv, kind, j, us) if drawn else "iron")
+            idx.append(seen[key])
+        rings.append(idx)
+    faces = []
+    n = len(rings[0])
+    for i in range(len(rings)):
+        ra, rb = rings[i], rings[(i + 1) % len(rings)]
         for j in range(n):
             k = (j + 1) % n
-            if j == n - 1 and drawn:
-                continue                                    # the underside is never seen
-            ou, oy = -(prof[k][1] - prof[j][1]), (prof[k][0] - prof[j][0])
-            want = (na[0] * ou, oy, na[1] * ou)
-            ntop = len(us)
-            if j == 0:
-                col = "concrete_dk"
-            elif j <= ntop - 1 and drawn:
-                if line:
-                    col = "mint"
-                elif j in AMBER_SEG:
-                    col = "amber"
-                elif joint:
-                    col = "concrete_dk"
-                else:
-                    col = cp.jitter_tone("concrete", slab, 0.07)
-            elif j == ntop:
-                col = cp.jitter_tone("concrete_lt", slab, 0.05)
-            elif j == ntop + 1:
-                col = "copper"
-            else:
-                col = "concrete_dk"
-            if not drawn:
-                col = "iron"
-            quad = [pa[j], pa[k], pb[k], pb[j]]
-            qface(s, quad, col, want)
+            quad = [ra[j], ra[k], rb[k], rb[j]]
+            quad = [q for m, q in enumerate(quad) if q != quad[m - 1]]
+            if len(set(quad)) >= 3:
+                faces.append(tuple(quad))
+    s.add(verts, faces, colors=colors)
 
 
 def track_apron(s):
-    """The roll-on apron: ground to deck over 6.5 m at the start straight's camp side, chamfered at its edges."""
+    """The roll-on apron: ground to deck over 6.5 m at the start straight's camp side, chamfered at its edges. One closed
+    welded solid (top grid, flat underside, side walls where the edge stands above the ground)."""
     z0 = TZ - START_S
-    xs = [(-34.5, 0.0), (-28.0, 1.0), (-20.4, 1.0)]
+    xs = [(-34.5, 0.0), (-28.0, 1.0), (-20.5, 1.0)]
     zs = [(z0 - 5.0, 0.0), (z0 - 4.5, 1.0), (z0 + 4.5, 1.0), (z0 + 5.0, 0.0)]
+    verts, cols, top, bot = [], [], {}, {}
+    for i in range(3):
+        for j in range(4):
+            h = SLAB * xs[i][1] * zs[j][1]
+            top[i, j] = len(verts)
+            verts.append((xs[i][0], h, zs[j][0]))
+            cols.append("concrete_dk" if j != 1 and j != 2 else cp.jitter_tone("concrete", 20 + min(i, 1), 0.07))
+            if h > 0:
+                bot[i, j] = len(verts)
+                verts.append((xs[i][0], 0.0, zs[j][0]))
+                cols.append("concrete_dk")
+            else:
+                bot[i, j] = top[i, j]
+    faces = []
+
+    def add(q):
+        q = [v for m, v in enumerate(q) if v != q[m - 1]]
+        if len(set(q)) >= 3:
+            faces.append(tuple(q))
+
     for i in range(2):
         for j in range(3):
-            pts = [(xs[i][0], SLAB * xs[i][1] * zs[j][1], z0 + zs[j][0] - z0),
-                   (xs[i][0], SLAB * xs[i][1] * zs[j + 1][1], zs[j + 1][0]),
-                   (xs[i + 1][0], SLAB * xs[i + 1][1] * zs[j + 1][1], zs[j + 1][0]),
-                   (xs[i + 1][0], SLAB * xs[i + 1][1] * zs[j][1], zs[j][0])]
-            col = "concrete_dk" if j != 1 else cp.jitter_tone("concrete", 20 + i, 0.07)
-            qface(s, pts, col, (0.0, 1.0, 0.0))
+            add([top[i, j], top[i, j + 1], top[i + 1, j + 1], top[i + 1, j]])
+            add([bot[i, j], bot[i + 1, j], bot[i + 1, j + 1], bot[i, j + 1]])
+    for i in range(2):
+        for j in (0, 3):
+            add([top[i, j], top[i + 1, j], bot[i + 1, j], bot[i, j]])
+    for j in range(3):
+        for i in (0, 2):
+            add([top[i, j], bot[i, j], bot[i, j + 1], top[i, j + 1]])
+    s.add(verts, faces, colors=cols)
     # mint threshold bar at the apron's foot and two amber chevrons pointing at the deck
     cp.obox(s, (0.7, 0.03, 8.4), (-27.6, SLAB + 0.015, z0), T["mint"])
     for x in (-25.0, -23.2):
@@ -280,13 +325,10 @@ def track(s):
 def track_col(s):
     sweep(s, track_s(False), U_COL, False)
     z0 = TZ - START_S
-    for i in range(2):
-        xa = [(-34.5, 0.0), (-28.0, SLAB), (-20.4, SLAB)]
-        pts = [(xa[i][0], xa[i][1], z0 - 4.5), (xa[i][0], xa[i][1], z0 + 4.5),
-               (xa[i + 1][0], xa[i + 1][1], z0 + 4.5), (xa[i + 1][0], xa[i + 1][1], z0 - 4.5)]
-        qface(s, pts, "iron", (0.0, 1.0, 0.0))
-        pts = [(xa[i][0], 0.0, z0 - 4.5), (xa[i][0], 0.0, z0 + 4.5), (xa[i + 1][0], 0.0, z0 + 4.5), (xa[i + 1][0], 0.0, z0 - 4.5)]
-        qface(s, pts, "iron", (0.0, -1.0, 0.0))
+    xa = [(-34.5, 0.0), (-28.0, SLAB), (-20.5, SLAB)]
+    pts = [(x, h, z) for x, h in xa for z in (z0 - 4.5, z0 + 4.5)] + [(x, 0.0, z) for x, h in xa for z in (z0 - 4.5, z0 + 4.5)]
+    s.add(pts, [(0, 2, 3, 1), (2, 4, 5, 3), (6, 7, 9, 8), (8, 9, 11, 10), (0, 2, 8, 6), (2, 4, 10, 8),
+                (1, 3, 9, 7), (3, 5, 11, 9), (4, 5, 11, 10)], "iron")
 
 
 GHOSTS = 32
@@ -435,48 +477,50 @@ def fence_pts():
 
 
 def rail_band(s, angles, yc, color):
-    """A flat band 0.24 tall and 0.08 thick mounted outside the posts, one polyline through every post."""
-    secs = []
+    """A flat band 0.24 tall and 0.08 thick mounted outside the posts, one closed welded polyline through every post."""
+    pts = []
     for a in angles:
         rx, rz = math.sin(a), math.cos(a)
         rin, rout = FENCE_R + 0.2, FENCE_R + 0.28
-        secs.append([(rin * rx, yc - 0.12, rin * rz), (rout * rx, yc - 0.12, rout * rz),
-                     (rout * rx, yc + 0.12, rout * rz), (rin * rx, yc + 0.12, rin * rz)])
+        pts += [(rin * rx, yc - 0.12, rin * rz), (rout * rx, yc - 0.12, rout * rz),
+                (rout * rx, yc + 0.12, rout * rz), (rin * rx, yc + 0.12, rin * rz)]
+    faces = []
     for i in range(len(angles) - 1):
-        a, b = secs[i], secs[i + 1]
-        am = (angles[i] + angles[i + 1]) / 2
-        r = (math.sin(am), math.cos(am))
-        wants = [(0.0, 1.0, 0.0), (r[0], 0.0, r[1]), (0.0, -1.0, 0.0), (-r[0], 0.0, -r[1])]
-        # corner pairs: 0-1 bottom, 1-2 outer, 2-3 top, 3-0 inner
-        for c, want in ((0, wants[2] if False else (0.0, -1.0, 0.0)), (1, wants[1]), (2, wants[0]), (3, wants[3])):
-            if c == 0:
-                continue                                     # bottom unseen
+        for c in range(4):
             d = (c + 1) % 4
-            qface(s, [a[c], a[d], b[d], b[c]], color, want)
-    for sec, sgn in ((secs[0], -1), (secs[-1], 1)):
-        a = angles[0] if sgn < 0 else angles[-1]
-        t = (math.cos(a) * sgn, 0.0, -math.sin(a) * sgn)
-        qface(s, sec, color, t)
+            faces.append((4 * i + c, 4 * i + d, 4 * i + 4 + d, 4 * i + 4 + c))
+    faces.append((3, 2, 1, 0))
+    last = 4 * (len(angles) - 1)
+    faces.append((last, last + 1, last + 2, last + 3))
+    s.add(pts, faces, color)
+
+
+def flat_prism(s, outline, y, h, color, at=(0.0, 0.0)):
+    """A thin closed solid: an (x, z) outline (any simple polygon, counter-clockwise or not) from y to y + h."""
+    n = len(outline)
+    pts = [(at[0] + x, y + dy, at[1] + z) for dy in (0.0, h) for x, z in outline]
+    faces = [tuple(range(n)), tuple(range(2 * n - 1, n - 1, -1))]
+    faces += [(i, (i + 1) % n, (i + 1) % n + n, i + n) for i in range(n)]
+    s.add(pts, faces, color)
 
 
 def yard(s):
-    # Raked sand slab: concentric strips of alternating sand tones under a chamfered rim.
+    # Raked sand slab: a closed chamfered base under concentric bands of alternating sand tones, each a thin closed ring a hair
+    # higher than the last (the bands overlap by 5 cm instead of meeting face to face).
     n = 20
-    pk.frustum(s, FLOOR_R + 0.5, FLOOR_R, 0.0, SAND, n, T["sandstone"], caps=(False, False))
-    radii = [0.0, 6.0, 11.0, 16.0, FLOOR_R]
+    pk.frustum(s, FLOOR_R + 0.5, FLOOR_R, 0.0, SAND, n, T["sandstone"])
+    radii = [0.0, 6.0, 11.0, 16.0, FLOOR_R * math.cos(math.pi / n) - 0.03]
     for i in range(4):
         col = cp.jitter_tone("sand", i, 0.06) if i % 2 == 0 else cp.jitter_tone("plaza", i, 0.04)
+        y1 = SAND + 0.01 + 0.003 * i
         if i == 0:
-            pk.frustum(s, radii[1], radii[1], SAND, SAND, n, col, caps=(False, True))
-            continue
-        r0, r1 = radii[i], radii[i + 1]
-        pts = [(r * math.sin(a), SAND, r * math.cos(a)) for r in (r0, r1) for a in pk.around(n, math.pi / n)]
-        faces = [(k, (k + 1) % n, n + (k + 1) % n, n + k) for k in range(n)]
-        s.add(pts, [f[::-1] for f in faces], col)
+            pk.frustum(s, radii[1], radii[1], SAND - 0.02, y1, n, col)
+        else:
+            pk.ring_y(s, radii[i] - 0.05, radii[i + 1], SAND - 0.02, y1, n, col)
     # Fence: copper posts, two iron flat rails, a bollard pair at the gap.
     angles = fence_pts()
     for a in angles:
-        pk.frustum(s, 0.21, 0.16, 0.0, 1.55, 8, T["copper"], caps=(False, True), at=(FENCE_R * math.sin(a), FENCE_R * math.cos(a)))
+        pk.frustum(s, 0.21, 0.16, 0.0, 1.55, 8, T["copper"], at=(FENCE_R * math.sin(a), FENCE_R * math.cos(a)))
     rail_band(s, angles, 0.62, T["iron"])
     rail_band(s, angles, 1.2, T["iron_hi"])
     for sx, a in ((-1, -GAP + 0.0), (1, GAP)):
@@ -492,15 +536,15 @@ def yard(s):
     cp.obox(s, (3.2, 0.14, 1.8), (bx, 1.55 + SAND, bz), T["concrete_lt"], yaw=BLOCK_YAW)
     tx, tz = TYRE_AT
     for k in range(3):
-        y0 = SAND + k * 0.55
-        pk.frustum(s, 0.95, 1.0, y0, y0 + 0.5, 8, cp.jitter_tone("charcoal", k, 0.1), at=(tx + 0.04 * k, tz), caps=(False, k < 2))
-        pk.frustum(s, 1.0, 0.98, y0 + 0.5, y0 + 0.55, 8, T["iron_hi"], at=(tx + 0.04 * k, tz), caps=(False, False))
-    pk.frustum(s, 0.5, 0.5, SAND + 1.62, SAND + 1.64, 8, T["charcoal"], at=(tx + 0.08, tz), caps=(False, True))
+        y0 = SAND + k * 0.55 - (0.02 if k else 0.0)
+        pk.frustum(s, 0.95, 1.0, y0, y0 + 0.5, 8, cp.jitter_tone("charcoal", k, 0.1), at=(tx + 0.04 * k, tz))
+        pk.frustum(s, 1.0, 0.98, y0 + 0.45, y0 + 0.55, 8, T["iron_hi"], at=(tx + 0.04 * k, tz))
+    pk.frustum(s, 0.5, 0.5, SAND + 1.6, SAND + 1.67, 8, T["charcoal"], at=(tx + 0.08, tz))
     # Spawn grate: copper rim, dark pit, iron bars, a hub with the brass Fleet chevron.
     gx, gz = GRATE_AT
-    pk.frustum(s, 3.3, 3.1, SAND, SAND + 0.2, 16, T["concrete"], at=GRATE_AT, caps=(False, False))
-    pk.frustum(s, 3.0, 3.0, SAND + 0.2, SAND + 0.2, 16, T["charcoal"], at=GRATE_AT, caps=(False, True))
-    pk.ring_y(s, 2.7, 3.05, SAND + 0.2, SAND + 0.3, 16, T["copper"], at=GRATE_AT)
+    pk.frustum(s, 3.3, 3.1, SAND, SAND + 0.2, 16, T["concrete"], at=GRATE_AT)
+    pk.frustum(s, 3.0, 3.0, SAND + 0.18, SAND + 0.205, 16, T["charcoal"], at=GRATE_AT)
+    pk.ring_y(s, 2.7, 3.05, SAND + 0.19, SAND + 0.3, 16, T["copper"], at=GRATE_AT)
     for k in range(-2, 3):
         x = k * 1.0
         half = math.sqrt(max(2.75 ** 2 - x * x, 0.0))
@@ -508,8 +552,7 @@ def yard(s):
     pk.frustum(s, 1.25, 1.2, SAND + 0.25, SAND + 0.36, 12, T["iron"], at=GRATE_AT)
     chev = [(-1.0, 0.45), (0.0, -0.5), (1.0, 0.45), (1.0, 1.0), (0.0, 0.05), (-1.0, 1.0)]
     for dz in (-0.55, 0.45):
-        pts = [(gx + x, SAND + 0.375, gz + z + dz) for x, z in chev]
-        qface(s, pts, T["brass"], (0.0, 1.0, 0.0))
+        flat_prism(s, chev, SAND + 0.355, 0.03, T["brass"], at=(gx, gz + dz))
     # A call-box pad where the picker stands.
     cx, _, cz = CALL_BOX_AT
     s.box((2.4, 0.06, 2.0), (cx, SAND + 0.03, cz), T["concrete_lt"])
