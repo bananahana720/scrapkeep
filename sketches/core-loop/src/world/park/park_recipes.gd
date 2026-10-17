@@ -109,6 +109,17 @@ const ROWS := {
 	"landmark_sinkhole": {"family": "landmark", "budget": "hero_landmark"},
 	"landmark_sky_island": {"family": "landmark", "budget": "hero_landmark"},
 	"landmark_spire": {"family": "landmark", "budget": "hero_landmark"},
+	# The sinkhole's authored pass (tools/blender/park/sinkhole_tubes.py, sinkhole_slabs.py): wash dressing and drop lips.
+	"lava_wash": {"family": "tunnels", "budget": "park_large"},
+	"lava_wash_short": {"family": "tunnels", "budget": "park_large"},
+	"gallery_wash": {"family": "caverns", "budget": "park_large"},
+	"drift_wash": {"family": "tunnels", "budget": "park_large"},
+	"skylight_lip": {"family": "tunnels", "budget": "park_large"},
+	"tube_mouth_lip": {"family": "tunnels", "budget": "park_large"},
+	"breach_lip": {"family": "tunnels", "budget": "park_large"},
+	"miners_cap": {"family": "tunnels", "budget": "park_large"},
+	"great_room_deck": {"family": "bowls", "budget": "park_large"},
+	"haulage_bed": {"family": "grind_lines", "budget": "park_large"},
 }
 
 # Each element's ride fact by its section 4 family; a row's own ride_fact wins. kicker_launch is the kicker's launch

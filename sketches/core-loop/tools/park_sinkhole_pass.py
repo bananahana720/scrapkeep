@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The sinkhole's "Wall pays" pass (Andrew 2026-10-17 22:37Z; "One skill per park", 22:12Z; DECISIONS.md).
+"""The sinkhole's authored pass: "Wall pays" and the dressing (Andrew 2026-10-17 22:37Z; "One skill per park", 22:12Z; DECISIONS.md).
 
 Carving is the sinkhole's skill, and the Dig floor rule (src/combat/floor_rule.gd) is its hook: a ball on a wall steeper
 than 25.8 degrees is off the floor, so floor threats can't reach it. This pass makes the tube walls the fast line and the
@@ -20,6 +20,12 @@ floor the slow, bitten one, by moving every rope ring and most geyser mouths ont
              fumarole                                   unchanged
   The tube floors stay where the burrowers (lava channel) and drill crews (drifts) bite.
 
+The dressing (park rows, DRESS): every greybox tube, cavern, drop lip and box row of the sinkhole takes its authored
+piece with the seat fit (tools/blender/park/sinkhole_tubes.py, sinkhole_slabs.py). The lava tubes carry the polish band,
+so they read as the ancients' work (society ancient) and their verb is bank, the carve; the drifts stay the miners'
+floor (roll). The cinder cone's spire and the machine vault's bowl are the ground scatter's to dress; the trench granaries
+tile the cliff dwelling row. FRAGMENTS adds the pass's field notes.
+
 Each wall point sits at lateral offset `band` m from the wash centreline, inside the band where the wash is steeper than
 the floor rule (park_stamps.gd wash profile, tools/blender/park/sinkhole_tubes.py band_start). A ring's height is the
 floor under the old fan plus the wash's rise at that offset.
@@ -27,7 +33,7 @@ floor under the old fan plus the wash's rise at that offset.
 Reads the original rows from git (the parent of the commit that first ran this pass) when the file has already been
 rewritten, so it is idempotent:
 
-  python3 sketches/core-loop/tools/park_sinkhole_walls.py
+  python3 sketches/core-loop/tools/park_sinkhole_pass.py
 """
 import json
 import math
@@ -42,6 +48,29 @@ ROPES = {
     "main_tube_lower_4": ("main_tube_lower_rope", (SAMPLE,), 22.0),
     "east_haulage_4": ("east_haulage_rope", (SAMPLE,), 16.0),
     "west_breakthrough_6": ("west_breakthrough_rope", (SAMPLE,), 20.0),
+}
+# recipe by (element, landform, short) for the wash rows; short is under 40.5 m (the seat fit's 0.75 of 54 m)
+WASH = {
+    ("tunnel", "lava_tube", False): ("lava_wash", "bank", "ancient"),
+    ("tunnel", "lava_tube", True): ("lava_wash_short", "bank", "ancient"),
+    ("tunnel", "adit", False): ("drift_wash", None, None),
+    ("flooded_cavern", "cenote_pool", False): ("gallery_wash", None, None),
+}
+SLABS = {
+    "skylight_1": "skylight_lip", "skylight_2": "skylight_lip", "skylight_3": "skylight_lip",
+    "tube_mouth": "tube_mouth_lip", "crater_breach": "breach_lip",
+    "upper_tube_cap": "miners_cap", "great_room_cap": "miners_cap",
+    "great_room_floor": "great_room_deck", "haulage_rails": "haulage_bed",
+}
+SCATTER = ["cinder_cone", "machine_vault"]
+# row id: (recipe, fit) for the rows a kit piece already dresses
+KIT = {"trench_granaries": ("cliff_dwelling_row", "tile")}
+# row id: (society, fragment); the text is the stage page's (design-v3/park/stages/4-park_sinkhole.md section 11)
+FRAGMENTS = {
+    "main_tube_upper_1": ("ancient", "ancient_polish_band"),
+    "cannon_tube_2": ("ancient", "ancient_vent_mouths"),
+    "main_tube_lower_1": ("mining", "mining_wall_rule"),
+    "main_tube_lower_4": ("mining", "mining_rope_rings"),
 }
 # vent id: (on the wall, charge s)
 VENTS = {
@@ -120,20 +149,54 @@ def vent_row(c, row):
     return c
 
 
+def dress(row):
+    r = dict(row)
+    if not str(r["recipe"]).startswith("greybox:"):
+        return r
+    if r["id"] in SCATTER:
+        r["recipe"] = "scatter"
+        return r
+    if r["id"] in KIT:
+        r["recipe"], r["fit"] = KIT[r["id"]]
+        return r
+    if r["id"] in SLABS:
+        r["recipe"] = SLABS[r["id"]]
+        r["fit"] = "seat"
+        return r
+    key = (r["element"], r["landform"], float(r["size"][0]) < 40.5)
+    if r["stamp"] == "wash" and key in WASH:
+        recipe, verb, society = WASH[key]
+        r["recipe"] = recipe
+        r["fit"] = "seat"
+        if verb:
+            r["verb"] = verb
+        if society and r["society"] == "none":
+            r["society"] = society
+    return r
+
+
+def tag(row):
+    if row["id"] in FRAGMENTS:
+        row = dict(row)
+        row["society"], row["fragment"] = FRAGMENTS[row["id"]]
+    return row
+
+
 def original():
-    """The contraption rows before this pass: the file's own rows if they still hold the floor fans, else git's."""
+    """The rows before this pass: the file's own if it still holds the floor fans, else HEAD's, else the parent of the
+    commit that removed the fourth haulage rope (the commit that first ran this pass)."""
     import subprocess
     text = PARK.read_text()
-    if '"id": "tube_rope_4"' in text and '"id": "east_haulage_rope_4"' in text:
+    if '"id": "east_haulage_rope_4"' in text:
         return text
-    rel = PARK.relative_to(pathlib.Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=PARK.parent, text=True).strip()))
-    show = lambda rev: subprocess.check_output(["git", "show", "%s:%s" % (rev, rel)], cwd=PARK.parent, text=True)
-    head = show("HEAD")
+    top = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=PARK.parent, text=True).strip()
+    rel = str(PARK.relative_to(top))
+    git = lambda *a: subprocess.check_output(["git", *a], cwd=top, text=True)
+    head = git("show", "HEAD:" + rel)
     if '"id": "east_haulage_rope_4"' in head:
         return head
-    # the commit that ran this pass removed the fourth haulage rope; its parent holds the floor fans
-    log = subprocess.check_output(["git", "log", "--format=%H", "-S", '"id": "east_haulage_rope_4"', "--", str(rel)], cwd=PARK.parent, text=True).split()
-    return show(log[0] + "^")
+    log = git("log", "--format=%H", "-S", '"id": "east_haulage_rope_4"', "--", rel).split()
+    return git("show", log[0] + "^:" + rel)
 
 
 def main():
@@ -141,9 +204,6 @@ def main():
     rows = {r["id"]: r for r in old["park_rows"]}
     old_c = old["contraption_rows"]
     lines = PARK.read_text().split("\n")
-    head = lines.index(' "contraption_rows": [')
-    first = head + 1
-    last = next(i for i in range(first, len(lines)) if lines[i].startswith(" ]")) - 1
     new = []
     done = set()
     for c in old_c:
@@ -157,6 +217,17 @@ def main():
             new.append(vent_row(c, rows[c["site"]]))
             continue
         new.append(c)
+    # the park rows, line by line: dress, then tag
+    head_rows = lines.index(' "park_rows": [')
+    k = head_rows + 1
+    while lines[k].startswith("  {"):
+        tail_k = "," if lines[k].endswith(",") else ""
+        row = json.loads(lines[k].rstrip(","))
+        lines[k] = "  " + json.dumps(tag(dress(row)), ensure_ascii=False) + tail_k
+        k += 1
+    head = lines.index(' "contraption_rows": [')
+    first = head + 1
+    last = next(i for i in range(first, len(lines)) if lines[i].startswith(" ]")) - 1
     body = ["  " + json.dumps(c, ensure_ascii=False) + "," for c in new]
     body[-1] = body[-1].rstrip(",")
     tail = "," if lines[last].endswith(",") else ""
