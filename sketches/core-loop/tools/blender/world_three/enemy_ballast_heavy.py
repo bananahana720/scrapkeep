@@ -9,7 +9,7 @@ one never lifts anything, it plants.
 
 Godot metres (X,Y,Z) map to Blender (X,-Z,Y). Origin at the roster's standard collider centre,
 floor Y = -1.1; faces Godot +Z. Suggested collider: box 2.7 x 1.7 x 2.1 (X, Y, Z) on its castors.
-Three meshes, three surfaces, opaque vertex colour, no baked glow:
+Two meshes, three surfaces, opaque vertex colour, no baked glow:
   BallastBody    fleet_paint: crew, seat, pennant, paint bands and stencils (flashes with the
                  enemy) and working_tool: the iron ingots, castors and the rear winch drum.
                  (Two surfaces on one mesh.)

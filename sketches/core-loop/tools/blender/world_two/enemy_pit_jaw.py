@@ -11,7 +11,7 @@ so the floor is Y = -1.1 and the plate sits flush on it; the body faces Godot +Z
 hatch is behind it at -Z. The jaws are an oval 2.6 m wide (X) and 4.1 m long (Z) when open.
 Each jaw pivots about the Godot X axis through its own origin at the hinge line (Y = -1.04):
   close:   PitJawA rotates -90 degrees about X, PitJawB +90 degrees. They meet upright in the
-           Z = 0 plane as a 4 m-tall toothed oval round a ball sitting at catch_centre.
+           Z = 0 plane as a toothed arch about 2.2 m tall round a ball sitting at catch_centre.
   wind-up: the tell is both jaws lifting 12 degrees off the plate (same signs), teeth up.
 Three meshes, three surfaces, opaque vertex colour, no baked glow:
   PitJawFrame  fleet_paint: floor plate with its hazard chevron ring, the bone pressure plate,
