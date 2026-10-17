@@ -375,6 +375,10 @@ Short field notes in the deep works' existing voice (`src/core/lore_rows.gd:195-
 | `mining_pump_caisson` | `caisson_bowl` | Caisson log: pumped dry at shift change. Water back by noon. Level rises when something breaks. |
 | `mining_pump_ticket` | `pump_gallery` | Pump ticket: boiler rated for the caisson. Caisson rated for water. |
 | `ancient_brood_count` | landmark | Brood count: every bolt in the deep works, sorted by size. The count is still going. |
+| `ancient_polish_band` | `main_tube_upper_1` | Wall survey: polish band two metres up both walls, both directions. Lava only runs one way. |
+| `ancient_vent_mouths` | `cannon_tube_2` | Vent survey: the mouths open on the polish band, never the floor. Nobody on this crew set them there. |
+| `mining_wall_rule` | `main_tube_lower_1` | Shift rule, lower tubes: walk the wall. Floor's been taking boots. |
+| `mining_rope_rings` | `main_tube_lower_4` | Rigging note: rings go up on the band. Nobody hangs a rope over a floor that bites. |
 
 The `ref_` fragment describes the work and speaks for no living people (PARK.md section 4). `mining_pump_caisson` foreshadows the Warden's mechanism, and `ancient_brood_count` picks up the deep works' existing brood lines (`lore_rows.gd:215`, `224`). The existing codex entries this stage teaches stay: `lure_bloom`, `bore_breach`, `burrow_lane`, `awaiting_operator` and the variant's `brood_dark` (PARK.md:431).
 

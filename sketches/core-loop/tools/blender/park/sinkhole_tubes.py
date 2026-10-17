@@ -8,8 +8,8 @@ waymark 2, measured 17 October 2026). So these pieces dress the wash and never r
 
   - The ride surface stays the baked terrain. The drawn wall band follows park_stamps.gd's wash profile analytically, LIFT m
     above it, which hides the 2 m terrain grid (its chords sag up to about 0.13 m on a wall) without floating.
-  - The -col mesh is a 2 m strip BURY m under the floor centre, the full length, so the seat fit (park_recipes.gd PARK-SEAT)
-    has authored ends and the ball never meets it.
+  - The -col mesh is two small blocks BURY m under the floor centre at the two authored ends, so the seat fit
+    (park_recipes.gd PARK-SEAT) has authored ends and the ball never meets them.
   - Nothing is drawn or collides inside the lane above the surface. Crest crust and fallen roof slabs stand only beyond the
     crest, |x| >= W/2 + 0.5.
 
@@ -47,7 +47,7 @@ MODELS = SKETCH / "assets/models/park"
 PARK_LARGE = {"tris": 16000, "draws": 2}
 DETAIL = {"tris": 1500, "draws": 1}
 LIFT = 0.2
-BURY = 0.15
+BURY = 6.0
 # FloorRule.FLOOR_NORMAL_Y: a face whose normal has y below this is off the floor.
 FLOOR_NORMAL_Y = 0.9
 STATION_M = 2.0
@@ -212,8 +212,12 @@ def base_mesh(spec):
 
 
 def col_mesh(spec):
+    """Two small blocks BURY m down, one at each authored end: they give the seat fit its ends and nothing to hit. A strip
+    along the run poked out of the floor wherever the tube floor sags under the chord between its ends (dead stops on
+    the floor line, 17 October 2026)."""
     soup = Soup()
-    soup.box(Vector((0, -BURY - 0.05, spec["length"] / 2)), (2.0, 0.1, spec["length"]), COL["sand"])
+    for z in (0.1, spec["length"] - 0.1):
+        soup.box(Vector((0, -BURY, z)), (0.2, 0.2, 0.2), COL["sand"])
     return soup
 
 

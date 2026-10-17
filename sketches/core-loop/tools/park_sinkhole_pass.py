@@ -24,7 +24,7 @@ The dressing (park rows, DRESS): every greybox tube, cavern, drop lip and box ro
 piece with the seat fit (tools/blender/park/sinkhole_tubes.py, sinkhole_slabs.py). The lava tubes carry the polish band,
 so they read as the ancients' work (society ancient) and their verb is bank, the carve; the drifts stay the miners'
 floor (roll). The cinder cone's spire and the machine vault's bowl are the ground scatter's to dress; the trench granaries
-tile the cliff dwelling row. FRAGMENTS adds the pass's field notes.
+tile the cliff dwelling row. FRAGMENTS adds the pass's field notes and COUNTERS rewrites the floor threats' counters for the floor rule.
 
 Each wall point sits at lateral offset `band` m from the wash centreline, inside the band where the wash is steeper than
 the floor rule (park_stamps.gd wash profile, tools/blender/park/sinkhole_tubes.py band_start). A ring's height is the
@@ -44,10 +44,10 @@ SAMPLE = 0.81  # of the half width: 10.5 m on a 26 m wash, inside the carve band
 FAN = (0.72, 0.90)  # the channel crossing's two rings per wall
 # site: (rope ids, rings per wall, floor speed)
 ROPES = {
-    "lava_channel_14": ("tube_rope", FAN, 18.0),
-    "main_tube_lower_4": ("main_tube_lower_rope", (SAMPLE,), 22.0),
-    "east_haulage_4": ("east_haulage_rope", (SAMPLE,), 16.0),
-    "west_breakthrough_6": ("west_breakthrough_rope", (SAMPLE,), 20.0),
+    "lava_channel_14": ("tube_rope", FAN, 24.0),
+    "main_tube_lower_4": ("main_tube_lower_rope", (SAMPLE,), 26.0),
+    "east_haulage_4": ("east_haulage_rope", (SAMPLE,), 18.0),
+    "west_breakthrough_6": ("west_breakthrough_rope", (SAMPLE,), 24.0),
 }
 # recipe by (element, landform, short) for the wash rows; short is under 40.5 m (the seat fit's 0.75 of 54 m)
 WASH = {
@@ -71,6 +71,11 @@ FRAGMENTS = {
     "cannon_tube_2": ("ancient", "ancient_vent_mouths"),
     "main_tube_lower_1": ("mining", "mining_wall_rule"),
     "main_tube_lower_4": ("mining", "mining_rope_rings"),
+}
+# home id: counter text, now naming the Dig floor rule: a ball carving a wall is off the floor and out of reach
+COUNTERS = {
+    "cinder_burrowers": "Carve the channel wall: a ball on the wall band is off the floor and the burrow can't reach it (floor_rule.gd), and the rope fan's rings hang on the band; or slam the marker, and the codex burrow_lane pays for the side roll.",
+    "drift_drill_crews": "Ride the drift wall: the rig's ring bores the floor and a carving ball is off it (floor_rule.gd); the wall ropes carry you past, the timber sets every 6 m are claw and harpoon anchors, or smash the rig mid-bore.",
 }
 # vent id: (on the wall, charge s)
 VENTS = {
@@ -224,6 +229,15 @@ def main():
         tail_k = "," if lines[k].endswith(",") else ""
         row = json.loads(lines[k].rstrip(","))
         lines[k] = "  " + json.dumps(tag(dress(row)), ensure_ascii=False) + tail_k
+        k += 1
+    head_homes = lines.index(' "home_rows": [')
+    k = head_homes + 1
+    while lines[k].startswith("  {"):
+        tail_k = "," if lines[k].endswith(",") else ""
+        home = json.loads(lines[k].rstrip(","))
+        if home["id"] in COUNTERS:
+            home["counter"] = COUNTERS[home["id"]]
+        lines[k] = "  " + json.dumps(home, ensure_ascii=False) + tail_k
         k += 1
     head = lines.index(' "contraption_rows": [')
     first = head + 1
