@@ -117,6 +117,13 @@ const ROWS := {
 	"secret-chip-keepers": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/secret_chip_keepers/manifest.json"},
 	"secret-highdraft-rain": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/secret_highdraft_rain/manifest.json"},
 	"secret-dig-dub": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/secret_dig_dub/manifest.json"},
+	# The sound bible's picks (SOUND-INT, tools/ace/package_picked_takes.py): each boss fight's
+	# opening take (phase_music.gd PICKED) and the camp page. The roaming picks play the shelf
+	# of a zone pack (SHELF below). A pick not on disk falls back to the older pack.
+	"boss-brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/boss_brindle/manifest.json"},
+	"boss-waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/boss_waking/manifest.json"},
+	"boss-mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/boss_mind/manifest.json"},
+	"camp": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/camp/manifest.json"},
 	"title": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title/manifest.json"},
 	# The opening's theme picks the title take (title_intros.gd: "A" sax lead, "B" machine lead);
 	# C is the show-opening take.
@@ -125,6 +132,22 @@ const ROWS := {
 	"title-c": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_c/manifest.json"},
 	"summary": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/summary/manifest.json"},
 }
+
+
+# Each zone pack's shelf (calm, travel and the home after a Warden) plays its world's picked
+# roaming take at 172; the Warden's pivot, build, telegraph and drop keep the zone pack's own
+# 129 clips, so no roaming bed plays inside an arena (lesson 27a).
+const SHELF := {"spillway": "roam_spillway", "cable_reach": "roam_spillway", "dig_upper": "roam_dig",
+	"dig_deep": "roam_dig", "highdraft": "roam_highdraft", "highdraft_crown": "roam_highdraft"}
+
+
+# The roaming take for a zone pack's theme, resolved, or "" when the theme has none or its
+# Oggs are not on disk (the zone pack's own shelf plays).
+static func shelf_manifest(theme: String, sidecar_dir := "") -> String:
+	if not SHELF.has(theme):
+		return ""
+	var path := "res://assets/music_ace/%s/manifest.json" % SHELF[theme]
+	return resolve_manifest(path, sidecar_dir) if pack_on_disk(path, sidecar_dir) else ""
 
 
 # A zone/boss id or a stage row. Existing {theme, ace} stage music overrides the pack.
@@ -201,8 +224,8 @@ static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String
 
 # A pack is playable only when its manifest resolves and every stem file it names is on disk:
 # the Oggs are gitignored, so a checkout can hold manifests with no audio.
-static func pack_on_disk(manifest_path: String) -> bool:
-	var path := resolve_manifest(manifest_path)
+static func pack_on_disk(manifest_path: String, sidecar_dir := "") -> bool:
+	var path := resolve_manifest(manifest_path, sidecar_dir)
 	if path == "":
 		return false
 	var m = JSON.parse_string(FileAccess.get_file_as_string(path))

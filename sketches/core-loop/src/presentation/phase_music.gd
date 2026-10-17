@@ -18,9 +18,12 @@ const CHAMPION := "champion-hype"
 const EURO_CHAMPION := "euro-champion"
 const CHAMPION_FINAL_THIRD := 1.0 / 3.0
 const BOSS_SYNTH_THEME := {"brindle": 0, "waking": 1, "mind": 2}
+# The sound bible's picked boss themes (SOUND-INT), one 129 BPM take per boss.
+const PICKED := {"brindle": "boss-brindle", "waking": "boss-waking", "mind": "boss-mind"}
 # Every id with a pack of its own, for MusicRows.
 const TRACKS := ["brindle-p1-requisition", "brindle-p2-furnace", "brindle-p3-scuttle", "waking-final", "mind-final",
-	"champion-hype", "euro-brindle-p3", "euro-waking-final", "euro-mind-final", "euro-champion"]
+	"champion-hype", "euro-brindle-p3", "euro-waking-final", "euro-mind-final", "euro-champion",
+	"boss-brindle", "boss-waking", "boss-mind"]
 
 
 static func theme_of(id: String) -> String:
@@ -50,9 +53,12 @@ static func track_for_phase(boss: String, phase: int) -> String:
 	return ""
 
 
-# The pack the boss's fight opens on: Brindle's phase 1 track when it is available, else the
-# boss's own theme.
+# The pack the boss's fight opens on: the boss's picked theme (boss-brindle, music thread
+# 17 Oct: it opens, Brindle's p2 and p3 follow), else Brindle's phase 1 track, else the boss's
+# older theme. Each step is taken only when its pack is on disk.
 static func entry_track(boss: String, avail: Callable) -> String:
+	if PICKED.has(boss) and avail.call(PICKED[boss]):
+		return String(PICKED[boss])
 	if boss == "brindle" and avail.call(BRINDLE_PHASES[0]):
 		return BRINDLE_PHASES[0]
 	return boss

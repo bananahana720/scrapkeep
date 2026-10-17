@@ -6,6 +6,7 @@ const Ace := preload("res://src/presentation/ace_sequencer.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const PhaseMusic := preload("res://src/presentation/phase_music.gd")
 
 const ZONES := ["spillway", "cable_reach", "dig_upper", "dig_deep", "highdraft", "highdraft_crown"]
 const NEW_TRACKS := ["cable_reach", "dig_upper", "dig_deep", "highdraft", "highdraft_crown", "brindle", "waking", "mind", "title", "summary"]
@@ -64,7 +65,8 @@ func _physics_process(_delta: float) -> bool:
 	_game.tuning.set_option(Tuning.MUSIC_KEY, "ace")
 	_game.events.flow_changed.emit("title")
 	audio._flush_flow()
-	_selected(audio, "title")
+	# The sound bible's picks play where their Oggs are on disk, the older packs elsewhere.
+	_selected(audio, _theme(audio.title_now()))
 	var title = audio.ace
 	var pending: Dictionary = title.pending.duplicate() if title != null else {}
 	_game.events.flow_changed.emit("class_select")
@@ -83,12 +85,15 @@ func _physics_process(_delta: float) -> bool:
 		_game.flow.enter_stage(world * 2, Vector3.ZERO, false)
 		audio._flush_flow()
 		_game.flow.enter_boss(Vector3.ZERO)
-		_selected(audio, ["brindle", "waking", "mind"][world - 1])
+		_selected(audio, _theme(PhaseMusic.entry_track(["brindle", "waking", "mind"][world - 1], PhaseMusic.available)))
 		_check("boss entry schedules the pivot", audio.ace != null and audio.ace.mode == "warden" and audio.ace.section == "pivot")
 	_game.events.run_ended.emit(true)
 	audio._flush_flow()
-	_selected(audio, "summary")
-	_check("won summary starts its cadence", audio.ace != null and audio.ace.section == "return")
+	_selected(audio, _theme(audio.summary_row(true)))
+	if audio.summary_row(true) == "summary":
+		_check("won summary starts its cadence", audio.ace != null and audio.ace.section == "return")
+	else:
+		_check("won summary starts theme C from calm", audio.ace != null and audio.ace.section == "calm")
 	_game.events.run_ended.emit(false)
 	audio._flush_flow()
 	_selected(audio, "summary")
@@ -101,6 +106,10 @@ func _physics_process(_delta: float) -> bool:
 	print("ace_tracks_test: %s" % ("PASS" if _failures == 0 else "FAIL"))
 	quit(0 if _failures == 0 else 1)
 	return true
+
+
+func _theme(row: String) -> String:
+	return Rows.resolve(row)["ace_manifest"].get_base_dir().get_file()
 
 
 func _selected(audio, track: String) -> void:

@@ -73,6 +73,8 @@ var manifest := {}
 var flat := false
 # The resolved manifest selected for this band, even when its Oggs are absent.
 var manifest_source := ""
+# The roaming take playing the shelf over a zone pack (MusicRows.SHELF), or "".
+var shelf_source := ""
 var clips := {}
 var sections := {}
 var streams := {}
@@ -140,7 +142,7 @@ static func from_stage(stage = "default", sidecar_dir := "", stages = MusicRows.
 	return load("res://src/presentation/ace_sequencer.gd").new(pack["ace_manifest"], sidecar_dir)
 
 
-func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
+func _init(manifest_path := MANIFEST, sidecar_dir := "", shelf := false) -> void:
 	rate_scale = AudioServer.get_mix_rate() / float(RATE)
 	if manifest_path == "":
 		return
@@ -181,7 +183,41 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 			streams[file] = stream
 			clip["paths"] = clip.get("paths", {})
 			clip["paths"][stem] = file
+	if shelf:
+		_overlay_shelf(sidecar_dir)
 	_report()
+
+
+# The world's picked roaming take replaces a zone pack's calm and travel clips (so home plays
+# it too); every Warden section keeps the zone pack's own clips. A take with an unreadable file
+# leaves the zone pack's shelf as it was.
+func _overlay_shelf(sidecar_dir: String) -> void:
+	var path := MusicRows.shelf_manifest(String(manifest.get("theme", "")), sidecar_dir)
+	if path == "":
+		return
+	var pick = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not pick is Dictionary or not pick.has("clips"):
+		return
+	var shelf := {}
+	var loaded := {}
+	for id in ["calm", "travel"]:
+		if not (pick["clips"] as Dictionary).has(id):
+			return
+		var clip: Dictionary = pick["clips"][id].duplicate(true)
+		clip["paths"] = {}
+		for stem in stems:
+			var file := path.get_base_dir().path_join(String(clip["files"][stem]))
+			var stream := AudioStreamOggVorbis.load_from_file(file)
+			if stream == null:
+				return
+			stream.loop = bool(clip["loop"])
+			stream.loop_offset = float(clip["loop_offset"]) / RATE
+			loaded[file] = stream
+			clip["paths"][stem] = file
+		shelf[id] = clip
+	streams.merge(loaded, true)
+	clips.merge(shelf, true)
+	shelf_source = path
 
 
 # --ace-check: one line saying whether the band found its stems (the export proof reads it).
