@@ -57,6 +57,7 @@ func _rows() -> void:
 		t.check("%s carries only allowed effect keys" % row.id, Modifier.valid(row))
 		t.check("%s caption fits the card (at most 8 words in its line)" % row.id, String(row.line).split(" ", false).size() <= 8)
 	t.eq("row ids are unique", ids.size(), Modifier.ROWS.size())
+	t.check("world-effect overlays name WORLD-FX.md kinds", Modifier.ROWS.all(func(row): return String(row.get("fx", "")) in ["", "plenty", "scarce", "hidden"]))
 	var planted := {"id": "slick", "word": "Slick", "line": "x", "friction": 0.1}
 	t.check("planted handling key is rejected", not Modifier.valid(planted))
 

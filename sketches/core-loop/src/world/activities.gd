@@ -378,7 +378,9 @@ func _enter_stage(retry: bool) -> void:
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
 				var drawn_site := _build(drawn_spec.id, drawn_spec.at, drawn_spec)
 				drawn_site.view.set_sight(float(stage_modifier.get("sight_scale", 1.0)))
+				StageModifier.mark_far(stage_modifier, drawn_site)
 				sites.append(drawn_site)
+	StageModifier.set_air(stage_modifier)
 	_pending_stage = true
 
 

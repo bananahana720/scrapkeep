@@ -671,6 +671,8 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 func _card_for_stage(stage: int) -> void:
 	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
 	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.caption(modifier))
+	if not modifier.is_empty() and game.player != null:
+		StageModifier.announce(game.player.active_body().global_position)
 
 
 func _label(font_size: int) -> Label:

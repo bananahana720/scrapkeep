@@ -18,18 +18,22 @@ const CAP := 8
 const FAR_ANCHORS := 250
 # The only effect keys a row may carry; a row with any other key is rejected by valid().
 const EFFECTS := ["count_scale", "sight_scale", "far"]
+# Presentation-only keys: fx is the world-effects overlay kind (WORLD-FX.md, PR #47).
+const LOOKS := ["id", "word", "line", "fx"]
+const WORLD_FX := "res://src/presentation/world_fx/world_fx.gd"
+const WORLD_FX_ANCHOR := "res://src/presentation/world_fx/world_fx_anchor.gd"
 const ROWS := [
-	{"id": "surplus", "word": "Surplus Yard", "line": "Somebody over-ordered. More pockets.", "count_scale": 2.0},
-	{"id": "lean", "word": "Lean Haul", "line": "Budget cuts. Fewer pockets.", "count_scale": 0.5},
+	{"id": "surplus", "word": "Surplus Yard", "line": "Somebody over-ordered. More pockets.", "fx": "plenty", "count_scale": 2.0},
+	{"id": "lean", "word": "Lean Haul", "line": "Budget cuts. Fewer pockets.", "fx": "scarce", "count_scale": 0.5},
 	{"id": "floodlit", "word": "Floodlit", "line": "Someone left the lights on. Beacons read far.", "sight_scale": 1.75},
-	{"id": "blackout", "word": "Blackout", "line": "The beacons are on a budget.", "sight_scale": 0.5},
+	{"id": "blackout", "word": "Blackout", "line": "The beacons are on a budget.", "fx": "hidden", "sight_scale": 0.5},
 	{"id": "far_haul", "word": "Far Haul", "line": "Everything good is at the edges.", "far": true},
 ]
 
 
 static func valid(row: Dictionary) -> bool:
 	for key in row:
-		if not key in ["id", "word", "line"] and not key in EFFECTS:
+		if not key in LOOKS and not key in EFFECTS:
 			return false
 	return true
 
@@ -98,3 +102,25 @@ static func far_anchors(prepared: Dictionary) -> Array:
 
 static func caption(row: Dictionary) -> String:
 	return "" if row.is_empty() else "%s: %s" % [row.word, row.line]
+
+
+# World effects (WORLD-FX.md hooks). Each call does nothing until that kit is in the build and a
+# WorldFx is installed for the stage, so the modifier works with or without it.
+static func announce(at: Vector3) -> void:
+	if ResourceLoader.exists(WORLD_FX):
+		load(WORLD_FX).fire("modifier_shown", at)
+
+
+# The stage's overlay air: plenty, scarce or hidden for the rows that name one, cleared otherwise.
+static func set_air(row: Dictionary) -> void:
+	if not ResourceLoader.exists(WORLD_FX):
+		return
+	var current = load(WORLD_FX).current
+	if is_instance_valid(current):
+		current.set_overlay(String(row.get("fx", "")))
+
+
+# A brass flare (mod_far) on each Far Haul pocket.
+static func mark_far(row: Dictionary, site: Node3D) -> void:
+	if row.get("far", false) and ResourceLoader.exists(WORLD_FX_ANCHOR):
+		site.add_child(load(WORLD_FX_ANCHOR).make("mod_far"))
