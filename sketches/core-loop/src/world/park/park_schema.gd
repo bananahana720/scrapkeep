@@ -469,6 +469,8 @@ static func _recipe(out: Array, id: String, recipe: String) -> void:
 		if not ELEMENTS.has(recipe.trim_prefix(GREYBOX)):
 			_add(out, id, "recipe", "%s names no park element" % recipe)
 		return
+	if recipe == LANDMARK:
+		return
 	if not RECIPES.has(recipe) and not _registry().has(recipe):
 		_add(out, id, "recipe", "%s names no registry row" % recipe)
 

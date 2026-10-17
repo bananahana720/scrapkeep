@@ -425,6 +425,11 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 		return null
 	if recipe.begins_with(GREYBOX):
 		return place_greybox(row, recipe.trim_prefix(GREYBOX), parent, ground, publish)
+	if recipe == LANDMARK:
+		# The landmark's own model dresses this row (the sinkhole's gallery deck): the row keeps only its ride sensor.
+		var deck := _node(row, parent, ground)
+		_sensor(deck, row, publish)
+		return deck
 	var budget := String(row.get("budget", ROWS.get(recipe, {}).get("budget", "landform")))
 	var p := paths(recipe, budget)
 	if not ResourceLoader.exists(p["base"]):
@@ -932,6 +937,8 @@ static func stands_in(row: Dictionary) -> bool:
 	var recipe := String(row.get("recipe", ""))
 	if recipe == "" or recipe.begins_with(GREYBOX):
 		return recipe != ""
+	if recipe == LANDMARK:
+		return false
 	if not ResourceLoader.exists(paths(recipe, _budget(row))["base"]):
 		return true
 	if fits_tile(row):
@@ -946,7 +953,7 @@ static func _budget(row: Dictionary) -> String:
 # Every GLB a row's placement reads.
 static func row_paths(row: Dictionary) -> Array:
 	var recipe := String(row.get("recipe", ""))
-	if recipe == "" or recipe.begins_with(GREYBOX):
+	if recipe == "" or recipe == LANDMARK or recipe.begins_with(GREYBOX):
 		return []
 	var p := paths(recipe, _budget(row))
 	var out: Array = [p["base"]]

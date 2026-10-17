@@ -93,6 +93,22 @@ test("parkGreybox groups greybox recipes and recipes with no GLB, and passes bui
   );
 });
 
+test("parkGreybox counts a landmark-dressed row only until the landmark's GLB lands", () => {
+  const doc = {
+    landmark: { id: "sinkhole", recipe: "landmark_sinkhole" },
+    park_rows: [{ id: "deck", element: "ledge", recipe: "landmark" }],
+  };
+  const bare = parkGreybox("park_sinkhole", doc, () => false);
+  assert.deepEqual(
+    bare.map((f) => f.what),
+    [
+      "1 greybox landmark_sinkhole (recipe landmark_sinkhole has no GLB): sinkhole",
+      "1 greybox ledge (dressed by landmark landmark_sinkhole, which has no GLB): deck",
+    ],
+  );
+  assert.deepEqual(parkGreybox("park_sinkhole", doc, (recipe) => recipe === "landmark_sinkhole"), []);
+});
+
 test("dictKeys reads the keys of one dictionary block and skips comments", () => {
   const source = 'const IDS := {\n\t"cls_a": "x", # "not_a": "y"\n\t"cls_b": "z",\n}\nconst EXTRA := {"e": "f"}\n';
   assert.deepEqual(dictKeys(source, "IDS"), ["cls_a", "cls_b"]);

@@ -8,7 +8,10 @@ Rewrites src/world/park/park_sinkhole.json in place, one row per line as the fil
                                      zero-height plateau stamp, so the bake paints the ring and
                                      keeps the floor, and the row places only its ride_ledge sensor
                                      (park_recipes.gd stamp_replaces). `gallery_ring` keeps its id,
-                                     home and routes and becomes the north segment.
+                                     home and routes and becomes the north segment. The landmark's
+                                     timber deck (landmark_sinkhole) dresses every segment but the
+                                     three in the lower tubes' trough (TROUGH): the others carry
+                                     recipe `landmark`, the trough's keep greybox:ledge.
   gallery_cut_1..15                  the south wall cut back to radius 66 between x -45 and 45,
                                      so the ring passes behind the nest. Columns 6 m wide with
                                      edges on odd metres, so no 2 m bake vertex sits in two cuts.
@@ -33,6 +36,9 @@ CUT_R = 66.0
 CUT_Z0 = 399.0
 CUT_EDGES = list(range(-45, 46, 6))
 PUMP_AT = [73, 350]
+# The segments the lower tubes' wash cuts through (bearings 142 to 183 deg from +z on the landmark model, so 0 to
+# 38 deg here): the landmark's deck stops short of them.
+TROUGH = {0, 1, 2}
 
 KEYS = ["id", "element", "landform", "society", "at", "y", "size", "yaw_deg", "verb", "ride_fact", "home",
         "recipe", "stamp", "hole", "budget", "routes", "fragment"]
@@ -64,7 +70,7 @@ def ring_rows(old):
             id="gallery_ring" if first else "gallery_ring_%d" % (k + 1),
             element="ledge", at=polar(mid, deg), size=[length, 0, R_OUT - R_IN],
             yaw_deg=round((90.0 - deg + 180.0) % 360.0 - 180.0, 1), ride_fact="ride_ledge",
-            home=old["home"] if first else "", recipe="greybox:ledge", stamp="plateau",
+            home=old["home"] if first else "", recipe="greybox:ledge" if k in TROUGH else "landmark", stamp="plateau",
             routes=[r for r in old["routes"] if r != "gallery_lap"] + ["gallery_lap"] if first else ["gallery_lap"],
             fragment=old["fragment"] if first else ""))
     return out
