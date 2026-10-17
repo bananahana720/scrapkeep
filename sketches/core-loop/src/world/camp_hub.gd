@@ -26,12 +26,18 @@ const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const Layout := preload("res://src/world/camp_layout.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 
 # Features that plug into the hub. Each is a script with `static func attach(hub)`.
-const FEATURES: Array = []
+const FEATURES: Array = [
+	preload("res://src/world/camp_skee.gd"),
+	preload("res://src/world/camp_trial.gd"),
+	preload("res://src/world/camp_sandbox.gd"),
+	preload("res://src/ui/camp_scrapbook.gd"),
+]
 
 const GLB_DIR := "res://assets/models/camp/"
 const HUB_ORIGIN := Vector3(3000.0, 0.0, 3000.0)
@@ -73,6 +79,8 @@ signal station_left(id: String)
 
 var game
 var ball
+# The profile that keeps the camp's records; game.gd hands it in (profile_purity keeps ctx.profile out of src/world).
+var camp_store
 var root: Node3D
 var built := false
 var walking := false
@@ -85,6 +93,7 @@ var _inside: Array[String] = []
 var _prompts: CanvasLayer
 var _prompt_box: VBoxContainer
 var _prompt_buttons := {}
+var _clock: Label
 var _pet: Node3D
 var _pet_home := Vector3.ZERO
 var _pet_tween: Tween
@@ -214,6 +223,7 @@ func leave_walk() -> void:
 	walking = false
 	_inside.clear()
 	_refresh_prompts()
+	set_clock("")
 	_set_zones_monitoring(false)
 	root.visible = false
 	_prompts.visible = false
@@ -555,6 +565,34 @@ func _build_prompts() -> void:
 	_prompt_box.offset_top = -190.0
 	_prompt_box.offset_bottom = -110.0
 	_prompts.add_child(_prompt_box)
+	_clock = Label.new()
+	_clock.name = "Clock"
+	_clock.visible = false
+	_clock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_clock.anchor_left = 0.5
+	_clock.anchor_right = 0.5
+	_clock.offset_left = -140.0
+	_clock.offset_right = 140.0
+	_clock.offset_top = 18.0
+	_clock.add_theme_font_override("font", UiFonts.mono())
+	_clock.add_theme_font_size_override("font_size", 24)
+	_clock.add_theme_color_override("font_color", Palette.SAND)
+	_clock.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
+	_clock.add_theme_constant_override("outline_size", 6)
+	_prompts.add_child(_clock)
+
+
+# The walk HUD's one-line clock, top centre, for a live trial lap; "" hides it.
+func set_clock(text: String) -> void:
+	if _clock == null:
+		return
+	_clock.text = text
+	_clock.visible = text != ""
+
+
+func clock_text() -> String:
+	return _clock.text if _clock != null and _clock.visible else ""
 
 
 func _refresh_prompts() -> void:

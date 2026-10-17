@@ -235,6 +235,7 @@ func _ready() -> void:
 	camp_hub = CampHub.new()
 	add_child(camp_hub)
 	camp_hub.setup(self)
+	camp_hub.camp_store = ctx.profile
 	add_child(preload("res://src/ui/workshop.gd").new())
 	add_child(preload("res://src/ui/pause_menu.gd").new())
 

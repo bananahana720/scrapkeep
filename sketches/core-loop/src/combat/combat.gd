@@ -3648,6 +3648,9 @@ func _declare_codex() -> void:
 # Every time a trick fires. The codex dedupes per run and per attempt, so a trick first
 # pulled in a retried attempt pays again after the retry (CONTRACTS, Codex).
 func _discover(id: String, at: Vector3) -> void:
+	# The camp's sandbox fights happen outside play and never mark the codex.
+	if ctx.flow != null and not ctx.flow.in_play():
+		return
 	if not discovered.has(id):
 		discovery_log.append(id)
 	discovered[id] = at

@@ -357,6 +357,23 @@ func arm() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_step(delta)
+	_sync_clock()
+
+
+# The walk HUD's lap line (the arch's timer cannot be read from the far straight): the live lap, then the result.
+func _sync_clock() -> void:
+	if hub == null or not hub.has_method("set_clock"):
+		return
+	if run.state == State.RUNNING:
+		hub.set_clock("Lap  " + format_ms(run.ms()))
+	elif run.state == State.DONE and _after > 0.0:
+		hub.set_clock("Lap  " + timer_label.text.strip_edges())
+	else:
+		hub.set_clock("")
+
+
+func _step(delta: float) -> void:
 	var body := _ball_body()
 	if body == null:
 		return
