@@ -18,7 +18,7 @@ Andrew, 2026-10-16: carefree, experimental and **melodramatic, like an anime ope
 
 ## Title screens rotate
 
-Andrew loves both title themes, so there is no single title. Each title theme pairs with its own alternate title screen, and the game picks one per launch: A (sax noir), B (machine lead), and C (the show opening, built from opening-sequence tropes, at the band's 172 BPM). Never play the same one twice in a row.
+Andrew loves both title themes, so there is no single title. Each title theme pairs with its own alternate title screen, and the game picks one per launch: A (sax noir), B (machine lead), and C (the show opening, built from opening-sequence tropes, at the band's 172 BPM; Andrew picked take 1, `title-c2-show-opening-s2301`, on 2026-10-16). Never play the same one twice in a row.
 
 The themes also have jobs past the title screen, matching the tone bible (`tone/TONE-BIBLE.md` in the project library, draft of 2026-10-16), which wins on feel:
 

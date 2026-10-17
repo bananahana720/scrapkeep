@@ -14,7 +14,7 @@ These come from [cut_loops.py](cut_loops.py), whose tempo search read a syntheti
 | title-b-machine-lead-s2102 | 92 s | 128.0 | 2.1 s | |
 | title-c-anime-opening-s2201 | 92 s | not measured, asked for 172 | 4.0 s | |
 | title-c-anime-opening-s2202 | 92 s | not measured, asked for 172 | 2.5 s | |
-| title-c2-show-opening-s2301 | 92 s | 129.1 read, asked for 172 | 1.8 s | |
+| title-c2-show-opening-s2301 (Andrew's pick) | 92 s | 129.1 read, asked for 172 | 1.8 s | |
 | title-c2-show-opening-s2302 | 92 s | 127.5 read, asked for 172 | 2.0 s | |
 | title-c2-show-opening-s2303 | 92 s | 128.7 read, asked for 172 | 3.4 s | |
 | title-c2-show-opening-s2304 | 92 s | 127.1 read, asked for 172 | 3.8 s | |
