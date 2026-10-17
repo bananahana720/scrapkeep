@@ -26,94 +26,17 @@ static func make_probe(owner_body: CollisionObject3D) -> ShapeCast3D:
 	return probe
 
 
-# The grip clock, once per physics step: full at the fast tier, running down below it.
-static func tick_grip(state, tuning, delta: float) -> void:
-	if state.velocity.length() >= tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST]:
-		state.grip_hold = Tuning.GRIP_PEEL_S
-	else:
-		state.grip_hold = maxf(0.0, state.grip_hold - delta)
-
-
-static func gripping(state, tuning) -> bool:
-	return state.grip_hold > 0.0 and tuning.grip_on()
-
-
-# The lowest contact normal y that counts as ground this step.
-static func ground_dot(state, tuning) -> float:
-	return Tuning.GRIP_SLOPE_DOT if gripping(state, tuning) else Tuning.MAX_SLOPE_DOT
-
-
-# A downward cast misses a wall beside the ball, so while gripping a steep face the probe
-# looks along that face's normal instead. Otherwise it looks at the world's down.
-static func aim_probe(probe: ShapeCast3D, state, tuning) -> void:
-	var dir := Vector3.DOWN
-	if gripping(state, tuning) and state.grounded and state.contact_normal.y < Tuning.GRIP_FORCE_FROM:
-		dir = -state.contact_normal
-	probe.target_position = dir * (Tuning.RADIUS * 0.08 + Tuning.SKIN + 0.06)
-
-
-# The press into a gripped face, as an acceleration along -normal: zero on floors and banks,
-# full from MAX_SLOPE_DOT up the wall and over the lip of an overhang.
-static func downforce(state, tuning) -> Vector3:
-	if not state.grounded or not gripping(state, tuning):
-		return Vector3.ZERO
-	var n: Vector3 = state.contact_normal
-	var weight := clampf((Tuning.GRIP_FORCE_FROM - n.y) / (Tuning.GRIP_FORCE_FROM - Tuning.MAX_SLOPE_DOT), 0.0, 1.0)
-	return -n * Tuning.GRIP_DOWNFORCE * state.velocity.length() * weight
-
-
-# The speed along a face that lets a gripping ball take it, or INF when grip is off.
-static func grip_speed(state, tuning) -> float:
-	return tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST] if gripping(state, tuning) else INF
-
-
-# Floors and banks are always ground. A wall is ground only while gripping, and a ball takes
-# a new wall only running along it at grip speed: a head-on hit runs along nothing, so it
-# still bounces (the pipe vault's head-on bounce stays). A wall it already rides holds until
-# the grip clock runs out.
-static func _takes(state, n: Vector3, floor_dot: float, take_speed: float, on_wall: bool) -> bool:
-	if n.y <= floor_dot:
-		return false
-	if n.y > Tuning.MAX_SLOPE_DOT or on_wall:
-		return true
-	return (state.velocity - n * state.velocity.dot(n)).length() >= take_speed
-
-
-static func probe_ground(probe: ShapeCast3D, state, floor_dot := Tuning.MAX_SLOPE_DOT, take_speed := INF) -> void:
+static func probe_ground(probe: ShapeCast3D, state) -> void:
 	probe.force_shapecast_update()
-	var on_wall: bool = state.grounded and state.contact_normal.y <= Tuning.MAX_SLOPE_DOT
-	var best := -INF
+	var best := -1.0
 	var normal := Vector3.UP
 	if probe.is_colliding():
 		for i in probe.get_collision_count():
 			var n: Vector3 = probe.get_collision_normal(i)
-			if n.y > best and _takes(state, n, floor_dot, take_speed, on_wall):
+			if n.y > best:
 				best = n.y
 				normal = n
-	_set_ground(state, normal if best > -INF else null)
-
-
-# Landing on a wall from the air, or meeting one beside the ball, never shows under a probe
-# that looks down: while gripping, a touched world face is taken by the same rule.
-static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D) -> void:
-	if state.grounded or not gripping(state, tuning):
-		return
-	var take_speed := grip_speed(state, tuning)
-	var best := -INF
-	var found = null
-	for i in body_state.get_contact_count():
-		if not (body_state.get_contact_collider_object(i) is StaticBody3D):
-			continue
-		var n := body_state.get_contact_local_normal(i)
-		if n.y > best and _takes(state, n, Tuning.GRIP_SLOPE_DOT, take_speed, false):
-			best = n.y
-			found = n
-	if found != null:
-		_set_ground(state, found)
-
-
-static func _set_ground(state, normal) -> void:
-	if normal != null:
+	if best > Tuning.MAX_SLOPE_DOT:
 		state.grounded = true
 		state.contact_normal = normal
 		state.coyote = Tuning.COYOTE_TIME
@@ -121,7 +44,6 @@ static func _set_ground(state, normal) -> void:
 	else:
 		state.grounded = false
 		state.contact_normal = Vector3.UP
-	state.carving = state.grounded and state.grip_hold > 0.0 and state.contact_normal.y < Tuning.CARVE_DOT
 
 
 static func wish_direction(intent, drive_basis: Basis, state) -> Vector3:
@@ -234,10 +156,6 @@ static func jump(state, tuning) -> Vector3:
 		return Vector3.ZERO
 	var n: Vector3 = state.contact_normal if from_ground else Vector3.UP
 	var dir := (n + Vector3.UP).normalized()
-	# Off a gripped wall the ball already climbs faster than the jump, so half up would add
-	# nothing: the jump pushes straight off the face instead.
-	if from_ground and n.y < Tuning.MAX_SLOPE_DOT:
-		dir = n
 	if not from_ground:
 		state.air_actions -= 1
 	state.jump_buffer = 0.0

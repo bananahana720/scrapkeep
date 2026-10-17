@@ -68,9 +68,6 @@ const SPECS := [
 	# Game.pilot_unlocked; the saved profile is never read or written differently.
 	{"key": "profile", "label": "Launch set", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["default", "sitting"]},
 	{"key": "harpoon_rewind", "label": "Harpoon rewind (s)", "min": 0.0, "max": 3.0, "step": 0.1, "value": 1.0},
-	# Wall grip (ENEMY-PRIORITY.md 3a; Andrew's "Speed holds", 2026-10-17): at the fast tier
-	# walls and the first part of an overhang count as ground. `--grip=off` for the sitting.
-	{"key": "grip", "label": "Wall grip", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 ]
 
 # The option rows other modules read by name.
@@ -94,16 +91,6 @@ const RADIUS := 1.0
 # harpoon reels in and then hangs or orbits instead of grinding into the body.
 const ANCHOR_MIN_ROPE := 6.0
 const SKIN := 0.12
-# Wall grip, start values (ENEMY-PRIORITY.md 3a). From the fast tier the grounded threshold
-# drops to GRIP_SLOPE_DOT; below it for GRIP_PEEL_S the ball peels off. The downforce,
-# GRIP_DOWNFORCE x speed in m/s^2, presses along the contact normal only, so it never adds
-# speed; it fades in from GRIP_FORCE_FROM to full at MAX_SLOPE_DOT, leaving floors, banks
-# and kicker lips as they were. Carving is grip-speed contact steeper than CARVE_DOT (25 deg).
-const GRIP_SLOPE_DOT := -0.2
-const GRIP_PEEL_S := 0.25
-const GRIP_DOWNFORCE := 0.6
-const GRIP_FORCE_FROM := 0.707
-const CARVE_DOT := 0.906
 
 # The speed bank (SQ9, comps/roboquest/movement-and-feel.md): a chosen jump/slide
 # landing at BANK_ARM x cruise, or a stick start from a free rest below BANK_REST x cruise
@@ -169,8 +156,7 @@ func _init() -> void:
 #         reads them); "launch" flags apply when game.gd calls apply_cmdline("launch"),
 #         so a bot or tool that builds a bare Tuning never sees them.
 # `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --music=ace --breath=gentle
-# --discovery=cards --telegraph=haze --world-one-builds=on --hotwire-shell=on --hotwire-tread=on
-# --grip=off`, from the engine args
+# --discovery=cards --telegraph=haze --world-one-builds=on --hotwire-shell=on --hotwire-tread=on`, from the engine args
 # or the user args (after Godot's `--`). A flag in neither table is ignored.
 # threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,
 # since the static-drawn floor marking has no tuning in reach; tuning_flags_test checks
@@ -190,7 +176,6 @@ const FLAGS := {
 	"hotwire-tread": ["hotwire_tread", "option", "launch"],
 	"companion-stub": ["companion_stub", "option", "launch"],
 	"profile": ["profile", "option", "launch"],
-	"grip": ["grip", "option", "launch"],
 }
 
 
@@ -237,10 +222,6 @@ func world_one() -> bool:
 
 func pole_flail() -> bool:
 	return option("pole_flail") == "on"
-
-
-func grip_on() -> bool:
-	return option("grip") == "on"
 
 
 func armor() -> bool:

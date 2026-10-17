@@ -42,8 +42,6 @@ const WAKING_FLOOR_DROP := "waking_floor_drop"
 const WAKING_BREACH_SLAM := "waking_breach_slam"
 const WAKING_FLOOR_CHAIN := "waking_floor_chain"
 const WAKING_FINAL_FLOOR := "waking_final_floor"
-const WAKING_LIP_DROP := "waking_lip_drop"
-const WAKING_WALL_HOME := "waking_wall_home"
 
 const MIND_LANE := "mind_lane"
 const MIND_SPLIT_LANE := "mind_split_lane"
@@ -75,18 +73,6 @@ const WAKING := [
 		"hint": "Sooner or later, there is nowhere deeper to hide.",
 		"clue": "the Waking's final floor + the finishing hit",
 		"text": "Follow the Waking to its final floor and finish the fight there.",
-	},
-	{
-		"id": WAKING_LIP_DROP, "name": "Off the Lip",
-		"hint": "A stuck drill can't brace for what falls off the rim.",
-		"clue": "a jammed bore drill + a slam straight off a carve",
-		"text": "Carve the rim bank, launch off its lip and slam the Waking while its drill is jammed in the floor.",
-	},
-	{
-		"id": WAKING_WALL_HOME, "name": "The Wall Is Home",
-		"hint": "The floor fights back. The bank doesn't.",
-		"clue": "a burrow lane, a cave-in and a bore breach + carving through each",
-		"text": "Carve through a live burrow lane, cave-in and bore breach on the rim bank, untouched.",
 	},
 ]
 
