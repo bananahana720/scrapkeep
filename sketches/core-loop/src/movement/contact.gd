@@ -60,6 +60,11 @@ static func knock_scale(speed: float, heft: float) -> float:
 
 
 # The shove a ram of base `base` lands at `speed` with `heft`, times a haul landing's `mult`.
+# A shove's heft share: grows with heft up to the knock ceiling, never under the plain shove.
+static func heft_shove(force: float, heft: float) -> float:
+	return minf(force * heft_knock(heft), maxf(force, KNOCK_CEILING))
+
+
 static func ram_knock(base: float, speed: float, heft: float, mult := 1.0) -> float:
 	var knock := minf(base * knock_scale(speed, heft), KNOCK_CEILING)
 	return minf(knock * mult, LANDING_CEILING) if mult > 1.0 else knock

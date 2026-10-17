@@ -1273,7 +1273,7 @@ func _smash_rend(at: Vector3, speed: float) -> void:
 			continue
 		inward.y = 0.0
 		inward = inward.normalized() if inward.length() > 0.01 else Vector3.FORWARD
-		enemy.knock(inward + Vector3.UP * 0.2, Augments.SLAM_KNOCK * strength * REND_PULL)
+		enemy.knock(inward + Vector3.UP * 0.2, Contact.heft_shove(Augments.SLAM_KNOCK * strength * REND_PULL, heft()))
 		enemy.flash()
 
 
@@ -1324,7 +1324,7 @@ func _skid_push(at: Vector3, strength: float, reach := SKID_REACH, inner := SKID
 		if not in_skid_cone(to, ahead, reach, inner):
 			continue
 		var falloff := 1.0 - to.length() / reach
-		enemy.knock(ahead + Vector3.UP * 0.3, Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"))
+		enemy.knock(ahead + Vector3.UP * 0.3, Contact.heft_shove(Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"), heft()))
 		enemy.flash()
 		struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
 		abilities.refund(AbilityState.MOVEMENT, SKID_REFUND)
