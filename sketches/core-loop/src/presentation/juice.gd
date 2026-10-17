@@ -49,7 +49,9 @@ const CONTACT_KINDS := ["ram", "stomp", "slam"]
 # KNOCKBACK-FEEL: a ball contact's stop and shake follow its throw (Contact.ram_knock), not
 # its damage, so a heft V slam lands bigger than a heft II one instead of both sitting at
 # the damage cap. A throw of THROW_LO m/s (a cruise bump) or less asks for the low end, the
-# knock ceiling for the high end; the spine's 60 ms cap and SHAKE_CAP still bound both.
+# knock ceiling for the high end; the spine's 60 ms cap and SHAKE_CAP still bound both. The
+# throw only ever adds: a hit never stops or shakes less than its damage asked for, so a
+# cruise bump lands as it did and only harder throws land harder.
 const THROW_LO := 11.0
 const THROW_STOP_MS := [22.0, 58.0]
 const THROW_SHAKE := [0.2, 0.5]
@@ -460,10 +462,10 @@ func _flush_hits() -> void:
 		var hit: Dictionary = _hits[i]
 		var throw := float(hit.get("throw", -1.0))
 		if hit["stop"]:
-			stop = maxf(stop, stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]) if throw < 0.0 else throw_stop_ms(throw, hit["crit"]))
+			stop = maxf(stop, maxf(stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]), throw_stop_ms(throw, hit["crit"]) if throw >= 0.0 else 0.0))
 			if hit["crit"]:
 				shake = maxf(shake, float(row["crit"]["shake"]))
-		shake = maxf(shake, hit["shake"] if throw < 0.0 else lerpf(THROW_SHAKE[0], THROW_SHAKE[1], throw_share(throw)))
+		shake = maxf(shake, maxf(hit["shake"], lerpf(THROW_SHAKE[0], THROW_SHAKE[1], throw_share(throw)) if throw >= 0.0 else 0.0))
 		crit = crit or hit["crit"]
 		if hit["heavy"]:
 			heavy = true

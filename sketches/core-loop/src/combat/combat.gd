@@ -3543,7 +3543,7 @@ func _pin(victim: Node3D, to: Vector3, speed: float, mult := 1.0) -> void:
 # never a hulk's victims, so stagger timing is untouched. Below PIN_MIN_SPEED it is spent.
 func bowl_hulk(enemy: Node3D, direction: Vector3, speed: float) -> void:
 	var flat := Vector3(direction.x, 0.0, direction.z)
-	if speed <= Weapons.PIN_MIN_SPEED or flat.length_squared() < 0.0001 or not is_instance_valid(enemy):
+	if speed <= Weapons.PIN_MIN_SPEED or flat.length_squared() < 0.0001 or not is_instance_valid(enemy) or enemy.get("swarm") != null:
 		return
 	_hulks.append({"at": enemy.global_position, "vel": flat.normalized() * speed, "radius": _hull(enemy),
 		"left": Weapons.HULK_SECONDS, "hit": {enemy.get_instance_id(): true}, "mult": heft()})
@@ -3568,6 +3568,8 @@ func _hulk_step(enemies: Array, delta: float) -> void:
 			if not _pinnable(victim) or victim.get("weight") == null or (hulk["hit"] as Dictionary).has(victim.get_instance_id()):
 				continue
 			if victim.has_method("fight") and victim.fight() == "posture":
+				continue
+			if victim.get("swarm") != null:
 				continue
 			var to: Vector3 = victim.global_position - at
 			to.y = 0.0
