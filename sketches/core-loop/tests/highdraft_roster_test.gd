@@ -332,7 +332,8 @@ func _kite() -> void:
 	await physics_frame
 	t.check("KD-8 an air ram at the top kills it outright", deaths.get(id, "") == "air_ram", "death '%s'" % deaths.get(id, ""))
 
-	_grow(2.3)
+	# Well clear of class 3's 2.2, so speed wear over the ride cannot drop it a class.
+	_grow(2.6)
 	_park_ball(Vector3(-10.0, 0.0, 120.0))
 	await _frames(2)
 	kite = _spawn("kite_drone", Vector3(-12.0, 0.0, 116.0))
@@ -342,9 +343,10 @@ func _kite() -> void:
 		and _ground(kite.ride_at.x, kite.ride_at.z) < SPAWN_TOP - 6.0, "riding '%s' at %s" % [kite.riding, kite.ride_at])
 	id = kite.get_instance_id()
 	game.player.reset_to(kite.global_position + Vector3(0.0, -1.5, 0.0), Vector3(6.0, 2.0, 0.0))
-	await _frames(4)
+	# Gravity alone leaves vy near zero after 6 frames; the drop kick takes it well below.
+	await _frames(6)
 	var vy: float = game.player.state.velocity.y
-	t.check("KD-10 grown: the air-ram kill drops the ball", deaths.get(id, "") == "air_ram" and vy < 0.0, "death '%s', vy %.2f" % [deaths.get(id, ""), vy])
+	t.check("KD-10 grown: the air-ram kill drops the ball", deaths.get(id, "") == "air_ram" and vy < -3.0, "death '%s', vy %.2f" % [deaths.get(id, ""), vy])
 	_grow(1.0)
 	_clear()
 	_park_ball(Vector3(0.0, 0.0, 128.0))
