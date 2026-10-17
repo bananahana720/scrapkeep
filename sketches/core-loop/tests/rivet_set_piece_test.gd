@@ -46,7 +46,8 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 229
+	# 2026-10-16 (pilot paint): Calibrated is live, one check added.
+	_expected_checks = 230
 	super._initialize()
 
 

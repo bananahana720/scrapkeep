@@ -17,7 +17,8 @@ const Synth := preload("res://src/presentation/synth.gd")
 
 func _initialize() -> void:
 	_t = T.new("tarn_set_piece_test")
-	_expected_checks = 53
+	# 2026-10-16 (pilot paint): Redjaw Teeth is live; the pending check splits into three.
+	_expected_checks = 55
 	super._initialize()
 
 
