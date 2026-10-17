@@ -1,0 +1,100 @@
+extends RefCounted
+
+# Stage modifiers (SI3; W13-INTEGRATION-3.md SI3; comps/isaac/pacing-and-trades.md:84). At most one
+# per stage, picked from the run seed and the stage number alone, so the stage card that shows it
+# before the stage starts and the pocket draw that applies it read the same row, and a retry gets
+# the same one. A row scales the drawn pocket count, scales how far the drawn pockets' beacons
+# read, or keeps the draw to the farthest few anchors. It is a stage-start parameter, never a
+# durable field (TADR-010:47), and nothing here reads or writes ball tuning, physics or input.
+
+# Stage 1 draws no pockets (pocket_draw.gd stage_sites), so it never has a modifier.
+const FIRST_STAGE := 2
+const CHANCE := 0.4
+# The drawn-plus-authored pocket cap (comps/isaac/floor-generation.md, cap 8).
+const CAP := 8
+# Far Haul keeps this many anchors, farthest from the main line first. Anchors are lattice nodes
+# (about 700 to 1,900 a map); 250 keeps whole far areas rather than one cluster, so even the
+# Crown's few anchors still fit its five pockets (150 fit about one a stage there).
+const FAR_ANCHORS := 250
+# The only effect keys a row may carry; a row with any other key is rejected by valid().
+const EFFECTS := ["count_scale", "sight_scale", "far"]
+const ROWS := [
+	{"id": "surplus", "word": "Surplus Yard", "line": "Somebody over-ordered. More pockets.", "count_scale": 2.0},
+	{"id": "lean", "word": "Lean Haul", "line": "Budget cuts. Fewer pockets.", "count_scale": 0.5},
+	{"id": "floodlit", "word": "Floodlit", "line": "Someone left the lights on. Beacons read far.", "sight_scale": 1.75},
+	{"id": "blackout", "word": "Blackout", "line": "The beacons are on a budget.", "sight_scale": 0.5},
+	{"id": "far_haul", "word": "Far Haul", "line": "Everything good is at the edges.", "far": true},
+]
+
+
+static func valid(row: Dictionary) -> bool:
+	for key in row:
+		if not key in ["id", "word", "line"] and not key in EFFECTS:
+			return false
+	return true
+
+
+# The drawn slots a stage has before any modifier (pocket_draw.gd draw: 3 to 5 rising one a stage).
+static func base_slots(stage: int, authored: int) -> int:
+	return maxi(0, mini(CAP, stage + 2) - authored)
+
+
+# The drawn slots with the row applied: scaled, at least one, and never past the cap.
+static func slots(row: Dictionary, stage: int, authored: int) -> int:
+	var base := base_slots(stage, authored)
+	if base == 0 or not row.has("count_scale"):
+		return base
+	return clampi(ceili(base * float(row.count_scale)), 1, maxi(0, CAP - authored))
+
+
+# The most drawn slots any row can give the stage, for checking a saved draw.
+static func max_slots(stage: int, authored: int) -> int:
+	var most := base_slots(stage, authored)
+	for row in ROWS:
+		most = maxi(most, slots(row, stage, authored))
+	return most
+
+
+# A row is offered only where it changes something: a count row only where its count differs.
+static func _eligible(row: Dictionary, stage: int, authored: int) -> bool:
+	if base_slots(stage, authored) == 0:
+		return false
+	return not row.has("count_scale") or slots(row, stage, authored) != base_slots(stage, authored)
+
+
+# The stage's modifier, or {} for none, from its own stream (no shared RNG is touched).
+static func pick(run_seed: int, stage: int, authored: int) -> Dictionary:
+	if stage < FIRST_STAGE:
+		return {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([run_seed, stage, "stage_modifier"])
+	if rng.randf() >= CHANCE:
+		return {}
+	var offered := ROWS.filter(func(row): return _eligible(row, stage, authored))
+	if offered.is_empty():
+		return {}
+	return offered[rng.randi_range(0, offered.size() - 1)].duplicate(true)
+
+
+# The modifier for a stage of a terrain's table: only park maps draw pockets.
+static func for_stage(run, terrain, stage: int) -> Dictionary:
+	if run == null or terrain == null or not terrain.has_method("map_for") or not "maps" in terrain:
+		return {}
+	if stage < 1 or stage > terrain.maps.size():
+		return {}
+	var map = terrain.map_for(stage)
+	if map == null or not "park" in map or map.park.is_empty() or not "activity_sites" in map:
+		return {}
+	return pick(int(run.run_seed), stage, map.activity_sites.size())
+
+
+# The farthest anchors a Far Haul draw may use, farthest first.
+static func far_anchors(prepared: Dictionary) -> Array:
+	var anchors: Array = prepared.get("anchors", []).duplicate()
+	var line: PackedFloat32Array = prepared.from_line
+	anchors.sort_custom(func(a, b): return line[a.node] > line[b.node] or (line[a.node] == line[b.node] and a.node < b.node))
+	return anchors.slice(0, FAR_ANCHORS)
+
+
+static func caption(row: Dictionary) -> String:
+	return "" if row.is_empty() else "%s: %s" % [row.word, row.line]

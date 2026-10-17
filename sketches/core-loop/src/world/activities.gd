@@ -14,6 +14,7 @@ const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
+const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
 # stand lit from the stage's first frame, finish on an action the player already knows and pay
@@ -130,6 +131,8 @@ var _graph
 var _graph_map := ""
 var _draw_layout := {}
 var _draw_map := ""
+# The SI3 row this stage's draw applied, {} for none; the stage card shows the same row.
+var stage_modifier := {}
 var _mark_pools := {}
 # A park map's stage-entry data (SWAP-HITCH): the baked graph, the trade-pocket candidates and,
 # for a map played past stage 1, the pocket-draw layout. All three read only the graph and the
@@ -324,6 +327,7 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 func _enter_stage(retry: bool) -> void:
 	clear()
 	_elite_arrivals = 0
+	stage_modifier = {}
 	# A retry does not re-arm the piece, so dying cannot farm one.
 	if not retry:
 		_piece_paid = false
@@ -369,9 +373,12 @@ func _enter_stage(retry: bool) -> void:
 			if entry_data.layout.is_empty():
 				entry_data.layout = PocketDraw.prepare(_graph, map)
 			_draw_layout = entry_data.layout
-		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout):
+		stage_modifier = StageModifier.for_stage(ctx.run, ctx.terrain, ctx.run.stage)
+		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout, stage_modifier):
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
-				sites.append(_build(drawn_spec.id, drawn_spec.at, drawn_spec))
+				var drawn_site := _build(drawn_spec.id, drawn_spec.at, drawn_spec)
+				drawn_site.view.set_sight(float(stage_modifier.get("sight_scale", 1.0)))
+				sites.append(drawn_site)
 	_pending_stage = true
 
 

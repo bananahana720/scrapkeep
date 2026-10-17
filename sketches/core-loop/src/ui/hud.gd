@@ -17,6 +17,7 @@ const RunStatus := preload("res://src/ui/run_status.gd")
 const ObjectiveView := preload("res://src/ui/objective_view.gd")
 const RestartMeter := preload("res://src/ui/restart_meter.gd")
 const LaunchCard := preload("res://src/ui/launch_card.gd")
+const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
@@ -666,8 +667,10 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		_card_for_stage(stage)
 
 
+# The stage's name, and its SI3 modifier read from the same pick the pocket draw applies.
 func _card_for_stage(stage: int) -> void:
-	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"))
+	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
+	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.caption(modifier))
 
 
 func _label(font_size: int) -> Label:
