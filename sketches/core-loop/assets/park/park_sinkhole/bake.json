@@ -4,20 +4,20 @@
     "ground": 641601,
     "holes": 298,
     "surface": {
-      "basalt": 311678,
+      "basalt": 311680,
       "concrete": 0,
       "net": 0,
       "sand": 22500,
-      "sandstone": 298242,
-      "tailings": 7580
+      "sandstone": 298250,
+      "tailings": 7570
     },
     "under_fallback": 298
   },
   "files": {
     "apron.bin": "c836ef1d89010814f5cebe35fa5a46b64b602bbccebc0768ee4b703cf3a197b4",
-    "ground.bin": "3d5ad5816af17c137b81ccd5e0345da4faa186ffa0a319ebce5258e572ff6b00",
+    "ground.bin": "f26f65ae877323d757b1f55d55f9422413b109a841d84d4dc08eb23b262ecfb0",
     "holes.bin": "8effdd4b22b7221243c39ceee8fc46c462348659e2883a16c091b0859f0dda26",
-    "surface.bin": "6bbcbd287a69cda6c36b6fb97643dc966cdcca84958c9411e1f98797bdbe9997",
+    "surface.bin": "8c462fc0ae82e5aa26e721e295fb45bddad2d59395f6c3d2d554d6661e2271c6",
     "under.bin": "61d42af97c8eec7a6b2e6056431fb112493124f65bd798408683ad140a47e00a"
   },
   "grid": {
@@ -48,11 +48,11 @@
     "step_m": 2.0
   },
   "height": {
-    "max": 100.0,
+    "max": 45.0,
     "min": -107.810111999512
   },
   "map": "park_sinkhole",
-  "park_sha256": "87d9bf3dc7d3422a2e9799a7834f4bb942890c55fcae13f213380abe32d857a0",
+  "park_sha256": "99b49f265c8dbaa23ab058c4e88c6af7dc6bbab69ae0335b7fb9f6f7f4ad503a",
   "schema": "scrapkeep-park-bake/1",
   "tool_sha256": "046e7258338a8bcca754c4ca23cb0cf963098dfc29cf88aaa46601fbb4e363c2"
 }
