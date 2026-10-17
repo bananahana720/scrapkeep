@@ -37,8 +37,6 @@ const DECK_SIZE := Vector3(3.6, 0.3, 3.6)
 # The model's floor sits on its clamp pads 1.5 m under its origin (enemy_dispatcher.py).
 const FLOOR_DROP := 1.5
 const BODY_SIZE := Vector3(2.9, 2.3, 2.9)
-# The plated brute's weight: what a hit's interrupt is read against (knock).
-const IMPACT_WEIGHT := 3.0
 # Start values (ENEMY-PRIORITY lever 4): one chaser every 8 s. The ring sits where the ball is
 # when the drop is committed, with no lead: rolling off it beats it at any speed, and a ball
 # circling under the perch gets hit (a lead missed a curving ball by 9 m on the median in the lab).
@@ -78,12 +76,12 @@ func _configure(threat: float) -> void:
 	_set_health(HP * threat)
 	plating = 0.0
 	scrap_value = SCRAP
-	weight = 1000.0
+	weight = 4.0  # past the Tarn claw's largest tow limit (3.5); what a hit's interrupt is read against
 	walk_speed = 0.0
 	attack_range = DROP_RANGE
 	warn_seconds = WARN
 	live_seconds = 0.05
-	rest_seconds = DROP_EVERY - WARN
+	rest_seconds = DROP_EVERY - WARN - live_seconds
 	first_rest = FIRST_DROP
 	keep_far = DROP_RANGE
 
@@ -133,9 +131,10 @@ func _build_tool() -> void:
 
 # A body that still reads as the Dispatcher if the model is missing: the box and the tube.
 func _fallback_body() -> void:
-	_box(BODY_SIZE * 0.95, Palette.VERDIGRIS, Vector3.ZERO)
-	_cylinder(0.4, 3.0, Palette.CHARCOAL, Vector3(0.0, -0.2, -2.0)).rotation.x = PI * 0.5
-	var lamp := _box(Vector3(0.5, 0.5, 0.5), Palette.BRASS, Vector3(0.0, 1.6, 0.0), 0.0)
+	var pivot := _visual_parent()
+	_box(BODY_SIZE * 0.95, Palette.VERDIGRIS, Vector3.ZERO, 0.0, pivot)
+	_cylinder(0.4, 3.0, Palette.CHARCOAL, Vector3(0.0, -0.2, -2.0), 0.0, pivot).rotation.x = PI * 0.5
+	var lamp := _box(Vector3(0.5, 0.5, 0.5), Palette.BRASS, Vector3(0.0, 1.6, 0.0), 0.0, pivot)
 	_signal_material = lamp.material_override as StandardMaterial3D
 
 
@@ -148,13 +147,13 @@ static func _parts() -> Array:
 		return []
 	var scene := packed.instantiate() as Node3D
 	var parts: Array = []
-	for name in ["DispatcherBody", "DispatcherRadar", "DispatcherSignal"]:
-		var mi := scene.find_child(name, true, false) as MeshInstance3D
+	for part in ["DispatcherBody", "DispatcherRadar", "DispatcherSignal"]:
+		var mi := scene.find_child(part, true, false) as MeshInstance3D
 		if mi == null or mi.mesh == null:
 			scene.free()
 			_asset_warning()
 			return []
-		parts.append({"name": name, "mesh": mi.mesh.duplicate(), "xform": _in_scene(mi, scene)})
+		parts.append({"name": part, "mesh": mi.mesh.duplicate(), "xform": _in_scene(mi, scene)})
 	for socket in ["drop_mouth", "Beacon", "RadarPivot", "perch_foot"]:
 		var node := scene.find_child(socket, true, false) as Node3D
 		if node != null:
@@ -183,8 +182,6 @@ static func _asset_warning() -> void:
 # Puts the body on its perch: a park perch top from the spec, else its own mast where it spawned.
 func _perch() -> void:
 	var foot := global_position
-	if foot == Vector3.ZERO and spec.has("at"):
-		foot = spec["at"]
 	var ground: float = terrain.height(foot.x, foot.z) if terrain != null else foot.y
 	if spec.has("perch"):
 		perch_top = spec["perch"]
@@ -234,12 +231,12 @@ func perch_height() -> float:
 
 
 # A hit never moves it, but one hard enough still breaks the drop: the knock is kept as the
-# speed it would give a body of IMPACT_WEIGHT, for the counter's interrupt read only.
+# speed it would give a free body of its weight, for the counter's interrupt read only.
 func knock(direction: Vector3, force: float) -> void:
 	if _dead or direction.length_squared() < 0.0001:
 		return
 	knocks += 1
-	var push := Vector3(direction.x, 0.0, direction.z).normalized() * force / IMPACT_WEIGHT
+	var push := Vector3(direction.x, 0.0, direction.z).normalized() * force / weight
 	if push.length() > _knocked_speed():
 		_knock = push
 
