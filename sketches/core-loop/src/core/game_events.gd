@@ -192,6 +192,9 @@ signal line_skill_expired(ability_id: String)
 # The active slot (src/combat/actives): F fired the racked active at `at`; count is how many
 # pieces left (rockets in a volley). Maker sets and sounds read it; its strikes are enemy_struck.
 signal active_fired(active_id: String, at: Vector3, count: int)
+# An active building toward a strike on one machine (the Cutting Torch's heat on a plate):
+# fraction climbs 0 to 1 in steps; presentation glows and sizzles it. No damage of its own.
+signal active_heat(active_id: String, at: Vector3, fraction: float)
 # The set piece (src/combat/ultimate.gd, wave P-B's ultimate unit): the meter reached full;
 # Q committed the planned path (seconds is wind-up plus flight); the flight's middle beat;
 # the landing strike resolved; a cancel (recall, bail, stage or death) and whether it refunded.

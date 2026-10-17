@@ -346,6 +346,7 @@ const WEIGHTED := {
 const WEIGHT_EXEMPT := {
 	"line_skill_fired": "The line skill's bite; its landed strike is enemy_struck.",
 	"active_fired": "The active's launch cue; its landed strikes are enemy_struck.",
+	"active_heat": "A building heat tick under the active's sound row; it lands no hit, its cut is enemy_struck.",
 	"achievement_earned": "Reward and economy ladders own the cue; rewards never stop time.",
 	"activity_done": "World, interaction and activity rows own their contextual glyph and sound.",
 	"ambush_ended": "World, interaction and activity rows own their contextual glyph and sound.",
