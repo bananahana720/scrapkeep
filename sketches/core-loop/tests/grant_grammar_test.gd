@@ -201,5 +201,21 @@ func _toast() -> void:
 	_t.eq("a pilot reward keeps its beat line", Achievements.toast_text("brindle_routed"), "Brindle Routed\n%s" % Achievements.beat_of("brindle_routed"))
 	_t.eq("a delivered cosmetic reward names the look", Achievements.toast_text("ach_d7_salt_skip"), "Salt Skip\nNew look: Salt Skip")
 	_t.eq("a paint reward names the look", Achievements.toast_text("warden_broken"), "Warden Breaker\nNew look: Night Slate")
-	_t.eq("a pending item's toast shows the row name only", Achievements.toast_text("ach_sable_switchback"), "Switchback")
+	# The pending id is read at runtime, as achievement_rows_case does for PENDING_PILOTS.
+	var pending: Array = Cosmetics.PENDING_ART.filter(func(id): return Achievements.for_cosmetic(id) != "")
+	if pending.is_empty():
+		var rewarded: Array = Achievements.ROWS.keys().filter(func(a): return Achievements.beat_of(a) == "" and String(Achievements.reward_of(a).get("cosmetic", "")) != "")
+		var silent: Array = rewarded.filter(func(a): return not Achievements.toast_text(a).contains("\nNew look: "))
+		_t.check("with no pending art, every cosmetic-reward toast names its look", not rewarded.is_empty() and silent.is_empty(), str(silent))
+	else:
+		var pending_grant := Achievements.for_cosmetic(pending[0])
+		_t.eq("a pending item's toast shows the row name only", Achievements.toast_text(pending_grant), String(Achievements.row(pending_grant)["name"]))
+	# The test seam plants the hood as pending: its toast shows the row name only.
+	var hood_grant := Achievements.for_cosmetic("outfit_rivet_hood")
+	Cosmetics._test_pending = ["outfit_rivet_hood"]
+	_t.eq("a planted pending item's toast shows the row name only", Achievements.toast_text(hood_grant), String(Achievements.row(hood_grant)["name"]))
+	Cosmetics._test_pending = []
+	_t.eq("a delivered shell's toast names the look",Achievements.toast_text("ach_sable_switchback"), "Switchback\nNew look: Felt Rig")
+	_t.eq("a delivered outfit's toast names the look", Achievements.toast_text(Achievements.for_cosmetic("outfit_rivet_hood")),
+		"%s\nNew look: Welding Hood" % Achievements.row(Achievements.for_cosmetic("outfit_rivet_hood"))["name"])
 	_t.eq("an unknown row toasts its id", Achievements.toast_text("not_a_row"), "not_a_row")

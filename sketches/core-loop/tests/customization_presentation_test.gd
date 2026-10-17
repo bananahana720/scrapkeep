@@ -110,6 +110,13 @@ func _run() -> void:
 	_check_fallback(view, rec["pod"], pod_materials, decal)
 	_t.check("B5 missing plate reuses the ring material", ring.get_active_material(ring_paint) == decal)
 	_check_pilot_fallbacks(view, hero, view.effective(pilot, "decal"))
+	# The test seam plants the worn decal as pending: effective() falls back to the default.
+	var worn_decal: String = view.CosmeticWear.worn(hero.profile, Cosmetics.owner_for(pilot, "decal"), "decal")
+	_t.check("a worn decal resolves before the plant", worn_decal != "" and not view.effective(pilot, "decal").is_empty(), worn_decal)
+	Cosmetics._test_pending = [worn_decal]
+	_t.eq("a planted pending worn decal resolves to the default", view.effective(pilot, "decal"), {})
+	Cosmetics._test_pending = []
+	_t.check("the cleared decal resolves again", not view.effective(pilot, "decal").is_empty())
 
 	var body = _game.presentation.get_node("CompanionBody")
 	_t.eq("seat real SPIL-9 for run", body.seat_for_capture("primer_coil", "ram_prow"), "")
