@@ -65,6 +65,8 @@ const ROWS := {
 	# Kill-first specials (roster_specials.gd): the tell's sound is the special's own cue.
 	"dispatcher": {"color_role": "hazard", "shape": "cross", "sound": "none", "attacks": {"E26": ["warn_seconds"]},
 		"idle": {"style": "tick", "amplitude": 0.03, "beats": 2.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
+	"prop_crew": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E31": ["ROOF_WARN"]},
+		"idle": {"style": "sway", "amplitude": 0.03, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 }
 
 

@@ -184,6 +184,7 @@ const CHASSIS := {
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
 	"dispatcher": {"chassis": "cache", "move_class": "fixed", "threat_feature": "Pneumatic tube curling down off a box on a mast"},
 	"foreman": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Steam-horn mast over a punch clock, tethered to its crew"},
+	"prop_crew": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Timber prop holding a cracked roof frame over its pack"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.

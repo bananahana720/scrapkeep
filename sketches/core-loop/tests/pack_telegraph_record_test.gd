@@ -295,6 +295,7 @@ func _against_code(kinds: Array) -> void:
 		var warn: float = probe.warn_seconds if is_counter else -1.0
 		var rest: float = probe.rest_seconds if is_counter else -1.0
 		var reads: float = float(probe.get("recovery_seconds")) if probe.get("recovery_seconds") != null else -1.0
+		var probe_wants: bool = is_counter and probe._wants_attack(Vector3.FORWARD * 4.0)
 		_clear_field()
 		await physics_frame
 		_test.check(kind + " is a counter.gd kind", is_counter, "script %s" % kind)
@@ -302,6 +303,10 @@ func _against_code(kinds: Array) -> void:
 			continue
 		_test.check(kind + " pre-shoot is its warn", absf(float(row.get("pre_shoot", -1.0)) - warn) < 0.0001,
 			"record %.2f, warn_seconds %.2f" % [row.get("pre_shoot", -1.0), warn])
+		if _record.PLAYER_STARTED.has(id):
+			_test.check(kind + " is player-started with no cooldown", float(row.get("cooldown", -1.0)) == 0.0 and not probe_wants,
+				"record cooldown %.2f, attacks on its own %s" % [row.get("cooldown", -1.0), probe_wants])
+			continue
 		_test.check(kind + " cooldown is its rest less the recovery", absf(float(row.get("cooldown", -1.0)) - (rest - float(_record.RECOVERY))) < 0.0001,
 			"record %.2f, rest_seconds %.2f - recovery %.2f" % [row.get("cooldown", -1.0), rest, _record.RECOVERY])
 		_test.check(kind + " reads the shared recovery", absf(reads - float(_record.RECOVERY)) < 0.0001,

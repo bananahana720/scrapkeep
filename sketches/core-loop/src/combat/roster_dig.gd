@@ -15,4 +15,7 @@ const ROWS := {
 	"lamp_swarm": {"faction": "fleet", "role": "controller", "mechanic": "lure_bloom", "telegraph": Threat.Type.WAVE, "holds": false,
 		"breaks": ["boost"], "tag": "", "tests": "steer", "script": "res://src/combat/lamp_swarm.gd", "world": 2,
 		"line": "Blooms a ring of lure lamps that bends your steering toward the light; boost straight through the wave."},
+	"prop_crew": {"faction": "fleet", "role": "controller", "mechanic": "roof_drop", "telegraph": Threat.Type.INSTANT, "holds": false,
+		"breaks": ["ram"], "tag": "", "tests": "contact", "script": "res://src/combat/prop_crew.gd", "world": 2,
+		"line": "Shores a cracked roof over its pack; ram the prop from the wall side and the roof comes down on them, and on you if you are on the floor."},
 }

@@ -34,11 +34,11 @@ const LIGHTS := ["ancient_beam", ""]
 const EVENT_FAMILY := {
 	"flood_fill": "natural", "drain": "natural", "cave_in": "natural", "collapse": "natural",
 	"impact": "natural", "flash_flood": "natural", "lightning": "natural",
-	"fleet_landing": "fleet", "machine_eruption": "ancient",
+	"fleet_landing": "fleet", "lift_cage": "fleet", "zipline_drop": "fleet", "machine_eruption": "ancient",
 	"boiler_burst": "industrial", "reactor_blow": "industrial",
 }
 const EVENT_KINDS := ["flood_fill", "drain", "cave_in", "collapse", "impact", "flash_flood", "lightning",
-	"fleet_landing", "machine_eruption", "boiler_burst", "reactor_blow"]
+	"fleet_landing", "machine_eruption", "boiler_burst", "reactor_blow", "lift_cage", "zipline_drop"]
 const FAMILIES := ["natural", "fleet", "ancient", "industrial"]
 # Telegraph floors (section 5 rule 1): a hazard with no ground change, a ground change, and a
 # Fleet landing or an ancient eruption. A row changes the ground when its kind reshapes the
@@ -97,7 +97,7 @@ const REGISTRY_PATH := "res://assets/registry.json"
 # The real-culture guardrail (section 4): these rows house no home, carry only ref_ fragments,
 # and are never the site of a ground-changing or destructive event.
 const GUARDED_SOCIETIES := ["hohokam", "ancestral_puebloan"]
-const GUARDED_EVENT_KINDS := ["cave_in", "collapse", "impact", "machine_eruption", "fleet_landing",
+const GUARDED_EVENT_KINDS := ["cave_in", "collapse", "impact", "machine_eruption", "fleet_landing", "lift_cage", "zipline_drop",
 	"boiler_burst", "reactor_blow"]
 const REF_PREFIX := "ref_"
 
@@ -413,11 +413,13 @@ static func _event_row(out: Array, id: String, row: Dictionary, rows: Dictionary
 		_add(out, id, "water_depth", "depth_m %s is over %s m" % [str(effect["depth_m"]), MAX_EVENT_WATER_M])
 	if effect.has("home") and not homes.has(effect["home"]):
 		_add(out, id, "reference", "effect.home %s is no home row" % str(effect["home"]))
-	if kind == "fleet_landing":
-		if not VESSELS.has(effect.get("vessel")):
-			_add(out, id, "enum", "effect.vessel %s is not one of %s" % [str(effect.get("vessel")), str(VESSELS)])
+	if kind == "fleet_landing" and not VESSELS.has(effect.get("vessel")):
+		_add(out, id, "enum", "effect.vessel %s is not one of %s" % [str(effect.get("vessel")), str(VESSELS)])
+	if EVENT_FAMILY[kind] == "fleet":
 		if not effect.has("home"):
-			_add(out, id, "missing", "a fleet landing names effect.home")
+			_add(out, id, "missing", "a %s names effect.home" % kind)
+		if not effect.has("footprint_m"):
+			_add(out, id, "missing", "a %s names effect.footprint_m" % kind)
 	if _fields(out, id, row["route_change"], ROUTE_CHANGE_FIELDS):
 		for key in ["closes", "opens"]:
 			for route in row["route_change"][key]:

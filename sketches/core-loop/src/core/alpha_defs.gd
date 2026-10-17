@@ -126,7 +126,7 @@ const DEFS := [
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
-			{"id": "dig_bore", "kinds": ["drill_crew", "burrower"]},
+			{"id": "dig_bore", "kinds": ["drill_crew", "burrower", "prop_crew"]},
 			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
 			{"id": "dig_linked", "kinds": ["linker", "drill_crew", "burrower"]},
 			{"id": "dig_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
@@ -139,7 +139,7 @@ const DEFS := [
 		"packs": [
 			{"id": "deep_bore", "kinds": ["drill_crew", "burrower", "burrower"]},
 			{"id": "deep_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "burrower"]},
-			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm"]},
+			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm", "prop_crew"]},
 			{"id": "deep_linked", "kinds": ["linker", "drill_crew", "lamp_swarm"]},
 			{"id": "deep_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 		], "elite": ELITE, "warden_variant": "brood"},
