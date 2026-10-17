@@ -19,6 +19,15 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
 
+# SHA-256 of var_to_bytes(draw(...)) for run seeds 0 to 3 per stage, with no modifier, captured on main
+# at cf63e622 before SI3. A draw with no modifier must still produce exactly these bytes.
+const GOLDEN := {
+	2: "2da49d67bfdf475f7c983cdab44b5af6181f2959567d01d70c2764f539bd55ee",
+	3: "6b2244ea5e2df73b4330ccec611c17a05b250afc9cf711233641ac960dcc9f02",
+	4: "99a743b6e91c90af34cfda84138cff6b42e4cb9480f9e4c7734e6c3dc7308d39",
+	5: "c9c1702e9b7fa6b32ae2b3a2e60d5885afea15f4b32f4df22e84d7ad61aaec94",
+	6: "735d350d077e5ed38a23f508c2df25abb9b23ff8c80867a233d06f930d830918",
+}
 const PICK_SEEDS := 2000
 const DRAW_SEEDS := 16
 const RUN_SEEDS := [3, 11, 29]
@@ -129,6 +138,14 @@ func _draws(stage: int) -> void:
 	var far_set := {}
 	for spot in Modifier.far_anchors(prepared):
 		far_set[spot.node] = true
+	var golden := HashingContext.new()
+	golden.start(HashingContext.HASH_SHA256)
+	for s in 4:
+		var run = Run.new()
+		run.stage = stage
+		run.run_seed = s
+		golden.update(var_to_bytes(_draw(prepared, map, stage, s, Trade.stage_site(graph, map, run, 78000, trade_pool))))
+	t.eq("stage %d: no-modifier draw matches main's bytes before SI3" % stage, golden.finish().hex_encode(), GOLDEN[stage])
 	for s in DRAW_SEEDS:
 		var run = Run.new()
 		run.stage = stage
@@ -247,6 +264,8 @@ func _runtime() -> void:
 	var applied := 0
 	var launch_ok := true
 	var drawn_ok := true
+	var world_ok := true
+	var world_cards := 0
 	for s in RUN_SEEDS:
 		game.run.run_seed = s
 		game.run.pocket_draw_cache = {}
@@ -258,6 +277,8 @@ func _runtime() -> void:
 			await physics_frame
 			# A new world shows its world card first and the stage card a beat later.
 			if hud.launch_card.title != game.ctx.stages.of(stage)["name"]:
+				world_ok = world_ok and hud.launch_card.line == Modifier.caption(expected)
+				world_cards += 1
 				await create_timer(hud.WORLD_CARD_BEAT + 0.3).timeout
 			entries += 1
 			var card_line: String = hud.launch_card.line if hud.launch_card.showing() else "<no card>"
@@ -279,6 +300,7 @@ func _runtime() -> void:
 	t.check("the runtime saw modifiers applied", applied > 0, "%d of %d entries" % [applied, entries])
 	t.check("the launch card for the next stage carries its modifier", launch_ok)
 	t.check("sight rows scale the drawn beacons", drawn_ok)
+	t.check("a new world's card carries its first stage's modifier from entry", world_ok and world_cards > 0, "%d world cards" % world_cards)
 	# Seed 29 stage 5 draws Floodlit (printed by the loop above when it differs).
 	game.run.run_seed = 29
 	game.run.pocket_draw_cache = {}

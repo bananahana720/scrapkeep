@@ -344,6 +344,7 @@ func _enter_stage(retry: bool) -> void:
 	if "stage" in ctx.terrain:
 		_prepare_stage(int(ctx.terrain.stage) + 1)
 	if not "activity_sites" in map:
+		StageModifier.set_air({})
 		return
 	for spec in map.activity_sites:
 		var id := String(spec["id"])

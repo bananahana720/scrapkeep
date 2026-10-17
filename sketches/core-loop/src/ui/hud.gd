@@ -647,7 +647,9 @@ func _on_world_entered(world: int) -> void:
 	var row := Worlds.row(world)
 	if row.is_empty():
 		return
-	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"))
+	# The world card carries the first stage's modifier, so it is on screen from the drop's start.
+	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, game.run.stage)
+	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"), StageModifier.caption(modifier))
 	_world_card_at = Time.get_ticks_msec()
 
 
