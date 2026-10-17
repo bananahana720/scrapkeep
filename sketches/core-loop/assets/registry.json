@@ -4768,6 +4768,28 @@
    }
   },
   {
+   "id": "enemy_ballast_heavy",
+   "path": "res://assets/models/world_three/enemy_ballast_heavy.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/ballast_heavy.gd, Highdraft roster thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_three/enemy_ballast_heavy.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Dig and Highdraft rosters"
+   }
+  },
+  {
+   "id": "enemy_gap_net",
+   "path": "res://assets/models/world_three/enemy_gap_net.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/gap_net.gd, Highdraft roster thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_three/enemy_gap_net.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Dig and Highdraft rosters"
+   }
+  },
+  {
    "id": "enemy_kite_drone",
    "path": "res://assets/models/world_three/enemy_kite_drone.glb",
    "class": "enemy",
@@ -4820,6 +4842,28 @@
    "provenance": {
     "recipe": "tools/blender/world_two/enemy_lamp_swarm.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "enemy_pit_jaw",
+   "path": "res://assets/models/world_two/enemy_pit_jaw.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/pit_jaw.gd, World 2 and 3 enemy identity thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_two/enemy_pit_jaw.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Dig and Highdraft rosters"
+   }
+  },
+  {
+   "id": "enemy_prop_crew",
+   "path": "res://assets/models/world_two/enemy_prop_crew.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/prop_crew.gd, Prop crew and Dig events thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_two/enemy_prop_crew.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Dig and Highdraft rosters"
    }
   },
   {
@@ -5042,14 +5086,18 @@
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
   "enemy_anchor_crew",
+  "enemy_ballast_heavy",
   "enemy_burrower",
   "enemy_catch_trap",
   "enemy_drill_crew",
+  "enemy_gap_net",
   "enemy_gyro_jammer",
   "enemy_kite_drone",
   "enemy_lamp_swarm",
   "enemy_line_cutter",
   "enemy_miniboss",
+  "enemy_pit_jaw",
+  "enemy_prop_crew",
   "enemy_ramp_flipper",
   "enemy_reactor",
   "enemy_swarm_remnant",
