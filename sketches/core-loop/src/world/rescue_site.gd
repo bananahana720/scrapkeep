@@ -14,7 +14,8 @@ static var _shared := {}
 static var _warned := {}
 
 # The world rescues (DESIGN-V3, pilots): a caged pilot on a map, freed by the player. The
-# map says where (StageMap.rescue_sites: id, at, quest, prompt), the cage is an ally-family device
+# map says where (StageMap.rescue_sites: id, at, quest, prompt, and optionally pilot, the class id
+# sitting in the cage; without it PILOT_QUESTS names one by quest), the cage is an ally-family device
 # in the interact system's hold consent, and finishing it emits rescue_completed(quest) on
 # the bus; the profile layer earns the pilot's row from that fact. A quest is rescued once
 # per run: a stage entry, so a retry, rebuilds an unfinished cage and keeps a freed one
@@ -112,7 +113,7 @@ class Cage extends "res://src/world/device.gd":
 		_open_walls.visible = false
 		add_child(_open_walls)
 		_build_freed_walls()
-		var class_id: String = RescueSite.PILOT_QUESTS.get(quest, "")
+		var class_id := String(spec.get("pilot", RescueSite.PILOT_QUESTS.get(quest, "")))
 		if class_id != "":
 			_pilot = Node3D.new()
 			_pilot.name = "RescuedPilot"

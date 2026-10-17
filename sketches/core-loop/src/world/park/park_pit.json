@@ -176,5 +176,8 @@
   {"id": "cache_lip", "activity": "cracked_cache", "site": "spoil_heap_14", "at": [296, -320], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "switchback_camp_site", "activity": "enemy_camp", "site": "switchback_camp", "at": [180, -160], "pack": ["burrower", "burrower", "drill_crew"], "pay": {"named": "rivet_plating"}},
   {"id": "bench3_altar", "activity": "ambush_altar", "site": "pit", "at": [-110, -84], "pack": [], "pay": {"rarities": ["common", "rare"]}}
+ ],
+ "rescue_rows": [
+  {"id": "kest_cage", "site": "floor_sump", "at": [-150, 110], "face": [-0.42, -0.91], "quest": "dig", "pilot": "demolitions_caster", "prompt": "free the digger"}
  ]
 }

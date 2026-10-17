@@ -8,6 +8,7 @@ extends RefCounted
 # lead_floor, water_depth, handling, recipe, home_landform, guardrail, line.
 
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const Director := preload("res://src/world/director.gd")
 
 const SCHEMA := "scrapkeep-park/1"
@@ -140,6 +141,9 @@ const PARK_FIELDS := {
 # entry and exit (park_recipes.gd seat_fit); "tile" repeats a shorter GLB recipe end to end, each copy seated on the
 # ground at its own ends (park_recipes.gd tile_fit).
 const FITS := ["seat", "tile"]
+# Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
+# the cage, so who is rescued is data; quest is what rescue_completed carries (achievements.gd keys on it).
+const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -242,6 +246,7 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var weather := _rows(out, park, "weather_rows", WEATHER_FIELDS)
 	var activities := _rows(out, park, "activity_rows", ACTIVITY_FIELDS)
 	var routes := _rows(out, park, "routes", ROUTE_FIELDS)
+	var rescues := _rows(out, park, "rescue_rows", RESCUE_FIELDS) if park.has("rescue_rows") else {}
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)
@@ -279,6 +284,13 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 		_weather_row(out, id, weather[id], events)
 	for id in activities:
 		_site(out, id, activities[id], rows)
+	for id in rescues:
+		_site(out, id, rescues[id], rows)
+		if String(rescues[id]["quest"]) == "":
+			_add(out, id, "missing", "a rescue names its quest")
+		var pilot := String(rescues[id]["pilot"])
+		if pilot != "" and ClassDef.by_id(pilot) == null:
+			_add(out, id, "reference", "pilot %s is no class id" % pilot)
 	return out
 
 
