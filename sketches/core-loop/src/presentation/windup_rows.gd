@@ -57,7 +57,9 @@ const ROWS := {
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"kite_drone": {"color_role": "hazard", "shape": "diamond", "sound": "warn_dive", "attacks": {"E24": ["warn_seconds"]},
 		"idle": {"style": "hover", "amplitude": 0.07, "beats": 2.5}, "death": {"style": "spin_down", "parts": 3, "seconds": 0.45}},
-	"jolt_layer": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E25": ["warn_seconds"]},
+	# The jolt layer's voice is file-backed (src/presentation/jolt_layer_audio.gd, load if
+	# present); its sound names this row once SfxBank registers the jolt_layer_* cues (PR #12).
+	"jolt_layer": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E27": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
 }
 

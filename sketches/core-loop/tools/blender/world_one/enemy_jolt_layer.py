@@ -1,4 +1,4 @@
-# E25 Jolt layer: an oxide Fleet animal crew hauling a charcoal cable spool on its back,
+# E27 Jolt layer: an oxide Fleet animal crew hauling a charcoal cable spool on its back,
 # a coil standing over the spool that swells before each jolt (design-v3/FIELDS-AND-CASTS.md
 # section 2.3). The spool axle runs across the shoulders at Godot (0, 2.0, -0.25); the coil
 # rises from it to y 3.2. Loose cable drapes from the spool to the ground behind the crew.
@@ -81,6 +81,6 @@ tris = common.tri_total(root)
 surfaces = len(body.data.materials) + len(coil.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "COIL", common.tris(coil))
 if tris > 1200 or surfaces > 3:
-    raise SystemExit("E25 limits exceeded")
+    raise SystemExit("E27 limits exceeded")
 opts = common.args()
 common.export(root, opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_jolt_layer.glb"))

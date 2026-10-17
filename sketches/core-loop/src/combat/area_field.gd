@@ -75,6 +75,12 @@ func lead_fraction() -> float:
 	return clampf((into - (pulse - lead)) / lead, 0.0, 1.0)
 
 
+# Seconds until the next pulse.
+func until_pulse() -> float:
+	var pulse := float(row.get("pulse", 1.0))
+	return pulse - fmod(_clock, pulse)
+
+
 # Advances the clock; true on each tick a pulse goes off.
 func step(delta: float) -> bool:
 	var pulse := float(row.get("pulse", 1.0))

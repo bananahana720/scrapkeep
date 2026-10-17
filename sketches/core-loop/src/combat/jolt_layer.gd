@@ -1,6 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const AreaField := preload("res://src/combat/area_field.gd")
+const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
 
 # The jolt layer (design-v3/FIELDS-AND-CASTS.md section 2.3): a Spillway crew under a cable
 # spool that unrolls a live mat where the ball is going. The warning is an instant ring laid
@@ -21,6 +22,9 @@ var jolts := 0
 var slipped := 0
 var recalls := 0
 
+# The voice (JoltAudio): the presence loop, and the pulse whose tell has started.
+var _presence: AudioStreamPlayer3D
+var _told := -1
 var _spool: MeshInstance3D
 var _coil: MeshInstance3D
 static var _warned_asset := false
@@ -38,6 +42,9 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	_presence = JoltAudio.player("presence", self)
+	if _presence != null:
+		_presence.autoplay = true
 	var parts := _parts()
 	if not parts.is_empty():
 		_crew.free()
@@ -101,6 +108,10 @@ func _live(delta: float) -> bool:
 		return false
 	var pulsed: bool = field.step(delta)
 	tele.set_progress(field.lead_fraction())
+	# The tell starts TELL_LEAD before each pulse that will go off inside the live window.
+	if field.pulses != _told and field.until_pulse() <= JoltAudio.TELL_LEAD:
+		_told = field.pulses
+		_cue("tell")
 	if not pulsed:
 		return true
 	var player = _player()
@@ -110,6 +121,7 @@ func _live(delta: float) -> bool:
 		"landed":
 			jolts += 1
 			flash()
+			_cue("jam")
 			_recall_q()
 		"speed", "air", "line":
 			slipped += 1
@@ -124,10 +136,22 @@ func _recall_q() -> void:
 	if ult != null and ult.winding_up():
 		ult.recall()
 		recalls += 1
+		_cue("fizzle")
 
 
 func _on_end() -> void:
 	field = null
+	_told = -1
+
+
+func _die() -> void:
+	JoltAudio.one_shot("break", get_parent(), global_position)
+	super._die()
+
+
+func _cue(part: String) -> void:
+	if is_inside_tree():
+		JoltAudio.one_shot(part, get_parent(), global_position)
 
 
 func _pose() -> void:

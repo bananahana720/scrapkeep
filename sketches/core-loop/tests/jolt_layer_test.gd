@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const AreaField := preload("res://src/combat/area_field.gd")
+const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
 const T := preload("res://tests/support/t.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
@@ -19,8 +20,10 @@ const Intent := preload("res://src/movement/intent.gd")
 #   drops Sable's charging gauge, jams the special and leaves the ball unheld; a pulse on a
 #   ball in the air passes it by; a pulse during Q's wind-up recalls Q with a full refund; a
 #   ball with a line attached reads as slipping.
+# - Its voice loads only if present: a raw RIFF reads as 16-bit mono, and the body carries a
+#   presence loop exactly when the presence file exists.
 
-const EXPECTED_CHECKS := 26
+const EXPECTED_CHECKS := 28
 const OFFSET := Vector3(8.0, 0.0, 3.0)
 const LIMIT := 9.0
 const DT := 1.0 / 60.0
@@ -48,6 +51,7 @@ func _initialize() -> void:
 	_cast_time()
 	_jam()
 	_field()
+	_voice()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -128,6 +132,31 @@ func _field() -> void:
 	_t.check("the lead climbs to full before the first pulse", lead_before_first > 0.95 and lead_seen <= 1.0,
 		"lead before the first pulse %.2f" % lead_before_first)
 	source.free()
+
+
+func _voice() -> void:
+	var riff := PackedByteArray()
+	riff.append_array("RIFF".to_ascii_buffer())
+	riff.resize(riff.size() + 4)
+	riff.append_array("WAVEfmt ".to_ascii_buffer())
+	var fmt := PackedByteArray()
+	fmt.resize(20)
+	fmt.encode_u32(0, 16)
+	fmt.encode_u16(4, 1)
+	fmt.encode_u16(6, 1)
+	fmt.encode_u32(8, 44100)
+	fmt.encode_u32(12, 88200)
+	fmt.encode_u16(16, 2)
+	fmt.encode_u16(18, 16)
+	fmt.append_array("data".to_ascii_buffer())
+	riff.append_array(fmt)
+	var data := PackedByteArray()
+	data.resize(4 + 8)
+	data.encode_u32(0, 8)
+	riff.append_array(data)
+	var wav: AudioStreamWAV = JoltAudio._from_riff(riff)
+	_t.eq("a raw RIFF reads as 16-bit mono at its rate", [wav != null, wav.stereo if wav else true,
+		wav.mix_rate if wav else 0, wav.data.size() if wav else 0], [true, false, 44100, 8])
 
 
 func _step(ab, seconds: float) -> void:
@@ -223,6 +252,9 @@ func _finish(field) -> bool:
 	windups.append(ult.windup_seconds())
 	player.abilities.ultimate_id = base_id
 	_t.eq("a base Q winds up 0.35 s and a variant casts 0.5 s", windups, [0.35, AbilityState.VARIANT_CAST])
+	var has_file := ResourceLoader.exists(JoltAudio.path("presence")) or FileAccess.file_exists(JoltAudio.path("presence"))
+	_t.eq("the body carries a presence loop exactly when its file is present",
+		_unit.get_node_or_null("Jolt_presence") != null, has_file)
 	_t.eq("the check count", _t.checks + 1, EXPECTED_CHECKS)
 	_game.free()
 	quit(_t.verdict())
