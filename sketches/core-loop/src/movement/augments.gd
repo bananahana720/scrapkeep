@@ -53,8 +53,12 @@ const STAKE_GROUP := "sable_stake"
 
 const MIN_ROPE := 2.5
 # A body joins this group to be a harpoon anchor (PARK.md section 7): its line rides as a
-# world line that follows it. Warden.setup adds an anchor Warden; nothing else does.
+# world line that follows it. Warden.setup adds an anchor Warden, Sable's stakes join it, and so
+# does a world solid that moves (WORLD_ANCHOR_GROUP).
 const ANCHOR_GROUP := "harpoon_anchor"
+# A moving world solid (the Hanging Isle's tip, isle_rig.gd): any hook ray or assist that lands on
+# it bites the body, so the line rides the moving point; it is no enemy and links no chain.
+const WORLD_ANCHOR_GROUP := "world_anchor"
 # A harpoon line is idle, latched to a world point or a body, or committed to a smash
 # haul on a body. SMASH_MAX bounds a haul; a line stretched past BREAK_STRETCH times the
 # rope range lets go; ground under this normal.y is walkable and cannot be hooked.
@@ -388,7 +392,7 @@ static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forw
 		var body = centre["collider"]
 		if mask != WORLD_MASK and body is Node3D and (body.is_in_group("enemy") or body.is_in_group(STAKE_GROUP)):
 			return {"state": AIM_BODY, "point": centre["position"], "normal": centre["normal"], "body": body}
-		return {"state": AIM_REACH, "point": centre["position"], "normal": centre["normal"]}
+		return _world_aim(AIM_REACH, centre)
 	if assist_deg <= 0.0:
 		return no_aim()
 	var side := forward.cross(Vector3.UP)
@@ -413,8 +417,17 @@ static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forw
 				nearest = gap
 				best = hit
 		if not best.is_empty():
-			return {"state": AIM_ASSIST, "point": best["position"], "normal": best["normal"]}
+			return _world_aim(AIM_ASSIST, best)
 	return no_aim()
+
+
+# A world hit's aim record; one on a moving world solid carries it as the body the line rides.
+static func _world_aim(state: int, hit: Dictionary) -> Dictionary:
+	var out := {"state": state, "point": hit["position"], "normal": hit["normal"]}
+	var body = hit.get("collider")
+	if body is Node3D and body.is_in_group(WORLD_ANCHOR_GROUP):
+		out["body"] = body
+	return out
 
 
 # An enemy the line can bite: alive, in the enemy group, and on the enemy layer so the ball can touch it.
