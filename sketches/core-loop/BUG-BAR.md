@@ -4,11 +4,12 @@ How to grade a bug found while playing the alpha, and what the alpha can ship wi
 
 ## Acceptance rule
 
-The alpha is accepted when all three hold:
+The alpha is accepted at Andrew's 11-area playtest sitting when both hold:
 
 1. No verdict area is "Not yet". The 11 areas: core feel, Wardens and bosses, in-run growth, progression across runs, pilots, stage and world design, look, sound and music, clarity, difficulty and pacing, stability.
 2. No crash or blocker bug is open.
-3. Five first-time players reach the end of world one unaided.
+
+The earlier rule that five first-time players reach the end of world one unaided was removed by Andrew on 17 Oct 2026.
 
 ## Severity
 
