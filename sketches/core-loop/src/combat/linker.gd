@@ -212,6 +212,9 @@ func cut_cable(how: String) -> void:
 	cut_by = how
 	_unlink()
 	special_tell.emit("cut")
+	# The codex trick "cable_cut": the dish drops for good.
+	if fleet != null and is_instance_valid(fleet):
+		fleet.discover("cable_cut", global_position)
 	if _anim != null and _anim.has_animation("cut"):
 		_anim.play("cut")
 	else:

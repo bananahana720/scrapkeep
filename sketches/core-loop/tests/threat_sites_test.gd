@@ -51,6 +51,9 @@ const AUDIT := {
 	"res://src/combat/pit_jaw.gd": ["INSTANT"],
 	# 2026-10-17 (wave 18): the Splitter's fuse blast.
 	"res://src/combat/splitter_pod.gd": ["INSTANT"],
+	# 2026-10-17 (stage/alpha-w16): the Dispatcher's tube drop (#59) and the jolt layer's mat (#65).
+	"res://src/combat/dispatcher.gd": ["PROJECTILE"],
+	"res://src/combat/jolt_layer.gd": ["INSTANT"],
 	# alpha w7 Mind: build() lays each descriptor's own type; DESCRIPTORS audits where it is named.
 	"res://src/boss/mind_attacks.gd": ["descriptor", "descriptor", "descriptor"],
 }

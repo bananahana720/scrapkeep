@@ -108,6 +108,12 @@ const ENTRIES := [
 		"text": "Rides the thermals out of reach and dives on the spot it marks; shoot it while it circles or leave the mark.",
 	},
 	{
+		"id": "cable_cut", "name": "Cut the Line",
+		"hint": "A shield is only as good as what holds it up.",
+		"clue": "a Linker's taut cable + a cut",
+		"text": "Never attacks: it braces a dish over a partner on a taut cable, and the dish takes every hit it faces; cut the cable, come over the rim or round the back, or drop the Linker first.",
+	},
+	{
 		"id": "shift_over", "name": "Shift Over",
 		"hint": "Every crew has someone blowing the whistle.",
 		"clue": "a Foreman's horn + the Foreman down first",
@@ -307,6 +313,7 @@ const DETECTORS := {
 	"line_cut": {"kind": "line_cutter", "script": "res://src/combat/line_cutter.gd"},
 	"deck_winch": {"kind": "anchor_crew", "script": "res://src/combat/anchor_crew.gd"},
 	"thermal_dive": {"kind": "kite_drone", "script": "res://src/combat/kite_drone.gd"},
+	"cable_cut": {"kind": "linker", "script": "res://src/combat/linker.gd"},
 	"shift_over": {"kind": "foreman", "script": "res://src/combat/foreman.gd"},
 	"roof_drop": {"kind": "prop_crew", "script": "res://src/combat/prop_crew.gd"},
 	"split_pop": {"kind": "splitter", "script": "res://src/combat/splitter.gd"},
