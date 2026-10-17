@@ -6,13 +6,14 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The crown's place layers (stage 6 page sections 11 and 17; journey board gap 9): a park row's music_layer is
-# published by its ride sensor beside its ride fact, and a group row with no recipe (the hoodoo forest, the spire top
-# ramp) gets a sensor that publishes the layer alone. The ball entering is driven by emitting the sensor's
+# published by its ride sensor beside its ride fact, and a group row with no recipe (the hoodoo forest) gets a sensor
+# that publishes the layer alone. The toppled route's layer waits for the strike's runtime swap: on the unswapped
+# spire_top_ramp its sensor sat on the main line and played before any strike (bot audit, 2026-10-17). The ball entering is driven by emitting the sensor's
 # body_entered by hand; whether the music thread's render plays is not checked here.
 
 const CROWN := "res://src/world/park/park_crown.json"
 const LAYERS := {"hoodoo_forest": "layer_crown_hoodoos", "alcove_ledge": "layer_crown_alcove",
-	"spire_top_ramp": "layer_crown_toppled", "crown_ramp": "layer_crown_ramp"}
+	"crown_ramp": "layer_crown_ramp"}
 
 var _t := T.new("park_music_layers_test")
 
@@ -32,7 +33,8 @@ func _run() -> void:
 		_t.eq("%s names its layer" % id, String(rows[id].get("music_layer", "")), LAYERS[id])
 		_t.check("%s's layer is a WORLD_ROWS kind" % id, EventKinds.WORLD_ROWS.has(LAYERS[id]), LAYERS[id])
 	_t.eq("the layer-only rows are the recipe-less ones", ParkRecipes.layer_rows(park).map(func(r): return r["id"]),
-		["hoodoo_forest", "spire_top_ramp"])
+		["hoodoo_forest"])
+	_t.check("the unswapped spire top ramp carries no layer yet", not rows["spire_top_ramp"].has("music_layer"), "")
 
 	var parent := Node3D.new()
 	root.add_child(parent)

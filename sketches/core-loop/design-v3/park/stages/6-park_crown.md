@@ -438,7 +438,7 @@ The stage keeps today's music: theme 2 with the `highdraft_crown` ACE set (`src/
 | The break | the unseal drop, then the rice-cooker clear | G2, G9 |
 | The hoodoo forest | `layer_crown_hoodoos` (stand-in tick; the music thread renders `music_layer_crown_hoodoos`) | row `music_layer`, section 17 |
 | The alcove ledge | `layer_crown_alcove` (`music_layer_crown_alcove`) | row `music_layer` |
-| The toppled route (spire top ramp) | `layer_crown_toppled` (`music_layer_crown_toppled`) | row `music_layer` |
+| The toppled route (spire top ramp) | `layer_crown_toppled` (`music_layer_crown_toppled`), rendered but not wired: it goes on `spire_top_ramp` once the strike's runtime swap lands. On the unswapped row its sensor sat on the main line and played before any strike. | row `music_layer`, after the swap |
 | The crown ramp launch | `layer_crown_ramp` (`music_layer_crown_ramp`) | row `music_layer` |
 | Each kite strike | `riser_natural` into `drop_lightning`, on the bar | G9, `on_bar` |
 
@@ -576,7 +576,7 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
 | `take-crown-spire-fusion` | outside the spire's 30 m waist, west face, 30 m above the bowl floor | `{"stage": 6, "x": -17.0, "z": 470.0, "at": 18.0}` | glide off `crown_updraft` and thread past the waist; 22 m off the hand's perch 2-to-3 lane |
 | `take-crown-footwork` | the Gauntlet net, slung between the two highest buttes | `{"stage": 6, "x": 280.0, "z": 175.0, "drop": 250.0}` | balloon lift or gauntlet updraft to 110 m, then roll the net |
 
-**Music.** A park row's optional `music_layer` (park_schema.gd) names a `layer_*` WORLD_ROWS kind; the row's ride sensor publishes it on entry, and a group row with no recipe (the hoodoo forest, the spire top ramp) gets a sensor of its own (park_recipes.gd `place_layer`). The four new layer ids are in section 11.
+**Music.** A park row's optional `music_layer` (park_schema.gd) names a `layer_*` WORLD_ROWS kind; the row's ride sensor publishes it on entry, and a group row with no recipe (the hoodoo forest) gets a sensor of its own (park_recipes.gd `place_layer`). The four new layer ids are in section 11.
 
 ## Appendix: the park file draft
 
