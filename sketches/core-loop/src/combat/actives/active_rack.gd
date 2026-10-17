@@ -73,7 +73,7 @@ func lock(seconds: float) -> void:
 	_locked = maxf(_locked, seconds)
 	if winding > 0.0:
 		winding = 0.0
-		charges += 1
+		charges = mini(charges + 1, int(_row(active_id)["max_charges"]))
 		if _kinds[active_id].has_method("cancel"):
 			_kinds[active_id].cancel()
 
