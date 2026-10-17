@@ -20,6 +20,7 @@ npm run redteam -- --wave=17 --carry=artifacts/local/redteam/w16-<stamp>/finding
 | `--carry=<findings.json>` | none | Replays the last pass's blockers and majors (up to four) on their own seeds, to show whether they still happen. |
 | `--quick` | off | Stops every run after stage 1, shortens the item fuzz, skips the dense-fight bench. |
 | `--no-export` | export on | Skips the cloud export and headless boot. |
+| `--sweep` | off | A wider pass for spare compute: 60 runs (every persona and pilot pair twice) and 40 fuzz seeds, on its own seed block (20000 + 1000 per wave), so it never repeats a regular pass. About 3 hours on 4 cores. |
 
 `GODOT_BIN` must name the Godot 4.7.2 editor; the cloud SessionStart hook sets it. Output goes to `artifacts/local/redteam/w<wave>-<stamp>/`: `findings.md` (the page), `findings.json` (the same, plus the carry list for the next wave) and `jobs/` (every log, `bots.ndjson`, `runs.ndjson`, event audit and tick profile).
 

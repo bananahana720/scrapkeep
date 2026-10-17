@@ -9,13 +9,13 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { HITCH_MS, PILOTS, botArgs, carryList, grade, hitches, parseNdjson, planWave, readBotJob, renderMarkdown, sharedHitches, waveSeed } from "./lib.mjs";
+import { HITCH_MS, PILOTS, botArgs, carryList, grade, hitches, parseNdjson, planWave, readBotJob, renderMarkdown, sharedHitches, sweepSeed, waveSeed } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const sketch = path.join(root, "sketches/core-loop");
 const godot = process.env.GODOT_BIN;
 
-const opts = { wave: null, quick: false, slots: 4, carry: null, export: true, count: null };
+const opts = { wave: null, quick: false, slots: 4, carry: null, export: true, count: null, sweep: false };
 for (const arg of process.argv.slice(2)) {
   const [k, v] = arg.replace(/^--/, "").split("=");
   if (k === "wave") opts.wave = Number(v);
@@ -24,6 +24,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "runs") opts.count = Number(v);
   else if (k === "carry") opts.carry = v;
   else if (k === "no-export") opts.export = false;
+  else if (k === "sweep") opts.sweep = true;
   else die("unknown option " + arg);
 }
 if (!godot || !existsSync(godot)) die("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
@@ -34,12 +35,15 @@ function die(message) {
   process.exit(1);
 }
 
-const count = opts.count ?? (opts.quick ? 5 : 10);
+// A sweep defaults to 60 runs: every persona x pilot cell twice. Fuzz seeds sit 500 past its runs.
+const seedOf = opts.sweep ? sweepSeed : waveSeed;
+const fuzzAt = opts.sweep ? 500 : 50;
+const count = opts.count ?? (opts.quick ? 5 : opts.sweep ? 60 : 10);
 const carry = opts.carry ? JSON.parse(readFileSync(opts.carry, "utf8")).carry ?? [] : [];
-const jobs = planWave({ wave: opts.wave, count, quick: opts.quick, carry });
+const jobs = planWave({ wave: opts.wave, count, quick: opts.quick, carry, seed: seedOf });
 const started = new Date();
 const stamp = started.toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
-const outDir = path.join(root, "artifacts/local/redteam", `w${opts.wave}-${stamp}`);
+const outDir = path.join(root, "artifacts/local/redteam", `w${opts.wave}${opts.sweep ? "-sweep" : ""}-${stamp}`);
 const jobsDir = path.join(outDir, "jobs");
 mkdirSync(jobsDir, { recursive: true });
 const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
@@ -110,8 +114,8 @@ const extras = { fuzzSeconds: opts.quick ? 30 : 60 };
 
 function fuzzTask() {
   return async () => {
-    const first = waveSeed(opts.wave, 50);
-    const seeds = `${first}-${first + (opts.quick ? 5 : 19)}`;
+    const first = seedOf(opts.wave, fuzzAt);
+    const seeds = `${first}-${first + (opts.quick ? 5 : opts.sweep ? 39 : 19)}`;
     const dir = path.join(jobsDir, "item-fuzz");
     mkdirSync(dir, { recursive: true });
     log("start item fuzz " + seeds);
@@ -133,7 +137,7 @@ function sweepTask() {
     extras.sweep = [];
     for (const arm of ["stack", "compose"]) {
       const p = await runProcess(["--headless", "--path", "sketches/core-loop", "--script", "res://tools/build_sweep.gd", "--", "--arm=" + arm,
-        ...(arm === "compose" ? ["--seed=" + waveSeed(opts.wave, 0), "--builds=" + (opts.quick ? 1000 : 10000)] : [])], { logFile: path.join(dir, arm + ".txt") });
+        ...(arm === "compose" ? ["--seed=" + seedOf(opts.wave, 0), "--builds=" + (opts.quick ? 1000 : 10000)] : [])], { logFile: path.join(dir, arm + ".txt") });
       const problems = [...p.text.matchAll(/^build_sweep problem: (.*)$/gm)].map((m) => `${arm}: ${m[1]}`);
       extras.sweep.push(...problems);
       if (p.exit !== 0 && problems.length === 0) extras.sweep.push(`${arm} arm failed (exit ${p.exit}); see jobs/build-sweep/${arm}.txt`);
@@ -221,7 +225,7 @@ if (!opts.quick) await perfBench();
 
 const findings = grade(results, extras);
 const minutes = Math.round((Date.now() - started) / 60000);
-const page = renderMarkdown({ wave: opts.wave, commit, started: started.toISOString().slice(0, 16) + "Z", minutes, results, findings, extras });
+const page = renderMarkdown({ wave: opts.sweep ? `${opts.wave} (sweep)` : opts.wave, commit, started: started.toISOString().slice(0, 16) + "Z", minutes, results, findings, extras });
 writeFileSync(path.join(outDir, "findings.md"), page);
 writeFileSync(path.join(outDir, "findings.json"), JSON.stringify({
   wave: opts.wave, commit, started: started.toISOString(), minutes, quick: opts.quick, pilots: PILOTS,

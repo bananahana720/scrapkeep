@@ -40,15 +40,20 @@ export function waveSeed(wave, index) {
   return 1000 + wave * 100 + index;
 }
 
+// A sweep (--sweep) is a wider pass on spare compute: its own block, 20000 + 1000w up, past every wave block.
+export function sweepSeed(wave, index) {
+  return 20000 + wave * 1000 + index;
+}
+
 // The persona x pilot grid has 30 cells. k % 5 and k % 6 walk every cell once in 30 steps, so
 // consecutive waves take the next `count` cells and the whole grid turns over every 30/count waves.
-export function planWave({ wave, count = 10, quick = false, carry = [] }) {
+export function planWave({ wave, count = 10, quick = false, carry = [], seed = waveSeed }) {
   if (!Number.isInteger(wave) || wave < 0 || wave > 89) throw new Error("--wave must be an integer from 0 to 89");
   const jobs = [];
   for (let i = 0; i < count; i++) {
     const k = (wave * count + i) % (PERSONAS.length * PILOTS.length);
     const persona = PERSONAS[k % PERSONAS.length];
-    jobs.push(botJob(persona, PILOTS[k % PILOTS.length], waveSeed(wave, i), quick));
+    jobs.push(botJob(persona, PILOTS[k % PILOTS.length], seed(wave, i), quick));
   }
   for (const [i, c] of carry.entries()) {
     const persona = PERSONAS.find((p) => p.id === c.persona);

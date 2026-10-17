@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PERSONAS, PILOTS, carryList, grade, hitches, logErrors, pileUps, planWave, readBotJob, renderMarkdown } from "./lib.mjs";
+import { PERSONAS, PILOTS, sweepSeed, carryList, grade, hitches, logErrors, pileUps, planWave, readBotJob, renderMarkdown } from "./lib.mjs";
 
 const job = (over = {}) => ({ id: "speedrunner-tarn-2500", kind: "bot", persona: "speedrunner", policy: "skipper", pilot: "tarn", seed: 2500, stages: null, args: [], ...over });
 const result = (over = {}) => ({ job: job(), exit: 0, timedOut: false, row: { outcome: "won", stage_reached: 7, game_seconds: 600, stages: [], beats: [] }, errors: [], piles: [], perf: { spikes: [], loads: 0, p99: 4 }, ...over });
@@ -15,6 +15,9 @@ test("a wave's runs cover every persona and new cells each wave", () => {
   const seeds = new Set([...planWave({ wave: 15 }), ...planWave({ wave: 16 })].map((j) => j.seed));
   assert.equal(seeds.size, 20);
   assert.throws(() => planWave({ wave: 1.5 }));
+  const sweep = planWave({ wave: 15, count: 60, seed: sweepSeed });
+  assert.equal(new Set(sweep.map((j) => j.persona + j.pilot)).size, 30);
+  assert.equal(sweep[0].seed, 35000);
 });
 
 test("quick runs stop after stage 1 and carried runs replay their seed", () => {
