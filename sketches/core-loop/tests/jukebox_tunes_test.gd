@@ -23,6 +23,8 @@ const T := preload("res://tests/support/t.gd")
 #     the dial on 1 to 3, hears nothing new while it spins, and J lifts the needle and
 #     returns to the camp with the title theme queued;
 #   - every source kind plays its own track: menu, level, warden, boss, lounge and miniboss;
+#     a recorded-only pack wins over the synth track under it, and its boss stands in on
+#     the synth when the pack is not on disk;
 #   - leaving the title while a record spins hands the music back to the game.
 
 const STORE_DIR := "user://jukebox_tunes_test/"
@@ -57,12 +59,14 @@ func _source_state(row: Dictionary) -> Dictionary:
 			return {"mode": "play", "track": "level", "section": "", "lounge": true, "zone": "2-1"}
 		"miniboss":
 			return {"mode": "play", "track": "miniboss", "section": "", "lounge": false, "zone": "3-1"}
+		"pack":
+			return {"mode": "play", "track": source["boss"], "section": "3", "lounge": false, "zone": "1-2", "pack": source["pack"]}
 	return {}
 
 
 func _rows() -> void:
 	var seen := {}
-	var kinds := ["menu", "level", "warden", "boss", "lounge", "miniboss"]
+	var kinds := ["menu", "level", "warden", "boss", "lounge", "miniboss", "pack"]
 	var long := []
 	for row in TuneRows.ROWS:
 		var id := String(row["id"])
@@ -81,6 +85,8 @@ func _rows() -> void:
 	for shelf in TuneRows.SHELVES.size():
 		_t.check("shelf %d holds records" % shelf, not TuneRows.on_shelf(shelf).is_empty())
 	_t.eq("the death break's keys are no record", TuneRows.key_of({"mode": "dead", "track": "level", "zone": "1-1"}), "")
+	_t.eq("a zone's own recorded pack leaves the roam record", TuneRows.key_of({"mode": "play", "track": "level", "zone": "1-1", "pack": "spillway"}), "roam-1-1")
+	_t.eq("a recorded-only pack wins over the boss under it", TuneRows.key_of({"mode": "play", "track": "brindle", "zone": "1-2", "pack": "euro-brindle-p3"}), "euro-brindle-p3")
 	_t.eq("an unknown zone is no record", TuneRows.key_of({"mode": "play", "track": "level", "zone": "9-9"}), "")
 	_t.eq("a stopped level (menu mode) is no roam record", TuneRows.key_of({"mode": "idle", "track": "level", "zone": "1-1"}), "")
 
@@ -180,6 +186,11 @@ func _ace(audio) -> void:
 	_t.check("ACE: warden-1-1 spins", audio.spin("warden-1-1"))
 	_render(audio, 44100)
 	_t.check("ACE: the Warden take plays", audio.ace_playing() and audio.ace.mode == "warden")
+	for id in ["brindle-p2-furnace", "euro-mind-final", "champion-hype"]:
+		if MusicRows.resolve(id)["ace_manifest"] != "":
+			_t.check("ACE: %s spins" % id, audio.spin(id))
+			_render(audio, 44100)
+			_t.eq("ACE: %s is what the ear hears" % id, TuneRows.key_of(audio.music_state()), id)
 	audio.stop_spin()
 	_render(audio, 44100 * 2)
 	_t.check("ACE: the title take comes back", audio.ace_playing() and audio.ace.mode == "menu")
@@ -272,6 +283,8 @@ func _run() -> void:
 		_render(audio, 44100 * 2)
 		var row: Dictionary = TuneRows.row(id)
 		_t.eq("%s is what the ear would hear" % id, TuneRows.key_of(audio.music_state().merged({"zone": String(row["source"].get("zone", "1-1"))}, true)), id)
+	_t.check("a recorded-only record spins", audio.spin("brindle-p2-furnace"))
+	_t.eq("its boss stands in on the synth", audio.engine.track, "brindle")
 	audio.spin("lounge")
 	_render(audio, 44100 * 2)
 	_t.check("the lounge record masks the band", audio.engine.lounge)

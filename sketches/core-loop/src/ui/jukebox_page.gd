@@ -14,8 +14,9 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
 const SHELF_COLORS := [Palette.AMBER, Palette.COPPER, Palette.SANDSTONE, Palette.LEDGER]
 const DETENTS := ["Idle", "Cruise", "Full tilt"]
-const SLEEVE_SIZE := Vector2(232.0, 46.0)
+const SLEEVE_SIZE := Vector2(232.0, 40.0)
 const DECK := 300.0
+const CRATE_H := 360.0
 
 signal sleeve_chosen(id: String)
 
@@ -48,13 +49,20 @@ func _init() -> void:
 	deck.custom_minimum_size = Vector2(DECK, DECK)
 	deck.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	body.add_child(deck)
+	# The crate scrolls once the shelves outgrow a 720 px screen; focus pulls the picked sleeve
+	# into view.
+	var crate := ScrollContainer.new()
+	crate.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	crate.follow_focus = true
+	crate.custom_minimum_size = Vector2(0.0, CRATE_H)
+	body.add_child(crate)
 	_shelves = HBoxContainer.new()
 	_shelves.add_theme_constant_override("separation", 12)
 	_shelves.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	body.add_child(_shelves)
+	crate.add_child(_shelves)
 	for shelf in TuneRows.SHELVES.size():
 		var column := VBoxContainer.new()
-		column.add_theme_constant_override("separation", 8)
+		column.add_theme_constant_override("separation", 6)
 		column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_shelves.add_child(column)
 		column.add_child(_label(18, SHELF_COLORS[shelf], TuneRows.SHELVES[shelf].to_upper()))
@@ -203,6 +211,8 @@ class Sleeve extends Button:
 		for state in ["normal", "hover", "pressed", "disabled"]:
 			var box := ChoiceButton.plate(edge.lightened(0.25) if state == "hover" else edge, 3 if playing else 2, 50.0)
 			box.content_margin_left = 50.0
+			box.content_margin_top = 4.0
+			box.content_margin_bottom = 4.0
 			add_theme_stylebox_override(state, box)
 		add_theme_stylebox_override("focus", ChoiceButton.plate(Palette.ARC if playing else Color.WHITE, 4, 50.0, false))
 		var words: Color = Palette.SAND if found else Palette.SLATE

@@ -10,6 +10,9 @@ extends RefCounted
 #   boss    a world boss's fight
 #   lounge  Moss's bay, a layer mask over the zone the bay docks at
 #   miniboss  the mini-boss fight, the level darkened (synth band only for now)
+#   pack    a recorded-only track (a boss phase, a final, the champion, a Eurodance drop):
+#           heard only while its ACE pack plays; on the deck the synth plays its boss as a
+#           stand-in when the pack is not on disk
 # A new track (a secret area, a champion, a final phase) is one more row with its own source
 # kind and one more branch in key_of; nothing else changes. Ids and names follow the music
 # thread's registry, design-v3/sound/tunes.json, as each of its tracks is wired. where is the dry hint a blank
@@ -38,6 +41,14 @@ const ROWS := [
 		"where": "Pick a fight with a mini-boss.",
 		"sleeve": "Weigh-in was a formality.",
 		"source": {"kind": "miniboss", "zone": "1-1"}},
+	{"id": "champion-hype", "name": "Champion", "shelf": 0, "rare": true,
+		"where": "Meet a champion out on a run.",
+		"sleeve": "Brought its own entrance music.",
+		"source": {"kind": "pack", "pack": "champion-hype", "boss": "brindle"}},
+	{"id": "euro-champion", "name": "Champion, Drop", "shelf": 0, "rare": true,
+		"where": "Wear a champion down to its last third.",
+		"sleeve": "Nobody told the crowd there was a crowd.",
+		"source": {"kind": "pack", "pack": "euro-champion", "boss": "brindle"}},
 	{"id": "roam-1-1", "name": "Top Shelf", "shelf": 1, "rare": false,
 		"where": "Roll the Spillway's top shelf.",
 		"sleeve": "Logged at flood stage. Drums ride the current.",
@@ -58,6 +69,22 @@ const ROWS := [
 		"where": "Meet the Admiral.",
 		"sleeve": "Runtime rounded up to the nearest anthem.",
 		"source": {"kind": "boss", "boss": "brindle"}},
+	{"id": "brindle-p1-requisition", "name": "Requisition", "shelf": 1, "rare": true,
+		"where": "Hear the Admiral open the fight.",
+		"sleeve": "Form one of three. Filed in triplicate.",
+		"source": {"kind": "pack", "pack": "brindle-p1-requisition", "boss": "brindle"}},
+	{"id": "brindle-p2-furnace", "name": "Furnace", "shelf": 1, "rare": true,
+		"where": "Push Brindle into the second phase.",
+		"sleeve": "Stoked by hand. Gauges ignored.",
+		"source": {"kind": "pack", "pack": "brindle-p2-furnace", "boss": "brindle"}},
+	{"id": "brindle-p3-scuttle", "name": "Scuttle", "shelf": 1, "rare": true,
+		"where": "Push Brindle into the last phase.",
+		"sleeve": "Abandon ship, in tempo.",
+		"source": {"kind": "pack", "pack": "brindle-p3-scuttle", "boss": "brindle"}},
+	{"id": "euro-brindle-p3", "name": "Brindle, Drop", "shelf": 1, "rare": true,
+		"where": "Hold on through Brindle's last phase.",
+		"sleeve": "The Admiral discovers four on the floor.",
+		"source": {"kind": "pack", "pack": "euro-brindle-p3", "boss": "brindle"}},
 	{"id": "roam-2-1", "name": "Upper Bench", "shelf": 2, "rare": false,
 		"where": "Roll the Dig's upper bench.",
 		"sleeve": "Recorded underground. The rock kept time.",
@@ -78,6 +105,14 @@ const ROWS := [
 		"where": "Find what the Dig was digging for.",
 		"sleeve": "It woke up in this key.",
 		"source": {"kind": "boss", "boss": "waking"}},
+	{"id": "waking-final", "name": "The Waking, Final", "shelf": 2, "rare": true,
+		"where": "Take the Waking to its last phase.",
+		"sleeve": "Fully awake now. Regrets nothing.",
+		"source": {"kind": "pack", "pack": "waking-final", "boss": "waking"}},
+	{"id": "euro-waking-final", "name": "The Waking, Drop", "shelf": 2, "rare": true,
+		"where": "Stay alive in the Waking's last phase.",
+		"sleeve": "Bass drop logged by the seismograph.",
+		"source": {"kind": "pack", "pack": "euro-waking-final", "boss": "waking"}},
 	{"id": "roam-3-1", "name": "Highdraft", "shelf": 3, "rare": false,
 		"where": "Ride the Highdraft.",
 		"sleeve": "Mastered at altitude. Ears may pop.",
@@ -98,6 +133,14 @@ const ROWS := [
 		"where": "Reach the top of the Highdraft.",
 		"sleeve": "Liner notes: one line, and it is about you.",
 		"source": {"kind": "boss", "boss": "mind"}},
+	{"id": "mind-final", "name": "The Mind, Final", "shelf": 3, "rare": true,
+		"where": "Take the Mind to its last phase.",
+		"sleeve": "It saved its best thought for last.",
+		"source": {"kind": "pack", "pack": "mind-final", "boss": "mind"}},
+	{"id": "euro-mind-final", "name": "The Mind, Drop", "shelf": 3, "rare": true,
+		"where": "Stay alive in the Mind's last phase.",
+		"sleeve": "Overthinking, set to a beat.",
+		"source": {"kind": "pack", "pack": "euro-mind-final", "boss": "mind"}},
 ]
 
 const BOSSES := ["brindle", "waking", "mind"]
@@ -120,9 +163,13 @@ static func on_shelf(shelf: int) -> Array:
 
 # The tune the band is playing, from what the music director reports: mode (idle, play or
 # dead), track and section as music_engine.gd names them, whether Moss's lounge mask is on,
-# and the zone ("1-1") of the stage in play. "" when nothing on the jukebox is playing: the
-# death break's keys, the miniboss's darkened level, a track no row names.
+# the zone ("1-1") of the stage in play, and the recorded pack playing ("" when the synth
+# plays). A recorded-only pack wins over the synth track under it. "" when nothing on the
+# jukebox is playing: the death break's keys, a track no row names.
 static func key_of(state: Dictionary) -> String:
+	var pack := String(state.get("pack", ""))
+	if pack != "" and String(row(pack).get("source", {}).get("kind", "")) == "pack":
+		return pack
 	var mode := String(state.get("mode", ""))
 	var track := String(state.get("track", ""))
 	var zone := String(state.get("zone", ""))

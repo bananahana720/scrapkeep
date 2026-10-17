@@ -848,8 +848,9 @@ func music_state() -> Dictionary:
 	var zone := ""
 	if ctx != null and ctx.get("run") != null:
 		zone = MusicRows.zone_id(int(ctx.run.stage), _music_stages())
+	var pack := _ace_from.get_base_dir().get_file().replace("_", "-") if ace_playing() else ""
 	return {"mode": MusicEngine.MODE_NAMES[engine.mode], "track": engine.track, "section": engine.section,
-		"lounge": engine.lounge, "zone": zone}
+		"lounge": engine.lounge, "zone": zone, "pack": pack}
 
 
 func _tend_ear(delta: float) -> void:
@@ -887,10 +888,10 @@ func spin(id: String) -> bool:
 		engine.menu_theme(source["pack"], won, engine.clock)
 		_ace_named(source["pack"], engine.clock, false, won)
 		return true
-	if kind == "boss":
+	if kind == "boss" or kind == "pack":
 		var boss := String(source["boss"])
 		engine.force_track(boss, MusicRows.stage_theme(boss), "1", true)
-		_ace_named(boss, engine.clock, true)
+		_ace_named(String(source.get("pack", boss)), engine.clock, true)
 		return true
 	var zone := String(source["zone"])
 	engine.force_track({"warden": "warden", "miniboss": "miniboss"}.get(kind, "level"), MusicRows.stage_theme(zone))
