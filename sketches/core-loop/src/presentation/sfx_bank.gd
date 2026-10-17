@@ -152,6 +152,8 @@ const TRIM_DB := {
 	# The arrival forms and the prop crew (tools/ace/arrival_sfx.py); a tell ends on its landing frame.
 	"lift_cage_arrive": -3.0, "zipline_whine": -5.0, "zipline_snap": -3.0, "cave_in_rumble": -4.0,
 	"cave_in_debris": -3.0, "prop_crew_presence": -14.0, "prop_crew_strain": -4.0, "prop_crew_collapse": -2.0,
+	# The Highdraft roster (tools/ace/roster_sfx.py); a tell ends on its landing frame.
+	"ballast_brace_tell": -4.0, "ballast_brace_slam": -2.0, "gap_net_charge_tell": -6.0, "gap_net_charge_live": -4.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
@@ -275,6 +277,8 @@ const FILE_SOUNDS := {
 	"zipline_snap": "foley/zipline_snap.wav", "cave_in_rumble": "foley/cave_in_rumble.wav",
 	"cave_in_debris": "foley/cave_in_debris.wav", "prop_crew_presence": "foley/prop_crew_presence.wav",
 	"prop_crew_strain": "foley/prop_crew_strain.wav", "prop_crew_collapse": "foley/prop_crew_collapse.wav",
+	"ballast_brace_tell": "foley/ballast_brace_tell.wav", "ballast_brace_slam": "foley/ballast_brace_slam.wav",
+	"gap_net_charge_tell": "foley/gap_net_charge_tell.wav", "gap_net_charge_live": "foley/gap_net_charge_live.wav",
 }
 # hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
 const HYPE_DROP_LEAD_SECONDS := 2.0
