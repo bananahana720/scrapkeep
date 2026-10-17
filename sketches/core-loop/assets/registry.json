@@ -511,7 +511,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/dressing.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 95c848cf64b3b92a2c24179a9fac7c716850cfe3308e56697a44cbb1bd93a618"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 3e47fa3a00bfdc830cc0dc3a40bcbef189eb4f24ea6e23421fd6fa278058ef6a"
    }
   },
   {
@@ -522,7 +522,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/gate_lockers.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 876ce4775a3c5f110b3e79686eb31e717f5ff002ba7dafe28b41e162cf9ffdb6"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 6de56fc30e245efd77a574f483d36fc5cf08b503ea9e4f4666a640004866d2a4"
    }
   },
   {
@@ -533,7 +533,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/gate_lockers.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 5b2c230591ba2896e1b831ca1f98682da46c4e93bbf9074a1aae0eb169021de5"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 c788dc233f6e51de7c8f0de51548caa122ad93975beeea44c42c814e2a0ca11b"
    }
   },
   {
@@ -566,7 +566,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/gate_lockers.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 27019a4d46f695d29fb98aef0fa554bd1c4b4d603cb4f4b74d62104d15e4bc7a"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 2d218c1f75f1691da31c64ded21bf30d5bb2ca08d192d7a069e18602f8c0a4c6"
    }
   },
   {
@@ -588,7 +588,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/moss.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 63f22e841677f91fbb678d2746e76fab4d7772538fd6c14f4d3debc6c8f5c3c1"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 3ef5e623711d586aa04932f6754ad2558fd7e594d54b31e5837c3229416bdb96"
    }
   },
   {
@@ -643,7 +643,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/plaza.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 731a5dac5887641cc794dc38c7cd88bbc190310e590c96277bdc2503fe53ff63"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 30594e27290d9dfa7a01f1bef746dcaef9763688b86beeaf9b301dcad67c3db6"
    }
   },
   {
@@ -654,7 +654,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/practice.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 583590742c53673624116118ed77a45b863a51c7de00b4c31925f4f6ce7f515e"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 78723abc0dd0a745358b4927e3aa8ebbb9b68da0474fa348ec04963c620f8c55"
    }
   },
   {
@@ -676,7 +676,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/plaza.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 efcd0f8c90e77aae52abac5265687db15996c0a53c1356f0f6d7deaed19614a0"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 eb82f26314099c24ea308863a099d26b771d725aacab115d6b2ef27ca26be8e9"
    }
   },
   {
@@ -698,7 +698,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/skee.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 ca348e6fdb4b4a3c70256ae3380d769dc0acd0107a356072ea48e8e39143e108"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 4a276ec61c14d906038dc4ca183ab7ed67de07e11ef827ed707ecbae4bae8ea8"
    }
   },
   {
@@ -709,7 +709,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/skee.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 fb7e663724c7c132eb4778a69e6ec89bfaa74d19d9f83a031a7f408f20cf68bb"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 ae0309f0aa1f674fb98105bb89bd5734fe1a49918e2adeafc34e366fff78767b"
    }
   },
   {
@@ -731,7 +731,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/dressing.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 d32ec4ee5c8ed3d7b0e8f70fa9170907e6c95df7c8edabccd67a9dd75ed024cf"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 fd4fbe5cef671d95cfae5c89edf4e9d8a74140e44d63cd2a04befb7135266aea"
    }
   },
   {
@@ -797,7 +797,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/practice.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 b613a938a3a98fdd2b566f22d8eec5ef76f8b76c404435522e3e42b5798057ab"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 e80a166c11c9191c82f72c393ab1eb2b743c3730cf0895dff5be0d66627b516f"
    }
   },
   {
@@ -808,7 +808,7 @@
    "loader": "none (camp scene wiring pending, wave 19 machine work)",
    "provenance": {
     "recipe": "tools/blender/camp/stations.py",
-    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 83f38cce7cab66a0ab85b853f459fcd358a05b1e25b8c3d8bc6c8cd1b8dcc901"
+    "notes": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 2978f512e44fd9510ae9f1d088d7e9fea097c386c043cc6f71992f08b044770e"
    }
   },
   {
