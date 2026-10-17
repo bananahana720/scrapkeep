@@ -1,19 +1,20 @@
-# smoke: solo timeout=360s (bots fight the Waking with its own attacks; two runs, 240 s simulated budget each)
+# smoke: solo timeout=360s (one fixed-90-fps child; bots fight the Waking with its own attacks; two runs, 240 s simulated budget each)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const T := preload("res://tests/support/t.gd")
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # Bots fight the Waking with its own attacks on (waking.gd, waking_attacks.gd): each run
 # starts normally, breaks world 2's last stage Warden through the spawner seam, launches
 # into the arena and fights with ordinary inputs. Each run must win inside BUDGET, the
 # Waking must have attacked on every floor, and the first stagger must land in the posture
-# band, 45 to 70 s (Andrew, 19:42Z 17 Oct), give or take STAGGER_SLACK for run-to-run noise
-# (the same seed varies by about 2 s). At waking.gd POSTURE_GAIN 0.565, seeds 1 to 3: the
-# skipper staggers it at 68.3, 69.9 and 69.9 s; the brawler at 45.8 s on seed 2, but at 9.8 s
-# on seeds 1 and 3, where one smash slam fills the bar from about 17 to 100. Those seeds are
+# band, 45 to 70 s (Andrew, 19:42Z 17 Oct), give or take STAGGER_SLACK. In the fixed-90-fps
+# child each seed repeats exactly. At waking.gd POSTURE_GAIN 0.565, seeds 1 to 3: the skipper
+# staggers it at 67.8, 65.2 and 65.8 s; the brawler at 48.0 s on seed 2, but at 9.8 s on
+# seeds 1 and 3, where one smash slam fills the bar from about 17 to 100. Those seeds are
 # not run here; the smash fill is the posture rule's, not the Waking's.
 #
 # Evidence limit: two bots, one seed each; bots dodge on a fixed reaction time and never
@@ -41,7 +42,18 @@ var _report: Array = []
 
 
 func _initialize() -> void:
+	# The runs play in a fixed-90-fps child with hit-stop on the tick count and seed(1), as
+	# bot_run.gd plays: on the wall clock the same seed's first stagger moved by up to 40 s.
+	if not OS.get_cmdline_user_args().has("--child"):
+		var results := ChildRuns.run([{"script": "res://tests/waking_bot_fight_test.gd", "args": ["--child"]}], 340.0)
+		var result: Dictionary = results[0]
+		print(result["log"])
+		_t.check("child ran clean", result["code"] == 0 and not result["timed_out"] and ChildRuns.summary(result)["errors"].is_empty(),
+			"exit %s, timed out %s" % [result["code"], result["timed_out"]])
+		quit(_t.verdict())
+		return
 	SimClock.ticks = true
+	seed(1)
 	var spec := OS.get_environment("WAKING_BOT_RUNS")
 	if spec != "":
 		_runs = []
