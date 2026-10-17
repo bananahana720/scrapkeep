@@ -4,6 +4,10 @@
     nice -n 10 demucs -n htdemucs -d cuda -o <work_dir>/stems <work_dir>/stretched/*.wav
     python package_phase_tracks.py pack <work_dir>
 
+The place-and-moment tunes use the same three steps, with the gapfill folder as render_root:
+
+    python package_phase_tracks.py stretch --tunes ../../design-v3/sound/tunes.json <gapfill_dir> <work_dir>
+
 Each pack is assets/music_ace/<id with underscores>/manifest.json plus main.{drums,bass,other}.ogg:
 one 16-bar looping clip "main", flat (ace_sequencer.gd never schedules Warden sections for it),
 cut on the measured beat grid, the loop tail blended into its head like package_music.py's
@@ -29,6 +33,8 @@ OUT = SKETCH / 'assets/music_ace'
 SOUND = SKETCH / 'design-v3/sound'
 BARS = 16
 START_BAR = 4
+# Takes whose loop clicks when cut from START_BAR (scripts/audio-gate.mjs seam), cut earlier.
+START_BARS = {'landmark-penstock': 2}
 TARGET_LUFS = -16.0
 MAX_TP = -1.2
 
@@ -50,12 +56,30 @@ TRACKS = {
 }
 
 
+# The place-and-moment tunes (design-v3/sound/tunes.json): the picked take of each row, from the
+# mastered gapfill folder. Key letter and offset from the row's key, relative to the house D.
+TUNES_JSON = SOUND / 'tunes.json'
+KEY_OFFSETS = {'D': 0, 'E': 2, 'G': 5}
+
+
+def tune_tracks(tunes_path=TUNES_JSON):
+    out = {}
+    for row in json.loads(Path(tunes_path).read_text()):
+        letter = row['key'].split()[0]
+        if letter not in KEY_OFFSETS:
+            raise SystemExit(f"{row['id']}: key {row['key']} has no offset from D")
+        out[row['id']] = (None, row['pick'], None, int(row['bpm']), letter, KEY_OFFSETS[letter])
+    return out
+
+
 def theme_of(track_id):
     return track_id.replace('-', '_')
 
 
-def source_of(render_root, track_id):
-    folder, job, seed, *_ = TRACKS[track_id]
+def source_of(render_root, track_id, tracks=TRACKS):
+    folder, job, seed, *_ = tracks[track_id]
+    if folder is None:
+        return render_root / job
     base = render_root / 'renders' / folder
     if seed is None:
         return base / job
@@ -67,11 +91,11 @@ def source_of(render_root, track_id):
     raise SystemExit(f'{track_id}: no take {job} seed {seed}')
 
 
-def mono_tempo(path, bpm):
+def mono_tempo(path, bpm, lo=0.93, hi=1.07):
     import cut_loops
     audio, sr = sf.read(path, always_2d=True)
     flux, rate = cut_loops.onset_envelope(audio.mean(axis=1), sr)
-    coarse = cut_loops.tempo(flux, rate, bpm * 0.93, bpm * 1.07)
+    coarse = cut_loops.tempo(flux, rate, bpm * lo, bpm * hi)
     best = None
     for t in np.arange(coarse - 0.3, coarse + 0.3, 0.01):
         lag = rate * 60 / t
@@ -87,15 +111,31 @@ def stretch(args):
     work = args.work
     (work / 'stretched').mkdir(parents=True, exist_ok=True)
     report = {}
-    for track_id, (_, _, _, bpm, _, _) in TRACKS.items():
-        src = source_of(args.render_root, track_id)
+    tracks = tune_tracks(args.tunes) if args.tunes else TRACKS
+    for track_id, (_, _, _, bpm, key, key_offset) in tracks.items():
+        src = source_of(args.render_root, track_id, tracks)
         measured = mono_tempo(src, bpm)
         out = work / 'stretched' / f'{theme_of(track_id)}.wav'
+        if abs(measured / bpm - 1) > 0.045 and args.tunes:
+            # The gapfill takes were rendered at their row's tempo; a read at the wide window's
+            # edge is the detector, so read again in a narrow window around the row's tempo.
+            narrow = mono_tempo(src, bpm, 0.97, 1.03)
+            print(f'{track_id}: wide read {measured:.2f}, narrow read {narrow:.2f}', flush=True)
+            measured = narrow
         if abs(measured / bpm - 1) > 0.045:
             raise SystemExit(f'{track_id}: read {measured:.2f}, too far from {bpm}; needs an ear')
         subprocess.run(['rubberband', '-q', '--fine', '-T', f'{bpm / measured:.6f}', str(src), str(out)], check=True)
         after = mono_tempo(out, bpm)
-        report[track_id] = dict(source=str(src), bpm_target=bpm, bpm_before=round(measured, 3), bpm_after=round(after, 3))
+        note = 'stretched'
+        if args.tunes and abs(after / bpm - 1) > 0.01:
+            # The stretch moved the read away from the row's tempo, so the reads disagree with
+            # themselves; the take was rendered at the row's tempo, so it is packed as rendered.
+            import shutil
+            shutil.copyfile(src, out)
+            note = f'unstretched: detector unreliable (read {after:.2f} after stretching)'
+            after = mono_tempo(out, bpm, 0.97, 1.03)
+        report[track_id] = dict(stretch=note,source=str(src), bpm_target=bpm, bpm_before=round(measured, 3), bpm_after=round(after, 3),
+                                key=key, key_offset=key_offset)
         print(track_id, report[track_id], flush=True)
     (work / 'stretch.json').write_text(json.dumps(report, indent=1))
 
@@ -137,7 +177,10 @@ def pack(args):
     sys.path.insert(0, str(SOUND))
     import cut_loops
     base = json.loads((SKETCH / 'assets/music_ace/brindle/manifest.json').read_text())
-    for track_id, (_, _, _, bpm, key, key_offset) in TRACKS.items():
+    for track_id, row in report.items():
+        bpm, key, key_offset = row['bpm_target'], row.get('key'), row.get('key_offset')
+        if key is None:
+            key, key_offset = TRACKS[track_id][4], TRACKS[track_id][5]
         theme = theme_of(track_id)
         stem_dir = work / 'stems' / 'htdemucs' / theme
         stems = {s: read_stem(stem_dir / f'{s}.wav') for s in ('drums', 'bass', 'other')}
@@ -146,22 +189,34 @@ def pack(args):
         flux, rate = cut_loops.onset_envelope(mix.mean(axis=1), RATE)
         beat = round(RATE * 60 / bpm)
         bar = beat * 4
-        start = round(cut_loops.phase(flux, rate, bpm) * RATE) + START_BAR * bar
-        frames = BARS * bar
-        if start + frames + POST_ROLL > len(mix):
-            raise SystemExit(f'{track_id}: take too short for {BARS} bars at {bpm}')
+        head = round(cut_loops.phase(flux, rate, bpm) * RATE)
+        # Skip the intro by START_BAR bars, or as many as a short take leaves room for; a take
+        # shorter than 16 bars (some gapfill renders are 30 s) loops 8.
+        fit = None
+        for bars in (BARS, BARS // 2):
+            for start_bar in range(START_BARS.get(track_id, START_BAR), -1, -1):
+                if head + start_bar * bar + bars * bar + POST_ROLL <= len(mix):
+                    fit = (bars, start_bar)
+                    break
+            if fit:
+                break
+        if fit is None:
+            raise SystemExit(f'{track_id}: take too short for {BARS // 2} bars at {bpm}')
+        bars, start_bar = fit
+        frames = bars * bar
+        start = head + start_bar * bar
         state = dict(source_start=start, frames=frames)
         clips = {s: cut_clip(stems[s], state, 0, 1, bar) for s in STEMS}
         pcm = {s: c[0] for s, c in clips.items()}
         loop_offset = clips['drums'][1]
         gain_db = 0.0
         for _ in range(6):
-            i, p = lufs_tp(limit({s: v * 10 ** (gain_db / 20) for s, v in pcm.items()}))
+            i, p = lufs_tp(limit({s: v * 10 ** (gain_db / 20) for s, v in pcm.items()}, args.ceiling))
             want = TARGET_LUFS - i
             if abs(want) < 0.05:
                 break
             gain_db += want
-        scaled = limit({s: v * 10 ** (gain_db / 20) for s, v in pcm.items()})
+        scaled = limit({s: v * 10 ** (gain_db / 20) for s, v in pcm.items()}, args.ceiling)
         i, p = lufs_tp(scaled)
         folder = OUT / theme
         folder.mkdir(parents=True, exist_ok=True)
@@ -181,14 +236,14 @@ def pack(args):
                                   note='htdemucs; vocals summed into other')},
             clips=dict(main=dict(
                 parent='single', take=track_id, source_start=start, take_start=start, bpm=bpm, beat=beat, bar=bar,
-                beats_per_bar=4, bars=BARS, entry=PRE_ROLL, exit=PRE_ROLL + frames, loop=True, loop_offset=loop_offset,
+                beats_per_bar=4, bars=bars, entry=PRE_ROLL, exit=PRE_ROLL + frames, loop=True, loop_offset=loop_offset,
                 loop_to_bar=1, sample_count=count, key=key, key_offset=key_offset, files=files)),
             sections=dict(main=dict(clip='main', game=track_id, enter='bar', phase='start', profile='full')),
             set_piece=[], profiles=PROFILES, breath=base['breath'], breath_default='hard',
             cuts='measured-beat-phase', timing_verified=False, gain_db=round(gain_db, 2),
             measured=dict(lufs=i, true_peak=p, note='summed stems before Ogg encode'))
         (folder / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n')
-        print(f'{track_id}: {BARS} bars at {bpm}, gain {gain_db:+.2f} dB, {i:.2f} LUFS, {p:.2f} dBFS', flush=True)
+        print(f'{track_id}: {bars} bars from bar {start_bar} at {bpm}, gain {gain_db:+.2f} dB, {i:.2f} LUFS, {p:.2f} dBFS', flush=True)
 
 
 def main():
@@ -197,8 +252,11 @@ def main():
     s = sub.add_parser('stretch')
     s.add_argument('render_root', type=Path)
     s.add_argument('work', type=Path)
+    s.add_argument('--tunes', type=Path, help='package the picks of this tunes.json; render_root is the folder holding them')
     p = sub.add_parser('pack')
     p.add_argument('work', type=Path)
+    p.add_argument('--ceiling', type=float, default=-1.5,
+                   help='limiter ceiling in dBFS; the tunes use -2.2 so the Ogg encode stays under -1 dBTP')
     args = ap.parse_args()
     return stretch(args) if args.cmd == 'stretch' else pack(args)
 
