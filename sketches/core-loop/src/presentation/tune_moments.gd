@@ -80,19 +80,7 @@ static func available(id: String) -> bool:
 
 
 static func _pack_on_disk(id: String) -> bool:
-	if not TUNES.has(id):
-		return false
-	var path := MusicRows.resolve_manifest(manifest_of(id))
-	if path == "":
-		return false
-	var m = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not m is Dictionary or (m.get("clips", {}) as Dictionary).is_empty():
-		return false
-	for clip in m["clips"].values():
-		for file in (clip.get("files", {}) as Dictionary).values():
-			if not FileAccess.file_exists(path.get_base_dir().path_join(String(file))):
-				return false
-	return true
+	return TUNES.has(id) and MusicRows.pack_on_disk(manifest_of(id))
 
 
 static func is_hidden(id: String) -> bool:

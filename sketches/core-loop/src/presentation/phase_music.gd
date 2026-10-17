@@ -33,7 +33,7 @@ static func manifest_of(id: String) -> String:
 
 # Whether the pack is on disk (source tree or export sidecar).
 static func available(id: String) -> bool:
-	return MusicRows.resolve_manifest(manifest_of(id)) != ""
+	return MusicRows.pack_on_disk(manifest_of(id))
 
 
 static func is_final(phase: int) -> bool:

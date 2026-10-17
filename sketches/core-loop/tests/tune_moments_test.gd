@@ -246,6 +246,7 @@ func _process(_delta: float) -> bool:
 	_t.check("a missing remix keeps the parent", none.level_tune(zone31) == "" and none._boss_entry("brindle") == "brindle-p1-requisition")
 
 	for node in _nodes:
-		node.free()
+		if is_instance_valid(node):
+			node.queue_free()
 	quit(_t.verdict())
 	return true

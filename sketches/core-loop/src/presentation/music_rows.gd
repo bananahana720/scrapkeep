@@ -176,3 +176,19 @@ static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String
 		if FileAccess.file_exists(sidecar):
 			return sidecar
 	return ""
+
+
+# A pack is playable only when its manifest resolves and every stem file it names is on disk:
+# the Oggs are gitignored, so a checkout can hold manifests with no audio.
+static func pack_on_disk(manifest_path: String) -> bool:
+	var path := resolve_manifest(manifest_path)
+	if path == "":
+		return false
+	var m = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not m is Dictionary or (m.get("clips", {}) as Dictionary).is_empty():
+		return false
+	for clip in m["clips"].values():
+		for file in (clip.get("files", {}) as Dictionary).values():
+			if not FileAccess.file_exists(path.get_base_dir().path_join(String(file))):
+				return false
+	return true
