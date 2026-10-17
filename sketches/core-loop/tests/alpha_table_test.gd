@@ -79,7 +79,8 @@ func _initialize() -> void:
 		var world_kinds := Roster.world_kinds(pair[1])
 		for pack in A.DEFS[pair[0]]["packs"]:
 			for kind in pack["kinds"]:
-				_check("row %d kind %s" % [pair[0] + 1, kind], world_kinds.has(kind) and Director.KIND_NAMES.has(kind), "world %d" % pair[1])
+				_check("row %d kind %s" % [pair[0] + 1, kind], (world_kinds.has(kind) or kind in Roster.SPECIALS) and Director.KIND_NAMES.has(kind),
+					"world %d" % pair[1])
 	# --table=alpha resolves through the game's selection; no choice stays the default.
 	var game = Game.new()
 	game.test_mode = true

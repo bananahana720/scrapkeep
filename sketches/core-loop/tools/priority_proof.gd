@@ -495,6 +495,9 @@ func _spawn_encounter() -> void:
 	var at := _drop(ball + forward * (CREW_RANGE + SPECIAL_BEHIND))
 	if _mode == "built":
 		_driver.special = _toughen(spawner.spawn_enemy(String(_row["id"]), at))
+		# A built buffer reports its own wipes (foreman.gd), as the model counts its stand-in's.
+		if _driver.special.has_signal("wiped"):
+			_driver.special.wiped.connect(func(_members: Array): _wipes += 1)
 	else:
 		# The model's stand-in: a non-attacking body with no plating and MODEL_HP.
 		var body: Node3D = spawner.spawn_enemy("vault", at)
