@@ -20,6 +20,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 #   {"kind": "codex", "id": String, "at": Vector3}
 #   {"kind": "accel", "accel": Vector3}           a push to add this tick (a thermal)
 #   {"kind": "carry", "accel": Vector3}           the barge under the ball accelerating
+#   {"kind": "drag", "accel": Vector3}            a cinder floor slowing a ball that rolls on it
 
 const GAUGE_REACH := 60.0
 const RAM_REACH := 2.8
@@ -36,6 +37,10 @@ const PUFF_SECONDS := 0.7
 # relative speed: the ball's own rolling resistance and drag act against the world,
 # not the deck, and would otherwise let it creep aft (measured: 6.6 m per crossing).
 const KEEP_STATION := 4.0
+# A cinder floor (the sinkhole's "Wall pays", 2026-10-17): strips of loose cinder down the middle of a tube's floor take
+# drag (share of planar speed per second) from a ball rolling on them. Only a ball within CINDER_REACH of the ground
+# counts, so a ball carving the wall above the strip, or in the air, is never slowed.
+const CINDER_REACH := 1.4
 
 # The park's contraption skins (design-v3/PARK.md section 4, KC9): a spec with a `recipe` key draws that recipe's GLBs in
 # place of the code primitive; a spec without one, or whose GLBs are missing, draws the primitive it always drew. The
@@ -71,6 +76,10 @@ var cables: Array[Dictionary] = []
 var valves: Array[Dictionary] = []
 var walls: Array[Dictionary] = []
 var thermals: Array[Dictionary] = []
+var cinders: Array[Dictionary] = []
+# One material for every cinder band, so the glow lights the whole floor at once.
+var _cinder_mat: StandardMaterial3D = null
+var _cinder_glow := 0.0
 # False while a map's contraptions wait for a loop mode (the Spillway's return lift in
 # v2): world neither steps nor shows them.
 var live := true
@@ -122,6 +131,8 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 				walls.append(_build_wall(spec))
 			"thermal":
 				thermals.append(_build_thermal(spec))
+			"cinder":
+				cinders.append(_build_cinder(spec))
 	_setup_caches()
 	reset()
 
@@ -259,8 +270,68 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 			_thermal_quiet = THERMAL_GAP
 			facts.append({"kind": "fact", "fact": "thermal_ride", "at": ball})
 			facts.append({"kind": "codex", "id": "steam_thermal", "at": ball})
+	if not riding:
+		for c in cinders:
+			if _on_cinder(c, ball):
+				facts.append({"kind": "drag", "accel": -Vector3(velocity.x, 0.0, velocity.z) * float(c["spec"]["drag"])})
+				break
 	_slams.clear()
 	return facts
+
+
+# The cinders' telegraph (world.gd _step_cinder, cinder_heat.gd): 0 cold, 1 at the end of the grace, an ember glow.
+func set_cinder_glow(glow: float) -> void:
+	if _cinder_mat == null or is_equal_approx(glow, _cinder_glow):
+		return
+	_cinder_glow = glow
+	_cinder_mat.emission_enabled = glow > 0.0
+	_cinder_mat.emission = Palette.HAZARD
+	_cinder_mat.emission_energy_multiplier = 2.5 * glow
+
+
+# A puff of steam where a hot ball leaves the cinders.
+func steam(at: Vector3) -> void:
+	_puff(at + Vector3.UP * 0.5, 2.5)
+
+
+# A cinder spec's strips are [x, z, yaw_deg, length, half_width] on the ground; each draws as a dark grit band.
+func _build_cinder(spec: Dictionary) -> Dictionary:
+	if _cinder_mat == null:
+		_cinder_mat = Palette.solid(Palette.CHARCOAL)
+	var mat := _cinder_mat
+	var strips := []
+	for s: Array in spec["strips"]:
+		var yaw := deg_to_rad(float(s[2]))
+		var along := Vector3(sin(yaw), 0.0, cos(yaw))
+		var half := float(s[3]) * 0.5
+		var a: Vector3 = ground.call(float(s[0]) - along.x * half, float(s[1]) - along.z * half, 0.0)
+		var b: Vector3 = ground.call(float(s[0]) + along.x * half, float(s[1]) + along.z * half, 0.0)
+		var band := MeshInstance3D.new()
+		var plane := PlaneMesh.new()
+		plane.size = Vector2(float(s[4]) * 2.0, a.distance_to(b))
+		band.mesh = plane
+		band.material_override = mat
+		var mid := (a + b) * 0.5 + Vector3.UP * 0.04
+		var fwd := (b - a).normalized()
+		var up := (Vector3.UP - fwd * fwd.dot(Vector3.UP)).normalized()
+		band.transform = Transform3D(Basis(up.cross(fwd).normalized(), up, fwd), mid)
+		add_child(band)
+		strips.append({"centre": Vector2(float(s[0]), float(s[1])), "along": Vector2(along.x, along.z), "half": half, "side": float(s[4])})
+	return {"spec": spec, "strips": strips}
+
+
+func _on_cinder(c: Dictionary, ball: Vector3) -> bool:
+	var floor_y: float = ground.call(ball.x, ball.z, 0.0).y
+	if ball.y - floor_y > CINDER_REACH:
+		return false
+	var p := Vector2(ball.x, ball.z)
+	for s: Dictionary in c["strips"]:
+		var rel: Vector2 = p - s["centre"]
+		var u: float = rel.dot(s["along"])
+		var v: float = rel.dot(Vector2(s["along"].y, -s["along"].x))
+		if absf(u) <= s["half"] and absf(v) <= s["side"]:
+			return true
+	return false
 
 
 func _process(delta: float) -> void:

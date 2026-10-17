@@ -22,8 +22,8 @@ Convention (the park family's): +Y up, ride along +Z, origin on the entry lip at
 "entry_lip"), the piece runs z 0 to LENGTH. The wash's own end openings are not drawn: consecutive rows overlap there and
 the terrain carries the shape. size is [length, wash depth, wash width], the row's.
 
-Run (memory-capped):
-  prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 --python \
+Run (memory-capped with prlimit, 12 GiB of address space):
+  prlimit <address-space cap> -- blender --background --threads 2 --python-exit-code 1 --python \
     sketches/core-loop/tools/blender/park/sinkhole_tubes.py -- [--out DIR] [--only ID[,ID]] [--count-only]
 """
 import argparse

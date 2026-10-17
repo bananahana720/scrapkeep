@@ -67,8 +67,9 @@ const CONTRAPTION_KEYS := {
 	"valve": ["at", "door"],
 	"cracked_wall": ["at", "size", "turn"],
 	"thermal": ["at", "radius", "height"],
+	"cinder": ["strips", "drag"],
 }
-const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal"]
+const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal", "cinder"]
 const CONTRAPTION_RECIPES := ["", "gauge", "geyser_vent", "cannon", "trebuchet", "lift_platform", "barge"]
 
 # Activity presentation uses an ACTIVITY_ROWS key or the kind's existing cue.view alias.
