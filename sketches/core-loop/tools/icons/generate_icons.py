@@ -340,6 +340,24 @@ register(
 )
 
 
+def g_ab_sable_reel():
+    return [
+        rect(12, 14, 6, 36, fill=BONE, rx=2),
+        rect(30, 14, 6, 36, fill=BONE, rx=2),
+        rect(18, 22, 12, 20, fill=COPPER),
+        line(30, 32, 56, 32, stroke=MINT, width=DETAIL),
+        path("M 56 32 L 56 40 C 56 46 48 46 48 40", stroke=MINT, width=DETAIL),
+        chevron(44, 24, 6, 8, stroke=MINT, width=DETAIL).replace("polyline", "polyline transform=\"rotate(180 44 24)\""),
+    ]
+
+
+register(
+    "ab_sable_reel", "Reel in (shared stand-in line and ultimate)",
+    "A cable spool seen from the side, its line running out to a hook, a mint arrow pointing back at the spool",
+    plate_rounded_square, g_ab_sable_reel,
+)
+
+
 def g_ab_sable_smash():
     return [
         chevron(32, 22, 16, 12, stroke=BONE),
