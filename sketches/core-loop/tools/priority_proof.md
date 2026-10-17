@@ -85,7 +85,7 @@ The Splitter follows the ball 7 to 13 m out and buds a fuse pod 1.2 s in, then e
 | Splitter | built | 1 | 0.9 / 0.4 / 11.3 s | 3.1 / 0.8 / 13.1 s | 3.44 | 3 of 8 | too little damage |
 | Splitter | built | 3 | 3.9 / 0.0 / 23.5 s | 4.5 / 2.0 / 33.5 s | 1.13 | 5 of 8 | too little damage |
 
-Damage taken (before scrap armour), mean: hp x1 target 10.9, ignore 10.9; hp x3 target 10.1, ignore 20.3 (ignore higher on 6 of 8 seeds). Later spawns joined, mean: hp x3 target 4.4, ignore 12.4.
+Damage taken (before scrap armour), mean: hp x1 target 10.9, ignore 10.9; hp x3 target 10.1, ignore 20.3 (ignore higher on 6 of 8 seeds). Later spawns joined, mean: hp x3 target 4.4, ignore 12.5.
 
 What it says:
 
