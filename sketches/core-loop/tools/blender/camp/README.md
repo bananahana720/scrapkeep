@@ -12,7 +12,7 @@ sketches/core-loop/tools/blender/camp/build_all.sh /tmp/x     # a scratch build;
 python3 sketches/core-loop/tools/fold_registry.py             # fold the fragment into assets/registry.json
 ```
 
-There are 9 recipes and 34 GLBs. Every recipe rebuilds byte-identically. `build_all.sh` prints one `CAMP_EXPORT` row per GLB, with its sha256. Every GLB is one `enamel` draw with COLOR_0 vertex colour, the same as the park contraptions. Its class budget in `assets/asset_budgets.json` covers the drawn mesh plus the collision mesh, which is what `npm run asset:inspect` counts.
+There are 9 recipes and 34 GLBs. Every recipe rebuilds byte-identically. `build_all.sh` prints one `CAMP_EXPORT` row per GLB, with its sha256. Every GLB is one `enamel` draw with COLOR_0 vertex colour, the same as the park contraptions. Its class budget in `assets/asset_budgets.json` covers the drawn mesh plus the collision mesh, which is what `npm run asset:inspect` counts. Every part is a closed solid: `export` casts a ray grid from above and from four sides and fails the build if more than 0.3% of first hits land on a back face.
 
 To render previews with Cycles on the CPU:
 
@@ -20,6 +20,16 @@ To render previews with Cycles on the CPU:
 blender -b -P sketches/core-loop/tools/blender/camp/render.py -- --piece <glb> [<glb> ...] [--stack] --out DIR
 blender -b -P sketches/core-loop/tools/blender/camp/render.py -- --layout --models sketches/core-loop/assets/models/camp --out DIR
 ```
+
+## Skee-ball physics check
+
+`scripts/cloud/skee_lab` is a headless Godot 4.7.2 project (Jolt, 90 ticks) that loads the lane's collision as a trimesh and rolls the game's ball (radius 1, mass 6, friction 0.9, bounce 0.25) up the lane at 9 to 20 m/s and three x offsets. It fails if any roll in the 11 to 18 m/s band ends neither in a cup nor back at the return.
+
+```sh
+$GODOT_BIN --headless --path scripts/cloud/skee_lab -s lab.gd -- "$PWD/sketches/core-loop/assets/models/camp/camp_skee_lane.glb"
+```
+
+On the committed lane, all 27 rolls score or return. Straight rolls reach the 10, 20 and 40 cups; the 50 and 100 cups need the player to steer.
 
 ## Conventions
 
