@@ -96,9 +96,10 @@ class VolumeIndicator extends Indicator:
 		var origin: Vector3 = drawn["shape"]["origin"]
 		return Transform3D(Basis.from_scale(Vector3.ONE * k), origin * (1.0 - k) + Vector3.UP * LIFT) * (drawn["vertices"] as PackedVector3Array)
 
-	# Each face's fill fan, then its edges: a part's edge belongs to two of its faces and its
-	# corners to three or more, so each edge's keyline and strip, and each corner's cap, is drawn
-	# once, where the scar drew 40 triangles a face edge.
+	# The fills, then every keyline, then every strip and cap, so the charcoal keyline sits under
+	# every edge. A part's edge belongs to two of its faces and its corners to three or more, so
+	# each edge and each corner is drawn once, where the scar drew 40 triangles a face edge. The
+	# colours are taken once: a volume record has no "fill" to breathe with.
 	static func _build(shape: Dictionary, now: float) -> Dictionary:
 		var look := style(shape, now)
 		var fill: Color = look["fill"]
@@ -113,6 +114,10 @@ class VolumeIndicator extends Indicator:
 		cap.fill(look["edge"])
 		var vertices := PackedVector3Array()
 		var colors := PackedColorArray()
+		var keylines := PackedVector3Array()
+		var keyline_colors := PackedColorArray()
+		var edges := PackedVector3Array()
+		var edge_colors := PackedColorArray()
 		var edged := {}
 		var capped := {}
 		for cell in shape["cells"]:
@@ -135,15 +140,19 @@ class VolumeIndicator extends Indicator:
 					var along := b - a
 					var flat := Vector3(along.x, 0.0, along.z)
 					var side := flat.cross(Vector3.UP).normalized() if flat.length_squared() > 0.0001 else Vector3.RIGHT
-					vertices.append_array(Transform3D(Basis(side * (EDGE * 0.5 + KEYLINE), Vector3.UP, along), a) * _strip_unit)
-					colors.append_array(keyline)
-					vertices.append_array(Transform3D(Basis(side * (EDGE * 0.5), Vector3.UP, along), a) * _strip_unit)
-					colors.append_array(strip)
+					keylines.append_array(Transform3D(Basis(side * (EDGE * 0.5 + KEYLINE), Vector3.UP, along), a) * _strip_unit)
+					keyline_colors.append_array(keyline)
+					edges.append_array(Transform3D(Basis(side * (EDGE * 0.5), Vector3.UP, along), a) * _strip_unit)
+					edge_colors.append_array(strip)
 					for corner: Vector3 in [a, b]:
 						if not capped.has(corner):
 							capped[corner] = true
-							vertices.append_array(Transform3D(Basis.IDENTITY, corner) * _cap_unit)
-							colors.append_array(cap)
+							edges.append_array(Transform3D(Basis.IDENTITY, corner) * _cap_unit)
+							edge_colors.append_array(cap)
+		vertices.append_array(keylines)
+		vertices.append_array(edges)
+		colors.append_array(keyline_colors)
+		colors.append_array(edge_colors)
 		return {"shape": shape, "vertices": vertices, "colors": colors}
 
 	# _cap's eight triangles about the origin.

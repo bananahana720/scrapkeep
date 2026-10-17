@@ -265,9 +265,14 @@ func finish() -> void:
 func prune() -> void:
 	for id in _entries.keys():
 		var entry: Dictionary = _entries[id]
-		if entry["shape"].get_ref() == null and not entry.has("task"):
-			_entries.erase(id)
-			_watched.erase(id)
+		if entry["shape"].get_ref() != null:
+			continue
+		if entry.has("task"):
+			if not WorkerThreadPool.is_task_completed(entry["task"]):
+				continue
+			WorkerThreadPool.wait_for_task_completion(entry["task"])
+		_entries.erase(id)
+		_watched.erase(id)
 
 
 func _forget(id: int) -> void:
