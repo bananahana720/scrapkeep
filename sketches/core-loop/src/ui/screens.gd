@@ -15,6 +15,7 @@ const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
+const JukeboxPage := preload("res://src/ui/jukebox_page.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -76,6 +77,7 @@ var _help
 var _achievements
 var _settings
 var _camp
+var _jukebox
 var _ending: VBoxContainer
 var _ending_title: Label
 var _ending_body: Label
@@ -161,7 +163,16 @@ func setup(game_ref) -> void:
 	_camp.button_for("settings").pressed.connect(_press.bind("key_s"))
 	_camp.back.pressed.connect(_press.bind("key_k"))
 	_camp.companion_button().pressed.connect(_camp_companion)
+	_camp.button_for("jukebox").pressed.connect(_press.bind("key_j"))
 	_content.add_child(_camp)
+	_jukebox = JukeboxPage.new()
+	_jukebox.visible = false
+	_jukebox.sleeve_chosen.connect(_spin_toggle)
+	_jukebox.play_button.pressed.connect(_press.bind("key_space"))
+	for i in 3:
+		_jukebox.detent_button(i).pressed.connect(_press.bind("key_%d" % (i + 1)))
+	_jukebox.back.pressed.connect(_press.bind("key_j"))
+	_content.add_child(_jukebox)
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
 	_ending.add_theme_constant_override("separation", 26)
@@ -208,6 +219,7 @@ func _on_flow_changed(state: String) -> void:
 	_achievements.visible = false
 	_settings.visible = false
 	_camp.visible = false
+	_jukebox.visible = false
 	_ending.visible = false
 	_ending_left = 0.0
 	_prologue_line = -1
@@ -470,6 +482,8 @@ func toggle_camp() -> void:
 
 
 func _close_camp_silently() -> void:
+	if _jukebox.visible:
+		_close_jukebox()
 	if not _camp.visible:
 		return
 	_camp.visible = false
@@ -494,6 +508,87 @@ func open_camp_from_summary() -> void:
 
 func camp_open() -> bool:
 	return _camp.visible
+
+
+# J on the camp swaps it for Moss's jukebox, and back. Leaving lifts the needle, so the
+# title theme returns with the camp.
+func toggle_jukebox() -> void:
+	if _jukebox.visible:
+		_close_jukebox()
+		_camp.visible = true
+		_camp.refresh(game)
+		_show("CAMP", Palette.AMBER, "")
+		_camp.button_for("jukebox").grab_focus()
+		_fade(true)
+		return
+	if not _camp.visible:
+		return
+	_camp.visible = false
+	_jukebox.visible = true
+	_refresh_jukebox()
+	_show("MOSS'S JUKEBOX", Palette.AMBER, "")
+	_jukebox.focus_first()
+	_fade(true)
+
+
+func _close_jukebox() -> void:
+	_jukebox.visible = false
+	var audio = _audio()
+	if audio != null:
+		audio.stop_spin()
+
+
+func jukebox_open() -> bool:
+	return _jukebox.visible
+
+
+func jukebox_page():
+	return _jukebox
+
+
+# The jukebox's keys, from game._screen_key while it is open: Space or Enter plays the
+# focused sleeve (or stops the deck), 1 to 3 set the dial, J and Esc go back. Every other
+# key is swallowed so the title's keys stay off the camp behind it.
+func jukebox_key(key: int) -> bool:
+	match key:
+		KEY_J, KEY_ESCAPE:
+			toggle_jukebox()
+		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+			var id: String = _jukebox.focused_id()
+			var audio = _audio()
+			if id == "" or (audio != null and audio.spinning == id):
+				_spin_toggle(audio.spinning if audio != null else "")
+			else:
+				_spin_toggle(id)
+		KEY_1, KEY_2, KEY_3:
+			var audio = _audio()
+			if audio != null:
+				audio.set_spin_detent(key - KEY_1)
+			_refresh_jukebox()
+	return true
+
+
+# A found record goes on the deck; the record already playing comes off; a blank sleeve
+# only shows its hint.
+func _spin_toggle(id: String) -> void:
+	var audio = _audio()
+	if audio == null or id == "":
+		return
+	if audio.spinning == id:
+		audio.stop_spin()
+	elif _jukebox.is_found(id) and audio.spin(id):
+		audio.play("bay_jukebox", 0.0, 1.0, "UI")
+	_refresh_jukebox()
+
+
+func _refresh_jukebox() -> void:
+	var audio = _audio()
+	_jukebox.refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2)
+
+
+func _audio():
+	var presentation = game.get("presentation")
+	return presentation.get("audio") if presentation != null else null
 
 
 func camp_page():
@@ -532,7 +627,7 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _camp.visible or ending_open()
+	return _help.visible or _achievements.visible or _camp.visible or _jukebox.visible or ending_open()
 
 
 func ending_open() -> bool:
@@ -613,6 +708,14 @@ func _input(event: InputEvent) -> void:
 		return
 	if _settings.visible:
 		if _settings.handle(event):
+			get_viewport().set_input_as_handled()
+		return
+	if _jukebox.visible:
+		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+			toggle_jukebox()
+			get_viewport().set_input_as_handled()
+		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+			toggle_jukebox()
 			get_viewport().set_input_as_handled()
 		return
 	if _camp.visible:
@@ -776,7 +879,7 @@ func _fade(show: bool) -> void:
 
 
 func _layout_backdrop() -> void:
-	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible)
+	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible or _jukebox.visible)
 	_veil.anchor_bottom = 0.5 if title_deck else 1.0
 	_content.anchor_bottom = _veil.anchor_bottom
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
@@ -823,6 +926,8 @@ func button_for(action: String) -> Button:
 			return _settings.back
 		if _camp.visible:
 			return _camp.back
+		if _jukebox.visible:
+			return _jukebox.back
 		return _achievements.back if _achievements.visible else _help.back
 	if action == "breath":
 		return _breath_row if _breath_row.visible else null

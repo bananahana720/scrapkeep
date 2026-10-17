@@ -2,8 +2,9 @@ extends RefCounted
 
 # The player's progress as one versioned document, saved as profile.json: unlocked
 # pilots, worlds and cosmetics, earned achievements, equipped cosmetics, stats and the
-# last pilot and the between-run nodes opened (SG12, an id list added inside schema 4: a
-# file without it reads as none opened). Preferences live in settings_store.gd. The store knows no starters and
+# last pilot, the between-run nodes opened (SG12, an id list added inside schema 4: a
+# file without it reads as none opened) and the jukebox tunes heard (tune_rows.gd, an id
+# list added the same way). Preferences live in settings_store.gd. The store knows no starters and
 # reads no clock; the caller passes the time an achievement was earned. Mutators change
 # memory and save() writes. A store cannot save until it has loaded, and a save that finds
 # a newer generation on disk merges it in instead of replacing it. A file this build
@@ -35,6 +36,7 @@ const SHAPE := {
 	"companion": SafeStore.DICT,
 	"seen": SafeStore.STRINGS,
 	"options": SafeStore.STRINGS,
+	"tunes": SafeStore.STRINGS,
 }
 
 var path := ""
@@ -139,7 +141,7 @@ func save() -> bool:
 # (else theirs) and the saver's escape flag. The generation is the larger of the two.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
-	for key in ["pilots", "worlds", "cosmetics", "settled", "seen", "options"]:
+	for key in ["pilots", "worlds", "cosmetics", "settled", "seen", "options", "tunes"]:
 		if not out.has(key):
 			out[key] = []
 		for id in theirs.get(key, []):
@@ -414,6 +416,23 @@ func option_ids() -> Array:
 	return _doc["options"].duplicate()
 
 
+# Jukebox tunes heard in play (tune_rows.gd ids). Memory only; save() writes.
+func has_tune(id: String) -> bool:
+	return _doc["tunes"].has(id)
+
+
+# True the first time a tune is heard, false after.
+func hear_tune(id: String) -> bool:
+	if has_tune(id):
+		return false
+	_doc["tunes"].append(id)
+	return true
+
+
+func tune_ids() -> Array:
+	return _doc["tunes"].duplicate()
+
+
 func rewards_settled() -> bool:
 	return bool(_doc["rewards_settled"])
 
@@ -521,6 +540,7 @@ func _defaults() -> Dictionary:
 		"rewards_settled": false,
 		"seen": [],
 		"options": [],
+		"tunes": [],
 	}
 
 

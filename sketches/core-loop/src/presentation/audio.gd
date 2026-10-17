@@ -24,10 +24,19 @@ const Roster := preload("res://src/combat/roster.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const Companion := preload("res://src/core/companion.gd")
+const TuneRows := preload("res://src/core/tune_rows.gd")
+const TuneEar := preload("res://src/presentation/tune_ear.gd")
 # SR7: the shortest gap between two chirps of one companion cue (start value, comps
 # ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
 const CHIRP_COOLDOWN := 0.75
 const CHIRP_LOG_CAP := 256
+# Moss's jukebox: the band's intensity at each of the dial's three detents (idle, cruise,
+# full tilt), fed as the threat parameter while a record spins, so the drums and the lead
+# build as they do with speed in play.
+const SPIN_ENERGY := [0.15, 0.5, 0.9]
+
+# A jukebox tune heard in play for long enough to count (tune_ear.gd); fires once per id.
+signal tune_heard(id: String)
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -281,6 +290,11 @@ var _flow_queue: Array = []
 var _overlay: Label
 var _overlay_until := 0
 var _virtual_usec := 0.0
+var _ear := TuneEar.new()
+# The record Moss's jukebox is playing, "" when the game drives the music.
+var spinning := ""
+var spin_detent := 2
+var _spin_restore := Callable()
 
 static var _bake_task := -1
 static var _baked := false
@@ -511,6 +525,7 @@ func _process(delta: float) -> void:
 	_tend_hum()
 	_follow_warden()
 	_follow_escalation()
+	_tend_ear(delta)
 	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
 		_land_drop()
 	_pump()
@@ -825,6 +840,105 @@ func _select_ace_manifest(manifest: String) -> void:
 			_ace_failed = false
 			ace_missing = ""
 		_ace_row_manifest = manifest
+
+
+# --- Moss's jukebox ------------------------------------------------------------------
+# What the band is playing, in the words TuneRows.key_of reads.
+func music_state() -> Dictionary:
+	var zone := ""
+	if ctx != null and ctx.get("run") != null:
+		zone = MusicRows.zone_id(int(ctx.run.stage), _music_stages())
+	return {"mode": MusicEngine.MODE_NAMES[engine.mode], "track": engine.track, "section": engine.section,
+		"lounge": engine.lounge, "zone": zone}
+
+
+func _tend_ear(delta: float) -> void:
+	if spinning != "":
+		return
+	var id := _ear.listen(TuneRows.key_of(music_state()), delta)
+	if id != "":
+		tune_heard.emit(id)
+
+
+# A tune the profile already holds: the ear never reports it again.
+func knows_tune(id: String) -> void:
+	_ear.knows(id)
+
+
+# Puts a found record on: the band cuts to its track now (a needle drop, not a phrase), at
+# the dial's energy. The ACE band plays the recorded take when its package is on disk; the
+# synth plays it otherwise. False when the id names no row or the band is not baked yet.
+func spin(id: String) -> bool:
+	var row := TuneRows.row(id)
+	if row.is_empty() or not sound_ready:
+		return false
+	if spinning == "":
+		_spin_restore = engine.parameter_source
+	spinning = id
+	engine.set_parameter_source(func(): return {"threat": SPIN_ENERGY[spin_detent]})
+	engine.cancel_pending()
+	if ace_playing():
+		ace.set_bay(false)
+	var source: Dictionary = row["source"]
+	var kind := String(source["kind"])
+	if kind == "menu":
+		var won := bool(source.get("won", true))
+		engine.schedule_mode(engine.clock, MusicEngine.IDLE)
+		engine.menu_theme(source["pack"], won, engine.clock)
+		_ace_named(source["pack"], engine.clock, false, won)
+		return true
+	if kind == "boss":
+		var boss := String(source["boss"])
+		engine.force_track(boss, MusicRows.stage_theme(boss), "1", true)
+		_ace_named(boss, engine.clock, true)
+		return true
+	var zone := String(source["zone"])
+	engine.force_track("warden" if kind == "warden" else "level", MusicRows.stage_theme(zone))
+	_select_ace_manifest(MusicRows.resolve(zone)["ace_manifest"])
+	if ace_ready():
+		_ace_flight = false
+		_handover_at = -1
+		_prime_band_parameters()
+		ace.start_level(engine.clock)
+		engine.grid = ace
+		if kind == "warden":
+			ace.commit_warden()
+	else:
+		_ace_end()
+	if kind == "lounge":
+		engine.set_lounge(true)
+		if ace_playing():
+			ace.set_bay(true)
+	return true
+
+
+# The dial: 0 idle, 1 cruise, 2 full tilt. Heard from the next parameter sample.
+func set_spin_detent(detent: int) -> void:
+	spin_detent = clampi(detent, 0, SPIN_ENERGY.size() - 1)
+
+
+# Lifts the needle: the title theme comes back on the next beat.
+func stop_spin() -> void:
+	if spinning == "":
+		return
+	_release_spin()
+	engine.cancel_pending()
+	var at := engine.next_beat()
+	engine.schedule_mode(at, MusicEngine.IDLE)
+	engine.menu_theme("title", true, at)
+	_ace_named("title", at)
+
+
+# The game takes the music back (a run starts while a record plays): the parameters return
+# to the run's source and the flow's own cues pick the track.
+func _release_spin() -> void:
+	if spinning == "":
+		return
+	spinning = ""
+	engine.set_parameter_source(_spin_restore)
+	_spin_restore = Callable()
+	if ace_playing():
+		ace.set_bay(false)
 
 
 func _ace_named(id: String, at: int, boss := false, won := true) -> void:
@@ -1765,6 +1879,8 @@ func _on_event_progress(event_id: String, fraction: float) -> void:
 
 
 func _on_flow_changed(state: String) -> void:
+	if state != "title":
+		_release_spin()
 	if state in MENU_STATES:
 		play("flow_changed", 0.0, 1.0, "UI")
 	if state == "title" or state == "class_select":
