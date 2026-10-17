@@ -25,9 +25,8 @@ const T := preload("res://tests/support/t.gd")
 #   - every source kind plays its own track: menu, level, warden, boss, lounge and miniboss;
 #     a recorded-only pack wins over the synth track under it, and its boss stands in on
 #     the synth when the pack is not on disk;
-#   - the 22 place-and-moment tunes the music thread wired (tunes.json ids and names) are
-#     records, found while their pack plays; the two still unwired (camp course, curse)
-#     are not; each hidden one is rare and its hint says where to listen;
+#   - the 23 place-and-moment tunes the music thread wired (tunes.json ids and names) are
+#     records, found while their pack plays; the camp course, still unwired, is not; each hidden one is rare and its hint says where to listen;
 #     on the deck a place tune with no pack on disk plays its zone's roam on the synth;
 #   - leaving the title while a record spins hands the music back to the game.
 
@@ -103,13 +102,14 @@ func _rows() -> void:
 		"secret-brindle-swing": "Brindle Swings", "secret-chip-keepers": "Chiptune Keepers",
 		"secret-highdraft-rain": "Rain over the Highdraft", "secret-dig-dub": "Deep Works Dub",
 		"miniboss": "Heavyweight", "fabricator": "The Fabricator",
+		"modifier-curse": "Cursed Run",
 	}
 	var named := {}
 	for id in place:
 		named[id] = String(TuneRows.row(id).get("name", ""))
-	_t.eq("the 22 wired tunes are records under their tunes.json names", named, place)
-	_t.eq("the unwired tunes are not records yet", ["camp-course", "modifier-curse"].filter(func(id): return not TuneRows.row(id).is_empty()), [])
-	_t.eq("the crate holds 51 records", TuneRows.ROWS.size(), 51)
+	_t.eq("the 23 wired tunes are records under their tunes.json names", named, place)
+	_t.eq("the unwired tune is not a record yet", ["camp-course"].filter(func(id): return not TuneRows.row(id).is_empty()), [])
+	_t.eq("the crate holds 52 records", TuneRows.ROWS.size(), 52)
 	for id in place:
 		if String(id).begins_with("secret-"):
 			_t.check("%s is rare" % id, bool(TuneRows.row(id)["rare"]))
