@@ -1,6 +1,6 @@
 # Scrapkeep in Claude Code and Codex
 
-Both apps use the same project authority and five canonical skills. Claude loads `CLAUDE.md`, which imports `AGENTS.md`; its skill directories link to `.agents/skills`. Shared pstack remains installed once at `/home/andrew/.config/pstack/plugin`. The pstack runtime contract is `/home/andrew/.config/pstack/runtime.md`; the skills and `AGENTS.md` refer to it by role and this file records its path once.
+Both apps use the same project authority and five canonical skills. Claude loads `CLAUDE.md`, which imports `AGENTS.md`; its skill directories link to `.agents/skills`. Shared A stack (renamed from pstack) remains installed once at `/home/andrew/.config/astack/plugin`. The A stack runtime contract is `/home/andrew/.config/astack/runtime.md`; the skills and `AGENTS.md` refer to it by role and this file records its path once.
 
 ## Use it
 
@@ -26,22 +26,22 @@ The game project disables automatic model switching and fallback chains. Runtime
 
 The same settings file makes approval gates mechanical. `permissions.deny` blocks force pushes, `npm publish` and `gh repo delete`; `permissions.ask` prompts for `git push`, `gh repo`, `gh api`, `npm install`, `npm i` and `npm uninstall`. The coordinator pushes reviewed work and answers the prompt; `npm ci` from the lockfile stays unrestricted.
 
-Codex retains its existing Astra role map. Six matching Codex role files under `.codex/agents/` carry the same names, descriptions and packet instructions with a `model_reasoning_effort` pin for Codex desktop sessions. Both maps live under `/home/andrew/.config/pstack/models/`. A prompt does not set runtime model/effort. Verify actual metadata; report unavailable capabilities or substitutions before accepting a lane. This policy does not promise the model used by every internal utility request.
+Codex retains its existing Astra role map. Six matching Codex role files under `.codex/agents/` carry the same names, descriptions and packet instructions with a `model_reasoning_effort` pin for Codex desktop sessions. Both maps live under `/home/andrew/.config/astack/models/`. A prompt does not set runtime model/effort. Verify actual metadata; report unavailable capabilities or substitutions before accepting a lane. This policy does not promise the model used by every internal utility request.
 
 Writers no longer self-isolate. The coordinator creates each writer's worktree at the recorded base with `scripts/new-worktree.sh <task-id> <base-sha>`, which exits nonzero when HEAD differs, and names the path, branch and base SHA in the packet. The writer's first command verifies that identity and stops on a mismatch. Never import all uncommitted owner changes as a shortcut. Preserve leases across interruptions until the owner is confirmed stopped and its artifacts inspected.
 
 ## Check the installation
 
 ```sh
-python /home/andrew/.config/pstack/verify.py --project /home/andrew/Projects/scrapkeep
-python /home/andrew/.config/pstack/test_verify.py
-claude plugin details pstack
+python /home/andrew/.config/astack/verify.py --project /home/andrew/Projects/scrapkeep
+python /home/andrew/.config/astack/test_verify.py
+claude plugin details astack
 npm run check:project
 npm run check:docs
 npm run check:scope -- <base> <candidate> [--no-build]
 ```
 
-The pstack verifier's project section checks that `CLAUDE.md` imports `AGENTS.md`, that each of the five `.claude/skills` entries is a symlink resolving to its `.agents/skills` body, that each skill's frontmatter is discoverable, and that no skill names an obsolete planning file. Its settings and agent checks (`verify.py:140-177`) still encode the earlier three-tier design with `isolation: worktree` and read the removed `modelSettings` key, so they fail on the current definitions until pstack updates the verifier; that update is Andrew's shared-setup change, not a project edit. Since pstack dfca550 (2026-09-26) the verifier lists all five skills, and it fails when this repository's `reactive-model-loop` differs from the canonical pstack plugin copy; the only remaining failure there is the writer's `isolation: worktree` check. `npm run check:skills` checks all five skills: frontmatter, the `.claude/skills` link, cited paths, commands and event ids, and the lesson ledgers. `npm run check:project` checks required files, package/lock metadata and local file links. `npm run check:docs` adds anchors, BACKLOG card completeness and the TRACKING event sequence. `npm run check:scope` classifies changed paths between two commits and prints the commands that scope requires. `npm run verify` qualifies browser-proof code, not configuration, human game feel or the future native game. `check:godot` is reserved until the engineering handoff. Do not run a game build for a documentation-only task. Missing browser tools remain a verification gap.
+The A stack verifier's project section checks that `CLAUDE.md` imports `AGENTS.md`, that each of the five `.claude/skills` entries is a symlink resolving to its `.agents/skills` body, that each skill's frontmatter is discoverable, and that no skill names an obsolete planning file. Its settings and agent checks (`verify.py:140-177`) still encode the earlier three-tier design with `isolation: worktree` and read the removed `modelSettings` key, so they fail on the current definitions until pstack updates the verifier; that update is Andrew's shared-setup change, not a project edit. Since pstack dfca550 (2026-09-26) the verifier lists all five skills, and it fails when this repository's `reactive-model-loop` differs from the canonical pstack plugin copy; the only remaining failure there is the writer's `isolation: worktree` check. `npm run check:skills` checks all five skills: frontmatter, the `.claude/skills` link, cited paths, commands and event ids, and the lesson ledgers. `npm run check:project` checks required files, package/lock metadata and local file links. `npm run check:docs` adds anchors, BACKLOG card completeness and the TRACKING event sequence. `npm run check:scope` classifies changed paths between two commits and prints the commands that scope requires. `npm run verify` qualifies browser-proof code, not configuration, human game feel or the future native game. `check:godot` is reserved until the engineering handoff. Do not run a game build for a documentation-only task. Missing browser tools remain a verification gap.
 
 The Claude port's migration receipts were disposable and lived under the gitignored `artifacts/local/`. The tracked evidence for the current configuration is the accepted audit under `artifacts/ai-first-audit-2026-09-06/`. No new plugin bundle, service or game feature accompanies this configuration; the permission rules above are the only gates added.
 

@@ -1,0 +1,178 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import {
+  APP_ID,
+  AppImageError,
+  EXECUTABLE,
+  appImageName,
+  appImageToolArgs,
+  appRun,
+  buildAppImage,
+  desktopEntry,
+  execPath,
+  findAppimagetool,
+  installPaths,
+  missingToolMessage,
+  newestTarball,
+  parseArgs,
+  versionOf,
+} from "./sketch-appimage.mjs";
+
+test("parseArgs defaults to the newest tarball, installing, with no named packer", () => {
+  assert.deepEqual(parseArgs([]), { tarball: null, install: true, appimagetool: null });
+  assert.deepEqual(parseArgs(["--tarball=/a.tar.gz", "--no-install", "--appimagetool", "/t"]), {
+    tarball: "/a.tar.gz",
+    install: false,
+    appimagetool: "/t",
+  });
+  assert.throws(() => parseArgs(["--nope"]), /unknown argument: --nope/);
+});
+
+test("versionOf reads the sha and dirty mark from a sketch:export tarball name only", () => {
+  assert.equal(versionOf("/x/scrapkeep-core-loop-77b99de.tar.gz"), "77b99de");
+  assert.equal(versionOf("scrapkeep-core-loop-77b99de-dirty.tar.gz"), "77b99de-dirty");
+  assert.equal(versionOf("scrapkeep-core-loop-77b99de.zip"), null);
+  assert.equal(appImageName("77b99de"), "Scrapkeep-77b99de-x86_64.AppImage");
+});
+
+test("newestTarball picks the most recently written export and ignores other files", () => {
+  const times = { "/e/scrapkeep-core-loop-aaaaaaa.tar.gz": 1, "/e/scrapkeep-core-loop-bbbbbbb.tar.gz": 2 };
+  const list = () => ["scrapkeep-core-loop-aaaaaaa.tar.gz", "scrapkeep-core-loop-bbbbbbb.tar.gz", "20261016T000000", "notes.txt"];
+  const dir = mkdtempSync(path.join(os.tmpdir(), "appimage-newest-"));
+  assert.equal(newestTarball(dir), null);
+  assert.equal(newestTarball(path.join(dir, "missing")), null);
+  assert.equal(
+    newestTarball(dir, list, (file) => times["/e/" + path.basename(file)] ?? 0),
+    path.join(dir, "scrapkeep-core-loop-bbbbbbb.tar.gz"),
+  );
+});
+
+test("the desktop entry names the game, its icon and the Game category", () => {
+  const entry = desktopEntry({ exec: "/h/Scrapkeep.AppImage", tryExec: "/h/Scrapkeep.AppImage" });
+  assert.ok(entry.startsWith("[Desktop Entry]\nType=Application\nName=Scrapkeep\n"));
+  assert.match(entry, /^Exec=\/h\/Scrapkeep\.AppImage$/m);
+  assert.match(entry, /^TryExec=\/h\/Scrapkeep\.AppImage$/m);
+  assert.match(entry, new RegExp(`^Icon=${APP_ID}$`, "m"));
+  assert.match(entry, /^Categories=Game;ActionGame;$/m);
+  assert.match(entry, /^Terminal=false$/m);
+  assert.doesNotMatch(desktopEntry({ exec: APP_ID }), /TryExec/);
+});
+
+test("execPath quotes a path the desktop spec would split or expand", () => {
+  assert.equal(execPath("/home/a/.local/share/scrapkeep/Scrapkeep.AppImage"), "/home/a/.local/share/scrapkeep/Scrapkeep.AppImage");
+  assert.equal(execPath("/home/a b/S.AppImage"), '"/home/a b/S.AppImage"');
+  assert.equal(execPath('/h/$x"y'), '"/h/\\$x\\"y"');
+});
+
+test("AppRun runs the game from usr/lib and passes every argument through", () => {
+  const text = appRun();
+  assert.ok(text.startsWith("#!/bin/sh\n"));
+  assert.ok(text.includes(`exec "$HERE/usr/lib/${APP_ID}/${EXECUTABLE}" "$@"`));
+});
+
+test("findAppimagetool honours the flag, then APPIMAGETOOL, then PATH and the usual folders", () => {
+  const has = (set) => (file) => set.has(file);
+  assert.equal(findAppimagetool({ flag: "/t/tool", env: {}, home: "/h", exists: has(new Set(["/t/tool"])) }), "/t/tool");
+  assert.equal(findAppimagetool({ flag: "/t/tool", env: {}, home: "/h", exists: has(new Set()) }), null);
+  assert.equal(findAppimagetool({ env: { APPIMAGETOOL: "/e/tool" }, home: "/h", exists: has(new Set(["/e/tool"])) }), "/e/tool");
+  assert.equal(
+    findAppimagetool({ env: { PATH: "/usr/bin:/opt/bin" }, home: "/h", exists: has(new Set(["/opt/bin/appimagetool"])) }),
+    "/opt/bin/appimagetool",
+  );
+  assert.equal(
+    findAppimagetool({ env: { PATH: "/usr/bin" }, home: "/h", exists: has(new Set(["/h/Applications/appimagetool-x86_64.AppImage"])) }),
+    "/h/Applications/appimagetool-x86_64.AppImage",
+  );
+  assert.equal(findAppimagetool({ env: { PATH: "/usr/bin" }, home: "/h", exists: has(new Set()) }), null);
+});
+
+test("the missing-tool message says where the AppDir is and how to get the packer, never fetching it", () => {
+  const message = missingToolMessage("/x/S.AppDir");
+  assert.ok(message.includes("/x/S.AppDir"));
+  assert.ok(message.includes("yay -S appimagetool-bin"));
+  assert.ok(message.includes("https://github.com/AppImage/appimagetool/releases"));
+  assert.ok(message.includes("--appimagetool=<path>"));
+  assert.ok(missingToolMessage("/x", "/t/tool").startsWith("appimagetool not found at /t/tool."));
+});
+
+test("installPaths puts the AppImage, icon and app-menu entry under the data home", () => {
+  assert.deepEqual(installPaths({ dataHome: "/h/.local/share" }), {
+    appImage: "/h/.local/share/scrapkeep/Scrapkeep.AppImage",
+    icon: "/h/.local/share/icons/hicolor/scalable/apps/scrapkeep.svg",
+    desktop: "/h/.local/share/applications/scrapkeep.desktop",
+  });
+  assert.deepEqual(appImageToolArgs("/a.AppDir", "/a.AppImage"), ["--no-appstream", "/a.AppDir", "/a.AppImage"]);
+});
+
+// A tarball shaped like sketch:export's: one top folder holding the game and music_ace.
+function fakeExport() {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "appimage-build-"));
+  const stage = path.join(dir, "20261016T000000");
+  mkdirSync(path.join(stage, "music_ace/spillway"), { recursive: true });
+  writeFileSync(path.join(stage, EXECUTABLE), "#!/bin/sh\necho game \"$@\"\n");
+  writeFileSync(path.join(stage, "music_ace/spillway/manifest.json"), "{}\n");
+  writeFileSync(path.join(stage, "BUILD.txt"), "commit: abc\n");
+  const tarball = path.join(dir, "scrapkeep-core-loop-abcdef1.tar.gz");
+  const tar = spawnSync("tar", ["-czf", tarball, "-C", dir, "--transform=s,^20261016T000000,scrapkeep-core-loop-abcdef1,", "20261016T000000"]);
+  assert.equal(tar.status, 0, String(tar.stderr));
+  // Stands in for appimagetool: records its arguments and writes the output file it was given.
+  const tool = path.join(dir, "fake-appimagetool");
+  writeFileSync(tool, '#!/bin/sh\necho "$@" > "$(dirname "$0")/tool-args"\necho "$ARCH" > "$(dirname "$0")/tool-arch"\nprintf image > "$3"\n', { mode: 0o755 });
+  return { dir, tarball, tool };
+}
+
+test("buildAppImage lays out the AppDir, packs it and installs the app-menu entry", async () => {
+  const { dir, tarball, tool } = fakeExport();
+  const home = path.join(dir, "home");
+  const result = await buildAppImage({ tarball, appimagetool: tool, env: { PATH: process.env.PATH }, home, log: () => {} });
+  const appDir = path.join(dir, "Scrapkeep-abcdef1-x86_64.AppDir");
+  assert.equal(result.appDir, appDir);
+  assert.equal(result.output, path.join(dir, "Scrapkeep-abcdef1-x86_64.AppImage"));
+  assert.ok(statSync(path.join(appDir, "usr/lib/scrapkeep", EXECUTABLE)).mode & 0o100);
+  assert.ok(existsSync(path.join(appDir, "usr/lib/scrapkeep/music_ace/spillway/manifest.json")));
+  assert.ok(statSync(path.join(appDir, "AppRun")).mode & 0o100);
+  assert.match(readFileSync(path.join(appDir, "scrapkeep.desktop"), "utf8"), /^Exec=scrapkeep$/m);
+  assert.ok(existsSync(path.join(appDir, "scrapkeep.svg")));
+  assert.ok(existsSync(path.join(appDir, ".DirIcon")));
+  assert.equal(readFileSync(path.join(dir, "tool-args"), "utf8").trim(), `--no-appstream ${appDir} ${result.output}`);
+  assert.equal(readFileSync(path.join(dir, "tool-arch"), "utf8").trim(), "x86_64");
+
+  const run = spawnSync(path.join(appDir, "AppRun"), ["--", "--profile=sitting"], { encoding: "utf8", env: { APPDIR: appDir } });
+  assert.equal(run.stdout.trim(), "game -- --profile=sitting");
+
+  const share = path.join(home, ".local/share");
+  assert.equal(readFileSync(path.join(share, "scrapkeep/Scrapkeep.AppImage"), "utf8"), "image");
+  assert.ok(statSync(path.join(share, "scrapkeep/Scrapkeep.AppImage")).mode & 0o100);
+  assert.ok(existsSync(path.join(share, "icons/hicolor/scalable/apps/scrapkeep.svg")));
+  const entry = readFileSync(path.join(share, "applications/scrapkeep.desktop"), "utf8");
+  assert.match(entry, new RegExp(`^Exec=${share.replace(/[.]/g, "\\.")}/scrapkeep/Scrapkeep\\.AppImage$`, "m"));
+});
+
+test("buildAppImage honours XDG_DATA_HOME and --no-install", async () => {
+  const { dir, tarball, tool } = fakeExport();
+  const dataHome = path.join(dir, "xdg");
+  await buildAppImage({ tarball, appimagetool: tool, env: { PATH: process.env.PATH, XDG_DATA_HOME: dataHome }, home: "/nonexistent", log: () => {} });
+  assert.ok(existsSync(path.join(dataHome, "applications/scrapkeep.desktop")));
+  const skipped = await buildAppImage({ tarball, install: false, appimagetool: tool, env: { PATH: process.env.PATH, XDG_DATA_HOME: path.join(dir, "none") }, log: () => {} });
+  assert.equal(skipped.installed, null);
+  assert.ok(!existsSync(path.join(dir, "none")));
+});
+
+test("buildAppImage without appimagetool leaves the AppDir and says how to get the tool", async () => {
+  const { dir, tarball } = fakeExport();
+  await assert.rejects(
+    buildAppImage({ tarball, env: { PATH: "" }, home: path.join(dir, "home"), log: () => {} }),
+    (error) => error instanceof AppImageError && /appimagetool not found/.test(error.message) && /yay -S/.test(error.message),
+  );
+  assert.ok(existsSync(path.join(dir, "Scrapkeep-abcdef1-x86_64.AppDir/AppRun")));
+  assert.ok(!existsSync(path.join(dir, "home/.local/share/applications")));
+});
+
+test("buildAppImage refuses a file that is not a sketch:export tarball", async () => {
+  await assert.rejects(buildAppImage({ tarball: "/x/game.tar.gz", log: () => {} }), /not a sketch:export tarball/);
+  await assert.rejects(buildAppImage({ tarball: "/x/scrapkeep-core-loop-abcdef1.tar.gz", log: () => {} }), /tarball missing/);
+});
