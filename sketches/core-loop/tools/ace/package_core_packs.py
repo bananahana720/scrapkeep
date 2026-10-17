@@ -46,38 +46,61 @@ CUES = {
     'spillway-loop': (None, 'spiced'), 'dig-loop': (None, 'spiced'), 'highdraft-loop': (None, 'spiced'),
     'boss-brindle': (129, 'spiced'), 'boss-waking': (129, 'spiced'), 'boss-mind': (129, 'spiced'),
     'title-a': (129, 'spiced'), 'title-b': (129, 'spiced'), 'title-c': (172, 'spiced'),
-    'summary-win': (129, 'spiced'), 'summary-loss': (129, 'light'),
+    'camp': (129, 'light'),
 }
-# pack -> (cue, kind, key). Stage-to-pack mapping: src/core/park_defs.gd music.ace (stage 1 spillway, 2 cable_reach,
-# 3 dig_upper, 4 dig_deep, 5 highdraft, 6 highdraft_crown); wardens and the menus are src/presentation/music_rows.gd.
-# Worlds' tonics: Spillway D, Dig E, Highdraft G; Brindle and the Waking D, the Mind E (package_phase_tracks.py TRACKS).
+ZONE_BPM = 129
+# pack -> (kind, key, cue, roam cue, stage). Stage-to-pack mapping: src/core/park_defs.gd music.ace (stage 1 spillway,
+# 2 cable_reach, 3 dig_upper, 4 dig_deep, 5 highdraft, 6 highdraft_crown). Worlds' tonics: Spillway D, Dig E, Highdraft G;
+# Brindle and the Waking D, the Mind E (package_phase_tracks.py TRACKS).
+# roam: calm and travel from the roam track's current mix, cadence from its spiced mix, at 172 (the title layout).
+# zone: the world's 16-bar loop stretched to 129 supplies pivot, build, telegraph, open, drop and cadence; calm and
+#   travel come from the roam track at 172. Stage B, the world's second stage, takes windows 8 bars further on.
+# boss: the long-track plan at 129. menu: calm, travel and cadence from the picked mix whole.
 PACKS = {
-    'spillway': ('roam-spillway', 'long', 'D'),
-    'cable_reach': ('spillway-loop', 'loop', 'D'),
-    'dig_upper': ('roam-dig', 'long', 'E'),
-    'dig_deep': ('dig-loop', 'loop', 'E'),
-    'highdraft': ('roam-highdraft', 'long', 'G'),
-    'highdraft_crown': ('highdraft-loop', 'loop', 'G'),
-    'brindle': ('boss-brindle', 'long', 'D'),
-    'waking': ('boss-waking', 'long', 'D'),
-    'mind': ('boss-mind', 'long', 'E'),
-    'title': ('title-a', 'menu', 'D'),
-    'title_a': ('title-a', 'menu', 'D'),
-    'title_b': ('title-b', 'menu', 'D'),
-    'title_c': ('title-c', 'menu', 'D'),
-    'summary': ('summary-win', 'summary', 'D'),
+    'roam_spillway': ('roam', 'D', 'roam-spillway', None, 'A'),
+    'roam_dig': ('roam', 'E', 'roam-dig', None, 'A'),
+    'roam_highdraft': ('roam', 'G', 'roam-highdraft', None, 'A'),
+    'spillway': ('zone', 'D', 'spillway-loop', 'roam-spillway', 'A'),
+    'cable_reach': ('zone', 'D', 'spillway-loop', 'roam-spillway', 'B'),
+    'dig_upper': ('zone', 'E', 'dig-loop', 'roam-dig', 'A'),
+    'dig_deep': ('zone', 'E', 'dig-loop', 'roam-dig', 'B'),
+    'highdraft': ('zone', 'G', 'highdraft-loop', 'roam-highdraft', 'A'),
+    'highdraft_crown': ('zone', 'G', 'highdraft-loop', 'roam-highdraft', 'B'),
+    'boss_brindle': ('boss', 'D', 'boss-brindle', None, 'A'),
+    'boss_waking': ('boss', 'D', 'boss-waking', None, 'A'),
+    'boss_mind': ('boss', 'E', 'boss-mind', None, 'A'),
+    'title_a': ('menu', 'D', 'title-a', None, 'A'),
+    'title_b': ('menu', 'D', 'title-b', None, 'A'),
+    'title_c': ('menu', 'D', 'title-c', None, 'A'),
+    'camp': ('menu', 'D', 'camp', None, 'A'),
 }
-SHORT_CLIPS = {'pivot', 'telegraph', 'open', 'drop', 'cadence'}
+# A new pack's section map comes from the existing pack it sits beside.
+TEMPLATES = {'boss_brindle': 'brindle', 'boss_waking': 'waking', 'boss_mind': 'mind'}
 
 
 def mix_name(cue, high):
     return f'{cue}-{high}' if high else f'{cue}-current'
 
 
-def load_track(work, cue, which):
+def stretch(work):
+    """Rubber Band every stem of the three loop tracks from its native tempo to ZONE_BPM, one ratio per track."""
+    for cue, (nominal, high) in CUES.items():
+        if nominal is not None:
+            continue
+        for name in (mix_name(cue, None), mix_name(cue, high)):
+            src = work / 'stems/htdemucs' / name
+            native = 16 * 240 / (sf.info(src / 'drums.wav').frames / RATE)
+            dst = work / 'stretched' / name
+            dst.mkdir(parents=True, exist_ok=True)
+            for s in ('drums', 'bass', 'other', 'vocals'):
+                subprocess.run(['rubberband', '-q', '--fine', '-T', f'{ZONE_BPM / native:.8f}', str(src / f'{s}.wav'), str(dst / f'{s}.wav')], check=True)
+            print(name, f'native {native:.3f} -> {ZONE_BPM}', flush=True)
+
+
+def load_track(work, cue, which, stretched=False):
     """Stems of one mix at 44.1 kHz: drums, bass, other (vocals folded in), as float64 (n, 2)."""
     name = mix_name(cue, CUES[cue][1] if which == 'high' else None)
-    folder = work / 'stems/htdemucs' / name
+    folder = work / ('stretched' if stretched else 'stems/htdemucs') / name
     out = {}
     for s in ('drums', 'bass', 'other', 'vocals'):
         a, sr = sf.read(folder / f'{s}.wav', always_2d=True)
@@ -117,15 +140,19 @@ class Track:
         import cut_loops
         self.cue = cue
         nominal, self.high_name = CUES[cue]
-        self.cur_name, self.cur = load_track(work, cue, 'cur')
-        self.hi_name, self.hi = load_track(work, cue, 'high')
-        self.n = len(self.cur['drums'])
         self.loop = nominal is None
+        self.cur_name, self.cur = load_track(work, cue, 'cur', self.loop)
+        self.hi_name, self.hi = load_track(work, cue, 'high', self.loop)
+        if self.loop:
+            # The stretched loop is exactly 16 bars of the zone tempo; Rubber Band's length is trimmed or padded to that.
+            want = int(round(16 * 240 / ZONE_BPM * RATE))
+            for d in (self.cur, self.hi):
+                for s in STEMS:
+                    d[s] = d[s][:want] if len(d[s]) >= want else np.pad(d[s], ((0, want - len(d[s])), (0, 0)))
+        self.n = len(self.cur['drums'])
         self.flux, self.rate = flux_of(self.cur)
         if self.loop:
-            # A cut loop is exactly 16 bars long, so its length gives the tempo; the onsets only confirm it.
-            self.tempo = 16 * 240 * RATE / self.n / 1.0 / (RATE / RATE)
-            self.tempo = 16 * 240 / (self.n / RATE)
+            self.tempo = float(ZONE_BPM)
             self.read = narrow_tempo(self.flux, self.rate, self.tempo, 0.01)
             self.music_bars = 16
             self.head = 0.0
@@ -172,19 +199,26 @@ class Track:
         return int(round(s0 + p)), p / RATE * 1000
 
 
-def plan_for(track, kind):
-    """clip id -> (mix 'cur' or 'high', first bar, bars, loop target bar or None)."""
-    m = track.music_bars
-    if kind == 'long':
-        return dict(calm=('cur', 4, 16, 1), travel=('cur', 20, 16, 1), pivot=('high', 15, 1, None),
-                    build=('high', 16, 16, 9), telegraph=('high', m - 12, 4, 1), open=('high', m - 8, 4, 1),
-                    drop=('high', m - 4, 4, None), cadence=('cur', m - 2, 2, None))
-    if kind == 'loop':
-        return dict(calm=('cur', 0, 16, 1), travel=('cur', 8, 16, 1), pivot=('high', -1, 1, None),
-                    build=('high', 0, 16, 9), telegraph=('high', 4, 4, 1), open=('high', 8, 4, 1),
-                    drop=('high', 12, 4, None), cadence=('cur', 14, 2, None))
+def plan_for(pack, tracks):
+    """clip id -> (track, mix 'cur' or 'high', first bar, bars, loop target bar or None)."""
+    kind, _key, cue, roam, stage = PACKS[pack]
+    t = tracks[cue]
+    m = t.music_bars
+    if kind == 'roam':
+        return dict(calm=(t, 'cur', 4, 16, 1), travel=(t, 'cur', 20, 16, 1), cadence=(t, 'high', m - 2, 2, None))
+    if kind == 'boss':
+        return dict(calm=(t, 'cur', 4, 16, 1), travel=(t, 'cur', 20, 16, 1), pivot=(t, 'high', 15, 1, None),
+                    build=(t, 'high', 16, 16, 9), telegraph=(t, 'high', m - 12, 4, 1), open=(t, 'high', m - 8, 4, 1),
+                    drop=(t, 'high', m - 4, 4, None), cadence=(t, 'cur', m - 2, 2, None))
     if kind == 'menu':
-        return dict(calm=('high', 4, 16, 1), travel=('high', 20, 16, 1), cadence=('high', m - 2, 2, None))
+        return dict(calm=(t, 'high', 4, 16, 1), travel=(t, 'high', 20, 16, 1), cadence=(t, 'high', m - 2, 2, None))
+    if kind == 'zone':
+        r = tracks[roam]
+        o = 0 if stage == 'A' else 8
+        shelf = 4 + o
+        return dict(calm=(r, 'cur', shelf, 16, 1), travel=(r, 'cur', shelf + 16, 16, 1), pivot=(t, 'high', o - 1, 1, None),
+                    build=(t, 'high', o, 16, 9), telegraph=(t, 'high', 4 + o, 4, 1), open=(t, 'high', 8 + o, 4, 1),
+                    drop=(t, 'high', 12 + o, 4, None), cadence=(t, 'cur', 14 + o, 2, None))
     raise SystemExit(f'no plan for {kind}')
 
 
@@ -229,19 +263,11 @@ def fit_gain(pcm):
 
 
 def cut_pack(work, pack, tracks):
-    cue, kind, key = PACKS[pack]
-    if cue not in tracks:
-        tracks[cue] = Track(work, cue)
-    t = tracks[cue]
-    plan = plan_for(t, kind) if pack != 'summary' else None
-    if pack == 'summary':
-        loss = tracks.setdefault('summary-loss', Track(work, 'summary-loss'))
-        wm = t.music_bars
-        plan = dict(cadence=(t, 'high', 0, 3, None), calm=(t, 'high', 3, wm - 3, 1),
-                    travel=(loss, 'high', 1, loss.music_bars - 1, 1))
-        # summary-loss' light mix is its 'high' name (CUES), summary-win's spiced mix is its 'high' name.
-    else:
-        plan = {cid: (t, *rest) for cid, rest in plan.items()}
+    kind, key, cue, roam, _stage = PACKS[pack]
+    for c in (cue, roam):
+        if c and c not in tracks:
+            tracks[c] = Track(work, c)
+    plan = plan_for(pack, tracks)
     rows = {}
     for cid, (tr, which, first, bars, loop_bar) in plan.items():
         stems = tr.hi if which == 'high' else tr.cur
@@ -264,8 +290,9 @@ def cut_pack(work, pack, tracks):
 
 
 def write_pack(work, pack, kind, key, rows):
-    template = json.loads((OUT / pack / 'manifest.json').read_text()) if (OUT / pack / 'manifest.json').exists() else \
-        json.loads((OUT / 'title' / 'manifest.json').read_text())
+    own = OUT / pack / 'manifest.json'
+    beside = OUT / TEMPLATES.get(pack, 'title') / 'manifest.json'
+    template = json.loads((own if own.exists() and kind == 'zone' else beside).read_text())
     folder = OUT / pack
     folder.mkdir(parents=True, exist_ok=True)
     clips, sources = {}, {}
@@ -279,7 +306,7 @@ def write_pack(work, pack, kind, key, rows):
             encode(v, folder / files[s])
         mixname = tr.hi_name if r['which'] == 'high' else tr.cur_name
         mix_path = SPICE / f'{mixname}.wav'
-        stem_dir = work / 'stems/htdemucs' / mixname
+        stem_dir = work / ('stretched' if tr.loop else 'stems/htdemucs') / mixname
         total = len(r['pcm']['drums'])
         clips[cid] = dict(parent=kind, take=mixname, source_state=f'{mixname} bars {r["first"]}-{r["first"] + r["bars"] - 1}',
                           source_bars=f'{r["first"] + 1}-{r["first"] + r["bars"]}', source_start=r['start'], take_start=r['start'],
@@ -305,19 +332,25 @@ def write_pack(work, pack, kind, key, rows):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('cmd', choices=('plan', 'pack'))
+    ap.add_argument('cmd', choices=('stretch', 'plan', 'pack'))
     ap.add_argument('work', type=Path)
     ap.add_argument('--packs', nargs='*', default=list(PACKS))
     args = ap.parse_args()
+    if args.cmd == 'stretch':
+        return stretch(args.work)
     tracks = {}
     for pack in args.packs:
         if args.cmd == 'plan':
-            cue, kind, key = PACKS[pack]
-            t = tracks.setdefault(cue, Track(args.work, cue))
-            print(pack, cue, kind, f'tempo {t.tempo:.3f} (read {t.read:.3f}) music bars {t.music_bars} head {t.head / RATE:.4f}s')
-            if pack != 'summary':
-                for cid, row in plan_for(t, kind).items():
-                    print('   ', cid, row, 'snap', t.snap(row[0], row[1])[1])
+            kind, key, cue, roam, stage = PACKS[pack]
+            for c in (cue, roam):
+                if c and c not in tracks:
+                    tracks[c] = Track(args.work, c)
+            for c in (cue, roam):
+                if c:
+                    t = tracks[c]
+                    print(pack, c, kind, stage, f'tempo {t.tempo:.3f} (read {t.read:.3f}) music bars {t.music_bars} head {t.head / RATE:.4f}s')
+            for cid, (t, which, first, bars, loop) in plan_for(pack, tracks).items():
+                print('   ', cid, t.cue, which, first, bars, loop, f'snap {t.snap(which, first)[1]:.1f} ms')
         else:
             kind, key, rows = cut_pack(args.work, pack, tracks)
             write_pack(args.work, pack, kind, key, rows)
