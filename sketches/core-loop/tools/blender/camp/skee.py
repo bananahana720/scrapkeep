@@ -62,14 +62,16 @@ CROWN_R, CROWN_CY = 14.4, 1.5
 
 def lane_h(d):
     """Lane surface height at distance d up the lane (0 at the foot)."""
+    if d < 0.0:
+        return 0.02 + 0.04 * (d + 0.6) / 0.6
     if d <= LANE_L - HUMP_L:
-        return RISE * d / (LANE_L - HUMP_L)
+        return 0.06 + RISE * d / (LANE_L - HUMP_L)
     t = (d - (LANE_L - HUMP_L)) / HUMP_L
-    return RISE + HUMP_H * (0.35 * t + 0.65 * t * t)
+    return 0.06 + RISE + HUMP_H * (0.35 * t + 0.65 * t * t)
 
 
 def lane_rows():
-    rows = [0.0, 4.0, 8.0, 12.0, 16.0, 20.0]
+    rows = [-0.6, 0.0, 4.0, 8.0, 12.0, 16.0, 20.0]
     rows += [20.0 + HUMP_L * i / 7 for i in range(1, 8)]
     return rows
 
@@ -146,7 +148,7 @@ def board_top(s, color=True):
             for i in range(NSEG):
                 a, b = p[i], p[(i + 1) % NSEG]
                 lo, hi = min(a[1], b[1]), max(a[1], b[1])
-                if hi - lo < 1e-9 or lo > v0 + 1e-9 or hi < v1 - 1e-9:
+                if hi - lo < 1e-9 or lo > v0 + 1e-6 or hi < v1 - 1e-6:
                     continue
                 f = lambda v: a[0] + (b[0] - a[0]) * (v - a[1]) / (b[1] - a[1])
                 edges.append((f(v0), f(v1)))
@@ -197,81 +199,203 @@ def board_under(s):
 
 # ----------------------------------------------------------------------------------------------------------- structure
 
+def lane_profile():
+    return [(-d, lane_h(d)) for d in lane_rows()]
+
+
+def flat_bot(top):
+    return [(top[0][0], 0.0), (top[-1][0], 0.0)]
+
+
 def structure(s, col=False):
-    rows = lane_rows()
-    top = [(-d, lane_h(d)) for d in rows]
-    felt = [cp.jitter_tone("felt", k, 0.04) for k in range(len(top) - 1)]
-    # Lane body (felt top, timber ends), then the timber cabinet sides and the copper rails above them.
-    topped(s, top, [(top[0][0], 0.0), (top[-1][0], 0.0)], felt, "timber", "x") if False else None
-    topped(s, top, [(top[0][0], 0.0), (top[-1][0], 0.0)], felt, "timber", "x") if False else None
-    topped_lane(s, top, felt)
+    side = lane_profile()
+    felt = [cp.jitter_tone("felt", k, 0.04) for k in range(len(side) - 1)]
+    topped(s, side, flat_bot(side), -LANE_HW, LANE_HW, felt, "timber", "x")
     for sx in (-1, 1):
         x0, x1 = sorted((sx * LANE_HW, sx * (LANE_HW + RAIL_T)))
-        topped(s, top, [(top[0][0], 0.0), (top[-1][0], 0.0)], "timber_lt", "timber", "x") if False else None
-        side = [(-d, lane_h(d)) for d in rows]
-        topped(s, side, [(side[0][0], 0.0), (side[-1][0], 0.0)], "timber_lt", "timber", "x") if False else None
-        rail_top = [(z, y + RAIL_H) for z, y in side]
-        topped_x(s, side, rail_top, x0, x1)
-    # Trough: floor tilts down toward the gutter (+X), left wall, and the gutter and outer walls.
-    tz0, tz1 = Z0, -LANE_L
-    topped(s, [(-W, 1.9), (3.15, 1.4)], [(-W, 0.0), (3.15, 0.0)], "iron_hi", "timber", "z") if False else None
-    trough(s, tz0, tz1)
-    topped(s, zline(Z0, 3.5, gut_y), [(Z0, 0.0), (3.5, 0.0)], "iron_hi", "timber", "x") if False else None
-    topped_x_gutter(s)
-    # Board walls (vertical top, level with the plane raised 1.4 m), backstop.
+        topped(s, side, flat_bot(side), x0, x1, "timber_lt", "timber", "x")
+        topped(s, [(z, y + RAIL_H) for z, y in side], side, x0, x1, "copper", "copper", "x")
+    # Trough between the hump and the board: floor tilts toward the gutter (+X), left wall.
+    topped(s, [(-W, 1.9), (3.15, 1.4)], [(-W, 0.0), (3.15, 0.0)], Z0, -LANE_L, "iron_hi", "timber", "z")
+    topped(s, [(Z0, 3.05), (-LANE_L, 3.05)], flat_bot([(Z0, 0), (-LANE_L, 0)]), -CAB, -W, "timber_lt", "timber", "x")
+    # Return gutter and its outer wall, 1.4 m of slope over 30 m.
+    gz = [(Z0, gut_y(Z0)), (3.5, gut_y(3.5))]
+    topped(s, gz, flat_bot(gz), 3.15, W, "iron_hi", "timber", "x")
+    topped(s, [(z, y + 1.65) for z, y in gz], flat_bot(gz), W, CAB, "timber_lt", "timber", "x")
+    # Board side walls (the plane raised 1.4 m), the backstop, the arch.
+    bw = [(Z_END, Y_END + 1.4), (Z0, Y0 + 1.4)]
     for x0, x1 in ((-CAB, -W), (W, CAB)):
-        topped(s, [(Z0, Y0 + 1.4), (Z_END, Y_END + 1.4)], [(Z0, 0.0), (Z_END, 0.0)], "timber_lt", "timber", "x") if False else None
-        wall(s, x0, x1)
-    wall(s, -CAB, -W, trough_part=True)
+        topped(s, bw, flat_bot(bw), x0, x1, "timber_lt", "timber", "x")
     s.box((2 * CAB, Y_END + 2.6, 0.6), (0, (Y_END + 2.6) / 2, Z_END - 0.3), T["timber"])
-    s.box((2 * CAB, 0.15, 0.7), (0, Y_END + 2.65, Z_END - 0.3), T["copper"]) if not col else None
     board_top(s, color=not col)
     cup_body(s)
-    # Scoreboard arch: two posts and the header.
+    zc = (ARCH_Z0 + ARCH_Z1) / 2
     for sx in (-1, 1):
-        s.box((0.7, HEAD_Y0, ARCH_Z1 - ARCH_Z0), (sx * (CAB + 0.35), HEAD_Y0 / 2, (ARCH_Z0 + ARCH_Z1) / 2), T["timber"])
-    s.box((2 * (CAB + 0.7), HEAD_Y1 - HEAD_Y0, ARCH_Z1 - ARCH_Z0), (0, (HEAD_Y0 + HEAD_Y1) / 2, (ARCH_Z0 + ARCH_Z1) / 2), T["iron"])
+        s.box((0.7, HEAD_Y0, ARCH_Z1 - ARCH_Z0), (sx * (CAB + 0.35), HEAD_Y0 / 2, zc), T["timber"])
+    s.box((2 * (CAB + 0.7), HEAD_Y1 - HEAD_Y0, ARCH_Z1 - ARCH_Z0), (0, (HEAD_Y0 + HEAD_Y1) / 2, zc), T["iron"])
     if col:
         board_under(s)
 
 
-def topped_lane(s, top, felt):
-    topped(s, top, [(top[0][0], 0.0), (top[-1][0], 0.0)], felt, "timber", "x") if False else None
-    xs = (-LANE_HW, LANE_HW)
-    topped(s, top, [(top[0][0], 0.0), (top[-1][0], 0.0)], felt, "timber", "x") if False else None
-    _lane_solid(s, top, felt, xs[0], xs[1])
+def strip(s, d0, d1, x0, x1, lift, color):
+    """A flat painted strip on the lane between d0 and d1 (inside one linear or curved row; split at row edges)."""
+    cuts = [d0] + [d for d in lane_rows() if d0 < d < d1] + [d1]
+    for a, b in zip(cuts, cuts[1:]):
+        face(s, [(x0, lane_h(a) + lift, -a), (x1, lane_h(a) + lift, -a), (x1, lane_h(b) + lift, -b), (x0, lane_h(b) + lift, -b)],
+             (0, 1, 0), color)
 
 
-def _lane_solid(s, top, felt, x0, x1):
-    topped(s, top, [(top[0][0], 0.0), (top[-1][0], 0.0)], felt, "timber", "x")
+def chevron(s, d, color):
+    outer = [(-1.1, d - 0.5), (0.0, d + 0.7), (1.1, d - 0.5)]
+    inner = [(1.1, d - 1.0), (0.0, d + 0.2), (-1.1, d - 1.0)]
+    face(s, [(x, lane_h(dd) + 0.025, -dd) for x, dd in outer + inner], (0, 1, 0), color)
 
 
-def topped_x(s, side, rail_top, x0, x1):
-    """Timber cabinet side (to the lane's height) with the copper rail on top of it, as two closed solids."""
-    topped(s, side, [(side[0][0], 0.0), (side[-1][0], 0.0)], "timber_lt", "timber", "x")
-    topped(s, rail_top, side, "copper", "copper", "x") if False else None
-    _rail(s, rail_top, side, x0, x1)
+def cap(s, pts, x0, x1, lift, color, side="iron"):
+    topped(s, [(z, y + lift) for z, y in pts], pts, x0, x1, color, side, "x")
 
 
-def _rail(s, rail_top, side, x0, x1):
-    topped(s, rail_top, side, "copper_dk", "copper", "x") if False else None
-    topped_w(s, rail_top, side, x0, x1)
+def crown_pt(a):
+    return (CROWN_R * math.sin(a), CROWN_CY + CROWN_R * math.cos(a))
 
 
-def topped_w(s, top, bot, x0, x1):
-    topped(s, top, bot, "copper", "copper", "x") if False else None
-    _topped_xr(s, top, bot, x0, x1)
+BULB_ANGLES = [math.radians(a) for a in (-24, -18, -12, -6, 0, 6, 12, 18, 24)]
 
 
-def _topped_xr(s, top, bot, x0, x1):
-    topped(s, top, bot, "copper", "copper", "x") if False else None
-    _emit(s, top, bot, x0, x1, "copper", "copper")
+def bulbs():
+    out = []
+    for a in BULB_ANGLES:
+        x, y = crown_pt(a)
+        out.append((x, y + 0.05, ARCH_Z1 + 0.12))
+    for sx in (-1, 1):
+        out.append((sx * (CAB + 0.35), HEAD_Y0 + 0.3, ARCH_Z1 + 0.12))
+    return out
 
 
-def _emit(s, top, bot, x0, x1, topcol, sidecol):
-    topped(s, top, bot, topcol, sidecol, "x") if False else None
-    topped_wx(s, top, bot, x0, x1, topcol, sidecol)
+def base(s):
+    structure(s)
+    side = lane_profile()
+    # Lane markings: bone edge lines, mint start bar and arrows, distance bars, a copper lip.
+    for sx in (-1, 1):
+        strip(s, 0.0, LANE_L - 0.6, sx * 2.45 - 0.07, sx * 2.45 + 0.07, 0.015, "bone")
+    strip(s, 1.2, 1.8, -2.3, 2.3, 0.02, "mint")
+    for k, d in enumerate((3.2, 7.2, 11.2, 15.2, 18.8)):
+        chevron(s, d, "mint" if k % 2 == 0 else "mint_dk")
+    for d in (6.0, 10.0, 14.0, 18.0):
+        strip(s, d, d + 0.14, -2.3, 2.3, 0.012, "bone")
+    y6, y7 = lane_h(LANE_L - 0.5), lane_h(LANE_L)
+    topped(s, [(-(LANE_L - 0.5), y6 + 0.04), (-LANE_L, y7 + 0.04)], [(-(LANE_L - 0.5), y6), (-LANE_L, y7)],
+           -LANE_HW, LANE_HW, "copper", "copper_dk", "x")
+    # Iron rail caps, copper wall caps.
+    for sx in (-1, 1):
+        x0, x1 = sorted((sx * LANE_HW, sx * (LANE_HW + RAIL_T)))
+        cap(s, [(z, y + RAIL_H) for z, y in side], x0 - 0.08, x1 + 0.08, 0.1, "iron_hi")
+    bw = [(Z_END, Y_END + 1.4), (Z0, Y0 + 1.4)]
+    gz = [(Z0, gut_y(Z0) + 1.65), (3.5, gut_y(3.5) + 1.65)]
+    for x0, x1 in ((-CAB - 0.05, -W + 0.05), (W - 0.05, CAB + 0.05)):
+        cap(s, bw, x0, x1, 0.12, "copper", "copper_dk")
+    cap(s, gz, W - 0.05, CAB + 0.05, 0.12, "copper", "copper_dk")
+    cap(s, [(Z0, 3.05), (-LANE_L, 3.05)], -CAB - 0.05, -W + 0.05, 0.12, "copper", "copper_dk")
+    s.box((2 * CAB + 0.2, 0.18, 0.8), (0, Y_END + 2.69, Z_END - 0.3), T["copper"])
+    cup_decor(s)
+    # Scoreboard: frame, six blank amber panels (runtime draws digits), copper crown with marquee bulbs.
+    zc = (ARCH_Z0 + ARCH_Z1) / 2
+    s.box((2 * (CAB + 0.7) + 0.2, 0.22, 0.2), (0, HEAD_Y1 + 0.11, ARCH_Z1 - 0.05), T["copper"])
+    s.box((2 * (CAB + 0.7) + 0.2, 0.22, 0.2), (0, HEAD_Y0 - 0.11, ARCH_Z1 - 0.05), T["copper"])
+    for x, w in ((-5.4, 1.2), (-3.3, 1.7), (-1.1, 1.7), (1.1, 1.7), (3.3, 1.7), (5.4, 1.2)):
+        s.box((w + 0.3, 2.3, 0.06), (x, 13.0, ARCH_Z1 + 0.03), T["amber_dk"])
+        s.box((w, 2.0, 0.06), (x, 13.0, ARCH_Z1 + 0.09), T["amber"])
+    pts = [crown_pt(math.radians(a)) for a in range(-27, 28, 3)]
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        cp.obox(s, (math.hypot(x1 - x0, y1 - y0) + 0.06, 0.4, 1.0), ((x0 + x1) / 2, (y0 + y1) / 2, zc),
+                T["copper"], roll=math.atan2(y1 - y0, x1 - x0))
+    for sx in (-1, 1):
+        s.box((1.0, 0.3, 1.8), (sx * (CAB + 0.35), HEAD_Y0 - 0.15, zc), T["copper"])
+        s.box((0.9, 0.5, 1.6), (sx * (CAB + 0.35), 0.25, zc), T["copper_dk"])
+    for x, y, z in bulbs():
+        cp.lamp(s, x, y, z, 0.28)
+    # Dark ledge under each board lip and a bone chalk line across the foot of the board.
+    face(s, [P(-W, 0.0, 0.02), P(W, 0.0, 0.02), P(W, 0.25, 0.02), P(-W, 0.25, 0.02)], (0, CT, ST), "copper")
 
 
-def topped_wx(s, top, bot, x0, x1, topcol, sidecol):
-    pass
+def detail1(s):
+    side = lane_profile()
+    zs = [-d for d in (1.0, 4.5, 8.0, 11.5, 15.0, 18.5, 21.5)]
+    for sx in (-1, 1):
+        for z in zs:
+            y = lane_h(-z) + RAIL_H * 0.5 + 0.2
+            cp.pk.hexstud(s, (sx * (LANE_HW + RAIL_T), y, z), (sx, 0, 0), 0.09, 0.07, T["copper_dk"])
+            cp.pk.hexstud(s, (sx * LANE_HW, y, z), (-sx, 0, 0), 0.09, 0.06, T["copper_dk"])
+    for f in (0.35, 0.7):
+        for sx in (-1, 1):
+            xo = sx * (LANE_HW + RAIL_T)
+            x0, x1 = sorted((xo, xo + sx * 0.03))
+            a, b = (0.0, lane_h(0.0)), (-20.0, lane_h(20.0))
+            topped(s, [(a[0], a[1] * f + 0.03), (b[0], b[1] * f + 0.03)], [(a[0], a[1] * f - 0.03), (b[0], b[1] * f - 0.03)],
+                   x0, x1, "timber", "timber", "x")
+    for k in range(9):
+        z = -22.0 + 3.0 * k + 0.0
+        if z > 3.0:
+            break
+        s.box((2.4, 0.07, 0.22), (4.4, gut_y(z) + 0.035, z), T["iron"])
+    for sx in (-1, 1):
+        zc = (ARCH_Z0 + ARCH_Z1) / 2
+        for y in (2.0, 5.5, 9.0):
+            s.box((0.86, 0.22, 1.5), (sx * (CAB + 0.35), y, zc), T["copper_dk"])
+
+
+def detail2(s):
+    for k in range(12):
+        x = -6.0 + 12.0 * k / 11
+        cp.pk.hexstud(s, (x, HEAD_Y0 + 0.2, ARCH_Z1 - 0.05), (0, 0, 1), 0.07, 0.07, T["copper_dk"])
+    for k in range(10):
+        a = BULB_ANGLES[min(k, 8)]
+        x, y = crown_pt(a + math.radians(3.0))
+        cp.pk.hexstud(s, (x, y - 0.25, ARCH_Z1 + 0.0), (0, 0, 1), 0.06, 0.06, T["iron"])
+    for sx in (-1, 1):
+        for v in (1.5, 4.0, 6.5, 9.0, 11.5, 13.5):
+            cp.pk.hexstud(s, P(sx * W, v, 0.8), (-sx, 0, 0), 0.09, 0.07, T["copper_dk"])
+            cp.pk.hexstud(s, P(sx * CAB, v, 0.8), (sx, 0, 0), 0.09, 0.07, T["copper_dk"])
+    for x in (-4.4, -2.2, 0.0, 2.2, 4.4):
+        s.box((0.12, 2.3, 0.05), (x, 13.0, ARCH_Z1 + 0.14), T["iron"])
+
+
+def sockets():
+    out = {"start": (0.0, 1.0, 0.0), "score": (0.0, 13.0, FACE_Z + 0.1), "return_exit": (4.4, 1.0, 3.5),
+           "interact": (0.0, 1.0, 1.5)}
+    for cid, (u, v, r) in sorted(CUPS.items()):
+        out[cid] = P(u, v, -DEPTH + 0.0)
+    for i, p in enumerate(bulbs()):
+        out["light_%02d" % i] = p
+    return out
+
+
+def check_base(s):
+    for cid, (u, v, r) in sorted(CUPS.items()):
+        inr = r * math.cos(math.pi / NSEG)
+        assert inr >= 1.1 and 2 * inr >= 2.4, (cid, "opening too small for a 1.1 m sphere", inr)
+        assert DEPTH >= 1.2 and abs(u) + r <= W - 0.3 and 0.2 <= v - r and v + r + 0.5 <= BL, (cid, "outside board")
+    items = sorted(CUPS.items())
+    for i, (a, (ua, va, ra)) in enumerate(items):
+        for b, (ub, vb, rb) in items[i + 1:]:
+            gap = math.hypot(ua - ub, va - vb) - ra - rb
+            assert gap >= 0.6, (a, b, "cups too close", gap)
+    lo, hi = cp.bounds(s)
+    assert abs(lo[1]) < 0.01 and 15.5 < hi[1] < 16.6, ("height", lo, hi)
+    assert 2 * LANE_HW == 5.5 and abs(lane_h(LANE_L) - lane_h(LANE_L - HUMP_L) - HUMP_H) < 1e-6
+    assert lo[2] > -39.5 and hi[2] <= 4.0, ("length", lo, hi)
+
+
+def main():
+    args = cp.options()
+    base_s = cp.surface("camp_skee_lane", base)
+    for name, fn in (("camp_skee_lane_detail1", detail1), ("camp_skee_lane_detail2", detail2)):
+        cp.inside(cp.surface(name, fn), base_s)
+    cp.export("camp_skee_lane", base, "park_large", args, col=lambda s: structure(s, col=True), sockets=sockets(),
+              check=check_base)
+    cp.export("camp_skee_lane_detail1", detail1, "detail", args)
+    cp.export("camp_skee_lane_detail2", detail2, "detail", args)
+
+
+if __name__ == "__main__":
+    main()

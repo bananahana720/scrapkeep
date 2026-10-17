@@ -195,7 +195,6 @@ def track_s(drawn):
 
 
 def sweep(s, svals, us, drawn):
-    nseg = len(us) + 3
     rings = [ring(v, us) for v in svals]
     for i in range(len(svals) - 1):
         smid = (svals[i] + svals[i + 1]) / 2
@@ -203,17 +202,13 @@ def sweep(s, svals, us, drawn):
         line = abs(smid - START_S) < 0.5 and drawn
         joint = (svals[i + 1] - svals[i]) < 0.2 and drawn and not line
         slab = int(smid // 8)
-        nseg_all = len(pa) - 1
-        for j in range(nseg_all):
-            du, dy = pa[j + 1][0] - pa[j][0], pa[j + 1][1] - pa[j][1]
-            # (u, y) segment from ring i; recover u, y from the profile so the outward normal is exact
-            u0, y0 = profile(svals[i], us)[j]
-            u1, y1 = profile(svals[i], us)[j + 1]
-            ou, oy = -(y1 - y0), (u1 - u0)
-            if j == nseg_all - 1 and not drawn:
-                pass
-            elif j == nseg_all - 1:
+        n = len(pa)
+        prof = profile(svals[i], us)
+        for j in range(n):
+            k = (j + 1) % n
+            if j == n - 1 and drawn:
                 continue                                    # the underside is never seen
+            ou, oy = -(prof[k][1] - prof[j][1]), (prof[k][0] - prof[j][0])
             want = (na[0] * ou, oy, na[1] * ou)
             ntop = len(us)
             if j == 0:
@@ -235,7 +230,7 @@ def sweep(s, svals, us, drawn):
                 col = "concrete_dk"
             if not drawn:
                 col = "iron"
-            quad = [pa[j], pa[j + 1], pb[j + 1], pb[j]]
+            quad = [pa[j], pa[k], pb[k], pb[j]]
             qface(s, quad, col, want)
 
 
