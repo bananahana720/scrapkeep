@@ -27,12 +27,15 @@ import common
 import polish
 
 ASSETS = ("sky_cloud", "sky_mesa", "sky_cradle", "sky_loom", "sky_blades")
-# Polish (tools/blender/POLISH.md) for the three hardware pieces; the cloud and mesa are
-# scenery and stay as they were. Bevels keep the planar faces, so the bounds that
-# dress_mhs_assets_test pins to a centimetre hold.
+# Polish (tools/blender/POLISH.md) for the three hardware pieces. Bevels keep the planar faces,
+# so the bounds that dress_mhs_assets_test pins to a centimetre hold. The cloud and mesa round
+# themselves (spline rings, rounded lips) and rescale to their exact bounds; the mesa takes
+# smoothing and the bake on its stone slot.
 POLISH = {"sky_cradle": dict(bevel=.12, bevel_min=.5), "sky_loom": dict(bevel=.1, bevel_min=.5),
-          "sky_blades": dict(bevel=.15, bevel_min=.5)}
+          "sky_blades": dict(bevel=.15, bevel_min=.5), "sky_mesa": dict(bevel=0, bake_slots=("M1_stone",))}
 HARDWARE_CAP = (500, 320, 1)  # polish: was (270, 610, 1); dress_mhs_assets_test caps match
+# polish: was (120, 110, 2), the scenery class; registry exceptions and dress_mhs_assets_test match
+LANDFORM_CAP = (1000, 1000, 2)
 PETROL = "53686d"
 CHALK = "c8bda5"
 CLOUD = "ece7da"
@@ -62,21 +65,50 @@ def box(part, size, position, color):
     return part.box("paint", (size[0], size[2], size[1]), xyz(position), color=color)
 
 
+def spline(points, steps, closed=False):
+    """Catmull-Rom through points (tuples), steps samples per span."""
+    out = []
+    count = len(points)
+    spans = count if closed else count - 1
+    for k in range(spans):
+        p0, p1 = points[(k - 1) % count if closed else max(k - 1, 0)], points[k]
+        p2 = points[(k + 1) % count]
+        p3 = points[(k + 2) % count if closed else min(k + 2, count - 1)]
+        for j in range(steps):
+            t = j / steps
+            out.append(tuple(0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t
+                                    + (3 * b - a - 3 * c + d) * t ** 3)
+                             for a, b, c, d in zip(p0, p1, p2, p3)))
+    if not closed:
+        out.append(points[-1])
+    return out
+
+
+def fit(part, spans):
+    # Exact centre-origin bounds despite the asymmetric lobes and spline overshoot.
+    for axis, (low, high) in enumerate(spans):
+        lo = min(v.co[axis] for v in part.bm.verts)
+        hi = max(v.co[axis] for v in part.bm.verts)
+        for v in part.bm.verts:
+            v.co[axis] = low + (v.co[axis] - lo) / (hi - lo) * (high - low)
+
+
 def cloud(root):
-    # One continuous lobed shell, rather than overlapping sphere primitives.
+    # One continuous lobed shell, rather than overlapping sphere primitives: spline rings
+    # through the lobes, each ring a soft puffed ellipse.
     part = common.Part("CloudHull")
     rings = []
-    n = 6
-    for x, width, height, lift in [(-35, 8, 3, -1), (-29, 16, 5, 1),
-                                   (-22, 17, 5, 1), (-16, 15, 3.5, -1),
-                                   (-8, 20, 6, 0), (0, 19, 5.5, .5),
-                                   (9, 16, 3.5, -1), (19, 19, 5, 1),
-                                   (28, 16, 5, 1), (35, 8, 3, -1)]:
+    n = 16
+    lobes = [(-35, 8, 3, -1), (-29, 16, 5, 1), (-22, 17, 5, 1), (-16, 15, 3.5, -1),
+             (-8, 20, 6, 0), (0, 19, 5.5, .5), (9, 16, 3.5, -1), (19, 19, 5, 1),
+             (28, 16, 5, 1), (35, 8, 3, -1)]
+    for x, width, height, lift in spline(lobes, 3):
         ring = []
         for i in range(n):
             angle = math.tau * i / n
-            ring.append(part.bm.verts.new((x, width * math.sin(angle),
-                                          lift + height * math.cos(angle))))
+            puff = 1 + 0.07 * math.sin(3 * angle + x * 0.35) + 0.04 * math.cos(5 * angle - x * 0.2)
+            ring.append(part.bm.verts.new((x, width * puff * math.sin(angle),
+                                          lift + height * puff * math.cos(angle))))
         rings.append(ring)
     low = part.bm.verts.new((-40, 0, -1))
     high = part.bm.verts.new((40, 0, -1))
@@ -87,12 +119,7 @@ def cloud(root):
             face(part, [rings[a][i], rings[a][j], rings[a + 1][j], rings[a + 1][i]],
                  CLOUD, "glass").smooth = True
         face(part, [high, rings[-1][i], rings[-1][j]], CLOUD, "glass").smooth = True
-    # Exact centre-origin bounds despite the asymmetric lobes.
-    for axis, span in enumerate((80, 40, 12)):
-        lo = min(v.co[axis] for v in part.bm.verts)
-        hi = max(v.co[axis] for v in part.bm.verts)
-        for v in part.bm.verts:
-            v.co[axis] = ((v.co[axis] - lo) / (hi - lo) - 0.5) * span
+    fit(part, ((-40, 40), (-20, 20), (-6, 6)))
     mat = common.material("glass")
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
     bsdf.inputs["Base Color"].default_value = common.rgba(CLOUD)
@@ -108,23 +135,27 @@ def cloud(root):
 
 def mesa(root):
     part = common.Part("MesaHull")
-    outline = [(-30, -8), (-22, -19), (-6, -20), (18, -18), (30, -6),
-               (27, 12), (12, 20), (-8, 18), (-25, 15), (-29, 6)]
+    outline = spline([(-30, -8), (-22, -19), (-6, -20), (18, -18), (30, -6),
+                      (27, 12), (12, 20), (-8, 18), (-25, 15), (-29, 6)], 3, closed=True)
     n = len(outline)
     rings = []
-    # Broad lower bench at 29 m, smaller offset crown at 50 m; one closed landform.
-    for y, scale, shift in [(0, 1, 0), (5, .97, .3), (27, .87, -.7),
-                            (29, .91, -1.0), (29, .39, 8.0), (50, .35, 7.4)]:
+    # Broad lower bench at 29 m, smaller offset crown at 50 m; one closed landform. Two
+    # strata ledges step the lower wall, and the bench lip and crown top roll over.
+    for y, scale, shift in [(0, 1, 0), (5, .97, .3), (11, .94, .1), (11.8, .955, .05),
+                            (19, .91, -.3), (19.8, .925, -.35), (27, .87, -.7),
+                            (28.4, .905, -.9), (29, .89, -1.0), (29, .86, -.6),
+                            (29, .39, 8.0), (30.2, .37, 7.9), (48.9, .35, 7.45),
+                            (50, .32, 7.4)]:
         rings.append([part.bm.verts.new(xyz((x * scale + shift, y, z * scale)))
                       for x, z in outline])
     face(part, list(reversed(rings[0])), CHALK)
-    for row in range(5):
+    for row in range(len(rings) - 1):
         for i in range(n):
             j = (i + 1) % n
-            f = face(part, [rings[row][i], rings[row][j], rings[row + 1][j], rings[row + 1][i]], CHALK)
-            f.smooth = row != 3
+            face(part, [rings[row][i], rings[row][j], rings[row + 1][j], rings[row + 1][i]], CHALK)
     face(part, rings[-1], CHALK)
-    # Shared vertex colour at each ring retains indexed vertices under the 110 V cap.
+    fit(part, ((-30, 30), (-20, 20), (0, 50)))
+    # Height gain plus a faint banding; the bake adds the occlusion under ledges.
     linear = common.to_linear(common.srgb(CHALK))
     for f in part.bm.faces:
         for loop in f.loops:
@@ -224,7 +255,7 @@ def metrics(path):
             draws += 1
             vertices += doc["accessors"][primitive["attributes"]["POSITION"]]["count"]
             triangles += doc["accessors"][primitive["indices"]]["count"] // 3
-    cap = (120, 110, 2) if path.stem in ASSETS[:2] else HARDWARE_CAP
+    cap = LANDFORM_CAP if path.stem in ASSETS[:2] else HARDWARE_CAP
     assert 0 < triangles <= cap[0] and 0 < vertices <= cap[1] and 0 < draws <= cap[2], (path, triangles, vertices, draws)
     return {"triangles": triangles, "vertices": vertices, "draws": draws,
             "materials": len(doc.get("materials", [])), "bytes": len(data),
