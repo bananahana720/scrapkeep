@@ -114,11 +114,24 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	gravity_scale = tuning.f("gravity") / 9.8
 	state.velocity = body_state.linear_velocity
 	var origin := body_state.transform.origin
+	Rules.tick_grip(state, tuning, delta)
 	if tuning.on("legacy_spin_probe"):
 		_probe.global_transform = body_state.transform
 	else:
 		_probe.global_transform = Transform3D(Basis.IDENTITY, origin)
-	Rules.probe_ground(_probe, state)
+		Rules.aim_probe(_probe, state, tuning)
+	# Sable's vault kick and a falling slam own the faces the ball meets in the air, so a
+	# wall is taken from the air only without them; carving up from the floor still grips,
+	# and inside the coyote time a one-tick hop off a seam re-takes the wall.
+	var take_speed := Rules.grip_speed(state, tuning)
+	if not state.grounded and state.coyote <= 0.0 and kit != null and (kit.on(Augments.VAULT) or kit.slamming):
+		take_speed = INF
+	Rules.probe_ground(_probe, state, Rules.ground_dot(state, tuning), take_speed)
+	Rules.grip_contact(state, tuning, body_state, take_speed)
+
+	var spin = Rules.carve_spin(state, tuning)
+	if spin != null:
+		body_state.angular_velocity = spin
 
 	var wish := Vector3.ZERO
 	if not Augments.holding(kit):
@@ -145,6 +158,12 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 
 		if external_accel != Vector3.ZERO:
 			body_state.apply_central_force(external_accel * mass)
+
+		# A ride that lifts the ball off its face (the reactor's sheet, a chute's assist) wins:
+		# the press would hold the ball on the face the ride is carrying it up and away from.
+		var press := Rules.downforce(state, tuning)
+		if press != Vector3.ZERO and external_accel.dot(state.contact_normal) <= 0.0:
+			body_state.apply_central_force(press * mass)
 	external_accel = Vector3.ZERO
 
 	# The augments run before jump and boost so a pylon jump or a vault kick can claim

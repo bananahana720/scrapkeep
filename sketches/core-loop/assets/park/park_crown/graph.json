@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "614ae8a9b4ae5017a99bc041b6bb4f65464aa00f564ddbbfc45d506cc6b3d64c",
+  "bake_sha256": "3c18de80f348c7ab84657d4d164b5c2add741b69641ef40b049c2089a0257c2d",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1007600,
-  "edges": 328599,
+  "bytes": 1006576,
+  "edges": 328600,
   "first_failed": "",
   "flags": {
     "deck": 1427,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "d5d8383c78668a95942ff15e0b61ffb69569f6ff8513cf1fc65cd3e20e052bd9",
+  "graph_sha256": "a5d9ea64fa6ec022f979b2a422864726ff946bf9e5feaee64d79ea7a59da0ef0",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
   "nodes": 41828,
-  "park_sha256": "e5d630e483e42f3e689424a845d77b9e8df896fbcc8db09d315a6713f6a64c60",
+  "park_sha256": "23109d18ca70bb5e63db71956702614f90d4000fa025e6ef54499a9925b5971d",
   "pockets": [
     {
       "clear_ring": [],
@@ -132,7 +132,7 @@
     }
   ],
   "reward_ratio": "0.506",
-  "ride_edges": 16,
+  "ride_edges": 17,
   "routes": {
     "east": [],
     "gauntlet": [],
@@ -179,7 +179,7 @@
       "value": 1.44
     }
   ],
-  "tool_sha256": "069b998146f21b9c9da3075e188d25f07404a4441f4753e689b1dfe1c00ae274",
+  "tool_sha256": "08e6eb9c62c59217f08bab6ce13d58e49e39f264d8b6a23707afd674eca1d850",
   "zones": {
     "anchors": [
       {

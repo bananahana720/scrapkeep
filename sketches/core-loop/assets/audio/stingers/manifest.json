@@ -5,48 +5,48 @@
     "bar": 2,
     "beat": 3,
     "beats": 2,
-    "clip": "open",
-    "dbtp": -2.75,
+    "clip": "drop",
+    "dbtp": -4.84,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_flash_flood": {
-    "bar": 1,
+    "bar": 3,
     "beat": 1,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -1.06,
+    "dbtp": -1.74,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_fleet": {
-    "bar": 4,
+    "bar": 2,
     "beat": 3,
     "beats": 2,
-    "clip": "drop",
-    "dbtp": -1.04,
+    "clip": "open",
+    "dbtp": -1.81,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_flood": {
     "bar": 4,
-    "beat": 1,
+    "beat": 3,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -2.04,
+    "dbtp": -3.05,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_industrial": {
-    "bar": 2,
-    "beat": 3,
+    "bar": 1,
+    "beat": 1,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -1.0,
+    "dbtp": -1.94,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
@@ -55,7 +55,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -4.07,
+    "dbtp": -3.2,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -64,7 +64,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -1.16,
+    "dbtp": -1.0,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -73,7 +73,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -1.25,
+    "dbtp": -1.5,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -82,17 +82,17 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -3.31,
+    "dbtp": -1.92,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
    },
    "stinger_lightning": {
-    "bar": 2,
+    "bar": 3,
     "beat": 1,
     "beats": 1,
-    "clip": "drop",
-    "dbtp": -3.52,
+    "clip": "open",
+    "dbtp": -2.22,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 20512
@@ -104,17 +104,17 @@
  "1_2": {
   "cues": {
    "drop_ancient": {
-    "bar": 2,
+    "bar": 4,
     "beat": 3,
     "beats": 2,
     "clip": "open",
-    "dbtp": -2.45,
+    "dbtp": -4.04,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_collapse": {
-    "bar": 1,
+    "bar": 2,
     "beat": 3,
     "beats": 2,
     "clip": "open",
@@ -127,18 +127,18 @@
     "bar": 4,
     "beat": 1,
     "beats": 2,
-    "clip": "open",
-    "dbtp": -1.27,
+    "clip": "drop",
+    "dbtp": -1.1,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_fleet": {
-    "bar": 3,
+    "bar": 2,
     "beat": 3,
     "beats": 2,
-    "clip": "open",
-    "dbtp": -2.39,
+    "clip": "drop",
+    "dbtp": -2.07,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
@@ -148,7 +148,7 @@
     "beat": 1,
     "beats": 2,
     "clip": "open",
-    "dbtp": -1.4,
+    "dbtp": -1.62,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
@@ -157,7 +157,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -1.83,
+    "dbtp": -2.46,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -166,7 +166,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -1.45,
+    "dbtp": -1.88,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -175,7 +175,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -1.0,
+    "dbtp": -1.23,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -184,7 +184,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -1.91,
+    "dbtp": -1.9,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -196,50 +196,50 @@
  "2_1": {
   "cues": {
    "drop_ancient": {
-    "bar": 2,
-    "beat": 1,
+    "bar": 1,
+    "beat": 3,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -2.5,
+    "dbtp": -4.37,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_collapse": {
     "bar": 3,
-    "beat": 1,
+    "beat": 3,
     "beats": 2,
-    "clip": "drop",
-    "dbtp": -2.58,
+    "clip": "open",
+    "dbtp": -2.4,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_fleet": {
-    "bar": 4,
+    "bar": 3,
     "beat": 3,
     "beats": 2,
-    "clip": "open",
+    "clip": "drop",
     "dbtp": -1.0,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_flood": {
-    "bar": 3,
-    "beat": 3,
+    "bar": 1,
+    "beat": 1,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -3.13,
+    "dbtp": -2.65,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_industrial": {
-    "bar": 3,
+    "bar": 2,
     "beat": 3,
     "beats": 2,
-    "clip": "open",
+    "clip": "drop",
     "dbtp": -1.0,
     "kind": "drop",
     "lufs": -16.0,
@@ -249,7 +249,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -3.07,
+    "dbtp": -1.76,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -258,7 +258,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -1.58,
+    "dbtp": -1.0,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -267,7 +267,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -1.85,
+    "dbtp": -1.06,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -276,7 +276,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -2.23,
+    "dbtp": -1.4,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -288,21 +288,21 @@
  "2_2": {
   "cues": {
    "drop_ancient": {
-    "bar": 2,
-    "beat": 1,
+    "bar": 1,
+    "beat": 3,
     "beats": 2,
     "clip": "open",
-    "dbtp": -2.14,
+    "dbtp": -4.37,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_cave_in": {
-    "bar": 3,
+    "bar": 1,
     "beat": 1,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -4.2,
+    "dbtp": -2.89,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
@@ -312,27 +312,27 @@
     "beat": 1,
     "beats": 2,
     "clip": "open",
-    "dbtp": -1.42,
+    "dbtp": -2.1,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_fleet": {
-    "bar": 3,
-    "beat": 3,
+    "bar": 4,
+    "beat": 1,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -1.08,
+    "dbtp": -1.4,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
    },
    "drop_industrial": {
-    "bar": 4,
+    "bar": 2,
     "beat": 3,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -2.69,
+    "dbtp": -1.13,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
@@ -341,7 +341,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -3.98,
+    "dbtp": -1.85,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -350,7 +350,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -1.44,
+    "dbtp": -1.41,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -359,7 +359,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -1.93,
+    "dbtp": -1.2,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -368,7 +368,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -2.89,
+    "dbtp": -1.48,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -386,11 +386,11 @@
     "samples": 57330
    },
    "drop_collapse": {
-    "bar": 2,
-    "beat": 3,
+    "bar": 4,
+    "beat": 1,
     "beats": 2,
-    "clip": "drop",
-    "dbtp": -3.81,
+    "clip": "open",
+    "dbtp": -1.9,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
@@ -402,11 +402,11 @@
     "samples": 61739
    },
    "drop_impact": {
-    "bar": 1,
+    "bar": 3,
     "beat": 1,
     "beats": 1,
-    "clip": "open",
-    "dbtp": -4.28,
+    "clip": "drop",
+    "dbtp": -1.55,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 20512
@@ -415,7 +415,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -1.3,
+    "dbtp": -1.0,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -424,7 +424,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -1.0,
+    "dbtp": -1.15,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -433,7 +433,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -1.0,
+    "dbtp": -2.3,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -457,11 +457,11 @@
     "samples": 61739
    },
    "drop_flood": {
-    "bar": 1,
+    "bar": 4,
     "beat": 3,
     "beats": 2,
     "clip": "drop",
-    "dbtp": -2.89,
+    "dbtp": -2.23,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
@@ -470,8 +470,8 @@
     "bar": 3,
     "beat": 3,
     "beats": 1,
-    "clip": "drop",
-    "dbtp": -3.79,
+    "clip": "open",
+    "dbtp": -2.4,
     "kind": "drop",
     "lufs": -16.0,
     "samples": 20512
@@ -480,7 +480,7 @@
     "bar": 16,
     "beat": 1,
     "clip": "build",
-    "dbtp": -1.13,
+    "dbtp": -1.6,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -489,7 +489,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -1.51,
+    "dbtp": -2.28,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
@@ -498,7 +498,7 @@
     "bar": 4,
     "beat": 1,
     "clip": "telegraph",
-    "dbtp": -2.37,
+    "dbtp": -3.13,
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048

@@ -16,7 +16,8 @@ old={}
 for row in rows:
     bpy.context.scene.frame_set(row['frame'])
     old[row['key']]=points([bpy.data.objects[n] for n in names])
-arm,meshes,root=rig.build()
+# The baseline blend predates polish; compare the shared geometry unpolished.
+arm,meshes,root=rig.build(polished=False)
 errors=[]
 for row in rows:
     rig.clear_pose(arm)
