@@ -1,11 +1,33 @@
 {
  "assets": [
   {
+   "id": "companion_skin_till_bell",
+   "path": "res://assets/cosmetics/companion_skins/companion_skin_till_bell.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_companion_skin (Till Bell on Deck, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py companion_skin_till_bell",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "decal_curtain_call_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_curtain_call_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "decal_fern_mask.png",
    "path": "res://assets/cosmetics/decals/decal_fern_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -15,8 +37,8 @@
    "id": "decal_moth_mask.png",
    "path": "res://assets/cosmetics/decals/decal_moth_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -26,8 +48,8 @@
    "id": "decal_mushroom_mask.png",
    "path": "res://assets/cosmetics/decals/decal_mushroom_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -37,8 +59,8 @@
    "id": "decal_patch_mask.png",
    "path": "res://assets/cosmetics/decals/decal_patch_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -48,19 +70,30 @@
    "id": "decal_paw_mask.png",
    "path": "res://assets/cosmetics/decals/decal_paw_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
    }
   },
   {
+   "id": "decal_sable_spool_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_sable_spool_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "decal_seashell_mask.png",
    "path": "res://assets/cosmetics/decals/decal_seashell_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -70,8 +103,8 @@
    "id": "decal_snail_shell_mask.png",
    "path": "res://assets/cosmetics/decals/decal_snail_shell_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -81,11 +114,48 @@
    "id": "decal_thimble_mask.png",
    "path": "res://assets/cosmetics/decals/decal_thimble_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "outfit_rivet_hood",
+   "path": "res://assets/cosmetics/outfits/outfit_rivet_hood.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Welding Hood, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_rivet_hood",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "outfit_tally_eyeshade",
+   "path": "res://assets/cosmetics/outfits/outfit_tally_eyeshade.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Eyeshade, CUSTOMIZE section 8)",
+   "exception": {
+    "draws": 3
+   },
+   "exception_why": "the visor plus one garter on each upper arm; each bone's part is its own mesh, so three draws, one surface each",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_tally_eyeshade",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "outfit_tarn_steady_cap",
+   "path": "res://assets/cosmetics/outfits/outfit_tarn_steady_cap.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Steady Cap, Replace_Cap, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_tarn_steady_cap",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
@@ -93,7 +163,7 @@
    "path": "res://assets/cosmetics/textures/decal_atlas.png",
    "class": "texture",
    "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "loader": "atlas behind the cua_manifest .tres AtlasTextures; decal rows read the per-mask PNGs",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -104,18 +174,40 @@
    "path": "res://assets/cosmetics/textures/trail_atlas.png",
    "class": "texture",
    "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "loader": "used by res://assets/cosmetics/trails/*.glb",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
    }
   },
   {
+   "id": "trail_any_downbeat",
+   "path": "res://assets/cosmetics/trails/trail_any_downbeat.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "trail_cannon_recital",
+   "path": "res://assets/cosmetics/trails/trail_cannon_recital.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_forge_chips",
    "path": "res://assets/cosmetics/trails/trail_forge_chips.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -125,19 +217,30 @@
    "id": "trail_ink_stitch",
    "path": "res://assets/cosmetics/trails/trail_ink_stitch.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
    }
   },
   {
+   "id": "trail_kest_fuse_smoke",
+   "path": "res://assets/cosmetics/trails/trail_kest_fuse_smoke.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_moth_tuft",
    "path": "res://assets/cosmetics/trails/trail_moth_tuft.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -147,33 +250,77 @@
    "id": "trail_plum_curl",
    "path": "res://assets/cosmetics/trails/trail_plum_curl.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_rivet_swarf",
+   "path": "res://assets/cosmetics/trails/trail_rivet_swarf.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
    "id": "trail_rose_wash",
    "path": "res://assets/cosmetics/trails/trail_rose_wash.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
    }
   },
   {
+   "id": "trail_sable_cable",
+   "path": "res://assets/cosmetics/trails/trail_sable_cable.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_salt_skip",
    "path": "res://assets/cosmetics/trails/trail_salt_skip.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_tally_punch_tape",
+   "path": "res://assets/cosmetics/trails/trail_tally_punch_tape.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "trail_tarn_claw_marks",
+   "path": "res://assets/cosmetics/trails/trail_tarn_claw_marks.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
@@ -1134,7 +1281,7 @@
    "path": "res://assets/models/companion/escape_rail.glb",
    "class": "enemy",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "source piece for assets/models/companion/assembled/ pairs",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -1145,7 +1292,7 @@
    "path": "res://assets/models/companion/escape_vent.glb",
    "class": "enemy",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "source piece for assets/models/companion/assembled/ pairs",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -1156,7 +1303,7 @@
    "path": "res://assets/models/companion/primer_coil.glb",
    "class": "enemy",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "source piece for assets/models/companion/assembled/ pairs",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -1167,7 +1314,7 @@
    "path": "res://assets/models/companion/primer_mesh.glb",
    "class": "enemy",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "source piece for assets/models/companion/assembled/ pairs",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -1199,11 +1346,21 @@
    "id": "spil9",
    "path": "res://assets/models/companion/spil9.glb",
    "class": "enemy",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd (load of this path)",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "spil9_marks",
+   "path": "res://assets/models/companion/spil9_marks.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (grown-mark add-ons for SPIL-9; seat via hero_assets._mount_on_bones, runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py --asset spil9_marks"
    }
   },
   {
@@ -1281,7 +1438,7 @@
    "path": "res://assets/models/dig_mechanical/breach_wedge_a.glb",
    "class": "prop",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "superseded by the _12x12 and _14x10 sized wedges",
    "provenance": {
     "recipe": "tools/blender/dig_mechanical/breach_wedge_a.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1314,7 +1471,7 @@
    "path": "res://assets/models/dig_mechanical/breach_wedge_b.glb",
    "class": "prop",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "superseded by the _12x12 and _14x10 sized wedges",
    "provenance": {
     "recipe": "tools/blender/dig_mechanical/breach_wedge_b.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1347,7 +1504,7 @@
    "path": "res://assets/models/dig_mechanical/breach_wedge_c.glb",
    "class": "prop",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "superseded by the _12x12 and _14x10 sized wedges",
    "provenance": {
     "recipe": "tools/blender/dig_mechanical/breach_wedge_c.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1545,7 +1702,7 @@
    "path": "res://assets/models/dig_stone/bed_cut.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_cut.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1556,7 +1713,7 @@
    "path": "res://assets/models/dig_stone/bed_floor.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_floor.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1567,7 +1724,7 @@
    "path": "res://assets/models/dig_stone/bed_recess.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_recess.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1578,7 +1735,7 @@
    "path": "res://assets/models/dig_stone/bed_rubble.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_rubble.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1589,7 +1746,7 @@
    "path": "res://assets/models/dig_stone/breach_socket.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "offline study, not fitted to the P-R6 12x12 / 14x10 breach rectangles",
    "provenance": {
     "recipe": "tools/blender/dig_stone/breach_socket.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1925,8 +2082,8 @@
    "id": "island_rib",
    "path": "res://assets/models/highdraft/island_rib.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/arena_mind_dress.gd",
    "provenance": {
     "recipe": "tools/blender/highdraft/islands.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
@@ -1948,8 +2105,8 @@
    "id": "island_rim",
    "path": "res://assets/models/highdraft/island_rim.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/arena_mind_dress.gd",
    "provenance": {
     "recipe": "tools/blender/highdraft/islands.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
@@ -2082,8 +2239,8 @@
    "id": "prop_fan",
    "path": "res://assets/models/highdraft/prop_fan.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
    "provenance": {
     "recipe": "tools/blender/highdraft/props.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
@@ -2249,7 +2406,7 @@
    "path": "res://assets/models/highdraft/travel_vane.glb",
    "class": "prop",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "cut by P-R9 for readability (decisions.tsv 2026-10-06T20:55)",
    "provenance": {
     "recipe": "tools/blender/highdraft/lift.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
@@ -5690,7 +5847,7 @@
   {
    "class": "prop",
    "id": "scrap_crate",
-   "loader": "none (forge promote scrap_crate/v002; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/models/scrap_crate.glb",
    "provenance": {
     "notes": "assets/models/scrap_crate.forge.json",
@@ -6103,7 +6260,7 @@
    "path": "res://assets/models/world_one/enemy_foreman.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "none (runtime integration pending; src/combat/lobber.gd elite affix (Foreman), wave 17)",
+   "loader": "src/combat/foreman.gd",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_foreman.py",
     "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4, lever 3 (PR #23)"
@@ -6126,6 +6283,28 @@
    "class": "enemy",
    "ships": true,
    "loader": "src/combat/hooker.gd (load of this path)"
+  },
+  {
+   "id": "enemy_jolt_layer",
+   "path": "res://assets/models/world_one/enemy_jolt_layer.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/jolt_layer.gd:66",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_jolt_layer.py",
+    "note": "Procedural bmesh world-one recipe for the fields-and-casts first slice."
+   }
+  },
+  {
+   "id": "enemy_linker",
+   "path": "res://assets/models/world_one/enemy_linker.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/linker.gd, wave 19)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_linker.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
+   }
   },
   {
    "path": "res://assets/models/world_one/enemy_lobber.glb",
@@ -6197,6 +6376,28 @@
    }
   },
   {
+   "id": "enemy_splitter",
+   "path": "res://assets/models/world_one/enemy_splitter.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/splitter.gd:body_parts",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_splitter.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
+   }
+  },
+  {
+   "id": "enemy_splitter_piece",
+   "path": "res://assets/models/world_one/enemy_splitter_piece.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/splitter.gd:piece_parts",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_splitter_piece.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
+   }
+  },
+  {
    "id": "enemy_swarm_remnant",
    "path": "res://assets/models/world_one/enemy_swarm_remnant.glb",
    "class": "enemy",
@@ -6241,6 +6442,40 @@
     "draws": 4
    },
    "exception_why": "winch drone test ceiling 4 draws"
+  },
+  {
+   "id": "relay_mast",
+   "path": "res://assets/models/world_one/relay_mast.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/event_view.gd _build_relay (CoilGlow takes the charge material)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/relay_stake.py",
+    "note": "Procedural vertex-coloured lattice tower for an event relay, in the park landmarks' look."
+   },
+   "exception": {
+    "tris": 3000,
+    "verts": 4800,
+    "draws": 3
+   },
+   "exception_why": "A 17 m tower read at event range; the prop class covers one small static mesh. Limits asserted by the recipe and relay_models_test."
+  },
+  {
+   "id": "relay_stake_post",
+   "path": "res://assets/models/world_one/relay_stake_post.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/relay_stake.gd (Stake1..Stake4 and CoilGlow take runtime materials; StakeNeedle turns per stack)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/relay_stake.py",
+    "note": "Procedural vertex-coloured shared-world device in the park landmarks' look; stands at the park relays of stage 1 and stage 5."
+   },
+   "exception": {
+    "tris": 3000,
+    "verts": 4800,
+    "draws": 9
+   },
+   "exception_why": "Opt-in device whose stake shows in five independently lit parts (four rings and the coil) plus a turning needle; the prop class covers one small static mesh. Limits asserted by the recipe and relay_models_test."
   },
   {
    "id": "rescue_cage",
@@ -6885,7 +7120,7 @@
   {
    "class": "texture",
    "id": "crate_icon_sheet",
-   "loader": "none (forge promote crate_icon/v003; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/sprites/crate_icon/crate_icon_sheet.png",
    "provenance": {
     "notes": "assets/sprites/crate_icon/crate_icon.forge.json",
@@ -6896,7 +7131,7 @@
   {
    "class": "texture",
    "id": "scrap_coin",
-   "loader": "none (forge promote scrap_coin/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/sprites/scrap_coin/scrap_coin.png",
    "provenance": {
     "notes": "assets/sprites/scrap_coin/scrap_coin.forge.json",
@@ -6931,7 +7166,7 @@
   {
    "class": "texture",
    "id": "sand_ground_albedo",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_albedo.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -6942,7 +7177,7 @@
   {
    "class": "texture",
    "id": "sand_ground_ao",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_ao.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -6953,7 +7188,7 @@
   {
    "class": "texture",
    "id": "sand_ground_height",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_height.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -6964,7 +7199,7 @@
   {
    "class": "texture",
    "id": "sand_ground_normal",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_normal.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -6975,7 +7210,7 @@
   {
    "class": "texture",
    "id": "sand_ground_roughness",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_roughness.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -7110,6 +7345,7 @@
   "cliff_dwelling_row",
   "cliff_dwelling_row_detail1",
   "cliff_dwelling_row_detail2",
+  "companion_skin_till_bell",
   "cottonwood_crown",
   "cottonwood_detail1",
   "cottonwood_detail2",
@@ -7125,11 +7361,13 @@
   "cut_face_long",
   "cut_face_scoop",
   "decal_atlas.png",
+  "decal_curtain_call_mask.png",
   "decal_fern_mask.png",
   "decal_moth_mask.png",
   "decal_mushroom_mask.png",
   "decal_patch_mask.png",
   "decal_paw_mask.png",
+  "decal_sable_spool_mask.png",
   "decal_seashell_mask.png",
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
@@ -7143,14 +7381,18 @@
   "enemy_gap_net",
   "enemy_gap_net_curtain",
   "enemy_gyro_jammer",
+  "enemy_jolt_layer",
   "enemy_kite_drone",
   "enemy_lamp_swarm",
   "enemy_line_cutter",
+  "enemy_linker",
   "enemy_miniboss",
   "enemy_pit_jaw",
   "enemy_prop_crew",
   "enemy_ramp_flipper",
   "enemy_reactor",
+  "enemy_splitter",
+  "enemy_splitter_piece",
   "enemy_swarm_remnant",
   "enemy_swatter",
   "enemy_vault",
@@ -7321,6 +7563,9 @@
   "ore_cart_detail1",
   "ore_cart_detail2",
   "ore_cart_wheel",
+  "outfit_rivet_hood",
+  "outfit_tally_eyeshade",
+  "outfit_tarn_steady_cap",
   "park_contraption_barge",
   "park_contraption_barge_detail1",
   "park_contraption_barge_detail2",
@@ -7419,6 +7664,8 @@
   "ram_spring__escape_vent",
   "ram_spring__primer_coil",
   "ram_spring__primer_mesh",
+  "relay_mast",
+  "relay_stake_post",
   "res://assets/models/world_one/shell_rivet.glb",
   "rescue_cage",
   "return_ramp_skin",
@@ -7499,13 +7746,20 @@
   "timber_portal",
   "timber_portal_detail1",
   "timber_portal_detail2",
+  "trail_any_downbeat",
   "trail_atlas.png",
+  "trail_cannon_recital",
   "trail_forge_chips",
   "trail_ink_stitch",
+  "trail_kest_fuse_smoke",
   "trail_moth_tuft",
   "trail_plum_curl",
+  "trail_rivet_swarf",
   "trail_rose_wash",
+  "trail_sable_cable",
   "trail_salt_skip",
+  "trail_tally_punch_tape",
+  "trail_tarn_claw_marks",
   "travel_vane",
   "trebuchet_launcher_arm",
   "trebuchet_launcher_detail1",

@@ -143,13 +143,17 @@ func _fresh(stage: int, t):
 
 func _slice_ratio_regression(t) -> void:
 	var source := FileAccess.get_file_as_string("res://tests/posture_bands_test.gd")
-	var pattern := RegEx.create_from_string('t\\.check\\("over the sweep seeds small takes at least twice grown\'s time", ([^\\n]+),')
+	# 9ea4c6ef made the factor a constant (GROWTH, 1.85x for the first Warden); read it from the source too.
+	var pattern := RegEx.create_from_string('t\\.check\\("over the sweep seeds small takes at least %\\.2f times grown\'s time" % GROWTH, ([^\\n]+),\\n')
+	var growth_found := RegEx.create_from_string('const GROWTH := ([0-9.]+)').search(source)
+	t.check("slice growth factor is readable", growth_found != null)
+	var growth := float(growth_found.get_string(1)) if growth_found != null else 2.0
 	var found := pattern.search(source)
 	t.check("slice ratio assertion is executable", found != null)
 	if found == null:
 		return
 	var assertion := Expression.new()
-	var parsed := assertion.parse(found.get_string(1), PackedStringArray(["small", "grown", "swept", "swept_grown"]))
+	var parsed := assertion.parse(found.get_string(1), PackedStringArray(["small", "grown", "swept", "swept_grown", "GROWTH"]))
 	t.eq("slice ratio assertion parses", parsed, OK)
 	if parsed != OK:
 		return
@@ -161,9 +165,9 @@ func _slice_ratio_regression(t) -> void:
 	for case in cases:
 		var live: Array = case["live_ms"]
 		var saved: Array = case["saved"]
-		var expected: bool = int(live[1]) > 0 and int(live[0]) - int(live[1]) >= int(live[1])
+		var expected: bool = int(live[1]) > 0 and float(live[0]) >= growth * float(live[1])
 		var swept := {"small_median_s": str(saved[0]), "grown_median_s": str(saved[1])}
-		var actual = assertion.execute([float(live[0]) / 1000.0, float(live[1]) / 1000.0, swept, float(saved[1])])
+		var actual = assertion.execute([float(live[0]) / 1000.0, float(live[1]) / 1000.0, swept, float(saved[1]), growth])
 		t.check("slice %s evaluates" % case["name"], not assertion.has_execute_failed())
 		t.eq("slice %s" % case["name"], actual, expected)
 

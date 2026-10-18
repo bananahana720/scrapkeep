@@ -16,7 +16,8 @@ extends SceneTree
 #              its own; a group's 20 m post lattice has no lane through it, walled Kest's needles
 #              line at [-135, 105], stopped Rivet at the split spire's edge post [27, 25] and would
 #              fill the Warden bowl) and spire_top_ramp (the strike's swap
-#              target; no runtime swap yet). Coverage fields build physical posts outside the
+#              target; no runtime swap yet). The authored pass rows in DRESSED (2026-10-17) name a GLB
+#              recipe instead, and its base file exists so the row does not fall back. Coverage fields build physical posts outside the
 #              fixed pilot corridors and pocket rings. Effective density excludes unplaced
 #              rows and empty post fields, and reads the limit from park_density_test. No reversed-ramp
 #              "_rise" row is left (a kicker's wedge is its own ramp), and no kicker is stamped.
@@ -57,6 +58,18 @@ const LINES_PATH := "res://assets/park/park_crown/lines.json"
 const PLANT_PATH := "user://park_crown_plant.json"
 
 const WAYMARKS := ["drop_in", "turnstone", "split_spire", "landmark"]
+# 2026-10-17 crown authored pass (stage page section 17): the gust lips, the hammocks and the mooring deck are GLB rows.
+const DRESSED := {"hoodoo_gust_lip_1": "mesa_lip_kicker", "hoodoo_gust_lip_2": "mesa_lip_kicker",
+	"hoodoo_gust_lip_3": "mesa_lip_kicker", "hoodoo_gust_lip_4": "mesa_lip_kicker", "needle_gust_lip": "mesa_lip_kicker",
+	"gauntlet_toe_lip": "mesa_lip_kicker", "signal_foot_lip": "mesa_lip_kicker", "kite_runout_lip": "mesa_lip_kicker",
+	"scree_gust_lip": "mesa_lip_kicker", "meander_cross_lip": "mesa_lip_kicker", "needle_hammock": "net_deck",
+	"needle_hammock_2": "net_deck", "kite_mooring_deck": "net_deck",
+	# 2026-10-17 islands follow-up: the flank lips and nets that keep the crown over half the park median.
+	"watch_flank_lip_w": "mesa_lip_kicker", "watch_flank_lip_e": "mesa_lip_kicker", "east_bajada_lip_1": "mesa_lip_kicker",
+	"east_bajada_lip_2": "mesa_lip_kicker", "gauntlet_kite_lip": "mesa_lip_kicker", "alcove_foot_lip": "mesa_lip_kicker",
+	"east_wash_hammock": "net_deck", "bowl_rim_net": "net_deck", "west_field_lip": "mesa_lip_kicker",
+	"signal_approach_lip": "mesa_lip_kicker", "bajada_rim_lip_w": "mesa_lip_kicker", "bajada_rim_lip_e": "mesa_lip_kicker",
+	"east_field_lip": "mesa_lip_kicker", "bowl_rim_net_w": "net_deck"}
 const POCKETS := {
 	"camp_signal": {"role": "online", "rarities": ["common"]},
 	"cache_turnstone": {"role": "reward", "rarities": ["rare"]},
@@ -278,7 +291,10 @@ static func pin_failures(park: Dictionary) -> Array:
 		if UNPLACED.has(id):
 			if recipe != "":
 				out.append("%s carries recipe %s, want none (left unplaced)" % [id, recipe])
-		elif recipe != "greybox:" + String(r["element"]):
+		elif DRESSED.has(id):
+			if recipe != DRESSED[id] or not ResourceLoader.exists(ParkRecipes.GLB_DIR + recipe + ".glb"):
+				out.append("%s carries recipe %s, want %s with its GLB" % [id, recipe, DRESSED[id]])
+		elif recipe != "greybox:" + String(r["element"]) and not (r["element"] == "anchor_field" and ParkRecipes.ANCHOR_KITS.has(recipe)):
 			out.append("%s carries recipe %s, want greybox:%s" % [id, recipe, r["element"]])
 		if id.ends_with("_rise"):
 			out.append("reversed-ramp row %s is back" % id)

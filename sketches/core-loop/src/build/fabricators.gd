@@ -212,8 +212,8 @@ func _refresh_label(fab: Dictionary, cogs: int, held: Array) -> void:
 	if fab["restock"] > 0.0:
 		text = "FABRICATING..."
 	else:
-		var d: Resource = Parts.def(part_id)
-		text = "%s\n%s\n%s" % [Parts.headline(part_id), d.text if d != null else "",
+		var d: Resource = Parts.offer_def(part_id, held)
+		text = "%s\n%s\n%s" % [Parts.offer_headline(part_id, held), d.text if d != null else "",
 			"ROLL THROUGH: %d cogs" % cost if ready else "need %d cogs (have %d)" % [cost, cogs]]
 		var mark: String = mark_for.call(part_id) if mark_for.is_valid() else ""
 		if mark != "":

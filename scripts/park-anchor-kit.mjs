@@ -5,17 +5,20 @@ import { fileURLToPath } from "node:url";
 // node scripts/park-anchor-kit.mjs [--check]: moves every `greybox:anchor_field` row of the six park maps onto its
 // anchors kit recipe (park_recipes.gd ANCHOR_KITS, tools/blender/park/anchors.py). It rewrites only the recipe value on
 // each row's own line, so after a merge conflict in a park map, take the other side and run it again. --check rewrites
-// nothing and fails while a row is left.
+// nothing and fails while a row is left. A changed map needs its bake and graph rerun (their park_sha256 pins it):
+//   godot --headless --path sketches/core-loop --script res://tools/park_bake.gd -- --map=<map>, then park_graph.gd
 // The family comes from the row id first (what the row is named for), then its landform (anchors.py's docstring).
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const PARKS = ["park_dam", "park_flume", "park_pit", "park_sinkhole", "park_islands", "park_crown"];
 export const GREY = "greybox:anchor_field";
 
+// Whole words of the id only (between underscores, digits or its ends), so "mastery" is no mast.
+const word = (alternatives) => new RegExp(`(^|_)(${alternatives})(?=_|\\d|$)`);
 export const BY_ID = [
-  [/cairn/, "anchor_cairn"],
-  [/net_post|mast|boom|truss|trestle|pier|fire_lookout/, "anchor_timber"],
-  [/spatter|basalt/, "anchor_basalt"],
+  [word("cairns?"), "anchor_cairn"],
+  [word("net_posts?|masts?|booms?|truss(es)?|trestles?|piers?|fire_lookout"), "anchor_timber"],
+  [word("spatter|basalt"), "anchor_basalt"],
 ];
 
 export const BY_LANDFORM = {

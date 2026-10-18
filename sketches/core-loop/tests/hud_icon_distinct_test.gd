@@ -17,7 +17,9 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # Re-pinned 9 -> 11 on 2026-10-10 (wave 13 unit B2, SKILL-BAR section 5): the skill bar draws
 # five keycap words (1, 2, 3, Shift, Ctrl) where the four-slot bar drew three (Shift, F, Ctrl;
 # the LMB glyph has no letters). The fight-case budget stays 25 (LEGIBILITY.md:114).
-const HUD_WORDS := 11
+# Re-pinned 11 -> 16 on 2026-10-17 (FIRST-TIMER audit): a fresh profile's first frame now shows
+# the drive lesson (ui/first_steps.gd), the four drive keycaps and DRIVE at the ball.
+const HUD_WORDS := 16
 
 var _game
 var _frames := 0

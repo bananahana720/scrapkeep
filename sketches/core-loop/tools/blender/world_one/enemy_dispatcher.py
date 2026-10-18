@@ -14,8 +14,8 @@ works; set it with the front toward the drop and the tube clears the edge.
 Three meshes, three surfaces, all opaque vertex colour:
   DispatcherBody    fleet_paint: the box, lid, clamps, headset and mic boom, ticket printer and
                     its paper tongue, the tube. Flashes with the enemy.
-  DispatcherRadar   fleet_paint: the radar paddle. Origin on the mast head; the runtime spins
-                    it round Y, a quarter turn per beat with dispatcher_presence's ping.
+  DispatcherRadar   fleet_paint: the radar paddle, skinned to the Radar bone on the mast
+                    head; the idle clip snaps it a quarter turn per beat with the ping.
   DispatcherSignal  requisition_tag: tube bands and mouth lip, the two eye lenses, the mic
                     capsule and the beacon. Brass at rest; the runtime lights it for each drop,
                     with dispatcher_tell (the tube sucks up, then the double ding). No glow is
@@ -23,12 +23,11 @@ Three meshes, three surfaces, all opaque vertex colour:
 Sockets (empties, no draws): drop_mouth (each chaser spawns here; its -Z is the way out of
 the tube), Beacon, TicketSlot, RadarPivot, perch_foot (centre of the clamp pads).
 Procedural bmesh in this repository; no external meshes or textures.
-Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir]
+Rig and clips (idle, tell, break): kill_first_motion.dispatcher.
+Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir] [--sheet dir]
 """
-import json
 import math
 import os
-import struct
 import sys
 
 import bmesh
@@ -176,15 +175,15 @@ assert tris <= 1100
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_dispatcher.glb")
-common.export(root, path)
-data = open(path, "rb").read()
-size = struct.unpack_from("<I", data, 12)[0]
-glb = json.loads(data[20:20 + size])
-prims = [p for m in glb["meshes"] for p in m["primitives"]]
-verts = sum(glb["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims)
-tri_count = sum(glb["accessors"][p["indices"]]["count"] // 3 for p in prims)
-assert verts <= 2100 and tri_count <= 1100 and len(prims) == 3
-print(f"DISPATCHER EXPORTED: {verts} V / {tri_count} T / {len(prims)} D")
+import kill_first_motion
+import kill_first_rig
+rig = kill_first_motion.dispatcher(root, body_obj, signal_obj, radar_obj)
+stats = rig.export(path, draws=3)
+print(f"DISPATCHER EXPORTED: {stats['verts']} V / {stats['tris']} T / {stats['draws']} D, "
+      f"{stats['joints']} joints, clips {stats['clips']}")
+if kill_first_rig.sheet_dir():
+    kill_first_rig.contact_sheet("dispatcher", rig, FLOOR, kill_first_rig.sheet_dir(), focus=(0, -1.2, 0.6),
+                                 scale=7.5, shots=kill_first_motion.DISPATCHER_SHOTS, lit_clips=("tell",))
 
 if opts["render"]:
     import kill_first_preview

@@ -17,6 +17,10 @@ const TelegraphScript := preload("res://src/combat/telegraph.gd")
 #           still hit it on the way), then finishes it, so both arms end on the same clear.
 # The target is ignore's mean hull lost at least 1.25 x target's (TARGET_RATIO), per special,
 # with at least MIN_HULL lost on the ignore arm: a ratio between two near-zero means is noise.
+# Damage taken is graded the same way beside it (damage_verdict, MIN_DAMAGE): the hull only
+# takes what the ball's scrap armour does not, so at low numbers the hull reads noise while
+# the hits that landed still show the cost (coordinator, 2026-10-17, on the Splitter: accept
+# on median hull plus damage taken). Each arm also reports its median hull.
 #
 # The stock bot dodges every telegraph it sees, so no fair attack ever lands on it; --dodge
 # (DODGE by default) is the share it answers, each telegraph decided once from the seed.
@@ -47,6 +51,8 @@ const SPECIALS := [
 const ARMS := ["target", "ignore"]
 const TARGET_RATIO := 1.25
 const MIN_HULL := 5.0
+# About one fair hit landed per run on the ignore arm.
+const MIN_DAMAGE := 10.0
 # The default share of telegraphs dodged: a stand-in for a player who misses about a third.
 const DODGE := 0.65
 const CREW_RANGE := 22.0
@@ -137,6 +143,10 @@ var _cleared_s := -1.0
 var _wipes := 0
 var _warnings := 0
 var _dispatched := 0
+var _joined := 0
+# True once the crew and the special stand, so only what comes after joins.
+var _encounter_up := false
+var _special_split := false
 var _model_clock := 0.0
 var _scrap_serial := 0
 var _counter_serial := 0
@@ -308,49 +318,88 @@ static func summarize(rows: Array, results: Array, cap: float) -> Dictionary:
 				by_arm[r["arm"]][int(r["seed"])] = r
 		for arm in ARMS:
 			var hull := []
+			var damage := []
 			var clear := []
 			var warned := []
 			var outcomes := {}
 			for r in by_arm[arm].values():
 				hull.append(float(r["hull_lost"]))
+				damage.append(float(r.get("damage_taken", 0.0)))
 				warned.append(float(r.get("warnings", 0)))
 				clear.append(float(r["clear_s"]) if float(r["clear_s"]) >= 0.0 else cap)
 				outcomes[r["outcome"]] = int(outcomes.get(r["outcome"], 0)) + 1
-			item[arm] = {"runs": hull.size(), "hull_mean": snappedf(mean(hull), 0.1),
+			item[arm] = {"runs": hull.size(), "hull_mean": snappedf(mean(hull), 0.1), "hull_median": snappedf(median(hull), 0.1),
+					"damage_mean": snappedf(mean(damage), 0.1),
 					"clear_mean_s": snappedf(mean(clear), 0.1), "warnings_mean": snappedf(mean(warned), 0.1),
 					"outcomes": outcomes}
 		var worse := 0
+		var damage_worse := 0
 		var paired := 0
+		var seed_ratios := []
 		for s in by_arm["target"]:
 			if by_arm["ignore"].has(s):
 				paired += 1
-				if float(by_arm["ignore"][s]["hull_lost"]) > float(by_arm["target"][s]["hull_lost"]):
+				var ti := float(by_arm["target"][s]["hull_lost"])
+				var ii := float(by_arm["ignore"][s]["hull_lost"])
+				if ii > ti:
 					worse += 1
+				seed_ratios.append(ii / ti if ti > 0.0 else (INF if ii > 0.0 else 1.0))
+				if float(by_arm["ignore"][s].get("damage_taken", 0.0)) > float(by_arm["target"][s].get("damage_taken", 0.0)):
+					damage_worse += 1
 		item["paired_seeds"] = paired
 		item["ignore_worse_seeds"] = worse
+		item["ignore_damage_worse_seeds"] = damage_worse
+		# The paired seeds' own ratios, middle value: above 1 means most seeds went the right way,
+		# so the mean is not carried by one seed.
+		item["median_ratio"] = snappedf(median(seed_ratios), 0.01) if not seed_ratios.is_empty() else 1.0
 		var t: float = item["target"]["hull_mean"]
 		var i: float = item["ignore"]["hull_mean"]
-		item["ratio"] = snappedf(i / t, 0.01) if t > 0.0 else (INF if i > 0.0 else 1.0)
-		if paired == 0:
-			item["verdict"] = "no runs"
-		elif i < MIN_HULL:
-			item["verdict"] = "too little damage"
-		else:
-			item["verdict"] = "pass" if float(item["ratio"]) >= TARGET_RATIO else "miss"
+		item["ratio"] = _ratio(i, t)
+		item["verdict"] = _verdict(paired, i, item["ratio"], MIN_HULL)
+		var dt: float = item["target"]["damage_mean"]
+		var di: float = item["ignore"]["damage_mean"]
+		item["damage_ratio"] = _ratio(di, dt)
+		item["damage_verdict"] = _verdict(paired, di, item["damage_ratio"], MIN_DAMAGE)
 		out["specials"].append(item)
 	return out
 
 
+static func _ratio(ignore: float, target: float) -> float:
+	return snappedf(ignore / target, 0.01) if target > 0.0 else (INF if ignore > 0.0 else 1.0)
+
+
+static func _verdict(paired: int, ignore: float, ratio: float, floor_value: float) -> String:
+	if paired == 0:
+		return "no runs"
+	if ignore < floor_value:
+		return "too little damage"
+	return "pass" if ratio >= TARGET_RATIO else "miss"
+
+
 static func table(report: Dictionary) -> Array:
-	var lines := ["priority_proof: special | mode | target hull/clear | ignore hull/clear | ratio | ignore worse | verdict"]
+	var lines := ["priority_proof: special | mode | target hull mean/median/clear | ignore hull mean/median/clear | ratio | median seed ratio | ignore worse | verdict"
+		+ " | target/ignore damage | damage ratio | damage worse | damage verdict"]
 	for item in report["specials"]:
 		if item["verdict"] == "not built":
-			lines.append("  %s | not built | - | - | - | - | not built" % item["name"])
+			lines.append("  %s | not built | - | - | - | - | - | not built | - | - | - | not built" % item["name"])
 			continue
-		lines.append("  %s | %s | %.1f / %.1fs | %.1f / %.1fs | %s | %d of %d | %s" % [item["name"], item["mode"],
-				item["target"]["hull_mean"], item["target"]["clear_mean_s"], item["ignore"]["hull_mean"],
-				item["ignore"]["clear_mean_s"], str(item["ratio"]), item["ignore_worse_seeds"], item["paired_seeds"], item["verdict"]])
+		lines.append("  %s | %s | %.1f / %.1f / %.1fs | %.1f / %.1f / %.1fs | %s | %s | %d of %d | %s | %.1f / %.1f | %s | %d of %d | %s" % [
+				item["name"], item["mode"],
+				item["target"]["hull_mean"], item["target"]["hull_median"], item["target"]["clear_mean_s"],
+				item["ignore"]["hull_mean"], item["ignore"]["hull_median"], item["ignore"]["clear_mean_s"],
+				str(item["ratio"]), str(item["median_ratio"]), item["ignore_worse_seeds"], item["paired_seeds"], item["verdict"],
+				item["target"]["damage_mean"], item["ignore"]["damage_mean"], str(item["damage_ratio"]),
+				item["ignore_damage_worse_seeds"], item["paired_seeds"], item["damage_verdict"]])
 	return lines
+
+
+static func median(values: Array) -> float:
+	if values.is_empty():
+		return 0.0
+	var sorted := values.duplicate()
+	sorted.sort()
+	var mid := sorted.size() / 2
+	return float(sorted[mid]) if sorted.size() % 2 == 1 else (float(sorted[mid - 1]) + float(sorted[mid])) * 0.5
 
 
 static func mean(values: Array) -> float:
@@ -413,6 +462,7 @@ func _physics_process(delta: float) -> bool:
 			if _spawned:
 				_hits += 1
 				_taken += amount)
+		_game.ctx.events.enemy_spawned.connect(_on_enemy_spawned)
 		_game.run.run_seed_override = _run_seed
 		_driver.start()
 		return false
@@ -449,11 +499,23 @@ var _start_s := 0.0
 var _grounded_s := 0.0
 
 
+# Whatever the encounter makes after it starts (a Dispatcher's drop, a Splitter's pieces)
+# joins the crew, toughened like the rest: the bot fights it and the clear waits for it. A
+# Splitter piece scales its health from the toughened chaser, so --hp-mult carries through.
+func _on_enemy_spawned(enemy: Node3D, _kind: String) -> void:
+	if _encounter_up and enemy not in _driver.crew:
+		_driver.crew.append(_toughen(enemy))
+		_joined += 1
+
+
 func _encounter_s() -> float:
 	return _game.run.stage_time - _start_s
 
 
+# Clear means everything down and nothing still to come (a Splitter's flare yet to pop).
 func _cleared() -> bool:
+	if not _game.get_tree().get_nodes_in_group("enemy_pending").is_empty():
+		return false
 	for enemy in _driver.crew:
 		if PriorityDriver.alive(enemy):
 			return false
@@ -483,12 +545,20 @@ func _spawn_encounter() -> void:
 			_driver.special.dispatched.connect(func(add: Node3D):
 				_driver.crew.append(_toughen(add))
 				_dispatched += 1)
+		# A built buffer reports its own wipes (foreman.gd), as the model counts its stand-in's.
+		if _driver.special != null and _driver.special.has_signal("wiped"):
+			_driver.special.wiped.connect(func(_members: Array): _wipes += 1)
+		# A built Splitter records whether it split, as the model counts its stand-in's.
+		var special: Node3D = _driver.special
+		if special != null and special.has_signal("died"):
+			special.died.connect(func(_where: Vector3, _scrap: int): _special_split = bool(special.get_meta("split", false)))
 	else:
 		# The model's stand-in: a non-attacking body with no plating and MODEL_HP.
 		var body: Node3D = spawner.spawn_enemy("vault", at)
 		body.plating = 0.0
 		body._set_health(MODEL_HP * float(_settings.get("hp-mult", "1")))
 		_driver.special = body
+	_encounter_up = true
 
 
 
@@ -527,7 +597,7 @@ func _step_model(delta: float) -> void:
 				standing += 1
 		if standing < int(model["alive_cap"]):
 			var from: Vector3 = _driver.special.global_position
-			_driver.crew.append(_toughen(_game.combat.spawn_enemy(String(model["spawn"]), _drop(from + Vector3(2.5, 0.0, 0.0)))))
+			_game.combat.spawn_enemy(String(model["spawn"]), _drop(from + Vector3(2.5, 0.0, 0.0)))
 			_dispatched += 1
 
 
@@ -543,7 +613,7 @@ func _record() -> void:
 			"class": _driver.class_id(), "outcome": _driver.outcome, "hull_lost": snappedf(lost, 0.1),
 			"hits": _hits, "damage_taken": snappedf(_taken, 0.1), "clear_s": snappedf(_cleared_s, 0.01),
 			"special_dead_s": snappedf(_special_dead_s, 0.01), "crew_spawned": _driver.crew.size(),
-			"crew_killed": killed, "wipes": _wipes, "warnings": _warnings, "dispatched": _dispatched,
+			"crew_killed": killed, "wipes": _wipes, "warnings": _warnings, "dispatched": _dispatched, "joined": _joined, "special_split": _special_split,
 			"encounter_s": snappedf(_encounter_s() if _spawned else 0.0, 0.01)}
 	# A built special's own counts, when it keeps them (the Dispatcher's drops and drop hits).
 	for key in ["drops", "landed_hits"]:

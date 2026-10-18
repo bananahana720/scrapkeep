@@ -44,6 +44,9 @@ const TRAVEL_DOWN := 0.2
 const TRAVEL_THREAT := 2
 # The ultimate meter's pressure step: a full meter at rest pressure still reaches travel.
 const ULTIMATE_STEP := 0.4
+# The momentum faders (INTEGRATION section 2): speed is a fraction of top speed.
+const DRUMS_IN_SPEED := 0.25
+const DRUMS_FULL_SPEED := 0.5
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
 
 
@@ -298,12 +301,23 @@ func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, 
 
 # Demucs's other stem carries the melodic roles; drums and bass retain their profiles.
 # At full threat/approach the recorded mix is unchanged. Armour and release remove other.
+# Two momentum faders ride on top when the feed carries them (INTEGRATION section 2):
+# drums follow rolling speed, in from a quarter of top speed and full at half, and the
+# lead (other) also opens with the kill chain: a third at chain 2 (the sax hook), full at 4.
+# Boss sections keep the full kit: the duel does not breathe with the ball's speed.
 func parameter_gain(stem: String) -> float:
-	if not parameter_enabled or not parameters.has("threat") or stem != "other":
+	if not parameter_enabled or not parameters.has("threat"):
+		return 1.0
+	if stem == "drums":
+		if mode != "level" or not parameters.has("speed"):
+			return 1.0
+		return clampf(smoothstep(DRUMS_IN_SPEED, DRUMS_FULL_SPEED, float(parameters.speed)), 0.0, 1.0)
+	if stem != "other":
 		return 1.0
 	if parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3):
 		return 0.0
-	return clampf(maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), _parameter_danger_floor), float(parameters.get("approach", 0.0))), 0.0, 1.0)
+	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), _parameter_danger_floor), float(parameters.get("approach", 0.0)))
+	return clampf(maxf(open, float(parameters.get("chain", 0.0))), 0.0, 1.0)
 
 
 # A full ultimate meter is one pressure step for the ACE band, as set_ultimate_lift is one
@@ -793,6 +807,22 @@ func _retarget(frames: int) -> void:
 		v.wet_step = 1.0 / maxf(frames, 1)
 
 
+# The momentum faders rise over one beat and fall over two bars, so one bump of speed or
+# a single broken link never makes the band stutter (INTEGRATION section 2). Only voices
+# already sounding move, and only when their own momentum factor changed: a join's new
+# voices, the threat and armour retargets and the Warden release keep their own ramps.
+func _smooth_momentum(drums_before: float, chain_before: float, stripped_before: bool) -> void:
+	var drums_moved := parameters.has("speed") and parameter_gain("drums") != drums_before
+	var stripped := parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3)
+	var lead_moved := parameters.has("chain") and float(parameters.chain) != chain_before and not stripped and not stripped_before
+	var joining: Array = pending.get("voices", [])
+	for v: Voice in voices:
+		if v in joining:
+			continue
+		if (v.stem == "drums" and drums_moved) or (v.stem == "other" and lead_moved):
+			_ramp_to(v, v.target, grid_beat if v.target > v.gain else grid_bar * 2)
+
+
 func _add(action: Dictionary) -> void:
 	var i := 0
 	while i < actions.size() and int(actions[i]["at"]) <= int(action["at"]):
@@ -824,6 +854,9 @@ func _run(action: Dictionary) -> void:
 	match action["type"]:
 		"parameters":
 			var previous_gain := parameter_gain("other")
+			var drums_before := parameter_gain("drums")
+			var chain_before := float(parameters.get("chain", 0.0))
+			var stripped_before := parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3)
 			var previous := parameters.duplicate()
 			var previous_released := parameter_released
 			var previous_lift := ultimate_lift
@@ -839,10 +872,11 @@ func _run(action: Dictionary) -> void:
 			if not pending.is_empty():
 				var profile := _profile(String(pending.section))
 				for voice: Voice in pending.voices:
-					if voice.stem == "other":
-						var gain := _gain_of(profile.other, "other")
+					if voice.stem == "other" or voice.stem == "drums":
+						var gain := _gain_of(profile[voice.stem], voice.stem)
 						if voice.target != gain:
 							_ramp_to(voice, gain, STOP_RAMP)
+			_smooth_momentum(drums_before, chain_before, stripped_before)
 			if previous != parameters or previous_released != parameter_released or previous_lift != ultimate_lift or previous_gain != parameter_gain("other"):
 				var targets := {}
 				var performing: Array = pending.get("voices", voices) if int(pending.get("begin", -1)) == clock else voices

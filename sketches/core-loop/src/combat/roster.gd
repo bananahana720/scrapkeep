@@ -30,7 +30,9 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # - tests: the build axis it tests, which the director weights against the player's
 #   build ("air", "speed", "heft", "contact", "weapon", "steer", "habit").
 # - script, world: a declared later-world kind's behaviour file and world (roster_dig.gd,
-#   roster_highdraft.gd). Such a kind is built, so spawnable, once its script exists.
+#   roster_highdraft.gd); a base row may name them too (the jolt layer). Such a kind is built,
+#   so spawnable, once its script exists.
+#   A kill-first special (roster_specials.gd) has a script and either a "world" or a "priority".
 
 const FLEET := "fleet"
 const REACTOR := "reactor"
@@ -109,6 +111,11 @@ const BASE_ROWS := {
 	"gyro_jammer": {"faction": FLEET, "role": "controller", "mechanic": "gyro_drift", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "boost", "smash"], "tag": "hold_riser", "tag_next": "tag_gyro_warble", "hold": "hold_riser", "tests": "steer",
 		"line": "Throws your gyroscope off inside its field: steering drifts side to side until you move out or break it."},
+	# The Spillway's field crew (design-v3/FIELDS-AND-CASTS.md section 2.3): spawnable by name, in
+	# no director pack until wave 19.
+	"jolt_layer": {"faction": FLEET, "role": "controller", "mechanic": "static_jam", "telegraph": T_INSTANT, "holds": false,
+		"breaks": ["speed", "jump"], "tag": "", "tests": "speed", "script": "res://src/combat/jolt_layer.gd", "world": 1,
+		"line": "Unrolls a live cable mat that jolts a slow ball: charges and casts drop and specials jam; roll fast, jump or hook out."},
 	"swatter": {"faction": FLEET, "role": "punisher", "mechanic": "paddle_bat", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "boost"], "tag": "hit_thwack", "tag_next": "tag_paddle_swat", "hold": "", "tests": "steer",
 		"line": "Swings a low paddle arm that bats you along its sweep; jump the paddle, or boost to ride the knock."},
@@ -176,13 +183,19 @@ const CHASSIS := {
 	"reactor_relic": {"chassis": "heavy", "move_class": "fixed", "threat_feature": "Vent slits glowing before the eruption"},
 	"swarm_remnant": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Drones snapping into one lined-up formation"},
 	"mind_hand": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Raised arm whose lens locks on the ball"},
-	"burrower": {"chassis": "burrower", "move_class": "ground", "threat_feature": "Bulging floor line running along its lane"},
+	"burrower": {"chassis": "burrower", "move_class": "ground", "threat_feature": "Floor ring swelling under a ball on the floor"},
 	"drill_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Drill bit lowered over the bore point"},
-	"lamp_swarm": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Lure lamps blooming in a ring"},
+	"lamp_swarm": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Floodlight heads opening their shutters in a ring"},
 	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
 	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
 	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
 	"dispatcher": {"chassis": "cache", "move_class": "fixed", "threat_feature": "Pneumatic tube curling down off a box on a mast"},
+	"foreman": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Steam-horn mast over a punch clock, tethered to its crew"},
+	"prop_crew": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Timber prop holding a cracked roof frame over its pack"},
+	"pit_jaw": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Toothed jaw ring flush with the floor, its lips parting"},
+	"splitter": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Three welded pods whose seams flare white as one buds off"},
+	"splitter_pod": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Lit seams blinking faster as the fuse burns"},
+	"jolt_layer": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cable spool under a coil that swells before each jolt"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.
@@ -190,11 +203,11 @@ const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "net
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const ANCIENTS := ["reactor_relic", "swarm_remnant", "mind_hand"]
 # The kill-first specials (ENEMY-PRIORITY.md 4): rows in this file plus roster_specials.gd; they arrive in packs too.
-static var SPECIALS: Array = ["linker"] + RosterSpecials.ROWS.keys()
+static var SPECIALS: Array = ["linker"] + RosterSpecials.ROWS.keys().filter(func(id): return RosterSpecials.ROWS[id].get("priority", "") != "spawned")
 # The family ancient per Warden family.
 const FAMILY_ANCIENT := {REACTOR: "reactor_relic", SWARM: "swarm_remnant", MIND: "mind_hand"}
 
-# Every row: the base roster plus the declared world 2 and 3 kinds.
+# Every row: the base roster, the declared world 2 and 3 kinds and the kill-first specials.
 static var ROWS: Dictionary = _all_rows()
 
 
@@ -257,6 +270,7 @@ static func is_ancient(name: String) -> bool:
 	return faction(name)["era"] == "ancient"
 
 
+# A kill-first special arrives inside a pack, so it counts as one too; what it spawns does not.
 static func is_reinforcement(id: String) -> bool:
 	return id in COUNTERS or id in ANCIENTS or id in SPECIALS
 

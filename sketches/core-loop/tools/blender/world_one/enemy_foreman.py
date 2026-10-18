@@ -17,20 +17,19 @@ lobber.gd affix turns it half a turn if it reuses the lobber's facing.
 Three meshes, three surfaces, all opaque vertex colour:
   ForemanBody    fleet_paint: cart, cabinet, dial, hard hat, mast, reels, the bristle
                  moustache. Flashes with the enemy.
-  ForemanHand    fleet_paint: the clock's one hand. Origin on the dial centre; the runtime
-                 ticks it round its local Z on the beat, the presence loop's clock tick.
+  ForemanHand    fleet_paint: the clock's one hand, skinned to the Hand bone on the dial
+                 centre; the idle clip ticks it on the beat, the presence loop's clock tick.
   ForemanSignal  requisition_tag: both horn bells, the dial rim, the tether reel caps and
                  the steam valve. Brass at rest; the runtime lights it on the beat before
                  each wipe, with foreman_tell. No glow is baked into the file.
 Sockets (empties, no draws): HornMouth (steam puff; its -Z blows out of the big bell), ClockFace (where the SHIFT OVER stamp
 lands), tether_a..d (where each crew tether leaves its reel), SteamValve.
 Procedural bmesh in this repository; no external meshes or textures.
-Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir]
+Rig and clips (idle, tell, break): kill_first_motion.foreman.
+Run: blender -b --factory-startup -P <this file> -- [--out file.glb] [--render dir] [--sheet dir]
 """
-import json
 import math
 import os
-import struct
 import sys
 
 import bmesh
@@ -218,15 +217,15 @@ assert tris <= 1100
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_foreman.glb")
-common.export(root, path)
-data = open(path, "rb").read()
-size = struct.unpack_from("<I", data, 12)[0]
-glb = json.loads(data[20:20 + size])
-prims = [p for m in glb["meshes"] for p in m["primitives"]]
-verts = sum(glb["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims)
-tri_count = sum(glb["accessors"][p["indices"]]["count"] // 3 for p in prims)
-assert verts <= 2100 and tri_count <= 1100 and len(prims) == 3
-print(f"FOREMAN EXPORTED: {verts} V / {tri_count} T / {len(prims)} D")
+import kill_first_motion
+import kill_first_rig
+rig = kill_first_motion.foreman(root, body_obj, signal_obj, hand_obj)
+stats = rig.export(path, draws=3)
+print(f"FOREMAN EXPORTED: {stats['verts']} V / {stats['tris']} T / {stats['draws']} D, "
+      f"{stats['joints']} joints, clips {stats['clips']}")
+if kill_first_rig.sheet_dir():
+    kill_first_rig.contact_sheet("foreman", rig, FLOOR, kill_first_rig.sheet_dir(), focus=(0, 0, 1.9),
+                                 scale=9.5, shots=kill_first_motion.FOREMAN_SHOTS, lit_clips=("tell",))
 
 if opts["render"]:
     import kill_first_preview

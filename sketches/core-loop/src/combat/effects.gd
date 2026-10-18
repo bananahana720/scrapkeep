@@ -1,6 +1,6 @@
 extends Node3D
 
-# Combat's own short-lived marks: chain arcs, blast rings and impact sparks. They show
+# Combat's own short-lived marks: chain arcs, blast rings, impact sparks and straight beams. They show
 # where a committed hit landed, for a fraction of a second, drawn as thin lines at
 # PRIORITY, below every enemy telegraph (principle 4: our effects never hide a threat).
 # Presentation (writer C) owns the rest of the juice; these are the minimum a greybox
@@ -17,6 +17,7 @@ const RING_SEGMENTS := 40
 var _arcs: Array = []
 var _rings: Array = []
 var _sparks: Array = []
+var _beams: Array = []
 var _mesh: ImmediateMesh
 var _arc_rng := RandomNumberGenerator.new()
 
@@ -53,7 +54,13 @@ func spark(at: Vector3, color: Color) -> void:
 	_sparks.append({"at": at, "color": color, "life": SPARK_LIFE})
 
 
+# A straight line that fades over `life` seconds: a lance's committed path, drawn once.
+func beam(from: Vector3, to: Vector3, color: Color, life: float) -> void:
+	_beams.append({"from": from, "to": to, "color": color, "life": life, "span": life})
+
+
 func clear() -> void:
+	_beams.clear()
 	_arcs.clear()
 	_rings.clear()
 	_sparks.clear()
@@ -65,7 +72,8 @@ func _process(delta: float) -> void:
 	_arcs = _age(_arcs, delta)
 	_rings = _age(_rings, delta)
 	_sparks = _age(_sparks, delta)
-	if _arcs.is_empty() and _rings.is_empty() and _sparks.is_empty():
+	_beams = _age(_beams, delta)
+	if _arcs.is_empty() and _rings.is_empty() and _sparks.is_empty() and _beams.is_empty():
 		return
 	_mesh.surface_begin(Mesh.PRIMITIVE_LINES)
 	for entry in _arcs:
@@ -74,6 +82,8 @@ func _process(delta: float) -> void:
 		_draw_ring(entry)
 	for entry in _sparks:
 		_draw_spark(entry)
+	for entry in _beams:
+		_line(entry["from"], entry["to"], Color(entry["color"], entry["color"].a * clampf(entry["life"] / entry["span"], 0.0, 1.0)))
 	_mesh.surface_end()
 
 

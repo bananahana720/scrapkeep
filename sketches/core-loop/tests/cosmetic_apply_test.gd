@@ -13,9 +13,14 @@ const Game := preload("res://src/game.gd")
 #   - an empty, unknown, other-pilot, unowned or non-paint id gives no tint and one warning each;
 #   - Tarn's own starter paint applies to Tarn and is refused on another pilot;
 #   - a paint equipped on a live shell repaints at the next fit;
-#   - a ClassPreview with paint_id tints only its shell's paint slot.
+#   - a ClassPreview with paint_id tints only its shell's paint slot;
+#   - the paint shows: on every pilot's Core lattice, Cobalt and each starter paint pull the
+#     colour the paint surfaces render at least SHOWN_PULL of the way to the tint (PAINT-TRACE
+#     card B). A multiply over the dark lattice only darkens it, so it fails this.
 
 const LIFT := 1.2
+# Share of the sRGB distance from the unpainted Core to the lifted tint that the paint must close (start).
+const SHOWN_PULL := 0.5
 const SABLE := "pylon_engineer"
 
 var _failures := 0
@@ -50,6 +55,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_refusals()
 	_check_repaint()
 	_check_preview()
+	_check_shown()
 	print("cosmetic_apply_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -61,9 +67,11 @@ static func slot_albedos(node: Node, slot: String, out: Array = []) -> Array:
 		var mi := node as MeshInstance3D
 		for i in mi.mesh.get_surface_count():
 			if HeroAssets.slot_of(mi.mesh, i) == slot:
-				var mat := mi.get_surface_override_material(i) as StandardMaterial3D
-				if mat != null:
+				var mat := mi.get_surface_override_material(i)
+				if mat is StandardMaterial3D:
 					out.append(mat.albedo_color)
+				elif mat is ShaderMaterial:
+					out.append(mat.get_shader_parameter("paint_tint"))
 	for c in node.get_children():
 		slot_albedos(c, slot, out)
 	return out
@@ -78,7 +86,7 @@ static func all_equal(colors: Array, want: Color) -> bool:
 	return true
 
 
-# Core is glass only today, so it has no paint surface; whatever it has must wear the tint.
+# A Core with no paint surface passes; whatever paint surface it has must wear the tint.
 static func none_or_equal(colors: Array, want: Color) -> bool:
 	return colors.is_empty() or all_equal(colors, want)
 
@@ -191,3 +199,77 @@ func _check_preview() -> void:
 			and not paint_before.is_empty(),
 			"preview tints only the paint slot")
 		preview.free()
+
+
+# The colour a paint surface renders for one vertex colour, before the plate texture and light,
+# in linear RGB: vertex x albedo for the plain material, the lerp toward the tint for a painted one.
+static func shown(mat: Material, vertex: Color) -> Color:
+	if mat is ShaderMaterial:
+		var lift: Color = (mat.get_shader_parameter("lift") as Color).srgb_to_linear()
+		var tint: Color = (mat.get_shader_parameter("paint_tint") as Color).srgb_to_linear()
+		var take: float = mat.get_shader_parameter("paint_take")
+		return Color(vertex.r * lift.r, vertex.g * lift.g, vertex.b * lift.b).lerp(tint, take)
+	var albedo: Color = (mat as StandardMaterial3D).albedo_color.srgb_to_linear()
+	return Color(vertex.r * albedo.r, vertex.g * albedo.g, vertex.b * albedo.b)
+
+
+# Mean shown colour, in sRGB, over the paint surfaces of the meshes under part that would draw.
+static func mean_shown(part: Node) -> Color:
+	var sum := Vector3.ZERO
+	var n := 0
+	var stack: Array[Node] = [part]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if node is Node3D and not (node as Node3D).visible:
+			continue
+		stack.append_array(node.get_children())
+		if not node is MeshInstance3D:
+			continue
+		var mi := node as MeshInstance3D
+		for i in mi.mesh.get_surface_count():
+			if HeroAssets.slot_of(mi.mesh, i) != "paint":
+				continue
+			var colors = mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]
+			if colors == null:
+				continue
+			var mat := mi.get_surface_override_material(i)
+			for c in colors:
+				var s := shown(mat, c)
+				sum += Vector3(s.r, s.g, s.b)
+				n += 1
+	if n == 0:
+		return Color.BLACK
+	sum /= n
+	return Color(sum.x, sum.y, sum.z).linear_to_srgb()
+
+
+static func distance(a: Color, b: Color) -> float:
+	return Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length()
+
+
+func _shown_core(hook, pilot: String, tints: Dictionary) -> Color:
+	var ball := Node3D.new()
+	var rec: Dictionary = hook.fit_shell_into(ball, pilot, "", 1, tints)
+	var got := mean_shown(rec["core"]) if not rec.is_empty() else Color.BLACK
+	ball.free()
+	return got
+
+
+func _check_shown() -> void:
+	var hook := HeroAssets.new()
+	for def in ClassDef.all():
+		var plain := _shown_core(hook, def.id, {"class": def.color})
+		var paints := ["paint_any_cobalt"]
+		for id in Cosmetics.for_slot("paint", def.id):
+			if Cosmetics.row(id).get("starter", false):
+				paints.append(id)
+		for id in paints:
+			var tint: Color = Cosmetics.row(id)["tint"]
+			var painted := _shown_core(hook, def.id, {"class": def.color, "paint": tint})
+			# Both colours sit before the plate texture, so the full paint is the lifted tint.
+			var full := _lifted(tint)
+			var gap := distance(plain, full)
+			var pull := (gap - distance(painted, full)) / maxf(gap, 0.001)
+			_report("B shown %s %s" % [def.id, id], pull >= SHOWN_PULL,
+				"Core renders %s unpainted, %s with %s: pulled %.2f of the way, needs %.2f" % [plain.to_html(false), painted.to_html(false), tint.to_html(false), pull, SHOWN_PULL])
+	hook.free()

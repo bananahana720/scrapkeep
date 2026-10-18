@@ -2,7 +2,7 @@ extends RefCounted
 
 # The Highdraft's dress: the islands, ridge bridges, return ramps and barges skinned with the
 # modelled kit, the thermal vent and air, the net deck, the harpoon anchors, a prop scatter, the
-# cloud deck and distant silhouettes, and the high bright morning sky. Visual only: no collision
+# cloud deck and distant silhouettes, and the open sky. Visual only: no collision
 # shape, body or tuning is touched. Every piece falls back to the greybox the map and contraptions
 # already built when its GLB is missing (the original meshes stay visible until a skin lands).
 # Hooked from game.gd through hook(ctx), which builds the zone on the entry that builds its ground.
@@ -59,7 +59,8 @@ static func is_highdraft(map) -> bool:
 
 
 # Build the zone's dress on the entry that builds its ground, and swap the light for it; any
-# other stage restores the shared environment. Connected after the world module's own handler,
+# other stage restores the shared environment. The stage's world look (world_look.gd, hooked after
+# this in game.gd) is applied later, so its time of day owns the key, ambient and fog colour here. Connected after the world module's own handler,
 # so the stage's contraptions already exist.
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
@@ -814,6 +815,11 @@ static func _props(parent: Node3D, map) -> void:
 				parent.add_child(sail)
 				_loop(sail, ["wind", "wind_loop"])
 				_sail_capture(parent, sail)
+		if radius >= 15.0:
+			var taken := placed.duplicate()
+			if found:
+				taken.append(sail_at)
+			_fan(parent, rows, taken, id, centre, radius, top)
 	var yard := Node3D.new()
 	yard.name = "Props"
 	parent.add_child(yard)
@@ -822,6 +828,31 @@ static func _props(parent: Node3D, map) -> void:
 		_multi(yard, String(row["file"]).get_basename(), _mesh(row["file"], row["node"]), lists[pick])
 		if row["file"] == "prop_lamp_body.glb":
 			_multi(yard, "prop_lamp_glass", _mesh("prop_lamp_glass.glb", "Surface"), lists[pick])
+
+
+# One spinning yard fan (animated) on each medium or large island. Its own seed, so the yard
+# props and sails keep their places.
+static func _fan(parent: Node3D, rows, taken: Array[Vector2], id, centre: Vector2, radius: float, top: float) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(String(id) + ":fan") ^ int(radius * 100.0)
+	for k in 40:
+		var at := centre + Vector2.from_angle(rng.randf() * TAU) * (radius - rng.randf_range(2.5, 6.0))
+		if SetDressing.blocked(rows, at, 1.5) != "":
+			continue
+		var clear := true
+		for other in taken:
+			clear = clear and other.distance_to(at) >= 4.0
+		if not clear:
+			continue
+		var fan := _scene("prop_fan.glb")
+		if fan == null:
+			return
+		fan.name = "Fan_%s" % id
+		fan.position = Vector3(at.x, top, at.y)
+		fan.rotation.y = rng.randf() * TAU
+		parent.add_child(fan)
+		_loop(fan, ["spin", "spin_loop"])
+		return
 
 
 # A capture viewpoint 6 m off the first sail's face, aimed at its 2 m face, so stills can frame one.

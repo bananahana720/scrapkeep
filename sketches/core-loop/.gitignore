@@ -4,5 +4,7 @@
 assets/music_ace/**/*.ogg
 assets/music_ace/.gdignore
 !assets/textures/*.webp.import
+# Event-set WAVs load as PCM (compress/mode=0): the bank decodes their 16-bit data, which QOA hides.
+!assets/audio/event_set/*.wav.import
 # Pilot animation GLBs keep their _loop clip names: name suffixes off, loop clips set (PE round 2, 2026-10-11).
 !assets/models/pilot_*_anim.glb.import

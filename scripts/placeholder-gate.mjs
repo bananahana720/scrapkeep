@@ -28,9 +28,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const PARK_MAPS_FILE = "src/core/park_defs.gd";
 export const GREYBOX = "greybox:";
-export const LANDMARK_DRESSED = "landmark";
-// park_recipes.gd: the park's ground scatter dresses the row, so it is no stand-in.
-export const SCATTER_DRESSED = "scatter";
 // Andrew's ruling 2026-10-17 06:16Z ("Ride lips only"): tunnel mouths, half-pipe edges, kickers and caverns
 // get real pieces; a plain bank, drop, ground shelf or mesa whose height stamp already shapes the ground
 // counts once its world's ground and scatter are on. Such a row draws no grey box (park_recipes.gd
@@ -38,6 +35,12 @@ export const SCATTER_DRESSED = "scatter";
 // The scatter half is runtime: park_map.gd keeps scatter out of every non-ground footprint until the wave
 // coordinator lets it onto these rows.
 export const PLAIN_SLOPES = ["bank", "drop", "ground", "sky_island"];
+export const LANDMARK_DRESSED = "landmark";
+// park_recipes.gd: the park's ground scatter dresses the row, so it is no stand-in.
+export const SCATTER_DRESSED = "scatter";
+// Andrew's "Edges are ground" (2026-10-17 22:29Z): a stamped greybox kicker spanning the whole play rect across its
+// facing (the Highdraft's mesa step lips) is a mesa edge, ground like a plain slope (park_map.gd mesa_edge).
+export const MESA_EDGE = "kicker";
 export const TEXT_MARKER = /\b(todo|tbd|fixme|xxx|lorem|placeholders?|coming soon|not yet implemented)\b/i;
 // Calls whose text goes to the log, not the screen.
 export const LOG_CALL = /\b(print|prints|printerr|print_rich|push_warning|push_error|assert|_warn|_warn_once|_fail)\s*\(/;
@@ -150,12 +153,19 @@ export function isPlainSlope(row) {
   );
 }
 
+export function isMesaEdge(row, playRect) {
+  if (row.element !== MESA_EDGE || row.recipe !== GREYBOX + MESA_EDGE || (row.stamp ?? "") === "" || row.y != null) return false;
+  if (!Array.isArray(playRect) || !Array.isArray(row.size)) return false;
+  const a = ((row.yaw_deg ?? 0) * Math.PI) / 180;
+  return row.size[2] >= Math.abs(Math.cos(a)) * playRect[2] + Math.abs(Math.sin(a)) * playRect[3];
+}
+
 // One finding per map and stand-in element, with its count and first ids.
 export function parkGreybox(map, doc, glbExists) {
   const groups = new Map();
   for (const { group, row } of recipeRows(doc)) {
     const recipe = row.recipe;
-    if (isPlainSlope(row)) continue;
+    if (isPlainSlope(row) || isMesaEdge(row, doc.play_rect)) continue;
     let element = null;
     let why = "";
     if (recipe === SCATTER_DRESSED) continue;
@@ -390,8 +400,9 @@ export function terrainRows(project) {
   let total = 0;
   for (const map of mapIds(parkDefs)) {
     const file = `src/world/park/${map}.json`;
-    if (existsSync(path.join(project, file)))
-      total += recipeRows(JSON.parse(read(file))).filter(({ row }) => isPlainSlope(row)).length;
+    if (!existsSync(path.join(project, file))) continue;
+    const doc = JSON.parse(read(file));
+    total += recipeRows(doc).filter(({ row }) => isPlainSlope(row) || isMesaEdge(row, doc.play_rect)).length;
   }
   return total;
 }
@@ -402,7 +413,7 @@ function main() {
   console.log(args.json ? JSON.stringify(findings, null, 2) : report(findings, args.limit));
   if (!args.json) {
     const terrain = terrainRows(args.project);
-    if (terrain > 0) console.log(`note: ${terrain} stamped plain slope(s) counted as terrain, not placeholders (PLAIN_SLOPES)`);
+    if (terrain > 0) console.log(`note: ${terrain} stamped plain slope(s) and mesa edge(s) counted as terrain, not placeholders (PLAIN_SLOPES, MESA_EDGE)`);
   }
   process.exitCode = findings.length === 0 ? 0 : 1;
 }

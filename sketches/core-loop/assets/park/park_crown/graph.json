@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "bfb75ab3bef333b8aad1be3032a80199bff8f363b28403f6edddf2de2fac7f93",
+  "bake_sha256": "1d2f5c01c708c4d0d8780c9ae17341770a2b122678fb524c50a97aca1f5e7aab",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 987683,
-  "edges": 321834,
+  "bytes": 1007665,
+  "edges": 328559,
   "first_failed": "",
   "flags": {
-    "deck": 701,
-    "door_ok": 39550,
+    "deck": 1427,
+    "door_ok": 39657,
     "line": 387,
-    "open": 40699,
-    "sight_ok": 9071,
+    "open": 40806,
+    "sight_ok": 9111,
     "under": 0
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "4a8be66175ed5ea285c7eff7b6167439c1641ee1c57c2c70ee330c2ac3d2f3e8",
+  "graph_sha256": "09615be059414110c975c9a9623d956cc4ac07f9196d953ff0ad5a6a1006b1ca",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
-  "nodes": 41102,
-  "park_sha256": "345abf763176c92ccc7bb4d9358ee25c6be8a8787385b331bdd30e6b4467b8f2",
+  "nodes": 41828,
+  "park_sha256": "3e1b48de8a9cbbf7cf4729b38f7a92a0b49a34434b75470986f817160e634b3c",
   "pockets": [
     {
       "clear_ring": [],
@@ -132,7 +132,7 @@
     }
   ],
   "reward_ratio": "0.506",
-  "ride_edges": 13,
+  "ride_edges": 16,
   "routes": {
     "east": [],
     "gauntlet": [],
@@ -179,7 +179,7 @@
       "value": 1.44
     }
   ],
-  "tool_sha256": "e33555885dfb290dbee2407c3cd9ce1b37caac4411791b44b19ee1f368a00aad",
+  "tool_sha256": "069b998146f21b9c9da3075e188d25f07404a4441f4753e689b1dfe1c00ae274",
   "zones": {
     "anchors": [
       {
@@ -191,11 +191,19 @@
         "viable": true
       },
       {
+        "cost": 1428.0,
+        "d_landmark": 526.5,
+        "name": "kite_mooring_deck",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
         "cost": 1299.9,
         "d_landmark": 251.3,
         "name": "gauntlet_shelf",
         "on_route": false,
-        "rank": 2,
+        "rank": 3,
         "viable": true
       },
       {
@@ -207,9 +215,25 @@
         "viable": false
       },
       {
+        "cost": 1231.2,
+        "d_landmark": 152.6,
+        "name": "kite_runout_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 1183.2,
         "d_landmark": 161.2,
         "name": "kick_wlast_12",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1181.3,
+        "d_landmark": 398.0,
+        "name": "signal_foot_lip",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -231,6 +255,14 @@
         "viable": false
       },
       {
+        "cost": 1091.1,
+        "d_landmark": 641.6,
+        "name": "signal_approach_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 1041.3,
         "d_landmark": 170.7,
         "name": "crown_ramp",
@@ -239,18 +271,66 @@
         "viable": true
       },
       {
-        "cost": 843.7,
-        "d_landmark": 504.5,
-        "name": "gauntlet_toe",
+        "cost": 1003.5,
+        "d_landmark": 664.9,
+        "name": "gauntlet_kite_lip",
         "on_route": false,
-        "rank": 3,
-        "viable": true
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 951.3,
+        "d_landmark": 349.0,
+        "name": "needle_gust_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 871.1,
+        "d_landmark": 515.8,
+        "name": "gauntlet_toe_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 832.1,
         "d_landmark": 370.7,
         "name": "spire_top_ramp",
         "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 813.1,
+        "d_landmark": 863.4,
+        "name": "alcove_foot_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 792.5,
+        "d_landmark": 794.8,
+        "name": "east_bajada_lip_2",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 789.0,
+        "d_landmark": 985.9,
+        "name": "east_field_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 759.1,
+        "d_landmark": 1024.7,
+        "name": "west_field_lip",
+        "on_route": false,
         "rank": 0,
         "viable": false
       },
@@ -271,6 +351,38 @@
         "viable": true
       },
       {
+        "cost": 696.3,
+        "d_landmark": 652.8,
+        "name": "hoodoo_gust_lip_2",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 687.1,
+        "d_landmark": 724.2,
+        "name": "hoodoo_gust_lip_4",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 651.5,
+        "d_landmark": 915.2,
+        "name": "east_bajada_lip_1",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 644.6,
+        "d_landmark": 601.2,
+        "name": "hoodoo_gust_lip_3",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 636.6,
         "d_landmark": 422.6,
         "name": "meander_bend",
@@ -279,12 +391,60 @@
         "viable": true
       },
       {
-        "cost": 537.2,
-        "d_landmark": 861.7,
-        "name": "turnstone_scree",
+        "cost": 624.0,
+        "d_landmark": 710.1,
+        "name": "meander_cross_lip",
         "on_route": false,
-        "rank": 6,
-        "viable": true
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 588.5,
+        "d_landmark": 713.7,
+        "name": "hoodoo_gust_lip_1",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 550.6,
+        "d_landmark": 878.0,
+        "name": "scree_gust_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 529.1,
+        "d_landmark": 1010.4,
+        "name": "bajada_rim_lip_w",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 518.7,
+        "d_landmark": 1012.8,
+        "name": "bajada_rim_lip_e",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 441.4,
+        "d_landmark": 1096.8,
+        "name": "watch_flank_lip_w",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 427.1,
+        "d_landmark": 1097.0,
+        "name": "watch_flank_lip_e",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 411.6,
@@ -311,11 +471,11 @@
         "viable": true
       }
     ],
-    "count": 44,
+    "count": 71,
     "crossings": {
-      "drop": 21,
-      "ride": 7,
-      "walk": 53
+      "drop": 27,
+      "ride": 9,
+      "walk": 77
     },
     "hidden": [
       {

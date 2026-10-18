@@ -16,7 +16,7 @@ class FakeCtx:
 
 class FakeSpecial:
 	extends Node3D
-	signal special_tell
+	signal special_tell(moment: String)
 	signal died(where: Vector3, scrap: int)
 	var rammed_at_ground := false
 
@@ -70,7 +70,7 @@ func _process(_delta: float) -> bool:
 
 	audio._last_start.clear()
 	audio.cue_log.clear()
-	enemies[0].special_tell.emit()
+	enemies[0].special_tell.emit("tell")
 	_t.check("the tell sounds now, not on a beat", audio.cue_log.size() == 1 and audio.cue_log[0][1] == "foreman_tell" and audio.cue_log[0][2] == "now", str(audio.cue_log))
 
 	audio.cue_log.clear()

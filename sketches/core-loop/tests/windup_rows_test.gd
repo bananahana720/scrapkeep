@@ -26,7 +26,7 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 func _expected(enemy, attack: String) -> float:
 	match String(enemy.kind):
-		"vault", "linker": return 0.0
+		"vault", "linker", "foreman": return 0.0
 		"chaser": return enemy.WINDUP
 		"lobber": return enemy.TELEGRAPH
 		"miniboss": return enemy.SLAM_CROUCH + enemy.SLAM_LEAP if attack == "E03" else enemy.CHARGE_BRACE
@@ -64,7 +64,7 @@ func _walk() -> void:
 			_report("cue " + attack, cue.color_role in EventKinds.COLOR_ROLES and cue.shape in EventKinds.SHAPES
 				and (cue.sound == EventKinds.NONE or SfxBank.has_recipe(cue.sound)), "resolved cue has a valid role, shape and bank id")
 			if attack == EventKinds.NONE:
-				_report("non-attacker", kind in ["vault", "linker"] and cue.phase == "none" and cue.shape == "none" and cue.sound == "none",
+				_report("non-attacker", kind in ["vault", "linker", "foreman"] and cue.phase == "none" and cue.shape == "none" and cue.sound == "none",
 					"%s explicitly has no attack" % kind)
 			else:
 				_report("attack " + attack, EventKinds.has_attack(attack) and cue.phase == "windup" and cue.color_role == "hazard"

@@ -773,11 +773,14 @@ static func _range(view: GeometryInstance3D, begin: float, end: float, margin: f
 
 
 # The ride sensor: an Area3D over the footprint reaching SENSOR_ABOVE_M above the top, hearing only the ball's layer.
-# Centred on the row's at for every recipe (ride_frame). None when the row's fact is no WORLD_ROWS kind or no publish
-# callable is given.
+# Centred on the row's at for every recipe (ride_frame). It publishes the row's ride fact and its optional music_layer
+# (park_schema.gd), each that is a WORLD_ROWS kind. None when neither is, or no publish callable is given.
 static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
-	var fact := String(row.get("ride_fact", ""))
-	if not publish.is_valid() or not EventKinds.WORLD_ROWS.has(fact):
+	var facts := []
+	for fact in [String(row.get("ride_fact", "")), String(row.get("music_layer", ""))]:
+		if EventKinds.WORLD_ROWS.has(fact):
+			facts.append(fact)
+	if not publish.is_valid() or facts.is_empty():
 		return
 	var size: Array = row["size"]
 	var area := Area3D.new()
@@ -793,7 +796,9 @@ static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
 	shape.position.y = box.size.y * 0.5
 	area.add_child(shape)
 	node.add_child(area)
-	area.body_entered.connect(func(ball: Node3D) -> void: publish.call(fact, ball.global_position))
+	area.body_entered.connect(func(ball: Node3D) -> void:
+		for fact: String in facts:
+			publish.call(fact, ball.global_position))
 
 
 # A wedge's six corners in the node's space: extent is [width, height, length]; rise +1 puts the high edge at +z.
@@ -849,14 +854,32 @@ static func _relative(node: Node3D, top: Node) -> Transform3D:
 # stamped row places its node and ride sensor but no solid: the stamp replaces it (PARK.md section 4: a landform is
 # "height stamp plus a recipe"; the stamp shapes the ground, and a greybox has no lip or rim to add). A greybox
 # anchor_field, or an anchors kit row, becomes a post field (place_anchor_field). A GLB recipe stands where place() puts
-# it, its -col mesh on top of the stamped ground. Only the park file's schema fields are read, never a stage's ids. After
-# the rows the park's landmark places once (place_landmark): its GLB loads with the rows' GLBs, and placed_rows never
-# names it.
+# it, its -col mesh on top of the stamped ground. Only the park file's schema fields are read, never a stage's ids.
+# After the rows the park's landmark places once (place_landmark): its GLB loads with the rows' GLBs, and
+# placed_rows never names it.
 
 
 # The park rows that place something: recipe not "".
 static func placed_rows(park: Dictionary) -> Array:
 	return (park.get("park_rows", []) as Array).filter(func(row: Dictionary) -> bool: return String(row.get("recipe", "")) != "")
+
+
+# The rows that place only a music layer's listening sensor: recipe "" (a group row such as a hoodoo forest, whose
+# members are rows of their own) with a music_layer.
+static func layer_rows(park: Dictionary) -> Array:
+	return (park.get("park_rows", []) as Array).filter(func(row: Dictionary) -> bool:
+		return String(row.get("recipe", "")) == "" and String(row.get("music_layer", "")) != "")
+
+
+# A layer row's node: a sensor over the footprint on the ground under its centre (or its absolute y) that publishes the
+# music layer alone (the group's ride fact stays its members'), with no view and no collider.
+static func place_layer(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable()) -> Node3D:
+	var node := _node(row, parent, ground)
+	node.name = "Layer_" + String(row.get("id", ""))
+	var layer := row.duplicate()
+	layer["ride_fact"] = ""
+	_sensor(node, layer, publish)
+	return node
 
 
 # Where anchor posts keep out: every built footprint ({"at", "size": [along, across], "yaw"}, the ground and anchor
@@ -1064,7 +1087,8 @@ static func anchor_variant(row: Dictionary) -> int:
 
 
 # The drawn posts' transforms in the node's space (node_xf the row node's transform): a kit row's posts stretched and
-# turned (header), else the unstretched box centres of grey posts.
+# turned (header) in the node's space, so they square up with the colliders under any yaw_deg, else the unstretched box
+# centres of grey posts.
 static func anchor_draws(row: Dictionary, posts: PackedVector2Array, ground: Callable, node_xf: Transform3D, kit: bool) -> Array:
 	var tall := float(row["size"][1]) + ANCHOR_SINK_M
 	var inv := node_xf.affine_inverse()
@@ -1077,7 +1101,7 @@ static func anchor_draws(row: Dictionary, posts: PackedVector2Array, ground: Cal
 			out.append(inv * Transform3D(Basis.IDENTITY, Vector3(p.x, bottom + tall * 0.5, p.y)))
 			continue
 		var turn := Basis(Vector3.UP, PI * 0.5 * float(hash("%s:%d" % [row.get("id", ""), k]) % 4))
-		out.append(inv * Transform3D(turn * stretch, Vector3(p.x, bottom + tall / ANCHOR_AUTHORED_M, p.y)))
+		out.append(Transform3D(turn * stretch, inv * Vector3(p.x, bottom + tall / ANCHOR_AUTHORED_M, p.y)))
 	return out
 
 
@@ -1214,6 +1238,7 @@ class Placer extends Node3D:
 	var _landmark: Dictionary = {}
 	var _park: Dictionary = {}
 	var landmark: Node3D = null
+	var _layers: Array = []
 	var _zones: Array = []
 	var _ground: Callable
 	var _publish: Callable
@@ -1232,6 +1257,7 @@ class Placer extends Node3D:
 	func start(park: Dictionary, ground: Callable, publish: Callable, threaded: bool) -> void:
 		var t0 := Time.get_ticks_usec()
 		_rows = Self.placed_rows(park)
+		_layers = Self.layer_rows(park)
 		_zones = Self.clear_zones(park)
 		_ground = ground
 		_publish = publish
@@ -1365,6 +1391,8 @@ class Placer extends Node3D:
 				add_child(landmark)
 			holder.free()
 			row_usec_max = maxi(row_usec_max, Time.get_ticks_usec() - r0)
+		for row: Dictionary in _layers:
+			Self.place_layer(row, self, _ground, _publish)
 		_held.clear()
 		phase = Phase.READY
 		set_process(false)

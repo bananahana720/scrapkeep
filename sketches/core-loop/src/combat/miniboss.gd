@@ -409,7 +409,7 @@ func _model_pose(delta: float) -> void:
 	_core_material.albedo_color = Palette.live() if weak else Palette.VERDIGRIS
 	_core_material.emission_enabled = weak
 	_core_material.emission = Palette.live()
-	_core_material.emission_energy_multiplier = 4.0 if weak else 0.0
+	_core_material.emission_energy_multiplier = FlashGuard.spike(1.2, 4.0) if weak else 0.0
 	_model_plate_material.albedo_color = Palette.SLATE
 
 
@@ -502,7 +502,7 @@ func _primitive_pose(delta: float) -> void:
 		plate.rotation.y = lerpf(plate.rotation.y, side * 0.9 * open, 1.0 - exp(-14.0 * delta))
 	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
 	_core.scale = Vector3.ONE * (1.5 * pulse if weak else 0.8)
-	_core_material.emission_energy_multiplier = 4.0 if weak else 1.2
+	_core_material.emission_energy_multiplier = FlashGuard.spike(1.2, 4.0) if weak else 1.2
 	_halo.visible = weak
 	if weak:
 		_halo.rotate_y(delta * 5.0)

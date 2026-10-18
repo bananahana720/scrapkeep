@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # The water a stage's basin fills with. Its shape comes from the map's basin record,
 # so each stage floods its own bowl, and the push, the plane you see and the "water"
@@ -89,8 +90,8 @@ func render() -> void:
 	var pulse := 0.0
 	if cycle.klaxon():
 		pulse = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.009)
-	_lamp.light_energy = pulse * 9.0
-	_lamp_material.emission_energy_multiplier = 0.4 + pulse * 5.0
+	_lamp.light_energy = FlashGuard.spike(0.0, pulse * 9.0)
+	_lamp_material.emission_energy_multiplier = FlashGuard.spike(0.4, 0.4 + pulse * 5.0)
 
 
 func in_basin(point: Vector3) -> bool:
