@@ -23,6 +23,8 @@ extends "res://src/combat/counter.gd"
 # The specials' cue hub (CONTRACTS.md "Special cues"); loaded only once that file lands.
 const CUES := "res://src/combat/special_cues.gd"
 const POD := "splitter_pod"
+const SpecialRig := preload("res://src/presentation/special_rig.gd")
+const BODY_GLB := "res://assets/models/world_one/enemy_splitter.glb"
 const PIECE_GLB := "res://assets/models/world_one/enemy_splitter_piece.glb"
 
 signal special_tell(moment: String)
@@ -142,14 +144,19 @@ func _build_crew() -> void:
 	_add_capsule(BODY_RADIUS, BODY_HALF * 2.0, Palette.RUST).free()
 	_seam_material = Palette.solid(SEAM_BRASS, SEAM_IDLE)
 	var parts := body_parts()
+	# On screen the glb's own scene stands in, so its crawl, tell and break clips play; the
+	# collider, sockets and signals are as before (a headless run copies meshes).
+	var model := SpecialRig.seat(self, _visual_parent(), BODY_GLB, "splitter")
 	for part in parts["meshes"]:
-		var mi := MeshInstance3D.new()
-		mi.name = part.name
-		mi.mesh = part.mesh
-		mi.transform = part.xform
+		var mi: MeshInstance3D = model.find_child(part.name, true, false) as MeshInstance3D if model != null else null
+		if mi == null:
+			mi = MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			_visual_parent().add_child(mi)
 		for i in mi.mesh.get_surface_count():
 			mi.set_surface_override_material(i, _material if part.paint else _seam_material)
-		_visual_parent().add_child(mi)
 		if part.paint:
 			_crew = mi
 	_base_color = Color.WHITE
@@ -188,7 +195,7 @@ static func _read(path: String) -> Dictionary:
 
 
 static func body_parts() -> Dictionary:
-	return parts("res://assets/models/world_one/enemy_splitter.glb")
+	return parts(BODY_GLB)
 
 
 static func piece_parts() -> Dictionary:
