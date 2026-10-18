@@ -32,6 +32,34 @@ Per part, set `part.bevel` (metres, `0` for none) or `part.subsurf` (levels) bef
 and `subsurf = 2`; hard machinery with the default bevel and `subsurf = 0` or `1`; thin
 sails, nets and decals with `bevel = 0` and `subsurf = 0`.
 
+### Regions: different polish for pieces of one part
+
+A part is one draw, so a crew head often shares a part with hard machinery. Wrap the
+primitives that need their own settings in `part.region(...)`:
+
+```python
+with body.region(bevel=0, subsurf=2, detail=1):   # head and muzzle: soft
+    body.uv("fleet_paint", 0.38, u=8, v=6, loc=head)
+with body.region(bevel=0.01):                       # a 4 cm stay: narrow bevel
+    body.rod("fleet_paint", a, b, 0.04)
+```
+
+`bevel`, `subsurf`, `detail` and `fit` default to the part's. Faces built inside the
+block are cut out, finished alone and joined back before triangulation, so wrap whole
+primitives: a region that shares vertices with the rest of the part opens a seam.
+Subdivided regions usually want `detail=1`, since each level already multiplies
+triangles by four. Without polish, `region()` does nothing.
+
+`fit=True` (an `enable()` option, or per region) scales each connected piece back to its
+unpolished bounding box after bevel and subdivision, so measured envelopes (a core's
+0.8 m radius, an ear tip's height, a bulb's 0.6 m face) hold exactly. Leave it off for a
+lopsided piece, such as the kite drone's keeled hull, where a per-axis stretch pushes
+diagonals past the envelope.
+
+The world 2 and 3 enemies use it for the shared crew critter (`world_two/fleet_crew.py`):
+head and muzzle `subsurf=2`, ears and paws `subsurf=1`, eyes and nose smooth with no
+subdivision, all `detail=1`.
+
 Subdivision carries loop colours, UVs, deform weights, materials and shading flags, and
 the mesh's integer and float vertex layers: an integer tag (`pilot_bone`, `tally_bone`,
 `rig_part`) goes to whatever most of a new vertex's source vertices carry, the lowest on
@@ -46,6 +74,7 @@ do not survive a bmesh rebuild; recipes with morphs subdivide only their unmorph
 | `sharp_angle` | 50° | Edges sharper than this stay hard after the bevel |
 | `subsurf` | 0 | Catmull-Clark levels; about 4x triangles per level |
 | `crease_angle` | 70° | On subdivided parts, edges sharper than this stay creased |
+| `fit` | off | Scale each piece back to its unpolished bounding box (see Regions) |
 | `ao`, `ao_rays`, `ao_reach`, `ao_strength` | on, 24, 0.18, 0.55 | Ambient occlusion bake |
 | `edge` | 0.18 | Convex edges lighten and creases darken by up to this much |
 | `bake_slots` | the `vc` slots | Slots whose vertex colours take the bake |
@@ -67,7 +96,9 @@ do not survive a bmesh rebuild; recipes with morphs subdivide only their unmorph
 Blender's corner normals, polygon normals and subdivision differ in the last bits
 between runs. The pass computes its own normals in Python doubles, subdivides in Python
 (`polish.subdivide`), rounds AO before quantising to 1/1024, and `common.export` sorts
-each primitive's vertices when polish is on. `check_polish.py` builds a recipe twice
+each primitive's vertices when polish is on. Polished quads split on their shorter
+diagonal (ties through the lowest corner), since a face's first loop, and with it
+Blender's fixed diagonal, can differ between runs. `check_polish.py` builds a recipe twice
 under polish and fails on any byte difference.
 
 ```sh
@@ -115,3 +146,7 @@ names, rigid weights, origins and collider envelopes. A recipe's envelope assert
 (radius, half extents, heights) must still pass, and can move both ways: bevels and
 subdivision pull corners inward, but `detail` adds segments to curved primitives, so
 their faces sit closer to the true circle and the mesh grows slightly outward.
+
+Colour tests still apply to baked colours: `tests/hero_assets_test.gd` caps `ancient_enamel`
+value and saturation at 0.45, and the default AO pushed dark corners to 0.473. Recipes
+with that slot use `edge=0, ao_strength=0.35`.

@@ -378,7 +378,7 @@ The pilot hangs directly under Pod (`hero_assets.gd:526`), so hand and control s
 4. One skin, 25 joints, and the `pilot-v1` hierarchy (`PILOT-RIG.md:23-40`).
 5. Tracks target joints only, matching `tests/pilot_reactions_test.gd:53-58`.
 6. Mesh primitives keep the baseline's attribute sets (`JOINTS_0`, `WEIGHTS_0`, colour), triangle count and draw count.
-7. Size: GLB at most 640 KB; animation data at most 300 KB.
+7. Size: GLB at most 1,024 KB; animation data at most 300 KB. (Raised from 640 KB on 18 Oct 2026 for the model polish, tools/blender/POLISH.md: a soft-toy pilot body carries about 6,000 to 7,000 vertices, about 470 KB of mesh.)
 
 **Pose and geometry, sampled every half frame after reimport:**
 
@@ -504,7 +504,7 @@ The queue holds card 1's lock for the run and exports `CUDA_VISIBLE_DEVICES` (`t
 | Clips per GLB | 7 | 18 | exactly 18 |
 | Seconds of animation per GLB | 9.17 | 20.9 to 23.4 | none |
 | Animation data per GLB | 46 to 97 KB | about 106 KB (Cannon) to 248 KB (Tarn) | 300 KB |
-| GLB size | 310 to 366 KB | about 370 KB (Cannon) to 503 KB (Tarn) | 640 KB |
+| GLB size | 310 to 366 KB | about 370 KB (Cannon) to 503 KB (Tarn) | 1,024 KB (640 KB before the model polish) |
 | Pilot mesh | 4,600 tris, 3,100 verts, 5 draws (`assets/asset_budgets.json:45-49`) | unchanged | unchanged |
 
 The projection scales each pilot's measured rate (Tarn 10.6 KB per second of animation, the Cannon 5.1, likely because its rigid cast keeps every scale constant) by the new seconds in 1.2. Godot's import keeps `animation/remove_immutable_tracks=true` and `animation/fps=30` (`assets/models/pilot_tarn_anim.glb.import`), which drops constant tracks.

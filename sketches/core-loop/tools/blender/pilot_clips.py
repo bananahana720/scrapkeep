@@ -47,8 +47,7 @@ EXPORT_COMMON = dict(export_format='GLB', use_selection=True, export_animations=
 EXPORT_ROUTES = {
     'rivet': ({}, False), 'sable': ({}, False), 'kest': ({}, False),
     'tarn': ({'export_vertex_color': 'ACTIVE'}, True),
-    # Tally's base scene is polished (POLISH.md): sort vertices too, or rebuilds drift.
-    'tally': ({'export_vertex_color': 'ACTIVE', 'export_extras': False}, 'vertices'),
+    'tally': ({'export_vertex_color': 'ACTIVE', 'export_extras': False}, True),
     'cannon': ({}, True),
 }
 
@@ -298,9 +297,12 @@ def export(arm, out_glb, pilot):
     bpy.context.scene.frame_set(1)
     extra, canonical = EXPORT_ROUTES[pilot]
     bpy.ops.export_scene.gltf(filepath=str(out_glb), **dict(EXPORT_COMMON, **extra))
-    if canonical:
+    # A polished body (POLISH.md) carries the "Bake" UV map; its vertices are sorted so
+    # rebuilds stay byte-identical.
+    polished = any("Bake" in o.data.uv_layers for o in meshes)
+    if canonical or polished:
         from common import canonical_indices
-        canonical_indices(str(out_glb), vertices=canonical == 'vertices')
+        canonical_indices(str(out_glb), vertices=polished)
 
 
 def synthetic_table(pilot):
