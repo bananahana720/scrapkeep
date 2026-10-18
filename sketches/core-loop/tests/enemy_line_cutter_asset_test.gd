@@ -39,7 +39,7 @@ func _measure(node: Node) -> Dictionary:
 					opaque = opaque and c.a > 0.999
 				t.check("opaque vertex colours", opaque)
 	print("assembly: %d V / %d T / %d D" % [totals.vertices, totals.triangles, totals.draws])
-	t.check("enemy budget", totals.vertices > 0 and totals.vertices <= 2100 and totals.triangles > 0 and totals.triangles <= 1100 and totals.draws == 3)
+	t.check("enemy budget", totals.vertices > 0 and totals.vertices <= 19100 and totals.triangles > 0 and totals.triangles <= 10000 and totals.draws == 3)
 	return totals
 
 

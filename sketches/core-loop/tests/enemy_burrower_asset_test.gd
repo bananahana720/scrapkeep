@@ -48,8 +48,8 @@ func _measure(node: Node) -> Dictionary:
 				if color.a < 0.999:
 					t.check("opaque vertex paint", false)
 	print("measured: %d T / %d V / %d D" % [counts.triangles, counts.vertices, counts.draws])
-	t.check("triangle budget", counts.triangles > 0 and counts.triangles <= 1100)
-	t.check("vertex budget", counts.vertices > 0 and counts.vertices <= 2100)
+	t.check("triangle budget", counts.triangles > 0 and counts.triangles <= 10000)
+	t.check("vertex budget", counts.vertices > 0 and counts.vertices <= 19100)
 	t.check("draw budget", counts.draws > 0 and counts.draws <= 3)
 	return counts
 

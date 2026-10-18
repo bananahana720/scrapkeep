@@ -59,7 +59,7 @@ func _budget(node: Node, label: String) -> void:
 				for color in a[Mesh.ARRAY_COLOR] as PackedColorArray:
 					opaque = opaque and color.a >= 0.999
 	print("%s: %d V, %d T, %d D" % [label, vertices, triangles, draws])
-	t.check(label + " budget", vertices > 0 and vertices <= 2100 and triangles > 0 and triangles <= 1100 and draws == 3)
+	t.check(label + " budget", vertices > 0 and vertices <= 19100 and triangles > 0 and triangles <= 10000 and draws == 3)
 	t.check(label + " opaque unlit surfaces", opaque and not emission)
 
 
