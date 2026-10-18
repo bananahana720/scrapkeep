@@ -93,6 +93,18 @@ const ROWS := [
 		"text": "Stores ledger: spare bearings requisitioned. Pump still expected to run. Filed request for spare expectations.",
 	},
 	{
+		"id": "lore.spillway.note.shift_board", "kind": "field_note", "zone": "1-1",
+		"text": "Shift board, pump house: FOREMAN column reads MIND. HANDS column wiped clean. Chalk dust under it is fresh every morning.",
+	},
+	{
+		"id": "lore.spillway.note.gloves", "kind": "field_note", "zone": "1-1",
+		"text": "Locker row: one pair of work gloves set out per shift. Nobody on the roster draws them. A fresh pair is laid out anyway.",
+	},
+	{
+		"id": "lore.park_dam.note.crane", "kind": "field_note", "zone": "1-1",
+		"text": "Crane log: cab empty, keys on the hook. Jib swung once during the noon tune. Lift signed for in a hand nobody on shift writes.",
+	},
+	{
 		"id": "lore.park_dam.intro.warden", "kind": "intro", "zone": "1-1", "subject": "warden",
 		"text": "Dam Warden. Gates open on its count, not ours.",
 	},
@@ -303,6 +315,10 @@ const ROWS := [
 		"text": "Survey sheet: cliff height unchanged. Chalk marks below the plates sit one boot higher each morning.",
 	},
 	{
+		"id": "lore.dig_entry.note.hoist_bell", "kind": "field_note", "zone": "2-1",
+		"text": "Hoist bell log: rung for crew up, rung for crew down. Nobody rode. Bell rope worn smooth at a height no crew could reach.",
+	},
+	{
 		"id": "lore.dig_entry.intro.warden", "kind": "intro", "zone": "2-1",
 		"subject": "warden",
 		"text": "Crew notice: borrowed lights go back on the rack. Even found ones.",
@@ -480,6 +496,10 @@ const ROWS := [
 		"text": "Beacon watch: lens steady across both bridges. Shadow on the middle island keeps arriving before the light.",
 	},
 	{
+		"id": "lore.highdraft_deck.note.work_order", "kind": "field_note", "zone": "3-1",
+		"text": "Work order, issued by MIND: hold the island up, keep supper warm, count the crew. Signed in the HANDS box. Ink still wet.",
+	},
+	{
 		"id": "lore.highdraft_deck.intro.warden", "kind": "intro", "zone": "3-1",
 		"subject": "warden",
 		"text": "Tool locker: spoon filed as wrench. Wrench filed as weather loss.",
@@ -594,6 +614,10 @@ const ROWS := [
 		"text": "West cable inspection: knots hold. Voice in the line asks which knot belongs to which worker.",
 	},
 	{
+		"id": "lore.park_crown.note.glove_numbers", "kind": "field_note", "zone": "3-2",
+		"text": "Crown watch: four fingers of the big glove stencilled 01 to 04, numbers off the old roster. Thumb reads FOREMAN. All five still clock in.",
+	},
+	{
 		"id": "lore.park_crown.intro.warden", "kind": "intro", "zone": "3-2", "subject": "warden",
 		"text": "Crown Warden. One hand, three perches. It keeps the count.",
 	},
@@ -601,5 +625,100 @@ const ROWS := [
 		"id": "lore.highdraft_core.intro.mind", "kind": "intro", "zone": "3-2",
 		"subject": "mind",
 		"text": "Lookout scrap: island lights blink in order. Count starts before the first.",
+	},
+	# Boss threat lines, one per boss and pilot (Andrew's design answer 12, "One line each",
+	# 2026-10-17). Each sits at the world's last zone, where the arena opens, and wins over the
+	# boss row without a pilot, which stays as the fallback. The Mind's lines answer its tune
+	# hidden backwards in the Spillway music (answer 9).
+	# TONE-READ: boss threat lines; every line awaits Andrew's read.
+	{
+		"id": "lore.reach.intro.brindle.pylon_engineer", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "pylon_engineer",
+		"text": "Brindle: Fastest fox on record. I've rounded you up to two.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.runner_gunner", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "runner_gunner",
+		"text": "Brindle: Rivet, a perfect record. Fleet policy is to audit perfect records.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.demolitions_caster", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "demolitions_caster",
+		"text": "Brindle: Take your time measuring, Kest. The Fleet bills by the hour.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.tarn", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "tarn",
+		"text": "Brindle: A gentle tiger in a snarling machine. I'll address the machine.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.tally", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "tally",
+		"text": "Brindle: Tally. My rival ledger. Tonight we see whose columns balance.",
+	},
+	{
+		"id": "lore.reach.intro.brindle.remembered_cannon", "kind": "intro", "zone": "1-2",
+		"subject": "brindle", "pilot": "remembered_cannon",
+		"text": "Brindle: Ancient ordnance, unregistered. I'll log you as a gift.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.pylon_engineer", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "pylon_engineer",
+		"text": "Waking: Fast fox. Your pylons were planted in my back.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.runner_gunner", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "runner_gunner",
+		"text": "Waking: Another mole digging in my dark. At least you aim.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.demolitions_caster", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "demolitions_caster",
+		"text": "Waking: Kest. I knocked back the whole time. You never knocked again.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.tarn", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "tarn",
+		"text": "Waking: Your machine growls at me, tiger. You only said sorry.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.tally", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "tally",
+		"text": "Waking: Itemize this, Tally. Floor. Floor. Ceiling.",
+	},
+	{
+		"id": "lore.dig_depths.intro.waking.remembered_cannon", "kind": "intro", "zone": "2-2",
+		"subject": "waking", "pilot": "remembered_cannon",
+		"text": "Waking: I know your rings, old gun. You shook my sleep.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.pylon_engineer", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "pylon_engineer",
+		"text": "Mind: My gun remembered you, fox. I've hummed you since the Spillway.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.runner_gunner", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "runner_gunner",
+		"text": "Mind: Lift the visor, Rivet. I'd like to see who listened.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.demolitions_caster", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "demolitions_caster",
+		"text": "Mind: Welcome home, Kest. I kept your sky. Commit to staying.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.tarn", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "tarn",
+		"text": "Mind: Quiet tiger. Let the machine snarl. I only want the duet.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.tally", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "tally",
+		"text": "Mind: Tally, enter one more line. Likes: you. Balance that.",
+	},
+	{
+		"id": "lore.highdraft_core.intro.mind.remembered_cannon", "kind": "intro", "zone": "3-2",
+		"subject": "mind", "pilot": "remembered_cannon",
+		"text": "Mind: You were my gun. Now you play my song backwards.",
 	},
 ]

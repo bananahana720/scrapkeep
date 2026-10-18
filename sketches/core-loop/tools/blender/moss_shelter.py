@@ -13,7 +13,12 @@ import math, os, sys
 import bmesh
 sys.path.insert(0, os.path.dirname(__file__))
 import common
+import polish
 from common import Part
+# Polish (POLISH.md): smooth shading with hard fracture creases and the AO/wear bake. No subdivision or bevel:
+# the cheeks are deliberate unequal fracture planes with chipped, not rolled, edges (moss_shelter_test "planes
+# unequal"). Only this recipe builds the module, so it opts in at module level.
+polish.enable(bevel=0)
 common.reset()
 root = common.empty('MossShelter')
 p = Part('SandstoneShelter')

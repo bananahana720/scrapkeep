@@ -20,10 +20,15 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # transforms stay byte-identical to the base.
 
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
-# SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted), recorded
-# 2026-10-11 on the untouched base d204cea (KB5). A change here moves an old map's scatter.
-const OLD_MAPS_HASH := "5bdc8fbaa2b82655daf9425a055b042a7b8ce55de12e01ce71e643a2a5ce7666"
+# SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted). A change
+# here moves an old map's scatter. Re-pinned 2026-10-18 (coordinator call 2026-10-18) to a57519e6,
+# the value reported stable in this repo back to 0eeb995e; was 5bdc8fba, recorded 2026-10-11 on
+# the base d204cea (KB5), which is not in this repo.
+const OLD_MAPS_HASH := "a57519e6d2f7ff97671b7cb051b49fb168b2c550919fad2fe7e0ac2ec7610dd2"
 # The rows that hash covers: Dig 4, Dig Deep 4, Spillway 4 (a missing batch must not pass).
 const OLD_MAPS_ROWS := 12
 const PARK_TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
@@ -44,6 +49,7 @@ func _initialize() -> void:
 func _run() -> void:
 	# The park section runs first, so the process's resource cache holds none of what the build reads.
 	await _park_chunks()
+	_plain_slopes()
 	var seeds := {}
 	var row_errors := []
 	var relief_errors := []
@@ -159,7 +165,7 @@ func _run() -> void:
 
 	var old_hash := _old_maps_hash()
 	print("scatter_rows_test: old-map scatter hash ", old_hash)
-	t.eq("the old maps' scatter transforms are byte-identical to d204cea", old_hash, OLD_MAPS_HASH)
+	t.eq("the old maps' scatter transforms are byte-identical to the pin", old_hash, OLD_MAPS_HASH)
 
 	quit(t.verdict())
 
@@ -367,6 +373,79 @@ func _park_chunks() -> void:
 		% [batches, worst_draws, probe, float(batches) / maxf(1.0, float(probe))])
 	t.check("the merged chunks draw fewer batches than the probe's unmerged chunks", batches > 0 and batches < probe, "%d vs %d" % [batches, probe])
 	holder.free()
+
+
+# "Ride lips only" (Andrew, 2026-10-17 06:16Z) and "Edges are ground" (22:29Z): on every park map the stage table
+# uses, a stamped plain slope (ParkMap.plain_slope, the placeholder gate's isPlainSlope) or mesa edge (ParkMap.mesa_edge)
+# is not in keep_out and gets scatter inside its footprint, while every other built footprint but the ground stays
+# clear; a plain slope left bare has a built piece over it. Placed on flat ground, so each row's whole footprint is in
+# reach; on the real stamp the slope rule still keeps pieces off the steep faces.
+func _plain_slopes() -> void:
+	var flat := func(x: float, z: float, _r: float) -> Vector3: return Vector3(x, 0.0, z)
+	var maps := {}
+	for def: Dictionary in ParkDefs.DEFS:
+		maps[String(def["map"])] = true
+	var plain_total := 0
+	var edges := 0
+	var problems := []
+	for map_id: String in maps:
+		var map = ParkMap.new("res://src/world/park/%s.json" % map_id)
+		if not map.ok:
+			problems.append("%s fails its schema" % map_id)
+			continue
+		var kept := {}
+		for f: Dictionary in map.scatter["keep_out"]:
+			kept[f["id"]] = f
+		var plain := []
+		var built := []
+		for row: Dictionary in map.park["park_rows"]:
+			if ParkMap.mesa_edge(row, map.play_rect):
+				edges += 1
+			if ParkMap.plain_slope(row) or ParkMap.mesa_edge(row, map.play_rect):
+				plain.append(row)
+				if kept.has(row["id"]):
+					problems.append("%s/%s is a plain slope kept out" % [map_id, row["id"]])
+			# 2026-10-18 (w17 fix): a scatter-dressed row (recipe "scatter", #114's cinder_cone) is dressed by
+			# the scatter, so park_map.gd keeps it out of keep_out; it is neither plain nor built here.
+			elif row["element"] != "ground" and row["recipe"] != ParkRecipes.SCATTER_DRESSED:
+				built.append(row)
+				if not kept.has(row["id"]):
+					problems.append("%s/%s is built but not kept out" % [map_id, row["id"]])
+		plain_total += plain.size()
+		if plain.is_empty():
+			continue
+		# The chunks under the plain slopes' centres, every kit row.
+		var cells := {}
+		for row: Dictionary in plain:
+			var at: Vector2 = ParkMap._v2(row["at"])
+			cells[Vector2i(floori((at.x + ParkTerrain.HALF) / ParkTerrain.TILE_M), floori((at.y + ParkTerrain.HALF) / ParkTerrain.TILE_M))] = true
+		var on_plain := {}
+		var on_built := 0
+		for row: Dictionary in ScatterRows.PARK_KIT:
+			var aabb: AABB = Scatter._source(row["mesh"])["aabb"]
+			for cell: Vector2i in cells:
+				for xf: Transform3D in Scatter.chunk_transforms(row, map, flat, aabb, cell.x, cell.y, []):
+					var p := Vector2(xf.origin.x, xf.origin.z)
+					for slope: Dictionary in plain:
+						if ParkMap.footprint_contains(slope, p):
+							on_plain[slope["id"]] = true
+					for b: Dictionary in built:
+						if Scatter._kept_out([kept[b["id"]]], p):
+							on_built += 1
+		print("scatter_rows_test: %s has scatter on %d of %d stamped plain slopes and mesa edges" % [map_id, on_plain.size(), plain.size()])
+		# A plain slope with no scatter is one a built piece stands on (a half-pipe in a drop, an anchor field on a
+		# bank), so its centre is kept out by that piece.
+		for row: Dictionary in plain:
+			if not on_plain.has(row["id"]) and not Scatter._kept_out(map.scatter["keep_out"], ParkMap._v2(row["at"])):
+				problems.append("%s/%s has no scatter and nothing built on it" % [map_id, row["id"]])
+		if on_built > 0:
+			problems.append("%s %d pieces inside built footprints" % [map_id, on_built])
+	print("scatter_rows_test: %d stamped plain slopes and mesa edges over the stage table's parks" % plain_total)
+	t.check("scatter lands on the stamped plain slopes and stays out of every other built footprint", plain_total > 0 and problems.is_empty(), ", ".join(problems.slice(0, 8)))
+	var fixture = ParkMap.new()
+	var lip: Array = fixture.park["park_rows"].filter(func(r: Dictionary) -> bool: return r["element"] == "kicker")
+	t.check("the Highdraft carries mesa edges and an ordinary kicker is not one", edges > 0 and not lip.is_empty()
+		and not lip.any(func(r: Dictionary) -> bool: return ParkMap.mesa_edge(r, fixture.play_rect)), "%d edges" % edges)
 
 
 static func _key(v: Vector3) -> String:

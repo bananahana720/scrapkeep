@@ -32,9 +32,12 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Deflector")
 
 GROUND = -1.1
@@ -87,6 +90,7 @@ b.box("paint", (0.28, 0.05, 0.18), loc=(0, 0.855, 0.30), color=BRASS)  # the one
 
 body = b.to_object(parent=root)
 b = Part("DishWall")
+b.subsurf = 0
 bm = b.bm
 
 # --- The dish: two skins over 16 sectors and four rings --------------------------------
@@ -150,7 +154,7 @@ zs = [v.z for v in points]
 surfaces = len(body.data.materials) + len(wall.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3))
-if tris > 1200 or surfaces > 3 or max(abs(x) for x in xs) > 2.0 or min(ys) < -1.75 or max(ys) > 0.9 \
+if tris > 3200 or surfaces > 3 or max(abs(x) for x in xs) > 2.0 or min(ys) < -1.75 or max(ys) > 0.9 \
         or min(zs) < GROUND - 0.001 or max(zs) > 2.3:
     raise SystemExit("C17 limits exceeded")
 

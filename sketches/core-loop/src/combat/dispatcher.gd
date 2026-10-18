@@ -27,6 +27,7 @@ const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 signal special_tell(moment: String)
 signal dispatched(enemy: Node3D)
 
+const SpecialRig := preload("res://src/presentation/special_rig.gd")
 const MODEL := "res://assets/models/world_one/enemy_dispatcher.glb"
 # A chaser's health: reaching it is the test, not grinding it down.
 const HP := 60.0
@@ -123,11 +124,17 @@ func _build_tool() -> void:
 	if parts.is_empty():
 		_fallback_body()
 		return
+	# On screen the glb's own scene stands in, so its idle, tell and break clips play (the
+	# radar's turn is the clip's then); sockets, collider and signals are as before.
+	var model := SpecialRig.seat(self, _visual_parent(), MODEL, "dispatcher")
 	for part in parts:
-		var mi := MeshInstance3D.new()
-		mi.name = part.name
-		mi.mesh = part.mesh
-		mi.transform = part.xform
+		var mi: MeshInstance3D = model.find_child(part.name, true, false) as MeshInstance3D if model != null else null
+		if mi == null:
+			mi = MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			_visual_parent().add_child(mi)
 		match String(part.name):
 			"DispatcherBody":
 				mi.material_override = _material
@@ -137,8 +144,8 @@ func _build_tool() -> void:
 				mi.material_override = _signal_material
 			"DispatcherRadar":
 				mi.material_override = _material
-				_radar = mi
-		_visual_parent().add_child(mi)
+				if model == null:
+					_radar = mi
 	_mouth = _sockets.get("drop_mouth", _mouth)
 
 

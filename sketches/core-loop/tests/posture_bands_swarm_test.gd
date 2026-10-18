@@ -74,6 +74,13 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 const EXPECT_SMALL_S := 88.16
 const EXPECT_GROWN_S := 38.77
 const TOLERANCE := 0.10
+# 2026-10-18: a 4-core, 16 GB cloud sandbox ran all 24 children at once; the kernel killed grown
+# seed 1 for memory (exit 9, no record, counted as a 300 s fight) and every camper hit the 900 s
+# wall cap, so the band read grown 51.71 s. CHILD_MEMORY_B is one child's budget (about 700 MB
+# resident at its peak) and CHILDREN_PER_CORE caps the children to the cores, so each child
+# finishes its run on any machine.
+const CHILD_MEMORY_B := 1024 * 1024 * 1024
+const CHILDREN_PER_CORE := 2
 
 var _child := false
 var _hoisted = null
@@ -104,10 +111,13 @@ func _initialize() -> void:
 			jobs.append({"script": "res://tests/posture_bands_swarm_test.gd", "args": args})
 			names.append([arm, run_seed, out])
 	t.check("the sweep has runs", not jobs.is_empty(), "%d jobs" % jobs.size())
-	var results := ChildRuns.run(jobs, 900.0)
+	var parallel := _parallel(jobs.size())
+	print("swarm sweep: %d children, %d at once" % [jobs.size(), parallel])
+	var results := ChildRuns.run(jobs, 900.0, parallel)
 	var fights := {}
 	var low_staggers := {}
 	var latch_finishes := {}
+	var unrecorded := []
 	for i in results.size():
 		var arm: String = names[i][0]
 		var run_seed: int = names[i][1]
@@ -115,6 +125,8 @@ func _initialize() -> void:
 		t.check("%s seed %d ran" % [arm, run_seed], results[i]["code"] == 0 and not results[i]["timed_out"],
 			"exit %s, timed out %s" % [results[i]["code"], results[i]["timed_out"]])
 		var record := _record(out)
+		if record.is_empty():
+			unrecorded.append("%s %d (exit %s)" % [arm, run_seed, results[i]["code"]])
 		var pilot: String = PILOTS[run_seed % PILOTS.size()]
 		t.eq("%s seed %d plays %s" % [arm, run_seed, pilot], record.get("class", ""), pilot)
 		var hoist = JSON.parse_string(FileAccess.get_file_as_string(out.path_join("hoist.json"))) if FileAccess.file_exists(out.path_join("hoist.json")) else null
@@ -142,6 +154,7 @@ func _initialize() -> void:
 	var grown_low: int = low_staggers.get("grown", []).filter(func(n): return n > 0).size()
 	print("swarm band stage %d: small %.2f s of %s, grown %.2f s of %s, camper %s" % [STAGE, small, fights.get("small", []),
 		grown, fights.get("grown", []), fights.get("camper", [])])
+	print("swarm runs with no record (counted at the run cap): %s" % [unrecorded])
 	print("swarm low-dwell staggers per seed: small %s, grown %s, camper %s" % [low_staggers.get("small", []),
 		low_staggers.get("grown", []), low_staggers.get("camper", [])])
 	t.eq("each arm ran eight seeds", [fights.get("small", []).size(), fights.get("grown", []).size(), fights.get("camper", []).size()],
@@ -240,6 +253,13 @@ func _fight(record: Dictionary) -> float:
 				start = BotDriver.fight_start_of(note)
 			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - float(start if start != null else 0.0))
 	return RUN_CAP_S
+
+
+# The children that fit at once: all of them on a big machine, fewer where memory or cores are short.
+static func _parallel(jobs: int) -> int:
+	var available := int(OS.get_memory_info().get("available", -1))
+	var by_memory := jobs if available <= 0 else maxi(1, available / CHILD_MEMORY_B)
+	return clampi(mini(by_memory, OS.get_processor_count() * CHILDREN_PER_CORE), 1, jobs)
 
 
 static func _median(values: Array) -> float:

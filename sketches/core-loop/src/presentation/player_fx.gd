@@ -5,6 +5,7 @@ const Parts := preload("res://src/build/parts.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Density := preload("res://src/presentation/density.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
 # committed fact or the ball's own motion and never decides an outcome (TADR-008).
@@ -64,7 +65,11 @@ const WORDS := {
 	"paid": {"text": "PAID", "size": 0.9},
 	"wham": {"text": "WHAM", "size": 1.0},
 	"strike": {"text": "STRIKE", "size": 1.1},
+	"beat": {"text": "BWAP", "size": 0.9},
 }
+# An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
+# when it has one, else BWAP over the sax stab.
+const ONBEAT_GROW := 1.4
 # Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
 # whatever the distance, so a word near the camera never swallows the ball.
 const WORD_SCREEN := 0.075
@@ -377,6 +382,31 @@ func _on_pinned(victim: Node3D, _damage: float) -> void:
 		impact_frame(victim.global_position, 0.8)
 
 
+# audio.gd's hit_on_beat. Deferred, so a word the same hit earns (WHAM, KLANG) stamps first
+# and grows instead of being refused by the gap.
+func on_beat_hit(enemy: Node3D, kind: String) -> void:
+	_on_beat_word.call_deferred(enemy, kind, _clock)
+
+
+func _on_beat_word(enemy: Node3D, _kind: String, at_clock: float) -> void:
+	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
+	for w in _words:
+		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
+			w["size"] = float(w["size"]) * ONBEAT_GROW
+			return
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
+		return
+	if word("beat", enemy.global_position + Vector3.UP * 1.8):
+		_words_by_id("beat")["size"] *= ONBEAT_GROW
+
+
+func _words_by_id(id: String) -> Dictionary:
+	for w in _words:
+		if w.get("id", "") == id and w["t"] < 1.0:
+			return w
+	return {}
+
+
 # Tally stamps PAID when two or more go down together.
 func _on_killed(_kind: String, at: Vector3, _scrap: int) -> void:
 	if _pilot_id() != "tally":
@@ -473,6 +503,7 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 	slot["at"] = placed
 	slot["tilt"] = _rng.randf_range(-0.2, 0.2)
 	slot["size"] = float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
+	slot["born"] = _clock
 	label.visible = true
 	_draw_word(slot)
 	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1
@@ -485,7 +516,7 @@ func _word_color(id: String) -> Color:
 			return HEAT_COLOR
 		"heft_up", "fused":
 			return Palette.BRASS
-	return player.class_color().lerp(Color.WHITE, 0.2)
+	return player.class_color().lerp(Color.WHITE, FlashGuard.whiten(0.2))
 
 
 func _beside_ball() -> Vector3:
@@ -582,7 +613,8 @@ func _draw_word(slot: Dictionary) -> void:
 	basis = basis * Basis(Vector3.BACK, slot["tilt"])
 	# The label's font is 96 px at 0.01 m a pixel, so ~0.7 m of cap height at scale 1.
 	label.global_transform = Transform3D(basis.scaled(Vector3.ONE * metres * scale / 0.7), at)
-	label.modulate.a = alpha
+	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
+	label.modulate.a = FlashGuard.info(alpha)
 	label.outline_modulate = Color(INK.r, INK.g, INK.b, alpha)
 
 
@@ -678,6 +710,7 @@ class ImpactFrame:
 			ink.a = 0.75 + 0.2 * _heat
 			if accent:
 				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
+				ink.a = FlashGuard.alpha(ink.a)
 			draw_colored_polygon(PackedVector2Array([tip, outer + side, outer - side]), ink)
 
 	# A hot build's edge wash: the screen edge dips dark, glows heat orange halfway in and
@@ -685,7 +718,7 @@ class ImpactFrame:
 	# hit and the centre stays clear.
 	func _draw_wash(rect: Vector2, band: float) -> void:
 		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
-		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.4 * _heat)
+		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, FlashGuard.alpha(0.4 * _heat))
 		var clear := Color(hot.r, hot.g, hot.b, 0.0)
 		_ring(rect, 0.0, band * 0.6, dark, hot)
 		_ring(rect, band * 0.6, band, hot, clear)
@@ -758,7 +791,7 @@ func _draw_aura(delta: float) -> void:
 		basis = basis.scaled(Vector3(size, size, size * stretch))
 		mm.set_instance_transform(i, Transform3D(basis, at))
 		var c: Color = heat_tint(_mote_colors[i])
-		mm.set_instance_color(i, c.lerp(Color.WHITE, 0.6 * _mote_flare))
+		mm.set_instance_color(i, c.lerp(Color.WHITE, FlashGuard.whiten(0.6 * _mote_flare)))
 
 
 # --- Overdrive ---------------------------------------------------------------------------
@@ -837,6 +870,8 @@ func _draw_overdrive(delta: float) -> void:
 		_flecks.amount_ratio = clampf(heat * (0.6 + 0.4 * might), 0.0, 1.0)
 		_embers.amount_ratio = clampf(heat * (0.5 + 0.5 * might), 0.0, 1.0)
 	if _flecks.emitting != on:
+		FxLibrary.set_heat(_flecks)
+		FxLibrary.set_heat(_embers)
 		_flecks.emitting = on
 		_embers.emitting = on
 
@@ -875,6 +910,7 @@ func _draw_carve() -> void:
 		var fast := clampf(speed / 30.0, 0.0, 1.0)
 		_carve.amount_ratio = clampf((0.35 + 0.65 * steep) * (0.7 + 0.3 * might) * fast, 0.1, 1.0)
 	if _carve.emitting != on:
+		FxLibrary.set_heat(_carve)
 		_carve.emitting = on
 		if on:
 			spawned["carve"] = spawned.get("carve", 0) + 1
@@ -889,6 +925,7 @@ func column(tint: Color, at := Vector3.INF) -> void:
 	p.global_transform = Transform3D(Basis.IDENTITY, base)
 	p.set_instance_shader_parameter("tint", _glow(heat_tint(tint), 1.15))
 	p.amount_ratio = clampf(0.5 + 0.5 * might, 0.0, 1.0)
+	FxLibrary.set_heat(p)
 	p.restart()
 	p.emitting = true
 	spawned["column"] = spawned.get("column", 0) + 1
@@ -896,11 +933,20 @@ func column(tint: Color, at := Vector3.INF) -> void:
 
 # --- Emitters ----------------------------------------------------------------------------
 
-func _emitter(pm: ParticleProcessMaterial, mesh: PrimitiveMesh, amount: int, life: float, blend: String, one_shot: bool) -> GPUParticles3D:
-	mesh.material = FxLibrary._material(blend)
+# The shape gives the look (FxLibrary._LOOKS): a long box is a streak along its motion, a ball
+# or a cube a soft glow.
+func _emitter(pm: ParticleProcessMaterial, shape: PrimitiveMesh, amount: int, life: float, blend: String, one_shot: bool) -> GPUParticles3D:
+	var size = shape.size if shape is BoxMesh else shape.height
+	var look := "streak" if size is Vector3 and maxf(size.y, size.z) > size.x * 2.0 else "glow"
+	var mesh := FxLibrary.look_mesh(look, size, blend)
+	mesh.material = FxLibrary.look_material(look, blend)
+	if look == "glow":
+		pm.angle_min = 0.0
+		pm.angle_max = 360.0
 	var p := GPUParticles3D.new()
 	p.process_material = pm
 	p.draw_pass_1 = mesh
+	p.set_meta("fx_look", look)
 	p.amount = amount
 	p.lifetime = life
 	p.one_shot = one_shot

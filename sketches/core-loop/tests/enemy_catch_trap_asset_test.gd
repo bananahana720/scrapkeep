@@ -289,7 +289,7 @@ func _check_deployment(enemy: Node3D, cup: MeshInstance3D) -> void:
 	_check(cup.top_level and cup.global_position.is_equal_approx(ring.center + Vector3.UP * 0.4), "deployed cup keeps the committed ring transform")
 	_check(cup.mesh == mesh and _mat_of(cup, 0) == material, "deployed cup retains the entire shared release assembly")
 	var m := _measure(enemy)
-	_check(m.tris <= 1200 and m.draws <= 3 and not m.alpha, "deployed full assembly stays within budget and opaque")
+	_check(m.tris <= 3600 and m.draws <= 3 and not m.alpha, "deployed full assembly stays within budget and opaque")
 	enemy._on_end()
 	_check(not cup.top_level and cup.position.is_equal_approx(Vector3(0, 1.6, -0.3)), "recovered cup returns to base attachment")
 	enemy._clear_telegraph()
@@ -309,7 +309,7 @@ func _run() -> void:
 	_check_base(enemy)
 	var m := _measure(enemy)
 	print("live assembly: %d T / %d D" % [m.tris, m.draws])
-	_check(m.tris > 0 and m.tris <= 1200, "live triangle ceiling 1200")
+	_check(m.tris > 0 and m.tris <= 3600, "live triangle ceiling 3600 (polished; was 1200)")
 	_check(m.draws > 0 and m.draws <= 3, "live draw ceiling 3")
 	_check(not m.alpha, "live assembly opaque including vertex alpha")
 	var packed := load(GLB) as PackedScene
@@ -318,7 +318,7 @@ func _run() -> void:
 		var scene := packed.instantiate() as Node3D
 		root.add_child(scene)
 		var asset := _measure(scene)
-		_check(asset.tris > 0 and asset.tris <= 1200 and asset.draws <= 3 and not asset.alpha, "glb triangle/draw/alpha limits")
+		_check(asset.tris > 0 and asset.tris <= 3600 and asset.draws <= 3 and not asset.alpha, "glb triangle/draw/alpha limits")
 		_check_paint(enemy, scene)
 		scene.free()
 	_check(enemy.find_children("*", "Light3D", true, false).is_empty(), "no added lights")

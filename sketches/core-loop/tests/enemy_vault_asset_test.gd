@@ -76,7 +76,7 @@ func _measure(node: Node3D) -> Dictionary:
 func _budget(node: Node3D, label: String) -> Dictionary:
 	var m := _measure(node)
 	print("%s: %d T / %d V / %d D" % [label, m.tris, m.vertices, m.draws])
-	_check(m.tris > 0 and m.tris <= 1100 and m.vertices <= 2100 and m.draws > 0 and m.draws <= 4, label + " D3 budget")
+	_check(m.tris > 0 and m.tris <= 4000 and m.vertices <= 2500 and m.draws > 0 and m.draws <= 4, label + " D3 budget")
 	_check(m.opaque, label + " opaque materials")
 	return m
 

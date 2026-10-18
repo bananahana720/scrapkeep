@@ -20,6 +20,7 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import fabricator_hoop as fh
+import polish
 from fabricator_hoop import kit, common, frustum
 import lantern_beacon_detail1 as lbd1
 import lantern_beacon_detail2 as lbd2
@@ -146,6 +147,7 @@ def export(name, slot, build_fn, size, budget, out_dir):
 
 
 def main():
+    polish.enable(bevel=.02, bevel_min=.25, **fh.kit.BAKE)  # light shell polish: smooth shading, bake
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(fh.MODELS))

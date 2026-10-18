@@ -13,6 +13,8 @@ Hand targets, world wrists and planted hands use pilot_arm's imported pilot solv
 Controls resolve from the shipped shell GLB in Pod space; control_points are ignored.
 Exports use the pilot's section 4.2 route, keeping the seven original actions intact.
 --table reads an alternate pose table, for scratch proofs without installing a table.
+A clip with "ease": "spline" interpolates with a cardinal spline over its keys (no dead-stop at a
+key); every other ease keeps the per-segment lerp, so existing tables bake unchanged.
 
 --selftest imports the shipped Sable GLB as the base, builds a synthetic table (every new
 clip, a torso and head beat, rest anchors), bakes, exports to a temp dir and requires the
@@ -101,6 +103,69 @@ def lerp_pose(a, b, f):
     return out
 
 
+def flatten(pose, path=()):
+    """A pose's numbers as {path: float}; lists contribute one entry per item."""
+    out = {}
+    for k, v in pose.items():
+        if isinstance(v, dict):
+            out.update(flatten(v, path + (k,)))
+        elif isinstance(v, list):
+            for i, x in enumerate(v):
+                out[path + (k, i)] = float(x)
+        else:
+            out[path + (k,)] = float(v)
+    return out
+
+
+def unflatten(flat):
+    out = {}
+    for path, value in flat.items():
+        node = out
+        for part, following in zip(path, path[1:]):
+            node = node.setdefault(part, [0.0] * 3 if isinstance(following, int) else {})
+        node[path[-1]] = value
+    return out
+
+
+def spline_pose(poses, i, frame, loop):
+    """Cardinal spline through the keys: tangents come from the neighbouring keys, so a segment
+    flows into the next with no dead-stop at the key. A loop wraps (frame E equals frame 1);
+    an open clip holds zero tangent at its two ends."""
+    n = len(poses)
+    times = [f for f, _ in poses]
+    flats = [flatten(p) for _, p in poses]
+    span = times[-1] - times[0]
+
+    def neighbour(j):
+        if 0 <= j < n:
+            return times[j], flats[j]
+        if not loop:
+            return None
+        # The last key repeats the first, so a wrap skips it.
+        return (times[j + n - 1] - span, flats[j + n - 1]) if j < 0 else (times[j - n + 1] + span, flats[j - n + 1])
+
+    def tangent(j, path):
+        before, after = neighbour(j - 1), neighbour(j + 1)
+        if before is None or after is None:
+            return 0.0
+        return (after[1].get(path, default_of(path)) - before[1].get(path, default_of(path))) / (after[0] - before[0])
+
+    t0, t1 = times[i], times[min(i + 1, n - 1)]
+    u = 0.0 if t1 == t0 else (frame - t0) / (t1 - t0)
+    h = t1 - t0
+    h00, h10, h01, h11 = 2 * u ** 3 - 3 * u ** 2 + 1, u ** 3 - 2 * u ** 2 + u, -2 * u ** 3 + 3 * u ** 2, u ** 3 - u ** 2
+    j1 = min(i + 1, n - 1)
+    out = {}
+    for path in set().union(*flats):
+        p0, p1 = flats[i].get(path, default_of(path)), flats[j1].get(path, default_of(path))
+        out[path] = h00 * p0 + h10 * h * tangent(i, path) + h01 * p1 + h11 * h * tangent(j1, path)
+    return unflatten(out)
+
+
+def default_of(path):
+    return 1.0 if path[-1] == 'height' else 0.0
+
+
 def apply(arm, pose, torso_scale, pilot, planted=None):
     for bone in arm.pose.bones:
         bone.location = (0, 0, 0)
@@ -180,8 +245,11 @@ def bake(arm, name, clip, table):
             i = max(j for j, (f, _) in enumerate(poses) if f <= frame)
             f0, p0 = poses[i]
             f1, p1 = poses[min(i + 1, len(poses) - 1)]
-            t = 0.0 if f1 == f0 else ease(clip.get('ease', 'smooth'), (frame - f0) / (f1 - f0))
-            pose = lerp_pose(p0, p1, t)
+            if clip.get('ease') == 'spline':
+                pose = spline_pose(poses, i, frame, bool(clip.get('loop')))
+            else:
+                t = 0.0 if f1 == f0 else ease(clip.get('ease', 'smooth'), (frame - f0) / (f1 - f0))
+                pose = lerp_pose(p0, p1, t)
         apply(arm, pose, table.get('torso_scale', True), pilot, planted)
         baked.append({b.name: (b.location.copy(), b.rotation_quaternion.copy(), b.scale.copy()) for b in arm.pose.bones})
         if clip.get('loop') and frame == end:
@@ -297,9 +365,12 @@ def export(arm, out_glb, pilot):
     bpy.context.scene.frame_set(1)
     extra, canonical = EXPORT_ROUTES[pilot]
     bpy.ops.export_scene.gltf(filepath=str(out_glb), **dict(EXPORT_COMMON, **extra))
-    if canonical:
+    # A polished body (POLISH.md) carries the "Bake" UV map; its vertices are sorted so
+    # rebuilds stay byte-identical.
+    polished = any("Bake" in o.data.uv_layers for o in meshes)
+    if canonical or polished:
         from common import canonical_indices
-        canonical_indices(str(out_glb))
+        canonical_indices(str(out_glb), vertices=polished)
 
 
 def synthetic_table(pilot):

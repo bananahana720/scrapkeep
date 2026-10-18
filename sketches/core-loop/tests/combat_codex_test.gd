@@ -41,6 +41,7 @@ var _lobber: Node3D
 # The wave 9 units still waiting on the ball's teleport, and where the ball started.
 var _w9_units := {}
 var _w9_home := Vector3.ZERO
+var _roof_fall: Node3D
 # Set by the last case; a script error that aborts a case leaves it false.
 var _last_case_ran := false
 
@@ -83,7 +84,10 @@ func _physics_process(delta: float) -> bool:
 				_step = 3
 		3:
 			_clock += delta
-			if _combat.discovered.has("shell_return") or _clock > 4.0:
+			var roof_done: bool = not is_instance_valid(_roof_fall) or _combat.discovered.has("roof_drop")
+			if (_combat.discovered.has("shell_return") and roof_done) or _clock > 4.0:
+				_report("roof_drop", _combat.discovered.has("roof_drop"),
+					"a rammed prop's roof crushed the drill crew under it")
 				_report("shell_return", _combat.discovered.has("shell_return"),
 					"a batted shell landed on its own lobber and killed it (%.2f s after the bat)" % _clock)
 				_warden_tricks()
@@ -201,6 +205,9 @@ func _w9_tricks() -> void:
 	_combat.strike(rig, "slam", 14.0)
 	_report("bore_breach", _combat.discovered.has("bore_breach") and rig.stopped == 1,
 		"a slam on a drill crew mid-bore stopped it (stopped %d)" % rig.stopped)
+	# 2026-10-17 (damage families, PR #65): a hit past the rig's plating reads its armour.
+	_combat.strike(rig, "test_bolt", 40.0, "", "weapon")
+	_report("armour_plated", _combat.discovered.has("armour_plated"), "a full hit on a plated drill crew reads it")
 
 	var cutter: Node3D = _w9_spawn("line_cutter", home + Vector3(-10.0, 0.0, 8.0))
 	cutter._warn(_w9_to(cutter))
@@ -227,9 +234,30 @@ func _w9_tricks() -> void:
 	foreman.take_damage(1.0e6)
 	_report("shift_over", _combat.discovered.has("shift_over") and AttackBudget.clocked_out(hand),
 		"a Foreman fell with its crew standing (crew clocked out %s)" % AttackBudget.clocked_out(hand))
+	var splitter: Node3D = _w9_spawn("splitter", home + Vector3(-8.0, 0.0, -6.0))
+	splitter.hp = 1.0
+	_combat.strike(splitter, "stomp", 30.0)
+	_report("split_pop", _combat.discovered.has("split_pop") and splitter.get_meta("split", true) == false,
+		"a stomp killed a Splitter clean (split %s)" % splitter.get_meta("split", null))
+	# A pod whose ring held the ball at its fuse blows up on an empty ring.
+	var pod: Node3D = _w9_spawn("splitter_pod", home + Vector3(-12.0, 0.0, 6.0))
+	pod._warn(_w9_to(pod))
+	pod._ring_had_ball = true
+	pod.phase = pod.Phase.LIVE
+	pod._go_live()
+	_report("fuse_pod", _combat.discovered.has("fuse_pod") and pod.blasts == 1,
+		"a ball out of a pod's ring when it blew (blasts %d)" % pod.blasts)
 	for node in [rig, cutter, crew, hand]:
 		if is_instance_valid(node):
 			node.queue_free()
+
+	# A rammed prop drops its roof on the drill crew sheltering under it. The roof lands
+	# after its warning, so it reports beside the shell (step 3).
+	var shoring: Node3D = _w9_spawn("prop_crew", home + Vector3(-16.0, 0.0, -12.0))
+	shoring.set_physics_process(false)
+	var mate: Node3D = _w9_spawn("drill_crew", shoring.roof_centre())
+	mate.set_physics_process(false)
+	_roof_fall = shoring.knock_prop()
 	_w10_pack_tricks(home)
 
 	var burrower: Node3D = _w9_spawn("burrower", home + Vector3(8.0, 0.0, 0.0))
@@ -241,7 +269,7 @@ func _w9_tricks() -> void:
 	lamps.phase = lamps.Phase.LIVE
 	lamps._go_live()
 	_w9_units = {"burrower": burrower, "kite": kite, "lamps": lamps,
-		"lane_had_ball": burrower._lane_had_ball, "mark_had_ball": kite.telegraph().contains(home)}
+		"lane_had_ball": burrower._ring_had_ball, "mark_had_ball": kite.telegraph().contains(home)}
 	var away := Vector3(0.0, 0.0, -4.0)
 	_game.player.reset_to(home + away, away.normalized() * 1.2 * ctx.tuning.f("cruise"))
 	_clock = 0.0
@@ -249,10 +277,12 @@ func _w9_tricks() -> void:
 
 func _w9_after_move() -> void:
 	var burrower: Node3D = _w9_units["burrower"]
+	# The lane is learned by leaving the floor: the ball is off it as the burst lands.
+	_game.player.state.grounded = false
 	burrower.phase = burrower.Phase.LIVE
 	burrower._go_live()
 	_report("burrow_lane", _combat.discovered.has("burrow_lane") and _w9_units["lane_had_ball"] and burrower.bursts == 1,
-		"the lane held the ball at commit (%s) and the burst came up empty" % _w9_units["lane_had_ball"])
+		"the ring held the ball at commit (%s) and the burst came up empty" % _w9_units["lane_had_ball"])
 
 	var kite: Node3D = _w9_units["kite"]
 	kite.phase = kite.Phase.LIVE
@@ -302,7 +332,19 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	fleet.holds.snap(drone, "jump")
 	_report("cable_snap", _combat.discovered.has("cable_snap") and winched and drone.broken_by == "jump",
 		"a winch drone hooked the ball (%s), then a jump snapped the cable (%s)" % [winched, drone.broken_by])
-	for node in [trap, brute, drone]:
+
+	# 2026-10-17 (world rosters): a slam on a pit jaw's open jaw shuts it.
+	var jaw: Node3D = _w9_spawn("pit_jaw", home + Vector3(10.0, 0.0, -2.0))
+	jaw._warn(_w9_to(jaw))
+	_game.events.slammed.emit(jaw.telegraph().center, 1.0, 1.0)
+	_report("jaw_slam", _combat.discovered.has("jaw_slam") and jaw.slam_kills == 1,
+		"a slam on the open jaw shut it (slam_kills %d)" % jaw.slam_kills)
+	# 2026-10-18 (w17 fix): 8cdcd49 gave the Linker its codex row; a bolt on its cable cuts it.
+	var linker: Node3D = _w9_spawn("linker", home + Vector3(12.0, 0.0, 10.0))
+	_combat.strike(linker, "bolt", 5.0, "cable")
+	_report("cable_cut", _combat.discovered.has("cable_cut") and linker.cut and linker.cut_by == "struck",
+		"a bolt on a Linker's cable cut it (cut %s by %s)" % [linker.cut, linker.cut_by])
+	for node in [trap, brute, drone, jaw, linker]:
 		if is_instance_valid(node):
 			node.queue_free()
 
@@ -354,6 +396,10 @@ func _warden_tricks() -> void:
 		# 2026-10-10 (wave 13, B6): the five skill bar rows need an ultimate and a loaded bite, which
 		# this staging does not run; tests/discovery_skill_bar_test.gd opens each on its trigger.
 		if id in ["loaded_line", "set_piece", "set_piece_core", "set_piece_cash_in", "set_piece_breakout"]:
+			continue
+		# 2026-10-17 (Highdraft roster): a ring-out needs a rim and a gap sling a gap, which this flat
+		# staging lacks; tests/highdraft_roster_test.gd opens each on the stage 5 islands.
+		if id in ["ring_out", "gap_sling"]:
 			continue
 		# 2026-10-04 (wave 9): detector-pending entries declare a hint but no enemy fires them yet.
 		if CodexEntries.DETECTOR_PENDING.has(id):

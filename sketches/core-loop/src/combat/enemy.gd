@@ -1,11 +1,13 @@
 extends CharacterBody3D
 
 const Palette := preload("res://src/core/palette.gd")
+const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
@@ -26,6 +28,18 @@ const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
+# Ring-outs (design-v3/WORLD-ROSTERS.md, Andrew's "Ring-outs" tap, 17 Oct 20:03Z): in the
+# Highdraft an enemy knocked off an island edge is gone, a kill for the pilot. Only a knock
+# counts: one that walks off is still rescued. A knock opens the fall; in the air over ground
+# RING_OUT_DROP below the floor it was knocked from, the enemy rings out. Bosses, Wardens, their relics and the
+# kill-first specials are always rescued.
+const RING_OUT_WORLD := 3
+const RING_OUT_DROP := 6.0
+# Boss pieces are kept too (Roster.is_boss_piece). Splitter pods can be rung out
+# (WORLD-ROSTERS.md); the mama splitter cannot. Flyers (kite and winch drones) hover and
+# move on their own _move, so a knock never drops them.
+const RING_OUT_KEPT := ["warden", "vault", "miniboss", "reactor_relic", "swarm_remnant", "mind_hand",
+	"foreman", "dispatcher", "splitter", "linker"]
 # The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
 # an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
 # crack. The tint_state names ("amber" for will break, "slate" for glances) stay as combat
@@ -80,6 +94,9 @@ var scrap_value := 3
 # Who is dealing the hit that may kill: "" for every ordinary source, "spark" while a wear
 # patch resolves (wear_trail sets it around take_damage). The died handler passes it on.
 var last_damage_source := ""
+var ringed_out := false
+# The height the open knock started from; INF while no knock is open.
+var _ring_from := INF
 var weight := 1.0
 # The stage threat this body was set up at; poles and flails read it for heft (movement/grip.gd).
 var threat_level := 1.0
@@ -137,6 +154,17 @@ const LINE_EASE := 0.15
 # its own sim clock, which stops while an attack is open.
 var idle_offset := Vector3.ZERO
 var _idle_pose := Basis.IDENTITY
+# Easing on the pivot only (presentation, never the body): the idle offset fades out as an
+# attack opens and back in as it closes, and a wind-up that is cancelled eases its pose home.
+const IDLE_FADE_OUT := 0.12
+const IDLE_FADE_IN := 0.15
+const POSE_EASE := 0.12
+var _idle_mix := 1.0
+var _idle_held := Vector3.ZERO
+var _was_winding := false
+var _wind_pose := Basis.IDENTITY
+var _eased_from := Basis.IDENTITY
+var _ease_age := -1.0
 # The ATTACK_ROWS pose the open attack leans into, and how long since it struck (-1: none).
 var _posed := ""
 var _posing := false
@@ -271,9 +299,17 @@ func _update_idle(delta: float) -> void:
 		return
 	var row: Dictionary = WindupRows.ROWS.get(kind, {})
 	if winding_up():
+		_was_winding = true
+		_ease_age = -1.0
+		# The idle offset fades to zero rather than dropping; the clock holds still as before.
+		_idle_mix = move_toward(_idle_mix, 0.0, delta / IDLE_FADE_OUT)
+		idle_offset = _idle_held * _idle_mix
 		_idle_pose = EnemyMotion.pose_basis(row)
 		if row.get("pose", {}).is_empty():
 			_idle_pose = _attack_pose()
+		else:
+			_idle_pose = Transform3D(Basis.IDENTITY, Vector3.ZERO).interpolate_with(Transform3D(_idle_pose, Vector3.ZERO), 1.0 - _idle_mix).basis
+		_wind_pose = _idle_pose
 		return
 	if _posing:
 		_posing = false
@@ -282,6 +318,17 @@ func _update_idle(delta: float) -> void:
 		_posed_struck = false
 		if _release_age < 0.0:
 			_posed = ""
+	if _was_winding:
+		_was_winding = false
+		_eased_from = _wind_pose
+		_ease_age = 0.0 if _release_age < 0.0 else -1.0
+	if _ease_age >= 0.0:
+		# A cancelled attack's pose (or a row's own) eases home instead of dropping.
+		_ease_age += delta
+		var home := smoothstep(0.0, 1.0, _ease_age / POSE_EASE)
+		_idle_pose = Transform3D(_eased_from, Vector3.ZERO).interpolate_with(Transform3D.IDENTITY, home).basis
+		if _ease_age >= POSE_EASE:
+			_ease_age = -1.0
 	if _release_age >= 0.0:
 		_idle_pose = WindupPoses.release(_posed, _release_age, EnemyMotion.motion_scale)
 		_release_age += delta
@@ -292,7 +339,10 @@ func _update_idle(delta: float) -> void:
 		_idle_period = float(row.get("idle", {}).get("beats", 0.0)) * EnemyMotion.attack_clock(kind, self)
 		_idle_clock = float(absi(hash(Vector3i(global_position.round()))) % 97) / 97.0 * _idle_period
 	_idle_clock += delta
-	idle_offset = EnemyMotion.idle_offset(row.get("idle", {}), _idle_clock, _idle_period)
+	_idle_held = EnemyMotion.idle_offset(row.get("idle", {}), _idle_clock, _idle_period)
+	# Back from an attack the wave eases in from rest, not from wherever the clock stopped.
+	_idle_mix = move_toward(_idle_mix, 1.0, delta / IDLE_FADE_IN)
+	idle_offset = _idle_held * _idle_mix
 
 
 # The open attack's whole-body pose (windup_poses.gd), from its row and its telegraph's fill.
@@ -380,6 +430,12 @@ func is_dead() -> bool:
 # window; the Warden drops it to 0 while its magnet is shot.
 func plating_now() -> float:
 	return plating
+
+
+# The armour row damage_families.gd reads (its armour_of falls through to the kind table on
+# ""): a Dig elite arrives with spec armour "plated".
+func armour_class() -> String:
+	return String(spec.get("armour", ""))
 
 
 # The plating one hit meets. `part` is "" for the body or a weak point id.
@@ -516,15 +572,65 @@ func _move(delta: float, desired: Vector3) -> void:
 		velocity.y = _knock.y
 		_knock.y = 0.0
 	velocity.y -= GRAVITY * delta
+	var grounded := is_on_floor()
 	move_and_slide()
 	if is_on_floor() and velocity.y < 0.0:
 		velocity.y = 0.0
 	_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)
+	if _rings_out(grounded):
+		return
 	_rescue()
 
 
 func _knocked_speed() -> float:
 	return Vector3(_knock.x, 0.0, _knock.z).length()
+
+
+# A knock opens the fall when it strikes an enemy standing on a floor, and the fall closes
+# once the enemy is back on a floor with the knock spent. Being in the air RING_OUT_DROP
+# below the floor it was knocked from, over ground at least that far down, is a ring-out:
+# off an edge the ground falls away under it, while down a slope or a ramp it stays close. Returns true when this tick rang the enemy out.
+func _rings_out(grounded: bool) -> bool:
+	if _dead or not ring_outs_here():
+		_ring_from = INF
+		return false
+	var knocked := _knocked_speed() >= 1.0
+	if _ring_from == INF:
+		if knocked and grounded:
+			_ring_from = global_position.y
+		return false
+	var floor_line := _ring_from - RING_OUT_DROP
+	if not is_on_floor() and global_position.y < floor_line \
+			and terrain.height(global_position.x, global_position.z) + half_height < floor_line:
+		ring_out()
+		return true
+	if is_on_floor() and not knocked:
+		_ring_from = INF
+	return false
+
+
+# A throw that moves the enemy itself (Tarn's tow and hurl) opens the fall from where it
+# stood, the way a knock would.
+func open_ring_out() -> void:
+	if _ring_from == INF and is_on_floor():
+		_ring_from = global_position.y
+
+
+func ring_outs_here() -> bool:
+	return terrain != null and terrain.has_method("world") and terrain.world() == RING_OUT_WORLD \
+		and not kind in RING_OUT_KEPT and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
+
+
+# Knocked off the edge: a kill the pilot earned, whatever health or plating was left.
+func ring_out() -> void:
+	if _dead:
+		return
+	ringed_out = true
+	last_damage_source = "ring_out"
+	if _reaction_bus != null and _reaction_bus.has_signal("enemy_ringed_out"):
+		_reaction_bus.enemy_ringed_out.emit(kind, global_position)
+	hp = 0.0
+	_die()
 
 
 # An enemy that falls through the map is put back on the ground, not killed: a kill
@@ -543,10 +649,10 @@ func _update_flash(delta: float) -> void:
 		return
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta * 2.5)
-		_material.albedo_color = _base_color.lerp(Color(1.0, 1.0, 0.85), _flash)
+		_material.albedo_color = _base_color.lerp(Color(1.0, 1.0, 0.85), FlashGuard.whiten(_flash))
 		_material.emission_enabled = true
 		_material.emission = EventKinds.role_color("neutral")
-		_material.emission_energy_multiplier = _flash * 2.0
+		_material.emission_energy_multiplier = FlashGuard.spike(0.0, _flash * 2.0)
 		if _flash <= 0.0:
 			_apply_rest_look()
 
@@ -596,7 +702,7 @@ func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3
 func _plate_material(rim_mask: Texture2D = null) -> StandardMaterial3D:
 	if rim_mask == null and not _plates_are_round():
 		rim_mask = rim_frame_mask()
-	var mat := Palette.solid(PLATE_CLOSED)
+	var mat := Palette.solid(PLATE_CLOSED, 0.0, false)
 	mat.metallic = 0.6
 	mat.roughness = 0.4
 	mat.emission_texture = rim_mask if rim_mask != null else mask_texture([Color.BLACK], 1)
@@ -693,11 +799,38 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 # --- Attack facts ---------------------------------------------------------------------
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_PHYSICS_PROCESS:
+	if what == NOTIFICATION_READY:
+		# Spawners add the enemy, then build its body in setup() the same frame.
+		_dress_bake.call_deferred()
+	elif what == NOTIFICATION_PHYSICS_PROCESS:
 		_update_reaction(get_physics_process_delta_time())
 		_facts_poll()
 		if tint_state == "amber" and _pulses():
 			_pulse_rim(get_physics_process_delta_time())
+
+
+# The polish bake reaches every swapped-in material (BakeLook): the body paint the flash
+# brightens, tints and state materials all keep the model's baked occlusion and wear.
+# Scripts that swap materials onto a baked surface later call it again.
+func _dress_bake() -> void:
+	if is_inside_tree():
+		BakeLook.dress(self, owned_materials())
+
+
+# The materials this enemy's script holds in its own variables: the ones it mutates.
+func owned_materials() -> Array:
+	var out: Array = []
+	for prop in get_property_list():
+		if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE == 0:
+			continue
+		var value = get(prop.name)
+		if value is StandardMaterial3D:
+			out.append(value)
+		elif value is Array:
+			for item in value:
+				if item is StandardMaterial3D:
+					out.append(item)
+	return out
 
 
 # The open attack as a fact, with the geometry and progress it has right now; {} when

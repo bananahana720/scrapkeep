@@ -27,9 +27,12 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Netcaster")
 
 GROUND = -1.1
@@ -85,7 +88,7 @@ zs = [v.co.z for v in body.data.vertices]
 surfaces = len(body.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3))
-if tris > 1200 or surfaces > 2 or max(abs(x) for x in xs) > 1.7 or min(ys) < -0.9 or max(ys) > 0.9 \
+if tris > 7600 or surfaces > 2 or max(abs(x) for x in xs) > 1.7 or min(ys) < -0.9 or max(ys) > 0.9 \
         or min(zs) < GROUND - 0.001 or max(zs) > 3.2:
     raise SystemExit("C16 limits exceeded")
 

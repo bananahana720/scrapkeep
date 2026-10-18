@@ -94,6 +94,8 @@ signal boss_defeated
 # and rocket jumps. ability_id is the slot's ability id, or "slingshot".
 signal enemy_rebounded(enemy: Node3D, speed: float)
 signal enemy_pinned(enemy: Node3D, damage: float)
+# A Highdraft enemy knocked off an island edge (enemy.gd ring_out); enemy_killed follows.
+signal enemy_ringed_out(kind: String, at: Vector3)
 signal vault_kicked(at: Vector3, speed: float)
 signal gauge_charging(ability_id: String)
 signal gauge_released(ability_id: String, fraction: float)
@@ -171,9 +173,11 @@ signal posture_changed(enemy: Node3D, posture: float, staggered: bool)
 # where its pay appears. Once per activity per stage attempt.
 signal activity_done(id: String, at: Vector3)
 # progress.gd earned an achievement and saved the profile (or tried to). id keys Achievements.ROWS.
+# The first-win secret paint rows (secrets.gd PAINT_ROWS) earn silently and never emit it.
 signal achievement_earned(id: String)
 # A world rescue finished (a stranded pilot freed). quest_id names it: "rivet" for world one's
-# runner, "dig" for the later dig rescue. achievements.gd rows key on it to unlock pilots.
+# runner, "dig" for the later dig rescue, "isles" for Tally's cage in the Highdraft. achievements.gd
+# rows key on it to unlock pilots.
 signal rescue_completed(quest_id: String)
 
 # The skill bar and the ultimate (design-v3/SKILL-BAR.md section 7). All ten are declared
@@ -189,6 +193,12 @@ signal slot_cast(slot: String, ability_id: String, at: Vector3)
 signal line_skill_loaded(ability_id: String, seconds: float)
 signal line_skill_fired(ability_id: String, target: Node3D, at: Vector3, on: String)
 signal line_skill_expired(ability_id: String)
+# The active slot (src/combat/actives): F fired the racked active at `at`; count is how many
+# pieces left (rockets in a volley). Maker sets and sounds read it; its strikes are enemy_struck.
+signal active_fired(active_id: String, at: Vector3, count: int)
+# An active building toward a strike on one machine (the Cutting Torch's heat on a plate):
+# fraction climbs 0 to 1 in steps; presentation glows and sizzles it. No damage of its own.
+signal active_heat(active_id: String, at: Vector3, fraction: float)
 # The set piece (src/combat/ultimate.gd, wave P-B's ultimate unit): the meter reached full;
 # Q committed the planned path (seconds is wind-up plus flight); the flight's middle beat;
 # the landing strike resolved; a cancel (recall, bail, stage or death) and whether it refunded.

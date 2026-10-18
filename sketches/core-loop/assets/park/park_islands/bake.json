@@ -52,7 +52,7 @@
     "min": 0.0
   },
   "map": "park_islands",
-  "park_sha256": "e4a80a65ee3bcfea78f0d9482021f54495b7ed547de3767350792e32fbed70ac",
+  "park_sha256": "002721db020d8604ecf27525355fa18c006117dd2226fcb930ae77b2eb674ec6",
   "schema": "scrapkeep-park-bake/1",
   "tool_sha256": "046e7258338a8bcca754c4ca23cb0cf963098dfc29cf88aaa46601fbb4e363c2"
 }

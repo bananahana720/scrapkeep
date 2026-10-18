@@ -19,10 +19,22 @@ from mathutils import Euler, Vector
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "dig_mechanical"))
+sys.path.insert(0, str(HERE))
 import kit
 import common
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
+
+# Polish (tools/blender/POLISH.md): tub gets a bevel, the tyre only smooth shading and the bake (subdivision or a bevel pulls its 12-gon tread in past the size assert); the dig_mechanical cart_body/cart_wheel recipes are untouched.
+PROP = [750, 610, 1]  # polish: was kit.P [270, 610, 1]
+FINISH = {"Tub": {"bevel": .04}, "Tyre": {"bevel": 0}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
+
+
+def polish_on():
+    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)
+    kit.FINISH.update(FINISH)
+
 
 # One row per painted part. Hues come from the game palette, not the picture: the sheet's bright orange
 # rim and mint ore sit on reserved meanings (LEGIBILITY.md: hazard hurts, amber pays, mint is "your verb
@@ -186,7 +198,7 @@ def export(name, part, slot, smooth, build, sockets, out_dir):
     path = Path(out_dir) / (name + ".glb")
     common.export(root, str(path))
     metrics = kit.gltf_metrics(path)
-    assert all(metrics[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], kit.P)), (name, metrics, kit.P)
+    assert all(metrics[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], PROP)), (name, metrics, PROP)
     assert metrics["materials"] == [slot], (name, metrics["materials"])
     size = metrics["bounds"]["size"]
     assert all(abs(a - b) <= .03 * b for a, b in zip(size, SIZE[name])), (name, size, SIZE[name])
@@ -200,6 +212,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))
     args = parser.parse_args(argv)
+    polish_on()
     export("ore_cart_body", "Tub", "enamel", False, body, SOCKETS, args.out_dir)
     export("ore_cart_wheel", "Tyre", "elastomer", True, wheel, {}, args.out_dir)
 

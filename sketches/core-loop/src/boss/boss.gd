@@ -11,6 +11,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
 # Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
@@ -335,7 +336,7 @@ func _step_crane(i: int, delta: float, ball: Vector3) -> void:
 	if h != null and is_instance_valid(h) and not h.is_done():
 		var head_r: float = (h.r_in + h.r_out) * 0.5
 		if h.state == Hazard.WARN:
-			glow = 0.5 + 0.5 * sin(h.age * TAU * 4.0)
+			glow = 0.5 + 0.5 * sin(h.age * TAU * FlashGuard.rate(4.0))
 			at = at.lerp(_head(h, h.a_from, head_r), clampf(h.age / h.warn_seconds, 0.0, 1.0))
 		else:
 			glow = 1.0

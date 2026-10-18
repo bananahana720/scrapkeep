@@ -508,7 +508,7 @@ Cables use their explicit world coordinates. Balloon lifts and cloud cannons rem
 
 | Weather | Kind | Trigger | Spec |
 | --- | --- | --- | --- |
-| `golden_air` | clear | `{"on": "always"}` | `{"lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#fff1dc"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"}` |
+| `golden_air` | clear | `{"on": "always"}` | `{"lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#f0c08e"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"}` |
 | `cloud_rise` | cloud_deck | `{"on": "clock_tier", "value": 2}` | `{"lead_s": 8.0, "live_s": 60.0, "gap_s": 60.0, "fog": {"density": 0.006, "color": "#ece7da"}, "sky": "clear", "sound": "cloud_hush_bed", "music_layer": "layer_cloud_pad", "event_odds": {"mooring_dropship": 2.0}, "handling": "none"}` |
 
 The cloud deck rises below the net; handling is unchanged. Weather and music are the authored rows, not listening acceptance.
@@ -616,6 +616,51 @@ Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-2
 | `ancient_lens_rock_hum` | `lens_rocks` | The rocks hum one step below whatever you are whistling. |
 | `net_bowl_mends` | `net_bowl` | Mend log: the bowl net under the isle never needs mending. Nobody mends it. |
 | `ancient_keel_grip` | the landmark | The grip marks on the isle's tip are older than the rock they grip. |
+| `net_weaver_post_tags` | `net_posts_1` | Post tag, west gap: TIE HERE. Older tag under it: TIE HERE TOO. |
+| `net_weaver_cairn_count` | `lookout_cairn_1` | Cairn on the Lookout: one stone per crossing. The top stone is warm. |
+| `net_weaver_post_run` | `net_post_run` | Every post on the run leans downwind by the same amount. The weavers call this surveying. |
+| `fleet_cage_manifest` | `mooring_pad` | Mooring manifest: one pack rat, filed under INVENTORY. Inventory disputes the filing. |
+| `dam_era_spill_lips` | `lookout_spill_lip_w` | Survey note: two spill lips cut at the lookout's shoulders, for runoff. The runoff uses the stairs. |
+| `dam_era_watch_net` | `lookout_watch_net` | Standing order: log anything that falls off the mesa. Net added in '31. The log got shorter. |
+| `fleet_kite_lip` | `shelf_kite_lip` | Fleet notice: this lip launches kites, not crew. Crew launched to date: 9. Notice amended. |
+| `net_weaver_shelf_hammock` | `shelf_hammock` | One hammock, slung where the hoodoos drop things. They have dropped a pilot. Logged as a thing. |
+| `fleet_cage_approach` | `cage_approach_lip_s` | The bookkeeper's cage faces the pad so she can audit landings. Four complaints filed about the landings. |
+| `fleet_catch_net` | `cage_catch_net` | Under-mooring net, rated for cargo. Pilots count as cargo under Fleet circular 12. |
+| `fleet_ledger_lip` | `ledger_lip` | Lip entered in the ledger: one launch, outgoing. Incoming not yet reconciled. |
+| `mining_saddle_spoil` | `saddle_spoil_lip` | Spoil bank, east saddle. Graded smooth, then graded into a ramp by somebody who was not the grader. |
+| `net_weaver_spoil_net` | `tram_spoil_net` | The weavers re-strung the tram's old spoil net and kept the ore it caught. They call it rent. |
+| `mining_assay_lip` | `assay_lip` | Assay office sign: SAMPLES BY HAND ONLY. Under it, a lip. Samples arrive faster now. |
+| `net_weaver_wing_hammocks` | `wing_hammock_e` | Wing hammocks, east and west, at the cloud line. What misses the wash lands in the weavers' record. |
+| `fleet_roost_launch` | `roost_launch_lip` | Roost launch lip: point at the isle, release on the gust. Gust schedule posted. The gust has not read it. |
+| `fleet_drying_net` | `roost_drying_net` | Kite sails dry here. One has been drying since the Fleet arrived. Do not ask whose. |
+| `ancient_lens_lip` | `lens_lip` | The lip points at the lens rocks. Nobody cut it. The grain runs the wrong way for weather. |
+| `net_weaver_keel_nets` | `keel_net_w` | Two nets flank the keel bench, knotted to the bowl's count. The count is still 40,112. |
+| `net_weaver_field_lips` | `post_field_lip_1` | Post fields, four corners, a lip in each. Weavers ride them to inspect the knots. Inspection is the excuse. |
+
+**Authored pass, 17 October 2026** (Andrew's "Now, light", "Rescue on the isles" and "Either path"). The net-weavers are a society row now (`net_weaver`): the net carve, the net bowl, the post run, the twelve post fields and the five cairns. The Fleet's mooring crew keeps the Moorings, the west shelf and the kite roost (its kite drones are Fleet stock). The weavers also cut the net carve's steps and set the three knuckle banks round the net bowl, and the dam-era lookout crew built the lookout steps below the fire lookout. Natural landforms stay `none`. Society share over hand-built rows goes from 11% to 37%. The file's optional `rescue_rows` stand `tally_cage` on `mooring_mesa` at [-290, 30], facing the pad, 70 m from it and about 100 m off Tarn's line and the floor line. The row names its pilot as data (`"pilot": "tally"`, quest `isles`). Freeing her earns `isles_rescued`, and Tally's class row opens on that or on three ledger leaves, whichever comes first (`class_def.gd` unlock `or`).
+
+**Islands authored pass, 17 October 2026** (follow-up to the crown pass; the w16 intent check put the Highdraft at 152 hand-built rows against the 187 that 70% of the Spillway asks). Thirty-eight GLB rows (`mesa_lip_kicker` seat-fit lips and `net_deck` nets), all `routes: []`, at least 39 m off every pilot line and the floor line, and placeholder-free, so the placeholder total holds at 1442. Each lip throws into something: a net, a thermal, the cage, or the next fan.
+
+- *The rescue approach.* `cage_approach_lip_s` at [-325, -130] throws north up the Moorings toward Tally's cage; `cage_approach_lip_w` at [-400, -20] throws east onto the mesa from the post field; `cage_catch_net` (y 115, [-400, 100]) catches a short throw under the moorings; `ledger_lip` and `manifest_lip` carry a freed pilot back to the west wing.
+- *The Lookout.* The dam-era crew's `lookout_spill_lip_w` and `_e` on the mesa's shoulders, `lookout_pine_lip` off the pines, and `lookout_watch_net` (y 249) east of the fire lookout.
+- *The shelves and the saddle.* `saddle_gust_lip_w`, the mine's `saddle_spoil_lip`, the Fleet's `shelf_kite_lip` into the west post field, the weavers' `shelf_hammock` (y 199) and `saddle_hammock_e` (y 224), and `hoodoo_cap_lip` past the hoodoo garden.
+- *The mine.* `tram_head_lip`, `assay_lip`, `adit_spill_lip`, `chute_trestle_lip`, and the weavers' `tram_spoil_net` (y 194).
+- *The wings.* `wing_gust_lip_w` and `_e` toss off the wing mesas into `wing_hammock_w` (y 89) and `wing_hammock_e` (y 85) at the cloud line.
+- *The far flanks.* The Fleet's `roost_launch_lip` on top of the kite roost, aimed at the isle, with `roost_foot_lip` and `roost_drying_net` at its foot; the lens rocks' `lens_lip`, `lens_foot_lip` and the weavers' `lens_hum_net`; `keel_net_w` and `_e` flanking the keel bench; one lip in each corner post field (`post_field_lip_1` to `_4`) and `east_post_lip` and `west_post_lip` on the middle fields.
+
+Every new row has a society (net-weavers 19, Fleet 9, mining 5, dam-era 3, ancient 2). Islands hand-built rows go from 97 to 135 and its society share from 37% to 55%; the Highdraft totals 204 against the 187 bar. The crown takes fourteen flank rows in the same PR so it stays over half the raised park median (stage 6 page section 17).
+
+**One skill per park: grapple** (Andrew's Q4 answer, 22:12Z 17 October: "the islands test grapple"). The landforms stay; the lines and enemies change to read as grapple. The skill line (`assets/park/park_islands/skill_line.json`, Rivet) rides six cables end to end, each one carrying on the last one's heading, from the Lookout to the keel: `lookout_line` (new, [200, -600] to [95, -392]) drops off the Lookout's east shoulder to the tram station, then `tramway`, `bench_line` (new, [310, -180] to [250, -40]) over the assay terrace, `chute_line` (new, [260, -20] to [216, 158]) past the adit to the east wing, `wing_line` (new, [180, 200] to [66, 306]) across the cloud wash, and `keel_line` under the isle. The four new cables have a 6 m hook radius and start at least 25 m off every other pilot's line and the floor line (`tests/park_skill_lines_test.gd`). A first draft that started them on Rivet's and Sable's lines hooked those pilots off their own lines, and they stalled 60 to 109 times. The new `lookout_cutters` home (line cutters, spawning anywhere in the `lookout_mesa` footprint) joins the tram and chute cutters along the relay. A line cutter cuts a hooked harpoon line only (`src/combat/line_cutter.gd`), not a cable ride, so they press the harpoon gaps between the cables, not the cables themselves. The ballast heavies on the Moorings stay as the islands' ring-out threat.
+
+Ridden with `tools/traversal_line.gd --table=park --stage=5 --pilot=rivet --lines=res://assets/park/park_islands/skill_line.json` on seeds 1 to 4 (with the ride pieces of PR #95): all four engage the Warden in 79 to 86 s with 0 or 1 dead stops, 6 distinct ride facts and `ride_grapple_line` firing; the line steers between the Lookout's hoodoo posts 34 to 36. All six pilots' own lines still engage on seeds 1 and 2. The 18 step lips stay greybox for now: on `mesa_shelf_edge` Sable's own line stalled 108 to 133 times at `run_step_lip_1`, and the check already counts the step edges as ground. The evidence limit: the bot bites only in fights (`tools/bot_driver.gd`), so no run here shows a harpoon swing between cables.
+
+**Signal caches** (RADIO.md on PR #66; rows for PR #68's `tools/radio_cache_spots.gd` SPOTS):
+
+| Take | Spot here | Row | The reach |
+| --- | --- | --- | --- |
+| `take-hanging-isle-liquid` | under the Hanging Isle's tip, 24 m off its axis (clear of the hand's 16 m reach), 28 m over the net bowl | `{"stage": 5, "x": 24.0, "z": 520.0, "at": 70.0}` | glide in off a bowl thermal, or swing on the tip's harpoon anchor |
+| `take-islands-kite-chime` | among the kite anchors on the kite roost, the far west island | `{"stage": 5, "x": -455.0, "z": 490.0, "drop": 250.0}` | ride `roost_thermal` up 50 m and land on the roost |
+| `take-highdraft-first-light` (legend) | above the highest kite tether, 12 m over `roost_line`'s top anchor, above the cloud deck | `{"stage": 5, "x": -420.0, "z": 470.0, "at": 185.0}` | top out the roost thermal, then glide back onto a point 31 m above the roost with no surface under it |
 
 Today's 3-1 lore lines (`src/core/lore_rows.gd:232-288`, the post docket at `:274` and the beacon watch at `:278`) stay; they still fit a park of posts and a lens.
 
@@ -1247,7 +1292,7 @@ floor: 8 seed rows, stops [].
   {"id": "saddle_seam", "kind": "cracked_wall", "site": "saddle", "recipe": "", "at": [230, -420], "size": [10, 6, 1.4], "turn": 1.2, "cache": {"at": [236, -426]}}
  ],
  "weather_rows": [
-  {"id": "golden_air", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#fff1dc"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
+  {"id": "golden_air", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#f0c08e"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
   {"id": "cloud_rise", "kind": "cloud_deck", "trigger": {"on": "clock_tier", "value": 2}, "lead_s": 8.0, "live_s": 60.0, "gap_s": 60.0, "fog": {"density": 0.006, "color": "#ece7da"}, "sky": "clear", "sound": "cloud_hush_bed", "music_layer": "layer_cloud_pad", "event_odds": {"mooring_dropship": 2.0}, "handling": "none"}
  ],
  "activity_rows": [

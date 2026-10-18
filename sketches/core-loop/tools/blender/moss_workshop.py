@@ -4,7 +4,12 @@ Blender +Z is up. Coordinates below are converted from the bay's Godot coordinat
 import math, os, random, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import common
+import polish
 from common import Part
+# Polish (POLISH.md): only this recipe builds the module, so it opts in at module level. The registry
+# exception caps the file at 4400 T / 7900 V and the model already sits at 4328, so it takes smooth shading
+# and the AO/wear bake only (bevel_min 9 m skips every bevel).
+polish.enable(detail=1, bevel=0.03, bevel_min=9)
 common.reset()
 rng=random.Random(280928)
 root=common.empty('MossWorkshop')

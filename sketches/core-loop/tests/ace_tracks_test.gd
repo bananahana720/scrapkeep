@@ -89,8 +89,11 @@ func _physics_process(_delta: float) -> bool:
 		_check("boss entry schedules the pivot", audio.ace != null and audio.ace.mode == "warden" and audio.ace.section == "pivot")
 	_game.events.run_ended.emit(true)
 	audio._flush_flow()
-	_selected(audio, "summary")
-	_check("won summary starts its cadence", audio.ace != null and audio.ace.section == "return")
+	_selected(audio, _theme(audio.summary_row(true)))
+	if audio.summary_row(true) == "summary":
+		_check("won summary starts its cadence", audio.ace != null and audio.ace.section == "return")
+	else:
+		_check("won summary starts theme C from calm", audio.ace != null and audio.ace.section == "calm")
 	_game.events.run_ended.emit(false)
 	audio._flush_flow()
 	_selected(audio, "summary")
@@ -113,7 +116,7 @@ func _selected(audio, track: String) -> void:
 	_check(track + " ready through the director", audio.ace != null and audio.ace.ready() and audio.ace.manifest.get("theme") == track and audio.engine.grid == audio.ace)
 	if audio.ace == null or not audio.ace.ready():
 		return
-	_check(track + " cuts are explicitly provisional", audio.ace.manifest.get("cuts") == "nominal-unverified" and not audio.ace.manifest.get("timing_verified", true))
+	_check(track + " cuts are explicitly provisional", audio.ace.manifest.get("cuts") in ["nominal-unverified", "measured-beat-phase"] and not audio.ace.manifest.get("timing_verified", true))
 	var at: int = audio.ace.pending.get("at", audio.ace.clock)
 	var frames := maxi(1, at - audio.ace.clock + 2048)
 	var got: PackedVector2Array = audio.ace.render(frames)

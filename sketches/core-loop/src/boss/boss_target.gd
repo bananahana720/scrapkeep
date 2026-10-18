@@ -1,6 +1,7 @@
 extends AnimatableBody3D
 
 const Palette := preload("res://src/core/palette.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # One strikeable piece of Brindle: the hull, a crane magnet, a vent cap or the eject
 # scooter. It speaks combat's enemy protocol (src/combat/README.md on the combat
@@ -196,4 +197,4 @@ func _process(delta: float) -> void:
 		var m := mat as StandardMaterial3D
 		m.emission_enabled = lit
 		m.emission = Color.WHITE
-		m.emission_energy_multiplier = 1.5
+		m.emission_energy_multiplier = FlashGuard.spike(0.0, 1.5)

@@ -6,6 +6,9 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 
 const FIXTURES := "res://tests/fixtures/profile/"
 const DIR := "user://profile_store_test/"
+# 2026-10-17 w16: user:// is shared by every worktree of this sketch, so each run writes under its
+# own process folder; a sibling run's start-of-run clear can no longer delete this run's files.
+var _dir := "%s%d/" % [DIR, OS.get_process_id()]
 # Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 5): schema 4 adds the seen list.
 const KNOWN_FIELDS := ["schema", "generation", "pilots", "worlds", "achievements", "cosmetics", "equipped", "stats", "last_pilot", "settled", "companion", "rewards_settled", "seen"]
 const V1_FIXTURE := "res://tests/fixtures/profile_v1.json"
@@ -17,7 +20,7 @@ var _n := 0
 
 func _initialize() -> void:
 	_clear_dir()
-	DirAccess.make_dir_recursive_absolute(DIR)
+	DirAccess.make_dir_recursive_absolute(_dir)
 	_round_trip()
 	_rule_1_missing()
 	_rule_2_unreadable()
@@ -48,10 +51,15 @@ func _initialize() -> void:
 
 
 func _clear_dir() -> void:
-	if not DirAccess.dir_exists_absolute(DIR):
+	if not DirAccess.dir_exists_absolute(_dir):
 		return
-	for file_name in DirAccess.get_files_at(DIR):
-		DirAccess.remove_absolute(DIR + file_name)
+	# The failed-write check plants a folder where a profile file goes; remove folders too, or a
+	# leftover folder at pN.json blocks a later run's successful save at the same path.
+	for sub in DirAccess.get_directories_at(_dir):
+		DirAccess.remove_absolute(_dir + sub)
+	for file_name in DirAccess.get_files_at(_dir):
+		DirAccess.remove_absolute(_dir + file_name)
+	DirAccess.remove_absolute(_dir)
 	DirAccess.remove_absolute(DIR)
 
 
@@ -64,7 +72,7 @@ func _future_bytes() -> PackedByteArray:
 
 func _fresh_path() -> String:
 	_n += 1
-	return "%sp%d.json" % [DIR, _n]
+	return "%sp%d.json" % [_dir, _n]
 
 
 func _copy_fixture(name: String) -> String:
@@ -250,7 +258,7 @@ func _save_needs_a_load() -> void:
 	for label in cases:
 		var path := _fresh_path()
 		_write(path, cases[label])
-		var files := DirAccess.get_files_at(DIR).size()
+		var files := DirAccess.get_files_at(_dir).size()
 		var p := Profile.new(path)
 		p.unlock_pilot("runner_gunner")
 		p.earn("rout_brindle", 5.0)
@@ -259,7 +267,7 @@ func _save_needs_a_load() -> void:
 		p.set_last_pilot("runner_gunner")
 		_t.check("F3-1 %s: save before load refused" % label, not p.save() and not p.last_error.is_empty(), p.last_error)
 		_t.check("F3-1 %s: bytes unchanged" % label, _bytes(path) == cases[label])
-		_t.check("F3-1 %s: nothing else written" % label, DirAccess.get_files_at(DIR).size() == files, str(DirAccess.get_files_at(DIR)))
+		_t.check("F3-1 %s: nothing else written" % label, DirAccess.get_files_at(_dir).size() == files, str(DirAccess.get_files_at(_dir)))
 	var fresh := Profile.new(_fresh_path())
 	_t.check("F3-1 missing file: save before load refused", not fresh.save() and not FileAccess.file_exists(fresh.path))
 

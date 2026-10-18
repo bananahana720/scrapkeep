@@ -26,8 +26,10 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from ore_cart import kit, common
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
+PROP = [800, 700, 1]  # polish: was kit.P [270, 610, 1]; class cap 2,000 T / 4,600 V
 
 # One row per painted part, palette names or palette.gd hex only. The picture's brass bezel line, hub and collar are
 # copper (RECIPE-WAVE lore: brass is the Fleet's requisition colour). The picture's teal is lighter than VERDIGRIS
@@ -53,7 +55,7 @@ NEEDLE_Z = .12
 FACE_Z = .06                            # the dial plane; the pointer's back sits 0.04 m in front of it
 # Bezel case profile (radius, z) from the back rim to the inner lip; outer radius 1.15 against today's 1.1.
 BEZEL = [(1.00, -.24), (1.15, -.16), (1.15, .13), (1.07, .21), (.94, .19), (.905, FACE_Z - .005)]
-BEZEL_N = 20
+BEZEL_N = 40  # polish: was 20
 FACE_R = .91
 LINE = (.855, .905)                     # copper bezel line (inner, outer radius)
 HAIR = (.815, .835)                     # charcoal hairline inside it
@@ -136,25 +138,25 @@ def tick(s, theta, r0, r1, w, z, color):
 
 def stand(s):
     r, y0, y1 = FLANGE
-    cyl(s, (0, y0, 0), (0, y1, 0), r, 8, TONES["felt"])
+    cyl(s, (0, y0, 0), (0, y1, 0), r, 16, TONES["felt"])
     r, y0, y1 = SPIGOT
-    cyl(s, (0, y0, 0), (0, y1, 0), r, 8, TONES["collar"], caps=(False, False))
+    cyl(s, (0, y0, 0), (0, y1, 0), r, 16, TONES["collar"], caps=(False, False))
     (size, at) = BLOCK
     s.box(size, at, TONES["stem"])
     (size, at) = ARM
     s.box(size, at, TONES["stem"])
     r, x0, x1, y = BOSS
-    cyl(s, (x0, y, 0), (x1, y, 0), r, 8, TONES["stem"])
+    cyl(s, (x0, y, 0), (x1, y, 0), r, 16, TONES["stem"])
     r, x0, x1 = BOSS_BOLT
     cyl(s, (x0 - .01, BOSS[3], 0), (x1, BOSS[3], 0), r, 6, TONES["bolt"], caps=(False, True), start=0.0)
     r, x0, x1, y = PLUG
     cyl(s, (x0 + .01, y, 0), (x1, y, 0), r, 6, TONES["bolt"], caps=(False, True), start=0.0)
     r, y0, y1 = COLLAR
-    cyl(s, (0, y0, 0), (0, y1, 0), r, 8, TONES["collar"], caps=(False, True))
+    cyl(s, (0, y0, 0), (0, y1, 0), r, 16, TONES["collar"], caps=(False, True))
     r, y0, y1 = STEM
-    cyl(s, (0, y0, 0), (0, y1, 0), r, 8, TONES["stem"], caps=(False, False))
+    cyl(s, (0, y0, 0), (0, y1, 0), r, 16, TONES["stem"], caps=(False, False))
     r, y0, y1 = RING
-    cyl(s, (0, y0, 0), (0, y1, 0), r, 8, TONES["stem"])
+    cyl(s, (0, y0, 0), (0, y1, 0), r, 16, TONES["stem"])
     r, y0, y1 = NUT
     cyl(s, (0, y0, 0), (0, y1, 0), r, 6, TONES["stem"], start=0.0)
 
@@ -168,7 +170,7 @@ def bezel(s):
 def face(s):
     # A closed slab, not a lone n-gon: kit.Surface recomputes normals and a lone face can come out backward.
     cyl(s, (0, FACE_Y, FACE_Z - .03), (0, FACE_Y, FACE_Z), FACE_R, BEZEL_N, TONES["face"], start=0.0)
-    n = 24
+    n = 48  # polish: was 24
     z = FACE_Z + .004
     annulus(s, LINE[0], LINE[1], z, n, TONES["line"])
     annulus(s, HAIR[0], HAIR[1], z, n, TONES["tick"])
@@ -188,7 +190,7 @@ def needle(s):
     s.prism(BLADE, BLADE_D, TONES["pointer"], axis="z")
     r, z0, z1 = HUB
     cyl(s, (0, 0, z0), (0, 0, z1), r, 12, TONES["hub"])
-    cyl(s, (0, 0, z1), (0, 0, z1 + .02), r * .55, 8, TONES["hub"], caps=(False, True))
+    cyl(s, (0, 0, z1), (0, 0, z1 + .02), r * .55, 16, TONES["hub"], caps=(False, True))
 
 
 def export(name, part, slot, build, sockets, out_dir, smooth=False):
@@ -203,7 +205,7 @@ def export(name, part, slot, build, sockets, out_dir, smooth=False):
     path = Path(out_dir) / (name + ".glb")
     common.export(root, str(path))
     metrics = kit.gltf_metrics(path)
-    assert all(metrics[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], kit.P)), (name, metrics, kit.P)
+    assert all(metrics[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], PROP)), (name, metrics, PROP)
     assert metrics["materials"] == [slot], (name, metrics["materials"])
     size = metrics["bounds"]["size"]
     assert all(abs(a - b) <= .03 * b + .002 for a, b in zip(size, SIZE[name])), (name, size, SIZE[name])
@@ -217,6 +219,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))
     args = parser.parse_args(argv)
+    polish.enable(bevel=.02, bevel_min=.1, **kit.BAKE)
+    kit.FINISH.update({"Face": {"bevel": 0}, "Needle": {"bevel": 0}})
     export("gauge_dial_stand", "Stand", "steel", stand, SOCKETS, args.out_dir)
     export("gauge_dial_bezel", "Bezel", "steel", bezel, {}, args.out_dir, smooth=True)
     export("gauge_dial_face", "Face", "enamel", face, {}, args.out_dir)

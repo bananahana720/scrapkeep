@@ -27,6 +27,10 @@ from common import Part
 
 for slot, rough, metal in [("relay_concrete", 0.95, 0.0), ("relay_metal", 0.6, 0.35), ("relay_glass", 0.2, 0.0)]:
     common.SLOTS[slot] = {"vc": True, "rough": rough, "metal": metal}
+# Polish (POLISH.md): LIMITS are pinned by relay_models_test and both devices sit near them, so smooth shading and
+# the AO/wear bake only; the glass rings and orb carry the live state glow and are not baked.
+import polish
+polish.enable(detail=1, bevel=0, bake_slots=("relay_concrete", "relay_metal"))
 
 TAU = math.tau
 COIL_Y = 17.0

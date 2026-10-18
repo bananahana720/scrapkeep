@@ -22,6 +22,7 @@ const AttackBudget := preload("res://src/combat/attack_budget.gd")
 signal special_tell(moment: String)
 signal wiped(crew: Array)
 
+const SpecialRig := preload("res://src/presentation/special_rig.gd")
 const MODEL := "res://assets/models/world_one/enemy_foreman.glb"
 # Start values (ENEMY-PRIORITY lever 3, the priority proof's model row): health the model was
 # read on, a 5 s wipe, a 1.5 s clock-out.
@@ -83,18 +84,23 @@ func _build_body() -> void:
 		return
 	_signal_material = Palette.solid(Palette.BRASS, 0.0)
 	_signal_material.vertex_color_use_as_albedo = true
+	# On screen the glb's own scene stands in, so its idle, tell and break clips play; the
+	# sockets, collider and special_tell signal are as before (a headless run copies meshes).
+	var model := SpecialRig.seat(self, _visual_parent(), MODEL, "foreman")
 	for part in parts:
-		var mi := MeshInstance3D.new()
-		mi.name = part.name
-		mi.mesh = part.mesh
-		mi.transform = part.xform
+		var mi: MeshInstance3D = model.find_child(part.name, true, false) as MeshInstance3D if model != null else null
+		if mi == null:
+			mi = MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			_visual_parent().add_child(mi)
 		match String(part.name):
 			"ForemanBody", "ForemanHand":
 				mi.material_override = _material
 			"ForemanSignal":
 				mi.material_override = _signal_material
-		_visual_parent().add_child(mi)
-		if part.name == "ForemanHand":
+		if part.name == "ForemanHand" and model == null:
 			_hand = mi
 	for socket in ["tether_a", "tether_b", "tether_c", "tether_d"]:
 		if _sockets.has(socket):
@@ -178,7 +184,7 @@ func _build_tethers() -> void:
 	_tethers.mesh = _tether_mesh
 	_tethers.top_level = true
 	_tethers.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var line := Palette.solid(Palette.CABLE)
+	var line := Palette.solid(Palette.CABLE, 0.0, false)
 	line.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_tethers.material_override = line
 	add_child(_tethers)

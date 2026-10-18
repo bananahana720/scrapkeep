@@ -27,7 +27,7 @@ const T := preload("res://tests/support/t.gd")
 #   - the field notes, class cards, controls diagram and ability bar name only the table's keys.
 # Re-pinned 2026-10-10 for the skill bar (design-v3/SKILL-BAR.md sections 1 and 6, wave P-B
 # unit B1): the table holds eleven rows, ten live verbs plus the retired special, whose
-# cl_special keeps no key, so F does nothing in play. select owns 1, 2 and 3 (the old card
+# cl_special keeps no key. 2026-10-17: the active joined as the twelfth row and holds F. select owns 1, 2 and 3 (the old card
 # bays) and ultimate owns Q, so Q is no longer a cut key: pressing it fills ultimate_pressed
 # and nothing else, and the source still names no KEY_Q (the key comes from the table). The
 # set_piece state sits above the rest, and the bar shows 1, 2, 3 on its slots and Shift and
@@ -104,12 +104,13 @@ func _table() -> void:
 	_t.eq("every verb has an action with a key or a button", bare, [])
 	_t.eq("no key is bound to two verbs", duplicated, [])
 	var retired: Array = Bindings.VERBS.keys().filter(func(v): return Bindings.VERBS[v].get("retired", false))
-	_t.eq("eleven rows, the special the one retired", [Bindings.VERBS.size(), retired], [11, ["special"]])
+	_t.eq("twelve rows, the special the one retired", [Bindings.VERBS.size(), retired], [12, ["special"]])
 	_t.eq("1, 2, 3 are select and Q is ultimate", [Bindings.VERBS["select"]["actions"].keys(), Bindings.VERBS["ultimate"]["actions"].keys(),
 		Bindings.VERBS["ultimate"]["actions"]["cl_ultimate"]["keys"]], [["cl_bay_1", "cl_bay_2", "cl_bay_3"], ["cl_ultimate"], [KEY_Q]])
-	_t.check("F does nothing in play: cl_special has no event and no action holds F",
-		InputMap.has_action("cl_special") and InputMap.action_get_events("cl_special").is_empty() and not seen_keys.has(KEY_F),
-		"cl_special events %d, F bound %s" % [InputMap.action_get_events("cl_special").size() if InputMap.has_action("cl_special") else -1, seen_keys.has(KEY_F)])
+	# 2026-10-17 (item tiers and actives): F came back as the active's key, never the special's.
+	_t.check("F is the active's key: cl_special has no event and only cl_active holds F",
+		InputMap.has_action("cl_special") and InputMap.action_get_events("cl_special").is_empty() and seen_keys.get(KEY_F, "") == "active",
+		"cl_special events %d, F bound to %s" % [InputMap.action_get_events("cl_special").size() if InputMap.has_action("cl_special") else -1, seen_keys.get(KEY_F, "")])
 
 	var table_actions := Bindings.actions()
 	var strays: Array = []

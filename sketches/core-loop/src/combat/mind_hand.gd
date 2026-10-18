@@ -261,6 +261,10 @@ func _dress_model() -> void:
 	_anim = player
 	BossModel.own_clips(_anim)
 	BossModel.loop_clip(_anim, "still_track")
+	# A queued clip takes the pair's blend: the brace eases out of the strike's last frames and
+	# the hand settles back into its still track after the recovery.
+	_anim.set_blend_time("exact_strike", "brace", BossModel.blend_for("brace"))
+	_anim.set_blend_time("recover", "still_track", BossModel.blend_for("still_track"))
 	BossModel.play(_anim, "still_track")
 
 

@@ -22,7 +22,13 @@ HERE = Path(__file__).resolve().parent
 SKETCH = HERE.parents[2]
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
 
+# Polish (tools/blender/POLISH.md): smooth shading with hard creases and the AO and wear bake only.
+# dress_spl_assets_test pins 620 T / 1140 V for the body, 240 / 480 per module and 1100 / 2100 per
+# pair, and the sources already sit within a few triangles of them, so no bevel, subdivision or
+# denser curves (detail 1) are added.
+POLISH = dict(detail=1, bevel=0)
 OUT = SKETCH / "assets/models/companion"
 NAMES = ("primer_coil", "primer_mesh", "ram_prow", "ram_spring", "escape_vent", "escape_rail")
 FAMILY = {n: i // 2 for i, n in enumerate(NAMES)}
@@ -92,6 +98,7 @@ def g(p):
 class Model:
     def __init__(self, name):
         common.reset()
+        polish.enable(**POLISH)
         common.SLOTS["bare_metal"] = {"color": "929995", "rough": .45, "metal": .6}
         self.name = name
         self.part = common.Part("CompanionMesh")
@@ -406,6 +413,8 @@ class Model:
     def export(self, path):
         path=Path(path)
         path.parent.mkdir(parents=True,exist_ok=True)
+        bpy.context.view_layer.update()
+        polish.bake(self.root, common.POLISH)
         bpy.ops.object.select_all(action="DESELECT")
         for obj in common.tree(self.root):
             obj.select_set(True)
@@ -415,7 +424,7 @@ class Model:
             export_frame_range=False,export_force_sampling=True,export_def_bones=False,
             export_skins=True,export_yup=True,export_materials="EXPORT",export_vertex_color="ACTIVE",
             export_cameras=False,export_lights=False,export_extras=False)
-        common.canonical_indices(str(path))
+        common.canonical_indices(str(path),vertices=True)
         isolate_channels(path)
         data=path.read_bytes()
         gltf=json.loads(data[20:20+struct.unpack_from("<I",data,12)[0]])
@@ -493,6 +502,7 @@ def build_marks():
     are authored in hull coordinates like the rest of this file. Rings and the core use
     the emissive field slot: the halo is the assist gauge."""
     common.reset()
+    polish.enable(**POLISH)
     common.SLOTS["bare_metal"] = {"color": "929995", "rough": .45, "metal": .6}
     hull = common.empty("Hull")
     hull.rotation_euler.x = math.pi/2

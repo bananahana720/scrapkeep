@@ -61,13 +61,19 @@ func _title() -> void:
 
 
 func _summary() -> void:
-	var c := _rig({"title-c": true})
+	# The summary pack holds theme C with its lift (won) and the jazz-club summary (lost).
+	var c := _rig({"summary": true, "title-c": true})
+	_t.eq("the won-summary slot is the summary pack", Audio.WON_SUMMARY_ROW, "summary")
+	_t.eq("a won run's summary plays the summary pack, theme C with its lift", c.summary_row(true), "summary")
+	_t.eq("a lost run keeps the jazz-club summary", c.summary_row(false), "summary")
+	_t.eq("the summary pack not on disk: a won run plays plain theme C", _rig({"title-c": true}).summary_row(true), "title-c")
+	_t.eq("neither on disk: the summary row", _rig({}).summary_row(true), "summary")
 	c.get_meta("events").run_ended.emit(false)
 	c._flush_flow()
 	_t.check("a lost run starts the summary as lost", _last(c) == ["summary", false], str(c.named))
 	c.get_meta("events").run_ended.emit(true)
 	c._flush_flow()
-	_t.check("a won run starts the summary as won (its pack opens on theme C)", _last(c) == ["summary", true], str(c.named))
+	_t.check("a won run starts the summary as won (theme C with its lift)", _last(c) == ["summary", true], str(c.named))
 
 
 func _camp() -> void:

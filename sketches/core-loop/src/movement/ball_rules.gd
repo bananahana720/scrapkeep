@@ -26,17 +26,110 @@ static func make_probe(owner_body: CollisionObject3D) -> ShapeCast3D:
 	return probe
 
 
-static func probe_ground(probe: ShapeCast3D, state) -> void:
+# The grip clock, once per physics step: full at the fast tier, running down below it.
+static func tick_grip(state, tuning, delta: float) -> void:
+	if state.velocity.length() >= tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST]:
+		state.grip_hold = Tuning.GRIP_PEEL_S
+	else:
+		state.grip_hold = maxf(0.0, state.grip_hold - delta)
+
+
+static func gripping(state, tuning) -> bool:
+	return state.grip_hold > 0.0 and tuning.grip_on()
+
+
+# The lowest contact normal y that counts as ground this step.
+static func ground_dot(state, tuning) -> float:
+	return Tuning.GRIP_SLOPE_DOT if gripping(state, tuning) else Tuning.MAX_SLOPE_DOT
+
+
+# A downward cast misses a wall beside the ball, so while gripping a steep face the probe
+# looks along that face's normal instead. Otherwise it looks at the world's down.
+static func aim_probe(probe: ShapeCast3D, state, tuning) -> void:
+	var dir := Vector3.DOWN
+	if gripping(state, tuning) and state.grounded and state.contact_normal.y < Tuning.GRIP_FORCE_FROM:
+		dir = -state.contact_normal
+	probe.target_position = dir * (Tuning.RADIUS * 0.08 + Tuning.SKIN + 0.06)
+
+
+# The press into a gripped face, as an acceleration along -normal: zero on floors and banks,
+# full from MAX_SLOPE_DOT up the wall and over the lip of an overhang.
+static func downforce(state, tuning) -> Vector3:
+	if not state.grounded or not gripping(state, tuning):
+		return Vector3.ZERO
+	var n: Vector3 = state.contact_normal
+	var weight := clampf((Tuning.GRIP_FORCE_FROM - n.y) / (Tuning.GRIP_FORCE_FROM - Tuning.MAX_SLOPE_DOT), 0.0, 1.0)
+	return -n * Tuning.GRIP_DOWNFORCE * state.velocity.length() * weight
+
+
+# The spin a gripping ball rolls along a wall with, or null off one. Matching it keeps the wall's
+# contact from scrubbing the ball's speed into slip (Speed holds); floors and banks, ground
+# without grip, keep the contact's own spin.
+static func carve_spin(state, tuning):
+	if not state.grounded or not gripping(state, tuning) or state.contact_normal.y > Tuning.MAX_SLOPE_DOT:
+		return null
+	return state.contact_normal.cross(state.velocity) / Tuning.RADIUS
+
+
+# The speed along a face that lets a gripping ball take it, or INF when grip is off.
+static func grip_speed(state, tuning) -> float:
+	return tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST] if gripping(state, tuning) else INF
+
+
+# Floors and banks are always ground. A wall is ground only while gripping, and a ball takes
+# a new wall only running along it at grip speed: a head-on hit runs along nothing, so it
+# still bounces (the pipe vault's head-on bounce stays). A wall it already rides holds until
+# the grip clock runs out. Only the world's faces are walls: an enemy's flank never is.
+static func _takes(state, n: Vector3, floor_dot: float, take_speed: float, on_wall: bool, world: bool) -> bool:
+	if n.y <= floor_dot:
+		return false
+	if n.y > Tuning.MAX_SLOPE_DOT:
+		return true
+	if not world:
+		return false
+	return on_wall or (state.velocity - n * state.velocity.dot(n)).length() >= take_speed
+
+
+static func probe_ground(probe: ShapeCast3D, state, floor_dot := Tuning.MAX_SLOPE_DOT, take_speed := INF) -> void:
 	probe.force_shapecast_update()
-	var best := -1.0
+	var on_wall: bool = state.grounded and state.contact_normal.y <= Tuning.MAX_SLOPE_DOT
+	var best := -INF
 	var normal := Vector3.UP
 	if probe.is_colliding():
 		for i in probe.get_collision_count():
 			var n: Vector3 = probe.get_collision_normal(i)
-			if n.y > best:
+			if n.y > best and _takes(state, n, floor_dot, take_speed, on_wall, _world_face(probe.get_collider(i))):
 				best = n.y
 				normal = n
-	if best > Tuning.MAX_SLOPE_DOT:
+	_set_ground(state, normal if best > -INF else null)
+
+
+# Landing on a wall from the air, or meeting one beside the ball, never shows under a probe
+# that looks down: while gripping, a touched world face is taken by the same rule.
+static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D, take_speed: float) -> void:
+	if state.grounded or not gripping(state, tuning):
+		return
+	var best := -INF
+	var found = null
+	for i in body_state.get_contact_count():
+		if not _world_face(body_state.get_contact_collider_object(i)):
+			continue
+		var n := body_state.get_contact_local_normal(i)
+		if n.y > best and _takes(state, n, Tuning.GRIP_SLOPE_DOT, take_speed, false, true):
+			best = n.y
+			found = n
+	if found != null:
+		_set_ground(state, found)
+
+
+# A static face of the world. A boss hull is an AnimatableBody3D (a StaticBody3D) in the enemy
+# group, and it stays a body to ram, never a wall to ride.
+static func _world_face(collider) -> bool:
+	return collider is StaticBody3D and not (collider as Node).is_in_group("enemy")
+
+
+static func _set_ground(state, normal) -> void:
+	if normal != null:
 		state.grounded = true
 		state.contact_normal = normal
 		state.coyote = Tuning.COYOTE_TIME
@@ -44,6 +137,7 @@ static func probe_ground(probe: ShapeCast3D, state) -> void:
 	else:
 		state.grounded = false
 		state.contact_normal = Vector3.UP
+	state.carving = state.grounded and state.grip_hold > 0.0 and state.contact_normal.y < Tuning.CARVE_DOT
 
 
 static func wish_direction(intent, drive_basis: Basis, state) -> Vector3:
@@ -156,11 +250,16 @@ static func jump(state, tuning) -> Vector3:
 		return Vector3.ZERO
 	var n: Vector3 = state.contact_normal if from_ground else Vector3.UP
 	var dir := (n + Vector3.UP).normalized()
+	# Off a gripped wall the ball already climbs faster than the jump, so half up would add
+	# nothing: the jump pushes straight off the face instead.
+	if from_ground and n.y < Tuning.MAX_SLOPE_DOT:
+		dir = n
 	if not from_ground:
 		state.air_actions -= 1
 	state.jump_buffer = 0.0
 	state.coyote = 0.0
 	state.grounded = false
+	state.carving = false
 	# Keep the horizontal run: only the component along the jump direction is set.
 	var along: float = state.velocity.dot(dir)
 	return dir * maxf(0.0, tuning.f("jump_speed") - along)

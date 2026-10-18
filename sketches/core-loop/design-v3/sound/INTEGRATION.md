@@ -50,8 +50,8 @@ A boss arrival freezes on the intro card under `boss_arena_in`, the versus sting
 | First fight in a stage | the pivot bar into the 129 combat layer: the world track, or the combat hype loop for ordinary fights |
 | Warden and world boss | the Warden: the zone pack's combat layer. The world boss: its picked theme (`boss-brindle`, `boss-waking`, `boss-mind`) opens the fight, Brindle's p2 and p3 tracks follow, and the final phase plays its euro track |
 | World cleared | `stinger_world`, then the next world's roam |
-| Run won | the `summary` pack in won mode, on the summary and on the final win's ending. PR #12 rebuilds that pack in place to open on two bars of theme C in D, then lift to E, so no row of its own |
-| Run lost | the jazz-club `summary` pack, with its wink |
+| Run won | theme C, the show opening, on the summary and on the final win's ending: the `summary` pack's return section (`audio.WON_SUMMARY_ROW`) plays two bars of theme C in D, then its loop lifted a whole step to E |
+| Run lost | the `summary` pack's travel loop, the jazz-club summary-loss, with its wink |
 
 Every pick whose Oggs are not on disk falls back to the pack it replaced: the older boss theme, the plain title or the summary pack.
 

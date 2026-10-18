@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (four isolated seeded bot children at a time)
+# smoke: bots timeout=1200s (four isolated seeded bot children at a time; 352.6 s alone on 2026-10-12 and about 425 s in the w17 cloud gate on 2026-10-18, over the 360 s solo ceiling; moved to the bot tier)
 # 2026-10-12, W13 smoke triage: 352.550 s alone; 1.5x exceeds the ordinary ceiling, so cap at 360 s. The fixed 5/16 band still fails at 4/16.
 # 2026-10-13 RED-COMBAT regression: Sable's Bank Shot removes the old
 # planned-bite reel (9000ca2, PC-SABLE brief-r4.md:3-7). A jump must clear

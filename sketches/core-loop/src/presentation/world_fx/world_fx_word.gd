@@ -1,6 +1,7 @@
 extends Label3D
 
 const Palette := preload("res://src/core/palette.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # A drawn sound word (TONE-BIBLE pillar 2): SPLOSH, KA-CHUNK, OOH. It stamps in with three frames of
 # overshoot, holds, and slides off on a diagonal (the do-and-don't table's card motion). It floats
@@ -23,7 +24,8 @@ static func stamp(parent: Node, word: String, at: Vector3, fill := Palette.LEDGE
 	w.pixel_size = 0.0011
 	w.font_size = 72
 	w.outline_size = 22
-	w.modulate = fill
+	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
+	w.modulate = Color(fill, FlashGuard.info(fill.a))
 	w.outline_modulate = Palette.CHARCOAL
 	w.shaded = false
 	w.double_sided = true
@@ -49,7 +51,7 @@ func _process(delta: float) -> void:
 	elif t > 0.7:
 		var k := (t - 0.7) / 0.3
 		position += _drift * delta * 3.0 * k
-		modulate.a = 1.0 - k
+		modulate.a = FlashGuard.info(1.0 - k)
 		outline_modulate.a = 1.0 - k
 	if _age >= LIFE:
 		queue_free()

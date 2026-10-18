@@ -8,6 +8,12 @@ The place-and-moment tunes use the same three steps, with the gapfill folder as 
 
     python package_phase_tracks.py stretch --tunes ../../design-v3/sound/tunes.json <gapfill_dir> <work_dir>
 
+The radio's takes are whole songs, so they pack with --whole: one clip from the first downbeat
+through the last full bar, looping back to the top.
+
+    python package_phase_tracks.py stretch --radio ../../design-v3/sound/radio_renders.json <radio_dir> <work_dir>
+    python package_phase_tracks.py pack --whole <work_dir>
+
 Each pack is assets/music_ace/<id with underscores>/manifest.json plus main.{drums,bass,other}.ogg:
 one 16-bar looping clip "main", flat (ace_sequencer.gd never schedules Warden sections for it),
 cut on the measured beat grid, the loop tail blended into its head like package_music.py's
@@ -72,6 +78,21 @@ def tune_tracks(tunes_path=TUNES_JSON):
     return out
 
 
+# The radio's takes (design-v3/sound/radio_renders.json, written by radio_takes.py): whole songs,
+# packed with `pack --whole` so the take plays start to finish instead of a 16-bar loop. The
+# take played is the row's pick, else its first render.
+def radio_tracks(renders_path):
+    out = {}
+    for row in json.loads(Path(renders_path).read_text()):
+        if not row.get('takes'):
+            continue
+        letter = row['key'].split()[0]
+        if letter not in KEY_OFFSETS:
+            raise SystemExit(f"{row['id']}: key {row['key']} has no offset from D")
+        out[row['id']] = (None, row.get('pick') or row['takes'][0], None, int(row['bpm']), letter, KEY_OFFSETS[letter])
+    return out
+
+
 def theme_of(track_id):
     return track_id.replace('-', '_')
 
@@ -111,12 +132,15 @@ def stretch(args):
     work = args.work
     (work / 'stretched').mkdir(parents=True, exist_ok=True)
     report = {}
-    tracks = tune_tracks(args.tunes) if args.tunes else TRACKS
+    tracks = radio_tracks(args.radio) if args.radio else tune_tracks(args.tunes) if args.tunes else TRACKS
+    # Gapfill tunes and radio takes were rendered at their row's tempo, so a read that disagrees
+    # is the detector's, not the take's.
+    at_tempo = bool(args.tunes or args.radio)
     for track_id, (_, _, _, bpm, key, key_offset) in tracks.items():
         src = source_of(args.render_root, track_id, tracks)
         measured = mono_tempo(src, bpm)
         out = work / 'stretched' / f'{theme_of(track_id)}.wav'
-        if abs(measured / bpm - 1) > 0.045 and args.tunes:
+        if abs(measured / bpm - 1) > 0.045 and at_tempo:
             # The gapfill takes were rendered at their row's tempo; a read at the wide window's
             # edge is the detector, so read again in a narrow window around the row's tempo.
             narrow = mono_tempo(src, bpm, 0.97, 1.03)
@@ -127,7 +151,7 @@ def stretch(args):
         subprocess.run(['rubberband', '-q', '--fine', '-T', f'{bpm / measured:.6f}', str(src), str(out)], check=True)
         after = mono_tempo(out, bpm)
         note = 'stretched'
-        if args.tunes and abs(after / bpm - 1) > 0.01:
+        if at_tempo and abs(after / bpm - 1) > 0.01:
             # The stretch moved the read away from the row's tempo, so the reads disagree with
             # themselves; the take was rendered at the row's tempo, so it is packed as rendered.
             import shutil
@@ -193,7 +217,14 @@ def pack(args):
         # Skip the intro by START_BAR bars, or as many as a short take leaves room for; a take
         # shorter than 16 bars (some gapfill renders are 30 s) loops 8.
         fit = None
-        for bars in (BARS, BARS // 2):
+        if args.whole:
+            # The whole take from its first downbeat: every full bar that fits before the
+            # post-roll, so the song plays through and its last bar joins back to its first.
+            whole_bars = (len(mix) - head - POST_ROLL) // bar
+            if whole_bars < BARS // 2:
+                raise SystemExit(f'{track_id}: take too short for a whole-song pack at {bpm}')
+            fit = (whole_bars, 0)
+        for bars in () if fit else (BARS, BARS // 2):
             for start_bar in range(START_BARS.get(track_id, START_BAR), -1, -1):
                 if head + start_bar * bar + bars * bar + POST_ROLL <= len(mix):
                     fit = (bars, start_bar)
@@ -240,7 +271,7 @@ def pack(args):
                 loop_to_bar=1, sample_count=count, key=key, key_offset=key_offset, files=files)),
             sections=dict(main=dict(clip='main', game=track_id, enter='bar', phase='start', profile='full')),
             set_piece=[], profiles=PROFILES, breath=base['breath'], breath_default='hard',
-            cuts='measured-beat-phase', timing_verified=False, gain_db=round(gain_db, 2),
+            cuts='measured-beat-phase', whole=bool(args.whole), timing_verified=False, gain_db=round(gain_db, 2),
             measured=dict(lufs=i, true_peak=p, note='summed stems before Ogg encode'))
         (folder / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n')
         print(f'{track_id}: {bars} bars from bar {start_bar} at {bpm}, gain {gain_db:+.2f} dB, {i:.2f} LUFS, {p:.2f} dBFS', flush=True)
@@ -253,8 +284,10 @@ def main():
     s.add_argument('render_root', type=Path)
     s.add_argument('work', type=Path)
     s.add_argument('--tunes', type=Path, help='package the picks of this tunes.json; render_root is the folder holding them')
+    s.add_argument('--radio', type=Path, help='package the takes of this radio_renders.json; render_root is the radio folder')
     p = sub.add_parser('pack')
     p.add_argument('work', type=Path)
+    p.add_argument('--whole', action='store_true', help='one clip spanning the whole take (radio songs), not a 16-bar loop')
     p.add_argument('--ceiling', type=float, default=-1.5,
                    help='limiter ceiling in dBFS; the tunes use -2.2 so the Ogg encode stays under -1 dBTP')
     args = ap.parse_args()

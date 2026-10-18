@@ -27,9 +27,12 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("BolaThrower")
 
 GROUND = -1.1
@@ -74,7 +77,7 @@ loop_reach = max(v.co.length for v in bola.data.vertices)
 surfaces = len(body.data.materials) + len(bola.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "BODY_R", round(reach, 3), "BODY_Z", round(min(zs), 3),
       round(max(zs), 3), "LOOP_REACH", round(loop_reach, 3))
-if tris > 1200 or surfaces > 3 or reach > 0.8 or min(zs) < GROUND - 0.001 or max(zs) > 2.3 or loop_reach > 1.12:
+if tris > 4200 or surfaces > 3 or reach > 0.8 or min(zs) < GROUND - 0.001 or max(zs) > 2.3 or loop_reach > 1.12:
     raise SystemExit("C13 limits exceeded")
 
 opts = common.args()

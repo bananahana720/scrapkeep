@@ -8,7 +8,7 @@ const Palette := preload("res://src/core/palette.gd")
 # rim outer radius is 1.95 m and its face reaches 1.68 m out, the crew stands 0.8 m either way.
 # The base contract: the deflector's collider, lane, rebound, timing and damage constants are the
 # values deflector.gd had before the dressing swap.
-const CEILING_T := 1200
+const CEILING_T := 3200  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 const CEILING_D := 3
 const X_MIN := -2.0
 const X_MAX := 2.0
@@ -99,7 +99,7 @@ func _run() -> void:
 			_check(names == entry[1], "asset surfaces %s: %s" % [entry[0], names])
 	var m := _measure(scene)
 	print("asset: %d T, %d D" % [m["tris"], m["draws"]])
-	_check(m["tris"] >= 844 * 0.9 and m["tris"] <= 844 * 1.1, "WF-8 triangles within 10 percent of 844")
+	_check(m["tris"] >= 2966 * 0.9 and m["tris"] <= 2966 * 1.1, "WF-8 triangles within 10 percent of 2966 (polished; was 844)")
 	_check(m["tris"] <= CEILING_T and m["tris"] > 0, "asset triangles %d <= %d" % [m["tris"], CEILING_T])
 	_check(m["draws"] <= CEILING_D, "asset draws %d <= %d" % [m["draws"], CEILING_D])
 	_check(not m["alpha"], "asset has no alpha surface")
@@ -135,7 +135,7 @@ func _run() -> void:
 	print("live assembly: %d T, %d D" % [live["tris"], live["draws"]])
 	_check(dish.find_child("DeflectorBody", true, false) != null, "the live Deflector carries its DeflectorBody dressing")
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within %d / 3" % [live["tris"], live["draws"], CEILING_T])
 	_check(not live["alpha"], "live assembly has no alpha surface")
 	# The original dish footprint is the released wall; the carried angle deliberately swings out.
 	dish.phase = dish.Phase.LIVE

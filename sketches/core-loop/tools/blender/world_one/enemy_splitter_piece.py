@@ -28,6 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 import common
+import polish
 from common import Part
 import splitter_pod
 from splitter_pod import g
@@ -35,6 +36,8 @@ from splitter_pod import g
 common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("SplitterPiece")
 
 R = 0.75
@@ -43,6 +46,8 @@ BACK = 0.42
 
 body = Part("SplitterPieceBody")
 glow = Part("SplitterPieceGlow")
+glow.bevel = 0
+glow.subsurf = 0
 tip, out = splitter_pod.build(body, glow, 0.0, R, centre=(0.0, 0.0, BACK), back_glow=True)
 # Loose, the snout runs out to a full lance with a bone tip: the chaser's read, small.
 lance = Vector(g(tip.x, tip.y, tip.z + BACK))
@@ -67,7 +72,7 @@ low = min(p.z for p in points)
 high = max(p.z for p in points)
 print("PIECE radius %.3f floor %.3f top %.3f tris %d" % (radius, low, high, common.tri_total(root)))
 assert low >= FLOOR - 1e-4 and high <= 0.9 and radius <= 1.0
-assert common.tri_total(root) <= 600
+assert common.tri_total(root) <= 3100
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_splitter_piece.glb")
@@ -75,7 +80,7 @@ import kill_first_motion
 import kill_first_rig
 rig = kill_first_motion.piece(root, body_obj, glow_obj, FLOOR)
 stats = rig.export(path, draws=2)
-assert stats["verts"] <= 1200 and stats["tris"] <= 600
+assert stats["verts"] <= 1900 and stats["tris"] <= 3100
 print(f"PIECE EXPORTED: {stats['verts']} V / {stats['tris']} T / {stats['draws']} D, "
       f"{stats['joints']} joints, clips {stats['clips']}")
 if kill_first_rig.sheet_dir():

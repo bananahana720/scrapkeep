@@ -103,6 +103,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(vw.MODELS))
     args = parser.parse_args(argv)
+    vw.polish_on()
     export("valve_wheel_detail1", "WheelDetail1", wheel, "wheel", args.out_dir)
     export("valve_wheel_detail1m", "MountDetail1", mount, "mount", args.out_dir)
 

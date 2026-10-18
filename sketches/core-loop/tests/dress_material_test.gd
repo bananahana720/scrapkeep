@@ -123,11 +123,12 @@ func _reasons(mesh: Mesh, surface: int, material: Material) -> Array[String]:
 		if vertex_colours and material.albedo_color.is_equal_approx(Color.WHITE) \
 				and not material.vertex_color_use_as_albedo and material.albedo_texture == null:
 			reasons.append("white")
-		# Palette.solid creates an opaque, textureless material with roughness 0.8.
-		# Treat a BoxMesh with that signature as a placeholder regardless of tint
-		# or emission. This also catches duplicates without modifying solid().
+		# Palette.solid creates an opaque material with no albedo map and roughness 0.8,
+		# marked palette_solid (its surface grain is not a texture of the prop). Treat a
+		# BoxMesh with that signature as a placeholder regardless of tint or emission.
+		# The meta survives duplicate(), so copies count too.
 		if mesh is BoxMesh and material.albedo_texture == null \
-				and is_equal_approx(material.roughness, 0.8) \
+				and (material.get_meta("palette_solid", false) or is_equal_approx(material.roughness, 0.8)) \
 				and material.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED \
 				and not material.vertex_color_use_as_albedo:
 			reasons.append("solid_box")

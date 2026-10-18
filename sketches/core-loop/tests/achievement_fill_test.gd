@@ -68,10 +68,14 @@ func _tables() -> void:
 	# Re-pinned 2026-10-11 (w13 SG12, merge): the four ach_meta_* between-run option grants; was 39.
 	# 2026-10-12 (W13 coordinator): the pins hold the shared rows; each P-C kit's rows sit in its
 	# marked block and its own tests count them (tests/support/pilot_blocks.gd). Was the total,
-	# which every kit merge broke (49 and 47 on 19b3656).
-	_t.eq("F1 forty-three achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 43)
-	_t.eq("F1 forty-one cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 41)
-	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty())
+	# which every kit merge broke (49 and 47 on 19b3656). 2026-10-17 (first-win secrets, Andrew's Q8):
+	# six hidden secret_paint_* rows and their six paints join the shared rows; with the crown pass's
+	# isles_rescued (Tally's sky-islands rescue) that makes 50 and 47 (43 and 41 before).
+	_t.eq("F1 fifty achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 50)
+	_t.eq("F1 forty-seven cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 47)
+	# A pilot's "or" rule row (class_def.gd unlock) pays that pilot through the class row, so its own reward is empty.
+	var or_rows := ClassDef.all().filter(func(d): return d.unlock.has("or")).map(func(d): return ClassDef.unlock_row(String(d.unlock["or"])))
+	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty() and not or_rows.has(id))
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 
 

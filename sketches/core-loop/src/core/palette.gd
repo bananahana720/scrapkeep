@@ -195,10 +195,16 @@ static func ball_material() -> StandardMaterial3D:
 	return mat
 
 
-static func solid(color: Color, emit := 0.0) -> StandardMaterial3D:
+# `grain` false for a material that maps its own UV1 texture (a mask, an icon) or draws a flat
+# read (an unshaded line): the grain's world-triplanar UVs would re-map that texture.
+static func solid(color: Color, emit := 0.0, grain := true) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
 	mat.roughness = 0.8
+	# The flat-colour signature dress_material_test counts on a box, whatever surface it wears.
+	mat.set_meta("palette_solid", true)
+	if grain:
+		surface_grain(mat)
 	if emit > 0.0:
 		mat.emission_enabled = true
 		mat.emission = color
@@ -291,20 +297,104 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 
 
 const HDRI_SKY := "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr"
+const TIME_SKY := preload("res://src/presentation/time_sky.gdshader")
 static var _hdri_sky: Sky
 
-# The Poly Haven partly cloudy sky, one Sky for every world row that names "hdri".
+# The Poly Haven partly cloudy sky, one Sky for every world row that names "hdri". Its material is
+# the time-of-day sky (time_sky.gdshader): the stage's time row sets its grade through the lighting
+# stack (world_look.gd sky_rows), and its defaults draw the panorama unchanged.
 static func hdri_sky() -> Sky:
 	if _hdri_sky == null:
-		var material := PanoramaSkyMaterial.new()
-		material.panorama = load(HDRI_SKY)
 		_hdri_sky = Sky.new()
-		_hdri_sky.sky_material = material
+		_hdri_sky.sky_material = time_sky_material(load(HDRI_SKY))
 	return _hdri_sky
+
+
+static func time_sky_material(panorama: Texture2D) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = TIME_SKY
+	material.set_shader_parameter("panorama", panorama)
+	return material
 
 
 static var _wear: ImageTexture
 static var _oxide: ImageTexture
+static var _grain_normal: ImageTexture
+static var _grain_rough: ImageTexture
+static var _grime: ImageTexture
+
+# How a painted solid answers light, without touching its colour role: a fine hammered grain in
+# the normals and roughness (so highlights break up instead of sliding across a flat face) and
+# broad grime blotches a few shades darker (so no two faces of one prop share a value, as
+# VISUAL-LANGUAGE "Scrappy" asks). World triplanar, so the grain is the same size on a bolt and
+# a barge, and props with no UVs still wear it. One set of textures serves every solid.
+const GRAIN_METRES := 0.5
+const GRIME_METRES := 3.5
+
+static func surface_grain(mat: StandardMaterial3D) -> void:
+	if _grain_normal == null:
+		var noise := FastNoiseLite.new()
+		noise.seed = 4127
+		noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		noise.frequency = 0.045
+		noise.fractal_octaves = 3
+		var bump := noise.get_seamless_image(128, 128, false, false, 0.1, false)
+		var rough := bump.duplicate() as Image
+		bump.bump_map_to_normal_map(8.0)
+		bump.generate_mipmaps(true)
+		_grain_normal = ImageTexture.create_from_image(bump)
+		rough.convert(Image.FORMAT_L8)
+		for y in rough.get_height():
+			for x in rough.get_width():
+				var v := rough.get_pixel(x, y).r
+				rough.set_pixel(x, y, Color.from_hsv(0.0, 0.0, lerpf(0.72, 1.0, v)))
+		rough.generate_mipmaps()
+		_grain_rough = ImageTexture.create_from_image(rough)
+		var blotch := FastNoiseLite.new()
+		blotch.seed = 911
+		blotch.frequency = 0.02
+		blotch.fractal_octaves = 4
+		var grime := blotch.get_seamless_image(128, 128, false, false, 0.1, false)
+		grime.convert(Image.FORMAT_L8)
+		for y in grime.get_height():
+			for x in grime.get_width():
+				var v := grime.get_pixel(x, y).r
+				grime.set_pixel(x, y, Color.from_hsv(0.0, 0.0, lerpf(0.8, 1.0, smoothstep(0.25, 0.7, v))))
+		grime.generate_mipmaps()
+		_grime = ImageTexture.create_from_image(grime)
+	mat.normal_enabled = true
+	mat.normal_texture = _grain_normal
+	mat.normal_scale = 0.6
+	mat.roughness_texture = _grain_rough
+	mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+	mat.uv1_triplanar = true
+	mat.uv1_world_triplanar = true
+	mat.uv1_scale = Vector3.ONE / GRAIN_METRES
+	mat.detail_enabled = true
+	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+	mat.detail_albedo = _grime
+	mat.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
+	mat.uv2_triplanar = true
+	mat.uv2_world_triplanar = true
+	mat.uv2_scale = Vector3.ONE / GRIME_METRES
+
+
+# Takes surface_grain off again, for a model that brings its own surface (BakeLook).
+static func smooth(mat: StandardMaterial3D) -> void:
+	if mat.normal_texture != _grain_normal or _grain_normal == null:
+		return
+	mat.normal_enabled = false
+	mat.normal_texture = null
+	mat.roughness_texture = null
+	mat.uv1_triplanar = false
+	mat.uv1_world_triplanar = false
+	mat.uv1_scale = Vector3.ONE
+	mat.detail_enabled = false
+	mat.detail_albedo = null
+	mat.uv2_triplanar = false
+	mat.uv2_world_triplanar = false
+	mat.uv2_scale = Vector3.ONE
+
 
 static func enamel_wear(mat: StandardMaterial3D) -> void:
 	if _wear == null:

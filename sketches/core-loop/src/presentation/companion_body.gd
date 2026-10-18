@@ -20,6 +20,7 @@ extends Node3D
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # One GLB per ordered socket pair, named <socket 0>__<socket 1> in table order.
 const MODEL_DIR := "res://assets/models/companion/assembled/"
@@ -44,6 +45,11 @@ const BEHIND := 0.8
 const FOLLOW_RATE := 8.0
 const TURN_RATE := 6.0
 const MOVING_SPEED := 1.0
+# Presentation only: stop below this so idle and follow do not flicker around MOVING_SPEED.
+const STOPPED_SPEED := 0.6
+# Seconds of crossfade into idle/follow and into a one-shot beat; the clip name switches at once.
+const LOOP_BLEND := 0.2
+const BEAT_BLEND := 0.12
 # The escape lamp: radius, height over the hull root, emission per cue, and each act's shape.
 const LAMP_RADIUS := 0.09
 const LAMP_LIFT := 0.48
@@ -401,7 +407,9 @@ func _grow() -> void:
 	if _halo != null:
 		var fill: float = combat.assist_fill() if combat != null and combat.has_method("assist_fill") else 0.0
 		var mat := _halo.material_override as StandardMaterial3D
-		var blink := fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
+		# The full halo's 2 Hz blink is under FlashGuard's cap; reduce flashes stops it anyway and
+		# holds the full glow, since the fill level already says "full".
+		var blink := not FlashGuard.on and fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
 		mat.emission_energy_multiplier = lerpf(HALO_ENERGY["empty"], HALO_ENERGY["full"], fill) * (1.6 if blink else 1.0)
 
 
@@ -582,7 +590,7 @@ func _light(lamp: String) -> void:
 	var mat := _lamp.material_override as StandardMaterial3D
 	mat.albedo_color = row["color"].darkened(0.6) if lamp == "spent" else row["color"]
 	mat.emission = row["color"]
-	mat.emission_energy_multiplier = LAMP_ENERGY[lamp]
+	mat.emission_energy_multiplier = FlashGuard.spike(LAMP_ENERGY["ready"], LAMP_ENERGY[lamp]) if lamp != "spent" else LAMP_ENERGY[lamp]
 	_lamp.scale = LAMP_SCALE[lamp]
 
 
@@ -603,7 +611,8 @@ func _escape_beat() -> void:
 func _follow(delta: float) -> void:
 	var player = ctx.player
 	var velocity: Vector3 = player.planar_velocity()
-	_moving = velocity.length() > MOVING_SPEED
+	var speed := velocity.length()
+	_moving = speed > (STOPPED_SPEED if _moving else MOVING_SPEED)
 	if _moving:
 		var want := velocity.normalized()
 		var blended := _heading.lerp(want, 1.0 - exp(-TURN_RATE * delta))
@@ -637,14 +646,14 @@ func _play(clip: String) -> void:
 		return
 	if _anim.current_animation == clip and _anim.is_playing():
 		return
-	_anim.play(clip)
+	_anim.play(clip, LOOP_BLEND)
 
 
 # A one-shot beat; the next frame's idle or follow resumes when it ends.
 func _beat(clip: String) -> void:
 	if _anim == null or not _anim.has_animation(clip):
 		return
-	_anim.play(clip)
+	_anim.play(clip, BEAT_BLEND)
 
 
 func _beats() -> void:
