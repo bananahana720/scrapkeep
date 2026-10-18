@@ -22,9 +22,12 @@ import bmesh
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("JoltLayer")
 CHAR = "charcoal"
 PLATE = common.mix("oxide", "charcoal", 0.18)
@@ -67,6 +70,7 @@ bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 
 c = Part("JoltCoil")
+c.subsurf = 0
 c.cyl("paint", 0.06, 0.06, 0.8, segs=8, loc=g(0, COIL[1] + 0.4, COIL[2]), color=CHAR)
 for k in range(5):
     y = COIL[1] + 0.12 + k * 0.15
@@ -80,7 +84,7 @@ bpy.context.view_layer.update()
 tris = common.tri_total(root)
 surfaces = len(body.data.materials) + len(coil.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "COIL", common.tris(coil))
-if tris > 1200 or surfaces > 3:
+if tris > 6800 or surfaces > 3:
     raise SystemExit("E27 limits exceeded")
 opts = common.args()
 common.export(root, opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_jolt_layer.glb"))

@@ -34,9 +34,12 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("PlatedBrute")
 
 GROUND = -1.1
@@ -125,6 +128,7 @@ body.parent = rig
 
 # --- Plate group: front slab, brow, ribs, bolts, shoulder and rear cladding ----------
 p = Part("BrutePlates")
+p.subsurf = 0
 p.box("bare_metal", (2.0, 0.5, 1.9), loc=(0, -1.10, 0.10))  # front slab, face at -1.35
 p.box("bare_metal", (2.1, 0.62, 0.22), loc=(0, -1.14, 1.02))  # brow lip (plate; only its front edge is trim)
 p.box("bare_metal", (2.0, 0.05, 0.05), loc=(0, -1.435, 1.135), color=RIM)  # brow front edge
@@ -161,7 +165,7 @@ surfaces = len(body.data.materials) + len(plates.data.materials)
 print("TRIS", t_body + t_plates, "BODY", t_body, "PLATES", t_plates, "SURFACES", surfaces,
       "BODY_R", round(body_r, 3), "BODY_Z", round(body_lo, 3), round(body_hi, 3),
       "PLATE_R", round(plate_r, 3), "PLATE_Z", round(plate_lo, 3), round(plate_hi, 3))
-if (t_body + t_plates > 1200 or surfaces > 3 or body_r > 0.8 or body_lo < GROUND - 0.001
+if (t_body + t_plates > 5500 or surfaces > 3 or body_r > 0.8 or body_lo < GROUND - 0.001
         or body_hi > 2.3 or plate_r > 1.8 or plate_lo < GROUND - 0.001 or plate_hi > 1.3):
     raise SystemExit("C15 limits exceeded")
 

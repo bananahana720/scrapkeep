@@ -252,13 +252,13 @@ func _run() -> void:
 	var live := _measure(enemy)
 	print("live assembly: %d V / %d T / %d D" % [live.vertices, live.tris, live.draws])
 	# A scratch base revert reports the original full assembly before failing the new budget.
-	_check(live.tris > 0 and live.tris <= 1200, "live full assembly <= 1200 triangles")
+	_check(live.tris > 0 and live.tris <= 4400, "live full assembly <= 4400 triangles (polished; was 1200)")
 	_check(live.draws > 0 and live.draws <= 3, "live full assembly <= 3 colour surfaces/draws")
 	_check(live.opaque and live.lights == 0, "live full assembly opaque with zero lights")
 	_base(enemy)
 	var asset := _measure(raw)
 	print("asset: %d V / %d T / %d D" % [asset.vertices, asset.tris, asset.draws])
-	_check(asset.tris > 0 and asset.tris <= 1200 and asset.draws == 3 and asset.vertices <= 3600, "GLB assembly within 3600 V / 1200 T / 3 D")
+	_check(asset.tris > 0 and asset.tris <= 4400 and asset.draws == 3 and asset.vertices <= 8400, "GLB assembly within 8400 V / 4400 T / 3 D (polished)")
 	_check(asset.opaque and asset.lights == 0, "GLB opaque with zero lights")
 	var body := enemy.find_child("RampBody", true, false) as MeshInstance3D
 	var plate := enemy.find_child("RampPlate", true, false) as MeshInstance3D

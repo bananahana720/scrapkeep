@@ -25,9 +25,12 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("CatchTrap")
 CHAR = "charcoal"
 IRON = common.mix("charcoal", "oxide", 0.25)
@@ -56,6 +59,8 @@ body = b.to_object(parent=root)
 
 # Cup wall: four rings, sealed underside and a recessed floor, no top cap.
 c = Part("CatchCup")
+c.bevel = 0
+c.subsurf = 0
 bm = c.bm
 N = 16
 spec = [(0.30, -0.40), (0.48, 0.40), (0.42, 0.40), (0.24, -0.28)]
@@ -88,7 +93,7 @@ tris = common.tri_total(root)
 surfaces = len(body.data.materials) + len(cup.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "CUP_MOUTH_R", 0.48, "CUP_BASE_R", 0.30,
       "CUP_HEIGHT", 0.80, "BODY_TRIS", common.tris(body), "CUP_TRIS", common.tris(cup))
-if tris > 1200 or surfaces > 3:
+if tris > 3600 or surfaces > 3:
     raise SystemExit("C22 budget exceeded")
 for obj, offset in ((body, Vector(g(0, 0, 0))), (cup, Vector(g(0, 1.6, -0.3)))):
     for v in obj.data.vertices:
