@@ -28,7 +28,8 @@ B. Wedge pieces (origin "centre", never scaled). The -col mesh is the grey-box d
      weir_apron, gap_work_deck, rim_road.
 C. Flume ride pieces (origin "entry_lip", +Z the ride): the trough cross-section is grind.py FLUME exactly (floor y 5, crests
    y 8, walls, bents every 12 m, hoop straps, rail empties "<id>-rail_NN" on the crest).
-     flume_pour_spout                14 m, level; the last 2 m of floor curve down 1 m into a pour lip.
+     flume_pour_spout                14 m, level; the last 2 m of floor curve down 1 m into a pour lip. It hangs from the relic
+                                     clamp: its two bents are 2 m hangers, so the drum floor stays open underneath.
      flume_siphon_span               100.8 m; the whole section rides y(z) = 5 - 21 s(z/100.8), s(t) = 3t^2 - 2t^3, built in
                                      stations, bent legs reach 11 m below the local floor.
      flume_reach_120                 120 m, level, a bent flush inside each end so the -col runs exactly 0..120 and its entry
@@ -939,7 +940,7 @@ def spec_flume(rid):
                 "legs": lambda z: FLUME["floor_y"] - 11.0, "rail_n": 10}
     if rid == "flume_pour_spout":
         return {"length": SPOUT_L, "wall_dy": zero, "floor_dy": spout_floor_dy, "wall_z": [0.0, 3.5, 7.0, 10.5, 14.0],
-                "floor_z": spout_floor_stations(), "bents": [0.0, 12.0], "legs": lambda z: FLUME["ground"] - 1.0, "rail_n": 2}
+                "floor_z": spout_floor_stations(), "bents": [0.0, 12.0], "legs": lambda z: FLUME["under"] - 2.0, "rail_n": 2}
     return {"length": SIPHON_L, "wall_dy": siphon_dy, "floor_dy": siphon_dy, "wall_z": stations(SIPHON_L, SIPHON_STEP),
             "floor_z": stations(SIPHON_L, SIPHON_STEP), "bents": [12.0 * k for k in range(9)] + [SIPHON_L],
             "legs": lambda z: FLUME["floor_y"] + siphon_dy(z) - 11.0, "rail_n": 8}
