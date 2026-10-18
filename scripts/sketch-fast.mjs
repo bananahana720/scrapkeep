@@ -358,7 +358,7 @@ function runGodot(sketchDir, test, timeoutMs) {
       // A kill before the time limit that the lane did not send is usually the container's
       // memory limit (dmesg "Memory cgroup out of memory"), not the test.
       const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
-      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true });
+      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
     });
   });
 }
@@ -558,29 +558,42 @@ async function main() {
   let baseImported = false;
   let prRed = null;
 
-  // A failure is rerun alone on the head, then on the merge base, before it is the PR's.
+  // A failure is rerun on the head and on the merge base side by side, before it is the PR's.
+  // Base verdicts are cached per base tree, so a known base-red costs one rerun on later heads.
+  const baseCacheFile = path.join(root, "artifacts", "local", "receipts", `base-runs-${diffBase.slice(0, 12)}.json`);
+  const baseCache = existsSync(baseCacheFile) ? JSON.parse(readFileSync(baseCacheFile, "utf8")) : {};
+  async function onBase(test, timeoutMs) {
+    if (!options.baseCheck) return null;
+    if (baseCache[test]) {
+      log(`  ${test} on the merge base: cached (${baseCache[test].ok ? "green" : "red"})`);
+      return baseCache[test];
+    }
+    const baseSketch = path.join(baseDir(), SKETCH);
+    if (!existsSync(path.join(baseSketch, test))) return null;
+    if (!baseImported) {
+      importWithRetry(`${SKETCH} (base)`, ["--headless", "--path", baseSketch], (job) => {
+        const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
+        return { label: job.label, exit: result.status, ok: result.status === 0 };
+      });
+      baseImported = true;
+    }
+    log(`  running ${test} on the merge base`);
+    const run = await runGodot(baseSketch, test, timeoutMs);
+    // A lane stop or a memory-limit kill says nothing about the base; only a verdict is cached.
+    if (!run.killed && (run.exit !== null || run.timedOut)) {
+      baseCache[test] = { ok: run.ok, checks: run.checks };
+      mkdirSync(path.dirname(baseCacheFile), { recursive: true });
+      writeFileSync(baseCacheFile, JSON.stringify(baseCache, null, 2) + "\n");
+    }
+    return run;
+  }
+
   async function confirm(first) {
     const timeoutMs = testTimeoutMs(sourceOf(sketchDir, first.test));
-    log(`  rerunning ${first.test} alone (${first.reason})`);
-    const rerun = await runGodot(sketchDir, first.test, timeoutMs);
-    let baseOk = null;
-    let baseChecks = [];
-    if (!rerun.ok && options.baseCheck) {
-      const baseSketch = path.join(baseDir(), SKETCH);
-      if (existsSync(path.join(baseSketch, first.test))) {
-        if (!baseImported) {
-          importWithRetry(`${SKETCH} (base)`, ["--headless", "--path", baseSketch], (job) => {
-            const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
-            return { label: job.label, exit: result.status, ok: result.status === 0 };
-          });
-          baseImported = true;
-        }
-        log(`  running ${first.test} on the merge base`);
-        const baseRun = await runGodot(baseSketch, first.test, timeoutMs);
-        baseOk = baseRun.ok;
-        baseChecks = baseRun.checks;
-      }
-    }
+    log(`  rerunning ${first.test} (${first.reason})`);
+    const [rerun, baseRun] = await Promise.all([runGodot(sketchDir, first.test, timeoutMs), onBase(first.test, timeoutMs)]);
+    const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
+    const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
     return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks }), rerun };
   }
 
