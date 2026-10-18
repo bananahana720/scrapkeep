@@ -22,11 +22,17 @@ class PhysicsProbe extends Node:
 	var frames := 0
 	var seconds := 0.0
 	var wrong_step := 0
+	# The first few off-step frames and what the engine was set to then. Godot 4.7.2 passes
+	# physics_step * Engine.time_scale, exact even through 250 ms stalls, so an off step
+	# means something scaled time (a hit stop); the detail names it.
+	var wrong_seen: Array = []
 	func _physics_process(delta: float) -> void:
 		frames += 1
 		seconds += delta
 		if absf(delta - 1.0 / 60.0) > 0.000001:
 			wrong_step += 1
+			if wrong_seen.size() < 5:
+				wrong_seen.append({"frame": frames, "delta": delta, "time_scale": Engine.time_scale, "ticks": Engine.physics_ticks_per_second})
 
 
 func _initialize() -> void:
@@ -103,7 +109,7 @@ func _run() -> void:
 	file.store_string(JSON.stringify(record))
 	file.close()
 	t.eq("trace runs 18000 actual physics steps", physics.frames, 18000)
-	t.eq("trace has no scaled physics steps", physics.wrong_step, 0)
+	t.check("trace has no scaled physics steps", physics.wrong_step == 0, "%d off-step frames, first %s" % [physics.wrong_step, str(physics.wrong_seen)])
 	t.near("trace covers 300 simulation seconds", physics.seconds, 300.0, 0.000001)
 	t.check("five-minute trace is recorded", FileAccess.file_exists(trace_path) and not samples.is_empty(), trace_path)
 	t.eq("trace sampler clamps zero values", engine.parameter_clamps, 0)
