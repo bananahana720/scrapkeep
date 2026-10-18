@@ -20,12 +20,23 @@ polish.enable(detail=2, bevel=0.03)
 
 `common.Part.to_object` then bevels and smooths each part before it triangulates, and
 subdivides it when asked. `common.export` bakes AO and wear over the whole tree before it
-writes the GLB. A recipe that never calls `enable()` builds byte for byte as before.
+writes the GLB. A recipe that never calls `enable()` builds byte for byte as before. Recipes that write
+their own GLB with `bpy.ops.export_scene.gltf` instead of `common.export` (the pilots,
+bosses, Wardens, `kill_first_rig.py` and the animation scripts) get the bevels and
+subdivision but no bake and no vertex sort: call `polish.bake(root, polish.options())`
+and `common.canonical_indices(path, vertices=True)` around their export, or their
+rebuilds will not stay byte-identical.
 
 Per part, set `part.bevel` (metres, `0` for none) or `part.subsurf` (levels) before
 `to_object()`. Organic shapes such as crew bodies and heads look best with `bevel = 0`
 and `subsurf = 2`; hard machinery with the default bevel and `subsurf = 0` or `1`; thin
 sails, nets and decals with `bevel = 0` and `subsurf = 0`.
+
+Subdivision carries loop colours, UVs, deform weights, materials and shading flags, and
+the mesh's integer and float vertex layers: an integer tag (`pilot_bone`, `tally_bone`,
+`rig_part`) goes to whatever most of a new vertex's source vertices carry, the lowest on
+a tie, and floats average. Concave ngons are ear-clipped before subdividing. Shape keys
+do not survive a bmesh rebuild; recipes with morphs subdivide only their unmorphed parts.
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -49,9 +60,9 @@ sails, nets and decals with `bevel = 0` and `subsurf = 0`.
 - Every baked mesh gets a second UV map, `Bake` (glTF `TEXCOORD_1`, Godot `UV2`):
   `x` is the unoccluded fraction (1 is open, 0 is covered) and `y` is wear (0.5 neutral,
   higher on convex edges). Materials of any slot can opt in, for example
-  `ALBEDO *= mix(1.0, UV2.x, 0.55)`. The first UV map is all zeros, since every runtime
-  material maps by triplanar projection. A mesh that already has two UV maps keeps them
-  and gets no `Bake` map.
+  `ALBEDO *= mix(1.0, UV2.x, 0.55)`. A mesh with no UV map gets an all-zero first map
+  ahead of `Bake`, since every runtime material maps by triplanar projection; one with
+  a UV map keeps it, and one that already has two keeps both and gets no `Bake` map.
 
 ## Rebuilds stay byte-identical
 
@@ -103,5 +114,6 @@ blender -b --factory-startup -P sketches/core-loop/tools/blender/polish_compare.
 
 Polish changes surfaces only. Keep node names, mesh names, material slot names, bone
 names, rigid weights, origins and collider envelopes. A recipe's envelope asserts
-(radius, half extents, heights) must still pass: bevels and subdivision only pull
-surfaces inward.
+(radius, half extents, heights) must still pass, and can move both ways: bevels and
+subdivision pull corners inward, but `detail` adds segments to curved primitives, so
+their faces sit closer to the true circle and the mesh grows slightly outward.
