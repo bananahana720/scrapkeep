@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "f5a7e24bfb1c7d00abcad729a49b65a6298a00f1294d44cbb7a60cde70d139f8",
+  "bake_sha256": "fc75796942bd6202c8248e871547f9b581e56ff65dd0562b0ea1c6b583611799",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 859843,
-  "edges": 307622,
+  "bytes": 891963,
+  "edges": 319422,
   "first_failed": "",
   "flags": {
-    "deck": 0,
-    "door_ok": 39277,
+    "deck": 1331,
+    "door_ok": 39448,
     "line": 439,
-    "open": 40401,
-    "sight_ok": 10239,
+    "open": 40572,
+    "sight_ok": 10271,
     "under": 0
   },
   "full_visit_m": 2010,
   "full_visit_ratio": "1.539",
-  "graph_sha256": "87e6b5d5ab3a18141bcabe323d3fbea5775e3322a85a42a9146d042aa389a9eb",
+  "graph_sha256": "13c5ea4b93146931281dcfa9ea087a381b8ecd37ddf81cd105d269f529e9008a",
   "line_errors": [],
   "line_path_nodes": 157,
   "longest_est_m": 2356,
   "map": "park_islands",
-  "nodes": 40401,
-  "park_sha256": "8a995939dec64da99d3a6ead54b811634b3f8fcdec9d8dddc51d79bc6796cdfd",
+  "nodes": 41732,
+  "park_sha256": "fc217efd0ee367d235ba0206f3e6394fd0df4808972ece6b879e7dbb35eb2b39",
   "pockets": [
     {
       "clear_ring": [],
@@ -207,6 +207,14 @@
   "zones": {
     "anchors": [
       {
+        "cost": 1424.8,
+        "d_landmark": 354.0,
+        "name": "lens_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 1349.2,
         "d_landmark": 389.3,
         "name": "lens_rocks",
@@ -226,6 +234,22 @@
         "cost": 1342.0,
         "d_landmark": 132.8,
         "name": "knuckle_e",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1314.2,
+        "d_landmark": 371.1,
+        "name": "roost_foot_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1310.2,
+        "d_landmark": 503.1,
+        "name": "lens_foot_lip",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -255,35 +279,75 @@
         "viable": true
       },
       {
+        "cost": 1150.9,
+        "d_landmark": 574.1,
+        "name": "cage_catch_net",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 1046.3,
+        "d_landmark": 481.5,
+        "name": "wing_gust_lip_e",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 643.4,
         "d_landmark": 770.1,
         "name": "fin_west",
         "on_route": false,
-        "rank": 2,
+        "rank": 3,
         "viable": true
+      },
+      {
+        "cost": 637.4,
+        "d_landmark": 1120.8,
+        "name": "post_field_lip_3",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 637.2,
+        "d_landmark": 1119.5,
+        "name": "post_field_lip_4",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 319.1,
         "d_landmark": -1.0,
         "name": "open",
         "on_route": false,
-        "rank": 3,
+        "rank": 4,
         "viable": true
+      },
+      {
+        "cost": 315.7,
+        "d_landmark": 1278.2,
+        "name": "lookout_pine_lip",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 51.5,
         "d_landmark": 1351.2,
         "name": "slickrock_run_shelf",
         "on_route": false,
-        "rank": 4,
+        "rank": 5,
         "viable": true
       }
     ],
-    "count": 192,
+    "count": 231,
     "crossings": {
-      "drop": 99,
+      "drop": 143,
       "ride": 13,
-      "walk": 347
+      "walk": 394
     },
     "hidden": [
       {

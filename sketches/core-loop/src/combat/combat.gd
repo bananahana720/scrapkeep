@@ -38,6 +38,7 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const SpecialCues := preload("res://src/combat/special_cues.gd")
 const Companion := preload("res://src/core/companion.gd")
+const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
@@ -473,6 +474,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_ended.connect(func(_won: bool): _clear_devices())
 	ctx.events.run_started.connect(func(_class_id: String):
+		_armour_known = {}
 		discovered = {}
 		discovery_log = []
 		_proc_ready = {}
@@ -625,6 +627,7 @@ func _door_caps(hit: Dictionary) -> void:
 	var enemy: Node3D = hit["enemy"]
 	var result: Dictionary = hit["result"]
 	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, hit["kind"], hit["cls"])
+	_read_armour(enemy, hit, result)
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_exposed.erase(enemy.get_instance_id())
@@ -632,6 +635,29 @@ func _door_caps(hit: Dictionary) -> void:
 	# its own mark.
 	if hit["kind"] == ARC_MARK_KIND:
 		_arc_mark(enemy)
+
+
+# Damage families (DamageFamilies, FIELDS-AND-CASTS section 6): a hit that beat the plating
+# meets its target's armour row, resisted about 60% and weak about 150%. The read rides on the
+# target as meta "armour_read" for this hit's enemy_struck listeners (presentation stamps DENT
+# or ZZAP! on the first of each per run), and the first read of an armour class discovers its
+# codex entry, after which the class wears its icon.
+
+
+func _read_armour(enemy: Node3D, hit: Dictionary, result: Dictionary) -> void:
+	var armour := DamageFamilies.armour_of(enemy)
+	var read := DamageFamilies.verdict(armour, hit["kind"], hit["cls"]) if bool(result.get("full", false)) else ""
+	enemy.set_meta("armour_read", read)
+	if read == "":
+		return
+	result["dealt"] = float(result["dealt"]) * DamageFamilies.mult(armour, hit["kind"], hit["cls"])
+	result["read"] = read
+	if _armour_known.has(armour):
+		return
+	_armour_known[armour] = true
+	match armour:
+		"plated":
+			_discover("armour_plated", enemy.global_position)
 
 
 func _door_crit(hit: Dictionary) -> void:
@@ -1318,7 +1344,11 @@ func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 	if enemy.has_method("crushable") and not enemy.crushable():
 		return false
 	var result := resolve(enemy, kind, force)
-	var dealt: float = float(result["dealt"]) * _strike_mult(enemy, kind, _classify_source(kind, _forced_source))
+	var cls := _classify_source(kind, _forced_source)
+	var dealt: float = float(result["dealt"]) * _strike_mult(enemy, kind, cls)
+	# The armour read the strike will apply (_read_armour), asked without recording it (F005).
+	if bool(result.get("full", false)):
+		dealt *= DamageFamilies.mult(DamageFamilies.armour_of(enemy), kind, cls)
 	return result["plating"] <= 0.0 and dealt >= enemy.hp
 
 
@@ -2353,6 +2383,8 @@ const REEL_BURST := 8.0
 
 # The tap whose cast is running, {slot, id, fire}, or {} (FIELDS-AND-CASTS section 4).
 var _cast_pending := {}
+# Armour classes read this run; the codex dedupes too, this skips the call.
+var _armour_known := {}
 # A bite this tick waits for _step_line, so it fires after the bite's chain link is counted.
 var _bite_pending := false
 

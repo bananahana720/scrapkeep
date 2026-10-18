@@ -225,6 +225,12 @@ const ENTRIES := [
 		"clue": "a hostile hold + Q",
 		"text": "Press Q while an enemy holds you: the hold breaks as the set piece starts.",
 	},
+	{
+		"id": "armour_plated", "name": "Plated",
+		"hint": "Some crews shrug off a plain hit.",
+		"clue": "any hit on a plated crew",
+		"text": "Plated crews take 60% from rams, smashes and weapon fire (DENT) and 150% from arc and your abilities (ZZAP!).",
+	},
 	# --- P-C Sable entries ---
 	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + slot 3", "text": "Pick 3 and click while a line stands: whip round the anchor and leave toward your aim, faster than you came."},
 	{"id": "cable_run", "name": "Cable Run", "hint": "Everything she drives into the air is somewhere to hook.", "clue": "a full ring + Q", "text": "Q rides a cable and drives a stake on every beat. The stakes hold a line for six seconds after landing."},
@@ -344,6 +350,7 @@ const DETECTORS := {
 	"set_piece_core": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"set_piece_cash_in": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"set_piece_breakout": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"armour_plated": {"kind": "drill_crew", "script": "res://src/combat/combat.gd"},
 	# --- P-C Cannon detectors ---
 	"cannon_lane_charge": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"cannon_fire_mission": {"kind": "", "script": "res://src/combat/ultimate.gd"},

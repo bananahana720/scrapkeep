@@ -17,6 +17,8 @@ extends RefCounted
 # kind         the script that fires it: setup(ctx, combat), fire(rack, row, bonus) -> pieces
 #              launched, step(delta), clear(); optional begin(rack, row) draws the wind-up's tell
 #              (the same geometry fire() will hit) and cancel() drops it.
+#              fire() may run twice in one release (Open Frame, maker_sets.gd: fired in the
+#              air, an active fires twice), so a kind keeps no per-release state across it.
 
 const SCRAP_ROCKET := "scrap_rocket"
 
@@ -38,7 +40,7 @@ const ROWS := {
 	# --- end Silo Battery ---
 	# --- Cutting Torch (Redjaw Workshops) ---
 	"cutting_torch": {
-		"name": "Cutting Torch", "maker": "redjaw_workshops", "rarity": "rare",
+		"name": "Cutting Torch", "maker": "redjaw", "rarity": "rare",
 		"verb": "Sweep a plate-cutting torch", "text": "F: a guide line, then a beam that burns through plating",
 		"max_charges": 1, "recharge": 11.0, "kill_charge": 0.12, "bonus_cap": 4, "windup": 0.3,
 		"kind": preload("res://src/combat/actives/cutting_torch.gd"),
@@ -54,7 +56,7 @@ const ROWS := {
 	# --- end Lift Pulse ---
 	# --- Quake Knock (Waking-made) ---
 	"quake_knock": {
-		"name": "Quake Knock", "maker": "waking_made", "rarity": "relic",
+		"name": "Quake Knock", "maker": "waking", "rarity": "relic",
 		"verb": "Knock a quake ring into the floor", "text": "F: a ring of cracks draws itself, then the floor hits",
 		"max_charges": 1, "recharge": 11.0, "kill_charge": 0.12, "bonus_cap": 4, "windup": 0.5,
 		"kind": preload("res://src/combat/actives/quake_knock.gd"),

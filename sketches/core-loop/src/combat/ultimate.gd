@@ -33,6 +33,8 @@ const RECOVER := "recover"
 const WINDUP_SECONDS := 0.35
 # A planting wind-up (a row's `plant`) brakes the ball's planar speed to a stop within this long.
 const PLANT_STOP_SECONDS := 0.15
+
+var _plant_from := 0.0
 const RECOVER_SECONDS := 0.25
 const FLIGHT_SPEED := 18.0
 const FLIGHT_MIN := 1.6
@@ -469,6 +471,7 @@ func start(p: Dictionary) -> void:
 	_was_full = false
 	_phase = WINDUP
 	_left = windup_seconds()
+	_plant_from = ctx.player.planar_velocity().length()
 	_leg = 0
 	_ride = null
 	_posture_spent = {}
@@ -519,13 +522,17 @@ func plants() -> bool:
 
 
 # The plant is the pilot's own heavy stance, the one cast that stops the ball, and only while
-# its wind-up runs; the fall stays as it is.
-func _plant(delta: float) -> void:
+# its wind-up runs. The planar speed brakes linearly from the speed at the press to zero over
+# PLANT_STOP_SECONDS and is held there, the pilot's drive included; the fall stays as it is.
+# The line was already cut at the start, so the cause "ultimate" cuts nothing new.
+func _plant() -> void:
 	var v: Vector3 = ctx.player.state.velocity
 	var flat := Vector3(v.x, 0.0, v.z)
-	if flat.length() < 0.01:
+	var into := windup_seconds() - _left
+	var cap := _plant_from * maxf(0.0, 1.0 - into / PLANT_STOP_SECONDS)
+	if flat.length() <= cap + 0.001:
 		return
-	flat *= maxf(0.0, 1.0 - delta / PLANT_STOP_SECONDS)
+	flat = flat.normalized() * cap if cap > 0.0 else Vector3.ZERO
 	ctx.player.set_velocity_now(Vector3(flat.x, v.y, flat.z), "ultimate")
 
 
@@ -598,7 +605,7 @@ func step(delta: float) -> void:
 		WINDUP:
 			_left -= delta
 			if plants():
-				_plant(delta)
+				_plant()
 			if _left <= 0.0:
 				_begin_flight()
 		FLIGHT:

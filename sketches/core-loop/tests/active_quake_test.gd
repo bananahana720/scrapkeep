@@ -106,7 +106,7 @@ func _run() -> void:
 	_rack = _combat.get("actives")
 	var row: Dictionary = ActiveDefs.row(ID)
 	_t.check("01 the row is a Waking-made relic with a 0.5 s wind-up",
-		row.get("rarity") == "relic" and row.get("maker") == "waking_made" and is_equal_approx(float(row.get("windup", 0.0)), 0.5), str(row))
+		row.get("rarity") == "relic" and row.get("maker") == "waking" and is_equal_approx(float(row.get("windup", 0.0)), 0.5), str(row))
 	_t.check("02 its launch has a bank sound with a trim row", SfxBank.has_recipe("active_" + ID) and SfxBank.TRIM_DB.has("active_" + ID))
 	if _rack == null or row.is_empty():
 		quit(_t.verdict())

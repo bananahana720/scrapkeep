@@ -265,7 +265,8 @@ func _hook_and_environment() -> void:
 	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). World row 3 says sky "hdri", so
 	# apply_environment leaves the sky to the row (Palette.hdri_sky); the painted sky is used only
 	# when the row says "own" (highdraft_scenery.gd apply_environment).
-	_t.check("hook: the environment keeps the shared HDRI sky when the row says hdri", env.sky == before and env.sky.sky_material is PanoramaSkyMaterial)
+	# 2026-10-17 (one day per run): the shared HDRI sky's material is the time-of-day sky shader.
+	_t.check("hook: the environment keeps the shared HDRI sky when the row says hdri", env.sky == before and env.sky.sky_material is ShaderMaterial)
 	_t.check("hook: the painted sky path for an own row still builds a panorama", Scenery._sky_material() is PanoramaSkyMaterial)
 	_t.check("hook: ambient shifts to the sky cream", env.ambient_light_color.is_equal_approx(Scenery.LOOK["ambient"]) and not ambient.is_equal_approx(env.ambient_light_color))
 	Scenery.restore_environment(terrain)
@@ -309,7 +310,7 @@ func _game_integration() -> void:
 	_t.eq("game: both barges wear the recipe", skinned, 2)
 	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). Stages 5 and 1 (worlds 3 and 1) both
 	# say "hdri": the one cached Palette.hdri_sky() is set on entry and stays across the move.
-	_t.check("game: the morning sky is up (the cached HDRI sky)", env.sky == Palette.hdri_sky())
+	_t.check("game: the cached HDRI sky is up", env.sky == Palette.hdri_sky())
 	game.flow.enter_stage(1, Vector3.ZERO, false)
 	await physics_frame
 	_t.check("game: stage 1 keeps the same cached HDRI sky", env.sky == Palette.hdri_sky())

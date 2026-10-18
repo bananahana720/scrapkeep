@@ -801,6 +801,11 @@ const STATE_ROWS := {
 	"beacon_sealed": {"color": "slate", "motion": "none", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
 	"beacon_open": {"color": "amber", "motion": "steady", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
 	"wearing": {"color": "rust", "motion": "steady", "shape": "chevron", "sound": NONE, "verb": NONE, "word": ""},
+	# Damage families (FIELDS-AND-CASTS section 6): the first resisted and weak hit on an armour
+	# class each run stamp their word; once its codex entry is known the class wears its icon.
+	"dented": {"color": "slate", "motion": "none", "shape": "square", "sound": NONE, "verb": NONE, "word": "DENT"},
+	"zzapped": {"color": "live", "motion": "none", "shape": "cross", "sound": NONE, "verb": NONE, "word": "ZZAP!"},
+	"plated": {"color": "slate", "motion": "steady", "shape": "square", "sound": NONE, "verb": NONE, "word": ""},
 }
 
 # The five synergies the slice keeps, keyed by their ids in build/synergies.gd, which owns the
@@ -1099,6 +1104,12 @@ const WORLD_ROWS := {
 	"layer_undercroft": {"group": "event", "color": Palette.VERDIGRIS, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_reese_sub", "hud": "", "objective": "", "priority": 0},
 	"layer_shelf": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_theme", "hud": "", "objective": "", "priority": 0},
 	"layer_sky": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_bells_arp", "hud": "", "objective": "", "priority": 0},
+	# The crown's place layers (design-v3/park/stages/6-park_crown.md section 12), published by a park row's music_layer.
+	# Stand-in tick until the music thread renders each layer.
+	"layer_crown_hoodoos": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_hoodoos", "hud": "", "objective": "", "priority": 0},
+	"layer_crown_alcove": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_alcove", "hud": "", "objective": "", "priority": 0},
+	"layer_crown_toppled": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_toppled", "hud": "", "objective": "", "priority": 0},
+	"layer_crown_ramp": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_ramp", "hud": "", "objective": "", "priority": 0},
 	"ride_grapple_line": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "grapple_clink", "sound_next": "ride_cable_clink", "hud": "", "objective": "", "priority": 1},
 	"ride_glide_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_glide_wind", "hud": "", "objective": "", "priority": 1},
 	"ride_skylight": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rail_hum", "hud": "", "objective": "", "priority": 1},

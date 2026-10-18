@@ -10,7 +10,9 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
+const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
@@ -42,13 +44,18 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # cell, the unshadowed cell selects two of them, and an in-front hull is still selected.
 # 2026-10-16 (BITE-PIN): 226 -> 229. A guard re-closed on the ball, and the landing, hold the
 # exceptions of bodies the ball is inside until it is clear (exception_hold.gd).
-# 2026-10-17 (unit K): 229 -> 230. The Welding Hood's art landed; it is checked live on its own.
+# 2026-10-17 (RIVET-FREEZE): 230 -> 233 (after pilot paint's 229 -> 230). The terrain commit's skipped clips leave parts and
+# shadows byte-identical to a plain subtraction pass.
+# 2026-10-17 (RIVET-FREEZE, "Fewer lines"): 233 -> 237. Coplanar terrain faces merge into convex
+# polygons of the same area, the merged carve keeps the same volume, and the cell boxes select
+# what the plain selection does.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
 	# 2026-10-16 (pilot paint): Calibrated is live, one check added.
-	_expected_checks = 230
+# 2026-10-17 (stage/alpha-w16): 237 -> 238 with EARNED-COSMETICS' one check on cand.
+	_expected_checks = 238
 	super._initialize()
 
 
@@ -181,7 +188,7 @@ func _shape_dispatch_fixture() -> void:
 			var other_shapes: Dictionary = indicator.shapes
 			indicator.shapes = {"rivet_scar": scar}
 			_kit.volume_indicator._process(0.0)
-			var arrays: Array = _kit.volume_indicator._tris.surface_get_arrays(0)
+			var arrays: Array = _kit.volume_indicator.scar_mesh.surface_get_arrays(0)
 			var rendered: Array = []
 			for i in (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
 				if arrays[Mesh.ARRAY_COLOR][i].a < 1.0:
@@ -342,10 +349,10 @@ func _alpha_terrain_cost_fixture() -> void:
 	indicator._process(0.0)
 	var changes := [0]
 	var changed := func(): changes[0] += 1
-	indicator._tris.changed.connect(changed)
+	indicator.scar_mesh.changed.connect(changed)
 	indicator._process(0.0)
 	_t.eq("captured alpha frozen volume does not rebuild its mesh", changes[0], 0)
-	indicator._tris.changed.disconnect(changed)
+	indicator.scar_mesh.changed.disconnect(changed)
 	await _fresh()
 	var arena := Arena.new()
 	arena.position = Vector3(0.0, 50.75909, 118.0)
@@ -389,6 +396,119 @@ func _alpha_terrain_cost_fixture() -> void:
 	arena.queue_free()
 	_game.ctx.terrain.use(1)
 	await _fresh()
+
+
+# RIVET-FREEZE: the terrain commit skips clips a margin proves cannot change a part. Its parts
+# and shadows must match one plain _subtract_shadow pass per face, byte for byte, across a flat
+# floor grid cutting the slab, a wall, a sliver, faces behind the origin and seeded strays.
+func _shade_identity_fixture() -> void:
+	var origin := Vector3(0.0, 0.3, 0.0)
+	var dir := Vector3(1.0, -0.15, 0.2).normalized()
+	var side := dir.cross(Vector3.UP).normalized()
+	var up := side.cross(dir).normalized()
+	var cells: Array = []
+	for i in 8:
+		var a := dir.rotated(up, lerpf(-0.6, 0.6, float(i) / 8.0))
+		var b := dir.rotated(up, lerpf(-0.6, 0.6, float(i + 1) / 8.0))
+		var sa := a.cross(up) * 0.4
+		var sb := b.cross(up) * 0.4
+		cells.append(_kit._commit_cell([origin + sa, origin + a * 12.0 + sa, origin + b * 12.0 - sb, origin - sb], up, 0.5))
+	var faces: Array = []
+	for x in range(-2, 14, 2):
+		for z in range(-8, 8, 2):
+			var p := Vector3(x, -0.4, z)
+			faces.append([p, p + Vector3(2.0, 0.0, 0.0), p + Vector3(0.0, 0.0, 2.0)])
+			faces.append([p + Vector3(2.0, 0.0, 0.0), p + Vector3(2.0, 0.0, 2.0), p + Vector3(0.0, 0.0, 2.0)])
+	faces.append([Vector3(9.0, -1.0, -3.0), Vector3(9.0, 2.0, -3.0), Vector3(9.0, 2.0, 3.0), Vector3(9.0, -1.0, 3.0)])
+	faces.append([Vector3(5.0, -0.2, 0.0), Vector3(5.0001, -0.2, 0.0), Vector3(5.0, -0.2, 4.0)])
+	faces.append([Vector3(-3.0, -1.0, -1.0), Vector3(-3.0, 1.0, 0.0), Vector3(-3.0, -1.0, 1.0)])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 36101
+	for i in 40:
+		var at := Vector3(rng.randf_range(-2.0, 13.0), rng.randf_range(-1.5, 1.5), rng.randf_range(-5.0, 5.0))
+		faces.append([at, at + Vector3(rng.randf_range(-2.0, 2.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-2.0, 2.0)), at + Vector3(rng.randf_range(-2.0, 2.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-2.0, 2.0))])
+	var plain := cells.duplicate(true)
+	var plain_shadows: Array = []
+	for face in faces:
+		var shadow: Array = _kit._face_shadow(origin, face)
+		if shadow.is_empty():
+			continue
+		plain_shadows.append(shadow)
+		var lit: Array = []
+		for cell in plain:
+			lit.append_array(_kit._subtract_shadow(cell, shadow))
+		plain = lit
+	var hull := [{"at": origin + up * 0.5, "normal": up}, {"at": origin - up * 0.5, "normal": -up}]
+	var shadows: Array = []
+	var fast: Array = _kit._shade(origin, faces, cells.duplicate(true), shadows, hull)
+	_t.check("shade fixture carves: the floor and wall change the parts", var_to_bytes(plain) != var_to_bytes(cells))
+	_t.check("shade parts match a plain subtraction pass byte for byte", var_to_bytes(fast) == var_to_bytes(plain), "%d vs %d parts" % [fast.size(), plain.size()])
+	_t.check("shade shadows match a plain subtraction pass byte for byte", var_to_bytes(shadows) == var_to_bytes(plain_shadows), "%d vs %d shadows" % [shadows.size(), plain_shadows.size()])
+
+
+# RIVET-FREEZE ("Fewer lines"): coplanar faces merge before the carve. A tiled square becomes its
+# outline, an L of tiles becomes convex pieces of the same area, and the carve through the merged
+# faces holds the same points as the carve through the triangles.
+func _merge_fixture() -> void:
+	var square: Array = []
+	for x in range(0, 8, 2):
+		for z in range(0, 8, 2):
+			var p := Vector3(x, -0.4, z)
+			square.append([p, p + Vector3(0.0, 0.0, 2.0), p + Vector3(2.0, 0.0, 0.0)])
+			square.append([p + Vector3(2.0, 0.0, 0.0), p + Vector3(0.0, 0.0, 2.0), p + Vector3(2.0, 0.0, 2.0)])
+	var merged: Array = TerrainFaces.merge(square)
+	_t.check("merge: a tiled square becomes its four-corner outline", merged.size() == 1 and (merged[0] as Array).size() == 4 and is_equal_approx(_area(merged[0]), 64.0), "%d polygons" % merged.size())
+	var ell: Array = square.filter(func(face): return not ((face[0] as Vector3) + face[1] + face[2]).x > 12.0 or not ((face[0] as Vector3) + face[1] + face[2]).z > 12.0)
+	var pieces: Array = TerrainFaces.merge(ell)
+	var area := 0.0
+	var convex := true
+	for piece in pieces:
+		area += _area(piece)
+		for i in piece.size():
+			var before: Vector3 = piece[(i + piece.size() - 1) % piece.size()]
+			var at: Vector3 = piece[i]
+			var after: Vector3 = piece[(i + 1) % piece.size()]
+			convex = convex and (at - before).cross(after - at).dot(Vector3.UP) > 0.0
+	_t.check("merge: an L of tiles becomes fewer strictly convex pieces of the same area", pieces.size() < ell.size() and pieces.size() <= 3 and convex and is_equal_approx(area, 48.0), "%d pieces, area %s" % [pieces.size(), area])
+	var origin := Vector3(1.0, 0.3, 1.0)
+	var dir := Vector3(1.0, -0.1, 0.8).normalized()
+	var side := dir.cross(Vector3.UP).normalized()
+	var up := side.cross(dir).normalized()
+	var cells: Array = []
+	for i in 6:
+		var a := dir.rotated(up, lerpf(-0.7, 0.7, float(i) / 6.0))
+		var b := dir.rotated(up, lerpf(-0.7, 0.7, float(i + 1) / 6.0))
+		cells.append(_kit._commit_cell([origin, origin + a * 9.0, origin + b * 9.0], up, 0.8))
+	var wall: Array = [[Vector3(5.0, -1.0, 2.0), Vector3(5.0, 1.0, 2.0), Vector3(5.0, 1.0, 4.0)], [Vector3(5.0, -1.0, 2.0), Vector3(5.0, 1.0, 4.0), Vector3(5.0, -1.0, 4.0)]]
+	var hull := [{"at": origin + up * 0.8, "normal": up}, {"at": origin - up * 0.8, "normal": -up}]
+	var plain: Array = _kit._shade(origin, ell + wall, cells.duplicate(true), [], hull)
+	var shadows: Array = []
+	var fewer: Array = _kit._shade(origin, TerrainFaces.merge(ell + wall), cells.duplicate(true), shadows, hull)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 36025
+	var held := 0
+	var differ := 0
+	for i in 4000:
+		var p := Vector3(rng.randf_range(0.0, 10.0), rng.randf_range(-1.5, 2.0), rng.randf_range(-1.0, 10.0))
+		var in_plain := plain.any(func(cell): return _kit._cell_intersects(cell, p, 0.0))
+		held += 1 if in_plain else 0
+		differ += 1 if in_plain != fewer.any(func(cell): return _kit._cell_intersects(cell, p, 0.0)) else 0
+	_t.check("merge: the carve through merged faces holds the same points", held > 200 and differ == 0, "%d held, %d differ" % [held, differ])
+	var shape := {"kind": "rivet_volume", "origin": origin, "cells": fewer, "shadows": shadows}
+	var boxes: Array = _kit._cell_boxes(shape)
+	var skipped := 0
+	for i in 2000:
+		var p := Vector3(rng.randf_range(-1.0, 11.0), rng.randf_range(-2.0, 2.5), rng.randf_range(-2.0, 11.0))
+		var hull_radius := rng.randf_range(0.0, 1.2)
+		skipped += 1 if _kit._in_shape(shape, p, hull_radius, boxes) != _kit._in_shape(shape, p, hull_radius) else 0
+	_t.eq("cell boxes select exactly what the plain selection does", skipped, 0)
+
+
+static func _area(polygon: Array) -> float:
+	var sum := Vector3.ZERO
+	for i in range(1, polygon.size() - 1):
+		sum += ((polygon[i] as Vector3) - polygon[0]).cross((polygon[i + 1] as Vector3) - polygon[0])
+	return sum.length() * 0.5
 
 
 # FU-RIVET-SHADOW: the empty-shadow case. The silhouette cone meets the cell, but the whole
@@ -492,6 +612,8 @@ func _run() -> void:
 	await _boot()
 	# First, so a broken shadow subtraction fails this direct check before a later fixture can stall.
 	_empty_shadow_fixture()
+	_shade_identity_fixture()
+	_merge_fixture()
 	await _alpha_terrain_cost_fixture()
 	await _cylinder_terrain_fixture()
 	await _shape_dispatch_fixture()
@@ -849,9 +971,12 @@ func _run() -> void:
 		breach.get("on") == "ultimate_landed" and breach.get("where") == {"ultimate_id": "foundry_cutter"} and breach.get("at_least") == {"hits": 6}
 		and int(breach.get("count", 0)) == 1 and Achievements.reward_of("ach_rivet_full_breach").get("cosmetic", "") == "shell_rivet_calibrated", str(breach))
 	grants["ach_rivet_full_breach"] = "shell_rivet_calibrated"
-	# Re-pinned 2026-10-17 (stage/alpha-w16, #17 + #46 + unit K): the trail, Calibrated and the Welding Hood are all live.
-	_t.check("every Rivet grant is live", grants.values().all(func(id): return not Cosmetics.is_pending(id)))
-	_t.check("the Welding Hood is live", not Cosmetics.is_pending("outfit_rivet_hood") and FileAccess.file_exists("res://assets/cosmetics/outfits/outfit_rivet_hood.glb"))
+	_t.check("every granted item is pending or has a registered, shipping asset", CosmeticArt.unaccounted(grants.values()).is_empty(), str(CosmeticArt.unaccounted(grants.values())))
+	# Negatives: an unregistered id, and a real row whose asset does not ship, are neither.
+	_t.check("a granted id that is neither pending nor shipping fails that rule", not Cosmetics.row(CosmeticArt.NEGATIVE_ROW).is_empty()
+		and not CosmeticArt.shipping_ids().has(String(Cosmetics.row(CosmeticArt.NEGATIVE_ROW).get("asset", "")))
+		and CosmeticArt.unaccounted(CosmeticArt.NEGATIVES).size() == CosmeticArt.NEGATIVES.size(), str(CosmeticArt.unaccounted(CosmeticArt.NEGATIVES)))
+	_t.check("Calibrated is live", not Cosmetics.is_pending("shell_rivet_calibrated") and FileAccess.file_exists("res://assets/models/world_one/shell_rivet_calibrated.glb"))
 	_t.check("both line cues are keyed and read the Rivet motif", Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["punch"]) and Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["arrive"])
 		and Audio.RIVET_LINE["motif"] == ClassDef.by_id("runner_gunner").motif)
 	_finish()

@@ -30,9 +30,12 @@ func _frames(n: int) -> void:
 
 func _run() -> void:
 	var pilots := 0
+	# 2026-10-17 (crown authored pass): a pilot's "or" rule row (Tally's isles_rescued) opens that pilot too, so it
+	# carries a beat like a pilot reward row; was 5 pilot unlock rows.
+	var or_rows := ClassDef.all().filter(func(d): return d.unlock.has("or")).map(func(d): return ClassDef.unlock_row(String(d.unlock["or"])))
 	for id in Achievements.ids():
 		var row: Dictionary = Achievements.row(id)
-		if not row.get("reward", {}).has("pilot"):
+		if not row.get("reward", {}).has("pilot") and not or_rows.has(id):
 			_t.check("%s has no beat" % id, not row.has("beat"), str(row.get("beat", "")))
 			continue
 		pilots += 1
@@ -40,10 +43,19 @@ func _run() -> void:
 		var words := beat.split(" ", false).size()
 		_t.check("%s beat within cap" % id, beat != "" and words <= Achievements.BEAT_WORDS, "%d words: %s" % [words, beat])
 		_t.eq("%s toast second line" % id, Achievements.toast_text(id), "%s\n%s" % [row["name"], beat])
-	_t.eq("pilot unlock rows", pilots, 5)
+	_t.eq("pilot unlock rows", pilots, 6)
 	_t.eq("a row without a beat toasts its name first", Achievements.toast_text("kills_100").split("\n")[0], "Hundred Down")
 	_t.eq("a delivered cosmetic reward toasts New look", Achievements.toast_text("kills_100"), "Hundred Down\nNew look: %s" % Cosmetics.row("paint_rivet_forge")["name"])
-	_t.eq("a pending cosmetic reward toasts its name only", Achievements.toast_text(Achievements.for_cosmetic("shell_sable_felt")), Achievements.row(Achievements.for_cosmetic("shell_sable_felt"))["name"])
+	# The pending id is read at runtime, as achievement_rows_case does for PENDING_PILOTS.
+	var pending: Array = Cosmetics.PENDING_ART.filter(func(id): return Achievements.for_cosmetic(id) != "")
+	if pending.is_empty():
+		var rewarded: Array = Achievements.ROWS.keys().filter(func(a): return Achievements.beat_of(a) == "" and String(Achievements.reward_of(a).get("cosmetic", "")) != "")
+		var silent: Array = rewarded.filter(func(a): return not Achievements.toast_text(a).contains("\nNew look: "))
+		_t.check("with no pending art, every cosmetic-reward toast names its look", not rewarded.is_empty() and silent.is_empty(), str(silent))
+	else:
+		_t.eq("a pending cosmetic reward toasts its name only", Achievements.toast_text(Achievements.for_cosmetic(pending[0])), Achievements.row(Achievements.for_cosmetic(pending[0]))["name"])
+	var felt := Achievements.for_cosmetic("shell_sable_felt")
+	_t.eq("a delivered shell reward toasts New look", Achievements.toast_text(felt), "%s\nNew look: %s" % [Achievements.row(felt)["name"], Cosmetics.row("shell_sable_felt")["name"]])
 
 	var signals := Achievements.bus_signals()
 	var ids: Array = []
