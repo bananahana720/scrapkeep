@@ -87,6 +87,10 @@ var _picks_waiting: Array[int] = []
 # Upgrade picks owed for new heft classes (the slice table), held until the ball is calm.
 var _class_picks_owed := 0
 var _pressure := -1.0
+# Seconds since the director last took combat's build_read(); it walks habits and the tree, so
+# it refreshes about once a second, not every tick. Starts due so the first step reads it.
+const BUILD_REFRESH := 1.0
+var _build_clock := BUILD_REFRESH
 var _vault_pending := false
 var _was_grounded := true
 # A barge carried the ball this tick (contraptions.gd's "carry" fact), for the net deck's footing note.
@@ -559,6 +563,10 @@ func director_alive() -> int:
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
 	director.heft_class = ctx.run.heft_class()
+	_build_clock += delta
+	if _build_clock >= BUILD_REFRESH and ctx.spawner != null and ctx.spawner.has_method("build_read"):
+		_build_clock = 0.0
+		director.build = ctx.spawner.build_read()
 	var alive := director_alive()
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
