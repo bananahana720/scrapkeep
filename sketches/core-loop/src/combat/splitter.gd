@@ -17,7 +17,7 @@ extends "res://src/combat/counter.gd"
 # fusing together as one volley.
 #
 # The effects contract (design-v3/MACHINE-VFX.md, PR #51, and the special cues): each bud's
-# seam flare fires special_tell("tell") and SpecialCues.tell(self) on its first frame, and
+# seam flare fires SpecialCues.tell(self) (which emits special_tell("tell")) on its first frame, and
 # meta "split" is set before died goes out.
 
 # The specials' cue hub (CONTRACTS.md "Special cues"); loaded only once that file lands.
@@ -97,9 +97,10 @@ func _physics_process(delta: float) -> void:
 		_bud_clock -= delta
 		if _bud_clock <= 0.0 and _pods.size() < POD_CAP:
 			_flare_left = POP_DELAY
-			special_tell.emit("tell")
 			if ResourceLoader.exists(CUES):
 				load(CUES).tell(self)
+			else:
+				special_tell.emit("tell")
 
 
 # One pod comes off the side facing the ball and runs at it.
