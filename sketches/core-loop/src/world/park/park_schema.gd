@@ -400,6 +400,10 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "rider", "rider needs a GLB recipe and an [x, z] at, not %s" % str(rider))
 		elif rider.has("on") and not String(rider["on"]).begins_with("layer_mind_quote_"):
 			_add(out, id, "rider", "rider on %s is no once-per-run fact (layer_mind_quote_*)" % str(rider["on"]))
+		elif rider.has("yaw_deg") and not (rider["yaw_deg"] is float or rider["yaw_deg"] is int):
+			_add(out, id, "rider", "rider yaw_deg %s is no number" % str(rider["yaw_deg"]))
+		else:
+			_recipe(out, id, String(rider["recipe"]))
 	if GUARDED_SOCIETIES.has(row["society"]):
 		if row["home"] != "":
 			_add(out, id, "guardrail", "a %s row houses no home (%s)" % [row["society"], row["home"]])

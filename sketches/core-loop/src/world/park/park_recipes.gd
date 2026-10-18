@@ -816,13 +816,15 @@ static func _fire(area: Area3D, fact: String, at: Vector3, publish: Callable) ->
 		if area.has_meta("fired"):
 			return
 		area.set_meta("fired", true)
-		for rider: Node in area.get_tree().get_nodes_in_group(RIDER_GROUP):
-			if rider.get_meta("on", "") == fact:
+		# Riders stand beside their rows under the same parent (ParkRows), so another stage's crane never answers.
+		var rows := area.get_parent().get_parent()
+		for rider: Node in rows.get_children() if rows != null else []:
+			if rider.is_in_group(RIDER_GROUP) and rider.get_meta("on", "") == fact:
 				swing(rider)
 	publish.call(fact, at)
 
 
-# The row's rider as its own landform-budget piece at rider.at on the raw ground, turned by rider.yaw_deg.
+# The row's rider as its own landform-budget piece (placed by place_row only; place() leaves riders out) at rider.at on the raw ground, turned by rider.yaw_deg.
 static func place_rider(row: Dictionary, parent: Node3D, ground := Callable()) -> Node3D:
 	var rider: Dictionary = row["rider"]
 	var piece := {"id": "%s_rider" % row["id"], "element": "ground", "at": rider["at"], "y": null, "size": [1.0, 1.0, 1.0],
@@ -1226,6 +1228,10 @@ static func row_paths(row: Dictionary) -> Array:
 	for key in ["mid", "far"]:
 		if p.has(key):
 			out.append(p[key])
+	if row.get("rider") is Dictionary:
+		var r := paths(String(row["rider"].get("recipe", "")), "landform")
+		out.append(r["base"])
+		out.append_array(r["shells"])
 	return out.filter(func(path: String) -> bool: return ResourceLoader.exists(path))
 
 
@@ -1398,8 +1404,9 @@ class Placer extends Node3D:
 			var r0 := Time.get_ticks_usec()
 			# Built outside the tree, then added once.
 			var holder := Node3D.new()
-			var node := Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next))
-			if node != null:
+			Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next))
+			# The row's node and its rider, if it has one.
+			for node: Node in holder.get_children():
 				holder.remove_child(node)
 				add_child(node)
 			holder.free()
