@@ -21,6 +21,11 @@ HERE = Path(__file__).resolve().parent
 HELPERS = HERE if (HERE / "common.py").exists() else Path.cwd() / "sketches/core-loop/tools/blender"
 sys.path.insert(0, str(HELPERS))
 import common
+import polish
+
+# Cast mantle: 3 cm chamfers on real corners, doubled curves, baked AO (POLISH.md). No edge
+# lightening and softer AO keep ancient enamel under the section 11 cap.
+polish.enable(detail=2, bevel=0.03, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
 
 ENAMEL = "365754"
 UV_PITCH = .25 * math.sqrt(2)
@@ -277,7 +282,7 @@ def main():
         make_bell(i, common.empty("MountVent%d" % i, parent=root))
     opts = common.args()
     path = opts["out"] or common.default_out("warden_mantle_meltdown")
-    export_checked(root, path, (600, 1100, 12))
+    export_checked(root, path, (1000, 1600, 12))  # polished caps (POLISH.md, 18 Oct)
     if opts["render"]:
         preview(path, opts["render"], "reactor", "meltdown")
 
