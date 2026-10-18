@@ -30,6 +30,9 @@ DEFAULTS = {
     "bevel": 0.03,
     "bevel_angle": 30.0,
     "bevel_segments": 1,
+    # Edges shorter than this keep hard (no bevel), so bolts and rivets stay cheap while
+    # the big panels round off; 0 bevels every hard edge.
+    "bevel_min": 0.0,
     # Faces are smooth; edges sharper than this stay hard after the bevel.
     "sharp_angle": 50.0,
     # Catmull-Clark levels for parts (a Part's own .subsurf wins). Hard edges are creased,
@@ -50,6 +53,9 @@ DEFAULTS = {
     # Convex edges lighten and creases darken by up to this much (curvature bake).
     "edge": 0.18,
     "bake_slots": None,
+    # Linear RGB colours the bake never changes: a state key a shader matches exactly (the
+    # kit steel shader tints loops within 0.02 of mint), so darkening it would break the tint.
+    "bake_keep": (),
 }
 
 _opts = None
@@ -100,7 +106,8 @@ def shape(bm, opts=None, bevel=None):
             w = round(min(width, 0.25 * thin), 4)
             if w < 0.005:
                 continue
-            edges = {e for f in island for e in f.edges if _angle(e) > o["bevel_angle"]}
+            edges = {e for f in island for e in f.edges
+                     if _angle(e) > o["bevel_angle"] and e.calc_length() >= o["bevel_min"]}
             groups.setdefault(w, set()).update(edges)
         for w in sorted(groups, reverse=True):
             hard = sorted((e for e in groups[w] if e.is_valid), key=lambda e: e.index)
@@ -562,5 +569,7 @@ def bake(root, opts=None):
                     continue
                 shade = shade[2]
                 c = attr.data[li].color
+                if any(math.dist(c[:3], k[:3]) < 0.02 for k in o["bake_keep"]):
+                    continue
                 attr.data[li].color = (_q(c[0] * shade), _q(c[1] * shade), _q(c[2] * shade), c[3])
         me.update()

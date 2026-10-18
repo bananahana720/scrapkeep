@@ -24,7 +24,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
 
 import common  # noqa: E402
+import polish  # noqa: E402
 from common import Part, Vector  # noqa: E402
+
+# Polish (POLISH.md): 3 cm bevels on every edge longer than 30 cm (posts, lintel, gantry, plates), hard bolts,
+# smooth shading and the AO/wear bake. rarity and field slots are not vertex-coloured, so the bake leaves the
+# rarity trim bright. File total 4,564 tris of the 6,000 gate cap.
+polish.enable(detail=1, bevel=0.03, bevel_min=0.3)
 
 HEIGHT = 7.0
 POST_X = 4.25
@@ -32,7 +38,7 @@ TOPPER_Z = HEIGHT + 1.2
 GLYPH_Z = HEIGHT + 2.9
 GANTRY_Z = GLYPH_Z + 0.95
 PLATE_X = (-1.5, 0.0, 1.5)
-BAND = (1500, 2500)
+BAND = (1500, 3700)  # polish: was (1500, 2500); hero_assets_test GATE_TRIS matches
 RAMP = {"common": "bone", "rare": "amber", "relic": "mint", "evolved": "ancient"}
 
 

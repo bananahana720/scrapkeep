@@ -38,9 +38,19 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from lantern_beacon import kit, common, frustum, around
 from ore_cart import strut
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [900, 2000, 2]
+LANDMARK = [2500, 2000, 2]  # polish: was [900, 2000, 2]
+# Polish (tools/blender/POLISH.md): small bevels only; the deck Plate top is a ride surface, so it gets a bevel and no subdivision and stays flat.
+FINISH = {"Plate": {"bevel": .03}, "Column": {"bevel": .03}, "Pump": {"bevel": .03}, "Frame": {"bevel": .03}, "Faces": {"bevel": .04}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
+
+
+def polish_on():
+    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)
+    kit.FINISH.update(FINISH)
+
+
 NAME = "lift_platform"
 
 # One row per painted part, palette names or palette hex only (common.HEX mirrors src/core/palette.gd; LEDGER e6d9b8 and
@@ -275,6 +285,7 @@ def out_dir():
 
 
 def main():
+    polish_on()
     d = out_dir()
     export(NAME + "_deck", [("Plate", "enamel", False, deck_enamel), ("Column", "steel", False, deck_steel)], d, deck_clear)
     export(NAME + "_pump", [("Pump", "enamel", False, pump_enamel), ("Frame", "steel", False, pump_steel)], d, pump_clear)

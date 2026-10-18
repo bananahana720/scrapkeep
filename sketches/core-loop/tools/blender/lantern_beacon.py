@@ -27,9 +27,19 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from ore_cart import kit, common, strut
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [900, 2000, 2]
+LANDMARK = [1900, 2000, 2]  # polish: was [900, 2000, 2]
+# Polish (tools/blender/POLISH.md): hard machinery: small bevels, no subdivision on the thin struts; the kit bake takes every vertex-coloured slot.
+FINISH = {"Frame": {"bevel": .03}, "Housing": {"bevel": .04}, "Lens": {"bevel": .05}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
+
+
+def polish_on():
+    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)
+    kit.FINISH.update(FINISH)
+
+
 
 # One row per painted part, palette names only. "state" is the exact mint that steel.gdshader swaps for the
 # instance's state_tint, so the ring and cap carry the beacon's open/sealed colour from one table; the
@@ -79,6 +89,11 @@ def warden_rows():
     deck = const(wkit, "DECK")
     body = wkit.split("func point_offset()")[1].split("\nfunc ")[0]
     offsets = dict(re.findall(r"Roster\.(\w+):\s*return Vector3\.UP \* \(DECK \+ ([0-9.]+)\)", body))
+    # The mind's branch since KF8a is `if mind_body(): return MIND_BODY_POINTS[...]` and then the plain offset; the
+    # beacon's Warden has no harpoon anchor, so the plain offset is the one that applies here.
+    mind = re.search(r"Roster\.MIND:.*?\n\t\t\treturn Vector3\.UP \* \(DECK \+ ([0-9.]+)\)", body, re.S)
+    assert mind, "mind point offset"
+    offsets["MIND"] = mind.group(1)
     assert sorted(offsets) == ["MIND", "REACTOR", "SWARM"], offsets
     points = {f.lower(): (0.0, half + deck + float(o), 0.0) for f, o in offsets.items()}
     y = points["mind"][1]
@@ -241,6 +256,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))
     args = parser.parse_args(argv)
+    polish_on()
     seat, _, _ = warden_rows()
     frame = export("lantern_beacon_frame", [("Frame", "steel", False, steel), ("Housing", "enamel", False, enamel)],
                    {"socket_lens": [0, GLASS[1], 0], "socket_ring": [0, RING[0], 0], "socket_clamp": list(seat)},

@@ -30,9 +30,19 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from lantern_beacon import kit, common
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [270, 610, 1]
+PROP = [500, 610, 1]  # polish: was [270, 610, 1]
+# Polish (tools/blender/POLISH.md): cabinet and trim take a bevel, round feet one subdivision.
+FINISH = {"Cabinet": {"bevel": .04}, "Trim": {"bevel": .02}, "Feet": {"bevel": 0, "subsurf": 1}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
+
+
+def polish_on():
+    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)
+    kit.FINISH.update(FINISH)
+
+
 NAME = "moss_jukebox"
 
 # One row per painted part, palette names or palette hex only (common.HEX mirrors src/core/palette.gd; LEDGER e6d9b8 and
@@ -263,6 +273,7 @@ def out_dir():
 
 
 def main():
+    polish_on()
     d = out_dir()
     export(NAME + "_cabinet", "Cabinet", "enamel", cabinet, SIZE["cabinet"], SOCKETS, d)
     export(NAME + "_trim", "Trim", "steel", trim, SIZE["trim"], {}, d)

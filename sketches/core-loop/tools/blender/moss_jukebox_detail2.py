@@ -47,6 +47,7 @@ def build(s):
 
 
 def main():
+    j.polish_on()
     j.export(j.NAME + "_detail2", "Detail2", "steel", build, SIZE, {}, j.out_dir(), budget=DETAIL, tag="JUKEBOX_D2")
 
 

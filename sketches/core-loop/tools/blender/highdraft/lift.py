@@ -28,9 +28,26 @@ HERE = Path(__file__).resolve().parent
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
 
 COLORS = dict(bone="d2c5a5", petrol="53686d", charcoal="242a28",
               oxide="9b513a", mint="8bf0d3", amber="e5a044", slate="596a7c")
+# Polish (tools/blender/POLISH.md). dress_mhl_assets_test pins every file's bounds to a
+# millimetre, so these take bevels only (planar faces keep the extents) and no subdivision.
+# The eye and collar swap slate and mint by exact vertex colour at import (color_pose), so
+# they take no AO or wear bake. thermal_air is scenery and stays as it was.
+POLISH = {
+    "thermal_vent": dict(bevel=.05, bevel_min=.15, bevel_angle=35),
+    "net_tile": dict(bevel=0),
+    "net_edge": dict(bevel=.03, bevel_min=.1),
+    "net_shoe": dict(bevel=.03, bevel_min=.1),
+    "anchor_mast": dict(bevel=.04, bevel_min=.15),
+    "anchor_eye": dict(bevel=.03, bevel_min=.1, ao=False, edge=0),
+    "anchor_collar": dict(bevel=.03, ao=False, edge=0),
+    "travel_vane": dict(bevel=.03, bevel_min=.1),
+}
+# polish: was 270 / 610 (dress_mhl_assets_test pins that); class cap prop 2,000 / 4,600
+PROP_CAP = (1500, 3400, 1)
 FILES = ("thermal_vent", "thermal_air", "net_tile", "net_edge", "net_shoe",
          "anchor_mast", "anchor_eye", "anchor_collar", "travel_vane")
 
@@ -277,12 +294,23 @@ def anchor_collar(root):
 def travel_vane(root):
     p = common.Part("Hardware")
     box(p, (.2, 1.2, .2), (0, .6, 0), "charcoal")
-    stem_count = len(p.bm.verts)
+    blade = common.Part("Hardware.blade")
+    blade.bevel = 0  # its 2.0 m extent is pinned to a millimetre
     outline = [(-.7, 0), (.95, .10), (1.3, .34), (1.12, .65),
                (.55, .70), (-.7, .42)]
     m = common.mtx((0, 0, 1.2), (math.pi / 2, 0, 0))
-    tint(p, p.prism("paint", outline, .15, matrix=m), "bone", True)
-    obj = finish(p, root)
+    tint(blade, blade.prism("paint", outline, .15, matrix=m), "bone", True)
+    stem = finish(p, root)
+    stem_group = stem.vertex_groups.new(name="VaneRoot")
+    stem_group.add(list(range(len(stem.data.vertices))), 1, "REPLACE")
+    fin = finish(blade, root)
+    fin.vertex_groups.new(name="VaneHinge").add(list(range(len(fin.data.vertices))), 1, "REPLACE")
+    bpy.ops.object.select_all(action="DESELECT")
+    stem.select_set(True)
+    fin.select_set(True)
+    bpy.context.view_layer.objects.active = stem
+    bpy.ops.object.join()
+    obj = stem
     part_marker(root, "Blade", (2, .7, .15), (.3, 1.55, 0))
     part_marker(root, "Stem", (.2, 1.2, .2), (0, .6, 0))
     mark(root, "mast_foot")
@@ -300,9 +328,6 @@ def travel_vane(root):
     hinge.head, hinge.tail = (0, 0, 1.2), (0, 0, 1.4)
     hinge.parent = fixed
     bpy.ops.object.mode_set(mode="OBJECT")
-    for name, ids in (("VaneRoot", range(stem_count)),
-                      ("VaneHinge", range(stem_count, len(obj.data.vertices)))):
-        obj.vertex_groups.new(name=name).add(list(ids), 1, "REPLACE")
     mod = obj.modifiers.new("VaneRig", "ARMATURE")
     mod.object = rig
     return obj
@@ -499,6 +524,8 @@ def motions(path, name):
 
 def export(root, path, name):
     bpy.context.view_layer.update()
+    if common.POLISH is not None:
+        polish.bake(root, common.POLISH)
     for obj in bpy.context.scene.objects:
         obj.select_set(False)
     for obj in common.tree(root):
@@ -506,7 +533,7 @@ def export(root, path, name):
     bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", use_selection=True,
         export_apply=False, export_yup=True, export_materials="EXPORT", export_vertex_color="ACTIVE",
         export_extras=True, export_animations=False, export_skins=True, export_cameras=False, export_lights=False)
-    common.canonical_indices(str(path))
+    common.canonical_indices(str(path), vertices=common.POLISH is not None)
     motions(path, name)
     doc, _ = read_glb(path)
     triangles = vertices = draws = 0
@@ -517,7 +544,7 @@ def export(root, path, name):
             triangles += doc["accessors"][prim["indices"]]["count"] // 3
             vertices += doc["accessors"][prim["attributes"]["POSITION"]]["count"]
             draws += 1
-    cap = (120, 110, 2) if name == "thermal_air" else (270, 610, 1)
+    cap = (120, 110, 2) if name == "thermal_air" else PROP_CAP
     assert 0 < triangles <= cap[0] and 0 < vertices <= cap[1] and draws <= cap[2], (name, triangles, vertices, draws)
     assert len(doc["materials"]) == 1
     print("MHL_ASSET %s T=%d V=%d draws=%d materials=1 bytes=%d sha256=%s" %
@@ -624,6 +651,12 @@ def main():
     if not opts.preview_only:
         for name in FILES:
             common.reset()
+            if name in POLISH:
+                polish.enable(**POLISH[name])
+            else:
+                # Scenery: untouched.
+                polish._opts = common.POLISH = None
+                common.DETAIL = 1
             root = common.empty(name)
             root["family"] = "M5" if name == "thermal_air" else "M2"
             root["collision"] = False

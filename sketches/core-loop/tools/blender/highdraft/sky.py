@@ -24,8 +24,15 @@ from mathutils import Vector
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common
+import polish
 
 ASSETS = ("sky_cloud", "sky_mesa", "sky_cradle", "sky_loom", "sky_blades")
+# Polish (tools/blender/POLISH.md) for the three hardware pieces; the cloud and mesa are
+# scenery and stay as they were. Bevels keep the planar faces, so the bounds that
+# dress_mhs_assets_test pins to a centimetre hold.
+POLISH = {"sky_cradle": dict(bevel=.12, bevel_min=.5), "sky_loom": dict(bevel=.1, bevel_min=.5),
+          "sky_blades": dict(bevel=.15, bevel_min=.5)}
+HARDWARE_CAP = (500, 320, 1)  # polish: was (270, 610, 1); dress_mhs_assets_test caps match
 PETROL = "53686d"
 CHALK = "c8bda5"
 CLOUD = "ece7da"
@@ -217,7 +224,7 @@ def metrics(path):
             draws += 1
             vertices += doc["accessors"][primitive["attributes"]["POSITION"]]["count"]
             triangles += doc["accessors"][primitive["indices"]]["count"] // 3
-    cap = (120, 110, 2) if path.stem in ASSETS[:2] else (270, 610, 1)
+    cap = (120, 110, 2) if path.stem in ASSETS[:2] else HARDWARE_CAP
     assert 0 < triangles <= cap[0] and 0 < vertices <= cap[1] and 0 < draws <= cap[2], (path, triangles, vertices, draws)
     return {"triangles": triangles, "vertices": vertices, "draws": draws,
             "materials": len(doc.get("materials", [])), "bytes": len(data),
@@ -305,6 +312,11 @@ def main():
         path = options.out_dir / (name + ".glb")
         if not options.render_only:
             common.reset()
+            if name in POLISH:
+                polish.enable(**POLISH[name])
+            else:
+                polish._opts = common.POLISH = None
+                common.DETAIL = 1
             root = common.empty(name)
             builder(root)
             common.export(root, str(path))

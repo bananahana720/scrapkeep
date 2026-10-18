@@ -26,8 +26,19 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from ore_cart import kit, common, strut
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
+PROP = [600, 610, 1]  # polish: was kit.P [270, 610, 1]
+# Polish (tools/blender/POLISH.md): hard machinery; the amber band stays an unbevelled stripe.
+FINISH = {"Wheel": {"bevel": .03}, "Band": {"bevel": 0}, "Mount": {"bevel": .03}, "WheelDetail1": {"bevel": 0}, "MountDetail1": {"bevel": 0}, "WheelDetail2": {"bevel": 0}}
+
+
+def polish_on():
+    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)
+    kit.FINISH.update(FINISH)
+
+
 
 # One row per painted part, palette names only. The band is amber, a painted safety stripe (VISUAL-LANGUAGE.md:482), not hazard (LEGIBILITY.md:21); the hub, gasket
 # and outlet are copper: brass is the Fleet requisition colour, friendly fittings are copper (RECIPE-WAVE.md LORE).
@@ -179,7 +190,7 @@ def export(name, part, slot, smooth, build, sockets, out_dir):
     path = Path(out_dir) / (name + ".glb")
     common.export(root, str(path))
     metrics = kit.gltf_metrics(path)
-    assert all(metrics[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], kit.P)), (name, metrics, kit.P)
+    assert all(metrics[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], PROP)), (name, metrics, PROP)
     assert metrics["materials"] == [slot], (name, metrics["materials"])
     size = metrics["bounds"]["size"]
     assert all(abs(a - b) <= .03 * b for a, b in zip(size, SIZE[name])), (name, size, SIZE[name])
@@ -193,6 +204,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))
     args = parser.parse_args(argv)
+    polish_on()
     export("valve_wheel_wheel", "Wheel", "steel", False, wheel, {}, args.out_dir)
     export("valve_wheel_band", "Band", "enamel", False, band, {}, args.out_dir)
     export("valve_wheel_mount", "Mount", "enamel", False, mount, {"socket_hub": [0, HUB_Y, 0]}, args.out_dir)

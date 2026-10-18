@@ -37,9 +37,10 @@ import bpy
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from lantern_beacon import kit, common, frustum, around
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [270, 610, 1]
+PROP = [850, 750, 1]  # polish: was [270, 610, 1]; class cap 2,000 T / 4,600 V
 NAME = "geyser_launcher"
 
 # One row per painted part, palette names or palette hex only (common.HEX mirrors src/core/palette.gd; LEDGER e6d9b8
@@ -70,7 +71,7 @@ RIM_CLEAR = 2.7
 POST_TOP = .2                          # ground + 1.2: caps included
 EPS = 1e-4
 BLOCKS = (12, R_SPEC, 3.3, GROUND, -.8, .05)   # count, outer, inner core, y0, y1, gap
-SLAB = (16, 3.42, -.8, WALL_TOP)       # segments, outer radius, y0, y1 (the top course)
+SLAB = (32, 3.42, -.8, WALL_TOP)       # segments, outer radius, y0, y1 (the top course)
 PIT_Y = -.95                           # the stone basin under the grate: lit stone, so the charcoal bars read over it
 GRATE_Y = (WALL_TOP, RIM_TOP)          # rim bottom, grate top
 RIM_IN = 2.6
@@ -178,15 +179,15 @@ def box_along(s, at, out, length, side, y, color):
 
 
 def fittings(s):
-    lathe(s, NOZZLE, NOZZLE_TOP, 8, tone("copper"))
+    lathe(s, NOZZLE, NOZZLE_TOP, 16, tone("copper"))
     box_along(s, (0.0, NOZZLE[2][0] - .05), (0.0, 1.0), PIPE[0], PIPE[1], PIPE[2], tone("pipe"))
     for deg in POSTS:
         a = math.radians(deg)
         x, _, z = polar(POST_R, a, 0)
         r, y0, y1 = POST
-        frustum(s, r, r, y0, y1, 6, tone("post"), caps=(False, False), at=(x, z))
+        frustum(s, r, r, y0, y1, 12, tone("post"), caps=(False, False), at=(x, z))
         cr, c0, c1 = CAP
-        frustum(s, cr, cr, c0, c1, 6, tone("copper"), caps=(True, True), at=(x, z))
+        frustum(s, cr, cr, c0, c1, 12, tone("copper"), caps=(True, True), at=(x, z))
         # The spout turns along the rim, the way the picture's side valves do.
         t = (math.cos(a), -math.sin(a))
         box_along(s, (x + t[0] * (r - .04), z + t[1] * (r - .04)), t, SPOUT[0], SPOUT[1], SPOUT[2], tone("post"))
@@ -255,6 +256,8 @@ def out_dir():
 
 def main():
     d = out_dir()
+    # Stone takes the bake too: its sandstone beds multiply the vertex colour. kit.BAKE keeps the mint state key exact.
+    polish.enable(bevel=.04, bevel_min=.2, **{**kit.BAKE, "bake_slots": kit.BAKE["bake_slots"] + ("stone",)})
     export(NAME + "_drum", "Drum", "stone", drum, SIZE["drum"], SOCKETS, d)
     export(NAME + "_grate", "Grate", "steel", grate, SIZE["grate"], {}, d)
     export(NAME + "_fittings", "Fittings", "enamel", fittings, SIZE["fittings"], {}, d)
