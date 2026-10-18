@@ -1,6 +1,7 @@
 extends RefCounted
 
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const SpecialCues := preload("res://src/combat/special_cues.gd")
 
 # The kill-first specials' voices (INTEGRATION.md section 7, item 5). You hear which special
 # is near before you see it: <name>_presence loops on the enemy, <name>_tell on the frame of
@@ -35,15 +36,11 @@ static func heard(distances: Dictionary, cap := CAP) -> Array:
 	return ids.slice(0, maxi(cap, 0))
 
 
-# Whether an enemy was rammed at ground level when it died: a property or a method named
-# rammed_at_ground, false when it has neither.
+# Whether an enemy was rammed at ground level when it died. 2026-10-18 (w18 splitter cue): this
+# is SpecialCues.rammed itself, so the sound and the machine_fx burst read one fact (the real
+# Splitter sets meta "split", not rammed_at_ground); the rammed_at_ground fallback lives there.
 static func rammed(enemy: Object) -> bool:
-	if enemy == null:
-		return false
-	if enemy.has_method("rammed_at_ground"):
-		return bool(enemy.rammed_at_ground())
-	var value = enemy.get("rammed_at_ground")
-	return value is bool and value
+	return SpecialCues.rammed(enemy)
 
 
 # The looping AudioStreamPlayer3D a special carries. Its own player, so it never takes a voice
