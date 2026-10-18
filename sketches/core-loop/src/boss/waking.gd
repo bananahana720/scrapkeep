@@ -50,6 +50,7 @@ const LANDING_ATTACK := 1.2
 # The Warden's posture gains, scaled so the first stagger lands in the 45 to 70 s band
 # (Andrew, 19:42Z 17 Oct). Before the attacks, bots staggered it at 23 to 36 s.
 const POSTURE_GAIN := 0.565
+const HIT_CAP := 15.0
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
 
 var floors: WakingFloors
@@ -463,6 +464,11 @@ func _warden_spec() -> Dictionary:
 	numbers["smash_base"] = float(numbers.get("smash_base", BossPosture.SMASH_BASE)) * POSTURE_GAIN
 	numbers["other_base"] = float(numbers.get("other_base", BossPosture.OTHER_BASE)) * POSTURE_GAIN
 	numbers["other_base_charging"] = float(numbers.get("other_base_charging", BossPosture.OTHER_BASE_CHARGING)) * POSTURE_GAIN
+	# The Dig row's contact gain (150 over 0.55) lets one ordinary ram fill the bar from about 17
+	# (brawler seeds 1 and 3 staggered it at 9.8 s); HIT_CAP holds one ordinary hit until the first
+	# stagger. alpha-status/waking-stagger-table.md has the sweep.
+	numbers["hit_cap"] = HIT_CAP
+	numbers["hit_cap_until_stagger"] = true
 	spec["posture"] = numbers
 	return spec
 

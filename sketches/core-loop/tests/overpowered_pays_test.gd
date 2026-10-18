@@ -153,4 +153,9 @@ func _ceiling() -> void:
 	_t.check("hit_cap holds an ordinary amplified ram", _gain(capped, 0.9) <= 20.0001, "%.1f" % _gain(capped, 0.9))
 	_t.check("hit_cap opens for a monster ram", _gain(capped, 3.0) >= BossPosture.FULL - 0.001, "%.1f" % _gain(capped, 3.0))
 	_t.check("hit_cap climbs between", _gain(capped, 2.25) > 20.0 and _gain(capped, 2.25) < BossPosture.FULL, "%.1f" % _gain(capped, 2.25))
+	var first := BossPosture.new({"curve": 2.0, "hit_cap": 15.0, "hit_cap_until_stagger": true, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55})
+	var ram := {"kind": "ram", "punch": 90.0, "plating": 100.0, "frame": 1}
+	_t.check("hit_cap_until_stagger holds before the first stagger", float(first.judge(ram)["gain"]) <= 15.0001, "%.1f" % float(first.judge(ram)["gain"]))
+	first.staggers = 1
+	_t.check("hit_cap_until_stagger lets go after it", float(first.judge(ram)["gain"]) > 15.0, "%.1f" % float(first.judge(ram)["gain"]))
 	_t.eq("the ultimate fills up to 70 on a closed guard", preload("res://src/combat/ultimate.gd").WARDEN_POSTURE_CAP, 70.0)

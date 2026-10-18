@@ -17,7 +17,9 @@ const MULT_MIN := 0.2
 const MULT_MAX := 3.0
 # A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
 # from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
-# monster build's still can. Without the key a hit may fill it, as before.
+# monster build's still can. Without the key a hit may fill it, as before. With
+# "hit_cap_until_stagger" the cap holds only until the first stagger, so the later chunks
+# fill at the row's own pace.
 const ORDINARY_RATIO := 1.5
 const DRAIN_DELAY := 3.0
 const DRAIN_RATE := 12.0
@@ -46,6 +48,7 @@ var ram_shatters := true
 var contact_gain_scale := 0.0
 var contact_gain_floor := 0.0
 var hit_cap := FULL
+var hit_cap_until_stagger := false
 
 var posture := 0.0
 var staggered := false
@@ -82,6 +85,7 @@ func _init(numbers := {}) -> void:
 	contact_gain_scale = float(numbers.get("contact_gain_scale", 0.0))
 	contact_gain_floor = float(numbers.get("contact_gain_floor", 0.0))
 	hit_cap = float(numbers.get("hit_cap", FULL))
+	hit_cap_until_stagger = bool(numbers.get("hit_cap_until_stagger", false))
 
 
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
@@ -120,7 +124,7 @@ func judge(hit: Dictionary) -> Dictionary:
 
 # The most one hit at this ratio may add (see ORDINARY_RATIO).
 func cap_for(ratio: float) -> float:
-	if hit_cap >= FULL or mult_max <= ORDINARY_RATIO:
+	if hit_cap >= FULL or mult_max <= ORDINARY_RATIO or (hit_cap_until_stagger and staggers > 0):
 		return FULL
 	var t := clampf((ratio - ORDINARY_RATIO) / (mult_max - ORDINARY_RATIO), 0.0, 1.0)
 	return lerpf(hit_cap, FULL, t)
