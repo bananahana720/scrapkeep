@@ -31,6 +31,8 @@ const AVOID_SPAWN := 25.0
 const SPACING := 40.0
 const ALONG_LINE := 0.55
 const PROMPT_REACH := 45.0
+# Beyond this many metres from the ball a hoop's label is not on screen (squared).
+const FAR_SQ := (PROMPT_REACH + 15.0) * (PROMPT_REACH + 15.0)
 
 var _rng: RandomNumberGenerator
 var _class_id := ""
@@ -121,6 +123,7 @@ func _roll(held: Array) -> String:
 # state first; buy() is told whether the spend went through. `cogs` is the wallet.
 func step(ball: Vector3, delta: float, cogs: int, held: Array) -> Array[Dictionary]:
 	var crossings: Array[Dictionary] = []
+	var held_key := held.hash()
 	for fab in _fabs:
 		if fab["restock"] > 0.0:
 			fab["restock"] -= delta
@@ -136,6 +139,14 @@ func step(ball: Vector3, delta: float, cogs: int, held: Array) -> Array[Dictiona
 		var crossed: bool = signf(was) != signf(along) and was != 0.0
 		if crossed and side <= WIDTH * 0.5 + 0.5 and rel.y > -1.5 and rel.y < RING * 2.0 - SINK and fab["restock"] <= 0.0:
 			crossings.append(fab)
+		# A hoop out of the prompt's reach is only repainted when what it shows could change:
+		# its part, its restock, whether you can afford it, or the parts you hold. The full
+		# text is rebuilt on every tick in reach, as before.
+		var far: bool = rel.length_squared() > FAR_SQ
+		var key := [fab["part_id"], fab["restock"] > 0.0, cogs >= price(fab["part_id"], held.size()), held_key]
+		if far and fab.get("quiet_key") == key:
+			continue
+		fab["quiet_key"] = key
 		_refresh_label(fab, cogs, held)
 	return crossings
 
