@@ -73,6 +73,18 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #        one per 90 Hz tick, about 1.5 a frame), hitting once carved and due. Each carve's shares' wall
 #        times (ms is the largest) and part count go to "carves"; its terrain face count before and after
 #        the coplanar merge is read after the window, so it costs no recorded frame.
+# The carve check cannot pass by not firing (lesson 34, "a check that can't fire proves nothing"). RivetKit counts
+# its carves (carve_stats) and the terrain cache its builds; the window's deltas go to "carve_window" and
+# "terrain_window" and print on the result line. p3 fails (valid false, exit 1) when its window committed no
+# Full Cut, no Breach carve that cut terrain, no Breach hit or no carve share, or when the pilot is not Rivet.
+# p1 is the no-carve control: it fails if any carve fired in it. Both fail if the terrain cache started more
+# than TERRAIN_BUILDS_PER_WARM builds a warm-up cycle in the window (the 100-175 ms ticks that reverted
+# 8e40be12: a standing Rivet's warm-up must find its park cached).
+#   --pilot=<class id>   the class the bot plays (default the Rivet seed). Planted negative: p3 with
+#                        --pilot=pylon_engineer must fail.
+#   --plant=no-carve     p3 skips its carves. Planted negative: it must fail.
+# The one-placement control (the old keying) is tests/rivet_warm_hitch_test.gd's: Andrew's park has no
+# shared shape placed twice near the stand, so a planted run here would not trip (tried: 0 builds).
 # Every scene records memory at the window's open and close; p2 also at two_stages (stage 2 built, stage 1
 # active) and after_swap (stage 1 freed).
 
@@ -93,6 +105,8 @@ const SCENES := {
 }
 const CARVE_EVERY := 60
 const CARVE_BUDGET_MS := 16.7
+const TERRAIN_BUILDS_PER_WARM := 1
+const PLANTS := ["no-carve"]
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
@@ -184,6 +198,10 @@ var _carves: Array = []
 var _breach_late := {}
 var _breach_row := {}
 var _stand_heading := Vector3.FORWARD
+var _pilot := ""
+var _plant := ""
+var _carve_open := {}
+var _terrain_open := {}
 
 
 func _initialize() -> void:
@@ -205,6 +223,12 @@ func _initialize() -> void:
 	_warm_seconds = float(settings.get("warm-seconds", "0"))
 	_out = settings.get("out", "")
 	_table = String(settings.get("table", ""))
+	_pilot = String(settings.get("pilot", ""))
+	_plant = String(settings.get("plant", ""))
+	if _plant != "" and not _plant in PLANTS:
+		printerr("perf_bench: unknown --plant=" + _plant)
+		quit(2)
+		return
 	if not SCENES.has(_scene_id) or not _out.is_absolute_path() or not _out.ends_with(".json"):
 		printerr("perf_bench: needs -- --scene=s1|s2|s3|p1|p2|p3 --out=<absolute .json path>")
 		quit(2)
@@ -266,6 +290,13 @@ func _process(delta: float) -> bool:
 			if _off.has("no-music"):
 				_game.presentation.audio.engine = SilentBand.new()
 			_driver = BotDriver.new(_game, "skipper", RIVET_SEED)
+			if _pilot != "":
+				var index: int = BotDriver.class_index_for(RIVET_SEED, _pilot)
+				if index < 0:
+					printerr("perf_bench: no pilot " + _pilot)
+					quit(2)
+					return false
+				_driver.class_index = index
 			_driver.start()
 			if _view != "fight":
 				_game.ctx.calm = true
@@ -292,7 +323,7 @@ func _process(delta: float) -> bool:
 				_game.combat.effects.clear()
 			if _view == "swap" and _phase == "record":
 				_step_swap()
-			if _view == "carve" and _phase == "record":
+			if _view == "carve" and _phase == "record" and _plant != "no-carve":
 				var kit = _game.combat.get_node_or_null("RivetKit")
 				if kit != null and not _breach_late.is_empty():
 					_step_carve_shares(kit)
@@ -346,6 +377,7 @@ func _process_end() -> void:
 			_phase = "record"
 			_frame = 0
 			_probe_open = _checks()
+			_open_counts()
 			_memory["at_open"] = _snapshot()
 			_materials_at_record = Threat.Painter.materials_built
 		return
@@ -484,6 +516,64 @@ func _close_carve(row: Dictionary, shape: Dictionary, begin: int) -> void:
 	(row["shares_ms"] as Array).append(snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001))
 	row["ms"] = (row["shares_ms"] as Array).max()
 	row["parts"] = (shape.get("cells", []) as Array).size()
+
+
+func _kit():
+	return _game.combat.get_node_or_null("RivetKit")
+
+
+func _open_counts() -> void:
+	var kit = _kit()
+	if kit == null:
+		return
+	_carve_open = kit.carve_stats.duplicate()
+	_terrain_open = {"builds": kit.terrain.builds, "hits": kit.terrain.hits, "warm_cycles": kit.warm_cycles}
+
+
+# The carves and terrain builds the recorded window saw; empty when there is no kit.
+func _window_counts() -> Dictionary:
+	var kit = _kit()
+	if kit == null or _carve_open.is_empty():
+		return {}
+	var carves := {}
+	for key in kit.carve_stats:
+		carves[key] = int(kit.carve_stats[key]) - int(_carve_open[key])
+	var terrain := {"builds": kit.terrain.builds - int(_terrain_open["builds"]), "hits": kit.terrain.hits - int(_terrain_open["hits"]),
+		"warm_cycles": kit.warm_cycles - int(_terrain_open["warm_cycles"]), "builds_per_warm_max": TERRAIN_BUILDS_PER_WARM}
+	return {"carve_window": carves, "terrain_window": terrain, "rivet": kit._rivet()}
+
+
+# Appends an error for each way the carve check could pass without proving anything.
+func _gate_carves(counts: Dictionary) -> void:
+	if not _scene_id in ["p1", "p3"]:
+		return
+	if counts.is_empty():
+		_errors.append("%s: no RivetKit counts: the carve check cannot fire" % _scene_id)
+		return
+	var carves: Dictionary = counts["carve_window"]
+	var terrain: Dictionary = counts["terrain_window"]
+	var fired: int = int(carves["full_cut"]) + int(carves["breach_started"])
+	if not bool(counts["rivet"]):
+		_errors.append("%s: the pilot is not Rivet, so no carve or warm-up can run" % _scene_id)
+	if _scene_id == "p1":
+		if fired != 0 or int(carves["shares"]) != 0:
+			_errors.append("p1 is the no-carve control but %d carves fired" % fired)
+		if int(terrain["warm_cycles"]) < 1 and bool(counts["rivet"]):
+			_errors.append("p1: no terrain warm-up cycle ran in the window, so the cache guard did not fire")
+	else:
+		var cut: int = int(carves["breach_flat"]) + int(carves["breach_slope"])
+		if int(carves["full_cut"]) < 1:
+			_errors.append("p3: no Full Cut committed in the window")
+		if cut < 1:
+			_errors.append("p3: no Breach carve cut terrain in the window (%d started, %d uncut)" % [int(carves["breach_started"]), int(carves["breach_uncut"])])
+		if int(carves["breach_hits"]) < 1:
+			_errors.append("p3: no Breach carve hit in the window")
+		if int(carves["shares"]) < 1:
+			_errors.append("p3: no carve share ran in the window")
+		if _carves.is_empty():
+			_errors.append("p3: no carve rows recorded")
+	if bool(counts["rivet"]) and int(terrain["builds"]) > int(terrain["builds_per_warm_max"]) * maxi(int(terrain["warm_cycles"]), 1):
+		_errors.append("%s: the terrain cache started %d builds in %d warm-up cycles (bound %d a cycle)" % [_scene_id, int(terrain["builds"]), int(terrain["warm_cycles"]), int(terrain["builds_per_warm_max"])])
 
 
 func _record_done() -> bool:
@@ -909,8 +999,10 @@ func _finish() -> void:
 	if _phase == "finished":
 		return
 	_phase = "finished"
+	var counts := _window_counts()
 	if _view == "carve":
 		_carve_stats()
+	_gate_carves(counts)
 	if _samples.size() < RECORD_FRAMES:
 		_errors.append("recorded %d of %d frames" % [_samples.size(), RECORD_FRAMES])
 	var segments := {}
@@ -957,6 +1049,7 @@ func _finish() -> void:
 		"stats": stats, "frame_ms_by_ticks": by_ticks,
 		"ablation_notes": _ablation_notes, "checks": _check_delta(),
 		"view": _view, "memory": _memory, "swap": _swap, "segments": segments, "segment_starts": _segment_at,
+		"carve_window": counts.get("carve_window", {}), "terrain_window": counts.get("terrain_window", {}), "pilot": _pilot, "plant": _plant,
 		"carves": _carves, "carve_budget_ms": CARVE_BUDGET_MS,
 		"carve_max_ms": _carves.reduce(func(m, c): return maxf(m, (c["shares_ms"] as Array).max() if not (c["shares_ms"] as Array).is_empty() else 0.0), 0.0),
 		"carves_over_budget": _carves.filter(func(c): return (c["shares_ms"] as Array).any(func(ms): return float(ms) > CARVE_BUDGET_MS)).size(),
@@ -968,5 +1061,6 @@ func _finish() -> void:
 		return
 	file.store_string(JSON.stringify(info, "  "))
 	file.close()
+	print("perf_bench: %s carve_window %s terrain_window %s valid %s errors %s" % [_scene_id, counts.get("carve_window", {}), counts.get("terrain_window", {}), _errors.is_empty(), _errors])
 	print("perf_bench: %s %s frame p50 %.2f p99 %.2f ms -> %s" % [_scene_id, ablations, stats["frame_ms"].get("p50", -1.0), stats["frame_ms"].get("p99", -1.0), _out])
 	quit(0 if _errors.is_empty() else 1)

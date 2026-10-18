@@ -196,6 +196,12 @@ const STALE_TICKS := 450
 # instance id -> {transform -> {shape (WeakRef), task, result: {faces, boxes, grid}, used}}
 var _entries := {}
 var _watched := {}
+# Counters for a hitch guard: builds started (a cache miss) and cached() reads that found one.
+var builds := 0
+var hits := 0
+# A planted control: the old keying, one build per shape, replaced when the shape is placed
+# anywhere else. A park's shared shapes then rebuild every warm-up cycle (the 100-175 ms tick).
+var keep_one_placement := false
 
 
 # local_faces: the shape's faces in its own space, an Array of vertex Arrays, or a
@@ -213,9 +219,12 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 		world = transform * (local_faces as PackedVector3Array)
 	else:
 		world = (local_faces as Array).map(func(face): return (face as Array).map(func(v): return transform * v))
+	builds += 1
 	entry = {"shape": weakref(shape), "result": {}, "used": Engine.get_physics_frames()}
 	var result: Dictionary = entry["result"]
 	entry["task"] = WorkerThreadPool.add_task(func(): _build(world, result), false, "rivet terrain faces")
+	if keep_one_placement:
+		_forget(id)
 	if not _entries.has(id):
 		_entries[id] = {}
 	_entries[id][transform] = entry
@@ -228,6 +237,7 @@ func cached(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	if entry.is_empty() or entry["shape"].get_ref() != shape:
 		return {}
 	entry["used"] = Engine.get_physics_frames()
+	hits += 1
 	return entry
 
 

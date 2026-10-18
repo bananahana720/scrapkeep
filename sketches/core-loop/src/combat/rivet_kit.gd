@@ -1250,6 +1250,7 @@ func _peak_aim() -> Vector3:
 # FULL_CUT_REACH; every machine it crosses takes FULL_CUT_DAMAGE x heft once, no pierce cap.
 func full_cut(at: Vector3, dir: Vector3, heft: float) -> int:
 	var shape := _commit_sector(at, dir, Weapons.FULL_CUT_REACH, deg_to_rad(Weapons.FULL_CUT_DEG * 0.5), Weapons.FULL_CUT_WIDTH)
+	carve_stats["full_cut"] += 1
 	var hits := 0
 	for enemy in select(shape):
 		_beam_hit(enemy, Weapons.FULL_CUT_DAMAGE * heft, at)
@@ -1302,6 +1303,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 
 # The Breach Skid's hits on its carved sector: [hits, damage dealt].
 func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pins: float, damage: float) -> Array:
+	carve_stats["breach_hits"] += 1
 	var hits := 0
 	var dealt := 0.0
 	shape["strict_angle"] = true
@@ -1343,6 +1345,11 @@ var late_work := LATE_WORK
 # shaded, lit, shadows, id, at, heading, reach, pins, damage, record}, with result once carved.
 var _late: Array = []
 
+# What the carve did, so a timing run can prove it fired (lesson 34): full_cut commits, Breach
+# carves started, ones that finished on their first share (flat: the landing tick) or took more
+# (slope), ones with nothing to cut, shares taken and hits delivered.
+var carve_stats := {"full_cut": 0, "breach_started": 0, "breach_flat": 0, "breach_slope": 0, "breach_uncut": 0, "shares": 0, "breach_hits": 0}
+
 
 func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: float, damage: float) -> Dictionary:
 	var sector := _sector_cells(at, heading, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
@@ -1354,10 +1361,14 @@ func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: 
 	var late := {"centre": _commit_beam(at, heading, reach, 0.0), "start": start, "due": start + LATE_TICKS, "sector": sector,
 		"cell_cuts": [], "next": 0, "shaded": -1, "lit": [], "shadows": shadows, "id": id, "at": at, "heading": heading,
 		"reach": reach, "pins": pins, "damage": damage, "record": combat.ultimate._record if combat.ultimate != null else {}}
+	carve_stats["breach_started"] += 1
+	late["shares"] = 0
 	if found.has("unreadable"):
 		late["result"] = []
+		carve_stats["breach_uncut"] += 1
 	elif cuts.is_empty():
 		late["result"] = cells
+		carve_stats["breach_uncut"] += 1
 	else:
 		for cell in cells:
 			(late["cell_cuts"] as Array).append(_cell_cuts(cuts, cell))
@@ -1375,12 +1386,15 @@ func _shade_late(late: Dictionary, budget := -1) -> bool:
 	var cell_cuts: Array = late["cell_cuts"]
 	var lit: Array = late["lit"]
 	_shade_work = 0
+	late["shares"] = int(late["shares"]) + 1
+	carve_stats["shares"] += 1
 	while int(late["next"]) < cells.size() and _shade_work < budget:
 		var i: int = late["next"]
 		lit.append_array(_shade_cell(late["at"], cell_cuts[i], [cells[i]]))
 		late["next"] = i + 1
 	if int(late["next"]) == cells.size():
 		late["result"] = lit
+		carve_stats["breach_flat" if int(late["shares"]) == 1 else "breach_slope"] += 1
 	return late.has("result")
 
 
@@ -1529,9 +1543,18 @@ func _exit_tree() -> void:
 	terrain.finish()
 
 
+# Warm-up cycles run, for a hitch guard: while Rivet stands, terrain.builds should stop growing.
+var warm_cycles := 0
+
+
 func _warm_terrain() -> void:
 	if Engine.get_physics_frames() % WARM_EVERY != 0 or ctx.player == null or not _rivet():
 		return
+	warm_cycle()
+
+
+func warm_cycle() -> void:
+	warm_cycles += 1
 	terrain.prune()
 	var box := BoxShape3D.new()
 	box.size = Vector3.ONE * WARM_REACH * 2.0
