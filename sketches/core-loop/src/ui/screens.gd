@@ -969,7 +969,29 @@ func start_ending_sequence() -> void:
 	ending_sequence = EndingSequence.new()
 	add_child(ending_sequence)
 	ending_sequence.finished.connect(_close_ending)
-	ending_sequence.start(game)
+	ending_sequence.start(game, game.flow.lap_stats)
+
+
+# The Q16 ending's first act: the crew's fly-over over the victory card, after which flow starts the victory lap.
+func start_ending_prelude() -> void:
+	if is_instance_valid(ending_sequence):
+		return
+	_content.visible = false
+	_veil.visible = false
+	if game.hud != null:
+		game.hud.clear_achievement_toasts()
+	_ending_left = ENDING_HOLD
+	ending_sequence = EndingSequence.new()
+	add_child(ending_sequence)
+	ending_sequence.finished.connect(_close_prelude)
+	ending_sequence.start(game, {}, true)
+
+
+func _close_prelude() -> void:
+	if is_instance_valid(ending_sequence):
+		ending_sequence.queue_free()
+		ending_sequence = null
+	game.flow.start_lap()
 
 
 # The summary's title, epitaph, stats and actions are built beneath and wait hidden.

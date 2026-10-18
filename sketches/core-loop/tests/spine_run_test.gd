@@ -66,6 +66,8 @@ func _physics_process(_delta: float) -> bool:
 
 func _start() -> void:
 	_started = true
+	# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This test ends on the summary.
+	_game.flow.victory_lap = false
 	var events = _game.events
 	events.flow_changed.connect(func(s: String): _states.append(s))
 	events.stage_entered.connect(_on_stage_entered)

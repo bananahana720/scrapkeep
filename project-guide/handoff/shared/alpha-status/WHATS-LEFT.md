@@ -1,5 +1,7 @@
 # What's left for the alpha
 
+> Snapshot from 17 Oct 22:10Z. Superseded where newer: the wave 19 feel check was replaced on 18 Oct by one full playtest at the end of wave 21; live state is in [GRAPH.md](../../../coord/GRAPH.md) and [STATE.md](../../STATE.md).
+
 Written 2026-10-17 22:10Z by the thread "What's left for the alpha". Read against cand/alpha-w16 2fce8953, main cf63e622, open PRs #12-#75 (fetched heads of #20, #31, #40, #53, #55, #66-#68), the thread list at 22:04Z, the intent scorecard (alpha-status/intent-check/results/w16-2fce8953.md), the ambition map and the register. Read-only; nothing built. Placeholders and item tiers/actives are left out (their own threads).
 
 ## The headline

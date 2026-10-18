@@ -137,7 +137,8 @@ static func piece_for(row: Dictionary) -> String:
 
 
 # The rows these pieces exist for: greybox kickers in the flume, pit, crown and islands, and the sinkhole's half-pipes,
-# and the rows already swapped onto one of these pieces (2026-10-18 Highdraft swap, PR #78).
+# whether they still stand in as the greybox or a park pass has already swapped them onto a piece (2026-10-18 Highdraft
+# swap, PR #78).
 static func _target(park: String, row: Dictionary) -> bool:
 	var recipe := String(row.get("recipe", ""))
 	if recipe != "greybox:" + String(row["element"]) and not PIECES.has(recipe):

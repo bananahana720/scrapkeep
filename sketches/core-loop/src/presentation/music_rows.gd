@@ -140,8 +140,8 @@ const ROWS := {
 	"secret-highdraft-rain": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/secret_highdraft_rain/manifest.json"},
 	"secret-dig-dub": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/secret_dig_dub/manifest.json"},
 	# The sound bible's picks (SOUND-INT, tools/ace/package_picked_takes.py): each boss fight's
-	# opening take (phase_music.gd PICKED) and the camp page. The roaming picks play the shelf
-	# of a zone pack (SHELF below). A pick not on disk falls back to the older pack.
+	# opening take (phase_music.gd PICKED) and the camp page. The roaming picks are cut into the
+	# zone packs' own shelves (RENDERS.md, core packs). A pick not on disk falls back to the older pack.
 	"boss-brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/boss_brindle/manifest.json"},
 	"boss-waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/boss_waking/manifest.json"},
 	"boss-mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/boss_mind/manifest.json"},
@@ -154,22 +154,6 @@ const ROWS := {
 	"title-c": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_c/manifest.json"},
 	"summary": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/summary/manifest.json"},
 }
-
-
-# Each zone pack's shelf (calm, travel and the home after a Warden) plays its world's picked
-# roaming take at 172; the Warden's pivot, build, telegraph and drop keep the zone pack's own
-# 129 clips, so no roaming bed plays inside an arena (lesson 27a).
-const SHELF := {"spillway": "roam_spillway", "cable_reach": "roam_spillway", "dig_upper": "roam_dig",
-	"dig_deep": "roam_dig", "highdraft": "roam_highdraft", "highdraft_crown": "roam_highdraft"}
-
-
-# The roaming take for a zone pack's theme, resolved, or "" when the theme has none or its
-# Oggs are not on disk (the zone pack's own shelf plays).
-static func shelf_manifest(theme: String, sidecar_dir := "") -> String:
-	if not SHELF.has(theme):
-		return ""
-	var path := "res://assets/music_ace/%s/manifest.json" % SHELF[theme]
-	return resolve_manifest(path, sidecar_dir) if pack_on_disk(path, sidecar_dir) else ""
 
 
 # A zone/boss id or a stage row. Existing {theme, ace} stage music overrides the pack.
