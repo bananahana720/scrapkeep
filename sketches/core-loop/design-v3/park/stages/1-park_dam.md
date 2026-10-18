@@ -732,7 +732,19 @@ The pass for WHATS-LEFT unit 3 and placeholder unit H, modelled on the crown pas
 
 **The Mind's first musical quote (Q9).** It plays at the Eye's south mouth: row `eye_mouth` [0, 205], a 20 by 30 m flat plateau stamp, publishes ride fact `layer_mind_quote_spillway` as the ball leaves the Eye. Every line crosses the Eye once, downhill, so the quote plays once per run on every line. It goes through the place-layer path (`event_kinds.gd`, `sound_next` `music_layer_mind_quote_spillway`), and ui_tick stands in until the file on #12 lands. A ride sensor publishes on every entry, so a `layer_mind_quote_` fact gets a guard (`park_recipes.gd` `_fire`): the first entry plays it, and a bounce inside the box or a second crossing stays silent (`tests/park_mind_quote_once_test.gd`, red without the guard). The spot is outside every arena: the Warden's fight opens at the bay dock [0, 467], 247 m on, and the nearest other fight (the `bench_altar` ambush, [206, 250]) is 211 m away, while the row's sensor box is 20 by 30 m and reaches only 3 m above the ground. The flume thread was told of the spot, since the Mind's quote recurs on its stage.
 
-**Bands, eight seeds per line, on `24f7665d`.** BANDS_TABLE
+**Bands, eight seeds per line, on `54702876`** (the head after #79's `a286cf1d` and the six-park re-bake; later commits change only a content pin and this page). `traversal_line.gd --table=park --stage=1`, seeds 1 to 8, fixed 90 FPS at nice 10, two lanes; evidence in `artifacts/local/dam-pass/final/` (local, not committed). Every pilot band holds on all six pilot lines, and the floor line holds its own band (Warden in at most twice Rivet's median, 0 dead stops). The last column is section 9's medians on main, for comparison.
+
+| Line | Reached | time_to_warden_s median (max) | flow_share median (min) | segments median s | quiet_max_s | dead stops | Bands outside | Section 9 time / flow |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 8 of 8 | 64.8 (64.8) | 0.9335 (0.9335) | 27.53, 18.14, 19.12 | 8.41 | 0 | none | 63.48 / 0.9276 |
+| rivet | 8 of 8 | 81.05 (81.05) | 0.8443 (0.836) | 38.16, 29.36, 13.52 | 12.14 | 0 | none | 80.9 / 0.8445 |
+| kest | 8 of 8 | 87.61 (87.61) | 0.7609 (0.7314) | 30.08, 30.71, 26.81 | 11.8 | 0 | none | 80.22 / 0.7691 |
+| tarn | 8 of 8 | 73.9 (75.49) | 0.9687 (0.9432) | 31.56, 26.09, 16.24 | 10.5 | 0 | none | 73.87 / 0.9687 |
+| tally | 8 of 8 | 84.78 (84.78) | 0.7273 (0.7273) | 32.31, 32.71, 19.74 | 12.06 | 0 | none | 80.27 / 0.8156 |
+| cannon | 8 of 8 | 84.07 (84.83) | 0.9461 (0.916) | 29.51, 29.47, 25.08 | 10.91 | 0 | none | 84.68 / 0.9273 |
+| floor | 8 of 8 | 61.5 (62.31) | 0.9402 (0.9135) | 18.47, 27.18, 15.84 | 4.19 | 0 | length_ratio 1.13 (a pilot band, reported for the floor, as in section 9) | 86.57 / 0.7684 |
+
+The floor line is the rolling line, and it is where this pass shows. It reaches the Warden 25 s sooner (86.6 to 61.5 s median). Flow rises from 0.77 to 0.94. The longest quiet stretch falls from 12.5 s to 4.2 s, and the dead stops that section 15 recorded beside the domes camp are gone on every seed. Its length ratio, 1.13, is under the pilots' 1.3 to 2.0 band. The slalom takes the fall line down the shelf, which is what a rolling line should do, and section 9 already reports that band for the floor without gating it. Tally's flow (0.73) and Kest's time (87.6 s) moved before this pass: section 15 measured 0.7273 and 85.25 s after the KD1 swap, and both stay inside their bands.
 
 **Scorecard** (`intent-check/scorecard.py`, against `2fce8953` in `results/w16-2fce8953.md`):
 
