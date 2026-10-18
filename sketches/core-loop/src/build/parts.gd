@@ -239,7 +239,7 @@ static var maker_nudge_on := true
 #            (patterns and pulses that hit more than one target), arc_coil, static_burr (arcs).
 #   fuse     tracer_round (section 5), loose_trigger, double_feed, gatling_heart (weapon_rate: a
 #            faster cycle lands before a fast mover leaves).
-#   cc       brace_frame (section 5), flywheel (a refilled movement charge breaks a hold).
+#   cc       brace_frame (section 5) only: no other part plainly breaks or prevents a hold.
 #   air      none: no pilot's nemesis is air yet, so nothing is tagged until one is.
 #   plating  hot_rivets, slag_rounds, sunforged_core, ram_plow, overpressure (weapon_damage and punch
 #            per hit), warhead_slug, clean_break (plating-specific), ballast_drum (section 5).
@@ -250,7 +250,7 @@ const ANSWERS := {
 	"helix_drill": ["spread"], "ring_wave": ["spread"], "tempest_core": ["spread"], "arc_coil": ["spread"],
 	"static_burr": ["spread"],
 	"loose_trigger": ["fuse"], "double_feed": ["fuse"], "gatling_heart": ["fuse"],
-	"brace_frame": ["cc"], "flywheel": ["cc"],
+	"brace_frame": ["cc"],
 	"hot_rivets": ["plating"], "slag_rounds": ["plating"], "sunforged_core": ["plating"], "ram_plow": ["plating"],
 	"overpressure": ["plating"], "warhead_slug": ["plating"], "clean_break": ["plating"], "ballast_drum": ["plating"],
 }
