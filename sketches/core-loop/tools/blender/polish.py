@@ -165,6 +165,94 @@ def subdivide(bm, levels=1):
     return bm
 
 
+def subdivide_where(bm, levels, pick):
+    """Subdivide only the connected islands (lists of faces in index order) for which
+    pick(island) is true; other islands stay as they are. Lets one Part soften its organic
+    primitives while hard props in the same mesh keep their edges. Picked islands move
+    to the end of the vertex and face order. Modifies bm in place and returns it."""
+    if levels <= 0:
+        return bm
+    bm.verts.index_update()
+    bm.faces.index_update()
+    bm.faces.ensure_lookup_table()
+    seen, picked = set(), []
+    for f in bm.faces:
+        if f.index in seen:
+            continue
+        island, stack = [], [f]
+        seen.add(f.index)
+        while stack:
+            g = stack.pop()
+            island.append(g)
+            for e in g.edges:
+                for h in e.link_faces:
+                    if h.index not in seen:
+                        seen.add(h.index)
+                        stack.append(h)
+        # Recipes can emit faces in a different order between runs; order by vertex.
+        island.sort(key=lambda g: [la.vert.index for la in _loops(g)])
+        if pick(island):
+            picked.append(island)
+    if not picked:
+        return bm
+    picked.sort(key=lambda island: [la.vert.index for la in _loops(island[0])])
+    loop_kinds = [(kind, name) for kind in ("float_color", "color", "uv")
+                  for name in getattr(bm.loops.layers, kind).keys()]
+    int_names = list(bm.verts.layers.int.keys())
+    for island in picked:
+        sub = bmesh.new()
+        sl = [(getattr(bm.loops.layers, k)[n], getattr(sub.loops.layers, k).new(n), k) for k, n in loop_kinds]
+        si = [(bm.verts.layers.int[n], sub.verts.layers.int.new(n)) for n in int_names]
+        vmap = {}
+        for v in sorted({v for g in island for v in g.verts}, key=lambda v: v.index):
+            nv = sub.verts.new(v.co)
+            for a, b in si:
+                nv[b] = v[a]
+            vmap[v] = nv
+        for g in island:
+            loops = _loops(g)
+            nf = sub.faces.new([vmap[la.vert] for la in loops])
+            nf.material_index = g.material_index
+            nf.smooth = g.smooth
+            for la, lb in zip(loops, nf.loops):
+                for a, b, k in sl:
+                    if k == "uv":
+                        lb[b].uv = la[a].uv
+                    else:
+                        lb[b] = la[a]
+        sub.edges.ensure_lookup_table()
+        for g in island:
+            for e in g.edges:
+                ne = sub.edges.get((vmap[e.verts[0]], vmap[e.verts[1]]))
+                if ne is not None:
+                    ne.smooth = e.smooth
+        sub = subdivide(sub, levels)
+        bmesh.ops.delete(bm, geom=sorted(vmap, key=lambda v: v.index), context="VERTS")
+        sub.verts.index_update()
+        back = {}
+        sl = [(getattr(sub.loops.layers, k)[n], getattr(bm.loops.layers, k)[n], k) for k, n in loop_kinds]
+        si = [(sub.verts.layers.int[n], bm.verts.layers.int[n]) for n in int_names]
+        for v in sub.verts:
+            nv = bm.verts.new(v.co)
+            for a, b in si:
+                nv[b] = v[a]
+            back[v] = nv
+        for g in sub.faces:
+            nf = bm.faces.new([back[v] for v in g.verts])
+            nf.material_index = g.material_index
+            nf.smooth = g.smooth
+            for la, lb in zip(g.loops, nf.loops):
+                for a, b, k in sl:
+                    if k == "uv":
+                        lb[b].uv = la[a].uv
+                    else:
+                        lb[b] = la[a]
+        sub.free()
+    bm.verts.index_update()
+    bm.faces.index_update()
+    return bm
+
+
 def finish(bm, opts, bevel=None, subsurf=None, regions=()):
     """Shape and subdivide one part. Faces tagged by Part.region take that region's bevel
     and levels; each region is cut out, finished alone and joined back. Returns the bmesh
