@@ -1,20 +1,26 @@
-# Wave state and open PRs (18 Oct 2026, 05:15Z)
+# Wave state and open PRs (18 Oct 2026, 05:55Z, end of night)
 
-Re-check every sha with `git ls-remote origin` before relying on it. These were read from GitHub at 04:55Z.
+Andrew closed out for the night at 05:50Z because usage on the old account was nearly gone. He restarts in the morning, probably from the new project. Re-check every sha with `git ls-remote origin` before relying on it.
 
 ## Where the waves stand
 
-- **main is `f1ab35c1`**: wave 16 (`f9f58944`) plus #132.
-- **Wave 16 is on main** at `f9f58944`. Andrew pushed it at 02:06Z on 18 Oct, and it was verified. Rivet's faster carves (#73) were reverted out of it because the park carve check couldn't fire a carve.
-- **Wave 17 is being stacked** on `stage/alpha-w17` (pushed head `27e15952`, draft PR #116 into main). Staging also had main merged in locally (`06a607da`) and the pit jaw and gap net calls as local `83e14863`, not yet pushed at 04:55Z. The promote-fast flow applies: see the last section.
-- **Gate passes stacked for wave 17:** #107, #101, #108, #112, #114, #113, #109, #105, #93, #103, #106, #118.
-- **Still in the gate at 04:25Z:** #69, #73, #111 (camp), the polish set (#115, #119, #120, #121, #122, #124, #128, #133), #78, #126, #123, #127, #61, #104, #106.
-- **PC results on `89bc14ae`:** stage entry is OK. The in-stage freezes are 3.94 s on stage 1 and 2.36 s on stage 2. Menu-ready fails at about 12 s against 5 s. "Stage entry freeze" owns both, with #129 awaiting a 4080 rerun.
-- **#73 (Rivet carve)** passed the gate at `8e40be12` but has a warm-up hitch. It promotes only with the fixed head plus a 4080 p1/p3 rerun; otherwise it is reverted at promotion.
-- **The 4080 queue:** the #129 park rerun plus a real-launch stage 1, the wave 17 densest fight plus the #128 bosses, the Job B stills, then the #73 p1/p3 rerun.
-- **The next wave carries:** Rivet "Smooth, 0.11 s" (LATE_WORK 290), the crown margin 0.855 reshape, and a loud error for a missing record in child runs.
-- **Old drafts still to check:** #75, #66 pilot radio, #56, #55 jukebox, #52 stage modifiers, #25, #22.
-- **Tests-only fix #132** (child-runs parallel cap) was merged to main at 04:39Z outside the gate. It was kept because it's harmless. The coordinator asked Andrew whether he merged it.
+- **main is `dc3cac54`.** That is wave 16 plus #132, #135 (this handoff pack), #136 (cloud setup) and #138 (autocompact settings).
+- **Wave 17 is being stacked** on `stage/alpha-w17` at `102324cd` (draft PR #116 into main). It now carries #78, #61 and #12 along with the earlier stack. The promote-fast flow applies (last section).
+- **#105** (picked music themes) re-gates after merging the stage in, because it conflicted with #12.
+- **#126** (flume) passed, with the flume small median re-pinned stage-wide over 5+ seeds.
+- **#73** (Rivet carve): a lighter carve change is being pushed. It needs a 4080 p1/p3 run before it promotes.
+- **#137** (LATE_WORK 290, slope smoothing) is parked. Andrew tapped "Instant, 0.11 s later" at 05:46Z: flat Breaches and Full Cut hit instantly, slopes land at about 0.18 s, and "Smooth, 0.11 s" returns once dense fights get cheaper. See DECISIONS.md.
+- **#140** (Sable, Cannon and Tarn idle loops) is in the gate.
+- **#129** (stage entry freeze): cold boot is 8.94 s against the 5 s target on the 4080. The fix directions are in `gate/stage-entry-w16.md` in the shared folder.
+- **Boss spawn freeze** is a new thread. It works from the machine's "Boss freeze frames" findings.
+- **Dense fights:** a render-thread A/B is queued on the 4080. The stage 6 fight runs 30% over budget, and its arena labels are being confirmed.
+- **SWAP-HITCH-6:** a self-play flag for it is being built.
+- **Grown-hit sound:** Andrew gave the go-ahead at 05:45Z.
+- **Landforms:** exceptions recorded for the landform checks.
+- **Closed:** #22, #89, #80 and #99.
+- **Pilot radio:** the music packer is at 16 of 56 takes.
+- **Old drafts:** #75, #56 and #55 were closed as landed. #66, #25 and #52 were folded into #139 (`7b426bbc`, in the gate).
+- **Staging still owes** the run_tier re-record, the rebuild of 3 Warden GLBs (mantle_brood, mantle_choir, kit_mind) and the reactor-band drift.
 
 ## Base reds
 
@@ -29,6 +35,8 @@ These fail on the base too, so they are not a PR's fault. The staging list is in
 - Older cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `alpha_bot_sweep`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved.
 
 ## Open PRs and their heads
+
+Heads as read at 04:55Z. Many have moved or merged into the stage since; re-check before use.
 
 | PR | Title | Base | Head sha |
 | --- | --- | --- | --- |

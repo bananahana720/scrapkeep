@@ -50,7 +50,7 @@ These were typed by Andrew in the old project on 17 and 18 Oct. Ask him to resta
 - **Kill-first specials.** The Foreman, Dispatcher, Splitter and Linker each have their own presence, tell and death sounds.
 - **World enemies.** Unique remixes of the core verbs (roll, ram, grapple, carve): the Dig is "Commit", the Highdraft is "Ring-outs".
 - **Items.** Six actives plus maker sets on the 61 items come before the sitting. Overrides and evolved forms come after. Every flash obeys Reduce flashes.
-- **Rivet's Breach.** Every heavy Breach lands its crater and hits about 55 ms after touchdown, spread over frames with no hitch. On steep slopes it lands at 0.11 s, which keeps 60 fps.
+- **Rivet's Breach.** "Instant, 0.11 s later" (18 Oct 05:46): flat Breaches and Full Cut hit instantly, and slope Breaches land at about 0.18 s for now. Slopes return to "Smooth, 0.11 s" once dense fights get cheaper (#137).
 - **Parks.** One skill per park: dam rolling, flume momentum, pit abilities, sinkhole carving, islands grapple, crown everything. The flume keeps its open 90 m butte gap. In the sinkhole the floor is lava, briefly, and the glazed walls pay carvers. Highdraft edges are ground.
 - **Music.** Gritty steampunk-cyberpunk with house and jazz, melody first: combat at 129 BPM, roaming at 172. Boss finals switch to Eurodance at 140-150 BPM in the final phase only. Never replace a pick unless he picks the new take by ear. Theme C plays on a won run's summary and the ending. A place music layer never sits inside an arena.
 
