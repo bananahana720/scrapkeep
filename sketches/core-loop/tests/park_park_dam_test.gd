@@ -225,14 +225,15 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary, cells: 
 		var recipe := String(row.get("recipe", ""))
 		if recipe.begins_with(ParkRecipes.GREYBOX) and not UNSTAMPED_OK.has(row["element"]) and String(row.get("stamp", "")) == "":
 			out.append("%s is a greybox %s with no stamp: KB9 builds it as a solid box" % [row["id"], row["element"]])
-		# KD1-DRESS: the dressed rows name their GLB and it loads; every other row stays greybox.
+		# KD1-DRESS: the dressed rows name their GLB and it loads; every other row stays greybox, anchor fields aside
+		# (they wear the anchors kit, park_anchors_test).
 		if DRESSED.has(row["id"]):
 			if recipe != DRESSED[row["id"]]:
 				out.append("dressing: %s names %s, want %s" % [row["id"], recipe, DRESSED[row["id"]]])
 			elif ParkRecipes.stands_in(row):
 				out.append("dressing: %s names %s but its base GLB is missing, so it stands in as greybox" % [row["id"], recipe])
-		elif recipe != "" and not recipe.begins_with(ParkRecipes.GREYBOX) and not ParkRecipes.ANCHOR_KITS.has(recipe):
-			out.append("dressing: %s names %s, but only the DRESSED rows are dressed" % [row["id"], recipe])
+		elif recipe != "" and not recipe.begins_with(ParkRecipes.GREYBOX) and not ParkRecipes.is_anchor_field(row):
+			out.append("dressing: %s names %s, but only %s are dressed" % [row["id"], recipe, DRESSED.keys()])
 		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
 	for row in park.get("activity_rows", []) + park.get("contraption_rows", []):
 		if row.has("at"):

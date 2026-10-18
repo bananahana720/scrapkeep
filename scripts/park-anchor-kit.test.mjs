@@ -9,6 +9,8 @@ test("kitFor reads the row id before the landform", () => {
   assert.equal(kitFor({ id: "sentinel_4", landform: "hoodoo_field" }), "anchor_hoodoo");
   assert.equal(kitFor({ id: "east_drift_post_1i", landform: "adit" }), "anchor_timber");
   assert.equal(kitFor({ id: "isle_post_1", landform: "sky_island" }), "anchor_cairn");
+  assert.equal(kitFor({ id: "mastery_rock", landform: "hoodoo_field" }), "anchor_hoodoo");
+  assert.equal(kitFor({ id: "signal_masts", landform: "mesa_rim" }), "anchor_timber");
   assert.throws(() => kitFor({ id: "x", landform: "glacier" }), /no anchors kit/);
 });
 
