@@ -75,7 +75,7 @@ const DRESSED := {"hoodoo_gust_lip_1": "mesa_lip_kicker", "hoodoo_gust_lip_2": "
 	"kick_wmid_3": "mesa_lip_kicker_60x32x36", "kick_wlast_10": "mesa_lip_kicker_60x26x60",
 	"kick_emid_1": "mesa_lip_kicker_24x6x36", "kick_emid_2": "mesa_lip_kicker_24x6x36", "kick_wmid_4": "mesa_lip_kicker_24x6x36",
 	"kick_wmid_5": "mesa_lip_kicker_24x6x36", "kick_clast_6": "mesa_lip_kicker_24x6x36", "kick_nlast_7": "mesa_lip_kicker_24x6x36",
-	"kick_nlast_8": "mesa_lip_kicker_24x6x36", "kick_nlast_9": "mesa_lip_kicker_24x6x36", "kick_wlast_11": "mesa_lip_kicker_24x6x36",
+	"kick_nlast_8": "mesa_lip_kicker_24x6x36", "kick_nlast_9": "mesa_lip_kicker_24x6x36",
 	"kick_wlast_12": "mesa_lip_kicker_24x6x36", "kick_slast_14": "mesa_lip_kicker_24x6x36"}
 const POCKETS := {
 	"camp_signal": {"role": "online", "rarities": ["common"]},
