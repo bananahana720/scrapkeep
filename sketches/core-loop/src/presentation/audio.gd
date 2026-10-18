@@ -89,6 +89,7 @@ const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwa
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
+	"grown_sub": 60, "grown_crack": 60, "grown_tail": 120, "grown_rattle": 120,
 	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
@@ -3057,7 +3058,24 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 		play("enemy_struck", db, _posture_note_ratio(enemy))
 	else:
 		play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+	if contact:
+		_grown_layers(db)
 	_pay_beat(enemy, kind)
+
+
+# A grown pilot's contact hits carry more weight: one layer per heft class past I, started on
+# the hit's own frame with the hit's level. A sub drop from II, a heavier crack from III, a long
+# rumbling tail and a scrap rattle from IV, so a heft IV slam sounds about twice as layered.
+const GROWN_LAYERS := [[2, "grown_sub"], [3, "grown_crack"], [4, "grown_tail"], [4, "grown_rattle"]]
+
+
+func _grown_layers(db: float) -> void:
+	var heft := _heft_class
+	if ctx != null and ctx.run != null and ctx.run.has_method("heft_class"):
+		heft = int(ctx.run.heft_class())
+	for layer in GROWN_LAYERS:
+		if heft >= int(layer[0]):
+			play("enemy_struck", db, 1.0, "SFX", layer[1])
 
 
 # The hit's own sound has already played, so the beat never delays it.
