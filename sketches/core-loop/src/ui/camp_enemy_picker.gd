@@ -47,6 +47,7 @@ func _init() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
+	scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	scroll.custom_minimum_size = Vector2((ROW_SIZE.x + 10.0) * COLUMNS + 20.0, LIST_H)
 	add_child(scroll)
 	_grid = GridContainer.new()
@@ -61,7 +62,7 @@ func _init() -> void:
 		_grid.add_child(row)
 		_rows[kind] = row
 	_note = _label(19, Palette.SAND)
-	_note.custom_minimum_size = Vector2(0.0, 52.0)
+	_note.custom_minimum_size = Vector2(760.0, 52.0)
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_note)
 	var buttons := HBoxContainer.new()

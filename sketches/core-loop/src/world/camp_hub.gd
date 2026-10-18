@@ -79,7 +79,7 @@ signal station_left(id: String)
 
 var game
 var ball
-# The profile that keeps the camp's records; game.gd hands it in (profile_purity keeps ctx.profile out of src/world).
+# The store that keeps the camp's records; game.gd hands it in (the profile layer stays out of src/world).
 var camp_store
 var root: Node3D
 var built := false
@@ -470,7 +470,7 @@ func _build_stations() -> void:
 	_station("lockers", "camp_lockers", "interact", "Customize", "key_c", ZONE_RADIUS, lift, func(): screens.walk_customize())
 	_station("moss", "camp_moss_stall", "interact", "Companion", "key_m", ZONE_RADIUS, lift, func(): screens.walk_companion())
 	_station("settings", "camp_settings_console", "interact", "Settings", "key_s", ZONE_RADIUS, lift, func(): screens.toggle_settings())
-	_station("achieve", "camp_trophy_wall", "interact", "Achievements", "key_a", ZONE_RADIUS, lift, func(): screens.toggle_achievements())
+	_station("achieve", "camp_trophy_wall", "interact", "Trophy wall", "key_a", ZONE_RADIUS, lift, func(): screens.toggle_achievements())
 	var cabinet: Node3D = _pieces.get("moss_jukebox")
 	if cabinet != null:
 		add_station("jukebox", cabinet.global_position + Vector3(0.0, 1.0, 0.0), "Jukebox", "key_j", 3.0, func(): screens.toggle_jukebox())

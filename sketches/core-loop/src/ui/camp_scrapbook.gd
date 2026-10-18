@@ -25,6 +25,7 @@ const FIRE_PIT := "camp_fire_pit"
 const EMPTY_LINE := "Nothing pasted in yet. The paste pot is full and has been waiting."
 const LINE_SECONDS := 5.0
 const LINE_FADE := 1.2
+const PAGE_H := 560.0
 
 var pages: Array = []
 var index := 0
@@ -39,6 +40,9 @@ var _holder: Control
 func _init() -> void:
 	name = "CampScrapbook"
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# The walk's page slot is a column that sizes a child by its minimum: without one the book is 0 px tall.
+	custom_minimum_size = Vector2(0.0, PAGE_H)
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_holder = Control.new()
 	_holder.set_anchors_preset(Control.PRESET_FULL_RECT)

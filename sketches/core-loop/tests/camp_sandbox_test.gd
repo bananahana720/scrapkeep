@@ -9,7 +9,7 @@ const T := preload("res://tests/support/t.gd")
 
 # The camp's any-enemy sandbox: the kind list, the picker page, and the yard against a real
 # Game on the title state and the real camp hub (the walk is screens.toggle_camp; features
-# attach by `Sandbox.attach(hub)`, which camp_hub.gd's FEATURES list calls on the first walk).
+# attach by `Sandbox.attach(hub)`, which camp_hub.gd's FEATURES list calls once the hub is built).
 
 var _t := T.new("camp_sandbox_test")
 var _kills := 0
@@ -107,7 +107,6 @@ func _yard() -> void:
 	_t.eq("the walk runs on the title state", game.flow.state_name(), "title")
 	var hub = game.camp_hub
 	hub.ensure_built()
-	Sandbox.attach(hub)
 	var sandbox: Node = hub.root.get_node("CampSandbox")
 	var yard: Vector3 = hub.piece("camp_sandbox_yard").global_position
 	var entry: Vector3 = hub.socket("camp_sandbox_yard", "entry").origin

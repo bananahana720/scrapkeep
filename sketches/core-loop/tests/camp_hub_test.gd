@@ -24,7 +24,7 @@ const STATIONS := [
 	{"id": "jukebox", "key": KEY_J, "label": "Jukebox"},
 	{"id": "settings", "key": KEY_S, "label": "Settings"},
 	{"id": "radio", "key": KEY_R, "label": "Mixtapes"},
-	{"id": "achieve", "key": KEY_A, "label": "Achievements"},
+	{"id": "achieve", "key": KEY_A, "label": "Trophy wall"},
 ]
 
 var _t := T.new("camp_hub_test")
@@ -117,6 +117,9 @@ func _run() -> void:
 	await _frames(3)
 	_t.check("K builds the hub", _hub.built and _hub.root != null, "")
 	_t.check("the walk is on and the camp is open", _screens.walking() and _screens.camp_open() and _hub.walking, "")
+	var line_card: Node = _hub.get_node_or_null("CampLineLayer/CampLine")
+	_t.check("a dry line card shows on entering the walk", line_card != null and line_card.get_child_count() > 0
+		and line_card.get_child(0).text.length() > 10 and line_card.mouse_filter == Control.MOUSE_FILTER_IGNORE, str(line_card))
 	_t.eq("the flow stays on the title", flow.state_name(), "title")
 	_t.check("the run is not in play", not flow.in_play(), "")
 	_t.check("the ball is unfrozen", not player.frozen(), "")
@@ -224,6 +227,7 @@ func _run() -> void:
 	_game._screen_key(KEY_E)
 	await _frames(2)
 	_t.check("sandbox: E opens the enemy picker over the walk", sandbox.page_open and _screens.walking() and not _screens.walk_live(), "")
+	_t.check("sandbox: the picker sits on screen", _on_screen(_screens.walk_page()), str(_screens.walk_page().get_global_rect()))
 	Push.key(root, KEY_ESCAPE)
 	await _frames(2)
 	_t.check("sandbox: Escape returns to the walk", not sandbox.page_open and _screens.walk_live(), "")
@@ -232,11 +236,26 @@ func _run() -> void:
 	_game._screen_key(KEY_B)
 	await _frames(2)
 	_t.check("scrapbook: B opens the book over the walk", _screens.walk_page() != null and _screens.walk_page().visible and not _screens.walk_live(), "")
+	_t.check("scrapbook: the book sits on screen", _on_screen(_screens.walk_page()), str(_screens.walk_page().get_global_rect()))
 	Push.key(root, KEY_ESCAPE)
 	await _frames(2)
 	_t.check("scrapbook: Escape returns to the walk", _screens.walk_page() == null and _screens.walk_live(), "")
 	_t.check("every feature added its station", _hub.zone_ids().has("camp_skee") and _hub.zone_ids().has("camp_trial")
 		and _hub.zone_ids().has("sandbox_call_box") and _hub.zone_ids().has("scrapbook"), str(_hub.zone_ids()))
+
+	# No two prompted zones that overlap share a key, so a key never means two stations at once.
+	var clashes := []
+	var ids: Array = _hub.zone_ids()
+	for i in ids.size():
+		for j in range(i + 1, ids.size()):
+			var za: Dictionary = _hub._zones[ids[i]]
+			var zb: Dictionary = _hub._zones[ids[j]]
+			if za["key"] == "" or zb["key"] == "":
+				continue
+			var reach: float = za["area"].get_child(0).shape.radius + zb["area"].get_child(0).shape.radius
+			if za["key"] == zb["key"] and _hub.zone_position(ids[i]).distance_to(_hub.zone_position(ids[j])) < reach:
+				clashes.append([ids[i], ids[j]])
+	_t.check("no overlapping stations share a key", clashes.is_empty(), str(clashes))
 
 	# The plug-in API: a feature's station and its page, opened over the walk and closed back to it.
 	var feature := {"pressed": 0, "closed": 0}
@@ -305,6 +324,13 @@ func _run() -> void:
 	await _frames(2)
 	_t.check("the title after Launch is the plain title", not _screens.camp_open() and _screens._actions.visible, "")
 	quit(_t.verdict())
+
+
+# A page that is tall enough to read and lies inside the window.
+func _on_screen(page: Control) -> bool:
+	var rect: Rect2 = page.get_global_rect()
+	var slide: float = _screens._content.position.y  # the page is still sliding in
+	return rect.size.y > 200.0 and rect.position.y - slide >= 0.0 and rect.end.y - slide <= page.get_viewport().get_visible_rect().size.y + 1.0
 
 
 func _pad(button: int) -> InputEventJoypadButton:
