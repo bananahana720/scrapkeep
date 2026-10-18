@@ -120,7 +120,9 @@ func _idle_scene() -> void:
 			var turned: float = enemy.reaction_pivot.transform.basis.get_rotation_quaternion().angle_to(Quaternion.IDENTITY)
 			if enemy.winding_up():
 				windup_frames += 1
-				windup_zero = windup_zero and origin == Vector3.ZERO and enemy.idle_offset == Vector3.ZERO
+				# The offset fades over IDLE_FADE_OUT (never up), then holds at zero.
+				var faded: bool = windup_frames > 20
+				windup_zero = windup_zero and (not faded or (origin == Vector3.ZERO and enemy.idle_offset == Vector3.ZERO)) and origin.length() <= float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude) + 0.0001
 				if i == 0:
 					lean = maxf(lean, turned)
 			elif i == 0 and windup_frames > 0 and turned > 0.01:
@@ -132,7 +134,7 @@ func _idle_scene() -> void:
 		var amp := float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude)
 		_t.check("GP6-2 idle " + SCENE_KINDS[i], inside[i] and peaks[i] > amp * 0.5, "peak %.4f m within %.3f m" % [peaks[i], amp])
 		_t.check("GP6-2 collider " + SCENE_KINDS[i], _shapes(enemies[i]) == shapes[i], "collision shapes keep their local transforms")
-	_t.check("GP6-2 wind-up holds", windup_zero and windup_frames > 0, "%d open-attack frames, all with zero offset" % windup_frames)
+	_t.check("GP6-2 wind-up holds", windup_zero and windup_frames > 0, "%d open-attack frames, offset faded to zero" % windup_frames)
 	# ATTACK_ROWS E01 e01_brace_back: the chaser leans back into its lunge, then snaps through it.
 	_t.check("GP6-2 wind-up leans into its pose", lean > deg_to_rad(8.0), "peak lean %.1f deg" % rad_to_deg(lean))
 	_t.check("GP6-2 strike snaps through its release", released)

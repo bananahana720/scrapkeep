@@ -1029,7 +1029,7 @@ class Updater extends Node3D:
 				and ball.y >= base.y and ball.y <= base.y + float(row["height"])
 			var want := "occupied" if inside else "idle"
 			if want != row["state"] and row["player"] != null:
-				(row["player"] as AnimationPlayer).play(want)
+				(row["player"] as AnimationPlayer).play(want, 0.15)
 			row["state"] = want
 		if sky != null and ball != Vector3.INF:
 			sky.position = Vector3(ball.x, sky.position.y, ball.z)
@@ -1055,6 +1055,6 @@ class Updater extends Node3D:
 			return
 		row["state"] = want
 		if row["player"] != null:
-			(row["player"] as AnimationPlayer).play(want)
+			(row["player"] as AnimationPlayer).play(want, 0.15)
 		for collar in row["collars"]:
-			(collar as AnimationPlayer).play("open" if want == "idle" else "close")
+			(collar as AnimationPlayer).play("open" if want == "idle" else "close", 0.1)

@@ -46,6 +46,10 @@ const DISH_PLATING := 999.0
 const CABLE_RADIUS := 0.6
 const CABLE_TOUCH := 1.2
 const IDLE_CLIPS := {"idle": true, "braced": true}
+# Seconds a clip eases in from the pose before it (AnimationPlayer's blend table; a queued
+# clip follows it too). Tells, loops and returns blend; `cut` is a hit read and stays at 0.
+const BLENDS := {"idle": {"brace": 0.12, "slack": 0.12, "braced": 0.12}, "brace": {"braced": 0.1},
+	"braced": {"slack": 0.12, "idle": 0.12}, "slack": {"idle": 0.15, "brace": 0.12}}
 
 var partner: Node3D = null
 var braced := false
@@ -334,6 +338,8 @@ func _build_model() -> void:
 		_aim_bone = _skeleton.find_bone("DishAim")
 	var players := _model.find_children("*", "AnimationPlayer", true, false)
 	_anim = players[0] as AnimationPlayer if not players.is_empty() else null
+	if _anim != null:
+		_ease_clips()
 	for socket in ["cable_base", "cable_dish", "cable_cut", "partner_spot"]:
 		var node := _model.find_child(socket, true, false) as Node3D
 		if node != null:
@@ -409,6 +415,18 @@ func _light_cable(on: bool) -> void:
 	_cable_material.emission_enabled = on
 	_cable_material.emission = EventKinds.role_color("live")
 	_cable_material.emission_energy_multiplier = PLATE_GLOW_LIVE if on else 0.0
+
+
+# The glb carries no loop flag, so idle and braced would play once and freeze: loop them
+# here, and set how long each switch eases. Reduced motion adds no looping ambient motion.
+func _ease_clips() -> void:
+	for clip in IDLE_CLIPS:
+		if _anim.has_animation(clip) and EnemyMotion.motion_scale > 0.0:
+			_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+	for from in BLENDS:
+		for to in BLENDS[from]:
+			if _anim.has_animation(from) and _anim.has_animation(to):
+				_anim.set_blend_time(from, to, BLENDS[from][to])
 
 
 func _play(clip: String, then := "") -> void:
