@@ -74,7 +74,8 @@ func _check_clips() -> void:
 		_t.check("preview pilot has an animator", false)
 		preview.free()
 		return
-	var seated_still := not animator.is_playing()
+	# Sable's GLB ships a real idle_loop (2026-10-18): the preview then already plays it.
+	var seated_still := animator.has_animation("idle_loop") or not animator.is_playing()
 	Trigger.add_synthetic_clips(animator, "pylon_engineer")
 	_t.check("preview plays idle_loop when the GLB has it (seated still before)",
 		seated_still and preview.seat_pilot() == "idle_loop" and animator.is_playing() and animator.current_animation == "idle_loop")
