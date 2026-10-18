@@ -1326,9 +1326,11 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 # tick at a time and hits once it is done, and never before LATE_TICKS (about 55 ms) after the
 # landing (Andrew's "Beat later" and "Spread every Breach", 2026-10-18). Work is counted, never
 # timed, so a replay is the same on any machine. The cells' parts join in cell order, as _shade
-# joins them, so the shape is the same as a carve made at once.
+# joins them, so the shape is the same as a carve made at once. LATE_WORK is the 4080's ceiling:
+# its largest share at 200 was 7.5 ms, and 1.5 shares a frame must stay under 16.7 ms; a steep
+# slope then hits about 0.11 s after landing (Andrew's "Smooth, 0.11 s", 2026-10-18).
 const LATE_TICKS := 5
-const LATE_WORK := 200
+const LATE_WORK := 290
 
 # The tick's work budget; a test lowers it to see the stages.
 var late_work := LATE_WORK
