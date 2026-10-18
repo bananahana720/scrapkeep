@@ -24,7 +24,7 @@ from mathutils.bvhtree import BVHTree
 import common
 
 DEFAULTS = {
-    # Segment multiplier for cyl, rod, uv, ring and cone; ico gains one subdivision at 2+.
+    # Segment multiplier for cyl, rod, uv and ring; ico gains one subdivision at 2+.
     "detail": 2,
     # Bevel width in metres on edges sharper than bevel_angle; 0 turns bevels off.
     "bevel": 0.03,
@@ -103,7 +103,8 @@ def subdivide(bm, levels=1):
     """Catmull-Clark in Python: Blender's subdivision runs threaded and its output differs
     in the last bits between runs. Sharp edges (edge.smooth False) and open edges are
     creased, so boxes keep their corners and bevels round into fillets. Loop colours,
-    UVs, deform weights, materials and shading flags carry over. Returns a new bmesh."""
+    UVs, deform weights, integer tag and float vertex layers, materials and shading
+    flags carry over. Returns a new bmesh."""
     limit = (_opts or DEFAULTS)["crease_angle"]
     bm.normal_update()
     for e in bm.edges:
@@ -205,6 +206,12 @@ def _avg(points):
 
 
 def _cc(src):
+    # A concave ngon's centroid can fall outside it and fold the corner quads; ear-clip
+    # those first.
+    src.normal_update()
+    concave = [f for f in src.faces if len(f.verts) > 4 and not common._convex(f)]
+    if concave:
+        bmesh.ops.triangulate(src, faces=concave, quad_method="FIXED", ngon_method="EAR_CLIP")
     src.verts.index_update()
     src.edges.index_update()
     src.faces.index_update()
@@ -237,10 +244,11 @@ def _cc(src):
                    for kind in ("float_color", "color", "uv") for name in getattr(src.loops.layers, kind).keys()]
     sdef = src.verts.layers.deform.active
     ddef = dst.verts.layers.deform.new() if sdef is not None else None
-    # Integer vertex tags (rig part, bone index) carry over from the lowest-index source
-    # vertex. Islands are disconnected, so a rigidly tagged island stays rigidly tagged.
-    int_layers = [(src.verts.layers.int[name], dst.verts.layers.int.new(name))
-                  for name in src.verts.layers.int.keys()]
+    # Integer vertex layers are rig and part tags (pilot_bone, tally_bone, rig_part...):
+    # a new vertex takes the tag most of its source vertices share, the lowest on a tie.
+    # Float vertex layers average.
+    ints = [(src.verts.layers.int[n], dst.verts.layers.int.new(n)) for n in src.verts.layers.int.keys()]
+    floats = [(src.verts.layers.float[n], dst.verts.layers.float.new(n)) for n in src.verts.layers.float.keys()]
 
     def weights(vs):
         if sdef is None:
@@ -253,12 +261,14 @@ def _cc(src):
 
     def new_vert(pos, vs):
         nv = dst.verts.new(pos)
-        first = min(vs, key=lambda v: v.index)
-        for sl, dl in int_layers:
-            nv[dl] = first[sl]
         if ddef is not None:
             for g, w in sorted(weights(vs).items()):
                 nv[ddef][g] = w
+        for sl, dl in ints:
+            tags = sorted(v[sl] for v in vs)
+            nv[dl] = max(tags, key=lambda t: (tags.count(t), -t))
+        for sl, dl in floats:
+            nv[dl] = math.fsum(v[sl] for v in vs) / len(vs)
         return nv
 
     nv_v = [new_vert(vpt[v.index], [v]) for v in src.verts]
