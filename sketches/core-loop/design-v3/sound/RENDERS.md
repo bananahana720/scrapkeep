@@ -336,6 +336,34 @@ e67e6e0a372aca18b339cf539d641156029d188852e147f05008b5187c134f98  variant-src/hy
 - **Place layers stay out of arenas** (the Crown pass). A place music layer's sensor sits outside every arena, or the music director locks layers during a fight: a layer switching mid-fight moves the on-bar telegraphs. That holds for the Mind quote above wherever it fires.
 - **The Highdraft's own drops** (PR #83). `drop_fleet_anvil` (an anvil pair, then a G Lydian brass stab) and `drop_boiler` (a hiss, a pop and a whistle bending to the tritone) are designed one-shots for 3-1 and 3-2, a whole step apart, by `tools/ace/highdraft_stingers.py`; `cut_stingers.py` leaves them to it. The Highdraft has no cut `riser_mind_quote` or `drop_mind_wrong`, so the engine plays its pilot-aware Mind quote there.
 
+## Core packs from the sound-bible picks (2026-10-17)
+
+The core ACE packs play Andrew's mastered picks from `sound-bible-2026-10-16/spice/` (`<cue>-current.wav`, `-spiced.wav`, `-light.wav`), cut by `tools/ace/package_core_packs.py` (`stretch`, `plan`, `pack`) from htdemucs stems (`nice -n 10`, cuda, vocals folded into other) of the 44.1 kHz resample. The rule: roaming ramps with speed, so calm, travel and the kill cadence come from the -current mix and pivot, build, telegraph, open and drop from the -spiced mix of the same track (same tempo, sample-aligned, so a switch never jumps). The roam packs and the title packs use the layout calm, travel, cadence. Every clip is cut on the measured kick phase of its own drums stem (45 ms snap limit) and loops join like `package_music.cut_clip`; gains put each 10 s or longer clip at -16 LUFS with a -3 dBFS limiter ceiling. The three 16-bar loop tracks (126.95, 127.95 and 123.9 bpm) are stretched with Rubber Band to exactly 129, one ratio per track on every stem. The grid files (roam, boss) are cut at their nominal 172 or 129; the titles at the tempo read from their kicks. Timing is not human-verified (`timing_verified` false). Keys are the nominal world tonics, not measured; `tools/ace/key_check.py` found mismatches, listed below the table. `camp` (camp-light, 129) is pending its stem split. `title` and `summary` are untouched.
+
+Bars count from the first kick-grid downbeat of the track; a loop track wraps. M is the track's music bar count.
+
+| Pack | bpm | Sources | Section map |
+|---|---|---|---|
+| roam_spillway | 172.0 | roam-spillway-current, roam-spillway-spiced | calm cur 5-20 loop, travel cur 21-36 loop, cadence spi 43-44 |
+| roam_dig | 172.0 | roam-dig-current, roam-dig-spiced | calm cur 5-20 loop, travel cur 21-36 loop, cadence spi 43-44 |
+| roam_highdraft | 172.0 | roam-highdraft-current, roam-highdraft-spiced | calm cur 5-20 loop, travel cur 21-36 loop, cadence spi 42-43 |
+| spillway | 129.0 / 172.0 | roam-spillway-current, spillway-loop-current, spillway-loop-spiced | calm cur 5-20 loop, travel cur 21-36 loop, pivot spi 0-0, build spi 1-16 loop, telegraph spi 5-8 loop, open spi 11-14 loop, drop spi 13-16, cadence cur 15-16 |
+| cable_reach | 129.0 / 172.0 | roam-spillway-current, spillway-loop-current, spillway-loop-spiced | calm cur 13-28 loop, travel cur 29-44 loop, pivot spi 8-8, build spi 9-24 loop, telegraph spi 17-20 loop, open spi 13-16 loop, drop spi 21-24, cadence cur 23-24 |
+| dig_upper | 129.0 / 172.0 | dig-loop-current, dig-loop-spiced, roam-dig-current | calm cur 5-20 loop, travel cur 21-36 loop, pivot spi 0-0, build spi 1-16 loop, telegraph spi 5-8 loop, open spi 11-14 loop, drop spi 13-16, cadence cur 15-16 |
+| dig_deep | 129.0 / 172.0 | dig-loop-current, dig-loop-spiced, roam-dig-current | calm cur 13-28 loop, travel cur 29-44 loop, pivot spi 8-8, build spi 9-24 loop, telegraph spi 17-20 loop, open spi 13-16 loop, drop spi 21-24, cadence cur 23-24 |
+| highdraft | 129.0 / 172.0 | highdraft-loop-current, highdraft-loop-spiced, roam-highdraft-current | calm cur 5-20 loop, travel cur 21-36 loop, pivot spi 0-0, build spi 1-16 loop, telegraph spi 5-8 loop, open spi 11-14 loop, drop spi 13-16, cadence cur 15-16 |
+| highdraft_crown | 129.0 / 172.0 | highdraft-loop-current, highdraft-loop-spiced, roam-highdraft-current | calm cur 13-28 loop, travel cur 29-44 loop, pivot spi 8-8, build spi 9-24 loop, telegraph spi 17-20 loop, open spi 13-16 loop, drop spi 21-24, cadence cur 23-24 |
+| boss_brindle | 129.0 | boss-brindle-current, boss-brindle-spiced | calm cur 5-20 loop, travel cur 21-36 loop, pivot spi 16-16, build spi 17-32 loop, telegraph spi 40-43 loop, open spi 44-47 loop, drop spi 48-51, cadence cur 50-51 |
+| boss_waking | 129.0 | boss-waking-current, boss-waking-spiced | calm cur 5-20 loop, travel cur 21-36 loop, pivot spi 16-16, build spi 17-32 loop, telegraph spi 40-43 loop, open spi 44-47 loop, drop spi 48-51, cadence cur 50-51 |
+| boss_mind | 129.0 | boss-mind-current, boss-mind-spiced | calm cur 5-20 loop, travel cur 21-36 loop, pivot spi 16-16, build spi 17-32 loop, telegraph spi 41-44 loop, open spi 45-48 loop, drop spi 49-52, cadence cur 51-52 |
+| title_a | 127.01 | title-a-spiced | calm spi 5-20 loop, travel spi 21-36 loop, cadence spi 45-46 |
+| title_b | 128.0 | title-b-spiced | calm spi 5-20 loop, travel spi 21-36 loop, cadence spi 47-48 |
+| title_c | 172.02 | title-c-spiced | calm spi 5-20 loop, travel spi 21-36 loop, cadence spi 63-64 |
+
+In the section map `cur` is the -current mix, `spi` the -spiced mix and `lig` the -light mix; the numbers are the 1-based bars of the source (loop tracks wrap past bar 16).
+
+Key check (chroma against the nominal tonic, `key_check.py`, native stems): the loop tracks match (spillway and cable_reach D minor, dig E minor, highdraft G minor), as do brindle D minor and title_b and title_c D major. Mismatches: the roam tracks (roam_spillway reads A minor, roam_dig C major, roam_highdraft D major), so a zone pack's calm and travel sit in a different key from its pivot to cadence clips; boss_waking reads E minor and boss_mind G minor against nominal D and E; title_a reads A minor against D. The manifests keep the nominal keys until Andrew decides.
+
 ## Reproduce
 
 ```bash
