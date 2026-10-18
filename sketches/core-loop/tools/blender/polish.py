@@ -183,7 +183,24 @@ def finish(bm, opts, bevel=None, subsurf=None, regions=()):
     return out
 
 
+def _loops(face):
+    """A face's loops starting from its lowest-index vertex. Recipes can hand over the
+    same face with a different first loop between runs, and bevel and subdivision emit
+    vertices in loop order, so polish starts every face at the same corner."""
+    loops = list(face.loops)
+    k = min(range(len(loops)), key=lambda i: loops[i].vert.index)
+    return loops[k:] + loops[:k]
+
+
+def _canonical(bm):
+    out = bmesh.new()
+    _append(out, bm)
+    bm.free()
+    return out
+
+
 def _finish_one(bm, opts, bevel, subsurf, fit=None):
+    bm = _canonical(bm)
     before = _boxes(bm) if (opts["fit"] if fit is None else fit) else None
     shape(bm, opts, bevel)
     levels = opts["subsurf"] if subsurf is None else subsurf
@@ -268,10 +285,11 @@ def _append(dst, src):
             nv[dl] = v[sl]
         verts.append(nv)
     for f in src.faces:
-        nf = dst.faces.new([verts[v.index] for v in f.verts])
+        loops = _loops(f)
+        nf = dst.faces.new([verts[l.vert.index] for l in loops])
         nf.material_index = f.material_index
         nf.smooth = f.smooth
-        for sloop, dloop in zip(f.loops, nf.loops):
+        for sloop, dloop in zip(loops, nf.loops):
             for kind, sl, dl in loop_layers:
                 if kind == "uv":
                     dloop[dl].uv = sloop[sl].uv
