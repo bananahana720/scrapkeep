@@ -23,6 +23,10 @@ const exportRoot = path.join(root, "artifacts/local/core-loop-export");
 const iconSource = path.join(root, "scripts/appimage/scrapkeep.svg");
 const installScript = path.join(root, "scripts/appimage/install.sh");
 export const APP_ID = "scrapkeep";
+// Godot 4.7.2 sets the X11 WM_CLASS class (and the Wayland app id) from application/config/name in
+// sketches/core-loop/project.godot; StartupWMClass must equal it so a launcher groups the window
+// with its entry. Change both together.
+export const WM_CLASS = "Scrapkeep";
 export const EXECUTABLE = "core-loop.x86_64";
 const tarballName = /^scrapkeep-core-loop-([0-9a-f]{7,40}(?:-dirty)?)\.tar\.gz$/;
 const toolNames = ["appimagetool", "appimagetool-x86_64.AppImage", "appimagetool.AppImage"];
@@ -74,6 +78,8 @@ export function desktopEntry({ exec, icon = APP_ID }) {
       "Exec=" + exec,
       "Icon=" + icon,
       "Terminal=false",
+      "StartupNotify=true",
+      "StartupWMClass=" + WM_CLASS,
       "Categories=Game;ActionGame;",
       "Keywords=scrap;mech;harpoon;roguelite;",
       "Actions=sitting;",

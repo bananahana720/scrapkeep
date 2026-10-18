@@ -371,6 +371,11 @@ export function howToRun({ sha7 }) {
   );
 }
 
+// Printed last, so the export is not the end of the road: the AppImage wraps this tarball.
+export function nextStepLine() {
+  return "next: npm run sketch:appimage packs and installs the launcher; then open Scrapkeep from the app menu (or run ~/.local/share/scrapkeep/Scrapkeep.AppImage) and check its window groups under the one icon.";
+}
+
 export function packageName(sha7, dirty = false) {
   return "scrapkeep-core-loop-" + sha7 + (dirty ? "-dirty" : "");
 }
@@ -610,6 +615,7 @@ async function main() {
   console.log("sidecar stems: " + stemCount + " in " + path.join(outDir, "music_ace"));
   console.log("boot tail:\n" + bootText.trim().split("\n").slice(-6).join("\n"));
   if (proofLine) console.log(proofLine);
+  console.log(nextStepLine());
 }
 
 async function winProof(outDir) {
