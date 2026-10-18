@@ -22,6 +22,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 # SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted), recorded
 # 2026-10-11 on the untouched base d204cea (KB5). A change here moves an old map's scatter.
@@ -402,7 +403,9 @@ func _plain_slopes() -> void:
 				plain.append(row)
 				if kept.has(row["id"]):
 					problems.append("%s/%s is a plain slope kept out" % [map_id, row["id"]])
-			elif row["element"] != "ground":
+			# 2026-10-18 (w17 fix): a scatter-dressed row (recipe "scatter", #114's cinder_cone) is dressed by
+			# the scatter, so park_map.gd keeps it out of keep_out; it is neither plain nor built here.
+			elif row["element"] != "ground" and row["recipe"] != ParkRecipes.SCATTER_DRESSED:
 				built.append(row)
 				if not kept.has(row["id"]):
 					problems.append("%s/%s is built but not kept out" % [map_id, row["id"]])
