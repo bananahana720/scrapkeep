@@ -3,6 +3,7 @@ extends SceneTree
 const Holds := preload("res://src/combat/holds.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 
 # 2026-10-18 (w17 hook out): a harpoon bite on world geometry breaks any hold whose row lists
 # "hook", as a player break (reason "hook", the refund) with a SNAP_KICK along the line to the
@@ -63,14 +64,24 @@ func _initialize() -> void:
 	_check("enemy bite does not", holds.holding(), "holding %s" % [holds.held_kinds()])
 	holds.clear()
 
-	# Holds that do not list hook (netcaster, anchor crew) stay held.
-	for kind in ["air_net", "anchor_tether"]:
-		var row_breaks: Array = ["jump", "glide", "smash"] if kind == "air_net" else ["boost", "speed"]
-		holds.catch(src, kind, row_breaks)
+	# The real netcaster row and the real anchor crew row (roster_highdraft.gd) stay held, and
+	# a hook-listing row announces hold_broken(kind, "hook").
+	var broken: Array = []
+	rig["events"].hold_broken.connect(func(kind: String, method: String): broken.append([kind, method]))
+	var crew: Dictionary = RosterHighdraft.ROWS["anchor_crew"]
+	for row in [Roster.ROWS["netcaster"], crew]:
+		if row.is_empty():
+			_check("anchor_crew row found", false, "no anchor_crew row in roster_highdraft.gd")
+			continue
+		holds.catch(src, String(row["mechanic"]), row["breaks"])
 		player.kit.anchor_body = null
 		rig["events"].grapple_fired.emit(Vector3(0, 0, -10))
-		_check("no hook for " + kind, holds.holding(), "held %s" % [holds.held_kinds()])
+		_check("no hook for " + String(row["mechanic"]), holds.holding() and broken.is_empty(), "held %s, broken %s" % [holds.held_kinds(), broken])
 		holds.clear()
+	var trapper: Dictionary = Roster.ROWS["mag_trapper"]
+	holds.catch(src, String(trapper["mechanic"]), trapper["breaks"])
+	rig["events"].grapple_fired.emit(Vector3(0, 0, -10))
+	_check("hold_broken announces hook", broken == [["mag_pit", "hook"]], "broken %s" % [broken])
 
 	# Straight overhead has no planar line: falls back to the velocity direction.
 	player.accel = Vector3.ZERO

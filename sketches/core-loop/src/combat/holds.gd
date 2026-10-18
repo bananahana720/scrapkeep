@@ -19,7 +19,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # - Breaking free. A hold lists the player's own actions that end it. When one lands
 #   (a jump, a boost or any class movement burst, a smash, a glide, or for a tether
 #   enough momentum) the hold ends, the ball gets a forward kick and a movement-ability
-#   refund: escaping is a momentum moment, not only relief.
+#   refund: escaping is a momentum moment, not only relief. A harpoon bite on world geometry
+#   is the hook out, for a hold whose row lists "hook": it kicks along the line to the anchor.
 #
 # - The hold bound. A hold may bend the ball's path but never slow it or turn it faster
 #   than TURN_RATE: bound() strips the part of an acceleration that points against the
