@@ -298,6 +298,15 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 	return _shaders[key]
 
 
+# An emitter's starting heat, read from FlashGuard each time it fires so a flipped toggle takes
+# effect on the next burst. `kind` defaults to the look the emitter was built with (meta fx_look).
+static func set_heat(p: GeometryInstance3D, kind := "") -> void:
+	if kind == "":
+		kind = p.get_meta("fx_look", "")
+	if HEAT.has(kind):
+		p.set_instance_shader_parameter("heat", FlashGuard.whiten(HEAT[kind]))
+
+
 # The material an emitter draws with, whatever its mesh type.
 static func material_of(p: GPUParticles3D) -> Material:
 	return p.draw_pass_1.surface_get_material(0)
@@ -430,6 +439,7 @@ static func build(id: String) -> GPUParticles3D:
 	var p := GPUParticles3D.new()
 	p.process_material = pm
 	p.draw_pass_1 = mesh
+	p.set_meta("fx_look", kind)
 	p.amount = int(s["max"])
 	p.lifetime = s["life"]
 	p.one_shot = s["attach"] == "world"
@@ -454,7 +464,6 @@ static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Ve
 	else:
 		p.global_transform = Transform3D(Basis.IDENTITY, at)
 	p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else colour(id, kind))
-	if HEAT.has(look(id)):
-		p.set_instance_shader_parameter("heat", FlashGuard.whiten(HEAT[look(id)]))
+	set_heat(p, look(id))
 	p.restart()
 	p.emitting = true

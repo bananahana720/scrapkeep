@@ -811,7 +811,7 @@ func _build_bursts() -> void:
 			else:
 				p.angular_velocity_min = -540.0
 				p.angular_velocity_max = 540.0
-			p.set_instance_shader_parameter("heat", FlashGuard.whiten(FxLibrary.HEAT[look]))
+			p.set_meta("fx_look", look)
 			p.mesh = mesh
 			p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			p.name = "Burst_%s_%d" % [kind, i]
@@ -833,7 +833,7 @@ func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
 		p.amount = amount
 	p.global_position = at
 	p.color = color
-	p.set_instance_shader_parameter("heat", FlashGuard.whiten(FxLibrary.HEAT[BURST_LOOKS[kind]]))
+	FxLibrary.set_heat(p)
 	p.restart()
 	p.emitting = true
 	spawned["burst_" + kind] = spawned.get("burst_" + kind, 0) + 1
