@@ -68,6 +68,9 @@ var bot_driven := false
 # The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
 # --table= from the launch args, and no argument is LAUNCH_TABLE (the default table in test_mode).
 var table := ""
+# Stage 1's park ground builds on worker threads behind the menu (world.gd MENU-READY); on for a
+# played game, and for a test that sets it before the game enters the tree.
+var ground_behind_menu := false
 # The dev keys (F1 tuning panel, F3 interpolation, F4 tuning dump, F6 boss tempo) work only when
 # the game was launched with --dev; a test sets it directly. Modules read ctx.dev.
 var dev := false:
@@ -123,7 +126,9 @@ var last_device := "kbm"
 
 
 func _ready() -> void:
+	_boot("ready")
 	dev = dev or _launch_flag("--dev")
+	ground_behind_menu = ground_behind_menu or not test_mode
 	_register_actions()
 	events = GameEvents.new()
 	events.name = "GameEvents"
@@ -187,7 +192,9 @@ func _ready() -> void:
 	add_child(progress)
 	ctx.progress = progress
 
+	_boot("modules")
 	world = _module(World)
+	_boot("world")
 	for row in ctx.stages.DEFS:
 		if row["map"] == "spillway":
 			preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(row["stage"]))
@@ -196,12 +203,16 @@ func _ready() -> void:
 	preload("res://src/presentation/highdraft_scenery.gd").hook(ctx)
 	preload("res://src/presentation/world_look.gd").hook(ctx)
 	WorldFx.hook(ctx)
+	_boot("world_hooks")
 	combat = _module(Combat)
+	_boot("combat")
 	build = _module(Build)
 	# Wave 4's boss module sets up after build and before presentation when it exists.
 	if ResourceLoader.exists(BOSS_PATH):
 		boss = _module(load(BOSS_PATH))
+	_boot("build_boss")
 	presentation = _module(Presentation)
+	_boot("presentation")
 	apply_saved_display()
 	assert(ctx.terrain != null, "world.setup(ctx) must set ctx.terrain")
 	assert(ctx.spawner != null, "combat.setup(ctx) must set ctx.spawner")
@@ -218,6 +229,7 @@ func _ready() -> void:
 		flow.store = RunStore.new(run_store_path if run_store_path != "" else storage_dir.path_join("run.json"))
 	events.flow_changed.connect(_on_flow_changed)
 
+	_boot("flow")
 	hud = Hud.new()
 	hud.name = "Hud"
 	add_child(hud)
@@ -247,11 +259,32 @@ func _ready() -> void:
 		keyboard.tuning = tuning
 		keyboard.enabled = false
 		player.source = keyboard
-	# The first stage's ground is where the title parks the ball.
+	# The first stage's ground is where the title parks the ball, once it is built (world.gd).
+	if ctx.terrain.is_ready(1):
+		_park_on_title_ground(1)
+	else:
+		camera.snap(ctx.terrain.entry_heading(1))
+		ctx.terrain.stage_built.connect(_park_on_title_ground)
+	_boot("ui")
+	flow.show_title()
+	_boot("title")
+	if _launch_flag("--boot-profile"):
+		for frame in 5:
+			await get_tree().process_frame
+			_boot("frame %d" % (frame + 1))
+
+
+func _park_on_title_ground(stage: int) -> void:
+	if stage != 1:
+		return
+	if ctx.terrain.stage_built.is_connected(_park_on_title_ground):
+		ctx.terrain.stage_built.disconnect(_park_on_title_ground)
+	# A run started before the ground was built has placed the ball itself.
+	if flow.in_play():
+		return
 	player.reset_to(ctx.terrain.spawn_point(1))
 	player.body().global_position = ctx.terrain.spawn_point(1)
 	camera.snap(ctx.terrain.entry_heading(1))
-	flow.show_title()
 
 
 # Moss's jukebox: a tune heard in play long enough is filed in the profile and announced on
@@ -751,6 +784,13 @@ func _dev_key(key: int) -> bool:
 			_capture_mouse(not panel.visible and flow.in_play())
 			return true
 	return false
+
+
+# --boot-profile prints the main-thread clock at each step of setup and over the first frames
+# after the menu (MENU-READY), so a cold launch on real hardware shows where its time goes.
+func _boot(step: String) -> void:
+	if _launch_flag("--boot-profile"):
+		print("SCRAPKEEP_BOOT %s ms=%d" % [step, Time.get_ticks_msec()])
 
 
 static func _launch_flag(flag: String) -> bool:

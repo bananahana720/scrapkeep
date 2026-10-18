@@ -97,7 +97,9 @@ func setup(ctx_ref) -> void:
 	terrain = Terrain.new(ctx.stages)
 	# A park row's ride sensor publishes on the game bus (KB9; park_recipes.gd _sensor).
 	terrain.publish = ctx.events.world_fact.emit
-	terrain.build(ctx.root)
+	# MENU-READY (measured 2026-10-18, exported build, cloud headless): building stage 1's park
+	# ground in setup held the menu for about 2 of its 6 s. A played game builds it behind the menu.
+	terrain.build(ctx.root, ctx.root.get("ground_behind_menu") == true)
 	ctx.terrain = terrain
 	_wire_terrain()
 	flood = Flood.new()
