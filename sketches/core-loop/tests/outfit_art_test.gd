@@ -20,7 +20,7 @@ const DOME := 0.98
 # (glTF import renames upper_arm.L to upper_arm_L) and leaves an outfit clip's tracks
 # pointing at the GLB's own tree. The port note's patch sets this true; until then the
 # garters and the hood's motion are reported, not required.
-const MOUNT_PATCHED := false
+const MOUNT_PATCHED := true
 
 var _t := T.new("outfit_art_test")
 
