@@ -60,24 +60,66 @@ func save(page: Dictionary) -> String:
 	return path
 
 
-# Every readable page, newest first (ended_unix, then run_id), after pruning the shelf.
-func load_all() -> Array:
-	prune()
-	return _entries().map(func(e): return _read_page(e["id"]))
+# Every readable page, newest first (ended_unix, then run_id), after pruning the shelf. With
+# with_shots false no PNG is decoded: each panel's `shot` is null and `shot_file` names the
+# picture, so a caller that only reads the words (the camp's dry line) stays cheap. Each JSON
+# is parsed once for the prune and the read together.
+func load_all(with_shots := true) -> Array:
+	var entries := _entries()
+	_prune_entries(entries)
+	var out: Array = []
+	for i in mini(entries.size(), MAX_PAGES):
+		out.append(_page_from(entries[i]["doc"], with_shots))
+	return out
+
+
+# The pages without their pictures: JSON only.
+func summaries() -> Array:
+	return load_all(false)
+
+
+# Fills each panel's `shot` from its `shot_file` (a page from summaries()). Idempotent.
+func load_shots(page: Dictionary) -> Dictionary:
+	var panels = page.get("panels", [])
+	if not panels is Array:
+		return page
+	for panel in panels:
+		if panel is Dictionary and panel.get("shot") == null:
+			panel["shot"] = _load_shot(String(panel.get("shot_file", "")), String(page.get("run_id", "")))
+	return page
+
+
+# A page's outcome, shared by the camp lines and the comic page: the run-end thread's
+# "outcome" ("won" or not), else the older won flag.
+static func is_won(page: Dictionary) -> bool:
+	if page.has("outcome"):
+		return String(page["outcome"]) == "won"
+	return bool(page.get("won", false))
 
 
 # Keeps the newest MAX_PAGES; deletes the rest with their PNGs. Returns how many went.
 func prune() -> int:
-	var entries := _entries()
+	return _prune_entries(_entries())
+
+
+func _prune_entries(entries: Array) -> int:
 	var gone := 0
 	for i in range(MAX_PAGES, entries.size()):
 		var id: String = entries[i]["id"]
 		_remove(dir.path_join(id + ".json"))
 		for file in DirAccess.get_files_at(dir):
-			if file.begins_with(id + "_") and file.ends_with(".png"):
+			if _is_shot_of(file, id):
 				_remove(dir.path_join(file))
 		gone += 1
 	return gone
+
+
+# Exactly <id>_<digits>.png, so id "a" never claims the pictures of id "a_b".
+static func _is_shot_of(file: String, id: String) -> bool:
+	if not (file.begins_with(id + "_") and file.ends_with(".png")):
+		return false
+	var middle := file.substr(id.length() + 1, file.length() - id.length() - 5)
+	return middle.is_valid_int() and not middle.begins_with("-") and not middle.begins_with("+")
 
 
 static func safe_id(run_id: String) -> String:
@@ -87,7 +129,7 @@ static func safe_id(run_id: String) -> String:
 	return out
 
 
-# [{id, ended}] for each JSON that parses as a page, newest first. Unreadable files stay.
+# [{id, ended, doc}] for each JSON that parses as a page, newest first. Unreadable files stay.
 func _entries() -> Array:
 	var out: Array = []
 	if not DirAccess.dir_exists_absolute(dir):
@@ -98,26 +140,39 @@ func _entries() -> Array:
 		var doc = SafeStore.parse(FileAccess.get_file_as_string(dir.path_join(file)), TYPE_DICTIONARY)
 		if doc == null:
 			continue
-		out.append({"id": file.get_basename(), "ended": float(doc.get("ended_unix", 0.0)) if (doc.get("ended_unix") is float or doc.get("ended_unix") is int) else 0.0})
+		out.append({"id": file.get_basename(), "doc": doc, "ended": float(doc.get("ended_unix", 0.0)) if (doc.get("ended_unix") is float or doc.get("ended_unix") is int) else 0.0})
 	out.sort_custom(func(a, b): return a["ended"] > b["ended"] or (a["ended"] == b["ended"] and a["id"] > b["id"]))
 	return out
 
 
-func _read_page(id: String) -> Dictionary:
-	var doc: Dictionary = SafeStore.parse(FileAccess.get_file_as_string(dir.path_join(id + ".json")), TYPE_DICTIONARY)
+func _page_from(doc: Dictionary, with_shots: bool) -> Dictionary:
+	doc = doc.duplicate(true)
 	var panels = doc.get("panels", [])
 	if not panels is Array:
 		panels = []
+	var run_id := String(doc.get("run_id", ""))
 	for panel in panels:
 		if not panel is Dictionary:
 			continue
 		var name = panel.get("shot", "")
-		var image: Image = null
-		if name is String and name != "" and FileAccess.file_exists(dir.path_join(name)):
-			image = Image.load_from_file(dir.path_join(name))
-		panel["shot"] = image
+		panel["shot_file"] = name if name is String else ""
+		panel["shot"] = _load_shot(panel["shot_file"], run_id) if with_shots else null
 	doc["panels"] = panels
 	return doc
+
+
+# The picture a panel names, or null. The name is a basename that must start with the page's
+# safe id, so a hand-edited page cannot point at another file.
+func _load_shot(name: String, run_id: String) -> Image:
+	if name.is_empty() or name != name.get_file():
+		return null
+	var id := safe_id(run_id)
+	if id.is_empty() or not name.begins_with(id + "_") or not name.ends_with(".png"):
+		return null
+	var path := dir.path_join(name)
+	if not FileAccess.file_exists(path):
+		return null
+	return Image.load_from_file(path)
 
 
 func _write_png(image: Image, path: String) -> Error:

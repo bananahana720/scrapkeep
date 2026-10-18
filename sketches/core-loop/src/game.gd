@@ -236,6 +236,8 @@ func _ready() -> void:
 	add_child(camp_hub)
 	camp_hub.setup(self)
 	camp_hub.camp_store = ctx.profile
+	# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
+	preload("res://src/ui/camp_enemy_picker.gd").watch(self)
 	add_child(preload("res://src/ui/workshop.gd").new())
 	add_child(preload("res://src/ui/pause_menu.gd").new())
 
@@ -648,6 +650,8 @@ func pad_screen_key(event: InputEvent) -> int:
 			# In the camp walk A presses the station the ball is in, else it is the jump.
 			if screens != null and screens.walk_live():
 				return camp_hub.confirm_key()
+			if screens != null and screens.walking():
+				return KEY_NONE
 			if screens != null and screens.overlay_open():
 				return KEY_NONE
 			if get_viewport().gui_get_focus_owner() != null:
@@ -765,6 +769,10 @@ func _screen_key(key: int) -> bool:
 			# The camp walk: its keys act only inside a station's zone; the rest roll the ball.
 			if screens.walk_live():
 				return screens.walk_key(key)
+			# A page open over the walk owns the keys (Space and Enter press its focused button through the UI);
+			# no title hotkey may leak through it.
+			if screens.walking():
+				return false
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()
 				return true

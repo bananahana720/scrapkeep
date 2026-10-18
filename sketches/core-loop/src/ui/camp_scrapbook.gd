@@ -29,6 +29,8 @@ const PAGE_H := 560.0
 
 var pages: Array = []
 var index := 0
+# The shelf the pages came from; the pictures of a page load from it only when that page is shown.
+var store
 
 var _view: Control
 var _count: Label
@@ -105,6 +107,8 @@ func _rebuild() -> void:
 	if pages.is_empty():
 		_count.text = ""
 		return
+	if store != null:
+		store.load_shots(pages[index])
 	_view = _page_view(pages[index])
 	_holder.add_child(_view)
 	_count.text = "Page %d of %d" % [index + 1, pages.size()]
@@ -147,11 +151,12 @@ static func attach(hub) -> void:
 	var store := ScrapbookStore.new(dir)
 	var book: Control = (load("res://src/ui/camp_scrapbook.gd") as GDScript).new()
 	book.name = "CampScrapbook"
+	book.store = store
 	book.visible = false
 	var pit: Node3D = hub.piece(FIRE_PIT)
 	var at: Vector3 = (pit.global_position if pit != null else Vector3.ZERO) + Vector3(0.0, 1.0, 0.0)
 	var open := func():
-		book.show_pages(store.load_all())
+		book.show_pages(store.summaries())
 		game.screens.open_walk_page(book)
 	hub.add_station(STATION_ID, at, STATION_LABEL, STATION_KEY, STATION_RADIUS, open)
 	var layer := CanvasLayer.new()
@@ -164,7 +169,7 @@ static func attach(hub) -> void:
 		if profile != null and profile.has_method("stat"):
 			for key in ["stages_cleared", "deaths", "kills"]:
 				stats[key] = profile.stat(key)
-		show_line(layer, CampLines.line_for(store.load_all(), stats)))
+		show_line(layer, CampLines.line_for(store.summaries(), stats)))
 
 
 # A small caption card at the bottom left that fades out after LINE_SECONDS. It ignores the

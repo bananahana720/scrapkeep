@@ -10,6 +10,8 @@ extends RefCounted
 # deaths, kills): a ledger line when there are any, the first-visit line when there are
 # none. Melodrama stays in the scrapbook's captions; these are the log.
 
+const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
+
 const STREAK_LOSSES := 3
 const STREAK_WINS := 2
 
@@ -106,9 +108,7 @@ static func line_for(pages: Array, stats := {}) -> String:
 
 # A page's outcome: the run-end thread's "outcome" field, else the older won flag.
 static func is_won(page: Dictionary) -> bool:
-	if page.has("outcome"):
-		return String(page["outcome"]) == "won"
-	return bool(page.get("won", false))
+	return ScrapbookStore.is_won(page)
 
 
 # How many pages from the newest share its outcome (won or not).

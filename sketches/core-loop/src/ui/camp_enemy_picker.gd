@@ -121,8 +121,9 @@ static func mark_met(saved, kind: String) -> bool:
 # Marks every enemy a run spawns as met. The sandbox spawns without the bus fact, so a
 # called enemy never marks itself.
 static func watch(game) -> void:
-	if game == null or game.events == null:
+	if game == null or game.events == null or game.has_meta("met_watch"):
 		return
+	game.set_meta("met_watch", true)
 	game.events.enemy_spawned.connect(func(enemy: Node3D, kind: String):
 		if not enemy.has_meta("sandbox_slot"):
 			mark_met(game.ctx.profile, kind))

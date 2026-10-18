@@ -17,6 +17,7 @@ extends Control
 
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
 const ASPECT := 0.75
 const MAX_PANELS := 6
 const INK_COLOR := Color("242a28")
@@ -124,7 +125,7 @@ static func layout(rows: Array, area: Rect2, gutter: float) -> Array:
 
 # The melodramatic card for a lost run, "" for a win. Same run, same card.
 static func melodrama(p: Dictionary) -> String:
-	if bool(p.get("won", false)):
+	if ScrapbookStore.is_won(p):
 		return ""
 	return String(LOSS_CARDS[posmod(String(p.get("run_id", "")).hash(), LOSS_CARDS.size())])
 
@@ -143,7 +144,7 @@ static func subtitle_text(p: Dictionary) -> String:
 		parts.append(String(p["pilot_name"]).to_upper())
 	if String(p.get("world_name", "")) != "":
 		parts.append(String(p["world_name"]).to_upper())
-	parts.append("RETURN ENTERED" if bool(p.get("won", false)) else "HULL NOT RETURNED")
+	parts.append("RETURN ENTERED" if ScrapbookStore.is_won(p) else "HULL NOT RETURNED")
 	return "  |  ".join(parts)
 
 

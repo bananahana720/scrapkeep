@@ -1007,7 +1007,10 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if _camp.visible:
-		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+		# Pad B boosts in the walk; Start (the pause button elsewhere) leaves the camp. Esc leaves on keys.
+		var leave := event is InputEventJoypadButton and event.pressed and (event.button_index == JOY_BUTTON_START
+			or (event.button_index == JOY_BUTTON_B and not _walking))
+		if leave:
 			toggle_camp()
 			get_viewport().set_input_as_handled()
 		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
