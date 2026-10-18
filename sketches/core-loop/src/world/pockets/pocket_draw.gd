@@ -5,6 +5,7 @@ const Graph := preload("res://src/world/park/park_graph.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
 const Placement := preload("res://src/world/park/park_placement.gd")
+const Modifier := preload("res://src/world/events/stage_modifier.gd")
 const CREDITS := 150
 const CHANCE := 0.25
 
@@ -154,11 +155,12 @@ static func _named_common(entry: Dictionary) -> bool:
 	var pay := _owned_pay(entry)
 	return not Placement._within(Placement._pay(pay).rarities, Placement.PAY_FAR)
 
-static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = []) -> Dictionary:
+# modifier is the stage's SI3 row (stage_modifier.gd), {} for none; {} draws exactly as before.
+static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = [], modifier := {}) -> Dictionary:
 	var result := {"sites": [], "metrics": {"initial_credits": CREDITS, "remaining_credits": CREDITS, "failed_placements": 0, "refunded_credits": 0, "chance_opportunities": 0, "chance_hits": 0, "anchors": prepared.anchors.size()}}
 	if stage < 1 or stage > Park.COUNT or map.park.map != Park.of(stage).map:
 		return result
-	var slots := maxi(0, mini(8, stage + 2) - map.activity_sites.size())
+	var slots := Modifier.slots(modifier, stage, map.activity_sites.size())
 	if slots == 0:
 		return result
 	var pool := entries(map)
@@ -182,9 +184,14 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 		available -= cost(chosen)
 		pool.erase(chosen)
 	picked.sort_custom(func(a, b): return cost(a) > cost(b) or (cost(a) == cost(b) and a.id < b.id))
+	# Far Haul tries every one of the farthest few anchors, farthest first.
+	var far_haul: bool = anchors.is_empty() and modifier.get("far", false)
+	var chance := 1.0 if far_haul else CHANCE
 	var candidates: Array = anchors.duplicate() if not anchors.is_empty() else prepared.anchors.duplicate()
+	if far_haul:
+		candidates = Modifier.far_anchors(prepared)
 	# Alternate near-first and far-first traversals on the private stage stream.
-	if anchors.is_empty() and rng.randi_range(0, 1) == 1:
+	elif anchors.is_empty() and rng.randi_range(0, 1) == 1:
 		candidates.reverse()
 	var pending := false
 	for spot in candidates:
@@ -192,7 +199,7 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 			break
 		if not pending:
 			result.metrics.chance_opportunities += 1
-			if rng.randf() >= CHANCE:
+			if rng.randf() >= chance:
 				continue
 			result.metrics.chance_hits += 1
 			pending = true
@@ -244,7 +251,7 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 	result.sites.sort_custom(func(a, b): return cost(a.interior) > cost(b.interior) or (cost(a.interior) == cost(b.interior) and a.interior.id < b.interior.id))
 	return result
 
-static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}) -> Array:
+static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}, modifier := {}) -> Array:
 	if graph == null or map == null or map.park.is_empty() or run.stage < 1 or run.stage > Park.COUNT or map.park.map != Park.of(run.stage).map:
 		return []
 	var key := str(run.stage)
@@ -255,7 +262,7 @@ static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared
 	var layout: Dictionary = prepared
 	if layout.is_empty():
 		layout = prepare(graph, map) if run.stage > 1 else {"anchors": [], "fits": {}}
-	var result := draw(layout, map, run.stage, rng, trade)
+	var result := draw(layout, map, run.stage, rng, trade, [], modifier)
 	run.pocket_draw_cache[key] = {"sites": result.sites.duplicate(true)}
 	return result.sites
 
@@ -295,7 +302,7 @@ static func validate_doc(doc, entrance: int) -> String:
 		if not key is String or not key.is_valid_int() or key != str(int(key)) or int(key) < 1 or int(key) > mini(entrance, Park.COUNT):
 			return "invalid pocket draw stage"
 		var row = doc[key]
-		if not row is Dictionary or not row.get("sites") is Array or row.sites.size() > maxi(0, mini(8, int(key) + 2) - 3):
+		if not row is Dictionary or not row.get("sites") is Array or row.sites.size() > Modifier.max_slots(int(key), 3):
 			return "invalid pocket draw sites"
 		var seen := {}
 		var spent := 0
