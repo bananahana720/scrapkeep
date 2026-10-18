@@ -57,7 +57,7 @@ func _spawn():
 # Drive one throw by hand: commit, hold the ball in the ring, set the line state, and step until
 # the unit is back to roaming. The line flags are set again each frame so the frozen player's tick
 # cannot clear them before the landing.
-func _throw(unit, hooked: bool, gliding: bool, interrupt := false) -> void:
+func _throw(unit, hooked: bool, gliding: bool, interrupt := false, height := 0.0) -> void:
 	unit._rest = 99.0
 	unit.phase = unit.Phase.ROAM
 	unit._warn(unit._flat_to_ball())
@@ -65,7 +65,7 @@ func _throw(unit, hooked: bool, gliding: bool, interrupt := false) -> void:
 		await physics_frame
 		unit.knock(Vector3.RIGHT, 20.0)
 	for frame in 300:
-		game.player.reset_to(ball)
+		game.player.reset_to(ball + Vector3.UP * height)
 		game.player.set_velocity_now(Vector3.ZERO)
 		game.player.kit.hooked = hooked
 		game.player.kit.gliding = gliding
@@ -98,7 +98,13 @@ func _run() -> void:
 	facts.clear()
 	kit.line_end = ""
 
+	# A cut costs you only over a gap (design-v3/WORLD-ROSTERS.md): at ground height it grazes.
 	await _throw(unit, true, false)
+	t.check("over ground it only grazes", unit.throws == 1 and unit.cuts == 0 and unit.grazed == 1 and kit.hooked,
+		"throws %d cuts %d grazed %d hooked %s" % [unit.throws, unit.cuts, unit.grazed, kit.hooked])
+
+	unit.throws = 0
+	await _throw(unit, true, false, false, unit.GAP_HEIGHT + 2.0)
 	t.check("landing cuts once", unit.throws == 1 and unit.cuts == 1 and not kit.hooked and kit.line_end == "line_cutter",
 		"throws %d cuts %d hooked %s line_end '%s'" % [unit.throws, unit.cuts, kit.hooked, kit.line_end])
 

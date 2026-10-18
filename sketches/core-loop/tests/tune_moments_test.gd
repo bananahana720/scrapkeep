@@ -6,6 +6,8 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const RunClock := preload("res://src/build/run_clock.gd")
 const T := preload("res://tests/support/t.gd")
+const Profile := preload("res://src/core/profile.gd")
+const TuneRows := preload("res://src/core/tune_rows.gd")
 
 # The place-and-moment tunes (tune_moments.gd). Every tunes.json row is wired with a case here
 # or listed unwired with the hook it needs. The decisions are pure; the glue is read from what
@@ -22,6 +24,7 @@ class FakeCtx:
 	extends RefCounted
 	var events: Node
 	var build
+	var profile
 
 class Rig:
 	extends Audio
@@ -135,6 +138,9 @@ func _rig(avail: Callable) -> Rig:
 	var events := GameEvents.new()
 	var ctx := FakeCtx.new()
 	ctx.events = events
+	# A won profile: Moss's B-side is a first-win secret (secrets.gd, TuneRows.shut).
+	ctx.profile = Profile.new()
+	ctx.profile.earn("first_win", 0.0)
 	var audio := Rig.new()
 	audio.setup(ctx)
 	audio.bake_now()
@@ -196,6 +202,21 @@ func _process(_delta: float) -> bool:
 	_t.eq("the jukebox finds After Hours", _last(a), "secret-after-hours")
 	a.jukebox_flipped()
 	_t.eq("a second press goes back to the counter", _last(a), "moss-shop")
+	# Before the first win the B-side is shut where secrets.gd exists: the flip keeps the counter.
+	var won = a.ctx.profile
+	a.ctx.profile = Profile.new()
+	a.jukebox_flipped()
+	if ResourceLoader.exists(TuneRows.SECRETS):
+		_t.eq("before the first win the flip keeps the counter", _last(a), "moss-shop")
+	else:
+		_t.eq("with no secrets.gd the flip finds After Hours for anyone", _last(a), "secret-after-hours")
+		a.jukebox_flipped()
+	a.ctx.profile = null
+	a.jukebox_flipped()
+	_t.eq("a context with no profile does not crash the flip", _last(a), "secret-after-hours" if not ResourceLoader.exists(TuneRows.SECRETS) else "moss-shop")
+	if not ResourceLoader.exists(TuneRows.SECRETS):
+		a.jukebox_flipped()
+	a.ctx.profile = won
 	a.end_moment("shop", "bay")
 	_t.eq("leaving the bay returns", _last(a), "")
 
@@ -231,7 +252,7 @@ func _process(_delta: float) -> bool:
 	_t.check("a champion on a chiptune run plays the chiptune", not a.named.is_empty() and a.named[-1][0] == "secret-chip-keepers", str(a.named))
 	elite.free()
 	a._remixes = {}
-	_t.eq("an unrolled run opens on phase 1", a._boss_entry("brindle"), "brindle-p1-requisition")
+	_t.eq("an unrolled run opens on the picked theme", a._boss_entry("brindle"), "boss-brindle")
 
 	var p := _rig(func(_id): return true)
 	p.ctx.build = FakeBuild.new()
@@ -256,7 +277,7 @@ func _process(_delta: float) -> bool:
 	mb.free()
 	_t.check("missing packs never change the music", none.staged.is_empty() and none.named.is_empty(), str(none.staged))
 	none._remixes = {"3-1": "secret-highdraft-rain", "brindle": "secret-brindle-swing"}
-	_t.check("a missing remix keeps the parent", none.level_tune(zone31) == "" and none._boss_entry("brindle") == "brindle-p1-requisition")
+	_t.check("a missing remix keeps the parent", none.level_tune(zone31) == "" and none._boss_entry("brindle") == "boss-brindle")
 
 	for node in _nodes:
 		if is_instance_valid(node):

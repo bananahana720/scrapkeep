@@ -15,6 +15,8 @@ const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
+const JukeboxPage := preload("res://src/ui/jukebox_page.gd")
+const RadioPage := preload("res://src/ui/radio_page.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -46,13 +48,24 @@ const SIDE := 60.0
 const ACTION_GAP := 18
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
-const TITLE := "SCRAPKEEP: FIRST RUN"
+const TITLE := "SCRAPKEEP"
+# The title's name lands like an ink stamp (TONE-BIBLE UI motion): it starts big and tilted and
+# snaps down with a short overshoot. It rests straight, because its container's layout resets a
+# child's scale and rotation. Reduced motion skips the slam.
+const STAMP_FROM := 1.35
+const STAMP_TIME := 0.18
+const STAMP_TILT := -6.0
 # A win over the final world's boss opens the summary on the ending page (Worlds.ENDING). For
 # its first ENDING_HOLD seconds no key closes it, so a press meant for the fight cannot skip
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
 const ENDING_HOLD := 1.0
 const PROLOGUE_TITLE := "FIRST SHIFT"
 # Start is the one filled button on the title: the primary action reads first and biggest.
+# The run-end comic page (run_moments.gd) on the summary, drawn by the camp's comic_page.gd
+# when the build has it: 3:4, at most this share of the screen's height.
+const COMIC_PAGE_PATH := "res://src/ui/comic_page.gd"
+const COMIC_HEIGHT := 0.5
+const COMIC_MAX_HEIGHT := 540.0
 const PRIMARY_FONT := 26
 const PRIMARY_HEIGHT := 60.0
 
@@ -62,9 +75,12 @@ var _victory_boss := {}
 var _veil: ColorRect
 var _content: VBoxContainer
 var _title: Label
+# A beaten boss row's "stamp" (Worlds.BOSSES), inked under the victory title: the Mind's HIRED.
+var _mark: Label
 var _body: Label
 var _stats: HBoxContainer
 var _choices: HBoxContainer
+var _comic_row: HBoxContainer
 var _actions: HFlowContainer
 # Under the title's buttons: why a saved run was refused, so New run is the plain next step.
 var _refusal: Label
@@ -76,6 +92,15 @@ var _help
 var _achievements
 var _settings
 var _camp
+var _jukebox
+var _radio
+# The camp walk (camp_hub.gd): K on the title puts the ball in the 3D camp. The camp page shrinks to a key-hint strip
+# and each station's page opens over the walk and gives it back. _walk_page is a page a feature opened through
+# open_walk_page(), with the call that runs when it closes.
+var _walking := false
+var _walk_page: Control
+var _walk_on_close := Callable()
+var _companion_hooked := false
 var _ending: VBoxContainer
 var _ending_title: Label
 var _ending_body: Label
@@ -83,6 +108,7 @@ var _ending_left := 0.0
 var ending_sequence
 var _guard := 0.0
 var _tween: Tween
+var _stamp_tween: Tween
 var _state := ""
 # The prologue (PrologueRows) plays on the first pilot select of a profile. A bot-driven game
 # (the headless tests) skips it unless it opts in, so its Start lands on the cards as before.
@@ -108,6 +134,10 @@ func setup(game_ref) -> void:
 	add_child(_content)
 	_title = _label(64)
 	_content.add_child(_title)
+	_mark = _label(44)
+	_mark.add_theme_color_override("font_color", Palette.AMBER)
+	_mark.visible = false
+	_content.add_child(_mark)
 	_body = _label(22)
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.custom_minimum_size = Vector2(1000.0, 0.0)
@@ -115,6 +145,8 @@ func setup(game_ref) -> void:
 	_content.add_child(_body)
 	_stats = _row(30)
 	_content.add_child(_stats)
+	_comic_row = _row(0)
+	_content.add_child(_comic_row)
 	_choices = _row(CARD_GAP)
 	_content.add_child(_choices)
 	_actions = HFlowContainer.new()
@@ -142,7 +174,8 @@ func setup(game_ref) -> void:
 	_content.add_child(_help)
 	_achievements = AchievementsPage.new()
 	_achievements.visible = false
-	_achievements.back.pressed.connect(_press.bind("key_a"))
+	# Back closes the page directly: over the camp walk the A hotkey is the trophy wall's, not the page's.
+	_achievements.back.pressed.connect(toggle_achievements)
 	_content.add_child(_achievements)
 	_settings = SettingsPages.new()
 	_settings.visible = false
@@ -160,8 +193,28 @@ func setup(game_ref) -> void:
 	_camp.button_for("achievements").pressed.connect(_press.bind("key_a"))
 	_camp.button_for("settings").pressed.connect(_press.bind("key_s"))
 	_camp.back.pressed.connect(_press.bind("key_k"))
-	_camp.companion_button().pressed.connect(_camp_companion)
+	_camp.companion_button().pressed.connect(walk_companion)
+	_camp.button_for("jukebox").pressed.connect(_press.bind("key_j"))
 	_content.add_child(_camp)
+	_camp.customize.back_requested.connect(_sync_walk)
+	_jukebox = JukeboxPage.new()
+	_jukebox.visible = false
+	_jukebox.sleeve_chosen.connect(_spin_toggle)
+	_jukebox.play_button.pressed.connect(_press.bind("key_space"))
+	for i in 3:
+		_jukebox.detent_button(i).pressed.connect(_press.bind("key_%d" % (i + 1)))
+	_jukebox.back.pressed.connect(_press.bind("key_j"))
+	_content.add_child(_jukebox)
+	_camp.button_for("radio").pressed.connect(_press.bind("key_r"))
+	_radio = RadioPage.new()
+	_radio.visible = false
+	_radio.track_chosen.connect(_radio_track)
+	_radio.tape_chosen.connect(func(i: int): radio_key(KEY_1 + i))
+	_radio.new_button.pressed.connect(_press.bind("key_n"))
+	_radio.shuffle_button.pressed.connect(_press.bind("key_x"))
+	_radio.tune_button.pressed.connect(_press.bind("key_t"))
+	_radio.back.pressed.connect(_press.bind("key_r"))
+	_content.add_child(_radio)
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
 	_ending.add_theme_constant_override("separation", 26)
@@ -177,6 +230,8 @@ func setup(game_ref) -> void:
 	_content.add_child(_ending)
 	game.events.flow_changed.connect(_on_flow_changed)
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
+	if game.run_moments != null:
+		game.run_moments.page_ready.connect(_show_comic_page)
 
 
 func _label(font_size: int) -> Label:
@@ -197,6 +252,8 @@ func _row(separation: int) -> HBoxContainer:
 
 
 func _on_flow_changed(state: String) -> void:
+	if _walking:
+		_stop_walk()
 	if is_instance_valid(ending_sequence):
 		ending_sequence.cancel()
 		ending_sequence.queue_free()
@@ -208,6 +265,8 @@ func _on_flow_changed(state: String) -> void:
 	_achievements.visible = false
 	_settings.visible = false
 	_camp.visible = false
+	_jukebox.visible = false
+	_radio.visible = false
 	_ending.visible = false
 	_ending_left = 0.0
 	_prologue_line = -1
@@ -215,11 +274,13 @@ func _on_flow_changed(state: String) -> void:
 	_breath_row.visible = false
 	_refusal.text = ""
 	_title.visible = true
+	_mark.visible = false
+	_unstamp()
 	_stats.visible = true
 	_choices.visible = true
 	_actions.visible = true
 	_fit_actions()
-	for row in [_stats, _choices, _actions]:
+	for row in [_stats, _comic_row, _choices, _actions]:
 		for child in row.get_children():
 			row.remove_child(child)
 			child.queue_free()
@@ -232,14 +293,20 @@ func _on_flow_changed(state: String) -> void:
 			_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 			if game.flow.continue_ready:
 				_action("continue", "key_c", "Continue")
+			# The main menu (decisions.tsv 2026-10-16 alpha-scope): Play to pilot select, then
+			# Camp, Settings, Help and Achievements, and Quit last, on the Esc the title already
+			# quits on.
 			var saved: bool = game.flow.continue_ready or game.flow.saved_run_cause != ""
-			_action("start", "key_space", "New run" if saved else "Start")
+			_action("start", "key_space", "New run" if saved else "Play")
+			_action("camp", "key_k", "Camp")
+			_action("settings", "key_s", "Settings")
 			_action("help", "key_h", "Help")
 			_action("achievements", "key_a", "Achievements")
-			_action("settings", "key_s", "Settings")
 			if game.ctx.profile != null and not game.ctx.profile.companion().is_empty():
 				_companion_action()
-			_action("camp", "key_k", "Camp")
+			_action("quit", "key_esc", "Quit")
+			_stamp()
+			_announce_ready()
 			if game.flow.saved_run_cause != "":
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()
@@ -277,6 +344,10 @@ func _on_flow_changed(state: String) -> void:
 			var boss := _beaten_boss()
 			_victory_boss = boss
 			_show(String(boss.get("title", "BOSS ROUTED")), EventKinds.color("boss_defeated"), String(boss.get("victory", "")))
+			_mark.text = String(boss.get("stamp", ""))
+			if _mark.text != "":
+				_mark.visible = true
+				_stamp(_mark)
 		"summary":
 			var body := String(game.run.summary()["class"])
 			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets)
@@ -427,9 +498,12 @@ func toggle_achievements() -> void:
 	_actions.visible = not _achievements.visible
 	if _achievements.visible:
 		_achievements.refresh(game.ctx.profile, game.progress)
+		# Over the camp walk A is the trophy wall's key, so Back shows the Esc that closes it.
+		_achievements.back.set_key("key_esc" if walking() else "key_a")
 		_show("ACHIEVEMENTS", Palette.AMBER, "")
+		_sync_walk()
 	else:
-		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+		_back_to_base()
 	_fade(true)
 
 
@@ -446,44 +520,210 @@ func toggle_settings() -> void:
 		_show("SETTINGS", Palette.AMBER, "")
 		_settings.focus("fullscreen")
 		refresh_lab_row()
+		_sync_walk()
 	else:
 		_breath_row.visible = false
-		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+		_back_to_base()
 	_fade(true)
 
 
-# K on the title swaps its body and actions for the camp page, and back. A, S and H on the
-# camp close it and open their own page, whose Back returns to the title.
+# K on the title opens the camp: a walk through the 3D camp (camp_hub.gd) with a key-hint strip, and K again
+# leaves it. The stations open their pages from their zones; each page's Back returns to the walk.
 func toggle_camp() -> void:
 	if _state != "title" or _help.visible or _achievements.visible or _settings.visible:
 		return
-	_camp.visible = not _camp.visible
-	_actions.visible = not _camp.visible
-	if _camp.visible:
-		_camp.refresh(game)
-		_show("CAMP", Palette.AMBER, "")
-		_camp.button_for("launch").grab_focus()
-	else:
-		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
-		get_viewport().gui_release_focus()
+	if _walking:
+		if not walk_live():
+			return
+		_end_walk()
+		return
+	_begin_walk()
+
+
+func _begin_walk() -> void:
+	_walking = true
+	_camp.set_walk(true)
+	_camp.refresh(game)
+	var audio = _audio()
+	if audio != null:
+		audio.camp_theme(true)
+	_actions.visible = false
+	_show("CAMP", Palette.AMBER, "")
+	game.camp_hub.enter_walk()
+	_hook_companion()
+	get_viewport().gui_release_focus()
+	_sync_walk()
 	_fade(true)
 
 
+func _end_walk() -> void:
+	_stop_walk()
+	_camp.visible = false
+	_actions.visible = true
+	_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+	get_viewport().gui_release_focus()
+	_fade(true)
+
+
+# The walk ends: the hub hides, the ball freezes and the input goes back to the menus. The title is restored by the
+# caller (K) or by the flow change that rebuilds it (Launch).
+func _stop_walk() -> void:
+	if not _walking:
+		return
+	_walking = false
+	var audio = _audio()
+	if audio != null:
+		audio.camp_theme(false)
+	if is_instance_valid(_walk_page):
+		_walk_page.visible = false
+	_walk_page = null
+	_walk_on_close = Callable()
+	game.camp_hub.leave_walk()
+	_camp.set_walk(false)
+	_veil.visible = true
+	_title.visible = true
+	_content.alignment = BoxContainer.ALIGNMENT_CENTER
+	game.walk_input(false)
+
+
+func walking() -> bool:
+	return _walking
+
+
+# The walk is live when it shows no page: the ball rolls, the zones answer their keys and the prompts show.
+func walk_live() -> bool:
+	return _walking and not page_open()
+
+
+# A page covers the walk: Help, Achievements, Settings, Jukebox, Mixtapes, Customize, the Companion panel or a page a
+# feature opened with open_walk_page().
+func page_open() -> bool:
+	if _help.visible or _achievements.visible or _settings.visible or _jukebox.visible or _radio.visible:
+		return true
+	if _camp.customize != null and _camp.customize.visible:
+		return true
+	var workshop = game.get_node_or_null("Workshop")
+	if workshop != null and workshop.companion_panel.is_open():
+		return true
+	return is_instance_valid(_walk_page)
+
+
+# Brings the screen in line with the walk: live shows the strip and the prompts and rolls the ball; a page shows
+# the veil and holds the ball.
+func _sync_walk() -> void:
+	if not _walking:
+		return
+	var live := walk_live()
+	var customizing: bool = _camp.customize != null and _camp.customize.visible
+	game.walk_input(live)
+	game.camp_hub.set_prompts_visible(live)
+	_camp.visible = live or customizing
+	_veil.visible = not live
+	_title.visible = not live
+	_content.alignment = BoxContainer.ALIGNMENT_END if live else BoxContainer.ALIGNMENT_CENTER
+	_layout_backdrop()
+
+
+# A page closes: the title when there is no walk, else the walk.
+func _back_to_base() -> void:
+	if _walking:
+		_actions.visible = false
+		_show("CAMP", Palette.AMBER, "")
+		_sync_walk()
+	else:
+		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+
+
+# The one way a new page opens over the walk and returns to it: the page is shown over the veil, the ball is held,
+# and Back, Esc or pad B (or close_walk_page()) hides it, runs on_close and gives the walk back with the ball where
+# it was. A page that has its own Back button connects it to close_walk_page.
+func open_walk_page(page: Control, on_close := Callable()) -> void:
+	if not walk_live():
+		return
+	if page.get_parent() == null:
+		_content.add_child(page)
+	page.visible = true
+	_walk_page = page
+	_walk_on_close = on_close
+	_actions.visible = false
+	_show("CAMP", Palette.AMBER, "")
+	_sync_walk()
+	_fade(true)
+
+
+func close_walk_page() -> void:
+	if not is_instance_valid(_walk_page):
+		_walk_page = null
+		return
+	var page := _walk_page
+	var after := _walk_on_close
+	_walk_page = null
+	_walk_on_close = Callable()
+	page.visible = false
+	if after.is_valid():
+		after.call()
+	_back_to_base()
+	_fade(true)
+
+
+func walk_page() -> Control:
+	return _walk_page
+
+
+# The walk's keys, from game._screen_key while the walk is live: K leaves; any other key acts only inside the zone
+# of a station that names it, and the rest go to the ball.
+func walk_key(key: int) -> bool:
+	if key == KEY_K:
+		toggle_camp()
+		return true
+	return game.camp_hub.press_key(key)
+
+
+# Customize at the lockers: the camp page's own customize page, over the walk.
+func walk_customize() -> void:
+	if _camp.customize == null:
+		return
+	_camp.customize._open_from_camp()
+	if _camp.customize.visible:
+		_show("CAMP", Palette.AMBER, "")
+		_sync_walk()
+		_fade(true)
+
+
+# Moss's bench at his stall. The panel refuses under an overlay, so the walk steps aside for the call.
+func walk_companion() -> void:
+	var workshop = game.get_node("Workshop")
+	_walking = false
+	_camp.visible = false
+	var opened: bool = workshop.open_companion()
+	_walking = true
+	_camp.visible = not opened
+	_sync_walk()
+	if not opened:
+		game.hud.toast(CampMenu.NO_PIECES)
+
+
+func _hook_companion() -> void:
+	if _companion_hooked:
+		return
+	_companion_hooked = true
+	game.get_node("Workshop").companion_panel.closed.connect(_sync_walk)
+
+
 func _close_camp_silently() -> void:
-	if not _camp.visible:
+	# The camp's music ends with it, so a needle lifted below goes back to the title theme.
+	var audio = _audio()
+	if audio != null:
+		audio.camp_theme(false)
+	if _jukebox.visible:
+		_close_jukebox()
+	if _radio.visible:
+		_radio.visible = false
+	if _walking or not _camp.visible:
 		return
 	_camp.visible = false
 	_actions.visible = true
 	get_viewport().gui_release_focus()
-
-
-# The camp's Companion button: the camp steps aside first, since open_companion refuses
-# under an overlay.
-func _camp_companion() -> void:
-	_close_camp_silently()
-	_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
-	_layout_backdrop()
-	game.get_node("Workshop").open_companion()
 
 
 # The summary's Camp: back to the title, with the camp open.
@@ -493,7 +733,184 @@ func open_camp_from_summary() -> void:
 
 
 func camp_open() -> bool:
-	return _camp.visible
+	return _walking or _camp.visible
+
+
+# J on the camp swaps it for Moss's jukebox, and back. Leaving lifts the needle, so the
+# title theme returns with the camp.
+func toggle_jukebox() -> void:
+	if _jukebox.visible:
+		_close_jukebox()
+		if _walking:
+			_back_to_base()
+			_fade(true)
+			return
+		_camp.visible = true
+		_camp.refresh(game)
+		_show("CAMP", Palette.AMBER, "")
+		_camp.button_for("jukebox").grab_focus()
+		_fade(true)
+		return
+	if not _camp.visible:
+		return
+	_camp.visible = false
+	_jukebox.visible = true
+	_refresh_jukebox()
+	_show("MOSS'S JUKEBOX", Palette.AMBER, "")
+	_jukebox.focus_first()
+	_sync_walk()
+	_fade(true)
+
+
+func _close_jukebox() -> void:
+	_jukebox.visible = false
+	var audio = _audio()
+	if audio != null:
+		audio.stop_spin()
+
+
+func jukebox_open() -> bool:
+	return _jukebox.visible
+
+
+func jukebox_page():
+	return _jukebox
+
+
+# The jukebox's keys, from game._screen_key while it is open: Space or Enter plays the
+# focused sleeve (or stops the deck), 1 to 3 set the dial, J and Esc go back. Every other
+# key is swallowed so the title's keys stay off the camp behind it.
+func jukebox_key(key: int) -> bool:
+	match key:
+		KEY_J, KEY_ESCAPE:
+			toggle_jukebox()
+		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+			var id: String = _jukebox.focused_id()
+			var audio = _audio()
+			if audio != null and audio.spinning != "" and not _jukebox.is_found(id):
+				id = audio.spinning
+			_spin_toggle(id)
+		KEY_1, KEY_2, KEY_3:
+			var audio = _audio()
+			if audio != null:
+				audio.set_spin_detent(key - KEY_1)
+			_refresh_jukebox()
+	return true
+
+
+# A found record goes on the deck; the record already playing comes off; a blank sleeve
+# only shows its hint.
+func _spin_toggle(id: String) -> void:
+	var audio = _audio()
+	if audio == null or id == "":
+		return
+	if audio.spinning == id:
+		audio.stop_spin()
+	elif _jukebox.is_found(id) and audio.spin(id):
+		audio.play("bay_jukebox", 0.0, 1.0, "UI")
+	_refresh_jukebox()
+
+
+func _refresh_jukebox() -> void:
+	var audio = _audio()
+	var sitting: bool = game.tuning != null and game.tuning.sitting()
+	_jukebox.refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2, sitting)
+
+
+func _audio():
+	var presentation = game.get("presentation")
+	return presentation.get("audio") if presentation != null else null
+
+
+# R on the camp swaps it for the radio's mixtapes, and back. The radio keeps what was changed.
+func toggle_radio() -> void:
+	if _radio.visible:
+		_radio.visible = false
+		_save_radio()
+		if _walking:
+			_back_to_base()
+			_fade(true)
+			return
+		_camp.visible = true
+		_camp.refresh(game)
+		_show("CAMP", Palette.AMBER, "")
+		_camp.button_for("radio").grab_focus()
+		_fade(true)
+		return
+	if not _camp.visible or game.get("radio_deck") == null:
+		return
+	_camp.visible = false
+	_radio.visible = true
+	_radio.refresh(game.ctx.profile, game.radio_deck.radio)
+	_show("MIXTAPES", Palette.AMBER, "")
+	_radio.focus_first()
+	_sync_walk()
+	_fade(true)
+
+
+func radio_open() -> bool:
+	return _radio.visible
+
+
+func radio_page():
+	return _radio
+
+
+# The mixtape keys, from game._screen_key while the page is open: Space or Enter takes the
+# focused track on or off the tape, comma and period move a tape track, 1 to 6 pick a tape, N
+# starts one, X shuffles, T tunes the radio to it, R and Esc go back. Every other key is
+# swallowed so the title's keys stay off the camp behind it.
+func radio_key(key: int) -> bool:
+	var radio = game.radio_deck.radio
+	var focused: String = _radio.focused_id()
+	match key:
+		KEY_R, KEY_ESCAPE:
+			toggle_radio()
+			return true
+		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+			if focused != "":
+				_radio_track(focused.substr(2), focused[0] == "t")
+			return true
+		KEY_COMMA, KEY_PERIOD:
+			if focused.begins_with("t:"):
+				radio.nudge(radio.mixtape, focused.substr(2), -1 if key == KEY_COMMA else 1)
+		KEY_N:
+			var made: int = radio.new_mixtape()
+			if made >= 0:
+				radio.mixtape = made
+		KEY_X:
+			var rng := RandomNumberGenerator.new()
+			rng.randomize()
+			radio.shuffle_mixtape(radio.mixtape, rng)
+		KEY_T:
+			radio.tune(radio.MIXTAPE)
+		_:
+			if key >= KEY_1 and key < KEY_1 + radio.mixtapes.size():
+				radio.mixtape = key - KEY_1
+			else:
+				return true
+	_radio.refresh(game.ctx.profile, radio)
+	if focused != "":
+		_radio.focus(focused[0] == "t", focused.substr(2))
+	return true
+
+
+func _radio_track(id: String, on_tape: bool) -> void:
+	var radio = game.radio_deck.radio
+	if on_tape:
+		radio.remove_from(radio.mixtape, id)
+	elif not radio.add_to(radio.mixtape, id):
+		radio.remove_from(radio.mixtape, id)
+	var audio = _audio()
+	if audio != null:
+		audio.play("flow_changed", 0.0, 1.0, "UI")
+	_radio.refresh(game.ctx.profile, radio)
+	_radio.focus(on_tape, id)
+
+
+func _save_radio() -> void:
+	if game.get("radio_deck") != null:
+		game.radio_deck._save()
 
 
 func camp_page():
@@ -532,7 +949,7 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _camp.visible or ending_open()
+	return _help.visible or _achievements.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible or ending_open()
 
 
 func ending_open() -> bool:
@@ -611,12 +1028,38 @@ func _input(event: InputEvent) -> void:
 	if prologue_showing():
 		_prologue_input(event)
 		return
+	if is_instance_valid(_walk_page):
+		var back: bool = event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B
+		back = back or (event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE)
+		if back:
+			close_walk_page()
+			get_viewport().set_input_as_handled()
+		return
 	if _settings.visible:
 		if _settings.handle(event):
 			get_viewport().set_input_as_handled()
 		return
-	if _camp.visible:
+	if _radio.visible:
 		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+			toggle_radio()
+			get_viewport().set_input_as_handled()
+		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+			toggle_radio()
+			get_viewport().set_input_as_handled()
+		return
+	if _jukebox.visible:
+		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+			toggle_jukebox()
+			get_viewport().set_input_as_handled()
+		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+			toggle_jukebox()
+			get_viewport().set_input_as_handled()
+		return
+	if _camp.visible:
+		# Pad B boosts in the walk; Start (the pause button elsewhere) leaves the camp. Esc leaves on keys.
+		var leave: bool = event is InputEventJoypadButton and event.pressed and (event.button_index == JOY_BUTTON_START
+			or (event.button_index == JOY_BUTTON_B and not _walking))
+		if leave:
 			toggle_camp()
 			get_viewport().set_input_as_handled()
 		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
@@ -680,7 +1123,10 @@ func _show(title: String, color: Color, body: String) -> void:
 
 func _action(id: String, key: String, words: String) -> void:
 	var button := ChoiceButton.new(id, key, words)
-	button.pressed.connect(_press.bind(key))
+	if id == "quit":
+		button.pressed.connect(func(): get_tree().quit())
+	else:
+		button.pressed.connect(_press.bind(key))
 	if id == "start":
 		_make_primary(button)
 	_actions.add_child(button)
@@ -724,6 +1170,22 @@ func _beaten_boss() -> Dictionary:
 	return game.flow.boss_row(game.ctx.stages.world_of(game.run.stage))
 
 
+# The page folds at run_ended, after the summary has opened, so it arrives on its own row.
+func _show_comic_page(page: Dictionary) -> void:
+	if _state != "summary" or not ResourceLoader.exists(COMIC_PAGE_PATH):
+		return
+	var comic: Control = load(COMIC_PAGE_PATH).new()
+	var height := minf(COMIC_MAX_HEIGHT, _screen().y * COMIC_HEIGHT)
+	comic.custom_minimum_size = Vector2(height * 0.75, height)
+	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_comic_row.add_child(comic)
+	comic.show_page(page)
+
+
+func comic_page() -> Control:
+	return _comic_row.get_child(0) if _comic_row.get_child_count() > 0 else null
+
+
 # The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
 # retries, each on its own icon.
 func _summary_stats() -> void:
@@ -755,6 +1217,50 @@ func _summary_stats() -> void:
 		_stats.add_child(row)
 
 
+func _stamp(target: Label = null) -> void:
+	if target == null:
+		target = _title
+	if game.camera != null and game.camera.reduced_motion:
+		return
+	_stamp_tween = create_tween()
+	_stamp_tween.tween_callback(func():
+		target.pivot_offset = target.size / 2.0
+		target.scale = Vector2.ONE * STAMP_FROM
+		target.rotation = deg_to_rad(STAMP_TILT))
+	_stamp_tween.set_parallel(true)
+	_stamp_tween.tween_property(target, "scale", Vector2.ONE, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_stamp_tween.tween_property(target, "rotation", 0.0, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+# The release-candidate gate launches the AppImage on a fresh profile and waits for this one
+# line, printed the first time the main menu shows in this process. After ms it names the launch
+# set and how many pilots the title opens, so a cold launch shows the unlock ladder (P-R21: 1 on a
+# fresh profile) or the sitting (all six).
+static var _ready_announced := false
+
+
+func _announce_ready() -> void:
+	if _ready_announced:
+		return
+	_ready_announced = true
+	print(ready_line(Time.get_ticks_msec()))
+
+
+func ready_line(ms: int) -> String:
+	var open: int = game.flow.classes.filter(func(def): return game.pilot_unlocked(def)).size()
+	var launch_set := "sitting" if game.tuning != null and game.tuning.sitting() else "default"
+	return "SCRAPKEEP_MENU_READY ms=%d profile=%s pilots=%d/%d" % [ms, launch_set, open, game.flow.classes.size()]
+
+
+func _unstamp() -> void:
+	if _stamp_tween != null:
+		_stamp_tween.kill()
+		_stamp_tween = null
+	for label in [_title, _mark]:
+		label.scale = Vector2.ONE
+		label.rotation = 0.0
+
+
 func _fade(show: bool) -> void:
 	_layout_backdrop()
 	if _tween != null:
@@ -776,7 +1282,7 @@ func _fade(show: bool) -> void:
 
 
 func _layout_backdrop() -> void:
-	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible)
+	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible)
 	_veil.anchor_bottom = 0.5 if title_deck else 1.0
 	_content.anchor_bottom = _veil.anchor_bottom
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
@@ -823,6 +1329,10 @@ func button_for(action: String) -> Button:
 			return _settings.back
 		if _camp.visible:
 			return _camp.back
+		if _jukebox.visible:
+			return _jukebox.back
+		if _radio.visible:
+			return _radio.back
 		return _achievements.back if _achievements.visible else _help.back
 	if action == "breath":
 		return _breath_row if _breath_row.visible else null

@@ -24,10 +24,19 @@ from mathutils import Vector
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common
+import polish
 
 SKETCH = Path(common.SKETCH)
 FILES = ("island_small", "island_medium", "island_large", "island_rim",
          "island_rib", "bridge_skin", "return_ramp_skin", "barge_skin")
+# Polish (tools/blender/POLISH.md) for the hardware skins only; the three islands are landforms
+# and wait for the landform pass. Bevels keep the planar faces, so the pinned bounds hold, and
+# the flat deck skins take smoothing and the bake without a bevel. The material is renamed
+# "steel" in finish(), so that is the slot that takes the bake.
+POLISH = {"island_rim": dict(bevel=.03, bevel_min=.1), "island_rib": dict(bevel=.04, bevel_min=.1),
+          "bridge_skin": dict(bevel=0), "return_ramp_skin": dict(bevel=0),
+          "barge_skin": dict(bevel=.04, bevel_min=.15)}
+HARDWARE_CAP = (400, 450, 1)  # polish: was (270, 610, 1); dress_mhi_assets_test PROP_CAP matches
 CHALK = "c8bda5"
 PETROL = "53686d"
 BONE = "d2c5a5"
@@ -269,7 +278,7 @@ def exported_metrics(path):
             draws += 1
             verts += doc["accessors"][prim["attributes"]["POSITION"]]["count"]
             tris += doc["accessors"][prim["indices"]]["count"] // 3
-    cap = (8000, 24000, 1) if path.stem in FILES[:3] else (270, 610, 1)
+    cap = (8000, 24000, 1) if path.stem in FILES[:3] else HARDWARE_CAP
     assert 0 < tris <= cap[0] and 0 < verts <= cap[1] and draws == 1, (path, tris, verts, draws)
     assert len(doc["materials"]) == 1
     return {"file": path.name, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
@@ -356,6 +365,11 @@ def main():
         path = args.out_dir / (name + ".glb")
         if not args.preview_only:
             common.reset()
+            if name in POLISH:
+                polish.enable(bake_slots=("steel",), **POLISH[name])
+            else:
+                polish._opts = common.POLISH = None
+                common.DETAIL = 1
             if name == "island_small":
                 root = island(28, name, [("OffsetKeel", (3, -5, 0), 8)])
             elif name == "island_medium":

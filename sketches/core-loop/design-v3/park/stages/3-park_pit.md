@@ -21,6 +21,7 @@ Terms used once and kept: a **bench** is one step of the pit (a flat **tread** y
 | Park | 1.6 km square; an open-pit copper mine 900 m across and 100 m deep in its middle |
 | Lines | Six pilot lines, median paths 1583 to 2034 m and median times 61.78 to 100.94 s; floor line 90.41 s (section 9) |
 | Greybox size | 109 park rows, 5 events, 4 homes, 12 contraptions, 2 weather rows, 3 activities, 21 routes |
+| After the authored pass (section 15) | 117 park rows (four drifts and four adit portals added), 7 homes (three cut homes added); the rest unchanged |
 
 ## 1. Landform and society layer
 
@@ -84,7 +85,7 @@ Legend, exact positions (x, z in metres):
 | Homes | tailings burrowers; adit drill crews; winze lamp swarms; barge drill crew (dormant) | (337.5, 110); (292.5, 120); (-337.5, -20); (-337.5, 250) |
 | Contraptions | incline skip (0, -225) to (0, 10); tipple lift (20, 262); sump geyser (-70, 128); rim zip (60, -298) to (150, -178); adit valve (94, -374); sealed portal (262.5, 400); dust devils (400, -60) and (-30, 160) |
 | Activities | cracked cache `cache_lip`; enemy camp `switchback_camp_site`; ambush altar `bench3_altar` (KD3, was `bench4_altar`) | (296, -320); (180, -160); (-110, -84) |
-| Rescue | Kest's cage (needs a schema key, section 14) | (-150, 110), bench 4 west, facing +x |
+| Rescue | Kest's cage, `rescue_rows` kest_cage | (-144, 110) on the sump floor at the foot of bench 4 west, facing +x; moved 6 m off the bench wall from the first pick (-150, 110) so the roll-in is flat (park_rescue_test) |
 
 The three activities are signposted from the drop-in: the cache sits on the north-east rim at the foot of a spoil heap, with a clear sight line from the stage line (`park_graph.gd` sight_ok), the camp's smoke rises on the north-east bench in view of the dump top, and the altar is a lit ring on bench 3 north seen across the pit (altar lighting follows VX8: no hazard stripes on it, `git show 364e1e6`).
 
@@ -100,7 +101,10 @@ The three activities are signposted from the drop-in: the cache sits on the nort
 | `canal_lip` | grind_line | canal | hohokam | grind / `ride_grapple_line` | - | `canal_lip` | channel | - | landform | ref_canal_gradient |
 | `rim_haul_ramp` | flow_line | open_pit | mining | roll / `ride_chute` | - | `pit_haul_ramp` | ramp | - | landform | mining_haul_grade |
 | `pit` | bowl | open_pit | mining | bank / `ride_bowl` | - | `bench_coping` | terrace | - | landform | mining_bench_survey |
-| `haul_road_west_1..5` | flow_line | open_pit | mining | roll / `ride_chute` | - | `pit_haul_ramp` | ramp | - | landform | - |
+| `haul_road_west_1..4` | flow_line | open_pit | mining | cast / `ride_chute` | cuts 2-4: section 15 | `pit_haul_ramp` | ramp | - | landform | section 15 |
+| `haul_road_west_5` | flow_line | open_pit | mining | roll / `ride_chute` | - | `pit_haul_ramp` | ramp | - | landform | - |
+| `west_drift_1..4` (section 15) | ground | open_pit | mining | cast / - | - | - | plateau | - | landform | drift 1: mining_drift_chalk |
+| `west_adit_1..4` (section 15) | ledge | adit | mining | roll / `ride_ledge` | - | `timber_portal` | - | - | detail | - |
 | `north_dive` | kicker | open_pit | mining | launch / `kicker_launch` | - | `mesa_lip_kicker` | - | - | detail | - |
 | `east_dive` | kicker | open_pit | mining | launch / `kicker_launch` | - | `mesa_lip_kicker` | - | - | detail | - |
 | `tailings_bench_east` | terrace | tailings_bench | mining | roll / `ride_bowl` | tailings_burrowers | `tailings_lip` | plateau | - | landform | mining_tailings_pond |
@@ -159,7 +163,7 @@ Five rows, all four families. Trigger tiers: tier 1 at 45 s, tier 2 at 90 s (`sr
 | `winze_lamps` | lamp_swarm | `winze_west` (shaft) | the winze collar sits in the bench face's noon shadow, so the 9 m lure bloom (`src/combat/lamp_swarm.gd:17`) reads bright and bends a slow ball toward the cap | boost straight through at cruise (`lamp_swarm.gd:7-9`), or slam the cap and drop a bench out of the bloom | tier 0, every 22 s, max 3, `dig_lamps` | ram at tier 2, 50 hp, 10 scrap | yes |
 | `barge_drill_crew` | drill_crew | `barge_apron` (open_pit) | the barge deck stands 6 m over bench 3 and its mast bores the haul road below, out of a ram's reach | the stern ramp is a kicker aimed at the mast; ram at tier 2 or shoot the mast | tier 2, every 30 s, max 2, `dig_bore` | damage, 150 hp, 20 scrap | yes; dormant until the barge lands |
 
-Every pack is one of the stage's own (`alpha_defs.gd:86-89`). The elite pack still arrives as the third arrival (`alpha_defs.gd:47-49`).
+The authored pass (section 15) adds three cut homes, `powder_cut_lamps` (lamp_swarm, `dig_lamps`), `barge_cut_burrowers` (burrower, `dig_shallow`) and `collar_cut_rigs` (drill_crew, `dig_bore`); their advantage and counter text is in `park_pit.json`. Every pack is one of the stage's own (`alpha_defs.gd:86-89`). The elite pack still arrives as the third arrival (`alpha_defs.gd:47-49`).
 
 ## 7. `contraption_rows` draft
 
@@ -292,6 +296,11 @@ Short field notes in the Dig's existing voice (`src/core/lore_rows.gd:114-170`).
 | `mining_leach_ticket` | `leach_pads` | Leach pad ticket: copper drawn off, solution returned. Return volume exceeds issue. |
 | `mining_launder_note` | `mill_launder` | Launder note: tailings run downhill to the dam. Some run back. |
 | `mining_headframe_cage` | landmark | Hoist log: cage called to the collar 412 times on the night shift. There was no night shift. |
+| `mining_top_cut` | `haul_road_west_1` | Top cut: forty wide, twenty deep. Trucks passed two abreast. Mirrors bolted to both walls. The mirrors face the wall. |
+| `mining_powder_cut` | `haul_road_west_2` | Powder cut: charges kept in the west adit, lamps kept well clear of it. The lamps have moved closer. |
+| `mining_barge_cut` | `haul_road_west_3` | Barge cut: spoil tipped off the barge straight into the cut. Floor stays soft for weeks. Something keeps it soft. |
+| `mining_collar_cut` | `haul_road_west_4` | Collar cut: last grade to the floor. Rigs parked nose to the wall at shift end. By morning they face the road. |
+| `mining_drift_chalk` | `west_drift_1` | Drift chalk: one drift holed through per cut, four in all. Count them on the way down. Five on the way up. |
 
 The `ref_` fragment describes the work and the water it managed and speaks for no living people (PARK.md section 4). The existing codex entries this stage teaches stay: `burrow_lane`, `bore_breach`, `lure_bloom` and `awaiting_operator` (`src/combat/codex_entries.gd:59-60`, `69-84`, `162-166`).
 
@@ -303,7 +312,7 @@ The `ref_` fragment describes the work and the water it managed and speaks for n
 | Pressure row 3 (pack 1.20, interval 0.90, elite 1.00, posture 1.05, boss 1.15) | `alpha_defs.gd:59-66` | unchanged |
 | Warden plating 130, health 950, posture curve 2.0 x 1.05, `ram_shatters` false, beacon 25 s | `alpha_defs.gd:81-85` | the kind changes, the numbers stay until KF3 re-measures |
 | Music theme 1, ACE `dig_upper` | `alpha_defs.gd:81`, `music_rows.gd:10` | the arc in section 10 rides it |
-| Kest's rescue on this stage, quest `dig` | `map_dig.gd:84` | moves to (-150, 110); needs a schema key |
+| Kest's rescue on this stage, quest `dig` | `map_dig.gd:84` | moves to (-144, 110) as `rescue_rows` kest_cage |
 | Breach plates as a slam verb | `map_dig.gd:28-32` | become winze caps |
 | Camp pay `rivet_plating`, cache, altar | `map_dig.gd:78-82` | the camp pack becomes Dig kinds (veto item 6) |
 
@@ -354,7 +363,7 @@ The attempted heaviest-view inventory counted 108 explicit mesh surfaces and 116
 6. **`eruption_lip` has its own kicker row (R6).**
 7. **`deep_adit_wakes` waits for clock tier 3.** That needs veto item 16.
 8. **Fix round (2026-10-11, on the KB9 and KB7b head).** Five 0.1 m haul lanes added and three 0.4 m greybox strips lowered to 0.1 m (section 4); `dust_devil_floor` moved from (80, 100) to (-30, 160) onto the Kest line and widened to radius 12 (section 7); the Kest line re-cut through it and clear of `hoist_house`; `cache_lip` moved to (296, -320) on `spoil_heap_14` (call 2). With the kickers now physical wedges, two more geometry calls: `camp_dive` moved from (163.5, -196.4) at yaw 24.8 to (134, -197) at yaw 51, with `camp_dive_windrow_2` shifted west to (85, -197.4) and a new 30 m `camp_dive_windrow_3` at (175, -198) and the `camp_ore_bin` box at (160, -218) for the harpoon (section 9). Head A now reaches it from (95, -228). The old north-north-east launch threw Sable at 45 m/s across the whole bench 2 tread and off the `bench3_dive` lip to bench 3, where 2 of 8 seeds stalled under the camp. And `east_dive`, `east_dive_3` (30 m wide) and `east_dive_2` (40 m wide, centred at (232, 133), with `east_dive_2_windrow_2` shifted to (233, 83) to meet it) were widened from 14 m, because a ball landing off `east_dive` clipped the side of the 14 m wedge at (232, 142), and later the 40 m wedge's edge at (236, 125), and lost half its speed. And the `canal_lip` slab went to 0.1 m with a `canal_saguaros` anchor field beside it (section 4). The bake and graph were rebuilt; `park_graph.gd` reports no breach.
-9. **`beacon_ok` is NO on this head (reported, not gated by any test in the stage list).** The SR15 objective-fit check (`tools/park_graph.gd` `beacon_check`, from KB8 round two) wants every node of a 42 m disc round the beacon open and within 2.5 m of its height. The collar dish (a 10 m bowl stamp, 70 m across) and the `tipple_deck` ledge sit inside that disc by design: the dish is the swarm's floor and the deck is the drop finisher. Clearing it is a mounting and fight-floor change, which is the coordinator's and KF8's call, so it is listed as a follow-up, not changed here.
+9. **`beacon_ok` is NO on this head (reported, not gated by any test in the stage list).** The SR15 objective-fit check (`tools/park_graph.gd` `beacon_check`, from KB8 round two) wants every node of a 42 m disc round the beacon open and within 2.5 m of its height. The collar dish (a 10 m bowl stamp, 70 m across) and the `tipple_deck` ledge sit inside that disc by design: the dish is the swarm's floor and the deck is the drop finisher. Clearing it is a mounting and fight-floor change, which is the coordinator's and KF8's call, so it is listed as a follow-up, not changed here. **Settled 2026-10-17 (authored pass):** `beacon_check` now reads a headframe mounting's own floor. When the Warden mounts on the headframe, the rows the landmark GLB dresses (`collar_dish`, `tipple_deck`, `hoist_house`, recipe `landmark`) are the fight floor: their nodes are exempt from the 2.5 m rise (the dish is a bowl by design), nodes under the deck and the hoist house roof are not counted as closed, and their tops are not counted as decks. Every other disc node is still checked. The headframe GLB now carries the tipple deck plate and the hoist house (`tools/blender/park/landmarks.py`), so those two rows stopped drawing grey boxes. Result: `beacon_ok` yes, 89 disc nodes, 0 closed. A planted park with greybox deck and hoist rows fails the check (`tests/park_park_pit_test.gd`). The tool hash changed, so every park's `graph.json` must be regenerated after its bake.
 
 The anchor and ride-fact rows of sections 7 and 9 are new. These draft gaps stay open, because no row or line change closes them:
 
@@ -373,7 +382,7 @@ The anchor and ride-fact rows of sections 7 and 9 are new. These draft gaps stay
 2. The pit centre sits at (0, 175) with the floor at the south side; the long north wall is the descent.
 3. The hoist's low dwell is the contact window and its high dwell is the latch window; the drop finisher comes from the tipple deck at 40 m, because the sheave wheels at 120 m are outside the 45 m rope.
 4. Today's breach plates become winze caps: slam to drop one bench.
-5. Kest's cage moves to bench 4 west at (-150, 110).
+5. Kest's cage moves to the sump floor at the foot of bench 4 west, (-144, 110).
 6. The enemy camp fields Dig kinds (burrower, burrower, drill crew), not today's world 1 kinds (`map_dig.gd:79`); the pay stays `rivet_plating`.
 7. The Hohokam canal is a grind line the haul road bends around; it hosts nothing hostile and nothing breaks it.
 8. No ancient beam on this stage.
@@ -389,9 +398,36 @@ The anchor and ride-fact rows of sections 7 and 9 are new. These draft gaps stay
 6. `src/combat/miniboss.gd` must run a `swarm_remnant` eruption miniboss; unverified here.
 7. Page path: this page lives at `design-v3/park/stages/3-park_pit.md` (PARK.md section 6.1 and the world 1 pages), not at the brief's `design-v3/park/park_pit.md`.
 
+## 15. Authored pass, 2026-10-17: the West Workings
+
+**The skill.** Andrew's ruling (one skill per park, relayed 22:15Z 17 Oct): the pit tests **abilities in close quarters**. The landforms stay. Enemy placement and the jungle-gym lines change so the pit reads as that test. The Dig's world theme is Plate: armour shrugs hits and is weak to abilities. The drill crew's plate takes the first breaking hit whole (`drill_crew.gd:5-6`).
+
+**What was wrong.** The west haul road (`haul_road_west_1` to `_4`) was four dead-end slots. Each ramp cut 40 m wide into its bench tread and fell 20 m. But its foot sat 17.5 m short of the next bench's edge, so a ball reached the bottom of a 20 m pit with walls on three sides (measured on the bake: the foot cell at -40, -60, -80 or -100, the strip beyond it still at the bench above). The `main` and `west_swing` routes named a road no ball could use, and no pilot line went there. The quiet west side was a third of the pit with nothing to do.
+
+**What it is now.** The four slots are the pit's ability gauntlet, rim to floor:
+
+| Cut | Bench | Drift (row, centre, cut 20 m) | Who waits there | Why a cast beats a ram |
+| --- | --- | --- | --- | --- |
+| Top cut, `haul_road_west_1` | 1 to 2 | `west_drift_1`, (-384, -24) | nobody: the first cut teaches the slot. The winze lamps bloom at its exit (`winze_lamps`) | the slot is 40 m wide with 20 m walls, so a ball cannot swing wide |
+| Powder cut, `haul_road_west_2` | 2 to 3 | `west_drift_2`, (-309, 136) | `powder_cut_lamps`: two lamp swarms and a plated drill crew (`dig_lamps`) | the walls hold the lure bloom in a box, and there is no run-up to reach the cruise that boosts through |
+| Barge cut, `haul_road_west_3` | 3 to 4 | `west_drift_3`, (-234, 292) | `barge_cut_burrowers` (`dig_shallow`) | there is one line down the slot, and the mound is on it |
+| Collar cut, `haul_road_west_4` | 4 to floor | `west_drift_4`, (-159, 184) | `collar_cut_rigs`: a plated drill crew with a burrower and a prop crew (`dig_bore`) | the plate shrugs the ram a 40 m run can build. Pop it with a cast first |
+
+Each drift is a `ground` row with a `plateau` stamp of -20 over the bench strip between the cut's foot and the next bench. It opens the foot flush onto the lower bench: on the bake the drift cells sit at the lower bench height with no lip. The drift runs 46 m along the cut (50 m at the barge cut). It opens the bottom 38 to 42 m of the cut's side, where the cut floor stands up to 6 m over the drift as a step down, and runs 6 m past the cut's end wall as run-out. So a ball can leave the slot sideways before the end wall. The slot keeps its other wall and its upper two thirds. The first skill-line ride, with 16 m drifts at the very foot, dead-stopped Sable against all four end walls. 30 m drifts still caught Sable and Tarn on the corner where the drift met the cut wall. Each cut has an old adit in its west wall (`west_adit_1` to `_4`, `timber_portal` GLB, the mouth on the cut floor and the headwall flush with the wall). That is where the cut's crew comes from. The cuts and drifts carry the new park verb `cast` (PARK.md 2.2: a place the skill bar clears, not the ball).
+
+**Enemy placement elsewhere.** The risk pocket stays `bench3_altar`, because PARK.md 2.12 wants it within the reward's 241 m detour of a pilot line and every west cut is 360 m or more from one (measured: a hauler bounty at the head of the top cut had a 367 m detour). Its ambush now draws Dig plate, two drill crews and a lamp swarm, instead of the rule's default chasers. The row's `pack` reaches the altar because `activities.gd` now applies an authored pack to `ambush_altar` the way it does for the relay (`tests/activities_pay_test.gd` pins it, with the empty-pack default). No other park authors an altar pack. The camp keeps its burrowers and a drill crew. Kest's cage on the floor (`kest_cage`, (-144, 110)) sits 70 m from the collar cut's drift: the demolitions caster is rescued at the foot of the ability gauntlet.
+
+**The skill line.** `assets/park/park_pit/skill_line.json` holds one line for all six pilots: drop_in, the canal, the rim haul ramp, west along bench 1, then down all four cuts and through all four drifts to the floor, joining Kest's final approach to the landmark. It skips `switchback_camp`, because the camp is the east side's on-line pocket. Ride it with `tools/traversal_line.gd -- --table=park --stage=3 --pilot=<p> --lines=res://assets/park/park_pit/skill_line.json`. `tests/park_park_pit_test.gd` pins that it resolves, and that every cut and drift holds one of its waypoints. It is a separate file, so `lines.json`, the graph's line nodes and every pocket distance stay as they were. So the six measured pilot lines still ride the east side and none enters a cut: the gauntlet is the west route a player chooses, and the skill line is its proof.
+
+**What the skill line does and does not pass.** Every pilot reaches the Warden on every seed (merged-tree receipts in `artifacts/local/pitpass/skillm/`). It is an end-to-end ride, not a stage-band line: on all six pilots the longest gap between anchors is about 60 m against the band's 40 m, it rides two ride facts against three, and one segment runs 50 to 68 s against 45 s. Those are the cost of four slots in a row with nothing to swing from inside them, which is the test. Sable still dead-stops once on half its seeds at (-322, 149), the south end-wall corner of the powder cut beside `west_drift_2`. Seeds come in identical pairs on this line, so four seeds are two distinct traces.
+
+**Berms and windrows.** The 25 low plateau berms and crest windrows (3 to 4 m tall) carry the verb `swing`. Their recorded job is the harpoon's anchor faces (section 7 and the berm list in section 9), not banking. The 22 rim domes (`slickrock_N`, `spoil_heap_N`) stay as density fill (the KD3 density gaps, section 4). The brief keeps the landforms.
+
+**Art swapped in this pass (placeholder unit D).** The `pit_haul_lane` GLB (a level 40 m haul-road tile, `tools/blender/park/bowls.py`) replaced four greybox haul lanes: seat fit on the 53 m and 60 m rim lanes (`rim_road_lane_1`, `_2`), tile fit on `bench1_haul_lane` and `bench2_north_lane`. The tile has a 1.4 m windrow on one side and a 3.8 m cut bank on the other, so it only fits where lines run along it: on `bench2_camp_lane` and `bench2_east_bank` the Sable, Rivet and Cannon lines cross its edge and dead-stopped there (9 of their 12 seeds), so those two stay 0.1 m greybox until a curbless lane exists. `haul_road_west_5` stays greybox too: tiled across the floor, its cut bank ran into the hoist house and stopped every skill-line pilot there. The nine kickers now seat the PR #95 plate kickers (`plate_kicker_12x2p5x14`, `_x30` on `east_dive` and `east_dive_3`, `_x40` on `east_dive_2`). `camp_ore_bin` now uses `ore_bin`, and `back_door_portal` uses `timber_portal` (`tools/blender/park/workings.py`). `mill_launder` and `conveyor_gallery` are each split in two and seat `flume_span` and `pipeline_rail`. `floor_sump` and `tailings_bench_east` are dressed by the scatter, `collar_dish`, `tipple_deck` and `hoist_house` by the landmark. Still greybox: `bench2_camp_lane`, `bench2_east_bank`, `haul_road_west_5`, `dump_wash_1` and `_2`, and `canal_lip`. The dressed attempt of 2026-10-12 failed traversal at those last three, so they stay greybox here.
+
 ## Appendix: draft park file
 
-Generated from the tables above and checked for enums, id references, home landforms, pack membership, lead floors and the real-culture rule (no failures on this stage). It is the schema-exact form for `src/world/park/park_pit.json`; KD3 replaces target recipes with `greybox:<element>` for the greybox pass. **Shipped (KD3 greybox, 2026-10-11; re-synced in the fix round):** the block below is now the shipped `src/world/park/park_pit.json`, so the page's park file and its section 9 lines agree; the original draft is in git history (`5f2139b`).
+Generated from the tables above and checked for enums, id references, home landforms, pack membership, lead floors and the real-culture rule (no failures on this stage). It is the schema-exact form for `src/world/park/park_pit.json`; KD3 replaces target recipes with `greybox:<element>` for the greybox pass. **Shipped (KD3 greybox, 2026-10-11; re-synced in the fix round):** the block below was the shipped `src/world/park/park_pit.json`, so the page's park file and its section 9 lines agree; the original draft is in git history (`5f2139b`). Since the authored pass (section 15) `src/world/park/park_pit.json` is the source of truth and this block is the fix-round snapshot.
 
 ```json
 {

@@ -25,9 +25,10 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from lantern_beacon import kit, common, frustum
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [900, 2000, 2]
+LANDMARK = [2500, 2000, 2]  # polish: was [900, 2000, 2]; class cap 4,000 T / 8,900 V
 NAME = "fabricator_hoop"
 
 # One row per painted part, palette names only (common.HEX mirrors src/core/palette.gd). "state" is the exact mint
@@ -45,7 +46,7 @@ TONES = {
 # Today's ring: TorusMesh inner 4.65, outer 5.0, centre y 3.5 (fabricators.gd:149-155). The inner radius is kept
 # exactly; the outer grows to the picture's chunkier band within the 10 percent footprint rule.
 RING_Y, RING_IN, RING_OUT, RING_DEPTH = 3.5, 4.65, 5.35, .7
-RING_SEGMENTS, RING_CHAMFER = 28, .12
+RING_SEGMENTS, RING_CHAMFER = 56, .12  # polish: segments were 28
 RING_CUT_Y = .3                        # the arc's ends stop inside the footings, this high on the centreline
 SILL = (.14, .55, .3)                  # height, half depth at the ground, half depth on top
 NUT = (1.0, 7.85, 9.05)                # circumradius, y0, y1 (hex, a flat facing +Z)
@@ -190,6 +191,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))
     args = parser.parse_args(argv)
+    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)  # hard machinery: soft edges, smooth ring, bake (mint state key kept exact)
     export(NAME, [("Hoop", "steel", False, steel), ("Footings", "enamel", False, enamel)], SOCKETS, args.out_dir)
 
 

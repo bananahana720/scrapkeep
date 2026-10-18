@@ -171,12 +171,9 @@ func _run() -> void:
 	_game.tuning.set_option("scrap_mode", "armor")
 	await _sim(0.5)
 	var build = _game.build
-	# Bake the sound bank (a couple of seconds of CPU) before any cue can be admitted.
-	var waited := 0
-	while not _audio().sound_ready and waited < 2400:
-		await process_frame
-		waited += 1
-	_check("sound bank ready", _audio().sound_ready, "waited %d frames" % waited)
+	# Bake the sound bank before any cue can be admitted; a frame budget races the bank's size.
+	_audio().bake_now()
+	_check("sound bank ready", _audio().sound_ready, "baked with bake_now")
 	build.shell_air_changed.connect(func(_factor: float, rose: bool): _sig.append(rose))
 	var row: Dictionary = EventKinds.WORLD_ROWS.get("shell_air_shift", {})
 	_check("one EventKinds row carries the fact", row.get("shape", "") == "ring" and row.get("sound", "") == SOUND and row.get("color") is Color,

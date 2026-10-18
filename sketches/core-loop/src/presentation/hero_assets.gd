@@ -71,6 +71,14 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
+# Pilot return-to-rest clip built at runtime for GLBs with no idle loop, and the blend an impact
+# gets when it interrupts another one-shot.
+# The rest clip lives in each animator's own library: the GLB's default library is shared by
+# every instance and by the bot track switch (bot_options.gd), so it never gains a runtime clip.
+const REST_LIBRARY := "runtime"
+const REST_CLIP := "runtime/rest_pose"
+const REST_LENGTH := 0.5
+const INTERRUPT_BLEND := 0.05
 const PILOT_TABLES := "res://src/presentation/clips/%s.json"
 # The movement chip's signals kick both pedals (PILOT-CLIPS section 5), by argument count.
 const MECHA_PEDAL_EVENTS := {"dashed": 1, "boosted": 1, "blink_used": 2, "sprint_started": 1, "rocket_jumped": 2}
@@ -133,6 +141,34 @@ const AIR_CUE_RISE := [0.9, 1.9]
 const AIR_CUE_RETURN := [1.9, 0.9]
 const AIR_CUE_RADIUS := 0.62
 const AIR_CUE_NAME := "AirCue"
+
+# An equipped paint lerps the paint surfaces' baked vertex colour this far toward its tint,
+# so a dark lattice takes the hue instead of only darkening (PAINT-TRACE card A2, start value).
+const PAINT_TAKE := 0.6
+# Plate maps average darker than the old neutral value noise; the paint slot lifts once.
+const PAINT_LIFT := 1.2
+const PAINT_SHADER := """shader_type spatial;
+render_mode cull_back, diffuse_burley, specular_schlick_ggx;
+uniform vec4 paint_tint : source_color = vec4(1.0);
+uniform vec4 lift : source_color = vec4(1.0);
+uniform float paint_take = 0.0;
+uniform sampler2D plate_texture : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+varying vec3 local_pos;
+varying vec3 local_normal;
+void vertex() {
+	local_pos = VERTEX;
+	local_normal = NORMAL;
+}
+vec3 painted(vec3 vertex_color, vec3 pos, vec3 normal) {
+	vec3 weights = abs(normalize(normal));
+	weights /= max(weights.x + weights.y + weights.z, 0.001);
+	vec3 p = pos / 1.5;
+	vec3 plate = texture(plate_texture, p.yz).rgb * weights.x
+		+ texture(plate_texture, p.xz).rgb * weights.y
+		+ texture(plate_texture, p.xy).rgb * weights.z;
+	return mix(vertex_color * lift.rgb, paint_tint.rgb, paint_take) * plate;
+}
+"""
 
 const SLOTS := {
 	"paint": {"color": Color.WHITE, "vertex": true, "rough": 0.8},
@@ -264,9 +300,19 @@ void fragment() {
 		glass.resource_name = slot
 		_materials[key] = glass
 		return glass
+	if slot == "paint" and tint != Color.WHITE:
+		var painted := ShaderMaterial.new()
+		painted.shader = _paint_shader("paint", PAINT_SHADER + """void fragment() {
+	ALBEDO = painted(COLOR.rgb, local_pos, local_normal);
+	ROUGHNESS = 0.8;
+}
+""")
+		painted.resource_name = slot
+		_paint_parameters(painted, tint)
+		_materials[key] = painted
+		return painted
 	var spec: Dictionary = SLOTS[slot]
 	var color: Color = tint if spec.has("from") else spec["color"]
-	var paint_tint := slot == "paint" and tint != Color.WHITE
 	color = color.lerp(Color.WHITE, spec.get("lighten", 0.0))
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = slot
@@ -300,9 +346,8 @@ void fragment() {
 			mat.uv1_scale = Vector3.ONE / metres
 			# Plate maps average darker than the old neutral value noise; lift them once here
 			# instead of tinting twice.
-			if slot == "paint":  # lift once, not a second tint
-				var lift := Color(1.2, 1.2, 1.2) * (tint if paint_tint else Color.WHITE)
-				mat.albedo_color = Color(lift.r, lift.g, lift.b, mat.albedo_color.a)
+			if slot == "paint":
+				mat.albedo_color = Color(PAINT_LIFT, PAINT_LIFT, PAINT_LIFT, mat.albedo_color.a)
 		else:
 			mat.albedo_texture = Palette.painted_texture(128)
 			mat.uv1_triplanar = true
@@ -432,9 +477,7 @@ func paint_tint(pilot: String, paint_id: String):
 
 
 func _equipped_paint(id: String) -> String:
-	if profile == null:
-		return ""
-	return profile.equipped(id, "paint")
+	return CosmeticWear.worn(profile, id, "paint")
 
 
 # The equipped shell variant's asset id for a pilot, or "" for the default cage.
@@ -608,32 +651,14 @@ func kest_band_material(tint: Color) -> ShaderMaterial:
 	var key := "kest_bands:" + tint.to_html()
 	if _materials.has(key):
 		return _materials[key]
-	var base := material("paint", tint) as StandardMaterial3D
 	var mat := ShaderMaterial.new()
-	var shader := Shader.new()
 	# PD-KEST stores band index in UV2.x and the fourth satchel's class gate in UV2.y.
-	shader.code = """shader_type spatial;
-render_mode cull_back, diffuse_burley, specular_schlick_ggx;
-uniform vec4 paint_tint : source_color = vec4(1.0);
-uniform vec4 class_color : source_color = vec4(1.0);
-uniform sampler2D plate_texture : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+	mat.shader = _paint_shader("kest_bands", PAINT_SHADER + """uniform vec4 class_color : source_color = vec4(1.0);
 instance uniform int lit_count = 0;
 instance uniform int heft_class = 1;
-varying vec3 local_pos;
-varying vec3 local_normal;
-void vertex() {
-	local_pos = VERTEX;
-	local_normal = NORMAL;
-}
 void fragment() {
 	if (UV2.y > float(heft_class) + 0.1) { discard; }
-	vec3 weights = abs(normalize(local_normal));
-	weights /= max(weights.x + weights.y + weights.z, 0.001);
-	vec3 p = local_pos / 1.5;
-	vec3 plate = texture(plate_texture, p.yz).rgb * weights.x
-		+ texture(plate_texture, p.xz).rgb * weights.y
-		+ texture(plate_texture, p.xy).rgb * weights.z;
-	ALBEDO = COLOR.rgb * paint_tint.rgb * plate;
+	ALBEDO = painted(COLOR.rgb, local_pos, local_normal);
 	ROUGHNESS = 0.8;
 	if (UV2.x > 0.5) {
 		bool lit = UV2.x <= float(lit_count) + 0.1;
@@ -641,14 +666,31 @@ void fragment() {
 		EMISSION = lit ? class_color.rgb * 0.5 : vec3(0.0);
 	}
 }
-"""
-	mat.shader = shader
+""")
 	mat.resource_name = "kest_bands"
-	mat.set_shader_parameter("paint_tint", base.albedo_color)
-	mat.set_shader_parameter("plate_texture", base.albedo_texture)
+	_paint_parameters(mat, tint)
 	mat.set_shader_parameter("class_color", ClassDef.KEST_COLOR)
 	_materials[key] = mat
 	return mat
+
+
+# One shader per paint use, shared by every tint, so a new paint adds a material, not a shader.
+func _paint_shader(use: String, code: String) -> Shader:
+	var key := "shader:" + use
+	if not _materials.has(key):
+		var shader := Shader.new()
+		shader.code = code
+		_materials[key] = shader
+	return _materials[key]
+
+
+# White is no paint: the plain lift over the vertex colour, as the StandardMaterial3D draws it.
+static func _paint_parameters(mat: ShaderMaterial, tint: Color) -> void:
+	var lift := Color(PAINT_LIFT, PAINT_LIFT, PAINT_LIFT)
+	mat.set_shader_parameter("paint_tint", Color(PAINT_LIFT * tint.r, PAINT_LIFT * tint.g, PAINT_LIFT * tint.b))
+	mat.set_shader_parameter("lift", lift)
+	mat.set_shader_parameter("paint_take", PAINT_TAKE if tint != Color.WHITE else 0.0)
+	mat.set_shader_parameter("plate_texture", Palette.look_texture("rusted-salvaged-plate", true))
 
 
 func kest_fuse_material(bright: bool) -> ShaderMaterial:
@@ -1208,8 +1250,12 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 		scene.free()
 		return mounts
 	paint(scene, tints)
+	# glTF import renames a node "upper_arm.L" to "upper_arm_L"; match parts by that name.
+	var bone_of := {}
+	for i in skeleton.get_bone_count():
+		bone_of[skeleton.get_bone_name(i).validate_node_name()] = skeleton.get_bone_name(i)
 	for part in scene.get_children():
-		var bone := String(part.name)
+		var bone := String(bone_of.get(String(part.name), part.name))
 		if part is AnimationPlayer or skeleton.find_bone(bone) < 0:
 			continue
 		scene.remove_child(part)
@@ -1226,6 +1272,7 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 	# "<Kind>_<bone>/<part>" and share the pilot's clip names, so react() plays both.
 	var player := scene.find_child("AnimationPlayer", false, false) as AnimationPlayer
 	if player != null and not mounts.is_empty():
+		_retarget_clips(player, mounts)
 		scene.remove_child(player)
 		player.name = "%sAnimator" % kind.capitalize()
 		player.set_meta("addon", kind)
@@ -1234,6 +1281,27 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 		mounts.append(player)
 	scene.free()
 	return mounts
+
+
+# Imported clips address parts from the GLB root ("head/HoodShell"). After the mount each part
+# sits under its attachment, so its tracks gain the attachment's name. Copies, never the cache.
+func _retarget_clips(player: AnimationPlayer, mounts: Array) -> void:
+	var under := {}
+	for mount in mounts:
+		under[String(mount.get_child(0).name)] = String(mount.name)
+	for lib_name in player.get_animation_library_list():
+		var lib := AnimationLibrary.new()
+		var source := player.get_animation_library(lib_name)
+		for clip in source.get_animation_list():
+			var anim := source.get_animation(clip).duplicate() as Animation
+			for i in anim.get_track_count():
+				var path := String(anim.track_get_path(i))
+				var top := path.get_slice("/", 0).get_slice(":", 0)
+				if under.has(top):
+					anim.track_set_path(i, NodePath(under[top] + "/" + path))
+			lib.add_animation(clip, anim)
+		player.remove_animation_library(lib_name)
+		player.add_animation_library(lib_name, lib)
 
 
 func _remove_bone_mounts(scope: Node3D, kind: String) -> void:
@@ -1477,6 +1545,11 @@ func _start_reaction(rec: Dictionary, clip: String, priority: int, blend: float,
 
 func _play(rec: Dictionary, clip: String, blend: float, apply := true) -> void:
 	var animator: AnimationPlayer = rec.animator
+	# An impact that interrupts another one-shot (wince over big_cheer's raised arms) gets a
+	# short blend so the whole arm range does not jump in one frame; over a base loop it still cuts.
+	if blend <= 0.0 and animator.is_playing() and animator.current_animation != clip \
+			and animator.current_animation not in [PilotReactions.BASES.idle.clip, PilotReactions.BASES.flight.clip, REST_CLIP]:
+		blend = INTERRUPT_BLEND
 	animator.play(clip, blend)
 	if apply:
 		animator.advance(0.0)
@@ -1505,6 +1578,8 @@ func _pilot_finished(clip: StringName, player_id: int, animator: AnimationPlayer
 	var rec: Dictionary = _players.get(player_id, {})
 	if rec.is_empty() or rec.animator != animator:
 		return
+	if String(clip) == REST_CLIP:
+		return
 	var riding := _riding(rec)
 	# Section 3 rule 2: a ride pose never snaps to rest.
 	if String(clip) in PilotReactions.ENDS_ON_RIDE and not riding and animator.has_animation(PilotReactions.RECOVER.clip):
@@ -1518,13 +1593,13 @@ func _pilot_finished(clip: StringName, player_id: int, animator: AnimationPlayer
 		rec.cooldowns[held.clip] = _reaction_clock + float(held.cooldown)
 		_start_reaction(rec, held.clip, int(held.priority), float(held.blend), false)
 		return
-	_to_base(rec)
+	_to_base(rec, true)
 
 
 # Section 3 rule 1: the base loop from frame 0 with a 0.1 s blend, ult_ride_loop while the set
 # piece holds the ride, else idle_loop. Without the loop (today's GLBs): stop, reset every bone
 # to rest, and warn once per pilot.
-func _to_base(rec: Dictionary) -> void:
+func _to_base(rec: Dictionary, after_clip := false) -> void:
 	rec.reaction = ""
 	rec.queued = {}
 	var animator = rec.get("animator")
@@ -1543,9 +1618,37 @@ func _to_base(rec: Dictionary) -> void:
 	_warn_once("pilot_base:" + String(rec["class"]), "hero_assets: pilot %s has no %s; seating by stop and reset" % [rec["class"], base.clip])
 	rec.base = ""
 	rec.priority = -1
+	if after_clip and _play_rest(rec):
+		return
 	animator.stop()
 	for skeleton in rec.pilot.find_children("*", "Skeleton3D", true, false):
 		skeleton.reset_bone_poses()
+
+
+# A pilot GLB with no idle loop eases to its rest pose over BASE_BLEND instead of snapping: a
+# runtime clip keys every bone at rest. It is not a pilot clip, so the run log never counts it.
+func _play_rest(rec: Dictionary) -> bool:
+	var animator: AnimationPlayer = rec.animator
+	if not animator.has_animation(REST_CLIP):
+		var root := animator.get_node_or_null(animator.root_node)
+		if root == null:
+			return false
+		var library := AnimationLibrary.new()
+		var rest := Animation.new()
+		rest.length = REST_LENGTH
+		for skeleton: Skeleton3D in rec.pilot.find_children("*", "Skeleton3D", true, false):
+			var path := String(root.get_path_to(skeleton))
+			for bone in skeleton.get_bone_count():
+				var pose := skeleton.get_bone_rest(bone)
+				var node := NodePath("%s:%s" % [path, skeleton.get_bone_name(bone)])
+				for kind in [[Animation.TYPE_POSITION_3D, pose.origin], [Animation.TYPE_ROTATION_3D, pose.basis.get_rotation_quaternion()], [Animation.TYPE_SCALE_3D, pose.basis.get_scale()]]:
+					var track := rest.add_track(kind[0])
+					rest.track_set_path(track, node)
+					rest.track_insert_key(track, 0.0, kind[1])
+		library.add_animation(REST_CLIP.get_file(), rest)
+		animator.add_animation_library(REST_LIBRARY, library)
+	animator.play(REST_CLIP, PilotReactions.BASE_BLEND)
+	return true
 
 
 # The set piece phase from the router's injected callable (SKILL-BAR section 7), else idle.

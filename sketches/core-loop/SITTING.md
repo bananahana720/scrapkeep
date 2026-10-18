@@ -28,7 +28,7 @@ This is separate from the checkpoint 1 steps below. It checks that the packaged 
    XDG_DATA_HOME="$HOME/.local/share/scrapkeep-cold-b9f9712" ./core-loop.x86_64
    ```
 
-5. Check the title screen: amber **SCRAPKEEP: FIRST RUN** with the buttons Start, Help, Achievements, Settings, Camp and Breath: hard. There is no Continue button, and no Companion button yet: Companion joins the row once a run finds your first companion piece. If you see Continue or New run, the save is not fresh: close the game and repeat step 4 exactly.
+5. Check the title screen: amber **SCRAPKEEP**, stamped in at a slight tilt, with the buttons Play, Camp, Settings, Help, Achievements and Quit. There is no Continue button, and no Companion button yet: Companion joins the row once a run finds your first companion piece. If you see Continue or New run, the save is not fresh: close the game and repeat step 4 exactly.
 
 6. Press H to read how to play, then close it. Press Space to start and pick any open pilot.
 

@@ -12,6 +12,10 @@ from common import Part
 common.reset()
 for slot, rough, metal in [("device_concrete", 0.95, 0.0), ("device_metal", 0.68, 0.28), ("device_marks", 0.85, 0.0)]:
     common.SLOTS[slot] = {"vc": True, "rough": rough, "metal": metal}
+# Polish (POLISH.md): the registry caps device props at 1100 T / 2100 V, so smooth shading and the AO/wear bake only
+# (bevel 0); Not imported by another recipe, so module level.
+import polish
+polish.enable(detail=1, bevel=0)
 
 def g(x,y,z):
     return (x,-z,y)

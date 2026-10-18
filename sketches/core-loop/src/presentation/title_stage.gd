@@ -6,6 +6,11 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const TitleIntros := preload("res://src/presentation/title_intros.gd")
+const TitleIntroPlayer := preload("res://src/presentation/title_intro_player.gd")
+const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const Worlds := preload("res://src/core/worlds.gd")
+const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 
 const PILOTS := [
 	{"id": "pylon_engineer", "name": "SableShell", "color": ClassDef.SABLE_COLOR, "at": Vector3(-3.5, 1.04, 0.0)},
@@ -15,12 +20,28 @@ const PILOTS := [
 const LOOK := Vector3(0.0, 2.6, 0.0)
 const CAMERA_AT := Vector3(0.6, 5.1, 12.8)
 const COMPANION_AT := Vector3(5.1, 1.7, 1.0)
+# Every ANTIC_PERIOD seconds one deck pilot, in turn, climbs out and does their bit
+# (pilot_antics.gd), starting ANTIC_DELAY into the slot so the first frames stay still.
+const ANTIC_PERIOD := 11.0
+const ANTIC_DELAY := 4.0
+# Look closer: drag with the right mouse button (or the right stick) to orbit a deck pilot,
+# wheel to zoom; let go and the camera drifts back after LOOK_HOLD seconds.
+const LOOK_DIST := 3.4
+const LOOK_NEAR := 1.6
+const LOOK_FAR := 6.5
+const LOOK_HOLD := 1.4
+const LOOK_RATE := 6.0
+const LOOK_DRAG := 0.008
+const LOOK_STICK := 2.4
+const LOOK_DEADZONE := 0.2
 
 var viewport: SubViewport
 var stage: Node3D
 var camera: Camera3D
 var companion: Node3D
 var active := false
+# The camp walk (camp_hub.gd) shows the real world through the chase camera, so the title picture stands down.
+var camp_walk := false
 var _layer: CanvasLayer
 var _picture: TextureRect
 var _sun: DirectionalLight3D
@@ -28,10 +49,28 @@ var _fill: DirectionalLight3D
 var _environment: Environment
 var _clock := 0.0
 var _warned := {}
+var _flow_state := "title"
+# The rotating opening (title_intros.gd). It autoplays once per launch on the first title
+# screen, never for bots or tests (bot_driven, test_mode, a headless display) and never with
+# --no-intro.
+var intro: Node
+var intro_autoplay := true
+var _intro_tried := false
+var _ctx
+var deck_antics: Array = []
+var look_target := 1
+var look_weight := 0.0
+var _look := {"yaw": 0.0, "pitch": 0.25, "dist": LOOK_DIST}
+var _look_dragging := false
+var _look_idle := LOOK_HOLD
+var _stick := Vector2.ZERO
 
 
 func setup(ctx) -> void:
 	name = "TitleStage"
+	_ctx = ctx
+	intro_autoplay = ctx.root != null and not bool(ctx.root.get("bot_driven")) and not bool(ctx.root.get("test_mode")) \
+		and DisplayServer.get_name() != "headless" and not "--no-intro" in OS.get_cmdline_user_args()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	viewport = SubViewport.new()
 	viewport.name = "TitleViewport"
@@ -66,16 +105,80 @@ func setup(ctx) -> void:
 	_picture.texture = viewport.get_texture()
 	_layer.add_child(_picture)
 	get_viewport().size_changed.connect(_resize)
+	intro = TitleIntroPlayer.new()
+	add_child(intro)
+	intro.setup(self)
+	intro.finished.connect(_intro_finished)
 	ctx.events.flow_changed.connect(show_flow)
+	ctx.events.boss_arena_entered.connect(_boss_met)
 	GraphicsPreset.register_dressing_host(self)
 	show_flow(ctx.flow.state_name())
 
 
 func show_flow(state: String) -> void:
-	active = state in ["title", "class_select"]
+	_flow_state = state
+	active = state in ["title", "class_select"] and not camp_walk
 	_layer.visible = active
 	stage.visible = active
+	if state != "title" and intro_playing():
+		intro.skip()
 	_sync_dressing()
+	if state == "title" and intro_autoplay and not _intro_tried:
+		_intro_tried = true
+		play_intro.call_deferred()
+
+
+func intro_playing() -> bool:
+	return intro != null and intro.playing
+
+
+# Plays the opening the profile's state picks (or the given row) and records it as shown.
+func play_intro(id := "") -> bool:
+	if not active or intro_playing() or (_ctx != null and _ctx.flow.state_name() != "title"):
+		return false
+	var profile = _ctx.profile if _ctx != null else null
+	if id == "":
+		var root = _ctx.root if _ctx != null else null
+		var flyable := func(pilot: String) -> bool:
+			var def = ClassDef.by_id(pilot)
+			return def != null and root != null and root.has_method("pilot_unlocked") and root.pilot_unlocked(def)
+		id = TitleIntros.pick(TitleIntros.facts_from(profile, flyable))
+	intro.reduced_motion = HighdraftFx.preferred
+	_seat_deck()
+	look_weight = 0.0
+	_look_idle = LOOK_HOLD
+	if not intro.play(id, viewport.get_texture()):
+		return false
+	if profile != null:
+		TitleIntros.mark_shown(profile, id)
+		if profile.can_save:
+			profile.save()
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# The music side starts title take A or B on bar 1; a no-op until audio carries title_theme.
+	var audio = get_parent().get("audio") if get_parent() != null else null
+	if audio != null and audio.has_method("title_theme"):
+		audio.title_theme(intro.theme)
+	return true
+
+
+func _intro_finished(_id: String, _skipped: bool) -> void:
+	_frame()
+	_sync_dressing()
+
+
+func _boss_met() -> void:
+	var run = _ctx.run if _ctx != null else null
+	var boss: Dictionary = Worlds.boss_of(int(run.world)) if run != null else {}
+	# Memory only: the run's own save carries it, so a boss entry never adds a disk write.
+	if _ctx.profile != null:
+		TitleIntros.mark_met(_ctx.profile, String(boss.get("kind", "")))
+
+
+func set_camp_walk(on: bool) -> void:
+	camp_walk = on
+	if on and intro_playing():
+		intro.skip()
+	show_flow(_flow_state)
 
 
 func _sync_dressing() -> void:
@@ -91,6 +194,12 @@ func _sync_dressing() -> void:
 	_sun.shadow_enabled = not low
 	_fill.light_energy = WorldLook.TITLE.fill
 	_resize()
+	if intro_playing():
+		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		return
+	if not active or low:
+		# Not stepped again until shown: no pilot left frozen half out of its ball.
+		_seat_deck()
 	set_process(active and not low)
 	if not active:
 		viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -108,7 +217,11 @@ func _resize() -> void:
 
 
 func _process(delta: float) -> void:
+	if intro_playing():
+		return
 	_clock += delta
+	_step_antics()
+	_step_look(delta)
 	_frame()
 	companion.position = COMPANION_AT + Vector3(0.0, sin(_clock * 1.25) * 0.09, 0.0)
 	companion.rotation.y = -0.3 + sin(_clock * 0.35) * 0.08
@@ -118,6 +231,118 @@ func _frame() -> void:
 	var drift := Vector3(sin(_clock * 0.12) * 0.55, sin(_clock * 0.17) * 0.12, cos(_clock * 0.12) * 0.18)
 	camera.position = CAMERA_AT + drift
 	camera.look_at(LOOK)
+	if look_weight > 0.001:
+		camera.transform = camera.transform.interpolate_with(_orbit(), smoothstep(0.0, 1.0, look_weight))
+
+
+func _step_antics() -> void:
+	if HighdraftFx.preferred:
+		_seat_deck()
+		return
+	var slot := int(_clock / ANTIC_PERIOD)
+	var t := (_clock - slot * ANTIC_PERIOD - ANTIC_DELAY) / PilotAntics.LENGTH
+	for i in deck_antics.size():
+		if deck_antics[i] != null:
+			deck_antics[i].apply(t if i == slot % deck_antics.size() else -1.0)
+
+
+func _seat_deck() -> void:
+	for antic in deck_antics:
+		if antic != null:
+			antic.seat()
+
+
+# --- look closer -----------------------------------------------------------------------------
+
+func looking() -> bool:
+	return _look_dragging or _look_idle < LOOK_HOLD
+
+
+func _orbit() -> Transform3D:
+	var holder: Node3D = stage.get_node_or_null(String(PILOTS[look_target].name))
+	var centre: Vector3 = (holder.position if holder != null else Vector3(PILOTS[look_target].at)) + Vector3(0.0, 0.5, 0.0)
+	var dir := Vector3(sin(_look.yaw) * cos(_look.pitch), sin(_look.pitch), cos(_look.yaw) * cos(_look.pitch))
+	var at: Vector3 = centre + dir * float(_look.dist)
+	return Transform3D(Basis.looking_at(centre - at), at)
+
+
+func _step_look(delta: float) -> void:
+	if _stick.length() > LOOK_DEADZONE:
+		look_drag(_stick * LOOK_STICK * delta / LOOK_DRAG)
+	if not _look_dragging:
+		_look_idle += delta
+	var goal := 1.0 if looking() else 0.0
+	look_weight = move_toward(look_weight, goal, LOOK_RATE * delta * (1.0 if goal > look_weight else 0.35))
+
+
+# Begins looking at the deck pilot nearest the screen point (or keeps the current one).
+func look_begin(at_screen := Vector2(-1.0, -1.0)) -> void:
+	if at_screen.x >= 0.0 and camera.is_inside_tree():
+		var best := INF
+		var scale := Vector2(viewport.size) / get_viewport().get_visible_rect().size
+		for i in PILOTS.size():
+			var spot := camera.unproject_position(Vector3(PILOTS[i].at))
+			var gap := spot.distance_to(at_screen * scale)
+			if gap < best:
+				best = gap
+				look_target = i
+	if not looking():
+		_look = {"yaw": -0.22, "pitch": 0.25, "dist": LOOK_DIST}
+	_look_idle = 0.0
+
+
+func look_drag(rel: Vector2) -> void:
+	if not looking():
+		look_begin()
+	_look.yaw = float(_look.yaw) - rel.x * LOOK_DRAG
+	_look.pitch = clampf(float(_look.pitch) + rel.y * LOOK_DRAG, -0.15, 1.2)
+	_look_idle = 0.0
+
+
+func look_zoom(step: float) -> void:
+	if not looking():
+		look_begin()
+	_look.dist = clampf(float(_look.dist) * pow(0.88, step), LOOK_NEAR, LOOK_FAR)
+	_look_idle = 0.0
+
+
+func look_cycle() -> void:
+	look_begin()
+	look_target = (look_target + 1) % PILOTS.size()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not active or intro_playing() or _ctx == null or _ctx.flow.state_name() != "title":
+		_look_dragging = false
+		_stick = Vector2.ZERO
+		return
+	if event is InputEventMouseButton:
+		match event.button_index:
+			MOUSE_BUTTON_RIGHT:
+				_look_dragging = event.pressed
+				if event.pressed:
+					look_begin(event.position)
+				else:
+					_look_idle = 0.0
+			MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN:
+				if event.pressed:
+					if not looking():
+						look_begin(event.position)
+					look_zoom(1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0)
+			_:
+				return
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and _look_dragging:
+		look_drag(event.relative)
+		get_viewport().set_input_as_handled()
+	elif event is InputEventJoypadMotion and event.axis in [JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y]:
+		if event.axis == JOY_AXIS_RIGHT_X:
+			_stick.x = event.axis_value
+		else:
+			_stick.y = event.axis_value
+	elif event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_RIGHT_STICK:
+		look_cycle()
+		get_viewport().set_input_as_handled()
 
 
 func _build_lights() -> void:
@@ -186,6 +411,7 @@ func _build_deck() -> void:
 
 func _build_heroes() -> void:
 	var painter := HeroAssets.new()
+	deck_antics.resize(PILOTS.size())
 	for row in PILOTS:
 		var holder := Node3D.new()
 		holder.name = row.name
@@ -215,6 +441,9 @@ func _build_heroes() -> void:
 			continue
 		holder.add_child(shell)
 		_freeze_visual(shell)
+		if not fitted.is_empty():
+			deck_antics[PILOTS.find(row)] = PilotAntics.new({"holder": holder, "core": core, "pod": pod,
+				"pilot": fitted.pilot, "animator": fitted.animator}, row.id)
 	painter.free()
 
 

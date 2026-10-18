@@ -17,10 +17,15 @@ const CUES := {
 	"riser_industrial": {"family": "industrial", "rise": true, "voice": "steam_whistle", "notes": [62, 65, 67, 69, 74, 77, 81, 86], "trim_sound": "threat_whistle"},
 	"drop_industrial": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50], "sound": "smash_crack", "trim_sound": "smash_crack"},
 	"drop_flash_flood": {"alias": "drop_flood"},
-	"drop_fleet_anvil": {"alias": "drop_fleet"},
-	"riser_mind_quote": {"alias": "riser_ancient"},
-	"drop_mind_wrong": {"alias": "drop_ancient"},
-	"drop_boiler": {"alias": "drop_industrial"},
+	# The Highdraft's own four (G home, Lydian lift; D-home notes, so G#/68 is the sharp eleven).
+	# The mooring crew's anvil answers twice and the Fleet brass lifts onto the eleven.
+	"drop_fleet_anvil": {"danger": true, "family": "fleet", "rise": false, "voice": "brass", "notes": [50, 57, 68], "accent": "anvil", "sound": "fleet_anvil", "trim_sound": "fleet_anvil"},
+	# Always the Mind: the player's hook played back inverted, a brushed gust under each note.
+	"riser_mind_quote": {"family": "ancient", "ancient": "mind", "rise": true, "voice": "sub", "notes": [44, 56], "accent": "brush", "trim_sound": "reactor_erupt"},
+	# The quote's flattened last note held alone while the floor slides a tritone under it.
+	"drop_mind_wrong": {"danger": true, "family": "ancient", "ancient": "mind", "drop_sound": "mind_wrong_", "rise": false, "voice": "sub", "notes": [44], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
+	# A pressure vessel giving: hiss swell, valve pop, a tritone steam shriek.
+	"drop_boiler": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50, 56], "sound": "boiler_burst", "trim_sound": "boiler_burst"},
 	"stinger_lightning": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
 	"drop_collapse": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [57, 50, 45], "accent": "crash", "trim_sound": "smash_crack"},
 	"drop_cave_in": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [50, 45, 38], "accent": "kick", "trim_sound": "land_thud"},
@@ -69,7 +74,7 @@ static func synth_cue(id: String, context: Dictionary = {}) -> Dictionary:
 	if row.voice == "stage":
 		row.voice = STAGE_VOICES[clampi(int(context.get("theme", 0)), 0, STAGE_VOICES.size() - 1)]
 	if row.family == "ancient":
-		var ancient: String = context.get("ancient", "reactor")
+		var ancient: String = row.get("ancient", context.get("ancient", "reactor"))
 		var motif := Harmony.motif(ancient)
 		if motif.is_empty():
 			return {}
@@ -81,7 +86,7 @@ static func synth_cue(id: String, context: Dictionary = {}) -> Dictionary:
 		if ancient == "swarm":
 			row.notes.append_array(motif.chord)
 		if not row.rise:
-			row.sound = ANCIENT_DROPS[ancient] + (str(context.get("motif", "sable")) if ancient == "mind" else "")
+			row.sound = String(row.get("drop_sound", ANCIENT_DROPS[ancient])) + (str(context.get("motif", "sable")) if ancient == "mind" else "")
 		row.trim_sound = row.sound if row.has("sound") else {"reactor": "reactor_erupt", "swarm": "swarm_buzz", "mind": "mind_" + str(context.get("motif", "sable"))}[ancient]
 	return row
 
@@ -134,6 +139,13 @@ const ROWS := {
 	"secret-chip-keepers": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/secret_chip_keepers/manifest.json"},
 	"secret-highdraft-rain": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/secret_highdraft_rain/manifest.json"},
 	"secret-dig-dub": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/secret_dig_dub/manifest.json"},
+	# The sound bible's picks (SOUND-INT, tools/ace/package_picked_takes.py): each boss fight's
+	# opening take (phase_music.gd PICKED) and the camp page. The roaming picks play the shelf
+	# of a zone pack (SHELF below). A pick not on disk falls back to the older pack.
+	"boss-brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/boss_brindle/manifest.json"},
+	"boss-waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/boss_waking/manifest.json"},
+	"boss-mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/boss_mind/manifest.json"},
+	"camp": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/camp/manifest.json"},
 	"title": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title/manifest.json"},
 	# The opening's theme picks the title take (title_intros.gd: "A" sax lead, "B" machine lead);
 	# C is the show-opening take.
@@ -142,6 +154,22 @@ const ROWS := {
 	"title-c": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_c/manifest.json"},
 	"summary": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/summary/manifest.json"},
 }
+
+
+# Each zone pack's shelf (calm, travel and the home after a Warden) plays its world's picked
+# roaming take at 172; the Warden's pivot, build, telegraph and drop keep the zone pack's own
+# 129 clips, so no roaming bed plays inside an arena (lesson 27a).
+const SHELF := {"spillway": "roam_spillway", "cable_reach": "roam_spillway", "dig_upper": "roam_dig",
+	"dig_deep": "roam_dig", "highdraft": "roam_highdraft", "highdraft_crown": "roam_highdraft"}
+
+
+# The roaming take for a zone pack's theme, resolved, or "" when the theme has none or its
+# Oggs are not on disk (the zone pack's own shelf plays).
+static func shelf_manifest(theme: String, sidecar_dir := "") -> String:
+	if not SHELF.has(theme):
+		return ""
+	var path := "res://assets/music_ace/%s/manifest.json" % SHELF[theme]
+	return resolve_manifest(path, sidecar_dir) if pack_on_disk(path, sidecar_dir) else ""
 
 
 # A zone/boss id or a stage row. Existing {theme, ace} stage music overrides the pack.
@@ -184,6 +212,22 @@ static func resolve_pack(row: Dictionary, sidecar_dir := "") -> Dictionary:
 	}
 
 
+# A radio take's own pack (design-v3/sound/radio_takes.py, packaged whole by pack --whole):
+# its row when ROWS names one, else assets/music_ace/<take id>/ with dashes or underscores,
+# whichever is on disk. "" until the take is rendered and packaged.
+static func take_manifest(id: String) -> String:
+	var named := str(ROWS.get(id, {}).get("ace_manifest", ""))
+	if named != "":
+		return named
+	if not id.begins_with("take-"):
+		return ""
+	for dir in [id.replace("-", "_"), id]:
+		var path := "res://assets/music_ace/%s/manifest.json" % dir
+		if resolve_manifest(path) != "":
+			return path
+	return ""
+
+
 # Source first, then the export's music_ace sidecar. Missing packs are silent synth fallback.
 static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
 	if manifest_path == "":
@@ -202,8 +246,8 @@ static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String
 
 # A pack is playable only when its manifest resolves and every stem file it names is on disk:
 # the Oggs are gitignored, so a checkout can hold manifests with no audio.
-static func pack_on_disk(manifest_path: String) -> bool:
-	var path := resolve_manifest(manifest_path)
+static func pack_on_disk(manifest_path: String, sidecar_dir := "") -> bool:
+	var path := resolve_manifest(manifest_path, sidecar_dir)
 	if path == "":
 		return false
 	var m = JSON.parse_string(FileAccess.get_file_as_string(path))

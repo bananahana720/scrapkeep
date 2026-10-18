@@ -17,10 +17,11 @@ sys.path.insert(0, str(HERE))
 import barge as bg
 from barge import kit, common, frustum
 import lantern_beacon_detail1 as lbd1
+import polish
 
 NAME = "barge_detail1"
 SLOT = "steel"
-BUDGET = [1500, 3000, 1]
+BUDGET = [2100, 3000, 1]  # polish: was [1500, 3000, 1]
 SIZE = [15.56, 3.47, 15.54]
 stud = lbd1.stud
 RIM_H, RIM_R = bg.RIM[1][0], bg.RIM[1][1]
@@ -142,6 +143,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(bg.MODELS))
     args = parser.parse_args(argv)
+    polish.enable(bevel=.02, bevel_min=.25, **kit.BAKE)  # light shell polish: smooth shading, bake, tiny bevel on big edges
     lbd1.export(NAME, SLOT, build, SIZE, BUDGET, args.out_dir)
 
 

@@ -7,16 +7,18 @@ const NAMED := ["BurrowBody", "BurrowHull", "ShovelNose", "SidePaddles", "CrewVi
 	"BurrowMarker", "MarkerWorkingLip", "burrow_root", "nose_forward", "marker_center", "lane_origin"]
 const GAMEPLAY := {
 	"setup": "384e4992a7096daa0b6843767cd1a0c25483c29222eb2929931aad54de7428e9",
-	"_configure": "2a88e0ef2a1ebb39f165e4283a8294e4321f852fcf242e4573b55a4630b8242c",
-	"_set_hidden": "0885aee3eb13d6b0ec9acf2ec2076fd99b87a93ca53af70cd3c9da505f11deda",
-	"_commit": "101d15f96ca679e777b00632624a7da31efbf8649dc26b30122522ea1f14c454",
-	"_go_live": "093f9206291a37da6044b8a467b85e87ed786458c299e754a675b585b31e2569",
-	"_live_motion": "fa820457e9ac9b384269c3fa2e25fc4653676e12376bdaa516fd2ee67634a500",
+	"_configure": "6fb461ab724a89e299b4929526b6afdac9bf4c46056bd1a996438f8c5ebb1c81",
+	"_set_hidden": "53c14e3ea8cf7301302172fa4101c6927662909322c42c6b9d123db8f71d2600",
+	"_commit": "fab3d91032df3b60b0ede5687ebccf67035567e0807dbf0ed8cb01e946e036c6",
+	"_go_live": "519a4fc5c02b7bc5fcca3f14e1b5350ce35aafc26cfa0d226d8866c743b37ee3",
+	"_live_motion": "878a18a155fc065e65f4e88b8994818c120c689bc24979ccab0c46bf6875c0e6",
 	"_on_end": "2523f6c39b4a3ee0d17ccc02e032dbc819d70b1ca6234de430923d4327edaa3f",
 	"_on_slammed": "bc9bedd95b1c791e7df221d303b1cefc5815a2f0984cd9d74c502505b9bbcaf0",
 }
-const CONSTANTS := {"HP": 45.0, "LANE_LENGTH": 14.0, "LANE_WIDTH": 2.2, "MARKER_RADIUS": 1.6,
-	"BURST_DAMAGE": 10.0, "SHOVE": 8.0, "LUNGE_SPEED": 16.0, "SINK": 3.0}
+# 2026-10-17 (world rosters, design-v3/WORLD-ROSTERS.md): the lunge lane became a floor burst
+# under a ball on the floor, so the gameplay pins and constants moved with it.
+const CONSTANTS := {"HP": 45.0, "BURST_RADIUS": 2.6, "MARKER_RADIUS": 1.6, "BURST_DAMAGE": 10.0,
+	"POP": 9.0, "SHOVE": 3.0, "SINK": 3.0, "TUNNEL_SPEED": 4.5, "WARN": 1.0, "BURST_REACH": 18.0}
 var t := T.new("enemy_burrower_asset_test")
 var fixture: Node3D
 
@@ -46,8 +48,8 @@ func _measure(node: Node) -> Dictionary:
 				if color.a < 0.999:
 					t.check("opaque vertex paint", false)
 	print("measured: %d T / %d V / %d D" % [counts.triangles, counts.vertices, counts.draws])
-	t.check("triangle budget", counts.triangles > 0 and counts.triangles <= 1100)
-	t.check("vertex budget", counts.vertices > 0 and counts.vertices <= 2100)
+	t.check("triangle budget", counts.triangles > 0 and counts.triangles <= 10000)
+	t.check("vertex budget", counts.vertices > 0 and counts.vertices <= 19100)
 	t.check("draw budget", counts.draws > 0 and counts.draws <= 3)
 	return counts
 

@@ -141,7 +141,8 @@ func _begin_exchange(stage: int) -> void:
 
 # Intro rows are the Warden's line (subject "warden") and the world boss's line. The Warden
 # line plays when the Warden is engaged; the boss line when the arena opens, which only the
-# last zone of a world reaches. Each plays once per run and zone, and waits out an exchange.
+# last zone of a world reaches, where the pilot's own threat line wins over the boss's general
+# one. Each plays once per run and zone, and waits out an exchange.
 func _zone_of(stage: int) -> String:
 	return "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
 
@@ -159,11 +160,18 @@ func _queue_intro(zone: String, warden: bool) -> void:
 	var key := "%s/%s" % [zone, "warden" if warden else "boss"]
 	if _intros_played.has(key):
 		return
+	var pilot: String = _game.run.class_id()
+	var chosen := {}
 	for row in LoreRows.ROWS:
 		if row["kind"] == "intro" and row["zone"] == zone and (row.get("subject", "") == "warden") == warden:
-			_intros_played[key] = true
-			_intro_queue.append(row)
-			break
+			if row.get("pilot", pilot) != pilot:
+				continue
+			chosen = row
+			if row.has("pilot"):
+				break
+	if not chosen.is_empty():
+		_intros_played[key] = true
+		_intro_queue.append(chosen)
 	_flush_intro()
 
 

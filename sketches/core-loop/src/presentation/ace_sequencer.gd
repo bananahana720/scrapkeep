@@ -44,6 +44,9 @@ const TRAVEL_DOWN := 0.2
 const TRAVEL_THREAT := 2
 # The ultimate meter's pressure step: a full meter at rest pressure still reaches travel.
 const ULTIMATE_STEP := 0.4
+# The momentum faders (INTEGRATION section 2): speed is a fraction of top speed.
+const DRUMS_IN_SPEED := 0.25
+const DRUMS_FULL_SPEED := 0.5
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
 
 
@@ -63,6 +66,8 @@ class Voice:
 	var wet := 0.0
 	var wet_target := 0.0
 	var wet_step := 0.0
+	# The clip's level against the pack's (a roaming take over a louder zone pack).
+	var trim := 1.0
 
 
 var manifest := {}
@@ -70,6 +75,8 @@ var manifest := {}
 var flat := false
 # The resolved manifest selected for this band, even when its Oggs are absent.
 var manifest_source := ""
+# The roaming take playing the shelf over a zone pack (MusicRows.SHELF), or "".
+var shelf_source := ""
 var clips := {}
 var sections := {}
 var streams := {}
@@ -137,7 +144,7 @@ static func from_stage(stage = "default", sidecar_dir := "", stages = MusicRows.
 	return load("res://src/presentation/ace_sequencer.gd").new(pack["ace_manifest"], sidecar_dir)
 
 
-func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
+func _init(manifest_path := MANIFEST, sidecar_dir := "", shelf := false) -> void:
 	rate_scale = AudioServer.get_mix_rate() / float(RATE)
 	if manifest_path == "":
 		return
@@ -178,7 +185,43 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 			streams[file] = stream
 			clip["paths"] = clip.get("paths", {})
 			clip["paths"][stem] = file
+	if shelf:
+		_overlay_shelf(sidecar_dir)
 	_report()
+
+
+# The world's picked roaming take replaces a zone pack's calm and travel clips (so home plays
+# it too); every Warden section keeps the zone pack's own clips. A take with an unreadable file
+# leaves the zone pack's shelf as it was.
+func _overlay_shelf(sidecar_dir: String) -> void:
+	var path := MusicRows.shelf_manifest(String(manifest.get("theme", "")), sidecar_dir)
+	if path == "":
+		return
+	var pick = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not pick is Dictionary or not pick.has("clips"):
+		return
+	var shelf := {}
+	var loaded := {}
+	for id in ["calm", "travel"]:
+		if not (pick["clips"] as Dictionary).has(id):
+			return
+		var clip: Dictionary = pick["clips"][id].duplicate(true)
+		clip["paths"] = {}
+		# The take plays at its own level, not the zone pack's (spillway is +4 dB).
+		clip["trim"] = db_to_linear(float(pick.get("level_db", 0.0))) / maxf(level, 0.000001)
+		for stem in stems:
+			var file := path.get_base_dir().path_join(String(clip["files"][stem]))
+			var stream := AudioStreamOggVorbis.load_from_file(file)
+			if stream == null:
+				return
+			stream.loop = bool(clip["loop"])
+			stream.loop_offset = float(clip["loop_offset"]) / RATE
+			loaded[file] = stream
+			clip["paths"][stem] = file
+		shelf[id] = clip
+	streams.merge(loaded, true)
+	clips.merge(shelf, true)
+	shelf_source = path
 
 
 # --ace-check: one line saying whether the band found its stems (the export proof reads it).
@@ -298,12 +341,23 @@ func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, 
 
 # Demucs's other stem carries the melodic roles; drums and bass retain their profiles.
 # At full threat/approach the recorded mix is unchanged. Armour and release remove other.
+# Two momentum faders ride on top when the feed carries them (INTEGRATION section 2):
+# drums follow rolling speed, in from a quarter of top speed and full at half, and the
+# lead (other) also opens with the kill chain: a third at chain 2 (the sax hook), full at 4.
+# Boss sections keep the full kit: the duel does not breathe with the ball's speed.
 func parameter_gain(stem: String) -> float:
-	if not parameter_enabled or not parameters.has("threat") or stem != "other":
+	if not parameter_enabled or not parameters.has("threat"):
+		return 1.0
+	if stem == "drums":
+		if mode != "level" or not parameters.has("speed"):
+			return 1.0
+		return clampf(smoothstep(DRUMS_IN_SPEED, DRUMS_FULL_SPEED, float(parameters.speed)), 0.0, 1.0)
+	if stem != "other":
 		return 1.0
 	if parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3):
 		return 0.0
-	return clampf(maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), _parameter_danger_floor), float(parameters.get("approach", 0.0))), 0.0, 1.0)
+	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), _parameter_danger_floor), float(parameters.get("approach", 0.0)))
+	return clampf(maxf(open, float(parameters.get("chain", 0.0))), 0.0, 1.0)
 
 
 # A full ultimate meter is one pressure step for the ACE band, as set_ultimate_lift is one
@@ -541,8 +595,8 @@ func _mix(at: int, span: int) -> void:
 			if w0 > 0.0 or v.wet > 0.0:
 				_lowpass(got, v, w0)
 			heard.append(got)
-			starts.append(g0 * l0)
-			ends.append(v.gain * l1)
+			starts.append(g0 * l0 * v.trim)
+			ends.append(v.gain * l1 * v.trim)
 			var last := starts.size() - 1
 			plain = plain and starts[last] == ends[last] and starts[last] == starts[0]
 	if heard.is_empty():
@@ -749,6 +803,7 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 	v.count = int(clip["sample_count"])
 	v.loop = bool(clip["loop"])
 	v.loop_offset = int(clip["loop_offset"])
+	v.trim = float(clip.get("trim", 1.0))
 	var g := _gain_of(gains, stem)
 	var hz = gains.get("lowpass_hz")
 	if hz != null:
@@ -793,6 +848,22 @@ func _retarget(frames: int) -> void:
 		v.wet_step = 1.0 / maxf(frames, 1)
 
 
+# The momentum faders rise over one beat and fall over two bars, so one bump of speed or
+# a single broken link never makes the band stutter (INTEGRATION section 2). Only voices
+# already sounding move, and only when their own momentum factor changed: a join's new
+# voices, the threat and armour retargets and the Warden release keep their own ramps.
+func _smooth_momentum(drums_before: float, chain_before: float, stripped_before: bool) -> void:
+	var drums_moved := parameters.has("speed") and parameter_gain("drums") != drums_before
+	var stripped := parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3)
+	var lead_moved := parameters.has("chain") and float(parameters.chain) != chain_before and not stripped and not stripped_before
+	var joining: Array = pending.get("voices", [])
+	for v: Voice in voices:
+		if v in joining:
+			continue
+		if (v.stem == "drums" and drums_moved) or (v.stem == "other" and lead_moved):
+			_ramp_to(v, v.target, grid_beat if v.target > v.gain else grid_bar * 2)
+
+
 func _add(action: Dictionary) -> void:
 	var i := 0
 	while i < actions.size() and int(actions[i]["at"]) <= int(action["at"]):
@@ -824,6 +895,9 @@ func _run(action: Dictionary) -> void:
 	match action["type"]:
 		"parameters":
 			var previous_gain := parameter_gain("other")
+			var drums_before := parameter_gain("drums")
+			var chain_before := float(parameters.get("chain", 0.0))
+			var stripped_before := parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3)
 			var previous := parameters.duplicate()
 			var previous_released := parameter_released
 			var previous_lift := ultimate_lift
@@ -839,10 +913,11 @@ func _run(action: Dictionary) -> void:
 			if not pending.is_empty():
 				var profile := _profile(String(pending.section))
 				for voice: Voice in pending.voices:
-					if voice.stem == "other":
-						var gain := _gain_of(profile.other, "other")
+					if voice.stem == "other" or voice.stem == "drums":
+						var gain := _gain_of(profile[voice.stem], voice.stem)
 						if voice.target != gain:
 							_ramp_to(voice, gain, STOP_RAMP)
+			_smooth_momentum(drums_before, chain_before, stripped_before)
 			if previous != parameters or previous_released != parameter_released or previous_lift != ultimate_lift or previous_gain != parameter_gain("other"):
 				var targets := {}
 				var performing: Array = pending.get("voices", voices) if int(pending.get("begin", -1)) == clock else voices

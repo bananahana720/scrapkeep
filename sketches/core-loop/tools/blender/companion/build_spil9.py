@@ -22,12 +22,25 @@ HERE = Path(__file__).resolve().parent
 SKETCH = HERE.parents[2]
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
 
+# Polish (tools/blender/POLISH.md): smooth shading with hard creases and the AO and wear bake only.
+# dress_spl_assets_test pins 620 T / 1140 V for the body, 240 / 480 per module and 1100 / 2100 per
+# pair, and the sources already sit within a few triangles of them, so no bevel, subdivision or
+# denser curves (detail 1) are added.
+POLISH = dict(detail=1, bevel=0)
 OUT = SKETCH / "assets/models/companion"
 NAMES = ("primer_coil", "primer_mesh", "ram_prow", "ram_spring", "escape_vent", "escape_rail")
 FAMILY = {n: i // 2 for i, n in enumerate(NAMES)}
 HULL_CLIPS = {"idle": 1.6, "follow": .18, "dock": .25, "empty": .25,
-              "escape_spent": .14, "escape_rearm": .20}
+              "escape_spent": .14, "escape_rearm": .20,
+              "assist_rise": .15, "assist_drop": .15, "assist_return": .45}
+# The called assist (SPIL-9 Grows Up storyboard, beat 4): rise 0.05-0.20 s, drop 0.20-0.35 s
+# with the hit at drop age 0.10 s, return 0.35-0.80 s. Played in order; return ends on rest.
+# Godot resamples clips at 30 fps on import, so each beat's extreme sits on a 1/30 s key.
+ASSIST_CLIPS = ("assist_rise", "assist_drop", "assist_return")
+# Grown-mark add-ons, one mesh per mark, all riding the Hull bone (spil9_marks.glb).
+MARKS = ("Mk1Halo", "Mk2Fins", "Mk3Halo", "Mk4Exhaust", "Mk5CoreCrest")
 MODULE_CLIPS = {
     "primer_coil": {"primer_set": .12, "primer_consume": .16, "primer_expire": .12},
     "primer_mesh": {"primer_set": .12, "primer_consume": .16, "primer_expire": .12},
@@ -38,6 +51,9 @@ MODULE_CLIPS = {
 
 
 def owns_channel(clip, node, path):
+    if clip in ASSIST_CLIPS:
+        # A whole-body act: squash, stretch and pitch all ride BodyPose. No held state lives there.
+        return node == "BodyPose" and path in ("translation", "rotation", "scale")
     if clip in ("idle", "dock", "empty"):
         return node == "BodyPose" and path == "translation"
     if clip == "follow":
@@ -62,7 +78,7 @@ def isolate_channels(path):
     for animation in gltf.get("animations",[]):
         channels=[c for c in animation["channels"] if owns_channel(animation["name"],
             gltf["nodes"][c["target"]["node"]]["name"],c["target"]["path"])]
-        assert len(channels)==1,(animation["name"],channels)
+        assert len(channels)==(3 if animation["name"] in ASSIST_CLIPS else 1),(animation["name"],channels)
         samplers=[]
         for channel in channels:
             samplers.append(animation["samplers"][channel["sampler"]])
@@ -82,6 +98,7 @@ def g(p):
 class Model:
     def __init__(self, name):
         common.reset()
+        polish.enable(**POLISH)
         common.SLOTS["bare_metal"] = {"color": "929995", "rough": .45, "metal": .6}
         self.name = name
         self.part = common.Part("CompanionMesh")
@@ -346,6 +363,11 @@ class Model:
             b.rotation_euler.x = math.radians(8)*math.exp(-4*t)*math.cos(math.pi*t/2)
         elif clip in ("dock","empty"):
             b.location.z = .025*(1-t)**2
+        elif clip in ASSIST_CLIPS:
+            z, pitch, roll, sxy, sz = assist_pose(clip, t)
+            b.location.z = z
+            b.rotation_euler.x, b.rotation_euler.y = math.radians(pitch), math.radians(roll)
+            b.scale = (sxy, sxy, sz)
         for bone in self.arm.pose.bones:
             if bone.name.endswith(("CoilPivot","MeshPivot")):
                 if clip=="primer_set":
@@ -391,6 +413,8 @@ class Model:
     def export(self, path):
         path=Path(path)
         path.parent.mkdir(parents=True,exist_ok=True)
+        bpy.context.view_layer.update()
+        polish.bake(self.root, common.POLISH)
         bpy.ops.object.select_all(action="DESELECT")
         for obj in common.tree(self.root):
             obj.select_set(True)
@@ -400,7 +424,7 @@ class Model:
             export_frame_range=False,export_force_sampling=True,export_def_bones=False,
             export_skins=True,export_yup=True,export_materials="EXPORT",export_vertex_color="ACTIVE",
             export_cameras=False,export_lights=False,export_extras=False)
-        common.canonical_indices(str(path))
+        common.canonical_indices(str(path),vertices=True)
         isolate_channels(path)
         data=path.read_bytes()
         gltf=json.loads(data[20:20+struct.unpack_from("<I",data,12)[0]])
@@ -411,6 +435,48 @@ class Model:
         assert 0<tris<=limits[0] and 0<verts<=limits[1] and len(prims)<=3, (self.name,tris,verts,len(prims),limits)
         print("SPL_EXPORT",self.name,"T",tris,"V",verts,"D",len(prims),"BYTES",len(data),flush=True)
         return {"asset":self.name,"tris":tris,"verts":verts,"draws":len(prims),"bytes":len(data),"clips":self.clips}
+
+
+def lerp(a, b, t):
+    return a+(b-a)*t
+
+
+def ease_out(t):
+    return 1-(1-t)**3
+
+
+def assist_pose(clip, t):
+    """BodyPose (lift m, pitch deg nose-up, roll deg, width scale, height scale) at clip
+    fraction t. The runtime carries SPIL-9 over the ball; these are the body's acting."""
+    if clip == "assist_rise":
+        crouch = 4/9  # 0.067 s
+        if t < crouch:
+            # Crouch and brace, nose up, like a cat about to jump.
+            e = t/crouch; e = e*e*(3-2*e)
+            return -.07*e, 12*e, 0, 1+.14*e, 1-.18*e
+        # Pop: stretch up through the move and end peering down at the target.
+        e = ease_out((t-crouch)/(1-crouch))
+        arc = math.sin(math.pi*e)
+        return lerp(-.07, .30, e), lerp(12, -22, e), 0, lerp(1.14, 1, e)-.12*arc, lerp(.82, 1, e)+.25*arc
+    if clip == "assist_drop":
+        hit, flat = 2/3, 8/9  # 0.10 s and 0.133 s
+        if t <= hit:
+            # Falls faster and stretches longer until the hit.
+            e = (t/hit)**3
+            return lerp(.30, -.10, e), lerp(-22, -38, e), 0, 1-.14*e, 1+.28*e
+        if t <= flat:
+            # Snaps flat on the next frame and holds it.
+            e = min(1, (t-hit)/(flat-hit)*3)
+            return lerp(-.10, -.12, e), -38, 0, lerp(.86, 1.24, e), lerp(1.28, .68, e)
+        e = ease_out((t-flat)/(1-flat))
+        return lerp(-.12, -.05, e), lerp(-38, -12, e), 0, lerp(1.24, 1.04, e), lerp(.68, .94, e)
+    # Floats home with a sheepish waggle, landing on rest so idle picks up cleanly.
+    e = ease_out(t)
+    fade = 1-t
+    return (lerp(-.05, 0, e)+.06*math.sin(math.pi*t)*fade,
+            lerp(-12, 0, e)+8*math.sin(math.tau*t)*fade,
+            9*math.sin(math.tau*2.5*t)*fade**1.5,
+            lerp(1.04, 1, e), lerp(.94, 1, e)+.05*math.sin(math.pi*t)*fade)
 
 
 def build(asset="spil9",pair=None):
@@ -429,13 +495,92 @@ def build(asset="spil9",pair=None):
     return m
 
 
+def build_marks():
+    """Grown-mark add-ons. The glTF root is an empty named Hull, so hero_assets'
+    _mount_on_bones seats it on the Hull bone. That joint's rest turns Blender Y/Z into
+    Godot -Z/Y, so the empty carries the inverse (+90 deg about X) and the parts below it
+    are authored in hull coordinates like the rest of this file. Rings and the core use
+    the emissive field slot: the halo is the assist gauge."""
+    common.reset()
+    polish.enable(**POLISH)
+    common.SLOTS["bare_metal"] = {"color": "929995", "rough": .45, "metal": .6}
+    hull = common.empty("Hull")
+    hull.rotation_euler.x = math.pi/2
+    meshes = []
+
+    def mark(name, build_fn):
+        part = common.Part(name)
+        build_fn(part)
+        bmesh.ops.recalc_face_normals(part.bm, faces=list(part.bm.faces))
+        obj = part.to_object(parent=hull)
+        meshes.append(obj)
+
+    def halo(r_in, r_out, z):
+        def fn(part):
+            # Hangs behind the sockets like a back halo, tipped toward the chase camera. Seated
+            # modules stand within |z| <= .12 and reach 0.94 m, so a ring over the deck would cut them.
+            part.ring("field", r_in, r_out, .02, 16, loc=g((0, .62, z)), rot=(math.radians(65), 0, 0))
+        return fn
+
+    def slab(part, slot, points, axis, depth, color=None):
+        # A flat plate from a Godot-space outline, thickened along one Godot axis.
+        n = Vector(axis)*(depth/2)
+        lo = [part.bm.verts.new(g(Vector(q)-n)) for q in points]
+        hi = [part.bm.verts.new(g(Vector(q)+n)) for q in points]
+        faces = [part.bm.faces.new(list(reversed(lo))), part.bm.faces.new(hi)]
+        for i in range(len(points)):
+            j = (i+1) % len(points)
+            faces.append(part.bm.faces.new((lo[i], lo[j], hi[j], hi[i])))
+        part.paint(faces, slot, color)
+
+    def fins(part):
+        # Swept back and out from the bumpers, under the ram adaptors and behind the prow blocks.
+        for side in (-1, 1):
+            slab(part, "paint", [(.55*side, 0, -.05), (.55*side, .06, .30), (.76*side, .14, .44),
+                                 (.74*side, .10, .34)], (1, 0, 0), .035, "petrol")
+
+    def exhaust(part):
+        # Twin stacks at the rear, clear of the trail witness on the centre line.
+        for x in (-.19, .19):
+            part.cyl("bare_metal", .055, .045, .18, 8, loc=g((x, -.02, .42)), rot=(math.pi/2, 0, 0))
+            part.ring("rubber", .028, .046, .02, 8, loc=g((x, -.02, .515)), rot=(math.pi/2, 0, 0))
+
+    def core_crest(part):
+        # Lens on the rear deck under the halo; the crest sweeps up and forward off the front
+        # deck on the centre line, between the ram adaptors.
+        part.cyl("field", .055, .045, .05, 6, loc=g((0, .245, .22)))
+        slab(part, "paint", [(0, .22, -.10), (0, .22, -.32), (0, .48, -.46), (0, .42, -.30)], (1, 0, 0), .03, "bone")
+
+    mark("Mk1Halo", halo(.15, .175, .40))
+    mark("Mk2Fins", fins)
+    mark("Mk3Halo", halo(.205, .225, .42))
+    mark("Mk4Exhaust", exhaust)
+    mark("Mk5CoreCrest", core_crest)
+    return hull, meshes
+
+
+def export_marks(path):
+    hull, meshes = build_marks()
+    common.export(hull, str(path))
+    data = Path(path).read_bytes()
+    gltf = json.loads(data[20:20+struct.unpack_from("<I", data, 12)[0]])
+    prims = [p for m in gltf["meshes"] for p in m["primitives"]]
+    tris = sum(gltf["accessors"][p["indices"]]["count"]//3 for p in prims)
+    verts = sum(gltf["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims)
+    names = [n["name"] for n in gltf["nodes"]]
+    assert [gltf["nodes"][i]["name"] for i in gltf["scenes"][0]["nodes"]] == ["Hull"], names
+    assert all(m in names for m in MARKS) and len(prims) <= 7 and tris <= 520, (names, len(prims), tris)
+    print("SPL_EXPORT spil9_marks T", tris, "V", verts, "D", len(prims), "BYTES", len(data), flush=True)
+    return {"asset": "spil9_marks", "tris": tris, "verts": verts, "draws": len(prims), "bytes": len(data)}
+
+
 def pairs():
     return [(a,b) for a,b in itertools.permutations(NAMES,2) if FAMILY[a]!=FAMILY[b]]
 
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument("--asset",choices=("spil9",)+NAMES,default="spil9")
+    parser.add_argument("--asset",choices=("spil9","spil9_marks")+NAMES,default="spil9")
     parser.add_argument("--pair",nargs=2,choices=NAMES)
     parser.add_argument("--all",action="store_true")
     parser.add_argument("--out",type=Path)
@@ -448,9 +593,12 @@ def main():
         for pair in pairs():
             m=build(pair=pair)
             reports.append(m.export(OUT/"assembled"/f"{m.name}.glb"))
+        reports.append(export_marks(OUT/"spil9_marks.glb"))
         evidence=SKETCH.parents[1]/"artifacts/local/dress-preview/SPL"
         evidence.mkdir(parents=True,exist_ok=True)
         (evidence/"export-metrics.json").write_text(json.dumps(reports,indent=2)+"\n")
+    elif args.asset=="spil9_marks":
+        export_marks(args.out or OUT/"spil9_marks.glb")
     else:
         m=build(args.asset,args.pair)
         m.export(args.out or OUT/("assembled" if args.pair else "")/f"{m.name}.glb")

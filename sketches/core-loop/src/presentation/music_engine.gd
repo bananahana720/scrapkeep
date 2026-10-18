@@ -375,7 +375,7 @@ func _init() -> void:
 	_lead = _make_track_lead()
 
 
-# Spillway and the cadence: what the title and stage 1 need, before the music starts.
+# Spillway and the cadence: what the title needs, before the music starts.
 static func prepare() -> void:
 	_prepare_chords(Harmony.PROGRESSION + Harmony.CADENCE + [Harmony.MINOR_OF["G13"], Harmony.MINOR_OF["Cmaj9"], Harmony.MINOR_OF["Bbmaj9"]], ["lead"], 0)
 	for drum in Synth.DRUMS:
@@ -386,6 +386,63 @@ static func prepare() -> void:
 		if SfxBank.bake_cancel:
 			return
 		Synth.note("reese", chord["root"] + 19)
+
+
+# The rest of Spillway's band, which stage 1 plays once the run starts: the club layer,
+# the layered lines, the lead voices and the Warden's half-step lift. Rendered on first
+# use instead, each note costs 35 to 85 ms in one frame, so the run waits for this.
+static func prepare_opening() -> void:
+	_prepare_club(Harmony.PROGRESSION, 0, [12, 19, 22, 24])
+	_prepare_chords(Harmony.PROGRESSION, ["brass", "talk"], 0)
+	_prepare_chords(Harmony.PROGRESSION, ["lead", "brass", "talk"], 1)
+	_prepare_club(Harmony.PROGRESSION, 1, [12, 18, 19, 22])
+	for shift in [0, 1]:
+		_prepare_club(Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE], shift, [12, 18, 19, 22])
+	# The layered lines and each pilot's counter-line: choir, echo chops and counter voices
+	# across the lead's range.
+	for midi in range(58, 88):
+		if SfxBank.bake_cancel:
+			return
+		Synth.note("choir_ah", midi)
+		Synth.note("choir_oo", midi)
+		Synth.note("keys", midi)
+		Synth.note("talk", midi)
+		Synth.note("tom", midi)
+		Synth.note("beep", midi)
+	for midi in range(58, 104):
+		if SfxBank.bake_cancel:
+			return
+		Synth.note("bell", midi)
+		Synth.note("mallet", midi)
+		Synth.note("clav", midi)
+	# The bass lines walk and approach chromatically, so every pitch in their range, and
+	# the reactor pedal's sub.
+	for midi in range(34, 72):
+		if SfxBank.bake_cancel:
+			return
+		Synth.note("fbass", midi)
+		Synth.note("reese", midi + 10)
+	for cell in Harmony.motif("reactor")["cells"]:
+		Synth.note("sub", int(cell[1]))
+
+
+# The house stabs, funk bass, reese and clav for each chord, shifted by semitones.
+static func _prepare_club(chords: Array, shift: int, reese_offsets: Array) -> void:
+	for chord in chords:
+		if SfxBank.bake_cancel:
+			return
+		var voicing := _shift(chord["voicing"], shift)
+		var root: int = int(chord["root"]) + shift
+		Synth.stab_chord(voicing, false)
+		Synth.stab_chord(voicing, true)
+		for offset in [0, 7, 10, 12]:
+			Synth.note("fbass", root + offset)
+		for offset in reese_offsets:
+			Synth.note("reese", root + offset)
+		for midi in voicing:
+			Synth.note("clav", midi)
+			Synth.note("clav", midi + 12)
+			Synth.note("clav", midi + 24)
 
 
 # The other themes, keys and boss tracks: on a background worker behind stage 1.
@@ -400,31 +457,9 @@ static func prepare_rest() -> void:
 	for list in [Harmony.WEIR, Harmony.BRINDLE, Harmony.MINOR_OF.values(), Harmony.BRINDLE_PHRYGIAN]:
 		for chord in list:
 			Synth.organ_chord(chord["voicing"])
-	for pair in [[Harmony.PROGRESSION, 0], [Harmony.SLUICE, 0], [Harmony.WEIR, 0], [Harmony.VICTORY, 0], [Harmony.BRINDLE, 0],
+	for pair in [[Harmony.SLUICE, 0], [Harmony.WEIR, 0], [Harmony.VICTORY, 0], [Harmony.BRINDLE, 0],
 			[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 2]]:
-		var shift: int = pair[1]
-		for chord in pair[0]:
-			var voicing := _shift(chord["voicing"], shift)
-			var root: int = int(chord["root"]) + shift
-			Synth.stab_chord(voicing, false)
-			Synth.stab_chord(voicing, true)
-			for offset in [0, 7, 10, 12]:
-				Synth.note("fbass", root + offset)
-			for offset in [12, 19, 22, 24]:
-				Synth.note("reese", root + offset)
-			for midi in voicing:
-				Synth.note("clav", midi)
-				Synth.note("clav", midi + 12)
-				Synth.note("clav", midi + 24)
-	# The layered lines: choir, echo chops and counter voices across the lead's range.
-	for midi in range(58, 88):
-		Synth.note("choir_ah", midi)
-		Synth.note("choir_oo", midi)
-		Synth.note("keys", midi)
-	for midi in range(70, 100):
-		Synth.note("bell", midi)
-		Synth.note("mallet", midi)
-		Synth.note("clav", midi)
+		_prepare_club(pair[0], pair[1], [12, 19, 22, 24])
 	# The Warden's escalation: the lift a half step up, the sinister break and pivots.
 	var lifted: Array = Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
 	_prepare_chords(lifted, ["lead", "brass", "talk"], 1)
@@ -458,6 +493,7 @@ static func prepare_rest() -> void:
 
 static func prepare_all() -> void:
 	prepare()
+	prepare_opening()
 	prepare_rest()
 
 
@@ -570,7 +606,7 @@ func set_parameter_source(source: Callable) -> void:
 func _sample_parameters() -> void:
 	var raw: Dictionary = parameter_source.call()
 	parameters = {}
-	for id in ["threat", "approach", "armour"]:
+	for id in ["threat", "approach", "armour", "speed", "chain"]:
 		if not raw.has(id):
 			continue
 		var value := float(raw[id])

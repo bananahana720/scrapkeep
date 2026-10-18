@@ -1,5 +1,6 @@
 extends Control
 
+const Secrets := preload("res://src/core/secrets.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
@@ -293,6 +294,8 @@ static func attach(camp) -> void:
 	entry.name = "CustomizeButton"
 	entry.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	camp.add_child(entry)
+	camp.customize = page
+	camp.customize_entry = entry
 	page._entry = entry
 	entry.pressed.connect(page._open_from_camp)
 	camp.visibility_changed.connect(func():
@@ -527,9 +530,7 @@ func open(profile, progress = null) -> void:
 	if progress != null:
 		backfill(_profile, progress)
 	if _camp != null:
-		_camp._lines.hide()
-		_camp._buttons.hide()
-		_entry.hide()
+		_camp.page_opened()
 	trying = {}
 	_seen_dirty = false
 	_seen_clock.clear()
@@ -593,7 +594,7 @@ static func equip(profile, owner: String, slot_id: String, id: String) -> bool:
 func shown_ids(slot_id: String) -> Array:
 	var out: Array = []
 	for id in Cosmetics.for_slot(slot_id, pilot):
-		if not Cosmetics.is_pending(id):
+		if not Cosmetics.is_pending(id) and not Secrets.shut_paint(id, _profile):
 			out.append(id)
 	return out
 
@@ -867,10 +868,8 @@ func close() -> void:
 	position = Vector2.ZERO
 	modulate.a = 1.0
 	if _camp != null:
-		_camp._lines.show()
-		_camp._buttons.show()
-		_entry.show()
-		if _camp.is_visible_in_tree():
+		_camp.page_closed()
+		if _camp.is_visible_in_tree() and not _camp.walk:
 			_entry.grab_focus()
 	back_requested.emit()
 
@@ -920,7 +919,7 @@ func _input(event: InputEvent) -> void:
 			_stop_intro()
 		if handle(event):
 			get_viewport().set_input_as_handled()
-	elif _camp != null and _camp.is_visible_in_tree() and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_C:
+	elif _camp != null and _camp.is_visible_in_tree() and not _camp.walk and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_C:
 		_open_from_camp()
 		get_viewport().set_input_as_handled()
 

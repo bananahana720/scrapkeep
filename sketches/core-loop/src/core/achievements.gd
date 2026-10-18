@@ -52,6 +52,10 @@ const ROWS := {
 	# rescue_site.gd emits rescue_completed("dig") for this quest.
 	"dig_rescued": {"name": "Digger Rescued", "text": "Rescue the buried digger.", "on": "rescue_completed",
 		"where": {"quest_id": "dig"}, "count": 1, "beat": "Kest dug out. Says the wall knocked back the whole time.", "reward": {"pilot": "demolitions_caster"}},
+	# rescue_site.gd emits rescue_completed("isles") at the Moorings cage (park_islands.json rescue_rows). It is
+	# Tally's "or" rule (class_def.gd), so the row carries no pilot reward; ledger_balanced keeps hers.
+	"isles_rescued": {"name": "Inventory Returned", "text": "Free the bookkeeper the Fleet filed as cargo.", "on": "rescue_completed",
+		"where": {"quest_id": "isles"}, "count": 1, "beat": "Tally signed her own release form. Stamped it PAID.", "reward": {}},
 	"kills_100": {"name": "Hundred Down", "text": "Break 100 machines across all your runs.", "on": "enemy_killed",
 		"count": 100, "reward": {"cosmetic": "paint_rivet_forge"}},
 	"kills_1000": {"name": "Thousand Down", "text": "Break 1000 machines across all your runs.", "on": "enemy_killed",
@@ -134,7 +138,7 @@ const ROWS := {
 	# --- end runner_gunner ---
 	# --- demolitions_caster (Kest): P-C Kest adds its grant rows here ---
 	"ach_kest_blast_vault": {"name": "Blast Vault", "text": "Let your own Cable Charge throw you clear.", "hidden": true, "on": "synergy_discovered", "where": {"synergy_id": "kest_blast_vault"}, "count": 1, "reward": {"cosmetic": "trail_kest_fuse_smoke"}},
-	"ach_kest_homecoming": {"name": "Homecoming", "text": "Fly Kest into the Highdraft.", "on": "synergy_discovered", "where": {"synergy_id": "kest_homecoming"}, "count": 1, "reward": {"cosmetic": "outfit_kest_rigger"}},
+	"ach_kest_homecoming": {"name": "Homecoming", "text": "Fly Kest into the Highdraft.", "on": "synergy_discovered", "where": {"synergy_id": "kest_homecoming"}, "count": 1, "reward": {"cosmetic": "paint_kest_rigger"}},
 	"ach_kest_tick_tick_boom": {"name": "Tick, Tick, Boom", "text": "Strike eight machines with one Windhover.", "on": "synergy_discovered", "where": {"synergy_id": "kest_tick_tick_boom"}, "count": 1, "reward": {"cosmetic": "shell_kest_roost"}},
 	# --- end demolitions_caster ---
 	# --- tarn (Tarn): P-C Tarn adds its grant rows here ---
@@ -158,6 +162,20 @@ const ROWS := {
 	"ach_cannon_time_on_target": {"name": "Time on Target", "text": "Land a Fire Mission on eight enemies at once.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_time_on_target"}, "count": 1, "reward": {"cosmetic": "paint_cannon_lens"}},
 	"ach_cannon_old_tune": {"name": "Old Tune", "text": "Quiet the Mind with its own gun.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_old_tune"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_cannon_choir"}},
 	# --- end remembered_cannon ---
+	# First-win secrets (secrets.gd): the first won run opens one alternate paint per pilot. Hidden, so a
+	# fresh player sees no hint; progress.gd backfill_secrets earns them for a player who won before they existed.
+	"secret_paint_sable": {"name": "Sable's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_sable_overtime"}},
+	"secret_paint_rivet": {"name": "Rivet's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_rivet_inside_job"}},
+	"secret_paint_kest": {"name": "Kest's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_kest_knock_back"}},
+	"secret_paint_tarn": {"name": "Tarn's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_tarn_unissued"}},
+	"secret_paint_tally": {"name": "Tally's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_tally_carbon"}},
+	"secret_paint_cannon": {"name": "Cannon's Second Coat", "text": "Win a run.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_cannon_velvet"}},
 }
 
 

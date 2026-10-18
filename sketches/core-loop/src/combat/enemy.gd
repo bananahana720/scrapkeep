@@ -6,6 +6,8 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -80,6 +82,18 @@ var scrap_value := 3
 # patch resolves (wear_trail sets it around take_damage). The died handler passes it on.
 var last_damage_source := ""
 var weight := 1.0
+# The stage threat this body was set up at; poles and flails read it for heft (movement/grip.gd).
+var threat_level := 1.0
+
+
+# A pole line (POLES-FLAILS section 4) rides any enemy like an anchor: the bite point is the
+# anchor and the body carries the ball at its own velocity. warden.gd overrides both.
+func anchor_point(point: Vector3, _from = null) -> Vector3:
+	return point
+
+
+func anchor_velocity() -> Vector3:
+	return velocity
 var radius := 1.0
 var half_height := 1.5
 # "", "amber" or "slate", set by combat every physics tick from punch_now().
@@ -124,6 +138,23 @@ const LINE_EASE := 0.15
 # its own sim clock, which stops while an attack is open.
 var idle_offset := Vector3.ZERO
 var _idle_pose := Basis.IDENTITY
+# Easing on the pivot only (presentation, never the body): the idle offset fades out as an
+# attack opens and back in as it closes, and a wind-up that is cancelled eases its pose home.
+const IDLE_FADE_OUT := 0.12
+const IDLE_FADE_IN := 0.15
+const POSE_EASE := 0.12
+var _idle_mix := 1.0
+var _idle_held := Vector3.ZERO
+var _was_winding := false
+var _wind_pose := Basis.IDENTITY
+var _eased_from := Basis.IDENTITY
+var _ease_age := -1.0
+# The ATTACK_ROWS pose the open attack leans into, and how long since it struck (-1: none).
+var _posed := ""
+var _posing := false
+var _posed_struck := false
+var _posed_instance := -1
+var _release_age := -1.0
 var _idle_clock := -1.0
 var _idle_period := 0.0
 
@@ -243,7 +274,8 @@ func _update_reaction(delta: float) -> void:
 
 
 # The model breathes between attacks and holds still (or takes its row's pose) through
-# every open attack, so the idle is never read as a telegraph.
+# every open attack, so the idle is never read as a telegraph; the attack's own wind-up pose
+# (windup_poses.gd) is the read instead.
 func _update_idle(delta: float) -> void:
 	idle_offset = Vector3.ZERO
 	_idle_pose = Basis.IDENTITY
@@ -251,13 +283,71 @@ func _update_idle(delta: float) -> void:
 		return
 	var row: Dictionary = WindupRows.ROWS.get(kind, {})
 	if winding_up():
+		_was_winding = true
+		_ease_age = -1.0
+		# The idle offset fades to zero rather than dropping; the clock holds still as before.
+		_idle_mix = move_toward(_idle_mix, 0.0, delta / IDLE_FADE_OUT)
+		idle_offset = _idle_held * _idle_mix
 		_idle_pose = EnemyMotion.pose_basis(row)
+		if row.get("pose", {}).is_empty():
+			_idle_pose = _attack_pose()
+		else:
+			_idle_pose = Transform3D(Basis.IDENTITY, Vector3.ZERO).interpolate_with(Transform3D(_idle_pose, Vector3.ZERO), 1.0 - _idle_mix).basis
+		_wind_pose = _idle_pose
 		return
+	if _posing:
+		_posing = false
+		# The attack closed: one that struck snaps through its release; a cancelled one lets go.
+		_release_age = 0.0 if _posed_struck else -1.0
+		_posed_struck = false
+		if _release_age < 0.0:
+			_posed = ""
+	if _was_winding:
+		_was_winding = false
+		_eased_from = _wind_pose
+		_ease_age = 0.0 if _release_age < 0.0 else -1.0
+	if _ease_age >= 0.0:
+		# A cancelled attack's pose (or a row's own) eases home instead of dropping.
+		_ease_age += delta
+		var home := smoothstep(0.0, 1.0, _ease_age / POSE_EASE)
+		_idle_pose = Transform3D(_eased_from, Vector3.ZERO).interpolate_with(Transform3D.IDENTITY, home).basis
+		if _ease_age >= POSE_EASE:
+			_ease_age = -1.0
+	if _release_age >= 0.0:
+		_idle_pose = WindupPoses.release(_posed, _release_age, EnemyMotion.motion_scale)
+		_release_age += delta
+		if _release_age >= WindupPoses.RELEASE_SECONDS:
+			_release_age = -1.0
+			_posed = ""
 	if _idle_clock < 0.0:
 		_idle_period = float(row.get("idle", {}).get("beats", 0.0)) * EnemyMotion.attack_clock(kind, self)
 		_idle_clock = float(absi(hash(Vector3i(global_position.round()))) % 97) / 97.0 * _idle_period
 	_idle_clock += delta
-	idle_offset = EnemyMotion.idle_offset(row.get("idle", {}), _idle_clock, _idle_period)
+	_idle_held = EnemyMotion.idle_offset(row.get("idle", {}), _idle_clock, _idle_period)
+	# Back from an attack the wave eases in from rest, not from wherever the clock stopped.
+	_idle_mix = move_toward(_idle_mix, 1.0, delta / IDLE_FADE_IN)
+	idle_offset = _idle_held * _idle_mix
+
+
+# The open attack's whole-body pose (windup_poses.gd), from its row and its telegraph's fill.
+func _attack_pose() -> Basis:
+	if _atk.is_empty():
+		return Basis.IDENTITY
+	var pose := EventKinds.attack_pose(String(_atk["row"]))
+	if not WindupPoses.has_pose(pose):
+		return Basis.IDENTITY
+	if int(_atk["instance"]) != _posed_instance:
+		# A new attack opened straight off the last one: its strike is its own.
+		_posed_instance = int(_atk["instance"])
+		_posed_struck = false
+	_posed = pose
+	_posing = true
+	_release_age = -1.0
+	var tele = _atk.get("tele")
+	var live := tele != null and is_instance_valid(tele)
+	var progress: float = tele.progress if live else float(_atk["progress"])
+	_posed_struck = _posed_struck or String(_atk["phase"]) != PHASE_WINDUP or progress >= 1.0
+	return WindupPoses.windup(pose, progress, tele.age if live else 0.0, EnemyMotion.motion_scale)
 
 
 # An attack is open: a wind-up or strike instance, a committed telegraph, or the state the
@@ -487,10 +577,10 @@ func _update_flash(delta: float) -> void:
 		return
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta * 2.5)
-		_material.albedo_color = _base_color.lerp(Color(1.0, 1.0, 0.85), _flash)
+		_material.albedo_color = _base_color.lerp(Color(1.0, 1.0, 0.85), FlashGuard.whiten(_flash))
 		_material.emission_enabled = true
 		_material.emission = EventKinds.role_color("neutral")
-		_material.emission_energy_multiplier = _flash * 2.0
+		_material.emission_energy_multiplier = FlashGuard.spike(0.0, _flash * 2.0)
 		if _flash <= 0.0:
 			_apply_rest_look()
 

@@ -12,6 +12,10 @@ extends SceneTree
 # greybox pass, 2026-10-11. Fix round, 2026-10-11: the reward pocket stands at least 150 m in a straight line from
 # every pilot and floor line, and the Kest line crosses dust_devil_floor's column; each has its planted control.
 # Fix round, 2026-10-12: named waypoints receive the numeric-point checks; a moved canal_lip pins the bounds error.
+# Authored pass, 2026-10-17 (one skill per park: the pit tests abilities in close quarters): the beacon sight check
+# passes on the headframe mounting, and a planted park whose tipple deck and hoist house stand in as greybox fails it;
+# assets/park/park_pit/skill_line.json resolves for all six pilots, drop_in through canal_lip to landmark, and passes
+# through every west cut and every drift, with a planted line that skips the barge drift failing that pin.
 
 const T := preload("res://tests/support/t.gd")
 
@@ -29,6 +33,10 @@ const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 const Graph := preload("res://src/world/park/park_graph.gd")
 # The reward's least straight distance from any measured line (KD3 fix round): PARK.md 2.12's detour floor, 150 m.
 const REWARD_CLEAR_M := 150.0
+const SKILL_LINE := "res://assets/park/park_pit/skill_line.json"
+const SKILL_WAYMARKS := ["drop_in", "canal_lip", "landmark"]
+const CUTS := ["haul_road_west_1", "west_drift_1", "haul_road_west_2", "west_drift_2", "haul_road_west_3", "west_drift_3",
+	"haul_road_west_4", "west_drift_4"]
 
 var t := T.new("park_park_pit_test")
 
@@ -127,7 +135,49 @@ func _run() -> void:
 	var at: Array = thermal["at"]
 	var kest := _line_distance(park, lines["pilots"]["kest"], Vector2(float(at[0]), float(at[1])))
 	t.check("the kest line crosses dust_devil_floor's column", kest <= float(thermal["radius"]), "%.1f m from its centre" % kest)
+
+	# Authored pass (2026-10-17): the beacon sight check on the headframe mounting, planted first.
+	var greyed := park.duplicate(true)
+	for row in greyed["park_rows"]:
+		if row["id"] in ["tipple_deck", "hoist_house"]:
+			row["recipe"] = "greybox:ledge"
+	t.check("planted: a greybox tipple deck and hoist house fail the beacon check", not tool.beacon_check(graph, greyed)["ok"])
+	var beacon: Dictionary = tool.beacon_check(graph, park)
+	t.check("beacon check passes on the headframe mounting", beacon["ok"], str(beacon))
+
+	# The skill line: every pilot rides the west cuts and their drifts, rim to floor.
+	var skill: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SKILL_LINE))
+	t.eq("skill line has six pilots", skill.get("pilots", {}).keys(), PILOTS)
+	for pilot in PILOTS:
+		t.eq("%s skill line resolves" % pilot, _resolve(graph, park, skill["pilots"][pilot], SKILL_WAYMARKS), [])
+	var skipped: Dictionary = skill["pilots"]["kest"].duplicate(true)
+	skipped["waypoints"] = skipped["waypoints"].filter(func(p) -> bool: return not (p is Array and _inside(park, "west_drift_3", p)))
+	t.check("planted: a skill line that skips the barge drift misses a cut", not _missing_cuts(park, skipped).is_empty())
+	for pilot in PILOTS:
+		t.eq("%s skill line passes every cut and drift" % pilot, _missing_cuts(park, skill["pilots"][pilot]), [])
 	quit(t.verdict())
+
+
+# The cuts and drifts whose footprint holds none of the line's numeric waypoints.
+func _missing_cuts(park: Dictionary, line: Dictionary) -> Array:
+	var out := []
+	for id in CUTS:
+		if not line["waypoints"].any(func(p) -> bool: return p is Array and _inside(park, id, p)):
+			out.append(id)
+	return out
+
+
+# Whether point p lies in the named row's footprint (yaw forward (sin, cos), size [length, height, width]).
+func _inside(park: Dictionary, id: String, p: Array) -> bool:
+	for row in park["park_rows"]:
+		if row["id"] != id:
+			continue
+		var d := Vector2(float(p[0]) - float(row["at"][0]), float(p[1]) - float(row["at"][1]))
+		var yaw := deg_to_rad(float(row["yaw_deg"]))
+		var along := d.x * sin(yaw) + d.y * cos(yaw)
+		var across := d.x * cos(yaw) - d.y * sin(yaw)
+		return absf(along) <= float(row["size"][0]) * 0.5 and absf(across) <= float(row["size"][2]) * 0.5
+	return false
 
 
 func _activity(park: Dictionary, id: String) -> Dictionary:
@@ -178,7 +228,9 @@ func _off_lines(park: Dictionary, lines: Dictionary, p: Vector2) -> float:
 
 # Errors for one line: waymark ids in order from drop_in to landmark, every point inside the play square on an open
 # graph node with a finite path to the beacon.
-func _resolve(graph, park: Dictionary, line: Dictionary) -> Array:
+func _resolve(graph, park: Dictionary, line: Dictionary, waymarks: Array = []) -> Array:
+	if waymarks.is_empty():
+		waymarks = park["waymarks"]
 	var out := []
 	var named := []
 	var rows := {}
@@ -188,7 +240,7 @@ func _resolve(graph, park: Dictionary, line: Dictionary) -> Array:
 		var at: Array
 		if point is String:
 			named.append(point)
-			if not park["waymarks"].has(point):
+			if not waymarks.has(point):
 				out.append("%s is no waymark" % point)
 				continue
 			if point == "drop_in":
@@ -211,6 +263,6 @@ func _resolve(graph, park: Dictionary, line: Dictionary) -> Array:
 			out.append("%s is on no open node" % str(point))
 		elif not is_finite(graph.d_landmark_node(n)):
 			out.append("%s has no path to the beacon" % str(point))
-	if named != park["waymarks"]:
+	if named != waymarks:
 		out.append("waymarks named %s" % str(named))
 	return out

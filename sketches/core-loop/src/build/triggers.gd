@@ -33,11 +33,12 @@ const MAX_CHAIN_DEPTH := 1
 # counts in full. on_hit and on_kill read the weapon's own value instead, keyed by the
 # strike kind combat reports (a laser that fires ten times a second procs less per hit
 # than a sticky charge). "synergy" is build's own strike: it never procs an item, which
-# is the second guard against build feeding itself.
+# is the second guard against build feeding itself. "fusion" (SG2, element_field.gd) is the
+# same: a grind strikes every enemy in its area on a beat, so it procs nothing.
 const DISCRETE_PROC := 1.0
 const STRIKE_PROC := {
 	"stomp": 1.0, "ram": 1.0, "slam": 1.0, "shell": 1.0, "ring": 1.0, "line": 1.0,
-	"arc": 0.6, "turret": 0.5, "pin": 0.5, "runner": 0.4, "synergy": 0.0,
+	"arc": 0.6, "turret": 0.5, "pin": 0.5, "runner": 0.4, "synergy": 0.0, "fusion": 0.0,
 }
 const UNKNOWN_STRIKE_PROC := 0.5
 # Golden-ratio offsets turn a pass's one draw into a separate roll per item, so two

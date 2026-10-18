@@ -203,12 +203,11 @@ func _fight_to_the_end() -> void:
 	var flow = _game.flow
 	flow.retry_stage()
 	_states.append(flow.state_name())
-	var above: Vector3 = _boss.arena.global_position + Vector3.UP * 40.0
 	var defeated_at := -1.0
 	var rammed := -1
 	var hull = _boss.ship.hull
 	while _boss.clock < LIMIT:
-		Harness.put_ball(_game, above)
+		Harness.put_ball(_game, _above_cockpit())
 		for target in _boss.ship.magnets + _boss.ship.caps:
 			if not target.is_dead():
 				_double.strike(target, "arc", 1.0e9)
@@ -220,7 +219,7 @@ func _fight_to_the_end() -> void:
 			elif _boss._posture.staggers != rammed:
 				rammed = _boss._posture.staggers
 				await physics_frame
-				Harness.put_ball(_game, above)
+				Harness.put_ball(_game, _above_cockpit())
 				_double.strike(hull, "ram", 150.0)
 		if _boss.scooter_landed():
 			Harness.put_ball(_game, _boss.scooter.global_position + Vector3.UP * 1.8)
@@ -250,3 +249,12 @@ func _fight_to_the_end() -> void:
 			tail.append(s)
 	_report("victory then summary", tail.slice(-3) == ["boss", "victory", "summary"] and _boss.arena == null,
 		"flow went %s after boss_defeated; arena freed on the summary %s" % [str(tail), _boss.arena == null])
+
+
+# 2026-10-17 BRINDLE-HULL: the bodies follow the ship now, so the ball stands above the
+# cockpit end of the moving hull. This is a trap of the test double, not of real play:
+# boss_spawner_double.gd never calls judge_hit, so it routes a ram through contact_part,
+# and a ram from above a vent cap becomes a cap hit that never cracks the cockpit. The
+# old arena-centre spot only worked while the bodies stayed behind there.
+func _above_cockpit() -> Vector3:
+	return _boss.ship.to_global(Vector3(0.0, 40.0, 4.8))

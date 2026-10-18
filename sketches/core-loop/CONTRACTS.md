@@ -162,13 +162,14 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `line_skill_loaded` | `ability_id: String, seconds: float` | A | a line skill cast with no line standing loaded the next bite |
 | `line_skill_fired` | `ability_id: String, target: Node3D, at: Vector3, on: String` | A | the line skill fired along the line; on is `body` or `world`; target is null on the world |
 | `line_skill_expired` | `ability_id: String` | A | a load ran out with no bite; nothing is refunded |
+| `active_fired` | `active_id: String, at: Vector3, count: int` | A (`src/combat/actives`) | F fired the racked active; count is the pieces it launched (rockets in a volley) |
 | `ultimate_ready` | `ultimate_id: String` | ultimate (`src/combat/ultimate.gd`, wave P-B B3) | the meter reached full |
 | `ultimate_started` | `ultimate_id: String, path: String, from: Vector3, to: Vector3, seconds: float` | ultimate | Q committed a planned path; seconds is wind-up plus flight |
 | `ultimate_peak` | `ultimate_id: String, at: Vector3` | ultimate | the flight's middle beat |
 | `ultimate_landed` | `ultimate_id: String, at: Vector3, hits: int, damage: float` | ultimate | the landing strike resolved |
 | `ultimate_cancelled` | `ultimate_id: String, reason: String, refunded: bool` | ultimate | `recall`, `bail`, `stage` or `death` |
 | `reward_offered` | `offers: Array` | B | gates are open or moved; offer records below |
-| `reward_chosen` | `part_id: String` | B | a gate was taken, after `run.add_part` |
+| `reward_chosen` | `part_id: String` | B | a gate was taken, after `run.add_part`; an active offer's id (`active:` + active id, `src/combat/actives/active_offers.gd`, --actives on) is racked instead and never added as a part |
 | `element_resolved` | `element_id: String, material_id: String, behaviour: String, at: Vector3` | B | an element met a material (TADR-009); C picks the sound by behaviour (freeze, electrify, shatter) |
 | `event_announced` | `event_id: String, seconds_until: float` | D | a stage event is coming |
 | `event_started` | `event_id: String` | D | it is live |
@@ -191,7 +192,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
    - **Unseal.** When `enemy_killed` arrives with kind `warden` and it is this stage's Warden, flow emits `beacon_unsealed(stage)`, enters `gates` and emits `beacon_charge_changed(1.0)`, wherever the ball is. "This stage's Warden" means `integrity_of(warden)` reads 0, or, for a spawner without `integrity_of`, the kill happened within 6 m of where it stood.
    - **Vanished Warden.** If the Warden leaves the tree with no kill recorded, flow unseals the same way, warns once, and adds a `warden_vanished` anomaly to the run log. If the spawner returns no Warden, or the stage is calm, the stage stays on the unsealed presence path: circling inside the ring charges it over `beacon_seconds`, then flow enters `gates` and emits `beacon_charge_changed(1.0)`.
 2. B opens its gates and emits `reward_offered(offers)`. Each offer is a Dictionary with these keys: `part_id: String`, `at: Vector3` (the gate's ground centre), `facing: Vector3` (the way through, flat and unit length) and `width: float`. B reads `ctx.run.gate_tier_bonus()` when it builds the offers. B emits `reward_offered` again whenever the gates move. `spine_run_test.gd` drives the ball through `offers[0]` using these records.
-3. When the ball rolls through a gate, B calls `run.add_part(id, "gate")`, then emits `reward_chosen(id)`.
+3. When the ball rolls through a gate, B calls `run.add_part(id, "gate")` (or, for an active offer, racks it with `combat.actives.take(id, at)`), then emits `reward_chosen(id)`.
 4. D launches the ball and emits `launched(velocity)`. D may launch from inside its own `reward_chosen` handler, before flow has heard `reward_chosen`. Flow accepts a launch in either `gates` or `launch`.
 5. Flow counts `LAUNCH_FLIGHT` (0.6 s) of flight, emits `stage_cleared`, then enters the next stage. The entry keeps the ball's horizontal speed exactly, turns it onto the new stage's entry heading, keeps the vertical part, and drops the ball in from 14 m above the spawn. After stage 3 it emits `run_ended(true)` instead.
 
@@ -228,6 +229,10 @@ Per-kind stats, transformer ids and `register_part` are documented in `src/comba
 - `would_crush(enemy, kind, force) -> bool` is true when the enemy has no plating and the hit would kill it.
 
 The spine calls all of these defensively (`has_method`). The fallbacks are integrity 1.0, punch 0, plating 0 and would_crush false. The one exception is the objective line and gap line, which show the stage's `warden_plating` when the spawner cannot say.
+
+### Special cues (`src/combat/special_cues.gd`)
+
+The four kill-first specials (Foreman, Dispatcher, Splitter, Linker) each have a presence loop, a tell and a death sting. A body is a special by its `kind`, a `special` meta or its `elite_affix` meta. `spawn_enemy` calls `SpecialCues.attach(enemy)` before it emits `enemy_spawned`, which gives the body a `special_tell(moment: String)` signal if it has none; a body built outside `spawn_enemy` calls `attach` itself first. Presence and death need no call: `audio.gd` and `machine_fx.gd` start presence on `enemy_spawned` and play the death on the body's `died`. A Splitter rammed at ground level says so with `rammed_at_ground` (a property or a method) before it dies. A behaviour calls `SpecialCues.tell(self)` on the tell's first frame and does not emit `special_tell("tell")` itself: the hook emits it once, and `audio.gd` (sound), `special_rig.gd` (clip) and `machine_fx.gd` (effects) all start from that emit, on that frame. It returns "" with a warning for a body nobody listens to. Other moments (the Linker's `cut`) the body emits itself. Sound ids are `<special>_<moment>`, loaded by `sfx_bank.gd` from `assets/audio/specials/`; the audio gate counts a missing one as a placeholder.
 
 Every enemy is in group `enemy`, is on physics layer 3, and implements `knock(direction: Vector3, force: float)` and `flash()`. The ball calls those two for contact physics, so collisions have weight whatever combat does with the damage.
 
@@ -553,8 +558,8 @@ The shop is an economy with no geometry.
 | --- | --- |
 | `enter()` (W6, the ball enters the bay) | stocks the shelf and the hook, pauses the difficulty clock, returns the greeting line |
 | `leave()` (W6, the exit pad) | returns the leaving bark and restarts the clock |
-| `shelf_offers()` (W1) | three `{index, part_id, name, price, sold, rarity, text, icon, trigger_icon, element_icon, affordable}` |
-| `buy(index)` | spends scrap and adds the part with source `shop` |
+| `shelf_offers()` (W1) | three `{index, part_id, name, price, sold, rarity, text, icon, trigger_icon, element_icon, affordable}`; with --actives on the last may be an active offer (`part_id` `active:<id>`), which adds `active`, `maker` and `headline` |
+| `buy(index)` | spends scrap and adds the part with source `shop`; an active offer is racked instead (`combat.actives.take`) |
 | `reroll_price()`, `reroll()` | one reroll per visit: 12 scrap, times 1.5 for each visit after the first |
 | `charge_offers()`, `buy_charge(slot)` | `{slot, part_id, price, cells, cap, max_charges, icon, can}` for each slot that recharges; a cell is a shop-only part, at most 2 per slot, and the slot's ceiling is 4 charges |
 | `sell_offers()`, `sell_quote(part_id)`, `sell(part_id)` | half the part's current price back; heft drops with the part |
@@ -762,7 +767,7 @@ Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The t
 
 ### Per-boss modules
 
-- **Table.** `Worlds.BOSSES` (`src/core/worlds.gd:22-29`) names, for `brindle`, `waking` and `mind`, the module `script`, the `music` section, the `title` and the `built` flag. All three rows are built.
+- **Table.** `Worlds.BOSSES` (`src/core/worlds.gd:22-29`) names, for `brindle`, `waking` and `mind`, the module `script`, the `music` section, the `title` and the `built` flag. All three rows are built. An optional `stamp` (the Mind's `HIRED`) is inked under the victory title by `screens.gd`.
 - **Lookup.** `flow._module_for(world)` (`src/core/flow.gd:141-147`) reads the row's `script`, returns the scene's module for the scene boss, and otherwise loads and sets up the script once and caches it by path in `_row_modules`, shared by every row that names it. `flow.boss_row(world)` (`:167`) is the row, with `boss_row_override` for tests.
 - **Scripts.** Brindle is `src/boss/boss.gd`. `src/boss/waking.gd` and `src/boss/mind.gd` extend `src/boss/stub_boss.gd`, which answers `MODULE` (`stub_boss.gd:45-223`: `active`, `enter_arena`, `exit_arena`, `ground_height_at`, `music_state`, `objective_text`).
 - **The Waking** fights three floors over the stub's pit: `FLOOR_NAMES` Spoil, Seam, Bedrock (`waking.gd:14`), each shattered chunk telegraphs the highest live floor and drops it `FLOOR_WARN` later (`waking.gd:16`, `:66`).

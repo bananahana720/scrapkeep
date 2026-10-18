@@ -2,6 +2,7 @@ extends Node3D
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # What the harpoon line looks like in the world, state by state (LEGIBILITY section 3). Every
 # colour and every motion is read from the line's EventKinds row, so the sight, the sound and the
@@ -10,6 +11,7 @@ const Augments := preload("res://src/movement/augments.gd")
 #
 #   cable      the line from the ball to the anchor, slack and sagging or taut and bright
 #   brackets   live corners closing on a target the press would bite; they pulse
+#              with a ring inside for a pole grip, or a hook below for a flail
 #   barb       the head seated in a body, with a steady collar that tightens as the gap closes
 #   post_ring  a steady ring on the world post the line stands on
 #   dry fire, let go, broke and the smash landing are short beats of their own
@@ -30,6 +32,10 @@ const LOCK_FROM_SCALE := 1.8
 const BRACKET_BASE := 0.9
 const BRACKET_PER_METRE := 0.015
 const BRACKET_TICK := 0.45
+# The grip marks: a pole rings the target inside the brackets; a flail hangs a hook below them.
+const POLE_RING := 0.7
+const HOOK_DROP := 1.15
+const HOOK_SIZE := 0.5
 const MARK_PX := 3.0
 const PULSE_HZ := 2.0
 const PULSE_DEPTH := 0.14
@@ -247,7 +253,7 @@ func _draw_cable(kit, ball: Vector3, smash: bool) -> void:
 		cable_radius = TAUT_RADIUS if taut else SLACK_RADIUS
 		var color := live.lightened(TAUT_LIGHTEN) if taut else live.darkened(SLACK_DIM)
 		if smash:
-			color = EventKinds.line_color("smash_committed").lightened(1.0 - clampf(_smash_age / SMASH_FLASH, 0.0, 1.0))
+			color = EventKinds.line_color("smash_committed").lightened(FlashGuard.whiten(1.0 - clampf(_smash_age / SMASH_FLASH, 0.0, 1.0)))
 		var sag: float = 0.0 if taut else minf(maxf(kit.rope - gap, 0.0) * SAG_PER_SLACK, MAX_SAG)
 		_cable_material.albedo_color = color
 		_ribbon(mesh, ball, kit.anchor, sag, cable_radius)
@@ -317,7 +323,20 @@ func _draw_lock(kit) -> void:
 		var reach := half * BRACKET_TICK * 2.0
 		_bar(mesh, tip, tip - right * corner.x * reach, up, width)
 		_bar(mesh, tip, tip - up * corner.y * reach, right, width)
+	if kit.aim.get("grip", "") == "flail":
+		_hook_mark(mesh, at - up * half * HOOK_DROP, right, up, half * HOOK_SIZE, width)
 	mesh.surface_end()
+	if kit.aim.get("grip", "") == "pole":
+		_circle(mesh, at, half * POLE_RING, camera.global_position)
+
+
+# The flail mark (POLES-FLAILS section 10): a hook hanging under the brackets, so the yank
+# reads by shape before the press, not by colour.
+func _hook_mark(mesh: ImmediateMesh, top: Vector3, right: Vector3, up: Vector3, size: float, width: float) -> void:
+	var bottom := top - up * size
+	_bar(mesh, top, bottom, right, width)
+	_bar(mesh, bottom, bottom - right * size * 0.6, up, width)
+	_bar(mesh, bottom - right * size * 0.6, bottom - right * size * 0.6 + up * size * 0.4, right, width)
 
 
 func _draw_latch(kit, ball: Vector3) -> void:

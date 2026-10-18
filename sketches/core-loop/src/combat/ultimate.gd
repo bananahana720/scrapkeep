@@ -31,6 +31,10 @@ const FLIGHT := "flight"
 const RECOVER := "recover"
 
 const WINDUP_SECONDS := 0.35
+# A planting wind-up (a row's `plant`) brakes the ball's planar speed to a stop within this long.
+const PLANT_STOP_SECONDS := 0.15
+
+var _plant_from := 0.0
 const RECOVER_SECONDS := 0.25
 const FLIGHT_SPEED := 18.0
 const FLIGHT_MIN := 1.6
@@ -138,6 +142,8 @@ var _offset := 0.0
 var _expected := Vector3.ZERO
 var _posture_spent := {}
 var _record := {}
+# True while a landing that something on the path stopped short of its target resolves.
+var stopped_short := false
 var _clock := 0.0
 var _contact_at := {}
 var _staggered := {}
@@ -389,7 +395,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 		legs = [{"mode": "arc", "to": found["entry"], "beats": first, "seconds": first * each, "strike": false},
 			{"mode": "line", "to": to, "beats": beats - first, "seconds": (beats - first) * each, "strike": true}]
 	return {"path": mode, "from": ball, "to": to, "target": found.get("target"), "beats": beats,
-		"flight": flight, "seconds": WINDUP_SECONDS + flight, "legs": legs}
+		"flight": flight, "seconds": windup_seconds() + flight, "legs": legs}
 
 
 # The flight seconds for a path length: length / 18 m/s clamped to 1.6 to 3.2 s, then whole
@@ -466,7 +472,8 @@ func start(p: Dictionary) -> void:
 	meter.locked = true
 	_was_full = false
 	_phase = WINDUP
-	_left = WINDUP_SECONDS
+	_left = windup_seconds()
+	_plant_from = ctx.player.planar_velocity().length()
 	_leg = 0
 	_ride = null
 	_posture_spent = {}
@@ -500,7 +507,38 @@ func _draw_path(p: Dictionary) -> void:
 		from = leg["to"]
 
 
-# Q in the wind-up: cancel with a full refund.
+# The wind-up is Q's cast (design-v3/FIELDS-AND-CASTS.md section 4, Andrew's "Big ones only"
+# 2026-10-17 19:56:59Z): a row's `cast` when it names one (the stronger depth-3 variants),
+# else WINDUP_SECONDS.
+func windup_seconds() -> float:
+	return float(AbilityState.ABILITIES.get(_ult_id(), {}).get("cast", WINDUP_SECONDS))
+
+
+func winding_up() -> bool:
+	return _phase == WINDUP
+
+
+# Whether this Q's wind-up plants the pilot (Tarn's and the Cannon's variants).
+func plants() -> bool:
+	return bool(AbilityState.ABILITIES.get(_ult_id(), {}).get("plant", false))
+
+
+# The plant is the pilot's own heavy stance, the one cast that stops the ball, and only while
+# its wind-up runs. The planar speed brakes linearly from the speed at the press to zero over
+# PLANT_STOP_SECONDS and is held there, the pilot's drive included; the fall stays as it is.
+# The line was already cut at the start, so the cause "ultimate" cuts nothing new.
+func _plant() -> void:
+	var v: Vector3 = ctx.player.state.velocity
+	var flat := Vector3(v.x, 0.0, v.z)
+	var into := windup_seconds() - _left
+	var cap := _plant_from * maxf(0.0, 1.0 - into / PLANT_STOP_SECONDS)
+	if flat.length() <= cap + 0.001:
+		return
+	flat = flat.normalized() * cap if cap > 0.0 else Vector3.ZERO
+	ctx.player.set_velocity_now(Vector3(flat.x, v.y, flat.z), "ultimate")
+
+
+# Q in the wind-up: cancel with a full refund. A field's jolt calls it too (jolt_layer.gd).
 func recall() -> void:
 	if _phase != WINDUP:
 		return
@@ -568,6 +606,8 @@ func step(delta: float) -> void:
 	match _phase:
 		WINDUP:
 			_left -= delta
+			if plants():
+				_plant()
 			if _left <= 0.0:
 				_begin_flight()
 		FLIGHT:
@@ -629,7 +669,9 @@ func _fly(delta: float) -> void:
 	var ball: Vector3 = player.ball_position()
 	# Something on the path stopped the ball: the flight ends there as a landing.
 	if _leg_time > 0.1 and ball.distance_to(_expected) > BLOCKED:
+		stopped_short = true
 		_land(ball)
+		stopped_short = false
 		return
 	_leg_time += delta
 	_beat_clock += delta
@@ -709,9 +751,9 @@ func _strike(at: Vector3) -> void:
 	var result: Array = [0, 0.0]
 	if row.has("landing"):
 		result = (row["landing"] as Callable).call(at, HEFT_MULT[_heft_index()], mult)
-	_record["landing_hits"] = int(_record.get("landing_hits", 0)) + int(result[0])
-	_record["damage"] = snappedf(float(_record.get("damage", 0.0)) + float(result[1]), 0.01)
-	ctx.events.ultimate_landed.emit(_id, at, int(result[0]), float(result[1]))
+	# A third entry means the row hits later and reports then (Rivet's late carve).
+	if result.size() < 3:
+		report_landing(_record, _id, at, result)
 	if _id == "cable_run" and _leg >= (_plan.get("legs", []) as Array).size():
 		_sable_runs += 1
 		if ctx.codex != null and ctx.codex.known("set_piece"):
@@ -721,6 +763,13 @@ func _strike(at: Vector3) -> void:
 	combat._discover("set_piece", at)
 	if chain_links >= 3:
 		combat._discover("set_piece_cash_in", at)
+
+
+# A landing's [hits, damage] into its own set piece's record, and the landed event.
+func report_landing(record: Dictionary, id: String, at: Vector3, result: Array) -> void:
+	record["landing_hits"] = int(record.get("landing_hits", 0)) + int(result[0])
+	record["damage"] = snappedf(float(record.get("damage", 0.0)) + float(result[1]), 0.01)
+	ctx.events.ultimate_landed.emit(id, at, int(result[0]), float(result[1]))
 
 
 func _encore_target(at: Vector3):
