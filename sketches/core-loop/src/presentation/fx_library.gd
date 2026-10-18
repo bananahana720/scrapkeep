@@ -2,6 +2,7 @@ extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # W12 VX-FX: GPU particle effects, one spec per effect. An event's EventKinds.JUICE row
 # names the effects it plays and how many particles each throws ("fx": {spec: count});
@@ -95,18 +96,132 @@ const SPECS := {
 		"size": Vector3(0.34, 0.08, 0.28), "colour": "RUST", "attach": "world", "blend": "mix", "shape": "point", "owner": "machine"},
 }
 
-const _SHADER := """
+# How a particle draws, from its spec (look): solid matter and light each get their own shape
+# instead of one flat ball or box.
+#   puff    a comic cel puff: a lumpy billboard disc, lit top and shaded underside, inked rim (dust, steam)
+#   glow    a soft additive bloom, a hot centre falling off to the tint (embers, rings of light)
+#   streak  a camera-facing streak along the particle's velocity, fat hot head, thin cooling tail
+#   chunk   a chipped lit shard with flat facets, each particle a shade off the next (debris)
+#   bead    a solid disc in the row colour with a charcoal keyline, so it reads on sand (latch, phase)
+const _HEAD := """
 shader_type spatial;
-render_mode unshaded, cull_disabled, %s;
+render_mode %s;
 instance uniform vec4 tint : source_color = vec4(1.0);
-void fragment() {
-	ALBEDO = tint.rgb * COLOR.rgb;
-	ALPHA = tint.a * COLOR.a;
+// How far a hot particle starts toward white; it cools over its life (FlashGuard.whiten scales it).
+instance uniform float heat = 0.0;
+varying float v_life;
+varying float v_seed;
+float seed_of(int id) {
+	return fract(sin(float(id) * 12.9898 + 78.233) * 43758.5453);
 }
 """
+const _BILLBOARD := """
+void vertex() {
+	v_life = INSTANCE_CUSTOM.y;
+	v_seed = seed_of(INSTANCE_ID);
+	float c = cos(INSTANCE_CUSTOM.x);
+	float s = sin(INSTANCE_CUSTOM.x);
+	mat4 facing = mat4(normalize(INV_VIEW_MATRIX[0]), normalize(INV_VIEW_MATRIX[1]), normalize(INV_VIEW_MATRIX[2]), MODEL_MATRIX[3]);
+	facing = facing * mat4(vec4(c, -s, 0.0, 0.0), vec4(s, c, 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+	float k = length(MODEL_MATRIX[0].xyz);
+	MODELVIEW_MATRIX = VIEW_MATRIX * facing * mat4(vec4(k, 0.0, 0.0, 0.0), vec4(0.0, k, 0.0, 0.0), vec4(0.0, 0.0, k, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
+}
+"""
+const _LOOKS := {
+	"puff": ["unshaded, cull_disabled, blend_mix, depth_draw_never", "billboard", """
+void fragment() {
+	vec2 p = vec2(UV.x * 2.0 - 1.0, 1.0 - UV.y * 2.0);
+	float r = length(p);
+	float a = atan(p.y, p.x);
+	float edge = 0.8 + 0.09 * sin(a * 5.0 + v_seed * 6.283) + 0.05 * sin(a * 3.0 - v_seed * 17.0);
+	if (r > edge) {
+		discard;
+	}
+	vec3 n = vec3(p / edge, sqrt(max(0.0, 1.0 - r * r / (edge * edge))));
+	float lit = step(0.25, dot(n, normalize(vec3(-0.45, 0.7, 0.55))));
+	vec3 base = tint.rgb * COLOR.rgb;
+	vec3 shade = mix(base * vec3(0.84, 0.85, 0.9), base * 1.06, lit);
+	float ink = smoothstep(edge - 0.07, edge - 0.02, r);
+	ALBEDO = mix(shade, base * 0.7, ink * 0.5);
+	ALPHA = tint.a * COLOR.a;
+}
+"""],
+	"glow": ["unshaded, cull_disabled, blend_add, depth_draw_never", "billboard", """
+void fragment() {
+	float r = length(UV * 2.0 - 1.0);
+	float halo = pow(max(0.0, 1.0 - r), 2.2);
+	float hot = heat * (1.0 - v_life) * (1.0 - smoothstep(0.0, 0.3, r));
+	// The glow multiplier spreads the halo wider instead of clipping it white, so the hue survives on sand.
+	float g = max(COLOR.r, max(COLOR.g, COLOR.b));
+	halo = pow(max(0.0, 1.0 - r), 2.2 / max(g, 1.0));
+	ALBEDO = mix(tint.rgb * min(COLOR.rgb, vec3(1.0)), vec3(1.0), clamp(hot, 0.0, 1.0));
+	ALPHA = tint.a * COLOR.a * halo * 0.8;
+}
+"""],
+	"streak": ["unshaded, cull_disabled, %s", "streak", """
+void fragment() {
+	float along = UV.y;
+	float across = abs(UV.x * 2.0 - 1.0);
+	float w = mix(1.0, 0.18, along);
+	float body = 1.0 - smoothstep(w * 0.7, w, across);
+	float tip = 1.0 - smoothstep(0.85, 1.0, 1.0 - along);
+	float core = (1.0 - smoothstep(0.0, w * 0.45, across)) * (1.0 - along);
+	float hot = clamp(heat * (1.0 - v_life) * core * 1.6, 0.0, 1.0);
+	ALBEDO = mix(tint.rgb * %s, vec3(1.0), hot);
+	ALPHA = tint.a * COLOR.a * body * tip%s;
+}
+"""],
+	"chunk": ["diffuse_toon, specular_disabled, cull_back, blend_mix, depth_draw_opaque", "chunk", """
+void fragment() {
+	ALBEDO = tint.rgb * min(COLOR.rgb, vec3(1.0)) * (0.82 + 0.3 * v_seed);
+	ROUGHNESS = 0.9;
+	RIM = 0.25;
+	RIM_TINT = 0.6;
+}
+"""],
+	"bead": ["unshaded, cull_disabled, blend_mix, depth_draw_opaque", "billboard", """
+void fragment() {
+	float r = length(UV * 2.0 - 1.0);
+	if (r > 0.95) {
+		discard;
+	}
+	vec3 base = tint.rgb * COLOR.rgb;
+	float hot = clamp(heat * (1.0 - v_life) * (1.0 - smoothstep(0.0, 0.35, r)), 0.0, 1.0);
+	vec3 fill = mix(base, vec3(1.0), hot);
+	ALBEDO = mix(fill, vec3(0.141, 0.165, 0.157), smoothstep(0.66, 0.72, r));
+	ALPHA = tint.a * COLOR.a;
+}
+"""],
+}
+const _STREAK_VERTEX := """
+void vertex() {
+	v_life = INSTANCE_CUSTOM.y;
+	v_seed = seed_of(INSTANCE_ID);
+	vec3 along = MODEL_MATRIX[1].xyz;
+	float len = length(along);
+	along /= max(len, 0.0001);
+	vec3 to_eye = normalize(CAMERA_POSITION_WORLD - MODEL_MATRIX[3].xyz);
+	vec3 side = cross(along, to_eye);
+	side = length(side) > 0.0001 ? normalize(side) : normalize(INV_VIEW_MATRIX[0].xyz);
+	float wid = length(MODEL_MATRIX[0].xyz);
+	mat4 facing = mat4(vec4(side * wid, 0.0), vec4(along * len, 0.0), vec4(cross(side, along), 0.0), MODEL_MATRIX[3]);
+	MODELVIEW_MATRIX = VIEW_MATRIX * facing;
+	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
+}
+"""
+const _CHUNK_VERTEX := """
+void vertex() {
+	v_life = INSTANCE_CUSTOM.y;
+	v_seed = seed_of(INSTANCE_ID);
+}
+"""
+# How hot each look starts (before FlashGuard.whiten): sparks and beads flash toward white and
+# cool to their tint; puffs and chunks are matter and never glow.
+const HEAT := {"glow": 0.55, "streak": 0.7, "bead": 0.35, "puff": 0.0, "chunk": 0.0}
 
 static var _shaders := {}
-
+static var _meshes := {}
 
 static func spec(id: String) -> Dictionary:
 	return SPECS.get(id, {})
@@ -141,15 +256,105 @@ static func ceiling(owner := "vfx") -> int:
 	return total
 
 
-# One material per blend mode, shared by every emitter; colour is an instance uniform.
-static func _material(blend: String) -> ShaderMaterial:
-	if not _shaders.has(blend):
+# A spec's look (see _LOOKS), from its blend, size and colour source.
+static func look(id: String) -> String:
+	var s := spec(id)
+	if s.is_empty():
+		return ""
+	if s["size"] is Vector3:
+		if s.get("align", false):
+			return "streak"
+		return "chunk"
+	if s["blend"] == "add":
+		return "glow"
+	if s.get("colour", "row") == "row":
+		return "bead"
+	return "puff"
+
+
+# One material per look (and blend, for streaks), shared by every emitter that draws that way;
+# colour and heat are instance uniforms.
+static func _material(id: String) -> ShaderMaterial:
+	return look_material(look(id), spec(id)["blend"])
+
+
+static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
+	var key := kind + ":" + (blend if kind == "streak" else "")
+	if not _shaders.has(key):
+		var row: Array = _LOOKS[kind]
+		var modes: String = row[0]
+		var body: String = row[2]
+		if kind == "streak":
+			modes = modes % ("blend_add, depth_draw_never" if blend == "add" else "blend_mix, depth_draw_opaque")
+			body = body % (["min(COLOR.rgb, vec3(1.0))", " * (1.0 - smoothstep(0.0, 1.0, across)) * 0.7"] if blend == "add" else ["COLOR.rgb", ""])
+		var vertex: String = {"billboard": _BILLBOARD, "streak": _STREAK_VERTEX, "chunk": _CHUNK_VERTEX}[row[1]]
 		var shader := Shader.new()
-		shader.code = _SHADER % ("blend_add, depth_draw_never" if blend == "add" else "blend_mix, depth_draw_opaque")
+		shader.code = (_HEAD % modes) + vertex + body
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
-		_shaders[blend] = mat
-	return _shaders[blend]
+		if kind == "streak" and blend != "add" or kind == "bead":
+			mat.render_priority = 0
+		_shaders[key] = mat
+	return _shaders[key]
+
+
+# The material an emitter draws with, whatever its mesh type.
+static func material_of(p: GPUParticles3D) -> Material:
+	return p.draw_pass_1.surface_get_material(0)
+
+
+# The particle mesh for a look: a quad for the billboards and streaks, a chipped shard for chunks.
+static func look_mesh(kind: String, size, blend := "mix") -> Mesh:
+	var key := kind + ":" + blend + ":" + str(size)
+	if _meshes.has(key):
+		return _meshes[key]
+	var mesh: Mesh
+	match kind:
+		"chunk":
+			mesh = _shard(size if size is Vector3 else Vector3.ONE * float(size))
+		"streak":
+			var quad := QuadMesh.new()
+			quad.size = Vector2(size.x * 2.0, maxf(size.y, size.z)) if size is Vector3 else Vector2.ONE * float(size)
+			mesh = quad
+		_:
+			# The puff's lumpy edge sits inside the quad, so the quad is a quarter wider than the old ball.
+			var quad := QuadMesh.new()
+			var d: float = (size.x if size is Vector3 else float(size)) * (1.25 if kind == "puff" else 1.0)
+			quad.size = Vector2(d, d)
+			mesh = quad
+	_meshes[key] = mesh
+	return mesh
+
+
+# A box with its corners pushed in and out and one corner chipped off, flat-shaded, so debris reads
+# as broken plate and stone, not cubes. Fixed seed: every build makes the same shard.
+static func _shard(size: Vector3) -> ArrayMesh:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SEED
+	var corners: Array[Vector3] = []
+	for i in 8:
+		var c := Vector3(-0.5 if i & 1 == 0 else 0.5, -0.5 if i & 2 == 0 else 0.5, -0.5 if i & 4 == 0 else 0.5)
+		c *= Vector3(rng.randf_range(0.7, 1.15), rng.randf_range(0.7, 1.15), rng.randf_range(0.7, 1.15))
+		corners.append(c * size * 1.15)
+	corners[7] *= 0.45
+	var faces := [[0, 2, 3, 1], [4, 5, 7, 6], [0, 1, 5, 4], [2, 6, 7, 3], [0, 4, 6, 2], [1, 3, 7, 5]]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for f in faces:
+		for tri in [[f[0], f[1], f[2]], [f[0], f[2], f[3]]]:
+			var a: Vector3 = corners[tri[0]]
+			var b: Vector3 = corners[tri[1]]
+			var c: Vector3 = corners[tri[2]]
+			var n := (b - a).cross(c - a).normalized()
+			if n.dot((a + b + c) / 3.0) < 0.0:
+				n = -n
+				var swap := b
+				b = c
+				c = swap
+			for v in [a, c, b]:
+				st.set_normal(n)
+				st.add_vertex(v)
+	return st.commit()
 
 
 # One emitter, configured from its spec; the caller owns placement, tint and restart.
@@ -194,19 +399,34 @@ static func build(id: String) -> GPUParticles3D:
 		pm.scale_curve = swell_tex
 	if s["blend"] == "add" or s["attach"] == "ball" or s.get("grow", false):
 		pm.alpha_curve = fade_tex
-	var mesh: PrimitiveMesh
-	if s["size"] is Vector3:
-		var box := BoxMesh.new()
-		box.size = s["size"]
-		mesh = box
+	# Secondary motion: puffs drag to a stop and roll as they swell, sparks lose speed to the
+	# air so their arcs bend, and every billboard starts at its own turn so no two lumps match.
+	var kind := look(id)
+	if kind == "puff":
+		pm.damping_min = 0.6
+		pm.damping_max = 1.8
+		pm.angle_min = 0.0
+		pm.angle_max = 360.0
+		if not s.has("spin"):
+			pm.angular_velocity_min = -40.0
+			pm.angular_velocity_max = 40.0
+		if s.get("grow", false) or s["attach"] == "persist":
+			pm.turbulence_enabled = true
+			pm.turbulence_noise_strength = 0.6
+			pm.turbulence_noise_scale = 3.0
+			pm.turbulence_influence_min = 0.05
+			pm.turbulence_influence_max = 0.15
+	elif kind == "streak":
+		pm.damping_min = 2.0
+		pm.damping_max = 5.0
+	elif kind == "glow" or kind == "bead":
+		pm.angle_min = 0.0
+		pm.angle_max = 360.0
+	var mesh := look_mesh(kind, s["size"], s["blend"])
+	if mesh is PrimitiveMesh:
+		mesh.material = _material(id)
 	else:
-		var ball := SphereMesh.new()
-		ball.radius = float(s["size"]) * 0.5
-		ball.height = float(s["size"])
-		ball.radial_segments = 8
-		ball.rings = 4
-		mesh = ball
-	mesh.material = _material(s["blend"])
+		mesh.surface_set_material(0, _material(id))
 	var p := GPUParticles3D.new()
 	p.process_material = pm
 	p.draw_pass_1 = mesh
@@ -234,5 +454,7 @@ static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Ve
 	else:
 		p.global_transform = Transform3D(Basis.IDENTITY, at)
 	p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else colour(id, kind))
+	if HEAT.has(look(id)):
+		p.set_instance_shader_parameter("heat", FlashGuard.whiten(HEAT[look(id)]))
 	p.restart()
 	p.emitting = true

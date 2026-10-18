@@ -929,11 +929,20 @@ func column(tint: Color, at := Vector3.INF) -> void:
 
 # --- Emitters ----------------------------------------------------------------------------
 
-func _emitter(pm: ParticleProcessMaterial, mesh: PrimitiveMesh, amount: int, life: float, blend: String, one_shot: bool) -> GPUParticles3D:
-	mesh.material = FxLibrary._material(blend)
+# The shape gives the look (FxLibrary._LOOKS): a long box is a streak along its motion, a ball
+# or a cube a soft glow.
+func _emitter(pm: ParticleProcessMaterial, shape: PrimitiveMesh, amount: int, life: float, blend: String, one_shot: bool) -> GPUParticles3D:
+	var size = shape.size if shape is BoxMesh else shape.height
+	var look := "streak" if size is Vector3 and maxf(size.y, size.z) > size.x * 2.0 else "glow"
+	var mesh := FxLibrary.look_mesh(look, size, blend)
+	mesh.material = FxLibrary.look_material(look, blend)
+	if look == "glow":
+		pm.angle_min = 0.0
+		pm.angle_max = 360.0
 	var p := GPUParticles3D.new()
 	p.process_material = pm
 	p.draw_pass_1 = mesh
+	p.set_instance_shader_parameter("heat", FlashGuard.whiten(FxLibrary.HEAT[look]))
 	p.amount = amount
 	p.lifetime = life
 	p.one_shot = one_shot
