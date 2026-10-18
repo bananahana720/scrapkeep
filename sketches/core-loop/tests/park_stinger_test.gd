@@ -76,9 +76,10 @@ func _fallback_checks() -> void:
 	no_file["stage"] = "1-1"
 	_t.check("1-1 has no drop_impact file", not SfxBank.file_exists(SfxBank.stinger_id("1-1", "drop_impact")))
 	_t.eq("1-1 drop_impact is the synth row", MusicRows.cue("drop_impact", no_file), MusicRows.cue("drop_impact", options))
-	# The synth aliases stay distinct from their targets only through files.
-	var aliased := MusicRows.cue("drop_boiler", options)
-	_t.eq("drop_boiler without a stage is drop_industrial's synth row", aliased, MusicRows.cue("drop_industrial", options))
+	# #83 gave the Highdraft its own boiler, so drop_boiler's synth row is no longer drop_industrial's.
+	var boiler := MusicRows.cue("drop_boiler", options)
+	_t.check("drop_boiler without a stage is its own boiler_burst synth row",
+		boiler.get("sound") == "boiler_burst" and boiler != MusicRows.cue("drop_industrial", options))
 
 
 func _active(e) -> Array:
