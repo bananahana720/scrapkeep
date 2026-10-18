@@ -35,7 +35,7 @@
 # The gloves (2026-10-18, design thread): the crew called it the Mind because it did the
 # thinking and they were its hands; the crew is gone, so it wears their work gloves to do their
 # jobs. Canvas backs with stitched seam ridges, pale scuffed leather palm patches and fingertips,
-# and a rolled, frayed cuff at the wrist, all vertex colour on the dull enamel slot; the green
+# and a rolled, frayed cuff at the wrist, vertex colour on the matte "pilot" slot (see GLOVE_SLOT); the green
 # shows only through the split side seams. Each finger's back carries its crew number in chipped
 # white stencil, raised 2 cm (Blender's built-in font, converted to mesh): little to index 04, 03,
 # 02, 01, matching the seams that go out in that order (seam3 is 04 ... seam0 is 01); the thumb,
@@ -133,6 +133,12 @@ STITCH = common.mix("charcoal", "sandstone", 0.3)
 STENCIL = "ffffff"  # chipped white roster paint
 CHIP = common.mix("sandstone", "petrol", 0.55)
 ROSTER = {0: "01", 1: "02", 2: "03", 3: "04"}  # FINGERS index -> crew number; seam%d goes with it
+# 2026-10-18 review (F4), following the KF7c cuff precedent below: the glove's pale canvas, leather,
+# stitching and stencil paint are lighter than the enamel cap (ROSTER-LOOK, HSV value and saturation
+# <= 0.45), and ancient_enamel would rust-mottle them anyway. They sit on "pilot", a matte
+# vertex-colour slot with no texture, paint or wear in hero_assets.gd; the enamel keeps its dark
+# petrol, iron and dust under the cap.
+GLOVE_SLOT = "pilot"
 # KF7c fix round: the cuff rendered as dark as the stalk with a bone vertex colour. ancient_enamel
 # does not let the vertex colour set the value: hero_assets.gd material() gives it palette.gd
 # painted_texture (a 0.66 to 1.0 grey multiply) and enamel_wear (a detail layer that MIXES copper
@@ -269,7 +275,7 @@ def loft(part, rows, slot, color=None, caps=True):
     return part.paint(faces, slot, color)
 
 
-def segment(part, bone, a, b, w0, h0, w1, h1, color=CANVAS):
+def segment(part, bone, a, b, w0, h0, w1, h1, color=CANVAS, slot=GLOVE_SLOT):
     """One finger or thumb segment from a to b (Godot), a chamfered box that tapers."""
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
@@ -280,7 +286,7 @@ def segment(part, bone, a, b, w0, h0, w1, h1, color=CANVAS):
             section(a + d * 0.35, right, up, w0, h0, 0.25),
             section(b - d * 0.3, right, up, w1, h1, 0.22),
             section(b - d * 0.02, right, up, w1 * 0.86, h1 * 0.8, 0.2)]
-    part.on(bone, loft, part, rows, "ancient_enamel", color)
+    part.on(bone, loft, part, rows, slot, color)
     return right, up
 
 
@@ -301,11 +307,11 @@ def stitch(part, bone, a, b, right, h):
     d = (b - a).normalized()
     back = -right.cross(d).normalized()
     a0, b0 = a + d * 0.45 + back * (h / 2 + 0.015), b - d * 0.35 + back * (h / 2 + 0.015)
-    part.on(bone, part.beam, "ancient_enamel", B(a0), B(b0), 0.07, 0.05, color=STITCH)
+    part.on(bone, part.beam, GLOVE_SLOT, B(a0), B(b0), 0.07, 0.05, color=STITCH)
     n = max(2, int((b0 - a0).length / 0.45))
     for k in range(n + 1):
         c = a0.lerp(b0, k / n)
-        part.on(bone, part.beam, "ancient_enamel", B(c - right * 0.09), B(c + right * 0.09), 0.04, 0.05,
+        part.on(bone, part.beam, GLOVE_SLOT, B(c - right * 0.09), B(c + right * 0.09), 0.04, 0.05,
                 color=STITCH)
 
 
@@ -349,7 +355,7 @@ def stencil(part, bone, text, at, along, across, out, size):
             faces.append(f)
             # Chipped paint: about one face in six shows the canvas through it.
             chip = (i * 2654435761 + len(text) * 97) % 6 == 0
-            part.paint([f], "ancient_enamel", CHIP if chip else STENCIL)
+            part.paint([f], GLOVE_SLOT, CHIP if chip else STENCIL)
         return faces
     part.on(bone, add)
 
@@ -391,12 +397,12 @@ def build_body():
         p.on("Hand", p.cyl, "ancient_enamel", 1.55, 1.55, 0.12, 12, loc=B((0, y, 0)), color=IRON)
     p.on("Hand", p.cyl, "ancient_enamel", 0.98, 1.08, 0.6, 12, loc=B((0, 1.76, 0)), color=ENAMEL)
     # The glove's rolled cuff, folded over at the wrist, with frayed canvas tabs hanging below.
-    p.on("Hand", p.cyl, "ancient_enamel", 1.2, 1.24, 0.34, 16, loc=B((0, 1.95, 0)), color=CANVAS)
-    p.on("Hand", p.cyl, "ancient_enamel", 1.3, 1.3, 0.14, 16, loc=B((0, 2.05, 0)), color=LEATHER)
+    p.on("Hand", p.cyl, GLOVE_SLOT, 1.2, 1.24, 0.34, 16, loc=B((0, 1.95, 0)), color=CANVAS)
+    p.on("Hand", p.cyl, GLOVE_SLOT, 1.3, 1.3, 0.14, 16, loc=B((0, 2.05, 0)), color=LEATHER)
     for k in range(14):
         a = k * math.tau / 14 + 0.11 * ((k * 7) % 3)
         length = 0.16 + 0.05 * ((k * 5) % 4)
-        p.on("Hand", p.box, "ancient_enamel", (0.2, 0.05, length),
+        p.on("Hand", p.box, GLOVE_SLOT, (0.2, 0.05, length),
              loc=B((1.2 * math.cos(a), 1.78 - length / 2 + 0.04, 1.2 * math.sin(a))),
              rot=(0, 0, -a + math.pi / 2), color=CANVAS)
     p.on("Hand", p.cyl, "ancient_enamel", 1.08, 2.0, 0.36, 12, loc=B((0, 2.24, 0)), color=ENAMEL)
@@ -407,22 +413,22 @@ def build_body():
     roll_u = Vector((-math.sin(PALM_ROLL), math.cos(PALM_ROLL), 0))
     rows = [section(Vector((0, PALM_Y0 + lift, z)), roll_r, roll_u, 2 * hw, 2 * hh, ch)
             for z, hw, hh, lift, ch in PALM]
-    p.on("Palm", loft, p, rows, "ancient_enamel", CANVAS)
+    p.on("Palm", loft, p, rows, GLOVE_SLOT, CANVAS)
     tilt = (0, -PALM_ROLL, 0)  # Blender rotation matching the roll about -Z
 
     def top_y(x, hh):
         return PALM_Y0 + x * math.tan(PALM_ROLL) + hh / math.cos(PALM_ROLL)
 
-    p.on("Palm", p.ico, "ancient_enamel", 1.0, 2, loc=B((1.9, top_y(1.9, 0.42) - 0.1, 1.3)), scale=(0.85, 1.4, 0.4),
+    p.on("Palm", p.ico, GLOVE_SLOT, 1.0, 2, loc=B((1.9, top_y(1.9, 0.42) - 0.1, 1.3)), scale=(0.85, 1.4, 0.4),
          rot=tilt, color=LEATHER)
-    p.on("Palm", p.ico, "ancient_enamel", 1.0, 2, loc=B((-1.8, top_y(-1.8, 0.42) - 0.1, 1.6)), scale=(0.7, 1.0, 0.35),
+    p.on("Palm", p.ico, GLOVE_SLOT, 1.0, 2, loc=B((-1.8, top_y(-1.8, 0.42) - 0.1, 1.6)), scale=(0.7, 1.0, 0.35),
          rot=tilt, color=LEATHER)
     # Scuffed leather patches across the palm and under the knuckle line.
     for x, z, w, d in ((0.0, -1.2, 3.6, 1.1), (-0.3, -2.75, 5.4, 0.55)):
-        p.on("Palm", p.box, "ancient_enamel", (w, d, 0.06), loc=B((x, top_y(x, 0.36) + 0.01, z)), rot=tilt,
+        p.on("Palm", p.box, GLOVE_SLOT, (w, d, 0.06), loc=B((x, top_y(x, 0.36) + 0.01, z)), rot=tilt,
              color=LEATHER)
     # The glove's back seam: a stitched ridge from the cuff to the middle knuckle.
-    p.on("Palm", p.beam, "ancient_enamel", B((0, palm_back_y(0, 0.36) - 0.02, 2.3)),
+    p.on("Palm", p.beam, GLOVE_SLOT, B((0, palm_back_y(0, 0.36) - 0.02, 2.3)),
          B((0, palm_back_y(0, 0.32) - 0.02, -3.0)), 0.12, 0.08, color=STITCH)
     p.on("Palm", p.ring, "ancient_enamel", 1.2, 1.55, 0.18, 12, loc=B((0, top_y(0, 0.36) - 0.03, 0.2)), rot=tilt,
          color=IRON)
@@ -462,7 +468,7 @@ def build_body():
         # The fingertip: a blunt cast cap.
         tip = pts[3]
         d = (pts[3] - pts[2]).normalized()
-        p.on(parent, p.ico, "ancient_enamel", 0.17, 2, loc=B(tip - d * 0.05), scale=(1.5, 1.2, 1.0),
+        p.on(parent, p.ico, GLOVE_SLOT, 0.17, 2, loc=B(tip - d * 0.05), scale=(1.5, 1.2, 1.0),
              color=LEATHER)
     # Thumb, opposed: out on the -X side from the heel, rising past the palm's plane.
     tp = [Vector(v) for v in THUMB["pts"]]
@@ -481,7 +487,7 @@ def build_body():
         if s < 2:
             stencil(p, name, ("FORE", "MAN")[s], (tp[s] + tp[s + 1]) / 2, d, right_of(d), THUMB["h"] * k0 * 0.47,
                     0.5)
-    p.on(parent, p.ico, "ancient_enamel", 0.3, 2, loc=B(tp[3]), scale=(0.95, 0.85, 0.85), color=LEATHER)
+    p.on(parent, p.ico, GLOVE_SLOT, 0.3, 2, loc=B(tp[3]), scale=(0.95, 0.85, 0.85), color=LEATHER)
     # The wrist stalk: three ribbed sleeves, each with a dark core that hides in the sleeve
     # above it at rest and bridges the gap when the stalk telescopes down 10 m.
     parent = "Hand"
@@ -843,7 +849,8 @@ def animate(arm):
 
 def build():
     common.reset()
-    polish.enable(detail=1, bevel=0.02)
+    # edge 0 and a lighter AO keep bevelled enamel corners under the enamel cap.
+    polish.enable(detail=1, bevel=0.02, edge=0.0, ao_strength=0.35)
     root = common.empty("WardenMind")
     pose_node = common.empty("Pose", (0, 0, 0), root)
     common.empty("PoseHang", (0, 0, 0), root)

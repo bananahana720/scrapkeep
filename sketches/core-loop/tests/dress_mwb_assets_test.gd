@@ -1,6 +1,7 @@
 extends SceneTree
 
-const SLOTS := ["ancient_enamel", "rubber", "ancient_light", "bare_metal", "mantle_tool"]
+# "pilot": the glove fingers (2026-10-18 review F4), a matte vertex-colour slot kept off the enamel cap.
+const SLOTS := ["ancient_enamel", "rubber", "ancient_light", "bare_metal", "mantle_tool", "pilot"]
 const SEATS := [Vector3(1.735, 2.97, 0), Vector3(-0.665, 2.97, 1.385641), Vector3(-0.665, 2.97, -1.385641)]
 const SPECS := [
 	{"file": "warden_mantle_hand.glb", "root": "MantleHand", "cap": [6000, 11200, 5],

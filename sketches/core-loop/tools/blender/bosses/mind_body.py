@@ -25,16 +25,19 @@ completed panel hidden in wiring; do not play all three every phase. The three
 choir_change variants demonstrate the real seat transitions; code selects the seat
 and owns the collision target. attention is only a small optical rotation.
 stagger_open uncovers mint OpenLens behind opaque slate shutters. Runtime alone
-decides when it opens. No mint crown/enamel, reward amber or attached hand geometry.
+decides when it opens. No mint crown/enamel, reward amber or attached hand geometry
+(the GlovePlate below is a detached prop resting by the seat, not a hand on the crown).
 
 The empty place (2026-10-18, design thread): the crew called the Mind the Mind because
 it did the thinking and they were its hands. CrewBench is four empty seats on a low
 plank behind the seat, facing the lens, outside every telegraph. GlovePlate is a work
 glove laid flat by the bench; it rests hidden (scale 0.001) and only glove_down shows it
 coming down onto the pad by the empty seat, while the mantles settle as in final_quiet.
-glove_down is the defeat clip for this base; final_quiet stays for older wiring. All
-clips are sampled every frame with eased (auto-clamped Bezier) keys. family_strike ends
-holding FamilyRecoil at z=-0.18, where recovery starts, so the pair never pops.
+glove_down is the base's defeat clip, played by mind_dress.gd from PR #113, which
+falls back to final_quiet when it is missing; final_quiet stays. All clips are sampled
+every frame with eased (auto-clamped Bezier) keys. family_strike ends holding
+FamilyRecoil at z=-0.18, where recovery and hand_send (which replaces recovery when a
+hand is sent) both start, easing back to 0, so neither pair pops.
 
 One base allocation includes the crown, six slabs, supports, spine and seat. The kit
 allocation includes the optics and all working tools. These REPLACE the old clamp
@@ -330,15 +333,26 @@ def crew_bench(root):
         p = [(r*math.sin(a), y, r*math.cos(a)) for a in (a0, a1) for r in (3.85, 4.95) for y in (0, .12)]
         lo0, hi0, lo1, hi1 = p[0], p[1], p[2], p[3]
         lo2, hi2, lo3, hi3 = p[4], p[5], p[6], p[7]
-        bench.face([hi0, hi2, hi3, hi1], "ancient_enamel", "petrol")
-        bench.face([lo0, lo1, lo3, lo2], "dark_joint", "charcoal")
-        bench.face([lo0, lo2, hi2, hi0], "dark_joint", "charcoal")
-        bench.face([lo1, hi1, hi3, lo3], "dark_joint", "charcoal")
+        mid = (a0 + a1) / 2
+        radial = Vector((math.sin(mid), 0, math.cos(mid)))
+        outward(bench, [hi0, hi2, hi3, hi1], Vector((0, 1, 0)), "ancient_enamel", "petrol")
+        outward(bench, [lo0, lo1, lo3, lo2], Vector((0, -1, 0)), "dark_joint", "charcoal")
+        outward(bench, [lo0, lo2, hi2, hi0], -radial, "dark_joint", "charcoal")
+        outward(bench, [lo1, hi1, hi3, lo3], radial, "dark_joint", "charcoal")
     for a, inner, outer in ((-44, 3.85, 4.95), (44, 3.85, 4.95)):
         r = math.radians(a)
         q = [(rr*math.sin(r), y, rr*math.cos(r)) for rr in (inner, outer) for y in (0, .12)]
-        bench.face([q[0], q[2], q[3], q[1]] if a < 0 else [q[0], q[1], q[3], q[2]], "dark_joint", "charcoal")
+        tangent = Vector((math.cos(r), 0, -math.sin(r))) * (1 if a > 0 else -1)
+        outward(bench, [q[0], q[2], q[3], q[1]], tangent, "dark_joint", "charcoal")
     bench.object((0,0,0), root)
+
+
+def outward(mesh, points, out, slot, tint):
+    """A planar face wound so its normal points along out (Godot frame; B() keeps handedness)."""
+    a, b, c = (Vector(p) for p in points[:3])
+    if (b - a).cross(c - a).dot(out) < 0:
+        points = list(reversed(points))
+    mesh.face(points, slot, tint)
 
 
 def glove_plate(root):
@@ -600,6 +614,8 @@ def pose(clip,t,root,snapshot):
             if shutter:
                 shutter.rotation_euler.x=-1.24*opened
                 shutter.location.z=.12*opened
+    if clip=="hand_send" and obj("FamilyRecoil"):
+        obj("FamilyRecoil").location.z=-.18*(1-ease(t))
     if clip=="hand_send" and obj("EmitterL"):
         obj("EmitterL").rotation_euler.z=.09*math.sin(math.pi*t)
 
@@ -617,7 +633,7 @@ def controls(clip,root):
     elif clip in ("pulse_warn","pulse"): names=["PulseLip"]
     elif clip.startswith("choir_change"): names=["LensRoot"]
     elif clip=="stagger_open": names=["Shutter%d"%i for i in range(6)]
-    elif clip=="hand_send": names=["EmitterL"]
+    elif clip=="hand_send": names=["EmitterL","FamilyRecoil"]
     elif clip=="glove_down": names=["Mantle%d"%i for i in range(6)]+["GlovePlate"]
     elif clip=="final_quiet": names=["Mantle%d"%i for i in range(6)]+["LensRoot"]+["Shutter%d"%i for i in range(6)]
     return [o for o in common.tree(root) if o.name in names]

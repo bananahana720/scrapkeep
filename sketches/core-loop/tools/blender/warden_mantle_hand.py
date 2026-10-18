@@ -7,7 +7,7 @@ Only the selected mantle is exported. --render reimports that GLB on CPU.
 
 Gloves (2026-10-18): the fingers wear the lost crew's work gloves, canvas backs
 with a stitched ridge, pale leather tips and a rolled, frayed cuff band over the
-finger roots, all vertex colour on the dull enamel slot. Polished (POLISH.md).
+finger roots, vertex colour on the matte "pilot" slot. Polished (POLISH.md).
 """
 
 import math
@@ -30,6 +30,10 @@ DUST = common.mix("petrol", "bone", 0.09)
 CANVAS = common.mix("sandstone", "petrol", 0.42)
 LEATHER = common.mix("sandstone", "bone", 0.5)
 STITCH = common.mix("charcoal", "sandstone", 0.3)
+# Review F4 (2026-10-18): glove colours are lighter than the enamel cap, so the whole glove
+# finger, its stitching and cuff use the matte vertex-colour "pilot" slot (no paint or wear in
+# hero_assets.gd), as warden_mind.py does. The fingers carry no enamel, so draws stay at 5.
+GLOVE_SLOT = "pilot"
 
 
 def xyz(v):
@@ -94,7 +98,8 @@ def clipped_stripes(part, polygon, plane):
 
 def setup():
     common.reset()
-    polish.enable(detail=1, bevel=0.02)
+    # edge 0 and a lighter AO keep bevelled enamel corners under the enamel cap.
+    polish.enable(detail=1, bevel=0.02, edge=0.0, ao_strength=0.35)
     common.SLOTS["mantle_tool"] = {"vc": True, "rough": 0.85}
     common.material("ancient_enamel").node_tree.nodes["Principled BSDF"].inputs[
         "Roughness"
@@ -156,18 +161,18 @@ def build():
                             (lower[k], upper[k], upper[(k + 1) % 8], lower[(k + 1) % 8])
                         )
                     ],
-                    "ancient_enamel",
+                    GLOVE_SLOT,
                     LEATHER if j == 0 else CANVAS,
                 )
         fingers.paint(
-            [fingers.bm.faces.new(list(reversed(rows[0])))], "ancient_enamel", LEATHER
+            [fingers.bm.faces.new(list(reversed(rows[0])))], GLOVE_SLOT, LEATHER
         )
-        fingers.paint([fingers.bm.faces.new(rows[-1])], "ancient_enamel", CANVAS)
+        fingers.paint([fingers.bm.faces.new(rows[-1])], GLOVE_SLOT, CANVAS)
         # The stitched seam ridge down the glove finger's back, ticks across it.
-        fingers.beam("ancient_enamel", Vector(xyz((-3.285, 2.2, z))), Vector(xyz((-3.285, 3.45, z))),
+        fingers.beam(GLOVE_SLOT, Vector(xyz((-3.285, 2.2, z))), Vector(xyz((-3.285, 3.45, z))),
                      0.05, 0.04, color=STITCH)
         for y in (2.35, 2.75, 3.15):
-            fingers.beam("ancient_enamel", Vector(xyz((-3.285, y, z - 0.1))), Vector(xyz((-3.285, y, z + 0.1))),
+            fingers.beam(GLOVE_SLOT, Vector(xyz((-3.285, y, z - 0.1))), Vector(xyz((-3.285, y, z + 0.1))),
                          0.03, 0.04, color=STITCH)
         # The working pad sits .052m behind the front; neutral cast rim closes
         # the real cutout, so no orange overlay floats over a solid finger face.
@@ -187,7 +192,7 @@ def build():
             face(
                 fingers,
                 [outer[k], outer[(k + 1) % 4], inner[(k + 1) % 4], inner[k]],
-                "ancient_enamel",
+                GLOVE_SLOT,
                 "bone",
             )
         clipped_stripes(
@@ -198,10 +203,10 @@ def build():
     # Each glove finger's rolled cuff at its root, frayed tabs hanging down its back; all of it
     # stays inside the finger's 0.5 m lane.
     for z in (-1.0, 0.0, 1.0):
-        box(fingers, "ancient_enamel", (0.72, 0.18, 0.5), (-2.95, 3.52, z), LEATHER)
+        box(fingers, GLOVE_SLOT, (0.72, 0.18, 0.5), (-2.95, 3.52, z), LEATHER)
         for k, dz in enumerate((-0.17, -0.05, 0.07, 0.18)):
             length = 0.1 + 0.04 * ((k * 5 + int(z + 1)) % 3)
-            box(fingers, "ancient_enamel", (0.03, length, 0.08), (-3.32, 3.43 - length / 2, z + dz), CANVAS)
+            box(fingers, GLOVE_SLOT, (0.03, length, 0.08), (-3.32, 3.43 - length / 2, z + dz), CANVAS)
     fingers.to_object(parent=mount)
     return root
 
