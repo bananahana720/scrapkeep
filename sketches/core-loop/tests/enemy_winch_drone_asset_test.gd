@@ -10,7 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 # what winch_drone.gd had before the dressing swap, pinned both as its source text (the literals
 # in _configure and _live) and as the runtime values counter.gd leaves after clamping.
 const GLB := "res://assets/models/world_one/enemy_winch_drone.glb"
-const CEILING_T := 1200
+const CEILING_T := 4600  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 # WD: splitting the drum adds one draw; the original triangle ceiling is unchanged.
 const CEILING_D := 4
 const X_MIN := -1.7
@@ -140,7 +140,7 @@ func _run() -> void:
 	surfaces.sort()
 	_check(names == ["WinchBody", "WinchDrum", "WinchRotor"], "asset node names stay pinned, including the split drum")
 	_check(surfaces == ["fleet_paint", "paint", "paint", "paint"], "asset surface names stay pinned")
-	_check(absf(float(m["tris"]) - 552.0) <= 55.2, "WD-8 triangles within 10 percent of base 552")
+	_check(absf(float(m["tris"]) - 4412.0) <= 441.2, "WD-8 triangles within 10 percent of base 4412 (polished; was 552)")
 	scene.free()
 
 	game.ctx.calm = true
@@ -156,7 +156,7 @@ func _run() -> void:
 	_check(drone.find_child("WinchBody", true, false) != null and drone.find_child("WinchRotor", true, false) != null,
 		"the live drone carries its WinchBody and WinchRotor dressing")
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 4" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within %d / 4" % [live["tris"], live["draws"], CEILING_T])
 	_check(not live["alpha"], "live assembly has no alpha surface")
 	var pts := _points(drone)
 	var lo := Vector3(INF, INF, INF)

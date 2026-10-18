@@ -31,11 +31,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 import common
+import polish
 from common import Part
 import splitter_pod
 from splitter_pod import g
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
 root = common.empty("Splitter")
@@ -48,6 +51,8 @@ NAMES = ["a", "b", "c"]
 
 body = Part("SplitterBody")
 glow = Part("SplitterSeams")
+glow.bevel = 0
+glow.subsurf = 0
 snouts = []
 for i, az in enumerate(AZ):
     tip, out = splitter_pod.build(body, glow, az, R, tally=i + 1)
@@ -100,7 +105,7 @@ low = min(p.z for p in points)
 high = max(p.z for p in points)
 print("SPLITTER radius %.3f floor %.3f top %.3f tris %d" % (radius, low, high, common.tri_total(root)))
 assert radius <= 1.6 and low >= FLOOR - 1e-4 and high <= 1.7
-assert common.tri_total(root) <= 1100
+assert common.tri_total(root) <= 8000
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_splitter.glb")

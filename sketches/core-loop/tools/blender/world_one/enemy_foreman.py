@@ -40,9 +40,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
 root = common.empty("Foreman")
@@ -89,6 +92,7 @@ def block(y0, y1, w0, w1, d0, d1, z=0.0):
 
 body = Part("ForemanBody")
 signal = Part("ForemanSignal")
+signal.subsurf = 0
 
 # Cart: the lobber's deck and tapered tower, a little squatter, so the chassis reads as kin.
 hull(body, "fleet_paint", block(-1.30, -0.62, 1.0, 1.0, 1.1, 1.1), OXIDE)
@@ -96,10 +100,11 @@ hull(body, "fleet_paint", block(-0.62, 0.95, 0.88, 0.72, 0.9, 0.74), OXIDE)
 hull(body, "fleet_paint", block(0.95, 1.2, 1.2, 1.2, 1.2, 1.2), OXIDE_HI)
 gbox(body, "fleet_paint", (2.05, 0.12, 2.05), loc=g(0, -0.98, 0), color=CHAR)
 gbox(body, "fleet_paint", (1.66, 0.11, 1.4), loc=g(0, 0.3, 0), color=CHAR)
-# Wheels roll along Z; bottoms on the floor.
+# Wheels roll along Z; bottoms on the floor. Smoothing pulls an 8-sided rim in by about
+# 7 percent, so the polished wheel starts that much larger and still lands on the floor.
 for sx in (-1, 1):
     for sz in (-1, 1):
-        body.cyl("fleet_paint", 0.5, 0.5, 0.28, segs=8, loc=g(sx * 1.05, -1.5, sz * 0.68),
+        body.cyl("fleet_paint", 0.537, 0.537, 0.28, segs=8, loc=g(sx * 1.05, -1.5, sz * 0.68),
                  rot=(0, math.pi / 2, 0), color=CHAR)
     body.rod("fleet_paint", G(sx * 1.0, -1.5, -0.68), G(sx * 1.0, -1.5, 0.68), 0.1, segs=4, color=CHAR)
 
@@ -213,7 +218,7 @@ tris = common.tri_total(root)
 print("FOREMAN cart half %.3f x %.3f floor %.3f top %.3f tris %d" % (half_x, half_z, low, high, tris))
 assert half_x <= HALF + 1e-4 and half_z <= HALF + 1e-4
 assert low >= FLOOR - 1e-4 and high <= TOP + 1e-4
-assert tris <= 1100
+assert tris <= 8700
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_foreman.glb")

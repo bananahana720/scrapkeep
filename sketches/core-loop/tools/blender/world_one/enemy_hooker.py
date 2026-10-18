@@ -28,9 +28,12 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Hooker")
 
 GROUND = -1.1
@@ -83,6 +86,7 @@ body = b.to_object(parent=root)
 # --- Harpoon: long level shaft, hazard barbed head, tail ring ------------------------
 pivot = common.empty("HookerHarpoon", PIVOT, root)
 h = Part("HookerHarpoonMesh")
+h.subsurf = 0
 px, py, pz = PIVOT
 h.rod("paint", (px, py + 0.55, pz), (px, py - 1.75, pz), 0.075, segs=6, color=CHAR)
 h.rod("paint", (px, py - 1.75, pz), (px, py - 2.35, pz), 0.19, segs=6, color=HAZ, r2=0.0)
@@ -102,7 +106,7 @@ surfaces = len(body.data.materials) + len(harpoon.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3),
       "HARPOON_Y", round(min(hys), 3), round(max(hys), 3), "HARPOON_Z", round(min(hzs), 3), round(max(hzs), 3))
-if tris > 1200 or surfaces > 3 or max(abs(x) for x in xs) > 1.6 or min(ys) < -1.0 or max(ys) > 1.0 \
+if tris > 6800 or surfaces > 3 or max(abs(x) for x in xs) > 1.6 or min(ys) < -1.0 or max(ys) > 1.0 \
         or min(zs) < GROUND - 0.001 or max(zs) > 4.0 or min(hys) < -2.5 or max(hys) > 0.8:
     raise SystemExit("C14 limits exceeded")
 

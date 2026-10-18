@@ -38,9 +38,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
 root = common.empty("Dispatcher")
@@ -69,6 +72,7 @@ def gbox(part, slot, size, loc, color=None, rot=(0, 0, 0)):
 
 body = Part("DispatcherBody")
 signal = Part("DispatcherSignal")
+signal.subsurf = 0
 
 # The vault's octagon: petrol box, a lighter lid band and a charcoal skirt.
 FOOT = [(-1.25, -1.44), (1.25, -1.44), (1.44, -1.25), (1.44, 1.25),
@@ -143,6 +147,7 @@ signal_obj = signal.to_object(parent=root)
 
 # Radar paddle round its own origin on the mast head: a slatted bar tipped back, facing -Z.
 radar = Part("DispatcherRadar")
+radar.subsurf = 0
 tilt = (math.radians(-18), 0, 0)
 gbox(radar, "fleet_paint", (1.9, 0.42, 0.08), loc=g(0, 0.2, -0.05), rot=tilt, color=common.mix(PETROL, BONE, 0.3))
 for x in (-0.6, 0.6):
@@ -171,7 +176,7 @@ reach = max(p.y for p in points)
 tris = common.tri_total(root)
 print("DISPATCHER floor %.3f top %.3f front reach %.3f tris %d" % (low, high, reach, tris))
 assert low >= FLOOR - 1e-4 and high <= 3.2 and reach <= 3.75
-assert tris <= 1100
+assert tris <= 8100
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_dispatcher.glb")
