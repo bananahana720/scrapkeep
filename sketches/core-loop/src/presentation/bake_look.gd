@@ -8,7 +8,10 @@ extends RefCounted
 # dress() multiplies those surfaces by the bake's shade through StandardMaterial3D's detail layer on
 # UV2, so a script can keep mutating its material (albedo, emission) as before. A multiply cannot
 # brighten, so convex edges stop at neutral (the vertex slots lift them up to 18%): the
-# darkening, which carries the form, matches exactly.
+# darkening, which carries the form, matches exactly. The detail layer always writes NORMAL_MAP,
+# so the shaded surfaces need usable tangents: the polished GLBs carry a constant UV1, which
+# leaves theirs constant and, where one runs along its normal, drew that quad black.
+# tangent_safe() rebuilds such a mesh once with tangents square to the normals.
 
 # Slots whose vertex colours already carry the bake (polish.py bake_slots): left alone, or the
 # shade would apply twice.
@@ -131,9 +134,10 @@ static func dress(root: Node, owned: Array = []) -> int:
 			wants[mat][_look(view.mesh, i)] = true
 	var dressed := 0
 	for view: MeshInstance3D in views:
-		var mesh := view.mesh
-		if mesh == null:
+		if view.mesh == null:
 			continue
+		view.mesh = tangent_safe(view.mesh)
+		var mesh := view.mesh
 		for i in mesh.get_surface_count():
 			var look := _look(mesh, i)
 			var mat := view.get_active_material(i)
@@ -158,6 +162,121 @@ static func dress(root: Node, owned: Array = []) -> int:
 				mesh.surface_set_material(i, twin(mat, look == 1))
 			dressed += 1
 	return dressed
+
+
+# `mesh`, or once per mesh a copy whose shaded surfaces have tangents square to their normals:
+# every tangent where the surface's UV1 is a single point (the tangents mean nothing there), else
+# only the ones that are zero or run along their normal. The normal map those surfaces draw is
+# flat, so any square tangent is right. Names, materials, LODs and the shadow mesh carry over;
+# a mesh with blend shapes or custom channels is left as it is. The copy hangs off the source
+# mesh's metadata, so it lives exactly as long as the source.
+static func tangent_safe(mesh: Mesh) -> Mesh:
+	if not (mesh is ArrayMesh) or mesh.get_meta("bake_tangents_ok", false):
+		return mesh
+	if mesh.has_meta("bake_safe"):
+		return mesh.get_meta("bake_safe")
+	var source := mesh as ArrayMesh
+	var fix := []
+	var plain := source.get_blend_shape_count() == 0
+	for i in source.get_surface_count():
+		fix.append(_tangent_fix(source, i) if _look(source, i) == 1 else 0)
+		plain = plain and (source.surface_get_format(i) & _CUSTOM) == 0
+	if (not fix.has(1) and not fix.has(2)) or not plain:
+		mesh.set_meta("bake_tangents_ok", true)
+		return mesh
+	var out := ArrayMesh.new()
+	out.resource_name = source.resource_name
+	for i in source.get_surface_count():
+		var arrays := source.surface_get_arrays(i)
+		if fix[i] > 0:
+			var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+			var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT] if arrays[Mesh.ARRAY_TANGENT] != null else PackedFloat32Array()
+			tangents.resize(normals.size() * 4)
+			for v in normals.size():
+				var n := normals[v]
+				if fix[i] == 1 and not _bad(Vector3(tangents[v * 4], tangents[v * 4 + 1], tangents[v * 4 + 2]), n):
+					continue
+				var t := n.cross(Vector3.UP if absf(n.y) < 0.9 else Vector3.RIGHT).normalized()
+				tangents[v * 4] = t.x
+				tangents[v * 4 + 1] = t.y
+				tangents[v * 4 + 2] = t.z
+				tangents[v * 4 + 3] = 1.0
+			arrays[Mesh.ARRAY_TANGENT] = tangents
+		out.add_surface_from_arrays(source.surface_get_primitive_type(i), arrays, [], _lods(source, i),
+			source.surface_get_format(i) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS)
+		if out.get_surface_count() != i + 1:
+			mesh.set_meta("bake_tangents_ok", true)
+			return mesh
+		out.surface_set_name(i, source.surface_get_name(i))
+		out.surface_set_material(i, source.surface_get_material(i))
+	out.custom_aabb = source.custom_aabb
+	out.shadow_mesh = source.shadow_mesh
+	out.set_meta("bake_tangents_ok", true)
+	mesh.set_meta("bake_safe", out)
+	return out
+
+
+const _CUSTOM := Mesh.ARRAY_FORMAT_CUSTOM0 | Mesh.ARRAY_FORMAT_CUSTOM1 | Mesh.ARRAY_FORMAT_CUSTOM2 | Mesh.ARRAY_FORMAT_CUSTOM3
+
+
+# 0 leaves the tangents, 1 fixes the bad ones, 2 replaces them all (no tangents, or a UV1 that
+# is a single point). Compressed surfaces read back decompressed and rebuild uncompressed.
+static func _tangent_fix(mesh: ArrayMesh, surface: int) -> int:
+	var format := mesh.surface_get_format(surface)
+	if (format & Mesh.ARRAY_FORMAT_NORMAL) == 0:
+		return 0
+	if (format & Mesh.ARRAY_FORMAT_TANGENT) == 0:
+		return 2
+	var arrays := mesh.surface_get_arrays(surface)
+	if (format & Mesh.ARRAY_FORMAT_TEX_UV) == 0:
+		return 2
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var single := true
+	for uv in uvs:
+		if not uv.is_equal_approx(uvs[0]):
+			single = false
+			break
+	if single:
+		return 2
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT]
+	for v in normals.size():
+		if _bad(Vector3(tangents[v * 4], tangents[v * 4 + 1], tangents[v * 4 + 2]), normals[v]):
+			return 1
+	return 0
+
+
+static func _bad(tangent: Vector3, normal: Vector3) -> bool:
+	return tangent.length() < 0.5 or absf(tangent.normalized().dot(normal)) > 0.9
+
+
+# The surface's imported LODs as add_surface_from_arrays takes them, read back from the server's
+# index buffers (16-bit up to 65536 vertices). Any that does not read back cleanly is dropped.
+static func _lods(mesh: ArrayMesh, surface: int) -> Dictionary:
+	var lods := {}
+	var count := mesh.surface_get_array_len(surface)
+	var wide := count > 65536
+	for lod in RenderingServer.mesh_get_surface(mesh.get_rid(), surface).get("lods", []):
+		var data: PackedByteArray = lod.get("index_data", PackedByteArray())
+		var indices := (data.to_int32_array() if wide else _u16(data))
+		if indices.is_empty() or indices.size() % 3 != 0:
+			continue
+		var ok := true
+		for index in indices:
+			if index < 0 or index >= count:
+				ok = false
+				break
+		if ok:
+			lods[float(lod.get("edge_length", 0.0))] = indices
+	return lods
+
+
+static func _u16(data: PackedByteArray) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	out.resize(data.size() / 2)
+	for i in out.size():
+		out[i] = data.decode_u16(i * 2)
+	return out
 
 
 static func _look(mesh: Mesh, surface: int) -> int:
