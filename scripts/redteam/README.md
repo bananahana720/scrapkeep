@@ -20,6 +20,7 @@ npm run redteam -- --wave=17 --carry=artifacts/local/redteam/w16-<stamp>/finding
 | `--carry=<findings.json>` | none | Replays the last pass's blockers and majors (up to four) on their own seeds, to show whether they still happen. |
 | `--quick` | off | Stops every run after stage 1, shortens the item fuzz, skips the dense-fight bench. |
 | `--no-export` | export on | Skips the cloud export and headless boot. |
+| `--persona=<id>` | off | A head pass: one persona on all six pilots, on six seeds that stay the same for every head in the wave, plus 6 fuzz seeds. Meant to run on every staging head; the full pass or sweep runs at wave close. |
 | `--sweep` | off | A wider pass for spare compute: 60 runs (every persona and pilot pair twice) and 40 fuzz seeds, on its own seed block (20000 + 1000 per wave), so it never repeats a regular pass. About 3 hours on 4 cores. |
 
 **Splitting a sweep across sandboxes.** Each sandbox has 4 cores and a 2-hour cap on background jobs. Give each one its own `--block=<0-4>` (its own seeds) and `--runs=30` (every pair once, about 90 minutes), then join the passes into one page with `node scripts/redteam/merge.mjs --out=<dir> <findings.json>...`.

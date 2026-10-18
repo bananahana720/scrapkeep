@@ -77,6 +77,7 @@ const TRIM_DB := {
 	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
+	"grown_sub": -4.0, "grown_crack": -7.0, "grown_tail": -10.0, "grown_rattle": -11.0,
 	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0,
 	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -7.0, "hurt": -3.0,
 	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
@@ -586,6 +587,20 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _slam()
 		"core_slam":
 			return _core_slam()
+		"grown_sub":
+			# The low end under a grown hit: a 62-to-34 Hz drop that outlasts the thwack.
+			return _mix([[_tone(0.5, 62.0, 34.0, "sine", 5.0), 0, 1.0], [_tone(0.03, 140.0, 70.0, "sine", 60.0), 0, 0.3]])
+		"grown_crack":
+			# A heavier transient: a sharp noise snap over a dark saw knock.
+			return _mix([[_noise(0.03, 4200.0, 1800.0, 110.0, 0.0005), 0, 1.0],
+				[_tone(0.07, 190.0, 85.0, "saw_dark", 38.0), 0, 0.8]], true)
+		"grown_tail":
+			# A long tail: low rumble and filtered air that ring on after the hit.
+			return _mix([[_tone(1.2, 48.0, 38.0, "sine", 2.4), 0, 0.8], [_noise(1.3, 420.0, 120.0, 2.6, 0.02), 0, 0.6]])
+		"grown_rattle":
+			# Scrap settling off the shell: four ticks, each quieter.
+			return _mix([[_noise(0.03, 3200.0, 2000.0, 80.0), 0, 0.7], [_noise(0.03, 2600.0, 1700.0, 80.0), Synth.seconds(0.06), 0.5],
+				[_noise(0.03, 3600.0, 2200.0, 80.0), Synth.seconds(0.13), 0.38], [_noise(0.03, 2400.0, 1500.0, 80.0), Synth.seconds(0.22), 0.26]])
 		"ultimate_land":
 			return _ultimate_land()
 		"kest_demo_knock":

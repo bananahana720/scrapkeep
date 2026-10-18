@@ -79,6 +79,10 @@ func _physics_process(delta: float) -> void:
 	if game.flow == null:
 		return
 	if _driver == null:
+		# The played game builds stage 1's ground behind the menu (ground_behind_menu); start the
+		# run once it is built, as a player pressing start after the menu settles.
+		if not game.ctx.terrain.is_ready(1):
+			return
 		_start()
 		return
 	if _quit_code >= 0:

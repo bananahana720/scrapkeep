@@ -16,6 +16,9 @@ const DIFFICULTY_TIERS := 2
 const SCRAPLESS := "scrapless"
 const PAR := "par"
 const MODIFIERS := [SCRAPLESS, PAR]
+# Not chosen at the start: a run turns cursed when it takes a curse pocket's deal. Build keeps
+# the flag in step with RunState.cursed(), and tags() lists it so the music can follow it.
+const CURSE := "curse"
 
 var run_seconds := 0.0
 var stage_seconds := 0.0
@@ -23,6 +26,7 @@ var difficulty_seconds := 0.0
 var paused := false
 var stage := 1
 var modifiers := {}
+var cursed := false
 # Stage number (as a String, the JSON key) to the best Warden-break seconds on record.
 var best := {}
 var broke_at := -1.0
@@ -30,6 +34,7 @@ var broke_at := -1.0
 
 func begin_run(chosen: Dictionary) -> void:
 	modifiers = {}
+	cursed = false
 	for key in MODIFIERS:
 		if chosen.get(key, false):
 			modifiers[key] = true
@@ -64,6 +69,8 @@ func tags() -> Array:
 	for key in MODIFIERS:
 		if modifiers.has(key):
 			out.append(key)
+	if cursed:
+		out.append(CURSE)
 	return out
 
 

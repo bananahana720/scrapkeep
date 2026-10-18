@@ -5,7 +5,7 @@ Page: https://claude.ai/artifact/BkritUa1WFADGzWBiBmJK8
 No open questions. Rounds 1 and 2 (16 questions) were all answered by Andrew on 17 Oct 2026 at 22:12Z. The next round will appear here.
 
 ## Settled 17 Oct 2026 22:12Z (Andrew's answers)
-1. First hands-on play: Wave 19 feel check
+1. First hands-on play: Wave 19 feel check (replaced 18 Oct: one full playtest at the end of wave 21)
 2. Casting while rolling: Depends on the pilot
 3. World themes: Flow, Plate, Wind
 4. Park skills: One skill per park

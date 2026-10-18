@@ -64,6 +64,8 @@ func _make_game():
 func _run() -> void:
 	while _game.flow == null:
 		await physics_frame
+	# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This walk ends on the summary.
+	_game.flow.victory_lap = false
 	await _walk()
 	var frames: int = Engine.get_physics_frames() - _began
 	_t.check("within the cap", frames < FRAME_CAP, "%d physics frames, %.1f s simulated" % [frames, frames / 90.0])
