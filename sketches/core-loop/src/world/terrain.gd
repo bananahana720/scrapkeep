@@ -96,8 +96,11 @@ var _threaded: Array[bool] = []
 # A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
 # root (world.gd's contraptions) drops them.
 signal stage_freed(index: int)
-# A park stage's ground, props and rows were built, by stage number.
+# A park stage's ground and props were built and its rows started placing, by stage number.
 signal stage_built(index: int)
+
+# A first stage built behind the menu (build threaded_first).
+var _threaded_first := false
 
 
 func _init(table = StageDefs) -> void:
@@ -144,6 +147,7 @@ func map_for(index: int) -> RefCounted:
 # game shows its menu without waiting on it (MENU-READY); any read of the ground finishes it.
 func build(parent: Node3D, threaded_first := false) -> void:
 	_parent = parent
+	_threaded_first = threaded_first
 	_build_sky(parent)
 	_pad_rows()
 	if _is_park.has(true) and parent.is_inside_tree():
@@ -292,6 +296,10 @@ func _ensure(index: int) -> int:
 				if _worlds[j] == _worlds[i] and _roots[j] == null and not _is_park[j]:
 					_build_stage(j)
 	elif _is_park[i] and not _grounds[i].is_ready():
+		# The first stage read before it was built (a run started on the menu) places its rows now
+		# too; a next stage's rows still place across the swap.
+		if i == 0 and _threaded_first:
+			_threaded[i] = false
 		_grounds[i].finish()
 	return i
 

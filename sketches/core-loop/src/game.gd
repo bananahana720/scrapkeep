@@ -271,6 +271,8 @@ func _ready() -> void:
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
+			if not is_inside_tree():
+				return
 			_boot("frame %d" % (frame + 1))
 
 
@@ -279,7 +281,7 @@ func _park_on_title_ground(stage: int) -> void:
 		return
 	if ctx.terrain.stage_built.is_connected(_park_on_title_ground):
 		ctx.terrain.stage_built.disconnect(_park_on_title_ground)
-	# A run started before the ground was built has placed the ball itself.
+	# A run started before the ground was built finishes it on entry and places the ball after.
 	if flow.in_play():
 		return
 	player.reset_to(ctx.terrain.spawn_point(1))

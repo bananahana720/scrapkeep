@@ -39,7 +39,7 @@ func _run() -> void:
 	# The same start with stage 1 built in setup, for where its ball should start.
 	var want := await _start(false)
 	var got := await _start(true)
-	_t.check("a run started before the ground is built enters stage 1 on it", got.stage == 1 and got.ready, str(got))
+	_t.check("a run started before the ground is built enters stage 1 on it, rows placed", got.stage == 1 and got.ready and got.rows, str(got))
 	_t.check("its ball starts where a run on ground built in setup starts", got.ball.is_equal_approx(want.ball), "%s, want %s" % [got.ball, want.ball])
 	await physics_frame
 	quit(_t.verdict())
@@ -51,7 +51,8 @@ func _start(behind: bool) -> Dictionary:
 	game.flow.press_start()
 	game.flow.choose_class(0)
 	await physics_frame
-	var out := {"stage": game.flow.stage(), "ready": game.ctx.terrain.is_ready(1), "ball": game.player.body().global_position}
+	var rows = game.ctx.terrain.park_rows(1)
+	var out := {"stage": game.flow.stage(), "ready": game.ctx.terrain.is_ready(1), "rows": rows != null and rows.is_ready(), "ball": game.player.body().global_position}
 	game.free()
 	return out
 
