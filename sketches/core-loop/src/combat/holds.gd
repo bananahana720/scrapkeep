@@ -40,7 +40,9 @@ const TENACITY_WINDOW := 4.0
 const TENACITY_IMMUNE := 2.5
 # The breaks that are the player's own action, and so pay the refund.
 # "ultimate" is Q: the set piece breaks every hold it starts in (SKILL-BAR section 2).
-const PLAYER_BREAKS := ["jump", "boost", "smash", "glide", "speed", "ultimate"]
+# 2026-10-18 (w17 hook out): "hook" is a harpoon bite on world geometry (ENEMY-PRIORITY
+# section 4, lever 1); it kicks along the line at SNAP_KICK, like the tether's snap.
+const PLAYER_BREAKS := ["jump", "boost", "smash", "glide", "speed", "ultimate", "hook"]
 const BREAK_KICK := 4.0
 const SNAP_KICK := 7.0
 const BREAK_REFUND := 0.6
@@ -93,6 +95,7 @@ func setup(ctx_ref) -> void:
 	events.blink_used.connect(func(_from: Vector3, _to: Vector3): _player_action("boost"))
 	events.sprint_started.connect(func(_dir: Vector3): _player_action("boost"))
 	events.slammed.connect(func(_at: Vector3, _strength: float, _flatness: float): _player_action("smash"))
+	events.grapple_fired.connect(_on_grapple_fired)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
 	events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
 		break_all("ultimate"))
@@ -247,13 +250,25 @@ func break_all(method: String) -> void:
 		_release_id(id, method)
 
 
-func _player_action(method: String) -> void:
+func _player_action(method: String, line := Vector3.ZERO) -> void:
 	for id in active.keys():
 		if active.has(id) and method in active[id]["breaks"]:
-			_release_id(id, method)
+			_release_id(id, method, line)
 
 
-func _release_id(id: int, reason: String) -> void:
+# 2026-10-18 (w17 hook out): grapple_fired goes out for a bite on a body and on bare world
+# alike, and player_ball has set kit.anchor_body by then. A bite on an enemy is not a hook out
+# (poles and flails on enemies are a later wave); a post or a moving world solid is geometry.
+func _on_grapple_fired(anchor: Vector3) -> void:
+	if active.is_empty():
+		return
+	var body = player.kit.anchor_body
+	if body != null and is_instance_valid(body) and body.is_in_group("enemy"):
+		return
+	_player_action("hook", anchor - player.ball_position())
+
+
+func _release_id(id: int, reason: String, line := Vector3.ZERO) -> void:
 	if not active.has(id):
 		return
 	var hold: Dictionary = active[id]
@@ -261,7 +276,7 @@ func _release_id(id: int, reason: String) -> void:
 	last_release = {"kind": hold["kind"], "reason": reason, "held": _clock - float(hold["since"])}
 	if reason in PLAYER_BREAKS:
 		breaks_by_player += 1
-		_refund(SNAP_KICK if reason == "speed" else BREAK_KICK)
+		_refund(SNAP_KICK if reason == "speed" or reason == "hook" else BREAK_KICK, line if reason == "hook" else Vector3.ZERO)
 		ctx.events.hold_broken.emit(hold["kind"], reason)
 	else:
 		ctx.events.hold_ended.emit(hold["kind"], reason)
@@ -276,8 +291,13 @@ func gift_refund() -> void:
 
 # The boost refund: a forward kick along the way the ball is rolling, and part of the
 # class movement ability's recharge back. A gift, so it goes past the CC door.
-func _refund(kick: float) -> void:
-	var dir: Vector3 = player.planar_velocity()
+# line: a direction to kick along instead of the velocity (the hook out). It is planar, as
+# the velocity kick is: a vertical kick up a wall would fight the grip the bite just took.
+# A bite straight above or below the ball has no planar line and falls back to the velocity.
+func _refund(kick: float, line := Vector3.ZERO) -> void:
+	var dir: Vector3 = Vector3(line.x, 0.0, line.z)
+	if dir.length() < 0.1:
+		dir = player.planar_velocity()
 	if dir.length() < 0.5:
 		dir = -ctx.camera.yaw_basis().z if ctx.camera != null else Vector3.FORWARD
 		dir.y = 0.0
