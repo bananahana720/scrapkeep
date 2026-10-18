@@ -24,9 +24,11 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
-# SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted), recorded
-# 2026-10-11 on the untouched base d204cea (KB5). A change here moves an old map's scatter.
-const OLD_MAPS_HASH := "5bdc8fbaa2b82655daf9425a055b042a7b8ce55de12e01ce71e643a2a5ce7666"
+# SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted). A change
+# here moves an old map's scatter. Re-pinned 2026-10-18 (coordinator call 2026-10-18) to a57519e6,
+# the value reported stable in this repo back to 0eeb995e; was 5bdc8fba, recorded 2026-10-11 on
+# the base d204cea (KB5), which is not in this repo.
+const OLD_MAPS_HASH := "a57519e6d2f7ff97671b7cb051b49fb168b2c550919fad2fe7e0ac2ec7610dd2"
 # The rows that hash covers: Dig 4, Dig Deep 4, Spillway 4 (a missing batch must not pass).
 const OLD_MAPS_ROWS := 12
 const PARK_TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
@@ -163,7 +165,7 @@ func _run() -> void:
 
 	var old_hash := _old_maps_hash()
 	print("scatter_rows_test: old-map scatter hash ", old_hash)
-	t.eq("the old maps' scatter transforms are byte-identical to d204cea", old_hash, OLD_MAPS_HASH)
+	t.eq("the old maps' scatter transforms are byte-identical to the pin", old_hash, OLD_MAPS_HASH)
 
 	quit(t.verdict())
 
