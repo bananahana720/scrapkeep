@@ -1,6 +1,7 @@
 extends CharacterBody3D
 
 const Palette := preload("res://src/core/palette.gd")
+const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -597,7 +598,7 @@ func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3
 func _plate_material(rim_mask: Texture2D = null) -> StandardMaterial3D:
 	if rim_mask == null and not _plates_are_round():
 		rim_mask = rim_frame_mask()
-	var mat := Palette.solid(PLATE_CLOSED)
+	var mat := Palette.solid(PLATE_CLOSED, 0.0, false)
 	mat.metallic = 0.6
 	mat.roughness = 0.4
 	mat.emission_texture = rim_mask if rim_mask != null else mask_texture([Color.BLACK], 1)
@@ -694,11 +695,38 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 # --- Attack facts ---------------------------------------------------------------------
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_PHYSICS_PROCESS:
+	if what == NOTIFICATION_READY:
+		# Spawners add the enemy, then build its body in setup() the same frame.
+		_dress_bake.call_deferred()
+	elif what == NOTIFICATION_PHYSICS_PROCESS:
 		_update_reaction(get_physics_process_delta_time())
 		_facts_poll()
 		if tint_state == "amber" and _pulses():
 			_pulse_rim(get_physics_process_delta_time())
+
+
+# The polish bake reaches every swapped-in material (BakeLook): the body paint the flash
+# brightens, tints and state materials all keep the model's baked occlusion and wear.
+# Scripts that swap materials onto a baked surface later call it again.
+func _dress_bake() -> void:
+	if is_inside_tree():
+		BakeLook.dress(self, owned_materials())
+
+
+# The materials this enemy's script holds in its own variables: the ones it mutates.
+func owned_materials() -> Array:
+	var out: Array = []
+	for prop in get_property_list():
+		if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE == 0:
+			continue
+		var value = get(prop.name)
+		if value is StandardMaterial3D:
+			out.append(value)
+		elif value is Array:
+			for item in value:
+				if item is StandardMaterial3D:
+					out.append(item)
+	return out
 
 
 # The open attack as a fact, with the geometry and progress it has right now; {} when
