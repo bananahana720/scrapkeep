@@ -36,7 +36,7 @@ OUT = SKETCH / 'assets/music_ace'
 SPICE = Path('/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice')
 SOUND = SKETCH / 'design-v3/sound'
 TARGET_LUFS = -16.0
-CEILING = -2.0
+CEILING = -3.0
 MUSIC_FLOOR_DB = -45.0
 KEYS = {'C': -2, 'Db': -1, 'D': 0, 'Eb': 1, 'E': 2, 'F': 3, 'Gb': 4, 'G': 5, 'Ab': 6, 'A': 7, 'Bb': 8, 'B': 9}
 
@@ -157,8 +157,12 @@ class Track:
             self.music_bars = 16
             self.head = 0.0
         else:
-            self.tempo = narrow_tempo(self.flux, self.rate, nominal, 0.03)
-            self.read = self.tempo
+            # Grid-stretched files sit on their nominal tempo (a wider window found 174.18 for a 172 file);
+            # the titles were not grid-stretched, so their own tempo is searched wider.
+            self.read = narrow_tempo(self.flux, self.rate, nominal, 0.03 if cue.startswith('title') else 0.01)
+            # The grid files hold their nominal tempo, which a weak kick envelope can misread (roam-highdraft read
+            # 174.18 and 170.95 from two windows around 172); each clip's start is then snapped to the local kicks.
+            self.tempo = self.read if cue.startswith('title') else float(nominal)
             self.head = cut_loops.phase(self.flux, self.rate, self.tempo) * RATE
         self.bar_f = 240 / self.tempo * RATE
         self.beat_f = self.bar_f / 4
@@ -216,8 +220,12 @@ def plan_for(pack, tracks):
         r = tracks[roam]
         o = 0 if stage == 'A' else 8
         shelf = 4 + o
+        # Stage B also swaps the telegraph and open windows (the second stage's open wrap clicked at +16 in the first cut).
+        # Stage A's open starts two bars past the loop's halfway point for the same reason (spillway's wrap stepped
+        # 0.2936 against a 0.2905 limit at bar 8, 0.3014 against 0.2992 at bar 9).
+        tele, opn = (4 + o, 10 + o) if stage == 'A' else (8 + o, 4 + o)
         return dict(calm=(r, 'cur', shelf, 16, 1), travel=(r, 'cur', shelf + 16, 16, 1), pivot=(t, 'high', o - 1, 1, None),
-                    build=(t, 'high', o, 16, 9), telegraph=(t, 'high', 4 + o, 4, 1), open=(t, 'high', 8 + o, 4, 1),
+                    build=(t, 'high', o, 16, 9), telegraph=(t, 'high', tele, 4, 1), open=(t, 'high', opn, 4, 1),
                     drop=(t, 'high', 12 + o, 4, None), cadence=(t, 'cur', 14 + o, 2, None))
     raise SystemExit(f'no plan for {kind}')
 

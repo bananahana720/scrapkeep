@@ -50,6 +50,9 @@ def main():
     work = Path(sys.argv[1])
     for pack, cue in CUE_OF.items():
         folder = work / 'stems/htdemucs' / f'{cue}-current'
+        if not (folder / 'other.wav').exists():
+            print(f'{pack:16s} no stems yet')
+            continue
         c = chroma(folder / 'other.wav', 1.0) + chroma(folder / 'bass.wav', 2.0)
         rows = best_key(c)
         nominal = PACKS[pack][1]
