@@ -52,6 +52,16 @@ func _initialize() -> void:
 			bowl.struck()
 	t.check("a hit a second keeps the floor cool", bowl_hurt == 0.0, "%.2f hp" % bowl_hurt)
 
+	# A hit mid-glow restarts the telegraph, so the next glow is heard again.
+	var reglow := CinderHeat.new()
+	var glows := 0
+	for k in int(2.0 / DT):
+		if reglow.step(DT, true, 100.0)["fact"] == CinderHeat.GLOW_FACT:
+			glows += 1
+		if k == int(1.0 / DT):
+			reglow.struck()
+	t.check("a hit mid-glow re-arms the glow", glows == 2, "%d glows" % glows)
+
 	# Never lethal.
 	var low := CinderHeat.new()
 	var hp := 3.0

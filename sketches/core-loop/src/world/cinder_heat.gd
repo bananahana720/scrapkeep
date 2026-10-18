@@ -35,8 +35,7 @@ func reset() -> void:
 
 # A hit landed on an enemy: the ball is fighting on the floor, not idling on it.
 func struck() -> void:
-	dwell = 0.0
-	_pulse = 0.0
+	reset()
 
 
 func step(delta: float, on_cinder: bool, hp: float) -> Dictionary:

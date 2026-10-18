@@ -242,7 +242,7 @@ Spec keys are today's (`src/world/contraptions.gd:86-101`). 27 rows since the au
 | `drift_valve` | valve, `gauge` | `east_drift_3` | at (195.4, -272.1), door at (207.2, -277.5), 10 by 5 by 1 m | opens a side door from the drift into skylight 2's chamber |
 | `cenote_raft` | barge, `barge` | `west_cenote` | a [-335, -84.8, -215] to b [-300, -85.3, -195], travel 6 s, dwell 2 s | a miners' raft across the cenote |
 | `rim_zip` | cable, `""` | `sinkhole_walls` | from [-160, 4.4, 255] to [-60, -97.6, 330], radius 3.4, floor 18 | a drop line from the west rim to the gallery ring, after the cave-in opens the plateau |
-| `tube_cinder` | cinder, `` | `lava_channel_1` | 50 strips over the middle fifth of every `lava_wash` and `lava_wash_short` floor, drag 0.08 | the floor is lava: free to touch, lingering heats (`src/world/cinder_heat.gd`); the light drag keeps the walls the faster line. The lava channel is left out so the opening stays blazing |
+| `tube_cinder` | cinder, `` | `lava_channel_1` | 50 strips over the flat middle 40% of every `lava_wash` and `lava_wash_short` floor, drag 0.08 | the floor is lava: free to touch, lingering heats (`src/world/cinder_heat.gd`); the light drag keeps the walls the faster line. The lava channel is left out so the opening stays blazing |
 
 Against the draft: the rope fan, eight tube vents and six lower-tube ropes keep the ride chain continuous, now on the walls. Park row sensors also run on this head. `sealed_crosscut` has its own `crosscut_drift` site at (-80, 152), clear of the cave-in ring. The fumarole, lift, valve and raft follow the shipped polylines.
 
