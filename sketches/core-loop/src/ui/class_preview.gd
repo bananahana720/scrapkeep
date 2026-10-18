@@ -5,6 +5,8 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
+const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
+const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 
 # The class card's portrait and live ability preview: the pilot's real hero shell
 # (hero_assets.gd's glb, painted by its own paint()) in a tiny world of its own. The
@@ -88,12 +90,29 @@ var _focused := false
 var last_focus_clip := ""
 # Where the once-per-profile unlock is recorded (ui_profile.gd); resolved from the game when unset.
 var ui_profile = null
+var antic
+var look_weight := 0.0
+var _look := {"yaw": 0.0, "pitch": 0.2, "dist": LOOK_DIST}
+var _look_idle := LOOK_HOLD
+var look_dragging := false
 # --profile=sitting: the unlock plays on the first focus of every launch instead.
 var sitting := false
 const IDLE_CLIP := "idle_loop"
 const UNLOCK_CLIP := "unlock"
 const UNLOCK_SEEN := "unlock_clip_"
 const BASE_BLEND := 0.1
+# At rest the pilot climbs out and does their bit (pilot_antics.gd) every ANTIC_PERIOD seconds,
+# each card on its own phase so a row of cards never moves in step; never in the first period,
+# so a card you just opened on shows its still first.
+const ANTIC_PERIOD := 9.0
+# Look closer: drag with the right mouse button or the right stick to orbit the pilot, wheel
+# (while dragging) to zoom; the view drifts back LOOK_HOLD seconds after you let go.
+const LOOK_DIST := 3.2
+const LOOK_NEAR := 1.4
+const LOOK_FAR := 6.0
+const LOOK_HOLD := 1.4
+const LOOK_RATE := 6.0
+const LOOK_DRAG := 0.009
 # Classes whose unlock played this launch under --profile=sitting.
 static var _sitting_unlocks := {}
 
@@ -197,6 +216,8 @@ func _build_shell() -> void:
 
 # Swaps the shell for the current variant, keeping the ball and its pose.
 func _refit_shell() -> void:
+	if antic != null:
+		antic.seat()
 	var at := _core.transform
 	var facing := _pod.rotation.y
 	for node in [_core, _pod]:
@@ -245,6 +266,7 @@ func _fit_pilot() -> void:
 		return
 	_pilot = fitted.pilot
 	_animator = fitted.get("animator")
+	antic = PilotAntics.new({"holder": ball, "core": _core, "pod": _pod, "pilot": _pilot, "animator": _animator}, def.id)
 	seat_pilot()
 
 
@@ -418,7 +440,10 @@ func _process(delta: float) -> void:
 	if ball == null:
 		return
 	_time += delta
+	# Before track_focus: seating a pilot stops its animator, which would cut a first-focus unlock.
+	_step_antic()
 	track_focus()
+	_step_look(delta)
 	if playing():
 		clock += delta
 	else:
@@ -437,6 +462,52 @@ func _frame(k: float) -> void:
 	var at := (_rest_at + NEAR_OFFSET).lerp(_follow + FOLLOW_OFFSET, k)
 	_camera.fov = lerpf(NEAR_FOV, FOLLOW_FOV, k)
 	_camera.transform = Transform3D(Basis.looking_at((_rest_at + NEAR_LOOK).lerp(_follow + FOLLOW_LOOK, k) - at), at)
+	if look_weight > 0.001:
+		var centre := ball.position + Vector3(0.0, 0.3, 0.0)
+		var dir := Vector3(sin(_look.yaw) * cos(_look.pitch), sin(_look.pitch), cos(_look.yaw) * cos(_look.pitch))
+		var eye: Vector3 = centre + dir * float(_look.dist)
+		_camera.transform = _camera.transform.interpolate_with(Transform3D(Basis.looking_at(centre - eye), eye),
+			smoothstep(0.0, 1.0, look_weight))
+
+
+# The rest-pose antic: off while the card is open (the signature move owns the ball then).
+func _step_antic() -> void:
+	if antic == null:
+		return
+	var was_out: bool = antic.out
+	var t := -1.0
+	if not playing() and _time >= ANTIC_PERIOD and not HighdraftFx.preferred:
+		var phase := fmod(_time + float(hash(String(def.id)) % 1000) / 1000.0 * ANTIC_PERIOD, ANTIC_PERIOD)
+		t = (phase - (ANTIC_PERIOD - PilotAntics.LENGTH)) / PilotAntics.LENGTH
+	antic.apply(t)
+	if was_out and not antic.out:
+		seat_pilot()
+
+
+func looking() -> bool:
+	return look_dragging or _look_idle < LOOK_HOLD
+
+
+func _step_look(delta: float) -> void:
+	if not look_dragging:
+		_look_idle += delta
+	var goal := 1.0 if looking() else 0.0
+	look_weight = move_toward(look_weight, goal, LOOK_RATE * delta * (1.0 if goal > look_weight else 0.35))
+
+
+func look_drag(rel: Vector2) -> void:
+	if not looking():
+		_look = {"yaw": -0.3, "pitch": 0.2, "dist": LOOK_DIST}
+	_look.yaw = float(_look.yaw) - rel.x * LOOK_DRAG
+	_look.pitch = clampf(float(_look.pitch) + rel.y * LOOK_DRAG, -0.2, 1.2)
+	_look_idle = 0.0
+
+
+func look_zoom(step: float) -> void:
+	if not looking():
+		look_drag(Vector2.ZERO)
+	_look.dist = clampf(float(_look.dist) * pow(0.88, step), LOOK_NEAR, LOOK_FAR)
+	_look_idle = 0.0
 
 
 # Poses the scene at loop phase t, 0 to 1.
