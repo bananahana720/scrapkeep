@@ -212,7 +212,7 @@ Advantage and counter text is in each row of the park file. `drift_drill_crews` 
 
 ## 7. `contraption_rows` (shipped)
 
-Spec keys are today's (`src/world/contraptions.gd:86-101`). 27 rows since the authored pass (2026-10-17, "Wall pays" and the floor is lava; `tools/park_sinkhole_pass.py` writes the ropes, vents and cinder strips).
+Spec keys are today's (`src/world/contraptions.gd:86-101`). 28 rows since the authored pass (2026-10-17, "Wall pays" and the floor is lava; `tools/park_sinkhole_pass.py` writes the ropes, vents, cinder strips and glaze).
 
 | Id | Kind, recipe | Site | Spec | What it is for |
 | --- | --- | --- | --- | --- |
@@ -243,6 +243,7 @@ Spec keys are today's (`src/world/contraptions.gd:86-101`). 27 rows since the au
 | `cenote_raft` | barge, `barge` | `west_cenote` | a [-335, -84.8, -215] to b [-300, -85.3, -195], travel 6 s, dwell 2 s | a miners' raft across the cenote |
 | `rim_zip` | cable, `""` | `sinkhole_walls` | from [-160, 4.4, 255] to [-60, -97.6, 330], radius 3.4, floor 18 | a drop line from the west rim to the gallery ring, after the cave-in opens the plateau |
 | `tube_cinder` | cinder, `` | `lava_channel_1` | 50 strips over the flat middle 40% of every `lava_wash` and `lava_wash_short` floor, drag 0.08 | the floor is lava: free to touch, lingering heats (`src/world/cinder_heat.gd`); the light drag keeps the walls the faster line. The lava channel is left out so the opening stays blazing |
+| `tube_glaze` | glaze, `` | `lava_channel_1` | 84 strips on both walls of every wash tube, 0.62 to 0.98 of the half width, push 7 m/s/s from 4 to 36 m/s | the polish band is old lava glass: a ball carving it is pushed along its travel, so the wall is the fast line (`contraptions.gd` `_on_glaze`) |
 
 Against the draft: the rope fan, eight tube vents and six lower-tube ropes keep the ride chain continuous, now on the walls. Park row sensors also run on this head. `sealed_crosscut` has its own `crosscut_drift` site at (-80, 152), clear of the cave-in ring. The fumarole, lift, valve and raft follow the shipped polylines.
 
@@ -276,19 +277,25 @@ Andrew tapped "Wall pays" (22:37Z) and asked for the floor to be lava (23:24Z): 
 - Leaving the floor or landing a hit on an enemy cools it at once, with a hiss and a steam puff, so bowling through a pack or zigzagging never burns.
 - The strips also carry a light drag (0.08 per second of floor speed). Heat alone left the floor line as fast as the walls.
 
-One seed per pilot, `--table=park --stage=4 --seeds=1`, fixed-fps 90, on this branch with the wall grip from #61 merged, riding `lines_carve.json` (the floor line rides `--floor --ref=sable`). Times are to the Warden in seconds; carve is the share of grounded ticks on a bank, wall or lip.
+- The polish band up every tube wall is glaze (`tube_glaze`): a ball carving it gets a 7 m/s/s push along its travel, between 4 and 36 m/s. With #61's wall grip, carving lost speed against the floor. Before the glaze, every pilot's old floor route beat its wall line by 3 to 18 s.
 
-| Pilot | Heat and drag | Carve | Heat only | Carve | Cinder burns |
+One seed per pilot, `--table=park --stage=4 --seeds=1`, fixed-fps 90, on this branch with the wall grip from #61 merged. `lines.json` is now the carving lines: every waypoint in a tube sits at 0.81 of the half width on one wall. Kest, Cannon and Tally ride the travel's right wall, Tarn the left, and Sable and Rivet the outside of each bend. The old routes, which are mostly floor, stay as `lines_floor_routes.json` for this comparison. Times are to the Warden in seconds. Carve is the share of grounded ticks on a bank, wall or lip. Repeat runs of one line vary by up to 2.6 s.
+
+| Pilot | Carving line | Carve | Old floor route | Carve | Floor burns (hull) |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Sable | 64.7 | 0.28 | 65.0 | 0.20 | 0 |
-| Tarn | 99.9 | 0.43 | 99.2 | 0.43 | 0 |
-| Cannon | 100.2 | 0.36 | 101.5 | 0.36 | 0 |
-| Kest | 105.9 | 0.39 | 109.2 | 0.41 | 0 |
-| Tally | 113.8 | 0.39 | 117.9 | 0.36 | 0 |
-| Rivet | 120.2 | 0.51 | 119.9 | 0.52 | 0 |
-| Floor line | 110.0 | 0.02 | 100.0 | 0.01 | 10 (118 hull) / 11 (110 hull) |
+| Cannon | 88.9 | 0.40 | 95.9 | 0.02 | 9 (94) |
+| Tarn | 91.6 | 0.43 | 94.2 | 0.02 | 3 (52) |
+| Kest | 94.4 | 0.33 | 103.6 | 0.02 | 13 (80) |
+| Tally | 97.3 | 0.34 | 98.9 | 0.01 | 5 (52) |
+| Rivet | 102.1, 99.9 | 0.40 | 101.0, 101.0 | 0.01 | 0 |
+| Sable | 66.9, 69.7 | 0.24 | 62.8, 65.8 | 0.04-0.06 | 2 (0-8) |
+| Floor line (Rivet, `--floor`) | | | 104.8 | 0.02 | 11 (106) |
 
-With heat only the floor line ties the fastest carving pilots, so the drag stays. With it, Sable, Tarn, Cannon and Kest beat the floor; Tally and Rivet's carving lines are still slower than the floor and need line work. No carving pilot took heat. The floor bot never fights, so its burn is the worst case. `lines.json` stays the shipped line until #61 lands; `lines_carve.json` replaces it then.
+- Carving wins for Cannon, Kest, Tarn and Tally, and it ties for Rivet. No carving line took heat; every floor rider but Rivet burned.
+- Sable is the exception. Sable is airborne half the run (0.48), so the ground barely matters, and its floor route is 3-4 s quicker. A glaze cap of 48 m/s did not change that.
+- The tested alternatives were each slower: inside-of-bend wall lines, wall time only at the ropes and vents, and a glaze push of 4.
+- With heat only and no glaze, the floor line tied the walls at 100 s, so the light drag stays.
+- The floor bot never fights, so its burn is the worst case.
 
 
 ## Qualified round-4 measurement, 2026-10-13
