@@ -1105,6 +1105,11 @@ func _traverse(delta: float) -> void:
 	if source.hold.has("move"):
 		source.hold["move"] = _world_to_stick(sent["wish"])
 	source.press = sent["press"]
+	# The aim moved while the press was in flight: a bite that would now land on a body is dropped.
+	if source.press.has("harpoon_pressed") and "harpoon" in hands:
+		var now: Dictionary = game.player.kit.aim
+		if now.get("state", Augments.AIM_NONE) == Augments.AIM_NONE or now.get("body") != null:
+			source.press.erase("harpoon_pressed")
 	var picked: bool = source.press.has("slot_pick")
 	_gate_presses()
 	_traverse_click(picked)
@@ -1124,8 +1129,11 @@ func _traverse_hands(ball: Vector3, point: Vector3, delta: float) -> Variant:
 
 
 # Swings from an anchor ahead, and lets the line go before it can stop the ball. It bites the
-# world and Sable's stakes only: an enemy is a fight, and an anchor-line body (a Warden, an island
-# tip) winches the ball in and holds it.
+# world only: an enemy is a fight, and a body line (a Warden, an island tip, Sable's stake) winches
+# the ball in and holds it, which the on_body release below would drop the tick after the bite, so
+# stakes are left out of the hand rather than exempted from that release. Once hook-out lands a
+# world bite also releases holds that list `hook`: the hand can then act as a hold breaker in
+# traversal measurements, and that is intended.
 func _swing_hand(ball: Vector3, point: Vector3, delta: float) -> Variant:
 	var kit = game.player.kit
 	var way := Vector3(point.x - ball.x, 0.0, point.z - ball.z)
@@ -1164,7 +1172,7 @@ func _swing_hand(ball: Vector3, point: Vector3, delta: float) -> Variant:
 		for pitch in SWING_PITCHES:
 			var dir: Vector3 = (way.rotated(Vector3.UP, yaw) * cos(pitch) + Vector3.UP * sin(pitch)).normalized()
 			var hit := Augments.grapple_target(space, ball + Vector3.UP * 0.8, dir, ball, reach, assist,
-				Augments.WORLD_MASK | Augments.ENEMY_MASK | Augments.STAKE_MASK, false)
+				Augments.WORLD_MASK | Augments.ENEMY_MASK, false)
 			if _swing_bites(hit, ball, way) and (hit["point"] - ball).dot(way) > far:
 				far = (hit["point"] - ball).dot(way)
 				best = hit["point"]
@@ -1174,8 +1182,7 @@ func _swing_hand(ball: Vector3, point: Vector3, delta: float) -> Variant:
 func _swing_bites(aim: Dictionary, ball: Vector3, way: Vector3) -> bool:
 	if aim.get("state", Augments.AIM_NONE) == Augments.AIM_NONE:
 		return false
-	var body = aim.get("body")
-	if body != null and not (is_instance_valid(body) and body.is_in_group(Augments.STAKE_GROUP)):
+	if aim.get("body") != null:
 		return false
 	var to: Vector3 = aim["point"] - ball
 	return to.y >= SWING_ABOVE and to.length() > 0.5 and Vector3(to.x, 0.0, to.z).normalized().dot(way) >= SWING_AHEAD
@@ -3372,7 +3379,10 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		elif player.state.velocity.y < 2.0:
 			hold["brake_held"] = true
 	if _glide_held and not thermal:
-		# The glide hand's drop: spend the air jump, then hold the key while falling.
+		# The glide hand's drop: spend the air jump, then hold the key while falling. A blink
+		# would leave the footprint, as in the thermal branch.
+		hold.erase("shift_held")
+		source.press.erase("shift_pressed")
 		if player.state.air_actions > 0:
 			source.press["jump_pressed"] = true
 		elif player.state.velocity.y < 0.0 and not player.kit.slamming:

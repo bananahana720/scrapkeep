@@ -11,7 +11,7 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 23
+const EXPECTED_CHECKS := 32
 const DT := 1.0 / 90.0
 
 var _t := T.new("bot_hands_flag_test")
@@ -43,6 +43,8 @@ func _run() -> void:
 	_default_is_bare()
 	_glide_needs_the_augment()
 	_harpoon_needs_speed_and_a_target()
+	await _harpoon_bites_a_world_anchor()
+	_glide_holds_over_a_drop()
 	_t.eq("check count", _t.checks, EXPECTED_CHECKS)
 	var code := _t.verdict()
 	quit(code)
@@ -56,11 +58,13 @@ func _parse_cases() -> void:
 	_t.eq("one hand", parse.call(["--hands=harpoon"]), ["harpoon"])
 	_t.eq("an empty value names no hand", parse.call(["--hands="]), [])
 	_t.eq("the known hands", BotDriver.HAND_NAMES, ["harpoon", "glide"])
-	var all_known := true
-	for hand in parse.call(["--hands=harpoon,glide"]):
-		all_known = all_known and hand in BotDriver.HAND_NAMES
-	_t.check("the flag's hands are all known", all_known)
-	_t.check("a typo is not a known hand", not "harpon" in BotDriver.HAND_NAMES)
+	var named: Array = parse.call(["--hands=harpoon,glide"])
+	_t.eq("the flag's hands are all known", named.filter(func(h): return h in BotDriver.HAND_NAMES), named)
+	var typo: Array = parse.call(["--hands=harpon"])
+	_t.eq("a typo parses but names no known hand", typo.filter(func(h): return h in BotDriver.HAND_NAMES), [])
+	var kept: Array[String] = []
+	_t.eq("a bare run writes <pilot>.json", TraversalLine.summary_name("kest", kept), "kest.json")
+	_t.eq("a hands run writes <pilot>.hands.json", TraversalLine.summary_name("kest", named), "kest.hands.json")
 
 
 func _set_hands(names: Array) -> void:
@@ -133,3 +137,85 @@ func _harpoon_needs_speed_and_a_target() -> void:
 	_t.check("harpoon hand: a point on the ball gives no way, so no press",
 		_step(_player.ball_position()) == null and not _driver.source.press.has("harpoon_pressed"))
 	_t.check("the hands leave the default press map empty", _driver.source.press.is_empty())
+
+
+func _glide_holds_over_a_drop() -> void:
+	_set_hands(["glide"])
+	_player.kit.set_on("glide", true)
+	_player.state.grounded = false
+	var ball: Vector3 = _player.ball_position()
+	var high := Vector3(ball.x, _driver._ground_point(ball.x, ball.z).y + 40.0, ball.z)
+	var way := Vector3.FORWARD
+	_player.set_velocity_now(way * 20.0)
+	var far_low: Vector3 = high + way * 80.0 + Vector3.DOWN * 30.0
+	_driver._gliding = false
+	_driver._glide_hand(high, far_low)
+	_t.check("glide hand: a 40 m drop toward a distant lower waypoint holds glide", _driver._glide_held and _driver._gliding)
+	_driver._gliding = false
+	_driver._glide_held = false
+	_driver._glide_hand(high, high + way * 20.0 + Vector3.DOWN * 30.0)
+	_t.check("glide hand: a waypoint inside GLIDE_NEAR is not overflown", not _driver._gliding)
+	_driver._glide_hand(high, high + way * 80.0 + Vector3.UP * 5.0)
+	_t.check("glide hand: a waypoint above the ball is not overflown", not _driver._gliding)
+	_driver._glide_hand(high, far_low)
+	_driver.source.press.clear()
+	_driver.source.hold.clear()
+	_driver.source.hold["shift_held"] = true
+	_player.state.velocity.y = -5.0
+	_player.state.air_actions = 0
+	_driver._drive(far_low, null, DT)
+	_t.check("glide hand: the drop holds the jump key while falling", _driver.source.hold.get("jump_held", false))
+	_t.check("glide hand: the drop clears a leftover blink hold", not _driver.source.hold.has("shift_held"))
+
+
+func _harpoon_bites_a_world_anchor() -> void:
+	_set_hands(["harpoon"])
+	_driver._swing_cool = 0.0
+	_driver._swing_sent = 0.0
+	_player.kit.set_on(Augments.GRAPPLE, true)
+	_player.set_physics_process(true)
+	var ball: Vector3 = _player.ball_position()
+	var way := Vector3.FORWARD
+	var beam := StaticBody3D.new()
+	beam.collision_layer = Augments.WORLD_MASK
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(12.0, 2.0, 12.0)
+	shape.shape = box
+	beam.add_child(shape)
+	root.add_child(beam)
+	beam.global_position = ball + way * 25.0 + Vector3.UP * 14.0
+	await physics_frame
+	var point: Vector3 = ball + way * 60.0
+	var best_yaw := 0.0
+	var best := -2.0
+	var toward: Vector3 = (beam.global_position - ball).normalized()
+	_game.camera.pitch = 0.5
+	for yaw in [0.0, PI * 0.5, PI, -PI * 0.5]:
+		_game.camera.yaw = yaw
+		var dot: float = _game.camera.aim_forward().dot(toward)
+		if dot > best:
+			best = dot
+			best_yaw = yaw
+	_game.camera.yaw = best_yaw
+	var hooked := false
+	var pressed := false
+	for tick in 120:
+		if not hooked:
+			_player.set_velocity_now(way * 20.0 + Vector3.UP * 0.5)
+		_driver.source.press.clear()
+		_driver.source.hold.clear()
+		_driver._harpoon_held = false
+		_driver._traverse_hands(_player.ball_position(), point, DT)
+		pressed = pressed or _driver.source.press.has("harpoon_pressed")
+		if _driver._harpoon_held:
+			_driver.source.hold["harpoon_held"] = true
+		await physics_frame
+		if _player.kit.hooked:
+			hooked = true
+			break
+	_t.check("harpoon hand: the hand presses the harpoon for it", pressed)
+	_t.check("harpoon hand: the hook lands on the beam, a world anchor", hooked and not _player.kit.on_body \
+			and _player.kit.anchor.distance_to(beam.global_position) < 8.0)
+	beam.queue_free()
+	_player.set_physics_process(false)

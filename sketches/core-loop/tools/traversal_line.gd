@@ -34,7 +34,9 @@ const CINDER_BURN := CinderHeat.BURN_FACT
 # --hands=harpoon,glide gives the traversal bot its optional hands (bot_driver.gd HAND_NAMES): the
 # harpoon hand swings from an anchor ahead on the way to the next waypoint, the glide hand holds
 # glide over a thermal column and down a long drop. Both are off by default, so every pin, band
-# and bot baseline is the bare pilot's; the flag reaches every child.
+# and bot baseline is the bare pilot's; the flag reaches every child. A hands run writes
+# <pilot>.hands.json with a "hands" field and prints hands= on its summary line, never <pilot>.json;
+# --floor refuses --hands.
 #
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
@@ -831,6 +833,10 @@ func _initialize() -> void:
 			printerr("traversal_line: --hands=%s names no hand (%s)" % [hand, ",".join(BotDriver.HAND_NAMES)])
 			quit(2)
 			return
+	if _settings.has("floor") and not hands_of(_settings).is_empty():
+		printerr("traversal_line: --floor cannot take --hands (the floor line strips the hands' presses)")
+		quit(2)
+		return
 	_routes = load_routes()
 	if _settings.has("child"):
 		if _seeds.size() != 1:
@@ -855,7 +861,7 @@ func _run_children() -> void:
 	for i in _seeds.size():
 		var child_out := out.path_join("children/%d-seed-%d" % [i + 1, _seeds[i]])
 		DirAccess.make_dir_recursive_absolute(child_out)
-		var path := child_out.path_join("%s.json" % _pilot)
+		var path := child_out.path_join(summary_name(_pilot, hands_of(_settings)))
 		var name := "%s-seed-%d-trace.json" % [_pilot, _seeds[i]]
 		var child_trace := child_out.path_join(name)
 		var trace_path := out.path_join(name)
@@ -948,6 +954,12 @@ static func _parse(args: PackedStringArray) -> Dictionary:
 		elif arg.begins_with("--"):
 			out[arg.substr(2)] = "1"
 	return out
+
+
+# A hands run's summary is <pilot>.hands.json, so it is never the bare baseline that bands, the
+# floor's --ref and other readers take from <pilot>.json.
+static func summary_name(pilot: String, hands: Array) -> String:
+	return "%s.json" % pilot if hands.is_empty() else "%s.hands.json" % pilot
 
 
 # The hands --hands= names, in the order given.
@@ -1064,7 +1076,7 @@ func _out_dir() -> String:
 
 func _finish() -> void:
 	var out := _out_dir()
-	var path := out.path_join("%s.json" % _pilot)
+	var path := out.path_join(summary_name(_pilot, hands_of(_settings)))
 	var doc := {}
 	if _park:
 		doc = park_document(_pilot, _map_id, _stage, _commit(), _runs, _line.get("bar", {}), _floor_ref(out))
@@ -1073,6 +1085,8 @@ func _finish() -> void:
 	else:
 		var bar: Dictionary = _routes.get("pilots", {}).get(_pilot, {}).get("bar", {})
 		doc = document(_pilot, TABLE, _commit(), _runs, bar)
+	if not hands_of(_settings).is_empty():
+		doc["hands"] = hands_of(_settings)
 	if not _inconclusive.is_empty():
 		doc["status"] = "INCONCLUSIVE"
 		doc["inconclusive"] = _inconclusive
@@ -1083,8 +1097,9 @@ func _finish() -> void:
 		for band in doc["bands"]:
 			var verdict := "no data" if band["inside"] == null else ("inside" if band["inside"] else "OUTSIDE")
 			print("traversal_line: %s band %s (%s): median %s, worst %s -> %s" % [_pilot, band["measure"], band["band"], band["median"], band["worst"], verdict])
-	print("traversal_line: %s median flow share %.3f, worst seed %s, written %s to %s"
-		% [_pilot, doc["median_flow_share"], doc["worst_seed"], written, path])
+	var hands_note := "" if hands_of(_settings).is_empty() else " hands=" + ",".join(hands_of(_settings))
+	print("traversal_line: %s%s median flow share %.3f, worst seed %s, written %s to %s"
+		% [_pilot, hands_note, doc["median_flow_share"], doc["worst_seed"], written, path])
 	if _park and _stage == FIXTURE_STAGE:
 		restore_park_defs()
 	quit((0 if _inconclusive.is_empty() else 3) if written else 1)
