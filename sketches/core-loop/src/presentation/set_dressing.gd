@@ -43,6 +43,9 @@ var _built_for := []
 var last_entry_usec := 0
 # The next stage's plan (plan()) while a worker draws it: {"key", "task", "out"}, else empty.
 var _prep := {}
+# A first stage still building behind the menu (world.gd MENU-READY): a worker draws its plan once
+# its ground is built and the menu builds it, so neither setup nor the first entry waits on it.
+var _dress_when_planned := false
 # Whether the current children were built from a worker's plan, for stage_entry_budget_test.
 var built_from_worker := false
 # The clutter kit's meshes and their target materials, read once (_kit_meshes).
@@ -62,7 +65,10 @@ func setup(context) -> void:
 	name = "TargetSetDressing"
 	ctx.events.stage_entered.connect(_stage_entered)
 	ctx.events.stage_content_cleared.connect(_clear_stage)
-	_build_stage()
+	if ctx.terrain.is_ready(ctx.terrain.stage):
+		_build_stage()
+	else:
+		_dress_when_planned = true
 
 func _stage_entered(_stage: int, _retry: bool) -> void:
 	var started := Time.get_ticks_usec()
@@ -75,6 +81,7 @@ func _clear_stage(_reason: String) -> void:
 	visible = false
 
 func _build_stage() -> void:
+	_dress_when_planned = false
 	var stage: int = ctx.terrain.stage
 	var root: Node3D = ctx.terrain.geometry_root(stage)
 	_active = root.visible
@@ -138,7 +145,7 @@ func _prepare_next() -> void:
 	var terrain = ctx.terrain
 	if not "maps" in terrain or not terrain.has_method("is_ready") or not "stage" in terrain:
 		return
-	var next: int = terrain.stage + 1
+	var next: int = terrain.stage + (0 if _dress_when_planned else 1)
 	var key := _key(next, terrain.geometry_root(next)) if next <= terrain.maps.size() and terrain.is_ready(next) else []
 	# A plan no stage can take any more (a new run, a preset change) is dropped once its worker is
 	# done, so no frame waits on it.
@@ -539,6 +546,8 @@ func _clutter_batch(label: String, mesh: Mesh, buffer: PackedFloat32Array) -> Mu
 
 func _process(delta: float) -> void:
 	_prepare_next()
+	if _dress_when_planned and not _prep.is_empty() and WorkerThreadPool.is_task_completed(_prep.task):
+		_build_stage()
 	visible = _active and ctx.flow.in_play()
 	if not visible:
 		return

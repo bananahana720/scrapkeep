@@ -54,7 +54,7 @@ How this project actually runs, learned the hard way on 16-18 Oct 2026. Each les
 
 ## Library and records
 
-28. **One register for decisions.** Check `project-guide/DECISIONS.md` before proposing anything that might already be decided; he dislikes re-deciding and the tokens spent rediscovering old calls (19:46Z 17 Oct).
+28. **One register for decisions.** Check `project-guide/handoff/DECISIONS.md` before proposing anything that might already be decided; he dislikes re-deciding and the tokens spent rediscovering old calls (19:46Z 17 Oct).
 29. **Every idea he gives is a motif.** Brief design threads with the motifs that touch their area (world enemy themes, single-skill areas, damage-type armour, buff/debuff zones, cast times).
 30. **The Custom view tab strips colour, opacity and positioning.** Use `currentColor`, no hard-coded colours (dark mode).
 31. **Memory sync to his PC is one-way.** A snapshot goes to `docs/project/PROJECT-MEMORY.md` only on request.
@@ -87,4 +87,11 @@ He said he won't dictate anything but direction (19:55Z 17 Oct), so the filing i
 40. **Promote fast, the wave 17 flow (PR #106, ORCHESTRATOR).** Fast lane (`npm run sketch:fast -- --base <stage>`) plus a reviewer stacks a PR on the stage branch; each stage head gets the full cloud gate and one rotating red team persona; with no new red or blocker, staging merges the stage PR to main on GitHub; the PC runs GPU checks on each promoted head (GPU red is a next-wave fix unless it crashes); five-persona sweep at wave close.
 41. **Claude Docs edit grammar.** `target {"kind":"blocks","ids":[...]}`, `source {"as":"blocks","from":{"kind":"inline","content":[rows]}}`; a table row can't be replaced, so insert the new row after it and `delete` the old one with its `ifHash`.
 42. **Artifacts and Claude Docs are private to the account that made them.** For a move to another account, carry the content as files in the repo (project-guide/handoff/) or share the pages with the new account.
+
+## Moving coordination to the PC, 18 Oct
+
+43. **GitHub is the bus for cloud lanes.** Claude Code cloud sessions cannot message other sessions. A lane posts a receipt comment on each PR (verdict, head SHA, commands, nonzero test counts) and raises a hand on the wave's "Wave board" issue. The local coordinator reads both at every check-in, at least every 30 minutes. Local sessions message the coordinator directly.
+44. **Escalation goes one step at a time.** An agent asks its lane coordinator; a lane asks the local coordinator; only the coordinator goes to Andrew, with a stakeholder pitch (what's at stake, options with tradeoffs, a recommendation, the measured number, what would change it). Keep building on the recommendation while a pitch waits.
+45. **Sync the records before splitting into worktrees.** Lanes clone main, so the rulings, the ownership table and the graph land on main first; a lane that starts from stale docs re-decides settled calls.
+46. **Cap concurrent cloud lanes and let each fan out inside its sandbox.** Four lane sessions that run their own agents and workflows replace a dozen flat threads; the dozen used up the old account in a day.
 
