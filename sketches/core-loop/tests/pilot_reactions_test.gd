@@ -1,5 +1,6 @@
 extends SceneTree
 
+# Partial tables allowed 2026-10-18: a partial table lists the new roles its pilot ships (required_for).
 # Re-pinned 2026-10-11 (PE-0b): table existence selects 18 or seven clips for each pilot.
 # Re-pinned 2026-10-11 (PE-0, design-v3/PILOT-CLIPS.md section 8): the rows now name the eleven
 # new clips, which today's GLBs lack, so the asset check follows the roster instead of the rows: a
@@ -109,8 +110,9 @@ func check_assets() -> void:
 			probed = true
 			check_table_rule(animator, stem)
 		var has_table := Trigger.has_table(stem)
-		var required: Array = Trigger.required_clips(has_table)
-		check("%s carries %d roster clips (pose table %s)" % [class_id, required.size(), "present" if has_table else "absent"], required.size() == (18 if has_table else 7))
+		var required: Array = Trigger.required_for(stem)
+		# A table with "partial": true ships only the roles it lists; any other table means all 18.
+		check("%s carries %d roster clips (pose table %s)" % [class_id, required.size(), "present" if has_table else "absent"], required.size() >= 8 if has_table else required.size() == 7)
 		for clip in required:
 			check("%s / %s exists" % [class_id, clip], animator.has_animation(clip))
 		for clip in animator.get_animation_list():
