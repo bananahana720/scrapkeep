@@ -201,6 +201,15 @@ func _run() -> void:
 	# A second Esc with no page leaves.
 	await _put_in("achieve")
 	_t.eq("pad A in the trophy wall's zone is A", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_A)
+	_game._screen_key(KEY_A)
+	await _frames(2)
+	_t.check("A opens the trophy wall over the walk", _screens.achievements_open() and _screens.walking(), "")
+	_screens.button_for("back").pressed.emit()
+	await _frames(2)
+	_t.check("the trophy wall's Back returns to the walk", not _screens.achievements_open() and _screens.walk_live(), "")
+	if _screens.achievements_open():
+		_screens.toggle_achievements()
+		await _frames(2)
 
 	# The pet.
 	await _put_in("settings")

@@ -153,7 +153,8 @@ func setup(game_ref) -> void:
 	_content.add_child(_help)
 	_achievements = AchievementsPage.new()
 	_achievements.visible = false
-	_achievements.back.pressed.connect(_press.bind("key_a"))
+	# Back closes the page directly: over the camp walk the A hotkey is the trophy wall's, not the page's.
+	_achievements.back.pressed.connect(toggle_achievements)
 	_content.add_child(_achievements)
 	_settings = SettingsPages.new()
 	_settings.visible = false

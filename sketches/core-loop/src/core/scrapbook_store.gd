@@ -161,13 +161,13 @@ func _page_from(doc: Dictionary, with_shots: bool) -> Dictionary:
 	return doc
 
 
-# The picture a panel names, or null. The name is a basename that must start with the page's
-# safe id, so a hand-edited page cannot point at another file.
+# The picture a panel names, or null. The name must be <safe id>_<digits>.png, so a hand-edited
+# page cannot point at another file or at another page's picture.
 func _load_shot(name: String, run_id: String) -> Image:
 	if name.is_empty() or name != name.get_file():
 		return null
 	var id := safe_id(run_id)
-	if id.is_empty() or not name.begins_with(id + "_") or not name.ends_with(".png"):
+	if id.is_empty() or not _is_shot_of(name, id):
 		return null
 	var path := dir.path_join(name)
 	if not FileAccess.file_exists(path):
