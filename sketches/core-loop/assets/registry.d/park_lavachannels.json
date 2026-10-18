@@ -1,0 +1,40 @@
+{
+ "assets": [
+  {
+   "id": "lava_channel",
+   "path": "res://assets/models/park/lava_channel.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_channel_detail1",
+   "path": "res://assets/models/park/lava_channel_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_channel_detail2",
+   "path": "res://assets/models/park/lava_channel_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  }
+ ]
+}

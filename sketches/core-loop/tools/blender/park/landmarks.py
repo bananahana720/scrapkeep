@@ -889,6 +889,82 @@ PIT_ROPE = (0.882, 0.0, 0.470)          # toward the hoist house, unit
 PIT_PERP = (-0.470, 0.0, 0.882)
 PIT_WHEEL_Y, PIT_WHEEL_R = 113.0, 7.0
 PIT_WELL = (6.0, 0.0, 38.0)             # half width, bottom, top
+# The tipple_deck row (park_pit: at [0, 240], y -60, size [24, 2, 16], yaw 180) in this frame: Frame.local(0, -60, 240)
+# = (0, 40, 15); the row's yaw less the landmark's is 0, so its length (24) runs along local z and its width (16) along
+# x; place_greybox stands the box on the row's y: local x -8..8, y 40..42, z 3..27. The deck plate's top is the row's
+# top, 42; its edge stringers sit on the girders (top 39.7) through bearing shims out to x +-8.7.
+PIT_DECK_BOX = ((-8.0, 40.0, 3.0), (8.0, 42.0, 27.0))
+# The hoist_house row (at [-75, 215], ground y -100, size [44, 16, 26], yaw -63): Frame.local(-75, -100, 215) = (75, 0,
+# 40); local yaw = -63 - 180 = -243 = 117 degrees, so its length axis is local (sin 117, 0, cos 117) = (0.891, 0, -0.454)
+# (Frame.dir_local of the row's world +Z) and its width axis (cos 117, 0, -sin 117) = (-0.454, 0, -0.891). Half 22 by 13,
+# roof 16. The rope ends (hoist, below) lie 12 m from the centre toward the headframe on the plane square to PIT_ROPE;
+# the house meets them with a rope slot cut in the roof: the drum wall on that plane (d 12, d along -PIT_ROPE from the
+# centre), the slot 2 m deep to d 14, |q| < 5.5 along PIT_PERP, floor at 12. A rope rises 1.49 m per metre of plan back
+# toward the wheels, so it clears the slot's far lip (y 17 at d 14) and the roof beyond.
+PIT_HOUSE_ROW = ((-75.0, 215.0), -63.0, (44.0, 16.0, 26.0))
+PIT_ROPE_END_D = 12.0
+# d from, d to, half q, floor y; d is -PIT_ROPE . (p - centre), and PIT_ROPE is unit to 3 places, so the rope ends sit
+# at d = 12 |PIT_ROPE|^2 (11.986), where the drum wall stands
+PIT_SLOT = (PIT_ROPE_END_D * (PIT_ROPE[0] ** 2 + PIT_ROPE[2] ** 2), 14.0, 5.5, 12.0)
+
+
+def pit_house():
+    """(centre, length axis, width axis, half length, half width, roof) of the hoist house in the landmark frame."""
+    F = FRAMES["landmark_headframe"]
+    (wx, wz), yaw, size = PIT_HOUSE_ROW
+    c = F.local(wx, F.y, wz)
+    a = math.radians(yaw)
+    ax = F.dir_local(math.sin(a), math.cos(a))
+    aw = F.dir_local(math.cos(a), -math.sin(a))
+    return c, ax, aw, size[0] / 2, size[2] / 2, size[1]
+
+
+def clip(poly, n, k):
+    """The part of a convex outline [(x, z)] with n . p <= k (Sutherland-Hodgman, one plane)."""
+    out = []
+    for i, p in enumerate(poly):
+        q = poly[(i + 1) % len(poly)]
+        dp, dq = n[0] * p[0] + n[1] * p[1] - k, n[0] * q[0] + n[1] * q[1] - k
+        if dp <= 0:
+            out.append(p)
+        if dp * dq < 0:
+            t = dp / (dp - dq)
+            out.append((p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t))
+    return out
+
+
+def pit_house_pieces():
+    """[(outline, y0, y1)]: the house up to the slot floor, then the roof block round the rope slot (each convex)."""
+    c, ax, aw, hl, hw, roof = pit_house()
+    rect = [(c[0] + ax[0] * sl * hl + aw[0] * sw * hw, c[2] + ax[2] * sl * hl + aw[2] * sw * hw)
+            for sl, sw in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    d0, d1, hq, floor = PIT_SLOT
+    u, p = (-PIT_ROPE[0], -PIT_ROPE[2]), (PIT_PERP[0], PIT_PERP[2])
+    du = u[0] * c[0] + u[1] * c[2]
+    dp = p[0] * c[0] + p[1] * c[2]
+    neg = lambda n: (-n[0], -n[1])
+    parts = [(rect, 0.0, floor), (clip(rect, u, du + d0), floor, roof), (clip(rect, neg(u), -du - d1), floor, roof)]
+    band = clip(clip(rect, neg(u), -du - d0), u, du + d1)
+    parts += [(clip(band, neg(p), -dp - hq), floor, roof), (clip(band, p, dp - hq), floor, roof)]
+    return [(o, y0, y1) for o, y0, y1 in parts if len(o) >= 3]
+
+
+def pit_rope_ends():
+    return [vadd(vadd((75.0, 14.0, 40.0), PIT_ROPE, -PIT_ROPE_END_D), PIT_PERP, s * 3.5) for s in (-1, 1)]
+
+
+def pit_house_solid(s, roof_col, wall_col, slot=True):
+    if not slot:
+        c, ax, aw, hl, hw, roof = pit_house()
+        obox(s, vadd(c, UP, roof / 2), (hw, roof / 2, hl), (aw, UP, ax), wall_col)
+        return
+    for outline, y0, y1 in pit_house_pieces():
+        slab(s, outline, y0, y1, wall_col, roof_col if y1 > PIT_SLOT[3] + 1 else wall_col)
+
+
+def pit_stack():
+    c, ax, aw, hl, hw, roof = pit_house()
+    return vadd(vadd(c, ax, 14.0), aw, -6.0)
 
 
 def pit_leg(i, y):
@@ -967,6 +1043,35 @@ def build_headframe():
         beam(st, pit_leg(0 if sx > 0 else 1, 18.0), (sx * 8.4, 38.7, 22.0), 0.5, 0.5, col("iron_hi"))
     for z in (12.0, 20.0, 27.0):
         beam(st, (-8.4, 38.9, z), (8.4, 38.9, z), 0.4, 0.5, col("iron_hi"), caps=False)
+    # tipple deck (PIT_DECK_BOX): plate, edge stringers on bearing shims over the girders, floor beams, end channels
+    (dx0, dyb, dz0), (dx1, dyt, dz1) = PIT_DECK_BOX
+    box(st, (dx0, dyt - 0.4, dz0), (dx1, dyt, dz1), col("steel"))
+    for sx in (-1, 1):
+        box(st, (min(sx * 7.7, sx * 8.0), 39.7, dz0), (max(sx * 7.7, sx * 8.0), dyt - 0.4, dz1), iron)
+        for z in (4.0, 9.0, 15.0, 21.0, 26.0):
+            box(st, (min(sx * 7.7, sx * 8.7), 39.7, z - 0.3), (max(sx * 7.7, sx * 8.7), 40.0, z + 0.3), col("iron_hi"))
+    for z in (dz0 + 0.2, 7.0, 11.0, 15.0, 19.0, 23.0, dz1 - 0.2):
+        box(st, (-7.7, dyb + 0.2, z - 0.2), (7.7, dyt - 0.4, z + 0.2), col("iron_hi"))
+    box(colm, (dx0, dyb, dz0), (dx1, dyt, dz1), iron)
+    # hoist house (pit_house): corrugated walls, rust roof round the rope slot, the drum window on the slot's back wall
+    # facing the headframe, a boiler stack with two bands and a cap
+    hc, hax, haw, hhl, hhw, hroof = pit_house()
+    pit_house_solid(st, col("rust"), col("steel"))
+    pit_house_solid(colm, iron, iron, slot=False)
+    d0, d1, hq, floor = PIT_SLOT
+    wall = vadd(hc, PIT_ROPE, -(d0 + 0.03))
+    win = lambda q, y: vadd(vadd((wall[0], y, wall[2]), PIT_PERP, q), UP, 0.0)
+    card(st, [win(-4.6, floor + 0.4), win(4.6, floor + 0.4), win(4.6, hroof - 0.5), win(-4.6, hroof - 0.5)], col("iron"), vscale(PIT_ROPE, -1.0))
+    for q in (-4.6, -1.55, 1.55, 4.6):
+        beam(st, win(q, floor + 0.4), win(q, hroof - 0.5), 0.22, 0.22, col("copper"))
+    for y in (floor + 0.4, hroof - 0.5):
+        beam(st, win(-4.6, y), win(4.6, y), 0.22, 0.22, col("copper"))
+    sc = pit_stack()
+    frustum(st, (sc[0], sc[2]), 1.0, 0.85, hroof - 0.2, 34.0, 10, col("iron"))
+    for y in (22.0, 29.0):
+        frustum(st, (sc[0], sc[2]), 1.0, 1.0, y, y + 0.5, 10, col("rust"))
+    frustum(st, (sc[0], sc[2]), 1.15, 1.15, 33.4, 34.4, 10, col("iron_hi"))
+    frustum(colm, (sc[0], sc[2]), 1.0, 0.85, hroof - 0.2, 34.0, 8, iron)
 
     # ---- mid: box legs with cross braces, the deck, 16-segment wheel discs, ropes
     ms = mid["steel"]
@@ -987,6 +1092,9 @@ def build_headframe():
         ms.ring_solid([vadd(p, PIT_PERP, -0.3) for p in ring], [vadd(p, PIT_PERP, 0.3) for p in ring], iron)
         hoist = vadd(vadd((75.0, 14.0, 40.0), PIT_ROPE, -12.0), PIT_PERP, s * 3.5)
         tube(ms, vadd(c, PIT_ROPE, PIT_WHEEL_R - 0.3), hoist, 0.3, 3, col("cable"))
+    box(ms, PIT_DECK_BOX[0], PIT_DECK_BOX[1], col("steel"))
+    pit_house_solid(ms, col("rust"), col("steel"))
+    frustum(ms, (sc[0], sc[2]), 1.0, 0.85, hroof - 0.2, 34.0, 8, col("iron"))
 
     # ---- far: four box legs, the back legs, the deck and both wheel discs (the A-and-wheels read)
     fs = far["steel"]
@@ -1003,6 +1111,7 @@ def build_headframe():
         u, v = frame(PIT_PERP)
         ring = [vadd(vadd(c, u, PIT_WHEEL_R * math.cos(TAU * k / 12)), v, PIT_WHEEL_R * math.sin(TAU * k / 12)) for k in range(12)]
         fs.ring_solid([vadd(p, PIT_PERP, -0.3) for p in ring], [vadd(p, PIT_PERP, 0.3) for p in ring], iron)
+    pit_house_solid(fs, None, col("steel"), slot=False)
 
     # ---- shells: ladder and gusset plates (1); rivet rows (2)
     s1, s2 = sky.Surf("landmark_headframe_detail1"), sky.Surf("landmark_headframe_detail2")
@@ -1023,12 +1132,23 @@ def build_headframe():
         for k in range(9):
             x = x0 + 2.0 * k
             beam(s1, (x, dy1, z), (x, dy1 + 1.1, z), 0.06, 0.06, col("iron_hi"), caps=False)
+    # corrugation ribs every 2 m on the two house walls facing the headframe (+width and -length), under the slot floor
+    for axis, half, along, span in ((haw, hhw, hax, hhl), (hax, -hhl, haw, hhw)):
+        n = int(span)
+        for k in range(-n + 1, n, 2):
+            foot = vadd(vadd(hc, axis, half + (0.04 if half > 0 else -0.04)), along, float(k))
+            beam(s1, vadd(foot, UP, 0.3), vadd(foot, UP, floor - 0.3), 0.12, 0.08, col("iron_hi"), caps=False)
     for k in range(len(levels)):
         for i in range(4):
             p = pit_leg(i, levels[k])
             for m in range(3):
                 q = vadd(p, (-1.0 + m, 0.95, 2.0 if p[2] > 0 else -2.0))
                 box(s2, vsub(q, (0.09, 0.09, 0.09)), vadd(q, (0.09, 0.09, 0.09)), col("copper_dk"))
+    # rivet rows on the tipple deck's edge stringers
+    for sx in (-1, 1):
+        for k in range(12):
+            q = (sx * 8.05, 40.8, 4.0 + 2.0 * k)
+            box(s2, vsub(q, (0.07, 0.07, 0.07)), vadd(q, (0.07, 0.07, 0.07)), col("copper_dk"))
     empties = {"sight_top": (0.0, PIT_WHEEL_Y + PIT_WHEEL_R, 0.0), "warden_anchor": (0.0, 4.0, 0.0),
                "hoist_high": (0.0, 34.0, 0.0), "sheave_rope": (0.0, 110.0, 0.0)}
     return {"base": base, "exempt": exempt, "col": colm, "nodes": [], "empties": empties, "mid": mid, "far": far,
@@ -1770,6 +1890,21 @@ def check_card(rid, spec):
         inside = [v for v in every if abs(v[0]) < hw and abs(v[2]) < hw and y0 < v[1] < y1]
         assert not inside, (rid, "geometry in the hive well", inside[:3])
         assert min(v[1] for v in spec["col"].v) <= -2.0, (rid, "legs do not reach the ground")
+        # each rope end lies on the drum wall inside the slot; back along the rope toward its wheel, every point over the
+        # house's footprint outside the slot is above the roof
+        c, ax, aw, hl, hw, roof = pit_house()
+        d0, d1, hq, floor = PIT_SLOT
+        for s, end in zip((-1, 1), pit_rope_ends()):
+            rel = vsub(end, c)
+            d, q = -sky.dot(rel, PIT_ROPE), sky.dot(rel, PIT_PERP)
+            assert abs(d - d0) < 1e-6 and abs(q) < hq and floor < end[1] < roof, (rid, "rope end off the drum wall", d, q, end)
+            top = vadd(vadd((0.0, PIT_WHEEL_Y, 0.0), PIT_PERP, s * 3.5), PIT_ROPE, PIT_WHEEL_R - 0.3)
+            for k in range(1, 401):
+                p = vlerp(end, top, k / 400)
+                r = vsub(p, c)
+                over = abs(sky.dot(r, ax)) <= hl and abs(sky.dot(r, aw)) <= hw
+                in_slot = d0 <= -sky.dot(r, PIT_ROPE) <= d1 and abs(sky.dot(r, PIT_PERP)) < hq
+                assert not over or in_slot or p[1] >= roof, (rid, "rope through the hoist house roof", p)
     if rid == "landmark_sinkhole":
         r, ya, yb = SINK_POOL
         inside = [v for v in every if math.hypot(v[0], v[2]) < r and ya < v[1] < yb]

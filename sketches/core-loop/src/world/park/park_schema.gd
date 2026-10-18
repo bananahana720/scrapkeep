@@ -26,7 +26,7 @@ const LANDFORMS := ["slot_canyon", "arroyo", "dry_wash", "slickrock", "canal", "
 # net_weaver: the Highdraft's animals who string the nets, posts and balloon lifts (Andrew's "Now, light" tap,
 # 2026-10-17; stage 6 page section 15 asked for their id).
 const SOCIETIES := ["none", "hohokam", "ancestral_puebloan", "mining", "dam_era", "fleet", "ancient", "net_weaver"]
-const VERBS := ["roll", "pump", "grind", "launch", "drop", "swing", "glide", "lift", "bank", "slam"]
+const VERBS := ["roll", "pump", "grind", "launch", "drop", "swing", "glide", "lift", "bank", "slam", "cast"]
 const STAMPS := ["", "wash", "channel", "ridge", "mesa", "butte", "spire", "bowl", "terrace", "crater",
 	"sinkhole", "ramp", "plateau"]
 const BUDGETS := ["landform", "park_large", "hero_landmark", "detail"]
@@ -83,7 +83,7 @@ const WEATHER_KINDS := ["clear", "monsoon", "dust_squall", "heat_shimmer", "cave
 const RECIPES := [
 	"half_pipe_concrete", "slot_canyon_flow", "wash_dropin_lip",
 	"canal_lip", "flume_span", "penstock_run", "pipeline_rail",
-	"bench_coping", "tailings_lip", "pit_haul_ramp",
+	"bench_coping", "tailings_lip", "pit_haul_ramp", "pit_haul_lane",
 	"lava_tube_run", "adit_mouth", "shaft_drop", "spillway_tunnel",
 	"cenote_pool", "flooded_shaft", "cavern_shell",
 	"cliff_dwelling_row", "mesa_rim_ledge", "viga_pivot",
@@ -92,6 +92,7 @@ const RECIPES := [
 	"landmark_dam", "landmark_penstock_tower", "landmark_headframe", "landmark_sinkhole",
 	"landmark_sky_island", "landmark_spire",
 	"anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn",
+	"ore_bin", "ore_bin_row", "timber_portal",
 ]
 const GREYBOX := "greybox:"
 # The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).

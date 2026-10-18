@@ -7984,6 +7984,42 @@
    }
   },
   {
+   "id": "lava_channel",
+   "path": "res://assets/models/park/lava_channel.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_channel_detail1",
+   "path": "res://assets/models/park/lava_channel_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_channel_detail2",
+   "path": "res://assets/models/park/lava_channel_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
    "id": "lava_tube_run",
    "path": "res://assets/models/park/lava_tube_run.glb",
    "class": "park_large",
@@ -8104,6 +8140,222 @@
    }
   },
   {
+   "id": "mesa_lip_kicker_24x6x36",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x36.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 36]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_24x6x36_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x36_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 36]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_24x6x36_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x36_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 36]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_24x6x60",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x60.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 60]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_24x6x60_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x60_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 60]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_24x6x60_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x60_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 60]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_24x6x90",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x90.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 90]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_24x6x90_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x90_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 90]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_24x6x90_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_24x6x90_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [24, 6, 90]; seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_26x5x30",
+   "path": "res://assets/models/park/mesa_lip_kicker_26x5x30.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [26, 5, 30]; seats rows 19.5 to 39 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_26x5x30_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_26x5x30_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [26, 5, 30]; seats rows 19.5 to 39 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_26x5x30_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_26x5x30_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [26, 5, 30]; seats rows 19.5 to 39 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_60x26x60",
+   "path": "res://assets/models/park/mesa_lip_kicker_60x26x60.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [60, 26, 60]; seats rows 45 to 90 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_60x26x60_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_60x26x60_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [60, 26, 60]; seats rows 45 to 90 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_60x26x60_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_60x26x60_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [60, 26, 60]; seats rows 45 to 90 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_60x32x36",
+   "path": "res://assets/models/park/mesa_lip_kicker_60x32x36.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [60, 32, 36]; seats rows 45 to 90 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_60x32x36_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_60x32x36_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [60, 32, 36]; seats rows 45 to 90 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_60x32x36_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_60x32x36_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa_lip_kicker for the crown rows of size [60, 32, 36]; seats rows 45 to 90 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
    "id": "mesa_lip_kicker_detail1",
    "path": "res://assets/models/park/mesa_lip_kicker_detail1.glb",
    "class": "detail",
@@ -8215,6 +8467,42 @@
    }
   },
   {
+   "id": "mesa_shelf_edge",
+   "path": "res://assets/models/park/mesa_shelf_edge.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_detail1",
+   "path": "res://assets/models/park/mesa_shelf_edge_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_detail2",
+   "path": "res://assets/models/park/mesa_shelf_edge_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
    "id": "net_deck",
    "path": "res://assets/models/park/net_deck.glb",
    "class": "landform",
@@ -8248,6 +8536,72 @@
    "provenance": {
     "recipe": "tools/blender/park/skyislands.py",
     "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "ore_bin",
+   "path": "res://assets/models/park/ore_bin.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "steel ore bin on timber cribs; size [10, 14, 10] (length along +Z, height, width); origin centre of the footprint on the ground"
+   }
+  },
+  {
+   "id": "ore_bin_detail1",
+   "path": "res://assets/models/park/ore_bin_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "steel ore bin on timber cribs; size [10, 14, 10] (length along +Z, height, width); origin centre of the footprint on the ground"
+   }
+  },
+  {
+   "id": "ore_bin_detail2",
+   "path": "res://assets/models/park/ore_bin_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "steel ore bin on timber cribs; size [10, 14, 10] (length along +Z, height, width); origin centre of the footprint on the ground"
+   }
+  },
+  {
+   "id": "ore_bin_row",
+   "path": "res://assets/models/park/ore_bin_row.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "four ore bins under one walkway girder; size [45, 14, 8] (length along +Z, height, width); origin centre of the footprint on the ground"
+   }
+  },
+  {
+   "id": "ore_bin_row_detail1",
+   "path": "res://assets/models/park/ore_bin_row_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "four ore bins under one walkway girder; size [45, 14, 8] (length along +Z, height, width); origin centre of the footprint on the ground"
+   }
+  },
+  {
+   "id": "ore_bin_row_detail2",
+   "path": "res://assets/models/park/ore_bin_row_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "four ore bins under one walkway girder; size [45, 14, 8] (length along +Z, height, width); origin centre of the footprint on the ground"
    }
   },
   {
@@ -8323,6 +8677,39 @@
    }
   },
   {
+   "id": "pit_haul_lane",
+   "path": "res://assets/models/park/pit_haul_lane.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "pit_haul_lane_detail1",
+   "path": "res://assets/models/park/pit_haul_lane_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "pit_haul_lane_detail2",
+   "path": "res://assets/models/park/pit_haul_lane_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
    "id": "pit_haul_ramp",
    "path": "res://assets/models/park/pit_haul_ramp.glb",
    "class": "landform",
@@ -8353,6 +8740,402 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "plate_kicker_10x3x8",
+   "path": "res://assets/models/park/plate_kicker_10x3x8.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [10, 3, 8] (placeholder unit C); seats rows 7.5 to 15 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_10x3x8_detail1",
+   "path": "res://assets/models/park/plate_kicker_10x3x8_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [10, 3, 8] (placeholder unit C); seats rows 7.5 to 15 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_10x3x8_detail2",
+   "path": "res://assets/models/park/plate_kicker_10x3x8_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [10, 3, 8] (placeholder unit C); seats rows 7.5 to 15 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x14",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x14.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 14] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x14_detail1",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x14_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 14] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x14_detail2",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x14_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 14] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x30",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x30.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 30] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x30_detail1",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x30_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 30] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x30_detail2",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x30_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 30] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x40",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x40.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 40] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x40_detail1",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x40_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 40] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_12x2p5x40_detail2",
+   "path": "res://assets/models/park/plate_kicker_12x2p5x40_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [12, 2.5, 40] (placeholder unit C); seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_16x6x24",
+   "path": "res://assets/models/park/plate_kicker_16x6x24.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [16, 6, 24] (placeholder unit C); seats rows 12 to 24 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_16x6x24_detail1",
+   "path": "res://assets/models/park/plate_kicker_16x6x24_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [16, 6, 24] (placeholder unit C); seats rows 12 to 24 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_16x6x24_detail2",
+   "path": "res://assets/models/park/plate_kicker_16x6x24_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [16, 6, 24] (placeholder unit C); seats rows 12 to 24 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_18x4x10",
+   "path": "res://assets/models/park/plate_kicker_18x4x10.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [18, 4, 10] (placeholder unit C); seats rows 13.5 to 27 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_18x4x10_detail1",
+   "path": "res://assets/models/park/plate_kicker_18x4x10_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [18, 4, 10] (placeholder unit C); seats rows 13.5 to 27 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_18x4x10_detail2",
+   "path": "res://assets/models/park/plate_kicker_18x4x10_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [18, 4, 10] (placeholder unit C); seats rows 13.5 to 27 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_24x3x20",
+   "path": "res://assets/models/park/plate_kicker_24x3x20.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [24, 3, 20] (placeholder unit C); seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_24x3x20_detail1",
+   "path": "res://assets/models/park/plate_kicker_24x3x20_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [24, 3, 20] (placeholder unit C); seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_24x3x20_detail2",
+   "path": "res://assets/models/park/plate_kicker_24x3x20_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [24, 3, 20] (placeholder unit C); seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_24x4x18",
+   "path": "res://assets/models/park/plate_kicker_24x4x18.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [24, 4, 18] (placeholder unit C); seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_24x4x18_detail1",
+   "path": "res://assets/models/park/plate_kicker_24x4x18_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [24, 4, 18] (placeholder unit C); seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_24x4x18_detail2",
+   "path": "res://assets/models/park/plate_kicker_24x4x18_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [24, 4, 18] (placeholder unit C); seats rows 18 to 36 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_28x14x34",
+   "path": "res://assets/models/park/plate_kicker_28x14x34.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [28, 14, 34] (placeholder unit C); seats rows 21 to 42 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_28x14x34_detail1",
+   "path": "res://assets/models/park/plate_kicker_28x14x34_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [28, 14, 34] (placeholder unit C); seats rows 21 to 42 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_28x14x34_detail2",
+   "path": "res://assets/models/park/plate_kicker_28x14x34_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [28, 14, 34] (placeholder unit C); seats rows 21 to 42 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_30x8x18",
+   "path": "res://assets/models/park/plate_kicker_30x8x18.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [30, 8, 18] (placeholder unit C); seats rows 22.5 to 45 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_30x8x18_detail1",
+   "path": "res://assets/models/park/plate_kicker_30x8x18_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [30, 8, 18] (placeholder unit C); seats rows 22.5 to 45 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_30x8x18_detail2",
+   "path": "res://assets/models/park/plate_kicker_30x8x18_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [30, 8, 18] (placeholder unit C); seats rows 22.5 to 45 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_8x3x20",
+   "path": "res://assets/models/park/plate_kicker_8x3x20.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [8, 3, 20] (placeholder unit C); seats rows 6 to 12 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_8x3x20_detail1",
+   "path": "res://assets/models/park/plate_kicker_8x3x20_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [8, 3, 20] (placeholder unit C); seats rows 6 to 12 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "plate_kicker_8x3x20_detail2",
+   "path": "res://assets/models/park/plate_kicker_8x3x20_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Industrial plate kicker for the flume and pit rows of size [8, 3, 20] (placeholder unit C); seats rows 6 to 12 m long. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -8566,6 +9349,39 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "timber_portal",
+   "path": "res://assets/models/park/timber_portal.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "adit portal: three timber sets, lagging, number board, rock headwall round a dark opening; size [8, 6, 3] (length along +Z, height, width); origin centre of the footprint on the ground; collider posts and caps only"
+   }
+  },
+  {
+   "id": "timber_portal_detail1",
+   "path": "res://assets/models/park/timber_portal_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "adit portal: three timber sets, lagging, number board, rock headwall round a dark opening; size [8, 6, 3] (length along +Z, height, width); origin centre of the footprint on the ground; collider posts and caps only"
+   }
+  },
+  {
+   "id": "timber_portal_detail2",
+   "path": "res://assets/models/park/timber_portal_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/workings.py",
+    "notes": "adit portal: three timber sets, lagging, number board, rock headwall round a dark opening; size [8, 6, 3] (length along +Z, height, width); origin centre of the footprint on the ground; collider posts and caps only"
    }
   },
   {
@@ -10527,6 +11343,9 @@
   "lantern_beacon_detail2",
   "lantern_beacon_frame",
   "lantern_beacon_lens",
+  "lava_channel",
+  "lava_channel_detail1",
+  "lava_channel_detail2",
   "lava_tube_run",
   "lava_tube_run_bend_n30",
   "lava_tube_run_bend_n30_detail1",
@@ -10542,11 +11361,32 @@
   "lift_platform_glass",
   "lift_platform_pump",
   "mesa_lip_kicker",
+  "mesa_lip_kicker_24x6x36",
+  "mesa_lip_kicker_24x6x36_detail1",
+  "mesa_lip_kicker_24x6x36_detail2",
+  "mesa_lip_kicker_24x6x60",
+  "mesa_lip_kicker_24x6x60_detail1",
+  "mesa_lip_kicker_24x6x60_detail2",
+  "mesa_lip_kicker_24x6x90",
+  "mesa_lip_kicker_24x6x90_detail1",
+  "mesa_lip_kicker_24x6x90_detail2",
+  "mesa_lip_kicker_26x5x30",
+  "mesa_lip_kicker_26x5x30_detail1",
+  "mesa_lip_kicker_26x5x30_detail2",
+  "mesa_lip_kicker_60x26x60",
+  "mesa_lip_kicker_60x26x60_detail1",
+  "mesa_lip_kicker_60x26x60_detail2",
+  "mesa_lip_kicker_60x32x36",
+  "mesa_lip_kicker_60x32x36_detail1",
+  "mesa_lip_kicker_60x32x36_detail2",
   "mesa_lip_kicker_detail1",
   "mesa_lip_kicker_detail2",
   "mesa_rim_ledge",
   "mesa_rim_ledge_detail1",
   "mesa_rim_ledge_detail2",
+  "mesa_shelf_edge",
+  "mesa_shelf_edge_detail1",
+  "mesa_shelf_edge_detail2",
   "mind_hand",
   "mind_hand_M1_M2_cast_atlas.png",
   "mind_hand_M4_signal_atlas.png",
@@ -10565,6 +11405,12 @@
   "net_edge",
   "net_shoe",
   "net_tile",
+  "ore_bin",
+  "ore_bin_detail1",
+  "ore_bin_detail2",
+  "ore_bin_row",
+  "ore_bin_row_detail1",
+  "ore_bin_row_detail2",
   "ore_cart_body",
   "ore_cart_detail1",
   "ore_cart_detail2",
@@ -10600,9 +11446,45 @@
   "pipeline_rail",
   "pipeline_rail_detail1",
   "pipeline_rail_detail2",
+  "pit_haul_lane",
+  "pit_haul_lane_detail1",
+  "pit_haul_lane_detail2",
   "pit_haul_ramp",
   "pit_haul_ramp_detail1",
   "pit_haul_ramp_detail2",
+  "plate_kicker_10x3x8",
+  "plate_kicker_10x3x8_detail1",
+  "plate_kicker_10x3x8_detail2",
+  "plate_kicker_12x2p5x14",
+  "plate_kicker_12x2p5x14_detail1",
+  "plate_kicker_12x2p5x14_detail2",
+  "plate_kicker_12x2p5x30",
+  "plate_kicker_12x2p5x30_detail1",
+  "plate_kicker_12x2p5x30_detail2",
+  "plate_kicker_12x2p5x40",
+  "plate_kicker_12x2p5x40_detail1",
+  "plate_kicker_12x2p5x40_detail2",
+  "plate_kicker_16x6x24",
+  "plate_kicker_16x6x24_detail1",
+  "plate_kicker_16x6x24_detail2",
+  "plate_kicker_18x4x10",
+  "plate_kicker_18x4x10_detail1",
+  "plate_kicker_18x4x10_detail2",
+  "plate_kicker_24x3x20",
+  "plate_kicker_24x3x20_detail1",
+  "plate_kicker_24x3x20_detail2",
+  "plate_kicker_24x4x18",
+  "plate_kicker_24x4x18_detail1",
+  "plate_kicker_24x4x18_detail2",
+  "plate_kicker_28x14x34",
+  "plate_kicker_28x14x34_detail1",
+  "plate_kicker_28x14x34_detail2",
+  "plate_kicker_30x8x18",
+  "plate_kicker_30x8x18_detail1",
+  "plate_kicker_30x8x18_detail2",
+  "plate_kicker_8x3x20",
+  "plate_kicker_8x3x20_detail1",
+  "plate_kicker_8x3x20_detail2",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",
@@ -10713,6 +11595,9 @@
   "tailings_lip_detail2",
   "thermal_air",
   "thermal_vent",
+  "timber_portal",
+  "timber_portal_detail1",
+  "timber_portal_detail2",
   "trail_any_downbeat",
   "trail_atlas.png",
   "trail_cannon_recital",
