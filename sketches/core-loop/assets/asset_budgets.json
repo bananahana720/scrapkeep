@@ -80,8 +80,8 @@
     "prop": {
       "tris": 2000,
       "verts": 4600,
-      "draws": 1,
-      "set_by": "2026-10-18 model polish (tools/blender/POLISH.md; Andrew 00:04Z asked for denser, baked models while frames hold): tris 270 to 2000 and verts 610 to 4600 at the old ratio, pending one 4080 frame check on the densest fight; draws unchanged; earlier basis: moss_shelter (266 / 608 / 1); old ceilings 1,600 T / 2,400 V; moss_workshop carries an exception under its recipe's 6,500 T assert"
+      "draws": 2,
+      "set_by": "2026-10-18 model polish (tools/blender/POLISH.md; Andrew 00:04Z asked for denser, baked models while frames hold): tris 270 to 2000 and verts 610 to 4600 at the old ratio, pending one 4080 frame check on the densest fight; draws 1 to 2 (coordinator call 2026-10-18: a bevelled detail shell on the polished kits is a second draw by design), pending the 4080 densest-fight frame check; if red, merge draws instead; earlier basis: moss_shelter (266 / 608 / 1); old ceilings 1,600 T / 2,400 V; moss_workshop carries an exception under its recipe's 6,500 T assert"
     },
     "landmark": {
       "tris": 4000,
@@ -92,8 +92,8 @@
     "detail": {
       "tris": 4000,
       "verts": 8000,
-      "draws": 1,
-      "set_by": "2026-10-18 model polish (tools/blender/POLISH.md; Andrew 00:04Z asked for denser, baked models while frames hold): tris 1500 to 4000 and verts 3000 to 8000 at the old ratio, pending one 4080 frame check on the densest fight; draws unchanged; earlier basis: 2026-10-09 wave 12 coordinator: trial class for detail shells (one extra draw each, culled by range); the base asset keeps its own class. Values from the cart and beacon detail pilots (848 to 1240 tris per shell).",
+      "draws": 2,
+      "set_by": "2026-10-18 model polish (tools/blender/POLISH.md; Andrew 00:04Z asked for denser, baked models while frames hold): tris 1500 to 4000 and verts 3000 to 8000 at the old ratio, pending one 4080 frame check on the densest fight; draws 1 to 2 (coordinator call 2026-10-18: a bevelled detail shell on the polished kits is a second draw by design), pending the 4080 densest-fight frame check; if red, merge draws instead; earlier basis: 2026-10-09 wave 12 coordinator: trial class for detail shells (one extra draw each, culled by range); the base asset keeps its own class. Values from the cart and beacon detail pilots (848 to 1240 tris per shell).",
       "ranges": {"base_end": 250.0, "base_margin": 20.0, "shells": [[60.0, 8.0], [25.0, 4.0]]}
     }
   },
