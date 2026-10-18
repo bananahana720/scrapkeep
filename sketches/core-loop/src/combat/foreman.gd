@@ -184,7 +184,7 @@ func _build_tethers() -> void:
 	_tethers.mesh = _tether_mesh
 	_tethers.top_level = true
 	_tethers.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var line := Palette.solid(Palette.CABLE)
+	var line := Palette.solid(Palette.CABLE, 0.0, false)
 	line.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_tethers.material_override = line
 	add_child(_tethers)

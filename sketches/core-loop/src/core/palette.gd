@@ -195,13 +195,16 @@ static func ball_material() -> StandardMaterial3D:
 	return mat
 
 
-static func solid(color: Color, emit := 0.0) -> StandardMaterial3D:
+# `grain` false for a material that maps its own UV1 texture (a mask, an icon) or draws a flat
+# read (an unshaded line): the grain's world-triplanar UVs would re-map that texture.
+static func solid(color: Color, emit := 0.0, grain := true) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
 	mat.roughness = 0.8
 	# The flat-colour signature dress_material_test counts on a box, whatever surface it wears.
 	mat.set_meta("palette_solid", true)
-	surface_grain(mat)
+	if grain:
+		surface_grain(mat)
 	if emit > 0.0:
 		mat.emission_enabled = true
 		mat.emission = color
@@ -374,6 +377,23 @@ static func surface_grain(mat: StandardMaterial3D) -> void:
 	mat.uv2_triplanar = true
 	mat.uv2_world_triplanar = true
 	mat.uv2_scale = Vector3.ONE / GRIME_METRES
+
+
+# Takes surface_grain off again, for a model that brings its own surface (BakeLook).
+static func smooth(mat: StandardMaterial3D) -> void:
+	if mat.normal_texture != _grain_normal or _grain_normal == null:
+		return
+	mat.normal_enabled = false
+	mat.normal_texture = null
+	mat.roughness_texture = null
+	mat.uv1_triplanar = false
+	mat.uv1_world_triplanar = false
+	mat.uv1_scale = Vector3.ONE
+	mat.detail_enabled = false
+	mat.detail_albedo = null
+	mat.uv2_triplanar = false
+	mat.uv2_world_triplanar = false
+	mat.uv2_scale = Vector3.ONE
 
 
 static func enamel_wear(mat: StandardMaterial3D) -> void:

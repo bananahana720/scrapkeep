@@ -1,5 +1,7 @@
 extends RefCounted
 
+const BakeLook := preload("res://src/presentation/bake_look.gd")
+
 # Shared helpers for the boss GLBs (assets/models/bosses/). Every boss keeps its primitive
 # body as the fallback: load_scene returns null when a GLB is missing or unloadable, and the
 # caller then leaves the primitives visible. Nothing here moves a collider or sets a timer;
@@ -21,6 +23,9 @@ static func load_scene(path: String) -> Node3D:
 					var drawn := _vertex_coloured(source)
 					if drawn != source:
 						view.set_surface_override_material(i, drawn)
+		# The polish bake's UV2 shade (tools/blender/POLISH.md); a caller that swaps in its own
+		# materials afterwards calls BakeLook.dress again with them as `owned`.
+		BakeLook.dress(scene)
 	return scene
 
 
