@@ -84,7 +84,7 @@ func _fallback(hero, player, rec: Dictionary) -> void:
 	_t.check("near_miss plays phew", hero.react(player, "near_miss"))
 	Trigger.finish(rec)
 	# The clip end now eases to rest over BASE_BLEND through the runtime rest clip, then stops.
-	_t.check("without idle_loop the clip end eases to the rest clip", _playing(rec, "rest_pose") and rec.reaction == "")
+	_t.check("without idle_loop the clip end eases to the rest clip", _playing(rec, "runtime/rest_pose") and rec.reaction == "")
 	Trigger.finish(rec)
 	_t.check("without idle_loop the clip end stops the animator", not animator.is_playing() and rec.reaction == "")
 	_t.check("without idle_loop the bones are reset to rest", Trigger.bones_at_rest(rec.pilot))

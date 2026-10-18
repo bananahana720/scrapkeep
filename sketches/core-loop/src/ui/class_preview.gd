@@ -93,7 +93,7 @@ var sitting := false
 const IDLE_CLIP := "idle_loop"
 const UNLOCK_CLIP := "unlock"
 const UNLOCK_SEEN := "unlock_clip_"
-const BASE_BLEND := 0.1
+const BASE_BLEND: float = preload("res://src/presentation/pilot_reactions.gd").BASE_BLEND
 # Classes whose unlock played this launch under --profile=sitting.
 static var _sitting_unlocks := {}
 

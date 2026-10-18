@@ -73,7 +73,10 @@ const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
 # Pilot return-to-rest clip built at runtime for GLBs with no idle loop, and the blend an impact
 # gets when it interrupts another one-shot.
-const REST_CLIP := "rest_pose"
+# The rest clip lives in each animator's own library: the GLB's default library is shared by
+# every instance and by the bot track switch (bot_options.gd), so it never gains a runtime clip.
+const REST_LIBRARY := "runtime"
+const REST_CLIP := "runtime/rest_pose"
 const REST_LENGTH := 0.5
 const INTERRUPT_BLEND := 0.05
 const PILOT_TABLES := "res://src/presentation/clips/%s.json"
@@ -1627,10 +1630,10 @@ func _to_base(rec: Dictionary, after_clip := false) -> void:
 func _play_rest(rec: Dictionary) -> bool:
 	var animator: AnimationPlayer = rec.animator
 	if not animator.has_animation(REST_CLIP):
-		var library := animator.get_animation_library("")
 		var root := animator.get_node_or_null(animator.root_node)
-		if library == null or root == null:
+		if root == null:
 			return false
+		var library := AnimationLibrary.new()
 		var rest := Animation.new()
 		rest.length = REST_LENGTH
 		for skeleton: Skeleton3D in rec.pilot.find_children("*", "Skeleton3D", true, false):
@@ -1642,7 +1645,8 @@ func _play_rest(rec: Dictionary) -> bool:
 					var track := rest.add_track(kind[0])
 					rest.track_set_path(track, node)
 					rest.track_insert_key(track, 0.0, kind[1])
-		library.add_animation(REST_CLIP, rest)
+		library.add_animation(REST_CLIP.get_file(), rest)
+		animator.add_animation_library(REST_LIBRARY, library)
 	animator.play(REST_CLIP, PilotReactions.BASE_BLEND)
 	return true
 
