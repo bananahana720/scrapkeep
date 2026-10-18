@@ -52,7 +52,10 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # tune inside 20 percent reaches the band.
 # 2026-10-11 (wave 13 KF4, anchor off): measured 66.4 / 49.4 s (small/grown 1.34) with the tilt; the same arms with
 # no driver measured 78.6 / 41.5 s (1.89).
-const EXPECT_SMALL_S := 101.5
+# 2026-10-18 (Overpowered pays, #104): small re-pinned 101.5 -> 89.2 s, the coordinator's call. Lift the ceiling
+# (hits count to 3x plating) speeds every build's break, and 89.2 s still sits above the 45-70 s window. Shard 7
+# measured 89.2 s twice with identical medians (gate/shard-104.txt).
+const EXPECT_SMALL_S := 89.2
 const EXPECT_GROWN_S := 42.7
 const TOLERANCE := 0.10
 
