@@ -26,7 +26,7 @@ func _process(_delta: float) -> bool:
 	if peer == null:
 		if server.is_connection_available():
 			peer = server.take_connection()
-			_send("profiler:servers", [true, []])
+			_send("profiler:servers", [true, [1024]])
 		return false
 	peer.poll()
 	if peer.get_status() != StreamPeerTCP.STATUS_CONNECTED:
