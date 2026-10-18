@@ -1,6 +1,7 @@
 extends Node3D
 
 const EndingSequence := preload("res://src/ui/ending_sequence.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -333,7 +334,8 @@ func _flare(color: Color, at: Vector3) -> void:
 	sphere.radius = 2.4
 	sphere.height = 4.8
 	mesh.mesh = sphere
-	var material := _glow(color, 6.0, 0.99)
+	# A flare is a brightness spike, so it reads the reduce-flashes toggle (VISUAL-LANGUAGE.md section 8).
+	var material := _glow(color, FlashGuard.spike(1.0, 6.0), 0.99)
 	mesh.material_override = material
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mesh)

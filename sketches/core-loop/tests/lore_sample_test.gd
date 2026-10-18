@@ -42,6 +42,9 @@ const CAP_EDITS := {
 	30: "Lookout scrap: island lights blink in order. Count starts before the first.",
 }
 
+# Lines LORE-REPLACE retired with the old stage 2 cableway (decisions.tsv, 2026-10-16).
+const RETIRED := [7, 8, 9, 10]
+
 var _failures := 0
 
 
@@ -59,6 +62,9 @@ func _initialize() -> void:
 	for index in range(SAMPLE.size()):
 		var number := index + 1
 		var expected: String = CAP_EDITS.get(number, SAMPLE[index])
-		_report("sample line %d" % number, texts.has(expected), expected)
+		if number in RETIRED:
+			_report("retired line %d" % number, not texts.has(expected), expected)
+		else:
+			_report("sample line %d" % number, texts.has(expected), expected)
 	print("lore_sample_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

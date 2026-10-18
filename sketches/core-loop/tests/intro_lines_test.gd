@@ -5,10 +5,15 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const Registry := preload("res://src/core/content_registry.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 
 # Intro lines: the Warden's row plays when warden_engaged fires, the boss's row when
 # boss_arena_entered fires. Each plays once per run and zone, waits out an exchange and a
-# pause, and the registry keeps the rows on real zones with the boss their world owns.
+# pause, and the registry keeps the rows on real zones with the boss their world owns. Every
+# boss has one threat line per pilot at its arena zone, and the pilot's line wins there.
+
+const ARENA_ZONES := {"brindle": "1-2", "waking": "2-2", "mind": "3-2"}
 
 const SETTLE_FRAMES := 12
 
@@ -27,9 +32,9 @@ func _initialize() -> void:
 	root.add_child(_game)
 
 
-func _intro(zone: String, subject: String) -> Dictionary:
+func _intro(zone: String, subject: String, pilot := "") -> Dictionary:
 	for row in LoreRows.ROWS:
-		if row["kind"] == "intro" and row["zone"] == zone and row["subject"] == subject:
+		if row["kind"] == "intro" and row["zone"] == zone and row["subject"] == subject and row.get("pilot", "") == pilot:
 			return row
 	return {}
 
@@ -76,6 +81,24 @@ func _check_registry() -> void:
 	var stage_issues := _issues_for(rows, "lore.test.nostage").filter(func(issue): return issue["detail"].contains("has no stage"))
 	_t.check("zone with no stage is rejected", stage_issues.size() == 1, str(stage_issues))
 	_t.check("second line for a boss the world lacks is rejected", _issues_for(rows, "lore.test.wrongboss").size() == 1, str(_issues_for(rows, "lore.test.wrongboss")))
+	var pilots: Array = ClassDef.all().map(func(p): return p.id)
+	_t.eq("six pilots", pilots.size(), 6)
+	_t.eq("three bosses", ARENA_ZONES.keys().size(), Worlds.BOSSES.size())
+	for boss in Worlds.BOSSES:
+		for pilot in pilots:
+			var found := shipped.filter(func(row): return row["kind"] == "intro" and row.get("subject") == boss and row.get("pilot") == pilot)
+			_t.check("%s has one threat line for %s" % [boss, pilot], found.size() == 1, str(found.size()))
+			_t.check("%s line for %s sits at the arena zone" % [boss, pilot], found.size() == 1 and found[0]["zone"] == ARENA_ZONES[boss], str(found))
+	var pilot_lines := shipped.filter(func(row): return row["kind"] == "intro" and row.has("pilot"))
+	_t.eq("eighteen threat lines", pilot_lines.size(), 18)
+	var early := {"id": "lore.test.early", "kind": "intro", "zone": "1-1", "subject": "brindle", "pilot": "tally", "text": "Too soon."}
+	var stranger := {"id": "lore.test.stranger", "kind": "intro", "zone": "1-2", "subject": "brindle", "pilot": "nobody", "text": "Who?"}
+	var warden_pilot := {"id": "lore.test.wardenpilot", "kind": "intro", "zone": "1-2", "subject": "warden", "pilot": "tally", "text": "Not mine."}
+	rows = shipped.duplicate(true)
+	rows.append_array([early, stranger, warden_pilot])
+	_t.check("pilot line before the arena zone is rejected", _issues_for(rows, "lore.test.early").size() == 1, str(_issues_for(rows, "lore.test.early")))
+	_t.check("pilot line for an unknown pilot is rejected", _issues_for(rows, "lore.test.stranger").size() == 1, str(_issues_for(rows, "lore.test.stranger")))
+	_t.check("pilot line on a Warden is rejected", _issues_for(rows, "lore.test.wardenpilot").size() == 1, str(_issues_for(rows, "lore.test.wardenpilot")))
 
 
 func _physics_process(_delta: float) -> bool:
@@ -86,8 +109,9 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	var spillway_warden := _intro("1-1", "warden")
 	var reach_warden := _intro("1-2", "warden")
-	var reach_boss := _intro("1-2", "brindle")
-	var dig_boss := _intro("2-2", "waking")
+	var pilot: String = _game.run.class_id()
+	var reach_boss := _intro("1-2", "brindle", pilot)
+	var dig_boss := _intro("2-2", "waking", pilot)
 	match _phase:
 		"boot":
 			_game.ctx.calm = true
@@ -116,6 +140,7 @@ func _physics_process(_delta: float) -> bool:
 			_press("cl_interact")
 			_t.check("exchange still running before its last line", not _showing(reach_boss), _bubble.text)
 			_press("cl_interact")
+			_t.check("pilot's own boss line is the one queued", pilot != "" and not reach_boss.is_empty(), pilot)
 			_t.check("boss line shows after the exchange ends", _showing(reach_boss), _bubble.text)
 			_press("cl_interact")
 			_t.check("interact dismisses the intro", _silent(), _bubble.text)

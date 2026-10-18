@@ -6,6 +6,10 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const TitleIntros := preload("res://src/presentation/title_intros.gd")
+const TitleIntroPlayer := preload("res://src/presentation/title_intro_player.gd")
+const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 
 const PILOTS := [
 	{"id": "pylon_engineer", "name": "SableShell", "color": ClassDef.SABLE_COLOR, "at": Vector3(-3.5, 1.04, 0.0)},
@@ -28,10 +32,20 @@ var _fill: DirectionalLight3D
 var _environment: Environment
 var _clock := 0.0
 var _warned := {}
+# The rotating opening (title_intros.gd). It autoplays once per launch on the first title
+# screen, never for bots or tests (bot_driven, test_mode, a headless display) and never with
+# --no-intro.
+var intro: Node
+var intro_autoplay := true
+var _intro_tried := false
+var _ctx
 
 
 func setup(ctx) -> void:
 	name = "TitleStage"
+	_ctx = ctx
+	intro_autoplay = ctx.root != null and not bool(ctx.root.get("bot_driven")) and not bool(ctx.root.get("test_mode")) \
+		and DisplayServer.get_name() != "headless" and not "--no-intro" in OS.get_cmdline_user_args()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	viewport = SubViewport.new()
 	viewport.name = "TitleViewport"
@@ -66,7 +80,12 @@ func setup(ctx) -> void:
 	_picture.texture = viewport.get_texture()
 	_layer.add_child(_picture)
 	get_viewport().size_changed.connect(_resize)
+	intro = TitleIntroPlayer.new()
+	add_child(intro)
+	intro.setup(self)
+	intro.finished.connect(_intro_finished)
 	ctx.events.flow_changed.connect(show_flow)
+	ctx.events.boss_arena_entered.connect(_boss_met)
 	GraphicsPreset.register_dressing_host(self)
 	show_flow(ctx.flow.state_name())
 
@@ -75,7 +94,55 @@ func show_flow(state: String) -> void:
 	active = state in ["title", "class_select"]
 	_layer.visible = active
 	stage.visible = active
+	if state != "title" and intro_playing():
+		intro.skip()
 	_sync_dressing()
+	if state == "title" and intro_autoplay and not _intro_tried:
+		_intro_tried = true
+		play_intro.call_deferred()
+
+
+func intro_playing() -> bool:
+	return intro != null and intro.playing
+
+
+# Plays the opening the profile's state picks (or the given row) and records it as shown.
+func play_intro(id := "") -> bool:
+	if not active or intro_playing() or (_ctx != null and _ctx.flow.state_name() != "title"):
+		return false
+	var profile = _ctx.profile if _ctx != null else null
+	if id == "":
+		var root = _ctx.root if _ctx != null else null
+		var flyable := func(pilot: String) -> bool:
+			var def = ClassDef.by_id(pilot)
+			return def != null and root != null and root.has_method("pilot_unlocked") and root.pilot_unlocked(def)
+		id = TitleIntros.pick(TitleIntros.facts_from(profile, flyable))
+	intro.reduced_motion = HighdraftFx.preferred
+	if not intro.play(id, viewport.get_texture()):
+		return false
+	if profile != null:
+		TitleIntros.mark_shown(profile, id)
+		if profile.can_save:
+			profile.save()
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# The music side starts title take A or B on bar 1; a no-op until audio carries title_theme.
+	var audio = get_parent().get("audio") if get_parent() != null else null
+	if audio != null and audio.has_method("title_theme"):
+		audio.title_theme(intro.theme)
+	return true
+
+
+func _intro_finished(_id: String, _skipped: bool) -> void:
+	_frame()
+	_sync_dressing()
+
+
+func _boss_met() -> void:
+	var run = _ctx.run if _ctx != null else null
+	var boss: Dictionary = Worlds.boss_of(int(run.world)) if run != null else {}
+	# Memory only: the run's own save carries it, so a boss entry never adds a disk write.
+	if _ctx.profile != null:
+		TitleIntros.mark_met(_ctx.profile, String(boss.get("kind", "")))
 
 
 func _sync_dressing() -> void:
@@ -91,6 +158,9 @@ func _sync_dressing() -> void:
 	_sun.shadow_enabled = not low
 	_fill.light_energy = WorldLook.TITLE.fill
 	_resize()
+	if intro_playing():
+		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		return
 	set_process(active and not low)
 	if not active:
 		viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -108,6 +178,8 @@ func _resize() -> void:
 
 
 func _process(delta: float) -> void:
+	if intro_playing():
+		return
 	_clock += delta
 	_frame()
 	companion.position = COMPANION_AT + Vector3(0.0, sin(_clock * 1.25) * 0.09, 0.0)

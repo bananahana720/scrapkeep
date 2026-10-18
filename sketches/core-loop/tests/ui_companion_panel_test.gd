@@ -180,7 +180,7 @@ func _run() -> void:
 	# Taking one out.
 	Push.key(root, KEY_3)
 	await _frames(2)
-	_t.eq("a seated piece comes out and opens both sockets", _game.run.companion, _doc(stub, []))
+	_t.eq("a seated piece comes out and the other stays seated", _game.run.companion, _doc(stub, ["primer_coil"]))
 	_t.eq("the other stays staged", panel.staged, ["primer_coil"] as Array[String])
 	Push.key(root, KEY_2)
 	await _frames(2)
@@ -205,7 +205,7 @@ func _run() -> void:
 	Push.key(root, KEY_1)
 	Push.key(root, KEY_2)
 	await _frames(2)
-	_t.eq("same family refused, sockets stay empty", _game.run.companion, _doc(all, []))
+	_t.eq("same family refused, the first stays seated", _game.run.companion, _doc(all, ["primer_coil"]))
 	_t.check("family refusal line shown", panel.screen_text().contains(panel.LINE_FAMILY), panel.message)
 	_t.eq("only the first piece staged", panel.staged, ["primer_coil"] as Array[String])
 	Push.key(root, KEY_3)

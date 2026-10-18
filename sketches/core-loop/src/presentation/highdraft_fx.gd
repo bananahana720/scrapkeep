@@ -201,7 +201,7 @@ func step(delta: float, ball: Vector3) -> void:
 			_density(row)
 		row.material.set_shader_parameter("fx_time", clock)
 	_step_catches(delta)
-	if ball != Vector3.INF:
+	if ball != Vector3.INF and _map.has_method("net_deck_height"):
 		var contact: float = _map.net_deck_height() + Tuning.RADIUS
 		if _last_ball != Vector3.INF and ball.y <= contact + 0.15 and ball.y >= contact - 0.2 \
 				and (_last_ball.y > contact + 0.15 or _last_ball.y < contact - 0.2):
@@ -220,6 +220,8 @@ func step(delta: float, ball: Vector3) -> void:
 
 
 func catch_at(ball: Vector3) -> void:
+	if not _map.has_method("net_deck_height"):
+		return
 	var deck: float = _map.net_deck_height()
 	if absf(ball.y - (deck + Tuning.RADIUS)) > 0.3 or absf(float(_map.sample(ball.x, ball.z)[0]) - deck) > 0.05:
 		return

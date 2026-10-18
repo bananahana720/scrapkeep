@@ -46,6 +46,11 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # pilots, no pilot declaring defence + movement, and every pilot measuring the pair it declares.
 # A kit with no common hitter puts the hitter of every gate pair off-kit (Tally's old kit measured
 # a 0.37 share), so each kit must hold one.
+# 2026-10-17 (maker sets): the bars above measure the kit lean alone, so these draws run with the
+# maker nudge off (Parts.maker_nudge_on). The nudge keeps every group's and bucket's weight in each
+# slot (maker_sets_case proves that per slot); it moves which piece of a bucket shows, and so the
+# bots' picks and the seeded path. One more pass with it on checks every pilot's bucket shares
+# stay within NUDGE_DRIFT of the pass without it (about two standard errors of a 10-run share).
 # Evidence limit: the offer draw only. Whether each pilot still wins its bot
 # runs is bot_six_*_test's claim, and how the lean feels is Andrew's to play.
 
@@ -66,6 +71,7 @@ const UNREACHABLE_PAIR := ["defence", "movement"]
 const ALPHA_OVERLAP_MAX := 0.40
 const ALPHA_MIN_PAIRS := 4
 const TALLY_PART := "winch_pawl"
+const NUDGE_DRIFT := 0.03
 
 var _t := preload("res://tests/support/t.gd").new("offer_weights_test")
 
@@ -90,8 +96,12 @@ func _initialize() -> void:
 				defence_hitters[id] = true
 	# The premise of the PAIRS note: if this goes red, re-measure the pair line before trusting it.
 	_t.eq("no common part that hits harder is in the defence bucket (PAIRS premise)", defence_hitters.keys(), [])
+	Parts.maker_nudge_on = false
 	var full := _measure("full")
 	_judge("full", full, true)
+	Parts.maker_nudge_on = true
+	_nudge_drift(full, _measure("full nudged"))
+	Parts.maker_nudge_on = false
 	_fallback("full")
 	_keep_neutral()
 	Synergies.table = AlphaDefs
@@ -101,6 +111,7 @@ func _initialize() -> void:
 	_tally_part(alpha)
 	_fallback("alpha")
 	Synergies.table = null
+	Parts.maker_nudge_on = true
 	_trees()
 	quit(_t.verdict())
 
@@ -144,6 +155,18 @@ func _measure(label: String) -> Dictionary:
 			print("[%s %s %s] draws %d slots %d kit share %.3f movement %.3f buckets %s neutral max/stage %d" % [label, pilot, bot,
 				s["draws"], s["slots"], _share(s, "kit"), _bucket_share(s, "movement"), _bucket_shares(s), s["neutral_max"]])
 	return out
+
+
+# The maker nudge moves no pilot's bucket share by more than NUDGE_DRIFT.
+func _nudge_drift(plain: Dictionary, nudged: Dictionary) -> void:
+	for pilot in PILOTS:
+		var a := _merged(plain, pilot)
+		var b := _merged(nudged, pilot)
+		var worst := 0.0
+		for bucket in BUCKETS:
+			worst = maxf(worst, absf(_bucket_share(a, bucket) - _bucket_share(b, bucket)))
+		_t.check("maker nudge %s bucket shares within %.2f of the kit lean alone" % [pilot, NUDGE_DRIFT], worst <= NUDGE_DRIFT,
+			"worst %.3f: %s against %s" % [worst, _bucket_shares(b), _bucket_shares(a)])
 
 
 func _pick(bot: String, pilot: String, picks: Array, rng: RandomNumberGenerator) -> String:

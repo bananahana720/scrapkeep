@@ -39,6 +39,11 @@ func slots(game) -> Array:
 		if by_slot.has(name):
 			out.append(by_slot[name])
 	out.append_array(rest)
+	var rack = game.combat.get("actives") if game.get("combat") != null else null
+	if rack != null:
+		var record: Dictionary = rack.slot_record()
+		if not record.is_empty():
+			out.append(record)
 	if valid(out):
 		return out
 	if not _warned:

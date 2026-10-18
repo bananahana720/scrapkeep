@@ -436,6 +436,11 @@ The stage keeps today's music: theme 2 with the `highdraft_crown` ACE set (`src/
 | A stagger | the quote again, now naming the habit it braced (the choir's brace) | `src/combat/warden.gd:535-540` |
 | Half broken; three quarters | the key lift; the sinister break | G7 |
 | The break | the unseal drop, then the rice-cooker clear | G2, G9 |
+| The hoodoo forest | `layer_crown_hoodoos` (stand-in tick; the music thread renders `music_layer_crown_hoodoos`) | row `music_layer`, section 17 |
+| The alcove ledge | `layer_crown_alcove` (`music_layer_crown_alcove`) | row `music_layer` |
+| The toppled route (spire top ramp) | `layer_crown_toppled` (`music_layer_crown_toppled`), rendered but not wired: it goes on `spire_top_ramp` once the strike's runtime swap lands. On the unswapped row its sensor sat on the main line and played before any strike. | row `music_layer`, after the swap |
+| The crown ramp launch | `layer_crown_ramp` (`music_layer_crown_ramp`), rendered but not wired: the ramp sits inside the Warden's bowl, and the ball re-crossing it mid-fight changed the layer and moved the on-bar telegraphs (bot A/B, skipper stage 6 seed 2: Warden broken at fight tick 14410 with the layer, 6262 without, as on the base). It goes on a sensor outside the arena, or behind a fight lock in the music director. | row `music_layer`, later |
+| Each kite strike | `riser_natural` into `drop_lightning`, on the bar | G9, `on_bar` |
 
 Event cues (proposed ids for KE8's `CUES` table): `riser_natural` into `drop_lightning` or `drop_flood`; `riser_fleet` into `drop_fleet_anvil`; `riser_mind_quote` into `drop_mind_wrong`; `riser_industrial` into `drop_boiler`.
 
@@ -460,6 +465,27 @@ Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-2
 | `ancient_perch_wear` | `perch_spires` | Three perches, three wear marks, one rhythm: eight seconds. |
 | `fleet_collector_tag` | `crown_collector` | Collector tag: INVENTORY. HANDLE AS STORM. |
 | `ancient_crown_count` | the landmark | Carved round the Crown's foot: a tally of every ball that reached it. Yours is already there. |
+| `net_weaver_gust_lips` | `hoodoo_gust_lip_1` | Weaver note: four lips, cut where the gusts already jump. The gusts have not complained. |
+| `net_weaver_lip_tally` | `hoodoo_gust_lip_3` | Lip 3 tally: balls launched, 212. Balls that came back to try again, 212. |
+| `net_weaver_hoodoo_knots` | `hoodoo_3` | Knot count, hoodoo necks: one per cap. Caps that fell had two. |
+| `net_weaver_needle_lip` | `needle_gust_lip` | Aim the needle lip at the updraft. If you miss the updraft, aim it at the net. |
+| `net_weaver_needle_posts` | `needle_3` | Weaver survey: the needles are posts the storm put up for free. We only had to add the net. |
+| `net_weaver_needle_hammock` | `needle_hammock` | Hammock rated for one ball, two weavers or a light storm. Not all three. |
+| `fleet_kite_mooring` | `signal_butte` | Mooring log: kite flown to draw the storm off the masts. Storm drawn. Kite kept, mostly. |
+| `fleet_mooring_deck` | `kite_mooring_deck` | Mooring deck, borrowed from the weavers. Paperwork says purchased. The weavers have not seen the paperwork. |
+| `fleet_gauntlet_winch` | `gauntlet_west` | Winch post 4: hooked one ball, two kites, a net. The net refused to come aboard. |
+| `fleet_dropship_manifest` | `gauntlet_shelf` | Dropship manifest, Gauntlet run: crew six, winches four, cargo one Crown. Cargo status: pending. |
+| `fleet_toe_lip` | `gauntlet_toe_lip` | Winch crew poured this lip to reach the updraft without a net. Requisition for a net: pending. |
+| `fleet_updraft_lip` | `signal_foot_lip` | Updraft lip, poured so the crew could reach the kite without climbing. Climbing is now optional. Lightning is not. |
+| `net_weaver_scree_lip` | `scree_gust_lip` | Scree lip, cut for the talus run. The talus was here first and is taking it back, slowly. |
+| `net_weaver_watch_lips` | `watch_flank_lip_w` | Two lips off the Watch Butte's flanks, for weavers who are late to the bajada. All weavers are late to the bajada. |
+| `net_weaver_wash_hammock` | `east_wash_hammock` | Hammock strung over the east fields at wash height. The wash has not run in years. The hammock is ready. |
+| `fleet_gauntlet_kite` | `gauntlet_kite_lip` | Kite lip under the east butte. Launch on the whistle. There is no whistle; listen for the crew. |
+| `fleet_rim_net` | `bowl_rim_net` | Rim net, east side of the bowl, for anything the Crown sheds. Itemised daily. The list is getting long. |
+| `fleet_signal_approach` | `signal_approach_lip` | Approach lip for the signal crew, cut so the climb starts at speed. The crew climb slower than the lip. |
+| `net_weaver_rim_lips` | `bajada_rim_lip_e` | Rim lips, both sides of the bajada head, set by weavers who wanted the fields to have a front door. |
+
+The last thirteen rows are the authored pass of 17 October (section 17): the net-weavers and the Fleet's mooring crew as society rows, Andrew's "Now, light" (no new systems).
 
 Today's 3-2 lore lines (`src/core/lore_rows.gd:291-299`, "Tie your tools before the crown takes them" at `:295`) stay; the Crown is now literal.
 
@@ -531,6 +557,34 @@ p1_overhead is plotted from this park file by `tools/park_plot.py`, not generate
 - Lines: lengths clipped at the engage ring, segment lengths between waymark passes.
 - Sight: a 50 m grid over the play rect, eye 2 m above a box model of the stamped rows on the bajada ramp, ray sampled every 10 m: 0.854 over 774 cells.
 - None of this ran in Godot. The traversal bands, the sight test and the density test run in KD6.
+
+## 17. Authored pass, 17 October 2026
+
+Why: the w16 intent check found the crown the thinnest park (42 authored rows against a median of 107, six story fragments, journey board gap 9: no music for the alcove, the hoodoo forest, the toppled route or the crown ramp). Everything below uses the core verbs and the Highdraft's wind; events never stop the ball. No new greybox: every added row is a GLB recipe or a contraption, so the crown's placeholders stay at 237.
+
+**Rides.**
+- *Hoodoo gust lips.* Four `mesa_lip_kicker` rows (`hoodoo_gust_lip_1` to `_4`, seat fit, routes none) at the forest's edges, each turned so its throw carries into the forest or into `hoodoo_chimney`, a 70 m thermal at [-60, -140] between hoodoos 4, 6 and 9. Lip, glide into the chimney, rise, swing off a cap.
+- *Needle lip and hammock.* `needle_gust_lip` at [-90, 160] throws west at `needle_updraft`. `needle_hammock` is one `net_deck` cell slung at y 36 west of the needles ([-255, 140], 80 m), clear of every pilot line: a sagging net to bank on, reached by swinging off needles 3 and 7 or drifting out of the updraft.
+- *Gauntlet toe lip.* `gauntlet_toe_lip` at [200, 40] throws north into `gauntlet_updraft`.
+- *Second hammock cell.* `needle_hammock_2` at [-335, 140] tiles the first cell to the west (the cells share their posts), so the weavers' net is a two-cell string running toward the Signal Butte.
+- *Scree lip.* `scree_gust_lip` on the Turnstone scree ([-232, -306]) throws north-west at the alcove talus, a side door into the west fan off Tarn's line.
+- *Meander cross lip.* `meander_cross_lip` at [150, -180], east of the meander, throws Kest's line across toward the east ribs.
+
+- *Flank lips and rim nets* (islands follow-up, 17 October). The islands pass raised the park median, so the crown takes fourteen more GLB rows in its far fields, all off every pilot line (165 m or more) and placeholder-free: lips off the Watch Butte's flanks (`watch_flank_lip_w`, `_e`), the bajada head's rims (`bajada_rim_lip_w`, `_e`), the east and west slickrock fields (`east_bajada_lip_1`, `_2`, `east_field_lip`, `west_field_lip`, `alcove_foot_lip`), the Fleet's `gauntlet_kite_lip` and `signal_approach_lip`, the weavers' `east_wash_hammock`, and the Fleet's `bowl_rim_net` and `bowl_rim_net_w` on the bowl's outer rims. Authored rows 55 to 69.
+
+**Set piece: the storm kite line** (crown only). The Fleet's mooring crew flies a storm kite off the Signal Butte. `signal_foot_lip` at [-330, 300] pitches the ball west into `signal_updraft`, a 200 m thermal at the butte's sheer east foot ([-366, 300]), which lifts a glider to `storm_kite_line`, a 327 m cable from [-366, 195, 300] down to [-150, 7.9, 420]. It lands outside the engage ring, beside the signal wire's foot, where `kite_runout_lip` throws the ball on toward `crown_updraft` and the bowl. `kite_mooring_deck`, a `net_deck` cell on the butte top (y 190), is the landing for a glider that overshoots. `kite_strike` (lightning, clock tier 1, 3 s on-bar mark, 12 m, 6 damage, every 30 s while live) strikes the butte top: ride the updraft between strikes.
+
+**Society rows.** The net-weavers own the gust lips, the hoodoo knots, the needle hammock and the Gauntlet net. The Fleet's mooring crew owns the Signal Butte, the mooring deck, the Gauntlet's west butte and shelf, and the toe lip. Their lines are in section 12. Built works got their builders too: the weavers cut the thirteen line kickers (`kick_*`), the bajada lip and the meander cross lip; the Fleet poured the crown ramp and the toe yard and holds the east Gauntlet butte. Natural landforms (washes, buttes, the bowl) stay `none`. That takes the crown's society share over hand-built rows from 5% to 65%.
+
+**Signal caches** (design-v3/sound/RADIO.md on PR #66; rows in the format of PR #68's `tools/radio_cache_spots.gd` SPOTS, which casts the heights onto live colliders):
+
+| Take | Spot here | Row | The reach |
+| --- | --- | --- | --- |
+| `take-crown-last-call` | the Fleet's storm collector, the bell-shaped frame lowest on the Crown's flank (the park spire has no bell frames of its own) | `{"stage": 6, "x": 145.0, "z": 470.0, "drop": 120.0}` | the 64 m ledge: shelf cannon or a swing off the perches |
+| `take-crown-spire-fusion` | outside the spire's 30 m waist, west face, 30 m above the bowl floor | `{"stage": 6, "x": -17.0, "z": 470.0, "at": 18.0}` | glide off `crown_updraft` and thread past the waist; 22 m off the hand's perch 2-to-3 lane |
+| `take-crown-footwork` | the Gauntlet net, slung between the two highest buttes | `{"stage": 6, "x": 280.0, "z": 175.0, "drop": 250.0}` | balloon lift or gauntlet updraft to 110 m, then roll the net |
+
+**Music.** A park row's optional `music_layer` (park_schema.gd) names a `layer_*` WORLD_ROWS kind; the row's ride sensor publishes it on entry, and a group row with no recipe (the hoodoo forest) gets a sensor of its own (park_recipes.gd `place_layer`). The four new layer ids are in section 11; two are wired today (hoodoos, alcove), and the toppled route and crown ramp wait as section 11 says.
 
 ## Appendix: the park file draft
 

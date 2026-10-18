@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # The family kit on the Warden's shared clamp (DESIGN-V2 section 11, VISUAL-LANGUAGE
 # section 11), visual only: nothing here collides. The clamp is one base; the kit says
@@ -146,7 +147,7 @@ func update(_delta: float) -> void:
 	if warden == null:
 		return
 	var open: bool = warden.family_open()
-	_seam_material.emission_energy_multiplier = SEAM_OPEN if open else SEAM_DIM
+	_seam_material.emission_energy_multiplier = FlashGuard.spike(SEAM_DIM, SEAM_OPEN) if open else SEAM_DIM
 	if _open_node != null:
 		_open_node.scale = Vector3.ONE * (1.3 if open else 1.0)
 	if _lens != null:

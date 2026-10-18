@@ -56,6 +56,7 @@ const PARK_FAMILY_CAP := 1
 const PARK_LAND_FACTS := {
 	"ground_slump": "ground_slump_landed",
 	"flood_rising": "flood_landed", "fleet_inbound": "fleet_landed",
+	"cage_rising": "cage_landed", "zipline_inbound": "zipline_landed",
 	"ancient_stirring": "ancient_erupted", "boiler_pressure": "boiler_landed",
 	"lightning_charge": "lightning_landed",
 	"cave_in_crumble": "cave_in_swap", "impact_incoming": "impact_swap",

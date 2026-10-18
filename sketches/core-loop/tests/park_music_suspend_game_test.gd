@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const T := preload("res://tests/support/t.gd")
+const ParkRiser := preload("res://tests/support/park_riser.gd")
 var t := T.new("park_music_suspend_game_test")
 
 class TransportProbe extends Node:
@@ -93,10 +94,7 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 	t.check(label + " band remains audible", music_peak > 0.0001 and (audio.engine.lounge if in_bay else audio.engine.pause_gain == 0.45), str([music_peak, audio.engine.lounge, audio.engine.pause_gain]))
 	t.check(label + " predicted drop cancelled", not audio.engine._actions.any(func(a): return a.get("type") == "park_cue" and a.owner == "plunge_pool_flood" and not a.row.rise), str(audio.engine.pending_actions()))
 	t.check(label + " no predicted impact", starts.is_empty() and not audio.engine.park_cue_log.any(func(a): return a.owner == "plunge_pool_flood" and a.id == "drop_flood"), str(starts))
-	var notes: int = MusicRows.cue("riser_natural", {"theme": audio.engine.theme}).notes.size()
-	var expected_warning := []
-	for cell in notes:
-		expected_warning.append(announcement[0].at + roundi(float(announcement[0].lead) * cell / notes))
+	var expected_warning := ParkRiser.starts("riser_natural", ParkRiser.options(audio), announcement[0].lead, announcement[0].at)
 	var heard: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "riser_natural")
 	t.check(label + " original riser cells finish once", heard.map(func(a): return a.at) == expected_warning, str([heard.map(func(a): return a.at), expected_warning]))
 	if aligned:

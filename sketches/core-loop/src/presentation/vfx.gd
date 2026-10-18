@@ -12,6 +12,7 @@ const Density := preload("res://src/presentation/density.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -20,6 +21,10 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 # ball, never across the line ahead, so they never hide the next threat.
 
 const POOL := 48
+# Glyph silhouettes that are pure light pops: reduce flashes keeps FlashGuard's decorative
+# share of their alpha. Every other glyph (rings, bars, cause shapes) shows a reach or a cause
+# and keeps the information share.
+const POP_SHAPES := ["flash", "star", "burst"]
 const SPARKLE_POOL := 6
 # Trail seconds and width per speed tier: nothing at a walk, a comet when blazing.
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
@@ -76,6 +81,15 @@ var _chain := 0
 var _chain_rung := 0
 var _pip_pop := 0.0
 var edge: Control
+# How grown the build is, 0 to 1 (player_fx.gd might): hit and kill glyphs grow with it, so
+# a late run's hit reads bigger than the first fight's (Andrew, "Clearly mightier").
+# The slam ring stays at the slam's real reach.
+var might := 0.0
+const MIGHT_GLYPH := 0.15
+# How far a grown build's hit and kill glyphs run toward heat orange (player_fx.gd heat_k):
+# growth shows as colour, not size (Andrew, "Presence, centre clear").
+var heat := 0.0
+const HEAT_GLYPH := Color(1.0, 0.5, 0.12)
 # False skips the ball trail and speed lines; tools/perf_bench.gd --no-trails sets it.
 var trails := true
 # Every kill's starburst, pop and debris pass through this gate (kill_pop).
@@ -491,7 +505,8 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	slot["from"] = size_from
 	slot["to"] = size_to
 	slot["spin"] = 3.0 if silhouette in ["star", "burst", "diamond", "square", "core"] else 0.0
-	slot["alpha"] = governed.x
+	var pop: bool = silhouette in POP_SHAPES or not _meshes.has(silhouette)
+	slot["alpha"] = FlashGuard.alpha(governed.x) if pop else FlashGuard.info(governed.x)
 	node.visible = true
 	spawned[kind] = spawned.get(kind, 0) + 1
 	_draw_glyph(slot)
@@ -567,10 +582,22 @@ func _on_shot(_weapon: String, from: Vector3, to: Vector3) -> void:
 	glyph("shot_fired", to, 0.5, 1.1, 0.09, Vector3.ZERO, "flash", player.class_color())
 
 
+# A glyph's colour run toward heat and brightened; transparent (the row's own colour) when cold.
+func _hot(kind: String) -> Color:
+	if heat <= 0.0:
+		return Color(0, 0, 0, 0)
+	# Hotter and brighter: a grown hit's core carries more light at the same size.
+	var c: Color = Rows.color(kind).lerp(HEAT_GLYPH, heat)
+	var k := 1.0 + 0.6 * heat
+	return Color(c.r * k, c.g * k, c.b * k, c.a)
+
+
 func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
-	glyph("enemy_struck", enemy.global_position + Vector3.UP * 0.6, 0.4, clampf(0.8 + force * 0.03, 0.8, 1.6), 0.14)
+	var grow := 1.0 + MIGHT_GLYPH * might
+	glyph("enemy_struck", enemy.global_position + Vector3.UP * 0.6, 0.4 * grow, clampf(0.8 + force * 0.03, 0.8, 1.6) * grow, 0.14 + 0.08 * might,
+		Vector3.ZERO, "", _hot("enemy_struck"))
 
 
 # --- Scrap sparkles ------------------------------------------------------------------------
@@ -888,9 +915,9 @@ func _emit_pops() -> void:
 	var row := EventKinds.juice("enemy_killed")
 	for cluster in pops.ready(_clock, Density.live().coalesce_seconds()):
 		var at: Vector3 = cluster["at"]
-		var scale: float = cluster["scale"]
-		glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6 * scale, 1.8 * scale, 0.3)
-		burst("pop", at + Vector3.UP * 0.8, EventKinds.color("enemy_killed"), int(ceil(float(row["pop"]) * scale)))
+		var scale: float = cluster["scale"] * (1.0 + MIGHT_GLYPH * might)
+		glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6 * scale, 1.8 * scale, 0.3, Vector3.ZERO, "", _hot("enemy_killed"))
+		burst("pop", at + Vector3.UP * 0.8, EventKinds.color("enemy_killed").lerp(HEAT_GLYPH, heat), int(ceil(float(row["pop"]) * scale)))
 		burst("debris", at + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(ceil(float(row["debris"]) * scale)))
 
 

@@ -1,0 +1,1097 @@
+extends Node
+
+const Palette := preload("res://src/core/palette.gd")
+const Parts := preload("res://src/build/parts.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Density := preload("res://src/presentation/density.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+
+# The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
+# committed fact or the ball's own motion and never decides an outcome (TADR-008).
+#
+#   might      0 to 1 from heft class, parts, synergies and fusions: how grown the build
+#              is. Every layer below reads it, so a grown pilot looks mightier than a
+#              small one (Andrew, 17 Oct: action-RPG growth, Hades boon stacking).
+#   aura       one mote per part orbits the ball in its element's colour; motes flare on
+#              each hit and stretch into streamers once the build is grown
+#   boon       a hit throws a second spark burst in the build's dominant element colour
+#   words      comic sound words (KLANG, WHUMP) stamped beside big moments, never on
+#              ordinary hits, never ahead of the ball (TONE-BIBLE pillar 2)
+#   overdrive  past SOFT_CAP_MPS the ball burns: white-hot rim, flame flecks and a
+#              hanging ember trail, so "my contact hurts now" reads at a glance
+#   carve      grinding sparks while the ball rides banked ground at speed
+#   column     a rising brass column for a heft class up or a fusion
+#   frame      a 3-frame ink focus-line impact frame on the biggest hits; edge band only,
+#              so the centre and every telegraph stay clear
+# Colour carries the meaning: the pilot's colour is "you did this", brass is growth,
+# the heat ramp is overdrive, element colours are the build.
+
+# Andrew's ruling (17 Oct 07:17Z): speed past 60 m/s becomes hit damage and a blazing
+# trail. The gameplay is wave 17 machine work; this layer reads the ball's speed itself.
+const SOFT_CAP_MPS := 60.0
+const SOFT_CAP_OFF_MPS := 54.0
+const HEAT_RISE_S := 0.15
+const HEAT_FALL_S := 0.4
+# Banked ground: the contact normal's up share below this is a carve.
+const CARVE_NORMAL_Y := 0.82
+const MOTES := 12
+const MOTE_RADIUS := 1.65
+const ELEMENT_COLORS := {"frost": Palette.ANCIENT, "arc": Palette.ARC, "kinetic": Palette.SAND}
+const HEAT_COLOR := Color(1.0, 0.5, 0.12)
+# How much of a colour the heat takes at full heat_k: saturated orange, never white, so the
+# heat reads as colour and not as brightness.
+const HEAT_SHARE := 0.85
+const INK := Color(0.07, 0.07, 0.08)
+
+# Below every threat mark (threat_grammar PRIORITY 40, under-lines 39): enemy warnings
+# always draw on top of player effects (Andrew, 17 Oct 16:36Z).
+const RENDER_PRIORITY := -4
+
+const MIGHT_TIERS := ["small", "rising", "grown", "mighty"]
+
+# Sound words. size is metres of cap height at might 0; a word grows to 1.5x at might 1.
+const WORDS := {
+	"smash": {"text": "KLANG", "size": 0.9},
+	"slam": {"text": "WHUMP", "size": 0.9},
+	"landing": {"text": "KRUNCH", "size": 0.7},
+	"launch": {"text": "FWOOSH", "size": 0.8},
+	"rocket": {"text": "KA-BOOM", "size": 1.0},
+	"vault": {"text": "BOING", "size": 0.7},
+	"ignite": {"text": "VRAAAM", "size": 0.85},
+	"heft_up": {"text": "KACHUNK", "size": 1.0},
+	"fused": {"text": "FUSED", "size": 1.0},
+	"ultimate": {"text": "KRA-KOOM", "size": 1.3},
+	"paid": {"text": "PAID", "size": 0.9},
+	"wham": {"text": "WHAM", "size": 1.0},
+	"strike": {"text": "STRIKE", "size": 1.1},
+	"beat": {"text": "BWAP", "size": 0.9},
+}
+# An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
+# when it has one, else BWAP over the sax stab.
+const ONBEAT_GROW := 1.4
+# Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
+# whatever the distance, so a word near the camera never swallows the ball.
+const WORD_SCREEN := 0.075
+# Words stay inside this share of the screen from its centre (the HUD lives outside it).
+const WORD_SAFE := Vector2(0.78, 0.7)
+# Ram launches and bowling racks, lined up with the Knockback thread (17 Oct): a ram at
+# blazing speed throws 23 to 34 m/s; a killed body bowling on fires enemy_pinned per pin.
+const LAUNCH_KINDS := ["ram", "slam"]
+const CONTACT_KINDS := ["ram", "slam", "stomp"]
+const STRIKE_PINS := 3
+const STRIKE_WINDOW_S := 0.6
+
+# Each pilot's own voice on the shared moments (TONE-BIBLE, the cast).
+const PILOT_WORDS := {
+	"pylon_engineer": {"launch": "ZWOOSH"},
+	"runner_gunner": {"smash": "PING"},
+	"demolitions_caster": {"slam": "BOOM", "rocket": "BOOM"},
+	"tarn": {"smash": "GRRAK", "slam": "KRASH"},
+	"tally": {"smash": "KA-CHING"},
+	"remembered_cannon": {"launch": "KA-THOOM", "smash": "THOOM"},
+}
+const WORD_POOL := 4
+const WORDS_ALIVE := 2
+const WORD_GAP_S := 0.35
+const WORD_REPEAT_S := 1.2
+const WORD_LIFE := 0.6
+const WORD_STAMP_S := 0.1
+const WORD_EXIT_S := 0.2
+# Smash speed that earns KLANG and the impact frame: lower as the build grows.
+const SMASH_WORD_MPS := [22.0, 12.0]
+const SMASH_FRAME_MPS := [32.0, 18.0]
+# An impact frame holds for rendered frames, not seconds: 3 frames is 50 ms at 60 fps.
+const FRAME_FRAMES := 3
+const FRAME_GAP_S := 0.6
+
+# GPU particle ceilings: pool x max, pinned by player_fx_test.
+const FLECKS := 96
+const EMBERS := 64
+const CARVE := 64
+const COLUMN := 48
+const COLUMN_POOL := 2
+const BOON := 40
+const BOON_POOL := 3
+
+var ctx
+var player
+var camera
+var vfx
+var root: Node3D
+var reduced_motion := false
+# Facts drawn, by layer, for the tests and the notes.
+var spawned := {}
+
+var might := 0.0
+# Staged captures only (tools/player_fx_capture.gd): "velocity", "normal" and "grounded"
+# stand in for the ball's state, so a frozen ball can be posed blazing or carving.
+var pose := {}
+var overdrive := false
+var heat := 0.0
+var _evolutions := 0
+var _clock := 0.0
+var _rng := RandomNumberGenerator.new()
+var _font: Font
+var _words: Array = []
+var _last_word := -1.0e9
+var _word_seen := {}
+var _side := 1.0
+var _aura: MultiMeshInstance3D
+var _mote_colors: Array = []
+var _mote_flare := 0.0
+var _mote_arrive := {}
+var _rim: MeshInstance3D
+var _rim_mat: ShaderMaterial
+var _flecks: GPUParticles3D
+var _embers: GPUParticles3D
+var _carve: GPUParticles3D
+var _columns: Array = []
+var _column_next := 0
+var _boons: Array = []
+var _boon_next := 0
+var _last_boon := -1.0e9
+var _frame: Control
+var _last_frame := -1.0e9
+var _kill_times: Array = []
+# Might is recounted this often too, so a growth path with no fact of its own (a tree pick,
+# start mass, a restored snapshot) still shows.
+const MIGHT_REFRESH_S := 0.25
+var _might_wait := 0.0
+var _pin_times: Array = []
+
+
+func setup(ctx_ref, vfx_ref = null) -> void:
+	ctx = ctx_ref
+	vfx = vfx_ref
+	name = "PlayerFx"
+	player = ctx.player
+	camera = ctx.camera
+	_rng.seed = 1717
+	root = Node3D.new()
+	root.name = "PlayerFxRoot"
+	ctx.root.add_child(root)
+	if ResourceLoader.exists("res://assets/fonts/NotoSans-Bold.ttf"):
+		_font = load("res://assets/fonts/NotoSans-Bold.ttf")
+	for i in WORD_POOL:
+		_words.append(_make_word())
+	_build_aura()
+	_build_rim()
+	_flecks = _emitter(_flecks_material(), _box(Vector3(0.12, 0.12, 0.55)), FLECKS, 0.35, "add", false)
+	_flecks.name = "OverdriveFlecks"
+	_embers = _emitter(_embers_material(), _ball(0.16), EMBERS, 0.9, "add", false)
+	_embers.name = "OverdriveEmbers"
+	_carve = _emitter(_carve_material(), _box(Vector3(0.05, 0.05, 0.4)), CARVE, 0.28, "add", false)
+	_carve.name = "CarveSparks"
+	for i in COLUMN_POOL:
+		var c := _emitter(_column_material(), _box(Vector3(0.07, 0.6, 0.07)), COLUMN, 0.8, "add", true)
+		c.name = "PowerColumn_%d" % i
+		_columns.append(c)
+	for i in BOON_POOL:
+		var b := _emitter(_boon_material(), _box(Vector3.ONE * 0.16), BOON, 0.3, "add", true)
+		b.name = "BoonSparks_%d" % i
+		_boons.append(b)
+	var layer := CanvasLayer.new()
+	layer.name = "ImpactFrameLayer"
+	layer.layer = 3
+	add_child(layer)
+	_frame = ImpactFrame.new()
+	layer.add_child(_frame)
+	_wire()
+
+
+# --- Might -------------------------------------------------------------------------------
+
+static func might_from(heft_class: int, parts: int, synergies: int, evolutions: int, picks := 0) -> float:
+	return clampf(0.3 * clampf((heft_class - 1) / 4.0, 0.0, 1.0) + 0.3 * minf(parts, 8) / 8.0
+		+ 0.2 * minf(picks, 4) / 4.0 + 0.1 * minf(synergies, 4) / 4.0 + 0.1 * minf(evolutions, 3) / 3.0, 0.0, 1.0)
+
+
+static func might_tier(value: float) -> int:
+	return clampi(int(value * 4.0), 0, 3)
+
+
+func refresh_might() -> void:
+	var run = ctx.run
+	var heft_class: int = run.heft_class() if run != null and run.has_method("heft_class") else 1
+	var parts: Array = run.parts if run != null else []
+	var synergies: int = vfx.ring_count() if vfx != null else 0
+	var picks := 0
+	if player.get("tree") != null and player.tree.has_method("path"):
+		picks = player.tree.path().size()
+	might = might_from(heft_class, parts.size(), synergies, _evolutions, picks)
+	if vfx != null and "might" in vfx:
+		vfx.might = might
+		vfx.heat = HEAT_SHARE * heat_k(might)
+	_mote_colors.clear()
+	for id in parts:
+		if _mote_colors.size() >= MOTES:
+			break
+		_mote_colors.append(part_color(String(id)))
+
+
+static func part_color(part_id: String) -> Color:
+	var row := Parts.row(part_id)
+	var element := String(row.get("element", "kinetic"))
+	var color: Color = ELEMENT_COLORS.get(element, Palette.SAND)
+	if String(row.get("rarity", "")) in ["rare", "relic"]:
+		color = color.lerp(Color.WHITE, 0.25)
+	return color
+
+
+# Colour heat (Andrew, "Presence, centre clear", 17 Oct 17:28Z): a grown build's colours
+# run hotter, toward the heat ramp, instead of its bursts growing past their size. Heat
+# starts at might 0.1 and is full from 0.7, so a "grown" build already runs mostly hot.
+static func heat_k(value: float) -> float:
+	return clampf((value - 0.1) / 0.6, 0.0, 1.0)
+
+
+func heat_tint(color: Color) -> Color:
+	return color.lerp(HEAT_COLOR, HEAT_SHARE * heat_k(might))
+
+
+# The colour most of the build's parts share: the colour a boon spark takes.
+func dominant_color() -> Color:
+	var counts := {}
+	var best := Palette.SAND
+	var most := 0
+	for c in _mote_colors:
+		counts[c] = counts.get(c, 0) + 1
+		if counts[c] > most:
+			most = counts[c]
+			best = c
+	return best
+
+
+func _wire() -> void:
+	var events = ctx.events
+	events.run_started.connect(func(_class_id: String):
+		_evolutions = 0
+		_mote_arrive.clear()
+		refresh_might())
+	events.part_gained.connect(func(id: String, _source: String):
+		_mote_arrive[min(ctx.run.parts.size() - 1, MOTES - 1) if ctx.run != null else 0] = 0.0
+		refresh_might())
+	events.heft_class_changed.connect(_on_heft_up)
+	_listen(events, "heft_class_dropped", func(_c: int, _h: float): refresh_might())
+	_listen(events, "synergy_discovered", func(_id: String, _cat: String, _first: bool): refresh_might.call_deferred())
+	_listen(events, "evolution_fired", _on_evolution)
+	events.enemy_struck.connect(_on_struck)
+	events.harpoon_smashed.connect(_on_smashed)
+	events.slammed.connect(_on_slammed)
+	events.landed.connect(func(impact: float):
+		if impact >= 24.0:
+			word("landing", _beside_ball()))
+	events.launched.connect(func(_v: Vector3): word("launch", _beside_ball()))
+	_listen(events, "rocket_jumped", func(at: Vector3, _speed: float): word("rocket", at + Vector3.UP * 1.8))
+	_listen(events, "vault_kicked", func(at: Vector3, _speed: float): word("vault", at + Vector3.UP * 1.6))
+	_listen(events, "ultimate_landed", func(_id: String, at: Vector3, hits: int, _dmg: float):
+		if hits > 0:
+			word("ultimate", at + Vector3.UP * 2.0)
+			impact_frame(at, 1.0))
+	events.enemy_killed.connect(_on_killed)
+	_listen(events, "enemy_pinned", _on_pinned)
+	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
+
+
+static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
+	if events.has_signal(signal_name) and not events.is_connected(signal_name, callable):
+		events.connect(signal_name, callable)
+
+
+func _pilot_id() -> String:
+	return String(player.class_def.id) if player.class_def != null else ""
+
+
+func _on_heft_up(heft_class: int, _heft: float) -> void:
+	var before := might
+	refresh_might()
+	if might > before and heft_class > 1:
+		column(Palette.BRASS)
+		word("heft_up", _beside_ball())
+
+
+func _on_evolution(part_id: String) -> void:
+	_evolutions += 1
+	refresh_might()
+	column(part_color(part_id).lerp(Palette.BRASS, 0.4))
+	word("fused", _beside_ball())
+
+
+func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	_mote_flare = 1.0
+	if kind in LAUNCH_KINDS and _tier() >= SpeedTier.BLAZING and is_instance_valid(enemy) and enemy.is_inside_tree():
+		word("wham", enemy.global_position + Vector3.UP * 1.8)
+		impact_frame(enemy.global_position, clampf(0.6 + 0.4 * might, 0.0, 1.0))
+	elif kind in CONTACT_KINDS and might_tier(might) >= 2 and is_instance_valid(enemy) and enemy.is_inside_tree():
+		# Grown builds earn the edge ink on every contact hit, not only the biggest.
+		impact_frame(enemy.global_position, 0.4 + 0.4 * might)
+	if _mote_colors.is_empty() or might < 0.25 or _clock - _last_boon < 0.06:
+		return
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
+		return
+	_boon(enemy.global_position + Vector3.UP * 0.7)
+
+
+func _boon(at: Vector3) -> void:
+	if Density.live().band()["max"] > 0.7:
+		return
+	_last_boon = _clock
+	var p: GPUParticles3D = _boons[_boon_next]
+	_boon_next = (_boon_next + 1) % _boons.size()
+	var pm := p.process_material as ParticleProcessMaterial
+	# A hotter build burns a brighter core: same size, more light.
+	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(heat_tint(dominant_color()), 1.1 + 0.7 * heat_k(might)))
+	spawned["boon"] = spawned.get("boon", 0) + 1
+
+
+# A slam: WHUMP when it is a real one; a grown build also throws hot sparks out of the
+# crater and, from "grown", earns the impact frame. No column here: the centre stays clear
+# (Andrew, "Presence, centre clear"). The ring of the slam's real reach stays vfx.gd's,
+# true to who it hit.
+func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
+	if strength < 0.5:
+		return
+	word("slam", at + Vector3.UP * 1.6)
+	if might >= 0.25 and not _mote_colors.is_empty():
+		_boon(at + Vector3.UP * 0.4)
+	if might_tier(might) >= 2:
+		impact_frame(at, clampf(0.5 + 0.5 * might, 0.0, 1.0))
+
+
+# Andrew's "Clearly mightier" (17 Oct 16:36Z), read as "Presence, centre clear": the boon
+# burst grows in count and heat, never in size or reach, on top of vfx.gd's fixed sparks.
+static func boon_count(value: float) -> int:
+	return int(round(BOON * clampf(value, 0.0, 1.0)))
+
+
+func _on_smashed(_enemy: Node3D, at: Vector3, speed: float) -> void:
+	if speed >= lerpf(SMASH_WORD_MPS[0], SMASH_WORD_MPS[1], might):
+		word("smash", at + Vector3.UP * 1.8)
+	if speed >= lerpf(SMASH_FRAME_MPS[0], SMASH_FRAME_MPS[1], might):
+		impact_frame(at, clampf(0.6 + might * 0.4, 0.0, 1.0))
+
+
+# A body bowled into a rack: the third pin inside the window stamps STRIKE.
+func _on_pinned(victim: Node3D, _damage: float) -> void:
+	_pin_times.append(_clock)
+	while not _pin_times.is_empty() and _clock - float(_pin_times[0]) > STRIKE_WINDOW_S:
+		_pin_times.pop_front()
+	if _pin_times.size() == STRIKE_PINS and is_instance_valid(victim) and victim.is_inside_tree():
+		word("strike", victim.global_position + Vector3.UP * 2.0, Palette.BRASS)
+		impact_frame(victim.global_position, 0.8)
+
+
+# audio.gd's hit_on_beat. Deferred, so a word the same hit earns (WHAM, KLANG) stamps first
+# and grows instead of being refused by the gap.
+func on_beat_hit(enemy: Node3D, kind: String) -> void:
+	_on_beat_word.call_deferred(enemy, kind, _clock)
+
+
+func _on_beat_word(enemy: Node3D, _kind: String, at_clock: float) -> void:
+	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
+	for w in _words:
+		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
+			w["size"] = float(w["size"]) * ONBEAT_GROW
+			return
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
+		return
+	if word("beat", enemy.global_position + Vector3.UP * 1.8):
+		_words_by_id("beat")["size"] *= ONBEAT_GROW
+
+
+func _words_by_id(id: String) -> Dictionary:
+	for w in _words:
+		if w.get("id", "") == id and w["t"] < 1.0:
+			return w
+	return {}
+
+
+# Tally stamps PAID when two or more go down together.
+func _on_killed(_kind: String, at: Vector3, _scrap: int) -> void:
+	if _pilot_id() != "tally":
+		return
+	_kill_times.append(_clock)
+	while not _kill_times.is_empty() and _clock - float(_kill_times[0]) > 0.25:
+		_kill_times.pop_front()
+	if _kill_times.size() == 2:
+		word("paid", at + Vector3.UP * 1.8, Palette.LEDGER)
+
+
+func clear() -> void:
+	for w in _words:
+		w["t"] = 1.0
+		w["node"].visible = false
+	overdrive = false
+	heat = 0.0
+	_kill_times.clear()
+	_pin_times.clear()
+	if _frame != null:
+		_frame.hide_now()
+
+
+# --- Sound words -------------------------------------------------------------------------
+
+func _make_word() -> Dictionary:
+	var label := Label3D.new()
+	label.name = "SoundWord"
+	label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	label.double_sided = true
+	label.shaded = false
+	label.font_size = 96
+	label.outline_size = 30
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.outline_modulate = INK
+	label.pixel_size = 0.01
+	label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Words sit beside the ball, never in its lane, so a hill may not swallow them; the
+	# threat marks still draw after them.
+	label.no_depth_test = true
+	label.render_priority = RENDER_PRIORITY
+	label.outline_render_priority = RENDER_PRIORITY - 1
+	if _font != null:
+		label.font = _font
+	label.visible = false
+	root.add_child(label)
+	return {"node": label, "t": 1.0, "id": "", "tilt": 0.0, "size": 1.0, "at": Vector3.ZERO}
+
+
+func word_text(id: String) -> String:
+	var own: Dictionary = PILOT_WORDS.get(_pilot_id(), {})
+	return String(own.get(id, WORDS[id]["text"]))
+
+
+func words_alive() -> int:
+	var n := 0
+	for w in _words:
+		if w["t"] < 1.0:
+			n += 1
+	return n
+
+
+# Stamps a sound word at `at`, pushed off the line ahead of the ball. Refused inside the
+# gap since the last word, inside a word's own repeat window, with two alive, or in the
+# densest band, where only the reads may speak.
+func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
+	if not WORDS.has(id) or root == null or not root.is_inside_tree():
+		return false
+	if _clock - _last_word < WORD_GAP_S or _clock - float(_word_seen.get(id, -1.0e9)) < WORD_REPEAT_S:
+		return false
+	if words_alive() >= WORDS_ALIVE or Density.live().band()["max"] > 0.7:
+		return false
+	var slot: Dictionary = _words[0]
+	for w in _words:
+		if w["t"] >= 1.0:
+			slot = w
+			break
+	_last_word = _clock
+	_word_seen[id] = _clock
+	var label: Label3D = slot["node"]
+	label.text = word_text(id)
+	# The word grows away from the ball, so a long one never covers it.
+	var placed := clear_of_lane(at)
+	var right_of_ball := true
+	if camera != null and camera.cam != null:
+		right_of_ball = (placed - player.shown_position()).dot(camera.cam.global_basis.x) >= 0.0
+	slot["away"] = 1.0 if right_of_ball else -1.0
+	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
+	slot["width_px"] = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
+	var tint: Color = color if color.a > 0.0 else heat_tint(_word_color(id))
+	label.modulate = tint
+	slot["t"] = 0.0
+	slot["id"] = id
+	slot["at"] = placed
+	slot["tilt"] = _rng.randf_range(-0.2, 0.2)
+	slot["size"] = float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
+	slot["born"] = _clock
+	label.visible = true
+	_draw_word(slot)
+	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1
+	return true
+
+
+func _word_color(id: String) -> Color:
+	match id:
+		"ignite":
+			return HEAT_COLOR
+		"heft_up", "fused":
+			return Palette.BRASS
+	return player.class_color().lerp(Color.WHITE, FlashGuard.whiten(0.2))
+
+
+func _beside_ball() -> Vector3:
+	_side = -_side
+	var ball: Vector3 = player.shown_position()
+	if camera == null or camera.cam == null:
+		return ball + Vector3.UP * 2.3 + Vector3.RIGHT * 1.6 * _side
+	var cam: Camera3D = camera.cam
+	var half := _half_height(cam, ball)
+	return ball + cam.global_basis.y * half * 0.3 + cam.global_basis.x * half * 0.22 * _side
+
+
+# Half the view's height in metres at `at`'s depth.
+static func _half_height(cam: Camera3D, at: Vector3) -> float:
+	var depth := maxf(0.5, -(cam.global_transform.affine_inverse() * at).z)
+	return depth * tan(deg_to_rad(cam.fov) * 0.5)
+
+
+# Pulls a point inside the safe share of the screen, at the same depth.
+static func _in_safe_area(cam: Camera3D, at: Vector3, margin := Vector2.ZERO) -> Vector3:
+	if cam.is_position_behind(at):
+		return at
+	var view := cam.get_viewport().get_visible_rect().size
+	var p := cam.unproject_position(at)
+	var centre := view * 0.5
+	var reach := (view * 0.5 * WORD_SAFE - margin).max(Vector2.ZERO)
+	var clamped := Vector2(clampf(p.x, centre.x - reach.x, centre.x + reach.x), clampf(p.y, centre.y - reach.y, centre.y + reach.y))
+	if clamped.is_equal_approx(p):
+		return at
+	var depth := -(cam.global_transform.affine_inverse() * at).z
+	return cam.project_position(clamped, depth)
+
+
+# A word never sits in the lane ahead of the ball: anything within LANE_M of the line the
+# ball travels, in front of it, is pushed sideways out of the lane.
+const LANE_M := 2.5
+const LANE_AHEAD_M := 30.0
+
+
+func clear_of_lane(at: Vector3) -> Vector3:
+	var v: Vector3 = _velocity()
+	v.y = 0.0
+	if v.length() < 1.0:
+		return at
+	var dir := v.normalized()
+	var ball: Vector3 = player.shown_position()
+	var rel := at - ball
+	var ahead := rel.dot(dir)
+	if ahead <= 0.0 or ahead > LANE_AHEAD_M:
+		return at
+	var lateral := rel - dir * ahead
+	lateral.y = 0.0
+	if lateral.length() >= LANE_M:
+		return at
+	var side := dir.cross(Vector3.UP).normalized()
+	if lateral.length() > 0.01:
+		side = lateral.normalized()
+	return at + side * (LANE_M - lateral.length() + 0.3)
+
+
+func _draw_word(slot: Dictionary) -> void:
+	var label: Label3D = slot["node"]
+	var t: float = slot["t"] * WORD_LIFE
+	var size: float = slot["size"]
+	var scale := 1.0
+	var slide := 0.0
+	var alpha := 1.0
+	if not reduced_motion:
+		# Ink-stamp in with overshoot, hold, then slide off on a diagonal (TONE-BIBLE UI motion).
+		if t < WORD_STAMP_S * 0.5:
+			scale = lerpf(1.7, 0.9, t / (WORD_STAMP_S * 0.5))
+		elif t < WORD_STAMP_S:
+			scale = lerpf(0.9, 1.0, (t - WORD_STAMP_S * 0.5) / (WORD_STAMP_S * 0.5))
+	var exit_from := WORD_LIFE - WORD_EXIT_S
+	if t > exit_from:
+		var u := (t - exit_from) / WORD_EXIT_S
+		alpha = 1.0 - u
+		slide = 0.0 if reduced_motion else u * u * 1.4
+	var basis := Basis.IDENTITY
+	var at: Vector3 = slot["at"]
+	var metres := size
+	if camera != null and camera.cam != null:
+		var cam: Camera3D = camera.cam
+		basis = cam.global_basis
+		var half := _half_height(cam, at)
+		metres = size * WORD_SCREEN * half * 2.0
+		# The word's near end sits at the anchor and the word runs away from the ball; the
+		# whole word, not its anchor, stays inside the safe area.
+		var width_m: float = float(slot.get("width_px", 0.0)) * label.pixel_size * metres / 0.7
+		at += basis.x * float(slot.get("away", 1.0)) * width_m * 0.5
+		var px_per_m := cam.get_viewport().get_visible_rect().size.y / (2.0 * half)
+		at = _in_safe_area(cam, at, Vector2(width_m * 0.5, metres * 0.6) * px_per_m)
+		at += (basis.x + basis.y) * slide * half * 0.25
+	basis = basis * Basis(Vector3.BACK, slot["tilt"])
+	# The label's font is 96 px at 0.01 m a pixel, so ~0.7 m of cap height at scale 1.
+	label.global_transform = Transform3D(basis.scaled(Vector3.ONE * metres * scale / 0.7), at)
+	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
+	label.modulate.a = FlashGuard.info(alpha)
+	label.outline_modulate = Color(INK.r, INK.g, INK.b, alpha)
+
+
+# --- Impact frame ------------------------------------------------------------------------
+
+func impact_frame(at: Vector3, strength: float) -> bool:
+	if reduced_motion or _frame == null or _clock - _last_frame < FRAME_GAP_S:
+		return false
+	if camera == null or camera.cam == null or camera.cam.is_position_behind(at):
+		return false
+	_last_frame = _clock
+	_frame.fire(camera.cam.unproject_position(at), strength, _rng.randi(), heat_k(might))
+	spawned["impact_frame"] = spawned.get("impact_frame", 0) + 1
+	return true
+
+
+# Manga focus lines: ink wedges pointing at the hit from the screen edge, only in the outer
+# BAND of the screen, so the hit, the ball and every telegraph inside stay readable.
+class ImpactFrame:
+	extends Control
+
+	const LINES := 56
+	# Lines live only in this share of the screen's short side, measured in from the edge.
+	const BAND := 0.2
+
+	var _focus := Vector2.ZERO
+	var _strength := 0.0
+	var _heat := 0.0
+	var _left := 0
+	var _seed := 0
+
+	func _ready() -> void:
+		set_anchors_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		visible = false
+
+	func fire(focus: Vector2, strength: float, seed_value: int, heat_value := 0.0) -> void:
+		_focus = focus
+		_strength = strength
+		_heat = heat_value
+		_left = FRAME_FRAMES
+		_seed = seed_value
+		position = Vector2.ZERO
+		size = get_viewport_rect().size
+		visible = true
+		queue_redraw()
+
+	func hide_now() -> void:
+		_left = 0
+		visible = false
+
+	func active() -> bool:
+		return _left > 0
+
+	func _process(_delta: float) -> void:
+		if _left <= 0:
+			return
+		_left -= 1
+		if _left <= 0:
+			visible = false
+
+	func _draw() -> void:
+		var rect := get_viewport_rect().size
+		var band := minf(rect.x, rect.y) * BAND
+		var focus := _focus.clamp(Vector2.ZERO, rect)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = _seed
+		if _heat > 0.0:
+			_draw_wash(rect, band)
+		for i in int(LINES * _strength):
+			var angle := TAU * (float(i) + rng.randf() * 0.8) / float(LINES * _strength)
+			var dir := Vector2(cos(angle), sin(angle))
+			# Where the ray from the focus leaves the screen.
+			var exit := INF
+			if dir.x > 0.001:
+				exit = minf(exit, (rect.x - focus.x) / dir.x)
+			elif dir.x < -0.001:
+				exit = minf(exit, -focus.x / dir.x)
+			if dir.y > 0.001:
+				exit = minf(exit, (rect.y - focus.y) / dir.y)
+			elif dir.y < -0.001:
+				exit = minf(exit, -focus.y / dir.y)
+			if exit == INF or exit < 1.0:
+				continue
+			var inner := maxf(0.0, exit - band * rng.randf_range(0.5, 1.0))
+			var width := rng.randf_range(5.0, 16.0) * (0.6 + 0.4 * _strength)
+			var side := Vector2(-dir.y, dir.x) * width
+			var tip := focus + dir * inner
+			var outer := focus + dir * (exit + width * 2.0)
+			# Every third line of a hot build burns heat orange; a cold build keeps a few white.
+			var accent := i % (3 if _heat > 0.0 else 7) == 0
+			var ink := INK
+			ink.a = 0.75 + 0.2 * _heat
+			if accent:
+				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
+				ink.a = FlashGuard.alpha(ink.a)
+			draw_colored_polygon(PackedVector2Array([tip, outer + side, outer - side]), ink)
+
+	# A hot build's edge wash: the screen edge dips dark, glows heat orange halfway in and
+	# fades to nothing before the middle, so the build's heat and weight read on every grown
+	# hit and the centre stays clear.
+	func _draw_wash(rect: Vector2, band: float) -> void:
+		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
+		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, FlashGuard.alpha(0.4 * _heat))
+		var clear := Color(hot.r, hot.g, hot.b, 0.0)
+		_ring(rect, 0.0, band * 0.6, dark, hot)
+		_ring(rect, band * 0.6, band, hot, clear)
+
+	# A screen-edge ring from `outer` to `inner` pixels in, shaded from one colour to the other.
+	func _ring(rect: Vector2, outer: float, inner: float, from: Color, to: Color) -> void:
+		var o := [Vector2(outer, outer), Vector2(rect.x - outer, outer), rect - Vector2(outer, outer), Vector2(outer, rect.y - outer)]
+		var i := [Vector2(inner, inner), Vector2(rect.x - inner, inner), rect - Vector2(inner, inner), Vector2(inner, rect.y - inner)]
+		for k in 4:
+			var n := (k + 1) % 4
+			draw_polygon(PackedVector2Array([o[k], o[n], i[n], i[k]]), PackedColorArray([from, from, to, to]))
+
+
+# --- Aura --------------------------------------------------------------------------------
+
+func _build_aura() -> void:
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.11
+	mesh.height = 0.22
+	mesh.radial_segments = 4
+	mesh.rings = 2
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.vertex_color_use_as_albedo = true
+	mesh.material = mat
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = mesh
+	mm.instance_count = MOTES
+	mm.visible_instance_count = 0
+	_aura = MultiMeshInstance3D.new()
+	_aura.name = "MightAura"
+	_aura.multimesh = mm
+	_aura.top_level = true
+	_aura.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(_aura)
+
+
+func motes_shown() -> int:
+	return _aura.multimesh.visible_instance_count if _aura != null else 0
+
+
+func _draw_aura(delta: float) -> void:
+	var mm := _aura.multimesh
+	var n := _mote_colors.size()
+	mm.visible_instance_count = n
+	if n == 0:
+		return
+	_mote_flare = maxf(0.0, _mote_flare - delta * 6.0)
+	var centre: Vector3 = player.shown_position()
+	_aura.global_transform = Transform3D.IDENTITY
+	var v: Vector3 = _velocity()
+	var speed := v.length()
+	# Grown builds trail their motes as streamers along the ball's motion.
+	var stretch := 1.0 + (clampf(speed / 30.0, 0.0, 1.0) * 3.0 if might_tier(might) >= 2 else 0.0)
+	var along := v / speed if speed > 0.5 else Vector3.FORWARD
+	var tilt := Basis(Vector3.RIGHT, 0.45)
+	for i in n:
+		var arrive: float = _mote_arrive.get(i, 1.0)
+		if arrive < 1.0:
+			arrive = minf(1.0, arrive + delta * 2.0)
+			_mote_arrive[i] = arrive
+		var angle := _clock * (1.6 + 0.8 * might) + TAU * float(i) / float(n)
+		var ring := tilt * Vector3(cos(angle), 0.0, sin(angle)) * MOTE_RADIUS * (1.0 + 0.15 * might)
+		# A new part drops in from above and settles into the ring.
+		var at := centre + ring + Vector3.UP * (1.0 - ease(arrive, 0.4)) * 4.0
+		var size := (0.8 + 0.5 * might) * (1.0 + 0.9 * _mote_flare)
+		var basis := Basis.looking_at(along, Vector3.UP if absf(along.y) < 0.95 else Vector3.RIGHT)
+		basis = basis.scaled(Vector3(size, size, size * stretch))
+		mm.set_instance_transform(i, Transform3D(basis, at))
+		var c: Color = heat_tint(_mote_colors[i])
+		mm.set_instance_color(i, c.lerp(Color.WHITE, FlashGuard.whiten(0.6 * _mote_flare)))
+
+
+# --- Overdrive ---------------------------------------------------------------------------
+
+const _RIM_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_back;
+uniform vec4 rim : source_color = vec4(1.0, 0.62, 0.24, 1.0);
+uniform vec4 pilot : source_color = vec4(1.0);
+uniform float heat = 0.0;
+void fragment() {
+	float f = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.2);
+	vec3 hot = mix(rim.rgb, vec3(1.0, 0.97, 0.9), f * f);
+	ALBEDO = mix(hot, pilot.rgb, 0.25 * (1.0 - f)) * (f * 2.2 + 0.08) * heat;
+}
+"""
+
+
+func _build_rim() -> void:
+	var shader := Shader.new()
+	shader.code = _RIM_SHADER
+	_rim_mat = ShaderMaterial.new()
+	_rim_mat.shader = shader
+	_rim_mat.render_priority = RENDER_PRIORITY
+	var mesh := SphereMesh.new()
+	mesh.radius = 1.08
+	mesh.height = 2.16
+	mesh.radial_segments = 24
+	mesh.rings = 12
+	_rim = MeshInstance3D.new()
+	_rim.name = "OverdriveRim"
+	_rim.mesh = mesh
+	_rim.material_override = _rim_mat
+	_rim.top_level = true
+	_rim.visible = false
+	_rim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(_rim)
+
+
+# One step of the overdrive switch: on at SOFT_CAP_MPS, off under SOFT_CAP_OFF_MPS, so a
+# speed on the line never flickers it. Returns true on the frame it ignites.
+func overdrive_step(speed: float, delta: float) -> bool:
+	var ignited := false
+	if not overdrive and speed >= SOFT_CAP_MPS:
+		overdrive = true
+		ignited = true
+	elif overdrive and speed < SOFT_CAP_OFF_MPS:
+		overdrive = false
+	var target := 1.0 if overdrive else 0.0
+	var seconds := HEAT_RISE_S if target > heat else HEAT_FALL_S
+	heat = move_toward(heat, target, delta / seconds)
+	return ignited
+
+
+func _draw_overdrive(delta: float) -> void:
+	var v: Vector3 = _velocity()
+	var speed := v.length()
+	if overdrive_step(speed, delta):
+		spawned["ignite"] = spawned.get("ignite", 0) + 1
+		var back: Vector3 = player.shown_position() - v.normalized() * 1.5
+		word("ignite", _beside_ball())
+		impact_frame(player.shown_position(), 0.6)
+		if vfx != null:
+			vfx.glyph("overdrive", back, 0.8, 4.0, 0.3, v, "ring", HEAT_COLOR)
+	var on := heat > 0.01
+	_rim.visible = on
+	var ball: Vector3 = player.shown_position()
+	if on:
+		_rim.global_position = ball
+		_rim_mat.set_shader_parameter("heat", heat)
+		_rim_mat.set_shader_parameter("pilot", player.class_color())
+		if speed > 1.0:
+			var basis := Basis.looking_at(-v / speed, Vector3.UP if absf(v.y / speed) < 0.95 else Vector3.RIGHT)
+			_flecks.global_transform = Transform3D(basis, ball - v / speed * 0.9)
+			_embers.global_transform = Transform3D(basis, ball - v / speed * 0.6)
+		_flecks.amount_ratio = clampf(heat * (0.6 + 0.4 * might), 0.0, 1.0)
+		_embers.amount_ratio = clampf(heat * (0.5 + 0.5 * might), 0.0, 1.0)
+	if _flecks.emitting != on:
+		_flecks.emitting = on
+		_embers.emitting = on
+
+
+# --- Carve sparks ------------------------------------------------------------------------
+
+func _velocity() -> Vector3:
+	return pose.get("velocity", player.state.velocity)
+
+
+func _normal() -> Vector3:
+	return pose.get("normal", player.state.contact_normal)
+
+
+func _tier() -> int:
+	return SpeedTier.of(_velocity().length(), 14.0) if pose.has("velocity") else player.speed_tier()
+
+
+func carving() -> bool:
+	var grounded: bool = pose.get("grounded", player.state.grounded)
+	return grounded and _normal().y < CARVE_NORMAL_Y and _tier() >= SpeedTier.FAST
+
+
+func _draw_carve() -> void:
+	var on := carving()
+	if on:
+		var v: Vector3 = _velocity()
+		var speed := v.length()
+		var back: Vector3 = -v / maxf(speed, 0.01)
+		var normal := _normal()
+		var up: Vector3 = normal
+		if absf(back.dot(up)) > 0.95:
+			up = Vector3.UP
+		_carve.global_transform = Transform3D(Basis.looking_at(back, up), player.ball_position() - normal * 0.95)
+		var steep := clampf((CARVE_NORMAL_Y - normal.y) / CARVE_NORMAL_Y, 0.0, 1.0)
+		var fast := clampf(speed / 30.0, 0.0, 1.0)
+		_carve.amount_ratio = clampf((0.35 + 0.65 * steep) * (0.7 + 0.3 * might) * fast, 0.1, 1.0)
+	if _carve.emitting != on:
+		_carve.emitting = on
+		if on:
+			spawned["carve"] = spawned.get("carve", 0) + 1
+
+
+# --- Column ------------------------------------------------------------------------------
+
+func column(tint: Color, at := Vector3.INF) -> void:
+	var p: GPUParticles3D = _columns[_column_next]
+	_column_next = (_column_next + 1) % _columns.size()
+	var base: Vector3 = player.ball_position() - Vector3.UP * 0.8 if at == Vector3.INF else at
+	p.global_transform = Transform3D(Basis.IDENTITY, base)
+	p.set_instance_shader_parameter("tint", _glow(heat_tint(tint), 1.15))
+	p.amount_ratio = clampf(0.5 + 0.5 * might, 0.0, 1.0)
+	p.restart()
+	p.emitting = true
+	spawned["column"] = spawned.get("column", 0) + 1
+
+
+# --- Emitters ----------------------------------------------------------------------------
+
+func _emitter(pm: ParticleProcessMaterial, mesh: PrimitiveMesh, amount: int, life: float, blend: String, one_shot: bool) -> GPUParticles3D:
+	mesh.material = FxLibrary._material(blend)
+	var p := GPUParticles3D.new()
+	p.process_material = pm
+	p.draw_pass_1 = mesh
+	p.amount = amount
+	p.lifetime = life
+	p.one_shot = one_shot
+	p.explosiveness = 1.0 if one_shot else 0.0
+	p.local_coords = false
+	p.emitting = false
+	p.use_fixed_seed = true
+	p.seed = FxLibrary.SEED
+	p.visibility_aabb = AABB(Vector3(-10, -6, -10), Vector3(20, 14, 20))
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.set_instance_shader_parameter("tint", Color.WHITE)
+	root.add_child(p)
+	return p
+
+
+static func _glow(c: Color, k: float) -> Color:
+	return Color(c.r * k, c.g * k, c.b * k, 1.0)
+
+
+static func _box(size: Vector3) -> BoxMesh:
+	var b := BoxMesh.new()
+	b.size = size
+	return b
+
+
+static func _ball(d: float) -> SphereMesh:
+	var s := SphereMesh.new()
+	s.radius = d * 0.5
+	s.height = d
+	s.radial_segments = 6
+	s.rings = 3
+	return s
+
+
+static func _ramp(stops: Array) -> GradientTexture1D:
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array(stops.map(func(s): return s[0]))
+	g.colors = PackedColorArray(stops.map(func(s): return s[1]))
+	var tex := GradientTexture1D.new()
+	tex.gradient = g
+	return tex
+
+
+static func _fade(end: float) -> CurveTexture:
+	var c := Curve.new()
+	c.add_point(Vector2(0.0, 1.0))
+	c.add_point(Vector2(1.0, end))
+	var tex := CurveTexture.new()
+	tex.curve = c
+	return tex
+
+
+static func _flecks_material() -> ParticleProcessMaterial:
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, 0, -1)
+	pm.spread = 16.0
+	pm.initial_velocity_min = 5.0
+	pm.initial_velocity_max = 11.0
+	pm.gravity = Vector3(0, 3.0, 0)
+	pm.particle_flag_align_y = true
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	pm.emission_sphere_radius = 0.7
+	pm.scale_min = 0.7
+	pm.scale_max = 1.4
+	pm.scale_curve = _fade(0.2)
+	pm.color_ramp = _ramp([[0.0, Color(1.0, 0.95, 0.75, 1.0)], [0.25, Color(1.0, 0.6, 0.18, 1.0)],
+		[0.65, Color(0.85, 0.24, 0.08, 0.85)], [1.0, Color(0.2, 0.08, 0.06, 0.0)]])
+	return pm
+
+
+static func _embers_material() -> ParticleProcessMaterial:
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, 0, -1)
+	pm.spread = 40.0
+	pm.initial_velocity_min = 0.3
+	pm.initial_velocity_max = 1.5
+	pm.gravity = Vector3(0, 1.4, 0)
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	pm.emission_sphere_radius = 0.9
+	pm.scale_min = 0.6
+	pm.scale_max = 1.3
+	pm.scale_curve = _fade(0.0)
+	pm.color_ramp = _ramp([[0.0, Color(1.0, 0.7, 0.3, 1.0)], [0.5, Color(0.9, 0.35, 0.12, 0.9)], [1.0, Color(0.35, 0.1, 0.06, 0.0)]])
+	return pm
+
+
+static func _carve_material() -> ParticleProcessMaterial:
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, 0.35, -1)
+	pm.spread = 22.0
+	pm.initial_velocity_min = 7.0
+	pm.initial_velocity_max = 14.0
+	pm.gravity = Vector3(0, -22.0, 0)
+	pm.particle_flag_align_y = true
+	pm.scale_min = 0.6
+	pm.scale_max = 1.2
+	pm.scale_curve = _fade(0.1)
+	pm.color_ramp = _ramp([[0.0, Color(1.0, 0.95, 0.7, 1.0)], [0.35, Color(1.0, 0.72, 0.25, 1.0)], [1.0, Color(0.8, 0.3, 0.1, 0.0)]])
+	return pm
+
+
+static func _column_material() -> ParticleProcessMaterial:
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3.UP
+	pm.spread = 6.0
+	pm.initial_velocity_min = 6.0
+	pm.initial_velocity_max = 11.0
+	pm.radial_velocity_min = -1.6
+	pm.radial_velocity_max = -1.0
+	pm.gravity = Vector3(0, -2.0, 0)
+	pm.particle_flag_align_y = true
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
+	pm.emission_ring_axis = Vector3.UP
+	pm.emission_ring_radius = 1.6
+	pm.emission_ring_inner_radius = 1.3
+	pm.emission_ring_height = 0.0
+	pm.scale_curve = _fade(0.0)
+	pm.alpha_curve = _fade(0.0)
+	return pm
+
+
+static func _boon_material() -> ParticleProcessMaterial:
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3.UP
+	pm.spread = 180.0
+	pm.initial_velocity_min = 4.0
+	pm.initial_velocity_max = 9.0
+	pm.gravity = Vector3(0, -6.0, 0)
+	pm.angular_velocity_min = -540.0
+	pm.angular_velocity_max = 540.0
+	pm.scale_curve = _fade(0.0)
+	pm.alpha_curve = _fade(0.0)
+	return pm
+
+
+# The most particles this layer can hold alive at once, for the notes.
+static func ceiling() -> int:
+	return FLECKS + EMBERS + CARVE + COLUMN * COLUMN_POOL + BOON * BOON_POOL
+
+
+# --- Frame -------------------------------------------------------------------------------
+
+func _process(delta: float) -> void:
+	if player == null or root == null:
+		return
+	_clock += delta
+	_might_wait -= delta
+	if _might_wait <= 0.0:
+		_might_wait = MIGHT_REFRESH_S
+		refresh_might()
+	for w in _words:
+		if w["t"] >= 1.0:
+			continue
+		w["t"] = minf(1.0, w["t"] + delta / WORD_LIFE)
+		if w["t"] >= 1.0:
+			w["node"].visible = false
+		else:
+			_draw_word(w)
+	_draw_aura(delta)
+	_draw_overdrive(delta)
+	_draw_carve()

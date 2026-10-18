@@ -103,7 +103,9 @@ func _run() -> void:
 	_t.check("retry of stage 1: set dressing within %.0f ms" % DRESSING_MS, retry_1.get("set_dressing", INF) <= DRESSING_MS, _ms(retry_1, "set_dressing"))
 	await _ticks(SETTLE_TICKS)
 
-	# The next stage builds the way play does (world.gd starts it when the Warden wakes).
+	# The next stage builds before the exit, as in play (world.gd starts it when the Warden wakes).
+	# Under SimClock.ticks (set above) prepare() builds it whole inside the call (terrain.gd
+	# _worker_builds), so the wait loop below ends at once; the entry handlers timed here run after it.
 	var terrain = _game.ctx.terrain
 	terrain.prepare(2)
 	var waited := 0

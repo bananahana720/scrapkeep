@@ -34,3 +34,37 @@ static func rebound_velocity(velocity: Vector3, normal: Vector3, jump_speed: flo
 # What a rebound may cost the player: the part of the normal speed restitution keeps.
 static func contact_cost(velocity: Vector3, normal: Vector3) -> float:
 	return maxf(0.0, -velocity.dot(normal.normalized())) * (1.0 - RESTITUTION)
+
+
+# Knockback grows with the hit (KNOCKBACK-FEEL, 2026-10-17). A ram's shove scales with the
+# speed it lands at and the heft behind it, so a late-run slam throws a body far harder than
+# an early bump: (speed / KNOCK_REF_SPEED) ^ KNOCK_SPEED_EXP x heft ^ KNOCK_HEFT_EXP. At
+# KNOCK_REF_SPEED (blazing at the default cruise) and heft 1 it is the old flat shove. Speed
+# counts up to SOFT_CAP_SPEED: past it the wave 17 soft cap turns speed into hit damage and
+# the blazing trail, not into throw. No ram throws harder than KNOCK_CEILING; a paid haul
+# landing (the chain's multiplier) may reach LANDING_CEILING.
+const KNOCK_REF_SPEED := 27.0
+const KNOCK_SPEED_EXP := 0.6
+const KNOCK_HEFT_EXP := 0.30
+const SOFT_CAP_SPEED := 60.0
+const KNOCK_CEILING := 34.0
+const LANDING_CEILING := 42.0
+
+
+static func heft_knock(heft: float) -> float:
+	return pow(maxf(heft, 1.0), KNOCK_HEFT_EXP)
+
+
+static func knock_scale(speed: float, heft: float) -> float:
+	return pow(clampf(speed, 0.0, SOFT_CAP_SPEED) / KNOCK_REF_SPEED, KNOCK_SPEED_EXP) * heft_knock(heft)
+
+
+# The shove a ram of base `base` lands at `speed` with `heft`, times a haul landing's `mult`.
+# A shove's heft share: grows with heft up to the knock ceiling, never under the plain shove.
+static func heft_shove(force: float, heft: float) -> float:
+	return minf(force * heft_knock(heft), maxf(force, KNOCK_CEILING))
+
+
+static func ram_knock(base: float, speed: float, heft: float, mult := 1.0) -> float:
+	var knock := minf(base * knock_scale(speed, heft), KNOCK_CEILING)
+	return minf(knock * mult, LANDING_CEILING) if mult > 1.0 else knock

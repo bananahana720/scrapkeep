@@ -210,6 +210,10 @@ static func describe(held: Array) -> Dictionary:
 		var d = Parts.def(id)
 		if d == null:
 			continue
+		# SG15: a levelled part reads as its held level's numbers, once.
+		var levelled: bool = not d.levels.is_empty()
+		if levelled:
+			d = Parts.def_at(id, Parts.level_of(id, held))
 		if d.effect.get("do", "") == "damage_reduction":
 			remaining_cap *= 1.0 - (d.stack_cap if d.stack_cap > 0.0 else 1.0)
 		var n: int = counts[id]
@@ -220,7 +224,7 @@ static func describe(held: Array) -> Dictionary:
 			at_cap = is_equal_approx(ItemEffects.stacked(d, effect_key, n), d.stack_cap)
 		if d.stack_rule == "spike":
 			at_cap = is_equal_approx(d.stacked(1.0, n), _spike_cap(d))
-		var bonuses := _bonuses(d, n)
+		var bonuses := _level_bonuses(d, id) if levelled else _bonuses(d, n)
 		var layer_name := "weapon-local" if d.layer == "local" else "player-global"
 		var words := "%s x%d · %s · %s%s" % [d.display_name, n, layer_name, cap, " (at cap)" if at_cap else ""]
 		if d.layer == "global":
@@ -279,6 +283,21 @@ static func _sheet_cap(d: Resource, per: float, multiplying: bool) -> float:
 	if d.stack_rule == "hyperbolic" or d.stack_cap < 1.0:
 		return -1.0
 	return pow(per, int(d.stack_cap)) if multiplying else per * int(d.stack_cap)
+
+
+# A levelled part's held level, folded once, against its top level's numbers as the cap.
+static func _level_bonuses(d: Resource, id: String) -> Array:
+	var top: Resource = Parts.def_at(id, PartDef.MAX_LEVEL)
+	var out := {}
+	for key in d.mods:
+		_pool(out, key, "multiplying", float(d.mods[key]), float(top.mods.get(key, d.mods[key])))
+	for key in ["punch", "max_hp_bonus"]:
+		if d.get(key) != 0.0:
+			_pool(out, key, "additive", float(d.get(key)), float(top.get(key)))
+	for key in ["cooldown_scale", "magnet", "kill_scrap"]:
+		if d.get(key) != 1.0:
+			_pool(out, key, "multiplying", float(d.get(key)), float(top.get(key)))
+	return out.values()
 
 
 static func _bonuses(d: Resource, n: int) -> Array:

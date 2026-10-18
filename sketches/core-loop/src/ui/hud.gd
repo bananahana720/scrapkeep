@@ -20,6 +20,7 @@ const LaunchCard := preload("res://src/ui/launch_card.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
+const FirstSteps := preload("res://src/ui/first_steps.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -95,6 +96,10 @@ const ACH_LAYER := 8
 const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
 const ACH_WORD := "Achievement"
+# A jukebox record found in play shares the achievement plate, after any achievement waiting.
+const TUNE_WORD := "New record"
+# A radio take found in play: the same plate, its own word, louder for a legend.
+const TAKE_WORDS := {"b-side": "New B-side", "take": "New take", "legend": "Legendary take"}
 # A new field note: the Tab cap and these words under the achievement slot, 3 s, faded in and out.
 const LORE_WORDS := "New field note"
 const LORE_TOTAL := 3.0
@@ -142,6 +147,7 @@ var reticle
 var profile
 var ability_bar
 var key_glyphs
+var first_steps
 var edge_markers
 var part_name
 var launch_card
@@ -163,6 +169,10 @@ var _held_toast := {}
 var _ach_panel: PanelContainer
 var _ach_name: Label
 var _ach_queue: Array[String] = []
+var _tune_queue: Array[String] = []
+var _take_words := {}
+var _ach_word: Label
+var _ach_icon: TextureRect
 var _ach_entry := {}
 var _lore_panel: PanelContainer
 var _lore_left := 0.0
@@ -219,6 +229,9 @@ func setup(game_ref) -> void:
 	key_glyphs = KeyGlyphs.new()
 	add_child(key_glyphs)
 	key_glyphs.setup(game, profile)
+	first_steps = FirstSteps.new()
+	add_child(first_steps)
+	first_steps.setup(game, profile)
 
 	_objective = ObjectiveView.new()
 	add_child(_objective)
@@ -362,10 +375,12 @@ func _build_ach_toast() -> void:
 	star.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	star.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(star)
+	_ach_icon = star
 	var word := _label(18)
 	word.text = ACH_WORD
 	word.add_theme_color_override("font_color", Palette.AMBER)
 	row.add_child(word)
+	_ach_word = word
 	_ach_name = _label(TOAST_FONT[3])
 	_ach_name.add_theme_color_override("font_color", Palette.SAND)
 	row.add_child(_ach_name)
@@ -433,6 +448,22 @@ func ach_waiting() -> Array[String]:
 	return _ach_queue.duplicate()
 
 
+# A record found for Moss's jukebox: its name, then where to play it.
+func tune_found(tune_name: String) -> void:
+	_tune_queue.append("%s\nOn Moss's jukebox at camp" % tune_name)
+
+
+func tune_waiting() -> Array[String]:
+	return _tune_queue.duplicate()
+
+
+# A take found for the pilot radio: its name, then the station it airs on.
+func take_found(take_name: String, station_name: String, tier := "take") -> void:
+	var text := "%s\nOn the radio: %s" % [take_name, station_name]
+	_take_words[text] = TAKE_WORDS.get(tier, TAKE_WORDS["take"])
+	_tune_queue.append(text)
+
+
 # A fight is live while the Warden is engaged and still standing.
 func _fight_live() -> bool:
 	return game.flow != null and game.flow.engaged() and game.flow.sealed
@@ -441,6 +472,7 @@ func _fight_live() -> bool:
 # The ending owns the screen: no achievement toast waits for it or shows over it.
 func clear_achievement_toasts() -> void:
 	_ach_queue.clear()
+	_tune_queue.clear()
 	_ach_entry = {}
 	_ach_panel.visible = false
 
@@ -456,9 +488,12 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
-	if _ach_entry.is_empty() and not _ach_queue.is_empty() and not _fight_live():
-		_ach_entry = {"text": _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
+	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live():
+		var tune := _ach_queue.is_empty()
+		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
 		_ach_name.text = _ach_entry["text"]
+		_ach_word.text = (String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ACH_WORD)
+		_ach_icon.texture = Icons.shape("wave" if tune else "star")
 		_ach_panel.visible = true
 	if _ach_entry.is_empty():
 		return
@@ -920,7 +955,7 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, edge_markers, why_callout, hotwire_screen, damage_numbers]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, hotwire_screen, damage_numbers]:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing

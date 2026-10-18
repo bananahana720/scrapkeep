@@ -16,6 +16,7 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraphTool := preload("res://tools/park_graph.gd")
+const GraphLoader := preload("res://src/world/park/park_graph.gd")
 
 const MAP := "park_sinkhole"
 const PARK := "res://src/world/park/park_sinkhole.json"
@@ -89,6 +90,18 @@ func _run() -> void:
 		if row["id"] == "great_room_floor":
 			row["y"] = float(row["y"]) + 3.0
 	t.check("plant: a floor raised 3 m fails seating", not floor_seating(raised_floor).is_empty())
+
+	# The beacon disc over the brood's pool: the pool takes the swarm's slab, so its rising floor
+	# is judged as the pool and the lip outside it must be flat. With the nest 30 m lower, the pit
+	# no longer reaches the first floor, the slab is not built, and the plain flat-disc rule fails.
+	var built = GraphLoader.read(BAKED + "/graph.bin")
+	if t.check("graph.bin loads", built != null):
+		var beacon: Dictionary = ParkGraphTool.beacon_check(built, park)
+		t.check("the beacon disc judges the brood's pool", beacon["ok"] and not (beacon["pool"] as Dictionary).is_empty(), str(beacon))
+		var deep: Dictionary = park.duplicate(true)
+		deep["landmark"]["warden"]["anchor"] = [0.0, -129.0, 388.0]
+		var plain: Dictionary = ParkGraphTool.beacon_check(built, deep)
+		t.check("plant: a pool the pit cannot take falls back to the flat disc and fails", not plain["ok"] and (plain["pool"] as Dictionary).is_empty(), str(plain))
 	quit(t.verdict())
 
 
