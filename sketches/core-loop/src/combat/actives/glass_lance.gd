@@ -41,8 +41,6 @@ const CHAIN_FALLOFF := 0.7
 const COLOR := Color(0.78, 1.0, 0.62)
 const SHARD_COLOR := Color(0.94, 1.0, 0.9)
 const KIND := "lance"
-# The proc row's quick cut: a hit stop and a stagger, no launch.
-const IMPACT := "proc"
 const SOURCE := "special"
 
 var ctx
@@ -174,7 +172,7 @@ func _pierce(enemy: Node3D, lance: Dictionary) -> void:
 	pierced += 1
 	var dmg: float = lance["damage"]
 	combat.effects.spark(enemy.global_position + Vector3.UP, ActiveFx.peak(SHARD_COLOR))
-	combat._hit(enemy, KIND, dmg, lance["dir"], KNOCK, "", SOURCE, IMPACT)
+	combat._hit(enemy, KIND, dmg, lance["dir"], KNOCK, "", SOURCE)
 	var jumps := _pattern("chain_arc")
 	if jumps > 0:
 		combat._chain(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,

@@ -284,6 +284,9 @@ const IMPACT := {
 	"cannon": {"knock": 9.0, "lift": 0.25, "stop": "hit", "shake": 0.15, "react": "stagger"},
 	# The Scrap Rocket Rack's blast (src/combat/actives/scrap_rockets.gd): a bomb's stop, a lighter shove.
 	"rocket": {"knock": 14.0, "lift": 0.3, "stop": "hit", "shake": 0.08, "react": "stagger"},
+	# The Glass Lance's pierce and its Chain Arc jumps (src/combat/actives/glass_lance.gd): a quick
+	# cut's stop and stagger, so a jumped machine reads like the pierced one.
+	"lance": {"knock": 8.0, "lift": 0.3, "stop": "hit", "shake": 0.1, "react": "stagger"},
 }
 # Degrees and seconds; enemy weight divides angles by sqrt(max(weight, 1)).
 const REACTIONS := {
