@@ -705,10 +705,25 @@ func tick(delta: float) -> bool:
 				_end("boss_stalled")
 				return true
 			_fight_boss(delta)
+		"lap":
+			_lap_roll()
 		_:
 			source.hold = {}
 	_set_piece_hands()
 	return outcome != ""
+
+
+# The victory lap: boost for the vent in the bowl's middle, so the bot rides the wall down into it, flies, lands on the
+# far wall and rolls back for another shot, the way a player showing off would. The lap's clock ends it. A started
+# driver has already ended on run_ended by then, so the lap's callers (victory_lap_test, lap_capture) call this directly.
+func _lap_roll() -> void:
+	var lap = game.flow.lap
+	if not is_instance_valid(lap):
+		source.hold = {}
+		return
+	var to: Vector3 = lap.centre() - game.player.ball_position()
+	var wish := Vector3(to.x, 0.0, to.z).normalized() if Vector2(to.x, to.z).length() > 1.0 else Vector3.BACK
+	source.hold = {"move": _world_to_stick(wish), "shift_held": true}
 
 
 # The stall limit now. A sweep's own stage_limit is kept; the default one stretches for the
@@ -1117,10 +1132,12 @@ func _camper(target: Node3D, delta: float) -> void:
 
 
 func _completionist(warden: Node3D, delta: float) -> void:
-	if _activity_goal(delta):
-		return
+	# Give up before resuming a camp or bounty: on Tally 36428 stage 4 the
+	# activities ran past ENGAGE_BY and the Warden was never reached.
 	if _activity_rushed():
 		_fight(warden, delta)
+		return
+	if _activity_goal(delta):
 		return
 	var event := _event_goal(delta)
 	if not event.is_empty():

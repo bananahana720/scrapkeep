@@ -18,7 +18,7 @@ const PILOT := "res://assets/models/pilot_cannon_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_cannon.glb"
 const CHOIR := "res://assets/models/world_one/shell_cannon_choir.glb"
 const BUDGETS := "res://assets/asset_budgets.json"
-const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
+const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8, "idle_loop": 2.8}
 const PARENTS := {
 	"root": "", "pelvis": "root", "spine_01": "pelvis", "spine_02": "spine_01",
 	"neck": "spine_02", "head": "neck", "snout": "head", "goggles": "head",
@@ -142,11 +142,11 @@ func check_rig(pilot: Node3D, raw: Dictionary) -> void:
 	var clips := Array(player.get_animation_list()).filter(func(name): return name != "RESET")
 	var lost := CLIPS.keys().filter(func(name): return not name in clips)
 	var unexpected := clips.filter(func(name): return not CLIPS.has(name))
-	check("exact seven clips", clips.size() == 7 and lost.is_empty() and unexpected.is_empty(), "count %d missing %s extra %s" % [clips.size(), lost, unexpected])
+	check("exact eight clips", clips.size() == 8 and lost.is_empty() and unexpected.is_empty(), "count %d missing %s extra %s" % [clips.size(), lost, unexpected])
 	var raw_names := []
 	for animation in raw.get("animations", []):
 		raw_names.append(animation.get("name", ""))
-	check("seven exported clips", raw_names.size() == 7 and CLIPS.keys().all(func(name): return name in raw_names))
+	check("eight exported clips", raw_names.size() == 8 and CLIPS.keys().all(func(name): return name in raw_names))
 	var rigid := true
 	var skins := {}
 	for mi: MeshInstance3D in meshes(pilot):

@@ -20,7 +20,8 @@ static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
 	var next := 0
 	while next < jobs.size() or running.any(func(r): return r["live"]):
 		for r in running.filter(func(r): return r["live"]):
-			r["timed_out"] = OS.is_process_running(r["pid"])
+			# A child that never started (pid -1) must not reach waitpid(-1) or kill(-1).
+			r["timed_out"] = r["pid"] > 0 and OS.is_process_running(r["pid"])
 			if not r["timed_out"]:
 				r["live"] = false
 			elif Time.get_ticks_msec() - r["start"] >= timeout_s * 1000.0:
@@ -33,7 +34,7 @@ static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
 	var out := []
 	for r in running:
 		var timed_out: bool = r["timed_out"]
-		out.append({"code": -1 if timed_out else OS.get_process_exit_code(r["pid"]),
+		out.append({"code": -1 if timed_out or r["pid"] <= 0 else OS.get_process_exit_code(r["pid"]),
 			"log": FileAccess.get_file_as_string(r["log"]), "timed_out": timed_out})
 		DirAccess.remove_absolute(r["log"])
 	DirAccess.remove_absolute(dir)

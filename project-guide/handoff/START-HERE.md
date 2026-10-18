@@ -1,5 +1,7 @@
 # Start here: taking over Scrapkeep in a new project
 
+> **18 Oct update:** coordination now runs from a local Claude Code session on Andrew's PC with up to 4 cloud lanes. Start at [project-guide/coord/GRAPH.md](../coord/GRAPH.md); a lane starts from [LANE-BRIEF.md](../coord/LANE-BRIEF.md). The steps below were for a new claude.ai project and stay as reference.
+
 You are the coordinator of a fresh Scrapkeep project on Andrew's other account. The old project's threads, cards, pages, memory and Remote Control sessions don't carry over. This folder does. Read it before you act.
 
 1. Read these, in this folder, in order: [STATE.md](STATE.md) (wave, open PRs with heads, base reds, the promote-fast flow), [THREADS.md](THREADS.md) (roles and live work at the move), [DEVICES.md](DEVICES.md) (the PC and what the cloud can't do), [DECISIONS.md](DECISIONS.md) (every ruling) and [LESSONS.md](LESSONS.md) (ways of working).

@@ -19,9 +19,11 @@ const MOTIFS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 const MIN_SAMPLES := Harmony.RATE / 20
 
 var _failures := 0
+var _checks := 0
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
+	_checks += 1
 	if not ok:
 		_failures += 1
 	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
@@ -63,6 +65,11 @@ func _initialize() -> void:
 	for park in ["park_crown", "park_islands"]:
 		var own := _park_sounds(park).filter(func(sound): return not elsewhere.has(sound))
 		_report("Highdraft-only event sounds", own.size() >= OWN.size(), "%s: %d of its cues heard in no Spillway or Dig park" % [park, own.size()])
+	# sketch:smoke needs the suite verdict line (tests/support/t.gd verdict()), not just the exit code.
+	if _failures == 0:
+		print("highdraft_cues_test: PASS (%d checks)" % _checks)
+	else:
+		print("highdraft_cues_test: FAIL (%d of %d checks)" % [_failures, _checks])
 	quit(0 if _failures == 0 else 1)
 
 
