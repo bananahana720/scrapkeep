@@ -1275,7 +1275,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var damage: float = Ultimate.LANDING_DAMAGE * heft * chain
 	var late := _carve_late(id, at, heading, reach, pins, damage)
 	var result: Array = [0, 0.0, "late"]
-	if _shade_late(late):
+	if _shade_late(late, mini(late_work, LANDING_WORK)):
 		result = _breach(_late_shape(late), at, heading, reach, pins, damage)
 	else:
 		_late.append(late)
@@ -1329,6 +1329,12 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 # joins them, so the shape is the same as a carve made at once.
 const LATE_TICKS := 5
 const LATE_WORK := 200
+# The landing tick also gathers the faces and cuts, about as much again as a share, so its
+# share is smaller; flat ground (one part a cell, 96 cells) and a shallow bowl (158) still carve
+# and hit there. A
+# later carve's hits (selection and drawing) take a tick of their own after its last share.
+# Both keep a carve tick inside the frame's headroom on Andrew's 4080 (coordinator, 2026-10-18).
+const LANDING_WORK := 160
 
 # The tick's work budget; a test lowers it to see the stages.
 var late_work := LATE_WORK
@@ -1358,15 +1364,18 @@ func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: 
 	return late
 
 
-# One tick's share of the carve; true once it is done.
-func _shade_late(late: Dictionary) -> bool:
+# One tick's share of the carve, budget parts at most (late_work when negative); true once
+# it is done.
+func _shade_late(late: Dictionary, budget := -1) -> bool:
 	if late.has("result"):
 		return true
+	if budget < 0:
+		budget = late_work
 	var cells: Array = late["sector"]["cells"]
 	var cell_cuts: Array = late["cell_cuts"]
 	var lit: Array = late["lit"]
 	_shade_work = 0
-	while int(late["next"]) < cells.size() and _shade_work < late_work:
+	while int(late["next"]) < cells.size() and _shade_work < budget:
 		var i: int = late["next"]
 		lit.append_array(_shade_cell(late["at"], cell_cuts[i], [cells[i]]))
 		late["next"] = i + 1
@@ -1382,10 +1391,11 @@ func _late_shape(late: Dictionary) -> Dictionary:
 # Each waiting carve takes one share per tick after its landing tick.
 func _step_late(now := Engine.get_physics_frames()) -> void:
 	for late in _late:
-		if now > int(late["start"]) and now > int(late["shaded"]):
+		if now > int(late["start"]) and now > int(late["shaded"]) and not late.has("result"):
 			late["shaded"] = now
-			_shade_late(late)
-	while not _late.is_empty() and _late[0].has("result") and now >= int(_late[0]["due"]):
+			if _shade_late(late):
+				late["carved"] = now
+	while not _late.is_empty() and _late[0].has("result") and now >= int(_late[0]["due"]) and now > int(_late[0].get("carved", -1)):
 		var late: Dictionary = _late.pop_front()
 		var result := _breach(_late_shape(late), late["at"], late["heading"], late["reach"], late["pins"], late["damage"])
 		if combat.ultimate != null:

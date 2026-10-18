@@ -69,9 +69,10 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #   p3   p1's stand, then Rivet carves where the ball stands every CARVE_EVERY frames of the window, turn
 #        about between the Breach Skid landing's sector and Full Cut's (RIVET-CURVE, wave 17): the park
 #        drop-in's carve against the 16.7 ms frame, with no ultimate to wait for. A Breach carve runs as a
-#        landing does, a LATE_WORK share on the landing frame and one per frame after (the game takes one
-#        per 90 Hz tick, about 1.5 a frame). Each carve's shares' wall times (ms is the largest), terrain
-#        face count before and after the coplanar merge, and part count go to "carves".
+#        landing does, a LANDING_WORK share on the landing frame and one per frame after (the game takes
+#        one per 90 Hz tick, about 1.5 a frame), hitting once carved and due. Each carve's shares' wall
+#        times (ms is the largest) and part count go to "carves"; its terrain face count before and after
+#        the coplanar merge is read after the window, so it costs no recorded frame.
 # Every scene records memory at the window's open and close; p2 also at two_stages (stage 2 built, stage 1
 # active) and after_swap (stage 1 freed).
 
@@ -425,10 +426,8 @@ func _step_carve() -> void:
 	var breach := _carves.size() % 2 == 0
 	var reach: float = kit.breach_reach() if breach else Weapons.FULL_CUT_REACH
 	var half: float = acos(PlayerBall.SKID_CONE) if breach else deg_to_rad(Weapons.FULL_CUT_DEG * 0.5)
-	var sector: Dictionary = kit._sector_cells(at, heading, reach, half, 0.0 if breach else Weapons.FULL_CUT_WIDTH, Weapons.BREACH_INNER if breach else 0.0)
-	var found: Dictionary = kit._terrain_near(at, sector["cells"])
-	var row := {"frame": _frame, "kind": "breach" if breach else "full_cut", "faces": (found["faces"] as Array).size(),
-		"merged": TerrainFaces.merge(found["faces"]).size(), "at": [at.x, at.y, at.z], "shares_ms": []}
+	var row := {"frame": _frame, "kind": "breach" if breach else "full_cut", "at": [at.x, at.y, at.z], "shares_ms": [],
+		"heading": [heading.x, heading.y, heading.z]}
 	_carves.append(row)
 	var begin := Time.get_ticks_usec()
 	if breach:
@@ -436,25 +435,49 @@ func _step_carve() -> void:
 		# (_step_carve_shares), the hits once it is done.
 		_breach_late = kit._carve_late("p3", at, heading, reach, 1.0, 0.0)
 		_breach_row = row
-		_step_carve_shares(kit, begin)
+		_step_carve_shares(kit, begin, true)
 	else:
 		kit.full_cut(at, heading, 1.0)
 		_close_carve(row, kit.volume_indicator.shapes.get("rivet_scar", {}), begin)
 
 
 # One share of the pending Breach carve, from begin; the hits once it is done.
-func _step_carve_shares(kit, begin := Time.get_ticks_usec()) -> void:
+func _step_carve_shares(kit, begin := Time.get_ticks_usec(), landing := false) -> void:
 	if _breach_late.is_empty():
 		return
-	var done: bool = kit._shade_late(_breach_late)
-	if not done:
-		(_breach_row["shares_ms"] as Array).append(snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001))
+	var now := Engine.get_physics_frames()
+	var carved: bool = _breach_late.has("result")
+	var done: bool = kit._shade_late(_breach_late, mini(kit.late_work, kit.LANDING_WORK) if landing else -1)
+	# As in the game: a light carve hits on the landing frame, a heavy one on a later frame once
+	# carved and due.
+	var hits := done and (landing or carved and now >= int(_breach_late["due"]))
+	if not hits:
+		if not carved:
+			(_breach_row["shares_ms"] as Array).append(snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001))
 		return
 	var late := _breach_late
 	_breach_late = {}
 	var shape: Dictionary = kit._late_shape(late)
 	kit._breach(shape, late["at"], late["heading"], late["reach"], 1.0, 0.0)
 	_close_carve(_breach_row, shape, begin)
+
+
+# Each carve's face counts, read once the record is over so they cost no recorded frame.
+func _carve_stats() -> void:
+	var kit = _game.combat.get_node_or_null("RivetKit")
+	if kit == null:
+		return
+	for row in _carves:
+		var at := Vector3(row["at"][0], row["at"][1], row["at"][2])
+		var heading := Vector3(row["heading"][0], row["heading"][1], row["heading"][2])
+		var breach: bool = row["kind"] == "breach"
+		var reach: float = kit.breach_reach() if breach else Weapons.FULL_CUT_REACH
+		var half: float = acos(PlayerBall.SKID_CONE) if breach else deg_to_rad(Weapons.FULL_CUT_DEG * 0.5)
+		var sector: Dictionary = kit._sector_cells(at, heading, reach, half, 0.0 if breach else Weapons.FULL_CUT_WIDTH, Weapons.BREACH_INNER if breach else 0.0)
+		var found: Dictionary = kit._terrain_near(at, sector["cells"])
+		row["faces"] = (found["faces"] as Array).size()
+		row["merged"] = TerrainFaces.merge(found["faces"]).size()
+		row.erase("heading")
 
 
 func _close_carve(row: Dictionary, shape: Dictionary, begin: int) -> void:
@@ -886,6 +909,8 @@ func _finish() -> void:
 	if _phase == "finished":
 		return
 	_phase = "finished"
+	if _view == "carve":
+		_carve_stats()
 	if _samples.size() < RECORD_FRAMES:
 		_errors.append("recorded %d of %d frames" % [_samples.size(), RECORD_FRAMES])
 	var segments := {}

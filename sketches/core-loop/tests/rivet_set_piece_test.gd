@@ -52,7 +52,8 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # clearance, carves the same points as a plain subtraction pass.
 # 2026-10-18 (RIVET-CURVE, "Beat later" and "Spread every Breach"): 238 -> 243. A heavy Breach
 # carve takes a share per tick and hits once done, never before LATE_TICKS; a light one hits on
-# the landing tick. The carve is byte for byte the one made at once.
+# the landing tick. The carve is byte for byte the one made at once. Frame headroom (same day):
+# a heavy carve hits the tick after its last share, so selection never shares a tick with one.
 
 
 func _initialize() -> void:
@@ -511,8 +512,8 @@ func _merge_fixture() -> void:
 
 
 # RIVET-CURVE ("Beat later", "Spread every Breach"): the captured bowl landing. A light carve
-# finishes on the landing tick; a heavy one carves a share per tick and hits once done, never
-# before LATE_TICKS. Either way the carve is byte for byte the one made at once.
+# finishes on the landing tick; a heavy one carves a share per tick and hits the tick after,
+# never before LATE_TICKS. Either way the carve is byte for byte the one made at once.
 func _late_landing_fixture(at: Vector3, dir: Vector3) -> void:
 	var reach: float = _kit.breach_reach()
 	var spot: Dictionary = _kit._commit_sector(at, dir, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
@@ -548,7 +549,7 @@ func _late_landing_fixture(at: Vector3, dir: Vector3) -> void:
 			hit_at = tick
 			break
 	var drawn: Dictionary = _kit.volume_indicator.shapes.get("rivet_breach", {})
-	_t.check("late landing: a heavy carve takes one share per tick and hits once carved", twice and shares > _kit.LATE_TICKS and carved_at == now + shares - 1 and hit_at == carved_at and not drawn.is_empty(), "%d shares, carved at +%d, hit at +%d" % [shares, carved_at - now, hit_at - now])
+	_t.check("late landing: a heavy carve takes one share per tick and hits the tick after its last", twice and shares > _kit.LATE_TICKS and carved_at == now + shares - 1 and hit_at == carved_at + 1 and not drawn.is_empty(), "%d shares, carved at +%d, hit at +%d" % [shares, carved_at - now, hit_at - now])
 	# A carve done in two shares still waits for LATE_TICKS.
 	_kit.late_work = work / 2 + 1
 	var quick: Dictionary = _kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
