@@ -7,6 +7,8 @@ const Fabricators := preload("res://src/build/fabricators.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
 const Accretion := preload("res://src/build/accretion.gd")
+const PartSets := preload("res://src/build/part_sets.gd")
+const SetTell := preload("res://src/presentation/set_tell.gd")
 const Parts := preload("res://src/build/parts.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Synergies := preload("res://src/build/synergies.gd")
@@ -103,6 +105,10 @@ var gates
 var fabricators
 var field
 var accretion
+# SI6: the complete sets' tell on the ball, and the sets this run has completed (a respec
+# that breaks a set keeps it here and in the codex's Found list).
+var set_tell
+var set_ledger = PartSets.Ledger.new()
 var sheet
 # SI5: the derived sheet between part-list changes; recompute() reads it, so pickup,
 # respec, run start and stage entry refold only the categories the changed parts touch.
@@ -208,6 +214,9 @@ func setup(ctx_ref) -> void:
 	accretion = Accretion.new()
 	ctx.player.roll_node().add_child(accretion)
 	accretion.setup()
+	set_tell = SetTell.new()
+	set_tell.name = "SetTell"
+	ctx.player.roll_node().add_child(set_tell)
 	bus = Triggers.Bus.new()
 	effects = ItemEffects.new(self)
 	clock = RunClock.new()
@@ -330,6 +339,9 @@ func offer_mark(part_id: String) -> String:
 	var completes := Parts.completed_by(part_id, held)
 	if completes != "":
 		return "* completes %s *" % Synergies.ROWS[completes]["name"]
+	var set_id := PartSets.completed_by(part_id, held)
+	if set_id != "":
+		return "* completes %s *" % PartSets.SETS[set_id]["name"]
 	var ingredient := Parts.ingredient_of(part_id, held)
 	if ingredient != "":
 		var named: bool = is_known(ingredient) or has_perk("lens")
@@ -521,6 +533,8 @@ func recompute() -> void:
 	_live = sheet.synergies.duplicate()
 	for synergy_id in sheet.consumed:
 		_live.append(synergy_id)
+	for set_id in set_ledger.note(sheet.sets):
+		_note_found("set:" + set_id, "%s: %s" % [PartSets.SETS[set_id]["name"], PartSets.SETS[set_id]["text"]])
 	_redraw()
 
 
@@ -744,6 +758,7 @@ func _apply_shell() -> void:
 
 func _redraw() -> void:
 	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies + sheet.consumed, ctx.run.heft_class())
+	set_tell.show_sets(sheet.sets)
 
 
 func _codex():
@@ -861,6 +876,7 @@ func _on_run_started(_class_id_value: String) -> void:
 	tread_fires = 0
 	_discovered.clear()
 	_found.clear()
+	set_ledger = PartSets.Ledger.new()
 	_refresh_seams()
 	bus.clear()
 	effects.reset_run()
