@@ -8,15 +8,15 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Where the sound bible's picks play (SOUND-INT picks, music thread 17 Oct): each world's
-# roaming take on its zone packs' shelf, never inside a Warden's arena; each boss's picked
+# roaming take on its zone packs' shelf (cut into the packs, RENDERS.md), never inside a
+# Warden's arena and crossing into it on the drums alone; each boss's picked
 # theme opening its fight; title A until an opening names its theme; theme C on a won run's
 # summary and the ending, the jazz-club summary on a loss; the camp take while the camp is
 # open. Every pick not on disk falls back to the older pack. The packs are stood in by
-# title_available, so the slots are checked everywhere; the shelf overlay is heard only where
-# the Oggs are.
+# title_available, so the slots are checked everywhere; the pivot is heard only where the
+# Oggs are.
 
 const ZONES := ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2"]
-const WORLD_ROAM := {1: "roam_spillway", 2: "roam_dig", 3: "roam_highdraft"}
 const WARDEN_SECTIONS := ["pivot", "build", "telegraph", "open", "drop", "break", "return"]
 
 class FakeCtx:
@@ -42,7 +42,7 @@ func _initialize() -> void:
 	_camp()
 	_bosses()
 	_shelf_rows()
-	_shelf_heard()
+	_pivot_heard()
 	for node in _nodes:
 		if is_instance_valid(node):
 			node.queue_free()
@@ -111,49 +111,46 @@ func _bosses() -> void:
 
 func _shelf_rows() -> void:
 	for zone in ZONES:
-		var path := String(MusicRows.ROWS[zone]["ace_manifest"])
-		var pack: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
-		var theme := String(pack["theme"])
-		var world := int(zone.substr(0, 1))
-		_t.eq("%s's shelf is its world's roaming pick" % zone, MusicRows.SHELF.get(theme, ""), WORLD_ROAM[world])
-		var roam := _manifest_at("res://assets/music_ace/%s/manifest.json" % WORLD_ROAM[world])
-		_t.eq("%s's roaming pick is in the zone's key" % zone, roam["key"], pack["key"])
-		_t.check("%s's roaming pick roams at 172" % zone, int(roam["clips"]["calm"]["bpm"]) == 172 and int(roam["clips"]["travel"]["bpm"]) == 172)
-		# The overlay replaces calm and travel only: every Warden section plays another clip.
+		var pack := _manifest(zone)
+		_t.check("%s roams at 172" % zone, int(pack["clips"]["calm"]["bpm"]) == 172 and int(pack["clips"]["travel"]["bpm"]) == 172)
 		var inside := true
 		for section in WARDEN_SECTIONS:
 			if pack["sections"].has(section) and String(pack["sections"][section]["clip"]) in ["calm", "travel"]:
 				inside = false
 		_t.check("%s: no Warden section plays the roaming shelf" % zone, inside)
 		_t.check("%s's Warden build is on the 129 grid" % zone, int(pack["clips"]["build"]["bpm"]) == 129)
-		if not MusicRows.pack_on_disk(MusicRows.ROWS[zone]["ace_manifest"]) or MusicRows.shelf_manifest(theme) == "":
-			_t.check("%s with no Oggs: the zone's own shelf" % zone, Ace.new(path, "", true).shelf_source == "")
 
 
-func _shelf_heard() -> void:
+# The pivot from the roaming shelf into the Warden's combat clips crosses on the drums alone:
+# the shelf's bass and lead are silent at the downbeat, so two keys never overlap.
+func _pivot_heard() -> void:
 	var heard := 0
 	for zone in ZONES:
 		var path := String(MusicRows.ROWS[zone]["ace_manifest"])
-		var theme := String(_manifest_at(path)["theme"])
-		if not MusicRows.pack_on_disk(path) or MusicRows.shelf_manifest(theme) == "":
-			print("SKIP control %s shelf PCM: its Oggs are not in this checkout" % zone)
+		if not MusicRows.pack_on_disk(path):
+			print("SKIP control %s pivot PCM: its Oggs are not in this checkout" % zone)
 			continue
 		heard += 1
-		var plain := Ace.new(path)
-		var band := Ace.new(path, "", true)
-		_t.check("%s loads with the roaming shelf" % zone, band.ready() and band.shelf_source == MusicRows.shelf_manifest(theme))
-		var pick_dir := band.shelf_source.get_base_dir()
-		for clip in ["calm", "travel"]:
-			_t.check("%s %s plays the pick" % [zone, clip], String(band.clips[clip]["paths"]["drums"]).begins_with(pick_dir))
-		var want := db_to_linear(float(_manifest_at(band.shelf_source).get("level_db", 0.0))) / band.level
-		_t.check("%s's shelf plays at the take's own level" % zone, is_equal_approx(float(band.clips["calm"].get("trim", 1.0)), want))
-		for clip in ["build", "cadence"]:
-			if band.clips.has(clip):
-				_t.eq("%s %s keeps the zone pack" % [zone, clip], band.clips[clip]["paths"], plain.clips[clip]["paths"])
+		var band := Ace.new(path)
 		band.start_level(0)
 		band.render(band.grid_bar * 2)
-		_t.check("%s's shelf renders with no short reads" % zone, band.short_reads == 0 and band.misses == 0)
-	print("PICK_SLOTS shelves=%d heard=%d" % [ZONES.size(), heard])
+		band.commit_warden()
+		var at := int(band.pending.get("at", -1))
+		_t.check("%s schedules the pivot" % zone, at > band.clock and band.pending.get("section", "") == "pivot")
+		band.render(maxi(at - band.clock - 64, 1))
+		var harmony := 0.0
+		var drums := 0.0
+		for v in band.voices + band.fading:
+			if v.stem == "drums":
+				drums = maxf(drums, v.gain)
+			elif not v in band.pending.get("voices", []):
+				harmony = maxf(harmony, v.gain)
+		_t.check("%s's shelf harmony is out before the pivot" % zone, harmony < 0.02, "gain %.3f" % harmony)
+		_t.check("%s's drums carry across the pivot" % zone, drums > 0.5, "gain %.3f" % drums)
+		band.render(band.grid_beat)
+		_t.eq("%s lands on the pivot" % zone, band.section, "pivot")
+		_t.check("%s pivots with no short reads" % zone, band.short_reads == 0 and band.misses == 0)
+	print("PICK_SLOTS pivots=%d heard=%d" % [ZONES.size(), heard])
 
 
 func _rig(on_disk: Dictionary) -> Rig:
