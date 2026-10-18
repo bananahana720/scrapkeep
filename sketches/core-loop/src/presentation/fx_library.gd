@@ -19,7 +19,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #   attach   "world" fires once where it is told, "ball" follows the ball and emits
 #            continuously, "persist" emits continuously where it was placed until stopped
 #   blend    "add" glows over the scene, "mix" is solid matter
-#   glow     brightness multiplier on the tint, so an additive spark still reads on sand
+#   glow     brightness multiplier on the tint; the glow and additive streak looks spend it on a
+#            wider halo instead of clipping to white, so an additive spark still reads on sand
 #   warm     a persistent emitter starts with a full cloud (preprocess = life), not a trickle
 #   shape    "point" or "ring" (emission on a flat ring of ring_m radius)
 #   forward  the emitter's direction is its own -Z, aimed at a target (the latch's pulse)
@@ -210,10 +211,19 @@ void vertex() {
 	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
 }
 """
+# 3D particles carry their spin angle only in INSTANCE_CUSTOM.x, so the shard turns itself about
+# an axis of its own: debris tumbles instead of sliding flat.
 const _CHUNK_VERTEX := """
 void vertex() {
 	v_life = INSTANCE_CUSTOM.y;
 	v_seed = seed_of(INSTANCE_ID);
+	vec3 axis = normalize(vec3(v_seed - 0.5, 0.6, fract(v_seed * 7.13) - 0.5));
+	float a = INSTANCE_CUSTOM.x + v_seed * 6.283;
+	float c = cos(a);
+	float s = sin(a);
+	mat3 turn = mat3(c) + (1.0 - c) * outerProduct(axis, axis) + s * mat3(vec3(0.0, axis.z, -axis.y), vec3(-axis.z, 0.0, axis.x), vec3(axis.y, -axis.x, 0.0));
+	VERTEX = turn * VERTEX;
+	NORMAL = turn * NORMAL;
 }
 """
 # How hot each look starts (before FlashGuard.whiten): sparks and beads flash toward white and
@@ -292,19 +302,24 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 		shader.code = (_HEAD % modes) + vertex + body
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
-		if kind == "streak" and blend != "add" or kind == "bead":
-			mat.render_priority = 0
 		_shaders[key] = mat
 	return _shaders[key]
 
 
 # An emitter's starting heat, read from FlashGuard each time it fires so a flipped toggle takes
 # effect on the next burst. `kind` defaults to the look the emitter was built with (meta fx_look).
+# Every emitter that took heat joins HEAT_GROUP, so Game.set_reduce_flashes re-reads the toggle on
+# emitters that keep running (embers, overdrive flecks, follow halos).
+const HEAT_GROUP := &"fx_heat"
+
 static func set_heat(p: GeometryInstance3D, kind := "") -> void:
 	if kind == "":
 		kind = p.get_meta("fx_look", "")
 	if HEAT.has(kind):
+		p.set_meta("fx_look", kind)
 		p.set_instance_shader_parameter("heat", FlashGuard.whiten(HEAT[kind]))
+		if not p.is_in_group(HEAT_GROUP):
+			p.add_to_group(HEAT_GROUP)
 
 
 # The material an emitter draws with, whatever its mesh type.
@@ -440,6 +455,8 @@ static func build(id: String) -> GPUParticles3D:
 	p.process_material = pm
 	p.draw_pass_1 = mesh
 	p.set_meta("fx_look", kind)
+	if kind == "puff" or kind == "bead":
+		p.draw_order = GPUParticles3D.DRAW_ORDER_VIEW_DEPTH
 	p.amount = int(s["max"])
 	p.lifetime = s["life"]
 	p.one_shot = s["attach"] == "world"

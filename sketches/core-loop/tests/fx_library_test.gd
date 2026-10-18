@@ -83,5 +83,10 @@ func _run() -> void:
 	var hot_on: float = spark.get_instance_shader_parameter("heat")
 	FlashGuard.on = false
 	t.check("a spark starts hot, and reduce flashes cuts its push toward white", hot_off > 0.0 and hot_on < hot_off * 0.5, "%s %s" % [hot_off, hot_on])
+	t.check("a fired emitter joins the heat group, so the toggle reaches it while it runs", spark.is_in_group(FxLibrary.HEAT_GROUP))
+	FlashGuard.on = true
+	FxLibrary.set_heat(spark)
+	t.check("re-reading heat from the emitter's own look follows the toggle", is_equal_approx(spark.get_instance_shader_parameter("heat"), hot_on))
+	FlashGuard.on = false
 	spark.free()
 	quit(t.verdict())

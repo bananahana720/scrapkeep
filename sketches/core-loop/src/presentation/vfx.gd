@@ -812,6 +812,8 @@ func _build_bursts() -> void:
 				p.angular_velocity_min = -540.0
 				p.angular_velocity_max = 540.0
 			p.set_meta("fx_look", look)
+			if look == "puff" or look == "bead":
+				p.draw_order = CPUParticles3D.DRAW_ORDER_VIEW_DEPTH
 			p.mesh = mesh
 			p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			p.name = "Burst_%s_%d" % [kind, i]
