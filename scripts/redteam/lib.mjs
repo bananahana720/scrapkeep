@@ -47,10 +47,17 @@ export function sweepSeed(wave, index) {
 
 // The persona x pilot grid has 30 cells. k % 5 and k % 6 walk every cell once in 30 steps, so
 // consecutive waves take the next `count` cells and the whole grid turns over every 30/count waves.
-export function planWave({ wave, count = 10, quick = false, carry = [], seed = waveSeed }) {
+// A head pass (`persona`) plays one persona on all six pilots, on seeds 60 + 6 x its index up in the
+// wave's block, so every head of a wave replays the same runs and a new stall is the head's change.
+export function planWave({ wave, count = 10, quick = false, carry = [], seed = waveSeed, persona = null }) {
   if (!Number.isInteger(wave) || wave < 0 || wave > 89) throw new Error("--wave must be an integer from 0 to 89");
   const jobs = [];
-  for (let i = 0; i < count; i++) {
+  if (persona) {
+    const at = PERSONAS.findIndex((p) => p.id === persona);
+    if (at < 0) throw new Error("--persona must be one of " + PERSONAS.map((p) => p.id).join(", "));
+    PILOTS.forEach((pilot, i) => jobs.push(botJob(PERSONAS[at], pilot, seed(wave, 60 + 6 * at + i), quick)));
+  }
+  for (let i = 0; i < (persona ? 0 : count); i++) {
     const k = (wave * count + i) % (PERSONAS.length * PILOTS.length);
     const persona = PERSONAS[k % PERSONAS.length];
     jobs.push(botJob(persona, PILOTS[k % PILOTS.length], seed(wave, i), quick));
