@@ -124,7 +124,24 @@ const ROWS := {
 	"ore_bin": {"family": "workings", "budget": "landform"},
 	"ore_bin_row": {"family": "workings", "budget": "landform"},
 	"timber_portal": {"family": "workings", "budget": "detail"},
+	# The sinkhole's authored pass (tools/blender/park/sinkhole_tubes.py, sinkhole_slabs.py): wash dressing and drop lips.
+	"lava_wash": {"family": "tunnels", "budget": "park_large"},
+	"lava_wash_short": {"family": "tunnels", "budget": "park_large"},
+	"gallery_wash": {"family": "caverns", "budget": "park_large"},
+	"drift_wash": {"family": "tunnels", "budget": "park_large"},
+	"skylight_lip": {"family": "tunnels", "budget": "park_large"},
+	"tube_mouth_lip": {"family": "tunnels", "budget": "park_large"},
+	"breach_lip": {"family": "tunnels", "budget": "park_large"},
+	"miners_cap": {"family": "tunnels", "budget": "park_large"},
+	"great_room_deck": {"family": "bowls", "budget": "park_large"},
+	"haulage_bed": {"family": "grind_lines", "budget": "park_large"},
 }
+
+# Wash dressing pieces (tools/blender/park/sinkhole_tubes.py) draped on the baked ground: a seat-fit row of one of these
+# moves every drawn vertex to the ground under it plus its height over the piece's own wash profile, so the drawn wall
+# band lies on the real wall wherever the floor sags under the seat's chord, a neighbour's cut overlaps or the row's own
+# end opens onto the plain. The -col keeps the seat fit; only the views move.
+const DRAPED := ["lava_wash", "lava_wash_short", "gallery_wash", "drift_wash"]
 
 # Each element's ride fact by its section 4 family; a row's own ride_fact wins. kicker_launch is the kicker's launch
 # path, not a WORLD_ROWS kind, so a kicker gets no ride sensor; ground and anchor_field carry none.
@@ -667,8 +684,56 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			for view in _views(scene, node, body, f[0], baked, f[1]):
 				_range(view, mid_end, 0.0, 0.0)
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	if baked and fits_seat(row) and DRAPED.has(String(row.get("recipe", ""))) and ground.is_valid():
+		drape(node, row, at_origin, ground)
 	_sensor(node, row, publish)
 	return node
+
+
+# The wash's own surface height over its floor centre at lateral x, the piece's profile (park_stamps.gd wash): 0 on
+# the flat middle 40% of the width, rising as depth (1 - (1 - w)^2) up the wall, depth at and beyond the crest.
+static func wash_profile(x: float, width: float, depth: float) -> float:
+	var t := absf(2.0 * x / maxf(width, 0.001))
+	if t >= 1.0:
+		return depth
+	if t <= 0.4:
+		return 0.0
+	var w := (t - 0.4) / 0.6
+	return depth * w * w
+
+
+# DRAPED: rebuild each view's mesh in the node's space with every vertex on the ground under it plus its height over
+# the authored profile. at_origin is the seat fit's GLB-to-node transform, so its inverse gives the authored point.
+static func drape(node: Node3D, row: Dictionary, at_origin: Transform3D, ground: Callable) -> void:
+	var frame := row_transform(row, ground)
+	var width := float(row["size"][2])
+	var depth := float(row["size"][1])
+	var back := at_origin.affine_inverse()
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", false, false):
+		var mesh := view.mesh
+		if mesh == null:
+			continue
+		var out := ArrayMesh.new()
+		for i in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(i)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			for k in verts.size():
+				var v := view.transform * verts[k]
+				var p := back * v
+				var w := frame * v
+				v.y = float(ground.call(w.x, w.z)) - frame.origin.y + p.y - wash_profile(p.x, width, depth)
+				verts[k] = v
+			arrays[Mesh.ARRAY_VERTEX] = verts
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			out.surface_set_material(i, mesh.surface_get_material(i))
+		var overrides := []
+		for i in mesh.get_surface_count():
+			overrides.append(view.get_surface_override_material(i))
+		view.mesh = out
+		for i in overrides.size():
+			if overrides[i] != null:
+				view.set_surface_override_material(i, overrides[i])
+		view.transform = Transform3D.IDENTITY
 
 
 # A greybox primitive of the row's size ([length, height, width], length along the facing) sitting on its base, with

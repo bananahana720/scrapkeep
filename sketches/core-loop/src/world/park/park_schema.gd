@@ -70,8 +70,10 @@ const CONTRAPTION_KEYS := {
 	"valve": ["at", "door"],
 	"cracked_wall": ["at", "size", "turn"],
 	"thermal": ["at", "radius", "height"],
+	"cinder": ["strips", "drag"],
+	"glaze": ["strips", "push", "cap"],
 }
-const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal"]
+const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal", "cinder", "glaze"]
 const CONTRAPTION_RECIPES := ["", "gauge", "geyser_vent", "cannon", "trebuchet", "lift_platform", "barge"]
 
 # Activity presentation uses an ACTIVITY_ROWS key or the kind's existing cue.view alias.
@@ -93,6 +95,8 @@ const RECIPES := [
 	"landmark_sky_island", "landmark_spire",
 	"anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn",
 	"ore_bin", "ore_bin_row", "timber_portal",
+	"lava_wash", "lava_wash_short", "gallery_wash", "drift_wash",
+	"skylight_lip", "tube_mouth_lip", "breach_lip", "miners_cap", "great_room_deck", "haulage_bed",
 ]
 const GREYBOX := "greybox:"
 # The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).
