@@ -19,6 +19,7 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cottonwood as cw
+import polish
 from cottonwood import kit, common
 
 NAME = "cottonwood_detail1"
@@ -193,6 +194,7 @@ def export(name, build_fn, size, out_dir, smooth=True):
 
 
 def main():
+    polish.enable(bevel=0, **cw.kit.BAKE)  # light shell polish: smooth shading, bake
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(cw.MODELS))

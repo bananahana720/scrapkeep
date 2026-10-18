@@ -12,6 +12,7 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 
 SEED = 20261002
 PLATE_THICKNESS = 0.055
@@ -135,6 +136,9 @@ def tuft(name, height, blades, seed):
 
 def main():
     common.reset()
+    # Polish (POLISH.md): clutter_kit_asset_test pins per-piece triangle caps of 24 to 72, so smooth shading and the
+    # AO/wear bake only (detail 1, bevel 0). The recipe writes its own GLB, so each piece is baked on its own.
+    polish.enable(detail=1, bevel=0)
     # The shared bare-metal preview is polished bone; this dry clutter uses dull exposed steel.
     metal = common.material("bare_metal").node_tree.nodes.get("Principled BSDF")
     metal.inputs["Base Color"].default_value = common.rgba(common.mix("charcoal", "bone", 0.36))
@@ -148,6 +152,7 @@ def main():
                tuft("tuft_a", 0.32, 3, SEED + 3), tuft("tuft_b", 0.38, 4, SEED + 4)]
     bpy.context.view_layer.update()
     for obj in objects:
+        polish.bake(obj)
         print("CK_GEOMETRY", obj.name, "triangles", common.tris(obj),
               "size", tuple(round(v, 6) for v in obj.dimensions),
               "bottom", round(min(v.co.z for v in obj.data.vertices), 6))
@@ -159,7 +164,7 @@ def main():
                               export_apply=True, export_yup=True, export_materials="EXPORT",
                               export_vertex_color="ACTIVE", export_extras=False,
                               export_animations=False, export_cameras=False, export_lights=False)
-    common.canonical_indices(out)
+    common.canonical_indices(out, vertices=True)
     print("EXPORTED", out)
 
 

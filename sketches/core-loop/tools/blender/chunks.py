@@ -19,7 +19,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import common  # noqa: E402
+import polish  # noqa: E402
 from common import Part, Vector  # noqa: E402
+
+# Polish (POLISH.md): the per-variant bands are pinned by hero_assets_test, so smooth shading and the AO/wear
+# bake on every chunk, one chamfer only on edges over 0.2 m (the plates and the large panels).
+polish.enable(detail=1, bevel=0.012, bevel_min=0.2)
 
 BASE = -0.07
 BANDS = {"small": (60, 120), "medium": (150, 300), "large": (400, 800)}
@@ -124,6 +129,8 @@ def main():
             name = "chunk_%s_%d" % (size, v)
             rng = random.Random("scrapkeep-" + name)
             p = Part(name)
+            if size == "small":
+                p.bevel = 0  # 60 to 120 band: small plates take smooth shading and the bake only
             build(p, rng, v)
             loc = (x0 + (v - 1) * (0.5 if size == "small" else 0.75 if size == "medium" else 0.95), 0, 0)
             for vert in p.bm.verts:

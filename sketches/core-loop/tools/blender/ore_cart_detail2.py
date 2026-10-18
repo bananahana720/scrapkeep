@@ -126,6 +126,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(oc["MODELS"]))
     args = parser.parse_args(argv)
+    oc["polish_on"]()
     common.reset()
     kit.PARTS.clear()
     root = common.empty(NAME)
