@@ -1,6 +1,7 @@
 extends Node3D
 
 const GameEvents := preload("res://src/core/game_events.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
@@ -631,9 +632,12 @@ func set_reduced_motion(on: bool) -> void:
 
 
 # Reduce flashes: every flash, white pop and strobe reads FlashGuard when it fires, so the
-# switch takes effect on the next flash without touching live nodes.
+# switch takes effect on the next flash. Particle emitters that keep running re-read it now.
 func set_reduce_flashes(on: bool) -> void:
 	FlashGuard.on = on
+	if is_inside_tree():
+		for p in get_tree().get_nodes_in_group(FxLibrary.HEAT_GROUP):
+			FxLibrary.set_heat(p)
 
 
 func set_fullscreen(on: bool) -> void:
