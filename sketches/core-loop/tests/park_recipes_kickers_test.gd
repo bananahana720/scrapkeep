@@ -7,7 +7,7 @@ extends SceneTree
 #     the folded registry says origin entry_lip.
 # (b) Budgets after import: base and -col within the landform class (8,000 triangles, two draws), each shell one draw
 #     within the detail class.
-# (c) Coverage: every greybox flume and pit kicker, every sinkhole lava_channel half-pipe, every crown kicker and every
+# (c) Coverage: every flume and pit kicker (greybox or already seated), every sinkhole lava_channel half-pipe, every crown kicker and every
 #     islands shelf-edge step lip has a piece of its width and height (piece_for), and its seat fit is not refused.
 # (d) Placed on a seat-fit row on flat ground, a piece's collider is the row's footprint: width W, lip height H (the
 #     shelf edge's coping 0.06 m), centred on the row's at.
@@ -134,7 +134,9 @@ static func piece_for(row: Dictionary) -> String:
 
 # The rows these pieces exist for: greybox kickers in the flume, pit, crown and islands, and the sinkhole's lava channels.
 static func _target(park: String, row: Dictionary) -> bool:
-	if String(row.get("recipe", "")) != "greybox:" + String(row["element"]):
+	# A row already seated with one of these pieces still counts (park_pit's kickers, authored pass 2026-10-17).
+	var recipe := String(row.get("recipe", ""))
+	if recipe != "greybox:" + String(row["element"]) and not PIECES.has(recipe):
 		return false
 	if park.ends_with("park_sinkhole.json"):
 		return row["element"] == "half_pipe" and String(row["id"]).begins_with("lava_channel_")
