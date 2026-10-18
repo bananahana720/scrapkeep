@@ -49,6 +49,14 @@ const AUDIT := {
 	"res://src/combat/lamp_swarm.gd": ["WAVE"],
 	"res://src/combat/line_cutter.gd": ["PROJECTILE"],
 	"res://src/combat/pit_jaw.gd": ["INSTANT"],
+	# 2026-10-17 (wave 18): the Splitter's fuse blast.
+	"res://src/combat/splitter_pod.gd": ["INSTANT"],
+	# 2026-10-17 (stage/alpha-w16): the Dispatcher's tube drop (#59) and the jolt layer's mat (#65).
+	"res://src/combat/dispatcher.gd": ["PROJECTILE"],
+	"res://src/combat/jolt_layer.gd": ["INSTANT"],
+	# 2026-10-17 Highdraft roster: the ballast heavy and the gap net, one telegraph each.
+	"res://src/combat/ballast_heavy.gd": ["INSTANT"],
+	"res://src/combat/gap_net.gd": ["LANE"],
 	# alpha w7 Mind: build() lays each descriptor's own type; DESCRIPTORS audits where it is named.
 	"res://src/boss/mind_attacks.gd": ["descriptor", "descriptor", "descriptor"],
 }

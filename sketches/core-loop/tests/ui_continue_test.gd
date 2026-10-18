@@ -85,7 +85,7 @@ func _bad_file(label: String, text: String, cause: String) -> void:
 func _run() -> void:
 	await _boot()
 	_game._screen_key(KEY_C)
-	_report("no saved run", _game.screens.button_for("continue") == null and _game.screens.button_for("start").text == "Start"
+	_report("no saved run", _game.screens.button_for("continue") == null and _game.screens.button_for("start").text == "Play"
 			and _game.flow.state_name() == "title",
 		"buttons %s; after C flow %s" % [_buttons(), _game.flow.state_name()])
 

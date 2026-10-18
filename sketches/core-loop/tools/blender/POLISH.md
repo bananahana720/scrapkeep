@@ -1,0 +1,105 @@
+# Model polish
+
+`polish.py` turns a recipe's primitive stack into a model that reads as one object: soft
+bevels, denser curves, smooth shading with hard creases, optional Catmull-Clark
+subdivision, and baked ambient occlusion and edge wear. Andrew asked for it on 18 Oct:
+"bake the models", make them denser and less "geometric blobbish with spheres tacked
+on", as long as frames hold.
+
+## Opting a recipe in
+
+Call `polish.enable()` after `import common` and before the first `Part`:
+
+```python
+import common
+import polish
+from common import Part
+
+polish.enable(detail=2, bevel=0.03)
+```
+
+`common.Part.to_object` then bevels and smooths each part before it triangulates, and
+subdivides it when asked. `common.export` bakes AO and wear over the whole tree before it
+writes the GLB. A recipe that never calls `enable()` builds byte for byte as before.
+
+Per part, set `part.bevel` (metres, `0` for none) or `part.subsurf` (levels) before
+`to_object()`. Organic shapes such as crew bodies and heads look best with `bevel = 0`
+and `subsurf = 2`; hard machinery with the default bevel and `subsurf = 0` or `1`; thin
+sails, nets and decals with `bevel = 0` and `subsurf = 0`.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `detail` | 2 | Segment multiplier for `cyl`, `rod`, `uv` and `ring`; `ico` gains a subdivision |
+| `bevel` | 0.03 | Bevel width in metres on edges sharper than `bevel_angle` (30°) |
+| `bevel_segments` | 1 | One chamfer; smooth shading rounds it |
+| `sharp_angle` | 50° | Edges sharper than this stay hard after the bevel |
+| `subsurf` | 0 | Catmull-Clark levels; about 4x triangles per level |
+| `crease_angle` | 70° | On subdivided parts, edges sharper than this stay creased |
+| `ao`, `ao_rays`, `ao_reach`, `ao_strength` | on, 24, 0.18, 0.55 | Ambient occlusion bake |
+| `edge` | 0.18 | Convex edges lighten and creases darken by up to this much |
+| `bake_slots` | the `vc` slots | Slots whose vertex colours take the bake |
+
+## What the bake writes
+
+- Vertex colours of faces in `bake_slots` (by default `paint`, `pilot`,
+  `ancient_enamel`, `hydraulic`) are multiplied by the AO and wear. These slots already
+  show vertex colour in game, so the bake is visible with no runtime change.
+- Every baked mesh gets a second UV map, `Bake` (glTF `TEXCOORD_1`, Godot `UV2`):
+  `x` is the unoccluded fraction (1 is open, 0 is covered) and `y` is wear (0.5 neutral,
+  higher on convex edges). Materials of any slot can opt in, for example
+  `ALBEDO *= mix(1.0, UV2.x, 0.55)`. The first UV map is all zeros, since every runtime
+  material maps by triplanar projection. A mesh that already has two UV maps keeps them
+  and gets no `Bake` map.
+
+## Rebuilds stay byte-identical
+
+Blender's corner normals, polygon normals and subdivision differ in the last bits
+between runs. The pass computes its own normals in Python doubles, subdivides in Python
+(`polish.subdivide`), rounds AO before quantising to 1/1024, and `common.export` sorts
+each primitive's vertices when polish is on. `check_polish.py` builds a recipe twice
+under polish and fails on any byte difference.
+
+```sh
+blender -b --factory-startup -P sketches/core-loop/tools/blender/check_polish.py -- \
+  world_three/enemy_kite_drone.py subsurf=1
+```
+
+## Budgets
+
+Polish raises triangle and vertex counts, not draw counts: it adds no surfaces. The class
+caps in `assets/asset_budgets.json` are already raised for it, so a family pass changes
+only its recipes' own asserts. The caps hold until one 4080 frame check on the densest
+fight confirms them.
+
+| Class | Triangles then | Triangles now | Vertices now |
+| --- | --- | --- | --- |
+| enemy | 1,100 | 10,000 | 19,100 |
+| pilot | 4,600 | 12,000 | 8,100 |
+| warden_kit | 1,500 | 6,000 | 11,200 |
+| warden_base | 5,000 | 20,000 | 38,400 |
+| prop | 270 | 2,000 | 4,600 |
+| landmark | 900 | 4,000 | 8,900 |
+| detail | 1,500 | 4,000 | 8,000 |
+| clutter | 280 | 1,200 | 2,800 |
+| gate | 2,700 | 6,000 | 11,800 |
+| chunk | 2,900 | 6,000 | 17,600 |
+
+Vertices keep each class's old ratio to triangles. Shell, hero_landmark, park_large,
+landform and scenery caps are unchanged.
+
+## Before and after
+
+`polish_compare.py` builds a recipe with polish off and on and writes one JPEG, today's
+model on top and the polished one below, for the family's phone page:
+
+```sh
+blender -b --factory-startup -P sketches/core-loop/tools/blender/polish_compare.py -- \
+  world_one/enemy_reactor.py /tmp/reactor.jpg
+```
+
+## Keep
+
+Polish changes surfaces only. Keep node names, mesh names, material slot names, bone
+names, rigid weights, origins and collider envelopes. A recipe's envelope asserts
+(radius, half extents, heights) must still pass: bevels and subdivision only pull
+surfaces inward.

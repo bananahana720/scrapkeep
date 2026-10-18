@@ -53,6 +53,7 @@ These world motifs match the fields and cast-times design (`design-v3/FIELDS-AND
 | Prop crew (new id `prop_crew`) | new behaviour, new body | Holds shoring over its pack. Ram the prop and the roof comes down on everything under it, the player included if on the floor. | Ram the prop from the wall side | The prop sits on a floor the burrowers own |
 
 - Dig elite: `drill_crew` plus the Foreman under a floodlight, replacing the Spillway elite on stages 3 and 4. Until the Foreman merges: `drill_crew`, `drill_crew`, `pit_jaw`. Every member of a Dig elite pack arrives plated, following Andrew's Q3 answer "Flow, Plate, Wind": `EliteAffixes.PLATED` sets spec armour `plated`, which `enemy.armour_class()` hands to `damage_families.gd` on PR #65. Kinetic hits are resisted, and arc and abilities are weak (`tests/dig_plated_elite_test.gd`).
+- Prop crew packs (identity thread, 17 Oct): stage 3 `dig_bore` is `drill_crew`, `burrower`, `prop_crew`, the teaching pack (ram the jack from the wall side; the burrower punishes a ball lining up the ram from the floor). Stage 4 `deep_crew` is `drill_crew`, `drill_crew`, `lamp_swarm`, `prop_crew`, the payoff (the prop is kill-first; one wall ram wipes both drill crews and the floodlight). Never in the Dig elite or the jaw packs; stage cap 1.
 - Dig fleet landing becomes a lift cage rising from the pit. Cave-ins start where a burrower surfaces.
 - Specials in the Dig: Splitter pods burrow; the Dispatcher hangs from a ceiling rig; the Linker joins plated crews.
 

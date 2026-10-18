@@ -15,6 +15,7 @@ const Scatter := preload("res://src/world/scatter.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # A park map id (`--table=park`, park_defs.gd) reads its park file: src/world/park/<id>.json once a
 # stage unit (KD1 to KD6) lands it, else the stage-1 stand-in under assets/park/ (KD0). A park id
@@ -178,7 +179,15 @@ func prepare(index: int) -> void:
 	var i := _index(index)
 	if not _is_park[i] or _roots[i] != null or _parent == null:
 		return
-	_build_park_stage(i, true)
+	_build_park_stage(i, _worker_builds())
+
+
+# A played game builds park stages on worker threads and attaches them inside a wall-clock
+# budget. A bot run (SimClock.ticks) builds them whole in the calling frame instead: the
+# frame a threaded build finishes on depends on CPU load, and the static bodies it adds to
+# the shared physics world move the solver's results, so a seed stops replaying.
+static func _worker_builds() -> bool:
+	return not SimClock.ticks
 
 
 func _build_stage(i: int) -> void:
@@ -251,7 +260,7 @@ func _on_park_built(i: int) -> void:
 	# The park rows (KB9): every row naming a recipe, with its collider and ride sensor, placed on the height() floor.
 	if maps[i] is ParkMap:
 		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i])
-	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), true)
+	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), _worker_builds())
 
 
 # A park stage's placed rows (park_recipes.gd Placer, "ParkRows" under its root), or null.

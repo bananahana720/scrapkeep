@@ -13,6 +13,7 @@ The container has no GPU. What runs here:
 | --- | --- | --- |
 | Godot tests, lint and bot runs | `npm run sketch:gate`, `npm run sketch:smoke -- --sketch core-loop --test <name>` | 4 vCPU; set `SMOKE_SLOTS=4` to use them all. |
 | Linux test build with win proofs | `node scripts/cloud/export-headless.mjs --win-proof` | Import, release gate, export, headless boots, three skipper wins. No ACE stems, no boss smoke, no tarball. |
+| Red-team pass on a wave build | `npm run redteam -- --wave=<n>` | Rotating bot personas, item fuzz, build sweep, dense-fight bench, placeholders; one ranked findings page. See [the red team](../redteam/README.md). About an hour. |
 | Blender recipes and Cycles stills | `blender -b --threads 2 --python-exit-code 1 -P <recipe> -- ...` | Recipe GLBs match the committed bytes. Cycles renders on the CPU. |
 
 What still needs Andrew's machine: `npm run sketch:export` (ACE stems are gitignored, and the boss smoke needs Vulkan), Eevee and any Vulkan capture, ACE-Step music, and playtesting.

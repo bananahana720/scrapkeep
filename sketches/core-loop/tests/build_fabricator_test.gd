@@ -9,7 +9,8 @@ const Fabricators := preload("res://src/build/fabricators.gd")
 # horizontal speed within 15%. Rolling through short of cogs grants nothing and costs
 # nothing. The rich pass clears the field first, so no gear on the lane moves the wallet. The ball is
 # driven through two hoops on the flat top shelf with ctx.calm set, so the speed checks
-# measure the ball and the fabricator alone.
+# measure the ball and the fabricator alone. Each pass through a stocked hoop, bought or
+# not, sends one world_fact("fabricator_used") at the hoop (the fabricator tune's cue).
 
 const APPROACH := 16.0
 const APPROACH_SPEED := 20.0
@@ -37,6 +38,7 @@ var _range_before := 0.0
 var _pieces_before := 0
 var _poor := {}
 var _collected := 0
+var _used: Array = []
 
 
 func _initialize() -> void:
@@ -57,6 +59,9 @@ func _physics_process(_delta: float) -> bool:
 			_game.ctx.calm = true
 			_game.player.source = _source
 			_game.events.part_gained.connect(func(id: String, source: String): _gained.append([id, source]))
+			_game.events.world_fact.connect(func(kind: String, at: Vector3):
+				if kind == "fabricator_used":
+					_used.append(at))
 			_game.events.scrap_collected.connect(func(amount: int, _at: Vector3, _total: int): _collected += amount)
 			_game.flow.press_start()
 			_game.flow.choose_class(0)
@@ -126,6 +131,7 @@ func _start_rich_pass() -> void:
 	_range_before = _game.player.grapple_range()
 	_pieces_before = _build.accretion.piece_count()
 	_gained.clear()
+	_used.clear()
 	_collected = 0
 	_drive_at(_fab)
 	_phase = "rich"
@@ -145,6 +151,7 @@ func _check_rich() -> void:
 		"grapple range %.1f m before, %.1f m after Long Spool" % [_range_before, _game.player.grapple_range()])
 	_report("part shows on the ball", _build.accretion.piece_count() == _pieces_before + 1,
 		"accreted hardware pieces %d before, %d after" % [_pieces_before, _build.accretion.piece_count()])
+	_report("fabricator used, once at the hoop", _used.size() == 1 and _used[0] == _fab["at"], "fabricator_used facts %s" % [_used])
 	_report("fabricator restocks", _fab["restock"] > 0.0, "restock timer %.2f s after the sale" % _fab["restock"])
 
 
@@ -156,6 +163,7 @@ func _start_poor_pass() -> void:
 	_poor = _build.fabricators.add_at(at, Vector3(0.0, 0.0, 1.0), "hot_rivets")
 	_poor["parts_before"] = _game.run.parts.size()
 	_gained.clear()
+	_used.clear()
 	_drive_at(_poor)
 	_phase = "poor"
 
@@ -165,6 +173,7 @@ func _check_poor() -> void:
 	var after: float = _poor.get("after", 0.0)
 	_report("short of cogs", _gained.is_empty() and _game.run.parts.size() == _poor["parts_before"],
 		"rolled through with %d cogs against a price of %d: part_gained %s" % [_game.run.cogs, Fabricators.price("hot_rivets", _poor["parts_before"]), _gained])
+	_report("short of cogs still a pass", _used.size() == 1, "fabricator_used facts %s" % [_used])
 	_report("short of cogs momentum", _kept(before, after),
 		"%.2f m/s before, %.2f m/s after (within %d%%)" % [before, after, int(TOLERANCE * 100.0)])
 

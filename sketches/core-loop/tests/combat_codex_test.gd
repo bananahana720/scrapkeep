@@ -1,6 +1,7 @@
 extends SceneTree
 # F6 2026-10-04: magnet_break and the Warden cap stomp are gone with the plating fight.
 
+const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
@@ -40,6 +41,7 @@ var _lobber: Node3D
 # The wave 9 units still waiting on the ball's teleport, and where the ball started.
 var _w9_units := {}
 var _w9_home := Vector3.ZERO
+var _roof_fall: Node3D
 # Set by the last case; a script error that aborts a case leaves it false.
 var _last_case_ran := false
 
@@ -82,7 +84,10 @@ func _physics_process(delta: float) -> bool:
 				_step = 3
 		3:
 			_clock += delta
-			if _combat.discovered.has("shell_return") or _clock > 4.0:
+			var roof_done: bool = not is_instance_valid(_roof_fall) or _combat.discovered.has("roof_drop")
+			if (_combat.discovered.has("shell_return") and roof_done) or _clock > 4.0:
+				_report("roof_drop", _combat.discovered.has("roof_drop"),
+					"a rammed prop's roof crushed the drill crew under it")
 				_report("shell_return", _combat.discovered.has("shell_return"),
 					"a batted shell landed on its own lobber and killed it (%.2f s after the bat)" % _clock)
 				_warden_tricks()
@@ -200,6 +205,9 @@ func _w9_tricks() -> void:
 	_combat.strike(rig, "slam", 14.0)
 	_report("bore_breach", _combat.discovered.has("bore_breach") and rig.stopped == 1,
 		"a slam on a drill crew mid-bore stopped it (stopped %d)" % rig.stopped)
+	# 2026-10-17 (damage families, PR #65): a hit past the rig's plating reads its armour.
+	_combat.strike(rig, "test_bolt", 40.0, "", "weapon")
+	_report("armour_plated", _combat.discovered.has("armour_plated"), "a full hit on a plated drill crew reads it")
 
 	var cutter: Node3D = _w9_spawn("line_cutter", home + Vector3(-10.0, 0.0, 8.0))
 	cutter._warn(_w9_to(cutter))
@@ -218,9 +226,38 @@ func _w9_tricks() -> void:
 	fleet.holds.snap(crew, "jump")
 	_report("deck_winch", _combat.discovered.has("deck_winch") and hooked and crew.broken_by == "jump",
 		"an anchor crew hooked the ball (%s), then a jump slipped it (%s)" % [hooked, crew.broken_by])
-	for node in [rig, cutter, crew]:
+	# A Foreman knocked out while its crew stands clocks them out.
+	var foreman: Node3D = _w9_spawn("foreman", home + Vector3(-8.0, 0.0, -14.0))
+	var hand: Node3D = _w9_spawn("chaser", home + Vector3(-12.0, 0.0, -14.0))
+	foreman._claimed = true
+	foreman._hire(hand)
+	foreman.take_damage(1.0e6)
+	_report("shift_over", _combat.discovered.has("shift_over") and AttackBudget.clocked_out(hand),
+		"a Foreman fell with its crew standing (crew clocked out %s)" % AttackBudget.clocked_out(hand))
+	var splitter: Node3D = _w9_spawn("splitter", home + Vector3(-8.0, 0.0, -6.0))
+	splitter.hp = 1.0
+	_combat.strike(splitter, "stomp", 30.0)
+	_report("split_pop", _combat.discovered.has("split_pop") and splitter.get_meta("split", true) == false,
+		"a stomp killed a Splitter clean (split %s)" % splitter.get_meta("split", null))
+	# A pod whose ring held the ball at its fuse blows up on an empty ring.
+	var pod: Node3D = _w9_spawn("splitter_pod", home + Vector3(-12.0, 0.0, 6.0))
+	pod._warn(_w9_to(pod))
+	pod._ring_had_ball = true
+	pod.phase = pod.Phase.LIVE
+	pod._go_live()
+	_report("fuse_pod", _combat.discovered.has("fuse_pod") and pod.blasts == 1,
+		"a ball out of a pod's ring when it blew (blasts %d)" % pod.blasts)
+	for node in [rig, cutter, crew, hand]:
 		if is_instance_valid(node):
 			node.queue_free()
+
+	# A rammed prop drops its roof on the drill crew sheltering under it. The roof lands
+	# after its warning, so it reports beside the shell (step 3).
+	var shoring: Node3D = _w9_spawn("prop_crew", home + Vector3(-16.0, 0.0, -12.0))
+	shoring.set_physics_process(false)
+	var mate: Node3D = _w9_spawn("drill_crew", shoring.roof_centre())
+	mate.set_physics_process(false)
+	_roof_fall = shoring.knock_prop()
 	_w10_pack_tricks(home)
 
 	var burrower: Node3D = _w9_spawn("burrower", home + Vector3(8.0, 0.0, 0.0))
@@ -354,6 +391,10 @@ func _warden_tricks() -> void:
 		# 2026-10-10 (wave 13, B6): the five skill bar rows need an ultimate and a loaded bite, which
 		# this staging does not run; tests/discovery_skill_bar_test.gd opens each on its trigger.
 		if id in ["loaded_line", "set_piece", "set_piece_core", "set_piece_cash_in", "set_piece_breakout"]:
+			continue
+		# 2026-10-17 (Highdraft roster): a ring-out needs a rim and a gap sling a gap, which this flat
+		# staging lacks; tests/highdraft_roster_test.gd opens each on the stage 5 islands.
+		if id in ["ring_out", "gap_sling"]:
 			continue
 		# 2026-10-04 (wave 9): detector-pending entries declare a hint but no enemy fires them yet.
 		if CodexEntries.DETECTOR_PENDING.has(id):

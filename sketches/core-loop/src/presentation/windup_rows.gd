@@ -36,6 +36,11 @@ const ROWS := {
 		"idle": {"style": "sway", "amplitude": 0.05, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.55}},
 	"ramp_flipper": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E14": ["warn_seconds"]},
 		"idle": {"style": "bob", "amplitude": 0.05, "beats": 2.5}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
+	"linker": {"color_role": "neutral", "shape": "none", "sound": "none", "attacks": {"none": []},
+		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
+	# The Foreman never attacks; its horn is the special's own cue (special_cues.gd).
+	"foreman": {"color_role": "neutral", "shape": "none", "sound": "none", "attacks": {"none": []},
+		"idle": {"style": "tick", "amplitude": 0.03, "beats": 2.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"catch_trap": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E15": ["warn_seconds"]},
 		"idle": {"style": "tick", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "pop", "parts": 4, "seconds": 0.4}},
 	"reactor_relic": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E16": ["warn_seconds"]},
@@ -57,8 +62,25 @@ const ROWS := {
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"kite_drone": {"color_role": "hazard", "shape": "diamond", "sound": "warn_dive", "attacks": {"E24": ["warn_seconds"]},
 		"idle": {"style": "hover", "amplitude": 0.07, "beats": 2.5}, "death": {"style": "spin_down", "parts": 3, "seconds": 0.45}},
+	# Kill-first specials (roster_specials.gd): the tell's sound is the special's own cue.
+	"dispatcher": {"color_role": "hazard", "shape": "cross", "sound": "none", "attacks": {"E26": ["warn_seconds"]},
+		"idle": {"style": "tick", "amplitude": 0.03, "beats": 2.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
+	"prop_crew": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E31": ["ROOF_WARN"]},
+		"idle": {"style": "sway", "amplitude": 0.03, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"pit_jaw": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E30": ["warn_seconds"]},
 		"idle": {"style": "tick", "amplitude": 0.04, "beats": 2.0}, "death": {"style": "pop", "parts": 4, "seconds": 0.4}},
+	"splitter": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {},
+		"idle": {"style": "breathe", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "pop", "parts": 3, "seconds": 0.4}},
+	"splitter_pod": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E25": ["warn_seconds"]},
+		"idle": {"style": "bob", "amplitude": 0.05, "beats": 1.5}, "death": {"style": "pop", "parts": 1, "seconds": 0.3}},
+	# The jolt layer's voice is file-backed (src/presentation/jolt_layer_audio.gd, load if
+	# present); its sound names this row once SfxBank registers the jolt_layer_* cues (PR #12).
+	"jolt_layer": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E27": ["warn_seconds"]},
+		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
+	"ballast_heavy": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E32": ["warn_seconds"]},
+		"idle": {"style": "breathe", "amplitude": 0.02, "beats": 3.0}, "death": {"style": "collapse", "parts": 8, "seconds": 0.7}},
+	"gap_net": {"color_role": "hazard", "shape": "star", "sound": "none", "attacks": {"E33": ["warn_seconds"]},
+		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
 }
 
 

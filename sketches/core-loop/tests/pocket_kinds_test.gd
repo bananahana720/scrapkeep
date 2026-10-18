@@ -231,6 +231,9 @@ func _ladder() -> void:
 		var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
 		var count := 0
 		for row in data.activity_rows:
+			# A park's opt-in relay (SR10) is an event beside the pockets, not a pocket site.
+			if row.activity == "hold_the_relay":
+				continue
 			var previous := 0
 			for kind in KINDS.slice(0, 4):
 				var admitted := _admitted(stage, kind, data.activity_rows.find(row), true)

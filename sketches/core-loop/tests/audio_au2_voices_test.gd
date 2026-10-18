@@ -7,10 +7,10 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # events have a short tune each. Buffers, not ears.
 
 const CEILING := 0.95
-# id: [min seconds, max seconds]
+# id: [min seconds, max seconds]. lore_found and pilot_unlocked play the event-set files (1.39 s, 2.10 s).
 const TUNES := {
 	"pickup_fountain": [0.3, 0.5], "synergy_fired": [0.6, 0.9], "evolution_fired": [0.6, 0.9],
-	"lore_found": [0.6, 0.9], "pilot_unlocked": [0.6, 0.9], "pilot_unlocked_sable": [0.6, 0.9],
+	"lore_found": [1.2, 1.6], "pilot_unlocked": [1.8, 2.4], "pilot_unlocked_sable": [0.6, 0.9],
 	"pilot_unlocked_rivet": [0.6, 0.9], "pilot_unlocked_kest": [0.6, 0.9], "pilot_unlocked_tarn": [0.6, 0.9],
 	"pilot_unlocked_tally": [0.6, 0.9], "pilot_unlocked_cannon": [0.6, 0.9],
 }

@@ -26,12 +26,15 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 
-func _fog_matches(label: String, row: Dictionary) -> void:
+# 2026-10-17 (one day per run): an open-sky stage's fog leans toward its time of day, so the colour
+# to keep is the stage look's (WorldLook.environment), not the bare world row's.
+func _fog_matches(label: String, row: Dictionary, stage: int) -> void:
 	var env: Environment = _game.ctx.terrain.environment
 	var view = _game.world.view
+	var want: Color = WorldLook.environment(WorldLook.stage_look(stage, _game.ctx.stages.world_of(stage)), false).fog_light_color
 	view.rebuild(_game.world.events)
 	_t.near(label + " density survives a rebuild", env.fog_density, row.fog.density)
-	_t.check(label + " colour survives a rebuild", env.fog_light_color.is_equal_approx(row.fog.color), str(env.fog_light_color))
+	_t.check(label + " colour survives a rebuild", env.fog_light_color.is_equal_approx(want), "%s, want %s" % [env.fog_light_color, want])
 	view.clear()
 	_t.near(label + " density survives a clear", env.fog_density, row.fog.density)
 
@@ -82,15 +85,17 @@ func _run() -> void:
 	_t.eq("Dig keeps its dome", WorldLook.ROWS[2].sky, "dome")
 	_t.eq("Waking pit unchanged", WorldLook.ARENAS.waking.sky, "dome")
 	_t.eq("Mind unchanged", WorldLook.ARENAS.mind.sky, "own")
-	var material := env.sky.sky_material as PanoramaSkyMaterial if env.sky != null else null
-	_t.check("stage 1 draws the cached HDRI sky", env.sky == Palette.hdri_sky() and material != null and material.panorama.resource_path.ends_with(".hdr"))
+	# 2026-10-17 (one day per run): the HDRI sky's material is the time-of-day sky shader over the panorama.
+	var material := env.sky.sky_material as ShaderMaterial if env.sky != null else null
+	var panorama: Texture2D = material.get_shader_parameter("panorama") if material != null else null
+	_t.check("stage 1 draws the cached HDRI sky", env.sky == Palette.hdri_sky() and panorama != null and panorama.resource_path.ends_with(".hdr"))
 	_t.check("the HDRI sky is cached once", Palette.hdri_sky() == Palette.hdri_sky())
 
 	# 2. fog: the Spillway's, then the Dig's.
-	_fog_matches("Spillway", WorldLook.ROWS[1])
+	_fog_matches("Spillway", WorldLook.ROWS[1], 1)
 	_game.flow.enter_stage(_game.ctx.stages.first_of(2), Vector3.ZERO, false)
 	await _frames(30)
-	_fog_matches("Dig", WorldLook.ROWS[2])
+	_fog_matches("Dig", WorldLook.ROWS[2], _game.ctx.stages.first_of(2))
 	_t.check("the Dig keeps its dome", env.background_mode == Environment.BG_COLOR)
 
 	# 3. the Highdraft's own exposure and saturation come from its row.

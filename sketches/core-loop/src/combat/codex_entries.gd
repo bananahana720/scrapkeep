@@ -92,8 +92,8 @@ const ENTRIES := [
 	{
 		"id": "line_cut", "name": "Under the Cutter",
 		"hint": "A spinning blade leaves room beneath its arc.",
-		"clue": "a cutter crossing your air path + a low glide or early landing",
-		"text": "Throws a spinning cutter across your air path that severs your line; glide under its arc or land early.",
+		"clue": "a cutter crossing your line over a gap + a glide under it, or a fresh bite at once",
+		"text": "Throws a spinning cutter that severs your line over a gap; bite a fresh line within half a second and the swing keeps a kick.",
 	},
 	{
 		"id": "deck_winch", "name": "Slip the Hook",
@@ -104,8 +104,50 @@ const ENTRIES := [
 	{
 		"id": "thermal_dive", "name": "Leave the Mark",
 		"hint": "The kite commits to a spot. You do not have to.",
-		"clue": "a circling kite + a shot, or a dive mark + a roll away",
-		"text": "Rides the thermals out of reach and dives on the spot it marks; shoot it while it circles or leave the mark.",
+		"clue": "a circling kite + an air ram off its thermal, or a dive mark + a roll away",
+		"text": "Circles high in a thermal and dives on the spot it marks; ride the same thermal up and ram it in the air to kill it outright.",
+	},
+	{
+		"id": "ring_out", "name": "Over the Edge",
+		"hint": "Nothing that heavy can be worn down. Everything that heavy can fall.",
+		"clue": "a ballast heavy on the rim + a ram while it braces",
+		"text": "A slab crew posted on the island rim that no damage wears down; ram it off the edge, hardest while it braces to slam.",
+	},
+	{
+		"id": "gap_sling", "name": "Faster Than the Net",
+		"hint": "A net holds what it can hold.",
+		"clue": "a live net across a gap + a crossing at full swing",
+		"text": "Strings a live net across a gap that slings a slow crossing back the way it came; cross faster than it can hold and you rip it.",
+	},
+	{
+		"id": "cable_cut", "name": "Cut the Line",
+		"hint": "A shield is only as good as what holds it up.",
+		"clue": "a Linker's taut cable + a cut",
+		"text": "Never attacks: it braces a dish over a partner on a taut cable, and the dish takes every hit it faces; cut the cable, come over the rim or round the back, or drop the Linker first.",
+	},
+	{
+		"id": "shift_over", "name": "Shift Over",
+		"hint": "Every crew has someone blowing the whistle.",
+		"clue": "a Foreman's horn + the Foreman down first",
+		"text": "Never attacks: it horns every 5 s and its crew's cracked plating closes up again; knock it out first and the whole crew clocks out for a breath.",
+	},
+	{
+		"id": "roof_drop", "name": "Bring Down the Roof",
+		"hint": "One timber holds up everything over that crew.",
+		"clue": "a prop crew's shored roof + a ram from the wall",
+		"text": "Shores a cracked roof over its pack; ram the prop from the wall side and the roof comes down on them, and on you if you are on the floor.",
+	},
+	{
+		"id": "split_pop", "name": "Clean Break",
+		"hint": "Some scrap comes apart the way you hit it.",
+		"clue": "a Splitter + a smash from above, or a shot from far off",
+		"text": "Chases you and keeps budding fuse pods that run at you and blow up; kill it to stop them, by a smash from above or a shot from 15 m, or a ram pops it into three more.",
+	},
+	{
+		"id": "fuse_pod", "name": "Out of the Ring",
+		"hint": "A lit fuse is a promise, not a hit.",
+		"clue": "a Splitter pod + rolling out of its ring",
+		"text": "A torn-off Splitter pod: runs at you, lights a one-second fuse ring and blows up; roll out of the ring.",
 	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
@@ -182,6 +224,12 @@ const ENTRIES := [
 		"hint": "Nothing holds a ball with a plan.",
 		"clue": "a hostile hold + Q",
 		"text": "Press Q while an enemy holds you: the hold breaks as the set piece starts.",
+	},
+	{
+		"id": "armour_plated", "name": "Plated",
+		"hint": "Some crews shrug off a plain hit.",
+		"clue": "any hit on a plated crew",
+		"text": "Plated crews take 60% from rams, smashes and weapon fire (DENT) and 150% from arc and your abilities (ZZAP!).",
 	},
 	# --- P-C Sable entries ---
 	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + slot 3", "text": "Pick 3 and click while a line stands: whip round the anchor and leave toward your aim, faster than you came."},
@@ -283,6 +331,13 @@ const DETECTORS := {
 	"line_cut": {"kind": "line_cutter", "script": "res://src/combat/line_cutter.gd"},
 	"deck_winch": {"kind": "anchor_crew", "script": "res://src/combat/anchor_crew.gd"},
 	"thermal_dive": {"kind": "kite_drone", "script": "res://src/combat/kite_drone.gd"},
+	"cable_cut": {"kind": "linker", "script": "res://src/combat/linker.gd"},
+	"shift_over": {"kind": "foreman", "script": "res://src/combat/foreman.gd"},
+	"roof_drop": {"kind": "prop_crew", "script": "res://src/combat/prop_crew.gd"},
+	"split_pop": {"kind": "splitter", "script": "res://src/combat/splitter.gd"},
+	"fuse_pod": {"kind": "splitter_pod", "script": "res://src/combat/splitter_pod.gd"},
+	"ring_out": {"kind": "ballast_heavy", "script": "res://src/combat/ballast_heavy.gd"},
+	"gap_sling": {"kind": "gap_net", "script": "res://src/combat/gap_net.gd"},
 	"heavy_roll": {"kind": "mag_trapper", "script": "res://src/combat/mag_trapper.gd"},
 	"plate_peel": {"kind": "plated_brute", "script": "res://src/combat/plated_brute.gd"},
 	"cable_snap": {"kind": "winch_drone", "script": "res://src/combat/winch_drone.gd"},
@@ -295,6 +350,7 @@ const DETECTORS := {
 	"set_piece_core": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"set_piece_cash_in": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"set_piece_breakout": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"armour_plated": {"kind": "drill_crew", "script": "res://src/combat/combat.gd"},
 	# --- P-C Cannon detectors ---
 	"cannon_lane_charge": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"cannon_fire_mission": {"kind": "", "script": "res://src/combat/ultimate.gd"},

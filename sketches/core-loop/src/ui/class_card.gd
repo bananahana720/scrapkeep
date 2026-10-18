@@ -9,6 +9,7 @@ const ClassKit := preload("res://src/ui/class_kit.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
@@ -357,24 +358,14 @@ func bind_profile(profile) -> void:
 func paint_options() -> Array:
 	var out: Array = [""]
 	for id in Cosmetics.for_slot("paint", def.id):
-		if owns(_profile, id):
+		if CosmeticWear.owns(_profile, id):
 			out.append(id)
 	return out
 
 
-static func owns(profile, id: String) -> bool:
-	var row := Cosmetics.row(id)
-	if row.is_empty() or profile == null:
-		return false
-	return bool(row.get("starter", false)) or profile.has_cosmetic(id)
-
-
 # The equipped paint id, or "" when none or one this profile does not own.
 func paint_shown() -> String:
-	if _profile == null:
-		return ""
-	var id: String = _profile.equipped(def.id, "paint")
-	return id if id != "" and owns(_profile, id) else ""
+	return CosmeticWear.worn(_profile, def.id, "paint")
 
 
 # The next owned paint (or none), equipped and saved.
@@ -430,6 +421,9 @@ func _on_pressed() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if _look_input(event):
+		accept_event()
+		return
 	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_X and is_open() and not locked:
 		cycle_paint()
 		accept_event()
@@ -437,6 +431,29 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_P and is_open() and not locked:
 		cycle_paint()
 		accept_event()
+
+
+# Look closer at the pilot (class_preview.gd): right-drag or the right stick orbits, the wheel
+# zooms while the right button is held. Locked pilots can be looked at too.
+func _look_input(event: InputEvent) -> bool:
+	if preview == null or not preview.has_method("look_drag"):
+		return false
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_RIGHT:
+			preview.look_dragging = event.pressed
+			preview.look_drag(Vector2.ZERO)
+			return true
+		if preview.look_dragging and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			preview.look_zoom(1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0)
+			return true
+	elif event is InputEventMouseMotion and preview.look_dragging:
+		preview.look_drag(event.relative)
+		return true
+	elif event is InputEventJoypadMotion and event.axis in [JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y] and absf(event.axis_value) > 0.2:
+		var push := Vector2(event.axis_value, 0.0) if event.axis == JOY_AXIS_RIGHT_X else Vector2(0.0, event.axis_value)
+		preview.look_drag(push * 18.0)
+		return true
+	return false
 
 
 func _name_row(color: Color, width: float) -> HBoxContainer:

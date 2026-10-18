@@ -140,10 +140,10 @@ func _update_flash(delta: float) -> void:
 	super(delta)
 	if _disc_material == null:
 		return
-	_disc_material.albedo_color = Color.WHITE.lerp(Color(1.0, 1.0, 0.85), _flash)
+	_disc_material.albedo_color = Color.WHITE.lerp(Color(1.0, 1.0, 0.85), FlashGuard.whiten(_flash))
 	_disc_material.emission_enabled = _flash > 0.0
 	_disc_material.emission = EventKinds.role_color("neutral")
-	_disc_material.emission_energy_multiplier = _flash * 2.0
+	_disc_material.emission_energy_multiplier = FlashGuard.spike(0.0, _flash * 2.0)
 
 
 func _commit(_to_ball: Vector3) -> Node3D:

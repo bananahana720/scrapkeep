@@ -27,7 +27,7 @@ const FIELDS_HASH := 4081964357
 # 2026-10-04: re-pinned again for the cogs_collected row (CG2, alpha wave 5 fix round).
 # 2026-10-04: re-pinned for the achievement_earned and rescue_completed rows hearing their own cues (alpha wave 7, snd-achievement-rescue).
 # 2026-10-04: re-pinned for the world_entered row hearing the world stinger at priority 3 (alpha wave 11 fix, zone-entry cue).
-const ROWS_HASH := 2133490794  # 2026-10-18 (ring-outs): enemy_ringed_out hears ring_out_fall (#12) through sound_next, near_whoosh until then; was 970866342, 2026-10-17 the enemy_ringed_out row; was 997489691, 2026-10-09 (wave 12 VX-SURF): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value of weak_point_opened, landmark_hum and reactor_vented; rows otherwise unchanged (restoring the old colour restores the old hash); was 1079977938
+const ROWS_HASH := 766403076  # 2026-10-18 (Highdraft ring-outs, merged onto stage/alpha-w17): the enemy_ringed_out row hearing ring_out_fall; was 1463771709. 2026-10-17 (item tiers and actives): the active_fired row; was 997489691. 2026-10-09 (wave 12 VX-SURF): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value of weak_point_opened, landmark_hum and reactor_vented; rows otherwise unchanged (restoring the old colour restores the old hash); was 1079977938
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]
@@ -78,7 +78,8 @@ func _check_ids() -> void:
 			missing.append(id)
 	_report("every id has a row", missing.is_empty(), "%d of %d document ids without a row %s" % [missing.size(), doc.size(), missing])
 	# 2026-10-04, alpha wave 8: an id owned by a declared later-world roster kind (a row with
-	# a "world", roster_dig.gd and roster_highdraft.gd) is reserved ahead of the document.
+	# a "world", roster_dig.gd and roster_highdraft.gd) is reserved ahead of the document, and
+	# so is one owned by a kill-first special (a "priority", roster_specials.gd).
 	var extra: Array[String] = []
 	for id in EventKinds.ATTACK_ROWS:
 		if not seen.has(id) and not _reserved(id):
@@ -103,7 +104,8 @@ func _check_ids() -> void:
 
 func _reserved(id: String) -> bool:
 	var row := EventKinds.attack_row(id)
-	return row["owner_kind"] == "roster" and Roster.row(String(row["owner"])).has("world")
+	var owner := Roster.row(String(row["owner"]))
+	return row["owner_kind"] == "roster" and (owner.has("world") or owner.has("priority"))
 
 
 func _check_fields() -> void:

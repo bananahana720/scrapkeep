@@ -33,54 +33,57 @@ const Cards := preload("res://src/world/director_cards.gd")
 # fields (recipe, fit); KD1-DRESS's three recipe renames had moved all 20. Whole runs unchanged.
 # 2026-10-16 PARK-WIN re-pin: crown_apron at 730.5 -> 731.5 (PW2) and the islands Warden anchor y
 # 80 -> 66 (PW1) are park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged.
-# 2026-10-17 world rosters re-pin (design-v3/WORLD-ROSTERS.md): the Dig's jaw packs and its own
-# plated elite are park-row data, and the Dig packs and Highdraft ring-outs move the default
-# runs; recorded with --record-base, seeds 0..19, at the commit that carries this comment.
+# 2026-10-17 HIGHDRAFT-ROSTER re-pin (#72): the Highdraft packs (ballast_heavy, gap_net) and the
+# Highdraft elite move the director schedule and the default run; recorded with --record-base.
+# 2026-10-17 stage/alpha-w16 combined re-pin: every admitted director-moving PR together (attack budget,
+# Foreman, specials, Dig and Highdraft rosters, #75 isle skirt); recorded with --record-base --section=runtime.
+# 2026-10-18 stage/alpha-w16 re-pin: cand 6f075df2, crown pass, #65, #73, #79, #96, #97, #98 and #99 together; recorded with --record-base --section=runtime.
+# 2026-10-18 Dig plated elites and Highdraft ring-outs (#69) merged onto stage/alpha-w17; recorded with --record-base --section=runtime.
 const BASE_SCHEDULE := [
-	"14b343d7e44d2281218a4d5a3fa077154ad9c685401f9e0855749f898bf7781b",
-	"23bc7b4def375c113d7ff6cf81859e050ff8884f5f368284a462fb7bbacb2fa3",
-	"416fb01deb4745674ffd289cfc8de36a3e620378735316b8f155a979d3f9aeda",
-	"ae9e19bff80d6e873a9b0842f267d8776a8fd8d21eda915c4b24fb646bbefa48",
-	"93b6fbb7e66542611b8c01e9254af531e378adf2451ee97d92304dd00bb05767",
-	"5c8eaeeb44deef7254729efd0243b60933fd07a9c036e32b23273ea5ae7bd829",
-	"a11464368aa1d3e79d283df588eb2454b04e5d03abbc3d70932221b830c536fe",
-	"a2b516a4df53db8b4849937ddb23b53dfc57461805542f30ebbd0e0d2e9c469f",
-	"cc436ee2f34d2cb46665718a129426d7e28570e77ad6aab1eb401ea5305b42a7",
-	"44ae176438efdb1c4370d037f6352a08f9f34fb82bcb2d0df32138b58816bdec",
-	"5d5a53b51caa4d4c1b3f7aa917b6aae639766c10ab30adc741d76f733be3c209",
-	"e7d23eb63e4c4a58fcbcf5c8ca134300251cb2f1128e1c2c8295afe6bd3184da",
-	"1d72dc85e590aa8186f8b058a0327f3057e661840613640d78ce398ea2bbd2cd",
-	"f2f3de9f2b793c4a98025aee8c2a18d0c38d9726b440b22b1117a6021a974008",
-	"6c7c321e9bff2cb0981b70a0e1fe23eb4606341732fe930f25ebe27dd31d4b8b",
-	"9df1e133228c662032caac7ba333fb376698d0ce712fefc17ebf95c8819ee27b",
-	"c4f1f929610109b13dc933fd638b3e346c130553824ce76c43fde4b197b25eb2",
-	"b3a5b009123f00d82065e640372b6728fe21f26f1d37b07f1935575d852cfa9f",
-	"b1e8c1f5317c0017bfced98516be99ef719aae3664fb240176cd05c4cfd1b32f",
-	"adfe26a99cdb6338c127dd97d9db8b045e230498dde4e6b19d1f73678963053e",
+	"48735094c755c9c0070530a013a8d07c9d34c670f0cfd3c5d550e63ae9b08437",
+	"1eb4d5c6afa0b0d0b07a1fd01573a1854d04bd741e7b7631d362b290a328d091",
+	"36d6370d8e26f4a16f41c54641c6442b376cc48a770b05819827bab6c0711995",
+	"23a822d37cff417dae32e8760803747b51aa11eda9adc8919b9274791b3241fd",
+	"b14376355ced366eeb3d0f116910198552be2a09291600a902ff7415424a1b4e",
+	"72c8abcf363bf4ea0f73463189628f5895b4e1621484c5144d3d3a4c2bc2cc04",
+	"5352f921c7b3e99b58916c28b9c47a4f0a77e7d23c7ad1e7c7c132f3f311f4b5",
+	"f0818093b3e43bdafced0f11d4c26259ad264d6a73d22b380c7fe9772432fba3",
+	"126288a2e6ad5677fcd4627d2d2f10642e10979e300a0bfc54b046bc940b624b",
+	"bfb2806eb5ee29a68464b39593d0fb113f847e9f91df49c5157f65f58c700422",
+	"f0b585631ee249458664e95778912c07436c7ffcdadb8b1009f1480d128b3304",
+	"de63c319129de767f268b9c9bdd2a27ce9210e82446e1d404c92198980c8808d",
+	"734efd5932c9197262c50b03b5dea1a19516eb2ce0d84d27201ec7ced8f9c5de",
+	"58208180c8bff877850eba58a1e3ceb66044c33dce68a58431000021e1964c87",
+	"a3adfffcbe821e92d77804fbe19164d1a89dfb9eaceb79ec7411dbf383f0c1b5",
+	"1b31a91718964706f3cab45f5c44683e8111af60796100b209b0ba6d77f09ae8",
+	"b29b73399e2489f245042d280dc1f66fcc5f20e8a3de128311ebd962e795535d",
+	"b7b25411fb019ee983d721228092fc201edf25f79863ea1dd1fec6fd3c25060a",
+	"771413281676bf3148d076dabffd722e4066dcc855c13c43d54e98a04cc7c920",
+	"b24e1fccdc8fad8704b729f2316463ef82786abce3ac88c896cf48973475b185",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
 const BASE_RUN := [
-	"5f4b5de2e22537865e31b8ce5c6c94599a30f2da4e662fb0275a5d249ff46eae",
-	"b912e5094c443308745769fe091a6bcd6b5423cae85947482ce97ff3898ae75a",
-	"bec9eb0eca49bbdf72b34c822050551f807218d1c263f56cbabe8a43d12a1b91",
-	"87e766c019224059cfc917c3f68788ac527ef9cf5a5eb266487a34485f92eff6",
-	"d452addf95bd6ec9010b5b54e729c49bf11c1cf0fdab0d88cb0bbbc71eeae4b3",
-	"0b6ef0f8b15e305eb6f2d4e87ecd8be00e85b61c37e4dab12c20609d89c75ca5",
-	"db50495fcdbf656fb6f3dc8bbd470046d499ae00e05fd1a5c66ec88162400c1e",
-	"e9321d8eec6a00ebf33b77706c7140ca5a5869a075c63428c7e8b247202cac9c",
-	"9df677d141d7d04df2f9e05b25ea82e6e4eea7f1ef150314438198846dde5063",
-	"448ef9dc0e12a538f99a5ddaea3155152835efd50eeee5cf5cf4045e5c0c97c9",
-	"965dc49fe0301a185bf712d4e5056ccdaf473ec0ef69c0c4e8fdbb6228bbd658",
-	"859aa235d156da75a2b8b23387a29808c60e324aeb20234362d3a0428f4cc1e3",
-	"3c88575aa3a4aa3e7709c94161d759af58a08cb014b18ed23ee44b91aece68df",
-	"b4a25a3937c966c597ed4bd0eac4792f38123d680c52f88da88d3a1f582b1685",
-	"4102ee725ce68da154a8f671f9e3cba8da9367b0e11c7773150e9567a5209f7f",
-	"4f571cc1608c2a4f2619fcd4fed76b6718e0a2dfe3e2e638199b2117e39bb8f5",
-	"686aa8772186f1e99a90f47e9559c584254017fd29ea472e1aee7c1c47c70231",
-	"ba06d4cca5a9303e31f94598e33d3184a09b3496c77b0d22fbbc60f80abc4c38",
-	"25fbfd02d88cba4c6ef1b84ba3a579525d32bcfadae304655b4ce477a46368de",
-	"5e13f3f74714d8dc2187f733c2d9682020080fbedfd0e5b2a8e97ee1285bd69a",
+	"2a46dc7d9d17cd12aef367c65619660683e778edef21859b49c2dd7f14468420",
+	"95329d10a931286623a74828f42cd141765c60bc3a3546ff022750a9133e3fb8",
+	"041d0097949e3ab40136aa59159a9f6c5deed9eb5610564dbe653e15a65c2dc9",
+	"71a5eee34776ec9ae38b4c01bd2ca7d4b7b5e78db4e81b4e441b5e072c7a3ffc",
+	"1ee0d32a596acc5865c940173bfa90d4a2cd08811932c6c8ee8856ff0ec104da",
+	"ad0652c02b4df66989c1a8eded90b76361ef0f27a8bc4477d7fc9acd75c2079e",
+	"23d5f0c16ada8049f35dc3d2e385d2234a1f8043ad923ab7424115dc2b935293",
+	"79207039d6dbf563dff94e78382a512b18b24c1ad5ec14e129f5d5196f330a55",
+	"d5896afa99107f2f447d2eabe22ef2b375dda28d9bd3b6768b081bf865131e3b",
+	"5d9c12fa38c8c3687e9cb5a386e2d220b269fba190bb8882c215368a1ecff148",
+	"9d0bbacec3f9373d6798e6a0b623e425439d8bdd43b55e3f8dde0ca1e93966dd",
+	"9a0fac71b7ab2624af98e3aaa950096980ed525c7e8c983fefefec003e42c3c3",
+	"5be29d5a5cd3c19b282f0f984050d26e310e8ae3803c438f5f0bdef4cf79a528",
+	"f57ed87b54ebc2115cc74eedbb644b95b56cb60b5676f5479faefac1654cdadc",
+	"c8f3499fc8ebe8f85a1a9e5b5e3cdde6b1c24e4aa22b22130c04144f87d5469d",
+	"71a08fbfc17e9851311b268802dc554c254d031b29bdfcb71f9959708e70d028",
+	"124c8b7017301a1d06dba70b42f8625bb94920d88660359fdc1c863d2251355f",
+	"ca1a4611cbb40f4675c3285f13892d1f392a7dd223a686a8660c17f8300d1774",
+	"59d05166c8bab2e95c6af0788a6f15c77d441c12280aea4d51738d69647ed4a9",
+	"03754d5953208c5a776c7c016afaa777801f0efcd48d082ebfa6025bc85806be",
 ]
 const SEEDS := 20
 const DRAWS := 400
@@ -158,6 +161,17 @@ static func _director_rows(rows: Array) -> Array:
 		kept.append(copy)
 	return kept
 
+# 2026-10-17 (SQ2, PR #15): each due spawn carries its arrival's pack number for the attacker
+# budget (attack_budget.gd). It copies a tag the director already drew and moves no spawn, so the
+# schedule pin leaves it out, as RT1 leaves out presentation fields.
+static func _without_pack(due: Array) -> Array:
+	var kept: Array[Dictionary] = []
+	for spawn in due:
+		var copy: Dictionary = spawn.duplicate(true)
+		copy.erase("pack")
+		kept.append(copy)
+	return kept
+
 func _schedule(d, steps := 1200) -> Dictionary:
 	var ball: Vector2 = d._park_map.beacon if d._park_map != null else Vector2.ZERO
 	if d._park_map != null:
@@ -168,7 +182,7 @@ func _schedule(d, steps := 1200) -> Dictionary:
 		var due: Array = d.advance(0.5, 0, ball)
 		members += due.size()
 		if not due.is_empty():
-			schedule.append([step, due])
+			schedule.append([step, _without_pack(due)])
 	return {"schedule": schedule, "members": members, "cap": d.cap(), "interval": d.interval()}
 
 func _config(tier_value: int) -> Dictionary:

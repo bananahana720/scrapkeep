@@ -8,9 +8,16 @@ const TRAILS := [
 	["trail_forge_chips", "Chip", "tumble_fade", 0.25, Vector2(0.045, 0.045), "3a6fb0"],
 	["trail_moth_tuft", "PairedTuft", "expand_fade", 0.40, Vector2(0.15, 0.09), "a39cb3"],
 	["trail_rose_wash", "WashPuff", "flatten_fade", 0.35, Vector2(0.16, 0.08), "d68ab0"],
+	["trail_sable_cable", "CableDash", "fade", 0.35, Vector2(0.03, 0.12), "3f8f6a"],
+	["trail_rivet_swarf", "Swarf", "tumble_fade", 0.30, Vector2(0.07, 0.05), "ae7240"],
+	["trail_kest_fuse_smoke", "SmokeWisp", "expand_fade", 0.40, Vector2(0.07, 0.16), "8c8577"],
+	["trail_tarn_claw_marks", "ClawPair", "fade", 0.40, Vector2(0.40, 0.06), "d2c5a5"],
+	["trail_tally_punch_tape", "TapeStrip", "fade", 0.35, Vector2(0.05, 0.14), "f7f1e3"],
+	["trail_cannon_recital", "RecitalMarks", "fade", 0.45, Vector2(0.30, 0.07), "6fb3a6"],
+	["trail_any_downbeat", "BeatTick", "fade", 0.30, Vector2(0.10, 0.025), "8a5a3a"],
 ]
-const DECALS := ["fern", "patch", "snail_shell", "thimble", "mushroom", "paw", "seashell", "moth"]
-const DECAL_SIZES := [Vector2(0.44, 0.55), Vector2(0.44, 0.34), Vector2(0.44, 0.42), Vector2(0.36, 0.42), Vector2(0.44, 0.40), Vector2(0.42, 0.42), Vector2(0.46, 0.42), Vector2(0.50, 0.34)]
+const DECALS := ["fern", "patch", "snail_shell", "thimble", "mushroom", "paw", "seashell", "moth", "sable_spool", "curtain_call"]
+const DECAL_SIZES := [Vector2(0.44, 0.55), Vector2(0.44, 0.34), Vector2(0.44, 0.42), Vector2(0.36, 0.42), Vector2(0.44, 0.40), Vector2(0.42, 0.42), Vector2(0.46, 0.42), Vector2(0.50, 0.34), Vector2(0.44, 0.44), Vector2(0.44, 0.37)]
 const PAINTS := ["night", "forge", "plum", "salt", "dusk", "moth"]
 const TINTS := ["2b3a4a", "3a6fb0", "8a3f6e", "e9ecea", "d68ab0", "a39cb3"]
 const RESERVED := [Color("8bf0d3"), Color("ff5a3c"), Color("e5a044"), Color("d9b44a")]
@@ -73,7 +80,7 @@ func _run() -> void:
 	if not doc is Dictionary:
 		finish()
 		return
-	check(doc.get("trails", []).size() == 6 and doc.get("decals", []).size() == 8 and doc.get("paints", []).size() == 6, "20 required items")
+	check(doc.get("trails", []).size() == TRAILS.size() and doc.get("decals", []).size() == DECALS.size() and doc.get("paints", []).size() == PAINTS.size(), "29 required items")
 	for entry in doc.get("files", []):
 		var path := BASE + String(entry.get("path", ""))
 		check(FileAccess.file_exists(path), path + " exists")
