@@ -47,6 +47,8 @@ CUES = {
     'boss-brindle': (129, 'spiced'), 'boss-waking': (129, 'spiced'), 'boss-mind': (129, 'spiced'),
     'title-a': (129, 'spiced'), 'title-b': (129, 'spiced'), 'title-c': (172, 'spiced'),
     'camp': (129, 'light'),
+    # Theme C a whole step up (Rubber Band -p 2 on bass, other and vocals; drums unshifted), for the won summary's lift.
+    'title-c-up2': (172, 'spiced'), 'summary-loss': (129, 'light'),
 }
 ZONE_BPM = 129
 # pack -> (kind, key, cue, roam cue, stage). Stage-to-pack mapping: src/core/park_defs.gd music.ace (stage 1 spillway,
@@ -73,9 +75,17 @@ PACKS = {
     'title_b': ('menu', 'D', 'title-b', None, 'A'),
     'title_c': ('menu', 'D', 'title-c', None, 'A'),
     'camp': ('menu', 'D', 'camp', None, 'A'),
+    # Andrew, card 23:24:59Z 17 Oct ("Won run and ending"): a won run plays theme C with a whole-step lift, a lost run keeps
+    # the jazz-club summary. The summary pack plays return (cadence, then home = calm) when won and travel when lost
+    # (ace_sequencer.gd start_menu), so cadence is two bars of theme C in D, calm is theme C lifted to E, and travel is
+    # summary-loss's light mix.
+    'summary': ('summary', 'D', 'title-c', 'title-c-up2', 'A'),
 }
+EXTRA = {'summary': ('summary-loss',)}
+# A clip cut from a shifted copy reports the key it sounds in.
+CLIP_KEY = {'title-c-up2': 'E'}
 # A new pack's section map comes from the existing pack it sits beside.
-TEMPLATES = {'boss_brindle': 'brindle', 'boss_waking': 'waking', 'boss_mind': 'mind'}
+TEMPLATES = {'boss_brindle': 'brindle', 'boss_waking': 'waking', 'boss_mind': 'mind', 'summary': 'summary'}
 
 
 def mix_name(cue, high):
@@ -216,6 +226,9 @@ def plan_for(pack, tracks):
                     drop=(t, 'high', m - 4, 4, None), cadence=(t, 'cur', m - 2, 2, None))
     if kind == 'menu':
         return dict(calm=(t, 'high', 4, 16, 1), travel=(t, 'high', 20, 16, 1), cadence=(t, 'high', m - 2, 2, None))
+    if kind == 'summary':
+        up, loss = tracks[roam], tracks['summary-loss']
+        return dict(cadence=(t, 'high', 2, 2, None), calm=(up, 'high', 4, 16, 1), travel=(loss, 'high', 1, 16, 1))
     if kind == 'zone':
         r = tracks[roam]
         o = 0 if stage == 'A' else 8
@@ -272,7 +285,7 @@ def fit_gain(pcm):
 
 def cut_pack(work, pack, tracks):
     kind, key, cue, roam, _stage = PACKS[pack]
-    for c in (cue, roam):
+    for c in (cue, roam) + EXTRA.get(pack, ()):
         if c and c not in tracks:
             tracks[c] = Track(work, c)
     plan = plan_for(pack, tracks)
@@ -313,7 +326,8 @@ def write_pack(work, pack, kind, key, rows):
             files[s] = f'{cid}.{s}.ogg'
             encode(v, folder / files[s])
         mixname = tr.hi_name if r['which'] == 'high' else tr.cur_name
-        mix_path = SPICE / f'{mixname}.wav'
+        # A shifted copy's source is the mix it was shifted from.
+        mix_path = SPICE / f'{mixname.replace("-up2", "")}.wav'
         stem_dir = work / ('stretched' if tr.loop else 'stems/htdemucs') / mixname
         total = len(r['pcm']['drums'])
         clips[cid] = dict(parent=kind, take=mixname, source_state=f'{mixname} bars {r["first"]}-{r["first"] + r["bars"] - 1}',
@@ -321,7 +335,7 @@ def write_pack(work, pack, kind, key, rows):
                           bpm=round(tr.tempo, 3), beat=tr.bar // 4, bar=tr.bar, beats_per_bar=4, bars=r['bars'],
                           entry=PRE_ROLL, exit=PRE_ROLL + r['bars'] * tr.bar, loop=r['loop_bar'] is not None,
                           loop_offset=r['offset'] or 0, loop_to_bar=r['loop_bar'], sample_count=total,
-                          key=key, key_offset=KEYS[key], files=files, mix=r['which'], grid_snap_ms=round(r['snap_ms'], 2),
+                          key=CLIP_KEY.get(tr.cue, key), key_offset=KEYS[CLIP_KEY.get(tr.cue, key)], files=files, mix=r['which'], grid_snap_ms=round(r['snap_ms'], 2),
                           gain_db=round(r['gain'], 2), measured=dict(lufs=i, true_peak=p, note='summed stems before Ogg encode'))
         sources[cid] = dict(take=mixname, render=str(mix_path), render_sha256=sha(mix_path), tempo_read=round(tr.read, 3),
                             timing='measured beat phase of the drums stem; downbeat identity unverified',
@@ -350,7 +364,7 @@ def main():
     for pack in args.packs:
         if args.cmd == 'plan':
             kind, key, cue, roam, stage = PACKS[pack]
-            for c in (cue, roam):
+            for c in (cue, roam) + EXTRA.get(pack, ()):
                 if c and c not in tracks:
                     tracks[c] = Track(args.work, c)
             for c in (cue, roam):
