@@ -1,4 +1,5 @@
-# smoke: bots timeout=770s (24 bot runs on stage 3 in child processes at once, each cut at RUN_CAP_S)
+# smoke: bots timeout=1650s (24 bot runs on stage 3 in child processes, as many at once as memory and cores allow, each cut at RUN_CAP_S)
+# 2026-10-18: with the parallel cap (8 at once on a 4-core, 16 GB cloud sandbox) the sweep took 1096 s alone; 1.5x rounded up to 50 s is 1650 s.
 # 2026-10-12, W13 smoke triage: completed in 510.708 s alone with its fixed bands still red; 1.5x rounded up to 10 s is 770 s, beyond the ordinary 360 s cap.
 # 2026-10-13 WT-BANDS: paired record gain 100 -> 150; measured small 104.78 -> 104.78 s, grown 46.40 -> 38.77 s.
 # Re-pinned small 164.03 -> 104.78 s and grown 118.32 -> 38.77 s from five agreeing sweeps.
@@ -131,7 +132,7 @@ func _initialize() -> void:
 		t.check("%s seed %d ran" % [arm, run_seed], results[i]["code"] == 0 and not results[i]["timed_out"],
 			"exit %s, timed out %s" % [results[i]["code"], results[i]["timed_out"]])
 		var record := _record(out)
-		# A child the system killed (exit 9 is an out-of-memory kill) or the wall cap cut wrote no
+		# A child the system killed (exit 9, SIGKILL; on 18 Oct the kernel's out-of-memory killer) or the wall cap cut wrote no
 		# record: an error of the sweep, never a fight at the run cap, so it stays out of the medians.
 		t.check("%s seed %d wrote a record" % [arm, run_seed], not record.is_empty(),
 			"child killed / no record, exit %s, timed out %s" % [results[i]["code"], results[i]["timed_out"]])
