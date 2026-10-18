@@ -36,10 +36,12 @@ sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, os.path.join(HERE, "..", "world_two"))
 sys.path.insert(0, HERE)
 import common
+import polish
 from common import Part
 import gap_net_post
 
 common.reset()
+polish.enable(detail=2, bevel=0.03, fit=True)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.85}
 common.SLOTS["working_tool"] = {"vc": True, "rough": 0.5, "metal": 0.4}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
@@ -86,6 +88,9 @@ batten_obj = batten.to_object(origin=g(BATTEN_X, 0, 0), parent=root)
 # Net tile: top and bottom ropes, zigzag strands between them (diamonds), all thin and opaque
 # so the ball reads through the gaps. Local X 0..TILE from the batten.
 span = Part("GapNetSpan")
+# Thin net strands: smooth shading only, no bevel or subdivision.
+span.bevel = 0
+span.subsurf = 0
 H = NET_HIGH - NET_LOW
 ROWS = 4  # even, so the zigzag rows mirror into diamonds and tiles join
 COLS = 4
@@ -114,13 +119,13 @@ high = max(p.z for p in points)
 print("GAP NET floor %.3f top %.3f tris %d" % (low, high, common.tri_total(root)),
       [(o.name, common.tris(o)) for o in objs])
 assert low >= FLOOR - 1e-4 and high <= 4.0
-assert common.tri_total(root) <= 1100
+assert common.tri_total(root) <= 6000
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_three", "enemy_gap_net.glb")
 common.export(root, path)
 import world_preview
-world_preview.budget(path, 3)
+world_preview.budget(path, 3, tris=6000, verts=9000)
 
 if opts["render"]:
     tiles = []
