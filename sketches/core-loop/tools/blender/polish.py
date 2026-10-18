@@ -182,11 +182,13 @@ def subdivide_where(bm, levels, pick):
                     if h.index not in seen:
                         seen.add(h.index)
                         stack.append(h)
-        island.sort(key=lambda g: g.index)
+        # Recipes can emit faces in a different order between runs; order by vertex.
+        island.sort(key=lambda g: [la.vert.index for la in _loops(g)])
         if pick(island):
             picked.append(island)
     if not picked:
         return bm
+    picked.sort(key=lambda island: [la.vert.index for la in _loops(island[0])])
     loop_kinds = [(kind, name) for kind in ("float_color", "color", "uv")
                   for name in getattr(bm.loops.layers, kind).keys()]
     int_names = list(bm.verts.layers.int.keys())
@@ -201,10 +203,11 @@ def subdivide_where(bm, levels, pick):
                 nv[b] = v[a]
             vmap[v] = nv
         for g in island:
-            nf = sub.faces.new([vmap[v] for v in g.verts])
+            loops = _loops(g)
+            nf = sub.faces.new([vmap[la.vert] for la in loops])
             nf.material_index = g.material_index
             nf.smooth = g.smooth
-            for la, lb in zip(g.loops, nf.loops):
+            for la, lb in zip(loops, nf.loops):
                 for a, b, k in sl:
                     if k == "uv":
                         lb[b].uv = la[a].uv
