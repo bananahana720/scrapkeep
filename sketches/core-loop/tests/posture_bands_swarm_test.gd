@@ -1,4 +1,5 @@
-# smoke: bots timeout=770s (24 bot runs on stage 3 in child processes at once, each cut at RUN_CAP_S)
+# smoke: bots timeout=1800s (24 bot runs on stage 3 in child processes, as many at once as memory and cores allow, each cut at RUN_CAP_S)
+# 2026-10-18: with the parallel cap (8 at once on a 4-core, 16 GB cloud sandbox) the sweep took 1096 s alone; 1.5x is 1644 s; the gate box, loaded, ran past 1208 s, so it takes the bot ceiling, 1800 s.
 # 2026-10-12, W13 smoke triage: completed in 510.708 s alone with its fixed bands still red; 1.5x rounded up to 10 s is 770 s, beyond the ordinary 360 s cap.
 # 2026-10-13 WT-BANDS: paired record gain 100 -> 150; measured small 104.78 -> 104.78 s, grown 46.40 -> 38.77 s.
 # Re-pinned small 164.03 -> 104.78 s and grown 118.32 -> 38.77 s from five agreeing sweeps.
@@ -71,8 +72,14 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 # 187.68, 78.73, 108.58, 76.19, 64.94, 91.27], grown 38.77 s of [34.72, 36.94, 42.94, 37.47, 46.4, 26.12,
 # 38.77, 55.52], 2.35x; the camper broke it on none of seeds 0 to 15 but seed 8 (222 s). Was 104.78 / 38.77.
 # stage/alpha-w16 carries both #43 and #15: #43's 88.16 s stands until the combined sweep re-pins it.
-const EXPECT_SMALL_S := 88.16
-const EXPECT_GROWN_S := 38.77
+# 2026-10-18 (wave 16 close, main f9f58944 plus the parallel cap): the combined sweep re-pins small
+# 88.16 -> 99.54 s and grown 38.77 -> 42.69 s. Measured with every child recorded (8 at once on a
+# 4-core sandbox): small 99.54 s of [88.36, 106.18, 99.9, 99.54, 89.76, 84.33, 71.83, 106.63], grown
+# 42.69 s of [62.85, 38.09, 42.69, 51.71, 61.81, 38.15, 37.85, 38.71], 2.33x; the camper broke it on
+# none. The #104 thread's sweep on f9f58944 (gate/pr104-swarm-ablation.txt) gave the same fights to the
+# hundredth except grown seed 1, which the kernel killed for memory there and which is 38.09 s here.
+const EXPECT_SMALL_S := 99.54
+const EXPECT_GROWN_S := 42.69
 const TOLERANCE := 0.10
 # 2026-10-18: a 4-core, 16 GB cloud sandbox ran all 24 children at once; the kernel killed grown
 # seed 1 for memory (exit 9, no record, counted as a 300 s fight) and every camper hit the 900 s
@@ -125,6 +132,10 @@ func _initialize() -> void:
 		t.check("%s seed %d ran" % [arm, run_seed], results[i]["code"] == 0 and not results[i]["timed_out"],
 			"exit %s, timed out %s" % [results[i]["code"], results[i]["timed_out"]])
 		var record := _record(out)
+		# A child the system killed (exit 9, SIGKILL; on 18 Oct the kernel's out-of-memory killer) or the wall cap cut wrote no
+		# record: an error of the sweep, never a fight at the run cap, so it stays out of the medians.
+		t.check("%s seed %d wrote a record" % [arm, run_seed], not record.is_empty(),
+			"child killed / no record, exit %s, timed out %s" % [results[i]["code"], results[i]["timed_out"]])
 		if record.is_empty():
 			unrecorded.append("%s %d (exit %s)" % [arm, run_seed, results[i]["code"]])
 		var pilot: String = PILOTS[run_seed % PILOTS.size()]
@@ -135,7 +146,8 @@ func _initialize() -> void:
 				and top >= HOIST_TOP, "hoist %s" % [hoist])
 		if not fights.has(arm):
 			fights[arm] = []
-		fights[arm].append(_fight(record))
+		if not record.is_empty():
+			fights[arm].append(_fight(record))
 		var heights: Array = hoist.get("staggers", []) if hoist is Dictionary else []
 		if not low_staggers.has(arm):
 			low_staggers[arm] = []
@@ -147,14 +159,14 @@ func _initialize() -> void:
 		print("swarm latch arm %s seed %d: latches %d, ride %.1f s, shots from the line %d, hauls %d, chunks from a haul %d, drop hauls %d, drop chunks %d, drop break %s, fight %.2f s" % [
 			arm, run_seed, int(note.get("latch_bites", 0)), float(note.get("latch_ride_s", 0.0)), int(note.get("latch_shots", 0)),
 			int(note.get("latch_hauls", 0)), int(note.get("latch_chunks", 0)), int(note.get("drop_hauls", 0)), int(note.get("drop_chunks", 0)),
-			note.get("drop_break", false) == true, fights[arm].back()])
+			note.get("drop_break", false) == true, _fight(record)])
 	var grown: float = _median(fights.get("grown", []))
 	var small: float = _median(fights.get("small", []))
 	var camper_broke: int = fights.get("camper", []).filter(func(s): return s < RUN_CAP_S).size()
 	var grown_low: int = low_staggers.get("grown", []).filter(func(n): return n > 0).size()
 	print("swarm band stage %d: small %.2f s of %s, grown %.2f s of %s, camper %s" % [STAGE, small, fights.get("small", []),
 		grown, fights.get("grown", []), fights.get("camper", [])])
-	print("swarm runs with no record (counted at the run cap): %s" % [unrecorded])
+	print("swarm runs with no record (left out of the medians): %s" % [unrecorded])
 	print("swarm low-dwell staggers per seed: small %s, grown %s, camper %s" % [low_staggers.get("small", []),
 		low_staggers.get("grown", []), low_staggers.get("camper", [])])
 	t.eq("each arm ran eight seeds", [fights.get("small", []).size(), fights.get("grown", []).size(), fights.get("camper", []).size()],
