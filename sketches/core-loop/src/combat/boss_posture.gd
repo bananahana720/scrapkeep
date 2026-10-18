@@ -110,7 +110,8 @@ func judge(hit: Dictionary) -> Dictionary:
 	var gain := hit_base * pow(clampf(ratio, mult_min, mult_max), curve)
 	if contact and contact_gain_scale > 0.0:
 		gain *= 1.0 + contact_gain_scale * maxf(0.0, clampf(ratio, mult_min, mult_max) - contact_gain_floor)
-	gain = minf(gain, cap_for(ratio))
+	if hit_cap < FULL:
+		gain = minf(gain, cap_for(ratio))
 	if contact and frame == gain_frame:
 		gain = maxf(0.0, gain - gain_in_frame)
 	result["gain"] = gain
