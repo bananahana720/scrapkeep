@@ -403,16 +403,24 @@ def canonical_indices(path, vertices=False):
 
     if vertices:
         data = _unshare_accessors(gltf, data, bin_start)
+    def vertex_accessors(prim):
+        # Morph targets are per-vertex arrays too: they sort and match with the vertices.
+        # Unpolished exports keep their old layout byte for byte.
+        ids = [a for _, a in sorted(prim["attributes"].items())]
+        if not vertices:
+            return ids
+        return ids + [m[k] for m in prim.get("targets", []) for k in sorted(m)]
+
     for mesh in gltf["meshes"]:
         for prim in mesh["primitives"]:
-            columns = [element_bytes(a) for _, a in sorted(prim["attributes"].items())]
+            columns = [element_bytes(a) for a in vertex_accessors(prim)]
             if vertices:
                 rows = list(zip(*columns))
                 order = sorted(range(len(rows)), key=lambda k: rows[k])
                 where = [0] * len(order)
                 for new, old in enumerate(order):
                     where[old] = new
-                for (_, acc_id), column in zip(sorted(prim["attributes"].items()), columns):
+                for acc_id, column in zip(vertex_accessors(prim), columns):
                     acc = gltf["accessors"][acc_id]
                     view = gltf["bufferViews"][acc["bufferView"]]
                     size = len(column[0])
@@ -444,9 +452,9 @@ def _unshare_accessors(gltf, data, bin_start):
     used = set()
     for mesh in gltf["meshes"]:
         for prim in mesh["primitives"]:
-            slots = [("attributes", k) for k in sorted(prim["attributes"])] + [(None, "indices")]
-            for group, key in slots:
-                holder = prim[group] if group else prim
+            holders = [(prim["attributes"], k) for k in sorted(prim["attributes"])] + [(prim, "indices")]
+            holders += [(m, k) for m in prim.get("targets", []) for k in sorted(m)]
+            for holder, key in holders:
                 acc_id = holder[key]
                 if acc_id not in used:
                     used.add(acc_id)
@@ -481,6 +489,10 @@ def _repack(gltf, data, bin_start):
                 targets[prim["attributes"][key]] = 34962
             order.append(prim["indices"])
             targets[prim["indices"]] = 34963
+            for morph in prim.get("targets", []):
+                for key in sorted(morph):
+                    order.append(morph[key])
+                    targets[morph[key]] = 34962
     for anim in gltf.get("animations", []):
         for sampler in anim["samplers"]:
             order += [sampler["input"], sampler["output"]]
@@ -519,6 +531,9 @@ def _repack(gltf, data, bin_start):
         for prim in mesh["primitives"]:
             prim["attributes"] = {k: new_id[v] for k, v in prim["attributes"].items()}
             prim["indices"] = new_id[prim["indices"]]
+            prim["targets"] = [{k: new_id[v] for k, v in morph.items()} for morph in prim.get("targets", [])] or None
+            if prim["targets"] is None:
+                del prim["targets"]
     for anim in gltf.get("animations", []):
         for sampler in anim["samplers"]:
             sampler["input"], sampler["output"] = new_id[sampler["input"]], new_id[sampler["output"]]
