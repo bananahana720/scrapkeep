@@ -7,6 +7,8 @@ const BotAudit := preload("res://tools/bot_audit.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
+const SignalTimer := preload("res://tools/signal_timer.gd")
+const PhysicsProbe := preload("res://tools/physics_probe.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -40,6 +42,16 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 # same args (tuning.gd's FLAGS).
 # --from-stage=N continues a matching RunStore entrance in --out/entrance.json;
 # otherwise it starts normally, then enters stage N for a bounded world run.
+# Frame-time probes (stage-entry and mid-stage freezes; a bot run plays the legacy maps unless it
+# passes --table=park, which a launched game plays):
+# --wall-clock=1 leaves SimClock on the wall clock, as in a played game: park stages build on
+# worker threads and hit-stop reads real time, so the seed no longer replays exactly.
+# --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage, flow state and the
+# Performance process, physics, node, resource and object counts.
+# --entry-profile=1 writes entry-<seed>.ndjson: every GameEvents handler's main-thread ms by
+# frame (tools/signal_timer.gd), signals under 5 ms a frame dropped. It slows the run about 2.5x.
+# --physics-probe=1 writes physics-<seed>.ndjson: for each physics tick over 100 ms, the Game
+# children (and --probe-under=<child,...>'s children) that spent it (tools/physics_probe.gd).
 # The game runs in test mode (no keyboard, no mouse capture) and its codex and run log
 # are pointed at --out, the way test mode points them at a per-process folder; --out may
 # be an absolute path or a user:// path. Next to the spine's two logs the runner writes:
@@ -73,11 +85,16 @@ var _counter_serial := 0
 var _bot_options
 var _allocation_noise: Array[RefCounted] = []
 var _beats
+var _frame_log: FileAccess
+var _frame_usec := 0
+var _frame_index := 0
+var _signal_timer
+var _physics_probe
 
 
 func _initialize() -> void:
-	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
+	SimClock.ticks = _settings.get("wall-clock", "0") != "1"
 	_bot_options = BotOptions.new(_settings, self)
 	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
 	if BotProfile.enabled:
@@ -179,6 +196,10 @@ func _next() -> void:
 	_game.run_store_path = _out.path_join("entrance.json")
 	root.add_child(_game)
 	_driver = null
+	if _settings.get("frame-log", "0") == "1":
+		_frame_log = FileAccess.open(_out.path_join("frames-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
+		_frame_usec = 0
+		_frame_index = 0
 	if _settings.has("trace-ticks"):
 		_tick_trace = FileAccess.open(_out.path_join("trace-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
 
@@ -232,6 +253,20 @@ func _physics_process(delta: float) -> bool:
 			_audit.setup(_game.events, _driver, _out.path_join("events-%d.ndjson" % _seeds[_index]))
 		_bot_options.apply_audio(_game.presentation.audio)
 		_beats = StageBeats.Recorder.new(_game.events, _game.flow)
+		if _settings.get("entry-profile", "0") == "1":
+			_signal_timer = SignalTimer.new()
+			var names := []
+			for row in _game.events.get_script().get_script_signal_list():
+				names.append(row.name)
+			_signal_timer.time_signals(_game.events, names)
+		if _settings.get("physics-probe", "0") == "1":
+			_physics_probe = PhysicsProbe.new()
+			var parents := [_game]
+			for name in String(_settings.get("probe-under", "")).split(",", false):
+				var node: Node = _game.get_node_or_null(name)
+				if node != null:
+					parents.append(node)
+			_physics_probe.watch(self, parents)
 		_driver.start(resume)
 		if _settings.has("from-stage") and not resume and int(_settings["from-stage"]) != 1:
 			_game.flow.enter_stage(int(_settings["from-stage"]), Vector3.ZERO, false)
@@ -267,11 +302,23 @@ func _physics_process(delta: float) -> bool:
 		_bot_scope = null
 		BotProfile.finish(_out.path_join("profile-%d.json" % _seeds[_index]))
 	_audit = null
+	if _signal_timer != null:
+		_signal_timer.flush()
+		var file := FileAccess.open(_out.path_join("entry-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
+		for row in _signal_timer.rows:
+			file.store_line(JSON.stringify(row))
+		_signal_timer = null
+	if _physics_probe != null:
+		var file := FileAccess.open(_out.path_join("physics-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
+		for row in _physics_probe.rows:
+			file.store_line(JSON.stringify(row))
+		_physics_probe = null
 	_game.free()
 	if _settings.get("bot-no-pilot-tracks", "0") == "1":
 		print("bot_run: %d cosmetic pilot tracks disabled; playback retained" % _bot_options.pilot_tracks_skipped)
 	_game = null
 	_tick_trace = null
+	_frame_log = null
 	# Match a fresh process: start the driver before the new camera's first render update.
 	Engine.time_scale = 1.0
 	_next_pending = true
@@ -349,4 +396,18 @@ func _finish() -> void:
 func _process(_delta: float) -> bool:
 	if BotProfile.enabled:
 		BotProfile.idle_begin()
+	if _frame_log != null and _game != null and _game.run != null:
+		var now := Time.get_ticks_usec()
+		if _frame_usec > 0:
+			_frame_log.store_line(JSON.stringify({"f": _frame_index, "ms": (now - _frame_usec) / 1000.0, "stage": _game.run.stage, "state": _game.flow.state,
+				"process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, "physics_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+				"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT), "resources": Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT),
+				"objects": Performance.get_monitor(Performance.OBJECT_COUNT)}))
+		_frame_usec = now
+		_frame_index += 1
+	if _signal_timer != null:
+		_signal_timer.flush()
+		_signal_timer.frame = _frame_index
+	if _physics_probe != null:
+		_physics_probe.frame = _frame_index
 	return false

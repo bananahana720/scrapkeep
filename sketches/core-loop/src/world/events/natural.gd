@@ -7,6 +7,7 @@ const OverlayMap := EventGround.OverlayMap
 const Kinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
@@ -39,6 +40,9 @@ var _next_checked := false
 # {"plan"}. Shared across handlers because each stage's handler is freed on the next entry. A
 # stage's handler starts the worker for the next stage once that stage's ground is built.
 static var _plans := {}
+# The worker projecting the marks of a plan made on the main thread: {"key", "task", "out"}, else
+# empty. Static like _plans, so a retry or teardown before it is done never waits on it.
+static var _marks_job := {}
 
 
 class WaterClock:
@@ -104,12 +108,13 @@ func setup(world_ref) -> void:
 		if row.family != "natural" or not KINDS.has(row.kind):
 			continue
 		var entry: Dictionary = planned[row.id]
-		var record := {"site": entry.site, "at": entry.at, "geometry": entry.geometry.duplicate(), "overlay": null}
+		var record := {"site": entry.site, "at": entry.at, "geometry": entry.geometry.duplicate(), "overlay": null, "marks": entry.get("marks", {})}
 		if entry.has("water"):
 			record.water_surface = entry.water
 		if row.kind in ["cave_in", "collapse", "impact"]:
 			_prepare_overlay(row, record, entry)
 		_prepared[row.id] = record
+	_plan_marks(planned)
 	world.terrain.flood = _water_field
 	# Replace the generic world's sound listener for this stage, preserving its other cues.
 	var presentation = world.ctx.root.get("presentation")
@@ -156,11 +161,33 @@ static func plan(world, park: Dictionary) -> Dictionary:
 	return out
 
 
+# Each natural row's telegraph and landing marks, projected from its planned geometry (up to about
+# 1 s each for a flash flood's wash, so never on the main thread in play). A landed collapse sits
+# on its own overlay, so its landing mark is always projected live. Pure like plan().
+static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictionary:
+	var out := {}
+	for row in park.event_rows:
+		if not planned.has(row.id):
+			continue
+		var geometry: Dictionary = planned[row.id].geometry
+		out[row.id] = {"telegraph": _mark_surfaces(world, row, geometry, false, null, true)}
+		if row.kind != "collapse":
+			out[row.id].land = _mark_surfaces(world, row, geometry, true, null, true)
+	return out
+
+
 static func _finish(planned: Dictionary) -> void:
 	for entry in planned.values():
 		for key in ["water", "surface", "target"]:
 			if entry.has(key):
 				entry[key].finish()
+		_finish_marks(entry.get("marks", {}))
+
+
+static func _finish_marks(marks: Dictionary) -> void:
+	for surfaces: Dictionary in marks.values():
+		for surface in surfaces.values():
+			surface.finish()
 
 
 # This stage's plan: the one a worker made while the previous stage played, the one the last entry
@@ -179,6 +206,62 @@ func _planned() -> Dictionary:
 	if key != 0 and EventGround.pristine(terrain, terrain.stage):
 		_plans[key] = {"plan": planned, "rows": rows}
 	return planned
+
+
+# Starts a worker on the stage's marks, from a snapshot of its ground as entered, unless its cached
+# plan has them (a retry); _take_marks hands them over once it is done, and a mark wanted before
+# then is projected live.
+func _plan_marks(planned: Dictionary) -> void:
+	var terrain = world.terrain
+	var key := _root_key(terrain, terrain.stage)
+	if key == 0 or not _plans.has(key) or not EventGround.pristine(terrain, terrain.stage):
+		return
+	if planned.values().any(func(entry): return entry.has("marks")) or _marks_job.get("key", 0) == key:
+		return
+	_settle_marks()
+	var snapshot := EventGround.snapshot(world.terrain, world.terrain.stage)
+	var park: Dictionary = _original_map.park.duplicate(true)
+	# The prepared geometry, which the overlay setup may have given a span's marker surface.
+	var geometry := {}
+	for id in _prepared:
+		var copy: Dictionary = _prepared[id].geometry.duplicate(true)
+		if copy.has("marker_surface"):
+			copy.marker_surface = copy.marker_surface.copy()
+		geometry[id] = {"geometry": copy}
+	var out := {}
+	_marks_job = {"key": key, "out": out, "task": WorkerThreadPool.add_task(func(): out.merge(plan_marks(snapshot, park, geometry)), false, "natural marks")}
+
+
+func _take_marks() -> void:
+	if _marks_job.is_empty() or not WorkerThreadPool.is_task_completed(_marks_job.task):
+		return
+	var key: int = _marks_job.key
+	var marks := _settle_marks()
+	if world == null or key != _root_key(world.terrain, world.terrain.stage):
+		return
+	for id in marks:
+		if _prepared.has(id) and _prepared[id].marks.is_empty():
+			_prepared[id].marks = marks[id]
+
+
+# Waits on the marks worker, finishes its meshes and stores them in the plan they belong to.
+static func _settle_marks() -> Dictionary:
+	if _marks_job.is_empty():
+		return {}
+	WorkerThreadPool.wait_for_task_completion(_marks_job.task)
+	var marks: Dictionary = _marks_job.out
+	_finish_marks_by_row(marks)
+	var cached: Dictionary = _plans.get(_marks_job.key, {}).get("plan", {})
+	for id in marks:
+		if cached.has(id):
+			cached[id].marks = marks[id]
+	_marks_job = {}
+	return marks
+
+
+static func _finish_marks_by_row(marks: Dictionary) -> void:
+	for row_marks: Dictionary in marks.values():
+		_finish_marks(row_marks)
 
 
 static func _rows_hash(park: Dictionary) -> int:
@@ -234,6 +317,7 @@ func _prepare_next() -> void:
 static func settle_plans() -> void:
 	for key in _plans.keys():
 		_settle(key)
+	_settle_marks()
 
 
 # Teardown: waits on every plan, then drops them, meshes and shapes with them.
@@ -283,6 +367,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 
 
 func _process(_delta: float) -> void:
+	_take_marks()
 	_prepare_next()
 	for key in _plans:
 		if _plans[key].has("task") and WorkerThreadPool.is_task_completed(_plans[key].task):
@@ -440,37 +525,75 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
-	if landed and row.kind == "collapse":
-		geometry = geometry.duplicate()
-		geometry.marker_surface = _overlay_map.swaps[_prepared[row.id].swap].target
+	var surfaces: Dictionary = _prepared[row.id].marks.get("land" if landed else "telegraph", {}) if _prepared.has(row.id) else {}
+	if surfaces.is_empty() or not _ground_as_planned():
+		if landed and row.kind == "collapse":
+			geometry = geometry.duplicate()
+			geometry.marker_surface = _overlay_map.swaps[_prepared[row.id].swap].target
+		surfaces = _mark_surfaces(world, row, geometry, landed, _overlay_map)
 	var mark := Node3D.new()
 	mark.set_meta("row_id", row.id)
 	add_child(mark)
 	mark.position = Vector3.UP * 0.15
-	var form: String = row.telegraph.form
-	var spec: Dictionary = Kinds.world_row(world.events.PARK_LAND_FACTS[form] if landed else form)
-	var half: Vector2 = geometry.half
+	var spec: Dictionary = Kinds.world_row(EventDirector.PARK_LAND_FACTS[row.telegraph.form] if landed else row.telegraph.form)
 	var mesh := MeshInstance3D.new()
-	mesh.name = "Style"
+	mesh.name = "DustCurtain" if surfaces.has("CrawlingCrack") else "Style"
 	mesh.set_meta("shape", spec.shape)
+	if surfaces.has("CrawlingCrack"):
+		var crack := MeshInstance3D.new()
+		crack.name = "CrawlingCrack"
+		crack.mesh = surfaces.CrawlingCrack.mesh
+		crack.material_override = Palette.unshaded(spec.color)
+		mark.add_child(crack)
+	mesh.mesh = surfaces.Style.mesh
+	mesh.material_override = Palette.unshaded(spec.color)
+	mark.add_child(mesh)
+	if surfaces.has("Footprint"):
+		var boundary := Node3D.new()
+		boundary.name = "Footprint"
+		mark.add_child(boundary)
+		var outline := MeshInstance3D.new()
+		outline.mesh = surfaces.Footprint.mesh
+		outline.material_override = Palette.unshaded(spec.color)
+		boundary.add_child(outline)
+	return mark
+
+
+# True while the stage's ground is the one the plan projected on: no cave roof lowered and no
+# overlay down that reshapes the ground, so a planned mark matches one projected now.
+func _ground_as_planned() -> bool:
+	var terrain = world.terrain
+	if "_cave_roofs" in terrain and not EventGround.pristine(terrain, terrain.stage):
+		return false
+	if _overlay_map != null and "overlays" in terrain:
+		for id in terrain.overlays:
+			if _overlay_map.profiles.has(id):
+				return false
+	return true
+
+
+# A mark's projected surfaces by node name: Style, CrawlingCrack for a dust crack and Footprint for
+# all but lightning. Pure in world (the live world or an EventGround.Snapshot), so a worker can
+# project them (deferred, finished on the main thread by _finish).
+static func _mark_surfaces(world, row: Dictionary, geometry: Dictionary, landed: bool, overlay_map: OverlayMap, deferred := false) -> Dictionary:
+	var spec: Dictionary = Kinds.world_row(EventDirector.PARK_LAND_FACTS[row.telegraph.form] if landed else row.telegraph.form)
+	var half: Vector2 = geometry.half
+	var out := {}
 	var shapes := []
 	var offset := Callable()
+	var project := func(shape_list: Array, shape_offset: Callable) -> WaterSurface:
+		return EventGround.project_surface(world, geometry, shape_list, shape_offset, false, null, overlay_map, null, deferred)
 	if spec.get("pattern", "") == "dust_crack":
-		mesh.name = "DustCurtain"
-		shapes = [_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)]
+		shapes = [EventGround._rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)]
 		var initial := 1.0 if landed else 0.001
 		offset = func(local, _base): return float(spec.dust_height_m) * initial * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)
 		var foot: float = geometry.crack_foot_x
-		var crack := MeshInstance3D.new()
-		crack.name = "CrawlingCrack"
-		crack.mesh = _project_surface(geometry, [_rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, initial)))]).mesh
-		crack.material_override = Palette.unshaded(spec.color)
-		mark.add_child(crack)
+		out.CrawlingCrack = project.call([EventGround._rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, initial)))], Callable())
 	elif spec.shape == "cross":
-		shapes = [_rectangle(Vector2(-half.x, -0.15), Vector2(half.x, 0.15)),
-			_rectangle(Vector2(-0.15, -half.y), Vector2(0.15, half.y))]
+		shapes = [EventGround._rectangle(Vector2(-half.x, -0.15), Vector2(half.x, 0.15)),
+			EventGround._rectangle(Vector2(-0.15, -half.y), Vector2(0.15, half.y))]
 	elif spec.shape == "wave":
-		shapes = [_rectangle(-half, half)]
+		shapes = [EventGround._rectangle(-half, half)]
 		offset = func(local, _base): return 0.2 * (1.0 + sin((local.y / (half.y * 2.0) + 0.5) * TAU * 3.0))
 	else:
 		var segments := 32
@@ -480,28 +603,15 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 			shapes.append([Vector2.ZERO, a, b] if spec.shape == "burst" else [a, b, b * 0.97, a * 0.97])
 		if spec.shape == "burst":
 			offset = func(local, _base): return 0.3 * maxf(0.0, 1.0 - (local / half).length_squared())
-	mesh.mesh = _project_surface(geometry, shapes, offset).mesh
-	mesh.material_override = Palette.unshaded(spec.color)
-	mark.add_child(mesh)
+	out.Style = project.call(shapes, offset)
 	if row.kind != "lightning":
-		var boundary := Node3D.new()
-		boundary.name = "Footprint"
-		mark.add_child(boundary)
-		var outline := MeshInstance3D.new()
-		outline.mesh = _footprint_mesh(geometry)
-		outline.material_override = Palette.unshaded(spec.color)
-		boundary.add_child(outline)
-	return mark
-
-
-func _footprint_mesh(geometry: Dictionary) -> ArrayMesh:
-	var half: Vector2 = geometry.half
-	var inset := (half - Vector2.ONE * 0.3).max(Vector2.ZERO)
-	return _project_surface(geometry, [
-		_rectangle(-half, Vector2(half.x, -inset.y)),
-		_rectangle(Vector2(-half.x, inset.y), half),
-		_rectangle(Vector2(-half.x, -inset.y), Vector2(-inset.x, inset.y)),
-		_rectangle(Vector2(inset.x, -inset.y), Vector2(half.x, inset.y))]).mesh
+		var inset := (half - Vector2.ONE * 0.3).max(Vector2.ZERO)
+		out.Footprint = project.call([
+			EventGround._rectangle(-half, Vector2(half.x, -inset.y)),
+			EventGround._rectangle(Vector2(-half.x, inset.y), half),
+			EventGround._rectangle(Vector2(-half.x, -inset.y), Vector2(-inset.x, inset.y)),
+			EventGround._rectangle(Vector2(inset.x, -inset.y), Vector2(half.x, inset.y))], Callable())
+	return out
 
 
 func _show_landing(row: Dictionary, state: Dictionary) -> void:
