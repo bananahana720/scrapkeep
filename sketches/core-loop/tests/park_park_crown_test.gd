@@ -69,7 +69,14 @@ const DRESSED := {"hoodoo_gust_lip_1": "mesa_lip_kicker", "hoodoo_gust_lip_2": "
 	"east_bajada_lip_2": "mesa_lip_kicker", "gauntlet_kite_lip": "mesa_lip_kicker", "alcove_foot_lip": "mesa_lip_kicker",
 	"east_wash_hammock": "net_deck", "bowl_rim_net": "net_deck", "west_field_lip": "mesa_lip_kicker",
 	"signal_approach_lip": "mesa_lip_kicker", "bajada_rim_lip_w": "mesa_lip_kicker", "bajada_rim_lip_e": "mesa_lip_kicker",
-	"east_field_lip": "mesa_lip_kicker", "bowl_rim_net_w": "net_deck"}
+	"east_field_lip": "mesa_lip_kicker", "bowl_rim_net_w": "net_deck",
+	# 2026-10-18 placeholder unit I: the sized kickers from the ride pieces (tools/blender/park/kickers.py), seat fit.
+	"bajada_lip": "mesa_lip_kicker_24x6x90", "crown_ramp": "mesa_lip_kicker_24x6x60", "east_ribs": "mesa_lip_kicker_26x5x30",
+	"kick_wmid_3": "mesa_lip_kicker_60x32x36", "kick_wlast_10": "mesa_lip_kicker_60x26x60",
+	"kick_emid_1": "mesa_lip_kicker_24x6x36", "kick_emid_2": "mesa_lip_kicker_24x6x36", "kick_wmid_4": "mesa_lip_kicker_24x6x36",
+	"kick_wmid_5": "mesa_lip_kicker_24x6x36", "kick_clast_6": "mesa_lip_kicker_24x6x36", "kick_nlast_7": "mesa_lip_kicker_24x6x36",
+	"kick_nlast_8": "mesa_lip_kicker_24x6x36", "kick_nlast_9": "mesa_lip_kicker_24x6x36", "kick_wlast_11": "mesa_lip_kicker_24x6x36",
+	"kick_wlast_12": "mesa_lip_kicker_24x6x36", "kick_slast_14": "mesa_lip_kicker_24x6x36"}
 const POCKETS := {
 	"camp_signal": {"role": "online", "rarities": ["common"]},
 	"cache_turnstone": {"role": "reward", "rarities": ["rare"]},

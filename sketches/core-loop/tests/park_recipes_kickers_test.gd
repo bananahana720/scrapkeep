@@ -136,9 +136,11 @@ static func piece_for(row: Dictionary) -> String:
 	return ""
 
 
-# The rows these pieces exist for: greybox kickers in the flume, pit, crown and islands, and the sinkhole's half-pipes.
+# The rows these pieces exist for: greybox kickers in the flume, pit, crown and islands, and the sinkhole's half-pipes,
+# and the rows already swapped onto one of these pieces (2026-10-18 Highdraft swap, PR #78).
 static func _target(park: String, row: Dictionary) -> bool:
-	if String(row.get("recipe", "")) != "greybox:" + String(row["element"]):
+	var recipe := String(row.get("recipe", ""))
+	if recipe != "greybox:" + String(row["element"]) and not PIECES.has(recipe):
 		return false
 	return row["element"] == ("half_pipe" if park.ends_with("park_sinkhole.json") else "kicker")
 
@@ -159,6 +161,9 @@ func _check_coverage() -> void:
 			var id := piece_for(row)
 			if id == "":
 				missing.append("%s %s" % [row["id"], row["size"]])
+				continue
+			if PIECES.has(String(row["recipe"])) and (row["recipe"] != id or row.get("fit", "") != ParkRecipes.FIT_SEAT):
+				missing.append("%s takes %s, seat fit, not %s %s" % [row["id"], id, row["recipe"], row.get("fit", "")])
 				continue
 			var seated := row.duplicate(true)
 			seated["recipe"] = id

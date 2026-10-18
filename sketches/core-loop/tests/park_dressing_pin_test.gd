@@ -13,6 +13,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Stage -> [map, batch count, hash], from the 7dbdebae builder.
+# 2026-10-18 ride pieces re-pin: stage 5 park_islands 3681139656 -> 3658420553, because the step lips are now
+# mesa_shelf_edge pieces and run_step_lip_3 is split in two, which changes the scatter keep-out; the others unchanged.
 # 2026-10-17 islands authored pass re-pin: stage 5 park_islands 3297821718 -> 3681139656 and stage 6 park_crown
 # 452118366 -> 74019119, because the new lips and nets join the scatter keep-out (park_map.gd); stages 1 to 4 unchanged.
 # 2026-10-17 crown authored pass re-pin: stage 6 park_crown 3361994924 -> 452118366, because the new lips,
@@ -27,7 +29,7 @@ const PINS := {
 	2: ["park_flume", 13, 1284262125],
 	3: ["park_pit", 13, 3689678730],
 	4: ["park_sinkhole", 13, 3017710206],
-	5: ["park_islands", 13, 3681139656],
+	5: ["park_islands", 13, 3658420553],
 	6: ["park_crown", 13, 74019119],
 }
 
