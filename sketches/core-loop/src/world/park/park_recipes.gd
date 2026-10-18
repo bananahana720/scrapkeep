@@ -30,6 +30,10 @@ extends RefCounted
 # entry and at its exit match within TILE_MATCH_M in width and height (tile_ends); a recipe that does not, or a stretch
 # outside STRETCH_MIN to STRETCH_MAX, refuses the fit and the row stands in as its greybox and says why (tile_refusal).
 # Every copy carries its own base views, detail shells and collider faces, each view with the budget's ranges.
+#
+# The drape fit (dam kit, 2026-10-17): a row that says `"fit": "drape"` names a GLB authored to conform to the stamped ground
+# (tools/blender/park/dam_dressing.py), so its node stands on seat() like a greybox stand-in of its stamp, not on the crest; no
+# `y` (which the graph reads as a deck), no stretch or shear, and the stamped ground stays the collider.
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
@@ -61,6 +65,7 @@ const WORLD_LAYER := 1
 const BALL_LAYER := 2
 # How far above a piece's top the ride sensor reaches, so a ball rolling or landing on it counts.
 const SENSOR_ABOVE_M := 3.0
+const ONCE_FACT_PREFIX := "layer_mind_quote_"
 const GREYBOX_TINT := Color("8a8a84")
 # The seat fit (header): the row field value, the stretch bounds and the GLB nodes that mark a ride's authored ends.
 const FIT_SEAT := "seat"
@@ -71,6 +76,7 @@ const SOCKET_EXIT := "socket_exit"
 # The tile fit (header): the row field value, the fewest copies, how closely the entry and exit cross-sections must
 # match, and how far inside each authored end the cross-section is cut (an end cap lying in the plane cuts to nothing).
 const FIT_TILE := "tile"
+const FIT_DRAPE := "drape"
 const TILE_MIN := 2
 const TILE_MATCH_M := 0.25
 const TILE_SLICE_IN_M := 0.05
@@ -315,6 +321,11 @@ static func seat_fit(row: Dictionary, ends: Dictionary, ground := Callable()) ->
 	var basis := Basis(Vector3.RIGHT, Vector3.UP, Vector3(0, shear, stretch))
 	var xf := Transform3D(basis, Vector3(0, a - shear * e.z, -length * 0.5 - stretch * e.z))
 	return {"ok": true, "reason": "", "stretch": stretch, "lip_y": lip_y, "exit_y": exit_y, "transform": xf}
+
+
+# Whether a row opts in to the drape fit (header): a stamped GLB row seated like its stamp's greybox.
+static func fits_drape(row: Dictionary) -> bool:
+	return String(row.get("fit", "")) == FIT_DRAPE and String(row.get("stamp", "")) != ""
 
 
 # Whether a row opts in to the tile fit (header).
@@ -794,7 +805,17 @@ static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
 	node.add_child(area)
 	area.body_entered.connect(func(ball: Node3D) -> void:
 		for fact: String in facts:
-			publish.call(fact, ball.global_position))
+			_fire(area, fact, ball.global_position, publish))
+
+
+# A ride sensor publishes its fact on every entry, except a Mind quote (Q9), which plays once per stage build: a bounce
+# inside the box or a second crossing stays silent.
+static func _fire(area: Area3D, fact: String, at: Vector3, publish: Callable) -> void:
+	if fact.begins_with(ONCE_FACT_PREFIX):
+		if area.has_meta("fired"):
+			return
+		area.set_meta("fired", true)
+	publish.call(fact, at)
 
 
 # A wedge's six corners in the node's space: extent is [width, height, length]; rise +1 puts the high edge at +z.
@@ -1148,10 +1169,10 @@ static func stamp_replaces(row: Dictionary) -> bool:
 	return String(row.get("stamp", "")) != "" and row.get("y") == null and stands_in(row)
 
 
-# The ground a row's node stands on: a stamp_replaces row stands on the ground less its own stamp's raise (the plain
-# the stamp raised; a cut keeps its floor, so the sensor reaches into it); everything else on the ground itself.
+# The ground a row's node stands on: a stamp_replaces row, or a drape-fit row, stands on the ground less its own stamp's
+# raise (the plain the stamp raised; a cut keeps its floor, so the sensor reaches into it); everything else on the ground itself.
 static func seat(row: Dictionary, ground: Callable) -> Callable:
-	if not ground.is_valid() or not stamp_replaces(row):
+	if not ground.is_valid() or not (stamp_replaces(row) or fits_drape(row)):
 		return ground
 	var f := Stamps.frame(row)
 	return func(x: float, z: float) -> float: return float(ground.call(x, z)) - maxf(Stamps.offset(f, x, z), 0.0)
