@@ -594,10 +594,13 @@ func _tick_speed_bank(delta: float) -> void:
 		_speed_bank_rest_ticks = 0
 		_speed_bank_rest_braked = false
 		return
+	# The bank reads a gripped wall as the air it was before grip: planar speed on a climb is
+	# near zero, and a rest there would let a roll start push the ball along the wall.
+	var floored: bool = state.grounded and state.contact_normal.y > Tuning.MAX_SLOPE_DOT
 	var planar := planar_velocity()
 	var speed := planar.length()
 	var free_rest := _speed_bank_rest_ticks > 0 and not _speed_bank_rest_braked
-	if state.grounded and speed <= Tuning.BANK_REST * cruise:
+	if floored and speed <= Tuning.BANK_REST * cruise:
 		_speed_bank_rest_ticks += 1
 		_speed_bank_rest_braked = _speed_bank_rest_braked or intent.brake_held
 	else:
@@ -617,14 +620,14 @@ func _tick_speed_bank(delta: float) -> void:
 			_speed_bank_chosen = BankMove.NONE
 			_speed_bank_airborne = false
 	if _speed_bank_chosen == BankMove.SLIDE:
-		if not state.grounded:
+		if not floored:
 			_speed_bank_chosen = BankMove.SLIDE_FLIGHT
 		elif not intent.brake_held or speed <= Tuning.BANK_REST * cruise:
 			_speed_bank_chosen = BankMove.NONE
-	if slide_start and state.grounded and speed >= Tuning.BANK_ARM * cruise:
+	if slide_start and floored and speed >= Tuning.BANK_ARM * cruise:
 		_speed_bank_chosen = BankMove.SLIDE
 		_speed_bank_airborne = false
-	roll_start = roll_start and free_rest and state.grounded and not intent.brake_held and speed <= Tuning.BANK_REST * cruise
+	roll_start = roll_start and free_rest and floored and not intent.brake_held and speed <= Tuning.BANK_REST * cruise
 	if not speed_bank.is_empty() and jumped:
 		var row: Dictionary = speed_bank["row"]
 		var u: float = speed_bank["t"] / float(row["decay_s"])
@@ -635,7 +638,7 @@ func _tick_speed_bank(delta: float) -> void:
 		speed_bank = {}
 		return
 	if speed_bank.is_empty():
-		if not state.grounded or not (roll_start or (landed and speed >= Tuning.BANK_ARM * cruise)):
+		if not floored or not (roll_start or (landed and speed >= Tuning.BANK_ARM * cruise)):
 			return
 		var row := Tuning.bank_row(class_def.id if class_def != null else "")
 		var bonus := float(row["ratio"]) * cruise - speed
@@ -651,7 +654,7 @@ func _tick_speed_bank(delta: float) -> void:
 		var banked := minf(bonus, (float(row["ratio"]) - 1.0) * cruise)
 		speed_bank = {"row": row, "t": 0.0, "bonus0": banked, "bonus": banked}
 		return
-	if not state.grounded:
+	if not floored:
 		return
 	var row: Dictionary = speed_bank["row"]
 	speed_bank["t"] += delta

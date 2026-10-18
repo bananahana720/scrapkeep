@@ -1403,7 +1403,7 @@ func active_weapon() -> String:
 	var weapon: String = abilities.id_of(AbilityState.WEAPON)
 	var mounted_as = abilities.cap(AbilityState.WEAPON, "mounted", null)
 	# Air Turret: airborne counts as mounted for the weapon.
-	if mounted_as != null and (ctx.player.kit.mounted or (_knob("air_turret") and not ctx.player.state.grounded)):
+	if mounted_as != null and (ctx.player.kit.mounted or (_knob("air_turret") and not ctx.player.state.on_floor())):
 		return mounted_as
 	return weapon
 
@@ -1715,7 +1715,7 @@ func _step_special(intent, delta: float) -> void:
 		ctx.player.indicator.clear("special")
 		return
 	var held: bool = (intent.special_held or auto) and not (_knob("sprint_full_blast") and kit.sprinting)
-	var step: float = delta * (_knob("air_charge") if not ctx.player.state.grounded else 1.0)
+	var step: float = delta * (_knob("air_charge") if not ctx.player.state.on_floor() else 1.0)
 	if not gauge.step(step, held):
 		ctx.player.indicator.set_shape("special", row["geometry"].call(gauge.fraction()))
 		return
@@ -2725,7 +2725,7 @@ func _step_roll_restore(delta: float) -> void:
 		_roll_clock = 0.0
 		return
 	var planar: float = ctx.player.planar_velocity().length()
-	if not ctx.player.state.grounded or SpeedTier.of(planar, ctx.player.tuning.f("cruise")) < SpeedTier.CRUISE:
+	if not ctx.player.state.on_floor() or SpeedTier.of(planar, ctx.player.tuning.f("cruise")) < SpeedTier.CRUISE:
 		return
 	_roll_clock += delta
 	while _roll_clock >= Weapons.PRESSURE_ROLL_S:
