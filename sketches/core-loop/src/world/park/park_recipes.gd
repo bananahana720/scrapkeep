@@ -1125,7 +1125,8 @@ static func anchor_variant(row: Dictionary) -> int:
 
 
 # The drawn posts' transforms in the node's space (node_xf the row node's transform): a kit row's posts stretched and
-# turned (header), else the unstretched box centres of grey posts.
+# turned (header) in the node's space, so they square up with the colliders under any yaw_deg, else the unstretched box
+# centres of grey posts.
 static func anchor_draws(row: Dictionary, posts: PackedVector2Array, ground: Callable, node_xf: Transform3D, kit: bool) -> Array:
 	var tall := float(row["size"][1]) + ANCHOR_SINK_M
 	var inv := node_xf.affine_inverse()
@@ -1138,7 +1139,7 @@ static func anchor_draws(row: Dictionary, posts: PackedVector2Array, ground: Cal
 			out.append(inv * Transform3D(Basis.IDENTITY, Vector3(p.x, bottom + tall * 0.5, p.y)))
 			continue
 		var turn := Basis(Vector3.UP, PI * 0.5 * float(hash("%s:%d" % [row.get("id", ""), k]) % 4))
-		out.append(inv * Transform3D(turn * stretch, Vector3(p.x, bottom + tall / ANCHOR_AUTHORED_M, p.y)))
+		out.append(Transform3D(turn * stretch, inv * Vector3(p.x, bottom + tall / ANCHOR_AUTHORED_M, p.y)))
 	return out
 
 
