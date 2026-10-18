@@ -1,5 +1,6 @@
 extends VBoxContainer
 
+const Secrets := preload("res://src/core/secrets.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Companion := preload("res://src/core/companion.gd")
@@ -80,7 +81,7 @@ static func reading(game) -> Dictionary:
 		for piece in Companion.PIECES:
 			if piece["id"] == id:
 				seated.append(String(piece["name"]))
-	var ids: Array = Achievements.ids()
+	var ids: Array = Achievements.ids().filter(func(id): return not Secrets.shut_row(id, profile))
 	var earned := 0
 	for id in ids:
 		if profile != null and profile.earned(id):

@@ -13,6 +13,7 @@ extends Node
 
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 
 const STAT_PREFIX := "ach."
 const SAVE_POINTS := ["player_died", "run_ended"]
@@ -67,6 +68,7 @@ func setup(events, run, profile, now := Callable(), codex = null) -> void:
 			_connect(signal_name, arg_names[signal_name])
 	backfill_rewards()
 	backfill_discoveries()
+	backfill_secrets()
 	if open_met_pilots() > 0 and _profile.can_save and not _profile.save():
 		warnings += 1
 		push_warning("progress: earned pilots opened but not saved: %s" % _profile.last_error)
@@ -105,6 +107,22 @@ func backfill_discoveries() -> int:
 		if _profile.stat(STAT_PREFIX + id) < float(row.get("count", 1)):
 			_profile.set_stat(STAT_PREFIX + id, float(row.get("count", 1)))
 		_earn(id, row)
+		earned += 1
+	return earned
+
+
+# Earns the hidden first-win paint rows (secrets.gd PAINT_ROWS) for a profile that won a run before
+# they existed, so every won profile holds every secret. _earn keeps it idempotent. Returns the rows earned.
+func backfill_secrets() -> int:
+	if _profile == null or not _profile.earned(Secrets.UNLOCK):
+		return 0
+	var earned := 0
+	for pilot in Secrets.PAINT_ROWS:
+		var id: String = Secrets.PAINT_ROWS[pilot]
+		if not rows.has(id) or _profile.earned(id):
+			continue
+		_profile.set_stat(STAT_PREFIX + id, maxf(_profile.stat(STAT_PREFIX + id), float(rows[id].get("count", 1))))
+		_earn(id, rows[id])
 		earned += 1
 	return earned
 
@@ -180,7 +198,7 @@ func open_met_pilots() -> int:
 	var earned := Callable(_profile, "earned")
 	var opened := 0
 	for def in ClassDef.all():
-		if not def.starter and not _profile.has_pilot(def.id) and ClassDef.unlock_met(String(def.unlock.get("by", "")), earned):
+		if not def.starter and not _profile.has_pilot(def.id) and ClassDef.unlock_open(def.unlock, earned):
 			_profile.unlock_pilot(def.id)
 			opened += 1
 	return opened
@@ -317,12 +335,17 @@ func _need_met(row: Dictionary) -> bool:
 
 
 func _earn(id: String, row: Dictionary) -> void:
+	var silent: bool = Secrets.PAINT_ROWS.values().has(id)
 	if not _profile.earn(id, float(_now.call())):
 		return
 	var reward: Dictionary = row.get("reward", {})
 	for kind in reward:
 		grant_once("reward:%s:%s" % [id, kind], String(kind), String(reward[kind]))
+	# A row that is a pilot's "or" rule carries no pilot reward (one row per pilot reward), so its earn opens
+	# the pilot here.
+	open_met_pilots()
 	if not _profile.save():
 		warnings += 1
 		push_warning("progress: %s earned but not saved: %s" % [id, _profile.last_error])
-	_events.achievement_earned.emit(id)
+	if not silent:
+		_events.achievement_earned.emit(id)

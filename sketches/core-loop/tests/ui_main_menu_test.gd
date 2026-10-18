@@ -40,6 +40,8 @@ func _run() -> void:
 	var quit: Button = screens.button_for("quit")
 	_t.check("Quit is on Esc", quit != null and quit.key == "key_esc" and quit.text == "Quit")
 	_t.eq("the title reads SCRAPKEEP", screens._title.text, Screens.TITLE)
+	_t.eq("the ready line names the launch set and the open pilots", screens.ready_line(1234),
+		"SCRAPKEEP_MENU_READY ms=1234 profile=default pilots=1/6")
 
 	# Steps the stamp past its end on the tween's own clock, not the wall clock.
 	screens._stamp_tween.custom_step(Screens.STAMP_TIME + 0.2)

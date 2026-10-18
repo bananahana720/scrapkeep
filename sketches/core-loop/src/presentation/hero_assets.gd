@@ -1242,8 +1242,12 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 		scene.free()
 		return mounts
 	paint(scene, tints)
+	# glTF import renames a node "upper_arm.L" to "upper_arm_L"; match parts by that name.
+	var bone_of := {}
+	for i in skeleton.get_bone_count():
+		bone_of[skeleton.get_bone_name(i).validate_node_name()] = skeleton.get_bone_name(i)
 	for part in scene.get_children():
-		var bone := String(part.name)
+		var bone := String(bone_of.get(String(part.name), part.name))
 		if part is AnimationPlayer or skeleton.find_bone(bone) < 0:
 			continue
 		scene.remove_child(part)
@@ -1260,6 +1264,7 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 	# "<Kind>_<bone>/<part>" and share the pilot's clip names, so react() plays both.
 	var player := scene.find_child("AnimationPlayer", false, false) as AnimationPlayer
 	if player != null and not mounts.is_empty():
+		_retarget_clips(player, mounts)
 		scene.remove_child(player)
 		player.name = "%sAnimator" % kind.capitalize()
 		player.set_meta("addon", kind)
@@ -1268,6 +1273,27 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 		mounts.append(player)
 	scene.free()
 	return mounts
+
+
+# Imported clips address parts from the GLB root ("head/HoodShell"). After the mount each part
+# sits under its attachment, so its tracks gain the attachment's name. Copies, never the cache.
+func _retarget_clips(player: AnimationPlayer, mounts: Array) -> void:
+	var under := {}
+	for mount in mounts:
+		under[String(mount.get_child(0).name)] = String(mount.name)
+	for lib_name in player.get_animation_library_list():
+		var lib := AnimationLibrary.new()
+		var source := player.get_animation_library(lib_name)
+		for clip in source.get_animation_list():
+			var anim := source.get_animation(clip).duplicate() as Animation
+			for i in anim.get_track_count():
+				var path := String(anim.track_get_path(i))
+				var top := path.get_slice("/", 0).get_slice(":", 0)
+				if under.has(top):
+					anim.track_set_path(i, NodePath(under[top] + "/" + path))
+			lib.add_animation(clip, anim)
+		player.remove_animation_library(lib_name)
+		player.add_animation_library(lib_name, lib)
 
 
 func _remove_bone_mounts(scope: Node3D, kind: String) -> void:

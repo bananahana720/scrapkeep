@@ -36,7 +36,9 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
+const SpecialCues := preload("res://src/combat/special_cues.gd")
 const Companion := preload("res://src/core/companion.gd")
+const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
@@ -323,6 +325,8 @@ var near_miss
 var flail
 # The set piece on Q (ultimate.gd), a child like near_miss; it owns the meter.
 var ultimate
+# The active slot on F (src/combat/actives), behind --actives.
+var actives
 var last_player_hit := {}
 var last_impact := {}
 var _cloud := {}
@@ -389,7 +393,7 @@ func setup(ctx_ref) -> void:
 		"point_blank": {"geometry": _point_blank_geometry, "fire": _fire_point_blank},
 		"clamp": {"geometry": _clamp_geometry, "fire": _fire_clamp},
 		"cannon_plate": {"geometry": _plate_geometry, "fire": _fire_plate},
-		"gather_plate": {"tap": _tap_gather},
+		"gather_plate": {"tap": _tap_gather, "commit": _card_aim},
 	}
 	# line_id -> {on_body: Callable(target, fraction, chain_mult), on_world: Callable(anchor,
 	# fraction, chain_mult), geometry: Callable(fraction)} (SKILL-BAR section 7). Each pilot owns
@@ -423,6 +427,9 @@ func setup(ctx_ref) -> void:
 	add_child(ultimate)
 	ultimate.setup(ctx, self)
 	ultimate.register("ult_default", {"tech": _ult_volley, "peak": _ult_peak, "landing": _ult_landing})
+	actives = preload("res://src/combat/actives/active_rack.gd").new()
+	add_child(actives)
+	actives.setup(ctx, self)
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(_anchor: Vector3): _bite_load())
@@ -467,6 +474,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_ended.connect(func(_won: bool): _clear_devices())
 	ctx.events.run_started.connect(func(_class_id: String):
+		_armour_known = {}
 		discovered = {}
 		discovery_log = []
 		_proc_ready = {}
@@ -563,7 +571,10 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 		enemy.threat_level = _threat()
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
-		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
+		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
+		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
+		if source != "fuse":
+			ctx.run.record_kill(kind, where, scrap, source)
 		var id := enemy.get_instance_id()
 		_primed.erase(id)
 		_prow_until.erase(id)
@@ -574,6 +585,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
+	# A kill-first special gets its special_tell signal before its listeners hear it arrive.
+	SpecialCues.attach(enemy)
 	ctx.events.enemy_spawned.emit(enemy, kind)
 	fleet.on_spawned(enemy, kind)
 	return enemy
@@ -614,6 +627,7 @@ func _door_caps(hit: Dictionary) -> void:
 	var enemy: Node3D = hit["enemy"]
 	var result: Dictionary = hit["result"]
 	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, hit["kind"], hit["cls"])
+	_read_armour(enemy, hit, result)
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_exposed.erase(enemy.get_instance_id())
@@ -621,6 +635,29 @@ func _door_caps(hit: Dictionary) -> void:
 	# its own mark.
 	if hit["kind"] == ARC_MARK_KIND:
 		_arc_mark(enemy)
+
+
+# Damage families (DamageFamilies, FIELDS-AND-CASTS section 6): a hit that beat the plating
+# meets its target's armour row, resisted about 60% and weak about 150%. The read rides on the
+# target as meta "armour_read" for this hit's enemy_struck listeners (presentation stamps DENT
+# or ZZAP! on the first of each per run), and the first read of an armour class discovers its
+# codex entry, after which the class wears its icon.
+
+
+func _read_armour(enemy: Node3D, hit: Dictionary, result: Dictionary) -> void:
+	var armour := DamageFamilies.armour_of(enemy)
+	var read := DamageFamilies.verdict(armour, hit["kind"], hit["cls"]) if bool(result.get("full", false)) else ""
+	enemy.set_meta("armour_read", read)
+	if read == "":
+		return
+	result["dealt"] = float(result["dealt"]) * DamageFamilies.mult(armour, hit["kind"], hit["cls"])
+	result["read"] = read
+	if _armour_known.has(armour):
+		return
+	_armour_known[armour] = true
+	match armour:
+		"plated":
+			_discover("armour_plated", enemy.global_position)
 
 
 func _door_crit(hit: Dictionary) -> void:
@@ -1109,7 +1146,8 @@ func _target_class_of_kind(kind: String) -> String:
 	# complement of KINDS, so the two names cannot silently drift apart. A kind that is
 	# neither is a real gap (a KINDS or SCRIPTS addition this unit missed), so it still
 	# counts under "adds" but is warned once rather than counted silently.
-	if not Roster.is_reinforcement(kind):
+	# A special's spawn (roster_specials.gd "spawned") is an add, but not a reinforcement.
+	if not Roster.is_reinforcement(kind) and not Roster.row(kind).has("priority"):
 		push_warning("_target_class_of_kind: '%s' is neither a v1 kind nor a Fleet reinforcement; counting it under 'adds'" % kind)
 	return "adds"
 
@@ -1306,7 +1344,11 @@ func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 	if enemy.has_method("crushable") and not enemy.crushable():
 		return false
 	var result := resolve(enemy, kind, force)
-	var dealt: float = float(result["dealt"]) * _strike_mult(enemy, kind, _classify_source(kind, _forced_source))
+	var cls := _classify_source(kind, _forced_source)
+	var dealt: float = float(result["dealt"]) * _strike_mult(enemy, kind, cls)
+	# The armour read the strike will apply (_read_armour), asked without recording it (F005).
+	if bool(result.get("full", false)):
+		dealt *= DamageFamilies.mult(DamageFamilies.armour_of(enemy), kind, cls)
 	return result["plating"] <= 0.0 and dealt >= enemy.hp
 
 
@@ -1405,6 +1447,7 @@ func _physics_process(delta: float) -> void:
 		_cooldown += 1.0 / _rate(weapon)
 	if not intent.fire_held:
 		_cooldown = maxf(_cooldown, 0.0)
+	_step_cast()
 	_step_special(intent, delta)
 	_step_line(intent, delta)
 	_step_cannon(delta)
@@ -1640,8 +1683,15 @@ func _step_special(intent, delta: float) -> void:
 		return
 	var row: Dictionary = _specials[id]
 	if gauge == null:
+		# A second press or right mouse drops a running cast with nothing spent, like a gauge.
+		if abilities.casting == AbilityState.SPECIAL:
+			if intent.special_pressed or intent.cancel_pressed:
+				var dropped: String = abilities.cancel_cast()
+				if dropped != "":
+					ctx.events.gauge_cancelled.emit(dropped, "cancel")
+			return
 		if row.has("tap") and intent.special_pressed:
-			_tap(AbilityState.SPECIAL, id, row["tap"])
+			_tap(AbilityState.SPECIAL, id, row["tap"], row.get("commit", Callable()))
 		return
 	if not gauge.charging and intent.special_pressed and not abilities.ready(AbilityState.SPECIAL):
 		_refuse_cast(AbilityState.SPECIAL, "cooling")
@@ -1687,8 +1737,51 @@ func _step_special(intent, delta: float) -> void:
 
 
 # One tap cast on a bar slot: refused while cooling, refused with no target, else spent and
-# published. Nothing is spent on a refusal, and the selection and its timer stay.
-func _tap(slot: String, id: String, cast: Callable) -> void:
+# published. Nothing is spent on a refusal, and the selection and its timer stay. A row with a
+# `cast` time starts its cast here instead and lands through _step_cast when it finishes; an
+# interrupting hit drops it first with nothing spent (FIELDS-AND-CASTS section 4). A row's
+# `commit` aims at the press: an invalid aim is refused then, and the cast lands where it aimed.
+func _tap(slot: String, id: String, cast: Callable, commit := Callable()) -> void:
+	var abilities = ctx.player.abilities
+	if abilities.casting == slot:
+		return
+	if not abilities.ready(slot):
+		_refuse_cast(slot, "cooling")
+		return
+	if abilities.cast_of(slot) > 0.0:
+		var fire := cast
+		if commit.is_valid():
+			var aim: Dictionary = commit.call()
+			if not bool(aim.get("valid", true)):
+				_refuse_cast(slot, "no_target")
+				return
+			fire = cast.bind(aim)
+		if not abilities.begin_cast(slot):
+			_refuse_cast(slot, "cooling")
+			return
+		_cast_pending = {"slot": slot, "id": id, "fire": fire}
+		ctx.events.gauge_charging.emit(id)
+		return
+	_land_tap(slot, id, cast)
+
+
+# A cast that ran its time lands now as the tap it started from, with the same refusals.
+func _step_cast() -> void:
+	var done: String = ctx.player.abilities.take_cast_done()
+	if _cast_pending.is_empty():
+		return
+	if done == "":
+		if ctx.player.abilities.casting == "":
+			_cast_pending = {}
+		return
+	var pending := _cast_pending
+	_cast_pending = {}
+	if done == String(pending["slot"]):
+		ctx.events.gauge_released.emit(String(pending["id"]), 1.0)
+		_land_tap(done, String(pending["id"]), pending["fire"])
+
+
+func _land_tap(slot: String, id: String, cast: Callable) -> void:
 	var abilities = ctx.player.abilities
 	if not abilities.ready(slot):
 		_refuse_cast(slot, "cooling")
@@ -1706,6 +1799,8 @@ func _tap(slot: String, id: String, cast: Callable) -> void:
 # A cast left click asked for that cannot go. Only a click the bar routed answers with a cue;
 # a module test or a bot writing special_* directly hears nothing new.
 func _refuse_cast(slot: String, reason: String) -> void:
+	if reason == "cooling" and ctx.player.abilities.silenced(slot):
+		reason = "jammed"
 	if ctx.player.abilities.selected == slot:
 		ctx.events.verb_failed.emit("fire", reason, ctx.player.ball_position())
 
@@ -2286,6 +2381,10 @@ const LINE_REEL_DAMAGE := 10.0
 const LINE_REEL_KNOCK := 12.0
 const REEL_BURST := 8.0
 
+# The tap whose cast is running, {slot, id, fire}, or {} (FIELDS-AND-CASTS section 4).
+var _cast_pending := {}
+# Armour classes read this run; the codex dedupes too, this skips the call.
+var _armour_known := {}
 # A bite this tick waits for _step_line, so it fires after the bite's chain link is counted.
 var _bite_pending := false
 
@@ -2575,8 +2674,9 @@ func _card_aim() -> Dictionary:
 
 
 # Slot 2's tap: plant the plate at the aim. The tap path spends slot 2's own charge.
-func _tap_gather() -> bool:
-	var aim := _card_aim()
+func _tap_gather(aim := {}) -> bool:
+	if aim.is_empty():
+		aim = _card_aim()
 	if not _run_gather(aim["point"], aim["valid"]):
 		return false
 	ctx.events.shot_fired.emit("gather_plate", ctx.player.ball_position(), aim["point"])

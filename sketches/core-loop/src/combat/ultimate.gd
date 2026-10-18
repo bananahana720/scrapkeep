@@ -31,6 +31,10 @@ const FLIGHT := "flight"
 const RECOVER := "recover"
 
 const WINDUP_SECONDS := 0.35
+# A planting wind-up (a row's `plant`) brakes the ball's planar speed to a stop within this long.
+const PLANT_STOP_SECONDS := 0.15
+
+var _plant_from := 0.0
 const RECOVER_SECONDS := 0.25
 const FLIGHT_SPEED := 18.0
 const FLIGHT_MIN := 1.6
@@ -391,7 +395,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 		legs = [{"mode": "arc", "to": found["entry"], "beats": first, "seconds": first * each, "strike": false},
 			{"mode": "line", "to": to, "beats": beats - first, "seconds": (beats - first) * each, "strike": true}]
 	return {"path": mode, "from": ball, "to": to, "target": found.get("target"), "beats": beats,
-		"flight": flight, "seconds": WINDUP_SECONDS + flight, "legs": legs}
+		"flight": flight, "seconds": windup_seconds() + flight, "legs": legs}
 
 
 # The flight seconds for a path length: length / 18 m/s clamped to 1.6 to 3.2 s, then whole
@@ -468,7 +472,8 @@ func start(p: Dictionary) -> void:
 	meter.locked = true
 	_was_full = false
 	_phase = WINDUP
-	_left = WINDUP_SECONDS
+	_left = windup_seconds()
+	_plant_from = ctx.player.planar_velocity().length()
 	_leg = 0
 	_ride = null
 	_posture_spent = {}
@@ -502,7 +507,38 @@ func _draw_path(p: Dictionary) -> void:
 		from = leg["to"]
 
 
-# Q in the wind-up: cancel with a full refund.
+# The wind-up is Q's cast (design-v3/FIELDS-AND-CASTS.md section 4, Andrew's "Big ones only"
+# 2026-10-17 19:56:59Z): a row's `cast` when it names one (the stronger depth-3 variants),
+# else WINDUP_SECONDS.
+func windup_seconds() -> float:
+	return float(AbilityState.ABILITIES.get(_ult_id(), {}).get("cast", WINDUP_SECONDS))
+
+
+func winding_up() -> bool:
+	return _phase == WINDUP
+
+
+# Whether this Q's wind-up plants the pilot (Tarn's and the Cannon's variants).
+func plants() -> bool:
+	return bool(AbilityState.ABILITIES.get(_ult_id(), {}).get("plant", false))
+
+
+# The plant is the pilot's own heavy stance, the one cast that stops the ball, and only while
+# its wind-up runs. The planar speed brakes linearly from the speed at the press to zero over
+# PLANT_STOP_SECONDS and is held there, the pilot's drive included; the fall stays as it is.
+# The line was already cut at the start, so the cause "ultimate" cuts nothing new.
+func _plant() -> void:
+	var v: Vector3 = ctx.player.state.velocity
+	var flat := Vector3(v.x, 0.0, v.z)
+	var into := windup_seconds() - _left
+	var cap := _plant_from * maxf(0.0, 1.0 - into / PLANT_STOP_SECONDS)
+	if flat.length() <= cap + 0.001:
+		return
+	flat = flat.normalized() * cap if cap > 0.0 else Vector3.ZERO
+	ctx.player.set_velocity_now(Vector3(flat.x, v.y, flat.z), "ultimate")
+
+
+# Q in the wind-up: cancel with a full refund. A field's jolt calls it too (jolt_layer.gd).
 func recall() -> void:
 	if _phase != WINDUP:
 		return
@@ -570,6 +606,8 @@ func step(delta: float) -> void:
 	match _phase:
 		WINDUP:
 			_left -= delta
+			if plants():
+				_plant()
 			if _left <= 0.0:
 				_begin_flight()
 		FLIGHT:

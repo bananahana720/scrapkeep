@@ -13,6 +13,31 @@ const Synth := preload("res://src/presentation/synth.gd")
 
 const RATE := Harmony.RATE
 
+# The 49 event-set WAVs (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
+# RENDERS.md), registered under their cue keys. A file cue replaces the recipe of the
+# same key. The file is decoded to the bank's rate at bake time, so stingers, streams and
+# the keyed bakes read it like any other cue. Peak -1 dBFS, like the recipes' 0.9.
+const EVENT_DIR := "res://assets/audio/event_set/"
+const FILE_RATE := 48000
+const EVENT_CUES := [
+	"achievement_chime", "armor_shed", "boost_whoosh", "boss_arena_in", "boss_phase", "boss_weak_hit",
+	"callout_chime", "crit_ping", "dash_whoosh", "death", "found_chime", "hit_thwack", "hop", "hurt",
+	"kill_chain_tier_1", "kill_chain_tier_2", "kill_chain_tier_3", "kill_chain_tier_4", "kill_chain_tier_5",
+	"kill_pop", "land_thud", "lore_found", "near_whoosh", "part_get", "pickup_fountain", "pilot_unlocked",
+	"rarity_bell_common", "rarity_bell_epic", "rarity_bell_rare", "rescue_fanfare", "scrap_tick_1",
+	"scrap_tick_2", "scrap_tick_3", "scrap_tick_4", "scrap_tick_5", "shop_bell", "slam_boom", "smash_crack",
+	"stinger_boss_defeated", "stinger_clear", "stinger_milestone", "stinger_run_end", "stinger_run",
+	"stinger_stage", "stinger_world", "synergy_fanfare", "threat_whistle", "ui_tick", "verb_fail",
+]
+# Tiered cues: the base key keeps its recipe and its pitch-ladder callers; resolve() picks
+# the tier's file from the rung the caller already sends (the scrap and kill ladders, and
+# the rarity rung: common 0, rare up to 4, epic from the relic's 5).
+const TIER_CUES := {
+	"scrap_tick": ["scrap_tick_1", "scrap_tick_2", "scrap_tick_3", "scrap_tick_4", "scrap_tick_5"],
+	"kill_chain_tier": ["kill_chain_tier_1", "kill_chain_tier_2", "kill_chain_tier_3", "kill_chain_tier_4", "kill_chain_tier_5"],
+	"rarity_bell": ["rarity_bell_common", "rarity_bell_rare", "rarity_bell_epic"],
+}
+
 # Stingers written on the grid. The audio director starts them on a beat through the
 # music engine; beats is how long they hold the stinger lane.
 const STINGER_BEATS := {
@@ -76,6 +101,12 @@ const TRIM_DB := {
 	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0, "tally_break": -3.0, "cannon_break": -3.0,
 	"fleet_motif": -4.0, "reactor_tick": -6.0, "reactor_erupt": -2.0, "swarm_buzz": -9.0, "swarm_lock": -6.0, "swarm_scatter": -8.0,
 	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0, "mind_tally": -5.0, "mind_cannon": -5.0,
+	# The Highdraft's own event drops (music_rows.gd): the anvil, the boiler and the Mind's wrong note.
+	"fleet_anvil": -3.0, "boiler_burst": -3.0,
+	"mind_wrong_sable": -5.0, "mind_wrong_rivet": -5.0, "mind_wrong_kest": -5.0, "mind_wrong_tarn": -5.0, "mind_wrong_tally": -5.0, "mind_wrong_cannon": -5.0,
+	# --- Glass Lance sounds (src/combat/actives/glass_lance.gd) ---
+	"active_glass_lance": -7.0,
+	# --- end Glass Lance ---
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
@@ -116,7 +147,13 @@ const TRIM_DB := {
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
 	# The skill bar's refusals (SKILL-BAR section 2): a refused pick and a refused Q, each a dull
 	# tick of its own.
-	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0,
+	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0, "verb_fail_active": -18.0,
+	# The actives' launches (src/combat/actives), one per active: "active_" + its id.
+	"active_scrap_rocket": -8.0,
+	"active_cutting_torch": -10.0, "active_cutting_torch_heat": -14.0,
+	"active_silo_battery": -6.0,
+	"active_quake_knock": -7.0,
+	"active_lift_pulse": -7.0,
 	# Each pilot's line-skill and set-piece cues, one marked block per pilot (SKILL-BAR section 12,
 	# item 4); a row here needs its recipe in _bake.
 	# --- P-C Sable sounds ---
@@ -144,6 +181,18 @@ const TRIM_DB := {
 	"splitter_spawn": -6.0,
 	"linker_presence": -14.0, "linker_tell": -4.0, "linker_break": -3.0, "linker_spawn": -6.0,
 	"hype_drop": -3.0,
+	"jolt_layer_presence": -14.0, "jolt_layer_tell": -4.0, "jolt_layer_jam": -3.0, "jolt_layer_fizzle": -6.0,
+	"jolt_layer_break": -3.0,
+	# The crown's place layers (tools/ace/cut_layers.py): two bars of the crown's own band, under it.
+	"music_layer_crown_hoodoos": -8.0, "music_layer_crown_alcove": -8.0, "music_layer_crown_toppled": -8.0,
+	"music_layer_crown_ramp": -8.0,
+	# The Mind's first quote, its theme inverted over the Spillway's groove (tools/ace/mind_quote.py).
+	"music_layer_mind_quote_spillway": -8.0,
+	# The arrival forms and the prop crew (tools/ace/arrival_sfx.py); a tell ends on its landing frame.
+	"lift_cage_arrive": -3.0, "zipline_whine": -5.0, "zipline_snap": -3.0, "cave_in_rumble": -4.0,
+	"cave_in_debris": -3.0, "prop_crew_presence": -14.0, "prop_crew_strain": -4.0, "prop_crew_collapse": -2.0,
+	# The Highdraft roster (tools/ace/roster_sfx.py); a tell ends on its landing frame.
+	"ballast_brace_tell": -4.0, "ballast_brace_slam": -2.0, "gap_net_charge_tell": -6.0, "gap_net_charge_live": -4.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
@@ -183,6 +232,10 @@ static var _lock := Mutex.new()
 # Cues whose notes depend on the level (the synergy fanfare quotes its motif).
 const THEMED := ["synergy_fanfare"]
 static var _streams := {}
+# Sounds the music session renders to files rather than recipes: each plays once its file is
+# in RENDERED_DIR, and the cue that wants it plays without it until then.
+const RENDERED_DIR := "res://assets/audio/sfx/"
+static var _rendered := {}
 # Set on the main thread to abandon a startup bake; the worker checks it between ids.
 static var bake_cancel := false
 
@@ -196,7 +249,7 @@ static func break_midis(variant := 0) -> Array:
 
 
 static func has_recipe(id: String) -> bool:
-	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or _assist_parts(id).size() > 0
+	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or _assist_parts(id).size() > 0 or id in EVENT_CUES
 
 
 static func trim_db(id: String) -> float:
@@ -204,7 +257,82 @@ static func trim_db(id: String) -> float:
 		return CAUSE_NOTE_DB
 	if id.begins_with(ASSIST_STING):
 		return ASSIST_STING_DB
-	return TRIM_DB.get(id, -8.0)
+	return TRIM_DB.get(id, TRIM_DB.get(base_key(id), -8.0))
+
+
+# The key a tier's file belongs to (scrap_tick_3 -> scrap_tick), else the id itself. A
+# tier file keeps its base key's trim.
+static func base_key(id: String) -> String:
+	for base in TIER_CUES:
+		if id in TIER_CUES[base]:
+			return base
+	return id
+
+
+# The res:// path of an event-set cue.
+static func event_path(id: String) -> String:
+	return EVENT_DIR + id + ".wav"
+
+
+# The file a sound id plays and the pitch it plays at. A tiered key reads the rung the
+# caller already sends as its pitch (Harmony.ratio of a pentatonic step): the tier's file
+# is already stepped, so it plays at 1.0. Every other id passes through.
+static func resolve(sound: String, pitch: float) -> Dictionary:
+	if not TIER_CUES.has(sound) or pitch <= 0.0:
+		return {"id": sound, "pitch": pitch}
+	var files: Array = TIER_CUES[sound]
+	var rung := ladder_rung(pitch)
+	var index := clampi(rung, 0, files.size() - 1)
+	if sound == "rarity_bell":
+		index = 0 if rung <= 0 else (1 if rung < 5 else 2)
+	# A tier whose file is missing plays the base recipe on the caller's rung, pitch kept.
+	if not _has_file(files[index]):
+		return {"id": sound, "pitch": pitch}
+	return {"id": files[index], "pitch": 1.0}
+
+
+static var _file_present := {}
+
+
+static func _has_file(id: String) -> bool:
+	if not _file_present.has(id):
+		_file_present[id] = ResourceLoader.exists(event_path(id))
+	return _file_present[id]
+
+
+# The pentatonic rung whose ratio is nearest this pitch ratio.
+static func ladder_rung(pitch: float) -> int:
+	var steps := 12.0 * log(maxf(pitch, 0.001)) / log(2.0)
+	var best := 0
+	for rung in range(0, 12):
+		if absf(float(Harmony.pentatonic_step(rung)) - steps) < absf(float(Harmony.pentatonic_step(best)) - steps):
+			best = rung
+	return best
+
+
+# An event-set WAV as float samples at the bank rate (linear resample from the file rate), moved shift semitones.
+# Empty when the file is absent or is not 16-bit mono.
+static func _event_samples(id: String, shift := 0) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	var path := event_path(id)
+	if not ResourceLoader.exists(path):
+		return out
+	var wav := ResourceLoader.load(path, "AudioStreamWAV", ResourceLoader.CACHE_MODE_IGNORE) as AudioStreamWAV
+	if wav == null or wav.format != AudioStreamWAV.FORMAT_16_BITS or wav.stereo:
+		return out
+	var count := wav.data.size() / 2
+	# A keyed bake (shift in semitones) is a varispeed of the file, like pitch_scale in play.
+	var step := float(wav.mix_rate) / float(RATE) * pow(2.0, float(shift) / 12.0)
+	var length := int(floor(float(count - 1) / step)) + 1
+	out.resize(length)
+	for i in length:
+		var at := float(i) * step
+		var lo := int(at)
+		var hi := mini(lo + 1, count - 1)
+		var a := wav.data.decode_s16(lo * 2) / 32768.0
+		var b := wav.data.decode_s16(hi * 2) / 32768.0
+		out[i] = lerpf(a, b, at - lo)
+	return out
 
 
 # The world stinger's id for a world: the plain row sound at step 0, else the step named.
@@ -258,15 +386,50 @@ const FILE_SOUNDS := {
 	"linker_presence": "specials/linker_presence.wav", "linker_tell": "specials/linker_tell.wav",
 	"linker_break": "specials/linker_break.wav", "linker_spawn": "specials/linker_spawn.wav",
 	"hype_drop": "hype_drop.wav",
+	"jolt_layer_presence": "specials/jolt_layer_presence.wav", "jolt_layer_tell": "specials/jolt_layer_tell.wav",
+	"jolt_layer_jam": "specials/jolt_layer_jam.wav", "jolt_layer_fizzle": "specials/jolt_layer_fizzle.wav",
+	"jolt_layer_break": "specials/jolt_layer_break.wav",
+	"music_layer_crown_hoodoos": "layers/music_layer_crown_hoodoos.wav", "music_layer_crown_alcove": "layers/music_layer_crown_alcove.wav",
+	"music_layer_crown_toppled": "layers/music_layer_crown_toppled.wav", "music_layer_crown_ramp": "layers/music_layer_crown_ramp.wav",
+	"music_layer_mind_quote_spillway": "layers/music_layer_mind_quote_spillway.wav",
+	"lift_cage_arrive": "foley/lift_cage_arrive.wav", "zipline_whine": "foley/zipline_whine.wav",
+	"zipline_snap": "foley/zipline_snap.wav", "cave_in_rumble": "foley/cave_in_rumble.wav",
+	"cave_in_debris": "foley/cave_in_debris.wav", "prop_crew_presence": "foley/prop_crew_presence.wav",
+	"prop_crew_strain": "foley/prop_crew_strain.wav", "prop_crew_collapse": "foley/prop_crew_collapse.wav",
+	"ballast_brace_tell": "foley/ballast_brace_tell.wav", "ballast_brace_slam": "foley/ballast_brace_slam.wav",
+	"gap_net_charge_tell": "foley/gap_net_charge_tell.wav", "gap_net_charge_live": "foley/gap_net_charge_live.wav",
 }
 # hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
 const HYPE_DROP_LEAD_SECONDS := 2.0
 
 
+# Per-stage park event stingers (tools/ace/cut_stingers.py) are ids of the form
+# "stinger:<zone with _>/<cue>", for example "stinger:3_1/drop_boiler".
+const STINGER_PREFIX := "stinger:"
+
+
+static func stinger_id(zone: String, cue: String) -> String:
+	return "%s%s/%s" % [STINGER_PREFIX, zone.replace("-", "_"), cue]
+
+
+static func file_path(id: String) -> String:
+	if id.begins_with(STINGER_PREFIX):
+		return SFX_DIR + "stingers/" + id.substr(STINGER_PREFIX.length()) + ".wav"
+	return SFX_DIR + String(FILE_SOUNDS[id])
+
+
+static func file_exists(id: String) -> bool:
+	var path := file_path(id)
+	return ResourceLoader.exists(path) or FileAccess.file_exists(path)
+
+
 # The mono samples of a rendered file: the imported resource when the editor or export has
-# one, else the raw RIFF (headless runs without an import cache).
-static func file_samples(id: String) -> PackedFloat32Array:
-	var path: String = SFX_DIR + String(FILE_SOUNDS[id])
+# one, else the raw RIFF (headless runs without an import cache). An id outside FILE_SOUNDS
+# and the stingers is an event-set cue (EVENT_CUES), read at the bank rate and moved shift semitones.
+static func file_samples(id: String, shift := 0) -> PackedFloat32Array:
+	if not FILE_SOUNDS.has(id) and not id.begins_with(STINGER_PREFIX):
+		return _event_samples(id, shift)
+	var path := file_path(id)
 	var out := PackedFloat32Array()
 	var res = load(path) if ResourceLoader.exists(path) else null
 	if res is AudioStreamWAV and (res as AudioStreamWAV).format == AudioStreamWAV.FORMAT_16_BITS:
@@ -365,6 +528,14 @@ static func stream(id: String) -> AudioStreamWAV:
 	return _streams[id]
 
 
+# A rendered sound's stream, or null while its file is not there yet.
+static func rendered(id: String) -> AudioStream:
+	if not _rendered.has(id):
+		var path := RENDERED_DIR + id + ".wav"
+		_rendered[id] = load(path) if ResourceLoader.exists(path) else null
+	return _rendered[id]
+
+
 static func bake_all(ids: Array) -> void:
 	for id in ids:
 		if bake_cancel:
@@ -377,11 +548,19 @@ static func bake_all(ids: Array) -> void:
 
 
 static func _bake(id: String) -> PackedFloat32Array:
-	if FILE_SOUNDS.has(id):
+	if FILE_SOUNDS.has(id) or id.begins_with(STINGER_PREFIX):
 		var file := file_samples(id)
 		if file.size() > 0:
 			return file
 		return _tone(0.12, _hz(62), _hz(62), "sine", 20.0)
+	if id in EVENT_CUES:
+		var recorded := file_samples(id, _shift)
+		if not recorded.is_empty():
+			return recorded
+		# A missing or unreadable file never leaves the cue silent: a tier falls back to
+		# its base recipe, a plain key to its own.
+		if base_key(id) != id:
+			return _bake(base_key(id))
 	if id in ["plate_tally", "clip_tally", "stroke_tally", "settle_tally"]:
 		return tally_recipe(id)
 	if id.begins_with("cable_kest_") or id.begins_with("raid_kest_") or id.begins_with("tick_kest_"):
@@ -446,6 +625,40 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.09, 520.0, 330.0, "sine", 32.0), 0, 1.0], [_noise(0.01, 2500.0, 2000.0, 300.0), 0, 0.4]])
 		"verb_fail_select":
 			return _mix([[_tone(0.05, 300.0, 260.0, "square_dark", 45.0), 0, 1.0], [_noise(0.01, 1800.0, 1200.0, 250.0), 0, 0.3]])
+		"verb_fail_active":
+			return _mix([[_fm(0.12, _hz(67), 1.5, 2.0, 24.0, -2.0), 0, 1.0], [_noise(0.05, 900.0, 600.0, 40.0), 0, 0.3]])
+		# A valve hiss, then a bottle rocket's rising whistle over a low thump: FWOOSH.
+		"active_scrap_rocket":
+			return _mix([[_noise(0.16, 2400.0, 5200.0, 14.0, 0.004), 0, 0.7], [_tone(0.09, 120.0, 60.0, "sine", 30.0), 0, 0.8],
+				[_tone(0.34, 900.0, 2600.0, "sine", 6.0), Synth.seconds(0.06), 0.35], [_noise(0.3, 1200.0, 3600.0, 8.0, 0.02), Synth.seconds(0.06), 0.4]])
+		# A gas torch catching: a pop and a hiss, then a buzz on the key's root and fifth that
+		# burns as long as the beam. Keyed (audio.gd), so it sits in the world's key.
+		"active_cutting_torch":
+			return _mix([[_noise(0.05, 3200.0, 1400.0, 60.0, 0.001), 0, 0.9], [_tone(0.07, 200.0, 90.0, "sine", 40.0), 0, 0.7],
+				[_tone(1.6, _hz(38), _hz(38), "saw_dark", 1.4), Synth.seconds(0.04), 0.6], [_tone(1.6, _hz(45), _hz(45), "square_dark", 1.6), Synth.seconds(0.04), 0.25],
+				[_noise(1.6, 2800.0, 2200.0, 1.2, 0.03), Synth.seconds(0.04), 0.3]])
+		# Hot metal spitting under the flame: a short sizzle; audio climbs it with the heat.
+		"active_cutting_torch_heat":
+			return _mix([[_noise(0.14, 3400.0, 5200.0, 18.0, 0.004), 0, 1.0], [_noise(0.08, 1800.0, 2600.0, 30.0), Synth.seconds(0.02), 0.4]])
+		# A two-note klaxon chirp, the hatch's clank, two shells whistling down, and the landing
+		# FALL (silo_battery.gd) after the hatch opens: KA-THOOM.
+		"active_silo_battery":
+			return _mix([[_tone(0.07, 740.0, 720.0, "square_dark", 12.0), 0, 0.45], [_tone(0.07, 990.0, 960.0, "square_dark", 12.0), Synth.seconds(0.07), 0.45],
+				[_fm(0.2, _hz(43), 2.76, 3.0, 16.0), Synth.seconds(0.12), 0.8], [_noise(0.05, 3200.0, 1800.0, 60.0), Synth.seconds(0.12), 0.5],
+				[_tone(0.3, 2600.0, 900.0, "sine", 2.0), Synth.seconds(0.15), 0.28], [_tone(0.26, 2200.0, 760.0, "sine", 2.0), Synth.seconds(0.19), 0.24],
+				[_tone(0.45, 95.0, 36.0, "sine", 6.0), Synth.seconds(0.45), 1.0], [_noise(0.4, 900.0, 180.0, 8.0, 0.003), Synth.seconds(0.45), 0.8],
+				[_noise(0.06, 4200.0, 2200.0, 50.0), Synth.seconds(0.45), 0.4]], true)
+		# The Waking's own floor voice (warn_burrow's low Eb rumble, breach's dry crack), struck by
+		# hand: a muffled knock under the plate, the rumble rolling out, then stone cracking. KRRAK
+		"active_quake_knock":
+			return _mix([[_noise(0.1, 420.0, 200.0, 30.0), 0, 0.9], [_tone(0.5, _hz(39), _hz(34), "saw_dark", 3.5), 0, 0.85],
+				[_noise(0.035, 5200.0, 2200.0, 85.0), Synth.seconds(0.05), 0.9], [_fm(0.1, _hz(63), 2.3, 4.0, 26.0), Synth.seconds(0.05), 0.5],
+				[_noise(0.03, 4400.0, 2000.0, 90.0), Synth.seconds(0.12), 0.6], [_noise(0.4, 1300.0, 200.0, 5.0, 0.02), Synth.seconds(0.1), 0.7]], true)
+		# The deep thump of the pulse leaving the fan on the press (the shove lands with it), over the
+		# turbine spooling up behind it (a rising whine and rushing air): WHUMP.
+		"active_lift_pulse":
+			return _mix([[_tone(0.3, 95.0, 42.0, "sine", 12.0), 0, 1.0], [_noise(0.22, 1600.0, 300.0, 14.0, 0.004), 0, 0.6],
+				[_fm_sweep(0.26, 180.0, 720.0, 1.2, 4.0), Synth.seconds(0.02), 0.4], [_noise(0.28, 500.0, 2600.0, 6.0, 0.06), Synth.seconds(0.02), 0.3]])
 		"verb_fail_ultimate":
 			return _mix([[_fm(0.16, _hz(62), 1.5, 2.5, 20.0, -2.0), 0, 1.0], [_tone(0.06, 180.0, 150.0, "sine", 30.0), Synth.seconds(0.05), 0.6]])
 		"grapple_release":
@@ -664,6 +877,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _swarm_scatter()
 		"mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon":
 			return _mind_quote(id.get_slice("_", 1))
+		"mind_wrong_sable", "mind_wrong_rivet", "mind_wrong_kest", "mind_wrong_tarn", "mind_wrong_tally", "mind_wrong_cannon":
+			return _mind_wrong(id.get_slice("_", 2))
+		"fleet_anvil":
+			return _fleet_anvil()
+		"boiler_burst":
+			return _boiler_burst()
+		"active_glass_lance":
+			return _glass_lance()
 		"hold_pit", "hold_bola", "hold_tether", "hold_net", "hold_riser":
 			return hold(id.get_slice("_", 1), Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
 		"tenacity_choke":
@@ -1643,6 +1864,44 @@ static func _mind_quote(class_id: String) -> PackedFloat32Array:
 	for cell in Harmony.mind_quote(class_id):
 		score.append([int(cell[0]), int(cell[1]) + 12, int(cell[2]) + 2, "chime", 0.7])
 	return Synth.render_score(score, 2.4)
+
+
+# The Mind's wrong note: the quote's flattened last note rung alone, with the floor a tritone
+# under it sliding down a semitone more, so the Highdraft's G never arrives.
+static func _mind_wrong(class_id: String) -> PackedFloat32Array:
+	var quote: Array = Harmony.mind_quote(class_id)
+	var wrong: int = (int(quote[-1][1]) if not quote.is_empty() else 61) + 12
+	return _mix([[_cut(_n("bell", wrong), 1.6), 0, 0.8], [_fm(1.6, _hz(wrong - 6), 1.0, 0.4, 1.6, -1.0), 0, 0.5],
+		[_tone(1.2, _hz(wrong - 18), _hz(wrong - 19), "sine", 2.0), Synth.seconds(0.1), 0.6], [Synth.drum("crash"), 0, 0.25]])
+
+
+# The Fleet's mooring anvil (KLANG-KLANG), then its brass a fourth up with the Lydian sharp
+# eleven on top and a pulley whirring away into the wind.
+static func _fleet_anvil() -> PackedFloat32Array:
+	var gap := Synth.seconds(0.17)
+	return _mix([[Synth.drum("anvil"), 0, 1.0], [Synth.drum("anvil"), gap, 0.8], [Synth.drum("boom"), 0, 0.6],
+		[_cut(_n("brass", 50), 0.7), gap, 0.6], [_cut(_n("brass", 57), 0.7), gap, 0.5], [_cut(_n("brass", 68), 0.7), gap, 0.4],
+		[_fm_sweep(0.6, _hz(79), _hz(91), 1.5, 5.0), gap * 2, 0.2]], true)
+
+
+# A boiler or burner giving way: a pressure hiss that swells, the valve pop with a thud under
+# it, the steam roaring off and a two-pipe whistle on D and its tritone.
+static func _boiler_burst() -> PackedFloat32Array:
+	var pop := Synth.seconds(0.22)
+	return _mix([[_noise(0.3, 900.0, 4200.0, 1.0, 0.25), 0, 0.5], [Synth.drum("boom"), pop, 1.0],
+		[_noise(0.9, 5000.0, 600.0, 3.0, 0.003), pop, 0.7], [_tone(0.25, 70.0, 40.0, "sine", 12.0), pop, 0.8],
+		[_tone(0.7, _hz(74), _hz(76), "sine", 3.5), pop, 0.35], [_tone(0.7, _hz(80), _hz(82), "sine", 3.5), pop, 0.25]], true)
+# The Glass Lance: a glass flick, then the Mind's quote in miniature. The first three notes of its
+# quote of Sable (D B G) ring fast on the chime two octaves up, and a clean sine holds the
+# quote's wrong last note: TINNG. No vocals.
+static func _glass_lance() -> PackedFloat32Array:
+	var quote: Array = Harmony.mind_quote("sable")
+	var parts: Array = [[_fm(0.06, _hz(int(quote[0][1]) + 36), 3.5, 3.0, 45.0), 0, 0.5]]
+	for i in 3:
+		parts.append([_cut(_n("chime", int(quote[i][1]) + 24), 0.14), Synth.seconds(0.02 + 0.045 * i), 0.7])
+	var wrong := int(quote[quote.size() - 1][1]) + 36
+	parts.append([_tone(0.9, _hz(wrong), _hz(wrong), "sine", 4.5), Synth.seconds(0.15), 0.55])
+	return _mix(parts)
 
 
 # A hold loop, n samples long. The four counter holds of SOUND-STORY.md section 3 sit

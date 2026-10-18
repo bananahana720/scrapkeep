@@ -246,7 +246,7 @@ func _build_buy() -> void:
 		var state := "sold" if offer["sold"] else ("ok" if offer["affordable"] else "poor")
 		_tile(shelf, {"kind": "shelf", "index": offer["index"], "part_id": offer["part_id"], "icon": offer["icon"],
 			"rarity": offer["rarity"], "element_icon": offer["element_icon"], "trigger_icon": offer["trigger_icon"],
-			"price": offer["price"], "state": state}, SHELF_TILE)
+			"price": offer["price"], "state": state, "headline": offer.get("headline", "")}, SHELF_TILE)
 	var cost: int = shop.reroll_price()
 	_tile(shelf, {"kind": "reroll", "price": cost,
 		"state": "spent" if shop.rerolls_left <= 0 else ("ok" if game.run.cogs >= cost else "poor")}, SHELF_TILE)
@@ -415,7 +415,8 @@ func _update_detail() -> void:
 	if at.x >= 0:
 		var control = _grid()[at.x][at.y]
 		if control is ShopTile and control.rec.has("part_id"):
-			text = Parts.headline(String(control.rec["part_id"]))
+			var own: String = control.rec.get("headline", "")
+			text = own if own != "" else Parts.headline(String(control.rec["part_id"]))
 	_detail.text = text
 
 

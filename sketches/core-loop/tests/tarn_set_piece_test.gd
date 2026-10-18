@@ -7,6 +7,7 @@ const Progress := preload("res://src/core/progress.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 
@@ -247,8 +248,7 @@ func _grants() -> void:
 	_t.check("all three grants earned", grant_ids.all(func(id): return store.earned(id)))
 	var items := ["trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap"]
 	_t.check("all three looks unlocked", items.all(func(id): return store.has_cosmetic(id)))
-	# Re-pinned 2026-10-17 (stage/alpha-w16, #17 + #46): the trail and shell are live; the outfit waits.
-	_t.check("pending art hidden on the outfit only", items.all(func(id): return Cosmetics.is_pending(id) == (id == "outfit_tarn_steady_cap")))
+	_t.check("every granted look is pending or ships, and none has a price", CosmeticArt.unaccounted(items).is_empty() and items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")), str(CosmeticArt.unaccounted(items)))
 	_t.check("the shell is live", not Cosmetics.is_pending("shell_tarn_redjaw_teeth") and FileAccess.file_exists("res://assets/models/world_one/shell_tarn_redjaw_teeth.glb"))
 	_t.check("no price", items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
 	var reload_store := Profile.new(store.path)

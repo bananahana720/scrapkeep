@@ -12,6 +12,7 @@ const Density := preload("res://src/presentation/density.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -20,6 +21,10 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 # ball, never across the line ahead, so they never hide the next threat.
 
 const POOL := 48
+# Glyph silhouettes that are pure light pops: reduce flashes keeps FlashGuard's decorative
+# share of their alpha. Every other glyph (rings, bars, cause shapes) shows a reach or a cause
+# and keeps the information share.
+const POP_SHAPES := ["flash", "star", "burst"]
 const SPARKLE_POOL := 6
 # Trail seconds and width per speed tier: nothing at a walk, a comet when blazing.
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
@@ -500,7 +505,8 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	slot["from"] = size_from
 	slot["to"] = size_to
 	slot["spin"] = 3.0 if silhouette in ["star", "burst", "diamond", "square", "core"] else 0.0
-	slot["alpha"] = governed.x
+	var pop: bool = silhouette in POP_SHAPES or not _meshes.has(silhouette)
+	slot["alpha"] = FlashGuard.alpha(governed.x) if pop else FlashGuard.info(governed.x)
 	node.visible = true
 	spawned[kind] = spawned.get(kind, 0) + 1
 	_draw_glyph(slot)

@@ -5,6 +5,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # What the reward ceremony draws (v3 W13): the reveal card, the crate that shakes, cracks
 # and bursts, the hull slot the part sockets into, and the payoff's flash over the ball.
@@ -362,9 +363,9 @@ func _draw_burst(centre: Vector2, bt: float, fade: float) -> void:
 		var angle := k * TAU / RAYS + bt * 0.45
 		var tip := 520.0
 		draw_colored_polygon(PackedVector2Array([centre, centre + Vector2.from_angle(angle - 0.05) * tip, centre + Vector2.from_angle(angle + 0.05) * tip]),
-			Color(yours if k % 2 == 0 else tint, 0.26 * rays))
+			Color(yours if k % 2 == 0 else tint, FlashGuard.alpha(0.26) * rays))
 	var f := clampf(bt / 0.3, 0.0, 1.0)
-	draw_circle(centre, 40.0 + 320.0 * f, Color(yours.lerp(Color.WHITE, 0.6), 0.75 * (1.0 - f)))
+	draw_circle(centre, 40.0 + 320.0 * f, Color(yours.lerp(Color.WHITE, FlashGuard.whiten(0.6)), FlashGuard.alpha(0.75) * (1.0 - f)))
 	if bt < 0.3:
 		_draw_crate(centre, 0.0, 1.0, 1.0, 1.0 - bt / 0.3)
 	if bt < 0.7:
@@ -422,6 +423,6 @@ func _draw_flash(flash: Dictionary) -> void:
 	var x := clampf(_seconds(flash["start_ms"]) / float(flash["life_s"]), 0.0, 1.0)
 	var at: Vector2 = flash["at"]
 	var yours: Color = flash["class_color"]
-	draw_arc(at, 30.0 + 80.0 * _ease(x), 0.0, TAU, 32, Color(yours, 1.0 - x), 5.0 * (1.0 - x) + 1.0, true)
+	draw_arc(at, 30.0 + 80.0 * _ease(x), 0.0, TAU, 32, Color(yours, FlashGuard.info(1.0 - x)), 5.0 * (1.0 - x) + 1.0, true)
 	var pop := 1.0 + 0.35 * sin(minf(x / 0.35, 1.0) * PI)
 	_socket(at, 24.0 * pop, String(flash["icon"]), flash["tint"], 1.0 - x * x)

@@ -37,6 +37,8 @@ const READY := "ready"
 const COOLING := "cooling"
 const ACTIVE := "active"
 const UNAVAILABLE := "unavailable"
+# The refusal a jammed slot answers (FIELDS-AND-CASTS section 3); its state reads UNAVAILABLE.
+const JAMMED := "jammed"
 
 # No modifier may drive a cooldown below this (DESIGN-V2 section 6, risk 4).
 const COOLDOWN_FLOOR := 0.4
@@ -78,6 +80,20 @@ const RUN_EPSILON := 0.000001
 # A skill shot draws exactly its committed geometry; the hit test forgives a hull this
 # share beyond the drawn edge, so what you see is never bigger than what can hit.
 const FORGIVENESS := 0.18
+# Cast times and the jam (design-v3/FIELDS-AND-CASTS.md sections 3 and 4). A row's `cast` is the
+# seconds between the press and the effect; the ball keeps rolling at full speed the whole time,
+# unless the row has `plant`: Andrew's "Depends on the pilot" (Q2, 2026-10-17 22:12:39Z) has the
+# heavy pilots, Tarn and the Cannon, plant for their heavy casts (their Q variants), braking to a
+# stop through the wind-up by their own choice; Sable, Kest, Rivet and Tally cast on the move.
+# An interrupting hit (the crowd-control door) drops a running cast with nothing spent, as it
+# drops a gauge. A jam (an enemy field's pulse) shuts the SILENCED slots for its seconds: the
+# weapon, the movement chip, the smash and Q stay open, so a jam never takes the ball's speed.
+const SILENCED := [SPECIAL, LINE]
+# Andrew's "Big ones only" (2026-10-17 19:56:59Z): Q's 0.35 s wind-up stays and a jolt recalls it;
+# the depth-3 Q variants cast longer, at this start value until the power read ranks them (the
+# strongest may go to 0.8 s); Gather Plate casts in 0.3 s; everything else stays instant.
+const VARIANT_CAST := 0.5
+const UNSTARTED := ""
 
 # One row per ability id; the class row names which id fills each slot, and an upgrade
 # swaps a slot to a variant row. The rest of the game dispatches on a row's
@@ -98,7 +114,8 @@ const FORGIVENESS := 0.18
 #   ultimate  paths (preference order over line, arc, rail), beats (0 lets the path length
 #             set the flight beats, a positive number fixes them), hold_beats (a hold leg
 #             before the last leg), variant_of (a depth-3 row names its base ultimate)
-#   any slot  family (lane, split_lane, plate or rush: the Mind family this slot commits),
+#   any slot  cast (seconds from the press to the effect, 0 or absent for none), plant (the
+#             pilot plants, braking to a stop, through that cast), family (lane, split_lane, plate or rush: the Mind family this slot commits),
 #             pool (the slot whose charges this row spends: Tally's slots 2 and 3 spend
 #             slot 1's pressure). A special or line row with no charge_max is a tap: it
 #             casts on the press.
@@ -138,43 +155,43 @@ const ABILITIES := {
 	# --- P-C Sable rows (line skill, ultimate, depth-3 variants) -------------------------
 	"bank_shot": {"icon": "ab_sable_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"cable_run": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"ball_lightning": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["arc"], "variant_of": "cable_run"},
-	"outpost": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "cable_run"},
+	"ball_lightning": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["arc"], "variant_of": "cable_run", "cast": VARIANT_CAST},
+	"outpost": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "cable_run", "cast": VARIANT_CAST},
 	# --- end Sable ---
 	# --- P-C Rivet rows ------------------------------------------------------------------
 	"line_drive": {"icon": "ab_rivet_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"foundry_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"prism_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter"},
-	"juggernaut_drive": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter"},
+	"prism_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter", "cast": VARIANT_CAST},
+	"juggernaut_drive": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter", "cast": VARIANT_CAST},
 	# --- end Rivet ---
 	# --- P-C Kest rows -------------------------------------------------------------------
 	# 2026-10-11 (PC-KEST round 3): fourteen seconds preserves both fixed bands after the contact cap.
 	"cable_charge": {"icon": "ab_kest_line", "cooldown": 14.0, "line": true, "load_seconds": 4.0},
 	"windhover": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "hold_beats": 2},
-	"air_raid": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "windhover"},
-	"minelayer": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "windhover"},
+	"air_raid": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "windhover", "cast": VARIANT_CAST},
+	"minelayer": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "windhover", "cast": VARIANT_CAST},
 	# --- end Kest ---
 	# --- P-C Tarn rows -------------------------------------------------------------------
 	"claw_drag": {"icon": "ab_tarn_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"redjaw_rend": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"rake_run": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "redjaw_rend"},
-	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend"},
+	"rake_run": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST, "plant": true},
+	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST, "plant": true},
 	# --- end Tarn ---
 	# --- P-C Tally rows ------------------------------------------------------------------
 	# pilots/tally.md section 3: Balance Due alone spends pressure; Gather Plate and the Ledger
 	# Clip keep their own cooldowns and pay into it; Q's meter is Plate Return's charge.
 	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3},
-	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 6.0},
+	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 6.0, "cast": 0.3},
 	"link_clips": {"icon": "ab_tally_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"plate_return": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
-	"plate_audit": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "plate_return"},
-	"plate_flywheel": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["arc", "rail", "line"], "variant_of": "plate_return"},
+	"plate_audit": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "plate_return", "cast": VARIANT_CAST},
+	"plate_flywheel": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["arc", "rail", "line"], "variant_of": "plate_return", "cast": VARIANT_CAST},
 	# --- end Tally ---
 	# --- P-C Cannon rows -----------------------------------------------------------------
 	"cannon_lane_charge": {"icon": "ab_cannon_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "family": "lane"},
 	"cannon_fire_mission": {"icon": "ab_cannon_ult", "paths": ["arc", "line", "rail"], "beats": 0},
-	"cannon_creeping_barrage": {"icon": "ab_cannon_ult", "paths": ["line", "rail", "arc"], "beats": 0, "variant_of": "cannon_fire_mission"},
-	"cannon_plate_mortar": {"icon": "ab_cannon_ult", "paths": ["arc"], "beats": 6, "variant_of": "cannon_fire_mission"},
+	"cannon_creeping_barrage": {"icon": "ab_cannon_ult", "paths": ["line", "rail", "arc"], "beats": 0, "variant_of": "cannon_fire_mission", "cast": VARIANT_CAST, "plant": true},
+	"cannon_plate_mortar": {"icon": "ab_cannon_ult", "paths": ["arc"], "beats": 6, "variant_of": "cannon_fire_mission", "cast": VARIANT_CAST, "plant": true},
 	# --- end Cannon ---
 }
 const ICON_DIR := "res://assets/icons/"
@@ -261,6 +278,8 @@ class Slot:
 	var pressure_bonus := 0
 	# Combat refund seconds landed on the charge now recharging (REFUND_CYCLE_SHARE).
 	var cycle_refunded := 0.0
+	# Seconds from the press to the effect (the row's `cast`); 0 casts on the press.
+	var cast := 0.0
 
 
 # The key the movement chip shows: Shift for every pilot (player_ball sets it).
@@ -289,6 +308,13 @@ var state_changes := 0
 var sprint_cancels := 0
 var _requests := []
 var _sprint_cancel := false
+# The cast running ("" when none), its seconds left, and the slot whose cast just finished
+# (read once through take_cast_done). Seconds of jam left, and jams taken, for tests and HUD.
+var casting := UNSTARTED
+var cast_left := 0.0
+var _cast_done := UNSTARTED
+var jam_left := 0.0
+var jams := 0
 
 
 func _init() -> void:
@@ -331,6 +357,7 @@ func swap(name: String, id: String) -> void:
 	s.duration = s.base_duration / attack_speed
 	s.priority = priority_of(id)
 	s.cancels_sprint = cancels_sprint_of(id)
+	s.cast = maxf(0.0, float(row.get("cast", 0.0)))
 	var charge_max: float = row.get("charge_max", 0.0)
 	if charge_max > 0.0:
 		s.gauge = Gauge.new(charge_max)
@@ -379,7 +406,7 @@ func pool_of(name: String) -> String:
 func ready(name: String) -> bool:
 	var s: Slot = _slots[name]
 	var payer: Slot = _slots[pool_of(name)]
-	return s.available and payer.charges > 0
+	return s.available and payer.charges > 0 and not silenced(name)
 
 
 func spend(name: String) -> bool:
@@ -450,6 +477,10 @@ func drain_refunds() -> Array:
 
 func refill() -> void:
 	stage_refunded = 0.0
+	casting = UNSTARTED
+	cast_left = 0.0
+	_cast_done = UNSTARTED
+	jam_left = 0.0
 	running = ""
 	running_left = 0.0
 	_requests = []
@@ -477,6 +508,8 @@ func set_cooldown_scale(name: String, scale: float) -> void:
 
 func tick(delta: float) -> void:
 	_resolve(delta)
+	_tick_cast(delta)
+	jam_left = maxf(0.0, jam_left - delta)
 	for name in SLOTS:
 		_recharge(_slots[name], delta)
 
@@ -585,6 +618,8 @@ func _recharge(s: Slot, seconds: float) -> void:
 
 
 func charging() -> bool:
+	if casting != UNSTARTED:
+		return true
 	for name in SLOTS:
 		var g: Gauge = (_slots[name] as Slot).gauge
 		if g != null and g.charging:
@@ -592,21 +627,88 @@ func charging() -> bool:
 	return false
 
 
-# Drops every charging gauge; returns the ability ids that were charging.
+# Drops every charging gauge and the running cast; returns the ability ids that were charging.
 func cancel_gauges() -> Array:
 	var dropped := []
 	for name in SLOTS:
 		var s: Slot = _slots[name]
 		if s.gauge != null and s.gauge.cancel():
 			dropped.append(s.id)
+	var cast := cancel_cast()
+	if cast != UNSTARTED:
+		dropped.append(cast)
 	return dropped
+
+
+# --- Cast times and the jam (FIELDS-AND-CASTS sections 3 and 4) ------------------------
+
+func cast_of(name: String) -> float:
+	return (_slots[name] as Slot).cast
+
+
+# Starts the cast for a slot whose ability has a cast time. Nothing is spent until it finishes.
+# False when another cast runs, the slot has no cast time or it is not ready.
+func begin_cast(name: String) -> bool:
+	if casting != UNSTARTED or cast_of(name) <= 0.0 or not ready(name):
+		return false
+	casting = name
+	cast_left = cast_of(name)
+	return true
+
+
+# The share of the running cast done, 0 to 1; 0 with none.
+func cast_fraction() -> float:
+	if casting == UNSTARTED:
+		return 0.0
+	return clampf(1.0 - cast_left / maxf(0.001, cast_of(casting)), 0.0, 1.0)
+
+
+# Drops the running cast with nothing spent; returns its ability id, or "" with none.
+func cancel_cast() -> String:
+	if casting == UNSTARTED:
+		return UNSTARTED
+	var id := id_of(casting)
+	casting = UNSTARTED
+	cast_left = 0.0
+	return id
+
+
+# The slot whose cast finished since the last call, once; "" otherwise. Its owner fires it.
+func take_cast_done() -> String:
+	var done := _cast_done
+	_cast_done = UNSTARTED
+	return done
+
+
+func _tick_cast(delta: float) -> void:
+	if casting == UNSTARTED:
+		return
+	cast_left -= delta
+	if cast_left <= RUN_EPSILON:
+		_cast_done = casting
+		casting = UNSTARTED
+		cast_left = 0.0
+
+
+# A field's pulse: the SILENCED slots shut for `seconds`. A jam refreshes, never stacks.
+func jam(seconds: float) -> void:
+	jam_left = maxf(jam_left, seconds)
+	jams += 1
+
+
+func jammed() -> bool:
+	return jam_left > 0.0
+
+
+func silenced(name: String) -> bool:
+	return jam_left > 0.0 and name in SILENCED
 
 
 func state_of(name: String) -> String:
 	var s: Slot = _slots[name]
-	if not s.available:
+	if not s.available or silenced(name):
 		return UNAVAILABLE
-	if s.active or (s.gauge != null and s.gauge.charging):
+	if s.active or (s.gauge != null and s.gauge.charging) or casting == name:
 		return ACTIVE
 	return READY if (_slots[pool_of(name)] as Slot).charges > 0 else COOLING
 
@@ -615,13 +717,16 @@ func state_of(name: String) -> String:
 # These change the record only; the player's router publishes slot_selected.
 
 # Picks a bar slot. Returns "" when it took, else the refusal: "unavailable" for a slot that
-# is not on the bar or not available, "cooling" for one with no charge in.
+# is not on the bar or not available, "jammed" for one a field's pulse shut, "cooling" for one
+# with no charge in.
 func select(name: String) -> String:
 	if not name in BAR or not _slots.has(name):
 		return UNAVAILABLE
 	var s: Slot = _slots[name]
 	if s.id == "" or not s.available:
 		return UNAVAILABLE
+	if silenced(name):
+		return JAMMED
 	if name != WEAPON and not ready(name):
 		return COOLING
 	selected = name
@@ -693,7 +798,7 @@ func slots() -> Array:
 			frac = clampf(1.0 - s.recharge / cd, 0.0, 1.0)
 		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": slot_key(name), "cooldown_frac": frac,
 			"charges": s.charges, "max_charges": s.max_charges, "state": state_of(name),
-			"gauge": s.gauge.fraction() if s.gauge != null else 0.0,
+			"gauge": s.gauge.fraction() if s.gauge != null else (cast_fraction() if name == casting else 0.0),
 			"number": int(NUMBER.get(name, 0)), "group": "bar" if name in BAR else "chip",
 			"selected": name == selected, "select_left": select_left() if name == selected else 0.0})
 	return out

@@ -130,7 +130,7 @@ func _run() -> void:
 	# Re-pinned 2026-10-10 (wave 13 unit B2, design-v3/SKILL-BAR.md section 6): the special's row
 	# retired; the pick's three keys and the ultimate each have a row.
 	_t.eq("S3-2 the page rows", page.rows.keys().filter(func(id): return not id.begins_with("pad_") and not id in ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist"]),
-		["fullscreen", "quality", "reduced_motion", "jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact", "reset", "roll", "look", "back"])
+		["fullscreen", "quality", "reduced_motion", "reduce_flashes", "jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact", "reset", "roll", "look", "back"])
 	_t.check("S3-2 roll and look are fixed", page.row("roll").disabled and page.row("look").disabled, "fixed")
 	_t.check("S3-2 the page holds the pause", paused and _game.pause_toggled(), "paused %s" % paused)
 	Push.key(root, KEY_S)
@@ -139,7 +139,7 @@ func _run() -> void:
 	down.button_index = JOY_BUTTON_DPAD_DOWN
 	down.pressed = true
 	root.push_input(down)
-	_t.eq("S3-6 a pad's down moves it too (Display holds fullscreen, quality, reduced motion and Back)", page.focused_id(), "reduced_motion")
+	_t.eq("S3-6 a pad's down moves it too (Display holds fullscreen, quality, reduced motion, reduce flashes and Back)", page.focused_id(), "reduced_motion")
 	Push.key(root, KEY_ESCAPE)
 	await _settle(0.5)
 	_t.check("S3-2 Esc goes back to the first page with Settings focused", not menu.settings_open() and menu.is_open() and menu.focused_id() == "settings" and menu.row("resume").visible, "focus %s" % menu.focused_id())

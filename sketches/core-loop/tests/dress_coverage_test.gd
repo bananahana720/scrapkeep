@@ -186,9 +186,9 @@ func _table_minimums() -> void:
 	for file in DirAccess.get_files_at("res://src/combat"):
 		if file.begins_with("roster_") and file.ends_with(".gd"):
 			var table = load("res://src/combat/" + file)
-			# World tables hold a stage's worth of kinds; the kill-first specials table grows a kind at a time.
-			if file != "roster_specials.gd":
-				_require(table.ROWS.size() >= 3, "%s needs at least 3 rows" % file)
+			# The specials table grows one kill-first enemy per unit (Splitter first, wave 18).
+			var least := 1 if file == "roster_specials.gd" else 3
+			_require(table.ROWS.size() >= least, "%s needs at least %d rows" % [file, least])
 			for kind in table.ROWS:
 				_require(Roster.ROWS.has(kind), "%s absent from merged enemy roster" % kind)
 	_require(Roster.ROWS.size() >= 25, "merged enemy table needs at least 25 rows")
