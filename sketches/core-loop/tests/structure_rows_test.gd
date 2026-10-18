@@ -95,6 +95,8 @@ func _start() -> void:
 		_game.flow.boss_row_override[2] = unbuilt
 		_report("unbuilt row selected", not _game.flow.boss_row(2)["built"], "world two built:false")
 	_game.ctx.calm = true
+	# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This test ends on the summary.
+	_game.flow.victory_lap = false
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 
