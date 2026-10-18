@@ -169,8 +169,10 @@ func _check_coverage() -> void:
 				continue
 			covered += 1
 		_t.check("(c) %s: every target row has a piece that seats it" % path.get_file(), missing.is_empty(), str(missing))
-	_t.check("(c) the pieces seat all 73 target rows (18 flume and pit kickers, 21 lava channels, 16 crown kickers, 18 step lips)",
-		covered == total and total == 73, "%d of %d" % [covered, total])
+	# 2026-10-18: 64 target rows, was 73. The #112 pit authored pass seated the pit's nine greybox kickers on the
+	# plate_kicker pieces themselves (park_pit.json recipe plate_kicker_12x2p5x*), so they are no longer greybox targets.
+	_t.check("(c) the pieces seat all 64 target rows (9 flume kickers, 21 lava channels, 16 crown kickers, 18 step lips)",
+		covered == total and total == 64, "%d of %d" % [covered, total])
 
 
 # The collider's AABB in the node's space.
