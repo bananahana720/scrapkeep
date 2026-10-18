@@ -1,31 +1,31 @@
 {
-  "bake_sha256": "5dbefc8e2d08266179097510756cd05d6b980e5a3e2d34a311751c67a446eadc",
+  "bake_sha256": "f0cd6c7c925589fc83937aa2bc6ca75298558a49aa0b4a9a2bb160845ea3b996",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 943367,
-  "edges": 315278,
+  "bytes": 946847,
+  "edges": 314841,
   "first_failed": "",
   "flags": {
-    "deck": 55,
-    "door_ok": 39895,
-    "line": 417,
-    "open": 40438,
-    "sight_ok": 9696,
+    "deck": 37,
+    "door_ok": 39877,
+    "line": 404,
+    "open": 40420,
+    "sight_ok": 9658,
     "under": 18
   },
-  "full_visit_m": 1909,
-  "full_visit_ratio": "1.363",
-  "graph_sha256": "c552b2215db7f31f03f87e7dc5491f464094cff37cce9da3fdf25eab750a6848",
+  "full_visit_m": 1913,
+  "full_visit_ratio": "1.361",
+  "graph_sha256": "edd3676bff7e2d24a870df1985aa0a52e27e5a16a86c1c268f7230b721a0cedc",
   "line_errors": [],
   "line_path_nodes": 175,
   "longest_est_m": 2038,
   "map": "park_sinkhole",
-  "nodes": 40456,
-  "park_sha256": "b1e81bf8d94b4f632571d6281668ec06a98ec05189f102a1d4855acbb96a1073",
+  "nodes": 40438,
+  "park_sha256": "386028b7f78152ca9b72b12e405f8d0dbbc000024a0d140fb456782a3036aeb3",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 375,
+      "d_landmark": 381,
       "d_spawn": 1040,
       "detour_m": 0,
       "door_at": [
@@ -52,7 +52,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 387,
+      "d_landmark": 391,
       "d_spawn": 1213,
       "detour_m": 164,
       "door_at": [
@@ -80,7 +80,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 459,
+      "d_landmark": 464,
       "d_spawn": 941,
       "detour_m": 224,
       "door_at": [
@@ -107,7 +107,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 233,
+      "d_landmark": 238,
       "d_spawn": 1170,
       "detour_m": 79,
       "door_at": [
@@ -131,7 +131,7 @@
       "site": "crosscut_drift"
     }
   ],
-  "reward_ratio": "0.835",
+  "reward_ratio": "0.832",
   "ride_edges": 57,
   "routes": {
     "bore_shaft": [],
@@ -146,6 +146,7 @@
     "east_haulage": [],
     "east_loop": [],
     "eruption_lip": [],
+    "gallery_lap": [],
     "main": [],
     "main_lower": [],
     "main_upper": [],
@@ -163,13 +164,13 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1401,
+    "d_landmark": 1406,
     "farther_share": "0.008",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1401,
-  "spawn_beacon_share": "0.687",
+  "spawn_beacon_m": 1406,
+  "spawn_beacon_share": "0.690",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -179,29 +180,21 @@
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.835
+      "value": 0.832
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.363
+      "value": 1.361
     }
   ],
-  "tool_sha256": "da6fdfdba7b82b109309fba8b5131587e1d7d174a839b79191201df3d2ea2f9d",
+  "tool_sha256": "4461666e87db0beb7981a7f75bf3ba9b1e5bdb7a15c2947f1272a818aaa4a3d8",
   "zones": {
     "anchors": [
       {
-        "cost": 1418.1,
-        "d_landmark": 56.0,
-        "name": "pump_gallery",
-        "on_route": false,
-        "rank": 0,
-        "viable": false
-      },
-      {
         "cost": 1292.7,
-        "d_landmark": 302.3,
+        "d_landmark": 307.2,
         "name": "bore_apron",
         "on_route": false,
         "rank": 1,
@@ -209,7 +202,7 @@
       },
       {
         "cost": 1211.8,
-        "d_landmark": 454.9,
+        "d_landmark": 459.8,
         "name": "east_mesa",
         "on_route": false,
         "rank": 2,
@@ -217,7 +210,7 @@
       },
       {
         "cost": 1182.4,
-        "d_landmark": 364.0,
+        "d_landmark": 368.8,
         "name": "east_chamber",
         "on_route": false,
         "rank": 3,
@@ -225,7 +218,7 @@
       },
       {
         "cost": 918.7,
-        "d_landmark": 436.6,
+        "d_landmark": 441.6,
         "name": "west_chamber",
         "on_route": false,
         "rank": 4,
@@ -233,7 +226,7 @@
       },
       {
         "cost": 679.2,
-        "d_landmark": 649.1,
+        "d_landmark": 654.1,
         "name": "west_cenote",
         "on_route": false,
         "rank": 5,
@@ -241,18 +234,18 @@
       },
       {
         "cost": 661.1,
-        "d_landmark": 759.8,
+        "d_landmark": 764.8,
         "name": "trench_granaries",
         "on_route": false,
         "rank": 0,
         "viable": false
       }
     ],
-    "count": 151,
+    "count": 185,
     "crossings": {
-      "drop": 22,
+      "drop": 33,
       "ride": 45,
-      "walk": 374
+      "walk": 460
     },
     "hidden": [
       {
