@@ -939,7 +939,7 @@ def spec_flume(rid):
                 "legs": lambda z: FLUME["floor_y"] - 11.0, "rail_n": 10}
     if rid == "flume_pour_spout":
         return {"length": SPOUT_L, "wall_dy": zero, "floor_dy": spout_floor_dy, "wall_z": [0.0, 3.5, 7.0, 10.5, 14.0],
-                "floor_z": spout_floor_stations(), "bents": [0.0, 12.0], "legs": lambda z: FLUME["ground"], "rail_n": 2}
+                "floor_z": spout_floor_stations(), "bents": [0.0, 12.0], "legs": lambda z: FLUME["ground"] - 1.0, "rail_n": 2}
     return {"length": SIPHON_L, "wall_dy": siphon_dy, "floor_dy": siphon_dy, "wall_z": stations(SIPHON_L, SIPHON_STEP),
             "floor_z": stations(SIPHON_L, SIPHON_STEP), "bents": [12.0 * k for k in range(9)] + [SIPHON_L],
             "legs": lambda z: FLUME["floor_y"] + siphon_dy(z) - 11.0, "rail_n": 8}

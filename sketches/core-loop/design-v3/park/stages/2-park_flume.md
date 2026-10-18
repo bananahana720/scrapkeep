@@ -2,6 +2,54 @@
 
 World 1, Spillway Works, the world's last stage before Brindle. Warden kind `reactor` on the `flume` mounting, variant `meltdown`. Time of day `morning`. Storyboard board id `park-2-park_flume`. Status: draft for Andrew's approval (unit K-W1, 2026-10-10). Every number is a starting value to tune in play unless a file:line backs it.
 
+## Authored pass: the momentum test (2026-10-17, WHATS-LEFT unit 3)
+
+Andrew's ruling (2026-10-17 22:12Z, "one skill per park"): the flume tests momentum. The landforms stay. The pieces, the line and the enemy placement change so that the park reads as one held line from the weir to the head house. If you keep your speed, the flume carries you the whole way. If you lose it, you are on the ground with the canals.
+
+**The line.** Weir intake, weir reach, gap work deck, hollow intake, hollow reach, siphon span, head reach, pour lip, drum. The route is `flume_whole` (butte_gap to the landmark). The bot line is `assets/park/park_flume/momentum.json`, which has the same waypoints for all six pilots.
+- The siphon span is new: 100.8 m, falling 21 m on a smoothstep from the hollow floor (45) to the head reach floor (24). It pays back the speed the hollow reach costs.
+- The pour spout crosses the drum's west rim 10 m south-east of its old spot, at [207.8, 439.8]. It enters on the rim and its lip hangs over the drum. Its deck is at the Warden anchor's height (-2), where the relic clamps on, and its far bent stands on the drum floor (-14). The head reach throws a rider who holds the line off its end into the drum, still rolling. The old spot lay across the ground way's drop over the rim, where the floor line hit the spout's wall on every seed. The floor line now has 0 dead stops on 4 seeds.
+- The hollow trestle collapse (clock tier 1) still breaks the hollow reach. A rider who is late finds the flume falling under them. That is the race the park sets, and the ramp it leaves still leads down.
+
+**Pieces** (`tools/blender/park/flume_works.py`, registry fragment `park_flume_works.json`, three GLBs each):
+
+| Row(s) | Piece | Note |
+| --- | --- | --- |
+| weir, hollow and head reaches | `flume_reach_120`, tile fit | `flume_span` refuses the tile fit: it has a bent at its entry only. The reaches had been standing in as grey boxes with no warning anyone saw. The new reach has a bent flush inside both ends. |
+| weir_intake, hollow_intake (new) | `flume_intake_16` | A 16 m mouth that flares from 14 m wide and floor-flush to the flume section. A ball rolling in from open ground used to hit the bare wall ends and bounce off. |
+| siphon_span (new), pour_channel | `flume_siphon_span`, `flume_pour_spout` | |
+| 28 flume piers, 19 bend piers, 18 bluff piers | `flume_bent_50`, `survey_mast_40`, `surge_pylon_28` | Colliders identical to the old boxes. Re-verbed `swing`: they are the anchors that carry a swing along the line. |
+| crib piers and walls, anchor blocks | `crib_pier_*`, `crib_wall_60x24x6`, `anchor_block_16x28x8` | |
+| gatehouse, annex, crew ledges, weir deck, gap reach, rim drop | `weir_gatehouse`, `annex_hall`, `crew_bunk_ledge`, `weir_apron`, `gap_work_deck`, `rim_road` | Box and wedge colliders as before. |
+| 11 canals, washes, chutes and the weir pond | `liner_<row>` | Decoration conformed to the bake. The stamp stays the only collider. |
+| 9 kickers | `plate_kicker_*` from #95, seat fit | |
+| head_house_drum; horseshoe and lower gorge | `landmark`; `scatter` | |
+
+**Enemy placement.** Trestle drones roost on the hollow reach itself: a 20 m winch lane along the trough hooks a ball that slows on the grind. siphon_camp moves 2.8 m toward the flume, to [-26, 174], so a rider on the siphon passes the camp within its 12 m reach. Its lobbers still sit in the gorge under the span. The forecourt brutes can be beaten by keeping the flume's speed to the pour lip.
+
+**Fragments.** See section 11 for the eight new dam-era texts: siphon span, bent board, survey mast, surge pylon, pour lip, gatehouse key, crib pier, anchor block and intake gate. They match the #53 field notes (bents numbered downhill, the siphon, the drum).
+
+**Evidence** (headless, fixed 90 fps, `traversal_line.gd --table=park --stage=2`; automated play says nothing about feel):
+- Momentum line, six pilots by two seeds: 11 of the 12 runs ride every flume piece from the weir to the head house, with 0 to 1 dead stops.
+  - Times to the Warden: Sable 58 to 60 s, Tarn 76 to 77, Cannon 82 to 83, Tally 88 to 91, Kest 89 to 91, Rivet 97 to 98.
+  - The miss is Rivet. It reaches the hollow as the collapse starts, rides the falling ramp and meets the siphon end from below.
+  - Sable runs faster than the general 60 s band floor, and its last segment is under 12 s. Those bands were written for the wandering lines, not for a held one.
+- Standard lines (`lines.json`), six pilots by four seeds, compared with the base (955ca23a, run the same way):
+  - Rivet, Tarn and Cannon are inside every band.
+  - Kest's median flow share is 0.690 here and 0.677 on the base. Both are under the 0.7 bar, so the miss predates this pass.
+  - Tally's per-seed flow is under the bar on some seeds here and on the base.
+  - Sable picks up 0 or 1 dead stop at the weir-terrace waypoint from run to run on both trees. This build's own Sable seed 1 gives 0 with tracing and 1 without.
+  - The floor line has 0 dead stops and is inside its floor band. Its flow share is 0.579 here and 0.593 on the base, both under the bar.
+- Tests: park_park_flume, park_place, park_bake_fresh, asset_registry, park_recipes_grind, park_anchors, park_recipes_kickers, park_dressing_pin, flume_line_posture, posture_bands_flume and bot_flume_exit all pass. `placeholder-gate` lists no flume rows. `park-anchor-kit --check` shows 0 left.
+- park_schema_test's "six stage pages" failure comes from the base: a seventh page from #68.
+- Re-pins, each with a dated header:
+  - Stage 2 dressing pin, from siphon_camp's keep-out. With the camp at its old spot the old pin holds.
+  - The collapse's `depth_m` now measures 21.441297 from the trough floor.
+  - park_recipes_kickers_test counts rows already swapped onto a piece.
+  - tools/bot_driver.gd's climb route reads seated kickers, not only greybox ones.
+
+**Scorecard** (intent-check, this branch): 0 flume placeholders, 161 authored rows, 20 story fragments, society share 0.66, ride-fact share 0.94. The top verb is `swing` (0.5) because the 65 piers are swing anchors. The scorecard counts verbs per row, so a park whose skill is one long line reads as its anchors. The line itself is the test.
+
 <!-- flume-current-table -->
 ## Current measurements and qualification, round 9
 
@@ -680,7 +728,7 @@ The stage row keeps theme 1, the sluice palette with the funk slap bass (`alpha_
 | `dam_era_bent_board` | flume bent 1, weir end | Bent 1. Counting starts at the weir. Paint the ticks bigger; nobody reads them at speed. |
 | `dam_era_survey_mast` | bend survey mast 1 | Survey mast 1. String from here to the bend, re-strung daily. The bend moved twice. The masts did not. |
 | `dam_era_surge_pylon` | bluff surge pylon 1 | Surge line, pylon 1. Line carries the head house telephone. Head house rings first. |
-| `dam_era_pour_lip` | pour channel | Pour lip. Flume ends here, a hand above the drum floor. The water never minded the drop. |
+| `dam_era_pour_lip` | pour channel | Pour lip. The flume ends at the drum rim and lets go. The water never minded the drop. |
 | `dam_era_gatehouse_key` | weir gatehouse | Gatehouse key on the inside hook. Door locked from the outside. Crew uses the window. |
 | `dam_era_crib_pier` | siphon bench pier | Crib pier, timber and river rock. Built to hold the siphon still. Holds most things still. |
 | `dam_era_anchor_block` | bench coping pier | Anchor block for a penstock that was never laid. Poured anyway. The pour was already paid for. |
