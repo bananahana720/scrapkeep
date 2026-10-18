@@ -253,7 +253,7 @@ The round-5 source moves signal_masts west to [-282,272], retaining mast_cutters
 | crown_updraft | thermal | crown_bowl | (primitive) | {"at":[-80,500],"radius":6.0,"height":120.0} |
 | gauntlet_updraft | thermal | gauntlet_west | (primitive) | {"at":[200,110],"radius":6.0,"height":160.0} |
 | turnstone_wire | cable | turnstone | (primitive) | {"from":[-30,67.3,-275],"to":[-95,62.6,-150],"radius":4.5,"floor":18.0} |
-| signal_wire | cable | signal_masts | (primitive) | {"from":[-245,12.0,285],"to":[-140,5.0,455],"radius":4.5,"floor":18.0} |
+| signal_wire | cable | signal_masts | (primitive) | {"from":[-243,43.0,284],"to":[-140,5.0,455],"radius":6.0,"floor":18.0} |
 | east_wire | cable | east_wash | (primitive) | {"from":[170,56.9,-290],"to":[230,52.2,-110],"radius":4.5,"floor":18.0} |
 | gauntlet_tether | cable | gauntlet_west | (primitive) | {"from":[75,26.8,95],"to":[270,27.7,150],"radius":4.5,"floor":18.0} |
 | shelf_wire | cable | gauntlet_shelf | (primitive) | {"from":[80,24.0,120],"to":[165,7.3,300],"radius":4.5,"floor":18.0} |
@@ -584,7 +584,7 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
 - the signal wire past the mast cutters;
 - the bowl drop. The spire hands hold `lens_spire`, about 155 m off the line: scenery here, not a test.
 
-Ridden with `tools/traversal_line.gd --table=park --stage=6 --pilot=sable --lines=res://assets/park/park_crown/skill_line.json` on seeds 1 to 4 (with the ride pieces of PR #95): all four engage in 60 to 63 s with 5 distinct ride facts (chute, launch, grapple, bowl, drop) and `ride_grapple_line` firing. There are 0 to 2 short stops at `signal_runout_anchor` and `sentinel_50`, where the ball misses the signal wire's hook (4.5 m around a point 7 m over the ground) and rolls on into the posts; PARK.md section 8 asks for none, so the line is not yet at its bar. All six pilots' own lines still engage on seeds 1 and 2. `kick_wlast_11` stays greybox: on its piece Sable's own line stalled three times against it.
+Ridden with `tools/traversal_line.gd --table=park --stage=6 --pilot=sable --lines=res://assets/park/park_crown/skill_line.json` on seeds 1 to 4 (with the ride pieces of PR #95): all four engage in 50 to 64 s with 5 distinct ride facts (chute, launch, grapple, bowl, drop) and `ride_grapple_line` firing, and two of the four have one short stop at the bowl's west rim ([-122, 479]); PARK.md section 8 asks for none, so the line is not yet at its bar. The signal wire's hook sits at the top of `kick_wlast_10`'s arc ([-243, 43, 284], 6 m): at its old place, 7 m over the ground, the 26 m kicker threw every ball about 30 m over it, so nobody hooked it and the line rolled into `signal_runout_anchor` and `sentinel_50` instead. All six pilots' own lines still engage on seeds 1 and 2. `kick_wlast_11` stays greybox: on its piece Sable's own line stalled three times against it.
 
 **Signal caches** (design-v3/sound/RADIO.md on PR #66; rows in the format of PR #68's `tools/radio_cache_spots.gd` SPOTS, which casts the heights onto live colliders):
 
@@ -892,7 +892,7 @@ Ridden with `tools/traversal_line.gd --table=park --stage=6 --pilot=sable --line
   {"id": "crown_updraft", "kind": "thermal", "site": "crown_bowl", "recipe": "", "at": [-80, 500], "radius": 6.0, "height": 120.0},
   {"id": "gauntlet_updraft", "kind": "thermal", "site": "gauntlet_west", "recipe": "", "at": [200, 110], "radius": 6.0, "height": 160.0},
   {"id": "turnstone_wire", "kind": "cable", "site": "turnstone", "recipe": "", "from": [-30, 67.3, -275], "to": [-95, 62.6, -150], "radius": 4.5, "floor": 18.0},
-  {"id": "signal_wire", "kind": "cable", "site": "signal_masts", "recipe": "", "from": [-245, 12.0, 285], "to": [-140, 5.0, 455], "radius": 4.5, "floor": 18.0},
+  {"id": "signal_wire", "kind": "cable", "site": "signal_masts", "recipe": "", "from": [-243, 43.0, 284], "to": [-140, 5.0, 455], "radius": 6.0, "floor": 18.0},
   {"id": "east_wire", "kind": "cable", "site": "east_wash", "recipe": "", "from": [170, 56.9, -290], "to": [230, 52.2, -110], "radius": 4.5, "floor": 18.0},
   {"id": "gauntlet_tether", "kind": "cable", "site": "gauntlet_west", "recipe": "", "from": [75, 26.8, 95], "to": [270, 27.7, 150], "radius": 4.5, "floor": 18.0},
   {"id": "shelf_wire", "kind": "cable", "site": "gauntlet_shelf", "recipe": "", "from": [80, 24.0, 120], "to": [165, 7.3, 300], "radius": 4.5, "floor": 18.0},
@@ -1209,7 +1209,7 @@ The appendix above is the original storyboard draft. This snapshot is the shippe
   {"id": "crown_updraft", "kind": "thermal", "site": "crown_bowl", "recipe": "", "at": [-80, 500], "radius": 6.0, "height": 120.0},
   {"id": "gauntlet_updraft", "kind": "thermal", "site": "gauntlet_west", "recipe": "", "at": [200, 110], "radius": 6.0, "height": 160.0},
   {"id": "turnstone_wire", "kind": "cable", "site": "turnstone", "recipe": "", "from": [-30, 67.3, -275], "to": [-95, 62.6, -150], "radius": 4.5, "floor": 18.0},
-  {"id": "signal_wire", "kind": "cable", "site": "signal_masts", "recipe": "", "from": [-245, 12.0, 285], "to": [-140, 5.0, 455], "radius": 4.5, "floor": 18.0},
+  {"id": "signal_wire", "kind": "cable", "site": "signal_masts", "recipe": "", "from": [-243, 43.0, 284], "to": [-140, 5.0, 455], "radius": 6.0, "floor": 18.0},
   {"id": "east_wire", "kind": "cable", "site": "east_wash", "recipe": "", "from": [170, 56.9, -290], "to": [230, 52.2, -110], "radius": 4.5, "floor": 18.0},
   {"id": "gauntlet_tether", "kind": "cable", "site": "gauntlet_west", "recipe": "", "from": [75, 26.8, 95], "to": [270, 27.7, 150], "radius": 4.5, "floor": 18.0},
   {"id": "shelf_wire", "kind": "cable", "site": "gauntlet_shelf", "recipe": "", "from": [80, 24.0, 120], "to": [165, 7.3, 300], "radius": 4.5, "floor": 18.0},
