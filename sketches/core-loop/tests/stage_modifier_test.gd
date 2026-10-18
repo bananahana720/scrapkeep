@@ -19,14 +19,14 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
 
-# SHA-256 of var_to_bytes(draw(...)) for run seeds 0 to 3 per stage, with no modifier, captured on main
-# at cf63e622 before SI3. A draw with no modifier must still produce exactly these bytes.
+# SHA-256 of var_to_bytes(draw(...)) for run seeds 0 to 3 per stage, with no modifier, captured before SI3
+# (stages 2-3 on main cf63e622; stages 4-6 re-captured on stage/alpha-w17 27e15952, whose parks changed). A draw with no modifier must still produce exactly these bytes.
 const GOLDEN := {
 	2: "2da49d67bfdf475f7c983cdab44b5af6181f2959567d01d70c2764f539bd55ee",
 	3: "6b2244ea5e2df73b4330ccec611c17a05b250afc9cf711233641ac960dcc9f02",
-	4: "99a743b6e91c90af34cfda84138cff6b42e4cb9480f9e4c7734e6c3dc7308d39",
-	5: "c9c1702e9b7fa6b32ae2b3a2e60d5885afea15f4b32f4df22e84d7ad61aaec94",
-	6: "735d350d077e5ed38a23f508c2df25abb9b23ff8c80867a233d06f930d830918",
+	4: "d2f652ab46ed826448f4b83d7724e4c1b4cd8e73d79c3216e9f0ca399110c59e",
+	5: "a8d3b6f9bdac7853f09e71fc3ed62437cd7ef67e069dd1f24d4ae1e426fe7e85",
+	6: "72c5565818cee8e1854dc1aa5cf9859a605e449bcebe47dd20c8f0b3c0edd12c",
 }
 const PICK_SEEDS := 2000
 const DRAW_SEEDS := 16
