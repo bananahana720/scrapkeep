@@ -101,5 +101,5 @@
     "max_side": 2048,
     "set_by": "the written cap; every texture today is 512 or 1024"
   },
-  "rule": "cap = smallest round number (100 for 1,000 and up, 10 below) at or above the largest member after import, never above the tightest existing per-asset ceiling for any member; a member over its class carries an exception in assets/registry.json"
+  "rule": "cap = smallest round number (100 for 1,000 and up, 10 below) at or above the largest member after import, never above the tightest existing per-asset ceiling for any member; a member over its class carries an exception in assets/registry.json. Exception (2026-10-18 model polish, tools/blender/POLISH.md): the enemy, pilot, warden_kit, warden_base, prop, landmark, detail, clutter, gate and chunk caps are headroom for polished rebuilds, set ahead of their members and held until one 4080 frame check on the densest fight"
 }
