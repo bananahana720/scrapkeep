@@ -59,6 +59,31 @@ func _spawn(kind: String, index: int):
 	return enemy
 
 
+# Coordinator call 2026-10-18: a closed roster pose may live on the enemy's own body (its
+# `_pose` read, WIRE-OR-CUT.md) instead of in WindupPoses. The body counts only if its
+# behaviour script overrides `_pose` with real work, or names the pose id where it draws it
+# (prop_crew.gd's e31_prop_kicked). An inherited or empty `_pose` does not count, so a row
+# whose pose neither WindupPoses nor its body provides still fails.
+func _body_owns_pose(owner: String, pose: String) -> bool:
+	var path := String(Roster.ROWS.get(owner, {}).get("script", "res://src/combat/%s.gd" % owner))
+	if not FileAccess.file_exists(path):
+		return false
+	var source := FileAccess.get_file_as_string(path)
+	if source.contains(pose):
+		return true
+	var at := source.find("\nfunc _pose(")
+	if at < 0:
+		return false
+	var body_start := source.find("\n", at + 1)
+	var next_func := source.find("\nfunc ", body_start)
+	var body := source.substr(body_start, (next_func if next_func >= 0 else source.length()) - body_start)
+	for line in body.split("\n"):
+		var code := line.strip_edges()
+		if code != "" and not code.begins_with("#") and code != "pass":
+			return true
+	return false
+
+
 # GP6-1: the ranges are the brief's, written here and not read from EnemyMotion.
 func _rows() -> void:
 	_t.eq("every roster kind has a row", WindupRows.ROWS.size(), Roster.ROWS.size())
@@ -83,7 +108,8 @@ func _rows() -> void:
 		var attack: Dictionary = EventKinds.ATTACK_ROWS[id]
 		named[attack["pose"]] = true
 		var own_rig: bool = not WindupRows.ROWS.get(attack["owner"], {}).get("pose", {}).is_empty()
-		if attack["group"] == "enemy" and not attack["open"].has("pose") and not own_rig and not WindupPoses.has_pose(attack["pose"]):
+		if attack["group"] == "enemy" and not attack["open"].has("pose") and not own_rig and not WindupPoses.has_pose(attack["pose"]) \
+				and not _body_owns_pose(String(attack["owner"]), String(attack["pose"])):
 			missing.append(attack["pose"])
 	var stray: Array = WindupPoses.POSES.keys().filter(func(k): return not named.has(k))
 	_t.check("GP6-1 roster wind-up poses", missing.is_empty() and stray.is_empty(), "missing %s, stray %s" % [missing, stray])
