@@ -6,7 +6,8 @@ const KIT_NODES := ["MindKitRoot", "CombatSeat", "KitMount", "LensRoot", "LensSe
 const BASE_CLIPS := {"phase_break": 1.0, "phase_break_2": 1.0, "phase_break_3": 1.0, "final_quiet": 2.0}
 const KIT_CLIPS := {"attention": 4.0, "lane_warn": 1.4, "split_lane_warn": 1.6, "rush_warn": 1.5, "plate_warn": 1.8, "family_strike": 0.2, "recovery": 0.4, "pulse_warn": 2.0, "pulse": 0.3, "choir_change": 0.6, "choir_change_1_2": 0.6, "choir_change_2_0": 0.6, "stagger_open": 0.5, "hand_send": 0.6, "final_quiet": 2.0}
 const MATERIALS := ["ancient_enamel", "dark_joint", "glass", "signal_surface"]
-const SPEC_CAPS := {"warden_base": Vector3i(5000, 9600, 32), "warden_kit": Vector3i(1500, 2800, 18)}
+# Raised for the 2026-10-18 model polish (tools/blender/POLISH.md); draws unchanged.
+const SPEC_CAPS := {"warden_base": Vector3i(20000, 38400, 32), "warden_kit": Vector3i(6000, 11200, 18)}
 
 var failures := 0
 var checks := 0
