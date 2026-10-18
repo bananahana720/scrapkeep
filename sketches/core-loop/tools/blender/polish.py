@@ -110,6 +110,10 @@ def shape(bm, opts=None, bevel=None):
                                 clamp_overlap=True, loop_slide=True, material=-1)
                 bm.normal_update()
                 bm.edges.index_update()
+        # A clamped bevel that meets itself leaves coincident corners: zero-area
+        # triangles the asset tests reject.
+        bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=sorted(bm.edges, key=lambda e: e.index))
+        bm.normal_update()
     for f in bm.faces:
         f.smooth = True
     for e in bm.edges:
