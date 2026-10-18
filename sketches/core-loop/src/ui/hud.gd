@@ -17,6 +17,7 @@ const RunStatus := preload("res://src/ui/run_status.gd")
 const ObjectiveView := preload("res://src/ui/objective_view.gd")
 const RestartMeter := preload("res://src/ui/restart_meter.gd")
 const LaunchCard := preload("res://src/ui/launch_card.gd")
+const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
@@ -152,6 +153,7 @@ var edge_markers
 var part_name
 var launch_card
 var _world_card_at := -1
+var _cursed := false
 var why_callout
 var hotwire_screen
 # Where each prompt went this frame, for tests: prompt node to its screen rect.
@@ -681,7 +683,8 @@ func _on_world_entered(world: int) -> void:
 	var row := Worlds.row(world)
 	if row.is_empty():
 		return
-	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"))
+	# The world card carries the first stage's modifier, so it is on screen from the drop's start.
+	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, game.run.stage))
 	_world_card_at = Time.get_ticks_msec()
 
 
@@ -701,8 +704,23 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		_card_for_stage(stage)
 
 
+# The moment a run turns cursed, its card goes up; a retry's rewind or a new run clears it quietly.
+func _step_curse() -> void:
+	var now: bool = game.run != null and game.run.cursed()
+	if now and not _cursed:
+		launch_card.show_card("obj_beacon", StageModifier.CURSE.word, EventKinds.color("stage_entered"), StageModifier.CURSE.line)
+		if game.player != null:
+			StageModifier.announce(game.player.active_body().global_position)
+	_cursed = now
+
+
+# The stage's name, and its SI3 modifier read from the same pick the pocket draw applies, after
+# the cursed line once the run is cursed.
 func _card_for_stage(stage: int) -> void:
-	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"))
+	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
+	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage))
+	if not modifier.is_empty() and game.player != null:
+		StageModifier.announce(game.player.active_body().global_position)
 
 
 func _label(font_size: int) -> Label:
@@ -941,6 +959,7 @@ func _process(delta: float) -> void:
 	if size != _laid_out:
 		layout(size)
 	_step_toast(delta)
+	_step_curse()
 	damage_numbers.step(delta)
 	_step_ach(delta)
 	_step_lore(delta)
