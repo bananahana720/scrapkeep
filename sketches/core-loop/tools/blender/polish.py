@@ -24,7 +24,7 @@ from mathutils.bvhtree import BVHTree
 import common
 
 DEFAULTS = {
-    # Segment multiplier for cyl, rod, uv, ring and cone; ico gains one subdivision at 2+.
+    # Segment multiplier for cyl, rod, uv and ring; ico gains one subdivision at 2+.
     "detail": 2,
     # Bevel width in metres on edges sharper than bevel_angle; 0 turns bevels off.
     "bevel": 0.03,
@@ -86,12 +86,27 @@ def shape(bm, opts=None, bevel=None):
     bm.normal_update()
     bm.edges.index_update()
     if width > 0:
-        hard = [e for e in bm.edges if _angle(e) > o["bevel_angle"]]
-        if hard:
-            bmesh.ops.bevel(bm, geom=hard, offset=width, offset_type="OFFSET",
-                            segments=o["bevel_segments"], profile=0.5, affect="EDGES",
-                            clamp_overlap=True, loop_slide=True, material=-1)
-            bm.normal_update()
+        # Each loose piece (a kitbashed box, bolt, groove or decal) bevels at most a
+        # quarter of its thinnest side: a full-width bevel on a 1.5 cm groove or a flat
+        # decal folds the faces through each other. Pieces too thin for 5 mm keep their
+        # edges, which also spares triangles on bolts and weld beads.
+        groups = {}
+        for island in _islands(bm):
+            co = [v.co for f in island for v in f.verts]
+            thin = min(max(c[i] for c in co) - min(c[i] for c in co) for i in range(3))
+            w = round(min(width, 0.25 * thin), 4)
+            if w < 0.005:
+                continue
+            edges = {e for f in island for e in f.edges if _angle(e) > o["bevel_angle"]}
+            groups.setdefault(w, set()).update(edges)
+        for w in sorted(groups, reverse=True):
+            hard = sorted((e for e in groups[w] if e.is_valid), key=lambda e: e.index)
+            if hard:
+                bmesh.ops.bevel(bm, geom=hard, offset=w, offset_type="OFFSET",
+                                segments=o["bevel_segments"], profile=0.5, affect="EDGES",
+                                clamp_overlap=True, loop_slide=True, material=-1)
+                bm.normal_update()
+                bm.edges.index_update()
     for f in bm.faces:
         f.smooth = True
     for e in bm.edges:
@@ -99,11 +114,33 @@ def shape(bm, opts=None, bevel=None):
     return bm
 
 
+def _islands(bm):
+    """Faces grouped into edge-connected pieces, in face index order."""
+    bm.faces.index_update()
+    seen, out = set(), []
+    for start in bm.faces:
+        if start.index in seen:
+            continue
+        seen.add(start.index)
+        stack, island = [start], []
+        while stack:
+            f = stack.pop()
+            island.append(f)
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index)
+                        stack.append(g)
+        out.append(island)
+    return out
+
+
 def subdivide(bm, levels=1):
     """Catmull-Clark in Python: Blender's subdivision runs threaded and its output differs
     in the last bits between runs. Sharp edges (edge.smooth False) and open edges are
     creased, so boxes keep their corners and bevels round into fillets. Loop colours,
-    UVs, deform weights, materials and shading flags carry over. Returns a new bmesh."""
+    UVs, deform weights, integer tag and float vertex layers, materials and shading
+    flags carry over. Returns a new bmesh."""
     limit = (_opts or DEFAULTS)["crease_angle"]
     bm.normal_update()
     for e in bm.edges:
@@ -120,6 +157,12 @@ def _avg(points):
 
 
 def _cc(src):
+    # A concave ngon's centroid can fall outside it and fold the corner quads; ear-clip
+    # those first.
+    src.normal_update()
+    concave = [f for f in src.faces if len(f.verts) > 4 and not common._convex(f)]
+    if concave:
+        bmesh.ops.triangulate(src, faces=concave, quad_method="FIXED", ngon_method="EAR_CLIP")
     src.verts.index_update()
     src.edges.index_update()
     src.faces.index_update()
@@ -152,6 +195,11 @@ def _cc(src):
                    for kind in ("float_color", "color", "uv") for name in getattr(src.loops.layers, kind).keys()]
     sdef = src.verts.layers.deform.active
     ddef = dst.verts.layers.deform.new() if sdef is not None else None
+    # Integer vertex layers are rig and part tags (pilot_bone, tally_bone, rig_part...):
+    # a new vertex takes the tag most of its source vertices share, the lowest on a tie.
+    # Float vertex layers average.
+    ints = [(src.verts.layers.int[n], dst.verts.layers.int.new(n)) for n in src.verts.layers.int.keys()]
+    floats = [(src.verts.layers.float[n], dst.verts.layers.float.new(n)) for n in src.verts.layers.float.keys()]
 
     def weights(vs):
         if sdef is None:
@@ -167,6 +215,11 @@ def _cc(src):
         if ddef is not None:
             for g, w in sorted(weights(vs).items()):
                 nv[ddef][g] = w
+        for sl, dl in ints:
+            tags = sorted(v[sl] for v in vs)
+            nv[dl] = max(tags, key=lambda t: (tags.count(t), -t))
+        for sl, dl in floats:
+            nv[dl] = math.fsum(v[sl] for v in vs) / len(vs)
         return nv
 
     nv_v = [new_vert(vpt[v.index], [v]) for v in src.verts]
@@ -252,7 +305,10 @@ def bake(root, opts=None):
         mw = ob.matrix_world
         base = len(verts)
         verts += [mw @ v.co for v in ob.data.vertices]
-        polys += [[base + i for i in p.vertices] for p in ob.data.polygons]
+        # Glass and other see-through slots let light through, so they cast no occlusion.
+        clear = {i for i, m in enumerate(ob.data.materials)
+                 if m is not None and common.SLOTS.get(m.name, {}).get("alpha", 1.0) < 1.0}
+        polys += [[base + i for i in p.vertices] for p in ob.data.polygons if p.material_index not in clear]
     tree = BVHTree.FromPolygons(verts, polys, all_triangles=False, epsilon=0.0)
     lo = Vector([min(v[i] for v in verts) for i in range(3)])
     hi = Vector([max(v[i] for v in verts) for i in range(3)])
@@ -332,7 +388,13 @@ def bake(root, opts=None):
                         for d in dirs:
                             w = t * d.x + bt * d.y + n * d.z
                             hit = tree.ray_cast(p, w, reach)
-                            if hit[0] is not None:
+                            # A back face means the corner sits inside another part
+                            # (kitbashed primitives overlap); that part hides nothing.
+                            # Where a front and a back face meet the ray at one point (a
+                            # shared edge, coplanar overlaps) the BVH returns either by
+                            # run, so any front face at the hit point counts.
+                            if hit[0] is not None and (hit[1].dot(w) < 0.0 or any(
+                                    f[1].dot(w) < 0.0 for f in tree.find_nearest_range(hit[0], reach * 1e-5))):
                                 occ += 1.0 - (hit[3] / reach) ** 2
                         # Rays that graze a shared edge can hit either face; rounding
                         # drops that last-bit noise before the 1/1024 quantisation.
