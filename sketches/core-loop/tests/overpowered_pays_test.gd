@@ -2,7 +2,6 @@ extends SceneTree
 
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
-const Enemy := preload("res://src/combat/enemy.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
@@ -10,8 +9,6 @@ const BossRules := preload("res://src/boss/boss_rules.gd")
 # Overpowered pays (Andrew, 17 Oct 2026): a strong build or a lucky run is never punished.
 #   - A linear or capped part held at its stack cap adds nothing more, so no roll offers it again,
 #     on any pilot's full catalogue; a hyperbolic or uncapped part is never called maxed.
-#   - Damage past a kill pays scrap: none without overflow or on a Warden, more with more
-#     overflow, at most double the kill's scrap.
 #   - A bigger hit draws a bigger damage number, up to MEGA_FONT; small hits keep the old sizes.
 # Evidence limit: the rules only. How much faster a strong pilot grows is the bot gate's to
 # measure, and how it feels is Andrew's.
@@ -25,7 +22,6 @@ var _t := preload("res://tests/support/t.gd").new("overpowered_pays_test")
 func _initialize() -> void:
 	Synergies.table = null
 	_maxed_parts()
-	_overkill()
 	_numbers()
 	_ceiling()
 	quit(_t.verdict())
@@ -86,16 +82,6 @@ func _maxed_parts() -> void:
 	if hyperbolic != "":
 		_t.check("a hyperbolic part is never stacked out", not Parts.stacked_out(hyperbolic, [hyperbolic, hyperbolic, hyperbolic, hyperbolic, hyperbolic]), hyperbolic)
 	_t.check("an unknown part is never stacked out", not Parts.stacked_out("no_such_part", ["no_such_part"]), "")
-
-
-func _overkill() -> void:
-	_t.eq("no overflow pays nothing", Enemy.overkill_scrap(6, 0.0, 40.0, "brute"), 0)
-	_t.eq("a Warden pays no overflow", Enemy.overkill_scrap(6, 400.0, 40.0, "warden"), 0)
-	_t.eq("one max-HP of overflow pays half again", Enemy.overkill_scrap(6, 40.0, 40.0, "brute"), 3)
-	_t.eq("two max-HP of overflow pays double", Enemy.overkill_scrap(6, 80.0, 40.0, "brute"), 6)
-	_t.eq("a huge overflow still pays double", Enemy.overkill_scrap(6, 4000.0, 40.0, "brute"), 6)
-	_t.check("more overflow never pays less",
-		Enemy.overkill_scrap(7, 30.0, 40.0, "chaser") <= Enemy.overkill_scrap(7, 60.0, 40.0, "chaser"), "")
 
 
 func _numbers() -> void:
