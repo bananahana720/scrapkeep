@@ -20,11 +20,11 @@ def g(x, y, z):
 
 def build():
     common.reset()
-    # Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
-    polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
     common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
     common.SLOTS["part_state"] = {"color": "petrol", "metal": 0.6, "rough": 0.4}
     common.SLOTS["working_tool"] = {"color": "bone", "rough": 0.4}
+    # Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+    polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
     root = common.empty("Vault")
     body = Part("VaultBody")
     footprint = [(-1.25, -1.44), (1.25, -1.44), (1.44, -1.25), (1.44, 1.25),

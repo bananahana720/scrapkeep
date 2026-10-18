@@ -42,10 +42,10 @@ import polish
 from common import Part
 
 common.reset()
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
-polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Dispatcher")
 
 FLOOR = -1.5

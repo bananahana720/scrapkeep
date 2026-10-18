@@ -18,11 +18,11 @@ import polish
 from common import Part
 
 common.reset()
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
-polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.75}
 common.SLOTS["part_state"] = {"vc": True, "rough": 0.4, "metal": 0.6}
 common.SLOTS["core_state"] = {"color": "petrol", "rough": 0.4}
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Miniboss")
 GROUND = -3.45
 SLATE = "6f7f8f"
