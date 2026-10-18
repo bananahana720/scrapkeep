@@ -72,7 +72,7 @@ Known base reds and cloud-only false fails are listed in [STATE.md](../handoff/S
 | 20 | HELP and ACHIEVEMENTS refresh; FLASH-COMFORT; bug bar | placeholder burn-down to zero | PERF-NIGHT on the 4080 after radio renders | frametime gate |
 | 21 | ALPHA-RC AppImage release candidate | last art holes | final 4080 pass | RC gate: `--win-proof` four proofs, five personas |
 
-Source plan: `PLAN-w16-plus.md` (in the `scrapkeep-wt-cand-alpha-w15` worktree under `artifacts/local/alpha/push/w16/`); where it differs from the 17 to 18 Oct handoff, the handoff wins.
+Source plan: [PLAN-w16-plus.md](PLAN-w16-plus.md); where it differs from the 17 to 18 Oct handoff, the handoff wins.
 
 ## PC queue
 
