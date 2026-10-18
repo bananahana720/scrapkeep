@@ -115,3 +115,7 @@ names, rigid weights, origins and collider envelopes. A recipe's envelope assert
 (radius, half extents, heights) must still pass, and can move both ways: bevels and
 subdivision pull corners inward, but `detail` adds segments to curved primitives, so
 their faces sit closer to the true circle and the mesh grows slightly outward.
+
+Colour tests still apply to baked colours: `tests/hero_assets_test.gd` caps `ancient_enamel`
+value and saturation at 0.45, and the default AO pushed dark corners to 0.473. Recipes
+with that slot use `edge=0, ao_strength=0.35`.
