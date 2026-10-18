@@ -509,6 +509,9 @@ func toggle_camp() -> void:
 		return
 	_camp.visible = not _camp.visible
 	_actions.visible = not _camp.visible
+	var audio = _audio()
+	if audio != null:
+		audio.camp_theme(_camp.visible)
 	if _camp.visible:
 		_camp.refresh(game)
 		_show("CAMP", Palette.AMBER, "")
@@ -520,6 +523,10 @@ func toggle_camp() -> void:
 
 
 func _close_camp_silently() -> void:
+	# The camp's music ends with it, so a needle lifted below goes back to the title theme.
+	var audio = _audio()
+	if audio != null:
+		audio.camp_theme(false)
 	if _jukebox.visible:
 		_close_jukebox()
 	if _radio.visible:
