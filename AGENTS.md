@@ -1,6 +1,6 @@
 # Scrapkeep project instructions
 
-Read [the project desk](docs/project/README.md) and [CONTRIBUTING.md](CONTRIBUTING.md) before substantive work. Personal pstack preferences and host policy still apply.
+Read [the project desk](docs/project/README.md) and [CONTRIBUTING.md](CONTRIBUTING.md) before substantive work. Personal A stack preferences and host policy still apply. Live alpha coordination (waves 17 to 21) runs from [project-guide/coord/GRAPH.md](project-guide/coord/GRAPH.md) and the rulings in [project-guide/handoff/DECISIONS.md](project-guide/handoff/DECISIONS.md); alpha work stacks on `stage/alpha-w<N>` through the promote-fast flow, and Andrew plays once, at the end of wave 21.
 
 - `BIBLE.md` and accepted `adr/` records own game and production direction. `BACKLOG.md` owns task definitions, `TRACKING.md` owns live execution and questions, and `ORCHESTRATOR.md` owns assignment, isolation, review and integration. Read the task's exact sources; a proposed sprint or ready card is not authorization to start it.
 - Use `plan-session` for planning, `scrapkeep-task` for authorized cards, `scrapkeep-verify` for artifact-specific verification, `scrapkeep-lab` for the headless Godot lab and `reactive-model-loop` for a fast model that decides inside a running system. Both apps share the bodies under `.agents/skills/` (`reactive-model-loop` mirrors its canonical pstack copy); `.agents/skills/README.md` says when to add a skill, and `npm run check:skills` checks them.
