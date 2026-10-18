@@ -50,6 +50,9 @@ DEFAULTS = {
     # Convex edges lighten and creases darken by up to this much (curvature bake).
     "edge": 0.18,
     "bake_slots": None,
+    # Linear RGB colours the bake never changes: a state key a shader matches exactly (the
+    # kit steel shader tints loops within 0.02 of mint), so darkening it would break the tint.
+    "bake_keep": (),
 }
 
 _opts = None
@@ -351,5 +354,7 @@ def bake(root, opts=None):
                     continue
                 shade = shade[2]
                 c = attr.data[li].color
+                if any(math.dist(c[:3], k[:3]) < 0.02 for k in o["bake_keep"]):
+                    continue
                 attr.data[li].color = (_q(c[0] * shade), _q(c[1] * shade), _q(c[2] * shade), c[3])
         me.update()

@@ -39,6 +39,7 @@ sails, nets and decals with `bevel = 0` and `subsurf = 0`.
 | `ao`, `ao_rays`, `ao_reach`, `ao_strength` | on, 24, 0.18, 0.55 | Ambient occlusion bake |
 | `edge` | 0.18 | Convex edges lighten and creases darken by up to this much |
 | `bake_slots` | the `vc` slots | Slots whose vertex colours take the bake |
+| `bake_keep` | none | Linear colours the bake leaves exact, such as a shader's state key |
 
 ## What the bake writes
 

@@ -59,9 +59,8 @@ HOOK_X = (-4.6, 4.6)                        # small hooks on the rim's inner lip
 PADS = [((-4.6, 1), .7), ((4.6, 1), .7), ((-4.6, -1), .7), ((4.6, -1), .7), ((0, 0), .7)]  # (along, side) at y; (0,0) = +X end
 KNOBS = [(-2.3, -0.55), (2.3, -0.55)]        # (z, y) on the -X end
 KNOB = (.72, 7.0, 7.75, 12)                  # radius, x buried, x outer, sides
-# Polish (tools/blender/POLISH.md): hard machinery, so a 5 cm bevel and one subdivision level that rounds the hull
-# rings and the rim; every vertex-coloured kit slot takes the AO and wear bake (glass has no vertex colour).
-KIT_BAKE = ("elastomer", "enamel", "steel")
+# Polish (tools/blender/POLISH.md): hard machinery with a 4 cm bevel, one subdivision level that rounds the hull rings
+# and the rim, and the kit's AO and wear bake (kit.BAKE).
 FINISH = {"Hull": {"bevel": 0, "subsurf": 1}, "Fenders": {"bevel": .06}}
 SIZE = {"barge": [15.24, 5.55, 15.4], "barge_fenders": [15.41, 2.37, 15.16]}
 
@@ -188,7 +187,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))
     args = parser.parse_args(argv)
-    polish.enable(bevel=.04, bake_slots=KIT_BAKE)
+    polish.enable(bevel=.04, **kit.BAKE)
     kit.FINISH.update(FINISH)
     export(NAME, [("Hull", "enamel", False, enamel), ("Fittings", "steel", False, steel)], args.out_dir)
     export("barge_fenders", [("Fenders", "elastomer", False, fenders)], args.out_dir)

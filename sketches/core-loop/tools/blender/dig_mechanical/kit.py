@@ -51,6 +51,9 @@ def material(slot):
 # Per-surface polish finish by Surface name: {"Hull": {"bevel": 0.06, "subsurf": 1}}. Read only
 # under polish.enable(); a name not listed takes the enable() defaults (POLISH.md).
 FINISH = {}
+# polish.enable(**BAKE) for kit recipes: every vertex-coloured kit slot takes the AO and wear bake
+# (glass has no vertex colour), and the mint state key that steel.gdshader matches within 0.02 stays exact.
+BAKE = {"bake_slots": ("elastomer", "enamel", "steel"), "bake_keep": (common.rgba("mint"),)}
 
 
 class Surface:
