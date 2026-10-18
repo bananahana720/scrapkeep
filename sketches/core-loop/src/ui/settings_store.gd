@@ -18,6 +18,9 @@ const QUALITY := "quality"
 const REDUCED_MOTION := "reduced_motion"
 # A reduced-motion edge flash keeps this share of its alpha (the hit read stays visible).
 const REDUCED_FLASH := 0.25
+# Reduce flashes, 0 off and 1 on: cuts the brightness of flashes, white pops and strobes
+# (FlashGuard holds the shares). Separate from reduced motion: a player may want either alone.
+const REDUCE_FLASHES := "reduce_flashes"
 const STICK_SENSITIVITY := "stick_sensitivity"
 const INVERT_Y := "invert_y"
 const STICK_DEADZONE := "stick_deadzone"
@@ -131,6 +134,10 @@ func fullscreen() -> bool:
 
 func reduced_motion() -> bool:
 	return float(comfort.get(REDUCED_MOTION, 0.0)) >= 0.5
+
+
+func reduce_flashes() -> bool:
+	return float(comfort.get(REDUCE_FLASHES, 0.0)) >= 0.5
 
 
 # 0 for High, 1 for Low.

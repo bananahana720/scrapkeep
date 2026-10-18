@@ -95,6 +95,14 @@ const ICON_CATEGORIES :=["damage", "mobility", "defense", "utility", "charge", "
 # derived from its fields in from_row so a new field cannot go undeclared. Not the row's
 # "touches" key, which names the verb the build readout shows.
 @export var stat_touches: Array = []
+# SG15 three-level parts (parts.gd): MAX_LEVEL dicts, level n's numbers at levels[n - 1],
+# on a capped row with stack_cap MAX_LEVEL. Each names only LEVEL_KEYS the row itself sets,
+# so a level never moves a sheet category level 1 does not declare. level is the level this
+# def stands for (Parts.def_at); a plain def is level 1.
+const MAX_LEVEL := 3
+const LEVEL_KEYS := ["punch", "mods", "max_hp_bonus", "magnet", "kill_scrap", "cooldown_scale", "text"]
+@export var levels: Array = []
+@export var level := 1
 
 # SG3, comps/gunfire/scrolls-and-synergies.md:54. These name existing inputs;
 # they do not grant eligibility or change a part's effect.
@@ -161,6 +169,7 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.reads = row.get("reads", def._read_stats())
 	def.bits = ShotBits.part_mask(def.tags, row.get("bits"))
 	def.stat_touches = def._stat_touches()
+	def.levels = row.get("levels", [])
 	var player_global: bool = def.max_hp_bonus != 0.0 or not def.effect.is_empty() \
 		or not def.charges.is_empty() or def.trigger != "" or def.magnet != 1.0 \
 		or def.cooldown_scale != 1.0 or def.kill_scrap != 1.0 or row.has("relay")

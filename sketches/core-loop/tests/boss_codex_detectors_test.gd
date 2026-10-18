@@ -58,7 +58,7 @@ func _declared() -> void:
 	for entry in _game.ctx.codex.entries(CodexEntries.CATEGORY):
 		listed[entry["id"]] = true
 	var missing: Array = CodexEntries.all().map(func(e): return e["id"]).filter(func(id): return not listed.has(id))
-	_t.check("all 12 boss rows declared at game ready", CodexEntries.all().size() == 12 and missing.is_empty(), "missing %s" % str(missing))
+	_t.check("all 14 boss rows declared at game ready", CodexEntries.all().size() == 14 and missing.is_empty(), "missing %s" % str(missing))
 
 
 # --- The Waking --------------------------------------------------------------------------

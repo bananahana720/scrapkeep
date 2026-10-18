@@ -1,13 +1,16 @@
 extends "res://src/combat/enemy.gd"
 
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
+const AttackBudget := preload("res://src/combat/attack_budget.gd")
 
 # The chaser runs you down and lunges. The lunge is committed: at wind-up it lays a
 # lane on the ground from where it stands toward where you are, and only that lane
 # can hurt you, only while it is lunging down it. Roll off the lane, jump it, or hit
 # the chaser hard enough during the wind-up to break it (a knock at INTERRUPT or more
 # cancels the lunge and its lane together). Touching a chaser that is not lunging
-# costs nothing but the bump.
+# costs nothing but the bump. A chaser ready to lunge asks the attacker budget
+# (attack_budget.gd) for a slot first, as every counter does, and keeps chasing until it
+# gets one.
 
 const SPEED := 4.8
 const LUNGE_RANGE := 10.0
@@ -130,7 +133,10 @@ func _physics_process(delta: float) -> void:
 				desired = to_ball.normalized() * SPEED
 			_move(delta, desired)
 			if _rest <= 0.0 and to_ball.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
-				_begin_windup(to_ball)
+				if AttackBudget.ask(self):
+					_begin_windup(to_ball)
+			else:
+				AttackBudget.withdraw(self)
 		State.WINDUP:
 			_move(delta, Vector3.ZERO)
 			var lane := telegraph()
@@ -189,6 +195,7 @@ func _end_attack(next: int) -> void:
 	_clock = 0.0
 	_rest = REST
 	_clear_telegraph()
+	AttackBudget.release(self)
 
 
 # e01_brace_back: the wedge loads back over planted claws and flares its hinged fin.

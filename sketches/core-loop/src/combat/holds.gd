@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # Every hold an enemy puts on the ball, and the tenacity that bounds a chain of them
 # (DESIGN-V2 section 10.3). A counter never touches the ball itself: it asks here.
@@ -376,7 +377,7 @@ static func _stripes(mesh: ImmediateMesh, from: Vector3, to: Vector3) -> void:
 # law, 7f19110; enemy_tenacity_test pins it), flickering while the immunity lasts. It is Rivet's sprint look, because both mean
 # crowd control cannot hold you.
 func _draw_bracket(ball: Vector3) -> void:
-	var on := immune() and fmod(_clock * FLICKER_HZ, 1.0) < 0.7
+	var on := immune() and FlashGuard.blink(fmod(_clock * FLICKER_HZ, 1.0) < 0.7)
 	_bracket.visible = on
 	if not on:
 		return

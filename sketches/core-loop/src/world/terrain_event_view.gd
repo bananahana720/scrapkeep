@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # Draws each terrain event's telegraph from its model and nothing else, in the W2
 # grammar (VISUAL-LANGUAGE sections 4 and 11): hostile HAZARD, 45-degree stripes over a
@@ -115,7 +116,7 @@ func _draw(e: Dictionary, delta: float) -> void:
 	var f: float = 1.0 if flashing else model.fill()
 	var tm: TorusMesh = e["torus"]
 	tm.inner_radius = clampf(r * (1.0 - f), 0.05, r - 0.05)
-	(e["fill"] as MeshInstance3D).material_override = Palette.unshaded(Palette.HAZARD) if flashing else _stripe
+	(e["fill"] as MeshInstance3D).material_override = Palette.unshaded(Color(Palette.HAZARD, FlashGuard.info(1.0))) if flashing else _stripe
 	if model.id == "impact":
 		_draw_impact(e, f)
 	else:

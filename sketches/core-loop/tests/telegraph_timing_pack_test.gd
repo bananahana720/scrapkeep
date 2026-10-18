@@ -41,6 +41,8 @@ const SPAWNS := 50
 const SPEED := 8
 const BASE_TICKS := 90
 const OFFSET := Vector3(12.0, 0.0, 0.0)
+# The ballast heavy holds its rim instead of closing on the ball, so it stands in its slam reach.
+const BALLAST_OFFSET := Vector3(3.5, 0.0, 0.0)
 const LOBBER_OFFSET := Vector3(15.0, 0.0, 0.0)
 const FRAME_LIMIT := 600
 const GRID := 16
@@ -104,12 +106,16 @@ func _boot() -> bool:
 
 
 # The pack kinds: every roster kind the spawner builds, less the set pieces (the Warden, the
-# vault) and the surge miniboss, which the event director sends as its own beat.
+# vault) and the surge miniboss, which the event director sends as its own beat, and any
+# row with no telegraph (the Linker never attacks).
 func _pack_kinds() -> Array:
 	var kinds: Array = []
 	for id in Roster.ROWS:
 		var kind := String(id)
-		if kind in ["warden", "vault", "miniboss"]:
+		if kind in ["warden", "vault", "miniboss"] or int(Roster.row(kind)["telegraph"]) < 0:
+			continue
+		# A kind whose row has no telegraph never attacks (the Splitter only buds its pods).
+		if int(Roster.row(kind).get("telegraph", 0)) == -1:
 			continue
 		if kind in ["chaser", "lobber"] or _game.combat.fleet.makes(kind):
 			kinds.append(kind)
@@ -227,7 +233,7 @@ func _clear_field() -> void:
 
 func _spawn(kind: String):
 	_game.player.reset_to(_ball_at)
-	var at: Vector3 = _ball_at + (LOBBER_OFFSET if kind == "lobber" else OFFSET)
+	var at: Vector3 = _ball_at + (LOBBER_OFFSET if kind == "lobber" else BALLAST_OFFSET if kind == "ballast_heavy" else OFFSET)
 	# The mind hand braces against the ball's top habit; give it one to read.
 	if kind == "mind_hand":
 		_game.combat.fleet.habits.add("ram", 5.0)
@@ -367,6 +373,12 @@ func _run() -> void:
 	for kind in kinds:
 		var id: String = _record.id_of(kind)
 		var rec: Dictionary = _record.ROWS.get(id, {})
+		# A player-started attack never comes from a solo spawn; its own test drives it
+		# (enemy_prop_crew_test: one INSTANT disc the roof's size, landing after its warning).
+		if _record.PLAYER_STARTED.has(id):
+			report[id] = {"kind": kind, "marker": String(rec.get("marker", "")), "band": String(rec.get("band", "")), "pre_shoot": "%.2f" % rec.get("pre_shoot", -1.0)}
+			print("%s | %s | player-started, measured by its own test" % [kind, id])
+			continue
 		var leads: Array = []
 		var overlaps: Array = []
 		var markers := {}

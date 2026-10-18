@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Achievements := preload("res://src/core/achievements.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const Companion := preload("res://src/core/companion.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
@@ -213,7 +214,7 @@ func _run() -> void:
 	# Achievements count.
 	profile.earn(Achievements.ids()[0], EARNED_AT)
 	_reopen(screens)
-	_t.check("an earn shows in the count", camp.labels().has("Achievements: 1 of %d earned" % Achievements.ids().size()), "")
+	_t.check("an earn shows in the count", camp.labels().has("Achievements: 1 of %d earned" % Achievements.ids().filter(func(id): return not Secrets.shut_row(id, profile)).size()), "")
 
 	# Pages from the camp.
 	_game._screen_key(KEY_A)

@@ -1,0 +1,77 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { GRACE_TICKS, MECHANICS, audit, judge, main, parseArgs } from "./first-timer.mjs";
+
+const mechanic = (id) => MECHANICS.find((m) => m.id === id);
+
+// A probe in tools/first_timer.gd's shape, trimmed to what the judge reads.
+const probe = (taught, needed, pilot = "runner_gunner") => ({
+  tool: "first_timer", seed: 1, pilot, stages: 2, ticks: 10000, tick_hz: 90, stage_reached: 3,
+  card: [], taught, needed,
+});
+
+test("a lesson on screen before the need passes", () => {
+  const p = probe({ "objective:roll_gate": { tick: 100, stage: 1 } }, { reward_offered: { tick: 200, stage: 1 } });
+  assert.equal(judge(mechanic("gates"), p).verdict, "ok");
+});
+
+test("a lesson within the grace after the need still passes", () => {
+  const p = probe({ "objective:break_guard": { tick: 432, stage: 1 } }, { warden_engaged: { tick: 431, stage: 1 } });
+  assert.equal(judge(mechanic("warden"), p).verdict, "ok");
+});
+
+test("a lesson after the grace fails a required mechanic", () => {
+  const p = probe(
+    { "objective:roll_gate": { tick: 200 + GRACE_TICKS + 1, stage: 1 } },
+    { reward_offered: { tick: 200, stage: 1 } },
+  );
+  assert.equal(judge(mechanic("gates"), p).verdict, "late");
+  assert.equal(audit([p]).ok, false);
+});
+
+test("a required mechanic with no lesson fails", () => {
+  const p = probe({}, { stage_entered: { tick: 0, stage: 1 } });
+  assert.equal(judge(mechanic("roll"), p).verdict, "never");
+  assert.equal(audit([p]).rows.find((r) => r.id === "roll").failed, true);
+});
+
+test("the pilot card alone passes but is flagged", () => {
+  const p = probe({ "card:smash": { tick: -1, stage: 0 } }, { warden_staggered: { tick: 1410, stage: 1 } });
+  const verdict = judge(mechanic("slam"), p);
+  assert.equal(verdict.verdict, "card_only");
+  assert.equal(audit([p]).rows.find((r) => r.id === "slam").failed, false);
+});
+
+test("an optional mechanic used untaught never fails the audit", () => {
+  const p = probe({}, { bay_entered: { tick: 50, stage: 1 } });
+  assert.equal(judge(mechanic("shop"), p).verdict, "never");
+  assert.equal(audit([p]).rows.find((r) => r.id === "shop").failed, false);
+});
+
+test("a need the run never reaches is not a miss", () => {
+  const p = probe({}, {});
+  assert.equal(judge(mechanic("retry"), p).verdict, "not_reached");
+  assert.equal(audit([p]).rows.find((r) => r.id === "retry").failed, false);
+});
+
+test("one failing pilot fails the mechanic", () => {
+  const good = probe({ "screen:dead": { tick: 10, stage: 1 } }, { dead: { tick: 10, stage: 1 } }, "tally");
+  const bad = probe({}, { dead: { tick: 10, stage: 1 } }, "tarn");
+  assert.equal(audit([good, bad]).rows.find((r) => r.id === "retry").failed, true);
+});
+
+test("--from re-judges saved probes and exits 1 on a miss", async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "first-timer-"));
+  writeFileSync(path.join(dir, "probe-tally-1.json"), JSON.stringify(probe({}, { stage_entered: { tick: 0, stage: 1 } }, "tally")));
+  const code = await main([`--from=${dir}`, `--out=${dir}`]);
+  assert.equal(code, 1);
+  assert.match(readFileSync(path.join(dir, "report.md"), "utf8"), /Roll and steer the ball \*\*FAIL\*\*/);
+});
+
+test("parseArgs rejects an unknown pilot", () => {
+  assert.throws(() => parseArgs(["--pilots=nobody"]), /unknown pilot/);
+  assert.deepEqual(parseArgs(["--pilots=tarn,tally"]).pilots, ["tarn", "tally"]);
+});

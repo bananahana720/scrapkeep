@@ -23,6 +23,8 @@ const Lanes := preload("res://src/build/lanes.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Relics := preload("res://src/build/relics.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
+const MakerBonuses := preload("res://src/build/maker_bonuses.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -61,6 +63,9 @@ signal shell_air_changed(factor: float, rose: bool)
 signal hotwire_offered(part_id: String, recycle: int)
 signal hotwire_resolved(part_id: String, choice: String, cogs: int)
 const PARTICIPANTS := ["player"]
+# SG15: an offer of a part already held shows the level it would reach, by its current level.
+# A part at its top level is never offered, so it has no entry.
+const LEVEL_NAMES := ["", "II", "III"]
 # The dash leaves frost this long, and drops a visible puff every few ticks of it.
 const FROST_TRAIL := 0.7
 const PUFF_EVERY := 3
@@ -122,6 +127,8 @@ var effects
 var clock
 var shop
 var lanes
+# Maker sets (maker_sets.gd, maker_bonuses.gd): the completed sets' bonuses.
+var makers
 # The challenge modifiers the class screen chose for the next run (RunClock.MODIFIERS).
 var _next_modifiers := {}
 # Parts offered at this stage's gates, id to count, so a stage rarely repeats one.
@@ -201,6 +208,7 @@ func setup(ctx_ref) -> void:
 	ctx.root.add_child(gates)
 	gates.setup(ctx.terrain)
 	gates.mark_for = offer_mark
+	gates.active_row = _active_row
 	gates.chosen.connect(_on_gate_chosen)
 	fabricators = Fabricators.new()
 	fabricators.name = "Fabricators"
@@ -211,6 +219,7 @@ func setup(ctx_ref) -> void:
 	ctx.root.add_child(field)
 	field.setup(ctx)
 	field.resolved.connect(_on_element_resolved)
+	field.fused.connect(_on_fused)
 	accretion = Accretion.new()
 	ctx.player.roll_node().add_child(accretion)
 	accretion.setup()
@@ -222,6 +231,7 @@ func setup(ctx_ref) -> void:
 	clock = RunClock.new()
 	shop = Shop.new(ctx, self)
 	lanes = Lanes.new()
+	makers = MakerBonuses.new(self)
 	ctx.build = self
 	ctx.set_meta("build", self)
 	ctx.events.stage_entered.connect(_on_stage_entered)
@@ -247,6 +257,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.beacon_unsealed.connect(_on_warden_broken_hotwire)
 	ctx.events.enemy_struck.connect(_on_tread_struck)
 	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
+	makers.setup()
 
 
 # ---- Build API (for combat, presentation and world; see SEAMS.md) ----
@@ -342,6 +353,9 @@ func offer_mark(part_id: String) -> String:
 	var set_id := PartSets.completed_by(part_id, held)
 	if set_id != "":
 		return "* completes %s *" % PartSets.SETS[set_id]["name"]
+	var level := Parts.level_of(part_id, held)
+	if level > 0 and level < LEVEL_NAMES.size():
+		return "* level %s *" % LEVEL_NAMES[level]
 	var ingredient := Parts.ingredient_of(part_id, held)
 	if ingredient != "":
 		var named: bool = is_known(ingredient) or has_perk("lens")
@@ -373,6 +387,22 @@ func item_hit(enemy: Node3D, damage: float, element := "") -> void:
 # A part's live effect numbers for a card or the fuzzer: {id, trigger, procs}.
 func item_procs() -> Dictionary:
 	return effects.procs.duplicate()
+
+
+# Maker sets: maker id to distinct pieces held (parts, relics and the racked active), the live
+# bonus ids, and the active rack's open-frame question (fired in the air, fire twice).
+func maker_counts() -> Dictionary:
+	makers.refresh()
+	return makers.counted.duplicate()
+
+
+func maker_bonuses() -> Array:
+	makers.refresh()
+	return makers.live.duplicate()
+
+
+func maker_fires_twice() -> bool:
+	return makers.fires_twice()
 
 
 func trigger_stats() -> Dictionary:
@@ -829,6 +859,11 @@ func _on_element_resolved(result: Dictionary) -> void:
 		_note_found("element:" + key, row["found"])
 
 
+# SG2: a fusion's first fire logs its codex card, which carries the row's elite rule.
+func _on_fused(result: Dictionary) -> void:
+	_note_found("fusion:" + String(result["key"]), Elements.card_text(Elements.FUSIONS[result["key"]]))
+
+
 func _class_id() -> String:
 	return ctx.run.class_id()
 
@@ -957,6 +992,29 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		if not picks.is_empty() and not scrapless():
 			ctx.run.add_part(picks[0], "vault")
 		ctx.run.add_core("vault", at)
+		var active := active_offer("vault", Parts.SOURCE_RARITIES["vault"], ctx.rng)
+		if active != "" and not scrapless():
+			active_rack().take(active, ctx.player.ball_position())
+
+
+# The active rack (src/combat/actives) while --actives is on, else null.
+func active_rack():
+	var rack = ctx.spawner.get("actives") if ctx.spawner != null else null
+	return rack if rack != null and rack.enabled() else null
+
+
+# An active offer id for a draw from `source` at these rarities (ActiveOffers), or "" with
+# --actives off, when none fits, or when the draw's share misses.
+func active_offer(source: String, rarities: Array, rng: RandomNumberGenerator) -> String:
+	var rack = active_rack()
+	if rack == null:
+		return ""
+	return ActiveOffers.roll(rng, source, rack.rows(), rarities, rack.held())
+
+
+func _active_row(id: String) -> Dictionary:
+	var rack = active_rack()
+	return rack.row_of(id) if rack != null else {}
 
 
 # The gates open when flow enters its gates state, never on the charge reading: a
@@ -971,13 +1029,20 @@ func _on_flow_changed(state: String) -> void:
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
+	var active := active_offer("gate", rarities, ctx.rng)
+	if active != "":
+		picks.append(active)
 	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))
 
 
 # Scrapless still rolls through a gate to launch (the handshake needs reward_chosen);
 # it just takes nothing.
 func _on_gate_chosen(part_id: String) -> void:
-	if not scrapless():
+	if ActiveOffers.is_offer(part_id):
+		var rack = active_rack()
+		if rack != null and not scrapless():
+			rack.take(part_id, ctx.player.ball_position())
+	elif not scrapless():
 		ctx.run.add_part(part_id, "gate")
 	ctx.events.reward_chosen.emit(part_id)
 
@@ -1143,6 +1208,7 @@ func _physics_process(delta: float) -> void:
 		if shell_fitted():
 			_refresh_air_mod()
 	_step_tread(delta)
+	makers.step(delta)
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
 	scrap.magnet_scale = sheet.magnet * effects.magnet_boost()
@@ -1177,6 +1243,9 @@ func _physics_process(delta: float) -> void:
 
 func _step_fabricators(ball: Vector3, delta: float) -> void:
 	for fab in fabricators.step(ball, delta, ctx.run.cogs, ctx.run.parts):
+		# The ball rolled through a stocked hoop, bought or not: the fabricator tune's cue
+		# (tunes.json "fabricator"). No WORLD_ROWS row, so it plays no sound of its own.
+		ctx.events.world_fact.emit("fabricator_used", fab["at"])
 		var part_id: String = fab["part_id"]
 		if ctx.run.spend_cogs(Fabricators.price(part_id, ctx.run.parts.size())):
 			fabricators.sold(fab)

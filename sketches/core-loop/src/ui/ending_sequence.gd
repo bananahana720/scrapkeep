@@ -45,6 +45,7 @@ var viewport: SubViewport
 var camera: Camera3D
 var worlds: Array[Node3D] = []
 var stages: Array[int] = []
+static var _highdraft_skies := {}
 var shell: Node3D
 var companion: Node3D
 var _scene: Node3D
@@ -575,11 +576,33 @@ func _enter_world(index: int) -> void:
 	shell.position = _at
 	companion.position = _at + Vector3(3.0, -0.8, -0.5)
 	_world_label.text = "%s\n%s" % [Worlds.ENDING.title, Worlds.ROWS[index].name]
-	_environment.ambient_light_color = Color("b4c0c9") if index == 2 else Palette.SAND
-	_environment.fog_light_color = Color("798c9e") if index == 2 else Palette.SAND
-	_environment.sky.sky_material = HighdraftScenery._sky_material() if index == 2 else Palette.workshop_sky()
-	_sun.light_color = Color("fff1dc") if index == 2 else Color(1.0, 0.95, 0.80)
-	_sun.rotation_degrees = Vector3(-46.0, 62.0, 0.0) if index == 2 else Vector3(-38.0, 118.0, 0.0)
+	if index == 2:
+		_highdraft_light(stage)
+		return
+	_environment.ambient_light_color = Palette.SAND
+	_environment.fog_light_color = Palette.SAND
+	_environment.sky.sky_material = Palette.workshop_sky()
+	_sun.light_color = Color(1.0, 0.95, 0.80)
+	_sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)
+
+
+# The Highdraft vignette sits in its stage's time of day (one day per run), so the reunion on the
+# islands is lit like the run that reached them: the time row's key, ambient and fog lean, and the
+# painted panorama under that time's grade. A stage-less world falls back to the run's dusk.
+func _highdraft_light(stage: int) -> void:
+	var look := WorldLook.stage_look(stage, 3) if stage > 0 else WorldLook.row(3).merged(WorldLook.TIME_ROWS.dusk, true)
+	var time: String = look.get("time", "dusk")
+	if not _highdraft_skies.has(time):
+		var material := Palette.time_sky_material(HighdraftScenery._sky_material().panorama)
+		var graded := WorldLook.grade(look)
+		for key in graded:
+			material.set(key, graded[key])
+		_highdraft_skies[time] = material
+	_environment.ambient_light_color = look.ambient
+	_environment.fog_light_color = WorldLook.environment(look, false).fog_light_color
+	_environment.sky.sky_material = _highdraft_skies[time]
+	_sun.light_color = look.sun_color
+	_sun.rotation_degrees = look.sun_rotation
 
 
 func handle(event: InputEvent) -> void:

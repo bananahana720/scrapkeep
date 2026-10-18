@@ -291,16 +291,24 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 
 
 const HDRI_SKY := "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr"
+const TIME_SKY := preload("res://src/presentation/time_sky.gdshader")
 static var _hdri_sky: Sky
 
-# The Poly Haven partly cloudy sky, one Sky for every world row that names "hdri".
+# The Poly Haven partly cloudy sky, one Sky for every world row that names "hdri". Its material is
+# the time-of-day sky (time_sky.gdshader): the stage's time row sets its grade through the lighting
+# stack (world_look.gd sky_rows), and its defaults draw the panorama unchanged.
 static func hdri_sky() -> Sky:
 	if _hdri_sky == null:
-		var material := PanoramaSkyMaterial.new()
-		material.panorama = load(HDRI_SKY)
 		_hdri_sky = Sky.new()
-		_hdri_sky.sky_material = material
+		_hdri_sky.sky_material = time_sky_material(load(HDRI_SKY))
 	return _hdri_sky
+
+
+static func time_sky_material(panorama: Texture2D) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = TIME_SKY
+	material.set_shader_parameter("panorama", panorama)
+	return material
 
 
 static var _wear: ImageTexture

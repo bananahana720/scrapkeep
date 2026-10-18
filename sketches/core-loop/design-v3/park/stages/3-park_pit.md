@@ -84,7 +84,7 @@ Legend, exact positions (x, z in metres):
 | Homes | tailings burrowers; adit drill crews; winze lamp swarms; barge drill crew (dormant) | (337.5, 110); (292.5, 120); (-337.5, -20); (-337.5, 250) |
 | Contraptions | incline skip (0, -225) to (0, 10); tipple lift (20, 262); sump geyser (-70, 128); rim zip (60, -298) to (150, -178); adit valve (94, -374); sealed portal (262.5, 400); dust devils (400, -60) and (-30, 160) |
 | Activities | cracked cache `cache_lip`; enemy camp `switchback_camp_site`; ambush altar `bench3_altar` (KD3, was `bench4_altar`) | (296, -320); (180, -160); (-110, -84) |
-| Rescue | Kest's cage (needs a schema key, section 14) | (-150, 110), bench 4 west, facing +x |
+| Rescue | Kest's cage, `rescue_rows` kest_cage | (-144, 110) on the sump floor at the foot of bench 4 west, facing +x; moved 6 m off the bench wall from the first pick (-150, 110) so the roll-in is flat (park_rescue_test) |
 
 The three activities are signposted from the drop-in: the cache sits on the north-east rim at the foot of a spoil heap, with a clear sight line from the stage line (`park_graph.gd` sight_ok), the camp's smoke rises on the north-east bench in view of the dump top, and the altar is a lit ring on bench 3 north seen across the pit (altar lighting follows VX8: no hazard stripes on it, `git show 364e1e6`).
 
@@ -303,7 +303,7 @@ The `ref_` fragment describes the work and the water it managed and speaks for n
 | Pressure row 3 (pack 1.20, interval 0.90, elite 1.00, posture 1.05, boss 1.15) | `alpha_defs.gd:59-66` | unchanged |
 | Warden plating 130, health 950, posture curve 2.0 x 1.05, `ram_shatters` false, beacon 25 s | `alpha_defs.gd:81-85` | the kind changes, the numbers stay until KF3 re-measures |
 | Music theme 1, ACE `dig_upper` | `alpha_defs.gd:81`, `music_rows.gd:10` | the arc in section 10 rides it |
-| Kest's rescue on this stage, quest `dig` | `map_dig.gd:84` | moves to (-150, 110); needs a schema key |
+| Kest's rescue on this stage, quest `dig` | `map_dig.gd:84` | moves to (-144, 110) as `rescue_rows` kest_cage |
 | Breach plates as a slam verb | `map_dig.gd:28-32` | become winze caps |
 | Camp pay `rivet_plating`, cache, altar | `map_dig.gd:78-82` | the camp pack becomes Dig kinds (veto item 6) |
 
@@ -373,7 +373,7 @@ The anchor and ride-fact rows of sections 7 and 9 are new. These draft gaps stay
 2. The pit centre sits at (0, 175) with the floor at the south side; the long north wall is the descent.
 3. The hoist's low dwell is the contact window and its high dwell is the latch window; the drop finisher comes from the tipple deck at 40 m, because the sheave wheels at 120 m are outside the 45 m rope.
 4. Today's breach plates become winze caps: slam to drop one bench.
-5. Kest's cage moves to bench 4 west at (-150, 110).
+5. Kest's cage moves to the sump floor at the foot of bench 4 west, (-144, 110).
 6. The enemy camp fields Dig kinds (burrower, burrower, drill crew), not today's world 1 kinds (`map_dig.gd:79`); the pay stays `rivet_plating`.
 7. The Hohokam canal is a grind line the haul road bends around; it hosts nothing hostile and nothing breaks it.
 8. No ancient beam on this stage.

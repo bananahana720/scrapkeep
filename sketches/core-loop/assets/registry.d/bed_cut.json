@@ -5,7 +5,7 @@
    "path": "res://assets/models/dig_stone/bed_cut.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_cut.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"

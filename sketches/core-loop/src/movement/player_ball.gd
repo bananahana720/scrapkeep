@@ -10,6 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
+const Grip := preload("res://src/movement/grip.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
@@ -90,6 +91,9 @@ var heft_of := Callable()
 var mass_of := Callable()
 # Restores Tally's pressure by a count (the stamp landing); combat wires it to _grant_pressure.
 var pressure_grant := Callable()
+# A body a ram or crush just killed keeps flying as a hulk that bowls what is ahead of it
+# (enemy, direction, knock); combat wires it to bowl_hulk. Unwired, a kill bowls nothing.
+var hulk_launch := Callable()
 # E's first claim (world's interact system, claims(face_in_reach: bool) -> bool): true
 # when an interactable takes this press, so it never also plants a pylon.
 var interact_claim := Callable()
@@ -502,12 +506,19 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		return
 	_clear_speed_bank()
 	Augments.attach(kit, ball_position(), point, normal, body)
+	kit.grip = Grip.of(body, heft(), tuning.pole_flail())
 	events.grapple_fired.emit(point)
 	if body != null:
 		if body.has_method("flash"):
 			body.flash()
 		events.harpoon_bit.emit(body, point)
-	_publish_chain(chain.link(body != null and not (body.is_in_group(Augments.STAKE_GROUP)), state.grounded), body, point)
+	_publish_chain(chain.link(body != null and not body.is_in_group(Augments.STAKE_GROUP)
+		and not body.is_in_group(Augments.WORLD_ANCHOR_GROUP), state.grounded), body, point)
+
+
+# A flail strike on another enemy is a chain link (POLES-FLAILS section 5; flail.gd).
+func link_chain(body: Node3D) -> void:
+	_publish_chain(chain.link(true, state.grounded), body, body.global_position)
 
 
 func release_grapple() -> void:
@@ -677,7 +688,8 @@ func _mark_slots() -> void:
 func _charging() -> bool:
 	var special = abilities.gauge(AbilityState.SPECIAL)
 	var line = abilities.gauge(AbilityState.LINE)
-	return (special != null and special.charging) or (line != null and line.charging) or kit.slingshot.charging
+	return (special != null and special.charging) or (line != null and line.charging) or kit.slingshot.charging \
+		or abilities.casting != AbilityState.UNSTARTED
 
 
 # --- The skill bar's router (design-v3/SKILL-BAR.md sections 1 and 2) -------------------
@@ -765,7 +777,9 @@ func _pick(slot: String) -> void:
 func _drop_gauge(slot: String, reason: String) -> bool:
 	var gauge = abilities.gauge(slot)
 	if gauge == null or not gauge.cancel():
-		return false
+		# A slot with a cast time drops its running cast the same way (FIELDS-AND-CASTS section 4).
+		if abilities.casting != slot or abilities.cancel_cast() == "":
+			return false
 	indicator.collapse(slot)
 	events.gauge_cancelled.emit(abilities.id_of(slot), reason)
 	return true
@@ -803,6 +817,7 @@ func _read_grammar() -> void:
 		_press_harpoon()
 	elif intent.harpoon_released and kit.hooked:
 		_fling()
+		_pole_exit()
 		release_grapple()
 	# Rope Anchor: winching up to the wall with Ctrl plants the pylon there.
 	if tree.knob("winch_mount") and kit.hooked and kit.winching and not kit.mounted \
@@ -1050,6 +1065,19 @@ func _read_mass() -> void:
 	kit.mass_q = clampf(mass / Augments.MASS_FULL, 0.0, 1.0)
 
 
+# Letting go of a pole slingshots you on along the tangent (POLES-FLAILS section 4): a share
+# of the speed across the line is added along it, never past the soft cap.
+func _pole_exit() -> void:
+	if not Augments.pole_line(kit):
+		return
+	var v: Vector3 = state.velocity
+	var to_body: Vector3 = kit.anchor - ball_position()
+	if to_body.length() < 0.01:
+		return
+	var share := Augments.POLE_EXIT_SABLE if class_def != null and class_def.id == "pylon_engineer" else Augments.POLE_EXIT
+	_rigid.set_velocity_now(Augments.pole_exit(v, to_body.normalized(), share))
+
+
 # Coil Hook: letting go of the rope throws you on along your swing.
 func _fling() -> void:
 	var fling: float = tree.knob("grapple_fling")
@@ -1149,6 +1177,7 @@ func _try_crush(body: Node3D) -> void:
 	if landing:
 		smash_landing = body
 	struck.emit(body, RAM, _landing_force(RAM, speed))
+	_bowl_if_killed(body, planar_velocity(), Contact.ram_knock(Augments.RAM_KNOCK, speed, heft(), _landing_mult))
 	if landing:
 		_finish_landing(body, closing)
 	smash_landing = null
@@ -1237,7 +1266,7 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
-		var hits := _push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM)
+		var hits := _push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM, Contact.heft_knock(heft()))
 		if hits > 0:
 			events.drop_landed.emit(hits)
 		else:
@@ -1269,7 +1298,7 @@ func _smash_rend(at: Vector3, speed: float) -> void:
 			continue
 		inward.y = 0.0
 		inward = inward.normalized() if inward.length() > 0.01 else Vector3.FORWARD
-		enemy.knock(inward + Vector3.UP * 0.2, Augments.SLAM_KNOCK * strength * REND_PULL)
+		enemy.knock(inward + Vector3.UP * 0.2, Contact.heft_shove(Augments.SLAM_KNOCK * strength * REND_PULL, heft()))
 		enemy.flash()
 
 
@@ -1320,7 +1349,7 @@ func _skid_push(at: Vector3, strength: float, reach := SKID_REACH, inner := SKID
 		if not in_skid_cone(to, ahead, reach, inner):
 			continue
 		var falloff := 1.0 - to.length() / reach
-		enemy.knock(ahead + Vector3.UP * 0.3, Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"))
+		enemy.knock(ahead + Vector3.UP * 0.3, Contact.heft_shove(Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"), heft()))
 		enemy.flash()
 		struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
 		abilities.refund(AbilityState.MOVEMENT, SKID_REFUND)
@@ -1374,7 +1403,8 @@ func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:
 	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK * tree.knob("plant_repel"), "")
 
 
-func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> int:
+# knock_mult scales the shove only; the strike keeps force, so damage is unchanged.
+func _push_enemies(at: Vector3, radius: float, force: float, kind: String, knock_mult := 1.0) -> int:
 	var hits := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		var away: Vector3 = enemy.global_position - at
@@ -1384,7 +1414,8 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> in
 		away.y = 0.0
 		away = away.normalized() if away.length() > 0.01 else Vector3.FORWARD
 		var falloff := 1.0 - reach / radius
-		enemy.knock(away + Vector3.UP * 0.5, force * falloff)
+		# Heft adds throw up to the knock ceiling, never under the plain shove.
+		enemy.knock(away + Vector3.UP * 0.5, minf(force * falloff * knock_mult, maxf(force * falloff, Contact.KNOCK_CEILING)))
 		enemy.flash()
 		hits += 1
 		if kind != "":
@@ -1430,14 +1461,25 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
 		_rebound(enemy, normal, before, planar, away)
 	elif SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
-		enemy.knock(away + Vector3.UP * 0.35, Augments.RAM_KNOCK * _landing_mult)
+		# Swarm drones keep the plain shove: the rack's scatter and refold timing sets the hive's posture pace.
+		var shove: float = Augments.RAM_KNOCK * _landing_mult if enemy.get("swarm") != null else Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult)
+		enemy.knock(away + Vector3.UP * 0.35, shove)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)
 		# Planar speed, the same measure punch_now and the crush check use (one query).
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
+		_bowl_if_killed(enemy, away, shove)
 	if landing:
 		_finish_landing(enemy, closing)
 	smash_landing = null
+
+
+# A ram that killed hands its shove to the hulk, which bowls on along the ball's travel.
+func _bowl_if_killed(enemy: Node3D, direction: Vector3, shove: float) -> void:
+	if not hulk_launch.is_valid() or not is_instance_valid(enemy) or not enemy.has_method("is_dead") or not enemy.is_dead():
+		return
+	var weight = enemy.get("weight")
+	hulk_launch.call(enemy, Vector3(direction.x, 0.0, direction.z), shove / maxf(float(weight) if weight != null else 1.0, 0.1))
 
 
 # The first contact of a committed haul lets the line go, so the ordinary contact (stomp,
@@ -1502,4 +1544,5 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 	shockwave.emit(enemy.global_position, 0.8)
 	if SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
+		_bowl_if_killed(enemy, away, Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult))
 	events.enemy_rebounded.emit(enemy, out.length())

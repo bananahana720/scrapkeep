@@ -3,6 +3,9 @@ extends Node3D
 const ActivityView := preload("res://src/world/activity_view.gd")
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Cards := preload("res://src/world/director_cards.gd")
+const HoldRelay := preload("res://src/world/hold_relay.gd")
+const RelayStake := preload("res://src/world/relay_stake.gd")
 const Interact := preload("res://src/world/interact.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
@@ -14,6 +17,7 @@ const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
 # stand lit from the stage's first frame, finish on an action the player already knows and pay
@@ -29,7 +33,7 @@ const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 #           goes to a ram at cruise or a slam of at least that strength) or "brute_dead".
 # pay:      `scrap` (180, so three activities lift the ball two heft classes), taken with one
 #           part from `rarities` or an authored `named` part id, as a pickup at `where`: the altar, the pedestal or the
-#           place the brute fell. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
+#           place the brute fell, or the relay's mast. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
 #           EventKinds.CEREMONY_SOURCES, so no ceremony pauses the game for it. The first activity finished
 #           in a stage entry also adds the next companion piece (Companion.DROP_ORDER) to the run, unequipped.
 const PAY_RARITIES := ["common", "rare"]
@@ -88,6 +92,20 @@ const RULES := {
 		"starts": "none", "ring": 5.0, "finishes": "wall_broken", "face": Vector2(0.0, -1.0),
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_cache", "where": "pedestal"},
 	},
+	# Hold the Relay in a park (W13 SR10): a stake post `post_out` metres outside the ring, past the
+	# miniboss zone, on the side facing the stage's drop-in, takes 0 to 4 stacks before the ball rolls into the ring; the
+	# ring then charges by hold_relay.gd's rule. The relay's pack credit (`waves` buys of `pack`)
+	# and its miniboss count are both times 1 + k, and it pays 1 + k part rolls. Packs come every
+	# `wave_s` while it charges and never two inside `pack_gap_s`; what the relay stands at once,
+	# minibosses included, stays inside the attacker budget (relay_budget). Minibosses come from
+	# `miniboss_at` in steps of `miniboss_step` of the charge. A loss frees the stake after
+	# `retry_s`.
+	"hold_the_relay": {
+		"starts": "ring", "ring": HoldRelay.RULE["radius"], "finishes": "relay", "pack": ["chaser", "chaser", "lobber"],
+		"waves": 3, "wave_s": 6.0, "pack_gap_s": 0.5, "miniboss_at": 0.35, "miniboss_step": 0.12,
+		"post_out": 26.0, "retry_s": 12.0, "budget": {"start": 6, "per_class": 1, "per_world": 2, "cap": 12},
+		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_relay", "where": "relay"},
+	},
 	"hauler_bounty": {
 		"starts": "near_or_hit", "ring": 4.0, "wake": 30.0, "leash": 40.0, "return_speed": 9.0, "kind": "plated_brute",
 		"finishes": "brute_dead",
@@ -116,6 +134,10 @@ const SLAM_REACH := 7.0
 const SLAM_MIN_PER_CRUISE := 1.0
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
+# The first-win room's log line on the back wall: eye height for the ball, and a wrap width that keeps
+# it inside the wall's 12 m at Label3D's 0.005 m per pixel.
+const ROOM_LOG_HEIGHT := 3.4
+const ROOM_LOG_WIDTH_PX := 1800.0
 # The back wall's own glow once the wall is fired. No light: a per-site OmniLight3D freed on
 # a stage change made Godot 4.7.2 Forward+ segfault on the next boss entry (GPU only), as the
 # wave 9 cage light did.
@@ -158,6 +180,8 @@ const POCKET_SAFE_M := 4.0
 const POCKET_DAMAGE_PER_S := 8.0
 const MARK_SPACING_M := 80.0
 const MARK_POOL_SIZE := 16
+# A charging relay reports its progress when it has moved this far (event_director's step).
+const RELAY_PROGRESS_STEP := 0.01
 
 
 # One standing activity: its rule, its look, its state and, once it has finished, its pay.
@@ -207,9 +231,19 @@ class Site extends Node3D:
 	var trade := {}
 	var trade_devices: Array = []
 	var footprint := POCKET_FOG_SIZE
+	var relay
+	var stake_post: Node3D
+	var relay_credit := 0.0
+	var relay_wave_s := 0.0
+	var relay_gap_s := 0.0
+	var relay_wave_left := 0
+	var relay_shown := -1.0
+	var relay_cooldown := 0.0
+	var minibosses_sent := 0
+	var minibosses: Array = []
 
 	func _exit_tree() -> void:
-		for enemy in pack:
+		for enemy in pack + minibosses:
 			if is_instance_valid(enemy):
 				enemy.queue_free()
 
@@ -357,6 +391,13 @@ func _enter_stage(retry: bool) -> void:
 				built_spec.pack = spec.pack.duplicate()
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
 		sites.append(_build(id, spec["at"], built_spec))
+	if _graph_map != "":
+		var tuning = ctx.get("tuning")
+		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
+		for room_spec in Secrets.room_sites(_graph_map, ctx.get("profile"), sitting):
+			var room := _build("cracked_cache", room_spec["at"], room_spec)
+			_hang_room_log(room, String(room_spec["secret"]))
+			sites.append(room)
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
@@ -380,6 +421,11 @@ func clear() -> void:
 		if is_instance_valid(site):
 			for device in site.trade_devices:
 				ctx.root.get_node("Interact").unregister(device)
+			if site.stake_post != null:
+				ctx.root.get_node("Interact").unregister(site.stake_post)
+			for enemy in site.minibosses:
+				if is_instance_valid(enemy):
+					enemy.queue_free()
 			for hazard in site.hazards:
 				hazard.stop()
 			for enemy in site.pack:
@@ -414,7 +460,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id == "enemy_camp" or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
+	if id in ["enemy_camp", "hold_the_relay"] or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
 	if not s.interior.is_empty():
 		s.footprint = spec.footprint
@@ -428,6 +474,8 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 			s.rule.cue.word = spec.tell.word
 	if id == "enemy_camp":
 		s.rule["pack"] = spec.get("pack", s.rule["pack"])
+	elif id == "hold_the_relay" and not spec.get("pack", []).is_empty():
+		s.rule["pack"] = spec.pack.duplicate()
 	# PARK.md 2.12: the park row authors the pay ladder (rarities, or a named part that wins when the
 	# table offers it). Scrap, source and where stay the rule's own, so the heft pace never moves.
 	for key in ["rarities", "named"]:
@@ -448,6 +496,8 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	elif id == "enemy_camp" and (spec.has("site") or not s.interior.is_empty()):
 		_build_hazard(s)
 	match id:
+		"hold_the_relay":
+			_build_relay(s)
 		"ambush_altar":
 			_build_altar(s)
 		"cracked_cache":
@@ -578,6 +628,23 @@ func _build_cache(s: Site) -> void:
 	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
 
 
+# A first-win room's crew-log line (secrets.gd ROOMS), painted on the inside of its back wall, so it
+# reads only once the cracked face is down and the ball is in the room.
+func _hang_room_log(s: Site, room_id: String) -> void:
+	var room: Dictionary = Secrets.ROOMS[room_id]
+	s.name = "Secret_" + room_id
+	var label := Label3D.new()
+	label.name = "RoomLog"
+	label.text = "%s\n%s" % [String(room["name"]).to_upper(), room["log"]]
+	label.position = Vector3(0.0, ROOM_LOG_HEIGHT, -WALL_DEPTH + 0.06)
+	label.font_size = 30
+	label.outline_size = 6
+	label.width = ROOM_LOG_WIDTH_PX
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.modulate = Palette.SAND
+	s.add_child(label)
+
+
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:
 	var mesh := MeshInstance3D.new()
 	var bm := BoxMesh.new()
@@ -640,6 +707,8 @@ func _physics_process(delta: float) -> void:
 			continue
 		if not s.done:
 			match String(s.rule["finishes"]):
+				"relay":
+					_watch_relay(s, delta, ball)
 				"pack_dead":
 					_watch_ambush(s, ball)
 				"wall_broken":
@@ -827,6 +896,9 @@ func _cue(s: Site, phase: String) -> void:
 	var presentation: Node = ctx.root.get_node_or_null("Presentation")
 	if presentation != null:
 		presentation.audio.play(kind)
+		# The site's own tune (an arena's), read by id; audio decides whether it has one.
+		if presentation.audio.has_method("activity_cue"):
+			presentation.audio.activity_cue(s.id, phase)
 	if is_instance_valid(s.phase_view):
 		s.phase_view.queue_free()
 	s.phase_view = ActivityView._glyph(String(row.shape), row.color)
@@ -1057,6 +1129,126 @@ static func _alive(pack: Array) -> int:
 	return n
 
 
+# ---- The relay ----
+
+func _build_relay(s: Site) -> void:
+	var at := Vector2(s.global_position.x, s.global_position.z)
+	s.relay = HoldRelay.new({"relay": at, "ring": at}, s.global_position.y)
+	var post := RelayStake.new()
+	post.relay = s.relay
+	s.add_child(post)
+	var spawn: Vector3 = ctx.terrain.spawn_point(ctx.run.stage)
+	var toward := Vector2(spawn.x, spawn.z) - at
+	toward = toward.normalized() if toward.length() > 0.01 else Vector2(0.0, -1.0)
+	var post_at := at + toward * (float(s.rule["ring"]) + float(s.rule["post_out"]))
+	post.global_position = ctx.terrain.drop_point(post_at.x, post_at.y, 0.0)
+	post.setup(ctx, ctx.root.get_node("Interact"), {"id": "relay_stake_%d_%s" % [ctx.run.stage, s.name]})
+	ctx.root.get_node("Interact").register(post)
+	s.stake_post = post
+	s.view.word.text = s.relay.stake_line()
+
+
+func relay_pack_cost(s: Site) -> float:
+	return Cards.cost(s.rule["pack"])
+
+
+func relay_miniboss_count(s: Site) -> int:
+	return int(round(s.relay.miniboss_credit(1.0)))
+
+
+# The attacker budget the relay stands inside: a start, one more per heft class past the first
+# and two per world past the first, capped.
+func relay_budget(s: Site) -> int:
+	var b: Dictionary = s.rule["budget"]
+	var world: int = ctx.stages.world_of(ctx.run.stage)
+	return mini(int(b["cap"]), int(b["start"]) + int(b["per_class"]) * maxi(0, ctx.run.heft_class() - 1) + int(b["per_world"]) * maxi(0, world - 1))
+
+
+func relay_standing(s: Site) -> int:
+	return _alive(s.pack) + _alive(s.minibosses)
+
+
+func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
+	var relay = s.relay
+	if not s.started:
+		s.view.word.text = relay.stake_line()
+		s.relay_cooldown -= delta
+		if s.relay_cooldown > 0.0:
+			return
+		if ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+			return
+		if _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > HoldRelay.REACH_UP:
+			return
+		s.started = true
+		relay.begin()
+		s.relay_credit = relay.pack_credit(relay_pack_cost(s) * int(s.rule["waves"]))
+		s.relay_wave_s = 0.0
+		s.relay_gap_s = 0.0
+		s.relay_wave_left = 0
+		s.minibosses_sent = 0
+		s.relay_shown = -1.0
+		ctx.events.event_started.emit(s.id)
+	var outcome: String = relay.step(delta, ball, ctx.player.state.velocity)
+	if relay.progress() - s.relay_shown >= RELAY_PROGRESS_STEP or (relay.progress() >= 1.0 and s.relay_shown < 1.0):
+		s.relay_shown = relay.progress()
+		ctx.events.event_progress.emit(s.id, s.relay_shown)
+	s.view.word.text = relay.status()
+	s.pack = s.pack.filter(func(enemy): return is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead()))
+	s.relay_wave_s -= delta
+	s.relay_gap_s -= delta
+	var cost := relay_pack_cost(s)
+	var room := relay_budget(s) - relay_standing(s)
+	var due: int = mini(relay_miniboss_count(s), int(floor((relay.progress() - float(s.rule["miniboss_at"])) / float(s.rule["miniboss_step"]))) + 1)
+	# A wave is one pack per stack plus one, each pack_gap_s after the last, every wave_s.
+	if s.relay_wave_s <= 0.0 and s.relay_wave_left == 0 and s.relay_credit >= cost - 0.0001:
+		s.relay_wave_left = relay.stakes + 1
+		s.relay_wave_s = float(s.rule["wave_s"])
+	if s.relay_gap_s <= 0.0:
+		if s.minibosses_sent < due and room >= 1:
+			_relay_miniboss(s)
+		elif s.relay_wave_left > 0 and s.relay_credit >= cost - 0.0001 and room >= s.rule["pack"].size():
+			_relay_pack(s, ball)
+			s.relay_credit -= cost
+			s.relay_wave_left -= 1
+	if outcome == "won":
+		s.stake_post.spent = true
+		ctx.events.event_ended.emit(s.id, "won")
+		_finish(s, s.global_position + Vector3(0.0, 0.0, 6.0))
+	elif outcome == "lost":
+		ctx.events.event_ended.emit(s.id, "lost")
+		s.started = false
+		s.relay_cooldown = float(s.rule["retry_s"])
+
+
+func _relay_pack(s: Site, ball: Vector3) -> void:
+	var kinds: Array = s.rule["pack"]
+	var entry: Vector3 = ball - s.global_position
+	var first := atan2(entry.z, entry.x) + PI + PACK_TURN
+	for i in kinds.size():
+		var a := first + TAU * float(i) / kinds.size()
+		var spot := s.global_position + Vector3(cos(a), 0.0, sin(a)) * float(s.rule["ring"])
+		var enemy = ctx.spawner.spawn_enemy(kinds[i], ctx.terrain.drop_point(spot.x, spot.z, SPAWN_CLEARANCE))
+		if enemy != null:
+			s.pack.append(enemy)
+	s.relay_gap_s = float(s.rule["pack_gap_s"])
+
+
+# Each miniboss lands in the relay's miniboss zone, seeded per relay and per arrival, so a
+# stage retry puts them where they were.
+func _relay_miniboss(s: Site) -> void:
+	var zone: Array = s.relay.miniboss_zone()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, "%s_miniboss_%d" % [s.id, s.minibosses_sent])
+	var angle := rng.randf() * TAU
+	var dist := rng.randf_range(zone[1].x, zone[1].y)
+	var at: Vector2 = (zone[0] as Vector2) + Vector2(cos(angle), sin(angle)) * dist
+	var enemy = ctx.spawner.spawn_enemy("miniboss", ctx.terrain.drop_point(at.x, at.y, BRUTE_DROP))
+	s.minibosses_sent += 1
+	if enemy != null:
+		s.minibosses.append(enemy)
+	s.relay_gap_s = float(s.rule["pack_gap_s"])
+
+
 # ---- The cache ----
 
 func _watch_wall(s: Site, ball: Vector3) -> void:
@@ -1185,6 +1377,9 @@ func _finish(s: Site, at: Vector3) -> void:
 		if s.rule.has("bundle"):
 			s.pickup_parts = s.reward_parts.duplicate()
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
+		elif s.relay != null:
+			s.pickup_parts = _roll_many(s.id, table["rarities"], s.relay.rewards())
+			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
 		else:
 			s.pickup_part = _roll(s.id, table["rarities"])
 	if s.pickup_part != "":
@@ -1219,10 +1414,14 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 
 
 func _roll(id: String, rarities: Array) -> String:
+	var picks := _roll_many(id, rarities, 1)
+	return String(picks[0]) if not picks.is_empty() else ""
+
+
+func _roll_many(id: String, rarities: Array, count: int) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, id)
-	var picks: Array = Parts.roll(rng, rarities, ctx.run.class_id(), ctx.run.parts, 1)
-	return String(picks[0]) if not picks.is_empty() else ""
+	return Parts.roll(rng, rarities, ctx.run.class_id(), ctx.run.parts, count)
 
 
 # A pickup takes the ball that rolls onto it, not one already standing there when it appeared.
@@ -1235,7 +1434,7 @@ func _watch_pickup(s: Site, ball: Vector3) -> void:
 		s.pickup_taken = true
 		s.pickup.queue_free()
 		s.pickup = null
-		if s.rule.has("bundle"):
+		if s.rule.has("bundle") or not s.pickup_parts.is_empty():
 			for part in s.pickup_parts:
 				ctx.run.add_part(part, String(s.rule.pay.source))
 		else:
