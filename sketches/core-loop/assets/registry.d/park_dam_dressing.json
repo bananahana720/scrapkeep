@@ -3719,6 +3719,94 @@
      4.0311
     ]
    }
+  },
+  {
+   "id": "dam_crest_crane",
+   "path": "res://assets/models/park/dam_crest_crane.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh the crest crane (mast and jib meshes; the jib swings on the Mind's quote), material enamel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/dam_dressing.py",
+    "notes": "design-v3/park/stages/1-park_dam.md section 15 follow-up (dam kit): built from assets/park/park_dam/ground.bin and src/world/park/park_dam.json, deterministic; vertices relative to the row node at its base height"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "The mast and the jib are two meshes so the jib can turn on the Mind's quote; one enamel slot each.",
+   "bounds": {
+    "min": [
+     -2.6,
+     -0.6,
+     -10.2319
+    ],
+    "max": [
+     2.6,
+     35.0587,
+     34.0429
+    ],
+    "size": [
+     5.2,
+     35.6587,
+     44.2748
+    ]
+   }
+  },
+  {
+   "id": "dam_crest_crane_detail1",
+   "path": "res://assets/models/park/dam_crest_crane_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/dam_dressing.py",
+    "notes": "design-v3/park/stages/1-park_dam.md section 15 follow-up (dam kit): built from assets/park/park_dam/ground.bin and src/world/park/park_dam.json, deterministic; vertices relative to the row node at its base height"
+   },
+   "bounds": {
+    "min": [
+     1.65,
+     0,
+     -0.38
+    ],
+    "max": [
+     1.74,
+     28,
+     0.38
+    ],
+    "size": [
+     0.09,
+     28,
+     0.76
+    ]
+   }
+  },
+  {
+   "id": "dam_crest_crane_detail2",
+   "path": "res://assets/models/park/dam_crest_crane_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/dam_dressing.py",
+    "notes": "design-v3/park/stages/1-park_dam.md section 15 follow-up (dam kit): built from assets/park/park_dam/ground.bin and src/world/park/park_dam.json, deterministic; vertices relative to the row node at its base height"
+   },
+   "bounds": {
+    "min": [
+     -2.28,
+     0.5,
+     -2.28
+    ],
+    "max": [
+     2.28,
+     0.68,
+     2.28
+    ],
+    "size": [
+     4.56,
+     0.18,
+     4.56
+    ]
+   }
   }
  ]
 }

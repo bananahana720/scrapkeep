@@ -1444,6 +1444,73 @@ def build_gate(rid):
     return base, d1, d2
 
 
+# ------------------------------------------------------------------------------------------------ the crest crane
+CRANE = "dam_crest_crane"
+CRANE_TOP = 28.0           # the slewing ring's height over the crest; the jib mesh turns about the node's y axis
+CRANE_JIB = 34.0           # the jib's reach along local +z, the counter-jib's along -z is CRANE_JIB * 0.3
+
+
+def build_crane():
+    """The dam crew's tower crane on the crest (Andrew's "All hands": during the Mind's quote it swings once, empty).
+    Two meshes: the mast with its cab (dam_crest_crane) and the jib, counter-jib and empty hook (dam_crest_crane_jib),
+    both with the mast's axis at local x = z = 0 and the crest at y 0, so the jib turns about the node's own y axis.
+    Members are chunky on purpose: the crane reads from the Eye, about 450 m off. No collider."""
+    mast, jib, d1, d2 = Out(BUDGETS["landform"]["tris"] // 2), Out(BUDGETS["landform"]["tris"] // 2), Out(DETAIL_TRIS), Out(DETAIL_TRIS)
+    paint, paint2, rust = C("ochre"), tint(C("ochre"), 0.82), C("rust")
+    h = 1.6                                                    # half the mast's side
+    legs = [(-h, -h), (h, -h), (h, h), (-h, h)]
+    box_solid(mast, "enamel", (-2.6, -0.6, -2.6), (2.6, 0.5, 2.6), C("concrete_dk"))      # the footing block, bedded in the crest
+    for x, z in legs:
+        rod_solid(mast, "enamel", (x, 0.0, z), (x, CRANE_TOP, z), 0.22, paint, sides=4)
+    step = 2.8
+    y = 0.0
+    while y + step <= CRANE_TOP + 0.01:
+        for k in range(4):
+            a, b = legs[k], legs[(k + 1) % 4]
+            rod_solid(mast, "enamel", (a[0], y, a[1]), (b[0], y + step, b[1]), 0.1, paint2, sides=4)
+            rod_solid(mast, "enamel", (a[0], y + step, a[1]), (b[0], y + step, b[1]), 0.12, paint, sides=4)
+        y += step
+    box_solid(mast, "enamel", (-2.0, CRANE_TOP - 0.6, -2.0), (2.0, CRANE_TOP, 2.0), rust)              # the slewing ring
+    # the jib: a triangular truss along +z, a catwalk plate on its top chords, the counter-jib with its blocks along -z
+    top = CRANE_TOP
+    box_solid(jib, "enamel", (-1.6, top, -1.6), (1.6, top + 0.4, 1.6), rust)                            # the turntable
+    box_solid(jib, "enamel", (-1.3, top + 0.4, 1.7), (1.3, top + 3.0, 4.5), paint)                      # the cab
+    box_solid(jib, "enamel", (-1.1, top + 1.6, 4.5), (1.1, top + 2.7, 4.56), C("glass"))                # its window, facing out along the jib
+    rod_solid(jib, "enamel", (0.0, top + 0.4, 0.0), (0.0, top + 7.0, 0.0), 0.2, paint, sides=4)         # the tower head
+    w, d = 0.9, 1.6
+    ch = [(-w, top + 0.4), (w, top + 0.4), (0.0, top + 0.4 + d)]
+    for x, yy in ch:
+        rod_solid(jib, "enamel", (x, yy, 0.0), (x * 0.4, yy - (0.6 if yy > top + 1 else 0.0), CRANE_JIB), 0.16, paint, sides=4)
+    n = 12
+    for k in range(n):
+        z0, z1 = CRANE_JIB * k / n, CRANE_JIB * (k + 1) / n
+        for i in range(3):
+            a, b = ch[i], ch[(i + 1) % 3]
+            rod_solid(jib, "enamel", (a[0], a[1], z0), (b[0], b[1], z1), 0.08, paint2, sides=4)
+    box_solid(jib, "enamel", (-0.7, top + 0.32, 4.6), (0.7, top + 0.4, CRANE_JIB - 0.5), C("steel"))    # the catwalk
+    rod_solid(jib, "enamel", (0.0, top + 7.0, 0.0), (0.0, top + 0.4 + d, CRANE_JIB * 0.7), 0.06, C("steel_lt"), sides=4)   # the pendant
+    cj = CRANE_JIB * 0.3
+    for x in (-w, w):
+        rod_solid(jib, "enamel", (x, top + 0.4, 0.0), (x, top + 0.4, -cj), 0.16, paint, sides=4)
+    rod_solid(jib, "enamel", (0.0, top + 7.0, 0.0), (0.0, top + 0.6, -cj), 0.06, C("steel_lt"), sides=4)
+    box_solid(jib, "enamel", (-1.5, top - 1.4, -cj + 0.2), (1.5, top + 0.4, -cj + 3.2), C("concrete"))  # the counterweight blocks
+    box_solid(jib, "enamel", (-1.0, top + 0.1, CRANE_JIB - 9.0), (1.0, top + 0.5, CRANE_JIB - 7.6), rust)  # the trolley, parked out
+    rod_solid(jib, "enamel", (0.0, top + 0.1, CRANE_JIB - 8.3), (0.0, top - 9.0, CRANE_JIB - 8.3), 0.05, C("iron"), sides=4)  # the cable
+    box_solid(jib, "enamel", (-0.5, top - 10.4, CRANE_JIB - 8.8), (0.5, top - 9.0, CRANE_JIB - 7.8), C("amber"))  # the hook block, empty
+    # detail 1 (mid): the mast ladder and the cab's door and hand rails
+    for yy in [0.6 + 0.6 * k for k in range(int((CRANE_TOP - 1.0) / 0.6))]:
+        if d1.tris() + 12 > DETAIL_TRIS:
+            break
+        box_solid(d1, "enamel", (h + 0.05, yy, -0.3), (h + 0.12, yy + 0.05, 0.3), C("steel_lt"))
+    for x in (-0.35, 0.35):
+        box_solid(d1, "enamel", (h + 0.08, 0.0, x - 0.03), (h + 0.14, CRANE_TOP, x + 0.03), C("steel_lt"))
+    # detail 2 (near): tie-down bolts and grout round the footing
+    for k in range(16):
+        a = TAU * k / 16
+        box_solid(d2, "enamel", (2.2 * math.cos(a) - 0.08, 0.5, 2.2 * math.sin(a) - 0.08), (2.2 * math.cos(a) + 0.08, 0.68, 2.2 * math.sin(a) + 0.08), C("iron"))
+    return mast, jib, d1, d2
+
+
 # ------------------------------------------------------------------------------------------------ export
 SLOT_ORDER = ("enamel", "steel", "ancient_lens")
 
@@ -1593,8 +1660,15 @@ def counts_of(base, extra, col, d1, d2):
 
 
 def build(rid, out_dir, rows, ground, count_only=False):
-    name = rid if rid in GATES else "dam_" + rid
-    if rid in GATES:
+    name = rid if rid in GATES or rid == CRANE else "dam_" + rid
+    if rid == CRANE:
+        mast, jib, d1, d2 = build_crane()
+        info = {"counts": {"base": mast.tris() + jib.tris(), "col": 0, "detail1": d1.tris(), "detail2": d2.tris()}, "cls": "landform", "flush": None}
+        base_nodes = [(CRANE, [mast], True), (CRANE + "_jib", [jib], True)]
+        shells = (d1, d2)
+        has_col = False
+        notes = {}
+    elif rid in GATES:
         base, d1, d2 = build_gate(rid)
         info = {"counts": {"base": base.tris(), "col": 0, "detail1": d1.tris(), "detail2": d2.tris()}, "cls": "landform", "flush": None}
         base_nodes = [(rid, [base], True)]
@@ -1644,9 +1718,9 @@ def registry_rows(results):
         for fname, g in glb.items():
             row = {"id": fname, "path": "res://assets/models/park/%s.glb" % fname, "class": g["class"], "ships": True}
             if fname == name:
-                what = "the drape recipe of park row %s" % name[4:] if name not in GATES else "a dome-summit survey gate"
+                what = "a dome-summit survey gate" if name in GATES else "the crest crane (mast and jib meshes; the jib swings on the Mind's quote)" if name == CRANE else "the drape recipe of park row %s" % name[4:]
                 row["loader"] = "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh %s, material enamel%s; visibility range from the %s class)" % (
-                    what, "" if name in GATES or name[4:] not in HAS_COL else " and its -col trimesh", g["class"])
+                    what, "" if name in GATES or name == CRANE or name[4:] not in HAS_COL else " and its -col trimesh", g["class"])
             else:
                 shell = fname[-1]
                 row["loader"] = "src/world/park/park_recipes.gd place (detail shell %s at the base GLB's origin, visibility range from the landform class shells[%d]; material enamel)" % (shell, int(shell) - 1)
@@ -1662,6 +1736,9 @@ def registry_rows(results):
             if fname == name and name == "dam_eye_mouth":
                 row["exception"] = {"draws": 2}
                 row["exception_why"] = "Enamel grooves and the ancient_lens seams are two material slots on one mesh; the landform class allows one draw."
+            if fname == name and name == CRANE:
+                row["exception"] = {"draws": 2}
+                row["exception_why"] = "The mast and the jib are two meshes so the jib can turn on the Mind's quote; one enamel slot each."
             if fname == name and name in GATES:
                 row["exception"] = {"draws": 2}
                 row["exception_why"] = "The enamel cairn and flag and the steel survey pole are two material slots on one mesh; the landform class allows one draw."
@@ -1718,12 +1795,12 @@ def main():
         rows.setdefault(k, dict(v))
     ground = Ground()
     wanted = [i.strip() for i in args.only.split(",") if i.strip()]
-    ids = [("dam_" + r) for r in ROWS] + list(GATES)
+    ids = [("dam_" + r) for r in ROWS] + list(GATES) + [CRANE]
     if wanted:
         ids = [i for i in ids if i in wanted]
     results = []
     for full in ids:
-        rid = full if full in GATES else full[4:]
+        rid = full if full in GATES or full == CRANE else full[4:]
         results.append(build(rid, args.out_dir, rows, ground, args.count_only))
     if args.log:
         Path(args.log).parent.mkdir(parents=True, exist_ok=True)
