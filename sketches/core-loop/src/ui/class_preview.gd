@@ -271,7 +271,7 @@ func seat_pilot() -> String:
 func focus_clip() -> String:
 	if _animator == null or _pilot == null or def == null or not _animator.has_animation(UNLOCK_CLIP) or not _unlock_due():
 		return ""
-	_animator.play(UNLOCK_CLIP, 0.0)
+	_animator.play(UNLOCK_CLIP, BASE_BLEND if _animator.is_playing() else 0.0)
 	_animator.advance(0.0)
 	if not _animator.animation_finished.is_connected(_on_clip_finished):
 		_animator.animation_finished.connect(_on_clip_finished)

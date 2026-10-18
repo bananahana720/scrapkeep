@@ -25,7 +25,7 @@ const T := preload("res://tests/support/t.gd")
 const MECHA_PATH := "res://src/presentation/mecha_motion.gd"
 
 const CLASS_ID := "pylon_engineer"
-const EXPECTED := 90
+const EXPECTED := 91
 
 var _t := T.new("pilot_clips_policy_test")
 var _phase := "idle"
@@ -82,6 +82,9 @@ func _fallback(hero, player, rec: Dictionary) -> void:
 	_t.check("the stripped GLB lacks idle_loop", not animator.has_animation("idle_loop"))
 	_t.check("a clip the GLB lacks (smash) is refused", not hero.react(player, "slammed", [Vector3.ZERO, 30.0, 1.0]))
 	_t.check("near_miss plays phew", hero.react(player, "near_miss"))
+	Trigger.finish(rec)
+	# The clip end now eases to rest over BASE_BLEND through the runtime rest clip, then stops.
+	_t.check("without idle_loop the clip end eases to the rest clip", _playing(rec, "rest_pose") and rec.reaction == "")
 	Trigger.finish(rec)
 	_t.check("without idle_loop the clip end stops the animator", not animator.is_playing() and rec.reaction == "")
 	_t.check("without idle_loop the bones are reset to rest", Trigger.bones_at_rest(rec.pilot))

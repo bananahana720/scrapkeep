@@ -4,11 +4,16 @@ extends Node3D
 const Interactables := preload("res://src/world/interactables.gd")
 const Palette := preload("res://src/core/palette.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const MODEL := "res://assets/models/world_one/rescue_cage.glb"
 const REQUIRED := ["CageFrame", "CageGate", "CageLatch", "CageSeat"]
 const PILOT_QUESTS := {"rivet": "runner_gunner", "dig": "demolitions_caster"}
 const UNLOCK_CLIP := "unlock"
 const IDLE_CLIP := "idle_loop"
+const POSE_BLEND_FREED := "big_cheer"
+# Crossfade between cage poses, and the pilot's walk out to where the freed cage opens.
+const POSE_BLEND := 0.15
+const FREE_MOVE := 0.45
 static var model_path := MODEL
 static var _shared := {}
 static var _warned := {}
@@ -50,6 +55,7 @@ class Cage extends "res://src/world/device.gd":
 	# (not rebuilt spent on a retry): the pilot plays unlock (PILOT-CLIPS section 1.4) instead of
 	# big_cheer when its GLB has it, then idle_loop. tick() stays as pinned.
 	var _freed_now := false
+	var _free_tween: Tween
 
 	func _init() -> void:
 		family = "ally"
@@ -128,7 +134,9 @@ class Cage extends "res://src/world/device.gd":
 				_animator.animation_finished.connect(_on_pilot_clip_done)
 
 	func _on_pilot_clip_done(clip: StringName) -> void:
-		if String(clip) == UNLOCK_CLIP and _animator.has_animation(IDLE_CLIP):
+		# A pilot without an unlock clip would hold big_cheer's last frame; ease back to idle.
+		var cheer_done := String(clip) == POSE_BLEND_FREED and spent
+		if (String(clip) == UNLOCK_CLIP or cheer_done) and _animator.has_animation(IDLE_CLIP):
 			_pose = IDLE_CLIP
 			_animator.play(IDLE_CLIP, 0.1)
 
@@ -180,16 +188,40 @@ class Cage extends "res://src/world/device.gd":
 		_signal.emission = Palette.ARC if spent else Interactables.color(family)
 		_signal.emission_energy_multiplier = 1.0 if spent else (1.2 + fill * 2.0 if breaking else 0.6)
 		if _pilot != null:
-			_pilot.position = Vector3(0.0, 1.6, 2.1) if spent else Vector3(0.0, 1.25 + (0.25 if breaking else 0.0), -0.25)
-			_pilot.rotation.y = PI + (0.2 * sin(fill * TAU) if breaking else 0.0)
+			_place_pilot(fill)
 		if breaking:
 			_freed_now = true
 		var pose := "big_cheer" if spent else ("heave" if breaking else "slump")
 		if spent and _freed_now and _animator != null and _animator.has_animation(UNLOCK_CLIP):
 			pose = UNLOCK_CLIP if _pose != IDLE_CLIP else IDLE_CLIP
+		elif spent and _pose == IDLE_CLIP:
+			pose = IDLE_CLIP
 		if pose != _pose and _animator != null and _animator.has_animation(pose):
+			var blend := POSE_BLEND if _pose != "" else 0.0
 			_pose = pose
-			_animator.play(pose)
+			_animator.play(pose, blend)
+
+	# While caged the pilot follows the break gauge; on release it eases out to the freed spot
+	# (landing in place under reduced motion) instead of teleporting.
+	func _place_pilot(fill: float) -> void:
+		if not spent:
+			if _free_tween != null:
+				_free_tween.kill()
+				_free_tween = null
+			_pilot.position = Vector3(0.0, 1.25 + (0.25 if breaking else 0.0), -0.25)
+			_pilot.rotation.y = PI + (0.2 * sin(fill * TAU) if breaking else 0.0)
+			return
+		if _free_tween != null and _free_tween.is_valid():
+			return
+		var rest := Vector3(0.0, 1.6, 2.1)
+		if _pilot.position.is_equal_approx(rest) or not _freed_now or not is_inside_tree() \
+				or EnemyMotion.motion_scale <= 0.0:
+			_pilot.position = rest
+			_pilot.rotation.y = PI
+			return
+		_free_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_free_tween.tween_property(_pilot, "position", rest, FREE_MOVE)
+		_free_tween.tween_property(_pilot, "rotation:y", PI, FREE_MOVE)
 
 	func ready_now() -> bool:
 		return not spent and not breaking

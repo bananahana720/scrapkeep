@@ -45,6 +45,11 @@ const BEHIND := 0.8
 const FOLLOW_RATE := 8.0
 const TURN_RATE := 6.0
 const MOVING_SPEED := 1.0
+# Presentation only: stop below this so idle and follow do not flicker around MOVING_SPEED.
+const STOPPED_SPEED := 0.6
+# Seconds of crossfade into idle/follow and into a one-shot beat; the clip name switches at once.
+const LOOP_BLEND := 0.2
+const BEAT_BLEND := 0.12
 # The escape lamp: radius, height over the hull root, emission per cue, and each act's shape.
 const LAMP_RADIUS := 0.09
 const LAMP_LIFT := 0.48
@@ -606,7 +611,8 @@ func _escape_beat() -> void:
 func _follow(delta: float) -> void:
 	var player = ctx.player
 	var velocity: Vector3 = player.planar_velocity()
-	_moving = velocity.length() > MOVING_SPEED
+	var speed := velocity.length()
+	_moving = speed > (STOPPED_SPEED if _moving else MOVING_SPEED)
 	if _moving:
 		var want := velocity.normalized()
 		var blended := _heading.lerp(want, 1.0 - exp(-TURN_RATE * delta))
@@ -640,14 +646,14 @@ func _play(clip: String) -> void:
 		return
 	if _anim.current_animation == clip and _anim.is_playing():
 		return
-	_anim.play(clip)
+	_anim.play(clip, LOOP_BLEND)
 
 
 # A one-shot beat; the next frame's idle or follow resumes when it ends.
 func _beat(clip: String) -> void:
 	if _anim == null or not _anim.has_animation(clip):
 		return
-	_anim.play(clip)
+	_anim.play(clip, BEAT_BLEND)
 
 
 func _beats() -> void:

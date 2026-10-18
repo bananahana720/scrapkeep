@@ -71,6 +71,11 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
+# Pilot return-to-rest clip built at runtime for GLBs with no idle loop, and the blend an impact
+# gets when it interrupts another one-shot.
+const REST_CLIP := "rest_pose"
+const REST_LENGTH := 0.5
+const INTERRUPT_BLEND := 0.05
 const PILOT_TABLES := "res://src/presentation/clips/%s.json"
 # The movement chip's signals kick both pedals (PILOT-CLIPS section 5), by argument count.
 const MECHA_PEDAL_EVENTS := {"dashed": 1, "boosted": 1, "blink_used": 2, "sprint_started": 1, "rocket_jumped": 2}
@@ -1537,6 +1542,11 @@ func _start_reaction(rec: Dictionary, clip: String, priority: int, blend: float,
 
 func _play(rec: Dictionary, clip: String, blend: float, apply := true) -> void:
 	var animator: AnimationPlayer = rec.animator
+	# An impact that interrupts another one-shot (wince over big_cheer's raised arms) gets a
+	# short blend so the whole arm range does not jump in one frame; over a base loop it still cuts.
+	if blend <= 0.0 and animator.is_playing() and animator.current_animation != clip \
+			and animator.current_animation not in [PilotReactions.BASES.idle.clip, PilotReactions.BASES.flight.clip, REST_CLIP]:
+		blend = INTERRUPT_BLEND
 	animator.play(clip, blend)
 	if apply:
 		animator.advance(0.0)
@@ -1565,6 +1575,8 @@ func _pilot_finished(clip: StringName, player_id: int, animator: AnimationPlayer
 	var rec: Dictionary = _players.get(player_id, {})
 	if rec.is_empty() or rec.animator != animator:
 		return
+	if String(clip) == REST_CLIP:
+		return
 	var riding := _riding(rec)
 	# Section 3 rule 2: a ride pose never snaps to rest.
 	if String(clip) in PilotReactions.ENDS_ON_RIDE and not riding and animator.has_animation(PilotReactions.RECOVER.clip):
@@ -1578,13 +1590,13 @@ func _pilot_finished(clip: StringName, player_id: int, animator: AnimationPlayer
 		rec.cooldowns[held.clip] = _reaction_clock + float(held.cooldown)
 		_start_reaction(rec, held.clip, int(held.priority), float(held.blend), false)
 		return
-	_to_base(rec)
+	_to_base(rec, true)
 
 
 # Section 3 rule 1: the base loop from frame 0 with a 0.1 s blend, ult_ride_loop while the set
 # piece holds the ride, else idle_loop. Without the loop (today's GLBs): stop, reset every bone
 # to rest, and warn once per pilot.
-func _to_base(rec: Dictionary) -> void:
+func _to_base(rec: Dictionary, after_clip := false) -> void:
 	rec.reaction = ""
 	rec.queued = {}
 	var animator = rec.get("animator")
@@ -1603,9 +1615,36 @@ func _to_base(rec: Dictionary) -> void:
 	_warn_once("pilot_base:" + String(rec["class"]), "hero_assets: pilot %s has no %s; seating by stop and reset" % [rec["class"], base.clip])
 	rec.base = ""
 	rec.priority = -1
+	if after_clip and _play_rest(rec):
+		return
 	animator.stop()
 	for skeleton in rec.pilot.find_children("*", "Skeleton3D", true, false):
 		skeleton.reset_bone_poses()
+
+
+# A pilot GLB with no idle loop eases to its rest pose over BASE_BLEND instead of snapping: a
+# runtime clip keys every bone at rest. It is not a pilot clip, so the run log never counts it.
+func _play_rest(rec: Dictionary) -> bool:
+	var animator: AnimationPlayer = rec.animator
+	if not animator.has_animation(REST_CLIP):
+		var library := animator.get_animation_library("")
+		var root := animator.get_node_or_null(animator.root_node)
+		if library == null or root == null:
+			return false
+		var rest := Animation.new()
+		rest.length = REST_LENGTH
+		for skeleton: Skeleton3D in rec.pilot.find_children("*", "Skeleton3D", true, false):
+			var path := String(root.get_path_to(skeleton))
+			for bone in skeleton.get_bone_count():
+				var pose := skeleton.get_bone_rest(bone)
+				var node := NodePath("%s:%s" % [path, skeleton.get_bone_name(bone)])
+				for kind in [[Animation.TYPE_POSITION_3D, pose.origin], [Animation.TYPE_ROTATION_3D, pose.basis.get_rotation_quaternion()], [Animation.TYPE_SCALE_3D, pose.basis.get_scale()]]:
+					var track := rest.add_track(kind[0])
+					rest.track_set_path(track, node)
+					rest.track_insert_key(track, 0.0, kind[1])
+		library.add_animation(REST_CLIP, rest)
+	animator.play(REST_CLIP, PilotReactions.BASE_BLEND)
+	return true
 
 
 # The set piece phase from the router's injected callable (SKILL-BAR section 7), else idle.
