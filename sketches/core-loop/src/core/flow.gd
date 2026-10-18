@@ -828,6 +828,9 @@ func _begin_ending() -> bool:
 func start_lap() -> void:
 	if state != VICTORY or not is_instance_valid(lap):
 		return
+	var hud = ctx.root.get("hud") if ctx.root != null else null
+	if hud != null and hud.has_method("clear_toasts"):
+		hud.clear_toasts()
 	lap.begin(ctx.player.state.velocity)
 	_set_state(LAP)
 

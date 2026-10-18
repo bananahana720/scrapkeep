@@ -66,6 +66,8 @@ func _physics_process(delta: float) -> bool:
 				_driver.tick(delta)
 		"victory":
 			if _game.flow.state_name() == "lap":
+				# A bot-driven game skips the credits after a second (screens.gd); the still wants them rolling.
+				_game.bot_driven = false
 				_phase = "lap"
 		"lap":
 			if _game.flow.state_name() != "lap":
@@ -85,8 +87,11 @@ func _physics_process(delta: float) -> bool:
 					_taken.append(shot["name"])
 					_save(shot["name"])
 		"credits":
-			_credits_clock += delta
-			if _credits_clock >= CREDITS_AT:
+			# The credits run on frame time, which a software renderer lags behind physics time, so read their own clock.
+			var seq = _game.screens.ending_sequence
+			var rolled: float = seq.elapsed - seq.WORLD_SECONDS * 3.0 if is_instance_valid(seq) else INF
+			if rolled >= CREDITS_AT:
+				_credits_clock = CREDITS_AT
 				_save("07-credits-over-the-bowl")
 				_phase = "closing"
 		"closing":
