@@ -12,7 +12,6 @@ const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
-const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
