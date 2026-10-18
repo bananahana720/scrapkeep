@@ -78,7 +78,7 @@ const RIG_BONES := [
 	"goggles", "jaw", "snout", "shoulder.L", "upper_arm.L", "lower_arm.L", "hand.L", "curl.L",
 	"shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R", "curl.R", "tool.R", "tail.01", "tail.02",
 ]
-const RIG_TRIS := Vector2i(4447, 4537)
+const RIG_TRIS := Vector2i(10720, 10936)
 const RIG_MESHES := {"Pilot": ["pilot"], "WingFan_L": ["pilot"], "WingFan_R": ["pilot"], "WingUpper_L": ["pilot"], "WingUpper_R": ["pilot"]}
 
 var _t := T.new("world_one_shell_kest_test")

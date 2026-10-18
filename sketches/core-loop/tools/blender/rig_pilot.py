@@ -25,7 +25,8 @@ import shell_base as sb
 # Polish (POLISH.md): soft-toy organic parts, crisp props. Islands of the Pilot mesh up to
 # SOFT_MAX_TRIS triangles subdivide once (hands, feet, limbs, ears, muzzles); the larger
 # head and torso spheres are already dense. Goggle frames and lenses, boxes and belt
-# beams stay hard with a small bevel.
+# beams stay hard. The bevel is under polish.shape's 5 mm floor, so their edges stay as
+# authored; a 6 mm bevel put Kest over the pilot cap.
 POLISH = {"detail": 1, "bevel": .003}
 SOFT_MAX_TRIS = 200
 HARD_PRIMITIVES = ("ring", "box", "beam")
@@ -142,12 +143,13 @@ def accessories(pilot_name, arm):
     return meshes
 
 
-def build(pilot_name="rivet", out=None):
+def build(pilot_name="rivet", out=None, polished=True):
     global OUT
     OUT = Path(out) if out else ROOT / "artifacts/anim-pilot" / (pilot_name if pilot_name != "rivet" else "")
     common.reset()
     common.preview_class({"rivet":"copper", "sable":"mint", "kest":"amber"}[pilot_name])
-    polish.enable(**POLISH)
+    if polished:
+        polish.enable(**POLISH)
     env = recipe(pilot_name)
     records = []
     originals = {}
@@ -179,7 +181,9 @@ def build(pilot_name="rivet", out=None):
     original_to_object = common.Part.to_object
 
     def to_object(part, *args, **kwargs):
-        if part.name == "Pilot":
+        if not polished:
+            pass
+        elif part.name == "Pilot":
             soft_toy(part, records, tags)
         else:
             # The hidden shell context is not exported; leave it unpolished.
@@ -237,7 +241,7 @@ def build(pilot_name="rivet", out=None):
     pilot.parent = arm
     modifier = pilot.modifiers.new("Rigid primitive weights", "ARMATURE")
     modifier.object = arm
-    pilot["source"] = f"shell_{pilot_name}.pilot + shell_base.spherical; unchanged original vertices"
+    pilot["source"] = f"shell_{pilot_name}.pilot + shell_base.spherical; " + ("soft-toy polish (POLISH.md)" if polished else "unchanged original vertices")
     meshes = [pilot]
     if pilot_name == "rivet":
         for side, s in (("R", 1), ("L", -1)):
@@ -255,7 +259,8 @@ def build(pilot_name="rivet", out=None):
     else:
         meshes.extend(accessories(pilot_name, arm))
     # Bake AO and edge wear over the rig's own meshes only; the glass and pod are hidden.
-    polish.bake(arm)
+    if polished:
+        polish.bake(arm)
     for obj in common.tree(root):
         obj.hide_render = True
     root.hide_render = True

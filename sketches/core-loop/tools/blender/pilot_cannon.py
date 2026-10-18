@@ -479,9 +479,9 @@ def main():
     args = parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
     OUT.mkdir(parents=True, exist_ok=True)
     common.reset()
-    # Polish (POLISH.md): the cast forms are already smooth; a small bevel and the baked
-    # AO give the castings their seams and contact shade. Subdivision added 4x triangles
-    # for no visible change.
+    # Polish (POLISH.md): the cast forms are already smooth; the baked AO gives the
+    # castings their contact shade. The bevel is under polish.shape's 5 mm floor, so edges
+    # stay as authored. Subdivision added 4x triangles for no visible change.
     polish.enable(detail=2, bevel=.004)
     for name, digest in REFERENCES.items():
         assert hashlib.sha256((SHEET_ROOT/name).read_bytes()).hexdigest() == digest, "Inspected reference changed: "+name
@@ -490,9 +490,13 @@ def main():
     mesh = model()
     shell = None
     if not args.no_shell:
+        # The shell belongs to world_one/shell_cannon.py, which is unpolished.
+        polished, detail = common.POLISH, common.DETAIL
+        common.POLISH, common.DETAIL = None, 1
         mod = shell_module()
         shell = mod.build()
         common.export(shell, str(mod.MODEL))
+        common.POLISH, common.DETAIL = polished, detail
     bpy.ops.wm.save_as_mainfile(filepath=str(OUT/"pilot_cannon-model.blend"))
     arm, spec = skeleton(mesh)
     acts, tables = actions(arm)
