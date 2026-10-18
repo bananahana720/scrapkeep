@@ -28,6 +28,18 @@ const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
+# Ring-outs (design-v3/WORLD-ROSTERS.md, Andrew's "Ring-outs" tap, 17 Oct 20:03Z): in the
+# Highdraft an enemy knocked off an island edge is gone, a kill for the pilot. Only a knock
+# counts: one that walks off is still rescued. A knock opens the fall; in the air over ground
+# RING_OUT_DROP below the floor it was knocked from, the enemy rings out. Bosses, Wardens, their relics and the
+# kill-first specials are always rescued.
+const RING_OUT_WORLD := 3
+const RING_OUT_DROP := 6.0
+# Boss pieces are kept too (Roster.is_boss_piece). Splitter pods can be rung out
+# (WORLD-ROSTERS.md); the mama splitter cannot. Flyers (kite and winch drones) hover and
+# move on their own _move, so a knock never drops them.
+const RING_OUT_KEPT := ["warden", "vault", "miniboss", "reactor_relic", "swarm_remnant", "mind_hand",
+	"foreman", "dispatcher", "splitter", "linker"]
 # The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
 # an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
 # crack. The tint_state names ("amber" for will break, "slate" for glances) stay as combat
@@ -82,6 +94,9 @@ var scrap_value := 3
 # Who is dealing the hit that may kill: "" for every ordinary source, "spark" while a wear
 # patch resolves (wear_trail sets it around take_damage). The died handler passes it on.
 var last_damage_source := ""
+var ringed_out := false
+# The height the open knock started from; INF while no knock is open.
+var _ring_from := INF
 var weight := 1.0
 # The stage threat this body was set up at; poles and flails read it for heft (movement/grip.gd).
 var threat_level := 1.0
@@ -417,6 +432,12 @@ func plating_now() -> float:
 	return plating
 
 
+# The armour row damage_families.gd reads (its armour_of falls through to the kind table on
+# ""): a Dig elite arrives with spec armour "plated".
+func armour_class() -> String:
+	return String(spec.get("armour", ""))
+
+
 # The plating one hit meets. `part` is "" for the body or a weak point id.
 func plating_for(_kind: String, _part: String) -> float:
 	return plating_now()
@@ -551,15 +572,65 @@ func _move(delta: float, desired: Vector3) -> void:
 		velocity.y = _knock.y
 		_knock.y = 0.0
 	velocity.y -= GRAVITY * delta
+	var grounded := is_on_floor()
 	move_and_slide()
 	if is_on_floor() and velocity.y < 0.0:
 		velocity.y = 0.0
 	_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)
+	if _rings_out(grounded):
+		return
 	_rescue()
 
 
 func _knocked_speed() -> float:
 	return Vector3(_knock.x, 0.0, _knock.z).length()
+
+
+# A knock opens the fall when it strikes an enemy standing on a floor, and the fall closes
+# once the enemy is back on a floor with the knock spent. Being in the air RING_OUT_DROP
+# below the floor it was knocked from, over ground at least that far down, is a ring-out:
+# off an edge the ground falls away under it, while down a slope or a ramp it stays close. Returns true when this tick rang the enemy out.
+func _rings_out(grounded: bool) -> bool:
+	if _dead or not ring_outs_here():
+		_ring_from = INF
+		return false
+	var knocked := _knocked_speed() >= 1.0
+	if _ring_from == INF:
+		if knocked and grounded:
+			_ring_from = global_position.y
+		return false
+	var floor_line := _ring_from - RING_OUT_DROP
+	if not is_on_floor() and global_position.y < floor_line \
+			and terrain.height(global_position.x, global_position.z) + half_height < floor_line:
+		ring_out()
+		return true
+	if is_on_floor() and not knocked:
+		_ring_from = INF
+	return false
+
+
+# A throw that moves the enemy itself (Tarn's tow and hurl) opens the fall from where it
+# stood, the way a knock would.
+func open_ring_out() -> void:
+	if _ring_from == INF and is_on_floor():
+		_ring_from = global_position.y
+
+
+func ring_outs_here() -> bool:
+	return terrain != null and terrain.has_method("world") and terrain.world() == RING_OUT_WORLD \
+		and not kind in RING_OUT_KEPT and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
+
+
+# Knocked off the edge: a kill the pilot earned, whatever health or plating was left.
+func ring_out() -> void:
+	if _dead:
+		return
+	ringed_out = true
+	last_damage_source = "ring_out"
+	if _reaction_bus != null and _reaction_bus.has_signal("enemy_ringed_out"):
+		_reaction_bus.enemy_ringed_out.emit(kind, global_position)
+	hp = 0.0
+	_die()
 
 
 # An enemy that falls through the map is put back on the ground, not killed: a kill

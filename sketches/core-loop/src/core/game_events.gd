@@ -94,6 +94,8 @@ signal boss_defeated
 # and rocket jumps. ability_id is the slot's ability id, or "slingshot".
 signal enemy_rebounded(enemy: Node3D, speed: float)
 signal enemy_pinned(enemy: Node3D, damage: float)
+# A Highdraft enemy knocked off an island edge (enemy.gd ring_out); enemy_killed follows.
+signal enemy_ringed_out(kind: String, at: Vector3)
 signal vault_kicked(at: Vector3, speed: float)
 signal gauge_charging(ability_id: String)
 signal gauge_released(ability_id: String, fraction: float)

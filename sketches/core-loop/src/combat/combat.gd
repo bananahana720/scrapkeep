@@ -555,6 +555,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
 	var health_scale := _threat()
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
+	if affix_id == EliteAffixes.PLATED:
+		enemy_spec["armour"] = EliteAffixes.PLATED
 	if kind not in ["warden", "vault"]:
 		var director = ctx.root.get_node("World").director
 		health_scale = director.hp_scale()
