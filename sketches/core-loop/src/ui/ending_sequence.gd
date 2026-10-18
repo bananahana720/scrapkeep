@@ -20,7 +20,10 @@ const CREDITS_SECONDS := 18.0
 const CREDITS_LINE_SECONDS := 4.5
 # The credits roll stops this far above the screen bottom; the skip hint owns the band beneath.
 const HINT_BAND := 72.0
-const SKIP_HINT := [{"cap": "key_enter", "say": "Enter"}, {"say": "or"}, {"cap": "key_esc", "say": "Esc"}, {"say": "skip to summary"}]
+const SKIP_HINT := [{"say": "Any key skips to the summary"}]
+const PRELUDE_HINT := [{"say": "Any key skips to the victory lap"}]
+# After the victory lap the roll opens straight on the credits; a press mashed at the lap's end waits this long.
+const SKIP_GUARD := 0.75
 const TOTAL_SECONDS := WORLD_SECONDS * 3.0 + CREDITS_SECONDS
 const WORLD_DRESSING := {1: "SpillwayScenery", 2: "DigScenery", 3: "HighdraftScenery"}
 # KC10 (PARK.md section 6, 13 item 6): the credits' set is Meteor Crater, the crater_ending bowl (400 m, stamp radius
@@ -73,21 +76,38 @@ var _crater_files: Array = []
 var _crater_requests: Array[String] = []
 # Headless only: crater GLBs load on the main thread at placement instead of on a loader thread.
 var _crater_serial := false
+# The victory lap's stats (flow.lap_stats); non-empty means the sequence opened on the credits over the bowl.
+var lap := {}
+# The Q16 ending's first act: only the fly-over plays, and finished hands over to the victory lap.
+var prelude := false
+var _opened_at := 0.0
 
 
-func start(game_ref) -> void:
+func start(game_ref, lap_stats := {}, prelude_only := false) -> void:
 	game = game_ref
+	lap = lap_stats
+	prelude = prelude_only
 	name = "EndingSequence"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var began := Time.get_ticks_usec()
 	_build_view()
-	_build_worlds()
-	_build_crater()
-	_build_crew()
+	if lap.is_empty():
+		_build_worlds()
+		_build_crew()
+	if not prelude:
+		_build_crater()
+	if prelude:
+		skip_hint.setup(PRELUDE_HINT)
 	prepare_usec = Time.get_ticks_usec() - began
 	active = true
+	if not lap.is_empty():
+		# The lap already played the crew log and the bowl; the roll starts on the credits.
+		_credits.text = credits_text(lap)
+		world_index = 2
+		elapsed = WORLD_SECONDS * 3.0
+		_opened_at = elapsed
 	advance(0.0)
 	# run_ended already selects the summary music through the audio director. Calling
 	# its menu API also covers a sequence started from an already-settled summary.
@@ -185,6 +205,14 @@ func _build_view() -> void:
 	move_child(_hint_band, -1)
 	move_child(skip_hint, -1)
 	_cut = _backing(0.0, 1.0, Color(Palette.CHARCOAL, 0.0))
+
+
+# The credits with the lap's own block above the thanks: a strong build sees its numbers in the roll.
+static func credits_text(stats: Dictionary) -> String:
+	var block := "Victory lap\nTop speed %d m/s · Best air %.1f s · Rim laps %d" % [int(stats.get("top_speed", 0.0)),
+		float(stats.get("best_air", 0.0)), int(stats.get("rim_laps", 0))]
+	var thanks := CREDITS.rfind("\n\n")
+	return CREDITS.substr(0, thanks) + "\n\n" + block + CREDITS.substr(thanks)
 
 
 func letterbox_bars() -> Array:
@@ -477,7 +505,7 @@ func advance(delta: float) -> void:
 	if not active:
 		return
 	elapsed = minf(TOTAL_SECONDS, elapsed + maxf(0.0, delta))
-	if elapsed >= TOTAL_SECONDS:
+	if elapsed >= TOTAL_SECONDS or (prelude and elapsed >= WORLD_SECONDS * 3.0):
 		skip()
 		return
 	var index := mini(2, int(elapsed / WORLD_SECONDS))
@@ -582,14 +610,14 @@ func _enter_world(index: int) -> void:
 	_sun.rotation_degrees = Vector3(-46.0, 62.0, 0.0) if index == 2 else Vector3(-38.0, 118.0, 0.0)
 
 
+# Any key, mouse button, pad button or action press skips (Q16: "any input skips"); motion and releases do not. Opened
+# from the lap, the first SKIP_GUARD seconds ignore input, so a press meant for the ball cannot eat the credits.
 func handle(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_cancel"):
-		skip()
-	elif event is InputEventKey and event.pressed and not event.echo:
-		var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
-		if key in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE]:
-			skip()
-	elif event is InputEventJoypadButton and event.pressed and event.button_index in [JOY_BUTTON_A, JOY_BUTTON_B]:
+	if not lap.is_empty() and elapsed - _opened_at < SKIP_GUARD:
+		return
+	var pressed: bool = (event is InputEventKey and event.pressed and not event.echo) \
+		or ((event is InputEventMouseButton or event is InputEventJoypadButton or event is InputEventAction) and event.pressed)
+	if pressed:
 		skip()
 
 

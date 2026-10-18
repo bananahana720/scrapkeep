@@ -640,10 +640,24 @@ func tick(delta: float) -> bool:
 				_end("boss_stalled")
 				return true
 			_fight_boss(delta)
+		"lap":
+			_lap_roll()
 		_:
 			source.hold = {}
 	_set_piece_hands()
 	return outcome != ""
+
+
+# The victory lap: boost for the vent in the bowl's middle, so the bot rides the wall down into it, flies, lands on the
+# far wall and rolls back for another shot, the way a player showing off would. The lap's clock ends it.
+func _lap_roll() -> void:
+	var lap = game.flow.lap
+	if not is_instance_valid(lap):
+		source.hold = {}
+		return
+	var to: Vector3 = lap.centre() - game.player.ball_position()
+	var wish := Vector3(to.x, 0.0, to.z).normalized() if Vector2(to.x, to.z).length() > 1.0 else Vector3.BACK
+	source.hold = {"move": _world_to_stick(wish), "shift_held": true}
 
 
 # A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist

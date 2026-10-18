@@ -2754,7 +2754,7 @@
    "class": "park_large",
    "origin": "entry_lip",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place (base GLB with its crater_ending-col trimesh; the ending camera set, never a stage)",
+   "loader": "src/world/park/park_recipes.gd place (base GLB with its crater_ending-col trimesh; the ending bowl: the victory lap after the Mind and the credits set, never a stage)",
    "provenance": {
     "recipe": "tools/blender/park/crater.py"
    }
