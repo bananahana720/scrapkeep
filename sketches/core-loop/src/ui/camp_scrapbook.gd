@@ -159,6 +159,11 @@ static func attach(hub) -> void:
 		book.show_pages(store.summaries())
 		game.screens.open_walk_page(book)
 	hub.add_station(STATION_ID, at, STATION_LABEL, STATION_KEY, STATION_RADIUS, open)
+	# The book joins the screens' content only when first opened; a hub that leaves the tree
+	# before that would strand it, so free it then.
+	hub.tree_exiting.connect(func():
+		if is_instance_valid(book) and book.get_parent() == null:
+			book.free())
 	var layer := CanvasLayer.new()
 	layer.name = "CampLineLayer"
 	layer.layer = 40
