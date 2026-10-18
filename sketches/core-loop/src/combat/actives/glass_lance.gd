@@ -1,5 +1,6 @@
 extends RefCounted
 
+const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # The Glass Lance (Mind-glass): a shard of the Mind that wants to be thrown. A fire commits a
@@ -123,9 +124,9 @@ func _tell(lance: Dictionary) -> void:
 	for k in heights.size() - 1:
 		var a := _point(lance, k * SAMPLE)
 		var b := _point(lance, minf(REACH, (k + 1) * SAMPLE))
-		combat.effects.beam(a, b, COLOR, life)
+		combat.effects.beam(a, b, ActiveFx.peak(COLOR), life)
 		for edge in [side, -side]:
-			combat.effects.beam(a + edge, b + edge, Color(COLOR, 0.45), life)
+			combat.effects.beam(a + edge, b + edge, ActiveFx.peak(Color(COLOR, 0.45)), life)
 
 
 func step(delta: float) -> void:
@@ -149,7 +150,7 @@ func _fly(lance: Dictionary, delta: float) -> bool:
 	lance["s"] = after
 	var from: Vector3 = lance["from"]
 	var dir: Vector3 = lance["dir"]
-	combat.effects.beam(_point(lance, before), _point(lance, after), SHARD_COLOR, 0.08)
+	combat.effects.beam(_point(lance, before), _point(lance, after), ActiveFx.peak(SHARD_COLOR), 0.08)
 	var generation := _generation
 	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
 		if enemy.is_dead() or lance["hit"].has(enemy.get_instance_id()):
@@ -172,12 +173,12 @@ func _fly(lance: Dictionary, delta: float) -> bool:
 func _pierce(enemy: Node3D, lance: Dictionary) -> void:
 	pierced += 1
 	var dmg: float = lance["damage"]
-	combat.effects.spark(enemy.global_position + Vector3.UP, SHARD_COLOR)
+	combat.effects.spark(enemy.global_position + Vector3.UP, ActiveFx.peak(SHARD_COLOR))
 	combat._hit(enemy, KIND, dmg, lance["dir"], KNOCK, "", SOURCE, IMPACT)
 	var jumps := _pattern("chain_arc")
 	if jumps > 0:
 		combat._chain(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
-			"chain_falloff": CHAIN_FALLOFF, "color": COLOR, "kind": KIND, "knock": KNOCK, "source": SOURCE})
+			"chain_falloff": CHAIN_FALLOFF, "color": ActiveFx.peak(COLOR), "kind": KIND, "knock": KNOCK, "source": SOURCE})
 
 
 func _girth(enemy: Node3D) -> float:
