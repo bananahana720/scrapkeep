@@ -38,6 +38,9 @@ DEFAULTS = {
     # Catmull-Clark levels for parts (a Part's own .subsurf wins). Hard edges are creased,
     # so boxes keep their corners and bevels turn into fillets. Each level is about 4x tris.
     "subsurf": 0,
+    # Scale each connected piece back to its unpolished bounding box after bevel and
+    # subdivision, so measured envelopes (core radius, ear tips, bulb size) hold exactly.
+    "fit": False,
     # On subdivided parts only edges sharper than this stay creased; softer ones round off.
     "crease_angle": 70.0,
     # Ambient occlusion: rays per corner, reach as a fraction of the asset's radius, and
@@ -160,6 +163,132 @@ def subdivide(bm, levels=1):
         old, bm = bm, _cc(bm)
         old.free()
     return bm
+
+
+def finish(bm, opts, bevel=None, subsurf=None, regions=()):
+    """Shape and subdivide one part. Faces tagged by Part.region take that region's bevel
+    and levels; each region is cut out, finished alone and joined back. Returns the bmesh
+    to triangulate, which may be a new one."""
+    layer = bm.faces.layers.int.get("polish_region")
+    if layer is None:
+        return _finish_one(bm, opts, bevel, subsurf)
+    settings = [(bevel, subsurf, None)] + [(bevel if b is None else b, subsurf if s is None else s, f)
+                                           for b, s, f in regions]
+    tags = sorted({f[layer] for f in bm.faces})
+    out = bmesh.new()
+    for tag in tags:
+        piece = bm.copy()
+        player = piece.faces.layers.int["polish_region"]
+        drop = [f for f in piece.faces if f[player] != tag]
+        if drop:
+            bmesh.ops.delete(piece, geom=drop, context="FACES")
+        piece.faces.layers.int.remove(player)
+        piece = _finish_one(piece, opts, *settings[tag])
+        _append(out, piece)
+        piece.free()
+    bm.free()
+    return out
+
+
+def _finish_one(bm, opts, bevel, subsurf, fit=None):
+    before = _boxes(bm) if (opts["fit"] if fit is None else fit) else None
+    shape(bm, opts, bevel)
+    levels = opts["subsurf"] if subsurf is None else subsurf
+    if levels:
+        bm = subdivide(bm, levels)
+    if before:
+        _fit(bm, before)
+    return bm
+
+
+def _vert_islands(bm):
+    """Connected pieces as vertex lists, ordered by their lowest vertex index."""
+    bm.verts.index_update()
+    seen = set()
+    out = []
+    for v in bm.verts:
+        if v.index in seen:
+            continue
+        seen.add(v.index)
+        stack, piece = [v], []
+        while stack:
+            u = stack.pop()
+            piece.append(u)
+            for e in u.link_edges:
+                w = e.other_vert(u)
+                if w.index not in seen:
+                    seen.add(w.index)
+                    stack.append(w)
+        out.append(sorted(piece, key=lambda x: x.index))
+    return out
+
+
+def _box(verts):
+    return (tuple(min(v.co[i] for v in verts) for i in range(3)),
+            tuple(max(v.co[i] for v in verts) for i in range(3)))
+
+
+def _boxes(bm):
+    return [_box(piece) for piece in _vert_islands(bm)]
+
+
+def _fit(bm, before):
+    """Scales each piece about its box centre to the nearest unpolished box."""
+    for piece in _vert_islands(bm):
+        lo, hi = _box(piece)
+        old = min(before, key=lambda b: math.fsum((b[0][i] - lo[i]) ** 2 + (b[1][i] - hi[i]) ** 2
+                                                    for i in range(3)))
+        for i in range(3):
+            size, want = hi[i] - lo[i], old[1][i] - old[0][i]
+            if size < 1e-9:
+                continue
+            k, c, oc = want / size, (lo[i] + hi[i]) / 2, (old[0][i] + old[1][i]) / 2
+            for v in piece:
+                co = v.co.copy()
+                co[i] = oc + (co[i] - c) * k
+                v.co = co
+
+
+def _append(dst, src):
+    """Copies src into dst: positions, deform weights, integer and float vertex tags, loop
+    colours and UVs, materials and shading flags, in src's element order."""
+    loop_layers = []
+    for kind in ("float_color", "color", "uv"):
+        dl, sl = getattr(dst.loops.layers, kind), getattr(src.loops.layers, kind)
+        for name in sl.keys():
+            loop_layers.append((kind, sl[name], dl.get(name) or dl.new(name)))
+    sdef = src.verts.layers.deform.active
+    ddef = None
+    if sdef is not None:
+        ddef = dst.verts.layers.deform.active or dst.verts.layers.deform.new()
+    vert_layers = [(sl[n], dl.get(n) or dl.new(n)) for sl, dl in
+                   ((src.verts.layers.int, dst.verts.layers.int), (src.verts.layers.float, dst.verts.layers.float))
+                   for n in sl.keys()]
+    src.verts.index_update()
+    verts = []
+    for v in src.verts:
+        nv = dst.verts.new(v.co)
+        if ddef is not None:
+            for g, w in sorted(v[sdef].items()):
+                nv[ddef][g] = w
+        for sl, dl in vert_layers:
+            nv[dl] = v[sl]
+        verts.append(nv)
+    for f in src.faces:
+        nf = dst.faces.new([verts[v.index] for v in f.verts])
+        nf.material_index = f.material_index
+        nf.smooth = f.smooth
+        for sloop, dloop in zip(f.loops, nf.loops):
+            for kind, sl, dl in loop_layers:
+                if kind == "uv":
+                    dloop[dl].uv = sloop[sl].uv
+                else:
+                    dloop[dl] = sloop[sl]
+    for e in src.edges:
+        if not e.smooth:
+            de = dst.edges.get((verts[e.verts[0].index], verts[e.verts[1].index]))
+            if de is not None:
+                de.smooth = False
 
 
 def _avg(points):
@@ -405,7 +534,7 @@ def bake(root, opts=None):
                             # shared edge, coplanar overlaps) the BVH returns either by
                             # run, so any front face at the hit point counts.
                             if hit[0] is not None and (hit[1].dot(w) < 0.0 or any(
-                                    f[1].dot(w) < 0.0 for f in tree.find_nearest_range(hit[0], reach * 1e-5))):
+                                    f[1].dot(w) < 0.0 for f in tree.find_nearest_range(hit[0], reach * 1e-4))):
                                 occ += 1.0 - (hit[3] / reach) ** 2
                         # Rays that graze a shared edge can hit either face; rounding
                         # drops that last-bit noise before the 1/1024 quantisation.
