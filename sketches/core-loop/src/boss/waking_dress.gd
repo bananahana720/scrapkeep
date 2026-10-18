@@ -20,6 +20,8 @@ const FLOOR_CLIPS := [["floor_warn", "floor_drop"], ["floor_warn_seam", "floor_d
 const PULSE_KIT := ["PressureLip0", "PressureLip1", "PressureLip2"]
 const PULSE_BASE := ["IntakeVane0", "IntakeVane1", "IntakeVane2"]
 const PULSE_CLIPS := ["pulse_warn", "pulse"]
+# The vanes also move in these base clips, so their tracks ride the vane player with the pulse.
+const VANE_CLIPS := PULSE_CLIPS + ["sleeping", "wake", "pit_defeat"]
 const CORE := ["CoreShutter0", "CoreShutter1", "CoreShutter2", "CoreLive", "CoreUnready", "ReactorCore"]
 # Test seam: a test points these at a missing file to prove the stub body stays.
 static var base_path := BASE
@@ -90,7 +92,7 @@ func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
 	# The core opens on its own player so a floor or pulse clip never closes it mid-stagger.
 	_core_anim = BossModel.split_player(_kit_anim, ["core_open"], CORE)
 	_pulse_kit_anim = BossModel.split_player(_kit_anim, PULSE_CLIPS, PULSE_KIT)
-	_pulse_base_anim = BossModel.split_player(_base_anim, PULSE_CLIPS, PULSE_BASE)
+	_pulse_base_anim = BossModel.split_player(_base_anim, VANE_CLIPS, PULSE_BASE)
 	BossModel.hide_warden_body(module.warden)
 	_both("wake")
 
@@ -123,8 +125,11 @@ func _physics_process(_delta: float) -> void:
 	if module.state == module.DEFEATED and not _defeated:
 		_defeated = true
 		BossModel.play(_base_anim, "pit_defeat")
+		BossModel.play(_pulse_base_anim, "pit_defeat")
 
 
 func _both(clip: String) -> void:
 	BossModel.play(_base_anim, clip)
 	BossModel.play(_kit_anim, clip)
+	if clip in VANE_CLIPS:
+		BossModel.play(_pulse_base_anim, clip)

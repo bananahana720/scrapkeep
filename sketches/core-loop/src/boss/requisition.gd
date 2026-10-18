@@ -297,7 +297,8 @@ func _cue(clip: String, token: int) -> void:
 # roll, so they stop freezing after the first crane. Reduced motion adds no idle, as for the
 # enemies; the cue key is left alone, so no cue replays.
 func _resume_idle(clip: StringName) -> void:
-	if EnemyMotion.motion_scale <= 0.0 or clip == &"idle_roll" or _anim.assigned_animation != clip:
+	# The hull the pilot has ejected from lies empty, so its drums stay still.
+	if EnemyMotion.motion_scale <= 0.0 or clip in [&"idle_roll", &"eject"] or _anim.assigned_animation != clip:
 		return
 	BossModel.play(_anim, "idle_roll")
 

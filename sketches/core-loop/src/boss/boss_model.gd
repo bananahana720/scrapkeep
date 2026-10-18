@@ -154,7 +154,7 @@ const BLENDS := {
 	"floor_warn": 0.15, "floor_warn_seam": 0.15, "floor_warn_bedrock": 0.15,
 	"pulse_warn": 0.15, "pulse": 0.1, "recovery": 0.15, "hand_send": 0.1, "recover": 0.2,
 	"lane_warn": 0.15, "split_lane_warn": 0.15, "rush_warn": 0.15, "plate_warn": 0.15, "quote_warn": 0.15,
-	"brace": 0.06, "choir_change": 0.12, "choir_change_1_2": 0.12, "choir_change_2_0": 0.12,
+	"brace": 0.05, "choir_change": 0.12, "choir_change_1_2": 0.12, "choir_change_2_0": 0.12,
 	# A strike lands on the hazard's frame; a floor drop only takes the last few frames to
 	# hide the spine's restart, well inside the 0.05 s a live hazard tolerates.
 	"floor_drop": 0.04, "floor_drop_seam": 0.04, "floor_drop_bedrock": 0.04,
@@ -190,6 +190,9 @@ static func play(player, clip: String, backwards := false, blend := -1.0, speed 
 			from = player.current_animation_position
 	if seconds <= 0.0:
 		player.stop()
+	else:
+		# stop() would have dropped a queue left behind the old clip; a crossfade must too.
+		player.clear_queue()
 	if backwards:
 		player.play(clip, seconds, -speed, true)
 	else:
