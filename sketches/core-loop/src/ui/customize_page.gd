@@ -1,5 +1,6 @@
 extends Control
 
+const Secrets := preload("res://src/core/secrets.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
@@ -593,7 +594,7 @@ static func equip(profile, owner: String, slot_id: String, id: String) -> bool:
 func shown_ids(slot_id: String) -> Array:
 	var out: Array = []
 	for id in Cosmetics.for_slot(slot_id, pilot):
-		if not Cosmetics.is_pending(id):
+		if not Cosmetics.is_pending(id) and not Secrets.shut_paint(id, _profile):
 			out.append(id)
 	return out
 

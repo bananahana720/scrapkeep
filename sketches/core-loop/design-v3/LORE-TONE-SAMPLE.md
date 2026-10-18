@@ -2,7 +2,7 @@
 
 Lore voice APPROVED as written by Andrew on 2026-10-04: dry work-crew notes and shift logs with a quiet wrong thing underneath. Music remains synth pending listening approval.
 
-Each world has ten lines retained from the approved sample. World 2 and world 3 lore rows now use this voice, grounded in their maps.
+Each world has ten lines retained from the approved sample, except Spillway lines 7 to 10, which LORE-REPLACE retired with the old stage 2 cableway on 2026-10-17 (`docs/decisions.tsv`). World 2 and world 3 lore rows now use this voice, grounded in their maps.
 
 ## Spillway Works
 
@@ -12,10 +12,10 @@ Each world has ten lines retained from the approved sample. World 2 and world 3 
 4. Shift log: intake cleared. Fleet took the spare grate. Fish now larger than permitted.
 5. Maintenance tag: handwheel replaced with a serving tray. Turns fine. Return before supper.
 6. Survey scrap: old flood marks inside the sealed housing. Outside stone is dry. Left the question on the next shift's sheet.
-7. I've counted. You're all here. Sit down; I'll mend the harnesses.
-8. Wall stencil: NO SWINGING FROM SERVICE HOOKS. Inspection note: stencil only visible from service hook.
-9. Cable Reach Warden. Still guarding a shift nobody remembers starting.
-10. Brindle: A working cableway. Excellent. We'll collect the anchors first.
+7. I've counted. You're all here. Sit down; I'll mend the harnesses. (retired)
+8. Wall stencil: NO SWINGING FROM SERVICE HOOKS. Inspection note: stencil only visible from service hook. (retired)
+9. Cable Reach Warden. Still guarding a shift nobody remembers starting. (retired)
+10. Brindle: A working cableway. Excellent. We'll collect the anchors first. (retired)
 
 ## The Dig
 

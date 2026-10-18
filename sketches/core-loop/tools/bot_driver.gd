@@ -73,6 +73,16 @@ const TURN_RATE := 5.0
 const SENSITIVITY := 0.0022
 # A stage longer than this is a stall: the bot could not break the Warden.
 const STAGE_LIMIT := 240.0
+# The Mind's crown (stage 6) takes the park Mind 127 to 232 s to break (parkwin and parkboss
+# receipts, 2026-10-16/17), against the 240 s limit: its fight gets PARK_MIND_LIMIT. Any broken
+# Warden gets GATE_LIMIT seconds after the break to reach an exit gate, so a late break is not
+# a stall (one run broke at 232.6 s and stalled in "gates" 7 s later).
+const PARK_MIND_LIMIT := 480.0
+# The roll to the gates is a leg of its own: completionist seed 35118 (Pylon) broke the stage-6
+# Warden at 230.7 s and was cut off at 240 s on its way to gate 1. A gate the bot cannot reach
+# still stalls, GATE_LIMIT after the break, with stall_state "gates". 90 s, not PR #34's 60 s:
+# STAGE6's measured exits took up to 26 s plus the exit-bank run-up (merge, 2026-10-17).
+const GATE_LIMIT := 90.0
 const BOSS_LIMIT := 420.0
 const STUCK_SPEED := 2.5
 const STUCK_SECONDS := 2.0
@@ -110,6 +120,9 @@ const DROP_ABOVE := 0.0
 const DROP_WAIT := 0.6
 # Off the line in a stagger the ball jumps for the drop within DROP_JUMP_REACH of the open point.
 const DROP_JUMP_REACH := 8.0
+# A jump and the air jump lift the ball about 6 m (measured on the park table, seed 1): an open
+# point higher than DROP_REACH_UP over the ball cannot be jumped over, so the ball bites from below.
+const DROP_REACH_UP := 6.0
 # With the posture bar at LINE_FINISH or more the ball takes the line instead of the ram, from
 # LINE_FINISH_STANDOFF out, so the stagger the shots from the line open finds it hanging and the
 # drop follows (swarm.md section 4: the high dwell is the latch window and the brake-drop carries
@@ -161,6 +174,36 @@ const WAYPOINT_REACHED := 9.0
 const WAYPOINT_SECONDS := 14.0
 const GATE_HOP_SECONDS := 6.0
 const GATE_HOP_EVERY := 1.5
+# A static prop on the line to a gate (the crown's relic cache stands on the beacon island's
+# approach and, once its wall is cracked, is a pocket the line runs into) is steered round:
+# the line is probed GATE_PROBE metres ahead, and a blocked one goes round the prop's nearest
+# visible corner (GATE_MARGIN off its walls), held up to GATE_DETOUR_SECONDS so the turn does
+# not flip back at the mouth; with no corner in sight it turns by GATE_TURN steps instead.
+const GATE_PROBE := 9.0
+const GATE_PROBE_NEAR := 30.0
+const GATE_TURN := 30.0
+const GATE_MARGIN := 4.0
+# A gate on a rise the ball cannot climb from a standstill (the park crown's exit bank is a
+# 27 degree face below its gates, 14 to 22 m up in 16 m) is taken as a player takes it: back
+# off GATE_RUNUP_BACK metres down the line, then charge it at speed. Tried once the gate has
+# stood untaken GATE_RUNUP_AFTER seconds with the ball more than 3 m below it.
+const GATE_RUNUP_AFTER := 14.0
+const GATE_RUNUP_BACK := 70.0
+const GATE_RUNUP_SECONDS := 12.0
+const GATE_CHARGE_SECONDS := 10.0
+const GATE_DETOUR_SECONDS := 6.0
+# A gate the ball has rolled off the gates' island beside GATE_SWITCH_FALLS times is given up
+# for the next offer: the crown's relic cache stands beside the east gate's run-in, and a bot
+# that keeps going round it at speed keeps leaving the beacon top by its east rim.
+const GATE_SWITCH_FALLS := 2
+# A gate still untaken after GATE_SWITCH_SECONDS is given up for the next offer the same way:
+# the cache's walls can hold a bot that keeps rounding them on the beacon top.
+const GATE_SWITCH_SECONDS := 40.0
+# Level with a gate and within GATE_CALM_RANGE of it, the bot rolls in without boosting and brakes
+# above GATE_CALM_SPEED, as a player eases up near a rim: the crown's gates stand 5 m in from a
+# 25 m drop, and a heavy ball boosted at its run-in point overshoots it off the beacon top.
+const GATE_CALM_RANGE := 25.0
+const GATE_CALM_SPEED := 12.0
 const VAULT_SECONDS := 45.0
 const EVENT_PURSUIT_SECONDS := 40.0
 const EVENT_LATEST := 150.0
@@ -200,6 +243,11 @@ const FACE_TILT := 0.866
 const SLING_STEP := 0.05
 const SLING_FLIGHT := 4.0
 const MIND_STAGE := 5
+# A fight climb on the Mind stage that has not reached its target after MIND_CLIMB_GIVE_UP seconds
+# drops the end-height test for the rest of the stage (ISLE-SKIRT): that test reads the east skirt
+# of the Hanging Isle's ramp as one gentle step, and Tarn (completionist seed 36003) shuttled on it
+# from t=100 s to the limit. The Mind fight's own climbs back to the hand finish well inside it.
+const MIND_CLIMB_GIVE_UP := 45.0
 # Specials.
 const CROWD := 2
 const CROWD_RADIUS := 12.0
@@ -236,6 +284,11 @@ const CAMP_LAST := 1000.0
 const CLIMB_STEP := 4.0
 const CLIMB_PAD := 100.0
 const CLIMB_SLOPE := 0.5
+# When no way up stays within CLIMB_SLOPE, the plan is retried at each of these steeper limits
+# before the ball is steered straight at the target: Spillway stage 1 (Tarn, random seed 35221)
+# has a basin whose way out climbs between 0.5 and 0.55, and the straight line from it meets the 14 m face
+# under the Warden's shelf, which held the ball for the rest of the stage.
+const CLIMB_SLOPE_RETRY := [0.6, 0.75]
 # A greybox kicker rises exactly CLIMB_SLOPE (14 m over 28 m); the slack keeps rounding from closing it.
 const SLOPE_SLACK := 0.001
 # How far past a kicker's lip its launch lands, clear of the gap a lip leaves before the next floor.
@@ -308,6 +361,15 @@ var _offers: Array = []
 var _gate_pick := -1
 var _gate_time := 0.0
 var _gate_hop := 0.0
+var _gate_detour := Vector3.ZERO
+var _gate_detour_left := 0.0
+var _gate_run := ""
+var _gate_run_clock := 0.0
+var _gate_on_top := false
+# Whether this stage's gates stand on a sky island's top (a Highdraft map: the crown's beacon,
+# 25 m over the deck). The climb-back, calm, back-out and gate-switch rules apply only there.
+var _island_gates := false
+var _gate_falls := 0
 var _stage := 0
 var _fight_phase := "charge"
 var _fight_target: Node3D = null
@@ -347,6 +409,9 @@ var _climb: Array[Vector3] = []
 var _climb_for := ""
 var _fight_climb: Array[Vector3] = []
 var _fight_climb_clock := 0.0
+var _fight_climb_held := 0.0
+var _fight_climb_tick := -1
+var _mind_slope_spent := false
 var _route_lips: Array[Vector3] = []
 var _plate_hand := {}
 var _ignore_walls := false
@@ -594,7 +659,7 @@ func tick(delta: float) -> bool:
 	# Every stage state, the gates included: a gate the bot cannot reach (seed 5 random put
 	# gate 1 behind a Spillway chute kerb) once ran a process forever, since only the
 	# Warden fight had a limit. stall_state says which state ran out.
-	if flow.in_stage() and game.run.stage_time > stage_limit:
+	if flow.in_stage() and game.run.stage_time > _stage_cap():
 		_note_set("stall_state", state)
 		_end("stalled")
 		return true
@@ -644,6 +709,20 @@ func tick(delta: float) -> bool:
 			source.hold = {}
 	_set_piece_hands()
 	return outcome != ""
+
+
+# The stall limit now. A sweep's own stage_limit is kept; the default one stretches for the
+# Mind's crown and for the gates after a break.
+func _stage_cap() -> float:
+	if stage_limit != STAGE_LIMIT:
+		return stage_limit
+	var cap := stage_limit
+	if game.run.stage == 6:
+		cap = PARK_MIND_LIMIT
+	var broken = _note.get("warden_broken_s")
+	if broken != null:
+		cap = maxf(stage_limit, float(broken) + GATE_LIMIT)
+	return cap
 
 
 # A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
@@ -721,6 +800,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_climb_for = ""
 	_fight_climb = []
 	_fight_climb_clock = 0.0
+	_fight_climb_held = 0.0
+	_fight_climb_tick = -1
+	_mind_slope_spent = false
 	_wander_clock = 0.0
 	_committed = policy == "skipper"
 	_planned = false
@@ -1185,7 +1267,7 @@ func _approach(s, ball: Vector3) -> Vector3:
 		_climb_for = s.id
 		_climb.clear()
 		if at.y - ball.y > LEVEL_BAND:
-			_climb = _climb_route(ball, at)
+			_climb = _climb_route_any(ball, at)
 	while not _climb.is_empty() and _flat(ball, _climb[0]) < CLIMB_REACHED:
 		_climb.pop_front()
 	_kicker_jump(ball)
@@ -1193,7 +1275,7 @@ func _approach(s, ball: Vector3) -> Vector3:
 
 
 # A grid path over the terrain's heights from the ball to the site that never climbs a step
-# steeper than CLIMB_SLOPE (falling is free), every other cell kept. Empty when there is none.
+# steeper than slope (CLIMB_SLOPE unless given; falling is free), every other cell kept. Empty when there is none.
 # A cell costs more the further it drops to a neighbour, so a route up a ramp keeps to its middle,
 # not the rim of its skirt where a ball cutting the corner at the foot slides back to the deck.
 # Each step's rise is read on both of its halves (the heights are sampled at half a step), so a
@@ -1202,14 +1284,14 @@ func _approach(s, ball: Vector3) -> Vector3:
 # A park kicker is a placed wedge the terrain's heights do not hold, so its ramp is laid over them
 # and its lip carries a one-way launch edge KICKER_LAUNCH past it: the Flume's warden exit rises
 # 14 m up drum_lip_kicker and flies its 3 m gap to the gate lip, a way the heights alone never had.
-func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
+func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vector3]:
 	var terrain = game.ctx.terrain
 	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD
 	var hi := Vector2(maxf(from.x, to.x), maxf(from.z, to.z)) + Vector2.ONE * CLIMB_PAD
 	var nx := int(ceilf((hi.x - lo.x) / CLIMB_STEP)) + 1
 	var nz := int(ceilf((hi.y - lo.y) / CLIMB_STEP)) + 1
 	var hx := 2 * nx - 1
-	var legacy := _in_mind_stage()
+	var legacy := _mind_slope()
 	var graph := AStar2D.new()
 	graph.reserve_space(nx * nz)
 	var half := PackedFloat32Array()
@@ -1243,17 +1325,17 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 				if legacy:
 					# Mind stage: the pre-13c94abc test, one slope from the end heights.
 					up = (hb - ha) / (run * 2.0)
-					if absf(up) <= CLIMB_SLOPE:
+					if absf(up) <= slope:
 						graph.connect_points(a, b)
 					elif up > 0.0:
 						graph.connect_points(b, a, false)
 					else:
 						graph.connect_points(a, b, false)
-				elif up <= CLIMB_SLOPE + SLOPE_SLACK and down <= CLIMB_SLOPE + SLOPE_SLACK:
+				elif up <= slope + SLOPE_SLACK and down <= slope + SLOPE_SLACK:
 					graph.connect_points(a, b)
-				elif up <= CLIMB_SLOPE + SLOPE_SLACK:
+				elif up <= slope + SLOPE_SLACK:
 					graph.connect_points(a, b, false)
-				elif down <= CLIMB_SLOPE + SLOPE_SLACK:
+				elif down <= slope + SLOPE_SLACK:
 					graph.connect_points(b, a, false)
 	# Each kicker's lip and landing are two more points: the ramp's cells climb to the lip, the lip
 	# launches one way to the landing, and the landing joins the cells beside it on its own level.
@@ -1278,11 +1360,11 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 				var c := lo + Vector2(i, j) * CLIMB_STEP
 				var hc: float = half[2 * j * hx + 2 * i]
 				var to_lip := c.distance_to(Vector2(lip.x, lip.z))
-				if to_lip <= CLIMB_STEP * 1.5 and lip.y - hc <= (CLIMB_SLOPE + SLOPE_SLACK) * maxf(to_lip, 0.01) \
-						and hc - lip.y <= CLIMB_SLOPE * maxf(to_lip, 0.01):
+				if to_lip <= CLIMB_STEP * 1.5 and lip.y - hc <= (slope + SLOPE_SLACK) * maxf(to_lip, 0.01) \
+						and hc - lip.y <= slope * maxf(to_lip, 0.01):
 					graph.connect_points(j * nx + i, lip_id, false)
 				var to_land := c.distance_to(land2)
-				if to_land <= CLIMB_STEP * 1.5 and absf(hc - land_y) <= CLIMB_SLOPE * maxf(to_land, 0.01):
+				if to_land <= CLIMB_STEP * 1.5 and absf(hc - land_y) <= slope * maxf(to_land, 0.01):
 					graph.connect_points(land_id, j * nx + i)
 	var ids := graph.get_id_path(graph.get_closest_point(Vector2(from.x, from.z)), graph.get_closest_point(Vector2(to.x, to.z)))
 	var out: Array[Vector3] = []
@@ -1302,6 +1384,16 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 				_route_lips.append(out.back())
 		elif k % 2 == 1 or ramp[k] or (k + 1 < ids.size() and ramp[k + 1]):
 			out.append(_ground_point(at.x, at.y))
+	return out
+
+
+# _climb_route at CLIMB_SLOPE, then at each CLIMB_SLOPE_RETRY limit until one finds a way.
+func _climb_route_any(from: Vector3, to: Vector3) -> Array[Vector3]:
+	var out := _climb_route(from, to)
+	for slope in CLIMB_SLOPE_RETRY:
+		if not out.is_empty():
+			break
+		out = _climb_route(from, to, slope)
 	return out
 
 
@@ -1695,12 +1787,16 @@ func _anchor_bite(target: Node3D, ball: Vector3) -> void:
 
 # The open point off the line: ram it (a fast ram shatters too) and jump beside it once per
 # stagger (the air jump at the top when still short of it); in the air over it, bite (the drop);
-# past the top of the air jump still short of it, or landed again, bite from there.
+# past the top of the air jump still short of it, landed again, or with the point out of jump
+# reach, bite from there.
 func _anchor_open(target: Node3D, short: bool, ball: Vector3, delta: float) -> void:
 	var point := _open_point(target)
 	var grounded: bool = game.player.state.grounded
 	var spent: bool = _drop_jumped and not grounded and game.player.state.air_actions <= 0 and game.player.state.velocity.y < 0.0
-	var bite := (not grounded and ball.y > point.y + DROP_ABOVE) or spent or (grounded and _drop_jumped)
+	# A point beyond the jump's reach (the park stage-3 Warden staggers on a floor 7 to 15 m over
+	# the ball's ground) is bitten from where the ball is.
+	var beyond_jump := point.y - ball.y > DROP_REACH_UP
+	var bite := (not grounded and ball.y > point.y + DROP_ABOVE) or spent or (grounded and _drop_jumped) or beyond_jump
 	_ground_fight(target, short, delta)
 	_goal = "drop climb"
 	if bite:
@@ -2144,9 +2240,15 @@ func _climbing(ball: Vector3, at: Vector3) -> bool:
 
 # The next point on the climb to a fight target above the ball, or the target when no way up is found.
 func _fight_way_up(ball: Vector3, at: Vector3, delta: float) -> Vector3:
+	if _fight_climb_tick != ticks:
+		_fight_climb_held = _fight_climb_held + delta if _fight_climb_tick == ticks - 1 else delta
+		_fight_climb_tick = ticks
+	if _fight_climb_held > MIND_CLIMB_GIVE_UP and _in_mind_stage() and not _mind_slope_spent:
+		_mind_slope_spent = true
+		_fight_climb_clock = 0.0
 	_fight_climb_clock -= delta
 	if _fight_climb_clock <= 0.0:
-		_fight_climb = _climb_route(ball, at)
+		_fight_climb = _climb_route_any(ball, at)
 		_fight_climb_clock = FIGHT_CLIMB_REPLAN
 	while not _fight_climb.is_empty() and _flat(ball, _fight_climb[0]) < CLIMB_REACHED:
 		_fight_climb.pop_front()
@@ -2392,6 +2494,17 @@ func _on_offers(offers: Array) -> void:
 	_gate_pick = _choose_gate(offers)
 	_gate_time = 0.0
 	_gate_hop = 0.0
+	_gate_detour_left = 0.0
+	_gate_run = ""
+	_gate_run_clock = 0.0
+	_gate_on_top = false
+	_gate_falls = 0
+	var map = game.ctx.terrain.map_for(game.run.stage)
+	_island_gates = map != null and map.has_method("_islands")
+	if _island_gates:
+		# A climb planned in the Warden fight is not the way to the gates.
+		_fight_climb.clear()
+		_fight_climb_clock = 0.0
 
 
 func _choose_gate(offers: Array) -> int:
@@ -2432,15 +2545,33 @@ func _to_gate(delta: float) -> void:
 	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
 	var ball_at: Vector3 = game.player.ball_position()
 	if _climbing(ball_at, at):
+		if _gate_on_top and _island_gates:
+			_gate_on_top = false
+			_gate_falls += 1
+			if _gate_falls >= GATE_SWITCH_FALLS:
+				_switch_gate()
 		target = _fight_way_up(ball_at, target, delta)
 		_goal += " climb"
 	else:
+		_gate_on_top = true
 		_fight_climb.clear()
 		_fight_climb_clock = 0.0
+	if rel.length() < GATE_PROBE_NEAR:
+		target = _gate_round_props(ball_at, target, delta)
+	else:
+		_gate_detour_left = 0.0
+	# A ball off the gates' island with a way up follows that way: the run-up's straight
+	# charge would meet the island's cliff (the crown's beacon top stands 25 m over the deck).
+	if _fight_climb.is_empty() or not _island_gates:
+		target = _gate_runup(at, facing, rel, ball_at, target, delta)
+	else:
+		_gate_run = ""
 	# A gate still untaken after GATE_HOP_SECONDS has something on its line (a kerb, a
 	# bench): hop while rolling at it, as a player clears a low lip.
 	_gate_time += delta
 	_gate_hop -= delta
+	if _gate_time > GATE_SWITCH_SECONDS and _gate_on_top and _island_gates:
+		_switch_gate()
 	if _gate_time > GATE_HOP_SECONDS and _gate_hop <= 0.0 and game.player.state.grounded and along < 0.0 and along > -14.0:
 		_gate_hop = GATE_HOP_EVERY
 		source.press["jump_pressed"] = true
@@ -2449,7 +2580,149 @@ func _to_gate(delta: float) -> void:
 		print("    gate %d at=(%.1f, %.1f, %.1f) facing=(%.2f, %.2f, %.2f) ball=(%.1f, %.1f, %.1f) along=%.1f side=%.1f dy=%.1f ground=%.1f target=(%.1f, %.1f, %.1f)"
 			% [_gate_pick, at.x, at.y, at.z, facing.x, facing.y, facing.z, ball.x, ball.y, ball.z, along, side, rel.y,
 				game.ctx.terrain.height(ball.x, ball.z), target.x, target.y, target.z])
+	var calm: bool = _island_gates and _gate_on_top and _gate_run == "" and absf(rel.y) < 3.0 and rel.length() < GATE_CALM_RANGE
+	if not calm:
+		_act(target, null, delta)
+		return
+	var boost_clock := _boost_clock
+	_boost_clock = maxf(_boost_clock, delta)
 	_act(target, null, delta)
+	_boost_clock = boost_clock
+	if game.player.state.grounded and game.player.planar_velocity().length() > GATE_CALM_SPEED:
+		source.hold["brake_held"] = true
+
+
+# Gives up the picked gate for the next offer, with a fresh clock, run-up and detour.
+func _switch_gate() -> void:
+	_gate_falls = 0
+	_gate_time = 0.0
+	_gate_run = ""
+	_gate_detour_left = 0.0
+	if _offers.size() > 1:
+		_gate_pick = (_gate_pick + 1) % _offers.size()
+		_count("gate_switches")
+
+
+# The run-up for a gate up a face: "runup" drives to GATE_RUNUP_BACK metres down the gate's
+# line, "charge" rolls the line at speed; each phase gives up after its seconds and the other
+# takes over, so a stalled charge is a fresh run-up.
+func _gate_runup(at: Vector3, facing: Vector3, rel: Vector3, ball: Vector3, target: Vector3, delta: float) -> Vector3:
+	if _gate_time < GATE_RUNUP_AFTER or rel.y > -3.0:
+		_gate_run = ""
+		return target
+	var start := at - facing * GATE_RUNUP_BACK
+	start.y = ball.y
+	if _gate_run == "":
+		_gate_run = "runup"
+		_gate_run_clock = 0.0
+		_count("gate_runups")
+	_gate_run_clock += delta
+	if _gate_run == "runup" and (_flat(ball, start) < 8.0 or _gate_run_clock > GATE_RUNUP_SECONDS):
+		_gate_run = "charge"
+		_gate_run_clock = 0.0
+	elif _gate_run == "charge" and _gate_run_clock > GATE_CHARGE_SECONDS:
+		_gate_run = "runup"
+		_gate_run_clock = 0.0
+		_count("gate_runups")
+	_goal += " " + _gate_run
+	if _gate_run == "runup":
+		return start
+	return at + facing * 10.0
+
+
+# The static prop on the gate line, or an empty Dictionary. Ground is not a prop.
+func _gate_probe(from: Vector3, heading: Vector3, length: float) -> Dictionary:
+	var origin := from + Vector3.UP * 0.5
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + heading * length)
+	var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return {}
+	var node := hit["collider"] as Node
+	if "/Ground" in str(node.get_path()):
+		return {}
+	return hit
+
+
+# The prop's footprint on the ground plane: its parent's collision boxes when it is a small
+# device (a cache is four walls and a roof), else the body alone.
+func _prop_footprint(body: Node) -> Rect2:
+	var owner_node: Node = body.get_parent()
+	var shapes: Array = []
+	if owner_node != null and owner_node.get_child_count() <= 12:
+		for child in owner_node.get_children():
+			if child is CollisionObject3D:
+				shapes.append_array(child.find_children("*", "CollisionShape3D", false, false))
+	if shapes.is_empty():
+		shapes = body.find_children("*", "CollisionShape3D", false, false)
+	var box := Rect2()
+	var first := true
+	for cs in shapes:
+		var bs := (cs as CollisionShape3D).shape as BoxShape3D
+		if bs == null:
+			continue
+		for sx in [-0.5, 0.5]:
+			for sz in [-0.5, 0.5]:
+				var corner: Vector3 = (cs as CollisionShape3D).global_transform * Vector3(bs.size.x * sx, 0.0, bs.size.z * sz)
+				if first:
+					box = Rect2(Vector2(corner.x, corner.z), Vector2.ZERO)
+					first = false
+				else:
+					box = box.expand(Vector2(corner.x, corner.z))
+	return box
+
+
+# Returns where to steer for the gate: the target, or a way round a prop on the line: the
+# corner of its footprint (GATE_MARGIN off the walls) the ball sees and that makes the
+# shortest trip to the target, else the nearest clear heading.
+func _gate_round_props(ball: Vector3, target: Vector3, delta: float) -> Vector3:
+	_gate_detour_left -= delta
+	if _gate_detour_left > 0.0 and _flat(ball, _gate_detour) > 3.0:
+		return _gate_detour
+	var line := target - ball
+	line.y = 0.0
+	if line.length() < 1.0:
+		return target
+	var reach := minf(line.length(), GATE_PROBE)
+	line = line.normalized()
+	var hit := _gate_probe(ball, line, reach)
+	if hit.is_empty():
+		return target
+	var walls := _prop_footprint(hit["collider"])
+	if _island_gates and walls.has_point(Vector2(ball.x, ball.z)):
+		# Inside a prop's pocket (the crown's relic cache is walled on three sides): no corner is
+		# in sight from in there, so back out the way the ball came in, away from the gate.
+		_gate_detour = ball - line * (walls.size.length() * 0.5 + GATE_MARGIN)
+		_gate_detour_left = GATE_DETOUR_SECONDS
+		_count("gate_backouts")
+		return _gate_detour
+	var box := walls.grow(GATE_MARGIN)
+	var best_cost := INF
+	var best := Vector3.ZERO
+	if box.has_area():
+		for corner in [box.position, box.position + Vector2(box.size.x, 0.0), box.position + Vector2(0.0, box.size.y), box.end]:
+			var at := Vector3(corner.x, ball.y, corner.y)
+			var way := at - ball
+			way.y = 0.0
+			if way.length() < 1.0 or not _gate_probe(ball, way.normalized(), way.length()).is_empty():
+				continue
+			var cost := way.length() + _flat(at, target)
+			if cost < best_cost:
+				best_cost = cost
+				best = at
+	if best_cost < INF:
+		_gate_detour = best
+		_gate_detour_left = GATE_DETOUR_SECONDS
+		_count("gate_detours")
+		return best
+	for step in range(1, 7):
+		for side in [1.0, -1.0]:
+			var heading := line.rotated(Vector3.UP, deg_to_rad(GATE_TURN * step * side))
+			if _gate_probe(ball, heading, GATE_PROBE).is_empty():
+				_gate_detour = ball + heading * GATE_PROBE
+				_gate_detour_left = 1.0
+				_count("gate_detours")
+				return _gate_detour
+	return target
 
 
 # --- acting: telegraphs first, then the class kit, then the stick --------------------
@@ -2637,6 +2910,11 @@ func _turret(aim, delta: float) -> void:
 # end-height slope test, and the two-half test moves that median (MIND-ROUTE, 2026-10-16).
 func _in_mind_stage() -> bool:
 	return int(_note.get("stage", 0)) == MIND_STAGE
+
+
+# The end-height test plans the Mind stage's climbs until one runs past MIND_CLIMB_GIVE_UP.
+func _mind_slope() -> bool:
+	return _in_mind_stage() and not _mind_slope_spent
 
 
 func _sling_lands_low() -> bool:

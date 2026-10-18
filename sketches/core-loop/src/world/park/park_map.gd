@@ -10,6 +10,13 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 const FIXTURE := "res://src/world/park/park_test.json"
+# Andrew's "Ride lips only" ruling (2026-10-17 06:16Z): a plain bank, drop, ground shelf or sky island whose height
+# stamp is its whole shape is terrain, not a placeholder, so scatter lands on it as on the open ground. The same rows
+# as scripts/placeholder-gate.mjs PLAIN_SLOPES and isPlainSlope.
+const PLAIN_SLOPES := ["bank", "drop", "ground", "sky_island"]
+# Andrew's "Edges are ground" (2026-10-17 22:29Z): a stamped kicker that spans the whole play rect across its facing
+# (the Highdraft's mesa step lips, 18 rows and 28.8 km on park_islands) is a mesa edge, ground like a plain slope.
+const MESA_EDGE := "kicker"
 
 var path := ""
 var ok := false
@@ -88,16 +95,34 @@ func _fill() -> void:
 		rescue_sites.append({"id": row["id"], "quest": row["quest"], "prompt": row["prompt"], "pilot": row["pilot"],
 			"at": _v2(row["at"]), "face": _v2(row["face"]).normalized()})
 
-	# Scatter keeps out of every built footprint (PARK.md 2.9) but a row the scatter itself dresses; the kit rows come
-	# with KB5.
+	# Scatter keeps out of every built footprint (PARK.md 2.9) but the ground, the plain slopes, the mesa
+	# edges and a row the scatter itself dresses; the kit rows come with KB5.
 	scatter = scatter.duplicate(true)
 	var keep_out := []
 	for row in park["park_rows"]:
-		if row["element"] == "ground" or row["recipe"] == ParkRecipes.SCATTER_DRESSED:
+		if row["element"] == "ground" or row["recipe"] == ParkRecipes.SCATTER_DRESSED or plain_slope(row) or mesa_edge(row, play_rect):
 			continue
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))
 	scatter["keep_out"] = keep_out
+
+
+# A stamped plain slope: a PLAIN_SLOPES greybox whose stamp shapes the ground and that has no absolute y, so
+# park_recipes.gd stamp_replaces draws no box for it and the stamped ground is the whole piece.
+static func plain_slope(row: Dictionary) -> bool:
+	var element := String(row.get("element", ""))
+	return element in PLAIN_SLOPES and String(row.get("recipe", "")) == ParkRecipes.GREYBOX + element \
+		and String(row.get("stamp", "")) != "" and row.get("y") == null
+
+
+# A mesa edge: a stamped MESA_EDGE greybox (stamp_replaces, as plain_slope) whose cross size reaches across the
+# whole of rect, measured along the row's cross axis.
+static func mesa_edge(row: Dictionary, rect: Rect2) -> bool:
+	if String(row.get("element", "")) != MESA_EDGE or String(row.get("recipe", "")) != ParkRecipes.GREYBOX + MESA_EDGE \
+			or String(row.get("stamp", "")) == "" or row.get("y") != null:
+		return false
+	var dir := _dir(float(row["yaw_deg"]))
+	return float(row["size"][2]) >= absf(dir.y) * rect.size.x + absf(dir.x) * rect.size.y
 
 
 # One kicker row's lip: the ride's exit, the footprint's far end along the facing, which park_recipes.gd ride_frame (the

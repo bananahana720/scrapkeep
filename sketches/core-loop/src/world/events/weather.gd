@@ -8,6 +8,7 @@ extends RefCounted
 # (ParkSchema rejects anything else), so nothing here reads or writes ball tuning or physics.
 
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 
 var current := {}
 var _env: Environment
@@ -27,11 +28,13 @@ func hook(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 			_saved = _fog_state(_env)
 			apply(_env, row)
 			current = look(row)
+			WorldFx.lay_overlay(String(row.sky))
 		"end":
 			if not _saved.is_empty():
 				_restore_fog(_env, _saved)
 			_saved = {}
 			current = {}
+			WorldFx.lay_overlay("")
 
 
 # The look a row carries: fog density and colour from the row, the sky id with its tint and

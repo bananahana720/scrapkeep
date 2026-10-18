@@ -55,9 +55,14 @@ static func from_parts(held: Array) -> RefCounted:
 		if d.rarity == "evolved" and not Synergies.evolution_of(part_id) in sheet.consumed:
 			continue
 		# A linear or capped row stops adding at stack_cap copies (v2 W4 loot); the
-		# catalogue's first rows carry no cap, so their copies all count as before.
+		# catalogue's first rows carry no cap, so their copies all count as before. A
+		# levelled row (SG15) folds once, at its first copy, with the held level's numbers.
 		counted[part_id] = counted.get(part_id, 0) + 1
-		if d.stack_rule != "hyperbolic" and d.stack_cap >= 1.0 and counted[part_id] > int(d.stack_cap):
+		if not d.levels.is_empty():
+			if counted[part_id] > 1:
+				continue
+			d = Parts.def_at(part_id, Parts.level_of(part_id, held))
+		elif d.stack_rule != "hyperbolic" and d.stack_cap >= 1.0 and counted[part_id] > int(d.stack_cap):
 			continue
 		sheet._fold(d.mods, d.patterns, d.elements)
 		sheet.cooldown_scale *= d.cooldown_scale

@@ -205,7 +205,7 @@ This PR adds only this file. These are the lines other files need, in order.
    - Then run `customization_system_test` and `ui_customize_page_test`, which check that every non-pending row resolves to real art.
 2. **Trails and decals.** `tools/blender/cosmetics/build_cua.py`: add the seven `TRAILS` rows and their `trail_shape()` branches, and add `DECALS` indices 8 and 9 with their `decal_shape()` branches (change the bare `else` to `elif index == 7`). Re-export, then re-run `inspect_cua.py --compare` and `dress_cua_assets_test`. Then remove the nine ids from `PENDING_ART`.
 3. **Outfits and skin.** One recipe each and one registry row each, in `registry.d` or `assets/registry.json`, whichever the coordinator uses for new rows. Remove each id from `PENDING_ART` as its art lands.
-4. **The cut (confirmed by Andrew, 2026-10-16).** Remove `outfit_kest_rigger` from `ROWS` (`cosmetics.gd:88`) and `PENDING_ART`, and remove the reward from `ach_kest_homecoming` in `achievements.gd`. Update the CUSTOMIZE.md section 8 totals (outfits 3) and re-pin `kest_kit_test.gd:345-354`.
+4. **The cut (confirmed by Andrew, 2026-10-16).** Remove `outfit_kest_rigger` from `ROWS` (`cosmetics.gd:88`) and `PENDING_ART`, and remove the reward from `ach_kest_homecoming` in `achievements.gd`. Update the CUSTOMIZE.md section 8 totals (outfits 3) and re-pin `kest_kit_test.gd:345-354`. *Done 2026-10-16 with one change: the validator requires every achievement to carry a reward, so Homecoming now pays a new Kest paint, `paint_kest_rigger` "Rigger Blue" (the optional route below).*
 5. **Optional extras, not part of alpha:** beat-spaced Downbeat emission, a thicker Swarf Curl while sprinting, the muffled roll for Felt Rig.
 
 ## How this was checked

@@ -263,8 +263,8 @@ func _run_all() -> void:
 	# to EJECT without simulating the full 75 s fight; the scooter still starts mid-air,
 	# so it is marked landed and the ball is put on it directly, the same way
 	# boss_flow_test.gd's own scooter case does (Harness.put_ball to the scooter, never
-	# the other way: the scooter is an AnimatableBody3D with sync_to_physics, so setting
-	# its own global_position from script does not take effect before a physics tick).
+	# the other way: the scooter is a kinematic AnimatableBody3D, and since BRINDLE-HULL it
+	# no longer has sync_to_physics, so the ball goes to it).
 	boss.jump_to_phase(4)
 	boss._eject["landed"] = true
 	ctx.player.reset_to(boss.scooter.global_position)

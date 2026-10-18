@@ -23,10 +23,16 @@ const Palette := preload("res://src/core/palette.gd")
 #   shape    "point" or "ring" (emission on a flat ring of ring_m radius)
 #   forward  the emitter's direction is its own -Z, aimed at a target (the latch's pulse)
 #   owner    "vfx" pools are built by Vfx under its root; others belong to the node named
+#            ("machine" is MachineFx: what enemies and bosses throw off)
+#   grow     a puff that swells as it fades (steam), instead of shrinking
+#   alpha    the spec colour's opacity (steam is thin, not a solid ball)
+#   local    particles ride the emitter, so turning the emitter turns them (a daze halo)
 # Emitters use a fixed seed, so a capture at a fixed tick repeats. No lights.
 const SEED := 731
 # Pool x max over the "vfx" specs; fx_library_test pins it.
 const CEILING := 752
+# Pool x max over the "machine" specs; machine_fx_test pins it.
+const MACHINE_CEILING := 876
 const SPECS := {
 	"roll_dust": {"pool": 1, "max": 64, "life": 0.7, "speed": [0.4, 1.4], "spread": 75.0, "gravity": 0.6,
 		"size": 0.42, "colour": "SANDSTONE", "attach": "ball", "blend": "mix", "shape": "point"},
@@ -62,6 +68,31 @@ const SPECS := {
 		"size": Vector3.ONE * 0.24, "colour": "SANDSTONE", "attach": "persist", "blend": "mix", "shape": "point", "down": true, "owner": "dig"},
 	"net_dust": {"pool": 2, "max": 14, "life": 0.6, "speed": [1.5, 3.5], "spread": 80.0, "gravity": 0.8,
 		"size": 0.5, "colour": "SANDSTONE", "attach": "world", "blend": "mix", "shape": "ring", "ring_m": 1.0, "owner": "highdraft"},
+	# Machine effects (machine_fx.gd). Fleet crews leak steam and throw brass sparks; ancients
+	# fizz in their seam light and shed cast shell. Steam is ledger cream, never white, so
+	# it never reads as frost or a flash, and dense enough to show against sandstone.
+	"steam_puff": {"pool": 6, "max": 10, "life": 1.1, "speed": [1.0, 2.6], "spread": 30.0, "gravity": 1.2, "grow": true,
+		"size": 0.7, "colour": "LEDGER", "alpha": 0.75, "attach": "world", "blend": "mix", "shape": "point", "owner": "machine"},
+	"steam_jet": {"pool": 16, "max": 10, "life": 0.6, "speed": [3.0, 6.0], "spread": 12.0, "gravity": 0.8, "grow": true,
+		"size": 0.8, "colour": "LEDGER", "alpha": 0.75, "attach": "persist", "blend": "mix", "shape": "point", "owner": "machine"},
+	"brass_spark": {"pool": 6, "max": 16, "life": 0.35, "speed": [6.0, 13.0], "spread": 70.0, "gravity": -16.0,
+		"size": Vector3(0.08, 0.08, 0.5), "colour": "BRASS", "attach": "world", "blend": "add", "shape": "point", "align": true, "glow": 1.2, "owner": "machine"},
+	"arc_fizz": {"pool": 6, "max": 14, "life": 0.18, "speed": [10.0, 18.0], "spread": 180.0, "gravity": 0.0,
+		"size": Vector3(0.06, 0.06, 0.6), "colour": "ANCIENT", "attach": "world", "blend": "add", "shape": "point", "align": true, "glow": 1.3, "owner": "machine"},
+	"arc_crawl": {"pool": 12, "max": 10, "life": 0.25, "speed": [0.5, 1.5], "spread": 180.0, "gravity": 0.0,
+		"size": 0.18, "colour": "ANCIENT", "attach": "persist", "blend": "add", "shape": "ring", "ring_m": 1.1, "glow": 1.8, "owner": "machine"},
+	"seam_motes": {"pool": 6, "max": 12, "life": 0.9, "speed": [1.0, 3.0], "spread": 25.0, "gravity": 2.5,
+		"size": 0.16, "colour": "ANCIENT", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 0.8, "glow": 1.8, "owner": "machine"},
+	"daze_halo": {"pool": 6, "max": 6, "life": 0.6, "speed": [0.0, 0.0], "spread": 0.0, "gravity": 0.0, "local": true,
+		"size": 0.3, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "ring", "ring_m": 0.7, "glow": 1.0, "owner": "machine"},
+	"fuse_sputter": {"pool": 4, "max": 6, "life": 0.3, "speed": [1.5, 3.5], "spread": 50.0, "gravity": -6.0,
+		"size": 0.08, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "point", "glow": 2.0, "owner": "machine"},
+	"phase_ring": {"pool": 2, "max": 64, "life": 0.6, "speed": [0.0, 0.0], "radial": [16.0, 18.0], "spread": 0.0, "gravity": 0.0,
+		"size": 0.35, "colour": "row", "attach": "world", "blend": "mix", "shape": "ring", "ring_m": 1.5, "owner": "machine"},
+	"shell_shards": {"pool": 3, "max": 16, "life": 1.1, "speed": [6.0, 12.0], "spread": 60.0, "gravity": -24.0, "spin": 600.0,
+		"size": Vector3(0.3, 0.06, 0.22), "colour": "VERDIGRIS", "attach": "world", "blend": "mix", "shape": "point", "owner": "machine"},
+	"plate_chunks": {"pool": 3, "max": 16, "life": 1.1, "speed": [6.0, 12.0], "spread": 60.0, "gravity": -24.0, "spin": 600.0,
+		"size": Vector3(0.34, 0.08, 0.28), "colour": "RUST", "attach": "world", "blend": "mix", "shape": "point", "owner": "machine"},
 }
 
 const _SHADER := """
@@ -97,13 +128,15 @@ static func colour(id: String, kind: String) -> Color:
 	if source == "row":
 		return EventKinds.color(kind)
 	var named: Dictionary = (Palette as Script).get_script_constant_map()
-	return named.get(source, Palette.SAND)
+	var tint: Color = named.get(source, Palette.SAND)
+	tint.a = float(spec(id).get("alpha", 1.0))
+	return tint
 
 
-static func ceiling() -> int:
+static func ceiling(owner := "vfx") -> int:
 	var total := 0
 	for id in SPECS:
-		if SPECS[id].get("owner", "vfx") == "vfx":
+		if SPECS[id].get("owner", "vfx") == owner:
 			total += int(SPECS[id]["pool"]) * int(SPECS[id]["max"])
 	return total
 
@@ -147,11 +180,19 @@ static func build(id: String) -> GPUParticles3D:
 		pm.emission_ring_height = 0.0
 	var fade := Curve.new()
 	fade.add_point(Vector2(0.0, 1.0))
-	fade.add_point(Vector2(1.0, 0.0 if s["blend"] == "add" else 0.35))
+	fade.add_point(Vector2(1.0, 0.0 if s["blend"] == "add" or s.get("grow", false) else 0.35))
 	var fade_tex := CurveTexture.new()
 	fade_tex.curve = fade
 	pm.scale_curve = fade_tex
-	if s["blend"] == "add" or s["attach"] == "ball":
+	if s.get("grow", false):
+		var swell := Curve.new()
+		swell.max_value = 2.0
+		swell.add_point(Vector2(0.0, 0.5))
+		swell.add_point(Vector2(1.0, 1.8))
+		var swell_tex := CurveTexture.new()
+		swell_tex.curve = swell
+		pm.scale_curve = swell_tex
+	if s["blend"] == "add" or s["attach"] == "ball" or s.get("grow", false):
 		pm.alpha_curve = fade_tex
 	var mesh: PrimitiveMesh
 	if s["size"] is Vector3:
@@ -173,7 +214,7 @@ static func build(id: String) -> GPUParticles3D:
 	p.lifetime = s["life"]
 	p.one_shot = s["attach"] == "world"
 	p.explosiveness = s.get("explosive", 1.0) if p.one_shot else 0.0
-	p.local_coords = false
+	p.local_coords = s.get("local", false)
 	p.emitting = false
 	p.preprocess = float(s["life"]) if s.get("warm", false) else 0.0
 	p.use_fixed_seed = true

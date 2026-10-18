@@ -1,5 +1,6 @@
 extends VBoxContainer
 
+const Secrets := preload("res://src/core/secrets.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Companion := preload("res://src/core/companion.gd")
@@ -9,7 +10,7 @@ const ClassCard := preload("res://src/ui/class_card.gd")
 
 # The interim camp between runs, a title page on K: which pilots are ready and how each
 # locked one unlocks, the companion pieces found and seated, where paint is chosen, and the
-# achievements count. Launch, Achievements, Settings and Back press their keys through
+# achievements count. Launch, Achievements, Settings, Jukebox, Mixtapes and Back press their keys through
 # screens.gd; Companion shows only when the companion owns a piece. The full camp scene
 # replaces this page.
 
@@ -41,6 +42,8 @@ func _init() -> void:
 	_companion = ChoiceButton.new("companion", "key_m", "Companion")
 	_buttons.add_child(ChoiceButton.new("achievements", "key_a", "Achievements"))
 	_buttons.add_child(ChoiceButton.new("settings", "key_s", "Settings"))
+	_buttons.add_child(ChoiceButton.new("jukebox", "key_j", "Jukebox"))
+	_buttons.add_child(ChoiceButton.new("radio", "key_r", "Mixtapes"))
 	back = ChoiceButton.new("back", "key_k", "Back")
 	_buttons.add_child(back)
 	preload("res://src/ui/customize_page.gd").attach(self)
@@ -78,7 +81,7 @@ static func reading(game) -> Dictionary:
 		for piece in Companion.PIECES:
 			if piece["id"] == id:
 				seated.append(String(piece["name"]))
-	var ids: Array = Achievements.ids()
+	var ids: Array = Achievements.ids().filter(func(id): return not Secrets.shut_row(id, profile))
 	var earned := 0
 	for id in ids:
 		if profile != null and profile.earned(id):

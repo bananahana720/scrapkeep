@@ -2,6 +2,9 @@ extends SceneTree
 
 # Headless: godot --headless --path <sketch> --script res://tools/still_compare.gd -- <a.png> <b.png>
 # Prints the mean colour of each named rectangle in both stills and their CIE76 distance.
+# With --peak first (-- --peak <rest.png> <flash.png>) it prints the brightness the flash
+# adds instead: over the pixels that got brighter, the mean and the 99th-percentile rise in
+# relative luminance (Rec. 709, linear), and the share of the frame that rose by over 0.1.
 const RECTS := {
 	"sunlit_sand": Rect2i(180, 900, 220, 100),
 	"shadowed_sand": Rect2i(1620, 700, 200, 160),
@@ -11,6 +14,9 @@ const RECTS := {
 
 func _initialize() -> void:
 	var paths := OS.get_cmdline_user_args()
+	var peak := paths.size() == 3 and paths[0] == "--peak"
+	if peak:
+		paths = paths.slice(1)
 	if paths.size() != 2:
 		print("usage: -- <a.png> <b.png>")
 		quit(2)
@@ -21,6 +27,10 @@ func _initialize() -> void:
 		print("cannot load a still")
 		quit(3)
 		return
+	if peak:
+		_print_peak(a, b)
+		quit(0)
+		return
 	for name in RECTS:
 		var area: Rect2i = RECTS[name]
 		var mean_a := _mean(a, area)
@@ -28,6 +38,28 @@ func _initialize() -> void:
 		print("%-14s a=(%.3f %.3f %.3f) b=(%.3f %.3f %.3f) cie76=%.1f" % [name,
 			mean_a.r, mean_a.g, mean_a.b, mean_b.r, mean_b.g, mean_b.b, _cie76(mean_a, mean_b)])
 	quit(0)
+
+static func _print_peak(rest: Image, flash: Image) -> void:
+	var rises := PackedFloat32Array()
+	var bright := 0
+	var total := mini(rest.get_width(), flash.get_width()) * mini(rest.get_height(), flash.get_height())
+	for y in mini(rest.get_height(), flash.get_height()):
+		for x in mini(rest.get_width(), flash.get_width()):
+			var rise := _luminance(flash.get_pixel(x, y)) - _luminance(rest.get_pixel(x, y))
+			if rise > 0.0:
+				rises.append(rise)
+				if rise > 0.1:
+					bright += 1
+	rises.sort()
+	var sum := 0.0
+	for rise in rises:
+		sum += rise
+	var mean := sum / float(maxi(rises.size(), 1))
+	var p99 := rises[int(rises.size() * 0.99)] if rises.size() > 0 else 0.0
+	print("peak rise mean=%.4f p99=%.4f max=%.4f bright_share=%.4f" % [mean, p99, rises[-1] if rises.size() > 0 else 0.0, float(bright) / float(maxi(total, 1))])
+
+static func _luminance(c: Color) -> float:
+	return 0.2126 * _linear(c.r) + 0.7152 * _linear(c.g) + 0.0722 * _linear(c.b)
 
 static func _mean(image: Image, area: Rect2i) -> Color:
 	var sum := Vector3.ZERO

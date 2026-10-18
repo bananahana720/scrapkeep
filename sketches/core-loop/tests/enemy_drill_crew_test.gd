@@ -117,6 +117,20 @@ func _run() -> void:
 	t.check("last_bore reads the ring", rig.last_bore.has("at") and rig.last_bore["radius"] == rig.BORE_RADIUS)
 	rig.free()
 
+	# The floor rule: a cave-in under a ball that is off the floor (carving or airborne) misses.
+	rig = _spawn()
+	await _frames(2)
+	rig.set_physics_process(false)
+	var missed := []
+	rig.hit_player.connect(func(amount: float, _shove: Vector3): missed.append(amount))
+	rig._warn(rig._flat_to_ball())
+	game.player.state.grounded = false
+	rig.phase = rig.Phase.LIVE
+	rig._go_live()
+	t.eq("a bore under a ball off the floor misses", missed.size(), 0)
+	t.eq("it still bored", rig.bores, 1)
+	rig.free()
+
 	# Death leaves the breach fact, readable inside a died handler.
 	rig = _spawn(1000.0)
 	await _frames(2)

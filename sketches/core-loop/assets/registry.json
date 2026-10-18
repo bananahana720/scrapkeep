@@ -1,11 +1,33 @@
 {
  "assets": [
   {
+   "id": "companion_skin_till_bell",
+   "path": "res://assets/cosmetics/companion_skins/companion_skin_till_bell.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_companion_skin (Till Bell on Deck, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py companion_skin_till_bell",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "decal_curtain_call_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_curtain_call_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "decal_fern_mask.png",
    "path": "res://assets/cosmetics/decals/decal_fern_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -15,8 +37,8 @@
    "id": "decal_moth_mask.png",
    "path": "res://assets/cosmetics/decals/decal_moth_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -26,8 +48,8 @@
    "id": "decal_mushroom_mask.png",
    "path": "res://assets/cosmetics/decals/decal_mushroom_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -37,8 +59,8 @@
    "id": "decal_patch_mask.png",
    "path": "res://assets/cosmetics/decals/decal_patch_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -48,19 +70,30 @@
    "id": "decal_paw_mask.png",
    "path": "res://assets/cosmetics/decals/decal_paw_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
    }
   },
   {
+   "id": "decal_sable_spool_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_sable_spool_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "decal_seashell_mask.png",
    "path": "res://assets/cosmetics/decals/decal_seashell_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -70,8 +103,8 @@
    "id": "decal_snail_shell_mask.png",
    "path": "res://assets/cosmetics/decals/decal_snail_shell_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -81,11 +114,48 @@
    "id": "decal_thimble_mask.png",
    "path": "res://assets/cosmetics/decals/decal_thimble_mask.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "outfit_rivet_hood",
+   "path": "res://assets/cosmetics/outfits/outfit_rivet_hood.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Welding Hood, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_rivet_hood",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "outfit_tally_eyeshade",
+   "path": "res://assets/cosmetics/outfits/outfit_tally_eyeshade.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Eyeshade, CUSTOMIZE section 8)",
+   "exception": {
+    "draws": 3
+   },
+   "exception_why": "the visor plus one garter on each upper arm; each bone's part is its own mesh, so three draws, one surface each",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_tally_eyeshade",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "outfit_tarn_steady_cap",
+   "path": "res://assets/cosmetics/outfits/outfit_tarn_steady_cap.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_outfit (Steady Cap, Replace_Cap, CUSTOMIZE section 8)",
+   "provenance": {
+    "recipe": "tools/blender/outfits/build_outfits.py outfit_tarn_steady_cap",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
@@ -93,7 +163,7 @@
    "path": "res://assets/cosmetics/textures/decal_atlas.png",
    "class": "texture",
    "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "loader": "atlas behind the cua_manifest .tres AtlasTextures; decal rows read the per-mask PNGs",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -104,18 +174,40 @@
    "path": "res://assets/cosmetics/textures/trail_atlas.png",
    "class": "texture",
    "ships": false,
-   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "loader": "used by res://assets/cosmetics/trails/*.glb",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
    }
   },
   {
+   "id": "trail_any_downbeat",
+   "path": "res://assets/cosmetics/trails/trail_any_downbeat.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "trail_cannon_recital",
+   "path": "res://assets/cosmetics/trails/trail_cannon_recital.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_forge_chips",
    "path": "res://assets/cosmetics/trails/trail_forge_chips.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -125,19 +217,30 @@
    "id": "trail_ink_stitch",
    "path": "res://assets/cosmetics/trails/trail_ink_stitch.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
    }
   },
   {
+   "id": "trail_kest_fuse_smoke",
+   "path": "res://assets/cosmetics/trails/trail_kest_fuse_smoke.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_moth_tuft",
    "path": "res://assets/cosmetics/trails/trail_moth_tuft.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -147,33 +250,77 @@
    "id": "trail_plum_curl",
    "path": "res://assets/cosmetics/trails/trail_plum_curl.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_rivet_swarf",
+   "path": "res://assets/cosmetics/trails/trail_rivet_swarf.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
    "id": "trail_rose_wash",
    "path": "res://assets/cosmetics/trails/trail_rose_wash.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
    }
   },
   {
+   "id": "trail_sable_cable",
+   "path": "res://assets/cosmetics/trails/trail_sable_cable.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
    "id": "trail_salt_skip",
    "path": "res://assets/cosmetics/trails/trail_salt_skip.glb",
    "class": "scenery",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
    "provenance": {
     "recipe": "tools/blender/cosmetics/build_cua.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_tally_punch_tape",
+   "path": "res://assets/cosmetics/trails/trail_tally_punch_tape.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
+   }
+  },
+  {
+   "id": "trail_tarn_claw_marks",
+   "path": "res://assets/cosmetics/trails/trail_tarn_claw_marks.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/core/cosmetics.gd",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "brief": "design-v3/COSMETICS-ART-BRIEFS.md"
    }
   },
   {
@@ -435,6 +582,380 @@
     "recipe": "tools/blender/bosses/mind_hand.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md",
     "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "camp_barrel",
+   "path": "res://assets/models/camp/camp_barrel.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 89f0a4332a44048dec29cdced088fce67a5c9309ea952ca59e38e6d65f3bd1d5"
+   }
+  },
+  {
+   "id": "camp_bench",
+   "path": "res://assets/models/camp/camp_bench.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 9410cc16df7715c322aa9bad00f9f78404bfeac014b3ac7709b8e0d2a304bfa5"
+   }
+  },
+  {
+   "id": "camp_call_box",
+   "path": "res://assets/models/camp/camp_call_box.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/practice.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 071ed8f8822a1687da16bc13f4779b05c2c1aada6b1d214bd82f2cd81cf851b9"
+   }
+  },
+  {
+   "id": "camp_crate_stack",
+   "path": "res://assets/models/camp/camp_crate_stack.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 edd3980afae398866cf7d1d9c9c5ab7df185379ae0acc5742c1f5fb0364372ca"
+   }
+  },
+  {
+   "id": "camp_fence",
+   "path": "res://assets/models/camp/camp_fence.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 3d86f2ca4a24db0a795c712199ba13b75400033c5277ef48ce609362b661b935"
+   }
+  },
+  {
+   "id": "camp_fire_pit",
+   "path": "res://assets/models/camp/camp_fire_pit.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 b03899b935ee922f8cd5a8e26b091db07f3a4c6be16c19ded1f37ca48a4146d9"
+   }
+  },
+  {
+   "id": "camp_lamp_post",
+   "path": "res://assets/models/camp/camp_lamp_post.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 3e47fa3a00bfdc830cc0dc3a40bcbef189eb4f24ea6e23421fd6fa278058ef6a"
+   }
+  },
+  {
+   "id": "camp_launch_gate",
+   "path": "res://assets/models/camp/camp_launch_gate.glb",
+   "class": "gate",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/gate_lockers.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 6de56fc30e245efd77a574f483d36fc5cf08b503ea9e4f4666a640004866d2a4"
+   }
+  },
+  {
+   "id": "camp_launch_gate_detail1",
+   "path": "res://assets/models/camp/camp_launch_gate_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/gate_lockers.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 c788dc233f6e51de7c8f0de51548caa122ad93975beeea44c42c814e2a0ca11b"
+   }
+  },
+  {
+   "id": "camp_launch_gate_detail2",
+   "path": "res://assets/models/camp/camp_launch_gate_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/gate_lockers.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 ea6dae11b2e0d31d005befc8a9231c305bc196ea06678bc4227c58f7af29347a"
+   }
+  },
+  {
+   "id": "camp_lockers",
+   "path": "res://assets/models/camp/camp_lockers.glb",
+   "class": "gate",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/gate_lockers.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 5c4923d2795867e1c9e540f3882eacaad205ffd9b317d30b5437b16bc9ad5d4e"
+   }
+  },
+  {
+   "id": "camp_lockers_detail1",
+   "path": "res://assets/models/camp/camp_lockers_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/gate_lockers.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 2d218c1f75f1691da31c64ded21bf30d5bb2ca08d192d7a069e18602f8c0a4c6"
+   }
+  },
+  {
+   "id": "camp_lockers_detail2",
+   "path": "res://assets/models/camp/camp_lockers_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/gate_lockers.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 84803de323c3a554da26fe8cba6d90c244a158af893acab440ac780ae30aea0b"
+   }
+  },
+  {
+   "id": "camp_moss_stall",
+   "path": "res://assets/models/camp/camp_moss_stall.glb",
+   "class": "gate",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/moss.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 3ef5e623711d586aa04932f6754ad2558fd7e594d54b31e5837c3229416bdb96"
+   }
+  },
+  {
+   "id": "camp_moss_stall_detail1",
+   "path": "res://assets/models/camp/camp_moss_stall_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/moss.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 42bb9e55d4d9ec1ae91a9efd8591acd10ee4ece366e5840fad2b6ef3c0c824ab"
+   }
+  },
+  {
+   "id": "camp_moss_stall_detail2",
+   "path": "res://assets/models/camp/camp_moss_stall_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/moss.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 9f6260aa1b70a8a0402ff3c07a7262cc62a84433c938ab65ab1a88aa493039c1"
+   }
+  },
+  {
+   "id": "camp_pet",
+   "path": "res://assets/models/camp/camp_pet.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/pet.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 16c38fbe1f7bf326c228b314ff06d2cdc2ca83cff8e4964c6f621ea01d27c7f0"
+   }
+  },
+  {
+   "id": "camp_pet_pen",
+   "path": "res://assets/models/camp/camp_pet_pen.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/pet.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 d37e22c806cce51f648ead8b64862a5180c96f3093f376f6ed109869edfe85b7"
+   }
+  },
+  {
+   "id": "camp_plaza",
+   "path": "res://assets/models/camp/camp_plaza.glb",
+   "class": "park_large",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/plaza.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 30594e27290d9dfa7a01f1bef746dcaef9763688b86beeaf9b301dcad67c3db6"
+   }
+  },
+  {
+   "id": "camp_sandbox_yard",
+   "path": "res://assets/models/camp/camp_sandbox_yard.glb",
+   "class": "park_large",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/practice.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 78723abc0dd0a745358b4927e3aa8ebbb9b68da0474fa348ec04963c620f8c55"
+   }
+  },
+  {
+   "id": "camp_settings_console",
+   "path": "res://assets/models/camp/camp_settings_console.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/stations.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 ab005440e7614135dea6e19fce22079adc280f7224bf9b334fc5c725229cc383"
+   }
+  },
+  {
+   "id": "camp_shortcut",
+   "path": "res://assets/models/camp/camp_shortcut.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/plaza.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 dd8eefb9698017795357cfa72f4d0fac333557868ea7e997fac6b332746f3191"
+   }
+  },
+  {
+   "id": "camp_signpost",
+   "path": "res://assets/models/camp/camp_signpost.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 7f2ea5b6ed991d749b436cd9b3848255c26fdb9b10aef593755ce34c0b7245ac"
+   }
+  },
+  {
+   "id": "camp_skee_lane",
+   "path": "res://assets/models/camp/camp_skee_lane.glb",
+   "class": "park_large",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/skee.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 149800017f9d8b542aa570ac63529e6faae6f28d1f91ff63867b78ae82c48b7c"
+   }
+  },
+  {
+   "id": "camp_skee_lane_detail1",
+   "path": "res://assets/models/camp/camp_skee_lane_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/skee.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 01af6a58409a8e44b24d7e2e7b635a29e991d92bcc87c6aafe0cdb25448db14c"
+   }
+  },
+  {
+   "id": "camp_skee_lane_detail2",
+   "path": "res://assets/models/camp/camp_skee_lane_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/skee.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 47723342b6dab5a4631581c134c687680ae38768c14288bf1f6919b899271161"
+   }
+  },
+  {
+   "id": "camp_tarp",
+   "path": "res://assets/models/camp/camp_tarp.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 fd4fbe5cef671d95cfae5c89edf4e9d8a74140e44d63cd2a04befb7135266aea"
+   }
+  },
+  {
+   "id": "camp_tool_rack",
+   "path": "res://assets/models/camp/camp_tool_rack.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/dressing.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 4f23ff023c3823b07d9ce75f81a0b4da706fc7b1c6f7184add1f441211ec273f"
+   }
+  },
+  {
+   "id": "camp_toy_ball",
+   "path": "res://assets/models/camp/camp_toy_ball.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/pet.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 2d1b94617c77bdb818b9f94d1167b7fcb2de6908415aef06e2e34b3fd4254481"
+   }
+  },
+  {
+   "id": "camp_toy_tire",
+   "path": "res://assets/models/camp/camp_toy_tire.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/pet.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 b61703398ebe78bf066b5ccce0e3bb6ddc0aa5c63c8918917eaeafb78e302b3d"
+   }
+  },
+  {
+   "id": "camp_toy_wrench",
+   "path": "res://assets/models/camp/camp_toy_wrench.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/pet.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 480ec162e01df673bccaedfb67baadb54c065bab0bfb2dca9fca6207f058635e"
+   }
+  },
+  {
+   "id": "camp_trial_arch",
+   "path": "res://assets/models/camp/camp_trial_arch.glb",
+   "class": "gate",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/practice.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 905be7dd9b9ae6ec076b40aac0af4bb1ea1e6b0093619616ce6689644db43f09"
+   }
+  },
+  {
+   "id": "camp_trial_track",
+   "path": "res://assets/models/camp/camp_trial_track.glb",
+   "class": "park_large",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/practice.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 e80a166c11c9191c82f72c393ab1eb2b743c3730cf0895dff5be0d66627b516f"
+   }
+  },
+  {
+   "id": "camp_trophy_wall",
+   "path": "res://assets/models/camp/camp_trophy_wall.glb",
+   "class": "gate",
+   "ships": false,
+   "loader": "none (camp scene wiring pending, wave 19 machine work)",
+   "provenance": {
+    "recipe": "tools/blender/camp/stations.py",
+    "note": "Camp hub kit (storyboard 7, hub ring). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. assets/models/camp/camp.PROVENANCE.txt. sha256 2978f512e44fd9510ae9f1d088d7e9fea097c386c043cc6f71992f08b044770e"
    }
   },
   {
@@ -760,7 +1281,7 @@
    "path": "res://assets/models/companion/escape_rail.glb",
    "class": "enemy",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "source piece for assets/models/companion/assembled/ pairs",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -771,7 +1292,7 @@
    "path": "res://assets/models/companion/escape_vent.glb",
    "class": "enemy",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "source piece for assets/models/companion/assembled/ pairs",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -782,7 +1303,7 @@
    "path": "res://assets/models/companion/primer_coil.glb",
    "class": "enemy",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "source piece for assets/models/companion/assembled/ pairs",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -793,7 +1314,7 @@
    "path": "res://assets/models/companion/primer_mesh.glb",
    "class": "enemy",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "source piece for assets/models/companion/assembled/ pairs",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
@@ -825,11 +1346,21 @@
    "id": "spil9",
    "path": "res://assets/models/companion/spil9.glb",
    "class": "enemy",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd (load of this path)",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "spil9_marks",
+   "path": "res://assets/models/companion/spil9_marks.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (grown-mark add-ons for SPIL-9; seat via hero_assets._mount_on_bones, runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py --asset spil9_marks"
    }
   },
   {
@@ -907,7 +1438,7 @@
    "path": "res://assets/models/dig_mechanical/breach_wedge_a.glb",
    "class": "prop",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "superseded by the _12x12 and _14x10 sized wedges",
    "provenance": {
     "recipe": "tools/blender/dig_mechanical/breach_wedge_a.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -940,7 +1471,7 @@
    "path": "res://assets/models/dig_mechanical/breach_wedge_b.glb",
    "class": "prop",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "superseded by the _12x12 and _14x10 sized wedges",
    "provenance": {
     "recipe": "tools/blender/dig_mechanical/breach_wedge_b.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -973,7 +1504,7 @@
    "path": "res://assets/models/dig_mechanical/breach_wedge_c.glb",
    "class": "prop",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "superseded by the _12x12 and _14x10 sized wedges",
    "provenance": {
     "recipe": "tools/blender/dig_mechanical/breach_wedge_c.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1171,7 +1702,7 @@
    "path": "res://assets/models/dig_stone/bed_cut.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_cut.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1182,7 +1713,7 @@
    "path": "res://assets/models/dig_stone/bed_floor.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_floor.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1193,7 +1724,7 @@
    "path": "res://assets/models/dig_stone/bed_recess.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_recess.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1204,7 +1735,7 @@
    "path": "res://assets/models/dig_stone/bed_rubble.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "look-reference study (dig_stone manifest); not placed",
    "provenance": {
     "recipe": "tools/blender/dig_stone/bed_rubble.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1215,7 +1746,7 @@
    "path": "res://assets/models/dig_stone/breach_socket.glb",
    "class": "landform",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "offline study, not fitted to the P-R6 12x12 / 14x10 breach rectangles",
    "provenance": {
     "recipe": "tools/blender/dig_stone/breach_socket.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
@@ -1551,8 +2082,8 @@
    "id": "island_rib",
    "path": "res://assets/models/highdraft/island_rib.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/arena_mind_dress.gd",
    "provenance": {
     "recipe": "tools/blender/highdraft/islands.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
@@ -1574,8 +2105,8 @@
    "id": "island_rim",
    "path": "res://assets/models/highdraft/island_rim.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/arena_mind_dress.gd",
    "provenance": {
     "recipe": "tools/blender/highdraft/islands.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
@@ -1708,8 +2239,8 @@
    "id": "prop_fan",
    "path": "res://assets/models/highdraft/prop_fan.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
    "provenance": {
     "recipe": "tools/blender/highdraft/props.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
@@ -1875,7 +2406,7 @@
    "path": "res://assets/models/highdraft/travel_vane.glb",
    "class": "prop",
    "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "loader": "cut by P-R9 for readability (decisions.tsv 2026-10-06T20:55)",
    "provenance": {
     "recipe": "tools/blender/highdraft/lift.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
@@ -6372,7 +6903,7 @@
   {
    "class": "prop",
    "id": "scrap_crate",
-   "loader": "none (forge promote scrap_crate/v002; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/models/scrap_crate.glb",
    "provenance": {
     "notes": "assets/models/scrap_crate.forge.json",
@@ -6770,6 +7301,28 @@
    "loader": "src/combat/deflector.gd (load of this path)"
   },
   {
+   "id": "enemy_dispatcher",
+   "path": "res://assets/models/world_one/enemy_dispatcher.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/vault.gd dispatcher behaviour, wave 18)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_dispatcher.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4, lever 4 (PR #23)"
+   }
+  },
+  {
+   "id": "enemy_foreman",
+   "path": "res://assets/models/world_one/enemy_foreman.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/foreman.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_foreman.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4, lever 3 (PR #23)"
+   }
+  },
+  {
    "id": "enemy_gyro_jammer",
    "path": "res://assets/models/world_one/enemy_gyro_jammer.glb",
    "class": "enemy",
@@ -6786,6 +7339,28 @@
    "class": "enemy",
    "ships": true,
    "loader": "src/combat/hooker.gd (load of this path)"
+  },
+  {
+   "id": "enemy_jolt_layer",
+   "path": "res://assets/models/world_one/enemy_jolt_layer.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/jolt_layer.gd:66",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_jolt_layer.py",
+    "note": "Procedural bmesh world-one recipe for the fields-and-casts first slice."
+   }
+  },
+  {
+   "id": "enemy_linker",
+   "path": "res://assets/models/world_one/enemy_linker.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/linker.gd, wave 19)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_linker.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
+   }
   },
   {
    "path": "res://assets/models/world_one/enemy_lobber.glb",
@@ -6857,6 +7432,28 @@
    }
   },
   {
+   "id": "enemy_splitter",
+   "path": "res://assets/models/world_one/enemy_splitter.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/splitter.gd:body_parts",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_splitter.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
+   }
+  },
+  {
+   "id": "enemy_splitter_piece",
+   "path": "res://assets/models/world_one/enemy_splitter_piece.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/splitter.gd:piece_parts",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_splitter_piece.py",
+    "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
+   }
+  },
+  {
    "id": "enemy_swarm_remnant",
    "path": "res://assets/models/world_one/enemy_swarm_remnant.glb",
    "class": "enemy",
@@ -6901,6 +7498,40 @@
     "draws": 4
    },
    "exception_why": "winch drone test ceiling 4 draws"
+  },
+  {
+   "id": "relay_mast",
+   "path": "res://assets/models/world_one/relay_mast.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/event_view.gd _build_relay (CoilGlow takes the charge material)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/relay_stake.py",
+    "note": "Procedural vertex-coloured lattice tower for an event relay, in the park landmarks' look."
+   },
+   "exception": {
+    "tris": 3000,
+    "verts": 4800,
+    "draws": 3
+   },
+   "exception_why": "A 17 m tower read at event range; the prop class covers one small static mesh. Limits asserted by the recipe and relay_models_test."
+  },
+  {
+   "id": "relay_stake_post",
+   "path": "res://assets/models/world_one/relay_stake_post.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/relay_stake.gd (Stake1..Stake4 and CoilGlow take runtime materials; StakeNeedle turns per stack)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/relay_stake.py",
+    "note": "Procedural vertex-coloured shared-world device in the park landmarks' look; stands at the park relays of stage 1 and stage 5."
+   },
+   "exception": {
+    "tris": 3000,
+    "verts": 4800,
+    "draws": 9
+   },
+   "exception_why": "Opt-in device whose stake shows in five independently lit parts (four rings and the coil) plus a turning needle; the prop class covers one small static mesh. Limits asserted by the recipe and relay_models_test."
   },
   {
    "id": "rescue_cage",
@@ -7416,6 +8047,39 @@
    }
   },
   {
+   "id": "enemy_ballast_heavy",
+   "path": "res://assets/models/world_three/enemy_ballast_heavy.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/ballast_heavy.gd, Highdraft roster thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_three/enemy_ballast_heavy.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Dig and Highdraft rosters"
+   }
+  },
+  {
+   "id": "enemy_gap_net",
+   "path": "res://assets/models/world_three/enemy_gap_net.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/gap_net.gd, Highdraft roster thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_three/enemy_gap_net.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Dig and Highdraft rosters"
+   }
+  },
+  {
+   "id": "enemy_gap_net_curtain",
+   "path": "res://assets/models/world_three/enemy_gap_net_curtain.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/gap_net.gd, Highdraft roster thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_three/enemy_gap_net_curtain.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Highdraft roster (the gap net hung mid-gap, square to the crossing)"
+   }
+  },
+  {
    "id": "enemy_kite_drone",
    "path": "res://assets/models/world_three/enemy_kite_drone.glb",
    "class": "enemy",
@@ -7471,6 +8135,28 @@
    }
   },
   {
+   "id": "enemy_pit_jaw",
+   "path": "res://assets/models/world_two/enemy_pit_jaw.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/pit_jaw.gd, World 2 and 3 enemy identity thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_two/enemy_pit_jaw.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Dig and Highdraft rosters"
+   }
+  },
+  {
+   "id": "enemy_prop_crew",
+   "path": "res://assets/models/world_two/enemy_prop_crew.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "none (runtime integration pending; src/combat/prop_crew.gd, Prop crew and Dig events thread)",
+   "provenance": {
+    "recipe": "tools/blender/world_two/enemy_prop_crew.py",
+    "build_spec": "sketches/core-loop/design-v3/WORLD-ROSTERS.md, the Dig and Highdraft rosters"
+   }
+  },
+  {
    "id": "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
    "path": "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr",
    "class": "texture",
@@ -7490,7 +8176,7 @@
   {
    "class": "texture",
    "id": "crate_icon_sheet",
-   "loader": "none (forge promote crate_icon/v003; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/sprites/crate_icon/crate_icon_sheet.png",
    "provenance": {
     "notes": "assets/sprites/crate_icon/crate_icon.forge.json",
@@ -7501,7 +8187,7 @@
   {
    "class": "texture",
    "id": "scrap_coin",
-   "loader": "none (forge promote scrap_coin/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/sprites/scrap_coin/scrap_coin.png",
    "provenance": {
     "notes": "assets/sprites/scrap_coin/scrap_coin.forge.json",
@@ -7536,7 +8222,7 @@
   {
    "class": "texture",
    "id": "sand_ground_albedo",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_albedo.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -7547,7 +8233,7 @@
   {
    "class": "texture",
    "id": "sand_ground_ao",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_ao.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -7558,7 +8244,7 @@
   {
    "class": "texture",
    "id": "sand_ground_height",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_height.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -7569,7 +8255,7 @@
   {
    "class": "texture",
    "id": "sand_ground_normal",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_normal.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -7580,7 +8266,7 @@
   {
    "class": "texture",
    "id": "sand_ground_roughness",
-   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
+   "loader": "asset-forge pipeline proof; not game content",
    "path": "res://assets/textures/sand_ground/sand_ground_roughness.png",
    "provenance": {
     "notes": "assets/textures/sand_ground/sand_ground.forge.json",
@@ -7669,6 +8355,40 @@
   "breach_wedge_c_14x10",
   "bridge_skin",
   "bridge_skin_rusted-salvaged-plate.webp",
+  "camp_barrel",
+  "camp_bench",
+  "camp_call_box",
+  "camp_crate_stack",
+  "camp_fence",
+  "camp_fire_pit",
+  "camp_lamp_post",
+  "camp_launch_gate",
+  "camp_launch_gate_detail1",
+  "camp_launch_gate_detail2",
+  "camp_lockers",
+  "camp_lockers_detail1",
+  "camp_lockers_detail2",
+  "camp_moss_stall",
+  "camp_moss_stall_detail1",
+  "camp_moss_stall_detail2",
+  "camp_pet",
+  "camp_pet_pen",
+  "camp_plaza",
+  "camp_sandbox_yard",
+  "camp_settings_console",
+  "camp_shortcut",
+  "camp_signpost",
+  "camp_skee_lane",
+  "camp_skee_lane_detail1",
+  "camp_skee_lane_detail2",
+  "camp_tarp",
+  "camp_tool_rack",
+  "camp_toy_ball",
+  "camp_toy_tire",
+  "camp_toy_wrench",
+  "camp_trial_arch",
+  "camp_trial_track",
+  "camp_trophy_wall",
   "canal_lip",
   "canal_lip_detail1",
   "canal_lip_detail2",
@@ -7687,6 +8407,7 @@
   "cliff_dwelling_row",
   "cliff_dwelling_row_detail1",
   "cliff_dwelling_row_detail2",
+  "companion_skin_till_bell",
   "cottonwood_crown",
   "cottonwood_detail1",
   "cottonwood_detail2",
@@ -7723,25 +8444,38 @@
   "cut_face_long",
   "cut_face_scoop",
   "decal_atlas.png",
+  "decal_curtain_call_mask.png",
   "decal_fern_mask.png",
   "decal_moth_mask.png",
   "decal_mushroom_mask.png",
   "decal_patch_mask.png",
   "decal_paw_mask.png",
+  "decal_sable_spool_mask.png",
   "decal_seashell_mask.png",
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
   "enemy_anchor_crew",
+  "enemy_ballast_heavy",
   "enemy_burrower",
   "enemy_catch_trap",
+  "enemy_dispatcher",
   "enemy_drill_crew",
+  "enemy_foreman",
+  "enemy_gap_net",
+  "enemy_gap_net_curtain",
   "enemy_gyro_jammer",
+  "enemy_jolt_layer",
   "enemy_kite_drone",
   "enemy_lamp_swarm",
   "enemy_line_cutter",
+  "enemy_linker",
   "enemy_miniboss",
+  "enemy_pit_jaw",
+  "enemy_prop_crew",
   "enemy_ramp_flipper",
   "enemy_reactor",
+  "enemy_splitter",
+  "enemy_splitter_piece",
   "enemy_swarm_remnant",
   "enemy_swatter",
   "enemy_vault",
@@ -7960,6 +8694,9 @@
   "ore_cart_detail1",
   "ore_cart_detail2",
   "ore_cart_wheel",
+  "outfit_rivet_hood",
+  "outfit_tally_eyeshade",
+  "outfit_tarn_steady_cap",
   "park_contraption_barge",
   "park_contraption_barge_detail1",
   "park_contraption_barge_detail2",
@@ -8055,6 +8792,8 @@
   "ram_spring__escape_vent",
   "ram_spring__primer_coil",
   "ram_spring__primer_mesh",
+  "relay_mast",
+  "relay_stake_post",
   "res://assets/models/world_one/shell_rivet.glb",
   "rescue_cage",
   "return_ramp_skin",
@@ -8144,13 +8883,20 @@
   "tailings_lip_detail2",
   "thermal_air",
   "thermal_vent",
+  "trail_any_downbeat",
   "trail_atlas.png",
+  "trail_cannon_recital",
   "trail_forge_chips",
   "trail_ink_stitch",
+  "trail_kest_fuse_smoke",
   "trail_moth_tuft",
   "trail_plum_curl",
+  "trail_rivet_swarf",
   "trail_rose_wash",
+  "trail_sable_cable",
   "trail_salt_skip",
+  "trail_tally_punch_tape",
+  "trail_tarn_claw_marks",
   "travel_vane",
   "trebuchet_launcher_arm",
   "trebuchet_launcher_detail1",

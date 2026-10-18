@@ -1055,6 +1055,13 @@ SINK_POOL = (40.0, -120.0, -100.0)
 SINK_ANCHOR = (0.0, -99.0, 38.0)
 LAMP_R = 44.2
 SINK_HEAD_X = 100.0
+# The tube mouths' wash stamps (main_tube_lower_11, east_haulage_11) cut a trough through the north ring, down to y
+# -107.8; the deck, its seams and its lamps stop at the trough's bearings (degrees, sampled at bake 49b06209).
+SINK_WASH = (math.radians(142.0), math.radians(183.0))
+
+
+def sink_in_wash(a):
+    return SINK_WASH[0] <= a % TAU <= SINK_WASH[1]
 SINK_ALCOVE = [(0.0, 66.0), (12.0, 66.0), (15.0, 65.0), (18.0, 64.0), (21.0, 63.0), (24.0, 62.0), (27.0, 61.0),
                (30.0, 60.0), (33.0, 59.0), (36.0, 58.0), (39.0, 55.0), (42.0, 54.0), (45.0, 49.0), (46.5, 48.0)]
 
@@ -1187,13 +1194,16 @@ def build_sinkhole():
     sink_alcove_rim(sto, 3.0, lambda k: shade("basalt", 1.0, (k, 23), 0.1))
     # the full gallery ring round the pool: radial planks on sleepers, flush (FLUSH-safe), with lamp posts
     fe = exempt["enamel"]
-    annulus(fe, (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 120,
+    deck_arc = (SINK_WASH[1], SINK_WASH[0] + TAU)
+    annulus(fe, (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 106, arc=deck_arc, color_fn=
             lambda i: shade("timber" if i % 3 else "timber_dk", 1.0, (i, 41), 0.08))
     # the caisson lip: a riveted steel band set flush just outside the pool
     annulus(exempt["steel"], (0.0, 0.0), SINK_POOL[0] + 0.15, SINK_POOL[0] + 1.1, SINK_FLOOR, SINK_FLOOR + 0.08, 64,
             lambda i: shade("steel", 1.0, (i, 51), 0.06))
     for k in range(16):
         a = TAU * (k + 0.5) / 16
+        if sink_in_wash(a):
+            continue
         p = (LAMP_R * math.sin(a), SINK_FLOOR + 0.1, LAMP_R * math.cos(a))
         box(e, (p[0] - 0.12, p[1], p[2] - 0.12), (p[0] + 0.12, p[1] + 2.6, p[2] + 0.12), col("timber_dk"))
         box(e, (p[0] - 0.35, p[1] + 2.6, p[2] - 0.35), (p[0] + 0.35, p[1] + 3.1, p[2] + 0.35), col("amber"))
@@ -1262,7 +1272,8 @@ def build_sinkhole():
 
     # ---- mid: coping, coarse strata, the ring deck, the caisson band, the headgear's outline
     sink_walls(mid["stone"], 6, 5, 0.08, wall_colour, y_top=-0.6)
-    annulus(mid["enamel"], (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 48, lambda i: col("timber"), sides=False)
+    annulus(mid["enamel"], (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 42, lambda i: col("timber"),
+            arc=deck_arc, sides=False)
     annulus(mid["steel"], (0.0, 0.0), SINK_POOL[0] + 0.15, SINK_POOL[0] + 1.1, SINK_FLOOR, SINK_FLOOR + 0.08, 32, lambda i: col("steel"), sides=False)
     for sx in (-1, 1):
         box(mid["stone"], (min(sx * 126.1, sx * 129.0), -0.6, -50.0), (max(sx * 126.1, sx * 129.0), 0.08, 48.0), col("basalt"))
@@ -1286,6 +1297,8 @@ def build_sinkhole():
     s1, s2 = sky.Surf("landmark_sinkhole_detail1"), sky.Surf("landmark_sinkhole_detail2")
     for k in range(60):
         a = TAU * k / 60
+        if sink_in_wash(a):
+            continue
         p0 = (SINK_RING[0] * math.sin(a), SINK_FLOOR + 0.105, SINK_RING[0] * math.cos(a))
         p1 = (SINK_RING[1] * math.sin(a), SINK_FLOOR + 0.105, SINK_RING[1] * math.cos(a))
         t = (math.cos(a), 0.0, -math.sin(a))
@@ -1302,6 +1315,8 @@ def build_sinkhole():
         s1.chunk(p, (sz * 1.6, sz, sz * 1.3), rnd(k, 74) * TAU, k, shade("basalt", 1.0, (k, 75), 0.1), jitter=0.2, top=0.7)
     for k in range(16):
         a = TAU * (k + 0.5) / 16
+        if sink_in_wash(a):
+            continue
         p = (LAMP_R * math.sin(a), SINK_FLOOR + 2.2, LAMP_R * math.cos(a))
         t = (math.sin(a), 0.0, math.cos(a))
         beam(s1, p, vadd(p, t, 0.6), 0.08, 0.08, col("iron"), caps=False)

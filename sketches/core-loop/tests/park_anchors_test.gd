@@ -7,7 +7,8 @@ extends SceneTree
 # (d) It carries the <id>-col collision mesh (ledges.py convention; never drawn).
 # (e) A kit row places through place_row: the same posts and box colliders as greybox:anchor_field and one Posts view
 #     (one draw) holding the row's variant mesh in the enamel slot, every post drawn once over its collider, stretched
-#     along Y only by tall / 10 with authored y -1 on the collider's bottom, and turned by quarter turns only.
+#     along Y only by tall / 10 with authored y -1 on the collider's bottom, and square to its collider (quarter turns in
+#     the row's space, on a row with a yaw of 30 degrees).
 # (f) A kit row does not stand in, and its preload list is its three variants.
 # Evidence limit: file shape, bounds and placement data only; no look (no render), no frame cost.
 
@@ -78,7 +79,8 @@ func _place(recipe: String) -> void:
 			bad.append("post %d base %.3f" % [k, xf.origin.y])
 		if not shapes_at.has(Vector2(snappedf(local.origin.x, 0.01), snappedf(local.origin.z, 0.01))):
 			bad.append("post %d has no collider under it" % k)
-		var turn := fposmod(atan2(xf.basis.x.z, xf.basis.x.x), PI * 0.5)
+		# Square to its collider, which turns with the row: a quarter turn in the node's space.
+		var turn := fposmod(atan2(local.basis.x.z, local.basis.x.x), PI * 0.5)
 		if minf(turn, PI * 0.5 - turn) > 0.001:
 			bad.append("post %d turn %.3f" % [k, turn])
 	_t.check("(e) %s draws every post once in its variant, stretched on Y over its collider" % recipe, draws.size() == posts and bad.is_empty(), "drawn %d of %d; %s" % [draws.size(), posts, str(bad.slice(0, 3))])

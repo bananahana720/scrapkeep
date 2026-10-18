@@ -33,51 +33,56 @@ const Cards := preload("res://src/world/director_cards.gd")
 # fields (recipe, fit); KD1-DRESS's three recipe renames had moved all 20. Whole runs unchanged.
 # 2026-10-16 PARK-WIN re-pin: crown_apron at 730.5 -> 731.5 (PW2) and the islands Warden anchor y
 # 80 -> 66 (PW1) are park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged.
+# 2026-10-17 HIGHDRAFT-ROSTER re-pin (#72): the Highdraft packs (ballast_heavy, gap_net) and the
+# Highdraft elite move the director schedule and the default run; recorded with --record-base.
+# 2026-10-17 stage/alpha-w16 combined re-pin: every admitted director-moving PR together (attack budget,
+# Foreman, specials, Dig and Highdraft rosters, #75 isle skirt); recorded with --record-base --section=runtime.
+# 2026-10-18 stage/alpha-w16 re-pin: cand 6f075df2, crown pass, #65, #73, #79, #96, #97, #98 and #99 together; recorded with --record-base --section=runtime.
 const BASE_SCHEDULE := [
-	"61d47efea5608e71e6df00c0c5553ff79eb6552be8c26257ba95a767ea4735c1",
-	"9556fe80c81c79b58b79505e9baffea0399ead6dc1f8791d34bdf9987839716f",
-	"210cf1f2a0d341b4ff7ef45d599b3f023c3d58fff8c272616c3d442a90915ec3",
-	"31edbc26bc90954c3518f216e777f08e11b09a39aaf4da81b3d021ddab45aff9",
-	"054b6d41559f9953441f923a872f9247637d6930cfa717bec72c44a4f11528ed",
-	"c001721cd73343c590547ec076984464f94ccc565a4730dac5b1eb8240063b21",
-	"f318e3b115a5ef88a9c1c1d02e5a49e6385df5b09f8c7de13769343270458bea",
-	"2787da6664b2da9c70d98246ed9220e516f23872f7916b692e77821938e4dd29",
-	"1e710fe1d164aa14d96e234a0b3c5bf368bb9240a526d57f2438accb445b323c",
-	"20799a58f09d6947e730c45c7072ee94de57be174e1e50d33e26653f357b7a9e",
-	"d8df55b943599481cd6b05aca6d25aba28745a2abd9fd730339a3b6dec029944",
-	"fb369dd5e1b9c26416e288cb3c2ab3557dcb198fa5e14f0fd08e350c8a4bda0b",
-	"20d33ca8e40b4e02da548fbe50921cd19697584a5a7363f5d364ce73040ee962",
-	"a8f74f3f241794dd2303dab1e20af0c8901600835270d6b823d7112f38dbffe0",
-	"f7797d4b684e52cd23a993d175e3b219b9c75c93bab1458f81de95369da2ec0e",
-	"750edd9752bba17b037b7d5f6d9dde2cbe014444200edd9a684e1cf1e3a724ec",
-	"ba7dfe94e09e71de4c02551e2655b01dfad4535ae5063d565a0aa32d3f48d69c",
-	"fb0195a26b7cb1247851864d18638da473ca5a1ec60898934d50d800b442b844",
-	"eb1544e87d6d662e8f263e5a2cb3a2352a42817339d707af4c4888fb5e57b254",
-	"fc9afd45d4a32849d2d269ca24411a0cafc9fc54ea1f3b14533ed14bf5e8fed5",
+	"c632ddb6b5be4544e00ba71eb763f9988b227aa68a1fd2b735052b694619ad26",
+	"2077a0a4d44ffebff49b1b4d78ba19a02848dc4a7d7f4996a2a8bf175dc3703e",
+	"eede7888fe6cdf31a56f460813b6b67fb94a942096d255a314088ff45ef94329",
+	"112f1a42a31b6f90b4cf4b9e7e215a5c29603a5b2632b9b0164ea183fa9ef17d",
+	"79d320bacb5b0514519dd4ee16cedcead86cb81eaaedbb3ad2afe54587520c78",
+	"431aa4107579f703a46b017186b85d318d23f958e0854c2b098cd9c378c215e0",
+	"2306570fe351b9cfd1f209236dc84db011f959556be437fadc3f22f594f3f326",
+	"e895261f297868062533e0e16044d232674c082b0b670a5812f68bab9b0b542e",
+	"3eec4d2b335b04d039ee2fd08333561dc310670e025bb0f59c3be8f3c2c793a6",
+	"061d202032cfd8a536f9ef2e6b222226b998ef77a0209b1b47e144b2161c33e9",
+	"d0feb6dcaced81a3dd19559d20d6bd38c49e8b7393aefa75913bd39c314614e4",
+	"202092bc0502fc3c8d0171c171a6ec97cc8b26506839e592b99992182abd3435",
+	"a0fcf4da8cf4dc083b97c2553ca477fbc2101f9be74e6e620a0de24dbf173a3e",
+	"5cf9d3ebc49c67d234842f6016bb4790a13c608becb90da4db130c53f5674232",
+	"ea526420778cc2822fd9b79b6153ab3d4b64e416efc537ebfbf2b35a099ac99f",
+	"4d60e1e24e84f6668142d27048aa8656687f0a2c9571e6cda68ac3c1ba6b0af4",
+	"64b56134a6dbaa58c3843bbf8aa77e32f6418970af86d6aa983c6ceceed1e621",
+	"4867d10dcd9f1edd5ae81fdd555512e2d1e7fe6e1104ec6c576cdbc07c5fd710",
+	"8544b39b9418fd8e759a4df0f8ba7dd399517bd81e42788ba825588294a66de9",
+	"f1d96378b176ff00de2042c79ce8a2ccab4dcb09ac2be2202b36474834c8dea7",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
 const BASE_RUN := [
-	"68c016b3eef2bee0b7033296cb249976e7fb7c914290cab6adb08bac174db439",
-	"e254e812475af8c967f4f75b68b9878cb146ce252370ff8d08d032a29e679e5d",
-	"d6eaa14d09456e05a93aacfb0f4cdb830a272131fbf95b358c2d9b17dd0b483a",
-	"91637ea0da648ef5ef3646e6cb45c47f543160b81dd3bfb05cc62c64adf100e3",
-	"9bc5437db52b5cb48cd21e841c50ecce16e24ad334a12bbc223c807aa8298049",
-	"137602d69c3f973524fd3f346608bc58483e9640122577393acb08832b41f72b",
-	"6a4546d3bd70f9648bdc7f3662d3c99f196334db501700db05c1260ef5329577",
-	"00bb0e7ecd087f44ec1d8b96f9afb43f0f529a3d7028d4c4e71745d6ed9df607",
-	"a11672ceda16795c33fc7426e6a5657170ee4ad09e3c5b49b651cf4c1b2517d2",
-	"b60514e9161c3cde555e53b7fb14829f0f8422b6b275a2472ef97e725a2fd468",
-	"e6eba2418547a528bdd133c956bc88677e79c967b969d30000bf5ed3a40f156d",
-	"a3682c9f610802ae0aa0b4d216174c3b1a04819585f280f74466830a6e8c165b",
-	"9a447e763c2ce2dca997dedb2779f7096d209c4bce71c0e38d07c3f4c54c5daa",
-	"31773a5fbb09bed6b0310273f6eaeffe8e95bec756796a3bfbe094512e92ff9a",
-	"ae41251a5351229c7a37913494f7714b8466c3c2a1b12756135dde4e1b7c8014",
-	"d19bfcff2d273972be664b7bf299e064f6c1b85454300cc0fa13ca1126a03d7a",
-	"315562f650b921f5bc0ba2f106bf247ace7748a41ac4fa2e7bab950f22648794",
-	"c9eb32e0d656f7b7e02bde0dd8e5cb2d219dae5348c67d50f7671706d6144fea",
-	"eeeaec0a617aca3730062dc524d3a964311c280483e79b0f241f8a770748f8c5",
-	"38909d690bf0ab4e05e1d524ebe7f138f3673b24f6c90cc2aed67f841e0ff217",
+	"480788dab3208260a2b75c6168cd8b068fc398f5f48dfcb736a8d1d04e1c4a45",
+	"25991e86e993bc5e3fbb01815e411fd78c8f91a5c73447148002f84df7fffcde",
+	"87aa44415732056067fef7cc1b9092006f37305f66943890940e13b9fcd7e94b",
+	"7dcf31b10a638d7b01fbf4169cc0d915ba98e4289c9bfe19f750ddf4c6bf8437",
+	"df840247773703c84045ec6bfd8241072bd67df8d03a401840a63a7e2ec619ce",
+	"db234ce4ef94450fb193a300f6ce974806fbb5e547d5e7fc8ebc643a0073a758",
+	"aede3a68fc3dd9798b586c62774d6127936b0e60aecccc70ea9a9eb26dde403d",
+	"fb0769e5f6717c20dac6c644458b309a0848da97a255b9263607382583838877",
+	"1cdd6a7e73dcdf8089c2949365a55873c88bb3553da9c0f7418c5d8774f668f9",
+	"13ef37066c45331426775319eb592fdd1cfb0c4e2c11d3f50a7cc7c5bc0ce110",
+	"8d1faab0ac402a2aa86059a5389817b3976c5fc8c0677ce144197b52680e3ca3",
+	"69b1ef37f7e73f9966fb417fdd493d2a7bc8e9f3f59dddd53bead084e709ebf7",
+	"158a880be444c69e7fefadcd77457c4856987fc18758104e3c67d996149f7640",
+	"216af9b4be7f3405510407eb25c4518869af25c0402264e72c6f53519510f5b5",
+	"7549b395817df2c4f7c0db25b37349dfc12090a6adf4b7fc88fc3339b76ac9bd",
+	"8ef34d5a07e4144c6867135c894d0d6b1bf77b33529b779725bebdd77874f1b9",
+	"6153eeabc80a49d6cb85ef566a8782a6d3bf25659413d5779e88d7d7ffa6d6d4",
+	"0b501c5c07ab79c44841f05bacc278af70adae2238f248db65ad74233c62ee62",
+	"49e172ae71f459e0a62cac8cf96d798911dd544a05d5f543fb82d65f4e6f8a68",
+	"01ef70e5d7cdde8056e8fea06642a6b2e67ab869eec1e62efb09dfc22433da83",
 ]
 const SEEDS := 20
 const DRAWS := 400
@@ -155,6 +160,17 @@ static func _director_rows(rows: Array) -> Array:
 		kept.append(copy)
 	return kept
 
+# 2026-10-17 (SQ2, PR #15): each due spawn carries its arrival's pack number for the attacker
+# budget (attack_budget.gd). It copies a tag the director already drew and moves no spawn, so the
+# schedule pin leaves it out, as RT1 leaves out presentation fields.
+static func _without_pack(due: Array) -> Array:
+	var kept: Array[Dictionary] = []
+	for spawn in due:
+		var copy: Dictionary = spawn.duplicate(true)
+		copy.erase("pack")
+		kept.append(copy)
+	return kept
+
 func _schedule(d, steps := 1200) -> Dictionary:
 	var ball: Vector2 = d._park_map.beacon if d._park_map != null else Vector2.ZERO
 	if d._park_map != null:
@@ -165,7 +181,7 @@ func _schedule(d, steps := 1200) -> Dictionary:
 		var due: Array = d.advance(0.5, 0, ball)
 		members += due.size()
 		if not due.is_empty():
-			schedule.append([step, due])
+			schedule.append([step, _without_pack(due)])
 	return {"schedule": schedule, "members": members, "cap": d.cap(), "interval": d.interval()}
 
 func _config(tier_value: int) -> Dictionary:

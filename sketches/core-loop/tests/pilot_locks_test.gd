@@ -16,6 +16,8 @@ const T := preload("res://tests/support/t.gd")
 # save and reload. GP5-3: every class row's unlock label is 1 to 9 words, its rule names the
 # achievement that rewards that pilot, and a locked pilot's camp line and card show it.
 # GP5-4: the bot's --pilot pick runs a locked pilot on a fresh profile (flow.choose_class).
+# GP5-5 (Andrew's "Either path", 2026-10-17): Tally opens on the sky-islands rescue or on three
+# ledger leaves, whichever comes first; the other path still earns its row and opens no one else.
 
 const NOW := 1700000000.0
 const V2_FIXTURE := "res://tests/fixtures/profile_v2_rivet_kest.json"
@@ -50,6 +52,7 @@ func _physics_process(_delta: float) -> bool:
 	_gp5_3_labels()
 	_gp5_1_sequence()
 	_gp5_2_v2_fixture()
+	_gp5_5_either_path()
 	_gp5_4_bot_pick()
 	_game.queue_free()
 	quit(_t.verdict())
@@ -83,6 +86,9 @@ func _emit(step: String) -> void:
 		"brindle_routed":
 			events.world_entered.emit(1)
 			events.enemy_killed.emit("brindle", Vector3.ZERO, 0)
+		"isles_rescue":
+			events.world_entered.emit(3)
+			events.rescue_completed.emit("isles")
 		"third_leaf":
 			for i in 3:
 				events.world_fact.emit(Progress.LEDGER_FACT, Vector3.ZERO)
@@ -154,6 +160,9 @@ func _gp5_3_labels() -> void:
 			continue
 		var row := ClassDef.unlock_row(by)
 		_t.eq("GP5-3 %s rule's row rewards this pilot" % def.id, Achievements.reward_of(row).get("pilot", ""), def.id)
+		if def.unlock.has("or"):
+			var other := String(def.unlock["or"])
+			_t.check("GP5-3 %s or is a known rule with a row" % def.id, ClassDef.UNLOCK_BYS.has(other) and Achievements.ROWS.has(ClassDef.unlock_row(other)), other)
 		_t.check("GP5-3 %s card hint leads with the label" % def.id, ClassCard.unlock_hint(def, _game.progress).begins_with(label), ClassCard.unlock_hint(def, _game.progress))
 	_t.eq("GP5-3 one pilot starts open", starts, 1)
 	var read: Dictionary = CampMenu.reading(_game)
@@ -163,6 +172,23 @@ func _gp5_3_labels() -> void:
 		var def = ClassDef.by_id(p["id"])
 		var line := "%s: %s" % [p["name"], ClassCard.unlock_hint(def, _game.progress)]
 		_t.check("GP5-3 camp shows %s's label" % p["id"], (read["lines"] as PackedStringArray).has(line) and line.contains(String(def.unlock["label"])), line)
+
+
+func _gp5_5_either_path() -> void:
+	for order in [["isles_rescue", "third_leaf"], ["third_leaf", "isles_rescue"]]:
+		var profile := Profile.new("%s/pilot_locks_%s.json" % [_game.storage_dir, order[0]])
+		profile.load_profile()
+		var progress := _progress(profile)
+		_game.run.begin(ClassDef.all()[0])
+		_emit(order[0])
+		_t.eq("GP5-5 %s first opens Tally and no other" % order[0], _open(profile), [SABLE, TALLY])
+		_emit(order[1])
+		_t.eq("GP5-5 %s second keeps Tally and opens no other" % order[1], _open(profile), [SABLE, TALLY])
+		_t.check("GP5-5 both rows earned after %s then %s" % order, profile.earned("isles_rescued") and profile.earned(ClassDef.unlock_row("leaves:3")), "")
+		var reloaded := Profile.new(profile.path)
+		reloaded.load_profile()
+		_t.eq("GP5-5 the saved file keeps Tally (%s first)" % order[0], _open(reloaded), [SABLE, TALLY])
+		progress.queue_free()
 
 
 func _gp5_4_bot_pick() -> void:

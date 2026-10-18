@@ -14,6 +14,7 @@ extends RefCounted
 # breaks    true when reaching zero is permanent (armour breaks; shield goes down and returns).
 # attack    the one line a player reads off the bar.
 const Palette := preload("res://src/core/palette.gd")
+const Elements := preload("res://src/build/elements.gd")
 
 const CLASS_IDS := ["armour", "shield", "health"]
 const CLASS_FIELDS := ["palette", "pattern", "regen", "breaks", "attack"]
@@ -76,8 +77,10 @@ class Pool extends RefCounted:
 		max_value = maximum
 		value = maximum
 
-	func hit(amount: float) -> void:
-		value = maxf(0.0, value - amount)
+	# element is the hit's element id ("" for none); its multiplier is the class's row in
+	# Elements.LAYER_MULT (SG2), the one table every layer reads.
+	func hit(amount: float, element := "") -> void:
+		value = maxf(0.0, value - amount * Elements.layer_mult(class_id, element))
 		_since_hit = 0.0
 		if value == 0.0 and CLASSES[class_id]["breaks"]:
 			broken = true

@@ -216,7 +216,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 		count += int(_knob("ult_beats", 0))
 		p["beats"] = count
 		p["flight"] = count * each
-		p["seconds"] = WINDUP_SECONDS + p["flight"]
+		p["seconds"] = windup_seconds() + p["flight"]
 		p["legs"] = [{"mode": "arc", "to": p["to"], "beats": count, "seconds": count * each, "strike": true}]
 	if id == "windhover" and p["path"] != "hop":
 		var b: Vector3 = p["to"]
@@ -230,7 +230,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 			{"mode": "line", "to": b, "beats": 1, "seconds": each, "strike": true}]
 		p["beats"] = arc_beats + 3
 		p["flight"] = (arc_beats + 3) * each
-		p["seconds"] = WINDUP_SECONDS + p["flight"]
+		p["seconds"] = windup_seconds() + p["flight"]
 	return p
 
 

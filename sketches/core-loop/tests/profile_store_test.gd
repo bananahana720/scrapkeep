@@ -41,6 +41,7 @@ func _initialize() -> void:
 	_v3_migrates_to_4()
 	_v3_seen_already_present()
 	_seen_merge()
+	_retired_cosmetic_swapped()
 	_source_is_clean()
 	_clear_dir()
 	quit(_t.verdict())
@@ -566,6 +567,29 @@ func _seen_merge() -> void:
 	_t.check("B5 two writers union their seen ids", c.is_seen("trail_any_downbeat") and c.is_seen("decal_curtain_call") and c.seen_ids().size() == 2, str(c.seen_ids()))
 	var merged := Profile.merge({"seen": ["a"], "pilots": [], "worlds": [], "cosmetics": [], "settled": [], "achievements": {}, "stats": {}, "equipped": {}}, {"seen": ["b", "a"]})
 	_t.eq("B5 merge unions seen", merged["seen"], ["a", "b"])
+
+
+# 2026-10-16: a save that earned the cut Rigger Harness owns Rigger Blue on its next load, the
+# new paint glows as unseen, the outfit slot that wore the harness is cleared, and the swap
+# survives a save and a merge with a file that still holds the old id.
+func _retired_cosmetic_swapped() -> void:
+	var path := _fresh_path()
+	var doc := {"schema": 4, "generation": 3, "cosmetics": ["paint_any_night", "outfit_kest_rigger"],
+		"seen": ["paint_any_night", "outfit_kest_rigger"], "achievements": {"ach_kest_homecoming": 1790100000},
+		"equipped": {"demolitions_caster/outfit": "outfit_kest_rigger", "demolitions_caster/paint": "paint_any_night"}}
+	_write(path, JSON.stringify(doc).to_utf8_buffer())
+	var p := Profile.new(path)
+	_t.check("RIG loads", p.load_profile() and p.can_save, p.last_error)
+	_t.check("RIG harness swapped for Rigger Blue", p.has_cosmetic("paint_kest_rigger") and not p.has_cosmetic("outfit_kest_rigger") and p.has_cosmetic("paint_any_night"))
+	_t.check("RIG Rigger Blue is new", not p.is_seen("paint_kest_rigger") and not p.is_seen("outfit_kest_rigger") and p.is_seen("paint_any_night"))
+	_t.check("RIG outfit slot cleared, paint kept", p.equipped("demolitions_caster", "outfit") == "" and p.equipped("demolitions_caster", "paint") == "paint_any_night")
+	_t.check("RIG earn time kept", p.earned_at("ach_kest_homecoming") == 1790100000)
+	_write(path, JSON.stringify(doc).to_utf8_buffer())
+	_t.check("RIG saves over a file that still holds the old id", p.save(), p.last_error)
+	var reloaded := Profile.new(path)
+	reloaded.load_profile()
+	_t.check("RIG the swap survives save and merge", reloaded.has_cosmetic("paint_kest_rigger") and not reloaded.has_cosmetic("outfit_kest_rigger")
+		and reloaded._doc["cosmetics"].count("paint_kest_rigger") == 1)
 
 
 func _source_is_clean() -> void:
