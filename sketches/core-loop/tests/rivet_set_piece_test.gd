@@ -49,13 +49,15 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # 2026-10-17 (RIVET-FREEZE, "Fewer lines"): 233 -> 237. Coplanar terrain faces merge into convex
 # polygons of the same area, the merged carve keeps the same volume, and the cell boxes select
 # what the plain selection does.
+# 2026-10-17 (RIVET-CURVE): 237 -> 238. A grazing bumpy floor, whose shadows are too thin for a
+# clearance, carves the same points as a plain subtraction pass.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
 	# 2026-10-16 (pilot paint): Calibrated is live, one check added.
-# 2026-10-17 (stage/alpha-w16): 237 -> 238 with EARNED-COSMETICS' one check on cand.
-	_expected_checks = 238
+	# 2026-10-18 (stage/alpha-w17): 238 -> 239, RIVET-CURVE on top of EARNED-COSMETICS' one check.
+	_expected_checks = 239
 	super._initialize()
 
 
@@ -504,6 +506,50 @@ func _merge_fixture() -> void:
 	_t.eq("cell boxes select exactly what the plain selection does", skipped, 0)
 
 
+# RIVET-CURVE: a landing just above a bumpy floor of small triangles. Their shadows meet at
+# grazing angles, so the carve skips them by the reach of each shadow's frustum; the parts it
+# keeps hold the same points as subtracting every shadow.
+func _grazing_fixture() -> void:
+	var origin := Vector3(0.0, 0.4, 0.0)
+	var up := Vector3.UP
+	var cells: Array = []
+	for i in 6:
+		var a := Vector3.RIGHT.rotated(up, TAU * float(i) / 6.0)
+		var b := Vector3.RIGHT.rotated(up, TAU * float(i + 1) / 6.0)
+		cells.append(_kit._commit_cell([origin, origin + a * 3.2, origin + b * 3.2], up, 1.0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 36013
+	var heights := {}
+	for x in range(-4, 5):
+		for z in range(-4, 5):
+			heights[Vector2i(x, z)] = rng.randf_range(-0.35, 0.05)
+	var faces: Array = []
+	for x in range(-4, 4):
+		for z in range(-4, 4):
+			var p := func(dx: int, dz: int) -> Vector3: return Vector3((x + dx) * 0.8, heights[Vector2i(x + dx, z + dz)], (z + dz) * 0.8)
+			faces.append([p.call(0, 0), p.call(0, 1), p.call(1, 0)])
+			faces.append([p.call(1, 0), p.call(0, 1), p.call(1, 1)])
+	var plain := cells.duplicate(true)
+	for face in faces:
+		var shadow: Array = _kit._face_shadow(origin, face)
+		if shadow.is_empty():
+			continue
+		var lit: Array = []
+		for cell in plain:
+			lit.append_array(_kit._subtract_shadow(cell, shadow))
+		plain = lit
+	var hull := [{"at": origin + up, "normal": up}, {"at": origin - up, "normal": -up}]
+	var fast: Array = _kit._shade(origin, faces, cells.duplicate(true), [], hull)
+	var held := 0
+	var differ := 0
+	for i in 6000:
+		var q := Vector3(rng.randf_range(-3.2, 3.2), rng.randf_range(-0.6, 1.4), rng.randf_range(-3.2, 3.2))
+		var in_plain := plain.any(func(cell): return _kit._cell_intersects(cell, q, 0.0))
+		held += 1 if in_plain else 0
+		differ += 1 if in_plain != fast.any(func(cell): return _kit._cell_intersects(cell, q, 0.0)) else 0
+	_t.check("grazing floor: the carve holds the same points as a plain subtraction pass", held > 300 and differ == 0, "%d held, %d differ" % [held, differ])
+
+
 static func _area(polygon: Array) -> float:
 	var sum := Vector3.ZERO
 	for i in range(1, polygon.size() - 1):
@@ -614,6 +660,7 @@ func _run() -> void:
 	_empty_shadow_fixture()
 	_shade_identity_fixture()
 	_merge_fixture()
+	_grazing_fixture()
 	await _alpha_terrain_cost_fixture()
 	await _cylinder_terrain_fixture()
 	await _shape_dispatch_fixture()
