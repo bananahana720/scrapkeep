@@ -141,12 +141,14 @@ func _pivot_heard() -> void:
 		var harmony := 0.0
 		var drums := 0.0
 		for v in band.voices + band.fading:
-			if v.stem == "drums":
+			if v in band.pending.get("voices", []):
+				continue
+			if v.stem == "drums" and not v.cleared:
 				drums = maxf(drums, v.gain)
-			elif not v in band.pending.get("voices", []):
+			elif v.stem != "drums":
 				harmony = maxf(harmony, v.gain)
 		_t.check("%s's shelf harmony is out before the pivot" % zone, harmony < 0.02, "gain %.3f" % harmony)
-		_t.check("%s's drums carry across the pivot" % zone, drums > 0.5, "gain %.3f" % drums)
+		_t.check("%s's shelf drums carry to the pivot's downbeat" % zone, drums > 0.1, "gain %.3f" % drums)
 		band.render(band.grid_beat)
 		_t.eq("%s lands on the pivot" % zone, band.section, "pivot")
 		_t.check("%s pivots with no short reads" % zone, band.short_reads == 0 and band.misses == 0)

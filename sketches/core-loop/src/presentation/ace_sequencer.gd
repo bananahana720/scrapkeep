@@ -48,7 +48,7 @@ const ULTIMATE_STEP := 0.4
 const DRUMS_IN_SPEED := 0.25
 const DRUMS_FULL_SPEED := 0.5
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
-const SHELF_SECTIONS := ["calm", "travel"]
+const SHELF_CLIPS := ["calm", "travel"]
 
 
 class Voice:
@@ -743,7 +743,7 @@ func _schedule(name: String, at: int, join_from_edge := false) -> void:
 	var join := _join_frames(name)
 	var begin := at if join_from_edge else maxi(clock, at - join)
 	var ramp := join if join_from_edge else at - begin
-	if name == "pivot" and section in SHELF_SECTIONS:
+	if name == "pivot" and section != "" and String(sections[section]["clip"]) in SHELF_CLIPS:
 		_clear_harmony(at)
 	var fresh: Array = []
 	var gains := _profile(name)
@@ -835,7 +835,7 @@ func _smooth_momentum(drums_before: float, chain_before: float, stripped_before:
 	var lead_moved := parameters.has("chain") and float(parameters.chain) != chain_before and not stripped and not stripped_before
 	var joining: Array = pending.get("voices", [])
 	for v: Voice in voices:
-		if v in joining:
+		if v in joining or v.cleared:
 			continue
 		if (v.stem == "drums" and drums_moved) or (v.stem == "other" and lead_moved):
 			_ramp_to(v, v.target, grid_beat if v.target > v.gain else grid_bar * 2)
