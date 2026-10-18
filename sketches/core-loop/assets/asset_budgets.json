@@ -57,15 +57,15 @@
     "landform": {
       "tris": 8000,
       "verts": 24000,
-      "draws": 1,
-      "set_by": "sculpted rock round four, alpha/x11/LKR4/KIT.md: 8,000 triangles, one draw (cliff_strata 7,988 / 8,000); verts is 3 per triangle, the unwelded flat-shaded bound, since the kit gives none; no member yet",
+      "draws": 2,
+      "set_by": "sculpted rock round four, alpha/x11/LKR4/KIT.md: 8,000 triangles; draws 1 to 2 (coordinator call 2026-10-18: a bevelled detail shell is a second draw by design), pending the 4080 densest-fight frame check; if red, merge draws instead; earlier basis: one draw (cliff_strata 7,988 / 8,000); verts is 3 per triangle, the unwelded flat-shaded bound, since the kit gives none; no member yet",
       "ranges": {"base_end": 900.0, "base_margin": 60.0, "shells": [[120.0, 15.0], [50.0, 8.0]]}
     },
     "park_large": {
       "tris": 16000,
       "verts": 48000,
-      "draws": 2,
-      "set_by": "2026-10-10 w13 KC0: design-v3/PARK.md section 9 recipes row (16,000 triangles, 2 draws) for tunnels, caverns, the crater and the floating island; verts is 3 per triangle, the landform rule; no member yet",
+      "draws": 3,
+      "set_by": "2026-10-10 w13 KC0: design-v3/PARK.md section 9 recipes row (16,000 triangles, 2 draws); draws 2 to 3 (coordinator call 2026-10-18: a bevelled detail shell is a second draw by design), pending the 4080 densest-fight frame check; if red, merge draws instead; for tunnels, caverns, the crater and the floating island; verts is 3 per triangle, the landform rule; no member yet",
       "ranges": {"base_end": 700.0, "base_margin": 50.0, "shells": [[150.0, 20.0], [60.0, 8.0]]}
     },
     "hero_landmark": {

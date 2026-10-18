@@ -39,6 +39,13 @@ const DEEP_GAP := 16.0
 const STACK_GAP := 6.0
 const POST_HEIGHT := 4.0
 const POST_FALL := 3.0
+# E33's wind-up (event_kinds.gd, e33_net_crackle; coordinator call 2026-10-18, "no silent
+# wind-ups"): through the charge the slack net crackles, flashing to its live tint in bursts that
+# come faster and longer as the charge fills, and shivers CRACKLE_SHAKE along its normal. It goes
+# solid live on the strike. Presentation only: the lane, the band and the timing are unchanged.
+const CRACKLE_RATE := 5.0
+const CRACKLE_RATE_GAIN := 15.0
+const CRACKLE_SHAKE := 0.08
 
 var slung := 0
 var torn := 0
@@ -52,6 +59,7 @@ var _strung := false
 var _post_y := INF
 var _mat_live: StandardMaterial3D
 var _mat_slack: StandardMaterial3D
+var _crackling := false
 static var _warned_asset := false
 static var _shared: Array = []
 
@@ -164,7 +172,7 @@ func _hang(center: Vector3, normal: Vector3, low: float, high: float) -> void:
 				Vector3(-NET_WIDTH * 0.5 + span_box.size.x * i - span_box.position.x, -span_box.position.y * stretch, 0.0))
 			mesh.add_child(piece)
 	nets.append({"center": center, "normal": normal, "side": side, "low": low, "high": high, "live": true,
-		"last": 0.0, "mesh": mesh})
+		"last": 0.0, "mesh": mesh, "origin": mesh.global_position})
 	_tint(mesh, _mat_slack)
 
 
@@ -231,6 +239,32 @@ func _live(_delta: float) -> bool:
 
 func _on_end() -> void:
 	_paint(false)
+
+
+# E33's pose, e33_net_crackle: the charging net flickers live in quickening bursts and shivers.
+func _pose() -> void:
+	var charging := phase == Phase.WARN and not is_dead()
+	if not charging:
+		if _crackling:
+			_crackling = false
+			_settle()
+		return
+	_crackling = true
+	var t := clampf(_warn_progress(), 0.0, 1.0)
+	var beat := fmod(_t * (CRACKLE_RATE + CRACKLE_RATE_GAIN * t), 1.0)
+	var lit := beat < 0.2 + 0.5 * t
+	var shake := sin(_t * 70.0) * CRACKLE_SHAKE * t
+	for net in nets:
+		if not net["live"] or not is_instance_valid(net["mesh"]):
+			continue
+		_tint(net["mesh"], _mat_live if lit else _mat_slack)
+		net["mesh"].global_position = (net["origin"] as Vector3) + (net["normal"] as Vector3) * shake
+
+
+func _settle() -> void:
+	for net in nets:
+		if is_instance_valid(net["mesh"]):
+			net["mesh"].global_position = net["origin"]
 
 
 func _tear(net: Dictionary) -> void:
