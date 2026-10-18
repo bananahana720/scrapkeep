@@ -1273,12 +1273,11 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var reach := breach_reach()
 	var pins: float = float(_knob("ult_pins", 1.0))
 	var damage: float = Ultimate.LANDING_DAMAGE * heft * chain
-	var late := _carve_late(id, at, heading, reach, pins, damage)
 	var result: Array = [0, 0.0, "late"]
-	if _shade_late(late):
-		result = _breach(_late_shape(late), at, heading, reach, pins, damage)
+	if _stopped_short():
+		_carve_late(id, at, heading, reach, pins, damage)
 	else:
-		_late.append(late)
+		result = _breach(_commit_sector(at, heading, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER), at, heading, reach, pins, damage)
 	# Exit flat along the heading at the banked speed: the ride's release keeps its speed and
 	# loses the fall (A2-CRITIC: no floor; the speed gift is Sable's alone).
 	var ride = combat.ultimate._ride if combat.ultimate != null else null
@@ -1320,25 +1319,27 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 	return [hits, dealt]
 
 
-# The Breach Skid's carve shades its cells in order until it has tested LATE_WORK parts against
-# shadows in a tick (about 30 us each, in the cloud and on Andrew's 4080 alike). A light carve
-# finishes on the landing tick and hits there. A heavy one (bumpy or curved ground) carries on a
-# tick at a time and hits once it is done, and never before LATE_TICKS (about 55 ms) after the
-# landing (Andrew's "Beat later" and "Spread every Breach", 2026-10-18). Work is counted, never
-# timed, so a replay is the same on any machine. The cells' parts join in cell order, as _shade
-# joins them, so the shape is the same as a carve made at once.
+# A landing that terrain stopped short of its target (a slope or wall on the path) carves the
+# same exact sector a few cells per tick and hits LATE_TICKS (about 55 ms) later: a curved
+# slope's carve takes far longer than a frame (Andrew's "Beat later", 2026-10-18). Each tick
+# shades cells in order until it has tested LATE_WORK parts against shadows (about 30 us each
+# in the cloud), and the last tick shades the rest; work is counted, never timed, so a replay
+# is the same on any machine. The cells' parts join in cell order, as _shade joins them.
 const LATE_TICKS := 5
-const LATE_WORK := 200
-
+const LATE_WORK := 800
 # The tick's work budget; a test lowers it to see the stages.
 var late_work := LATE_WORK
 
 # Breach carves waiting to hit, oldest first: {centre, start, due, sector, cell_cuts, next,
-# shaded, lit, shadows, id, at, heading, reach, pins, damage, record}, with result once carved.
+# done, lit, shadows, id, at, heading, reach, pins, damage, record}, with result once carved.
 var _late: Array = []
 
 
-func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: float, damage: float) -> Dictionary:
+func _stopped_short() -> bool:
+	return combat.ultimate != null and combat.ultimate.stopped_short
+
+
+func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: float, damage: float) -> void:
 	var sector := _sector_cells(at, heading, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
 	var cells: Array = sector["cells"]
 	var found := _terrain_near(at, cells)
@@ -1346,8 +1347,8 @@ func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: 
 	var cuts := _cuts(at, TerrainFaces.merge(found["faces"]), cells, shadows, sector["hull"])
 	var start := Engine.get_physics_frames()
 	var late := {"centre": _commit_beam(at, heading, reach, 0.0), "start": start, "due": start + LATE_TICKS, "sector": sector,
-		"cell_cuts": [], "next": 0, "shaded": -1, "lit": [], "shadows": shadows, "id": id, "at": at, "heading": heading,
-		"reach": reach, "pins": pins, "damage": damage, "record": combat.ultimate._record if combat.ultimate != null else {}}
+		"cell_cuts": [], "next": 0, "done": 0, "lit": [], "shadows": shadows, "id": id, "at": at, "heading": heading,
+		"reach": reach, "pins": pins, "damage": damage, "record": combat.ultimate._record}
 	if found.has("unreadable"):
 		late["result"] = []
 	elif cuts.is_empty():
@@ -1355,39 +1356,30 @@ func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: 
 	else:
 		for cell in cells:
 			(late["cell_cuts"] as Array).append(_cell_cuts(cuts, cell))
-	return late
+	_late.append(late)
 
 
-# One tick's share of the carve; true once it is done.
-func _shade_late(late: Dictionary) -> bool:
-	if late.has("result"):
-		return true
-	var cells: Array = late["sector"]["cells"]
-	var cell_cuts: Array = late["cell_cuts"]
-	var lit: Array = late["lit"]
-	_shade_work = 0
-	while int(late["next"]) < cells.size() and _shade_work < late_work:
-		var i: int = late["next"]
-		lit.append_array(_shade_cell(late["at"], cell_cuts[i], [cells[i]]))
-		late["next"] = i + 1
-	if int(late["next"]) == cells.size():
-		late["result"] = lit
-	return late.has("result")
-
-
-func _late_shape(late: Dictionary) -> Dictionary:
-	return _sector_shape(late["sector"], late["result"], late["shadows"], late["centre"])
-
-
-# Each waiting carve takes one share per tick after its landing tick.
 func _step_late(now := Engine.get_physics_frames()) -> void:
 	for late in _late:
-		if now > int(late["start"]) and now > int(late["shaded"]):
-			late["shaded"] = now
-			_shade_late(late)
-	while not _late.is_empty() and _late[0].has("result") and now >= int(_late[0]["due"]):
+		while int(late["done"]) < mini(LATE_TICKS, now - int(late["start"])):
+			late["done"] = int(late["done"]) + 1
+			if late.has("result"):
+				continue
+			var cells: Array = late["sector"]["cells"]
+			var cell_cuts: Array = late["cell_cuts"]
+			var lit: Array = late["lit"]
+			var last: bool = int(late["done"]) == LATE_TICKS
+			_shade_work = 0
+			while int(late["next"]) < cells.size() and (last or _shade_work < late_work):
+				var i: int = late["next"]
+				lit.append_array(_shade_cell(late["at"], cell_cuts[i], [cells[i]]))
+				late["next"] = i + 1
+			if int(late["next"]) == cells.size():
+				late["result"] = lit
+	while not _late.is_empty() and int(_late[0]["done"]) >= LATE_TICKS:
 		var late: Dictionary = _late.pop_front()
-		var result := _breach(_late_shape(late), late["at"], late["heading"], late["reach"], late["pins"], late["damage"])
+		var shape := _sector_shape(late["sector"], late["result"], late["shadows"], late["centre"])
+		var result := _breach(shape, late["at"], late["heading"], late["reach"], late["pins"], late["damage"])
 		if combat.ultimate != null:
 			combat.ultimate.report_landing(late["record"], late["id"], late["at"], result)
 
