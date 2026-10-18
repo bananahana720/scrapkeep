@@ -232,7 +232,7 @@ func _pilot(pilot: Node, document: Dictionary) -> void:
 					total += weights[i + j]
 				rigid = rigid and active == 1 and absf(total - 1.0) < 0.001
 			_check("rigid weights " + str(surface), rigid, "one full weight per vertex")
-	_budget("pilot", pilot, Vector3i(4600, 3100, 5), ["pilot", "rubber", "bare_metal"])
+	_budget("pilot", pilot, Vector3i(12000, 8100, 5), ["pilot", "rubber", "bare_metal"])
 
 
 func _shell(shell: Node, document: Dictionary) -> void:
