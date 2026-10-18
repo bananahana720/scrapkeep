@@ -104,9 +104,12 @@ func _rig(scene: Node) -> void:
 	var clips: Array = Array(player.get_animation_list()) if player != null else []
 	clips.erase("RESET")
 	var wanted := CLIPS.keys()
+	# 2026-10-18: src/presentation/clips/tarn.json lists idle_loop only, so the GLB carries the seven
+	# kept clips plus that loop (it loops, by its _loop name).
+	wanted.append("idle_loop")
 	clips.sort()
 	wanted.sort()
-	_t.check("exact seven clips", clips == wanted, "got %s; expected %s" % [clips, wanted])
+	_t.check("exact seven clips plus idle_loop", clips == wanted, "got %s; expected %s" % [clips, wanted])
 	if player == null or skeleton == null:
 		return
 	_t.check("rig scale", scene.scale.is_equal_approx(Vector3.ONE) and skeleton.scale.is_equal_approx(Vector3.ONE), "scale 1")
