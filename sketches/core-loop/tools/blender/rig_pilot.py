@@ -19,7 +19,32 @@ ROOT = HERE.parents[3]
 OUT = ROOT / "artifacts/anim-pilot"
 sys.path.insert(0, str(HERE))
 import common
+import polish
 import shell_base as sb
+
+# Polish (POLISH.md): soft-toy organic parts, crisp props. Islands of the Pilot mesh up to
+# SOFT_MAX_TRIS triangles subdivide once (hands, feet, limbs, ears, muzzles); the larger
+# head and torso spheres are already dense. Goggle frames and lenses, boxes and belt
+# beams stay hard with a small bevel.
+POLISH = {"detail": 1, "bevel": .003}
+SOFT_MAX_TRIS = 200
+HARD_PRIMITIVES = ("ring", "box", "beam")
+
+
+def soft_toy(part, records, tags):
+    """Subdivide the organic islands of the tagged Pilot part; each keeps its rig tag."""
+    layer = part.bm.verts.layers.int["rig_part"]
+    size = {}
+    for f in part.bm.faces:
+        size[f.verts[0][layer]] = size.get(f.verts[0][layer], 0) + len(f.verts) - 2
+
+    def soft(index):
+        primitive, bone = records[index - 1][1], tags[index - 1]
+        return primitive not in HARD_PRIMITIVES and bone != "goggles" and size[index] <= SOFT_MAX_TRIS
+
+    # An island softens only when every primitive in it is organic.
+    polish.subdivide_where(part.bm, 1, lambda island: all(soft(i) for i in {f.verts[0][layer] for f in island}))
+    part.subsurf = 0
 
 
 def recipe(pilot="rivet"):
@@ -88,13 +113,16 @@ def accessories(pilot_name, arm):
         meshes.append(obj)
     if pilot_name == "sable":
         p=common.Part("TailBase")
+        p.bevel,p.subsurf=0,1
         p.rod("pilot",(0,-.16,-.27),(0,-.46,-.20),.105,10,r2=.14,color="oxide")
         attach(p,"tail.01")
         p=common.Part("TailTip")
+        p.bevel,p.subsurf=0,1
         p.rod("pilot",(0,-.46,-.20),(0,-.65,.03),.14,10,r2=.075,color="oxide")
         p.rod("pilot",(0,-.65,.03),(0,-.72,.14),.077,10,r2=.012,color="bone")
         attach(p,"tail.02")
         p=common.Part("Tool")
+        p.bevel,p.subsurf=.004,0
         p.rod("bare_metal",(.32,.36,.02),(.32,.48,.20),.019,8)
         p.rod("class_accent",(.32,.36,.02),(.32,.42,.11),.028,8)
         p.ring("bare_metal",.029,.047,.025,10,loc=(.32,.49,.215),rot=(math.pi/2,0,0),arc=(.35,math.tau-.35))
@@ -105,6 +133,7 @@ def accessories(pilot_name, arm):
                 ("WingUpper", "upper_arm.", (s*.25,.035,-.10),(s*.40,-.11,-.14)),
                 ("WingFan", "hand.", (s*.32,.40,.05),(s*.49,.54,.09))]:
                 p=common.Part(name+"."+side)
+                p.bevel,p.subsurf=0,1
                 for k in range(4):
                     a=Vector(base)+Vector((s*.018*k,0,-.018*k))
                     b=Vector(tip)+Vector((s*.035*k,-.025*k,-.015*k))
@@ -118,6 +147,7 @@ def build(pilot_name="rivet", out=None):
     OUT = Path(out) if out else ROOT / "artifacts/anim-pilot" / (pilot_name if pilot_name != "rivet" else "")
     common.reset()
     common.preview_class({"rivet":"copper", "sable":"mint", "kest":"amber"}[pilot_name])
+    polish.enable(**POLISH)
     env = recipe(pilot_name)
     records = []
     originals = {}
@@ -149,8 +179,23 @@ def build(pilot_name="rivet", out=None):
     original_to_object = common.Part.to_object
 
     def to_object(part, *args, **kwargs):
+        if part.name == "Pilot":
+            soft_toy(part, records, tags)
+        else:
+            # The hidden shell context is not exported; leave it unpolished.
+            part.bevel, part.subsurf = 0, 0
         return original_to_object(part, *args, **kwargs)
 
+    head_tags = {
+        "rivet": ["head", "snout", "snout", "goggles", "ear.L", "goggles", "goggles", "goggles", "snout", "ear.R", "goggles", "goggles", "goggles", "snout", "goggles"],
+        "sable": ["head"] + [b for side in ("L", "R") for b in ["snout", "goggles", "goggles", "goggles", "ear."+side, "ear."+side, "ear."+side]] + ["snout", "jaw", "snout", "goggles", "goggles"],
+        "kest": ["head"] + ["goggles"]*9 + ["snout", "snout", "jaw"] + ["crest"]*3,
+    }[pilot_name]
+    body_tags = ["spine_01", "spine_02"]
+    for side in ("L", "R"):
+        body_tags += ["pelvis", "pelvis", "pelvis", "shoulder." + side,
+                      "upper_arm." + side, "lower_arm." + side, "hand." + side, "spine_02"]
+    tags = head_tags + body_tags
     common.Part.to_object = to_object
     try:
         animal = env["pilot"]()
@@ -182,16 +227,6 @@ def build(pilot_name="rivet", out=None):
     for b in arm.pose.bones:
         b.rotation_mode = "XYZ"
 
-    head_tags = {
-        "rivet": ["head", "snout", "snout", "goggles", "ear.L", "goggles", "goggles", "goggles", "snout", "ear.R", "goggles", "goggles", "goggles", "snout", "goggles"],
-        "sable": ["head"] + [b for side in ("L", "R") for b in ["snout", "goggles", "goggles", "goggles", "ear."+side, "ear."+side, "ear."+side]] + ["snout", "jaw", "snout", "goggles", "goggles"],
-        "kest": ["head"] + ["goggles"]*9 + ["snout", "snout", "jaw"] + ["crest"]*3,
-    }[pilot_name]
-    body_tags = ["spine_01", "spine_02"]
-    for side in ("L", "R"):
-        body_tags += ["pelvis", "pelvis", "pelvis", "shoulder." + side,
-                      "upper_arm." + side, "lower_arm." + side, "hand." + side, "spine_02"]
-    tags = head_tags + body_tags
     assert len(records) == len(tags), (len(records), len(tags), [(r[0], r[1]) for r in records])
     attr = pilot.data.attributes["rig_part"]
     for index, name in enumerate(tags):
@@ -207,6 +242,7 @@ def build(pilot_name="rivet", out=None):
     if pilot_name == "rivet":
         for side, s in (("R", 1), ("L", -1)):
             claws = common.Part("Claws." + side)
+            claws.bevel, claws.subsurf = 0, 1
             for dx in (-.041, 0, .041):
                 claws.rod("pilot", (s * .32 + dx, .44, .055),
                           (s * .32 + dx, .535, .035), .015, 6, color="bone", r2=.004)
@@ -218,6 +254,8 @@ def build(pilot_name="rivet", out=None):
             meshes.append(obj)
     else:
         meshes.extend(accessories(pilot_name, arm))
+    # Bake AO and edge wear over the rig's own meshes only; the glass and pod are hidden.
+    polish.bake(arm)
     for obj in common.tree(root):
         obj.hide_render = True
     root.hide_render = True
