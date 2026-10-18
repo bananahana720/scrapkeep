@@ -714,7 +714,8 @@ func tick(delta: float) -> bool:
 
 
 # The victory lap: boost for the vent in the bowl's middle, so the bot rides the wall down into it, flies, lands on the
-# far wall and rolls back for another shot, the way a player showing off would. The lap's clock ends it.
+# far wall and rolls back for another shot, the way a player showing off would. The lap's clock ends it. A started
+# driver has already ended on run_ended by then, so the lap's callers (victory_lap_test, lap_capture) call this directly.
 func _lap_roll() -> void:
 	var lap = game.flow.lap
 	if not is_instance_valid(lap):

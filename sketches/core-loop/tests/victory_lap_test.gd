@@ -8,7 +8,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
 const T := preload("res://tests/support/t.gd")
 
-# Rule (src/world/victory_lap.gd, src/core/flow.gd _enter_lap; Andrew's design answer Q16 "60 s free roll"): after
+# Rule (src/world/victory_lap.gd, src/core/flow.gd _begin_ending; Andrew's design answer Q16 "60 s free roll"): after
 # the Mind falls and the crew's fly-over hands over (the bot skips it, as screens.gd lets a bot), a bot-driven ball
 # rolls Meteor Crater with no damage source anywhere (no fight group node, no arena,
 # hit points never fall) and the credits roll over the bowl within 60 s of the lap starting. The run is won and the
