@@ -6,9 +6,12 @@ World 1, Spillway Works, the world's last stage before Brindle. Warden kind `rea
 
 Andrew's ruling (2026-10-17 22:12Z, "one skill per park"): the flume tests momentum. The landforms stay. The pieces, the line and the enemy placement change so that the park reads as one held line from the weir to the head house. If you keep your speed, the flume carries you the whole way. If you lose it, you are on the ground with the canals.
 
-**The line.** Weir intake, weir reach, gap work deck, hollow intake, hollow reach, siphon span, head reach, pour lip, drum. The route is `flume_whole` (butte_gap to the landmark). The bot line is `assets/park/park_flume/momentum.json`, which has the same waypoints for all six pilots.
+**The line.** Weir intake, weir reach, gap work deck, a carry across the canal floor, hollow intake, hollow reach, siphon span, head reach, then off the head reach's end into the drum. The route is `flume_whole` (butte_gap to the landmark). The bot line is `assets/park/park_flume/momentum.json`, which has the same waypoints for all six pilots.
+- The butte gap is part of the test. The gap work deck throws you onto the canal floor, and you carry your speed about 90 m over open ground into the hollow intake's flared mouth. Andrew chose this over a bridging span (card, 2026-10-18 03:09:59Z, "Keep the carry").
+- The finish is the flight off the head reach into the drum. The pour spout is scenery the relic clamps on, not part of the line.
+- The weir reach carries no enemies on purpose. It is the 10 s speed build.
 - The siphon span is new: 100.8 m, falling 21 m on a smoothstep from the hollow floor (45) to the head reach floor (24). It pays back the speed the hollow reach costs.
-- The pour spout crosses the drum's west rim 10 m south-east of its old spot, at [207.8, 439.8]. It enters on the rim and its lip hangs over the drum. Its deck is at the Warden anchor's height (-2), where the relic clamps on, and its far bent stands on the drum floor (-14). The head reach throws a rider who holds the line off its end into the drum, still rolling. The old spot lay across the ground way's drop over the rim, where the floor line hit the spout's wall on every seed. The floor line now has 0 dead stops on 4 seeds.
+- The pour spout sits inside the drum's west rim at [210.1, 437.9], its lip over the drum. Its deck is at the Warden anchor's height (-2), where the relic clamps on, and it hangs from the clamp: its two bents are 2 m hangers, so the drum floor stays open underneath. Its old spot lay across the ground way's drop over the rim, and a later spot with legs to the drum floor stalled Sable and Tally on the standard lines.
 - The hollow trestle collapse (clock tier 1) still breaks the hollow reach. A rider who is late finds the flume falling under them. That is the race the park sets, and the ramp it leaves still leads down.
 
 **Pieces** (`tools/blender/park/flume_works.py`, registry fragment `park_flume_works.json`, three GLBs each):
@@ -25,28 +28,25 @@ Andrew's ruling (2026-10-17 22:12Z, "one skill per park"): the flume tests momen
 | 9 kickers | `plate_kicker_*` from #95, seat fit | |
 | head_house_drum; horseshoe and lower gorge | `landmark`; `scatter` | |
 
-**Enemy placement.** Trestle drones roost on the hollow reach itself: a 20 m winch lane along the trough hooks a ball that slows on the grind. siphon_camp moves 2.8 m toward the flume, to [-26, 174], so a rider on the siphon passes the camp within its 12 m reach. Its lobbers still sit in the gorge under the span. The forecourt brutes can be beaten by keeping the flume's speed to the pour lip.
+**Enemy placement.** The weir reach has none (see the line above). Trestle drones roost on the hollow reach itself: a 20 m winch lane along the trough hooks a ball that slows on the grind. siphon_camp moves 2.8 m toward the flume, to [-26, 174], so a rider on the siphon passes the camp within its 12 m reach. Its lobbers still sit in the gorge under the span. The forecourt brutes can be beaten by keeping the flume's speed to the pour lip.
 
 **Fragments.** See section 11 for the eight new dam-era texts: siphon span, bent board, survey mast, surge pylon, pour lip, gatehouse key, crib pier, anchor block and intake gate. They match the #53 field notes (bents numbered downhill, the siphon, the drum).
 
-**Evidence** (headless, fixed 90 fps, `traversal_line.gd --table=park --stage=2`; automated play says nothing about feel):
-- Momentum line, six pilots by two seeds: 11 of the 12 runs ride every flume piece from the weir to the head house, with 0 to 1 dead stops.
-  - Times to the Warden: Sable 58 to 60 s, Tarn 76 to 77, Cannon 82 to 83, Tally 88 to 91, Kest 89 to 91, Rivet 97 to 98.
-  - The miss is Rivet. It reaches the hollow as the collapse starts, rides the falling ramp and meets the siphon end from below.
-  - Sable runs faster than the general 60 s band floor, and its last segment is under 12 s. Those bands were written for the wandering lines, not for a held one.
-- Standard lines (`lines.json`), six pilots by four seeds, compared with the base (955ca23a, run the same way):
-  - Rivet, Tarn and Cannon are inside every band.
-  - Kest's median flow share is 0.690 here and 0.677 on the base. Both are under the 0.7 bar, so the miss predates this pass.
-  - Tally's per-seed flow is under the bar on some seeds here and on the base.
-  - Sable picks up 0 or 1 dead stop at the weir-terrace waypoint from run to run on both trees. This build's own Sable seed 1 gives 0 with tracing and 1 without.
-  - The floor line has 0 dead stops and is inside its floor band. Its flow share is 0.579 here and 0.593 on the base, both under the bar.
-- Tests: park_park_flume, park_place, park_bake_fresh, asset_registry, park_recipes_grind, park_anchors, park_recipes_kickers, park_dressing_pin, flume_line_posture, posture_bands_flume and bot_flume_exit all pass. `placeholder-gate` lists no flume rows. `park-anchor-kit --check` shows 0 left.
-- park_schema_test's "six stage pages" failure comes from the base: a seventh page from #68.
+**Evidence** (headless, fixed 90 fps, `traversal_line.gd --table=park --stage=2`, every artifact tagged with its commit; automated play says nothing about feel). Head db83afa7, compared with the stage w17 base f8c87419 run the same way. Artifacts are under `artifacts/local/flume/` (std5, mom9, base4).
+- Momentum line, six pilots by two seeds. 10 of the 12 runs ride every reach, the siphon and the head reach. Times to the Warden: Sable 58 s, Tarn 76 to 77, Cannon 83, Tally 88 to 90, Kest 87 to 89, Rivet 93 to 96.
+  - Rivet misses on both seeds. It reaches the hollow as the collapse starts, rides the falling ramp and meets the siphon end from below, with 1 dead stop.
+  - Sable seed 1 has 1 dead stop at the butte gap landing; seed 2 carries through. Tally seed 1 has 1 at the weir reach's end, leaving it at 8 m/s; seed 2 has none.
+  - Kest and Tally's flow share is 0.45 to 0.62 on this line, under the 0.7 bar. Sable runs under the 60 s band floor. These bands were written for the wandering lines.
+- Standard lines (`lines.json`), six pilots by four seeds.
+  - Cannon, Kest, Rivet, Tally and Tarn have 0 dead stops on every seed, as on the base.
+  - Sable has 1 stop on 2 of 4 seeds. One is at the weir canal floor: the path matches the base to 0.5 m and misses a 12 m waymark by 0.3 m, where the base makes it by 0.2 m. The other is at the siphon camp. Both happen on the base too from run to run: 0 of 4 seeds in one base run, 1 of 4 at the siphon camp in another.
+  - Per-seed flow share falls under the 0.7 bar on one Kest seed and two Tally seeds here, and on two Kest seeds and one Tally seed on the base. Every median is inside the bar here; on the base Kest's median (0.68) is under it. The floor line has 0 dead stops on 4 seeds; its flow share is 0.59 here and 0.57 on the base, both under the bar.
+- Tests on the head: park_park_flume, park_recipes_kickers, park_dressing_pin and bot_flume_exit pass. `flume_works.py --check` passes. park_schema_test's only failures are its "six stage pages" checks, from the seventh page #68 adds on the base. The earlier head's run (c2e3df3b) also passed park_place, park_bake_fresh, asset_registry, park_recipes_grind, park_anchors, flume_line_posture and posture_bands_flume, `placeholder-gate` listed no flume rows and `park-anchor-kit --check` showed 0 left.
 - Re-pins, each with a dated header:
   - Stage 2 dressing pin, from siphon_camp's keep-out. With the camp at its old spot the old pin holds.
-  - The collapse's `depth_m` now measures 21.441297 from the trough floor.
+  - The collapse's `depth_m` now measures 21.441297 from the trough floor, and the collapse closes `flume_whole` as well as `flume_mid`.
   - park_recipes_kickers_test counts rows already swapped onto a piece.
-  - tools/bot_driver.gd's climb route reads seated kickers, not only greybox ones.
+  - tools/bot_driver.gd's climb route reads seated kickers, not only greybox ones. This also covers the islands' and crown's seated kickers, which no run here exercises.
 
 **Scorecard** (intent-check, this branch): 0 flume placeholders, 161 authored rows, 20 story fragments, society share 0.66, ride-fact share 0.94. The top verb is `swing` (0.5) because the 65 piers are swing anchors. The scorecard counts verbs per row, so a park whose skill is one long line reads as its anchors. The line itself is the test.
 
@@ -155,6 +155,8 @@ The corrected candidate tests judge the music bar grid booked at announcement. B
 
 
 ## Riding surface correction, round 9
+
+Superseded by the authored pass above: the hollow reach is now a `flume_reach_120` trough at y 40, and the collapse depth is 21.441297. The text below is kept as history.
 
 Coordinator ruling V1 defines the intact riding surface as base plus height. The span remains at base y=44 m with height 2 m, so its mesh and solid collider top are 46 m. The warning sits 0.15 m above that top. The prepared replacement begins at the independently measured intact surface with zero fall progress. It falls continuously over the unchanged two seconds to the baked hollow floor, 23.5586042404175 m, giving depth 22.4413957595825 m. The 20 m hold-clear margin, predicted crossing hold, partial-fall pause, authored site, trigger, form, lead, swap and route changes remain fixed.
 
