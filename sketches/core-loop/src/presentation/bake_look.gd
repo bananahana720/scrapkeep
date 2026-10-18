@@ -5,8 +5,10 @@ extends RefCounted
 # slots, and into UV2 for every face (x: unoccluded fraction, y: wear, 0.5 neutral). Enemy and
 # boss scripts swap their own materials onto GLB surfaces (body paint for the hit flash, tints,
 # state swaps), and those ignore UV2, so every face outside the vertex-colour slots lost the bake.
-# dress() gives those surfaces the same multiplier the vertex bake uses, through StandardMaterial3D's
-# detail layer on UV2, so a script can keep mutating its material (albedo, emission) as before.
+# dress() multiplies those surfaces by the bake's shade through StandardMaterial3D's detail layer on
+# UV2, so a script can keep mutating its material (albedo, emission) as before. A multiply cannot
+# brighten, so convex edges stop at neutral (the vertex slots lift them up to 18%): the
+# darkening, which carries the form, matches exactly.
 
 # Slots whose vertex colours already carry the bake (polish.py bake_slots): left alone, or the
 # shade would apply twice.
@@ -14,25 +16,26 @@ const VERTEX_BAKED := ["paint", "pilot", "ancient_enamel", "hydraulic"]
 # polish.py defaults: shade = (1 - AO_STRENGTH * occluded) * (1 + wear), wear in +-EDGE.
 const AO_STRENGTH := 0.55
 const EDGE := 0.18
-const RAMP := 64
+# 256 steps: the plate material samples with nearest filtering, and 64 banded on it.
+const RAMP := 256
 const Palette := preload("res://src/core/palette.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 static var _ramp: ImageTexture
 static var _twins := {}
 
 
-# The shade as a mix target: black with alpha 1 - shade where the bake darkens, white with alpha
-# shade - 1 where a convex edge lightens. x is the unoccluded fraction; y is the wear with glTF's
+# The shade as a multiplier, capped at 1. x is the unoccluded fraction; y is the wear with glTF's
 # flipped V, so 0 is the most worn convex edge and 1 the deepest crease.
 static func ramp() -> ImageTexture:
 	if _ramp == null:
-		var img := Image.create_empty(RAMP, RAMP, false, Image.FORMAT_RGBA8)
+		var img := Image.create_empty(RAMP, RAMP, false, Image.FORMAT_RGB8)
 		for j in RAMP:
 			var wear := (1.0 - float(j) / (RAMP - 1) * 2.0) * EDGE
 			for i in RAMP:
 				var occluded := 1.0 - float(i) / (RAMP - 1)
-				var shade := (1.0 - AO_STRENGTH * occluded) * (1.0 + wear)
-				img.set_pixel(i, j, Color(0, 0, 0, 1.0 - shade) if shade < 1.0 else Color(1, 1, 1, shade - 1.0))
+				var shade := minf((1.0 - AO_STRENGTH * occluded) * (1.0 + wear), 1.0)
+				img.set_pixel(i, j, Color(shade, shade, shade))
 		_ramp = ImageTexture.create_from_image(img)
 	return _ramp
 
@@ -53,7 +56,7 @@ static func apply(mat: StandardMaterial3D) -> void:
 	Palette.smooth(mat)
 	mat.detail_enabled = true
 	mat.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
-	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX
+	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MUL
 	mat.detail_albedo = ramp()
 	mat.detail_mask = null
 	mat.uv2_triplanar = false
@@ -82,14 +85,36 @@ static func twin(mat: StandardMaterial3D, shade := true) -> StandardMaterial3D:
 	return _twins[key]
 
 
+# `mat` without the shade, for a mesh with no UV2 that borrows a dressed material (death debris
+# boxes): UV2 reads (0, 0) there, the fully covered corner.
+static func unbaked(mat: Material) -> Material:
+	if not (mat is StandardMaterial3D and mat.get_meta("bake_look", false)):
+		return mat
+	var key := [mat.get_instance_id(), "unbaked"]
+	if not _twins.has(key) or not is_instance_valid(_twins[key]):
+		var copy := mat.duplicate() as StandardMaterial3D
+		copy.detail_enabled = false
+		copy.detail_albedo = null
+		copy.set_meta("bake_look", false)
+		_twins[key] = copy
+	return _twins[key]
+
+
+# Telegraph stripes read flat: Palette's, and the per-script ones painted with the threat texture.
+static func _warning(mat: StandardMaterial3D) -> bool:
+	return mat == Palette.hazard_stripe() or mat.get_meta("no_bake", false) \
+		or (mat.albedo_texture != null and mat.albedo_texture == Threat.Painter.stripe_texture())
+
+
 # Every baked surface under `root` that a StandardMaterial3D draws takes the bake's look: outside
 # the vertex-colour slots the UV2 shade, inside them (which carry the shade already) just the
 # loss of the world grain. A material in `owned` (one the script holds and mutates, such as the
 # body paint the hit flash brightens) changes in place, so the script's changes still show; any
-# other material is swapped for its twin, on the node or on the shared mesh. An owned material
-# that also draws a surface wanting another look gets a twin instead. The hazard stripe stays as
-# it is: a warning reads flat. Shader materials and unbaked meshes are left alone. Safe to call
-# again. Returns the surfaces dressed.
+# other material is swapped for its twin, on the node or on the shared mesh (an imported mesh's
+# cached resource included, so every later instance shares the twin). An owned material that also
+# draws a surface wanting another look stays as it is, since a twin would stop drawing the
+# script's changes. Telegraph stripes stay flat. Shader materials and unbaked meshes are left
+# alone. Safe to call again. Returns the surfaces dressed.
 static func dress(root: Node, owned: Array = []) -> int:
 	var views: Array = root.find_children("*", "MeshInstance3D", true, false)
 	if root is MeshInstance3D:
@@ -104,7 +129,6 @@ static func dress(root: Node, owned: Array = []) -> int:
 			if not wants.has(mat):
 				wants[mat] = {}
 			wants[mat][_look(view.mesh, i)] = true
-	var stripe := Palette.hazard_stripe()
 	var dressed := 0
 	for view: MeshInstance3D in views:
 		var mesh := view.mesh
@@ -113,10 +137,12 @@ static func dress(root: Node, owned: Array = []) -> int:
 		for i in mesh.get_surface_count():
 			var look := _look(mesh, i)
 			var mat := view.get_active_material(i)
-			if look == 0 or not (mat is StandardMaterial3D) or mat == stripe \
-					or mat.get_meta("bake_look", false) or mat.get_meta("bake_smooth", false):
+			if look == 0 or not (mat is StandardMaterial3D) or mat.get_meta("bake_look", false) \
+					or mat.get_meta("bake_smooth", false) or _warning(mat):
 				continue
-			if mat in owned and wants[mat].size() == 1:
+			if mat in owned:
+				if wants[mat].size() > 1:
+					continue
 				if look == 1:
 					apply(mat)
 				else:

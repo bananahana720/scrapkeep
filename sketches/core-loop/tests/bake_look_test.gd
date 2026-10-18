@@ -8,6 +8,7 @@ const T := preload("res://tests/support/t.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 var t := T.new("bake_look_test")
 
@@ -29,19 +30,16 @@ func _surface(mesh: ArrayMesh, slot: String, baked: bool, mat: Material) -> void
 	mesh.surface_set_material(i, mat)
 
 
-func _alpha(ramp: Image, open: float, wear_v: float) -> Color:
-	return ramp.get_pixel(roundi(open * (BakeLook.RAMP - 1)), roundi(wear_v * (BakeLook.RAMP - 1)))
+func _shade(ramp: Image, open: float, wear_v: float) -> float:
+	return ramp.get_pixel(roundi(open * (BakeLook.RAMP - 1)), roundi(wear_v * (BakeLook.RAMP - 1))).r
 
 
 func _run() -> void:
 	var ramp := BakeLook.ramp().get_image()
-	t.check("open, unworn: no shade", _alpha(ramp, 1.0, 0.5).a < 0.02, str(_alpha(ramp, 1.0, 0.5)))
-	var covered := _alpha(ramp, 0.0, 0.5)
-	t.check("fully covered: black at the AO strength", covered.r < 0.01 and absf(covered.a - BakeLook.AO_STRENGTH) < 0.02, str(covered))
-	var edge := _alpha(ramp, 1.0, 0.0)
-	t.check("glTF V 0 is the worn convex edge: lighter", edge.r > 0.99 and absf(edge.a - BakeLook.EDGE) < 0.02, str(edge))
-	var crease := _alpha(ramp, 1.0, 1.0)
-	t.check("glTF V 1 is the crease: darker", crease.r < 0.01 and absf(crease.a - BakeLook.EDGE) < 0.02, str(crease))
+	t.near("open, unworn: no shade", _shade(ramp, 1.0, 0.5), 1.0, 0.02)
+	t.near("fully covered: the bake's AO multiplier", _shade(ramp, 0.0, 0.5), 1.0 - BakeLook.AO_STRENGTH, 0.02)
+	t.near("glTF V 1 is the crease: the bake's wear multiplier", _shade(ramp, 1.0, 1.0), 1.0 - BakeLook.EDGE, 0.02)
+	t.near("glTF V 0 is the worn convex edge: a multiply stops at neutral", _shade(ramp, 1.0, 0.0), 1.0, 0.02)
 
 	var flash := Palette.solid(Color.WHITE)
 	var paint := Palette.solid(Color.WHITE)
@@ -56,6 +54,9 @@ func _run() -> void:
 	_surface(body, "rubber", true, rubber)
 	_surface(body, "bare_metal", true, stripe)
 	_surface(body, "brass", true, both)
+	var warning := StandardMaterial3D.new()
+	warning.albedo_texture = Threat.Painter.stripe_texture()
+	_surface(body, "bare_metal", true, warning)
 	var bare := ArrayMesh.new()
 	_surface(bare, "brass", false, both)
 	var root := Node3D.new()
@@ -67,10 +68,11 @@ func _run() -> void:
 	plain.mesh = bare
 	root.add_child(plain)
 
-	t.eq("every baked surface but the stripe dressed", BakeLook.dress(root, [flash, both]), 4)
+	t.eq("baked surfaces dressed, stripes and the mixed owned material skipped", BakeLook.dress(root, [flash, both]), 3)
 	t.check("owned flash paint shaded in place, so the hit flash still shows", view.get_active_material(0) == flash
 		and flash.get_meta("bake_look", false) and flash.detail_albedo == BakeLook.ramp()
-		and flash.detail_uv_layer == BaseMaterial3D.DETAIL_UV_2 and not flash.uv2_triplanar)
+		and flash.detail_uv_layer == BaseMaterial3D.DETAIL_UV_2 and flash.detail_blend_mode == BaseMaterial3D.BLEND_MODE_MUL
+		and not flash.uv2_triplanar)
 	t.check("the shade samples texel centres, so an open face never wraps to the covered column",
 		flash.uv2_offset.x > 0.0 and flash.uv2_scale.x < 1.0)
 	t.check("shaded paint loses the world grain (soft toy)", flash.normal_texture == null and not flash.uv1_triplanar)
@@ -81,8 +83,12 @@ func _run() -> void:
 	t.check("shared rubber swapped for a shaded twin; the original keeps its grain", twin != rubber
 		and twin.get_meta("bake_look", false) and rubber.normal_texture == grain and not rubber.get_meta("bake_look", false))
 	t.check("hazard stripe stays flat", body.surface_get_material(3) == stripe and not stripe.get_meta("bake_look", false))
-	t.check("owned material that also draws an unbaked mesh gets a twin, not the shade in place",
-		body.surface_get_material(4) != both and not both.get_meta("bake_look", false) and bare.surface_get_material(0) == both)
+	t.check("a script's own stripe (the threat texture) stays flat", body.surface_get_material(5) == warning and not warning.get_meta("bake_look", false))
+	t.check("owned material that also draws an unbaked mesh stays as it is, so its changes keep drawing",
+		body.surface_get_material(4) == both and not both.get_meta("bake_look", false) and bare.surface_get_material(0) == both)
+	var debris := BakeLook.unbaked(flash) as StandardMaterial3D
+	t.check("a mesh with no UV2 borrows the material without the shade", debris != flash and not debris.detail_enabled
+		and debris.albedo_color == flash.albedo_color and BakeLook.unbaked(rubber) == rubber)
 	t.eq("dressing again changes nothing", BakeLook.dress(root, [flash, both]), 0)
 	t.check("twins are shared between instances", BakeLook.twin(rubber) == twin)
 
