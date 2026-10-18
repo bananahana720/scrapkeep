@@ -5,6 +5,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
 const Beacon := preload("res://src/core/beacon.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Profile := preload("res://src/core/profile.gd")
@@ -29,6 +30,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
@@ -308,6 +310,8 @@ func continue_refusal() -> String:
 func sitting_save_guard() -> void:
 	if tuning != null and tuning.sitting() and ctx.profile != null:
 		ctx.profile._refuse("sitting profile: this session does not save")
+		# The sitting opens every first-win secret, as it opens every pilot (secrets.gd).
+		Secrets.open_for_sitting(ctx.profile)
 
 
 func pilot_unlocked(def) -> bool:
@@ -598,6 +602,7 @@ func apply_saved_display(args: Array = []) -> void:
 	if saved.fullscreen():
 		set_fullscreen(true)
 	set_reduced_motion(saved.reduced_motion())
+	set_reduce_flashes(saved.reduce_flashes())
 
 
 # 0 High, 1 Low.
@@ -623,6 +628,12 @@ func set_reduced_motion(on: bool) -> void:
 	for node in find_children("*", "Node3D", true, false):
 		if node.get_script() == HighdraftFx:
 			node.reduced_motion = on
+
+
+# Reduce flashes: every flash, white pop and strobe reads FlashGuard when it fires, so the
+# switch takes effect on the next flash without touching live nodes.
+func set_reduce_flashes(on: bool) -> void:
+	FlashGuard.on = on
 
 
 func set_fullscreen(on: bool) -> void:

@@ -78,7 +78,8 @@ func _run() -> void:
 	_clear_field()
 	await _sim(0.2)
 
-	# Toggle off: the bite reels as it always has.
+	# Toggle off: the bite reels as it always has. Set here, so a launch flag cannot turn it on.
+	_game.tuning.set_option("pole_flail", "off")
 	_combat.heft_override = 3.0
 	var ball := _point(0.0, 0.0, 0.6)
 	_player.reset_to(ball)

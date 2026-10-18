@@ -109,6 +109,14 @@ const ROWS := {
 	"paint_cannon_lens": {"slot": "paint", "pilot": "remembered_cannon", "name": "Lens Glass", "starter": false, "tint": Color("d4f2b0")},
 	"shell_cannon_choir": {"slot": "shell", "pilot": "remembered_cannon", "name": "Choir Barrel", "starter": false, "tint": Color("6fb3a6"), "asset": "shell_cannon_choir"},
 	# --- end remembered_cannon ---
+	# First-win secrets (secrets.gd PAINTS, Andrew's Q8 "A few secrets", 17 Oct): one alternate paint per
+	# pilot, each named for that pilot's own crew-log beat. Their grant rows are hidden until a run is won.
+	"paint_sable_overtime": {"slot": "paint", "pilot": "pylon_engineer", "name": "Overtime Arc", "starter": false, "tint": Color("b9a6ff")},
+	"paint_rivet_inside_job": {"slot": "paint", "pilot": "runner_gunner", "name": "Inside Job", "starter": false, "tint": Color("9be564")},
+	"paint_kest_knock_back": {"slot": "paint", "pilot": "demolitions_caster", "name": "Knocked Back", "starter": false, "tint": Color("4fd1d9")},
+	"paint_tarn_unissued": {"slot": "paint", "pilot": "tarn", "name": "Unissued Red", "starter": false, "tint": Color("9e1b3b")},
+	"paint_tally_carbon": {"slot": "paint", "pilot": "tally", "name": "Carbon Copy", "starter": false, "tint": Color("3d5a99")},
+	"paint_cannon_velvet": {"slot": "paint", "pilot": "remembered_cannon", "name": "Curtain Velvet", "starter": false, "tint": Color("8e1f4f")},
 }
 
 

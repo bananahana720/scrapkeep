@@ -11,7 +11,7 @@ const SetDressing := preload("res://src/presentation/set_dressing.gd")
 # collides. Presentation only.
 
 const MARGIN := 3.0
-const CAGE_CLEAR := 14.0
+const CAGE_CLEAR := 18.0
 # A stamped row is ground, not a built piece; a long or wide one (a 750 m terrace, a 900 m bowl) is
 # the landform itself and keeps nothing out, while a shorter one (a wash, a haul ramp) is a ride.
 const STAMP_KEEP_M := 200.0

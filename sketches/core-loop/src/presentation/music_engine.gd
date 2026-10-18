@@ -1248,6 +1248,9 @@ func park_cue(id: String, lead_frames := 0, at := -1, context: Dictionary = {}, 
 		push_error("music: missing park cue " + id)
 		return -1
 	var start: int = clock if at < 0 else at
+	if row.rise and row.get("stinger", false):
+		_park_file_riser(id, row, options, lead_frames, start, priority_db, owner)
+		return start
 	if row.rise:
 		var count: int = row.notes.size()
 		for i in count:
@@ -1259,6 +1262,32 @@ func park_cue(id: String, lead_frames := 0, at := -1, context: Dictionary = {}, 
 		_add_action(start, {"type": "park_cue", "id": id, "row": row, "cell": 0,
 			"length": beat_len() * 2, "progress": 1.0, "priority_db": priority_db, "owner": owner})
 	return start
+
+
+# A rendered riser ends exactly at the landing: it starts at landing minus its length, and
+# the synth cells fill only the lead before it. A lead shorter than the file drops the file's
+# first frames instead of moving the end.
+func _park_file_riser(id: String, row: Dictionary, options: Dictionary, lead_frames: int, start: int, priority_db: float, owner: String) -> void:
+	var length := SfxBank.samples_at(row.sound, step_len, 0, theme).size()
+	var file_at := start + lead_frames - length
+	var skip := 0
+	if file_at < start:
+		skip = start - file_at
+		file_at = start
+	var before := lead_frames - length
+	if before > 0:
+		var plain := options.duplicate()
+		plain.erase("stage")
+		var synth := MusicRows.cue(id, plain)
+		var count: int = synth.notes.size()
+		for i in count:
+			var from := roundi(float(before) * i / count)
+			var until := roundi(float(before) * (i + 1) / count)
+			_add_action(start + from, {"type": "park_cue", "id": id, "row": synth, "cell": i,
+				"length": maxi(1, until - from), "progress": float(i) / count, "priority_db": priority_db, "owner": owner})
+	if skip < length:
+		_add_action(file_at, {"type": "park_cue", "id": id, "row": row, "cell": 0, "skip": skip,
+			"length": length - skip, "progress": 1.0, "priority_db": priority_db, "owner": owner})
 
 
 func cancel_park_cue(owner: String) -> void:
@@ -1281,7 +1310,11 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 	if _park_pcm.has(signature):
 		return _park_pcm[signature]
 	var buf: PackedFloat32Array
-	if row.has("sound"):
+	if row.get("stinger", false):
+		buf = SfxBank.samples_at(row.sound, step_len, 0, theme)
+		if int(action.get("skip", 0)) > 0:
+			buf = Synth.declick(buf.slice(int(action.skip)))
+	elif row.has("sound"):
 		buf = SfxBank.samples_at(row.sound, step_len, live_key, theme)
 	else:
 		var n: int = action.length

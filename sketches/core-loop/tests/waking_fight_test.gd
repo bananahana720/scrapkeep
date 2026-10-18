@@ -105,6 +105,8 @@ func _walk() -> void:
 	_t.check("defeated within the cap", seen.defeated == 1 and not Harness._alive(Harness.target(mod)),
 			"%d frames of %d, boss_defeated %d" % [frames, FIGHT_CAP, seen.defeated])
 
+	# The Waking's own attacks telegraph on the same signal (waking_attacks.gd); the floors are these.
+	telegraphs = telegraphs.filter(func(t): return String(t[0]).begins_with("waking_floor_"))
 	var ids: Array = telegraphs.map(func(t): return t[0])
 	_t.eq("floors dropped in order", ids, ["waking_floor_1", "waking_floor_2", "waking_floor_3"])
 	_t.eq("three height changes", changes.size(), 3)

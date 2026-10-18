@@ -9,6 +9,7 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
 const StatusMarks := preload("res://src/presentation/status_marks.gd")
+const ArmourMarks := preload("res://src/presentation/armour_marks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const TitleStage := preload("res://src/presentation/title_stage.gd")
@@ -55,6 +56,7 @@ var machine_fx
 var player_fx
 var line_view
 var status_marks
+var armour_marks
 var banner
 var hero_assets
 var ceremony
@@ -87,6 +89,7 @@ func setup(ctx_ref) -> void:
 	player_fx = PlayerFx.new()
 	add_child(player_fx)
 	player_fx.setup(ctx, vfx)
+	audio.hit_on_beat.connect(player_fx.on_beat_hit)
 	line_view = LineView.new()
 	add_child(line_view)
 	if ctx.camera != null and ctx.camera.cam != null:
@@ -96,6 +99,9 @@ func setup(ctx_ref) -> void:
 	status_marks = StatusMarks.new()
 	add_child(status_marks)
 	status_marks.setup(ctx, vfx)
+	armour_marks = ArmourMarks.new()
+	add_child(armour_marks)
+	armour_marks.setup(ctx)
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)

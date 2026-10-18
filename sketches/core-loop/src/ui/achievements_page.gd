@@ -1,5 +1,6 @@
 extends VBoxContainer
 
+const Secrets := preload("res://src/core/secrets.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -9,7 +10,8 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 # The title's list of every achievement, in table order (Achievements.ROWS): an amber
 # star, the name and the date for an earned row; a slate ring, the name and the words
 # to do for one not earned yet. A hidden row stays "???" and "Keep playing." until it is
-# earned. A row with a count shows how far along it is, from Progress.count_of. Nothing
+# earned. A first-win secret row (secrets.gd PAINT_ROWS) is left out until it is earned, so a
+# fresh profile sees no hint of it. A row with a count shows how far along it is, from Progress.count_of. Nothing
 # is written twice: every word is a table row. Back presses A, as A opened it.
 
 const COLUMNS := 2
@@ -58,6 +60,8 @@ func refresh(profile, progress) -> void:
 		child.queue_free()
 	rows.clear()
 	for id in Achievements.ids():
+		if Secrets.shut_row(id, profile):
+			continue
 		var row := _row(id, profile, progress)
 		_grid.add_child(row)
 		rows[id] = row

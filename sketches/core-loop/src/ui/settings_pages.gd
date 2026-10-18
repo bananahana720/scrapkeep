@@ -9,10 +9,10 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 
 # The settings page both hosts show: the pause menu in place of its first page, the title
 # through its Settings button. Three pages behind a tab strip, switched by LB and RB, Q and E
-# or a click, the last one kept for the session: Display (fullscreen, quality), Controls (a
-# key row and a pad row per verb, Reset keys, the two fixed verbs) and Look (stick speed,
-# invert Y, dead zone, mouse speed, aim assist, each stepped by Enter, A or a click and by
-# left and right). Back sits under every page. A key row waits for the next key or mouse
+# or a click, the last one kept for the session: Display (fullscreen, quality, reduced motion,
+# reduce flashes), Controls (a key row and a pad row per verb, Reset keys, the two fixed
+# verbs) and Look (stick speed, invert Y, dead zone, mouse speed, aim assist, each stepped by
+# Enter, A or a click and by left and right). Back sits under every page. A key row waits for the next key or mouse
 # button, a pad row for the next pad button (and a trigger for fire and harpoon); Esc or B
 # cancels; a press another verb already holds is refused with "Taken".
 # A new binding goes to the store and to the InputMap at once (game.apply_binding, the same
@@ -110,7 +110,7 @@ func setup(game_ref, back_key := "key_esc") -> void:
 
 
 func _build_display() -> void:
-	for id in ["fullscreen", "quality", "reduced_motion"]:
+	for id in ["fullscreen", "quality", "reduced_motion", "reduce_flashes"]:
 		_add_plain(id, "display")
 
 
@@ -292,6 +292,7 @@ func refresh() -> void:
 	rows["fullscreen"].text = "Fullscreen: %s" % ("on" if store.fullscreen() else "off")
 	rows["quality"].text = "Quality: %s" % ("Low" if store.quality() == 1 else "High")
 	rows["reduced_motion"].text = "Reduced motion: %s" % ("on" if store.reduced_motion() else "off")
+	rows["reduce_flashes"].text = "Reduce flashes: %s" % ("on" if store.reduce_flashes() else "off")
 	for verb in VERBS:
 		_rebuild(verb)
 		_rebuild("pad_" + verb)
@@ -414,6 +415,11 @@ func press(id: String) -> void:
 			_store().set_comfort(SettingsStore.REDUCED_MOTION, 1.0 if calm else 0.0)
 			_game.set_reduced_motion(calm)
 			rows["reduced_motion"].text = "Reduced motion: %s" % ("on" if calm else "off")
+		"reduce_flashes":
+			var dim: bool = not _store().reduce_flashes()
+			_store().set_comfort(SettingsStore.REDUCE_FLASHES, 1.0 if dim else 0.0)
+			_game.set_reduce_flashes(dim)
+			rows["reduce_flashes"].text = "Reduce flashes: %s" % ("on" if dim else "off")
 		"reset":
 			_game.reset_bindings()
 			refresh()

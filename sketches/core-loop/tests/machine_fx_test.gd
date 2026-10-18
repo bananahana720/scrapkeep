@@ -109,7 +109,7 @@ func _run() -> void:
 		var row: Dictionary = MachineFx.SPECIALS[name]
 		t.check("%s has a spawn, a tell, a break and their sounds" % name, row.has("spawn") and row.has("tell")
 			and (row.has("break") or (row.has("break_split") and row.has("break_clean")))
-			and row["sounds"].has("tell") and row["sounds"].has("presence") and row["sounds"].has("spawn"))
+			and ["tell", "presence", "spawn"].all(func(m: String): return MachineFx.special_sound(name, m) != ""))
 
 	var splitter := FakeSpecial.new()
 	splitter.kind = "splitter"

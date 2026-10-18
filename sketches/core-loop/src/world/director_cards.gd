@@ -38,6 +38,11 @@ const CARDS := {
 	"kite_drone": {"cost": 2, "weight": 1.0, "stage_cap": 3},
 	"linker": {"cost": 4, "weight": 1.0, "stage_cap": 2},
 	"foreman": {"cost": 3, "weight": 1.0, "stage_cap": 1},
+	"prop_crew": {"cost": 3, "weight": 1.0, "stage_cap": 1},
+	"pit_jaw": {"cost": 3, "weight": 1.0, "stage_cap": 2},
+	"splitter": {"cost": 3, "weight": 1.0, "stage_cap": 2},
+	"ballast_heavy": {"cost": 5, "weight": 1.0, "stage_cap": 2},
+	"gap_net": {"cost": 3, "weight": 1.0, "stage_cap": 2},
 }
 
 

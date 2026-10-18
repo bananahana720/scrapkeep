@@ -33,6 +33,8 @@ const LEGIBILITY_PATH := "res://design-v3/LEGIBILITY.md"
 const SPEED := 8
 const BASE_TICKS := 90
 const OFFSET := Vector3(12.0, 0.0, 0.0)
+# The ballast heavy holds its rim instead of closing on the ball, so it stands in its slam reach.
+const BALLAST_OFFSET := Vector3(3.5, 0.0, 0.0)
 const FRAME_LIMIT := 1500
 # Standing: a hover unit settles a few centimetres after a dive; a walk would cover
 # walk_speed x RECOVERY, about 2.9 m.
@@ -94,6 +96,9 @@ func _pack_kinds() -> Array:
 		# telegraph (the Linker, the Foreman) never attacks.
 		if kind in ["warden", "vault", "miniboss"] or int(Roster.row(kind)["telegraph"]) < 0:
 			continue
+		# A kind whose row has no telegraph never attacks (the Splitter only buds its pods).
+		if int(Roster.row(kind).get("telegraph", 0)) == -1:
+			continue
 		if kind in ["chaser", "lobber"] or _game.combat.fleet.makes(kind):
 			kinds.append(kind)
 	return kinds
@@ -149,7 +154,7 @@ func _structure(kinds: Array) -> void:
 
 func _spawn(kind: String):
 	_game.player.reset_to(_ball_at)
-	var at: Vector3 = _ball_at + OFFSET
+	var at: Vector3 = _ball_at + (BALLAST_OFFSET if kind == "ballast_heavy" else OFFSET)
 	# The mind hand braces against the ball's top habit; give it one to read.
 	if kind == "mind_hand":
 		_game.combat.fleet.habits.add("ram", 5.0)
@@ -295,6 +300,7 @@ func _against_code(kinds: Array) -> void:
 		var warn: float = probe.warn_seconds if is_counter else -1.0
 		var rest: float = probe.rest_seconds if is_counter else -1.0
 		var reads: float = float(probe.get("recovery_seconds")) if probe.get("recovery_seconds") != null else -1.0
+		var probe_wants: bool = is_counter and probe._wants_attack(Vector3.FORWARD * 4.0)
 		_clear_field()
 		await physics_frame
 		_test.check(kind + " is a counter.gd kind", is_counter, "script %s" % kind)
@@ -302,6 +308,10 @@ func _against_code(kinds: Array) -> void:
 			continue
 		_test.check(kind + " pre-shoot is its warn", absf(float(row.get("pre_shoot", -1.0)) - warn) < 0.0001,
 			"record %.2f, warn_seconds %.2f" % [row.get("pre_shoot", -1.0), warn])
+		if _record.PLAYER_STARTED.has(id):
+			_test.check(kind + " is player-started with no cooldown", float(row.get("cooldown", -1.0)) == 0.0 and not probe_wants,
+				"record cooldown %.2f, attacks on its own %s" % [row.get("cooldown", -1.0), probe_wants])
+			continue
 		_test.check(kind + " cooldown is its rest less the recovery", absf(float(row.get("cooldown", -1.0)) - (rest - float(_record.RECOVERY))) < 0.0001,
 			"record %.2f, rest_seconds %.2f - recovery %.2f" % [row.get("cooldown", -1.0), rest, _record.RECOVERY])
 		_test.check(kind + " reads the shared recovery", absf(reads - float(_record.RECOVERY)) < 0.0001,

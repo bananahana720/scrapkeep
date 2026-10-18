@@ -90,6 +90,7 @@ func _data() -> void:
 	_report("every hold breaks", unbreakable.is_empty(), "holding rows whose breaks are not the player's own: %s" % [unbreakable])
 
 	# 2026-10-04, alpha wave 8: the world 2 and 3 kinds are declared ahead of their scripts.
+	# 2026-10-17: seven with the pit jaw (design-v3/WORLD-ROSTERS.md); eight with the prop crew (stage/alpha-w16).
 	var declared: Array = Roster.world_kinds(2) + Roster.world_kinds(3)
 	# 2026-10-04: built tracks the script file, so a wave 9 unit that adds one needs no edit here.
 	var mismatched: Array = []
@@ -100,7 +101,7 @@ func _data() -> void:
 			built.append(id)
 		if Roster.built(id) != has_script:
 			mismatched.append(id)
-	_report("declared kinds are built exactly when their script exists", declared.size() == 6 and mismatched.is_empty(), "declared %s; built %s; mismatched %s" % [declared, built, mismatched])
+	_report("declared kinds are built exactly when their script exists", declared.size() == 8 and mismatched.is_empty(), "declared %s; built %s; mismatched %s" % [declared, built, mismatched])
 
 
 func _physics_process(_delta: float) -> bool:
