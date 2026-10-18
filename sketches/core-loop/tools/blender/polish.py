@@ -523,7 +523,7 @@ def bake(root, opts=None):
                             # shared edge, coplanar overlaps) the BVH returns either by
                             # run, so any front face at the hit point counts.
                             if hit[0] is not None and (hit[1].dot(w) < 0.0 or any(
-                                    f[1].dot(w) < 0.0 for f in tree.find_nearest_range(hit[0], reach * 1e-5))):
+                                    f[1].dot(w) < 0.0 for f in tree.find_nearest_range(hit[0], reach * 1e-4))):
                                 occ += 1.0 - (hit[3] / reach) ** 2
                         # Rays that graze a shared edge can hit either face; rounding
                         # drops that last-bit noise before the 1/1024 quantisation.

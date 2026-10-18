@@ -50,8 +50,8 @@ primitives: a region that shares vertices with the rest of the part opens a seam
 Subdivided regions usually want `detail=1`, since each level already multiplies
 triangles by four. Without polish, `region()` does nothing.
 
-`fit=True` (an `enable()` option, or per region) scales each connected piece back to its
-bounding box before bevel and subdivision after bevel and subdivision, so measured envelopes (a core's
+`fit=True` (an `enable()` option, or per region) scales each connected piece, after bevel
+and subdivision, back to its bounding box from before them, so measured envelopes (a core's
 0.8 m radius, an ear tip's height, a bulb's 0.6 m face) hold exactly. Leave it off for a
 lopsided piece, such as the kite drone's keeled hull, where a per-axis stretch pushes
 diagonals past the envelope.
@@ -146,3 +146,7 @@ names, rigid weights, origins and collider envelopes. A recipe's envelope assert
 (radius, half extents, heights) must still pass, and can move both ways: bevels and
 subdivision pull corners inward, but `detail` adds segments to curved primitives, so
 their faces sit closer to the true circle and the mesh grows slightly outward.
+
+Colour tests still apply to baked colours: `tests/hero_assets_test.gd` caps `ancient_enamel`
+value and saturation at 0.45, and the default AO pushed dark corners to 0.473. Recipes
+with that slot use `edge=0, ao_strength=0.35`.
