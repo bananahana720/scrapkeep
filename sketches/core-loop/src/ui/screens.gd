@@ -477,6 +477,8 @@ func toggle_achievements() -> void:
 	_actions.visible = not _achievements.visible
 	if _achievements.visible:
 		_achievements.refresh(game.ctx.profile, game.progress)
+		# Over the camp walk A is the trophy wall's key, so Back shows the Esc that closes it.
+		_achievements.back.set_key("key_esc" if walking() else "key_a")
 		_show("ACHIEVEMENTS", Palette.AMBER, "")
 		_sync_walk()
 	else:
