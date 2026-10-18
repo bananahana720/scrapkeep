@@ -284,8 +284,9 @@ def _append(dst, src):
         for sl, dl in vert_layers:
             nv[dl] = v[sl]
         verts.append(nv)
-    for f in src.faces:
-        loops = _loops(f)
+    # Faces in a fixed order too: by their vertex indices from the lowest corner.
+    for loops in sorted((_loops(f) for f in src.faces), key=lambda ls: [l.vert.index for l in ls]):
+        f = loops[0].face
         nf = dst.faces.new([verts[l.vert.index] for l in loops])
         nf.material_index = f.material_index
         nf.smooth = f.smooth
