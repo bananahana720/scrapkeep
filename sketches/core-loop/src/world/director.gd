@@ -34,7 +34,7 @@ extends RefCounted
 #
 # Authored packs (slice table): with `authored` set, every arrival is one whole pack from
 # that list and nothing else spawns: no single draws, no unlock clock, no ancient share. Packs
-# are drawn uniformly and never the same twice in a row; the
+# are drawn uniformly (but for the nemesis lean below) and never the same twice in a row; the
 # `elite_arrival`-th arrival is the `elite` pack, once. Pacing stays the director's own, and
 # a pack arrives only when the cap has room for all of it.
 #
