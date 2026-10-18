@@ -1117,10 +1117,12 @@ func _camper(target: Node3D, delta: float) -> void:
 
 
 func _completionist(warden: Node3D, delta: float) -> void:
-	if _activity_goal(delta):
-		return
+	# Give up before resuming a camp or bounty: on Tally 36428 stage 4 the
+	# activities ran past ENGAGE_BY and the Warden was never reached.
 	if _activity_rushed():
 		_fight(warden, delta)
+		return
+	if _activity_goal(delta):
 		return
 	var event := _event_goal(delta)
 	if not event.is_empty():
