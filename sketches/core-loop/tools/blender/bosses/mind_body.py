@@ -27,6 +27,15 @@ and owns the collision target. attention is only a small optical rotation.
 stagger_open uncovers mint OpenLens behind opaque slate shutters. Runtime alone
 decides when it opens. No mint crown/enamel, reward amber or attached hand geometry.
 
+The empty place (2026-10-18, design thread): the crew called the Mind the Mind because
+it did the thinking and they were its hands. CrewBench is four empty seats on a low
+plank behind the seat, facing the lens, outside every telegraph. GlovePlate is a work
+glove laid flat by the bench; it rests hidden (scale 0.001) and only glove_down shows it
+coming down onto the pad by the empty seat, while the mantles settle as in final_quiet.
+glove_down is the defeat clip for this base; final_quiet stays for older wiring. All
+clips are sampled every frame with eased (auto-clamped Bezier) keys. family_strike ends
+holding FamilyRecoil at z=-0.18, where recovery starts, so the pair never pops.
+
 One base allocation includes the crown, six slabs, supports, spine and seat. The kit
 allocation includes the optics and all working tools. These REPLACE the old clamp
 and kit; they are not additions to it. Material names follow the shared contract.
@@ -47,6 +56,7 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
 
 SKETCH = HERE.parents[2]
 PALETTE = {"bone": "d2c5a5", "petrol": "365754", "charcoal": "242a28",
@@ -61,7 +71,17 @@ CLIPS = {
     "choir_change": (0.6, 0.6), "choir_change_1_2": (0.6, 0.6),
     "choir_change_2_0": (0.6, 0.6), "stagger_open": (0.5, 0.5),
     "hand_send": (0.6, 0.3), "final_quiet": (2.0, 2.0),
+    "glove_down": (2.4, 2.4),
 }
+GLOVE_AT = (4.3, 0.06, 3.0)
+GLOVE_FROM = (0.0, 14.0, 1.0)
+# Fingers toward the end seat, cuff out toward the rim.
+GLOVE_YAW = -125
+
+
+def ease(t):
+    t = max(0.0, min(1.0, t))
+    return t * t * (3 - 2 * t)
 
 
 def B(v):
@@ -275,7 +295,94 @@ def base():
             body.face([rings[j][k],rings[j+1][k],rings[j+1][n],rings[j][n]],
                       "dark_joint" if dark else "ancient_enamel", "charcoal" if dark else ("petrol" if k%6==1 else "bone"))
     body.object((0,0,0),seat)
+    crew_bench(root)
+    glove_plate(root)
     return root
+
+
+def crew_bench(root):
+    """Four empty crew seats on a low curved plank behind the seat, each facing the lens."""
+    bench = Mesh("CrewBench")
+    radius = 4.4
+    for i in range(4):
+        a = math.radians(-33 + 22 * i)
+        out = Vector((math.sin(a), 0, math.cos(a)))
+        side = Vector((math.cos(a), 0, -math.sin(a)))
+        c = out * radius
+
+        def at(x, y, z):
+            return tuple(c + side * x + Vector((0, y, 0)) + out * z)
+
+        def block(x0, x1, y0, y1, z0, z1, slot, tint):
+            v = [at(x, y, z) for x, y, z in [(x0,y0,z0),(x1,y0,z0),(x1,y1,z0),(x0,y1,z0),
+                                              (x0,y0,z1),(x1,y0,z1),(x1,y1,z1),(x0,y1,z1)]]
+            for f in [(0,3,2,1),(4,5,6,7),(0,1,5,4),(3,7,6,2),(0,4,7,3),(1,2,6,5)]:
+                bench.face([v[k] for k in f], slot, tint)
+        block(-.48,.48,.5,.66,-.42,.42,"ancient_enamel","bone")
+        block(-.46,.46,.66,1.5,.36,.5,"ancient_enamel","petrol")
+        block(-.4,.4,1.18,1.3,.34,.52,"dark_joint","charcoal")
+        for sx in (-.36,.36):
+            for sz in (-.3,.3):
+                block(sx-.06,sx+.06,.12,.5,sz-.06,sz+.06,"dark_joint","charcoal")
+    # One plank under all four, a shallow arc of five flat segments.
+    for j in range(5):
+        a0, a1 = math.radians(-44 + 17.6 * j), math.radians(-44 + 17.6 * (j + 1))
+        p = [(r*math.sin(a), y, r*math.cos(a)) for a in (a0, a1) for r in (3.85, 4.95) for y in (0, .12)]
+        lo0, hi0, lo1, hi1 = p[0], p[1], p[2], p[3]
+        lo2, hi2, lo3, hi3 = p[4], p[5], p[6], p[7]
+        bench.face([hi0, hi2, hi3, hi1], "ancient_enamel", "petrol")
+        bench.face([lo0, lo1, lo3, lo2], "dark_joint", "charcoal")
+        bench.face([lo0, lo2, hi2, hi0], "dark_joint", "charcoal")
+        bench.face([lo1, hi1, hi3, lo3], "dark_joint", "charcoal")
+    for a, inner, outer in ((-44, 3.85, 4.95), (44, 3.85, 4.95)):
+        r = math.radians(a)
+        q = [(rr*math.sin(r), y, rr*math.cos(r)) for rr in (inner, outer) for y in (0, .12)]
+        bench.face([q[0], q[2], q[3], q[1]] if a < 0 else [q[0], q[1], q[3], q[2]], "dark_joint", "charcoal")
+    bench.object((0,0,0), root)
+
+
+def glove_plate(root):
+    """A work glove laid flat, palm down: canvas back, leather cuff, five fingers."""
+    glove = Mesh("GlovePlate")
+    h = .14
+
+    def slab(outline, y0, y1, tint, side="dark_joint"):
+        # Top faces up (+Y): keep every outline clockwise seen from above (x right, z down).
+        area = sum(outline[k][0]*outline[(k+1)%len(outline)][1]-outline[(k+1)%len(outline)][0]*outline[k][1]
+                   for k in range(len(outline)))
+        if area > 0:
+            outline = list(reversed(outline))
+        top = [(x, y1, z) for x, z in outline]
+        bottom = [(x, y0, z) for x, z in outline]
+        glove.face(top, "ancient_enamel", tint)
+        glove.face(list(reversed(bottom)), side, "charcoal")
+        n = len(outline)
+        for k in range(n):
+            m = (k + 1) % n
+            glove.face([bottom[k], bottom[m], top[m], top[k]], "ancient_enamel", tint)
+
+    def digit(x, z0, length, width, a):
+        d = (math.sin(a), math.cos(a))
+        r = (d[1], -d[0])
+        pts = []
+        for s, w in ((0, width), (length*.9, width*.92)):
+            pts.append((x + d[0]*s - r[0]*w/2, z0 + d[1]*s - r[1]*w/2))
+        tip = (x + d[0]*length, z0 + d[1]*length)
+        pts = [pts[0], pts[1], (tip[0] - r[0]*w*.3, tip[1] - r[1]*w*.3),
+               (tip[0] + r[0]*w*.3, tip[1] + r[1]*w*.3),
+               (x + d[0]*length*.9 + r[0]*w/2, z0 + d[1]*length*.9 + r[1]*w/2),
+               (x + r[0]*width/2, z0 + r[1]*width/2)]
+        return pts
+    # Palm: an eight-sided plate, cuff at +z, fingers toward -z.
+    slab([(-.62,.55),(.62,.55),(.72,.2),(.7,-.45),(.55,-.62),(-.55,-.62),(-.7,-.45),(-.72,.2)], 0, h, "c9b48a")
+    slab([(-.7,.95),(.7,.95),(.68,.55),(-.68,.55)], 0, h*1.25, "6b4a32")
+    for x, length in ((-.45, .62), (-.15, .78), (.15, .82), (.44, .7)):
+        slab(digit(x, -.58, length, .27, 0), 0, h*.9, "c9b48a")
+    slab(digit(.68, .0, .62, .3, math.radians(-120)), 0, h*.9, "c9b48a")
+    obj = glove.object((0,0,0), root)
+    obj.location = B(GLOVE_AT)
+    obj.rotation_euler.z = math.radians(GLOVE_YAW)
+    obj.scale = Vector((1.6, 1.6, 1.6)) * .001
 
 
 def optic(parent):
@@ -436,6 +543,23 @@ def pose(clip,t,root,snapshot):
                 slab.rotation_euler.x=.65*u+.25*math.sin(math.pi*u)*(1-u)
                 slab.rotation_euler.z=side*.3*math.sin(math.pi*u)
                 slab.scale=Vector((1,1,1))*max(.015,1-u**6)
+    if clip=="glove_down":
+        settle=ease(t/.8)
+        for i in range(6):
+            slab=obj("Mantle%d"%i)
+            if slab:
+                slab.rotation_euler.x=(.09 if i%2 else -.07)*settle
+        glove=obj("GlovePlate")
+        if glove:
+            # Carried down from the crown, a breath held above the seat, then set down.
+            u=ease((t-.15)/.7)
+            land=ease((t-.85)/.15)
+            at=Vector(GLOVE_FROM).lerp(Vector(GLOVE_AT)+Vector((0,.5,0)),u)
+            at.y-=.5*land
+            glove.location=B(at)
+            glove.rotation_euler.z=math.radians(GLOVE_YAW)+(1-u)*.9
+            glove.rotation_euler.x=(1-u)*.5
+            glove.scale=Vector((1.6,1.6,1.6))*max(.001,min(1,(t-.1)/.08))
     if clip=="final_quiet":
         for i in range(6):
             slab=obj("Mantle%d"%i)
@@ -463,7 +587,8 @@ def pose(clip,t,root,snapshot):
     if clip=="pulse" and obj("PulseLip"):
         obj("PulseLip").location.z=.45*(1-t)-.10*math.sin(math.pi*t)
     if clip in ("family_strike","recovery") and obj("FamilyRecoil"):
-        obj("FamilyRecoil").location.z=-.18*(math.sin(math.pi*t) if clip=="family_strike" else 1-t)
+        # The strike kicks back and holds; recovery leaves from that same -0.18 m.
+        obj("FamilyRecoil").location.z=-.18*(ease(t/.6) if clip=="family_strike" else 1-ease(t))
     if clip.startswith("choir_change") and obj("LensRoot"):
         start={"choir_change":0,"choir_change_1_2":1,"choir_change_2_0":2}[clip]
         a=(start+t)*math.tau/3
@@ -493,6 +618,7 @@ def controls(clip,root):
     elif clip.startswith("choir_change"): names=["LensRoot"]
     elif clip=="stagger_open": names=["Shutter%d"%i for i in range(6)]
     elif clip=="hand_send": names=["EmitterL"]
+    elif clip=="glove_down": names=["Mantle%d"%i for i in range(6)]+["GlovePlate"]
     elif clip=="final_quiet": names=["Mantle%d"%i for i in range(6)]+["LensRoot"]+["Shutter%d"%i for i in range(6)]
     return [o for o in common.tree(root) if o.name in names]
 
@@ -508,9 +634,8 @@ def animate(root,snapshot):
             act=bpy.data.actions.new(clip+"_"+o.name)
             o.animation_data.action=act
             act.use_fake_user=True
-            frames=sorted(set([1,1+round(duration*30*.2),1+round(duration*30*.55),1+round(duration*30)]))
-            if clip.startswith("choir_change") or clip.startswith("phase_break"):
-                frames=list(range(1,round(duration*30)+2))
+            # Every frame at 30 fps, so sampled curves (sines, kicks, settles) read smooth.
+            frames=list(range(1,round(duration*30)+2))
             for f in frames:
                 pose(clip,(f-1)/(duration*30),root,snapshot)
                 for path in ("location","rotation_euler","scale"):
@@ -520,7 +645,10 @@ def animate(root,snapshot):
                     for bag in strip.channelbags:
                         for curve in bag.fcurves:
                             for k in curve.keyframe_points:
-                                k.interpolation="LINEAR"
+                                k.interpolation="BEZIER"
+                                k.handle_left_type="AUTO_CLAMPED"
+                                k.handle_right_type="AUTO_CLAMPED"
+                            curve.update()
             o.animation_data.action=None
             track=o.animation_data.nla_tracks.new()
             track.name=clip
@@ -590,7 +718,8 @@ def export(root,path,snapshot):
             for track in obj.animation_data.nla_tracks:
                 track.mute=True
     freeze_rest_export(path,snapshot)
-    common.canonical_indices(str(path))
+    # Sorted vertices too: the polish bake's values must not depend on export order.
+    common.canonical_indices(str(path),vertices=True)
     print("EXPORTED",path)
 
 
@@ -691,6 +820,9 @@ def main():
     materials()
     base_root=base()
     fit_mantle_envelope(base_root)
+    # Baked AO and edge wear only: bevels or subdivision would move the measured envelope.
+    polish.enable(ao_reach=.08)
+    polish.bake(base_root,polish.options())
     base_rest=rest(base_root)
     animate(base_root,base_rest)
     args.out_dir.mkdir(parents=True,exist_ok=True)
@@ -698,11 +830,13 @@ def main():
     # Free Blender-global names before the kit, but preserve base preview identity.
     for obj in common.tree(base_root): obj.name="BasePreview_"+obj.name
     kit_root=kit()
+    polish.bake(kit_root,polish.options())
     kit_rest=rest(kit_root)
     animate(kit_root,kit_rest)
     export(kit_root,args.out_dir/"boss_mind_kit.glb",kit_rest)
     info={}
-    for file,cap in (("boss_mind_base.glb",(5000,9600,32)),("boss_mind_kit.glb",(1500,2800,18))):
+    # warden_base and warden_kit classes, raised for polish (POLISH.md).
+    for file,cap in (("boss_mind_base.glb",(20000,38400,32)),("boss_mind_kit.glb",(6000,11200,18))):
         row=glb_info(args.out_dir/file)
         assert all(row[k]<=limit for k,limit in zip(("tris","verts","draws"),cap)),(file,row,cap)
         info[file]=row
