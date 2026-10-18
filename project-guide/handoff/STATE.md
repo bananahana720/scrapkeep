@@ -4,12 +4,17 @@ Re-check every sha with `git ls-remote origin` before relying on it. These were 
 
 ## Where the waves stand
 
+- **main is `f1ab35c1`**: wave 16 (`f9f58944`) plus #132.
 - **Wave 16 is on main** at `f9f58944`. Andrew pushed it at 02:06Z on 18 Oct, and it was verified. Rivet's faster carves (#73) were reverted out of it because the park carve check couldn't fire a carve.
-- **Wave 17 is being stacked** on `stage/alpha-w17` (`27e15952`, draft PR #116 into main). The promote-fast flow applies: see the last section.
+- **Wave 17 is being stacked** on `stage/alpha-w17` (pushed head `27e15952`, draft PR #116 into main). Staging also had main merged in locally (`06a607da`) and the pit jaw and gap net calls as local `83e14863`, not yet pushed at 04:55Z. The promote-fast flow applies: see the last section.
 - **Gate passes stacked for wave 17:** #107, #101, #108, #112, #114, #113, #109, #105, #93, #103, #106, #118.
 - **Still in the gate at 04:25Z:** #69, #73, #111 (camp), the polish set (#115, #119, #120, #121, #122, #124, #128, #133), #78, #126, #123, #127, #61, #104, #106.
 - **PC results on `89bc14ae`:** stage entry is OK. The in-stage freezes are 3.94 s on stage 1 and 2.36 s on stage 2. Menu-ready fails at about 12 s against 5 s. "Stage entry freeze" owns both, with #129 awaiting a 4080 rerun.
-- **Tests-only fix #132** was merged to main at 04:39Z outside the gate. It was kept because it's harmless. The coordinator asked Andrew whether he merged it.
+- **#73 (Rivet carve)** passed the gate at `8e40be12` but has a warm-up hitch. It promotes only with the fixed head plus a 4080 p1/p3 rerun; otherwise it is reverted at promotion.
+- **The 4080 queue:** the #129 park rerun plus a real-launch stage 1, the wave 17 densest fight plus the #128 bosses, the Job B stills, then the #73 p1/p3 rerun.
+- **The next wave carries:** Rivet "Smooth, 0.11 s" (LATE_WORK 290), the crown margin 0.855 reshape, and a loud error for a missing record in child runs.
+- **Old drafts still to check:** #75, #66 pilot radio, #56, #55 jukebox, #52 stage modifiers, #25, #22.
+- **Tests-only fix #132** (child-runs parallel cap) was merged to main at 04:39Z outside the gate. It was kept because it's harmless. The coordinator asked Andrew whether he merged it.
 
 ## Base reds
 
@@ -19,7 +24,7 @@ These fail on the base too, so they are not a PR's fault. The staging list is in
 - `bot_brindle_short`: heft 1.36 against 1.30.
 - `park_reactor_fight`: 61.2 s against 53.7 s. It is one-seed chaotic and flaps even when run solo, so a fail needs a repeat.
 - `bot_six_demolitions_caster`: a Kest flake, 5 in 8.
-- Swarm `runner_gunner` stall: grown seed 1 never latches the hive and caps at 300 s. It has its own thread, "Swarm hive stall on main".
+- Swarm `runner_gunner` "stall": it turned out to be cloud out-of-memory kills, not a game bug. Rerun such rows alone.
 - Swarm grown and 2x misses (base grown 51.71 s). #104 is gated on no regression against `f9f58944`.
 - Older cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `alpha_bot_sweep`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved.
 

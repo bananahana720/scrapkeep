@@ -10,4 +10,4 @@ You are the coordinator of a fresh Scrapkeep project on Andrew's other account. 
 6. Rebuild the phone pages he still uses (Library start page, Sitting Kit, design questions) from the repo copies. The old page list is in [LIBRARY.md](LIBRARY.md).
 7. From now on, keep the register and lessons in this folder.
 
-Andrew's own setup steps, the full file table and what wasn't carried over are in [README.md](README.md). Reference copies of shared-folder files threads rely on are in [shared/](shared/).
+Andrew's own setup steps, the full file table and what wasn't carried over are in [README.md](README.md). Reference copies of shared-folder files threads rely on are in [shared/](shared/). Cloud environment setup for the new project is in [tools/cloud/CLOUD-SETUP.md](../../tools/cloud/CLOUD-SETUP.md), which lands through its own PR.

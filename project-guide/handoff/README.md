@@ -22,7 +22,7 @@ Before you leave the old project, let its open threads finish or park. Every ope
 | --- | --- |
 | [START-HERE.md](START-HERE.md) | The one file the new coordinator reads first |
 | [NEW-GOAL.md](NEW-GOAL.md) | Project name, one-line goal, description |
-| [NEW-INSTRUCTIONS.md](NEW-INSTRUCTIONS.md) | Project instructions: the 13 Direction principles and how we work |
+| [NEW-INSTRUCTIONS.md](NEW-INSTRUCTIONS.md) | The old project's live instructions, updated for the repo and the promote-fast merge flow |
 | [NEW-MEMORY.md](NEW-MEMORY.md) | Cleaned project memory, current truth only |
 | [BOOTSTRAP-PROMPT.md](BOOTSTRAP-PROMPT.md) | First chat message for the new coordinator |
 | [STATE.md](STATE.md) | Wave state, every open PR with its head, base reds, the promote-fast flow |
@@ -33,7 +33,9 @@ Before you leave the old project, let its open threads finish or park. Every ope
 | [RECONCILE.md](RECONCILE.md) | Conflicts with older decision records and how each was settled |
 | [LIBRARY.md](LIBRARY.md) | Every old page, with status (private to the old account) |
 | old-memory/ | Only in the old shared folder `handoff/old-memory/` (raw memory files, not committed). NEW-MEMORY.md is the cleaned version |
-| [shared/](shared/) | Text files from the old shared folder that threads rely on: sitting watch list, attack id registry, card queue, what's left, tone and sound bibles, intent-check method and script, bot shard brief, placeholder breakdown, Waking stagger table, ambition map, alpha scope |
+| [shared/](shared/) | Text files from the old shared folder that threads rely on: sitting watch list, attack id registry, card queue, what's left, tone and sound bibles, intent-check method and script, bot shard brief, placeholder breakdown, Waking stagger table, ambition map, alpha scope, the Rieseberg ambition article |
+
+Cloud environment setup for the new project is in [tools/cloud/CLOUD-SETUP.md](../../tools/cloud/CLOUD-SETUP.md), written by the "Cloud setup for the new project" thread in its own PR.
 
 ## Not carried over
 

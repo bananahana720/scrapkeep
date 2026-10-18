@@ -35,6 +35,8 @@ These were typed by Andrew in the old project on 17 and 18 Oct. Ask him to resta
 - **Every idea is a motif.** Place it deliberately across the game, in harmony, not spread evenly.
 - **Usage limits.** Threads stop and don't self-resume, so nudge each after a reset.
 - **PC Remote Control sessions.** They often report phantom permission prompts. Raise one only if the session stays stalled for several minutes.
+- **Design hub tab.** The coordinator writes it only when a member asks, rebuilt from the register. Its sections are Waiting on you, On your radar, Decided, Being checked, After the alpha, and How we work.
+- **GPU handoff.** The coordinator gives "go", and the PC session replies "GPU released".
 - **Calendar.** Add holds for his wave 19 feel check and the sitting once dates exist.
 
 ## Direction (the full list is in the project instructions and the register)

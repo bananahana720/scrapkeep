@@ -13,7 +13,7 @@ Threads and their sessions stay in the old project and don't move. In the new pr
 | Faster test and red team loops | The tiered gate (#106), flaky tests made deterministic, never skipped | Review of #106 |
 | Set up the per-wave red team | Red team per stage head (one persona) and the five-persona close sweep; crash harvest; intent-check scorecard re-run | The next stage head |
 | Bot shard 6, Bot shard 7 | Bot-tier test shards for the gate (the brief is in `gate/BOT-SHARDS.md` in the shared folder) | Gate jobs |
-| PC machine session (Remote Control) | GPU checks, admissions, the 4080 benches | #129 rerun, the #73 slope bench |
+| PC machine session (Remote Control) | GPU checks and the 4080 benches | The 4080 queue in STATE.md |
 | PC music session (Remote Control) | ACE-Step renders, radio takes, camp music | The last 9 radio takes, the camp split |
 
 ## Work threads still open
@@ -29,7 +29,7 @@ Threads and their sessions stay in the old project and don't move. In the new pr
 | Effects and shader polish | #108 (also owns baked shading lost where enemy scripts swap materials) | Done, in gate |
 | Stage entry freeze | #129: in-stage freezes and the 12 s menu-ready | Awaiting the 4080 rerun |
 | Runner Gunner ultimate freeze (Rivet) | #73: Spread every Breach, Smooth 0.11 s on slopes | Building the slope timing |
-| Swarm hive stall on main | Base red: runner_gunner never latches the hive | Review-ready |
+| Swarm hive stall on main | Base red that turned out to be cloud out-of-memory kills | Review-ready |
 | Reward overpowered builds | #104: Lift the ceiling, Per Warden, overkill pays | In gate |
 | Wall grip and carving | #61 Speed holds | In gate |
 | World 2 and 3 enemy identity | #69; owns the attack id registry `alpha-status/attack-ids.md` (new claims E34+) | Review-ready |
