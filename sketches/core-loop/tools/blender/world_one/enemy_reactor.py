@@ -15,9 +15,13 @@ import bpy
 from mathutils import Vector
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Polish (POLISH.md): filleted edges and baked AO on the cast. No smoothing level: the
+# cast's lathe profile is the read, so it keeps its exact radii.
+polish.enable(detail=1, subsurf=0, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty('Reactor')
 
 def shell(part, rows, slot, colors, caps=True, sectors=16):
@@ -52,12 +56,16 @@ for v in body.bm.verts:
 body.to_object(parent=root)
 
 stack = Part('ReactorStack')
+stack.bevel = 0  # thin bands and an open bore; the charge band keeps its exact height
 # Open bore, tapered cast tube and wide blue collar inside a twice-height dark groove.
 shell(stack, [(-0.60,0.32), (-0.30,0.30), (0.28,0.28), (0.50,0.28), (0.60,0.28)],
       'paint', [(0.22,0.33,0.31), 'petrol', 'charcoal', 'charcoal'], caps=False, sectors=8)
 stack.ring('paint', 0.20, 0.28, 0.08, segs=8, loc=(0,0,0.56), color=(0.29,0.40,0.38))
 stack.cyl('paint', 0.20, 0.20, 0.18, segs=8, loc=(0,0,0.40), color='charcoal')
-stack.cyl('paint', 0.284, 0.284, 0.10, segs=8, loc=(0,0,0.39), color='ancient', caps=False)
+# The Cherenkov band is blue: reactor.gd lights only blue vertex colour. It named the
+# palette's 'ancient' until that turned uranium green in wave 12, and the shipped GLB
+# kept the old blue.
+stack.cyl('paint', 0.284, 0.284, 0.10, segs=8, loc=(0,0,0.39), color='3d8bff', caps=False)
 bmesh.ops.recalc_face_normals(stack.bm, faces=stack.bm.faces[:])
 stack.to_object(parent=root)
 body_obj = bpy.data.objects['ReactorBody']
@@ -66,7 +74,7 @@ assembly_tris = common.tris(body_obj) + 3 * common.tris(stack_obj)
 draws = len(body_obj.data.materials) + len(stack_obj.data.materials)
 print('ASSEMBLY_TRIS', assembly_tris, 'DRAWS', draws,
       'BODY_TRIS', common.tris(body_obj), 'STACK_TRIS', common.tris(stack_obj))
-if assembly_tris > 1200 or draws > 3:
+if assembly_tris > 5100 or draws > 3:
     raise SystemExit('C31 assembled budget exceeded')
 opts = common.args()
 common.export(root, opts['out'] or os.path.join(common.MODELS, 'world_one', 'enemy_reactor.glb'))

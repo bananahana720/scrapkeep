@@ -29,6 +29,9 @@ const DEFEAT_CLIP := "glove_down"
 const SHUTTERS := ["Shutter0", "Shutter1", "Shutter2", "Shutter3", "Shutter4", "Shutter5"]
 # How fast the lens settles onto a new choir seat; the clips' own change is 0.6 s.
 const LENS_SETTLE := 8.0
+# How far a warn clip may be stretched or squeezed to fit its sim timer.
+const WARN_SPEED_MIN := 0.5
+const WARN_SPEED_MAX := 2.0
 
 var module
 var base: Node3D
@@ -150,7 +153,8 @@ func _step_attack() -> void:
 		_current = {"attack": module.attacks.back(), "struck": false}
 		var family: String = String(_current["attack"]["family"])
 		_aim(_current["attack"])
-		BossModel.play(_kit_anim, FAMILY_CLIPS.get(family, "lane_warn"))
+		var warn_clip: String = FAMILY_CLIPS.get(family, "lane_warn")
+		BossModel.play(_kit_anim, warn_clip, false, -1.0, _warn_speed(warn_clip, _current["attack"]))
 		_hands_seen = module.hands.size()
 		return
 	if _current.is_empty():
@@ -169,6 +173,19 @@ func _step_attack() -> void:
 		_hands_seen = module.hands.size()
 		BossModel.play(_kit_anim, "hand_send" if sent else "recovery")
 		_current = {}
+
+
+# From phase 2 the sim tightens each warn below its clip's authored length, so the strike cut
+# the clip short. The clip is stretched to end exactly when the hazard's own warn timer does;
+# the timer itself is only read.
+func _warn_speed(clip: String, attack: Dictionary) -> float:
+	var hazards: Array = attack["hazards"]
+	if hazards.is_empty() or not is_instance_valid(hazards[0]) or not _kit_anim.has_animation(clip):
+		return 1.0
+	var warn: float = hazards[0].warn_seconds
+	if warn <= 0.0:
+		return 1.0
+	return clampf(_kit_anim.get_animation(clip).length / warn, WARN_SPEED_MIN, WARN_SPEED_MAX)
 
 
 # Emitters yaw to the committed bearing: a lane's heading, or the middle of a plate's sector.

@@ -60,8 +60,9 @@ def offset(obj, up=0, forward=0, pitch=0, yaw=0, roll=0, scale=1, side=0):
     obj.scale = scl * scale
 
 
-def action(root, name, duration, rows):
-    """rows = object -> [(seconds, offset keywords)]. Only named visuals get keys."""
+def action(root, name, duration, rows, linear=()):
+    """rows = object -> [(seconds, offset keywords)]. Only named visuals get keys.
+    Parts in `linear` stay LINEAR: code moves the magnet head on a linear path, so its arm must match."""
     import common
     objects = {o.name: o for o in common.tree(root)}
     restore(root)
@@ -83,13 +84,17 @@ def action(root, name, duration, rows):
         strip = track.strips.new(name, 1, act)
         strip.name = name
         strip.extrapolation = "NOTHING"
-        # Linear samples keep warning endpoints exact and prevent overshoot.
+        # Eased keys with clamped handles: endpoints stay exact, any overshoot is an authored key.
+        # Rolling drums are constant-rate spin and stay linear so loops have no pulse.
+        mode = "LINEAR" if part.startswith("Drum") or part in linear else "BEZIER"
         for layer in act.layers:
             for item in layer.strips:
                 for bag in item.channelbags:
                     for curve in bag.fcurves:
                         for key in curve.keyframe_points:
-                            key.interpolation = "LINEAR"
+                            key.interpolation = mode
+                            if mode == "BEZIER":
+                                key.handle_left_type = key.handle_right_type = "AUTO_CLAMPED"
         obj.animation_data.action = None
         track.mute = True
     restore(root)
@@ -112,15 +117,26 @@ def author_ship(root):
     rows["Hull"] = [(0, {}), (.3, {"up": -.025, "pitch": .004}),
                     (.6, {}), (.9, {"up": -.025, "pitch": -.004}), (d, {})]
     action(root, "idle_roll", d, rows)
-    for name, duration, start, end in (("crane_warn", 1.4, 0, -math.radians(40)),
-                                      ("crane_sweep", 1.2, -math.radians(40), math.radians(40))):
+    # Code places the magnet head and cable on a linear path (boss.gd _step_crane), so the crane
+    # arm's yaw stays linear and keyed as on base: no wind-back, no overshoot. The elbow and the
+    # magnet tilt are free to ease, and the warn overshoots them. Sweep starts on the warn end pose.
+    warn = math.radians(40)
+    for name, duration in (("crane_warn", 1.4), ("crane_sweep", 1.2)):
         rows = {}
         for side, sign in (("Port", 1), ("Starboard", -1)):
-            rows["Crane" + side] = [(0, {"yaw": sign * start}), (duration, {"yaw": sign * end})]
-            rows["CraneElbow" + side] = [(0, {"pitch": -.05}), (duration, {"pitch": -.18})]
+            if name == "crane_warn":
+                yaw = [(0, 0), (1.4, -warn)]
+                magnet = [(0, .02), (.3, 0), (1.15, .21), (1.4, .18)]
+                elbow = [(0, -.05), (.3, -.03), (1.1, -.2), (1.4, -.18)]
+            else:
+                yaw = [(0, -warn), (1.2, warn)]
+                magnet = [(0, .18), (.7, .21), (1.2, .18)]
+                elbow = [(0, -.18), (.7, -.2), (1.2, -.18)]
+            rows["Crane" + side] = [(t, {"yaw": sign * v}) for t, v in yaw]
+            rows["CraneElbow" + side] = [(t, {"pitch": v}) for t, v in elbow]
             # Only small tilt of the working face. MagnetSocket position is code-owned.
-            rows["Magnet" + side] = [(0, {"pitch": .02}), (duration, {"pitch": .18})]
-        action(root, name, duration, rows)
+            rows["Magnet" + side] = [(t, {"pitch": v}) for t, v in magnet]
+        action(root, name, duration, rows, linear=("CranePort", "CraneStarboard"))
     action(root, "magnet_hold_drip", .2, {
         "Magnet" + s: [(0, {"up": .035}), (.08, {"up": .055}), (.1, {"up": .025}), (.2, {"up": .035})]
         for s in ("Port", "Starboard")})
@@ -172,11 +188,13 @@ def author_ship(root):
             rows[prefix + s] = absent(.8)
     action(root, "enter_scuttle", .8, rows)
     action(root, "charge_warn", 1.4, {
-        "BowRam": [(0, {}), (1.4, {"forward": -.18, "pitch": .025})],
-        "Hull": [(0, {}), (1.4, {"up": -.08, "pitch": .008})]})
+        "BowRam": [(0, {}), (.25, {"forward": .03}), (1.15, {"forward": -.2, "pitch": .028}),
+                   (1.4, {"forward": -.18, "pitch": .025})],
+        "Hull": [(0, {}), (.25, {"up": .012}), (1.15, {"up": -.09, "pitch": .009}),
+                 (1.4, {"up": -.08, "pitch": .008})]})
     action(root, "wall_stun", 3, {
         "Hull": [(0, {}), (.10, {"pitch": -.015, "up": -.06}),
-                  (.2, {"pitch": .012}), (.35, {}), (3, {})],
+                  (.2, {"pitch": .012}), (.35, {}), (.6, {"pitch": -.004, "up": .01}), (1.1, {}), (3, {})],
         "CockpitShield": [(0, {"pitch": math.radians(105)}), (3, {"pitch": math.radians(105)})]})
     action(root, "eject", 2.5, {
         "ScooterSeat": [(0, {}), (.2, {"up": -.18}), (.35, {"up": .25}), (.5, {"scale": .001}), (2.5, {"scale": .001})],

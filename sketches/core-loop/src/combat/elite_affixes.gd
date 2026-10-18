@@ -6,6 +6,11 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 # Rest decreases toward 1.8 s; its upper cap is 2.4 s. Each added attack alternates
 # with the brute's original slam and freezes its own geometry at warning onset.
 const IDS := ["stamp", "rail", "rearblast"]
+# The Dig's theme is plate and pressure (Andrew's Q3, "Flow, Plate, Wind"): every member of a
+# Dig elite pack arrives with this affix, spec armour "plated", so kinetic hits are resisted
+# and arc and abilities are weak (damage_families.gd, the fields thread's PR #65). It is not a
+# ROWS behaviour: row("plated") stays empty.
+const PLATED := "plated"
 const ROWS := {
 	"stamp": {"name": "Target-stamp Fast Plated Brute", "behaviour": "target_stamp", "stat": "walk_speed",
 		"stats": {"walk_speed": [3.8, 4.4, 5.0]}, "cap": 5.0,

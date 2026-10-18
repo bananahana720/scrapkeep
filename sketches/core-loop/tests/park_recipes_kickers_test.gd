@@ -1,22 +1,22 @@
 extends SceneTree
 # 2026-10-17 (placeholder units C and F, alpha-status/placeholders/BREAKDOWN.md): the sized kickers (tools/blender/park/
-# kickers.py) and the lava channel half-pipe (tools/blender/park/lavachannels.py) place through park_recipes.gd and ride.
+# kickers.py) and the sinkhole's stamped channels and chute (tools/blender/park/lavachannels.py) place through
+# park_recipes.gd and ride.
 # Each GLB is one row size [L, H, W], because the seat fit stretches a GLB along its ride only (PARK-SEAT); its id says
 # that size, and a seat-fit row seats any length from 0.75 to 1.5 L.
 # (a) Each recipe ships its base GLB and two detail shells; the base holds the render mesh and its -col mesh only, and
 #     the folded registry says origin entry_lip.
 # (b) Budgets after import: base and -col within the landform class (8,000 triangles, two draws), each shell one draw
 #     within the detail class.
-# (c) Coverage: every flume and pit kicker (greybox or already seated), every sinkhole lava_channel half-pipe, every crown kicker and every
-#     islands shelf-edge step lip has a piece of its width and height (piece_for), and its seat fit is not refused.
-# (d) Placed on a seat-fit row on flat ground, a piece's collider is the row's footprint: width W, lip height H (the
-#     shelf edge's coping 0.06 m), centred on the row's at.
+# (c) Coverage: every greybox kicker in the flume, pit, crown and islands and every greybox sinkhole half-pipe has a
+#     piece of its width and height (piece_for), and its seat fit is not refused.
+# (d) Placed on a seat-fit row on flat ground, a piece's collider is the row's footprint: width W, its top at H (the
+#     shelf edge's coping 0.06 m; a stamp liner's open ends, y 0, its floor COL_DROP under the stamp's -H; the chained
+#     lava_channel's two end slabs, 6 m under its floor, so nothing in its lane collides), centred on the row's at.
 # (e) A ball runs off plate_kicker_12x2p5x14 on a seat-fit pit row, leaves the ground at the lip (StageMap.near_kicker_lip)
 #     at the angle the row's height and length set, with no dead stop on the way.
-# (f) A ball rolls the length of a seated lava_channel row with a sideways push: it pumps between the walls, stays inside
-#     the channel, rolls out of the far end, and never dead-stops.
-# Evidence limit: headless Jolt physics on a 1 m ball on flat ground (no park bake, so no stamp under the channel); no
-# feel, look or camera claim.
+# Evidence limit: headless Jolt physics on a 1 m ball on flat ground; no park bake, so no ride through a stamp liner (the
+# bake's stamp is that ride; the Sinkhole park pass rides it); no feel, look or camera claim.
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
@@ -39,11 +39,16 @@ const PIECES := {
 	"plate_kicker_16x6x24": [16, 6, 24], "plate_kicker_8x3x20": [8, 3, 20],
 	"mesa_lip_kicker_24x6x36": [24, 6, 36], "mesa_lip_kicker_24x6x60": [24, 6, 60], "mesa_lip_kicker_24x6x90": [24, 6, 90],
 	"mesa_lip_kicker_26x5x30": [26, 5, 30], "mesa_lip_kicker_60x32x36": [60, 32, 36], "mesa_lip_kicker_60x26x60": [60, 26, 60],
-	"mesa_shelf_edge": [12, 0.01, 1600],
-	"lava_channel": [58, 4, 28],
+	"mesa_shelf_edge": [12, 0.01, 1600], "mesa_shelf_edge_12x0p01x840": [12, 0.01, 840], "mesa_shelf_edge_12x0p01x720": [12, 0.01, 720],
+	"mesa_lip_kicker_12x4x56": [12, 4, 56], "mesa_lip_kicker_12x4x300": [12, 4, 300],
+	"lava_channel": [58, 4, 28], "lava_trench_420x6x40": [420, 6, 40], "dry_wash_1500x4x60": [1500, 4, 60],
+	"lava_chute_3x0p5x8": [3, 0.5, 8],
 }
+# the stamp liners (lavachannels.py): the -col is the stamp's profile COL_DROP under it, meeting the plain at the open ends
+const LINERS := ["lava_trench_420x6x40", "dry_wash_1500x4x60"]
 const SHELF_TOP := 0.06
-const LAVA_LIFT := 0.12
+const COL_DROP := 0.15
+const CHAIN_SLAB := [-6.0, -5.8]
 
 var _t := T.new("park_recipes_kickers_test")
 
@@ -58,7 +63,6 @@ func _run() -> void:
 	_check_coverage()
 	_check_placed()
 	await _check_kicker_roll()
-	await _check_channel_roll()
 	quit(_t.verdict())
 
 
@@ -132,17 +136,14 @@ static func piece_for(row: Dictionary) -> String:
 	return ""
 
 
-# The rows these pieces exist for: greybox kickers in the flume, pit, crown and islands, and the sinkhole's lava channels.
+# The rows these pieces exist for: greybox kickers in the flume, pit, crown and islands, and the sinkhole's half-pipes,
+# whether they still stand in as the greybox or a park pass has already swapped them onto a piece (2026-10-18 Highdraft
+# swap, PR #78).
 static func _target(park: String, row: Dictionary) -> bool:
-	# A row already seated with one of these pieces still counts (park_pit's kickers, authored pass 2026-10-17).
 	var recipe := String(row.get("recipe", ""))
 	if recipe != "greybox:" + String(row["element"]) and not PIECES.has(recipe):
 		return false
-	if park.ends_with("park_sinkhole.json"):
-		return row["element"] == "half_pipe" and String(row["id"]).begins_with("lava_channel_")
-	if park.ends_with("park_islands.json"):
-		return row["element"] == "kicker" and String(row["id"]).contains("step_lip")
-	return row["element"] == "kicker"
+	return row["element"] == ("half_pipe" if park.ends_with("park_sinkhole.json") else "kicker")
 
 
 func _check_coverage() -> void:
@@ -162,6 +163,9 @@ func _check_coverage() -> void:
 			if id == "":
 				missing.append("%s %s" % [row["id"], row["size"]])
 				continue
+			if PIECES.has(String(row["recipe"])) and (row["recipe"] != id or row.get("fit", "") != ParkRecipes.FIT_SEAT):
+				missing.append("%s takes %s, seat fit, not %s %s" % [row["id"], id, row["recipe"], row.get("fit", "")])
+				continue
 			var seated := row.duplicate(true)
 			seated["recipe"] = id
 			seated["fit"] = ParkRecipes.FIT_SEAT
@@ -171,8 +175,9 @@ func _check_coverage() -> void:
 				continue
 			covered += 1
 		_t.check("(c) %s: every target row has a piece that seats it" % path.get_file(), missing.is_empty(), str(missing))
-	_t.check("(c) the pieces seat all 73 target rows (18 flume and pit kickers, 21 lava channels, 16 crown kickers, 18 step lips)",
-		covered == total and total == 73, "%d of %d" % [covered, total])
+	# 78 on stage w17 with #78: the islands' 18 step lips stay greybox and run_step_lip_3 is not split (#78 held them back)
+	_t.check("(c) the pieces seat all 78 target rows (18 flume and pit kickers, 24 sinkhole half-pipes, 16 crown kickers, 20 islands kickers)",
+		covered == total and total == 78, "%d of %d" % [covered, total])
 
 
 # The collider's AABB in the node's space.
@@ -195,18 +200,22 @@ func _check_placed() -> void:
 	var x := 0.0
 	for id: String in PIECES:
 		var size: Array = PIECES[id]
-		var element := "half_pipe" if id == "lava_channel" else "kicker"
+		var element := "half_pipe" if id.begins_with("lava_") or id.begins_with("dry_wash") else "kicker"
 		var node := ParkRecipes.place(_row(id, element, Vector2(x, 0), 0.0, size, id, ""), parent)
 		x += float(size[2]) + 20.0
 		if not _t.check("(d) %s places as its GLB, not a greybox" % id, node != null and not node.has_meta("seat_refused")
 				and node.get_node_or_null("Greybox") == null, str(node)):
 			continue
 		var box := _collider_box(node)
-		var top := SHELF_TOP if id == "mesa_shelf_edge" else (LAVA_LIFT if id == "lava_channel" else float(size[1]))
+		var top := SHELF_TOP if id.begins_with("mesa_shelf_edge") else (0.0 if LINERS.has(id) else float(size[1]))
 		var half := float(size[0]) * 0.5
+		var floor_ok := absf(box.position.y + float(size[1]) + COL_DROP) <= EPS if LINERS.has(id) else true
+		if id == "lava_channel":
+			top = CHAIN_SLAB[1]
+			floor_ok = absf(box.position.y - CHAIN_SLAB[0]) <= EPS
 		_t.check("(d) %s collider is %.0f m wide, tops at %.2f m, from -L/2 to L/2 on its centre" % [id, float(size[2]), top],
 			absf(box.size.x - float(size[2])) <= EPS and absf(box.end.y - top) <= EPS and absf(box.position.x + float(size[2]) * 0.5) <= EPS
-			and box.position.z <= -half + EPS and box.end.z >= half - EPS, str(box))
+			and box.position.z <= -half + EPS and box.end.z >= half - EPS and floor_ok, str(box))
 	parent.free()
 
 
@@ -279,39 +288,4 @@ func _check_kicker_roll() -> void:
 	_t.check("(e) the ball leaves plate_kicker_12x2p5x14 at its lip at the angle the row sets", launched and absf(angle - want) <= 6.0,
 		"left at %.1f degrees, row sets %.1f" % [angle, want])
 	_t.check("(e) no dead stop up the ramp", _dead_run(speeds) <= DEAD_FRAMES, "%d frames under 2 m/s" % _dead_run(speeds))
-	parent.free()
-
-
-func _check_channel_roll() -> void:
-	var parent := Node3D.new()
-	root.add_child(parent)
-	# a 59.5 m row, the lava channels' typical length: the GLB stretches 1.03 and runs z -29.75..29.75
-	var row := _row("c", "half_pipe", Vector2(0, 0), 0.0, [59.5, 4, 28], "lava_channel", "ride_chute")
-	ParkRecipes.place(row, parent)
-	ParkRecipes.place(_row("apron_in", "ground", Vector2(0, -45), -1.0, [30, 1, 40], "greybox:ground", ""), parent)
-	ParkRecipes.place(_row("apron_out", "ground", Vector2(0, 45), -1.0, [30, 1, 40], "greybox:ground", ""), parent)
-	var ball := _ball(parent, Vector3(0, 1.05, -42), Vector3(4, 0, 14))
-	var speeds: Array = []
-	var widest := 0.0
-	var lowest := 0.0
-	var crossings := 0
-	var side := 0
-	for f in 600:
-		await physics_frame
-		var p := ball.position
-		if p.z > -29.75 and p.z < 29.75:
-			widest = maxf(widest, absf(p.x))
-			lowest = minf(lowest, p.y)
-			var s := signi(int(signf(p.x)))
-			if s != 0 and side != 0 and s != side:
-				crossings += 1
-			if s != 0:
-				side = s
-		if p.z < 40.0:
-			speeds.append(ball.linear_velocity.length())
-	_t.check("(f) the ball pumps across the floor between the walls", crossings >= 1, "%d crossings" % crossings)
-	_t.check("(f) the ball stays inside the channel's 28 m", widest < 13.5, "widest %.2f m" % widest)
-	_t.check("(f) the ball drops into the channel floor", lowest < -2.5, "lowest %.2f m" % lowest)
-	_t.check("(f) the ball rolls out of the far end", ball.position.z > 30.0 and ball.position.y > -1.0, str(ball.position))
-	_t.check("(f) no dead stop through the channel", _dead_run(speeds) <= DEAD_FRAMES, "%d frames under 2 m/s" % _dead_run(speeds))
 	parent.free()

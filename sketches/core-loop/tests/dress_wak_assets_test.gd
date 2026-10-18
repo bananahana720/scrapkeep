@@ -207,7 +207,7 @@ func _run() -> void:
 	family.family = "reactor"
 	check("reactor target matches real family offset", family.point_offset().is_equal_approx(Vector3(0, 5.2, 0)) and Warden.FAMILY_POINT_RADIUS == 1.3)
 	family.free()
-	for entry in [["boss_waking_base.glb", BASE_NODES, Vector3i(5000, 9600, 32)], ["boss_waking_kit.glb", KIT_NODES, Vector3i(1500, 2800, 18)]]:
+	for entry in [["boss_waking_base.glb", BASE_NODES, Vector3i(10000, 9600, 32)], ["boss_waking_kit.glb", KIT_NODES, Vector3i(4000, 4000, 18)]]:
 		var scene := open_asset(entry[0])
 		if scene == null:
 			continue

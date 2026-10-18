@@ -77,6 +77,7 @@ const TRIM_DB := {
 	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
+	"grown_sub": -4.0, "grown_crack": -7.0, "grown_tail": -10.0, "grown_rattle": -11.0,
 	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0,
 	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -7.0, "hurt": -3.0,
 	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
@@ -193,6 +194,7 @@ const TRIM_DB := {
 	"cave_in_debris": -3.0, "prop_crew_presence": -14.0, "prop_crew_strain": -4.0, "prop_crew_collapse": -2.0,
 	# The Highdraft roster (tools/ace/roster_sfx.py); a tell ends on its landing frame.
 	"ballast_brace_tell": -4.0, "ballast_brace_slam": -2.0, "gap_net_charge_tell": -6.0, "gap_net_charge_live": -4.0,
+	"ring_out_fall": -8.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
@@ -398,6 +400,7 @@ const FILE_SOUNDS := {
 	"prop_crew_strain": "foley/prop_crew_strain.wav", "prop_crew_collapse": "foley/prop_crew_collapse.wav",
 	"ballast_brace_tell": "foley/ballast_brace_tell.wav", "ballast_brace_slam": "foley/ballast_brace_slam.wav",
 	"gap_net_charge_tell": "foley/gap_net_charge_tell.wav", "gap_net_charge_live": "foley/gap_net_charge_live.wav",
+	"ring_out_fall": "foley/ring_out_fall.wav",
 }
 # hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
 const HYPE_DROP_LEAD_SECONDS := 2.0
@@ -431,7 +434,9 @@ static func file_samples(id: String, shift := 0) -> PackedFloat32Array:
 		return _event_samples(id, shift)
 	var path := file_path(id)
 	var out := PackedFloat32Array()
-	var res = load(path) if ResourceLoader.exists(path) else null
+	# Uncached: this runs on the bake worker, and a cached load there leaves its load token
+	# and stream alive at exit ("resources still in use"). samples() keeps the decoded copy.
+	var res = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) if ResourceLoader.exists(path) else null
 	if res is AudioStreamWAV and (res as AudioStreamWAV).format == AudioStreamWAV.FORMAT_16_BITS:
 		return _pcm16(res.data, res.stereo)
 	var bytes := FileAccess.get_file_as_bytes(path)
@@ -582,6 +587,20 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _slam()
 		"core_slam":
 			return _core_slam()
+		"grown_sub":
+			# The low end under a grown hit: a 62-to-34 Hz drop that outlasts the thwack.
+			return _mix([[_tone(0.5, 62.0, 34.0, "sine", 5.0), 0, 1.0], [_tone(0.03, 140.0, 70.0, "sine", 60.0), 0, 0.3]])
+		"grown_crack":
+			# A heavier transient: a sharp noise snap over a dark saw knock.
+			return _mix([[_noise(0.03, 4200.0, 1800.0, 110.0, 0.0005), 0, 1.0],
+				[_tone(0.07, 190.0, 85.0, "saw_dark", 38.0), 0, 0.8]], true)
+		"grown_tail":
+			# A long tail: low rumble and filtered air that ring on after the hit.
+			return _mix([[_tone(1.2, 48.0, 38.0, "sine", 2.4), 0, 0.8], [_noise(1.3, 420.0, 120.0, 2.6, 0.02), 0, 0.6]])
+		"grown_rattle":
+			# Scrap settling off the shell: four ticks, each quieter.
+			return _mix([[_noise(0.03, 3200.0, 2000.0, 80.0), 0, 0.7], [_noise(0.03, 2600.0, 1700.0, 80.0), Synth.seconds(0.06), 0.5],
+				[_noise(0.03, 3600.0, 2200.0, 80.0), Synth.seconds(0.13), 0.38], [_noise(0.03, 2400.0, 1500.0, 80.0), Synth.seconds(0.22), 0.26]])
 		"ultimate_land":
 			return _ultimate_land()
 		"kest_demo_knock":

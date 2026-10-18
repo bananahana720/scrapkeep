@@ -681,6 +681,15 @@ func record_milestone(event_id: String) -> void:
 
 
 # Flow calls this as a stage begins (not on a retry): cores are stage-scoped.
+# A run is cursed once a curse pocket's deal was taken (a "risk" decision on a curse offer).
+# Read from trade_memory, so it follows saves, Continue and a retry's rewind with no field of its own.
+func cursed() -> bool:
+	for offer in trade_memory.seen:
+		if offer.get("curse", false) and bool(trade_memory.decisions.get(str(offer.stage), false)):
+			return true
+	return false
+
+
 func enter_stage(index: int) -> void:
 	if index != stage:
 		for offer in trade_memory.seen:

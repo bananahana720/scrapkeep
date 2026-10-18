@@ -2,6 +2,7 @@ extends Node3D
 
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const BakeLook := preload("res://src/presentation/bake_look.gd")
 
 # An enemy's life between attacks and its break-up on death, read from its WindupRows row
 # (idle, death, and the swarm remnant's wind-up pose). The idle moves the model's pivot
@@ -141,7 +142,7 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 			var box := BoxMesh.new()
 			box.size = Vector3.ONE * (0.45 - 0.03 * float(i % 4))
 			piece.mesh = box
-			piece.material_override = material
+			piece.material_override = BakeLook.unbaked(material)
 			piece.position = out * 0.4 + Vector3.UP * 0.6
 		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0})
 	return node

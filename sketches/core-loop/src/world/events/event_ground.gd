@@ -160,6 +160,13 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 			var normal := (vertices[k + 2] - vertices[k]).cross(vertices[k + 1] - vertices[k]).normalized()
 			normals.append_array([normal, normal, normal])
 	else:
+		# Neighbouring shapes and faces share corners and vertices, so each ground read is made once
+		# per point (a burst's 32 fan slices overlap the same cells); the output is unchanged.
+		var corners := {}
+		var grounds := {}
+		var markers := {}
+		var marker: Surface = geometry.get("marker_surface")
+		var span: bool = geometry.get("span", false)
 		for shape: Array in shapes:
 			var polygon := shape.map(func(p): return p.rotated(-yaw) + centre)
 			var low := Vector2.INF
@@ -174,37 +181,57 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 					var b := a + Vector2.RIGHT * ParkTerrain.STEP
 					var c := a + Vector2.DOWN * ParkTerrain.STEP
 					var d := a + Vector2.ONE * ParkTerrain.STEP
-					var heights := PackedFloat64Array()
-					for point in [a, b, c, d]:
-						var y: float = _water_ground(world, point) if water else world.terrain.height(point.x, point.y)
-						if baseline == null and not water and "_heights" in world.terrain:
-							y = maxf(y, world.terrain._grid_height(world.terrain._heights[world.terrain.stage - 1], point.x, point.y))
-						heights.append(y)
-					if water and "_holes" in world.terrain:
-						var terrain = world.terrain
-						var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], a.x + ParkTerrain.STEP * 0.5, a.y + ParkTerrain.STEP * 0.5)
-						if not is_nan(floor_y):
-							for k in 4:
-								heights[k] = minf(heights[k], floor_y)
-					for triangle in [[a, b, c], [b, d, c]]:
+					var triangles := [[a, b, c], [b, d, c]]
+					var clips := []
+					for triangle in triangles:
 						var clipped: Array = polygon
 						for edge in 3:
 							clipped = _clip_edge(clipped, triangle[edge], triangle[(edge + 1) % 3])
+						clips.append(clipped)
+					if clips[0].size() < 3 and clips[1].size() < 3:
+						continue
+					var heights := PackedFloat64Array()
+					if baseline == null:
+						for point in [a, b, c, d]:
+							if not corners.has(point):
+								var y: float = _water_ground(world, point) if water else world.terrain.height(point.x, point.y)
+								if not water and "_heights" in world.terrain:
+									y = maxf(y, world.terrain._grid_height(world.terrain._heights[world.terrain.stage - 1], point.x, point.y))
+								corners[point] = y
+							heights.append(corners[point])
+						if water and "_holes" in world.terrain:
+							var terrain = world.terrain
+							var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], a.x + ParkTerrain.STEP * 0.5, a.y + ParkTerrain.STEP * 0.5)
+							if not is_nan(floor_y):
+								for k in 4:
+									heights[k] = minf(heights[k], floor_y)
+					for t in 2:
+						var triangle: Array = triangles[t]
+						var clipped: Array = clips[t]
 						for k in range(1, clipped.size() - 1):
 							var face := PackedVector3Array()
 							for point: Vector2 in [clipped[0], clipped[k], clipped[k + 1]]:
-								var f := (point - a) / ParkTerrain.STEP
-								var y: float = heights[0] + (heights[1] - heights[0]) * f.x + (heights[2] - heights[0]) * f.y if triangle[0] == a else heights[3] + (heights[2] - heights[3]) * (1.0 - f.x) + (heights[1] - heights[3]) * (1.0 - f.y)
+								var y: float
 								if baseline != null:
-									y = baseline.height(point)
-								elif not water:
-									y = maxf(y, world.terrain.height(point.x, point.y))
-									if overlay_map != null:
-										for id in world.terrain.overlays:
-											if overlay_map.profiles.has(id):
-												y = maxf(y, overlay_map.profiles[id].surface.height(point))
-								if geometry.has("marker_surface"):
-									y = geometry.marker_surface.height(point) if geometry.get("span", false) else maxf(y, geometry.marker_surface.height(point))
+									if not grounds.has(point):
+										grounds[point] = baseline.height(point)
+									y = grounds[point]
+								else:
+									var f := (point - a) / ParkTerrain.STEP
+									y = heights[0] + (heights[1] - heights[0]) * f.x + (heights[2] - heights[0]) * f.y if triangle[0] == a else heights[3] + (heights[2] - heights[3]) * (1.0 - f.x) + (heights[1] - heights[3]) * (1.0 - f.y)
+									if not water:
+										if not grounds.has(point):
+											var ground: float = world.terrain.height(point.x, point.y)
+											if overlay_map != null:
+												for id in world.terrain.overlays:
+													if overlay_map.profiles.has(id):
+														ground = maxf(ground, overlay_map.profiles[id].surface.height(point))
+											grounds[point] = ground
+										y = maxf(y, grounds[point])
+								if marker != null:
+									if not markers.has(point):
+										markers[point] = marker.height(point)
+									y = markers[point] if span else maxf(y, markers[point])
 								if offset.is_valid():
 									y += maxf(0.0, float(offset.call((point - centre).rotated(yaw), y)))
 								face.append(Vector3(point.x, y, point.y))

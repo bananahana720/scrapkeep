@@ -89,6 +89,7 @@ const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwa
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
+	"grown_sub": 60, "grown_crack": 60, "grown_tail": 120, "grown_rattle": 120,
 	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
@@ -192,7 +193,7 @@ const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "ga
 # also drive the reactor pedal (v2 W5b), and hold_started and pack_arrived resolve by
 # who holds or arrives (v2 W9), so they get their own listeners below.
 const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
-	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
+	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened", "enemy_ringed_out"]
 
 var ctx
 # Per posture Warden, the stagger and chunk count the last posture_changed showed.
@@ -207,9 +208,11 @@ var ace_manifest := ""
 # The title's music row: "title" until an opening names its theme (title_theme).
 var title_row := "title"
 var _on_title := false
-# The row a won run's summary and the ending play: theme C, the show opening (Andrew, "Won run
-# and ending", 17 Oct). A lost run, or a pack not on disk, keeps the summary row.
-const WON_SUMMARY_ROW := "title-c"
+# The row a won run's summary and the ending play: theme C, the show opening, with its whole-step
+# lift (Andrew, "Won run and ending", 17 Oct). The summary pack holds it: won, its return section
+# plays two bars of theme C and then theme C lifted a whole step (tools/ace/package_core_packs.py);
+# lost, its travel loop is the jazz-club summary. A pack not on disk falls back to the plain title-c.
+const WON_SUMMARY_ROW := "summary"
 # The camp page is open on the title (screens.gd): the camp pick plays while it is.
 var camp_open := false
 # The manifest the zone rows last selected. A caller that sets ace_manifest away from it
@@ -461,7 +464,7 @@ func _start_ace_load() -> void:
 
 
 func _load_ace() -> void:
-	_ace_loaded = AceSequencer.new(_ace_loaded_from, "", true)
+	_ace_loaded = AceSequencer.new(_ace_loaded_from)
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -828,7 +831,7 @@ func ace_ready() -> bool:
 		loaded = _ace_loaded
 	_ace_loaded = null
 	if loaded == null:
-		loaded = AceSequencer.new(ace_manifest, "", true)
+		loaded = AceSequencer.new(ace_manifest)
 	if not loaded.ready():
 		_ace_failed = true
 		ace_missing = loaded.missing
@@ -1192,7 +1195,9 @@ func title_now() -> String:
 
 
 func summary_row(won: bool) -> String:
-	return WON_SUMMARY_ROW if won and title_available.call(WON_SUMMARY_ROW) else "summary"
+	if won and not title_available.call(WON_SUMMARY_ROW) and title_available.call("title-c"):
+		return "title-c"
+	return "summary"
 
 
 # screens.gd says when the camp page opens and closes: the camp take plays while it is open,
@@ -3053,7 +3058,24 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 		play("enemy_struck", db, _posture_note_ratio(enemy))
 	else:
 		play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+	if contact:
+		_grown_layers(db)
 	_pay_beat(enemy, kind)
+
+
+# A grown pilot's contact hits carry more weight: one layer per heft class past I, started on
+# the hit's own frame with the hit's level. A sub drop from II, a heavier crack from III, a long
+# rumbling tail and a scrap rattle from IV, so a heft IV slam sounds about twice as layered.
+const GROWN_LAYERS := [[2, "grown_sub"], [3, "grown_crack"], [4, "grown_tail"], [4, "grown_rattle"]]
+
+
+func _grown_layers(db: float) -> void:
+	var heft := _heft_class
+	if ctx != null and ctx.run != null and ctx.run.has_method("heft_class"):
+		heft = int(ctx.run.heft_class())
+	for layer in GROWN_LAYERS:
+		if heft >= int(layer[0]):
+			play("enemy_struck", db, 1.0, "SFX", layer[1])
 
 
 # The hit's own sound has already played, so the beat never delays it.

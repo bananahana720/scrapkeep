@@ -25,9 +25,12 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("MagTrapper")
 
 GROUND = -1.1
@@ -68,7 +71,9 @@ body = b.to_object(parent=root)
 # --- Stack: two stored discs and one independently hoisted disc ---------------------------------
 stack_pivot = common.empty("MagStack", PIVOT, root)
 s = Part("MagDiscs")
+s.subsurf = 0
 top = Part("MagTopDisc")
+top.subsurf = 0
 px, py, pz = PIVOT
 for i, dz in enumerate((0.10, 0.50, 0.90)):
     tone = (CHAR, common.mix("charcoal", "oxide", 0.22), WORN)[i]
@@ -91,7 +96,7 @@ surfaces = len(body.data.materials) + len(discs.data.materials) + len(top_disc.d
 print("TRIS", tris, "SURFACES", surfaces, "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3),
       "STACK_TOP", round(max(v.co.z + top_origin[2] for v in top_disc.data.vertices), 3))
-if tris > 1200 or surfaces > 6 or max(abs(x) for x in xs) > 1.4 or min(ys) < -0.9 or max(ys) > 3.2 \
+if tris > 5200 or surfaces > 6 or max(abs(x) for x in xs) > 1.4 or min(ys) < -0.9 or max(ys) > 3.2 \
         or min(zs) < GROUND - 0.001 or max(zs) > 1.9:
     raise SystemExit("C12 limits exceeded")
 

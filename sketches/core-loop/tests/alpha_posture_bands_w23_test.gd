@@ -1,4 +1,4 @@
-# smoke: solo timeout=300s (twelve bot runs in child processes at once, each through its world's boss)
+# smoke: bots timeout=1200s (twelve bot runs in child processes at once, each through its world's boss; 195 s alone on 2026-10-12, 546 s at main and 640 s at w17 on a 4-core cloud box at load 7 to 20 on 2026-10-18, same ticks and the same per-child wall, so the 300 s solo cap no longer fits; moved to the bot tier with alpha_posture_bands_test)
 # 2026-10-12, W13 smoke triage: 195.469 s alone; 1.5x rounded up to 10 s is 300 s, inside the 360 s ordinary cap.
 extends SceneTree
 

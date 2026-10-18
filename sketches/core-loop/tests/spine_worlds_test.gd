@@ -153,6 +153,8 @@ func _start() -> void:
 		_won = won)
 	if _scenario == 2:
 		_game.ctx.calm = true
+		# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This test ends on the summary.
+		_game.flow.victory_lap = false
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
 		return
@@ -166,6 +168,8 @@ func _start() -> void:
 		var unbuilt: Dictionary = Worlds.boss_of(2).duplicate()
 		unbuilt["built"] = false
 		_game.flow.boss_row_override[2] = unbuilt
+	# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This test ends on the summary.
+	_game.flow.victory_lap = false
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 

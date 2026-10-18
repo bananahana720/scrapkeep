@@ -23,6 +23,7 @@ from mathutils.bvhtree import BVHTree
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import common
+import polish
 import rig_pilot
 import anim_rivet_drop as arm_solver
 
@@ -48,6 +49,11 @@ KEYS = {"drop_land": [1, 7, 13, 17, 21, 29, 39, 49, 58, 66],
         "heave": [1, 3, 7, 10, 15, 25]}
 KEY_POSES = {"drop_land": 17, "big_cheer": 25, "wince": 3,
              "slump": 23, "phew": 10, "brace": 6, "heave": 7}
+# Polish (POLISH.md): face, ears, muzzle, jaw, paws and grip fans subdivide once into soft
+# vinyl-toy forms; torso, limbs, tail, cloth, ledger and metal keep their authored topology,
+# smooth shaded with hard creases (no bevel, as for Tarn).
+POLISH = {"detail": 1, "bevel": 0}
+SOFT_BONES = ("head", "ear.R", "ear.L", "snout", "jaw", "hand.R", "hand.L", "curl.R", "curl.L")
 COLOURS = {"fur": "706a5d", "ear": "906681", "cream": "f7f1e3",
            "mulberry": "906681", "cloth_shadow": "694b5d"}
 
@@ -165,6 +171,10 @@ class AnimalSurface:
 
     def finish(self):
         bmesh.ops.recalc_face_normals(self.part.bm, faces=list(self.part.bm.faces))
+        # One connected island can carry several tags, so every vertex must be soft.
+        soft = {self.bones.index(name) + 1 for name in SOFT_BONES}
+        polish.subdivide_where(self.part.bm, 1, lambda island: all(
+            v[self.weights] in soft for f in island for v in f.verts))
         obj = self.part.to_object()
         tags = obj.data.attributes["tally_bone"]
         for i, name in enumerate(self.bones):
@@ -547,7 +557,7 @@ def export_pilot(arm,obj,path):
         export_frame_range=False,export_force_sampling=True,export_def_bones=False,
         export_skins=True,export_yup=True,export_materials="EXPORT",export_vertex_color="ACTIVE",
         export_extras=False,export_cameras=False,export_lights=False)
-    common.canonical_indices(str(path))
+    common.canonical_indices(str(path),vertices=common.POLISH is not None)
 
 
 def verify_motion(arm,obj,actions):
@@ -699,6 +709,7 @@ def main():
     parser.add_argument("--preview-tag",default="final-")
     args=parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
     common.reset()
+    polish.enable(**POLISH)
     PREVIEW.mkdir(parents=True,exist_ok=True)
     obj,parts=model()
     arm=None
@@ -714,10 +725,11 @@ def main():
         (PREVIEW/"poses.json").write_text(json.dumps(tables,indent=2)+"\n")
         arm.animation_data.action=actions[0]
         bpy.context.scene.frame_set(1)
+        polish.bake(arm)
         export_pilot(arm,obj,args.out)
         report["export"]=glb_counts(args.out)
         counts=report["export"]
-        assert counts["triangles"]<=4600 and counts["vertices"]<=3100 and counts["draws"]<=5,counts
+        assert counts["triangles"]<=10600 and counts["vertices"]<=8100 and counts["draws"]<=5,counts
         print("TALLY_PILOT",json.dumps(counts,sort_keys=True))
     bpy.ops.wm.save_as_mainfile(filepath=str(PREVIEW/("tally-model.blend" if args.model_only else "tally-rig.blend")))
     (PREVIEW/"model-receipt.json").write_text(json.dumps(report,indent=2)+"\n")

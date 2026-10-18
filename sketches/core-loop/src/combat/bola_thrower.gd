@@ -150,7 +150,7 @@ func _live(_delta: float) -> bool:
 		return false
 	var player = _player()
 	var v: Vector3 = player.state.velocity
-	_pull(Vector3(-v.x * DRAG, -DOWN if not player.state.grounded else 0.0, -v.z * DRAG))
+	_pull(Vector3(-v.x * DRAG, -DOWN if not player.state.on_floor() else 0.0, -v.z * DRAG))
 	return true
 
 

@@ -1,11 +1,12 @@
 extends SceneTree
 
-const SLOTS := ["ancient_enamel", "rubber", "ancient_light", "bare_metal", "mantle_tool"]
+# "pilot": the glove fingers (2026-10-18 review F4), a matte vertex-colour slot kept off the enamel cap.
+const SLOTS := ["ancient_enamel", "rubber", "ancient_light", "bare_metal", "mantle_tool", "pilot"]
 const SEATS := [Vector3(1.735, 2.97, 0), Vector3(-0.665, 2.97, 1.385641), Vector3(-0.665, 2.97, -1.385641)]
 const SPECS := [
-	{"file": "warden_mantle_hand.glb", "root": "MantleHand", "cap": [650, 1200, 5],
+	{"file": "warden_mantle_hand.glb", "root": "MantleHand", "cap": [6000, 11200, 5],
 	"paths": ["MountBody", "MountBody/HandWrist", "MountBody/HandThreeFingers"]},
-	{"file": "warden_mantle_choir.glb", "root": "MantleChoir", "cap": [900, 1700, 7],
+	{"file": "warden_mantle_choir.glb", "root": "MantleChoir", "cap": [1100, 1700, 7],
 	"paths": ["MountBody", "MountBody/ChoirRearComb", "MountBody/ChoirFiveHorns", "MountArmL", "MountArmL/ChoirShoeL", "MountArmR", "MountArmR/ChoirShoeR"]}
 ]
 var failures := 0
@@ -133,7 +134,7 @@ func _check_asset(spec: Dictionary) -> void:
 			exported[1] += int(gltf.accessors[primitive.attributes.POSITION].count)
 			exported[2] += 1
 	for i in 3:
-		_check(exported[i] > 0 and exported[i] <= spec.cap[i] and exported[i] <= [1500, 2800, 18][i], "%s exported budget %d/%d" % [spec.file, exported[i], spec.cap[i]])
+		_check(exported[i] > 0 and exported[i] <= spec.cap[i] and exported[i] <= [6000, 11200, 18][i], "%s exported budget %d/%d" % [spec.file, exported[i], spec.cap[i]])
 	_check(materials.size() <= 5 and materials.has("mantle_tool") and materials.has("ancient_light"), "five material maximum and separate tool/seam slots")
 	_check(triangles == exported[0] and surfaces == exported[2] and vertices <= exported[1], "Godot geometry agrees with export")
 	for material: Dictionary in gltf.get("materials", []):

@@ -33,7 +33,14 @@ import bmesh  # noqa: E402
 import bpy  # noqa: E402
 
 import common  # noqa: E402
+import polish  # noqa: E402
 from common import Part, Vector  # noqa: E402
+
+# Cast ancient castings: 4 cm chamfers on real corners, doubled curves, baked AO (POLISH.md).
+# Hex cells stay six-sided. The Mind's kit builds unpolished: the Mind is rebuilt elsewhere.
+# No edge lightening and softer AO: dark quantised corners pushed enamel saturation past
+# the section 11 cap of 0.45 (hero_assets_test).
+polish.enable(detail=2, bevel=0.04, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
 
 ENAMEL = "petrol"
 DUST = common.mix("petrol", "sandstone", 0.35)
@@ -41,8 +48,9 @@ HINGE_X = 2.2
 TOWER_TOP = 7.8
 JAW_R = 3.1
 JAW_Z = (2.4, 5.4)
-BASE_TRIS = (4000, 6000)
-KIT_TRIS = (800, 1500)
+# Polished bands (POLISH.md, 18 Oct), under the warden_base and warden_kit class caps.
+BASE_TRIS = (4000, 14000)
+KIT_TRIS = (800, 4600)
 
 
 def dust(part):
@@ -265,21 +273,28 @@ def reactor_extras():
         a = math.pi + (k - 1) * 0.95
         at = Vector((0.95 * math.cos(a), 0.95 * math.sin(a), 1.45))
         v = Part("Vent%d" % k)
-        v.cyl("ancient_enamel", 0.3, 0.24, 1.2, 10, loc=at + Vector((0, 0, 0.6)), color=ENAMEL)
-        v.ring("ancient_enamel", 0.2, 0.36, 0.14, 10, loc=at + Vector((0, 0, 1.2)), color=DUST)
-        v.ring("rubber", 0.22, 0.3, 0.1, 10, loc=at + Vector((0, 0, 0.75)))
-        v.ring("ancient_light", 0.25, 0.305, 0.04, 10, loc=at + Vector((0, 0, 0.75)))
+        # Vents keep ten sides under polish; smoothing rounds them and the kit stays light.
+        n = 10 // common.DETAIL
+        v.cyl("ancient_enamel", 0.3, 0.24, 1.2, n, loc=at + Vector((0, 0, 0.6)), color=ENAMEL)
+        v.ring("ancient_enamel", 0.2, 0.36, 0.14, n, loc=at + Vector((0, 0, 1.2)), color=DUST)
+        v.ring("rubber", 0.22, 0.3, 0.1, n, loc=at + Vector((0, 0, 0.75)))
+        v.ring("ancient_light", 0.25, 0.305, 0.04, n, loc=at + Vector((0, 0, 0.75)))
         vents.append((v, at))
     return [(core, (0.35, 0, 1.25))] + vents
 
 
+def hexagon():
+    """Six sides under any polish detail: the hive reads by its hexagons."""
+    return 6 // common.DETAIL
+
+
 def hex_cell(p, center, r, h, color, slot="ancient_enamel"):
-    p.cyl(slot, r, r * 0.92, h, 6, loc=center, color=color)
+    p.cyl(slot, r, r * 0.92, h, hexagon(), loc=center, color=color)
 
 
 def kit_hive(rng):
     p = Part("WardenKitHive")
-    p.cyl("ancient_enamel", 1.2, 1.0, 0.4, 6, loc=(0, 0, 0.2), color=ENAMEL)
+    p.cyl("ancient_enamel", 1.2, 1.0, 0.4, hexagon(), loc=(0, 0, 0.2), color=ENAMEL)
     cells = []
     r = 0.32
     for ring, z in ((0, 0.9), (1, 0.9), (2, 0.75), (1, 1.6), (0, 1.75)):
@@ -295,8 +310,8 @@ def kit_hive(rng):
             continue
         hex_cell(p, c, r, h, ENAMEL)
         if k % 2 == 0:
-            p.cyl("rubber", r * 0.7, r * 0.7, 0.03, 6, loc=c + Vector((0, 0, h / 2)))
-            p.cyl("ancient_light", r * 0.45, r * 0.45, 0.04, 6, loc=c + Vector((0, 0, h / 2 + 0.005)))
+            p.cyl("rubber", r * 0.7, r * 0.7, 0.03, hexagon(), loc=c + Vector((0, 0, h / 2)))
+            p.cyl("ancient_light", r * 0.45, r * 0.45, 0.04, hexagon(), loc=c + Vector((0, 0, h / 2 + 0.005)))
     for side in [-1, 1]:
         p.box("ancient_enamel", (0.7,0.3,0.5), loc=(-0.65,side*0.92,0.7), rot=(0.0,side*0.3,0.0), color=ENAMEL)
     dust(p)
@@ -306,9 +321,9 @@ def kit_hive(rng):
 def hive_extras():
     q = Part("WeakPoint")
     at = Vector((1.1, 0, 0.9))
-    q.cyl("ancient_enamel", 0.46, 0.4, 0.9, 6, loc=at, rot=(0, math.pi / 2, 0), color=ENAMEL, caps=False)
+    q.cyl("ancient_enamel", 0.46, 0.4, 0.9, hexagon(), loc=at, rot=(0, math.pi / 2, 0), color=ENAMEL, caps=False)
     q.ico("ancient_light", 0.3, 2, loc=at + Vector((0.05, 0, 0)))
-    q.cyl("rubber", 0.5, 0.5, 0.06, 6, loc=at + Vector((0.45, 0, 0)), rot=(0, math.pi / 2, 0))
+    q.cyl("rubber", 0.5, 0.5, 0.06, hexagon(), loc=at + Vector((0.45, 0, 0)), rot=(0, math.pi / 2, 0))
     out = [(q, tuple(at))]
     for k in range(6):
         a = k * math.tau / 6 + math.pi / 6
@@ -422,9 +437,13 @@ def main():
     kits = []
     for fam, body, extras in (("reactor", kit_reactor, reactor_extras), ("hive", kit_hive, hive_extras),
                               ("mind", kit_mind, mind_extras)):
+        polished = common.POLISH, common.DETAIL
+        if fam == "mind":
+            common.POLISH, common.DETAIL = None, 1
         root = build_kit("WardenKit" + fam.capitalize(), body(rng), extras())
         rows.append(("kit_" + fam, common.tri_total(root), KIT_TRIS))
         common.export(root, os.path.join(out_dir, "warden_kit_%s.glb" % fam))
+        common.POLISH, common.DETAIL = polished
         # Blender names are file-global; free this kit's names (WeakPoint, Body) for the next.
         for o in common.tree(root)[1:]:
             o.name = fam + "_" + o.name

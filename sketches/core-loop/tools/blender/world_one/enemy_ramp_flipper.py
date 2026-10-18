@@ -18,6 +18,7 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 
@@ -26,6 +27,8 @@ def g(x, y, z):
 
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("RampFlipper")
 b = Part("RampBody")
 b.cyl("fleet_paint", .55, .63, .95, segs=10, loc=g(0, -.34, 0))
@@ -47,6 +50,7 @@ bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 b.to_object(parent=root)
 
 p = Part("RampPlate")
+p.subsurf = 0
 # Underframe, panels and rim all remain inside the base box's +/-2.88 m and +/-0.09 m.
 p.box("paint", (5.76, 5.76, .10), loc=g(0, -.04, 0), color="charcoal")
 for side in (-1, 1):
@@ -81,7 +85,7 @@ bpy.context.view_layer.update()
 tris = common.tri_total(root)
 surfaces = sum(len(o.data.materials) for o in common.tree(root) if o.type == "MESH")
 print("C21 TRIS", tris, "SURFACES", surfaces)
-if tris > 1200 or surfaces > 3:
+if tris > 4400 or surfaces > 3:
     raise SystemExit("C21 assembly budget exceeded")
 opts = common.args()
 common.export(root, opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_ramp_flipper.glb"))

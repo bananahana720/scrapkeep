@@ -621,7 +621,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -633,7 +633,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -645,7 +645,151 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840_detail1",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840_detail2",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x720",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x720_detail1",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x720_detail2",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   }
  ]

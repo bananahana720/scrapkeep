@@ -7,6 +7,10 @@ No root motion, collider, UI, habit selection or authored aim. Runtime owns the
 LensRoot bearing and starts/seeks these clips from counter.gd's real phase age.
 The upper link telescopes slightly in warning to bridge the bent middle link to
 the fixed y=3.4 lens socket. This is visual linkage compensation only.
+
+Glove (2026-10-18): the field hand is one gloved finger-arm, the crew's glove the
+Mind still wears. Rounder 16-sided links, a stitched seam ridge with ticks down
+each link's back, and a rolled pale cuff band at the lens end.
 """
 import argparse
 import hashlib
@@ -231,8 +235,16 @@ def geometry():
     m.loft([(-1.8, 1.1), (-1.71, 1.1), (-1.3, 0.5)], 12, "Foot")
     for i, base in enumerate((-1.3, 0.3, 1.9)):
         name = "Segment%d" % i
-        m.loft([(base, 0.18), (base + 1.6, 0.14)], 8, name,
-               "petrol" if i == 1 else "bone", phase=math.pi / 8)
+        m.loft([(base, 0.18), (base + 0.8, 0.165), (base + 1.6, 0.14)], 16, name,
+               "petrol" if i == 1 else "bone", phase=math.pi / 16)
+        # The glove's stitched seam ridge down the back of the link, with stitch ticks.
+        m.plate([(-0.02, -0.19, base + 0.2), (0.02, -0.19, base + 0.2),
+                 (0.02, -0.16, base + 1.4), (-0.02, -0.16, base + 1.4)], 0.03, name, "charcoal")
+        for k in range(4):
+            z = base + 0.32 + k * 0.3
+            y = -0.188 + 0.025 * (z - base) / 1.6
+            m.plate([(-0.06, y, z - 0.012), (0.06, y, z - 0.012), (0.06, y, z + 0.012),
+                     (-0.06, y, z + 0.012)], 0.02, name, "charcoal")
         # Recessed linear groove. It stays blue, independent of combat state.
         m.plate([(-0.014, 0.172, base + 0.18), (0.014, 0.172, base + 0.18),
                  (0.014, 0.143, base + 1.42), (-0.014, 0.143, base + 1.42)],
@@ -249,6 +261,9 @@ def geometry():
         m.plate([(side * 0.48, 0.495, 3.95), (side * 0.503, 0.495, 3.94),
                  (side * 0.955, 0.66, 3.53), (side * 0.93, 0.66, 3.53)],
                 0.004, "LensRoot", "blue", 1)
+    # The glove's rolled cuff at the lens end of the finger.
+    m.loft([(2.86, 0.165), (2.92, 0.215), (3.06, 0.225), (3.14, 0.19)], 16, "Segment2", "bone",
+           phase=math.pi / 16)
     m.ring((0, 0.25, 3.4), 0.57, 0.7, 0.15, 12, "LensRoot")
     m.ring((0, 0.44, 3.4), 0.46, 0.7, 0.07, 12, "LensShutter")
     m.ring((0, 0.49, 3.4), 0.49, 0.69, 0.015, 12, "HazardFace", "hazard", 1)
@@ -391,7 +406,8 @@ def main():
         common.canonical_indices(str(packed))
         args.out.write_bytes(packed.read_bytes())
     stats = glb_stats(args.out)
-    assert 0 < stats["tris"] <= 1100 and stats["verts"] <= 2100 and stats["draws"] == 3, stats
+    # enemy class, raised for polish (POLISH.md); the old ratio of vertices to triangles.
+    assert 0 < stats["tris"] <= 4000 and stats["verts"] <= 7600 and stats["draws"] == 3, stats
     assert set(stats["clips"]) == set(CLIPS), stats
     print("MHD_EXPORT", json.dumps(stats, sort_keys=True))
     if args.receipt:

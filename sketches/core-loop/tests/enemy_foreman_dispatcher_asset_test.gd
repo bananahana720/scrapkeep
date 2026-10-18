@@ -53,7 +53,8 @@ func _budget(label: String, scene: Node3D, draws: int, slots: Array) -> void:
 			if mat != null:
 				seen.append(mat.resource_name)
 	print("%s: %d V / %d T / %d D" % [label, verts, tris, surfaces])
-	t.check(label + " enemy budget", verts <= 2100 and tris <= 1100 and surfaces == draws)
+	# The enemy class cap (assets/asset_budgets.json); each body recipe asserts its own.
+	t.check(label + " enemy budget", verts <= 19100 and tris <= 10000 and surfaces == draws)
 	for slot in slots:
 		t.check(label + " slot " + slot, slot in seen)
 

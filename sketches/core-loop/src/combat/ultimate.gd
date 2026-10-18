@@ -142,8 +142,6 @@ var _offset := 0.0
 var _expected := Vector3.ZERO
 var _posture_spent := {}
 var _record := {}
-# True while a landing that something on the path stopped short of its target resolves.
-var stopped_short := false
 var _clock := 0.0
 var _contact_at := {}
 var _staggered := {}
@@ -669,9 +667,7 @@ func _fly(delta: float) -> void:
 	var ball: Vector3 = player.ball_position()
 	# Something on the path stopped the ball: the flight ends there as a landing.
 	if _leg_time > 0.1 and ball.distance_to(_expected) > BLOCKED:
-		stopped_short = true
 		_land(ball)
-		stopped_short = false
 		return
 	_leg_time += delta
 	_beat_clock += delta
@@ -751,9 +747,9 @@ func _strike(at: Vector3) -> void:
 	var result: Array = [0, 0.0]
 	if row.has("landing"):
 		result = (row["landing"] as Callable).call(at, HEFT_MULT[_heft_index()], mult)
-	# A third entry means the row hits later and reports then (Rivet's late carve).
-	if result.size() < 3:
-		report_landing(_record, _id, at, result)
+	_record["landing_hits"] = int(_record.get("landing_hits", 0)) + int(result[0])
+	_record["damage"] = snappedf(float(_record.get("damage", 0.0)) + float(result[1]), 0.01)
+	ctx.events.ultimate_landed.emit(_id, at, int(result[0]), float(result[1]))
 	if _id == "cable_run" and _leg >= (_plan.get("legs", []) as Array).size():
 		_sable_runs += 1
 		if ctx.codex != null and ctx.codex.known("set_piece"):
@@ -763,13 +759,6 @@ func _strike(at: Vector3) -> void:
 	combat._discover("set_piece", at)
 	if chain_links >= 3:
 		combat._discover("set_piece_cash_in", at)
-
-
-# A landing's [hits, damage] into its own set piece's record, and the landed event.
-func report_landing(record: Dictionary, id: String, at: Vector3, result: Array) -> void:
-	record["landing_hits"] = int(record.get("landing_hits", 0)) + int(result[0])
-	record["damage"] = snappedf(float(record.get("damage", 0.0)) + float(result[1]), 0.01)
-	ctx.events.ultimate_landed.emit(id, at, int(result[0]), float(result[1]))
 
 
 func _encore_target(at: Vector3):

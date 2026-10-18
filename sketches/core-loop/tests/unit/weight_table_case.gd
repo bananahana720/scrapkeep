@@ -23,7 +23,7 @@ const OWNER := {
 	"boss_defeated": "neutral", "boss_weak_point_hit": "neutral", "slammed": "neutral",
 	"sticky_detonated": "demolitions_caster", "enemy_rebounded": "neutral",
 	"cloak_broken": "demolitions_caster", "hold_broken": "neutral", "swarm_scattered": "neutral",
-	"enemy_pinned": "neutral", "arc_slammed": "pylon_engineer", "skid_smashed": "runner_gunner",
+	"enemy_pinned": "neutral", "enemy_ringed_out": "neutral", "arc_slammed": "pylon_engineer", "skid_smashed": "runner_gunner",
 	"demo_slammed": "demolitions_caster", "cloak_started": "demolitions_caster", "cc_ignored": "runner_gunner",
 }
 const SAME_FRAME_PAIRS := [

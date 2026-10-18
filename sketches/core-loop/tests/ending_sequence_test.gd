@@ -38,6 +38,8 @@ func _run() -> void:
 	await _frames(5)
 	_game.bot_driven = false
 	_game.ctx.calm = true
+	# The fly-over is the ending when the crater lap cannot place (flow._begin_ending); victory_lap_test owns the lap.
+	_game.flow.victory_lap = false
 	_game.events.achievement_earned.connect(func(id: String): _earned.append(id))
 	_game.events.run_ended.connect(_before_sequence)
 	_game.flow.press_start()
@@ -250,6 +252,7 @@ func _resume_world_check() -> void:
 	await _frames(5)
 	_game.bot_driven = false
 	_game.ctx.calm = true
+	_game.flow.victory_lap = false
 	_game.flow.press_start()
 	_game.flow.choose_class(1)
 	await _frames(2)

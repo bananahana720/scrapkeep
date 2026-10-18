@@ -310,7 +310,7 @@ func _ball_on_pool(warden) -> bool:
 	if target == null:
 		return false
 	var state = target.get("state")
-	if state == null or not state.grounded:
+	if state == null or not state.on_floor():
 		return false
 	var ball: Vector3 = target.ball_position() if target.has_method("ball_position") else target.global_position
 	return Vector2(ball.x - pool_centre.x, ball.z - pool_centre.z).length() <= pool_radius \

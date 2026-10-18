@@ -51,6 +51,8 @@ func _run() -> void:
 func _walk() -> void:
 	var game = _game
 	var flow = game.flow
+	# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This test ends on the summary.
+	flow.victory_lap = false
 	var seen = Harness.counter(game)
 	game.ctx.events.boss_attack_telegraphed.connect(func(id: String, warn: float):
 		_telegraphs.append({"id": id, "warn": warn, "frame": Engine.get_physics_frames()}))

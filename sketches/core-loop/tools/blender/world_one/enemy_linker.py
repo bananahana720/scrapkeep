@@ -36,12 +36,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 import common
+import polish
 from common import Part
 
 common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["working_tool"] = {"vc": True, "rough": 0.48, "metal": 0.55}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Linker")
 
 FLOOR = -1.1
@@ -120,6 +123,7 @@ body_obj = body.to_object(parent=root)
 
 # Dish: concave plate on the dish frame (U right, V up the face, N out of the face).
 dish = Part("LinkerDish")
+dish.subsurf = 0
 N = Vector((0.0, -math.sin(TILT), math.cos(TILT)))
 U = Vector((1.0, 0.0, 0.0))
 V = N.cross(U)
@@ -178,6 +182,7 @@ dish_obj = dish.to_object(origin=g(*HINGE), parent=root)
 
 # Slack cable: drum top to the dish's lower back, sagging below the boom, with a coupling.
 cable = Part("LinkerCable")
+cable.subsurf = 0
 start = Vector((DRUM[0] + 0.05, DRUM[1] + 0.22, DRUM[2] + 0.1))
 end = C - V * 0.95 - N * (SKIN + 0.05)
 SAG = 0.75
@@ -206,7 +211,7 @@ core = max(math.hypot(p.x, p.y) for p in post if p.z < 0.6)
 low = min((o.matrix_world @ v.co).z for o in (body_obj, dish_obj, cable_obj) for v in o.data.vertices)
 print("LINKER core %.3f floor %.3f tris %d" % (core, low, common.tri_total(root)))
 assert low >= FLOOR - 1e-4 and core <= 1.1
-assert common.tri_total(root) <= 1100
+assert common.tri_total(root) <= 7400
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_linker.glb")

@@ -4,15 +4,17 @@ const Ace := preload("res://src/presentation/ace_sequencer.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The picked takes (tools/ace/package_picked_takes.py) are music_ace themes in the menu
-# bank's shape: calm, travel and cadence. The manifests are committed and the Oggs are
+# The picked takes (tools/ace/package_core_packs.py, from the mastered picks) are music_ace
+# themes: the menu bank's calm, travel and cadence, and for a boss its eight combat clips. The manifests are committed and the Oggs are
 # local, so the structural checks run everywhere, and the sound checks run wherever the
 # Oggs are: the drum stem follows the speed fader and the lead stem follows the chain
 # fader, heard in the rendered PCM of a real take.
 
 const THEMES := ["title_a", "title_b", "title_c", "roam_spillway", "roam_dig", "roam_highdraft",
 	"boss_brindle", "boss_waking", "boss_mind", "camp"]
-const GRIDS := {129: 20512, 172: 15384}
+const BOSS_CLIPS := ["calm", "travel", "pivot", "build", "telegraph", "open", "drop", "cadence"]
+# A boss clip that plays once: the pivot bar, the switch-up drop and the kill cadence.
+const ONE_SHOTS := ["pivot", "drop", "cadence"]
 
 var t := T.new("audio_music_picks_test")
 
@@ -38,15 +40,19 @@ func _initialize() -> void:
 func _structure(theme: String, m: Dictionary) -> void:
 	t.eq("%s names itself" % theme, m["theme"], theme)
 	t.eq("%s has the three stems" % theme, m["stems"], ["drums", "bass", "other"])
-	t.eq("%s is the menu bank's three clips" % theme, m["clips"].keys(), ["calm", "travel", "cadence"])
-	t.check("%s says its cuts are unverified" % theme, m["timing_verified"] == false and m["cuts"] == "nominal-unverified")
+	var boss := theme.begins_with("boss_")
+	var want: Array = BOSS_CLIPS if boss else ["calm", "travel", "cadence"]
+	t.eq("%s has its clips" % theme, m["clips"].keys(), want)
+	t.check("%s says its downbeat is unverified" % theme, m["timing_verified"] == false and m["cuts"] in ["nominal-unverified", "measured-beat-phase"])
 	for cid in m["clips"]:
 		var clip: Dictionary = m["clips"][cid]
-		var bpm := int(clip["bpm"])
-		t.check("%s/%s sits on a house grid" % [theme, cid], GRIDS.has(bpm) and clip["beat"] == GRIDS[bpm] and clip["bar"] == 4 * clip["beat"], "%d bpm, beat %d" % [bpm, clip["beat"]])
+		var bpm := float(clip["bpm"])
+		# Each clip sits on its own measured tempo: a whole number of samples per beat, four beats a bar.
+		t.check("%s/%s sits on its tempo's grid" % [theme, cid], absi(int(clip["beat"]) - roundi(Harmony.RATE * 60.0 / bpm)) <= 1 and clip["bar"] == 4 * clip["beat"], "%.2f bpm, beat %d" % [bpm, clip["beat"]])
 		t.eq("%s/%s is whole bars" % [theme, cid], int(clip["exit"]) - int(clip["entry"]), int(clip["bars"]) * int(clip["bar"]))
 		t.check("%s/%s names all three Oggs" % [theme, cid], clip["files"].keys() == ["drums", "bass", "other"])
-		t.check("%s/%s loops only calm and travel" % [theme, cid], bool(clip["loop"]) == (cid != "cadence"))
+		var loops: bool = not (cid in ONE_SHOTS) if boss else cid != "cadence"
+		t.check("%s/%s loops unless it plays once" % [theme, cid], bool(clip["loop"]) == loops)
 	for section in m["sections"]:
 		t.check("%s section %s points at a clip" % [theme, section], m["clips"].has(m["sections"][section]["clip"]))
 
@@ -81,7 +87,7 @@ func _level(theme: String, path: String, feed: Dictionary) -> Ace:
 
 
 func _faders(theme: String, path: String) -> void:
-	var bar: int = GRIDS[int(JSON.parse_string(FileAccess.get_file_as_string(path))["clips"]["calm"]["bpm"])] * 4
+	var bar: int = int(JSON.parse_string(FileAccess.get_file_as_string(path))["clips"]["calm"]["bar"])
 	var still := _level(theme, path, {"threat": 0.0, "speed": 0.0, "chain": 0.0})
 	t.eq("%s loads every Ogg" % theme, still.missing, "")
 	# Let the join finish, then listen to two bars.

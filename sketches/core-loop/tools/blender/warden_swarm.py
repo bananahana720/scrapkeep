@@ -61,6 +61,11 @@ import bpy  # noqa: E402
 from mathutils import Matrix, Quaternion, Vector  # noqa: E402
 
 import common  # noqa: E402
+import polish  # noqa: E402
+
+# Cast comb: 3 cm chamfers on real corners, smooth shading, baked AO (POLISH.md). Cells keep
+# their hexagons; no edge lightening and softer AO keep ancient enamel under its cap.
+polish.enable(detail=1, bevel=0.03, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
 from common import Part  # noqa: E402
 
 FPS = 30
@@ -70,7 +75,8 @@ CLIPS = {"idle": 4.0, "pulse": 2.4, "active": 4.0, "hoist_ride": 2.0, "snip": 2.
 HELD = ("idle", "active", "hoist_ride", "snip", "stagger_open", "brood_dark")
 # The drones' snip walks the rope away from the body, so the kit holds the rule in the rest.
 KIT_HELD = ("idle", "active", "hoist_ride", "stagger_open", "brood_dark")
-BUDGET = {"warden_swarm": ("warden_base", 5000, 9600, 32), "warden_swarm_kit_drones": ("warden_kit", 1500, 2800, 18)}
+# Polished caps (POLISH.md, 18 Oct), well under the warden_base and warden_kit class caps.
+BUDGET = {"warden_swarm": ("warden_base", 13000, 17000, 32), "warden_swarm_kit_drones": ("warden_kit", 1500, 2800, 18)}
 RADIUS = 2.8          # warden.gd RADIUS
 LOW_BAND = 2.0        # below this height nothing passes RADIUS
 REACH = RADIUS + 1.0  # above it nothing passes RADIUS + 1 m
@@ -340,14 +346,25 @@ def bone(arm, name, head, tail, parent=None, roll_to=None):
 
 def skin(m, arm, name):
     m.bm.verts.index_update()
+    # Owners ride in the bmesh's deform layer, so polish bevels carry them onto new vertices.
+    names = list(dict.fromkeys(m.owner))
+    index = {owner: k for k, owner in enumerate(names)}
+    deform = m.bm.verts.layers.deform.verify()
+    assert len(m.owner) == len(m.bm.verts), (len(m.owner), len(m.bm.verts))
+    for v, owner in zip(m.bm.verts, m.owner):
+        v[deform][index[owner]] = 1.0
     obj = m.part.to_object((0, 0, 0))
     obj.name = name
-    groups = {}
-    for i, owner in enumerate(m.owner):
-        if owner not in groups:
-            groups[owner] = obj.vertex_groups.new(name=owner)
-        groups[owner].add([i], 1.0, "REPLACE")
-    assert len(m.owner) == len(obj.data.vertices), (len(m.owner), len(obj.data.vertices))
+    for owner in names:
+        obj.vertex_groups.new(name=owner)
+    # Rigid skinning: every vertex keeps only its strongest bone, at full weight.
+    for v in obj.data.vertices:
+        groups = sorted(((g.weight, -g.group) for g in v.groups), reverse=True)
+        if len(groups) > 1 or (groups and groups[0][0] != 1.0):
+            keep = -groups[0][1]
+            for _, g in groups[1:]:
+                obj.vertex_groups[-g].remove([v.index])
+            obj.vertex_groups[keep].add([v.index], 1.0, "REPLACE")
     obj.parent = arm
     mod = obj.modifiers.new("Armature", "ARMATURE")
     mod.object = arm
@@ -778,6 +795,8 @@ def rest_reach(obj):
 
 def export(objs, path):
     bpy.context.view_layer.update()
+    if common.POLISH is not None:
+        polish.bake(objs[0], common.POLISH)
     for o in bpy.context.scene.objects:
         o.select_set(False)
     for o in objs:
@@ -792,7 +811,7 @@ def export(objs, path):
                               export_frame_range=False, export_force_sampling=True,
                               export_optimize_animation_size=True,
                               export_optimize_animation_keep_anim_armature=True)
-    common.canonical_indices(path)
+    common.canonical_indices(path, vertices=common.POLISH is not None)
     print("EXPORTED", path)
 
 

@@ -455,10 +455,10 @@
    },
    "budget_note": "Contains warden_base and warden_kit allocations, measured separately by dress_bri_assets_test; scooter shares the kit allowance.",
    "exception": {
-    "tris": 6500,
+    "tris": 19500,
     "draws": 50
    },
-   "exception_why": "one GLB holds the fortress base and its kit; D4 BUILD-SPEC allows warden_base plus warden_kit (1,500 tris, 18 draws)"
+   "exception_why": "one GLB holds the fortress base and its kit; D4 BUILD-SPEC allows warden_base plus warden_kit. Polished caps (POLISH.md, 18 Oct): body 14,500 plus combined kit 5,000 tris"
   },
   {
    "id": "boss_brindle_scooter",
@@ -2934,6 +2934,42 @@
    }
   },
   {
+   "id": "anchor_block_16x28x8",
+   "path": "res://assets/models/park/anchor_block_16x28x8.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. dam-era penstock anchor block with a flush iron saddle ring and cut pipe stub. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "anchor_block_16x28x8_detail1",
+   "path": "res://assets/models/park/anchor_block_16x28x8_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of anchor_block_16x28x8, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "anchor_block_16x28x8_detail2",
+   "path": "res://assets/models/park/anchor_block_16x28x8_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of anchor_block_16x28x8, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
    "id": "anchor_cairn_a",
    "path": "res://assets/models/park/anchor_cairn_a.glb",
    "class": "detail",
@@ -3279,6 +3315,42 @@
      10,
      8
     ]
+   }
+  },
+  {
+   "id": "annex_hall",
+   "path": "res://assets/models/park/annex_hall.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. heat-exchanger annex hall with a flat rideable roof, pipe runs and a pressure dial. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "annex_hall_detail1",
+   "path": "res://assets/models/park/annex_hall_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of annex_hall, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "annex_hall_detail2",
+   "path": "res://assets/models/park/annex_hall_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of annex_hall, drawn by range (the detail class), additive to the base."
    }
   },
   {
@@ -3756,7 +3828,7 @@
    "class": "park_large",
    "origin": "entry_lip",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd place (base GLB with its crater_ending-col trimesh; the ending camera set, never a stage)",
+   "loader": "src/world/park/park_recipes.gd place (base GLB with its crater_ending-col trimesh; the ending bowl: the victory lap after the Mind and the credits set, never a stage)",
    "provenance": {
     "recipe": "tools/blender/park/crater.py"
    }
@@ -3814,6 +3886,258 @@
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, no collider)",
    "provenance": {
     "recipe": "tools/blender/park/crater.py"
+   }
+  },
+  {
+   "id": "crew_bunk_ledge",
+   "path": "res://assets/models/park/crew_bunk_ledge.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. the flume crews' bunk ledge: plank deck on joists and knee braces with numbered bunk boards. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "crew_bunk_ledge_detail1",
+   "path": "res://assets/models/park/crew_bunk_ledge_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of crew_bunk_ledge, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crew_bunk_ledge_detail2",
+   "path": "res://assets/models/park/crew_bunk_ledge_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of crew_bunk_ledge, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_12x28x6",
+   "path": "res://assets/models/park/crib_pier_12x28x6.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. timber crib pier or wall, squared courses with recessed rock fill and iron drift pins. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "crib_pier_12x28x6_detail1",
+   "path": "res://assets/models/park/crib_pier_12x28x6_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of crib_pier_12x28x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_12x28x6_detail2",
+   "path": "res://assets/models/park/crib_pier_12x28x6_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of crib_pier_12x28x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_20x28x6",
+   "path": "res://assets/models/park/crib_pier_20x28x6.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. timber crib pier or wall, squared courses with recessed rock fill and iron drift pins. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "crib_pier_20x28x6_detail1",
+   "path": "res://assets/models/park/crib_pier_20x28x6_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of crib_pier_20x28x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_20x28x6_detail2",
+   "path": "res://assets/models/park/crib_pier_20x28x6_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of crib_pier_20x28x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_24x18x6",
+   "path": "res://assets/models/park/crib_pier_24x18x6.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. timber crib pier or wall, squared courses with recessed rock fill and iron drift pins. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "crib_pier_24x18x6_detail1",
+   "path": "res://assets/models/park/crib_pier_24x18x6_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of crib_pier_24x18x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_24x18x6_detail2",
+   "path": "res://assets/models/park/crib_pier_24x18x6_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of crib_pier_24x18x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_24x28x20",
+   "path": "res://assets/models/park/crib_pier_24x28x20.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. timber crib pier or wall, squared courses with recessed rock fill and iron drift pins. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "crib_pier_24x28x20_detail1",
+   "path": "res://assets/models/park/crib_pier_24x28x20_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of crib_pier_24x28x20, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_24x28x20_detail2",
+   "path": "res://assets/models/park/crib_pier_24x28x20_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of crib_pier_24x28x20, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_28x28x6",
+   "path": "res://assets/models/park/crib_pier_28x28x6.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. timber crib pier or wall, squared courses with recessed rock fill and iron drift pins. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "crib_pier_28x28x6_detail1",
+   "path": "res://assets/models/park/crib_pier_28x28x6_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of crib_pier_28x28x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_pier_28x28x6_detail2",
+   "path": "res://assets/models/park/crib_pier_28x28x6_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of crib_pier_28x28x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_wall_60x24x6",
+   "path": "res://assets/models/park/crib_wall_60x24x6.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. timber crib pier or wall, squared courses with recessed rock fill and iron drift pins. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "crib_wall_60x24x6_detail1",
+   "path": "res://assets/models/park/crib_wall_60x24x6_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of crib_wall_60x24x6, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "crib_wall_60x24x6_detail2",
+   "path": "res://assets/models/park/crib_wall_60x24x6_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of crib_wall_60x24x6, drawn by range (the detail class), additive to the base."
    }
   },
   {
@@ -7661,6 +7985,42 @@
    }
   },
   {
+   "id": "dry_wash_1500x4x60",
+   "path": "res://assets/models/park/dry_wash_1500x4x60.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Dry wash for the sinkhole's south_flats row: a silt and sand liner over the wash stamp, 1500 x 4 x 60; seats rows 1125 to 2250 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "dry_wash_1500x4x60_detail1",
+   "path": "res://assets/models/park/dry_wash_1500x4x60_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Dry wash for the sinkhole's south_flats row: a silt and sand liner over the wash stamp, 1500 x 4 x 60; seats rows 1125 to 2250 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "dry_wash_1500x4x60_detail2",
+   "path": "res://assets/models/park/dry_wash_1500x4x60_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Dry wash for the sinkhole's south_flats row: a silt and sand liner over the wash stamp, 1500 x 4 x 60; seats rows 1125 to 2250 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
    "id": "floating_island",
    "path": "res://assets/models/park/floating_island.glb",
    "class": "park_large",
@@ -7728,6 +8088,222 @@
    "loader": "park_recipes",
    "provenance": {
     "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "flume_bent_32",
+   "path": "res://assets/models/park/flume_bent_32.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. the flume crews' plank-sheathed timber bent tower, 32 m, with bent number board and speed-tick band. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "flume_bent_32_detail1",
+   "path": "res://assets/models/park/flume_bent_32_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of flume_bent_32, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_bent_32_detail2",
+   "path": "res://assets/models/park/flume_bent_32_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of flume_bent_32, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_bent_50",
+   "path": "res://assets/models/park/flume_bent_50.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. the flume crews' plank-sheathed timber bent tower, 50 m, with bent number board and speed-tick band. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "flume_bent_50_detail1",
+   "path": "res://assets/models/park/flume_bent_50_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of flume_bent_50, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_bent_50_detail2",
+   "path": "res://assets/models/park/flume_bent_50_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of flume_bent_50, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_intake_16",
+   "path": "res://assets/models/park/flume_intake_16.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. dam-era flume intake: a 16 m mouth whose walls and floor flare from 14 m wide and flush to the flume section, so a ball rolling in from open ground is funnelled into the trough; sluice gate hung open overhead."
+   }
+  },
+  {
+   "id": "flume_intake_16_detail1",
+   "path": "res://assets/models/park/flume_intake_16_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of flume_intake_16, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_intake_16_detail2",
+   "path": "res://assets/models/park/flume_intake_16_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of flume_intake_16, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_pour_spout",
+   "path": "res://assets/models/park/flume_pour_spout.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. level 14 m flume with a curved pour lip; same trough section as flume_span; rail empties on the crest."
+   }
+  },
+  {
+   "id": "flume_pour_spout_detail1",
+   "path": "res://assets/models/park/flume_pour_spout_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of flume_pour_spout, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_pour_spout_detail2",
+   "path": "res://assets/models/park/flume_pour_spout_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of flume_pour_spout, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_reach_120",
+   "path": "res://assets/models/park/flume_reach_120.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. level 120 m flume reach with a bent at both ends so it tiles; bents to 11 m below the floor."
+   }
+  },
+  {
+   "id": "flume_reach_120_detail1",
+   "path": "res://assets/models/park/flume_reach_120_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of flume_reach_120, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_reach_120_detail2",
+   "path": "res://assets/models/park/flume_reach_120_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of flume_reach_120, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_siphon_span",
+   "path": "res://assets/models/park/flume_siphon_span.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. 100.8 m flume whose whole section falls 21 m on a smoothstep profile; bents to 11 m below the floor."
+   }
+  },
+  {
+   "id": "flume_siphon_span_detail1",
+   "path": "res://assets/models/park/flume_siphon_span_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of flume_siphon_span, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_siphon_span_detail2",
+   "path": "res://assets/models/park/flume_siphon_span_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of flume_siphon_span, drawn by range (the detail class), additive to the base."
    }
   },
   {
@@ -7800,6 +8376,42 @@
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
     "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+   }
+  },
+  {
+   "id": "gap_work_deck",
+   "path": "res://assets/models/park/gap_work_deck.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. the flume crews' timber work deck wedge down the butte gap, lane stripes and trestle framing. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "gap_work_deck_detail1",
+   "path": "res://assets/models/park/gap_work_deck_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of gap_work_deck, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "gap_work_deck_detail2",
+   "path": "res://assets/models/park/gap_work_deck_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of gap_work_deck, drawn by range (the detail class), additive to the base."
    }
   },
   {
@@ -8260,7 +8872,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava channel half-pipe for the sinkhole's chained lava_channel rows (placeholder unit F): the wash stamp's cross profile, 58 x 4 x 28, measured from the floor centre (origin on the floor, crest at 4 m) with no end taper, so a seated row's ends land on its neighbour's floor; the shell sits 0.2 m over the profile, walls steeper than 25.8 degrees carry the glassy carve band, and the -col is two slabs 6 m under the floor (the seat fit's ends; the baked stamp is the ride). Seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -8272,7 +8884,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava channel half-pipe for the sinkhole's chained lava_channel rows (placeholder unit F): the wash stamp's cross profile, 58 x 4 x 28, measured from the floor centre (origin on the floor, crest at 4 m) with no end taper, so a seated row's ends land on its neighbour's floor; the shell sits 0.2 m over the profile, walls steeper than 25.8 degrees carry the glassy carve band, and the -col is two slabs 6 m under the floor (the seat fit's ends; the baked stamp is the ride). Seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -8284,7 +8896,79 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/lavachannels.py",
-    "notes": "Lava channel half-pipe for the sinkhole's lava_channel rows (placeholder unit F): the wash stamp's own profile, 58 x 4 x 28, lifted 0.12 m; seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Lava channel half-pipe for the sinkhole's chained lava_channel rows (placeholder unit F): the wash stamp's cross profile, 58 x 4 x 28, measured from the floor centre (origin on the floor, crest at 4 m) with no end taper, so a seated row's ends land on its neighbour's floor; the shell sits 0.2 m over the profile, walls steeper than 25.8 degrees carry the glassy carve band, and the -col is two slabs 6 m under the floor (the seat fit's ends; the baked stamp is the ride). Seats rows 43.5 to 87 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_chute_3x0p5x8",
+   "path": "res://assets/models/park/lava_chute_3x0p5x8.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava chute for the sinkhole's lava_chute row: a raised basalt trough with no stamp, 3 x 0.5 x 8, its floor at y 0 and its lips 0.5 m up; seats rows 2.25 to 4.5 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_chute_3x0p5x8_detail1",
+   "path": "res://assets/models/park/lava_chute_3x0p5x8_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava chute for the sinkhole's lava_chute row: a raised basalt trough with no stamp, 3 x 0.5 x 8, its floor at y 0 and its lips 0.5 m up; seats rows 2.25 to 4.5 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_chute_3x0p5x8_detail2",
+   "path": "res://assets/models/park/lava_chute_3x0p5x8_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava chute for the sinkhole's lava_chute row: a raised basalt trough with no stamp, 3 x 0.5 x 8, its floor at y 0 and its lips 0.5 m up; seats rows 2.25 to 4.5 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_trench_420x6x40",
+   "path": "res://assets/models/park/lava_trench_420x6x40.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp as the 2 m bake grid draws it (walls side 0 to 2 m), 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_trench_420x6x40_detail1",
+   "path": "res://assets/models/park/lava_trench_420x6x40_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp as the 2 m bake grid draws it (walls side 0 to 2 m), 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "lava_trench_420x6x40_detail2",
+   "path": "res://assets/models/park/lava_trench_420x6x40_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/lavachannels.py",
+    "notes": "Lava trench for the sinkhole's west_trench row: a liner over the channel stamp as the 2 m bake grid draws it (walls side 0 to 2 m), 420 x 6 x 40; seats rows 315 to 630 m long. The stamp is the ride: the shell sits 0.2 m over the bake's stamp and the -col 0.15 m under it, both tapering to the plain over the stamp's open ends; walls steeper than 25.8 degrees carry the glassy carve band. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -8468,6 +9152,402 @@
    }
   },
   {
+   "id": "liner_bench_run_wash",
+   "path": "res://assets/models/park/liner_bench_run_wash.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+   }
+  },
+  {
+   "id": "liner_bench_run_wash_detail1",
+   "path": "res://assets/models/park/liner_bench_run_wash_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_bench_run_wash, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_bench_run_wash_detail2",
+   "path": "res://assets/models/park/liner_bench_run_wash_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_bench_run_wash, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_bend_return_wash",
+   "path": "res://assets/models/park/liner_bend_return_wash.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+   }
+  },
+  {
+   "id": "liner_bend_return_wash_detail1",
+   "path": "res://assets/models/park/liner_bend_return_wash_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_bend_return_wash, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_bend_return_wash_detail2",
+   "path": "res://assets/models/park/liner_bend_return_wash_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_bend_return_wash, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_butte_gap",
+   "path": "res://assets/models/park/liner_butte_gap.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip."
+   }
+  },
+  {
+   "id": "liner_butte_gap_detail1",
+   "path": "res://assets/models/park/liner_butte_gap_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_butte_gap, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_butte_gap_detail2",
+   "path": "res://assets/models/park/liner_butte_gap_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_butte_gap, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_gap_wash",
+   "path": "res://assets/models/park/liner_gap_wash.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+   }
+  },
+  {
+   "id": "liner_gap_wash_detail1",
+   "path": "res://assets/models/park/liner_gap_wash_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_gap_wash, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_gap_wash_detail2",
+   "path": "res://assets/models/park/liner_gap_wash_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_gap_wash, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_lateral_canal",
+   "path": "res://assets/models/park/liner_lateral_canal.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip."
+   }
+  },
+  {
+   "id": "liner_lateral_canal_detail1",
+   "path": "res://assets/models/park/liner_lateral_canal_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_lateral_canal, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_lateral_canal_detail2",
+   "path": "res://assets/models/park/liner_lateral_canal_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_lateral_canal, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_main_canal",
+   "path": "res://assets/models/park/liner_main_canal.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip."
+   }
+  },
+  {
+   "id": "liner_main_canal_detail1",
+   "path": "res://assets/models/park/liner_main_canal_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_main_canal, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_main_canal_detail2",
+   "path": "res://assets/models/park/liner_main_canal_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_main_canal, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_mesa_spill",
+   "path": "res://assets/models/park/liner_mesa_spill.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+   }
+  },
+  {
+   "id": "liner_mesa_spill_detail1",
+   "path": "res://assets/models/park/liner_mesa_spill_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_mesa_spill, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_mesa_spill_detail2",
+   "path": "res://assets/models/park/liner_mesa_spill_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_mesa_spill, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_trestle_hollow",
+   "path": "res://assets/models/park/liner_trestle_hollow.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+   }
+  },
+  {
+   "id": "liner_trestle_hollow_detail1",
+   "path": "res://assets/models/park/liner_trestle_hollow_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_trestle_hollow, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_trestle_hollow_detail2",
+   "path": "res://assets/models/park/liner_trestle_hollow_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_trestle_hollow, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_wasteway_chute",
+   "path": "res://assets/models/park/liner_wasteway_chute.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. board-formed concrete liner panels with dark form joints and a worn cream coping strip at the rims; a painted gauge staff on one wall."
+   }
+  },
+  {
+   "id": "liner_wasteway_chute_detail1",
+   "path": "res://assets/models/park/liner_wasteway_chute_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_wasteway_chute, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_wasteway_chute_detail2",
+   "path": "res://assets/models/park/liner_wasteway_chute_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_wasteway_chute, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_weir_chute",
+   "path": "res://assets/models/park/liner_weir_chute.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. board-formed concrete liner panels with dark form joints and a worn cream coping strip at the rims."
+   }
+  },
+  {
+   "id": "liner_weir_chute_detail1",
+   "path": "res://assets/models/park/liner_weir_chute_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_weir_chute, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_weir_chute_detail2",
+   "path": "res://assets/models/park/liner_weir_chute_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_weir_chute, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_weir_pond",
+   "path": "res://assets/models/park/liner_weir_pond.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. concrete rim ring and a stone pitched lining around a flush floor."
+   }
+  },
+  {
+   "id": "liner_weir_pond_detail1",
+   "path": "res://assets/models/park/liner_weir_pond_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_weir_pond, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_weir_pond_detail2",
+   "path": "res://assets/models/park/liner_weir_pond_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_weir_pond, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
    "id": "mesa_lip_kicker",
    "path": "res://assets/models/park/mesa_lip_kicker.glb",
    "class": "landform",
@@ -8477,6 +9557,78 @@
    "provenance": {
     "recipe": "tools/blender/park/skyislands.py",
     "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x300_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x300_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Wide mesa lip kicker for the crown's lookout_lip row, size [12, 4, 300]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_12x4x56_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_12x4x56_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Mesa lip kicker for the crown's fin_nose_kicker row, size [12, 4, 56]; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -8815,7 +9967,79 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x720",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x720_detail1",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x720_detail2",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x720_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 720 m wide, for the west half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840_detail1",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "mesa_shelf_edge_12x0p01x840_detail2",
+   "path": "res://assets/models/park/mesa_shelf_edge_12x0p01x840_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/kickers.py",
+    "notes": "Caprock shelf-edge strip, 840 m wide, for the east half of run_step_lip_3 split around run_turn_wash; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -8827,7 +10051,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -8839,7 +10063,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; seat it with \"fit\": \"seat\"; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
-    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9 to 18 m long. Built by this script, no external mesh or texture; vertex colour."
+    "notes": "Caprock shelf-edge strip for the islands' 12 x 0.01 x 1600 step lips; seats rows 9.5 to 19.05 m long (its -col runs out over the bullnose to z 12.7). Built by this script, no external mesh or texture; vertex colour."
    }
   },
   {
@@ -9515,6 +10739,42 @@
    }
   },
   {
+   "id": "rim_road",
+   "path": "res://assets/models/park/rim_road.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. dam-era rim road wedge: graded sand surface, wheel ruts, curb logs, mileposts. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "rim_road_detail1",
+   "path": "res://assets/models/park/rim_road_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of rim_road, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "rim_road_detail2",
+   "path": "res://assets/models/park/rim_road_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of rim_road, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
    "id": "shaft_drop",
    "path": "res://assets/models/park/shaft_drop.glb",
    "class": "park_large",
@@ -9728,6 +10988,114 @@
    "provenance": {
     "recipe": "tools/blender/park/tunnels.py",
     "notes": "wave 13 KC4 detail shell 2 of spillway_tunnel"
+   }
+  },
+  {
+   "id": "surge_pylon_28",
+   "path": "res://assets/models/park/surge_pylon_28.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. board-formed concrete surge-line pylon, 28 m, steel crossarm and glass-green insulators. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "surge_pylon_28_detail1",
+   "path": "res://assets/models/park/surge_pylon_28_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of surge_pylon_28, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "surge_pylon_28_detail2",
+   "path": "res://assets/models/park/surge_pylon_28_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of surge_pylon_28, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "surge_pylon_48",
+   "path": "res://assets/models/park/surge_pylon_48.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. board-formed concrete surge-line pylon, 48 m, steel crossarm and glass-green insulators. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "surge_pylon_48_detail1",
+   "path": "res://assets/models/park/surge_pylon_48_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of surge_pylon_48, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "surge_pylon_48_detail2",
+   "path": "res://assets/models/park/surge_pylon_48_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of surge_pylon_48, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "survey_mast_40",
+   "path": "res://assets/models/park/survey_mast_40.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. the flume survey crew's mast: concrete footing, survey-rod banded timber, copper plate, pulley block. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "survey_mast_40_detail1",
+   "path": "res://assets/models/park/survey_mast_40_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of survey_mast_40, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "survey_mast_40_detail2",
+   "path": "res://assets/models/park/survey_mast_40_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of survey_mast_40, drawn by range (the detail class), additive to the base."
    }
   },
   {
@@ -9953,6 +11321,78 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "weir_apron",
+   "path": "res://assets/models/park/weir_apron.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. concrete weir apron wedge with form joints as colour. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "weir_apron_detail1",
+   "path": "res://assets/models/park/weir_apron_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of weir_apron, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "weir_apron_detail2",
+   "path": "res://assets/models/park/weir_apron_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of weir_apron, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "weir_gatehouse",
+   "path": "res://assets/models/park/weir_gatehouse.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. small concrete weir gatehouse with door, gate wheel and flat roof. Collider identical to the grey box it replaces."
+   }
+  },
+  {
+   "id": "weir_gatehouse_detail1",
+   "path": "res://assets/models/park/weir_gatehouse_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 1 of weir_gatehouse, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "weir_gatehouse_detail2",
+   "path": "res://assets/models/park/weir_gatehouse_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Detail shell 2 of weir_gatehouse, drawn by range (the detail class), additive to the base."
    }
   },
   {
@@ -11407,6 +12847,9 @@
   "anchor_basalt_a",
   "anchor_basalt_b",
   "anchor_basalt_c",
+  "anchor_block_16x28x8",
+  "anchor_block_16x28x8_detail1",
+  "anchor_block_16x28x8_detail2",
   "anchor_cairn_a",
   "anchor_cairn_b",
   "anchor_cairn_c",
@@ -11422,6 +12865,9 @@
   "anchor_timber_a",
   "anchor_timber_b",
   "anchor_timber_c",
+  "annex_hall",
+  "annex_hall_detail1",
+  "annex_hall_detail2",
   "arena_bowl_foundry",
   "arena_waking_rim_sector.glb",
   "barge",
@@ -11529,6 +12975,27 @@
   "crater_event",
   "crater_event_detail1",
   "crater_event_detail2",
+  "crew_bunk_ledge",
+  "crew_bunk_ledge_detail1",
+  "crew_bunk_ledge_detail2",
+  "crib_pier_12x28x6",
+  "crib_pier_12x28x6_detail1",
+  "crib_pier_12x28x6_detail2",
+  "crib_pier_20x28x6",
+  "crib_pier_20x28x6_detail1",
+  "crib_pier_20x28x6_detail2",
+  "crib_pier_24x18x6",
+  "crib_pier_24x18x6_detail1",
+  "crib_pier_24x18x6_detail2",
+  "crib_pier_24x28x20",
+  "crib_pier_24x28x20_detail1",
+  "crib_pier_24x28x20_detail2",
+  "crib_pier_28x28x6",
+  "crib_pier_28x28x6_detail1",
+  "crib_pier_28x28x6_detail2",
+  "crib_wall_60x24x6",
+  "crib_wall_60x24x6_detail1",
+  "crib_wall_60x24x6_detail2",
   "cut_face_long",
   "cut_face_scoop",
   "dam_apron_kicker",
@@ -11680,6 +13147,9 @@
   "drift_wash",
   "drift_wash_detail1",
   "drift_wash_detail2",
+  "dry_wash_1500x4x60",
+  "dry_wash_1500x4x60_detail1",
+  "dry_wash_1500x4x60_detail2",
   "enemy_anchor_crew",
   "enemy_ballast_heavy",
   "enemy_burrower",
@@ -11724,12 +13194,33 @@
   "flooded_shaft",
   "flooded_shaft_detail1",
   "flooded_shaft_detail2",
+  "flume_bent_32",
+  "flume_bent_32_detail1",
+  "flume_bent_32_detail2",
+  "flume_bent_50",
+  "flume_bent_50_detail1",
+  "flume_bent_50_detail2",
+  "flume_intake_16",
+  "flume_intake_16_detail1",
+  "flume_intake_16_detail2",
+  "flume_pour_spout",
+  "flume_pour_spout_detail1",
+  "flume_pour_spout_detail2",
+  "flume_reach_120",
+  "flume_reach_120_detail1",
+  "flume_reach_120_detail2",
+  "flume_siphon_span",
+  "flume_siphon_span_detail1",
+  "flume_siphon_span_detail2",
   "flume_span",
   "flume_span_detail1",
   "flume_span_detail2",
   "gallery_wash",
   "gallery_wash_detail1",
   "gallery_wash_detail2",
+  "gap_work_deck",
+  "gap_work_deck_detail1",
+  "gap_work_deck_detail2",
   "gauge_dial_bezel",
   "gauge_dial_detail1",
   "gauge_dial_detail2",
@@ -11812,6 +13303,12 @@
   "lava_channel",
   "lava_channel_detail1",
   "lava_channel_detail2",
+  "lava_chute_3x0p5x8",
+  "lava_chute_3x0p5x8_detail1",
+  "lava_chute_3x0p5x8_detail2",
+  "lava_trench_420x6x40",
+  "lava_trench_420x6x40_detail1",
+  "lava_trench_420x6x40_detail2",
   "lava_tube_run",
   "lava_tube_run_bend_n30",
   "lava_tube_run_bend_n30_detail1",
@@ -11832,7 +13329,46 @@
   "lift_platform_detail2",
   "lift_platform_glass",
   "lift_platform_pump",
+  "liner_bench_run_wash",
+  "liner_bench_run_wash_detail1",
+  "liner_bench_run_wash_detail2",
+  "liner_bend_return_wash",
+  "liner_bend_return_wash_detail1",
+  "liner_bend_return_wash_detail2",
+  "liner_butte_gap",
+  "liner_butte_gap_detail1",
+  "liner_butte_gap_detail2",
+  "liner_gap_wash",
+  "liner_gap_wash_detail1",
+  "liner_gap_wash_detail2",
+  "liner_lateral_canal",
+  "liner_lateral_canal_detail1",
+  "liner_lateral_canal_detail2",
+  "liner_main_canal",
+  "liner_main_canal_detail1",
+  "liner_main_canal_detail2",
+  "liner_mesa_spill",
+  "liner_mesa_spill_detail1",
+  "liner_mesa_spill_detail2",
+  "liner_trestle_hollow",
+  "liner_trestle_hollow_detail1",
+  "liner_trestle_hollow_detail2",
+  "liner_wasteway_chute",
+  "liner_wasteway_chute_detail1",
+  "liner_wasteway_chute_detail2",
+  "liner_weir_chute",
+  "liner_weir_chute_detail1",
+  "liner_weir_chute_detail2",
+  "liner_weir_pond",
+  "liner_weir_pond_detail1",
+  "liner_weir_pond_detail2",
   "mesa_lip_kicker",
+  "mesa_lip_kicker_12x4x300",
+  "mesa_lip_kicker_12x4x300_detail1",
+  "mesa_lip_kicker_12x4x300_detail2",
+  "mesa_lip_kicker_12x4x56",
+  "mesa_lip_kicker_12x4x56_detail1",
+  "mesa_lip_kicker_12x4x56_detail2",
   "mesa_lip_kicker_24x6x36",
   "mesa_lip_kicker_24x6x36_detail1",
   "mesa_lip_kicker_24x6x36_detail2",
@@ -11857,6 +13393,12 @@
   "mesa_rim_ledge_detail1",
   "mesa_rim_ledge_detail2",
   "mesa_shelf_edge",
+  "mesa_shelf_edge_12x0p01x720",
+  "mesa_shelf_edge_12x0p01x720_detail1",
+  "mesa_shelf_edge_12x0p01x720_detail2",
+  "mesa_shelf_edge_12x0p01x840",
+  "mesa_shelf_edge_12x0p01x840_detail1",
+  "mesa_shelf_edge_12x0p01x840_detail2",
   "mesa_shelf_edge_detail1",
   "mesa_shelf_edge_detail2",
   "mind_hand",
@@ -11997,6 +13539,9 @@
   "rescue_cage",
   "return_ramp_skin",
   "return_ramp_skin_rusted-salvaged-plate.webp",
+  "rim_road",
+  "rim_road_detail1",
+  "rim_road_detail2",
   "rubble_cluster",
   "sand_ground_albedo",
   "sand_ground_ao",
@@ -12068,6 +13613,15 @@
   "spillway_tunnel_detail2",
   "strut_bent",
   "strut_tall",
+  "surge_pylon_28",
+  "surge_pylon_28_detail1",
+  "surge_pylon_28_detail2",
+  "surge_pylon_48",
+  "surge_pylon_48_detail1",
+  "surge_pylon_48_detail2",
+  "survey_mast_40",
+  "survey_mast_40_detail1",
+  "survey_mast_40_detail2",
   "tailings_lip",
   "tailings_lip_detail1",
   "tailings_lip_detail2",
@@ -12120,6 +13674,12 @@
   "warden_swarm_kit_drones",
   "wash_dropin_lip",
   "wash_dropin_lip_detail1",
-  "wash_dropin_lip_detail2"
+  "wash_dropin_lip_detail2",
+  "weir_apron",
+  "weir_apron_detail1",
+  "weir_apron_detail2",
+  "weir_gatehouse",
+  "weir_gatehouse_detail1",
+  "weir_gatehouse_detail2"
  ]
 }
