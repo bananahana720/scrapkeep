@@ -13,6 +13,12 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const T := preload("res://tests/support/t.gd")
 const SCENE_KINDS := ["chaser", "mag_trapper", "winch_drone"]
+# Coordinator call 2026-10-18: the death range below (3 to 8 parts, 0.4 to 0.7 s) is for
+# full enemy bodies. These kinds are sub-parts of another enemy, so their death is checked
+# for a valid style only. Each entry names its reason.
+const DEATH_SUB_PARTS := {
+	"splitter_pod": "a Splitter sub-part that pops, not a full enemy body",
+}
 const IDLE_FRAMES := 240
 
 var _game
@@ -64,10 +70,11 @@ func _rows() -> void:
 			and (idle.get("beats") is float or idle.get("beats") is int) and float(idle.beats) > 0.0
 		_t.check("GP6-1 idle " + kind, idle_ok, str(idle))
 		var death = spec.get("death")
-		var death_ok: bool = death is Dictionary and String(death.get("style", "")) in ["scatter", "collapse", "spin_down", "pop"] \
-			and death.get("parts") is int and int(death.parts) >= 3 and int(death.parts) <= 8 \
-			and (death.get("seconds") is float) and float(death.seconds) >= 0.4 and float(death.seconds) <= 0.7
-		_t.check("GP6-1 death " + kind, death_ok, str(death))
+		var style_ok: bool = death is Dictionary and String(death.get("style", "")) in ["scatter", "collapse", "spin_down", "pop"] \
+			and death.get("parts") is int and death.get("seconds") is float
+		var death_ok: bool = style_ok and (DEATH_SUB_PARTS.has(kind) or (int(death.parts) >= 3 and int(death.parts) <= 8 \
+			and float(death.seconds) >= 0.4 and float(death.seconds) <= 0.7))
+		_t.check("GP6-1 death " + kind, death_ok, str(death) + ("" if not DEATH_SUB_PARTS.has(kind) else " (full-body range exempt: %s)" % DEATH_SUB_PARTS[kind]))
 	_t.check("GP6-1 vault", WindupRows.ROWS.vault.idle.style == "tick" and WindupRows.ROWS.vault.death.style == "collapse", "vault ticks and collapses")
 	# Every concrete roster attack pose has a whole-body pose, and nothing names a pose no row has.
 	var named := {}
