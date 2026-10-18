@@ -53,7 +53,7 @@ CUES = {
 ZONE_BPM = 129
 # pack -> (kind, key, cue, roam cue, stage). Stage-to-pack mapping: src/core/park_defs.gd music.ace (stage 1 spillway,
 # 2 cable_reach, 3 dig_upper, 4 dig_deep, 5 highdraft, 6 highdraft_crown). Worlds' tonics: Spillway D, Dig E, Highdraft G;
-# Brindle and the Waking D, the Mind E (package_phase_tracks.py TRACKS).
+# Brindle D; the Waking E (Phrygian) and the Mind G (Lydian minor), as design-v3/score/themes.py writes them and key_check.py reads them.
 # roam: calm and travel from the roam track's current mix, cadence from its spiced mix, at 172 (the title layout).
 # zone: the world's 16-bar loop stretched to 129 supplies pivot, build, telegraph, open, drop and cadence; calm and
 #   travel come from the roam track at 172. Stage B, the world's second stage, takes windows 8 bars further on.
@@ -69,8 +69,8 @@ PACKS = {
     'highdraft': ('zone', 'G', 'highdraft-loop', 'roam-highdraft', 'A'),
     'highdraft_crown': ('zone', 'G', 'highdraft-loop', 'roam-highdraft', 'B'),
     'boss_brindle': ('boss', 'D', 'boss-brindle', None, 'A'),
-    'boss_waking': ('boss', 'D', 'boss-waking', None, 'A'),
-    'boss_mind': ('boss', 'E', 'boss-mind', None, 'A'),
+    'boss_waking': ('boss', 'E', 'boss-waking', None, 'A'),
+    'boss_mind': ('boss', 'G', 'boss-mind', None, 'A'),
     'title_a': ('menu', 'D', 'title-a', None, 'A'),
     'title_b': ('menu', 'D', 'title-b', None, 'A'),
     'title_c': ('menu', 'D', 'title-c', None, 'A'),
