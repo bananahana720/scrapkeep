@@ -385,13 +385,21 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		if not routes.has(route):
 			_add(out, id, "reference", "route %s is no route" % str(route))
 	_recipe(out, id, row["recipe"])
-	# The one optional park row field: "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16) or
-	# its tile fit (PARK-TILE, 2026-10-16) or its drape fit (dam kit, 2026-10-17).
+	# The optional park row fields. "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16) or
+	# its tile fit (PARK-TILE, 2026-10-16) or its drape fit (dam kit, 2026-10-17). "rider" sets a GLB down beside the row
+	# whose jib turns when its "on" fact first fires (the dam's crest crane, 2026-10-18).
 	if row.has("fit"):
 		if not FITS.has(row["fit"]):
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
 		elif String(row["recipe"]) == "" or String(row["recipe"]).begins_with("greybox:"):
 			_add(out, id, "fit", "fit %s needs a GLB recipe, not %s" % [row["fit"], str(row["recipe"])])
+	if row.has("rider"):
+		var rider = row["rider"]
+		if not rider is Dictionary or not rider.get("at") is Array or (rider["at"] as Array).size() != 2 \
+				or String(rider.get("recipe", "")) == "" or String(rider.get("recipe", "")).begins_with("greybox:"):
+			_add(out, id, "rider", "rider needs a GLB recipe and an [x, z] at, not %s" % str(rider))
+		elif rider.has("on") and not String(rider["on"]).begins_with("layer_mind_quote_"):
+			_add(out, id, "rider", "rider on %s is no once-per-run fact (layer_mind_quote_*)" % str(rider["on"]))
 	if GUARDED_SOCIETIES.has(row["society"]):
 		if row["home"] != "":
 			_add(out, id, "guardrail", "a %s row houses no home (%s)" % [row["society"], row["home"]])

@@ -66,6 +66,12 @@ const BALL_LAYER := 2
 # How far above a piece's top the ride sensor reaches, so a ball rolling or landing on it counts.
 const SENSOR_ABOVE_M := 3.0
 const ONCE_FACT_PREFIX := "layer_mind_quote_"
+# A row's rider (park_schema.gd): a GLB set down beside the row on the raw ground, whose "_jib" mesh turns
+# RIDER_SWING_DEG about the rider's own y axis over RIDER_SWING_S when its "on" fact first fires (the dam's crest crane
+# on the Mind's quote, Andrew's "All hands"). Riders join RIDER_GROUP.
+const RIDER_GROUP := "park_rider"
+const RIDER_SWING_DEG := -75.0
+const RIDER_SWING_S := 4.5
 const GREYBOX_TINT := Color("8a8a84")
 # The seat fit (header): the row field value, the stretch bounds and the GLB nodes that mark a ride's authored ends.
 const FIT_SEAT := "seat"
@@ -810,7 +816,35 @@ static func _fire(area: Area3D, fact: String, at: Vector3, publish: Callable) ->
 		if area.has_meta("fired"):
 			return
 		area.set_meta("fired", true)
+		for rider: Node in area.get_tree().get_nodes_in_group(RIDER_GROUP):
+			if rider.get_meta("on", "") == fact:
+				swing(rider)
 	publish.call(fact, at)
+
+
+# The row's rider as its own landform-budget piece at rider.at on the raw ground, turned by rider.yaw_deg.
+static func place_rider(row: Dictionary, parent: Node3D, ground := Callable()) -> Node3D:
+	var rider: Dictionary = row["rider"]
+	var piece := {"id": "%s_rider" % row["id"], "element": "ground", "at": rider["at"], "y": null, "size": [1.0, 1.0, 1.0],
+		"yaw_deg": float(rider.get("yaw_deg", 0.0)), "ride_fact": "", "recipe": rider["recipe"], "budget": "landform", "stamp": ""}
+	var node := place(piece, parent, ground)
+	if node != null:
+		node.set_meta("on", String(rider.get("on", "")))
+		node.add_to_group(RIDER_GROUP)
+	return node
+
+
+# Turns the rider's "_jib" view once about the rider's y axis; a second call is a no-op.
+static func swing(rider: Node) -> void:
+	if rider.has_meta("swung"):
+		return
+	rider.set_meta("swung", true)
+	for view: Node in rider.find_children("*_jib", "MeshInstance3D", true, false):
+		var jib := view as MeshInstance3D
+		var start := jib.transform
+		var tween := jib.create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_method(func(a: float) -> void: jib.transform = Transform3D(Basis(Vector3.UP, a), Vector3.ZERO) * start,
+			0.0, deg_to_rad(RIDER_SWING_DEG), RIDER_SWING_S)
 
 
 # A wedge's six corners in the node's space: extent is [width, height, length]; rise +1 puts the high edge at +z.
@@ -1128,6 +1162,8 @@ static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), pub
 	if is_anchor_field(row):
 		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
 	var node := place(row, parent, seat(row, ground), publish)
+	if node != null and row.has("rider"):
+		place_rider(row, parent, ground)
 	if node != null and stamp_replaces(row):
 		# PARK.md section 4's rows are "height stamp plus a recipe": for a greybox stand-in (the fixture's deck, lip and
 		# apron) the stamp is the whole shape, so the row keeps no Collider of its own and the stamped ground collides.
