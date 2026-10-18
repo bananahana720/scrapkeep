@@ -76,6 +76,12 @@ test("the desktop entry groups the window: StartupWMClass is the project name Go
   assert.match(project, /^config\/custom_user_dir_name="godot\/app_userdata\/core-loop"$/m);
 });
 
+test("the project icon is the AppImage icon, byte for byte", () => {
+  const a = readFileSync(new URL("../sketches/core-loop/assets/app/scrapkeep_icon.svg", import.meta.url));
+  const b = readFileSync(new URL("./appimage/scrapkeep.svg", import.meta.url));
+  assert.ok(a.equals(b));
+});
+
 test("AppRun runs the game from usr/lib and passes every argument through, except --install and --uninstall", () => {
   const text = appRun();
   assert.ok(text.startsWith("#!/bin/sh\n"));
@@ -186,6 +192,8 @@ test("the AppImage installs and uninstalls itself with --install and --uninstall
   assert.ok(entry.endsWith(`\nExec="${app}" -- --profile=sitting\n`), entry);
   assert.equal(entry.match(/^TryExec=/gm).length, 1);
   assert.match(entry, /^Name=Scrapkeep$/m);
+  assert.match(entry, new RegExp(`^StartupWMClass=${WM_CLASS}$`, "m"));
+  assert.match(entry, /^StartupNotify=true$/m);
   assert.ok(existsSync(path.join(dataHome, "icons/hicolor/scalable/apps/scrapkeep.svg")));
 
   // Running --install from the installed copy rewrites the entry and leaves the copy in place.
