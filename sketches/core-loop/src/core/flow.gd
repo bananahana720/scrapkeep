@@ -8,15 +8,16 @@ const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
+const VictoryLap := preload("res://src/world/victory_lap.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
 # one-key way out. Modules read state; only flow changes it, and every change is
 # published as flow_changed so music and HUD follow the same beat.
 
-enum { TITLE, CLASS_SELECT, STAGE, BEACON, GATES, LAUNCH, SUMMARY, DEAD, BOSS, VICTORY }
+enum { TITLE, CLASS_SELECT, STAGE, BEACON, GATES, LAUNCH, SUMMARY, DEAD, BOSS, VICTORY, LAP }
 
-const NAMES := ["title", "class_select", "stage", "beacon", "gates", "launch", "summary", "dead", "boss", "victory"]
+const NAMES := ["title", "class_select", "stage", "beacon", "gates", "launch", "summary", "dead", "boss", "victory", "lap"]
 # The beat between Brindle's defeat and the summary: the ball keeps rolling.
 const VICTORY_SECONDS := 2.5
 # How long the ball flies after the launch before the next stage takes it; the
@@ -95,6 +96,10 @@ var saved_run_cause := ""
 var saved_run_why := ""
 const INVALID_RUN_SENTENCE := "The saved run does not fit this version of the game, so it cannot be continued."
 var run_won := false
+# The victory lap after the Mind (src/world/victory_lap.gd). Tests that read the old fly-over ending turn it off.
+var victory_lap := true
+var lap: Node3D = null
+var lap_stats := {}
 # The entrance doc last written, kept so a spent retry rewrites the entrance, never the arena.
 var _entrance := {}
 
@@ -129,7 +134,7 @@ func engaged() -> bool:
 
 
 func in_play() -> bool:
-	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH or state == BOSS
+	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH or state == BOSS or state == LAP
 
 
 # Stage content (director, flood, events, scrap, fabricators, vaults, stage enemies)
@@ -183,9 +188,18 @@ func boss_row(world: int) -> Dictionary:
 # The run was won over the boss of its table's final world: the summary opens on the ending
 # page. A table that names no boss counts only when its last world is the last of Worlds.ROWS.
 func won_final() -> bool:
+	return run_won and _final_world_cleared()
+
+
+func _final_world_cleared() -> bool:
 	var world: int = ctx.stages.world_of(ctx.run.stage)
 	var boss_table: bool = ctx.stages.BOSS != "" or world == int(Worlds.ROWS.back()["id"])
-	return run_won and ctx.stages.is_run_last(ctx.run.stage) and bool(boss_row(world).get("built", false)) and boss_table
+	return ctx.stages.is_run_last(ctx.run.stage) and bool(boss_row(world).get("built", false)) and boss_table
+
+
+# The run ends at Meteor Crater only after the Mind: the final world's boss row plays the Mind's music.
+func _ending_due() -> bool:
+	return _final_world_cleared() and String(boss_row(ctx.stages.world_of(ctx.run.stage)).get("music", "")) == "mind"
 
 # The boss that ends a world, or null when that world has none to run: its row is not
 # built, or the scene has no module. A one-world table that names no boss ends with the
@@ -218,6 +232,7 @@ func stage_def() -> Dictionary:
 
 
 func show_title() -> void:
+	_drop_lap()
 	ctx.player.set_frozen(true)
 	state = TITLE
 	ctx.events.flow_changed.emit(NAMES[TITLE])
@@ -293,6 +308,7 @@ func choose_run_tier(value: int) -> bool:
 func _begin_run(chosen: Resource) -> void:
 	in_arena = false
 	boss_active = false
+	lap_stats = {}
 	_world = 0
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
@@ -480,7 +496,7 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 # Back to the stage-start checkpoint: run state, ball position and entry speed. It is
 # one synchronous call, so it lands well inside a second.
 func retry_stage() -> void:
-	if not ctx.run.has_snapshot() or state == TITLE or state == CLASS_SELECT or state == SUMMARY or state == VICTORY:
+	if not ctx.run.has_snapshot() or state == TITLE or state == CLASS_SELECT or state == SUMMARY or state == VICTORY or state == LAP:
 		return
 	if state == DEAD:
 		_spend_world_retry()
@@ -692,6 +708,10 @@ func physics_step(delta: float) -> void:
 		if _victory_left <= 0.0:
 			_advance_from(ctx.run.stage)
 		return
+	if state == LAP:
+		if not is_instance_valid(lap) or lap.step(delta):
+			_close_lap()
+		return
 	if not in_play():
 		return
 	ctx.run.advance(delta)
@@ -756,18 +776,90 @@ func _on_boss_defeated() -> void:
 
 
 func _end_run_won() -> void:
+	if victory_lap and _ending_due() and _begin_ending():
+		return
 	_end_run(true)
 	# run_ended's synchronous listeners finish the profile, achievements and log first.
-	var world: int = ctx.stages.world_of(ctx.run.stage)
-	if won_final() and String(boss_row(world).get("music", "")) == "mind":
-		var screens = ctx.root.get("screens") if ctx.root != null else null
-		if screens != null and screens.has_method("start_ending_sequence"):
-			screens.start_ending_sequence()
+	if won_final() and _ending_due():
+		_roll_ending()
+
+
+func _roll_ending() -> void:
+	var screens = _screens()
+	if screens != null and screens.has_method("start_ending_sequence"):
+		screens.start_ending_sequence()
+
+
+func _screens():
+	return ctx.root.get("screens") if ctx.root != null else null
+
+
+# The Q16 ending (Andrew, 2026-10-17: "60 s free roll"): the crew's fly-over, then the victory lap in Meteor Crater,
+# then the credits over the bowl. The win is recorded here, exactly as _end_run records it, so a quit at any point of
+# the ending keeps it and leaves no Continue. The arena and every fight group go now, so nothing that can hurt the
+# ball reaches the crater, and the bowl is placed now so a bowl that cannot place falls back to the old ending before
+# anything is promised. Flow holds the victory state, with the ball frozen, until the fly-over hands over (start_lap).
+func _begin_ending() -> bool:
+	var boss := _boss_module()
+	if boss != null and boss.has_method("exit_arena"):
+		boss.exit_arena()
+	boss_active = false
+	in_arena = false
+	ctx.events.stage_content_cleared.emit("lap")
+	lap = VictoryLap.new()
+	ctx.root.add_child(lap)
+	if not lap.build(ctx):
+		warn_once("victory_lap", "flow: the crater did not place; the run ends without the victory lap")
+		_drop_lap()
+		return false
+	lap_stats = {}
+	_victory_left = INF
+	_record_end(true)
+	ctx.events.run_ended.emit(true)
+	var screens = _screens()
+	if screens != null and screens.has_method("start_ending_prelude"):
+		screens.start_ending_prelude()
+	else:
+		start_lap()
+	return true
+
+
+# The fly-over has finished or been skipped: the ball drops over the crater's rim and the lap's clock starts.
+func start_lap() -> void:
+	if state != VICTORY or not is_instance_valid(lap):
+		return
+	var hud = ctx.root.get("hud") if ctx.root != null else null
+	if hud != null and hud.has_method("clear_toasts"):
+		hud.clear_toasts()
+	lap.begin(ctx.player.state.velocity)
+	_set_state(LAP)
+
+
+# The lap's clock ran out: the summary waits beneath and the credits roll over the bowl.
+func _close_lap() -> void:
+	if is_instance_valid(lap):
+		lap_stats = lap.stats()
+	ctx.player.set_frozen(true)
+	_set_state(SUMMARY)
+	_roll_ending()
+
+
+func _drop_lap() -> void:
+	if is_instance_valid(lap):
+		lap.get_parent().remove_child(lap)
+		lap.queue_free()
+	lap = null
 
 
 # The run is over for good, won or lost: the saved run becomes a tombstone so no Continue
 # can bring it back.
 func _end_run(won: bool) -> void:
+	_record_end(won)
+	_set_state(SUMMARY)
+	ctx.events.run_ended.emit(won)
+
+
+func _record_end(won: bool) -> void:
 	ctx.run.over = true
 	run_won = won
 	ctx.player.set_frozen(true)
@@ -777,8 +869,6 @@ func _end_run(won: bool) -> void:
 	if store != null and store.refusal == "" and not store.clear():
 		store_error = "clear_failed"
 		push_warning("flow: run save not cleared: %s" % store.last_error)
-	_set_state(SUMMARY)
-	ctx.events.run_ended.emit(won)
 
 
 func _on_reward_chosen(_part_id: String) -> void:
@@ -843,7 +933,7 @@ func _engage() -> void:
 
 
 func _on_player_died() -> void:
-	if not in_play():
+	if not in_play() or state == LAP:
 		return
 	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	ctx.player.set_frozen(true)
@@ -903,5 +993,7 @@ func _set_state(next: int) -> void:
 		start_card.hide_card()
 	if state == next:
 		return
+	if next != LAP:
+		_drop_lap()
 	state = next
 	ctx.events.flow_changed.emit(NAMES[next])

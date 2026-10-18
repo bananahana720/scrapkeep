@@ -477,6 +477,13 @@ func clear_achievement_toasts() -> void:
 	_ach_panel.visible = false
 
 
+# The victory lap opens on its own banner: no toast left over from the win shows under it.
+func clear_toasts() -> void:
+	_toast = {}
+	_held_toast = {}
+	_toast_row.visible = false
+
+
 func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()

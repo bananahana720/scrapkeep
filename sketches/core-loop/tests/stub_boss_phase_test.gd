@@ -47,6 +47,8 @@ func _run() -> void:
 func _walk() -> void:
 	var game = _game
 	var flow = game.flow
+	# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This test ends on the summary.
+	flow.victory_lap = false
 	var stages = game.ctx.stages
 	_t.check("bot driven", game.bot_driven, "bot_driven %s" % game.bot_driven)
 	var seen = Harness.counter(game)
