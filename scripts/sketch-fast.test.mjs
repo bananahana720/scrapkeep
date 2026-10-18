@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  mergedBranch,
+  carriedPrs,
+  failingChecks,
+  hygieneFindings,
   canaries,
   classify,
   classifyFailure,
@@ -74,6 +78,27 @@ test("a hub's own tests are selected but nothing is reached through a hub", () =
   assert.deepEqual(hubChanged.hubs, ["src/hub.gd"]);
 });
 
+test("unit_suite always runs, park data pulls every park test, and movement changes name shard proofs", () => {
+  const index = files({
+    "src/movement/ball.gd": "",
+    "assets/park/park_dam/bake.json": "",
+    "tests/unit_suite_test.gd": "",
+    "tests/park_park_dam_test.gd": "",
+    "tests/park_park_pit_test.gd": "",
+    "tests/park_bake_fresh_test.gd": "",
+    "tests/posture_bands_reactor_test.gd": "",
+    "tests/alpha_posture_bands_test.gd": "",
+  });
+  const { picked, shards, unmapped } = selectTests(index, ["assets/park/park_dam/bake.json", "src/movement/ball.gd"]);
+  assert.equal(picked.get("tests/unit_suite_test.gd").tier, 0);
+  assert.ok(picked.has("tests/park_park_pit_test.gd"));
+  assert.ok(picked.has("tests/park_bake_fresh_test.gd"));
+  assert.deepEqual([...shards.keys()].sort(), ["tests/alpha_posture_bands_test.gd", "tests/posture_bands_reactor_test.gd"]);
+  assert.equal(picked.has("tests/posture_bands_reactor_test.gd"), false);
+  assert.deepEqual(unmapped, ["src/movement/ball.gd"]);
+  assert.equal(selectTests(index, []).picked.size, 0);
+});
+
 test("canaries are the cheapest timed tests that load the whole game", () => {
   const index = files({
     "src/game.gd": "",
@@ -116,11 +141,60 @@ test("plan keeps tiers within the budget, keeps changed tests, runs cheapest fir
   assert.deepEqual(out.bots, ["tests/bot_x_test.gd"]);
 });
 
-test("a failure is flaky when the rerun passes, base-red when the base fails too, else the PR's", () => {
-  assert.equal(classifyFailure({ rerunOk: true, baseOk: null }), "flaky");
-  assert.equal(classifyFailure({ rerunOk: false, baseOk: false }), "base-red");
-  assert.equal(classifyFailure({ rerunOk: false, baseOk: true }), "pr-red");
-  assert.equal(classifyFailure({ rerunOk: false, baseOk: null }), "pr-red");
+test("a failure is flaky when the rerun passes, base-red when the base fails the same checks, else the PR's", () => {
+  assert.equal(classifyFailure({ rerunOk: true, baseOk: null }).kind, "flaky");
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: false }).kind, "base-red");
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: true }).kind, "pr-red");
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: null }).kind, "pr-red");
+  const grew = classifyFailure({ rerunOk: false, baseOk: false, headChecks: ["a", "b"], baseChecks: ["a"] });
+  assert.deepEqual(grew, { kind: "pr-red", newChecks: ["b"] });
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: ["a"], baseChecks: ["a", "c"] }).kind, "base-red");
+});
+
+test("failing checks are named by their bracket label, so measured values do not differ", () => {
+  const output = "[Spillway skipper breaks it in 50 to 90 s] median 48.5 s -> FAIL\n[ok] x -> PASS\nplain line 3 -> FAIL (got 2)\n";
+  assert.deepEqual(failingChecks(output), ["Spillway skipper breaks it in 50 to 90 s", "plain line 3"]);
+});
+
+test("hygiene fails added symlinks, root files and new top-level folders only", () => {
+  const z = "0".repeat(40);
+  const raw = [
+    `:000000 120000 ${z} ${z} A\tnode_modules`,
+    `:000000 100644 ${z} ${z} A\tNOTES.md`,
+    `:000000 100644 ${z} ${z} A\tstray/x.txt`,
+    `:000000 100644 ${z} ${z} A\tscripts/ok.mjs`,
+    `:100644 100644 ${z} ${z} M\tREADME.md`,
+  ];
+  assert.deepEqual(hygieneFindings(raw, new Set(["scripts", "sketches"])), [
+    "symlink added: node_modules",
+    "root file added: NOTES.md",
+    "new top-level folder: stray/x.txt",
+  ]);
+});
+
+test("merged branch names come from GitHub and git merge subjects", () => {
+  assert.equal(mergedBranch("Merge pull request #76 from bananahana720/claude/project-thread-xzaxq4"), "claude/project-thread-xzaxq4");
+  assert.equal(mergedBranch("Merge remote-tracking branch 'origin/claude/sinkhole-bake-rkry23' into claude/z"), "claude/sinkhole-bake-rkry23");
+  assert.equal(mergedBranch("Merge branch 'stage/alpha-w16'"), "stage/alpha-w16");
+  assert.equal(mergedBranch("Merge BOT-LINE adb779a8: every pilot"), null);
+});
+
+test("carried PRs: an exact head is current, a named PR that moved on is stale unless already contained", () => {
+  const heads = new Map([["79", "c".repeat(40)], ["61", "a".repeat(40)]]);
+  const merges = [
+    { merge: "m1", carried: "a".repeat(40), subject: "Merge branch x" },
+    { merge: "m2", carried: "b".repeat(40), subject: "Merge pull request #79 from someone/bake" },
+    { merge: "m3", carried: "d".repeat(40), subject: "Merge local work" },
+  ];
+  const rows = carriedPrs(merges, { prHeads: heads }, () => false);
+  assert.deepEqual(rows.map((row) => [row.prs, row.stale]), [[["61"], false], [["79"], true], [[], false]]);
+  assert.equal(carriedPrs(merges, { prHeads: heads }, () => true)[1].stale, false);
+  const byBranch = carriedPrs(
+    [{ merge: "m4", carried: "e".repeat(40), subject: "Merge remote-tracking branch 'origin/claude/bake-x' into claude/y" }],
+    { prHeads: new Map([["80", "f".repeat(40)]]), branchHeads: new Map([["claude/bake-x", "f".repeat(40)]]) },
+    () => false,
+  );
+  assert.deepEqual([byBranch[0].prs, byBranch[0].branch, byBranch[0].stale], [["80"], "claude/bake-x", true]);
 });
 
 test("node tests: changed tests plus tests importing a changed module by file name", () => {
@@ -152,7 +226,9 @@ test("timings fold only passing test rows from a smoke receipt", () => {
 });
 
 test("parseArgs defaults to origin/main and a 15 minute budget", () => {
-  assert.deepEqual(parseArgs([]), { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true });
+  assert.deepEqual(parseArgs([]), { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true, pre: [] });
+  assert.deepEqual(parseArgs(["--pre", "#91", "--pre", "67"]).pre, ["91", "67"]);
+  assert.throws(() => parseArgs(["--pre", "abc"]));
   assert.equal(parseArgs(["--base", "stage/alpha-w17", "--budget", "600"]).budgetS, 600);
   assert.throws(() => parseArgs(["--budget", "0"]));
 });

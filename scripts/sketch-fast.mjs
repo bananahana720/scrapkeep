@@ -33,10 +33,29 @@ const DEFAULT_ESTIMATE_MS = 30_000;
 // direct tests still run, but nothing is selected through it at the second step.
 export const HUB_TESTS = 25;
 export const CANARY_COUNT = 4;
+// Content pins (music rows, attack rows, world digest, scatter rows) live in unit_suite, which no
+// res:// path reaches from most diffs, so it always runs (cloud gate, 18 Oct).
+export const ALWAYS = ["tests/unit_suite_test.gd"];
+// Some couplings have no res:// path: one park's recipe change moves other parks' bake hashes.
+export const PATH_RULES = [
+  {
+    name: "park data",
+    match: /(^|\/)parks?\/|(^|\/)park_[^/]*$/,
+    tests: ["tests/park_park_*", "tests/park_bake_fresh_test.gd", "tests/park_graph_test.gd", "tests/park_dressing_pin_test.gd"],
+  },
+];
+// Long whole-run proofs a change class must face; they go to the bot shards even past the budget.
+export const SHARD_RULES = [
+  {
+    name: "movement, boss, posture or damage",
+    match: /^src\/(movement|boss)\/|posture|damage/,
+    tests: ["tests/posture_bands_reactor_test.gd", "tests/alpha_posture_bands_*"],
+  },
+];
 const TEXT_EXTENSIONS = new Set([".gd", ".tscn", ".tres", ".godot", ".cfg", ".json", ".gdshader"]);
 
 export function parseArgs(argv) {
-  const options = { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true };
+  const options = { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true, pre: [] };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--base" && argv[i + 1]) options.base = argv[++i];
@@ -45,8 +64,10 @@ export function parseArgs(argv) {
     else if (arg === "--receipt" && argv[i + 1]) options.receipt = argv[++i];
     else if (arg === "--width" && argv[i + 1]) options.width = Number(argv[++i]);
     else if (arg === "--no-base-check") options.baseCheck = false;
+    else if (arg === "--pre" && argv[i + 1]) options.pre.push(argv[++i].replace(/^#/, ""));
   }
   if (!Number.isFinite(options.budgetS) || options.budgetS <= 0) throw new Error("--budget needs seconds above zero");
+  if (options.pre.some((pr) => !/^\d+$/.test(pr))) throw new Error("--pre takes PR numbers");
   return options;
 }
 
@@ -110,17 +131,27 @@ function stemTests(index, rel) {
   return index.tests.filter((test) => path.posix.basename(test).startsWith(stem + "_"));
 }
 
-// tier 0: a changed test; 1: a test that names the changed file, or is named after it;
+function expand(index, globs) {
+  return index.tests.filter((test) =>
+    globs.some((glob) => new RegExp("^" + glob.split("*").map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$").test(test)),
+  );
+}
+
+// tier 0: a changed test or an ALWAYS test; 1: a test that names the changed file, or is named after it;
 // 2: a test that names a non-hub file which names the changed file.
 export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
   const picked = new Map();
   const hubs = [];
   const unmapped = [];
+  const shards = new Map();
   const add = (test, tier, why) => {
     const prior = picked.get(test);
     if (!prior || prior.tier > tier) picked.set(test, { tier, why });
   };
+  if (changed.length > 0) for (const test of expand(index, ALWAYS)) add(test, 0, "always (content pins)");
   for (const rel of changed) {
+    for (const rule of PATH_RULES) if (rule.match.test(rel)) for (const test of expand(index, rule.tests)) add(test, 1, `${rule.name}: ${rel}`);
+    for (const rule of SHARD_RULES) if (rule.match.test(rel)) for (const test of expand(index, rule.tests)) if (!shards.has(test)) shards.set(test, `${rule.name}: ${rel}`);
     if (isTopLevelTest(rel)) {
       if (index.files.has(rel)) add(rel, 0, "changed");
       continue;
@@ -138,9 +169,10 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
       for (const test of second) add(test, 2, `names ${middle}, which names ${rel}`);
       reached += second.length;
     }
-    if (reached === 0 && stemTests(index, rel).length === 0) unmapped.push(rel);
+    if (reached === 0 && stemTests(index, rel).length === 0 && !PATH_RULES.some((rule) => rule.match.test(rel))) unmapped.push(rel);
   }
-  return { picked, hubs, unmapped };
+  for (const test of shards.keys()) picked.delete(test);
+  return { picked, hubs, unmapped, shards };
 }
 
 // Canaries: the cheapest tests that load the whole game, so a broad break shows in seconds
@@ -187,10 +219,60 @@ export function plan({ picked, timings, budgetMs, width, solo = () => false, bot
 
 // Verdict for one test after its retries. A head failure that passes on rerun is flaky (listed,
 // not blamed); one that also fails on the base is base-red (listed, not blamed).
-export function classifyFailure({ rerunOk, baseOk }) {
-  if (rerunOk) return "flaky";
-  if (baseOk === false) return "base-red";
-  return "pr-red";
+// A test red on both sides is base-red only when the head fails no check the base passes:
+// #104 took unit_suite from 6 to 11 failing checks with the same test red on the base.
+export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks = [] }) {
+  if (rerunOk) return { kind: "flaky", newChecks: [] };
+  if (baseOk === false) {
+    const base = new Set(baseChecks);
+    const newChecks = headChecks.filter((check) => !base.has(check));
+    return newChecks.length > 0 ? { kind: "pr-red", newChecks } : { kind: "base-red", newChecks: [] };
+  }
+  return { kind: "pr-red", newChecks: [] };
+}
+
+// A check's name is its bracketed label ("[Spillway skipper breaks it in 50 to 90 s] median ..."),
+// so measured values that change run to run do not make a check look new.
+export function failingChecks(output) {
+  return [...new Set(output.replace(/\r/g, "").split("\n").filter((line) => line.includes("-> FAIL")).map((line) => {
+    const label = /^\s*\[([^\]]+)\]/.exec(line);
+    return label ? label[1] : line.replace(/->\s*FAIL.*$/, "").trim();
+  }))].sort();
+}
+
+// Added files must not be symlinks, root files or new top-level folders (#104 committed a
+// node_modules symlink, which broke every merge into a tree that has node_modules).
+export function hygieneFindings(rawLines, baseTopLevel) {
+  const findings = [];
+  for (const line of rawLines) {
+    const match = /^:(\d+) (\d+) \S+ \S+ A\t(.+)$/.exec(line);
+    if (!match) continue;
+    const [, , mode, file] = match;
+    if (mode === "120000") findings.push(`symlink added: ${file}`);
+    else if (!file.includes("/")) findings.push(`root file added: ${file}`);
+    else if (!baseTopLevel.has(file.split("/")[0])) findings.push(`new top-level folder: ${file}`);
+  }
+  return findings;
+}
+
+// Merge commits on the PR's first-parent path each carry another branch. A carried PR that has
+// moved on since is stale (#101 and #102 carried #79 without 1f69c639 and failed on old bakes).
+export function mergedBranch(subject) {
+  return /\bfrom [\w.-]+\/([\w./-]+)$/.exec(subject)?.[1] ?? /(?:remote-tracking branch '|branch ')(?:origin\/)?([\w./-]+)'/.exec(subject)?.[1] ?? null;
+}
+
+export function carriedPrs(merges, { prHeads = new Map(), branchHeads = new Map() }, isAncestor) {
+  const prsAt = (sha) => [...prHeads].filter(([, head]) => head === sha).map(([pr]) => pr);
+  return merges.map(({ merge, carried, subject }) => {
+    const exact = prsAt(carried);
+    if (exact.length > 0) return { merge, carried, prs: exact, stale: false };
+    const named = /#(\d+)/.exec(subject)?.[1];
+    const branch = mergedBranch(subject);
+    const head = named && prHeads.has(named) ? prHeads.get(named) : branch && branchHeads.has(branch) ? branchHeads.get(branch) : null;
+    if (!head) return { merge, carried, prs: [], branch, stale: false, subject };
+    const prs = named && prHeads.has(named) ? [named] : prsAt(head);
+    return { merge, carried, prs, branch, stale: head !== carried && !isAncestor(head), head };
+  });
 }
 
 export function nodeTestsFor(changedNode, allNodeTests, readText) {
@@ -269,7 +351,7 @@ function runGodot(sketchDir, test, timeoutMs) {
       running.delete(child);
       rmSync(dataHome, { recursive: true, force: true });
       const verdict = judge({ test: "res://" + test, status: code, output });
-      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason: verdict.reason, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true });
+      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason: verdict.reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true });
     });
   });
 }
@@ -291,8 +373,15 @@ async function main() {
   const started = Date.now();
   const sketchDir = path.join(root, SKETCH);
   const mergeBase = git(["merge-base", options.base, "HEAD"]);
-  const changedPaths = git(["diff", "--name-only", mergeBase, "HEAD"]).split("\n").filter(Boolean);
-  const changed = classify(changedPaths);
+  // --pre PRs must already be merged into the head; the base gains them too, so their changes
+  // neither count as the PR's diff nor as the PR's reds (#100 needs #91, #78 needs #67).
+  for (const pr of options.pre) {
+    git(["fetch", "-q", "origin", `+refs/pull/${pr}/head:refs/remotes/pr/${pr}`]);
+    if (spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", `refs/remotes/pr/${pr}`, "HEAD"]).status !== 0) {
+      console.error(`--pre ${pr}: the head does not contain PR #${pr} at its current head. Merge it first: git merge --no-edit refs/remotes/pr/${pr}`);
+      process.exit(2);
+    }
+  }
   const receipt = {
     schema: RECEIPT_SCHEMA,
     label: options.receipt,
@@ -300,7 +389,6 @@ async function main() {
     base: options.base,
     merge_base: mergeBase,
     started_at: startedAt,
-    changed: changedPaths.length,
     stages: [],
     ok: true,
   };
@@ -317,8 +405,15 @@ async function main() {
     baseTree = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-base-"));
     rmSync(baseTree, { recursive: true, force: true });
     git(["worktree", "add", "--detach", baseTree, mergeBase]);
+    for (const pr of options.pre) git(["-c", "user.name=sketch-fast", "-c", "user.email=sketch-fast@localhost", "merge", "-q", "--no-edit", `refs/remotes/pr/${pr}`], baseTree);
     return baseTree;
   };
+  const diffBase = options.pre.length > 0 ? git(["rev-parse", "HEAD"], baseDir()) : mergeBase;
+  const changedPaths = git(["diff", "--name-only", diffBase, "HEAD"]).split("\n").filter(Boolean);
+  const changed = classify(changedPaths);
+  receipt.diff_base = diffBase;
+  receipt.pre = options.pre;
+  receipt.changed = changedPaths.length;
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
     if (baseTree) spawnSync("git", ["-C", root, "worktree", "remove", "--force", baseTree]);
@@ -331,7 +426,40 @@ async function main() {
     process.exit(code ?? (receipt.ok ? 0 : 1));
   };
 
-  log(`sketch:fast: ${changedPaths.length} changed paths (${changed.godot.length} sketch, ${changed.node.length} node, ${changed.docs.length} docs) since ${mergeBase.slice(0, 8)}`);
+  log(`sketch:fast: ${changedPaths.length} changed paths (${changed.godot.length} sketch, ${changed.node.length} node, ${changed.docs.length} docs) since ${diffBase.slice(0, 8)}${options.pre.length ? ` (merge base plus ${options.pre.map((pr) => "#" + pr).join(", ")})` : ""}`);
+
+  // Stage 0: what the head is made of. Hygiene, then any stale branch it carries.
+  const baseTop = new Set(git(["ls-tree", "--name-only", diffBase]).split("\n").filter(Boolean));
+  const hygiene = hygieneFindings(git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"), baseTop);
+  if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
+  const merges = git(["rev-list", "--first-parent", "--merges", "--parents", `${mergeBase}..HEAD`]).split("\n").filter(Boolean)
+    .map((line) => line.split(" "))
+    .filter(([, , second]) => second && spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", second, mergeBase]).status !== 0)
+    .map(([merge, , carried]) => ({ merge, carried, subject: git(["log", "-1", "--format=%s", merge]) }));
+  if (merges.length > 0) {
+    const heads = { prHeads: new Map(), branchHeads: new Map() };
+    const remote = spawnSync("git", ["-C", root, "ls-remote", "origin", "refs/pull/*/head", "refs/heads/*"], { encoding: "utf8", timeout: 60_000 });
+    for (const line of (remote.stdout || "").split("\n")) {
+      const pull = /^([0-9a-f]{40})\trefs\/pull\/(\d+)\/head$/.exec(line);
+      if (pull) heads.prHeads.set(pull[2], pull[1]);
+      const branch = /^([0-9a-f]{40})\trefs\/heads\/(.+)$/.exec(line);
+      if (branch) heads.branchHeads.set(branch[2], branch[1]);
+    }
+    const isAncestor = (sha) => {
+      spawnSync("git", ["-C", root, "fetch", "-q", "origin", sha]);
+      return spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", sha, "HEAD"]).status === 0;
+    };
+    const carried = carriedPrs(merges, heads, isAncestor);
+    receipt.carried = carried;
+    const label = (row) => row.prs.length ? row.prs.map((pr) => "#" + pr).join(", ") : row.branch ?? "an unnamed branch";
+    for (const row of carried) log(`  carries ${label(row)} at ${row.carried.slice(0, 8)}${row.stale ? ` (stale: its head is now ${row.head.slice(0, 8)})` : ""}${row.subject && !row.branch ? ` (${row.subject})` : ""}`);
+    const stale = carried.filter((row) => row.stale);
+    if (!stage("carried branches current", stale.length === 0, { note: stale.length ? stale.map((row) => `${label(row)} carried at ${row.carried.slice(0, 8)}, now ${row.head.slice(0, 8)}`).join("; ") : `${carried.length} merges, none stale` }) && !options.dryRun) {
+      log("  merge each stale branch's current head into the PR (or drop the carry), then rerun");
+      finish();
+    }
+  }
+
 
   // Godot selection first: the dry run and the receipt both need it.
   const index = buildIndex(sketchDir);
@@ -352,16 +480,17 @@ async function main() {
     unmapped: selection.unmapped,
     tests: Object.fromEntries([...selection.picked].map(([test, row]) => [test, row])),
     deferred_to_full_gate: lanePlan.deferred.map((row) => row.test),
-    bot_shards: lanePlan.bots,
+    bot_shards: [...new Set([...lanePlan.bots, ...selection.shards.keys()])].sort(),
+    shard_reasons: Object.fromEntries(selection.shards),
     estimate_ms: lanePlan.estimateMs,
   };
-  log(`selected ${lanePlan.parallel.length + lanePlan.solo.length} tests (${lanePlan.solo.length} solo), about ${Math.round(lanePlan.estimateMs / 1000)}s at width ${width}; ${lanePlan.deferred.length} past the budget go to the staging full gate; ${lanePlan.bots.length} bot-tier for the shards`);
+  log(`selected ${lanePlan.parallel.length + lanePlan.solo.length} tests (${lanePlan.solo.length} solo), about ${Math.round(lanePlan.estimateMs / 1000)}s at width ${width}; ${lanePlan.deferred.length} past the budget go to the staging full gate; ${receipt.selection.bot_shards.length} for the bot shards`);
   if (selection.hubs.length > 0) log(`hub files changed (each named by more than ${HUB_TESTS} tests): ${selection.hubs.join(", ")}`);
   if (selection.unmapped.length > 0) log(`no test names: ${selection.unmapped.slice(0, 8).join(", ")}${selection.unmapped.length > 8 ? ", ..." : ""}`);
   if (options.dryRun) {
     for (const row of [...lanePlan.parallel, ...lanePlan.solo]) log(`  ${(row.ms / 1000).toFixed(1)}s t${row.tier} ${row.test} (${row.why})`);
     for (const row of lanePlan.deferred) log(`  deferred t${row.tier} ${row.test}`);
-    for (const test of lanePlan.bots) log(`  bot shard ${test}`);
+    for (const test of receipt.selection.bot_shards) log(`  bot shard ${test}${selection.shards.has(test) ? ` (${selection.shards.get(test)})` : ""}`);
     process.exit(0);
   }
 
@@ -428,6 +557,7 @@ async function main() {
     log(`  rerunning ${first.test} alone (${first.reason})`);
     const rerun = await runGodot(sketchDir, first.test, timeoutMs);
     let baseOk = null;
+    let baseChecks = [];
     if (!rerun.ok && options.baseCheck) {
       const baseSketch = path.join(baseDir(), SKETCH);
       if (existsSync(path.join(baseSketch, first.test))) {
@@ -439,10 +569,12 @@ async function main() {
           baseImported = true;
         }
         log(`  running ${first.test} on the merge base`);
-        baseOk = (await runGodot(baseSketch, first.test, timeoutMs)).ok;
+        const baseRun = await runGodot(baseSketch, first.test, timeoutMs);
+        baseOk = baseRun.ok;
+        baseChecks = baseRun.checks;
       }
     }
-    return { kind: classifyFailure({ rerunOk: rerun.ok, baseOk }), rerun };
+    return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks }), rerun };
   }
 
   async function handle(result) {
@@ -450,12 +582,12 @@ async function main() {
     results.push({ test: result.test, ok: result.ok, exit: result.exit, ms: result.ms, reason: result.reason, quarantined });
     log(`${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s${quarantined ? " (quarantined)" : ""}`);
     if (result.ok || quarantined || result.killed) return;
-    const { kind } = await confirm(result);
-    log(`  ${result.test}: ${kind}`);
+    const { kind, newChecks } = await confirm(result);
+    log(`  ${result.test}: ${kind}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
     if (kind === "flaky") flaky.push(result.test);
     else if (kind === "base-red") baseRed.push(result.test);
     else if (!prRed) {
-      prRed = { test: result.test, reason: result.reason, tail: result.tail };
+      prRed = { test: result.test, reason: newChecks.length ? `fails checks the base passes: ${newChecks.join("; ")}` : result.reason, tail: result.tail };
       stopRunning();
     }
   }
@@ -478,13 +610,13 @@ async function main() {
   receipt.base_red = baseRed;
   if (prRed) {
     log(prRed.tail);
-    stage("tests", false, { note: `${prRed.test} is red on the head twice and green on the base: ${prRed.reason}`, pr_red: prRed.test });
+    stage("tests", false, { note: `${prRed.test} is the PR's red: ${prRed.reason}`, pr_red: prRed.test });
   } else {
     stage("tests", true, { note: `${results.length} run, ${flaky.length} flaky, ${baseRed.length} base-red` });
   }
   if (flaky.length) log(`flaky (red then green on rerun; make deterministic, never skip): ${flaky.join(", ")}`);
   if (baseRed.length) log(`base-red (red on the merge base too; not this PR): ${baseRed.join(", ")}`);
-  if (lanePlan.bots.length) log(`bot shards to run: ${lanePlan.bots.map((test) => path.posix.basename(test, ".gd")).join(" ")}`);
+  if (receipt.selection.bot_shards.length) log(`bot shards to run: ${receipt.selection.bot_shards.map((test) => path.posix.basename(test, ".gd")).join(" ")}`);
   if (lanePlan.deferred.length) log(`past the budget, for the staging full gate: ${lanePlan.deferred.length} tests`);
   finish();
 }
