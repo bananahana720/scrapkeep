@@ -12,7 +12,7 @@ Written 2026-10-17 by the "Reconcile past decisions" thread. Read-only pass; not
 | Bible decisions, decision register | `BIBLE_DECISIONS.md`, `docs/project/DECISION-REGISTER.md`, `BIBLE.md` | Read in full; Bible scanned for pillars, tone, music. |
 | Design docs | `sketches/core-loop/design-v3/` OWNER-INTERVIEW-2026-10-02, ALPHA-PLAN, ROADMAP, DESIGN-V3, PARK, PILOTS, CUSTOMIZE, STRATEGY-SPINE, AUDIO-V3, LOOP-REDESIGN; `SITTING.md`; storyboard DECISIONS.md (PR #14) | Priority files in full; the rest by owner-ruling sections. |
 | Local-only files | `artifacts/local/core-loop-playtest-veto.md` (R-22 veto list), `docs/project/PROJECT-MEMORY.md` (uncommitted snapshot, 16 Oct ~21Z), `artifacts/local/power-curve.tsv` | Only these differ from GitHub. |
-| Current record | project memory (all files), `project-guide/DECISIONS.md` (19:55Z), `alpha-status/` scope and card queue | |
+| Current record | project memory (all files), `project-guide/handoff/DECISIONS.md` (19:55Z), `alpha-status/` scope and card queue | |
 
 **About the local folder:** `/home/andrew/Projects/scrapkeep` is checked out at an older main (cd46b126, 16 Oct) and is a strict subset of origin/main, apart from the uncommitted memory snapshot and the gitignored `artifacts/local/`. So the old decision records are the same files that are on GitHub; nothing is stranded only on his PC except the R-22 veto list and the stale snapshot.
 
@@ -27,7 +27,7 @@ True contradictions or open calls with no later ruling. Card text is ready in se
 | Q1 | Time of day across a run | Two rival old calls: register D19 "one fixed time-of-day keyframe per biome" (DECISION-REGISTER:42, Sep, Open) vs PARK veto 2/11 "one day across a run; the Highdraft gives up its approved morning light" (PARK.md:629, 676, 10 Oct) | None | Look call that the dressing waves 18-19 need before they light the parks. |
 | Q2 | Pilot unlocks at the sitting | P-R21 "fresh profile starts with Sable only; Rivet at the world-one rescue, Kest at the Dig rescue, Tarn by beating Brindle, Tally by three leaves to Moss, the Cannon by beating the Mind" (decisions.tsv:344, 8 Oct, in force; OWNER-INTERVIEW:26). Row 442 adds `--profile=sitting` with all six open. | Sitting = outside tester, Play leads to pilot select. Unlocks never mentioned. | Decides what he sees in his first hour and whether the sitting can judge all six pilots. |
 | Q3 | Ending at Meteor Crater | PARK veto 6: "Meteor Crater is a camera set at the end of the ending sequence, not a playable lap; veto to make it a 60 s free roll" (PARK.md:671, 10 Oct) | Only "theme C scores the ending" | Taste call on the last minute of the game; never put to him. |
-| Q4 | Codex / GPT lane | "Codex with gpt-6.1-sol is a standing lane beside each Claude wave" (decisions.tsv:115, 2 Oct; 323 P-R2 up to 8 Sol writers); "use GPT heavily" (679, 12 Oct); "Claude-first with Codex Sol parallel on 2-3 units" (852, 14 Oct) | All work runs in Claude cloud threads; no Codex lane | His own standing direction that current practice silently dropped. |
+| Q4 | Codex / GPT lane | "Codex with gpt-6.1-sol is a standing lane beside each Claude wave" (decisions.tsv:115, 2 Oct; 323 P-R2 up to 8 Sol writers); "use GPT heavily" (679, 12 Oct); "Claude-first with Codex Sol parallel on 2-3 units" (852, 14 Oct) | All work runs in Claude cloud threads; no Codex lane | His own standing direction that current practice silently dropped. **Resolved:** retired by his tap 17 Oct 20:02 (DECISIONS.md Replaced rulings). |
 
 ---
 
@@ -50,7 +50,7 @@ No question for Andrew. These old records still read "in force" or are still loa
 | Worlds 2-3 and title music as synth placeholders | decisions.tsv:220, 266 | Full ACE score; picks by ear | Mark superseded. |
 | Three playable pilots | decisions.tsv:260, 268 | Six required (174) | Mark superseded. |
 | FLUX is the only picture engine, per-picture clicks | decisions.tsv:364 | Astra for detailed subjects (418, 428); blanket approval (433) | Mark superseded. |
-| Model pins | decisions.tsv:852 "Opus writers" (14 Oct) | AGENTS.md pins Sonnet writers (28 Sep trial) | The log and AGENTS.md disagree; Q4 settles the Codex part, the coordinator should pick one for Claude writers. |
+| Model pins | decisions.tsv:852 "Opus writers" (14 Oct) | AGENTS.md pins Sonnet writers (28 Sep trial) | The log and AGENTS.md disagree; Q4 settles the Codex part, the coordinator should pick one for Claude writers. **Resolved 18 Oct:** Sonnet writers, Opus gate, Fable consequential review, as AGENTS.md pins. |
 | Scrap-bot crew replaces the companion | decisions.tsv:467 "Accepted", Bible §6 on main | "One SPIL-9 for the alpha, crew after" (468, 476); "Grow SPIL-9" (17 Oct) | Mark 467 deferred; Bible §6 should say post-alpha. |
 | Speed vs "momentum is sacred" | decisions.tsv:119, 251; ROADMAP:66, 300 | Speed soft cap past 60 m/s (17 Oct 07:17Z) | Record the soft cap as a deliberate exception. |
 | Growth: shell grows, collider fixed | Bible pillar (BIBLE.md:65); DESIGN-V3:41; R-22 item 5 | "Presence, centre clear": burst size unchanged (17 Oct 17:28Z) | Consistent if "1.5-2x area is OK" means the aura, not the collider. Confirm on PR before anyone grows the collider. |

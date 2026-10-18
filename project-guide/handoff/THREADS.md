@@ -1,48 +1,17 @@
-# Live threads at the move (18 Oct 2026, 05:15Z)
+# Lanes and sessions (18 Oct 2026, local coordinator)
 
-Threads and their sessions stay in the old project and don't move. In the new project, restart only the roles you still need. Each row says what the thread owns and what it is waiting on. Its PR, branch and files are what a new thread picks up.
+The claude.ai project threads on the old account are closed; their roles are now the lanes below. Ownership, units and test gates are in [GRAPH.md](../coord/GRAPH.md); lane briefs follow [LANE-BRIEF.md](../coord/LANE-BRIEF.md). The 05:55Z roster is in git history.
 
-## Standing roles (restart these first)
+## Roles
 
-| Role (old thread title) | Owns | Waiting on |
-| --- | --- | --- |
-| Coordinator (project chat) | Triage, cards, standing merge authority, Design hub tab, memory | - |
-| Project library and lessons learned | Decisions register and lessons (both copies), Library page, sitting watch list. Verifies every tap in the timeline before recording | Nothing. The register is current to 04:42Z |
-| Cloud gate for draft PRs | Gate of record except GPU. Receipts on each PR; shards bot tiers to the bot shard threads | Its wave 17 queue (STATE.md) |
-| Cloud staging candidate | `stage/alpha-w<N>`: stacks gate passes, merges the stage to main on GitHub, cuts the next stage branch, row-pin re-records | Wave 17 gate results |
-| Faster test and red team loops | The tiered gate (#106), flaky tests made deterministic, never skipped | Review of #106 |
-| Set up the per-wave red team | Red team per stage head (one persona) and the five-persona close sweep; crash harvest; intent-check scorecard re-run | The next stage head |
-| Bot shard 6, Bot shard 7 | Bot-tier test shards for the gate (the brief is in `gate/BOT-SHARDS.md` in the shared folder) | Gate jobs |
-| PC machine session (Remote Control) | GPU checks and the 4080 benches | The 4080 queue in STATE.md |
-| PC music session (Remote Control) | ACE-Step renders, radio takes, camp music | The last 9 radio takes, the camp split |
+| Role | Where | Owns | Replaces (old thread) |
+| --- | --- | --- | --- |
+| Coordinator | Claude Code session on the PC | the graph, admission to main, records (DECISIONS, LESSONS, STATE, GRAPH), escalations to Andrew, check-ins | Coordinator (project chat); Project library and lessons learned |
+| Gate + staging | Cloud lane | `stage/alpha-w<N>`: re-gates, stacking, full gate shards, row pins, one red team persona per stage head, five at wave close | Cloud gate; Cloud staging candidate; Bot shards 6 and 7; Faster test and red team loops; Per-wave red team |
+| Systems | Cloud lane | gameplay and systems units, launch shell, title intros, help and achievements, bot behaviour | World 2 and 3 enemy identity; Reward overpowered builds; Wire picked themes; actives threads |
+| World | Cloud lane | Blender models, landmarks, dressing, park authored passes, placeholders | Polish threads (models, enemies, bosses, props); park authored passes; camp hub |
+| Perf | Cloud lane | freezes and frame cost: Rivet carve, stage entry, boss spawn, dense fights, SWAP-HITCH-6 | Stage entry freeze; Runner Gunner ultimate freeze; Boss spawn freeze; Dense fight frame cost |
+| GPU bench | Local session on the PC | the 4080 queue `~/scratch/w17/gpu-queue.md` | PC machine session (Remote Control) |
+| Music | Local session on the PC | `scripts/music/mx`: radio takes, camp split, renders | PC music session (Remote Control) |
 
-## Work threads still open
-
-| Thread | Work | State |
-| --- | --- | --- |
-| Smoother, more detailed models | Polish toolkit #107 (frozen), pilots #115/#122/#133, the Mind #120 | In gate as one set |
-| Polish world 1 enemies | #121 | Review-ready |
-| Polish world 2 and 3 enemies | #119 | Done, in gate |
-| Polish bosses and Wardens | #128 | Done, in gate |
-| Polish props and landmarks | #124 | Review-ready |
-| Smoother animation blends | #109, #117, #123, #130, #131 | Working |
-| Effects and shader polish | #108 (also owns baked shading lost where enemy scripts swap materials) | Done, in gate |
-| Stage entry freeze | #129: in-stage freezes and the 12 s menu-ready | Awaiting the 4080 rerun |
-| Runner Gunner ultimate freeze (Rivet) | #73: Spread every Breach, Smooth 0.11 s on slopes | Building the slope timing |
-| Swarm hive stall on main | Base red that turned out to be cloud out-of-memory kills | Review-ready |
-| Reward overpowered builds | #104: Lift the ceiling, Per Warden, overkill pays | In gate |
-| Wall grip and carving | #61 Speed holds | In gate |
-| World 2 and 3 enemy identity | #69; owns the attack id registry `alpha-status/attack-ids.md` (new claims E34+) | Review-ready |
-| Crown park authored pass | #78 | Working |
-| Flume park authored pass | #126, Keep the carry | Working |
-| First-win secrets | #127 | Review-ready |
-| Meteor Crater ending | #125 | Review-ready |
-| Build the camp hub model | #111 walkable camp | Review-ready |
-| Silo Battery, Quake Knock, Glass Lance actives; Active offers | #84-#91 | Working |
-| Lift Pulse active; Maker set bonuses | #89, #99 | Review-ready |
-| Measure how mighty a grown pilot feels | Power read tool | Review-ready |
-| Stage 6 exit gate stall | Bot stall at the stage 6 exit | Working |
-| Wire picked themes into stages | #105 | Done, in gate |
-| Every-park intentionality check | Owns `alpha-status/intent-check/METHOD.md` | Weighing the flume's route-membership weighting |
-
-The PR heads are in STATE.md. Everything else was resolved before the move.
+At most 4 cloud lanes run at once (Andrew, 18 Oct). Session links and live state are on the wave's Wave board issue.
