@@ -11,6 +11,7 @@
 #     blender -b --factory-startup -P <recipe>.py -- [--out file.glb] [--render dir]
 
 import array
+import contextlib
 import json
 import math
 import os
@@ -168,6 +169,33 @@ class Part:
         # Per-part bevel width and subdivision levels under polish; None takes the defaults.
         self.bevel = None
         self.subsurf = None
+        self.regions = []
+
+    @contextlib.contextmanager
+    def region(self, bevel=None, subsurf=None, detail=None, fit=None):
+        """Under polish, faces built inside the block take their own bevel, subdivision,
+        segment multiplier and fit (None inherits the part's). Subdivided regions usually want
+        detail=1. Wrap whole primitives: a region is cut out along its faces, so one that
+        shares vertices with the rest of the part would open a seam. Without polish this
+        does nothing."""
+        global DETAIL
+        if POLISH is None:
+            yield
+            return
+        layers = self.bm.faces.layers.int
+        layer = layers.get("polish_region") or layers.new("polish_region")
+        before = set(self.bm.faces)
+        outer = DETAIL
+        if detail is not None:
+            DETAIL = detail
+        try:
+            yield
+        finally:
+            DETAIL = outer
+        self.regions.append((bevel, subsurf, fit))
+        for f in self.bm.faces:
+            if f not in before and not f[layer]:
+                f[layer] = len(self.regions)
 
     def _slot(self, slot):
         if slot not in SLOTS:
@@ -280,11 +308,8 @@ class Part:
         bmesh.ops.translate(self.bm, vec=-o, verts=self.bm.verts)
         if POLISH is not None:
             import polish
-            polish.shape(self.bm, POLISH, self.bevel)
-            levels = POLISH["subsurf"] if self.subsurf is None else self.subsurf
-            if levels:
-                self.bm = polish.subdivide(self.bm, levels)
-                self.col = self.bm.loops.layers.float_color["Color"]
+            self.bm = polish.finish(self.bm, POLISH, self.bevel, self.subsurf, self.regions)
+            self.col = self.bm.loops.layers.float_color["Color"]
         # Triangulation ties (the diagonal of a quad, the ear of a regular hexagon) break
         # differently per run, so convex ngons fan from their first corner and quads
         # split on a fixed diagonal; only concave outlines are left to ear clipping.
@@ -300,7 +325,26 @@ class Part:
                     nf.material_index = slot
                     for loop in nf.loops:
                         loop[self.col] = color
-        bmesh.ops.triangulate(self.bm, faces=self.bm.faces[:], quad_method="FIXED", ngon_method="EAR_CLIP")
+        if POLISH is None:
+            bmesh.ops.triangulate(self.bm, faces=self.bm.faces[:], quad_method="FIXED", ngon_method="EAR_CLIP")
+        else:
+            # A face's first loop can differ between runs, and with it the fixed diagonal, which
+            # shifts smooth normals. Polished quads split on their shorter diagonal instead,
+            # ties going to the diagonal through the lowest corner.
+            fixed, alternate = [], []
+            for f in self.bm.faces:
+                if len(f.verts) != 4:
+                    fixed.append(f)
+                    continue
+                c = [tuple(v.co) for v in f.verts]
+                d02, d13 = math.dist(c[0], c[2]), math.dist(c[1], c[3])
+                if abs(d02 - d13) > 1e-9 * max(d02, d13):
+                    first = d02 < d13
+                else:
+                    first = min(c[0], c[2]) < min(c[1], c[3])
+                (fixed if first else alternate).append(f)
+            bmesh.ops.triangulate(self.bm, faces=fixed, quad_method="FIXED", ngon_method="EAR_CLIP")
+            bmesh.ops.triangulate(self.bm, faces=alternate, quad_method="ALTERNATE", ngon_method="EAR_CLIP")
         mesh = bpy.data.meshes.new(self.name)
         self.bm.to_mesh(mesh)
         self.bm.free()
