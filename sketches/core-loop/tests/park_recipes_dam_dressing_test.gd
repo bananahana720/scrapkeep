@@ -13,7 +13,9 @@ extends SceneTree
 # stamp's raise, rounded to 0.01 m), and its ride sensor is the same box at the same place.
 # (d) The Eye's arch clears the ramp floor by 18 m everywhere over the ramp's footprint and stands on the two fins outside the
 # ramp's width; the spillway portal clears the wash floor by 10 m across the full cut and stands outside it.
-# (e) The survey gates stand their cairn's foot at local y 16.0 (a `dome_N` row's 16 m spire is flat over its inner 40 percent).
+# (e) The survey gates stand their cairn's foot at local y 15.85, GATE_SINK under a `dome_N` row's 16 m spire summit, which
+#     rides the shelf's fall: within the gate's 2.2 m reach the summit stays between the foot and GATE_SINK x 2 over it,
+#     so no stone floats and the uphill ones bed into the rock.
 # Planted: a row whose y moved 1 m and a row with every vertex lifted 0.5 m each turn the checks red.
 # Evidence limit: geometry against the baked ground and a headless scene; no look, feel or ride claim.
 
@@ -32,13 +34,17 @@ const BASE_CAP := {"landform": 8000, "park_large": 16000}
 const SHELL_CAP := 1000
 const DETAIL_CAP := 1500
 const COL_RECIPES := ["dam_the_eye", "dam_spillway_tunnel"]
-const GATES := ["dam_survey_gate_red", "dam_survey_gate_blue"]
-const GATE_ROWS := 7
+const GATES := ["dam_survey_gate_red", "dam_survey_gate_blue", "dam_survey_benchmark"]
+const GATE_ROWS := 8
+const BENCHMARK := "dam_survey_benchmark"
 const DRESSED_COUNT := 41
 const EYE_CLEAR_M := 18.0
 const PORTAL_CLEAR_M := 10.0
 const SEAT_TOL := 0.0101
-const GATE_FOOT_Y := 16.0
+const DOME_TOP_Y := 16.0
+const GATE_SINK := 0.15
+const GATE_FOOT_Y := DOME_TOP_Y - GATE_SINK
+const GATE_REACH := 2.2
 
 var _t := T.new("park_recipes_dam_dressing_test")
 
@@ -76,10 +82,15 @@ func _run() -> void:
 		_check_gate(id)
 	# The slalom gates (stage page section 16): each flag stands on a 16 m spire dome, seated on the dome's base so the
 	# cairn foot authored at 16 m lands on the summit.
-	_t.eq("%d dome rows carry a survey gate" % GATE_ROWS, gated.size(), GATE_ROWS)
+	_t.eq("%d dome rows carry a survey gate or the benchmark" % GATE_ROWS, gated.size(), GATE_ROWS)
 	for row: Dictionary in gated:
 		_t.check("%s: gate on a drape-fit 16 m spire dome with no y" % row["id"], ParkRecipes.fits_drape(row) and row["y"] == null
-			and String(row["stamp"]) == "spire" and is_equal_approx(float(row["size"][1]), GATE_FOOT_Y), str(row))
+			and String(row["stamp"]) == "spire" and is_equal_approx(float(row["size"][1]), DOME_TOP_Y), str(row))
+		var stats := row_misses(row, ground, 0.0)
+		var seat: Array = (stats["misses"] as Array).filter(func(m): return not String(m).begins_with("flush"))
+		_t.check("%s: gate seated and sensed like its stand-in dome" % row["id"], seat.is_empty(), "; ".join(seat))
+		var summit := _summit_misses(row, ground)
+		_t.check("%s: the summit within %.1f m of the pole lies 0 to %.2f m over the cairn's foot" % [row["id"], GATE_REACH, 2.0 * GATE_SINK], summit.is_empty(), "; ".join(summit))
 	for row: Dictionary in dressed:
 		var stats := row_misses(row, ground, 0.0)
 		_t.check("%s: every drawn vertex between 0 and %.2f m over the ground, seated like its stand-in (%d samples, %.3f to %.3f m)" % [
@@ -148,6 +159,24 @@ func _check_files(id: String, budget: String, row_recipe: bool) -> void:
 
 # A placed row's misses: node height against the greybox stand-in's seat, the ride sensor, and every sample of every drawn
 # view against the ground. lift raises every sample (a planted stale vertex).
+# The baked ground round the gate at its reach, against the cairn's foot: never under it, at most 2 x GATE_SINK over.
+func _summit_misses(row: Dictionary, ground: Callable) -> Array:
+	var misses: Array = []
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var node := ParkRecipes.place_row(row, holder, ground, func(_kind: String, _at: Vector3) -> void: pass)
+	if node == null:
+		misses.append("place: %s placed no node" % row["id"])
+	else:
+		for k in 16:
+			var d := Vector2.from_angle(TAU * k / 16.0) * GATE_REACH
+			var over: float = ground.call(node.position.x + d.x, node.position.z + d.y) - node.position.y - GATE_FOOT_Y
+			if over < 0.0 or over > 2.0 * GATE_SINK:
+				misses.append("summit %s: ground %.3f over the foot" % [d, over])
+	holder.free()
+	return misses
+
+
 func row_misses(row: Dictionary, ground: Callable, lift: float) -> Dictionary:
 	var misses: Array = []
 	var holder := Node3D.new()
@@ -307,6 +336,9 @@ func _check_gate(id: String) -> void:
 			for p: Vector3 in m.mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX]:
 				lo = minf(lo, p.y)
 				hi = maxf(hi, p.y)
-	_t.check("(e) %s stands its cairn's foot at local y %.1f (lowest %.3f)" % [id, GATE_FOOT_Y, lo], absf(lo - GATE_FOOT_Y) < 0.02)
-	_t.check("(e) %s rises a 6 m pole over a 1.2 m cairn (top %.2f m over the foot)" % [id, hi - GATE_FOOT_Y], hi - GATE_FOOT_Y > 7.0 and hi - GATE_FOOT_Y < 7.6)
+	_t.check("(e) %s stands its cairn's foot at local y %.2f (lowest %.3f)" % [id, GATE_FOOT_Y, lo], absf(lo - GATE_FOOT_Y) < 0.02)
+	if id == BENCHMARK:
+		_t.check("(e) %s rises a 1.4 m stake over a 1.2 m cairn (top %.2f m over the foot)" % [id, hi - GATE_FOOT_Y], hi - GATE_FOOT_Y > 2.6 and hi - GATE_FOOT_Y < 3.0)
+	else:
+		_t.check("(e) %s rises a 6 m pole over a 1.2 m cairn (top %.2f m over the foot)" % [id, hi - GATE_FOOT_Y], hi - GATE_FOOT_Y > 7.0 and hi - GATE_FOOT_Y < 7.6)
 	scene.free()

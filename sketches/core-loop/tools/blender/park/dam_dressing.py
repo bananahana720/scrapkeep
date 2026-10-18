@@ -58,6 +58,8 @@ BUDGETS = json.loads((SKETCH / "assets/asset_budgets.json").read_text())["classe
 FLUSH = 0.12                # the most a part with no collider may stand over a surface a ball rolls on
 OFF_BASE, OFF_PAINT, OFF_MARK, OFF_TOP = 0.04, 0.06, 0.08, 0.10
 DETAIL_TRIS = 1000          # 3 unwelded vertices a triangle must stay inside the detail class's 3,000
+GATE_SINK = 0.15           # a survey gate stands this far under its dome's summit (see survey_gate)
+GATE_REACH = 1.9           # and keeps its scattered pebbles this close to the pole
 EYE_CLEAR, PORTAL_CLEAR = 18.0, 10.0
 TAU = math.tau
 
@@ -1204,7 +1206,7 @@ EXTRA_ROWS = {"eye_mouth": {"id": "eye_mouth", "element": "elevated_line", "land
                             "size": [20, 0, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "layer_mind_quote_spillway", "home": "",
                             "recipe": "dam_eye_mouth", "fit": "drape", "stamp": "plateau", "hole": False, "budget": "landform", "routes": [], "fragment": ""}}
 LARGE = {"the_eye", "spillway_tunnel", "toe_vent_pits"}          # park_large: two draws (lens or portal) and the arches' colliders
-GATES = ("dam_survey_gate_red", "dam_survey_gate_blue")
+GATES = ("dam_survey_gate_red", "dam_survey_gate_blue", "dam_survey_benchmark")
 HAS_COL = {"the_eye", "spillway_tunnel"}
 
 
@@ -1382,12 +1384,15 @@ def build_portal(d, extra, col):
 
 # ------------------------------------------------------------------------------------------------ dome-summit survey gates
 def build_gate(rid):
-    """A survey gate for a dome summit: the cairn's foot at local (0, 16, 0), where a `dome_N` row's 16 m spire stamp is
-    flat over its inner 40 percent of the radius, with the row's y at the dome's base height. No collider."""
-    flag = C("flag_red") if rid.endswith("red") else C("flag_blue")
+    """A survey gate for a dome summit: the cairn's foot at local (0, 16 - GATE_SINK, 0). A `dome_N` row's 16 m spire
+    stamp is flat over its inner 40 percent of the radius but rides the shelf's fall (about 6.5 percent along z), so the
+    gate sits GATE_SINK under the seat's summit and keeps every stone within 2 m of the pole: the downhill edge stays
+    bedded and the uphill stones sink into the rock instead of one side floating. No collider."""
+    flag = C("flag_red") if rid.endswith("red") else C("copper") if rid.endswith("benchmark") else C("flag_blue")
+    pole = 6.0 if not rid.endswith("benchmark") else 1.4      # the benchmark (dome_11) is a stake and a brass disc, no flag
     rng = random.Random(seed_of(rid))
     base, d1, d2 = Out(BUDGETS["landform"]["tris"]), Out(DETAIL_TRIS), Out(DETAIL_TRIS)
-    foot = 16.0
+    foot = 16.0 - GATE_SINK
     stones = ["sand", "sand2", "cream3", "talus", "cream"]
     # the dry-stacked cairn: four courses of jittered stones round a core, 1.2 m in all
     prism_xz(base, "enamel", [(0.55 * math.cos(TAU * k / 10), 0.55 * math.sin(TAU * k / 10)) for k in range(10)], foot, foot + 1.15, C("sand2"))
@@ -1405,22 +1410,25 @@ def build_gate(rid):
                                   (r_out * math.cos(a1), r_out * math.sin(a1)), (r_in * math.cos(a1), r_in * math.sin(a1))], foot + 0.5, foot + 0.78, flag)
     top = foot + 1.25
     prism_xz(base, "enamel", [(0.24 * math.cos(TAU * k / 12), 0.24 * math.sin(TAU * k / 12)) for k in range(12)], top, top + 0.06, C("copper"))     # the station disc
-    rod_solid(base, "steel", (0.0, top + 0.06, 0.0), (0.0, top + 6.06, 0.0), 0.04, C("steel_lt"))                    # the 6 m survey pole
-    yp = top + 6.0
-    convex_solid(base, "enamel", [(0.04, yp - 0.85, -0.012), (0.04, yp - 0.1, -0.012), (1.45, yp - 0.5, -0.012),
-                                   (0.04, yp - 0.85, 0.012), (0.04, yp - 0.1, 0.012), (1.45, yp - 0.5, 0.012)],
-                 [(0, 1, 2), (3, 4, 5), (0, 1, 4, 3), (1, 2, 5, 4), (2, 0, 3, 5)], flag)
+    rod_solid(base, "steel", (0.0, top + 0.06, 0.0), (0.0, top + 0.06 + pole, 0.0), 0.04, C("steel_lt"))            # the survey pole or stake
+    yp = top + pole
+    if pole < 6.0:
+        prism_xz(base, "enamel", [(0.09 * math.cos(TAU * k / 8), 0.09 * math.sin(TAU * k / 8)) for k in range(8)], yp, yp + 0.08, C("copper"))
+    else:
+        convex_solid(base, "enamel", [(0.04, yp - 0.85, -0.012), (0.04, yp - 0.1, -0.012), (1.45, yp - 0.5, -0.012),
+                                       (0.04, yp - 0.85, 0.012), (0.04, yp - 0.1, 0.012), (1.45, yp - 0.5, 0.012)],
+                     [(0, 1, 2), (3, 4, 5), (0, 1, 4, 3), (1, 2, 5, 4), (2, 0, 3, 5)], flag)
     # detail 1 (mid): the footing stones, a station tag on the cairn and the pole's collars
     for k in range(10):
         a = TAU * k / 10 + rng.uniform(-0.1, 0.1)
         r = rng.uniform(1.25, 1.9)
         lump(d1, rng, (r * math.cos(a), foot + 0.14, r * math.sin(a)), (rng.uniform(0.3, 0.6), 0.24, rng.uniform(0.3, 0.6)), tint(C(rng.choice(stones)), rng.uniform(.85, 1.05)))
-    for yy in (top + 0.9, top + 3.0, top + 5.4):
+    for yy in [top + h for h in (0.9, 3.0, 5.4) if h < pole]:
         prism_xz(d1, "enamel", [(0.075 * math.cos(TAU * k / 8), 0.075 * math.sin(TAU * k / 8)) for k in range(8)], yy, yy + 0.07, C("steel_lt"))
     box_solid(d1, "enamel", (-0.16, foot + 0.9, 0.9), (0.16, foot + 1.08, 0.94), C("copper"))
     # detail 2 (near): flakes and pebbles scattered on the flat summit round the cairn
     for k in range(40):
-        a, r = rng.uniform(0, TAU), rng.uniform(1.1, 3.4)
+        a, r = rng.uniform(0, TAU), rng.uniform(1.1, GATE_REACH)
         x, z = r * math.cos(a), r * math.sin(a)
         rr = rng.uniform(0.12, 0.34)
         a0 = rng.uniform(0, TAU)

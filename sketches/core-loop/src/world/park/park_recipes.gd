@@ -65,6 +65,7 @@ const WORLD_LAYER := 1
 const BALL_LAYER := 2
 # How far above a piece's top the ride sensor reaches, so a ball rolling or landing on it counts.
 const SENSOR_ABOVE_M := 3.0
+const ONCE_FACT_PREFIX := "layer_mind_quote_"
 const GREYBOX_TINT := Color("8a8a84")
 # The seat fit (header): the row field value, the stretch bounds and the GLB nodes that mark a ride's authored ends.
 const FIT_SEAT := "seat"
@@ -799,7 +800,17 @@ static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
 	shape.position.y = box.size.y * 0.5
 	area.add_child(shape)
 	node.add_child(area)
-	area.body_entered.connect(func(ball: Node3D) -> void: publish.call(fact, ball.global_position))
+	area.body_entered.connect(func(ball: Node3D) -> void: _fire(area, fact, ball.global_position, publish))
+
+
+# A ride sensor publishes its fact on every entry, except a Mind quote (Q9), which plays once per stage build: a bounce
+# inside the box or a second crossing stays silent.
+static func _fire(area: Area3D, fact: String, at: Vector3, publish: Callable) -> void:
+	if fact.begins_with(ONCE_FACT_PREFIX):
+		if area.has_meta("fired"):
+			return
+		area.set_meta("fired", true)
+	publish.call(fact, at)
 
 
 # A wedge's six corners in the node's space: extent is [width, height, length]; rise +1 puts the high edge at +z.

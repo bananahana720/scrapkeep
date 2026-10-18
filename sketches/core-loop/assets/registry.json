@@ -5946,6 +5946,94 @@
    }
   },
   {
+   "id": "dam_survey_benchmark",
+   "path": "res://assets/models/park/dam_survey_benchmark.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh a dome-summit survey gate, material enamel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/dam_dressing.py",
+    "notes": "design-v3/park/stages/1-park_dam.md section 15 follow-up (dam kit): built from assets/park/park_dam/ground.bin and src/world/park/park_dam.json, deterministic; vertices relative to the row node at its base height"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "The enamel cairn and flag and the steel survey pole are two material slots on one mesh; the landform class allows one draw.",
+   "bounds": {
+    "min": [
+     -1.0396,
+     15.85,
+     -1.0096
+    ],
+    "max": [
+     0.98,
+     18.58,
+     1.0405
+    ],
+    "size": [
+     2.0196,
+     2.73,
+     2.0501
+    ]
+   }
+  },
+  {
+   "id": "dam_survey_benchmark_detail1",
+   "path": "res://assets/models/park/dam_survey_benchmark_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/dam_dressing.py",
+    "notes": "design-v3/park/stages/1-park_dam.md section 15 follow-up (dam kit): built from assets/park/park_dam/ground.bin and src/world/park/park_dam.json, deterministic; vertices relative to the row node at its base height"
+   },
+   "bounds": {
+    "min": [
+     -2.089,
+     15.8601,
+     -1.8264
+    ],
+    "max": [
+     2.0823,
+     18.07,
+     1.8357
+    ],
+    "size": [
+     4.1713,
+     2.2099,
+     3.6621
+    ]
+   }
+  },
+  {
+   "id": "dam_survey_benchmark_detail2",
+   "path": "res://assets/models/park/dam_survey_benchmark_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/dam_dressing.py",
+    "notes": "design-v3/park/stages/1-park_dam.md section 15 follow-up (dam kit): built from assets/park/park_dam/ground.bin and src/world/park/park_dam.json, deterministic; vertices relative to the row node at its base height"
+   },
+   "bounds": {
+    "min": [
+     -1.9791,
+     15.85,
+     -2.0345
+    ],
+    "max": [
+     2.0755,
+     15.95,
+     1.9966
+    ],
+    "size": [
+     4.0546,
+     0.1,
+     4.0311
+    ]
+   }
+  },
+  {
    "id": "dam_survey_gate_blue",
    "path": "res://assets/models/park/dam_survey_gate_blue.glb",
    "class": "landform",
@@ -5962,12 +6050,12 @@
    "bounds": {
     "min": [
      -1.0066,
-     16,
+     15.85,
      -1.0455
     ],
     "max": [
      1.45,
-     23.31,
+     23.16,
      0.98
     ],
     "size": [
@@ -5990,12 +6078,12 @@
    "bounds": {
     "min": [
      -2.0448,
-     16.0083,
+     15.8583,
      -1.7954
     ],
     "max": [
      2.0183,
-     22.72,
+     22.57,
      1.8737
     ],
     "size": [
@@ -6017,19 +6105,19 @@
    },
    "bounds": {
     "min": [
-     -3.4321,
-     16,
-     -3.547
+     -2.0604,
+     15.85,
+     -2.0738
     ],
     "max": [
-     2.9878,
-     16.1,
-     2.5819
+     1.8716,
+     15.95,
+     1.7175
     ],
     "size": [
-     6.4199,
+     3.932,
      0.1,
-     6.1289
+     3.7913
     ]
    }
   },
@@ -6050,12 +6138,12 @@
    "bounds": {
     "min": [
      -0.995,
-     16,
+     15.85,
      -1.0198
     ],
     "max": [
      1.45,
-     23.31,
+     23.16,
      1.029
     ],
     "size": [
@@ -6078,12 +6166,12 @@
    "bounds": {
     "min": [
      -1.6645,
-     16.0082,
+     15.8582,
      -1.8503
     ],
     "max": [
      1.8853,
-     22.72,
+     22.57,
      1.711
     ],
     "size": [
@@ -6105,19 +6193,19 @@
    },
    "bounds": {
     "min": [
-     -3.6476,
-     16,
-     -2.621
+     -2.159,
+     15.85,
+     -1.7477
     ],
     "max": [
-     2.7751,
-     16.1,
-     2.8601
+     1.8601,
+     15.95,
+     1.8546
     ],
     "size": [
-     6.4227,
+     4.0191,
      0.1,
-     5.4811
+     3.6023
     ]
    }
   },
@@ -9551,6 +9639,9 @@
   "dam_spillway_tunnel",
   "dam_spillway_tunnel_detail1",
   "dam_spillway_tunnel_detail2",
+  "dam_survey_benchmark",
+  "dam_survey_benchmark_detail1",
+  "dam_survey_benchmark_detail2",
   "dam_survey_gate_blue",
   "dam_survey_gate_blue_detail1",
   "dam_survey_gate_blue_detail2",

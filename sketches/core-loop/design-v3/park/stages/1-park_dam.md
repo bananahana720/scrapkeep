@@ -109,9 +109,9 @@ D drop-in [-150, -690]
 
 The three activities, signposted from the drop-in: the domes camp (`enemy_camp`, today's chaser pack and the named `hot_rivets` pay, `map_spillway.gd:98`), the rim cache (`cracked_cache`) and the bench altar (`ambush_altar`). Rules from `activities.gd:29-47`. The camp is also the first waymark: lines pass its point within 12 m, and its ring starts only inside 8 m (`activities.gd:31`), so the fight is a choice made at speed.
 
-## 5. `park_rows` (136 rows, greybox round 5, 2026-10-12)
+## 5. `park_rows` (137 rows, greybox round 5, 2026-10-12; authored pass 2026-10-17)
 
-The shipped rows are in `src/world/park/park_dam.json`; this table follows that file. Every non-ground row carries `greybox:<element>` (R10), except the three rows the KD1-DRESS pilot dressed with landform recipes on 2026-10-16 (`west_wash`, `upper_slot`, `corkscrew_slot`; section 15). Heights are metres above the base plain; `size` is [length along the facing, height, width].
+The shipped rows are in `src/world/park/park_dam.json`; this table follows that file. Every non-ground row carries `greybox:<element>` (R10), except the three rows the KD1-DRESS pilot dressed with landform recipes on 2026-10-16 (`west_wash`, `upper_slot`, `corkscrew_slot`; section 15) and the rows the authored pass dressed on 2026-10-17: the 40 ride lips and `eye_mouth` on drape recipes, the seven slalom gates and the `dome_11` benchmark (section 16). Heights are metres above the base plain; `size` is [length along the facing, height, width].
 
 **Runtime placement (KB9, re-cut 2026-10-11).** Since KB9 the stage places its rows at runtime (`park_recipes.gd` `place_row`): a stamped greybox row keeps its ride sensor and drops its box, because the stamp is its shape, while an unstamped greybox row stands as a solid box of its whole size. The first greybox cut left 19 rows unstamped, and on the KB9 head `slickrock_domes` stood as a 24 m wall across every line (Rivet stalled 20 m from the drop on every seed). So every placed row except an anchor field now carries a stamp, which keeps the bake, the graph and the runtime in agreement:
 
@@ -336,6 +336,7 @@ The stage keeps its row: theme 0, `spillway` (`alpha_defs.gd:69`; `harmony.gd:11
 | The shelf lip | First launch: the full drum-and-bass groove lands on the landing downbeat (cue `first_drop`) |
 | The slots and the wash | The full band; combat lifts layers through the existing `escalate` arc (MUSIC-GEMS.md:21) |
 | The Eye | A one-bar low-pass dip inside the tunnel, opening on the far side (cue `eye_filter`) |
+| Leaving the Eye's south mouth, once per run | The Mind's first musical quote (Andrew's Q9), `layer_mind_quote_spillway` from row `eye_mouth` (section 16); the file renders on #12 |
 | The canyon floor, first touch | The B section lands as the ball first reaches y 10 or lower (cue `canyon_floor`) |
 | Flood, flash flood | Stage-band riser over the lead, `drop_flood` on the landing (PARK.md:310) |
 | Lightning | A stinger on the beat |
@@ -370,7 +371,7 @@ Draft text for the lore pass, in the tone of `SOUND-STORY.md:212`. Fragment ids 
 | `ref_viga_beams` | viga span | Roof beams carried from far uplands, their ends left long past the wall. |
 | `dam_era_canal_headworks` | canal lips | Headworks 2. The canal feeds fields nobody plants now. Gate oiled weekly anyway. |
 | `dam_era_station_marks` | dome 5, the first slalom gate | Traverse, deck to lip. One station per dome, numbered as we went. Chainman rolled it on a barrel. Chief says that is not surveying. The numbers check. |
-| `dam_era_gate_flags` | dome 24, the last slalom gate | Flags stay up after the survey. Roll between each pair, red then blue. Nobody asked who for. |
+| `dam_era_gate_flags` | dome 24, the last slalom gate | Flags stay up after the survey. Roll between the pairs and round the odd red one. Nobody asked who for. |
 | `dam_era_benchmark` | dome 11, the benchmark | Benchmark, elevation 152.0. Highest station on the shelf. Do not move this dome. |
 
 ## 12. What stays from today's stage, and what has no table yet
@@ -709,3 +710,38 @@ Segments, length ratios and distinct ride facts stay inside their bands on both 
 Three GLBs with their shells add 3 to 6 draws and no measurable memory; frame times ran with other writers on the machine, so only the ratios count.
 
 **Cost, for KD2 to KD6.** 3 rows swapped of 107 greybox rows. About 1.2 hours of wall time, nearly all of it machine time: two eight-seed sweeps of 56 rows (about 12 minutes each under the shared queue), the 42-run smoke (19 minutes), two perf series and the win proof. The edit itself is three recipe fields; the rebake takes 5.6 s for the bake and 8.6 s for the graph, and two rebakes give identical bytes. What blocked more swaps is placement, not assets: a GLB row seats on the ground at its centre and is never scaled, so a fixed-length GLB on a long or sloped row floats or buries, and only rows whose GLB seats within a few metres of the ground at its lip can swap without a footprint change.
+
+## 16. Authored pass: the dam tests rolling (2026-10-17)
+
+The pass for WHATS-LEFT unit 3 and placeholder unit H, modelled on the crown pass (#67). Andrew's Q4 ruling, "One skill per park", gives the dam rolling. The landforms stay where section 5 put them. What changed is what the shelf asks of a ball, and what every piece is made of. Branch `claude/dam-park-authored-pass-s1fxch`, PR #101, on `main` plus #40, #68, #29, #38 and #79.
+
+**The skill, and why rolling.** The dam is the first park. Each line starts on a 152 m survey shelf and ends 150 m lower, at the foot of the face. Gravity does the work, so the question the park asks is whether you can keep a line without wasting the fall. The floor line (stick and brake, no fire, no rope) is the purest version of that question, so it is the line this pass shapes.
+
+**The slalom (top shelf).** Before this pass the 25 domes were one bank row repeated: the same verb and size, no society and no reason (the scorecard's "25 numbered slickrock domes, all the same bank row"). The floor line meandered west round them and braked hard: flow 0.783, segments 39.0, 31.4 and 16.1 s on seed 1. Now the domes are the dam crew's survey traverse, and the floor line rolls down it as a slalom:
+
+- All 25 domes and the `slickrock_domes` bowl have verb `roll`.
+- Seven gate domes stand in the dam_era society, each with a survey flag on a dry-stacked cairn on its summit (`dam_survey_gate_red`, `dam_survey_gate_blue`): red gate `dome_5`/`dome_6` [-70, -595], blue gate `dome_18`/`dome_19` [-95, -507], the red turning post `dome_15` [-65, -478], then the domes camp, then blue gate `dome_24`/`dome_25` [-87, -330]. `assets/park/park_dam/lines.json` floor waypoints thread them in that order.
+- `dome_11` at the shelf's west end is the benchmark, the highest station, which only Sable's wide line visits. It carries `dam_survey_benchmark`: the gate cairn with a copper band, a brass station disc and a 1.4 m stake, and no flag.
+- `dome_7` keeps Rivet's cage at its north foot.
+- The other 16 domes stay plain. They are the wide lines' turning marks and the shelf's anchor faces; a slalom needs open snow round its gates.
+- Three crew-log fragments in section 11 tell the story in the crew's own words: `dam_era_station_marks` (dome_5), `dam_era_gate_flags` (dome_24) and `dam_era_benchmark` (dome_11).
+
+**Enemies: placement unchanged, on purpose.** Each home already tests a rolling skill (section 7 advantage and counter text). Chasers lunge down a straight lane, and you beat them by pumping the wash wall. Lobbers lead a held line, and you beat them by changing line under the shell. A trapper's pit bends a light line, and you beat it by rolling straight through. Winch drones snap at 19 m/s held across the bench. A brute's slam ring covers the tunnel landing, and you beat it by flying the flip bucket over the ring. Moving any home would trade a rolling test for a weaker one. The domes camp [-51, -396] stays where it was. The floor line now runs through it, between the red post and the last gate, so the fight is part of the line instead of a detour from it. Section 15 recorded the base floor line's dead stops at [-57, -403], beside this camp, on 7 of 8 seeds, so the sweep below is the check on that stretch.
+
+**The drape kit (unit H, 40 ride lips plus `eye_mouth`).** `tools/blender/park/dam_dressing.py` builds each greybox ride lip as its own GLB from the baked ground under its footprint (it matches `terrain.gd` `_grid_height`): 43 recipes × base and two detail shells = 129 GLBs, registry `assets/registry.d/park_dam_dressing.json`. A new opt-in fit `drape` (`park_schema.gd` FITS; `park_recipes.gd` `fits_drape`) seats a stamped row on the ground less its own stamp raise, so the piece lies flush on the shape its stamp made. Drape rows keep `y` null because `park_graph.gd` reads a row `y` as a deck: an early try with `y` set added 1,986 graph nodes and a gallery_valve breach. Each piece lies flush (at most 0.12 m off the ground, `tests/park_recipes_dam_dressing_test.gd`). The Eye's arch soffit stands 23.95 m up and the portal clears 12.43 m. The dome summits ride the shelf's fall (about 6.5 percent), so each gate stands 0.15 m under its seat's summit and keeps every stone within 2.2 m of the pole: the ground there lies 0 to 0.30 m over the cairn's foot, so no stone floats (the dressing test measures 16 points round each gate). Known limits: faces steeper than about 70° may z-fight, and the Eye arch legs stand in the fin-crest lane at x ±30 to ±54. No measured line rides there.
+
+**The Mind's first musical quote (Q9).** It plays at the Eye's south mouth: row `eye_mouth` [0, 205], a 20 by 30 m flat plateau stamp, publishes ride fact `layer_mind_quote_spillway` as the ball leaves the Eye. Every line crosses the Eye once, downhill, so the quote plays once per run on every line. It goes through the place-layer path (`event_kinds.gd`, `sound_next` `music_layer_mind_quote_spillway`), and ui_tick stands in until the file on #12 lands. A ride sensor publishes on every entry, so a `layer_mind_quote_` fact gets a guard (`park_recipes.gd` `_fire`): the first entry plays it, and a bounce inside the box or a second crossing stays silent (`tests/park_mind_quote_once_test.gd`, red without the guard). The spot is outside every arena: the Warden's fight opens at the bay dock [0, 467], 247 m on, and the nearest other fight (the `bench_altar` ambush, [206, 250]) is 211 m away, while the row's sensor box is 20 by 30 m and reaches only 3 m above the ground. The flume thread was told of the spot, since the Mind's quote recurs on its stage.
+
+**Bands, eight seeds per line, on `24f7665d`.** BANDS_TABLE
+
+**Scorecard** (`intent-check/scorecard.py`, against `2fce8953` in `results/w16-2fce8953.md`):
+
+| Measure | before | after |
+| --- | --- | --- |
+| Top verb (share) | bank (0.44) | roll (0.71) |
+| Society share | 0.27 | 0.35 |
+| Story fragments | 13 | 16 |
+| Dressed rows | 3 | 81 |
+| Placeholders | 105 | none |
+
+**Filler that remains.** The 11 `hoodoo_stack` ground rows are identical density rows off every line. They are scenery, not moments, and they are left for the wave 18-19 dressing. The 16 plain domes are the slalom's open ground, a choice and not an oversight.

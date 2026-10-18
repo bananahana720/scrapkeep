@@ -52,10 +52,10 @@ const LINE_CLEAR_M := 15.0
 const UNSTAMPED_OK := ["kicker", "anchor_field"]
 # KD1-DRESS, 2026-10-16: the rows dressed with a landform recipe GLB, and the recipe each names. 2026-10-17 (dam kit):
 # the 40 ride-lip greybox rows and `eye_mouth` join, each on its own drape recipe `dam_<row id>`
-# (tools/blender/park/dam_dressing.py). The slalom (stage page section 16) adds a survey gate flag on its seven gate domes.
+# (tools/blender/park/dam_dressing.py). The slalom (stage page section 16) adds a survey gate flag on its seven gate domes and the benchmark on dome_11.
 const DRESSED := {"dome_5": "dam_survey_gate_red", "dome_6": "dam_survey_gate_red", "dome_15": "dam_survey_gate_red",
 	"dome_18": "dam_survey_gate_blue", "dome_19": "dam_survey_gate_blue", "dome_24": "dam_survey_gate_blue",
-	"dome_25": "dam_survey_gate_blue",
+	"dome_25": "dam_survey_gate_blue", "dome_11": "dam_survey_benchmark",
 	"west_wash": "half_pipe_concrete", "upper_slot": "slot_canyon_flow", "corkscrew_slot": "slot_canyon_flow",
 	"shelf_lip": "dam_shelf_lip", "wash_fin_west": "dam_wash_fin_west", "slot_fin_west": "dam_slot_fin_west",
 	"slot_fin_east": "dam_slot_fin_east", "slot_fin_far": "dam_slot_fin_far", "domes_fin_west": "dam_domes_fin_west",
