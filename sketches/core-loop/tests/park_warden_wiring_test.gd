@@ -230,9 +230,10 @@ func _run() -> void:
 		w._step_mounting(1.5)
 		_near3("moving landing %d" % leg, w.global_position, finish)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(moving_path))
-	for fixture in [{"family": "reactor", "map": "park_test", "mounting": "flume"},
-		{"family": "swarm", "map": "park_pit", "mounting": "sinkhole"},
-		{"family": "mind", "map": "park_crown", "mounting": "spires"}]:
+	# Each copy reinforces with its world's elite pack; the Dig's is dig_elite (WORLD-ROSTERS.md).
+	for fixture in [{"family": "reactor", "map": "park_test", "mounting": "flume", "elite": "elite"},
+		{"family": "swarm", "map": "park_pit", "mounting": "sinkhole", "elite": "dig_elite"},
+		{"family": "mind", "map": "park_crown", "mounting": "spires", "elite": "elite"}]:
 		for flag in range(3):
 			var copy: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ParkMap.FIXTURE))
 			copy["map"] = fixture["map"]
@@ -244,7 +245,7 @@ func _run() -> void:
 			else:
 				copy["landmark"]["warden"].erase("harpoon_anchor")
 			for home in copy["home_rows"]:
-				home["reinforce"]["pack"] = "elite"
+				home["reinforce"]["pack"] = fixture["elite"]
 			var path := _write_copy(copy, "%s_flag_%d" % [fixture["family"], flag])
 			_exercise_copy(game, path, 1)
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
