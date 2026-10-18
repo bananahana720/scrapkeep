@@ -292,10 +292,11 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			_words(issues, name, id, row.text, 1, cap)
 		"music":
 			_ref(issues, name, id, "theme", row.synth_theme, range(Music.THEME_COUNT))
-			# Boss phase tracks (phase_music.gd) and the place-and-moment tunes (tune_moments.gd) are
+			# Boss phase tracks and picked boss themes (phase_music.gd), the sound bible's screen picks
+			# (camp, title-a/b/c; audio.gd) and the place-and-moment tunes (tune_moments.gd) are
 			# music ids too: their rows name the packs those modules pick.
-			_ref(issues, name, id, "music id", id, ["default", "title", "summary", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2"] + Worlds.BOSSES.keys()
-				+ PhaseMusic.TRACKS + TuneMoments.TUNES.keys())
+			_ref(issues, name, id, "music id", id, ["default", "title", "title-a", "title-b", "title-c", "camp", "summary", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2"] + Worlds.BOSSES.keys()
+				+ PhaseMusic.TRACKS + PhaseMusic.PICKED.values() + TuneMoments.TUNES.keys())
 			# Missing optional ACE packs intentionally fall back to synth. Validate the path, not installation.
 			if row.ace_manifest != "" and not (row.ace_manifest.begins_with("res://assets/music_ace/") and row.ace_manifest.ends_with("/manifest.json") and not ".." in row.ace_manifest):
 				_issue(issues, name, "references", id, "manifest outside optional ACE pack root")
