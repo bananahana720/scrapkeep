@@ -212,7 +212,7 @@ func _run() -> void:
 	var moving: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ParkMap.FIXTURE))
 	moving["map"] = "park_crown"
 	for home in moving["home_rows"]:
-		home["reinforce"]["pack"] = "elite"
+		home["reinforce"]["pack"] = "elite_highdraft"
 	moving["landmark"]["warden"].merge({"family": "mind", "mounting": "spires",
 		"harpoon_anchor": true, "anchor": [0, 22, 590],
 		"path": [[0, 22, 590], [18, 30, 600], [-12, 24, 570]]}, true)
@@ -230,10 +230,11 @@ func _run() -> void:
 		w._step_mounting(1.5)
 		_near3("moving landing %d" % leg, w.global_position, finish)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(moving_path))
-	# Each copy reinforces with its world's elite pack; the Dig's is dig_elite (WORLD-ROSTERS.md).
+	# Each copy reinforces with its world's elite pack; the Dig's is dig_elite and the Highdraft's
+	# elite_highdraft (WORLD-ROSTERS.md; world 3's pack list has no plain elite since 3059e90).
 	for fixture in [{"family": "reactor", "map": "park_test", "mounting": "flume", "elite": "elite"},
 		{"family": "swarm", "map": "park_pit", "mounting": "sinkhole", "elite": "dig_elite"},
-		{"family": "mind", "map": "park_crown", "mounting": "spires", "elite": "elite"}]:
+		{"family": "mind", "map": "park_crown", "mounting": "spires", "elite": "elite_highdraft"}]:
 		for flag in range(3):
 			var copy: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ParkMap.FIXTURE))
 			copy["map"] = fixture["map"]
