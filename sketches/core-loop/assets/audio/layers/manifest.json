@@ -8,7 +8,7 @@
   ],
   "seconds": 2.79,
   "lufs": -16.0,
-  "true_peak": -2.55
+  "true_peak": -2.85
  },
  "music_layer_crown_alcove": {
   "pack": "highdraft_crown",
@@ -19,7 +19,7 @@
   ],
   "seconds": 2.79,
   "lufs": -16.0,
-  "true_peak": -1.5
+  "true_peak": -2.87
  },
  "music_layer_crown_toppled": {
   "pack": "highdraft_crown",
@@ -30,7 +30,7 @@
   ],
   "seconds": 3.72,
   "lufs": -16.0,
-  "true_peak": -1.62
+  "true_peak": -1.0
  },
  "music_layer_crown_ramp": {
   "pack": "highdraft_crown",
@@ -41,7 +41,7 @@
   ],
   "seconds": 3.72,
   "lufs": -16.0,
-  "true_peak": -1.2
+  "true_peak": -2.02
  },
  "music_layer_mind_quote_spillway": {
   "pack": "spillway",
@@ -52,6 +52,6 @@
   ],
   "seconds": 2.79,
   "lufs": -16.0,
-  "true_peak": -2.66
+  "true_peak": -2.5
  }
 }

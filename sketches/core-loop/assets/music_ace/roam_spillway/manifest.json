@@ -18,93 +18,99 @@
  "silent_db": -80.0,
  "sources": {
   "calm": {
-   "take": "roam_spillway",
-   "render": "sound-bible:renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
-   "pick": "Spillway roaming (s2501)",
-   "trim_samples": 261656,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
-     "sha256": "6f902670d107e7b24249ed3a0bf35ced250e4b7983d374728c2214102a944b2f"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
-     "sha256": "ebb56f10a3262495f2a37f7916ea391244642f9ff4eb99b836112b89dc915bb3"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
-     "sha256": "21cee85698e6e1abbf732e316fe8438126974eaf59aa4dcc7ddc5a6f00728ac0"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
-     "sha256": "cbc904f90f528ae4f194ba548761c0a9e1194c2ab19f074ccddf9f65c3b2cc88"
+   "take": "roam-spillway-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-spillway-current.wav",
+   "render_sha256": "96b5ca2554370908c26800da22dd7a3213ba8920e016d8340dfac90639b25490",
+   "tempo_read": 172.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-current/drums.wav",
+      "sha256": "69f88105073dc5f50d5f8b89b078c3747bc7e102236f695d1dedf7e8496222eb"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-current/bass.wav",
+      "sha256": "0184ef5992723a86e39a5fe5620874e2482b39616c7ec332bb14f2503b1953f2"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-current/other.wav",
+      "sha256": "0947901e069c97daa7ebec14925f4dc93f2dfd2fc76e111f05487643493661d6"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-current/vocals.wav",
+      "sha256": "441e8056453d0283f5de8006a053490b9aed24200cc507299781dcdadb75e799"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   },
   "travel": {
-   "take": "roam_spillway",
-   "render": "sound-bible:renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
-   "pick": "Spillway roaming (s2501)",
-   "trim_samples": 1246232,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
-     "sha256": "6f902670d107e7b24249ed3a0bf35ced250e4b7983d374728c2214102a944b2f"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
-     "sha256": "ebb56f10a3262495f2a37f7916ea391244642f9ff4eb99b836112b89dc915bb3"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
-     "sha256": "21cee85698e6e1abbf732e316fe8438126974eaf59aa4dcc7ddc5a6f00728ac0"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
-     "sha256": "cbc904f90f528ae4f194ba548761c0a9e1194c2ab19f074ccddf9f65c3b2cc88"
+   "take": "roam-spillway-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-spillway-current.wav",
+   "render_sha256": "96b5ca2554370908c26800da22dd7a3213ba8920e016d8340dfac90639b25490",
+   "tempo_read": 172.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-current/drums.wav",
+      "sha256": "69f88105073dc5f50d5f8b89b078c3747bc7e102236f695d1dedf7e8496222eb"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-current/bass.wav",
+      "sha256": "0184ef5992723a86e39a5fe5620874e2482b39616c7ec332bb14f2503b1953f2"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-current/other.wav",
+      "sha256": "0947901e069c97daa7ebec14925f4dc93f2dfd2fc76e111f05487643493661d6"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-current/vocals.wav",
+      "sha256": "441e8056453d0283f5de8006a053490b9aed24200cc507299781dcdadb75e799"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   },
   "cadence": {
-   "take": "roam_spillway",
-   "render": "sound-bible:renders/lab-round5-1/grid172/roam-spillway-s2501-172bpm.wav",
-   "pick": "Spillway roaming (s2501)",
-   "trim_samples": 2661560,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/drums.wav",
-     "sha256": "6f902670d107e7b24249ed3a0bf35ced250e4b7983d374728c2214102a944b2f"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/bass.wav",
-     "sha256": "ebb56f10a3262495f2a37f7916ea391244642f9ff4eb99b836112b89dc915bb3"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/other.wav",
-     "sha256": "21cee85698e6e1abbf732e316fe8438126974eaf59aa4dcc7ddc5a6f00728ac0"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_spillway/vocals.wav",
-     "sha256": "cbc904f90f528ae4f194ba548761c0a9e1194c2ab19f074ccddf9f65c3b2cc88"
+   "take": "roam-spillway-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-spillway-spiced.wav",
+   "render_sha256": "8760112a0467f991a2c5c76cad1817e8b96ae9a661849abf56c6acb4b72b2553",
+   "tempo_read": 172.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-spiced/drums.wav",
+      "sha256": "06bbe47834549872b7906298e33053a375ca9c92545d912e3879cd4a9a281a63"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-spiced/bass.wav",
+      "sha256": "65bb00c65b689199ff547fe50b39b3a3f5a0db69e967e56cd1849de53007347e"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-spiced/other.wav",
+      "sha256": "cb96d76a53e130f204d850ba07ac1efab7836c4ef9bf37515c944d498ed411e1"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-spillway-spiced/vocals.wav",
+      "sha256": "b40d8a60915a0276b6f1b2ffb294f6561abd8fa93edd2aa69b486a6d09482834"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   }
  },
  "clips": {
   "calm": {
-   "parent": "picked",
-   "take": "roam_spillway",
-   "source_state": "calm",
+   "parent": "roam",
+   "take": "roam-spillway-current",
+   "source_state": "roam-spillway-current bars 4-19",
    "source_bars": "5-20",
-   "source_start": 261656,
-   "take_start": 261656,
-   "bpm": 172,
+   "source_start": 261436,
+   "take_start": 261436,
+   "bpm": 172.0,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -121,16 +127,24 @@
     "drums": "calm.drums.ogg",
     "bass": "calm.bass.ogg",
     "other": "calm.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": 0.0,
+   "gain_db": -0.1,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.9,
+    "note": "summed stems before Ogg encode"
    }
   },
   "travel": {
-   "parent": "picked",
-   "take": "roam_spillway",
-   "source_state": "travel",
+   "parent": "roam",
+   "take": "roam-spillway-current",
+   "source_state": "roam-spillway-current bars 20-35",
    "source_bars": "21-36",
-   "source_start": 1246232,
-   "take_start": 1246232,
-   "bpm": 172,
+   "source_start": 1245994,
+   "take_start": 1245994,
+   "bpm": 172.0,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -147,16 +161,24 @@
     "drums": "travel.drums.ogg",
     "bass": "travel.bass.ogg",
     "other": "travel.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": 0.0,
+   "gain_db": 0.0,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.8,
+    "note": "summed stems before Ogg encode"
    }
   },
   "cadence": {
-   "parent": "picked",
-   "take": "roam_spillway",
-   "source_state": "cadence",
-   "source_bars": "44-45",
-   "source_start": 2661560,
-   "take_start": 2661560,
-   "bpm": 172,
+   "parent": "roam",
+   "take": "roam-spillway-spiced",
+   "source_state": "roam-spillway-spiced bars 42-43",
+   "source_bars": "43-44",
+   "source_start": 2599761,
+   "take_start": 2599761,
+   "bpm": 172.0,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -173,6 +195,14 @@
     "drums": "cadence.drums.ogg",
     "bass": "cadence.bass.ogg",
     "other": "cadence.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 0.0,
+   "gain_db": -0.05,
+   "measured": {
+    "lufs": -16.6,
+    "true_peak": -2.7,
+    "note": "summed stems before Ogg encode"
    }
   }
  },
@@ -365,6 +395,7 @@
   }
  },
  "breath_default": "hard",
- "cuts": "nominal-unverified",
- "timing_verified": false
+ "cuts": "measured-beat-phase",
+ "timing_verified": false,
+ "pick": "sound-bible-2026-10-16/spice"
 }

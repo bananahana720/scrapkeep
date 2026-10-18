@@ -207,9 +207,11 @@ var ace_manifest := ""
 # The title's music row: "title" until an opening names its theme (title_theme).
 var title_row := "title"
 var _on_title := false
-# The row a won run's summary and the ending play: theme C, the show opening (Andrew, "Won run
-# and ending", 17 Oct). A lost run, or a pack not on disk, keeps the summary row.
-const WON_SUMMARY_ROW := "title-c"
+# The row a won run's summary and the ending play: theme C, the show opening, with its whole-step
+# lift (Andrew, "Won run and ending", 17 Oct). The summary pack holds it: won, its return section
+# plays two bars of theme C and then theme C lifted a whole step (tools/ace/package_core_packs.py);
+# lost, its travel loop is the jazz-club summary. A pack not on disk falls back to the plain title-c.
+const WON_SUMMARY_ROW := "summary"
 # The camp page is open on the title (screens.gd): the camp pick plays while it is.
 var camp_open := false
 # The manifest the zone rows last selected. A caller that sets ace_manifest away from it
@@ -1192,7 +1194,9 @@ func title_now() -> String:
 
 
 func summary_row(won: bool) -> String:
-	return WON_SUMMARY_ROW if won and title_available.call(WON_SUMMARY_ROW) else "summary"
+	if won and not title_available.call(WON_SUMMARY_ROW) and title_available.call("title-c"):
+		return "title-c"
+	return "summary"
 
 
 # screens.gd says when the camp page opens and closes: the camp take plays while it is open,

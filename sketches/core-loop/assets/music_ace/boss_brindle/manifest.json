@@ -1,7 +1,7 @@
 {
  "format": 1,
  "theme": "boss_brindle",
- "bank": "menu",
+ "bank": "phase1",
  "rate": 44100,
  "key": "D",
  "key_offset": 0,
@@ -18,93 +18,239 @@
  "silent_db": -80.0,
  "sources": {
   "calm": {
-   "take": "boss_brindle",
-   "render": "sound-bible:renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
-   "pick": "Brindle's theme (s2402)",
-   "trim_samples": 370368,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
-     "sha256": "afba8581891524e0ff88792afc8f9eaa4f77322835e73c3489ec9fb8e2edcb94"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
-     "sha256": "8acf916ae48cba51b8659832a90fed615231b9e5aa6683ce8791af39c58a804d"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
-     "sha256": "cbadc556880ecf524532f85b9b816f4bbd6e0a03cae4ddecb3774f8c49bccec8"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
-     "sha256": "718982cc4dafda432d7198c040cc6d75e9209f6f1534220fd235477ea78329f2"
+   "take": "boss-brindle-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/boss-brindle-current.wav",
+   "render_sha256": "d90d8913b642803d91cb3f5dbfe84292b798f399fc990d3b5a78e8d6f63f3033",
+   "tempo_read": 128.99,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/drums.wav",
+      "sha256": "7d2ae8becfc1d60b80bdf703e6f604e291ad716fd4d5f976c0df9d95b54ab931"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/bass.wav",
+      "sha256": "3170095c0481203f84f565d7ded5f213747b94f9c05fe87f3e082612b6e1fdf7"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/other.wav",
+      "sha256": "57314d6e8926089d6848208ecd77f271c6c555f05915d0dba7f0f720dc21e870"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/vocals.wav",
+      "sha256": "262e3c00b295722f1972e4d8b4f483c2ebaa64427dc3f077d00d17e26e9f2b4f"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   },
   "travel": {
-   "take": "boss_brindle",
-   "render": "sound-bible:renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
-   "pick": "Brindle's theme (s2402)",
-   "trim_samples": 1683136,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
-     "sha256": "afba8581891524e0ff88792afc8f9eaa4f77322835e73c3489ec9fb8e2edcb94"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
-     "sha256": "8acf916ae48cba51b8659832a90fed615231b9e5aa6683ce8791af39c58a804d"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
-     "sha256": "cbadc556880ecf524532f85b9b816f4bbd6e0a03cae4ddecb3774f8c49bccec8"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
-     "sha256": "718982cc4dafda432d7198c040cc6d75e9209f6f1534220fd235477ea78329f2"
+   "take": "boss-brindle-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/boss-brindle-current.wav",
+   "render_sha256": "d90d8913b642803d91cb3f5dbfe84292b798f399fc990d3b5a78e8d6f63f3033",
+   "tempo_read": 128.99,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/drums.wav",
+      "sha256": "7d2ae8becfc1d60b80bdf703e6f604e291ad716fd4d5f976c0df9d95b54ab931"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/bass.wav",
+      "sha256": "3170095c0481203f84f565d7ded5f213747b94f9c05fe87f3e082612b6e1fdf7"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/other.wav",
+      "sha256": "57314d6e8926089d6848208ecd77f271c6c555f05915d0dba7f0f720dc21e870"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/vocals.wav",
+      "sha256": "262e3c00b295722f1972e4d8b4f483c2ebaa64427dc3f077d00d17e26e9f2b4f"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
+  },
+  "pivot": {
+   "take": "boss-brindle-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/boss-brindle-spiced.wav",
+   "render_sha256": "e88c2d576876c0f461a20e91faf8d5b478f802169651a03b094b2737647dc76d",
+   "tempo_read": 128.99,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/drums.wav",
+      "sha256": "87452cbdeccb2b461bdf91c868fbf02618828bbd3991450135980df3ff25636c"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/bass.wav",
+      "sha256": "69e77be4d4a89a028882ab81afd5f1355c6080a76c074c28010b62bd95299c70"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/other.wav",
+      "sha256": "f3b18fdc05feef7fdd3a93f3c5d679fc081e683b6f08d118518bcdddad85dcea"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/vocals.wav",
+      "sha256": "fb00e64a6d8194519c49a9ea99aec7b01ed75eed4ff5b51082f7d290e2ee2435"
+     }
+    }
+   }
+  },
+  "build": {
+   "take": "boss-brindle-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/boss-brindle-spiced.wav",
+   "render_sha256": "e88c2d576876c0f461a20e91faf8d5b478f802169651a03b094b2737647dc76d",
+   "tempo_read": 128.99,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/drums.wav",
+      "sha256": "87452cbdeccb2b461bdf91c868fbf02618828bbd3991450135980df3ff25636c"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/bass.wav",
+      "sha256": "69e77be4d4a89a028882ab81afd5f1355c6080a76c074c28010b62bd95299c70"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/other.wav",
+      "sha256": "f3b18fdc05feef7fdd3a93f3c5d679fc081e683b6f08d118518bcdddad85dcea"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/vocals.wav",
+      "sha256": "fb00e64a6d8194519c49a9ea99aec7b01ed75eed4ff5b51082f7d290e2ee2435"
+     }
+    }
+   }
+  },
+  "telegraph": {
+   "take": "boss-brindle-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/boss-brindle-spiced.wav",
+   "render_sha256": "e88c2d576876c0f461a20e91faf8d5b478f802169651a03b094b2737647dc76d",
+   "tempo_read": 128.99,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/drums.wav",
+      "sha256": "87452cbdeccb2b461bdf91c868fbf02618828bbd3991450135980df3ff25636c"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/bass.wav",
+      "sha256": "69e77be4d4a89a028882ab81afd5f1355c6080a76c074c28010b62bd95299c70"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/other.wav",
+      "sha256": "f3b18fdc05feef7fdd3a93f3c5d679fc081e683b6f08d118518bcdddad85dcea"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/vocals.wav",
+      "sha256": "fb00e64a6d8194519c49a9ea99aec7b01ed75eed4ff5b51082f7d290e2ee2435"
+     }
+    }
+   }
+  },
+  "open": {
+   "take": "boss-brindle-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/boss-brindle-spiced.wav",
+   "render_sha256": "e88c2d576876c0f461a20e91faf8d5b478f802169651a03b094b2737647dc76d",
+   "tempo_read": 128.99,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/drums.wav",
+      "sha256": "87452cbdeccb2b461bdf91c868fbf02618828bbd3991450135980df3ff25636c"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/bass.wav",
+      "sha256": "69e77be4d4a89a028882ab81afd5f1355c6080a76c074c28010b62bd95299c70"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/other.wav",
+      "sha256": "f3b18fdc05feef7fdd3a93f3c5d679fc081e683b6f08d118518bcdddad85dcea"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/vocals.wav",
+      "sha256": "fb00e64a6d8194519c49a9ea99aec7b01ed75eed4ff5b51082f7d290e2ee2435"
+     }
+    }
+   }
+  },
+  "drop": {
+   "take": "boss-brindle-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/boss-brindle-spiced.wav",
+   "render_sha256": "e88c2d576876c0f461a20e91faf8d5b478f802169651a03b094b2737647dc76d",
+   "tempo_read": 128.99,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/drums.wav",
+      "sha256": "87452cbdeccb2b461bdf91c868fbf02618828bbd3991450135980df3ff25636c"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/bass.wav",
+      "sha256": "69e77be4d4a89a028882ab81afd5f1355c6080a76c074c28010b62bd95299c70"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/other.wav",
+      "sha256": "f3b18fdc05feef7fdd3a93f3c5d679fc081e683b6f08d118518bcdddad85dcea"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-spiced/vocals.wav",
+      "sha256": "fb00e64a6d8194519c49a9ea99aec7b01ed75eed4ff5b51082f7d290e2ee2435"
+     }
+    }
+   }
   },
   "cadence": {
-   "take": "boss_brindle",
-   "render": "sound-bible:renders/lab-round4-1/grid129/boss-brindle-s2402-129bpm.wav",
-   "pick": "Brindle's theme (s2402)",
-   "trim_samples": 4144576,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/drums.wav",
-     "sha256": "afba8581891524e0ff88792afc8f9eaa4f77322835e73c3489ec9fb8e2edcb94"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/bass.wav",
-     "sha256": "8acf916ae48cba51b8659832a90fed615231b9e5aa6683ce8791af39c58a804d"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/other.wav",
-     "sha256": "cbadc556880ecf524532f85b9b816f4bbd6e0a03cae4ddecb3774f8c49bccec8"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/boss_brindle/vocals.wav",
-     "sha256": "718982cc4dafda432d7198c040cc6d75e9209f6f1534220fd235477ea78329f2"
+   "take": "boss-brindle-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/boss-brindle-current.wav",
+   "render_sha256": "d90d8913b642803d91cb3f5dbfe84292b798f399fc990d3b5a78e8d6f63f3033",
+   "tempo_read": 128.99,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/drums.wav",
+      "sha256": "7d2ae8becfc1d60b80bdf703e6f604e291ad716fd4d5f976c0df9d95b54ab931"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/bass.wav",
+      "sha256": "3170095c0481203f84f565d7ded5f213747b94f9c05fe87f3e082612b6e1fdf7"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/other.wav",
+      "sha256": "57314d6e8926089d6848208ecd77f271c6c555f05915d0dba7f0f720dc21e870"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/boss-brindle-current/vocals.wav",
+      "sha256": "262e3c00b295722f1972e4d8b4f483c2ebaa64427dc3f077d00d17e26e9f2b4f"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   }
  },
  "clips": {
   "calm": {
-   "parent": "picked",
-   "take": "boss_brindle",
-   "source_state": "calm",
+   "parent": "boss",
+   "take": "boss-brindle-current",
+   "source_state": "boss-brindle-current bars 4-19",
    "source_bars": "5-20",
-   "source_start": 370368,
-   "take_start": 370368,
-   "bpm": 129,
+   "source_start": 329402,
+   "take_start": 329402,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -121,16 +267,24 @@
     "drums": "calm.drums.ogg",
     "bass": "calm.bass.ogg",
     "other": "calm.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": 21.77,
+   "gain_db": 0.2,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.7,
+    "note": "summed stems before Ogg encode"
    }
   },
   "travel": {
-   "parent": "picked",
-   "take": "boss_brindle",
-   "source_state": "travel",
+   "parent": "boss",
+   "take": "boss-brindle-current",
+   "source_state": "boss-brindle-current bars 20-35",
    "source_bars": "21-36",
-   "source_start": 1683136,
-   "take_start": 1683136,
-   "bpm": 129,
+   "source_start": 1641634,
+   "take_start": 1641634,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -147,16 +301,194 @@
     "drums": "travel.drums.ogg",
     "bass": "travel.bass.ogg",
     "other": "travel.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": 10.16,
+   "gain_db": 0.1,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.5,
+    "note": "summed stems before Ogg encode"
+   }
+  },
+  "pivot": {
+   "parent": "boss",
+   "take": "boss-brindle-spiced",
+   "source_state": "boss-brindle-spiced bars 15-15",
+   "source_bars": "16-16",
+   "source_start": 1231594,
+   "take_start": 1231594,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 1,
+   "entry": 4096,
+   "exit": 86144,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 87168,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "pivot.drums.ogg",
+    "bass": "pivot.bass.ogg",
+    "other": "pivot.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 14.51,
+   "gain_db": 0.3,
+   "measured": {
+    "lufs": -16.2,
+    "true_peak": -2.9,
+    "note": "summed stems before Ogg encode"
+   }
+  },
+  "build": {
+   "parent": "boss",
+   "take": "boss-brindle-spiced",
+   "source_state": "boss-brindle-spiced bars 16-31",
+   "source_bars": "17-32",
+   "source_start": 1313576,
+   "take_start": 1313576,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 1316864,
+   "loop": true,
+   "loop_offset": 660480,
+   "loop_to_bar": 9,
+   "sample_count": 1316864,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "build.drums.ogg",
+    "bass": "build.bass.ogg",
+    "other": "build.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 13.06,
+   "gain_db": 0.3,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.3,
+    "note": "summed stems before Ogg encode"
+   }
+  },
+  "telegraph": {
+   "parent": "boss",
+   "take": "boss-brindle-spiced",
+   "source_state": "boss-brindle-spiced bars 39-42",
+   "source_bars": "40-43",
+   "source_start": 3199846,
+   "take_start": 3199846,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 332288,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "telegraph.drums.ogg",
+    "bass": "telegraph.bass.ogg",
+    "other": "telegraph.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": -5.07,
+   "gain_db": 0.3,
+   "measured": {
+    "lufs": -15.8,
+    "true_peak": -2.4,
+    "note": "summed stems before Ogg encode"
+   }
+  },
+  "open": {
+   "parent": "boss",
+   "take": "boss-brindle-spiced",
+   "source_state": "boss-brindle-spiced bars 43-46",
+   "source_bars": "44-47",
+   "source_start": 3528032,
+   "take_start": 3528032,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 332288,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "open.drums.ogg",
+    "bass": "open.bass.ogg",
+    "other": "open.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": -5.07,
+   "gain_db": 0.3,
+   "measured": {
+    "lufs": -15.0,
+    "true_peak": -2.7,
+    "note": "summed stems before Ogg encode"
+   }
+  },
+  "drop": {
+   "parent": "boss",
+   "take": "boss-brindle-spiced",
+   "source_state": "boss-brindle-spiced bars 47-50",
+   "source_bars": "48-51",
+   "source_start": 3856218,
+   "take_start": 3856218,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 333312,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "drop.drums.ogg",
+    "bass": "drop.bass.ogg",
+    "other": "drop.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": -5.07,
+   "gain_db": 0.3,
+   "measured": {
+    "lufs": -16.5,
+    "true_peak": -2.6,
+    "note": "summed stems before Ogg encode"
    }
   },
   "cadence": {
-   "parent": "picked",
-   "take": "boss_brindle",
-   "source_state": "cadence",
-   "source_bars": "51-52",
-   "source_start": 4144576,
-   "take_start": 4144576,
-   "bpm": 129,
+   "parent": "boss",
+   "take": "boss-brindle-current",
+   "source_state": "boss-brindle-current bars 49-50",
+   "source_bars": "50-51",
+   "source_start": 4019991,
+   "take_start": 4019991,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -173,6 +505,14 @@
     "drums": "cadence.drums.ogg",
     "bass": "cadence.bass.ogg",
     "other": "cadence.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": -12.33,
+   "gain_db": 0.15,
+   "measured": {
+    "lufs": -18.3,
+    "true_peak": -4.2,
+    "note": "summed stems before Ogg encode"
    }
   }
  },
@@ -192,7 +532,7 @@
    "profile": "full"
   },
   "pivot": {
-   "clip": "cadence",
+   "clip": "pivot",
    "game": "boss or Warden entry",
    "enter": "bar",
    "phase": "start",
@@ -201,29 +541,29 @@
    "then": "build"
   },
   "build": {
-   "clip": "calm",
+   "clip": "build",
    "game": "bank and lift, the Warden closed",
    "enter": "bar",
    "phase": "start",
    "profile": "full",
-   "reenter_bar": 1
+   "reenter_bar": 9
   },
   "telegraph": {
-   "clip": "calm",
+   "clip": "telegraph",
    "game": "the pulse charging",
    "enter": "beat",
    "phase": "keep",
    "profile": "full"
   },
   "open": {
-   "clip": "calm",
+   "clip": "open",
    "game": "window open, the held breath",
    "enter": "beat",
    "phase": "keep",
    "profile": "breath"
   },
   "drop": {
-   "clip": "cadence",
+   "clip": "drop",
    "game": "landed on the core",
    "enter": "contact",
    "phase": "start",
@@ -232,7 +572,7 @@
    "then": "follow"
   },
   "break": {
-   "clip": "calm",
+   "clip": "open",
    "game": "the Warden breaks: breath before home",
    "enter": "bar",
    "phase": "start",
@@ -247,8 +587,8 @@
    "enter": "then",
    "phase": "start",
    "profile": "full",
-   "directed": true,
-   "then": "home"
+   "then": "home",
+   "directed": true
   },
   "home": {
    "clip": "calm",
@@ -365,6 +705,7 @@
   }
  },
  "breath_default": "hard",
- "cuts": "nominal-unverified",
- "timing_verified": false
+ "cuts": "measured-beat-phase",
+ "timing_verified": false,
+ "pick": "sound-bible-2026-10-16/spice"
 }
