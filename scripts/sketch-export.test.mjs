@@ -32,6 +32,7 @@ import {
   WIN_PROOFS,
   winProofBotArgs,
   proofLibraries,
+  selfPlayPresetText,
 } from "./sketch-export.mjs";
 
 test("proofLibraries picks each add-on's linux debug library and nothing else", () => {
@@ -93,16 +94,18 @@ test("release gate with status 1 fails even beside a PASS line", () => {
 });
 
 test("parseArgs reads both --stems-from forms, defaults to null and rejects others", () => {
-  assert.deepEqual(parseArgs([]), { stemsFrom: null, winProof: false, bossSmokeOnly: false });
+  assert.deepEqual(parseArgs([]), { stemsFrom: null, winProof: false, bossSmokeOnly: false, selfPlay: false });
   assert.deepEqual(parseArgs(["--stems-from=/a"]), {
     stemsFrom: "/a",
     winProof: false,
     bossSmokeOnly: false,
+    selfPlay: false,
   });
   assert.deepEqual(parseArgs(["--stems-from", "/b"]), {
     stemsFrom: "/b",
     winProof: false,
     bossSmokeOnly: false,
+    selfPlay: false,
   });
   assert.throws(() => parseArgs(["--nope"]), /unknown argument: --nope/);
 });
@@ -129,11 +132,13 @@ test("parseArgs reads --win-proof beside --stems-from", () => {
     stemsFrom: null,
     winProof: true,
     bossSmokeOnly: false,
+    selfPlay: false,
   });
   assert.deepEqual(parseArgs(["--stems-from=/a", "--win-proof"]), {
     stemsFrom: "/a",
     winProof: true,
     bossSmokeOnly: false,
+    selfPlay: false,
   });
 });
 
@@ -450,7 +455,7 @@ test("runBossSmoke builds the crash command only for the boss the control names"
 });
 
 test("parseArgs reads --boss-smoke-only", () => {
-  assert.deepEqual(parseArgs(["--boss-smoke-only"]), { stemsFrom: null, winProof: false, bossSmokeOnly: true });
+  assert.deepEqual(parseArgs(["--boss-smoke-only"]), { stemsFrom: null, winProof: false, bossSmokeOnly: true, selfPlay: false });
 });
 
 test("a won row below stage 6 fails the win proof", () => {
@@ -524,4 +529,42 @@ test("every win proof's bot args carry its pilot and table, and the cloud export
 test("buildStamp records the boss smoke lines before the win proof", () => {
   const text = buildStamp({ sha: "a", dirty: false, stamp: "s", godot: "g", stems: 1, stemsFrom: "f", bossSmoke: "boss smoke bowl: PASS" });
   assert.match(text, /stems: 1 from f\nboss smoke bowl: PASS\nwin proof: not run/);
+});
+
+test("parseArgs reads --self-play and the default leaves it off", () => {
+  assert.equal(parseArgs([]).selfPlay, false);
+  assert.equal(parseArgs(["--self-play"]).selfPlay, true);
+  assert.equal(parseArgs(["--win-proof", "--self-play"]).selfPlay, true);
+});
+
+test("--self-play keeps tools/ in the shipped preset and nothing else changes", () => {
+  const swapped = selfPlayPresetText(presetsText);
+  const exclude = (text, name) => {
+    const lines = text.split("\n");
+    const start = lines.findIndex((line) => line === `name="${name}"`);
+    return lines.slice(start).find((line) => line.startsWith("exclude_filter="));
+  };
+  assert.match(exclude(presetsText, "Linux x64"), /tools\/\*/);
+  assert.doesNotMatch(exclude(swapped, "Linux x64"), /tools\//);
+  assert.equal(
+    exclude(swapped, "Linux x64"),
+    'exclude_filter="tests/*, design-v2/*, design-v3/*, perf-lab/*, assets/music_ace/*"',
+  );
+  // The other preset, and every other line, are untouched.
+  assert.equal(exclude(swapped, "Linux x64 proof"), exclude(presetsText, "Linux x64 proof"));
+  const before = presetsText.split("\n");
+  const after = swapped.split("\n");
+  assert.equal(after.length, before.length);
+  assert.equal(after.filter((line, i) => line !== before[i]).length, 1);
+  // The default path never goes through the swap: the committed shipped preset still excludes tools/.
+  assert.match(parsePresets(presetsText)["Linux x64"].fields.exclude_filter, /tools\/\*/);
+  assert.throws(() => selfPlayPresetText("[preset.9]\nname=\"other\"\n"), /missing/);
+});
+
+test("the self-play package is named apart from the shipped one", () => {
+  assert.equal(packageName("abc1234", false, true), "scrapkeep-core-loop-abc1234-selfplay");
+  assert.equal(packageName("abc1234", true, true), "scrapkeep-core-loop-abc1234-dirty-selfplay");
+  assert.equal(packageName("abc1234"), "scrapkeep-core-loop-abc1234");
+  assert.ok(tarArgs("/a/b/20261005T051752", "abc1234", false, true)[1].endsWith("abc1234-selfplay.tar.gz"));
+  assert.deepEqual(tarArgs("/a/b/s", "abc1234"), tarArgs("/a/b/s", "abc1234", false, false));
 });

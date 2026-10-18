@@ -22,6 +22,13 @@ import { fileURLToPath } from "node:url";
 // MangoHud's CSV and summary.json. --log=<csv> skips the launch and reads an existing log.
 // --p99=<ms> (default 16.7) and --hitch=<ms> (default 33) set the budget; --keep-vsync leaves the
 // player's vsync on, --hud shows the overlay. Arguments after -- go to the game.
+// --self-play launches the game with its bot (src/game.gd --self-play; the pack must carry tools/:
+// npm run sketch:export -- --self-play) and any --self-play-<name>=<v> flag goes with it. The game's
+// "self-play:" lines are kept in self-play.log and summary.json (stage entries as seconds since
+// launch and in the MangoHud log's own time, with the worst frame from 1 s before to 5 s after
+// each). Keep the log alive to its end: --self-play-min=<warmup + seconds + 10>.
+// A self-play game that exits non-zero (1 run ended early, 2 no tools/ in the pack, 3 stalled)
+// fails the check with exit 1, or 2 for code 2.
 // Exit 0 inside budget, 1 over it, 2 when nothing was measured. Never downloads anything.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -42,6 +49,8 @@ export function parseArgs(argv) {
     hitch: BUDGET.hitchMs,
     keepVsync: false,
     hud: false,
+    selfPlay: false,
+    selfPlayArgs: [],
     gameArgs: [],
   };
   const number = (arg, name) => {
@@ -64,10 +73,55 @@ export function parseArgs(argv) {
     else if (arg.startsWith("--hitch=")) args.hitch = number(arg, "hitch");
     else if (arg === "--keep-vsync") args.keepVsync = true;
     else if (arg === "--hud") args.hud = true;
+    else if (arg === "--self-play") args.selfPlay = true;
+    else if (/^--self-play-[a-z]+=/.test(arg)) args.selfPlayArgs.push(arg);
     else throw new FrametimeError("unknown argument: " + arg);
   }
   if (args.seconds === 0) throw new FrametimeError("--seconds must be above 0");
+  if (args.selfPlayArgs.length > 0 && !args.selfPlay)
+    throw new FrametimeError("--self-play-<name>=<v> flags need --self-play");
   return args;
+}
+
+// The game's argv: the plain list after -- by default (unchanged); with --self-play the flag and
+// its options follow a leading -- so the game reads them as user args.
+export function gameArgv(args) {
+  if (!args.selfPlay) return args.gameArgs;
+  return ["--", "--self-play", ...args.selfPlayArgs, ...args.gameArgs];
+}
+
+// The "self-play:" lines of a game's stdout, as stage entries (seconds since launch) plus the
+// stall line if any. at is the MangoHud log's own time: launch seconds less the warmup.
+export function parseSelfPlay(text, warmup = 0) {
+  const lines = text.split(/\r?\n/).filter((line) => line.startsWith("self-play:"));
+  const stages = [];
+  let stalled = null;
+  for (const line of lines) {
+    const entered = line.match(/^self-play: stage (\d+) entered( \(retry\))? at ([\d.]+) s/);
+    if (entered)
+      stages.push({
+        stage: Number(entered[1]),
+        retry: Boolean(entered[2]),
+        launch_s: Number(entered[3]),
+        log_s: round(Number(entered[3]) - warmup),
+      });
+    const stall = line.match(/^self-play: stalled at stage (\d+) (\w+) at ([\d.]+) s pos (\S+)/);
+    if (stall)
+      stalled = { stage: Number(stall[1]), what: stall[2], launch_s: Number(stall[3]), pos: stall[4] };
+  }
+  return { lines, stages, stalled };
+}
+
+// The worst frame (ms) from before s before to after s after a stage entry, on the log's clock.
+export function worstFrameNear(frames, logS, before = 1, after = 5) {
+  let elapsed = 0;
+  let worst = 0;
+  for (const ms of frames) {
+    const at = elapsed / 1000;
+    if (at >= logS - before && at <= logS + after && ms > worst) worst = ms;
+    elapsed += ms;
+  }
+  return round(worst);
 }
 
 export function findOnPath(name, envPath = process.env.PATH ?? "") {
@@ -247,18 +301,41 @@ function stamp(date = new Date()) {
     .replace(/-\d{3}Z$/, "Z");
 }
 
-function analyse(logFile, args, outDir) {
-  const summary = summarize(parseLog(readFileSync(logFile, "utf8")), {
+function analyse(logFile, args, outDir, selfPlay = null) {
+  const frames = parseLog(readFileSync(logFile, "utf8"));
+  const summary = summarize(frames, {
     p99Ms: args.p99,
     hitchMs: args.hitch,
   });
+  let extra = {};
+  const notes = [];
+  if (selfPlay) {
+    const stages = selfPlay.stages.map((entry) => ({
+      ...entry,
+      worst_frame_ms: worstFrameNear(frames, entry.log_s),
+    }));
+    extra = {
+      self_play: { exit: selfPlay.exit, stages, stalled: selfPlay.stalled, lines: selfPlay.lines },
+    };
+    for (const entry of stages)
+      notes.push(
+        `self-play: stage ${entry.stage}${entry.retry ? " (retry)" : ""} entered at ${entry.launch_s} s (log ${entry.log_s} s), worst frame ${entry.worst_frame_ms} ms from 1 s before to 5 s after`,
+      );
+    if (selfPlay.stalled)
+      notes.push(
+        `self-play: STALLED at stage ${selfPlay.stalled.stage} ${selfPlay.stalled.what} at ${selfPlay.stalled.launch_s} s pos ${selfPlay.stalled.pos}`,
+      );
+    notes.push(`self-play: game exit ${selfPlay.exit}`);
+  }
   mkdirSync(outDir, { recursive: true });
   writeFileSync(
     path.join(outDir, "summary.json"),
-    JSON.stringify({ log: logFile, ...summary }, null, 2) + "\n",
+    JSON.stringify({ log: logFile, ...summary, ...extra }, null, 2) + "\n",
   );
   console.log(report(summary, logFile));
+  for (const note of notes) console.log(note);
   console.log("Summary: " + path.join(outDir, "summary.json"));
+  if (selfPlay && selfPlay.exit !== 0) return selfPlay.exit === 2 ? 2 : 1;
   return summary.pass ? 0 : 1;
 }
 
@@ -285,20 +362,32 @@ export function main(
   console.log(
     `Logging starts ${args.warmup} s after launch and runs ${args.seconds} s. Play normally for about ${minutes} min, then quit.`,
   );
-  const run = spawnSync(mangohud, [target, ...args.gameArgs], {
-    stdio: "inherit",
-    env: { ...env, MANGOHUD_CONFIG: config },
-  });
+  // A self-play game's stdout is read for its "self-play:" lines and echoed; otherwise it is inherited.
+  const launch = { env: { ...env, MANGOHUD_CONFIG: config } };
+  const run = spawnSync(
+    mangohud,
+    [target, ...gameArgv(args)],
+    args.selfPlay
+      ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
+      : { ...launch, stdio: "inherit" },
+  );
   if (run.error)
     throw new FrametimeError("could not launch: " + run.error.message);
+  let selfPlay = null;
+  if (args.selfPlay) {
+    process.stdout.write(run.stdout ?? "");
+    selfPlay = { ...parseSelfPlay(run.stdout ?? "", args.warmup), exit: run.status };
+    writeFileSync(path.join(outDir, "self-play.log"), selfPlay.lines.join("\n") + "\n");
+  }
   const logFile = newestLog(outDir);
   if (!logFile) {
+    if (selfPlay) console.error(`self-play: game exit ${selfPlay.exit}${selfPlay.stalled ? ", stalled at stage " + selfPlay.stalled.stage : ""}`);
     console.error(
       `MangoHud wrote no log in ${outDir}. Quit before the log ended, or MangoHud did not attach. Run again and play past ${minutes} min.`,
     );
     return 2;
   }
-  return analyse(logFile, args, outDir);
+  return analyse(logFile, args, outDir, selfPlay);
 }
 
 if (
