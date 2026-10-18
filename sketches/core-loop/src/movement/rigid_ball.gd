@@ -129,6 +129,10 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	Rules.probe_ground(_probe, state, Rules.ground_dot(state, tuning), take_speed)
 	Rules.grip_contact(state, tuning, body_state, take_speed)
 
+	var spin = Rules.carve_spin(state, tuning)
+	if spin != null:
+		body_state.angular_velocity = spin
+
 	var wish := Vector3.ZERO
 	if not Augments.holding(kit):
 		wish = Rules.wish_direction(intent, drive_basis, state)

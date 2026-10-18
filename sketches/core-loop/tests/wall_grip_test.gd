@@ -18,6 +18,9 @@ const BallState := preload("res://src/movement/ball_state.gd")
 #   slow        grip on at 15 m/s, under the fast tier: never grips, so never ground past 63 deg.
 #   land        grip on, dropped in the air beside the wall moving along it: the touch grips
 #               (Tally). Sable's vault, like a falling slam, keeps the faces met in the air.
+#   holds       a carve keeps its speed (Speed holds): on the gripped wall the ball bleeds rolling
+#               energy no faster than rolling on the floor (floor_run), so a carve line is never
+#               slower for its wall time. Before the fix the wall's contact scrubbed it into slip.
 #   bank        a stick press mid-climb starts no speed-bank roll (the bank reads the wall as air):
 #               drive alone adds a few m/s there; the roll start added 17.5 before the fix.
 #   hull        a boss hull (an AnimatableBody3D in the enemy group) is never a wall: Kest
@@ -93,6 +96,7 @@ func _initialize() -> void:
 		{"name": "slow", "grip": "on", "velocity": Vector3(15.0, 0.0, 0.0)},
 		{"name": "land", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": WALL_AIR, "class": "tally"},
 		{"name": "land_vault", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": WALL_AIR},
+		{"name": "floor_run", "grip": "on", "velocity": Vector3(0.0, 0.0, 26.0), "class": "tally"},
 		{"name": "hull", "grip": "on", "velocity": Vector3(3.0, 0.0, 26.0), "at": HULL_AIR, "class": "tally"},
 		{"name": "head_on", "grip": "on", "velocity": Vector3(26.0, 0.0, 0.0), "at": WALL_AIR},
 	]
@@ -162,6 +166,15 @@ func _sample() -> void:
 	var state = _player.state
 	var at: Vector3 = _player.ball_position()
 	var on_wall := at.x > ON_WALL_X and at.y > ON_WALL_Y
+	# A rolling ball's energy per unit mass, its spin included: 1/2 v^2 + 1/5 v^2 + g y.
+	var energy: float = 0.7 * state.velocity.length_squared() + _tuning.f("gravity") * at.y
+	var holding: bool = state.grounded and (state.contact_normal.y < 0.1 if _run["name"] == "land" else _ticks > 5)
+	if _run["name"] in ["land", "floor_run"] and holding:
+		if not _run.has("e_from"):
+			_run["e_from"] = energy
+			_run["e_from_tick"] = _ticks
+		_run["e_to"] = energy
+		_run["e_to_tick"] = _ticks
 	if _run["name"] == "hull":
 		on_wall = at.x > HULL_X - Tuning.RADIUS - 0.25
 	_run["top_speed"] = maxf(_run["top_speed"], state.velocity.length())
@@ -257,6 +270,12 @@ func _finish() -> void:
 		and land["wall_normal_x"] < -0.9,
 		"dropped beside the wall at 26 m/s along it: %d of %d grip-speed wall ticks grounded, face normal x %.2f" % [
 		land["wall_grounded"], land_gripped, land["wall_normal_x"]])
+	var floor_run: Dictionary = _runs["floor_run"]
+	var wall_loss := _loss_rate(land)
+	var floor_loss := _loss_rate(floor_run)
+	_report("holds", wall_loss <= floor_loss * 1.25 + 0.05,
+		"a carve on the wall bleeds %.2f J/kg a tick, rolling on the floor %.2f (at most 1.25x; 2.26 J/kg before the fix)" % [
+		wall_loss, floor_loss])
 	var vault: Dictionary = _runs["land_vault"]
 	_report("land_vault", vault["wall"] >= 10 and vault["wall_grounded"] == 0,
 		"Sable dropped beside the wall: %d wall ticks, %d grounded (her vault kick keeps faces met in the air)" % [
@@ -274,6 +293,11 @@ func _finish() -> void:
 		"top speed %.2f with grip vs %.2f without, launch %.2f" % [carve["top_speed"], off["top_speed"], launch])
 	print("wall_grip_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
+
+
+func _loss_rate(run: Dictionary) -> float:
+	var ticks := int(run.get("e_to_tick", 0)) - int(run.get("e_from_tick", 0))
+	return (float(run["e_from"]) - float(run["e_to"])) / ticks if ticks > 20 else INF
 
 
 func _rule_table() -> void:
