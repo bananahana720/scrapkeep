@@ -234,7 +234,8 @@ func knock_prop() -> Node3D:
 	var ball_hit := Callable()
 	if fleet != null and fleet.combat != null:
 		ball_hit = Callable(fleet.combat, "_on_player_hit").bind(ROOF_BALL_DAMAGE, ROOF_SHOVE, kind)
-	fall.configure("prop_roof_%d" % get_instance_id(), Vector3(at.x, ground_y, at.z), ROOF_RADIUS, ROOF_WARN,
+	var fall_key := "prop_roof_%d" % get_instance_id()
+	fall.configure(fall_key, Vector3(at.x, ground_y, at.z), ROOF_RADIUS, ROOF_WARN,
 		terrain,
 		_player(), ball_hit, ROOF_DAMAGE * _threat, slab)
 	fall.voice = Roster.voiced(String(Roster.faction(faction)["voice"]), _motif())

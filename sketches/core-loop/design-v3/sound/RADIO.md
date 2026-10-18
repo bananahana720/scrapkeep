@@ -12,7 +12,7 @@ The house band follows you live by default, and everything you find out in the w
 
 | Control | Keyboard | Pad | What it does |
 | --- | --- | --- | --- |
-| Next station | `.` | D-pad down | Turns the dial one station on, Radio Off included |
+| Next station | `.` | none yet (D-pad down fires the active) | Turns the dial one station on, Radio Off included |
 | Previous station | `,` | (none) | Turns the dial back one station |
 | Skip track | `/` | none yet (L3 is a rebind target) | Next track on this station or mixtape |
 | Pin track | `;` | (mixtape page) | The track on air plays through bosses and Wardens, until a boss's final phase |

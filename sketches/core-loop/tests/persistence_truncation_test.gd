@@ -42,6 +42,18 @@ func _expect_kept(dir: String, file: String, original: String, label: String) ->
 	for name in DirAccess.get_files_at(dir):
 		_check(not name.ends_with(".tmp"), "%s: no leftover temp file (%s)" % [label, name])
 
+# A directory nothing can be renamed in, so a load cannot move its file aside. Mode 555 does
+# it for a normal user; root ignores the mode, so the immutable flag does it there (chattr
+# refuses for a normal user and the mode stands alone).
+func _lock_dir(real: String) -> void:
+	OS.execute("chmod", ["555", real])
+	OS.execute("chattr", ["+i", real])
+
+
+func _unlock_dir(real: String) -> void:
+	OS.execute("chattr", ["-i", real])
+	OS.execute("chmod", ["755", real])
+
 var _case_n := 0
 
 
@@ -199,9 +211,9 @@ func _unmovable_file_survives() -> void:
 		var dir := _fresh_dir(c["file"], "{corrupt")
 		var path := dir.path_join(c["file"])
 		var real := ProjectSettings.globalize_path(dir)
-		OS.execute("chmod", ["555", real])
+		_lock_dir(real)
 		var store = c["make"].call(dir)
-		OS.execute("chmod", ["755", real])
+		_unlock_dir(real)
 		c["save"].call(store)
 		_check(FileAccess.get_file_as_string(path) == "{corrupt", "%s: a file that could not be moved aside is not overwritten" % c["label"])
 		_check(not String(c["error"].call(store)).is_empty(), "%s: the refused save is recorded" % c["label"])
@@ -230,9 +242,9 @@ func _healthy_reload_unblocks() -> void:
 		var dir := _fresh_dir(h["file"], "{corrupt")
 		var path := dir.path_join(h["file"])
 		var real := ProjectSettings.globalize_path(dir)
-		OS.execute("chmod", ["555", real])
+		_lock_dir(real)
 		var store = c["make"].call(dir)
-		OS.execute("chmod", ["755", real])
+		_unlock_dir(real)
 		_write(path, h["healthy"])
 		h["reload"].call(store)
 		c["save"].call(store)
@@ -247,9 +259,9 @@ func _blocked_save_after_merge() -> void:
 	var profile = UiProfile.new(dir)
 	_write(path, "{corrupt")
 	var real := ProjectSettings.globalize_path(dir)
-	OS.execute("chmod", ["555", real])
+	_lock_dir(real)
 	profile.mark_discovered("x")
-	OS.execute("chmod", ["755", real])
+	_unlock_dir(real)
 	_check(FileAccess.get_file_as_string(path) == "{corrupt", "ui_profile: the unreadable file is untouched by a save that finds it mid-merge")
 	_check(profile.last_error.contains("could not be moved aside"), "ui_profile: a save blocked by its merge records the block (got \"%s\")" % profile.last_error)
 
