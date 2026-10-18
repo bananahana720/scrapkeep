@@ -287,10 +287,51 @@ func _game_builds_rooms(label: String) -> void:
 		_t.check("%s: %s sits on the ground" % [label, id], absf(room.global_position.y - ground) < 0.5, "%.2f vs %.2f" % [room.global_position.y, ground])
 		var log_label: Label3D = room.get_node_or_null("RoomLog")
 		_t.check("%s: %s hangs its crew-log line" % [label, id], log_label != null and log_label.text.contains(String(Secrets.ROOMS[id]["log"])))
+		_room_reads(label, id, room)
 		_t.check("%s: %s is sealed by its cracked wall" % [label, id], room.wall != null and room.wall.visible and not room.done)
 		game.world.activities._break_wall(room)
 		_t.check("%s: %s opens when its wall breaks" % [label, id], room.done and not room.wall.visible)
+	for s in game.world.activities.sites:
+		if s.id == "cracked_cache" and not String(s.name).begins_with("Secret_"):
+			_t.check("%s: an ordinary cracked cache carries no room tell" % label,
+				s.wall == null or (s.wall.get_node_or_null("RoomTally") == null and s.wall.get_node_or_null("RoomGlove") == null))
 	if label == "sitting":
 		_t.check("sitting: the profile file is untouched", FileAccess.get_file_as_bytes(profile_path) == before and before.size() > 0, str(before.size()))
 	game.queue_free()
 	await process_frame
+
+
+# The red team's read on 89bc14ae: the log line washed out on the fired wall's sand glow. It now sits on
+# its own dark board above the ball's eye line, fits inside it, and the room carries its two tells.
+func _room_reads(label: String, id: String, room) -> void:
+	var log_label: Label3D = room.get_node_or_null("RoomLog")
+	var board: Node3D = room.get_node_or_null("RoomBoard")
+	if log_label == null or board == null:
+		_t.check("%s: %s has its crew board" % [label, id], false)
+		return
+	var bm: BoxMesh = (board as MeshInstance3D).mesh
+	var plate: Color = (board as MeshInstance3D).material_override.albedo_color
+	var ratio := _contrast(log_label.modulate, plate)
+	_t.check("%s: %s log contrast on its board >= 7:1" % [label, id], ratio >= 7.0, "%.1f:1" % ratio)
+	_t.check("%s: %s log stands in front of its board" % [label, id], log_label.position.z > board.position.z + bm.size.z * 0.5)
+	var box: AABB = log_label.get_aabb()
+	_t.check("%s: %s log fits its board" % [label, id], box.size.x > 0.0 and box.size.x <= bm.size.x and box.size.y <= bm.size.y,
+		"%.2f x %.2f m on %.2f x %.2f" % [box.size.x, box.size.y, bm.size.x, bm.size.y])
+	var low := board.position.y - bm.size.y * 0.5
+	_t.check("%s: %s board clears the ball's eye line" % [label, id], low >= 3.6 and board.position.y + bm.size.y * 0.5 <= 6.0, "%.2f m" % low)
+	var tally: Node3D = room.wall.get_node_or_null("RoomTally")
+	_t.check("%s: %s has a chalk tally on its face" % [label, id], tally != null and tally.get_child_count() == 5 and tally.position.z > 0.5)
+	var glove: Node3D = room.wall.get_node_or_null("RoomGlove")
+	_t.check("%s: %s hangs a glove on its face" % [label, id], glove != null and glove.position.z > 0.5 and glove.get_child_count() == 8)
+
+
+# WCAG relative-luminance contrast between two colours.
+func _contrast(a: Color, b: Color) -> float:
+	var la := _luma(a)
+	var lb := _luma(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+func _luma(c: Color) -> float:
+	var lin := func(v: float) -> float: return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
+	return 0.2126 * lin.call(c.r) + 0.7152 * lin.call(c.g) + 0.0722 * lin.call(c.b)

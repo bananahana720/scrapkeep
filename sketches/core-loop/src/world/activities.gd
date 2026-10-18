@@ -134,10 +134,21 @@ const SLAM_REACH := 7.0
 const SLAM_MIN_PER_CRUISE := 1.0
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
-# The first-win room's log line on the back wall: eye height for the ball, and a wrap width that keeps
-# it inside the wall's 12 m at Label3D's 0.005 m per pixel.
-const ROOM_LOG_HEIGHT := 3.4
-const ROOM_LOG_WIDTH_PX := 1800.0
+# The first-win room's log line on the back wall, on a dark crew board of its own: the fired wall
+# glows sand (CACHE_FIRED_GLOW), so text straight on it washes out. The board sits above the ball's
+# eye line, clear of the centre prompts and the beacon's beam, and its wrap keeps it inside the
+# board at Label3D's 0.005 m per pixel.
+const ROOM_LOG_HEIGHT := 4.5
+const ROOM_LOG_WIDTH_PX := 1240.0
+const ROOM_BOARD_SIZE := Vector2(7.0, 1.5)
+# The room's tell from outside, for a sharp eye only: a crew chalk tally on the cracked face and one
+# work glove hung on a nail beside it (the crew were the Mind's hands, worlds.gd). An ordinary cracked
+# cache has neither. Both sit on the face, not the ground: Terrain3D's drawn floor can stand above the
+# collider by more than a glove's height, which buried a glove laid on the ground.
+const ROOM_TALLY_AT := Vector3(3.6, 1.0, 0.52)
+const ROOM_TALLY_STROKE := Vector2(0.14, 1.1)
+const ROOM_GLOVE_AT := Vector3(2.3, 2.3, 0.5)
+const ROOM_GLOVE_SCALE := 1.6
 # The back wall's own glow once the wall is fired. No light: a per-site OmniLight3D freed on
 # a stage change made Godot 4.7.2 Forward+ segfault on the next boss entry (GPU only), as the
 # wave 9 cage light did.
@@ -628,21 +639,83 @@ func _build_cache(s: Site) -> void:
 	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
 
 
-# A first-win room's crew-log line (secrets.gd ROOMS), painted on the inside of its back wall, so it
-# reads only once the cracked face is down and the ball is in the room.
+# A first-win room's crew-log line (secrets.gd ROOMS), on a crew board fixed inside its back wall, so it
+# reads only once the cracked face is down and the ball is in the room; and its two quiet tells outside.
 func _hang_room_log(s: Site, room_id: String) -> void:
 	var room: Dictionary = Secrets.ROOMS[room_id]
 	s.name = "Secret_" + room_id
+	var board_z := -WALL_DEPTH + 0.06
+	var frame := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
+		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), Palette.solid(Palette.BRASS))
+	frame.name = "RoomBoardFrame"
+	var board := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
+		Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), Palette.solid(Palette.CHARCOAL))
+	board.name = "RoomBoard"
 	var label := Label3D.new()
 	label.name = "RoomLog"
 	label.text = "%s\n%s" % [String(room["name"]).to_upper(), room["log"]]
-	label.position = Vector3(0.0, ROOM_LOG_HEIGHT, -WALL_DEPTH + 0.06)
-	label.font_size = 30
-	label.outline_size = 6
+	label.position = Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.1)
+	label.font_size = 40
+	label.outline_size = 4
+	label.outline_modulate = Palette.CHARCOAL
 	label.width = ROOM_LOG_WIDTH_PX
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.modulate = Palette.SAND
+	label.modulate = Palette.LEDGER
+	label.render_priority = 2
+	label.outline_render_priority = 1
 	s.add_child(label)
+	_chalk_tally(s.wall)
+	_hang_glove(s)
+
+
+# Four strokes and the bar through them, chalked on the cracked face: the crew's count of a shift
+# that came back. It goes with the face when the wall breaks.
+func _chalk_tally(wall: Node3D) -> void:
+	var chalk := Palette.solid(Palette.LEDGER)
+	var tally := Node3D.new()
+	tally.name = "RoomTally"
+	tally.position = ROOM_TALLY_AT
+	wall.add_child(tally)
+	for k in 4:
+		var stroke := _mesh_box(tally, Vector3(ROOM_TALLY_STROKE.x, ROOM_TALLY_STROKE.y, 0.02),
+			Vector3(-0.39 + k * 0.26, 0.0, 0.0), chalk)
+		stroke.rotation.z = 0.06 * (k % 2 * 2 - 1)
+	var bar := _mesh_box(tally, Vector3(ROOM_TALLY_STROKE.x, ROOM_TALLY_STROKE.y * 1.25, 0.02), Vector3(0.0, 0.0, 0.01), chalk)
+	bar.rotation.z = -1.05
+
+
+# One work glove, fingers down on a nail in the cracked face, as the crew hang them at a shift's end: a
+# chunky leather palm, four rounded fingers, a thumb and a canvas cuff. It goes with the face.
+func _hang_glove(s: Site) -> void:
+	var glove := Node3D.new()
+	glove.name = "RoomGlove"
+	glove.position = ROOM_GLOVE_AT + Vector3(0.0, 0.0, 0.1 * ROOM_GLOVE_SCALE + 0.02)
+	glove.rotation = Vector3(-PI * 0.5, 0.0, 0.22)
+	glove.scale = Vector3.ONE * ROOM_GLOVE_SCALE
+	s.wall.add_child(glove)
+	var leather := Palette.solid(Palette.COPPER)
+	_mesh_box(glove, Vector3(0.62, 0.2, 0.66), Vector3.ZERO, leather)
+	for k in 4:
+		var finger := MeshInstance3D.new()
+		var cap := CapsuleMesh.new()
+		cap.radius = 0.08
+		cap.height = 0.5 - absf(k - 1.5) * 0.08
+		finger.mesh = cap
+		finger.material_override = leather
+		finger.rotation = Vector3(PI * 0.5, (k - 1.5) * 0.12, 0.0)
+		finger.position = Vector3(-0.23 + k * 0.155, -0.02, -0.33 - cap.height * 0.4)
+		glove.add_child(finger)
+	var thumb := MeshInstance3D.new()
+	var thumb_cap := CapsuleMesh.new()
+	thumb_cap.radius = 0.09
+	thumb_cap.height = 0.4
+	thumb.mesh = thumb_cap
+	thumb.material_override = leather
+	thumb.rotation = Vector3(PI * 0.5, -1.0, 0.0)
+	thumb.position = Vector3(-0.42, -0.02, -0.02)
+	glove.add_child(thumb)
+	_mesh_box(glove, Vector3(0.7, 0.24, 0.26), Vector3(0.0, 0.01, 0.42), Palette.solid(Palette.LEDGER))
+	_mesh_box(glove, Vector3(0.05, 0.3, 0.05), Vector3(0.0, -0.05, 0.5), Palette.solid(Palette.CHARCOAL))
 
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:
