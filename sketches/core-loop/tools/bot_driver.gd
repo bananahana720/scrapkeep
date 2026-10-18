@@ -1414,8 +1414,9 @@ func _climb_route_any(from: Vector3, to: Vector3) -> Array[Vector3]:
 	return out
 
 
-# The greybox kickers of this stage's park map whose footprint reaches the box lo..hi: each one's
-# placed transform, its half width and half length, its rise and its lip (top, at the facing end).
+# The kickers of this stage's park map whose footprint reaches the box lo..hi, greybox or seated on a
+# ride piece (the seat keeps the row's footprint and lip height): each one's placed transform, its
+# half width and half length, its rise and its lip (top, at the facing end).
 func _kickers_within(lo: Vector2, hi: Vector2) -> Array:
 	var out := []
 	var terrain = game.ctx.terrain
@@ -1426,7 +1427,7 @@ func _kickers_within(lo: Vector2, hi: Vector2) -> Array:
 	if root == null:
 		return out
 	for row in map.park.get("park_rows", []):
-		if row.get("element") != "kicker" or not String(row.get("recipe", "")).begins_with("greybox:"):
+		if row.get("element") != "kicker":
 			continue
 		var node := root.find_child("Park_" + String(row["id"]), true, false) as Node3D
 		if node == null:
