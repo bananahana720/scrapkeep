@@ -10,6 +10,7 @@ const T := preload("res://tests/support/t.gd")
 # Worlds.ENDING before the stats. Keys are pushed into the viewport for the screens; the game
 # skips its own _input in test mode, so each press is also fed to _screen_key the way the
 # game would read it. Checks:
+#   the Mind's victory screen shows its HIRED stamp and Brindle's shows none;
 #   a final win shows the page with the summary actions hidden; Space inside ENDING_HOLD
 #   neither closes it nor starts a run; Space after closes it onto RUN COMPLETE with the
 #   Mind's epitaph, still in summary, run_ended fired once;
@@ -67,6 +68,17 @@ func _run() -> void:
 	var screens = _game.screens
 	_game.events.run_ended.connect(func(_won): _ended += 1)
 	var mind: Dictionary = Worlds.BOSSES["mind"]
+
+	# The Mind's victory screen inks its stamp (HIRED, "All hands") under the title.
+	_game.run.stage = StageDefs.COUNT
+	flow._set_state(flow.VICTORY)
+	_t.check("mind victory: the stamp shows", screens._mark.visible, "hidden")
+	_t.eq("mind victory: the stamp is the row's", screens._mark.text, String(mind["stamp"]))
+	flow._set_state(flow.TITLE)
+	_game.run.stage = 1
+	flow._set_state(flow.VICTORY)
+	_t.check("brindle victory: no stamp", not screens._mark.visible, screens._mark.text)
+	flow._set_state(flow.TITLE)
 
 	# A final win, played by a human.
 	_end_at(StageDefs.COUNT, true)

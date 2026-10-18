@@ -70,6 +70,8 @@ var _victory_boss := {}
 var _veil: ColorRect
 var _content: VBoxContainer
 var _title: Label
+# A beaten boss row's "stamp" (Worlds.BOSSES), inked under the victory title: the Mind's HIRED.
+var _mark: Label
 var _body: Label
 var _stats: HBoxContainer
 var _choices: HBoxContainer
@@ -119,6 +121,10 @@ func setup(game_ref) -> void:
 	add_child(_content)
 	_title = _label(64)
 	_content.add_child(_title)
+	_mark = _label(44)
+	_mark.add_theme_color_override("font_color", Palette.AMBER)
+	_mark.visible = false
+	_content.add_child(_mark)
 	_body = _label(22)
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.custom_minimum_size = Vector2(1000.0, 0.0)
@@ -247,6 +253,7 @@ func _on_flow_changed(state: String) -> void:
 	_breath_row.visible = false
 	_refusal.text = ""
 	_title.visible = true
+	_mark.visible = false
 	_unstamp()
 	_stats.visible = true
 	_choices.visible = true
@@ -316,6 +323,10 @@ func _on_flow_changed(state: String) -> void:
 			var boss := _beaten_boss()
 			_victory_boss = boss
 			_show(String(boss.get("title", "BOSS ROUTED")), EventKinds.color("boss_defeated"), String(boss.get("victory", "")))
+			_mark.text = String(boss.get("stamp", ""))
+			if _mark.text != "":
+				_mark.visible = true
+				_stamp(_mark)
 		"summary":
 			var body := String(game.run.summary()["class"])
 			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets)
@@ -984,17 +995,19 @@ func _summary_stats() -> void:
 		_stats.add_child(row)
 
 
-func _stamp() -> void:
+func _stamp(target: Label = null) -> void:
+	if target == null:
+		target = _title
 	if game.camera != null and game.camera.reduced_motion:
 		return
 	_stamp_tween = create_tween()
 	_stamp_tween.tween_callback(func():
-		_title.pivot_offset = _title.size / 2.0
-		_title.scale = Vector2.ONE * STAMP_FROM
-		_title.rotation = deg_to_rad(STAMP_TILT))
+		target.pivot_offset = target.size / 2.0
+		target.scale = Vector2.ONE * STAMP_FROM
+		target.rotation = deg_to_rad(STAMP_TILT))
 	_stamp_tween.set_parallel(true)
-	_stamp_tween.tween_property(_title, "scale", Vector2.ONE, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_stamp_tween.tween_property(_title, "rotation", 0.0, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_stamp_tween.tween_property(target, "scale", Vector2.ONE, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_stamp_tween.tween_property(target, "rotation", 0.0, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 # The release-candidate gate launches the AppImage on a fresh profile and waits for this one
@@ -1021,8 +1034,9 @@ func _unstamp() -> void:
 	if _stamp_tween != null:
 		_stamp_tween.kill()
 		_stamp_tween = null
-	_title.scale = Vector2.ONE
-	_title.rotation = 0.0
+	for label in [_title, _mark]:
+		label.scale = Vector2.ONE
+		label.rotation = 0.0
 
 
 func _fade(show: bool) -> void:
