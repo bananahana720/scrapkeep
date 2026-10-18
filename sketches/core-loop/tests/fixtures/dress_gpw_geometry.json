@@ -102,7 +102,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
 		"type": "MeshInstance3D",
-		"vertices": "373808962"
+		"vertices": "546569517"
 	},
 	{
 		"bounds": "AABB(-32.3, -3.5, -25.68983, 64.6, 17.025589, 47.98983)",
@@ -111,7 +111,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
 		"type": "MeshInstance3D",
-		"vertices": "4216634889"
+		"vertices": "1012911189"
 	},
 	{
 		"bounds": "AABB(-28.190695, -6, -19.04338, 56.38139, 3.0000005, 38.08676)",
@@ -120,7 +120,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
 		"type": "MeshInstance3D",
-		"vertices": "3305234609"
+		"vertices": "768238811"
 	},
 	{
 		"bounds": "AABB(-26.319614, -2.7196152, -23.4, 52.63923, 4.6392307, 46.8)",
@@ -129,7 +129,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
 		"type": "MeshInstance3D",
-		"vertices": "895633411"
+		"vertices": "182841224"
 	},
 	{
 		"bounds": "AABB(-32.42, -3.08, -24.884895, 64.84, 14.907765, 49.134895)",
@@ -138,7 +138,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
 		"type": "MeshInstance3D",
-		"vertices": "1935149766"
+		"vertices": "3806650493"
 	},
 	{
 		"bounds": "AABB(-32.49, -2.56, -25.6, 64.98, 5.63, 51.2)",
@@ -147,7 +147,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
 		"type": "MeshInstance3D",
-		"vertices": "2173625637"
+		"vertices": "1255945740"
 	},
 	{
 		"bounds": "AABB(-4, -3, -4, 8, 6, 8)",
@@ -423,7 +423,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 8.6)",
 		"type": "MeshInstance3D",
-		"vertices": "3525858119"
+		"vertices": "3732163882"
 	},
 	{
 		"bounds": "AABB(-0.9, 0.41029274, -0.58, 1.8, 2.1745586, 1.1800001)",
@@ -432,7 +432,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 8.6)",
 		"type": "MeshInstance3D",
-		"vertices": "2426002249"
+		"vertices": "379779686"
 	},
 	{
 		"bounds": "AABB(-0.9, 0, -0.6, 1.8, 0.46, 1.2)",
@@ -441,7 +441,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 8.6)",
 		"type": "MeshInstance3D",
-		"vertices": "2872997689"
+		"vertices": "2810824095"
 	},
 	{
 		"bounds": "AABB(-0.91, 0.13267949, -0.61, 1.82, 2.4544363, 1.22)",
@@ -450,7 +450,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 8.6)",
 		"type": "MeshInstance3D",
-		"vertices": "536551855"
+		"vertices": "3610365522"
 	},
 	{
 		"bounds": "AABB(-0.925, 0.4175, -0.6, 1.85, 2.0793386, 0.16000003)",
@@ -459,7 +459,7 @@
 		"surfaces": 1,
 		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 8.6)",
 		"type": "MeshInstance3D",
-		"vertices": "1713277161"
+		"vertices": "1036023384"
 	},
 	{
 		"bounds": "AABB(-1.2, -0.05, -1.2, 2.4, 0.1, 2.4)",
