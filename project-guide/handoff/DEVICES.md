@@ -26,6 +26,7 @@ Environment setup for the new project's cloud sessions is in [tools/cloud/CLOUD-
 
 - **Container:** 4 vCPU, 15 GB RAM, about 30 GB disk, no GPU. It is reclaimed when idle, and `artifacts/local/` goes with it.
 - **Setup.** `.claude/hooks/session-start.sh` installs Godot 4.7.2 with Linux templates (`GODOT_BIN`), Blender 5.2.2 via the PyPI `bpy` wheel (shim `scripts/cloud/blender`), and runs `npm ci`. It takes about 70 s fresh and about 2 s cached.
+- **Context settings.** The repo `.claude/settings.json` sets `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=40`, `autoCompactEnabled: true` and `subagentPromptCacheTtl: "1h"`, the same values as the PC's `~/.claude/settings.json`, so cloud threads and their subagents compact at 40% and subagents keep a one-hour cache.
 - **Cloud can run:** sketch smoke and the gate, bot runs, the headless win-proof export, Blender recipes, and Cycles on the CPU.
 - **Cloud can't prove:** 60 fps, menu-ready time, or anything GPU. Cloud perf numbers never count.
 - **Concurrency limit.** More than 6 Godot lanes on 4 vCPU causes mass 180 s timeouts. Band sweeps can be killed for running out of memory.
