@@ -272,6 +272,8 @@ The pose JSON tables exist only for `drop_land` (`tools/blender/{rivet,sable,kes
 }
 ```
 
+**Partial tables (2026-10-18).** A table sets `"partial": true` to ship only the roles listed under `clips`; the verifier and `tests/support/pilot_clip_trigger.gd required_for` then require the seven kept clips plus those roles, not all eleven. Tarn's table lists `idle_loop` only. Sable and Cannon's idle tables wait in `src/presentation/clips/pending/` (a file there is inert: the game, verifier and tests read only `clips/<pilot>.json`) until their GLBs are exported; moving the file up is part of that export.
+
 **The pose vocabulary.** A field left out of a key means its rest value. Angles in degrees, distances in metres, in Pod space with Blender axes (+Z up, +Y forward, +X anatomical right, `PILOT-RIG.md:11`).
 
 | Field | Drives | Precedent |
@@ -290,7 +292,7 @@ The pose JSON tables exist only for `drop_land` (`tools/blender/{rivet,sable,kes
 | `root` | `[x, y, z]` location; `unlock` only | `PILOTS.md:67` |
 | `note` | one concrete observation per key, as every route records | `anim_pilot_reactions.py:30-82` |
 
-Clip keys: `end` (end frame), `loop`, `from` and `to` (anchors), `ease` (`smooth` or `linear`; `linear` for impact clips, as `wince` and `brace` are), `planted` (hands held at their grip every frame), `contact` (cast and smash clips; frame, hand and control), `preen_frames` (Kest only: the frames where the feather tip meets the beak, measured by check 17), `source`.
+Clip keys: `end` (end frame), `loop`, `from` and `to` (anchors), `ease` (`smooth` or `linear`; `linear` for impact clips, as `wince` and `brace` are; `spline` for loops that should never dead-stop: a cardinal spline through the keys, tangents from the neighbouring keys, wrapping at a loop's seam, added 2026-10-18 for the Sable, Tarn and Cannon idles), `planted` (hands held at their grip every frame), `contact` (cast and smash clips; frame, hand and control), `preen_frames` (Kest only: the frames where the feather tip meets the beak, measured by check 17), `source`.
 
 `controls` names the shell recipe's `CONTROLS` table: control name to Pod-space position. P-D's shell units write it; PE-0 defines the format. Since PE-0b (2026-10-11) the builder and check 14 read each control from one source, the pilot's shipped shell GLB (`roster.json` `shell`), by walking its `Control.*` and `LapBar.*` nodes up to `Pod` (`tools/blender/pilot_arm.py`). A table's hand-copied `control_points` block is ignored, never trusted. A control the shell lacks resolves to the grips `(±0.32, 0.40, 0.05)` (`anim_tarn.py:19`) and prints `PILOT_CLIPS_STANDIN <pilot> <control>`; the cast clip is re-targeted when P-D ships that control.
 
