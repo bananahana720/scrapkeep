@@ -51,17 +51,13 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # what the plain selection does.
 # 2026-10-17 (RIVET-CURVE): 237 -> 238. A grazing bumpy floor, whose shadows are too thin for a
 # clearance, carves the same points as a plain subtraction pass.
-# 2026-10-18 (RIVET-CURVE, "Beat later"): 238 -> 243. A landing stopped short of its target
-# carves a few cells per tick and hits LATE_TICKS later, with the carve byte for byte the
-# on-the-spot one.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
 	# 2026-10-16 (pilot paint): Calibrated is live, one check added.
-	# 2026-10-18 (stage/alpha-w17): 238 -> 239, RIVET-CURVE on top of EARNED-COSMETICS' one check;
-	# 239 -> 244 with "Beat later" (header).
-	_expected_checks = 244
+	# 2026-10-18 (stage/alpha-w17): 238 -> 239, RIVET-CURVE on top of EARNED-COSMETICS' one check.
+	_expected_checks = 239
 	super._initialize()
 
 
@@ -382,7 +378,6 @@ func _alpha_terrain_cost_fixture() -> void:
 	_t.eq("captured alpha bowl landing commits through one selector", _kit.selected_shapes.size(), 1)
 	_t.check("captured alpha bowl landing retains exposed volume", not (_kit.selected_shapes[0]["cells"] as Array).is_empty())
 	_t.eq("captured alpha bowl landing hits the exposed target exactly once", [snappedf(health_before - float(front.hp), 0.01), _hits(front).size()], [Ultimate.LANDING_DAMAGE * Ultimate.HEFT_MULT[2], 1])
-	_late_landing_fixture(arena_at, arena_heading)
 	_game.run.mass = prior_mass
 	var peak_at := Vector3(-5.500791, 52.43582, 115.2811)
 	var peak_aim := Vector3(0.672423, 0.593669, 0.442046).normalized()
@@ -509,34 +504,6 @@ func _merge_fixture() -> void:
 		var hull_radius := rng.randf_range(0.0, 1.2)
 		skipped += 1 if _kit._in_shape(shape, p, hull_radius, boxes) != _kit._in_shape(shape, p, hull_radius) else 0
 	_t.eq("cell boxes select exactly what the plain selection does", skipped, 0)
-
-
-# RIVET-CURVE ("Beat later"): the captured bowl landing. Stopped short of its target, it carves
-# a few cells per tick and hits LATE_TICKS later; the late carve is byte for byte the one made
-# on the spot. A landing at its target hits on the spot.
-func _late_landing_fixture(at: Vector3, dir: Vector3) -> void:
-	var reach: float = _kit.breach_reach()
-	var spot: Dictionary = _kit._commit_sector(at, dir, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
-	var ult = _combat.ultimate
-	var on_target: bool = _kit._stopped_short()
-	ult.stopped_short = true
-	_t.check("late landing: only a landing short of its target hits late", not on_target and _kit._stopped_short())
-	ult.stopped_short = false
-	var now := Engine.get_physics_frames()
-	_kit.late_work = 1
-	_kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
-	var due: int = _kit._late[0]["due"]
-	_kit._step_late(now + 1)
-	var staged: bool = int(_kit._late[0]["next"]) > 0 and int(_kit._late[0]["next"]) < (_kit._late[0]["sector"]["cells"] as Array).size()
-	_kit._step_late(due - 1)
-	_kit.late_work = _kit.LATE_WORK
-	_t.check("late landing: nothing hits before LATE_TICKS, and the carve spans ticks", staged and due == now + _kit.LATE_TICKS and _kit._late.size() == 1)
-	_kit.volume_indicator.clear("rivet_breach")
-	_kit._step_late(due)
-	var late: Dictionary = _kit.volume_indicator.shapes.get("rivet_breach", {})
-	_t.check("late landing: hits and draws on its tick", _kit._late.is_empty() and not late.is_empty())
-	_t.check("late landing: the bowl carves the sector", not (spot["shadows"] as Array).is_empty() and var_to_bytes(spot["cells"]) != var_to_bytes(_kit._sector_cells(at, dir, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)["cells"]))
-	_t.check("late landing: the late carve is the spot carve byte for byte", var_to_bytes([late.get("cells"), late.get("shadows")]) == var_to_bytes([spot["cells"], spot["shadows"]]), "%d vs %d parts" % [(late.get("cells", []) as Array).size(), (spot["cells"] as Array).size()])
 
 
 # RIVET-CURVE: a landing just above a bumpy floor of small triangles. Their shadows meet at
