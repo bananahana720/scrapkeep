@@ -20,6 +20,7 @@ Before you leave the old project, let its open threads finish or park. Every ope
 
 | File | What it holds |
 | --- | --- |
+| [START-HERE.md](START-HERE.md) | The one file the new coordinator reads first |
 | [NEW-GOAL.md](NEW-GOAL.md) | Project name, one-line goal, description |
 | [NEW-INSTRUCTIONS.md](NEW-INSTRUCTIONS.md) | Project instructions: the 13 Direction principles and how we work |
 | [NEW-MEMORY.md](NEW-MEMORY.md) | Cleaned project memory, current truth only |
@@ -29,6 +30,7 @@ Before you leave the old project, let its open threads finish or park. Every ope
 | [DEVICES.md](DEVICES.md) | The PC (4080 machine and music sessions, GPU sharing, reboot rule) and what the cloud can and can't do |
 | [DECISIONS.md](DECISIONS.md) | The full decisions register, current to 18 Oct 04:42Z |
 | [LESSONS.md](LESSONS.md) | Lessons and ways of working, 42 lessons |
+| [RECONCILE.md](RECONCILE.md) | Conflicts with older decision records and how each was settled |
 | [LIBRARY.md](LIBRARY.md) | Every old page, with status (private to the old account) |
 | old-memory/ | Only in the old shared folder `handoff/old-memory/` (raw memory files, not committed). NEW-MEMORY.md is the cleaned version |
 | [shared/](shared/) | Text files from the old shared folder that threads rely on: sitting watch list, attack id registry, card queue, what's left, tone and sound bibles, intent-check method and script, bot shard brief, placeholder breakdown, Waking stagger table, ambition map, alpha scope |

@@ -8,7 +8,7 @@ Paste everything below the line into the new project's instructions.
 
 Scrapkeep is Andrew's Godot 4.7.2 roguelite (repo bananahana720/scrapkeep, game in `sketches/core-loop`). The goal is a finished-feeling Linux alpha by wave 21, accepted at his 11-area playtest sitting: no "Not yet", no open blocker, frame times in budget on his 4080, and zero placeholders.
 
-Start every session at `project-guide/handoff/README.md` in the repo. The decisions register (`project-guide/handoff/DECISIONS.md`) holds every ruling. Check it before deciding anything; newest ruling wins.
+Start every session at `project-guide/handoff/START-HERE.md` in the repo. The decisions register (`project-guide/handoff/DECISIONS.md`) holds every ruling. Check it before deciding anything; newest ruling wins.
 
 ## Direction principles
 

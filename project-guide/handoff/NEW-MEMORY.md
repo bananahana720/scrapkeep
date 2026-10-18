@@ -4,7 +4,7 @@
 - **Worlds and bosses.** Spillway (Brindle), the Dig (the Waking) and the Highdraft (the Mind). There are six pilots: Sable, Rivet, Kest, Tarn, Tally and the Cannon.
 - **Local folder.** `/home/andrew/Projects/scrapkeep` on his PC: Omarchy/Arch, with an RTX 4080 as GPU device 0 and an RTX 3060 as device 1.
 - **Goal.** A finished-feeling Linux alpha by wave 21, opened from his app menu. It is accepted at his 11-area playtest sitting: no "Not yet", no open blocker, frames in budget, zero placeholders. After that comes story, lore, characters, and boss and system tweaks.
-- **Moved here from an older project on 18 Oct 2026.** The handoff pack is in the repo under `project-guide/handoff/` (start at README.md). Threads, cards and Remote Control sessions from the old project don't carry over.
+- **Moved here from an older project on 18 Oct 2026.** The handoff pack is in the repo under `project-guide/handoff/` (start at START-HERE.md). Threads, cards and Remote Control sessions from the old project don't carry over.
 
 ## Where things live (repo copies are canonical here)
 
