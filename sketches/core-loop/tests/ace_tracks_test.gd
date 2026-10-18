@@ -89,11 +89,8 @@ func _physics_process(_delta: float) -> bool:
 		_check("boss entry schedules the pivot", audio.ace != null and audio.ace.mode == "warden" and audio.ace.section == "pivot")
 	_game.events.run_ended.emit(true)
 	audio._flush_flow()
-	_selected(audio, _theme(audio.summary_row(true)))
-	if audio.summary_row(true) == "summary":
-		_check("won summary starts its cadence", audio.ace != null and audio.ace.section == "return")
-	else:
-		_check("won summary starts theme C from calm", audio.ace != null and audio.ace.section == "calm")
+	_selected(audio, "summary")
+	_check("won summary starts its cadence", audio.ace != null and audio.ace.section == "return")
 	_game.events.run_ended.emit(false)
 	audio._flush_flow()
 	_selected(audio, "summary")

@@ -196,9 +196,6 @@ var ace_manifest := ""
 # The title's music row: "title" until an opening names its theme (title_theme).
 var title_row := "title"
 var _on_title := false
-# The row a won run's summary and the ending play: theme C, the show opening (Andrew, "Won run
-# and ending", 17 Oct). A lost run, or a pack not on disk, keeps the summary row.
-const WON_SUMMARY_ROW := "title-c"
 # The camp page is open on the title (screens.gd): the camp pick plays while it is.
 var camp_open := false
 # The manifest the zone rows last selected. A caller that sets ace_manifest away from it
@@ -1178,10 +1175,6 @@ func title_now() -> String:
 	if title_row == "title" and title_available.call("title-a"):
 		return "title-a"
 	return title_row
-
-
-func summary_row(won: bool) -> String:
-	return WON_SUMMARY_ROW if won and title_available.call(WON_SUMMARY_ROW) else "summary"
 
 
 # screens.gd says when the camp page opens and closes: the camp take plays while it is open,
@@ -3301,14 +3294,14 @@ func _flush_flow() -> void:
 					engine.schedule_cadence(start + Harmony.BAR)
 					engine.schedule_mode(start + Harmony.BAR * 3, MusicEngine.IDLE)
 					engine.menu_theme("summary", true, start + Harmony.BAR * 3)
-					_ace_named(summary_row(true), start + Harmony.BAR * 3, false, true)
+					_ace_named("summary", start + Harmony.BAR * 3, false, true)
 				else:
 					# on_beat returns -1 until sound is ready, so this is the guarded handoff for both outcomes.
 					var at := engine.next_beat()
 					engine.schedule_mode(at, MusicEngine.IDLE)
 					if sound_ready:
 						engine.menu_theme("summary", won, at)
-						_ace_named(summary_row(won), at, false, won)
+						_ace_named("summary", at, false, won)
 			"dead":
 				_radio_drop("flow")
 				_ace_end()

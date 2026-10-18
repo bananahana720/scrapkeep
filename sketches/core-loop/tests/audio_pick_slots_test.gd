@@ -10,9 +10,9 @@ const T := preload("res://tests/support/t.gd")
 # Where the sound bible's picks play (SOUND-INT picks, music thread 17 Oct): each world's
 # roaming take on its zone packs' shelf (cut into the packs, RENDERS.md), never inside a
 # Warden's arena and crossing into it on the drums alone; each boss's picked
-# theme opening its fight; title A until an opening names its theme; theme C on a won run's
-# summary and the ending, the jazz-club summary on a loss; the camp take while the camp is
-# open. Every pick not on disk falls back to the older pack. The packs are stood in by
+# theme opening its fight; title A until an opening names its theme; the summary pack in won
+# mode on a won run and the ending (PR #12 rebuilds it to open on theme C), lost mode on a
+# loss; the camp take while the camp is open. Every pick not on disk falls back to the older pack. The packs are stood in by
 # title_available, so the slots are checked everywhere; the pivot is heard only where the
 # Oggs are.
 
@@ -62,16 +62,12 @@ func _title() -> void:
 
 func _summary() -> void:
 	var c := _rig({"title-c": true})
-	_t.eq("the won-summary slot is theme C", Audio.WON_SUMMARY_ROW, "title-c")
-	_t.eq("a won run's summary plays theme C", c.summary_row(true), "title-c")
-	_t.eq("a lost run keeps the jazz-club summary", c.summary_row(false), "summary")
-	_t.eq("theme C not on disk: the won summary keeps its pack", _rig({}).summary_row(true), "summary")
 	c.get_meta("events").run_ended.emit(false)
 	c._flush_flow()
 	_t.check("a lost run starts the summary as lost", _last(c) == ["summary", false], str(c.named))
 	c.get_meta("events").run_ended.emit(true)
 	c._flush_flow()
-	_t.check("a won run starts theme C", _last(c) == ["title-c", true], str(c.named))
+	_t.check("a won run starts the summary as won (its pack opens on theme C)", _last(c) == ["summary", true], str(c.named))
 
 
 func _camp() -> void:
