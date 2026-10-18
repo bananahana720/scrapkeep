@@ -62,10 +62,11 @@ static func downforce(state, tuning) -> Vector3:
 	return -n * Tuning.GRIP_DOWNFORCE * state.velocity.length() * weight
 
 
-# The spin a carving ball rolls along its face with, or null when it isn't carving.
-# Matching it keeps the contact patch from scrubbing the ball's speed into slip (Speed holds).
+# The spin a gripping ball rolls along a wall with, or null off one. Matching it keeps the wall's
+# contact from scrubbing the ball's speed into slip (Speed holds); floors and banks, ground
+# without grip, keep the contact's own spin.
 static func carve_spin(state, tuning):
-	if not state.carving or not gripping(state, tuning):
+	if not state.grounded or not gripping(state, tuning) or state.contact_normal.y > Tuning.MAX_SLOPE_DOT:
 		return null
 	return state.contact_normal.cross(state.velocity) / Tuning.RADIUS
 
