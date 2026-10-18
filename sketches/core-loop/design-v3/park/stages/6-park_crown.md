@@ -576,6 +576,16 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
 
 **Society rows.** The net-weavers own the gust lips, the hoodoo knots, the needle hammock and the Gauntlet net. The Fleet's mooring crew owns the Signal Butte, the mooring deck, the Gauntlet's west butte and shelf, and the toe lip. Their lines are in section 12. Built works got their builders too: the weavers cut the thirteen line kickers (`kick_*`), the bajada lip and the meander cross lip; the Fleet poured the crown ramp and the toe yard and holds the east Gauntlet butte. Natural landforms (washes, buttes, the bowl) stay `none`. That takes the crown's society share over hand-built rows from 5% to 65%.
 
+**One skill per park: everything at once** (Andrew's Q4 answer, 22:12Z 17 October: "the crown tests everything at once"). The landforms stay; the line and enemies change to read as everything. The skill line (`assets/park/park_crown/skill_line.json`, Sable) chains every verb the Highdraft has taught and all four of its enemy kinds in one run:
+- the bajada lip (launch);
+- the Turnstone wire (grapple), past the new `alcove_anchor_crew` (ballast heavies on the alcove butte's east rim, a ring-out);
+- the west wash (chute) and the split spire;
+- the new `needle_wire` ([-40, 110] to [-176, 193], 6 m hook, 45 m off every other line) through the needle kites;
+- the signal wire past the mast cutters;
+- the bowl drop under the spire hands.
+
+Ridden with `tools/traversal_line.gd --table=park --stage=6 --pilot=sable --lines=res://assets/park/park_crown/skill_line.json` on seeds 1 to 4: all four engage in 50 to 62 s with 5 distinct ride facts (chute, launch, grapple, bowl, drop) and `ride_grapple_line` firing. There are 1 to 4 short stops at the signal wire's landing and the split spire, and Sable's own line has one at the split spire on the base too. All six pilots' own lines still engage on seeds 1 and 2 with the base's times within 6 s.
+
 **Signal caches** (design-v3/sound/RADIO.md on PR #66; rows in the format of PR #68's `tools/radio_cache_spots.gd` SPOTS, which casts the heights onto live colliders):
 
 | Take | Spot here | Row | The reach |
