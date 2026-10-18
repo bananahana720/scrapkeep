@@ -8,6 +8,11 @@
   "effortLevel": "high",
   "switchModelsOnFlag": false,
   "fallbackModel": [],
+  "autoCompactEnabled": true,
+  "subagentPromptCacheTtl": "1h",
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "40"
+  },
   "hooks": {
     "SessionStart": [
       {

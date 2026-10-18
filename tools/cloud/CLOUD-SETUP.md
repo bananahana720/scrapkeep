@@ -14,6 +14,8 @@ Most of the setup travels with the repository. A cloud session clones the repo, 
 | Environment variables | None. The hook sets `GODOT_BIN` and `PATH` itself. |
 | Setup script | Paste the whole of [`setup.sh`](setup.sh). |
 
+Context settings also travel with the repo. `.claude/settings.json` sets `env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` to `40`, `autoCompactEnabled` to `true` and `subagentPromptCacheTtl` to `1h`, matching Andrew's PC, so threads and their subagents compact at 40% and subagents keep a one-hour prompt cache. Don't put the compaction variable in the environment's variables field: the session's own value (80) overrides one set there, while the repo `env` block overrides the session's value.
+
 The setup script is optional but recommended. The environment caches what it installs as a filesystem snapshot, so new sessions start with Godot and Blender already on disk instead of downloading about 300 MB each time (about 55 s saved per fresh session). Without it, the hook still installs everything at session start. The script finishes in about a minute, well under the five-minute limit for caching, and never fails the session start: on an error it prints a warning and the hook retries.
 
 The cache rebuilds when the setup script or the network setting changes, and about every seven days. If `setup.sh` changes in the repo (a new Godot or Blender pin), paste the new version into the field.
