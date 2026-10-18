@@ -576,6 +576,16 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
 
 **Society rows.** The net-weavers own the gust lips, the hoodoo knots, the needle hammock and the Gauntlet net. The Fleet's mooring crew owns the Signal Butte, the mooring deck, the Gauntlet's west butte and shelf, and the toe lip. Their lines are in section 12. Built works got their builders too: the weavers cut the thirteen line kickers (`kick_*`), the bajada lip and the meander cross lip; the Fleet poured the crown ramp and the toe yard and holds the east Gauntlet butte. Natural landforms (washes, buttes, the bowl) stay `none`. That takes the crown's society share over hand-built rows from 5% to 65%.
 
+**One skill per park: everything at once** (Andrew's Q4 answer, 22:12Z 17 October: "the crown tests everything at once"). The landforms stay; the line and enemies change to read as everything. The skill line (`assets/park/park_crown/skill_line.json`, Sable) chains the Highdraft's launch, cable, chute, bowl and drop in one run, past its kites and mast cutters. It does not yet test a harpoon swing, a slam, a ledge or a thermal: the bot glides and bites only in fights (`tools/bot_driver.gd`), and a thermal lifts a gliding ball only (`src/world/contraptions.gd`). The line:
+- the bajada lip (launch);
+- the Turnstone wire (grapple), with the new `alcove_anchor_crew` (ballast heavies on the alcove butte, a ring-out) about 30 m off the line;
+- the west wash (chute) and the split spire;
+- the new `needle_wire` ([-40, 110] to [-176, 193], 6 m hook, 45 m off every other line) through the needle kites;
+- the signal wire past the mast cutters;
+- the bowl drop. The spire hands hold `lens_spire`, about 155 m off the line: scenery here, not a test.
+
+Ridden with `tools/traversal_line.gd --table=park --stage=6 --pilot=sable --lines=res://assets/park/park_crown/skill_line.json` on seeds 1 to 4 (with the ride pieces of PR #95): all four engage in 60 to 63 s with 5 distinct ride facts (chute, launch, grapple, bowl, drop) and `ride_grapple_line` firing. There are 0 to 2 short stops at `signal_runout_anchor` and `sentinel_50`, where the ball misses the signal wire's hook (4.5 m around a point 7 m over the ground) and rolls on into the posts; PARK.md section 8 asks for none, so the line is not yet at its bar. All six pilots' own lines still engage on seeds 1 and 2. `kick_wlast_11` stays greybox: on its piece Sable's own line stalled three times against it.
+
 **Signal caches** (design-v3/sound/RADIO.md on PR #66; rows in the format of PR #68's `tools/radio_cache_spots.gd` SPOTS, which casts the heights onto live colliders):
 
 | Take | Spot here | Row | The reach |
