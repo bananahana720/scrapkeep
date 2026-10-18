@@ -31,6 +31,11 @@ const CINDER_BURN := CinderHeat.BURN_FACT
 # seed/spawn order instead of allocator-dependent object IDs. Trace allocation
 # can then only change the diagnostic buffer, not the world it observes.
 #
+# --hands=harpoon,glide gives the traversal bot its optional hands (bot_driver.gd HAND_NAMES): the
+# harpoon hand swings from an anchor ahead on the way to the next waypoint, the glide hand holds
+# glide over a thermal column and down a long drop. Both are off by default, so every pin, band
+# and bot baseline is the bare pilot's; the flag reaches every child.
+#
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
 #
@@ -816,6 +821,11 @@ func _initialize() -> void:
 		printerr("traversal_line: seeds must be nonempty and ticks and child-timeout positive")
 		quit(2)
 		return
+	for hand in hands_of(_settings):
+		if not hand in BotDriver.HAND_NAMES:
+			printerr("traversal_line: --hands=%s names no hand (%s)" % [hand, ",".join(BotDriver.HAND_NAMES)])
+			quit(2)
+			return
 	_routes = load_routes()
 	if _settings.has("child"):
 		if _seeds.size() != 1:
@@ -935,6 +945,14 @@ static func _parse(args: PackedStringArray) -> Dictionary:
 	return out
 
 
+# The hands --hands= names, in the order given.
+static func hands_of(settings: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for part in String(settings.get("hands", "")).split(",", false):
+		out.append(part)
+	return out
+
+
 func _start_seed() -> void:
 	_index = 0
 	seed(_seeds[_index])
@@ -952,6 +970,7 @@ func _physics_process(delta: float) -> bool:
 	if _driver == null:
 		_game.presentation.audio.bake_now()
 		_driver = BotDriver.new(_game, "traversal", _seeds[_index])
+		_driver.hands = hands_of(_settings)
 		if _park:
 			if not _start_park_driver():
 				return false
