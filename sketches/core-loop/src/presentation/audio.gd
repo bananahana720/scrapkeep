@@ -2707,7 +2707,8 @@ func _on_boss_defeated() -> void:
 
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 	if _kind == "miniboss" and is_instance_valid(_miniboss):
-		end_moment("miniboss", str(_miniboss.get_instance_id()))
+		var key := str(_miniboss.get_instance_id())
+		end_moment("miniboss", key)
 	if _kind == "miniboss" and engine.track == "miniboss":
 		# The payoff on the kill: the drop home on the next beat, then the cadence.
 		engine.miniboss_drop()
