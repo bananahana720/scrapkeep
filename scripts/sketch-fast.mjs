@@ -336,12 +336,13 @@ function placeholderRows(sketchDir) {
 
 const running = new Set();
 
-function runGodot(sketchDir, test, timeoutMs) {
+function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
   return new Promise((resolve) => {
     const started = Date.now();
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
     const child = spawn(binary, ["--headless", "--path", sketchDir, "--script", "res://" + test], { env: { ...process.env, XDG_DATA_HOME: dataHome } });
     running.add(child);
+    onChild(child);
     let output = "";
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
@@ -358,16 +359,54 @@ function runGodot(sketchDir, test, timeoutMs) {
       // A kill before the time limit that the lane did not send is usually the container's
       // memory limit (dmesg "Memory cgroup out of memory"), not the test.
       const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
-      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true });
+      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
     });
   });
 }
 
+function stopChild(child) {
+  child.killedByLane = true;
+  child.kill("SIGKILL");
+}
+
 function stopRunning() {
-  for (const child of running) {
-    child.killedByLane = true;
-    child.kill("SIGKILL");
-  }
+  for (const child of running) stopChild(child);
+}
+
+// Every Godot process the lane starts holds one of `width` lanes, so a confirm's head rerun and
+// base run never push one machine slot past its width (GRAPH caps a 4 vCPU box at 6 lanes).
+// A task holds one lane at a time and never waits for a second, so lanes cannot deadlock.
+export function lanePool(width) {
+  let free = width;
+  const waiters = [];
+  return async (task) => {
+    if (free > 0) free--;
+    else await new Promise((resolve) => waiters.push(resolve));
+    try {
+      return await task();
+    } finally {
+      const next = waiters.shift();
+      if (next) next();
+      else free++;
+    }
+  };
+}
+
+// Only a clean base verdict is cached. A timeout or a kill can come from machine load, and a
+// cached one would read every later real red on that test as base-red.
+export function cacheableBaseRun(run) {
+  return run.exit !== null && !run.killed && !run.timedOut;
+}
+
+function importAsync(args) {
+  return new Promise((resolve) => {
+    const child = spawn(binary, [...args, "--import"], { stdio: "ignore" });
+    const timer = setTimeout(() => child.kill("SIGKILL"), 180_000);
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve(code);
+    });
+  });
 }
 
 function sourceOf(sketchDir, test) {
@@ -555,32 +594,75 @@ async function main() {
   const results = [];
   const flaky = [];
   const baseRed = [];
-  let baseImported = false;
   let prRed = null;
+  const inLane = lanePool(width);
+  const stopped = (test) => ({ test, ok: false, exit: null, ms: 0, reason: "lane stopped", checks: [], tail: "", killed: true, timedOut: false });
+  const godot = (dir, test, timeoutMs, onChild) => inLane(() => (prRed ? stopped(test) : runGodot(dir, test, timeoutMs, onChild)));
 
-  // A failure is rerun alone on the head, then on the merge base, before it is the PR's.
-  async function confirm(first) {
-    const timeoutMs = testTimeoutMs(sourceOf(sketchDir, first.test));
-    log(`  rerunning ${first.test} alone (${first.reason})`);
-    const rerun = await runGodot(sketchDir, first.test, timeoutMs);
-    let baseOk = null;
-    let baseChecks = [];
-    if (!rerun.ok && options.baseCheck) {
-      const baseSketch = path.join(baseDir(), SKETCH);
-      if (existsSync(path.join(baseSketch, first.test))) {
-        if (!baseImported) {
-          importWithRetry(`${SKETCH} (base)`, ["--headless", "--path", baseSketch], (job) => {
-            const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
-            return { label: job.label, exit: result.status, ok: result.status === 0 };
-          });
-          baseImported = true;
-        }
-        log(`  running ${first.test} on the merge base`);
-        const baseRun = await runGodot(baseSketch, first.test, timeoutMs);
-        baseOk = baseRun.ok;
-        baseChecks = baseRun.checks;
-      }
+  // A failure is rerun on the head and on the merge base side by side before it is the PR's
+  // (a solo test reruns alone first). Base verdicts are cached per base tree and Godot binary in
+  // the shared git directory, so every worktree reuses them and --pre merges hit the cache too.
+  const baseTreeId = git(["rev-parse", `${diffBase}^{tree}`]);
+  const baseCacheFile = path.join(path.resolve(root, git(["rev-parse", "--git-common-dir"])), "sketch-fast", `base-runs-${baseTreeId.slice(0, 12)}.json`);
+  const stored = existsSync(baseCacheFile) ? JSON.parse(readFileSync(baseCacheFile, "utf8")) : {};
+  const baseCache = stored.binary === binary ? stored.tests ?? {} : {};
+  let baseImport = null;
+  async function onBase(test, timeoutMs, cancel = { cancelled: false }) {
+    if (!options.baseCheck) return null;
+    if (baseCache[test]) {
+      log(`  ${test} on the merge base: cached (${baseCache[test].ok ? "green" : "red"})`);
+      return baseCache[test];
     }
+    const baseSketch = path.join(baseDir(), SKETCH);
+    if (!existsSync(path.join(baseSketch, test))) return null;
+    baseImport ??= inLane(async () => {
+      const args = ["--headless", "--path", baseSketch];
+      if ((await importAsync(args)) === 0) return true;
+      log(`${SKETCH} (base) import failed; retrying once`);
+      return (await importAsync(args)) === 0;
+    });
+    if (!(await baseImport)) {
+      log(`  ${test} on the merge base: no verdict (the base import failed twice)`);
+      return null;
+    }
+    if (cancel.cancelled) return null;
+    log(`  running ${test} on the merge base`);
+    const run = await godot(baseSketch, test, timeoutMs, (child) => {
+      cancel.child = child;
+      if (cancel.cancelled) stopChild(child);
+    });
+    if (cacheableBaseRun(run)) {
+      baseCache[test] = { ok: run.ok, checks: run.checks };
+      mkdirSync(path.dirname(baseCacheFile), { recursive: true });
+      writeFileSync(baseCacheFile, JSON.stringify({ binary, tree: baseTreeId, tests: baseCache }, null, 2) + "\n");
+    }
+    return run;
+  }
+
+  async function confirm(first) {
+    const source = sourceOf(sketchDir, first.test);
+    const timeoutMs = testTimeoutMs(source);
+    let rerun;
+    let baseRun = null;
+    if (isSolo(source)) {
+      log(`  rerunning ${first.test} alone (${first.reason})`);
+      rerun = await godot(sketchDir, first.test, timeoutMs);
+      if (!rerun.ok) baseRun = await onBase(first.test, timeoutMs);
+    } else {
+      log(`  rerunning ${first.test} on the head and the merge base (${first.reason})`);
+      const cancel = { cancelled: false, child: null };
+      const pending = godot(sketchDir, first.test, timeoutMs);
+      const basePending = onBase(first.test, timeoutMs, cancel);
+      rerun = await pending;
+      // A green rerun makes the base verdict moot: stop the base run and cache nothing from it.
+      if (rerun.ok) {
+        cancel.cancelled = true;
+        if (cancel.child) stopChild(cancel.child);
+      }
+      baseRun = await basePending;
+    }
+    const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
+    const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
     return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks }), rerun };
   }
 
@@ -603,7 +685,7 @@ async function main() {
   async function worker() {
     while (queue.length > 0 && !prRed) {
       const row = queue.shift();
-      const result = await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test)));
+      const result = await godot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test)));
       await handle(result);
     }
   }

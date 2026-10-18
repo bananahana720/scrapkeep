@@ -7,8 +7,10 @@ import {
   hygieneFindings,
   canaries,
   classify,
+  cacheableBaseRun,
   classifyFailure,
   indexFromFiles,
+  lanePool,
   nodeTestsFor,
   parseArgs,
   placeholderIncrease,
@@ -249,4 +251,35 @@ test("import retries once after a crashed import and stops after two", () => {
   assert.equal(twice.results.length, 2);
   const clean = importWithRetry("core-loop", ["--headless"], () => ({ exit: 0, ok: false }), () => {});
   assert.equal(clean.results.length, 1, "an import that exits 0 with error lines is not retried");
+});
+
+test("the lane pool never runs more tasks than its width, and queued tasks still run", async () => {
+  const inLane = lanePool(2);
+  let live = 0;
+  let peak = 0;
+  const task = (ms) => inLane(async () => {
+    live++;
+    peak = Math.max(peak, live);
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    live--;
+    return ms;
+  });
+  // A confirm's rerun and base run queue behind the other worker's test, as in the lane.
+  const results = await Promise.all([task(20), task(5), task(5), task(1), task(1)]);
+  assert.deepEqual(results, [20, 5, 5, 1, 1]);
+  assert.equal(peak, 2);
+});
+
+test("a throwing task frees its lane", async () => {
+  const inLane = lanePool(1);
+  await assert.rejects(inLane(async () => { throw new Error("boom"); }));
+  assert.equal(await inLane(async () => "next"), "next");
+});
+
+test("only a clean base verdict is cached, never a timeout or a kill", () => {
+  assert.equal(cacheableBaseRun({ exit: 0, killed: false, timedOut: false }), true);
+  assert.equal(cacheableBaseRun({ exit: 1, killed: false, timedOut: false }), true);
+  assert.equal(cacheableBaseRun({ exit: null, killed: false, timedOut: true }), false);
+  assert.equal(cacheableBaseRun({ exit: null, killed: true, timedOut: false }), false);
+  assert.equal(cacheableBaseRun({ exit: null, killed: false, timedOut: false }), false);
 });
