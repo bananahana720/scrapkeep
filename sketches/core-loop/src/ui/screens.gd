@@ -702,7 +702,7 @@ func radio_key(key: int) -> bool:
 		KEY_X:
 			var rng := RandomNumberGenerator.new()
 			rng.randomize()
-			radio.shuffle(radio.mixtape, rng)
+			radio.shuffle_mixtape(radio.mixtape, rng)
 		KEY_T:
 			radio.tune(radio.MIXTAPE)
 		_:

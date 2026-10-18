@@ -158,7 +158,7 @@ const FITS := ["seat", "tile", "drape"]
 # place_layer). The music bakes each layer's sound_next; until then its stand-in sound plays.
 const MUSIC_LAYER_PREFIX := "layer_"
 # Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
-# the cage, so who is rescued is data; quest is what rescue_completed carries (achievements.gd keys on it).
+# the cage, so who is rescued is data; quest is what rescue_completed carries (the achievement rows key on it).
 const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
