@@ -141,17 +141,61 @@ static func hide_warden_body(warden: Node) -> void:
 			(part as Node3D).visible = false
 
 
-# Plays `clip` from its start; false when the clip does not exist.
+# Seconds a clip crossfades in from whatever pose the player holds. A strike, an impact or a
+# break is absent on purpose: it stays a hard cut so the pose never trails the live hazard
+# (adr/TADR-008). Every other clip is a tell, a loop, a release or a return, and eases in. A
+# clip the table does not name takes FALLBACK_BLEND.
+const FALLBACK_BLEND := 0.12
+const BLENDS := {
+	"idle_roll": 0.2, "chase": 0.2, "attention": 0.2, "still_track": 0.25, "sleeping": 0.2,
+	"enter_furnace": 0.15, "enter_scuttle": 0.15, "wake": 0.2, "phase_break": 0.12, "phase_break_2": 0.12,
+	"phase_break_3": 0.12, "final_quiet": 0.2, "pit_defeat": 0.2,
+	"crane_warn": 0.3, "charge_warn": 0.2, "slag_warn": 0.15, "drone_deploy": 0.1, "magnet_hold_drip": 0.08,
+	"floor_warn": 0.15, "floor_warn_seam": 0.15, "floor_warn_bedrock": 0.15,
+	"pulse_warn": 0.15, "pulse": 0.1, "recovery": 0.15, "hand_send": 0.1, "recover": 0.2,
+	"lane_warn": 0.15, "split_lane_warn": 0.15, "rush_warn": 0.15, "plate_warn": 0.15, "quote_warn": 0.15,
+	"brace": 0.06, "choir_change": 0.12, "choir_change_1_2": 0.12, "choir_change_2_0": 0.12,
+	# A strike lands on the hazard's frame; a floor drop only takes the last few frames to
+	# hide the spine's restart, well inside the 0.05 s a live hazard tolerates.
+	"floor_drop": 0.04, "floor_drop_seam": 0.04, "floor_drop_bedrock": 0.04,
+	"crane_sweep": 0.0, "family_strike": 0.0, "exact_strike": 0.0, "wall_stun": 0.0, "eject": 0.0,
+	"lens_break": 0.0, "stagger_open": 0.0, "core_open": 0.0,
+}
+
+
+static func blend_for(clip: String) -> float:
+	return float(BLENDS.get(clip, FALLBACK_BLEND))
+
+
+# Plays `clip`; false when the clip does not exist. The old pose crossfades into the clip over
+# its table blend (`blend` >= 0 overrides it) instead of a hard cut. `speed` stretches this
+# play only, so a warn can end exactly on its sim timer.
+# A reversal of the clip already running the other way carries on from where it stands, not
+# from the far end.
 # The player is untyped on purpose: a kit under a Warden is freed with it, and a freed
 # AnimationPlayer must be a no-op here, not a type error at the call.
-static func play(player, clip: String, backwards := false) -> bool:
+static func play(player, clip: String, backwards := false, blend := -1.0, speed := 1.0) -> bool:
 	if not is_instance_valid(player) or not player.has_animation(clip):
 		return false
-	player.stop()
+	var seconds: float = blend if blend >= 0.0 else blend_for(clip)
+	var from := -1.0
+	if player.assigned_animation == clip and player.is_playing():
+		# A clip cued twice on its first frame (both cranes) is already where a restart would
+		# put it; restarting would throw away the blend it began.
+		if player.current_animation_position <= 0.0 and (player.get_playing_speed() < 0.0) == backwards:
+			return true
+		# Playing a running clip again cannot crossfade into itself: it restarts, as it always did.
+		seconds = 0.0
+		if (player.get_playing_speed() < 0.0) != backwards:
+			from = player.current_animation_position
+	if seconds <= 0.0:
+		player.stop()
 	if backwards:
-		player.play_backwards(clip)
+		player.play(clip, seconds, -speed, true)
 	else:
-		player.play(clip)
+		player.play(clip, seconds, speed, false)
+	if from >= 0.0:
+		player.seek(from, true)
 	return true
 
 
