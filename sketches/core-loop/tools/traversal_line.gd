@@ -164,6 +164,9 @@ class Sampler:
 	var _uphill := 0.0
 	var tracing := false
 	var trace: Array = []
+	# Records "glide" among the verbs when the glide hand is on: a thermal column or drop the hand
+	# opens the glide over leaves no fact of its own, and a bare run's verbs stay as they were.
+	var record_glide := false
 	# The park's measures (PARK.md section 8).
 	var park := false
 	var waymarks: Array = []
@@ -295,6 +298,8 @@ class Sampler:
 			_event()
 			_verb(KICKER_LAUNCH)
 		_was_grounded = grounded
+		if record_glide and player.kit.gliding:
+			_verb("glide")
 		if _anchored(ball):
 			max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
 			_last_anchor = _path
@@ -980,6 +985,7 @@ func _physics_process(delta: float) -> bool:
 			_driver.start()
 			_sampler = Sampler.new(_game)
 		_sampler.tracing = _settings.has("trace")
+		_sampler.record_glide = "glide" in _driver.hands
 		return false
 	var over: bool = _driver.tick(delta)
 	if not over and _settings.has("ticks") and _driver.ticks >= int(_settings["ticks"]):

@@ -93,6 +93,10 @@ const SWING_SENT := 0.4
 # waypoint. Only a kit with the glide augment (Kest's blink) has the hand.
 const GLIDE_DROP := 10.0
 const GLIDE_GAIN := 2.0
+# The glide hand also keeps GLIDE_ABOVE m of height over the waypoint and GLIDE_NEAR m of way to
+# it: a glide that ends short of the waypoint beats one that overshoots below it.
+const GLIDE_ABOVE := 6.0
+const GLIDE_NEAR := 40.0
 # Radians of camera yaw per second: a brisk mouse, not a snap.
 const TURN_RATE := 5.0
 const SENSITIVITY := 0.0022
@@ -1130,7 +1134,7 @@ func _swing_hand(ball: Vector3, point: Vector3, delta: float) -> Variant:
 		return null
 	_swing_clock = 0.0
 	if _swing_cool > 0.0 or _swing_sent > 0.0 or kit.mounted or _cast_phase != "" or game.player.frozen() \
-			or game.player.planar_velocity().length() < SWING_MIN_SPEED:
+			or not game.player.verb_ready("harpoon") or game.player.planar_velocity().length() < SWING_MIN_SPEED:
 		return null
 	if _swing_bites(kit.aim, ball, way):
 		source.press["harpoon_pressed"] = true
@@ -1173,7 +1177,11 @@ func _glide_hand(ball: Vector3, point: Vector3) -> void:
 	var over := _inside_thermal(ball)
 	var drop: float = ball.y - _ground_point(ball.x, ball.z).y
 	var gains: bool = player.planar_velocity().dot(way) >= GLIDE_GAIN
-	_gliding = over or (drop >= GLIDE_DROP and gains) or (_gliding and gains)
+	# Glide carries a ball past a waypoint and lands it below one on a ledge it cannot climb back
+	# to (Highdraft islands, kest seed 1: 143 dead stops): only with height to spare over the
+	# waypoint and distance left to it.
+	var room: bool = ball.y - point.y >= GLIDE_ABOVE and Vector2(point.x - ball.x, point.z - ball.z).length() >= GLIDE_NEAR
+	_gliding = over or (room and gains and (drop >= GLIDE_DROP or _gliding))
 	_glide_held = _gliding
 
 
