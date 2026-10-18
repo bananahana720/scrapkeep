@@ -23,6 +23,19 @@ func _frames(n := 2) -> void:
 		await process_frame
 
 
+# The ball set down in the lockers' zone, the walk's Customize station (camp_hub.gd); its key is then C.
+func _enter_lockers() -> void:
+	var hub = _game.camp_hub
+	var toward: Vector3 = hub.root.global_position - hub.zone_position("lockers")
+	toward.y = 0.0
+	var at: Vector3 = hub.zone_position("lockers") + toward.normalized() * 1.5
+	at.y = 1.3
+	_game.player.reset_to(at)
+	_game.player.body().global_position = at
+	for i in 4:
+		await physics_frame
+
+
 func _action(action: String) -> void:
 	for pressed in [true, false]:
 		var event := InputEventAction.new()
@@ -41,6 +54,7 @@ func _run() -> void:
 	profile.unlock_pilot("runner_gunner")
 	_game._screen_key(KEY_K)
 	await _frames()
+	await _enter_lockers()
 	var camp = screens.camp_page()
 	var entry = camp.get_node_or_null("CustomizeButton")
 	var page = camp.get_node_or_null("CustomizePage")
@@ -49,7 +63,7 @@ func _run() -> void:
 		_game.free()
 		quit(_t.verdict())
 		return
-	Push.key(root, KEY_C)
+	_game._screen_key(KEY_C)
 	await _frames()
 	_t.check("CUS-4 C opens Customize", page.is_visible_in_tree() and screens.camp_open())
 	_t.eq("focus starts on pilot", page.focused_id(), "pilot")
@@ -65,6 +79,9 @@ func _run() -> void:
 	profile.unlock_cosmetic("trail_salt_skip")
 	profile.unlock_cosmetic("decal_fern")
 	profile.unlock_cosmetic("companion_paint_night")
+	# Re-pinned 2026-10-16: every pilot has a live shell variant now, so Shell sits between Paint and Trail.
+	Push.pad(root, JOY_BUTTON_DPAD_DOWN)
+	_t.eq("pad d-pad moves to shell", page.focused_id(), "shell")
 	Push.pad(root, JOY_BUTTON_DPAD_DOWN)
 	_t.eq("pad d-pad moves to trail", page.focused_id(), "trail")
 	Push.pad(root, JOY_BUTTON_A)
@@ -98,11 +115,11 @@ func _run() -> void:
 	_t.eq("SPIL-9 paint shared across pilots", page.selected("companion_paint"), "companion_paint_night")
 	Push.key(root, KEY_ESCAPE)
 	await _frames()
-	_t.check("CUS-4 Esc returns to camp without closing it", not page.visible and screens.camp_open() and entry.visible)
-	_t.check("Back restores entry focus", root.gui_get_focus_owner() == entry)
-	Push.click(root, entry)
+	_t.check("CUS-4 Esc returns to camp without closing it", not page.visible and screens.camp_open() and screens.walk_live() and camp._strip.visible)
+	_t.check("Back returns the walk, not the title", not screens._actions.visible and not entry.visible)
+	_game._screen_key(KEY_C)
 	await _frames()
-	_t.check("mouse opens Customize", page.is_visible_in_tree())
+	_t.check("C in the zone opens Customize again", page.is_visible_in_tree())
 	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 7): mouse first. A click on a slot row
 	# shows its cards; a click on an owned card equips and saves. Every control fits at 1280 by
 	# 720 and 1920 by 1080, not only today's row list.
@@ -131,7 +148,7 @@ func _run() -> void:
 	Push.pad(root, JOY_BUTTON_B)
 	await _frames()
 	_t.check("pad B returns to camp", not page.visible and screens.camp_open())
-	Push.click(root, entry)
+	_game._screen_key(KEY_C)
 	await _frames()
 	_action("ui_cancel")
 	await _frames()
@@ -190,9 +207,32 @@ func _page_checks(page, profile, screens) -> void:
 	page._select_slot("paint")
 	for id in Cosmetics.PENDING_ART:
 		_t.check("pending %s has no card" % id, page.card_for(id) == null and not id in page.shown_ids(Cosmetics.row(id)["slot"]))
-	for slot in ["shell", "outfit", "companion_skin", "bay_decor"]:
-		_t.check("empty slot %s is hidden" % slot, not page.rows[slot].visible and not slot in page.order())
-	_t.check("an empty owner group is hidden", not page._group_labels["PILOT"].visible and not page._group_labels["BAY"].visible)
+	# With PENDING_ART empty, the test seam plants a shown outfit so the hiding path still runs.
+	var outfits: Array = page.shown_ids("outfit")
+	_t.check("an outfit is shown before the plant", not outfits.is_empty(), str(outfits))
+	if not outfits.is_empty():
+		var planted: String = outfits[0]
+		Cosmetics._test_pending = [planted]
+		page._select_slot("outfit")
+		_t.check("planted pending %s has no card" % planted, page.card_for(planted) == null and not planted in page.shown_ids("outfit"))
+		Cosmetics._test_pending = []
+		page._select_slot("paint")
+		page._select_slot("outfit")
+		_t.check("cleared %s shows its card again" % planted, page.card_for(planted) != null and planted in page.shown_ids("outfit"))
+	page._select_slot("paint")
+	_t.check("the shell slot shows its built variant", page.rows["shell"].visible and "shell" in page.order())
+	_t.check("empty slot bay_decor is hidden", not page.rows["bay_decor"].visible and not "bay_decor" in page.order())
+	_t.check("an empty owner group is hidden", not page._group_labels["BAY"].visible)
+	# The delivered outfit and companion skin art is no longer pending: both slots and their groups show.
+	var delivered := {"outfit": ["outfit_rivet_hood", "outfit_tally_eyeshade", "outfit_tarn_steady_cap"], "companion_skin": ["companion_skin_till_bell"]}
+	for slot in delivered:
+		var shown: Array = page.shown_ids(slot)
+		_t.check("slot %s shows delivered ids" % slot, not shown.is_empty() and shown.all(func(id): return id in delivered[slot]), str(shown))
+		_t.check("slot %s row is visible and ordered" % slot, page.rows[slot].visible and slot in page.order())
+		page._select_slot(slot)
+		_t.check("slot %s has a card for each shown id" % slot, shown.all(func(id): return page.card_for(id) != null))
+	_t.check("the PILOT and SPIL-9 groups show", page._group_labels["PILOT"].visible and page._group_labels["SPIL-9"].visible)
+	page._select_slot("paint")
 	# New marks clear after 0.6 s on screen and seen saves once, on close.
 	var fresh := "paint_any_night"
 	profile.unlock_cosmetic(fresh)

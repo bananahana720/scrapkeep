@@ -58,7 +58,7 @@ static func _number(row: Dictionary, field: String) -> bool:
 # The kind's own attack clock: its first attack's lead, read from the enemy's real timing.
 static func attack_clock(kind: String, enemy: Object) -> float:
 	var spec: Dictionary = WindupRows.ROWS.get(kind, {})
-	if spec.is_empty():
+	if spec.is_empty() or spec.attacks.is_empty():
 		return REST_CLOCK
 	var lead := float(WindupRows.row(kind, enemy, String(spec.attacks.keys()[0])).get("lead_seconds", 0.0))
 	return lead if lead > 0.0 else REST_CLOCK

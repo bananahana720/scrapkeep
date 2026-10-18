@@ -60,6 +60,7 @@ def build(s):
 
 
 def main():
+    lp.polish_on()
     lp.export(NAME, [("Detail2", "steel", False, build)], lp.out_dir(), lp.pump_clear, budget=DETAIL, tag="LIFT_D2", size=SIZE)
 
 

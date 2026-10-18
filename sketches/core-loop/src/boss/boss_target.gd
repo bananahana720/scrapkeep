@@ -1,6 +1,7 @@
 extends AnimatableBody3D
 
 const Palette := preload("res://src/core/palette.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # One strikeable piece of Brindle: the hull, a crane magnet, a vent cap or the eject
 # scooter. It speaks combat's enemy protocol (src/combat/README.md on the combat
@@ -49,7 +50,9 @@ func setup(boss_ref, role_name: String, id: String, body_size: Vector3, capsule:
 	name = "Brindle_%s" % (id if id != "" else role_name)
 	radius = capsule.x
 	half_height = capsule.y
-	sync_to_physics = true
+	# boss.gd moves the ship, the parent, every tick; a synced body ignores a parent's motion
+	# and stays near the arena centre, so each piece follows its node directly.
+	sync_to_physics = false
 	collision_layer = 0
 	collision_mask = 0
 	if body_size != Vector3.ZERO:
@@ -194,4 +197,4 @@ func _process(delta: float) -> void:
 		var m := mat as StandardMaterial3D
 		m.emission_enabled = lit
 		m.emission = Color.WHITE
-		m.emission_energy_multiplier = 1.5
+		m.emission_energy_multiplier = FlashGuard.spike(0.0, 1.5)

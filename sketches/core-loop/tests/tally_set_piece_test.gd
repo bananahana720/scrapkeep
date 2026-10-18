@@ -12,6 +12,7 @@ const Progress := preload("res://src/core/progress.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Triggers := preload("res://src/build/triggers.gd")
 const T := preload("res://tests/support/t.gd")
@@ -28,7 +29,8 @@ const T := preload("res://tests/support/t.gd")
 # own (11 movers), and a 20-copy sweep per depth-4 leaf (16). Measured 107 checks (was 63).
 # 2026-10-12 (PC-TALLY round 3): live unspent three-clip settle pays once, no arc.
 # 2026-10-12 (PC-TALLY round 3): Flywheel peak pull ring includes its landing bonus.
-const EXPECTED_CHECKS := 109
+# 2026-10-16 (pilot paint): Abacus Lattice is live; the pending check splits into three.
+const EXPECTED_CHECKS := 111
 const DT := 1.0 / 60.0
 const SHELF := Vector3(-45.0, 122.0, 6.0)
 
@@ -642,7 +644,9 @@ func _grants() -> void:
 	_t.check("all three grants earned", grant_ids.all(func(id): return store.earned(id)), str(grant_ids.map(func(id): return store.earned(id))))
 	var items := ["trail_tally_punch_tape", "outfit_tally_eyeshade", "shell_tally_abacus"]
 	_t.check("all three looks unlocked", items.all(func(id): return store.has_cosmetic(id)))
-	_t.check("pending art hidden and no price", items.all(func(id): return Cosmetics.PENDING_ART.has(id) and not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
+	_t.check("every granted look is pending or ships, and none has a price", CosmeticArt.unaccounted(items).is_empty() and items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")), str(CosmeticArt.unaccounted(items)))
+	_t.check("the shell is live", not Cosmetics.is_pending("shell_tally_abacus") and FileAccess.file_exists("res://assets/models/world_one/shell_tally_abacus.glb"))
+	_t.check("no price", items.all(func(id): return not Cosmetics.row(id).has("price") and not Cosmetics.row(id).has("cost")))
 	var reload_store := Profile.new(store.path)
 	reload_store.load_profile()
 	_t.check("grants survive reload", grant_ids.all(func(id): return reload_store.earned(id)) and items.all(func(id): return reload_store.has_cosmetic(id)))

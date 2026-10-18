@@ -15,6 +15,7 @@ const RideRail := preload("res://src/world/ride_rail.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
+const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 
 const SET_PIECES := ["foundry_cutter", "prism_cutter", "juggernaut_drive"]
 const BEAM_PIECES := ["foundry_cutter", "prism_cutter"]
@@ -35,13 +36,53 @@ const PIN_WINDOW := 1.5
 const ARROW_LENGTH := 6.0
 
 class VolumeIndicator extends Indicator:
+	# A scar runs to thousands of triangles, so each layer's are built once, in world space, as
+	# packed arrays, and reach the mesh in one batch moved by _p's lift (and collapse) as one
+	# transform: an ImmediateMesh call per vertex cost more than the carve.
+	var scar_mesh := ArrayMesh.new()
 	var _drawn_shapes := {}
+	# layer -> {shape, vertices, colors}
+	var _built := {}
+	static var _strip_unit := PackedVector3Array([Vector3(1, 0, 0), Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 1), Vector3(-1, 0, 0)])
+	static var _cap_unit := _cap_points(EDGE * 0.5)
+
+	func _ready() -> void:
+		super._ready()
+		_mesh.mesh = scar_mesh
 
 	func _process(delta: float) -> void:
 		if shapes == _drawn_shapes and _collapsing.is_empty():
 			return
-		super._process(delta)
 		_drawn_shapes = shapes.duplicate()
+		for layer in _collapsing.keys():
+			_collapsing[layer]["t"] += delta
+			if _collapsing[layer]["t"] >= COLLAPSE:
+				_collapsing.erase(layer)
+		scar_mesh.clear_surfaces()
+		if shapes.is_empty() and _collapsing.is_empty():
+			return
+		var now := Time.get_ticks_msec() / 1000.0
+		var vertices := PackedVector3Array()
+		var colors := PackedColorArray()
+		var built := {}
+		for layer in shapes:
+			var cached: Dictionary = _built.get(layer, {})
+			if cached.is_empty() or not is_same(cached["shape"], shapes[layer]):
+				cached = _build(shapes[layer], now)
+			built[layer] = cached
+			vertices.append_array(_placed(cached, 1.0))
+			colors.append_array(cached["colors"])
+		_built = built
+		for layer in _collapsing:
+			var entry: Dictionary = _collapsing[layer]
+			var drawn := _build(entry["shape"], now)
+			vertices.append_array(_placed(drawn, 1.0 - clampf(entry["t"] / COLLAPSE, 0.0, 1.0)))
+			colors.append_array(drawn["colors"])
+		var arrays: Array = []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = vertices
+		arrays[Mesh.ARRAY_COLOR] = colors
+		scar_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 
 	func set_shape(layer: String, shape: Dictionary) -> void:
 		if (shape["cells"] as Array).all(func(cell): return (cell["faces"] as Array).is_empty()):
@@ -50,15 +91,78 @@ class VolumeIndicator extends Indicator:
 			return
 		super.set_shape(layer, shape)
 
-	func _draw(shape: Dictionary, now: float) -> void:
-		_anchor = shape["origin"]
+	# _p for every vertex at once: scaled by k into the origin, then lifted.
+	static func _placed(drawn: Dictionary, k: float) -> PackedVector3Array:
+		var origin: Vector3 = drawn["shape"]["origin"]
+		return Transform3D(Basis.from_scale(Vector3.ONE * k), origin * (1.0 - k) + Vector3.UP * LIFT) * (drawn["vertices"] as PackedVector3Array)
+
+	# The fills, then every keyline, then every strip and cap, so the charcoal keyline sits under
+	# every edge. A part's edge belongs to two of its faces and its corners to three or more, so
+	# each edge and each corner is drawn once, where the scar drew 40 triangles a face edge. The
+	# colours are taken once: a volume record has no "fill" to breathe with.
+	static func _build(shape: Dictionary, now: float) -> Dictionary:
 		var look := style(shape, now)
+		var fill: Color = look["fill"]
+		var keyline := PackedColorArray()
+		keyline.resize(6)
+		keyline.fill(Palette.CHARCOAL)
+		var strip := PackedColorArray()
+		strip.resize(6)
+		strip.fill(look["edge"])
+		var cap := PackedColorArray()
+		cap.resize(_cap_unit.size())
+		cap.fill(look["edge"])
+		var vertices := PackedVector3Array()
+		var colors := PackedColorArray()
+		var keylines := PackedVector3Array()
+		var keyline_colors := PackedColorArray()
+		var edges := PackedVector3Array()
+		var edge_colors := PackedColorArray()
+		var edged := {}
+		var capped := {}
 		for cell in shape["cells"]:
 			for face in cell["faces"]:
 				for i in range(1, face.size() - 1):
-					_triangle(face[0], face[i], face[i + 1], look["fill"])
+					vertices.append(face[0])
+					vertices.append(face[i])
+					vertices.append(face[i + 1])
+					colors.append(fill)
+					colors.append(fill)
+					colors.append(fill)
 				for i in face.size():
-					_ribbon(face[i], face[(i + 1) % face.size()], EDGE, look["edge"])
+					var a: Vector3 = face[i]
+					var b: Vector3 = face[(i + 1) % face.size()]
+					if (edged.get(a, {}) as Dictionary).has(b) or (edged.get(b, {}) as Dictionary).has(a):
+						continue
+					if not edged.has(a):
+						edged[a] = {}
+					edged[a][b] = true
+					var along := b - a
+					var flat := Vector3(along.x, 0.0, along.z)
+					var side := flat.cross(Vector3.UP).normalized() if flat.length_squared() > 0.0001 else Vector3.RIGHT
+					keylines.append_array(Transform3D(Basis(side * (EDGE * 0.5 + KEYLINE), Vector3.UP, along), a) * _strip_unit)
+					keyline_colors.append_array(keyline)
+					edges.append_array(Transform3D(Basis(side * (EDGE * 0.5), Vector3.UP, along), a) * _strip_unit)
+					edge_colors.append_array(strip)
+					for corner: Vector3 in [a, b]:
+						if not capped.has(corner):
+							capped[corner] = true
+							edges.append_array(Transform3D(Basis.IDENTITY, corner) * _cap_unit)
+							edge_colors.append_array(cap)
+		vertices.append_array(keylines)
+		vertices.append_array(edges)
+		colors.append_array(keyline_colors)
+		colors.append_array(edge_colors)
+		return {"shape": shape, "vertices": vertices, "colors": colors}
+
+	# _cap's eight triangles about the origin.
+	static func _cap_points(radius: float) -> PackedVector3Array:
+		var points := PackedVector3Array()
+		for i in 8:
+			points.append(Vector3.ZERO)
+			points.append(_around(TAU * float(i) / 8.0) * radius)
+			points.append(_around(TAU * float(i + 1) / 8.0) * radius)
+		return points
 
 
 var volume_indicator: VolumeIndicator
@@ -73,6 +177,7 @@ var last_cue := {}
 var last_punch := {}
 var beam_shapes: Array = []
 var selected_shapes: Array = []
+var terrain := TerrainFaces.new()
 
 
 static func shape_paths() -> Array:
@@ -405,8 +510,9 @@ func _commit_beam(from: Vector3, dir: Vector3, length: float, width: float) -> D
 func select(shape: Dictionary) -> Array:
 	selected_shapes.append(shape.duplicate(true))
 	var picks: Array = []
+	var boxes := _cell_boxes(shape)
 	for enemy in _enemies():
-		if _in_shape(shape, enemy.global_position, combat._hull(enemy)):
+		if _in_shape(shape, enemy.global_position, combat._hull(enemy), boxes):
 			picks.append(enemy)
 	var origin: Vector3 = shape["origin"]
 	if shape["kind"] == "line":
@@ -416,7 +522,26 @@ func select(shape: Dictionary) -> Array:
 	return picks
 
 
-func _in_shape(shape: Dictionary, point: Vector3, hull: float) -> bool:
+# Each closed cell's box, for skipping the cells a machine is nowhere near: a hit inside a
+# cell or within hull of its faces is inside the box grown by hull. BOX_MARGIN covers the
+# plane tolerance the containment test allows.
+const BOX_MARGIN := 0.01
+
+
+func _cell_boxes(shape: Dictionary) -> Array:
+	var boxes: Array = []
+	for cell in shape.get("cells", []):
+		var box := AABB()
+		var first := true
+		for face in cell["faces"]:
+			for v: Vector3 in face:
+				box = AABB(v, Vector3.ZERO) if first else box.expand(v)
+				first = false
+		boxes.append(box.grow(BOX_MARGIN))
+	return boxes
+
+
+func _in_shape(shape: Dictionary, point: Vector3, hull: float, boxes: Array = []) -> bool:
 	var to: Vector3 = point - (shape["origin"] as Vector3)
 	if not shape.get("hull_forgiveness", true):
 		hull = 0.0
@@ -432,7 +557,10 @@ func _in_shape(shape: Dictionary, point: Vector3, hull: float) -> bool:
 		if shape.has("cover") and (point - (shape["cover"][0] as Vector3)).dot(shape["cover"][1]) < -0.0001:
 			return false
 		return along >= -hull and along - hull <= (shape["endpoint"] as Vector3).distance_to(shape["origin"]) and side - hull <= float(shape["width"]) * 0.5
-	for cell in shape["cells"]:
+	for c in (shape["cells"] as Array).size():
+		var cell: Dictionary = shape["cells"][c]
+		if not boxes.is_empty() and not (boxes[c] as AABB).grow(hull).has_point(point):
+			continue
 		if _cell_intersects(cell, point, 0.0):
 			return true
 		if hull <= 0.0 or not _cell_intersects(cell, point, hull):
@@ -586,18 +714,25 @@ func _bounds_distance(bounds: AABB, plane: Dictionary) -> Vector2:
 	return Vector2(centre - radius, centre + radius)
 
 
-func _clip_cell(cell: Dictionary, plane: Dictionary) -> Dictionary:
-	var low := INF
-	var high := -INF
+# The cell's nearest and farthest signed distance from the plane: its box's when that settles
+# which side it is on, else its vertices'. Negating the normal negates and swaps both exactly.
+func _extent(cell: Dictionary, plane: Dictionary) -> Vector2:
 	var interval := _bounds_distance(cell["bounds"], plane)
 	if interval.x >= -0.0001 or interval.y <= 0.0001:
-		low = interval.x
-		high = interval.y
-	else:
-		for vertex in cell["vertices"]:
-			var distance: float = (vertex - plane["at"]).dot(plane["normal"])
-			low = minf(low, distance)
-			high = maxf(high, distance)
+		return interval
+	var low := INF
+	var high := -INF
+	for vertex in cell["vertices"]:
+		var distance: float = (vertex - plane["at"]).dot(plane["normal"])
+		low = minf(low, distance)
+		high = maxf(high, distance)
+	return Vector2(low, high)
+
+
+func _clip_cell(cell: Dictionary, plane: Dictionary) -> Dictionary:
+	var interval := _extent(cell, plane)
+	var low := interval.x
+	var high := interval.y
 	# A coplanar remnant has no volume and must not become a hull-forgiveness face.
 	if low >= -0.0001:
 		return _pack_cell([], [])
@@ -621,6 +756,14 @@ func _subtract_shadow(cell: Dictionary, shadow: Array, hull_boundary := false) -
 	var remaining := cell
 	for plane in planes:
 		var solid: bool = hull_boundary and bool(plane.get("solid", false))
+		# Wholly inside a plane leaves nothing outside it and the rest unchanged; wholly outside
+		# empties the rest. Both are what the two clips below would return.
+		if not solid:
+			var side := _extent(remaining, plane)
+			if side.x >= -0.0001 and not hull_boundary:
+				return [cell]
+			if side.x < -0.0001 and side.y <= 0.0001:
+				continue
 		var outside := _clip_cell(remaining, {"at": plane["at"], "normal": -plane["normal"], "terrain": true, "solid": solid})
 		if not (outside["faces"] as Array).is_empty():
 			lit.append(outside)
@@ -725,7 +868,22 @@ func _collider_faces(shape: Shape3D) -> Array:
 
 # Discover actual terrain faces across the whole volume, not sparse rays in each cell.
 # Include the hull margin in the query so forgiveness cannot reach uncommitted cover.
-func _commit_terrain(origin: Vector3, cells: Array, shadows: Array) -> Array:
+func _commit_terrain(origin: Vector3, cells: Array, shadows: Array, hull: Array = []) -> Array:
+	return _carve(origin, cells, shadows, hull, _terrain_near(origin, cells))
+
+
+# Carves the cells by found, _terrain_near's faces for them.
+func _carve(origin: Vector3, cells: Array, shadows: Array, hull: Array, found: Dictionary) -> Array:
+	if found.has("unreadable"):
+		# Still record the shadows of the faces found so far.
+		_shade(origin, TerrainFaces.merge(found["faces"]), cells, shadows, hull)
+		return []
+	return _shade(origin, TerrainFaces.merge(found["faces"]), cells, shadows, hull)
+
+
+# The terrain faces near the cells, with "unreadable" set when a shape there has none the carve
+# can read.
+func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 	var bounds := AABB(origin, Vector3.ZERO)
 	for cell in cells:
 		for face in cell["faces"]:
@@ -743,6 +901,7 @@ func _commit_terrain(origin: Vector3, cells: Array, shadows: Array) -> Array:
 	query.collision_mask = Hitscan.WORLD
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var excluded: Array[RID] = []
+	var faces: Array = []
 	while true:
 		query.exclude = excluded
 		var hits := space.intersect_shape(query)
@@ -758,38 +917,195 @@ func _commit_terrain(origin: Vector3, cells: Array, shadows: Array) -> Array:
 					continue
 				var transform := collider.global_transform * collider.shape_owner_get_transform(owner)
 				for i in collider.shape_owner_get_shape_count(owner):
-					var terrain_shape: Shape3D = collider.shape_owner_get_shape(owner, i)
-					var shape_bounds: AABB = transform * terrain_shape.get_debug_mesh().get_aabb()
-					if not bounds.grow(0.0001).intersects(shape_bounds):
-						continue
-					var faces := _collider_faces(terrain_shape)
-					if faces.is_empty():
-						return []
-					for local_face in faces:
-						var face: Array = local_face.map(func(v): return transform * v)
-						var face_bounds := AABB(face[0], Vector3.ZERO)
-						for vertex in face:
-							face_bounds = face_bounds.expand(vertex)
-						if not bounds.grow(0.0001).intersects(face_bounds):
-							continue
-						var shadow := _face_shadow(origin, face)
-						if shadow.is_empty():
-							continue
-						shadows.append(shadow)
-						var lit: Array = []
-						for cell in cells:
-							lit.append_array(_subtract_shadow(cell, shadow))
-						cells = lit
-	return cells
+					# The face boxes decide what is near; a debug mesh's box costs a park tile
+					# 120 ms the first time.
+					var entry := _terrain_entry(collider.shape_owner_get_shape(owner, i), transform)
+					if entry.is_empty():
+						return {"faces": faces, "unreadable": true}
+					faces.append_array(terrain.faces_near(entry, bounds.grow(0.0001)))
+	return {"faces": faces}
+
+
+# The shape's cached world faces (TerrainFaces), or {} for a shape the carve cannot read.
+func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
+	var entry := terrain.cached(shape, transform)
+	if not entry.is_empty():
+		return entry
+	var local_faces = (shape as ConcavePolygonShape3D).get_faces() if shape is ConcavePolygonShape3D else _collider_faces(shape)
+	if local_faces.is_empty():
+		return {}
+	return terrain.request(shape, transform, local_faces)
+
+
+# Subtracts each face's shadow in face order, exactly as one _subtract_shadow pass per face
+# would; a cell's parts depend on that cell alone, so each cell takes every face in turn. A
+# shadow that a plane of a part, its box or the hull clears by a margin would leave that part
+# unchanged, so it skips the clip. Every part lies inside the cells' first box, and the
+# caller's hull planes are planes every cell lies behind. Shadows too thin for a margin skip by
+# their reach instead (FRUSTUM_MARGIN).
+func _shade(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: Array) -> Array:
+	var cuts := _cuts(origin, faces, cells, shadows, hull)
+	if cuts.is_empty():
+		return cells
+	var lit: Array = []
+	for cell in cells:
+		lit.append_array(_shade_cell(origin, _cell_cuts(cuts, cell), [cell]))
+	return lit
+
+
+# The faces' shadows that can change a cell, as [face, shadow, clearance, extent, frustum, span];
+# every shadow is recorded in shadows.
+func _cuts(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: Array) -> Array:
+	var reach := AABB()
+	for i in cells.size():
+		reach = cells[i]["bounds"] if i == 0 else reach.merge(cells[i]["bounds"])
+	var far := 0.0
+	for k in 8:
+		far = maxf(far, reach.get_endpoint(k).distance_to(origin))
+	var cuts: Array = []
+	for face in faces:
+		var shadow := _face_shadow(origin, face)
+		if shadow.is_empty():
+			continue
+		shadows.append(shadow)
+		var clearance := _clearance(face, shadow)
+		var extent := AABB(face[0], Vector3.ZERO)
+		for v in face:
+			extent = extent.expand(v)
+		if clearance < INF and (_box_clears(reach, extent, origin, clearance) or _planes_clear(hull, origin, face, clearance)):
+			continue
+		var frustum := _frustum(origin, face, far)
+		var span := AABB(frustum[0], Vector3.ZERO)
+		for point in frustum:
+			span = span.expand(point)
+		span = span.grow(FRUSTUM_MARGIN)
+		if not span.intersects(reach):
+			continue
+		cuts.append([face, shadow, clearance, extent, frustum, span])
+	return cuts
+
+
+func _cell_cuts(cuts: Array, cell: Dictionary) -> Array:
+	var bounds: AABB = cell["bounds"]
+	return cuts.filter(func(cut): return (cut[5] as AABB).intersects(bounds))
+
+
+# Parts tested against a shadow so far: the late carve's measure of work done (LATE_WORK).
+var _shade_work := 0
+
+
+func _shade_cell(origin: Vector3, cuts: Array, parts: Array) -> Array:
+	for cut in cuts:
+		_shade_work += parts.size()
+		var face: Array = cut[0]
+		var clearance: float = cut[2]
+		var lit: Array = []
+		for part in parts:
+			if clearance < INF and (_box_clears(part["bounds"], cut[3], origin, clearance) or _planes_clear(part["planes"], origin, face, clearance)):
+				lit.append(part)
+			elif not (cut[5] as AABB).intersects(part["bounds"]) or _frustum_outside(part["planes"], cut[4]):
+				lit.append(part)
+			else:
+				lit.append_array(_subtract_shadow(part, cut[1]))
+		parts = lit
+	return parts
+
+
+# Grazing terrain (a bumpy floor seen from just above it) gives shadows whose corners are too
+# ill-conditioned for a clearance (MIN_DET), so those skip on reach instead. Every part lies
+# within far of the origin, so the shadow that can meet it is the frustum between the face and
+# the face pushed out along the origin's rays past far (scaled from its nearest point). A part
+# whose box misses the frustum's box, or that has a plane with the whole frustum FRUSTUM_MARGIN
+# outside it, keeps its volume, give or take the clip tolerance's sliver.
+const FRUSTUM_MARGIN := 0.001
+
+
+func _frustum(origin: Vector3, face: Array, far: float) -> Array:
+	var near := INF
+	for i in range(1, face.size() - 1):
+		near = minf(near, origin.distance_to(_closest_triangle(origin, face[0], face[i], face[i + 1])))
+	# 5% over, for float32 error in near when a face's plane passes close to the origin.
+	var push := far / maxf(near, 0.000001) * 1.05 + 1.0
+	var points: Array = []
+	for v in face:
+		points.append(v)
+		points.append(origin + ((v as Vector3) - origin) * push)
+	return points
+
+
+func _frustum_outside(planes: Array, frustum: Array) -> bool:
+	for plane in planes:
+		var at: Vector3 = plane["at"]
+		var normal: Vector3 = plane["normal"]
+		var outside := true
+		for point: Vector3 in frustum:
+			if (point - at).dot(normal) < FRUSTUM_MARGIN:
+				outside = false
+				break
+		if outside:
+			return true
+	return false
+
+
+# Clipping keeps points up to SLACK past each plane (0.0001 tolerance plus float32 error), which
+# loosens the shadow; a corner on three unit planes moves at most 3 * SLACK / |det| (Cramer's rule).
+# A plane clears the shadow when every corner is that far, plus CLEAR_MARGIN, past it.
+const SLACK := 0.0002
+const CLEAR_MARGIN := 0.01
+const MIN_DET := 0.001
+
+
+func _clearance(face: Array, shadow: Array) -> float:
+	var contact: Vector3 = shadow.back()["normal"]
+	var count := face.size()
+	var det := INF
+	for i in count:
+		var before: Vector3 = shadow[(i + count - 1) % count]["normal"]
+		var after: Vector3 = shadow[i]["normal"]
+		det = minf(det, absf(contact.dot(before.cross(after))))
+	return CLEAR_MARGIN + 3.0 * SLACK / det if det >= MIN_DET else INF
+
+
+# The shadow is every point origin + s * (v - origin) for v on the face and s >= 1. It lies past
+# a plane when each face corner is the clearance past it and no corner's ray turns back toward it.
+func _plane_clears(at: Vector3, normal: Vector3, origin: Vector3, face: Array, clearance: float) -> bool:
+	for v in face:
+		if (v - at).dot(normal) < clearance or (v - origin).dot(normal) < 0.0:
+			return false
+	return true
+
+
+func _planes_clear(planes: Array, origin: Vector3, face: Array, clearance: float) -> bool:
+	for plane in planes:
+		if _plane_clears(plane["at"], plane["normal"], origin, face, clearance):
+			return true
+	return false
+
+
+# The box's six planes, read from the face's own box (extent).
+func _box_clears(box: AABB, extent: AABB, origin: Vector3, clearance: float) -> bool:
+	var low := box.position
+	var high := box.end
+	var near := extent.position
+	var far := extent.end
+	return near.x >= maxf(high.x + clearance, origin.x) or far.x <= minf(low.x - clearance, origin.x) \
+		or near.y >= maxf(high.y + clearance, origin.y) or far.y <= minf(low.y - clearance, origin.y) \
+		or near.z >= maxf(high.z + clearance, origin.z) or far.z <= minf(low.z - clearance, origin.z)
 
 
 func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, width: float, inner := 0.0) -> Dictionary:
+	var sector := _sector_cells(origin, dir, reach, half, width, inner)
+	var shadows: Array = []
+	var cells := _commit_terrain(origin, sector["cells"], shadows, sector["hull"])
+	return _sector_shape(sector, cells, shadows)
+
+
+func _sector_cells(origin: Vector3, dir: Vector3, reach: float, half: float, width: float, inner := 0.0) -> Dictionary:
 	var side := dir.cross(Vector3.UP).normalized()
 	if side.length_squared() < 0.001:
 		side = Vector3.RIGHT
 	var up := side.cross(dir).normalized()
 	var cells: Array = []
-	var shadows: Array = []
 	var segments: int = ctx.player.indicator.SEGMENTS
 	for i in segments:
 		var a := dir.rotated(up, lerpf(-half, half, float(i) / segments))
@@ -803,10 +1119,18 @@ func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, wi
 			var a := dir.rotated(up, TAU * float(i) / segments)
 			var b := dir.rotated(up, TAU * float(i + 1) / segments)
 			cells.append(_commit_cell([origin, origin + a * inner, origin + b * inner], up, inner))
-	cells = _commit_terrain(origin, cells, shadows)
-	var centre := _commit_beam(origin, dir, reach, width)
-	return ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": origin, "direction": dir,
-		"length": reach, "half_angle": half, "width": width, "inner": inner, "up": up, "cells": cells, "shadows": shadows, "centre_endpoint": centre["endpoint"]})
+	var slab := maxf(width * 0.5, inner)
+	return {"origin": origin, "direction": dir, "length": reach, "half_angle": half, "width": width, "inner": inner, "up": up, "cells": cells,
+		"hull": [{"at": origin + up * slab, "normal": up}, {"at": origin - up * slab, "normal": -up}]}
+
+
+# The sector's committed record once its cells are carved.
+func _sector_shape(sector: Dictionary, cells: Array, shadows: Array, centre := {}) -> Dictionary:
+	if centre.is_empty():
+		centre = _commit_beam(sector["origin"], sector["direction"], sector["length"], sector["width"])
+	return ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": sector["origin"], "direction": sector["direction"],
+		"length": sector["length"], "half_angle": sector["half_angle"], "width": sector["width"], "inner": sector["inner"], "up": sector["up"],
+		"cells": cells, "shadows": shadows, "centre_endpoint": centre["endpoint"]})
 
 
 func _draw_shape(layer: String, shape: Dictionary) -> void:
@@ -948,23 +1272,12 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var heading := _flat(_heading()).normalized()
 	var reach := breach_reach()
 	var pins: float = float(_knob("ult_pins", 1.0))
-	var hits := 0
-	var dealt := 0.0
-	var shape := _commit_sector(at, heading, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
-	shape["strict_angle"] = true
-	for enemy in select(shape):
-		var damage: float = Ultimate.LANDING_DAMAGE * heft * chain
-		if _warden(enemy) or _boss(enemy):
-			dealt += combat._ult_hit(enemy, "slam", damage, at, true)
-		else:
-			if enemy.has_method("_on_slammed"):
-				enemy._on_slammed(at, 1.0, 1.0)
-			var falloff := clampf(1.0 - _flat(enemy.global_position - at).length() / reach, 0.0, 1.0)
-			combat._hit(enemy, "slam", slam_force(damage), heading, Ultimate.LANDING_KNOCK * falloff * pins, "", "special", "slam")
-			dealt += damage
-		hits += 1
-	_draw_shape("rivet_breach", shape)
-	_scar_left = maxf(_scar_left, Weapons.FULL_CUT_SCAR)
+	var damage: float = Ultimate.LANDING_DAMAGE * heft * chain
+	var result: Array = [0, 0.0, "late"]
+	if _stopped_short():
+		_carve_late(id, at, heading, reach, pins, damage)
+	else:
+		result = _breach(_commit_sector(at, heading, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER), at, heading, reach, pins, damage)
 	# Exit flat along the heading at the banked speed: the ride's release keeps its speed and
 	# loses the fall (A2-CRITIC: no floor; the speed gift is Sable's alone).
 	var ride = combat.ultimate._ride if combat.ultimate != null else null
@@ -983,7 +1296,102 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		_shoulder = 0.0
 	else:
 		_clear_piece()
+	return result
+
+
+# The Breach Skid's hits on its carved sector: [hits, damage dealt].
+func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pins: float, damage: float) -> Array:
+	var hits := 0
+	var dealt := 0.0
+	shape["strict_angle"] = true
+	for enemy in select(shape):
+		if _warden(enemy) or _boss(enemy):
+			dealt += combat._ult_hit(enemy, "slam", damage, at, true)
+		else:
+			if enemy.has_method("_on_slammed"):
+				enemy._on_slammed(at, 1.0, 1.0)
+			var falloff := clampf(1.0 - _flat(enemy.global_position - at).length() / reach, 0.0, 1.0)
+			combat._hit(enemy, "slam", slam_force(damage), heading, Ultimate.LANDING_KNOCK * falloff * pins, "", "special", "slam")
+			dealt += damage
+		hits += 1
+	_draw_shape("rivet_breach", shape)
+	_scar_left = maxf(_scar_left, Weapons.FULL_CUT_SCAR)
 	return [hits, dealt]
+
+
+# A landing that terrain stopped short of its target (a slope or wall on the path) carves the
+# same exact sector a few cells per tick and hits LATE_TICKS (about 55 ms) later: a curved
+# slope's carve takes far longer than a frame (Andrew's "Beat later", 2026-10-18). Each tick
+# shades cells in order until it has tested LATE_WORK parts against shadows (about 30 us each
+# in the cloud), and the last tick shades the rest; work is counted, never timed, so a replay
+# is the same on any machine. The cells' parts join in cell order, as _shade joins them.
+const LATE_TICKS := 5
+const LATE_WORK := 800
+# The tick's work budget; a test lowers it to see the stages.
+var late_work := LATE_WORK
+
+# Breach carves waiting to hit, oldest first: {centre, start, due, sector, cell_cuts, next,
+# done, lit, shadows, id, at, heading, reach, pins, damage, record}, with result once carved.
+var _late: Array = []
+
+
+func _stopped_short() -> bool:
+	return combat.ultimate != null and combat.ultimate.stopped_short
+
+
+func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: float, damage: float) -> void:
+	var sector := _sector_cells(at, heading, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
+	var cells: Array = sector["cells"]
+	var found := _terrain_near(at, cells)
+	var shadows: Array = []
+	var cuts := _cuts(at, TerrainFaces.merge(found["faces"]), cells, shadows, sector["hull"])
+	var start := Engine.get_physics_frames()
+	var late := {"centre": _commit_beam(at, heading, reach, 0.0), "start": start, "due": start + LATE_TICKS, "sector": sector,
+		"cell_cuts": [], "next": 0, "done": 0, "lit": [], "shadows": shadows, "id": id, "at": at, "heading": heading,
+		"reach": reach, "pins": pins, "damage": damage, "record": combat.ultimate._record}
+	if found.has("unreadable"):
+		late["result"] = []
+	elif cuts.is_empty():
+		late["result"] = cells
+	else:
+		for cell in cells:
+			(late["cell_cuts"] as Array).append(_cell_cuts(cuts, cell))
+	_late.append(late)
+
+
+func _step_late(now := Engine.get_physics_frames()) -> void:
+	for late in _late:
+		while int(late["done"]) < mini(LATE_TICKS, now - int(late["start"])):
+			late["done"] = int(late["done"]) + 1
+			if late.has("result"):
+				continue
+			var cells: Array = late["sector"]["cells"]
+			var cell_cuts: Array = late["cell_cuts"]
+			var lit: Array = late["lit"]
+			var last: bool = int(late["done"]) == LATE_TICKS
+			_shade_work = 0
+			while int(late["next"]) < cells.size() and (last or _shade_work < late_work):
+				var i: int = late["next"]
+				lit.append_array(_shade_cell(late["at"], cell_cuts[i], [cells[i]]))
+				late["next"] = i + 1
+			if int(late["next"]) == cells.size():
+				late["result"] = lit
+	while not _late.is_empty() and int(_late[0]["done"]) >= LATE_TICKS:
+		var late: Dictionary = _late.pop_front()
+		var shape := _sector_shape(late["sector"], late["result"], late["shadows"], late["centre"])
+		var result := _breach(shape, late["at"], late["heading"], late["reach"], late["pins"], late["damage"])
+		if combat.ultimate != null:
+			combat.ultimate.report_landing(late["record"], late["id"], late["at"], result)
+
+
+# Drops every late carve and its hits. report: each still closes its set piece's landing, with
+# no hits, so ultimate_landed fires once per strike.
+func _drop_late(report := false) -> void:
+	var dropped := _late
+	_late = []
+	if report and combat.ultimate != null:
+		for late in dropped:
+			combat.ultimate.report_landing(late["record"], late["id"], late["at"], [0, 0.0])
 
 
 # Juggernaut Drive's flight: every machine whose hull passes within the corridor of the ball's
@@ -1083,11 +1491,54 @@ func _physics_process(delta: float) -> void:
 
 func step(delta: float) -> void:
 	_clock += delta
+	_warm_terrain()
 	_step_pulses(delta)
 	_step_haul(delta)
 	_step_preview()
 	_step_piece(delta)
+	_step_late()
 	_step_cards()
+
+
+# Caches the static terrain around the ball on workers ahead of the carve, which otherwise
+# waits for the build (TerrainFaces).
+const WARM_EVERY := 45
+const WARM_REACH := 60.0
+
+
+func _exit_tree() -> void:
+	_drop_late()
+	terrain.finish()
+
+
+func _warm_terrain() -> void:
+	if Engine.get_physics_frames() % WARM_EVERY != 0 or ctx.player == null or not _rivet():
+		return
+	terrain.prune()
+	var box := BoxShape3D.new()
+	box.size = Vector3.ONE * WARM_REACH * 2.0
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = box
+	query.transform = Transform3D(Basis.IDENTITY, ctx.player.ball_position())
+	query.collision_mask = Hitscan.WORLD
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	var excluded: Array[RID] = []
+	while true:
+		query.exclude = excluded
+		var hits := space.intersect_shape(query)
+		if hits.is_empty():
+			return
+		for hit in hits:
+			var collider: CollisionObject3D = hit["collider"]
+			excluded.append(collider.get_rid())
+			if collider.get_class() != "StaticBody3D":
+				continue
+			for owner in collider.get_shape_owners():
+				if collider.is_shape_owner_disabled(owner):
+					continue
+				var transform := collider.global_transform * collider.shape_owner_get_transform(owner)
+				for i in collider.shape_owner_get_shape_count(owner):
+					_terrain_entry(collider.shape_owner_get_shape(owner, i), transform)
 
 
 func _clear_piece() -> void:
@@ -1105,6 +1556,7 @@ func _clear_piece() -> void:
 
 func _clear() -> void:
 	selected_shapes.clear()
+	_drop_late(true)
 	pulses.clear()
 	if not haul.is_empty():
 		_end_haul(false)

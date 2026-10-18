@@ -8,6 +8,8 @@ const Intent := preload("res://src/movement/intent.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const WindupPoses := preload("res://src/presentation/windup_poses.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const T := preload("res://tests/support/t.gd")
 const SCENE_KINDS := ["chaser", "mag_trapper", "winch_drone"]
@@ -67,6 +69,17 @@ func _rows() -> void:
 			and (death.get("seconds") is float) and float(death.seconds) >= 0.4 and float(death.seconds) <= 0.7
 		_t.check("GP6-1 death " + kind, death_ok, str(death))
 	_t.check("GP6-1 vault", WindupRows.ROWS.vault.idle.style == "tick" and WindupRows.ROWS.vault.death.style == "collapse", "vault ticks and collapses")
+	# Every concrete roster attack pose has a whole-body pose, and nothing names a pose no row has.
+	var named := {}
+	var missing: Array = []
+	for id in EventKinds.ATTACK_ROWS:
+		var attack: Dictionary = EventKinds.ATTACK_ROWS[id]
+		named[attack["pose"]] = true
+		var own_rig: bool = not WindupRows.ROWS.get(attack["owner"], {}).get("pose", {}).is_empty()
+		if attack["group"] == "enemy" and not attack["open"].has("pose") and not own_rig and not WindupPoses.has_pose(attack["pose"]):
+			missing.append(attack["pose"])
+	var stray: Array = WindupPoses.POSES.keys().filter(func(k): return not named.has(k))
+	_t.check("GP6-1 roster wind-up poses", missing.is_empty() and stray.is_empty(), "missing %s, stray %s" % [missing, stray])
 	_t.check("GP6-1 swarm pose", EnemyMotion.pose_basis(WindupRows.ROWS.swarm_remnant) != Basis.IDENTITY
 		and EnemyMotion.pose_basis(WindupRows.ROWS.chaser) == Basis.IDENTITY, "only the swarm remnant's row carries a wind-up pose")
 	GraphicsPreset.current = "low"
@@ -95,6 +108,8 @@ func _idle_scene() -> void:
 	var inside := [true, true, true]
 	var windup_zero := true
 	var windup_frames := 0
+	var lean := 0.0
+	var released := false
 	for frame in IDLE_FRAMES:
 		if frame == IDLE_FRAMES / 2:
 			enemies[0]._begin_windup(Vector3.FORWARD)
@@ -102,9 +117,16 @@ func _idle_scene() -> void:
 		for i in enemies.size():
 			var enemy = enemies[i]
 			var origin: Vector3 = enemy.reaction_pivot.transform.origin
+			var turned: float = enemy.reaction_pivot.transform.basis.get_rotation_quaternion().angle_to(Quaternion.IDENTITY)
 			if enemy.winding_up():
 				windup_frames += 1
-				windup_zero = windup_zero and origin == Vector3.ZERO and enemy.idle_offset == Vector3.ZERO
+				# The offset fades over IDLE_FADE_OUT (never up), then holds at zero.
+				var faded: bool = windup_frames > 20
+				windup_zero = windup_zero and (not faded or (origin == Vector3.ZERO and enemy.idle_offset == Vector3.ZERO)) and origin.length() <= float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude) + 0.0001
+				if i == 0:
+					lean = maxf(lean, turned)
+			elif i == 0 and windup_frames > 0 and turned > 0.01:
+				released = true
 			else:
 				peaks[i] = maxf(peaks[i], origin.length())
 				inside[i] = inside[i] and origin.length() <= float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude) + 0.0001
@@ -112,7 +134,12 @@ func _idle_scene() -> void:
 		var amp := float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude)
 		_t.check("GP6-2 idle " + SCENE_KINDS[i], inside[i] and peaks[i] > amp * 0.5, "peak %.4f m within %.3f m" % [peaks[i], amp])
 		_t.check("GP6-2 collider " + SCENE_KINDS[i], _shapes(enemies[i]) == shapes[i], "collision shapes keep their local transforms")
-	_t.check("GP6-2 wind-up holds", windup_zero and windup_frames > 0, "%d open-attack frames, all with zero offset" % windup_frames)
+	_t.check("GP6-2 wind-up holds", windup_zero and windup_frames > 0, "%d open-attack frames, offset faded to zero" % windup_frames)
+	# ATTACK_ROWS E01 e01_brace_back: the chaser leans back into its lunge, then snaps through it.
+	_t.check("GP6-2 wind-up leans into its pose", lean > deg_to_rad(8.0), "peak lean %.1f deg" % rad_to_deg(lean))
+	_t.check("GP6-2 strike snaps through its release", released)
+	_t.check("GP6-2 release settles to rest", enemies[0].reaction_pivot.transform.basis.is_equal_approx(Basis.IDENTITY) or enemies[0].winding_up(),
+		str(enemies[0].reaction_pivot.transform.basis))
 	for enemy in enemies:
 		enemy.free()
 

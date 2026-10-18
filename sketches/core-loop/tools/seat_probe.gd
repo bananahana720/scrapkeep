@@ -62,7 +62,7 @@ func _initialize() -> void:
 	if candidates.is_empty():
 		for id: String in rows:
 			var recipe := String(rows[id]["recipe"])
-			if recipe != "" and not recipe.begins_with(ParkRecipes.GREYBOX):
+			if recipe != "" and not recipe.begins_with(ParkRecipes.GREYBOX) and not ParkRecipes.ANCHOR_KITS.has(recipe):
 				candidates[id] = recipe
 	var parent := Node3D.new()
 	root.add_child(parent)

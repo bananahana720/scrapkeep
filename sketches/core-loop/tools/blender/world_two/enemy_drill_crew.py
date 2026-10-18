@@ -14,9 +14,11 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+polish.enable(detail=2, bevel=0.03, fit=True)
 for slot, rough, metal in (("fleet_paint", 0.82, 0.0), ("working_tool", 0.5, 0.45),
                            ("part_state", 0.72, 0.25)):
     common.SLOTS[slot] = {"vc": True, "rough": rough, "metal": metal}
@@ -41,22 +43,31 @@ def measured(part, faces, lo, hi):
 
 
 b = Part("DrillCrewBody")
-core = b.uv("fleet_paint", 0.8, u=8, v=6, scale=(1, 1, 1.375), color="petrol")
+# Under polish the crew is the shared soft critter: body, head and muzzle subdivide twice,
+# ears and arms once; eyes stay small smooth beads and the casting keeps crisp bevels.
+with b.region(bevel=0, subsurf=2, detail=1):
+    core = b.uv("fleet_paint", 0.8, u=8, v=6, scale=(1, 1, 1.375), color="petrol")
 core_vertices = b.verts_of(core)
 assert all(math.hypot(v.co.x, v.co.y) <= 0.800001 and -1.100001 <= v.co.z <= 1.100001
            for v in core_vertices)
 measured(b, core, (-0.8, -1.1, -0.8), (0.8, 1.1, 0.8))
-head = b.uv("fleet_paint", 0.38, u=8, v=6, loc=g(0, 1.3, 0), color="oxide")
+with b.region(bevel=0, subsurf=2, detail=1):
+    head = b.uv("fleet_paint", 0.38, u=8, v=6, loc=g(0, 1.3, 0), color="oxide")
 for face in core + head:
     face.smooth = True
 for side in (-1, 1):
-    b.cyl("fleet_paint", 0.13, 0.0, 0.34, segs=6, loc=g(side * 0.2, 1.65, 0), color="charcoal")
-    b.uv("fleet_paint", 0.035, u=6, v=4, loc=g(side * 0.14, 1.36, 0.338), color="charcoal")
-    b.rod("fleet_paint", g(side * 0.34, 0.95, 0.18), g(side * 0.38, 0.91, 0.68),
-          0.10, segs=6, color="oxide")
-    b.uv("fleet_paint", 0.12, u=6, v=4, loc=g(side * 0.38, 0.91, 0.68), color="charcoal")
-b.uv("fleet_paint", 0.16, u=8, v=4, loc=g(0, 1.21, 0.34), scale=(1, 1, 0.65), color="bone")
-box(b, "fleet_paint", (0.10, 0.07, 0.06), (0, 1.26, 0.48), "charcoal")
+    with b.region(bevel=0, subsurf=1, detail=1):
+        b.cyl("fleet_paint", 0.13, 0.0, 0.34, segs=6, loc=g(side * 0.2, 1.65, 0), color="charcoal")
+    with b.region(bevel=0, detail=1):
+        b.uv("fleet_paint", 0.035, u=6, v=4, loc=g(side * 0.14, 1.36, 0.338), color="charcoal")
+    with b.region(bevel=0, subsurf=1, detail=1):
+        b.rod("fleet_paint", g(side * 0.34, 0.95, 0.18), g(side * 0.38, 0.91, 0.68),
+              0.10, segs=6, color="oxide")
+        b.uv("fleet_paint", 0.12, u=6, v=4, loc=g(side * 0.38, 0.91, 0.68), color="charcoal")
+with b.region(bevel=0, subsurf=2, detail=1):
+    b.uv("fleet_paint", 0.16, u=8, v=4, loc=g(0, 1.21, 0.34), scale=(1, 1, 0.65), color="bone")
+with b.region(bevel=0.015, detail=1):
+    box(b, "fleet_paint", (0.10, 0.07, 0.06), (0, 1.26, 0.48), "charcoal")
 # A chamfered casting reaches the measured carriage envelope without square corners.
 outline = [(-0.65, -0.8), (-0.8, -0.65), (-0.8, 0.65), (-0.65, 0.8),
            (0.65, 0.8), (0.8, 0.65), (0.8, -0.65), (0.65, -0.8),
@@ -86,6 +97,8 @@ body = b.to_object(parent=root)
 
 # The screw is a continuous tapered helical flight, not stacked discs.
 d = Part("DrillBit")
+# The flight is only 7 cm thick, so its bevel stays narrow.
+d.bevel = 0.012
 d.rod("working_tool", g(0, 0.5, 1.2), g(0, 0.5, 3.6), 0.22, r2=0.0, segs=12, color="a8aaa3")
 rows = []
 steps = 30
@@ -110,12 +123,14 @@ bit = d.to_object(origin=g(0, 0.5, 2.4), parent=root)
 p = Part("DrillPlate")
 plate_faces = box(p, "part_state", (2.2, 1.8, 0.25), (0, 0.6, -1.0), "bone")
 measured(p, plate_faces, (-1.1, -0.3, -1.125), (1.1, 1.5, -0.875))
-for side in (-1, 1):
-    box(p, "part_state", (0.14, 1.58, 0.025), (side * 0.83, 0.6, -1.108), "petrol")
-    for y in (0.02, 1.19):
-        p.cyl("part_state", 0.065, 0.065, 0.025, segs=4, loc=g(side * 0.83, y, -1.110),
-              rot=(math.pi / 2, 0, 0), color="a8aaa3")
-box(p, "part_state", (0.58, 0.06, 0.025), (-0.34, 0.90, -1.110), "charcoal")
+# Flat stripes and bolt heads on the plate keep a hairline bevel.
+with p.region(bevel=0.006):
+    for side in (-1, 1):
+        box(p, "part_state", (0.14, 1.58, 0.025), (side * 0.83, 0.6, -1.108), "petrol")
+        for y in (0.02, 1.19):
+            p.cyl("part_state", 0.065, 0.065, 0.025, segs=4, loc=g(side * 0.83, y, -1.110),
+                  rot=(math.pi / 2, 0, 0), color="a8aaa3")
+    box(p, "part_state", (0.58, 0.06, 0.025), (-0.34, 0.90, -1.110), "charcoal")
 bmesh.ops.recalc_face_normals(p.bm, faces=p.bm.faces[:])
 plate = p.to_object(origin=g(0, 0.6, -1.0), parent=root)
 
@@ -127,7 +142,7 @@ for name, at in (("DrillHead", (0, 1.3, 0)), ("DrillCarriage", (0, 0.5, 1.3)),
     common.empty(name, g(*at), parent=root)
 bpy.context.view_layer.update()
 print("MESH_COUNTS", [(o.name, common.tris(o)) for o in (body, bit, plate)])
-assert common.tri_total(root) <= 1100
+assert common.tri_total(root) <= 7500
 assert sum(len(o.data.materials) for o in (body, bit, plate)) == 3
 print("EDC RECIPE: %d T / 3 surfaces; core radius 0.8, height 2.2; screw 0.9 x 2.4; plate rear" % common.tri_total(root))
 opts = common.args()
@@ -138,7 +153,7 @@ with open(output, "rb") as handle:
 gltf = json.loads(exported[20:20 + struct.unpack_from("<I", exported, 12)[0]])
 vertices = sum(gltf["accessors"][primitive["attributes"]["POSITION"]]["count"]
                for mesh in gltf["meshes"] for primitive in mesh["primitives"])
-assert vertices <= 2100, vertices
+assert vertices <= 9000, vertices
 print("EDC EXPORT: %d T / %d V / 3 D" % (common.tri_total(root), vertices))
 
 

@@ -94,10 +94,11 @@ static func make_offer(device_kind: String, tier: int, pay: String, run, rng: Ra
 
 
 # A part of exactly this power tier (Parts: tier 1 +10 to 15%, 2 +25%, 3 +50%) the class
-# may be offered, one it does not hold when it can, drawn from the device's stream.
+# may be offered, one it does not hold when it can, drawn from the device's stream. A part held
+# at its top level (SG15) would give nothing, so it is never the win.
 static func _pick_part(tier: int, run, rng: RandomNumberGenerator) -> String:
 	var pool: Array = Parts.offer_pool(run.class_id(), ItemGen.RARITIES).filter(
-		func(key): return Parts.def(key) != null and Parts.def(key).tier == tier)
+		func(key): return Parts.def(key) != null and Parts.def(key).tier == tier and not Parts.maxed(key, run.parts))
 	pool.sort()
 	var fresh: Array = pool.filter(func(key): return not key in run.parts)
 	if not fresh.is_empty():

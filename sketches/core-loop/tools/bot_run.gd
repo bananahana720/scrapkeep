@@ -24,6 +24,8 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
 # writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
 # diagnostic run. --fixed-fps 90 makes one frame one physics tick, faster than real time.
+# --comic-page=1 ends a run cut short as a loss so it folds a comic page (run_moments.gd); with a
+# rendering display (not --headless) the panels carry real stills.
 # --bot-profile=1 writes runner/tick timings and sampled Performance monitors.
 # --bot-audit=1 writes full-precision committed bus events with stable object tokens.
 # --bot-no-mix=1 skips sample arithmetic while retaining music transport.
@@ -47,13 +49,16 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 #                        reached, ticks, game and wall seconds, per-stage bot notes, and the
 #                        beats column (src/core/stage_beats.gd): per stage entered, the physics
 #                        ticks of arrive, loot, find, hold, fight and leave and whether it exited.
+#   scrapbook/           the run-end comic page (src/core/run_moments.gd) of a run that ended:
+#                        <run_id>.json and its stills <run_id>_<i>.png.
 #   codex-entries.json   every declared codex entry (id, category, name, clue), so the
 #                        report can name entries no run discovered.
 # A run ends on run_ended (won or lost), death, stall, or --until/--stages; a stalled
 # or missing-boss run has no spine record (the run log writes only at death and run end), so
 # its bots.ndjson line is the only trace. Each seed gets a fresh process and data folder,
 # seeded RNG streams, spawn-order signs instead of object-ID-dependent choices, a
-# completed audio bake, and physics-tick hit-stop gates (src/core/sim_clock.gd).
+# completed audio bake (stage 1's band too, as a player gets behind the title), and
+# physics-tick hit-stop gates (src/core/sim_clock.gd).
 # Replay evidence is specific to the checked machine, build, policy and table.
 
 var _audit
@@ -204,6 +209,7 @@ func _physics_process(delta: float) -> bool:
 		# Point the codex and the run log at --out; nothing has been written yet.
 		_game.codex.storage_dir = _out
 		_game.run_log.storage_dir = _out
+		_game.run_moments.storage_dir = _out
 		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), _seeds[_index])
 		if _settings.has("pilot"):
 			_driver.class_index = BotDriver.class_index_for(_seeds[_index], String(_settings["pilot"]))
@@ -219,7 +225,7 @@ func _physics_process(delta: float) -> bool:
 				return true
 			_driver.late_offer_policy = late
 			_driver.tree_policy = "random"
-		_game.presentation.audio.bake_now()
+		_game.presentation.audio.bake_opening_now()
 		_game.run.run_seed_override = _seeds[_index]
 		_started_msec = Time.get_ticks_msec()
 		var resume := false
@@ -256,6 +262,13 @@ func _physics_process(delta: float) -> bool:
 	_beats.finish()
 	# --stages=N and --until=N end the run a tick or two into the next stage; that sliver is not an attempt.
 	record["beats"] = StageBeats.within(_beats.rows, int(_settings.get("stages", _settings.get("until", "0"))))
+	# --comic-page=1 folds a comic page from a run cut short (--ticks, --until, a stall) as a
+	# loss, so a short rendered run can show its stills.
+	if _settings.has("comic-page") and not _game.run.over:
+		_game.flow._end_run(false)
+	# The run-end comic page (run_moments.gd): its panel count and where it was saved.
+	record["comic_panels"] = (_game.run_moments.last_page.get("panels", []) as Array).size()
+	record["comic_page"] = _game.run_moments.last_page_path
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()
@@ -307,7 +320,9 @@ func _snapshot(delta: float) -> Dictionary:
 		items.append([_vector(item.global_position), field._caught.get(item),
 			field._value.get(item), field._age.get(item), field._cogs.get(item)])
 	var events := []
-	for state in _game.world.events._park_states:
+	# world.gd holds no event director between stages (its events is null from a stage's end to the next entry).
+	var director = _game.world.events
+	for state in (director._park_states if director != null else []):
 		events.append({"id": state.row.id, "phase": state.phase, "due": state.due_s,
 			"ready": state.ready_s, "elapsed": state.live_elapsed_s, "holding": state.holding})
 	return {"tick": _driver.ticks + 1, "delta": delta, "flow": _game.flow.state_name(),
@@ -319,7 +334,7 @@ func _snapshot(delta: float) -> Dictionary:
 		"events": events, "music_clock": _game.presentation.audio.engine.clock,
 		"bot_rng": str(_driver.rng.state), "run_rng": str(_game.ctx.rng.state),
 		"loot_rng": str(_game.build.loot_rng.state), "director_rng": str(_game.world.director._rng.state),
-		"event_rng": str(_game.world.events.rng.state), "tree_rng": str(_driver._tree_rng.state),
+		"event_rng": str(director.rng.state) if director != null else null, "tree_rng": str(_driver._tree_rng.state),
 		"camera_rng": str(_game.camera._shake_rng.state),
 		"aim_origin": _vector(_game.ctx.aim_origin()), "aim_forward": _vector(_game.ctx.aim_forward()),
 		"yaw": _game.camera.yaw, "pitch": _game.camera.pitch, "enemies": enemies}

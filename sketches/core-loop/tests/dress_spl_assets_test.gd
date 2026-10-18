@@ -14,7 +14,10 @@ const MODULE_NODES := {
 	"escape_vent": ["ModuleRoot", "Foot", "FootBox", "VaneHinge.L", "VaneHinge.R", "Vanes.L", "Vanes.R"],
 	"escape_rail": ["ModuleRoot", "Foot", "Carriage", "RailSlide.L", "RailSlide.R", "Rails.L", "Rails.R"],
 }
-const HULL_CLIPS := {"idle": 1.6, "follow": 0.18, "dock": 0.25, "empty": 0.25, "escape_spent": 0.14, "escape_rearm": 0.20}
+const HULL_CLIPS := {"idle": 1.6, "follow": 0.18, "dock": 0.25, "empty": 0.25, "escape_spent": 0.14, "escape_rearm": 0.20,
+	"assist_rise": 0.15, "assist_drop": 0.15, "assist_return": 0.45}
+# The called assist is a whole-body act on BodyPose (squash, stretch, pitch); nothing held lives there.
+const ASSIST_CLIPS := ["assist_rise", "assist_drop", "assist_return"]
 const MODULE_CLIPS := {
 	"primer_coil": {"primer_set": 0.12, "primer_consume": 0.16, "primer_expire": 0.12},
 	"primer_mesh": {"primer_set": 0.12, "primer_consume": 0.16, "primer_expire": 0.12},
@@ -113,7 +116,7 @@ func _gap(a: AABB, b: AABB) -> float:
 	return d.length()
 
 
-func _geometry(scene: Node, pair: bool, label: String) -> void:
+func _geometry(scene: Node, pair: bool, label: String, whole_body := false) -> void:
 	var groups := _pose_vertices(scene)
 	var points: Array = []
 	var left := {}
@@ -127,12 +130,15 @@ func _geometry(scene: Node, pair: bool, label: String) -> void:
 	_check(not points.is_empty(), "nonempty posed geometry " + label)
 	if points.is_empty():
 		return
-	if pair:
+	# An assist moves and squashes the whole fitted assembly, so its envelope is the runtime's to place;
+	# module clearance still holds at every sample.
+	if pair and not whole_body:
 		var bounds := _bounds(points)
 		max_envelope = max_envelope.max(bounds.size)
 		max_height_above_root = maxf(max_height_above_root, bounds.end.y)
 		_check(bounds.size.x <= 1.65 + 0.0001 and bounds.end.y <= 1.20 + 0.0001 and bounds.size.z <= 0.90 + 0.0001,
 			"fitted envelope " + label + " " + str(bounds))
+	if pair:
 		_check(not left.is_empty() and not right.is_empty(), "two selected modules " + label)
 		for a in left:
 			for b in right:
@@ -188,6 +194,8 @@ func _feet(scene: Node, pair: bool, label: String) -> void:
 
 
 func _owns_channel(clip: String, node: String, path: String) -> bool:
+	if clip in ASSIST_CLIPS:
+		return node == "BodyPose" and path in ["translation", "rotation", "scale"]
 	if clip in ["idle", "dock", "empty"]:
 		return node == "BodyPose" and path == "translation"
 	if clip == "follow":
@@ -285,7 +293,7 @@ func _asset(name: String, parts: Array, pair: bool, budget: Dictionary) -> void:
 	for animation in data.get("animations", []):
 		checked_clips += 1
 		exported_clips.append(String(animation.get("name", "")))
-		_check(animation["channels"].size() == 1, "one owned control per clip " + path + " " + String(animation["name"]))
+		_check(animation["channels"].size() == (3 if String(animation["name"]) in ASSIST_CLIPS else 1), "owned controls per clip " + path + " " + String(animation["name"]))
 		for channel in animation["channels"]:
 			var target: Dictionary = channel["target"]
 			_check(_owns_channel(String(animation["name"]), String(data["nodes"][int(target["node"])]["name"]), String(target["path"])),
@@ -330,7 +338,7 @@ func _asset(name: String, parts: Array, pair: bool, budget: Dictionary) -> void:
 				player.play(clip)
 				player.seek(float(frame) / 100, true)
 				player.advance(0)
-				_geometry(scene, pair, name + " " + clip + " %d" % frame)
+				_geometry(scene, pair, name + " " + clip + " %d" % frame, clip in ASSIST_CLIPS)
 				_check((scene as Node3D).transform.is_equal_approx(root_transform), "no animation root motion " + clip)
 			player.stop()
 	if pair:
@@ -350,7 +358,8 @@ func _run() -> void:
 		quit(1)
 		return
 	var enemy: Dictionary = budgets["classes"]["enemy"]
-	_check(enemy["tris"] == 1100 and enemy["verts"] == 2100 and enemy["draws"] == 3, "P-R7 enemy row 1100/2100/3")
+	# P-R7 set 1100/2100/3; the 2026-10-18 model polish raised the row (tools/blender/POLISH.md).
+	_check(enemy["tris"] == 10000 and enemy["verts"] == 19100 and enemy["draws"] == 3, "enemy row 10000/19100/3")
 	_asset("spil9", [], false, enemy)
 	for p in PIECES:
 		_asset(p, [p], false, enemy)
@@ -362,7 +371,7 @@ func _run() -> void:
 			_asset(PIECES[i] + "__" + PIECES[j], [PIECES[i], PIECES[j]], true, enemy)
 			pair_count += 1
 	_check(loaded == 31 and pair_count == 24 and samples > 1000, "7 sources, 12 pairs in both placements, nonzero pose samples")
-	_check(checked_clips == 231 and held_state_checks == 33, "all clip controls and held-state checks ran")
+	_check(checked_clips == 306 and held_state_checks == 33, "all clip controls and held-state checks ran")
 	print("SPL_ANIMATION clips=%d held_state_checks=%d" % [checked_clips, held_state_checks])
 	print("SPL_GEOMETRY loaded=%d pairs=%d samples=%d conservative_gap=%.4f max_envelope=%s height_above_root=%.4f" % [loaded, pair_count, samples, minimum_gap, max_envelope, max_height_above_root])
 	print("dress_spl_assets_test: " + ("PASS" if failures == 0 else "FAIL"))

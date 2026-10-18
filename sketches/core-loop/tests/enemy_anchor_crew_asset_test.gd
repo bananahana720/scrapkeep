@@ -67,7 +67,7 @@ func _measure(node: Node) -> Dictionary:
 				for color in arrays[Mesh.ARRAY_COLOR] as PackedColorArray:
 					opaque = opaque and color.a == 1.0
 	print("%s: %d T / %d V / %d surfaces" % [node.name, tris, verts, draws])
-	t.check("budget " + str(node.name), tris > 0 and tris <= 1100 and verts > 0 and verts <= 2100 and draws == 3)
+	t.check("budget " + str(node.name), tris > 0 and tris <= 10000 and verts > 0 and verts <= 19100 and draws == 3)
 	t.check("opaque and unlit " + str(node.name), opaque and not emission)
 	return {"tris": tris, "verts": verts, "draws": draws}
 

@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # One grammar for every enemy threat, drawn by combat's telegraph.gd and the boss's
 # hazard.gd. The attack type decides how a threat draws; its committed geometry decides
@@ -1232,14 +1233,14 @@ class Flash:
 	func start(fill: Array, tone: Color) -> void:
 		_tone = tone
 		paint(fill, ["fill"])
-		tint("fill", Color(_tone, FLASH_ALPHA))
+		tint("fill", Color(_tone, FlashGuard.info(FLASH_ALPHA)))
 
 	func _process(delta: float) -> void:
 		_age += delta
 		if _age >= FLASH_SECONDS:
 			queue_free()
 			return
-		tint("fill", Color(_tone, FLASH_ALPHA * (1.0 - _age / FLASH_SECONDS)))
+		tint("fill", Color(_tone, FlashGuard.info(FLASH_ALPHA) * (1.0 - _age / FLASH_SECONDS)))
 
 
 static func flash(parent: Node, d: Dictionary, floor_y: float, lift: float) -> Node3D:

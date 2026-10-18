@@ -200,6 +200,7 @@ func run_policy() -> void:
 		if animator.has_animation("idle_loop"):
 			check(class_id + " clip hands back to idle_loop", rec.reaction == "" and animator.is_playing() and animator.current_animation == "idle_loop")
 		else:
+			finish(rec)  # the clip end eases to the runtime rest clip first
 			check(class_id + " clip finishes seated (no idle_loop yet)", rec.reaction == "" and not animator.is_playing())
 		check(class_id + " shared cooldown blocks hold_broken after near_miss", not hero.react(player, "hold_broken"))
 		hero._process(4.01)

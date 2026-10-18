@@ -157,6 +157,14 @@ Polylines (x, z), all starting at the tube mouth (0, -360) or the great room (0,
 - The ten kicker rows (`cinder_kicker`, `crust_kicker` and one per tube): each one's paired `<id>_ramp` ground row stamps the lip, and the traversal tool reads the lip from the park map (`near_kicker_lip`). A greybox kicker wedge would stack a second 2.5 m lip on the stamped one.
 - The ground rows, by R10's own scope.
 
+**Full ring (storyboard 4 call B, 2026-10-17).** Andrew picked the full gallery ring on 16 Oct (`storyboards/DECISIONS.md`). The 70 m strip at y -108.24, which sat buried about 8 m under the -100 pit floor so its sensor never fired, is replaced by 24 ring rows, `gallery_ring` and `gallery_ring_2` to `_24`: 15 m wide from radius 46 to 61 round the pool centre (0, 350), each a zero-height `plateau` ledge, so the bake paints the band and keeps the floor and the row places only its `ride_ledge` sensor (`stamp_replaces`). The greybox pit's south wall stood at z 400, 10 m behind the pool, so `gallery_cut_1` to `_15` cut it back to radius 66 between x -45 and 45 and the ring passes behind the nest. `pump_gallery` moves to (73, 350), outside the lap, and route `gallery_lap` runs round it. `tools/park_ring_rows.py` writes the rows. Re-measured in the cloud on 8 seeds against `cf63e622` measured the same way: all six pilots and the floor reach the Warden 8/8 with zero dead stops, arrival medians move by at most 1.5 s (floor 99.44 s, worst 100.44 s), and the completionist win proof clears stage 4 on seeds 1 to 3. Cloud numbers differ slightly from the round-4 table above (another machine and a later main), so compare like with like.
+
+**Real basin (Andrew, 2026-10-17).** Andrew tapped "Real basin" and then asked for the pool to be a bowl. Row `caisson_pit`, a `bowl` stamp 80 m across and 20 m deep at (0, 350), sinks the pool floor from the -100 pit floor to -120. The swarm's pool slab now builds there and rises 5 m per chunk lost (`src/combat/warden_swarm.gd`). Under the nest the ground is about -102. A straight-walled `sinkhole` stamp was tried first. It hung the nest over a 20 m wall that a ball on the pool floor could neither ram nor climb, and the completionist bot stalled on 2 of 3 seeds. Re-measured in the cloud against the ring-only `1548fa8f`, completionist, stage limit 1500 s:
+- Every pilot and the floor still reach the Warden 8/8 with zero dead stops. The floor median is 97.24 s, worst 100.37 s.
+- Stage 4 clears on 5 of 6 seeds, as before; seed 5 dies at the same tick on both trees.
+- The fight is slower: clear times by seed run 426, 451, 671, 1297 and 351 s against 235, 408, 455, 569 and 297 s.
+- Two things are still open. `park_graph`'s `beacon_ok` wants a disc of `reach_m` round the beacon that is flat within 2.5 m, which a 20 m basin cannot meet, so `park_park_sinkhole_test` fails that pin until the rule judges a mounting pool by its slab. And line fire from the pool floor builds about 0.1 posture a second, so the 45 to 70 s first stagger predicted above comes from rams instead.
+
 ## 5. `event_rows` (shipped)
 
 Five rows, all four families, as shipped in `src/world/park/park_sinkhole.json` (KD4 greybox, 2026-10-11). Tier 1 at 45 s and tier 2 at 90 s (`src/world/director.gd:83-85`, as cited in PARK.md section 5); `cenote_drain` waits for tier 3 (veto item 16, `MAX_TIME_TIERS` raised to 4).
@@ -204,34 +212,28 @@ Advantage and counter text is in each row of the park file. `drift_drill_crews` 
 
 ## 7. `contraption_rows` (shipped)
 
-Spec keys are today's (`src/world/contraptions.gd:86-101`). 32 rows.
+Spec keys are today's (`src/world/contraptions.gd:86-101`). 28 rows since the authored pass (2026-10-17, "Wall pays" and the floor is lava; `tools/park_sinkhole_pass.py` writes the ropes, vents, cinder strips and glaze).
 
 | Id | Kind, recipe | Site | Spec | What it is for |
 | --- | --- | --- | --- | --- |
-| `tube_rope_1` | cable, `""` | `lava_channel_14` | from [-194.8, -79.3, -545.2] to [-197.0, -79.8, -505.6], radius 3.4, floor 18 | the rope fan across the lava channel: four parallel lines, so every line latches one whatever its lane |
-| `tube_rope_2` | cable, `""` | `lava_channel_14` | from [-188.9, -79.9, -546.3] to [-191.5, -80.5, -503.3], radius 3.4, floor 18 | the rope fan across the lava channel: four parallel lines, so every line latches one whatever its lane |
-| `tube_rope_3` | cable, `""` | `lava_channel_14` | from [-183.0, -79.9, -547.3] to [-186.0, -80.6, -500.9], radius 3.4, floor 18 | the rope fan across the lava channel: four parallel lines, so every line latches one whatever its lane |
-| `tube_rope_4` | cable, `""` | `lava_channel_14` | from [-177.1, -79.2, -548.4] to [-180.5, -80.0, -498.6], radius 3.4, floor 18 | the rope fan across the lava channel: four parallel lines, so every line latches one whatever its lane |
-| `main_tube_lower_rope_1` | cable, `""` | `main_tube_lower_4` | from [-75.7, -97.2, 121.9] to [-50.3, -97.2, 144.3], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `main_tube_lower_rope_2` | cable, `""` | `main_tube_lower_4` | from [-70.7, -98.1, 118.7] to [-47.8, -98.0, 138.9], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `main_tube_lower_rope_3` | cable, `""` | `main_tube_lower_4` | from [-65.6, -98.0, 115.5] to [-45.3, -97.9, 133.4], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `main_tube_lower_rope_4` | cable, `""` | `main_tube_lower_4` | from [-60.5, -96.9, 112.3] to [-42.8, -96.7, 128.0], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `east_haulage_rope_1` | cable, `""` | `east_haulage_4` | from [147.2, -95.9, 89.3] to [163.2, -95.8, 110.4], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `east_haulage_rope_2` | cable, `""` | `east_haulage_4` | from [151.5, -97.1, 85.2] to [168.7, -97.2, 108.0], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `east_haulage_rope_3` | cable, `""` | `east_haulage_4` | from [155.9, -97.0, 81.0] to [174.2, -97.1, 105.5], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `east_haulage_rope_4` | cable, `""` | `east_haulage_4` | from [160.2, -95.5, 76.9] to [179.7, -95.7, 103.1], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `west_breakthrough_rope_1` | cable, `""` | `west_breakthrough_6` | from [-166.8, -98.7, 176.7] to [-155.9, -98.5, 208.5], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `west_breakthrough_rope_2` | cable, `""` | `west_breakthrough_6` | from [-161.0, -99.6, 175.3] to [-151.2, -99.6, 204.6], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `west_breakthrough_rope_3` | cable, `""` | `west_breakthrough_6` | from [-155.2, -99.6, 173.9] to [-146.6, -100.2, 200.8], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `west_breakthrough_rope_4` | cable, `""` | `west_breakthrough_6` | from [-149.3, -98.6, 172.5] to [-142.0, -99.2, 197.0], radius 3.4, floor 18 | four ropes across each lower tube past its vent's landing, so every line meets a grapple line after the great room |
-| `main_tube_upper_vent` | launcher, `geyser_vent` | `main_tube_upper_4` | at (88.3, -229.4), radius 5, target [58.8, -87.6, -191.9], floor 16, min flight 2.2 s, charge 3 s | a lava vent on the tube's straightest stretch: it throws a passing ball 50 m down the tube on an arc of at least 2.2 s |
-| `skylight_chain_vent` | launcher, `geyser_vent` | `skylight_chain_8` | at (127.5, -126), radius 5, target [89.8, -90.3, -93.2], floor 16, min flight 2.2 s, charge 3 s | a lava vent on the tube's straightest stretch: it throws a passing ball 50 m down the tube on an arc of at least 2.2 s |
-| `east_drift_vent` | launcher, `geyser_vent` | `east_drift_9` | at (189.5, -108.8), radius 5, target [152.8, -90.8, -75.1], floor 16, min flight 2.2 s, charge 3 s | a lava vent on the tube's straightest stretch: it throws a passing ball 50 m down the tube on an arc of at least 2.2 s |
-| `west_gallery_vent` | launcher, `geyser_vent` | `west_gallery_9` | at (-150.1, -93.9), radius 5, target [-110.2, -91.1, -63.9], floor 16, min flight 2.2 s, charge 3 s | a lava vent on the tube's straightest stretch: it throws a passing ball 50 m down the tube on an arc of at least 2.2 s |
-| `cannon_tube_vent` | launcher, `geyser_vent` | `cannon_tube_2` | at (-45.7, -314.1), radius 5, target [-79.4, -85.3, -277.2], floor 16, min flight 2.2 s, charge 3 s | a lava vent on the tube's straightest stretch: it throws a passing ball 50 m down the tube on an arc of at least 2.2 s |
-| `main_tube_lower_vent` | launcher, `geyser_vent` | `main_tube_lower_2` | at (-41.3, 25.5), radius 5, target [-73.1, -94.5, 62.7], floor 16, min flight 2.2 s, charge 3 s | a lava vent on the tube's straightest stretch: it throws a passing ball 50 m down the tube on an arc of at least 2.2 s |
-| `east_haulage_vent` | launcher, `geyser_vent` | `east_haulage_2` | at (65.7, 18.1), radius 5, target [108.5, -94.0, 43.9], floor 16, min flight 2.2 s, charge 3 s | a lava vent on the tube's straightest stretch: it throws a passing ball 50 m down the tube on an arc of at least 2.2 s |
-| `west_breakthrough_vent` | launcher, `geyser_vent` | `west_breakthrough_8` | at (-123.3, 233.4), radius 5, target [-83.3, -100.0, 263.3], floor 16, min flight 2.2 s, charge 3 s | a lava vent on the tube's straightest stretch: it throws a passing ball 50 m down the tube on an arc of at least 2.2 s |
+| `tube_rope_1` | cable, `` | `lava_channel_14` | from [-196.0, -78.8, -547.4] to [-198.8, -79.4, -502.7], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
+| `tube_rope_2` | cable, `` | `lava_channel_14` | from [-198.5, -77.1, -547.6] to [-201.3, -77.8, -502.9], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
+| `tube_rope_3` | cable, `` | `lava_channel_14` | from [-175.9, -78.8, -546.2] to [-178.7, -79.4, -501.5], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
+| `tube_rope_4` | cable, `` | `lava_channel_14` | from [-173.4, -77.1, -546.0] to [-176.2, -77.8, -501.3], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
+| `main_tube_lower_rope_1` | cable, `` | `main_tube_lower_4` | from [-75.1, -96.2, 125.0] to [-53.5, -96.1, 144.0], radius 3.4, floor 26 | the caisson swing: one ring per wall on the band, the fastest rope in the park, toward the bowl |
+| `main_tube_lower_rope_2` | cable, `` | `main_tube_lower_4` | from [-61.2, -96.2, 109.2] to [-39.6, -96.1, 128.3], radius 3.4, floor 26 | the caisson swing: one ring per wall on the band, the fastest rope in the park, toward the bowl |
+| `east_haulage_rope_1` | cable, `` | `east_haulage_4` | from [145.9, -95.2, 88.9] to [163.7, -95.3, 112.6], radius 3.4, floor 18 | the haulage cable: one ring per drift wall, the slowest rope; the drift floor is the drill crews' |
+| `east_haulage_rope_2` | cable, `` | `east_haulage_4` | from [161.5, -95.2, 77.3] to [179.2, -95.3, 100.9], radius 3.4, floor 18 | the haulage cable: one ring per drift wall, the slowest rope; the drift floor is the drill crews' |
+| `west_breakthrough_rope_1` | cable, `` | `west_breakthrough_6` | from [-168.1, -97.7, 177.9] to [-158.9, -98.0, 206.0], radius 3.4, floor 24 | the breakthrough run: one ring per wall on the band |
+| `west_breakthrough_rope_2` | cable, `` | `west_breakthrough_6` | from [-148.1, -97.7, 171.3] to [-138.9, -98.0, 199.4], radius 3.4, floor 24 | the breakthrough run: one ring per wall on the band |
+| `main_tube_upper_vent` | launcher, `geyser_vent` | `main_tube_upper_4` | at (78.3, -232.8), radius 5, target [58.8, -87.6, -191.9], floor 16, min flight 2.2 s, charge 2 s | skylight exit: mouth on the wall band, quick 2 s charge |
+| `skylight_chain_vent` | launcher, `geyser_vent` | `skylight_chain_8` | at (120.5, -133.9), radius 5, target [89.8, -90.3, -93.2], floor 16, min flight 2.2 s, charge 3 s | skylight exit: mouth on the wall band, 3 s charge |
+| `east_drift_vent` | launcher, `geyser_vent` | `east_drift_9` | at (189.5, -108.8), radius 5, target [152.8, -90.8, -75.1], floor 16, min flight 2.2 s, charge 4 s | a miners' floor vent, left on the drift floor and slow (4 s) |
+| `west_gallery_vent` | launcher, `geyser_vent` | `west_gallery_9` | at (-143.6, -102.2), radius 5, target [-110.2, -91.1, -63.9], floor 16, min flight 2.2 s, charge 2.5 s | the flood escape out of the cavern: wall mouth, 2.5 s charge |
+| `cannon_tube_vent` | launcher, `geyser_vent` | `cannon_tube_2` | at (-38, -306.9), radius 5, target [-79.4, -85.3, -277.2], floor 16, min flight 2.2 s, charge 2 s | the rhythm pair's quick beat: wall mouth, 2 s charge |
+| `main_tube_lower_vent` | launcher, `geyser_vent` | `main_tube_lower_2` | at (-34.1, 33.2), radius 5, target [-73.1, -94.5, 62.7], floor 16, min flight 2.2 s, charge 3 s | the rhythm pair's slow beat: wall mouth, 3 s charge |
+| `east_haulage_vent` | launcher, `geyser_vent` | `east_haulage_2` | at (65.7, 18.1), radius 5, target [108.5, -94.0, 43.9], floor 16, min flight 2.2 s, charge 4 s | a miners' floor vent, left on the drift floor and slow (4 s) |
+| `west_breakthrough_vent` | launcher, `geyser_vent` | `west_breakthrough_8` | at (-116.9, 225.1), radius 5, target [-83.3, -100.0, 263.3], floor 16, min flight 2.2 s, charge 2.5 s | the breakthrough hop toward the Warden: wall mouth, 2.5 s charge |
 | `sealed_crosscut` | cracked_wall, `""` | `crosscut_drift` | at (-84, 150), 10 by 6 by 1.4 m | the hidden pocket: smash it to cut from the west breakthrough to the main lower tube |
 | `fumarole` | launcher, `geyser_vent` | `lava_channel_5` | at (-267, -636.8), radius 3.5, target [0, -79.0, -362], floor 16, min flight 2.2 s, charge 3 s | a steam vent 24 m off the channel line that throws a ball that seeks it to the tube mouth |
 | `cone_thermal` | thermal, `""` | `cinder_cone` | at (-690, -700), radius 6, height 70 | warm air rising off the cone: a glider's first height |
@@ -240,8 +242,10 @@ Spec keys are today's (`src/world/contraptions.gd:86-101`). 32 rows.
 | `drift_valve` | valve, `gauge` | `east_drift_3` | at (195.4, -272.1), door at (207.2, -277.5), 10 by 5 by 1 m | opens a side door from the drift into skylight 2's chamber |
 | `cenote_raft` | barge, `barge` | `west_cenote` | a [-335, -84.8, -215] to b [-300, -85.3, -195], travel 6 s, dwell 2 s | a miners' raft across the cenote |
 | `rim_zip` | cable, `""` | `sinkhole_walls` | from [-160, 4.4, 255] to [-60, -97.6, 330], radius 3.4, floor 18 | a drop line from the west rim to the gallery ring, after the cave-in opens the plateau |
+| `tube_cinder` | cinder, `` | `lava_channel_1` | 50 strips over the flat middle 40% of every `lava_wash` and `lava_wash_short` floor, drag 0.08 | the floor is lava: free to touch, lingering heats (`src/world/cinder_heat.gd`). The strips draw as charcoal grit with ember seams (`assets/materials/dig_stone/cinder.gdshader`) that smoulder at rest and blaze as the grace runs out. The light drag keeps the walls the faster line. The lava channel is left out so the opening stays blazing |
+| `tube_glaze` | glaze, `` | `lava_channel_1` | 84 strips on both walls of every wash tube, 0.62 to 0.98 of the half width, push 7 m/s/s from 4 to 36 m/s | the polish band is old lava glass: a ball carving it is pushed along its travel, so the wall is the fast line (`contraptions.gd` `_on_glaze`). While it pushes, a `glaze_skim` fact plays a pale wave and a skimming zip every 1.2 s, so it reads as a surface |
 
-Against the draft: the rope fan, eight tube vents and twelve lower-tube ropes keep the ride chain continuous. Park row sensors also run on this head. `sealed_crosscut` has its own `crosscut_drift` site at (-80, 152), clear of the cave-in ring. The fumarole, lift, valve and raft follow the shipped polylines.
+Against the draft: the rope fan, eight tube vents and six lower-tube ropes keep the ride chain continuous, now on the walls. Park row sensors also run on this head. `sealed_crosscut` has its own `crosscut_drift` site at (-80, 152), clear of the cave-in ring. The fumarole, lift, valve and raft follow the shipped polylines.
 
 ## 8. Weather and time of day
 
@@ -263,6 +267,36 @@ Both rows carry `handling: "none"`. The monsoon changes the view and the sound: 
 - The light column is vertical, 4 m wide, centred on the nest and the Warden's colour. It lights no floor patch along a line.
 
 ## 9. Traversal lines and measurements
+
+### Wall pays and the floor is lava, 2026-10-17
+
+Andrew tapped "Wall pays" (22:37Z) and asked for the floor to be lava (23:24Z): touching the bottom is free, lingering hurts. The rule lives in `src/world/cinder_heat.gd`, and every number is a constant there.
+
+- Contact on a cinder strip, with the ball on the floor by the Dig's floor rule, builds dwell. The first 1.5 s are free; the cinders glow from 0.6 s.
+- After the grace it burns 4 hull per second in 0.5 s pulses, with a sizzle when the burn starts. It never takes the last point of hull.
+- Leaving the floor or landing a hit on an enemy cools it at once, with a hiss and a steam puff, so bowling through a pack or zigzagging never burns.
+- The strips also carry a light drag (0.08 per second of floor speed). Heat alone left the floor line as fast as the walls.
+
+- The polish band up every tube wall is glaze (`tube_glaze`): a ball carving it gets a 7 m/s/s push along its travel, between 4 and 36 m/s. With #61's wall grip, carving lost speed against the floor. Before the glaze, every pilot's old floor route beat its wall line by 3 to 18 s.
+
+One seed per pilot, `--table=park --stage=4 --seeds=1`, fixed-fps 90, on this branch with the wall grip from #61 merged. `lines.json` is now the carving lines: every waypoint in a tube sits at 0.81 of the half width on one wall. Kest, Cannon and Tally ride the travel's right wall, Tarn the left, and Sable and Rivet the outside of each bend. The old routes, which are mostly floor, stay as `lines_floor_routes.json` for this comparison. Times are to the Warden in seconds. Carve is the share of grounded ticks on a bank, wall or lip. Repeat runs of one line vary by up to 2.6 s.
+
+| Pilot | Carving line | Carve | Old floor route | Carve | Floor burns (hull) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Cannon | 88.9 | 0.40 | 95.9 | 0.02 | 9 (94) |
+| Tarn | 91.6 | 0.43 | 94.2 | 0.02 | 3 (52) |
+| Kest | 94.4 | 0.33 | 103.6 | 0.02 | 13 (80) |
+| Tally | 97.3 | 0.34 | 98.9 | 0.01 | 5 (52) |
+| Rivet | 102.1, 99.9 | 0.40 | 101.0, 101.0 | 0.01 | 0 |
+| Sable | 66.9, 69.7 | 0.24 | 62.8, 65.8 | 0.04-0.06 | 2 (0-8) |
+| Floor line (Rivet, `--floor`) | | | 104.8 | 0.02 | 11 (106) |
+
+- Carving wins for Cannon, Kest, Tarn and Tally, and it ties for Rivet. No carving line took heat; every floor rider but Rivet burned.
+- Sable is the exception. Sable is airborne half the run (0.48), so the ground barely matters, and its floor route is 3-4 s quicker. A glaze cap of 48 m/s did not change that.
+- The tested alternatives were each slower: inside-of-bend wall lines, wall time only at the ropes and vents, and a glaze push of 4.
+- With heat only and no glaze, the floor line tied the walls at 100 s, so the light drag stays.
+- The floor bot never fights, so its burn is the worst case.
+
 
 ## Qualified round-4 measurement, 2026-10-13
 
@@ -367,6 +401,10 @@ Short field notes in the deep works' existing voice (`src/core/lore_rows.gd:195-
 | `mining_pump_caisson` | `caisson_bowl` | Caisson log: pumped dry at shift change. Water back by noon. Level rises when something breaks. |
 | `mining_pump_ticket` | `pump_gallery` | Pump ticket: boiler rated for the caisson. Caisson rated for water. |
 | `ancient_brood_count` | landmark | Brood count: every bolt in the deep works, sorted by size. The count is still going. |
+| `ancient_polish_band` | `main_tube_upper_1` | Wall survey: polish band two metres up both walls, both directions. Lava only runs one way. |
+| `ancient_vent_mouths` | `cannon_tube_2` | Vent survey: the mouths open on the polish band, never the floor. Nobody on this crew set them there. |
+| `mining_wall_rule` | `main_tube_lower_1` | Shift rule, lower tubes: walk the wall. Floor's been taking boots. |
+| `mining_rope_rings` | `main_tube_lower_4` | Rigging note: rings go up on the band. Nobody hangs a rope over a floor that bites. |
 
 The `ref_` fragment describes the work and speaks for no living people (PARK.md section 4). `mining_pump_caisson` foreshadows the Warden's mechanism, and `ancient_brood_count` picks up the deep works' existing brood lines (`lore_rows.gd:215`, `224`). The existing codex entries this stage teaches stay: `lure_bloom`, `bore_breach`, `burrow_lane`, `awaiting_operator` and the variant's `brood_dark` (PARK.md:431).
 

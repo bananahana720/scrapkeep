@@ -21,8 +21,10 @@ from mathutils import Euler, Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from ore_cart import kit, common, strut
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
+PROP = [1200, 1000, 1]  # polish: was kit.P [270, 610, 1]; class cap 2,000 T / 4,600 V
 SLOT = "enamel"
 
 # Palette names only. The palette (common.HEX, src/core/palette.gd) has no bark brown and no leaf green, so each row is a
@@ -50,7 +52,7 @@ TONES = {
 # Trunk rings: (centre x, y, centre z, radius, twist degrees), an S-curve with a quarter turn of twist.
 TRUNK = [(0, -.25, 0, .95, 0), (.08, .7, 0, .66, 15), (.24, 1.8, .05, .58, 35), (.12, 3.0, 0, .55, 60),
          (-.15, 4.3, -.05, .56, 80), (-.05, 5.5, 0, .66, 95)]
-TRUNK_SIDES = 6
+TRUNK_SIDES = 12  # polish: was 6
 # Limbs: three tubes from the fork, (start, elbow, tip) with radii.
 LIMBS = [((-.25, 5.3, 0), (-1.7, 7.6, -.3), (-3.5, 9.8, -.6)),
          ((.05, 5.4, .1), (.4, 8.0, .6), (.2, 10.6, 1.0)),
@@ -112,7 +114,7 @@ def limb(s, path):
     for k, (p, r) in enumerate(zip(pts, LIMB_R)):
         d = (pts[min(k + 1, 2)] - pts[max(k - 1, 0)])
         u, v = frame(d)
-        rings.append([p + (u * math.cos(a) + v * math.sin(a)) * r for a in kit.angles(5, closed=True)])
+        rings.append([p + (u * math.cos(a) + v * math.sin(a)) * r for a in kit.angles(10, closed=True)])
     tube(s, rings, tone("limb"))
 
 
@@ -167,13 +169,32 @@ ICO_F = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11), (1, 5, 9), (
          (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9), (4, 9, 5), (2, 4, 11), (6, 2, 10), (8, 6, 7), (9, 8, 1)]
 
 
+def ico_once():
+    # One midpoint subdivision of the icosahedron (42 vertices, 80 faces) so a cluster reads as a round blob, not a gem.
+    verts = [Vector(v).normalized() for v in ICO_V]
+    cache, faces = {}, []
+
+    def mid(a, b):
+        key = (min(a, b), max(a, b))
+        if key not in cache:
+            cache[key] = len(verts)
+            verts.append(((verts[a] + verts[b]) / 2).normalized())
+        return cache[key]
+
+    for a, b, c in ICO_F:
+        ab, bc, ca = mid(a, b), mid(b, c), mid(c, a)
+        faces += [(a, ab, ca), (b, bc, ab), (c, ca, bc), (ab, bc, ca)]
+    return verts, faces
+
+
 def cluster(s, x, y, z, r, yaw):
     rot = Euler((0, math.radians(yaw), 0), "XYZ").to_matrix()
-    local = [Vector(v).normalized() for v in ICO_V]
-    verts = [tuple(rot @ Vector((v.x * r, v.y * r * SQUASH, v.z * r)) + Vector((x, y, z))) for v in local]
+    local, faces = ico_once()
+    r *= .895  # the old icosahedron's corners reached about .85 of r along each axis; a round blob keeps the crown's bounds
+    verts = [tuple(rot @ Vector((v.x * r, v.y * r * SQUASH * .972, v.z * r)) + Vector((x, y, z))) for v in local]
     # Underside dark, belly mid, top lit: the chunky clusters of the picture under a sun from above.
     colors = [tone("leaf", 0 if v.y < -.3 else (1 if v.y < .45 else 2)) for v in local]
-    s.add(verts, ICO_F, colors=colors)
+    s.add(verts, faces, colors=colors)
 
 
 def crown(s):
@@ -196,7 +217,7 @@ def export(name, part, smooth, build, out_dir):
     metrics = kit.gltf_metrics(path)
     size = metrics["bounds"]["size"]
     print("COTTONWOOD_SIZE", name, [round(v, 3) for v in size], metrics["bounds"], metrics["triangles"], metrics["vertices"], metrics["draws"])
-    assert all(metrics[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], kit.P)), (name, metrics, kit.P)
+    assert all(metrics[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], PROP)), (name, metrics, PROP)
     assert metrics["materials"] == [SLOT], (name, metrics["materials"])
     assert all(abs(a - b) <= .03 * b for a, b in zip(size, SIZE[name])), (name, size, SIZE[name])
     row = {**metrics, "file": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "merged_parts": dict(kit.PARTS)}
@@ -205,6 +226,10 @@ def export(name, part, smooth, build, out_dir):
 
 
 def main():
+    # Polish: organic crown blobs take subdivided icospheres (smooth shading, no bevel); the trunk keeps a 3 cm bevel on its
+    # slab and ridges; the AO and wear bake rides the enamel vertex colours.
+    polish.enable(bevel=.03, bevel_min=.2, **kit.BAKE)
+    kit.FINISH.update({"Crown": {"bevel": 0, "subsurf": 0}})
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))

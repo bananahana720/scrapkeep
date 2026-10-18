@@ -146,7 +146,8 @@ func run(t) -> void:
 	t.check("every VERBS intent field exists on Intent", missing_fields.is_empty(), "unknown fields: %s" % [missing_fields])
 	# 2026-10-11 (w13 coordinator, B1 and B3 merged): nine to eleven. select (caps 1, 2, 3) and ultimate (Q)
 	# joined the table and the retired special keeps its row (SKILL-BAR.md section 6; bindings_table_test.gd header).
-	t.check("eleven verbs", Bindings.VERBS.size() == 11, "%d verbs" % Bindings.VERBS.size())
+	# 2026-10-17 (item tiers and actives): the active on F makes twelve.
+	t.check("twelve verbs", Bindings.VERBS.size() == 12, "%d verbs" % Bindings.VERBS.size())
 
 	var states: Array = EventKinds.LINE_ROWS.keys()
 	states.sort()
@@ -210,7 +211,7 @@ func run(t) -> void:
 
 	var activity_ids: Array = EventKinds.ACTIVITY_ROWS.keys()
 	activity_ids.sort()
-	t.check("ACTIVITY_ROWS holds the five standing activities", activity_ids == ["ambush_altar", "cracked_cache", "enemy_camp", "hauler_bounty", "surge_run"], "ids: %s" % [activity_ids])
+	t.check("ACTIVITY_ROWS holds the six standing activities", activity_ids == ["ambush_altar", "cracked_cache", "enemy_camp", "hauler_bounty", "hold_the_relay", "surge_run"], "ids: %s" % [activity_ids])
 
 	t.check("harpoon_bit left ROWS", not EventKinds.ROWS.has("harpoon_bit"), "ROWS still holds harpoon_bit")
 	t.check("harpoon_smashed left ROWS", not EventKinds.ROWS.has("harpoon_smashed"), "ROWS still holds harpoon_smashed")

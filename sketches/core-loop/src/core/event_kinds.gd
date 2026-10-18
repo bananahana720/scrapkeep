@@ -177,6 +177,10 @@ const ROWS := {
 	"line_skill_loaded": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "lock_tick", "sound_next": "line_load", "hud": "", "objective": "", "priority": 1},
 	"line_skill_fired": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "line_bite", "sound_next": "motif_line", "hud": "", "objective": "", "priority": 1},
 	"line_skill_expired": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
+	# The active on F. Its sound is the active's own (audio.gd, "active_" + id); this is the fallback.
+	"active_fired": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "active_scrap_rocket", "hud": "", "objective": "", "priority": 1},
+	# The Cutting Torch's heat tick (cutting_torch.gd): audio.gd climbs its sizzle with the heat; it lands no hit.
+	"active_heat": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "active_cutting_torch_heat", "hud": "", "objective": "", "priority": 1},
 	"ultimate_ready": {"group": "combat", "color": Palette.ARC, "shape": "ring", "sound": "found_chime", "sound_next": "ultimate_ready", "hud": "", "objective": "", "priority": 1},
 	"ultimate_started": {"group": "combat", "color": Palette.ARC, "shape": "lane", "sound": "launch_roar", "hud": "", "objective": "", "priority": 1},
 	"ultimate_peak": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "sound_next": "motif_stinger", "hud": "", "objective": "", "priority": 1},
@@ -275,7 +279,10 @@ const IMPACT := {
 	"claw": {"knock": 8.0, "lift": 0.3, "stop": "hit", "shake": 0.1, "react": "stagger"},
 	"clamp": {"knock": 10.0, "lift": 0.1, "stop": "hit", "shake": 0.1, "react": "stagger"},
 	"ledger": {"knock": 6.0, "lift": 0.2, "stop": "hit", "shake": 0.05, "react": "stagger"},
+	"flail": {"knock": 14.0, "lift": 0.3, "stop": "hit", "shake": 0.15, "react": "launch"},
 	"cannon": {"knock": 9.0, "lift": 0.25, "stop": "hit", "shake": 0.15, "react": "stagger"},
+	# The Scrap Rocket Rack's blast (src/combat/actives/scrap_rockets.gd): a bomb's stop, a lighter shove.
+	"rocket": {"knock": 14.0, "lift": 0.3, "stop": "hit", "shake": 0.08, "react": "stagger"},
 }
 # Degrees and seconds; enemy weight divides angles by sqrt(max(weight, 1)).
 const REACTIONS := {
@@ -340,6 +347,8 @@ const WEIGHTED := {
 
 const WEIGHT_EXEMPT := {
 	"line_skill_fired": "The line skill's bite; its landed strike is enemy_struck.",
+	"active_fired": "The active's launch cue; its landed strikes are enemy_struck.",
+	"active_heat": "A building heat tick under the active's sound row; it lands no hit, its cut is enemy_struck.",
 	"achievement_earned": "Reward and economy ladders own the cue; rewards never stop time.",
 	"activity_done": "World, interaction and activity rows own their contextual glyph and sound.",
 	"ambush_ended": "World, interaction and activity rows own their contextual glyph and sound.",
@@ -560,20 +569,36 @@ const ATTACK_ROWS := {
 		"pose": "e17_rack_bow", "warn": "atk_e17_warn", "release": "atk_e17_release", "floor": "B", "open": []},
 	"E18": {"label": "Mind hand strike", "group": "enemy", "owner_kind": "roster", "owner": "mind_hand", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
 		"pose": "e18_elbow_telescope", "warn": "atk_e18_warn", "release": "atk_e18_release", "floor": "L", "open": []},
-	# Reserved for the declared world 2 and 3 kinds (roster_dig.gd, roster_highdraft.gd):
-	# pose and floor stay open until each kind's script lands.
-	"E19": {"label": "Burrower lane burst", "group": "enemy", "owner_kind": "roster", "owner": "burrower", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
-		"pose": "e19_mound_rise", "warn": "atk_e19_warn", "release": "atk_e19_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
+	# The declared world 2 and 3 kinds (roster_dig.gd, roster_highdraft.gd): pose and floor
+	# stay open until each kind's script lands. The Dig's floor threats (E19, E20, E30) have.
+	"E19": {"label": "Burrower floor burst", "group": "enemy", "owner_kind": "roster", "owner": "burrower", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e19_mound_rise", "warn": "atk_e19_warn", "release": "atk_e19_release", "floor": "B", "open": []},
 	"E20": {"label": "Drill crew breach", "group": "enemy", "owner_kind": "roster", "owner": "drill_crew", "allegiance": "hostile", "threat": "threat_instant", "glyph": "square", "color": Palette.HAZARD,
-		"pose": "e20_bit_lower", "warn": "atk_e20_warn", "release": "atk_e20_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
+		"pose": "e20_bit_lower", "warn": "atk_e20_warn", "release": "atk_e20_release", "floor": "B", "open": []},
 	"E21": {"label": "Lamp swarm lure bloom", "group": "enemy", "owner_kind": "roster", "owner": "lamp_swarm", "allegiance": "hostile", "threat": "threat_wave", "glyph": "wave", "color": Palette.HAZARD,
-		"pose": "e21_lamps_open", "warn": "atk_e21_warn", "release": "atk_e21_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
+		"pose": "e21_lamps_open", "warn": "atk_e21_warn", "release": "atk_e21_release", "floor": "L", "open": []},
 	"E22": {"label": "Line cutter throw", "group": "enemy", "owner_kind": "roster", "owner": "line_cutter", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
-		"pose": "e22_disc_cock", "warn": "atk_e22_warn", "release": "atk_e22_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
+		"pose": "e22_disc_cock", "warn": "atk_e22_warn", "release": "atk_e22_release", "floor": "B", "open": []},
 	"E23": {"label": "Anchor crew winch", "group": "enemy", "owner_kind": "roster", "owner": "anchor_crew", "allegiance": "hostile", "threat": "threat_lane", "glyph": "arrow", "color": Palette.HAZARD,
-		"pose": "e23_hook_swing", "warn": "atk_e23_warn", "release": "atk_e23_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
+		"pose": "e23_hook_swing", "warn": "atk_e23_warn", "release": "atk_e23_release", "floor": "L", "open": []},
 	"E24": {"label": "Kite drone dive", "group": "enemy", "owner_kind": "roster", "owner": "kite_drone", "allegiance": "hostile", "threat": "threat_instant", "glyph": "diamond", "color": Palette.HAZARD,
-		"pose": "e24_wings_fold", "warn": "atk_e24_warn", "release": "atk_e24_release", "floor": PLACEHOLDER, "open": ["pose", "floor"]},
+		"pose": "e24_wings_fold", "warn": "atk_e24_warn", "release": "atk_e24_release", "floor": "B", "open": []},
+	# Kill-first specials (roster_specials.gd). E25's pose is the pod's seam glow blinking
+	# faster as the fuse burns (splitter_pod.gd _pose); its ring marks the floor both ways.
+	"E25": {"label": "Splitter pod fuse blast", "group": "enemy", "owner_kind": "roster", "owner": "splitter_pod", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e25_pod_glow", "warn": "atk_e25_warn", "release": "atk_e25_release", "floor": "B", "open": []},
+	"E26": {"label": "Dispatcher tube drop", "group": "enemy", "owner_kind": "roster", "owner": "dispatcher", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
+		"pose": "e26_tube_suck", "warn": "atk_e26_warn", "release": "atk_e26_release", "floor": "B", "open": []},
+	"E27": {"label": "Jolt layer mat", "group": "enemy", "owner_kind": "roster", "owner": "jolt_layer", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e27_coil_swell", "warn": "atk_e27_warn", "release": "atk_e27_release", "floor": "B", "open": []},
+	"E30": {"label": "Pit jaw bite", "group": "enemy", "owner_kind": "roster", "owner": "pit_jaw", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e30_jaw_part", "warn": "atk_e30_warn", "release": "atk_e30_release", "floor": "B", "open": []},
+	"E31": {"label": "Prop crew roof drop", "group": "enemy", "owner_kind": "roster", "owner": "prop_crew", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "e31_prop_kicked", "warn": "atk_e31_warn", "release": "atk_e31_release", "floor": "B", "open": []},
+	"E32": {"label": "Ballast heavy brace slam", "group": "enemy", "owner_kind": "roster", "owner": "ballast_heavy", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "e32_claws_brace", "warn": "atk_e32_warn", "release": "atk_e32_release", "floor": "B", "open": []},
+	"E33": {"label": "Gap net charge", "group": "enemy", "owner_kind": "roster", "owner": "gap_net", "allegiance": "hostile", "threat": "threat_lane", "glyph": "star", "color": Palette.HAZARD,
+		"pose": "e33_net_crackle", "warn": "atk_e33_warn", "release": "atk_e33_release", "floor": "L", "open": []},
 	"W01": {"label": "Reactor Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w01_vents_lift", "warn": "atk_w01_warn", "release": "atk_w01_release", "floor": "B", "open": []},
 	"W02": {"label": "Hive Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
@@ -583,7 +608,7 @@ const ATTACK_ROWS := {
 	"W04": {"label": "Mind Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w04_mast_telescope", "warn": "atk_w04_warn", "release": "atk_w04_release", "floor": "B", "open": []},
 	"W06": {"label": "Mind Warden adaptation", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "neutral", "threat": "", "glyph": "core", "color": Palette.SAND,
-		"pose": "w06_lens_stare", "warn": "atk_w06_warn", "release": "atk_w06_release", "floor": "none", "open": ["color"]},
+		"pose": "w06_lens_stare", "warn": "atk_w06_warn", "release": "atk_w06_release", "floor": "none", "open": []},
 	"W07": {"label": "Caught-pulse crater", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "", "glyph": "burst", "color": Palette.HAZARD,
 		"pose": "w07_crater_bowl", "warn": NONE, "release": "atk_w07_release", "floor": "B", "open": []},
 	"B01": {"label": "Crane sweep", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "hostile", "threat": "threat_wave", "glyph": "wave", "color": Palette.HAZARD,
@@ -595,7 +620,7 @@ const ATTACK_ROWS := {
 	"B04": {"label": "Drone deployment", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "neutral", "threat": "", "glyph": "diamond", "color": Palette.AMBER,
 		"pose": "b04_hatch_open", "warn": "atk_b04_warn", "release": NONE, "floor": "L", "open": []},
 	"B05": {"label": "Ejection chase", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "neutral", "threat": "", "glyph": "arrow", "color": Palette.BRASS,
-		"pose": "b05_seat_compress", "warn": NONE, "release": "atk_b05_release", "floor": "none", "open": ["color"]},
+		"pose": "b05_seat_compress", "warn": NONE, "release": "atk_b05_release", "floor": "none", "open": []},
 	"P01": {"label": "Arc caster volley", "group": "pilot", "owner_kind": "class", "owner": "pylon_engineer", "allegiance": "player", "threat": "", "glyph": "ring", "color": ClassDef.SABLE_COLOR,
 		"pose": "p01_prongs_aim", "warn": NONE, "release": "atk_p01_release", "floor": "L", "open": []},
 	"P02": {"label": "Discharge and plant burst", "group": "pilot", "owner_kind": "class", "owner": "pylon_engineer", "allegiance": "player", "threat": "", "glyph": "ring", "color": ClassDef.SABLE_COLOR,
@@ -617,11 +642,11 @@ const ATTACK_ROWS := {
 	"P10": {"label": "Phantom blink cut", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
 		"pose": "p10_tool_blink", "warn": NONE, "release": "atk_p10_release", "floor": "L", "open": []},
 	"P11": {"label": "Ram, crush and stomp", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "arrow", "color": Palette.SAND,
-		"pose": "p11_cockpit_tilt", "warn": "atk_p11_warn", "release": "atk_p11_release", "floor": "L", "open": ["glyph", "color"]},
+		"pose": "p11_cockpit_tilt", "warn": "atk_p11_warn", "release": "atk_p11_release", "floor": "L", "open": []},
 	"P12": {"label": "Batted shell and pins", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "ring", "color": Palette.AMBER,
 		"pose": "p12_trail_stretch", "warn": NONE, "release": "atk_p12_release", "floor": "B", "open": []},
 	"P13": {"label": "Pilot upgrade attacks", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "diamond", "color": Palette.SAND,
-		"pose": PLACEHOLDER, "warn": PLACEHOLDER, "release": PLACEHOLDER, "floor": PLACEHOLDER, "open": ["glyph", "color", "pose", "warn", "release", "floor"]},
+		"pose": "p13_parent_pose", "warn": NONE, "release": NONE, "floor": "L", "open": []},
 }
 
 # Codex categories: each has its own colour, glyph shape and label, so the Tab codex
@@ -778,6 +803,11 @@ const STATE_ROWS := {
 	"beacon_sealed": {"color": "slate", "motion": "none", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
 	"beacon_open": {"color": "amber", "motion": "steady", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
 	"wearing": {"color": "rust", "motion": "steady", "shape": "chevron", "sound": NONE, "verb": NONE, "word": ""},
+	# Damage families (FIELDS-AND-CASTS section 6): the first resisted and weak hit on an armour
+	# class each run stamp their word; once its codex entry is known the class wears its icon.
+	"dented": {"color": "slate", "motion": "none", "shape": "square", "sound": NONE, "verb": NONE, "word": "DENT"},
+	"zzapped": {"color": "live", "motion": "none", "shape": "cross", "sound": NONE, "verb": NONE, "word": "ZZAP!"},
+	"plated": {"color": "slate", "motion": "steady", "shape": "square", "sound": NONE, "verb": NONE, "word": ""},
 }
 
 # The five synergies the slice keeps, keyed by their ids in build/synergies.gd, which owns the
@@ -810,6 +840,7 @@ const ACTIVITY_ROWS := {
 	"ambush_altar": {"color": "amber", "motion": "steady", "shape": "cross", "sound": "found_chime", "word": "Ambush"},
 	"cracked_cache": {"color": "amber", "motion": "steady", "shape": "diamond", "sound": "found_chime", "word": "Cache"},
 	"hauler_bounty": {"color": "amber", "motion": "steady", "shape": "square", "sound": "found_chime", "word": "Bounty"},
+	"hold_the_relay": {"color": "amber", "motion": "steady", "shape": "cross", "sound": "found_chime", "word": "Relay"},
 }
 
 
@@ -1027,6 +1058,12 @@ const WORLD_ROWS := {
 	"flood_landed": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "slam_boom", "sound_next": "flood_drop", "hud": "", "objective": "", "priority": 2},
 	"fleet_inbound": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "fleet_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"fleet_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "fleet_anvil_brass_drop", "hud": "", "objective": "", "priority": 2},
+	# The Dig's lift cage climbs its shaft (a lift's clank under the tick); the Highdraft's zipline
+	# trolley falls down its cable with the Fleet's pure whistle. World-native sounds are requested.
+	"cage_rising": {"group": "event", "color": Palette.HAZARD, "shape": "chevron", "sound": "threat_tick", "sound_next": "lift_chuff_clank", "hud": "", "objective": "", "priority": 2},
+	"cage_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "fleet_anvil_brass_drop", "hud": "", "objective": "", "priority": 2},
+	"zipline_inbound": {"group": "event", "color": Palette.HAZARD, "shape": "arrow", "sound": "threat_whistle", "sound_next": "fleet_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"zipline_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "fleet_anvil_brass_drop", "hud": "", "objective": "", "priority": 2},
 	"ancient_stirring": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "ancient_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"ancient_erupted": {"group": "event", "color": ANCIENT_LIGHT, "shape": "burst", "sound": "slam_boom", "sound_next": "ancient_family_drop", "hud": "", "objective": "", "priority": 2},
 	"boiler_pressure": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "boiler_falling_pure", "hud": "", "objective": "", "priority": 2},
@@ -1052,6 +1089,12 @@ const WORLD_ROWS := {
 	"launcher_charging": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "steam_whistle_rise", "hud": "", "objective": "", "priority": 0},
 	"cannon_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "cannon_bang_rail_whoosh", "hud": "", "objective": "", "priority": 1},
 	"trebuchet_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "trebuchet_creak_whoosh", "hud": "", "objective": "", "priority": 1},
+	# The sinkhole's floor is lava (cinder_heat.gd): the cinders glow as the grace runs out, sizzle while they burn, and
+	# hiss as a hot ball leaves them.
+	"glaze_skim": {"group": "event", "color": Palette.LEDGER, "shape": "wave", "sound": "line_zip", "sound_next": "glaze_skim_hiss", "hud": "", "objective": "", "priority": 0},
+	"cinder_glow": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 1},
+	"cinder_burn": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "threat_tick", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 2},
+	"cinder_cooled": {"group": "event", "color": Palette.SAND, "shape": "wave", "sound": "boost_whoosh", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 0},
 	"geyser_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "geyser_whistle_bang", "hud": "", "objective": "", "priority": 1},
 	"valve_smashed": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "slam_boom", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 2},
 	"route_opened": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "found_chime", "sound_next": "found_chime", "hud": "", "objective": "", "priority": 1},
@@ -1063,6 +1106,16 @@ const WORLD_ROWS := {
 	"layer_undercroft": {"group": "event", "color": Palette.VERDIGRIS, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_reese_sub", "hud": "", "objective": "", "priority": 0},
 	"layer_shelf": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_theme", "hud": "", "objective": "", "priority": 0},
 	"layer_sky": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_bells_arp", "hud": "", "objective": "", "priority": 0},
+	# The crown's place layers (design-v3/park/stages/6-park_crown.md section 12), published by a park row's music_layer.
+	# Stand-in tick until the music thread renders each layer.
+	"layer_crown_hoodoos": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_hoodoos", "hud": "", "objective": "", "priority": 0},
+	"layer_crown_alcove": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_alcove", "hud": "", "objective": "", "priority": 0},
+	"layer_crown_toppled": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_toppled", "hud": "", "objective": "", "priority": 0},
+	"layer_crown_ramp": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_ramp", "hud": "", "objective": "", "priority": 0},
+	# The Mind's first musical quote (Andrew's Q9, "A musical quote"): the dam's eye_mouth row publishes it as its ride
+	# fact as the ball leaves the Eye, which every line crosses once and downhill; its file renders on the music PR (#12),
+	# and until then ui_tick stands in.
+	"layer_mind_quote_spillway": {"group": "event", "color": ANCIENT_LIGHT, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_mind_quote_spillway", "hud": "", "objective": "", "priority": 0},
 	"ride_grapple_line": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "grapple_clink", "sound_next": "ride_cable_clink", "hud": "", "objective": "", "priority": 1},
 	"ride_glide_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_glide_wind", "hud": "", "objective": "", "priority": 1},
 	"ride_skylight": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rail_hum", "hud": "", "objective": "", "priority": 1},

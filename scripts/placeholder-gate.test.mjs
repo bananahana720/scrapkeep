@@ -16,6 +16,9 @@ import {
   missingIcons,
   openAttackRows,
   parkGreybox,
+  isPlainSlope,
+  recipeGlbs,
+  isMesaEdge,
   parseArgs,
   pendingEntries,
   report,
@@ -91,6 +94,76 @@ test("parkGreybox groups greybox recipes and recipes with no GLB, and passes bui
       ["1 greybox landmark_dam (recipe landmark_dam has no GLB): dam", 1],
     ],
   );
+});
+
+test("parkGreybox passes an anchors kit row only when all three variants have landed", () => {
+  assert.deepEqual(recipeGlbs("anchor_cairn"), ["anchor_cairn_a", "anchor_cairn_b", "anchor_cairn_c"]);
+  assert.deepEqual(recipeGlbs("flume_span"), ["flume_span"]);
+  const doc = {
+    park_rows: [
+      { id: "posts", element: "anchor_field", recipe: "anchor_hoodoo" },
+      { id: "cairns", element: "anchor_field", recipe: "anchor_cairn" },
+    ],
+  };
+  const built = new Set(["anchor_hoodoo_a", "anchor_hoodoo_b", "anchor_hoodoo_c", "anchor_cairn_a", "anchor_cairn_b"]);
+  const found = parkGreybox("park_islands", doc, (recipe) => built.has(recipe));
+  assert.deepEqual(
+    found.map((f) => [f.what, f.count]),
+    [["1 greybox anchor_field (recipe anchor_cairn has no GLB): cairns", 1]],
+  );
+});
+
+test("parkGreybox counts a mesa edge spanning the play rect as terrain and keeps narrower lips", () => {
+  const rect = [-800, -800, 1600, 1600];
+  const edge = { id: "fan_step_lip_1", element: "kicker", recipe: "greybox:kicker", stamp: "plateau", y: null, yaw_deg: 0, size: [12, 0.01, 1600] };
+  const narrow = { ...edge, id: "fin_nose_kicker", size: [12, 0.01, 56] };
+  const unstamped = { ...edge, id: "loose_lip", stamp: "" };
+  assert.equal(isMesaEdge(edge, rect), true);
+  assert.equal(isMesaEdge(narrow, rect), false);
+  assert.equal(isMesaEdge(unstamped, rect), false);
+  const found = parkGreybox("park_islands", { play_rect: rect, park_rows: [edge, narrow, unstamped] }, () => false);
+  assert.deepEqual(found.map((f) => [f.what, f.count]), [["2 greybox kicker: fin_nose_kicker, loose_lip", 2]]);
+});
+
+test("parkGreybox counts a stamped plain slope as terrain and keeps ride pieces and unstamped slopes", () => {
+  const doc = {
+    park_rows: [
+      { id: "bank_stamped", element: "bank", recipe: "greybox:bank", stamp: "raise", y: null },
+      { id: "mesa_stamped", element: "sky_island", recipe: "greybox:sky_island", stamp: "raise" },
+      { id: "bank_flat", element: "bank", recipe: "greybox:bank", stamp: "", y: null },
+      { id: "bank_floating", element: "bank", recipe: "greybox:bank", stamp: "raise", y: 40 },
+      { id: "tube_stamped", element: "tunnel", recipe: "greybox:tunnel", stamp: "cut", y: null },
+    ],
+  };
+  const found = parkGreybox("park_x", doc, () => false);
+  assert.deepEqual(
+    found.map((f) => [f.what, f.count]),
+    [
+      ["2 greybox bank: bank_flat, bank_floating", 2],
+      ["1 greybox tunnel: tube_stamped", 1],
+    ],
+  );
+  assert.equal(isPlainSlope(doc.park_rows[0]), true);
+  assert.equal(isPlainSlope(doc.park_rows[4]), false);
+});
+
+test("parkGreybox counts a landmark-dressed row only until the landmark's GLB lands, and never a scatter-dressed one", () => {
+  const doc = {
+    landmark: { id: "sinkhole", recipe: "landmark_sinkhole" },
+    park_rows: [
+      { id: "deck", element: "ledge", recipe: "landmark" },
+      { id: "wash", element: "ledge", recipe: "scatter" },
+    ],
+  };
+  const bare = parkGreybox("park_sinkhole", doc, () => false);
+  assert.deepEqual(
+    bare.map((f) => f.what),
+    [
+      "1 greybox landmark_sinkhole (recipe landmark_sinkhole has no GLB): sinkhole",
+      "1 greybox ledge (dressed by landmark landmark_sinkhole, which has no GLB): deck",
+    ],
+  );
+  assert.deepEqual(parkGreybox("park_sinkhole", doc, (recipe) => recipe === "landmark_sinkhole"), []);
 });
 
 test("dictKeys reads the keys of one dictionary block and skips comments", () => {

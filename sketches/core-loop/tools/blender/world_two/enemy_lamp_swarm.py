@@ -1,5 +1,11 @@
-"""ELS: measured Fleet lamp crew. Godot metres, +Z attack facing.
+"""ELS: measured Fleet lamp crew, dressed as the Dig's floodlight rig. Godot metres, +Z attack facing.
 
+WORLD-ROSTERS.md: the lamp swarm becomes the floodlight rig, the Dig crew that throws the light
+that plates its pack (the floodlight aura belongs to the fields thread). The dress is a miner in
+a helmet and riveted shoulder plates, a generator pack with a light mast and hazard beacon, and
+three floodlight heads (tapered housing, bone bezel, barn-door shutters) on booms. Geometry
+contract unchanged (tests/enemy_lamp_swarm_asset_test.gd): the same barrel core, bones,
+sockets, rest positions, bulb, hood and shutter sizes, and the 1.6 m formation.
 The three rigid lamp groups share one skin and two surfaces. Body/arms use one
 fleet_paint surface. Actor-owned proxies drive lamp bones; shutter and lens bones
 read the existing WARN clock. No authored motion or attack geometry is exported.
@@ -16,10 +22,14 @@ import bpy
 from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
+import polish
 from common import Part
+import fleet_crew
 
 common.reset()
+polish.enable(detail=2, bevel=0.03, fit=True)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.85}
 common.SLOTS["working_tool"] = {"vc": True, "rough": 0.5, "metal": 0.25}
 root = common.empty("LampSwarm")
@@ -32,43 +42,53 @@ def g(x, y, z):
 REST = [Vector((math.cos(math.tau * i / 3) * 1.3, 1.6,
                 math.sin(math.tau * i / 3) * 1.3)) for i in range(3)]
 body = Part("LampCrewBody")
-# Rounded barrel, broad bone armour with a petrol belt; boots fit the collider.
-rows = []
-for y, radius in [(-1.1, 0.32), (-0.9, 0.56), (-0.3, 0.8), (0.55, 0.74), (1.1, 0.46)]:
-    rows.append([body.bm.verts.new(g(radius * math.cos(k * math.tau / 10), y,
-                                     radius * math.sin(k * math.tau / 10))) for k in range(10)])
-for j in range(len(rows) - 1):
-    for k in range(10):
-        face = body.bm.faces.new((rows[j][k], rows[j][(k + 1) % 10],
-                                  rows[j + 1][(k + 1) % 10], rows[j + 1][k]))
-        body.paint([face], "fleet_paint", "petrol" if k in (1, 2, 6) else "bone")
-body.paint([body.bm.faces.new(list(reversed(rows[0]))), body.bm.faces.new(rows[-1])],
-           "fleet_paint", "charcoal")
+# Rounded barrel in work bone with petrol bands; boots fit the collider.
+# Under polish the barrel only smooths (its 50-corner hull is a measured contract); arms and
+# paws soften and plates stay crisp.
+with body.region(bevel=0, subsurf=0):
+    rows = []
+    for y, radius in [(-1.1, 0.32), (-0.9, 0.56), (-0.3, 0.8), (0.55, 0.74), (1.1, 0.46)]:
+        rows.append([body.bm.verts.new(g(radius * math.cos(k * math.tau / 10), y,
+                                         radius * math.sin(k * math.tau / 10))) for k in range(10)])
+    for j in range(len(rows) - 1):
+        for k in range(10):
+            face = body.bm.faces.new((rows[j][k], rows[j][(k + 1) % 10],
+                                      rows[j + 1][(k + 1) % 10], rows[j + 1][k]))
+            body.paint([face], "fleet_paint", "petrol" if k in (1, 2, 6) else "bone")
+    body.paint([body.bm.faces.new(list(reversed(rows[0]))), body.bm.faces.new(rows[-1])],
+               "fleet_paint", "charcoal")
 for side in (-1, 1):
     body.box("fleet_paint", (0.3, 0.42, 0.22), loc=g(side * 0.38, -0.72, 0.31), color="charcoal")
-    body.rod("fleet_paint", g(side * 0.43, 0.72, 0.2), g(side * 0.23, 0.63, 0.54),
-             0.09, segs=5, color="oxide")
-    body.ico("fleet_paint", 0.12, loc=g(side * 0.23, 0.63, 0.54), color="oxide")
+    with body.region(bevel=0, subsurf=1, detail=1):
+        body.rod("fleet_paint", g(side * 0.43, 0.72, 0.2), g(side * 0.23, 0.63, 0.54),
+                 0.09, segs=5, color="oxide")
+        body.ico("fleet_paint", 0.12, loc=g(side * 0.23, 0.63, 0.54), color="oxide")
 body.box("fleet_paint", (0.30, 0.045, 0.12), loc=g(0, 0.64, 0.57), color="charcoal")
-body.ring("fleet_paint", 0.65, 0.735, 0.10, segs=10, loc=g(0, 0.63, 0), color="charcoal")
+# A wider bevel leaves near-flat slivers on this thin belt, so it stays narrow.
+with body.region(bevel=0.01):
+    body.ring("fleet_paint", 0.65, 0.735, 0.10, segs=10, loc=g(0, 0.63, 0), color="charcoal")
 for side in (-1, 1):
     body.box("fleet_paint", (0.12, 0.035, 0.10), loc=g(side * 0.42, 0.35, 0.60), color="charcoal")
-    body.box("fleet_paint", (0.24, 0.025, 0.045), loc=g(side * 0.40, 0.52, 0.56), color="a8aaa3")
+    # Riveted shoulder plates: the Dig's plating, worn by the crew that hands it out.
+    body.box("fleet_paint", (0.42, 0.62, 0.12), loc=g(side * 0.5, 0.86, 0), rot=(0, side * 0.35, 0), color="53686d")
 core_points = [v.co.copy() for v in body.bm.verts]
 assert max(math.hypot(v.x, v.y) for v in core_points) <= 0.800001
 assert min(v.z for v in core_points) >= -1.100001 and max(v.z for v in core_points) <= 1.100001
 print("ELS core: radial %.6f m, Y %.6f..%.6f m" % (max(math.hypot(v.x, v.y) for v in core_points),
       min(v.z for v in core_points), max(v.z for v in core_points)))
-body.uv("fleet_paint", 0.38, u=8, v=6, loc=g(0, 1.3, 0), color="oxide")
-body.box("fleet_paint", (0.23, 0.14, 0.12), loc=g(0, 1.23, 0.32), color="bone")
-for side in (-1, 1):
-    body.cyl("fleet_paint", 0.12, 0.02, 0.34, segs=5, loc=g(side * 0.2, 1.65, 0), color="oxide")
-    body.box("fleet_paint", (0.04, 0.035, 0.025), loc=g(side * 0.13, 1.37, 0.342), color="charcoal")
+fleet_crew.head(body, (0, 1.3, 0), r=0.34, hat="helmet")
+# Generator pack on the back with a light mast and a hazard beacon: the rig's tower read.
+body.box("fleet_paint", (0.62, 0.34, 0.6), loc=g(0, 0.45, -0.88), color="53686d")
+with body.region(bevel=0.012):
+    body.rod("fleet_paint", g(0, 0.75, -0.9), g(0, 2.35, -0.9), 0.05, segs=5, color="charcoal")
+with body.region(bevel=0, detail=1):
+    body.ico("fleet_paint", 0.11, loc=g(0, 2.42, -0.9), color="hazard")
 common.empty("LampHead", loc=g(0, 1.3, 0), parent=root)
 for i, rest in enumerate(REST):
     shoulder = Vector((rest.x * 0.25, 0.87, rest.z * 0.25))
     assert 0.9 <= (rest - shoulder).length <= 1.3
-    body.rod("fleet_paint", g(*shoulder), g(*rest), 0.04, segs=5, color="petrol")
+    with body.region(bevel=0.01):
+        body.rod("fleet_paint", g(*shoulder), g(*rest), 0.04, segs=5, color="petrol")
     common.empty("LampArm%d" % i, loc=g(*shoulder), parent=root)
 bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])
 body_obj = body.to_object(parent=root)
@@ -105,6 +125,8 @@ for i, rest in enumerate(REST):
 bpy.ops.object.mode_set(mode="OBJECT")
 rig.select_set(False)
 lamps = Part("LampAssembly")
+# Lamp parts are a few centimetres thick, so the bevel stays narrow; the hazard decal is flat.
+lamps.bevel = 0.012
 deform = lamps.bm.verts.layers.deform.verify()
 groups = []
 
@@ -120,23 +142,27 @@ def weighted(name, draw):
 
 
 for i, rest in enumerate(REST):
-    # The bulb is a 0.6 m opaque drum with a neutral-white front aperture, not
-    # a luminous sphere that would swallow the triangular hood in the open pose.
-    weighted("LampBulb%d" % i, lambda: lamps.uv("working_tool", 0.3, u=8, v=6,
-               loc=g(*rest), scale=(1, 0.3, 1), color="charcoal"))
-    # Triangular hood and dark aperture inset. All hoods have the same Y datum.
-    outline = [(0, -0.3), (0.2598076, 0.15), (-0.2598076, 0.15)]
-    matrix = Matrix.Translation(g(*rest)) @ common.mtx(rot=(math.pi / 2, 0, 0))
-    weighted("LampHood%d" % i, lambda: lamps.prism("fleet_paint", outline, 0.18,
-               matrix=matrix, color="bone", side_slot="fleet_paint", side_color="petrol"))
+    # The bulb is the floodlight housing: 0.6 m square face, tapered back, widest at its
+    # mid-plane so the 1.6 m formation holds at every lamp.
+    housing = [(-0.2, 0.14), (0.2, 0.14), (0.3, 0.0), (0.27, -0.04), (-0.27, -0.04), (-0.3, 0.0)]
+    # The housing's corners set the 1.6 m formation, so they stay unbevelled.
+    with lamps.region(bevel=0):
+        weighted("LampBulb%d" % i, lambda: lamps.prism("working_tool", housing, 0.6,
+                   matrix=Matrix.Translation(g(*rest)), color="charcoal"))
+    # The hood is the bone hex bezel standing proud of the face, 0.18 deep. All share a datum.
+    # The bezel stays a hexagon.
+    with lamps.region(detail=1):
+        weighted("LampHood%d" % i, lambda: lamps.ring("fleet_paint", 0.17, 0.25, 0.18, segs=6,
+                   loc=g(*(rest + Vector((0, 0, 0.09)))), rot=(math.pi / 2, math.pi / 6, 0), color="bone"))
     weighted("LampLens%d" % i, lambda: lamps.cyl("working_tool", 0.14, 0.14, 0.025,
-               segs=8, loc=g(*(rest + Vector((0, 0, 0.105)))), rot=(math.pi / 2, 0, 0), color="f3f0e8"))
+               segs=8, loc=g(*(rest + Vector((0, 0, 0.06)))), rot=(math.pi / 2, 0, 0), color="f3f0e8"))
     for suffix, side in [("", -1), ("B", 1)]:
         name = "LampShutter%d%s" % (i, suffix)
         weighted(name, lambda side=side: lamps.box("working_tool", (0.10, 0.03, 0.24),
                   loc=g(*(rest + Vector((side * 0.05, 0, 0.15)))), color="charcoal"))
-        weighted(name, lambda side=side: lamps.box("working_tool", (0.027, 0.002, 0.24),
-                  loc=g(*(rest + Vector((side * 0.065, 0, 0.166)))), color="hazard"))
+        with lamps.region(bevel=0):
+            weighted(name, lambda side=side: lamps.box("working_tool", (0.027, 0.002, 0.24),
+                      loc=g(*(rest + Vector((side * 0.065, 0, 0.166)))), color="hazard"))
 bmesh.ops.recalc_face_normals(lamps.bm, faces=lamps.bm.faces[:])
 lamp_obj = lamps.to_object(parent=root)
 lamp_obj.parent = rig
@@ -154,7 +180,7 @@ doc = json.loads(data[20:20 + length])
 prims = [p for mesh in doc["meshes"] for p in mesh["primitives"]]
 triangles = sum(doc["accessors"][p["indices"]]["count"] // 3 for p in prims)
 vertices = sum(doc["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims)
-assert triangles <= 1100 and vertices <= 2100 and len(prims) <= 3
+assert triangles <= 7500 and vertices <= 11000 and len(prims) <= 3
 print("ELS geometry: %d T / %d V / %d D" % (triangles, vertices, len(prims)))
 
 

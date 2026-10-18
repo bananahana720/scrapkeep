@@ -2,8 +2,10 @@ extends RefCounted
 
 # The player's progress as one versioned document, saved as profile.json: unlocked
 # pilots, worlds and cosmetics, earned achievements, equipped cosmetics, stats and the
-# last pilot and the between-run nodes opened (SG12, an id list added inside schema 4: a
-# file without it reads as none opened). Preferences live in settings_store.gd. The store knows no starters and
+# last pilot, the between-run nodes opened (SG12, an id list added inside schema 4: a
+# file without it reads as none opened) and the jukebox tunes heard (tune_rows.gd, an id
+# list added the same way; the pilot radio's takes join that list) and the radio's dial and
+# mixtapes (radio.gd's to_dict, a dict added the same way). Preferences live in settings_store.gd. The store knows no starters and
 # reads no clock; the caller passes the time an achievement was earned. Mutators change
 # memory and save() writes. A store cannot save until it has loaded, and a save that finds
 # a newer generation on disk merges it in instead of replacing it. A file this build
@@ -24,6 +26,12 @@ const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2", 3: "_mig
 # Frozen history, not a rule: a returning v2 profile keeps them under the v3 locks.
 const V2_FREE_PILOTS := ["runner_gunner", "demolitions_caster"]
 
+# Cosmetic ids a cut item left in saves, to the id that replaces it. Every read swaps them, so
+# a save that earned the old item owns the new one; the new one stays unseen so it glows as new,
+# and a slot still wearing the old id is cleared. 2026-10-16: the Rigger Harness was cut for
+# alpha, and Homecoming pays Rigger Blue instead (COSMETICS-ART-BRIEFS.md).
+const RETIRED_COSMETICS := {"outfit_kest_rigger": "paint_kest_rigger"}
+
 const SHAPE := {
 	"pilots": SafeStore.STRINGS,
 	"worlds": SafeStore.STRINGS,
@@ -35,6 +43,9 @@ const SHAPE := {
 	"companion": SafeStore.DICT,
 	"seen": SafeStore.STRINGS,
 	"options": SafeStore.STRINGS,
+	"tunes": SafeStore.STRINGS,
+	"radio": SafeStore.DICT,
+	"camp": SafeStore.DICT,
 }
 
 var path := ""
@@ -139,7 +150,7 @@ func save() -> bool:
 # (else theirs) and the saver's escape flag. The generation is the larger of the two.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
-	for key in ["pilots", "worlds", "cosmetics", "settled", "seen", "options"]:
+	for key in ["pilots", "worlds", "cosmetics", "settled", "seen", "options", "tunes"]:
 		if not out.has(key):
 			out[key] = []
 		for id in theirs.get(key, []):
@@ -160,6 +171,7 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 		if mine.get("sockets", []).is_empty() and not other.get("sockets", []).is_empty():
 			mine["sockets"] = other["sockets"].duplicate()
 		out["companion"] = mine
+	out["camp"] = _merge_camp(out.get("camp", {}), theirs.get("camp", {}))
 	var times: Dictionary = theirs.get("achievements", {})
 	for id in times:
 		if not out["achievements"].has(id) or times[id] < out["achievements"][id]:
@@ -180,6 +192,22 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 		if not out.has(key):
 			out[key] = theirs[key]
 	out["generation"] = maxi(int(ours.get("generation", 0)), int(theirs.get("generation", 0)))
+	return out
+
+
+# The camp's records: the skee best by max, the trial's best lap by min and its ghost with it.
+static func _merge_camp(mine: Dictionary, other: Dictionary) -> Dictionary:
+	var out := mine.duplicate(true)
+	if other.has("skee_best") and (not out.has("skee_best") or int(other["skee_best"]) > int(out["skee_best"])):
+		out["skee_best"] = other["skee_best"]
+	var theirs_trial: Variant = other.get("trial")
+	if theirs_trial is Dictionary and theirs_trial.has("best_ms"):
+		var ours_trial: Variant = out.get("trial")
+		if not (ours_trial is Dictionary) or not ours_trial.has("best_ms") or int(theirs_trial["best_ms"]) < int(ours_trial["best_ms"]):
+			out["trial"] = (theirs_trial as Dictionary).duplicate(true)
+	for key in other:
+		if not out.has(key):
+			out[key] = other[key]
 	return out
 
 
@@ -414,6 +442,41 @@ func option_ids() -> Array:
 	return _doc["options"].duplicate()
 
 
+# Jukebox tunes heard in play (tune_rows.gd ids). Memory only; save() writes.
+func has_tune(id: String) -> bool:
+	return _doc["tunes"].has(id)
+
+
+# True the first time a tune is heard, false after.
+func hear_tune(id: String) -> bool:
+	if has_tune(id):
+		return false
+	_doc["tunes"].append(id)
+	return true
+
+
+func tune_ids() -> Array:
+	return _doc["tunes"].duplicate()
+
+
+# The pilot radio's station and mixtapes as Radio.to_dict makes them; {} until one is stored.
+func radio() -> Dictionary:
+	return _doc["radio"].duplicate(true)
+
+
+func set_radio(doc: Dictionary) -> void:
+	_doc["radio"] = doc.duplicate(true)
+
+
+# The camp's records as camp_records.gd keeps them; {} until one is stored.
+func camp() -> Dictionary:
+	return _doc["camp"].duplicate(true)
+
+
+func set_camp(doc: Dictionary) -> void:
+	_doc["camp"] = doc.duplicate(true)
+
+
 func rewards_settled() -> bool:
 	return bool(_doc["rewards_settled"])
 
@@ -490,7 +553,21 @@ func _read() -> Dictionary:
 	doc["generation"] = int(doc["generation"])
 	for id in doc["achievements"]:
 		doc["achievements"][id] = int(floorf(doc["achievements"][id]))
+	_retire_cosmetics(doc)
 	return {"state": "ok", "doc": doc, "from_version": from_version, "bytes": bytes}
+
+
+static func _retire_cosmetics(doc: Dictionary) -> void:
+	for old in RETIRED_COSMETICS:
+		if not doc["cosmetics"].has(old):
+			continue
+		doc["cosmetics"].erase(old)
+		doc["seen"].erase(old)
+		if not doc["cosmetics"].has(RETIRED_COSMETICS[old]):
+			doc["cosmetics"].append(RETIRED_COSMETICS[old])
+		for slot in doc["equipped"]:
+			if doc["equipped"][slot] == old:
+				doc["equipped"][slot] = ""
 
 
 func _shape_ok(doc: Dictionary) -> bool:
@@ -521,6 +598,9 @@ func _defaults() -> Dictionary:
 		"rewards_settled": false,
 		"seen": [],
 		"options": [],
+		"tunes": [],
+		"radio": {},
+		"camp": {},
 	}
 
 

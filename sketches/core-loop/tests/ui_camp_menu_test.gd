@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Achievements := preload("res://src/core/achievements.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const Companion := preload("res://src/core/companion.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
@@ -12,8 +13,10 @@ const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 
-# The interim camp (C7), a title page on K and the summary's Camp action, on the real title:
-#   - built synchronously; K, Escape, pad B and Back close it; A, S and Space leave for their page;
+# The camp page (C7), now the key-hint strip over the walkable camp (camp_hub.gd; camp_hub_test.gd walks it), on K
+# and the summary's Camp action, on the real title:
+#   - built synchronously; K, Escape and pad B leave the walk; A, S and Space act only in their station's zone,
+#     where A and S open their page, whose Back returns to the walk, and Space leaves for class select;
 #   - it reads ready and locked pilots, companion pieces found and seated, and achievements;
 #   - its Companion button shows only with a piece and opens the companion panel;
 #   - the summary's Camp (K, pad Y) lands on the title with the camp open;
@@ -47,6 +50,19 @@ func _settle(seconds: float) -> void:
 	while left > 0.0:
 		await process_frame
 		left -= _game.get_process_delta_time()
+
+
+# The ball set down in a camp station's zone (2 m toward the plaza from its centre), as camp_hub_test.gd does.
+func _put_in(id: String) -> void:
+	var hub = _game.camp_hub
+	var toward: Vector3 = hub.root.global_position - hub.zone_position(id)
+	toward.y = 0.0
+	var at: Vector3 = hub.zone_position(id) + toward.normalized() * 1.5
+	at.y = 1.3
+	_game.player.reset_to(at)
+	_game.player.body().global_position = at
+	for i in 4:
+		await physics_frame
 
 
 func _reopen(screens) -> void:
@@ -125,14 +141,15 @@ func _run() -> void:
 	_t.check("K opens the camp", screens.camp_open() and screens.overlay_open(), "")
 	_t.eq("the camp's title reads CAMP", screens._title.text, "CAMP")
 	_t.check("the title actions hide under the camp", not screens._actions.visible, "")
-	_t.check("focus lands on Launch", root.gui_get_focus_owner() == camp.button_for("launch"), str(root.gui_get_focus_owner()))
+	_t.check("the walk holds no focus and shows the key strip", root.gui_get_focus_owner() == null and camp.walk
+		and not camp.button_for("launch").is_visible_in_tree(), str(root.gui_get_focus_owner()))
 	_game._screen_key(KEY_K)
 	await _frames(1)
 	_t.check("K again closes the camp", not screens.camp_open() and screens._actions.visible, "")
 	_t.eq("the title body comes back", screens._body.text, FieldNotes.OBJECTIVE)
 	_t.check("nothing keeps focus after closing", root.gui_get_focus_owner() == null, str(root.gui_get_focus_owner()))
 
-	# Escape and pad B close; pad A presses the focused button.
+	# Escape and pad Start close (pad B is the boost); pad A presses the focused button.
 	_game._screen_key(KEY_K)
 	Push.key(root, KEY_ESCAPE)
 	await _frames(1)
@@ -140,15 +157,20 @@ func _run() -> void:
 	_game._screen_key(KEY_K)
 	Push.pad(root, JOY_BUTTON_B)
 	await _frames(1)
-	_t.check("pad B closes the camp", not screens.camp_open(), "")
+	_t.check("pad B boosts in the walk and does not close the camp", screens.camp_open(), "")
+	Push.pad(root, JOY_BUTTON_START)
+	await _frames(1)
+	_t.check("pad Start closes the camp", not screens.camp_open(), "")
 	_game._screen_key(KEY_K)
 	var pad_a := InputEventJoypadButton.new()
 	pad_a.button_index = JOY_BUTTON_A
 	pad_a.pressed = true
-	_t.eq("pad A on the camp is not a title key", _game.pad_screen_key(pad_a), KEY_NONE)
-	Push.pad(root, JOY_BUTTON_A)
+	_t.eq("pad A in the walk outside a zone is the jump, not a title key", _game.pad_screen_key(pad_a), KEY_NONE)
+	await _put_in("gate")
+	_t.eq("pad A in the gate's zone is Launch", _game.pad_screen_key(pad_a), KEY_SPACE)
+	_game._screen_key(_game.pad_screen_key(pad_a))
 	await _frames(2)
-	_t.eq("pad A on focused Launch goes to class select", flow.state_name(), "class_select")
+	_t.eq("pad A at the gate goes to class select", flow.state_name(), "class_select")
 	flow.show_title()
 	await _frames(1)
 
@@ -203,36 +225,45 @@ func _run() -> void:
 	_t.check("nothing seated reads none", camp.labels().has("Seated: none"), "")
 	var companion = camp.button_for("companion")
 	_t.check("the Companion button shows with a piece", companion != null, "")
-	if companion != null:
-		companion.pressed.emit()
-		await _frames(1)
-		_t.check("Companion closes the camp and opens the panel", not screens.camp_open() and ws.companion_panel.is_open(), "camp %s" % screens.camp_open())
-		ws.companion_panel.close()
-		await _frames(1)
+	_game._screen_key(KEY_M)
+	_t.check("M outside Moss's zone opens nothing", not ws.companion_panel.is_open(), "")
+	await _put_in("moss")
+	_game._screen_key(KEY_M)
+	await _frames(1)
+	_t.check("M at Moss's stall opens the panel over the walk", screens.camp_open() and ws.companion_panel.is_open()
+		and not screens.walk_live(), "camp %s" % screens.camp_open())
+	ws.companion_panel.close()
+	await _frames(1)
+	_t.check("closing the panel returns to the walk", screens.walk_live(), "")
 
 	# Achievements count.
 	profile.earn(Achievements.ids()[0], EARNED_AT)
 	_reopen(screens)
-	_t.check("an earn shows in the count", camp.labels().has("Achievements: 1 of %d earned" % Achievements.ids().size()), "")
+	_t.check("an earn shows in the count", camp.labels().has("Achievements: 1 of %d earned" % Achievements.ids().filter(func(id): return not Secrets.shut_row(id, profile)).size()), "")
 
-	# Pages from the camp.
+	# Pages from the camp: each opens from its station's zone and its Back returns to the walk.
+	_game._screen_key(KEY_A)
+	_t.check("A outside the trophy wall's zone opens nothing", not screens.achievements_open(), "")
+	await _put_in("achieve")
 	_game._screen_key(KEY_A)
 	await _frames(1)
-	_t.check("A from the camp opens achievements", screens.achievements_open() and not screens.camp_open(), "")
-	screens.button_for("back").pressed.emit()
+	_t.check("A at the trophy wall opens achievements", screens.achievements_open() and screens.camp_open(), "")
+	_game._screen_key(KEY_A)
+	_t.check("A on the open page does not stack or close it", screens.achievements_open(), "")
+	screens.toggle_achievements()
 	await _frames(1)
-	_t.check("its Back returns to the title", not screens.achievements_open() and screens._actions.visible and not screens.camp_open(), "")
-	_game._screen_key(KEY_K)
+	_t.check("its Back returns to the walk", not screens.achievements_open() and screens.walk_live() and not screens._actions.visible, "")
+	await _put_in("settings")
 	_game._screen_key(KEY_S)
 	await _frames(1)
-	_t.check("S from the camp opens settings", screens.settings_open() and not screens.camp_open(), "")
+	_t.check("S at the console opens settings", screens.settings_open() and screens.camp_open(), "")
 	screens.toggle_settings()
 	await _frames(1)
-	_t.check("settings' back returns to the title", not screens.settings_open() and screens._actions.visible and not screens.camp_open(), "")
-	_game._screen_key(KEY_K)
+	_t.check("settings' back returns to the walk", not screens.settings_open() and screens.walk_live() and not screens._actions.visible, "")
+	await _put_in("gate")
 	_game._screen_key(KEY_SPACE)
 	await _frames(1)
-	_t.eq("Space from the camp goes to class select", flow.state_name(), "class_select")
+	_t.eq("Space at the gate goes to class select", flow.state_name(), "class_select")
 	flow.show_title()
 	await _frames(1)
 

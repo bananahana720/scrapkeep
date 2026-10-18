@@ -104,9 +104,10 @@ func _init() -> void:
 		{"id": "hauler_bounty", "at": Vector2(70.0, 47.0)},
 		{"id": "ambush_altar", "at": Vector2(7.5, 30.0)},
 	]
-	# The hauler's cage on the middle island's north-west lip, beside the bridge landing, facing
-	# the Lift (thermal_a). Rescue rows carry no pay yet (rescue_site.gd).
-	rescue_sites = [{"id": "hauler_cage", "quest": "highdraft", "prompt": "free the hauler",
+	# The bookkeeper's cage on the middle island's north-west lip, beside the bridge landing, facing
+	# the Lift (thermal_a): the same isles rescue as park_islands.json's Moorings cage, so either
+	# table frees Tally (the isles_rescued achievement).
+	rescue_sites = [{"id": "tally_cage", "quest": "isles", "pilot": "tally", "prompt": "free the bookkeeper",
 		"at": Vector2(-7.5, 52.0), "face": (THERMAL_A - Vector2(-7.5, 52.0)).normalized()}]
 
 

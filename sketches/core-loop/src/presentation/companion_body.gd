@@ -11,13 +11,33 @@ extends Node3D
 # sound from one Companion.CUES row, and state() reports the cue shown. With no leader (the
 # run not alive) Companion.leash_step stalls it at the leader's last live spot; a respawn
 # or a long stretch past the leash recalls it beside the ball.
+# COMPANION-GROWS: the bare chassis shows once the run has a companion, one seated piece
+# bolts onto its socket, and two show the assembled pair. Each heft class adds a mark (scale
+# and greybox add-on parts from Companion.MARKS), the halo shows the assist gauge, and a
+# called assist shows its ink word beside the hit. The add-ons and the word are greybox
+# stand-ins for the effects and rig threads' art.
 
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # One GLB per ordered socket pair, named <socket 0>__<socket 1> in table order.
 const MODEL_DIR := "res://assets/models/companion/assembled/"
+const PART_DIR := "res://assets/models/companion/"
+const BARE := "bare"
+const CHASSIS_PATH := "res://assets/models/companion/spil9.glb"
+# The rig thread's grown-mark parts (PR #44, registry row spil9_marks): one Hull root whose
+# children are one mesh per mark. Without it the body builds greybox stand-ins.
+const MARKS_PATH := "res://assets/models/companion/spil9_marks.glb"
+const MARK_PARTS := ["Mk1Halo", "Mk2Fins", "Mk3Halo", "Mk4Exhaust", "Mk5CoreCrest"]
+# Socket.01 in the chassis rig, used when the skeleton has no socket bone to follow.
+const SOCKET_AT := Vector3(-0.29, 0.225, 0.0)
+const HALO_LIFT := 0.62
+const HALO_RADIUS := 0.36
+const HALO_ENERGY := {"empty": 0.15, "full": 3.0}
+const WORD_LIFE := 0.7
+const WORD_SIZE := 0.012
 # Root height: the belly floats 0.30 m over the floor and the hull is 0.21 m deep below it.
 const HULL_LIFT := 0.51
 const SIDE := 2.0
@@ -25,6 +45,11 @@ const BEHIND := 0.8
 const FOLLOW_RATE := 8.0
 const TURN_RATE := 6.0
 const MOVING_SPEED := 1.0
+# Presentation only: stop below this so idle and follow do not flicker around MOVING_SPEED.
+const STOPPED_SPEED := 0.6
+# Seconds of crossfade into idle/follow and into a one-shot beat; the clip name switches at once.
+const LOOP_BLEND := 0.2
+const BEAT_BLEND := 0.12
 # The escape lamp: radius, height over the hull root, emission per cue, and each act's shape.
 const LAMP_RADIUS := 0.09
 const LAMP_LIFT := 0.48
@@ -57,6 +82,16 @@ var _lamp: MeshInstance3D
 var _escape_cue := "none"
 var _leash := {}
 var _state := "idle"
+var _mark := 0
+var _grown := 1.0
+var _kit: Node3D
+# The mounted spil9_marks parts by name, empty when the GLB or the Hull bone is missing.
+var _mark_parts := {}
+var _halo: MeshInstance3D
+var _words: Array = []
+var _wired := false
+# Assists this body has shown, for tests and the power read.
+var assists_shown := 0
 
 
 func setup(ctx_ref) -> void:
@@ -94,6 +129,15 @@ static func dress_model(model: Node) -> void:
 			mesh.set_surface_override_material(surface, _painted_materials[original])
 
 
+# The key the body is built for: "" (no companion), "bare", one piece id, or the pair.
+static func key_of(sockets: Array, has_companion := true) -> String:
+	if not has_companion:
+		return ""
+	if sockets.is_empty():
+		return BARE
+	return "__".join(sockets)
+
+
 # Capture hook (tools/asset_capture.gd --call): seats two owned pieces into the run's
 # companion so a staged run shows the body. Returns "" or the refusal reason.
 func seat_for_capture(a: String, b: String) -> String:
@@ -110,6 +154,11 @@ func is_real() -> bool:
 	return _model != null
 
 
+func _has_companion() -> bool:
+	var run = ctx.get("run") if ctx != null else null
+	return run != null and String(run.companion.get("chassis", "")) == Companion.CHASSIS
+
+
 func _seats() -> Array:
 	var run = ctx.get("run") if ctx != null else null
 	if run == null:
@@ -121,18 +170,21 @@ func _seats() -> Array:
 		for id in sockets_v:
 			if typeof(id) == TYPE_STRING and Companion.family_of(id) != "":
 				found.append(id)
-	return found if found.size() == Companion.SOCKETS else []
+	return found if found.size() <= Companion.SOCKETS else []
 
 
 func _process(delta: float) -> void:
 	if ctx == null or ctx.player == null:
 		return
+	_wire()
+	_age_words(delta)
 	var seats := _seats()
-	var key := "" if seats.is_empty() else "%s__%s" % [seats[0], seats[1]]
+	var key := key_of(seats, _has_companion())
 	if key != _key:
 		_rebuild(seats, key)
 	if key == "":
 		return
+	_grow()
 	var lead := Companion.leash_step(_leash, delta, _leader_alive(), ctx.player.shown_position(), global_position)
 	_leash = lead
 	if lead["recall"]:
@@ -155,7 +207,7 @@ func _leader_alive() -> bool:
 
 # Stalled: hover beside the leader's last live spot and wait there, idle.
 func _hold(delta: float, safe: Vector3) -> void:
-	var target := safe + _heading.cross(Vector3.UP).normalized() * SIDE
+	var target := safe + _heading.cross(Vector3.UP).normalized() * SIDE * _grown
 	target.y = safe.y - Tuning.RADIUS + HULL_LIFT
 	if _snap:
 		global_position = target
@@ -202,14 +254,20 @@ func _rebuild(seats: Array, key: String) -> void:
 	_escape_cue = "none"
 	_leash = {}
 	_state = "idle"
+	_kit = null
+	_halo = null
+	_mark_parts = {}
+	_mark = 0
 	visible = key != ""
 	_snap = true
 	if key == "":
 		return
-	var path := model_path(seats, model_dir)
+	var path := model_path(seats, model_dir) if seats.size() == Companion.SOCKETS else CHASSIS_PATH
 	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 	if packed != null:
 		_model = packed.instantiate() as Node3D
+	if _model != null and seats.size() == 1:
+		_seat_part(_model, String(seats[0]))
 	if _model == null:
 		if not _warned:
 			_warned = true
@@ -217,10 +275,12 @@ func _rebuild(seats: Array, key: String) -> void:
 		var hull := _fallback()
 		add_child(hull)
 		_add_lamp(hull, key)
+		_add_halo(hull)
 		return
 	dress_model(_model)
 	add_child(_model)
 	_add_lamp(_model, key)
+	_add_halo(_model)
 	_anim = _model.find_children("*", "AnimationPlayer", true, false).front() as AnimationPlayer
 	_play("idle")
 
@@ -239,6 +299,266 @@ func _fallback() -> Node3D:
 		module.position = Vector3(x, 0.38, 0.0)
 		hull.add_child(module)
 	return hull
+
+
+# One seated piece bolts onto Socket.01: a bone attachment when the chassis skeleton has the
+# bone, else the socket's rest position.
+func _seat_part(chassis: Node3D, id: String) -> void:
+	var path := PART_DIR + id + ".glb"
+	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
+	if packed == null:
+		return
+	var part := packed.instantiate() as Node3D
+	part.name = "SeatedPart"
+	var skeletons := chassis.find_children("*", "Skeleton3D", true, false)
+	var skeleton := skeletons.front() as Skeleton3D if not skeletons.is_empty() else null
+	var bone := -1
+	if skeleton != null:
+		for name in ["Socket.01", "Socket_01"]:
+			bone = skeleton.find_bone(name)
+			if bone >= 0:
+				break
+	if bone >= 0:
+		var mount := BoneAttachment3D.new()
+		skeleton.add_child(mount)
+		mount.bone_name = skeleton.get_bone_name(bone)
+		mount.add_child(part)
+	else:
+		part.position = SOCKET_AT
+		chassis.add_child(part)
+
+
+# The halo is the assist gauge: dim while it fills, bright and blinking when full. With the
+# real marks mounted, Mk1Halo is the gauge.
+func _add_halo(host: Node3D) -> void:
+	_mark_parts = _mount_marks(host)
+	_kit = Node3D.new()
+	_kit.name = "MarkKit"
+	host.add_child(_kit)
+	if _mark_parts.has("Mk1Halo"):
+		_halo = _mark_parts["Mk1Halo"]
+		_halo.material_override = _halo_material()
+		return
+	_halo = MeshInstance3D.new()
+	_halo.name = "AssistHalo"
+	var ring := TorusMesh.new()
+	ring.inner_radius = HALO_RADIUS - 0.03
+	ring.outer_radius = HALO_RADIUS
+	_halo.mesh = ring
+	_halo.material_override = _halo_material()
+	_halo.position = Vector3(0.0, HALO_LIFT, 0.0)
+	_halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	host.add_child(_halo)
+
+
+func _halo_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.emission_enabled = true
+	mat.albedo_color = EventKinds.UI_ROWS["companion_ready"]["color"]
+	mat.emission = mat.albedo_color
+	return mat
+
+
+# Seats spil9_marks on the chassis Hull bone; returns its parts by name, all hidden until
+# _grow shows them. Empty when the GLB or the bone is missing.
+func _mount_marks(host: Node3D) -> Dictionary:
+	if not ResourceLoader.exists(MARKS_PATH):
+		return {}
+	var skeletons := host.find_children("*", "Skeleton3D", true, false)
+	var skeleton := skeletons.front() as Skeleton3D if not skeletons.is_empty() else null
+	if skeleton == null or skeleton.find_bone("Hull") < 0:
+		return {}
+	var scene := (load(MARKS_PATH) as PackedScene).instantiate()
+	var hull := scene.find_child("Hull", false, false) as Node3D
+	if hull == null:
+		hull = scene as Node3D if scene.name == "Hull" else null
+	if hull == null:
+		scene.free()
+		return {}
+	if hull != scene:
+		scene.remove_child(hull)
+		scene.free()
+	dress_model(hull)
+	var mount := BoneAttachment3D.new()
+	mount.name = "MarksMount"
+	skeleton.add_child(mount)
+	mount.bone_name = "Hull"
+	mount.add_child(hull)
+	var parts := {}
+	for name in MARK_PARTS:
+		var part := hull.find_child(name, true, false) as Node3D
+		if part != null:
+			part.visible = false
+			parts[name] = part
+	return parts
+
+
+# The mark follows the run's heft class: scale, then the add-on parts, rebuilt on a change.
+func _grow() -> void:
+	var run = ctx.get("run")
+	var heft: int = run.heft_class() if run != null and run.has_method("heft_class") else 1
+	var row := Companion.mark_of(heft)
+	if int(row["mark"]) != _mark:
+		_mark = int(row["mark"])
+		_grown = float(row["scale"])
+		global_basis = global_basis.orthonormalized() * Basis.from_scale(Vector3.ONE * _grown)
+		_build_kit(Companion.adds_of(heft))
+	if _halo != null:
+		var fill: float = combat.assist_fill() if combat != null and combat.has_method("assist_fill") else 0.0
+		var mat := _halo.material_override as StandardMaterial3D
+		# The full halo's 2 Hz blink is under FlashGuard's cap; reduce flashes stops it anyway and
+		# holds the full glow, since the fill level already says "full".
+		var blink := not FlashGuard.on and fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
+		mat.emission_energy_multiplier = lerpf(HALO_ENERGY["empty"], HALO_ENERGY["full"], fill) * (1.6 if blink else 1.0)
+
+
+func mark() -> int:
+	return _mark
+
+
+func grown() -> float:
+	return _grown
+
+
+func kit_parts() -> Array:
+	var out := []
+	for name in _mark_parts:
+		if (_mark_parts[name] as Node3D).visible and name != "Mk1Halo":
+			out.append(name)
+	if _kit != null:
+		for c in _kit.get_children():
+			out.append(String(c.name))
+	return out
+
+
+func _build_kit(adds: Array) -> void:
+	if _kit == null:
+		return
+	if not _mark_parts.is_empty():
+		_show_marks()
+		return
+	for c in _kit.get_children():
+		_kit.remove_child(c)
+		c.queue_free()
+	var grey := StandardMaterial3D.new()
+	grey.albedo_color = Color(0.55, 0.55, 0.6)
+	var glow := StandardMaterial3D.new()
+	glow.emission_enabled = true
+	glow.albedo_color = Color(1.0, 0.62, 0.15)
+	glow.emission = glow.albedo_color
+	glow.emission_energy_multiplier = 2.0
+	for add in adds:
+		match add:
+			"fins":
+				for x in [-1.0, 1.0]:
+					_kit_part("Fin", PrismMesh.new(), grey, Vector3(x * 0.62, 0.18, -0.05), Vector3(0.1, 0.28, 0.64), Vector3(0.0, 0.0, -x * 0.5))
+			"double_halo":
+				var outer := TorusMesh.new()
+				outer.inner_radius = HALO_RADIUS + 0.06
+				outer.outer_radius = HALO_RADIUS + 0.09
+				_kit_part("OuterHalo", outer, glow, Vector3(0.0, HALO_LIFT, 0.0), Vector3.ONE, Vector3.ZERO)
+			"exhaust":
+				for x in [-1.0, 1.0]:
+					var cone := CylinderMesh.new()
+					cone.top_radius = 0.0
+					cone.bottom_radius = 0.09
+					cone.height = 0.6
+					_kit_part("Exhaust", cone, glow, Vector3(x * 0.25, 0.05, 0.62), Vector3.ONE, Vector3(PI / 2.0, 0.0, 0.0))
+			"core_crest":
+				var core := SphereMesh.new()
+				core.radius = 0.16
+				core.height = 0.32
+				_kit_part("Core", core, glow, Vector3(0.0, 0.3, 0.05), Vector3.ONE, Vector3.ZERO)
+				_kit_part("Crest", PrismMesh.new(), grey, Vector3(0.0, 0.62, -0.05), Vector3(0.06, 0.4, 0.3), Vector3.ZERO)
+
+
+# Real marks: Mk1Halo always, then each mark's part up to the current one.
+func _show_marks() -> void:
+	for i in MARK_PARTS.size():
+		var part = _mark_parts.get(MARK_PARTS[i])
+		if part != null:
+			part.visible = i == 0 or i < _mark
+
+
+func _kit_part(part_name: String, mesh: Mesh, mat: Material, at: Vector3, size: Vector3, rot: Vector3) -> void:
+	var part := MeshInstance3D.new()
+	part.name = part_name
+	part.mesh = mesh
+	part.material_override = mat
+	part.position = at
+	part.scale = size
+	part.rotation = rot
+	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_kit.add_child(part)
+
+
+func _wire() -> void:
+	if _wired or combat == null or not combat.has_signal("companion_assisted"):
+		return
+	_wired = true
+	combat.companion_assisted.connect(_on_assisted)
+	combat.companion_assist_full.connect(func(): cue("assist_full"))
+
+
+# A called assist: its cue (clip and chirp) and its ink word beside the hit, drawn with depth
+# so it never covers a telegraph (tone bible guardrails; BIBLE.md:795).
+func _on_assisted(assist: Dictionary) -> void:
+	cue(String(assist.get("cue", "")))
+	if _anim != null and _anim.current_animation == "assist_rise":
+		for clip in ["assist_drop", "assist_return"]:
+			if _anim.has_animation(clip):
+				_anim.queue(clip)
+	assists_shown += 1
+	var host := get_parent()
+	if host == null:
+		return
+	var word := Label3D.new()
+	word.name = "AssistWord"
+	word.text = String(assist.get("word", ""))
+	word.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	word.pixel_size = WORD_SIZE
+	word.font_size = 96
+	word.outline_size = 24
+	word.modulate = Color(1.0, 0.62, 0.15)
+	word.outline_modulate = Color(0.08, 0.09, 0.11)
+	word.top_level = true
+	host.add_child(word)
+	var at: Vector3 = assist.get("at", global_position)
+	word.global_position = at + Vector3.UP * 2.2 + _heading.cross(Vector3.UP).normalized() * 1.5
+	_words.append([word, WORD_LIFE])
+
+
+func _age_words(delta: float) -> void:
+	var keep: Array = []
+	for entry in _words:
+		var word: Label3D = entry[0]
+		entry[1] = float(entry[1]) - delta
+		if not is_instance_valid(word):
+			continue
+		if float(entry[1]) <= 0.0:
+			word.queue_free()
+			continue
+		var t := 1.0 - float(entry[1]) / WORD_LIFE
+		word.scale = Vector3.ONE * (1.0 + 0.3 * maxf(0.0, 1.0 - t * 6.0))
+		word.modulate.a = clampf(float(entry[1]) / (WORD_LIFE * 0.4), 0.0, 1.0)
+		keep.append(entry)
+	_words = keep
+
+
+func _exit_tree() -> void:
+	for entry in _words:
+		if is_instance_valid(entry[0]):
+			entry[0].queue_free()
+	_words.clear()
+
+
+func words_shown() -> Array:
+	var out := []
+	for entry in _words:
+		if is_instance_valid(entry[0]):
+			out.append(entry[0].text)
+	return out
 
 
 # The lamp rides the model (or the plain hull) so the body keeps one child.
@@ -270,7 +590,7 @@ func _light(lamp: String) -> void:
 	var mat := _lamp.material_override as StandardMaterial3D
 	mat.albedo_color = row["color"].darkened(0.6) if lamp == "spent" else row["color"]
 	mat.emission = row["color"]
-	mat.emission_energy_multiplier = LAMP_ENERGY[lamp]
+	mat.emission_energy_multiplier = FlashGuard.spike(LAMP_ENERGY["ready"], LAMP_ENERGY[lamp]) if lamp != "spent" else LAMP_ENERGY[lamp]
 	_lamp.scale = LAMP_SCALE[lamp]
 
 
@@ -291,7 +611,8 @@ func _escape_beat() -> void:
 func _follow(delta: float) -> void:
 	var player = ctx.player
 	var velocity: Vector3 = player.planar_velocity()
-	_moving = velocity.length() > MOVING_SPEED
+	var speed := velocity.length()
+	_moving = speed > (STOPPED_SPEED if _moving else MOVING_SPEED)
 	if _moving:
 		var want := velocity.normalized()
 		var blended := _heading.lerp(want, 1.0 - exp(-TURN_RATE * delta))
@@ -299,14 +620,14 @@ func _follow(delta: float) -> void:
 			_heading = blended.normalized()
 	var ball: Vector3 = player.shown_position()
 	var right := _heading.cross(Vector3.UP).normalized()
-	var target := ball - _heading * BEHIND + right * SIDE
+	var target := ball - _heading * BEHIND + right * SIDE * _grown
 	target.y = ball.y - Tuning.RADIUS + HULL_LIFT
 	if _snap:
 		global_position = target
 		_snap = false
 	else:
 		global_position = global_position.lerp(target, 1.0 - exp(-FOLLOW_RATE * delta))
-	global_basis = Basis.looking_at(_heading, Vector3.UP)
+	global_basis = Basis.looking_at(_heading, Vector3.UP) * Basis.from_scale(Vector3.ONE * _grown)
 	if not _is_beat():
 		_state = "follow" if _moving else "idle"
 		if _anim != null:
@@ -325,14 +646,14 @@ func _play(clip: String) -> void:
 		return
 	if _anim.current_animation == clip and _anim.is_playing():
 		return
-	_anim.play(clip)
+	_anim.play(clip, LOOP_BLEND)
 
 
 # A one-shot beat; the next frame's idle or follow resumes when it ends.
 func _beat(clip: String) -> void:
 	if _anim == null or not _anim.has_animation(clip):
 		return
-	_anim.play(clip)
+	_anim.play(clip, BEAT_BLEND)
 
 
 func _beats() -> void:

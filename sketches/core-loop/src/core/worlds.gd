@@ -15,7 +15,8 @@ const ROWS := [
 ]
 
 # One row per boss. kind is the prefix of the boss's piece kinds ("brindle_hull"); music
-# is the music engine's id. title is the victory screen's heading; victory its body. built false means the script does not exist yet.
+# is the music engine's id. title is the victory screen's heading; victory its body; stamp, when set, is inked
+# under the heading (the Mind's crew took you on: "All hands", Andrew 2026-10-18). built false means the script does not exist yet.
 # script is the module flow runs for that world's arena. The Waking (waking.gd) and the Mind
 # (mind.gd) have their own modules; each extends stub_boss.gd, one posture Warden on a flat
 # pad, until its fight lands.
@@ -25,7 +26,8 @@ const BOSSES := {
 	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
 		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig. Fallen floors await pit inspection."},
 	"mind": {"name": "The Mind", "title": "THE MIND IS QUIET", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
-		"built": true, "victory": "The Mind is quiet.", "epitaph": "The Mind, quieted in the Highdraft. Lanes committed, crew still braced."},
+		"built": true, "victory": "The Mind is quiet.", "stamp": "HIRED",
+		"epitaph": "The Mind, quieted in the Highdraft. Glove set by the empty place."},
 }
 
 
@@ -37,7 +39,7 @@ const ENDING := {
 	"title": "RETURN TRIP ENTERED",
 	"log": {
 		1: [
-			"Shift log: Brindle routed, anchors collected. Cableway turns without anyone on the handwheel.",
+			"Shift log: Brindle routed. Head house drum turns without anyone on the handwheel.",
 			"Intake clear. Old flood marks inside the housing are one hand higher.",
 		],
 		2: [
