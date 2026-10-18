@@ -32,6 +32,7 @@ sails, nets and decals with `bevel = 0` and `subsurf = 0`.
 | `detail` | 2 | Segment multiplier for `cyl`, `rod`, `uv` and `ring`; `ico` gains a subdivision |
 | `bevel` | 0.03 | Bevel width in metres on edges sharper than `bevel_angle` (30°) |
 | `bevel_segments` | 1 | One chamfer; smooth shading rounds it |
+| `bevel_min` | 0 | Edges shorter than this (metres) are not bevelled, so bolts stay cheap |
 | `sharp_angle` | 50° | Edges sharper than this stay hard after the bevel |
 | `subsurf` | 0 | Catmull-Clark levels; about 4x triangles per level |
 | `crease_angle` | 70° | On subdivided parts, edges sharper than this stay creased |

@@ -30,6 +30,9 @@ DEFAULTS = {
     "bevel": 0.03,
     "bevel_angle": 30.0,
     "bevel_segments": 1,
+    # Edges shorter than this keep hard (no bevel), so bolts and rivets stay cheap while
+    # the big panels round off; 0 bevels every hard edge.
+    "bevel_min": 0.0,
     # Faces are smooth; edges sharper than this stay hard after the bevel.
     "sharp_angle": 50.0,
     # Catmull-Clark levels for parts (a Part's own .subsurf wins). Hard edges are creased,
@@ -86,7 +89,7 @@ def shape(bm, opts=None, bevel=None):
     bm.normal_update()
     bm.edges.index_update()
     if width > 0:
-        hard = [e for e in bm.edges if _angle(e) > o["bevel_angle"]]
+        hard = [e for e in bm.edges if _angle(e) > o["bevel_angle"] and e.calc_length() >= o["bevel_min"]]
         if hard:
             bmesh.ops.bevel(bm, geom=hard, offset=width, offset_type="OFFSET",
                             segments=o["bevel_segments"], profile=0.5, affect="EDGES",
