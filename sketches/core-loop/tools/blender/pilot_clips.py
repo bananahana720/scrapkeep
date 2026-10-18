@@ -47,7 +47,8 @@ EXPORT_COMMON = dict(export_format='GLB', use_selection=True, export_animations=
 EXPORT_ROUTES = {
     'rivet': ({}, False), 'sable': ({}, False), 'kest': ({}, False),
     'tarn': ({'export_vertex_color': 'ACTIVE'}, True),
-    'tally': ({'export_vertex_color': 'ACTIVE', 'export_extras': False}, True),
+    # Tally's base scene is polished (POLISH.md): sort vertices too, or rebuilds drift.
+    'tally': ({'export_vertex_color': 'ACTIVE', 'export_extras': False}, 'vertices'),
     'cannon': ({}, True),
 }
 
@@ -299,7 +300,7 @@ def export(arm, out_glb, pilot):
     bpy.ops.export_scene.gltf(filepath=str(out_glb), **dict(EXPORT_COMMON, **extra))
     if canonical:
         from common import canonical_indices
-        canonical_indices(str(out_glb))
+        canonical_indices(str(out_glb), vertices=canonical == 'vertices')
 
 
 def synthetic_table(pilot):
