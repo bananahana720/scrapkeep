@@ -117,19 +117,19 @@ def author_ship(root):
                     (.6, {}), (.9, {"up": -.025, "pitch": -.004}), (d, {})]
     action(root, "idle_roll", d, rows)
     # Warn winds the cranes back a few degrees, swings to the tell and settles on it by 1.4 s.
-    # Sweep leaves the tell pose, overshoots the far end a touch and settles on it at 1.2 s.
-    warn, sweep = math.radians(40), math.radians(43)
+    # Sweep is the strike: it starts on the warn end pose (blend 0) and eases to exactly +40 at 1.2 s, inside the hazard arc.
+    warn, over = math.radians(40), math.radians(43)
     for name, duration in (("crane_warn", 1.4), ("crane_sweep", 1.2)):
         rows = {}
         for side, sign in (("Port", 1), ("Starboard", -1)):
             if name == "crane_warn":
-                yaw = [(0, 0), (.3, math.radians(4)), (1.1, -sweep), (1.4, -warn)]
+                yaw = [(0, 0), (.3, math.radians(4)), (1.1, -over), (1.4, -warn)]
                 magnet = [(0, .02), (.3, 0), (1.15, .21), (1.4, .18)]
                 elbow = [(0, -.05), (.3, -.03), (1.1, -.2), (1.4, -.18)]
             else:
-                yaw = [(0, -warn), (1.0, sweep), (1.2, warn)]
-                magnet = [(0, .02), (1.0, .21), (1.2, .18)]
-                elbow = [(0, -.05), (1.0, -.2), (1.2, -.18)]
+                yaw = [(0, -warn), (1.2, warn)]
+                magnet = [(0, .18), (.7, .21), (1.2, .18)]
+                elbow = [(0, -.18), (.7, -.2), (1.2, -.18)]
             rows["Crane" + side] = [(t, {"yaw": sign * v}) for t, v in yaw]
             rows["CraneElbow" + side] = [(t, {"pitch": v}) for t, v in elbow]
             # Only small tilt of the working face. MagnetSocket position is code-owned.
