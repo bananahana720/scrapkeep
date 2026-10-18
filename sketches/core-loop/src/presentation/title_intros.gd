@@ -172,8 +172,9 @@ static func mark_met(profile, boss: String) -> bool:
 	return profile.mark_seen(MET_PREFIX + boss)
 
 
-# The shot list a row plays, in bars. Sable's opening is the storyboarded one (11 shots, 22
-# bars); every other row uses the same swing in 8 shots and 17 bars. kind names what the
+# The shot list a row plays, in bars. Sable's opening is the storyboarded one plus her hop-out
+# (12 shots, 24 bars); every other row uses the same swing in 8 shots and 17 bars, and a
+# pilot row adds the hop-out after its card (9 shots, 19 bars). kind names what the
 # player frames; see title_intro_player.gd.
 static func shots(id: String) -> Array:
 	var r := row(id)
@@ -185,6 +186,8 @@ static func shots(id: String) -> Array:
 		{"kind": "card", "bars": 2, "beat": "hype"},
 		{"kind": "action", "bars": 2, "beat": "hype"},
 	]
+	if r.kind == "pilot":
+		list.append({"kind": "antics", "bars": 2, "beat": "hype"})
 	if id == FIRST:
 		list.append({"kind": "rollcall", "bars": 2, "beat": "hype"})
 		list.append({"kind": "collision", "bars": 1, "beat": "collision"})

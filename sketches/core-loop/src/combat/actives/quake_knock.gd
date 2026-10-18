@@ -1,5 +1,6 @@
 extends RefCounted
 
+const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -175,7 +176,7 @@ func _commit(at: Vector3, radius: float) -> Node3D:
 func _strike(ring: Node3D, dmg: float) -> void:
 	knocks += 1
 	ring.set_progress(1.0)
-	combat.effects.ring(ring.center, ring.radius, COLOR)
+	combat.effects.ring(ring.center, ring.radius, ActiveFx.peak(COLOR))
 	var struck: Array = []
 	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
 		if not enemy.is_dead() and ring.contains(enemy.global_position):
@@ -212,7 +213,7 @@ func _chain(struck: Array, dmg: float) -> void:
 			if next == null:
 				break
 			visited.append(next)
-			combat.effects.arc(at, next.global_position, COLOR)
+			combat.effects.arc(at, next.global_position, ActiveFx.peak(COLOR))
 			combat._hit(next, KIND, hit, next.global_position - at, KNOCK * 0.5, "", SOURCE, IMPACT)
 			at = next.global_position
 
@@ -241,13 +242,13 @@ func _cracks(ring: Node3D, progress: float) -> void:
 	var seed := float(knocks) * 2.39996
 	for i in CRACKS:
 		var a := seed + TAU * i / CRACKS
-		combat.effects.arc(center, center + Vector3(cos(a), 0.0, sin(a)) * reach, COLOR)
+		combat.effects.arc(center, center + Vector3(cos(a), 0.0, sin(a)) * reach, ActiveFx.peak(COLOR))
 	var rim := ceili(CRACKS * 2 * progress)
 	for i in rim:
 		var a0 := seed + TAU * i / (CRACKS * 2)
 		var a1 := seed + TAU * (i + 1) / (CRACKS * 2)
 		combat.effects.arc(center + Vector3(cos(a0), 0.0, sin(a0)) * ring.radius,
-			center + Vector3(cos(a1), 0.0, sin(a1)) * ring.radius, COLOR)
+			center + Vector3(cos(a1), 0.0, sin(a1)) * ring.radius, ActiveFx.peak(COLOR))
 
 
 func _free(ring) -> void:

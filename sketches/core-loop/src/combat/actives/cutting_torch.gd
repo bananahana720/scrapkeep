@@ -1,5 +1,6 @@
 extends RefCounted
 
+const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 
@@ -145,7 +146,7 @@ func _commit() -> void:
 		lanes.append(lane)
 		ctx.player.indicator.set_shape(LAYER % i, ctx.player.yours(lane.duplicate()))
 		if not guiding:
-			combat.effects.arc(from + Vector3.UP * LIFT, lane["to"] + Vector3.UP * LIFT, COLOR)
+			combat.effects.arc(from + Vector3.UP * LIFT, lane["to"] + Vector3.UP * LIFT, ActiveFx.peak(COLOR))
 
 
 func _reach(from: Vector3, dir: Vector3) -> Vector3:
@@ -164,7 +165,7 @@ func _cut(delta: float) -> void:
 		var bite := maxf(CUT_DAMAGE * _burn / BURN, _plate(enemy))
 		if heat >= bite:
 			cuts += 1
-			combat.effects.spark(enemy.global_position + Vector3.UP, COLOR)
+			combat.effects.spark(enemy.global_position + Vector3.UP, ActiveFx.peak(COLOR))
 			combat._hit(enemy, KIND, heat, enemy.global_position - ctx.player.ball_position(), KNOCK, "", SOURCE, IMPACT)
 			heat = 0.0
 			_glow.erase(id)
@@ -180,8 +181,8 @@ func _show_heat(enemy: Node3D, id: int, fraction: float) -> void:
 	_glow[id] = shown
 	var hot := float(shown) / HEAT_STEPS
 	var at := enemy.global_position
-	combat.effects.ring(at + Vector3.UP * 0.3, combat._hull(enemy) + GLOW_REACH * (1.0 - hot), GLOW_COLD.lerp(COLOR, hot))
-	combat.effects.spark(at + Vector3.UP, GLOW_COLD.lerp(COLOR, hot))
+	combat.effects.ring(at + Vector3.UP * 0.3, combat._hull(enemy) + GLOW_REACH * (1.0 - hot), ActiveFx.peak(GLOW_COLD.lerp(COLOR, hot)))
+	combat.effects.spark(at + Vector3.UP, ActiveFx.peak(GLOW_COLD.lerp(COLOR, hot)))
 	ctx.events.active_heat.emit(ID, at, hot)
 
 

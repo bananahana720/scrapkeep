@@ -61,6 +61,15 @@ SLOTS = {
 
 PAINT_SET = ("petrol", "oxide", "bone")
 
+# Set by polish.enable(): a segment multiplier for curved primitives and the polish options.
+# At 1 and None every recipe builds exactly as before.
+DETAIL = 1
+POLISH = None
+
+
+def _segs(n):
+    return n * DETAIL
+
 
 def preview_class(color):
     """Previews only: the class colour class_accent shows in renders (runtime reads the
@@ -156,6 +165,9 @@ class Part:
         self.bm = bmesh.new()
         self.col = self.bm.loops.layers.float_color.new("Color")
         self.slots = []
+        # Per-part bevel width and subdivision levels under polish; None takes the defaults.
+        self.bevel = None
+        self.subsurf = None
 
     def _slot(self, slot):
         if slot not in SLOTS:
@@ -184,13 +196,13 @@ class Part:
         return self.paint(self._faces(r["verts"]), slot, color)
 
     def cyl(self, slot, r1, r2, depth, segs=8, loc=(0, 0, 0), rot=(0, 0, 0), color=None, caps=True):
-        r = bmesh.ops.create_cone(self.bm, cap_ends=caps, cap_tris=False, segments=segs,
+        r = bmesh.ops.create_cone(self.bm, cap_ends=caps, cap_tris=False, segments=_segs(segs),
                                   radius1=r1, radius2=r2, depth=depth, matrix=mtx(loc, rot))
         return self.paint(self._faces(r["verts"]), slot, color)
 
     def rod(self, slot, a, b, r, segs=6, color=None, r2=None):
         m, length = aim(a, b)
-        res = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segs,
+        res = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=_segs(segs),
                                     radius1=r, radius2=r if r2 is None else r2, depth=length, matrix=m)
         return self.paint(self._faces(res["verts"]), slot, color)
 
@@ -202,11 +214,11 @@ class Part:
         return self.paint(self._faces(r["verts"]), slot, color)
 
     def ico(self, slot, radius, subdiv=1, loc=(0, 0, 0), scale=(1, 1, 1), rot=(0, 0, 0), color=None):
-        r = bmesh.ops.create_icosphere(self.bm, subdivisions=subdiv, radius=radius, matrix=mtx(loc, rot, scale))
+        r = bmesh.ops.create_icosphere(self.bm, subdivisions=subdiv + (DETAIL > 1), radius=radius, matrix=mtx(loc, rot, scale))
         return self.paint(self._faces(r["verts"]), slot, color)
 
     def uv(self, slot, radius, u=8, v=6, loc=(0, 0, 0), scale=(1, 1, 1), rot=(0, 0, 0), color=None):
-        r = bmesh.ops.create_uvsphere(self.bm, u_segments=u, v_segments=v, radius=radius,
+        r = bmesh.ops.create_uvsphere(self.bm, u_segments=_segs(u), v_segments=_segs(v), radius=radius,
                                       matrix=mtx(loc, rot, scale))
         return self.paint(self._faces(r["verts"]), slot, color)
 
@@ -229,6 +241,7 @@ class Part:
              arc=(0.0, 2 * math.pi), taper=0.0):
         """A flat annulus (or arc of one) with thickness; taper shrinks the top radii."""
         m = mtx(loc, rot)
+        segs = _segs(segs)
         closed = abs(arc[1] - arc[0] - 2 * math.pi) < 1e-6
         steps = segs if closed else segs + 1
         rows = []
@@ -265,6 +278,13 @@ class Part:
     def to_object(self, origin=(0, 0, 0), parent=None):
         o = Vector(origin)
         bmesh.ops.translate(self.bm, vec=-o, verts=self.bm.verts)
+        if POLISH is not None:
+            import polish
+            polish.shape(self.bm, POLISH, self.bevel)
+            levels = POLISH["subsurf"] if self.subsurf is None else self.subsurf
+            if levels:
+                self.bm = polish.subdivide(self.bm, levels)
+                self.col = self.bm.loops.layers.float_color["Color"]
         # Triangulation ties (the diagonal of a quad, the ear of a regular hexagon) break
         # differently per run, so convex ngons fan from their first corner and quads
         # split on a fixed diagonal; only concave outlines are left to ear clipping.
@@ -343,6 +363,9 @@ def max_radius(obj, center=(0, 0, 0)):
 
 def export(root, path):
     bpy.context.view_layer.update()
+    if POLISH is not None:
+        import polish
+        polish.bake(root, POLISH)
     for o in bpy.context.scene.objects:
         o.select_set(False)
     for o in tree(root):
@@ -352,15 +375,16 @@ def export(root, path):
                               export_yup=True, export_materials="EXPORT", export_vertex_color="ACTIVE",
                               export_extras=False, export_animations=False, export_cameras=False,
                               export_lights=False)
-    canonical_indices(path)
+    canonical_indices(path, vertices=POLISH is not None)
     print("EXPORTED", path)
 
 
-def canonical_indices(path):
+def canonical_indices(path, vertices=False):
     """The glTF exporter emits the same triangles in a run-dependent order, sometimes
     through a different one of two identical vertices. Pointing each index at the first
     identical vertex and sorting the triangles (winding kept) makes a rerun
-    byte-identical."""
+    byte-identical. With vertices, the vertex arrays are sorted too: subdivision emits
+    the same vertices in a run-dependent order."""
     data = bytearray(open(path, "rb").read())
     json_len = struct.unpack("<I", data[12:16])[0]
     gltf = json.loads(data[20:20 + json_len])
@@ -380,6 +404,21 @@ def canonical_indices(path):
     for mesh in gltf["meshes"]:
         for prim in mesh["primitives"]:
             columns = [element_bytes(a) for _, a in sorted(prim["attributes"].items())]
+            if vertices:
+                rows = list(zip(*columns))
+                order = sorted(range(len(rows)), key=lambda k: rows[k])
+                where = [0] * len(order)
+                for new, old in enumerate(order):
+                    where[old] = new
+                for (_, acc_id), column in zip(sorted(prim["attributes"].items()), columns):
+                    acc = gltf["accessors"][acc_id]
+                    view = gltf["bufferViews"][acc["bufferView"]]
+                    size = len(column[0])
+                    stride = view.get("byteStride", size)
+                    base = bin_start + view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+                    for new, old in enumerate(order):
+                        data[base + new * stride:base + new * stride + size] = column[old]
+                columns = [[column[old] for old in order] for column in columns]
             first = {}
             same = [first.setdefault(key, k) for k, key in enumerate(zip(*columns))]
             acc = gltf["accessors"][prim["indices"]]
@@ -387,7 +426,7 @@ def canonical_indices(path):
             start = bin_start + view.get("byteOffset", 0) + acc.get("byteOffset", 0)
             code = codes[acc["componentType"]]
             end = start + acc["count"] * array.array(code).itemsize
-            idx = [same[i] for i in array.array(code, data[start:end])]
+            idx = [same[where[i] if vertices else i] for i in array.array(code, data[start:end])]
             tris = [tuple(idx[k:k + 3]) for k in range(0, len(idx), 3)]
             tris = sorted(min(t, t[1:] + t[:1], t[2:] + t[:2]) for t in tris)
             data[start:end] = array.array(code, [i for t in tris for i in t]).tobytes()

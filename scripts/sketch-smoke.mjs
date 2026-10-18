@@ -531,6 +531,18 @@ function runSync(job) {
   return report(job, result.status, (result.stdout || "") + (result.stderr || ""), Date.now() - started);
 }
 
+// A fresh worktree's first import can die with signal 11 in Godot's threaded reimport and leave
+// .ctex files missing, so every test then fails its "no script errors" checks. The second import
+// finishes the missing files. Two crashed imports stop the run rather than produce misleading
+// reds. Only the exit code decides; an import that exits 0 with error lines still runs the tests.
+export function importWithRetry(name, base, run = runSync, log = console.log) {
+  const first = run({ label: `${name} import`, args: [...base, "--import"] });
+  if (first.exit === 0) return { ok: true, results: [first] };
+  log(`${name} import failed (exit=${first.exit}); retrying once`);
+  const second = run({ label: `${name} import (retry)`, args: [...base, "--import"] });
+  return { ok: second.exit === 0, results: [first, second] };
+}
+
 // Every test gets its own XDG_DATA_HOME, so user:// is never shared between parallel runs.
 function runAsync(job) {
   return new Promise((resolve) => {
@@ -627,7 +639,12 @@ async function main() {
     const name = path.relative(root, directory);
     const base = ["--headless", "--path", directory];
     const quarantine = readQuarantine(directory);
-    results.push(runSync({ label: `${name} import`, args: [...base, "--import"] }));
+    const imported = importWithRetry(name, base);
+    results.push(...imported.results);
+    if (!imported.ok) {
+      console.error(`${name} import failed twice; tests not run (gate/startup-crash.md)`);
+      process.exit(1);
+    }
     if (!named && !options.bots) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
