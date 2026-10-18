@@ -345,6 +345,9 @@ class Part:
                 (fixed if first else alternate).append(f)
             bmesh.ops.triangulate(self.bm, faces=fixed, quad_method="FIXED", ngon_method="EAR_CLIP")
             bmesh.ops.triangulate(self.bm, faces=alternate, quad_method="ALTERNATE", ngon_method="EAR_CLIP")
+            # Bevel emits faces in a run-dependent order, and Blender sums a vertex's normal
+            # in face order, so its last bits move; lay the triangles out in vertex order.
+            self.bm = polish._canonical(self.bm)
         mesh = bpy.data.meshes.new(self.name)
         self.bm.to_mesh(mesh)
         self.bm.free()
