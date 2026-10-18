@@ -92,7 +92,7 @@ func _close(id: String) -> void:
 		"radio":
 			_game._screen_key(KEY_R)
 		"achieve":
-			_game._screen_key(KEY_A)
+			_screens.toggle_achievements()
 	await _frames(2)
 
 
@@ -110,6 +110,19 @@ func _run() -> void:
 	_t.eq("the game starts on the title", flow.state_name(), "title")
 	_t.check("the hub is not built before the first walk", not _hub.built, "")
 	_t.check("the title ball is frozen", player.frozen(), "")
+	# A run marks kinds as met before the camp is ever opened (the listener is wired at setup, once).
+	var Picker := preload("res://src/ui/camp_enemy_picker.gd")
+	_t.check("nothing is met before any spawn", not Picker.met_of(_game).has("chaser"), str(Picker.met_of(_game)))
+	var ghost := Node3D.new()
+	_game.events.enemy_spawned.emit(ghost, "chaser")
+	_t.check("an enemy_spawned before any camp visit marks it met", Picker.met_of(_game).has("chaser") and not _hub.built, str(Picker.met_of(_game)))
+	Picker.watch(_game)
+	var called := Node3D.new()
+	called.set_meta("sandbox_slot", 0)
+	_game.events.enemy_spawned.emit(called, "lobber")
+	_t.check("watch is idempotent and a sandbox call marks nothing", not Picker.met_of(_game).has("lobber"), str(Picker.met_of(_game)))
+	ghost.free()
+	called.free()
 
 	var environments := _count_environments(_game)
 	# K enters the walk.
@@ -278,6 +291,44 @@ func _run() -> void:
 	_t.check("socket() reads a placed piece's socket", _hub.socket("camp_launch_gate", "launch_trigger").origin.distance_to(
 		_hub.zone_position("gate")) < 0.01, "")
 
+	# No title hotkey leaks through a page opened over the walk, and pad B boosts instead of leaving.
+	var leak_pages := [
+		{"id": "lockers", "key": KEY_C}, {"id": "moss", "key": KEY_M}, {"id": "jukebox", "key": KEY_J},
+		{"id": "settings", "key": KEY_S}, {"id": "radio", "key": KEY_R}, {"id": "achieve", "key": KEY_A},
+		{"id": "sandbox_call_box", "key": KEY_E}, {"id": "scrapbook", "key": KEY_B},
+	]
+	for row in leak_pages:
+		var id: String = row["id"]
+		await _put_in(id)
+		_game._screen_key(row["key"])
+		await _frames(2)
+		var opened: bool = not _screens.walk_live()
+		_t.check("%s: a page is open for the leak check" % id, opened, "")
+		var before: Array = _stack()
+		for key in [KEY_SPACE, KEY_ENTER, KEY_A, KEY_S, KEY_H, KEY_C]:
+			_game._screen_key(key)
+			await _frames(1)
+		_t.eq("%s: the flow stays on the title under hotkeys" % id, flow.state_name(), "title")
+		_t.check("%s: the same page stays open and nothing stacks" % id, _stack() == before and _screens.walking()
+			and not _screens.walk_live(), "%s vs %s" % [_stack(), before])
+		_t.eq("%s: pad A opens nothing under a page" % id, _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_NONE)
+		if id == "sandbox_call_box" or id == "scrapbook":
+			Push.key(root, KEY_ESCAPE)
+			await _frames(2)
+		else:
+			await _close(id)
+		_t.check("%s: the leak check ends back on the live walk" % id, _screens.walk_live(), "")
+	await _put_in("settings")
+	Push.pad(root, JOY_BUTTON_B)
+	await _frames(2)
+	_t.check("pad B in the live walk boosts and does not leave", _screens.walking() and _screens.walk_live() and _hub.walking, "")
+	Push.pad(root, JOY_BUTTON_START)
+	await _frames(2)
+	_t.check("pad Start leaves the walk", not _screens.walking() and not _hub.walking and flow.state_name() == "title", "")
+	_game._screen_key(KEY_K)
+	await _frames(3)
+	_t.check("the walk is back after the pad check", _screens.walk_live(), "")
+
 	# A scripted roll from the spawn.
 	_game.player.reset_to(_hub.spawn_position())
 	_game.player.body().global_position = _hub.spawn_position()
@@ -338,6 +389,13 @@ func _pad(button: int) -> InputEventJoypadButton:
 	event.button_index = button
 	event.pressed = true
 	return event
+
+
+# What is open over the walk: every page and the walk page, for the leak checks.
+func _stack() -> Array:
+	var customize: bool = _screens.camp_page().customize.visible
+	return [_screens.settings_open(), _screens.achievements_open(), _screens.help_open(), _screens.jukebox_open(),
+		_screens.radio_open(), customize, _game.get_node("Workshop").companion_panel.is_open(), _screens.walk_page()]
 
 
 func _chirps() -> int:

@@ -148,7 +148,7 @@ func _run() -> void:
 	_t.eq("the title body comes back", screens._body.text, FieldNotes.OBJECTIVE)
 	_t.check("nothing keeps focus after closing", root.gui_get_focus_owner() == null, str(root.gui_get_focus_owner()))
 
-	# Escape and pad B close; pad A presses the focused button.
+	# Escape and pad Start close (pad B is the boost); pad A presses the focused button.
 	_game._screen_key(KEY_K)
 	Push.key(root, KEY_ESCAPE)
 	await _frames(1)
@@ -156,7 +156,10 @@ func _run() -> void:
 	_game._screen_key(KEY_K)
 	Push.pad(root, JOY_BUTTON_B)
 	await _frames(1)
-	_t.check("pad B closes the camp", not screens.camp_open(), "")
+	_t.check("pad B boosts in the walk and does not close the camp", screens.camp_open(), "")
+	Push.pad(root, JOY_BUTTON_START)
+	await _frames(1)
+	_t.check("pad Start closes the camp", not screens.camp_open(), "")
 	_game._screen_key(KEY_K)
 	var pad_a := InputEventJoypadButton.new()
 	pad_a.button_index = JOY_BUTTON_A
@@ -245,6 +248,8 @@ func _run() -> void:
 	await _frames(1)
 	_t.check("A at the trophy wall opens achievements", screens.achievements_open() and screens.camp_open(), "")
 	_game._screen_key(KEY_A)
+	_t.check("A on the open page does not stack or close it", screens.achievements_open(), "")
+	screens.toggle_achievements()
 	await _frames(1)
 	_t.check("its Back returns to the walk", not screens.achievements_open() and screens.walk_live() and not screens._actions.visible, "")
 	await _put_in("settings")

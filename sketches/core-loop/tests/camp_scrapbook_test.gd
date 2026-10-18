@@ -115,7 +115,58 @@ func _initialize() -> void:
 	_t.eq("B1 last page", book.index, 59)
 	var card := CampScrapbook.show_line(book, "A line.")
 	_t.check("B1 line card ignores input", card.mouse_filter == Control.MOUSE_FILTER_IGNORE and card.focus_mode == Control.FOCUS_NONE)
+	# Outcome-only pages read the same everywhere.
+	var only_won := {"run_id": "w1", "outcome": "won", "pilot_name": "Rivet", "world_name": "Spillway"}
+	var only_lost := {"run_id": "l1", "outcome": "lost"}
+	_t.check("O1 is_won on outcome alone", Store.is_won(only_won) and not Store.is_won(only_lost) and CampLines.is_won(only_won))
+	_t.eq("O1 melodrama is empty for outcome won", ComicPage.melodrama(only_won), "")
+	_t.check("O1 melodrama shows for outcome lost", ComicPage.melodrama(only_lost) != "")
+	_t.check("O1 subtitle reads outcome won", ComicPage.subtitle_text(only_won).contains("RETURN ENTERED"))
+	_t.check("O1 subtitle reads outcome lost", ComicPage.subtitle_text(only_lost).contains("HULL NOT RETURNED"))
+
+	# The light read decodes no picture; a page's shots load on request.
+	var light := store.summaries()
+	var any_shot := false
+	var any_file := false
+	for page in light:
+		for panel in page["panels"]:
+			any_shot = any_shot or panel["shot"] != null
+			any_file = any_file or String(panel["shot_file"]) != ""
+	_t.check("P1 summaries decode no image but name the files", light.size() == 60 and not any_shot and any_file)
+	var with_shot: Dictionary = {}
+	for page in light:
+		if page["run_id"] == "run-003":
+			with_shot = page
+	store.load_shots(with_shot)
+	_t.check("P1 load_shots fills one page", with_shot["panels"][0]["shot"] is Image)
+	_t.check("P1 load_all(false) is the light read", store.load_all(false)[0]["panels"][0]["shot"] == null)
+
+	# Prune matches exactly <id>_<digits>.png.
+	_t.check("R1 a_0.png and a_12.png belong to a", Store._is_shot_of("a_0.png", "a") and Store._is_shot_of("a_12.png", "a"))
+	_t.check("R1 a_b_0.png does not belong to a", not Store._is_shot_of("a_b_0.png", "a") and not Store._is_shot_of("a_x.png", "a")
+		and not Store._is_shot_of("a_.png", "a") and not Store._is_shot_of("a_1.png.png", "a"))
 	# Clean up the shelf.
 	for file in DirAccess.get_files_at(dir.path_join("scrapbook")):
 		DirAccess.remove_absolute(dir.path_join("scrapbook").path_join(file))
+	# A hand-edited shot name cannot reach another file.
+	var dir2 := "user://test-scrapbook-evil-%d" % OS.get_process_id()
+	var evil := Store.new(dir2)
+	var good := _page(7, false, 1, "runner_gunner", 4, true)
+	evil.save(good)
+	var other := _page(8, false, 1, "runner_gunner", 4, true)
+	evil.save(other)
+	var jpath := dir2.path_join("scrapbook/run-007.json")
+	var doc: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(jpath))
+	doc["panels"][0]["shot"] = "run-008_0.png"
+	doc["panels"][1]["shot"] = "../scrapbook/run-007_1.png"
+	var f := FileAccess.open(jpath, FileAccess.WRITE)
+	f.store_string(JSON.stringify(doc))
+	f.close()
+	var read := evil.load_all()
+	var seven: Dictionary = read[1] if read[1]["run_id"] == "run-007" else read[0]
+	_t.check("E1 another page's shot is refused", seven["panels"][0]["shot"] == null)
+	_t.check("E1 a path in the shot name is refused", seven["panels"][1]["shot"] == null)
+	_t.check("E1 an honest shot still loads", seven["panels"][2]["shot"] is Image)
+	for file in DirAccess.get_files_at(dir2.path_join("scrapbook")):
+		DirAccess.remove_absolute(dir2.path_join("scrapbook").path_join(file))
 	quit(_t.verdict())

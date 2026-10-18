@@ -158,7 +158,7 @@ func _yard() -> void:
 	for e in first:
 		spots[Vector2(snappedf(e.global_position.x, 0.5), snappedf(e.global_position.z, 0.5))] = true
 	_t.check("each takes its own grate", spots.size() == 4, str(spots.keys()))
-	_t.check("the run saw four called enemies announced on the bus only as presentation", get_nodes_in_group("enemy").size() == 4, "group")
+	_t.check("four called enemies stand in the enemy group", get_nodes_in_group("enemy").size() == 4, "group")
 
 	# A kill in the yard counts for nothing.
 	var victim: Node3D = first[0]
@@ -168,6 +168,15 @@ func _yard() -> void:
 	await physics_frame
 	_t.eq("the kill is not a run kill", game.run.kills, run_before["kills"])
 	_t.eq("no enemy_killed went out", _kills, 0)
+	# A ram on a winding-up chaser is the counter_ram trick; in the yard it marks nothing.
+	var winder: Node3D = first[1]
+	winder.state = 1
+	_t.eq("the chaser is winding up", winder.state_name(), "windup")
+	game.combat.strike(winder, "ram", 5.0)
+	await physics_frame
+	_t.check("the trick found nothing in the yard", game.combat.discovered.is_empty() and game.combat.discovery_log.is_empty(),
+		str(game.combat.discovered))
+	_t.eq("no synergy_discovered went out for the yard's ram", _discovered, 0)
 	_t.eq("a dead enemy frees its grate", sandbox.live_count(), 3)
 	_t.check("a freed grate is called again", sandbox.spawn("lobber") != null and sandbox.live_count() == 4, "recall")
 

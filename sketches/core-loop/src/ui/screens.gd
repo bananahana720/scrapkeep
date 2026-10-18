@@ -1008,7 +1008,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if _camp.visible:
 		# Pad B boosts in the walk; Start (the pause button elsewhere) leaves the camp. Esc leaves on keys.
-		var leave := event is InputEventJoypadButton and event.pressed and (event.button_index == JOY_BUTTON_START
+		var leave: bool = event is InputEventJoypadButton and event.pressed and (event.button_index == JOY_BUTTON_START
 			or (event.button_index == JOY_BUTTON_B and not _walking))
 		if leave:
 			toggle_camp()
