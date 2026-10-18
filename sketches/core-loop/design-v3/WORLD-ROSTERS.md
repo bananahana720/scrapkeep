@@ -73,7 +73,7 @@ In the Highdraft (world 3), any enemy knocked off an island edge is gone, and it
 - **Flyers:** kite and winch drones hover, so a knock never drops them and they never ring out. Splitter pods can be rung out, but the mama splitter cannot.
 - **What closes it:** once the enemy is back on a floor with the knock spent, a later fall no longer counts. So a throw that lands back on the island is safe, and an enemy that walks off with no knock is still rescued.
 - **Always rescued:** bosses, Wardens and their relics (`reactor_relic`, `swarm_remnant`, `mind_hand`), plus the kill-first specials (`RING_OUT_KEPT`). Boss arenas and the Spillway and Dig keep today's rescue.
-- **Tell:** the fall itself, then the break-up. The `enemy_ringed_out` event row borrows `near_whoosh`, the near-miss sound, until a dedicated ring-out cue is made. `enemy_killed` follows with the kill pop. Scrap drops where the enemy rang out, over the deck. No attack id is claimed, because a ring-out is not an attack.
+- **Tell:** the fall itself, then the break-up. The `enemy_ringed_out` event row plays `ring_out_fall` (PR #12: a slide whistle falling two octaves, a far-off poof and a two-ping twinkle) through `sound_next`, and borrows `near_whoosh` until #12 lands. `enemy_killed` follows with the kill pop. Scrap drops where the enemy rang out, over the deck. No attack id is claimed, because a ring-out is not an attack.
 - **Tests:** `tests/ring_out_test.gd`.
 
 - Highdraft elite: `ballast_heavy` plus two `kite_drone`, replacing the Spillway elite on stages 5 and 6.
