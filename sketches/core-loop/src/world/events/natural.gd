@@ -41,7 +41,7 @@ var _next_checked := false
 # stage's handler starts the worker for the next stage once that stage's ground is built.
 static var _plans := {}
 # The worker projecting the marks of a plan made on the main thread: {"key", "task", "out"}, else
-# empty. Static like _plans, so a retry or teardown before it is done never waits on it.
+# empty. Static like _plans, so a retry before it is done picks it up instead of starting another.
 static var _marks_job := {}
 
 
@@ -162,8 +162,8 @@ static func plan(world, park: Dictionary) -> Dictionary:
 
 
 # Each natural row's telegraph and landing marks, projected from its planned geometry (up to about
-# 1 s each for a flash flood's wash, so never on the main thread in play). A landed collapse sits
-# on its own overlay, so its landing mark is always projected live. Pure like plan().
+# 1 s each for a flash flood's wash, so never on the main thread in play). A landed collapse or
+# impact sits on its own overlay, so its landing mark is always projected live. Pure like plan().
 static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictionary:
 	var out := {}
 	for row in park.event_rows:
@@ -171,7 +171,7 @@ static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictiona
 			continue
 		var geometry: Dictionary = planned[row.id].geometry
 		out[row.id] = {"telegraph": _mark_surfaces(world, row, geometry, false, null, true)}
-		if row.kind != "collapse":
+		if not row.kind in ["collapse", "impact"]:
 			out[row.id].land = _mark_surfaces(world, row, geometry, true, null, true)
 	return out
 
@@ -565,9 +565,11 @@ func _ground_as_planned() -> bool:
 	var terrain = world.terrain
 	if "_cave_roofs" in terrain and not EventGround.pristine(terrain, terrain.stage):
 		return false
-	if _overlay_map != null and "overlays" in terrain:
+	# The live map, not this handler's: another family's swap (a boiler burst) installs its own.
+	var m = terrain.map()
+	if m is OverlayMap:
 		for id in terrain.overlays:
-			if _overlay_map.profiles.has(id):
+			if m.profiles.has(id):
 				return false
 	return true
 

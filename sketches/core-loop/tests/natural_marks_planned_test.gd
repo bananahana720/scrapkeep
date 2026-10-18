@@ -8,9 +8,10 @@ extends SceneTree
 # its ground as entered, started by the natural setup, so the entry itself does not grow.
 #
 # Checked on stage 1 and stage 2, whose span collapse sits on its overlay's marker surface: every
-# natural row has planned telegraph marks, and a landing mark unless it is a collapse; each planned
-# surface equals a live projection on the stage's ground vertex for vertex; a telegraph mark built
-# while the ground is as planned uses the planned meshes instead of projecting them.
+# natural row has planned telegraph marks, and a landing mark unless it is a collapse or impact;
+# each planned surface equals a live projection on the stage's ground vertex for vertex; a
+# telegraph mark built while the ground is as planned uses the planned meshes instead of
+# projecting them, and an overlay down on the stage's map sends marks back to live projection.
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -88,7 +89,7 @@ func _check_stage(label: String) -> void:
 	for row in rows:
 		var marks: Dictionary = natural._prepared[row.id].marks
 		_t.check("%s %s: planned telegraph mark" % [label, row.id], marks.has("telegraph"), str(marks.keys()))
-		_t.check("%s %s: planned landing mark unless a collapse" % [label, row.id], marks.has("land") != (row.kind == "collapse"), str(marks.keys()))
+		_t.check("%s %s: planned landing mark unless a collapse or impact" % [label, row.id], marks.has("land") != (row.kind in ["collapse", "impact"]), str(marks.keys()))
 		for phase in marks:
 			var live: Dictionary = Natural._mark_surfaces(natural.world, row, natural._prepared[row.id].geometry, phase == "land", natural._overlay_map)
 			var planned: Dictionary = marks[phase]
@@ -101,6 +102,13 @@ func _check_stage(label: String) -> void:
 	var style: MeshInstance3D = mark.get_node_or_null("Style") if mark.has_node("Style") else mark.get_node_or_null("DustCurtain")
 	_t.check("%s %s: the telegraph mark uses the planned mesh" % [label, row.id], style != null and style.mesh == natural._prepared[row.id].marks.telegraph.Style.mesh)
 	mark.free()
+	var terrain = natural.world.terrain
+	var live_map = terrain.map()
+	if live_map is Natural.OverlayMap and not live_map.profiles.is_empty():
+		var id = live_map.profiles.keys()[0]
+		terrain.overlays.append(id)
+		_t.check("%s: an overlay down sends marks back to live projection" % label, not natural._ground_as_planned(), str(id))
+		terrain.overlays.erase(id)
 
 
 func _ticks(n: int) -> void:
