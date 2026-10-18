@@ -379,7 +379,8 @@ func setup(ctx_ref) -> void:
 	_make_overlay()
 	_connect_all(ctx.events)
 	_start_bake()
-	ace_manifest = MusicRows.resolve("title")["ace_manifest"]
+	# The worker preloads the take the first title plays (title A when it is on disk).
+	ace_manifest = MusicRows.resolve(title_now())["ace_manifest"]
 	_ace_row_manifest = ace_manifest
 	_start_ace_load()
 	_flow_queue.append(["idle"])
@@ -1106,6 +1107,10 @@ func radio_release() -> void:
 		engine.force_track("warden" if _warden_engaged and ctx.flow.get("sealed") else "level", _stage_theme(_stage_now))
 	_moment_playing = ""
 	_ace_stage(_stage_now, engine.next_bar())
+	# A release inside a sealed Warden fight goes straight to the fight's sections: the shelf
+	# (the world's roaming take) never plays inside an arena.
+	if _warden_engaged and ctx.flow.get("sealed") and ace_playing() and ace.mode == "level":
+		ace.commit_warden()
 	cue_log.append(["radio", "score", "bar", engine.next_bar(), 1.0])
 
 

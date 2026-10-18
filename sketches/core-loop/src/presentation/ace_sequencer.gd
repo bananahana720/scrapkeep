@@ -66,6 +66,8 @@ class Voice:
 	var wet := 0.0
 	var wet_target := 0.0
 	var wet_step := 0.0
+	# The clip's level against the pack's (a roaming take over a louder zone pack).
+	var trim := 1.0
 
 
 var manifest := {}
@@ -205,6 +207,8 @@ func _overlay_shelf(sidecar_dir: String) -> void:
 			return
 		var clip: Dictionary = pick["clips"][id].duplicate(true)
 		clip["paths"] = {}
+		# The take plays at its own level, not the zone pack's (spillway is +4 dB).
+		clip["trim"] = db_to_linear(float(pick.get("level_db", 0.0))) / maxf(level, 0.000001)
 		for stem in stems:
 			var file := path.get_base_dir().path_join(String(clip["files"][stem]))
 			var stream := AudioStreamOggVorbis.load_from_file(file)
@@ -591,8 +595,8 @@ func _mix(at: int, span: int) -> void:
 			if w0 > 0.0 or v.wet > 0.0:
 				_lowpass(got, v, w0)
 			heard.append(got)
-			starts.append(g0 * l0)
-			ends.append(v.gain * l1)
+			starts.append(g0 * l0 * v.trim)
+			ends.append(v.gain * l1 * v.trim)
 			var last := starts.size() - 1
 			plain = plain and starts[last] == ends[last] and starts[last] == starts[0]
 	if heard.is_empty():
@@ -799,6 +803,7 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 	v.count = int(clip["sample_count"])
 	v.loop = bool(clip["loop"])
 	v.loop_offset = int(clip["loop_offset"])
+	v.trim = float(clip.get("trim", 1.0))
 	var g := _gain_of(gains, stem)
 	var hz = gains.get("lowpass_hz")
 	if hz != null:

@@ -22,8 +22,7 @@ const BOSS_SYNTH_THEME := {"brindle": 0, "waking": 1, "mind": 2}
 const PICKED := {"brindle": "boss-brindle", "waking": "boss-waking", "mind": "boss-mind"}
 # Every id with a pack of its own, for MusicRows.
 const TRACKS := ["brindle-p1-requisition", "brindle-p2-furnace", "brindle-p3-scuttle", "waking-final", "mind-final",
-	"champion-hype", "euro-brindle-p3", "euro-waking-final", "euro-mind-final", "euro-champion",
-	"boss-brindle", "boss-waking", "boss-mind"]
+	"champion-hype", "euro-brindle-p3", "euro-waking-final", "euro-mind-final", "euro-champion"]
 
 
 static func theme_of(id: String) -> String:

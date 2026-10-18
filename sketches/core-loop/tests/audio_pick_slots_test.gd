@@ -145,6 +145,8 @@ func _shelf_heard() -> void:
 		var pick_dir := band.shelf_source.get_base_dir()
 		for clip in ["calm", "travel"]:
 			_t.check("%s %s plays the pick" % [zone, clip], String(band.clips[clip]["paths"]["drums"]).begins_with(pick_dir))
+		var want := db_to_linear(float(_manifest_at(band.shelf_source).get("level_db", 0.0))) / band.level
+		_t.check("%s's shelf plays at the take's own level" % zone, is_equal_approx(float(band.clips["calm"].get("trim", 1.0)), want))
 		for clip in ["build", "cadence"]:
 			if band.clips.has(clip):
 				_t.eq("%s %s keeps the zone pack" % [zone, clip], band.clips[clip]["paths"], plain.clips[clip]["paths"])
