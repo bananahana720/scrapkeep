@@ -44,14 +44,14 @@ with body.region(bevel=0.01):                       # a 4 cm stay: narrow bevel
     body.rod("fleet_paint", a, b, 0.04)
 ```
 
-`bevel`, `subsurf`, `detail` and `fit` default to the part's. Faces built inside the
+`bevel`, `subsurf` and `detail` default to the part's; `fit` defaults to the `enable()` setting. Faces built inside the
 block are cut out, finished alone and joined back before triangulation, so wrap whole
 primitives: a region that shares vertices with the rest of the part opens a seam.
 Subdivided regions usually want `detail=1`, since each level already multiplies
 triangles by four. Without polish, `region()` does nothing.
 
 `fit=True` (an `enable()` option, or per region) scales each connected piece back to its
-unpolished bounding box after bevel and subdivision, so measured envelopes (a core's
+bounding box before bevel and subdivision after bevel and subdivision, so measured envelopes (a core's
 0.8 m radius, an ear tip's height, a bulb's 0.6 m face) hold exactly. Leave it off for a
 lopsided piece, such as the kite drone's keeled hull, where a per-axis stretch pushes
 diagonals past the envelope.
