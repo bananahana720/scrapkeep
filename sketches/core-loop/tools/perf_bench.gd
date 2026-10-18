@@ -67,9 +67,11 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #        through the 0.6 s flight, terrain.use(2) and the landing. Each sample carries its segment
 #        (build, flight, landing, after); the window lasts RECORD_FRAMES or until 30 frames past the landing.
 #   p3   p1's stand, then Rivet carves where the ball stands every CARVE_EVERY frames of the window, turn
-#        about between the Breach Skid landing's sector and Full Cut's (RIVET-CURVE, wave 17): the flat
-#        drop-in's carve against the 16.7 ms frame, with no ultimate to wait for. Each carve's wall time,
-#        terrain face count before and after the coplanar merge, and part count go to "carves".
+#        about between the Breach Skid landing's sector and Full Cut's (RIVET-CURVE, wave 17): the park
+#        drop-in's carve against the 16.7 ms frame, with no ultimate to wait for. A Breach carve runs as a
+#        landing does, a LATE_WORK share on the landing frame and one per frame after (the game takes one
+#        per 90 Hz tick, about 1.5 a frame). Each carve's shares' wall times (ms is the largest), terrain
+#        face count before and after the coplanar merge, and part count go to "carves".
 # Every scene records memory at the window's open and close; p2 also at two_stages (stage 2 built, stage 1
 # active) and after_swap (stage 1 freed).
 
@@ -177,6 +179,9 @@ var _segment_at := {}
 var _landed := 0
 var _swap := {}
 var _carves: Array = []
+# p3's Breach carve in progress (RivetKit._carve_late's record) and its row in _carves.
+var _breach_late := {}
+var _breach_row := {}
 var _stand_heading := Vector3.FORWARD
 
 
@@ -286,8 +291,12 @@ func _process(delta: float) -> bool:
 				_game.combat.effects.clear()
 			if _view == "swap" and _phase == "record":
 				_step_swap()
-			if _view == "carve" and _phase == "record" and _frame % CARVE_EVERY == CARVE_EVERY - 1:
-				_step_carve()
+			if _view == "carve" and _phase == "record":
+				var kit = _game.combat.get_node_or_null("RivetKit")
+				if kit != null and not _breach_late.is_empty():
+					_step_carve_shares(kit)
+				elif _frame % CARVE_EVERY == CARVE_EVERY - 1:
+					_step_carve()
 	_harness_usec = Time.get_ticks_usec() - begin
 	return false
 
@@ -418,18 +427,40 @@ func _step_carve() -> void:
 	var half: float = acos(PlayerBall.SKID_CONE) if breach else deg_to_rad(Weapons.FULL_CUT_DEG * 0.5)
 	var sector: Dictionary = kit._sector_cells(at, heading, reach, half, 0.0 if breach else Weapons.FULL_CUT_WIDTH, Weapons.BREACH_INNER if breach else 0.0)
 	var found: Dictionary = kit._terrain_near(at, sector["cells"])
+	var row := {"frame": _frame, "kind": "breach" if breach else "full_cut", "faces": (found["faces"] as Array).size(),
+		"merged": TerrainFaces.merge(found["faces"]).size(), "at": [at.x, at.y, at.z], "shares_ms": []}
+	_carves.append(row)
 	var begin := Time.get_ticks_usec()
-	var shape: Dictionary
 	if breach:
-		shape = kit._commit_sector(at, heading, reach, half, 0.0, Weapons.BREACH_INNER)
-		kit._breach(shape, at, heading, reach, 1.0, 0.0)
+		# The landing's own path: its first share on the landing tick, the rest one per frame
+		# (_step_carve_shares), the hits once it is done.
+		_breach_late = kit._carve_late("p3", at, heading, reach, 1.0, 0.0)
+		_breach_row = row
+		_step_carve_shares(kit, begin)
 	else:
 		kit.full_cut(at, heading, 1.0)
-		shape = kit.volume_indicator.shapes.get("rivet_scar", {})
-	var ms := (Time.get_ticks_usec() - begin) / 1000.0
-	_carves.append({"frame": _frame, "kind": "breach" if breach else "full_cut", "ms": snappedf(ms, 0.001),
-		"faces": (found["faces"] as Array).size(), "merged": TerrainFaces.merge(found["faces"]).size(),
-		"parts": (shape.get("cells", []) as Array).size(), "at": [at.x, at.y, at.z]})
+		_close_carve(row, kit.volume_indicator.shapes.get("rivet_scar", {}), begin)
+
+
+# One share of the pending Breach carve, from begin; the hits once it is done.
+func _step_carve_shares(kit, begin := Time.get_ticks_usec()) -> void:
+	if _breach_late.is_empty():
+		return
+	var done: bool = kit._shade_late(_breach_late)
+	if not done:
+		(_breach_row["shares_ms"] as Array).append(snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001))
+		return
+	var late := _breach_late
+	_breach_late = {}
+	var shape: Dictionary = kit._late_shape(late)
+	kit._breach(shape, late["at"], late["heading"], late["reach"], 1.0, 0.0)
+	_close_carve(_breach_row, shape, begin)
+
+
+func _close_carve(row: Dictionary, shape: Dictionary, begin: int) -> void:
+	(row["shares_ms"] as Array).append(snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001))
+	row["ms"] = (row["shares_ms"] as Array).max()
+	row["parts"] = (shape.get("cells", []) as Array).size()
 
 
 func _record_done() -> bool:
@@ -902,8 +933,8 @@ func _finish() -> void:
 		"ablation_notes": _ablation_notes, "checks": _check_delta(),
 		"view": _view, "memory": _memory, "swap": _swap, "segments": segments, "segment_starts": _segment_at,
 		"carves": _carves, "carve_budget_ms": CARVE_BUDGET_MS,
-		"carve_max_ms": _carves.reduce(func(m, c): return maxf(m, float(c["ms"])), 0.0),
-		"carves_over_budget": _carves.filter(func(c): return float(c["ms"]) > CARVE_BUDGET_MS).size(),
+		"carve_max_ms": _carves.reduce(func(m, c): return maxf(m, (c["shares_ms"] as Array).max() if not (c["shares_ms"] as Array).is_empty() else 0.0), 0.0),
+		"carves_over_budget": _carves.filter(func(c): return (c["shares_ms"] as Array).any(func(ms): return float(ms) > CARVE_BUDGET_MS)).size(),
 	}
 	var file := FileAccess.open(_out, FileAccess.WRITE)
 	if file == null:

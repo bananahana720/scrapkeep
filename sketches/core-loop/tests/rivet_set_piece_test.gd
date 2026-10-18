@@ -51,16 +51,16 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # what the plain selection does.
 # 2026-10-17 (RIVET-CURVE): 237 -> 238. A grazing bumpy floor, whose shadows are too thin for a
 # clearance, carves the same points as a plain subtraction pass.
-# 2026-10-18 (RIVET-CURVE, "Beat later"): 238 -> 243. A landing stopped short of its target
-# carves a few cells per tick and hits LATE_TICKS later, with the carve byte for byte the
-# on-the-spot one.
+# 2026-10-18 (RIVET-CURVE, "Beat later" and "Spread every Breach"): 238 -> 243. A heavy Breach
+# carve takes a share per tick and hits once done, never before LATE_TICKS; a light one hits on
+# the landing tick. The carve is byte for byte the one made at once.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
 	# 2026-10-16 (pilot paint): Calibrated is live, one check added.
 	# 2026-10-18 (stage/alpha-w17): 238 -> 239, RIVET-CURVE on top of EARNED-COSMETICS' one check;
-	# 239 -> 244 with "Beat later" (header).
+	# 239 -> 244 with "Beat later" and "Spread every Breach" (header).
 	_expected_checks = 244
 	super._initialize()
 
@@ -511,32 +511,59 @@ func _merge_fixture() -> void:
 	_t.eq("cell boxes select exactly what the plain selection does", skipped, 0)
 
 
-# RIVET-CURVE ("Beat later"): the captured bowl landing. Stopped short of its target, it carves
-# a few cells per tick and hits LATE_TICKS later; the late carve is byte for byte the one made
-# on the spot. A landing at its target hits on the spot.
+# RIVET-CURVE ("Beat later", "Spread every Breach"): the captured bowl landing. A light carve
+# finishes on the landing tick; a heavy one carves a share per tick and hits once done, never
+# before LATE_TICKS. Either way the carve is byte for byte the one made at once.
 func _late_landing_fixture(at: Vector3, dir: Vector3) -> void:
 	var reach: float = _kit.breach_reach()
 	var spot: Dictionary = _kit._commit_sector(at, dir, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
-	var ult = _combat.ultimate
-	var on_target: bool = _kit._stopped_short()
-	ult.stopped_short = true
-	_t.check("late landing: only a landing short of its target hits late", not on_target and _kit._stopped_short())
-	ult.stopped_short = false
-	var now := Engine.get_physics_frames()
-	_kit.late_work = 1
-	_kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
-	var due: int = _kit._late[0]["due"]
-	_kit._step_late(now + 1)
-	var staged: bool = int(_kit._late[0]["next"]) > 0 and int(_kit._late[0]["next"]) < (_kit._late[0]["sector"]["cells"] as Array).size()
-	_kit._step_late(due - 1)
-	_kit.late_work = _kit.LATE_WORK
-	_t.check("late landing: nothing hits before LATE_TICKS, and the carve spans ticks", staged and due == now + _kit.LATE_TICKS and _kit._late.size() == 1)
-	_kit.volume_indicator.clear("rivet_breach")
-	_kit._step_late(due)
-	var late: Dictionary = _kit.volume_indicator.shapes.get("rivet_breach", {})
-	_t.check("late landing: hits and draws on its tick", _kit._late.is_empty() and not late.is_empty())
 	_t.check("late landing: the bowl carves the sector", not (spot["shadows"] as Array).is_empty() and var_to_bytes(spot["cells"]) != var_to_bytes(_kit._sector_cells(at, dir, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)["cells"]))
-	_t.check("late landing: the late carve is the spot carve byte for byte", var_to_bytes([late.get("cells"), late.get("shadows")]) == var_to_bytes([spot["cells"], spot["shadows"]]), "%d vs %d parts" % [(late.get("cells", []) as Array).size(), (spot["cells"] as Array).size()])
+	_kit.late_work = 1 << 30
+	var light: Dictionary = _kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
+	_kit._shade_work = 0
+	var light_done: bool = _kit._shade_late(light)
+	var work: int = _kit._shade_work
+	_t.check("late landing: a light carve finishes on the landing tick, as the spot carve", light_done and var_to_bytes([light["result"], light["shadows"]]) == var_to_bytes([spot["cells"], spot["shadows"]]))
+	_kit.late_work = 1
+	var now := Engine.get_physics_frames()
+	var late: Dictionary = _kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
+	var shares := 1
+	if not _kit._shade_late(late):
+		_kit._late.append(late)
+	_kit.volume_indicator.clear("rivet_breach")
+	var carved_at := -1
+	var hit_at := -1
+	var twice := true
+	for tick in range(now + 1, now + 1000):
+		var next: int = late["next"]
+		_kit._step_late(tick)
+		# A second step in the same tick takes no second share.
+		var after: int = late["next"]
+		_kit._step_late(tick)
+		twice = twice and int(late["next"]) == after
+		if int(late["next"]) > next:
+			shares += 1
+		if carved_at < 0 and late.has("result"):
+			carved_at = tick
+		if _kit._late.is_empty():
+			hit_at = tick
+			break
+	var drawn: Dictionary = _kit.volume_indicator.shapes.get("rivet_breach", {})
+	_t.check("late landing: a heavy carve takes one share per tick and hits once carved", twice and shares > _kit.LATE_TICKS and carved_at == now + shares - 1 and hit_at == carved_at and not drawn.is_empty(), "%d shares, carved at +%d, hit at +%d" % [shares, carved_at - now, hit_at - now])
+	# A carve done in two shares still waits for LATE_TICKS.
+	_kit.late_work = work / 2 + 1
+	var quick: Dictionary = _kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
+	_kit._shade_late(quick)
+	_kit._late.append(quick)
+	var quick_hit := -1
+	for tick in range(now + 1, now + 100):
+		_kit._step_late(tick)
+		if _kit._late.is_empty():
+			quick_hit = tick
+			break
+	_kit.late_work = _kit.LATE_WORK
+	_t.check("late landing: a carve done early hits LATE_TICKS after landing", quick.has("result") and quick_hit == int(quick["due"]) and int(quick["due"]) == int(quick["start"]) + _kit.LATE_TICKS, "hit at +%d" % [quick_hit - int(quick["start"])])
+	_t.check("late landing: the late carve is the spot carve byte for byte", var_to_bytes([drawn.get("cells"), drawn.get("shadows")]) == var_to_bytes([spot["cells"], spot["shadows"]]), "%d vs %d parts" % [(drawn.get("cells", []) as Array).size(), (spot["cells"] as Array).size()])
 
 
 # RIVET-CURVE: a landing just above a bumpy floor of small triangles. Their shadows meet at

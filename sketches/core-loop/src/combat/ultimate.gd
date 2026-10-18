@@ -142,8 +142,6 @@ var _offset := 0.0
 var _expected := Vector3.ZERO
 var _posture_spent := {}
 var _record := {}
-# True while a landing that something on the path stopped short of its target resolves.
-var stopped_short := false
 var _clock := 0.0
 var _contact_at := {}
 var _staggered := {}
@@ -669,9 +667,7 @@ func _fly(delta: float) -> void:
 	var ball: Vector3 = player.ball_position()
 	# Something on the path stopped the ball: the flight ends there as a landing.
 	if _leg_time > 0.1 and ball.distance_to(_expected) > BLOCKED:
-		stopped_short = true
 		_land(ball)
-		stopped_short = false
 		return
 	_leg_time += delta
 	_beat_clock += delta
