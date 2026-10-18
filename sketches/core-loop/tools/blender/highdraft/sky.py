@@ -32,7 +32,7 @@ ASSETS = ("sky_cloud", "sky_mesa", "sky_cradle", "sky_loom", "sky_blades")
 # dress_mhs_assets_test pins to a centimetre hold.
 POLISH = {"sky_cradle": dict(bevel=.12, bevel_min=.5), "sky_loom": dict(bevel=.1, bevel_min=.5),
           "sky_blades": dict(bevel=.15, bevel_min=.5)}
-HARDWARE_CAP = (900, 2000, 1)  # polish: was (270, 610, 1); class cap prop 2,000 / 4,600
+HARDWARE_CAP = (500, 320, 1)  # polish: was (270, 610, 1); dress_mhs_assets_test caps match
 PETROL = "53686d"
 CHALK = "c8bda5"
 CLOUD = "ece7da"

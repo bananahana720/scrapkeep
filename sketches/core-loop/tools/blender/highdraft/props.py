@@ -33,8 +33,8 @@ OXIDE = "9b513a"
 # (bevel, subsurf) per look. Hard machinery takes a small bevel; round bodies subdivide;
 # thin sheets stay as drawn. Nothing that sets a floor or extreme extent is subdivided: the
 # tests pin bottoms at Y=0 and fan top at 0 to a millimetre.
-# polish: was 270 / 610; class cap prop 2,000 / 4,600. dress_mhp_assets_test still pins 270 / 610.
-TRI_CAP, VERT_CAP = 1500, 3400
+# polish: was 270 / 610; class cap prop 2,000 / 4,600. dress_mhp_assets_test pins the same 1100 / 900.
+TRI_CAP, VERT_CAP = 1100, 900
 STYLES = {"hard": (0.03, 0), "round": (0, 1), "flat": (0, 0)}
 
 

@@ -36,7 +36,7 @@ FILES = ("island_small", "island_medium", "island_large", "island_rim",
 POLISH = {"island_rim": dict(bevel=.03, bevel_min=.1), "island_rib": dict(bevel=.04, bevel_min=.1),
           "bridge_skin": dict(bevel=0), "return_ramp_skin": dict(bevel=0),
           "barge_skin": dict(bevel=.04, bevel_min=.15)}
-HARDWARE_CAP = (900, 2000, 1)  # polish: was (270, 610, 1); class cap prop 2,000 / 4,600
+HARDWARE_CAP = (400, 450, 1)  # polish: was (270, 610, 1); dress_mhi_assets_test PROP_CAP matches
 CHALK = "c8bda5"
 PETROL = "53686d"
 BONE = "d2c5a5"
