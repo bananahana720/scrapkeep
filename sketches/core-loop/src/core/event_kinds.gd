@@ -179,6 +179,8 @@ const ROWS := {
 	"line_skill_expired": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
 	# The active on F. Its sound is the active's own (audio.gd, "active_" + id); this is the fallback.
 	"active_fired": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "active_scrap_rocket", "hud": "", "objective": "", "priority": 1},
+	# The Cutting Torch's heat tick (cutting_torch.gd): audio.gd climbs its sizzle with the heat; it lands no hit.
+	"active_heat": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "active_cutting_torch_heat", "hud": "", "objective": "", "priority": 1},
 	"ultimate_ready": {"group": "combat", "color": Palette.ARC, "shape": "ring", "sound": "found_chime", "sound_next": "ultimate_ready", "hud": "", "objective": "", "priority": 1},
 	"ultimate_started": {"group": "combat", "color": Palette.ARC, "shape": "lane", "sound": "launch_roar", "hud": "", "objective": "", "priority": 1},
 	"ultimate_peak": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "sound_next": "motif_stinger", "hud": "", "objective": "", "priority": 1},
