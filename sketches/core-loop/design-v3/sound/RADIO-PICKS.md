@@ -1,6 +1,6 @@
 # Radio take picks
 
-Andrew tapped "Music thread picks" (2026-10-17 22:28:36Z): the music thread picks the better of each pair. Rule: passing every mix check beats failing; between two passing versions, more room around the lead wins.
+Andrew tapped "Music thread picks" (2026-10-17 22:28:36Z): the music thread picks the better of each pair. Rule: passing every mix check beats failing; between two passing versions, more room around the lead wins. Andrew hears the picks at the sitting and can swap any of them.
 
 | Take | Station | Tier | Pick | Why |
 | --- | --- | --- | --- | --- |
@@ -24,7 +24,7 @@ Andrew tapped "Music thread picks" (2026-10-17 22:28:36Z): the music thread pick
 | The Waking, 808 Edition | furnace | take | take-waking-808-s5101.wav | both pass; more room around the lead (0.54 vs 0.20) |
 | Highdraft, Hands Up | furnace | take | take-highdraft-hands-up-s5101.wav | both pass; more room around the lead (0.28 vs 0.14) |
 | Stampede, Encore | furnace | b-side | take-stampede-encore-s5101.wav | both pass; more room around the lead (0.21 vs 0.11) |
-| Round Arena, Main Event | furnace | take | take-round-arena-main-event-s5101.wav | both pass; more room around the lead (0.22 vs 0.22) |
+| Round Arena, Main Event | furnace | take | take-round-arena-main-event-s5101.wav | both pass; room around the lead tied at 0.22, so the first render stands |
 | Fabricator, Overclocked | furnace | b-side | take-fabricator-overclocked-s5101.wav | both pass; more room around the lead (0.25 vs 0.14) |
 | The Mind, Overclock | furnace | legend | take-mind-overclock-s5101.wav | both pass; more room around the lead (0.22 vs 0.16) |
 | The Dam Breaks | furnace | legend | take-dam-breaks-s5101.wav | both pass; more room around the lead (0.20 vs 0.09) |
