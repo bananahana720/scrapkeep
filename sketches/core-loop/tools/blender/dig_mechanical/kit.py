@@ -19,6 +19,7 @@ from mathutils import Matrix, Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
 
 SKETCH = HERE.parents[2]
 MODELS = SKETCH / "assets/models/dig_mechanical"
@@ -54,6 +55,28 @@ FINISH = {}
 # polish.enable(**BAKE) for kit recipes: every vertex-coloured kit slot takes the AO and wear bake
 # (glass has no vertex colour), and the mint state key that steel.gdshader matches within 0.02 stays exact.
 BAKE = {"bake_slots": ("elastomer", "enamel", "steel"), "bake_keep": (common.rgba("mint"),)}
+
+
+# Polish for the dig_mechanical assets only (tools/blender/POLISH.md). The manifest budgets stay
+# 270 T / 610 V, and dress_mdm_assets_test pins exact bounds to 5 mm, so these take smooth shading
+# and the AO and wear bake, plus a small bevel (planar faces keep the extents) where the shape is
+# boxes. Lamps are scenery and stay as they were. Recipes outside dig_mechanical never reach here.
+DIG_POLISH = {n: dict(bevel=0) for n in (
+    "impeller_rim_sector", "impeller_hub", "impeller_vane", "impeller_vane_chipped", "intake_petal",
+    "intake_throat", "intake_spine_segment", "cart_wheel", "shell_crescent", "shell_saddle",
+    "breach_rim_sector", "breach_tab")}
+DIG_POLISH.update({"cart_body": dict(bevel=0),  # its 1.7 x 3.0 m extents shrink under a bevel (5 mm pin)
+                   "strut_tall": dict(bevel=.03, bevel_min=.6), "strut_bent": dict(bevel=.03, bevel_min=.6)})
+
+
+def use_polish(name):
+    base = name.rsplit("_", 1)[0] if "x" in name.rsplit("_", 1)[-1] and name.startswith("breach_wedge_") else name
+    cfg = DIG_POLISH.get(base, dict(bevel=0) if base.startswith("breach_wedge_") else None)
+    if cfg is None:
+        polish._opts = common.POLISH = None
+        common.DETAIL = 1
+    else:
+        polish.enable(detail=1, **cfg, **BAKE)
 
 
 class Surface:
@@ -278,6 +301,7 @@ def rescale(s,size,bottom=True):
 
 def build(name,out=None):
     common.reset()
+    use_polish(name)
     PARTS.clear()
     root=common.empty(name)
     spec=ASSETS[name]
@@ -550,6 +574,7 @@ def baked_wedge(base,width,depth,out=None):
     pivot=wedge_pivot(c,width,depth)
     name=f"{base}_{width}x{depth}"
     common.reset()
+    use_polish(name)
     root=common.empty(name)
     s=Surface(ASSETS[base]["parts"][0],"steel")
     s.prism(outline,.12,"bone",axis="y")
