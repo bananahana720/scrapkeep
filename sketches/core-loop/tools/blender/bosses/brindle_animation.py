@@ -60,8 +60,9 @@ def offset(obj, up=0, forward=0, pitch=0, yaw=0, roll=0, scale=1, side=0):
     obj.scale = scl * scale
 
 
-def action(root, name, duration, rows):
-    """rows = object -> [(seconds, offset keywords)]. Only named visuals get keys."""
+def action(root, name, duration, rows, linear=()):
+    """rows = object -> [(seconds, offset keywords)]. Only named visuals get keys.
+    Parts in `linear` stay LINEAR: code moves the magnet head on a linear path, so its arm must match."""
     import common
     objects = {o.name: o for o in common.tree(root)}
     restore(root)
@@ -85,7 +86,7 @@ def action(root, name, duration, rows):
         strip.extrapolation = "NOTHING"
         # Eased keys with clamped handles: endpoints stay exact, any overshoot is an authored key.
         # Rolling drums are constant-rate spin and stay linear so loops have no pulse.
-        mode = "LINEAR" if part.startswith("Drum") else "BEZIER"
+        mode = "LINEAR" if part.startswith("Drum") or part in linear else "BEZIER"
         for layer in act.layers:
             for item in layer.strips:
                 for bag in item.channelbags:
@@ -116,14 +117,15 @@ def author_ship(root):
     rows["Hull"] = [(0, {}), (.3, {"up": -.025, "pitch": .004}),
                     (.6, {}), (.9, {"up": -.025, "pitch": -.004}), (d, {})]
     action(root, "idle_roll", d, rows)
-    # Warn winds the cranes back a few degrees, swings to the tell and settles on it by 1.4 s.
-    # Sweep is the strike: it starts on the warn end pose (blend 0) and eases to exactly +40 at 1.2 s, inside the hazard arc.
-    warn, over = math.radians(40), math.radians(43)
+    # Code places the magnet head and cable on a linear path (boss.gd _step_crane), so the crane
+    # arm's yaw stays linear and keyed as on base: no wind-back, no overshoot. The elbow and the
+    # magnet tilt are free to ease, and the warn overshoots them. Sweep starts on the warn end pose.
+    warn = math.radians(40)
     for name, duration in (("crane_warn", 1.4), ("crane_sweep", 1.2)):
         rows = {}
         for side, sign in (("Port", 1), ("Starboard", -1)):
             if name == "crane_warn":
-                yaw = [(0, 0), (.3, math.radians(4)), (1.1, -over), (1.4, -warn)]
+                yaw = [(0, 0), (1.4, -warn)]
                 magnet = [(0, .02), (.3, 0), (1.15, .21), (1.4, .18)]
                 elbow = [(0, -.05), (.3, -.03), (1.1, -.2), (1.4, -.18)]
             else:
@@ -134,7 +136,7 @@ def author_ship(root):
             rows["CraneElbow" + side] = [(t, {"pitch": v}) for t, v in elbow]
             # Only small tilt of the working face. MagnetSocket position is code-owned.
             rows["Magnet" + side] = [(t, {"pitch": v}) for t, v in magnet]
-        action(root, name, duration, rows)
+        action(root, name, duration, rows, linear=("CranePort", "CraneStarboard"))
     action(root, "magnet_hold_drip", .2, {
         "Magnet" + s: [(0, {"up": .035}), (.08, {"up": .055}), (.1, {"up": .025}), (.2, {"up": .035})]
         for s in ("Port", "Starboard")})
