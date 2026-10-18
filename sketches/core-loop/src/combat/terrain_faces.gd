@@ -188,8 +188,12 @@ static func _splice(poly: Array, k: int, other: Array, normal: Vector3) -> Array
 # uses the finished build, waiting for it if needed, so a bot replay never depends on timing.
 
 const BUCKET := 16.0
+# A build nobody has read for this many ticks is dropped. Parks share one Shape3D across many
+# colliders and a moved body leaves its old placements behind, so entries are kept per shape
+# and transform and aged out instead of replaced.
+const STALE_TICKS := 450
 
-# instance id -> {shape (WeakRef), transform, task, result: {faces, boxes, grid}}
+# instance id -> {transform -> {shape (WeakRef), task, result: {faces, boxes, grid}, used}}
 var _entries := {}
 var _watched := {}
 
@@ -201,10 +205,6 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	var entry := cached(shape, transform)
 	if not entry.is_empty():
 		return entry
-	# A moved shape's old build is waited for before its entry is replaced: every task is
-	# waited for once.
-	if (_entries.get(id, {}) as Dictionary).has("task"):
-		WorkerThreadPool.wait_for_task_completion(_entries[id]["task"])
 	if not _watched.has(id):
 		_watched[id] = true
 		shape.changed.connect(_forget.bind(id))
@@ -213,19 +213,22 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 		world = transform * (local_faces as PackedVector3Array)
 	else:
 		world = (local_faces as Array).map(func(face): return (face as Array).map(func(v): return transform * v))
-	entry = {"shape": weakref(shape), "transform": transform, "result": {}}
+	entry = {"shape": weakref(shape), "result": {}, "used": Engine.get_physics_frames()}
 	var result: Dictionary = entry["result"]
 	entry["task"] = WorkerThreadPool.add_task(func(): _build(world, result), false, "rivet terrain faces")
-	_entries[id] = entry
+	if not _entries.has(id):
+		_entries[id] = {}
+	_entries[id][transform] = entry
 	return entry
 
 
 # The entry for this shape at this transform, or {} when it has none yet.
 func cached(shape: Shape3D, transform: Transform3D) -> Dictionary:
-	var entry: Dictionary = _entries.get(shape.get_instance_id(), {})
-	if not entry.is_empty() and entry["shape"].get_ref() == shape and entry["transform"] == transform:
-		return entry
-	return {}
+	var entry: Dictionary = (_entries.get(shape.get_instance_id(), {}) as Dictionary).get(transform, {})
+	if entry.is_empty() or entry["shape"].get_ref() != shape:
+		return {}
+	entry["used"] = Engine.get_physics_frames()
+	return entry
 
 
 # The faces whose box meets box, in the shape's order.
@@ -255,30 +258,40 @@ func faces_near(entry: Dictionary, box: AABB) -> Array:
 
 # Waits for every build, so none runs past its kit.
 func finish() -> void:
-	for entry in _entries.values():
-		if entry.has("task"):
-			WorkerThreadPool.wait_for_task_completion(entry["task"])
-			entry.erase("task")
+	for placements in _entries.values():
+		for entry in placements.values():
+			if entry.has("task"):
+				WorkerThreadPool.wait_for_task_completion(entry["task"])
+				entry.erase("task")
 
 
-# Drops shapes that are gone, so freed stages do not pin their faces.
+# Drops builds whose shape is gone, so freed stages do not pin their faces, and builds nobody
+# has read for STALE_TICKS. A build still running is left for a later prune.
 func prune() -> void:
+	var now := Engine.get_physics_frames()
 	for id in _entries.keys():
-		var entry: Dictionary = _entries[id]
-		if entry["shape"].get_ref() != null:
-			continue
-		if entry.has("task"):
-			if not WorkerThreadPool.is_task_completed(entry["task"]):
+		var placements: Dictionary = _entries[id]
+		for transform in placements.keys():
+			var entry: Dictionary = placements[transform]
+			if entry["shape"].get_ref() != null and now - int(entry["used"]) <= STALE_TICKS:
 				continue
-			WorkerThreadPool.wait_for_task_completion(entry["task"])
-		_entries.erase(id)
-		_watched.erase(id)
+			if entry.has("task"):
+				if not WorkerThreadPool.is_task_completed(entry["task"]):
+					continue
+				WorkerThreadPool.wait_for_task_completion(entry["task"])
+				entry.erase("task")
+			placements.erase(transform)
+		if placements.is_empty():
+			_entries.erase(id)
+			if not is_instance_id_valid(id):
+				_watched.erase(id)
 
 
 func _forget(id: int) -> void:
-	var entry: Dictionary = _entries.get(id, {})
-	if entry.has("task"):
-		WorkerThreadPool.wait_for_task_completion(entry["task"])
+	for entry in (_entries.get(id, {}) as Dictionary).values():
+		if entry.has("task"):
+			WorkerThreadPool.wait_for_task_completion(entry["task"])
+			entry.erase("task")
 	_entries.erase(id)
 
 
