@@ -22,6 +22,19 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
+# The ball set down in a camp station's zone, 2 m toward the plaza from its centre (camp_hub_test.gd walks them all).
+func _put_in(id: String) -> void:
+	var hub = _game.camp_hub
+	var toward: Vector3 = hub.root.global_position - hub.zone_position(id)
+	toward.y = 0.0
+	var at: Vector3 = hub.zone_position(id) + toward.normalized() * 1.5
+	at.y = 1.3
+	_game.player.reset_to(at)
+	_game.player.body().global_position = at
+	for i in 4:
+		await physics_frame
+
+
 func _frames(n: int) -> void:
 	for i in n:
 		await process_frame
@@ -39,9 +52,11 @@ func _run() -> void:
 	profile.hear_tune(b)
 	profile.hear_tune("roam-1-1")
 	_game._screen_key(KEY_K)
-	_t.check("the camp offers mixtapes on R", screens.camp_page().button_for("radio") != null)
 	_game._screen_key(KEY_R)
-	_t.check("R opens the mixtapes", screens.radio_open() and not screens.camp_open())
+	_t.check("R outside the radio mast's zone opens nothing", not screens.radio_open())
+	await _put_in("radio")
+	_game._screen_key(KEY_R)
+	_t.check("R opens the mixtapes", screens.radio_open() and not screens.walk_live())
 	var page = screens.radio_page()
 	_t.eq("it counts found takes", page._count.text, "Takes found: 2 of %d" % takes.size())
 	_t.check("the crate holds found tracks", page.crate_row(a) != null and page.crate_row(b) != null and page.crate_row("roam-1-1") != null)
@@ -73,7 +88,7 @@ func _run() -> void:
 	_game._screen_key(KEY_T)
 	_t.eq("T tunes the radio to the tape", radio.station, Radio.MIXTAPE)
 	_game._screen_key(KEY_R)
-	_t.check("R goes back to the camp", screens.camp_open() and not screens.radio_open())
+	_t.check("R goes back to the camp walk", screens.walk_live() and not screens.radio_open())
 	_t.eq("and saves the tape", profile.radio().get("mixtapes", [{}])[0].get("ids", []), [a])
 	_game._screen_key(KEY_K)
 
