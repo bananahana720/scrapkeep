@@ -464,7 +464,7 @@ func _start_ace_load() -> void:
 
 
 func _load_ace() -> void:
-	_ace_loaded = AceSequencer.new(_ace_loaded_from, "", true)
+	_ace_loaded = AceSequencer.new(_ace_loaded_from)
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -831,7 +831,7 @@ func ace_ready() -> bool:
 		loaded = _ace_loaded
 	_ace_loaded = null
 	if loaded == null:
-		loaded = AceSequencer.new(ace_manifest, "", true)
+		loaded = AceSequencer.new(ace_manifest)
 	if not loaded.ready():
 		_ace_failed = true
 		ace_missing = loaded.missing
