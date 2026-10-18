@@ -5,6 +5,7 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const Nemesis := preload("res://src/combat/nemesis.gd")
 
 # The parts catalogue (TADR-008): one row per part, turned into typed PartDef resources
 # once and cached. Each row has a verb (what it makes you do), punch (flat per-hit
@@ -221,6 +222,40 @@ const MAKER_NUDGE_AT := 2
 const MAKER_NUDGE := 1.5
 # Off only for a measurement that needs the kit lean alone on a fixed seed (offer_weights_test).
 static var maker_nudge_on := true
+
+# 2026-10-18 (w17 answers): "Nudge loot" for matchups (Andrew, 2026-10-17 00:01Z: "Bad matchups:
+# counter items show up 1.5x as often; still luck."). A part whose ANSWERS tags hold one of the
+# pilot's nemesis axes (Nemesis.PILOT, design-v3/ENEMY-PRIORITY.md sections 4 lever 8 and 5) weighs
+# Nemesis.OFFER_WEIGHT times its offer bucket's other parts inside whichever group a slot draws
+# from, through the same _nudged pass as the maker nudge: every group and bucket keeps its share, so
+# the SQ19 kit-share bands hold by construction (answer_weights_test). It sits in roll(), so every
+# source that rolls parts leans (gates, shop shelf and hook, caches, fabricators, activities). It is
+# a lean on a draw and never a guarantee. The table is here, not on the rows, so the pinned
+# parts.rows digest and the other wave-17 cards that re-pin it stay untouched; ids absent read [].
+# damage_tier, rate_tier and range_tier (pattern.gd) are pattern tiers, not offerable parts: their
+# catalogue analogues carry the tag (weapon damage for plating, fire rate for fuse, range for range).
+#   range    long_barrel, focus_lens, horizon_optic, tracer_round (weapon_range).
+#   spread   cross_split, spiral_wave, chain_arc, fan_spread, helix_drill, ring_wave, tempest_core
+#            (patterns and pulses that hit more than one target), arc_coil, static_burr (arcs).
+#   fuse     tracer_round (section 5), loose_trigger, double_feed, gatling_heart (weapon_rate: a
+#            faster cycle lands before a fast mover leaves).
+#   cc       brace_frame (section 5), flywheel (a refilled movement charge breaks a hold).
+#   air      none: no pilot's nemesis is air yet, so nothing is tagged until one is.
+#   plating  hot_rivets, slag_rounds, sunforged_core, ram_plow, overpressure (weapon_damage and punch
+#            per hit), warhead_slug, clean_break (plating-specific), ballast_drum (section 5).
+const ANSWERS := {
+	"long_barrel": ["range"], "focus_lens": ["range"], "horizon_optic": ["range"],
+	"tracer_round": ["range", "fuse"],
+	"cross_split": ["spread"], "spiral_wave": ["spread"], "chain_arc": ["spread"], "fan_spread": ["spread"],
+	"helix_drill": ["spread"], "ring_wave": ["spread"], "tempest_core": ["spread"], "arc_coil": ["spread"],
+	"static_burr": ["spread"],
+	"loose_trigger": ["fuse"], "double_feed": ["fuse"], "gatling_heart": ["fuse"],
+	"brace_frame": ["cc"], "flywheel": ["cc"],
+	"hot_rivets": ["plating"], "slag_rounds": ["plating"], "sunforged_core": ["plating"], "ram_plow": ["plating"],
+	"overpressure": ["plating"], "warhead_slug": ["plating"], "clean_break": ["plating"], "ballast_drum": ["plating"],
+}
+# Off only for a measurement that needs the draw without the answer lean (answer_weights_test).
+static var answer_nudge_on := true
 
 # The pattern guarantee (balance loop, B4): a run that reaches stage 2's gates holding no
 # pattern transformer is offered one of these in that pair. Bots without a pattern took
@@ -781,16 +816,27 @@ static func _uncapped(class_id: String, pool: Array, offered: Dictionary) -> Arr
 # NEUTRAL_LEAN for a shelf part in the pilot's lean bucket. No part of the rolled rarity: any rarity.
 static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: String, pool: Array,
 		offered: Dictionary, picks: Array, exclude: Array, nudge: Dictionary = {}) -> String:
-	var kit: Dictionary = KITS[class_id]
 	if not listed_only() and rng.randf() < (1.0 - KIT_SHARE) * GENERATED_SHARE:
 		var recipe := ItemGen.roll_id(rng, rarity)
 		return "" if recipe in picks or recipe in exclude else recipe
+	var slot := slot_weights(rarity, class_id, pool, offered, nudge)
+	if slot["candidates"].is_empty():
+		return ""
+	return _pick_weight(rng, slot["candidates"], slot["weights"])
+
+
+# A kit slot's candidates and the weight of each (the odds _lean_slot draws by), without the
+# draw: {"candidates": Array, "weights": Dictionary}. Split out so answer_weights_test reads the
+# odds exactly instead of sampling them.
+static func slot_weights(rarity: String, class_id: String, pool: Array, offered: Dictionary,
+		nudge: Dictionary = {}) -> Dictionary:
+	var kit: Dictionary = KITS[class_id]
 	var open := _uncapped(class_id, pool, offered)
 	var candidates: Array = open.filter(func(key): return rows()[key]["rarity"] == rarity)
 	if candidates.is_empty():
 		candidates = open
 	if candidates.is_empty():
-		return ""
+		return {"candidates": [], "weights": {}}
 	var groups := {"moving": [], "still": [], "shelf": [], "rest": []}
 	for key in candidates:
 		if in_kit(class_id, key):
@@ -855,7 +901,7 @@ static func _lean_slot(rng: RandomNumberGenerator, rarity: String, class_id: Str
 			part = _nudged(part, nudge)
 			for key in part:
 				weights[key] = part[key]
-	return _pick_weight(rng, candidates, weights)
+	return {"candidates": candidates, "weights": weights}
 
 
 # One draw over keys by weight; a zero total picks uniformly by the same draw.
@@ -896,7 +942,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude and not maxed(key, held))
 	var picks: Array = []
 	var leans := KITS.has(class_id)
-	var nudge := maker_nudge(held, pool)
+	var nudge := answer_nudge(class_id, pool, maker_nudge(held, pool))
 	var bait := _bait(class_id, held, pool, offered, count)
 	if bait != "" and rng.randf() < SYNERGY_BAIT:
 		picks.append(bait)
@@ -1004,6 +1050,27 @@ static func maker_nudge(held: Array, pool: Array) -> Dictionary:
 		var maker := String(rows().get(part_id, {}).get("maker", ""))
 		if maker != "" and (pieces.get(maker, {}) as Dictionary).size() >= MAKER_NUDGE_AT and not part_id in held:
 			out[part_id] = MAKER_NUDGE
+	return out
+
+
+# A part's answer axes (ANSWERS); [] for any other id.
+static func answers_of(part_id: String) -> Array:
+	return ANSWERS.get(part_id, [])
+
+
+# nudge with Nemesis.OFFER_WEIGHT multiplied onto each pool part that answers class_id's nemesis.
+# nudge itself, untouched, when the pilot has no nemesis or no pool part answers it.
+static func answer_nudge(class_id: String, pool: Array, nudge: Dictionary) -> Dictionary:
+	if not answer_nudge_on or Nemesis.of(class_id).is_empty():
+		return nudge
+	var out := nudge
+	var copied := false
+	for part_id in pool:
+		if Nemesis.answers(class_id, answers_of(part_id)):
+			if not copied:
+				out = nudge.duplicate()
+				copied = true
+			out[part_id] = float(out.get(part_id, 1.0)) * Nemesis.OFFER_WEIGHT
 	return out
 
 
