@@ -6,10 +6,10 @@ than 25.8 degrees is off the floor, so floor threats can't reach it. This pass m
 floor the slow, bitten one, by moving every rope ring and most geyser mouths onto the walls' carve band:
 
   ropes      16 floor ropes in four fans of four become 10, every ring on a carve band, none on the floor:
-             lava_channel_14   the channel crossing: a fan of two per wall (the stage pin keeps four), floor 18
-             main_tube_lower_4 the caisson swing: one per wall, fastest in the park (floor 22), toward the bowl
-             east_haulage_4    the haulage cable: one per wall in the miners' drift, the slowest (floor 16)
-             west_breakthrough_6 the breakthrough run: one per wall, floor 20
+             lava_channel_14   the channel crossing: a fan of two per wall (the stage pin keeps four), floor 24
+             main_tube_lower_4 the caisson swing: one per wall, fastest in the park (floor 26), toward the bowl
+             east_haulage_4    the haulage cable: one per wall in the miners' drift, the slowest (floor 18)
+             west_breakthrough_6 the breakthrough run: one per wall, floor 24
              rim_zip           unchanged, the rim descent into the caisson
   geysers    9 identical vents (charge 3 s, all mid-floor) get one job each:
              main_tube_upper_vent, skylight_chain_vent  the two skylight exits, mouths on the wall, charge 2 s and 3 s
@@ -83,6 +83,12 @@ COUNTERS = {
 # second (contraptions.gd _on_cinder). The drifts (the drill crews' floor) and the flooded gallery keep theirs.
 CINDER_DRAG = 0.08
 CINDER_RECIPES = ("lava_wash", "lava_wash_short")
+# The glazed walls: the polish band on every tube wall, from 0.62 to 0.98 of the half width (the carve band starts near
+# 0.68), pushes a carving ball GLAZE_PUSH m/s/s along its travel up to GLAZE_CAP m/s (contraptions.gd _on_glaze). Measured
+# with #61's grip: push 4 won four pilots of six, push 7 with Tally's line on its other wall won all six.
+GLAZE_PUSH = 7.0
+GLAZE_CAP = 36.0
+GLAZE_RECIPES = ("lava_wash", "lava_wash_short", "gallery_wash", "drift_wash")
 
 
 def cinder_row(park_rows):
@@ -91,6 +97,15 @@ def cinder_row(park_rows):
         if r["recipe"] in CINDER_RECIPES and r["stamp"] == "wash":
             strips.append([r["at"][0], r["at"][1], r["yaw_deg"], r["size"][0], round(0.2 * float(r["size"][2]), 2)])
     return {"id": "tube_cinder", "kind": "cinder", "site": "lava_channel_1", "recipe": "", "strips": strips, "drag": CINDER_DRAG}
+
+
+def glaze_row(park_rows):
+    strips = []
+    for r in park_rows:
+        if r["recipe"] in GLAZE_RECIPES and r["stamp"] == "wash":
+            half = float(r["size"][2]) / 2
+            strips.append([r["at"][0], r["at"][1], r["yaw_deg"], r["size"][0], round(0.62 * half, 2), round(0.98 * half, 2)])
+    return {"id": "tube_glaze", "kind": "glaze", "site": "lava_channel_1", "recipe": "", "strips": strips, "push": GLAZE_PUSH, "cap": GLAZE_CAP}
 
 
 # vent id: (on the wall, charge s)
@@ -239,7 +254,7 @@ def main():
                 new += rope_rows(site, old_c, rows[site])
                 done.add(site)
             continue
-        if c["kind"] == "cinder":
+        if c["kind"] in ("cinder", "glaze"):
             continue
         if c["id"] in VENTS:
             new.append(vent_row(c, rows[c["site"]]))
@@ -267,6 +282,7 @@ def main():
     last = next(i for i in range(first, len(lines)) if lines[i].startswith(" ]")) - 1
     current = [json.loads(ln.rstrip(",")) for ln in lines if ln.startswith('  {"id": ') and '"element": ' in ln]
     new.append(cinder_row(current))
+    new.append(glaze_row(current))
     body = ["  " + json.dumps(c, ensure_ascii=False) + "," for c in new]
     body[-1] = body[-1].rstrip(",")
     tail = "," if lines[last].endswith(",") else ""

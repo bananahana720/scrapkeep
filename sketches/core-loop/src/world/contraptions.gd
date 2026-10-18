@@ -21,6 +21,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 #   {"kind": "accel", "accel": Vector3}           a push to add this tick (a thermal)
 #   {"kind": "carry", "accel": Vector3}           the barge under the ball accelerating
 #   {"kind": "drag", "accel": Vector3}            a cinder floor slowing a ball that rolls on it
+#   {"kind": "carry", "accel": Vector3}           also a glazed wall band speeding a ball that carves it
 
 const GAUGE_REACH := 60.0
 const RAM_REACH := 2.8
@@ -41,6 +42,10 @@ const KEEP_STATION := 4.0
 # drag (share of planar speed per second) from a ball rolling on them. Only a ball within CINDER_REACH of the ground
 # counts, so a ball carving the wall above the strip, or in the air, is never slowed.
 const CINDER_REACH := 1.4
+# A glazed wall (the same pass): the polish band up a tube's walls, ancient lava glass, pushes a ball carving it `push`
+# m/s/s along its planar travel, from 4 m/s up to the spec's `cap`. With #61's wall grip, carving lost speed against the
+# floor and every pilot's floor line beat its wall line by 3 to 18 s; the glaze is what makes the wall the fast line.
+const GLAZE_FROM := 4.0
 
 # The park's contraption skins (design-v3/PARK.md section 4, KC9): a spec with a `recipe` key draws that recipe's GLBs in
 # place of the code primitive; a spec without one, or whose GLBs are missing, draws the primitive it always drew. The
@@ -77,6 +82,7 @@ var valves: Array[Dictionary] = []
 var walls: Array[Dictionary] = []
 var thermals: Array[Dictionary] = []
 var cinders: Array[Dictionary] = []
+var glazes: Array[Dictionary] = []
 # One material for every cinder band, so the glow lights the whole floor at once.
 var _cinder_mat: StandardMaterial3D = null
 var _cinder_glow := 0.0
@@ -133,6 +139,8 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 				thermals.append(_build_thermal(spec))
 			"cinder":
 				cinders.append(_build_cinder(spec))
+			"glaze":
+				glazes.append(_build_glaze(spec))
 	_setup_caches()
 	reset()
 
@@ -271,6 +279,10 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 			facts.append({"kind": "fact", "fact": "thermal_ride", "at": ball})
 			facts.append({"kind": "codex", "id": "steam_thermal", "at": ball})
 	if not riding:
+		for g in glazes:
+			if _on_glaze(g, ball, velocity):
+				facts.append({"kind": "carry", "accel": Vector3(velocity.x, 0.0, velocity.z).normalized() * float(g["spec"]["push"])})
+				break
 		for c in cinders:
 			if _on_cinder(c, ball):
 				facts.append({"kind": "drag", "accel": -Vector3(velocity.x, 0.0, velocity.z) * float(c["spec"]["drag"])})
@@ -318,6 +330,31 @@ func _build_cinder(spec: Dictionary) -> Dictionary:
 		add_child(band)
 		strips.append({"centre": Vector2(float(s[0]), float(s[1])), "along": Vector2(along.x, along.z), "half": half, "side": float(s[4])})
 	return {"spec": spec, "strips": strips}
+
+
+# A glaze spec's strips are [x, z, yaw_deg, length, inner, outer]: the band between inner and outer metres off the
+# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band).
+func _build_glaze(spec: Dictionary) -> Dictionary:
+	var strips := []
+	for s: Array in spec["strips"]:
+		var yaw := deg_to_rad(float(s[2]))
+		strips.append({"centre": Vector2(float(s[0]), float(s[1])), "along": Vector2(sin(yaw), cos(yaw)), "half": float(s[3]) * 0.5, "inner": float(s[4]), "outer": float(s[5])})
+	return {"spec": spec, "strips": strips}
+
+
+func _on_glaze(g: Dictionary, ball: Vector3, velocity: Vector3) -> bool:
+	var speed := Vector2(velocity.x, velocity.z).length()
+	if speed < GLAZE_FROM or speed > float(g["spec"]["cap"]):
+		return false
+	if ball.y - ground.call(ball.x, ball.z, 0.0).y > CINDER_REACH:
+		return false
+	var p := Vector2(ball.x, ball.z)
+	for s: Dictionary in g["strips"]:
+		var rel: Vector2 = p - s["centre"]
+		var v := absf(rel.dot(Vector2(s["along"].y, -s["along"].x)))
+		if absf(rel.dot(s["along"])) <= s["half"] and v >= s["inner"] and v <= s["outer"]:
+			return true
+	return false
 
 
 func _on_cinder(c: Dictionary, ball: Vector3) -> bool:
