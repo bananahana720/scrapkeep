@@ -37,7 +37,14 @@ const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
-const CampHub := preload("res://src/world/camp_hub.gd")
+# The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
+# are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
+const CAMP_HUB_PATH := "res://src/world/camp_hub.gd"
+const WORKSHOP_PATH := "res://src/ui/workshop.gd"
+const PAUSE_MENU_PATH := "res://src/ui/pause_menu.gd"
+const CAMP_PICKER_PATH := "res://src/ui/camp_enemy_picker.gd"
+const MENU_STEPS := 4
+const MENU_MODULES_FRAMES_APART := 2
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
@@ -101,8 +108,12 @@ var hud
 var screens
 # The pilot radio (radio_deck.gd): the HUD dial, the takes a run finds, the playlists.
 var radio_deck
-# The walkable camp (camp_hub.gd), built on the first K from the title.
-var camp_hub
+# The walkable camp (camp_hub.gd). Reading it builds the menu modules if they are not up yet.
+var camp_hub:
+	get:
+		menu_modules()
+		return camp_hub
+var _menu_step := 0
 var notes
 var panel
 var keyboard
@@ -261,14 +272,14 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
-	camp_hub = CampHub.new()
-	add_child(camp_hub)
-	camp_hub.setup(self)
-	camp_hub.camp_store = ctx.profile
-	# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
-	preload("res://src/ui/camp_enemy_picker.gd").watch(self)
-	add_child(preload("res://src/ui/workshop.gd").new())
-	add_child(preload("res://src/ui/pause_menu.gd").new())
+	# Tests and bots build the menu modules here; a played game builds them behind the menu, and
+	# at once if a run or a camp visit starts first.
+	if test_mode:
+		menu_modules()
+	else:
+		events.flow_changed.connect(func(state: String):
+			if state != "title":
+				menu_modules())
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
@@ -284,12 +295,59 @@ func _ready() -> void:
 	_boot("ui")
 	flow.show_title()
 	_boot("title")
+	if not test_mode:
+		_build_menu_modules_later()
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
 			if not is_inside_tree():
 				return
 			_boot("frame %d" % (frame + 1))
+
+
+# Builds the camp, the workshop, the pause menu and the met-enemy watch, in four steps (_menu_step).
+# Called by the first reader of game.camp_hub, by workshop(), when a run leaves the title (each
+# finishes what is left at once), and a few frames apart behind the menu, so no one frame loads them all.
+func menu_modules() -> void:
+	while _menu_step < MENU_STEPS:
+		_menu_step_once()
+
+
+func _menu_step_once() -> void:
+	if _menu_step >= MENU_STEPS:
+		return
+	var started := Time.get_ticks_msec()
+	var step := _menu_step
+	_menu_step += 1
+	match step:
+		0:
+			var hub = load(CAMP_HUB_PATH).new()
+			camp_hub = hub
+			add_child(hub)
+			hub.setup(self)
+			hub.camp_store = ctx.profile
+		1:
+			# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
+			load(CAMP_PICKER_PATH).watch(self)
+		2:
+			add_child(load(WORKSHOP_PATH).new())
+		3:
+			add_child(load(PAUSE_MENU_PATH).new())
+	_boot("menu_modules step %d built in %d ms" % [step, Time.get_ticks_msec() - started])
+
+
+func workshop() -> Node:
+	menu_modules()
+	return get_node("Workshop")
+
+
+func _build_menu_modules_later() -> void:
+	while _menu_step < MENU_STEPS:
+		for frame in MENU_MODULES_FRAMES_APART:
+			await get_tree().process_frame
+			if not is_inside_tree():
+				return
+		_menu_step_once()
 
 
 func _park_on_title_ground(stage: int) -> void:
