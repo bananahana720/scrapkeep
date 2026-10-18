@@ -1084,6 +1084,7 @@ const WORLD_ROWS := {
 	"trebuchet_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "trebuchet_creak_whoosh", "hud": "", "objective": "", "priority": 1},
 	# The sinkhole's floor is lava (cinder_heat.gd): the cinders glow as the grace runs out, sizzle while they burn, and
 	# hiss as a hot ball leaves them.
+	"glaze_skim": {"group": "event", "color": Palette.LEDGER, "shape": "wave", "sound": "line_zip", "sound_next": "glaze_skim_hiss", "hud": "", "objective": "", "priority": 0},
 	"cinder_glow": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 1},
 	"cinder_burn": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "threat_tick", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 2},
 	"cinder_cooled": {"group": "event", "color": Palette.SAND, "shape": "wave", "sound": "boost_whoosh", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 0},
