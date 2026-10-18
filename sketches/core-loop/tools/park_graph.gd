@@ -85,6 +85,7 @@ const DIRS := [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, 
 
 const Placement := preload("res://src/world/park/park_placement.gd")
 const WardenSwarm := preload("res://src/combat/warden_swarm.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 # Placement rules live in park_placement.gd (the game draws pockets with them); kept here under their old names.
 const DOOR_SPAWN_M := Placement.DOOR_SPAWN_M
 const DOOR_BEACON_M := Placement.DOOR_BEACON_M
@@ -95,6 +96,8 @@ const DETOUR_MAX_M := Placement.DETOUR_MAX_M
 const HIDDEN_ROUTES := Placement.HIDDEN_ROUTES
 const BEACON_DISC_SHARE := Placement.BEACON_DISC_SHARE
 const BEACON_FLAT_M := Placement.BEACON_FLAT_M
+# A lattice node on a footprint's edge counts as on it (_in_footprint): yaw turns leave it a hair outside.
+const FOOTPRINT_EPS_M := 0.01
 const REWARD_RATIO_MIN := Placement.REWARD_RATIO_MIN
 const FULL_VISIT_RATIO_MAX := Placement.FULL_VISIT_RATIO_MAX
 const ONLINE_KINDS := Placement.ONLINE_KINDS
@@ -1088,12 +1091,17 @@ static func spawn_check(graph, park: Dictionary) -> Dictionary:
 # or below the first floor, warden_swarm.gd's own test) has a rising floor of its own: the pool's
 # nodes count for open but not for rise, and the rise is the spread of the disc's nodes outside
 # the pool. "pool" in the result is that pool, {} when the plain rule ran.
+# A headframe mounting fights over floors its landmark's model dresses (rows whose recipe is "landmark": the collar
+# dish round the shaft and the tipple deck the drop finisher lands from, park/stages/3-park_pit.md section 2): their
+# ground nodes do not count for rise, ground they roof is not closed, their deck nodes are no second floor, and the
+# rise is the spread of the disc's other nodes. "floors" in the result names those rows, [] when the plain rule ran.
 static func beacon_check(graph, park: Dictionary) -> Dictionary:
 	var at := Vector2(float(park["landmark"]["beacon"][0]), float(park["landmark"]["beacon"][1]))
 	var radius := float(park["landmark"]["reach_m"]) * BEACON_DISC_SHARE
 	var centre: int = ParkGraph.lattice_index(at.x, at.y)
 	var base: float = graph.py[centre]
 	var pool := _beacon_pool(graph, park)
+	var floors := _mounting_floors(park)
 	var lip_low := INF
 	var lip_high := -INF
 	var nodes := 0
@@ -1104,19 +1112,26 @@ static func beacon_check(graph, park: Dictionary) -> Dictionary:
 		if o >= SIDE * SIDE:
 			continue
 		nodes += 1
-		if graph.node_flags[o] & ParkGraph.OPEN == 0:
+		var p := Vector2(graph.px[o], graph.pz[o])
+		var roofed := floors.any(func(row: Dictionary) -> bool: return row["y"] != null and _in_footprint(row, p))
+		if graph.node_flags[o] & ParkGraph.OPEN == 0 and not roofed:
 			closed += 1
-		if pool.is_empty():
+		if not floors.is_empty():
+			if not floors.any(func(row: Dictionary) -> bool: return _in_footprint(row, p)):
+				lip_low = minf(lip_low, graph.py[o])
+				lip_high = maxf(lip_high, graph.py[o])
+		elif pool.is_empty():
 			rise = maxf(rise, absf(graph.py[o] - base))
-		elif Vector2(graph.px[o], graph.pz[o]).distance_to(pool["centre"]) > float(pool["radius_m"]):
+		elif p.distance_to(pool["centre"]) > float(pool["radius_m"]):
 			lip_low = minf(lip_low, graph.py[o])
 			lip_high = maxf(lip_high, graph.py[o])
-	if not pool.is_empty() and lip_high >= lip_low:
+	if not (pool.is_empty() and floors.is_empty()) and lip_high >= lip_low:
 		rise = lip_high - lip_low
+	var floor_ids := floors.map(func(row: Dictionary) -> String: return String(row["id"]))
 	# A deck row inside the disc (a ledge, a bridge) is a floor of its own: the beacon is then
 	# on a ledge or under one, and the fight has two floors.
 	for o in range(SIDE * SIDE, graph.node_count()):
-		if Vector2(graph.px[o], graph.pz[o]).distance_to(at) <= radius:
+		if Vector2(graph.px[o], graph.pz[o]).distance_to(at) <= radius and not floor_ids.has(graph.node_row(o)):
 			decks += 1
 			rise = maxf(rise, absf(graph.py[o] - base))
 	var reasons := []
@@ -1127,7 +1142,25 @@ static func beacon_check(graph, park: Dictionary) -> Dictionary:
 	if rise > BEACON_FLAT_M:
 		reasons.append("the disc rises %.2f m, want at most %.1f m" % [rise, BEACON_FLAT_M])
 	return {"ok": reasons.is_empty() and nodes > 0, "radius_m": radius, "nodes": nodes, "rise_m": rise,
-		"closed": closed, "decks": decks, "reasons": reasons, "pool": pool}
+		"closed": closed, "decks": decks, "reasons": reasons, "pool": pool, "floors": floor_ids}
+
+
+# The rows a headframe mounting fights over (beacon_check): the park rows its landmark's model dresses. [] for any
+# other mounting.
+static func _mounting_floors(park: Dictionary) -> Array:
+	var w = park["landmark"].get("warden", {})
+	if not w is Dictionary or w.get("mounting") != WardenSwarm.HEADFRAME:
+		return []
+	return park["park_rows"].filter(func(row: Dictionary) -> bool: return row.get("recipe") == ParkRecipes.LANDMARK_DRESSED)
+
+
+# Whether p lies on a row's footprint: size[0] along the row's facing (yaw_deg, 0 faces +z), size[2] across it.
+static func _in_footprint(row: Dictionary, p: Vector2) -> bool:
+	var d := p - Vector2(float(row["at"][0]), float(row["at"][1]))
+	var yaw := deg_to_rad(float(row["yaw_deg"]))
+	var along := d.x * sin(yaw) + d.y * cos(yaw)
+	var across := d.x * cos(yaw) - d.y * sin(yaw)
+	return absf(along) <= float(row["size"][0]) * 0.5 + FOOTPRINT_EPS_M and absf(across) <= float(row["size"][2]) * 0.5 + FOOTPRINT_EPS_M
 
 
 # The swarm pool a sinkhole mounting fights over, placed as warden_swarm.gd places it (spec

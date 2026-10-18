@@ -18,10 +18,13 @@ const Intent := preload("res://src/movement/intent.gd")
 # 2026-10-17 sinkhole re-pin: stage 4 park_sinkhole 2757620411 -> 3017710206, because its dressing
 # follows the 20 m bowl rebake and the scatter now dresses the trough, pump_gallery and east_mesa
 # (recipe "scatter"); the others unchanged.
+# 2026-10-17 pit authored pass re-pin: stage 3 park_pit 3689678730 -> 2247843387, because the four west drifts
+# rebake the ground and the scatter now dresses floor_sump and tailings_bench_east and keeps out of the new
+# cut adits; the others unchanged.
 const PINS := {
 	1: ["park_dam", 13, 2427938025],
 	2: ["park_flume", 13, 1284262125],
-	3: ["park_pit", 13, 3689678730],
+	3: ["park_pit", 13, 2247843387],
 	4: ["park_sinkhole", 13, 3017710206],
 	5: ["park_islands", 13, 3297821718],
 	6: ["park_crown", 13, 3361994924],

@@ -23,7 +23,7 @@ const LANDFORMS := ["slot_canyon", "arroyo", "dry_wash", "slickrock", "canal", "
 	"hoodoo_field", "saguaro_stand", "travertine_terrace", "horseshoe_bend", "river_canyon", "gooseneck",
 	"meteor_crater", "sky_island"]
 const SOCIETIES := ["none", "hohokam", "ancestral_puebloan", "mining", "dam_era", "fleet", "ancient"]
-const VERBS := ["roll", "pump", "grind", "launch", "drop", "swing", "glide", "lift", "bank", "slam"]
+const VERBS := ["roll", "pump", "grind", "launch", "drop", "swing", "glide", "lift", "bank", "slam", "cast"]
 const STAMPS := ["", "wash", "channel", "ridge", "mesa", "butte", "spire", "bowl", "terrace", "crater",
 	"sinkhole", "ramp", "plateau"]
 const BUDGETS := ["landform", "park_large", "hero_landmark", "detail"]
