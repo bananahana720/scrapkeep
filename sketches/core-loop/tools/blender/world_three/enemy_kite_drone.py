@@ -17,9 +17,11 @@ from mathutils import Quaternion, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+polish.enable(detail=2, bevel=0.03, fit=True)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.85}
 common.SLOTS["working_tool"] = {"vc": True, "rough": 0.65, "metal": 0.25}
 root = common.empty("KiteDrone")
@@ -55,25 +57,27 @@ def bind(part, weights, bone):
 
 body = Part("KiteCrewPod")
 bw = weighted(body)
-# Broad tapered cast panels, with rounded radial sections and a closed keel.
-rows = []
-for y, radius, front in [(-1.1, 0.30, 0.30), (-0.93, 0.58, 0.40), (-0.55, 0.8, 0.32),
-                         (0.18, 0.70, 0.58), (0.48, 0.8, 0.8), (0.88, 0.62, 0.62), (1.1, 0.34, 0.34)]:
-    # A recessed forward keel exposes the blunt chin within the original radial core.
-    rows.append([body.bm.verts.new(Vector(g(radius * math.cos(a * math.tau / 12), y,
-                                           min(front, radius * math.sin(a * math.tau / 12)))))
-                 for a in range(12)])
-for row_index, (low, high) in enumerate(zip(rows, rows[1:])):
-    for i in range(12):
-        face = body.bm.faces.new((low[i], low[(i + 1) % 12], high[(i + 1) % 12], high[i]))
-        col = "bone" if i in (1, 2, 3, 4) else PETROL
-        if row_index in (0, 5):
-            col = WORN
-        if (row_index, i) in ((1, 7), (3, 0), (2, 10)):
-            col = "petrol"
-        body.paint([face], "fleet_paint", col)
-body.paint([body.bm.faces.new(list(reversed(rows[0]))), body.bm.faces.new(rows[-1])],
-           "fleet_paint", CHAR)
+# The keel makes the hull lopsided, so it keeps its subdivided size instead of a box fit.
+with body.region(bevel=0, subsurf=1, fit=False):
+    # Broad tapered cast panels, with rounded radial sections and a closed keel.
+    rows = []
+    for y, radius, front in [(-1.1, 0.30, 0.30), (-0.93, 0.58, 0.40), (-0.55, 0.8, 0.32),
+                             (0.18, 0.70, 0.58), (0.48, 0.8, 0.8), (0.88, 0.62, 0.62), (1.1, 0.34, 0.34)]:
+        # A recessed forward keel exposes the blunt chin within the original radial core.
+        rows.append([body.bm.verts.new(Vector(g(radius * math.cos(a * math.tau / 12), y,
+                                               min(front, radius * math.sin(a * math.tau / 12)))))
+                     for a in range(12)])
+    for row_index, (low, high) in enumerate(zip(rows, rows[1:])):
+        for i in range(12):
+            face = body.bm.faces.new((low[i], low[(i + 1) % 12], high[(i + 1) % 12], high[i]))
+            col = "bone" if i in (1, 2, 3, 4) else PETROL
+            if row_index in (0, 5):
+                col = WORN
+            if (row_index, i) in ((1, 7), (3, 0), (2, 10)):
+                col = "petrol"
+            body.paint([face], "fleet_paint", col)
+    body.paint([body.bm.faces.new(list(reversed(rows[0]))), body.bm.faces.new(rows[-1])],
+               "fleet_paint", CHAR)
 core = [v.co.copy() for v in body.bm.verts]
 assert max(math.hypot(v.x, v.y) for v in core) <= 0.800001
 assert abs(min(v.z for v in core) + 1.1) < 1e-6 and abs(max(v.z for v in core) - 1.1) < 1e-6
@@ -89,12 +93,16 @@ for side in (-1, 1):
 body.box("fleet_paint", (0.38, 0.12, 0.12), loc=g(0, 0.82, 0.45), color=CHAR)
 bind(body, bw, 0)
 # Shared anonymous two-eared crew. Pale muzzle and dark inset eyes remain neutral.
-body.uv("fleet_paint", 0.38, u=8, v=6, loc=g(0, 1.3, 0), color="oxide")
-body.uv("fleet_paint", 0.20, u=8, v=4, loc=g(0, 1.20, 0.25), scale=(1, 0.60, 0.65), color="bone")
-body.ico("fleet_paint", 0.065, loc=g(0, 1.24, 0.37), scale=(1, 0.6, 0.65), color=CHAR)
-for side in (-1, 1):
-    body.cyl("fleet_paint", 0.13, 0, 0.34, segs=6, loc=g(side * 0.20, 1.65, 0), color="oxide")
-    body.ico("fleet_paint", 0.046, loc=g(side * 0.16, 1.40, 0.31), color=CHAR)
+with body.region(bevel=0, subsurf=2, detail=1):
+    body.uv("fleet_paint", 0.38, u=8, v=6, loc=g(0, 1.3, 0), color="oxide")
+    body.uv("fleet_paint", 0.20, u=8, v=4, loc=g(0, 1.20, 0.25), scale=(1, 0.60, 0.65), color="bone")
+with body.region(bevel=0, subsurf=1, detail=1):
+    for side in (-1, 1):
+        body.cyl("fleet_paint", 0.13, 0, 0.34, segs=6, loc=g(side * 0.20, 1.65, 0), color="oxide")
+with body.region(bevel=0, detail=1):
+    body.ico("fleet_paint", 0.065, loc=g(0, 1.24, 0.37), scale=(1, 0.6, 0.65), color=CHAR)
+    for side in (-1, 1):
+        body.ico("fleet_paint", 0.046, loc=g(side * 0.16, 1.40, 0.31), color=CHAR)
 bind(body, bw, 1)
 # Open-front hub shroud: the specified cylinder envelope leaves the operator visible.
 body.ring("fleet_paint", 0.41, 0.50, 0.9, segs=10, loc=g(0, 1.2, 0),
@@ -103,14 +111,16 @@ body.ring("fleet_paint", 0.40, 0.50, 0.07, segs=10, loc=g(0, 0.80, 0),
           arc=(math.radians(-15), math.radians(195)), color=WORN)
 bind(body, bw, 2)
 for side, bone in [(-1, 3), (1, 4)]:
-    body.rod("fleet_paint", g(side * 0.40, 0.72, 0.37), g(side * 0.32, 0.90, 0.50),
-             0.09, segs=6, color="oxide")
-    body.uv("fleet_paint", 0.12, u=6, v=4, loc=g(side * 0.32, 0.90, 0.50), color="oxide")
+    with body.region(bevel=0, subsurf=1, detail=1):
+        body.rod("fleet_paint", g(side * 0.40, 0.72, 0.37), g(side * 0.32, 0.90, 0.50),
+                 0.09, segs=6, color="oxide")
+        body.uv("fleet_paint", 0.12, u=6, v=4, loc=g(side * 0.32, 0.90, 0.50), color="oxide")
     bind(body, bw, bone)
 bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])
 pod = body.to_object(parent=root)
 
 sail = Part("KiteSail")
+sail.bevel = 0
 sw = weighted(sail)
 for side, bone in [(-1, 5), (1, 6)]:
     # Two rigid half-diamonds. The hub bridges the central seam; no upright wing.
@@ -119,11 +129,12 @@ for side, bone in [(-1, 5), (1, 6)]:
         outline.reverse()
     sail.prism("fleet_paint", outline, 0.12, matrix=common.mtx(g(0, 1.5, 0)),
                color="bone", side_slot="fleet_paint", side_color=PETROL)
-    for z in (-0.32, 0.32):
-        sail.rod("fleet_paint", g(0, 1.535, z), g(side * 1.55, 1.535, 0),
-                 0.025, segs=5, color=PETROL)
-    sail.rod("fleet_paint", g(0, 1.53, 0), g(side * 1.56, 1.53, 0),
-             0.03, segs=6, color=CHAR)
+    with sail.region(bevel=0.008):
+        for z in (-0.32, 0.32):
+            sail.rod("fleet_paint", g(0, 1.535, z), g(side * 1.55, 1.535, 0),
+                     0.025, segs=5, color=PETROL)
+        sail.rod("fleet_paint", g(0, 1.53, 0), g(side * 1.56, 1.53, 0),
+                 0.03, segs=6, color=CHAR)
     # Sparse repaired canvas facets and one pale edge chip, in the same draw.
     sail.prism("fleet_paint", [(side * 0.52, -0.17), (side * 0.95, -0.09), (side * 0.68, 0.06)],
                0.0002, matrix=common.mtx(g(0, 1.5601, 0)), color=WORN)
@@ -141,10 +152,11 @@ corners = [loop.vert for loop in front_face.loops]
 chin.bm.faces.remove(front_face)
 chin.paint([chin.bm.faces.new((corners[0], corners[1], corners[2]))], "working_tool", "hazard")
 chin.paint([chin.bm.faces.new((corners[0], corners[2], corners[3]))], "working_tool", CHAR)
-for i in range(2):
-    chin.prism("working_tool", [(-0.13, 0.02 - i * 0.20), (0.13, -0.06 - i * 0.20),
-                                (0.13, -0.13 - i * 0.20), (-0.13, -0.05 - i * 0.20)],
-               0.002, matrix=common.mtx(g(0, -0.199, 0.35)), color="hazard")
+with chin.region(bevel=0):
+    for i in range(2):
+        chin.prism("working_tool", [(-0.13, 0.02 - i * 0.20), (0.13, -0.06 - i * 0.20),
+                                    (0.13, -0.13 - i * 0.20), (-0.13, -0.05 - i * 0.20)],
+                   0.002, matrix=common.mtx(g(0, -0.199, 0.35)), color="hazard")
 bmesh.ops.recalc_face_normals(chin.bm, faces=chin.bm.faces[:])
 skid = chin.to_object(origin=g(0, -0.3, 0.3), parent=root)
 
@@ -172,7 +184,7 @@ for name, at in [("sail_root", (0, 1.5, 0)), ("hub_axis", (0, 1.2, 0)),
     common.empty(name, g(*at), root)
 
 bpy.context.view_layer.update()
-assert common.tri_total(root) <= 1100
+assert common.tri_total(root) <= 6500
 assert sum(len(o.data.materials) for o in (pod, wing, skid)) == 3
 opts = common.args()
 out = opts["out"] or os.path.join(common.MODELS, "world_three", "enemy_kite_drone.glb")
@@ -184,7 +196,7 @@ glb = json.loads(data[20:20 + size])
 prims = [p for m in glb["meshes"] for p in m["primitives"]]
 vertices = sum(glb["accessors"][p["attributes"]["POSITION"]]["count"] for p in prims)
 triangles = sum(glb["accessors"][p["indices"]]["count"] // 3 for p in prims)
-assert vertices <= 2100 and triangles <= 1100 and len(prims) == 3
+assert vertices <= 9500 and triangles <= 6500 and len(prims) == 3
 print("KITE_BUDGET: %d V, %d T, %d D" % (vertices, triangles, len(prims)))
 
 

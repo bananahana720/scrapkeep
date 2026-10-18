@@ -138,6 +138,17 @@ const LINE_EASE := 0.15
 # its own sim clock, which stops while an attack is open.
 var idle_offset := Vector3.ZERO
 var _idle_pose := Basis.IDENTITY
+# Easing on the pivot only (presentation, never the body): the idle offset fades out as an
+# attack opens and back in as it closes, and a wind-up that is cancelled eases its pose home.
+const IDLE_FADE_OUT := 0.12
+const IDLE_FADE_IN := 0.15
+const POSE_EASE := 0.12
+var _idle_mix := 1.0
+var _idle_held := Vector3.ZERO
+var _was_winding := false
+var _wind_pose := Basis.IDENTITY
+var _eased_from := Basis.IDENTITY
+var _ease_age := -1.0
 # The ATTACK_ROWS pose the open attack leans into, and how long since it struck (-1: none).
 var _posed := ""
 var _posing := false
@@ -272,9 +283,17 @@ func _update_idle(delta: float) -> void:
 		return
 	var row: Dictionary = WindupRows.ROWS.get(kind, {})
 	if winding_up():
+		_was_winding = true
+		_ease_age = -1.0
+		# The idle offset fades to zero rather than dropping; the clock holds still as before.
+		_idle_mix = move_toward(_idle_mix, 0.0, delta / IDLE_FADE_OUT)
+		idle_offset = _idle_held * _idle_mix
 		_idle_pose = EnemyMotion.pose_basis(row)
 		if row.get("pose", {}).is_empty():
 			_idle_pose = _attack_pose()
+		else:
+			_idle_pose = Transform3D(Basis.IDENTITY, Vector3.ZERO).interpolate_with(Transform3D(_idle_pose, Vector3.ZERO), 1.0 - _idle_mix).basis
+		_wind_pose = _idle_pose
 		return
 	if _posing:
 		_posing = false
@@ -283,6 +302,17 @@ func _update_idle(delta: float) -> void:
 		_posed_struck = false
 		if _release_age < 0.0:
 			_posed = ""
+	if _was_winding:
+		_was_winding = false
+		_eased_from = _wind_pose
+		_ease_age = 0.0 if _release_age < 0.0 else -1.0
+	if _ease_age >= 0.0:
+		# A cancelled attack's pose (or a row's own) eases home instead of dropping.
+		_ease_age += delta
+		var home := smoothstep(0.0, 1.0, _ease_age / POSE_EASE)
+		_idle_pose = Transform3D(_eased_from, Vector3.ZERO).interpolate_with(Transform3D.IDENTITY, home).basis
+		if _ease_age >= POSE_EASE:
+			_ease_age = -1.0
 	if _release_age >= 0.0:
 		_idle_pose = WindupPoses.release(_posed, _release_age, EnemyMotion.motion_scale)
 		_release_age += delta
@@ -293,7 +323,10 @@ func _update_idle(delta: float) -> void:
 		_idle_period = float(row.get("idle", {}).get("beats", 0.0)) * EnemyMotion.attack_clock(kind, self)
 		_idle_clock = float(absi(hash(Vector3i(global_position.round()))) % 97) / 97.0 * _idle_period
 	_idle_clock += delta
-	idle_offset = EnemyMotion.idle_offset(row.get("idle", {}), _idle_clock, _idle_period)
+	_idle_held = EnemyMotion.idle_offset(row.get("idle", {}), _idle_clock, _idle_period)
+	# Back from an attack the wave eases in from rest, not from wherever the clock stopped.
+	_idle_mix = move_toward(_idle_mix, 1.0, delta / IDLE_FADE_IN)
+	idle_offset = _idle_held * _idle_mix
 
 
 # The open attack's whole-body pose (windup_poses.gd), from its row and its telegraph's fill.

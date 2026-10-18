@@ -45,6 +45,7 @@ const SHAPE := {
 	"options": SafeStore.STRINGS,
 	"tunes": SafeStore.STRINGS,
 	"radio": SafeStore.DICT,
+	"camp": SafeStore.DICT,
 }
 
 var path := ""
@@ -170,6 +171,7 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 		if mine.get("sockets", []).is_empty() and not other.get("sockets", []).is_empty():
 			mine["sockets"] = other["sockets"].duplicate()
 		out["companion"] = mine
+	out["camp"] = _merge_camp(out.get("camp", {}), theirs.get("camp", {}))
 	var times: Dictionary = theirs.get("achievements", {})
 	for id in times:
 		if not out["achievements"].has(id) or times[id] < out["achievements"][id]:
@@ -190,6 +192,22 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 		if not out.has(key):
 			out[key] = theirs[key]
 	out["generation"] = maxi(int(ours.get("generation", 0)), int(theirs.get("generation", 0)))
+	return out
+
+
+# The camp's records: the skee best by max, the trial's best lap by min and its ghost with it.
+static func _merge_camp(mine: Dictionary, other: Dictionary) -> Dictionary:
+	var out := mine.duplicate(true)
+	if other.has("skee_best") and (not out.has("skee_best") or int(other["skee_best"]) > int(out["skee_best"])):
+		out["skee_best"] = other["skee_best"]
+	var theirs_trial: Variant = other.get("trial")
+	if theirs_trial is Dictionary and theirs_trial.has("best_ms"):
+		var ours_trial: Variant = out.get("trial")
+		if not (ours_trial is Dictionary) or not ours_trial.has("best_ms") or int(theirs_trial["best_ms"]) < int(ours_trial["best_ms"]):
+			out["trial"] = (theirs_trial as Dictionary).duplicate(true)
+	for key in other:
+		if not out.has(key):
+			out[key] = other[key]
 	return out
 
 
@@ -450,6 +468,15 @@ func set_radio(doc: Dictionary) -> void:
 	_doc["radio"] = doc.duplicate(true)
 
 
+# The camp's records as camp_records.gd keeps them; {} until one is stored.
+func camp() -> Dictionary:
+	return _doc["camp"].duplicate(true)
+
+
+func set_camp(doc: Dictionary) -> void:
+	_doc["camp"] = doc.duplicate(true)
+
+
 func rewards_settled() -> bool:
 	return bool(_doc["rewards_settled"])
 
@@ -573,6 +600,7 @@ func _defaults() -> Dictionary:
 		"options": [],
 		"tunes": [],
 		"radio": {},
+		"camp": {},
 	}
 
 

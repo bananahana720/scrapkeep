@@ -460,7 +460,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id in ["enemy_camp", "hold_the_relay"] or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
+	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
 	if not s.interior.is_empty():
 		s.footprint = spec.footprint
@@ -474,7 +474,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 			s.rule.cue.word = spec.tell.word
 	if id == "enemy_camp":
 		s.rule["pack"] = spec.get("pack", s.rule["pack"])
-	elif id == "hold_the_relay" and not spec.get("pack", []).is_empty():
+	elif id in ["hold_the_relay", "ambush_altar"] and not spec.get("pack", []).is_empty():
 		s.rule["pack"] = spec.pack.duplicate()
 	# PARK.md 2.12: the park row authors the pay ladder (rarities, or a named part that wins when the
 	# table offers it). Scrap, source and where stay the rule's own, so the heft pace never moves.

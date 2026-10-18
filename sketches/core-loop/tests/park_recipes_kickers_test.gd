@@ -174,9 +174,9 @@ func _check_coverage() -> void:
 				continue
 			covered += 1
 		_t.check("(c) %s: every target row has a piece that seats it" % path.get_file(), missing.is_empty(), str(missing))
-	# 78 when written; a split row (run_step_lip_3 around run_turn_wash) adds one
-	_t.check("(c) the pieces seat every target row (18 flume and pit kickers, 24 sinkhole half-pipes, 16 crown kickers, 20+ islands kickers)",
-		covered == total and total >= 78, "%d of %d" % [covered, total])
+	# 78 on stage w17 with #78: the islands' 18 step lips stay greybox and run_step_lip_3 is not split (#78 held them back)
+	_t.check("(c) the pieces seat all 78 target rows (18 flume and pit kickers, 24 sinkhole half-pipes, 16 crown kickers, 20 islands kickers)",
+		covered == total and total == 78, "%d of %d" % [covered, total])
 
 
 # The collider's AABB in the node's space.

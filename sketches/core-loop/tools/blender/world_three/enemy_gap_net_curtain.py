@@ -38,10 +38,12 @@ sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, os.path.join(HERE, "..", "world_two"))
 sys.path.insert(0, HERE)
 import common
+import polish
 from common import Part
 import gap_net_post
 
 common.reset()
+polish.enable(detail=2, bevel=0.03, fit=True)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.85}
 common.SLOTS["working_tool"] = {"vc": True, "rough": 0.5, "metal": 0.4}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
@@ -75,7 +77,8 @@ POST_SOCKETS = gap_net_post.build(post, MAST)
 # The hoist: a yard across the masthead, a block at its +X end and the fall down to the reel.
 post.beam("fleet_paint", G(-0.55, 3.2, 0), G(0.8, 3.2, 0), 0.16, 0.16, color=OXIDE)
 post.box("fleet_paint", (0.2, 0.3, 0.3), loc=g(0.72, 3.05, 0), color=STEEL)
-post.rod("fleet_paint", G(0.8, 2.92, 0), G(REEL.x + 0.3, REEL.y + 0.1, REEL.z), 0.035, segs=4, color="brass")
+with post.region(bevel=0.01):
+    post.rod("fleet_paint", G(0.8, 2.92, 0), G(REEL.x + 0.3, REEL.y + 0.1, REEL.z), 0.035, segs=4, color="brass")
 bmesh.ops.recalc_face_normals(post.bm, faces=post.bm.faces[:])
 post_obj = post.to_object(parent=root)
 
@@ -112,6 +115,9 @@ def strand(part, a, b, r, color):
 
 
 span = Part("GapNetSpan")
+# Cords stay open three-sided tubes: no bevel or subdivision, so tiles still join edge to edge.
+span.bevel = 0
+span.subsurf = 0
 TOP = CURTAIN_H - 0.12
 for i in range(COLS):
     # Headrope (heavy) and hem rope follow the pleats.
@@ -147,13 +153,13 @@ print("GAP NET CURTAIN floor %.3f post top %.3f tile x %.3f..%.3f y %.3f..%.3f t
     low, post_top, min(p.x for p in tile), max(p.x for p in tile), min(p.z for p in tile), max(p.z for p in tile),
     common.tri_total(root)), [(o.name, common.tris(o)) for o in objs])
 assert low >= FLOOR - 1e-4 and post_top <= 4.3
-assert common.tri_total(root) <= 1100
+assert common.tri_total(root) <= 6000
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_three", "enemy_gap_net_curtain.glb")
 common.export(root, path)
 import world_preview
-world_preview.budget(path, 3)
+world_preview.budget(path, 3, tris=6000, verts=9000)
 
 if opts["render"]:
     RIM = 1.0  # the runtime sets the crew 1 m back from the near rim

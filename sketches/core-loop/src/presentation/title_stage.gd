@@ -40,6 +40,8 @@ var stage: Node3D
 var camera: Camera3D
 var companion: Node3D
 var active := false
+# The camp walk (camp_hub.gd) shows the real world through the chase camera, so the title picture stands down.
+var camp_walk := false
 var _layer: CanvasLayer
 var _picture: TextureRect
 var _sun: DirectionalLight3D
@@ -47,6 +49,7 @@ var _fill: DirectionalLight3D
 var _environment: Environment
 var _clock := 0.0
 var _warned := {}
+var _flow_state := "title"
 # The rotating opening (title_intros.gd). It autoplays once per launch on the first title
 # screen, never for bots or tests (bot_driven, test_mode, a headless display) and never with
 # --no-intro.
@@ -113,7 +116,8 @@ func setup(ctx) -> void:
 
 
 func show_flow(state: String) -> void:
-	active = state in ["title", "class_select"]
+	_flow_state = state
+	active = state in ["title", "class_select"] and not camp_walk
 	_layer.visible = active
 	stage.visible = active
 	if state != "title" and intro_playing():
@@ -168,6 +172,13 @@ func _boss_met() -> void:
 	# Memory only: the run's own save carries it, so a boss entry never adds a disk write.
 	if _ctx.profile != null:
 		TitleIntros.mark_met(_ctx.profile, String(boss.get("kind", "")))
+
+
+func set_camp_walk(on: bool) -> void:
+	camp_walk = on
+	if on and intro_playing():
+		intro.skip()
+	show_flow(_flow_state)
 
 
 func _sync_dressing() -> void:

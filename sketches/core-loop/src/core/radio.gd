@@ -235,7 +235,7 @@ func nudge(list: int, id: String, step: int) -> bool:
 	return true
 
 
-func shuffle(list: int, rng: RandomNumberGenerator) -> void:
+func shuffle_mixtape(list: int, rng: RandomNumberGenerator) -> void:
 	if list < 0 or list >= mixtapes.size():
 		return
 	var ids: Array = mixtapes[list]["ids"]

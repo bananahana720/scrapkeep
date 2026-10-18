@@ -78,7 +78,7 @@ One row per park element. A stage starts with 40 to 70 rows (start).
 | `y` | number or null | Absolute height for a piece that does not sit on the ground (a rail, a hung line, a floating island); null sits it on the baked ground |
 | `size` | [l, h, w] | Footprint and height in metres |
 | `yaw_deg` | number | Turn about the vertical axis |
-| `verb` | enum | The traversal verb it carries: `roll`, `pump`, `grind`, `launch`, `drop`, `swing`, `glide`, `lift`, `bank`, `slam` |
+| `verb` | enum | The traversal verb it carries: `roll`, `pump`, `grind`, `launch`, `drop`, `swing`, `glide`, `lift`, `bank`, `slam`, `cast` (a place the skill bar clears, not the ball: the pit's ability test) |
 | `ride_fact` | string | The `WORLD_ROWS` kind it publishes when ridden (`src/core/event_kinds.gd:824`), for example `ride_chute`, `ride_grapple_line`, `thermal_ride`; `kicker_launch` for a kicker; `""` for a plain `ground` row. New facts are added to `WORLD_ROWS` by unit KC0 |
 | `home` | string | A `home_rows` id this element houses, or `""`. The enemy kind lives on the home row, not here |
 | `recipe` | string | A recipe id from section 4 (`assets/models/park/<recipe>.glb`), `greybox:<element>` during greybox, or `""` for a height-only element |

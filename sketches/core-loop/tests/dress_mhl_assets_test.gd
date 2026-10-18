@@ -1,7 +1,7 @@
 extends SceneTree
 
 const ROOT := "res://assets/models/highdraft"
-const PROP := Vector3i(270, 610, 1)
+const PROP := Vector3i(1100, 800, 1)  # 2026-10-18 polish: was (270, 610, 1); prop class cap 2000 / 4600
 const SCENERY := Vector3i(120, 110, 2)
 const ASSETS := {
 	"thermal_vent": {"parts": ["MouthRim", "Grate", "DuctFoot"], "clips": {"idle": 0.1, "occupied": 0.1},

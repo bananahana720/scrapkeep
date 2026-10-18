@@ -19,6 +19,9 @@ extends SceneTree
 # fall back to greybox, and every other park row stays a greybox stand-in. A new swap updates DRESSED and
 # the stage page's swap and keep lists together. A row with recipe "" (a ground row) places nothing.
 #
+# Re-pinned 2026-10-17 for the dam kit (tests/park_recipes_dam_dressing_test.gd owns the recipes themselves): DRESSED now names
+# 44 rows. An anchors kit recipe (ParkRecipes.ANCHOR_KITS) is not a landform dressing and was already outside this table.
+#
 # Planted: a copy of the park with the Warden's family changed, one with two waymarks swapped, a
 # lines copy naming a row the park lacks, a pocket role changed, a stamp dropped from a placed row,
 # a line bent through an anchor field, a dressed row reverted to greybox and a kept row swapped to a
@@ -47,8 +50,29 @@ const SIGHT_SHARE := 0.85
 # of drift either side of a line before it meets a post.
 const LINE_CLEAR_M := 15.0
 const UNSTAMPED_OK := ["kicker", "anchor_field"]
-# KD1-DRESS, 2026-10-16: the rows dressed with a landform recipe GLB, and the recipe each names.
-const DRESSED := {"west_wash": "half_pipe_concrete", "upper_slot": "slot_canyon_flow", "corkscrew_slot": "slot_canyon_flow"}
+# KD1-DRESS, 2026-10-16: the rows dressed with a landform recipe GLB, and the recipe each names. 2026-10-17 (dam kit):
+# the 40 ride-lip greybox rows and `eye_mouth` join, each on its own drape recipe `dam_<row id>`
+# (tools/blender/park/dam_dressing.py). The slalom (stage page section 16) adds a survey gate flag on its seven gate domes and the benchmark on dome_11.
+const DRESSED := {"dome_5": "dam_survey_gate_red", "dome_6": "dam_survey_gate_red", "dome_15": "dam_survey_gate_red",
+	"dome_18": "dam_survey_gate_blue", "dome_19": "dam_survey_gate_blue", "dome_24": "dam_survey_gate_blue",
+	"dome_25": "dam_survey_gate_blue", "dome_11": "dam_survey_benchmark",
+	"west_wash": "half_pipe_concrete", "upper_slot": "slot_canyon_flow", "corkscrew_slot": "slot_canyon_flow",
+	"shelf_lip": "dam_shelf_lip", "wash_fin_west": "dam_wash_fin_west", "slot_fin_west": "dam_slot_fin_west",
+	"slot_fin_east": "dam_slot_fin_east", "slot_fin_far": "dam_slot_fin_far", "domes_fin_west": "dam_domes_fin_west",
+	"domes_fin_mid": "dam_domes_fin_mid", "domes_fin_east": "dam_domes_fin_east", "domes_kicker": "dam_domes_kicker",
+	"wash_kicker": "dam_wash_kicker", "upper_slot_step": "dam_upper_slot_step", "corkscrew_step": "dam_corkscrew_step",
+	"eye_fin_west": "dam_eye_fin_west", "eye_fin_east": "dam_eye_fin_east", "the_eye": "dam_the_eye",
+	"eye_mouth": "dam_eye_mouth", "eye_chute_west": "dam_eye_chute_west", "eye_chute_east": "dam_eye_chute_east",
+	"pool_rock": "dam_pool_rock", "pool_pillar": "dam_pool_pillar", "west_lane_fin": "dam_west_lane_fin",
+	"east_lane_fin": "dam_east_lane_fin", "incline_spine": "dam_incline_spine",
+	"training_wall_west": "dam_training_wall_west", "training_wall_east": "dam_training_wall_east",
+	"spillway_tunnel": "dam_spillway_tunnel", "outlet_bucket": "dam_outlet_bucket",
+	"cliff_rooms_west": "dam_cliff_rooms_west", "service_ledge": "dam_service_ledge",
+	"lobber_ledge": "dam_lobber_ledge", "tailwater_bar": "dam_tailwater_bar", "pipeline_bridge": "dam_pipeline_bridge",
+	"canal_lips": "dam_canal_lips", "east_abutment": "dam_east_abutment",
+	"eye_fall_spire_west": "dam_eye_fall_spire_west", "eye_fall_spire_east": "dam_eye_fall_spire_east",
+	"apron_kicker": "dam_apron_kicker", "plunge_pool": "dam_plunge_pool", "powerhouse": "dam_powerhouse",
+	"toe_vent_pits": "dam_toe_vent_pits", "crest_rail": "dam_crest_rail"}
 
 var t := T.new("park_park_dam_test")
 
@@ -123,10 +147,10 @@ func _run() -> void:
 	t.check("planted greybox west_wash fails the dressing pin", undressed.any(func(miss): return String(miss).begins_with("dressing:")), str(undressed))
 	planted = park.duplicate(true)
 	for row in planted["park_rows"]:
-		if row["id"] == "canal_lips":
+		if row["id"] == "gate_row_apron":
 			row["recipe"] = "canal_lip"
 	var overdressed := pins(planted, lines, graph, cells)
-	t.check("planted canal_lip swap fails the dressing pin", overdressed.any(func(miss): return String(miss).begins_with("dressing:")), str(overdressed))
+	t.check("planted canal_lip swap on a kept row fails the dressing pin", overdressed.any(func(miss): return String(miss).begins_with("dressing:")), str(overdressed))
 	quit(t.verdict())
 
 
