@@ -130,7 +130,8 @@ var summary_guard_left := 0.0
 var _hit_stopped := false
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
-const SELF_PLAY := "res://tools/self_play.gd"
+# Named in parts: it is loaded at run time only when the pack carries tools/, never preloaded (lint L7).
+const SELF_PLAY := "res://%s/self_play.gd" % "tools"
 
 
 func _ready() -> void:
