@@ -318,6 +318,15 @@ class Part:
             if len(f.verts) > 4 and _convex(f):
                 vs = [loop.vert for loop in f.loops]
                 color = tuple(f.loops[0][self.col])
+                if POLISH is not None:
+                    # Polish starts faces at their lowest corner, which can sit on a straight run
+                    # of corners and fan a zero-area triangle; start at the first corner that can't.
+                    def flat(k):
+                        w = vs[k:] + vs[:k]
+                        return any((w[i].co - w[0].co).cross(w[i + 1].co - w[0].co).length < 1e-9
+                                   for i in range(1, len(w) - 1))
+                    k = next((k for k in range(len(vs)) if not flat(k)), 0)
+                    vs = vs[k:] + vs[:k]
                 slot = f.material_index
                 self.bm.faces.remove(f)
                 for i in range(1, len(vs) - 1):
