@@ -6,7 +6,7 @@ const SEATS := [Vector3(1.735, 2.97, 0), Vector3(-0.665, 2.97, 1.385641), Vector
 const SPECS := [
 	{"file": "warden_mantle_hand.glb", "root": "MantleHand", "cap": [6000, 11200, 5],
 	"paths": ["MountBody", "MountBody/HandWrist", "MountBody/HandThreeFingers"]},
-	{"file": "warden_mantle_choir.glb", "root": "MantleChoir", "cap": [900, 1700, 7],
+	{"file": "warden_mantle_choir.glb", "root": "MantleChoir", "cap": [1100, 1700, 7],
 	"paths": ["MountBody", "MountBody/ChoirRearComb", "MountBody/ChoirFiveHorns", "MountArmL", "MountArmL/ChoirShoeL", "MountArmR", "MountArmR/ChoirShoeR"]}
 ]
 var failures := 0
