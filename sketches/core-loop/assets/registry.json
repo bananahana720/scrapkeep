@@ -3294,7 +3294,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -3306,7 +3306,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -3318,7 +3318,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the miners' drifts' wash (W 24, L 54): timber lagging on the walls, timber sets every 6 m beyond the crest (detail1), copper lamp brackets (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -3436,7 +3436,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -3448,7 +3448,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -3460,7 +3460,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the flooded gallery's wash (W 26, L 54): cream limestone carve band with petrol polish streaks; leaning slabs (detail1), drip cones (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -4029,7 +4029,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -4041,7 +4041,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -4053,7 +4053,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the natural lava tubes' wash (W 26, L 54): a polished glassy carve band on both walls with a pale lip line where the floor rule lets go, crust lips beyond the crest; fallen roof slabs (detail1), scoria spatter (detail2). Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -4065,7 +4065,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -4077,7 +4077,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {
@@ -4089,7 +4089,7 @@
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id with fit seat; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/sinkhole_tubes.py",
-    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is a strip buried under the floor centre for the seat fit's ends. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
+    "notes": "Sinkhole authored pass (Wall pays, 2026-10-17): the short lava tube (W 26, L 24) for rows under 40.5 m: as lava_wash. Dresses a stamp wash row and never rides it: the ride stays the baked terrain, the -col is two blocks buried 6 m under the floor at the row's ends, for the seat fit. Procedural, no external mesh or texture; vertex colour under the enamel slot. Guardrail: no living people named or depicted."
    }
   },
   {

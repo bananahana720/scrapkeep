@@ -46,6 +46,11 @@ const CINDER_REACH := 1.4
 # m/s/s along its planar travel, from 4 m/s up to the spec's `cap`. With #61's wall grip, carving lost speed against the
 # floor and every pilot's floor line beat its wall line by 3 to 18 s; the glaze is what makes the wall the fast line.
 const GLAZE_FROM := 4.0
+# The glaze's tell while it pushes: a glaze_skim fact (WORLD_ROWS: a pale wave and a skimming zip) on the first tick
+# and every GLAZE_GAP seconds after, so the band reads and sounds like a slick surface, not an invisible hand.
+const GLAZE_GAP := 1.2
+const CINDER_SHADER := preload("res://assets/materials/dig_stone/cinder.gdshader")
+const CINDER_GRAIN := preload("res://assets/textures/packed-sand-floor.webp")
 
 # The park's contraption skins (design-v3/PARK.md section 4, KC9): a spec with a `recipe` key draws that recipe's GLBs in
 # place of the code primitive; a spec without one, or whose GLBs are missing, draws the primitive it always drew. The
@@ -84,7 +89,7 @@ var thermals: Array[Dictionary] = []
 var cinders: Array[Dictionary] = []
 var glazes: Array[Dictionary] = []
 # One material for every cinder band, so the glow lights the whole floor at once.
-var _cinder_mat: StandardMaterial3D = null
+var _cinder_mat: ShaderMaterial = null
 var _cinder_glow := 0.0
 # False while a map's contraptions wait for a loop mode (the Spillway's return lift in
 # v2): world neither steps nor shows them.
@@ -93,6 +98,7 @@ var live := true
 var _puffs: Array[Dictionary] = []
 var _slams: Array[Vector3] = []
 var _thermal_quiet := 0.0
+var _glaze_quiet := 0.0
 var _gauge_mat: Material
 var _needle_mat: Material
 var _rust_mat: Material
@@ -207,6 +213,7 @@ func reset() -> void:
 		w["body"].visible = true
 	_slams.clear()
 	_thermal_quiet = 0.0
+	_glaze_quiet = 0.0
 	# Cache side walls are rebuilt by reset; finish them along with this zone's devices.
 	if map.get_script().resource_path == "res://src/world/map_reach.gd":
 		load("res://src/presentation/spillway_scenery.gd").dress_props(self)
@@ -279,10 +286,19 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 			facts.append({"kind": "fact", "fact": "thermal_ride", "at": ball})
 			facts.append({"kind": "codex", "id": "steam_thermal", "at": ball})
 	if not riding:
+		var glazed := false
 		for g in glazes:
 			if _on_glaze(g, ball, velocity):
 				facts.append({"kind": "carry", "accel": Vector3(velocity.x, 0.0, velocity.z).normalized() * float(g["spec"]["push"])})
+				glazed = true
 				break
+		if not glazed:
+			_glaze_quiet = 0.0
+		else:
+			_glaze_quiet -= delta
+			if _glaze_quiet <= 0.0:
+				_glaze_quiet = GLAZE_GAP
+				facts.append({"kind": "fact", "fact": "glaze_skim", "at": ball})
 		for c in cinders:
 			if _on_cinder(c, ball):
 				facts.append({"kind": "drag", "accel": -Vector3(velocity.x, 0.0, velocity.z) * float(c["spec"]["drag"])})
@@ -296,9 +312,7 @@ func set_cinder_glow(glow: float) -> void:
 	if _cinder_mat == null or is_equal_approx(glow, _cinder_glow):
 		return
 	_cinder_glow = glow
-	_cinder_mat.emission_enabled = glow > 0.0
-	_cinder_mat.emission = Palette.HAZARD
-	_cinder_mat.emission_energy_multiplier = 2.5 * glow
+	_cinder_mat.set_shader_parameter("glow", glow)
 
 
 # A puff of steam where a hot ball leaves the cinders.
@@ -309,7 +323,10 @@ func steam(at: Vector3) -> void:
 # A cinder spec's strips are [x, z, yaw_deg, length, half_width] on the ground; each draws as a dark grit band.
 func _build_cinder(spec: Dictionary) -> Dictionary:
 	if _cinder_mat == null:
-		_cinder_mat = Palette.solid(Palette.CHARCOAL)
+		_cinder_mat = ShaderMaterial.new()
+		_cinder_mat.shader = CINDER_SHADER
+		_cinder_mat.set_shader_parameter("tex_grain", CINDER_GRAIN)
+		_cinder_mat.set_shader_parameter("ember", Vector3(Palette.HAZARD.r, Palette.HAZARD.g, Palette.HAZARD.b))
 	var mat := _cinder_mat
 	var strips := []
 	for s: Array in spec["strips"]:
