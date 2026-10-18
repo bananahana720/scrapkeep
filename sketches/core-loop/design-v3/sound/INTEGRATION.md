@@ -44,14 +44,16 @@ A boss arrival freezes on the intro card under `boss_arena_in`, the versus sting
 
 | Moment | Cue |
 | --- | --- |
-| Launch | one of titles A, B or C, never the same twice in a row |
-| Camp | `camp`, 129 BPM, warm |
-| Stage roaming | `roam-<world>` at 172 |
+| Launch | the opening's theme: the title intro (`title_intros.gd`, `theme`) calls `audio.title_theme`, and title A (sax lead) or B (machine lead) starts on its first bar; with no opening, title A; with no pack for the theme, the plain title |
+| Camp | `camp`, 129 BPM, warm, while the camp page is open (`audio.camp_theme`); the title theme returns when it closes |
+| Stage roaming | `roam_<world>` at 172 on the shelf of every zone pack in that world (`MusicRows.SHELF`); the Warden's pivot, build, telegraph and drop keep the zone pack's own 129 clips, so no roaming bed plays inside an arena |
 | First fight in a stage | the pivot bar into the 129 combat layer: the world track, or the combat hype loop for ordinary fights |
-| Warden and world boss | the world's boss theme |
+| Warden and world boss | the Warden: the zone pack's combat layer. The world boss: its picked theme (`boss-brindle`, `boss-waking`, `boss-mind`) opens the fight, Brindle's p2 and p3 tracks follow, and the final phase plays its euro track |
 | World cleared | `stinger_world`, then the next world's roam |
-| Run won | `summary-win`, then on the final win the ending |
-| Run lost | `summary-loss`, with its wink |
+| Run won | theme C, the show opening, on the summary and on the final win's ending: the `summary` pack's return section (`audio.WON_SUMMARY_ROW`) plays two bars of theme C in D, then its loop lifted a whole step to E |
+| Run lost | the `summary` pack's travel loop, the jazz-club summary-loss, with its wink |
+
+Every pick whose Oggs are not on disk falls back to the pack it replaced: the zone pack's own shelf, the older boss theme, the plain title or the summary pack.
 
 ## 6. Variations: phases, champions, areas, buffs, switch-ups
 

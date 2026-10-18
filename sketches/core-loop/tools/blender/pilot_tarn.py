@@ -19,7 +19,14 @@ SKETCH = HERE.parents[1]
 OUT = ROOT / "artifacts/local/dress-preview/PTA"
 sys.path.insert(0, str(HERE))
 import common
+import polish
 import rig_pilot
+
+# Polish (POLISH.md): the face, ears, muzzle, jaw and hands subdivide once into
+# soft vinyl-toy forms; torso, shoulders, legs, tubes, claws and metal keep their authored
+# topology, smooth shaded with hard creases (no bevel: it doubled the hard-edge count).
+POLISH = {"detail": 1, "bevel": 0}
+SOFT_BONES = ("head", "ear.R", "ear.L", "snout", "jaw", "hand.R", "hand.L")
 
 ASH = "5e5a54"
 
@@ -193,6 +200,10 @@ def build_model():
                 t.part.paint([face], "pilot", "oxide" if i in (1, 4, 7) else ASH)
                 face.smooth = True
         t.part.paint([t.part.bm.faces.new(tuple(reversed(frames[0]))), t.part.bm.faces.new(frames[-1])], "pilot", ASH)
+    soft = {t.bones.index(name) + 1 for name in SOFT_BONES}
+    pilot_slot = t.part.slots.index("pilot")
+    polish.subdivide_where(t.part.bm, 1, lambda island: island[0].material_index == pilot_slot
+                           and island[0].verts[0][t.layer] in soft)
     obj = t.part.to_object()
     attr = obj.data.attributes["tarn_bone"]
     for index, name in enumerate(t.bones, 1):
@@ -209,6 +220,7 @@ def build_cap():
     for face in crown:
         face.smooth = True
     cap.beam("pilot", (-.10, .102, .396), (.10, .102, .396), .026, .011, color="petrol")
+    polish.subdivide_where(cap.bm, 1, lambda island: island[0] in crown)
     obj = cap.to_object()
     obj.vertex_groups.new(name="head").add([v.index for v in obj.data.vertices], 1, "REPLACE")
     return obj
@@ -249,9 +261,10 @@ def main():
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     OUT.mkdir(parents=True, exist_ok=True)
     common.reset()
+    polish.enable(**POLISH)
     mesh = build_model()
     cap = build_cap()
-    assert common.tris(mesh) + common.tris(cap) <= 4600, common.tris(mesh) + common.tris(cap)
+    assert common.tris(mesh) + common.tris(cap) <= 10600, common.tris(mesh) + common.tris(cap)
     if args.model:
         root = common.empty("TarnNeutral")
         mesh.parent = root
@@ -266,6 +279,7 @@ def main():
         arm = make_rig(mesh)
         cap.parent = arm
         cap.modifiers.new("Rigid cap weight", "ARMATURE").object = arm
+        polish.bake(arm)
         destination = args.out or SKETCH / "assets/models/pilot_tarn_anim.glb"
         animate_and_export(arm, mesh, destination)
         # animate_and_export exports the body only; export again with the Cap node selected,
@@ -279,7 +293,7 @@ def main():
             export_frame_range=False, export_force_sampling=True, export_def_bones=False,
             export_skins=True, export_yup=True, export_materials="EXPORT", export_vertex_color="ACTIVE",
             export_cameras=False, export_lights=False)
-        common.canonical_indices(str(destination))
+        common.canonical_indices(str(destination), vertices=common.POLISH is not None)
         print("TARN_CAP: PASS Cap node", common.tris(cap), "triangles, rigid on head")
         if args.preview:
             from preview_tarn import render_delivery

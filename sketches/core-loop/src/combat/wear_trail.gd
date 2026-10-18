@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # Rivet's Run and Gun wear trail (--world-one-builds=on, --wear=on, node r_run_gun). Each whole
 # unit of rolling wear (run_state.wear_taken) leaves one short arc patch on the ground the ball
@@ -12,7 +13,8 @@ const Palette := preload("res://src/core/palette.gd")
 #   DAMAGE per hit, RADIUS from the patch to an enemy's hull, LIFE seconds, MAX_LIVE at once
 #   (a new patch retires the oldest), and one hit per enemy per HIT_GAP across all patches.
 # Drawn as a thin ring that pulses and a short arc to a struck enemy through combat's Effects,
-# never a particle carpet. One soft sputter per patch: `patched` carries the spot, audio
+# never a particle carpet. Reduce flashes dims both to the information share and slows the
+# pulse to FlashGuard's 3 Hz cap. One soft sputter per patch: `patched` carries the spot, audio
 # plays it.
 
 const NODE_ID := "r_run_gun"
@@ -74,7 +76,7 @@ func step(delta: float, enemies: Array) -> void:
 	patches = patches.filter(func(p): return p["age"] < LIFE)
 	for patch in patches:
 		if _clock >= patch["pulse"]:
-			patch["pulse"] = _clock + PULSE
+			patch["pulse"] = _clock + FlashGuard.period(PULSE)
 			_effects.ring(patch["at"] + Vector3.UP * 0.05, RADIUS, _tone(1.0 - patch["age"] / LIFE))
 		for enemy in enemies:
 			_touch(patch, enemy)
@@ -93,7 +95,7 @@ func _on_wear(removed: float) -> void:
 # One patch where the ball is, if it is on ground. Airborne wear leaves nothing.
 func _place() -> void:
 	var player = _ctx.player
-	if not player.state.grounded:
+	if not player.state.on_floor():
 		return
 	var ball: Vector3 = player.ball_position()
 	var ground: Vector3 = _floor_at.call(ball)
@@ -141,5 +143,5 @@ func _touch(patch: Dictionary, enemy) -> void:
 
 func _tone(fade: float) -> Color:
 	var c := Palette.AMBER
-	c.a = clampf(0.25 + 0.5 * fade, 0.0, 1.0)
+	c.a = FlashGuard.info(clampf(0.25 + 0.5 * fade, 0.0, 1.0))
 	return c

@@ -89,7 +89,7 @@ func _live(_delta: float) -> bool:
 	var player = _player()
 	var ball := _real_ball()
 	var above: float = ball.y - Telegraph.ground_under(terrain, ball)
-	var airborne: bool = not player.state.grounded and above >= NET_FLOOR
+	var airborne: bool = not player.state.on_floor() and above >= NET_FLOOR
 	if not field.contains(ball) or (not _holding() and not airborne):
 		if _holding():
 			_release("left")

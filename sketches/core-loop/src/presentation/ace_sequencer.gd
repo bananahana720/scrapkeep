@@ -66,6 +66,8 @@ class Voice:
 	var wet := 0.0
 	var wet_target := 0.0
 	var wet_step := 0.0
+	# The clip's level against the pack's (a roaming take over a louder zone pack).
+	var trim := 1.0
 
 
 var manifest := {}
@@ -73,6 +75,8 @@ var manifest := {}
 var flat := false
 # The resolved manifest selected for this band, even when its Oggs are absent.
 var manifest_source := ""
+# The roaming take playing the shelf over a zone pack (MusicRows.SHELF), or "".
+var shelf_source := ""
 var clips := {}
 var sections := {}
 var streams := {}
@@ -140,7 +144,7 @@ static func from_stage(stage = "default", sidecar_dir := "", stages = MusicRows.
 	return load("res://src/presentation/ace_sequencer.gd").new(pack["ace_manifest"], sidecar_dir)
 
 
-func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
+func _init(manifest_path := MANIFEST, sidecar_dir := "", shelf := false) -> void:
 	rate_scale = AudioServer.get_mix_rate() / float(RATE)
 	if manifest_path == "":
 		return
@@ -181,7 +185,43 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 			streams[file] = stream
 			clip["paths"] = clip.get("paths", {})
 			clip["paths"][stem] = file
+	if shelf:
+		_overlay_shelf(sidecar_dir)
 	_report()
+
+
+# The world's picked roaming take replaces a zone pack's calm and travel clips (so home plays
+# it too); every Warden section keeps the zone pack's own clips. A take with an unreadable file
+# leaves the zone pack's shelf as it was.
+func _overlay_shelf(sidecar_dir: String) -> void:
+	var path := MusicRows.shelf_manifest(String(manifest.get("theme", "")), sidecar_dir)
+	if path == "":
+		return
+	var pick = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not pick is Dictionary or not pick.has("clips"):
+		return
+	var shelf := {}
+	var loaded := {}
+	for id in ["calm", "travel"]:
+		if not (pick["clips"] as Dictionary).has(id):
+			return
+		var clip: Dictionary = pick["clips"][id].duplicate(true)
+		clip["paths"] = {}
+		# The take plays at its own level, not the zone pack's (spillway is +4 dB).
+		clip["trim"] = db_to_linear(float(pick.get("level_db", 0.0))) / maxf(level, 0.000001)
+		for stem in stems:
+			var file := path.get_base_dir().path_join(String(clip["files"][stem]))
+			var stream := AudioStreamOggVorbis.load_from_file(file)
+			if stream == null:
+				return
+			stream.loop = bool(clip["loop"])
+			stream.loop_offset = float(clip["loop_offset"]) / RATE
+			loaded[file] = stream
+			clip["paths"][stem] = file
+		shelf[id] = clip
+	streams.merge(loaded, true)
+	clips.merge(shelf, true)
+	shelf_source = path
 
 
 # --ace-check: one line saying whether the band found its stems (the export proof reads it).
@@ -555,8 +595,8 @@ func _mix(at: int, span: int) -> void:
 			if w0 > 0.0 or v.wet > 0.0:
 				_lowpass(got, v, w0)
 			heard.append(got)
-			starts.append(g0 * l0)
-			ends.append(v.gain * l1)
+			starts.append(g0 * l0 * v.trim)
+			ends.append(v.gain * l1 * v.trim)
 			var last := starts.size() - 1
 			plain = plain and starts[last] == ends[last] and starts[last] == starts[0]
 	if heard.is_empty():
@@ -763,6 +803,7 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 	v.count = int(clip["sample_count"])
 	v.loop = bool(clip["loop"])
 	v.loop_offset = int(clip["loop_offset"])
+	v.trim = float(clip.get("trim", 1.0))
 	var g := _gain_of(gains, stem)
 	var hz = gains.get("lowpass_hz")
 	if hz != null:

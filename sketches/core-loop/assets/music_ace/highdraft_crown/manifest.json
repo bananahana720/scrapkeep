@@ -18,183 +18,239 @@
  "silent_db": -80.0,
  "sources": {
   "calm": {
-   "take": "809c92d6-02db-d3b7-8615-74905778ce2a",
-   "seed": 1186,
-   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/highdraft_crown/base-calm/809c92d6-02db-d3b7-8615-74905778ce2a.wav",
-   "trim_samples": 246144,
-   "timing": "authored guard-bar target, unverified",
-   "stems": {
-    "drums": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/809c92d6-02db-d3b7-8615-74905778ce2a/809c92d6-02db-d3b7-8615-74905778ce2a.drums.wav",
-     "sha256": "3c71912a74be84c3600ceeaa74bc22080d9a4c54d53f9180e7d17771e8ac74ce"
-    },
-    "bass": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/809c92d6-02db-d3b7-8615-74905778ce2a/809c92d6-02db-d3b7-8615-74905778ce2a.bass.wav",
-     "sha256": "76649a9ad1ac80239bddb2793d62d338e7a96e33ede7d43bbd82e96b83a5e985"
-    },
-    "other": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/809c92d6-02db-d3b7-8615-74905778ce2a/809c92d6-02db-d3b7-8615-74905778ce2a.other.wav",
-     "sha256": "59d972878c7ebfdc7ad46b91a01e88e0e41805b50dba379bebb86edf1accbe98"
+   "take": "roam-highdraft-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-highdraft-current.wav",
+   "render_sha256": "e1ce90f18436504c0b137ceb1ca45965c0afdd2ae6a59d93d8db7d1fd714f2ba",
+   "tempo_read": 170.95,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/drums.wav",
+      "sha256": "74b6589d02c5e6d1c2ea19a904194989d50caa6c278b9677e34daa10a74e92c3"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/bass.wav",
+      "sha256": "b6cceca2a5fb98cbdbf5cdbcedfab25b4ac54cc748cdbbaaa0c56a5f32889665"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/other.wav",
+      "sha256": "79d857e737676f64c0800e1c26ad64b3cd75e24ccd2f24459c28d7e1234cebc1"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/vocals.wav",
+      "sha256": "11abae8213d5cd093749c285ddf68c1b778c39349c421b432c2d551edb930ab2"
+     }
     }
    }
   },
   "travel": {
-   "take": "b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba",
-   "seed": 1186,
-   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/highdraft_crown/base-travel/b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba.wav",
-   "trim_samples": 246144,
-   "timing": "authored guard-bar target, unverified",
-   "stems": {
-    "drums": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba/b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba.drums.wav",
-     "sha256": "c7728ef72aeb95c15fc1d3de6fa26c5cc4e4253944a03f12aedae93fd24d23a6"
-    },
-    "bass": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba/b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba.bass.wav",
-     "sha256": "5db416ea2343fe5cba96784ba581781bfabc7a15d3dd4ff98dbf4c3938104a78"
-    },
-    "other": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba/b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba.other.wav",
-     "sha256": "3f416e042fcf0c5f242edd74d820c2beae6404d5ca7c2da6d87e10a6d794b9d8"
+   "take": "roam-highdraft-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-highdraft-current.wav",
+   "render_sha256": "e1ce90f18436504c0b137ceb1ca45965c0afdd2ae6a59d93d8db7d1fd714f2ba",
+   "tempo_read": 170.95,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/drums.wav",
+      "sha256": "74b6589d02c5e6d1c2ea19a904194989d50caa6c278b9677e34daa10a74e92c3"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/bass.wav",
+      "sha256": "b6cceca2a5fb98cbdbf5cdbcedfab25b4ac54cc748cdbbaaa0c56a5f32889665"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/other.wav",
+      "sha256": "79d857e737676f64c0800e1c26ad64b3cd75e24ccd2f24459c28d7e1234cebc1"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/vocals.wav",
+      "sha256": "11abae8213d5cd093749c285ddf68c1b778c39349c421b432c2d551edb930ab2"
+     }
     }
    }
   },
   "pivot": {
-   "take": "f8a3598c-b3c3-ac74-c8a5-b5e68ab32331",
-   "seed": 1186,
-   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/highdraft_crown/base-pivot/f8a3598c-b3c3-ac74-c8a5-b5e68ab32331.wav",
-   "trim_samples": 246144,
-   "timing": "authored guard-bar target, unverified",
-   "stems": {
-    "drums": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/f8a3598c-b3c3-ac74-c8a5-b5e68ab32331/f8a3598c-b3c3-ac74-c8a5-b5e68ab32331.drums.wav",
-     "sha256": "2e04b44baca3c0105b2ac7fc3c120ed41e8ffe4eff60437ed631ceea12980f22"
-    },
-    "bass": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/f8a3598c-b3c3-ac74-c8a5-b5e68ab32331/f8a3598c-b3c3-ac74-c8a5-b5e68ab32331.bass.wav",
-     "sha256": "e6d6bdccbbccf9b21eb27b84279f3f27300a5bc250ffd252452f5411e8fa116b"
-    },
-    "other": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/f8a3598c-b3c3-ac74-c8a5-b5e68ab32331/f8a3598c-b3c3-ac74-c8a5-b5e68ab32331.other.wav",
-     "sha256": "7e58e4828c1dd3244b30908ba276f698ec6bad53710849209ff31c871f845f7f"
+   "take": "highdraft-loop-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/highdraft-loop-spiced.wav",
+   "render_sha256": "dd8e0c21b50816043d4f6d5511e516deb489bcd13e278d00eeffb818ad546e70",
+   "tempo_read": 129.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/drums.wav",
+      "sha256": "6462694d4d7bec03ed5cfd1e9ace5c00e66e24afa3b5304de3cfeafd0e5625da"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/bass.wav",
+      "sha256": "e80c9b8714684d7d7d6b68c7f6ecdec356539dc3423ec469c4f6b27d87ae7253"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/other.wav",
+      "sha256": "4f673ce4d653718a4cb2d34fef220ba902d4321107063c56be968f291d186188"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/vocals.wav",
+      "sha256": "c355d5e574ce09e5f39f7322000597d6532ec6547bc66c233b70c523a701ea42"
+     }
     }
    }
   },
   "build": {
-   "take": "ed69843d-7b6d-457c-8bd0-b1cf6393dc6f",
-   "seed": 1186,
-   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/highdraft_crown/base-build/ed69843d-7b6d-457c-8bd0-b1cf6393dc6f.wav",
-   "trim_samples": 328192,
-   "timing": "authored guard-bar target, unverified",
-   "stems": {
-    "drums": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ed69843d-7b6d-457c-8bd0-b1cf6393dc6f/ed69843d-7b6d-457c-8bd0-b1cf6393dc6f.drums.wav",
-     "sha256": "f3c038f825337207d442458bc44e90245303c6c6b8bd2a23f4eb06da832a4b94"
-    },
-    "bass": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ed69843d-7b6d-457c-8bd0-b1cf6393dc6f/ed69843d-7b6d-457c-8bd0-b1cf6393dc6f.bass.wav",
-     "sha256": "5638b3d658b92dcfcfaea49b11f3cd5353310f357ee67932ae43ae0a1bc6a646"
-    },
-    "other": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ed69843d-7b6d-457c-8bd0-b1cf6393dc6f/ed69843d-7b6d-457c-8bd0-b1cf6393dc6f.other.wav",
-     "sha256": "54d0274e4ec9dc6a1d40cd742c1344b2d33f9c342b57d6fb90142af958bdce01"
+   "take": "highdraft-loop-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/highdraft-loop-spiced.wav",
+   "render_sha256": "dd8e0c21b50816043d4f6d5511e516deb489bcd13e278d00eeffb818ad546e70",
+   "tempo_read": 129.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/drums.wav",
+      "sha256": "6462694d4d7bec03ed5cfd1e9ace5c00e66e24afa3b5304de3cfeafd0e5625da"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/bass.wav",
+      "sha256": "e80c9b8714684d7d7d6b68c7f6ecdec356539dc3423ec469c4f6b27d87ae7253"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/other.wav",
+      "sha256": "4f673ce4d653718a4cb2d34fef220ba902d4321107063c56be968f291d186188"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/vocals.wav",
+      "sha256": "c355d5e574ce09e5f39f7322000597d6532ec6547bc66c233b70c523a701ea42"
+     }
     }
    }
   },
   "telegraph": {
-   "take": "ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c",
-   "seed": 1186,
-   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/highdraft_crown/base-telegraph/ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c.wav",
-   "trim_samples": 328192,
-   "timing": "authored guard-bar target, unverified",
-   "stems": {
-    "drums": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c/ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c.drums.wav",
-     "sha256": "19aa79154c31627b32363744da78f3f3e1f6a14aabfc69c9c1736261e65aa16e"
-    },
-    "bass": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c/ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c.bass.wav",
-     "sha256": "35c412bb07fceaffd529fda53c25dc7c6e023c47941126e03828a7f89a320cf9"
-    },
-    "other": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c/ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c.other.wav",
-     "sha256": "f66690deeda69aa05624a3276869f72f21f00f2d23197c4d2142ecb361f5c21b"
+   "take": "highdraft-loop-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/highdraft-loop-spiced.wav",
+   "render_sha256": "dd8e0c21b50816043d4f6d5511e516deb489bcd13e278d00eeffb818ad546e70",
+   "tempo_read": 129.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/drums.wav",
+      "sha256": "6462694d4d7bec03ed5cfd1e9ace5c00e66e24afa3b5304de3cfeafd0e5625da"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/bass.wav",
+      "sha256": "e80c9b8714684d7d7d6b68c7f6ecdec356539dc3423ec469c4f6b27d87ae7253"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/other.wav",
+      "sha256": "4f673ce4d653718a4cb2d34fef220ba902d4321107063c56be968f291d186188"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/vocals.wav",
+      "sha256": "c355d5e574ce09e5f39f7322000597d6532ec6547bc66c233b70c523a701ea42"
+     }
     }
    }
   },
   "open": {
-   "take": "98fd1b81-d766-8398-e577-9909cce37684",
-   "seed": 1186,
-   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/highdraft_crown/base-open/98fd1b81-d766-8398-e577-9909cce37684.wav",
-   "trim_samples": 328192,
-   "timing": "authored guard-bar target, unverified",
-   "stems": {
-    "drums": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/98fd1b81-d766-8398-e577-9909cce37684/98fd1b81-d766-8398-e577-9909cce37684.drums.wav",
-     "sha256": "578499c5a1bbcb18e8e9c5fe7650fa832e9fab4f21d6a27e5777c23134b3f669"
-    },
-    "bass": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/98fd1b81-d766-8398-e577-9909cce37684/98fd1b81-d766-8398-e577-9909cce37684.bass.wav",
-     "sha256": "2cde90494fd3fe551ea91b9a4e30bb96c46f02f6f3d120d5a624f0d4d1273f28"
-    },
-    "other": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/98fd1b81-d766-8398-e577-9909cce37684/98fd1b81-d766-8398-e577-9909cce37684.other.wav",
-     "sha256": "522dc7623aa2617ea56659c7a208716ab23f1619b775375e89e2226188937e48"
+   "take": "highdraft-loop-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/highdraft-loop-spiced.wav",
+   "render_sha256": "dd8e0c21b50816043d4f6d5511e516deb489bcd13e278d00eeffb818ad546e70",
+   "tempo_read": 129.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/drums.wav",
+      "sha256": "6462694d4d7bec03ed5cfd1e9ace5c00e66e24afa3b5304de3cfeafd0e5625da"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/bass.wav",
+      "sha256": "e80c9b8714684d7d7d6b68c7f6ecdec356539dc3423ec469c4f6b27d87ae7253"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/other.wav",
+      "sha256": "4f673ce4d653718a4cb2d34fef220ba902d4321107063c56be968f291d186188"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/vocals.wav",
+      "sha256": "c355d5e574ce09e5f39f7322000597d6532ec6547bc66c233b70c523a701ea42"
+     }
     }
    }
   },
   "drop": {
-   "take": "3e78ea82-dc7d-93b0-0372-127ca18f19df",
-   "seed": 1186,
-   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/highdraft_crown/base-drop/3e78ea82-dc7d-93b0-0372-127ca18f19df.wav",
-   "trim_samples": 328192,
-   "timing": "authored guard-bar target, unverified",
-   "stems": {
-    "drums": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/3e78ea82-dc7d-93b0-0372-127ca18f19df/3e78ea82-dc7d-93b0-0372-127ca18f19df.drums.wav",
-     "sha256": "56fd8d9c406ebc6834ae950dd13f059404a9dbae094ba71c706679bf38a0b8b3"
-    },
-    "bass": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/3e78ea82-dc7d-93b0-0372-127ca18f19df/3e78ea82-dc7d-93b0-0372-127ca18f19df.bass.wav",
-     "sha256": "e55bc90a48352e734a195aeae2e44664a13d920b92ef0611bf9db4e4e97954ab"
-    },
-    "other": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/3e78ea82-dc7d-93b0-0372-127ca18f19df/3e78ea82-dc7d-93b0-0372-127ca18f19df.other.wav",
-     "sha256": "36b079173602e1831d467e3aea7fb57c699f131cc7933605ea90da2b645df685"
+   "take": "highdraft-loop-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/highdraft-loop-spiced.wav",
+   "render_sha256": "dd8e0c21b50816043d4f6d5511e516deb489bcd13e278d00eeffb818ad546e70",
+   "tempo_read": 129.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/drums.wav",
+      "sha256": "6462694d4d7bec03ed5cfd1e9ace5c00e66e24afa3b5304de3cfeafd0e5625da"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/bass.wav",
+      "sha256": "e80c9b8714684d7d7d6b68c7f6ecdec356539dc3423ec469c4f6b27d87ae7253"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/other.wav",
+      "sha256": "4f673ce4d653718a4cb2d34fef220ba902d4321107063c56be968f291d186188"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-spiced/vocals.wav",
+      "sha256": "c355d5e574ce09e5f39f7322000597d6532ec6547bc66c233b70c523a701ea42"
+     }
     }
    }
   },
   "cadence": {
-   "take": "ac8320ec-93d1-6b15-be30-8e0d632e82e4",
-   "seed": 1186,
-   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/highdraft_crown/base-cadence/ac8320ec-93d1-6b15-be30-8e0d632e82e4.wav",
-   "trim_samples": 328192,
-   "timing": "authored guard-bar target, unverified",
-   "stems": {
-    "drums": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ac8320ec-93d1-6b15-be30-8e0d632e82e4/ac8320ec-93d1-6b15-be30-8e0d632e82e4.drums.wav",
-     "sha256": "2513da7e6b4e1aec248a668f94e448de74f0aa690151ba1033995e9b3dca5dee"
-    },
-    "bass": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ac8320ec-93d1-6b15-be30-8e0d632e82e4/ac8320ec-93d1-6b15-be30-8e0d632e82e4.bass.wav",
-     "sha256": "dc6356c771cec9274c022075474da813780886b9ffe4ebfddb35efd713917d7a"
-    },
-    "other": {
-     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/ac8320ec-93d1-6b15-be30-8e0d632e82e4/ac8320ec-93d1-6b15-be30-8e0d632e82e4.other.wav",
-     "sha256": "3988a8b3cd30068cf88890d3601cdf413e2ab25fcd3b4bca3552e1bc5363deaa"
+   "take": "highdraft-loop-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/highdraft-loop-current.wav",
+   "render_sha256": "3b5d7cc0819810b27058048c2b6e0ac25563d4c7cb1df1d421dbc4e5734c9b9b",
+   "tempo_read": 129.01,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-current/drums.wav",
+      "sha256": "2c4fef8dfa1bd5e8a1b71c86e7b81adc6d51a4c8ae16f26b29729864702547c8"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-current/bass.wav",
+      "sha256": "18bf546c04eb03e089138dbc3308057e930275b8e3d39ed2c67c4276284dcd86"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-current/other.wav",
+      "sha256": "7df358836ce272af2fefe9393fcdd0ead5957c07405088ba0065d102c0268c24"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stretched/highdraft-loop-current/vocals.wav",
+      "sha256": "ffee96d284ff9c99a12f5733ef01f3635dfde8f6c7b35dd79763c0ed8fab780e"
+     }
     }
    }
   }
  },
  "clips": {
   "calm": {
-   "parent": "base",
-   "take": "809c92d6-02db-d3b7-8615-74905778ce2a",
-   "source_state": "base-calm",
-   "source_bars": "5-20",
-   "source_start": 246144,
-   "take_start": 246144,
-   "bpm": 172,
+   "parent": "zone",
+   "take": "roam-highdraft-current",
+   "source_state": "roam-highdraft-current bars 12-27",
+   "source_bars": "13-28",
+   "source_start": 750003,
+   "take_start": 750003,
+   "bpm": 172.0,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -211,16 +267,24 @@
     "drums": "calm.drums.ogg",
     "bass": "calm.bass.ogg",
     "other": "calm.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": 0.0,
+   "gain_db": -0.4,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.5,
+    "note": "summed stems before Ogg encode"
    }
   },
   "travel": {
-   "parent": "base",
-   "take": "b6a68a82-f9d8-ef1f-8e47-aca7c4de43ba",
-   "source_state": "base-travel",
-   "source_bars": "5-20",
-   "source_start": 246144,
-   "take_start": 246144,
-   "bpm": 172,
+   "parent": "zone",
+   "take": "roam-highdraft-current",
+   "source_state": "roam-highdraft-current bars 28-43",
+   "source_bars": "29-44",
+   "source_start": 1734561,
+   "take_start": 1734561,
+   "bpm": 172.0,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -237,42 +301,58 @@
     "drums": "travel.drums.ogg",
     "bass": "travel.bass.ogg",
     "other": "travel.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": 0.0,
+   "gain_db": 0.6,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.1,
+    "note": "summed stems before Ogg encode"
    }
   },
   "pivot": {
-   "parent": "base",
-   "take": "f8a3598c-b3c3-ac74-c8a5-b5e68ab32331",
-   "source_state": "base-pivot",
-   "source_bars": "5-5",
-   "source_start": 246144,
-   "take_start": 246144,
-   "bpm": 172,
-   "beat": 15384,
-   "bar": 61536,
+   "parent": "zone",
+   "take": "highdraft-loop-spiced",
+   "source_state": "highdraft-loop-spiced bars 7-7",
+   "source_bars": "8-8",
+   "source_start": 1887070,
+   "take_start": 1887070,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
    "beats_per_bar": 4,
    "bars": 1,
    "entry": 4096,
-   "exit": 65632,
+   "exit": 86144,
    "loop": false,
    "loop_offset": 0,
    "loop_to_bar": null,
-   "sample_count": 66656,
+   "sample_count": 87168,
    "key": "G",
    "key_offset": 5,
    "files": {
     "drums": "pivot.drums.ogg",
     "bass": "pivot.bass.ogg",
     "other": "pivot.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 0.0,
+   "gain_db": 0.6,
+   "measured": {
+    "lufs": -15.8,
+    "true_peak": -2.9,
+    "note": "summed stems before Ogg encode"
    }
   },
   "build": {
-   "parent": "base",
-   "take": "ed69843d-7b6d-457c-8bd0-b1cf6393dc6f",
-   "source_state": "base-build",
-   "source_bars": "5-20",
-   "source_start": 328192,
-   "take_start": 328192,
-   "bpm": 129,
+   "parent": "zone",
+   "take": "highdraft-loop-spiced",
+   "source_state": "highdraft-loop-spiced bars 8-23",
+   "source_bars": "9-24",
+   "source_start": 1969116,
+   "take_start": 1969116,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -289,16 +369,24 @@
     "drums": "build.drums.ogg",
     "bass": "build.bass.ogg",
     "other": "build.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 0.0,
+   "gain_db": 0.6,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.3,
+    "note": "summed stems before Ogg encode"
    }
   },
   "telegraph": {
-   "parent": "base",
-   "take": "ac9eddeb-1c1b-4320-b7ab-e6b6d80a9b9c",
-   "source_state": "base-telegraph",
-   "source_bars": "5-8",
-   "source_start": 328192,
-   "take_start": 328192,
-   "bpm": 129,
+   "parent": "zone",
+   "take": "highdraft-loop-spiced",
+   "source_state": "highdraft-loop-spiced bars 16-19",
+   "source_bars": "17-20",
+   "source_start": 2625488,
+   "take_start": 2625488,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -315,16 +403,24 @@
     "drums": "telegraph.drums.ogg",
     "bass": "telegraph.bass.ogg",
     "other": "telegraph.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 0.0,
+   "gain_db": 0.6,
+   "measured": {
+    "lufs": -16.9,
+    "true_peak": -2.6,
+    "note": "summed stems before Ogg encode"
    }
   },
   "open": {
-   "parent": "base",
-   "take": "98fd1b81-d766-8398-e577-9909cce37684",
-   "source_state": "base-open",
-   "source_bars": "5-8",
-   "source_start": 328192,
-   "take_start": 328192,
-   "bpm": 129,
+   "parent": "zone",
+   "take": "highdraft-loop-spiced",
+   "source_state": "highdraft-loop-spiced bars 12-15",
+   "source_bars": "13-16",
+   "source_start": 2297302,
+   "take_start": 2297302,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -341,16 +437,24 @@
     "drums": "open.drums.ogg",
     "bass": "open.bass.ogg",
     "other": "open.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 0.0,
+   "gain_db": 0.6,
+   "measured": {
+    "lufs": -15.5,
+    "true_peak": -2.4,
+    "note": "summed stems before Ogg encode"
    }
   },
   "drop": {
-   "parent": "base",
-   "take": "3e78ea82-dc7d-93b0-0372-127ca18f19df",
-   "source_state": "base-drop",
-   "source_bars": "5-8",
-   "source_start": 328192,
-   "take_start": 328192,
-   "bpm": 129,
+   "parent": "zone",
+   "take": "highdraft-loop-spiced",
+   "source_state": "highdraft-loop-spiced bars 20-23",
+   "source_bars": "21-24",
+   "source_start": 2953674,
+   "take_start": 2953674,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -367,16 +471,24 @@
     "drums": "drop.drums.ogg",
     "bass": "drop.bass.ogg",
     "other": "drop.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 0.0,
+   "gain_db": 0.6,
+   "measured": {
+    "lufs": -17.0,
+    "true_peak": -2.6,
+    "note": "summed stems before Ogg encode"
    }
   },
   "cadence": {
-   "parent": "base",
-   "take": "ac8320ec-93d1-6b15-be30-8e0d632e82e4",
-   "source_state": "base-cadence",
-   "source_bars": "5-6",
-   "source_start": 328192,
-   "take_start": 328192,
-   "bpm": 129,
+   "parent": "zone",
+   "take": "highdraft-loop-current",
+   "source_state": "highdraft-loop-current bars 22-23",
+   "source_bars": "23-24",
+   "source_start": 3117767,
+   "take_start": 3117767,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -393,6 +505,14 @@
     "drums": "cadence.drums.ogg",
     "bass": "cadence.bass.ogg",
     "other": "cadence.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": 0.0,
+   "gain_db": 0.46,
+   "measured": {
+    "lufs": -16.3,
+    "true_peak": -2.8,
+    "note": "summed stems before Ogg encode"
    }
   }
  },
@@ -585,6 +705,7 @@
   }
  },
  "breath_default": "hard",
- "cuts": "nominal-unverified",
- "timing_verified": false
+ "cuts": "measured-beat-phase",
+ "timing_verified": false,
+ "pick": "sound-bible-2026-10-16/spice"
 }

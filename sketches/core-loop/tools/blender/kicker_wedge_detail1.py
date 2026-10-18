@@ -15,6 +15,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import polish
 from kicker_wedge import (kit, common, TONES, tone, face, slab, stud, stripes, ride_check, plane_y, NORMAL, LENGTH, TOP,
                           HALF, CHEEK, SKIRT, SLOPE, FACE_SINK, RIDE_PROUD, CAP_V, CAP_GAP, MODELS)
 
@@ -96,6 +97,7 @@ def export(out_dir):
 
 
 def main():
+    polish.enable(bevel=.02, bevel_min=.25, **kit.BAKE)  # light shell polish: smooth shading, bake
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))

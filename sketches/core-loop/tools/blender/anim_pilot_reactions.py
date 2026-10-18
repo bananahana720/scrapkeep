@@ -312,6 +312,7 @@ def author(pilot, reference):
         export_animations=True, export_animation_mode='ACTIONS', export_anim_slide_to_zero=True,
         export_frame_range=False, export_force_sampling=True, export_def_bones=False,
         export_skins=True, export_yup=True, export_materials='EXPORT', export_cameras=False, export_lights=False)
+    rig.common.canonical_indices(str(dest), vertices=rig.common.POLISH is not None)
     bpy.ops.wm.save_as_mainfile(filepath=str(out / f'{pilot}-reactions.blend'))
 
 

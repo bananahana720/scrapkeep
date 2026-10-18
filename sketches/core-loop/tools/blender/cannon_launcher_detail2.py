@@ -12,6 +12,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cannon_launcher as cl
+import polish
 from cannon_launcher import Frame, frustum, around, ring, slab, tone
 from cannon_launcher_detail1 import stud, on_barrel, perp, DETAIL
 
@@ -81,6 +82,7 @@ def build(s):
 
 
 def main():
+    polish.enable(bevel=.02, bevel_min=.25, **cl.kit.BAKE)  # light shell polish: smooth shading, bake
     cl.export(NAME, [("Detail2", "steel", False, build)], {}, cl.out_dir(), budget=DETAIL, tag="CANNON_D2", size=SIZE)
 
 

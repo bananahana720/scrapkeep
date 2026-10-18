@@ -27,9 +27,10 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from ore_cart import kit, common
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [270, 610, 1]
+PROP = [520, 520, 1]  # polish: was [270, 610, 1]; class cap 2,000 T / 4,600 V
 
 # One row per painted part, palette names only (src/core/palette.gd; slate is SLATE 6f7f8f, absent from common.HEX).
 # The picture's orange is HAZARD, reserved for hostile reads (palette.gd:18), so the stripes are AMBER; its yellow cap
@@ -162,7 +163,7 @@ def body(s):
         rise = SKIRT[1] * LENGTH / TOP
         extrude_x(s, [(0, 0), (LENGTH, 0), (LENGTH, SKIRT[1]), (rise, SKIRT[1])], x_out, side * (HALF + SKIRT[0]), tone("body"))
         for z, y in RIVETS:
-            stud(s, (side * (HALF + (SKIRT[0] if y < SKIRT[1] else 0)), y, z), (side, 0, 0), .09, .06, .05, tone("rivet"))
+            stud(s, (side * (HALF + (SKIRT[0] if y < SKIRT[1] else 0)), y, z), (side, 0, 0), .09, .06, .05, tone("rivet"), sides=8)
     # Face plate between the cheeks, 1 cm under the plane, down to the cap bar.
     # Its lower edge stays at or above the floor, so the leading edge is flush and nothing hangs under y 0.
     top0, top1, bot1 = face(0, .06, -FACE_SINK), face(0, CAP_V, -FACE_SINK), face(0, CAP_V, -.08)
@@ -225,6 +226,11 @@ def export(name, part, slot, build, sockets, out_dir):
 
 
 def main():
+    # Polish: smooth shading with creases, bake, a 2 cm bevel on the long edges only (bevel_min keeps bolts cheap); the
+    # stripes and cap are decals on the plane, so they stay unbevelled. ride_check runs on the unpolished verts and
+    # a bevel only pulls surfaces inward, so the ride face stays flat and under RIDE_PROUD.
+    polish.enable(bevel=.02, bevel_min=.3, **kit.BAKE)
+    kit.FINISH.update({"Stripes": {"bevel": 0}})
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))

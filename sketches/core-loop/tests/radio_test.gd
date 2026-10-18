@@ -267,8 +267,8 @@ func _run() -> void:
 	var cache_wanted: Array = RadioCache.wanted("park_dam", func(id): return profile.has_tune(id), spots)
 	_t.eq("a placed cache of the park is wanted", cache_wanted, [[cache_take, Vector3(1.0, 2.0, 3.0)]])
 	# 2026-10-17 (stage/alpha-w16): spots now cover several parks, so count only the dam's cache takes that have one.
-	var dam_spotted := RadioTakes.takes().filter(func(t): return t["found"].get("on") == "cache" and t["found"].get("park") == "park_dam"
-		and RadioCache.spots().has(String(t["id"]))).size()
+	var dam_spotted := RadioTakes.takes().filter(func(t): return (t["found"].get("on") == "cache" and t["found"].get("park") == "park_dam"
+		and RadioCache.spots().has(String(t["id"])))).size()
 	_t.eq("one with no spot is not", RadioCache.wanted("park_dam", func(id): return false, {}).size(), dam_spotted)
 	var cache = RadioCache.new()
 	cache.take_id = cache_take

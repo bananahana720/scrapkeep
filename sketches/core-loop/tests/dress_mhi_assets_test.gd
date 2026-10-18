@@ -2,7 +2,7 @@ extends SceneTree
 
 const DEFAULT_DIR := "res://assets/models/highdraft"
 const LAND_CAP := [8000, 24000, 1]
-const PROP_CAP := [270, 610, 1]
+const PROP_CAP := [400, 450, 1]  # 2026-10-18 polish: was [270, 610, 1]; prop class cap 2000 / 4600
 const PIECES := {
 	"island_small": ["StoneTop", "OffsetKeel"],
 	"island_medium": ["StoneTop", "TwinKeel", "TwinKeel_l", "TwinKeel_r"],

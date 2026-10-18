@@ -143,7 +143,7 @@ func _run() -> void:
 	root.add_child(scene)
 	var m := _measure(scene)
 	print("IMPORTED %d V / %d T / %d D" % [m.vertices, m.tris, m.draws])
-	_check(m.tris > 0 and m.tris <= 1200, "asset-tris", "imported triangles <= 1200")
+	_check(m.tris > 0 and m.tris <= 3300, "asset-tris", "imported triangles <= 3300 (polished; was 1200)")
 	_check(m.draws == 3, "asset-draws", "imported body two surfaces and paddle one surface")
 	_check(m.opaque, "asset-alpha", "imported materials and vertex colours opaque")
 	game.ctx.calm = true
@@ -153,7 +153,7 @@ func _run() -> void:
 	second.set_physics_process(false)
 	var live := _measure(unit)
 	print("LIVE %d V / %d T / %d D" % [live.vertices, live.tris, live.draws])
-	_check(live.tris > 0 and live.tris <= 1200, "live-tris", "full live assembly <= 1200 T, including hidden meshes")
+	_check(live.tris > 0 and live.tris <= 3300, "live-tris", "full live assembly <= 3300 T, including hidden meshes")
 	_check(live.draws > 0 and live.draws <= 3, "live-draws", "full live assembly <= 3 colour-pass surfaces")
 	_check(live.opaque, "live-alpha", "full live assembly has no material or vertex alpha")
 	_check(scene.find_children("*", "Light3D", true, false).is_empty() and unit.find_children("*", "Light3D", true, false).is_empty(),

@@ -19,7 +19,7 @@ extends SceneTree
 #
 # What it checks, in order:
 #   budget    shell surfaces 15; tris without the pilot 3,000 to 6,500; verts within the shell
-#             class; shell plus rig under the 16,000 T / 15,000 V / 21 draw pod ceiling.
+#             class; shell plus rig under the 19,000 T / 18,000 V / 21 draw pod ceiling.
 #   tree      named nodes and parents, no FlightStick, exactly two pedals.
 #   materials section 9 slots only, no glass or requisition_tag, paint colours petrol, oxide,
 #             bone or charcoal, one class_accent surface (Mortar, at the launcher mouths),
@@ -49,8 +49,11 @@ const RIG := "res://assets/models/pilot_kest_anim.glb"
 const SURFACES := 15
 const SHELL_TRIS := Vector2i(3000, 6500)
 const SHELL_VERTS := 11600
-const MAX_V := 15000
-const MAX_T := 16000
+# 2026-10-18 coordinator call: polish raises the pod ceiling from 16,000 T / 15,000 V to
+# 19,000 T / 18,000 V, pending the 4080 densest-fight frame check; if it misses budget,
+# Kest returns unpolished.
+const MAX_V := 18000
+const MAX_T := 19000
 const MAX_DRAWS := 21
 const LATTICE_OUTER := 0.975
 const CORE_LIMIT := 0.985
@@ -78,7 +81,7 @@ const RIG_BONES := [
 	"goggles", "jaw", "snout", "shoulder.L", "upper_arm.L", "lower_arm.L", "hand.L", "curl.L",
 	"shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R", "curl.R", "tool.R", "tail.01", "tail.02",
 ]
-const RIG_TRIS := Vector2i(4447, 4537)
+const RIG_TRIS := Vector2i(10720, 10936)
 const RIG_MESHES := {"Pilot": ["pilot"], "WingFan_L": ["pilot"], "WingFan_R": ["pilot"], "WingUpper_L": ["pilot"], "WingUpper_R": ["pilot"]}
 
 var _t := T.new("world_one_shell_kest_test")

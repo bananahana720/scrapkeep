@@ -9,7 +9,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # from z -0.35), widened for the anchor crown and the longer harpoon with its whole pose travel.
 # The base contract: the hooker's collider, hitbox, lane, tether, timing and rating are the values
 # hooker.gd had before the dressing swap, and the anchor (the tether endpoint) is 3.1 m above the origin.
-const CEILING_T := 1200
+const CEILING_T := 6800  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 const CEILING_D := 3
 const X_MIN := -1.0
 const X_MAX := 1.6
@@ -133,7 +133,7 @@ func _run() -> void:
 	_check(hooker.find_child("HookerBody", true, false) != null and hooker.find_child("HookerHarpoon", true, false) != null,
 		"the live Hooker carries its HookerBody dressing and HookerHarpoon")
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within %d / 3" % [live["tris"], live["draws"], CEILING_T])
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check_envelope(hooker, "live rest")
 	_check_pose(hooker)

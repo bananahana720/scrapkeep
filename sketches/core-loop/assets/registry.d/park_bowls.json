@@ -98,6 +98,39 @@
       "provenance": {
         "recipe": "tools/blender/park/bowls.py"
       }
+    },
+    {
+      "id": "pit_haul_lane",
+      "path": "res://assets/models/park/pit_haul_lane.glb",
+      "class": "landform",
+      "origin": "entry_lip",
+      "ships": true,
+      "loader": "src/world/park/park_recipes.gd",
+      "provenance": {
+        "recipe": "tools/blender/park/bowls.py"
+      }
+    },
+    {
+      "id": "pit_haul_lane_detail1",
+      "path": "res://assets/models/park/pit_haul_lane_detail1.glb",
+      "class": "detail",
+      "origin": "entry_lip",
+      "ships": true,
+      "loader": "src/world/park/park_recipes.gd",
+      "provenance": {
+        "recipe": "tools/blender/park/bowls.py"
+      }
+    },
+    {
+      "id": "pit_haul_lane_detail2",
+      "path": "res://assets/models/park/pit_haul_lane_detail2.glb",
+      "class": "detail",
+      "origin": "entry_lip",
+      "ships": true,
+      "loader": "src/world/park/park_recipes.gd",
+      "provenance": {
+        "recipe": "tools/blender/park/bowls.py"
+      }
     }
   ]
 }

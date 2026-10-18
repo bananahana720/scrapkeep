@@ -421,6 +421,9 @@ func _on_pressed() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if _look_input(event):
+		accept_event()
+		return
 	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_X and is_open() and not locked:
 		cycle_paint()
 		accept_event()
@@ -428,6 +431,29 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_P and is_open() and not locked:
 		cycle_paint()
 		accept_event()
+
+
+# Look closer at the pilot (class_preview.gd): right-drag or the right stick orbits, the wheel
+# zooms while the right button is held. Locked pilots can be looked at too.
+func _look_input(event: InputEvent) -> bool:
+	if preview == null or not preview.has_method("look_drag"):
+		return false
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_RIGHT:
+			preview.look_dragging = event.pressed
+			preview.look_drag(Vector2.ZERO)
+			return true
+		if preview.look_dragging and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			preview.look_zoom(1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0)
+			return true
+	elif event is InputEventMouseMotion and preview.look_dragging:
+		preview.look_drag(event.relative)
+		return true
+	elif event is InputEventJoypadMotion and event.axis in [JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y] and absf(event.axis_value) > 0.2:
+		var push := Vector2(event.axis_value, 0.0) if event.axis == JOY_AXIS_RIGHT_X else Vector2(0.0, event.axis_value)
+		preview.look_drag(push * 18.0)
+		return true
+	return false
 
 
 func _name_row(color: Color, width: float) -> HBoxContainer:

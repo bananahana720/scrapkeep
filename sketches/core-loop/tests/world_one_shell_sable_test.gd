@@ -36,7 +36,7 @@ const RIG_BONES := [
 	"shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R", "curl.R", "tool.R", "tail.01", "tail.02",
 ]
 # The triangle range allows one percent of export variation; pod ceilings above stay fixed.
-const RIG_TRIS := Vector2i(4546, 4638)
+const RIG_TRIS := Vector2i(9714, 9910)
 const RIG_MESHES := {"Pilot": ["pilot"], "TailBase": ["pilot"], "TailTip": ["pilot"], "Tool": ["bare_metal", "class_accent"]}
 # Godot names of the nodes the kit, the clips and the loader read (Blender dots become underscores).
 const POD_NODES := ["Gyro", "WeaponRing", "Dome", "CoilMast", "WrenchRack", "RopeExit", "DecalPlate",

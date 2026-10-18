@@ -41,7 +41,7 @@ ROSTER = SKETCH / 'src/presentation/clips/roster.json'
 TABLES = SKETCH / 'src/presentation/clips'
 EVIDENCE = ROOT / 'artifacts/local/alpha/push/w13/clips'
 FPS = 30
-GLB_CAP = 640 * 1024
+GLB_CAP = 1024 * 1024
 ANIM_CAP = 300 * 1024
 REST_TOL = 1e-5
 RIDE_TOL = 1e-4
@@ -172,6 +172,15 @@ def pose_table(pilot):
     return json.loads(path.read_text()) if path.exists() else None
 
 
+def table_clips(data, table):
+    """The new roster clips a pose table commits to build: all of them, unless the table sets
+    "partial": true, when it ships exactly the clips it lists (2026-10-18: Sable, Tarn and Cannon
+    ship `idle_loop` before their other ten)."""
+    if not (table or {}).get('partial'):
+        return list(data['new'])
+    return [c for c in data['new'] if c in table.get('clips', {})]
+
+
 def expected_clips(data, pilot, table):
     """{clip: {end, loop, from, to}} for the new clips: the pose table's, else the roster's."""
     ends = data['end_frames'][pilot]
@@ -191,7 +200,7 @@ def check_structure(doc, binary, blob, base_doc, base_bin, data, pilot, has_tabl
     names = [a.get('name', '') for a in doc.get('animations', [])]
     info['clips'] = names
     kept = list(data['kept'])
-    new = list(data['new'])
+    new = table_clips(data, table) if has_table else list(data['new'])
     if not names:
         raise Failure('check 1: the GLB has no clips')
     if 'RESET' in names:
@@ -299,7 +308,7 @@ def check_pose(glb, data, pilot, table, info):
     report = {}
     info['pose'] = report
     chain = {}
-    for clip in data['new']:
+    for clip in table_clips(data, table):
         action = _action(bpy, clip)
         if action is None:
             raise Failure('reimport: clip %s has no action' % clip)
@@ -388,8 +397,10 @@ def check_pose(glb, data, pilot, table, info):
                     'grip_error': grip_error, 'contact_error': contact_error,
                     'preen_contact_error': preen_error, 'ledger_arm_triangle_overlaps': overlaps})
         report[clip] = row
-    ride = chain['ult_ride_loop'][0]
+    ride = chain['ult_ride_loop'][0] if 'ult_ride_loop' in chain else None
     for clip, end_kind in (('ult_windup', 1), ('ult_strike', 0), ('ult_strike', 1), ('ult_recover', 0)):
+        if ride is None or clip not in chain:
+            continue  # a partial table ships no ultimate chain yet
         error = _distance(chain[clip][end_kind], ride)
         if error > RIDE_TOL:
             raise Failure('check 8: %s %s is %.6f off the ride pose' % (clip, 'end' if end_kind else 'start', error))

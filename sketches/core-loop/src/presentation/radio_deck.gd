@@ -127,7 +127,7 @@ func _place_caches() -> void:
 	var root = game.ctx.get("root")
 	if terrain == null or root == null or not terrain.has_method("map") or terrain.map() == null:
 		return
-	RadioCache.spawn_for(String(terrain.map().title), root, self, game.ctx.player)
+	RadioCache.spawn_for(String(terrain.map().title), _found, root, self, game.ctx.player)
 
 
 func _found(id: String) -> bool:

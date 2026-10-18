@@ -43,9 +43,9 @@ static func wanted(map_id: String, found: Callable, table: Dictionary = {}) -> A
 	return out
 
 
-static func spawn_for(map_id: String, parent: Node, deck_ref, player_ref: Node3D) -> Array:
+static func spawn_for(map_id: String, found: Callable, parent: Node, deck_ref, player_ref: Node3D) -> Array:
 	var made: Array = []
-	for pair in wanted(map_id, func(id): return deck_ref.game.ctx.profile.has_tune(id)):
+	for pair in wanted(map_id, found):
 		var cache = load("res://src/world/radio_cache.gd").new()
 		cache.take_id = pair[0]
 		cache.deck = deck_ref

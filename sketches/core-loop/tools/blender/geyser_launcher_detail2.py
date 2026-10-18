@@ -13,6 +13,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import geyser_launcher as g
+import polish
 from geyser_launcher import frustum, polar, tone
 from geyser_launcher_detail1 import DETAIL, bolt, radial
 
@@ -55,6 +56,7 @@ def build(s):
 
 
 def main():
+    polish.enable(bevel=.02, bevel_min=.25, **g.kit.BAKE)  # light shell polish: smooth shading, bake
     g.export(g.NAME + "_detail2", "Detail2", "steel", build, SIZE, {}, g.out_dir(), budget=DETAIL, tag="GEYSER_D2")
 
 

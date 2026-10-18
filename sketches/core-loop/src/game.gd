@@ -1,6 +1,7 @@
 extends Node3D
 
 const GameEvents := preload("res://src/core/game_events.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
@@ -8,6 +9,7 @@ const Beacon := preload("res://src/core/beacon.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
+const RunMoments := preload("res://src/core/run_moments.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -35,6 +37,7 @@ const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
+const CampHub := preload("res://src/world/camp_hub.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
@@ -95,11 +98,15 @@ var hud
 var screens
 # The pilot radio (radio_deck.gd): the HUD dial, the takes a run finds, the playlists.
 var radio_deck
+# The walkable camp (camp_hub.gd), built on the first K from the title.
+var camp_hub
 var notes
 var panel
 var keyboard
 var codex
 var run_log
+# The run-end comic page's moments (src/core/run_moments.gd).
+var run_moments
 var progress
 var _progress_ready := false
 # Where the codex and the run log write: user:// in play, a per-process folder the
@@ -178,6 +185,9 @@ func _ready() -> void:
 	add_child(run_log)
 	run_log.setup(events, run, player, codex, storage_dir)
 	ctx.run_log = run_log
+	run_moments = RunMoments.new()
+	add_child(run_moments)
+	run_moments.setup(events, run, player, flow, ctx.stages, storage_dir)
 	ctx.profile = Profile.new(storage_dir.path_join("profile.json"))
 	if not ctx.profile.load_profile():
 		push_warning("profile: %s" % ctx.profile.last_error)
@@ -239,6 +249,12 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
+	camp_hub = CampHub.new()
+	add_child(camp_hub)
+	camp_hub.setup(self)
+	camp_hub.camp_store = ctx.profile
+	# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
+	preload("res://src/ui/camp_enemy_picker.gd").watch(self)
 	add_child(preload("res://src/ui/workshop.gd").new())
 	add_child(preload("res://src/ui/pause_menu.gd").new())
 
@@ -326,6 +342,12 @@ func _exit_tree() -> void:
 		return
 	for file in dir.get_files():
 		dir.remove(file)
+	# The scrapbook's pages and stills (run_moments.gd).
+	var book := storage_dir.path_join(RunMoments.DIR)
+	if DirAccess.dir_exists_absolute(book):
+		for file in DirAccess.get_files_at(book):
+			DirAccess.remove_absolute(book.path_join(file))
+		DirAccess.remove_absolute(book)
 	DirAccess.remove_absolute(storage_dir)
 
 
@@ -488,12 +510,22 @@ func _on_flow_changed(_state: String) -> void:
 	var playing: bool = flow.in_play()
 	if keyboard != null:
 		keyboard.enabled = playing
+		keyboard.walk = false
 	_capture_mouse(playing)
 	if playing:
 		# A is jump in play and ui_accept in a menu: nothing may keep focus into play.
 		var holder := get_viewport().gui_get_focus_owner()
 		if holder != null:
 			holder.release_focus()
+
+
+# The camp walk (camp_hub.gd) rolls the ball from the title: the keyboard and the captured mouse are live while the
+# walk shows no page, and off while a page covers it. The walk's keyboard only rolls, jumps, boosts and brakes.
+func walk_input(live: bool) -> void:
+	if keyboard != null:
+		keyboard.enabled = live
+		keyboard.walk = live
+	_capture_mouse(live)
 
 
 func _register_actions() -> void:
@@ -631,9 +663,12 @@ func set_reduced_motion(on: bool) -> void:
 
 
 # Reduce flashes: every flash, white pop and strobe reads FlashGuard when it fires, so the
-# switch takes effect on the next flash without touching live nodes.
+# switch takes effect on the next flash. Particle emitters that keep running re-read it now.
 func set_reduce_flashes(on: bool) -> void:
 	FlashGuard.on = on
+	if is_inside_tree():
+		for p in get_tree().get_nodes_in_group(FxLibrary.HEAT_GROUP):
+			FxLibrary.set_heat(p)
 
 
 func set_fullscreen(on: bool) -> void:
@@ -652,6 +687,11 @@ func pad_screen_key(event: InputEvent) -> int:
 	var state: String = flow.state_name()
 	if event.button_index == JOY_BUTTON_A:
 		if state == "title":
+			# In the camp walk A presses the station the ball is in, else it is the jump.
+			if screens != null and screens.walk_live():
+				return camp_hub.confirm_key()
+			if screens != null and screens.walking():
+				return KEY_NONE
 			if screens != null and screens.overlay_open():
 				return KEY_NONE
 			if get_viewport().gui_get_focus_owner() != null:
@@ -710,7 +750,7 @@ func _input(event: InputEvent) -> void:
 		camera.look(event.relative)
 		return
 	if event is InputEventMouseButton:
-		if not _mouse_captured() and event.pressed and flow.in_play() and not panel.visible and not get_meta("menu_held", false):
+		if not _mouse_captured() and event.pressed and (flow.in_play() or screens.walk_live()) and not panel.visible and not get_meta("menu_held", false):
 			_capture_mouse(true)
 		return
 	if event is InputEventJoypadButton:
@@ -766,12 +806,13 @@ func _screen_key(key: int) -> bool:
 				return screens.jukebox_key(key)
 			if screens.radio_open():
 				return screens.radio_key(key)
-			if key == KEY_R and screens.camp_open():
-				screens.toggle_radio()
-				return true
-			if key == KEY_J and screens.camp_open():
-				screens.toggle_jukebox()
-				return true
+			# The camp walk: its keys act only inside a station's zone; the rest roll the ball.
+			if screens.walk_live():
+				return screens.walk_key(key)
+			# A page open over the walk owns the keys (Space and Enter press its focused button through the UI);
+			# no title hotkey may leak through it.
+			if screens.walking():
+				return false
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()
 				return true

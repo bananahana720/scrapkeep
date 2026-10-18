@@ -25,9 +25,12 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Lobber")
 p = Part("LobberBody")
 bm = p.bm
@@ -97,6 +100,7 @@ c = Vector((0.0, 0.0, 3.6))
 base, top = c - d * (TUBE_LEN / 2), c + d * (TUBE_LEN / 2)
 # WL: the same tube and bands become one hinged part, with its origin at the breech.
 tube = Part("LobberBarrel")
+tube.subsurf = 0
 tube.rod("rubber", tuple(base), tuple(top), 0.6, segs=12, r2=0.45)
 
 
@@ -118,6 +122,7 @@ barrel = tube.to_object(origin=tuple(base), parent=root)
 # Loading bulb: its own mesh, origin at the bulb centre so the runtime charge scale swells it
 # in place.
 b = Part("LobberBulb")
+b.subsurf = 0
 b.ico("requisition_tag", BULB_R, subdiv=2, loc=(0.0, 0.0, BULB_Z))
 bulb = b.to_object(origin=(0.0, 0.0, BULB_Z), parent=root)
 bpy.context.view_layer.update()
@@ -132,7 +137,7 @@ zmax = max(v.z for v in assembly)
 bulb_r = max((v.co).length for v in bulb.data.vertices)
 print("TRIS", tri_count, "SURFACES", surfaces, "HALF_XY", round(half_x, 4), round(half_y, 4),
       "Z", round(zmin, 4), round(zmax, 4), "BULB_R", round(bulb_r, 4))
-if tri_count > 1200 or surfaces > 5 or half_x > HALF + 1e-4 or half_y > HALF + 1e-4 \
+if tri_count > 7100 or surfaces > 5 or half_x > HALF + 1e-4 or half_y > HALF + 1e-4 \
         or zmin < Z_BOTTOM - 1e-4 or zmax > Z_TOP_BODY + 1e-4 or bulb_r > BULB_R + 1e-4:
     raise SystemExit("C11 limits exceeded")
 

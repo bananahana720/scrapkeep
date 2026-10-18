@@ -2,18 +2,19 @@ extends SceneTree
 
 const DIRECTORY := "res://assets/models/highdraft/"
 # Frozen BUILD-SPEC rows: every exported node/primitive contributes to the totals.
+# 2026-10-18 polish (tools/blender/POLISH.md): cradle, loom and blades caps were [270, 610, 1].
 const SPEC := {
 	"sky_cloud": {"cap": [120, 110, 2], "slot": "glass", "size": Vector3(80, 12, 40), "bottom": -6.0,
 		"parts": ["CloudHull"], "sockets": {"join_l": Vector3(-40, 0, 0), "join_r": Vector3(40, 0, 0)}},
 	"sky_mesa": {"cap": [120, 110, 2], "slot": "M1_stone", "size": Vector3(60, 50, 40), "bottom": 0.0,
 		"parts": ["MesaHull"], "sockets": {"crown": Vector3(0, 50, 0)}},
-	"sky_cradle": {"cap": [270, 610, 1], "slot": "paint", "size": Vector3(30, 8, 22), "bottom": -8.0,
+	"sky_cradle": {"cap": [500, 320, 1], "slot": "paint", "size": Vector3(30, 8, 22), "bottom": -8.0,
 		"parts": ["CradleHull", "Deck", "Keel", "Rib_l", "Rib_r"],
 		"sockets": {"hang_l": Vector3(-10, -2, 0), "hang_r": Vector3(10, -2, 0)}},
-	"sky_loom": {"cap": [270, 610, 1], "slot": "paint", "size": Vector3(50, 60, 20), "bottom": 0.0,
+	"sky_loom": {"cap": [500, 320, 1], "slot": "paint", "size": Vector3(50, 60, 20), "bottom": 0.0,
 		"parts": ["LoomHull", "Beam_l", "Beam_r", "Beam_back", "Weight"],
 		"sockets": {"weight_hang": Vector3(0, 45, 0)}},
-	"sky_blades": {"cap": [270, 610, 1], "slot": "ancient_enamel", "size": Vector3(24, 80, 3), "bottom": 0.0,
+	"sky_blades": {"cap": [500, 320, 1], "slot": "ancient_enamel", "size": Vector3(24, 80, 3), "bottom": 0.0,
 		"parts": ["BladeHull", "Blade_l", "Blade_r"],
 		"sockets": {"blade_l": Vector3(-8, 0, 0), "blade_r": Vector3(8, 0, 0)}},
 }

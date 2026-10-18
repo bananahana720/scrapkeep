@@ -30,6 +30,10 @@ extends RefCounted
 # entry and at its exit match within TILE_MATCH_M in width and height (tile_ends); a recipe that does not, or a stretch
 # outside STRETCH_MIN to STRETCH_MAX, refuses the fit and the row stands in as its greybox and says why (tile_refusal).
 # Every copy carries its own base views, detail shells and collider faces, each view with the budget's ranges.
+#
+# The drape fit (dam kit, 2026-10-17): a row that says `"fit": "drape"` names a GLB authored to conform to the stamped ground
+# (tools/blender/park/dam_dressing.py), so its node stands on seat() like a greybox stand-in of its stamp, not on the crest; no
+# `y` (which the graph reads as a deck), no stretch or shear, and the stamped ground stays the collider.
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
@@ -61,6 +65,13 @@ const WORLD_LAYER := 1
 const BALL_LAYER := 2
 # How far above a piece's top the ride sensor reaches, so a ball rolling or landing on it counts.
 const SENSOR_ABOVE_M := 3.0
+const ONCE_FACT_PREFIX := "layer_mind_quote_"
+# A row's rider (park_schema.gd): a GLB set down beside the row on the raw ground, whose "_jib" mesh turns
+# RIDER_SWING_DEG about the rider's own y axis over RIDER_SWING_S when its "on" fact first fires (the dam's crest crane
+# on the Mind's quote, Andrew's "All hands"). Riders join RIDER_GROUP.
+const RIDER_GROUP := "park_rider"
+const RIDER_SWING_DEG := -75.0
+const RIDER_SWING_S := 4.5
 const GREYBOX_TINT := Color("8a8a84")
 # The seat fit (header): the row field value, the stretch bounds and the GLB nodes that mark a ride's authored ends.
 const FIT_SEAT := "seat"
@@ -71,6 +82,7 @@ const SOCKET_EXIT := "socket_exit"
 # The tile fit (header): the row field value, the fewest copies, how closely the entry and exit cross-sections must
 # match, and how far inside each authored end the cross-section is cut (an end cap lying in the plane cuts to nothing).
 const FIT_TILE := "tile"
+const FIT_DRAPE := "drape"
 const TILE_MIN := 2
 const TILE_MATCH_M := 0.25
 const TILE_SLICE_IN_M := 0.05
@@ -88,6 +100,7 @@ const ROWS := {
 	"bench_coping": {"family": "bowls", "budget": "landform"},
 	"tailings_lip": {"family": "bowls", "budget": "landform"},
 	"pit_haul_ramp": {"family": "bowls", "budget": "landform"},
+	"pit_haul_lane": {"family": "bowls", "budget": "landform"},
 	"lava_tube_run": {"family": "tunnels", "budget": "park_large"},
 	"adit_mouth": {"family": "tunnels", "budget": "park_large"},
 	"shaft_drop": {"family": "tunnels", "budget": "park_large"},
@@ -114,7 +127,27 @@ const ROWS := {
 	"anchor_timber": {"family": "anchors", "budget": "detail"},
 	"anchor_saguaro": {"family": "anchors", "budget": "detail"},
 	"anchor_cairn": {"family": "anchors", "budget": "detail"},
+	"ore_bin": {"family": "workings", "budget": "landform"},
+	"ore_bin_row": {"family": "workings", "budget": "landform"},
+	"timber_portal": {"family": "workings", "budget": "detail"},
+	# The sinkhole's authored pass (tools/blender/park/sinkhole_tubes.py, sinkhole_slabs.py): wash dressing and drop lips.
+	"lava_wash": {"family": "tunnels", "budget": "park_large"},
+	"lava_wash_short": {"family": "tunnels", "budget": "park_large"},
+	"gallery_wash": {"family": "caverns", "budget": "park_large"},
+	"drift_wash": {"family": "tunnels", "budget": "park_large"},
+	"skylight_lip": {"family": "tunnels", "budget": "park_large"},
+	"tube_mouth_lip": {"family": "tunnels", "budget": "park_large"},
+	"breach_lip": {"family": "tunnels", "budget": "park_large"},
+	"miners_cap": {"family": "tunnels", "budget": "park_large"},
+	"great_room_deck": {"family": "bowls", "budget": "park_large"},
+	"haulage_bed": {"family": "grind_lines", "budget": "park_large"},
 }
+
+# Wash dressing pieces (tools/blender/park/sinkhole_tubes.py) draped on the baked ground: a seat-fit row of one of these
+# moves every drawn vertex to the ground under it plus its height over the piece's own wash profile, so the drawn wall
+# band lies on the real wall wherever the floor sags under the seat's chord, a neighbour's cut overlaps or the row's own
+# end opens onto the plain. The -col keeps the seat fit; only the views move.
+const DRAPED := ["lava_wash", "lava_wash_short", "gallery_wash", "drift_wash"]
 
 # Each element's ride fact by its section 4 family; a row's own ride_fact wins. kicker_launch is the kicker's launch
 # path, not a WORLD_ROWS kind, so a kicker gets no ride sensor; ground and anchor_field carry none.
@@ -315,6 +348,11 @@ static func seat_fit(row: Dictionary, ends: Dictionary, ground := Callable()) ->
 	var basis := Basis(Vector3.RIGHT, Vector3.UP, Vector3(0, shear, stretch))
 	var xf := Transform3D(basis, Vector3(0, a - shear * e.z, -length * 0.5 - stretch * e.z))
 	return {"ok": true, "reason": "", "stretch": stretch, "lip_y": lip_y, "exit_y": exit_y, "transform": xf}
+
+
+# Whether a row opts in to the drape fit (header): a stamped GLB row seated like its stamp's greybox.
+static func fits_drape(row: Dictionary) -> bool:
+	return String(row.get("fit", "")) == FIT_DRAPE and String(row.get("stamp", "")) != ""
 
 
 # Whether a row opts in to the tile fit (header).
@@ -652,8 +690,56 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			for view in _views(scene, node, body, f[0], baked, f[1]):
 				_range(view, mid_end, 0.0, 0.0)
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	if baked and fits_seat(row) and DRAPED.has(String(row.get("recipe", ""))) and ground.is_valid():
+		drape(node, row, at_origin, ground)
 	_sensor(node, row, publish)
 	return node
+
+
+# The wash's own surface height over its floor centre at lateral x, the piece's profile (park_stamps.gd wash): 0 on
+# the flat middle 40% of the width, rising as depth (1 - (1 - w)^2) up the wall, depth at and beyond the crest.
+static func wash_profile(x: float, width: float, depth: float) -> float:
+	var t := absf(2.0 * x / maxf(width, 0.001))
+	if t >= 1.0:
+		return depth
+	if t <= 0.4:
+		return 0.0
+	var w := (t - 0.4) / 0.6
+	return depth * w * w
+
+
+# DRAPED: rebuild each view's mesh in the node's space with every vertex on the ground under it plus its height over
+# the authored profile. at_origin is the seat fit's GLB-to-node transform, so its inverse gives the authored point.
+static func drape(node: Node3D, row: Dictionary, at_origin: Transform3D, ground: Callable) -> void:
+	var frame := row_transform(row, ground)
+	var width := float(row["size"][2])
+	var depth := float(row["size"][1])
+	var back := at_origin.affine_inverse()
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", false, false):
+		var mesh := view.mesh
+		if mesh == null:
+			continue
+		var out := ArrayMesh.new()
+		for i in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(i)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			for k in verts.size():
+				var v := view.transform * verts[k]
+				var p := back * v
+				var w := frame * v
+				v.y = float(ground.call(w.x, w.z)) - frame.origin.y + p.y - wash_profile(p.x, width, depth)
+				verts[k] = v
+			arrays[Mesh.ARRAY_VERTEX] = verts
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			out.surface_set_material(i, mesh.surface_get_material(i))
+		var overrides := []
+		for i in mesh.get_surface_count():
+			overrides.append(view.get_surface_override_material(i))
+		view.mesh = out
+		for i in overrides.size():
+			if overrides[i] != null:
+				view.set_surface_override_material(i, overrides[i])
+		view.transform = Transform3D.IDENTITY
 
 
 # A greybox primitive of the row's size ([length, height, width], length along the facing) sitting on its base, with
@@ -794,7 +880,47 @@ static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
 	node.add_child(area)
 	area.body_entered.connect(func(ball: Node3D) -> void:
 		for fact: String in facts:
-			publish.call(fact, ball.global_position))
+			_fire(area, fact, ball.global_position, publish))
+
+
+# A ride sensor publishes its fact on every entry, except a Mind quote (Q9), which plays once per stage build: a bounce
+# inside the box or a second crossing stays silent.
+static func _fire(area: Area3D, fact: String, at: Vector3, publish: Callable) -> void:
+	if fact.begins_with(ONCE_FACT_PREFIX):
+		if area.has_meta("fired"):
+			return
+		area.set_meta("fired", true)
+		# Riders stand beside their rows under the same parent (ParkRows), so another stage's crane never answers.
+		var rows := area.get_parent().get_parent()
+		for rider: Node in rows.get_children() if rows != null else []:
+			if rider.is_in_group(RIDER_GROUP) and rider.get_meta("on", "") == fact:
+				swing(rider)
+	publish.call(fact, at)
+
+
+# The row's rider as its own landform-budget piece (placed by place_row only; place() leaves riders out) at rider.at on the raw ground, turned by rider.yaw_deg.
+static func place_rider(row: Dictionary, parent: Node3D, ground := Callable()) -> Node3D:
+	var rider: Dictionary = row["rider"]
+	var piece := {"id": "%s_rider" % row["id"], "element": "ground", "at": rider["at"], "y": null, "size": [1.0, 1.0, 1.0],
+		"yaw_deg": float(rider.get("yaw_deg", 0.0)), "ride_fact": "", "recipe": rider["recipe"], "budget": "landform", "stamp": ""}
+	var node := place(piece, parent, ground)
+	if node != null:
+		node.set_meta("on", String(rider.get("on", "")))
+		node.add_to_group(RIDER_GROUP)
+	return node
+
+
+# Turns the rider's "_jib" view once about the rider's y axis; a second call is a no-op.
+static func swing(rider: Node) -> void:
+	if rider.has_meta("swung"):
+		return
+	rider.set_meta("swung", true)
+	for view: Node in rider.find_children("*_jib", "MeshInstance3D", true, false):
+		var jib := view as MeshInstance3D
+		var start := jib.transform
+		var tween := jib.create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_method(func(a: float) -> void: jib.transform = Transform3D(Basis(Vector3.UP, a), Vector3.ZERO) * start,
+			0.0, deg_to_rad(RIDER_SWING_DEG), RIDER_SWING_S)
 
 
 # A wedge's six corners in the node's space: extent is [width, height, length]; rise +1 puts the high edge at +z.
@@ -1130,6 +1256,8 @@ static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), pub
 	if is_anchor_field(row):
 		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
 	var node := place(row, parent, seat(row, ground), publish)
+	if node != null and row.has("rider"):
+		place_rider(row, parent, ground)
 	if node != null and stamp_replaces(row):
 		# PARK.md section 4's rows are "height stamp plus a recipe": for a greybox stand-in (the fixture's deck, lip and
 		# apron) the stamp is the whole shape, so the row keeps no Collider of its own and the stamped ground collides.
@@ -1148,10 +1276,10 @@ static func stamp_replaces(row: Dictionary) -> bool:
 	return String(row.get("stamp", "")) != "" and row.get("y") == null and stands_in(row)
 
 
-# The ground a row's node stands on: a stamp_replaces row stands on the ground less its own stamp's raise (the plain
-# the stamp raised; a cut keeps its floor, so the sensor reaches into it); everything else on the ground itself.
+# The ground a row's node stands on: a stamp_replaces row, or a drape-fit row, stands on the ground less its own stamp's
+# raise (the plain the stamp raised; a cut keeps its floor, so the sensor reaches into it); everything else on the ground itself.
 static func seat(row: Dictionary, ground: Callable) -> Callable:
-	if not ground.is_valid() or not stamp_replaces(row):
+	if not ground.is_valid() or not (stamp_replaces(row) or fits_drape(row)):
 		return ground
 	var f := Stamps.frame(row)
 	return func(x: float, z: float) -> float: return float(ground.call(x, z)) - maxf(Stamps.offset(f, x, z), 0.0)
@@ -1192,6 +1320,10 @@ static func row_paths(row: Dictionary) -> Array:
 	for key in ["mid", "far"]:
 		if p.has(key):
 			out.append(p[key])
+	if row.get("rider") is Dictionary:
+		var r := paths(String(row["rider"].get("recipe", "")), "landform")
+		out.append(r["base"])
+		out.append_array(r["shells"])
 	return out.filter(func(path: String) -> bool: return ResourceLoader.exists(path))
 
 
@@ -1366,8 +1498,9 @@ class Placer extends Node3D:
 			var r0 := Time.get_ticks_usec()
 			# Built outside the tree, then added once.
 			var holder := Node3D.new()
-			var node := Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next))
-			if node != null:
+			Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next))
+			# The row's node and its rider, if it has one.
+			for node: Node in holder.get_children():
 				holder.remove_child(node)
 				add_child(node)
 			holder.free()

@@ -29,6 +29,23 @@ static func required_clips(with_table: bool) -> Array:
 	return Array(data.get("kept", [])) + (Array(data.get("new", [])) if with_table else [])
 
 
+# The clips one pilot's GLB must carry: the seven kept ones, plus the new roster clips its pose
+# table lists when it sets "partial": true, else all eleven, plus none without a table. A table
+# that ships only idle_loop (Sable, Tarn, Cannon, 2026-10-18) requires 8.
+static func required_for(stem: String, dir: String = TABLES_DIR) -> Array:
+	var data := roster()
+	var required: Array = Array(data.get("kept", []))
+	if not has_table(stem, dir):
+		return required
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join(stem + ".json")))
+	var partial: bool = parsed is Dictionary and bool(parsed.get("partial", false))
+	var listed: Dictionary = parsed.get("clips", {}) if partial else {}
+	for clip in Array(data.get("new", [])):
+		if not partial or listed.has(clip):
+			required.append(clip)
+	return required
+
+
 # The required clips an animator lacks.
 static func missing_clips(animator: AnimationPlayer, with_table: bool) -> Array:
 	var missing: Array = []

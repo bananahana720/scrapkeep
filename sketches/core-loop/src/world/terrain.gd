@@ -134,6 +134,11 @@ func map() -> RefCounted:
 	return maps[stage - 1]
 
 
+# The world the current stage is in (1 Spillway, 2 the Dig, 3 the Highdraft).
+func world() -> int:
+	return _worlds[_index(stage)]
+
+
 func map_for(index: int) -> RefCounted:
 	return maps[_index(index)]
 

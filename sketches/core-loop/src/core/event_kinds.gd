@@ -94,6 +94,7 @@ const ROWS := {
 	# plant discharge rides mounted (the plant clack and the motif's first notes).
 	"enemy_rebounded": {"group": "combat", "color": Palette.SAND, "shape": "chevron", "sound": "shell_spring", "sound_next": "rebound_spring_snap", "hud": "", "objective": "", "priority": 1},
 	"enemy_pinned": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "hit_thwack", "sound_next": "pin_double_thwack", "hud": "", "objective": "", "priority": 1},
+	"enemy_ringed_out": {"group": "combat", "color": Palette.COPPER, "shape": "arrow", "sound": "near_whoosh", "sound_next": "ring_out_fall", "hud": "", "objective": "", "priority": 1},
 	"vault_kicked": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "pylon_eject", "sound_next": "sable_octave_leap", "hud": "", "objective": "", "priority": 1},
 	"gauge_charging": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "motif_accumulate", "hud": "", "objective": "", "priority": 1},
 	"gauge_released": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "sound_next": "motif_release", "hud": "", "objective": "", "priority": 1},
@@ -179,6 +180,8 @@ const ROWS := {
 	"line_skill_expired": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
 	# The active on F. Its sound is the active's own (audio.gd, "active_" + id); this is the fallback.
 	"active_fired": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "active_scrap_rocket", "hud": "", "objective": "", "priority": 1},
+	# The Cutting Torch's heat tick (cutting_torch.gd): audio.gd climbs its sizzle with the heat; it lands no hit.
+	"active_heat": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "active_cutting_torch_heat", "hud": "", "objective": "", "priority": 1},
 	"ultimate_ready": {"group": "combat", "color": Palette.ARC, "shape": "ring", "sound": "found_chime", "sound_next": "ultimate_ready", "hud": "", "objective": "", "priority": 1},
 	"ultimate_started": {"group": "combat", "color": Palette.ARC, "shape": "lane", "sound": "launch_roar", "hud": "", "objective": "", "priority": 1},
 	"ultimate_peak": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "sound_next": "motif_stinger", "hud": "", "objective": "", "priority": 1},
@@ -281,6 +284,9 @@ const IMPACT := {
 	"cannon": {"knock": 9.0, "lift": 0.25, "stop": "hit", "shake": 0.15, "react": "stagger"},
 	# The Scrap Rocket Rack's blast (src/combat/actives/scrap_rockets.gd): a bomb's stop, a lighter shove.
 	"rocket": {"knock": 14.0, "lift": 0.3, "stop": "hit", "shake": 0.08, "react": "stagger"},
+	# The Glass Lance's pierce and its Chain Arc jumps (src/combat/actives/glass_lance.gd): a quick
+	# cut's stop and stagger, so a jumped machine reads like the pierced one.
+	"lance": {"knock": 8.0, "lift": 0.3, "stop": "hit", "shake": 0.1, "react": "stagger"},
 }
 # Degrees and seconds; enemy weight divides angles by sqrt(max(weight, 1)).
 const REACTIONS := {
@@ -333,6 +339,7 @@ const WEIGHTED := {
 	"hold_broken": {"class": "hit", "allegiance": "player", "visual": ""},
 	"swarm_scattered": {"class": "hit", "allegiance": "player", "visual": ""},
 	"enemy_pinned": {"class": "hit", "allegiance": "player", "visual": ""},
+	"enemy_ringed_out": {"class": "heavy", "allegiance": "player", "visual": ""},
 	"arc_slammed": {"class": "none", "allegiance": "player", "visual": ""},
 	"skid_smashed": {"class": "none", "allegiance": "player", "visual": ""},
 	"demo_slammed": {"class": "none", "allegiance": "player", "visual": ""},
@@ -1087,6 +1094,12 @@ const WORLD_ROWS := {
 	"launcher_charging": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "steam_whistle_rise", "hud": "", "objective": "", "priority": 0},
 	"cannon_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "cannon_bang_rail_whoosh", "hud": "", "objective": "", "priority": 1},
 	"trebuchet_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "trebuchet_creak_whoosh", "hud": "", "objective": "", "priority": 1},
+	# The sinkhole's floor is lava (cinder_heat.gd): the cinders glow as the grace runs out, sizzle while they burn, and
+	# hiss as a hot ball leaves them.
+	"glaze_skim": {"group": "event", "color": Palette.LEDGER, "shape": "wave", "sound": "line_zip", "sound_next": "glaze_skim_hiss", "hud": "", "objective": "", "priority": 0},
+	"cinder_glow": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 1},
+	"cinder_burn": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "threat_tick", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 2},
+	"cinder_cooled": {"group": "event", "color": Palette.SAND, "shape": "wave", "sound": "boost_whoosh", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 0},
 	"geyser_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "geyser_whistle_bang", "hud": "", "objective": "", "priority": 1},
 	"valve_smashed": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "slam_boom", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 2},
 	"route_opened": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "found_chime", "sound_next": "found_chime", "hud": "", "objective": "", "priority": 1},
@@ -1104,6 +1117,10 @@ const WORLD_ROWS := {
 	"layer_crown_alcove": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_alcove", "hud": "", "objective": "", "priority": 0},
 	"layer_crown_toppled": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_toppled", "hud": "", "objective": "", "priority": 0},
 	"layer_crown_ramp": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_crown_ramp", "hud": "", "objective": "", "priority": 0},
+	# The Mind's first musical quote (Andrew's Q9, "A musical quote"): the dam's eye_mouth row publishes it as its ride
+	# fact as the ball leaves the Eye, which every line crosses once and downhill; its file renders on the music PR (#12),
+	# and until then ui_tick stands in.
+	"layer_mind_quote_spillway": {"group": "event", "color": ANCIENT_LIGHT, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_mind_quote_spillway", "hud": "", "objective": "", "priority": 0},
 	"ride_grapple_line": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "grapple_clink", "sound_next": "ride_cable_clink", "hud": "", "objective": "", "priority": 1},
 	"ride_glide_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_glide_wind", "hud": "", "objective": "", "priority": 1},
 	"ride_skylight": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rail_hum", "hud": "", "objective": "", "priority": 1},

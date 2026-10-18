@@ -154,6 +154,7 @@ export const LIGHT_OWNERS = {
   "src/world/map_gorge.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },
   "src/world/map_reach.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },
   "src/world/terrain.gd": { sites: 1, owner: "the world sun, session-lived" },
+  "src/world/camp_hub.gd": { sites: 1, owner: "the camp hub's root under the game node, session-lived and hidden outside the walk" },
   "src/presentation/arena_waking_dress.gd": { sites: 4, owner: "WakingLightPool under ctx.root, session-lived; lent to the arena and floors, darkened and returned before exit or drop" },
 };
 

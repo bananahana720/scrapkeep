@@ -37,6 +37,11 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
+
+# A 25 m cast column: 5 cm chamfers, smooth cast curves, rounder lathes (POLISH.md).
+# AO reaches about a metre; the default fraction of 25 m darkened the whole spine.
+polish.enable(detail=2, bevel=0.05, bevel_angle=46.0, ao_reach=0.06)
 
 ROOT = HERE.parents[4]
 MODELS = ROOT / "sketches/core-loop/assets/models/bosses"
@@ -44,7 +49,9 @@ PREVIEW = ROOT / "artifacts/local/dress-preview/WAK"
 M1, M2, M3, M4 = "ancient_enamel", "dark_joint", "glass", "signal_surface"
 BONE, PETROL, DARK = "d2c5a5", "365754", "242a28"
 BLUE, HAZARD, SLATE, MINT = "3d8bff", "ff5a3c", "617481", "8bf0d3"
-FPS = 30
+# Keys are authored in seconds; the export samples every 1/60 s so eased curves hold
+# their shape in game. Key times, and so every telegraph window, are unchanged.
+FPS = 60
 CLIPS = {
     "sleeping": (3.0, 0.0), "wake": (1.6, 1.0),
     "pulse_warn": (2.0, 2.0), "pulse": (0.5, 0.08),
@@ -106,6 +113,7 @@ def empty(name, parent=None, at=(0, 0, 0)):
 def lathe(part, profile, segs=24, offset=0.0, slots=None):
     """Closed cross-section swept continuously around the vertical axis."""
     rows = []
+    segs *= common.DETAIL
     for k in range(segs):
         a = offset + math.tau * k / segs
         rows.append([part.bm.verts.new((r * math.cos(a), r * math.sin(a), z)) for r, z in profile])
@@ -178,6 +186,8 @@ def build_base():
     seat = empty("CombatSeat", root, (0,0,1.6))
     seat["runtime_owner"] = "Warden actor transform; scale one; no authored tracks"
     body = common.Part("SeatCasting")
+    # The casting stands on the pit floor at exactly 0: a chamfer would lift its foot.
+    body.bevel = 0
     lathe(body, [(1.7,-1.6),(2.55,-1.4),(2.8,-.85),(2.8,.65),(2.7,1.25),
                  (1.8,1.6),(1.4,1.6),(1.4,1.25),(2.15,.55),(2.15,-1.05),(1.7,-1.3)],
           24, slots=[M1,M1,M1,M1,M1,M1,M2,M2,M2,M2,M1])
@@ -361,12 +371,16 @@ def animate(root):
                 for time,value in keys:
                     setattr(obj,path,value)
                     obj.keyframe_insert(data_path=path,frame=1+time*FPS)
+            # Eased keys that blend into each other: clamped auto handles never overshoot,
+            # so every key pose and warning endpoint lands exactly on its time.
             for layer in action.layers:
                 for strip in layer.strips:
                     for bag in strip.channelbags:
                         for curve in bag.fcurves:
                             for point in curve.keyframe_points:
-                                point.interpolation="LINEAR"
+                                point.interpolation="BEZIER"
+                                point.handle_left_type=point.handle_right_type="AUTO_CLAMPED"
+                            curve.update()
             obj.animation_data.action=None
             nla=obj.animation_data.nla_tracks.new()
             nla.name=clip
@@ -380,6 +394,8 @@ def export(root,path):
     wrapper=empty("WakingBaseAsset" if path.stem.endswith("base") else "WakingKitAsset")
     root.parent=wrapper
     bpy.context.scene.frame_set(0)
+    if common.POLISH is not None:
+        polish.bake(wrapper,common.POLISH)
     bpy.ops.object.select_all(action="DESELECT")
     for obj in common.tree(wrapper): obj.select_set(True)
     bpy.context.view_layer.objects.active=wrapper
@@ -404,7 +420,7 @@ def export(root,path):
     binary_chunk=blob[20+json_size:]
     blob=struct.pack("<III",0x46546c67,2,20+len(encoded)+len(binary_chunk))+struct.pack("<II",len(encoded),0x4e4f534a)+encoded+binary_chunk
     path.write_bytes(blob)
-    common.canonical_indices(str(path))
+    common.canonical_indices(str(path),vertices=common.POLISH is not None)
     blob=path.read_bytes()
     anims={row["name"] for row in gltf.get("animations",[])}
     assert anims == set(CLIPS), (path,anims)
@@ -415,7 +431,8 @@ def export(root,path):
             draws+=1
             verts+=gltf["accessors"][primitive["attributes"]["POSITION"]]["count"]
             tris+=gltf["accessors"][primitive["indices"]]["count"]//3
-    caps=(5000,9600,32) if path.stem.endswith("base") else (1500,2800,18)
+    # Polished caps (POLISH.md, 18 Oct), half and two thirds of the class caps.
+    caps=(10000,9600,32) if path.stem.endswith("base") else (4000,4000,18)
     assert 0<tris<=caps[0] and verts<=caps[1] and draws<=caps[2], (path,tris,verts,draws,caps)
     result={"file":path.name,"bytes":len(blob),"sha256":hashlib.sha256(blob).hexdigest(),
             "tris":tris,"verts":verts,"draws":draws,"clips":sorted(anims)}

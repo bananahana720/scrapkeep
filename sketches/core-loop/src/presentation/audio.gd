@@ -47,6 +47,8 @@ const TuneMoments := preload("res://src/presentation/tune_moments.gd")
 # "until"}), the one the level band plays now, this run's rare remixes and their own rng (never
 # the run's), and whether this stage's Warden has taken the landmark's place.
 var tune_available: Callable = TuneMoments.available
+# Whether a title row's pack is on disk (title_theme); tests swap it.
+var title_available: Callable = func(row: String) -> bool: return MusicRows.pack_on_disk(MusicRows.resolve(row)["ace_manifest"])
 var _moments: Array = []
 var _moment_seq := 0
 var _moment_playing := ""
@@ -190,7 +192,7 @@ const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "ga
 # also drive the reactor pedal (v2 W5b), and hold_started and pack_arrived resolve by
 # who holds or arrives (v2 W9), so they get their own listeners below.
 const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
-	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
+	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened", "enemy_ringed_out"]
 
 var ctx
 # Per posture Warden, the stagger and chunk count the last posture_changed showed.
@@ -202,6 +204,16 @@ var engine: MusicEngine
 # no pack, or any missing file, plays the synth.
 var ace: AceSequencer
 var ace_manifest := ""
+# The title's music row: "title" until an opening names its theme (title_theme).
+var title_row := "title"
+var _on_title := false
+# The row a won run's summary and the ending play: theme C, the show opening, with its whole-step
+# lift (Andrew, "Won run and ending", 17 Oct). The summary pack holds it: won, its return section
+# plays two bars of theme C and then theme C lifted a whole step (tools/ace/package_core_packs.py);
+# lost, its travel loop is the jazz-club summary. A pack not on disk falls back to the plain title-c.
+const WON_SUMMARY_ROW := "summary"
+# The camp page is open on the title (screens.gd): the camp pick plays while it is.
+var camp_open := false
 # The manifest the zone rows last selected. A caller that sets ace_manifest away from it
 # (a test's missing package) keeps its pick across stage entries (fix round D, 2026-10-04).
 var _ace_row_manifest := ""
@@ -380,7 +392,8 @@ func setup(ctx_ref) -> void:
 	_make_overlay()
 	_connect_all(ctx.events)
 	_start_bake()
-	ace_manifest = MusicRows.resolve("title")["ace_manifest"]
+	# The worker preloads the take the first title plays (title A when it is on disk).
+	ace_manifest = MusicRows.resolve(title_now())["ace_manifest"]
 	_ace_row_manifest = ace_manifest
 	_start_ace_load()
 	_flow_queue.append(["idle"])
@@ -450,7 +463,7 @@ func _start_ace_load() -> void:
 
 
 func _load_ace() -> void:
-	_ace_loaded = AceSequencer.new(_ace_loaded_from)
+	_ace_loaded = AceSequencer.new(_ace_loaded_from, "", true)
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -817,7 +830,7 @@ func ace_ready() -> bool:
 		loaded = _ace_loaded
 	_ace_loaded = null
 	if loaded == null:
-		loaded = AceSequencer.new(ace_manifest)
+		loaded = AceSequencer.new(ace_manifest, "", true)
 	if not loaded.ready():
 		_ace_failed = true
 		ace_missing = loaded.missing
@@ -1039,7 +1052,7 @@ func stop_spin() -> void:
 	var at := engine.next_beat()
 	engine.schedule_mode(at, MusicEngine.IDLE)
 	engine.menu_theme("title", true, at)
-	_ace_named("title", at)
+	_menu_home(at)
 
 
 # The game takes the music back (a run starts while a record plays): the parameters return
@@ -1107,6 +1120,10 @@ func radio_release() -> void:
 		engine.force_track("warden" if _warden_engaged and ctx.flow.get("sealed") else "level", _stage_theme(_stage_now))
 	_moment_playing = ""
 	_ace_stage(_stage_now, engine.next_bar())
+	# A release inside a sealed Warden fight goes straight to the fight's sections: the shelf
+	# (the world's roaming take) never plays inside an arena.
+	if _warden_engaged and ctx.flow.get("sealed") and ace_playing() and ace.mode == "level":
+		ace.commit_warden()
 	cue_log.append(["radio", "score", "bar", engine.next_bar(), 1.0])
 
 
@@ -1154,7 +1171,56 @@ func tune_unheard(id: String) -> bool:
 	return id != "" and not TuneRows.row(id).is_empty() and not _ear.heard(id)
 
 
+# The title opening (title_stage.gd) names its theme as its intro starts: the title plays that
+# theme's take from its first bar. A theme with no pack on disk keeps the plain title.
+func title_theme(theme: String) -> void:
+	var row := "title-" + theme.to_lower()
+	if not MusicRows.ROWS.has(row) or not title_available.call(row):
+		row = "title"
+	if row == title_row:
+		return
+	title_row = row
+	if _on_title and sound_ready:
+		_ace_named(title_row, engine.next_bar())
+		_on_title = true
+
+
+# The title row that plays now: the opening's theme, else title A (the keepers' theme, which
+# the rotation opens on), else the plain title.
+func title_now() -> String:
+	if title_row == "title" and title_available.call("title-a"):
+		return "title-a"
+	return title_row
+
+
+func summary_row(won: bool) -> String:
+	if won and not title_available.call(WON_SUMMARY_ROW) and title_available.call("title-c"):
+		return "title-c"
+	return "summary"
+
+
+# screens.gd says when the camp page opens and closes: the camp take plays while it is open,
+# and the title theme comes back when it closes. A camp with no pack on disk keeps the title.
+func camp_theme(open: bool) -> void:
+	if camp_open == open:
+		return
+	camp_open = open
+	if sound_ready and spinning == "" and radio_hold == "":
+		_menu_home(engine.next_bar())
+
+
+# The music of the title screen at transport sample at: the camp's while the camp is open,
+# else the title row.
+func _menu_home(at: int) -> void:
+	if camp_open and title_available.call("camp"):
+		_ace_named("camp", at)
+		return
+	_ace_named(title_now(), at)
+	_on_title = true
+
+
 func _ace_named(id: String, at: int, boss := false, won := true) -> void:
+	_on_title = false
 	_ace_arrival_stage = 0
 	_ace_arrival_at = -1
 	var manifest: String = MusicRows.resolve(id)["ace_manifest"]
@@ -2645,7 +2711,8 @@ func _on_boss_defeated() -> void:
 
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 	if _kind == "miniboss" and is_instance_valid(_miniboss):
-		end_moment("miniboss", str(_miniboss.get_instance_id()))
+		var key := str(_miniboss.get_instance_id())
+		end_moment("miniboss", key)
 	if _kind == "miniboss" and engine.track == "miniboss":
 		# The payoff on the kill: the drop home on the next beat, then the cadence.
 		engine.miniboss_drop()
@@ -3305,14 +3372,14 @@ func _flush_flow() -> void:
 					engine.schedule_cadence(start + Harmony.BAR)
 					engine.schedule_mode(start + Harmony.BAR * 3, MusicEngine.IDLE)
 					engine.menu_theme("summary", true, start + Harmony.BAR * 3)
-					_ace_named("summary", start + Harmony.BAR * 3, false, true)
+					_ace_named(summary_row(true), start + Harmony.BAR * 3, false, true)
 				else:
 					# on_beat returns -1 until sound is ready, so this is the guarded handoff for both outcomes.
 					var at := engine.next_beat()
 					engine.schedule_mode(at, MusicEngine.IDLE)
 					if sound_ready:
 						engine.menu_theme("summary", won, at)
-						_ace_named("summary", at, false, won)
+						_ace_named(summary_row(won), at, false, won)
 			"dead":
 				_radio_drop("flow")
 				_ace_end()
@@ -3326,7 +3393,7 @@ func _flush_flow() -> void:
 				# The title's own theme, kept across the class select.
 				if sound_ready:
 					engine.menu_theme("title", true, at)
-					_ace_named("title", at)
+					_menu_home(at)
 			"unseal":
 				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()

@@ -60,4 +60,16 @@ func _run() -> void:
 	if want.has("Foley_cave_in_debris"):
 		t.check("the land sound starts land_lead before the landing", absf(at_land - 0.3) <= 1.5 / 90.0, "%.3f s before" % at_land)
 	host.free()
+	# A freed player's playback leaves the AudioServer only after its mix thread runs and the
+	# main loop collects it; quitting first leaks the stream. Step frames until no playback
+	# holds a foley stream (the cache's own reference and this loop's are all that remain).
+	for frame in 20000:
+		var held := false
+		for id in FoleyAudio.TRIM_DB:
+			var s := FoleyAudio.stream(id)
+			if s != null and s.get_reference_count() > 2:
+				held = true
+		if not held:
+			break
+		await process_frame
 	quit(t.verdict())

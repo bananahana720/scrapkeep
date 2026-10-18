@@ -29,13 +29,26 @@ func _init(action_id := "", key_id := "", words := "") -> void:
 	add_theme_color_override("font_pressed_color", Palette.AMBER)
 	add_theme_color_override("font_focus_color", Color.WHITE)
 	add_theme_color_override("font_disabled_color", Color(Palette.SAND, 0.4))
+	_plates()
+	custom_minimum_size = Vector2(0.0, 52.0)
+
+
+# The same choice under another key: the cap and the plate's inset follow it.
+func set_key(key_id: String) -> void:
+	if key_id == key:
+		return
+	key = key_id
+	_plates()
+	queue_redraw()
+
+
+func _plates() -> void:
 	var left := PAD + Keycap.size_of(key, KEY_H).x + PAD
 	add_theme_stylebox_override("normal", plate(Palette.VERDIGRIS, 2, left))
 	add_theme_stylebox_override("hover", plate(Palette.SAND, 2, left))
 	add_theme_stylebox_override("pressed", plate(Palette.AMBER, 3, left))
 	add_theme_stylebox_override("focus", plate(Palette.SAND, 4, left, false))
 	add_theme_stylebox_override("disabled", plate(Color(Palette.VERDIGRIS, 0.5), 2, left))
-	custom_minimum_size = Vector2(0.0, 52.0)
 
 
 static func plate(edge: Color, width: int, left: float, fill := true) -> StyleBoxFlat:

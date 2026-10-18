@@ -68,7 +68,7 @@ func _budget(label: String, scene: Node3D, slots: Array) -> void:
 			if mat != null:
 				seen.append(mat.resource_name)
 	print("%s: %d V / %d T / %d D" % [label, verts, tris, surfaces])
-	t.check(label + " enemy budget", verts <= 2100 and tris <= 1100 and surfaces == 3, "%d V %d T %d D" % [verts, tris, surfaces])
+	t.check(label + " enemy budget", verts <= 19100 and tris <= 10000 and surfaces == 3, "%d V %d T %d D" % [verts, tris, surfaces])
 	for slot in slots:
 		t.check(label + " slot " + slot, slot in seen)
 
