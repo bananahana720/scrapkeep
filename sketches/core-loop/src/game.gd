@@ -127,6 +127,7 @@ var summary_guard_left := 0.0
 var _hit_stopped := false
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
+const SELF_PLAY := "res://tools/self_play.gd"
 
 
 func _ready() -> void:
@@ -268,6 +269,20 @@ func _ready() -> void:
 	player.body().global_position = ctx.terrain.spawn_point(1)
 	camera.snap(ctx.terrain.entry_heading(1))
 	flow.show_title()
+	if _launch_flag("--self-play"):
+		_start_self_play()
+
+
+# --self-play hands the run to a bot from tools/ (tools/self_play.gd), which the shipped pack
+# leaves out; without it the game says so and quits, rather than waiting for a player.
+func _start_self_play() -> void:
+	if not ResourceLoader.exists(SELF_PLAY):
+		push_error("game: --self-play needs a pack with tools/ (npm run sketch:export -- --self-play)")
+		get_tree().quit(2)
+		return
+	var bot: Node = load(SELF_PLAY).new()
+	bot.set("game", self)
+	add_child(bot)
 
 
 # Moss's jukebox: a tune heard in play long enough is filed in the profile and announced on
