@@ -30,9 +30,6 @@ DEFAULTS = {
     "bevel": 0.03,
     "bevel_angle": 30.0,
     "bevel_segments": 1,
-    # Edges shorter than this keep hard (no bevel), so bolts and rivets stay cheap while
-    # the big panels round off; 0 bevels every hard edge.
-    "bevel_min": 0.0,
     # Faces are smooth; edges sharper than this stay hard after the bevel.
     "sharp_angle": 50.0,
     # Catmull-Clark levels for parts (a Part's own .subsurf wins). Hard edges are creased,
@@ -53,9 +50,6 @@ DEFAULTS = {
     # Convex edges lighten and creases darken by up to this much (curvature bake).
     "edge": 0.18,
     "bake_slots": None,
-    # Linear RGB colours the bake never changes: a state key a shader matches exactly (the
-    # kit steel shader tints loops within 0.02 of mint), so darkening it would break the tint.
-    "bake_keep": (),
 }
 
 _opts = None
@@ -106,8 +100,7 @@ def shape(bm, opts=None, bevel=None):
             w = round(min(width, 0.25 * thin), 4)
             if w < 0.005:
                 continue
-            edges = {e for f in island for e in f.edges
-                     if _angle(e) > o["bevel_angle"] and e.calc_length() >= o["bevel_min"]}
+            edges = {e for f in island for e in f.edges if _angle(e) > o["bevel_angle"]}
             groups.setdefault(w, set()).update(edges)
         for w in sorted(groups, reverse=True):
             hard = sorted((e for e in groups[w] if e.is_valid), key=lambda e: e.index)
@@ -117,8 +110,8 @@ def shape(bm, opts=None, bevel=None):
                                 clamp_overlap=True, loop_slide=True, material=-1)
                 bm.normal_update()
                 bm.edges.index_update()
-        # A clamped bevel can meet itself and leave coincident corners, which export as
-        # zero-area triangles (dress_mdm_assets_test rejects them); collapse those edges.
+        # A clamped bevel that meets itself leaves coincident corners: zero-area
+        # triangles the asset tests reject.
         bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=sorted(bm.edges, key=lambda e: e.index))
         bm.normal_update()
     for f in bm.faces:
@@ -190,7 +183,24 @@ def finish(bm, opts, bevel=None, subsurf=None, regions=()):
     return out
 
 
+def _loops(face):
+    """A face's loops starting from its lowest-index vertex. Recipes can hand over the
+    same face with a different first loop between runs, and bevel and subdivision emit
+    vertices in loop order, so polish starts every face at the same corner."""
+    loops = list(face.loops)
+    k = min(range(len(loops)), key=lambda i: loops[i].vert.index)
+    return loops[k:] + loops[:k]
+
+
+def _canonical(bm):
+    out = bmesh.new()
+    _append(out, bm)
+    bm.free()
+    return out
+
+
 def _finish_one(bm, opts, bevel, subsurf, fit=None):
+    bm = _canonical(bm)
     before = _boxes(bm) if (opts["fit"] if fit is None else fit) else None
     shape(bm, opts, bevel)
     levels = opts["subsurf"] if subsurf is None else subsurf
@@ -274,11 +284,13 @@ def _append(dst, src):
         for sl, dl in vert_layers:
             nv[dl] = v[sl]
         verts.append(nv)
-    for f in src.faces:
-        nf = dst.faces.new([verts[v.index] for v in f.verts])
+    # Faces in a fixed order too: by their vertex indices from the lowest corner.
+    for loops in sorted((_loops(f) for f in src.faces), key=lambda ls: [l.vert.index for l in ls]):
+        f = loops[0].face
+        nf = dst.faces.new([verts[l.vert.index] for l in loops])
         nf.material_index = f.material_index
         nf.smooth = f.smooth
-        for sloop, dloop in zip(f.loops, nf.loops):
+        for sloop, dloop in zip(loops, nf.loops):
             for kind, sl, dl in loop_layers:
                 if kind == "uv":
                     dloop[dl].uv = sloop[sl].uv
@@ -550,7 +562,5 @@ def bake(root, opts=None):
                     continue
                 shade = shade[2]
                 c = attr.data[li].color
-                if any(math.dist(c[:3], k[:3]) < 0.02 for k in o["bake_keep"]):
-                    continue
                 attr.data[li].color = (_q(c[0] * shade), _q(c[1] * shade), _q(c[2] * shade), c[3])
         me.update()
