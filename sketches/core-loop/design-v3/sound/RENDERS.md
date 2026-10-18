@@ -387,3 +387,9 @@ PATH=<shim dir>:$PATH CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python
 ```
 
 The shim is a one-line `nvidia-smi` wrapper that adds `-i 0`. Since the RTX 3060 was installed, `ace.py`'s VRAM check fails because it parses one line of `nvidia-smi` output and now gets two.
+
+## Radio takes packed (2026-10-18)
+
+All 81 takes of `assets/radio/catalogue.json` are rendered (two seeds each, 5101 and 5102), picked (`RADIO-PICKS.md`, Andrew's "Music thread picks" tap, 17 Oct 22:28Z: a version that passes every mix check beats one that fails; between two passing versions, more room around the lead wins) and packed as whole-song packs with `tools/ace/package_phase_tracks.py pack --whole`. The registry the pack step reads is `radio_renders.json` (81 rows, one pick each). Each pack is `assets/music_ace/take_<id>/manifest.json`; the Oggs are gitignored like every pack. `MusicRows.take_manifest` resolves a `take-*` id to its pack, so the radio plays the take's own recording and no longer its parent tune. `timing_verified` is false on all 81.
+
+Audio gate (`node scripts/audio-gate.mjs`, run on the 81 packs): loudness -16.0 to -16.1 LUFS on all 81; seam wrap under the loop's own 99.9th percentile step on all 81; true peak under -1 dBTP on 79 at the first pack (limiter ceiling -2.6), `take_fabricator_overclocked` (-0.7) and `take_sinkhole_trip` (-0.9) over after the Ogg encode, repacked at ceiling -3.6 to -1.8 and -1.7 dBTP. Ear check: Andrew, at the sitting.
