@@ -237,6 +237,19 @@ const ROWS := [
 const BOSSES := ["brindle", "waking", "mind"]
 
 
+# First-win secrets (secrets.gd, PR #97): a secret tune stays off the crate and off the band
+# until Secrets.tune_open. Read by path, so the jukebox works with or without that file;
+# with no secrets.gd nothing is shut.
+const SECRETS := "res://src/core/secrets.gd"
+
+
+static func shut(id: String, profile, sitting := false) -> bool:
+	if not ResourceLoader.exists(SECRETS):
+		return false
+	var secrets = load(SECRETS)
+	return id == String(secrets.TUNE) and not secrets.tune_open(profile, sitting)
+
+
 static func ids() -> Array:
 	return ROWS.map(func(r: Dictionary): return String(r["id"]))
 

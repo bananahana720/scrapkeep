@@ -50,6 +50,8 @@ var cancel_pressed := false
 var slot_pick := -1
 # Q this tick.
 var ultimate_pressed := false
+# F this tick: fire the racked active.
+var active_pressed := false
 
 
 func clear() -> void:
@@ -82,6 +84,7 @@ func clear() -> void:
 	shift_released = false
 	slot_pick = -1
 	ultimate_pressed = false
+	active_pressed = false
 
 
 # A source lets the headless test drive the same player with no input at all.
@@ -138,6 +141,7 @@ class Keyboard:
 		out.harpoon_held = Input.is_action_pressed("cl_harpoon")
 		out.harpoon_released = Input.is_action_just_released("cl_harpoon")
 		out.ultimate_pressed = Input.is_action_just_pressed("cl_ultimate")
+		out.active_pressed = Input.is_action_just_pressed("cl_active")
 		var picks := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
 		for i in picks.size():
 			if Input.is_action_just_pressed(picks[i]):

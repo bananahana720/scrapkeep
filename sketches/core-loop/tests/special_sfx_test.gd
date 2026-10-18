@@ -14,7 +14,7 @@ var _t := T.new("special_sfx_test")
 
 func _initialize() -> void:
 	var ids: Array = SfxBank.FILE_SOUNDS.keys()
-	_t.eq("17 specials and the hype drop", ids.size(), 18)
+	_t.eq("17 specials, the hype drop, 5 jolt layer, 4 crown layer, the Mind quote, 8 arrival and 4 Highdraft roster sounds", ids.size(), 40)
 	for id in ids:
 		_t.check("%s has a recipe" % id, SfxBank.has_recipe(id))
 		_t.check("%s has a trim" % id, SfxBank.TRIM_DB.has(id))

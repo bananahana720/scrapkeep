@@ -48,7 +48,13 @@ const SIDE := 60.0
 const ACTION_GAP := 18
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
-const TITLE := "SCRAPKEEP: FIRST RUN"
+const TITLE := "SCRAPKEEP"
+# The title's name lands like an ink stamp (TONE-BIBLE UI motion): it starts big and tilted and
+# snaps down with a short overshoot. It rests straight, because its container's layout resets a
+# child's scale and rotation. Reduced motion skips the slam.
+const STAMP_FROM := 1.35
+const STAMP_TIME := 0.18
+const STAMP_TILT := -6.0
 # A win over the final world's boss opens the summary on the ending page (Worlds.ENDING). For
 # its first ENDING_HOLD seconds no key closes it, so a press meant for the fight cannot skip
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
@@ -94,6 +100,7 @@ var _ending_left := 0.0
 var ending_sequence
 var _guard := 0.0
 var _tween: Tween
+var _stamp_tween: Tween
 var _state := ""
 # The prologue (PrologueRows) plays on the first pilot select of a profile. A bot-driven game
 # (the headless tests) skips it unless it opts in, so its Start lands on the cards as before.
@@ -251,6 +258,7 @@ func _on_flow_changed(state: String) -> void:
 	_breath_row.visible = false
 	_refusal.text = ""
 	_title.visible = true
+	_unstamp()
 	_stats.visible = true
 	_choices.visible = true
 	_actions.visible = true
@@ -268,14 +276,20 @@ func _on_flow_changed(state: String) -> void:
 			_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 			if game.flow.continue_ready:
 				_action("continue", "key_c", "Continue")
+			# The main menu (decisions.tsv 2026-10-16 alpha-scope): Play to pilot select, then
+			# Camp, Settings, Help and Achievements, and Quit last, on the Esc the title already
+			# quits on.
 			var saved: bool = game.flow.continue_ready or game.flow.saved_run_cause != ""
-			_action("start", "key_space", "New run" if saved else "Start")
+			_action("start", "key_space", "New run" if saved else "Play")
+			_action("camp", "key_k", "Camp")
+			_action("settings", "key_s", "Settings")
 			_action("help", "key_h", "Help")
 			_action("achievements", "key_a", "Achievements")
-			_action("settings", "key_s", "Settings")
 			if game.ctx.profile != null and not game.ctx.profile.companion().is_empty():
 				_companion_action()
-			_action("camp", "key_k", "Camp")
+			_action("quit", "key_esc", "Quit")
+			_stamp()
+			_announce_ready()
 			if game.flow.saved_run_cause != "":
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()
@@ -766,7 +780,8 @@ func _spin_toggle(id: String) -> void:
 
 func _refresh_jukebox() -> void:
 	var audio = _audio()
-	_jukebox.refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2)
+	var sitting: bool = game.tuning != null and game.tuning.sitting()
+	_jukebox.refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2, sitting)
 
 
 func _audio():
@@ -1075,7 +1090,10 @@ func _show(title: String, color: Color, body: String) -> void:
 
 func _action(id: String, key: String, words: String) -> void:
 	var button := ChoiceButton.new(id, key, words)
-	button.pressed.connect(_press.bind(key))
+	if id == "quit":
+		button.pressed.connect(func(): get_tree().quit())
+	else:
+		button.pressed.connect(_press.bind(key))
 	if id == "start":
 		_make_primary(button)
 	_actions.add_child(button)
@@ -1148,6 +1166,47 @@ func _summary_stats() -> void:
 		value.text = chip[1]
 		row.add_child(value)
 		_stats.add_child(row)
+
+
+func _stamp() -> void:
+	if game.camera != null and game.camera.reduced_motion:
+		return
+	_stamp_tween = create_tween()
+	_stamp_tween.tween_callback(func():
+		_title.pivot_offset = _title.size / 2.0
+		_title.scale = Vector2.ONE * STAMP_FROM
+		_title.rotation = deg_to_rad(STAMP_TILT))
+	_stamp_tween.set_parallel(true)
+	_stamp_tween.tween_property(_title, "scale", Vector2.ONE, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_stamp_tween.tween_property(_title, "rotation", 0.0, STAMP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+# The release-candidate gate launches the AppImage on a fresh profile and waits for this one
+# line, printed the first time the main menu shows in this process. After ms it names the launch
+# set and how many pilots the title opens, so a cold launch shows the unlock ladder (P-R21: 1 on a
+# fresh profile) or the sitting (all six).
+static var _ready_announced := false
+
+
+func _announce_ready() -> void:
+	if _ready_announced:
+		return
+	_ready_announced = true
+	print(ready_line(Time.get_ticks_msec()))
+
+
+func ready_line(ms: int) -> String:
+	var open: int = game.flow.classes.filter(func(def): return game.pilot_unlocked(def)).size()
+	var launch_set := "sitting" if game.tuning != null and game.tuning.sitting() else "default"
+	return "SCRAPKEEP_MENU_READY ms=%d profile=%s pilots=%d/%d" % [ms, launch_set, open, game.flow.classes.size()]
+
+
+func _unstamp() -> void:
+	if _stamp_tween != null:
+		_stamp_tween.kill()
+		_stamp_tween = null
+	_title.scale = Vector2.ONE
+	_title.rotation = 0.0
 
 
 func _fade(show: bool) -> void:

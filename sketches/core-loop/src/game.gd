@@ -5,6 +5,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
 const Beacon := preload("res://src/core/beacon.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Profile := preload("res://src/core/profile.gd")
@@ -14,6 +15,7 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
+const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
@@ -28,6 +30,8 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
@@ -48,6 +52,10 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const TABLES := {"default": StageDefs, "slice": SliceDefs, "alpha": AlphaDefs, "park": ParkDefs}
+# A launched game with no --table plays the six parks (KD7), so the app-menu entry reaches them.
+# Headless tests and bot runs (test_mode) keep the legacy maps unless they pick a table;
+# --table=default still reaches those maps from a launch.
+const LAUNCH_TABLE := "park"
 
 # The headless tests drive the same scene with a scripted source and no mouse capture.
 var test_mode := false:
@@ -59,7 +67,7 @@ var test_mode := false:
 # pauses while it is set.
 var bot_driven := false
 # The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
-# --table= from the launch args, and no argument is the default table.
+# --table= from the launch args, and no argument is LAUNCH_TABLE (the default table in test_mode).
 var table := ""
 # The dev keys (F1 tuning panel, F3 interpolation, F4 tuning dump, F6 boss tempo) work only when
 # the game was launched with --dev; a test sets it directly. Modules read ctx.dev.
@@ -186,9 +194,11 @@ func _ready() -> void:
 	for row in ctx.stages.DEFS:
 		if row["map"] == "spillway":
 			preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(row["stage"]))
+	preload("res://src/presentation/spillway_scenery.gd").hook(ctx)
 	preload("res://src/presentation/dig_scenery.gd").hook(ctx)
 	preload("res://src/presentation/highdraft_scenery.gd").hook(ctx)
 	preload("res://src/presentation/world_look.gd").hook(ctx)
+	WorldFx.hook(ctx)
 	combat = _module(Combat)
 	build = _module(Build)
 	# Wave 4's boss module sets up after build and before presentation when it exists.
@@ -281,7 +291,7 @@ func _chosen_table():
 			if arg.begins_with("--table="):
 				id = arg.trim_prefix("--table=")
 	if id.is_empty():
-		return StageDefs
+		return StageDefs if test_mode else TABLES[LAUNCH_TABLE]
 	if not TABLES.has(id):
 		push_warning("game: unknown stage table '%s'; using the default" % id)
 		return StageDefs
@@ -309,6 +319,8 @@ func continue_refusal() -> String:
 func sitting_save_guard() -> void:
 	if tuning != null and tuning.sitting() and ctx.profile != null:
 		ctx.profile._refuse("sitting profile: this session does not save")
+		# The sitting opens every first-win secret, as it opens every pilot (secrets.gd).
+		Secrets.open_for_sitting(ctx.profile)
 
 
 func pilot_unlocked(def) -> bool:
@@ -389,6 +401,7 @@ func restart_hold_fraction() -> float:
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
 		get_tree().get_nodes_in_group("enemy"), from, forward, player.ball_position())
+	Grip.mark(player.kit.aim, player.heft(), tuning.pole_flail())
 	return player.kit.aim
 
 
@@ -608,6 +621,7 @@ func apply_saved_display(args: Array = []) -> void:
 	if saved.fullscreen():
 		set_fullscreen(true)
 	set_reduced_motion(saved.reduced_motion())
+	set_reduce_flashes(saved.reduce_flashes())
 
 
 # 0 High, 1 Low.
@@ -622,13 +636,23 @@ func set_quality(level: int) -> void:
 func set_reduced_motion(on: bool) -> void:
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
+	WorldFx.preferred = on
+	if is_instance_valid(WorldFx.current):
+		WorldFx.current.set_quality(WorldFx.current.low, on)
 	if presentation != null and presentation.get("juice") != null:
 		presentation.juice.set_reduced_motion(on)
+		presentation.player_fx.reduced_motion = on
 	elif camera != null:
 		camera.reduced_motion = on
 	for node in find_children("*", "Node3D", true, false):
 		if node.get_script() == HighdraftFx:
 			node.reduced_motion = on
+
+
+# Reduce flashes: every flash, white pop and strobe reads FlashGuard when it fires, so the
+# switch takes effect on the next flash without touching live nodes.
+func set_reduce_flashes(on: bool) -> void:
+	FlashGuard.on = on
 
 
 func set_fullscreen(on: bool) -> void:

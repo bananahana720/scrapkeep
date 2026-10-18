@@ -53,7 +53,8 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 # or missing-boss run has no spine record (the run log writes only at death and run end), so
 # its bots.ndjson line is the only trace. Each seed gets a fresh process and data folder,
 # seeded RNG streams, spawn-order signs instead of object-ID-dependent choices, a
-# completed audio bake, and physics-tick hit-stop gates (src/core/sim_clock.gd).
+# completed audio bake (stage 1's band too, as a player gets behind the title), and
+# physics-tick hit-stop gates (src/core/sim_clock.gd).
 # Replay evidence is specific to the checked machine, build, policy and table.
 
 var _audit
@@ -219,7 +220,7 @@ func _physics_process(delta: float) -> bool:
 				return true
 			_driver.late_offer_policy = late
 			_driver.tree_policy = "random"
-		_game.presentation.audio.bake_now()
+		_game.presentation.audio.bake_opening_now()
 		_game.run.run_seed_override = _seeds[_index]
 		_started_msec = Time.get_ticks_msec()
 		var resume := false
@@ -307,7 +308,9 @@ func _snapshot(delta: float) -> Dictionary:
 		items.append([_vector(item.global_position), field._caught.get(item),
 			field._value.get(item), field._age.get(item), field._cogs.get(item)])
 	var events := []
-	for state in _game.world.events._park_states:
+	# world.gd holds no event director between stages (its events is null from a stage's end to the next entry).
+	var director = _game.world.events
+	for state in (director._park_states if director != null else []):
 		events.append({"id": state.row.id, "phase": state.phase, "due": state.due_s,
 			"ready": state.ready_s, "elapsed": state.live_elapsed_s, "holding": state.holding})
 	return {"tick": _driver.ticks + 1, "delta": delta, "flow": _game.flow.state_name(),
@@ -319,7 +322,7 @@ func _snapshot(delta: float) -> Dictionary:
 		"events": events, "music_clock": _game.presentation.audio.engine.clock,
 		"bot_rng": str(_driver.rng.state), "run_rng": str(_game.ctx.rng.state),
 		"loot_rng": str(_game.build.loot_rng.state), "director_rng": str(_game.world.director._rng.state),
-		"event_rng": str(_game.world.events.rng.state), "tree_rng": str(_driver._tree_rng.state),
+		"event_rng": str(director.rng.state) if director != null else null, "tree_rng": str(_driver._tree_rng.state),
 		"camera_rng": str(_game.camera._shake_rng.state),
 		"aim_origin": _vector(_game.ctx.aim_origin()), "aim_forward": _vector(_game.ctx.aim_forward()),
 		"yaw": _game.camera.yaw, "pitch": _game.camera.pitch, "enemies": enemies}

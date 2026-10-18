@@ -20,6 +20,7 @@ const LaunchCard := preload("res://src/ui/launch_card.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
+const FirstSteps := preload("res://src/ui/first_steps.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -146,6 +147,7 @@ var reticle
 var profile
 var ability_bar
 var key_glyphs
+var first_steps
 var edge_markers
 var part_name
 var launch_card
@@ -227,6 +229,9 @@ func setup(game_ref) -> void:
 	key_glyphs = KeyGlyphs.new()
 	add_child(key_glyphs)
 	key_glyphs.setup(game, profile)
+	first_steps = FirstSteps.new()
+	add_child(first_steps)
+	first_steps.setup(game, profile)
 
 	_objective = ObjectiveView.new()
 	add_child(_objective)
@@ -943,7 +948,7 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, edge_markers, why_callout, hotwire_screen, damage_numbers]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, hotwire_screen, damage_numbers]:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing

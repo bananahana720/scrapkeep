@@ -1,0 +1,323 @@
+extends Node3D
+
+const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
+const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
+const Anchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
+const Word := preload("res://src/presentation/world_fx/world_fx_word.gd")
+
+# World and event effects (WORLD-FX.md): the runtime. The game installs one (hook) that swaps its
+# air to each stage's world on stage entry and rests it on the title, summary and death screens.
+#   var fx := WorldFx.install(parent, world_index)        # ambient air for that world
+#   fx.bind(camera, ball)                                 # the air follows them
+#   WorldFx.fire("relay_full", at)                        # any system fires a hook, no reference needed
+#   fx.set_overlay("storm_build")                         # a weather sky or modifier kind adds air
+# Ambient emitters follow the camera (or the ball) with an identity basis, so the wind keeps its
+# direction while the view turns. Anchors (WorldFxAnchor) register themselves; every RANK_SECONDS
+# the nearest ANCHOR_SLOTS inside their lod_m emit and the rest rest or show an impostor.
+const RANK_SECONDS := 0.25
+const BURST_POOL := 2
+# Flow states with no stage on screen: the air rests there.
+const RESTING := ["title", "class_select", "summary", "dead", "victory"]
+
+static var current: Node3D
+# The saved reduced-motion setting, read on install; Game.set_reduced_motion keeps it current.
+static var preferred := false
+
+var world := -1
+var low := false
+var reduced_motion := false
+var ambient: Array[GPUParticles3D] = []
+var overlay: Array[GPUParticles3D] = []
+var overlay_kind := ""
+var resting := false
+var _camera: Node3D
+var _ball: Node3D
+var _bursts := {}
+var _next := {}
+var _rank_wait := 0.0
+var _relay: Node3D
+var _relay_quarters := 0
+
+
+static func install(parent: Node, world_index: int, is_low := false, is_reduced := false) -> Node3D:
+	var fx: Node3D = load("res://src/presentation/world_fx/world_fx.gd").new()
+	fx.name = "WorldFx"
+	fx.world = world_index
+	fx.low = is_low
+	fx.reduced_motion = is_reduced
+	parent.add_child(fx)
+	return fx
+
+
+# The game's wiring: one WorldFx under the game root, following the chase camera and the ball.
+static func hook(ctx) -> Node3D:
+	var fx := install(ctx.root, -1, false, preferred)
+	ctx.events.stage_entered.connect(fx._on_stage_entered.bind(ctx))
+	ctx.events.flow_changed.connect(fx._on_flow_changed)
+	ctx.events.event_started.connect(fx._on_event_started.bind(ctx))
+	ctx.events.event_progress.connect(fx._on_event_progress.bind(ctx))
+	ctx.events.event_ended.connect(fx._on_event_ended.bind(ctx))
+	load("res://src/presentation/graphics_preset.gd").register_dressing_host(fx)
+	return fx
+
+
+# A weather sky id or a modifier kind through the installed WorldFx; "" clears it.
+static func lay_overlay(kind: String) -> void:
+	if is_instance_valid(current):
+		current.set_overlay(kind)
+
+
+# Fire a hook through the installed WorldFx; a no-op when none is installed (menus, tests).
+static func fire(hook: String, at: Vector3, tint := Color.TRANSPARENT) -> void:
+	if is_instance_valid(current):
+		current.play(hook, at, tint)
+
+
+func _enter_tree() -> void:
+	current = self
+
+
+func _exit_tree() -> void:
+	if current == self:
+		current = null
+
+
+func _ready() -> void:
+	_build_ambient()
+
+
+func _build_ambient() -> void:
+	for p in ambient:
+		p.queue_free()
+	ambient.clear()
+	var set_id: String = Specs.WORLD_SETS.get(world, "")
+	for id in Specs.SETS.get(set_id, []):
+		ambient.append(_add(id))
+	_sync()
+	_follow()
+
+
+# Swap the air to another world's; the same world keeps its emitters (and their particles) as is.
+func enter_world(world_index: int) -> void:
+	if world_index == world:
+		return
+	world = world_index
+	_build_ambient()
+
+
+func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
+	enter_world(ctx.stages.world_of(stage))
+	set_overlay("")
+	if is_instance_valid(_relay):
+		_relay.queue_free()
+		_relay = null
+	bind(ctx.camera, ctx.player)
+	set_resting(false)
+
+
+func _on_flow_changed(state: String) -> void:
+	set_resting(RESTING.has(state))
+
+
+# Resting stops new air and hides what is in it, so a menu never shows a stage's dust.
+func set_resting(on: bool) -> void:
+	resting = on
+	visible = not on
+	for p in ambient + overlay:
+		p.emitting = not on and p.amount_ratio > 0.0
+
+
+# GraphicsPreset calls this on bind and on every preset change.
+func _sync_dressing() -> void:
+	set_quality(load("res://src/presentation/graphics_preset.gd").current == "low", reduced_motion)
+
+
+# camera: the chase camera (a rig node) or a Camera3D; the air follows the viewport's live lens.
+func bind(camera: Node3D, ball: Node3D) -> void:
+	_camera = camera
+	_ball = ball
+	_follow()
+
+
+func set_quality(is_low: bool, is_reduced: bool) -> void:
+	low = is_low
+	reduced_motion = is_reduced
+	_sync()
+
+
+# A weather sky id or a stage modifier kind (Specs.OVERLAYS); "" clears it.
+func set_overlay(kind: String) -> void:
+	for p in overlay:
+		p.queue_free()
+	overlay.clear()
+	overlay_kind = kind
+	for id in Specs.OVERLAYS.get(kind, []):
+		overlay.append(_add(id))
+	_sync()
+	_follow()
+
+
+# Hold the Relay (event id "hold_the_relay"): an anchor at the mast foot, sized to the ring, whose
+# level follows the charge and pauses while the ball is out; each quarter traces the ring and a
+# win fires the full burst.
+const RELAY_ID := "hold_the_relay"
+const RELAY_RING_M := 24.0
+
+
+static func _relay_model(ctx):
+	var world = ctx.root.get("world") if ctx.root != null else null
+	var director = world.get("events") if world != null else null
+	if director == null or not director.has_method("offer"):
+		return null
+	return director.offer(RELAY_ID).get("model")
+
+
+static func _relay_foot(ctx, model) -> Vector3:
+	var y: float = ctx.terrain.height(model.relay.x, model.relay.y) if ctx.get("terrain") != null else 0.0
+	return Vector3(model.relay.x, y, model.relay.y)
+
+
+func _on_event_started(id: String, ctx) -> void:
+	if id != RELAY_ID:
+		return
+	var model = _relay_model(ctx)
+	if model == null:
+		return
+	if is_instance_valid(_relay):
+		_relay.queue_free()
+	_relay = Anchor.make("relay")
+	add_child(_relay)
+	_relay.global_position = _relay_foot(ctx, model)
+	_relay.scale = Vector3.ONE * clampf(model.ring_radius / RELAY_RING_M, 0.25, 2.0)
+	_relay.set_level(0.0, not model.inside)
+	_relay_quarters = 0
+
+
+func _on_event_progress(id: String, fraction: float, ctx) -> void:
+	if id != RELAY_ID or not is_instance_valid(_relay):
+		return
+	var model = _relay_model(ctx)
+	_relay.set_level(fraction, model != null and not model.inside)
+	var quarters := mini(int(fraction * 4.0), 3)
+	if quarters > _relay_quarters:
+		_relay_quarters = quarters
+		play("relay_quarter", _relay.global_position, Color.TRANSPARENT, _relay.scale.x)
+
+
+func _on_event_ended(id: String, outcome: String, _ctx) -> void:
+	if id != RELAY_ID or not is_instance_valid(_relay):
+		return
+	if outcome == "won":
+		play("relay_full", _relay.global_position, Color.TRANSPARENT, _relay.scale.x)
+	_relay.queue_free()
+	_relay = null
+
+
+func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> void:
+	var row: Dictionary = Specs.HOOKS.get(hook, {})
+	if row.is_empty():
+		push_warning("WorldFx: no hook %s" % hook)
+		return
+	for id in row["effects"]:
+		var p := _burst(id)
+		var share := Kit.share(Specs.SPECS[id], low, reduced_motion)
+		if share <= 0.0:
+			continue
+		p.amount_ratio = share
+		p.global_transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), at)
+		p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else Color.WHITE)
+		p.restart()
+		p.emitting = true
+	if row["word"] != "" and not reduced_motion:
+		Word.stamp(self, row["word"], at)
+
+
+# Live particles this WorldFx can hold at once: ambient plus overlay plus the slotted anchors.
+func live_ceiling() -> int:
+	var total := 0
+	for p in ambient + overlay:
+		total += Kit.cost(p.get_meta("world_fx"), low, reduced_motion)
+	return total
+
+
+func _add(id: String) -> GPUParticles3D:
+	var p := Kit.build(id)
+	add_child(p)
+	return p
+
+
+func _burst(id: String) -> GPUParticles3D:
+	if not _bursts.has(id):
+		var pool: Array[GPUParticles3D] = []
+		for i in BURST_POOL:
+			pool.append(_add(id))
+		_bursts[id] = pool
+		_next[id] = 0
+	var i: int = _next[id]
+	_next[id] = (i + 1) % BURST_POOL
+	return _bursts[id][i]
+
+
+func _sync() -> void:
+	for p in ambient + overlay:
+		p.amount_ratio = Kit.share(Specs.SPECS[p.get_meta("world_fx")], low, reduced_motion)
+		p.emitting = p.amount_ratio > 0.0 and not resting
+	for ref in Anchor.live:
+		var a = ref.get_ref()
+		if a != null:
+			a.set_quality(low, reduced_motion)
+
+
+func _process(delta: float) -> void:
+	_follow()
+	_rank_wait -= delta
+	if _rank_wait <= 0.0:
+		_rank_wait = RANK_SECONDS
+		_rank()
+
+
+func _lens() -> Node3D:
+	var live := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if live != null:
+		return live
+	return _camera if is_instance_valid(_camera) else null
+
+
+func _follow() -> void:
+	if _camera == null:
+		return
+	var lens := _lens()
+	if lens == null:
+		return
+	var eye := lens.global_position
+	var yaw := Basis(Vector3.UP, lens.global_rotation.y)
+	var feet := _ball.global_position if is_instance_valid(_ball) else eye
+	Kit.set_clear(feet)
+	for p in ambient + overlay:
+		var s: Dictionary = Specs.SPECS[p.get_meta("world_fx")]
+		var offset: Vector3 = s.get("offset", Vector3.ZERO)
+		if s["attach"] == "ball":
+			p.global_position = feet + offset
+		else:
+			p.global_position = eye + yaw * offset
+
+
+func _rank() -> void:
+	Anchor.live = Anchor.live.filter(func(r): return r.get_ref() != null)
+	var lens := _lens()
+	if lens == null:
+		return
+	var eye := lens.global_position
+	var rows: Array = []
+	for ref in Anchor.live:
+		var a: Node3D = ref.get_ref()
+		if a.is_inside_tree():
+			rows.append([a.global_position.distance_to(eye), a])
+	rows.sort_custom(func(x, y): return x[0] < y[0])
+	var slots := Specs.ANCHOR_SLOTS
+	for row in rows:
+		var a = row[1]
+		var within: bool = row[0] <= a.lod_m()
+		a.set_range(row[0], within and slots > 0)
+		if within:
+			slots -= 1

@@ -83,8 +83,8 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": ""},
 	"E18": {"kind": "mind_hand", "pre_shoot": 1.4, "cooldown": 2.25, "radius": 1.3, "length": 18.0, "marker": "line", "band": "ray",
 		"recovery_before": 0.0, "reason": ""},
-	"E19": {"kind": "burrower", "pre_shoot": 1.0, "cooldown": 2.25, "radius": 1.1, "length": 14.0, "marker": "line", "band": "ray",
-		"recovery_before": 0.0, "reason": ""},
+	"E19": {"kind": "burrower", "pre_shoot": 1.0, "cooldown": 2.25, "radius": 2.6, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "A burst from under the floor: the ring swells 1.0 s first, and a ball that reaches a bank, a wall or the air is already out of it."},
 	"E20": {"kind": "drill_crew", "pre_shoot": 1.2, "cooldown": 2.25, "radius": 3.0, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A breach that no knock interrupts: the lowering bit is the only answer window."},
 	"E21": {"kind": "lamp_swarm", "pre_shoot": 0.9, "cooldown": 2.75, "radius": 9.0, "length": 0.0, "marker": "circle", "band": "area_burst",
@@ -95,6 +95,28 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": ""},
 	"E24": {"kind": "kite_drone", "pre_shoot": 0.8, "cooldown": 2.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A dive that no knock interrupts: the mark lamp paints the spot 0.8 s before the 0.7 s dive."},
+	"E25": {"kind": "splitter_pod", "pre_shoot": 1.0, "cooldown": 1.85, "radius": 4.5, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "A fuse, not a burst: the full second is the time to roll out of the ring; the spent husk sits out its recovery and crumbles, so the cooldown never runs."},
+	"E26": {"kind": "dispatcher", "pre_shoot": 1.2, "cooldown": 6.0, "radius": 4.0, "length": 0.0, "marker": "circle", "band": "projectile",
+		"recovery_before": 0.0, "reason": "A tube drop: the ring stands through the 0.45 s suck-up and the pod's 0.75 s flight, the lobber's grammar on a shorter arc. Cooldown is escalation step 0; unanswered drops climb to 2.5 s (step 1) and 1.0 s (step 2)."},
+	"E27": {"kind": "jolt_layer", "pre_shoot": 1.0, "cooldown": 3.25, "radius": 6.0, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "A field, not a burst: the mat's first jolt lands a full pulse after it goes live, each pulse read over its own 0.5 s lead (FIELDS-AND-CASTS section 2.3)."},
+	# E25 to E29 are taken by the specials' branches; the world roster kinds start at E30
+	# (design-v3/WORLD-ROSTERS.md).
+	"E30": {"kind": "pit_jaw", "pre_shoot": 1.0, "cooldown": 3.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": HOLD_REASON},
+	"E31": {"kind": "prop_crew", "pre_shoot": 1.0, "cooldown": 0.0, "radius": 3.3, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "The player starts it: ramming the prop drops the roof, which warns 1.0 s before it lands. It never repeats, so it has no cooldown."},
+	"E32": {"kind": "ballast_heavy", "pre_shoot": 1.1, "cooldown": 2.45, "radius": 5.0, "length": 0.0, "marker": "circle", "band": "area_burst",
+		"recovery_before": 0.0, "reason": "The brace is the answer window: 1.1 s with the slab up, light enough that a cruise ram throws it off the rim."},
+	"E33": {"kind": "gap_net", "pre_shoot": 1.0, "cooldown": 1.25, "radius": 0.6, "length": 14.0, "marker": "line", "band": "ray",
+		"recovery_before": 0.0, "reason": "A net that charges for 1.0 s and holds 3.5 s, then hangs slack for 2.0 s: cross in the slack or faster than it holds."},
+}
+
+# Pack attacks the player starts and the unit never repeats: no cycle to measure, so the
+# record's cooldown is 0 and the recovery check does not apply. Keyed by the ATTACK_ROWS id.
+const PLAYER_STARTED := {
+	"E31": "Prop crew roof drop: a ram on the prop starts it once; the crew has no attack of its own (design-v3/WORLD-ROSTERS.md).",
 }
 
 # Warden attacks keep their own timing (KF2 to KF4 report each one's charge, recovery and

@@ -1,6 +1,7 @@
 extends Node3D
 
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const DIR := "res://assets/models/highdraft/"
@@ -17,7 +18,7 @@ const SKY_RING := 460.0
 
 # A missing-folder fixture uses the same loader as the real fight.
 static var dir := DIR
-static var _sky_material: PanoramaSkyMaterial
+static var _sky_material: ShaderMaterial
 
 var _saved := {}
 var _greybox: Array[Dictionary] = []
@@ -221,11 +222,14 @@ func _apply_environment(terrain, root: Node) -> void:
 		if light.name != "SkyFill":
 			sun = light
 			break
+	var look: Dictionary = WorldLook.ARENAS.mind
 	if _sky_material == null:
-		_sky_material = _make_sky()
+		_sky_material = Palette.time_sky_material(_make_panorama())
+		var graded := WorldLook.grade(look)
+		for key in graded:
+			_sky_material.set(key, graded[key])
 	var sky := Sky.new()
 	sky.sky_material = _sky_material
-	var look: Dictionary = WorldLook.ARENAS.mind
 	var values := WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air)
 	values["sky"] = sky
 	_saved = GraphicsPreset.set_lighting(self, env, values, WorldLook.lights(look, sun), "arena")
@@ -248,8 +252,9 @@ func _exit_tree() -> void:
 	release()
 
 
-# Same morning panorama as the Highdraft, with a local cache and per-fight saved values.
-static func _make_sky() -> PanoramaSkyMaterial:
+# The Highdraft sheet's painted panorama, graded to the run's dusk by the Mind's look row, with a
+# local cache and per-fight saved values.
+static func _make_panorama() -> ImageTexture:
 	var image := Image.create_empty(512, 256, false, Image.FORMAT_RGB8)
 	var noise := FastNoiseLite.new()
 	noise.seed = 301006
@@ -271,6 +276,4 @@ static func _make_sky() -> PanoramaSkyMaterial:
 				color = color.lerp(cream, smoothstep(0.3, 0.55, cloud) * smoothstep(0.05, 0.25, elevation) * 0.7)
 			image.set_pixel(x, y, color)
 	image.generate_mipmaps()
-	var material := PanoramaSkyMaterial.new()
-	material.panorama = ImageTexture.create_from_image(image)
-	return material
+	return ImageTexture.create_from_image(image)

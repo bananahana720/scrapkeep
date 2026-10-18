@@ -89,6 +89,16 @@ const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
 	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
+# Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
+# a hit within ONBEAT_WINDOW_S of a beat the player hears adds the sax stab, rendered by the
+# music session in the home key, and fires hit_on_beat for the comic word. At most once a
+# beat. Damage never reads it.
+signal hit_on_beat(enemy: Node3D, kind: String)
+const ONBEAT_WINDOW_S := 0.08
+const ONBEAT_SOUND := "onbeat_sax_stab"
+# Tests set this to stand in for the beat clock: it returns the signed offset in seconds.
+var beat_offset_hook := Callable()
+var _onbeat_at := -(1 << 40)
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
 const KILL_COMBO_WINDOW_MS := 1500
@@ -141,6 +151,7 @@ const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tic
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
 	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
+	"active_cutting_torch",
 	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
 	# --- end Tally ---
@@ -235,6 +246,10 @@ var sound_ready := false
 var _pitch_rng := RandomNumberGenerator.new()
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
+# The process frame of the last play_stream call, so a test can count frames from event to play().
+var last_play_frame := -1
+# The pitch the log shows for a tiered cue (the caller's ladder rung); -1 logs the played pitch.
+var _logged_pitch := -1.0
 var chirp_log: Array = []
 var _chirp_last := {}
 var volumes := {"Music": 0.8, "SFX": 1.0, "UI": 1.0}
@@ -340,6 +355,7 @@ static var _bake_task := -1
 static var _baked := false
 static var _bake_done := false
 static var _rest_task := -1
+static var _opening_task := -1
 
 
 func _init() -> void:
@@ -386,6 +402,10 @@ static func _sound_ids() -> Array:
 	for id in SfxBank.TRIM_DB:
 		if not id in ids:
 			ids.append(id)
+	# The event-set files, tier files included (a tier plays by rung, so it must be baked).
+	for id in SfxBank.EVENT_CUES:
+		if not id in ids:
+			ids.append(id)
 	for midi in SfxBank.break_midis(POSTURE_PHRASE):
 		ids.append(SfxBank.cause_note_id(midi))
 	for cause in EventKinds.CAUSE_ROWS:
@@ -406,7 +426,10 @@ func _start_bake() -> void:
 	if _baked or _bake_task >= 0:
 		return
 	_bake_done = false
-	_bake_task = WorkerThreadPool.add_task(_bake_everything.bind(_sound_ids()), false, "presentation audio bake")
+	# The startup jobs here and below are high priority on purpose: a low-priority one
+	# queues behind the bake on a small pool (the pool reserves a few low-priority threads,
+	# one on 2 to 4), and a process that quits with it still queued never exits.
+	_bake_task = WorkerThreadPool.add_task(_bake_everything.bind(_sound_ids()), true, "presentation audio bake")
 
 
 static func _poll_bake() -> bool:
@@ -423,11 +446,34 @@ func _start_ace_load() -> void:
 	if ace_manifest == "" or _ace_task >= 0 or _ace_loaded != null or ace != null or _ace_failed or not ace_wanted():
 		return
 	_ace_loaded_from = ace_manifest
-	_ace_task = WorkerThreadPool.add_task(_load_ace, false, "presentation ACE stems")
+	_ace_task = WorkerThreadPool.add_task(_load_ace, true, "presentation ACE stems")
 
 
 func _load_ace() -> void:
 	_ace_loaded = AceSequencer.new(_ace_loaded_from)
+
+
+# Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
+# Bots call it; the headless game never starts the worker.
+func bake_opening_now() -> void:
+	bake_now()
+	_finish_opening()
+	MusicEngine.prepare_opening()
+
+
+# A live run that starts before stage 1's band is baked waits for it, as on a loading frame.
+func _ready_for_run() -> void:
+	if not live_output:
+		return
+	if not sound_ready:
+		bake_now()
+	_finish_opening()
+
+
+static func _finish_opening() -> void:
+	if _opening_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_opening_task)
+		_opening_task = -1
 
 
 # Blocks until the bank is baked; the tests call it, the game never needs to.
@@ -463,6 +509,7 @@ func _exit_tree() -> void:
 	if _rest_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_rest_task)
 		_rest_task = -1
+	_finish_opening()
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():
 		if child is AudioStreamPlayer:
@@ -477,10 +524,13 @@ func _on_ready() -> void:
 	if sound_ready:
 		return
 	sound_ready = true
-	# The other themes and the bosses bake behind stage 1. Headless runs render them
-	# on demand instead, so a test never waits on the worker at quit.
+	# The rest of stage 1's band bakes behind the title, and the other themes and the
+	# bosses behind stage 1. Headless runs render them on demand instead, so a test never
+	# waits on the worker at quit; bots call bake_opening_now.
+	if live_output and _opening_task < 0:
+		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
 	if _rest_task < 0 and live_output:
-		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, false, "presentation band bake")
+		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, true, "presentation band bake")
 	_virtual_usec = _transport_usec()
 	if not live_output:
 		return
@@ -1185,9 +1235,18 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
 	if not _admit(kind, sound, pitch):
 		return false
+	# A tiered key plays its tier's file, picked by the rung the caller sent as its pitch,
+	# before the live key moves that pitch.
+	# The cue log keeps the pitch the caller asked for, so the ladder stays readable there.
+	var tier := SfxBank.resolve(sound, pitch)
+	var asked := pitch
+	pitch = float(tier["pitch"])
 	if sound in KEYED_SOUNDS or sound in KEST_SOUNDS:
 		pitch *= Harmony.ratio(live_key())
-	_start(kind, sound, SfxBank.stream(sound), SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)] + db, pitch, bus)
+		asked *= Harmony.ratio(live_key())
+	_logged_pitch = asked if tier["id"] != sound else -1.0
+	_start(kind, sound, SfxBank.stream(tier["id"]), SfxBank.trim_db(tier["id"]) + PRIORITY_DB[Rows.priority(kind)] + db, pitch, bus)
+	_logged_pitch = -1.0
 	if Rows.priority(kind) >= 2:
 		_duck(0.55, 0.35)
 	if sound in DANGER_SOUNDS:
@@ -1266,7 +1325,8 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
 		_voices[sound] = live
-	cue_log.append([kind, sound, "now", engine.clock, pitch, volume])
+	last_play_frame = Engine.get_process_frames()
+	cue_log.append([kind, sound, "now", engine.clock, pitch if _logged_pitch < 0.0 else _logged_pitch, volume])
 
 
 # Cuts every voice of a sound on the SFX bus at once: a ceremony skipped mid-build drops
@@ -1334,6 +1394,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 func _connect_all(events) -> void:
 	_wire_cannon(events)
 	events.run_started.connect(func(class_id: String):
+		_ready_for_run()
 		_heft_class = 1
 		_hull_seen = 0.0
 		_fired_this_run.clear()
@@ -1376,6 +1437,8 @@ func _connect_all(events) -> void:
 	events.enemy_struck.connect(_on_struck)
 	events.shot_fired.connect(_on_shot)
 	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
+	events.active_fired.connect(_on_active_fired)
+	events.active_heat.connect(_on_active_heat)
 	events.reward_offered.connect(_on_offered)
 	events.reward_chosen.connect(func(_part: String): play("reward_chosen"))
 	events.event_announced.connect(_on_event_announced)
@@ -1936,7 +1999,8 @@ func _on_event_announced(event_id: String, seconds: float) -> void:
 		_flush_flow()
 	engine.cancel_park_cue(event_id)
 	var options := {"theme": engine.theme, "motif": _motif,
-		"ancient": MusicRows.ANCIENT_VOICES.get(row.effect.get("miniboss", ""), "reactor")}
+		"stage": MusicRows.zone_id(_stage_now, _music_stages()) if _stage_now > 0 else "",
+		"ancient":MusicRows.ANCIENT_VOICES.get(row.effect.get("miniboss", ""), "reactor")}
 	var lead := roundi(seconds * Harmony.RATE)
 	var landing_s := -1.0
 	if not state.is_empty():
@@ -2234,7 +2298,8 @@ func special_spawned(enemy: Node3D, name: String) -> void:
 	_specials[id] = {"node": enemy, "name": name, "player": player}
 	on_beat("special_spawn", 0.0, false, 1, SpecialAudio.cue(name, "spawn"))
 	if enemy.has_signal("special_tell"):
-		enemy.connect("special_tell", special_tell.bind(enemy))
+		# The bodies emit special_tell(moment); the tell cue sounds on the "tell" moment only.
+		enemy.connect("special_tell", func(moment: String): if moment == "tell": special_tell(enemy))
 	if enemy.has_signal("died"):
 		enemy.connect("died", func(_a = null, _b = null): special_broken(enemy))
 	enemy.tree_exiting.connect(_special_gone.bind(id), CONNECT_ONE_SHOT)
@@ -2503,8 +2568,13 @@ func activity_cue(activity_id: String, phase: String) -> void:
 func jukebox_flipped() -> void:
 	if _moments.any(func(m): return m.kind == "jukebox"):
 		end_moment("jukebox")
-	else:
+	elif not TuneRows.shut("secret-after-hours", ctx.get("profile"), _sitting()):
 		begin_moment("jukebox", "bay_jukebox", "secret-after-hours")
+
+
+func _sitting() -> bool:
+	var tuning = ctx.get("tuning")
+	return tuning != null and tuning.sitting()
 
 
 # A roll through a stocked fabricator hoop (build.gd world_fact "fabricator_used"): one pass of
@@ -2585,6 +2655,10 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
 	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
+	# Each link past the first adds its tier's stab (INTEGRATION section 3), five rungs.
+	if rung >= 1:
+		var tiers: Array = SfxBank.TIER_CUES["kill_chain_tier"]
+		play("enemy_killed", 0.0, 1.0, "SFX", tiers[mini(rung, tiers.size()) - 1])
 
 
 func _on_died() -> void:
@@ -2914,8 +2988,41 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 	var db := lerpf(-6.0, 1.0, clampf(force / 30.0, 0.0, 1.0)) if contact else -5.0
 	if _on_posture_fight(enemy):
 		play("enemy_struck", db, _posture_note_ratio(enemy))
+	else:
+		play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+	_pay_beat(enemy, kind)
+
+
+# The hit's own sound has already played, so the beat never delays it.
+func _pay_beat(enemy: Node3D, kind: String) -> void:
+	if absf(beat_offset_s()) > ONBEAT_WINDOW_S or engine.clock - _onbeat_at < engine.beat_len() / 2:
 		return
-	play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+	_onbeat_at = engine.clock
+	var stab := SfxBank.rendered(ONBEAT_SOUND)
+	if stab != null:
+		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")], Harmony.ratio(live_key()), "SFX")
+	else:
+		cue_log.append(["hit_on_beat", ONBEAT_SOUND, "absent", engine.clock, 1.0])
+	hit_on_beat.emit(enemy, kind)
+
+
+# How far the moment the player hears is from its nearest beat, in seconds: negative before
+# the beat, positive after. INF while no music plays.
+func beat_offset_s() -> float:
+	if beat_offset_hook.is_valid():
+		return beat_offset_hook.call()
+	if not sound_ready or engine.mode != MusicEngine.PLAY:
+		return INF
+	var heard := engine.clock
+	if live_output and _music_pb != null:
+		heard -= _ring_capacity - _music_pb.get_frames_available()
+	var length: int = engine.beat_len()
+	var next: int = engine.next_beat()
+	while next - length > heard:
+		next -= length
+	var to_next := next - heard
+	var from_last := heard - (next - length)
+	return (-float(to_next) if to_next < from_last else float(from_last)) / Harmony.RATE
 
 
 func _on_posture_fight(enemy: Node3D) -> bool:
@@ -2989,6 +3096,20 @@ func _integrity(enemy: Node3D) -> float:
 	return 1.0
 
 
+# Each active sounds its own launch ("active_" + id) when the bank has it, else the row's.
+func _on_active_fired(active_id: String, _at: Vector3, _count: int) -> void:
+	var sound := "active_" + active_id
+	play("active_fired", 0.0, 1.0, "SFX", sound if SfxBank.has_recipe(sound) else "")
+
+
+# An active's heat building on a machine ("active_" + id + "_heat"): it climbs an octave and
+# swells as the heat nears the strike, so a long first burn is heard working.
+func _on_active_heat(active_id: String, _at: Vector3, fraction: float) -> void:
+	var sound := "active_%s_heat" % active_id
+	if SfxBank.has_recipe(sound):
+		play("active_fired", lerpf(-8.0, 0.0, fraction), Harmony.ratio(lerpf(0.0, 12.0, fraction)), "SFX", sound)
+
+
 func _on_shot(weapon_id: String, _from: Vector3, _to: Vector3) -> void:
 	var cents := _pitch_rng.randf_range(-25.0, 25.0) / 100.0
 	play("shot_fired", 0.0, Harmony.ratio(WEAPON_PITCH.get(weapon_id, 0.0) + cents))
@@ -3058,6 +3179,10 @@ func sample_run_parameters() -> Dictionary:
 	var forward: Vector3 = ctx.aim_forward()
 	var enemies: Array = get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []
 	var values := {"threat": run_threat(at, forward, enemies, parameter_threat_weights, parameter_threat_range)}
+	# The momentum faders: rolling speed as a fraction of top speed drives the drums, and
+	# the chain length ((links - 1) / 3: a third at 2, full at 4) opens the lead stem.
+	values["speed"] = ctx.player.speed_fraction()
+	values["chain"] = chain_fader(int(ctx.player.chain.combo) if ctx.player.get("chain") != null else 0)
 	var map_id: String = ctx.flow.stage_def().get("map", "")
 	if map_id != _parameter_map:
 		_parameter_map = map_id
@@ -3078,6 +3203,10 @@ func sample_run_parameters() -> Dictionary:
 		_parameter_armour_peak = maxf(_parameter_armour_peak, ctx.run.mass)
 		values["armour"] = ctx.run.mass / _parameter_armour_peak
 	return values
+
+
+static func chain_fader(links: int) -> float:
+	return clampf(float(links - 1) / 3.0, 0.0, 1.0)
 
 
 static func run_threat(at: Vector3, forward: Vector3, enemies: Array, weights := Vector2(0.8, 0.2), radius := 48.0) -> float:

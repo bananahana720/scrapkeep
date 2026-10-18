@@ -279,7 +279,8 @@ func _run() -> void:
 	_game._screen_key(KEY_J)
 	_t.check("J opens the jukebox", screens.jukebox_open() and not screens.walk_live())
 	var page = screens.jukebox_page()
-	_t.eq("the jukebox counts found records", page._count.text, "Records found: 3 of %d" % TuneRows.ROWS.size())
+	var shelved := TuneRows.ids().filter(func(id): return not TuneRows.shut(id, _game.ctx.profile)).size()
+	_t.eq("the jukebox counts found records", page._count.text, "Records found: 3 of %d" % shelved)
 	_t.eq("a blank sleeve reads ???", page.sleeve("boss-mind").text, "???")
 	page.sleeve("boss-mind").grab_focus()
 	await _frames(1)
@@ -350,6 +351,38 @@ func _run() -> void:
 	_render(audio, 44100 * 2)
 	_t.check("stopping it never leaves the mask on", not audio.engine.lounge and audio.engine.track == "title")
 	_ace(audio)
+
+	# Moss's B-side is a first-win secret (secrets.gd, PR #97): shut, it has no sleeve, no count
+	# and no flip; open, it is an ordinary hidden record. With no secrets.gd nothing is shut.
+	var b_side := "secret-after-hours"
+	var fresh := Profile.new()
+	if not ResourceLoader.exists(TuneRows.SECRETS):
+		_t.check("without secrets.gd the B-side is never shut", not TuneRows.shut(b_side, fresh))
+	else:
+		var secrets = load(TuneRows.SECRETS)
+		_t.eq("the secret tune is the B-side", String(secrets.TUNE), b_side)
+		_t.check("a fresh profile has the B-side shut", TuneRows.shut(b_side, fresh))
+		_t.check("the sitting opens it", not TuneRows.shut(b_side, fresh, true))
+		_t.check("nothing else is shut", TuneRows.ids().all(func(id): return id == b_side or not TuneRows.shut(id, fresh)))
+		var shut_read: Dictionary = page.reading(fresh)
+		_t.eq("shut, the B-side leaves the crate and the count", [b_side in shut_read["shown"], shut_read["total"]], [false, TuneRows.ROWS.size() - 1])
+		var saved = _game.ctx.profile
+		_game.ctx.profile = fresh
+		audio._moments.clear()
+		audio.jukebox_flipped()
+		_t.check("shut, flipping Moss's jukebox starts no B-side", not audio._moments.any(func(m): return m.id == b_side))
+		page.refresh(fresh)
+		_t.check("shut, its sleeve is hidden", not page.sleeve(b_side).visible)
+		_game.ctx.profile = saved
+		audio._moments.clear()
+		page.refresh(saved)
+	var opened: int = audio._moments.size()
+	if not TuneRows.shut(b_side, _game.ctx.profile):
+		audio.jukebox_flipped()
+		_t.check("open, flipping Moss's jukebox starts the B-side", audio._moments.any(func(m): return m.id == b_side))
+		audio.jukebox_flipped()
+		_t.eq("and flipping it back ends it", audio._moments.size(), opened)
+		_t.check("open, its sleeve shows", page.sleeve(b_side).visible)
 
 	# A run taking the title while a record spins gets the music back.
 	_game._screen_key(KEY_J)

@@ -2,6 +2,7 @@ extends "res://src/combat/enemy.gd"
 
 const Roster := preload("res://src/combat/roster.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
+const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 
 # What every Fleet reinforcement shares (DESIGN-V2 section 10): an animal crew with its
@@ -22,6 +23,9 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 #   what it shows": prepare, commit, execute, recover): for recovery_seconds, the one value
 #   every ordinary attack reads from telegraph_record.gd, the unit stands where it struck
 #   and starts nothing. The recovery runs inside rest_seconds, so the cadence is unchanged.
+# - A unit ready to attack asks the attacker budget (attack_budget.gd, SQ2) for one of its
+#   slots first; refused, it keeps circling and waits its turn. The slot goes back when
+#   the attack ends, however it ends.
 #
 # Subclasses set the dials in _configure(), build the tool in _build_tool(), commit the
 # telegraph in _commit() and run the mechanic in _live(delta) -> bool (false ends it).
@@ -212,7 +216,10 @@ func _physics_process(delta: float) -> void:
 			recover_left = maxf(0.0, recover_left - delta)
 			_move(delta, Vector3.ZERO if stunned() or open else _roam(to_ball))
 			if not stunned() and not open and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(to_ball):
-				_warn(to_ball)
+				if AttackBudget.ask(self):
+					_warn(to_ball)
+			else:
+				AttackBudget.withdraw(self)
 		Phase.WARN:
 			_move(delta, Vector3.ZERO)
 			var tele := telegraph()
@@ -252,6 +259,7 @@ func _live_motion(_to_ball: Vector3) -> Vector3:
 func _warn(to_ball: Vector3) -> void:
 	var tele := _commit(to_ball)
 	if tele == null:
+		AttackBudget.release(self)
 		_rest = 0.5
 		return
 	_voice(tele)
@@ -307,6 +315,7 @@ func _end() -> void:
 		holds.release(self, "expired")
 	_on_end()
 	_clear_telegraph()
+	AttackBudget.release(self)
 	phase = Phase.ROAM
 	_t = 0.0
 	_rest = rest_seconds * float(spec.get("rest_scale", 1.0))

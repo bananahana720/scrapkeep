@@ -10,6 +10,7 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
@@ -46,7 +47,8 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 229
+	# 2026-10-16 (pilot paint): Calibrated is live, one check added.
+	_expected_checks = 231
 	super._initialize()
 
 
@@ -847,7 +849,12 @@ func _run() -> void:
 		breach.get("on") == "ultimate_landed" and breach.get("where") == {"ultimate_id": "foundry_cutter"} and breach.get("at_least") == {"hits": 6}
 		and int(breach.get("count", 0)) == 1 and Achievements.reward_of("ach_rivet_full_breach").get("cosmetic", "") == "shell_rivet_calibrated", str(breach))
 	grants["ach_rivet_full_breach"] = "shell_rivet_calibrated"
-	_t.check("the items wait for their art", grants.values().all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("every granted item is pending or has a registered, shipping asset", CosmeticArt.unaccounted(grants.values()).is_empty(), str(CosmeticArt.unaccounted(grants.values())))
+	# Negatives: an unregistered id, and a real row whose asset does not ship, are neither.
+	_t.check("a granted id that is neither pending nor shipping fails that rule", not Cosmetics.row(CosmeticArt.NEGATIVE_ROW).is_empty()
+		and not CosmeticArt.shipping_ids().has(String(Cosmetics.row(CosmeticArt.NEGATIVE_ROW).get("asset", "")))
+		and CosmeticArt.unaccounted(CosmeticArt.NEGATIVES).size() == CosmeticArt.NEGATIVES.size(), str(CosmeticArt.unaccounted(CosmeticArt.NEGATIVES)))
+	_t.check("Calibrated is live", not Cosmetics.is_pending("shell_rivet_calibrated") and FileAccess.file_exists("res://assets/models/world_one/shell_rivet_calibrated.glb"))
 	_t.check("both line cues are keyed and read the Rivet motif", Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["punch"]) and Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["arrive"])
 		and Audio.RIVET_LINE["motif"] == ClassDef.by_id("runner_gunner").motif)
 	_finish()
