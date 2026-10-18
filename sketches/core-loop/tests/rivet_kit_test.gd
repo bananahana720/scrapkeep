@@ -7,6 +7,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Kit := preload("res://src/combat/rivet_kit.gd")
+const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const T := preload("res://tests/support/t.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const AudioRows := preload("res://src/presentation/rows.gd")
@@ -65,7 +66,7 @@ func _cue_timing() -> void:
 
 
 var _t := T.new("rivet_kit_test")
-var _expected_checks := 51
+var _expected_checks := 54
 var _game
 var _player
 var _combat
@@ -216,6 +217,23 @@ func _punch_of(row: Array) -> float:
 	return float(_combat.punch_of(String(row[1]), float(row[2])))
 
 
+# Parks share one Shape3D across many colliders: each placement keeps its own build, so the
+# terrain warm-up does not rebuild every one of them each time (a 100-175 ms tick in a park).
+func _shared_shape_cache() -> void:
+	var cache := TerrainFaces.new()
+	var box := BoxShape3D.new()
+	var here := Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 0.0))
+	var there := Transform3D(Basis.IDENTITY, Vector3(100.0, 0.0, 0.0))
+	var faces := [[Vector3(-1, 0, -1), Vector3(1, 0, -1), Vector3(0, 0, 1)]]
+	var first := cache.request(box, here, faces)
+	cache.request(box, there, faces)
+	_t.check("both placements of a shared shape stay cached", not cache.cached(box, here).is_empty() and not cache.cached(box, there).is_empty(), "")
+	_t.check("a repeat request reuses its placement's build", cache.request(box, here, faces) == first, "")
+	var near := cache.faces_near(cache.cached(box, there), AABB(Vector3(98.0, -1.0, -2.0), Vector3(4.0, 2.0, 4.0)))
+	_t.eq("each placement reads its own faces", near.size() == 1 and (near[0][0] as Vector3).is_equal_approx(Vector3(99, 0, -1)), true)
+	cache.finish()
+
+
 func _finish() -> void:
 	_t.eq("expected check count", _t.checks + 1, _expected_checks)
 	_game.free()
@@ -224,6 +242,7 @@ func _finish() -> void:
 
 func _run() -> void:
 	await _boot()
+	_shared_shape_cache()
 	var audio = _game.presentation.audio
 	audio.bake_now()
 	audio.engine.key = 3
