@@ -401,16 +401,26 @@ def canonical_indices(path, vertices=False):
         base = bin_start + view.get("byteOffset", 0) + acc.get("byteOffset", 0)
         return [bytes(data[base + k * stride:base + k * stride + size]) for k in range(acc["count"])]
 
+    if vertices:
+        data = _unshare_accessors(gltf, data, bin_start)
+    def vertex_accessors(prim):
+        # Morph targets are per-vertex arrays too: they sort and match with the vertices.
+        # Unpolished exports keep their old layout byte for byte.
+        ids = [a for _, a in sorted(prim["attributes"].items())]
+        if not vertices:
+            return ids
+        return ids + [m[k] for m in prim.get("targets", []) for k in sorted(m)]
+
     for mesh in gltf["meshes"]:
         for prim in mesh["primitives"]:
-            columns = [element_bytes(a) for _, a in sorted(prim["attributes"].items())]
+            columns = [element_bytes(a) for a in vertex_accessors(prim)]
             if vertices:
                 rows = list(zip(*columns))
                 order = sorted(range(len(rows)), key=lambda k: rows[k])
                 where = [0] * len(order)
                 for new, old in enumerate(order):
                     where[old] = new
-                for (_, acc_id), column in zip(sorted(prim["attributes"].items()), columns):
+                for acc_id, column in zip(vertex_accessors(prim), columns):
                     acc = gltf["accessors"][acc_id]
                     view = gltf["bufferViews"][acc["bufferView"]]
                     size = len(column[0])
@@ -430,7 +440,114 @@ def canonical_indices(path, vertices=False):
             tris = [tuple(idx[k:k + 3]) for k in range(0, len(idx), 3)]
             tris = sorted(min(t, t[1:] + t[:1], t[2:] + t[:2]) for t in tris)
             data[start:end] = array.array(code, [i for t in tris for i in t]).tobytes()
+    if vertices:
+        data = _repack(gltf, data, bin_start)
     open(path, "wb").write(data)
+
+
+def _unshare_accessors(gltf, data, bin_start):
+    """The exporter reuses one accessor for identical data, such as the index lists of
+    two parts built the same way. Sorting vertices permutes each primitive on its own,
+    so every primitive after the first that uses an accessor gets its own copy."""
+    used = set()
+    for mesh in gltf["meshes"]:
+        for prim in mesh["primitives"]:
+            holders = [(prim["attributes"], k) for k in sorted(prim["attributes"])] + [(prim, "indices")]
+            holders += [(m, k) for m in prim.get("targets", []) for k in sorted(m)]
+            for holder, key in holders:
+                acc_id = holder[key]
+                if acc_id not in used:
+                    used.add(acc_id)
+                    continue
+                acc = dict(gltf["accessors"][acc_id])
+                view = gltf["bufferViews"][acc["bufferView"]]
+                start = bin_start + view.get("byteOffset", 0)
+                chunk = bytes(data[start:start + view["byteLength"]])
+                data += b"\0" * (-len(data) % 4)
+                copy = {k: v for k, v in view.items() if k != "byteOffset"}
+                copy["byteOffset"] = len(data) - bin_start
+                data += chunk
+                gltf["bufferViews"].append(copy)
+                acc["bufferView"] = len(gltf["bufferViews"]) - 1
+                gltf["accessors"].append(acc)
+                holder[key] = len(gltf["accessors"]) - 1
+                used.add(holder[key])
+    return data
+
+
+def _repack(gltf, data, bin_start):
+    """Lay the buffer out again in a fixed order, one tight buffer view per accessor:
+    mesh data by mesh, primitive and attribute name, then animation and skin data. Which
+    accessors the exporter shares depends on the run, so its own layout is not stable."""
+    sizes = {5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4}
+    widths = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}
+    order, targets = [], {}
+    for mesh in gltf["meshes"]:
+        for prim in mesh["primitives"]:
+            for key in sorted(prim["attributes"]):
+                order.append(prim["attributes"][key])
+                targets[prim["attributes"][key]] = 34962
+            order.append(prim["indices"])
+            targets[prim["indices"]] = 34963
+            for morph in prim.get("targets", []):
+                for key in sorted(morph):
+                    order.append(morph[key])
+                    targets[morph[key]] = 34962
+    for anim in gltf.get("animations", []):
+        for sampler in anim["samplers"]:
+            order += [sampler["input"], sampler["output"]]
+    for skin in gltf.get("skins", []):
+        if "inverseBindMatrices" in skin:
+            order.append(skin["inverseBindMatrices"])
+    new_id, accessors, views, binary = {}, [], [], bytearray()
+
+    def place(chunk, target=None):
+        binary.extend(b"\0" * (-len(binary) % 4))
+        view = {"buffer": 0, "byteLength": len(chunk), "byteOffset": len(binary)}
+        if target:
+            view["target"] = target
+        binary.extend(chunk)
+        views.append(view)
+        return len(views) - 1
+
+    for old in order:
+        if old in new_id:
+            continue
+        acc = dict(gltf["accessors"][old])
+        view = gltf["bufferViews"][acc["bufferView"]]
+        size = sizes[acc["componentType"]] * widths[acc["type"]]
+        stride = view.get("byteStride", size)
+        base = bin_start + view.get("byteOffset", 0) + acc.pop("byteOffset", 0)
+        chunk = b"".join(bytes(data[base + k * stride:base + k * stride + size]) for k in range(acc["count"]))
+        acc["bufferView"] = place(chunk, targets.get(old))
+        new_id[old] = len(accessors)
+        accessors.append(acc)
+    for image in gltf.get("images", []):
+        if "bufferView" in image:
+            view = gltf["bufferViews"][image["bufferView"]]
+            start = bin_start + view.get("byteOffset", 0)
+            image["bufferView"] = place(bytes(data[start:start + view["byteLength"]]))
+    for mesh in gltf["meshes"]:
+        for prim in mesh["primitives"]:
+            prim["attributes"] = {k: new_id[v] for k, v in prim["attributes"].items()}
+            prim["indices"] = new_id[prim["indices"]]
+            prim["targets"] = [{k: new_id[v] for k, v in morph.items()} for morph in prim.get("targets", [])] or None
+            if prim["targets"] is None:
+                del prim["targets"]
+    for anim in gltf.get("animations", []):
+        for sampler in anim["samplers"]:
+            sampler["input"], sampler["output"] = new_id[sampler["input"]], new_id[sampler["output"]]
+    for skin in gltf.get("skins", []):
+        if "inverseBindMatrices" in skin:
+            skin["inverseBindMatrices"] = new_id[skin["inverseBindMatrices"]]
+    gltf["accessors"], gltf["bufferViews"] = accessors, views
+    binary.extend(b"\0" * (-len(binary) % 4))
+    gltf["buffers"][0]["byteLength"] = len(binary)
+    text = json.dumps(gltf, separators=(",", ":"), sort_keys=True).encode()
+    text += b" " * (-len(text) % 4)
+    total = 12 + 8 + len(text) + 8 + len(binary)
+    return bytearray(struct.pack("<III", 0x46546C67, 2, total) + struct.pack("<I", len(text)) + b"JSON"
+                     + text + struct.pack("<I", len(binary)) + b"BIN\0" + bytes(binary))
 
 
 def default_out(name):
