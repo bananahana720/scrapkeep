@@ -431,7 +431,9 @@ static func file_samples(id: String, shift := 0) -> PackedFloat32Array:
 		return _event_samples(id, shift)
 	var path := file_path(id)
 	var out := PackedFloat32Array()
-	var res = load(path) if ResourceLoader.exists(path) else null
+	# Uncached: this runs on the bake worker, and a cached load there leaves its load token
+	# and stream alive at exit ("resources still in use"). samples() keeps the decoded copy.
+	var res = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) if ResourceLoader.exists(path) else null
 	if res is AudioStreamWAV and (res as AudioStreamWAV).format == AudioStreamWAV.FORMAT_16_BITS:
 		return _pcm16(res.data, res.stereo)
 	var bytes := FileAccess.get_file_as_bytes(path)
