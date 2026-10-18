@@ -138,7 +138,9 @@ def main():
     common.reset()
     # Polish (POLISH.md): clutter_kit_asset_test pins per-piece triangle caps of 24 to 72, so smooth shading and the
     # AO/wear bake only (detail 1, bevel 0). The recipe writes its own GLB, so each piece is baked on its own.
-    polish.enable(detail=1, bevel=0)
+    # edge=0: the wear bake would lighten tuft tips past the sand-brightness cap (clutter_kit_asset_test CK-3, KC-1).
+    # sharp_angle=5: plates stay flat-shaded so their caps keep exact opposite normals (CK-4 physical thickness).
+    polish.enable(detail=1, bevel=0, edge=0, sharp_angle=5)
     # The shared bare-metal preview is polished bone; this dry clutter uses dull exposed steel.
     metal = common.material("bare_metal").node_tree.nodes.get("Principled BSDF")
     metal.inputs["Base Color"].default_value = common.rgba(common.mix("charcoal", "bone", 0.36))

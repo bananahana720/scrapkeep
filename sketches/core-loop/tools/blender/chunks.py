@@ -22,9 +22,10 @@ import common  # noqa: E402
 import polish  # noqa: E402
 from common import Part, Vector  # noqa: E402
 
-# Polish (POLISH.md): the per-variant bands are pinned by hero_assets_test, so smooth shading and the AO/wear
-# bake on every chunk, one chamfer only on edges over 0.2 m (the plates and the large panels).
-polish.enable(detail=1, bevel=0.012, bevel_min=0.2)
+# Polish (POLISH.md): the per-variant bands are pinned by hero_assets_test, so smooth shading and one chamfer only
+# on edges over 0.2 m (the plates and the large panels). Paint stays exact petrol, oxide or bone (hero_assets_test
+# "chunks paint"), so the AO/wear bake goes to UV2 only (bake_slots empty).
+polish.enable(detail=1, bevel=0.012, bevel_min=0.2, bake_slots=())
 
 BASE = -0.07
 BANDS = {"small": (60, 120), "medium": (150, 300), "large": (400, 800)}

@@ -15,13 +15,13 @@ sys.path.insert(0, os.path.dirname(__file__))
 import common
 import polish
 from common import Part
-# Polish (POLISH.md): one subdivision level rounds the broken planes into chunky stone; creases keep the
-# slab corners. Only this recipe builds the module, so it opts in at module level.
+# Polish (POLISH.md): smooth shading with hard fracture creases and the AO/wear bake. No subdivision or bevel:
+# the cheeks are deliberate unequal fracture planes with chipped, not rolled, edges (moss_shelter_test "planes
+# unequal"). Only this recipe builds the module, so it opts in at module level.
 polish.enable(bevel=0)
 common.reset()
 root = common.empty('MossShelter')
 p = Part('SandstoneShelter')
-p.subsurf = 1
 bm = p.bm
 
 CAP_LOW, CAP_HIGH = 7.35, 9.2
