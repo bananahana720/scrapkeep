@@ -145,7 +145,7 @@ const ROOM_BOARD_SIZE := Vector2(7.0, 1.5)
 # work glove hung on a nail beside it (the crew were the Mind's hands, worlds.gd). An ordinary cracked
 # cache has neither. Both sit on the face, not the ground: Terrain3D's drawn floor can stand above the
 # collider by more than a glove's height, which buried a glove laid on the ground.
-const ROOM_TALLY_AT := Vector3(3.6, 1.0, 0.52)
+const ROOM_TALLY_AT := Vector3(3.6, 1.3, 0.52)
 const ROOM_TALLY_STROKE := Vector2(0.14, 1.1)
 const ROOM_GLOVE_AT := Vector3(2.3, 2.3, 0.5)
 const ROOM_GLOVE_SCALE := 1.6
@@ -690,8 +690,8 @@ func _hang_glove(s: Site) -> void:
 	var glove := Node3D.new()
 	glove.name = "RoomGlove"
 	glove.position = ROOM_GLOVE_AT + Vector3(0.0, 0.0, 0.1 * ROOM_GLOVE_SCALE + 0.02)
-	glove.rotation = Vector3(-PI * 0.5, 0.0, 0.22)
-	glove.scale = Vector3.ONE * ROOM_GLOVE_SCALE
+	# Hung fingers down, then slanted a little across the face.
+	glove.basis = (Basis(Vector3.BACK, 0.22) * Basis(Vector3.RIGHT, -PI * 0.5)).scaled(Vector3.ONE * ROOM_GLOVE_SCALE)
 	s.wall.add_child(glove)
 	var leather := Palette.solid(Palette.COPPER)
 	_mesh_box(glove, Vector3(0.62, 0.2, 0.66), Vector3.ZERO, leather)
@@ -711,11 +711,11 @@ func _hang_glove(s: Site) -> void:
 	thumb_cap.height = 0.4
 	thumb.mesh = thumb_cap
 	thumb.material_override = leather
-	thumb.rotation = Vector3(PI * 0.5, -1.0, 0.0)
+	thumb.rotation = Vector3(PI * 0.5, 1.0, 0.0)
 	thumb.position = Vector3(-0.42, -0.02, -0.02)
 	glove.add_child(thumb)
 	_mesh_box(glove, Vector3(0.7, 0.24, 0.26), Vector3(0.0, 0.01, 0.42), Palette.solid(Palette.LEDGER))
-	_mesh_box(glove, Vector3(0.05, 0.3, 0.05), Vector3(0.0, -0.05, 0.5), Palette.solid(Palette.CHARCOAL))
+	_mesh_box(glove, Vector3(0.05, 0.45, 0.05), Vector3(0.0, 0.0, 0.5), Palette.solid(Palette.CHARCOAL))
 
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:

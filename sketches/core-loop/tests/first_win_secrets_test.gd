@@ -291,10 +291,11 @@ func _game_builds_rooms(label: String) -> void:
 		_t.check("%s: %s is sealed by its cracked wall" % [label, id], room.wall != null and room.wall.visible and not room.done)
 		game.world.activities._break_wall(room)
 		_t.check("%s: %s opens when its wall breaks" % [label, id], room.done and not room.wall.visible)
-	for s in game.world.activities.sites:
-		if s.id == "cracked_cache" and not String(s.name).begins_with("Secret_"):
-			_t.check("%s: an ordinary cracked cache carries no room tell" % label,
-				s.wall == null or (s.wall.get_node_or_null("RoomTally") == null and s.wall.get_node_or_null("RoomGlove") == null))
+	if won:
+		var plain = game.world.activities._build("cracked_cache", Vector2(0.0, 0.0))
+		_t.check("%s: an ordinary cracked cache carries no room tell" % label, plain.wall != null
+			and plain.wall.get_node_or_null("RoomTally") == null and plain.wall.get_node_or_null("RoomGlove") == null
+			and plain.get_node_or_null("RoomLog") == null)
 	if label == "sitting":
 		_t.check("sitting: the profile file is untouched", FileAccess.get_file_as_bytes(profile_path) == before and before.size() > 0, str(before.size()))
 	game.queue_free()
