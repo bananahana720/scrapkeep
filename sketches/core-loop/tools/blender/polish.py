@@ -390,7 +390,11 @@ def bake(root, opts=None):
                             hit = tree.ray_cast(p, w, reach)
                             # A back face means the corner sits inside another part
                             # (kitbashed primitives overlap); that part hides nothing.
-                            if hit[0] is not None and hit[1].dot(w) < 0.0:
+                            # Where a front and a back face meet the ray at one point (a
+                            # shared edge, coplanar overlaps) the BVH returns either by
+                            # run, so any front face at the hit point counts.
+                            if hit[0] is not None and (hit[1].dot(w) < 0.0 or any(
+                                    f[1].dot(w) < 0.0 for f in tree.find_nearest_range(hit[0], reach * 1e-5))):
                                 occ += 1.0 - (hit[3] / reach) ** 2
                         # Rays that graze a shared edge can hit either face; rounding
                         # drops that last-bit noise before the 1/1024 quantisation.
