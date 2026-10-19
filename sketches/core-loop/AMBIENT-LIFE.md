@@ -20,7 +20,7 @@ Critters and locals that make each park feel inhabited, with no effect on play. 
 | Spillway | Puddle toad | critter | squat dome, big eyes | sits at canal and pool edges, dozes | low croak | plops in and sinks |
 | Spillway | Weir-keeper beaver | local, dam-era keepers | pear body, flat tail, wide hat | fishes off a bucket, waves, mends nets | two-note whistle | pulls the hat down behind the bucket |
 | Dig | Pit burro | critter | barrel body, big ears | grazes the pit benches | bray | trots to the far end of its bench |
-| Dig | Tube bat | critter, roosts of 3–6 | furry ball, folded wings, unlit | hangs asleep under tube ceilings and adits | tiny squeaks | unrolls and flutters to a farther roost |
+| Dig | Tube bat | critter, roosts of 3–6 | furry ball, folded wings, unlit | hangs asleep under tube ceilings and adits, only where a real roof stands 1.5–14 m overhead (none in park_sinkhole yet) | tiny squeaks | unrolls and flutters to a farther roost |
 | Dig | Horned lizard | critter | round pancake, soft nubs | basks on warm rock | pebble scratch | puffs up, wedges into a crack |
 | Dig | Old prospector badger | local, the miner who never left | round, pick and pan, battered hat | pans the runoff, hums | hummed tune | drops flat, hat over face |
 | Highdraft | Bighorn lamb | critter, pairs and trios | woolly cloud body, nub horns | perches on mesa rims, hops ledges | bleat | leaps away along the rim |
