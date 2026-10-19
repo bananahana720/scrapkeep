@@ -2478,6 +2478,9 @@ func _fight_boss(delta: float) -> void:
 				else:
 					source.hold["brake_held"] = true
 			return
+		# Phase 3's charge lane, once read, outranks the ram laps and run-ups _fight plans.
+		if phase == 3 and _charge_plan(boss, hull, ball, punch, delta):
+			return
 		_fight(hull, delta)
 		return
 	match phase:
