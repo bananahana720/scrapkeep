@@ -265,9 +265,23 @@ func _park_chunks() -> void:
 	t.eq("the stage root holds all 100 chunks", chunks.get_child_count(), ParkTerrain.TILE_COUNT)
 	t.check("start() is metered", chunks.start_usec > 0 and chunks.slowest_usec >= chunks.start_usec, "%d usec" % chunks.start_usec)
 	# The glb source is requested on the loader thread with the cache bypassed, so the main thread never
-	# loads it and the build is cold whatever the process has cached (KB5's receipt ran warm).
-	t.eq("the glb mesh sources load on the loader thread, not the main thread", chunks.get("threaded_loads"), 1)
-	t.check("the slot materials that are resources load on the loader thread", int(chunks.get("threaded_materials")) >= 1, str(chunks.get("threaded_materials")))
+	# loads it and the build is cold whatever the process has cached (KB5's receipt ran warm). Headless (the
+	# dummy rasterizer, whose mesh RID owner is not thread-safe) the sources load on the main thread instead.
+	if DisplayServer.get_name() != "headless":
+		t.eq("the glb mesh sources load on the loader thread, not the main thread", chunks.get("threaded_loads"), 1)
+		t.check("the slot materials that are resources load on the loader thread", int(chunks.get("threaded_materials")) >= 1, str(chunks.get("threaded_materials")))
+	else:
+		t.eq("headless, no glb source loads on the loader thread", chunks.get("threaded_loads"), 0)
+		t.eq("headless, no slot material loads on the loader thread", chunks.get("threaded_materials"), 0)
+		var glb_kinds := []
+		for row: Dictionary in Scatter.park_rows(map):
+			if String(row["mesh"]).begins_with("glb:") and not glb_kinds.has(row["kind"]):
+				glb_kinds.append(row["kind"])
+		var glb_views := 0
+		for view: MultiMeshInstance3D in chunks.find_children("*", "MultiMeshInstance3D", true, false):
+			if glb_kinds.has(view.get_meta("kind")) and view.multimesh.mesh != null:
+				glb_views += 1
+		t.check("headless, the glb sources still load (main thread) and their kinds are scattered", not glb_kinds.is_empty() and glb_views > 0, "%d batches of %s" % [glb_views, glb_kinds])
 	t.check("no main-thread scatter step over 8 ms during the build, start() included", chunks.slowest_usec > 0 and chunks.slowest_usec < FRAME_CAP_USEC, "%.2f ms" % slowest_ms)
 
 	# One MultiMesh per kind per chunk; no node for a kind a chunk has none of; each chunk sits in
