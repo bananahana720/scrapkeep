@@ -23,14 +23,13 @@ const MULT_MIN := 0.2
 const MULT_MAX := 3.0
 const MONSTER_CLASS := 3
 # Overpowered pays, the second half: a ceiling alone moved no grown seed, because a grown hit seldom
-# reaches 1.5x the plating. A row's "monster_gain" (stage 3 the hive 1.7, stage 5 the Mind 1.5) makes
-# every non-glancing hit at heft class III and above count that many times over, so the 0.35 to 0.65
-# ratio hits that fill a bar slowly (a Mind ram at 0.45 added 10) fill it in fewer swings. A row
-# without the key keeps 1, so a bare rule, the hull bosses and the Waking are unchanged. The gain
-# multiplies before a row's hit_cap, so the Waking's first-stagger cap holds; the Ultimate's cap is
-# already class-gated (ultimate.gd warden_cap) and Rivet's line cap scales by it (rivet_kit.gd _punch).
-# The rows differ because a small pilot who grows into class III mid-fight earns the gain too, and
-# the small arm's pin has to hold on each stage.
+# reaches 1.5x the plating. A row's "monster_gain" (stage 5, the Mind, 1.5) makes every non-glancing hit
+# at heft class III and above count that many times over, so the 0.35 to 0.65 ratio hits that fill a
+# bar slowly (a Mind ram at 0.45 added 10) fill it in fewer swings. A row without the key keeps 1, so a
+# bare rule, the hull bosses, the Waking and the other stages are unchanged. The gain multiplies before
+# a row's hit_cap, so the Waking's first-stagger cap holds; the Ultimate's cap is already class-gated
+# (ultimate.gd warden_cap). A small pilot who grows into class III mid-fight earns it too, so a row
+# sets the gain only where the grown arm needs it and the small arm's pin still holds.
 const MONSTER_GAIN := 1.0
 # A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
 # from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
