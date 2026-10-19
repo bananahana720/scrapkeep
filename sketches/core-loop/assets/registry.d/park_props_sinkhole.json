@@ -41,17 +41,17 @@
    "bounds": {
     "min": [
      -3.8495,
-     0.0003,
+     0,
      -1.9574
     ],
     "max": [
      3.8498,
-     4.4493,
+     4.4491,
      1.9572
     ],
     "size": [
      7.6993,
-     4.449,
+     4.4491,
      3.9146
     ]
    }
@@ -69,12 +69,12 @@
    "bounds": {
     "min": [
      -3.8437,
-     0.0101,
+     0,
      -1.9478
     ],
     "max": [
      3.8398,
-     4.4399,
+     4.4298,
      1.9547
     ],
     "size": [
@@ -153,12 +153,12 @@
    "bounds": {
     "min": [
      -4.6338,
-     0.0023,
+     0,
      -2.5912
     ],
     "max": [
      4.6548,
-     4.8298,
+     4.8275,
      2.5892
     ],
     "size": [
@@ -237,12 +237,12 @@
    "bounds": {
     "min": [
      -3.25,
-     0.0154,
+     0,
      -1.3861
     ],
     "max": [
      3.25,
-     4.2975,
+     4.2821,
      1.4013
     ],
     "size": [
@@ -321,12 +321,12 @@
    "bounds": {
     "min": [
      -3.8529,
-     0.0064,
+     0,
      -1.5848
     ],
     "max": [
      3.8486,
-     4.2969,
+     4.2905,
      1.6124
     ],
     "size": [
@@ -377,12 +377,12 @@
    "bounds": {
     "min": [
      -3.905,
-     -0.0036,
+     0,
      -3.2653
     ],
     "max": [
      3.9061,
-     3.9704,
+     3.974,
      3.2693
     ],
     "size": [
@@ -405,12 +405,12 @@
    "bounds": {
     "min": [
      -3.9046,
-     -0.0034,
+     0,
      -3.2689
     ],
     "max": [
      3.9025,
-     3.9632,
+     3.9666,
      3.2731
     ],
     "size": [
@@ -461,12 +461,12 @@
    "bounds": {
     "min": [
      -3.9491,
-     -0.0036,
+     0,
      -3.1871
     ],
     "max": [
      3.9512,
-     1.9611,
+     1.9647,
      3.1882
     ],
     "size": [
@@ -489,12 +489,12 @@
    "bounds": {
     "min": [
      -3.9564,
-     -0.0069,
+     0,
      -3.1907
     ],
     "max": [
      3.9557,
-     1.9684,
+     1.9753,
      3.1954
     ],
     "size": [
@@ -573,12 +573,12 @@
    "bounds": {
     "min": [
      -1.4938,
-     0.0154,
+     0,
      -1.0569
     ],
     "max": [
      1.5109,
-     2.8771,
+     2.8617,
      1.067
     ],
     "size": [
@@ -657,17 +657,17 @@
    "bounds": {
     "min": [
      -1.674,
-     -0.0078,
+     0,
      -1.7504
     ],
     "max": [
      1.6917,
-     1.2752,
+     1.2831,
      1.7499
     ],
     "size": [
      3.3657,
-     1.283,
+     1.2831,
      3.5003
     ]
    }
@@ -741,12 +741,12 @@
    "bounds": {
     "min": [
      -1.5456,
-     0.0061,
+     0,
      -0.9414
     ],
     "max": [
      1.5876,
-     1.6953,
+     1.6892,
      0.9437
     ],
     "size": [
@@ -825,12 +825,12 @@
    "bounds": {
     "min": [
      -1.8444,
-     0.0122,
+     0,
      -1.8055
     ],
     "max": [
      1.8574,
-     1.4646,
+     1.4524,
      1.8039
     ],
     "size": [
@@ -881,12 +881,12 @@
    "bounds": {
     "min": [
      -1.5957,
-     -0.0062,
+     0,
      -0.948
     ],
     "max": [
      1.5938,
-     1.7651,
+     1.7713,
      0.9483
     ],
     "size": [
@@ -909,17 +909,17 @@
    "bounds": {
     "min": [
      -1.5966,
-     0.0002,
+     0,
      -0.9378
     ],
     "max": [
      1.6,
-     1.7634,
+     1.7633,
      0.9483
     ],
     "size": [
      3.1966,
-     1.7632,
+     1.7633,
      1.8861
     ]
    }
@@ -932,23 +932,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant a LOD0 (2692 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; polished and baked."
+    "notes": "granary_jars variant a LOD0 (2800 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.3969,
+     -1.6865,
      0,
-     -1.5611
+     -1.313
     ],
     "max": [
-     1.3969,
-     1.441,
-     1.5611
+     1.6865,
+     1.4678,
+     1.313
     ],
     "size": [
-     2.7938,
-     1.441,
-     3.1222
+     3.373,
+     1.4678,
+     2.626
     ]
    }
   },
@@ -960,23 +960,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant a LOD1 (1346 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "granary_jars variant a LOD1 (1400 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.3886,
+     -1.6865,
      0,
-     -1.5688
+     -1.313
     ],
     "max": [
-     1.3969,
-     1.441,
-     1.5688
+     1.6782,
+     1.4662,
+     1.3064
     ],
     "size": [
-     2.7855,
-     1.441,
-     3.1376
+     3.3647,
+     1.4662,
+     2.6194
     ]
    }
   },
@@ -988,23 +988,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant a LOD2 (396 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "granary_jars variant a LOD2 (414 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.3877,
-     0.0104,
-     -1.5675
+     -1.6844,
+     0,
+     -1.3102
     ],
     "max": [
-     1.3974,
-     1.43,
-     1.568
+     1.6812,
+     1.4369,
+     1.2938
     ],
     "size": [
-     2.7851,
-     1.4196,
-     3.1355
+     3.3656,
+     1.4369,
+     2.604
     ]
    }
   },
@@ -1016,23 +1016,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant b LOD0 (2568 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; polished and baked."
+    "notes": "granary_jars variant b LOD0 (2676 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.4699,
+     -1.6646,
      0,
-     -1.5611
+     -1.314
     ],
     "max": [
-     1.4699,
-     1.441,
-     1.5611
+     1.6646,
+     1.4594,
+     1.314
     ],
     "size": [
-     2.9398,
-     1.441,
-     3.1222
+     3.3292,
+     1.4594,
+     2.628
     ]
    }
   },
@@ -1044,23 +1044,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant b LOD1 (1284 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "granary_jars variant b LOD1 (1338 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.4615,
-     -0.0004,
-     -1.5688
+     -1.6585,
+     0,
+     -1.3163
     ],
     "max": [
-     1.4699,
-     1.441,
-     1.5688
+     1.6646,
+     1.4594,
+     1.314
     ],
     "size": [
-     2.9314,
-     1.4414,
-     3.1376
+     3.3231,
+     1.4594,
+     2.6303
     ]
    }
   },
@@ -1072,23 +1072,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant b LOD2 (379 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "granary_jars variant b LOD2 (394 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.4606,
-     -0.0025,
-     -1.5675
+     -1.6627,
+     0,
+     -1.3128
     ],
     "max": [
-     1.4699,
-     1.43,
-     1.568
+     1.6606,
+     1.4336,
+     1.299
     ],
     "size": [
-     2.9305,
-     1.4325,
-     3.1355
+     3.3233,
+     1.4336,
+     2.6118
     ]
    }
   },
@@ -1100,23 +1100,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant c LOD0 (2852 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; polished and baked."
+    "notes": "granary_jars variant c LOD0 (2960 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.6956,
+     -1.8716,
      0,
-     -1.5611
+     -1.314
     ],
     "max": [
-     1.6956,
-     1.1004,
-     1.5611
+     1.8716,
+     1.1292,
+     1.314
     ],
     "size": [
-     3.3912,
-     1.1004,
-     3.1222
+     3.7432,
+     1.1292,
+     2.628
     ]
    }
   },
@@ -1128,23 +1128,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant c LOD1 (1420 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "granary_jars variant c LOD1 (1474 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.6895,
+     -1.8656,
      0,
-     -1.5688
+     -1.3179
     ],
     "max": [
-     1.6956,
-     1.1004,
-     1.5688
+     1.8695,
+     1.1253,
+     1.314
     ],
     "size": [
-     3.3851,
-     1.1004,
-     3.1376
+     3.7351,
+     1.1253,
+     2.6319
     ]
    }
   },
@@ -1156,23 +1156,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "granary_jars variant c LOD2 (387 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "granary_jars variant c LOD2 (400 tris): Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.6895,
-     0.0082,
-     -1.5675
+     -1.8655,
+     0,
+     -1.3126
     ],
     "max": [
-     1.6759,
-     1.1009,
-     1.568
+     1.8644,
+     1.0734,
+     1.3013
     ],
     "size": [
-     3.3654,
-     1.0927,
-     3.1355
+     3.7299,
+     1.0734,
+     2.6139
     ]
    }
   },
@@ -1245,12 +1245,12 @@
    "bounds": {
     "min": [
      -1.4333,
-     0.0148,
+     0,
      -1.5794
     ],
     "max": [
      1.4368,
-     1.3565,
+     1.3417,
      1.5869
     ],
     "size": [
@@ -1329,12 +1329,12 @@
    "bounds": {
     "min": [
      -1.4465,
-     0.0149,
+     0,
      -1.6302
     ],
     "max": [
      1.448,
-     2.5548,
+     2.5399,
      1.6022
     ],
     "size": [
@@ -1385,12 +1385,12 @@
    "bounds": {
     "min": [
      -1.6855,
-     -0.0027,
+     0,
      -1.5947
     ],
     "max": [
      1.6857,
-     1.3487,
+     1.3514,
      1.5952
     ],
     "size": [
@@ -1413,12 +1413,12 @@
    "bounds": {
     "min": [
      -1.6842,
-     0.0042,
+     0,
      -1.6133
     ],
     "max": [
      1.6829,
-     1.3412,
+     1.337,
      1.6117
     ],
     "size": [
@@ -1436,23 +1436,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant a LOD0 (2112 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; polished and baked."
+    "notes": "rain_gauge variant a LOD0 (2400 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.6687,
+     -0.6977,
      0,
-     -0.6586
+     -0.6519
     ],
     "max": [
-     0.6687,
-     1.73,
-     0.6586
+     0.6977,
+     1.3836,
+     0.6519
     ],
     "size": [
-     1.3374,
-     1.73,
-     1.3172
+     1.3954,
+     1.3836,
+     1.3038
     ]
    }
   },
@@ -1464,23 +1464,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant a LOD1 (1056 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rain_gauge variant a LOD1 (1200 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.6673,
+     -0.6983,
      0,
-     -0.658
+     -0.6514
     ],
     "max": [
-     0.6687,
-     1.73,
-     0.6573
+     0.6991,
+     1.3865,
+     0.6515
     ],
     "size": [
-     1.336,
-     1.73,
-     1.3153
+     1.3974,
+     1.3865,
+     1.3029
     ]
    }
   },
@@ -1492,23 +1492,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant a LOD2 (316 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rain_gauge variant a LOD2 (360 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.6668,
-     0.0022,
-     -0.6585
+     -0.6995,
+     0,
+     -0.6588
     ],
     "max": [
-     0.6713,
-     1.7278,
-     0.6548
+     0.7032,
+     1.3651,
+     0.6478
     ],
     "size": [
-     1.3381,
-     1.7256,
-     1.3133
+     1.4027,
+     1.3651,
+     1.3066
     ]
    }
   },
@@ -1520,23 +1520,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant b LOD0 (2400 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; polished and baked."
+    "notes": "rain_gauge variant b LOD0 (2684 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.9748,
+     -0.9588,
      0,
-     -0.6621
+     -0.6561
     ],
     "max": [
-     0.9748,
-     1.73,
-     0.6621
+     0.9588,
+     1.3887,
+     0.6561
     ],
     "size": [
-     1.9496,
-     1.73,
-     1.3242
+     1.9176,
+     1.3887,
+     1.3122
     ]
    }
   },
@@ -1548,23 +1548,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant b LOD1 (1200 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rain_gauge variant b LOD1 (1342 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9744,
+     -0.9584,
      0,
-     -0.6616
+     -0.6557
     ],
     "max": [
-     0.976,
-     1.73,
-     0.6621
+     0.9594,
+     1.3887,
+     0.6556
     ],
     "size": [
-     1.9504,
-     1.73,
-     1.3237
+     1.9178,
+     1.3887,
+     1.3113
     ]
    }
   },
@@ -1576,23 +1576,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant b LOD2 (360 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rain_gauge variant b LOD2 (402 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9748,
-     0.0022,
-     -0.6624
+     -0.9572,
+     0,
+     -0.6631
     ],
     "max": [
-     0.979,
-     1.7278,
-     0.6625
+     0.9621,
+     1.3865,
+     0.6536
     ],
     "size": [
-     1.9538,
-     1.7256,
-     1.3249
+     1.9193,
+     1.3865,
+     1.3167
     ]
    }
   },
@@ -1665,12 +1665,12 @@
    "bounds": {
     "min": [
      -0.7515,
-     0.0167,
+     0,
      -0.6476
     ],
     "max": [
      0.7631,
-     1.4203,
+     1.4036,
      0.6559
     ],
     "size": [
@@ -1749,12 +1749,12 @@
    "bounds": {
     "min": [
      -1.535,
-     0.0167,
+     0,
      -1.0752
     ],
     "max": [
      1.5409,
-     0.5453,
+     0.5286,
      1.0638
     ],
     "size": [
@@ -1833,17 +1833,17 @@
    "bounds": {
     "min": [
      -1.2763,
-     -0.0063,
+     0,
      -1.0858
     ],
     "max": [
      1.2596,
-     1.6438,
+     1.65,
      1.1056
     ],
     "size": [
      2.5359,
-     1.6501,
+     1.65,
      2.1914
     ]
    }
@@ -1917,12 +1917,12 @@
    "bounds": {
     "min": [
      -2.2959,
-     -0.0069,
+     0,
      -1.3868
     ],
     "max": [
      2.3,
-     1.0899,
+     1.0968,
      1.3834
     ],
     "size": [
@@ -1940,23 +1940,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "tally_post variant a LOD0 (2344 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; polished and baked."
+    "notes": "tally_post variant a LOD0 (2440 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.7993,
+     -0.7854,
      0,
-     -0.7075
+     -0.6411
     ],
     "max": [
-     0.7993,
-     1.425,
-     0.7075
+     0.7854,
+     1.2662,
+     0.6411
     ],
     "size": [
-     1.5986,
-     1.425,
-     1.415
+     1.5708,
+     1.2662,
+     1.2822
     ]
    }
   },
@@ -1968,23 +1968,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "tally_post variant a LOD1 (1172 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "tally_post variant a LOD1 (1220 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.7985,
+     -0.7862,
      0,
-     -0.7075
+     -0.6418
     ],
     "max": [
-     0.8002,
-     1.425,
-     0.7073
+     0.7864,
+     1.2652,
+     0.641
     ],
     "size": [
-     1.5987,
-     1.425,
-     1.4148
+     1.5726,
+     1.2652,
+     1.2828
     ]
    }
   },
@@ -1996,23 +1996,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "tally_post variant a LOD2 (352 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "tally_post variant a LOD2 (366 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.802,
-     0.0025,
-     -0.7099
+     -0.7854,
+     0,
+     -0.637
     ],
     "max": [
-     0.7992,
-     1.4175,
-     0.7069
+     0.7853,
+     1.2523,
+     0.6424
     ],
     "size": [
-     1.6012,
-     1.415,
-     1.4168
+     1.5707,
+     1.2523,
+     1.2794
     ]
    }
   },
@@ -2024,23 +2024,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "tally_post variant b LOD0 (1976 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; polished and baked."
+    "notes": "tally_post variant b LOD0 (2072 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
      -1.1176,
      0,
-     -0.7075
+     -0.64
     ],
     "max": [
      1.1176,
-     1.6563,
-     0.7075
+     1.4581,
+     0.64
     ],
     "size": [
      2.2352,
-     1.6563,
-     1.415
+     1.4581,
+     1.28
     ]
    }
   },
@@ -2052,23 +2052,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "tally_post variant b LOD1 (988 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "tally_post variant b LOD1 (1036 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -1.1184,
-     -0.0009,
-     -0.7084
+     0,
+     -0.6408
     ],
     "max": [
      1.1185,
-     1.6563,
-     0.7073
+     1.459,
+     0.6398
     ],
     "size": [
      2.2369,
-     1.6572,
-     1.4157
+     1.459,
+     1.2806
     ]
    }
   },
@@ -2080,23 +2080,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "tally_post variant b LOD2 (296 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "tally_post variant b LOD2 (310 tris): A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -1.117,
-     -0.0001,
-     -0.7099
+     0,
+     -0.636
     ],
     "max": [
      1.1174,
-     1.6375,
-     0.7088
+     1.4347,
+     0.6413
     ],
     "size": [
      2.2344,
-     1.6376,
-     1.4187
+     1.4347,
+     1.2773
     ]
    }
   },
@@ -2141,12 +2141,12 @@
    "bounds": {
     "min": [
      -1.1482,
-     0.0042,
+     0,
      -1.2398
     ],
     "max": [
      1.15,
-     1.0092,
+     1.005,
      1.2397
     ],
     "size": [
@@ -2169,12 +2169,12 @@
    "bounds": {
     "min": [
      -1.1477,
-     0.0018,
+     0,
      -1.2386
     ],
     "max": [
      1.1488,
-     1.0092,
+     1.0074,
      1.2386
     ],
     "size": [
@@ -2225,17 +2225,17 @@
    "bounds": {
     "min": [
      -1.7925,
-     0.005,
+     0,
      -1.6221
     ],
     "max": [
      1.7922,
-     1.6288,
+     1.6237,
      1.6223
     ],
     "size": [
      3.5847,
-     1.6238,
+     1.6237,
      3.2444
     ]
    }
@@ -2253,17 +2253,17 @@
    "bounds": {
     "min": [
      -1.7917,
-     0.0046,
+     0,
      -1.6213
     ],
     "max": [
      1.7903,
-     1.6288,
+     1.6241,
      1.6215
     ],
     "size": [
      3.582,
-     1.6242,
+     1.6241,
      3.2428
     ]
    }
@@ -2309,17 +2309,17 @@
    "bounds": {
     "min": [
      -1.4418,
-     0.0009,
+     0,
      -1.3371
     ],
     "max": [
      1.4418,
-     0.6142,
+     0.6132,
      1.3382
     ],
     "size": [
      2.8836,
-     0.6133,
+     0.6132,
      2.6753
     ]
    }
@@ -2337,17 +2337,17 @@
    "bounds": {
     "min": [
      -1.4486,
-     0.0,
+     0,
      -1.3248
     ],
     "max": [
      1.4418,
-     0.6079,
+     0.6078,
      1.3382
     ],
     "size": [
      2.8904,
-     0.6079,
+     0.6078,
      2.663
     ]
    }
@@ -2421,17 +2421,17 @@
    "bounds": {
     "min": [
      -0.6034,
-     0.0031,
+     0,
      -0.7772
     ],
     "max": [
      0.598,
-     1.2968,
+     1.2936,
      0.7722
     ],
     "size": [
      1.2014,
-     1.2937,
+     1.2936,
      1.5494
     ]
    }
@@ -2477,12 +2477,12 @@
    "bounds": {
     "min": [
      -1.3747,
-     -0.0008,
+     0,
      -1.1482
     ],
     "max": [
      1.3738,
-     0.3346,
+     0.3354,
      1.1479
     ],
     "size": [
@@ -2505,12 +2505,12 @@
    "bounds": {
     "min": [
      -1.3751,
-     -0.0056,
+     0,
      -1.144
     ],
     "max": [
      1.3864,
-     0.327,
+     0.3326,
      1.1496
     ],
     "size": [
@@ -2561,7 +2561,7 @@
    "bounds": {
     "min": [
      -1.9997,
-     -0.0,
+     0,
      -2.0706
     ],
     "max": [
@@ -2589,12 +2589,12 @@
    "bounds": {
     "min": [
      -1.9674,
-     -0.0007,
+     0,
      -2.0637
     ],
     "max": [
      1.9445,
-     0.6859,
+     0.6866,
      2.0665
     ],
     "size": [
@@ -2645,7 +2645,7 @@
    "bounds": {
     "min": [
      -1.9997,
-     -0.0,
+     0,
      -2.083
     ],
     "max": [
@@ -2673,12 +2673,12 @@
    "bounds": {
     "min": [
      -1.9997,
-     -0.0007,
+     0,
      -2.083
     ],
     "max": [
      1.9997,
-     0.5405,
+     0.5412,
      2.0859
     ],
     "size": [
