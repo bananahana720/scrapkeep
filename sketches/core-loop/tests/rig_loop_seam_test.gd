@@ -159,14 +159,15 @@ func _planted() -> Animation:
 	for f in 31:
 		var u := float(f) / 30.0
 		a.position_track_insert_key(v, u, Vector3(0, 0.2 * sin(PI * u), 0))
-	# Clean stepped track: a hand that snaps 60 degrees every 6 frames and comes round to where it
-	# started; its seam snap is one more tick.
+	# Clean stepped track: a clock hand that holds, then snaps 72 degrees in one frame, five times,
+	# and comes round to where it started. The clip's last frame is a snap and its first a hold, so
+	# the seam jumps the full 72 degrees per frame, exactly as every tick inside the clip does.
 	var k := a.add_track(Animation.TYPE_ROTATION_3D)
 	a.track_set_path(k, NodePath("Skel:clean_tick"))
-	a.track_set_interpolation_type(k, Animation.INTERPOLATION_NEAREST)
-	for f in 6:
-		a.rotation_track_insert_key(k, f * 0.2, Quaternion(Vector3.FORWARD, deg_to_rad(60.0 * f)))
-	a.rotation_track_insert_key(k, 1.0, Quaternion(Vector3.FORWARD, deg_to_rad(360.0)))
+	a.rotation_track_insert_key(k, 0.0, Quaternion.IDENTITY)
+	for f in range(1, 6):
+		a.rotation_track_insert_key(k, f * 0.2 - DT, Quaternion(Vector3.FORWARD, deg_to_rad(72.0 * (f - 1))))
+		a.rotation_track_insert_key(k, f * 0.2, Quaternion(Vector3.FORWARD, deg_to_rad(72.0 * f)))
 	return a
 
 
