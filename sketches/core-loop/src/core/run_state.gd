@@ -11,6 +11,9 @@ const StartPicks := preload("res://src/core/start_picks.gd")
 const Profile := preload("res://src/core/profile.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const MAX_HP := 100.0
+# A hit that would kill from full health leaves 1.0 instead (the 19 Oct ruling: no single update
+# kills from full); a const so the ladder can thin it at its top step.
+const ONE_SHOT_GUARD := true
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
 # Match HUD.LOW_HEALTH. Two seconds allows a clutch move before the 5 s regen delay;
@@ -535,12 +538,20 @@ func damage(amount: float, source: String) -> void:
 	if armor_mode:
 		_damage_armored(amount, source)
 		return
-	hp = maxf(0.0, hp - amount)
+	hp = _after_hit(amount)
 	since_damage = 0.0
 	_try_escape_window()
 	events.player_hit.emit(amount, source)
 	if hp <= 0.0:
 		events.player_died.emit()
+
+
+# The hull after a hit of `amount`. A pilot at full health is left at 1.0 by a hit that would
+# kill from there: no single update kills from full.
+func _after_hit(amount: float) -> float:
+	if ONE_SHOT_GUARD and hp >= max_hp and hp - amount <= 0.0:
+		return 1.0
+	return maxf(0.0, hp - amount)
 
 
 func _damage_armored(amount: float, source: String) -> void:
@@ -574,7 +585,7 @@ func _damage_armored(amount: float, source: String) -> void:
 			metrics["heft_at_hits"].append(snappedf(heft(), 0.01))
 		armor_hit.emit(removed, spill, source)
 	if overflow > 0.0:
-		var after := maxf(0.0, hp - overflow)
+		var after := _after_hit(overflow)
 		# A ward holds the hull at its floor, once, inside the same order.
 		if ward_hook.is_valid():
 			after = maxf(after, float(ward_hook.call(after)))
