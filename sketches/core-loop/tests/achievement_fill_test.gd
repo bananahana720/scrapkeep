@@ -10,7 +10,8 @@ const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
 
-# Every achievement pays a reward, and every earned paint has exactly one earner (alpha wave 14).
+# Every achievement pays a reward (except the record-only rows named in Achievements.RECORD_ONLY, wave 20),
+# and every earned paint has exactly one earner (alpha wave 14).
 #   F1 the table sizes: 16 achievements, 18 paints, no empty reward;
 #   F2 waking_stilled: only the world-two boss earns it, and it pays Dig Ochre;
 #   F3 highdraft_reached: entering world three earns it, and it pays Highdraft Sky;

@@ -17,7 +17,8 @@ const T := preload("res://tests/support/t.gd")
 #   ach_w20_maker_set    a maker set turned on (build.maker_bonuses refresh)
 #   ach_w20_overflow     an active fired with three overflow pieces (active_rack.press)
 # Each is driven through its real source in a park Game, with a controls pass first: the near
-# misses (a chaser kill, a non-cache take, an unstaked win, two overflow pieces) earn nothing,
+# misses (a chaser kill, a non-cache take, two overflow pieces) earn nothing through the real source,
+# an unstaked win is a direct relay_stake_paid(0) emit (not a played relay), so the relay-loss branch is untested here,
 # and a row whose signal never fires stays unearned. Evidence limit: headless rules, not feel.
 
 const NOW := 1700000000.0
