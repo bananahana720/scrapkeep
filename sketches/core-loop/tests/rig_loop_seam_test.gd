@@ -2,8 +2,13 @@ extends SceneTree
 # Loop seam check for every looped enemy, Warden and boss clip (AMBITION-BRIEF "keep loops
 # seamless"; coordinator ruling on GitHub #149). For each looped clip and each position,
 # rotation and scale track, the value at time 0 must meet the value at `length`
-# (location 1 mm, rotation 0.5 degrees, scale 0.001), and the step 0 -> dt must match the
-# step length - dt -> length (velocity jump at most 25% of the track's peak per-frame step).
+# (location 1 mm, rotation 0.5 degrees, scale 0.001), and the wrap from the last step
+# (length - dt -> length) to the first (0 -> dt) must be no harsher than the clip already is:
+# the seam's velocity change may not exceed SEAM_HARSHER times the largest frame-to-frame
+# velocity change inside the clip, unless it stays under a floor nobody sees at 30 fps
+# (5 mm, 0.5 degrees or 0.01 scale per frame). So a stepped track (a clock hand that ticks on
+# the beat grid, kill_first_rig.py) or a footfall that reverses mid-clip may reverse at the
+# seam too, while a smooth clip that arrives moving and leaves reversed fails.
 # Looped clips come from special_rig.gd CLIPS, linker.gd:48, mind_hand.gd:263 and the
 # hero_assets.gd idle replay. Mirrors tools/blender/rig_pose_audit.py section 5.
 # Real seam failures are findings: this test is allowed to stay red on shipped clips.
@@ -14,7 +19,8 @@ const DT := 1.0 / 30.0
 const LOC_M := 0.001
 const ROT_DEG := 0.5
 const SCALE_TOL := 0.001
-const VEL_FRACTION := 0.25
+const SEAM_HARSHER := 1.5
+const VEL_FLOOR := {Animation.TYPE_POSITION_3D: 0.005, Animation.TYPE_ROTATION_3D: 0.5, Animation.TYPE_SCALE_3D: 0.01}
 
 const LOOPS := [
 	[M + "world_one/enemy_foreman.glb", "idle"],
@@ -102,20 +108,20 @@ func compare(anim: Animation) -> Dictionary:
 			unit = "scale"
 		if gap > limit:
 			failures.append("%s seam %.5f %s > %s" % [path, gap, unit, limit])
-		# Peak per-frame step across the clip.
-		var peak := 0.0
+		# The largest frame-to-frame velocity change inside the clip (no wrap).
+		var steps: Array[Vector3] = []
 		var prev = first
 		for f in range(1, frames + 1):
 			var cur = _value(anim, i, minf(f * DT, length))
-			peak = maxf(peak, _step(kind, prev, cur).length())
+			steps.append(_step(kind, prev, cur))
 			prev = cur
-		if peak < 1e-9:
-			continue
-		var head := _step(kind, first, _value(anim, i, minf(DT, length)))
-		var tail := _step(kind, _value(anim, i, maxf(length - DT, 0.0)), last)
-		var jump := (head - tail).length()
-		if jump > VEL_FRACTION * peak:
-			failures.append("%s velocity jump %.5f %s > %.0f%% of peak %.5f" % [path, jump, unit, VEL_FRACTION * 100.0, peak])
+		var inside := 0.0
+		for f in range(1, steps.size()):
+			inside = maxf(inside, (steps[f] - steps[f - 1]).length())
+		var jump := (steps[0] - steps[steps.size() - 1]).length() if not steps.is_empty() else 0.0
+		if jump > maxf(SEAM_HARSHER * inside, VEL_FLOOR[kind]):
+			failures.append("%s velocity jump %.5f %s/frame > %.1f x the clip's own %.5f (floor %s)" % [path, jump, unit,
+				SEAM_HARSHER, inside, VEL_FLOOR[kind]])
 	return {"tracks": tracks, "failures": failures}
 
 
@@ -146,12 +152,21 @@ func _planted() -> Animation:
 	a.rotation_track_insert_key(w, 0.0, Quaternion.IDENTITY)
 	a.rotation_track_insert_key(w, 0.5, Quaternion(Vector3.UP, 0.5))
 	a.rotation_track_insert_key(w, 1.0, Quaternion(Vector3.UP, deg_to_rad(2.0)))
-	# Planted velocity jump: positions meet but the clip arrives moving and leaves reversed.
+	# Planted velocity jump: a smooth arch whose ends meet, so the clip arrives moving down and
+	# leaves moving up (about 2 cm per frame), harsher than anything inside it.
 	var v := a.add_track(Animation.TYPE_POSITION_3D)
 	a.track_set_path(v, NodePath("Skel:kink_pos"))
 	for f in 31:
 		var u := float(f) / 30.0
-		a.position_track_insert_key(v, u, Vector3(0.1 * absf(sin(PI * u * 2.0)) * (1.0 if u < 0.5 else 1.0), 0, 0))
+		a.position_track_insert_key(v, u, Vector3(0, 0.2 * sin(PI * u), 0))
+	# Clean stepped track: a hand that snaps 60 degrees every 6 frames and comes round to where it
+	# started; its seam snap is one more tick.
+	var k := a.add_track(Animation.TYPE_ROTATION_3D)
+	a.track_set_path(k, NodePath("Skel:clean_tick"))
+	a.track_set_interpolation_type(k, Animation.INTERPOLATION_NEAREST)
+	for f in 6:
+		a.rotation_track_insert_key(k, f * 0.2, Quaternion(Vector3.FORWARD, deg_to_rad(60.0 * f)))
+	a.rotation_track_insert_key(k, 1.0, Quaternion(Vector3.FORWARD, deg_to_rad(360.0)))
 	return a
 
 
@@ -159,11 +174,11 @@ func _run() -> void:
 	# Positive control: the comparison must flag the planted seams and pass the clean tracks.
 	var control := compare(_planted())
 	var text := "\n".join(PackedStringArray(control["failures"]))
-	t.check("control sees 6 transform tracks", control["tracks"] == 6, str(control["tracks"]))
+	t.check("control sees 7 transform tracks", control["tracks"] == 7, str(control["tracks"]))
 	t.check("control flags the planted position seam", text.contains("seam_pos seam"), text)
 	t.check("control flags the planted rotation seam", text.contains("seam_rot seam"), text)
 	t.check("control flags the planted velocity jump", text.contains("kink_pos velocity"), text)
-	t.check("control passes the clean tracks", not text.contains("clean_"), text)
+	t.check("control passes the clean tracks, the stepped one included", not text.contains("clean_"), text)
 
 	for row in LOOPS:
 		var path: String = row[0]
