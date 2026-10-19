@@ -333,7 +333,7 @@ export function parseNdjson(text) {
 }
 
 // Estimated wall seconds per job by kind (measured on the 4-vCPU box; see README), for --dry-run.
-export const SECONDS_PER_JOB = { boss: 90, warden: 90, world: 150 };
+export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330 }; // wall s per job at 4 parallel on the 4-vCPU box, smoke medians; world is a guess (no sample before 19 Oct)
 
 export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   const total = jobs.reduce((s, j) => s + (perKind[j.kind] ?? 120), 0);

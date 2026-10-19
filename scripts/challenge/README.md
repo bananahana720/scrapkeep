@@ -75,3 +75,14 @@ Output: `artifacts/local/challenge/<label>/`: `runs.ndjson` (one line per job: i
 - Boss cells enter the boss at the stage's start with the saved ball position, not carried from the exit run; a Warden fight starts from the stage's entrance, so it includes the approach.
 - One Learner attempt number per run: the a5 column plays attempt 5 fresh with the band's teaching applied, not five consecutive fights.
 - The seed counts decide the interval width; 16 seeds per column gives about plus or minus 20 points near 50%.
+
+## Cost (measured 19 Oct, 4 vCPU, 4 jobs at once, commit 0a70e5c7)
+
+| Job | Game s (median) | Wall s per job |
+| --- | --- | --- |
+| Library run, full park to stage 6 | 475 to 1402 | 624 to 1429 |
+| Boss cell (`brindle`) | 90 | 120 to 360 (93 s on a quiet box; process start is about 40 s of it) |
+| Warden cell (`w1`) | 240 (cap) or 207 | 165 to 410 |
+| Park cell (`world1`, 2 jobs at once) | 207 to 240 | 129 to 147 |
+
+The default table is 816 jobs (boss 240, Warden 480, park 96), about 19 hours at 4 parallel on the loaded numbers; `--dry-run` prints the estimate. Split it with `--shard`. Stage-1 Warden runs stall at the 240 s guard for some pilots (`w1` seeds 40300, 40301 Novice, Expert); a stall counts as a timeout, not a win.
