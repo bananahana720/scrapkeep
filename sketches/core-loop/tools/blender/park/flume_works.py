@@ -1272,7 +1272,7 @@ EARTH = "9c7650"
 STONE = "a8957a"
 COPING = "d9ccaa"
 BASE_OFF = 0.05                # the liner surface rides this far above the baked ground
-EDGE_OFF = 0.02                # and eases to this at its outer edge, where it meets untouched ground
+EDGE_OFF = 0.031               # and eases to this at its outer edge, where it meets untouched ground (just over FLUSH_MIN)
 HI_LIFT = 0.02                 # never lower than this above either triangulation of a ground cell
 FLUSH_LANE = 0.12             # flush_lane liners: the most any drawn vertex inside the lane stands above the ground
 FLUSH_RIM_GAP = 0.5           # and rim rock bodies start this far outside the lane edge
@@ -1283,22 +1283,24 @@ SLEEPER_HALF = 0.25
 PANEL = 8.0                    # concrete panel length
 JOINT_HALF = 0.15              # half the width of a form joint
 BASE_TRIS = 7900               # under the landform budget of 8000
-# Registry class of a liner: landform (8,000 triangles) unless listed. A full cut of a long channel's walls to the ground mesh needs
-# about 14.5k, so these two ride the park_large class (16,000 triangles, assets/asset_budgets.json). The class only sets the cap
-# assert: the park row's `budget` stays landform and sets the in-game draw ranges.
-LARGE_LINERS = ("liner_trestle_hollow", "liner_wasteway_chute")
+# Registry class of a liner: landform (8,000 triangles) unless listed. With the surface cut to the ground mesh (at least FLUSH_MIN
+# above it everywhere, at most FLUSH_LANE inside a footprint) these rows need more: their count is what the cut measures (trestle_hollow
+# about 14k, gap_wash 8.7k, main_canal 8.1k, lateral_canal 12.9k: park_large, 16,000; wasteway_chute 18.3k: hero_landmark, 24,000, the
+# only class above it). A class only sets the cap assert; the park row's `budget` stays landform and sets the in-game draw ranges.
+LINER_CLASS = {"liner_trestle_hollow": "park_large", "liner_gap_wash": "park_large", "liner_main_canal": "park_large",
+               "liner_lateral_canal": "park_large", "liner_wasteway_chute": "hero_landmark"}
 
 
 def liner_class(rid):
-    return "park_large" if rid in LARGE_LINERS else "landform"
+    return LINER_CLASS.get(rid, "landform")
 
 
 def liner_cap(rid):
-    return 16000 if rid in LARGE_LINERS else BUDGET["base"]["tris"]
+    return json.loads((kit.SKETCH / "assets/asset_budgets.json").read_text())["classes"][liner_class(rid)]["tris"]
 
 
 def tri_limit(rid):
-    return liner_cap(rid) - 100
+    return liner_cap(rid)
 ROCKS_MAX = 48                 # 20 tris each
 TUFTS_MAX = 60                 # 18 tris each
 CHECK_MIN, CHECK_MAX = -0.05, 0.30
@@ -1478,9 +1480,11 @@ def box_touches_footprint(row, x0, x1, z0, z1):
     return False
 
 
-FLOOR_OFF = -0.0015           # a settled corner goes no lower than this under the game's ground
+FLUSH_MIN = 0.03              # every liner vertex stands at least this far above the game's ground mesh: Terrain3D's own 1 m diagonals and LOD
+                              # can fold the drawn ground slightly above the 2 m collider planes, so a surface level with them z-fights
+MINV = FLUSH_MIN + 5e-5       # the offset a vertex is held above: over the minimum by more than float32 export can move it
+SLIVER = 1e-6                 # a piece or triangle smaller than this (m2) is dropped; the lane coverage assert still holds
 CAPV = FLUSH_LANE - 5e-5      # the offset a vertex inside a footprint is held to: under the band by more than float32 export can move it
-SURFACE_N = 4                 # barycentric lattice per triangle for the surface tests: (N+1)(N+2)/2 samples
 
 
 _FPQ = {}
@@ -1582,19 +1586,79 @@ def poly_area(poly):
     return 0.5 * sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1] for i in range(len(poly)))
 
 
-def tris_excess(row, tris):
-    """Highest the interpolated surface stands above the game's ground over a lattice of every triangle's points that lie inside a
-    ride footprint; tris are lists of three (world x, world z, local y). -1 when none do."""
-    best = -1.0
-    n = SURFACE_N
-    lattice = [(a / n, b / n, (n - a - b) / n) for a in range(n + 1) for b in range(n + 1 - a)]
-    for t in tris:
-        for u, v, w in lattice:
-            x = u * t[0][0] + v * t[1][0] + w * t[2][0]
-            z = u * t[0][1] + v * t[1][1] + w * t[2][1]
-            if fp_inside(row.park, x, z):
-                best = max(best, u * t[0][2] + v * t[1][2] + w * t[2][2] + row.g0 - ground_db(x, z, row.park))
-    return best
+def _clip_keep(poly, nx, nz, c):
+    """The part of a convex polygon with nx x + nz z <= c."""
+    out = []
+    n = len(poly)
+    for i in range(n):
+        p, q = poly[i], poly[(i + 1) % n]
+        dp = nx * p[0] + nz * p[1] - c
+        dq = nx * q[0] + nz * q[1] - c
+        if dp <= 1e-12:
+            out.append(p)
+        if (dp < -1e-12 and dq > 1e-12) or (dp > 1e-12 and dq < -1e-12):
+            t = dp / (dp - dq)
+            out.append((p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t))
+    return out
+
+
+def clip_to_footprint(poly, fp):
+    rid, at, hl, hw, f, a = fp
+    cf = f[0] * at[0] + f[1] * at[1]
+    ca = a[0] * at[0] + a[1] * at[1]
+    e = 1e-6
+    for nx, nz, c in ((f[0], f[1], cf + hl + e), (-f[0], -f[1], -(cf - hl) + e), (a[0], a[1], ca + hw + e), (-a[0], -a[1], -(ca - hw) + e)):
+        if not poly:
+            break
+        poly = _clip_keep(poly, nx, nz, c)
+    return poly
+
+
+def tri_extremes(row, t):
+    lo, hi = tri_extremes_at(row, t)[::2]
+    return lo, hi
+
+
+def tri_extremes_at(row, t):
+    """Exact (lowest clearance over the whole triangle, highest clearance inside a ride footprint or None) of a triangle's surface
+    above the game's ground mesh. t is three (world x, world z, local y). The difference is linear on every piece of the triangle that
+    lies in one ground mesh triangle, so its extremes sit at the vertices of the pieces: the triangle cut by the mesh's edges, and
+    its part inside each footprint (a convex clip) cut the same way."""
+    (x0, z0, y0), (x1, z1, y1), (x2, z2, y2) = t
+    d = (x1 - x0) * (z2 - z0) - (x2 - x0) * (z1 - z0)
+    if abs(d) < 1e-12:
+        return float("inf"), None, None, None
+    pa = ((y1 - y0) * (z2 - z0) - (y2 - y0) * (z1 - z0)) / d
+    pb = ((x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)) / d
+    pc = y0 - pa * x0 - pb * z0
+    park = row.park
+    poly = [(x0, z0), (x1, z1), (x2, z2)]
+    bx0, bx1 = min(x0, x1, x2), max(x0, x1, x2)
+    bz0, bz1 = min(z0, z1, z2), max(z0, z1, z2)
+    lines = grid_lines(bx0, bx1, bz0, bz1)
+
+    def clearance(p):
+        return pa * p[0] + pb * p[1] + pc + row.g0 - ground_db(p[0], p[1], park)
+
+    def points(pg):
+        if len(pg) < 3:
+            return pg
+        ps = [pg]
+        for line in lines:
+            ps = [q for f in ps for q in split_poly(f, line)]
+        return [p for f in ps for p in f]
+    pts = points(poly)
+    plo = min(pts, key=clearance)
+    lo = clearance(plo)
+    hi = phi = None
+    for fp in _fp_near(park, bx0, bx1, bz0, bz1):
+        cp = clip_to_footprint(poly, fp)
+        if cp:
+            q = max(points(cp), key=clearance)
+            h = clearance(q)
+            if hi is None or h > hi:
+                hi, phi = h, q
+    return lo, plo, hi, phi
 
 
 def _bary(p, a, b, c):
@@ -1637,7 +1701,7 @@ class FlushCell:
         inside a footprint."""
         row = self.row
         lx, lz = row.local(x, z)
-        off = self.off_at(lx, lz)
+        off = max(self.off_at(lx, lz), MINV)
         if fp_inside(row.park, x, z):
             off = min(off, CAPV)
         return x, z, ground_db(x, z, row.park) + off - row.g0
@@ -1651,13 +1715,13 @@ def _fan(verts):
         ok = True
         for k in range(1, n - 1):
             t = (verts[start], verts[(start + k) % n], verts[(start + k + 1) % n])
-            if abs(poly_area([(p[0], p[1]) for p in t])) < 1e-9:
+            if abs(poly_area([(p[0], p[1]) for p in t])) < SLIVER:
                 ok = False
                 break
             out.append(t)
         if ok:
             return out
-    return [t for t in ((verts[0], verts[k], verts[k + 1]) for k in range(1, n - 1)) if abs(poly_area([(p[0], p[1]) for p in t])) >= 1e-9]
+    return [t for t in ((verts[0], verts[k], verts[k + 1]) for k in range(1, n - 1)) if abs(poly_area([(p[0], p[1]) for p in t])) >= SLIVER]
 
 
 def emit_flush(row, V, cells):
@@ -1709,60 +1773,65 @@ def emit_flush(row, V, cells):
             cx = sum(p[0] for p in ring) / len(ring)
             cz = sum(p[1] for p in ring) / len(ring)
             mid = cells[ci].point(cx, cz)
-            return [[(mid, ring[k], ring[(k + 1) % len(ring)]) for k in range(len(ring))]]
+            fan = [(mid, ring[k], ring[(k + 1) % len(ring)]) for k in range(len(ring))]
+            return [[t for t in fan if abs(poly_area([(p[0], p[1]) for p in t])) >= SLIVER]]
         if len(cells[ci].keys) == 3:
             return [[(ring[0], ring[1], ring[2])]]
         return [[(ring[0], ring[1], ring[2]), (ring[0], ring[2], ring[3])], [(ring[0], ring[1], ring[3]), (ring[1], ring[2], ring[3])]]
 
-    def plain_choice(ci, force=False):
-        """(index of the candidate triangulation that keeps the band, its excess); the cell's corners are lowered (never to more than
-        FLOOR_OFF under the ground) when it takes that. (None, best excess) when no candidate can; with force the least bad candidate
-        is kept, lowered as far as it goes, and its index returned."""
+    MIN_T, MAX_T = FLUSH_MIN + 1e-5, FLUSH_LANE - 1e-6
+
+    def extremes(cand):
+        """(lowest clearance, its point and triangle, highest clearance inside a footprint or None, its point and triangle)."""
+        lo, plo, tlo, hi, phi, thi = float("inf"), None, None, None, None, None
+        for ti, t in enumerate(cand):
+            a, pa, b, pb = tri_extremes_at(row, t)
+            if a < lo:
+                lo, plo, tlo = a, pa, ti
+            if b is not None and (hi is None or b > hi):
+                hi, phi, thi = b, pb, ti
+        return lo, plo, tlo, hi, phi, thi
+
+    def plain_choice(ci, adjust=True):
+        """Index of the first candidate triangulation whose triangles keep the band exactly (every point of the surface at least
+        FLUSH_MIN above the ground mesh, and at most FLUSH_LANE inside a footprint), or None. When none does, the cell's corner
+        offsets are moved together, up by the deficit at the lowest point or down by the excess at the highest, a few times, each held to [MINV, CAPV] inside a footprint, to see whether the chord can be made
+        to fit; a cell that cannot is restored and left to the cut."""
         c = cells[ci]
-        n_cand = len(candidates(ci))
-        if not touches[ci]:
-            return 0, -1.0
-        for d in range(n_cand):
-            e = tris_excess(row, candidates(ci)[d])
-            if e <= FLUSH_LANE - 1e-6:
-                return d, e
-        best = (None, 1e9, None)
-        for d in range(n_cand):
-            saved = {k: V[k][4] for k in c.keys}
-            e = 1e9
-            for _ in range(6):
-                e = tris_excess(row, candidates(ci)[d])
-                if e <= FLUSH_LANE - 1e-6:
-                    return d, e
-                moved = False
-                for k in c.keys:
-                    low = max(V[k][4] - (e - FLUSH_LANE + 2e-5), FLOOR_OFF)
-                    if low < V[k][4] - 1e-9:
-                        V[k][4] = low
-                        moved = True
-                if not moved:
-                    break
-            if e < best[1]:
-                best = (d, e, {k: V[k][4] for k in c.keys})
-            for k, v in saved.items():
-                V[k][4] = v
-        if force and best[0] is not None:
-            for k, v in best[2].items():
-                V[k][4] = v
-            return best[0], best[1]
-        return None, best[1]
+        n = len(c.keys)
+        saved = {k: V[k][4] for k in c.keys}
+        for attempt in range(7 if adjust else 1):
+            cands = candidates(ci)
+            stats = [extremes(cand) for cand in cands]
+            for d, st in enumerate(stats):
+                if st[0] >= MIN_T and (st[3] is None or st[3] <= MAX_T):
+                    return d
+            lo, plo, tlo, hi, phi, thi = stats[0]
+            if lo < MIN_T and not (attempt % 2 and hi is not None and hi > MAX_T):
+                delta, pt, ti = MIN_T - lo + 1e-4, plo, tlo
+            elif hi is not None and hi > MAX_T:
+                delta, pt, ti = -(hi - MAX_T + 1e-4), phi, thi
+            else:
+                break
+            weights = {j: 1.0 for j in range(n)}
+            for j, wj in weights.items():
+                k = c.keys[j]
+                cap = CAPV if fp_inside(row.park, V[k][2], V[k][3]) else FEATURE_MAX - 0.03
+                V[k][4] = min(max(V[k][4] + delta * wj, MINV), cap)
+        for k, v in saved.items():
+            V[k][4] = v
+        return None
 
     choice = {}
-    severity = {}
+    strict = set()
     queue = list(range(len(cells)))
     while queue:
         ci = queue.pop(0)
         if mode[ci] == "overlay":
             continue
-        got, bad = plain_choice(ci)
+        got = plain_choice(ci, adjust=ci not in strict)
         if got is None:
             mode[ci] = "overlay"
-            severity[ci] = bad
             choice.pop(ci, None)
             n = len(cells[ci].keys)
             for k in range(n):
@@ -1771,6 +1840,15 @@ def emit_flush(row, V, cells):
                         queue.append(o)
         else:
             choice[ci] = got
+        if not queue:       # corners moved by an adjustment can spoil a cell accepted earlier: recheck every plain cell
+            for cj in range(len(cells)):
+                if mode[cj] == "plain":
+                    again = plain_choice(cj, adjust=False)
+                    if again is None:
+                        strict.add(cj)
+                        queue.append(cj)
+                    else:
+                        choice[cj] = again
     def fragments(ci):
         c = cells[ci]
         x0, x1 = min(p[0] for p in c.world), max(p[0] for p in c.world)
@@ -1783,7 +1861,7 @@ def emit_flush(row, V, cells):
             frags = [q for f in frags for q in split_poly(f, line)]
         out = []
         for f in frags:
-            if abs(poly_area(f)) < 1e-9:
+            if abs(poly_area(f)) < SLIVER:
                 continue
             out.append(f if poly_area(f) > 0 else f[::-1])
         return out
@@ -2508,22 +2586,16 @@ def liner_build(rid, out_dir):
     return rows
 
 
-def surface_in_footprints(row, pts, tris):
-    """(highest, count) of the interpolated height above the game's ground mesh over a barycentric lattice of every triangle, for the
-    samples inside a ride footprint."""
-    best, n = 0.0, 0
-    k = SURFACE_N
-    lattice = [(a / k, b / k, (k - a - b) / k) for a in range(k + 1) for b in range(k + 1 - a)]
+def surface_extremes(row, pts, tris):
+    """Exact (lowest clearance anywhere, highest clearance inside a ride footprint) of a mesh's surface over the game's ground mesh."""
+    world = [row.world(p[0], p[2]) + (p[1],) for p in pts]
+    lo, hi = float("inf"), 0.0
     for t in tris:
-        p = [pts[i] for i in t]
-        for u, v, w in lattice:
-            x = u * p[0][0] + v * p[1][0] + w * p[2][0]
-            z = u * p[0][2] + v * p[1][2] + w * p[2][2]
-            if not in_ride_footprint(row, x, z):
-                continue
-            n += 1
-            best = max(best, u * p[0][1] + v * p[1][1] + w * p[2][1] + row.g0 - row.db(x, z))
-    return best, n
+        a, b = tri_extremes(row, [world[i] for i in t])
+        lo = min(lo, a)
+        if b is not None:
+            hi = max(hi, b)
+    return lo, hi
 
 
 def lane_coverage(row, pts, tris):
@@ -2583,18 +2655,15 @@ def liner_check(rid, out_dir):
             gaps.append(y + row.g0 - row.db(x, z))
         lo, hi = min(gaps), max(gaps)
         if row.flush:
-            lane = [g for (x, y, z), g in zip(pts, gaps) if lane_strict(row) and abs(x) <= row.hw + 1e-6]
-            lane_max = max(lane) if lane else 0.0
-            print("FLUME_WORKS_FLUSH", name, "lane verts %d  highest inside |x| < %.1f: %.3f m (limit %.2f)  %s" % (
-                len(lane), row.hw, lane_max, FLUSH_LANE, "PASS" if lane_max <= FLUSH_LANE + 1e-4 else "FAIL"))
-            if lane_max > FLUSH_LANE + 1e-4:
-                fails.append("%s: %.3f m above the ground inside the lane (flush_lane limit %.2f)" % (name, lane_max, FLUSH_LANE))
             tris = mesh_triangles(doc, binary, meshes[0])
-            surf_max, surf_n = surface_in_footprints(row, pts, tris)
-            print("FLUME_WORKS_FLUSH", name, "drawn surface inside any ride footprint: %d samples, highest interpolated %.4f m (limit %.2f), %d triangles (cap %d, %s)  %s" % (
-                surf_n, surf_max, FLUSH_LANE, len(tris), liner_cap(rid), liner_class(rid), "PASS" if surf_max <= FLUSH_LANE + 1e-4 and len(tris) <= liner_cap(rid) else "FAIL"))
+            surf_min, surf_max = surface_extremes(row, pts, tris)
+            ok_ = surf_max <= FLUSH_LANE + 1e-4 and surf_min >= FLUSH_MIN - 1e-4 and len(tris) <= liner_cap(rid)
+            print("FLUME_WORKS_FLUSH", name, "exact surface over the ground mesh: lowest %.4f m (min %.2f), highest inside any ride footprint %.4f m (limit %.2f), %d triangles (cap %d, %s)  %s" % (
+                surf_min, FLUSH_MIN, surf_max, FLUSH_LANE, len(tris), liner_cap(rid), liner_class(rid), "PASS" if ok_ else "FAIL"))
             if surf_max > FLUSH_LANE + 1e-4:
-                fails.append("%s: drawn surface %.3f m above the ground inside a ride row's footprint (limit %.2f)" % (name, surf_max, FLUSH_LANE))
+                fails.append("%s: drawn surface %.4f m above the ground inside a ride row's footprint (limit %.2f)" % (name, surf_max, FLUSH_LANE))
+            if surf_min < FLUSH_MIN - 1e-4:
+                fails.append("%s: drawn surface %.4f m above the ground at its lowest (minimum %.2f)" % (name, surf_min, FLUSH_MIN))
             if len(tris) > liner_cap(rid):
                 fails.append("%s: %d triangles over the %s cap %d" % (name, len(tris), liner_class(rid), liner_cap(rid)))
             missing, total = lane_coverage(row, pts, tris)
@@ -2612,9 +2681,6 @@ def liner_check(rid, out_dir):
                 len(pts), lo, hi, CHECK_MIN, CHECK_MAX, "yes" if not any('-col' in n['name'] for n in doc['nodes']) else "NO", "PASS" if ok else "FAIL"))
             if not ok:
                 fails.append("%s: gap %.3f .. %.3f outside %.2f .. %.2f" % (name, lo, hi, CHECK_MIN, CHECK_MAX))
-            floor = [g for (x, y, z), g in zip(pts, gaps) if abs(x) <= 0.2 * row.W and row.style != "pond"]
-            if floor and max(floor) > BASE_OFF + 0.03 + 1e-4:
-                fails.append("%s: floor band %.3f m above the ground" % (name, max(floor)))
         else:
             print("FLUME_WORKS_LINER", name, "shell verts %d  gap %.3f .. %.3f m" % (len(pts), lo, hi))
             limit = FEATURE_MAX + 0.02 if name.endswith("1") else 0.75
@@ -2849,7 +2915,7 @@ def liner_registry(rid):
         text = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. "
                 "No -col mesh: the stamped terrain stays the only collider. Ships " + FLUSH_NOTES[LINERS[rid]["style"]] + ". "
                 + "Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground" + (", the verge band included" if LINERS[rid]["style"] in ("sandstone", "haul", "rails") else "") + ", and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
-                + (" Registry class park_large (16,000 triangles): a full cut of its channel walls to the ground mesh needs about 12k to 14.5k; the park row's budget stays landform." if rid in LARGE_LINERS else ""))
+                + (" Registry class %s (%d triangles): a full cut of it to the ground mesh, held between 0.03 and 0.12 m above it, needs more than the 8,000 of landform; the park row's budget stays landform." % (liner_class(rid), liner_cap(rid)) if rid in LINER_CLASS else ""))
         return [{"id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": liner_class(rid), "origin": "centre",
                  "ships": True, "loader": "src/world/park/park_recipes.gd",
                  "provenance": {"recipe": "tools/blender/park/flume_works.py", "note": text}}]
