@@ -441,6 +441,10 @@ func _result(ok: bool, reason: String, line_id := "", part_id := "", cost := 0) 
 	return out
 
 
+# 2026-10-18 (w17 answers): the shelf and the hook draw through Parts.roll, so a part that answers
+# the pilot's nemesis (Parts.ANSWERS, Nemesis.OFFER_WEIGHT) is stocked more often by the same lean the
+# gates get. It moves weight inside a part's offer bucket only, so the shelf's mix of buckets and its
+# rarities, and every price, stay as they were (answer_weights_test).
 func _stock() -> Array:
 	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE)
 	var out: Array = []
