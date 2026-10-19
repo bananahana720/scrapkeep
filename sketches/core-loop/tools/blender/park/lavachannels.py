@@ -58,10 +58,10 @@ BAKE_GRID = 2.0               # the park bake's height sample spacing, m
 SKIRT = 0.6                   # the shell's outer skirt reaches this far under the crest
 CREST_BAND = 2.0              # a chained shell's crest band: this far in from the crest the cross-section is halved (0.35 m apart) and the
 BAND_STEP = 0.5               # z step is this, m, so no long triangle chords across the steep ground just past the crest
-LANE_HALF = 14.0              # a chained row's lane half-width, W / 2: the neighbour's lane reaches this far either side of its line
+MAX_BEND_DEG = 45.0           # the largest yaw step between chained neighbours END_ZONE was measured for (check_rows enforces it)
 END_ZONE = 15.0               # m from a row's end with no beyond-crest props: measured over the 20 chain pairs (rows 51 to 60 m,
                               # stamps overlapping about 17 m, bends up to 45 degrees) the next row's lane reaches props at |x| 14.5 to 19.5
-                              # no further than 13.9 m (about LANE_HALF) from the end; 1 m slack
+                              # no further than 13.9 m (about the 14 m lane half-width) from the end; 1 m slack
 MIN_STRETCH = 0.88            # the shortest seated row (51.16 m) over the 58 m piece: a metre of row is at most 1 / this in the GLB
 PROP_HALF = 1.5               # a prop's reach along z (boulders to 1.5 m, cones 1.6 m), so its whole body stays out of the zone
 
@@ -509,6 +509,26 @@ def check_chute(base, col_s, shells):
     return 0.0
 
 
+ROWS_JSON = HERE.parents[2] / "src" / "world" / "park" / "park_sinkhole.json"
+
+
+def check_rows(path=ROWS_JSON):
+    """The end zone holds only for the rows it was measured on: fail the build, naming the row, if a lava_channel row is shorter
+    than MIN_STRETCH of the piece or turns more than MAX_BEND_DEG from its chained neighbour."""
+    if not Path(path).is_file():
+        raise SystemExit("lavachannels: %s missing, cannot check the lava_channel rows against END_ZONE" % path)
+    rows = [r for r in json.loads(Path(path).read_text())["park_rows"] if r.get("recipe") == "lava_channel"]
+    assert rows, ("no lava_channel rows in", str(path))
+    prev = None
+    for r in rows:
+        assert r["size"][0] / PIECES["lava_channel"].L >= MIN_STRETCH - 1e-9, (r["id"], "row shorter than MIN_STRETCH of the piece", r["size"][0])
+        if prev is not None:
+            bend = abs((r["yaw_deg"] - prev["yaw_deg"] + 180.0) % 360.0 - 180.0)
+            assert bend <= MAX_BEND_DEG + 1e-9, (prev["id"], r["id"], "bend over MAX_BEND_DEG", bend)
+        prev = r
+    return len(rows)
+
+
 RECIPES = list(PIECES) + [CHUTE["id"]]
 
 
@@ -555,6 +575,8 @@ def main():
     parser.add_argument("--recipe", default="all")
     args = parser.parse_args(argv)
     ids = RECIPES if args.recipe == "all" else args.recipe.split(",")
+    if "lava_channel" in ids:
+        print("LAVACHANNELS rows checked", check_rows())
     log = [build(rid, args.out, args.count_only) for rid in ids]
     for row in log:
         print("LAVACHANNELS", row["recipe"], json.dumps({k: v for k, v in row.items() if k != "glb"}, sort_keys=True))
