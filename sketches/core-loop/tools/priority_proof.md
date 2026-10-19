@@ -65,7 +65,7 @@ Mean hull lost and clear seconds over 8 paired seeds; every run cleared.
 | Dispatcher | model | 3 | 6.3 / 11.8 s | 3.9 / 17.8 s | 0.62 | 3 of 8 | too little damage (would miss) |
 | Dispatcher, 4 s drops | model | 3 | 6.3 / 11.9 s | 3.9 / 17.9 s | 0.62 | 3 of 8 | too little damage (would miss) |
 | Splitter | not built | | | | | | not built (built since; see below) |
-| Linker | built since (src/combat/linker.gd; `--specials=linker` crew exists in priority_proof.gd) | | | | | | not measured: no paired runs yet |
+| Linker | not built | | | | | | not built (built since in `src/combat/linker.gd`; the `--specials=linker` crew has no paired runs yet) |
 | Mag trapper (control) | built | 1 | 0.0 / 8.6 s | 0.2 / 11.3 s | - | 1 of 8 | too little damage |
 | Mag trapper (control) | built | 3 | 1.5 / 13.6 s | 2.3 / 16.0 s | 1.53 | 4 of 8 | too little damage |
 
