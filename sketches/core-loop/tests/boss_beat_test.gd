@@ -151,7 +151,7 @@ func _fight(boss: String, world: int, on: bool) -> void:
 			var after := _telegraphs.filter(func(e): return int(e["frame"]) >= cue_frame)
 			var gap_ok := true
 			for e in after:
-				gap_ok = gap_ok and int(e["frame"]) - cue_frame >= roundi(ChallengeDials.WARN_GAP * TICKS) - 1
+				gap_ok = gap_ok and int(e["frame"]) - cue_frame >= roundi(ChallengeDials.WARN_GAP * TICKS)
 			_t.check(tag + " no attack warning within GAP of the cue", gap_ok, str(after.map(func(e): return int(e["frame"]) - cue_frame)))
 		_t.eq(tag + " nothing beat-named on the telegraph event", _telegraphs.filter(func(e): return String(e["id"]).ends_with("_beat")).size(), 0)
 		_t.check(tag + " objective says bracing", mod.objective_text().contains("bracing"), mod.objective_text())

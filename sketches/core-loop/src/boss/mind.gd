@@ -62,7 +62,8 @@ func _beat_plan() -> Array:
 
 func _on_beat_started(seconds: float) -> void:
 	# No attack warning starts within GAP of the cue; the held commit goes at the first free tick.
-	_hold_until = clock + ChallengeDials.WARN_GAP
+	# The cue fires mid-strike, before this tick advances `clock`, so the hold counts one tick more.
+	_hold_until = clock + get_physics_process_delta_time() + ChallengeDials.WARN_GAP
 	ctx.events.boss_beat.emit(BOSS_ID, seconds)
 
 
