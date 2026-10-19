@@ -33,10 +33,12 @@ Blender's own evaluation):
   triangles touching a blended vertex: min deformed/rest area; max angle between the deformed
   normal and the normal a rigid move by the triangle's dominant bone would give, and the count that
   point the other way; edges between two blended vertices: min deformed/rest length.
-  COLLAPSE: area ratio < 0.35 or edge ratio < 0.5 at an in-game extreme; STRESS-COLLAPSE: only at
-  a stress pose.
+  COLLAPSE: area ratio < 0.35, edge ratio < 0.5, or any blended triangle turned inside out where
+  something can see it (normal_flipped_visible: the flipped triangle's centroid has a free ray out
+  of the rest of the mesh) at an in-game extreme; STRESS-COLLAPSE: only at a stress pose. A flip
+  buried inside other geometry is reported as normal_flipped but is not a flag.
   Rigid islands (connected components, welded by position, weighted whole to one bone), island
-  pairs on parent/child bones:
+  pairs on parent/child bones and on any two bones whose islands touch at rest:
   CLIP: vertices of one island that sit inside the other island's volume at the pose and did not
   at rest (inside = behind the nearest face's normal; closed islands are exact, an open island
   falls back to the nearest-surface depth along the normal and is marked open_mesh). Depth is
@@ -109,8 +111,8 @@ LOOPS = {
 # kfm = world_one/kill_first_motion.py; ws = warden_swarm.py; wm = warden_mind.py (tools/blender/).
 DELIBERATE = {
     "world_one/enemy_foreman": {
-        "break": {"pairs": [("Cabinet", "Hat"), ("Cabinet", "Hand")],
-                  "cite": "kfm:124-126 'the hand spins out to six o'clock, the hat flies and lands askew'; Hat key y 1.15 m at kfm:154, Hand 900 deg at kfm:152-153"},
+        "break": {"pairs": [("Cabinet", "Hat"), ("Cabinet", "Hand"), ("Chassis", "Mast"), ("Mast", "Horn*")],
+                  "cite": "kfm:124-126 'the hand spins out to six o'clock, the hat flies and lands askew; then each trombone note sags the mast one step further'; Hat key y 1.15 m kfm:154, Hand 900 deg kfm:152-153, mast and horn droop keys kfm:138-147"},
         "tell": {"pairs": [("Cabinet", "Hat")],
                  "cite": "kfm:101 'the steam at 0.55 pops the hat again'; Hat keys kfm:109-112. Mast/Horn overlap is not excused"},
     },
@@ -119,10 +121,10 @@ DELIBERATE = {
                   "cite": "kfm:258-260 'line disconnected. The printer jams and spews paper, the mast sproings up and wobbles with the radar spinning off-beat, the eyes boing out on springs, then the box sags sideways'; Tongue kfm:275-277, Radar 710 deg kfm:281-282, eye_boing kfm:262-267"},
     },
     "world_one/enemy_splitter": {
-        "break_split": {"pairs": [("Body", "Pod?"), ("Pod?", "*"), ("Core", "*"), ("Root", "Lamp")],
+        "break_split": {"pairs": [("Pod?", "*"), ("Core", "*"), ("*", "Lamp")],
                         "cite": "kfm:376-377 'the three pods burst out and the core and fuse go', SPLIT_BURST 0.45 m kfm:300"},
-        "break_clean": {"pairs": [("*", "Lamp"), ("Body", "Leg??"), ("Body", "Pod?"), ("Leg??", "Pod?")],
-                        "cite": "kfm:390-391 'one fat pop. Squashed flat, it bounces once and deflates; the fuse lamp pops off its neck, flies, lands beside it'; Body squash kfm:393-397, hips lift kfm:402-403"},
+        "break_clean": {"pairs": [("*", "Lamp"), ("Core", "Leg??"), ("Core", "Pod?"), ("Leg??", "Pod?")],
+                        "cite": "kfm:390-391 'one fat pop. Squashed flat, it bounces once and deflates; the fuse lamp pops off its neck, flies, lands beside it'; Body squash kfm:393-397, hips lift kfm:402-403. part() (kfm:324-333) never names a mesh island Body: the squashed shell is Core"},
     },
     "world_one/enemy_linker": {
         "cut": {"pairs": [("*", "Dish*"), ("Root", "Boom"), ("Cab", "Crew"), ("Cab", "Ears"), ("Crew", "Ears")],
@@ -132,6 +134,10 @@ DELIBERATE = {
     "world_one/enemy_plated_brute": {
         "proc:SlamPadLeft:tY+": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
                                  "cite": "plated_brute.gd:288-309 e09_pads_raise: the pads rise PAD_RISE 2.5 m (:45) off the body on the warn"},
+        "proc:SlamPadLeft:tY-": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
+                                 "cite": "plated_brute.gd:48 PAD_PLANT -0.47 m, :302 held for the rest of LIVE (lift = PAD_PLANT / PAD_RISE); the shoulder strip inverts here but sits wholly inside the torso (rig audit, normal_flipped_visible 0)"},
+        "proc:SlamPadRight:tY-": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
+                                  "cite": "plated_brute.gd:48 PAD_PLANT -0.47 m, :302 held for the rest of LIVE; shoulder strip inside the torso (normal_flipped_visible 0)"},
         "proc:SlamPadRight:tY+": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
                                   "cite": "plated_brute.gd:288-309 e09_pads_raise: the pads rise PAD_RISE 2.5 m (:45) off the body on the warn"},
     },
@@ -261,6 +267,9 @@ SMALL_ROT_STRESS = 15.0
 STEP = 1.0 / 30.0
 GAP_SAMPLES = 200
 INSIDE_CAP = 1500
+RAY_DIRS = [Vector(d).normalized() for d in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1),
+                                             (1, 1, 0), (-1, 1, 0), (1, -1, 0), (-1, -1, 0), (1, 0, 1), (-1, 0, 1),
+                                             (0, 1, 1), (0, -1, 1), (1, 0, -1), (-1, 0, -1), (0, 1, -1), (0, -1, -1)]]
 GAIN_MIN = 0.001  # a vertex counts as newly inside once it has gained 1 mm against rest
 SIBLING_CAP = 1500  # touching island pairs on non-parent/child bones, per rig
 KINDS_GAME = ("extreme", "clip")
@@ -744,6 +753,7 @@ class Metrics:
         self.blended_v = infl > 1
         tb = self.blended_v[T].any(1) if len(T) else np.zeros(0, dtype=bool)
         self.bt = T[tb]
+        self.non_bt = np.nonzero(~tb)[0]
         self.bt_area0, self.bt_n0 = self.tri_area_normal(V0, self.bt)
         # dominant bone: the bone with most weight over the triangle's three vertices
         self.bt_bone = np.zeros(len(self.bt), dtype=np.int64)
@@ -941,7 +951,7 @@ class Metrics:
     def evaluate(self, Vp, Dw):
         rig = self.rig
         out = {"area_min": None, "edge_min": None, "normal_dev_max_deg": None, "normal_flipped": None,
-               "collapse_focus": None,
+               "collapse_focus": None, "normal_flipped_visible": 0,
                "clip_depth_mm": 0.0, "clip_verts": 0, "clip_frac": 0.0, "clip_thr_mm": None, "clip_open": False,
                "clip_pair": None, "clip_ratio": 0.0, "clip_over": False, "clip_depth_max_mm": 0.0,
                "clip_tri_pairs": 0, "clip_tri_pair": None, "clip_hits": [], "gap_hits": [],
@@ -958,7 +968,18 @@ class Metrics:
             dot = np.clip((n1 * ne).sum(1), -1, 1)
             ang = np.degrees(np.arccos(dot))
             out["normal_dev_max_deg"] = round(float(ang[valid].max()), 3) if valid.any() else 180.0
-            out["normal_flipped"] = int(((dot < 0) & valid).sum())
+            fl = np.nonzero((dot < 0) & valid)[0]
+            out["normal_flipped"] = int(len(fl))
+            # A flipped triangle counts only if something can see it: a ray from its centroid that
+            # leaves the rest of the mesh (blended triangles excluded) in any of 18 directions.
+            vis = 0
+            if len(fl):
+                tree = self.bvh(Vp, self.non_bt, rig.T)
+                for i in fl:
+                    c = Vp[self.bt[i]].mean(0)
+                    if any(tree.ray_cast(Vector(c) + d * 1e-3, d)[0] is None for d in RAY_DIRS):
+                        vis += 1
+            out["normal_flipped_visible"] = vis
         if len(self.edges):
             l1 = np.linalg.norm(Vp[self.edges[:, 0]] - Vp[self.edges[:, 1]], axis=1)
             ok = np.nonzero(self.edge_ok)[0]
@@ -1058,6 +1079,9 @@ def collapse_ratio(m):
         r = max(r, AREA_FLAG / max(m["area_min"], 1e-3))
     if m["edge_min"] is not None:
         r = max(r, EDGE_FLAG / max(m["edge_min"], 1e-3))
+    if m.get("normal_flipped_visible"):
+        # a blended triangle turned inside out where it can be seen is a collapse too
+        r = max(r, 1.0 + min(m["normal_flipped_visible"], 999) / 1000.0)
     return r
 
 
@@ -1113,6 +1137,8 @@ def severity(m, kind, deliberate):
             parts.append("AREA %.2f" % m["area_min"])
         if m["edge_min"] is not None and m["edge_min"] < EDGE_FLAG:
             parts.append("EDGE %.2f" % m["edge_min"])
+        if m.get("normal_flipped_visible"):
+            parts.append("FLIP %d" % m["normal_flipped_visible"])
         return (1000.0 if kind in KINDS_GAME else 500.0) + sc, "COLLAPSE " + " ".join(parts)
     scale = 1.0
     if m.get("x_ratio", 0.0) > max(cr, gr):
@@ -1427,6 +1453,7 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         slot["bones"] = sorted(slot["bones"])
         slot["worst"] = {"pose": fmt_spec(p) if p["bone"] != "*" else p["axis"], "bone": p["bone"], "src": p.get("src"),
                          "area_min": p["area_min"], "edge_min": p["edge_min"],
+                         "normal_flipped": p["normal_flipped"], "normal_flipped_visible": p["normal_flipped_visible"],
                          "clip_depth_mm": p["clip_depth_mm"], "clip_verts": p["clip_verts"], "clip_frac": p["clip_frac"],
                          "clip_thr_mm": p["clip_thr_mm"], "clip_open": p["clip_open"], "clip_pair": p["clip_pair"],
                          "clip_tri_pairs": p["clip_tri_pairs"],
@@ -1503,17 +1530,21 @@ def skin_check(rig, values, Vp):
 def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pairs_untested=False):
     stage = Stage(rig, a["size"], a["samples"])
     w, h = a["size"], int(a["size"] * 0.75)
-    ranked = sorted(range(len(poses)), key=lambda i: -poses[i]["severity"])
-    chosen, seen = [], set()
-    for i in ranked:
-        p = poses[i]
-        ident = (p["bone"], p["axis"][:2] if p["bone"] != "*" else p["axis"])
-        if ident in seen:
-            continue
-        seen.add(ident)
-        chosen.append(i)
-        if len(chosen) == 5:
-            break
+    # In-game poses (clip frames and extremes) first: the top 5, then the top 3 stress poses, each
+    # list deduped on the signed axis so +0.22 and -0.47 of one axis both get a tile.
+    def pick(kinds, n):
+        out, seen = [], set()
+        for i in sorted((i for i in range(len(poses)) if poses[i]["kind"] in kinds), key=lambda i: -poses[i]["severity"]):
+            p = poses[i]
+            ident = (p["bone"], p["axis"], 1 if p["value"] > 0 else -1) if p["bone"] != "*" else (p["axis"],)
+            if ident in seen:
+                continue
+            seen.add(ident)
+            out.append(i)
+            if len(out) == n:
+                break
+        return out
+    chosen = pick(KINDS_GAME, 5) + pick(("stress",), 3)
     tiles = [tile(stage.render({}), [key.split("/")[-1], "REST POSE", "PAIRS UNTESTED" if pairs_untested else "RANKED BY DEFECT SEVERITY"])]
     for i in chosen:
         p = poses[i]
