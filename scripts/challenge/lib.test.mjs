@@ -47,6 +47,13 @@ test("a fight carries the comps report: largest hit share and first-45 s damage"
   assert.equal(w.largestShare, 0.25); // the stage note's max_hp wins over the record's
   const a = aggregate([g, { ...g, largestShare: 0.5, largestSource: "charge", hp45Share: 0.4 }, { result: "error" }]);
   assert.deepEqual([a.largestShare, a.largestSource, a.medianHp45Share, a.maxHp45Share], [0.5, "charge", 0.31, 0.4]);
+  // A Warden the bot never engaged reports nothing, so it cannot pull the 45 s median toward zero.
+  const cold = gradeRun("warden", { outcome: "stalled", max_hp: 90, stages: [{ stage: 2, max_hp: 90, warden_engaged_s: null, warden_fight_s: null }] }, { stage: 2 });
+  assert.deepEqual([cold.result, cold.largestShare, cold.hp45Share], ["timeout", null, null]);
+  const runs = [{ cell: "brindle", kind: "boss", stage: 2, column: "learner1", grade: g }, { cell: "brindle", kind: "boss", stage: 2, column: "expert", grade: { result: "win", fightS: 64, largestShare: 0.2, largestSource: "slag", hp45Share: 0.1 } }];
+  const md = renderTable(buildTable(runs));
+  assert.match(md, /## Fight report/);
+  assert.match(md, /\| brindle \| 64\.0 \| 34% \(slag\) \| 22% \/ 22% \|/);
 });
 
 test("a park run wins by reaching the Warden", () => {

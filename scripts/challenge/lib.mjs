@@ -178,8 +178,9 @@ export function botArgs(job, out) {
 // (no row, or no fight reached) is not either, and the table counts both apart from losses.
 // The comps study's per-fight report (research/comps/difficulty/SUMMARY.md, Lab measure), from one fight record:
 // the largest single hit as a share of pilot health and the share of health lost in the fight's first 45 s.
-export function fightReport(note, maxHp) {
-  if (!note) return {};
+// A Warden never engaged has no fight to report, so its shares are null, not zero. The study file arrives with #167.
+export function fightReport(note, maxHp, engaged = true) {
+  if (!note || !engaged) return { largestShare: null, largestSource: null, hp45Share: null };
   return {
     largestShare: note.largest_hit_share ?? (note.largest_hit != null && maxHp ? note.largest_hit / maxHp : null),
     largestSource: note.largest_hit_source ?? null,
@@ -203,7 +204,7 @@ export function gradeRun(kind, row, job = {}) {
   }
   if (kind === "warden") {
     const note = stages.find((s) => s.stage === (job.stage ?? row.stage_reached));
-    const rep = fightReport(note, note?.max_hp ?? row.max_hp);
+    const rep = fightReport(note, note?.max_hp ?? row.max_hp, note != null && fightStart(note) != null);
     if (note?.warden_broken_s != null) {
       const start = fightStart(note);
       const fightS = start != null ? round2(note.warden_broken_s - start) : null;

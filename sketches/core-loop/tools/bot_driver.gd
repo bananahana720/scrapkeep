@@ -925,9 +925,10 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 		into["hit_sources"][source_id] = snappedf(float(into["hit_sources"].get(source_id, 0.0)) + amount, 0.1)
 		# The comps study's per-fight report (research/comps/difficulty/SUMMARY.md, Lab measure): the largest
 		# single hit as a share of pilot health, and the damage taken in the fight's first 45 s. A stage note
-		# counts only from its Warden fight's start, so mob hits on the way in stay out of the Warden's row.
+		# counts only from its Warden fight's start to the break, so mob hits on the way in or out stay out of
+		# the Warden's row. The study file arrives with #167.
 		var fight_start = null if in_boss else fight_start_of(_note)
-		if in_boss or fight_start != null:
+		if in_boss or (fight_start != null and _note.get("warden_broken_s") == null):
 			var fight_s: float = _boss_clock if in_boss else game.run.stage_time - float(fight_start)
 			if amount > float(into.get("largest_hit", 0.0)):
 				into["largest_hit"] = snappedf(amount, 0.1)

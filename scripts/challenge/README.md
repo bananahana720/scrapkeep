@@ -24,7 +24,7 @@ The 0.6 s tell is not measured: a bot cannot say what a person reads. It stays a
 
 A fight-report section follows the win rates, in the per-Warden format the coordinator set on #149 (`sketches/core-loop/design-v3/research/comps/difficulty/SUMMARY.md`, Lab measure): Expert ordinary TTK, the largest single hit as a share of pilot health with its source, and the Learner attempt-1 health lost in the first 45 s (`largest_hit*` and `hp_lost_45s` in the bot record, counted from the boss entry or the Warden fight's start). Tell lengths and recovery in data come from the attack sheet (`tools/attack_sheet.gd`).
 
-A cell's mark is a point-estimate check (`✓`/`✗`); the Wilson 95% interval sits beside it, so a `✗` inside a wide interval reads as "run more seeds", not "broken". A timeout (stall, fight cap, tick guard) is never a win and is counted apart, beside the deaths. An error (no record, boss never entered, doc not resumed) and a harness kill (`killed`, a wall timeout that a rerun alone did not fix) are excluded from n and the rate and noted per column as `excluded: N error, M killed`; when more than 10% of a column's jobs are excluded, the column is `incomplete` and gets no ✓/✗.
+A cell's mark is a point-estimate check (`✓`/`✗`); the Wilson 95% interval sits beside it, so a `✗` inside a wide interval reads as "run more seeds", not "broken". A timeout (stall, fight cap, tick guard) is never a win and is counted apart, beside the deaths. An error (no record, boss never entered, no boss module in the boss state, doc not resumed) and a harness kill (`killed`, a wall timeout that a rerun alone did not fix) are excluded from n and the rate and noted per column as `excluded: N error, M killed`; when more than 10% of a column's jobs are excluded, the column is `incomplete` and gets no ✓/✗.
 
 The top/ord fight-time ratio is reported, not graded: the 2x hive rule is graded by `posture_bands_*`, and the ruling's "keeps the existing growth ratios" is not asserted here. The Learner 45 s check covers both attempt 1 and attempt 5 boss deaths.
 
@@ -66,7 +66,7 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 | `--label=` | `run-<stamp>` | Output folder name under `artifacts/local/challenge/`. |
 | `--shard=i/n` | | Jobs `k` where `k mod n = i-1`, over the planned list: deterministic, disjoint, joined by `--merge`. |
 | `--merge=<dir,...>` | | Aggregate run folders and print the table; runs nothing. Each folder's `meta.json` (shard, plan hash, commit, library) must agree, and every shard i of n must be present, or the merge is refused (`--allow-mixed` waives the plan, commit and library checks, never a missing or duplicate shard; with it, the same cell from two plans counts twice). |
-| `--resume` | | Continue an existing `--label`. Without it an existing label is refused, so rows never pile up across runs. Jobs whose row is for this plan and commit are skipped. |
+| `--resume` | | Continue an existing `--label`. Without it an existing label is refused, so rows never pile up across runs. Jobs whose row is for this plan and commit are skipped, except rows graded error or killed, which run again. |
 | `--allow-mixed` | | Let the table or a merge take rows or folders from different commits or plans. |
 | `--tune=<text>` | | Free text folded into the plan hash and forwarded to the runner as `--tune=`. |
 | `--dry-run` | | Print the job count and an estimated wall time. |
