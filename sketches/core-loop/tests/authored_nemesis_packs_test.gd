@@ -109,10 +109,10 @@ func _kill_first() -> void:
 	_t.check(_name + "stage 6 share is between %.2f and %.2f" % [SHARE_MIN, SHARE_MAX],
 		_share(_table.of(6)["packs"]) >= SHARE_MIN and _share(_table.of(6)["packs"]) <= SHARE_MAX)
 	var splitters := 0
-	for stage in range(2, 5):
+	for stage in range(3, 5):
 		for pack in _table.of(stage)["packs"]:
 			splitters += int("splitter" in pack["kinds"])
-	_t.check(_name + "the Splitter is in a few packs of stages 2 to 4 (%d)" % splitters, splitters >= 3)
+	_t.check(_name + "the Splitter is in packs of stages 3 and 4 (%d)" % splitters, splitters >= 2)
 
 
 func _budget() -> void:

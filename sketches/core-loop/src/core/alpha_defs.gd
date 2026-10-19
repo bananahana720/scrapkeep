@@ -84,8 +84,6 @@ const PACKS_SHIFT := [
 	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
 	{"id": "shift_crew", "kinds": ["foreman", "plated_brute", "chaser", "chaser"]},
-	# The Splitter's first pack (w18): a bud-and-burst crawler under a mortar.
-	{"id": "split_yard", "kinds": ["splitter", "chaser", "lobber"]},
 ]
 const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
 # The Dig's own elite (design-v3/WORLD-ROSTERS.md): two plated rigs and a jaw, so the floor is

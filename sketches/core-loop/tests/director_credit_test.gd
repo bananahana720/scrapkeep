@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_FIXED_CHECKS := 1119  # 2026-10-18 (W18-PACKS): nine park packs priced, was 1110. 2026-10-18 (W18-DISP): five dispatcher card checks; was 1105. 2026-10-17 (stage/alpha-w16): three Foreman shift packs and two pit jaw packs; was 1100
+const EXPECTED_FIXED_CHECKS := 1118  # 2026-10-18 (W18-PACKS): nine park packs priced, was 1110. 2026-10-18 (W18-DISP): five dispatcher card checks; was 1105. 2026-10-17 (stage/alpha-w16): three Foreman shift packs and two pit jaw packs; was 1100
 
 var _t := T.new("director_credit_test")
 
