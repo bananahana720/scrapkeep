@@ -125,7 +125,7 @@ func _hand_over_input() -> void:
 	if _card == null:
 		return
 	var had_focus := _play.has_focus()
-	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ignore_mouse(_card)
 	_play.focus_mode = Control.FOCUS_NONE
 	_play.release_focus()
 	if had_focus and _game.get("screens") != null and _game.flow.state_name() == "title":
@@ -134,10 +134,19 @@ func _hand_over_input() -> void:
 			start.grab_focus()
 
 
+# MOUSE_FILTER_IGNORE does not cascade: every control on the card lets clicks through to the title.
+func _ignore_mouse(node: Node) -> void:
+	if node is Control:
+		node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child in node.get_children():
+		_ignore_mouse(child)
+
+
 func _step_fade(delta: float) -> void:
 	if _card == null or _fade_started:
 		return
-	_ground_wait += delta
+	# A hitch must not shorten the wait: no frame counts for more than 1/30 s.
+	_ground_wait += minf(delta, 1.0 / 30.0)
 	var terrain = _game.ctx.terrain if _game.get("ctx") != null else null
 	var ground_up: bool = terrain == null or terrain.is_ready(1) or _game.flow.state_name() != "title"
 	if not ground_up and _ground_wait < GROUND_WAIT_S:
@@ -160,7 +169,7 @@ func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_CLOSE_REQUEST:
 		return
 	# A close in the middle of the threaded load waits for it, a frame at a time (_poll).
-	if _loading or _game == null and _card != null:
+	if _loading:
 		_closing = true
 	else:
 		_quit()
@@ -180,6 +189,10 @@ func _announce_interactive() -> void:
 
 func _on_play() -> void:
 	if _game != null:
+		# Past the hand-off the card is click-through; a Play that still lands (Enter on a held focus)
+		# does what the real title's Play does.
+		if _game.flow != null and _game.flow.state_name() == "title":
+			_game.flow.press_start()
 		return
 	_start_wanted = true
 	_status.text = "Loading"
@@ -206,6 +219,15 @@ func _build_card() -> void:
 	box.add_theme_constant_override("separation", 28)
 	_card.add_child(box)
 	var font: Font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else null
+	# The engine splash's ball (assets/app), so the card continues it.
+	var splash_path := "res://assets/app/scrapkeep_splash.png"
+	if ResourceLoader.exists(splash_path):
+		var splash := TextureRect.new()
+		splash.texture = load(splash_path)
+		splash.custom_minimum_size = Vector2(192.0, 192.0)
+		splash.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		splash.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		box.add_child(splash)
 	var title := Label.new()
 	title.text = "SCRAPKEEP"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

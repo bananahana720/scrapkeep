@@ -39,10 +39,12 @@ const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 # The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
 # are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
-const CAMP_HUB_PATH := "res://src/world/camp_hub.gd"
-const WORKSHOP_PATH := "res://src/ui/workshop.gd"
-const PAUSE_MENU_PATH := "res://src/ui/pause_menu.gd"
-const CAMP_PICKER_PATH := "res://src/ui/camp_enemy_picker.gd"
+const MENU_PATHS := [
+	"res://src/world/camp_hub.gd",
+	"res://src/ui/camp_enemy_picker.gd",
+	"res://src/ui/workshop.gd",
+	"res://src/ui/pause_menu.gd",
+]
 const MENU_STEPS := 4
 const MENU_MODULES_FRAMES_APART := 2
 
@@ -115,6 +117,7 @@ var camp_hub:
 		return camp_hub
 var _menu_step := 0
 var _menu_wait := -1
+var _menu_requested := -1
 var notes
 var panel
 var keyboard
@@ -281,6 +284,8 @@ func _ready() -> void:
 		events.flow_changed.connect(func(state: String):
 			if state != "title":
 				menu_modules())
+		# A Continue starts a run without leaving class select: the picker's watch must be up for it.
+		events.run_started.connect(func(_class_id: String): menu_modules())
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
@@ -320,21 +325,32 @@ func _menu_step_once() -> void:
 	var started := Time.get_ticks_msec()
 	var step := _menu_step
 	_menu_step += 1
+	var script: Script = _menu_script(step)
+	var loaded := Time.get_ticks_msec()
 	match step:
 		0:
-			var hub = load(CAMP_HUB_PATH).new()
+			var hub = script.new()
 			camp_hub = hub
 			add_child(hub)
 			hub.setup(self)
 			hub.camp_store = ctx.profile
 		1:
 			# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
-			load(CAMP_PICKER_PATH).watch(self)
+			script.watch(self)
 		2:
-			add_child(load(WORKSHOP_PATH).new())
+			add_child(script.new())
 		3:
-			add_child(load(PAUSE_MENU_PATH).new())
-	_boot("menu_modules step %d built in %d ms" % [step, Time.get_ticks_msec() - started])
+			add_child(script.new())
+	_boot("menu_modules step %d: script %d ms, main-thread build %d ms" % [step, loaded - started, Time.get_ticks_msec() - loaded])
+
+
+func _menu_script(step: int) -> Script:
+	var path: String = MENU_PATHS[step]
+	if _menu_requested == step:
+		_menu_requested = -1
+		# Blocks only when a forced build (a Start, a camp visit) finds the load still running.
+		return ResourceLoader.load_threaded_get(path)
+	return load(path)
 
 
 func workshop() -> Node:
@@ -342,15 +358,30 @@ func workshop() -> Node:
 	return get_node("Workshop")
 
 
-# Counts frames in _process (not an await, so a game freed meanwhile leaves no dangling coroutine).
+# Behind the menu, once the boot card is gone: one script at a time loads on the loader's thread
+# (ONE load_threaded_request, polled a frame at a time, never a parallel pair: the preload cycles
+# deadlock), and the main thread only instantiates and sets it up once it has loaded.
 func _step_menu_modules_later() -> void:
-	if _menu_wait < 0:
+	if _menu_wait < 0 or _menu_step >= MENU_STEPS:
 		return
-	_menu_wait -= 1
-	if _menu_wait > 0:
+	if get_tree().root.get_node_or_null("Boot") != null:
 		return
-	_menu_step_once()
-	_menu_wait = MENU_MODULES_FRAMES_APART if _menu_step < MENU_STEPS else -1
+	if _menu_requested < 0:
+		_menu_wait -= 1
+		if _menu_wait > 0:
+			return
+		_menu_requested = _menu_step
+		if ResourceLoader.load_threaded_request(MENU_PATHS[_menu_step], "", false) != OK:
+			_menu_requested = -1
+			_menu_step_once()
+			_menu_wait = MENU_MODULES_FRAMES_APART
+		return
+	match ResourceLoader.load_threaded_get_status(MENU_PATHS[_menu_requested]):
+		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return
+		_:
+			_menu_step_once()
+			_menu_wait = MENU_MODULES_FRAMES_APART
 
 
 func _park_on_title_ground(stage: int) -> void:

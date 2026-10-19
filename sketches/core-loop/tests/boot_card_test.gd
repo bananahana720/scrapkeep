@@ -65,6 +65,28 @@ func _run() -> void:
 	game.free()
 	await process_frame
 
+	# 1b. After the hand-off, while the card still fades: it is click-through, and a Play that lands starts.
+	var late_boot = _card()
+	var seen = await _wait_for_game()
+	var fading_game = seen
+	var blocking := []
+	var stack := [late_boot._card]
+	while not stack.is_empty():
+		var node = stack.pop_back()
+		if node is Control and node.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+			blocking.append(node.name)
+		stack.append_array(node.get_children())
+	_t.check("after the hand-off every control on the card lets clicks through", is_instance_valid(late_boot) and blocking.is_empty(), str(blocking))
+	_t.check("the title is up and waiting under the fading card", fading_game != null and fading_game.flow.state_name() == "title")
+	late_boot._play.pressed.emit()
+	_t.check("a Play after the hand-off starts the run", fading_game.flow.state_name() == "class_select", fading_game.flow.state_name())
+	frames = 0
+	while is_instance_valid(late_boot) and frames < FRAMES_MAX:
+		await process_frame
+		frames += 1
+	fading_game.free()
+	await process_frame
+
 	# 2. The synchronous path: headless without the card flag builds the game in place.
 	var plain = _card(false)
 	var printed := _interactive_ms
