@@ -82,6 +82,83 @@
      "yaw_deg": -50,
      "scale": 0.85,
      "tilt_deg": 2
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      9.5,
+      2.6
+     ],
+     "yaw_deg": 104,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -1.4,
+      -8.2
+     ],
+     "yaw_deg": 103,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -3.9,
+      -3.6
+     ],
+     "yaw_deg": -42,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      7.5,
+      -5.5
+     ],
+     "yaw_deg": 4,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -7.2,
+      -0.8
+     ],
+     "yaw_deg": -25,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      5.0,
+      -3.4
+     ],
+     "yaw_deg": -111,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -8.7,
+      4.5
+     ],
+     "yaw_deg": -134,
+     "scale": 0.88,
+     "tilt_deg": 0
     }
    ]
   },
@@ -164,6 +241,83 @@
      "yaw_deg": 20,
      "scale": 0.95,
      "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      0.2,
+      5.7
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -8.4,
+      3.6
+     ],
+     "yaw_deg": 1,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      6.8,
+      2.2
+     ],
+     "yaw_deg": -57,
+     "scale": 1.14,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      -3.9,
+      -5.3
+     ],
+     "yaw_deg": -51,
+     "scale": 0.98,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      8.0,
+      -0.7
+     ],
+     "yaw_deg": -112,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -1.5,
+      4.5
+     ],
+     "yaw_deg": 86,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      1.1,
+      5.6
+     ],
+     "yaw_deg": -94,
+     "scale": 1.06,
+     "tilt_deg": 0
     }
    ]
   },
@@ -234,6 +388,94 @@
      ],
      "yaw_deg": -80,
      "scale": 0.8,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -8.0,
+      -0.5
+     ],
+     "yaw_deg": 55,
+     "scale": 1.11,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      9.4,
+      3.7
+     ],
+     "yaw_deg": 77,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -3.2,
+      -3.6
+     ],
+     "yaw_deg": 135,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      10.2,
+      -3.2
+     ],
+     "yaw_deg": -55,
+     "scale": 1.02,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -5.0,
+      9.4
+     ],
+     "yaw_deg": -167,
+     "scale": 1.01,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      7.1,
+      -5.9
+     ],
+     "yaw_deg": 65,
+     "scale": 1.11,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -5.3,
+      -1.6
+     ],
+     "yaw_deg": 17,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "a",
+     "at": [
+      -2.8,
+      -4.8
+     ],
+     "yaw_deg": -48,
+     "scale": 0.9,
      "tilt_deg": 0
     }
    ]
@@ -339,6 +581,72 @@
      "yaw_deg": 95,
      "scale": 0.9,
      "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      5.1,
+      3.6
+     ],
+     "yaw_deg": 68,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      4.6,
+      -5.1
+     ],
+     "yaw_deg": 111,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -0.4,
+      4.6
+     ],
+     "yaw_deg": 63,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      6.0,
+      2.7
+     ],
+     "yaw_deg": -105,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      5.4,
+      -7.3
+     ],
+     "yaw_deg": 127,
+     "scale": 0.98,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      0.8,
+      7.9
+     ],
+     "yaw_deg": -88,
+     "scale": 0.95,
+     "tilt_deg": 0
     }
    ]
   },
@@ -431,6 +739,72 @@
      ],
      "yaw_deg": -100,
      "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -5.1,
+      7.7
+     ],
+     "yaw_deg": 87,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -1.1,
+      -4.3
+     ],
+     "yaw_deg": -161,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      1.2,
+      -4.3
+     ],
+     "yaw_deg": -32,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      5.1,
+      -4.6
+     ],
+     "yaw_deg": 74,
+     "scale": 0.89,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -2.2,
+      6.3
+     ],
+     "yaw_deg": -53,
+     "scale": 0.88,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      5.1,
+      2.9
+     ],
+     "yaw_deg": 63,
+     "scale": 0.99,
      "tilt_deg": 0
     }
    ]
@@ -525,6 +899,72 @@
      "yaw_deg": 30,
      "scale": 0.9,
      "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      0.5,
+      -4.4
+     ],
+     "yaw_deg": -51,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -1.6,
+      -3.7
+     ],
+     "yaw_deg": -29,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      6.2,
+      3.3
+     ],
+     "yaw_deg": 1,
+     "scale": 1.09,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      -1.8,
+      6.9
+     ],
+     "yaw_deg": 156,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      3.8,
+      -2.0
+     ],
+     "yaw_deg": -74,
+     "scale": 0.89,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -0.3,
+      8.9
+     ],
+     "yaw_deg": -160,
+     "scale": 1.03,
+     "tilt_deg": 0
     }
    ]
   },
@@ -617,6 +1057,72 @@
      ],
      "yaw_deg": -130,
      "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -6.8,
+      -5.5
+     ],
+     "yaw_deg": 170,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      6.4,
+      0.8
+     ],
+     "yaw_deg": -55,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      6.2,
+      5.3
+     ],
+     "yaw_deg": -143,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      2.6,
+      4.2
+     ],
+     "yaw_deg": -74,
+     "scale": 1.09,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -7.8,
+      -2.3
+     ],
+     "yaw_deg": 133,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -2.5,
+      9.5
+     ],
+     "yaw_deg": 158,
+     "scale": 0.86,
      "tilt_deg": 0
     }
    ]
@@ -711,6 +1217,72 @@
      "yaw_deg": 100,
      "scale": 0.9,
      "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -4.6,
+      0.9
+     ],
+     "yaw_deg": 88,
+     "scale": 1.12,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      5.6,
+      5.8
+     ],
+     "yaw_deg": -134,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -7.1,
+      8.2
+     ],
+     "yaw_deg": 144,
+     "scale": 1.12,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      3.5,
+      -5.6
+     ],
+     "yaw_deg": 175,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -4.6,
+      -6.3
+     ],
+     "yaw_deg": 111,
+     "scale": 0.87,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      7.2,
+      3.9
+     ],
+     "yaw_deg": -110,
+     "scale": 0.98,
+     "tilt_deg": 0
     }
    ]
   },
@@ -803,6 +1375,72 @@
      ],
      "yaw_deg": 50,
      "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      2.8,
+      5.0
+     ],
+     "yaw_deg": 129,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      5.5,
+      2.9
+     ],
+     "yaw_deg": 40,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      4.2,
+      -1.7
+     ],
+     "yaw_deg": 26,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      9.4,
+      -0.0
+     ],
+     "yaw_deg": -116,
+     "scale": 1.14,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      4.6,
+      -7.3
+     ],
+     "yaw_deg": 10,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      6.8,
+      1.4
+     ],
+     "yaw_deg": -92,
+     "scale": 0.99,
      "tilt_deg": 0
     }
    ]
@@ -897,6 +1535,72 @@
      "yaw_deg": 0,
      "scale": 1.0,
      "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      7.3,
+      7.9
+     ],
+     "yaw_deg": -38,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -4.9,
+      4.8
+     ],
+     "yaw_deg": -143,
+     "scale": 0.88,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -10.1,
+      -1.3
+     ],
+     "yaw_deg": 77,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      -6.1,
+      8.7
+     ],
+     "yaw_deg": -132,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      1.9,
+      5.0
+     ],
+     "yaw_deg": -147,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -6.8,
+      2.2
+     ],
+     "yaw_deg": 90,
+     "scale": 0.96,
+     "tilt_deg": 0
     }
    ]
   },
@@ -979,6 +1683,83 @@
      "yaw_deg": 0,
      "scale": 1.0,
      "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      8.4,
+      2.0
+     ],
+     "yaw_deg": -133,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -5.4,
+      -3.5
+     ],
+     "yaw_deg": 95,
+     "scale": 1.14,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -4.4,
+      -1.8
+     ],
+     "yaw_deg": -27,
+     "scale": 1.06,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      -2.2,
+      7.0
+     ],
+     "yaw_deg": 61,
+     "scale": 0.86,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -2.3,
+      4.4
+     ],
+     "yaw_deg": 98,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -3.1,
+      5.1
+     ],
+     "yaw_deg": 45,
+     "scale": 1.12,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -0.9,
+      8.0
+     ],
+     "yaw_deg": 9,
+     "scale": 0.89,
+     "tilt_deg": 0
     }
    ]
   }
@@ -993,16 +1774,6 @@
    ],
    "yaw_deg": -146.3,
    "near": "dump_berm_west, where the last haul truck died"
-  },
-  {
-   "id": "pit_03",
-   "template": "lunch_spot",
-   "at": [
-    -550.0,
-    -610.0
-   ],
-   "yaw_deg": -145.0,
-   "near": "dump_berm_west, crew lunch spot"
   },
   {
    "id": "pit_04",
@@ -1135,16 +1906,6 @@
    "near": "bench4_ore_bin, where the last haul truck died"
   },
   {
-   "id": "pit_17",
-   "template": "lunch_spot",
-   "at": [
-    -120.0,
-    -60.0
-   ],
-   "yaw_deg": 99.5,
-   "near": "west_dive_windrow_1, crew lunch spot"
-  },
-  {
    "id": "pit_18",
    "template": "fallen_marker",
    "at": [
@@ -1203,16 +1964,6 @@
    ],
    "yaw_deg": 126.9,
    "near": "camp_ore_bin, haul-road water stop"
-  },
-  {
-   "id": "pit_24",
-   "template": "lunch_spot",
-   "at": [
-    50.0,
-    -120.0
-   ],
-   "yaw_deg": -0.0,
-   "near": "bench2_north_lane, crew lunch spot"
   },
   {
    "id": "pit_25",
@@ -1335,16 +2086,6 @@
    "near": "east_dive_2_windrow_1, bench survey station"
   },
   {
-   "id": "pit_38",
-   "template": "scrub_patch",
-   "at": [
-    130.0,
-    140.0
-   ],
-   "yaw_deg": -166.9,
-   "near": "east_dive_3_windrow_2, a scrub patch on thin ground"
-  },
-  {
    "id": "pit_39",
    "template": "drill_yard",
    "at": [
@@ -1375,16 +2116,6 @@
    "near": "floor_dive_windrow_2, assay post at the bench face"
   },
   {
-   "id": "pit_42",
-   "template": "lunch_spot",
-   "at": [
-    -20.0,
-    130.0
-   ],
-   "yaw_deg": -169.5,
-   "near": "ore_pile_north, crew lunch spot"
-  },
-  {
    "id": "pit_43",
    "template": "water_stop",
    "at": [
@@ -1403,6 +2134,16 @@
    ],
    "yaw_deg": -75.6,
    "near": "floor_sump, ore cart gone to bursage on its stub"
+  },
+  {
+   "id": "pit_47",
+   "template": "fallen_marker",
+   "at": [
+    -550.0,
+    -610.0
+   ],
+   "yaw_deg": -145.0,
+   "near": "dump_berm_west, bench marker knocked flat, the old b"
   },
   {
    "id": "pit_54",
@@ -1465,14 +2206,14 @@
    "near": "bench2_north_lane, a scrub patch on thin ground"
   },
   {
-   "id": "pit_87",
-   "template": "scrub_patch",
+   "id": "pit_84",
+   "template": "fallen_marker",
    "at": [
-    -160.0,
-    80.0
+    -20.0,
+    130.0
    ],
-   "yaw_deg": -75.6,
-   "near": "bench4_ore_bin, a scrub patch on thin ground"
+   "yaw_deg": -169.5,
+   "near": "ore_pile_north, bench marker knocked flat, the old b"
   },
   {
    "id": "pit_106",
@@ -1515,16 +2256,6 @@
    "near": "floor_dive_windrow_1, hoist-rope wagon parked by its bell,"
   },
   {
-   "id": "pit_115",
-   "template": "lunch_spot",
-   "at": [
-    100.0,
-    -120.0
-   ],
-   "yaw_deg": -0.0,
-   "near": "bench3_dive_windrow_2, crew lunch spot"
-  },
-  {
    "id": "pit_116",
    "template": "fallen_marker",
    "at": [
@@ -1543,6 +2274,16 @@
    ],
    "yaw_deg": -0.0,
    "near": "west_dive_windrow_1, haul-road water stop"
+  },
+  {
+   "id": "pit_123",
+   "template": "scrub_patch",
+   "at": [
+    -120.0,
+    -40.0
+   ],
+   "yaw_deg": 99.5,
+   "near": "bench3_west_berm, a scrub patch on thin ground"
   },
   {
    "id": "pit_124",
@@ -1583,16 +2324,6 @@
    ],
    "yaw_deg": 68.1,
    "near": "ore_pile_mid, assay post at the bench face"
-  },
-  {
-   "id": "pit_131",
-   "template": "water_stop",
-   "at": [
-    190.0,
-    110.0
-   ],
-   "yaw_deg": -163.9,
-   "near": "east_dive_3_windrow_2, haul-road water stop"
   },
   {
    "id": "pit_132",
@@ -1645,6 +2376,26 @@
    "near": "floor_dive_windrow_1, hoist-rope wagon parked by its bell,"
   },
   {
+   "id": "pit_206",
+   "template": "scrub_patch",
+   "at": [
+    100.0,
+    -120.0
+   ],
+   "yaw_deg": -0.0,
+   "near": "bench3_dive_windrow_2, a scrub patch on thin ground"
+  },
+  {
+   "id": "pit_212",
+   "template": "shift_corner",
+   "at": [
+    180.0,
+    100.0
+   ],
+   "yaw_deg": -163.9,
+   "near": "east_dive_3_windrow_2, shift corner"
+  },
+  {
    "id": "pit_256",
    "template": "fallen_marker",
    "at": [
@@ -1663,6 +2414,16 @@
    ],
    "yaw_deg": 84.6,
    "near": "bench2_east_bank, bench survey station"
+  },
+  {
+   "id": "pit_313",
+   "template": "fallen_marker",
+   "at": [
+    -160.0,
+    70.0
+   ],
+   "yaw_deg": -75.6,
+   "near": "bench4_ore_bin, bench marker knocked flat, the old b"
   },
   {
    "id": "pit_321",
@@ -1695,36 +2456,6 @@
    "near": "camp_dive_windrow_1, haul-road water stop"
   },
   {
-   "id": "pit_360",
-   "template": "fallen_marker",
-   "at": [
-    367,
-    -61
-   ],
-   "yaw_deg": 84.6,
-   "near": "bench2_east_bank, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_361",
-   "template": "scrub_patch",
-   "at": [
-    308,
-    -46
-   ],
-   "yaw_deg": -95.4,
-   "near": "bench2_east_bank, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_362",
-   "template": "lunch_spot",
-   "at": [
-    367,
-    -20
-   ],
-   "yaw_deg": 90.0,
-   "near": "bench2_east_bank, crew lunch spot"
-  },
-  {
    "id": "pit_397",
    "template": "fallen_marker",
    "at": [
@@ -1745,46 +2476,6 @@
    "near": "rim_road_lane_2, a scrub patch on thin ground"
   },
   {
-   "id": "pit_412",
-   "template": "lunch_spot",
-   "at": [
-    272,
-    -128
-   ],
-   "yaw_deg": -5.1,
-   "near": "bench3_dive_windrow_1, crew lunch spot"
-  },
-  {
-   "id": "pit_418",
-   "template": "lunch_spot",
-   "at": [
-    310,
-    -73
-   ],
-   "yaw_deg": -95.4,
-   "near": "bench2_east_bank, crew lunch spot"
-  },
-  {
-   "id": "pit_436",
-   "template": "scrub_patch",
-   "at": [
-    -464,
-    -490
-   ],
-   "yaw_deg": -15.5,
-   "near": "wash_berm, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_443",
-   "template": "fallen_marker",
-   "at": [
-    -205,
-    -348
-   ],
-   "yaw_deg": -64.5,
-   "near": "haul_ramp_berm, bench marker knocked flat, the old b"
-  },
-  {
    "id": "pit_463",
    "template": "scrub_patch",
    "at": [
@@ -1793,16 +2484,6 @@
    ],
    "yaw_deg": -0.0,
    "near": "bench2_north_lane, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_477",
-   "template": "scrub_patch",
-   "at": [
-    -119,
-    -35
-   ],
-   "yaw_deg": 99.5,
-   "near": "bench3_west_berm, a scrub patch on thin ground"
   },
   {
    "id": "pit_489",
@@ -1823,16 +2504,6 @@
    ],
    "yaw_deg": -35.6,
    "near": "slickrock_15, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_501",
-   "template": "scrub_patch",
-   "at": [
-    -263,
-    -349
-   ],
-   "yaw_deg": -95.7,
-   "near": "rim_haul_ramp, a scrub patch on thin ground"
   },
   {
    "id": "pit_538",
@@ -1898,5 +2569,6 @@
    55
   ],
   "seed": 2
- }
+ },
+ "pin": 143236698
 }
