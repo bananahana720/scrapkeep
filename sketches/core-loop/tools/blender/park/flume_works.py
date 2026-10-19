@@ -1890,23 +1890,9 @@ def rock_pal(row):
     return {"sandstone": (SAND, VARNISH), "concrete": (CONCRETE, FORM), "canal": (STONE, VARNISH), "haul": (STONE, VARNISH), "rails": (STONE, VARNISH), "pond": (STONE, SAND)}[row.style]
 
 
-def flush_patch(s, row, color):
-    """A flush_lane liner whose rims all fall inside ride footprints keeps a detail shell (the loader and the export expect one
-    mesh): one 0.4 m flat colour patch 0.03 m over the ground just outside the lane, the nearest thing to no rim."""
-    lx, lz = row.hw + 1.0, 0.0
-    pts = []
-    for dx, dz in ((-0.2, -0.2), (-0.2, 0.2), (0.2, 0.2), (0.2, -0.2)):
-        px, pz = lx + dx, lz + dz
-        pts.append((px, row.sample(px, pz)[0] + 0.03 - row.g0, pz))
-    poly_up(s, pts, color)
-
-
 def liner_rocks(row):
     def build(s):
         pts = rim_points(row, ROCKS_MAX, "rock", 11)
-        print("FLUME_WORKS_RIMS", row.rid, "rocks kept", len(pts))
-        if row.flush and not pts:
-            flush_patch(s, row, STONE)
         pa, pb = rock_pal(row)
         for k, (lx, lz) in enumerate(pts):
             bil, hi = row.sample(lx, lz)
@@ -1931,9 +1917,6 @@ def liner_rocks(row):
 def liner_tufts(row):
     def build(s):
         pts = rim_points(row, TUFTS_MAX, "tuft", 13)
-        print("FLUME_WORKS_RIMS", row.rid, "tufts kept", len(pts))
-        if row.flush and not pts:
-            flush_patch(s, row, SAGE)
         for k, (lx, lz) in enumerate(pts):
             bil, hi = row.sample(lx, lz)
             x, y, z = lx, bil - row.g0 - 0.02, lz
@@ -1949,11 +1932,12 @@ def liner_tufts(row):
 
 def liner_build(rid, out_dir):
     row = Row(rid)
-    plans = [
-        (rid, [(rid + "_body", liner_base(row))], "base", LinerSurf),
-        (rid + "_detail1", [(rid + "_detail1_mesh", liner_rocks(row))], "detail", Surf),
-        (rid + "_detail2", [(rid + "_detail2_mesh", liner_tufts(row))], "detail", Surf),
-    ]
+    plans = [(rid, [(rid + "_body", liner_base(row))], "base", LinerSurf)]
+    if not row.flush:       # a flush_lane liner has no rim props, so no detail shells (the loader skips a missing shell)
+        plans += [
+            (rid + "_detail1", [(rid + "_detail1_mesh", liner_rocks(row))], "detail", Surf),
+            (rid + "_detail2", [(rid + "_detail2_mesh", liner_tufts(row))], "detail", Surf),
+        ]
     rows = []
     for name, builders, kind, surf_cls in plans:
         common.reset()
@@ -1984,7 +1968,7 @@ def liner_check(rid, out_dir):
     """Re-read ground.bin and measure the base mesh against it; confirm there is no -col node anywhere."""
     row = Row(rid)
     fails = []
-    for name in (rid, rid + "_detail1", rid + "_detail2"):
+    for name in (rid,) if row.flush else (rid, rid + "_detail1", rid + "_detail2"):
         doc, binary = read_glb(Path(out_dir) / (name + ".glb"))
         if any("-col" in n["name"] for n in doc["nodes"]):
             fails.append("%s: has a -col node" % name)
@@ -2227,12 +2211,24 @@ def intake_check(rid, out_dir):
     return fails
 
 
+FLUSH_NOTES = {
+    "sandstone": "a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane",
+    "haul": "a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief",
+    "rails": "a flush light-rail bed: two rails 0.03 m proud of a gravel bed, flush colour bands for the tie sleepers and a verge band of low cobble relief",
+}
+
+
 def liner_registry(rid):
     park = LINERS[rid].get("park", "park_flume")
+    if LINERS[rid].get("flush_lane"):
+        text = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. "
+                "No -col mesh: the stamped terrain stays the only collider. Ships " + FLUSH_NOTES[LINERS[rid]["style"]] + ". "
+                "Flush lane: every vertex inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells.")
+        return [{"id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": "landform", "origin": "centre",
+                 "ships": True, "loader": "src/world/park/park_recipes.gd",
+                 "provenance": {"recipe": "tools/blender/park/flume_works.py", "note": text}}]
     note = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. "
             + LINER_NOTES[LINERS[rid]["style"]] + LINER_NOTES_EXTRA.get(rid, "") + ".")
-    if LINERS[rid].get("flush_lane"):
-        note += " Flush lane: nothing inside a ride row's footprint stands over 0.12 m above the ground, so the rims carry no rocks or tufts and each detail shell is one flat 0.4 m patch."
     rows = []
     for name, base, text in ((rid, True, note),
                              (rid + "_detail1", False, "Decoration only, conformed to the %s bake; rebuild after a re-bake. Detail shell 1 of %s, drawn by range (the detail class): small rocks on the rims." % (park, rid)),
