@@ -1,5 +1,29 @@
 # Traversal bands: park_sinkhole (stage 4)
 
+## Dressed-rows check, 2026-10-19 (World lane, W19/20)
+
+Head: `9aadfc10aebabcb90059eeaa3c4d2dbbb51da5f1` (branch `claude/eloquent-rubin-83eps3-greybox`, over `b95e1799`), which seats the sinkhole's 24 `greybox:half_pipe` rows (`lava_channel_1..21`, `west_trench`, `south_flats`, `lava_chute`) on their lava GLBs with `"fit": "seat"`. Base: the read-only worktree at `1a7a7299`, nine commits behind head's parent; those nine change radio audio, `project.godot` and special-audio code, nothing in the world or movement.
+
+Method: `tools/traversal_line.gd -- --table=park --stage=4 --seeds=1,2,3,4,5,6,7,8 --child-timeout=900` with `--pilot=<name>` for sable, rivet, kest, tarn, tally and cannon, and `--floor` for the floor line, at `--fixed-fps 90`, headless, one batch at a time under `nice`, on both trees. Every pilot's line crosses the sinkhole's channel rows, so all seven were run. Each table cell is the median over 8 seeds, with the worst seed after the slash where the band reports one. Automated play only: it says nothing about feel, and the box was shared with other Godot lanes. (A first head batch of tarn and tally with the default 120 s child timeout lost seeds to timeouts under that load; those two were rerun with the longer timeout and the table uses the rerun.) Receipts: `artifacts/local/trav8-head/` and `artifacts/local/trav8-base/` (disposable, not committed).
+
+| Pilot | Reached (head / base) | time_to_warden s (head / base) | airborne_share (head / base) | dead_stops median/worst (head / base) | Bands outside (head / base) |
+| --- | --- | --- | --- | --- | --- |
+| sable | 8/8 / 8/8 | 70.14 / 72.51 vs 71.28 / 74.11 | 0.4646 / 0.4258 | 0.5 / 2 vs 1 / 2 | airborne_share, dead_stops / dead_stops |
+| rivet | 8/8 / 8/8 | 96.79 / 98.28 vs 96.79 / 97.32 | 0.2268 / 0.2268 | 0 / 0 vs 0 / 0 | segment_s / segment_s |
+| kest | 8/8 / 8/8 | 91.70 / 93.76 vs 90.93 / 93.76 | 0.2505 / 0.2505 | 0 / 0 vs 0 / 0 | segment_s / segment_s |
+| tarn | 8/8 / 8/8 | 91.41 / 93.52 vs 92.42 / 94.44 | 0.2768 / 0.2768 | 0 / 1 vs 0 / 1 | segment_s, dead_stops / same |
+| tally | 8/8 / 8/8 | 99.61 / 102.34 vs 99.61 / 102.34 | 0.2129 / 0.2129 | 0 / 0 vs 0 / 0 | segment_s / segment_s |
+| cannon | 8/8 / 8/8 | 88.23 / 90.03 vs 89.64 / 90.03 | 0.2467 / 0.2372 | 0 / 0 vs 0 / 0 | segment_s / segment_s |
+| floor | 8/8 / 8/8 | 103.73 / 105.60 vs 103.65 / 104.73 | 0.0727 / 0.0773 | 0 / 0 vs 0 / 0 | airborne_share / airborne_share |
+
+Notes for the coordinator:
+
+- Every pilot reaches the Warden on all 8 seeds on both trees. Total dead stops: sable 6 on head against 9 on base, tarn 1 against 2, all others 0.
+- Sable's airborne_share median is 0.4646 on head, against the 0.12 to 0.45 band: a miss. Base reads 0.4258, inside the band. Head also has fewer dead stops and about 1 s less time to the Warden, so the extra air time looks like the seated channels launching her more than the greybox did. No tuning was done.
+- Sable's dead_stops band (0 on every seed) is missed on both trees (worst seed 2 on each). Tarn's dead_stops band (worst seed 1) is also missed on both. The `segment_s` misses on rivet, kest, tarn, tally and cannon, and the floor line's airborne_share miss, are identical to base; they predate this change.
+- Kest's median flow share is 0.791 on head against 0.806 on base (band: median at least 0.7), and its time_to_warden median is 0.8 s slower. Both are inside their bands.
+
+
 ## Qualified round-4 measurement, 2026-10-13
 
 Runtime inputs match STEP 0 merge `e3ae572401729243688f26deb47c60a9fe9f3b64`, carrying candidate `3debeb8`, TRAV-DET2 and KE-FORMS. [The command ledger](/home/andrew/scratch/w13/sol/kd4-sinkhole-r4/commands.ndjson) records each run's exact head and input hashes. The round-4 authored changes affect documentation only. Geometry, lines, bake and graph inputs are unchanged by publication. Earlier measurements below are historical and superseded under ruling 28.
