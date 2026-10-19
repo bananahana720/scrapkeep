@@ -12,6 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
+import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
 
 // npm run sketch:export: a Linux x86_64 release of sketches/core-loop under
 // artifacts/local/core-loop-export/<run>/, the ACE stems beside it in music_ace/, booted
@@ -526,6 +527,22 @@ async function main() {
         );
     }
   }
+
+  // The Oggs are gitignored, so a folder can hold a stale mix under the right file name. Every stem the
+  // tracked manifests name must match STEMS.sha256, and each rejected file is named.
+  const named = tracks.flatMap((track) =>
+    Object.values(manifests[track].clips ?? {}).flatMap((clip) =>
+      Object.values(clip.files ?? {}).map((f) => `${track}/${f}`),
+    ),
+  );
+  const rejected = stemHashMismatches(path.join(stemRoot, STEM_HASHES), stemsFrom, named);
+  if (rejected === null)
+    fail(`no ${STEM_HASHES} in ${stemRoot}; the packed stems cannot be compared to what was cut (scripts/music/mx stem-hashes writes it)`);
+  if (rejected.length > 0)
+    fail(
+      `${rejected.length} stem file(s) in ${stemsFrom} do not match ${STEM_HASHES}:\n` +
+        rejected.map((r) => `  ${r.file}: ${r.why}`).join("\n"),
+    );
 
   // Raw data files the game opens must reach the pack (RELEASE-PARK); see export-include-check.mjs.
   const presetText = await readFile(path.join(project, "export_presets.cfg"), "utf8");
