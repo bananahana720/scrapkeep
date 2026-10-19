@@ -3,10 +3,11 @@ extends SceneTree
 const DIRECTORY := "res://assets/models/highdraft/"
 # Frozen BUILD-SPEC rows: every exported node/primitive contributes to the totals.
 # 2026-10-18 polish (tools/blender/POLISH.md): cradle, loom and blades caps were [270, 610, 1].
+# Soft-toy polish: cloud and mesa caps were [120, 110, 2]; they match sky.py LANDFORM_CAP.
 const SPEC := {
-	"sky_cloud": {"cap": [120, 110, 2], "slot": "glass", "size": Vector3(80, 12, 40), "bottom": -6.0,
+	"sky_cloud": {"cap": [1000, 1000, 2], "slot": "glass", "size": Vector3(80, 12, 40), "bottom": -6.0,
 		"parts": ["CloudHull"], "sockets": {"join_l": Vector3(-40, 0, 0), "join_r": Vector3(40, 0, 0)}},
-	"sky_mesa": {"cap": [120, 110, 2], "slot": "M1_stone", "size": Vector3(60, 50, 40), "bottom": 0.0,
+	"sky_mesa": {"cap": [1000, 1000, 2], "slot": "M1_stone", "size": Vector3(60, 50, 40), "bottom": 0.0,
 		"parts": ["MesaHull"], "sockets": {"crown": Vector3(0, 50, 0)}},
 	"sky_cradle": {"cap": [500, 320, 1], "slot": "paint", "size": Vector3(30, 8, 22), "bottom": -8.0,
 		"parts": ["CradleHull", "Deck", "Keel", "Rib_l", "Rib_r"],
