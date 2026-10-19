@@ -24,9 +24,9 @@ K = kit.Kit("sinkhole")
 LENS = "e4e2d6"       # plain white, non-emissive
 LIME = "cfc8b2"       # pale limestone
 LIME_D = "a9a28c"
-LICHEN = "b3c08e"     # pale lichen green (not mint)
-FERN = "86a15e"
-FERN_D = "5f7a42"
+LICHEN = "9aa284"     # dusty grey-sage lichen (never luminous, clear of mint and ancient green)
+FERN = "7b8a58"
+FERN_D = "58664a"
 STEEL = "8f9893"      # steel-grey, no brass
 STEEL_D = "5d6563"
 BASALT = "3d4140"
@@ -296,7 +296,9 @@ def tin_cart(p, v, rng):
         story="Stone seed jars of the old trench people, lidded and quiet, nobody home, no hearth.")
 def granary_jars(p, v, rng):
     spec = [(0.0, 0.0, 0.55), (0.95, 0.35, 0.42), (-0.85, 0.5, 0.38), (0.3, -0.95, 0.34)]
-    p.cyl(1.6, 0.3, (0.0, -0.1, 0.15), shade(LIME_D, 0.9), segs=6, r2=1.45, style="hard")  # flagstone ledge
+    for sx, sy, w, d, rz in ((0.0, 0.0, 1.9, 1.5, 0.35), (0.9, 0.3, 1.3, 1.1, -0.5), (-0.9, 0.5, 1.2, 1.0, 0.9),
+                             (0.3, -0.85, 1.3, 0.9, 0.1)):
+        p.box((w, d, 0.28), (sx, sy, 0.14), tint(shade(LIME_D, 0.9), rng, 0.06), rot=(0, 0, rz), style="hard", jit=0.03)
     for i, (x, y, r) in enumerate(spec):
         col = tint(mix(LIME, C["sandstone_pale"], 0.4), rng, 0.06)
         if v == "b" and i == 1:
@@ -348,18 +350,19 @@ def column_stubs(p, v, rng):
         story="Drip gauge on a short post: the crew counted every drop falling down from the skylights.")
 def rain_gauge(p, v, rng):
     lean = (0.25, 0.1, 0) if v == "b" else (0, 0, 0)
-    p.cyl(0.55, 0.3, (0, 0, 0.15), C["concrete_light"], segs=6, style="hard_smooth")
-    p.beam((0, 0, 0.25), (0.2 * lean[0] * 4, 0, 1.35), 0.2, C["timber_pale"], style="hard")
+    for k, (sx, sy, w, rz) in enumerate(((0.3, 0.2, 0.5, 0.4), (-0.3, 0.15, 0.4, 1.1), (0.0, -0.3, 0.45, 0.2))):
+        p.box((w, w * 0.8, 0.22), (sx, sy, 0.11), tint(C["concrete_light"], rng, 0.08), rot=(0, 0, rz), style="hard_smooth", jit=0.02)
+    p.beam((0, 0, 0.25), (0.2 * lean[0] * 4, 0, 1.0), 0.2, C["timber_pale"], style="hard")
     ox = lean[0] * 0.8
-    p.cyl(0.4, 0.36, (ox, 0, 1.55), C["iron_light"], segs=6, r2=0.55, style="hard_smooth")  # funnel
+    p.cyl(0.4, 0.36, (ox, 0, 1.2), C["iron_light"], segs=6, r2=0.55, style="hard_smooth")  # funnel
     # Chunky dial on the post, face to -Y.
-    p.torus(0.36, 0.07, (ox, -0.25, 0.95), STEEL_D, rot=(FLAT, 0, 0), major=14, minor=5)
-    p.cyl(0.34, 0.08, (ox, -0.2, 0.95), PALE_PAINT, segs=6, rot=(FLAT, 0, 0), style="hard_smooth")
+    p.torus(0.36, 0.07, (ox, -0.25, 0.7), STEEL_D, rot=(FLAT, 0, 0), major=14, minor=5)
+    p.cyl(0.34, 0.08, (ox, -0.2, 0.7), PALE_PAINT, segs=6, rot=(FLAT, 0, 0), style="hard_smooth")
     for k in range(8):
         a = TAU * k / 8
-        p.box((0.05, 0.03, 0.09), (ox + 0.27 * math.cos(a), -0.3, 0.95 + 0.27 * math.sin(a)), C["charcoal"], style="fine", jit=0.006)
+        p.box((0.05, 0.03, 0.09), (ox + 0.27 * math.cos(a), -0.3, 0.7 + 0.27 * math.sin(a)), C["charcoal"], style="fine", jit=0.006)
     a = 2.3 if v == "a" else 4.4
-    p.rod((ox, -0.31, 0.95), (ox + 0.25 * math.cos(a), -0.31, 0.95 + 0.25 * math.sin(a)), 0.03, C["charcoal"], segs=5)
+    p.rod((ox, -0.31, 0.7), (ox + 0.25 * math.cos(a), -0.31, 0.7 + 0.25 * math.sin(a)), 0.03, C["charcoal"], segs=5)
     p.ico(0.25, (0.6, -0.6, 0.15), LICHEN, scale=(1.3, 1, 0.4), subdiv=0, style="soft", jit=0.02)
     if v == "b":
         p.cyl(0.18, 0.3, (-0.9, -0.5, 0.18), C["iron_light"], segs=6, rot=(0, FLAT, 0.4), style="hard_smooth")  # spare tin cup, tipped
@@ -425,18 +428,19 @@ def hose_reel(p, v, rng):
 @K.kind("tally_post", hero=False, tags=["sign"], polish_opts={"detail": 1},
         story="A short post with a pale board of five-bar stroke tallies, counting shifts nobody finished.")
 def tally_post(p, v, rng):
-    lean = 0.2 if v == "b" else 0.0
-    p.cyl(0.6, 0.25, (0, 0, 0.12), C["concrete_light"], segs=10, style="hard_smooth")
-    p.beam((0, 0, 0.2), (lean, 0, 1.3), 0.3, C["timber_pale"])
-    p.box((0.95, 0.12, 0.8), (lean * 0.8, -0.2, 0.95), C["charcoal"], rot=(0, -lean, 0), style="hard_smooth")
-    p.box((1.05, 0.14, 0.08), (lean * 0.8, -0.2, 1.38), C["timber_dark"], rot=(0, -lean, 0))
+    lean = 0.12 if v == "b" else 0.0
+    for k, (sx, sy, w, rz) in enumerate(((0.3, 0.2, 0.5, 0.4), (-0.3, 0.1, 0.45, 1.1), (0.1, -0.3, 0.4, 0.2))):
+        p.box((w, w * 0.8, 0.2), (sx, sy, 0.1), tint(C["concrete_light"], rng, 0.08), rot=(0, 0, rz), style="hard_smooth", jit=0.02)
+    p.beam((0, 0, 0.15), (lean, 0, 1.15), 0.3, C["timber_pale"])
+    p.box((0.95, 0.12, 0.8), (lean * 0.8, -0.2, 0.8), C["charcoal"], rot=(0, -lean, 0), style="hard_smooth")
+    p.box((1.05, 0.14, 0.08), (lean * 0.8, -0.2, 1.22), C["timber_dark"], rot=(0, -lean, 0))
     groups = 4 if v == "a" else 2
     for g in range(groups):
         for r in range(2):
             gx = -0.32 + g * 0.22 if v == "a" else -0.2 + g * 0.3
             for k in range(4):
-                p.box((0.025, 0.03, 0.2), (lean * 0.8 + gx + k * 0.035 - 0.05, -0.28, 1.1 - r * 0.3), PALE_PAINT, style="fine")
-            p.box((0.15, 0.03, 0.025), (lean * 0.8 + gx + 0.035, -0.28, 1.1 - r * 0.3), PALE_PAINT, rot=(0, 0.5, 0), style="fine")
+                p.box((0.025, 0.03, 0.2), (lean * 0.8 + gx + k * 0.035 - 0.05, -0.28, 0.95 - r * 0.3), PALE_PAINT, style="fine")
+            p.box((0.15, 0.03, 0.025), (lean * 0.8 + gx + 0.035, -0.28, 0.95 - r * 0.3), PALE_PAINT, rot=(0, 0.5, 0), style="fine")
     p.ico(0.3, (0.7, -0.6, 0.15), LICHEN, scale=(1.3, 1, 0.35), subdiv=0, style="soft")
     if v == "b":
         p.box((0.7, 0.09, 0.4), (-0.9, -0.5, 0.06), C["charcoal"], rot=(0.05, 0, 0.5), style="hard_smooth")  # fallen spare board

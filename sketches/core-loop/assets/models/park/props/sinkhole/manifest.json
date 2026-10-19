@@ -220,12 +220,12 @@
       "res://assets/models/park/props/sinkhole/granary_jars_a_lod2.glb"
      ],
      "tris": [
-      2692,
-      1346,
-      396
+      2800,
+      1400,
+      414
      ],
-     "radius": 1.585,
-     "height": 1.441
+     "radius": 1.746,
+     "height": 1.468
     },
     "b": {
      "lod": [
@@ -234,12 +234,12 @@
       "res://assets/models/park/props/sinkhole/granary_jars_b_lod2.glb"
      ],
      "tris": [
-      2568,
-      1284,
-      379
+      2676,
+      1338,
+      394
      ],
-     "radius": 1.65,
-     "height": 1.441
+     "radius": 1.733,
+     "height": 1.459
     },
     "c": {
      "lod": [
@@ -248,12 +248,12 @@
       "res://assets/models/park/props/sinkhole/granary_jars_c_lod2.glb"
      ],
      "tris": [
-      2852,
-      1420,
-      387
+      2960,
+      1474,
+      400
      ],
-     "radius": 1.804,
-     "height": 1.1
+     "radius": 1.939,
+     "height": 1.129
     }
    }
   },
@@ -320,12 +320,12 @@
       "res://assets/models/park/props/sinkhole/rain_gauge_a_lod2.glb"
      ],
      "tris": [
-      2112,
-      1056,
-      316
+      2400,
+      1200,
+      360
      ],
-     "radius": 0.834,
-     "height": 1.73
+     "radius": 0.854,
+     "height": 1.384
     },
     "b": {
      "lod": [
@@ -334,12 +334,12 @@
       "res://assets/models/park/props/sinkhole/rain_gauge_b_lod2.glb"
      ],
      "tris": [
-      2400,
-      1200,
-      360
+      2684,
+      1342,
+      402
      ],
-     "radius": 1.097,
-     "height": 1.73
+     "radius": 1.086,
+     "height": 1.389
     }
    }
   },
@@ -431,12 +431,12 @@
       "res://assets/models/park/props/sinkhole/tally_post_a_lod2.glb"
      ],
      "tris": [
-      2344,
-      1172,
-      352
+      2440,
+      1220,
+      366
      ],
-     "radius": 0.956,
-     "height": 1.425
+     "radius": 0.907,
+     "height": 1.266
     },
     "b": {
      "lod": [
@@ -445,12 +445,12 @@
       "res://assets/models/park/props/sinkhole/tally_post_b_lod2.glb"
      ],
      "tris": [
-      1976,
-      988,
-      296
+      2072,
+      1036,
+      310
      ],
-     "radius": 1.245,
-     "height": 1.656
+     "radius": 1.217,
+     "height": 1.458
     }
    }
   },
