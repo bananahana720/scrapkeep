@@ -23,12 +23,13 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # (stages 2-3 on main cf63e622; stages 4-6 re-captured on stage/alpha-w17 27e15952, whose parks changed). A draw with no modifier must still produce exactly these bytes.
 # 2026-10-19, Gate lane: stage 2 re-captured after #126's flume park rewrite (04eb0d00), and stages 5 and 6
 # re-captured because #139's pins already missed the stage it landed on (ecf6f629 draws these same bytes).
+# Stage 6 re-captured again after #170's crown park change (3b7a26f0), on 240520a3.
 const GOLDEN := {
 	2: "209b49bfdd24edda935316265e6d40ca5aca0eb7e3ccf6427b25662aaa468a20",
 	3: "6b2244ea5e2df73b4330ccec611c17a05b250afc9cf711233641ac960dcc9f02",
 	4: "d2f652ab46ed826448f4b83d7724e4c1b4cd8e73d79c3216e9f0ca399110c59e",
 	5: "d89a37e5291457fa67873501141f4c03c635f6bfb93d2c17a527dcfe70b02589",
-	6: "668f4369e12c90f6cf6def08bd2789ab7ba7a6b24dfe0c09eecd3e2af891ae2f",
+	6: "01459ce08dba749e56913f45ceed8f45dc24e6977891e1f81ed222f0313479d1",
 }
 const PICK_SEEDS := 2000
 const DRAW_SEEDS := 16
