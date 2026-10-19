@@ -62,9 +62,9 @@ const CAMP_ACTIVITIES := ["enemy_camp"]
 # Explicit surfaces: with a file "ground_rows" list, every instance stands inside a listed row's footprint, inset at least this far
 # (beyond its own radius) from the edge, so nothing sits on a drop lip or a bowl edge. Listed rows stop being footprint keepouts.
 const GROUND_ROW_INSET_M := 8.0
-# Elements whose long stamps (past ParkSites.STAMP_KEEP_M, which treats them as the landform) still keep props out: a sky island
-# is a ride surface, and ParkSites leaves its 1,600 m stamps out of its footprint cells.
-const STAMP_BLOCKING := ["sky_island"]
+# ParkSites leaves every stamped row longer than ParkSites.STAMP_KEEP_M out of its footprint cells (it treats it as the landform),
+# so context() re-adds each such row that blocks_props to Context.stamped, whatever its element: a long flow_line, drop, bowl,
+# half_pipe, rail or sky_island is still a ridden surface. ground_rows and low_ground_rows open them like any other row.
 # Low ground in area rows (opt-in): a file "low_ground_rows" list names big area rows that admit instances no taller than
 # LOW_GROUND_MAX_M (litter included); anything taller there still fails as low_ground. Eligible: a flow_line, bowl, drop or
 # sky_island footprint at least LOW_GROUND_MIN_M on both axes, or a home site longer than LOW_GROUND_HOME_MIN_M on either axis.
@@ -88,6 +88,8 @@ const BUILD_SLICE_USEC := 3000
 
 static var file_overrides := {}
 static var _meshes := {}
+# Guards _meshes: warm() fills it on a worker while release_shared() and _build_stage() can clear it on the main thread.
+static var _mesh_lock := Mutex.new()
 static var _cache_owner := ""
 static var _material: StandardMaterial3D
 
@@ -278,7 +280,7 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 		else:
 			c.unresolved.append("home_rows site %s (home %s) names no park or activity row" % [site, String(home.get("id", site))])
 	for row: Dictionary in park_map.park.get("park_rows", []):
-		if String(row.get("element", "")) in STAMP_BLOCKING and not String(row.get("stamp", "")).is_empty() \
+		if not String(row.get("stamp", "")).is_empty() \
 				and maxf(float(row["size"][0]), float(row["size"][2])) > ParkSites.STAMP_KEEP_M and Context.blocks_props(row):
 			c.stamped.append(row)
 	for row: Dictionary in park_map.park.get("activity_rows", []):
@@ -402,6 +404,10 @@ static func file_errors(file: Dictionary, kit: Dictionary, park_map = null) -> A
 		errors.append_array(_ground_row_errors(file["ground_rows"], park_map))
 	if file.has("low_ground_rows"):
 		errors.append_array(_low_ground_row_errors(file["low_ground_rows"], park_map))
+	if file.get("ground_rows") is Array and file.get("low_ground_rows") is Array:
+		for id in file["ground_rows"]:
+			if id is String and (file["low_ground_rows"] as Array).has(id):
+				errors.append("row %s is in both ground_rows and low_ground_rows; a ground row has no height cap, so list it in one" % id)
 	return errors
 
 
@@ -711,7 +717,11 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 			fail.call("home_clear", "within %.0f m of an enemy camp" % HOME_CLEAR_M)
 	if not c.ground_rows.is_empty():
 		var inside := false
-		for row: Dictionary in c.ground_rows.values():
+		# A low instance (LOW_GROUND_MAX_M or less) may also stand inside a listed low_ground_rows row, with the same inset.
+		var surfaces: Array = c.ground_rows.values()
+		if height <= LOW_GROUND_MAX_M + 0.0001:
+			surfaces = surfaces + c.low_rows.values()
+		for row: Dictionary in surfaces:
 			var half := ParkMap.footprint_half_extents(row) - Vector2.ONE * (GROUND_ROW_INSET_M + r)
 			if half.x >= 0.0 and half.y >= 0.0 and ParkMap.footprint_contains(row, p, 0.0, Vector2.INF, half):
 				inside = true
@@ -975,8 +985,12 @@ static func _transform(inst: Dictionary) -> Transform3D:
 
 # A GLB's one mesh, read once per path.
 static func _mesh(path: String) -> Mesh:
-	if _meshes.has(path):
-		return _meshes[path]
+	_mesh_lock.lock()
+	var hit: bool = _meshes.has(path)
+	var cached: Mesh = _meshes[path] if hit else null
+	_mesh_lock.unlock()
+	if hit:
+		return cached
 	var mesh: Mesh = null
 	var packed = load(path)
 	if packed is PackedScene:
@@ -988,7 +1002,9 @@ static func _mesh(path: String) -> Mesh:
 		if view != null:
 			mesh = view.mesh
 		scene.free()
+	_mesh_lock.lock()
 	_meshes[path] = mesh
+	_mesh_lock.unlock()
 	return mesh
 
 
@@ -1028,7 +1044,9 @@ static func _vertex_material() -> StandardMaterial3D:
 
 # Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).
 static func release_shared() -> void:
+	_mesh_lock.lock()
 	_meshes.clear()
+	_mesh_lock.unlock()
 	_material = null
 	_cache_owner = ""
 
@@ -1116,7 +1134,9 @@ func _build_stage() -> void:
 		return
 	_free_views()
 	if _cache_owner != id:
+		_mesh_lock.lock()
 		_meshes.clear()
+		_mesh_lock.unlock()
 		_cache_owner = id
 	map_id = id
 	_built_for = key
