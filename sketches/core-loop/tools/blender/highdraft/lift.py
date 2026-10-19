@@ -35,7 +35,8 @@ COLORS = dict(bone="d2c5a5", petrol="53686d", charcoal="242a28",
 # Polish (tools/blender/POLISH.md). dress_mhl_assets_test pins every file's bounds to a
 # millimetre, so these take bevels only (planar faces keep the extents) and no subdivision.
 # The eye and collar swap slate and mint by exact vertex colour at import (color_pose), so
-# they take no AO or wear bake. thermal_air is scenery and stays as it was.
+# they take no AO or wear bake. thermal_air takes no polish (a glass column, nothing to bake);
+# it rounds itself with 24 sides and rings every 3.5 m or less, so the rise wave reads.
 POLISH = {
     "thermal_vent": dict(bevel=.05, bevel_min=.15, bevel_angle=35),
     "net_tile": dict(bevel=0),
@@ -147,14 +148,19 @@ def thermal_vent(root):
 def thermal_air(root):
     p = common.Part("AirColumn")
     rings = []
-    for height, radius, alpha in ((0, 2.5, .22), (14, 3.7, .7), (26, 4.8, .2),
-                                  (37, 5.8, .55), (39, 6.5, .32), (40, 6.5, 0)):
-        rings.append(([p.bm.verts.new((radius * math.cos(i * math.tau / 12),
-                                      radius * math.sin(i * math.tau / 12), height))
-                       for i in range(12)], alpha))
+    sides = 24
+    profile = ((0, 2.5, .22), (14, 3.7, .7), (26, 4.8, .2), (37, 5.8, .55), (39, 6.5, .32), (40, 6.5, 0))
+    for (h0, r0, a0), (h1, r1, a1) in zip(profile, profile[1:]):
+        steps = math.ceil((h1 - h0) / 3.5)
+        for k in range(steps + (h1 == 40)):
+            t = k / steps
+            height, radius, alpha = h0 + (h1 - h0) * t, r0 + (r1 - r0) * t, a0 + (a1 - a0) * t
+            rings.append(([p.bm.verts.new((radius * math.cos(i * math.tau / sides),
+                                          radius * math.sin(i * math.tau / sides), height))
+                           for i in range(sides)], alpha))
     for k in range(len(rings) - 1):
-        for i in range(12):
-            j = (i + 1) % 12
+        for i in range(sides):
+            j = (i + 1) % sides
             a, aa = rings[k]
             b, ba = rings[k + 1]
             face = p.bm.faces.new((a[i], a[j], b[j], b[i]))
@@ -544,7 +550,8 @@ def export(root, path, name):
             triangles += doc["accessors"][prim["indices"]]["count"] // 3
             vertices += doc["accessors"][prim["attributes"]["POSITION"]]["count"]
             draws += 1
-    cap = (120, 110, 2) if name == "thermal_air" else PROP_CAP
+    # thermal_air polish: was (120, 110, 2); now under the scenery class cap 1500/3000/2 (asset_budgets.json)
+    cap = (800, 500, 2) if name == "thermal_air" else PROP_CAP
     assert 0 < triangles <= cap[0] and 0 < vertices <= cap[1] and draws <= cap[2], (name, triangles, vertices, draws)
     assert len(doc["materials"]) == 1
     print("MHL_ASSET %s T=%d V=%d draws=%d materials=1 bytes=%d sha256=%s" %

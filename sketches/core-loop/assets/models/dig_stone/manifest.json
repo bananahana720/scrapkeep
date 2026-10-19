@@ -56,11 +56,11 @@
         4,
         2
       ],
-      "triangles": 4588,
-      "exported_vertices": 13648,
+      "triangles": 6012,
+      "exported_vertices": 3351,
       "surfaces": 1,
-      "bytes": 465572,
-      "sha256": "36c3b0d2f445196c46c6e9ff2e67f559ef30c13a1b9fa0ee382c535c6a865c77",
+      "bytes": 198516,
+      "sha256": "f11d0e7fc833bc1e04b05517ef2a269089cc3f82ef6c06397dc013da2d29d951",
       "part": "CutFace",
       "budget_row": "landform",
       "caps": {
@@ -116,11 +116,11 @@
         4,
         2.5
       ],
-      "triangles": 4588,
-      "exported_vertices": 13654,
+      "triangles": 6012,
+      "exported_vertices": 3325,
       "surfaces": 1,
-      "bytes": 465776,
-      "sha256": "b3c0b809a406a21671a40230733b6812f204067b84a297786807164f46a0572a",
+      "bytes": 197276,
+      "sha256": "1d6b663de98171ad98cc4438309fc210798d697c08481a4022eac90bf1086bba",
       "part": "CutScoop",
       "budget_row": "landform",
       "caps": {
@@ -171,10 +171,10 @@
         2.5
       ],
       "triangles": 576,
-      "exported_vertices": 1577,
+      "exported_vertices": 470,
       "surfaces": 1,
-      "bytes": 55152,
-      "sha256": "c5f4e8dc001fa3980f2d073a03e454c670aeaf952f3ad057ce29fc3ad4da7f53",
+      "bytes": 27528,
+      "sha256": "d74aa6fb48d36b7f6ba30273271824f88ff871ba03a3665b2b90fbb6fecdd568",
       "part": "Rubble",
       "budget_row": "landform",
       "caps": {
@@ -231,10 +231,10 @@
         8
       ],
       "triangles": 1152,
-      "exported_vertices": 2886,
+      "exported_vertices": 968,
       "surfaces": 1,
-      "bytes": 100552,
-      "sha256": "7aca019076d51c496c9dd40090b87bd88243e9a4a94063c918b3b9365d483aa5",
+      "bytes": 54948,
+      "sha256": "f5664d839886927dbb9486cb84ca58d9821b95a6a5e985ec4bce9d7ee8a5f1cb",
       "part": "SocketCut",
       "budget_row": "landform",
       "caps": {
@@ -278,10 +278,10 @@
         8
       ],
       "triangles": 2432,
-      "exported_vertices": 6531,
+      "exported_vertices": 1482,
       "surfaces": 1,
-      "bytes": 224788,
-      "sha256": "a3d25e6d0054b45f6c8317895592be9c5d70299d48efef61fb85a27d0ee24cb5",
+      "bytes": 87220,
+      "sha256": "827c01e448e5bfa99dbd1a3bf85805e4c54fafd5b113bf93a7fb19d67c001399",
       "part": "FloorStudy",
       "budget_row": "landform",
       "caps": {
@@ -325,10 +325,10 @@
         8
       ],
       "triangles": 4700,
-      "exported_vertices": 10290,
+      "exported_vertices": 2816,
       "surfaces": 1,
-      "bytes": 358684,
-      "sha256": "7de73b49710b3ca94ef3f965c1bfa9e614ab404ff3f78b255f45d57a80764442",
+      "bytes": 164856,
+      "sha256": "8a3cee1a393971c11efb48b34d9c9ca9a5c1ddafbd521e6873fc093cbfb76348",
       "part": "CutStudy",
       "budget_row": "landform",
       "caps": {
@@ -372,10 +372,10 @@
         8
       ],
       "triangles": 2432,
-      "exported_vertices": 3662,
+      "exported_vertices": 1574,
       "surfaces": 1,
-      "bytes": 132996,
-      "sha256": "7b1b02b625ae5000d30d4380c18445f7aca9eec824d24f1d142ddc07dff7af84",
+      "bytes": 91656,
+      "sha256": "f60a71d0fac106dc462997d837206f6451e602783396f329bb8abe2931f905c8",
       "part": "RubbleStudy",
       "budget_row": "landform",
       "caps": {
@@ -419,10 +419,10 @@
         8
       ],
       "triangles": 5876,
-      "exported_vertices": 14010,
+      "exported_vertices": 3631,
       "surfaces": 1,
-      "bytes": 484788,
-      "sha256": "e5ca5d0c352668ef92899870cc76a1feda786c677c00db0678a6c44a5d947186",
+      "bytes": 211044,
+      "sha256": "61d64609dd391e7c7d6aedafd5beca1164182dcd1e9edd5ce77853998978ecbb",
       "part": "RecessStudy",
       "budget_row": "landform",
       "caps": {

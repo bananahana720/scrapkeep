@@ -16,6 +16,12 @@ import bpy
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
+
+# Polish (tools/blender/POLISH.md): smooth shading with hard creases past 50 degrees and the
+# AO and wear bake on the grayscale wear colour, which stone.tres multiplies into the beds.
+# No bevel or subdivision, so the pinned metre bounds, floor relief and socket throat hold.
+LANDFORM = dict(bevel=0, bake_slots=("stone",))
 
 MODELS = Path(common.MODELS) / "dig_stone"
 BEDS = (1.7, 0.8, 2.6, 1.1, 0.6, 2.1, 1.4, 0.9)
@@ -77,7 +83,7 @@ def erosion(x, y, z):
 
 def wall(scoop=False):
     width, height, depth = SPECS["cut_face_scoop" if scoop else "cut_face_long"][1]
-    n, rows = 56, 41
+    n, rows = 64, 47
     verts, faces = [], []
     for k in range(rows):
         t = k / (rows - 1)
@@ -303,14 +309,14 @@ def make_mesh(name, verts, faces, root):
     bm.from_mesh(mesh)
     bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3], ngon_method="EAR_CLIP")
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    polish.shape(bm, bevel=0)
     bm.to_mesh(mesh)
     bm.free()
-    for face in mesh.polygons:
-        face.use_smooth = False
     # Neutral micro-wear/occlusion only. Geological albedo is shared world-position shading.
-    attr = mesh.color_attributes.new(name="Color", type="FLOAT_COLOR", domain="POINT")
-    for i, vertex in enumerate(mesh.vertices):
-        x, z, y = vertex.co
+    # The bake writes corner colours, so the wear colour is per corner.
+    attr = mesh.color_attributes.new(name="Color", type="FLOAT_COLOR", domain="CORNER")
+    for i, loop in enumerate(mesh.loops):
+        x, z, y = mesh.vertices[loop.vertex_index].co
         shade = 0.96 + 0.025 * ripple(x * 3, z * 3)
         attr.data[i].color = (shade, shade, shade, 1)
     mesh.color_attributes.active_color = attr
@@ -333,6 +339,7 @@ def main(name):
     parser.add_argument("--out")
     opt = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     common.reset()
+    polish.enable(**LANDFORM)
     part, size, sockets = SPECS[name]
     if name in ("cut_face_long", "cut_face_scoop"):
         verts, faces = wall(name == "cut_face_scoop")
