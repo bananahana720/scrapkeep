@@ -1,0 +1,16 @@
+{
+	"base": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/acap/polish/enemy_swarm_remnant/base/lit/..",
+	"head": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/acap/polish/enemy_swarm_remnant/head",
+	"modes": {
+		"lit": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-use6",
+				"asset-front30",
+				"asset-side30"
+			],
+			"sheet": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/acap/polish/enemy_swarm_remnant/pair/pair-lit.png"
+		}
+	}
+}
