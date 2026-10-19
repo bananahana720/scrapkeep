@@ -81,7 +81,7 @@ const KINDS := {
 	"dam_swift": {
 		"world": 1, "parks": ["park_dam", "park_flume"], "role": "critter",
 		"model": MODEL_DIR + "dam_swift.glb", "height_m": 0.22, "tris": [900, 4000],
-		"palette": {"body": Color("5e4a80"), "wing": Color("4f3d6e"), "cream": Color("ece4f1"), "eye": Color("2b2238")},
+		"palette": {"body": Color("7d70a8"), "wing": Color("5e4a80"), "cream": Color("ece4f1"), "eye": Color("2b2238")},
 		"sound": {"call": SOUND_DIR + "dam_swift_call.wav", "react": SOUND_DIR + "dam_swift_react.wav"},
 		"voice": {"call": "thin_twitter", "react": "flutter_burst"},
 		"call_every": [6.0, 12.0], "volume_db": -20.0,
