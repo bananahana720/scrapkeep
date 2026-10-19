@@ -1,0 +1,99 @@
+extends RefCounted
+
+# Skill bands for the bot driver (Challenge lane, DECISIONS section 5): the same bot at
+# three human skill levels, so a boss or stage can be read as "a Novice can't, a Learner
+# can after a few tries, an Expert always does". The driver holds one of these as `band`;
+# a null band is the driver exactly as it was. Every band number lives in BANDS below, so
+# tuning the bands is this file and nothing else.
+#
+#   Novice:  late reactions, misses many tells, basic attack and ram only.
+#   Learner: reads most tells, uses the base kit, and improves across attempts at a boss.
+#   Expert:  fast reads and the full kit (actives, chain, plant, harpoon, weak points,
+#            ultimate timing). The driver has no separate carve or wall-grip hand, so those
+#            ride on the Expert's other verbs and get no verb of their own here.
+#
+# Reaction is the seconds from a committed telegraph appearing to the bot seeing it. The
+# basis is human reaction time: a simple visual response is about 0.2-0.25 s for a
+# practised player, a choice response 0.35-0.5 s, and an untrained player under load
+# 0.6-0.8 s. The numbers are calibration starting points the harness checks, not final.
+# read_* is the chance a given tell is read at all; an unread tell is never dodged.
+# learn_attempts is the attempt at which the *_last values are reached: the values move
+# linearly from attempt 1 to that attempt and hold after.
+const BANDS := {
+	"expert": {"reaction_first": 0.25, "reaction_last": 0.25, "read_first": 1.0, "read_last": 1.0,
+		"learn_attempts": 1, "kit": "full"},
+	"learner": {"reaction_first": 0.45, "reaction_last": 0.30, "read_first": 0.65, "read_last": 0.92,
+		"learn_attempts": 5, "kit": "base"},
+	"novice": {"reaction_first": 0.70, "reaction_last": 0.70, "read_first": 0.35, "read_last": 0.35,
+		"learn_attempts": 1, "kit": "basic"},
+}
+
+# What each kit level lets the driver's hands do. The Novice only fires its gun, rams,
+# jumps and boosts, which are not verbs here because every band has them. "active" and
+# "chain" are in neither list: only the full kit has them.
+const BASE_VERBS := ["special", "line_cast", "plant", "harpoon", "weak_points", "ultimate"]
+
+var name := "expert"
+var attempt := 1
+var reaction_s := 0.25
+var read_chance := 1.0
+var kit := "full"
+
+var _rng := RandomNumberGenerator.new()
+var _read := {}
+
+
+# An unknown name is a caller's typo: say so and play the Expert, which is the baseline.
+static func make(band_name: String, attempt_number: int, seed_value: int):
+	var key := band_name
+	if not BANDS.has(key):
+		push_error("skill_band: unknown band '%s'; use expert, learner or novice" % band_name)
+		key = "expert"
+	var row: Dictionary = BANDS[key]
+	var band = new()
+	band.name = key
+	band.attempt = maxi(attempt_number, 1)
+	var span := maxi(int(row["learn_attempts"]) - 1, 1)
+	var t := clampf(float(band.attempt - 1) / float(span), 0.0, 1.0)
+	band.reaction_s = lerpf(float(row["reaction_first"]), float(row["reaction_last"]), t)
+	band.read_chance = lerpf(float(row["read_first"]), float(row["read_last"]), t)
+	band.kit = String(row["kit"])
+	band._rng.seed = hash(["band", key, band.attempt, seed_value])
+	return band
+
+
+# Whether this band sees the tell with this key (a hazard's instance id). The roll is made
+# once per key so a tell is read or missed for its whole life. A band that reads everything
+# never touches its stream, so an Expert's run cannot differ from the unbanded driver's.
+func reads(key: int) -> bool:
+	if read_chance >= 1.0:
+		return true
+	if not _read.has(key):
+		_read[key] = _rng.randf() < read_chance
+	return _read[key]
+
+
+# Drops answers for tells that are gone, as the driver prunes its own `_seen`.
+func forget(live: Dictionary) -> void:
+	if _read.size() > 64:
+		for key in _read.keys():
+			if not live.has(key):
+				_read.erase(key)
+
+
+func allows(verb: String) -> bool:
+	if kit == "full":
+		return true
+	if kit == "base":
+		return verb in BASE_VERBS
+	return false
+
+
+# Ultimate timing (an open core, a crowd) is the Expert's. Below it the press is untimed.
+func timed_ultimate() -> bool:
+	return kit == "full"
+
+
+func describe() -> Dictionary:
+	return {"name": name, "attempt": attempt, "reaction_s": snappedf(reaction_s, 0.001),
+		"read_chance": snappedf(read_chance, 0.001), "kit": kit}
