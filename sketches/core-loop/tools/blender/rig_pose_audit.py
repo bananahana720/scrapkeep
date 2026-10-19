@@ -275,25 +275,26 @@ PROCEDURAL = {
     # body, fists, plates and halo about the rig origin (:380, :387). Feet: foot_angle -0.6 to
     # +0.2 rad about X (:363, :368), splay rolls Z by -side*splay*0.5 (max 0.6 -> 0.3 rad, :395)
     # and moves x by side*splay (+-0.6 m), tuck lifts y to 1.1 m (:366, :394).
-    # Fists offset (0, -0.6..1.8, -0.85..0.5) (:359, :365, :373, :376), down to -0.685 with the
-    # crouch drop (+0.35 - 1.035). Plates yaw +-1.15 rad (:400, weak), move x by -side*0.45 and y
-    # down 0.7 (:399), -1.045 with the charge drop -0.345. Halo spins about Y (:406).
+    # Fists offset (0, -0.6..1.8, -0.85..0.5) from the body (:359, :365, :373, :376); the drop and
+    # lean they ride are the Body group pose. Plates yaw +-1.15 rad (:400, weak), move x by
+    # -side*0.45 and y down 0.7 (:399). Halo spins about Y (:406).
     "world_one/enemy_miniboss": {
-        "MinibossBody": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin", "loc": {"Y": (-1.035, 0.0)}},
-        "MinibossFistLeft": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin",
-                             "loc": {"Y": (-0.685, 1.8), "Z": (-0.85, 0.5)}},
-        "MinibossFistRight": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin",
-                              "loc": {"Y": (-0.685, 1.8), "Z": (-0.85, 0.5)}},
+        # Lean and body drop move the body, fists, plates and halo as one group about the rig
+        # origin (miniboss.gd:380-407: every non-foot bone takes body_basis and UP * drop); the feet
+        # do not follow, so the group pose is the relative travel.
+        "MinibossBody": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin", "loc": {"Y": (-1.035, 0.0)},
+                         "group": ["MinibossFistLeft", "MinibossFistRight", "MinibossPlateLeft", "MinibossPlateRight",
+                                   "MinibossHalo"]},
+        # Fists keep only their own offset from the body (:359-376), not the drop they ride.
+        "MinibossFistLeft": {"loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
+        "MinibossFistRight": {"loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
         "MinibossFootLeft": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (0.0, _D(0.3))},
                              "loc": {"X": (-0.6, 0.0), "Y": (0.0, 1.1)}},
         "MinibossFootRight": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (-_D(0.3), 0.0)},
                               "loc": {"X": (0.0, 0.6), "Y": (0.0, 1.1)}},
-        "MinibossHalo": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-180.0, 180.0)}, "pivot": "origin",
-                         "loc": {"Y": (-1.035, 0.0)}},
-        "MinibossPlateLeft": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-_D(1.15), _D(1.15))},
-                              "loc": {"X": (-0.45, 0.0), "Y": (-1.045, 0.0)}},
-        "MinibossPlateRight": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-_D(1.15), _D(1.15))},
-                               "loc": {"X": (0.0, 0.45), "Y": (-1.045, 0.0)}},
+        "MinibossHalo": {"rot": {"Y": (-180.0, 180.0)}},
+        "MinibossPlateLeft": {"rot": {"Y": (-_D(1.15), _D(1.15))}, "loc": {"X": (-0.45, 0.0), "Y": (-0.7, 0.0)}},
+        "MinibossPlateRight": {"rot": {"Y": (-_D(1.15), _D(1.15))}, "loc": {"X": (0.0, 0.45), "Y": (-0.7, 0.0)}},
     },
     # plated_brute.gd:290-309 _pose, PAD_RISE 2.5 (:45), REAR_ANGLE -30 (:46); the pads plant
     # PAD_PLANT -0.47 m below rest on every slam's hit frame (:48, :302: lift = PAD_PLANT / PAD_RISE).
@@ -682,11 +683,15 @@ def pose_values(rig, spec):
             s_g[list("XYZ").index(ax[1])] = val
         s_arm = C.T @ np.diag(s_g) @ C
         dp = mat4(np.eye(3), head) @ mat4(s_arm) @ mat4(np.eye(3), -head)
-    m = rig.basis_from_arm_delta(b, dp)
     from mathutils import Matrix as Mx
-    mm = Mx(m.tolist())
-    loc, quat, scale = mm.decompose()
-    return {spec["bone"]: (np.array(loc), np.array(quat), np.array(scale))}, {b: m}
+    values, basis = {}, {}
+    for name in [spec["bone"]] + list(spec.get("group", [])):
+        bi = rig.index[name]
+        m = rig.basis_from_arm_delta(bi, dp)  # the same arm-space move for every bone in the group
+        loc, quat, scale = Mx(m.tolist()).decompose()
+        values[name] = (np.array(loc), np.array(quat), np.array(scale))
+        basis[bi] = m
+    return values, basis
 
 
 # ---------------------------------------------------------------- audit
@@ -705,6 +710,10 @@ def weight_audit(rig):
             if w > 0.01:
                 weighted.add(b)
     blended = int((infl > 1).sum())
+    # The glTF exporter parks vertices with no group on a joint it names neutral_bone: those are
+    # unweighted, whatever the skin says.
+    neutral = {i for i, n in enumerate(rig.names) if n.startswith("neutral_bone")}
+    neutral_v = int(sum(1 for row in rig.groups if row and row[0][0] in neutral))
     return {
         "vertices": int(N),
         "triangles": int(len(rig.T)),
@@ -715,7 +724,10 @@ def weight_audit(rig):
         "influence_histogram": {str(k): v for k, v in sorted(hist.items())},
         "blended_vertices": blended,
         "max_influences": int(infl.max()) if N else 0,
-        "unweighted_vertices": int((infl == 0).sum()),
+        "unweighted_vertices": int((infl == 0).sum()) + neutral_v,
+        "unweighted_no_group": int((infl == 0).sum()),
+        "unweighted_neutral_bone": neutral_v,
+        "neutral_bones": sorted(rig.names[i] for i in neutral),
         "max_weight_sum_deviation": round(float(np.abs(sums - 1).max()), 6) if N else 0.0,
         "bones_without_weights": sorted(rig.names[b] for b in range(len(rig.bones)) if b not in weighted),
     }, weighted
@@ -767,7 +779,7 @@ def table_ranges(key):
     out = {}
     for bone, row in PROCEDURAL[key].items():
         r = {"rot": dict(row.get("rot", {})), "loc": dict(row.get("loc", {})), "scale": {},
-             "pivot": row.get("pivot")}
+             "pivot": row.get("pivot"), "group": row.get("group", [])}
         if "scale" in row:
             r["scale"]["U"] = row["scale"]
         out[bone] = r
@@ -779,7 +791,7 @@ def make_specs(ranges, deforming_names):
     for bone, r in ranges.items():
         if bone not in deforming_names:
             continue
-        base = {"bone": bone, "pivot": r.get("pivot")}
+        base = {"bone": bone, "pivot": r.get("pivot"), "group": r.get("group", [])}
 
         def src(key, a, v, lo, hi):
             pair = r.get("src", {}).get((key, a))
@@ -833,7 +845,13 @@ class Metrics:
         N = len(V0)
         infl = np.array([sum(1 for _, w in row if w > 0.01) for row in rig.groups]) if N else np.zeros(0, dtype=int)
         self.blended_v = infl > 1
-        tb = self.blended_v[T].any(1) if len(T) else np.zeros(0, dtype=bool)
+        dom = np.array([row[0][0] if row else -1 for row in rig.groups], dtype=np.int64)
+        tb_blend = self.blended_v[T].any(1) if len(T) else np.zeros(0, dtype=bool)
+        # A triangle whose single-influence vertices sit on different bones stretches like a blended one.
+        tb_cross = ((dom[T[:, 0]] != dom[T[:, 1]]) | (dom[T[:, 1]] != dom[T[:, 2]])) if len(T) else np.zeros(0, dtype=bool)
+        tb = tb_blend | tb_cross
+        self.cross_bone_tris = int((tb_cross & ~tb_blend).sum())
+        self.dom = dom
         self.bt = T[tb]
         self.non_bt = np.nonzero(~tb)[0]
         self.bt_area0, self.bt_n0 = self.tri_area_normal(V0, self.bt)
@@ -848,7 +866,7 @@ class Metrics:
         e = np.concatenate([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]]) if len(T) else np.zeros((0, 2), dtype=np.int64)
         e.sort(axis=1)
         e = np.unique(e, axis=0) if len(e) else e
-        keep = self.blended_v[e[:, 0]] & self.blended_v[e[:, 1]] if len(e) else np.zeros(0, dtype=bool)
+        keep = ((self.blended_v[e[:, 0]] & self.blended_v[e[:, 1]]) | (dom[e[:, 0]] != dom[e[:, 1]])) if len(e) else np.zeros(0, dtype=bool)
         self.edges = e[keep]
         self.edge0 = np.linalg.norm(V0[self.edges[:, 0]] - V0[self.edges[:, 1]], axis=1) if len(self.edges) else np.zeros(0)
         self.edge_ok = self.edge0 > 1e-9
@@ -1542,6 +1560,11 @@ def audit_rig(key, a, sheet_rows, loop_rows):
                          "clip_thr_mm": p["clip_thr_mm"], "clip_open": p["clip_open"], "clip_pair": p["clip_pair"],
                          "clip_tri_pairs": p["clip_tri_pairs"],
                          "gap_mm": p["gap_mm"], "gap_frac": p["gap_frac"], "gap_thr_mm": p["gap_thr_mm"], "gap_pair": p["gap_pair"]}
+    if audit["unweighted_vertices"]:
+        flags["UNWEIGHTED"] = {"count": audit["unweighted_vertices"], "bones": audit["neutral_bones"],
+                               "worst": {"pose": "rest", "bone": ",".join(audit["neutral_bones"]),
+                                         "no_group": audit["unweighted_no_group"],
+                                         "neutral_bone": audit["unweighted_neutral_bone"]}}
     deliberate_collapse = [{"pose": fmt_spec(p) if p["bone"] != "*" else p["axis"], "bone": p["bone"],
                             "area_min": p["area_min"], "edge_min": p["edge_min"], "flags": p["flags"]}
                            for p in poses if p["deliberate"] and any(f.endswith("COLLAPSE") for f in p["flags"])]
@@ -1578,18 +1601,21 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         "host_clip": hostc,
         "sibling_pairs": metrics.sibling_pairs, "sibling_capped": metrics.sibling_capped,
         "pose_count": len(poses), "contact_pairs": len(metrics.pairs),
-        "rigid_islands": len(metrics.rigid), "blended_triangles": int(len(metrics.bt)),
+        "rigid_islands": len(metrics.rigid), "blended_triangles": int(len(metrics.bt) - metrics.cross_bone_tris),
+        "cross_bone_triangles": metrics.cross_bone_tris,
         "deliberate": delib, "deliberate_collapse": deliberate_collapse,
         "flags": flags, "seams": seams, "poses": poses,
         "seconds": round(time.time() - t0, 1),
     }
     if not a["no-render"]:
-        render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, not metrics.pairs, hostc)
+        render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, not metrics.pairs, hostc,
+                   audit["unweighted_vertices"])
     summary = {
         "joints": audit["joints"], "deforming": audit["deforming_bone_count"], "verts": audit["vertices"],
         "unweighted": audit["unweighted_vertices"], "blended": audit["blended_vertices"],
         "max_influences": audit["max_influences"], "weight_sum_dev": audit["max_weight_sum_deviation"],
-        "poses": len(poses), "parent_child_pairs": len(metrics.pairs), "blended_tris": int(len(metrics.bt)), "skin_err_m": check.get("max_err_m"),
+        "poses": len(poses), "parent_child_pairs": len(metrics.pairs), "blended_tris": int(len(metrics.bt) - metrics.cross_bone_tris), "cross_bone_tris": metrics.cross_bone_tris,
+        "unweighted_neutral_bone": audit["unweighted_neutral_bone"], "skin_err_m": check.get("max_err_m"),
         "flags": {f: {"n": s["count"], "bones": s["bones"][:6], "worst": s["worst"]} for f, s in flags.items()},
         "deliberate_collapse": deliberate_collapse,
         "seam": {c: ("UNTESTED" if s.get("seam_untested") else s.get("failing_bones", s.get("error"))) for c, s in seams.items()},
@@ -1624,7 +1650,8 @@ def skin_check(rig, values, Vp):
     return {"max_err_m": round(err, 6)}
 
 
-def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pairs_untested=False, hostc=None):
+def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pairs_untested=False, hostc=None,
+               unweighted=0):
     stage = Stage(rig, a["size"], a["samples"])
     w, h = a["size"], int(a["size"] * 0.75)
     # In-game poses (clip frames and extremes) first: the top 5, then the top 3 stress poses, each
@@ -1646,7 +1673,8 @@ def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pai
     bad = bool(hw) and any(h["over"] for h in hostc.values())
     note = ("OWN PAIRS UNTESTED" if pairs_untested else "RANKED BY DEFECT SEVERITY") if not hw else \
         "VS BODY %d CLIPS WORST %.0fMM %s" % (len(hostc), hw["depth_mm"], "OVER" if bad else "OK")
-    tiles = [tile(stage.render({}), [key.split("/")[-1], "REST POSE", note], bad)]
+    tiles = [tile(stage.render({}), [key.split("/")[-1], "REST POSE" if not unweighted else "UNWEIGHTED %d VERTS" % unweighted,
+                                     note], bad or bool(unweighted))]
     for i in chosen:
         p = poses[i]
         label = fmt_spec(p) if p["bone"] != "*" else "%s %.2fS" % (p["axis"], p["value"])
