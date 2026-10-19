@@ -54,7 +54,7 @@ const CANNON_PILOT = "remembered_cannon";
 // Tally on seed 1 is the first of seeds 1 to 4 she wins in bot_six_tally_test (wave 11, GP7).
 const TALLY_SEED = 1;
 const TALLY_PILOT = "tally";
-const PARK_SEED = 1;
+const PARK_SEED = 2;
 const PARK_PILOT = "pylon_engineer";
 export const WIN_PROOFS = [
   { label: "win proof", seed: WIN_SEED, dir: "" },
@@ -69,6 +69,8 @@ export const WIN_PROOFS = [
   // recipe once dropped (wave-14 release), so its proof is mandatory. PARK-WIN (2026-10-16):
   // pylon_engineer seed 1, skipper policy, from stage 1, won stage 6 twice out of two. The wave-15
   // export (2026-10-17) then won 1 of 3 on one pack, so it passes on its first win in 3 tries.
+  // 2026-10-19 (Systems B w18): seed 2, not 1. The proof checks packaging, not balance, and the new
+  // Highdraft plating pack draft_plate puts Sable's nemesis on seed 1 (it stalls at stage 5).
   { label: "win proof (park)", seed: PARK_SEED, pilot: PARK_PILOT, table: "park", dir: "park", tries: 3 },
 ];
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;

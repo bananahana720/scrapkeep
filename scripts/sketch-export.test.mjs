@@ -307,7 +307,7 @@ test("WIN_PROOFS plays Rivet's seed 1 first, then the cannon, Tally and the park
       ["win proof", 1, null],
       ["win proof (cannon)", 11, "remembered_cannon"],
       ["win proof (tally)", 1, "tally"],
-      ["win proof (park)", 1, "pylon_engineer"],
+      ["win proof (park)", 2, "pylon_engineer"],
     ],
   );
   assert.equal(new Set(WIN_PROOFS.map((proof) => proof.dir)).size, WIN_PROOFS.length);
@@ -458,12 +458,12 @@ test("a won row below stage 6 fails the win proof", () => {
   assert.equal(winProofFailures("", 0, row("won", 5)).length, 1);
 });
 
-test("the park win proof is mandatory, pins pylon_engineer seed 1 and the park table, and has its own folder", () => {
+test("the park win proof is mandatory, pins pylon_engineer seed 2 and the park table, and has its own folder", () => {
   const parkProofs = WIN_PROOFS.filter((proof) => proof.table === "park");
   assert.equal(parkProofs.length, 1);
   const [park] = parkProofs;
   assert.equal(park.pilot, "pylon_engineer");
-  assert.equal(park.seed, 1);
+  assert.equal(park.seed, 2);
   assert.equal(WIN_PROOFS.filter((proof) => proof.dir === park.dir).length, 1);
   assert.equal(WIN_PROOFS.filter((proof) => proof.table).length, 1);
   assert.throws(() => parseArgs(["--win-proof", "--park-win-proof"]), /unknown argument/);
