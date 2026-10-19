@@ -1320,12 +1320,12 @@ LINERS.update(PIT_LINERS)
 # interpolated surface obeys it too. The sandstone, haul and rails styles are also flat across their whole lane (|x| <= the row's
 # half-width) and rim rocks start at hw + FLUSH_RIM_GAP. liner_check fails the build otherwise.
 ISLES_LINERS = {
-    "liner_run_turn_wash": {"park": "park_islands", "style": "sandstone", "at": (-60.0, -516.0), "size": (60.0, 4.0, 40.0), "yaw": 0.0, "flush_lane": True, "flush_surface": False},
-    "liner_lookout_stair": {"park": "park_islands", "style": "haul", "at": (-100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0, "flush_lane": True, "flush_surface": False},
-    "liner_east_ribs": {"park": "park_islands", "style": "haul", "at": (100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0, "flush_lane": True, "flush_surface": False},
-    "liner_net_post_run": {"park": "park_islands", "style": "haul", "at": (0.0, 200.0), "size": (160.0, 0.01, 120.0), "yaw": 0.0, "flush_lane": True, "flush_surface": False},
-    "liner_cloud_wash_east": {"park": "park_islands", "style": "sandstone", "at": (210.0, 260.0), "size": (300.0, 0.01, 30.0), "yaw": 0.0, "flush_lane": True, "flush_surface": False},
-    "liner_ore_chute": {"park": "park_islands", "style": "rails", "at": (110.0, 0.0), "size": (150.0, 0.01, 16.0), "yaw": 0.0, "flush_lane": True, "flush_surface": False},
+    "liner_run_turn_wash": {"park": "park_islands", "style": "sandstone", "at": (-60.0, -516.0), "size": (60.0, 4.0, 40.0), "yaw": 0.0, "flush_lane": True},
+    "liner_lookout_stair": {"park": "park_islands", "style": "haul", "at": (-100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0, "flush_lane": True},
+    "liner_east_ribs": {"park": "park_islands", "style": "haul", "at": (100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0, "flush_lane": True},
+    "liner_net_post_run": {"park": "park_islands", "style": "haul", "at": (0.0, 200.0), "size": (160.0, 0.01, 120.0), "yaw": 0.0, "flush_lane": True},
+    "liner_cloud_wash_east": {"park": "park_islands", "style": "sandstone", "at": (210.0, 260.0), "size": (300.0, 0.01, 30.0), "yaw": 0.0, "flush_lane": True},
+    "liner_ore_chute": {"park": "park_islands", "style": "rails", "at": (110.0, 0.0), "size": (150.0, 0.01, 16.0), "yaw": 0.0, "flush_lane": True},
 }
 ISLES_LINER_IDS = list(ISLES_LINERS)
 LINERS.update(ISLES_LINERS)
@@ -1641,7 +1641,7 @@ class Row:
         self.hw, self.hl = self.W / 2.0, self.L / 2.0
         self.ex, self.ez = self.hw + MARGIN, self.hl + MARGIN
         self.exl = self.exr = self.ex           # the sheet's extent on the -x and +x side (flush_lane rows clip at a neighbouring lane)
-        self.settle = self.flush and spec.get("flush_surface", True)    # the sampled-surface rule (the islands rows predate it)
+        self.settle = self.flush        # every flush row holds the band on its sampled surface
         self.peers = flush_peers(rid) if self.flush else []
         if self.flush:
             assert_pond_clear(rid)
@@ -2508,7 +2508,7 @@ def liner_registry(rid):
     if LINERS[rid].get("flush_lane"):
         text = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. "
                 "No -col mesh: the stamped terrain stays the only collider. Ships " + FLUSH_NOTES[LINERS[rid]["style"]] + ". "
-                + ("Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground" if LINERS[rid].get("flush_surface", True) else "Flush lane: every vertex inside any ride row's footprint stays within 0.12 m of the ground") + (", the verge band included" if LINERS[rid]["style"] in ("sandstone", "haul", "rails") else "") + ", and the sheet ships no rim props (no rocks, no tufts) and no detail shells.")
+                + "Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground" + (", the verge band included" if LINERS[rid]["style"] in ("sandstone", "haul", "rails") else "") + ", and the sheet ships no rim props (no rocks, no tufts) and no detail shells.")
         return [{"id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": "landform", "origin": "centre",
                  "ships": True, "loader": "src/world/park/park_recipes.gd",
                  "provenance": {"recipe": "tools/blender/park/flume_works.py", "note": text}}]
