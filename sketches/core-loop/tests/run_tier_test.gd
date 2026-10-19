@@ -41,27 +41,31 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-18 Dig plated elites and Highdraft ring-outs (#69) merged onto stage/alpha-w17; recorded with --record-base --section=runtime.
 # 2026-10-18 stage/alpha-w17 re-record at 04eb0d00 (Gate lane): #125, #127, #129, #139, #140, #106, #142, #144, #105 and the #126
 # flume pass (park rows) together; recorded with --record-base --section=runtime, seeds 0..19 in four-wide batches.
+# 2026-10-19 stage/alpha-w17 re-record at 958bbdcd (Gate lane): the candidate stack's park PRs (#170 crown, #180 pit,
+# #183 islands, #185 dam rim_cache) move park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged.
+# 2026-10-19 #214 islands re-record on 2e247fc8 (World lane): #214's islands rows (scatter, flush liners, greybox reverts,
+# four isle-piece swaps) are park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; --record-base --section=runtime.
 const BASE_SCHEDULE := [
-	"130800c9e9b35492febf859db51a3b53ce986347da4b326e5619ec9bc8e519bb",
-	"e851e2f8198073f6cb0ed5d779aaa07da9bc7ee0b8bd31235daa35823578d74f",
-	"d481e75c60a7cf1d0bc24a71bad7118a79c5c30a9d3cf19d3d224c25e4e88100",
-	"703088ee7dd6dd2b5ba72835b725e048ac8087fdda498c5a6adff5d0ebca3832",
-	"b35022f08e5da444e44f3bce8cfa17572212745760ce4493af189b187c8454f6",
-	"b8276dbc225d9cbd132a5d78f7d4b4581fab8bba4419c0d3e0626b29c3595975",
-	"084b7997ff5700037a237fe23e1279f57dfc8f9989daf0acf76e50c9644c05c9",
-	"e4cec0ae3e13fd471f655cc6ddc7089c3bbd6cbf580f881fc81d596bf4efcb95",
-	"de79e628e4f09fae0424ce8c588a5eba06c4fde92af37768fda58f021ceffde8",
-	"0d7aa519d386d5e45d15daffe8e2668813b2c3fb99e5ccd497edd2b37952c8ce",
-	"7b2d04ea00788a08c38fddeb4d74d2cd06c143e6aa4b78621db411e041ddc1aa",
-	"e9c14b6847ec4d0a6cdf2da65961fc5535f00702ab29fa9ec3ef4253668d252a",
-	"4e3d743430de3cd0c603ddfa39b1e8147134affcd77bf585bf2b56d9ac45edbd",
-	"60173f4992bfc21ab50b2d920611c1fc9d7d95ac2d78ca9099d8ff7fb1a270e1",
-	"4009d8bc4e5cd20eee9472f0701f885d97e0ef4469f74f6a98aa5e11d1d8b983",
-	"aab31cd157eff5dd092fbf12c67f59d769d87a3e8d00044e013fd2e0fbef3f41",
-	"d0d780cb710f13e3683c123789aae8f772bc68164a59603c27969e8f241497f7",
-	"d297d4f01da92a9f40003ebb05cc17cc55686585b57c169850757e98611fe9fd",
-	"dd71772d9c6dfd95a09f6f9c4fa7d32c5a8461c86668aba029a0fb977e199e01",
-	"3a4c87576fb5b0479f62248e2a04289a89893956683e7d93593959daacc3c555",
+	"c6b7746632aad629ffa1ba6278af1d3ee3e4c37ed3a3faf5fbe4206321fcda64",
+	"5418dc623b54abbcd8477bfc6e1688bfd631dae83ce559cfdd855263856ae4ae",
+	"d32cebfd759dd5d660a2eb26f4ffd70995e0f5c9363f27acb4a6aa995e1a3e14",
+	"5f70442c1d7de8c4b1739aea92c4e26e5d5acae803738546e279fa62630b0842",
+	"4399094e45b0893eb8fc69b7644e85bfcc9d1efa79000bff5b14a64d9304510c",
+	"b602f80569d7815754f777dd6ec434ad79a141554862e3541b919f1e286923d6",
+	"ad03de5a70ee8f6ad464b1c2effc5fc58f0fe01f72f13f795e922e139ea9c047",
+	"5d4595c9622adc68e9cd81cf8cd03957879fc5ea077241c141d4bcf9486020eb",
+	"881f7d5344d6f2a3472cf930cc421b0e284021e824f814e0e9e457c34f0685ea",
+	"08c63074e5f96645ce9590f627349f51ce50872ebfa3a4b8a6e68ff39dbe829d",
+	"f64d12c432c820df1380301b5098177ba1e89ff75372cb9f9f75bc07eae82b88",
+	"82693d0677a5d4d912c189b3502c983245d88c0184e71ed222f6011e13d166c9",
+	"52381e35fa8c4afd6ddb8624969854ea08900b18ae720d63f02143a06c89e0c1",
+	"650eaa6738c635739640f8c20719e729f34d9836675213847e14aca3f1b65486",
+	"c40fd870b34a7ddbd74499f4255da792bc2596a79a9a6b5ea11d4cd6313705d3",
+	"54a2ea9213532115e3ad7da5cf1b453e1ff3aee641fe80459158945d6df043b3",
+	"e974763a7317c0ca59480545b685afafa51b91ec2c714f82d2cd6558e076c41e",
+	"0dfdb49d2bc82145e804e8cb5ebb6b680e2f8e6c49fd50f4a45c31d97de97bae",
+	"3a084e3cd46f112d57566732c1510360d9e1cebc18aee6572c5d39000f2232d0",
+	"868ba7e2f86cdb508c8d3744e223b44a8fdccd3552031ca0365b5764b844c276",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
