@@ -1,6 +1,6 @@
 # Challenge band table
 
-The challenge lane says every boss and Warden should beat a Novice, give a Learner a fair fight and fall to an Expert, and that a park should be reachable by a Learner and often not by a Novice. This harness measures that. It plays each boss, each Warden and each world's approach to its Warden with the Novice, Learner and Expert bot bands from saved builds, grades the win rates against the targets, and prints one table.
+The challenge lane says every boss and Warden should beat a Novice, give a Learner a fair fight and fall to an Expert, and that a park should be reachable by a Learner and often not by a Novice. This harness measures that. It plays each boss, each Warden and each park's approach to its own Warden with the Novice, Learner and Expert bot bands from saved builds, grades the win rates against the targets, and prints one table.
 
 It changes nothing in the game and is not the gate. The bands (what a Novice, Learner and Expert bot do differently: reaction, aim, dodging, how the attempt number teaches) live in `sketches/core-loop/tools/skill_band.gd` and are read by `tools/bot_run.gd` as `--band=novice|learner|expert` and `--attempt=N`. This harness only chooses builds, seeds and cells and counts.
 
@@ -35,7 +35,7 @@ The top/ord fight-time ratio is reported, not graded: the 2x hive rule is graded
 | `brindle`, `waking`, `mind` | boss | Resume the last stage of the world (stages 2, 4, 6) and enter the boss at once (`--to-boss=1`). Win is `boss.defeated_s`. |
 | `w1` to `w6` | Warden | Resume stage N and play it to its exit (`--until=N`). Win is the stage note's `warden_broken_s`. The fight may last 240 s from engagement (`--fight-limit`, over 3x the 45-85 s stagger bands); the stage cap is lifted to 600 s (`--stage-limit`) so it cannot cut an engaged fight first. A `fight_capped` or `stalled` run is a timeout, never a win, and is counted beside the deaths. |
 | `park1` to `park6` | park | Resume park N and stop the tick its own Warden is engaged (`--stop-at=engaged:N`). Win is outcome `reached`. This is the default park measure: the ruling's "reaches the world's Warden" is read per park, because a Learner who wins a Warden 15-35% of the time on a first try cannot reach the next park's Warden 80% of the time. |
-| `world1` to `world3` | park, only with `--cells=world` | Resume the world's first park (1, 3, 5) and stop the tick its second park's Warden is engaged, so the run must break the first Warden on the way. Kept for comparison. |
+| `world1` to `world3` | park, only with `--cells=world` | Resume the world's first park (1, 3, 5) and stop the tick its second park's Warden is engaged, so the run must break the first Warden on the way. Information only (coordinator ruling 19 Oct 04:32Z, "chain, information only"): the table prints it in its own section with no target and no ✓/✗, and it never counts as failing. |
 
 Stage 1 has no build to carry, so only `w1`, `park1` and `world1` play fresh runs and the seed picks the pilot. Every other cell resumes a library doc, and the run checks it did: stage, parts count and mass must match the doc (`resumed` in the row). A run that did not resume is an error.
 
@@ -97,4 +97,4 @@ Output: `artifacts/local/challenge/<label>/`: `meta.json` (shard, plan hash, com
 | Warden cell (`w1`) | 240 (cap) or 207 | 165 to 410 |
 | Park cell (`world1`, 2 jobs at once) | 207 to 240 | 129 to 147 |
 
-The default table is now 1,176 jobs (boss 360, Warden 720, park 96), about 27 hours at 4 parallel on the loaded numbers; `--dry-run` prints the estimate. Split it with `--shard`. These numbers were taken with the completionist Warden persona, whose w1 runs stalled at the 240 s stage cap before engaging; Warden cells now use the skipper.
+The default table is now 1,272 jobs (boss 360, Warden 720, park 192: six parks × Novice and Learner a1 × 16 seeds; the dry run counts park jobs under `world`, their kind), about 29 hours at 4 parallel on the loaded numbers; `--cells=world` adds 96 chain jobs; `--dry-run` prints the estimate. Split it with `--shard`. These numbers were taken with the completionist Warden persona, whose w1 runs stalled at the 240 s stage cap before engaging; Warden cells now use the skipper.

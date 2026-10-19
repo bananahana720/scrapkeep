@@ -2,7 +2,7 @@
 // node scripts/challenge/run.mjs --library [--lib-seeds=4] [--lib-pilots=a,b] [--label=<name>]
 // node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,park,world] [--only=brindle,w1,park1]
 //     [--seeds=<n>: 24 fights, 16 parks] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--warden-persona=skipper] [--park-persona=skipper]
-//     [--tune=key=value,key=value] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
+//     [--tune=<text passed whole to bot_run; the game's dials split key=value,key=value>] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
 // node scripts/challenge/run.mjs --library [--lib-shard=i/n]; --library-merge=<dir,dir> --label=<name>
 // node scripts/challenge/run.mjs --merge=<dir,dir>
 //
@@ -45,7 +45,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "label") opts.label = v;
   else if (k === "shard") opts.shard = v;
   else if (k === "merge") opts.merge = v.split(",");
-  else if (k === "tune") opts.tune = arg.replace(/^--tune=/, "");  // key=value pairs: the value keeps its own =
+  else if (k === "tune") opts.tune = arg.startsWith("--tune=") ? arg.slice(7) : "";  // passed to bot_run whole; the value keeps its own =
   else if (k === "resume") opts.resume = true;
   else if (k === "allow-mixed") opts.allowMixed = true;
   else if (k === "dry-run") opts.dryRun = true;

@@ -47,6 +47,10 @@ export const BOSSES = [
 ];
 export const WARDENS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "w" + n, stage: n, world: Math.ceil(n / 2) }));
 export const WORLDS = [1, 2, 3].map((w) => ({ id: "world" + w, world: w, first: 2 * w - 1, last: 2 * w }));
+// World chains are a comparison column only (coordinator ruling, 19 Oct 04:32Z: "chain, information only"):
+// no target, no ✓/✗, never in the fail or incomplete lists.
+const CHAIN_IDS = new Set(WORLDS.map((w) => w.id));
+export const isChain = (cell) => CHAIN_IDS.has(cell);
 // A park cell: resume park N and stop the tick its own Warden is engaged. This is the default park measure: the
 // world chain above has to break the first park's Warden on the way, so it mixes the park target with the Warden one
 // (a Learner who wins that Warden 15-35% of the time cannot reach the second park's Warden 80% of the time).
@@ -324,7 +328,7 @@ export function buildTable(runs, buckets = {}) {
     for (const col of COLUMNS) {
       if (!c.grades[col.id]) continue;
       const a = aggregate(c.grades[col.id]);
-      const target = targetFor(c.kind, col.id);
+      const target = isChain(c.cell) ? null : targetFor(c.kind, col.id);
       columns[col.id] = { ...a, target, ok: a.incomplete ? null : meets(target, a.rate) };
     }
     const ord = columns.expert?.medianFightS;
@@ -335,7 +339,7 @@ export function buildTable(runs, buckets = {}) {
     const early = deaths.filter((d) => d < TARGETS.earliestLearnerBossDeathS).length;
     const overlap = buckets[c.stage]?.overlap ?? 0;
     return {
-      cell: c.cell, kind: c.kind, stage: c.stage, columns, overlap,
+      cell: c.cell, kind: c.kind, stage: c.stage, columns, overlap, info: isChain(c.cell),
       growthRatio: ord && top ? round2(top / ord) : null, // reported, not graded
       tell: c.kind === "boss" && learners.length ? {
         earlyDeaths: early, earliestDeathS: deaths.length ? Math.min(...deaths) : null,
@@ -346,6 +350,7 @@ export function buildTable(runs, buckets = {}) {
 }
 
 export function cellVerdict(cell) {
+  if (cell.info) return "info";
   const marks = Object.values(cell.columns).map((c) => c.ok);
   const bad = marks.includes(false) || cell.tell?.ok === false;
   if (bad) return "fail";
@@ -360,7 +365,7 @@ function cellText(c, note = "") {
   const mark = c.ok === null ? "" : c.ok ? " ✓" : " ✗";
   // A stall or a fight cap is the fight beating the player, not a win: shown beside the deaths.
   const extra = [c.losses ? `${c.losses} died` : "", c.capped ? `${c.capped} capped` : "", c.stalled ? `${c.stalled} stalled` : "", ""].filter(Boolean).join(", ");
-  return `${pct(c.rate)} (${c.n}) [${pct(c.lo)}-${pct(c.hi)}]${mark} vs ${describeTarget(c.target)}${extra ? " (" + extra + ")" : ""}${out ? " (excluded: " + out + ")" : ""}${note}`;
+  return `${pct(c.rate)} (${c.n}) [${pct(c.lo)}-${pct(c.hi)}]${mark}${c.target ? " vs " + describeTarget(c.target) : ""}${extra ? " (" + extra + ")" : ""}${out ? " (excluded: " + out + ")" : ""}${note}`;
 }
 
 const fmt = (x, d = 1) => (x == null ? "-" : Number(x).toFixed(d));
@@ -391,11 +396,19 @@ export function renderTable(table, meta = {}) {
     }
     lines.push("");
   }
-  const worlds = table.filter((c) => c.kind === "world");
-  if (worlds.length) {
-    lines.push("## Parks (reach the Warden)", "", "`parkN` resumes park N and stops when that park's Warden is engaged. `worldN` (only with `--cells=world`) starts at the world's first park and stops at its second park's Warden, so it must break the first Warden on the way.", "");
+  const parkRow = (c) => `| ${c.cell} | ${cellText(c.columns.novice)} | ${cellText(c.columns.learner1)} | ${fmt(c.columns.learner1?.medianFightS)} |`;
+  const parks = table.filter((c) => c.kind === "world" && !c.info);
+  if (parks.length) {
+    lines.push("## Parks (reach the Warden)", "", "`parkN` resumes park N and stops when that park's Warden is engaged; reaching it is the win.", "");
     lines.push("| Cell | Novice | Learner a1 | Game s to reach (Learner) |", "| --- | --- | --- | --- |");
-    for (const c of worlds) lines.push(`| ${c.cell} | ${cellText(c.columns.novice)} | ${cellText(c.columns.learner1)} | ${fmt(c.columns.learner1?.medianFightS)} |`);
+    for (const c of parks) lines.push(parkRow(c));
+    lines.push("");
+  }
+  const chains = table.filter((c) => c.info);
+  if (chains.length) {
+    lines.push("## World chains (information only, not graded)", "", "`worldN` (only with `--cells=world`) starts at the world's first park and stops at its second park's Warden, so it must break the first Warden on the way. Coordinator ruling 19 Oct 04:32Z: the park target is read per park; the chain is a comparison column with no target.", "");
+    lines.push("| Cell | Novice | Learner a1 | Game s to reach (Learner) |", "| --- | --- | --- | --- |");
+    for (const c of chains) lines.push(parkRow(c));
     lines.push("");
   }
   if (meta.buckets && Object.keys(meta.buckets).length) {
