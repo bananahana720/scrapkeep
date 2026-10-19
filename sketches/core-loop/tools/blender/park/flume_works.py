@@ -1283,6 +1283,22 @@ SLEEPER_HALF = 0.25
 PANEL = 8.0                    # concrete panel length
 JOINT_HALF = 0.15              # half the width of a form joint
 BASE_TRIS = 7900               # under the landform budget of 8000
+# Registry class of a liner: landform (8,000 triangles) unless listed. A full cut of a long channel's walls to the ground mesh needs
+# about 14.5k, so these two ride the park_large class (16,000 triangles, assets/asset_budgets.json). The class only sets the cap
+# assert: the park row's `budget` stays landform and sets the in-game draw ranges.
+LARGE_LINERS = ("liner_trestle_hollow", "liner_wasteway_chute")
+
+
+def liner_class(rid):
+    return "park_large" if rid in LARGE_LINERS else "landform"
+
+
+def liner_cap(rid):
+    return 16000 if rid in LARGE_LINERS else BUDGET["base"]["tris"]
+
+
+def tri_limit(rid):
+    return liner_cap(rid) - 100
 ROCKS_MAX = 48                 # 20 tris each
 TUFTS_MAX = 60                 # 18 tris each
 CHECK_MIN, CHECK_MAX = -0.05, 0.30
@@ -1462,10 +1478,6 @@ def box_touches_footprint(row, x0, x1, z0, z1):
     return False
 
 
-# Rows whose area of footprint-touching rough ground cannot be cut to the ground mesh inside the landform budget (8,000 triangles):
-# the cells the budget cannot afford stay plain, lowered to the ground, and the most any of them stands above it inside a footprint is
-# listed here (flume_mesh measures it, liner_build and liner_check hold it). A row not listed holds FLUSH_LANE exactly.
-BUDGET_LIMITED = {"liner_trestle_hollow": 0.13, "liner_wasteway_chute": 1.2}
 FLOOR_OFF = -0.0015           # a settled corner goes no lower than this under the game's ground
 CAPV = FLUSH_LANE - 5e-5      # the offset a vertex inside a footprint is held to: under the band by more than float32 export can move it
 SURFACE_N = 4                 # barycentric lattice per triangle for the surface tests: (N+1)(N+2)/2 samples
@@ -1648,7 +1660,7 @@ def _fan(verts):
     return [t for t in ((verts[0], verts[k], verts[k + 1]) for k in range(1, n - 1)) if abs(poly_area([(p[0], p[1]) for p in t])) >= 1e-9]
 
 
-def emit_flush(row, V, cells, budget=None):
+def emit_flush(row, V, cells):
     """All drawn triangles of a flush row, as (three (lx, y, lz), colour). A cell whose plain triangles keep the band (against the
     game's ground mesh, at lattice samples inside footprints) stays plain; the others are cut along the ground mesh's edges, the
     footprints' edges and nothing else, each piece fan-triangulated with its vertices on the ground mesh plus the offset, held to the
@@ -1742,8 +1754,6 @@ def emit_flush(row, V, cells, budget=None):
 
     choice = {}
     severity = {}
-    residual = 0.0
-    demoted = 0
     queue = list(range(len(cells)))
     while queue:
         ci = queue.pop(0)
@@ -1778,54 +1788,17 @@ def emit_flush(row, V, cells, budget=None):
             out.append(f if poly_area(f) > 0 else f[::-1])
         return out
 
-    frag_cache = {}
-    if budget is not None:
-        for ci in range(len(cells)):
-            if mode[ci] == "overlay":
-                frag_cache[ci] = fragments(ci)
-        order = sorted(frag_cache, key=lambda k: (severity[k], k))
-
-        def total_with(k):
-            """Triangles if the k least bad overlaid cells were plain."""
-            for ci in order[:k]:
-                mode[ci] = "plain"
-            n = 0
-            for ci in range(len(cells)):
-                if mode[ci] == "plain":
-                    n += len(candidates(ci)[choice.get(ci, 0)]) if choice.get(ci, 0) < len(candidates(ci)) else len(candidates(ci)[0])
-                else:
-                    n += sum(len(f) - 2 for f in frag_cache[ci])
-            for ci in order[:k]:
-                mode[ci] = "overlay"
-            return n
-        lo, hi = 0, len(order)
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if total_with(mid) <= budget:
-                hi = mid
-            else:
-                lo = mid + 1
-        for ci in order[:lo]:
-            mode[ci] = "plain"
-            choice[ci] = 0
-            del frag_cache[ci]
-            demoted += 1
-        for ci in range(len(cells)):
-            if mode[ci] == "plain":
-                choice[ci], e = plain_choice(ci, force=True)
-                if e > FLUSH_LANE - 1e-6:
-                    residual = max(residual, e)
     out = []
     for ci, c in enumerate(cells):
         if mode[ci] == "plain":
             tris = candidates(ci)[choice[ci]]
         else:
             tris = []
-            for f in frag_cache.get(ci) or fragments(ci):
+            for f in fragments(ci):
                 tris += _fan([c.point(x, z) for x, z in f])
         for t in tris:
             out.append(([(row.local(p[0], p[1])[0], p[2], row.local(p[0], p[1])[1]) for p in t], c.colour))
-    return {"tris": out, "residual": residual, "demoted": demoted, "overlay": sum(1 for m in mode if m == "overlay")}
+    return {"tris": out, "overlay": sum(1 for m in mode if m == "overlay")}
 
 
 _MESH = {}
@@ -1839,7 +1812,7 @@ def rect_axes(row, step):
     return xs, zs
 
 
-def rect_mesh(row, xs, zs, budget=None):
+def rect_mesh(row, xs, zs):
     V = {}
     for j, lz in enumerate(zs):
         for i, lx in enumerate(xs):
@@ -1859,10 +1832,10 @@ def rect_mesh(row, xs, zs, budget=None):
                 continue
             gh = sum(V[k][5] for k in keys) / 4.0
             cells.append(FlushCell(row, V, keys, "rect", rect_colour(row, (xs[i] + xs[i + 1]) / 2.0, (zs[j] + zs[j + 1]) / 2.0, gh, i, j)))
-    return emit_flush(row, V, cells, budget)
+    return emit_flush(row, V, cells)
 
 
-def pond_mesh(row, rings, ref, nang, budget=None):
+def pond_mesh(row, rings, ref, nang):
     a_rim, b_rim, a_ext, b_ext = pond_geometry(row)
     V = {}
     for k, r in enumerate(rings):
@@ -1883,49 +1856,39 @@ def pond_mesh(row, rings, ref, nang, budget=None):
             keys = [(0, 0), (1, i), (1, j)] if k == 0 else [(k, i), (k, j), (k + 1, j), (k + 1, i)]
             rho = sum(V[q][6] for q in keys) / len(keys)
             cells.append(FlushCell(row, V, keys, "tri" if k == 0 else "quad", pond_colour(row, rho, k, i)))
-    return emit_flush(row, V, cells, budget)
+    return emit_flush(row, V, cells)
 
 
 def flush_mesh(row):
-    """{"tris", "xs", "zs", "residual", "demoted"} of a flush row at the finest sampling whose drawn triangles (overlay pieces
-    included, so measured, not estimated) fit the landform budget. A row that fits at no sampling (the ground is too rough for its
-    area) takes the sampling with the fewest triangles and demotes its least-bad overlaid cells to plain lowered ones until it fits;
-    `residual` is then the highest those demoted cells stand above the ground inside a footprint."""
+    """{"tris", "xs", "zs"} of a flush row at the finest sampling whose drawn triangles (overlay pieces included, so measured, not
+    estimated) fit the row's registry class cap; AssertionError when none does."""
     if row.rid in _MESH:
         return _MESH[row.rid]
+    limit = tri_limit(row.rid)
     if row.style == "pond":
         plans = []
         for step_m in (3.5, 4.5, 6.0, 8.0, 10.0, 13.0, 17.0):
             rings, ref = pond_rings(row, step_m)
             for nang in (96, 80, 64, 48):
-                if nang + 2 * nang * (len(rings) - 2) <= BASE_TRIS:
+                if nang + 2 * nang * (len(rings) - 2) <= limit:
                     plans.append((rings, ref, nang))
-        run = lambda plan, budget=None: pond_mesh(row, plan[0], plan[1], plan[2], budget)
-        axes = (None, None)
+        run = lambda plan: pond_mesh(row, plan[0], plan[1], plan[2])
     else:
         plans = []
         for step in (2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 16.0):
             xs, zs = rect_axes(row, step)
-            if 2 * (len(xs) - 1) * (len(zs) - 1) <= BASE_TRIS and (xs, zs) not in [p for p in plans]:
+            if 2 * (len(xs) - 1) * (len(zs) - 1) <= limit and (xs, zs) not in plans:
                 plans.append((xs, zs))
-        run = lambda plan, budget=None: rect_mesh(row, plan[0], plan[1], budget)
-    sizes = []
-    for k, plan in enumerate(plans):
+        run = lambda plan: rect_mesh(row, plan[0], plan[1])
+    counts = []
+    for plan in plans:
         res = run(plan)
-        if len(res["tris"]) <= BASE_TRIS:
+        counts.append(len(res["tris"]))
+        if len(res["tris"]) <= limit:
             res["xs"], res["zs"] = (plan[0], plan[1]) if row.style != "pond" else (None, None)
             _MESH[row.rid] = res
             return res
-        sizes.append((len(res["tris"]), k))
-    best = None
-    for n, k in sorted(sizes)[:3]:
-        res = run(plans[k], BASE_TRIS)
-        assert len(res["tris"]) <= BASE_TRIS, (row.rid, len(res["tris"]))
-        res["xs"], res["zs"] = (plans[k][0], plans[k][1]) if row.style != "pond" else (None, None)
-        if best is None or (res["residual"], res["demoted"]) < (best["residual"], best["demoted"]):
-            best = res
-    _MESH[row.rid] = best
-    return best
+    raise AssertionError("%s: the full cut needs at least %d triangles, cap %d" % (row.rid, min(counts or [0]), limit))
 
 
 def flush_clip(row, spec):
@@ -2512,8 +2475,7 @@ def liner_build(rid, out_dir):
     row = Row(rid)
     if row.flush:
         mesh = flush_mesh(row)
-        assert mesh["residual"] <= BUDGET_LIMITED.get(rid, 0.0) + 1e-6, (rid, mesh["residual"])
-        print("FLUME_WORKS_MESH", rid, "triangles %d  cells demoted for the budget %d  highest of them %.3f m" % (len(mesh["tris"]), mesh["demoted"], mesh["residual"]))
+        print("FLUME_WORKS_MESH", rid, "triangles %d  class %s (cap %d)  cut cells %d" % (len(mesh["tris"]), liner_class(rid), liner_cap(rid), mesh["overlay"]))
     plans = [(rid, [(rid + "_body", liner_base(row))], "base", LinerSurf)]
     if not row.flush:       # a flush_lane liner has no rim props, so no detail shells (the loader skips a missing shell)
         plans += [
@@ -2533,7 +2495,7 @@ def liner_build(rid, out_dir):
         common.export(root, str(path))
         info = grind.gltf_info(path)
         m = info["metrics"]
-        assert m["triangles"] <= BUDGET[kind]["tris"], (name, m["triangles"], BUDGET[kind])
+        assert m["triangles"] <= (liner_cap(rid) if kind == "base" else BUDGET[kind]["tris"]), (name, m["triangles"], liner_cap(rid))
         if kind == "detail":
             assert m["vertices"] <= 3000, (name, m["vertices"])
         assert m["materials"] == ["enamel"], (name, m["materials"])
@@ -2629,11 +2591,12 @@ def liner_check(rid, out_dir):
                 fails.append("%s: %.3f m above the ground inside the lane (flush_lane limit %.2f)" % (name, lane_max, FLUSH_LANE))
             tris = mesh_triangles(doc, binary, meshes[0])
             surf_max, surf_n = surface_in_footprints(row, pts, tris)
-            allow = BUDGET_LIMITED.get(rid, FLUSH_LANE)
-            print("FLUME_WORKS_FLUSH", name, "drawn surface inside any ride footprint: %d samples, highest interpolated %.4f m (limit %.2f%s), %d triangles  %s" % (
-                surf_n, surf_max, allow, ", budget-limited" if rid in BUDGET_LIMITED else "", len(tris), "PASS" if surf_max <= allow + 1e-4 else "FAIL"))
-            if surf_max > allow + 1e-4:
-                fails.append("%s: drawn surface %.3f m above the ground inside a ride row's footprint (limit %.2f)" % (name, surf_max, allow))
+            print("FLUME_WORKS_FLUSH", name, "drawn surface inside any ride footprint: %d samples, highest interpolated %.4f m (limit %.2f), %d triangles (cap %d, %s)  %s" % (
+                surf_n, surf_max, FLUSH_LANE, len(tris), liner_cap(rid), liner_class(rid), "PASS" if surf_max <= FLUSH_LANE + 1e-4 and len(tris) <= liner_cap(rid) else "FAIL"))
+            if surf_max > FLUSH_LANE + 1e-4:
+                fails.append("%s: drawn surface %.3f m above the ground inside a ride row's footprint (limit %.2f)" % (name, surf_max, FLUSH_LANE))
+            if len(tris) > liner_cap(rid):
+                fails.append("%s: %d triangles over the %s cap %d" % (name, len(tris), liner_class(rid), liner_cap(rid)))
             missing, total = lane_coverage(row, pts, tris)
             print("FLUME_WORKS_FLUSH", name, "lane coverage: %d of %d grid points uncovered (%.5f)  %s" % (
                 missing, total, missing / max(total, 1), "PASS" if missing == 0 else "FAIL"))
@@ -2886,8 +2849,8 @@ def liner_registry(rid):
         text = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. "
                 "No -col mesh: the stamped terrain stays the only collider. Ships " + FLUSH_NOTES[LINERS[rid]["style"]] + ". "
                 + "Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground" + (", the verge band included" if LINERS[rid]["style"] in ("sandstone", "haul", "rails") else "") + ", and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
-                + (" The ground under it is too rough to cut to within the 8,000 triangle budget, so some cells stay plain and lowered to the ground, the highest standing %.2f m above it inside a footprint." % BUDGET_LIMITED[rid] if rid in BUDGET_LIMITED else ""))
-        return [{"id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": "landform", "origin": "centre",
+                + (" Registry class park_large (16,000 triangles): a full cut of its channel walls to the ground mesh needs about 12k to 14.5k; the park row's budget stays landform." if rid in LARGE_LINERS else ""))
+        return [{"id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": liner_class(rid), "origin": "centre",
                  "ships": True, "loader": "src/world/park/park_recipes.gd",
                  "provenance": {"recipe": "tools/blender/park/flume_works.py", "note": text}}]
     note = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. "
