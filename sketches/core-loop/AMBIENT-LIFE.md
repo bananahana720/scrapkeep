@@ -42,7 +42,7 @@ The Fleet appears in the Highdraft as signs only (moored kites, an empty crew be
 
 ## Tests
 
-`ambient_pool_test` (cap, flee, react, boss hide, hush, determinism), `ambient_homes_test` (keepouts on all six parks), `ambient_view_test` (no collision, no shadows, no events), `ambient_palette_test` (life band, enemy GLBs outside it, distance from the meaning colours), `ambient_assets_test` (tris, loops, height, one material, the mesh audit: no open or over-shared edge, no flipped face, and the loop-seam check on idle, move and the react hold), `ambient_sounds_test` (lengths, peaks, format).
+`ambient_pool_test` (cap, flee, react, boss hide, hush, determinism), `ambient_homes_test` (keepouts on all six parks), `ambient_view_test` (no collision, no shadows, no events), `ambient_hook_test` (presentation.gd builds it on the high preset, frees it on low), `ambient_palette_test` (life band, enemy GLBs outside it, distance from the meaning colours), `ambient_assets_test` (tris, loops, height, one material, the mesh audit: no open or over-shared edge, no flipped face, and the loop-seam check on idle, move and the react hold), `ambient_sounds_test` (lengths, peaks, format).
 
 ## Dressing lane
 
