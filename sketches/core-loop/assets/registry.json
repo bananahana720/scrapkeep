@@ -9704,7 +9704,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells. The ground under it is too rough to cut to within the 8,000 triangle budget, so some cells stay plain and lowered to the ground, the highest standing 0.13 m above it inside a footprint."
    }
   },
   {
@@ -9716,7 +9716,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a board-formed concrete chute with form joints, coping bands, wall relief and the painted gauge staff: the joints, the wall and the gauge are capped to the 0.12 m band inside every ride row's footprint, not removed, and keep their full relief outside. Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground, and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a board-formed concrete chute with form joints, coping bands, wall relief and the painted gauge staff: the joints, the wall and the gauge are capped to the 0.12 m band inside every ride row's footprint, not removed, and keep their full relief outside. Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground, and the sheet ships no rim props (no rocks, no tufts) and no detail shells. The ground under it is too rough to cut to within the 8,000 triangle budget, so some cells stay plain and lowered to the ground, the highest standing 1.20 m above it inside a footprint."
    }
   },
   {

@@ -65,6 +65,7 @@ import hashlib
 import json
 import bisect
 import math
+import os
 from pathlib import Path
 import struct
 import sys
@@ -1340,6 +1341,7 @@ LINER_NOTES = {
 LINER_NOTES_EXTRA = {"liner_wasteway_chute": "; a painted gauge staff on one wall"}
 
 _GROUND = {}
+_GROUND_LISTS = {}
 
 
 def ground_rows(park="park_flume"):
@@ -1376,6 +1378,22 @@ def ground_at(x, z, park="park_flume"):
     da = h00 + u * (h10 - h00) + v * (h11 - h10) if u >= v else h00 + v * (h01 - h00) + u * (h11 - h01)
     db = h00 + u * (h10 - h00) + v * (h01 - h00) if u + v <= 1.0 else h11 + (1 - u) * (h01 - h11) + (1 - v) * (h10 - h11)
     return bil, max(bil, da, db)
+
+
+def ground_db(x, z, park="park_flume"):
+    """The height of the game's ground mesh at world x, z: park_terrain.gd's grid (STEP 2, HALF 800) cut a, b, c / b, d, c with the
+    diagonal from b to c (terrain.gd), so planar inside each triangle; this is ground_at's `db`."""
+    g = _GROUND_LISTS.get(park)
+    if g is None:
+        g = _GROUND_LISTS[park] = ground_rows(park).tolist()
+    fx = min(max((x + GROUND_HALF) / GROUND_STEP, 0.0), GROUND_N - 1 - 1e-9)
+    fz = min(max((z + GROUND_HALF) / GROUND_STEP, 0.0), GROUND_N - 1 - 1e-9)
+    ix, iz = int(fx), int(fz)
+    u, v = fx - ix, fz - iz
+    h00, h10, h01, h11 = g[iz][ix], g[iz][ix + 1], g[iz + 1][ix], g[iz + 1][ix + 1]
+    if u + v <= 1.0:
+        return h00 + u * (h10 - h00) + v * (h01 - h00)
+    return h11 + (1 - u) * (h01 - h11) + (1 - v) * (h10 - h11)
 
 
 def ss(t):
@@ -1444,67 +1462,470 @@ def box_touches_footprint(row, x0, x1, z0, z1):
     return False
 
 
-def flush_capped(row, cells):
-    """The vertex keys of every cell (a list of ((key, lx, lz) x 3 or 4)) that touches a footprint."""
-    out = set()
-    for cell in cells:
-        lxs = [c[1] for c in cell]
-        lzs = [c[2] for c in cell]
-        if box_touches_footprint(row, min(lxs), max(lxs), min(lzs), max(lzs)):
-            out.update(c[0] for c in cell)
+# Rows whose area of footprint-touching rough ground cannot be cut to the ground mesh inside the landform budget (8,000 triangles):
+# the cells the budget cannot afford stay plain, lowered to the ground, and the most any of them stands above it inside a footprint is
+# listed here (flume_mesh measures it, liner_build and liner_check hold it). A row not listed holds FLUSH_LANE exactly.
+BUDGET_LIMITED = {"liner_trestle_hollow": 0.13, "liner_wasteway_chute": 1.2}
+FLOOR_OFF = -0.0015           # a settled corner goes no lower than this under the game's ground
+CAPV = FLUSH_LANE - 5e-5      # the offset a vertex inside a footprint is held to: under the band by more than float32 export can move it
+SURFACE_N = 4                 # barycentric lattice per triangle for the surface tests: (N+1)(N+2)/2 samples
+
+
+_FPQ = {}
+
+
+def fp_inside(park, x, z, reach=0.0):
+    q = _FPQ.get(park)
+    if q is None:
+        q = _FPQ[park] = [(at[0], at[1], (hl + hw + 1.0) ** 2, hl, hw, f, a) for rid, at, hl, hw, f, a in ride_footprints(park)]
+    for ax, az, r2, hl, hw, f, a in q:
+        dx, dz = x - ax, z - az
+        if dx * dx + dz * dz > r2:
+            continue
+        if abs(dx * f[0] + dz * f[1]) <= hl + reach + 1e-6 and abs(dx * a[0] + dz * a[1]) <= hw + reach + 1e-6:
+            return True
+    return False
+
+
+def _fp_edges(fp):
+    """The four edge lines of a footprint as (nx, nz, c, other axis, half extent along it, at)."""
+    rid, at, hl, hw, f, a = fp
+    cf = f[0] * at[0] + f[1] * at[1]
+    ca = a[0] * at[0] + a[1] * at[1]
+    return [(f[0], f[1], cf + hl, a, hw, at, True), (f[0], f[1], cf - hl, a, hw, at, True),
+            (a[0], a[1], ca + hw, f, hl, at, False), (a[0], a[1], ca - hw, f, hl, at, False)]
+
+
+def _fp_near(park, x0, x1, z0, z1):
+    out = []
+    for fp in ride_footprints(park):
+        rid, at, hl, hw, f, a = fp
+        ext = abs(f[0]) * hl + abs(a[0]) * hw, abs(f[1]) * hl + abs(a[1]) * hw
+        if at[0] - ext[0] <= x1 + 1e-6 and at[0] + ext[0] >= x0 - 1e-6 and at[1] - ext[1] <= z1 + 1e-6 and at[1] + ext[1] >= z0 - 1e-6:
+            out.append(fp)
     return out
 
 
-SETTLE_SINK = 0.03     # a settled vertex goes no lower than this under the ground
-SETTLE_PASSES = 12
-SETTLE_AIM = 5e-5      # and aims this far under the band, so float32 export never tips a sample over it
+def grid_lines(x0, x1, z0, z1):
+    """The ground mesh's edges across a box: x = 2k, z = 2k and the anti-diagonals x + z = 2m (terrain.gd's b-c diagonal)."""
+    out = [(1.0, 0.0, 2.0 * k) for k in range(math.ceil(x0 / 2.0 - 1e-9), math.floor(x1 / 2.0 + 1e-9) + 1)]
+    out += [(0.0, 1.0, 2.0 * k) for k in range(math.ceil(z0 / 2.0 - 1e-9), math.floor(z1 / 2.0 + 1e-9) + 1)]
+    out += [(1.0, 1.0, 2.0 * m) for m in range(math.ceil((x0 + z0) / 2.0 - 1e-9), math.floor((x1 + z1) / 2.0 + 1e-9) + 1)]
+    return out
 
 
-def surface_lattice(n=None):
-    n = n or SURFACE_N
-    return [(a / n, b / n, (n - a - b) / n) for a in range(n + 1) for b in range(n + 1 - a)]
+def seg_kinks(park, P, Q):
+    """Parameters t in (0, 1) along the world segment P-Q where the ground-conformed height has a kink: a ground mesh edge or the
+    boundary of a ride footprint."""
+    x0, x1 = sorted((P[0], Q[0]))
+    z0, z1 = sorted((P[1], Q[1]))
+    dx, dz = Q[0] - P[0], Q[1] - P[1]
+    ts = []
+    for nx, nz, c in grid_lines(x0, x1, z0, z1):
+        den = nx * dx + nz * dz
+        if abs(den) > 1e-12:
+            t = (c - nx * P[0] - nz * P[1]) / den
+            if 1e-9 < t < 1 - 1e-9:
+                ts.append(t)
+    for fp in _fp_near(park, x0, x1, z0, z1):
+        for nx, nz, c, other, ext, at, _ in _fp_edges(fp):
+            den = nx * dx + nz * dz
+            if abs(den) > 1e-12:
+                t = (c - nx * P[0] - nz * P[1]) / den
+                if 1e-9 < t < 1 - 1e-9 and abs((P[0] + t * dx - at[0]) * other[0] + (P[1] + t * dz - at[1]) * other[1]) <= ext + 1e-6:
+                    ts.append(t)
+    ts.sort()
+    out = []
+    for t in ts:
+        if not out or t - out[-1] > 1e-9:
+            out.append(t)
+    return out
 
 
-def settle_cells(row, verts, cells):
-    """Make the drawn surface itself obey the band. verts: key -> [lx, y, lz, bil]; cells: lists of 3 or 4 keys in drawing order.
-    Every sample of a cell's triangles (both diagonals of a quad, as the triangulation is the exporter's) that lies inside a ride
-    footprint is held to FLUSH_LANE above the ground: the cell's vertices are lowered by the excess, never more than SETTLE_SINK under
-    the ground, over a few passes. A cell that still exceeds the band (a cliff or cut the sampling bridges) is dropped, so the
-    baked ground, which is solid, shows there. Returns the indices of the dropped cells."""
-    lattice = surface_lattice()
-    plans = []
-    for ci, cell in enumerate(cells):
-        xs_ = [verts[k][0] for k in cell]
-        zs_ = [verts[k][2] for k in cell]
-        if not box_touches_footprint(row, min(xs_), max(xs_), min(zs_), max(zs_)):
+def split_poly(poly, line):
+    nx, nz, c = line
+    d = [nx * x + nz * z - c for x, z in poly]
+    if min(d) >= -1e-9 or max(d) <= 1e-9:
+        return [poly]
+    a, b = [], []
+    n = len(poly)
+    for i in range(n):
+        p, q, dp, dq = poly[i], poly[(i + 1) % n], d[i], d[(i + 1) % n]
+        if dp > 1e-9:
+            a.append(p)
+        elif dp < -1e-9:
+            b.append(p)
+        else:
+            a.append(p)
+            b.append(p)
+        if (dp > 1e-9 and dq < -1e-9) or (dp < -1e-9 and dq > 1e-9):
+            t = dp / (dp - dq)
+            r = (p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t)
+            a.append(r)
+            b.append(r)
+    return [x for x in (a, b) if len(x) >= 3]
+
+
+def poly_area(poly):
+    return 0.5 * sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1] for i in range(len(poly)))
+
+
+def tris_excess(row, tris):
+    """Highest the interpolated surface stands above the game's ground over a lattice of every triangle's points that lie inside a
+    ride footprint; tris are lists of three (world x, world z, local y). -1 when none do."""
+    best = -1.0
+    n = SURFACE_N
+    lattice = [(a / n, b / n, (n - a - b) / n) for a in range(n + 1) for b in range(n + 1 - a)]
+    for t in tris:
+        for u, v, w in lattice:
+            x = u * t[0][0] + v * t[1][0] + w * t[2][0]
+            z = u * t[0][1] + v * t[1][1] + w * t[2][1]
+            if fp_inside(row.park, x, z):
+                best = max(best, u * t[0][2] + v * t[1][2] + w * t[2][2] + row.g0 - ground_db(x, z, row.park))
+    return best
+
+
+def _bary(p, a, b, c):
+    d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+    if abs(d) < 1e-12:
+        return -1.0, -1.0, -1.0
+    u = ((b[1] - c[1]) * (p[0] - c[0]) + (c[0] - b[0]) * (p[1] - c[1])) / d
+    v = ((c[1] - a[1]) * (p[0] - c[0]) + (a[0] - c[0]) * (p[1] - c[1])) / d
+    return u, v, 1.0 - u - v
+
+
+class FlushCell:
+    """A lattice cell of a flush row: corner keys in drawing order, kind rect (x0,z0 / x1,z0 / x1,z1 / x0,z1), tri or quad."""
+
+    def __init__(self, row, V, keys, kind, colour):
+        self.row, self.V, self.keys, self.kind, self.colour = row, V, keys, kind, colour
+        self.loc = [(V[k][0], V[k][1]) for k in keys]
+        self.world = [(V[k][2], V[k][3]) for k in keys]
+        lxs, lzs = [p[0] for p in self.loc], [p[1] for p in self.loc]
+        self.lbox = (min(lxs), max(lxs), min(lzs), max(lzs))
+
+    @property
+    def offs(self):
+        return [self.V[k][4] for k in self.keys]
+
+    def off_at(self, lx, lz):
+        L, o = self.loc, self.offs
+        if self.kind == "rect":
+            s = (lx - L[0][0]) / (L[1][0] - L[0][0])
+            t = (lz - L[0][1]) / (L[3][1] - L[0][1])
+            return o[0] * (1 - s) * (1 - t) + o[1] * s * (1 - t) + o[2] * s * t + o[3] * (1 - s) * t
+        u, v, w = _bary((lx, lz), L[0], L[1], L[2])
+        if self.kind == "tri" or min(u, v, w) >= -1e-9:
+            return u * o[0] + v * o[1] + w * o[2]
+        u, v, w = _bary((lx, lz), L[0], L[2], L[3])
+        return u * o[0] + v * o[2] + w * o[3]
+
+    def point(self, x, z):
+        """(world x, world z, local y) of the surface over the world point: the ground mesh plus the offset, held to the band
+        inside a footprint."""
+        row = self.row
+        lx, lz = row.local(x, z)
+        off = self.off_at(lx, lz)
+        if fp_inside(row.park, x, z):
+            off = min(off, CAPV)
+        return x, z, ground_db(x, z, row.park) + off - row.g0
+
+
+def _fan(verts):
+    """Triangles (three vertices each) of a convex polygon, from the first vertex that gives no zero-area triangle."""
+    n = len(verts)
+    for start in range(n):
+        out = []
+        ok = True
+        for k in range(1, n - 1):
+            t = (verts[start], verts[(start + k) % n], verts[(start + k + 1) % n])
+            if abs(poly_area([(p[0], p[1]) for p in t])) < 1e-9:
+                ok = False
+                break
+            out.append(t)
+        if ok:
+            return out
+    return [t for t in ((verts[0], verts[k], verts[k + 1]) for k in range(1, n - 1)) if abs(poly_area([(p[0], p[1]) for p in t])) >= 1e-9]
+
+
+def emit_flush(row, V, cells, budget=None):
+    """All drawn triangles of a flush row, as (three (lx, y, lz), colour). A cell whose plain triangles keep the band (against the
+    game's ground mesh, at lattice samples inside footprints) stays plain; the others are cut along the ground mesh's edges, the
+    footprints' edges and nothing else, each piece fan-triangulated with its vertices on the ground mesh plus the offset, held to the
+    band inside a footprint. A plain cell next to an overlaid one takes the neighbour's kink points on the shared edge, so no crack
+    opens."""
+    park = row.park
+    ekey = lambda a, b: (a, b) if a <= b else (b, a)
+    emap = {}
+    for ci, c in enumerate(cells):
+        for e in range(len(c.keys)):
+            emap.setdefault(ekey(c.keys[e], c.keys[(e + 1) % len(c.keys)]), []).append(ci)
+    touches = [box_touches_footprint(row, *c.lbox) for c in cells]
+    mode = ["plain"] * len(cells)
+    kink_cache = {}
+
+    def kinks(a, b):
+        k = ekey(a, b)
+        if k not in kink_cache:
+            P, Q = (V[k[0]][2], V[k[0]][3]), (V[k[1]][2], V[k[1]][3])
+            kink_cache[k] = [(P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])) for t in seg_kinks(park, P, Q)]
+        pts = kink_cache[k]
+        return pts if (a, b) == k else pts[::-1]
+
+    def corner(c, k):
+        x, z = c.world[k]
+        return c.point(x, z)
+
+    def ring_of(ci):
+        """The cell's corners, each edge followed by the kink points of a neighbour that is overlaid; whether any were added."""
+        c = cells[ci]
+        n = len(c.keys)
+        ring = []
+        extra = False
+        for e in range(n):
+            ring.append(corner(c, e))
+            for o in emap[ekey(c.keys[e], c.keys[(e + 1) % n])]:
+                if o != ci and mode[o] == "overlay":
+                    ring += [c.point(x, z) for x, z in kinks(c.keys[e], c.keys[(e + 1) % n])]
+                    extra = True
+                    break
+        return ring, extra
+
+    def candidates(ci):
+        ring, extra = ring_of(ci)
+        if extra:
+            cx = sum(p[0] for p in ring) / len(ring)
+            cz = sum(p[1] for p in ring) / len(ring)
+            mid = cells[ci].point(cx, cz)
+            return [[(mid, ring[k], ring[(k + 1) % len(ring)]) for k in range(len(ring))]]
+        if len(cells[ci].keys) == 3:
+            return [[(ring[0], ring[1], ring[2])]]
+        return [[(ring[0], ring[1], ring[2]), (ring[0], ring[2], ring[3])], [(ring[0], ring[1], ring[3]), (ring[1], ring[2], ring[3])]]
+
+    def plain_choice(ci, force=False):
+        """(index of the candidate triangulation that keeps the band, its excess); the cell's corners are lowered (never to more than
+        FLOOR_OFF under the ground) when it takes that. (None, best excess) when no candidate can; with force the least bad candidate
+        is kept, lowered as far as it goes, and its index returned."""
+        c = cells[ci]
+        n_cand = len(candidates(ci))
+        if not touches[ci]:
+            return 0, -1.0
+        for d in range(n_cand):
+            e = tris_excess(row, candidates(ci)[d])
+            if e <= FLUSH_LANE - 1e-6:
+                return d, e
+        best = (None, 1e9, None)
+        for d in range(n_cand):
+            saved = {k: V[k][4] for k in c.keys}
+            e = 1e9
+            for _ in range(6):
+                e = tris_excess(row, candidates(ci)[d])
+                if e <= FLUSH_LANE - 1e-6:
+                    return d, e
+                moved = False
+                for k in c.keys:
+                    low = max(V[k][4] - (e - FLUSH_LANE + 2e-5), FLOOR_OFF)
+                    if low < V[k][4] - 1e-9:
+                        V[k][4] = low
+                        moved = True
+                if not moved:
+                    break
+            if e < best[1]:
+                best = (d, e, {k: V[k][4] for k in c.keys})
+            for k, v in saved.items():
+                V[k][4] = v
+        if force and best[0] is not None:
+            for k, v in best[2].items():
+                V[k][4] = v
+            return best[0], best[1]
+        return None, best[1]
+
+    choice = {}
+    severity = {}
+    residual = 0.0
+    demoted = 0
+    queue = list(range(len(cells)))
+    while queue:
+        ci = queue.pop(0)
+        if mode[ci] == "overlay":
             continue
-        tris = [(0, 1, 2)] if len(cell) == 3 else [(0, 1, 2), (0, 2, 3), (1, 2, 3), (1, 3, 0)]
-        samples = []
-        for t in tris:
-            for u, v, w in lattice:
-                x = u * verts[cell[t[0]]][0] + v * verts[cell[t[1]]][0] + w * verts[cell[t[2]]][0]
-                z = u * verts[cell[t[0]]][2] + v * verts[cell[t[1]]][2] + w * verts[cell[t[2]]][2]
-                if in_ride_footprint(row, x, z):
-                    wts = [0.0] * len(cell)
-                    wts[t[0]], wts[t[1]], wts[t[2]] = u, v, w
-                    samples.append((wts, ground_at(*row.world(x, z), row.park)[0] - row.g0))
-        if samples:
-            plans.append((ci, cell, samples))
+        got, bad = plain_choice(ci)
+        if got is None:
+            mode[ci] = "overlay"
+            severity[ci] = bad
+            choice.pop(ci, None)
+            n = len(cells[ci].keys)
+            for k in range(n):
+                for o in emap[ekey(cells[ci].keys[k], cells[ci].keys[(k + 1) % n])]:
+                    if o != ci and mode[o] == "plain":
+                        queue.append(o)
+        else:
+            choice[ci] = got
+    def fragments(ci):
+        c = cells[ci]
+        x0, x1 = min(p[0] for p in c.world), max(p[0] for p in c.world)
+        z0, z1 = min(p[1] for p in c.world), max(p[1] for p in c.world)
+        lines = grid_lines(x0, x1, z0, z1)
+        for fp in _fp_near(park, x0, x1, z0, z1):
+            lines += [(e[0], e[1], e[2]) for e in _fp_edges(fp)]
+        frags = [list(c.world)]
+        for line in lines:
+            frags = [q for f in frags for q in split_poly(f, line)]
+        out = []
+        for f in frags:
+            if abs(poly_area(f)) < 1e-9:
+                continue
+            out.append(f if poly_area(f) > 0 else f[::-1])
+        return out
 
-    def excess(cell, samples):
-        return max(sum(wt * verts[k][1] for wt, k in zip(wts, cell)) - g for wts, g in samples) - (FLUSH_LANE - SETTLE_AIM)
-    for _ in range(SETTLE_PASSES):
-        moved = False
-        for ci, cell, samples in plans:
-            e = 0.0
-            e = excess(cell, samples)
-            if e > 0.0:
-                for k in cell:
-                    verts[k][1] = max(verts[k][1] - e, verts[k][3] - row.g0 - SETTLE_SINK)
-                moved = True
-        if not moved:
-            break
-    return {ci for ci, cell, samples in plans if excess(cell, samples) > 1e-5}
+    frag_cache = {}
+    if budget is not None:
+        for ci in range(len(cells)):
+            if mode[ci] == "overlay":
+                frag_cache[ci] = fragments(ci)
+        order = sorted(frag_cache, key=lambda k: (severity[k], k))
+
+        def total_with(k):
+            """Triangles if the k least bad overlaid cells were plain."""
+            for ci in order[:k]:
+                mode[ci] = "plain"
+            n = 0
+            for ci in range(len(cells)):
+                if mode[ci] == "plain":
+                    n += len(candidates(ci)[choice.get(ci, 0)]) if choice.get(ci, 0) < len(candidates(ci)) else len(candidates(ci)[0])
+                else:
+                    n += sum(len(f) - 2 for f in frag_cache[ci])
+            for ci in order[:k]:
+                mode[ci] = "overlay"
+            return n
+        lo, hi = 0, len(order)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if total_with(mid) <= budget:
+                hi = mid
+            else:
+                lo = mid + 1
+        for ci in order[:lo]:
+            mode[ci] = "plain"
+            choice[ci] = 0
+            del frag_cache[ci]
+            demoted += 1
+        for ci in range(len(cells)):
+            if mode[ci] == "plain":
+                choice[ci], e = plain_choice(ci, force=True)
+                if e > FLUSH_LANE - 1e-6:
+                    residual = max(residual, e)
+    out = []
+    for ci, c in enumerate(cells):
+        if mode[ci] == "plain":
+            tris = candidates(ci)[choice[ci]]
+        else:
+            tris = []
+            for f in frag_cache.get(ci) or fragments(ci):
+                tris += _fan([c.point(x, z) for x, z in f])
+        for t in tris:
+            out.append(([(row.local(p[0], p[1])[0], p[2], row.local(p[0], p[1])[1]) for p in t], c.colour))
+    return {"tris": out, "residual": residual, "demoted": demoted, "overlay": sum(1 for m in mode if m == "overlay")}
+
+
+_MESH = {}
+
+
+def rect_axes(row, step):
+    """Lattice lines of a flush row: its feature stations, filled to `step`. No refinement to the ground: an overlaid cell is cut to the
+    ground mesh, so a rough ground needs no extra lattice lines."""
+    xs = across_stations(row, step)
+    zs = along_stations(row, step)
+    return xs, zs
+
+
+def rect_mesh(row, xs, zs, budget=None):
+    V = {}
+    for j, lz in enumerate(zs):
+        for i, lx in enumerate(xs):
+            bil = row.sample(lx, lz)[0]
+            off = rect_off(row, lx, lz, bil)
+            we = edge_weight(min((row.exr - lx) if lx >= 0 else (row.exl + lx), row.ez - abs(lz)))
+            off = min(EDGE_OFF + (off - EDGE_OFF) * we, FEATURE_MAX + 0.03)
+            wx, wz = row.world(lx, lz)
+            V[(j, i)] = [lx, lz, wx, wz, off, bil]
+    cells = []
+    for j in range(len(zs) - 1):
+        for i in range(len(xs) - 1):
+            keys = [(j, i), (j, i + 1), (j + 1, i + 1), (j + 1, i)]
+            if row.gap is not None and max(abs(V[k][5] - row.g0) for k in keys) > row.gap:
+                continue
+            if row.peers and flush_cell_covered(row, xs[i], xs[i + 1], zs[j], zs[j + 1]):
+                continue
+            gh = sum(V[k][5] for k in keys) / 4.0
+            cells.append(FlushCell(row, V, keys, "rect", rect_colour(row, (xs[i] + xs[i + 1]) / 2.0, (zs[j] + zs[j + 1]) / 2.0, gh, i, j)))
+    return emit_flush(row, V, cells, budget)
+
+
+def pond_mesh(row, rings, ref, nang, budget=None):
+    a_rim, b_rim, a_ext, b_ext = pond_geometry(row)
+    V = {}
+    for k, r in enumerate(rings):
+        for i in range(1 if k == 0 else nang):
+            phi = math.tau * i / nang
+            lx, lz = a_ext * r * math.cos(phi), b_ext * r * math.sin(phi)
+            bil = row.sample(lx, lz)[0]
+            rho = pond_rho(row, lx, lz)
+            off = pond_off(row, rho, k)
+            we = edge_weight((ref - rho) * min(a_rim, b_rim))
+            off = EDGE_OFF + (off - EDGE_OFF) * we
+            wx, wz = row.world(lx, lz)
+            V[(k, i)] = [lx, lz, wx, wz, off, bil, rho]
+    cells = []
+    for k in range(len(rings) - 1):
+        for i in range(nang):
+            j = (i + 1) % nang
+            keys = [(0, 0), (1, i), (1, j)] if k == 0 else [(k, i), (k, j), (k + 1, j), (k + 1, i)]
+            rho = sum(V[q][6] for q in keys) / len(keys)
+            cells.append(FlushCell(row, V, keys, "tri" if k == 0 else "quad", pond_colour(row, rho, k, i)))
+    return emit_flush(row, V, cells, budget)
+
+
+def flush_mesh(row):
+    """{"tris", "xs", "zs", "residual", "demoted"} of a flush row at the finest sampling whose drawn triangles (overlay pieces
+    included, so measured, not estimated) fit the landform budget. A row that fits at no sampling (the ground is too rough for its
+    area) takes the sampling with the fewest triangles and demotes its least-bad overlaid cells to plain lowered ones until it fits;
+    `residual` is then the highest those demoted cells stand above the ground inside a footprint."""
+    if row.rid in _MESH:
+        return _MESH[row.rid]
+    if row.style == "pond":
+        plans = []
+        for step_m in (3.5, 4.5, 6.0, 8.0, 10.0, 13.0, 17.0):
+            rings, ref = pond_rings(row, step_m)
+            for nang in (96, 80, 64, 48):
+                if nang + 2 * nang * (len(rings) - 2) <= BASE_TRIS:
+                    plans.append((rings, ref, nang))
+        run = lambda plan, budget=None: pond_mesh(row, plan[0], plan[1], plan[2], budget)
+        axes = (None, None)
+    else:
+        plans = []
+        for step in (2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 16.0):
+            xs, zs = rect_axes(row, step)
+            if 2 * (len(xs) - 1) * (len(zs) - 1) <= BASE_TRIS and (xs, zs) not in [p for p in plans]:
+                plans.append((xs, zs))
+        run = lambda plan, budget=None: rect_mesh(row, plan[0], plan[1], budget)
+    sizes = []
+    for k, plan in enumerate(plans):
+        res = run(plan)
+        if len(res["tris"]) <= BASE_TRIS:
+            res["xs"], res["zs"] = (plan[0], plan[1]) if row.style != "pond" else (None, None)
+            _MESH[row.rid] = res
+            return res
+        sizes.append((len(res["tris"]), k))
+    best = None
+    for n, k in sorted(sizes)[:3]:
+        res = run(plans[k], BASE_TRIS)
+        assert len(res["tris"]) <= BASE_TRIS, (row.rid, len(res["tris"]))
+        res["xs"], res["zs"] = (plans[k][0], plans[k][1]) if row.style != "pond" else (None, None)
+        if best is None or (res["residual"], res["demoted"]) < (best["residual"], best["demoted"]):
+            best = res
+    _MESH[row.rid] = best
+    return best
 
 
 def flush_clip(row, spec):
@@ -1562,13 +1983,14 @@ def gap_dropped(rid, lx, lz):
     wrow = plan_row(rid)
     if wrow.gap is None:
         return False
-    xs, zs, _, _ = rect_plan(wrow)
+    mesh = flush_mesh(wrow)
+    xs, zs = mesh["xs"], mesh["zs"]
     i = min(max(bisect.bisect_right(xs, lx) - 1, 0), len(xs) - 2)
     j = min(max(bisect.bisect_right(zs, lz) - 1, 0), len(zs) - 2)
     return max(abs(wrow.sample(x, z)[0] - wrow.g0) for x in (xs[i], xs[i + 1]) for z in (zs[j], zs[j + 1])) > wrow.gap
 
 
-def sheet_zone(rid, x, z):
+def sheet_zone(rid, x, z, gap_aware=True):
     """2 inside the lane of the row at world (x, z), 1 inside its sheet (lane plus MARGIN), else 0 (also 0 where the row's own
     mesh drops the cell for its gap rule)."""
     spec = LINERS[rid]
@@ -1585,14 +2007,14 @@ def sheet_zone(rid, x, z):
         zone = 1
     else:
         return 0
-    return 0 if spec.get("gap") is not None and gap_dropped(rid, lx, lz) else zone
+    return 0 if gap_aware and spec.get("gap") is not None and gap_dropped(rid, lx, lz) else zone
 
 
 def flush_covered(row, lx, lz):
     """Whether another flush_lane row's sheet takes the liner-local point: it is inside that row's lane and not this row's, or in
     both sheets and that row is the earlier one."""
     x, z = row.world(lx, lz)
-    mine = sheet_zone(row.rid, x, z)
+    mine = sheet_zone(row.rid, x, z, False)
     for earlier, oid in row.peers:
         theirs = sheet_zone(oid, x, z)
         if theirs > mine or (theirs == mine and theirs and earlier):
@@ -1641,7 +2063,6 @@ class Row:
         self.hw, self.hl = self.W / 2.0, self.L / 2.0
         self.ex, self.ez = self.hw + MARGIN, self.hl + MARGIN
         self.exl = self.exr = self.ex           # the sheet's extent on the -x and +x side (flush_lane rows clip at a neighbouring lane)
-        self.settle = self.flush        # every flush row holds the band on its sampled surface
         self.peers = flush_peers(rid) if self.flush else []
         if self.flush:
             assert_pond_clear(rid)
@@ -1652,6 +2073,13 @@ class Row:
 
     def world(self, lx, lz):
         return self.ax + lx * self.c + lz * self.s, self.az - lx * self.s + lz * self.c
+
+    def local(self, x, z):
+        dx, dz = x - self.ax, z - self.az
+        return dx * self.c - dz * self.s, dx * self.s + dz * self.c
+
+    def db(self, lx, lz):
+        return ground_db(*self.world(lx, lz), self.park)
 
     def sample(self, lx, lz):
         key = (round(lx, 5), round(lz, 5))
@@ -1978,95 +2406,8 @@ def pond_plan(row):
 
 def liner_base(row):
     def build(s):
-        if row.style == "pond":
-            rings, ref, nang, _ = pond_plan(row)
-            a_rim, b_rim, a_ext, b_ext = pond_geometry(row)
-            lat = []
-            pts_ = {}
-            for k, r in enumerate(rings):
-                for i in range(1 if k == 0 else nang):
-                    phi = math.tau * i / nang
-                    pts_[(k, i)] = (a_ext * r * math.cos(phi), b_ext * r * math.sin(phi))
-            capv = set()
-            if row.flush:
-                cells = []
-                for k in range(len(rings) - 1):
-                    for i in range(nang):
-                        j = (i + 1) % nang
-                        keys = [(0, 0), (1, i), (1, j)] if k == 0 else [(k, i), (k, j), (k + 1, j), (k + 1, i)]
-                        cells.append([(q, pts_[q][0], pts_[q][1]) for q in keys])
-                capv = flush_capped(row, cells)
-            for k, r in enumerate(rings):
-                line = []
-                for i in range(1 if k == 0 else nang):
-                    phi = math.tau * i / nang
-                    lx, lz = a_ext * r * math.cos(phi), b_ext * r * math.sin(phi)
-                    bil, hi = row.sample(lx, lz)
-                    rho = pond_rho(row, lx, lz)
-                    off = pond_off(row, rho, k)
-                    we = edge_weight((ref - rho) * min(a_rim, b_rim))
-                    off = EDGE_OFF + (off - EDGE_OFF) * we
-                    cap = FLUSH_LANE if row.flush and ((k, i) in capv or in_ride_footprint(row, lx, lz)) else None
-                    line.append(((lx, lifted(row, bil, hi, off, rho <= 0.4 + 1e-6, cap), lz), bil, rho))
-                lat.append(line)
-            lost = set()
-            if row.settle:
-                verts = {(k, i): [pts_[(k, i)][0], lat[k][i][0][1], pts_[(k, i)][1], lat[k][i][1]] for k in range(len(rings)) for i in range(len(lat[k]))}
-                cells = []
-                for k in range(len(rings) - 1):
-                    for i in range(nang):
-                        j = (i + 1) % nang
-                        cells.append([(0, 0), (1, i), (1, j)] if k == 0 else [(k, i), (k, j), (k + 1, j), (k + 1, i)])
-                lost = settle_cells(row, verts, cells)
-                lat = [[((pts_[(k, i)][0], verts[(k, i)][1], pts_[(k, i)][1]), lat[k][i][1], lat[k][i][2]) for i in range(len(lat[k]))] for k in range(len(rings))]
-            cell_no = -1
-            for k in range(len(rings) - 1):
-                for i in range(nang):
-                    j = (i + 1) % nang
-                    cell_no += 1
-                    if cell_no in lost:
-                        continue
-                    if k == 0:
-                        quad = [lat[0][0], lat[1][i], lat[1][j]]
-                    else:
-                        quad = [lat[k][i], lat[k][j], lat[k + 1][j], lat[k + 1][i]]
-                    rho = sum(q[2] for q in quad) / len(quad)
-                    poly_up(s, [q[0] for q in quad], pond_colour(row, rho, k, i))
-            return
-        xs, zs, _, _ = rect_plan(row)
-        lat = []
-        capv = set()
-        if row.flush:
-            capv = flush_capped(row, [[((j, i), xs[i], zs[j]), ((j, i + 1), xs[i + 1], zs[j]), ((j + 1, i + 1), xs[i + 1], zs[j + 1]),
-                                       ((j + 1, i), xs[i], zs[j + 1])] for j in range(len(zs) - 1) for i in range(len(xs) - 1)])
-        for jz, lz in enumerate(zs):
-            line = []
-            for ix, lx in enumerate(xs):
-                bil, hi = row.sample(lx, lz)
-                off = rect_off(row, lx, lz, bil)
-                we = edge_weight(min((row.exr - lx) if lx >= 0 else (row.exl + lx), row.ez - abs(lz)))
-                off = EDGE_OFF + (off - EDGE_OFF) * we
-                cap = FLUSH_LANE if row.flush and ((jz, ix) in capv or in_ride_footprint(row, lx, lz) or (lane_strict(row) and abs(lx) <= row.hw + 1e-6)) else None
-                line.append(((lx, lifted(row, bil, hi, off, abs(lx) <= 0.2 * row.W + 1e-6, cap), lz), bil))
-            lat.append(line)
-        lost = set()
-        if row.settle:
-            verts = {(j, i): [xs[i], lat[j][i][0][1], zs[j], lat[j][i][1]] for j in range(len(zs)) for i in range(len(xs))}
-            cells = [[(j, i), (j + 1, i), (j + 1, i + 1), (j, i + 1)] for j in range(len(zs) - 1) for i in range(len(xs) - 1)]
-            lost = settle_cells(row, verts, cells)
-            lat = [[((xs[i], verts[(j, i)][1], zs[j]), lat[j][i][1]) for i in range(len(xs))] for j in range(len(zs))]
-        for j in range(len(zs) - 1):
-            for i in range(len(xs) - 1):
-                if (j * (len(xs) - 1) + i) in lost:
-                    continue
-                quad = [lat[j][i], lat[j + 1][i], lat[j + 1][i + 1], lat[j][i + 1]]
-                if row.gap is not None and max(abs(q[1] - row.g0) for q in quad) > row.gap:
-                    continue
-                gh = sum(q[1] for q in quad) / 4.0
-                lx, lz = (xs[i] + xs[i + 1]) / 2.0, (zs[j] + zs[j + 1]) / 2.0
-                if row.peers and flush_cell_covered(row, xs[i], xs[i + 1], zs[j], zs[j + 1]):
-                    continue
-                poly_up(s, [q[0] for q in quad], rect_colour(row, lx, lz, gh, i, j))
+        for pts, colour in flush_mesh(row)["tris"]:
+            poly_up(s, pts, colour)
     return build
 
 
@@ -2169,6 +2510,10 @@ def liner_tufts(row):
 
 def liner_build(rid, out_dir):
     row = Row(rid)
+    if row.flush:
+        mesh = flush_mesh(row)
+        assert mesh["residual"] <= BUDGET_LIMITED.get(rid, 0.0) + 1e-6, (rid, mesh["residual"])
+        print("FLUME_WORKS_MESH", rid, "triangles %d  cells demoted for the budget %d  highest of them %.3f m" % (len(mesh["tris"]), mesh["demoted"], mesh["residual"]))
     plans = [(rid, [(rid + "_body", liner_base(row))], "base", LinerSurf)]
     if not row.flush:       # a flush_lane liner has no rim props, so no detail shells (the loader skips a missing shell)
         plans += [
@@ -2201,15 +2546,12 @@ def liner_build(rid, out_dir):
     return rows
 
 
-SURFACE_N = 4        # barycentric lattice per triangle: (N+1)(N+2)/2 samples, vertices, edge midpoints and the centroid region included
-
-
 def surface_in_footprints(row, pts, tris):
-    """(highest, count) of the interpolated height above the ground over a barycentric lattice of every triangle, for the
-    samples inside a ride footprint (ground by the same bilinear sample as the vertices)."""
+    """(highest, count) of the interpolated height above the game's ground mesh over a barycentric lattice of every triangle, for the
+    samples inside a ride footprint."""
     best, n = 0.0, 0
-    n_ = SURFACE_N
-    lattice = [(a / n_, b / n_, (n_ - a - b) / n_) for a in range(n_ + 1) for b in range(n_ + 1 - a)]
+    k = SURFACE_N
+    lattice = [(a / k, b / k, (k - a - b) / k) for a in range(k + 1) for b in range(k + 1 - a)]
     for t in tris:
         p = [pts[i] for i in t]
         for u, v, w in lattice:
@@ -2217,10 +2559,48 @@ def surface_in_footprints(row, pts, tris):
             z = u * p[0][2] + v * p[1][2] + w * p[2][2]
             if not in_ride_footprint(row, x, z):
                 continue
-            y = u * p[0][1] + v * p[1][1] + w * p[2][1]
             n += 1
-            best = max(best, y + row.g0 - row.sample(x, z)[0])
+            best = max(best, u * p[0][1] + v * p[1][1] + w * p[2][1] + row.g0 - row.db(x, z))
     return best, n
+
+
+def lane_coverage(row, pts, tris):
+    """(uncovered, total) over a 0.5 m grid of the row's own lane (the pond's rim ellipse): the points no drawn triangle covers,
+    apart from those another flush row's sheet takes (the cull) and those its gap rule drops."""
+    buckets = {}
+    for ti, t in enumerate(tris):
+        xs = [pts[i][0] for i in t]
+        zs = [pts[i][2] for i in t]
+        for bx in range(int(math.floor(min(xs) / 2.0)), int(math.floor(max(xs) / 2.0)) + 1):
+            for bz in range(int(math.floor(min(zs) / 2.0)), int(math.floor(max(zs) / 2.0)) + 1):
+                buckets.setdefault((bx, bz), []).append(ti)
+
+    def covered(x, z):
+        for ti in buckets.get((int(math.floor(x / 2.0)), int(math.floor(z / 2.0))), ()):
+            a, b, c = (pts[i] for i in tris[ti])
+            d = (b[2] - c[2]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[2] - c[2])
+            if abs(d) < 1e-12:
+                continue
+            u = ((b[2] - c[2]) * (x - c[0]) + (c[0] - b[0]) * (z - c[2])) / d
+            v = ((c[2] - a[2]) * (x - c[0]) + (a[0] - c[0]) * (z - c[2])) / d
+            if min(u, v, 1 - u - v) >= -1e-4:
+                return True
+        return False
+    total = missing = 0
+    nx, nz = int(row.hw / 0.5), int(row.hl / 0.5)
+    for i in range(-nx, nx):
+        for j in range(-nz, nz):
+            x, z = (i + 0.5) * 0.5, (j + 0.5) * 0.5
+            if row.style == "pond" and pond_rho(row, x, z) > 1.0:
+                continue
+            if row.peers and flush_covered(row, x, z):
+                continue
+            if row.gap is not None and gap_dropped(row.rid, x, z):
+                continue
+            total += 1
+            if not covered(x, z):
+                missing += 1
+    return missing, total
 
 
 def liner_check(rid, out_dir):
@@ -2238,7 +2618,7 @@ def liner_check(rid, out_dir):
         pts = mesh_positions(doc, binary, meshes[0])
         gaps = []
         for x, y, z in pts:
-            gaps.append(y + row.g0 - row.sample(x, z)[0])
+            gaps.append(y + row.g0 - row.db(x, z))
         lo, hi = min(gaps), max(gaps)
         if row.flush:
             lane = [g for (x, y, z), g in zip(pts, gaps) if lane_strict(row) and abs(x) <= row.hw + 1e-6]
@@ -2247,21 +2627,18 @@ def liner_check(rid, out_dir):
                 len(lane), row.hw, lane_max, FLUSH_LANE, "PASS" if lane_max <= FLUSH_LANE + 1e-4 else "FAIL"))
             if lane_max > FLUSH_LANE + 1e-4:
                 fails.append("%s: %.3f m above the ground inside the lane (flush_lane limit %.2f)" % (name, lane_max, FLUSH_LANE))
-            ride = [g for (x, y, z), g in zip(pts, gaps) if in_ride_footprint(row, x, z)]
-            ride_max = max(ride) if ride else 0.0
-            print("FLUME_WORKS_FLUSH", name, "inside any ride footprint: %d verts, highest %.3f m (limit %.2f)  %s" % (
-                len(ride), ride_max, FLUSH_LANE, "PASS" if ride_max <= FLUSH_LANE + 1e-4 else "FAIL"))
-            if ride_max > FLUSH_LANE + 1e-4:
-                fails.append("%s: %.3f m above the ground inside a ride row's footprint (flush_lane limit %.2f)" % (name, ride_max, FLUSH_LANE))
-            surf_max, surf_n = surface_in_footprints(row, pts, mesh_triangles(doc, binary, meshes[0]))
-            if row.settle:
-                print("FLUME_WORKS_FLUSH", name, "drawn surface inside any ride footprint: %d samples, highest interpolated %.3f m (limit %.2f)  %s" % (
-                    surf_n, surf_max, FLUSH_LANE, "PASS" if surf_max <= FLUSH_LANE + 1e-4 else "FAIL"))
-            else:
-                print("FLUME_WORKS_FLUSH", name, "drawn surface (rule not enforced for this row): %d samples, highest interpolated %.3f m" % (surf_n, surf_max))
-                surf_max = 0.0
-            if surf_max > FLUSH_LANE + 1e-4:
-                fails.append("%s: drawn surface %.3f m above the ground inside a ride row's footprint (flush_lane limit %.2f)" % (name, surf_max, FLUSH_LANE))
+            tris = mesh_triangles(doc, binary, meshes[0])
+            surf_max, surf_n = surface_in_footprints(row, pts, tris)
+            allow = BUDGET_LIMITED.get(rid, FLUSH_LANE)
+            print("FLUME_WORKS_FLUSH", name, "drawn surface inside any ride footprint: %d samples, highest interpolated %.4f m (limit %.2f%s), %d triangles  %s" % (
+                surf_n, surf_max, allow, ", budget-limited" if rid in BUDGET_LIMITED else "", len(tris), "PASS" if surf_max <= allow + 1e-4 else "FAIL"))
+            if surf_max > allow + 1e-4:
+                fails.append("%s: drawn surface %.3f m above the ground inside a ride row's footprint (limit %.2f)" % (name, surf_max, allow))
+            missing, total = lane_coverage(row, pts, tris)
+            print("FLUME_WORKS_FLUSH", name, "lane coverage: %d of %d grid points uncovered (%.5f)  %s" % (
+                missing, total, missing / max(total, 1), "PASS" if missing == 0 else "FAIL"))
+            if missing:
+                fails.append("%s: %d of %d lane grid points are not covered by a drawn triangle" % (name, missing, total))
             if name == rid + "_detail1":
                 near = min([abs(x) for x, y, z in pts] or [0.0])
                 if near < row.hw + FLUSH_RIM_GAP - 1e-3:
@@ -2508,7 +2885,8 @@ def liner_registry(rid):
     if LINERS[rid].get("flush_lane"):
         text = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. "
                 "No -col mesh: the stamped terrain stays the only collider. Ships " + FLUSH_NOTES[LINERS[rid]["style"]] + ". "
-                + "Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground" + (", the verge band included" if LINERS[rid]["style"] in ("sandstone", "haul", "rails") else "") + ", and the sheet ships no rim props (no rocks, no tufts) and no detail shells.")
+                + "Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground" + (", the verge band included" if LINERS[rid]["style"] in ("sandstone", "haul", "rails") else "") + ", and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+                + (" The ground under it is too rough to cut to within the 8,000 triangle budget, so some cells stay plain and lowered to the ground, the highest standing %.2f m above it inside a footprint." % BUDGET_LIMITED[rid] if rid in BUDGET_LIMITED else ""))
         return [{"id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": "landform", "origin": "centre",
                  "ships": True, "loader": "src/world/park/park_recipes.gd",
                  "provenance": {"recipe": "tools/blender/park/flume_works.py", "note": text}}]
