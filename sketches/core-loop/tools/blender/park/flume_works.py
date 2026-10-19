@@ -1285,7 +1285,7 @@ PANEL = 8.0                    # concrete panel length
 JOINT_HALF = 0.15              # half the width of a form joint
 BASE_TRIS = 7900               # under the landform budget of 8000
 # Registry class of a liner: landform (8,000 triangles) unless listed. With the surface cut to the ground mesh (at least FLUSH_MIN above
-# it everywhere, at most FLUSH_LANE inside a footprint) these rows need more; the counts the cut measures are trestle_hollow 14.0k,
+# it everywhere, at most FLUSH_LANE inside a footprint) these rows need more; the counts the cut measures are trestle_hollow 13.9k,
 # gap_wash 9.5k, main_canal 9.5k and lateral_canal 14.3k (park_large, 16,000) and wasteway_chute 22.3k (hero_landmark, 24,000, the only
 # class above it). A class only sets the cap assert; the park row's `budget` stays landform and sets the in-game draw ranges.
 LINER_CLASS = {"liner_trestle_hollow": "park_large", "liner_gap_wash": "park_large", "liner_main_canal": "park_large",
@@ -1586,7 +1586,9 @@ def split_poly(poly, line):
 def edge_chord_hits(poly, e):
     """Whether the chord a convex polygon makes with a footprint's edge line overlaps the edge itself. The extended line past the
     footprint's corner is no kink of the surface (seg_kinks does not insert its crossings either), so a cell it only crosses beyond
-    the corner is not cut by it; the decision is the cell's, so every piece of a cell is cut by the same lines."""
+    the corner is not cut by it; the decision is the cell's, so every piece of a cell is cut by the same lines. A cut cell can still
+    carry a point on a shared edge past the corner that its neighbour lacks; it is normally collinear, and liner_check's crack check
+    fails the build when it is not."""
     nx, nz, c, other, ext, at, _ = e
     n = len(poly)
     ss = []
