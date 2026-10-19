@@ -132,9 +132,9 @@
       "res://assets/models/park/props/sinkhole/echo_horn_a_lod2.glb"
      ],
      "tris": [
-      2952,
-      1476,
-      442
+      2996,
+      1498,
+      448
      ],
      "radius": 1.721,
      "height": 2.879
@@ -146,9 +146,9 @@
       "res://assets/models/park/props/sinkhole/echo_horn_b_lod2.glb"
      ],
      "tris": [
-      2616,
-      1308,
-      362
+      2660,
+      1330,
+      367
      ],
      "radius": 2.391,
      "height": 1.267

@@ -218,7 +218,9 @@ def gallery_collapse(p, v, rng):
         story="A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in.")
 def echo_horn(p, v, rng):
     p.box((2.4, 1.6, 0.4), (0, 0, 0.2), C["timber_pale"])
-    p.box((1.0, 1.0, 0.6), (-0.3, 0, 0.7), C["timber_dark"])
+    # Cradle: two saddle beams on the pallet, not a solid block.
+    for x in (-0.75, 0.45):
+        p.box((0.28, 1.1, 0.5), (x, 0, 0.65), C["timber_dark"])
     if v == "a":
         # Horn: a short throat and a flared bell, pointed gently upward along +X.
         pts = [((-0.4, 0, 1.3), 0.2), ((0.3, 0, 1.45), 0.35), ((1.0, 0, 1.65), 0.6), ((1.5, 0, 1.85), 0.95)]
