@@ -86,7 +86,7 @@ const BASE_ROWS := {
 
 	# Fleet reinforcements (DESIGN-V2 section 10): engineered anti-ball gear.
 	"mag_trapper": {"faction": FLEET, "role": "controller", "mechanic": "mag_pit", "telegraph": T_INSTANT, "holds": true,
-		"breaks": ["jump", "smash"], "tag": "hold_pit", "tag_next": "tag_mag_pit", "hold": "hold_pit", "tests": "heft",
+		"breaks": ["jump", "smash", "hook"], "tag": "hold_pit", "tag_next": "tag_mag_pit", "hold": "hold_pit", "tests": "heft",
 		"line": "Throws a magnetic pit disc that drags a ball lighter than its rating; heft rolls through it."},
 	"hooker": {"faction": FLEET, "role": "controller", "mechanic": "anchor_tether", "telegraph": T_LANE, "holds": true,
 		"breaks": ["boost", "speed"], "tag": "hold_tether", "tag_next": "tag_tether_crack", "hold": "hold_tether", "tests": "speed",
@@ -95,7 +95,7 @@ const BASE_ROWS := {
 		"breaks": ["jump", "glide", "smash"], "tag": "hold_net", "tag_next": "tag_net_crackle", "hold": "zap_hum", "tests": "air",
 		"line": "Raises an electric net that grabs only an airborne ball; double jump, glide or smash tears it."},
 	"bola_thrower": {"faction": FLEET, "role": "punisher", "mechanic": "bola_wrap", "telegraph": T_PROJECTILE, "holds": true,
-		"breaks": ["jump", "boost", "smash"], "tag": "hold_bola", "tag_next": "tag_bola_whoop", "hold": "hold_bola", "tests": "air",
+		"breaks": ["jump", "boost", "smash", "hook"], "tag": "hold_bola", "tag_next": "tag_bola_whoop", "hold": "hold_bola", "tests": "air",
 		"line": "Throws a slow arcing bola at where you will be; it wraps you, stings, and drags you down out of the air."},
 	"plated_brute": {"faction": FLEET, "role": "punisher", "mechanic": "extra_plate", "telegraph": T_INSTANT, "holds": false,
 		"breaks": ["smash"], "tag": "womp", "tag_next": "tag_plate_clang", "tests": "contact",
@@ -104,12 +104,12 @@ const BASE_ROWS := {
 		"breaks": ["jump"], "tag": "vault_drop", "tag_next": "tag_shield_boing", "tests": "contact",
 		"line": "Braces a dish shield that throws you back at restitution 0.9; jump off the rebound for a x1.8 vault."},
 	"winch_drone": {"faction": FLEET, "role": "controller", "mechanic": "winch_pull", "telegraph": T_LANE, "holds": true,
-		"breaks": ["jump", "boost", "smash"], "tag": "scrap_rip", "tag_next": "tag_winch_ratchet", "hold": "scrap_rip", "tests": "weapon",
+		"breaks": ["jump", "boost", "smash", "hook"], "tag": "scrap_rip", "tag_next": "tag_winch_ratchet", "hold": "scrap_rip", "tests": "weapon",
 		"line": "Hovers out of ramming reach and winches you toward its pack; shoot it or break the cable."},
 	# The anti-ball set (DESIGN-V2 section 15): gear evolved to beat balls, unlocked as
 	# the difficulty clock climbs.
 	"gyro_jammer": {"faction": FLEET, "role": "controller", "mechanic": "gyro_drift", "telegraph": T_INSTANT, "holds": true,
-		"breaks": ["jump", "boost", "smash"], "tag": "hold_riser", "tag_next": "tag_gyro_warble", "hold": "hold_riser", "tests": "steer",
+		"breaks": ["jump", "boost", "smash", "hook"], "tag": "hold_riser", "tag_next": "tag_gyro_warble", "hold": "hold_riser", "tests": "steer",
 		"line": "Throws your gyroscope off inside its field: steering drifts side to side until you move out or break it."},
 	# The Spillway's field crew (design-v3/FIELDS-AND-CASTS.md section 2.3): spawnable by name, in
 	# no director pack until wave 19.
@@ -123,7 +123,7 @@ const BASE_ROWS := {
 		"breaks": ["jump"], "tag": "vault_rise", "tag_next": "tag_ramp_creak", "hold": "", "tests": "steer",
 		"line": "A floor plate that tilts to fling a grounded ball up and off course; jump on the tilt to ride it as a ramp."},
 	"catch_trap": {"faction": FLEET, "role": "controller", "mechanic": "cup_hold", "telegraph": T_INSTANT, "holds": true,
-		"breaks": ["boost", "smash"], "tag": "ice_form", "tag_next": "tag_cup_snap", "hold": "ice_form", "tests": "speed",
+		"breaks": ["boost", "smash", "hook"], "tag": "ice_form", "tag_next": "tag_cup_snap", "hold": "ice_form", "tests": "speed",
 		"line": "A cup that closes over a ball rolling onto it and holds it dead still; boost or smash out, or break it first."},
 
 	# Kill-first specials (design-v3/ENEMY-PRIORITY.md 4): each makes its pack worse until it
