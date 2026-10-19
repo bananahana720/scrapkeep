@@ -206,6 +206,8 @@ def haul_truck(p, v, rng):
         bed_box((0.45, L + 0.1, 0.3), sx * 2.5, cy, hz + 1.75, trim)          # rim
     bed_box((5.4, 0.45, 2.2), 0, cy - L / 2 + 0.2, hz + 1.2, body)            # front wall
     bed_box((5.6, 1.2, 0.5), 0, cy - L / 2 - 0.6, hz + 2.4, trim)             # canopy over cab
+    py, pz = bp(cy - L / 2 - 0.6, hz + 2.55)
+    p.perch((0, py, pz))  # the canopy over the cab, raised with the bed (6 m or more up in a and b)
     for k in range(5):                                                         # ribs on the sides
         for sx in (-1, 1):
             bed_box((0.15, 0.35, 1.4), sx * 2.72, cy - 3.6 + k * 1.8, hz + 0.9, shade(trim, 0.9))
