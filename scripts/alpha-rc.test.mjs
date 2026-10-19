@@ -8,6 +8,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   MENU_READY,
+  TITLE_INTERACTIVE,
   STEP_IDS,
   appImageName,
   buildPlan,
@@ -232,9 +233,11 @@ test("cold launch: menu-ready line passes on a fresh XDG profile, and the profil
   const dir = tmp();
   const pidFile = path.join(dir, "pid");
   const before = readdirSync(os.tmpdir()).filter((n) => n.startsWith("scrapkeep-rc-home-")).length;
-  const ready = fake(dir, "ready.sh", `sleep 30 & echo $! > ${pidFile}; echo "home=$HOME cfg=$XDG_CONFIG_HOME data=$XDG_DATA_HOME godot=$GODOT_BIN"; echo "${MENU_READY} ms=800"; wait`);
+  const ready = fake(dir, "ready.sh", `sleep 30 & echo $! > ${pidFile}; echo "home=$HOME cfg=$XDG_CONFIG_HOME data=$XDG_DATA_HOME godot=$GODOT_BIN"; echo "${TITLE_INTERACTIVE} ms=700"; sleep 0.2; echo "${MENU_READY} ms=2500"; wait`);
   const result = await launchAppImage(ready, { seconds: 5, env: { ...process.env, GODOT_BIN: "/opt/godot" } });
   assert.equal(result.status, "pass");
+  assert.match(result.note, /interactive title in \d\.\d s \(budget 5 s\), 3D title in \d\.\d s/);
+  assert.ok(result.titleMs !== null && result.menuMs >= result.titleMs);
   const home = result.output.match(/home=(\S+)/)[1];
   assert.match(home, /scrapkeep-rc-home-/);
   assert.equal(result.output.match(/cfg=(\S+)/)[1], path.join(home, ".config"));
@@ -248,7 +251,15 @@ test("cold launch: menu-ready line passes on a fresh XDG profile, and the profil
 test("cold launch fails on an early exit, on silence, and outlasts a game that ignores SIGTERM", async () => {
   const dir = tmp();
   assert.match((await launchAppImage(fake(dir, "crash.sh", "exit 3"), { seconds: 5 })).note, /exited \(3\)/);
-  assert.match((await launchAppImage(fake(dir, "silent.sh", "exec sleep 30"), { seconds: 0.5 })).note, /no SCRAPKEEP_MENU_READY line within 0.5 s/);
+  assert.match((await launchAppImage(fake(dir, "silent.sh", "exec sleep 30"), { seconds: 0.5 })).note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.5 s/);
+  // The card in time but the 3D title never shows: fail, naming when the card came.
+  const noMenu = await launchAppImage(fake(dir, "nomenu.sh", `echo "${TITLE_INTERACTIVE} ms=900"; exec sleep 30`), { seconds: 5, menuWaitSeconds: 0.6 });
+  assert.equal(noMenu.status, "fail");
+  assert.match(noMenu.note, /no SCRAPKEEP_MENU_READY line within 0.6 s \(title card at \d\.\d s\)/);
+  // A card past the budget fails even when the 3D title follows.
+  const late = await launchAppImage(fake(dir, "late.sh", `sleep 0.8; echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; sleep 30`), { seconds: 0.4 });
+  assert.equal(late.status, "fail");
+  assert.match(late.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.4 s/);
   const stubborn = await launchAppImage(fake(dir, "stubborn.sh", "trap '' TERM; while true; do sleep 0.1; done"), { seconds: 0.3 });
   assert.equal(stubborn.status, "fail");
 });

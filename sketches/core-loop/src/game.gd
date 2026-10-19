@@ -114,6 +114,7 @@ var camp_hub:
 		menu_modules()
 		return camp_hub
 var _menu_step := 0
+var _menu_wait := -1
 var notes
 var panel
 var keyboard
@@ -296,7 +297,7 @@ func _ready() -> void:
 	flow.show_title()
 	_boot("title")
 	if not test_mode:
-		_build_menu_modules_later()
+		_menu_wait = MENU_MODULES_FRAMES_APART
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
@@ -341,13 +342,15 @@ func workshop() -> Node:
 	return get_node("Workshop")
 
 
-func _build_menu_modules_later() -> void:
-	while _menu_step < MENU_STEPS:
-		for frame in MENU_MODULES_FRAMES_APART:
-			await get_tree().process_frame
-			if not is_inside_tree():
-				return
-		_menu_step_once()
+# Counts frames in _process (not an await, so a game freed meanwhile leaves no dangling coroutine).
+func _step_menu_modules_later() -> void:
+	if _menu_wait < 0:
+		return
+	_menu_wait -= 1
+	if _menu_wait > 0:
+		return
+	_menu_step_once()
+	_menu_wait = MENU_MODULES_FRAMES_APART if _menu_step < MENU_STEPS else -1
 
 
 func _park_on_title_ground(stage: int) -> void:
@@ -460,6 +463,7 @@ func _process(delta: float) -> void:
 	summary_guard_left = maxf(0.0, summary_guard_left - delta)
 	if test_mode:
 		return
+	_step_menu_modules_later()
 	step_restart_hold(delta, Input.is_action_pressed("cl_retry"))
 	step_stick_look(delta)
 
