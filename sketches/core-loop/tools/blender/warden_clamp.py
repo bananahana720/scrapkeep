@@ -357,18 +357,24 @@ def mind_extras():
                Vector((-2.3, side * 1.4, 3.4))]
         for a, b in zip(pts, pts[1:]):
             arm.rod("ancient_enamel", a, b, 0.11, 6, color=ENAMEL, r2=0.08)
+        # Knuckles, their light rings, the claws and the lens keep their unpolished segment counts:
+        # smooth shading rounds them, and the polished kit stays inside the kit band.
         for q in pts[1:]:
-            arm.ico("ancient_enamel", 0.17, 1, loc=q, color=ENAMEL)
-            arm.ring("ancient_light", 0.12, 0.18, 0.03, 8, loc=q, rot=(math.pi / 2, 0, 0))
+            with arm.region(detail=1):
+                arm.ico("ancient_enamel", 0.17, 1, loc=q, color=ENAMEL)
+                arm.ring("ancient_light", 0.12, 0.18, 0.03, 8, loc=q, rot=(math.pi / 2, 0, 0))
         tip = pts[-1]
-        for k in range(3):
-            a = (k - 1) * 0.6
-            end = tip + Vector((-0.45 * math.cos(a), side * 0.45 * math.sin(a), -0.35))
-            arm.rod("bare_metal", tip, end, 0.04, 5, r2=0.015)
+        # The claws taper to 1.5 cm, under the chamfer: unbevelled, or the bevel folds them shut.
+        with arm.region(bevel=0, detail=1):
+            for k in range(3):
+                a = (k - 1) * 0.6
+                end = tip + Vector((-0.45 * math.cos(a), side * 0.45 * math.sin(a), -0.35))
+                arm.rod("bare_metal", tip, end, 0.04, 5, r2=0.015)
         out.append((arm, tuple(pts[0])))
     lens = Part("WeakPoint")
     c = Vector((0.1, 0, 2.2))
-    lens.ico("ancient_enamel", 0.42, 2, loc=c, scale=(0.8, 1, 1), color=ENAMEL)
+    with lens.region(detail=1):
+        lens.ico("ancient_enamel", 0.42, 2, loc=c, scale=(0.8, 1, 1), color=ENAMEL)
     for k, off in enumerate(((0, 0), (0.22, 0.2), (-0.22, 0.2), (0.22, -0.2), (-0.22, -0.2))):
         at = c + Vector((0.34, off[0], off[1]))
         r = 0.13 if k == 0 else 0.08
@@ -437,13 +443,9 @@ def main():
     kits = []
     for fam, body, extras in (("reactor", kit_reactor, reactor_extras), ("hive", kit_hive, hive_extras),
                               ("mind", kit_mind, mind_extras)):
-        polished = common.POLISH, common.DETAIL
-        if fam == "mind":
-            common.POLISH, common.DETAIL = None, 1
         root = build_kit("WardenKit" + fam.capitalize(), body(rng), extras())
         rows.append(("kit_" + fam, common.tri_total(root), KIT_TRIS))
         common.export(root, os.path.join(out_dir, "warden_kit_%s.glb" % fam))
-        common.POLISH, common.DETAIL = polished
         # Blender names are file-global; free this kit's names (WeakPoint, Body) for the next.
         for o in common.tree(root)[1:]:
             o.name = fam + "_" + o.name
