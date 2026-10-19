@@ -80,7 +80,7 @@ const KINDS := {
 	},
 	"dam_swift": {
 		"world": 1, "parks": ["park_dam", "park_flume"], "role": "critter",
-		"model": MODEL_DIR + "dam_swift.glb", "height_m": 0.22, "tris": [900, 2500],
+		"model": MODEL_DIR + "dam_swift.glb", "height_m": 0.22, "tris": [900, 4000],
 		"palette": {"body": Color("5e4a80"), "wing": Color("4f3d6e"), "cream": Color("ece4f1"), "eye": Color("2b2238")},
 		"sound": {"call": SOUND_DIR + "dam_swift_call.wav", "react": SOUND_DIR + "dam_swift_react.wav"},
 		"voice": {"call": "thin_twitter", "react": "flutter_burst"},
@@ -91,7 +91,7 @@ const KINDS := {
 	},
 	"puddle_toad": {
 		"world": 1, "parks": ["park_dam", "park_flume"], "role": "critter",
-		"model": MODEL_DIR + "puddle_toad.glb", "height_m": 0.24, "tris": [900, 2500],
+		"model": MODEL_DIR + "puddle_toad.glb", "height_m": 0.24, "tris": [900, 4000],
 		"palette": {"body": Color("8a79c8"), "spots": Color("6e5ea8"), "cream": Color("efe8f2"), "eye": Color("2b2238")},
 		"sound": {"call": SOUND_DIR + "puddle_toad_call.wav", "react": SOUND_DIR + "puddle_toad_react.wav"},
 		"voice": {"call": "low_croak", "react": "water_plop"},
@@ -125,7 +125,7 @@ const KINDS := {
 	},
 	"tube_bat": {
 		"world": 2, "parks": ["park_pit", "park_sinkhole"], "role": "critter",
-		"model": MODEL_DIR + "tube_bat.glb", "height_m": 0.2, "tris": [900, 2500],
+		"model": MODEL_DIR + "tube_bat.glb", "height_m": 0.2, "tris": [900, 4000],
 		"palette": {"body": Color("5a4470"), "wing": Color("6e5a8c"), "cream": Color("e8e0ee"), "eye": Color("2b2238")},
 		"sound": {"call": SOUND_DIR + "tube_bat_call.wav", "react": SOUND_DIR + "tube_bat_react.wav"},
 		"voice": {"call": "tiny_squeak", "react": "leather_flutter"},
@@ -136,7 +136,7 @@ const KINDS := {
 	},
 	"horned_lizard": {
 		"world": 2, "parks": ["park_pit", "park_sinkhole"], "role": "critter",
-		"model": MODEL_DIR + "horned_lizard.glb", "height_m": 0.14, "tris": [900, 2500],
+		"model": MODEL_DIR + "horned_lizard.glb", "height_m": 0.14, "tris": [900, 4000],
 		"palette": {"body": Color("9c86a8"), "nubs": Color("7d6890"), "cream": Color("ece4ee"), "eye": Color("2b2238")},
 		"sound": {"call": SOUND_DIR + "horned_lizard_call.wav", "react": SOUND_DIR + "horned_lizard_react.wav"},
 		"voice": {"call": "pebble_scratch", "react": "hiss_puff"},
@@ -170,7 +170,7 @@ const KINDS := {
 	},
 	"canyon_wren": {
 		"world": 3, "parks": ["park_islands", "park_crown"], "role": "critter",
-		"model": MODEL_DIR + "canyon_wren.glb", "height_m": 0.18, "tris": [900, 2500],
+		"model": MODEL_DIR + "canyon_wren.glb", "height_m": 0.18, "tris": [900, 4000],
 		"palette": {"body": Color("a07fb8"), "wing": Color("7c5ea8"), "tail": Color("5e4a80"), "cream": Color("efe8f2"), "eye": Color("2b2238")},
 		"sound": {"call": SOUND_DIR + "canyon_wren_call.wav", "react": SOUND_DIR + "canyon_wren_react.wav"},
 		"voice": {"call": "falling_whistle", "react": "flutter_burst"},
