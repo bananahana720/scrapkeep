@@ -48,6 +48,7 @@ RES_ROOT = "res://assets/models/park/props/"
 LOADER = "src/presentation/park_props.gd (vignette file src/world/park/props/park_%s.json)"
 
 # --- budgets (DRESSING-KITS.md) -----------------------------------------------------------
+PERCH_MIN_HEIGHT = 6.0  # metres: a variant this tall or taller exports a `perch` anchor (design-v3/park/PERCH-ANCHOR.md)
 BUDGET = {"dress_hero": (6000, 20000), "dress_prop": (300, 3000)}
 LOD1_BAND, LOD2_BAND, LOD2_MIN_TRIS = (0.40, 0.60), (0.10, 0.20), 40
 LOD1_TARGET, LOD2_TARGET = 0.50, 0.15
@@ -148,6 +149,13 @@ class Prop:
         self.rng = rng
         self.root = common.empty(name)
         self.parts = {}
+        self.perch_at = None
+
+    def perch(self, point):
+        """Optional perch anchor (design-v3/park/PERCH-ANCHOR.md): the centre of a flat deck a Dispatcher may stand
+        on, in the authoring frame (Blender Z up, before the kit recentres the model). Only variants 6 m tall or
+        more export it; without a point the kit uses the top-centre of the highest face."""
+        self.perch_at = Vector(point)
 
     def part(self, style):
         if style not in STYLES:
@@ -247,8 +255,11 @@ class Prop:
         me = obj.data
         lo = Vector((min(v.co[i] for v in me.vertices) for i in range(3)))
         hi = Vector((max(v.co[i] for v in me.vertices) for i in range(3)))
-        me.transform(Matrix.Translation((-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, -lo.z)))
+        shift = Vector((-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, -lo.z))
+        me.transform(Matrix.Translation(shift))
         me.update()
+        if self.perch_at is not None:
+            obj["perch_local"] = list(self.perch_at + shift)
         return obj
 
 
@@ -347,6 +358,8 @@ class Kit:
         radius = max(math.hypot(v.x, v.y) for v in verts)
         height = max(v.z for v in verts)
         info = {"radius": round(radius, 3), "height": round(height, 3)}
+        if height >= PERCH_MIN_HEIGHT:
+            info["perch"] = perch_of(obj, verts)
         stats = [self.write(root, obj, out_dir / (base + ".glb"))]
         assert stats[0]["tris"] == t0, base + ": exported tris differ from mesh tris"
         for suffix, target, band, floor in (("_lod1", LOD1_TARGET, LOD1_BAND, 0),
@@ -445,6 +458,8 @@ class Kit:
                 prefix = "%s%s/" % (RES_ROOT, self.park)
                 variants[v] = {"lod": [prefix + base + s + ".glb" for s in ("", "_lod1", "_lod2")],
                                "tris": info["tris"], "radius": info["radius"], "height": info["height"]}
+                if "perch" in info:
+                    variants[v]["perch"] = info["perch"]
             if not variants:
                 continue
             tags = list(spec["tags"])
@@ -512,6 +527,24 @@ class Kit:
         print("KIT_SHEET", sheet, flush=True)
 
 
+def perch_of(obj, verts):
+    """The variant's `perch` as [x, y, z] in glTF's frame (Y up, metres, origin at the foot centre): the recipe's point
+    (Prop.perch) when given, else the area-weighted centre of the faces within 2 cm of the highest face's height."""
+    local = obj.get("perch_local")
+    if local is not None:
+        x, y, z = (float(c) for c in local)
+    else:
+        polys = [(p.center, p.area) for p in obj.data.polygons]
+        top = max(c.z for c, _ in polys)
+        deck = [(c, a) for c, a in polys if c.z >= top - 0.02]
+        area = sum(a for _, a in deck) or 1.0
+        x = sum(c.x * a for c, a in deck) / area
+        y = sum(c.y * a for c, a in deck) / area
+        z = sum(c.z * a for c, a in deck) / area
+    assert all(math.isfinite(c) for c in (x, y, z)) and z > 0, "perch %r is not above the foot" % ((x, y, z),)
+    return [round(x, 3) + 0.0, round(z, 3) + 0.0, round(-y, 3) + 0.0]
+
+
 def inspect_glb(path):
     """Counts and bounds of a kit GLB; asserts the one-surface, one-material, no-image rule."""
     raw = Path(path).read_bytes()
@@ -520,6 +553,7 @@ def inspect_glb(path):
     assert len(prims) == 1, "%s: %d surfaces, want 1" % (Path(path).name, len(prims))
     assert len(gltf["materials"]) == 1 and not gltf.get("images"), Path(path).name + ": one vertex-colour material only"
     assert not any(any(m.get("emissiveFactor", [0])) for m in gltf["materials"]), Path(path).name + ": emissive"
+    assert "COLOR_0" in prims[0]["attributes"], Path(path).name + ": no COLOR_0 vertex colours (the props would render white)"
     pos = gltf["accessors"][prims[0]["attributes"]["POSITION"]]
     return {"tris": gltf["accessors"][prims[0]["indices"]]["count"] // 3, "verts": pos["count"],
             "bounds": [[round(x, 4) for x in pos["min"]], [round(x, 4) for x in pos["max"]]],

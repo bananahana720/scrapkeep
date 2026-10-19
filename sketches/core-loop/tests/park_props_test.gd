@@ -56,7 +56,10 @@ func _run() -> void:
 	var kit := ParkProps.load_json(String(file["kit"]))
 	var c := ParkProps.context(world["map"], world["ground"], world["stage"])
 	_check_build(list, kit)
+	_check_kits(kit)
 	_check_controls(world, kit, c)
+	_check_file_bands(file, kit)
+	_check_ground_rows(kit)
 	_check_synthetic(file, kit, world)
 	_check_prepare(file, kit, world, list)
 	await _check_game()
@@ -133,6 +136,11 @@ func _check_build(list: Array, kit: Dictionary) -> void:
 			multis += 1
 			if (view as MultiMeshInstance3D).multimesh.instance_count < 1 or (view as MultiMeshInstance3D).multimesh.transform_format != MultiMesh.TRANSFORM_3D:
 				bad_meta.append(String(view.name) + " multimesh")
+	var colourless := []
+	for view: GeometryInstance3D in views:
+		var shown: Mesh = (view as MultiMeshInstance3D).multimesh.mesh if view is MultiMeshInstance3D else (view as MeshInstance3D).mesh
+		colourless.append_array(ParkProps.colour_errors(shown, String(view.name), view))
+	_t.eq("every built MultiMesh and hero mesh surface has ARRAY_COLOR and a vertex-colour material", colourless.slice(0, 3), [])
 	_t.eq("every view has a visibility range end and the contract's ranges", bad_range, [])
 	_t.eq("shadows are off but a hero's LOD0", bad_shadow, [])
 	_t.eq("every view is grouped and tagged", bad_meta, [])
@@ -146,6 +154,25 @@ func _check_build(list: Array, kit: Dictionary) -> void:
 			names_unique = names_unique and not seen.has(view.name)
 			seen[view.name] = true
 	_t.check("each (mesh, LOD) has one view per vignette", names_unique)
+	# The far LOD of a vignette's props is one merged mesh (one draw), carrying every non-hero member.
+	var far_ok := true
+	var far_tris_ok := true
+	var far_views := 0
+	for holder in built.get_children():
+		if holder.name == "Litter":
+			continue
+		var members := list.filter(func(i: Dictionary) -> bool: return not i["litter"] and "Vignette_" + String(i["vignette"]) == String(holder.name) and i["class"] != ParkProps.HERO)
+		var far := holder.find_children("*", "GeometryInstance3D", false, false).filter(func(v: Node) -> bool: return v.get_meta("dress_lod", -1) == 2 and v.get_meta("dress_class", "") != ParkProps.HERO)
+		far_views += far.size()
+		far_ok = far_ok and far.size() == (1 if not members.is_empty() else 0) and not (far[0] is MultiMeshInstance3D if not far.is_empty() else false) \
+			and (far.is_empty() or int(far[0].get_meta("dress_count")) == members.size())
+		var want_tris := 0
+		for inst: Dictionary in members:
+			want_tris += int(kit["kinds"][inst["kind"]]["variants"][inst["v"]]["tris"][2])
+		if not far.is_empty():
+			var arrays: Array = ((far[0] as MeshInstance3D).mesh as ArrayMesh).surface_get_arrays(0)
+			far_tris_ok = far_tris_ok and (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3 == want_tris
+	_t.check("each vignette's props share one merged LOD2 view carrying every member and its LOD2 triangles", far_ok and far_tris_ok and far_views > 0, "%d far views" % far_views)
 	built.free()
 	var low := ParkProps.build_nodes(list, kit, true)
 	var low_litter := low.get_node_or_null("Litter")
@@ -153,6 +180,204 @@ func _check_build(list: Array, kit: Dictionary) -> void:
 	_t.check("the lowest preset drops litter and halves prop LOD0 and LOD1", low_litter == null and not lod0.is_empty() \
 		and is_equal_approx((lod0[0] as GeometryInstance3D).visibility_range_end, ParkProps.PROP_RANGES[0][1] * ParkProps.LOW_RANGE_SCALE))
 	low.free()
+
+
+const FLOORS := {ParkProps.HERO: [6000, 20000], ParkProps.PROP: [300, 3000]}
+const PROP_LOD2_MIN_TRIS := 40
+const PERCH_MIN_HEIGHT_M := 6.0
+
+
+# Every kit manifest the repo carries (the fixture's, plus assets/models/park/props/*/manifest.json): triangle budgets by class and
+# LOD, vertex colours on every LOD0 mesh, and the optional perch anchors.
+func _check_kits(fixture_kit: Dictionary) -> void:
+	var kits := {"fixture": fixture_kit}
+	var base := "res://assets/models/park/props/"
+	for dir in DirAccess.get_directories_at(base):
+		var path := base + dir + "/manifest.json"
+		if FileAccess.file_exists(path):
+			kits[dir] = ParkProps.load_json(path)
+	var bad_tris := []
+	var bad_colour := []
+	var bad_perch := []
+	var variants := 0
+	for name in kits:
+		bad_perch.append_array(_perch_errors(kits[name], name))
+		for kind in kits[name].get("kinds", {}):
+			var def: Dictionary = kits[name]["kinds"][kind]
+			for v in def["variants"]:
+				var row: Dictionary = def["variants"][v]
+				var label := "%s/%s/%s" % [name, kind, v]
+				variants += 1
+				bad_tris.append_array(_tri_errors(label, String(def["class"]), row["tris"], name == "fixture"))
+				var probe := MeshInstance3D.new()
+				probe.mesh = ParkProps._mesh(String(row["lod"][0]))
+				ParkProps.style_view(probe)
+				bad_colour.append_array(ParkProps.colour_errors(probe.mesh, label, probe))
+				probe.free()
+	_t.check("%d kit variants read" % variants, variants > 0)
+	_t.eq("LOD triangles: LOD0 in the class floor and cap, LOD1 40 to 60%, LOD2 10 to 20% (props at least 40)", bad_tris.slice(0, 4), [])
+	_t.eq("every kit LOD0 mesh has ARRAY_COLOR and a vertex-colour material", bad_colour.slice(0, 4), [])
+	_t.eq("every perch is three finite numbers inside the variant's bounds and at least 6 m up", bad_perch.slice(0, 4), [])
+	# Planted: the budget and perch checks must catch a bad row, and a mesh whose imported material ignores COLOR_0 must fail.
+	_t.check("planted: LOD0 under the hero floor fails", not _tri_errors("p", ParkProps.HERO, [5000, 2500, 750], false).is_empty())
+	_t.check("planted: LOD1 at 70% fails", not _tri_errors("p", ParkProps.PROP, [1000, 700, 150], false).is_empty())
+	_t.check("planted: a prop LOD2 under 40 triangles fails", not _tri_errors("p", ParkProps.PROP, [300, 150, 39], false).is_empty())
+	_t.check("planted: a prop at 1000 / 500 / 150 passes", _tri_errors("p", ParkProps.PROP, [1000, 500, 150], false).is_empty())
+	var perch_kit := {"kinds": {"k": {"variants": {"a": {"height": 7.0, "radius": 2.0, "perch": [0.0, 7.0, 0.0]}}}}}
+	_t.eq("planted: a sound perch passes", _perch_errors(perch_kit, "p"), [])
+	for bad in [[0.0, 5.0, 0.0], [0.0, 9.0, 0.0], [3.0, 7.0, 0.0], [0.0, 7.0], [0.0, NAN, 0.0]]:
+		perch_kit["kinds"]["k"]["variants"]["a"]["perch"] = bad
+		_t.check("planted: perch %s fails" % var_to_str(bad), not _perch_errors(perch_kit, "p").is_empty())
+	var path := String(fixture_kit["kinds"].values()[0]["variants"].values()[0]["lod"][0])
+	var raw := _raw_mesh(path)
+	var view := MeshInstance3D.new()
+	view.mesh = raw
+	_t.check("planted: the imported mesh, its material ignoring COLOR_0, fails the colour check", not ParkProps.colour_errors(raw, "raw", view).is_empty())
+	ParkProps.style_view(view)
+	_t.eq("planted: style_view fixes it", ParkProps.colour_errors(raw, "styled", view), [])
+	var flag_off := StandardMaterial3D.new()
+	view.material_override = flag_off
+	_t.check("planted: a view whose material has vertex_color_use_as_albedo off fails", not ParkProps.colour_errors(raw, "off", view).is_empty())
+	view.free()
+
+
+func _raw_mesh(path: String) -> Mesh:
+	var scene: Node = (load(path) as PackedScene).instantiate()
+	var found := scene.find_children("*", "MeshInstance3D", true, false)
+	var mesh: Mesh = (found[0] as MeshInstance3D).mesh
+	scene.free()
+	return mesh
+
+
+# LOD0 within the class floor and cap (the fixture's stand-in GLBs are exempt from the floor), LOD1 40 to 60%, LOD2 10 to 20% of LOD0.
+func _tri_errors(label: String, klass: String, tris: Array, fixture: bool) -> Array:
+	var errors := []
+	var lod0 := float(tris[0])
+	var bounds: Array = FLOORS[klass]
+	if lod0 > bounds[1] or (lod0 < bounds[0] and not fixture):
+		errors.append("%s LOD0 %d tris outside %s %d to %d" % [label, tris[0], klass, bounds[0], bounds[1]])
+	if fixture:
+		return errors
+	if float(tris[1]) < lod0 * 0.4 or float(tris[1]) > lod0 * 0.6:
+		errors.append("%s LOD1 %d is %.0f%% of LOD0, want 40 to 60" % [label, tris[1], 100.0 * tris[1] / lod0])
+	if float(tris[2]) < lod0 * 0.1 or float(tris[2]) > lod0 * 0.2 or (klass == ParkProps.PROP and tris[2] < PROP_LOD2_MIN_TRIS):
+		errors.append("%s LOD2 %d is %.0f%% of LOD0, want 10 to 20 (props at least %d)" % [label, tris[2], 100.0 * tris[2] / lod0, PROP_LOD2_MIN_TRIS])
+	return errors
+
+
+# design-v3/park/PERCH-ANCHOR.md: a variant's optional perch is [x, y, z], finite, above the foot, no more than 0.5 m over its height;
+# also inside the footprint radius and on a variant at least PERCH_MIN_HEIGHT_M tall.
+func _perch_errors(kit: Dictionary, name: String) -> Array:
+	var errors := []
+	for kind in kit.get("kinds", {}):
+		for v in kit["kinds"][kind]["variants"]:
+			var row: Dictionary = kit["kinds"][kind]["variants"][v]
+			if not row.has("perch"):
+				continue
+			var label := "%s/%s/%s perch" % [name, kind, v]
+			var perch = row["perch"]
+			if not perch is Array or (perch as Array).size() != 3 or not (perch as Array).all(func(n) -> bool: return (n is float or n is int) and is_finite(float(n))):
+				errors.append(label + " is not three finite numbers")
+				continue
+			var radius := float(row["radius"]) + 0.01
+			if float(perch[1]) <= 0.0 or float(perch[1]) > float(row["height"]) + 0.5:
+				errors.append("%s y %s is outside 0 to height %s (+0.5)" % [label, str(perch[1]), str(row["height"])])
+			if absf(float(perch[0])) > radius or absf(float(perch[2])) > radius:
+				errors.append("%s x/z %s is outside the footprint radius %s" % [label, str(perch), str(row["radius"])])
+			if float(row["height"]) < PERCH_MIN_HEIGHT_M or float(perch[1]) < PERCH_MIN_HEIGHT_M:
+				errors.append("%s on a variant %s tall at y %s: want at least %.0f m" % [label, str(row["height"]), str(perch[1]), PERCH_MIN_HEIGHT_M])
+	return errors
+
+
+# Litter band_m must sit inside the tier bands (near at least 6, far at most 64).
+func _check_file_bands(file: Dictionary, kit: Dictionary) -> void:
+	for band in [[3.0, 40.0], [10.0, 70.0]]:
+		var bad := file.duplicate(true)
+		bad["litter"]["band_m"] = band
+		_t.check("planted: litter band %s is a file error" % str(band), not ParkProps.file_errors(bad, kit).is_empty())
+	var ok := file.duplicate(true)
+	ok["litter"]["band_m"] = [6.0, 64.0]
+	_t.eq("planted: litter band [6, 64] passes", ParkProps.file_errors(ok, kit), [])
+
+
+# ground_rows, the explicit surfaces: islands' sky_island stamps are 1,600 m long, so ParkSites leaves them unbucketed; the
+# context indexes them itself. Listed rows are placement surfaces inset GROUND_ROW_INSET_M; every other rule still applies.
+func _check_ground_rows(kit: Dictionary) -> void:
+	var world := ParkProps.world_for("park_islands")
+	var map = world["map"]
+	var ground: Callable = world["ground"]
+	var c := ParkProps.context(map, ground, world["stage"])
+	var row := {}
+	for r: Dictionary in map.park["park_rows"]:
+		if r["id"] == "lookout_mesa" or r["id"] == "anvil_rock":
+			row = r
+			if r["id"] == "anvil_rock":
+				break
+	_t.check("islands has a long stamped sky_island row", not row.is_empty() and float(row["size"][2]) > ParkProps.ParkSites.STAMP_KEEP_M)
+	_t.check("the context indexes the long sky_island stamps ParkSites skips", c.stamped.size() > 0)
+	var half := ParkMap.footprint_half_extents(row)
+	var yaw := deg_to_rad(float(row["yaw_deg"]))
+	var centre := ParkProps._pair(row["at"])
+	var none := func(_inst: Dictionary) -> void:
+		pass
+	# Candidate points on a grid in the row's frame (x across half.x, y along half.y), world = centre + local.rotated(-yaw).
+	var inner := []
+	var edge5 := []
+	var outer := []
+	for iy in range(-int(half.y) + 12, int(half.y) - 12, 20):
+		for ix in [-1, 1]:
+			edge5.append(centre + Vector2(ix * (half.x - 5.0), iy).rotated(-yaw))
+		for dx in range(-int(half.x) + 14, int(half.x) - 14, 14):
+			inner.append(centre + Vector2(dx, iy).rotated(-yaw))
+	for dx in range(-int(half.x) + 14, int(half.x) - 14, 14):
+		for sy in [-1, 1]:
+			edge5.append(centre + Vector2(dx, sy * (half.y - 5.0)).rotated(-yaw))
+	var unlisted := _only("keepout", inner, kit, c, ground, none)
+	_t.check("planted: an unlisted sky_island point turns keepout red (a long stamp ParkSites skips)", not unlisted.is_empty(), "%d candidates" % inner.size())
+	var listed := ParkProps.context(map, ground, world["stage"])
+	listed.use_ground_rows([row["id"]])
+	var passes := _only_rules([], inner, kit, listed, ground)
+	_t.check("planted: a listed sky_island point at least 8 m inside passes every rule", not passes.is_empty())
+	var inset := _only_rules(["ground_row"], edge5, kit, listed, ground)
+	_t.check("planted: a listed sky_island point 5 m inside the edge fails ground_row alone", not inset.is_empty())
+	var outside := _only_rules(["ground_row"], _grid(map.play_rect, 40), kit, listed, ground)
+	_t.check("planted: a point outside every listed row fails ground_row alone", not outside.is_empty())
+	_t.check("planted: without ground_rows the same outside point is not ground_row's to judge", not outside.is_empty() and not _rules(outside, c).has("ground_row"))
+	# Schema: a home row, an unknown id and a bare string are file errors.
+	var file := {"schema": ParkProps.FILE_SCHEMA, "map": "park_islands", "kit": "res://x", "templates": {"t": {"props": [{"kind": "fix_bench", "v": "*", "at": [0, 0]}]}}, "spots": [{"id": "s", "template": "t", "at": [0, 0]}]}
+	var home_row := ""
+	for h: Dictionary in map.park["home_rows"]:
+		home_row = String(h["site"])
+		break
+	for bad in [[home_row], ["no_such_row"], "lookout_mesa", []]:
+		var broken := file.duplicate(true)
+		broken["ground_rows"] = bad
+		_t.check("planted: ground_rows %s is a file error" % var_to_str(bad), ParkProps.file_errors(broken, kit, map).any(func(e: String) -> bool: return e.begins_with("ground_rows")))
+	var fine := file.duplicate(true)
+	fine["ground_rows"] = ["twin_fins"]
+	_t.check("planted: listing a non-home row is no ground_rows error", not ParkProps.file_errors(fine, kit, map).any(func(e: String) -> bool: return e.begins_with("ground_rows")))
+	_t.check("planted: a file without ground_rows has no ground_rows error", not ParkProps.file_errors(file, kit, map).any(func(e: String) -> bool: return e.begins_with("ground_rows")))
+
+
+func _grid(rect: Rect2, step: int) -> Array:
+	var out := []
+	for x in range(int(rect.position.x) + step, int(rect.end.x), step):
+		for z in range(int(rect.position.y) + step, int(rect.end.y), step):
+			out.append(Vector2(x, z))
+	return out
+
+
+# The first candidate whose planted bench breaks exactly `rules` (in any order), {} if none.
+func _only_rules(rules: Array, points: Array, kit: Dictionary, c, ground: Callable) -> Dictionary:
+	for at: Vector2 in points:
+		var inst := _planted(kit, "fix_bench", at, ground)
+		var got := _rules(inst, c)
+		got.sort()
+		var want := rules.duplicate()
+		want.sort()
+		if got == want:
+			return inst
+	return {}
 
 
 # Planted controls: each must turn the validator red, and a clean twin must not.
@@ -165,8 +390,26 @@ func _check_controls(world: Dictionary, kit: Dictionary, c) -> void:
 	var mid := (line[0] + line[1]) * 0.5
 	var on_line := _planted(kit, "fix_bench", mid, ground)
 	_t.check("planted: an instance on a line turns line_clear red", _rules(on_line, c).has("line_clear"), str(_rules(on_line, c)))
+	var mids := []
+	for name in c.lines:
+		var pts: PackedVector2Array = c.lines[name]
+		for i in range(0, pts.size() - 1):
+			mids.append((pts[i] + pts[i + 1]) * 0.5)
+	var none_mutation := func(_inst: Dictionary) -> void:
+		pass
+	_t.check("planted: a point on a line turns line_clear red and nothing else", not _only("line_clear", mids, kit, c, ground, none_mutation).is_empty())
 	var in_keepout := _planted(kit, "fix_bench", map.spawn, ground)
 	_t.check("planted: an instance on the spawn turns keepout red", _rules(in_keepout, c).has("keepout"), str(_rules(in_keepout, c)))
+	# A spawn-style keepout (spawn, vault, gate slot, activity site, device) clear of every line: keepout alone.
+	var site_points := []
+	for row: Dictionary in c.sites._keepouts:
+		if row.get("ride", false):
+			continue
+		for pt: Vector2 in row["points"]:
+			for off in [Vector2.ZERO, Vector2(3, 0), Vector2(-3, 0), Vector2(0, 3), Vector2(0, -3), Vector2(7, 0), Vector2(-7, 0), Vector2(0, 7), Vector2(0, -7)]:
+				site_points.append(pt + off)
+	var site_hit := _only("keepout", site_points, kit, c, ground, none_mutation)
+	_t.check("planted: a point inside a site keepout (spawn style) turns keepout red and nothing else", not site_hit.is_empty(), "%d candidates" % site_points.size())
 	# Beside a home: a ring of points round each home's row, the first that breaks only home_clear.
 	var beside := {}
 	for home: Dictionary in c.homes:
@@ -192,8 +435,15 @@ func _check_controls(world: Dictionary, kit: Dictionary, c) -> void:
 		var far := _line_spot(kit, c, ground, tier, tier[4])
 		_t.check("planted: a %s prop at %.0f m from a line turns line_clear red" % [tier[0], tier[3]], not near.is_empty() and _rules(near, c).has("line_clear"))
 		_t.check("planted: a %s prop at %.0f m from a line passes line_clear" % [tier[0], tier[4]], not far.is_empty() and not _rules(far, c).has("line_clear"))
-	_t.check("planted: a hero 19 m from a line is tall too",
-		_rules(_hero_at(kit, c, ground, 19.0), c).has("line_clear"))
+	var hero19 := _hero_at(kit, c, ground, 19.0)
+	var at19 := Vector2(hero19["pos"].x, hero19["pos"].z)
+	_t.check("planted: the hero's point is 19 m from the nearest line", absf(c.line_distance(at19) - 19.0) < 0.5, str(c.line_distance(at19)))
+	_t.check("planted: a hero 19 m from a line is tall too", _rules(hero19, c).has("line_clear"))
+	var twin := hero19.duplicate()
+	twin["class"] = ParkProps.PROP
+	twin["height"] = 2.0
+	twin["tags"] = []
+	_t.check("planted: a non-hero twin at the same point passes the MID tier", not _rules(twin, c).has("line_clear"), str(_rules(twin, c)))
 	_check_branches(map, kit, c, ground)
 
 
