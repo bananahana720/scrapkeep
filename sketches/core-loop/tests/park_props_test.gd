@@ -16,6 +16,7 @@ const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
+const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 
 const FIXTURE_FILE := "res://tests/fixtures/park_props/park_dam.json"
@@ -253,8 +254,25 @@ func _check_branches(map, kit: Dictionary, c, ground: Callable) -> void:
 	_t.check("planted: a point beside an enemy camp turns home_clear red and nothing else", not c.camps.is_empty() and not _only("home_clear", camp_points, kit, c, ground, none).is_empty())
 	_t.check("planted: a slope over %.0f degrees turns slope red and nothing else" % ParkProps.SLOPE_MAX_DEG, not _only("slope", grid, kit, c, ground, steep).is_empty())
 	_t.check("planted: a foot floating over %.2f m turns seat red and nothing else" % ParkProps.SEAT_FLOAT_MAX_M, not _only("seat", grid, kit, c, ground, floaty).is_empty())
+	_check_kickers()
 	var outside := _planted(kit, "fix_bench", rect.end + Vector2(20.0, 20.0), ground)
 	_t.eq("planted: a point outside the play rect turns play_rect red and nothing else", _rules(outside, c), ["play_rect"])
+
+
+# A 1,600 m lip (the islands' mesa rim): the old circle blocks everywhere, the capsules block only the lip and its run-out.
+func _check_kickers() -> void:
+	var kicker := {"id": "lip", "at": Vector2(100.0, 200.0), "dir": Vector2(0.0, 1.0), "width": 1600.0}
+	var rows := [{"id": "lip", "size": [12.0, 0.01, 1600.0]}]
+	var capsules := ParkProps.kicker_keepouts([], [kicker], rows)
+	var circle := [{"what": "kicker ramp", "points": PackedVector2Array([Vector2(100.0, 188.0), Vector2(100.0, 205.0)]), "radius": 803.0, "ride": true}]
+	var behind := Vector2(100.0, 170.0)
+	_t.check("kicker: a point 30 m behind a long lip's centre was blocked by the circle", SetDressing.blocked(circle, behind, 3.0) != "")
+	_t.eq("kicker: it passes under the capsules", SetDressing.blocked(capsules, behind, 3.0), "")
+	_t.eq("kicker: a point 30 m behind the lip, 600 m along it, passes too", SetDressing.blocked(capsules, Vector2(700.0, 170.0), 3.0), "")
+	_t.eq("kicker: a point on the lip fails keepout", SetDressing.blocked(capsules, Vector2(100.0, 200.0), 3.0), "kicker ramp")
+	_t.eq("kicker: a point 600 m along the lip fails keepout", SetDressing.blocked(capsules, Vector2(700.0, 200.0), 3.0), "kicker ramp")
+	_t.eq("kicker: a point in the run-out fails keepout", SetDressing.blocked(capsules, Vector2(100.0, 215.0), 3.0), "kicker run-out")
+	_t.eq("kicker: a point past the run-out passes", SetDressing.blocked(capsules, Vector2(100.0, 200.0 + ParkProps.KICK_RUNOUT_M + 20.0), 3.0), "")
 
 
 # The first candidate whose planted bench, after mutate, breaks exactly the rule (and passes accept, if given); {} if none.
