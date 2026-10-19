@@ -6,6 +6,7 @@ const Habits := preload("res://src/combat/habits.gd")
 const Swarm := preload("res://src/combat/swarm.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # The v2 W7 enemies inside combat (DESIGN-V2 sections 10, 11 and 15). Combat owns it and
 # hands it three things: the spawner asks it for the units it knows (make), for their
@@ -129,8 +130,13 @@ func make(kind: String) -> Node3D:
 
 
 # Asks the loader thread for every built later-world roster script on the stage-entry beat,
-# so the first spawn of a kind mid-fight does not load (and compile) its script then.
+# so the first spawn of a kind mid-fight does not load (and compile) its script then. A bot
+# run (SimClock.ticks) skips it: a spawn that finds its load still in flight joins it, the
+# wait can run the message queue mid-frame, and when that happens depends on CPU load, so a
+# seed would stop replaying. A played game keeps the warm-up.
 func _warm_scripts() -> void:
+	if SimClock.ticks:
+		return
 	for kind in Roster.ROWS.keys():
 		if _loaded.has(kind) or SCRIPTS.has(kind) or not Roster.row(kind).has("script") or not Roster.built(kind):
 			continue
