@@ -349,7 +349,9 @@ func _menu_script(step: int) -> Script:
 	if _menu_requested == step:
 		_menu_requested = -1
 		# Blocks only when a forced build (a Start, a camp visit) finds the load still running.
-		return ResourceLoader.load_threaded_get(path)
+		var threaded: Script = ResourceLoader.load_threaded_get(path)
+		if threaded != null:
+			return threaded
 	return load(path)
 
 

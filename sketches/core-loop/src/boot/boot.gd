@@ -107,6 +107,8 @@ func _poll() -> void:
 func _add_game(scene: PackedScene) -> void:
 	if scene == null:
 		push_error("boot: %s did not load" % GAME_SCENE)
+		# A broken build quits instead of leaving the card up for good.
+		get_tree().quit(1)
 		return
 	_game = scene.instantiate()
 	var tree := get_tree()
