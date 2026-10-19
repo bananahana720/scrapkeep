@@ -466,10 +466,10 @@ func _check_long_stamped(kit: Dictionary) -> void:
 	var dc := ParkProps.context(dmap, dground, dam["stage"])
 	_t.check("the context indexes the long flow_line upper_slot", dc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "upper_slot"))
 	var in_slot := _first_low(["keepout"], _row_grid(slot, 4, 2), kit, dc, dground, low, func(inst: Dictionary) -> bool:
-		return dc.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_LOW_M)
+		return dc.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_LOW_M and _blocked_by(dc, inst, "upper_slot"))
 	_t.check("planted: a 0.8 m prop inside the unlisted long flow_line upper_slot, beyond the line tiers, fails keepout alone", not in_slot.is_empty())
 	var tall_slot := _first_low(["keepout"], _row_grid(slot, 4, 2), kit, dc, dground, 2.5, func(inst: Dictionary) -> bool:
-		return dc.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M)
+		return dc.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M and _blocked_by(dc, inst, "upper_slot"))
 	_t.check("planted: a 2.5 m prop inside upper_slot, beyond the mid tier, fails keepout alone", not tall_slot.is_empty())
 
 	# The boundary: sinkhole's south_flats is exactly 60 m on its short axis, so it still blocks.
@@ -478,7 +478,7 @@ func _check_long_stamped(kit: Dictionary) -> void:
 		and absf(float(flats["size"][2])) == ParkProps.STAMP_NARROW_M and float(flats["size"][0]) > ParkProps.ParkSites.STAMP_KEEP_M \
 		and plain.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "south_flats"))
 	var in_flats := _first_low(["keepout"], _row_grid(flats, 6, 4), kit, plain, sground, 2.5, func(inst: Dictionary) -> bool:
-		return plain.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M)
+		return plain.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M and _blocked_by(plain, inst, "south_flats"))
 	_t.check("planted: a 2.5 m prop inside south_flats, past the mid tier, fails keepout alone", not in_flats.is_empty())
 
 	# A wide long stamp is landform: pit's 900 by 900 m bowl admits mid and tall props that clear the lines.
@@ -499,9 +499,12 @@ func _check_long_stamped(kit: Dictionary) -> void:
 	var stepmap = stepw["map"]
 	var step := _park_row(stepmap, "anvil_step_2")
 	var stepc := ParkProps.context(stepmap, stepw["ground"], stepw["stage"])
+	# anvil_rock (a sky_island, always blocking) covers the steps, so the control lists it: the step row is then the only blocker.
+	stepc.use_ground_rows(["anvil_rock"])
 	_t.check("islands anvil_step_2 is a narrow long stamped drop in the context", not step.is_empty() and step["element"] == "drop" and stepc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "anvil_step_2"))
-	var in_step := _first_low(["keepout"], _row_grid(step, 6, 4), kit, stepc, stepw["ground"], low)
-	_t.check("planted: a 0.8 m prop inside unlisted anvil_step_2, clear of lines and capsules, fails keepout alone", not in_step.is_empty())
+	var in_step := _first_low(["keepout"], _row_grid(step, 6, 4), kit, stepc, stepw["ground"], low, func(inst: Dictionary) -> bool:
+		return _blocked_by(stepc, inst, "anvil_step_2"))
+	_t.check("planted: a 0.8 m prop inside unlisted anvil_step_2 (anvil_rock listed), clear of lines and capsules, fails keepout from that row alone", not in_step.is_empty())
 
 	# A long stamped ground row (open element, no home) still admits a prop.
 	var shelf := _park_row(dmap, "shelf_sag")
@@ -535,6 +538,20 @@ func _check_long_stamped(kit: Dictionary) -> void:
 	_t.check("planted: a row in both ground_rows and low_ground_rows is a file error", both.call(f))
 	f["ground_rows"] = ["rim_east"]
 	_t.check("planted: the same lists with distinct rows are not", not both.call(f))
+
+
+# True when the instance's keepout comes only from the stamped row `id`: it is blocked, and with that row taken out of
+# Context.stamped nothing blocks it. Without the row in the context (a mutated width rule) it is false, so a control that
+# must prove a narrow long stamp blocks cannot be satisfied by some other keepout.
+func _blocked_by(c, inst: Dictionary, id: String) -> bool:
+	var at := Vector2(inst["pos"].x, inst["pos"].z)
+	var margin := clampf(float(inst["radius"]) + ParkProps.ParkSites.MARGIN, ParkProps.ParkSites.MARGIN, ParkProps.ParkSites.MARGIN_MAX)
+	var full: String = c.keepout_at(at, margin, true)
+	var kept: Array = c.stamped
+	c.stamped = kept.filter(func(r: Dictionary) -> bool: return r["id"] != id)
+	var rest: String = c.keepout_at(at, margin, true)
+	c.stamped = kept
+	return full != "" and rest == "" and full == "built row " + id
 
 
 func _park_row(map, id: String) -> Dictionary:
