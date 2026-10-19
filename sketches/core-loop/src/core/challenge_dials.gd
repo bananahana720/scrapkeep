@@ -11,6 +11,9 @@ extends RefCounted
 # caps (combat/attack_budget.gd), the 0.2 s warning gap, growth ratios, and enemy HEALTH
 # (difficulty never raises enemy health). Every lethal attack keeps a tell of at least TELL_FLOOR.
 #
+# brindle.punish_mult scales WALL_STUN and CLASH_STUN, Brindle's punish windows; it does not touch
+# posture or stagger timing (frozen).
+#
 # Values are floats; keys ending in `_by_phase` are arrays of floats (`a/b/c/d` on the command
 # line). Static API, no autoload.
 
@@ -61,16 +64,25 @@ static func f(key: String) -> float:
 	return float(value(key))
 
 
-# Replaces the programmatic overrides (tests, the ladder later). Unknown keys push_error once
-# and are ignored; values are coerced like the command line's.
-static func set_overrides(d: Dictionary) -> void:
+# Replaces the programmatic overrides (tests, the ladder later). Unknown keys, non-numeric or
+# negative values, and pilot.* keys (unless allow_unruled) push_error once and are ignored: the
+# same checks as the command line's.
+static func set_overrides(d: Dictionary, allow_unruled := false) -> void:
 	_overrides = {}
 	for key in d:
 		var k := String(key)
 		if not DEFAULTS.has(k):
 			_unknown(k)
 			continue
-		_overrides[k] = _coerce(k, d[key])
+		if k.begins_with("pilot.") and not allow_unruled and not _unruled():
+			_reject(k, "pilot dials are not allowed levers yet (no ruling)")
+			continue
+		var v: Variant = d[key]
+		var raw: String = "/".join((v as Array).map(func(x): return str(x))) if v is Array else str(v)
+		if not _valid(k, raw):
+			_reject(k, "'%s' is not a non-negative number" % raw)
+			continue
+		_overrides[k] = _coerce(k, v)
 
 
 # Clears overrides and forgets the command line, so the next read parses it again.

@@ -120,6 +120,14 @@ func _physics_process(delta: float) -> void:
 	_send_hand()
 
 
+# A punish window cancels owed follow-ups and pushes the attack clock back to the normal period,
+# once: with none owed (combo 0, always) this changes nothing.
+func _end_combo() -> void:
+	if _combo_left > 0:
+		_attack_clock = ChallengeDials.period("mind", ATTACK_PERIOD, phase)
+	_combo_left = -1
+
+
 # The Warden has the fleet and publishes its own posture; only a fleetless Warden needs
 # the stub to do it.
 func _publish_posture() -> void:
@@ -162,7 +170,7 @@ func _commit_attack(family := "") -> void:
 		_family = String(d["family"])
 		if d.has("verb"):
 			_plate_verb = String(d["verb"])
-			_combo_left = -1  # the plate's weak window ends any combo
+			_end_combo()  # the plate's weak window ends any combo
 			_plate_until = clock + h.warn_seconds + h.live_seconds + ChallengeDials.punish("mind", MindAttacks.PLATE_WINDOW)
 		ctx.events.boss_attack_telegraphed.emit(String(d["id"]), h.warn_seconds)
 	var ledger: Dictionary = ctx.run.get_meta("boss_attacks", {})

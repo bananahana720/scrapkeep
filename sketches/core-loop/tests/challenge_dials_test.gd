@@ -104,6 +104,11 @@ func _rules() -> void:
 	_t.eq("a negative by-phase entry is ignored", ChallengeDials.parse("mind.damage_by_phase=1/-1/2/3").size(), 0)
 	_t.eq("pilot dials are refused without --tune-unruled", ChallengeDials.parse("pilot.regen_rate_mult=2").size(), 0)
 	_t.eq("a good entry beside a bad one is kept", ChallengeDials.parse("mind.damage_mult=abc,mind.combo=1"), {"mind.combo": 1.0})
+	ChallengeDials.set_overrides({"mind.damage_mult": -1.0, "mind.combo": "abc", "pilot.regen_rate_mult": 2.0, "mind.punish_mult": 3.0})
+	_t.eq("set_overrides refuses negative, non-numeric and pilot values", ChallengeDials.describe(), {"mind.punish_mult": 3.0})
+	ChallengeDials.set_overrides({"pilot.regen_rate_mult": 2.0}, true)
+	_t.eq("set_overrides takes a pilot dial only with the opt-in", ChallengeDials.describe(), {"pilot.regen_rate_mult": 2.0})
+	ChallengeDials.reset()
 	_director()
 
 
@@ -149,10 +154,12 @@ func _run() -> void:
 	await _combo("The Waking", 2, "waking")
 	await _period("The Waking", 2, "waking", Waking.ATTACK_PERIOD)
 	await _waking_punish()
+	await _waking_clock_after_jam()
 	await _hazard("The Mind", 3, "mind", "rush", "mind_rush", 10.0)
 	await _combo("The Mind", 3, "mind")
 	await _period("The Mind", 3, "mind", 3.5)
 	await _mind_punish()
+	await _mind_clock_after_plate()
 	_game.free()
 	ChallengeDials.reset()
 	quit(_t.verdict())
@@ -304,3 +311,56 @@ func _mind_punish() -> void:
 	mod._send_hand()
 	var hands: Array = mod.hands.filter(func(x): return is_instance_valid(x))
 	_t.check("a sent hand carries the Mind's phase", not hands.is_empty() and hands[0].boss_phase == 3, str(hands.size()))
+
+
+# With follow-ups owed, a bore jam pushes the attack clock back to the normal period: no commit
+# sooner than that inside the jam, not one 0.2 s later.
+func _waking_clock_after_jam() -> void:
+	var mod = Harness.module(_game, 2)
+	var center: Vector3 = Vector3(mod._center.x, mod._top(), mod._center.z)
+	mod._clear_attacks()
+	ChallengeDials.set_overrides({"waking.combo": 2.0})
+	mod.clock = 100.0
+	mod._attack_clock = 1.0e9
+	var d := {"family": "bore", "family_index": 3, "id": "waking_bore_0", "shape": "annulus", "type": Threat.Type.INSTANT,
+		"warn": 1.0, "live": 1.0, "height": WakingAttacks.HEIGHT, "at": center, "band": Vector2(0.0, 6.0), "delay": 0.0}
+	var h = MindAttacks.build(d)
+	h.ground = Callable(mod, "ground_height_at")
+	mod.ctx.root.add_child(h)
+	mod.attacks.append({"hazards": [h], "family": "bore", "landed": false, "descs": [d]})
+	var frames := 0
+	while not h.is_live() and frames < 90 * 3:
+		await physics_frame
+		frames += 1
+	mod._combo_left = 2
+	mod._attack_clock = ChallengeDials.WARN_GAP
+	var seen: int = mod.attack_count
+	for i in int(2.5 * 90.0):
+		await physics_frame
+	_t.eq("no attack commits for 2.5 s after a jam with a combo owed", mod.attack_count, seen)
+	_t.check("the clock was pushed back to the normal period", mod._attack_clock > 0.5, "%.2f s left" % mod._attack_clock)
+	mod._clear_attacks()
+	ChallengeDials.reset()
+
+
+# With follow-ups owed, a plate's weak window pushes the attack clock to the normal period.
+func _mind_clock_after_plate() -> void:
+	var mod = Harness.module(_game, 3)
+	mod._clear_attacks()
+	ChallengeDials.set_overrides({"mind.combo": 2.0})
+	mod._combo_left = -1
+	mod._brace_due = true
+	mod.clock = 100.0
+	mod._attack_clock = 0.0
+	var seen: int = mod.attack_count
+	var frames := 0
+	while mod.attack_count == seen and frames < 90:
+		await physics_frame
+		frames += 1
+	_t.check("the plate led the chain", mod.attack_count == seen + 1 and mod._family == "plate", "%d, %s" % [mod.attack_count, mod._family])
+	seen = mod.attack_count
+	for i in int(2.5 * 90.0):
+		await physics_frame
+	_t.eq("no attack commits for 2.5 s after the plate with a combo owed", mod.attack_count, seen)
+	mod._clear_attacks()
+	ChallengeDials.reset()
