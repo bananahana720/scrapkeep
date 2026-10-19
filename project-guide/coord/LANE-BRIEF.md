@@ -12,7 +12,7 @@ The local coordinator fills the bracketed fields and starts each cloud lane with
 
 ## Fields
 
-- **Lane:** [Gate + staging | Systems | World | Perf]
+- **Lane:** [Gate + staging | Systems | World | Perf | Dressing | Life | Challenge] (cloud), or a PC lane named in GRAPH.md
 - **Wave and stage:** wave [N], base `stage/alpha-w[N]`
 - **Goal:** [one sentence end state]
 - **Units:** [from GRAPH.md, with depends-on]
