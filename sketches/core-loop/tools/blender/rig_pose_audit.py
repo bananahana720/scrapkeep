@@ -109,6 +109,7 @@ LOOPS = {
 # fnmatch patterns, either order) are excused in that clip; every other pair stays a defect.
 # Each entry cites the source that says the motion is designed. COLLAPSE is never excused.
 # kfm = world_one/kill_first_motion.py; ws = warden_swarm.py; wm = warden_mind.py (tools/blender/).
+LAND_PAIRS = [("Palm", "Finger?_0"), ("Finger?_0", "Finger?_1"), ("Finger?_1", "Finger?_2"), ("Finger?_0", "Knuckle?")]
 DELIBERATE = {
     "world_one/enemy_foreman": {
         "break": {"pairs": [("Cabinet", "Hat"), ("Cabinet", "Hand"), ("Chassis", "Mast"), ("Mast", "Horn*")],
@@ -141,11 +142,14 @@ DELIBERATE = {
         "proc:SlamPadRight:tY+": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
                                   "cite": "plated_brute.gd:288-309 e09_pads_raise: the pads rise PAD_RISE 2.5 m (:45) off the body on the warn"},
     },
+    "world_three/enemy_anchor_crew": {
+        "proc:CrewBrace:tY-": {"pairs": [("AnchorFeet", "CrewBrace")],
+                               "cite": "anchor_crew.gd:122 the body sinks 0.08 m with the wind-up and holds it; enemy_anchor_crew.py:72-75 the feet boxes sit inside the hull at rest"},
+    },
     "world_three/enemy_kite_drone": {
-        "proc:KitePawLeft:tZ-": {"pairs": [("KitePaw*", "PodRoot")],
-                                 "cite": "kite_drone.gd:177-180 the paws tuck 0.08 m back (and 0.08 up) into the pod with the wind-up tension"},
-        "proc:KitePawRight:tZ-": {"pairs": [("KitePaw*", "PodRoot")],
-                                  "cite": "kite_drone.gd:177-180 the paws tuck 0.08 m back (and 0.08 up) into the pod with the wind-up tension"},
+        **{"proc:KitePaw%s:t%s" % (side, axis): {"pairs": [("KitePaw*", "PodRoot")],
+                                                 "cite": "kite_drone.gd:177-180 the paws tuck 0.08 m back (and 0.08 up) into the pod with the wind-up tension"}
+           for side in ("Left", "Right") for axis in ("Z-", "Y+")},
     },
     "warden_swarm": {
         "break": {"pairs": [("*", "*")], "cite": "ws:42 'chunk_shed and break (falling cells)'; cells split off and fall ws:488-492, hull falls ws:525-527"},
@@ -166,12 +170,23 @@ DELIBERATE = {
         **{c: {"pairs": [("Knuckle*", "*")],
                "cite": "wm:725-731 the knuckle flicks out along its dome normal and swells 25%; design-v3/wardens/mind.md:127 'shrug: the flared knuckle flicks outward'"}
            for c in ("shrug", "shrug_1", "shrug_2")},
-        "knocked_down": {"pairs": [("Hand", "*"), ("Palm", "*"), ("Finger*", "*")],
-                         "cite": "wm:766-772 the hand tumbles over and the fingers splay; wm:913 'tumble the hand (knocked_down)'"},
+        "knocked_down": {"pairs": [("Hand", "*"), ("Palm", "*"), ("Finger*", "*"), ("Stalk*", "Lens"), ("LensMount", "Lens")],
+                         "cite": "wm:766-772 the hand tumbles over and the fingers splay; wm:913 'tumble the hand (knocked_down)'; wm:773 the lens swells 1.3x over the last sleeve end"},
+        "active": {"pairs": [("Stalk*", "Lens"), ("LensMount", "Lens")],
+                   "cite": "wm:705-710 Lens scales 1.3 about its centre; the shell grows over Stalk2's sleeve end and the neck core, which sit inside the cap at rest (renders: nothing shows through)"},
+        "glide": {"pairs": [("LensMount", "Lens"), ("Stalk*", "Lens")],
+                  "cite": "wm:760 Lens pitches 0.25 +- 0.05 rad; the neck core rides inside the centred seat, wm:512-515, and the sleeve end sinks into the cap (renders clean)"},
+        **{c: {"pairs": LAND_PAIRS + extra,
+               "cite": cite}
+           for c, extra, cite in (
+               ("land", [], "wm:762-768 the clamp curls every finger to 0.75/0.9/0.7 rad (clamp :764, curl :767) and the thumb 0.35 rad; ROOT_Y wm:197 seats each root one JOINT_R (wm:194, :457) inside the palm edge, so the root drum meets the palm and the joint drums meet their neighbours (renders: nothing shows through)"),
+               ("takeoff", [("Palm", "Thumb_0"), ("Thumb_?", "Thumb_?")],
+                "wm:747-754 the fist: every finger curls to CURL_SHUT (wm:638), thumbs turn 0.5/0.6/0.5 rad; the land contacts (wm:762-768, ROOT_Y :197, JOINT_R :194) plus the thumb drums"))},
         "final_quiet": {"pairs": [("Thumb_*", "*"), ("Lens*", "*"), ("SmallLens*", "*")],
                         "cite": "wm:773-783 thumbs fold shut and the iris closes"},
-        "perch": {"pairs": [("Stalk*", "Stalk*"), ("Stalk*", "LensMount"), ("Stalk*", "Lens"), ("Finger?_1", "Finger?_2")],
-                  "cite": "wm:491-492 each stalk core 'hides in the sleeve above it at rest'; wm:645-646, :722-724 the perch "
+        "perch": {"pairs": [("Stalk*", "Stalk*"), ("Stalk*", "LensMount"), ("Stalk*", "Lens"), ("Finger?_1", "Finger?_2"),
+                            ("Thumb_?", "Thumb_?")],
+                  "cite": "wm:720-724 the thumb turns 0.45 and 0.6 rad and its wedge sits inside the 0.22 m joint drum (wm:483); wm:491-492 each stalk core 'hides in the sleeve above it at rest'; wm:645-646, :722-724 the perch "
                           "lift slides Stalk1, Stalk2 and LensMount up into their sleeves; wm:717-719 the hook folds segment 2 "
                           "back under segment 1 (pi + 0.1 - c1), touching only at the knuckle cap; the same lift telescopes the lens up "
                           "into the stalk's last sleeve (renders: the lens cap rides under the sleeve ring, nothing shows through)"},
@@ -179,7 +194,14 @@ DELIBERATE = {
     "bosses/mind_hand": {
         **{c: {"pairs": [("LensRoot", "MainLens"), ("Iris?", "MainLens"), ("MainLens", "*Target"), ("MintTarget", "SlateTarget")],
                "cite": "bosses/mind_hand.py:309-316 MainLens scales to 1.5 (lens_scale), the six irises open to 0.24 m on the lens face (aperture) and the mint and slate targets swap by scale on the same lens face; keys :335-340 for exact_strike, brace and recover"}
-           for c in ("brace", "recover", "exact_strike")},
+           for c in ("brace", "recover")},
+        "exact_strike": {"pairs": [("LensRoot", "MainLens"), ("Iris?", "MainLens"), ("MainLens", "*Target"), ("MintTarget", "SlateTarget"),
+                                   ("Segment1", "Segment2")],
+                         "cite": "bosses/mind_hand.py:309-316 MainLens 1.5, irises and targets as brace/recover; :335-340 key; the Segment1 bend and Segment2 re-aim :302-308"},
+        "quote_warn": {"pairs": [("LensRoot", "MainLens"), ("Iris?", "MainLens"), ("MainLens", "*Target"), ("Segment1", "Segment2")],
+                       "cite": "bosses/mind_hand.py:334 key lens_scale 1.3 and bend -0.5; the lens swell and the Segment1 bend :302-308; MintTarget hidden at scale 0.001 (:311) collapses to a point inside the lens"},
+        "still_track": {"pairs": [("MainLens", "MintTarget")],
+                        "cite": "bosses/mind_hand.py:296 reset_pose hides MintTarget at scale 0.001, a point inside the r 0.7 lens (:282)"},
         "lens_break": {"pairs": [("LensRoot", "*"), ("*", "MainLens")],
                        "cite": "bosses/mind_hand.py:317-320 LensRoot drops 0.55 m and tips, MainLens shrinks to 0.05; key :341"},
     },
