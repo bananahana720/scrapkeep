@@ -71,6 +71,8 @@ func _ready() -> void:
 			_until = arg.trim_prefix("--self-play-until=")
 		elif arg.begins_with("--self-play-stall="):
 			_stall = float(arg.trim_prefix("--self-play-stall="))
+		elif arg.begins_with("--self-play-script="):
+			pass  # test override, read by src/game.gd; named here so the launch-flag lint finds its parser
 		elif arg == "--self-play-plant-stall":
 			_plant_stall = true
 		elif arg.begins_with("--self-play-plant-limit="):
