@@ -10,3 +10,5 @@ assets/music_ace/.gdignore
 !assets/models/pilot_*_anim.glb.import
 # Park dressing kit GLBs use our own LODs: Godot's automatic mesh LOD generation is off (Dressing lane, 2026-10-19).
 !assets/models/park/props/*/*.glb.import
+# Local evidence (tools write here; the repo-root artifacts/local/ rule does not reach this folder).
+artifacts/local/
