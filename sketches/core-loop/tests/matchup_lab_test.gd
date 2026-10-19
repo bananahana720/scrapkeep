@@ -108,7 +108,7 @@ func _lookup() -> void:
 	_check("a range kind finds the first sorted range part", Lab.answer_item(rows, "tarn", "lobber") == "p_range_a")
 	_check("a class-gated part is withheld from other pilots", Lab.answer_item(rows, "tarn", "plated_brute") == ""
 		and Lab.answer_item(rows, "pylon_engineer", "plated_brute") == "p_plating_sable")
-	var real := load("res://src/build/parts.gd").rows()
+	var real: Dictionary = load("res://src/build/parts.gd").rows()
 	if not Lab.answers_field_exists(real):
 		_check("a base without answers tags yields no answer item", Lab.answer_item(real, "tarn", "lobber") == "")
 	_check("the default kinds skip the two kill-first specials and keep the built ones", "linker" not in Lab.default_kinds()
@@ -122,7 +122,7 @@ func _real_run() -> void:
 		DirAccess.remove_absolute(out)
 	var output := []
 	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
-			"--out=" + out, "--procs=4", "--seeds=1,2", "--pilots=" + ",".join(PILOTS_SMALL), "--kinds=" + ",".join(KINDS_SMALL),
+			"--out=" + out, "--procs=3", "--seeds=1,2", "--pilots=" + ",".join(PILOTS_SMALL), "--kinds=" + ",".join(KINDS_SMALL),
 			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
 	var code := OS.execute(OS.get_executable_path(), args, output, true)
 	var text := "\n".join(output)

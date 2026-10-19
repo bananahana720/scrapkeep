@@ -18,6 +18,7 @@ const TelegraphScript := preload("res://src/combat/telegraph.gd")
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd \
 #     -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65]
 #     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>]
+#   or: -- --from=<a.ndjson,b.ndjson> [--out=<heatmap txt>]   re-render saved rows
 #
 # Each duel is its own process (a bot run repeats exactly only in a fresh one). The harness is
 # tools/priority_proof.gd's: calm map, bot driver, the dodge share, the settle wait.
@@ -142,6 +143,9 @@ func _initialize() -> void:
 	if _settings.has("kind"):
 		_begin_child()
 		return
+	if _settings.has("from"):
+		_render_from()
+		return
 	if not _settings.has("out"):
 		printerr("matchup_lab: usage: -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65] [--pilots=a,b] [--kinds=a,b] [--answer=1]")
 		quit(2)
@@ -166,6 +170,40 @@ func _initialize() -> void:
 	_sweep_dir = OS.get_user_data_dir().path_join("matchup_lab").path_join("p%d" % OS.get_process_id())
 	DirAccess.make_dir_recursive_absolute(_sweep_dir)
 	_parent = true
+
+
+# --from=<a.ndjson,b.ndjson>: rebuild the heatmap and baseline gate from saved rows (runs nothing).
+# The answer arm is not replayed, so its cells read pending.
+func _render_from() -> void:
+	var rows := []
+	for path in String(_settings["from"]).split(",", false):
+		for line in FileAccess.get_file_as_string(path).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary and String(parsed.get("give", "")) == "":
+				rows.append(parsed)
+	var pilots := []
+	for p in PILOTS:
+		for r in rows:
+			if r["pilot"] == p:
+				pilots.append(p)
+				break
+	var kinds := []
+	for k in default_kinds():
+		for r in rows:
+			if r["kind"] == k:
+				kinds.append(k)
+				break
+	var table := build_table(rows, pilots, kinds, _cap)
+	var lines := heatmap(table)
+	lines.append_array(gate_lines(table, grade_answers(table, [], {}, _cap, 0)))
+	for line in lines:
+		print(line)
+	if _settings.has("out"):
+		var f := FileAccess.open(String(_settings["out"]), FileAccess.WRITE)
+		for line in lines:
+			f.store_line(line)
+		f.close()
+	quit(0)
 
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]

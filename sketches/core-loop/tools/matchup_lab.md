@@ -14,6 +14,7 @@ godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/m
 - `--out` is required. The ndjson holds one row per duel (`pilot`, `class`, `kind`, `seed`, `give`, `outcome`, `ttk_s`, `hull_lost`, `damage_taken`, `hits`, `kill_dist_m`, `warnings`, `joined`, `duel_s`, `phase`). The heatmap text is written beside it as `<out>.heatmap.txt` and printed.
 - Each duel is its own Godot process (a bot run repeats exactly only in a fresh one), `--procs` at a time. Run it under `nice -n 10`, at most 6 processes.
 - Runtime: about 30 to 40 s of wall time per duel, almost all of it boot, stage load and settle (a duel itself is seconds). Six processes give about 7 s per duel. 27 kinds x 6 pilots x 4 seeds is 648 duels, about 80 minutes; 8 seeds doubles it. The small test table is 12 duels, about 2 minutes.
+- `--from=<a.ndjson,b.ndjson> [--out=<txt>]` runs nothing: it rebuilds the heatmap and baseline gate from saved rows (use it to merge batches; the answer arm reads pending there).
 - `--bot-no-*` are the same fast flags `bot_run.gd` takes (audio mix, visuals, cosmetic pilot tracks).
 
 ## What a duel is
