@@ -18,12 +18,12 @@
       "res://assets/models/park/props/pit/haul_truck_a_lod2.glb"
      ],
      "tris": [
-      8980,
-      4490,
-      1346
+      8492,
+      4246,
+      1274
      ],
      "radius": 6.72,
-     "height": 7.491
+     "height": 7.489
     },
     "b": {
      "lod": [
@@ -32,9 +32,9 @@
       "res://assets/models/park/props/pit/haul_truck_b_lod2.glb"
      ],
      "tris": [
-      8840,
-      4420,
-      1326
+      8352,
+      4176,
+      1252
      ],
      "radius": 8.031,
      "height": 9.649
@@ -46,12 +46,12 @@
       "res://assets/models/park/props/pit/haul_truck_c_lod2.glb"
      ],
      "tris": [
-      17840,
-      8920,
-      2663
+      17352,
+      8676,
+      2587
      ],
      "radius": 7.148,
-     "height": 5.251
+     "height": 5.248
     }
    }
   },
@@ -145,12 +145,12 @@
       "res://assets/models/park/props/pit/shift_bell_a_lod2.glb"
      ],
      "tris": [
-      2380,
-      1190,
-      356
+      2040,
+      1020,
+      306
      ],
-     "radius": 1.525,
-     "height": 2.839
+     "radius": 1.549,
+     "height": 2.56
     },
     "b": {
      "lod": [
