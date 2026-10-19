@@ -158,7 +158,7 @@ const ENTRIES := [
 	{
 		"id": "stream_cut", "name": "Cut the Stream",
 		"hint": "Ignore the chute and the chute never stops.",
-		"clue": "a Dispatcher's mast + a kill while its chasers stand",
+		"clue": "a Dispatcher's mast + a kill after it has dropped a chaser",
 		"text": "Perched on a mast, it never attacks but drops a chaser at you every 8 s; reach it by grapple, vault or a long gun and the stream stops.",
 	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
