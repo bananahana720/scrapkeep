@@ -11,8 +11,8 @@ const StartPicks := preload("res://src/core/start_picks.gd")
 const Profile := preload("res://src/core/profile.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const MAX_HP := 100.0
-# A hit that would kill from full health leaves 1.0 instead (the 19 Oct ruling: no single update
-# kills from full); a const so the ladder can thin it at its top step.
+# A hit that would kill from full health leaves 1.0 instead (coordinator ruling, 19 Oct 02:29Z:
+# at base tier no single update kills from full). Applies at every tier until a ladder rule says otherwise.
 const ONE_SHOT_GUARD := true
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
