@@ -57,7 +57,10 @@ Each park has a kit of at least 12 kinds, and each kind has 2 or 3 variants (dif
 
 - Ranges are set on every view. Heroes: LOD0 to 70 m, LOD1 to 180 m, LOD2 to 450 m. Props: LOD0 to 35 m, LOD1 to 90 m, LOD2 to 200 m. Litter: LOD1 to 70 m only. Fade mode is self, with margins.
 - Draws: one MultiMesh per (mesh, LOD) per vignette, and litter batched per 160 m chunk. The bar is dressing adding at most 120 draws at any sampled ride-path pose, measured as the OpenGL proxy in the cloud. The park stays inside PARK.md's caps: draws p99 at most 1.3 times base on s3, and at most 1,400 on p1.
+- Litter batches extend `visibility_range_end` by the chunk's spread (the farthest member from the bounds centre), because a visibility range is measured to the batch's bounds centre, not to each member (same reasoning as `set_dressing.gd`). A chunk therefore keeps every member visible out to 70 m.
+- Heroes keep LOD0 shadows and full ranges on the low preset; the low preset only drops litter and halves the props' LOD0 and LOD1 ends.
 - No shadow casters on small props or litter.
+- The ruling is DECISIONS.md section 8, "Lived-in parks", 19 Oct 01:40, on main.
 - Every park PR posts `NEEDS: gpu` on the Wave board for a 4080 A/B. Cloud frame times never count.
 
 ## Evidence per park PR
