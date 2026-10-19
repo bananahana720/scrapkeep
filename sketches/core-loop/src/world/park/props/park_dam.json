@@ -25,7 +25,7 @@
       2.5
      ],
      "yaw_deg": 20,
-     "scale": 0.81,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -69,7 +69,7 @@
       -4
      ],
      "yaw_deg": 110,
-     "scale": 0.63,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -91,7 +91,7 @@
       -5
      ],
      "yaw_deg": 150,
-     "scale": 0.92,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -151,7 +151,7 @@
       0
      ],
      "yaw_deg": 15,
-     "scale": 0.81,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -162,7 +162,7 @@
       -3
      ],
      "yaw_deg": 10,
-     "scale": 0.63,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -217,7 +217,7 @@
       -6
      ],
      "yaw_deg": 200,
-     "scale": 0.63,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -239,7 +239,7 @@
       -5
      ],
      "yaw_deg": 260,
-     "scale": 0.51,
+     "scale": 0.85,
      "tilt_deg": 0
     }
    ]
@@ -266,7 +266,7 @@
       -2
      ],
      "yaw_deg": 60,
-     "scale": 0.92,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -277,7 +277,7 @@
       -5
      ],
      "yaw_deg": -110,
-     "scale": 0.92,
+     "scale": 0.95,
      "tilt_deg": 0
     },
     {
@@ -288,7 +288,7 @@
       1
      ],
      "yaw_deg": -25,
-     "scale": 0.67,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -299,7 +299,7 @@
       3
      ],
      "yaw_deg": 30,
-     "scale": 0.81,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -343,7 +343,7 @@
       -6
      ],
      "yaw_deg": 150,
-     "scale": 0.51,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -370,7 +370,7 @@
       2
      ],
      "yaw_deg": 15,
-     "scale": 0.81,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -425,7 +425,7 @@
       2
      ],
      "yaw_deg": 200,
-     "scale": 0.51,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -436,7 +436,7 @@
       3
      ],
      "yaw_deg": 30,
-     "scale": 0.51,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -507,7 +507,7 @@
       -1
      ],
      "yaw_deg": 35,
-     "scale": 0.81,
+     "scale": 0.95,
      "tilt_deg": 0
     },
     {
@@ -562,7 +562,7 @@
       -2
      ],
      "yaw_deg": 220,
-     "scale": 0.63,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -573,7 +573,7 @@
       -4.5
      ],
      "yaw_deg": 40,
-     "scale": 0.81,
+     "scale": 0.85,
      "tilt_deg": 0
     }
    ]
@@ -600,7 +600,7 @@
       1
      ],
      "yaw_deg": -30,
-     "scale": 0.67,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -611,7 +611,7 @@
       -1
      ],
      "yaw_deg": 80,
-     "scale": 0.99,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -704,7 +704,7 @@
       0
      ],
      "yaw_deg": 70,
-     "scale": 0.63,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -715,7 +715,7 @@
       -2
      ],
      "yaw_deg": 200,
-     "scale": 0.63,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -737,7 +737,7 @@
       3
      ],
      "yaw_deg": 120,
-     "scale": 0.51,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -759,7 +759,7 @@
       -6
      ],
      "yaw_deg": 25,
-     "scale": 0.81,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -863,7 +863,7 @@
       -3
      ],
      "yaw_deg": 210,
-     "scale": 0.51,
+     "scale": 0.95,
      "tilt_deg": 0
     },
     {
@@ -874,7 +874,7 @@
       -4
      ],
      "yaw_deg": 30,
-     "scale": 0.51,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -923,7 +923,7 @@
       2
      ],
      "yaw_deg": -20,
-     "scale": 0.81,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -934,7 +934,7 @@
       -3
      ],
      "yaw_deg": -30,
-     "scale": 0.67,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -1027,7 +1027,7 @@
       -1
      ],
      "yaw_deg": 85,
-     "scale": 0.99,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -1071,7 +1071,7 @@
       -6
      ],
      "yaw_deg": 160,
-     "scale": 0.63,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -1082,7 +1082,7 @@
       -4
      ],
      "yaw_deg": 40,
-     "scale": 0.51,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -1093,13 +1093,13 @@
       -6
      ],
      "yaw_deg": 140,
-     "scale": 0.81,
+     "scale": 0.85,
      "tilt_deg": 0
     }
    ]
   },
   "low_lunch": {
-   "story": "A crew's lunch spot on a flat rock, with a pail left tipped and brittlebush seedlings.",
+   "story": "A crew's lunch spot on a flat rock, one pail tipped, brittlebush seedlings.",
    "props": [
     {
      "kind": "lunch_pail",
@@ -1109,7 +1109,7 @@
       0
      ],
      "yaw_deg": 20,
-     "scale": 1.0,
+     "scale": 0.95,
      "tilt_deg": 0
     },
     {
@@ -1147,7 +1147,7 @@
     },
     {
      "kind": "desert_scrub",
-     "v": "a",
+     "v": "c",
      "at": [
       5,
       3
@@ -1164,12 +1164,12 @@
       5
      ],
      "yaw_deg": 95,
-     "scale": 0.85,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
-     "kind": "desert_scrub",
-     "v": "b",
+     "kind": "rebar_bloom",
+     "v": "c",
      "at": [
       -6,
       5
@@ -1181,7 +1181,7 @@
    ]
   },
   "low_camp": {
-   "story": "A cold fire pit with a few sandbags kept as windbreak, and a spare tripod.",
+   "story": "A cold fire pit with sandbags kept as windbreak.",
    "props": [
     {
      "kind": "cold_campfire",
@@ -1196,7 +1196,7 @@
     },
     {
      "kind": "sandbags",
-     "v": "a",
+     "v": "c",
      "at": [
       -1,
       4.5
@@ -1213,12 +1213,12 @@
       -1.5
      ],
      "yaw_deg": -60,
-     "scale": 1.0,
+     "scale": 0.95,
      "tilt_deg": 0
     },
     {
      "kind": "survey_tripod",
-     "v": "a",
+     "v": "b",
      "at": [
       -5,
       -2
@@ -1246,7 +1246,7 @@
       2.5
      ],
      "yaw_deg": 200,
-     "scale": 0.6,
+     "scale": 0.5,
      "tilt_deg": 0
     },
     {
@@ -1263,11 +1263,11 @@
    ]
   },
   "low_wall": {
-   "story": "Sandbags slumping against the wash, a pail of tools and rebar half-buried in weeds.",
+   "story": "Sandbags slumping against the bank, a pail and rebar in weeds.",
    "props": [
     {
      "kind": "sandbags",
-     "v": "a",
+     "v": "b",
      "at": [
       0,
       0
@@ -1295,7 +1295,7 @@
       3
      ],
      "yaw_deg": 30,
-     "scale": 0.6,
+     "scale": 0.5,
      "tilt_deg": 0
     },
     {
@@ -1311,7 +1311,7 @@
     },
     {
      "kind": "desert_scrub",
-     "v": "b",
+     "v": "c",
      "at": [
       -5,
       -2
@@ -1332,14 +1332,282 @@
      "tilt_deg": 0
     },
     {
-     "kind": "desert_scrub",
-     "v": "a",
+     "kind": "sandbags",
+     "v": "b",
      "at": [
       -1,
       6
      ],
      "yaw_deg": 200,
-     "scale": 0.5,
+     "scale": 0.85,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "mid_workbench": {
+   "story": "A works wall of hats with a compressor and spool, a crew gone home.",
+   "props": [
+    {
+     "kind": "hardhat_rack",
+     "v": "a",
+     "at": [
+      0,
+      4
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "compressor_cart",
+     "v": "a",
+     "at": [
+      -6,
+      3
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cable_drum",
+     "v": "a",
+     "at": [
+      5.5,
+      2
+     ],
+     "yaw_deg": -20,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stencil_post",
+     "v": "a",
+     "at": [
+      -3,
+      -3
+     ],
+     "yaw_deg": -30,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "a",
+     "at": [
+      2,
+      -3.5
+     ],
+     "yaw_deg": -70,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      7,
+      5
+     ],
+     "yaw_deg": 180,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "a",
+     "at": [
+      -4,
+      7
+     ],
+     "yaw_deg": 95,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "a",
+     "at": [
+      8,
+      -3
+     ],
+     "yaw_deg": 160,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "mid_laundry": {
+   "story": "A washing line by a cold fire: shirts, a towel, a kettle waiting.",
+   "props": [
+    {
+     "kind": "laundry_line",
+     "v": "a",
+     "at": [
+      0,
+      3
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cold_campfire",
+     "v": "a",
+     "at": [
+      -2,
+      -4
+     ],
+     "yaw_deg": 30,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "b",
+     "at": [
+      3.5,
+      -3
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -7,
+      4
+     ],
+     "yaw_deg": 200,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "b",
+     "at": [
+      7,
+      3
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cable_drum",
+     "v": "c",
+     "at": [
+      -6,
+      -5
+     ],
+     "yaw_deg": 110,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "b",
+     "at": [
+      5,
+      -6
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "mid_overgrown": {
+   "story": "Rebar, spool and compressor swallowed by brittlebush.",
+   "props": [
+    {
+     "kind": "rebar_bloom",
+     "v": "a",
+     "at": [
+      0,
+      2
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "compressor_cart",
+     "v": "c",
+     "at": [
+      5,
+      3
+     ],
+     "yaw_deg": -30,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -5,
+      3
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cable_drum",
+     "v": "c",
+     "at": [
+      -4,
+      -4
+     ],
+     "yaw_deg": 25,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      7,
+      -2
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "flood_staff",
+     "v": "c",
+     "at": [
+      2,
+      -6
+     ],
+     "yaw_deg": 50,
+     "scale": 0.8,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "c",
+     "at": [
+      -8,
+      -1
+     ],
+     "yaw_deg": 200,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stencil_post",
+     "v": "c",
+     "at": [
+      4,
+      7
+     ],
+     "yaw_deg": 75,
+     "scale": 0.9,
      "tilt_deg": 0
     }
    ]
@@ -1347,564 +1615,864 @@
  },
  "spots": [
   {
-   "id": "low_lunch_1",
-   "template": "low_lunch",
-   "at": [
-    -5,
-    -705
-   ],
-   "yaw_deg": -173,
-   "near": "dome_7: lunch spot on flat rock"
-  },
-  {
-   "id": "wheelhouse_yard_2",
+   "id": "wheelhouse_yard_1",
    "template": "wheelhouse_yard",
    "at": [
-    -335,
-    -700
+    -46,
+    230
    ],
-   "yaw_deg": -151,
-   "near": "dome_9: sluice crew's last shift"
+   "yaw_deg": -90,
+   "near": "the_eye: sluice crew's last shift"
   },
   {
-   "id": "mixer_graveyard_3",
-   "template": "mixer_graveyard",
+   "id": "mid_workbench_2",
+   "template": "mid_workbench",
    "at": [
-    -40,
-    -700
+    -2,
+    266
    ],
-   "yaw_deg": -169,
-   "near": "dome_2: mixer left to brittlebush"
+   "yaw_deg": 63,
+   "near": "the_eye: works wall, compressor"
   },
   {
-   "id": "low_camp_4",
-   "template": "low_camp",
+   "id": "mid_laundry_3",
+   "template": "mid_laundry",
    "at": [
-    -35,
-    -680
-   ],
-   "yaw_deg": -171,
-   "near": "dome_2: cold fire, windbreak"
-  },
-  {
-   "id": "survey_station_5",
-   "template": "survey_station",
-   "at": [
-    0,
-    -680
-   ],
-   "yaw_deg": -173,
-   "near": "dome_7: survey set up for view"
-  },
-  {
-   "id": "crew_camp_6",
-   "template": "crew_camp",
-   "at": [
-    85,
-    -680
-   ],
-   "yaw_deg": 130,
-   "near": "dome_7: cold camp, kettle waiting"
-  },
-  {
-   "id": "bunk_collapse_7",
-   "template": "bunk_collapse",
-   "at": [
-    -390,
-    -670
-   ],
-   "yaw_deg": -151,
-   "near": "dome_9: collapsed tent, weeds"
-  },
-  {
-   "id": "flood_gauge_8",
-   "template": "flood_gauge",
-   "at": [
-    65,
-    -665
-   ],
-   "yaw_deg": 130,
-   "near": "dome_7: gauge painted higher"
-  },
-  {
-   "id": "rebar_thicket_9",
-   "template": "rebar_thicket",
-   "at": [
-    -375,
-    -645
-   ],
-   "yaw_deg": -151,
-   "near": "dome_9: rebar through brittlebush"
-  },
-  {
-   "id": "lunch_spot_10",
-   "template": "lunch_spot",
-   "at": [
-    100,
-    -640
-   ],
-   "yaw_deg": 130,
-   "near": "dome_7: lunch never finished"
-  },
-  {
-   "id": "tool_wall_11",
-   "template": "tool_wall",
-   "at": [
-    -255,
-    -625
+    -284,
+    -619
    ],
    "yaw_deg": 29,
-   "near": "dome_3: works wall, hats left"
+   "near": "dome_3: washing line, cold fire"
   },
   {
-   "id": "pour_site_12",
-   "template": "pour_site",
-   "at": [
-    125,
-    -610
-   ],
-   "yaw_deg": 130,
-   "near": "dome_8: mixer sunk in silt"
-  },
-  {
-   "id": "wheelhouse_yard_13",
-   "template": "wheelhouse_yard",
-   "at": [
-    -265,
-    -605
-   ],
-   "yaw_deg": 29,
-   "near": "dome_3: sluice crew's last shift"
-  },
-  {
-   "id": "mixer_graveyard_14",
+   "id": "mixer_graveyard_4",
    "template": "mixer_graveyard",
    "at": [
-    -295,
-    -600
+    -302,
+    -598
    ],
    "yaw_deg": 29,
    "near": "dome_3: mixer left to brittlebush"
   },
   {
-   "id": "survey_station_15",
+   "id": "survey_station_5",
    "template": "survey_station",
    "at": [
-    -245,
-    -600
+    -2,
+    -504
+   ],
+   "yaw_deg": -132,
+   "near": "dome_19: survey set up for view"
+  },
+  {
+   "id": "crew_camp_6",
+   "template": "crew_camp",
+   "at": [
+    31,
+    -439
+   ],
+   "yaw_deg": 48,
+   "near": "dome_20: cold camp, kettle waiting"
+  },
+  {
+   "id": "low_lunch_7",
+   "template": "low_lunch",
+   "at": [
+    -263,
+    -640
    ],
    "yaw_deg": 29,
-   "near": "dome_3: survey set up for view"
+   "near": "dome_16: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_8",
+   "template": "low_camp",
+   "at": [
+    -301,
+    -656
+   ],
+   "yaw_deg": -151,
+   "near": "dome_3: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_9",
+   "template": "low_wall",
+   "at": [
+    -345,
+    -632
+   ],
+   "yaw_deg": -151,
+   "near": "dome_9: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_10",
+   "template": "low_lunch",
+   "at": [
+    -351,
+    -592
+   ],
+   "yaw_deg": 29,
+   "near": "dome_11: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_11",
+   "template": "low_camp",
+   "at": [
+    -384,
+    -585
+   ],
+   "yaw_deg": -83,
+   "near": "dome_11: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_12",
+   "template": "low_wall",
+   "at": [
+    -378,
+    -531
+   ],
+   "yaw_deg": -83,
+   "near": "dome_11: sandbags slumping"
+  },
+  {
+   "id": "bunk_collapse_13",
+   "template": "bunk_collapse",
+   "at": [
+    -342,
+    -482
+   ],
+   "yaw_deg": 8,
+   "near": "dome_3: collapsed tent, weeds"
+  },
+  {
+   "id": "low_lunch_14",
+   "template": "low_lunch",
+   "at": [
+    -319,
+    -510
+   ],
+   "yaw_deg": 8,
+   "near": "dome_3: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_15",
+   "template": "low_camp",
+   "at": [
+    -294,
+    -513
+   ],
+   "yaw_deg": 8,
+   "near": "dome_4: cold fire, windbreak"
   },
   {
    "id": "low_wall_16",
    "template": "low_wall",
    "at": [
-    -325,
-    -595
-   ],
-   "yaw_deg": 29,
-   "near": "dome_3: sandbags slumping in wash"
-  },
-  {
-   "id": "crew_camp_17",
-   "template": "crew_camp",
-   "at": [
-    110,
-    -595
-   ],
-   "yaw_deg": 130,
-   "near": "dome_8: cold camp, kettle waiting"
-  },
-  {
-   "id": "low_lunch_18",
-   "template": "low_lunch",
-   "at": [
-    -150,
-    -590
-   ],
-   "yaw_deg": 0,
-   "near": "dome_5: lunch spot on flat rock"
-  },
-  {
-   "id": "bunk_collapse_19",
-   "template": "bunk_collapse",
-   "at": [
-    -260,
-    -580
+    -272,
+    -548
    ],
    "yaw_deg": -172,
-   "near": "dome_3: collapsed tent, weeds"
+   "near": "dome_4: sandbags slumping"
   },
   {
-   "id": "flood_gauge_20",
+   "id": "flood_gauge_17",
    "template": "flood_gauge",
    "at": [
-    -230,
-    -580
+    -250,
+    -576
    ],
    "yaw_deg": -172,
    "near": "dome_4: gauge painted higher"
   },
   {
-   "id": "low_camp_21",
+   "id": "low_lunch_18",
+   "template": "low_lunch",
+   "at": [
+    -221,
+    -555
+   ],
+   "yaw_deg": -172,
+   "near": "dome_4: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_19",
    "template": "low_camp",
    "at": [
-    -175,
-    -575
+    -190,
+    -523
    ],
-   "yaw_deg": -176,
+   "yaw_deg": 8,
    "near": "dome_4: cold fire, windbreak"
   },
   {
-   "id": "low_wall_22",
+   "id": "low_wall_20",
    "template": "low_wall",
    "at": [
-    -210,
-    -570
+    -168,
+    -562
    ],
-   "yaw_deg": -172,
-   "near": "dome_4: sandbags slumping in wash"
+   "yaw_deg": -176,
+   "near": "dome_5: sandbags slumping"
   },
   {
-   "id": "rebar_thicket_23",
-   "template": "rebar_thicket",
+   "id": "low_lunch_21",
+   "template": "low_lunch",
    "at": [
-    25,
-    -550
+    -142,
+    -563
    ],
-   "yaw_deg": -132,
-   "near": "domes_fin_east: rebar through brittlebush"
+   "yaw_deg": -176,
+   "near": "dome_5: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_22",
+   "template": "low_camp",
+   "at": [
+    -114,
+    -533
+   ],
+   "yaw_deg": 8,
+   "near": "dome_5: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_23",
+   "template": "low_wall",
+   "at": [
+    -63,
+    -537
+   ],
+   "yaw_deg": 4,
+   "near": "dome_19: sandbags slumping"
   },
   {
    "id": "low_lunch_24",
    "template": "low_lunch",
    "at": [
-    5,
-    -545
+    -39,
+    -570
    ],
-   "yaw_deg": 72,
-   "near": "domes_fin_east: lunch spot on flat rock"
+   "yaw_deg": -176,
+   "near": "domes_fin_east: lunch on a flat rock"
   },
   {
-   "id": "lunch_spot_25",
-   "template": "lunch_spot",
-   "at": [
-    0,
-    -525
-   ],
-   "yaw_deg": 72,
-   "near": "domes_fin_east: lunch never finished"
-  },
-  {
-   "id": "low_camp_26",
+   "id": "low_camp_25",
    "template": "low_camp",
    "at": [
-    20,
-    -520
+    -14,
+    -537
    ],
-   "yaw_deg": -132,
+   "yaw_deg": 72,
    "near": "domes_fin_east: cold fire, windbreak"
   },
   {
-   "id": "tool_wall_27",
-   "template": "tool_wall",
-   "at": [
-    115,
-    -515
-   ],
-   "yaw_deg": 48,
-   "near": "dome_8: works wall, hats left"
-  },
-  {
-   "id": "low_wall_28",
+   "id": "low_wall_26",
    "template": "low_wall",
    "at": [
-    135,
-    -500
-   ],
-   "yaw_deg": 48,
-   "near": "dome_8: sandbags slumping in wash"
-  },
-  {
-   "id": "low_lunch_29",
-   "template": "low_lunch",
-   "at": [
-    -10,
-    -490
-   ],
-   "yaw_deg": -132,
-   "near": "dome_19: lunch spot on flat rock"
-  },
-  {
-   "id": "pour_site_30",
-   "template": "pour_site",
-   "at": [
-    110,
-    -470
-   ],
-   "yaw_deg": 48,
-   "near": "dome_8: mixer sunk in silt"
-  },
-  {
-   "id": "low_camp_31",
-   "template": "low_camp",
-   "at": [
-    -30,
-    -460
+    -32,
+    -484
    ],
    "yaw_deg": 72,
-   "near": "dome_19: cold fire, windbreak"
+   "near": "dome_19: sandbags slumping"
   },
   {
-   "id": "low_wall_32",
+   "id": "low_lunch_27",
+   "template": "low_lunch",
+   "at": [
+    -40,
+    -458
+   ],
+   "yaw_deg": 72,
+   "near": "dome_19: lunch on a flat rock"
+  },
+  {
+   "id": "rebar_thicket_28",
+   "template": "rebar_thicket",
+   "at": [
+    -132,
+    -363
+   ],
+   "yaw_deg": -105,
+   "near": "dome_23: rebar through brittlebush"
+  },
+  {
+   "id": "low_camp_29",
+   "template": "low_camp",
+   "at": [
+    -27,
+    175
+   ],
+   "yaw_deg": -90,
+   "near": "the_eye: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_30",
    "template": "low_wall",
    "at": [
-    40,
-    -435
+    -16,
+    -631
    ],
-   "yaw_deg": 48,
-   "near": "dome_20: sandbags slumping in wash"
+   "yaw_deg": 7,
+   "near": "dome_2: sandbags slumping"
   },
   {
-   "id": "wheelhouse_yard_33",
-   "template": "wheelhouse_yard",
+   "id": "low_lunch_31",
+   "template": "low_lunch",
    "at": [
-    60,
-    -415
+    -58,
+    -620
    ],
-   "yaw_deg": 48,
-   "near": "dome_23: sluice crew's last shift"
+   "yaw_deg": -110,
+   "near": "dome_2: lunch on a flat rock"
   },
   {
-   "id": "mixer_graveyard_34",
-   "template": "mixer_graveyard",
+   "id": "lunch_spot_32",
+   "template": "lunch_spot",
    "at": [
-    45,
-    -400
+    -164,
+    -594
    ],
-   "yaw_deg": 56,
-   "near": "dome_23: mixer left to brittlebush"
+   "yaw_deg": -21,
+   "near": "dome_5: lunch never finished"
+  },
+  {
+   "id": "low_camp_33",
+   "template": "low_camp",
+   "at": [
+    -187,
+    -559
+   ],
+   "yaw_deg": -172,
+   "near": "dome_4: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_34",
+   "template": "low_wall",
+   "at": [
+    -208,
+    -520
+   ],
+   "yaw_deg": 146,
+   "near": "dome_4: sandbags slumping"
   },
   {
    "id": "low_lunch_35",
    "template": "low_lunch",
    "at": [
-    -135,
-    -375
+    -239,
+    -552
    ],
-   "yaw_deg": -47,
-   "near": "dome_23: lunch spot on flat rock"
+   "yaw_deg": -172,
+   "near": "dome_4: lunch on a flat rock"
   },
   {
-   "id": "low_camp_36",
+   "id": "tool_wall_36",
+   "template": "tool_wall",
+   "at": [
+    -243,
+    -463
+   ],
+   "yaw_deg": -34,
+   "near": "dome_4: works wall, hats left"
+  },
+  {
+   "id": "low_camp_37",
    "template": "low_camp",
    "at": [
-    -5,
-    -365
+    -181,
+    -503
    ],
-   "yaw_deg": 56,
-   "near": "dome_23: cold fire, windbreak"
-  },
-  {
-   "id": "survey_station_37",
-   "template": "survey_station",
-   "at": [
-    10,
-    -345
-   ],
-   "yaw_deg": 56,
-   "near": "dome_23: survey set up for view"
+   "yaw_deg": 146,
+   "near": "dome_4: cold fire, windbreak"
   },
   {
    "id": "low_wall_38",
    "template": "low_wall",
    "at": [
-    -175,
-    -300
+    -112,
+    -413
    ],
-   "yaw_deg": -119,
-   "near": "dome_23: sandbags slumping in wash"
+   "yaw_deg": -47,
+   "near": "dome_19: sandbags slumping"
   },
   {
-   "id": "crew_camp_39",
-   "template": "crew_camp",
-   "at": [
-    -170,
-    -20
-   ],
-   "yaw_deg": -69,
-   "near": "wash_fin_west: cold camp, kettle waiting"
-  },
-  {
-   "id": "bunk_collapse_40",
-   "template": "bunk_collapse",
-   "at": [
-    -160,
-    10
-   ],
-   "yaw_deg": -69,
-   "near": "wash_fin_west: collapsed tent, weeds"
-  },
-  {
-   "id": "flood_gauge_41",
-   "template": "flood_gauge",
-   "at": [
-    -145,
-    40
-   ],
-   "yaw_deg": -69,
-   "near": "wash_fin_west: gauge painted higher"
-  },
-  {
-   "id": "rebar_thicket_42",
-   "template": "rebar_thicket",
-   "at": [
-    90,
-    45
-   ],
-   "yaw_deg": 89,
-   "near": "slot_fin_far: rebar through brittlebush"
-  },
-  {
-   "id": "lunch_spot_43",
-   "template": "lunch_spot",
-   "at": [
-    -135,
-    70
-   ],
-   "yaw_deg": -69,
-   "near": "eye_fin_west: lunch never finished"
-  },
-  {
-   "id": "tool_wall_44",
-   "template": "tool_wall",
-   "at": [
-    75,
-    75
-   ],
-   "yaw_deg": 89,
-   "near": "eye_fin_east: works wall, hats left"
-  },
-  {
-   "id": "pour_site_45",
-   "template": "pour_site",
-   "at": [
-    -110,
-    120
-   ],
-   "yaw_deg": -54,
-   "near": "eye_fin_west: mixer sunk in silt"
-  },
-  {
-   "id": "wheelhouse_yard_46",
-   "template": "wheelhouse_yard",
-   "at": [
-    55,
-    120
-   ],
-   "yaw_deg": 76,
-   "near": "eye_fin_east: sluice crew's last shift"
-  },
-  {
-   "id": "low_lunch_47",
+   "id": "low_lunch_39",
    "template": "low_lunch",
    "at": [
-    80,
-    125
+    -100,
+    -335
    ],
-   "yaw_deg": 76,
-   "near": "eye_fin_east: lunch spot on flat rock"
+   "yaw_deg": -105,
+   "near": "dome_23: lunch on a flat rock"
   },
   {
-   "id": "mixer_graveyard_48",
-   "template": "mixer_graveyard",
-   "at": [
-    -55,
-    225
-   ],
-   "yaw_deg": -90,
-   "near": "the_eye: mixer left to brittlebush"
-  },
-  {
-   "id": "survey_station_49",
-   "template": "survey_station",
-   "at": [
-    -80,
-    235
-   ],
-   "yaw_deg": -145,
-   "near": "the_eye: survey set up for view"
-  },
-  {
-   "id": "low_camp_50",
+   "id": "low_camp_40",
    "template": "low_camp",
    "at": [
-    50,
-    235
+    -66,
+    -237
    ],
-   "yaw_deg": 145,
+   "yaw_deg": 96,
+   "near": "dome_23: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_41",
+   "template": "low_wall",
+   "at": [
+    -62,
+    -209
+   ],
+   "yaw_deg": 99,
+   "near": "dome_23: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_42",
+   "template": "low_lunch",
+   "at": [
+    -58,
+    -182
+   ],
+   "yaw_deg": 99,
+   "near": "wash_fin_west: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_43",
+   "template": "low_camp",
+   "at": [
+    -54,
+    -156
+   ],
+   "yaw_deg": 99,
+   "near": "wash_fin_west: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_44",
+   "template": "low_wall",
+   "at": [
+    -50,
+    -129
+   ],
+   "yaw_deg": 99,
+   "near": "wash_fin_west: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_45",
+   "template": "low_lunch",
+   "at": [
+    -28,
+    349
+   ],
+   "yaw_deg": 79,
+   "near": "the_eye: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_46",
+   "template": "low_camp",
+   "at": [
+    -21,
+    379
+   ],
+   "yaw_deg": 112,
    "near": "the_eye: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_47",
+   "template": "low_wall",
+   "at": [
+    -8,
+    403
+   ],
+   "yaw_deg": 126,
+   "near": "the_eye: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_48",
+   "template": "low_lunch",
+   "at": [
+    -134,
+    -616
+   ],
+   "yaw_deg": 7,
+   "near": "dome_5: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_49",
+   "template": "low_camp",
+   "at": [
+    -25,
+    -665
+   ],
+   "yaw_deg": 162,
+   "near": "dome_2: cold fire, windbreak"
+  },
+  {
+   "id": "pour_site_50",
+   "template": "pour_site",
+   "at": [
+    1,
+    -688
+   ],
+   "yaw_deg": -173,
+   "near": "dome_7: mixer sunk in silt"
   },
   {
    "id": "low_wall_51",
    "template": "low_wall",
    "at": [
-    80,
-    240
+    17,
+    -629
    ],
-   "yaw_deg": -180,
-   "near": "eye_chute_east: sandbags slumping in wash"
+   "yaw_deg": -50,
+   "near": "dome_7: sandbags slumping"
   },
   {
-   "id": "crew_camp_52",
-   "template": "crew_camp",
+   "id": "wheelhouse_yard_52",
+   "template": "wheelhouse_yard",
    "at": [
-    -60,
-    245
+    79,
+    -642
    ],
-   "yaw_deg": -145,
-   "near": "the_eye: cold camp, kettle waiting"
+   "yaw_deg": 130,
+   "near": "dome_7: sluice crew's last shift"
   },
   {
-   "id": "bunk_collapse_53",
-   "template": "bunk_collapse",
+   "id": "mixer_graveyard_53",
+   "template": "mixer_graveyard",
    "at": [
-    160,
-    290
+    36,
+    -568
    ],
-   "yaw_deg": 111,
-   "near": "eye_chute_east: collapsed tent, weeds"
+   "yaw_deg": -50,
+   "near": "domes_fin_east: mixer left to brittlebush"
   },
   {
    "id": "low_lunch_54",
    "template": "low_lunch",
    "at": [
-    40,
-    300
+    73,
+    -561
    ],
-   "yaw_deg": -35,
-   "near": "the_eye: lunch spot on flat rock"
+   "yaw_deg": -50,
+   "near": "domes_fin_east: lunch on a flat rock"
   },
   {
-   "id": "low_camp_55",
+   "id": "survey_station_55",
+   "template": "survey_station",
+   "at": [
+    115,
+    -522
+   ],
+   "yaw_deg": 48,
+   "near": "dome_8: survey set up for view"
+  },
+  {
+   "id": "low_camp_56",
    "template": "low_camp",
    "at": [
-    35,
-    370
+    77,
+    -516
    ],
-   "yaw_deg": -103,
+   "yaw_deg": 48,
+   "near": "dome_20: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_57",
+   "template": "low_wall",
+   "at": [
+    33,
+    -516
+   ],
+   "yaw_deg": -132,
+   "near": "domes_fin_east: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_58",
+   "template": "low_lunch",
+   "at": [
+    -7,
+    -472
+   ],
+   "yaw_deg": -132,
+   "near": "dome_19: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_59",
+   "template": "low_camp",
+   "at": [
+    -4,
+    -430
+   ],
+   "yaw_deg": 56,
+   "near": "dome_20: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_60",
+   "template": "low_wall",
+   "at": [
+    -18,
+    -402
+   ],
+   "yaw_deg": 56,
+   "near": "dome_23: sandbags slumping"
+  },
+  {
+   "id": "crew_camp_61",
+   "template": "crew_camp",
+   "at": [
+    -16,
+    -363
+   ],
+   "yaw_deg": 56,
+   "near": "dome_23: cold camp, kettle waiting"
+  },
+  {
+   "id": "low_lunch_62",
+   "template": "low_lunch",
+   "at": [
+    -44,
+    -286
+   ],
+   "yaw_deg": 135,
+   "near": "dome_23: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_63",
+   "template": "low_camp",
+   "at": [
+    -20,
+    -263
+   ],
+   "yaw_deg": 135,
+   "near": "dome_23: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_64",
+   "template": "low_wall",
+   "at": [
+    0,
+    -230
+   ],
+   "yaw_deg": 110,
+   "near": "dome_23: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_65",
+   "template": "low_lunch",
+   "at": [
+    11,
+    -200
+   ],
+   "yaw_deg": 110,
+   "near": "dome_23: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_66",
+   "template": "low_camp",
+   "at": [
+    22,
+    -170
+   ],
+   "yaw_deg": 110,
+   "near": "dome_23: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_67",
+   "template": "low_wall",
+   "at": [
+    -3,
+    -137
+   ],
+   "yaw_deg": -87,
+   "near": "wash_fin_west: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_68",
+   "template": "low_lunch",
+   "at": [
+    29,
+    114
+   ],
+   "yaw_deg": 76,
+   "near": "eye_fin_east: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_69",
+   "template": "low_camp",
+   "at": [
+    27,
+    174
+   ],
+   "yaw_deg": 93,
    "near": "the_eye: cold fire, windbreak"
   },
   {
-   "id": "low_wall_56",
+   "id": "low_wall_70",
    "template": "low_wall",
    "at": [
-    40,
-    400
+    18,
+    272
    ],
-   "yaw_deg": -103,
-   "near": "the_eye: sandbags slumping in wash"
+   "yaw_deg": -35,
+   "near": "the_eye: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_71",
+   "template": "low_lunch",
+   "at": [
+    43,
+    289
+   ],
+   "yaw_deg": -35,
+   "near": "the_eye: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_72",
+   "template": "low_camp",
+   "at": [
+    117,
+    340
+   ],
+   "yaw_deg": 77,
+   "near": "eye_chute_east: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_73",
+   "template": "low_wall",
+   "at": [
+    112,
+    365
+   ],
+   "yaw_deg": 77,
+   "near": "eye_chute_east: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_74",
+   "template": "low_lunch",
+   "at": [
+    106,
+    389
+   ],
+   "yaw_deg": 77,
+   "near": "eye_chute_east: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_75",
+   "template": "low_camp",
+   "at": [
+    4,
+    -664
+   ],
+   "yaw_deg": -173,
+   "near": "dome_7: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_76",
+   "template": "low_wall",
+   "at": [
+    42,
+    -649
+   ],
+   "yaw_deg": 130,
+   "near": "dome_7: sandbags slumping"
+  },
+  {
+   "id": "bunk_collapse_77",
+   "template": "bunk_collapse",
+   "at": [
+    116,
+    -597
+   ],
+   "yaw_deg": 130,
+   "near": "dome_8: collapsed tent, weeds"
+  },
+  {
+   "id": "low_lunch_78",
+   "template": "low_lunch",
+   "at": [
+    -27,
+    -446
+   ],
+   "yaw_deg": -124,
+   "near": "dome_19: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_79",
+   "template": "low_camp",
+   "at": [
+    -17,
+    301
+   ],
+   "yaw_deg": 79,
+   "near": "the_eye: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_80",
+   "template": "low_wall",
+   "at": [
+    -22,
+    326
+   ],
+   "yaw_deg": 79,
+   "near": "the_eye: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_81",
+   "template": "low_lunch",
+   "at": [
+    62,
+    263
+   ],
+   "yaw_deg": 145,
+   "near": "the_eye: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_82",
+   "template": "low_camp",
+   "at": [
+    79,
+    269
+   ],
+   "yaw_deg": -180,
+   "near": "eye_chute_east: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_83",
+   "template": "low_wall",
+   "at": [
+    145,
+    294
+   ],
+   "yaw_deg": 111,
+   "near": "eye_chute_east: sandbags slumping"
+  },
+  {
+   "id": "low_lunch_84",
+   "template": "low_lunch",
+   "at": [
+    130,
+    366
+   ],
+   "yaw_deg": -85,
+   "near": "eye_chute_east: lunch on a flat rock"
+  },
+  {
+   "id": "low_camp_85",
+   "template": "low_camp",
+   "at": [
+    133,
+    396
+   ],
+   "yaw_deg": -85,
+   "near": "eye_chute_east: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_86",
+   "template": "low_wall",
+   "at": [
+    -62,
+    263
+   ],
+   "yaw_deg": -145,
+   "near": "the_eye: sandbags slumping"
   }
  ],
  "litter": {
@@ -1934,12 +2502,12 @@
     "weight": 1
    }
   ],
-  "spacing_m": 8,
+  "spacing_m": 10,
   "band_m": [
-   16,
-   60
+   6,
+   24
   ],
   "seed": 11
  },
- "pin": 2986789108
+ "pin": 3329481507
 }
