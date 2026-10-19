@@ -177,7 +177,12 @@ func _run() -> void:
 	t.eq("one render node shows on the new run", shown, 1)
 
 	# The swap while a stage's rows are still placing (KB9): stage 3 builds, and use(3) lands the frame its ground is
-	# ready, before its rows have all attached; the swap stays under the cap and the rows finish on their own.
+	# ready, before its rows have all attached; the swap stays under the cap and the rows finish on their own. The run
+	# plays stage 2 first, as a game does (world.gd prepares only the next stage), so use(3) frees one stage, stage 2,
+	# and stage 1's free lands before stage 3 builds; a skip from stage 1 to 3 would free two in one frame.
+	terrain.use(2)
+	for n in 3:
+		await process_frame
 	terrain.prepare(3)
 	var ground_frames := 0
 	while not terrain.is_ready(3) and ground_frames < BUILD_FRAMES_MAX:

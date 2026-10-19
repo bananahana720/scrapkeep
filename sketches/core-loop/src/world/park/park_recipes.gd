@@ -1625,6 +1625,8 @@ class Placer extends Node3D:
 	var _pending: Array = []
 	# Loaded resources held for the build, so its load() calls find them cached.
 	var _held: Array = []
+	# Headless, a threaded build's paths, loaded on the main thread one a frame while LOADING (_poll_loading).
+	var _main_loads: Array = []
 	var _next := 0
 	var _threaded := false
 	# Anchor-field post centres by row index, worked out on a worker (pure arithmetic, no server resources).
@@ -1662,10 +1664,14 @@ class Placer extends Node3D:
 		# Headless, a threaded build loads on the main thread too: the dummy rasterizer's mesh RID owner is not
 		# thread-safe, and these loader-thread loads raced the scatter's kit meshes and the indicator's mesh in the
 		# frames they were in flight (13 of 30 headless boots). ending_sequence.gd's _build_crater has the same gate.
-		for path: String in (wanted if threaded and DisplayServer.get_name() != "headless" else []):
+		# Those loads take a frame each before the rows place, as the loader's would, so no row step carries one.
+		var headless := DisplayServer.get_name() == "headless"
+		for path: String in (wanted if threaded and not headless else []):
 			if ResourceLoader.load_threaded_request(path) == OK:
 				_pending.append(path)
 				threaded_loads += 1
+		if threaded and headless:
+			_main_loads = wanted.duplicate()
 		if threaded:
 			_task = WorkerThreadPool.add_task(_work_posts, false, "park anchor posts")
 		else:
@@ -1705,6 +1711,7 @@ class Placer extends Node3D:
 		for path: String in _pending:
 			ResourceLoader.load_threaded_get(path)
 		_pending.clear()
+		_main_loads.clear()
 		_held.clear()
 
 	func _process(_delta: float) -> void:
@@ -1728,6 +1735,12 @@ class Placer extends Node3D:
 			slowest_step = step
 
 	func _poll_loading(block: bool) -> void:
+		while not _main_loads.is_empty():
+			var loaded := load(String(_main_loads.pop_front()))
+			if loaded != null:
+				_held.append(loaded)
+			if not block and not _main_loads.is_empty():
+				return
 		var still := []
 		for path: String in _pending:
 			var status := ResourceLoader.load_threaded_get_status(path)
