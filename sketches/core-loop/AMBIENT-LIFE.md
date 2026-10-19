@@ -25,7 +25,7 @@ Critters and locals that make each park feel inhabited, with no effect on play. 
 | Dig | Old prospector badger | local, the miner who never left | round, pick and pan, battered hat | pans the runoff, hums | hummed tune | drops flat, hat over face |
 | Highdraft | Bighorn lamb | critter, pairs and trios | woolly cloud body, nub horns | perches on mesa rims, hops ledges | bleat | leaps away along the rim |
 | Highdraft | Canyon wren | critter | tiny ball, cocked tail | hops net-deck ropes | falling whistle | flies to the next island |
-| Highdraft | Net-weaver ringtail | local | round body, ringed tail (soft plum and lilac rings, never high-contrast stripes) | weaves and mends on net decks | humming, rope creak | rolls into the net like a hammock |
+| Highdraft | Net-weaver ringtail | local | round body, ringed tail (soft plum and lilac rings, never high-contrast stripes) | weaves and mends on net decks | humming, rope creak | curls up in its own tail like a hammock |
 
 The Fleet appears in the Highdraft as signs only (moored kites, an empty crew bench; Dressing-lane props). A live Fleet crew would read as the enemy faction (proposed on #149, building on it until the coordinator rules).
 
