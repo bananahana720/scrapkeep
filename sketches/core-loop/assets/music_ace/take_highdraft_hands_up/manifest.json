@@ -1,0 +1,192 @@
+{
+ "format": 1,
+ "theme": "take_highdraft_hands_up",
+ "bank": "single",
+ "flat": true,
+ "rate": 44100,
+ "key": "G",
+ "key_offset": 5,
+ "stems": [
+  "drums",
+  "bass",
+  "other"
+ ],
+ "level_db": 0.0,
+ "pre_roll": 4096,
+ "post_roll": 1024,
+ "loop_join": 441,
+ "join_ms": 10.0,
+ "silent_db": -80.0,
+ "sources": {
+  "main": {
+   "take": "take-highdraft-hands-up-s5101.wav",
+   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/radio/take-highdraft-hands-up-s5101.wav",
+   "stretched": "/home/andrew/scratch/w16/radio-pack2/stretched/take_highdraft_hands_up.wav",
+   "bpm_before": 149.9,
+   "bpm_after": 144.75,
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_highdraft_hands_up/drums.wav",
+     "sha256": "a5cec84f129a3dacd89f8885aa1c5e4726212907faca5fa645ee9f8d6a26988c"
+    },
+    "bass": {
+     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_highdraft_hands_up/bass.wav",
+     "sha256": "eaa6cbe7b11857c1f46116a1476d16b37c2a9143145244e8ee1fb240d868c3a6"
+    },
+    "other": {
+     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_highdraft_hands_up/other.wav",
+     "sha256": "e06206741bdae1d4d0648ab2cd3c68761cb3a7d4b9fc1c25293f31a1a84a5b2b"
+    },
+    "vocals": {
+     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_highdraft_hands_up/vocals.wav",
+     "sha256": "f998b7e60fd2452d3fe8dd4bc987b6b273b77491027340751911d5534a9f7012"
+    }
+   },
+   "note": "htdemucs; vocals summed into other"
+  }
+ },
+ "clips": {
+  "main": {
+   "parent": "single",
+   "take": "take-highdraft-hands-up",
+   "source_start": 11776,
+   "take_start": 11776,
+   "bpm": 145,
+   "beat": 18248,
+   "bar": 72992,
+   "beats_per_bar": 4,
+   "bars": 84,
+   "entry": 4096,
+   "exit": 6135424,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 6135424,
+   "key": "G",
+   "key_offset": 5,
+   "files": {
+    "drums": "main.drums.ogg",
+    "bass": "main.bass.ogg",
+    "other": "main.other.ogg"
+   }
+  }
+ },
+ "sections": {
+  "main": {
+   "clip": "main",
+   "game": "take-highdraft-hands-up",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full"
+  }
+ },
+ "set_piece": [],
+ "profiles": {
+  "full": {
+   "drums": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  },
+  "lounge": {
+   "drums": {
+    "volume_db": -12.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": -4.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  }
+ },
+ "breath": {
+  "raw": {
+   "stems": {
+    "drums": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "the take as ACE played it: every stem at 0 dB"
+  },
+  "hard": {
+   "stems": {
+    "drums": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": -8.0,
+     "lowpass_hz": 900,
+     "lowpass_order": 2
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "round2/automation/open.json"
+  },
+  "gentle": {
+   "stems": {
+    "drums": {
+     "volume_db": -12.0,
+     "lowpass_hz": 2000,
+     "lowpass_order": 2
+    },
+    "bass": {
+     "volume_db": -6.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 60.0,
+   "ramp_out_ms": 20.0,
+   "source": "round2/automation/open-gentle.json"
+  }
+ },
+ "breath_default": "hard",
+ "cuts": "measured-beat-phase",
+ "whole": true,
+ "timing_verified": false,
+ "gain_db": 1.7,
+ "measured": {
+  "lufs": -16.0,
+  "true_peak": -1.3,
+  "note": "summed stems before Ogg encode"
+ }
+}

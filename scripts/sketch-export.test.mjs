@@ -17,6 +17,7 @@ import {
   runBossSmoke,
   defaultStemsFrom,
   howToRun,
+  nextStepLine,
   missingStems,
   missingStemsMessage,
   packageName,
@@ -524,4 +525,11 @@ test("every win proof's bot args carry its pilot and table, and the cloud export
 test("buildStamp records the boss smoke lines before the win proof", () => {
   const text = buildStamp({ sha: "a", dirty: false, stamp: "s", godot: "g", stems: 1, stemsFrom: "f", bossSmoke: "boss smoke bowl: PASS" });
   assert.match(text, /stems: 1 from f\nboss smoke bowl: PASS\nwin proof: not run/);
+});
+
+test("nextStepLine points at sketch:appimage and the launcher check", () => {
+  const line = nextStepLine();
+  assert.ok(!line.includes("\n"));
+  assert.match(line, /npm run sketch:appimage/);
+  assert.match(line, /app menu/);
 });
