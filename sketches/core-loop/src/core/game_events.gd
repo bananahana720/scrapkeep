@@ -126,7 +126,7 @@ signal world_fact(kind: String, at: Vector3)
 # v2 W7 enemies: the counters' holds and tenacity, pack arrivals, and the ancients'
 # facts. Combat emits every one (src/combat/holds.gd, fleet.gd and the units). kind is
 # the holding unit's mechanic (roster.gd); method is the player's own action that broke
-# it ("jump", "boost", "smash", "glide", "speed"); faction is "fleet", "reactor",
+# it ("jump", "boost", "smash", "glide", "speed", "ultimate", "hook"); faction is "fleet", "reactor",
 # "swarm" or "mind"; point_id names a family Warden's weak point.
 signal hold_started(kind: String, at: Vector3)
 signal hold_broken(kind: String, method: String)

@@ -16,14 +16,16 @@
 //   launch        Scrapkeep-<sha7>-x86_64.AppImage for this commit (default: found under
 //                 artifacts/local/core-loop-export/; --appimage=<path> must carry the same sha in its
 //                 name), cold launched with a fresh HOME and XDG profile and no Godot on PATH; passes when
-//                 it prints SCRAPKEEP_MENU_READY within 5 s
+//                 it prints SCRAPKEEP_TITLE_INTERACTIVE within 5 s (Andrew, 18 Oct, launch screen option A:
+//                 an interactive 2D title card while the 3D park title loads) and then SCRAPKEEP_MENU_READY
+//                 (the 3D title shows; reported, within MENU_WAIT_S, no budget of its own)
 // Each step ends pass, fail or not run. A missing or mismatched input, or a --skip=<id,...>, reads
 // "not run", never pass. The verdict is GO only when every step passed; --cloud makes it a
 // rehearsal at best, because cloud perf and the cloud export do not count.
 // Output: artifacts/local/alpha-rc/<stamp>/ with RC.md, rc.json and one log per step.
 // Exit 0 GO, 1 any step failed, 2 nothing failed but a step did not run (or a cloud rehearsal).
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +33,9 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;
 export const MENU_READY = "SCRAPKEEP_MENU_READY";
+export const TITLE_INTERACTIVE = "SCRAPKEEP_TITLE_INTERACTIVE";
+// The 3D title has no written budget; this only ends a launch that never shows it.
+export const MENU_WAIT_S = 60;
 export const LAUNCH_BUDGET_S = 5;
 // The full smoke tier takes about 2 h on a 4-core cloud box; a hang still ends, four hours in.
 const STEP_TIMEOUT_MS = 4 * 60 * 60_000;
@@ -206,17 +211,28 @@ export function freshProfile() {
   return { home, env };
 }
 
-// The player's machine has no Godot: drop GODOT_BIN and every PATH entry holding a godot binary.
+// The player's machine has no Godot: drop GODOT_BIN and shadow every godot* name on PATH with a
+// shim that exits 127, first on PATH. Dropping whole PATH entries instead removed /usr/bin on
+// Arch, where godot sits beside sh and sleep, and failed every cold launch on the PC (19 Oct).
 export function launchEnv(env, profileEnv) {
-  const pathDirs = (env.PATH ?? "").split(":").filter((dir) => {
+  const pathDirs = (env.PATH ?? "").split(":").filter(Boolean);
+  const names = new Set();
+  for (const dir of pathDirs) {
     try {
-      return !readdirSync(dir).some((name) => /^godot/i.test(name));
+      for (const name of readdirSync(dir)) if (/^godot/i.test(name)) names.add(name);
     } catch {
-      return false;
+      // A missing or unreadable PATH entry holds nothing to shadow.
     }
-  });
+  }
+  const shims = path.join(profileEnv.HOME, ".no-godot");
+  mkdirSync(shims, { recursive: true });
+  for (const name of names) {
+    const file = path.join(shims, name);
+    writeFileSync(file, `#!/bin/sh\necho "alpha-rc: ${name} called on a machine without Godot" >&2\nexit 127\n`);
+    chmodSync(file, 0o755);
+  }
   const { GODOT_BIN: _godot, ...rest } = env;
-  return { ...rest, PATH: pathDirs.join(":"), ...profileEnv };
+  return { ...rest, PATH: [shims, ...pathDirs].join(":"), ...profileEnv };
 }
 
 // SIGTERM to the whole process group, SIGKILL after a grace, resolved once the leader has exited.
@@ -241,19 +257,24 @@ function stopGroup(child) {
   });
 }
 
-// Cold launch: a fresh profile, no Godot on PATH, and the menu-ready line inside the budget. Its own
-// process group, so the stop reaches the game the AppImage runtime starts.
-export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, env = process.env } = {}) {
+// Cold launch: a fresh profile, no Godot on PATH. Andrew, 18 Oct, launch screen option A: the title
+// card's SCRAPKEEP_TITLE_INTERACTIVE line must come inside the budget, and the 3D title's
+// SCRAPKEEP_MENU_READY must follow (its time is reported; the budget is the card's). Its own process
+// group, so the stop reaches the game the AppImage runtime starts.
+export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, menuWaitSeconds = MENU_WAIT_S, env = process.env } = {}) {
   const profile = freshProfile();
   return new Promise((resolve) => {
     const started = Date.now();
     let output = "";
     let settled = false;
+    let titleMs = null;
+    let menuMs = null;
     const child = spawn(appimage, [], { env: launchEnv(env, profile.env), stdio: ["ignore", "pipe", "pipe"], detached: true });
     const finish = async (result) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      clearTimeout(titleTimer);
+      clearTimeout(menuTimer);
       const ms = Date.now() - started;
       if (child.pid) await stopGroup(child);
       child.stdout?.destroy();
@@ -261,19 +282,28 @@ export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, env = proc
       try {
         rmSync(profile.home, { recursive: true, force: true });
       } catch {}
-      resolve({ ...result, output, ms });
+      resolve({ ...result, output, ms, titleMs, menuMs });
     };
+    const seen = (line) => (output.includes(line) ? Date.now() - started : null);
     const onData = (chunk) => {
       output += chunk;
-      if (output.includes(MENU_READY)) finish({ status: "pass", note: `main menu in ${((Date.now() - started) / 1000).toFixed(1)} s on a fresh profile` });
+      titleMs ??= seen(TITLE_INTERACTIVE);
+      menuMs ??= seen(MENU_READY);
+      if (titleMs === null || menuMs === null) return;
+      const pass = titleMs <= seconds * 1000;
+      const note = `interactive title in ${(titleMs / 1000).toFixed(1)} s (budget ${seconds} s), 3D title in ${(menuMs / 1000).toFixed(1)} s, on a fresh profile`;
+      finish({ status: pass ? "pass" : "fail", note: pass ? note : `title card too late: ${note}` });
     };
     child.stdout.on("data", onData);
     child.stderr.on("data", onData);
     child.on("error", (error) => finish({ status: "fail", note: `could not start: ${error.message}` }));
     child.on("exit", (code, signal) => finish({ status: "fail", note: `exited (${code ?? signal}) before the main menu` }));
-    const timer = setTimeout(
-      () => finish({ status: "fail", note: `no ${MENU_READY} line within ${seconds} s (slow boot, or a build without the menu-ready line)` }),
-      seconds * 1000,
+    const titleTimer = setTimeout(() => {
+      if (titleMs === null) finish({ status: "fail", note: `no ${TITLE_INTERACTIVE} line within ${seconds} s (slow boot, or a build without the title card)` });
+    }, seconds * 1000);
+    const menuTimer = setTimeout(
+      () => finish({ status: "fail", note: `no ${MENU_READY} line within ${menuWaitSeconds} s (title card at ${titleMs === null ? "never" : (titleMs / 1000).toFixed(1) + " s"})` }),
+      menuWaitSeconds * 1000,
     );
   });
 }
