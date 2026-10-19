@@ -32,6 +32,8 @@ var hands: Array = []
 var phase := 1
 var attack_count := 0
 var _attack_clock := 0.0
+# Challenge dial mind.combo: follow-up attacks still owed after the lead; -1 when none is open.
+var _combo_left := -1
 var _family := ""
 var _plate_verb := ""
 var _brace_due := false
@@ -64,6 +66,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	super(entry_velocity)
 	phase = 1
 	_attack_clock = 0.0
+	_combo_left = -1
 	_family = ""
 	_plate_verb = ""
 	_brace_due = false
@@ -103,7 +106,12 @@ func _physics_process(delta: float) -> void:
 	_attack_clock -= delta
 	if _attack_clock > 0.0:
 		return
-	_attack_clock = ATTACK_PERIOD
+	_combo_left = ChallengeDials.combo_step("mind", _combo_left)
+	if _combo_left > 0:
+		_attack_clock = ChallengeDials.WARN_GAP
+	else:
+		_combo_left = -1
+		_attack_clock = ChallengeDials.period("mind", ATTACK_PERIOD, phase)
 	_commit_attack("plate" if _brace_due else "")
 	_brace_due = false
 	_send_hand()
@@ -151,7 +159,7 @@ func _commit_attack(family := "") -> void:
 		_family = String(d["family"])
 		if d.has("verb"):
 			_plate_verb = String(d["verb"])
-			_plate_until = clock + h.warn_seconds + h.live_seconds + MindAttacks.PLATE_WINDOW
+			_plate_until = clock + h.warn_seconds + h.live_seconds + ChallengeDials.punish("mind", MindAttacks.PLATE_WINDOW)
 		ctx.events.boss_attack_telegraphed.emit(String(d["id"]), h.warn_seconds)
 	var ledger: Dictionary = ctx.run.get_meta("boss_attacks", {})
 	ledger[_family] = int(ledger.get(_family, 0)) + 1
@@ -173,7 +181,7 @@ func _step_attacks(delta: float) -> void:
 			if h.is_live() and not attack["landed"] and h.contains(ball):
 				attack["landed"] = true
 				landings.append({"id": h.attack_id, "frame": Engine.get_physics_frames()})
-				ctx.run.damage(ATTACK_DAMAGE, "mind_%s" % attack["family"])
+				ctx.run.damage(ChallengeDials.damage("mind", ATTACK_DAMAGE, phase), "mind_%s" % attack["family"])
 			if not (h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5):
 				done = false
 		if done:

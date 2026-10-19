@@ -149,7 +149,7 @@ func charge_allowed(warden) -> bool:
 	# ready on the window's tick still starts the charge; the dwell then waits for the pulse.
 	var tick := 1.0 / Engine.physics_ticks_per_second
 	for dwell_end in [DWELL, 2.0 * DWELL + MOVE]:
-		var late: float = warden.PULSE_TELEGRAPH - (dwell_end - clock)
+		var late: float = warden.pulse_telegraph() - (dwell_end - clock)
 		if late >= -0.5 * tick and late <= 2.5 * tick:
 			return true
 	return false

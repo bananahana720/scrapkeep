@@ -58,6 +58,7 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 | `--persona=` | `brawler` | The bot policy for bosses and Wardens (`brawler` is the completionist's fight profile). `--park-persona=skipper` for parks. |
 | `--jobs=<n>` | 4 | Godot processes at once (at most 6). Band sweeps can run out of memory; a job that times out or is killed is rerun once alone before it counts. |
 | `--label=` | `run-<stamp>` | Output folder name under `artifacts/local/challenge/`. |
+| `--tune=k=v,k=v` | none | Difficulty dials (`src/core/challenge_dials.gd`), passed to every job as Godot `--tune=` and printed in the table header. Arrays use `a/b/c/d`. Run records carry a `dials` field only when set. |
 | `--shard=i/n` | | Jobs `k` where `k mod n = i-1`, over the planned list: deterministic, disjoint, joined by `--merge`. |
 | `--merge=<dir,...>` | | Aggregate existing `runs.ndjson` files and print the table; runs nothing. |
 | `--dry-run` | | Print the job count and an estimated wall time. |

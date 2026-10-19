@@ -2,7 +2,7 @@
 // node scripts/challenge/run.mjs --library [--lib-seeds=4] [--lib-pilots=a,b] [--label=<name>]
 // node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,world] [--only=brindle,w1,world1]
 //     [--seeds=16] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--park-persona=skipper]
-//     [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
+//     [--tune=key=value,key=value] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
 // node scripts/challenge/run.mjs --merge=<dir,dir>
 //
 // The band table (scripts/challenge/README.md): plays each boss, Warden and park with the Novice,
@@ -23,7 +23,7 @@ const KIND_TIMEOUT_MS = 40 * 60_000;
 const opts = {
   library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "world"], only: null, seeds: 16,
   bands: ["novice", "learner1", "learner5", "expert"], top: true, persona: "brawler", parkPersona: "skipper", jobs: 4, label: null,
-  shard: null, merge: null, dryRun: false, strict: false,
+  tune: null, shard: null, merge: null, dryRun: false, strict: false,
 };
 for (const arg of process.argv.slice(2)) {
   const [k, v] = arg.replace(/^--/, "").split("=");
@@ -39,6 +39,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "park-persona") opts.parkPersona = v;
   else if (k === "jobs") opts.jobs = Number(v);
   else if (k === "label") opts.label = v;
+  else if (k === "tune") opts.tune = arg.replace(/^--tune=/, "");  // key=value pairs; the value keeps its own =
   else if (k === "shard") opts.shard = v;
   else if (k === "merge") opts.merge = v.split(",");
   else if (k === "dry-run") opts.dryRun = true;
@@ -206,7 +207,7 @@ async function runTable() {
     const dir = path.join(outDir, "jobs", job.id + (attempt > 1 ? "-rerun" : ""));
     const out = path.join(dir, "out");
     mkdirSync(out, { recursive: true });
-    const p = await runProcess(botArgs(job, out), { env: stateEnv(path.join(dir, "state")), timeout: KIND_TIMEOUT_MS, logFile: path.join(dir, "log.txt") });
+    const p = await runProcess([...botArgs(job, out), ...(opts.tune ? ["--tune=" + opts.tune] : [])], { env: stateEnv(path.join(dir, "state")), timeout: KIND_TIMEOUT_MS, logFile: path.join(dir, "log.txt") });
     const row = parseNdjson(read(path.join(out, "bots.ndjson"))).at(-1) ?? null;
     return { p, row, ok: !p.timedOut && p.exit === 0 && row !== null };
   }
@@ -230,7 +231,7 @@ async function runTable() {
     log(`rerun ${job.id} alone (first try: ${first.p.timedOut ? "timeout" : "exit " + first.p.exit})`);
     record(job, await play(job, 2), true);
   }
-  finish(parseNdjson(read(runsFile)), outDir, { label, commit });
+  finish(parseNdjson(read(runsFile)), outDir, { label, commit, tune: opts.tune ?? undefined });
 }
 
 function finish(runs, outDir, meta) {

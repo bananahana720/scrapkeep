@@ -121,7 +121,7 @@ func _go_live() -> void:
 	var lane := telegraph()
 	if lane != null and lane.contains(_real_ball()):
 		strikes_landed += 1
-		hit_player.emit(STRIKE_DAMAGE, lane.dir * STRIKE_SHOVE)
+		hit_player.emit(ChallengeDials.damage("mind", STRIKE_DAMAGE, 1), lane.dir * STRIKE_SHOVE)  # mind.damage_mult only: the hand has no phase
 	if fleet != null:
 		fleet.events().weak_point_opened.emit("lens", lens_point(), BRACE)
 

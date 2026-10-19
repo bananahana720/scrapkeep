@@ -169,7 +169,7 @@ static func plate(seed: int, ball: Vector3, center: Vector3, phase: int, radius 
 	d["to_angle"] = bearing + PLATE_HALF_SPAN
 	d["verb"] = VERBS[rng.randi() % VERBS.size()]
 	d["hit_mult_floor"] = 1.0 / BRACE_MULT
-	d["weak_window"] = PLATE_WINDOW
+	d["weak_window"] = ChallengeDials.punish("mind", PLATE_WINDOW)
 	return [d]
 
 
@@ -266,7 +266,7 @@ static func _base(family: String, n: int, shape: String, type: int, warn: float,
 
 
 static func _warn(base: float, phase: int) -> float:
-	return base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1)
+	return ChallengeDials.tell("mind", base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1))
 
 
 static func _bearing(rng: RandomNumberGenerator, ball: Vector3, center: Vector3) -> float:

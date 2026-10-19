@@ -1694,7 +1694,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		var live: bool = sheet.sheet_live()
 		if kit.hooked:
 			source.press["harpoon_released"] = true
-		var until_pulse: float = target._charge_len - target._charge_time if target._charging else target.PULSE_CYCLE - target._pulse_clock
+		var until_pulse: float = target._charge_len - target._charge_time if target._charging else target.pulse_cycle() - target._pulse_clock
 		if live and sheet.entered_sheet_cycle == sheet.gates_opened and game.player.body().get_colliding_bodies().has(target):
 			_fight_phase = "sheet return %d" % sheet.gates_opened
 		var rammed: bool = _fight_phase == "sheet return %d" % sheet.gates_opened
@@ -3482,4 +3482,7 @@ func record(wall_seconds: float) -> Dictionary:
 	if late_offer_policy != "":
 		row["late_offer"] = {"policy": late_offer_policy, "tree_picks": tree_picks.size()}
 		row["late_offer"].merge(late_offer_counts)
+	var dials := ChallengeDials.describe()
+	if not dials.is_empty():
+		row["dials"] = dials
 	return row

@@ -216,7 +216,7 @@ static func _inside(p: Vector3, center: Vector3, limit: float) -> Vector3:
 
 
 static func _warn(base: float, phase: int) -> float:
-	return base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1)
+	return ChallengeDials.tell("waking", base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1))
 
 
 static func _bearing(rng: RandomNumberGenerator, ball: Vector3, center: Vector3) -> float:
