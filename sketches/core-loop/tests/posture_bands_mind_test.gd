@@ -57,8 +57,16 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # Warden, class-gated like the hive: small stays under class III and grown's ratios do not pass 1.5 at plating 170),
 # which measures 111.2 / 58.5 s (small /
 # grown) at 102324cd, inside the small tolerance. The grown miss is stage drift, not #104.
+# 2026-10-19 (Overpowered pays, class III gain; the Mind row's "monster_gain" 1.5, boss_posture.gd MONSTER_GAIN): grown
+# re-pinned 42.7 -> 36.96 s. Cause: from heft class III every non-glancing hit counts 1.5x, so the 0.35 to 0.65 ratio rams
+# that open a stagger slowly (a ram at 0.45 added 10) fill the bar in fewer swings; grown starts at class III. Before, on
+# the stage base 102324cd: small [103.05, 115.41, 111.18] median 111.2, grown [50.88, 61.72, 58.45] median 58.5 (the
+# band's grown 25 to 45 and 2x checks red). After, three agreeing sweeps (the first with a timeout-raised copy of this
+# file, children unchanged): small [99.54, 110.01, 66.72] median 99.54, grown [36.96, 29.89, 42.57] median 36.96, ratio
+# 2.69, camper 150 on every seed. The small pin holds (99.54 against 101.5); the tuning sweep over the row's gain, per
+# median small / grown: 1.0 111.2 / 58.5, 1.3 90.6 / 42.9, 1.35 90.6 / 30.2, 1.4 90.6 / 37.0, 1.5 99.5 / 37.0, 2.0 107.6 / 33.1.
 const EXPECT_SMALL_S := 101.5
-const EXPECT_GROWN_S := 42.7
+const EXPECT_GROWN_S := 36.96
 const TOLERANCE := 0.10
 
 var _settings := {}
