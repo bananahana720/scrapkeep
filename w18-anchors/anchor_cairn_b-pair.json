@@ -1,0 +1,16 @@
+{
+	"base": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/acap/p159/anchor_cairn_b/base",
+	"head": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/acap/p159/anchor_cairn_b/head",
+	"modes": {
+		"lit": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-front30",
+				"asset-side30",
+				"asset-use6"
+			],
+			"sheet": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/acap/p159/anchor_cairn_b/pair/pair-lit.png"
+		}
+	}
+}

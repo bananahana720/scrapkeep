@@ -10,3 +10,4 @@ Left = base (stage 1a7a7299), right = head, unless a file name says otherwise.
 ## w18-anchors
 
 Anchor kit soft-toy pass, Cycles CPU (`tools/blender/glb_stills.py`, 16 samples). `anchors-base-vs-head.jpg`: top row stage 1a7a7299, bottom row head cd1fe126, three-quarter view. `anchor_*-low.jpg`: the low camera under the ledges, showing the floored joints (no see-through).
+`anchor_*-ingame-pair-lit.jpg`: `tools/asset_capture.gd --glb` in game (left stage, right head cd1fe126; cameras asset-front30, asset-side30, asset-use6; lit), pair exit 0.
