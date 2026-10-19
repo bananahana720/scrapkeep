@@ -12,6 +12,10 @@ extends RefCounted
 #            ultimate timing). The driver has no separate carve or wall-grip hand, so those
 #            ride on the Expert's other verbs and get no verb of their own here.
 #
+# "active" (the F-key item actives, Intent active_pressed) is Expert-only here, but the driver has
+# no active hand yet: nothing presses one at any band, so the Expert lacks actives until one is
+# added. Adding it would move Expert results, so it is a separate decision. The verb has no call site.
+#
 # Reaction is the seconds from a committed telegraph appearing to the bot seeing it. The
 # basis is human reaction time: a simple visual response is about 0.2-0.25 s for a
 # practised player, a choice response 0.35-0.5 s, and an untrained player under load

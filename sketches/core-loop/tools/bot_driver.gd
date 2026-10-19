@@ -486,7 +486,7 @@ var _play_clock := 0.0
 var _fill_from := 0.0
 var _fills: Array[float] = []
 var _fill_open := true
-var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0}
+var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0, "shots": 0}
 # The meter's points by source at the first full meter, for the record only.
 var _first_fill_sources := {}
 
@@ -557,6 +557,7 @@ func start(resume := false) -> void:
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.special_used.connect(func(_id: String, _at: Vector3): _count("specials"))
 	events.shot_fired.connect(func(_weapon: String, _from: Vector3, _to: Vector3):
+		_totals["shots"] = int(_totals["shots"]) + 1
 		var kit = game.player.kit
 		if kit.hooked and kit.on_body and _anchor_warden(kit.anchor_body):
 			_count("latch_shots"))
@@ -3316,12 +3317,15 @@ const TALLY_GATHER_RADIUS := 12.0
 
 
 func _card_hands() -> void:
-	if not _kit("active"):
-		return
 	if game.player.abilities.cap(AbilityState.WEAPON, "cards", null) == null:
 		return
-	_tally_gather_hands()
-	_tally_plate_hands()
+	# The press conversion below is the weapon and always runs. The gather plate is a slot 2 cast
+	# and the plate burst is Q, so each follows its verb. At base the plate burst stays as it is:
+	# it is a crowd read near an untimed press.
+	if _kit("special"):
+		_tally_gather_hands()
+	if _kit("ultimate"):
+		_tally_plate_hands()
 	if not source.hold.get("fire_held", false):
 		return
 	source.hold.erase("fire_held")
@@ -3463,7 +3467,7 @@ func record(wall_seconds: float) -> Dictionary:
 		# the in-play seconds each fill took (run start or the last set piece to a full meter), and
 		# the in-play seconds played, which bounds a meter that never filled.
 		"slot_casts": {"special": _totals["slot_casts_special"], "line": _totals["slot_casts_line"]},
-		"ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
+		"shots": _totals["shots"], "ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
 		"ult_fill_s": _fills, "play_s": snappedf(_play_clock, 0.01),
 		# The meter's points by source: over the run, and at the first full meter. A record for
 		# reading why a fill band is red; no hand reads either.
