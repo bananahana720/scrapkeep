@@ -41,6 +41,12 @@ const DEFAULTS := {
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
 	"warden.pulse_damage_by_stage": ONES6, "warden.pulse_cycle_by_stage": ONES6, "warden.slag_damage_by_stage": ONES6,
+	# The Warden's counter-pulse (warden.gd): a second core ring committed inside a stagger. Damage is an
+	# absolute value per stage (0 = off, the default: nothing is built or rolled); the telegraph is floored at
+	# TELL_FLOOR; the delay is seconds into the stagger before it starts charging.
+	"warden.counter_damage_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+	"warden.counter_telegraph_by_stage": [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+	"warden.counter_delay_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
 	# Mobs: enemy hits (after director.damage_scale(); Warden and vault sources excluded),
 	# the director's crowd cap and spawn interval, and the elite repeat chance. The attack_budget
 	# caps and Director.HARD_CAP stay hard ceilings.
@@ -253,6 +259,12 @@ static func by_phase(key: String, phase: int) -> float:
 static func by_stage(key: String, stage: int) -> float:
 	var a: Array = value(key)
 	return float(a[stage - 1]) if stage >= 1 and stage <= a.size() else 1.0
+
+
+# Like by_stage, but a stage outside the list reads `outside` (an absolute dial, not a multiplier).
+static func by_stage_or(key: String, stage: int, outside: float) -> float:
+	var a: Array = value(key)
+	return float(a[stage - 1]) if stage >= 1 and stage <= a.size() else outside
 
 
 # A wire point's whole multiplier: the global `<base>_mult` times the stage's `<base>_by_stage`.

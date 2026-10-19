@@ -572,6 +572,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	if "threat_level" in enemy:
 		enemy.threat_level = _threat()
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
+	if enemy.has_signal("counter_hit"):
+		enemy.counter_hit.connect(_on_player_hit.bind("warden_counter"))
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
 		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
@@ -3884,7 +3886,7 @@ static func _pinnable(enemy) -> bool:
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
-	if source not in ["warden", "vault"]:
+	if source not in ["warden", "warden_counter", "vault"]:
 		amount *= ctx.root.get_node("World").director.damage_scale()
 		# The Mind's hand is a boss part: it takes the mind.* dials in mind_hand.gd, not the mobs dial.
 		if source != "mind_hand":
