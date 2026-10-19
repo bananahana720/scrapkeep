@@ -7,12 +7,12 @@ The local coordinator fills the bracketed fields and starts each cloud lane with
 1. [GRAPH.md](GRAPH.md): ownership, your units, their dependencies and the test gates.
 2. [DECISIONS.md](../handoff/DECISIONS.md): Andrew's rulings, newest wins. Never re-ask one.
 3. [LESSONS.md](../handoff/LESSONS.md) and [NEW-INSTRUCTIONS.md](../handoff/NEW-INSTRUCTIONS.md): how this project works.
-4. [The ambition article](../handoff/shared/ways-of-working/rieseberg-ambition-article.md): aim high on altitude, depth and range; the human sets direction and taste, Claude owns engineering and execution.
+4. [AMBITION-BRIEF.md](AMBITION-BRIEF.md): Andrew's 19 Oct goals, reframed through [the ambition article](../handoff/shared/ways-of-working/rieseberg-ambition-article.md). It covers the outcome, the hard targets with their instruments and outside checks, and the practices (by verb) your units use. Name the verb and the practice in every PR body.
 5. `AGENTS.md`, `ORCHESTRATOR.md`, `CONTRIBUTING.md` and the skill for your work (`scrapkeep-task`, `scrapkeep-verify`, `scrapkeep-lab`).
 
 ## Fields
 
-- **Lane:** [Gate + staging | Systems | World | Perf]
+- **Lane:** [Gate + staging | Systems | World | Perf | Dressing | Life | Challenge] (cloud), or a PC lane named in GRAPH.md
 - **Wave and stage:** wave [N], base `stage/alpha-w[N]`
 - **Goal:** [one sentence end state]
 - **Units:** [from GRAPH.md, with depends-on]
