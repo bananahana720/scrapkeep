@@ -92,6 +92,8 @@ class Context:
 	var homes: Array = []
 	var camps: Array[Vector2] = []
 	var spawn := Vector2.ZERO
+	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
+	var unresolved: Array = []
 	var _cells := {}
 
 	func line_distance(p: Vector2) -> float:
@@ -176,6 +178,8 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 			var at := _place(park_map.park, point) if point is String else _pair(point)
 			if at != Vector2.INF:
 				pts.append(at)
+			else:
+				c.unresolved.append("lines.json %s waypoint %s resolves to no place" % [key, str(point)])
 		if pts.size() > 1:
 			c.lines[key] = pts
 			for i in range(1, pts.size()):
@@ -194,6 +198,8 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 					break
 		if not found.is_empty():
 			c.homes.append({"id": String(home.get("id", site)), "row": found})
+		else:
+			c.unresolved.append("home_rows site %s (home %s) names no park or activity row" % [site, String(home.get("id", site))])
 	for row: Dictionary in park_map.park.get("activity_rows", []):
 		if String(row.get("activity", "")) in CAMP_ACTIVITIES:
 			c.camps.append(_pair(row["at"]))
@@ -727,7 +733,7 @@ static func _mesh(path: String) -> Mesh:
 	return mesh
 
 
-# Teardown: the cached meshes go with the park (and with the Game, activities.gd).
+# Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).
 static func release_shared() -> void:
 	_meshes.clear()
 	_cache_owner = ""

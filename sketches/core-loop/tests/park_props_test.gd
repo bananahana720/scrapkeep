@@ -6,7 +6,7 @@ extends SceneTree
 # rule (line_clear, route_lane, keepout, home_clear, play_rect, slope, seat), expands the same twice, and builds views that
 # carry a visibility range, cast no shadow but a hero's LOD0, and collide with nothing. Until a park has a file, the
 # fixture (tests/fixtures/park_props: a manifest over existing GLBs and four spots on park_dam) stands in for the whole
-# check, so the pass is never empty, and a park without a file counts as skipped. Planted controls that must fail: an
+# check, so the pass is never empty, and a park without a file is not counted. Planted controls that must fail: an
 # instance on a line, one inside a keepout, one beside a home, a tall prop 20 m from a line.
 #
 # Each park's vignette file pins its own expansion fingerprint in a top-level "pin" field, so the six park PRs never
@@ -44,8 +44,7 @@ func _run() -> void:
 		print("park_props_test: %s fingerprint %d" % [id, got])
 		_t.check("%s pins its fingerprint" % id, file.has("pin"))
 		_t.eq("%s expansion matches its pin" % id, got, int(file.get("pin", -1)))
-	print("park_props_test: %d of %d parks have a vignette file; %d skipped" % [real, ParkProps.PARKS.size(), ParkProps.PARKS.size() - real])
-	_t.check("the park count adds up", real + (ParkProps.PARKS.size() - real) == ParkProps.PARKS.size())
+	print("park_props_test: %d of %d parks have a vignette file; %d without one" % [real, ParkProps.PARKS.size(), ParkProps.PARKS.size() - real])
 
 	var world := ParkProps.world_for(FIXTURE_MAP)
 	_t.check("the fixture world loads", world["map"].ok and world["stage"] == 1)
@@ -71,6 +70,7 @@ func _check_park(id: String, path: String, min_kinds: int, min_variants: int, wo
 	_t.eq("%s: kit schema and glbs" % id, ParkProps.kit_errors(kit, min_kinds, min_variants), [])
 	_t.eq("%s: file schema and kit names" % id, ParkProps.file_errors(file, kit), [])
 	var c := ParkProps.context(world["map"], world["ground"], world["stage"])
+	_t.eq("%s: every home site and line waypoint resolves" % id, c.unresolved, [])
 	var list := ParkProps.expand(file, kit, world["map"], world["ground"], c)
 	var authored := 0
 	for spot: Dictionary in file.get("spots", []):
@@ -212,6 +212,65 @@ func _check_controls(world: Dictionary, kit: Dictionary, c) -> void:
 	_t.check("planted: a tall prop 20 m from a line turns line_clear red while a low one does not", found, "tall %s, low %s" % [str(tall_rules), str(low_rules)])
 	_t.check("planted: a hero 20 m from a line is tall too",
 		_rules(_hero_at(kit, c, ground, 20.0), c).has("line_clear"))
+	_check_branches(map, kit, c, ground)
+
+
+# One planted instance per remaining validator branch, each of which must produce exactly its rule.
+func _check_branches(map, kit: Dictionary, c, ground: Callable) -> void:
+	var grid := []
+	var rect: Rect2 = c.rect
+	for x in range(int(rect.position.x) + 10, int(rect.end.x), 10):
+		for z in range(int(rect.position.y) + 10, int(rect.end.y), 10):
+			grid.append(Vector2(x, z))
+	var lane_points := []
+	for z: Dictionary in c.lanes:
+		lane_points.append(((z["a"] as Vector2) + (z["b"] as Vector2)) * 0.5)
+	var row_points := []
+	for row: Dictionary in map.park.get("park_rows", []):
+		if row["element"] != "ground" and row["element"] != "anchor_field":
+			row_points.append(ParkProps._pair(row["at"]))
+	var camp_points := []
+	for camp: Vector2 in c.camps:
+		for dist in [20.0, 22.0, 24.0]:
+			for k in 36:
+				camp_points.append(camp + Vector2.from_angle(k * TAU / 36.0) * dist)
+	var two_m := func(inst: Dictionary) -> void:
+		inst["height"] = 2.0
+	var none := func(_inst: Dictionary) -> void:
+		pass
+	var steep := func(inst: Dictionary) -> void:
+		inst["slope_deg"] = ParkProps.SLOPE_MAX_DEG + 5.0
+	var floaty := func(inst: Dictionary) -> void:
+		inst["float_m"] = ParkProps.SEAT_FLOAT_MAX_M + 0.15
+	# A clean twin of each lies in the same grid; a 2.0 m bench at 20 m from a line is the only one the height changes.
+	var line_clear := _only("line_clear", grid, kit, c, ground, two_m, func(inst: Dictionary) -> bool:
+		var edge: float = c.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - inst["radius"]
+		return edge > 17.0 and edge < 23.0)
+	_t.check("planted: a 2.0 m prop 20 m from a line turns line_clear (the 1.5 m within 30 m rule) red and nothing else, a 1.0 m twin passes",
+		not line_clear.is_empty() and _rules(_with(line_clear, "height", 1.0), c).is_empty(), str(line_clear.get("pos")))
+	_t.check("planted: a point on a route lane leg turns route_lane red and nothing else", not _only("route_lane", lane_points, kit, c, ground, none).is_empty())
+	_t.check("planted: a point inside a built row footprint turns keepout red and nothing else", not _only("keepout", row_points, kit, c, ground, none).is_empty())
+	_t.check("planted: a point beside an enemy camp turns home_clear red and nothing else", not c.camps.is_empty() and not _only("home_clear", camp_points, kit, c, ground, none).is_empty())
+	_t.check("planted: a slope over %.0f degrees turns slope red and nothing else" % ParkProps.SLOPE_MAX_DEG, not _only("slope", grid, kit, c, ground, steep).is_empty())
+	_t.check("planted: a foot floating over %.2f m turns seat red and nothing else" % ParkProps.SEAT_FLOAT_MAX_M, not _only("seat", grid, kit, c, ground, floaty).is_empty())
+	var outside := _planted(kit, "fix_bench", rect.end + Vector2(20.0, 20.0), ground)
+	_t.eq("planted: a point outside the play rect turns play_rect red and nothing else", _rules(outside, c), ["play_rect"])
+
+
+# The first candidate whose planted bench, after mutate, breaks exactly the rule (and passes accept, if given); {} if none.
+func _only(rule: String, points: Array, kit: Dictionary, c, ground: Callable, mutate: Callable, accept := Callable()) -> Dictionary:
+	for at: Vector2 in points:
+		var inst := _planted(kit, "fix_bench", at, ground)
+		mutate.call(inst)
+		if _rules(inst, c) == [rule] and (accept.is_null() or accept.call(inst)):
+			return inst
+	return {}
+
+
+func _with(inst: Dictionary, key: String, value) -> Dictionary:
+	var copy := inst.duplicate()
+	copy[key] = value
+	return copy
 
 
 func _hero_at(kit: Dictionary, c, ground: Callable, edge: float) -> Dictionary:
@@ -301,5 +360,7 @@ func _check_game() -> void:
 	_t.check("the shipped high rebuilds them", props != null and props.views.size() > 0)
 	game.queue_free()
 	await physics_frame
+	await physics_frame
+	_t.check("No static keeps a map, mesh, shape or material once the Game is freed: ParkProps' mesh cache is empty", ParkProps._meshes.is_empty() and ParkProps._cache_owner == "", str(ParkProps._meshes.size()))
 	ParkProps.file_overrides.clear()
 	ParkProps.release_shared()
