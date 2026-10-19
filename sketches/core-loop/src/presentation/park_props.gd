@@ -63,7 +63,7 @@ const CAMP_ACTIVITIES := ["enemy_camp"]
 # (beyond its own radius) from the edge, so nothing sits on a drop lip or a bowl edge. Listed rows stop being footprint keepouts.
 const GROUND_ROW_INSET_M := 8.0
 # ParkSites leaves every stamped row longer than ParkSites.STAMP_KEEP_M out of its footprint cells (it treats it as the landform).
-# context() re-adds the ones that are ridden built features to Context.stamped: a long stamp narrower than STAMP_NARROW_M (a wash,
+# context() re-adds the ones that are ridden built features to Context.stamped: a long stamp 60 m (STAMP_NARROW_M) or narrower (a wash,
 # slot, fin, rail, lip or step face) keeps props out, because the pilot rides it. A wider long stamp (a pit bowl, a rim drop, a
 # fan band) is the landform itself and stays open, guarded by slope, seat, the line tiers and route lanes, as ParkSites intends.
 # A sky_island is always re-added whatever its width; ground_rows and low_ground_rows open stamped rows like any other row.
@@ -285,7 +285,7 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 	for row: Dictionary in park_map.park.get("park_rows", []):
 		if not String(row.get("stamp", "")).is_empty() \
 				and maxf(float(row["size"][0]), float(row["size"][2])) > ParkSites.STAMP_KEEP_M and Context.blocks_props(row) \
-				and (String(row.get("element", "")) == "sky_island" or minf(absf(float(row["size"][0])), absf(float(row["size"][2]))) < STAMP_NARROW_M):
+				and (String(row.get("element", "")) == "sky_island" or minf(absf(float(row["size"][0])), absf(float(row["size"][2]))) <= STAMP_NARROW_M):
 			c.stamped.append(row)
 	for row: Dictionary in park_map.park.get("activity_rows", []):
 		if String(row.get("activity", "")) in CAMP_ACTIVITIES:
