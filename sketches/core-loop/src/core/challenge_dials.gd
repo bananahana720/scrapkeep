@@ -87,6 +87,9 @@ static func set_overrides(d: Dictionary, allow_unruled := false) -> void:
 			_reject(k, "pilot dials are not allowed levers yet (no ruling)")
 			continue
 		var v: Variant = d[key]
+		if _is_list(k) and not v is Array:
+			_reject(k, "a list dial takes an array, not '%s'" % str(v))
+			continue
 		var raw: String = "/".join((v as Array).map(func(x): return str(x))) if v is Array else str(v)
 		if not _valid(k, raw):
 			_reject(k, "'%s' is not a non-negative number" % raw)
