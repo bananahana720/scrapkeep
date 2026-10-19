@@ -11,3 +11,4 @@ Disposable evidence for the Ambient life PRs; nothing here ships. One folder per
 - `veto_before_after.jpg`: the capture at 48d2bed0 found quail on 48 to 63 degree dome faces and swifts inside the weir gatehouse. ea077244 vetoes both.
 - `models/`: Blender stills of the four Spillway kinds (front three-quarter, side, react).
 - `reference/enemies_sheet.jpg`: 12 world-one enemies (Cycles CPU, `tools/blender/glb_stills.py`), for the first-look comparison.
+- `models/dam_swift_*.jpg` show the swift after b76cd78a lifted its body tone (first-look note); the in-game frames still show the older, darker swift.
