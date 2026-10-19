@@ -52,6 +52,7 @@ BUDGET = {"dress_hero": (6000, 20000), "dress_prop": (300, 3000)}
 LOD1_BAND, LOD2_BAND, LOD2_MIN_TRIS = (0.40, 0.60), (0.10, 0.20), 40
 LOD1_TARGET, LOD2_TARGET = 0.50, 0.15
 FLOOR_TOL = 0.02  # metres a LOD bottom may sit off y 0
+RESEAT_MAX = 0.15  # metres decimate() may shift a LOD down or up to put its bottom back on the floor
 
 # --- palette: only safe colours -----------------------------------------------------------
 C = {
@@ -373,6 +374,12 @@ class Kit:
         bpy.context.scene.collection.objects.link(obj)
         obj.parent = root
         common.place(obj, src["world_origin"], root)
+        # Collapse can lift or sink the lowest vertex a few centimetres; re-seat the LOD on LOD0's floor so no recipe
+        # needs a ground plinth to hold FLOOR_TOL. A shift past RESEAT_MAX means the silhouette broke, so it fails.
+        shift = min(v.co.z for v in src.data.vertices) - min(v.co.z for v in mesh.vertices)
+        assert abs(shift) <= RESEAT_MAX, "LOD re-seat of %.3f m exceeds %.2f m" % (shift, RESEAT_MAX)
+        for v in mesh.vertices:
+            v.co.z += shift
         for poly in mesh.polygons:
             poly.use_smooth = True
         if mesh.color_attributes.get("Color") is not None:
