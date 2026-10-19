@@ -1407,7 +1407,10 @@ class Placer extends Node3D:
 		# on the main thread through place()'s load(): with requests in flight its main-thread meshes raced the loader's
 		# RIDs ("Attempting to initialize the wrong RID" in place_greybox, and a null material on a part's free): 2 of 96
 		# park_holes_test runs six at a time before, 0 of 216 after (artifacts/local/alpha/push/w13/place/rid_sync/).
-		for path: String in (wanted if threaded else []):
+		# Headless, a threaded build loads on the main thread too: the dummy rasterizer's mesh RID owner is not
+		# thread-safe, and these loader-thread loads raced the scatter's kit meshes and the indicator's mesh in the
+		# frames they were in flight (13 of 30 headless boots). ending_sequence.gd's _build_crater has the same gate.
+		for path: String in (wanted if threaded and DisplayServer.get_name() != "headless" else []):
 			if ResourceLoader.load_threaded_request(path) == OK:
 				_pending.append(path)
 				threaded_loads += 1
