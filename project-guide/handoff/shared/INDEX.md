@@ -15,7 +15,7 @@ The Library page lists every other published page. Keep it current: its source i
 
 ## Project guide (threads read these)
 
-- [project-guide/DECISIONS.md](project-guide/DECISIONS.md): thread copy of the decisions register. Changes with the Claude Doc.
+- [project-guide/handoff/DECISIONS.md](../DECISIONS.md): thread copy of the decisions register. Changes with the Claude Doc.
 - [project-guide/LESSONS.md](project-guide/LESSONS.md): thread copy of the lessons doc.
 - [project-guide/RECONCILE.md](project-guide/RECONCILE.md): conflicts between older records and the register; folded into the register 17 Oct 20:15Z.
 - Page sources for republishing: [library-page.html](project-guide/library-page.html) (Scrapkeep Library), [sitting-kit-page.html](project-guide/sitting-kit-page.html) (Sitting Kit, v2 with play-check prompts).
