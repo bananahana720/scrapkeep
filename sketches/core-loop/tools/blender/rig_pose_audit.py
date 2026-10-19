@@ -170,10 +170,11 @@ DELIBERATE = {
                          "cite": "wm:766-772 the hand tumbles over and the fingers splay; wm:913 'tumble the hand (knocked_down)'"},
         "final_quiet": {"pairs": [("Thumb_*", "*"), ("Lens*", "*"), ("SmallLens*", "*")],
                         "cite": "wm:773-783 thumbs fold shut and the iris closes"},
-        "perch": {"pairs": [("Stalk*", "Stalk*"), ("Stalk*", "LensMount"), ("Finger?_1", "Finger?_2")],
+        "perch": {"pairs": [("Stalk*", "Stalk*"), ("Stalk*", "LensMount"), ("Stalk*", "Lens"), ("Finger?_1", "Finger?_2")],
                   "cite": "wm:491-492 each stalk core 'hides in the sleeve above it at rest'; wm:645-646, :722-724 the perch "
                           "lift slides Stalk1, Stalk2 and LensMount up into their sleeves; wm:717-719 the hook folds segment 2 "
-                          "back under segment 1 (pi + 0.1 - c1), touching only at the knuckle cap"},
+                          "back under segment 1 (pi + 0.1 - c1), touching only at the knuckle cap; the same lift telescopes the lens up "
+                          "into the stalk's last sleeve (renders: the lens cap rides under the sleeve ring, nothing shows through)"},
     },
     "bosses/mind_hand": {
         **{c: {"pairs": [("LensRoot", "MainLens"), ("Iris?", "MainLens"), ("MainLens", "*Target"), ("MintTarget", "SlateTarget")],

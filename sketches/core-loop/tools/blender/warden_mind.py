@@ -509,7 +509,10 @@ def build_body():
     # one big lens 1.8 m across ringed by five small ones.
     lc = Vector((0, LENS_Y, 0))
     p.on("Lens", p.uv, "ancient_enamel", 1.75, 12, 8, loc=B(lc), scale=(1.0, 0.72, 1.0), color=ENAMEL)
-    p.on("Lens", p.cyl, "ancient_enamel", 0.95, 0.6, 0.6, 12, loc=B(lc + Vector((0, 0.95, 0.3))), color=IRON)
+    # The iron seat under the stalk is centred in the hull. Offset 0.3 m to the rear it stuck a dark
+    # tapered slab out of the hull's back (the 12 x 8 faceted shell is under 1.26 m deep there); it
+    # moves and swells with Lens, so centred it stays inside the shell at every turn and scale.
+    p.on("Lens", p.cyl, "ancient_enamel", 0.95, 0.6, 0.6, 12, loc=B(lc + Vector((0, 0.95, 0.0))), color=IRON)
     face = lc + Vector((0, 0, -1.22))
     face_rot = (math.pi / 2, 0, 0)
     p.on("Lens", p.cyl, "ancient_enamel", 1.12, 1.18, 0.3, 16, loc=B(face + Vector((0, 0, 0.1))), rot=face_rot,
