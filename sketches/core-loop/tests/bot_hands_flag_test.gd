@@ -7,11 +7,12 @@ extends SceneTree
 # measure; this file proves the flag and the gates.
 
 const Augments := preload("res://src/movement/augments.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 32
+const EXPECTED_CHECKS := 35
 const DT := 1.0 / 90.0
 
 var _t := T.new("bot_hands_flag_test")
@@ -45,6 +46,7 @@ func _run() -> void:
 	_harpoon_needs_speed_and_a_target()
 	await _harpoon_bites_a_world_anchor()
 	_glide_holds_over_a_drop()
+	_no_q_while_the_hand_looks()
 	_t.eq("check count", _t.checks, EXPECTED_CHECKS)
 	var code := _t.verdict()
 	quit(code)
@@ -160,12 +162,17 @@ func _glide_holds_over_a_drop() -> void:
 	_driver._glide_hand(high, far_low)
 	_driver.source.press.clear()
 	_driver.source.hold.clear()
-	_driver.source.hold["shift_held"] = true
+	_driver._shift_left = 1.0
+	_driver.source.press["shift_pressed"] = true
 	_player.state.velocity.y = -5.0
 	_player.state.air_actions = 0
 	_driver._drive(far_low, null, DT)
 	_t.check("glide hand: the drop holds the jump key while falling", _driver.source.hold.get("jump_held", false))
-	_t.check("glide hand: the drop clears a leftover blink hold", not _driver.source.hold.has("shift_held"))
+	_t.check("glide hand: the drop clears a leftover blink hold and press",
+		not _driver.source.hold.has("shift_held") and not _driver.source.press.has("shift_pressed"))
+	_driver._shift_left = 0.0
+	_t.eq("a bare trace stem is the pilot", TraversalLine.trace_stem("kest", []), "kest")
+	_t.eq("a hands trace stem is apart", TraversalLine.trace_stem("kest", ["glide"]), "kest.hands")
 
 
 func _harpoon_bites_a_world_anchor() -> void:
@@ -219,3 +226,28 @@ func _harpoon_bites_a_world_anchor() -> void:
 			and _player.kit.anchor.distance_to(beam.global_position) < 8.0)
 	beam.queue_free()
 	_player.set_physics_process(false)
+
+
+func _no_q_while_the_hand_looks() -> void:
+	var ab = _player.abilities
+	_driver._ult_wait = 0.0
+	_driver._cast_phase = ""
+	var ball: Vector3 = _player.ball_position()
+	_driver._traverse_point = Vector3.INF
+	for turn in 16:
+		var at: Vector3 = ball + Vector3.FORWARD.rotated(Vector3.UP, TAU * turn / 16.0) * 40.0
+		if _driver._way_clear(ball, at):
+			_driver._traverse_point = at
+			break
+	ab.meter.locked = false
+	ab.meter.value = ab.meter.CAP
+	var ready: bool = String(ab.ultimate().get("state", "")) == AbilityState.READY
+	_driver.source.press.clear()
+	_driver._hand_aim = true
+	_driver._ultimate_hands(null)
+	var held_back: bool = not _driver.source.press.has("ultimate_pressed")
+	_driver._hand_aim = false
+	_driver._ultimate_hands(null)
+	var sent: bool = _driver.source.press.has("ultimate_pressed")
+	_t.check("Q: pressed with a clear way and no hand aim, held back while the hand looks at an anchor",
+		ready and held_back and sent)

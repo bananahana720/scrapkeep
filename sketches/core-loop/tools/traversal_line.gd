@@ -862,7 +862,7 @@ func _run_children() -> void:
 		var child_out := out.path_join("children/%d-seed-%d" % [i + 1, _seeds[i]])
 		DirAccess.make_dir_recursive_absolute(child_out)
 		var path := child_out.path_join(summary_name(_pilot, hands_of(_settings)))
-		var name := "%s-seed-%d-trace.json" % [_pilot, _seeds[i]]
+		var name := "%s-seed-%d-trace.json" % [trace_stem(_pilot, hands_of(_settings)), _seeds[i]]
 		var child_trace := child_out.path_join(name)
 		var trace_path := out.path_join(name)
 		# Invalidate both trace consumers before replacing this seed's evidence.
@@ -962,6 +962,11 @@ static func summary_name(pilot: String, hands: Array) -> String:
 	return "%s.json" % pilot if hands.is_empty() else "%s.hands.json" % pilot
 
 
+# The trace files' stem: a hands run's traces never collide with a bare run's.
+static func trace_stem(pilot: String, hands: Array) -> String:
+	return pilot if hands.is_empty() else "%s.hands" % pilot
+
+
 # The hands --hands= names, in the order given.
 static func hands_of(settings: Dictionary) -> Array[String]:
 	var out: Array[String] = []
@@ -1013,7 +1018,7 @@ func _physics_process(delta: float) -> bool:
 	var run := _sampler.result(_seeds[_index], "engaged" if _sampler.engaged else _driver.outcome)
 	_runs.append(run)
 	if _sampler.tracing:
-		var trace_path := _out_dir().path_join("%s-seed-%d-trace.json" % [_pilot, _seeds[_index]])
+		var trace_path := _out_dir().path_join("%s-seed-%d-trace.json" % [trace_stem(_pilot, hands_of(_settings)), _seeds[_index]])
 		write_document(trace_path, {"pilot": _pilot, "seed": _seeds[_index], "ticks": _sampler.trace})
 	print("traversal_line: %s seed %d -> %s, flow share %.3f, dead stops %d, anchor gap %.1f m, to Warden %s s, path %.1f m, rides %s, uphill %.1f m"
 		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"],

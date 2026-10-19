@@ -506,6 +506,9 @@ var _traverse_point := Vector3.INF
 # The traversal hands (HAND_NAMES) the runner named, and what they decided this tick.
 var hands: Array[String] = []
 var _glide_held := false
+# True on a tick the harpoon hand turns the camera to a candidate anchor: the Q set piece flies
+# where the camera looks, so the traversal pilot does not press it then.
+var _hand_aim := false
 var _gliding := false
 var _swing_clock := 0.0
 var _swing_cool := 0.0
@@ -1119,12 +1122,15 @@ func _traverse(delta: float) -> void:
 # turns to (the anchor the harpoon hand wants to bite), or null.
 func _traverse_hands(ball: Vector3, point: Vector3, delta: float) -> Variant:
 	_glide_held = false
+	_hand_aim = false
 	if hands.is_empty():
 		return null
 	if "glide" in hands:
 		_glide_hand(ball, point)
 	if "harpoon" in hands:
-		return _swing_hand(ball, point, delta)
+		var aim = _swing_hand(ball, point, delta)
+		_hand_aim = aim != null
+		return aim
 	return null
 
 
@@ -3225,7 +3231,7 @@ func _ultimate_hands(fight: Node3D) -> void:
 	if policy == "traversal":
 		if _traverse_point != Vector3.INF:
 			var ahead := _flat(ball, _traverse_point)
-			want = ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
+			want = not _hand_aim and ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
 	else:
 		want = _core_open(fight, ball) or _enemies_within(ball, ULT_CROWD_RADIUS) >= ULT_CROWD
 	if not want:
