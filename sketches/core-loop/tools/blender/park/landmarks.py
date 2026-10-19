@@ -1268,6 +1268,68 @@ def sink_alcove_rim(s, step, color_fn):
         slab(s, [(xa, za), (xb, zb), (xb - n[0] * w, zb - n[2] * w), (xa - n[0] * w, za - n[2] * w)], -0.6, 0.08, color_fn(k))
 
 
+# The trestle: a timber span over the wash trough, closing the ring (Andrew 16 Oct: "sinkhole a full ring"). It follows the
+# deck's arc from bearing 142 to 183, planked flush with the deck (top SINK_FLOOR + 0.1) and slung on four fish-belly
+# stringers whose soffit sags 0.9 m at mid-span, so the lowest timber is y -101.44, 6.3 m over the trough floor at -107.8.
+# Two bents (three legs, a cap beam, knee braces) stand at the trough's bearings, 0.6 degrees inside the span; no bent
+# stands in the trough itself, so the ball's line down it stays open. Visual only: nothing here enters the -col mesh.
+TRESTLE_N = 30
+TRESTLE_PLANK = 0.14
+TRESTLE_STRINGERS = (47.2, 51.4, 55.6, 59.8)
+TRESTLE_SAG = 0.9
+TRESTLE_DEPTH = 0.5
+TRESTLE_BENT_INSET = math.radians(0.6)
+TRESTLE_LEG_FOOT = -105.0
+
+
+def sink_pt(r, t, y):
+    return (r * math.sin(t), y, r * math.cos(t))
+
+
+def sink_trestle(e, ex, mid):
+    """e: the base enamel surface (substructure), ex: the flush deck's, mid: the mid view's enamel."""
+    a0, a1 = SINK_WASH
+    top = SINK_FLOOR + 0.1
+    seat = top - TRESTLE_PLANK
+    r0, r1 = SINK_RING
+    at = lambda u: a0 + (a1 - a0) * u
+    for i in range(TRESTLE_N):
+        ta, tb = at(i / TRESTLE_N), at((i + 1) / TRESTLE_N)
+        c = shade("timber" if i % 3 else "timber_dk", 1.0, (i, 42), 0.08)
+        lo = [sink_pt(r0, ta, seat), sink_pt(r1, ta, seat), sink_pt(r1, tb, seat), sink_pt(r0, tb, seat)]
+        hi = [sink_pt(r0, ta, top), sink_pt(r1, ta, top), sink_pt(r1, tb, top), sink_pt(r0, tb, top)]
+        ex.ring_solid(lo, hi, c)
+    segs = 10
+    for r in TRESTLE_STRINGERS:
+        for k in range(segs):
+            rings = []
+            for u in (k / segs, (k + 1) / segs):
+                t, bot = at(u), seat - TRESTLE_DEPTH - TRESTLE_SAG * math.sin(math.pi * u)
+                rings.append([sink_pt(r - 0.25, t, bot), sink_pt(r + 0.25, t, bot), sink_pt(r + 0.25, t, seat),
+                              sink_pt(r - 0.25, t, seat)])
+            e.ring_solid(rings[0], rings[1], col("timber_dk"), (k == 0, k == segs - 1))
+    for k in range(7):
+        t = at((k + 0.5) / 7)
+        beam(e, sink_pt(r0 + 0.3, t, seat - 0.2), sink_pt(r1 - 0.3, t, seat - 0.2), 0.3, 0.36, col("timber_lt"), caps=True)
+    legs = (47.5, 53.5, 59.5)
+    for tb, inward in ((a0 + TRESTLE_BENT_INSET, 1.0), (a1 - TRESTLE_BENT_INSET, -1.0)):
+        cap = seat - TRESTLE_DEPTH
+        beam(e, sink_pt(r0 + 0.3, tb, cap - 0.28), sink_pt(r1 - 0.3, tb, cap - 0.28), 0.7, 0.56, col("timber"))
+        for r in legs:
+            beam(e, sink_pt(r, tb, TRESTLE_LEG_FOOT), sink_pt(r, tb, cap), 0.6, 0.6, col("timber"))
+            tk = tb + inward * math.radians(3.0)
+            beam(e, sink_pt(r, tb, cap - 2.6), sink_pt(r, tk, seat - TRESTLE_DEPTH - 0.2), 0.3, 0.3, col("timber_lt"))
+    # mid view: the planks and the four stringers as single runs
+    annulus(mid, (0.0, 0.0), r0, r1, seat, top, 10, lambda i: col("timber"), arc=SINK_WASH, sides=False)
+    bot = lambda u: seat - TRESTLE_DEPTH - TRESTLE_SAG * math.sin(math.pi * u)
+    for r in TRESTLE_STRINGERS:
+        for k in range(4):
+            ta, tb = at(k / 4), at((k + 1) / 4)
+            mid.ring_solid([sink_pt(r - 0.3, ta, bot(k / 4)), sink_pt(r + 0.3, ta, bot(k / 4)), sink_pt(r + 0.3, ta, seat), sink_pt(r - 0.3, ta, seat)],
+                           [sink_pt(r - 0.3, tb, bot((k + 1) / 4)), sink_pt(r + 0.3, tb, bot((k + 1) / 4)), sink_pt(r + 0.3, tb, seat), sink_pt(r - 0.3, tb, seat)],
+                           col("timber_dk"), (False, False))
+
+
 def build_sinkhole():
     base, exempt, mid, far = View("landmark_sinkhole"), View("flush"), View("landmark_sinkhole_mid"), View("landmark_sinkhole_far")
     colm = sky.Surf("landmark_sinkhole-col-col")
@@ -1317,6 +1379,7 @@ def build_sinkhole():
     deck_arc = (SINK_WASH[1], SINK_WASH[0] + TAU)
     annulus(fe, (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 106, arc=deck_arc, color_fn=
             lambda i: shade("timber" if i % 3 else "timber_dk", 1.0, (i, 41), 0.08))
+    sink_trestle(e, fe, mid["enamel"])
     # the caisson lip: a riveted steel band set flush just outside the pool
     annulus(exempt["steel"], (0.0, 0.0), SINK_POOL[0] + 0.15, SINK_POOL[0] + 1.1, SINK_FLOOR, SINK_FLOOR + 0.08, 64,
             lambda i: shade("steel", 1.0, (i, 51), 0.06))
@@ -1423,6 +1486,11 @@ def build_sinkhole():
         p1 = (SINK_RING[1] * math.sin(a), SINK_FLOOR + 0.105, SINK_RING[1] * math.cos(a))
         t = (math.cos(a), 0.0, -math.sin(a))
         card(s1, [vadd(p0, t, -0.06), vadd(p1, t, -0.06), vadd(p1, t, 0.06), vadd(p0, t, 0.06)], col("timber_dk"), UP)
+    for k in range(TRESTLE_N // 2):
+        t = SINK_WASH[0] + (SINK_WASH[1] - SINK_WASH[0]) * (k + 0.5) / (TRESTLE_N // 2)
+        tg = (math.cos(t), 0.0, -math.sin(t))
+        p0, p1 = sink_pt(SINK_RING[0], t, SINK_FLOOR + 0.105), sink_pt(SINK_RING[1], t, SINK_FLOOR + 0.105)
+        card(s1, [vadd(p0, tg, -0.06), vadd(p1, tg, -0.06), vadd(p1, tg, 0.06), vadd(p0, tg, 0.06)], col("timber_dk"), UP)
     for k in range(48):
         wall = k % 3
         sz = 0.2 + 0.25 * rnd(k, 71)
