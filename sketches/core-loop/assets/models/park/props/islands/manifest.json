@@ -227,11 +227,11 @@
       "res://assets/models/park/props/islands/mender_stool_a_lod2.glb"
      ],
      "tris": [
-      1932,
-      966,
-      290
+      2100,
+      1050,
+      305
      ],
-     "radius": 1.322,
+     "radius": 1.391,
      "height": 0.966
     },
     "b": {
@@ -241,12 +241,12 @@
       "res://assets/models/park/props/islands/mender_stool_b_lod2.glb"
      ],
      "tris": [
-      2004,
-      1002,
-      300
+      2172,
+      1086,
+      317
      ],
-     "radius": 1.389,
-     "height": 0.939
+     "radius": 1.485,
+     "height": 0.826
     },
     "c": {
      "lod": [
@@ -255,12 +255,12 @@
       "res://assets/models/park/props/islands/mender_stool_c_lod2.glb"
      ],
      "tris": [
-      1644,
-      822,
-      246
+      1812,
+      906,
+      263
      ],
-     "radius": 1.321,
-     "height": 0.905
+     "radius": 1.391,
+     "height": 0.823
     }
    }
   },
@@ -358,12 +358,12 @@
       "res://assets/models/park/props/islands/ore_trolley_c_lod2.glb"
      ],
      "tris": [
-      2812,
-      1406,
-      422
+      2804,
+      1402,
+      420
      ],
-     "radius": 1.317,
-     "height": 1.451
+     "radius": 1.534,
+     "height": 1.571
     }
    }
   },

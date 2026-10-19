@@ -69,17 +69,17 @@
    "bounds": {
     "min": [
      -3.117,
-     0.0078,
+     0,
      -2.75
     ],
     "max": [
      3.1232,
-     5.1633,
+     5.1556,
      2.7379
     ],
     "size": [
      6.2402,
-     5.1555,
+     5.1556,
      5.4879
     ]
    }
@@ -153,17 +153,17 @@
    "bounds": {
     "min": [
      -2.8657,
-     0.0023,
+     0,
      -3.0011
     ],
     "max": [
      2.8909,
-     5.1636,
+     5.1612,
      2.9996
     ],
     "size": [
      5.7566,
-     5.1613,
+     5.1612,
      6.0007
     ]
    }
@@ -237,17 +237,17 @@
    "bounds": {
     "min": [
      -2.1168,
-     0.0061,
+     0,
      -2.8572
     ],
     "max": [
      2.1069,
-     3.9692,
+     3.9632,
      2.853
     ],
     "size": [
      4.2237,
-     3.9631,
+     3.9632,
      5.7102
     ]
    }
@@ -321,12 +321,12 @@
    "bounds": {
     "min": [
      -3.2227,
-     0.001,
+     0,
      -3.8743
     ],
     "max": [
      3.2337,
-     2.1973,
+     2.1963,
      3.8745
     ],
     "size": [
@@ -377,17 +377,17 @@
    "bounds": {
     "min": [
      -3.7247,
-     0.0017,
+     0,
      -5.4353
     ],
     "max": [
      3.7249,
-     3.1775,
+     3.1757,
      5.4346
     ],
     "size": [
      7.4496,
-     3.1758,
+     3.1757,
      10.8699
     ]
    }
@@ -405,17 +405,17 @@
    "bounds": {
     "min": [
      -3.7326,
-     0.0017,
+     0,
      -5.4344
     ],
     "max": [
      3.7085,
-     3.1801,
+     3.1783,
      5.4438
     ],
     "size": [
      7.4411,
-     3.1784,
+     3.1783,
      10.8782
     ]
    }
@@ -461,12 +461,12 @@
    "bounds": {
     "min": [
      -2.8821,
-     0.0001,
+     0,
      -3.7322
     ],
     "max": [
      2.8821,
-     3.1001,
+     3.1,
      3.7322
     ],
     "size": [
@@ -489,12 +489,12 @@
    "bounds": {
     "min": [
      -2.8716,
-     -0.0053,
+     0,
      -3.7384
     ],
     "max": [
      2.8921,
-     3.1014,
+     3.1067,
      3.7423
     ],
     "size": [
@@ -573,17 +573,17 @@
    "bounds": {
     "min": [
      -2.7206,
-     -0.0044,
+     0,
      -2.8251
     ],
     "max": [
      2.7192,
-     4.3985,
+     4.4028,
      2.8197
     ],
     "size": [
      5.4398,
-     4.4029,
+     4.4028,
      5.6448
     ]
    }
@@ -629,12 +629,12 @@
    "bounds": {
     "min": [
      -3.2631,
-     0.0006,
+     0,
      -2.4734
     ],
     "max": [
      3.2626,
-     4.3768,
+     4.3762,
      2.4726
     ],
     "size": [
@@ -657,12 +657,12 @@
    "bounds": {
     "min": [
      -3.271,
-     0.0011,
+     0,
      -2.4825
     ],
     "max": [
      3.2586,
-     4.3768,
+     4.3757,
      2.4594
     ],
     "size": [
@@ -713,12 +713,12 @@
    "bounds": {
     "min": [
      -3.48,
-     0.0001,
+     0,
      -2.8934
     ],
     "max": [
      3.4805,
-     4.4245,
+     4.4244,
      2.8927
     ],
     "size": [
@@ -741,12 +741,12 @@
    "bounds": {
     "min": [
      -3.4884,
-     0.0099,
+     0,
      -2.893
     ],
     "max": [
      3.4841,
-     4.4245,
+     4.4146,
      2.8905
     ],
     "size": [
@@ -825,12 +825,12 @@
    "bounds": {
     "min": [
      -1.1237,
-     -0.0094,
+     0,
      -1.0785
     ],
     "max": [
      1.1358,
-     0.6091,
+     0.6185,
      1.0026
     ],
     "size": [
@@ -909,12 +909,12 @@
    "bounds": {
     "min": [
      -1.1094,
-     -0.0094,
+     0,
      -0.8923
     ],
     "max": [
      1.1198,
-     0.5846,
+     0.594,
      0.8868
     ],
     "size": [
@@ -993,12 +993,12 @@
    "bounds": {
     "min": [
      -0.908,
-     0.0071,
+     0,
      -0.8881
     ],
     "max": [
      0.9021,
-     0.8492,
+     0.8421,
      0.8628
     ],
     "size": [
@@ -1016,23 +1016,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant a LOD0 (1932 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; polished and baked."
+    "notes": "mender_stool variant a LOD0 (2100 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.2597,
+     -1.3253,
      0,
-     -0.6043
+     -0.6904
     ],
     "max": [
-     1.2597,
+     1.3253,
      0.9663,
-     0.6043
+     0.6904
     ],
     "size": [
-     2.5194,
+     2.6506,
      0.9663,
-     1.2086
+     1.3808
     ]
    }
   },
@@ -1044,23 +1044,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant a LOD1 (966 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "mender_stool variant a LOD1 (1050 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.258,
-     -0.0005,
-     -0.6049
+     -1.3236,
+     0,
+     -0.6904
     ],
     "max": [
-     1.2606,
+     1.3253,
      0.9663,
-     0.6027
+     0.6887
     ],
     "size": [
-     2.5186,
-     0.9668,
-     1.2076
+     2.6489,
+     0.9663,
+     1.3791
     ]
    }
   },
@@ -1072,23 +1072,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant a LOD2 (290 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "mender_stool variant a LOD2 (305 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2592,
-     -0.0007,
-     -0.6012
+     -1.326,
+     0,
+     -0.6163
     ],
     "max": [
-     1.254,
-     0.9663,
-     0.6274
+     1.2367,
+     0.9678,
+     0.7134
     ],
     "size": [
-     2.5132,
-     0.967,
-     1.2286
+     2.5627,
+     0.9678,
+     1.3297
     ]
    }
   },
@@ -1100,22 +1100,22 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant b LOD0 (2004 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; polished and baked."
+    "notes": "mender_stool variant b LOD0 (2172 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.2224,
+     -1.3326,
      0,
      -0.8928
     ],
     "max": [
-     1.2224,
-     0.9389,
+     1.3326,
+     0.8263,
      0.8928
     ],
     "size": [
-     2.4448,
-     0.9389,
+     2.6652,
+     0.8263,
      1.7856
     ]
    }
@@ -1128,23 +1128,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant b LOD1 (1002 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "mender_stool variant b LOD1 (1086 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2207,
-     -0.0004,
+     -1.3308,
+     0,
      -0.8928
     ],
     "max": [
-     1.2211,
-     0.9401,
-     0.891
+     1.3326,
+     0.8267,
+     0.8911
     ],
     "size": [
-     2.4418,
-     0.9405,
-     1.7838
+     2.6634,
+     0.8267,
+     1.7839
     ]
    }
   },
@@ -1156,23 +1156,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant b LOD2 (300 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "mender_stool variant b LOD2 (317 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2303,
-     -0.0106,
-     -0.8832
+     -1.3321,
+     0,
+     -0.8942
     ],
     "max": [
-     1.2244,
-     0.9448,
-     0.9163
+     1.2248,
+     0.8197,
+     0.8992
     ],
     "size": [
-     2.4547,
-     0.9554,
-     1.7995
+     2.5569,
+     0.8197,
+     1.7934
     ]
    }
   },
@@ -1184,23 +1184,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant c LOD0 (1644 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; polished and baked."
+    "notes": "mender_stool variant c LOD0 (1812 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.2656,
+     -1.3244,
      0,
-     -0.6285
+     -0.6904
     ],
     "max": [
-     1.2656,
-     0.9055,
-     0.6285
+     1.3244,
+     0.8228,
+     0.6904
     ],
     "size": [
-     2.5312,
-     0.9055,
-     1.257
+     2.6488,
+     0.8228,
+     1.3808
     ]
    }
   },
@@ -1212,23 +1212,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant c LOD1 (822 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "mender_stool variant c LOD1 (906 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2638,
-     -0.0013,
-     -0.6304
+     -1.3227,
+     0,
+     -0.6904
     ],
     "max": [
-     1.2657,
-     0.9062,
-     0.627
+     1.3244,
+     0.8231,
+     0.6887
     ],
     "size": [
-     2.5295,
-     0.9075,
-     1.2574
+     2.6471,
+     0.8231,
+     1.3791
     ]
    }
   },
@@ -1240,23 +1240,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "mender_stool variant c LOD2 (246 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "mender_stool variant c LOD2 (263 tris): A three-legged stool and a knot board, the net-menders' spot, still a mug on the seat. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2724,
-     -0.0005,
-     -0.6344
+     -1.3251,
+     0,
+     -0.621
     ],
     "max": [
-     1.2703,
-     0.9045,
-     0.6187
+     1.2334,
+     0.8147,
+     0.6981
     ],
     "size": [
-     2.5427,
-     0.905,
-     1.2531
+     2.5585,
+     0.8147,
+     1.3191
     ]
    }
   },
@@ -1329,12 +1329,12 @@
    "bounds": {
     "min": [
      -0.8186,
-     0.0105,
+     0,
      -0.6462
     ],
     "max": [
      0.8147,
-     1.3609,
+     1.3504,
      0.6413
     ],
     "size": [
@@ -1413,12 +1413,12 @@
    "bounds": {
     "min": [
      -0.72,
-     -0.0032,
+     0,
      -0.6522
     ],
     "max": [
      0.7121,
-     1.3116,
+     1.3148,
      0.6722
     ],
     "size": [
@@ -1497,12 +1497,12 @@
    "bounds": {
     "min": [
      -0.7211,
-     0.0055,
+     0,
      -0.9325
     ],
     "max": [
      0.7123,
-     0.835,
+     0.8295,
      0.9384
     ],
     "size": [
@@ -1581,12 +1581,12 @@
    "bounds": {
     "min": [
      -1.1333,
-     0.0119,
+     0,
      -0.8173
     ],
     "max": [
      1.1346,
-     1.3192,
+     1.3073,
      0.8173
     ],
     "size": [
@@ -1665,12 +1665,12 @@
    "bounds": {
     "min": [
      -1.1705,
-     0.0033,
+     0,
      -0.9907
     ],
     "max": [
      1.152,
-     1.3002,
+     1.2969,
      0.9976
     ],
     "size": [
@@ -1688,23 +1688,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "ore_trolley variant c LOD0 (2812 tris): One parked ore bin on its stub axles, no rails anywhere, ore still heaped in it. Deterministic; polished and baked."
+    "notes": "ore_trolley variant c LOD0 (2804 tris): One parked ore bin on its stub axles, no rails anywhere, ore still heaped in it. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.2606,
+     -1.4665,
      0,
-     -1.0819
+     -1.1493
     ],
     "max": [
-     1.2606,
-     1.4514,
-     1.0819
+     1.4665,
+     1.5709,
+     1.1493
     ],
     "size": [
-     2.5212,
-     1.4514,
-     2.1638
+     2.933,
+     1.5709,
+     2.2986
     ]
    }
   },
@@ -1716,23 +1716,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "ore_trolley variant c LOD1 (1406 tris): One parked ore bin on its stub axles, no rails anywhere, ore still heaped in it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "ore_trolley variant c LOD1 (1402 tris): One parked ore bin on its stub axles, no rails anywhere, ore still heaped in it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2606,
+     -1.4665,
      0,
-     -1.0802
+     -1.1475
     ],
     "max": [
-     1.2606,
-     1.4514,
-     1.0819
+     1.4653,
+     1.5714,
+     1.1493
     ],
     "size": [
-     2.5212,
-     1.4514,
-     2.1621
+     2.9318,
+     1.5714,
+     2.2968
     ]
    }
   },
@@ -1744,23 +1744,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "ore_trolley variant c LOD2 (422 tris): One parked ore bin on its stub axles, no rails anywhere, ore still heaped in it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "ore_trolley variant c LOD2 (420 tris): One parked ore bin on its stub axles, no rails anywhere, ore still heaped in it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.244,
-     0.0029,
-     -1.0802
+     -1.4498,
+     0,
+     -1.1475
     ],
     "max": [
-     1.2478,
-     1.4592,
-     1.0819
+     1.4464,
+     1.5799,
+     1.1493
     ],
     "size": [
-     2.4918,
-     1.4563,
-     2.1621
+     2.8962,
+     1.5799,
+     2.2968
     ]
    }
   },
@@ -1805,17 +1805,17 @@
    "bounds": {
     "min": [
      -1.6748,
-     -0.0011,
+     0,
      -0.7019
     ],
     "max": [
      1.6752,
-     0.1831,
+     0.1841,
      0.7005
     ],
     "size": [
      3.35,
-     0.1842,
+     0.1841,
      1.4024
     ]
    }
@@ -1833,12 +1833,12 @@
    "bounds": {
     "min": [
      -1.6726,
-     -0.0007,
+     0,
      -0.6991
     ],
     "max": [
      1.6727,
-     0.1831,
+     0.1838,
      0.7094
     ],
     "size": [
@@ -1889,12 +1889,12 @@
    "bounds": {
     "min": [
      -1.3324,
-     -0.0037,
+     0,
      -0.6611
     ],
     "max": [
      1.3347,
-     0.2201,
+     0.2238,
      0.66
     ],
     "size": [
@@ -1917,12 +1917,12 @@
    "bounds": {
     "min": [
      -1.3325,
-     -0.0029,
+     0,
      -0.6605
     ],
     "max": [
      1.3362,
-     0.2151,
+     0.218,
      0.6669
     ],
     "size": [
@@ -1973,12 +1973,12 @@
    "bounds": {
     "min": [
      -1.2741,
-     0.0005,
+     0,
      -0.6345
     ],
     "max": [
      1.2725,
-     0.4936,
+     0.4931,
      0.6364
     ],
     "size": [
@@ -2001,12 +2001,12 @@
    "bounds": {
     "min": [
      -1.2683,
-     0.0005,
+     0,
      -0.6345
     ],
     "max": [
      1.2724,
-     0.4933,
+     0.4928,
      0.6326
     ],
     "size": [
@@ -2085,12 +2085,12 @@
    "bounds": {
     "min": [
      -1.2652,
-     0.0053,
+     0,
      -0.9264
     ],
     "max": [
      1.2374,
-     1.3473,
+     1.342,
      0.9592
     ],
     "size": [
@@ -2169,17 +2169,17 @@
    "bounds": {
     "min": [
      -1.0254,
-     0.0154,
+     0,
      -0.8699
     ],
     "max": [
      1.0439,
-     1.3473,
+     1.332,
      0.8627
     ],
     "size": [
      2.0693,
-     1.3319,
+     1.332,
      1.7326
     ]
    }
@@ -2225,7 +2225,7 @@
    "bounds": {
     "min": [
      -0.9083,
-     -0.0,
+     0,
      -0.669
     ],
     "max": [
@@ -2253,7 +2253,7 @@
    "bounds": {
     "min": [
      -0.9121,
-     0.0,
+     0,
      -0.6956
     ],
     "max": [
@@ -2337,12 +2337,12 @@
    "bounds": {
     "min": [
      -0.8568,
-     0.0053,
+     0,
      -0.3996
     ],
     "max": [
      0.8588,
-     0.9995,
+     0.9942,
      0.3861
     ],
     "size": [
@@ -2393,12 +2393,12 @@
    "bounds": {
     "min": [
      -0.8988,
-     0.0007,
+     0,
      -0.5526
     ],
     "max": [
      0.8986,
-     0.8988,
+     0.8981,
      0.5545
     ],
     "size": [
@@ -2421,12 +2421,12 @@
    "bounds": {
     "min": [
      -0.8972,
-     -0.0114,
+     0,
      -0.5527
     ],
     "max": [
      0.8985,
-     0.8967,
+     0.9081,
      0.5388
     ],
     "size": [
@@ -2505,12 +2505,12 @@
    "bounds": {
     "min": [
      -0.506,
-     0.0026,
+     0,
      -0.4789
     ],
     "max": [
      0.5141,
-     1.1118,
+     1.1092,
      0.4831
     ],
     "size": [
@@ -2589,17 +2589,17 @@
    "bounds": {
     "min": [
      -0.55,
-     0.0039,
+     0,
      -0.546
     ],
     "max": [
      0.5626,
-     1.4148,
+     1.411,
      0.5319
     ],
     "size": [
      1.1126,
-     1.4109,
+     1.411,
      1.0779
     ]
    }
@@ -2673,12 +2673,12 @@
    "bounds": {
     "min": [
      -0.6258,
-     -0.0007,
+     0,
      -0.4161
     ],
     "max": [
      0.6172,
-     0.83,
+     0.8307,
      0.4103
     ],
     "size": [
@@ -2729,7 +2729,7 @@
    "bounds": {
     "min": [
      -1.0155,
-     0.0,
+     0,
      -0.8375
     ],
     "max": [
@@ -2757,12 +2757,12 @@
    "bounds": {
     "min": [
      -1.012,
-     0.0087,
+     0,
      -0.8384
     ],
     "max": [
      1.012,
-     1.4605,
+     1.4518,
      0.8384
     ],
     "size": [
@@ -2813,7 +2813,7 @@
    "bounds": {
     "min": [
      -0.942,
-     -0.0,
+     0,
      -0.9211
     ],
     "max": [
@@ -2841,17 +2841,17 @@
    "bounds": {
     "min": [
      -0.9385,
-     0.0088,
+     0,
      -0.922
     ],
     "max": [
      0.9428,
-     1.4004,
+     1.3917,
      0.922
     ],
     "size": [
      1.8813,
-     1.3916,
+     1.3917,
      1.844
     ]
    }
@@ -2897,7 +2897,7 @@
    "bounds": {
     "min": [
      -1.0161,
-     0.0,
+     0,
      -0.8048
     ],
     "max": [
@@ -2925,17 +2925,17 @@
    "bounds": {
     "min": [
      -1.0161,
-     -0.0052,
+     0,
      -0.8056
     ],
     "max": [
      1.0179,
-     1.3687,
+     1.374,
      0.8056
     ],
     "size": [
      2.034,
-     1.3739,
+     1.374,
      1.6112
     ]
    }
@@ -2981,12 +2981,12 @@
    "bounds": {
     "min": [
      -1.2649,
-     0.0001,
+     0,
      -0.7883
     ],
     "max": [
      1.2649,
-     0.8606,
+     0.8605,
      0.7883
     ],
     "size": [
@@ -3009,12 +3009,12 @@
    "bounds": {
     "min": [
      -1.263,
-     -0.0048,
+     0,
      -0.7865
     ],
     "max": [
      1.2631,
-     0.8602,
+     0.865,
      0.7768
     ],
     "size": [
@@ -3093,12 +3093,12 @@
    "bounds": {
     "min": [
      -1.0007,
-     0.0013,
+     0,
      -0.7559
     ],
     "max": [
      0.9955,
-     0.6107,
+     0.6094,
      0.7453
     ],
     "size": [
@@ -3177,17 +3177,17 @@
    "bounds": {
     "min": [
      -0.7713,
-     -0.0059,
+     0,
      -0.6668
     ],
     "max": [
      0.7714,
-     1.271,
+     1.2768,
      0.6727
     ],
     "size": [
      1.5427,
-     1.2769,
+     1.2768,
      1.3395
     ]
    }
@@ -3485,17 +3485,17 @@
    "bounds": {
     "min": [
      -0.8478,
-     -0.0014,
+     0,
      -0.7679
     ],
     "max": [
      0.8451,
-     0.6751,
+     0.6764,
      0.7771
     ],
     "size": [
      1.6929,
-     0.6765,
+     0.6764,
      1.545
     ]
    }
@@ -3513,12 +3513,12 @@
    "bounds": {
     "min": [
      -0.8659,
-     -0.0048,
+     0,
      -0.7651
     ],
     "max": [
      0.8557,
-     0.6781,
+     0.6829,
      0.7753
     ],
     "size": [
@@ -3569,17 +3569,17 @@
    "bounds": {
     "min": [
      -1.3683,
-     0.0016,
+     0,
      -0.9045
     ],
     "max": [
      1.3656,
-     0.3576,
+     0.3561,
      0.9161
     ],
     "size": [
      2.7339,
-     0.356,
+     0.3561,
      1.8206
     ]
    }
@@ -3597,17 +3597,17 @@
    "bounds": {
     "min": [
      -1.3719,
-     -0.0069,
+     0,
      -0.93
     ],
     "max": [
      1.3729,
-     0.3635,
+     0.3703,
      0.916
     ],
     "size": [
      2.7448,
-     0.3704,
+     0.3703,
      1.846
     ]
    }
@@ -3681,12 +3681,12 @@
    "bounds": {
     "min": [
      -1.0253,
-     0.0104,
+     0,
      -1.1674
     ],
     "max": [
      1.0225,
-     0.8501,
+     0.8397,
      1.1708
     ],
     "size": [

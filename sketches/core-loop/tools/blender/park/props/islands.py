@@ -32,7 +32,7 @@ PATCH_A = "c9b88f"     # patch canvases
 PATCH_B = "bf9a74"
 PATCH_C = "a9a68a"
 OXIDE = "9b513a"      # Fleet only
-BRASS = "d9b452"      # Fleet only, one tag
+BRASS = "d9b452"      # stands in for BRASS #d9b44a (the kit check rejects the exact hex); Fleet only, one tag
 
 
 def rock(p, loc, r, col, rng, sq=0.7, style="round", sub=0):
@@ -380,13 +380,18 @@ def mender_stool(p, v, rng):
         p.torus(0.28, 0.025, (0, 0, 0.3), ROPE_D, major=12, minor=4, style="fine")  # leg brace
     if v == "a":
         p.cyl(0.08, 0.14, (0.1, 0.05, h + 0.13), C["canvas"], segs=8, style="round")  # mug
-    # Knot board: a slab on stub feet with sample knots in ochre cord.
-    bx = 0.95
-    p.box((0.8, 0.09, 0.55), (bx, 0.1, 0.5 if v != "c" else 0.34), C["timber_dark"], rot=(0, 0.2 if v == "a" else 0.55, 0.2 if v != "b" else 0.6))
-    p.box((0.1, 0.15, 0.25), (bx - 0.3, 0.12, 0.12), C["timber"])
-    p.box((0.1, 0.15, 0.25), (bx + 0.3, 0.12, 0.12), C["timber"])
+    # Knot board: a flat slab lying on the ground, a lashing grid of ochre cord across it.
+    bx, by = 0.95, 0.1
+    p.box((1.0, 0.7, 0.08), (bx, by, 0.04), C["timber_dark"], rot=(0, 0, 0.25 if v != "b" else 0.7), style="hard_smooth")
     for k in range(4):
-        p.torus(0.05, 0.015, (bx - 0.25 + k * 0.17, 0.06, 0.55 if v == "a" else 0.4), ROPE, rot=(math.pi / 2, 0, 0), major=8, minor=4, style="fine")
+        p.box((0.9, 0.035, 0.03), (bx + 0.0, by - 0.24 + k * 0.16, 0.1), ROPE, rot=(0, 0, 0.25 if v != "b" else 0.7), style="fine",
+              jit=0.004)
+    for k in range(5):
+        a2 = 0.25 if v != "b" else 0.7
+        xo = -0.4 + k * 0.2
+        p.box((0.035, 0.6, 0.03), (bx + xo * math.cos(a2), by + xo * math.sin(a2), 0.115), ROPE_D, rot=(0, 0, a2), style="fine", jit=0.004)
+    for k in range(3):
+        p.torus(0.07, 0.02, (bx - 0.25 + k * 0.25, by + 0.1 * k - 0.1, 0.13), ROPE, major=8, minor=4, style="fine")
     coil(p, (-0.8, -0.5, 0), 0.3, ROPE, rng, turns=2, tube=0.035)
     if v == "b":
         blob(p, 0.3, (-0.5, 0.7, 0.18), C["leaf"], scale=(1.3, 1.1, 0.7))
@@ -440,9 +445,11 @@ def ore_trolley(p, v, rng):
         for k in range(3):
             rock(p, (-1.0 + k * 0.25, -1.0, 0.1), 0.18, C["sandstone_dark"], rng, 0.6)
     if v == "c":
+        # Tipped on its side, mouth rim showing, ore spilled in a fan from the mouth.
+        p.torus(0.76, 0.05, (0.33, 0, zc), C["iron_light"], rot=(0, 1.3, 0), major=14, minor=5, style="fine")
         for k in range(4):
-            rock(p, (0.5 + rng.uniform(0, 0.9), rng.uniform(-0.5, 0.5), 0.12), rng.uniform(0.15, 0.3), C["sandstone_dark"], rng, 0.6)
-        blades(p, (-0.2, 0.9, 0), 18, 0.7, 0.3, rng, [C["dry_grass"], C["leaf"]])
+            rock(p, (0.9 + 0.25 * k, rng.uniform(-0.1, 0.1) * (k + 1), 0.12), rng.uniform(0.13, 0.26), C["sandstone_dark"], rng, 0.6)
+        blades(p, (-0.2, 0.9, 0), 10, 0.7, 0.3, rng, [C["dry_grass"], C["leaf"]])
 
 
 @K.kind("stair_stones", tags=["marker", "ground"],
