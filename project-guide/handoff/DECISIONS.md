@@ -103,6 +103,7 @@ Last updated 2026-10-18 20:55Z by the local coordinator (single wave 21 playtest
 | A boss's Eurodance final phase always plays, even over a pinned radio track; the pin comes back after. Pins win everywhere else. | 17 Oct 20:52 | tap "Finale wins" | |
 | Hitting on the beat pays off in sound only, with no gameplay bonus. | 17 Oct 22:12 | typed, design questions |  |
 | Pilot radio: the music thread picks the better of the two renders for each of the 81 takes and notes why; Andrew hears the picks at the sitting and can swap any. | 17 Oct 22:28 | tap "Music thread picks" | |
+| Percussion serves the song: melody leads, and drums support it the way a band's drummer does. No take may spend most of its length with drums dominating the melodic parts. At most 2 drum-forward takes ship, as labeled genre pieces whose drumming is dynamic and engaging. The Heat station was a miss (Brindle Afterburner the worst); Moss's Backroom was right. Fixes go cheapest first: the other render, then a stem rebalance, then a melody-led re-render. Owner: the music session. | 19 Oct | typed, after hearing half the radio | |
 | Theme C (the show-opening title song) plays on a won run's summary and on the ending; a lost run keeps the jazz-club summary track. Owner: the music thread. | 17 Oct 23:24 | tap "Won run and ending" | theme C on every summary (brief) |
 
 ## 5. Enemies and difficulty
