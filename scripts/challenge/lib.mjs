@@ -48,7 +48,12 @@ export const BOSSES = [
 export const WARDENS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "w" + n, stage: n, world: Math.ceil(n / 2) }));
 export const WORLDS = [1, 2, 3].map((w) => ({ id: "world" + w, world: w, first: 2 * w - 1, last: 2 * w }));
 
-export const WARDEN_TICKS = (240 + 90) * 90; // a Warden run's guard: 240 s of fight and 90 s of getting there
+// A Warden run: the fight may last 240 s from engagement (over 3x the 45-85 s stagger bands); the stage cap is lifted
+// to 600 s so it cannot cut an engaged fight first, and the tick guard sits past it.
+export const WARDEN_FIGHT_LIMIT_S = 240;
+export const WARDEN_STAGE_LIMIT_S = 600;
+export const WARDEN_TICKS = (WARDEN_STAGE_LIMIT_S + 100) * 90;
+export const DEFAULT_SEEDS = { fight: 24, world: 16 };
 export const BOSS_TICKS = 480 * 90; // the driver's own boss limit is 420 s
 export const WORLD_TICKS = 700 * 90;
 export const LIBRARY_STAGES = 6;
@@ -56,12 +61,14 @@ export const MIN_BUCKET = 3;
 
 // --- build library --------------------------------------------------------------------------
 
-// Rank a stage's docs by mass, then parts count. ordinary = rank percentile 40 to 60, top = 90 and up;
-// each bucket widens (ordinary both ways, top downward) until it holds MIN_BUCKET docs or every doc.
+// Rank a stage's docs by mass, then parts count. ordinary = rank percentile 40 to 60, top = 90 and up.
+// A bucket short of MIN_BUCKET docs widens (ordinary one rank each way, top downward) until it has them or
+// every doc is in. A small library therefore makes the buckets overlap (a doc in both); `overlap` counts those,
+// and the table marks the Expert-top column "(overlaps ordinary)" when it is not zero.
 export function pickBuilds(docs) {
   const ranked = [...docs].sort((a, b) => a.mass - b.mass || a.parts - b.parts || String(a.file).localeCompare(String(b.file)));
   const n = ranked.length;
-  if (n === 0) return { ordinary: [], top: [], ranked };
+  if (n === 0) return { ordinary: [], top: [], ranked, overlap: 0 };
   const pct = (i) => (n === 1 ? 0.5 : i / (n - 1));
   let lo = ranked.findIndex((_, i) => pct(i) >= 0.4 - 1e-9);
   let hi = ranked.length - 1 - [...ranked].reverse().findIndex((_, i) => pct(n - 1 - i) <= 0.6 + 1e-9);
@@ -76,7 +83,10 @@ export function pickBuilds(docs) {
   let start = ranked.findIndex((_, i) => pct(i) >= 0.9 - 1e-9);
   if (start < 0) start = n - 1;
   while (n - start < Math.min(MIN_BUCKET, n)) start--;
-  return { ordinary: ranked.slice(lo, hi + 1), top: ranked.slice(start), ranked };
+  const ordinary = ranked.slice(lo, hi + 1);
+  const top = ranked.slice(start);
+  const overlap = ordinary.filter((d) => top.includes(d)).length;
+  return { ordinary, top, ranked, overlap };
 }
 
 // An entrance file is the RunStore's envelope: { generation, schema, run: { stage, mass, parts, ... } }.
@@ -96,9 +106,10 @@ export function describeDoc(file, text) {
 // A cell is a fight or a park; a column is a band (and a build bucket); a job is one seed of one column of one cell.
 export function planCells(opts) {
   const {
-    builds = {}, cells = ["boss", "warden", "world"], only = null, seeds = 16, columns = COLUMNS.map((c) => c.id), persona = "brawler", parkPersona = "skipper",
+    builds = {}, cells = ["boss", "warden", "world"], only = null, seeds = null, columns = COLUMNS.map((c) => c.id), persona = "brawler", wardenPersona = "skipper", parkPersona = "skipper",
   } = opts;
   const jobs = [];
+  const tuneArgs = opts.tune ? ["--tune=" + opts.tune] : [];
   const want = (id) => !only || only.includes(id);
   const defs = [];
   for (const b of BOSSES) if (cells.includes("boss") && want(b.id)) defs.push({ kind: "boss", ...b });
@@ -110,13 +121,14 @@ export function planCells(opts) {
       const stage = def.kind === "world" ? def.first : def.stage;
       // Stage 1 is the start of a run: no build to carry, so it plays fresh (the seed picks the pilot).
       const docs = stage === 1 ? [null] : (builds[stage]?.[col.build] ?? []);
-      for (let i = 0; i < seeds; i++) {
+      const count = seeds ?? (def.kind === "world" ? DEFAULT_SEEDS.world : DEFAULT_SEEDS.fight);
+      for (let i = 0; i < count; i++) {
         const doc = docs.length ? docs[i % docs.length] : undefined;
         if (doc === undefined) {
-          jobs.push({ ...base(def, col, i, persona, parkPersona), missing: true });
+          jobs.push({ ...base(def, col, i, persona, wardenPersona, parkPersona, null, tuneArgs), missing: true });
           continue;
         }
-        jobs.push(base(def, col, i, persona, parkPersona, doc));
+        jobs.push(base(def, col, i, persona, wardenPersona, parkPersona, doc, tuneArgs));
       }
     }
   }
@@ -129,15 +141,15 @@ function cellSeed(def, i) {
   return 40000 + slot * 100 + i;
 }
 
-function base(def, col, i, persona, parkPersona, doc = null) {
+function base(def, col, i, persona, wardenPersona, parkPersona, doc = null, tuneArgs = []) {
   const seed = cellSeed(def, i);
-  const policy = def.kind === "world" ? parkPersona : persona;
+  const policy = def.kind === "world" ? parkPersona : def.kind === "warden" ? wardenPersona : persona;
   const from = def.kind === "world" ? def.first : def.stage;
-  const args = ["--band=" + col.band, "--attempt=" + col.attempt, "--cell=" + def.id];
+  const args = [...tuneArgs, "--band=" + col.band, "--attempt=" + col.attempt, "--cell=" + def.id];
   if (doc) args.push("--entrance=" + doc.file, "--from-stage=" + from);
   else if (from !== 1) args.push("--from-stage=" + from);
   if (def.kind === "boss") args.push("--to-boss=1", "--until=" + def.stage, "--ticks=" + BOSS_TICKS);
-  else if (def.kind === "warden") args.push("--until=" + def.stage, "--ticks=" + WARDEN_TICKS);
+  else if (def.kind === "warden") args.push("--until=" + def.stage, "--fight-limit=" + WARDEN_FIGHT_LIMIT_S, "--stage-limit=" + WARDEN_STAGE_LIMIT_S, "--ticks=" + WARDEN_TICKS);
   else args.push("--stop-at=engaged:" + def.last, "--ticks=" + WORLD_TICKS);
   return {
     id: `${def.id}-${col.id}-${seed}`, kind: def.kind, cell: def.id, stage: def.stage, column: col.id, band: col.band, attempt: col.attempt,
@@ -164,31 +176,58 @@ export function botArgs(job, out) {
 
 // win / loss / timeout / error. A timeout (a stall, a fight cap, a tick guard) is not a win; an error
 // (no row, or no fight reached) is not either, and the table counts both apart from losses.
+// The comps study's per-fight report (research/comps/difficulty/SUMMARY.md, Lab measure), from one fight record:
+// the largest single hit as a share of pilot health and the share of health lost in the fight's first 45 s.
+// A Warden never engaged has no fight to report, so its shares are null, not zero. The study file arrives with #167.
+export function fightReport(note, maxHp, engaged = true) {
+  if (!note || !engaged) return { largestShare: null, largestSource: null, hp45Share: null };
+  return {
+    largestShare: note.largest_hit_share ?? (note.largest_hit != null && maxHp ? note.largest_hit / maxHp : null),
+    largestSource: note.largest_hit_source ?? null,
+    hp45Share: maxHp ? Math.round(((note.hp_lost_45s ?? 0) / maxHp) * 1000) / 1000 : null,
+  };
+}
+
 export function gradeRun(kind, row, job = {}) {
   if (!row) return { result: "error", why: "no record" };
+  if (row.resumed === false) return { result: "error", why: "the run did not resume its entrance doc" };
   const stages = row.stages ?? [];
   if (kind === "boss") {
     const boss = row.boss;
-    if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null };
-    if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null };
-    if (row.outcome === "boss_stalled" || boss) return { result: "timeout", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null };
+    const rep = fightReport(boss, row.max_hp);
+    if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null, ...rep };
+    if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null, ...rep };
+    // "boss" is the driver finding no boss module in the boss state: the harness's fault, not a fight.
+    if (row.outcome === "boss") return { result: "error", why: "no boss module in the boss state" };
+    if (row.outcome === "boss_stalled" || boss) return { result: "timeout", reason: row.outcome, fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, ...rep };
     return { result: "error", why: "the boss was never entered (" + row.outcome + ")" };
   }
   if (kind === "warden") {
     const note = stages.find((s) => s.stage === (job.stage ?? row.stage_reached));
+    const rep = fightReport(note, note?.max_hp ?? row.max_hp, note != null && fightStart(note) != null);
     if (note?.warden_broken_s != null) {
-      const fightS = note.warden_engaged_s != null ? round2(note.warden_broken_s - note.warden_engaged_s) : null;
-      return { result: "win", fightS, hpLost: note.hp_lost ?? null };
+      const start = fightStart(note);
+      const fightS = start != null ? round2(note.warden_broken_s - start) : null;
+      return { result: "win", fightS, hpLost: note.hp_lost ?? null, ...rep };
     }
-    if (row.outcome === "died") return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null };
-    return { result: "timeout", fightS: null, hpLost: note?.hp_lost ?? null };
+    if (row.outcome === "died") return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
+    return { result: "timeout", reason: row.outcome, fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
   }
   if (kind === "world") {
     if (row.outcome === "reached") return { result: "win", fightS: row.game_seconds ?? null, hpLost: null };
     if (row.outcome === "died") return { result: "loss", fightS: row.game_seconds ?? null, hpLost: null };
-    return { result: "timeout", fightS: row.game_seconds ?? null, hpLost: null };
+    return { result: "timeout", reason: row.outcome, fightS: row.game_seconds ?? null, hpLost: null };
   }
   throw new Error("unknown kind " + kind);
+}
+
+// bot_driver.gd fight_start_of: the fight clock starts at the later of the bot's turn to the Warden and its engagement.
+export function fightStart(note) {
+  const turned = note.warden_fight_s;
+  const engaged = note.warden_engaged_s;
+  if (turned == null) return engaged ?? null;
+  if (engaged == null) return turned;
+  return Math.max(turned, engaged);
 }
 
 const round2 = (x) => Math.round(x * 100) / 100;
@@ -209,19 +248,37 @@ export function median(xs) {
   return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
 }
 
-// One column of one cell: grades is the list of gradeRun results.
+export const EXCLUDED = ["error", "killed"];
+export const INCOMPLETE_SHARE = 0.1;
+const CAPPED = ["fight_capped", "boss_stalled", "ticks_done"];
+
+// One column of one cell: grades is the list of gradeRun results. Errors (no record, boss never entered, doc not
+// resumed) and harness kills are excluded: they are not in n or the rate. Over 10% excluded makes the column incomplete.
 export function aggregate(grades) {
-  const count = (r) => grades.filter((g) => g.result === r).length;
-  const n = grades.length;
+  const total = grades.length;
+  const error = grades.filter((g) => g.result === "error").length;
+  const killed = grades.filter((g) => g.result === "killed").length;
+  const used = grades.filter((g) => !EXCLUDED.includes(g.result));
+  const count = (r) => used.filter((g) => g.result === r).length;
+  const n = used.length;
   const wins = count("win");
   const { lo, hi } = wilson(wins, n);
-  const deaths = grades.filter((g) => g.result === "loss" && g.diedS != null).map((g) => g.diedS);
+  const deaths = used.filter((g) => g.result === "loss" && g.diedS != null).map((g) => g.diedS);
+  const hit = used.filter((g) => g.largestShare != null).sort((a, b) => b.largestShare - a.largestShare)[0] ?? null;
+  const hp45 = used.map((g) => g.hp45Share).filter((x) => x != null);
   return {
-    n, wins, losses: count("loss"), timeouts: count("timeout"), errors: count("error"), rate: n ? wins / n : null, lo, hi,
-    medianFightS: median(grades.filter((g) => g.result === "win").map((g) => g.fightS)),
-    medianHpLost: median(grades.map((g) => g.hpLost)),
+    n, total, wins, losses: count("loss"), timeouts: count("timeout"),
+    capped: used.filter((g) => g.result === "timeout" && CAPPED.includes(g.reason)).length,
+    stalled: used.filter((g) => g.result === "timeout" && !CAPPED.includes(g.reason)).length,
+    excluded: { error, killed }, incomplete: total > 0 && (error + killed) / total > INCOMPLETE_SHARE,
+    rate: n ? wins / n : null, lo, hi,
+    medianFightS: median(used.filter((g) => g.result === "win").map((g) => g.fightS)),
+    medianHpLost: median(used.map((g) => g.hpLost)),
     earliestDeathS: deaths.length ? Math.min(...deaths) : null,
+    deathsS: deaths,
     earlyDeaths: deaths.filter((s) => s < TARGETS.earliestLearnerBossDeathS).length,
+    largestShare: hit?.largestShare ?? null, largestSource: hit?.largestSource ?? null,
+    medianHp45Share: median(hp45), maxHp45Share: hp45.length ? Math.max(...hp45) : null,
   };
 }
 
@@ -248,7 +305,7 @@ const pct = (x) => Math.round(x * 100) + "%";
 // --- the table ------------------------------------------------------------------------------
 
 // runs: rows as written to runs.ndjson: { job fields..., row }. Returns one entry per cell.
-export function buildTable(runs) {
+export function buildTable(runs, buckets = {}) {
   const cells = new Map();
   for (const r of runs) {
     const key = r.cell;
@@ -263,15 +320,22 @@ export function buildTable(runs) {
       if (!c.grades[col.id]) continue;
       const a = aggregate(c.grades[col.id]);
       const target = targetFor(c.kind, col.id);
-      columns[col.id] = { ...a, target, ok: meets(target, a.rate) };
+      columns[col.id] = { ...a, target, ok: a.incomplete ? null : meets(target, a.rate) };
     }
     const ord = columns.expert?.medianFightS;
     const top = columns.expertTop?.medianFightS;
-    const l1 = columns.learner1;
+    // The 45 s check covers every Learner column that ran (attempt 1 and attempt 5).
+    const learners = [columns.learner1, columns.learner5].filter(Boolean);
+    const deaths = learners.flatMap((l) => l.deathsS);
+    const early = deaths.filter((d) => d < TARGETS.earliestLearnerBossDeathS).length;
+    const overlap = buckets[c.stage]?.overlap ?? 0;
     return {
-      cell: c.cell, kind: c.kind, stage: c.stage, columns,
-      growthRatio: ord && top ? round2(top / ord) : null,
-      tell: c.kind === "boss" && l1 ? { earlyDeaths: l1.earlyDeaths, earliestDeathS: l1.earliestDeathS, ok: l1.earlyDeaths === 0 } : null,
+      cell: c.cell, kind: c.kind, stage: c.stage, columns, overlap,
+      growthRatio: ord && top ? round2(top / ord) : null, // reported, not graded
+      tell: c.kind === "boss" && learners.length ? {
+        earlyDeaths: early, earliestDeathS: deaths.length ? Math.min(...deaths) : null,
+        ok: learners.some((l) => l.incomplete) ? null : early === 0,
+      } : null,
     };
   });
 }
@@ -279,14 +343,19 @@ export function buildTable(runs) {
 export function cellVerdict(cell) {
   const marks = Object.values(cell.columns).map((c) => c.ok);
   const bad = marks.includes(false) || cell.tell?.ok === false;
-  return bad ? "fail" : marks.includes(true) ? "pass" : "none";
+  if (bad) return "fail";
+  if (Object.values(cell.columns).some((c) => c.incomplete)) return "incomplete";
+  return marks.includes(true) ? "pass" : "none";
 }
 
-function cellText(c) {
+function cellText(c, note = "") {
   if (!c) return "-";
+  const out = [c.excluded.error ? `${c.excluded.error} error` : "", c.excluded.killed ? `${c.excluded.killed} killed` : ""].filter(Boolean).join(", ");
+  if (c.incomplete) return `incomplete: ${c.n} of ${c.total} counted (excluded: ${out})${note}`;
   const mark = c.ok === null ? "" : c.ok ? " ✓" : " ✗";
-  const extra = [c.timeouts ? `${c.timeouts} timeout` : "", c.errors ? `${c.errors} error` : ""].filter(Boolean).join(", ");
-  return `${pct(c.rate)} (${c.n}) [${pct(c.lo)}-${pct(c.hi)}]${mark} vs ${describeTarget(c.target)}${extra ? " (" + extra + ")" : ""}`;
+  // A stall or a fight cap is the fight beating the player, not a win: shown beside the deaths.
+  const extra = [c.losses ? `${c.losses} died` : "", c.capped ? `${c.capped} capped` : "", c.stalled ? `${c.stalled} stalled` : "", ""].filter(Boolean).join(", ");
+  return `${pct(c.rate)} (${c.n}) [${pct(c.lo)}-${pct(c.hi)}]${mark} vs ${describeTarget(c.target)}${extra ? " (" + extra + ")" : ""}${out ? " (excluded: " + out + ")" : ""}${note}`;
 }
 
 const fmt = (x, d = 1) => (x == null ? "-" : Number(x).toFixed(d));
@@ -295,16 +364,26 @@ export function renderTable(table, meta = {}) {
   const lines = ["# Challenge band table", ""];
   if (meta.tune) lines.push(`Tuned: --tune=${meta.tune} requested (difficulty dials, src/core/challenge_dials.gd). The applied dials are on each run row as "dials", from describe(); a rejected entry is not applied.`, "");
   if (meta.label) lines.push(`Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`, "");
-  lines.push("Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. A timeout is not a win. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.", "");
+  lines.push("Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. Brackets after a cell count deaths, fight caps (fight_capped, boss_stalled) and stalls; none is a win. Runs with no record, an unresumed doc or a harness kill are excluded from n and the rate and noted as `excluded`; over 10% excluded makes the column incomplete. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.", "");
   const fights = table.filter((c) => c.kind !== "world");
   if (fights.length) {
     lines.push("## Bosses and Wardens", "");
-    lines.push("| Cell | Novice | Learner a1 | Learner a5 | Expert ordinary | Expert top | Learner a1 deaths < 45 s | Fight s (ord / top) | HP lost (ord) | top/ord |");
+    lines.push("| Cell | Novice | Learner a1 | Learner a5 | Expert ordinary | Expert top | Learner deaths < 45 s | Fight s (ord / top) | HP lost (ord) | top/ord (reported, not graded) |");
     lines.push("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
     for (const c of fights) {
       const t = c.tell;
-      const tell = t ? (t.ok ? "0 ✓" : `${t.earlyDeaths} ✗ (earliest ${fmt(t.earliestDeathS)} s)`) : "-";
-      lines.push(`| ${c.cell} | ${["novice", "learner1", "learner5", "expert", "expertTop"].map((id) => cellText(c.columns[id])).join(" | ")} | ${tell} | ${fmt(c.columns.expert?.medianFightS)} / ${fmt(c.columns.expertTop?.medianFightS)} | ${fmt(c.columns.expert?.medianHpLost)} | ${c.growthRatio ?? "-"} |`);
+      const tell = t ? (t.ok === null ? "incomplete" : t.ok ? "0 ✓" : `${t.earlyDeaths} ✗ (earliest ${fmt(t.earliestDeathS)} s)`) : "-";
+      lines.push(`| ${c.cell} | ${["novice", "learner1", "learner5", "expert", "expertTop"].map((id) => cellText(c.columns[id], id === "expertTop" && c.overlap ? " (overlaps ordinary)" : "")).join(" | ")} | ${tell} | ${fmt(c.columns.expert?.medianFightS)} / ${fmt(c.columns.expertTop?.medianFightS)} | ${fmt(c.columns.expert?.medianHpLost)} | ${c.growthRatio ?? "-"}${c.growthRatio != null && c.overlap ? " (overlaps ordinary)" : ""} |`);
+    }
+    lines.push("");
+  }
+  if (fights.length) {
+    lines.push("## Fight report (comps study format)", "", "From research/comps/difficulty/SUMMARY.md, Lab measure. Reference rows, which are tuning ranges, not rulings: boss TTK 50-90 s and Warden 90-150 s at an ordinary build (rows 1, 2); an ordinary hit 15-25% of pilot health, a heavy one 30-50%, and no single hit kills from full (rows 9, 10); a Learner loses well under full health in the first 45 s (row 11). Largest hit is the biggest single hit in any band's run, with its source id. Tells and recovery come from the attack sheet (`tools/attack_sheet.gd`), not from these runs. Warden rows count from the Warden fight's start.", "");
+    lines.push("| Cell | Expert ordinary TTK s | Largest hit, share of HP (source) | Learner a1 HP lost in first 45 s, share (median / max) |", "| --- | --- | --- | --- |");
+    for (const c of fights) {
+      const all = Object.values(c.columns).filter((x) => x.largestShare != null).sort((a, b) => b.largestShare - a.largestShare)[0];
+      const l1 = c.columns.learner1;
+      lines.push(`| ${c.cell} | ${fmt(c.columns.expert?.medianFightS)} | ${all ? `${pct(all.largestShare)} (${all.largestSource ?? "?"})` : "-"} | ${l1?.medianHp45Share != null ? `${pct(l1.medianHp45Share)} / ${pct(l1.maxHp45Share)}` : "-"} |`);
     }
     lines.push("");
   }
@@ -315,6 +394,16 @@ export function renderTable(table, meta = {}) {
     for (const c of worlds) lines.push(`| ${c.cell} | ${cellText(c.columns.novice)} | ${cellText(c.columns.learner1)} | ${fmt(c.columns.learner1?.medianFightS)} |`);
     lines.push("");
   }
+  if (meta.buckets && Object.keys(meta.buckets).length) {
+    lines.push("## Build buckets", "", "Docs per stage in the library, in the ordinary bucket (middle fifth by mass, then parts) and the top bucket (top tenth); a short bucket widens to three docs, so a small library makes them overlap (a doc in both).", "");
+    lines.push("| Stage | Docs | Ordinary | Top | In both |", "| --- | --- | --- | --- | --- |");
+    for (const [stage, b] of Object.entries(meta.buckets)) lines.push(`| ${stage} | ${b.docs} | ${b.ordinary} | ${b.top} | ${b.overlap}${b.overlap ? " (Expert top overlaps ordinary)" : ""} |`);
+    lines.push("");
+  }
+  if (meta.shards) lines.push(`Shards: ${meta.shards.join(", ")}.`, "");
+  if (meta.warnings?.length) lines.push(...meta.warnings.map((w) => "Warning: " + w), "");
+  const incomplete = table.filter((c) => cellVerdict(c) === "incomplete").map((c) => c.cell);
+  if (incomplete.length) lines.push(`Incomplete cells (over 10% of a column's jobs excluded as error or killed, no ✓/✗): ${incomplete.join(", ")}.`, "");
   const failing = table.filter((c) => cellVerdict(c) === "fail").map((c) => c.cell);
   lines.push(failing.length ? `Cells with a ✗: ${failing.join(", ")}.` : "No cell has a ✗.", "");
   return lines.join("\n");
@@ -339,4 +428,96 @@ export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330 }; // wall s
 export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   const total = jobs.reduce((s, j) => s + (perKind[j.kind] ?? 120), 0);
   return { jobs: jobs.length, cpuSeconds: total, wallSeconds: Math.ceil(total / Math.max(1, parallel)) };
+}
+
+// Library sharding: shards are separate folders with their own index.json (file paths relative to the folder).
+// Returns the joined entries, each with `from` (its shard folder); a file name seen twice keeps the first.
+export function mergeLibraryIndexes(shards) {
+  const seen = new Set();
+  const out = [];
+  for (const { dir, index } of shards) {
+    for (const d of index) {
+      if (seen.has(d.file)) continue;
+      seen.add(d.file);
+      out.push({ ...d, from: dir });
+    }
+  }
+  return out.sort((a, b) => a.stage - b.stage || a.file.localeCompare(b.file));
+}
+
+// Wall and game seconds per job by kind, for re-estimating --dry-run.
+export function wallStats(runs) {
+  const out = {};
+  for (const kind of ["boss", "warden", "world"]) {
+    const r = runs.filter((x) => x.kind === kind);
+    if (!r.length) continue;
+    out[kind] = { jobs: r.length, medianWallS: median(r.map((x) => x.wallS)), maxWallS: Math.max(...r.map((x) => x.wallS ?? 0)), medianGameS: median(r.map((x) => x.row?.game_seconds)) };
+  }
+  return out;
+}
+
+// --- identity: plan hash, keys, merge checks -------------------------------------------------
+
+// A cheap stable hash (FNV-1a, 64 bits as two 32-bit lanes) so lib.mjs stays free of node imports.
+export function hashString(text) {
+  let a = 0x811c9dc5;
+  let b = 0x01000193 ^ text.length;
+  for (let i = 0; i < text.length; i++) {
+    a = Math.imul(a ^ text.charCodeAt(i), 0x01000193) >>> 0;
+    b = Math.imul(b ^ text.charCodeAt(i), 0x85ebca6b) >>> 0;
+  }
+  return a.toString(16).padStart(8, "0") + b.toString(16).padStart(8, "0");
+}
+
+// What makes two table runs the same experiment: the library, the cells, seeds, columns, personas and tune string.
+// The shard is not in it: shards of one plan share a hash.
+export function planHash(o) {
+  const keys = ["libraryLabel", "libraryDigest", "cells", "only", "seeds", "columns", "persona", "wardenPersona", "parkPersona", "tune"];
+  return hashString(JSON.stringify(keys.map((k) => o[k] ?? null)));
+}
+
+export const jobKey = (job, { libraryLabel, plan, commit }) => `${libraryLabel ?? "-"}:${plan}:${(commit ?? "").slice(0, 8)}:${job.id}`;
+
+// meta: { shard: "i/n" | null, plan_hash, commit, library }. Returns { errors, warnings }: errors refuse the merge.
+export function checkMerge(metas, { allowMixed = false } = {}) {
+  const errors = [];
+  const warnings = [];
+  const mixed = (what, values) => {
+    const set = new Set(values);
+    if (set.size <= 1) return;
+    (allowMixed ? warnings : errors).push(`folders differ in ${what}: ${[...set].join(", ")}${allowMixed ? "" : " (use --allow-mixed to merge anyway)"}`);
+  };
+  if (metas.some((m) => !m)) errors.push("a folder has no meta.json (not a challenge run folder)");
+  const ms = metas.filter(Boolean);
+  mixed("plan hash", ms.map((m) => m.plan_hash));
+  mixed("commit", ms.map((m) => m.commit));
+  mixed("library", ms.map((m) => m.library));
+  const shards = ms.map((m) => m.shard);
+  if (shards.some((s) => s)) {
+    const parsed = shards.map((s) => (s ? /^(\d+)\/(\d+)$/.exec(s) : null));
+    if (parsed.some((p) => !p)) errors.push("some folders are sharded and some are not");
+    else {
+      const n = new Set(parsed.map((p) => p[2]));
+      if (n.size > 1) errors.push("shard counts differ: " + [...n].join(", "));
+      else {
+        const count = Number(parsed[0][2]);
+        const have = parsed.map((p) => Number(p[1]));
+        for (let i = 1; i <= count; i++) if (!have.includes(i)) errors.push(`shard ${i}/${count} is missing`);
+        if (new Set(have).size !== have.length) errors.push("a shard appears twice");
+      }
+    }
+  }
+  return { errors, warnings, shards: shards.filter(Boolean) };
+}
+
+// Bucket sizes per stage from the pickBuilds results.
+export function bucketInfo(builds) {
+  return Object.fromEntries(Object.entries(builds).map(([stage, b]) => [stage, { docs: b.ranked.length, ordinary: b.ordinary.length, top: b.top.length, overlap: b.overlap }]));
+}
+
+// Rows by a field, the last one winning.
+export function dedupeBy(rows, field = "id") {
+  const m = new Map();
+  for (const r of rows) m.set(r[field], r);
+  return [...m.values()];
 }

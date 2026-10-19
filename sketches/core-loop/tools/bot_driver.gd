@@ -434,6 +434,10 @@ var _plant_cool := 0.0
 var _plant_face := Vector3.ZERO
 var _plant_target: Node3D = null
 var _boss_clock := 0.0
+# The opening the 19 Oct ruling protects: no boss kills a Learner in its first 45 s.
+const FIRST_45_S := 45.0
+# Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
+var _sheet_live_s := -1.0
 var _punch_seen := 0.0
 var _warden_hp_at := -1.0
 var _warden_kinds := {}
@@ -915,11 +919,25 @@ func _in_boss() -> bool:
 func _on_player_hit(amount: float, source_id: String) -> void:
 	_count("hp_lost", amount)
 	_count("hits")
-	var into: Dictionary = boss_note if _in_boss() else _note
+	var in_boss := _in_boss()
+	var into: Dictionary = boss_note if in_boss else _note
 	if not into.is_empty():
 		if not into.has("hit_sources"):
 			into["hit_sources"] = {}
 		into["hit_sources"][source_id] = snappedf(float(into["hit_sources"].get(source_id, 0.0)) + amount, 0.1)
+		# The comps study's per-fight report (research/comps/difficulty/SUMMARY.md, Lab measure): the largest
+		# single hit as a share of pilot health, and the damage taken in the fight's first 45 s. A stage note
+		# counts only from its Warden fight's start to the break, so mob hits on the way in or out stay out of
+		# the Warden's row. The study file arrives with #167.
+		var fight_start = null if in_boss else fight_start_of(_note)
+		if in_boss or (fight_start != null and _note.get("warden_broken_s") == null):
+			var fight_s: float = _boss_clock if in_boss else game.run.stage_time - float(fight_start)
+			if amount > float(into.get("largest_hit", 0.0)):
+				into["largest_hit"] = snappedf(amount, 0.1)
+				into["largest_hit_source"] = source_id
+				into["largest_hit_share"] = snappedf(amount / maxf(float(game.run.max_hp), 1.0), 0.001)
+			if fight_s <= FIRST_45_S:
+				into["hp_lost_45s"] = snappedf(float(into.get("hp_lost_45s", 0.0)) + amount, 0.1)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
@@ -1700,6 +1718,19 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		var rammed: bool = _fight_phase == "sheet return %d" % sheet.gates_opened
 		# In a stagger a second ram in the same live sheet is the break, so the ball goes again.
 		var launching: bool = (live and (not rammed or staggered)) or (not live and target._charging and until_pulse <= DROP_WAIT)
+		var timed := _sheet_timed()
+		if not timed:
+			# Below the full kit the hand plays by sight (skill_band.gd): an open sheet seen for the
+			# band's reaction and read this cycle, and the stagger re-ram only with the base kit.
+			if not live:
+				_sheet_live_s = -1.0
+			elif _sheet_live_s < 0.0:
+				_sheet_live_s = 0.0
+			else:
+				_sheet_live_s += delta
+			var seen: bool = live and _sheet_live_s >= _reaction() \
+					and band.reads(target.get_instance_id() * 1000 + int(sheet.gates_opened))
+			launching = seen and (not rammed or (staggered and _kit("weak_points")))
 		var steer: Vector3 = target.family_point_at() if launching else _ground_point(foot.x, foot.z)
 		_harpoon_held = false
 		_harpoon_commit = false
@@ -1722,10 +1753,10 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_ignore_walls = launching
 		_slow_time = 0.0
 		_detour_time = 0.0
-		_act(steer, target, delta, target, false)
+		_act(steer, target, delta, target, not timed)
 		_ignore_walls = ignore_walls
 		_boost_clock = boost_clock
-		if staggered or float(target.posture()) >= SHEET_HOLD_FIRE:
+		if timed and (staggered or float(target.posture()) >= SHEET_HOLD_FIRE):
 			# Near a full bar, and in a stagger, any hit but the sheet ram only opens or spends a
 			# stagger that resets the bar (Tarn's claw, seed 3): the weapon, casts and ultimate wait.
 			source.hold.erase("fire_held")
@@ -2834,6 +2865,11 @@ func _threats() -> Array:
 	if band != null:
 		band.forget(live)
 	return out
+
+
+# Whether the dam sheet hand reads the Warden's clock and holds fire (the Expert, and no band).
+func _sheet_timed() -> bool:
+	return band == null or band.timed_sheet()
 
 
 # Seconds from a telegraph appearing to the bot seeing it.
