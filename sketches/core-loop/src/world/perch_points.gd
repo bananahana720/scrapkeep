@@ -174,23 +174,7 @@ static func ledges(park: Dictionary, ground: Callable) -> Array:
 				var base := float(ground.call(at.x, at.y))
 				found.append(Vector4(at.x, base + rise, at.y, base))
 	found.sort_custom(func(a: Vector4, b: Vector4) -> bool: return a.x < b.x or (a.x == b.x and a.z < b.z))
-	# Thin to SPACING_M, first in x then z order wins, by a grid of SPACING_M cells.
-	var kept: Array = []
-	var cells := {}
-	for top: Vector4 in found:
-		var cell := Vector2i(floori(top.x / SPACING_M), floori(top.z / SPACING_M))
-		var crowded := false
-		for dx in range(-1, 2):
-			for dz in range(-1, 2):
-				for other: Vector4 in cells.get(cell + Vector2i(dx, dz), []):
-					if Vector2(top.x, top.z).distance_to(Vector2(other.x, other.z)) < SPACING_M:
-						crowded = true
-		if not crowded:
-			kept.append(top)
-			if not cells.has(cell):
-				cells[cell] = []
-			cells[cell].append(top)
-	return kept
+	return _thin(found)
 
 
 # The surface at p as a landform top, or a Vector4 of INF when it is not 6 to 10 m over the lowest
@@ -262,3 +246,140 @@ static func _samples(row: Dictionary) -> Array:
 			for sign_l in [-1.0, 1.0]:
 				out.append(at + along * (sign_l * hl) + across * b)
 	return out
+
+
+# Landform tops closer than SPACING_M keep only the first (in x then z order), by a grid of SPACING_M cells.
+# `taken` are tops already kept elsewhere: a candidate within SPACING_M of one of them is dropped too.
+static func _thin(found: Array, taken: Array = []) -> Array:
+	var kept: Array = []
+	var cells := {}
+	for other: Vector4 in taken:
+		var key := Vector2i(floori(other.x / SPACING_M), floori(other.z / SPACING_M))
+		if not cells.has(key):
+			cells[key] = []
+		cells[key].append(other)
+	for top: Vector4 in found:
+		var cell := Vector2i(floori(top.x / SPACING_M), floori(top.z / SPACING_M))
+		var crowded := false
+		for dx in range(-1, 2):
+			for dz in range(-1, 2):
+				for other: Vector4 in cells.get(cell + Vector2i(dx, dz), []):
+					if Vector2(top.x, top.z).distance_to(Vector2(other.x, other.z)) < SPACING_M:
+						crowded = true
+		if not crowded:
+			kept.append(top)
+			if not cells.has(cell):
+				cells[cell] = []
+			cells[cell].append(top)
+	return kept
+
+
+# --- Prop tops, the third source ------------------------------------------------------------------
+# A tall Dressing kit prop may carry a deck anchor: an optional per-variant key `perch` in the kit manifest
+# (scrapkeep-park-props-kit/1), a list [x, y, z] in metres in the prop's local frame (origin at the foot
+# centre, Y up) naming the deck centre where a Dispatcher may stand. Its world position is
+# inst.pos + inst.basis * (inst.scale * local), for an instance of ParkProps.expand(). The prop must be able
+# to stand without a mast. Dressing props carry no collision, so a prop's own footprint never blocks its perch.
+# design-v3/park/PERCH-ANCHOR.md has the contract.
+
+# A well-formed local anchor as a Vector3, or Vector3.INF when `raw` is not a list of three finite numbers.
+static func perch_local(raw) -> Vector3:
+	if not raw is Array or (raw as Array).size() != 3:
+		return Vector3.INF
+	var v: Array = []
+	for n in raw:
+		if typeof(n) != TYPE_FLOAT and typeof(n) != TYPE_INT:
+			return Vector3.INF
+		if not is_finite(float(n)):
+			return Vector3.INF
+		v.append(float(n))
+	return Vector3(v[0], v[1], v[2])
+
+
+# Whether any variant of the kit carries a `perch` key (well formed or not).
+static func kit_has_perch(kit: Dictionary) -> bool:
+	for kind in (kit.get("kinds", {}) as Dictionary):
+		var variants = kit["kinds"][kind].get("variants", {}) if kit["kinds"][kind] is Dictionary else {}
+		for v in variants:
+			if variants[v] is Dictionary and (variants[v] as Dictionary).has("perch"):
+				return true
+	return false
+
+
+# The malformed `perch` entries of a kit, as strings (empty when every entry is well formed or absent). A
+# well-formed entry is three finite numbers with y above the foot and no higher than the variant's height
+# plus PERCH_SLACK_M. For the Dressing lane's kit tests.
+const PERCH_SLACK_M := 0.5
+
+static func perch_errors(kit: Dictionary) -> Array:
+	var errors: Array = []
+	var kinds = kit.get("kinds")
+	if not kinds is Dictionary:
+		return errors
+	for kind in kinds:
+		var def = kinds[kind]
+		if not def is Dictionary or not def.get("variants") is Dictionary:
+			continue
+		for v in def["variants"]:
+			var row = def["variants"][v]
+			if not row is Dictionary or not row.has("perch"):
+				continue
+			var label := "%s/%s perch" % [kind, v]
+			var local := perch_local(row["perch"])
+			if local.x == INF:
+				errors.append(label + " is not a list of three finite numbers")
+			elif local.y <= 0.0:
+				errors.append(label + " has y at or below the foot")
+			elif row.get("height") != null and local.y > float(row["height"]) + PERCH_SLACK_M:
+				errors.append(label + " has y above the variant height")
+	return errors
+
+
+# The perch tops of a prop expansion, sorted by x then z: [Vector4] (x, top y, z, ground under the deck), the
+# same shape and gates as ledges(): in the play rect, off every route lane and solid footprint (DECK_CLEAR),
+# the deck's 3.6 m square flat to LEVEL_M, 6 to 10 m over the ground under it, thinned to SPACING_M.
+# `taken` lists tops of another source that a prop top may not crowd. Refused: litter, a variant with no or a
+# malformed `perch`, a malformed instance, a non-finite world position.
+static func props(instances: Array, kit: Dictionary, park: Dictionary, ground: Callable, taken: Array = []) -> Array:
+	var kinds = kit.get("kinds")
+	if not kinds is Dictionary:
+		return []
+	var all_zones := _zone_list(ledge_zones(park))
+	var r: Array = park.get("play_rect", [-100000.0, -100000.0, 200000.0, 200000.0])
+	var play := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])).grow(-PLAY_INSET_M)
+	var found: Array = []
+	for inst in instances:
+		if not inst is Dictionary or inst.get("litter", false) != false:
+			continue
+		var def = kinds.get(inst.get("kind", ""))
+		if not def is Dictionary or not def.get("variants") is Dictionary:
+			continue
+		var row = def["variants"].get(inst.get("v", ""))
+		if not row is Dictionary or not row.has("perch"):
+			continue
+		var local := perch_local(row["perch"])
+		if local.x == INF or not inst.get("pos") is Vector3 or not inst.get("basis") is Basis:
+			continue
+		var sc = inst.get("scale", 1.0)
+		if (typeof(sc) != TYPE_FLOAT and typeof(sc) != TYPE_INT) or not is_finite(float(sc)) or float(sc) <= 0.0:
+			continue
+		var top: Vector3 = (inst["pos"] as Vector3) + (inst["basis"] as Basis) * (float(sc) * local)
+		if not (is_finite(top.x) and is_finite(top.y) and is_finite(top.z)):
+			continue
+		var at := Vector2(top.x, top.z)
+		if not play.has_point(at) or ParkRecipes.in_clear(all_zones, at, DECK_CLEAR):
+			continue
+		var base := float(ground.call(top.x, top.z))
+		var lo := base
+		var hi := base
+		for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
+			var g := float(ground.call(top.x + corner.x * DECK_HALF, top.z + corner.y * DECK_HALF))
+			lo = minf(lo, g)
+			hi = maxf(hi, g)
+		if hi - lo > LEVEL_M:
+			continue
+		var tip := Vector4(top.x, top.y, top.z, base)
+		if valid_ledge(tip):
+			found.append(tip)
+	found.sort_custom(func(a: Vector4, b: Vector4) -> bool: return a.x < b.x or (a.x == b.x and a.z < b.z))
+	return _thin(found, taken)

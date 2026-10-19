@@ -418,8 +418,25 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 	var i := _index(stage)
 	if not _perches.has(i):
 		_ensure(stage)
-		_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
+		var ledges := PerchPoints.ledges(m.park, height)
+		ledges.append_array(_prop_perches(m, ledges))
+		_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": ledges}
 	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
+
+
+# The third perch source: tops of tall Dressing props whose kit variant carries a `perch` anchor
+# (perch_points.gd props()). Empty, with nothing expanded, when the park has no vignette file or its kit
+# has no perch key. Loaded at run time because park_props.gd preloads this script.
+func _prop_perches(m, taken: Array) -> Array:
+	var park_props = load("res://src/presentation/park_props.gd")
+	var file: Dictionary = park_props.load_json(park_props.file_path(String(m.park.get("map", ""))))
+	if file.is_empty():
+		return []
+	var kit: Dictionary = park_props.load_json(String(file.get("kit", "")))
+	if kit.is_empty() or not PerchPoints.kit_has_perch(kit) or not (park_props.kit_errors(kit) + park_props.file_errors(file, kit)).is_empty():
+		return []
+	var on_ground := func(x: float, z: float, _t: float) -> Vector3: return Vector3(x, height(x, z), z)
+	return PerchPoints.props(park_props.expand(file, kit, m, on_ground), kit, m.park, height, taken)
 
 
 func spawn_point(index: int) -> Vector3:

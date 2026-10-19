@@ -1,0 +1,16 @@
+{
+ "schema": "scrapkeep-park-props/1",
+ "map": "park_dam",
+ "kit": "res://tests/fixtures/perch_props/manifest.json",
+ "templates": {
+  "mast": {
+   "story": "Fixture: one mast with a deck, on open flat ground of park_dam.",
+   "props": [
+    {"kind": "fix_mast", "v": "a", "at": [0, 0], "yaw_deg": 0, "scale": 1.0, "tilt_deg": 0}
+   ]
+  }
+ },
+ "spots": [
+  {"id": "mast_a", "template": "mast", "at": [-284, 204], "yaw_deg": 0}
+ ]
+}

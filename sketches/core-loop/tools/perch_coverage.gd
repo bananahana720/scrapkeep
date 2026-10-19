@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Prints, per park, the Dispatcher's candidate perch tops by source (anchor posts, landform tops) with their
+# Prints, per park, the Dispatcher's candidate perch tops by source (anchor posts, landform tops, Dressing prop tops) with their
 # rise, and how many of 200 seeded pack points have a perch within 40 m. Read-only:
 #   godot --headless --path sketches/core-loop --script res://tools/perch_coverage.gd
 # Optional user args after `--`: park ids (default: all six shipped parks).
@@ -8,6 +8,7 @@ extends SceneTree
 const PerchPoints := preload("res://src/world/perch_points.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkGround := preload("res://tests/support/park_ground.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 
 const PACKS := 200
 
@@ -28,6 +29,8 @@ func _initialize() -> void:
 		var ledges := PerchPoints.ledges(park_map.park, ground)
 		var done := Time.get_ticks_usec()
 		var blocked := PerchPoints.blockers(park_map.park)
+		var prop_tops := _prop_tops(park_map, ground, ledges)
+		ledges.append_array(prop_tops)
 		var packs := ParkGround.pack_points(park_map.park, PACKS)
 		var before := 0
 		var after := 0
@@ -62,7 +65,17 @@ func _initialize() -> void:
 		var rises := []
 		for ledge: Vector4 in ledges:
 			rises.append(snappedf(ledge.y - ledge.w, 0.1))
-		print("park_%s: posts %d, landform tops %d (derive %d ms, ledges %d ms), packs %d, perch within 40 m before %d after %d" % [
-			id, posts.size(), ledges.size(), (mid - started) / 1000, (done - mid) / 1000, packs.size(), before, after])
+		print("park_%s: posts %d, landform tops %d, prop tops %d (derive %d ms, ledges %d ms), packs %d, perch within 40 m before %d after %d" % [
+			id, posts.size(), ledges.size() - prop_tops.size(), prop_tops.size(), (mid - started) / 1000, (done - mid) / 1000, packs.size(), before, after])
 		print("   rises %s" % str(rises.slice(0, 24)))
 	quit(0)
+
+
+# The prop tops of a park's Dressing vignette file (PerchPoints.props); [] when the park has no file or its kit has no `perch` key.
+func _prop_tops(park_map, ground: Callable, taken: Array) -> Array:
+	var file := ParkProps.load_json(ParkProps.file_path(String(park_map.park.get("map", ""))))
+	var kit := ParkProps.load_json(String(file.get("kit", "")))
+	if file.is_empty() or kit.is_empty() or not PerchPoints.kit_has_perch(kit):
+		return []
+	var on_ground := func(x: float, z: float, _t: float) -> Vector3: return Vector3(x, ground.call(x, z), z)
+	return PerchPoints.props(ParkProps.expand(file, kit, park_map, on_ground), kit, park_map.park, ground, taken)

@@ -1,0 +1,17 @@
+{
+ "schema": "scrapkeep-park-props-kit/1",
+ "park": "dam",
+ "kinds": {
+  "fix_mast": {
+   "class": "dress_hero",
+   "tags": ["tall"],
+   "story": "Fixture: a mast with a deck at 8 m (a), 3 m (b), 14 m (c), and none (d).",
+   "variants": {
+    "a": {"lod": ["res://assets/models/highdraft/prop_sail.glb", "res://assets/models/highdraft/prop_sail.glb", "res://assets/models/highdraft/prop_sail.glb"], "tris": [200, 200, 200], "radius": 1.0, "height": 9.0, "perch": [0, 8, 0]},
+    "b": {"lod": ["res://assets/models/highdraft/prop_sail.glb", "res://assets/models/highdraft/prop_sail.glb", "res://assets/models/highdraft/prop_sail.glb"], "tris": [200, 200, 200], "radius": 1.0, "height": 4.0, "perch": [0, 3, 0]},
+    "c": {"lod": ["res://assets/models/highdraft/prop_sail.glb", "res://assets/models/highdraft/prop_sail.glb", "res://assets/models/highdraft/prop_sail.glb"], "tris": [200, 200, 200], "radius": 1.0, "height": 15.0, "perch": [0, 14, 0]},
+    "d": {"lod": ["res://assets/models/highdraft/prop_sail.glb", "res://assets/models/highdraft/prop_sail.glb", "res://assets/models/highdraft/prop_sail.glb"], "tris": [200, 200, 200], "radius": 1.0, "height": 9.0}
+   }
+  }
+ }
+}
