@@ -1615,7 +1615,7 @@ func _fight(target: Node3D, delta: float) -> void:
 	if short:
 		_count("punch_short_s", delta)
 	_note_shred(target, delta)
-	if _anchor_warden(target) and _kit("harpoon"):
+	if _anchor_warden(target) and (_kit("harpoon") or _sheet_warden(target)):
 		_anchor_fight(target, short, delta)
 		return
 	_ground_fight(target, short, delta)
@@ -1654,6 +1654,14 @@ func _anchor_warden(target) -> bool:
 	return target != null and is_instance_valid(target) and target.get("harpoon_anchor") == true
 
 
+# The dam reactor's spillway sheet: its hand releases the hook and breaks the Warden by ram, so
+# a band without the harpoon still runs it.
+func _sheet_warden(target: Node3D) -> bool:
+	return target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
+			and target.spec.get("park_landmark", false) and target.mount_driver != null \
+			and target.mount_driver.has_method("sheet_live")
+
+
 func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 	var kit = game.player.kit
 	var ball: Vector3 = game.player.ball_position()
@@ -1678,9 +1686,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		if not game.player.state.grounded:
 			_count("latch_bites_air")
 	_anchor_lined = lined
-	if target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
-			and target.spec.get("park_landmark", false) and target.mount_driver != null \
-			and target.mount_driver.has_method("sheet_live"):
+	if _sheet_warden(target):
 		var sheet = target.mount_driver
 		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
 		var runup: float = minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
@@ -3460,7 +3466,7 @@ func record(wall_seconds: float) -> Dictionary:
 		"game_seconds": snappedf(float(ticks) / float(Engine.physics_ticks_per_second), 0.01),
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
 		"boss": boss_note if not boss_note.is_empty() else null,
-		"reaction_s": REACTION,
+		"reaction_s": _reaction(),
 		"band": band.describe() if band else null,
 		"min_hp": snappedf(_min_hp, 0.1) if _min_hp != INF else null, "max_hp": game.run.max_hp,
 		# The skill bar (SKILL-BAR section 8): casts of slots 2 and 3, set pieces started, Q presses,
