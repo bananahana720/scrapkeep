@@ -21,8 +21,8 @@ extends SceneTree
 #     [--class=<index>]   pilot to stage (0 Sable, 1 Rivet, 2 Kest)
 #     [--spawn=<kind>@x,y,z]   spawn one enemy through combat.spawn_enemy before the settle; it is
 #       named Spawn_<kind> under the game, so --subject and --anchor can address /root/Game/Spawn_<kind>
-#     [--glb=<res path>@x,y,z[@yaw degrees]]   instance a GLB at that point before the settle, painted from the hero
-#       material slots and given the bake look as the game dresses its own models; it is named Glb_<file base name>
+#     [--glb=<res path>@x,y,z[@yaw degrees]]   instance a GLB at that point before the settle, painted from the park
+#       slot resources and the hero material slots and given the bake look as the game dresses its own models; it is named Glb_<file base name>
 #       under the game (/root/Game/Glb_warden_mantle_brood), for a model no stage-1 run shows (a later stage's mantle,
 #       a park landmark, an anchor kit)
 #     [--call=<node path>:<method>[:<physics frames>[:<JSON array of args>]]]   after the settle, call that method on the
@@ -40,6 +40,7 @@ const Cams := preload("res://tools/capture_cameras.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 const VERSION := 1
 const SEED := 280928
@@ -337,6 +338,14 @@ static func place_glb(parent: Node, spec: String) -> Node3D:
 	node.global_position = _vec(parts[1])
 	if parts.size() > 2:
 		node.rotation_degrees.y = float(parts[2])
+	# Park recipes (anchor kits, landmarks) draw from the shared slot resources, as place_parts does;
+	# hero models from hero_assets' slots, which win where both know a slot.
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		for i in view.mesh.get_surface_count():
+			var original := view.mesh.surface_get_material(i)
+			var slot := String(original.resource_name) if original != null else ""
+			if RecipeProps.is_slot_role(slot):
+				view.set_surface_override_material(i, RecipeProps.slot_material(slot))
 	var hero := parent.find_child("HeroAssets", true, false)
 	if hero != null and hero.has_method("paint"):
 		hero.paint(node, {})
