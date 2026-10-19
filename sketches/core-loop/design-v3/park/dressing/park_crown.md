@@ -1,6 +1,6 @@
 # Crown (`park_crown`) dressing kit
 
-Dressing lane (DRESSING-KITS.md), phase 1: the Blender kit only. Recipe `tools/blender/park/props/crown.py`; GLBs, `manifest.json` and import stubs under `assets/models/park/props/crown/`; registry rows in `assets/registry.d/park_props_crown.json` (the Gate lane folds `registry.json`). No placement yet: phase 2 writes `src/world/park/props/park_crown.json`.
+Dressing lane (DRESSING-KITS.md): the Blender kit and its placement. Recipe `tools/blender/park/props/crown.py`; GLBs, `manifest.json` and import stubs under `assets/models/park/props/crown/`; registry rows in `assets/registry.d/park_props_crown.json` (the Gate lane folds `registry.json`). Placement is in `src/world/park/props/park_crown.json`.
 
 The kit tells two stories. The net-weavers are non-hostile builders, so only their gear appears (ochre rope, nets, hammocks, a loom, mending baskets), never a face or a creature. The Fleet signal crew's gear is iron oxide `#9b513a` and charcoal with one brass tag, and is drawn as abandoned equipment: a hut, a weather post, a flat-lying cable spool and a tally slab, with no barrels and no gun-like masts. The ancient spires are never touched. Props use pale canvas, ochre rope, dusty sage and charcoal so they separate in value and hue from the red-orange sandstone ground, which sits close to HAZARD in hue. Brass is `#d9b44a`, used only on the Fleet tags.
 
@@ -9,6 +9,7 @@ The kit tells two stories. The net-weavers are non-hostile builders, so only the
 | `loom_frame` | hero | 11312/9768/8952 | 4.6/4.6/3.6 | machine,soft,tall | Net-weavers' floor loom: chunky bobbins on the bed and a half-woven ochre net in a leaning frame. |
 | `billing_booth` | hero | 10880/11060/9752 | 4.1/4.1/4.1 | machine,sign,tall | Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. |
 | `storm_station` | hero | 16092/16264/8752 | 4.5/4.5/2.9 | machine,sign,tall | Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. |
+| `lookout_deck` | hero | 15464/15532/15532 | 9.3/9.1/8.4 | soft,tall | Net-weavers' log-crib lookout: lashed logs and fieldstone holding a roped plank deck (the perch, 7.05 m up), a net over the rail, a lean-to cloth that is up, half down, or gone. |
 | `hammock_rig` | prop | 2328/2448/2284 | 1.4/1.4/1.4 | soft | Net-weavers' low hammock on two short posts, a blanket still in it; run down, it sags to the dust. |
 | `knot_board` | prop | 2940/1752/2032 | 1.7/1.2/1.2 | soft | A mending basket of spare net and a knot board with sample splices, set down mid-lesson. |
 | `spool_shed` | prop | 2980/2980/2656 | 3.0/3.0/2.1 | machine | A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. |
@@ -30,8 +31,12 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 - `loom_frame` leans back and carries an awning so it does not read as a two-post gate. Plants-through-scrap are `rabbitbrush_c` (iron wheel) and `yucca_c` (gear plate). Crew warmth: hammock blanket, thermos on a stool, mug and laundry at the booth, steaming dish stone.
 - Keep `kite_pennant` 30 m from lines.
 
-## Placement (19 October 2026, round 3)
+## Placement (19 October 2026, round 4)
 
-`src/world/park/props/park_crown.json`: 10 templates (net-weaver: mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar; Fleet and abandoned only: abandoned_booth, dead_weather_post, cable_corner, log_post), 95 spots, 864 vignette instances plus 138 litter (1002 in all), pinned. Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate`.
+`src/world/park/props/park_crown.json`: 18 templates (net-weaver: mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar, the minis, `low_cairn` and `lookout_a/b/c`; Fleet and abandoned only: abandoned_booth, dead_weather_post, cable_corner, log_post, `low_slab`), 145 spots, 899 vignette instances plus 133 litter (1032 in all), pinned. Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate`.
 
-Known gaps: the Watch Butte drop (floor and pilot lines from about z -720 to -320) sits inside the `drop_ramp` flow_line and `bajada_lip` kicker keepouts, so several density windows there have no legal ground.
+Low ground: the file lists `watch_butte`, `watch_butte_crest` and `drop_ramp` in `low_ground_rows`, so the Watch Butte drop takes instances 1.0 m or lower (`low_cairn`, `low_slab`: 33 spots, all scaled to 1.0 or less). The washes are ridden and stay unlisted; the spots that fix round 5 turned out of `meander`, `west_wash` and `east_wash` (crown_06, 07, 09, 10, 15, 18, 19, 20, 24, 29, 33, 43, 46) were moved to the nearest legal ground.
+
+Perches: `lookout_deck` carries `perch` (deck centre, 7.05 m over the foot, flat 4.4 m square), and seven `lookout_*` spots (`crown_lk_*`) stand off the line. Under the Dressing-gate rules the ride-row keepouts leave only one legal pocket near `gauntlet_net_2` (296, 240), so the other six stand where the uncovered Dispatcher pack points are. `perch_coverage.gd crown`: 23 of 200 before, 61 of 200 after (7 prop tops, all accepted); `PerchPoints.perch_errors(kit)` is empty.
+
+Known gaps: density windows still failing are floor 9.7/-441.9, sable 8/-476.3, tarn -32.8/-319.1 and cannon 34.1/-336.2 (the `bajada_lip` kicker keepout).
