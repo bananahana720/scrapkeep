@@ -20,58 +20,58 @@ from _life import Critter  # noqa: E402
 
 life = Critter("weir_keeper")
 
-# --- bucket: a soft rounded cylinder, same mesh
-life.tube("root", "bucket", [(0, 0.04, 0), (0, 0.27, 0)], [0.185, 0.2], sides=8, subsurf=1, cap=0.45)
+# --- bucket: a plum soft cylinder with a soft flare at the base and a lilac rim band, same mesh
+life.tube("root", "hat", [(0, 0.03, 0), (0, 0.14, 0), (0, 0.27, 0)], [0.26, 0.215, 0.215], sides=8, subsurf=1, cap=0.4)
+life.tube("root", "bucket", [(0, 0.255, 0), (0, 0.295, 0)], [0.23, 0.23], sides=8, subsurf=1, cap=0.5)
 
-# --- legs and feet, resting forward of the bucket
+# --- legs and rounded feet, short, resting forward of the bucket
 for s in (-1, 1):
-    life.capsule("root", "overalls", (0.1 * s, 0.34, -0.06), (0.105 * s, 0.1, -0.22), 0.07, 0.06, subsurf=1, u=6, v=4)
-    life.ellipsoid("root", "tail", (0.105 * s, 0.04, -0.27), (0.058, 0.04, 0.1), subsurf=1, u=6, v=4)
+    life.capsule("root", "overalls", (0.11 * s, 0.34, -0.06), (0.115 * s, 0.1, -0.22), 0.085, 0.07, subsurf=1, u=6, v=4)
+    life.ellipsoid("root", "tail", (0.115 * s, 0.06, -0.26), (0.08, 0.06, 0.11), subsurf=1, u=6, v=4)
 
-# --- body: a pear, wide at the seat
-life.ellipsoid("body", "overalls", (0, 0.45, 0.0), (0.2, 0.17, 0.19), subsurf=1, u=9, v=5)
-life.ellipsoid("body", "overalls", (0, 0.55, -0.01), (0.15, 0.13, 0.14), subsurf=1, u=9, v=5)
-life.ellipsoid("body", "overalls", (0, 0.655, -0.03), (0.095, 0.05, 0.085), subsurf=1, u=6, v=4)
-life.ellipsoid("body", "bucket", (0, 0.5, -0.135), (0.075, 0.06, 0.03), subsurf=1, u=6, v=4)  # bib pocket
+# --- body: a short chubby pear, wide hips
+life.ellipsoid("body", "overalls", (0, 0.42, 0.0), (0.23, 0.14, 0.215), subsurf=1, u=9, v=5)
+life.ellipsoid("body", "overalls", (0, 0.5, -0.01), (0.165, 0.11, 0.15), subsurf=1, u=8, v=4)
+life.ellipsoid("body", "bucket", (0, 0.45, -0.17), (0.08, 0.06, 0.03), subsurf=1, u=6, v=4)  # bib pocket
 for s in (-1, 1):
-    life.tube("body", "hat", [(0.065 * s, 0.665, -0.07), (0.075 * s, 0.58, -0.145), (0.075 * s, 0.53, -0.15)],
-              [0.016, 0.016, 0.016], sides=5, subsurf=1)
+    life.tube("body", "hat", [(0.07 * s, 0.57, -0.08), (0.085 * s, 0.5, -0.15), (0.085 * s, 0.46, -0.16)],
+              [0.016, 0.016, 0.016], sides=4, subsurf=1)
 
 # --- tail: a broad flat paddle drooping behind the bucket, round-ended
-life.ellipsoid("tail", "tail", (0, 0.22, 0.35), (0.115, 0.032, 0.2), rot=(18, 0, 0), subsurf=1, u=9, v=5)
+life.ellipsoid("tail", "tail", (0, 0.22, 0.38), (0.13, 0.032, 0.2), rot=(18, 0, 0), subsurf=1, u=8, v=4)
 
-# --- head: round, with muzzle, nose, two buck teeth, eyes
-life.ellipsoid("head", "cream", (0, 0.8, -0.015), (0.135, 0.12, 0.125), subsurf=1, u=9, v=5)
-life.ellipsoid("head", "cream", (0, 0.765, -0.115), (0.065, 0.05, 0.05), subsurf=1, u=6, v=4)
-life.ellipsoid("head", "eye", (0, 0.785, -0.16), (0.02, 0.014, 0.014), subsurf=1, u=6, v=4)
+# --- head: big and round, chubby cheeks, muzzle, big nose, two buck teeth, eyes, small round ears
+life.ellipsoid("head", "cream", (0, 0.72, -0.015), (0.2, 0.17, 0.18), subsurf=1, u=10, v=5)
+life.ellipsoid("head", "cream", (0, 0.675, -0.17), (0.085, 0.06, 0.06), subsurf=1, u=6, v=4)
+life.ellipsoid("head", "eye", (0, 0.7, -0.225), (0.038, 0.028, 0.026), subsurf=1, u=6, v=4)
 for s in (-1, 1):
-    life.ellipsoid("head", "cream", (0.014 * s, 0.725, -0.15), (0.014, 0.024, 0.01), subsurf=1, u=6, v=4)
-    life.ellipsoid("head", "eye", (0.058 * s, 0.82, -0.105), (0.017, 0.02, 0.012), subsurf=1, u=6, v=4)
-    life.ellipsoid("head", "tail", (0.115 * s, 0.88, 0.0), (0.04, 0.04, 0.025), subsurf=1, u=6, v=4)  # ears
+    life.ellipsoid("head", "cream", (0.125 * s, 0.655, -0.1), (0.085, 0.075, 0.08), subsurf=1, u=6, v=4)  # cheeks
+    life.ellipsoid("head", "cream", (0.02 * s, 0.615, -0.205), (0.02, 0.032, 0.014), subsurf=1, u=6, v=4)
+    life.ellipsoid("head", "eye", (0.085 * s, 0.745, -0.15), (0.024, 0.028, 0.016), subsurf=1, u=6, v=4)
+    life.ellipsoid("head", "tail", (0.195 * s, 0.8, 0.0), (0.055, 0.055, 0.03), rot=(0, 20 * s, 0), subsurf=1, u=6, v=4)  # ears
 
 # --- hat: wide floppy brim, rounded crown, band
-life.ellipsoid("hat", "hat", (0, 0.9, -0.01), (0.25, 0.03, 0.25), subsurf=1, u=9, v=5)
-life.ellipsoid("hat", "hat", (0, 0.96, 0.0), (0.135, 0.095, 0.135), subsurf=1, u=9, v=5)
-life.ellipsoid("hat", "tail", (0, 0.925, 0.0), (0.142, 0.022, 0.142), subsurf=1, u=10, v=4)
+life.ellipsoid("hat", "hat", (0, 0.89, -0.01), (0.3, 0.03, 0.3), subsurf=1, u=9, v=4)
+life.ellipsoid("hat", "hat", (0, 0.96, 0.0), (0.17, 0.1, 0.17), subsurf=1, u=8, v=4)
+life.ellipsoid("hat", "tail", (0, 0.925, 0.0), (0.178, 0.022, 0.178), subsurf=1, u=8, v=4)
 
 # --- arms: right holds the rod, left rests on the knee and waves
-life.capsule("arm_r", "bucket", (0.17, 0.6, -0.02), (0.15, 0.49, -0.18), 0.05, 0.045, subsurf=1, u=6, v=4)
-life.ellipsoid("arm_r", "cream", (0.15, 0.49, -0.2), (0.05, 0.045, 0.05), subsurf=1, u=6, v=4)
-life.tube("rod", "hat", [(0.14, 0.505, -0.12), (0.17, 0.36, -0.34), (0.2, 0.22, -0.56)], [0.012, 0.009, 0.007], sides=5, subsurf=1)
-life.tube("rod", "eye", [(0.2, 0.215, -0.56), (0.2, 0.12, -0.56), (0.2, 0.03, -0.56)], [0.004, 0.004, 0.004], sides=3, subsurf=0, cap=0.5)
-life.ellipsoid("rod", "bucket", (0.2, 0.03, -0.56), (0.016, 0.016, 0.016), subsurf=0, u=6, v=4)
-life.capsule("arm_l", "bucket", (-0.17, 0.6, -0.02), (-0.2, 0.5, -0.17), 0.05, 0.045, subsurf=1, u=6, v=4)
-life.ellipsoid("arm_l", "cream", (-0.2, 0.495, -0.19), (0.052, 0.05, 0.055), subsurf=1, u=6, v=4)
+life.capsule("arm_r", "bucket", (0.2, 0.55, -0.02), (0.17, 0.43, -0.17), 0.06, 0.055, subsurf=1, u=6, v=4)
+life.ellipsoid("arm_r", "cream", (0.17, 0.425, -0.19), (0.06, 0.055, 0.06), subsurf=1, u=6, v=4)
+life.tube("rod", "hat", [(0.16, 0.44, -0.14), (0.19, 0.33, -0.36), (0.22, 0.2, -0.58)], [0.013, 0.01, 0.008], sides=4, subsurf=1)
+life.tube("rod", "eye", [(0.22, 0.195, -0.58), (0.22, 0.03, -0.58)], [0.004, 0.004], sides=3, subsurf=0, cap=0.5)
+life.capsule("arm_l", "bucket", (-0.2, 0.55, -0.02), (-0.22, 0.44, -0.17), 0.06, 0.055, subsurf=1, u=6, v=4)
+life.ellipsoid("arm_l", "cream", (-0.22, 0.435, -0.19), (0.062, 0.06, 0.065), subsurf=1, u=6, v=4)
 
 life.rig([
     ("root", (0, 0, 0), None),
     ("body", (0, 0.35, 0.0), "root"),
-    ("head", (0, 0.7, -0.02), "body"),
-    ("hat", (0, 0.88, 0.0), "head"),
-    ("tail", (0, 0.32, 0.17), "body"),
-    ("arm_r", (0.17, 0.6, -0.02), "body"),
-    ("rod", (0.15, 0.49, -0.18), "arm_r"),
-    ("arm_l", (-0.17, 0.6, -0.02), "body"),
+    ("head", (0, 0.58, -0.02), "body"),
+    ("hat", (0, 0.86, 0.0), "head"),
+    ("tail", (0, 0.32, 0.2), "body"),
+    ("arm_r", (0.2, 0.55, -0.02), "body"),
+    ("rod", (0.17, 0.43, -0.18), "arm_r"),
+    ("arm_l", (-0.2, 0.55, -0.02), "body"),
 ])
 
 REST = {}
