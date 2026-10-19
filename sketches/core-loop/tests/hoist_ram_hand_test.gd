@@ -19,7 +19,7 @@ const T := preload("res://tests/support/t.gd")
 #            engagement, and records hoist_rams, hoist_glance and its last contact.
 #   plain    no band: the same row as the expert (bar wall time, run id and the band's own record).
 #   off      the Expert with the hand switched off (hoist-hand=0, the control switch): no hoist keys,
-#            so the old driver did not land that ram.
+#            so the switch really turns the hand off.
 #   novice   no hoist keys: the Novice does not run the hand.
 #   learner  the base kit at its fifth attempt runs the hand: its kit allows it and the run is clean
 #            (its read roll is per cycle, so a count is printed, not asserted).

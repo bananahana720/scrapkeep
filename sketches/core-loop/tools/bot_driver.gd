@@ -1869,7 +1869,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 # clock; the cue must be seen for the band's reaction and read this cycle (a Learner rolls once per
 # cycle). Contact counts as hoist_rams (punch at or over the plating) or hoist_glance (under it), once a
 # cycle (_on_hoist_struck). Off the swarm hoist, in a stagger, out of reach, or with the ball in the
-# pit or on the line, it returns false and the existing hand has the stick.
+# pit or inside the rim, it returns false and the existing hand has the stick.
 func _hoist_warden(target: Node3D) -> bool:
 	return target.get("family") == "swarm" and target.get("mounting") == "headframe" \
 			and target.get("mount_driver") != null
@@ -2009,10 +2009,10 @@ func _on_hoist_struck(enemy: Node3D, kind: String, force: float) -> void:
 	_count("hoist_rams" if punch >= plating else "hoist_glance")
 	if kind == "stomp":
 		_count("hoist_stomps")
-	_note["hoist_last_punch"] = snappedf(punch, 0.1)
-	_note["hoist_last_plating"] = snappedf(plating, 0.1)
-	_note["hoist_last_kind"] = kind
-	_note["hoist_last_s"] = snappedf(game.run.stage_time, 0.01)
+	_note_set("hoist_last_punch", snappedf(punch, 0.1))
+	_note_set("hoist_last_plating", snappedf(plating, 0.1))
+	_note_set("hoist_last_kind", kind)
+	_note_set("hoist_last_s", snappedf(game.run.stage_time, 0.01))
 	_hoist_done = _hoist_cycle
 
 
@@ -3061,6 +3061,9 @@ func _threats() -> Array:
 			if not live.has(id):
 				_seen.erase(id)
 	if band != null:
+		# The hoist cycle's answer is not a hazard id: keep it live so a Learner rolls each cycle once.
+		if is_instance_valid(_anchor_target) and _hoist_cycle > 0:
+			live[_anchor_target.get_instance_id() * 1000 + _hoist_cycle] = true
 		band.forget(live)
 	return out
 
