@@ -192,6 +192,11 @@ const ANCHOR_EDGE_STEP_M := 12.0
 # on its top). Until all three GLBs have landed the row draws grey posts like greybox:anchor_field.
 const ANCHOR_KITS := ["anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn"]
 const ANCHOR_VARIANTS := ["a", "b", "c"]
+# Pieces drawn over their row's greybox (the islands' collider-locked rows, coordinator on #149, 2026-10-19 02:18Z): a row
+# whose recipe is one of OVER_GREYBOX is placed exactly as its element's greybox (node, seat, ride sensor and box
+# collider, or none where its stamp replaces the box) and draws its GLB's views in place of the grey box. The GLBs carry
+# no -col, so the collider stays the greybox's own (tests/park_over_greybox_test.gd).
+const OVER_GREYBOX := ["isle_adit_portal", "isle_tram_head", "isle_keel_rib"]
 const ANCHOR_AUTHORED_M := 10.0
 # The waymark names that are no row: the spawn and the landmark (park_schema.gd DROP_IN and LANDMARK).
 const DROP_IN := "drop_in"
@@ -507,6 +512,8 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 	if not ResourceLoader.exists(p["base"]):
 		push_warning("park_recipes: %s missing, %s stands in as greybox" % [p["base"], row.get("id", "")])
 		return place_greybox(row, String(row.get("element", "")), parent, ground, publish)
+	if OVER_GREYBOX.has(recipe):
+		return place_over_greybox(row, p, budget, parent, ground, publish)
 	if fits_seat(row):
 		var refusal := seat_refusal(row, recipe_ends(recipe))
 		if refusal != "":
@@ -778,6 +785,32 @@ static func place_greybox(row: Dictionary, element: String, parent: Node3D, grou
 	node.add_child(view)
 	body.add_child(shape)
 	_sensor(node, row, publish)
+	return node
+
+
+# An OVER_GREYBOX row: its element's greybox with the GLB's views (paths p, ranges of budget) in place of the grey box.
+static func place_over_greybox(row: Dictionary, p: Dictionary, budget: String, parent: Node3D, ground := Callable(),
+		publish := Callable()) -> Node3D:
+	var node := place_greybox(row, String(row.get("element", "")), parent, ground, publish)
+	if node == null:
+		return null
+	var grey := node.get_node("Greybox")
+	node.remove_child(grey)
+	grey.free()
+	var body: StaticBody3D = node.get_node("Collider")
+	var r := ranges(budget)
+	var shell_ranges: Array = r.get("shells", [])
+	var parts: Array = [[p["base"], [0.0, float(r.get("base_end", 0.0)), float(r.get("base_margin", 0.0))], true]]
+	for k in (p["shells"] as Array).size():
+		var sr: Array = shell_ranges[k] if k < shell_ranges.size() else [0.0, 0.0]
+		parts.append([p["shells"][k], [0.0, float(sr[0]), float(sr[1])], false])
+	for part: Array in parts:
+		for scene: Node in _load(part[0]):
+			for view in _views(scene, node, body, Transform3D.IDENTITY):
+				_range(view, part[1][0], part[1][1], part[1][2])
+				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if part[2] else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			scene.free()
+	node.set_meta("over_greybox", true)
 	return node
 
 
@@ -1271,9 +1304,11 @@ static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), pub
 	return node
 
 
-# Whether a row's stamp stands in for its greybox solid: a greybox stand-in with a stamp and no absolute y.
+# Whether a row's stamp stands in for its greybox solid: a greybox stand-in (or an OVER_GREYBOX row, placed as one) with
+# a stamp and no absolute y.
 static func stamp_replaces(row: Dictionary) -> bool:
-	return String(row.get("stamp", "")) != "" and row.get("y") == null and stands_in(row)
+	return String(row.get("stamp", "")) != "" and row.get("y") == null \
+		and (stands_in(row) or OVER_GREYBOX.has(String(row.get("recipe", ""))))
 
 
 # The ground a row's node stands on: a stamp_replaces row, or a drape-fit row, stands on the ground less its own stamp's
