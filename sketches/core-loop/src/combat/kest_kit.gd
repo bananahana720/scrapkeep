@@ -607,7 +607,7 @@ func kest_cage_state() -> Dictionary:
 	var age := _clock - _last_throw
 	var recovering := _clock - _landed_at
 	var loaded: bool = not combat.line_load().is_empty() and not ready and not riding
-	var glow := 1.0 if riding else (0.8 + 0.2 * sin(_clock * TAU) if ready else (1.0 if posmod(int(_clock * 4.0), 2) == 0 else 0.0) if loaded else 0.2)
+	var glow := 1.0 if riding else (0.8 + 0.2 * sin(_clock * TAU) if ready else (1.0 if FlashGuard.blink(posmod(int(_clock * 4.0), 2) == 0) else 0.0) if loaded else 0.2)
 	if ctx.player.kit.cloaked and not riding:
 		glow = 0.0
 	return {"heft_class": _heft_index() + 1, "vent_angle": PI * 0.5 if gliding or riding else (PI / 6.0 if ready else 0.0),
