@@ -5,6 +5,8 @@ const Synergies := preload("res://src/build/synergies.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
+const StubBoss := preload("res://src/boss/stub_boss.gd")
+const Warden := preload("res://src/combat/warden.gd")
 
 # Overpowered pays (Andrew, 17 Oct 2026): a strong build or a lucky run is never punished.
 #   - A linear or capped part held at its stack cap adds nothing more, so no roll offers it again,
@@ -20,6 +22,7 @@ var _t := preload("res://tests/support/t.gd").new("overpowered_pays_test")
 
 
 func _initialize() -> void:
+	await process_frame  # the tree takes children only once it is running; the arena Warden checks need that
 	Synergies.table = null
 	_maxed_parts()
 	_numbers()
@@ -184,9 +187,76 @@ func _pilot_class() -> void:
 
 # A fleet-less Warden with no class source stays ordinary; one handed a class reads it.
 func _warden_class_source() -> void:
-	var Warden := preload("res://src/combat/warden.gd")
 	var bare = Warden.new()
 	_t.eq("a fleet-less Warden with no class source reads class 0", bare.pilot_heft_class(), 0)
 	bare.spec = {"heft_class": func() -> int: return 4}
 	_t.eq("a fleet-less Warden reads the class its spec hands in", bare.pilot_heft_class(), 4)
 	bare.free()
+	_stub_boss_class()
+
+
+# The class fakes: a run that reports a heft class, and flat ground for a Warden to stand on.
+class FakeRun:
+	var heft := 0
+	var stage := 1
+
+	func _init(h: int) -> void:
+		heft = h
+
+	func heft_class() -> int:
+		return heft
+
+
+class FakeCtx:
+	var run
+	var spawner = null
+
+
+class FlatGround:
+	func height(_x: float, _z: float) -> float:
+		return 0.0
+
+
+# The arena Warden has no fleet: the stub boss (and The Waking through super) hands it the run's
+# class in the spec, and the Warden's posture ceiling follows. Built the way the stub builds it.
+func _stub_boss_class() -> void:
+	var stub = StubBoss.new()
+	var ctx := FakeCtx.new()
+	ctx.run = FakeRun.new(2)
+	stub.ctx = ctx
+	var spec: Dictionary = stub._warden_spec()
+	_t.check("the stub boss spec carries a heft_class callable", spec.get("heft_class") is Callable, str(spec.get("heft_class")))
+	_t.eq("the callable reads the run's class", int(spec["heft_class"].call()), 2)
+	for cls in [2, 3, 5]:
+		ctx.run = FakeRun.new(cls)
+		var warden = _arena_warden(stub._warden_spec())
+		_t.eq("a Warden built from the stub spec reads class %d" % cls, warden.pilot_heft_class(), cls)
+		var ceiling := _ceiling_after_hit(warden)
+		_t.check("class %d Warden ceiling is %s" % [cls, "3.0x" if cls >= 3 else "1.5x"], is_equal_approx(ceiling, 3.0 if cls >= 3 else 1.5), "%.1f" % ceiling)
+		warden.get_parent().free()
+	# The spec reads ctx.run.stage, so it is built with a run; the callable runs later and guards a run gone.
+	ctx.run = FakeRun.new(4)
+	var spec_none: Dictionary = stub._warden_spec()
+	ctx.run = null
+	_t.eq("with no run the callable returns 0", int(spec_none["heft_class"].call()), 0)
+	var none = _arena_warden(spec_none)
+	_t.eq("a Warden with no run reads class 0", none.pilot_heft_class(), 0)
+	_t.check("a Warden with no run keeps the 1.5x ceiling", is_equal_approx(_ceiling_after_hit(none), 1.5), "")
+	none.get_parent().free()
+	stub.free()
+
+
+func _arena_warden(spec: Dictionary) -> Node3D:
+	# stage and run are the fake ctx's; a Warden needs only ground, a root and a target-free setup.
+	var warden := Warden.new()
+	var root := Node3D.new()
+	self.root.add_child(root)
+	root.add_child(warden)
+	warden.setup(null, FlatGround.new(), root, func() -> bool: return true, 0.0, spec)
+	return warden
+
+
+# judge_hit hands the run's class to the posture rule before it judges; read the ceiling after.
+func _ceiling_after_hit(warden: Node3D) -> float:
+	warden.judge_hit("ram", 100.0, false, 1)
+	return float(warden._posture.mult_max)
