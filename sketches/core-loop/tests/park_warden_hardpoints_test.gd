@@ -5,23 +5,29 @@ extends SceneTree
 # from the Warden body in world axes; the body stands exactly on landmark.warden.anchor (warden.gd setup), so each
 # offset is the empty's world position (the landmark row's transform applied to the GLB empty) minus the anchor.
 # The pit, the islands and the crown give none, and keep warden.gd's three body offsets.
-# Rope: every hardpoint is within the rope range (Tuning rope_range, 45 m) of the landmark beacon, measured flat
-# (the beacon is a map point with no height), except the sinkhole's two ring posts, which the card puts at (+-20, 3, 5)
-# from the nest: 47.4 m flat from the beacon centre, so they are checked against the engage ring's edge (reach_m)
-# and pinned at the measured distance. The dam's piers sit 20 m apart, inside the reactor's 24 m sheet.
+# What each card claims of the two flank hardpoints (hp_1, hp_2):
+# - dam (card 1): about 28 m from the beacon at ground level, in 3D, inside the rope range (Tuning rope_range, 45 m).
+#   Measured at the y datum (28.4 m); on the baked ground at the beacon (1.05 m lower) it is 29.3 m, still inside the rope.
+# - flume (card 2): the channel cheeks, 5 m either side of the channel axis (flat offset from the body) and 4 m up.
+# - sinkhole (card 4): the ring_post_e and ring_post_w rows' world x/z in park_sinkhole.json.
+# The dam's piers sit 20 m apart, inside the reactor's 24 m sheet.
 
 const T := preload("res://tests/support/t.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const WardenReactor := preload("res://src/combat/warden_reactor.gd")
+const ParkGraphTool := preload("res://tools/park_graph.gd")
+const Terrain := preload("res://src/world/terrain.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 const WITH_OFFSETS := ["park_dam", "park_flume", "park_sinkhole"]
 const WITHOUT_OFFSETS := ["park_pit", "park_islands", "park_crown"]
 const EMPTIES := ["hp_0", "hp_1", "hp_2"]
 const TOLERANCE_M := 0.05
-const SINKHOLE_BEACON_FLAT_M := 47.4
-const SINKHOLE_BEACON_PIN_M := 0.1
+const DAM_BEACON_M := 28.0
+const DAM_BEACON_TOLERANCE_M := 1.0
+const FLUME_CHEEK_OUT_M := 5.0
+const FLUME_CHEEK_UP_M := 4.0
 
 var t := T.new("park_warden_hardpoints_test")
 
@@ -69,8 +75,6 @@ func _park(map_id: String, rope: float) -> void:
 	t.check("%s GLB carries warden_anchor" % map_id, anchor_empty != null)
 	if anchor_empty != null:
 		t.near("%s warden_anchor lands on the spec anchor" % map_id, (xf * anchor_empty.global_transform.origin).distance_to(body), 0.0, TOLERANCE_M)
-	var beacon := Vector3(float(mark["beacon"][0]), 0.0, float(mark["beacon"][1]))
-	var reach := float(mark["reach_m"])
 	var hardpoints: Array[Vector3] = []
 	for i in EMPTIES.size():
 		var empty := scene.find_child(EMPTIES[i], true, false) as Node3D
@@ -82,13 +86,36 @@ func _park(map_id: String, rope: float) -> void:
 			offset_matches(offset, body, world, TOLERANCE_M))
 		hardpoints.append(body + offset)
 	scene.queue_free()
-	for i in hardpoints.size():
-		var flat := Vector2(hardpoints[i].x - beacon.x, hardpoints[i].z - beacon.z).length()
-		if map_id == "park_sinkhole" and i > 0:
-			t.near("%s hp_%d flat distance to the beacon centre (pinned)" % [map_id, i], flat, SINKHOLE_BEACON_FLAT_M, SINKHOLE_BEACON_PIN_M)
-			t.check("%s hp_%d within rope range of the engage ring's edge" % [map_id, i], flat - reach <= rope, "%.1f m" % (flat - reach))
-		else:
-			t.check("%s hp_%d within rope range of the beacon" % [map_id, i], flat <= rope, "%.1f m of %.0f" % [flat, rope])
+	if hardpoints.size() == 3:
+		match map_id:
+			"park_dam":
+				var bake := ParkGraphTool.load_bake("res://assets/park/park_dam")
+				var ground := float(Terrain._park_floor_at(float(mark["beacon"][0]), float(mark["beacon"][1]), bake["ground"], bake["holes"], bake["under"]))
+				# The card measures from the beacon at the landmark's y datum (0); the baked ground there is 1.05 m lower,
+				# which puts the piers 29.3 m away. Both are checked: the card's 28 m at the datum, the rope on the baked ground.
+				var datum := Vector3(float(mark["beacon"][0]), ParkRecipes.landmark_datum(mark), float(mark["beacon"][1]))
+				var baked := Vector3(datum.x, ground, datum.z)
+				for i in [1, 2]:
+					t.near("park_dam hp_%d 3D distance to the beacon at the datum (card: about 28 m)" % i, hardpoints[i].distance_to(datum), DAM_BEACON_M, DAM_BEACON_TOLERANCE_M)
+					var d := hardpoints[i].distance_to(baked)
+					t.check("park_dam hp_%d within rope range of the beacon on the baked ground (%.2f)" % [i, ground], d < rope, "%.2f m of %.0f" % [d, rope])
+			"park_flume":
+				for i in [1, 2]:
+					var off: Vector3 = offsets[i]
+					t.near("park_flume hp_%d flat offset" % i, Vector2(off.x, off.z).length(), FLUME_CHEEK_OUT_M, TOLERANCE_M)
+					t.near("park_flume hp_%d is 4 m up" % i, off.y, FLUME_CHEEK_UP_M, TOLERANCE_M)
+			"park_sinkhole":
+				var posts := {}
+				for prow: Dictionary in park["park_rows"]:
+					if String(prow["id"]).begins_with("ring_post_"):
+						posts[String(prow["id"])] = prow
+				for pair in [[1, "ring_post_e"], [2, "ring_post_w"]]:
+					var ok: bool = posts.has(pair[1])
+					t.check("park_sinkhole has %s" % pair[1], ok)
+					if ok:
+						var at: Array = posts[pair[1]]["at"]
+						var flat := Vector2(hardpoints[pair[0]].x - float(at[0]), hardpoints[pair[0]].z - float(at[1])).length()
+						t.near("park_sinkhole hp_%d sits on %s" % [pair[0], pair[1]], flat, 0.0, TOLERANCE_M)
 	if map_id == "park_dam" and hardpoints.size() == 3:
 		var apart := hardpoints[1].distance_to(hardpoints[2])
 		t.near("park_dam piers sit 20 m apart", apart, 20.0, TOLERANCE_M)
