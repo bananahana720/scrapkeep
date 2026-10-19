@@ -528,7 +528,9 @@ export function sketchInput(dir, checks, saved) {
   const project = existsSync(path.join(dir, "project.godot")) ? readFileSync(path.join(dir, "project.godot"), "utf8") : "";
   const main = /run\/main_scene="res:\/\/([^"]+)"/.exec(project)?.[1];
   const tests = checks.map((id) => {
-    if (id === "boot") return { id, refs: main ? [main] : [] };
+    // The boot job runs the main scene, which hands off to the game scene (src/boot/boot.gd GAME_SCENE):
+    // an edit under either one selects it.
+    if (id === "boot") return { id, refs: [...new Set([main, "main.tscn"].filter(Boolean))] };
     const file = path.join(dir, "tests", id);
     const text = existsSync(file) ? readFileSync(file, "utf8") : "";
     return { id, file: `tests/${id}`, refs: referencesOf(text, { kind: "gdscript" }) };

@@ -13,6 +13,7 @@
 #   scripts/music/mx godot-script <file.gd>     a scratch Godot script against the sketch project
 #   scripts/music/mx lint                       npm run sketch:lint
 #   scripts/music/mx audio-gate [args]          node scripts/audio-gate.mjs
+#   scripts/music/mx stem-hashes [args]         rewrite assets/music_ace/STEMS.sha256 after any pack
 #   scripts/music/mx commit <msg file> <path>...  stage the paths and commit with the message file
 #   scripts/music/mx push                       push this thread's branch
 #   scripts/music/mx merge-main                 fetch and merge origin/main, no edit
@@ -69,6 +70,9 @@ case "$step" in
         ;;
     audio-gate)
         node "$repo/scripts/audio-gate.mjs" "$@"
+        ;;
+    stem-hashes)
+        node "$repo/scripts/audio-gate.mjs" --write-stem-hashes "$@"
         ;;
     commit)
         msg="$1"

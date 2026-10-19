@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,6 +14,11 @@ import { fileURLToPath } from "node:url";
 //   seam       a looping track whose wrap from its last sample to its loop point steps further than
 //              the loop's own 99.9th-percentile sample step, the measure package_music.py used for
 //              the warden loop: an audible click
+//   stale      a packed Ogg that does not match what its manifest or STEMS.sha256 records: another
+//              mix under the same file name (a pack whose manifest was rewritten but whose Oggs were
+//              not), decoded length different from sample_count, loudness more than 0.3 LU from the
+//              clip's recorded measured.lufs, or a sha256 that differs from STEMS.sha256. The Oggs are
+//              gitignored, so the manifest and the hash list are what a checkout can compare them to.
 //   unchecked  a track whose audio is not on disk, or no ffmpeg; never counted as a pass
 // Game clips are measured as the engine plays them: stems summed, plus the manifest's level_db.
 // Loudness skips clips and files under 10 s (stingers, fanfares, short beds), where an integrated
@@ -29,6 +35,8 @@ export const SEAM_PERCENTILE = 0.999;
 export const AUDIO_EXT = [".wav", ".ogg", ".mp3", ".flac"];
 export const SFX_BANK = "src/presentation/sfx_bank.gd";
 export const MUSIC_DIR = "assets/music_ace";
+export const STEM_HASHES = "STEMS.sha256";
+export const MANIFEST_LUFS_TOL = 0.3;
 
 // INTEGRATION.md section 7 item 5: each special's presence loop, tell, break and spawn. The
 // Splitter's break has a ground-ram and a clean variant.
@@ -227,9 +235,67 @@ export function gameTracks(manifests) {
   for (const m of manifests)
     for (const [id, clip] of Object.entries(m.clips ?? {})) {
       const files = Object.values(clip.files ?? {}).map((f) => path.join(m.dir, f));
-      tracks.push({ name: `${m.theme}/${id}`, files, rate: clip.rate ?? m.rate, level: m.level_db ?? 0, loop: !!clip.loop, exit: clip.sample_count ?? clip.exit, loopAt: clip.loop_offset ?? 0 });
+      tracks.push({ name: `${m.theme}/${id}`, files, rate: clip.rate ?? m.rate, level: m.level_db ?? 0, loop: !!clip.loop, exit: clip.sample_count ?? clip.exit, loopAt: clip.loop_offset ?? 0, frames: clip.sample_count ?? null, measuredLufs: clip.measured?.lufs ?? null });
     }
   return tracks;
+}
+
+// A clip whose decoded length or loudness differs from what its manifest recorded when it was cut.
+export function staleAgainstManifest(t, frames, lufs) {
+  const found = [];
+  if (t.frames !== null && frames !== t.frames)
+    found.push({ kind: "stale", where: t.name, what: `decoded ${frames} frames, the manifest's sample_count is ${t.frames}; the Oggs are not the ones this manifest was cut from` });
+  if (t.measuredLufs !== null && lufs !== null && lufs !== undefined && Math.abs(lufs - t.measuredLufs) > MANIFEST_LUFS_TOL)
+    found.push({ kind: "stale", where: t.name, what: `${lufs} LUFS, the manifest recorded ${t.measuredLufs} (tolerance ${MANIFEST_LUFS_TOL}); the Oggs are not the ones this manifest was cut from` });
+  return found;
+}
+
+export function sha256(file) {
+  return createHash("sha256").update(readFileSync(file)).digest("hex");
+}
+
+// The stem files the manifests name, as "pack/file.ogg".
+export function namedStems(manifests) {
+  return manifests.flatMap((m) =>
+    Object.values(m.clips ?? {}).flatMap((clip) => Object.values(clip.files ?? {}).map((f) => `${path.basename(m.dir)}/${f}`)),
+  );
+}
+
+export function readStemHashes(file) {
+  if (!existsSync(file)) return null;
+  const hashes = new Map();
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    const m = /^([0-9a-f]{64})  (\S+)$/.exec(line);
+    if (m) hashes.set(m[2], m[1]);
+  }
+  return hashes;
+}
+
+// Every packed Ogg on disk under stemsDir must match STEMS.sha256, and every one the manifests name
+// must be listed there. Missing files are not reported here (missingStems and "unchecked" own that).
+// Returns one { file, why } per rejected file, so the caller can name each.
+export function stemHashMismatches(hashFile, stemsDir, named) {
+  const hashes = readStemHashes(hashFile);
+  if (hashes === null) return null;
+  const rejected = [];
+  for (const rel of [...new Set(named)].sort()) {
+    const file = path.join(stemsDir, rel);
+    if (!existsSync(file)) continue;
+    if (!hashes.has(rel)) rejected.push({ file: rel, why: `not listed in ${STEM_HASHES}; run scripts/music/mx stem-hashes after packing` });
+    else if (sha256(file) !== hashes.get(rel)) rejected.push({ file: rel, why: `sha256 differs from ${STEM_HASHES} (a stale or re-encoded Ogg)` });
+  }
+  return rejected;
+}
+
+export function writeStemHashes(hashFile, stemsDir, named) {
+  const lines = [];
+  for (const rel of [...new Set(named)].sort()) {
+    const file = path.join(stemsDir, rel);
+    if (!existsSync(file)) throw new Error(`cannot hash ${rel}: not in ${stemsDir}`);
+    lines.push(`${sha256(file)}  ${rel}`);
+  }
+  writeFileSync(hashFile, lines.join("\n") + "\n");
+  return lines.length;
 }
 
 export function measureGame(manifests) {
@@ -246,7 +312,7 @@ export function measureGame(manifests) {
     for (const s of stems) for (let i = 0; i < s.length; i++) mix[i] += s[i];
     const r = judge(t.name, gain(mix, t.level), t.rate, t);
     rows.push(r.row);
-    found.push(...r.found);
+    found.push(...r.found, ...staleAgainstManifest(t, mix.length / 2, r.row.lufs));
   }
   if (missing.length)
     found.push({ kind: "unchecked", where: MUSIC_DIR, what: `${missing.length} clip(s) have no local stems (the Oggs are not committed): ${missing.slice(0, 4).join(", ")}${missing.length > 4 ? ", ..." : ""}` });
@@ -272,6 +338,7 @@ export const KIND_TITLES = {
   loudness: "Tracks off the loudness target",
   peak: "Tracks over the true-peak limit",
   seam: "Loops that click at the wrap",
+  stale: "Packed audio that does not match its manifest or STEMS.sha256",
   unchecked: "Not checked",
 };
 
@@ -293,13 +360,14 @@ export function report(findings, rows = []) {
 }
 
 export function parseArgs(argv) {
-  const args = { project: path.join(root, "sketches/core-loop"), music: [], loops: /loop/i, json: false, cuesOnly: false };
+  const args = { project: path.join(root, "sketches/core-loop"), music: [], loops: /loop/i, json: false, cuesOnly: false, writeStemHashes: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const value = (flag) => (arg === flag && i + 1 < argv.length ? argv[++i] : arg.startsWith(flag + "=") ? arg.slice(flag.length + 1) : null);
     let v;
     if (arg === "--json") args.json = true;
     else if (arg === "--cues-only") args.cuesOnly = true;
+    else if (arg === "--write-stem-hashes") args.writeStemHashes = true;
     else if ((v = value("--project")) !== null) args.project = path.resolve(v);
     else if ((v = value("--music")) !== null) args.music.push(path.resolve(v));
     else if ((v = value("--loops")) !== null) args.loops = new RegExp(v, "i");
@@ -319,10 +387,21 @@ export function missingInputs(args, manifests) {
   return found;
 }
 
+// STEMS.sha256 beside the manifests: a mismatch names the file; no list at all is "unchecked", never a pass.
+export function hashFindings(project, manifests) {
+  const dir = path.join(project, MUSIC_DIR);
+  const named = namedStems(manifests);
+  if (!named.some((rel) => existsSync(path.join(dir, rel)))) return [];
+  const rejected = stemHashMismatches(path.join(dir, STEM_HASHES), dir, named);
+  if (rejected === null) return [{ kind: "unchecked", where: path.join(dir, STEM_HASHES), what: "no stem hash list; packed Oggs not compared to what was cut" }];
+  return rejected.map((r) => ({ kind: "stale", where: r.file, what: r.why }));
+}
+
 export function run(args) {
   const delivered = args.music.flatMap((d) => walk(d, AUDIO_EXT));
   const findings = [...missingInputs(args, readManifests(args.project)), ...cueFindings(args.project, delivered)];
   const rows = [];
+  if (!args.cuesOnly) findings.push(...hashFindings(args.project, readManifests(args.project)));
   if (!args.cuesOnly) {
     if (!hasFfmpeg()) findings.push({ kind: "unchecked", where: "ffmpeg", what: "ffmpeg not found; loudness, peaks and seams not measured" });
     else {
@@ -337,6 +416,12 @@ export function run(args) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.writeStemHashes) {
+    const dir = path.join(args.project, MUSIC_DIR);
+    const n = writeStemHashes(path.join(dir, STEM_HASHES), dir, namedStems(readManifests(args.project)));
+    console.log(`wrote ${n} hashes to ${path.join(dir, STEM_HASHES)}`);
+    return;
+  }
   const { findings, rows } = run(args);
   console.log(args.json ? JSON.stringify({ rows, findings }, null, 2) : report(findings, rows));
   process.exitCode = findings.length === 0 ? 0 : 1;

@@ -106,6 +106,12 @@
     "drums": "calm.drums.ogg",
     "bass": "calm.bass.ogg",
     "other": "calm.other.ogg"
+   },
+   "gain_db": -1.6,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.9,
+    "note": "summed stems before Ogg re-encode, after level_packs.py"
    }
   },
   "travel": {
@@ -132,6 +138,12 @@
     "drums": "travel.drums.ogg",
     "bass": "travel.bass.ogg",
     "other": "travel.other.ogg"
+   },
+   "gain_db": -0.9,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.3,
+    "note": "summed stems before Ogg re-encode, after level_packs.py"
    }
   },
   "cadence": {

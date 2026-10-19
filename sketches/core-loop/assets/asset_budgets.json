@@ -48,6 +48,12 @@
       "draws": 5,
       "set_by": "2026-10-18 model polish (tools/blender/POLISH.md; Andrew 00:04Z asked for denser, baked models while frames hold): tris 4600 to 12000 and verts 3100 to 8100 at the old ratio, pending one 4080 frame check on the densest fight; draws unchanged; earlier basis: pilot_sable_anim (4,592 T), pilot_kest_anim (3,098 V), kest and sable (5 draws); old band 400-4,800"
     },
+    "ambient": {
+      "tris": 6000,
+      "verts": 13800,
+      "draws": 1,
+      "set_by": "2026-10-19 ambient life lane (#149): 800–6,000 tris per critter or local, one draw; verts 2.3 per triangle, the prop and clutter ratio; skinned and welded, so real models sit near 0.5; first member dusk_quail (2,784 / 1,434 / 1); the per-kind bands live in src/core/ambient_kinds.gd"
+    },
     "scenery": {
       "tris": 1500,
       "verts": 3000,

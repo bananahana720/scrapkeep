@@ -388,8 +388,39 @@ PATH=<shim dir>:$PATH CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python
 
 The shim is a one-line `nvidia-smi` wrapper that adds `-i 0`. Since the RTX 3060 was installed, `ace.py`'s VRAM check fails because it parses one line of `nvidia-smi` output and now gets two.
 
+## Pack levels and the stale-Ogg check (2026-10-18)
+
+The audio gate on every pack's Oggs showed two things the gate could not see while the stems were missing from every checkout. First, the zone packs (spillway, cable_reach, dig_upper, dig_deep, highdraft, highdraft_crown) and the summary pack had Oggs from 30 Sep under manifests rewritten on 17 Oct for the sound-bible picks (153 files): every export and playtest build played the old mix at -12 to -16.7 LUFS while the manifests said -16.0. The fresh Oggs were in other worktrees; they were swapped in. Second, nine clips of the older brindle, mind, title and waking packs sat above -16 LUFS or past -1 dBTP (`mind/travel` -11.5 LUFS, `mind/build` -12.4, and others); `tools/ace/level_packs.py` applied one gain per clip to its three stems and recorded `gain_db` and `measured` in the manifest. No pick, take or cut point changed.
+
+The structural fix: `assets/music_ace/STEMS.sha256` lists the sha256 of every packed Ogg. `scripts/audio-gate.mjs` now reports `stale` for any named Ogg whose hash differs or is unlisted, for a decoded length that differs from `sample_count`, and for a clip more than 0.3 LU from its manifest's `measured.lufs`; `sketch:export` refuses a `--stems-from` folder with any such file and names each one. Run `scripts/music/mx stem-hashes` after every pack or level change. The tests plant a stale Ogg and require the check to fail on it before its zero is trusted.
+
 ## Radio takes packed (2026-10-18)
 
 All 81 takes of `assets/radio/catalogue.json` are rendered (two seeds each, 5101 and 5102), picked (`RADIO-PICKS.md`, Andrew's "Music thread picks" tap, 17 Oct 22:28Z: a version that passes every mix check beats one that fails; between two passing versions, more room around the lead wins) and packed as whole-song packs with `tools/ace/package_phase_tracks.py pack --whole`. The registry the pack step reads is `radio_renders.json` (81 rows, one pick each). Each pack is `assets/music_ace/take_<id>/manifest.json`; the Oggs are gitignored like every pack. `MusicRows.take_manifest` resolves a `take-*` id to its pack, so the radio plays the take's own recording and no longer its parent tune. `timing_verified` is false on all 81.
 
 Audio gate (`node scripts/audio-gate.mjs`, run on the 81 packs): loudness -16.0 to -16.1 LUFS on all 81; seam wrap under the loop's own 99.9th percentile step on all 81; true peak under -1 dBTP on 79 at the first pack (limiter ceiling -2.6), `take_fabricator_overclocked` (-0.7) and `take_sinkhole_trip` (-0.9) over after the Ogg encode, repacked at ceiling -3.6 to -1.8 and -1.7 dBTP. Ear check: Andrew, at the sitting.
+
+## Heat radio remake (2026-10-19)
+
+Andrew, 19 Oct: percussion should serve the song like a band's drummer, and many takes sound sloppy. DECISIONS rows "percussion serves the song" and "radio quality pass" apply. The 8 Furnace FM takes that failed the percussion bar were rebuilt from written briefs (`design-v3/sound/radio-briefs/heat.md`, one story moment, feeling, motif, arrangement map and mix note each; reviewed against TONE-BIBLE before any render). Tooling: `radio_remake.py` (render, split, master and pack) and `tools/ace/radio_master.py` (stem chain: per-stem EQ, bus compression, limiter; drum trim).
+
+Two arms, 6 seeds (arm A) and 4 seeds (arm B), rendered on the RTX 3060 (CUDA device 1, 10.2 GB peak):
+- arm A: melody-first caption on a plain cover of the parent pick, strength 0.34 to 0.60.
+- arm B: cover of a hybrid source (parent bass, drums at -9 dB, the written motif lead from `score/themes.py`), strength 0.60. Hybrids are built by `radio-briefs/build_hybrid.py`.
+
+Picks are the best rubric overall per take with a drum share under the bar; the other seeds stay in the scratch folder for the listen page. Shipped -> remade, from `qp/triage.py` (a proxy: it cannot judge melody or feel, so Andrew's ear decides at the playtest):
+
+| take | pick | overall | percussion | melody | drum share (median) | flags |
+|---|---|---|---|---|---|---|
+| top-shelf-overdrive | A s6204 | 2.52 -> 3.8 | 0.0 -> 4.34 | 2.72 -> 2.41 | 0.81 -> 0.42 | LOUDNESS_OFF |
+| mind-overclock | A s6205 | 2.65 -> 2.9 | 0.0 -> 1.62 | 1.72 -> 2.25 | 0.89 -> 0.55 | PERC_HEAVY,LOUDNESS_OFF |
+| stampede-encore | A s6202 | 2.04 -> 4.01 | 0.0 -> 4.18 | 0.97 -> 2.5 | 0.78 -> 0.40 | LOUDNESS_OFF |
+| champion-club-mix | B s6302 | 2.13 -> 4.33 | 0.0 -> 4.71 | 0.97 -> 3.11 | 0.73 -> 0.35 | - |
+| heavyweight-big-room | B s6303 | 2.62 -> 4.01 | 0.0 -> 4.46 | 2.68 -> 2.42 | 0.65 -> 0.40 | TRUE_PEAK |
+| brindle-afterburner | B s6304 | 2.64 -> 3.99 | 0.0 -> 4.85 | 2.26 -> 2.17 | 0.92 -> 0.33 | TRUE_PEAK,LOW_LRA |
+| highdraft-hands-up | B s6303 | 2.66 -> 3.9 | 0.0 -> 5.0 | 2.75 -> 2.25 | 0.89 -> 0.24 | TRUE_PEAK |
+| round-arena-main-event | B s6302 | 2.58 -> 4.01 | 0.0 -> 4.75 | 1.54 -> 3.83 | 0.69 -> 0.34 | TRUE_PEAK |
+
+Each pick's seed, caption, strength and arm are in `radio_renders.json` under `remade`. Previous renders are untouched, so a pick can be swapped back by removing `remade` and repacking. Motif detection by pitch tracking found no exact hits in any take, old or new, so whether the written hooks are audible is an open question for the ear.
+
+Open items: The Mind, Overclock is still PERC_HEAVY (drums 0.55 of the mix) and is the weakest remake; no seed of either arm cleared the bar, so its pick is the least bad. Melody dropped slightly on Top Shelf, Heavyweight, Brindle and Highdraft while drums fell; Andrew's ear decides whether the trade is right. Flags are from the stem-sum view; the overall column uses the master.wav view, and the shipped packs pass the audio gate (below).

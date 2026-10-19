@@ -60,8 +60,9 @@ func _check_registry() -> void:
 	_t.check("(a) every row names a park budget class, landmarks hero_landmark", bad.is_empty(), str(bad))
 	var budgets: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/asset_budgets.json"))
 	var classes: Dictionary = budgets["classes"]
-	_t.check("(a) park_large is 16,000 triangles and 2 draws", classes.has("park_large")
-		and int(classes["park_large"]["tris"]) == 16000 and int(classes["park_large"]["draws"]) == 2, str(classes.get("park_large")))
+	# Draws 2 to 3 on 2026-10-18 (coordinator call, b624dc1a): a bevelled detail shell is a second draw by design.
+	_t.check("(a) park_large is 16,000 triangles and 3 draws", classes.has("park_large")
+		and int(classes["park_large"]["tris"]) == 16000 and int(classes["park_large"]["draws"]) == 3, str(classes.get("park_large")))
 	_t.check("(a) hero_landmark is 24,000 / 6 draws / mid 6,000 / far 1,500", classes.has("hero_landmark")
 		and int(classes["hero_landmark"]["tris"]) == 24000 and int(classes["hero_landmark"]["draws"]) == 6
 		and int(classes["hero_landmark"].get("mid_tris", 0)) == 6000 and int(classes["hero_landmark"].get("far_tris", 0)) == 1500,
