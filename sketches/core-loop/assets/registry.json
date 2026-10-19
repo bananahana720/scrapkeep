@@ -1,6 +1,17 @@
 {
  "assets": [
   {
+   "id": "scrapkeep_splash.png",
+   "path": "res://assets/app/scrapkeep_splash.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "project.godot boot_splash/image",
+   "provenance": {
+    "source": "assets/app/scrapkeep_icon.svg rendered at 256 px",
+    "note": "Launcher boot splash from PR #152 (c1687806)."
+   }
+  },
+  {
    "id": "companion_skin_till_bell",
    "path": "res://assets/cosmetics/companion_skins/companion_skin_till_bell.glb",
    "class": "detail",
@@ -13555,6 +13566,7 @@
   "scrap_coin",
   "scrap_crate",
   "scrap_pickups",
+  "scrapkeep_splash.png",
   "shaft_drop",
   "shaft_drop_detail1",
   "shaft_drop_detail2",
