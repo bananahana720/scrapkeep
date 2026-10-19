@@ -113,12 +113,15 @@ func _run() -> void:
 	# A run marks kinds as met before the camp is ever opened (the listener is wired at setup, once).
 	var Picker := preload("res://src/ui/camp_enemy_picker.gd")
 	_t.check("nothing is met before any spawn", not Picker.met_of(_game).has("chaser"), str(Picker.met_of(_game)))
+	# Spawners add a body to the tree before announcing it; so do these stand-ins.
 	var ghost := Node3D.new()
+	_game.add_child(ghost)
 	_game.events.enemy_spawned.emit(ghost, "chaser")
 	_t.check("an enemy_spawned before any camp visit marks it met", Picker.met_of(_game).has("chaser") and not _hub.built, str(Picker.met_of(_game)))
 	Picker.watch(_game)
 	var called := Node3D.new()
 	called.set_meta("sandbox_slot", 0)
+	_game.add_child(called)
 	_game.events.enemy_spawned.emit(called, "lobber")
 	_t.check("watch is idempotent and a sandbox call marks nothing", not Picker.met_of(_game).has("lobber"), str(Picker.met_of(_game)))
 	ghost.free()

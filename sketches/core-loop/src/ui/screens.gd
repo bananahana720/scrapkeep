@@ -277,6 +277,7 @@ func _on_flow_changed(state: String) -> void:
 	_mark.visible = false
 	_unstamp()
 	_stats.visible = true
+	_comic_row.visible = true
 	_choices.visible = true
 	_actions.visible = true
 	_fit_actions()
@@ -291,6 +292,10 @@ func _on_flow_changed(state: String) -> void:
 			# leaves New run, focused, as the next step.
 			game.flow.saved_run()
 			_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+			# The title fills none of these rows; hidden, their gaps no longer push a wrapped
+			# action row below the stage line at 1280x720.
+			for row in [_stats, _comic_row, _choices]:
+				row.visible = false
 			if game.flow.continue_ready:
 				_action("continue", "key_c", "Continue")
 			# The main menu (decisions.tsv 2026-10-16 alpha-scope): Play to pilot select, then
