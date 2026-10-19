@@ -1,4 +1,4 @@
-# smoke: bots timeout=1800s (fourteen park bot runs in child processes, four at a time, about 100 s each alone)
+# smoke: bots timeout=1800s (seventeen park bot runs in child processes, four at a time, about 100 s each alone)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -13,6 +13,8 @@ const T := preload("res://tests/support/t.gd")
 # or the band's own record. The contrast half checks a Novice takes at least as much hull damage as an Expert.
 
 const POLICIES := ["skipper", "completionist", "camper"]
+# Tally's weapon is the card hand; a band must not take her throws away.
+const TALLY := "tally"
 const SEEDS := [1, 2]
 const TICKS := 9000
 const WALL_S := 900.0
@@ -76,6 +78,9 @@ func _runs(t) -> void:
 			for arm in ["plain", "expert"]:
 				labels.append("%s-%d-%s" % [policy, run_seed, arm])
 				jobs.append(_job(folder, labels[-1], policy, run_seed, "" if arm == "plain" else "expert"))
+	for arm in ["plain", "expert", "novice"]:
+		labels.append("tally-1-" + arm)
+		jobs.append(_job(folder, labels[-1], "skipper", 1, "" if arm == "plain" else arm, TALLY))
 	labels.append("skipper-1-novice")
 	jobs.append(_job(folder, labels[-1], "skipper", 1, "novice"))
 	labels.append("skipper-1-learner")
@@ -92,6 +97,14 @@ func _runs(t) -> void:
 			var expert: Dictionary = _strip(rows["%s-%d-expert" % [policy, run_seed]])
 			t.check("%s seed %d: expert row equals the unbanded row" % [policy, run_seed], plain == expert,
 				"differs in %s" % [_differing(plain, expert)])
+	var tally_plain: Dictionary = _strip(rows["tally-1-plain"])
+	var tally_expert: Dictionary = _strip(rows["tally-1-expert"])
+	t.check("tally seed 1: expert row equals the unbanded row", tally_plain == tally_expert,
+		"differs in %s" % [_differing(tally_plain, tally_expert)])
+	var tally_shots := int(rows["tally-1-novice"].get("shots", 0))
+	print("[report] tally seed 1 shots: plain %d, novice %d" % [int(rows["tally-1-plain"].get("shots", 0)), tally_shots])
+	t.check("tally novice still throws cards", rows["tally-1-novice"].get("class") == "tally" and tally_shots > 0,
+		"class %s, shots %d" % [rows["tally-1-novice"].get("class"), tally_shots])
 	var banded: Dictionary = rows["skipper-1-expert"]
 	t.check("a banded row records its band", (banded.get("band") as Dictionary).get("name", "") == "expert"
 			and rows["skipper-1-plain"].get("band") == null, "band %s" % [banded.get("band")])
@@ -110,11 +123,13 @@ func _runs(t) -> void:
 		PostureSweep._remove_tree(folder)
 
 
-func _job(folder: String, label: String, policy: String, run_seed: int, band: String) -> Dictionary:
+func _job(folder: String, label: String, policy: String, run_seed: int, band: String, pilot := "") -> Dictionary:
 	var args := ["--out=" + folder.path_join(label), "--policy=" + policy, "--seeds=%d" % run_seed, "--table=park",
 		"--gate=1", "--ticks=%d" % TICKS]
 	if band != "":
 		args.append("--band=" + band)
+	if pilot != "":
+		args.append("--pilot=" + pilot)
 	return {"script": "res://tools/bot_run.gd", "args": args}
 
 
