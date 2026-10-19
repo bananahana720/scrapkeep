@@ -2482,5 +2482,14 @@
   ],
   "seed": 6
  },
- "pin": 761422810
+ "pin": 761422810,
+ "low_ground_rows": [
+  "cinder_cone",
+  "rim_south",
+  "rim_east",
+  "rim_west",
+  "great_room",
+  "sinkhole_walls",
+  "caisson_bowl"
+ ]
 }
