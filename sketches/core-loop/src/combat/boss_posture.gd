@@ -28,9 +28,8 @@ const MONSTER_CLASS := 3
 # cap holds; the Ultimate's cap is already class-gated (ultimate.gd warden_cap) and Rivet's line cap
 # scales by it (rivet_kit.gd _punch).
 const MONSTER_GAIN := 2.0
-# A row's "gain_class" moves the class at which MONSTER_GAIN starts (default MONSTER_CLASS). The hive
-# sets IV: a small pilot who grows into class III mid-fight still fights it at the ordinary gain,
-# while a grown start (class III, IV within half the fight) earns it.
+# A row's "monster_gain" replaces MONSTER_GAIN for that Warden: the hive's lift is smaller, because a
+# small pilot who grows into class III mid-fight earns it too and the small arm's pin has to hold.
 # A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
 # from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
 # monster build's still can. Without the key a hit may fill it, as before. With
@@ -60,7 +59,7 @@ var mult_max := MULT_MAX
 var mult_top := MULT_MAX
 # MONSTER_GAIN at class III and above, else 1; set per hit with mult_max (set_pilot_class).
 var class_gain := 1.0
-var gain_class := MONSTER_CLASS
+var monster_gain := MONSTER_GAIN
 var drain_delay := DRAIN_DELAY
 var drain_rate := DRAIN_RATE
 # Set by a mounted driver before step; zero keeps the ordinary idle clock and drain.
@@ -109,7 +108,7 @@ func _init(numbers := {}) -> void:
 	curve = float(numbers.get("curve", 1.0))
 	ram_shatters = bool(numbers.get("ram_shatters", true))
 	crack_shatters = bool(numbers.get("crack_shatters", true))
-	gain_class = int(numbers.get("gain_class", MONSTER_CLASS))
+	monster_gain = float(numbers.get("monster_gain", MONSTER_GAIN))
 	contact_gain_scale = float(numbers.get("contact_gain_scale", 0.0))
 	contact_gain_floor = float(numbers.get("contact_gain_floor", 0.0))
 	hit_cap = float(numbers.get("hit_cap", FULL))
@@ -121,7 +120,7 @@ func _init(numbers := {}) -> void:
 # mid-fight earns the lift. A rule never given a class (a hull boss, a bare test) keeps the row's ceiling.
 func set_pilot_class(heft_class: int) -> void:
 	mult_max = mult_top if heft_class >= MONSTER_CLASS else minf(mult_top, ORDINARY_RATIO)
-	class_gain = MONSTER_GAIN if heft_class >= gain_class and mult_top > ORDINARY_RATIO else 1.0
+	class_gain = monster_gain if heft_class >= MONSTER_CLASS and mult_top > ORDINARY_RATIO else 1.0
 
 
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
