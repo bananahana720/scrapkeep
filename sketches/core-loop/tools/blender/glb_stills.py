@@ -6,8 +6,11 @@ three-quarter, and renders each with Cycles on the CPU at a low sample count:
 
   blender -b -t 2 -P sketches/core-loop/tools/blender/glb_stills.py -- \
       --glb path/to/model.glb --out DIR [--size 960] [--samples 24] [--views front,side,three-quarter]
+      [--mount mantle.glb[,mantle.glb]] [--name label]
 
-Writes DIR/<glb base name>-<view>.png and prints STILL <path> per frame.
+--mount seats each mantle's Mount<Name> groups on the model's <Name> nodes with an identity
+transform, as hero_assets.gd mounts a Warden mantle on its kit (MANTLE_MOUNTS).
+Writes DIR/<name or glb base name>-<view>.png and prints STILL <path> per frame.
 """
 import math
 import os
@@ -21,12 +24,18 @@ VIEWS = {"front": 0.0, "side": 90.0, "three-quarter": 35.0, "rear": 180.0}
 
 def args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    a = {"glb": "", "out": "", "size": 960, "samples": 24, "views": "front,side,three-quarter"}
-    i = 0
-    while i < len(argv):
-        key = argv[i].lstrip("-")
-        a[key] = type(a[key])(argv[i + 1]) if key in a else argv[i + 1]
-        i += 2
+    a = {"glb": "", "out": "", "size": 960, "samples": 24, "views": "front,side,three-quarter",
+         "mount": "", "name": ""}
+    if len(argv) % 2:
+        raise SystemExit("glb_stills: every flag takes one value")
+    for flag, value in zip(argv[::2], argv[1::2]):
+        key = flag.lstrip("-")
+        if key not in a:
+            raise SystemExit("glb_stills: unknown flag " + flag)
+        a[key] = type(a[key])(value)
+    unknown = set(a["views"].split(",")) - set(VIEWS)
+    if unknown:
+        raise SystemExit("glb_stills: unknown views " + ", ".join(sorted(unknown)))
     if not a["glb"] or not a["out"]:
         raise SystemExit("glb_stills: --glb and --out are required")
     return a
@@ -60,10 +69,33 @@ def colour_material():
         mat.node_tree.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
 
 
+def mount(path):
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=path)
+    added = [o for o in bpy.data.objects if o not in before]
+    groups = [o for o in added if o.name.startswith("Mount")]
+    if not groups:
+        raise SystemExit("glb_stills: %s has no Mount<Name> groups" % path)
+    for group in groups:
+        socket = bpy.data.objects.get(group.name[len("Mount"):].split(".")[0])
+        if socket is None or socket in added:
+            raise SystemExit("glb_stills: no %s node for %s" % (group.name[len("Mount"):], group.name))
+        group.parent = socket
+        group.matrix_parent_inverse.identity()
+        group.matrix_basis.identity()
+    # The mantle's own root (and its glTF axis turn) is dropped, as hero_assets frees it.
+    keep = set(groups).union(*(g.children_recursive for g in groups))
+    for o in added:
+        if o not in keep:
+            bpy.data.objects.remove(o)
+
+
 def main():
     a = args()
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=a["glb"])
+    for path in filter(None, a["mount"].split(",")):
+        mount(path)
     colour_material()
     objects = list(bpy.context.scene.objects)
     for o in objects:
@@ -100,7 +132,7 @@ def main():
     scene.collection.objects.link(cam)
     scene.camera = cam
     os.makedirs(a["out"], exist_ok=True)
-    base = os.path.splitext(os.path.basename(a["glb"]))[0]
+    base = a["name"] or os.path.splitext(os.path.basename(a["glb"]))[0]
     dist = radius * 3.2
     for view in a["views"].split(","):
         yaw = math.radians(VIEWS[view])

@@ -193,6 +193,21 @@ func _run() -> void:
 	var called := doc.duplicate(true)
 	called["call"] = ["/root/Game/Spawn_lobber:flash:2"]
 	_check(not Cap.compare(doc, called)["errors"].is_empty(), "compare: a different staged event call is refused")
+	var placed := doc.duplicate(true)
+	placed["glb"] = ["res://assets/models/warden_kit_mind.glb@0,50,0@30"]
+	_check(not Cap.compare(doc, placed)["errors"].is_empty(), "compare: a different --glb placement is refused")
+	var older := doc.duplicate(true)
+	older.erase("glb")
+	var empty := doc.duplicate(true)
+	empty["glb"] = []
+	_check(Cap.compare(older, empty)["errors"].is_empty(), "compare: a document without glb pairs with an empty glb list")
+	var root_node := Node3D.new()
+	root.add_child(root_node)
+	var glb := Cap.place_glb(root_node, "res://assets/models/warden_kit_mind.glb@1,2,3@90")
+	_check(glb != null and glb.name == "Glb_warden_kit_mind" and glb.global_position.is_equal_approx(Vector3(1, 2, 3))
+		and is_equal_approx(glb.rotation_degrees.y, 90.0) and glb.find_child("WeakPoint", true, false) != null, "place_glb instances the model at the point and yaw")
+	_check(Cap.place_glb(root_node, "res://assets/models/no_such_model.glb@0,0,0") == null, "place_glb refuses a missing scene")
+	root_node.queue_free()
 	var parsed := Cap.parse_call('/root/Game/Spawn_plated_brute:on_struck:2:["x","y",{"full":true}]')
 	_check(parsed["ok"] and parsed["path"] == "/root/Game/Spawn_plated_brute" and parsed["method"] == "on_struck"
 		and parsed["frames"] == 2 and parsed["args"] == ["x", "y", {"full": true}], "parse_call keeps a JSON argument list that holds colons")
