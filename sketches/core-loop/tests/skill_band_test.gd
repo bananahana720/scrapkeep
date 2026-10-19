@@ -117,6 +117,8 @@ func _runs(t) -> void:
 			"casts %s, ult presses %s, bites %d" % [casts, row.get("ult_presses"), bites])
 		t.eq("%s records its band" % label, [row["band"]["name"], int(row["band"]["attempt"])], ["novice", 1])
 	t.eq("learner records its band", [rows["skipper-1-learner"]["band"]["name"], int(rows["skipper-1-learner"]["band"]["attempt"])], ["learner", 1])
+	t.check("the row's reaction_s is the band's", absf(float(rows["skipper-1-learner"].get("reaction_s", 0.0)) - 0.45) < 0.001,
+		"reaction_s %s" % [rows["skipper-1-learner"].get("reaction_s")])
 	var fifth: Dictionary = rows["skipper-1-learner5"].get("band", {})
 	t.check("learner --attempt=5 reaches its last values", int(fifth.get("attempt", 0)) == 5 and absf(float(fifth.get("reaction_s", 0.0)) - 0.30) < 0.001,
 		"band %s" % [fifth])
