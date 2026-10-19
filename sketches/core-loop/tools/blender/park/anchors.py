@@ -511,13 +511,23 @@ def hoodoo(base, variant):
     total = sum(h for _, _, h in p["cap"])
     scale = (TOP - y) / total
     tilt = p["tilt"]
-    base.look = {"bevel": .15, "sharp": 80.0, "segments": 2}      # polish clamps to a quarter of the thinnest slab, about .15      # polish clamps to a quarter of the thinnest slab, about .15
+    base.look = {"bevel": .15, "sharp": 80.0, "segments": 2}      # polish clamps to a quarter of the thinnest slab, about .15
+    cap_top = None
     for k, (ra, rb, h) in enumerate(p["cap"]):
         h *= scale
         ca, cb = centre(y), centre(y + h)
         off = (tilt[0] * k, tilt[1] * k)
-        base.frustum(y, y + h, ra, rb, sides, CAPROCK if k % 2 == 0 else CAPROCK2, (ca[0] + off[0], ca[1] + off[1]),
-                     (cb[0] + off[0] + tilt[0] * .5, cb[1] + off[1] + tilt[1] * .5), phase=r.uniform(0, 1), radii=jitter(r, sides, .05))
+        tone = CAPROCK if k % 2 == 0 else CAPROCK2
+        # a slab after the first has no bottom cap while its bottom ring sits inside the slab below (the cap would be hidden);
+        # where the tilt makes it overhang, a flat unbevelled floor closes it instead (check_recipe asserts one or the other)
+        lo_ring, top_ring = base.frustum(y, y + h, ra, rb, sides, tone, (ca[0] + off[0], ca[1] + off[1]),
+                                         (cb[0] + off[0] + tilt[0] * .5, cb[1] + off[1] + tilt[1] * .5), phase=r.uniform(0, 1),
+                                         radii=jitter(r, sides, .05), caps=(k == 0, True))
+        if k:
+            if not inside_by(lo_ring, cap_top, .15):
+                base.floor(lo_ring, tone)
+            base.joints.append(("cap slab %d" % k, lo_ring, cap_top, .15))
+        cap_top = top_ring
         y += h
 
 
@@ -540,7 +550,7 @@ def basalt(base, variant):
     for x, z, rad, top, lx, lz, drips in BASALT_COLS[variant]:
         phase = r.uniform(0, math.pi / 3)
         span = top - .25
-        tone = BASALT if r.random() < .6 else BASALT2
+        tone = BASALT if base.crng.random() < .6 else BASALT2
 
         def at(y, x=x, z=z, lx=lx, lz=lz, span=span):
             f = (y - .25) / span
@@ -721,7 +731,8 @@ def cairn(base, variant):
         sides = p["sides"] - k % 2
         base.look = {"bevel": .2, "sharp": 80.0, "segments": 3 if k + 1 == len(hs) else 1}
         taper = r.uniform(.9, .97)
-        # colour comes from the colour RNG, warm and pale stones alternating, so geometry tuning never reshuffles it
+        # tone comes from the colour RNG (crng), warm and pale stones alternating. crng also feeds the per-piece mottle (one draw per
+        # piece when polished, one per face when flat), so tones stay put under geometry tuning only in polished builds with the same piece count
         pool = WARM_STONES if (k + warm0) % 2 == 0 else PALE_STONES
         tone = pool[base.crng.randrange(len(pool))]
         phase, radii = r.uniform(0, 2 * math.pi), jitter(r, sides, .08)
@@ -739,7 +750,7 @@ def cairn(base, variant):
     base.look = ROCK_LOOK
     for k in range(2):
         a = r.uniform(0, 2 * math.pi)
-        base.rock((math.cos(a) * 2.9, .1, math.sin(a) * 2.9), (r.uniform(.6, .9), r.uniform(.4, .6), r.uniform(.6, .9)), STONES[base.crng.randrange(len(STONES))])
+        base.rock((math.cos(a) * 2.6, .1, math.sin(a) * 2.6), (r.uniform(.6, .9), r.uniform(.4, .6), r.uniform(.6, .9)), STONES[base.crng.randrange(len(STONES))])
     # the iron pin set in the top stone and the cable ring round it
     base.look = {"bevel": .04}
     base.box((cx - .16, ytop - .1, cz - .16), (cx + .16, TOP, cz + .16), IRON, skip=("-y",), mottle=.04)
