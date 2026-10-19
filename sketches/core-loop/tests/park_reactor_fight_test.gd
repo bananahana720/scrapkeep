@@ -17,7 +17,8 @@ var checked_map := ""
 # The run replays itself once in a child at a fixed 90 fps, one physics tick per frame, as
 # bot_run's children do. Paced by the clock, a loaded machine dropped ticks and the same seed
 # broke the Warden in 40.9 s or 97.3 s (2 fails in 8 solo runs, shard 6, 18 Oct); fixed, it is
-# 40.9 s every time. The environment marks the child: get_cmdline_args() omits --fixed-fps.
+# 40.9 s every time (52.95 s every time on 102324cd and the w17 stage, 2026-10-19). The
+# environment marks the child: get_cmdline_args() omits --fixed-fps.
 const CHILD_ENV := "SCRAPKEEP_REACTOR_FIGHT_CHILD"
 
 func _initialize() -> void:
