@@ -1,0 +1,172 @@
+{
+	"aabb": [],
+	"adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+	"anchor": "/root/Game/Glb_warden_mantle_brood",
+	"anchor_offset": [
+		0.0,
+		0.0,
+		0.0
+	],
+	"call": [],
+	"class": 0,
+	"clay": [],
+	"frames": [
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.908693075180054,
+				0.0,
+				0.417464941740036,
+				0.10536901652813,
+				0.967622458934784,
+				0.229356020689011,
+				-0.403948456048965,
+				0.252402096986771,
+				-0.879271805286407
+			],
+			"centre": [
+				-58.4513397216797,
+				53.4075012207031,
+				-127.648498535156
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-61.0,
+				55.0,
+				-133.196151733398
+			],
+			"file": "asset-use6.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-use6",
+			"ortho_size": 0.0,
+			"sha256": "48e63b8c2aa0f04956d6bdd5802796a8f762a0d43181111bdf7c02936da852ca",
+			"target": [
+				-58.4513397216797,
+				53.4075012207031,
+				-127.648498535156
+			],
+			"thumb": "asset-use6.thumb.png",
+			"thumb_sha256": "ad7363483e7216cb9c9c56b7a17ffd196cd7cc83b1fef3e0c3e6e9b09f6e9831"
+		},
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.875289082527161,
+				0.0,
+				0.483600050210953,
+				0.0255635548382998,
+				0.998601913452148,
+				0.046268604695797,
+				-0.482923924922943,
+				0.0528609380125999,
+				-0.874065339565277
+			],
+			"centre": [
+				-58.4513397216797,
+				53.4075012207031,
+				-127.648498535156
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-73.0,
+				55.0,
+				-153.980758666992
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "db42d1c037b84bde5444adb76c72a8bc3a6e21f6f90a5e1b2e41ec33737701bc",
+			"target": [
+				-58.4513397216797,
+				53.4075012207031,
+				-127.648498535156
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "6e44819e62f849a86dbc6046ad989495190a04f5ce5ab3c5139e20d2d706fdce"
+		},
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.502229154109955,
+				0.0,
+				-0.864734590053558,
+				-0.0449908748269081,
+				0.998645603656769,
+				0.0261302478611469,
+				0.863563418388367,
+				0.0520285367965698,
+				-0.501548945903778
+			],
+			"centre": [
+				-58.4513397216797,
+				53.4075012207031,
+				-127.648498535156
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-32.0192375183105,
+				55.0,
+				-143.0
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "a22b08743fa64bbf7839f87153460ebb40d30365a5a4c84c673b2bdce8dabd7a",
+			"target": [
+				-58.4513397216797,
+				53.4075012207031,
+				-127.648498535156
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "e57f0d9966b66eb7eb67a5a43e4a30c3e25472adc1dc9936176010a3a219f646"
+		}
+	],
+	"freeze_specs": [],
+	"frozen_nodes": {},
+	"glb": [
+		"res://assets/models/warden_mantle_brood.glb@-58,52,-128@30"
+	],
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "lit",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1b999c649e26a9ca92cb46eb3add292095aecac223b0292e92f310917e8f5c46",
+		"src/presentation/hero_assets.gd": "e5c36c0dfd97ff1d7cc7ba23ac7909eb5004fe4aad24b64daeff4a441086030f",
+		"src/presentation/spillway_scenery.gd": "ac0961a0f3b43fc6eef649b6a16902fa248281e155f806bf73f4121097028890",
+		"src/world/terrain.gd": "5de2b7d620cff2e91c2a65b3db9afa9892529d21a89b6f21eefd9b42c8393bea",
+		"tools/asset_capture.gd": "d4e9a4670ec8a0cb21a2b3c0d703f3ce8c166352e197bad0e12704cd8188f568",
+		"tools/capture_cameras.gd": "6c185471294f2c03f75b706504a923926b1f1ef3f04947f1beb2213dbc56fe73"
+	},
+	"spawn": [],
+	"subject": "/root/Game/Glb_warden_mantle_brood",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}

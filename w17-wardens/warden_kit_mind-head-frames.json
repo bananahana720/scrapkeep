@@ -1,0 +1,172 @@
+{
+	"aabb": [],
+	"adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+	"anchor": "/root/Game/Glb_warden_kit_mind",
+	"anchor_offset": [
+		0.0,
+		0.0,
+		0.0
+	],
+	"call": [],
+	"class": 0,
+	"clay": [],
+	"frames": [
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.972966134548187,
+				0.0,
+				0.230948030948639,
+				0.0214256271719933,
+				0.995687365531921,
+				0.0902645066380501,
+				-0.229952022433281,
+				0.092772513628006,
+				-0.968770027160645
+			],
+			"centre": [
+				-59.5536994934082,
+				54.4165000915527,
+				-127.102996826172
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-61.0,
+				55.0,
+				-133.196151733398
+			],
+			"file": "asset-use6.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-use6",
+			"ortho_size": 0.0,
+			"sha256": "f0ae21e24b79c0ae8866fed99f286c6501fdb49c673186bb4eb809f79e8c6211",
+			"target": [
+				-59.5536994934082,
+				54.4165000915527,
+				-127.102996826172
+			],
+			"thumb": "asset-use6.thumb.png",
+			"thumb_sha256": "2b502a229120b1f249e32282cf358c1ba4deae6436ac00e5b100d124eb27aa47"
+		},
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.894328474998474,
+				0.0,
+				0.447410970926285,
+				0.00868499372154474,
+				0.999811589717865,
+				0.0173604097217321,
+				-0.447326689958572,
+				0.0194116700440645,
+				-0.894159972667694
+			],
+			"centre": [
+				-59.5536994934082,
+				54.4165000915527,
+				-127.102996826172
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-73.0,
+				55.0,
+				-153.980758666992
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "8b5d29ae6383f9dafd9f7333b165b77f8aea5e8a08b4152c397c4a8115955981",
+			"target": [
+				-59.5536994934082,
+				54.4165000915527,
+				-127.102996826172
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "86c49c3714adbab4b7da4ecbaaa6a3589afbb4015f54078cc48143185359b197"
+		},
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.499999225139618,
+				0.0,
+				-0.866025865077972,
+				-0.0158910565078259,
+				0.999831676483154,
+				0.00917468685656786,
+				0.865880072116852,
+				0.018349401652813,
+				-0.499915033578873
+			],
+			"centre": [
+				-59.5536994934082,
+				54.4165000915527,
+				-127.102996826172
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-32.0192375183105,
+				55.0,
+				-143.0
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "ead99b53a2cf8d8aa2489b42581e195c55f8ef4f129ffbb092557b9a7967ee85",
+			"target": [
+				-59.5536994934082,
+				54.4165000915527,
+				-127.102996826172
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "095bb945e7478d3be4cd067c4cb30d7a97f55d1e50739f0900d26c096d81bb93"
+		}
+	],
+	"freeze_specs": [],
+	"frozen_nodes": {},
+	"glb": [
+		"res://assets/models/warden_kit_mind.glb@-58,52,-128@30"
+	],
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "lit",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1b999c649e26a9ca92cb46eb3add292095aecac223b0292e92f310917e8f5c46",
+		"src/presentation/hero_assets.gd": "e5c36c0dfd97ff1d7cc7ba23ac7909eb5004fe4aad24b64daeff4a441086030f",
+		"src/presentation/spillway_scenery.gd": "ac0961a0f3b43fc6eef649b6a16902fa248281e155f806bf73f4121097028890",
+		"src/world/terrain.gd": "5de2b7d620cff2e91c2a65b3db9afa9892529d21a89b6f21eefd9b42c8393bea",
+		"tools/asset_capture.gd": "3c1cbb13152af765f0ecc90122d2c2fd3c7c48878d98406973ddd4f5368366e1",
+		"tools/capture_cameras.gd": "6c185471294f2c03f75b706504a923926b1f1ef3f04947f1beb2213dbc56fe73"
+	},
+	"spawn": [],
+	"subject": "/root/Game/Glb_warden_kit_mind",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}

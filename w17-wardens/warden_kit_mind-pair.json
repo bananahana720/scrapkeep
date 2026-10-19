@@ -1,0 +1,26 @@
+{
+	"base": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/cap/base/warden_kit_mind",
+	"head": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/cap/head/warden_kit_mind",
+	"modes": {
+		"lit": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-use6",
+				"asset-front30",
+				"asset-side30"
+			],
+			"sheet": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/cap/pair/warden_kit_mind/pair-lit.png"
+		},
+		"subject-black": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-use6",
+				"asset-front30",
+				"asset-side30"
+			],
+			"sheet": "/tmp/claude-0/-home-user-scrapkeep/de5a5de1-2d94-55d6-a700-ed24daab7813/scratchpad/cap/pair/warden_kit_mind/pair-subject-black.png"
+		}
+	}
+}
