@@ -141,6 +141,12 @@ DELIBERATE = {
         "proc:SlamPadRight:tY+": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
                                   "cite": "plated_brute.gd:288-309 e09_pads_raise: the pads rise PAD_RISE 2.5 m (:45) off the body on the warn"},
     },
+    "world_three/enemy_kite_drone": {
+        "proc:KitePawLeft:tZ-": {"pairs": [("KitePaw*", "PodRoot")],
+                                 "cite": "kite_drone.gd:177-180 the paws tuck 0.08 m back (and 0.08 up) into the pod with the wind-up tension"},
+        "proc:KitePawRight:tZ-": {"pairs": [("KitePaw*", "PodRoot")],
+                                  "cite": "kite_drone.gd:177-180 the paws tuck 0.08 m back (and 0.08 up) into the pod with the wind-up tension"},
+    },
     "warden_swarm": {
         "break": {"pairs": [("*", "*")], "cite": "ws:42 'chunk_shed and break (falling cells)'; cells split off and fall ws:488-492, hull falls ws:525-527"},
         "chunk_shed": {"pairs": [("*", "Ring*"), ("Ring*", "*")], "cite": "ws:26-29, :42, :480-482, :544-545 shed rings fall (drop, drift, spin)"},
@@ -157,6 +163,9 @@ DELIBERATE = {
            for c in ("chunk_lost", "chunk_lost_ring", "chunk_lost_middle", "chunk_lost_index")},
         "grip_falter": {"pairs": [("Stalk*", "*"), ("LensMount", "*"), ("Lens", "*")],
                         "cite": "wm:737-743 Stalk1, Stalk2 and LensMount drop DROP/3, the lens swells"},
+        **{c: {"pairs": [("Knuckle*", "*")],
+               "cite": "wm:725-731 the knuckle flicks out along its dome normal and swells 25%; design-v3/wardens/mind.md:127 'shrug: the flared knuckle flicks outward'"}
+           for c in ("shrug", "shrug_1", "shrug_2")},
         "knocked_down": {"pairs": [("Hand", "*"), ("Palm", "*"), ("Finger*", "*")],
                          "cite": "wm:766-772 the hand tumbles over and the fingers splay; wm:913 'tumble the hand (knocked_down)'"},
         "final_quiet": {"pairs": [("Thumb_*", "*"), ("Lens*", "*"), ("SmallLens*", "*")],
@@ -167,6 +176,9 @@ DELIBERATE = {
                           "back under segment 1 (pi + 0.1 - c1), touching only at the knuckle cap"},
     },
     "bosses/mind_hand": {
+        **{c: {"pairs": [("LensRoot", "MainLens"), ("Iris?", "MainLens"), ("MainLens", "*Target"), ("MintTarget", "SlateTarget")],
+               "cite": "bosses/mind_hand.py:309-316 MainLens scales to 1.5 (lens_scale), the six irises open to 0.24 m on the lens face (aperture) and the mint and slate targets swap by scale on the same lens face; keys :335-340 for exact_strike, brace and recover"}
+           for c in ("brace", "recover", "exact_strike")},
         "lens_break": {"pairs": [("LensRoot", "*"), ("*", "MainLens")],
                        "cite": "bosses/mind_hand.py:317-320 LensRoot drops 0.55 m and tips, MainLens shrinks to 0.05; key :341"},
     },
