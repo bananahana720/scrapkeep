@@ -2,7 +2,8 @@ extends SceneTree
 
 const Audio := preload("res://src/presentation/audio.gd")
 const SpecialAudio := preload("res://src/presentation/special_audio.gd")
-const GameEvents := preload("res://src/core/game_events.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const GameEvents :=preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The kill-first specials' hooks (INTEGRATION.md section 7, item 5): the presence loop is a
@@ -18,6 +19,7 @@ class FakeSpecial:
 	extends Node3D
 	signal special_tell(moment: String)
 	signal died(where: Vector3, scrap: int)
+	signal dispatched(add: Node3D)
 	var rammed_at_ground := false
 
 var _t := T.new("special_audio_test")
@@ -67,6 +69,30 @@ func _process(_delta: float) -> bool:
 	_t.eq("a closer special takes the slot", audio.specials_heard, [ids[2], ids[0]])
 	_t.check("the displaced loop stops", not enemies[1].get_node("SpecialPresence").playing and enemies[2].get_node("SpecialPresence").playing)
 	_t.check("the loop has its own player, not the combat pool", enemies[0].get_node("SpecialPresence").stream.loop_mode == AudioStreamWAV.LOOP_FORWARD)
+
+	# The Dispatcher's drop: its rendered spawn cue answers on the next beat, no new loop, the cap holds.
+	_t.eq("the drop answer is the rendered spawn cue", SpecialAudio.cue("dispatcher", "drop"), "dispatcher_spawn")
+	_t.check("that cue is a rendered file", SfxBank.FILE_SOUNDS.has(SpecialAudio.cue("dispatcher", "drop")))
+	audio.cue_log.clear()
+	enemies[1].dispatched.emit(null)
+	var drop_cue: Array = audio.cue_log[0] if not audio.cue_log.is_empty() else []
+	_t.check("a drop is answered on the beat", audio.cue_log.size() == 1 and drop_cue[0] == "special_drop" and drop_cue[1] == "dispatcher_spawn" and drop_cue[2] == "beat", str(audio.cue_log))
+	var loops := 0
+	for e in enemies:
+		loops += int(e.get_node_or_null("SpecialPresence") != null)
+	_t.eq("a drop adds no presence loop", loops, 3)
+	audio._tend_specials()
+	var playing := 0
+	for e in enemies:
+		playing += int(e.get_node("SpecialPresence").playing)
+	_t.check("the two-loop cap holds after a drop", audio.specials_heard.size() <= SpecialAudio.CAP and playing <= SpecialAudio.CAP, "%s playing %d" % [str(audio.specials_heard), playing])
+	# Planted negative control: a body the audio never registered sounds no answer.
+	var stranger := FakeSpecial.new()
+	root.add_child(stranger)
+	audio.cue_log.clear()
+	_t.eq("negative control: an unregistered body gets no answer", audio.special_drop(stranger), -1)
+	_t.check("negative control: and logs nothing", audio.cue_log.is_empty())
+	stranger.free()
 
 	audio._last_start.clear()
 	audio.cue_log.clear()
