@@ -184,6 +184,11 @@ func _old_maps_hash() -> String:
 	var ids: Array = Terrain.MAPS.keys()
 	ids.sort()
 	var hashed := 0
+	# SCATTER_DUMP=<file> writes every row's output as text (map, row seed, mesh aabb, instance count,
+	# then one line per instance: 12 buffer floats at full precision, in buffer order) so two machines'
+	# runs can be diffed with tools/scatter_dump_diff.py.
+	var dump_path := OS.get_environment("SCATTER_DUMP")
+	var dump := PackedStringArray()
 	for map_id: String in ids:
 		var rows: Array = Terrain.MAPS[map_id].new().scatter["kit"]
 		if rows.is_empty():
@@ -198,10 +203,25 @@ func _old_maps_hash() -> String:
 			var batch: Node = scatter.get_node_or_null("Scatter_%s" % row["seed"]) if scatter != null else null
 			ctx.update(("%s|%s|" % [row["kind"], row["seed"]]).to_utf8_buffer())
 			if batch != null:
-				ctx.update((batch.get_meta("instance_buffer") as PackedFloat32Array).to_byte_array())
+				var buffer: PackedFloat32Array = batch.get_meta("instance_buffer")
+				ctx.update(buffer.to_byte_array())
 				hashed += 1
+				if dump_path != "":
+					var aabb: AABB = Scatter._source(row["mesh"]).get("aabb", AABB())
+					dump.append("row %s %s mesh=%s aabb=%.9f,%.9f,%.9f,%.9f,%.9f,%.9f count=%d" % [map_id, row["seed"], row["mesh"],
+						aabb.position.x, aabb.position.y, aabb.position.z, aabb.size.x, aabb.size.y, aabb.size.z, buffer.size() / 12])
+					for i in buffer.size() / 12:
+						var cells := PackedStringArray()
+						for k in 12:
+							cells.append("%.9f" % buffer[i * 12 + k])
+						dump.append(" ".join(cells))
 		holder.free()
 	t.eq("the old-map hash covers every old scatter row", hashed, OLD_MAPS_ROWS)
+	if dump_path != "":
+		var out := FileAccess.open(dump_path, FileAccess.WRITE)
+		out.store_string("\n".join(dump) + "\n")
+		out.close()
+		print("scatter_rows_test: dumped ", dump.size(), " lines to ", dump_path)
 	return ctx.finish().hex_encode()
 
 
