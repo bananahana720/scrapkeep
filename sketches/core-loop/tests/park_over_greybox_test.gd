@@ -3,10 +3,13 @@ extends SceneTree
 # Rule (the islands' collider-locked rows, coordinator on #149, 2026-10-19 02:18Z): park_islands' ore_adit, tram_head,
 # keel_rib_w and keel_rib_e take drawn pieces (isle_adit_portal, isle_tram_head, isle_keel_rib; built by
 # tools/blender/park/isle_pieces.py) while each keeps the collider its greybox row has now, exactly. Only the visual
-# changes. Each row is placed through place_row twice, once as its greybox recipe and once with the piece's recipe in
-# memory (park_islands.json itself is Restart World's to edit), and the two must agree on the node's place, the
-# Collider (none for the two stamped rows, whose stamp collides; the same box for the ribs), the ride sensor and the
-# stamp_replaces mark. The piece's views must be drawn meshes only: no trimesh from the GLB, no grey box left.
+# changes. Each row is placed through place_row twice, once as its element's greybox and once as its piece, both built
+# in memory from the park file's row (so the test holds before and after Restart World switches the recipes in
+# park_islands.json, which is that lane's to edit), and the two must agree on the node's place, the Collider (none for
+# the two stamped rows, whose stamp collides; the same box for the ribs), the ride sensor and the stamp_replaces mark.
+# The piece's views must be drawn meshes only, with no grey box left. Only the adit portal adds collision: its posts and
+# side lagging, on a separate PieceCollider body whose every face stands outside the row's 14 m lane, so the pilots'
+# lines through the lane meet nothing new (coordinator ruling pending on #149, 2026-10-19).
 
 const T := preload("res://tests/support/t.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
@@ -18,6 +21,9 @@ const PIECES := {"ore_adit": "isle_adit_portal", "tram_head": "isle_tram_head", 
 	"keel_rib_e": "isle_keel_rib"}
 # The stamped rows carry no collider of their own today: the stamped ground is their shape (place_row).
 const STAMPED := ["ore_adit", "tram_head"]
+# The piece whose GLB carries its own uprights' collider, and the least |x| any of its faces may reach in the row frame:
+# the inner face of the portal posts (isle_pieces.py ADIT_POST_X - ADIT_POST / 2), outside the 7 m half width.
+const PIECE_COLLIDER := {"ore_adit": 9.225}
 
 var t := T.new("park_over_greybox_test")
 
@@ -43,9 +49,12 @@ func _run() -> void:
 	var parent := Node3D.new()
 	root.add_child(parent)
 	for id: String in PIECES:
-		var grey_row: Dictionary = rows[id]
-		t.check("%s is a greybox row today" % id, String(grey_row["recipe"]).begins_with(ParkRecipes.GREYBOX), grey_row["recipe"])
-		var piece_row := grey_row.duplicate(true)
+		var row: Dictionary = rows[id]
+		t.check("%s's recipe is its greybox or its piece" % id, row["recipe"] == ParkRecipes.GREYBOX + String(row["element"])
+			or row["recipe"] == PIECES[id], row["recipe"])
+		var grey_row := row.duplicate(true)
+		grey_row["recipe"] = ParkRecipes.GREYBOX + String(row["element"])
+		var piece_row := row.duplicate(true)
 		piece_row["recipe"] = PIECES[id]
 		var grey: Node3D = ParkRecipes.place_row(grey_row, parent, ground, publish)
 		var piece: Node3D = ParkRecipes.place_row(piece_row, parent, ground, publish)
@@ -61,7 +70,7 @@ func _run() -> void:
 			t.check("%s keeps no collider of its own (the stamp collides)" % id, piece.get_node_or_null("Collider") == null)
 		else:
 			var shapes: Array = _collider(piece)
-			t.check("%s keeps its greybox's one box" % id, shapes.size() == 1 and shapes[0]["kind"] == "BoxShape3D", "%s" % [shapes])
+			t.check("%s keeps its greybox's one box" % id, shapes.size() == 2 and shapes[1]["kind"] == "BoxShape3D", "%s" % [shapes])
 		t.check("%s has no grey box" % id, piece.get_node_or_null("Greybox") == null)
 		var views := piece.find_children("*", "MeshInstance3D", true, false)
 		t.check("%s draws its piece" % id, views.size() > 0, "%d views" % views.size())
@@ -69,15 +78,30 @@ func _run() -> void:
 		for view: MeshInstance3D in views:
 			drawn = drawn and not String(view.name).ends_with("-col") and view.mesh != null
 		t.check("%s's views are drawn meshes only" % id, drawn)
-		var grey_shapes := grey.find_children("*", "CollisionShape3D", true, false).size()
-		t.eq("%s adds no collision shape (no trimesh from the GLB)" % id,
-			piece.find_children("*", "CollisionShape3D", true, false).size(), grey_shapes)
+		var extra := piece.get_node_or_null("PieceCollider") as StaticBody3D
+		if not PIECE_COLLIDER.has(id):
+			t.check("%s adds no collider of its own" % id, extra == null)
+			t.eq("%s adds no collision shape (no trimesh from the GLB)" % id,
+				piece.find_children("*", "CollisionShape3D", true, false).size(),
+				grey.find_children("*", "CollisionShape3D", true, false).size())
+		elif t.check("%s's piece carries its uprights' collider" % id, extra != null and extra.get_child_count() > 0):
+			t.eq("%s's piece collider is on the world layer like the row's" % id, [extra.collision_layer, extra.collision_mask],
+				[1 << (ParkRecipes.WORLD_LAYER - 1), 0])
+			var inner := INF
+			var faces := 0
+			for shape: CollisionShape3D in extra.find_children("*", "CollisionShape3D", true, false):
+				for v in (shape.shape as ConcavePolygonShape3D).get_faces():
+					inner = minf(inner, absf((extra.transform * shape.transform * v).x))
+					faces += 1
+			t.check("%s's piece collider stands outside the lane" % id, faces > 0 and inner >= PIECE_COLLIDER[id] - 0.001,
+				"least |x| %.3f over %d face vertices" % [inner, faces])
 		t.check("%s's base view casts shadows" % id, views.any(func(v): return v.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF))
 	parent.free()
 	quit(t.verdict())
 
 
-# The Collider body's shapes as comparable records: kind, size and transform in the row's node space; [] for none.
+# The Collider body as comparable records, its layers and place first, then each shape's kind, size and transform in
+# the row's node space; [] for none.
 func _collider(node: Node3D) -> Array:
 	var body := node.get_node_or_null("Collider") as StaticBody3D
 	if body == null:
@@ -90,7 +114,7 @@ func _collider(node: Node3D) -> Array:
 		elif shape.shape is ConvexPolygonShape3D:
 			rec["points"] = (shape.shape as ConvexPolygonShape3D).points
 		out.append(rec)
-	return out.slice(1) if out.size() > 1 else out
+	return out
 
 
 # The ride sensor as a record: its mask and box; {} for none.

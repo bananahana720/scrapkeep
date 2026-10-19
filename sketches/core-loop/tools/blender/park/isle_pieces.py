@@ -1,7 +1,8 @@
 """The Highdraft islands' collider-locked pieces (park_islands, coordinator on #149, 2026-10-19 02:18Z): three GLBs drawn
 over rows whose greybox collider must not change, so park_recipes.gd places them as OVER_GREYBOX recipes (the row's
 greybox node, seat, ride sensor and box collider, or none where its stamp replaces the box) and only the view is new.
-No GLB here carries a -col.
+Only the adit portal carries a -col, for its own uprights (adit_collider), which park_recipes.gd puts on a separate
+PieceCollider body; nothing else the ball can reach stands more than FLUSH over a surface it rolls on.
 
   isle_keel_rib     keel_rib_w and keel_rib_e ([50, 12, 3], element ledge, no stamp): a rusted hull rib that fills the
                     live 3 x 12 x 50 box (x +-1.5, y 0 to 12, z +-25) so no face of the collider stands in open air: top
@@ -12,13 +13,15 @@ No GLB here carries a -col.
   isle_tram_head    tram_head ([30, 3, 30], element ledge, stamp plateau): the plateau stamp replaces the box, so the
                     stamped top is the collider. Its flat top is y = 3.0 - 0.05 z for z -14 to 8 and |x| <= 14 in the
                     row frame (the node stands on the plain under the stamp); past z 8 a neighbour cuts it lower. A
-                    plank deck 0.04 m proud of that top, a 2 m tram track 0.12 m proud, two buffer stops and a winch post
-                    at the back (z -12.5), no part on the drop side. The nearest pilot line passes 35 m from the centre.
+                    plank deck 0.04 m proud of that top, a 2 m tram track, a wheel-stop sill, a painted hazard band and
+                    a winch bed plate at the back (z -12.6), none more than FLUSH (0.12 m) proud, because the stamped
+                    top is the row's only collider; no part on the drop side. The nearest pilot line passes 35 m from the centre.
   isle_adit_portal  ore_adit ([30, 0.01, 14], element tunnel, stamp plateau with no raise): a 1 cm decal on a ramp, y =
                     0.0127 - 0.2625 z in the row frame, with no opening in the terrain. Three timber sets straddle the
                     ramp's uphill end (z -13.5, -9.5, -5.5), posts at x +-9.5 outside the 14 m lane, caps 7 m over the
                     ramp (CLEAR_ABOVE 5.5 in ledges.py), roof lagging over them, a number board and a hanging lamp on the
-                    downhill cap; ties and a track down the ramp 0.05 and 0.11 m proud. Sable, Rivet and Cannon's lines
+                    downhill cap; ties and a track down the ramp 0.05 and 0.11 m proud; rubble footings sunk to FLUSH.
+                    The posts and side lagging carry the portal's own -col (adit_collider), all outside the lane. Sable, Rivet and Cannon's lines
                     enter the lane 5 m off its axis at z -13, 3.5 m inside the posts after the ball's radius.
 
 Convention: Godot metres, +Y up, the row's length along +Z, its width along X, the origin at the row node (the footprint
@@ -41,6 +44,7 @@ import random
 import sys
 
 import bmesh
+import bpy
 from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -203,25 +207,20 @@ def tram_head(root, rng):
     with deck.region(bevel=0.01):
         for x in (-TRAM_GAUGE, TRAM_GAUGE):
             sloped(deck, x - 0.08, x + 0.08, TRAM_Z[0] + 0.3, TRAM_Z[1] - 0.2, tram_top, 0.0, FLUSH, IRON)
-    # buffer stops at the back: a timber block on each rail end, an iron face plate and a hazard board between them
-    zb = TRAM_Z[0] + 0.1
+    # wheel stops at the back: a timber sill across both rail ends with iron caps, and a hazard band painted on the
+    # deck before it, all within FLUSH of the top: the stamped top is this row's only collider, so nothing taller stands
+    # on it (a buffer block the ball rolled through would read as a wall that is not there)
+    zb = TRAM_Z[0] + 0.15
+    sloped(deck, -TRAM_GAUGE - 0.7, TRAM_GAUGE + 0.7, zb, zb + 0.5, tram_top, 0.0, FLUSH, shade(TIMBER_DK, rng))
     for x in (-TRAM_GAUGE, TRAM_GAUGE):
-        y0 = tram_top(zb)
-        block(deck, (x - 0.5, y0 - 0.1, zb), (x + 0.5, y0 + 1.1, zb + 0.9), shade(TIMBER_DK, rng))
-        block(deck, (x - 0.4, y0 + 0.35, zb + 0.9), (x + 0.4, y0 + 0.95, zb + 1.02), IRON_HI)
-        block(deck, (x - 0.15, y0 - 0.1, zb - 0.9), (x + 0.15, y0 + 0.8, zb), shade(TIMBER, rng))
-    y0 = tram_top(zb)
-    block(deck, (-TRAM_GAUGE - 0.5, y0 + 1.1, zb + 0.2), (TRAM_GAUGE + 0.5, y0 + 1.45, zb + 0.32), BONE)
-    for k in range(5):
-        x = -TRAM_GAUGE - 0.3 + k * 0.6
-        block(deck, (x, y0 + 1.1, zb + 0.32), (x + 0.3, y0 + 1.45, zb + 0.34), HAZARD)
-    # a winch post with its cable drum off the track's left, where the hauling crew stood
-    wx, wz = -5.5, TRAM_Z[0] + 1.2
-    wy = tram_top(wz)
-    block(deck, (wx - 0.35, wy - 0.1, wz - 0.35), (wx + 0.35, wy + 1.8, wz + 0.35), shade(TIMBER_DK, rng))
-    deck.cyl(SLOT, 0.55, 0.55, 1.4, segs=12, loc=g(wx, wy + 1.0, wz + 0.95), rot=(0.0, math.pi / 2, 0.0),
-             color=IRON_HI)
-    deck.cyl(SLOT, 0.35, 0.35, 1.5, segs=12, loc=g(wx, wy + 1.0, wz + 0.95), rot=(0.0, math.pi / 2, 0.0), color=RUST)
+        sloped(deck, x - 0.25, x + 0.25, zb + 0.05, zb + 0.45, tram_top, FLUSH - 0.02, FLUSH, IRON_HI)
+    for k in range(9):
+        x = -TRAM_GAUGE - 1.6 + k * 0.4
+        sloped(deck, x, x + 0.2, zb + 0.7, zb + 1.3, tram_top, 0.0, 0.045, HAZARD if k % 2 == 0 else BONE)
+    # the winch's bed plate off the track's left, where the hauling crew stood, with its cable coiled flat on it
+    wx, wz = -5.5, TRAM_Z[0] + 1.4
+    sloped(deck, wx - 0.9, wx + 0.9, wz - 0.7, wz + 0.7, tram_top, 0.0, 0.07, IRON)
+    deck.ring(SLOT, 0.3, 0.55, 0.05, segs=12, loc=g(wx, tram_top(wz) + 0.06, wz), color=RUST)
     deck.to_object(parent=root)
 
 
@@ -232,6 +231,9 @@ ADIT_POST = 0.55
 ADIT_CAP = (7.0, 7.7)       # cap underside and top over the ramp at each set
 ADIT_HZ = 15.0
 ADIT_TRACK = 1.0
+LANE_HX = 7.0               # the row's half width: the 14 m lane
+# Godot strips one -col on import, so the node arrives as isle_adit_portal-col and park_recipes.gd cooks its trimesh
+ADIT_COL = "isle_adit_portal-col-col"
 
 
 def adit_floor(z):
@@ -246,10 +248,12 @@ def adit_portal(root, rng):
             x0, x1 = sorted((s * (ADIT_POST_X - ADIT_POST / 2), s * (ADIT_POST_X + ADIT_POST / 2)))
             block(adit, (x0, base - 0.4, z - ADIT_POST / 2), (x1, base + ADIT_CAP[0], z + ADIT_POST / 2),
                   shade(TIMBER_DK if k % 2 else TIMBER, rng))
-            # a rubble footing round each post, kept outside the lane
+            # a rubble footing round each post, kept outside the lane and sunk to within FLUSH of the ramp
             for j in range(3):
-                adit.ico(SLOT, rng.uniform(0.45, 0.8), subdiv=1,
-                         loc=g(s * (ADIT_POST_X + rng.uniform(0.2, 0.9)), base - 0.1, z + rng.uniform(-0.9, 0.9)),
+                r = rng.uniform(0.45, 0.8)
+                adit.ico(SLOT, r, subdiv=1,
+                         loc=g(s * (ADIT_POST_X + rng.uniform(0.2, 0.9)), base + FLUSH - 0.02 - 0.6 * r,
+                               z + rng.uniform(-0.9, 0.9)),
                          scale=(1.0, 1.0, 0.6), color=shade(STONE, rng, 0.1))
         block(adit, (-ADIT_POST_X - 0.6, base + ADIT_CAP[0], z - 0.32), (ADIT_POST_X + 0.6, base + ADIT_CAP[1], z + 0.32),
               shade(TIMBER, rng))
@@ -291,10 +295,11 @@ def adit_portal(root, rng):
     # the lamp: a chain off the cap's centre, a copper cage lamp under it, clear of the 5.5 m lane height
     ly = yb - 0.05
     with adit.region(bevel=0):
-        for j in range(4):
+        for j in range(2):
             block(adit, (-0.04, ly - 0.25 * (j + 1), zf - 0.36), (0.04, ly - 0.25 * j - 0.03, zf - 0.28), IRON)
-    adit.cyl(SLOT, 0.22, 0.28, 0.5, segs=10, loc=g(0.0, ly - 1.25, zf - 0.32), color=COPPER)
-    adit.cyl(SLOT, 0.16, 0.16, 0.3, segs=10, loc=g(0.0, ly - 1.6, zf - 0.32), color="e5a044")
+    adit.cyl(SLOT, 0.22, 0.28, 0.5, segs=10, loc=g(0.0, ly - 0.75, zf - 0.32), color=COPPER)
+    adit.cyl(SLOT, 0.16, 0.16, 0.3, segs=10, loc=g(0.0, ly - 1.1, zf - 0.32), color="e5a044")
+    adit_collider(root)
     # ties and the track down the ramp
     z = -ADIT_HZ + 0.4
     while z < ADIT_HZ - 0.3:
@@ -307,6 +312,40 @@ def adit_portal(root, rng):
     adit.to_object(parent=root)
 
 
+def adit_collider(root):
+    """The portal's own collider (ADIT_COL): a box on each post and a slab on each side's lagging, so the uprights the
+    ball can reach are solid. Every face stands outside the 14 m lane (|x| >= ADIT_POST_X - ADIT_POST / 2); the row's
+    own collider (none: its stamp replaces the box) is untouched, because park_recipes.gd puts this mesh on a separate
+    PieceCollider body, not the row's Collider."""
+    verts, faces = [], []
+
+    def add(corners):
+        o = len(verts)
+        verts.extend(g(*c) for c in corners)
+        faces.extend([(o + 3, o + 2, o + 1, o), (o + 4, o + 5, o + 6, o + 7)])
+        faces.extend((o + k, o + (k + 1) % 4, o + 4 + (k + 1) % 4, o + 4 + k) for k in range(4))
+
+    for z in ADIT_SETS:
+        base = adit_floor(z)
+        for s in (-1, 1):
+            x0, x1 = sorted((s * (ADIT_POST_X - ADIT_POST / 2), s * (ADIT_POST_X + ADIT_POST / 2)))
+            y0, y1, z0, z1 = base - 0.4, base + ADIT_CAP[0], z - ADIT_POST / 2, z + ADIT_POST / 2
+            add([(x0, y0, z0), (x1, y0, z0), (x1, y0, z1), (x0, y0, z1),
+                 (x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1)])
+    za, zb = ADIT_SETS[0] - 0.25, ADIT_SETS[-1] + 0.25
+    a0, a1 = adit_floor(za), adit_floor(zb)
+    for s in (-1, 1):
+        x0, x1 = sorted((s * (ADIT_POST_X + ADIT_POST / 2), s * (ADIT_POST_X + ADIT_POST / 2 + 0.12)))
+        add([(x0, a0 + 4.5, za), (x1, a0 + 4.5, za), (x1, a1 + 4.5, zb), (x0, a1 + 4.5, zb),
+             (x0, a0 + ADIT_CAP[0], za), (x1, a0 + ADIT_CAP[0], za), (x1, a1 + ADIT_CAP[0], zb), (x0, a1 + ADIT_CAP[0], zb)])
+    mesh = bpy.data.meshes.new(ADIT_COL)
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(ADIT_COL, mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    obj.parent = root
+
+
 # ---------------------------------------------------------------------------------------------------------- recipes
 # id: (builder, seed, budget class the row places it under)
 RECIPES = {
@@ -316,11 +355,11 @@ RECIPES = {
 }
 
 
-def bounds(root):
+def bounds(root, skip=()):
     lo = Vector((math.inf,) * 3)
     hi = Vector((-math.inf,) * 3)
     for o in common.tree(root):
-        if o.type != "MESH":
+        if o.type != "MESH" or o in skip:
             continue
         for v in o.data.vertices:
             p = o.matrix_world @ v.co
@@ -337,13 +376,32 @@ def build(rid, out_dir, count_only):
     polish.enable(detail=1, bevel=0.04, bevel_min=0.2, bake_slots=(SLOT,))
     root = common.empty(rid + "_root")
     fn(root, random.Random(seed))
-    tris = common.tri_total(root)
-    lo, hi = bounds(root)
+    cols = [o for o in common.tree(root) if "-col" in o.name]
+    tris = common.tri_total(root)        # the -col mesh counts against the cap, as landmarks.py counts its own
+    lo, hi = bounds(root, skip=cols)
     cap = CLASSES[cls]
     print("ISLE_COUNT", rid, json.dumps({"tris": tris, "class": cls, "cap": cap["tris"],
                                          "bounds": [[round(v, 3) for v in lo], [round(v, 3) for v in hi]]}))
     assert tris <= cap["tris"], (rid, tris, cap["tris"])
-    assert not any(o.name.endswith("-col") for o in common.tree(root)), (rid, "no -col: the collider is the greybox's")
+    # nothing drawn the ball can reach stands more than FLUSH over the surface it rolls on (no ghost solids): on the
+    # tram head nothing over the stamped top, in the adit's lane and a metre past it nothing between FLUSH and CLEAR_ABOVE
+    for o in common.tree(root):
+        if o.type != "MESH" or o in cols:
+            continue
+        for v in o.data.vertices:
+            p = o.matrix_world @ v.co
+            x, y, z = p.x, p.z, -p.y
+            if rid == "isle_tram_head":
+                assert y - tram_top(z) <= FLUSH + 1e-3, (rid, "over FLUSH", (x, y, z))
+            elif rid == "isle_adit_portal" and abs(x) < LANE_HX + 1.0:
+                up = y - adit_floor(z)
+                assert up <= FLUSH + 1e-3 or up >= CLEAR_ABOVE, (rid, "in the lane between FLUSH and CLEAR_ABOVE", (x, y, z))
+    if rid == "isle_adit_portal":
+        assert [o.name for o in cols] == [ADIT_COL], (rid, [o.name for o in cols])
+        inner = min(abs((o.matrix_world @ v.co).x) for o in cols for v in o.data.vertices)
+        assert inner >= ADIT_POST_X - ADIT_POST / 2 - 1e-4, (rid, "the portal's collider stands outside the lane", inner)
+    else:
+        assert not cols, (rid, "no -col: the row's greybox collider is the only one")
     if rid == "isle_keel_rib":
         assert abs(lo[0] + RIB_HX) < 0.06 and abs(hi[0] - RIB_HX) < 0.06, (rid, "x faces at the box", lo, hi)
         assert abs(hi[1] - RIB_TOP) < 1e-3 and abs(lo[2] + RIB_HZ) < 1e-3 and abs(hi[2] - RIB_HZ) < 1e-3, (rid, lo, hi)
