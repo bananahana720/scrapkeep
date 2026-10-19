@@ -1,0 +1,1324 @@
+{
+ "schema": "scrapkeep-park-props/1",
+ "map": "park_islands",
+ "kit": "res://assets/models/park/props/islands/manifest.json",
+ "templates": {
+  "lookout_post": {
+   "story": "A fire crew's stilted log cab, a stool and the roost chart left by the steps.",
+   "props": [
+    {
+     "kind": "lookout_hut",
+     "v": "a",
+     "at": [
+      0,
+      5
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "a",
+     "at": [
+      0.5,
+      -1.5
+     ],
+     "yaw_deg": 8,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mender_stool",
+     "v": "a",
+     "at": [
+      -4.2,
+      0.5
+     ],
+     "yaw_deg": -60,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "chart_post",
+     "v": "a",
+     "at": [
+      4.0,
+      -2.0
+     ],
+     "yaw_deg": 51,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_basket",
+     "v": "a",
+     "at": [
+      -2.5,
+      -3.5
+     ],
+     "yaw_deg": 12,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      3.5,
+      1.5
+     ],
+     "yaw_deg": -150,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "a",
+     "at": [
+      6.0,
+      4.5
+     ],
+     "yaw_deg": -157,
+     "scale": 1.01,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "*",
+     "at": [
+      -6.0,
+      4.0
+     ],
+     "yaw_deg": -146,
+     "scale": 0.91,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "a",
+     "at": [
+      -3.0,
+      2.0
+     ],
+     "yaw_deg": -26,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      5.5,
+      -0.5
+     ],
+     "yaw_deg": -128,
+     "scale": 0.95,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lookout_ruin": {
+   "story": "The cab gave up: roof planks across the steps, manzanita through the floor.",
+   "props": [
+    {
+     "kind": "lookout_hut",
+     "v": "c",
+     "at": [
+      0,
+      5
+     ],
+     "yaw_deg": -20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "c",
+     "at": [
+      -3.0,
+      -2.5
+     ],
+     "yaw_deg": 43,
+     "scale": 1.16,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "b",
+     "at": [
+      2.5,
+      -3.0
+     ],
+     "yaw_deg": 26,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mender_stool",
+     "v": "c",
+     "at": [
+      4.5,
+      -0.5
+     ],
+     "yaw_deg": 162,
+     "scale": 0.89,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "c",
+     "at": [
+      -5.5,
+      3.0
+     ],
+     "yaw_deg": 122,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "b",
+     "at": [
+      6.0,
+      5.0
+     ],
+     "yaw_deg": -121,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "c",
+     "at": [
+      -2.0,
+      0.0
+     ],
+     "yaw_deg": -65,
+     "scale": 1.12,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "c",
+     "at": [
+      3.0,
+      1.5
+     ],
+     "yaw_deg": -109,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "c",
+     "at": [
+      -6.5,
+      6.5
+     ],
+     "yaw_deg": 47,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "c",
+     "at": [
+      -0.5,
+      -5.0
+     ],
+     "yaw_deg": 16,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "balloon_landing": {
+   "story": "A patched balloon came down hard; the crew spread their nets and sewing to dry.",
+   "props": [
+    {
+     "kind": "balloon_basket_wreck",
+     "v": "a",
+     "at": [
+      0,
+      5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "a",
+     "at": [
+      -4.5,
+      -1.5
+     ],
+     "yaw_deg": -150,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "a",
+     "at": [
+      3.5,
+      -2.5
+     ],
+     "yaw_deg": 61,
+     "scale": 1.01,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_basket",
+     "v": "a",
+     "at": [
+      -1.5,
+      -3.5
+     ],
+     "yaw_deg": -63,
+     "scale": 1.06,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "*",
+     "at": [
+      4.5,
+      0.5
+     ],
+     "yaw_deg": -16,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "c",
+     "at": [
+      6.5,
+      -3.5
+     ],
+     "yaw_deg": 100,
+     "scale": 1.09,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "*",
+     "at": [
+      -3.0,
+      2.0
+     ],
+     "yaw_deg": -87,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "*",
+     "at": [
+      -7.0,
+      5.0
+     ],
+     "yaw_deg": 9,
+     "scale": 1.14,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "a",
+     "at": [
+      8.0,
+      4.0
+     ],
+     "yaw_deg": 78,
+     "scale": 0.97,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "balloon_graveyard": {
+   "story": "The old envelope sprawls downslope with a pine growing through the gondola.",
+   "props": [
+    {
+     "kind": "balloon_basket_wreck",
+     "v": "c",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 25,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "b",
+     "at": [
+      -3.5,
+      -0.5
+     ],
+     "yaw_deg": 163,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "c",
+     "at": [
+      3.0,
+      -1.5
+     ],
+     "yaw_deg": -28,
+     "scale": 1.11,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "b",
+     "at": [
+      -5.0,
+      -3.0
+     ],
+     "yaw_deg": -118,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "c",
+     "at": [
+      4.5,
+      1.5
+     ],
+     "yaw_deg": -157,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      -2.0,
+      -3.5
+     ],
+     "yaw_deg": 90,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "b",
+     "at": [
+      7.0,
+      3.5
+     ],
+     "yaw_deg": 128,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "b",
+     "at": [
+      -7.0,
+      4.5
+     ],
+     "yaw_deg": 66,
+     "scale": 1.06,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      1.0,
+      -4.5
+     ],
+     "yaw_deg": 27,
+     "scale": 1.02,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "tram_halt": {
+   "story": "A mining tram cabin set down on blocks, one ore bin chocked beside it.",
+   "props": [
+    {
+     "kind": "tram_car_parked",
+     "v": "a",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_trolley",
+     "v": "a",
+     "at": [
+      -4.5,
+      -1.5
+     ],
+     "yaw_deg": 116,
+     "scale": 1.16,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_trolley",
+     "v": "b",
+     "at": [
+      3.5,
+      -2.5
+     ],
+     "yaw_deg": -9,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "b",
+     "at": [
+      0,
+      -2.0
+     ],
+     "yaw_deg": 4,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "*",
+     "at": [
+      -2.5,
+      -4.5
+     ],
+     "yaw_deg": 69,
+     "scale": 1.07,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "*",
+     "at": [
+      6.5,
+      0.5
+     ],
+     "yaw_deg": 168,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "a",
+     "at": [
+      -7.0,
+      4.0
+     ],
+     "yaw_deg": -73,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "a",
+     "at": [
+      7.0,
+      3.5
+     ],
+     "yaw_deg": 57,
+     "scale": 0.89,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "a",
+     "at": [
+      8.5,
+      -2.5
+     ],
+     "yaw_deg": -13,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      -5.5,
+      1.5
+     ],
+     "yaw_deg": -130,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "tram_wreck": {
+   "story": "The tram sagged on its blocks; ore leaked out and brush took the corner.",
+   "props": [
+    {
+     "kind": "tram_car_parked",
+     "v": "c",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": -15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_trolley",
+     "v": "c",
+     "at": [
+      4.5,
+      -2.0
+     ],
+     "yaw_deg": 91,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "c",
+     "at": [
+      -3.5,
+      -2.0
+     ],
+     "yaw_deg": -86,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "b",
+     "at": [
+      1.0,
+      -4.5
+     ],
+     "yaw_deg": 126,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "c",
+     "at": [
+      -6.0,
+      1.5
+     ],
+     "yaw_deg": -17,
+     "scale": 1.04,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "c",
+     "at": [
+      7.5,
+      4.5
+     ],
+     "yaw_deg": 130,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "c",
+     "at": [
+      -8.0,
+      5.0
+     ],
+     "yaw_deg": 124,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "c",
+     "at": [
+      -2.0,
+      0.0
+     ],
+     "yaw_deg": -29,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "c",
+     "at": [
+      6.0,
+      -4.5
+     ],
+     "yaw_deg": 131,
+     "scale": 1.17,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "net_crew_corner": {
+   "story": "Menders' corner: a stool, a knot board, nets half folded, a bale of rope.",
+   "props": [
+    {
+     "kind": "mender_stool",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": -119,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "a",
+     "at": [
+      -3.0,
+      2.5
+     ],
+     "yaw_deg": -91,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "b",
+     "at": [
+      3.5,
+      3.0
+     ],
+     "yaw_deg": -5,
+     "scale": 1.06,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "a",
+     "at": [
+      2.5,
+      -3.0
+     ],
+     "yaw_deg": -81,
+     "scale": 0.88,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_basket",
+     "v": "b",
+     "at": [
+      -3.5,
+      -2.5
+     ],
+     "yaw_deg": -28,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "chart_post",
+     "v": "b",
+     "at": [
+      -1.0,
+      6.0
+     ],
+     "yaw_deg": 23,
+     "scale": 1.17,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "*",
+     "at": [
+      5.5,
+      -0.5
+     ],
+     "yaw_deg": 65,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "*",
+     "at": [
+      5.0,
+      6.5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "*",
+     "at": [
+      -6.0,
+      3.0
+     ],
+     "yaw_deg": -152,
+     "scale": 1.15,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "patchwork_rock": {
+   "story": "A flat rock used as a sewing table; the bolt of cloth and tins still there.",
+   "props": [
+    {
+     "kind": "patch_bolt",
+     "v": "b",
+     "at": [
+      0,
+      2.5
+     ],
+     "yaw_deg": 95,
+     "scale": 1.14,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mender_stool",
+     "v": "b",
+     "at": [
+      -3.0,
+      0.0
+     ],
+     "yaw_deg": 101,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "c",
+     "at": [
+      3.5,
+      1.0
+     ],
+     "yaw_deg": -34,
+     "scale": 0.91,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      -1.0,
+      -3.0
+     ],
+     "yaw_deg": 46,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "c",
+     "at": [
+      5.0,
+      -2.5
+     ],
+     "yaw_deg": -147,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "*",
+     "at": [
+      -4.5,
+      4.5
+     ],
+     "yaw_deg": -115,
+     "scale": 0.98,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "*",
+     "at": [
+      2.0,
+      5.0
+     ],
+     "yaw_deg": -152,
+     "scale": 0.88,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      -6.0,
+      -1.0
+     ],
+     "yaw_deg": -119,
+     "scale": 0.91,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "ore_spill": {
+   "story": "A bin tipped over and the day's ore trailing off downslope in the wind.",
+   "props": [
+    {
+     "kind": "ore_trolley",
+     "v": "c",
+     "at": [
+      0,
+      3.0
+     ],
+     "yaw_deg": 20,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "b",
+     "at": [
+      3.5,
+      -1.0
+     ],
+     "yaw_deg": -161,
+     "scale": 1.14,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "*",
+     "at": [
+      6.5,
+      -3.5
+     ],
+     "yaw_deg": 39,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      -2.5,
+      -3.0
+     ],
+     "yaw_deg": -84,
+     "scale": 0.98,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "c",
+     "at": [
+      9.0,
+      -1.0
+     ],
+     "yaw_deg": -46,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "*",
+     "at": [
+      -3.5,
+      5.5
+     ],
+     "yaw_deg": 119,
+     "scale": 1.18,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "c",
+     "at": [
+      -5.5,
+      0.5
+     ],
+     "yaw_deg": -12,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "a",
+     "at": [
+      4.0,
+      4.5
+     ],
+     "yaw_deg": -141,
+     "scale": 0.91,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "c",
+     "at": [
+      -1.0,
+      -5.5
+     ],
+     "yaw_deg": -54,
+     "scale": 0.96,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "pine_ledge": {
+   "story": "Relict pines and manzanita crowding a slickrock ledge, a cairn between them.",
+   "props": [
+    {
+     "kind": "pine_sapling",
+     "v": "b",
+     "at": [
+      0,
+      3.0
+     ],
+     "yaw_deg": 112,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "a",
+     "at": [
+      -3.5,
+      5.0
+     ],
+     "yaw_deg": -162,
+     "scale": 1.17,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "c",
+     "at": [
+      3.5,
+      6.0
+     ],
+     "yaw_deg": 10,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "a",
+     "at": [
+      -6.0,
+      1.0
+     ],
+     "yaw_deg": 15,
+     "scale": 0.89,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "b",
+     "at": [
+      6.5,
+      2.0
+     ],
+     "yaw_deg": 10,
+     "scale": 1.17,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "a",
+     "at": [
+      -2.0,
+      0.0
+     ],
+     "yaw_deg": 124,
+     "scale": 1.09,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      2.0,
+      -1.0
+     ],
+     "yaw_deg": -81,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "c",
+     "at": [
+      5.0,
+      5.0
+     ],
+     "yaw_deg": -113,
+     "scale": 1.11,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      0.5,
+      -3.5
+     ],
+     "yaw_deg": 11,
+     "scale": 1.11,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "b",
+     "at": [
+      -5.0,
+      -2.5
+     ],
+     "yaw_deg": -58,
+     "scale": 0.95,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "stair_marker": {
+   "story": "The hikers' numbered stones climb past a stump chart and a loose cairn.",
+   "props": [
+    {
+     "kind": "chart_post",
+     "v": "a",
+     "at": [
+      0,
+      4.0
+     ],
+     "yaw_deg": 106,
+     "scale": 1.18,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "a",
+     "at": [
+      -3.5,
+      -1.0
+     ],
+     "yaw_deg": 80,
+     "scale": 1.14,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "b",
+     "at": [
+      3.0,
+      -3.0
+     ],
+     "yaw_deg": 95,
+     "scale": 1.12,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      4.5,
+      1.0
+     ],
+     "yaw_deg": 108,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "c",
+     "at": [
+      -5.5,
+      2.5
+     ],
+     "yaw_deg": -93,
+     "scale": 1.04,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "*",
+     "at": [
+      -2.0,
+      4.5
+     ],
+     "yaw_deg": -49,
+     "scale": 0.89,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "*",
+     "at": [
+      5.5,
+      5.5
+     ],
+     "yaw_deg": -161,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_basket",
+     "v": "c",
+     "at": [
+      1.5,
+      -1.0
+     ],
+     "yaw_deg": -82,
+     "scale": 1.09,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "mooring_spares": {
+   "story": "Fleet spares near the mooring: a winch drum, spare line and a chocked basket.",
+   "props": [
+    {
+     "kind": "winch_drum",
+     "v": "a",
+     "at": [
+      0,
+      4.0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "b",
+     "at": [
+      -3.5,
+      -1.0
+     ],
+     "yaw_deg": 155,
+     "scale": 1.01,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_basket",
+     "v": "a",
+     "at": [
+      3.5,
+      -1.5
+     ],
+     "yaw_deg": 149,
+     "scale": 1.18,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "*",
+     "at": [
+      -1.0,
+      -4.0
+     ],
+     "yaw_deg": 155,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "a",
+     "at": [
+      5.5,
+      1.5
+     ],
+     "yaw_deg": -95,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "*",
+     "at": [
+      -5.5,
+      3.0
+     ],
+     "yaw_deg": -103,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "c",
+     "at": [
+      6.5,
+      5.0
+     ],
+     "yaw_deg": 42,
+     "scale": 1.15,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "*",
+     "at": [
+      -6.5,
+      6.0
+     ],
+     "yaw_deg": 116,
+     "scale": 1.02,
+     "tilt_deg": 0
+    }
+   ]
+  }
+ },
+ "spots": [
+  {
+   "id": "dummy",
+   "template": "pine_ledge",
+   "at": [
+    0,
+    0
+   ],
+   "yaw_deg": 0,
+   "near": "dummy"
+  }
+ ],
+ "litter": {
+  "kinds": [
+   {
+    "kind": "stone_scatter",
+    "weight": 3
+   },
+   {
+    "kind": "grass_tufts",
+    "weight": 3
+   },
+   {
+    "kind": "pine_sapling",
+    "weight": 1.5
+   },
+   {
+    "kind": "manzanita",
+    "weight": 1.5
+   },
+   {
+    "kind": "net_bundle",
+    "weight": 1
+   },
+   {
+    "kind": "patch_bolt",
+    "weight": 0.8
+   },
+   {
+    "kind": "stair_stones",
+    "weight": 0.8
+   },
+   {
+    "kind": "rope_basket",
+    "weight": 0.6
+   },
+   {
+    "kind": "mender_stool",
+    "weight": 0.4
+   }
+  ],
+  "spacing_m": 20,
+  "band_m": [
+   18,
+   60
+  ],
+  "seed": 5
+ }
+}
