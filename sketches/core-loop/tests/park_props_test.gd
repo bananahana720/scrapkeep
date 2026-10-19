@@ -9,7 +9,8 @@ extends SceneTree
 # check, so the pass is never empty, and a park without a file counts as skipped. Planted controls that must fail: an
 # instance on a line, one inside a keepout, one beside a home, a tall prop 20 m from a line.
 #
-# The pins hold each park's expansion fingerprint once a park has a file (PINS, empty until then).
+# Each park's vignette file pins its own expansion fingerprint in a top-level "pin" field, so the six park PRs never
+# edit a shared table here. A park file without a pin fails and prints the value to pin.
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -21,8 +22,6 @@ const FIXTURE_FILE := "res://tests/fixtures/park_props/park_dam.json"
 const FIXTURE_MAP := "park_dam"
 const MIN_KINDS := 12
 const SYNTHETIC_VIGNETTES := 60
-# Map id -> expansion fingerprint (ParkProps.fingerprint), pinned when a park's vignette file lands.
-const PINS := {}
 
 var _t := T.new("park_props_test")
 
@@ -40,8 +39,11 @@ func _run() -> void:
 		real += 1
 		var world := ParkProps.world_for(id)
 		var list := _check_park(id, path, MIN_KINDS, 2, world)
-		if PINS.has(id):
-			_t.eq("%s expansion matches its pin" % id, ParkProps.fingerprint(list), PINS[id])
+		var got := ParkProps.fingerprint(list)
+		var file: Dictionary = ParkProps.load_json(path)
+		print("park_props_test: %s fingerprint %d" % [id, got])
+		_t.check("%s pins its fingerprint" % id, file.has("pin"))
+		_t.eq("%s expansion matches its pin" % id, got, int(file.get("pin", -1)))
 	print("park_props_test: %d of %d parks have a vignette file; %d skipped" % [real, ParkProps.PARKS.size(), ParkProps.PARKS.size() - real])
 	_t.check("the park count adds up", real + (ParkProps.PARKS.size() - real) == ParkProps.PARKS.size())
 
