@@ -7,8 +7,8 @@
 # lives only in thin ancient_light seams set in charcoal grooves twice their width, and
 # the enamel is dull petrol with sandstone dust on top faces, under the section 11 cap.
 # Provenance: authored procedurally here from Blender primitives and bmesh operators;
-# no external assets. Look pass 2: base 4492; kits reactor 1476, hive 1272, mind
-# 1464 (targets 4000 to 6000 and 800 to 1500).
+# no external assets. Polished (#107): base 13164; kits reactor 3500, hive 4420, mind
+# 3976 (BASE_TRIS and KIT_TRIS below).
 # WM: the unchanged crown exterior is cut into ArmourSegment0..3; InnerL/InnerR
 # stay below it and CoreAssembly cages a 1 m HeartSurface. Base 4956 triangles.
 #
@@ -37,7 +37,8 @@ import polish  # noqa: E402
 from common import Part, Vector  # noqa: E402
 
 # Cast ancient castings: 4 cm chamfers on real corners, doubled curves, baked AO (POLISH.md).
-# Hex cells stay six-sided. The Mind's kit builds unpolished: the Mind is rebuilt elsewhere.
+# Hex cells stay six-sided. The Mind's kit (the clamp path's stage 5 and 6 Wardens) is polished
+# too; its claws, knuckles, rings and lens keep their own segment counts (see mind_extras).
 # No edge lightening and softer AO: dark quantised corners pushed enamel saturation past
 # the section 11 cap of 0.45 (hero_assets_test).
 polish.enable(detail=2, bevel=0.04, bevel_angle=46.0, edge=0.0, ao_strength=0.35)

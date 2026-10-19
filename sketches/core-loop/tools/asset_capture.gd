@@ -696,6 +696,9 @@ static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 	for key in ["mode", "class", "spawn", "call", "seed", "size", "freeze_specs", "hide", "anchor_offset", "aabb", "isolate"]:
 		if not _close(a.get(key), b.get(key)):
 			errors.append("%s differs: %s vs %s" % [key, a.get(key), b.get(key)])
+	# --glb placements: a document from before the option has no key and pairs with an empty list.
+	if not _close(a.get("glb", []), b.get("glb", [])):
+		errors.append("glb differs: %s vs %s" % [a.get("glb", []), b.get("glb", [])])
 	var fa := {}
 	var fb := {}
 	for f in a.get("frames", []):
