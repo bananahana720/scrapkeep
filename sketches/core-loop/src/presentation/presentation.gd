@@ -20,6 +20,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
+const AmbientLife := preload("res://src/presentation/ambient_life.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -63,6 +64,7 @@ var hero_assets
 var ceremony
 var set_dressing: Node3D
 var park_props: Node3D
+var ambient_life: Node3D
 var title_stage: Node
 var ui_hidden := false
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
@@ -318,7 +320,14 @@ func _sync_dressing() -> void:
 	park_props = ParkProps.new()
 	add_child(park_props)
 	park_props.setup(ctx)
+	if is_instance_valid(ambient_life):
+		ambient_life.free()
+	ambient_life = null
 	var spec: Dictionary = GraphicsPreset.PRESETS[GraphicsPreset.current]
+	if spec.get("set_dressing", false):
+		ambient_life = AmbientLife.new()
+		add_child(ambient_life)
+		ambient_life.setup(ctx)
 	if spec.get("set_dressing", false) or spec.get("air_motes", false) or spec.get("air_streaks", false):
 		set_dressing = SetDressing.new()
 		add_child(set_dressing)

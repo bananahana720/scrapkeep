@@ -7,17 +7,20 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
+import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
 
 // npm run sketch:export: a Linux x86_64 release of sketches/core-loop under
 // artifacts/local/core-loop-export/<run>/, the ACE stems beside it in music_ace/, booted
 // headless for 300 frames. The stems are not in the pack, so the sequencer finds them beside
 // the executable. They are gitignored and cannot be regenerated, so they are copied from
 // --stems-from=<music_ace folder> (default: the main checkout's sketches/core-loop/assets/music_ace).
+// --self-play exports the same pack with tools/ kept in (package name ends -selfplay), so the
+// launch flag --self-play can load res://tools/self_play.gd; the default pack leaves tools/ out.
 // --win-proof then exports the "Linux x64 proof" pack (the shipped recipe plus tools/) into the
 // sibling <run>-win-proof/ and plays three skipper bot runs on it, each from a fresh user://, with
 // the editor binary: seed 1 as rolled (Rivet), seed 11 pinned to the remembered cannon, then seed 1
@@ -102,17 +105,19 @@ export function parseArgs(argv) {
   let stemsFrom = null;
   let winProof = false;
   let bossSmokeOnly = false;
+  let selfPlay = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--win-proof") winProof = true;
     else if (arg === "--boss-smoke-only") bossSmokeOnly = true;
+    else if (arg === "--self-play") selfPlay = true;
     else if (arg.startsWith("--stems-from="))
       stemsFrom = arg.slice("--stems-from=".length);
     else if (arg === "--stems-from" && i + 1 < argv.length)
       stemsFrom = argv[++i];
     else throw new Error("unknown argument: " + arg);
   }
-  return { stemsFrom, winProof, bossSmokeOnly };
+  return { stemsFrom, winProof, bossSmokeOnly, selfPlay };
 }
 
 export function defaultStemsFrom(gitCommonDir) {
@@ -248,6 +253,7 @@ export function buildStamp({
   stemsFrom,
   winProof,
   bossSmoke,
+  selfPlay = false,
 }) {
   return (
     [
@@ -256,6 +262,7 @@ export function buildStamp({
       "built: " + stamp,
       "godot: " + godot,
       "stems: " + stems + " from " + stemsFrom,
+      ...(selfPlay ? ["self-play pack (tools/ included)"] : []),
       ...(bossSmoke ? [bossSmoke] : []),
       winProof ?? "win proof: not run (pass --win-proof)",
     ].join("\n") + "\n"
@@ -376,8 +383,29 @@ export function nextStepLine() {
   return "next: npm run sketch:appimage packs and installs the launcher; then open Scrapkeep from the app menu (or run ~/.local/share/scrapkeep/Scrapkeep.AppImage) and check its window groups under the one icon.";
 }
 
-export function packageName(sha7, dirty = false) {
-  return "scrapkeep-core-loop-" + sha7 + (dirty ? "-dirty" : "");
+export function packageName(sha7, dirty = false, selfPlay = false) {
+  return "scrapkeep-core-loop-" + sha7 + (dirty ? "-dirty" : "") + (selfPlay ? "-selfplay" : "");
+}
+
+// --self-play: the shipped preset with tools/ kept in, so the launch flag --self-play finds
+// res://tools/self_play.gd (and the bot driver it preloads). Only the exclude_filter line of the
+// shipped preset changes; the default pack keeps tools/* out.
+export function selfPlayPresetText(presetText) {
+  const lines = presetText.split("\n");
+  const start = lines.findIndex((line) => line === `name="${preset}"`);
+  if (start < 0) throw new Error(`preset "${preset}" missing`);
+  for (let i = start + 1; i < lines.length && !lines[i].startsWith("["); i++) {
+    if (!lines[i].startsWith("exclude_filter=")) continue;
+    const kept = lines[i]
+      .slice("exclude_filter=".length)
+      .replace(/^"|"$/g, "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item && item !== "tools/*");
+    lines[i] = `exclude_filter="${kept.join(", ")}"`;
+    return lines.join("\n");
+  }
+  throw new Error(`preset "${preset}" has no exclude_filter`);
 }
 
 // The bot_run.gd arguments after "--" for one proof; the local and cloud exports both build from this,
@@ -398,10 +426,10 @@ export function winProofLine(row, pack, proof = WIN_PROOFS[0]) {
   return `${proof.label}: ${row.outcome} at stage ${row.stage_reached}, ${row.ticks} ticks, ${row.wall_seconds} s wall, policy ${WIN_POLICY} seed ${proof.seed}${pilot}${table}, pack ${pack}`;
 }
 
-export function tarArgs(outDir, sha7, dirty = false) {
+export function tarArgs(outDir, sha7, dirty = false, selfPlay = false) {
   const parent = path.dirname(outDir);
   const stamp = path.basename(outDir);
-  const name = packageName(sha7, dirty);
+  const name = packageName(sha7, dirty, selfPlay);
   return [
     "-czf",
     path.join(parent, name + ".tar.gz"),
@@ -500,6 +528,22 @@ async function main() {
     }
   }
 
+  // The Oggs are gitignored, so a folder can hold a stale mix under the right file name. Every stem the
+  // tracked manifests name must match STEMS.sha256, and each rejected file is named.
+  const named = tracks.flatMap((track) =>
+    Object.values(manifests[track].clips ?? {}).flatMap((clip) =>
+      Object.values(clip.files ?? {}).map((f) => `${track}/${f}`),
+    ),
+  );
+  const rejected = stemHashMismatches(path.join(stemRoot, STEM_HASHES), stemsFrom, named);
+  if (rejected === null)
+    fail(`no ${STEM_HASHES} in ${stemRoot}; the packed stems cannot be compared to what was cut (scripts/music/mx stem-hashes writes it)`);
+  if (rejected.length > 0)
+    fail(
+      `${rejected.length} stem file(s) in ${stemsFrom} do not match ${STEM_HASHES}:\n` +
+        rejected.map((r) => `  ${r.file}: ${r.why}`).join("\n"),
+    );
+
   // Raw data files the game opens must reach the pack (RELEASE-PARK); see export-include-check.mjs.
   const presetText = await readFile(path.join(project, "export_presets.cfg"), "utf8");
   for (const name of [preset, proofPreset]) {
@@ -531,7 +575,25 @@ async function main() {
   const outDir = path.join(root, "artifacts/local/core-loop-export", stamp);
   await mkdir(outDir, { recursive: true });
   const exe = path.join(outDir, "core-loop.x86_64");
-  const exported = run(binary, ["--headless", "--path", project, "--export-release", preset, exe]);
+  // --self-play swaps the shipped preset's exclude_filter for the export alone and restores the
+  // file at once, so the checkout is clean for the dirty check below. The restore also runs on any
+  // exit (fail() included) and on SIGINT/SIGTERM, so an interrupted export leaves the file as it was.
+  const presetPath = path.join(project, "export_presets.cfg");
+  const restorePreset = () => writeFileSync(presetPath, presetText);
+  let exported;
+  try {
+    if (args.selfPlay) {
+      process.once("exit", restorePreset);
+      for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => process.exit(128));
+      await writeFile(presetPath, selfPlayPresetText(presetText));
+    }
+    exported = run(binary, ["--headless", "--path", project, "--export-release", preset, exe]);
+  } finally {
+    if (args.selfPlay) {
+      restorePreset();
+      process.removeListener("exit", restorePreset);
+    }
+  }
   const exportText = exported.stdout + exported.stderr;
   if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(exe))
     fail("export failed\n" + exportText.slice(-2000));
@@ -587,17 +649,18 @@ async function main() {
       stemsFrom,
       winProof: proofLine,
       bossSmoke: smoke.lines.join("\n"),
+      selfPlay: args.selfPlay,
     }),
   );
   await writeFile(
     path.join(outDir, "HOW-TO-RUN.txt"),
     howToRun({ sha7: version }),
   );
-  const tar = run("tar", tarArgs(outDir, sha7, dirty));
+  const tar = run("tar", tarArgs(outDir, sha7, dirty, args.selfPlay));
   if (tar.status !== 0) fail("tar failed\n" + tar.stderr);
   const tarball = path.join(
     path.dirname(outDir),
-    packageName(sha7, dirty) + ".tar.gz",
+    packageName(sha7, dirty, args.selfPlay) + ".tar.gz",
   );
 
   const size = (await stat(exe)).size;
@@ -615,6 +678,7 @@ async function main() {
   console.log("sidecar stems: " + stemCount + " in " + path.join(outDir, "music_ace"));
   console.log("boot tail:\n" + bootText.trim().split("\n").slice(-6).join("\n"));
   if (proofLine) console.log(proofLine);
+  if (args.selfPlay) console.log("self-play: pack carries tools/ (launch with -- --self-play); not the shipped pack");
   console.log(nextStepLine());
 }
 
