@@ -1,10 +1,13 @@
 class_name ChallengeDials
 extends RefCounted
 # Challenge lane C3a: the named difficulty dials (Andrew's 19 Oct ruling: Souls-like hard but
-# fair, tuned against measured skill-band win rates). Plumbing only: with every dial at its
-# default the game is byte-identical (tests/run_tier_test.gd pins that). Later units and the
-# sweep harness move numbers through set_overrides() or `--tune=key=value,key=value` on the
-# command line, with no code edits.
+# fair, tuned against measured skill-band win rates). Plumbing first: a dial at its default is
+# the identity unless a per-world PR has set a tuned default below, each with a note citing its
+# band table. The sweep harness moves numbers through set_overrides() or
+# `--tune=key=value,key=value` on the command line, with no code edits. An override or tune
+# REPLACES that key's default (it does not multiply it), so `--tune=brindle.period_by_phase=1/1/1/1`
+# is the raw identity and the sweeps stay meaningful; the other keys of a boss (`_mult`) still
+# multiply on top of the tuned list.
 #
 # Allowed levers: boss damage, attack patterns, combos, punish windows, extra phases, mob
 # aggression, elite affixes. Frozen, and not dials: stagger and posture timing, the attacker
@@ -29,8 +32,12 @@ const ONES6 := [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 const DEFAULTS := {
 	# Per boss: hazard damage to the pilot, attack cadence, warn seconds, punish windows,
 	# and the number of extra follow-up attacks queued right after an attack.
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
-	"brindle.period_mult": 1.0, "brindle.period_by_phase": [1.0, 1.0, 1.0, 1.0],
+	# Brindle (world 1 boss) is tuned: phases Requisition, Furnace, Scuttle, chase. Band table: sweep
+	# tbr-k, 12 seeds, scratch/challenge-tune-tbr-k 2a45b9c2: Novice 0%, Learner a5 100%, Expert 100%,
+	# Top 100%, no Learner death under 45 s, largest hit 30% (brindle_slag). Learner a1 100% is reported,
+	# not graded (NEEDS 6267672032).
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.5, 2.0, 1.3, 1.0],
+	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.5, 1.0, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	"waking.damage_mult": 1.0, "waking.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.period_mult": 1.0, "waking.period_by_phase": [1.0, 1.0, 1.0, 1.0],
