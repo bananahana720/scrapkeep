@@ -15,13 +15,16 @@ extends RefCounted
 # posture or stagger timing (frozen).
 #
 # Values are floats; keys ending in `_by_phase` are arrays of floats (`a/b/c/d` on the command
-# line). Static API, no autoload.
+# line). Keys ending in `_by_stage` are the same with six entries, one per stage (`a/b/c/d/e/f`),
+# so a world is tuned apart from the others (world = ceil(stage / 2)). Static API, no autoload.
 
 # No dial may shorten a boss tell below this (seconds).
 const TELL_FLOOR := 0.6
 # The warning gap: no two warnings start closer than this (waking_attacks.gd GAP). A combo
 # follow-up and a scaled period never come sooner than this after the last attack.
 const WARN_GAP := 0.2
+
+const ONES6 := [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 const DEFAULTS := {
 	# Per boss: hazard damage to the pilot, attack cadence, warn seconds, punish windows,
@@ -37,10 +40,12 @@ const DEFAULTS := {
 	"mind.tell_mult": 1.0, "mind.punish_mult": 1.0, "mind.combo": 0.0,
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
+	"warden.pulse_damage_by_stage": ONES6, "warden.pulse_cycle_by_stage": ONES6, "warden.slag_damage_by_stage": ONES6,
 	# Mobs: enemy hits (after director.damage_scale(); Warden and vault sources excluded),
 	# the director's crowd cap and spawn interval, and the elite repeat chance. The attack_budget
 	# caps and Director.HARD_CAP stay hard ceilings.
 	"mobs.damage_mult": 1.0, "mobs.pack_scale_mult": 1.0, "mobs.interval_scale_mult": 1.0, "mobs.elite_rate_mult": 1.0,
+	"mobs.damage_by_stage": ONES6, "mobs.pack_scale_by_stage": ONES6, "mobs.interval_scale_by_stage": ONES6, "mobs.elite_rate_by_stage": ONES6,
 	# NOT ALLOWED LEVERS YET. Plumbed only: a ruling is needed before any non-default value ships.
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,
 }
@@ -127,7 +132,7 @@ static func parse(spec: String) -> Dictionary:
 			continue
 		var raw := pair.substr(eq + 1).strip_edges()
 		if not _valid(k, raw):
-			_reject(k, "'%s' is not a non-negative number" % raw + (" list a/b/c/d" if k.ends_with("_by_phase") else ""))
+			_reject(k, "'%s' is not a non-negative number" % raw + (" list a/b/c/d" if k.ends_with("_by_phase") else " list a/b/c/d/e/f" if k.ends_with("_by_stage") else ""))
 			continue
 		out[k] = _coerce(k, raw)
 	return out
@@ -147,12 +152,16 @@ static func _unruled() -> bool:
 	return "--tune-unruled" in OS.get_cmdline_args() or "--tune-unruled" in OS.get_cmdline_user_args()
 
 
+static func _is_list(key: String) -> bool:
+	return key.ends_with("_by_phase") or key.ends_with("_by_stage")
+
+
 static func _number(raw: String) -> bool:
 	return raw.is_valid_float() and float(raw) >= 0.0
 
 
 static func _valid(key: String, raw: String) -> bool:
-	if key.ends_with("_by_phase"):
+	if _is_list(key):
 		var parts := raw.split("/", true)
 		for part in parts:
 			if not _number(part):
@@ -166,7 +175,7 @@ static func _reject(key: String, why: String) -> void:
 
 
 static func _coerce(key: String, raw: Variant) -> Variant:
-	if key.ends_with("_by_phase"):
+	if _is_list(key):
 		var out := []
 		if raw is String:
 			for part in (raw as String).split("/", false):
@@ -235,3 +244,15 @@ static func combo_step(boss: String, left: int) -> int:
 static func by_phase(key: String, phase: int) -> float:
 	var a: Array = value(key)
 	return float(a[clampi(phase - 1, 0, a.size() - 1)])
+
+
+# One entry of a six-entry per-stage list (stage counts from 1); 1.0 for a stage outside it.
+static func by_stage(key: String, stage: int) -> float:
+	var a: Array = value(key)
+	return float(a[stage - 1]) if stage >= 1 and stage <= a.size() else 1.0
+
+
+# A wire point's whole multiplier: the global `<base>_mult` times the stage's `<base>_by_stage`.
+# Identity at defaults.
+static func stage_mult(base_key: String, stage: int) -> float:
+	return f(base_key + "_mult") * by_stage(base_key + "_by_stage", stage)

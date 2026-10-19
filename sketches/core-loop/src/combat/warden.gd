@@ -362,7 +362,7 @@ func _step_slag(delta: float) -> void:
 	_slag_burn += SLAG_DAMAGE * delta
 	if _slag_burn >= SLAG_DAMAGE:
 		_slag_burn -= SLAG_DAMAGE
-		hit_player.emit(SLAG_DAMAGE * ChallengeDials.f("warden.slag_damage_mult"), Vector3.ZERO)
+		hit_player.emit(SLAG_DAMAGE * ChallengeDials.stage_mult("warden.slag_damage", stage), Vector3.ZERO)
 
 
 # True where a lane's footprint lies, by the lane node's own hit test, whether or not it
@@ -664,10 +664,10 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= pulse_cycle() - pulse_telegraph() and _charge_allowed():
+	if _pulse_clock >= pulse_cycle(stage) - pulse_telegraph(stage) and _charge_allowed():
 		_charging = true
 		_charge_time = 0.0
-		_charge_len = pulse_telegraph()
+		_charge_len = pulse_telegraph(stage)
 		_flaring = lined_hardpoint()
 		_flare_picked = _flaring >= 0
 		_commit_ring(Threat.Type.INSTANT, global_position, pulse_radius, LIFT_REACH_UP, Palette.SAND)
@@ -679,13 +679,14 @@ func _step_pulse(delta: float, inside: bool) -> void:
 
 
 # Challenge dial warden.pulse_cycle_mult: the pulse cycle never drops under the boss tell floor,
-# and the telegraph is PULSE_TELEGRAPH, never longer than the cycle.
-static func pulse_cycle() -> float:
-	return ChallengeDials.floored(PULSE_CYCLE, ChallengeDials.f("warden.pulse_cycle_mult"))
+# and the telegraph is PULSE_TELEGRAPH, never longer than the cycle. at_stage is the Warden's stage
+# for warden.pulse_cycle_by_stage; the default 0 (a caller with no Warden) reads that list as 1.0.
+static func pulse_cycle(at_stage := 0) -> float:
+	return ChallengeDials.floored(PULSE_CYCLE, ChallengeDials.stage_mult("warden.pulse_cycle", at_stage))
 
 
-static func pulse_telegraph() -> float:
-	return minf(PULSE_TELEGRAPH, pulse_cycle())
+static func pulse_telegraph(at_stage := 0) -> float:
+	return minf(PULSE_TELEGRAPH, pulse_cycle(at_stage))
 
 
 func _pulse() -> void:
@@ -695,7 +696,7 @@ func _pulse() -> void:
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
-		hit_player.emit(PULSE_DAMAGE * ChallengeDials.f("warden.pulse_damage_mult"), Vector3.ZERO)
+		hit_player.emit(PULSE_DAMAGE * ChallengeDials.stage_mult("warden.pulse_damage", stage), Vector3.ZERO)
 	if _flaring >= 0:
 		_shrug_left = shrug_delay
 		if shrug_delay <= 0.0:
