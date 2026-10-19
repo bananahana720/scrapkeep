@@ -1,4 +1,4 @@
-# smoke: bots timeout=1200s (nine park bot runs in child processes at once, about 135 s each alone)
+# smoke: bots timeout=1800s (fifteen park bot runs in child processes, eight at a time, about 135 s each alone)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -10,12 +10,12 @@ const T := preload("res://tests/support/t.gd")
 # of ram reach, so the fight is the harpoon line's bolts (warden_reactor.gd FlumePosture). The arms are
 # tools/posture_sweep.gd's (small: skipper from mass 0; grown: skipper from 540; camper: shoots from
 # range), each a tools/bot_run.gd child on --table=park entering stage 2 directly (--from-stage=2,
-# --stages=2), seeds 0, 1 and 2, the seed's own pilot. A fight is warden_broken_s less
+# --stages=2), seeds 0 to 4, the seed's own pilot. A fight is warden_broken_s less
 # warden_engaged_s (engage to break); a run that never breaks counts as the CAP. Bands: grown median
 # 25 to 45 s, small median at least twice grown's, the camper never breaks it; the live medians stay
 # within 10 percent of the pins below.
 
-const SEEDS := [0, 1, 2]
+const SEEDS := [0, 1, 2, 3, 4]
 const ARMS := ["small", "grown", "camper"]
 const CAP := 120.0
 # The approach to the Warden takes about 90 s of stage time; this leaves the CAP after it.
@@ -35,8 +35,13 @@ const WALL_S := 1100.0
 # merges the card's base 6d7c7a0c lacked (KD1-DRESS, PARK-SEAT, DOMES-STOP, PARK-TILE). Two identical runs:
 # small [71.63, 72.22, 97.91] median 72.2, grown [23.9, 25.57, 33.97] median 25.6, ratio 2.82, campers
 # never broke. Every design band holds; only the pin moved.
-const EXPECT_SMALL_S := 72.2
-const EXPECT_GROWN_S := 25.6
+# 2026-10-18 (Gate lane, stage/alpha-w17 bca19617 with the #126 flume pass): widened to seeds 0 to 4 and
+# re-pinned from those five, per the coordinator's ruling on #126 (re-pin stage-wide from at least 5 seeds). One
+# direct run: small [78.76, 76.32, 85.75, 63.0, 49.01] median 76.3, grown [25.83, 28.29, 28.36, 28.88, 19.39]
+# median 28.3, ratio 2.70, campers never broke (pilots pylon_engineer, runner_gunner, demolitions_caster, tarn,
+# tally). Every design band holds; the grown pin moved 25.6 -> 28.3 and the small pin 72.2 -> 76.3.
+const EXPECT_SMALL_S := 76.3
+const EXPECT_GROWN_S := 28.3
 const TOLERANCE := 0.10
 
 
@@ -52,7 +57,8 @@ func _initialize() -> void:
 				"--seeds=%d" % run_seed, "--table=park", "--from-stage=2", "--stages=2", "--ticks=%d" % TICKS,
 				"--start-mass=%d" % int(row["mass"])]
 			jobs.append({"script": "res://tools/bot_run.gd", "args": args})
-	var results := ChildRuns.run(jobs, WALL_S)
+	# Eight at a time: fifteen children at once overrun a 4-core box (LESSONS 39).
+	var results := ChildRuns.run(jobs, WALL_S, 8)
 	var fights := {}
 	var broke := {}
 	var pilots := {}
