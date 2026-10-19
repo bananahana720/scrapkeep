@@ -1,29 +1,18 @@
 # park_islands traversal
 
-## Decoration-only pass, head vs base, 2026-10-19
+## Decoration-only pass, head vs base, 2026-10-19 (revised after review)
 
-The pass turned thirteen greybox rows into `scatter` rows or decoration-only liners (see `stages/5-park_islands.md`). Method: `tools/traversal_line.gd --table=park --stage=5 --seeds=1,2,3,4,5,6,7,8`, one pilot at a time, headless, `--fixed-fps 90`, `nice`; pilots Sable, Rivet, Kest, Tarn, Tally, Cannon, the floor line (`--floor --pilot=rivet --ref=rivet`) and Rivet's `skill_line.json`. Head: the islands-unit commit on `claude/eloquent-rubin-83eps3-islands`. Base: `/home/user/wt-base` at `1a7a7299`, whose park_islands.json and assets/park/park_islands equal the head's parent's. Receipts (not committed): `artifacts/local/isles-trav/`.
+The pass draws six rows as decoration-only liners and sets three to `scatter` (see `stages/5-park_islands.md`); `slickrock_run`, `fan_band`, `net_carve` and `isle_apron` were reverted to their greybox recipes after review because a scatter row's sensor stands on the raw ground and scatter would have opened the `twin_fins`, `west_wing` and `lens_rocks` event footprints. Method: `tools/traversal_line.gd --table=park --stage=5 --seeds=1,2,3,4,5,6,7,8 --child-timeout=900`, headless, `--fixed-fps 90`, `nice`, for Rivet, Tally and Sable (Kest, Tarn, Cannon, the floor line and the skill line were not re-run for this revision). Head: the revision commit on `claude/eloquent-rubin-83eps3-islands`; base: `137db801`, the true parent (park_flume and park_pit liners, no islands change), in a detached worktree. One pilot at a time, head and base run side by side (two Godot children on a shared 4-vCPU box). Receipts (not committed): `/tmp` batch files, summarised here.
 
-Seeds the 120 s child cap killed (exit 137, load) were rerun: head Rivet seeds 3, 7, 8 and base Sable seed 6 completed clean; Sable seed 1 was rerun at `--child-timeout=400` on both trees and stalls identically on both (see below).
-
-| Line | Head reached | Head dead stops | Head time_to_warden median (range) | Base reached | Base dead stops | Base time_to_warden median (range) |
+| Line | Head reached | Head dead stops (positions) | Head time_to_warden median (range) | Base reached | Base dead stops (positions) | Base time_to_warden median (range) |
 | --- | --- | --- | --- | --- | --- | --- |
-| sable | 7 of 8 (seed 1 stalls) | 0 on the 7 | 60.43 s (57.6 to 66.5) | 7 of 8 (seed 1 stalls at 400 s) | 2 (seeds 1, 3) | 60.2 s (59.1 to 74.0) |
-| rivet | 8 of 8 | 4 (seeds 2, 5, first batch) | 89.31 s (88.7 to 96.4) | 8 of 8 | 0 | 89.03 s (88.7 to 91.5) |
-| kest | 8 of 8 | 0 | 76.25 s (73.4 to 77.0) | 8 of 8 | 0 | 74.03 s (73.1 to 76.4) |
-| tarn | 8 of 8 | 0 | 81.36 s (80.4 to 84.9) | 8 of 8 | 1 (seed 5) | 82.11 s (75.1 to 84.0) |
-| tally | 8 of 8 | 5 (seeds 1, 4, 5, 6) | 72.92 s (69.7 to 88.7) | 8 of 8 | 4 (seeds 3, 4, 6) | 69.73 s (68.1 to 76.0) |
-| cannon | 8 of 8 | 0 | 80.45 s (80.3 to 80.8) | 8 of 8 | 0 | 80.38 s (80.1 to 81.6) |
-| floor | 8 of 8 | 0 | 82.42 s (82.0 to 84.1) | 8 of 8 | 1 (seed 4) | 83.2 s (82.2 to 90.8) |
-| rivet skill line | 8 of 8 | 2 (seed 6) | 87.44 s (77.4 to 94.3) | 8 of 8 | 2 (seed 6) | 87.17 s (78.2 to 94.3) |
+| rivet | 6 of 8 (seeds 6, 7 stall) | seeds 1, 2 at (157, -570), 13 to 17 s; seed 6 at (155, -562); seed 7 at (147, -513) repeatedly | 89.23 s (88.9 to 95.8) | 6 of 8 (seeds 1, 5 stall) | seed 1 at (155, -562); seed 5 at (147 to 157, -529) repeatedly; seed 7 at (156.5, -562) | 88.91 s (88.2 to 107.7) |
+| tally | 8 of 8 | seed 3 at (0, -298); seed 4 at (159, -562); seed 6 at (98.5, -618) | 70.41 s (69.5 to 75.8) | 7 of 8 (seed 6 stalls) | seed 3 at (0, -298); seed 4 at (159, -562); seed 6 at (98.5, -618) and (156, -562); seed 8 at (157, -570) | 70.67 s (68.1 to 77.2) |
+| sable | 7 of 8 (seed 1 stalls) | seed 1 around (-188 to -167, -561), 120 stops; seed 3 at (270, -125) | 59.71 s (57.5 to 67.4) | 7 of 8 (seed 1 stalls) | the same seed 1 and seed 3 stops; seed 8 at (-109, -690) | 59.96 s (59.1 to 67.4) |
 
-Reading. Every line reaches the Warden on the same seeds on both trees and the medians agree within about 2 s. Dead stops sit at places the base also stops:
-- Rivet head seeds 2 and 5 stopped at (157, -570), 13 to 17 s in (4 stops); a rerun of the same two seeds on the head was clean (88.7 s, 0 stops) and base Tally stops at (159, -562), 14.7 s, on seed 4, so this is an intermittent stop at a known weak spot, not a new one. Head Tally stops at the same place on three seeds against one on base; Tally's stops at (98.5, -618) are identical on both.
-- Sable seed 1 stalls (101 dead stops around (-175 to -196, -561)) on both trees when given the 400 s cap; the earlier batch pass on base reached under load, so the seed is wall-clock sensitive.
-- Runs are not bit-repeatable here (the same seed gave different stops across batches), so "unchanged" means within this noise, not identical rows. No collider was added or removed, because all thirteen rows were stamped (the stamp replaced the greybox box) and the liners carry no `-col`; scatter pieces are visual only.
-- Band verdicts per line were not re-judged here; the 2026-10-13 miss list (Sable time, Tally length) stands as recorded below.
+Reading. Tally and Sable repeat the base's dead stops to the decimetre (the same seeds, positions and times), so the pass changed nothing they feel. Rivet is not repeatable run to run on either tree: the stop at (157, -570) hit head seeds 1 and 2 and base's Tally seed 8 in this batch, so I reran Rivet seeds 1, 2, 5 and 7 on both trees. Rerun: base reached all four with no stops (89.7, 88.7, 89.1, 89.1 s); head reached seeds 2, 5 and 7 clean (88.7, 89.1, 89.1 s) and seed 1 stalled once at (156.6, -562) at 14.6 s, the other known weak spot at the same place as base's first-batch seed 1 stop (155, -562) and Tally's (159, -562). So the stop at (157, -570) recurred on head in the first batch (2 seeds against 0 on base's Rivet) and did not recur in the rerun; the neighbouring (155 to 160, -562 to -570) pocket also stops base runs (Rivet seeds 1 and 7, Tally seeds 4, 6, 8). The measure cannot separate a head-only effect from this run-to-run noise: the pass moves no collider and no ride sensor of consequence (plateau-row sensors up by at most 1 cm), but this is a bot trace, not a proof.
 
-Limits: automated bot lines only, no feel and no human play; eight seeds are fewer independent traces than eight because runs repeat closely; machine load from other lanes varied the wall-clock-sensitive seeds.
+Limits: automated bot lines only, no feel and no human play; Kest, Tarn, Cannon, the floor line and Rivet's skill line were measured on the earlier unrevised candidate (all within about 2 s of base, 8 of 8) and not re-run here; two Godot children shared the box, so wall-clock-sensitive seeds vary.
 
 ## Round 5 measurement, 2026-10-13
 

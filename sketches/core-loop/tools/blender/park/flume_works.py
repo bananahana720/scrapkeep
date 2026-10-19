@@ -1272,6 +1272,8 @@ COPING = "d9ccaa"
 BASE_OFF = 0.05                # the liner surface rides this far above the baked ground
 EDGE_OFF = 0.02                # and eases to this at its outer edge, where it meets untouched ground
 HI_LIFT = 0.02                 # never lower than this above either triangulation of a ground cell
+FLUSH_LANE = 0.12             # flush_lane liners: the most any drawn vertex inside the lane stands above the ground
+FLUSH_RIM_GAP = 0.5           # and rim rock bodies start this far outside the lane edge
 FEATURE_MAX = 0.25             # stones, cobbles, lips and joints stay under this above the ground
 MARGIN = 3.0                   # the liner runs this far past the row's rims
 SLEEPER_PITCH = 2.0            # rails style: a tie every 2 m, 0.5 m wide
@@ -1312,13 +1314,15 @@ PIT_LINER_IDS = list(PIT_LINERS)
 LINERS.update(PIT_LINERS)
 # The islands' decoration-only pass (park_islands bake). fin_chute (the twin_fins collapse drops its ground 8 m) and cloud_wash_west
 # (the west_wing impact swaps in a crater) are not here: a baked-ground liner would float over the swapped ground.
+# "flush_lane": nothing drawn inside |x| < the row's half-width stands more than FLUSH_LANE (0.12 m) above the ground, and rim rocks
+# start at hw + FLUSH_RIM_GAP, because a ride lane may carry no visible bump that is not solid. liner_check fails the build otherwise.
 ISLES_LINERS = {
-    "liner_run_turn_wash": {"park": "park_islands", "style": "sandstone", "at": (-60.0, -516.0), "size": (60.0, 4.0, 40.0), "yaw": 0.0},
-    "liner_lookout_stair": {"park": "park_islands", "style": "sandstone", "at": (-100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0},
-    "liner_east_ribs": {"park": "park_islands", "style": "sandstone", "at": (100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0},
-    "liner_net_post_run": {"park": "park_islands", "style": "haul", "at": (0.0, 200.0), "size": (160.0, 0.01, 120.0), "yaw": 0.0},
-    "liner_cloud_wash_east": {"park": "park_islands", "style": "sandstone", "at": (210.0, 260.0), "size": (300.0, 0.01, 30.0), "yaw": 0.0},
-    "liner_ore_chute": {"park": "park_islands", "style": "rails", "at": (110.0, 0.0), "size": (150.0, 0.01, 16.0), "yaw": 0.0},
+    "liner_run_turn_wash": {"park": "park_islands", "style": "sandstone", "at": (-60.0, -516.0), "size": (60.0, 4.0, 40.0), "yaw": 0.0, "flush_lane": True},
+    "liner_lookout_stair": {"park": "park_islands", "style": "haul", "at": (-100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0, "flush_lane": True},
+    "liner_east_ribs": {"park": "park_islands", "style": "haul", "at": (100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0, "flush_lane": True},
+    "liner_net_post_run": {"park": "park_islands", "style": "haul", "at": (0.0, 200.0), "size": (160.0, 0.01, 120.0), "yaw": 0.0, "flush_lane": True},
+    "liner_cloud_wash_east": {"park": "park_islands", "style": "sandstone", "at": (210.0, 260.0), "size": (300.0, 0.01, 30.0), "yaw": 0.0, "flush_lane": True},
+    "liner_ore_chute": {"park": "park_islands", "style": "rails", "at": (110.0, 0.0), "size": (150.0, 0.01, 16.0), "yaw": 0.0, "flush_lane": True},
 }
 ISLES_LINER_IDS = list(ISLES_LINERS)
 LINERS.update(ISLES_LINERS)
@@ -1327,7 +1331,7 @@ LINER_NOTES = {
     "concrete": "board-formed concrete liner panels with dark form joints and a worn cream coping strip at the rims",
     "pond": "concrete rim ring and a stone pitched lining around a flush floor",
     "canal": "earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip",
-    "rails": "a low light-rail bed: two rails 0.03 m proud on tie sleepers over a gravel bed, cobbles along the verges",
+    "rails": "a low light-rail bed: two rails 0.03 m proud of a gravel bed with flush colour bands for the tie sleepers, cobbles along the verges",
     "haul": "a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them",
 }
 LINER_NOTES_EXTRA = {"liner_wasteway_chute": "; a painted gauge staff on one wall"}
@@ -1390,6 +1394,7 @@ class Row:
         self.park = spec.get("park", "park_flume")
         self.gap = spec.get("gap")          # a lining left out wherever the ground departs this far from the row's own level
         self.gauge = spec.get("gauge", False)
+        self.flush = spec.get("flush_lane", False)
         self.ax, self.az = spec["at"]
         self.L, self.H, self.W = spec["size"]
         yaw = math.radians(spec["yaw"])
@@ -1421,7 +1426,7 @@ def fill(keys, step):
 
 def across_stations(row, step):
     hw, W = row.hw, row.W
-    k = [0.0, 0.2 * W, row.ex]
+    k = [0.0, 0.2 * W, row.ex] + ([hw] if row.flush and row.style == "haul" else [])
     if row.style == "sandstone":
         k += [hw, 0.1 * W, 0.3 * W]
     elif row.style == "concrete":
@@ -1457,6 +1462,15 @@ def edge_weight(dist):
     return ss(dist / 1.5)
 
 
+def verge_bump(d, d0=0.0):
+    """flush_lane verge: nothing inside the lane; the cobbles rise from d0 (the lane edge, or the last lane station for the
+    rails style, whose tie bands leave no triangle budget for another) to a crest 0.5 m on and fade by 2 m."""
+    d -= d0
+    if d <= 0 or d >= 2.0:
+        return 0.0
+    return ss(d / 0.5) if d < 0.5 else 1.0 - ss((d - 0.5) / 1.5)
+
+
 def rect_off(row, lx, lz, gh):
     """Height of the liner above the ground at a vertex (before the lift that keeps it clear of the bake)."""
     W, hw, st = row.W, row.hw, row.style
@@ -1468,7 +1482,7 @@ def rect_off(row, lx, lz, gh):
         if d <= 0:
             q = (gh / 0.9) % 1.0
             f = ss(q / 0.6) if q < 0.88 else ss((1.0 - q) / 0.12)
-            off += wt * 0.19 * f
+            off += wt * (0.06 if row.flush else 0.19) * f
     elif st == "concrete":
         p = lz + row.hl
         m = p % PANEL
@@ -1482,11 +1496,15 @@ def rect_off(row, lx, lz, gh):
         a_ = abs(lx)
         if 1.45 <= a_ <= 1.75 and 1.0 < lz + row.hl < row.L - 1.0:
             off += 0.03
+        elif row.flush:
+            off += 0.08 * verge_bump(d, -0.3)
         elif -1.0 < d < 1.4:
             bump = ss((d + 1.0) / 0.8) if d < 0.2 else 1.0 - ss((d - 0.2) / 1.2)
             off += 0.08 * bump
     elif st == "haul":
-        if -1.0 < d < 1.4:      # cobbles along the verge, low and soft: nothing in the lane stands up
+        if row.flush:
+            off += 0.10 * verge_bump(d)
+        elif -1.0 < d < 1.4:      # cobbles along the verge, low and soft: nothing in the lane stands up
             bump = ss((d + 1.0) / 0.8) if d < 0.2 else 1.0 - ss((d - 0.2) / 1.2)
             off += 0.10 * bump
     else:
@@ -1637,13 +1655,16 @@ class LinerSurf(Surf):
         return obj
 
 
-def lifted(row, bil, hi, off, flat=False):
+def lifted(row, bil, hi, off, flat=False, cap=None):
     """Local y of a liner vertex: off above the bilinear ground; off the floor band it also clears either triangulation of the
     ground cell (by at most 0.04 m extra, so steep cells never lift the liner far)."""
     y = bil + off
     if not flat:
         y = max(y, min(hi + HI_LIFT, y + 0.04))
-    return min(y, bil + FEATURE_MAX + 0.03) - row.g0
+    y = min(y, bil + FEATURE_MAX + 0.03)
+    if cap is not None:
+        y = min(y, bil + cap)
+    return y - row.g0
 
 
 def refine(vals, bent, tol=0.25, min_gap=0.5, passes=2):
@@ -1735,7 +1756,8 @@ def liner_base(row):
                 off = rect_off(row, lx, lz, bil)
                 we = edge_weight(min(row.ex - abs(lx), row.ez - abs(lz)))
                 off = EDGE_OFF + (off - EDGE_OFF) * we
-                line.append(((lx, lifted(row, bil, hi, off, abs(lx) <= 0.2 * row.W + 1e-6), lz), bil))
+                cap = FLUSH_LANE if row.flush and abs(lx) < row.hw - 1e-6 else None
+                line.append(((lx, lifted(row, bil, hi, off, abs(lx) <= 0.2 * row.W + 1e-6, cap), lz), bil))
             lat.append(line)
         for j in range(len(zs) - 1):
             for i in range(len(xs) - 1):
@@ -1776,6 +1798,9 @@ def rim_points(row, count, kind, salt):
         "haul": {"rock": (hw - 0.8, hw + 0.4), "tuft": (hw + 1.2, hw + 2.8)},
         "rails": {"rock": (hw - 0.8, hw + 0.4), "tuft": (hw + 1.2, hw + 2.8)},
     }[row.style][kind]
+    if row.flush and kind == "rock":
+        lo = max(lo, hw + 0.6 + FLUSH_RIM_GAP)      # a rock's radius reaches 0.6 m from its centre
+        hi = max(hi, lo + 1.0)
     per = max(1, count // 2)
     span = row.ez * 2.0 - 1.4
     for side in (-1, 1):
@@ -1890,6 +1915,17 @@ def liner_check(rid, out_dir):
         for x, y, z in pts:
             gaps.append(y + row.g0 - row.sample(x, z)[0])
         lo, hi = min(gaps), max(gaps)
+        if row.flush:
+            lane = [g for (x, y, z), g in zip(pts, gaps) if abs(x) < row.hw - 1e-6]
+            lane_max = max(lane) if lane else 0.0
+            print("FLUME_WORKS_FLUSH", name, "lane verts %d  highest inside |x| < %.1f: %.3f m (limit %.2f)  %s" % (
+                len(lane), row.hw, lane_max, FLUSH_LANE, "PASS" if lane_max <= FLUSH_LANE + 1e-4 else "FAIL"))
+            if lane_max > FLUSH_LANE + 1e-4:
+                fails.append("%s: %.3f m above the ground inside the lane (flush_lane limit %.2f)" % (name, lane_max, FLUSH_LANE))
+            if name.endswith("1"):
+                near = min([abs(x) for x, y, z in pts] or [0.0])
+                if near < row.hw + FLUSH_RIM_GAP - 1e-3:
+                    fails.append("%s: rock vertex at |x| %.2f, inside hw + %.1f" % (name, near, FLUSH_RIM_GAP))
         if name == rid:
             ok = CHECK_MIN - 1e-4 <= lo and hi <= CHECK_MAX + 1e-4
             print("FLUME_WORKS_LINER", rid, "base verts %d  vertical gap to ground %.3f .. %.3f m (allowed %.2f .. %.2f)  no -col: %s  %s" % (
