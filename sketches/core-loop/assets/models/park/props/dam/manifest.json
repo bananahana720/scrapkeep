@@ -18,12 +18,12 @@
       "res://assets/models/park/props/dam/gate_wheelhouse_a_lod2.glb"
      ],
      "tris": [
-      16880,
-      8440,
-      2532
+      16588,
+      8294,
+      2488
      ],
-     "radius": 3.006,
-     "height": 3.173
+     "radius": 5.376,
+     "height": 5.716
     },
     "b": {
      "lod": [
@@ -32,12 +32,12 @@
       "res://assets/models/park/props/dam/gate_wheelhouse_b_lod2.glb"
      ],
      "tris": [
-      17864,
-      8932,
-      2680
+      17520,
+      8760,
+      2628
      ],
-     "radius": 2.969,
-     "height": 3.15
+     "radius": 5.32,
+     "height": 5.679
     }
    }
   },
@@ -55,12 +55,12 @@
       "res://assets/models/park/props/dam/survey_tripod_a_lod2.glb"
      ],
      "tris": [
-      2952,
-      1476,
-      442
+      1540,
+      770,
+      226
      ],
-     "radius": 1.286,
-     "height": 0.924
+     "radius": 2.058,
+     "height": 1.473
     },
     "b": {
      "lod": [
@@ -69,12 +69,659 @@
       "res://assets/models/park/props/dam/survey_tripod_b_lod2.glb"
      ],
      "tris": [
-      2952,
-      1476,
-      442
+      1540,
+      770,
+      226
      ],
-     "radius": 1.098,
-     "height": 0.42
+     "radius": 1.757,
+     "height": 0.674
+    }
+   }
+  },
+  "mixer_wreck": {
+   "class": "dress_hero",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "A concrete mixer truck from the last pour: drum tipped, left where the crew walked off.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/mixer_wreck_a.glb",
+      "res://assets/models/park/props/dam/mixer_wreck_a_lod1.glb",
+      "res://assets/models/park/props/dam/mixer_wreck_a_lod2.glb"
+     ],
+     "tris": [
+      12772,
+      6386,
+      1908
+     ],
+     "radius": 7.872,
+     "height": 8.033
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/mixer_wreck_b.glb",
+      "res://assets/models/park/props/dam/mixer_wreck_b_lod1.glb",
+      "res://assets/models/park/props/dam/mixer_wreck_b_lod2.glb"
+     ],
+     "tris": [
+      17236,
+      8612,
+      2555
+     ],
+     "radius": 7.923,
+     "height": 8.047
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/mixer_wreck_c.glb",
+      "res://assets/models/park/props/dam/mixer_wreck_c_lod1.glb",
+      "res://assets/models/park/props/dam/mixer_wreck_c_lod2.glb"
+     ],
+     "tris": [
+      14596,
+      7297,
+      2172
+     ],
+     "radius": 9.479,
+     "height": 8.033
+    }
+   }
+  },
+  "survey_tent": {
+   "class": "dress_hero",
+   "tags": [
+    "soft",
+    "tall"
+   ],
+   "story": "The survey crew's wall tent on its timber platform: a cot, a table, a mug left on the ledger.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/survey_tent_a.glb",
+      "res://assets/models/park/props/dam/survey_tent_a_lod1.glb",
+      "res://assets/models/park/props/dam/survey_tent_a_lod2.glb"
+     ],
+     "tris": [
+      8884,
+      4442,
+      1332
+     ],
+     "radius": 5.377,
+     "height": 4.121
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/survey_tent_b.glb",
+      "res://assets/models/park/props/dam/survey_tent_b_lod1.glb",
+      "res://assets/models/park/props/dam/survey_tent_b_lod2.glb"
+     ],
+     "tris": [
+      6664,
+      3332,
+      985
+     ],
+     "radius": 5.732,
+     "height": 2.599
+    }
+   }
+  },
+  "flood_staff": {
+   "class": "dress_prop",
+   "tags": [
+    "sign",
+    "tall"
+   ],
+   "story": "A water-level staff on a concrete pier, its high-water line repainted higher three times.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/flood_staff_a.glb",
+      "res://assets/models/park/props/dam/flood_staff_a_lod1.glb",
+      "res://assets/models/park/props/dam/flood_staff_a_lod2.glb"
+     ],
+     "tris": [
+      1000,
+      500,
+      150
+     ],
+     "radius": 2.106,
+     "height": 4.579
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/flood_staff_b.glb",
+      "res://assets/models/park/props/dam/flood_staff_b_lod1.glb",
+      "res://assets/models/park/props/dam/flood_staff_b_lod2.glb"
+     ],
+     "tris": [
+      1072,
+      536,
+      154
+     ],
+     "radius": 2.412,
+     "height": 4.67
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/flood_staff_c.glb",
+      "res://assets/models/park/props/dam/flood_staff_c_lod1.glb",
+      "res://assets/models/park/props/dam/flood_staff_c_lod2.glb"
+     ],
+     "tris": [
+      2240,
+      1115,
+      326
+     ],
+     "radius": 4.884,
+     "height": 1.732
+    }
+   }
+  },
+  "stencil_post": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "A low post with a stencilled warning plate and a foreman's chalk tally board.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/stencil_post_a.glb",
+      "res://assets/models/park/props/dam/stencil_post_a_lod1.glb",
+      "res://assets/models/park/props/dam/stencil_post_a_lod2.glb"
+     ],
+     "tris": [
+      876,
+      438,
+      109
+     ],
+     "radius": 2.734,
+     "height": 1.71
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/stencil_post_b.glb",
+      "res://assets/models/park/props/dam/stencil_post_b_lod1.glb",
+      "res://assets/models/park/props/dam/stencil_post_b_lod2.glb"
+     ],
+     "tris": [
+      756,
+      378,
+      101
+     ],
+     "radius": 2.558,
+     "height": 1.939
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/stencil_post_c.glb",
+      "res://assets/models/park/props/dam/stencil_post_c_lod1.glb",
+      "res://assets/models/park/props/dam/stencil_post_c_lod2.glb"
+     ],
+     "tris": [
+      1368,
+      679,
+      189
+     ],
+     "radius": 2.89,
+     "height": 2.018
+    }
+   }
+  },
+  "lunch_pail": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "A crew member's pail, thermos and tin cup left on a flat rock, one lunch break never finished.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/lunch_pail_a.glb",
+      "res://assets/models/park/props/dam/lunch_pail_a_lod1.glb",
+      "res://assets/models/park/props/dam/lunch_pail_a_lod2.glb"
+     ],
+     "tris": [
+      1032,
+      516,
+      153
+     ],
+     "radius": 1.5,
+     "height": 1.31
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/lunch_pail_b.glb",
+      "res://assets/models/park/props/dam/lunch_pail_b_lod1.glb",
+      "res://assets/models/park/props/dam/lunch_pail_b_lod2.glb"
+     ],
+     "tris": [
+      1212,
+      601,
+      176
+     ],
+     "radius": 1.576,
+     "height": 1.039
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/lunch_pail_c.glb",
+      "res://assets/models/park/props/dam/lunch_pail_c_lod1.glb",
+      "res://assets/models/park/props/dam/lunch_pail_c_lod2.glb"
+     ],
+     "tris": [
+      2008,
+      996,
+      281
+     ],
+     "radius": 2.125,
+     "height": 1.31
+    }
+   }
+  },
+  "hardhat_rack": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "A peg board of hard hats against the works wall, one fallen where its owner went home.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/hardhat_rack_a.glb",
+      "res://assets/models/park/props/dam/hardhat_rack_a_lod1.glb",
+      "res://assets/models/park/props/dam/hardhat_rack_a_lod2.glb"
+     ],
+     "tris": [
+      2084,
+      1042,
+      306
+     ],
+     "radius": 2.521,
+     "height": 2.865
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/hardhat_rack_b.glb",
+      "res://assets/models/park/props/dam/hardhat_rack_b_lod1.glb",
+      "res://assets/models/park/props/dam/hardhat_rack_b_lod2.glb"
+     ],
+     "tris": [
+      1736,
+      863,
+      249
+     ],
+     "radius": 2.854,
+     "height": 2.865
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/hardhat_rack_c.glb",
+      "res://assets/models/park/props/dam/hardhat_rack_c_lod1.glb",
+      "res://assets/models/park/props/dam/hardhat_rack_c_lod2.glb"
+     ],
+     "tris": [
+      2624,
+      1301,
+      369
+     ],
+     "radius": 3.514,
+     "height": 2.865
+    }
+   }
+  },
+  "cable_drum": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "A wooden cable spool left flat on the ground, with a coil of rope the crew never stowed.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/cable_drum_a.glb",
+      "res://assets/models/park/props/dam/cable_drum_a_lod1.glb",
+      "res://assets/models/park/props/dam/cable_drum_a_lod2.glb"
+     ],
+     "tris": [
+      1424,
+      706,
+      222
+     ],
+     "radius": 4.346,
+     "height": 1.679
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/cable_drum_b.glb",
+      "res://assets/models/park/props/dam/cable_drum_b_lod1.glb",
+      "res://assets/models/park/props/dam/cable_drum_b_lod2.glb"
+     ],
+     "tris": [
+      1544,
+      766,
+      214
+     ],
+     "radius": 4.604,
+     "height": 1.682
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/cable_drum_c.glb",
+      "res://assets/models/park/props/dam/cable_drum_c_lod1.glb",
+      "res://assets/models/park/props/dam/cable_drum_c_lod2.glb"
+     ],
+     "tris": [
+      2524,
+      1257,
+      366
+     ],
+     "radius": 5.034,
+     "height": 1.5
+    }
+   }
+  },
+  "compressor_cart": {
+   "class": "dress_prop",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "A little two-wheel air compressor, its oversized whistle still on top; nobody blew the shift whistle.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/compressor_cart_a.glb",
+      "res://assets/models/park/props/dam/compressor_cart_a_lod1.glb",
+      "res://assets/models/park/props/dam/compressor_cart_a_lod2.glb"
+     ],
+     "tris": [
+      1120,
+      560,
+      164
+     ],
+     "radius": 2.477,
+     "height": 3.39
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/compressor_cart_b.glb",
+      "res://assets/models/park/props/dam/compressor_cart_b_lod1.glb",
+      "res://assets/models/park/props/dam/compressor_cart_b_lod2.glb"
+     ],
+     "tris": [
+      980,
+      490,
+      139
+     ],
+     "radius": 2.696,
+     "height": 2.16
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/compressor_cart_c.glb",
+      "res://assets/models/park/props/dam/compressor_cart_c_lod1.glb",
+      "res://assets/models/park/props/dam/compressor_cart_c_lod2.glb"
+     ],
+     "tris": [
+      2276,
+      1127,
+      322
+     ],
+     "radius": 3.299,
+     "height": 3.39
+    }
+   }
+  },
+  "cold_campfire": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "A stone ring of a cold campfire: charred logs, a seat, and the crew's kettle waiting on a stone.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/cold_campfire_a.glb",
+      "res://assets/models/park/props/dam/cold_campfire_a_lod1.glb",
+      "res://assets/models/park/props/dam/cold_campfire_a_lod2.glb"
+     ],
+     "tris": [
+      2484,
+      1242,
+      370
+     ],
+     "radius": 3.519,
+     "height": 1.808
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/cold_campfire_b.glb",
+      "res://assets/models/park/props/dam/cold_campfire_b_lod1.glb",
+      "res://assets/models/park/props/dam/cold_campfire_b_lod2.glb"
+     ],
+     "tris": [
+      2484,
+      1242,
+      370
+     ],
+     "radius": 3.569,
+     "height": 1.808
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/cold_campfire_c.glb",
+      "res://assets/models/park/props/dam/cold_campfire_c_lod1.glb",
+      "res://assets/models/park/props/dam/cold_campfire_c_lod2.glb"
+     ],
+     "tris": [
+      2920,
+      1445,
+      418
+     ],
+     "radius": 3.929,
+     "height": 1.363
+    }
+   }
+  },
+  "laundry_line": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A crew washing line between two leaning posts: shirts, a towel, a sock, left out in the dawn wind.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/laundry_line_a.glb",
+      "res://assets/models/park/props/dam/laundry_line_a_lod1.glb",
+      "res://assets/models/park/props/dam/laundry_line_a_lod2.glb"
+     ],
+     "tris": [
+      2128,
+      1064,
+      304
+     ],
+     "radius": 2.996,
+     "height": 2.423
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/laundry_line_b.glb",
+      "res://assets/models/park/props/dam/laundry_line_b_lod1.glb",
+      "res://assets/models/park/props/dam/laundry_line_b_lod2.glb"
+     ],
+     "tris": [
+      1340,
+      670,
+      181
+     ],
+     "radius": 3.302,
+     "height": 2.423
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/laundry_line_c.glb",
+      "res://assets/models/park/props/dam/laundry_line_c_lod1.glb",
+      "res://assets/models/park/props/dam/laundry_line_c_lod2.glb"
+     ],
+     "tris": [
+      2016,
+      997,
+      272
+     ],
+     "radius": 3.866,
+     "height": 2.85
+    }
+   }
+  },
+  "sandbags": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A low curved wall of sandbags thrown up against the spring melt, slumping now.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/sandbags_a.glb",
+      "res://assets/models/park/props/dam/sandbags_a_lod1.glb",
+      "res://assets/models/park/props/dam/sandbags_a_lod2.glb"
+     ],
+     "tris": [
+      2880,
+      1440,
+      432
+     ],
+     "radius": 3.908,
+     "height": 1.354
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/sandbags_b.glb",
+      "res://assets/models/park/props/dam/sandbags_b_lod1.glb",
+      "res://assets/models/park/props/dam/sandbags_b_lod2.glb"
+     ],
+     "tris": [
+      2112,
+      1050,
+      310
+     ],
+     "radius": 4.58,
+     "height": 1.025
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/sandbags_c.glb",
+      "res://assets/models/park/props/dam/sandbags_c_lod1.glb",
+      "res://assets/models/park/props/dam/sandbags_c_lod2.glb"
+     ],
+     "tris": [
+      2668,
+      1320,
+      381
+     ],
+     "radius": 4.471,
+     "height": 1.122
+    }
+   }
+  },
+  "rebar_bloom": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "A bundle of rebar left in a slab chunk, with a brittlebush that has taken the scrap for a trellis.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/rebar_bloom_a.glb",
+      "res://assets/models/park/props/dam/rebar_bloom_a_lod1.glb",
+      "res://assets/models/park/props/dam/rebar_bloom_a_lod2.glb"
+     ],
+     "tris": [
+      2628,
+      1309,
+      357
+     ],
+     "radius": 2.25,
+     "height": 2.273
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/rebar_bloom_b.glb",
+      "res://assets/models/park/props/dam/rebar_bloom_b_lod1.glb",
+      "res://assets/models/park/props/dam/rebar_bloom_b_lod2.glb"
+     ],
+     "tris": [
+      2508,
+      1249,
+      345
+     ],
+     "radius": 2.327,
+     "height": 2.028
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/rebar_bloom_c.glb",
+      "res://assets/models/park/props/dam/rebar_bloom_c_lod1.glb",
+      "res://assets/models/park/props/dam/rebar_bloom_c_lod2.glb"
+     ],
+     "tris": [
+      1764,
+      869,
+      231
+     ],
+     "radius": 2.863,
+     "height": 2.175
+    }
+   }
+  },
+  "desert_scrub": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "Brittlebush and creosote clumps: what grows once the works are quiet.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/desert_scrub_a.glb",
+      "res://assets/models/park/props/dam/desert_scrub_a_lod1.glb",
+      "res://assets/models/park/props/dam/desert_scrub_a_lod2.glb"
+     ],
+     "tris": [
+      2980,
+      1480,
+      426
+     ],
+     "radius": 2.726,
+     "height": 2.812
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/desert_scrub_b.glb",
+      "res://assets/models/park/props/dam/desert_scrub_b_lod1.glb",
+      "res://assets/models/park/props/dam/desert_scrub_b_lod2.glb"
+     ],
+     "tris": [
+      2908,
+      1448,
+      419
+     ],
+     "radius": 1.85,
+     "height": 2.548
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/desert_scrub_c.glb",
+      "res://assets/models/park/props/dam/desert_scrub_c_lod1.glb",
+      "res://assets/models/park/props/dam/desert_scrub_c_lod2.glb"
+     ],
+     "tris": [
+      1328,
+      648,
+      182
+     ],
+     "radius": 2.288,
+     "height": 2.36
     }
    }
   }
