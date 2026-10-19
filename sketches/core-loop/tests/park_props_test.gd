@@ -7,7 +7,7 @@ extends SceneTree
 # carry a visibility range, cast no shadow but a hero's LOD0, and collide with nothing. Until a park has a file, the
 # fixture (tests/fixtures/park_props: a manifest over existing GLBs and four spots on park_dam) stands in for the whole
 # check, so the pass is never empty, and a park without a file is not counted. Planted controls that must fail: an
-# instance on a line, one inside a keepout, one beside a home, a tall prop 20 m from a line.
+# instance on a line, one inside a keepout, one beside a home, tier edges at the line and a kicker run-out.
 #
 # Each park's vignette file pins its own expansion fingerprint in a top-level "pin" field, so the six park PRs never
 # edit a shared table here. A park file without a pin fails and prints the value to pin.
@@ -17,6 +17,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 
 const FIXTURE_FILE := "res://tests/fixtures/park_props/park_dam.json"
@@ -184,35 +185,15 @@ func _check_controls(world: Dictionary, kit: Dictionary, c) -> void:
 			break
 	_t.check("planted: an instance beside a home turns home_clear red (and nothing else)", not beside.is_empty() and _rules(beside["inst"], c) == ["home_clear"],
 		str(beside.get("home", "no spot")))
-	# A tall prop 20 m (edge to line) from a line; the same spot with a low prop passes line_clear.
-	var found := false
-	var tall_rules := []
-	var low_rules := []
-	for i in range(0, line.size() - 1):
-		var leg := line[i + 1] - line[i]
-		if leg.length() < 40.0:
-			continue
-		var normal := Vector2(-leg.y, leg.x).normalized()
-		for side in [-1.0, 1.0]:
-			var radius := float(bench["radius"])
-			var at: Vector2 = (line[i] + line[i + 1]) * 0.5 + normal * side * (20.0 + radius)
-			if absf(c.line_distance(at) - radius - 20.0) > 0.5:
-				continue
-			var tall := _planted(kit, "fix_bench", at, ground)
-			tall["height"] = 5.0
-			tall["tags"] = ["tall"]
-			var low := _planted(kit, "fix_bench", at, ground)
-			low["height"] = 1.0
-			tall_rules = _rules(tall, c)
-			low_rules = _rules(low, c)
-			if tall_rules.has("line_clear") and not low_rules.has("line_clear"):
-				found = true
-				break
-		if found:
-			break
-	_t.check("planted: a tall prop 20 m from a line turns line_clear red while a low one does not", found, "tall %s, low %s" % [str(tall_rules), str(low_rules)])
-	_t.check("planted: a hero 20 m from a line is tall too",
-		_rules(_hero_at(kit, c, ground, 20.0), c).has("line_clear"))
+	# Height tiers: edge-to-line minimums LOW 6 m, MID 10 m, TALL 20 m; each fails just inside and passes just outside.
+	var tiers := [["low", 1.0, [], 5.0, 7.0], ["mid", 2.0, [], 9.0, 11.0], ["tall", 5.0, ["tall"], 19.0, 21.0]]
+	for tier: Array in tiers:
+		var near := _line_spot(kit, c, ground, tier, tier[3])
+		var far := _line_spot(kit, c, ground, tier, tier[4])
+		_t.check("planted: a %s prop at %.0f m from a line turns line_clear red" % [tier[0], tier[3]], not near.is_empty() and _rules(near, c).has("line_clear"))
+		_t.check("planted: a %s prop at %.0f m from a line passes line_clear" % [tier[0], tier[4]], not far.is_empty() and not _rules(far, c).has("line_clear"))
+	_t.check("planted: a hero 19 m from a line is tall too",
+		_rules(_hero_at(kit, c, ground, 19.0), c).has("line_clear"))
 	_check_branches(map, kit, c, ground)
 
 
@@ -227,9 +208,15 @@ func _check_branches(map, kit: Dictionary, c, ground: Callable) -> void:
 	for z: Dictionary in c.lanes:
 		lane_points.append(((z["a"] as Vector2) + (z["b"] as Vector2)) * 0.5)
 	var row_points := []
+	var open_rows := []
+	var rail_rows := []
 	for row: Dictionary in map.park.get("park_rows", []):
-		if row["element"] != "ground" and row["element"] != "anchor_field":
+		if ParkProps.Context.blocks_props(row):
 			row_points.append(ParkProps._pair(row["at"]))
+			if row["element"] in ["kicker", "rail"]:
+				rail_rows.append(row)
+		elif row["element"] in ["ground", "bank"]:
+			open_rows.append(row)
 	var camp_points := []
 	for camp: Vector2 in c.camps:
 		for dist in [20.0, 22.0, 24.0]:
@@ -243,14 +230,33 @@ func _check_branches(map, kit: Dictionary, c, ground: Callable) -> void:
 		inst["slope_deg"] = ParkProps.SLOPE_MAX_DEG + 5.0
 	var floaty := func(inst: Dictionary) -> void:
 		inst["float_m"] = ParkProps.SEAT_FLOAT_MAX_M + 0.15
-	# A clean twin of each lies in the same grid; a 2.0 m bench at 20 m from a line is the only one the height changes.
-	var line_clear := _only("line_clear", grid, kit, c, ground, two_m, func(inst: Dictionary) -> bool:
-		var edge: float = c.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - inst["radius"]
-		return edge > 17.0 and edge < 23.0)
-	_t.check("planted: a 2.0 m prop 20 m from a line turns line_clear (the 1.5 m within 30 m rule) red and nothing else, a 1.0 m twin passes",
-		not line_clear.is_empty() and _rules(_with(line_clear, "height", 1.0), c).is_empty(), str(line_clear.get("pos")))
-	_t.check("planted: a point on a route lane leg turns route_lane red and nothing else", not _only("route_lane", lane_points, kit, c, ground, none).is_empty())
-	_t.check("planted: a point inside a built row footprint turns keepout red and nothing else", not _only("keepout", row_points, kit, c, ground, none).is_empty())
+	var tall_at := func(at: Vector2) -> Dictionary:
+		var inst := _planted(kit, "fix_bench", at, ground)
+		inst["height"] = 5.0
+		inst["tags"] = ["tall"]
+		return inst
+	var lane_ok := false
+	var lane_low_free := false
+	for at: Vector2 in lane_points:
+		if _rules(tall_at.call(at), c).has("route_lane"):
+			lane_ok = true
+			lane_low_free = not _rules(_planted(kit, "fix_bench", at, ground), c).has("route_lane")
+			break
+	_t.check("planted: a tall prop on a route lane leg turns route_lane red, a low one on it does not", lane_ok and lane_low_free)
+	_t.check("planted: a point inside a ride-feature row footprint turns keepout red and nothing else", not _only("keepout", row_points, kit, c, ground, none).is_empty())
+	var in_open := false
+	for row: Dictionary in open_rows:
+		for at: Vector2 in grid:
+			if ParkMap.footprint_contains(row, at, 0.0) and not _rules(_planted(kit, "fix_bench", at, ground), c).has("keepout"):
+				in_open = true
+				break
+		if in_open:
+			break
+	_t.check("planted: a low prop inside a ground or bank row passes keepout", in_open)
+	var in_ride := false
+	for row: Dictionary in rail_rows:
+		in_ride = in_ride or _rules(_planted(kit, "fix_bench", ParkProps._pair(row["at"]), ground), c).has("keepout")
+	_t.check("planted: a low prop inside a kicker or rail row fails keepout", in_ride and not rail_rows.is_empty())
 	_t.check("planted: a point beside an enemy camp turns home_clear red and nothing else", not c.camps.is_empty() and not _only("home_clear", camp_points, kit, c, ground, none).is_empty())
 	_t.check("planted: a slope over %.0f degrees turns slope red and nothing else" % ParkProps.SLOPE_MAX_DEG, not _only("slope", grid, kit, c, ground, steep).is_empty())
 	_t.check("planted: a foot floating over %.2f m turns seat red and nothing else" % ParkProps.SEAT_FLOAT_MAX_M, not _only("seat", grid, kit, c, ground, floaty).is_empty())
@@ -272,7 +278,8 @@ func _check_kickers() -> void:
 	_t.eq("kicker: a point on the lip fails keepout", SetDressing.blocked(capsules, Vector2(100.0, 200.0), 3.0), "kicker ramp")
 	_t.eq("kicker: a point 600 m along the lip fails keepout", SetDressing.blocked(capsules, Vector2(700.0, 200.0), 3.0), "kicker ramp")
 	_t.eq("kicker: a point in the run-out fails keepout", SetDressing.blocked(capsules, Vector2(100.0, 215.0), 3.0), "kicker run-out")
-	_t.eq("kicker: a point past the run-out passes", SetDressing.blocked(capsules, Vector2(100.0, 200.0 + ParkProps.KICK_RUNOUT_M + 20.0), 3.0), "")
+	_t.eq("kicker: a point 35 m ahead of the lip fails keepout", SetDressing.blocked(capsules, Vector2(100.0, 235.0), 3.0), "kicker run-out")
+	_t.eq("kicker: a point 70 m ahead of the lip passes", SetDressing.blocked(capsules, Vector2(100.0, 270.0), 3.0), "")
 
 
 # The first candidate whose planted bench, after mutate, breaks exactly the rule (and passes accept, if given); {} if none.
@@ -291,12 +298,34 @@ func _with(inst: Dictionary, key: String, value) -> Dictionary:
 	return copy
 
 
+# A planted bench of a tier [name, height, tags, ...] whose footprint edge is `edge` m from the nearest line leg, or {}.
+func _line_spot(kit: Dictionary, c, ground: Callable, tier: Array, edge: float) -> Dictionary:
+	for key in c.lines:
+		var line: PackedVector2Array = c.lines[key]
+		for i in range(0, line.size() - 1):
+			var leg := line[i + 1] - line[i]
+			if leg.length() < 40.0:
+				continue
+			var normal := Vector2(-leg.y, leg.x).normalized()
+			for side in [-1.0, 1.0]:
+				var inst := _planted(kit, "fix_bench", (line[i] + line[i + 1]) * 0.5, ground)
+				var at: Vector2 = (line[i] + line[i + 1]) * 0.5 + normal * side * (edge + float(inst["radius"]))
+				if absf(c.line_distance(at) - float(inst["radius"]) - edge) > 0.3 or not c.rect.has_point(at):
+					continue
+				inst = _planted(kit, "fix_bench", at, ground)
+				inst["height"] = tier[1]
+				inst["tags"] = tier[2]
+				return inst
+	return {}
+
+
 func _hero_at(kit: Dictionary, c, ground: Callable, edge: float) -> Dictionary:
 	var line: PackedVector2Array = c.lines[c.lines.keys()[0]]
 	var leg := line[1] - line[0]
 	var normal := Vector2(-leg.y, leg.x).normalized()
-	var hero := _planted(kit, "fix_ballast", (line[0] + line[1]) * 0.5 + normal * 20.0, ground)
+	var hero := _planted(kit, "fix_ballast", (line[0] + line[1]) * 0.5 + normal * edge, ground)
 	hero["radius"] = 0.0
+	hero["class"] = ParkProps.HERO
 	hero["height"] = 2.0
 	return hero
 
@@ -339,9 +368,10 @@ func _check_prepare(file: Dictionary, kit: Dictionary, world: Dictionary, list: 
 	_t.eq("prepare equals the plain expansion", ParkProps.fingerprint(out.get("list", [])), ParkProps.fingerprint(list))
 	_t.eq("prepare reports no schema errors", out.get("errors"), [])
 	_t.check("prepare warmed the meshes the build reads", ParkProps._meshes.size() > 0 and not ParkProps._meshes.values().has(null), str(ParkProps._meshes.size()))
-	ParkProps.file_overrides.clear()
+	ParkProps.file_overrides[FIXTURE_MAP] = "res://tests/fixtures/park_props/no_such_file.json"
 	var broken := ParkProps.prepare(FIXTURE_MAP, world["map"], world["ground"], world["stage"], false)
 	_t.check("a park without a file prepares nothing", broken.is_empty())
+	ParkProps.file_overrides.clear()
 
 
 # The live node: a park stage with a vignette file builds ParkProps under the presentation, whatever the set-dressing flag.
