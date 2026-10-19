@@ -77,11 +77,11 @@ const DRESSED := {"hoodoo_gust_lip_1": "mesa_lip_kicker", "hoodoo_gust_lip_2": "
 	"kick_wmid_5": "mesa_lip_kicker_24x6x36", "kick_clast_6": "mesa_lip_kicker_24x6x36", "kick_nlast_7": "mesa_lip_kicker_24x6x36",
 	"kick_nlast_8": "mesa_lip_kicker_24x6x36", "kick_nlast_9": "mesa_lip_kicker_24x6x36",
 	"kick_wlast_12": "mesa_lip_kicker_24x6x36", "kick_slast_14": "mesa_lip_kicker_24x6x36",
-	# 2026-10-18 content lane, crown greybox rows: the last ten stand-ins. The stamped washes and ramps are dressed by the
-	# park's ground scatter (their stamp is the whole shape); the ledges, the kicker and the net's two 80 m cells (net_deck does
+	# 2026-10-18 content lane, crown greybox rows: the last ten stand-ins. The stamped washes and ramps wear decoration-only
+	# liners (tools/blender/park/washes.py, 2026-10-18, no collider: the stamp stays the shape); the ledges, the kicker and the net's two 80 m cells (net_deck does
 	# not tile, so gauntlet_net is split in two) take their ride pieces.
-	"west_wash": "scatter", "east_wash": "scatter", "meander": "scatter", "meander_bend": "scatter",
-	"watch_butte_crest": "scatter", "drop_ramp": "scatter", "kick_wlast_11": "mesa_lip_kicker_24x6x36",
+	"west_wash": "liner_west_wash", "east_wash": "liner_east_wash", "meander": "liner_meander", "meander_bend": "liner_meander_bend",
+	"watch_butte_crest": "liner_watch_butte_crest", "drop_ramp": "liner_drop_ramp", "kick_wlast_11": "mesa_lip_kicker_24x6x36",
 	"crown_collector": "viga_pivot", "alcove_ledge": "cliff_dwelling_row", "gauntlet_net": "net_deck", "gauntlet_net_2": "net_deck"}
 const POCKETS := {
 	"camp_signal": {"role": "online", "rarities": ["common"]},
