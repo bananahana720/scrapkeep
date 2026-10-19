@@ -1,3 +1,4 @@
+# smoke: solo timeout=300s (the composition arm rolls 10,000 builds: about 150 s on an idle box)
 extends SceneTree
 
 const PartDef := preload("res://src/build/part_def.gd")

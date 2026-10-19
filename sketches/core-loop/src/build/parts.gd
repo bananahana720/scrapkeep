@@ -1063,10 +1063,11 @@ static func answers_of(part_id: String) -> Array:
 static func answer_nudge(class_id: String, pool: Array, nudge: Dictionary) -> Dictionary:
 	if not answer_nudge_on or Nemesis.of(class_id).is_empty():
 		return nudge
+	var answering := _answering(class_id)
 	var out := nudge
 	var copied := false
 	for part_id in pool:
-		if Nemesis.answers(class_id, answers_of(part_id)):
+		if answering.has(part_id):
 			if not copied:
 				out = nudge.duplicate()
 				copied = true
@@ -1074,22 +1075,46 @@ static func answer_nudge(class_id: String, pool: Array, nudge: Dictionary) -> Di
 	return out
 
 
+# The ANSWERS ids that answer class_id's nemesis, as a set; both tables are constants, so it is
+# built once per class (Parts.roll calls answer_nudge on every offer).
+static var _answering_by_class := {}
+
+
+static func _answering(class_id: String) -> Dictionary:
+	if not _answering_by_class.has(class_id):
+		var ids := {}
+		for part_id in ANSWERS:
+			if Nemesis.answers(class_id, ANSWERS[part_id]):
+				ids[part_id] = true
+		_answering_by_class[class_id] = ids
+	return _answering_by_class[class_id]
+
+
 # raw (id to weight) with each nudged id's weight times its nudge, then every offer bucket
 # rescaled to the total it had before, so the nudge moves weight between a bucket's own parts
 # only. A bucket whose parts are all nudged, or none, is unchanged. raw itself when no nudge.
 static func _nudged(raw: Dictionary, nudge: Dictionary) -> Dictionary:
-	if nudge.is_empty() or not raw.keys().any(func(key): return nudge.has(key)):
+	if nudge.is_empty():
+		return raw
+	var touched := false
+	for key in nudge:
+		if raw.has(key):
+			touched = true
+			break
+	if not touched:
 		return raw
 	var before := {}
 	var after := {}
 	var out := {}
+	var buckets := {}
 	for key in raw:
 		var b := bucket_of(key)
+		buckets[key] = b
 		out[key] = float(raw[key]) * float(nudge.get(key, 1.0))
 		before[b] = float(before.get(b, 0.0)) + float(raw[key])
 		after[b] = float(after.get(b, 0.0)) + out[key]
 	for key in out:
-		var b := bucket_of(key)
+		var b: String = buckets[key]
 		if after[b] > 0.0:
 			out[key] *= before[b] / after[b]
 	return out
