@@ -20,7 +20,7 @@ test("a boss run wins on defeated_s, loses on death and times out on a stall", (
   const boss = (outcome, b) => ({ outcome, boss: b });
   assert.deepEqual(gradeRun("boss", boss("until", { defeated_s: 61.2, seconds: 61.2, hp_lost: 40 })), { result: "win", fightS: 61.2, hpLost: 40 });
   assert.equal(gradeRun("boss", boss("won", { defeated_s: 80 })).result, "win");
-  const loss = gradeRun("boss", boss("died", { defeated_s: null, seconds: 33, hp_lost: 115 }));
+  const loss = gradeRun("boss", boss("died", { defeated_s: null, died_s: 33, seconds: 33.01, hp_lost: 115 }));
   assert.deepEqual([loss.result, loss.diedS], ["loss", 33]);
   assert.equal(gradeRun("boss", boss("boss_stalled", { defeated_s: null, seconds: 420 })).result, "timeout");
   assert.equal(gradeRun("boss", boss("ticks_done", { defeated_s: null, seconds: 400 })).result, "timeout");

@@ -18,6 +18,7 @@ import { COLUMNS, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, estimat
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
 const outRoot = path.join(root, "artifacts/local/challenge");
+const KIND_TIMEOUT_MS = 40 * 60_000;
 
 const opts = {
   library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "world"], only: null, seeds: 16,
@@ -180,8 +181,6 @@ function loadLibrary(dir) {
 }
 
 // --- the table ------------------------------------------------------------------------------
-
-const KIND_TIMEOUT_MS = 40 * 60_000;
 
 async function runTable() {
   const builds = opts.library ? loadLibrary(opts.library) : {};

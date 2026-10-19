@@ -170,7 +170,7 @@ export function gradeRun(kind, row, job = {}) {
   if (kind === "boss") {
     const boss = row.boss;
     if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null };
-    if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.seconds ?? null };
+    if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null };
     if (row.outcome === "boss_stalled" || boss) return { result: "timeout", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null };
     return { result: "error", why: "the boss was never entered (" + row.outcome + ")" };
   }
