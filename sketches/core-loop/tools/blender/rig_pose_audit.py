@@ -59,10 +59,12 @@ CPU at a low sample count and the vertex colours as base colour (as glb_stills.p
 tile of a rig shares one three-quarter camera framed on the rest bounds over a neutral ground.
 Procedural in this repository; numpy and mathutils ship with Blender; no added dependencies.
 """
+import fnmatch
 import json
 import math
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import time
@@ -101,80 +103,111 @@ LOOPS = {
     "bosses/mind_hand": ["still_track"],
 }
 
-# Clips whose GAP and CLIP are designed detachments or impacts, per GLB, each with the source that
-# says so (tools/blender/ paths). Anything not listed is held to the thresholds. COLLAPSE is never
-# excused by this table. kfm = world_one/kill_first_motion.py.
+# Designed detachments and impacts, per GLB and clip: only the listed part pairs (bone names,
+# fnmatch patterns, either order) are excused in that clip; every other pair stays a defect.
+# Each entry cites the source that says the motion is designed. COLLAPSE is never excused.
+# kfm = world_one/kill_first_motion.py; ws = warden_swarm.py; wm = warden_mind.py (tools/blender/).
 DELIBERATE = {
     "world_one/enemy_foreman": {
-        "break": "kfm:123-126 'the hat flies and lands askew', Hat key to y 1.15 m at kfm:148-151",
-        "tell": "kfm:101 'the steam at 0.55 pops the hat again', Hat key to y 0.55 m at kfm:112-113",
+        "break": {"pairs": [("Cabinet", "Hat"), ("Cabinet", "Hand")],
+                  "cite": "kfm:124-126 'the hand spins out to six o'clock, the hat flies and lands askew'; Hat key y 1.15 m at kfm:154, Hand 900 deg at kfm:152-153"},
+        "tell": {"pairs": [("Cabinet", "Hat")],
+                 "cite": "kfm:101 'the steam at 0.55 pops the hat again'; Hat keys kfm:109-112. Mast/Horn overlap is not excused"},
     },
     "world_one/enemy_dispatcher": {
-        "break": "kfm:258-260 'line disconnected... the eyes boing out on springs', Radar spins 710 deg at kfm:277",
+        "break": {"pairs": [("Root", "Body"), ("Body", "Eye?"), ("Mast", "Radar"), ("Body", "Tongue")],
+                  "cite": "kfm:258-260 'line disconnected. The printer jams and spews paper, the mast sproings up and wobbles with the radar spinning off-beat, the eyes boing out on springs, then the box sags sideways'; Tongue kfm:275-277, Radar 710 deg kfm:281-282, eye_boing kfm:262-267"},
     },
     "world_one/enemy_splitter": {
-        "break_split": "kfm:376-377 'the three pods burst out', SPLIT_BURST 0.45 m (kfm:300)",
-        "break_clean": "kfm:390-391 'the fuse lamp pops off its neck, flies, lands beside it'",
+        "break_split": {"pairs": [("Body", "Pod?"), ("Pod?", "*"), ("Core", "*"), ("Root", "Lamp")],
+                        "cite": "kfm:376-377 'the three pods burst out and the core and fuse go', SPLIT_BURST 0.45 m kfm:300"},
+        "break_clean": {"pairs": [("*", "Lamp"), ("Body", "Leg??"), ("Body", "Pod?"), ("Leg??", "Pod?")],
+                        "cite": "kfm:390-391 'one fat pop. Squashed flat, it bounces once and deflates; the fuse lamp pops off its neck, flies, lands beside it'; Body squash kfm:393-397, hips lift kfm:402-403"},
     },
     "world_one/enemy_linker": {
-        "cut": "kfm:565-568 'The dish drops onto its partner... slides off and lands on its back on the floor'",
+        "cut": {"pairs": [("*", "Dish*"), ("Root", "Boom"), ("Cab", "Crew"), ("Cab", "Ears"), ("Crew", "Ears")],
+                "cite": "kfm:565-568 'The dish drops onto its partner, slides off and lands on its back... The boom, freed of its load, springs up; the crew ducks, then peeks over the cab roof'"},
+    },
+    # Procedural rigs: key "proc:<bone>:<axis><sign>" for the in-game extreme of that bone and axis.
+    "world_one/enemy_plated_brute": {
+        "proc:SlamPadLeft:tY+": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
+                                 "cite": "plated_brute.gd:288-309 e09_pads_raise: the pads rise PAD_RISE 2.5 m (:45) off the body on the warn"},
+        "proc:SlamPadRight:tY+": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
+                                  "cite": "plated_brute.gd:288-309 e09_pads_raise: the pads rise PAD_RISE 2.5 m (:45) off the body on the warn"},
     },
     "warden_swarm": {
-        "break": "warden_swarm.py:488-492, :525-527 cells split off and fall, hull falls (:42 'falling cells')",
-        "chunk_shed": "warden_swarm.py:480-482 and :544 shed rings fall (drop, drift, spin) (:26-29, :42)",
-        "stagger_open": "warden_swarm.py:533-535 'the lit core rises out of the open queen' 0.6 m (:44)",
+        "break": {"pairs": [("*", "*")], "cite": "ws:42 'chunk_shed and break (falling cells)'; cells split off and fall ws:488-492, hull falls ws:525-527"},
+        "chunk_shed": {"pairs": [("*", "Ring*"), ("Ring*", "*")], "cite": "ws:26-29, :42, :480-482, :544-545 shed rings fall (drop, drift, spin)"},
+        "stagger_open": {"pairs": [("Cell*", "Shutter*"), ("*", "QueenCore")],
+                         "cite": "ws:510-514 shutters open to 125 deg; ws:533-535 'the lit core rises out of the open queen'"},
     },
     "warden_swarm_kit_drones": {
-        "break": "warden_swarm.py:673-681 drones drop, spin and fly out (:42-43)",
-        "snip": "warden_swarm.py:656-663 the file of three walks off along the rope (:43)",
+        "break": {"pairs": [("*", "*")], "cite": "ws:673-681 drones drop, spin and fly out"},
+        "snip": {"pairs": [("*", "*")], "cite": "ws:656-663 the file of three walks off along the rope (:43)"},
     },
     "warden_mind": {
-        "chunk_lost": "warden_mind.py:44-48 a lost finger folds shut, last two segments drop about a metre",
-        "chunk_lost_ring": "warden_mind.py:44-48, :709-711 as chunk_lost",
-        "chunk_lost_middle": "warden_mind.py:44-48, :709-711 as chunk_lost",
-        "chunk_lost_index": "warden_mind.py:44-48, :709-711 as chunk_lost",
-        "grip_falter": "warden_mind.py:737-741 Stalk1, Stalk2 and LensMount drop DROP/3, the lens swells",
-        "knocked_down": "warden_mind.py:766-770 the hand tumbles over (:911-913 'transient')",
-        "final_quiet": "warden_mind.py:773-783 thumbs fold shut and the iris closes",
+        **{c: {"pairs": [("Finger*", "Finger*")],
+               "cite": "wm:45-48 'A lost finger folds shut under its neighbours: the last two segments drop about a metre'; fold wm:636, :709-711"}
+           for c in ("chunk_lost", "chunk_lost_ring", "chunk_lost_middle", "chunk_lost_index")},
+        "grip_falter": {"pairs": [("Stalk*", "*"), ("LensMount", "*"), ("Lens", "*")],
+                        "cite": "wm:737-743 Stalk1, Stalk2 and LensMount drop DROP/3, the lens swells"},
+        "knocked_down": {"pairs": [("Hand", "*"), ("Palm", "*"), ("Finger*", "*")],
+                         "cite": "wm:766-772 the hand tumbles over and the fingers splay; wm:913 'tumble the hand (knocked_down)'"},
+        "final_quiet": {"pairs": [("Thumb_*", "*"), ("Lens*", "*"), ("SmallLens*", "*")],
+                        "cite": "wm:773-783 thumbs fold shut and the iris closes"},
     },
     "bosses/mind_hand": {
-        "lens_break": "bosses/mind_hand.py:317-320, :341 LensRoot drops 0.55 m and tips, MainLens shrinks to 0.05",
+        "lens_break": {"pairs": [("LensRoot", "*"), ("*", "MainLens")],
+                       "cite": "bosses/mind_hand.py:317-320 LensRoot drops 0.55 m and tips, MainLens shrinks to 0.05; key :341"},
     },
 }
+
+
+def excused(key, clip, a, b):
+    row = DELIBERATE.get(key, {}).get(clip)
+    if not row:
+        return False
+    return any((fnmatch.fnmatchcase(a, x) and fnmatch.fnmatchcase(b, y)) or (fnmatch.fnmatchcase(a, y) and fnmatch.fnmatchcase(b, x))
+               for x, y in row["pairs"])
+
 
 # In-game ranges of the procedural rigs (no clips), per bone: rot {axis: (lo, hi)} degrees about
 # the Godot axis, loc {axis: (lo, hi)} metres, scale (lo, hi) uniform; "pivot": "origin" turns
 # about the rig origin instead of the bone head.
-# Not modelled: miniboss.gd:362-379 also drops the body by body * HALF_HEIGHT (3.45 m: -1.04 to
-# +3.45) and lifts the feet with it; that travel is outside the ranges the ruling lists.
+# Body drop: miniboss.gd:374 drop = row.body * HALF_HEIGHT * t (3.45 m): slam_crouch -0.3 gives
+# -1.035 m, charge -0.345. It moves body, fists, plates and halo (their pos adds UP * drop, :386-407)
+# but not the feet (:392), so it is the relative travel; the leap lift raises feet with it (:366).
 _D = math.degrees
 PROCEDURAL = {
     # miniboss.gd:73-80 POSES, :347-413 _model_pose. Lean about X to -0.35 rad (-20.05 deg) turns
     # body, fists, plates and halo about the rig origin (:380, :387). Feet: foot_angle -0.6 to
     # +0.2 rad about X (:363, :368), splay rolls Z by -side*splay*0.5 (max 0.6 -> 0.3 rad, :395)
     # and moves x by side*splay (+-0.6 m), tuck lifts y to 1.1 m (:366, :394).
-    # Fists offset (0, -0.6..1.8, -0.85..0.5) (:359, :365, :373, :376). Plates yaw +-1.15 rad
-    # (:400, weak), move x by -side*0.45 and y down 0.7 (:399). Halo spins about Y (:406).
+    # Fists offset (0, -0.6..1.8, -0.85..0.5) (:359, :365, :373, :376), down to -0.685 with the
+    # crouch drop (+0.35 - 1.035). Plates yaw +-1.15 rad (:400, weak), move x by -side*0.45 and y
+    # down 0.7 (:399), -1.045 with the charge drop -0.345. Halo spins about Y (:406).
     "world_one/enemy_miniboss": {
-        "MinibossBody": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin"},
+        "MinibossBody": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin", "loc": {"Y": (-1.035, 0.0)}},
         "MinibossFistLeft": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin",
-                             "loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
+                             "loc": {"Y": (-0.685, 1.8), "Z": (-0.85, 0.5)}},
         "MinibossFistRight": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin",
-                              "loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
+                              "loc": {"Y": (-0.685, 1.8), "Z": (-0.85, 0.5)}},
         "MinibossFootLeft": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (0.0, _D(0.3))},
                              "loc": {"X": (-0.6, 0.0), "Y": (0.0, 1.1)}},
         "MinibossFootRight": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (-_D(0.3), 0.0)},
                               "loc": {"X": (0.0, 0.6), "Y": (0.0, 1.1)}},
-        "MinibossHalo": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-180.0, 180.0)}, "pivot": "origin"},
+        "MinibossHalo": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-180.0, 180.0)}, "pivot": "origin",
+                         "loc": {"Y": (-1.035, 0.0)}},
         "MinibossPlateLeft": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-_D(1.15), _D(1.15))},
-                              "loc": {"X": (-0.45, 0.0), "Y": (-0.7, 0.0)}},
+                              "loc": {"X": (-0.45, 0.0), "Y": (-1.045, 0.0)}},
         "MinibossPlateRight": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-_D(1.15), _D(1.15))},
-                               "loc": {"X": (0.0, 0.45), "Y": (-0.7, 0.0)}},
+                               "loc": {"X": (0.0, 0.45), "Y": (-1.045, 0.0)}},
     },
-    # plated_brute.gd:290-309 _pose, PAD_RISE 2.5 (:45), REAR_ANGLE -30 (:46).
+    # plated_brute.gd:290-309 _pose, PAD_RISE 2.5 (:45), REAR_ANGLE -30 (:46); the pads plant
+    # PAD_PLANT -0.47 m below rest on every slam's hit frame (:48, :302: lift = PAD_PLANT / PAD_RISE).
     "world_one/enemy_plated_brute": {
-        "SlamPadLeft": {"loc": {"Y": (0.0, 2.5)}},
-        "SlamPadRight": {"loc": {"Y": (0.0, 2.5)}},
+        "SlamPadLeft": {"loc": {"Y": (-0.47, 2.5)}},
+        "SlamPadRight": {"loc": {"Y": (-0.47, 2.5)}},
         "BruteRear": {"rot": {"X": (-30.0, 0.0)}},
     },
     # anchor_crew.gd:119-128: CrewBrace 8 deg about X and -0.08 in Y; ClutchTab i moves
@@ -224,6 +257,8 @@ SMALL_ROT_STRESS = 15.0
 STEP = 1.0 / 30.0
 GAP_SAMPLES = 200
 INSIDE_CAP = 1500
+GAIN_MIN = 0.001  # a vertex counts as newly inside once it has gained 1 mm against rest
+SIBLING_CAP = 1500  # touching island pairs on non-parent/child bones, per rig
 KINDS_GAME = ("extreme", "clip")
 
 # Godot (x, y, z) = C @ Blender (x, y, z).
@@ -789,8 +824,9 @@ class Metrics:
 
     @staticmethod
     def inside(V, isl, tree, lo, hi):
-        """{vertex: depth} for vertices of isl inside the island behind tree (box lo..hi): behind the
-        nearest face's normal. For an open island this is the nearest-surface depth along the normal."""
+        """{vertex: signed depth} for the vertices of isl inside box lo..hi against the island behind
+        tree: positive behind the nearest face's normal (inside), negative in front. For an open
+        island this is the nearest-surface depth along the normal."""
         pts = V[isl["verts"]]
         sel = isl["verts"][((pts >= lo) & (pts <= hi)).all(1)]
         if len(sel) > INSIDE_CAP:
@@ -798,18 +834,20 @@ class Metrics:
         out = {}
         for v in sel:
             r = tree.find_nearest(tuple(V[v]))
-            if r is not None and (Vector(V[v]) - r[0]).dot(r[1]) < 0:
-                out[int(v)] = r[3]
+            if r is not None:
+                out[int(v)] = r[3] if (Vector(V[v]) - r[0]).dot(r[1]) < 0 else -r[3]
         return out
 
     def _pairs(self):
         rig = self.rig
         V0, T = rig.V0, rig.T
         self.pairs = []
+        self.sibling_capped = False
         for c in self.bone_tris:
             p = rig.parent[c]
             if p >= 0 and p in self.bone_tris:
                 self.pairs.append((p, c))
+        parent_child = set(self.pairs)
         self.rest_overlap = {}
         self.contacts = {}
         self.ipairs = {}
@@ -820,11 +858,41 @@ class Metrics:
                 rest_tree[isl["id"]] = self.bvh(V0, isl["tris"], T)
             return rest_tree[isl["id"]]
         box0 = {i["id"]: (V0[i["verts"]].min(0), V0[i["verts"]].max(0)) for i in self.rigid}
-        for p, c in self.pairs:
+
+        def add(p, c, a, b, touching_only):
+            lo_a, hi_a = box0[a["id"]]
+            lo_b, hi_b = box0[b["id"]]
+            near = not ((lo_a > hi_b + GAP_REST).any() or (lo_b > hi_a + GAP_REST).any())
+            small, big = (a, b) if len(a["verts"]) <= len(b["verts"]) else (b, a)
+            contact = None
+            if near:
+                sv = small["verts"][np.linspace(0, len(small["verts"]) - 1, min(GAP_SAMPLES, len(small["verts"]))).astype(int)]
+                tree = tree0(big)
+                d = math.inf
+                for v in sv:
+                    r = tree.find_nearest(tuple(V0[v]))
+                    if r is not None:
+                        d = min(d, r[3])
+                if d < GAP_REST:
+                    contact = {"small": small, "big": big, "samples": sv, "rest": d, "diag": min(a["diag"], b["diag"])}
+            if touching_only and contact is None:
+                return False
+            rest_a, rest_b = {}, {}
+            if not ((lo_a > hi_b).any() or (lo_b > hi_a).any()):
+                rest_a = self.inside(V0, a, tree0(b), lo_b, hi_b)
+                rest_b = self.inside(V0, b, tree0(a), lo_a, hi_a)
+            self.ipairs.setdefault((p, c), []).append(
+                {"a": a, "b": b, "diag": min(a["diag"], b["diag"]), "rest_a": rest_a, "rest_b": rest_b,
+                 "open": not (a["closed"] and b["closed"])})
+            if contact:
+                self.contacts.setdefault((p, c), []).append(contact)
+            return True
+        for p, c in list(self.pairs):
             tp, tc = self.bone_tris[p], self.bone_tris[c]
             ov = self.bvh(V0, tp, T).overlap(self.bvh(V0, tc, T))
             self.rest_overlap[(p, c)] = {(int(tp[i]), int(tc[j])) for i, j in ov}
-            contacts, ips = [], []
+            self.ipairs[(p, c)] = []
+            self.contacts[(p, c)] = []
             ip = [i for i in self.rigid if i["bone"] == p]
             ic = [i for i in self.rigid if i["bone"] == c]
             for a in ip:
@@ -833,28 +901,38 @@ class Metrics:
                     lo_b, hi_b = box0[b["id"]]
                     if len(ip) * len(ic) > 4000 and ((lo_a > hi_b + 1.0).any() or (lo_b > hi_a + 1.0).any()):
                         continue
-                    diag = min(a["diag"], b["diag"])
-                    near = not ((lo_a > hi_b + GAP_REST).any() or (lo_b > hi_a + GAP_REST).any())
-                    rest_a, rest_b = {}, {}
-                    if not ((lo_a > hi_b).any() or (lo_b > hi_a).any()):
-                        rest_a = self.inside(V0, a, tree0(b), lo_b, hi_b)
-                        rest_b = self.inside(V0, b, tree0(a), lo_a, hi_a)
-                    ips.append({"a": a, "b": b, "diag": diag, "rest_a": set(rest_a), "rest_b": set(rest_b),
-                                "open": not (a["closed"] and b["closed"])})
-                    if not near:
+                    add(p, c, a, b, False)
+        # Sibling pairs: any two islands on different bones, whatever their hierarchy, that touch at
+        # rest (min distance under GAP_REST). Island bounds first, then only near pairs, capped.
+        R = len(self.rigid)
+        if R > 1:
+            lo = np.array([box0[i["id"]][0] for i in self.rigid]) - GAP_REST
+            hi = np.array([box0[i["id"]][1] for i in self.rigid]) + GAP_REST
+            bone = np.array([i["bone"] for i in self.rigid])
+            found = 0
+            for x in range(R):
+                near = ((lo[x] <= hi[x + 1:]) & (hi[x] >= lo[x + 1:])).all(1) & (bone[x] != bone[x + 1:])
+                for y in np.nonzero(near)[0] + x + 1:
+                    a, b = self.rigid[x], self.rigid[y]
+                    p, c = (a["bone"], b["bone"]) if a["bone"] < b["bone"] else (b["bone"], a["bone"])
+                    if (p, c) in parent_child or (c, p) in parent_child:
                         continue
-                    small, big = (a, b) if len(a["verts"]) <= len(b["verts"]) else (b, a)
-                    sv = small["verts"][np.linspace(0, len(small["verts"]) - 1, min(GAP_SAMPLES, len(small["verts"]))).astype(int)]
-                    tree = tree0(big)
-                    d = math.inf
-                    for v in sv:
-                        r = tree.find_nearest(tuple(V0[v]))
-                        if r is not None:
-                            d = min(d, r[3])
-                    if d < GAP_REST:
-                        contacts.append({"small": small, "big": big, "samples": sv, "rest": d, "diag": diag})
-            self.contacts[(p, c)] = contacts
-            self.ipairs[(p, c)] = ips
+                    if found >= SIBLING_CAP:
+                        self.sibling_capped = True
+                        break
+                    if (p, c) not in self.rest_overlap:
+                        tp, tc = self.bone_tris[p], self.bone_tris[c]
+                        ov = self.bvh(V0, tp, T).overlap(self.bvh(V0, tc, T))
+                        self.rest_overlap[(p, c)] = {(int(tp[i]), int(tc[j])) for i, j in ov}
+                    aa, bb = (a, b) if a["bone"] == p else (b, a)
+                    if add(p, c, aa, bb, True):
+                        found += 1
+                        if (p, c) not in self.pairs:
+                            self.pairs.append((p, c))
+                if self.sibling_capped:
+                    break
+        self.pairs = [pc for pc in self.pairs if self.ipairs.get(pc)]
+        self.sibling_pairs = len([pc for pc in self.pairs if pc not in parent_child])
 
     def evaluate(self, Vp, Dw):
         rig = self.rig
@@ -862,7 +940,7 @@ class Metrics:
                "collapse_focus": None,
                "clip_depth_mm": 0.0, "clip_verts": 0, "clip_frac": 0.0, "clip_thr_mm": None, "clip_open": False,
                "clip_pair": None, "clip_ratio": 0.0, "clip_over": False, "clip_depth_max_mm": 0.0,
-               "clip_tri_pairs": 0, "clip_tri_pair": None,
+               "clip_tri_pairs": 0, "clip_tri_pair": None, "clip_hits": [], "gap_hits": [],
                "gap_mm": 0.0, "gap_frac": 0.0, "gap_thr_mm": None, "gap_pair": None, "gap_ratio": 0.0, "gap_over": False}
         focus_area = focus_edge = None
         if len(self.bt):
@@ -890,6 +968,7 @@ class Metrics:
             focus = focus_edge
         out["collapse_focus"] = [round(float(x), 4) for x in focus] if focus is not None else None
         T = rig.T
+        V0 = rig.V0
         trees, boxes = {}, {}
 
         def treep(isl):
@@ -902,37 +981,53 @@ class Metrics:
                 pts = Vp[isl["verts"]]
                 boxes[isl["id"]] = (pts.min(0), pts.max(0))
             return boxes[isl["id"]]
+
+        def gained(inside_now, rest, other_bone):
+            """Depth gained against rest per vertex, bounded by its own travel relative to the other
+            island (so a vertex resting on the boundary reports about how far it moved inward)."""
+            R, t = Dw[other_bone][:3, :3], Dw[other_bone][:3, 3]
+            res = {}
+            for v, sd in inside_now.items():
+                if sd <= 0:
+                    continue
+                g = sd - rest.get(v, 0.0)
+                if g > GAIN_MIN:
+                    res[v] = min(g, float(np.linalg.norm(Vp[v] - (R @ V0[v] + t))))
+            return {v: d for v, d in res.items() if d > GAIN_MIN}
         for p, c in self.pairs:
             if np.abs(Dw[p] - Dw[c]).max() < 1e-9:
                 continue
+            pn = rig.names[p] + "/" + rig.names[c]
             tp, tc = self.bone_tris[p], self.bone_tris[c]
             ov = self.bvh(Vp, tp, T).overlap(self.bvh(Vp, tc, T))
             new = len({(int(tp[i]), int(tc[j])) for i, j in ov} - self.rest_overlap[(p, c)])
             if new > out["clip_tri_pairs"]:
                 out["clip_tri_pairs"] = new
-                out["clip_tri_pair"] = rig.names[p] + "/" + rig.names[c]
+                out["clip_tri_pair"] = pn
             for ip in self.ipairs[(p, c)]:
                 a, b = ip["a"], ip["b"]
                 lo_a, hi_a = boxp(a)
                 lo_b, hi_b = boxp(b)
                 if (lo_a > hi_b).any() or (lo_b > hi_a).any():
                     continue
-                ina = self.inside(Vp, a, treep(b), lo_b, hi_b)
-                inb = self.inside(Vp, b, treep(a), lo_a, hi_a)
-                new_a = {v: d for v, d in ina.items() if v not in ip["rest_a"]}
-                new_b = {v: d for v, d in inb.items() if v not in ip["rest_b"]}
-                n = len(new_a) + len(new_b)
+                ga = gained(self.inside(Vp, a, treep(b), lo_b, hi_b), ip["rest_a"], b["bone"])
+                gb = gained(self.inside(Vp, b, treep(a), lo_a, hi_a), ip["rest_b"], a["bone"])
+                n = len(ga) + len(gb)
                 if not n:
                     continue
-                depth = max(list(new_a.values()) + list(new_b.values()))
+                depth = max(list(ga.values()) + list(gb.values()))
                 thr = max(MIN_DEPTH, MIN_FRAC * ip["diag"])
                 out["clip_depth_max_mm"] = max(out["clip_depth_max_mm"], round(depth * 1000, 2))
-                if depth / thr > out["clip_ratio"]:
-                    out.update({"clip_depth_mm": round(depth * 1000, 2), "clip_verts": n,
-                                "clip_frac": round(depth / max(ip["diag"], 1e-9), 4), "clip_thr_mm": round(thr * 1000, 1),
-                                "clip_open": ip["open"], "clip_pair": rig.names[p] + "/" + rig.names[c],
-                                "clip_ratio": round(depth / thr, 4), "clip_over": depth > thr})
-            for ct in self.contacts[(p, c)]:
+                hit = {"pair": pn, "depth_mm": round(depth * 1000, 2), "verts": n,
+                       "frac": round(depth / max(ip["diag"], 1e-9), 4), "thr_mm": round(thr * 1000, 1),
+                       "open": ip["open"], "ratio": round(depth / thr, 4)}
+                if depth > thr:
+                    out["clip_hits"].append(hit)
+                if hit["ratio"] > out["clip_ratio"]:
+                    out.update({"clip_depth_mm": hit["depth_mm"], "clip_verts": n, "clip_frac": hit["frac"],
+                                "clip_thr_mm": hit["thr_mm"], "clip_open": ip["open"], "clip_pair": pn,
+                                "clip_ratio": hit["ratio"], "clip_over": depth > thr})
+            for ct in self.contacts.get((p, c), []):
                 tree = treep(ct["big"])
                 best = math.inf
                 for v in ct["samples"]:
@@ -940,10 +1035,15 @@ class Metrics:
                     if r is not None:
                         best = min(best, r[3])
                 thr = max(MIN_DEPTH, MIN_FRAC * ct["diag"])
-                if best < math.inf and best / thr > out["gap_ratio"]:
-                    out.update({"gap_mm": round(best * 1000, 2), "gap_frac": round(best / max(ct["diag"], 1e-9), 4),
-                                "gap_thr_mm": round(thr * 1000, 1), "gap_pair": rig.names[p] + "/" + rig.names[c],
-                                "gap_ratio": round(best / thr, 4), "gap_over": best > thr})
+                if best == math.inf:
+                    continue
+                hit = {"pair": pn, "gap_mm": round(best * 1000, 2), "frac": round(best / max(ct["diag"], 1e-9), 4),
+                       "thr_mm": round(thr * 1000, 1), "ratio": round(best / thr, 4)}
+                if best > thr:
+                    out["gap_hits"].append(hit)
+                if hit["ratio"] > out["gap_ratio"]:
+                    out.update({"gap_mm": hit["gap_mm"], "gap_frac": hit["frac"], "gap_thr_mm": hit["thr_mm"],
+                                "gap_pair": pn, "gap_ratio": hit["ratio"], "gap_over": best > thr})
         return out
 
 
@@ -957,17 +1057,46 @@ def collapse_ratio(m):
     return r
 
 
-def pose_flags(m, kind, deliberate=False):
+def pose_flags(m, kind):
+    """m carries clip_over/gap_over for the defect hits and x_clip/x_gap for the excused ones."""
     flags = []
     pre = "" if kind in KINDS_GAME else "STRESS-"
     if collapse_ratio(m) > 1:
         flags.append(pre + "COLLAPSE")  # never excused by DELIBERATE
-    dpre = "DELIBERATE-" if deliberate else pre
     if m["clip_over"]:
-        flags.append(dpre + "CLIP")
+        flags.append(pre + "CLIP")
     if m["gap_over"]:
-        flags.append(dpre + "GAP")
+        flags.append(pre + "GAP")
+    if m.get("x_clip"):
+        flags.append("DELIBERATE-CLIP")
+    if m.get("x_gap"):
+        flags.append("DELIBERATE-GAP")
     return flags
+
+
+def split_hits(m, key, clip):
+    """Move the hits the DELIBERATE table excuses for this clip out of the defect fields."""
+    x_clip = [h for h in m["clip_hits"] if clip and excused(key, clip, *h["pair"].split("/"))]
+    x_gap = [h for h in m["gap_hits"] if clip and excused(key, clip, *h["pair"].split("/"))]
+    d_clip = [h for h in m["clip_hits"] if h not in x_clip]
+    d_gap = [h for h in m["gap_hits"] if h not in x_gap]
+    out = dict(m)
+    out["x_clip"], out["x_gap"] = x_clip, x_gap
+    out["clip_over"], out["gap_over"] = bool(d_clip), bool(d_gap)
+    out["x_ratio"] = max([h["ratio"] for h in x_clip + x_gap], default=0.0)
+    if d_clip:
+        h = max(d_clip, key=lambda h: h["ratio"])
+        out.update({"clip_depth_mm": h["depth_mm"], "clip_verts": h["verts"], "clip_frac": h["frac"], "clip_thr_mm": h["thr_mm"],
+                    "clip_open": h["open"], "clip_pair": h["pair"], "clip_ratio": h["ratio"]})
+    else:
+        # nothing over threshold left: the ratio to rank on is the best of what is under it
+        out["clip_ratio"] = m["clip_ratio"] if not m["clip_over"] and not x_clip else 0.0
+    if d_gap:
+        h = max(d_gap, key=lambda h: h["ratio"])
+        out.update({"gap_mm": h["gap_mm"], "gap_frac": h["frac"], "gap_thr_mm": h["thr_mm"], "gap_pair": h["pair"], "gap_ratio": h["ratio"]})
+    else:
+        out["gap_ratio"] = m["gap_ratio"] if not m["gap_over"] and not x_gap else 0.0
+    return out
 
 
 def severity(m, kind, deliberate):
@@ -981,7 +1110,9 @@ def severity(m, kind, deliberate):
         if m["edge_min"] is not None and m["edge_min"] < EDGE_FLAG:
             parts.append("EDGE %.2f" % m["edge_min"])
         return (1000.0 if kind in KINDS_GAME else 500.0) + sc, "COLLAPSE " + " ".join(parts)
-    scale = 0.1 if deliberate else 1.0
+    scale = 1.0
+    if m.get("x_ratio", 0.0) > max(cr, gr):
+        return m["x_ratio"] * 0.001, "DELIBERATE %.1fX" % m["x_ratio"]
     if cr >= gr and cr > 0:
         return cr * scale, "CLIP %.0fMM %.0f%%" % (m["clip_depth_mm"], m["clip_frac"] * 100)
     if gr > 0:
@@ -1049,6 +1180,10 @@ def seam_check(rig, clip):
                       "vel_limit": [round(max(SEAM_HARSHER * inside[k], floors[k]), 5) for k in range(3)],
                       "seam": bool(fails), "why": fails}
     bad = {b: r for b, r in rows.items() if r["seam"]}
+    if not rows:
+        return {"clip": clip.name, "seconds": round(clip.seconds, 4), "bones": 0, "seam": None, "failing_bones": [],
+                "seam_untested": "NO BONE FCURVES (Blender import); Godot rig_loop_seam_test covers its tracks",
+                "bones_detail": {}}
     return {"clip": clip.name, "seconds": round(clip.seconds, 4), "bones": len(rows),
             "seam": bool(bad), "failing_bones": sorted(bad), "bones_detail": rows}
 
@@ -1198,6 +1333,10 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         ranges = table_ranges(key)
         source = "procedural table"
         specs = make_specs(ranges, names)
+        for sp in specs:
+            tag = "proc:%s:%s%s" % (sp["bone"], sp["axis"], "+" if sp["value"] > 0 else "-")
+            if sp["kind"] == "extreme" and tag in delib:
+                sp["deliberate"], sp["src"] = True, tag
     else:
         # Ranges from the clips the game holds to the thresholds; deliberate clips add only the
         # extremes that go beyond them, marked deliberate, with no stress pose.
@@ -1241,8 +1380,10 @@ def audit_rig(key, a, sheet_rows, loop_rows):
             if k in spec:
                 rec[k] = spec[k]
         rec["deliberate"] = bool(spec.get("deliberate"))
+        ctx = spec.get("clip") if spec["kind"] == "clip" else (spec.get("src") if rec["deliberate"] else None)
+        m = split_hits(m, key, ctx)
         rec.update(m)
-        rec["flags"] = pose_flags(m, spec["kind"], rec["deliberate"])
+        rec["flags"] = pose_flags(m, spec["kind"])
         rec["severity"], rec["worst_metric"] = severity(m, spec["kind"], rec["deliberate"])
         rec["severity"] = round(rec["severity"], 4)
         poses.append(rec)
@@ -1270,7 +1411,11 @@ def audit_rig(key, a, sheet_rows, loop_rows):
             slot = flags.setdefault(f, {"count": 0, "worst": None, "bones": set()})
             slot["count"] += 1
             slot["bones"].add(p["bone"])
-            score = {"COLLAPSE": collapse_ratio(p), "CLIP": p["clip_ratio"], "GAP": p["gap_ratio"]}[f.replace("STRESS-", "").replace("DELIBERATE-", "")]
+            base = f.replace("STRESS-", "").replace("DELIBERATE-", "")
+            if f.startswith("DELIBERATE"):
+                score = max([h["ratio"] for h in p["x_" + base.lower()]], default=0.0)
+            else:
+                score = {"COLLAPSE": collapse_ratio(p), "CLIP": p["clip_ratio"], "GAP": p["gap_ratio"]}[base]
             if slot["worst"] is None or score > slot["worst"][0]:
                 slot["worst"] = (score, p)
     for f, slot in flags.items():
@@ -1301,6 +1446,10 @@ def audit_rig(key, a, sheet_rows, loop_rows):
                        "loc_m": {k: [round(x, 4) for x in v] for k, v in r["loc"].items()},
                        "scale": {k: [round(x, 4) for x in v] for k, v in r["scale"].items()}}
                    for b, r in ranges.items()},
+        "git_head": GIT_HEAD, "pairs_untested": not metrics.pairs,
+        "pair_note": ("no parent/child or touching-at-rest island pairs: CLIP and GAP are untested, not clean"
+                      if not metrics.pairs else None),
+        "sibling_pairs": metrics.sibling_pairs, "sibling_capped": metrics.sibling_capped,
         "pose_count": len(poses), "contact_pairs": len(metrics.pairs),
         "rigid_islands": len(metrics.rigid), "blended_triangles": int(len(metrics.bt)),
         "deliberate": delib, "deliberate_collapse": deliberate_collapse,
@@ -1308,7 +1457,7 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         "seconds": round(time.time() - t0, 1),
     }
     if not a["no-render"]:
-        render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows)
+        render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, not metrics.pairs)
     summary = {
         "joints": audit["joints"], "deforming": audit["deforming_bone_count"], "verts": audit["vertices"],
         "unweighted": audit["unweighted_vertices"], "blended": audit["blended_vertices"],
@@ -1316,7 +1465,8 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         "poses": len(poses), "parent_child_pairs": len(metrics.pairs), "blended_tris": int(len(metrics.bt)), "skin_err_m": check.get("max_err_m"),
         "flags": {f: {"n": s["count"], "bones": s["bones"][:6], "worst": s["worst"]} for f, s in flags.items()},
         "deliberate_collapse": deliberate_collapse,
-        "seam": {c: (s.get("failing_bones", s.get("error"))) for c, s in seams.items()},
+        "seam": {c: ("UNTESTED" if s.get("seam_untested") else s.get("failing_bones", s.get("error"))) for c, s in seams.items()},
+        "pairs_untested": not metrics.pairs, "testable_pairs": len(metrics.pairs), "sibling_pairs": metrics.sibling_pairs,
         "seam_worst": {c: max(((r["vel_jump"][k] / max(r["vel_limit"][k], 1e-9), b, k) for b, r in s["bones_detail"].items()
                                for k in range(3)), default=None) for c, s in seams.items() if "bones_detail" in s},
     }
@@ -1346,7 +1496,7 @@ def skin_check(rig, values, Vp):
     return {"max_err_m": round(err, 6)}
 
 
-def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows):
+def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pairs_untested=False):
     stage = Stage(rig, a["size"], a["samples"])
     w, h = a["size"], int(a["size"] * 0.75)
     ranked = sorted(range(len(poses)), key=lambda i: -poses[i]["severity"])
@@ -1360,11 +1510,11 @@ def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows):
         chosen.append(i)
         if len(chosen) == 5:
             break
-    tiles = [tile(stage.render({}), [key.split("/")[-1], "REST POSE", "RANKED BY DEFECT SEVERITY"])]
+    tiles = [tile(stage.render({}), [key.split("/")[-1], "REST POSE", "PAIRS UNTESTED" if pairs_untested else "RANKED BY DEFECT SEVERITY"])]
     for i in chosen:
         p = poses[i]
         label = fmt_spec(p) if p["bone"] != "*" else "%s %.2fS" % (p["axis"], p["value"])
-        flagtxt = " ".join(p["flags"]) if p["flags"] else "NO FLAG"
+        flagtxt = " ".join(p["flags"]) if p["flags"] else ("PAIRS UNTESTED" if pairs_untested else "NO FLAG")
         collapsed = any(f.endswith("COLLAPSE") for f in p["flags"])
         tiles.append(tile(stage.render(values_for[i]),
                           [label, "%s [%s%s]" % (p["worst_metric"], p["kind"], " DELIB" if p["deliberate"] else ""), flagtxt],
@@ -1384,11 +1534,14 @@ def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows):
             imgs.append(stage.render(vals))
         over = 0.5 * imgs[0] + 0.5 * imgs[2]
         tag = key.split("/")[-1] + " " + cname
-        verdict = "SEAM " + ",".join(seam["failing_bones"][:3]) if seam["seam"] else "SEAM OK"
-        row = [tile(imgs[0], [tag, "FIRST FRAME %.1f" % clip.start, ""]),
-               tile(imgs[1], [tag, "MIDDLE %.1f" % mid, ""]),
+        untested = bool(seam.get("seam_untested"))
+        verdict = ("SEAM UNTESTED" if untested else ("SEAM " + ",".join(seam["failing_bones"][:3]) if seam["seam"] else "SEAM OK"))
+        note = "NO BONE FCURVES (IMPORT)" if untested else ""
+        note2 = "GODOT SEAM TEST COVERS IT" if untested else ""
+        row = [tile(imgs[0], [tag, "FIRST FRAME %.1f" % clip.start, note]),
+               tile(imgs[1], [tag, "MIDDLE %.1f" % mid, note2]),
                tile(imgs[2], [tag, "LAST FRAME %.1f" % clip.end, ""]),
-               tile(over, [tag, "LAST OVER FIRST 50%", verdict], seam["seam"])]
+               tile(over, [tag, "LAST OVER FIRST 50%", verdict], bool(seam["seam"]) or untested)]
         loop_rows.append(hstack(row, w, row[0].shape[0]))
 
 
@@ -1400,6 +1553,23 @@ def pad_rows(rows):
             r = np.concatenate([r, np.zeros((r.shape[0], width - r.shape[1], 3), dtype=np.float32)], axis=1)
         out.append(r)
     return np.concatenate(out, axis=0)
+
+
+def git_head():
+    try:
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=SKETCH, capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+GIT_HEAD = git_head()
+
+
+def footer(arr, text):
+    band = np.zeros((22, arr.shape[1], 3), dtype=np.float32)
+    band[:] = (0.05, 0.05, 0.06)
+    draw_text(band, 4, 4, text, 2, (0.8, 0.85, 0.8))
+    return np.concatenate([arr, band], axis=0)
 
 
 def main():
@@ -1414,7 +1584,7 @@ def main():
         results[key + ".glb"] = audit_rig(key, a, sheet_rows, loop_rows)
     path = os.path.join(a["out"], "rig_audit_%s.json" % tag)
     with open(path, "w") as f:
-        json.dump({"world": tag, "thresholds": {
+        json.dump({"world": tag, "git_head": GIT_HEAD, "thresholds": {
             "collapse_area": AREA_FLAG, "collapse_edge": EDGE_FLAG, "gap_rest_m": GAP_REST, "gap_pose_m": GAP_POSE,
             "seam_loc_mm": SEAM_LOC_MM, "seam_rot_deg": SEAM_ROT_DEG, "seam_scale": SEAM_SCALE,
             "seam_velocity_harsher": SEAM_HARSHER, "seam_floors": [SEAM_FLOOR_LOC_MM, SEAM_FLOOR_ROT_DEG, SEAM_FLOOR_SCALE],
@@ -1423,11 +1593,11 @@ def main():
     if sheet_rows:
         reset_scene()
         sp = os.path.join(a["out"], "pose_sheet_%s.png" % tag)
-        save_png(pad_rows(sheet_rows), sp)
+        save_png(footer(pad_rows(sheet_rows), "RIG_POSE_AUDIT %s POSES HEAD %s" % (tag, GIT_HEAD)), sp)
         print("SHEET", sp)
         if loop_rows:
             lp = os.path.join(a["out"], "loops_%s.png" % tag)
-            save_png(pad_rows(loop_rows), lp)
+            save_png(footer(pad_rows(loop_rows), "RIG_POSE_AUDIT %s LOOPS HEAD %s" % (tag, GIT_HEAD)), lp)
             print("LOOPS", lp)
 
 
