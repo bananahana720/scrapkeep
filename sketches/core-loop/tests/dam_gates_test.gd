@@ -100,12 +100,22 @@ func _run() -> void:
 	driver.gates_opened += 1
 	driver.sheet_left = WardenReactor.SHEET_SECONDS
 	var before := _state(driver)
+	# A control driver stepped the same way with no rig: the posed driver must match it tick for tick.
+	var control := Reactor.new()
+	control.mount_driver.gates_opened = driver.gates_opened
+	control.mount_driver.sheet_left = driver.sheet_left
+	var matched := true
+	var quarter := -1.0
 	var opened_at := -1.0
 	var clock := 0.0
 	while driver.sheet_live():
 		driver.step(reactor, _dt)
+		control.mount_driver.step(control, _dt)
 		rig.pose(driver, _dt)
+		matched = matched and _state(driver) == _state(control.mount_driver)
 		clock += _dt
+		if quarter < 0.0 and clock >= DamRig.OPEN_SECONDS * 0.25:
+			quarter = rig.angle()
 		if opened_at < 0.0 and is_equal_approx(rig.angle(), DamRig.OPEN_RAD):
 			opened_at = clock
 		if clock >= WardenReactor.SHEET_SECONDS - 4.0 * _dt and clock < WardenReactor.SHEET_SECONDS - 3.0 * _dt:
@@ -116,7 +126,11 @@ func _run() -> void:
 				t.check("%s's lip lifts to the trunnion" % leaf.name, lift >= LIFT_BAND.x and lift <= LIFT_BAND.y, "%.2f m" % lift)
 				t.check("%s's hinge holds" % leaf.name, leaf.transform.origin.distance_to(rig.rests[k].origin) < 0.001)
 	t.check("the leaves open within OPEN_SECONDS", opened_at > 0.0 and opened_at <= DamRig.OPEN_SECONDS + 2.0 * _dt, "%.3f s" % opened_at)
-	t.check("the leaves ease open, not snap", opened_at >= DamRig.OPEN_SECONDS - 2.0 * _dt, "%.3f s" % opened_at)
+	t.check("the leaves take OPEN_SECONDS, not snap", opened_at >= DamRig.OPEN_SECONDS - 2.0 * _dt, "%.3f s" % opened_at)
+	t.check("the leaves ease in: a quarter of the way through they lag a linear swing", quarter > 0.0
+		and quarter < 0.2 * DamRig.OPEN_RAD, "%.4f rad against linear %.4f" % [quarter, 0.25 * DamRig.OPEN_RAD])
+	t.check("through the live sheet the posed driver matches a control driver with no rig", matched)
+	control.free()
 
 	# The sheet runs out: shut within CLOSE_SECONDS.
 	var shut_after := _close_time(rig, driver, reactor)
