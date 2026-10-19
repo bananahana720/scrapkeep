@@ -20,26 +20,26 @@ from _life import Critter  # noqa: E402
 life = Critter("dam_swift")
 
 # --- body: a round ball, cream belly, short forked tail pointing back (+Z)
-life.ellipsoid("body", "body", (0, 0.1, 0.004), (0.088, 0.08, 0.09), subsurf=1, u=10, v=6)
-life.ellipsoid("body", "cream", (0, 0.085, -0.046), (0.062, 0.054, 0.042), rot=(-12, 0, 0), subsurf=0, u=10, v=6)
-for s in (-1, 1):
-    life.capsule("body", "wing", (0.008 * s, 0.108, 0.078), (0.026 * s, 0.116, 0.135), 0.021, 0.013, subsurf=1, u=6, v=4)
+life.ellipsoid("body", "body", (0, 0.1, 0.004), (0.088, 0.08, 0.09), subsurf=1, u=12, v=6)
+life.ellipsoid("body", "cream", (0, 0.085, -0.046), (0.062, 0.054, 0.042), rot=(-12, 0, 0), subsurf=1, u=10, v=6)
+for s in (-1, 1):  # two short rounded tail lobes
+    life.ellipsoid("body", "wing", (0.022 * s, 0.1, 0.098), (0.02, 0.017, 0.028), rot=(0, 18 * s, 0), subsurf=1, u=8, v=6)
 
 # --- head: small, merged into the front of the body; beak nub and eyes
 life.ellipsoid("head", "body", (0, 0.173, -0.056), (0.047, 0.043, 0.045), subsurf=1, u=8, v=5)
 life.ellipsoid("head", "cream", (0, 0.164, -0.094), (0.03, 0.022, 0.014), subsurf=1, u=6, v=4)
 life.ellipsoid("head", "wing", (0, 0.17, -0.106), (0.012, 0.009, 0.013), subsurf=1, u=6, v=4)
 for s in (-1, 1):
-    life.ellipsoid("head", "eye", (0.03 * s, 0.183, -0.082), (0.011, 0.012, 0.009), subsurf=0, u=8, v=5)
+    life.ellipsoid("head", "eye", (0.03 * s, 0.183, -0.082), (0.011, 0.012, 0.009), subsurf=1, u=8, v=5)
 
 # --- short feet
 for s in (-1, 1):
-    life.ellipsoid("body", "wing", (0.03 * s, 0.014, -0.012), (0.017, 0.014, 0.027), subsurf=0, u=8, v=5)
+    life.ellipsoid("body", "wing", (0.03 * s, 0.014, -0.012), (0.017, 0.014, 0.027), subsurf=1, u=8, v=5)
 
-# --- crescent wings: one smooth tapered sweep per side, shoulder at the front of the flank, tip curving back and up
-ARC = [(-0.025, 0.12), (0.02, 0.114), (0.065, 0.118), (0.105, 0.133), (0.135, 0.153)]
+# --- crescent wings: one smooth tapered sweep per side lying on the flank, following the body curve, rounded tip low on the back
+ARC = [(0.088, 0.118, -0.02), (0.091, 0.112, 0.02), (0.081, 0.108, 0.055), (0.057, 0.106, 0.085), (0.04, 0.105, 0.104)]
 for s, bone in ((-1, "wing_l"), (1, "wing_r")):
-    life.tube(bone, "wing", [(0.085 * s, y, z) for z, y in ARC], [0.024, 0.026, 0.022, 0.015, 0.007], sides=6, subsurf=1)
+    life.tube(bone, "wing", [(x * s, y, z) for x, y, z in ARC], [0.024, 0.026, 0.022, 0.017, 0.012], sides=6, subsurf=1, cap=1.0)
 
 life.rig([
     ("root", (0, 0, 0), None),
