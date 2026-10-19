@@ -20,6 +20,7 @@ Disposable evidence for the Ambient life PRs; nothing here ships. One folder per
 - `capture_states.txt`: the member states per second.
 - `bats_before_after.jpg`: before the roof veto, bats were planned where no roof exists. Now they roost only under a real roof, which means park_pit's adit portals; park_sinkhole has none for now.
 - `models/`: Blender stills of the burro, bat, lizard and prospector.
+- `bats_roosting_below.jpg` and `clips/ambient_park_pit_tube_bat_below.mp4`: the park_pit roost seen from below (the capture tool's roost camera), two bats hanging under the adit beams. They read small and dark against the timber; that is a visibility question for the 4080 A/B, not a misread.
 
 ## hd: Highdraft world (park_islands, park_crown)
 
