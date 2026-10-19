@@ -91,7 +91,24 @@ func _run() -> void:
 	# Only the radio's tip is already owed on the drop: the dial is on screen.
 	tips._physics_process(0.016)
 	_report("radio dial tip on the drop", tips.seen("radio") and _prompts.count("tip_radio") == 1, "prompts %s" % [_prompts])
-	_tip("grip", func(): _game.player.state.carving = true)
+	# A tip met in a fight waits, and is told when the fight lets go (the fight's word budget).
+	_game.flow._engaged = true
+	_game.player.state.carving = true
+	tips._physics_process(0.016)
+	_report("a fight holds the grip tip", not tips.seen("grip") and tips.pending.has("grip") and _prompts.count("tip_grip") == 0
+		and not _game.hud.toast_texts().has(FieldTips.TIPS["grip"]), "pending %s, prompts %s" % [tips.pending, _prompts])
+	_game.flow._engaged = false
+	tips._physics_process(0.016)
+	_report("the held tip comes after the fight", tips.seen("grip") and tips.pending.is_empty() and _prompts.count("tip_grip") == 1
+		and _game.hud.toast_texts().has(FieldTips.TIPS["grip"]), "prompts %s, toasts %s" % [_prompts, _game.hud.toast_texts()])
+	_game.flow._engaged = true
+	tips._physics_process(0.016)
+	_report("a fight takes a showing tip down", not _game.hud.toast_texts().has(FieldTips.TIPS["grip"]), "toasts %s" % [_game.hud.toast_texts()])
+	_game.flow._engaged = false
+	_game.player.state.carving = false
+	_game.player.state.carving = true
+	tips._physics_process(0.016)
+	_report("grip tip does not repeat", _prompts.count("tip_grip") == 1, "prompts %s" % [_prompts])
 	_game.player.state.carving = false
 	_tip("jam", func(): _game.player.abilities.jam(0.5))
 	_tip("cast", func(): _game.player.abilities.casting = "special")

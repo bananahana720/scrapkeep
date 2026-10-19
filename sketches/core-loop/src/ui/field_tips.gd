@@ -12,6 +12,9 @@ const Palette := preload("res://src/core/palette.gd")
 #   stake      the ball comes within STAKE_REACH of a relay's stake post
 #   companion  SPIL-9's halo gauge fills (combat.companion_assist_full)
 #   active     the F slot first racks an active (behind --actives)
+# A fight keeps its word budget (ui_word_budget_test): a tip met while a Warden is engaged waits
+# in `pending` and is told when the fight lets go, and one still on screen when a fight starts is
+# taken down.
 # Each emits events.prompt_shown("tip_<id>") as the toast shows, so scripts/first-timer.mjs reads
 # it as a teach, and files itself in the profile's seen list so it never repeats. Words come
 # from the game's own: the Warden's slots are numbers, the dial's keys are . , /.
@@ -31,6 +34,7 @@ const SEEN_PREFIX := "tip_"
 var game
 var profile
 var hud
+var pending := {}
 var _jams := 0
 var _wired := false
 
@@ -62,23 +66,40 @@ func _physics_process(_delta: float) -> void:
 	_wire()
 	var player = game.player
 	var state = player.state
-	if not seen("grip") and state.carving:
-		tell("grip")
+	if state.carving:
+		meet("grip")
 	var abilities = player.abilities
 	if abilities.jams > _jams:
-		tell("jam")
+		meet("jam")
 	_jams = abilities.jams
 	if abilities.casting != AbilityState.UNSTARTED:
-		tell("cast")
+		meet("cast")
 	if not seen("radio"):
 		var deck = game.get("radio_deck")
 		if deck != null and deck.dial != null and deck.dial.is_visible_in_tree():
-			tell("radio")
+			meet("radio")
 	if not seen("stake") and stake_near(player.ball_position()):
-		tell("stake")
+		meet("stake")
 	var combat = game.get("combat")
 	if combat != null and not seen("active") and combat.get("actives") != null and combat.actives.active_id != "":
-		tell("active")
+		meet("active")
+	if game.flow.engaged():
+		for id in TIPS:
+			hud.drop_toast(TIPS[id])
+	else:
+		for id in pending.keys():
+			tell(id)
+		pending.clear()
+
+
+# A verb met now: told at once, or held until the fight is over.
+func meet(id: String) -> void:
+	if seen(id):
+		return
+	if game.flow.engaged():
+		pending[id] = true
+		return
+	tell(id)
 
 
 # The companion's signal lives on combat, which can come up after the HUD: join it once.
@@ -89,7 +110,7 @@ func _wire() -> void:
 	if combat == null:
 		return
 	_wired = true
-	combat.companion_assist_full.connect(func(): tell("companion"))
+	combat.companion_assist_full.connect(func(): meet("companion"))
 
 
 func stake_near(ball: Vector3) -> bool:

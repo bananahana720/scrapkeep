@@ -1085,6 +1085,15 @@ func _physics_process(delta: float) -> void:
 	part_name.step(delta)
 
 
+# Takes one toast's words down at once (field_tips.gd, when a fight starts), whether showing or held.
+func drop_toast(text: String) -> void:
+	if not _toast.is_empty() and _toast["text"] == text:
+		_toast = {}
+		_toast_row.visible = false
+	if not _held_toast.is_empty() and _held_toast["text"] == text:
+		_held_toast = {}
+
+
 func _step_toast(delta: float) -> void:
 	if not launch_card.showing() and not _held_toast.is_empty():
 		_show_toast(_held_toast)
