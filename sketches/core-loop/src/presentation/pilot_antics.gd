@@ -36,6 +36,9 @@ const MOVES := {
 		"clips": [[0.0, "heave", 0.3], [0.78, "big_cheer", 0.6]]},
 }
 
+# Reduced motion (Game.set_reduced_motion keeps it current): the growl shake stops.
+static var reduced_motion := false
+
 var holder: Node3D
 var core: Node3D
 var pod: Node3D
@@ -210,7 +213,7 @@ static func pose_at(id: String, t: float) -> Dictionary:
 			var perch := Vector3(0.0, TOP + 0.12, 0.0)
 			pose.at = _hop(SEAT, perch, leave, 0.4).lerp(SEAT, _ease_in(back))
 			var growl := _span(t, 0.22, 0.56) * (1.0 - _span(t, 0.56, 0.6))
-			pose.shake = Vector3(sin(t * 160.0), sin(t * 210.0) * 0.5, cos(t * 140.0)) * 0.035 * growl
+			pose.shake = Vector3(sin(t * 160.0), sin(t * 210.0) * 0.5, cos(t * 140.0)) * 0.035 * growl * (0.0 if reduced_motion else 1.0)
 			pose.yaw = 0.15
 		"tally":
 			# Steps off to the other side and stamps the ball three times.

@@ -33,6 +33,9 @@ const HAND := 15.0
 const GESTURE_SECONDS := 0.6
 const INTRO_HOLD := 4.0
 
+# Reduced motion (Game.set_reduced_motion keeps it current): the bubble's shake and tail wag stop.
+static var reduced_motion := false
+
 var text := ""
 var kind := "moss_beat"
 var mood := ""
@@ -400,6 +403,8 @@ func _draw() -> void:
 		return
 	var e := shown_exasperation
 	var shake := Vector2(sin(_clock * TAU * 13.0), cos(_clock * TAU * 11.0)) * (e * 0.8 + (3.0 if grumble else 0.0)) * exp(-_clock * 5.0)
+	if reduced_motion:
+		shake = Vector2.ZERO
 	var squash := Vector2(1.0 / _pop, _pop) if grumble and mood == "beat" else Vector2(_pop, _pop)
 	draw_set_transform(pivot_offset + shake, _spin, squash)
 	var root := -pivot_offset
@@ -413,7 +418,7 @@ func _draw() -> void:
 	for p in body:
 		shifted.append(p + root)
 	var mid_y := _body.y * 0.5
-	var wag := sin(_clock * TAU * 3.0) * e * 1.5
+	var wag := 0.0 if reduced_motion else sin(_clock * TAU * 3.0) * e * 1.5
 	var tail := PackedVector2Array([root + Vector2(TAIL + 2.0, mid_y - 10.0), root + Vector2(-4.0, mid_y + 8.0 + wag), root + Vector2(TAIL + 2.0, mid_y + 10.0)])
 	draw_colored_polygon(tail, Color(Palette.CHARCOAL, 0.94))
 	draw_colored_polygon(shifted, Color(Palette.CHARCOAL, 0.94))

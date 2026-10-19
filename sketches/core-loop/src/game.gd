@@ -36,6 +36,11 @@ const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const RewardView := preload("res://src/ui/reward_view.gd")
+const MossBubble := preload("res://src/ui/moss_bubble.gd")
+const ClassCard := preload("res://src/ui/class_card.gd")
+const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
+const ClassPreview := preload("res://src/ui/class_preview.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
@@ -812,6 +817,11 @@ func set_reduced_motion(on: bool) -> void:
 	HighdraftFx.preferred = on
 	AbilityBar.reduced_motion = on
 	AimReticle.reduced_motion = on
+	RewardView.reduced_motion = on
+	MossBubble.reduced_motion = on
+	ClassCard.reduced_motion = on
+	PilotAntics.reduced_motion = on
+	ClassPreview.reduced_motion = on
 	WorldFx.preferred = on
 	if is_instance_valid(WorldFx.current):
 		WorldFx.current.set_quality(WorldFx.current.low, on)
