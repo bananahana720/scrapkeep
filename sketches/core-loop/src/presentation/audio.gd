@@ -224,9 +224,10 @@ var ace_missing := ""
 var _ace_failed := false
 # The stems load on a worker while the title shows (24 Oggs, 5.8 MB): the task, its
 # result and the manifest it read. ace_ready() waits for the rest of it, or loads them
-# in place when the option or the manifest changed after setup.
+# in place when the option or the manifest changed after setup. The worker writes into
+# _ace_slot, never into this node, so a node freed mid-load is not locked by the call.
 var _ace_task := -1
-var _ace_loaded: AceSequencer
+var _ace_slot: Array = []
 var _ace_loaded_from := ""
 var _ring_capacity := 0
 # The ACE ring's depth: the POC's QUEUE_TARGET, raised a step whenever the ring runs dry,
@@ -457,14 +458,24 @@ static func _poll_bake() -> bool:
 
 
 func _start_ace_load() -> void:
-	if ace_manifest == "" or _ace_task >= 0 or _ace_loaded != null or ace != null or _ace_failed or not ace_wanted():
+	if ace_manifest == "" or _ace_task >= 0 or not _ace_slot.is_empty() or ace != null or _ace_failed or not ace_wanted():
 		return
 	_ace_loaded_from = ace_manifest
-	_ace_task = WorkerThreadPool.add_task(_load_ace, true, "presentation ACE stems")
+	_ace_slot = []
+	_ace_task = WorkerThreadPool.add_task(_ace_loader(_ace_loaded_from, _ace_slot), true, "presentation ACE stems")
 
 
-func _load_ace() -> void:
-	_ace_loaded = AceSequencer.new(_ace_loaded_from)
+# Built in a static function so the lambda holds no self: a task bound to this node locks
+# it for the whole load, and freeing it then fails ("Object is locked") and corrupts the heap.
+static func _ace_loader(manifest: String, slot: Array) -> Callable:
+	return func(): slot.append(AceSequencer.new(manifest))
+
+
+func _notification(what: int) -> void:
+	# A node freed outside the tree (the tests) still waits for its stems to finish loading.
+	if what == NOTIFICATION_PREDELETE and _ace_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_ace_task)
+		_ace_task = -1
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -827,9 +838,9 @@ func ace_ready() -> bool:
 		# Loading started at setup; wait only for what is left of it.
 		WorkerThreadPool.wait_for_task_completion(_ace_task)
 		_ace_task = -1
-	if _ace_loaded != null and _ace_loaded_from == ace_manifest:
-		loaded = _ace_loaded
-	_ace_loaded = null
+	if not _ace_slot.is_empty() and _ace_loaded_from == ace_manifest:
+		loaded = _ace_slot[0]
+	_ace_slot = []
 	if loaded == null:
 		loaded = AceSequencer.new(ace_manifest)
 	if not loaded.ready():

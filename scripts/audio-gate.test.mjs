@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -19,7 +20,10 @@ import {
   report,
   seamStep,
   specialCues,
+  staleAgainstManifest,
+  stemHashMismatches,
   wiredSet,
+  writeStemHashes,
 } from "./audio-gate.mjs";
 import { scan } from "./placeholder-gate.mjs";
 
@@ -166,6 +170,67 @@ test("judge measures loudness, true peak and seams through ffmpeg", { skip: !has
     assert.ok(Math.abs(good.row.lufs + 16) < 0.3, String(good.row.lufs));
     const bad = judge("loud", decode(path.join(dir, "loud-click-loop.wav")), 48000, { loop: true });
     assert.deepEqual(bad.found.map((f) => f.kind).sort(), ["loudness", "seam"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+
+// A stale Ogg under the right file name is the failure these tests plant (the zone packs' Oggs were
+// 17 days older than their manifests and every export played them). Each check runs on a good pack
+// first, so a zero is only trusted after the same check has failed on the planted one.
+test("a clip whose length or loudness differs from its manifest is stale", () => {
+  const t = { name: "spillway/calm", frames: 988672, measuredLufs: -16 };
+  assert.deepEqual(staleAgainstManifest(t, 988672, -15.9), []);
+  assert.deepEqual(staleAgainstManifest(t, 988673, -16).map((f) => f.kind), ["stale"]);
+  assert.deepEqual(staleAgainstManifest(t, 988672, -14.2).map((f) => f.kind), ["stale"]);
+  assert.deepEqual(staleAgainstManifest({ name: "old/calm", frames: null, measuredLufs: null }, 5, -3), []);
+});
+
+test("STEMS.sha256 rejects a stale, an unlisted and a re-encoded stem and names each", () => {
+  const dir = project({ "spillway/calm.drums.ogg": "fresh drums", "spillway/calm.bass.ogg": "fresh bass", "spillway/calm.other.ogg": "fresh other" });
+  const named = ["spillway/calm.drums.ogg", "spillway/calm.bass.ogg", "spillway/calm.other.ogg"];
+  const list = path.join(dir, "STEMS.sha256");
+  try {
+    assert.equal(stemHashMismatches(list, dir, named), null, "no list is not a pass");
+    assert.equal(writeStemHashes(list, dir, named), 3);
+    assert.deepEqual(stemHashMismatches(list, dir, named), [], "the good pack passes");
+    writeFileSync(path.join(dir, "spillway/calm.bass.ogg"), "an older mix under the same name");
+    const bad = stemHashMismatches(list, dir, named);
+    assert.deepEqual(bad.map((r) => r.file), ["spillway/calm.bass.ogg"], "the planted stale Ogg is named and nothing else");
+    assert.match(bad[0].why, /sha256 differs/);
+    const unlisted = stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]);
+    assert.deepEqual(unlisted.map((r) => r.file), ["spillway/calm.bass.ogg"], "a named file that is not on disk is not this check's finding");
+    writeFileSync(path.join(dir, "spillway/build.drums.ogg"), "new, never hashed");
+    assert.ok(stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]).some((r) => r.file === "spillway/build.drums.ogg" && /not listed/.test(r.why)));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the gate flags a stale pack and an unhashed one, and passes the good pack", { skip: !hasFfmpeg() && "no ffmpeg" }, () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "audio-gate-stale-"));
+  const music = path.join(dir, "assets/music_ace/zone");
+  mkdirSync(music, { recursive: true });
+  const tone = (file, seconds, level) =>
+    spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", `sine=frequency=440:duration=${seconds}:sample_rate=44100`, "-af", `volume=${level}`, "-ac", "2", "-c:a", "libvorbis", file]);
+  try {
+    for (const stem of ["drums", "bass", "other"]) tone(path.join(music, `calm.${stem}.ogg`), 12, 0.02);
+    const manifest = { theme: "zone", rate: 44100, level_db: 0, stems: ["drums", "bass", "other"], clips: { calm: { files: { drums: "calm.drums.ogg", bass: "calm.bass.ogg", other: "calm.other.ogg" } } } };
+    const write = (clip) => writeFileSync(path.join(music, "manifest.json"), JSON.stringify({ ...manifest, clips: { calm: { ...manifest.clips.calm, ...clip } } }));
+    write({});
+    const base = parseArgs(["--project", dir]);
+    const kinds = () => run(base).findings.filter((f) => f.kind === "stale" || f.where.endsWith("STEMS.sha256")).map((f) => f.kind);
+    assert.deepEqual(kinds(), ["unchecked"], "no hash list: unchecked, never a pass");
+    writeStemHashes(path.join(dir, "assets/music_ace", "STEMS.sha256"), path.join(dir, "assets/music_ace"), ["zone/calm.drums.ogg", "zone/calm.bass.ogg", "zone/calm.other.ogg"]);
+    const measured = run(base).rows[0].lufs;
+    write({ measured: { lufs: measured } });
+    assert.deepEqual(kinds(), [], "the good pack: hashes match, loudness matches its manifest");
+    write({ measured: { lufs: measured + 2 } });
+    assert.deepEqual(kinds(), ["stale"], "a manifest cut from a louder mix flags the clip");
+    write({ measured: { lufs: measured } });
+    tone(path.join(music, "calm.bass.ogg"), 12, 0.02);
+    assert.ok(kinds().includes("stale"), "a re-encoded stem differs from the hash list");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
