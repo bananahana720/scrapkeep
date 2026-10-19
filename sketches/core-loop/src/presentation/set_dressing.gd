@@ -44,6 +44,9 @@ var _prep := {}
 var _dress_when_planned := false
 # Whether the current children were built from a worker's plan, for stage_entry_budget_test.
 var built_from_worker := false
+# Whether the last stage entry found its plan still drawing and left the build to _process, for
+# stage_entry_budget_test.
+var entry_deferred := false
 # The clutter kit's meshes and their target materials, read once (_kit_meshes).
 var _kit := {}
 var _kit_materials: Array[ShaderMaterial] = []
@@ -69,6 +72,7 @@ func setup(context) -> void:
 func _stage_entered(_stage: int, _retry: bool) -> void:
 	var started := Time.get_ticks_usec()
 	_active = true
+	entry_deferred = false
 	_build_stage()
 	last_entry_usec = Time.get_ticks_usec() - started
 
@@ -88,12 +92,17 @@ func _build_stage() -> void:
 	if key == _built_for and get_child_count() > 0:
 		_update_protection()
 		return
+	# A plan still drawing is never waited on here (SWAP-HITCH-4: the wait was 140 to 380 ms of a
+	# stage entry on a quick exit, the plan taking ~360 ms on a worker, the build ~2 ms). The old
+	# stage's dressing goes, and _process builds this one the frame the worker is done.
+	if not _prep.is_empty() and _prep.key == key and not WorkerThreadPool.is_task_completed(_prep.task):
+		_clear_children()
+		_built_for = []
+		_dress_when_planned = true
+		entry_deferred = true
+		return
 	_built_for = key
-	for child in get_children():
-		child.free()
-	batches.clear()
-	_materials.clear()
-	_dust = null
+	_clear_children()
 	map_id = ctx.stages.of(stage).map
 	seed_value = map_id.hash()
 	_ground = ctx.terrain.ground_callable(stage)
@@ -112,6 +121,13 @@ func _build_stage() -> void:
 		streaks.material_override.set_shader_parameter("ground_streak", true)
 		streaks.material_override.set_shader_parameter("opacity", 0.018)
 	_update_protection()
+
+func _clear_children() -> void:
+	for child in get_children():
+		child.free()
+	batches.clear()
+	_materials.clear()
+	_dust = null
 
 func _key(stage: int, root: Node3D) -> Array:
 	return [stage, ctx.stages.of(stage).map, Preset.current, root.get_instance_id()]
