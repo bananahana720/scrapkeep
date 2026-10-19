@@ -48,12 +48,19 @@ Blender's own evaluation):
   at the pose, with the gap also given as a fraction of that diagonal.
   STRESS-CLIP and STRESS-GAP when only a stress pose does it. Clips listed in DELIBERATE are
   designed detachments or impacts: their GAP and CLIP become DELIBERATE-GAP and DELIBERATE-CLIP
-  and leave the defect counts; COLLAPSE is never excused and is reported separately.
+  and leave the defect counts; COLLAPSE is never excused and is reported separately. Listing a
+  clip there takes it out of the range of motion (it adds only extremes beyond the others, no stress
+  pose), so it is for designed clips only. A motion a rig designs in every clip goes in
+  DESIGNED_PAIRS instead: those pairs are excused in every pose and every clip still sets the
+  ranges. Tool limit: the extremes are per Godot axis, so a hinge turned about an oblique axis is
+  split into per-axis poses (a plate "rY +22 deg" is rotated about the wrong axis); such a pose is
+  not one the game reaches, and only a render settles whether it is a defect.
   Kit against its body (HOSTS below): a kit rig whose parts never touch one another is measured
   against the body it rides. The body is skinned at the same clip time, every 1/15 s of every clip
   both share except the exempt ones, and each kit vertex is tested against the whole body mesh
-  (nearest face, behind its normal and the ray straight out from the axis meets the body = inside). A part deeper than max(30 mm, 5% of its own bounding
-  box diagonal) is a CLIP defect, reported as host_clip in the JSON and on the rig's sheet row.
+  (nearest face, behind its normal and the ray straight out from the axis meets the body = inside),
+  and each body vertex inside a kit part's bounding box is tested against the kit's closed prisms.
+  A part deeper than max(30 mm, 5% of its own bounding box diagonal) is a CLIP defect, reported as host_clip in the JSON and on the rig's sheet row.
   Loop seam (clips the game loops, LOOPS below): per bone the pose delta between the first and
   last key, the velocity change between the first and last 1/30 s steps. SEAM: location > 1 mm,
   rotation > 0.5 degrees, scale > 0.001, or a velocity change at the seam above 1.5 x the clip's
@@ -116,6 +123,9 @@ LOOPS = {
 HOSTS = {"warden_swarm_kit_drones": {"host": "warden_swarm", "skip": ("break", "snip")}}
 HOST_STEP = 1.0 / 15
 
+# The shed rings' cells, Cell7 to Cell51 (fnmatch patterns).
+_SHED_CELLS = ("Cell[7-9]", "Cell[1-4][0-9]", "Cell5[01]")
+
 # Designed detachments and impacts, per GLB and clip: only the listed part pairs (bone names,
 # fnmatch patterns, either order) are excused in that clip; every other pair stays a defect.
 # Each entry cites the source that says the motion is designed. COLLAPSE is never excused.
@@ -167,18 +177,10 @@ DELIBERATE = {
     "warden_swarm": {
         "break": {"pairs": [("*", "*")], "cite": "ws:42 'chunk_shed and break (falling cells)'; cells split off and fall ws:491-498, hull falls ws:528-531"},
         # Ring bones own no island, so the pairs name the cells: Ring1 is Cell1-6, Ring2 Cell7-18, Ring3 Cell19-30,
-        # Ring4 Cell31-42, Ring5 Cell43-51. Ring3 against Ring4 is Cell/Seam, covered by the seam pair.
+        # Ring4 Cell31-42, Ring5 Cell43-51; the shed rings are Cell7 to Cell51. Pinpricks of the same cell are in DESIGNED_PAIRS.
         "chunk_shed": {"pairs": [("Cell[7-9]", "Yoke"), ("Cell1[0-8]", "Yoke"), ("Cell[7-9]", "Cell[1-6]"), ("Cell1[0-8]", "Cell[1-6]"),
-                                 ("Cell*", "Seam*")],
-                       "cite": "ws:26-29, :42, :110, :483-487, :547-548, :552-563 the shed rings' cells (Cell7 to Cell51) fall away from the Yoke, Ring1 and each other while the pinpricks flicker; hero_assets.gd:2310-2318 enables one ring's track"},
-        "pulse": {"pairs": [("Cell*", "Shutter*"), ("Cell*", "Seam*")],
-                  "cite": "ws:507-509 every plate opens 50 deg about its hinge; the audit's per-Godot-axis splits of that turn are not game poses (the clip frames reach 6 mm Cell/Shutter); seam pair as SEAM_ROW"},
-        "stagger_open": {"pairs": [("Cell*", "Shutter*"), ("*", "QueenCore"), ("Cell*", "Seam*")],
-                         "cite": "ws:513-516 shutters open to 125 deg; ws:536-539 'the lit core rises out of the open queen'; seam pair as SEAM_ROW"},
-        # The pinpricks ride their Seam bone 50 mm into the lip (dim) or 130 mm (off), 70 mm proud (bright).
-        **{clip: {"pairs": [("Cell*", "Seam*")],
-                  "cite": "ws:35, :113-114, :451-498 a Seam bone sinks the pinpricks into the lip (SEAM_DIM -0.05, SEAM_OFF -0.13); a buried pinprick reads as CLIP and GAP"}
-           for clip in ("idle", "active", "hoist_ride", "snip", "brood_dark")},
+                                 *[(c, "Seam" + n[4:]) for c in _SHED_CELLS for n in _SHED_CELLS]],
+                       "cite": "ws:26-29, :42, :110, :483-487, :547-548, :552-563 the shed rings' cells (Cell7 to Cell51) fall away from the Yoke, Ring1 and each other (a shed ring's cells against another shed ring's pinpricks); hero_assets.gd:2310-2318 enables one ring's track"},
     },
     "warden_swarm_kit_drones": {
         "break": {"pairs": [("*", "*")], "cite": "ws:721-730 drones drop, spin and fly out"},
@@ -223,18 +225,25 @@ def host_frames(spec):
 
 
 def host_clip(rig, frames, tris):
-    """Per shared clip: the deepest a kit vertex sits inside the body, where, and the threshold."""
+    """Per shared clip: the deepest a kit vertex sits inside the body and the deepest a body vertex
+    sits inside a kit part (depth_mm is the larger), where, and the threshold."""
     owner = [row[0][0] if row else -1 for row in rig.groups]
-    diag = {}
+    pts = {}
     for v, b in enumerate(owner):
-        diag.setdefault(b, []).append(rig.V0[v])
-    thr = {b: max(MIN_DEPTH, MIN_FRAC * float(np.linalg.norm(np.max(p, 0) - np.min(p, 0)))) for b, p in diag.items()}
+        pts.setdefault(b, []).append(v)
+    thr = {b: max(MIN_DEPTH, MIN_FRAC * float(np.linalg.norm(np.ptp(rig.V0[vs], axis=0)))) for b, vs in pts.items()}
     res = {}
     for name, rows in frames.items():
         clip = rig.clips.get(name)
         if clip is None:
             continue
-        worst = {"depth_mm": 0.0, "t": None, "part": None, "thr_mm": None, "over": False}
+        worst = {"depth_mm": 0.0, "t": None, "part": None, "thr_mm": None, "over": False, "kit_in_body_mm": 0.0, "body_in_kit_mm": 0.0}
+
+        def note(kind, depth, t, b):
+            worst[kind] = max(worst[kind], round(depth * 1000, 2))
+            if depth * 1000 > worst["depth_mm"]:
+                worst.update({"depth_mm": round(depth * 1000, 2), "t": round(t, 4), "part": rig.names[b], "thr_mm": round(thr[b] * 1000, 1),
+                              "over": depth > thr[b]})
         for t, Vh in rows:
             Vk = pose_arrays(rig, clip, t)
             tree = BVHTree.FromPolygons(Vh.tolist(), tris.tolist(), all_triangles=True)
@@ -247,15 +256,43 @@ def host_clip(rig, frames, tris):
                 out = Vector((Vk[v][0], Vk[v][1], 0.0))
                 if out.length < 1e-6 or tree.ray_cast(Vector(Vk[v]), out.normalized())[0] is None:
                     continue
-                if r[3] * 1000 > worst["depth_mm"]:
-                    b = owner[v]
-                    worst.update({"depth_mm": round(r[3] * 1000, 2), "t": round(t, 4), "part": rig.names[b],
-                                  "thr_mm": round(thr[b] * 1000, 1), "over": r[3] > thr[b]})
+                note("kit_in_body_mm", r[3], t, owner[v])
+            # The other way: body vertices inside a kit part (its prisms are closed, so behind the nearest face is exact).
+            ktree = BVHTree.FromPolygons(Vk.tolist(), rig.T.tolist(), all_triangles=True)
+            for b, vs in pts.items():
+                lo, hi = Vk[vs].min(0) - 0.01, Vk[vs].max(0) + 0.01
+                for w in np.nonzero(((Vh >= lo) & (Vh <= hi)).all(1))[0]:
+                    r = ktree.find_nearest(tuple(Vh[w]))
+                    if r is not None and (Vector(Vh[w]) - r[0]).dot(r[1]) < 0:
+                        note("body_in_kit_mm", r[3], t, b)
         res[name] = worst
     return res
 
 
+# Pairs a rig designs in every pose, whatever the clip: key -> [(regex over "a/b", cite)], either order.
+# Unlike DELIBERATE they do not take a clip out of the range of motion, so every clip still sets the
+# extremes and stress poses. A backreference keeps a pair to one index (Cell3/Seam3, not Cell26/Seam38).
+DESIGNED_PAIRS = {
+    "warden_swarm": [
+        (r"Cell(\d+)/Seam\1", "ws:35, :113-114, :451-498 the Seam bone sinks a cell's own pinpricks into its lip (SEAM_DIM -0.05, SEAM_OFF -0.13) and "
+                              "lifts them proud (SEAM_BRIGHT): a buried pinprick reads as CLIP and GAP"),
+        (r"Seam7/Cell18|Cell14/Seam15|Cell16/Seam17|Cell26/Seam38|Cell30/Seam42",
+         "ws:35, :113-114 the pinprick at a cell's lip corner also sits on the lip of the neighbouring cell at rest (the five contacts the audit finds); "
+         "sunk or lifted by its own Seam bone it passes through that lip, hidden, and nothing else of cell i touches cell j (renders, 4x, every pose)"),
+        (r"Cell(\d+)/Shutter\1_\d", "ws:507-516 each cell's plates sit in its opening and turn about the hinge (pulse 50, active 28, stagger_open 50 to 125 deg): a hinge turn "
+                                    "split per Godot axis is not a pose the game reaches"),
+        (r"Cell0/QueenCore", "ws:536-539 the lit core sits inside the queen cell, swells and rises 0.6 m out of it in stagger_open"),
+    ],
+}
+
+
+def designed(key, a, b):
+    return any(re.fullmatch(rx, a + "/" + b) or re.fullmatch(rx, b + "/" + a) for rx, _ in DESIGNED_PAIRS.get(key, ()))
+
+
 def excused(key, clip, a, b):
+    if designed(key, a, b):
+        return True
     row = DELIBERATE.get(key, {}).get(clip)
     if not row:
         return False
@@ -1203,9 +1240,9 @@ def pose_flags(m, kind):
 
 
 def split_hits(m, key, clip):
-    """Move the hits the DELIBERATE table excuses for this clip out of the defect fields."""
-    x_clip = [h for h in m["clip_hits"] if clip and excused(key, clip, *h["pair"].split("/"))]
-    x_gap = [h for h in m["gap_hits"] if clip and excused(key, clip, *h["pair"].split("/"))]
+    """Move the hits DESIGNED_PAIRS (any pose) and the DELIBERATE table (this clip) excuse out of the defect fields."""
+    x_clip = [h for h in m["clip_hits"] if excused(key, clip, *h["pair"].split("/"))]
+    x_gap = [h for h in m["gap_hits"] if excused(key, clip, *h["pair"].split("/"))]
     d_clip = [h for h in m["clip_hits"] if h not in x_clip]
     d_gap = [h for h in m["gap_hits"] if h not in x_gap]
     out = dict(m)
@@ -1620,7 +1657,7 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         "deliberate_collapse": deliberate_collapse,
         "seam": {c: ("UNTESTED" if s.get("seam_untested") else s.get("failing_bones", s.get("error"))) for c, s in seams.items()},
         "pairs_untested": not metrics.pairs, "testable_pairs": len(metrics.pairs), "sibling_pairs": metrics.sibling_pairs,
-        "host_clip": {c: (h["depth_mm"], h["t"], h["part"], h["over"]) for c, h in hostc.items()},
+        "host_clip": {c: (h["depth_mm"], h["t"], h["part"], h["over"], h["kit_in_body_mm"], h["body_in_kit_mm"]) for c, h in hostc.items()},
         "seam_worst": {c: max(((r["vel_jump"][k] / max(r["vel_limit"][k], 1e-9), b, k) for b, r in s["bones_detail"].items()
                                for k in range(3)), default=None) for c, s in seams.items() if "bones_detail" in s},
     }
