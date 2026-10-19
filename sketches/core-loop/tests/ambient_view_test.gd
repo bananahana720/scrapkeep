@@ -211,6 +211,28 @@ func _unfit() -> void:
 	_t.check("ground under a structure is unfit", AmbientLife.unfit(flat, space, Vector2(200.0, 200.0), "rim"))
 	_t.check("a ceiling perch under a structure is fit", not AmbientLife.unfit(flat, space, Vector2(200.0, 200.0), "ceiling"))
 	_t.check("a ceiling perch with no roof is unfit", AmbientLife.unfit(flat, space, Vector2(0.0, 0.0), "ceiling"))
+	_t.check("a ceiling perch with no physics space is unfit", AmbientLife.unfit(flat, null, Vector2(200.0, 200.0), "ceiling"))
+	_t.check("a ceiling perch on sloped floor under a roof is fit", not AmbientLife.unfit(func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, 1.0 + (x - 200.0) * 0.8 + lift, z), space, Vector2(200.0, 200.0), "ceiling"))
+	var shelf := StaticBody3D.new()
+	var shelf_shape := CollisionShape3D.new()
+	shelf_shape.shape = BoxShape3D.new()
+	(shelf_shape.shape as BoxShape3D).size = Vector3(10.0, 0.4, 10.0)
+	shelf.add_child(shelf_shape)
+	shelf.position = Vector3(-200.0, 1.0 + AmbientLife.ROOF_MIN_M - 0.5, -200.0)
+	root.add_child(shelf)
+	var high := StaticBody3D.new()
+	var high_shape := CollisionShape3D.new()
+	high_shape.shape = BoxShape3D.new()
+	(high_shape.shape as BoxShape3D).size = Vector3(10.0, 0.4, 10.0)
+	high.add_child(high_shape)
+	high.position = Vector3(-400.0, 1.0 + AmbientLife.ROOF_REACH_M + 2.0, -400.0)
+	root.add_child(high)
+	for i in 3:
+		await physics_frame
+	_t.check("a shelf under ROOF_MIN_M is no roof", AmbientLife.unfit(flat, space, Vector2(-200.0, -200.0), "ceiling"))
+	_t.check("a roof past ROOF_REACH_M is no roof", AmbientLife.unfit(flat, space, Vector2(-400.0, -400.0), "ceiling"))
+	shelf.free()
+	high.free()
 	roof.free()
 
 

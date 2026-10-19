@@ -96,7 +96,7 @@ var _last_react_sound := {}
 var _wanted := {}
 
 
-# homes: ambient_homes.gd plan(); a home may carry `roof` (absolute y of a ceiling above it, bats).
+# homes: ambient_homes.gd plan(); a home may carry `roof` (height of a ceiling above the ground there, bats).
 func setup(homes: Array, seed_number: int) -> void:
 	_rng.seed = seed_number
 	members.clear()
