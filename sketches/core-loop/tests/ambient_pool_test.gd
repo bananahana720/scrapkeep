@@ -165,29 +165,40 @@ func _react() -> void:
 	_run_for(keeper, 3.0, _input(Vector3(0.0, 0.0, 100.0), threat))
 	var after := Vector2(keeper.members[0].pos.x, keeper.members[0].pos.z)
 	_t.check("duck kind stays put and hides", spot.distance_to(after) < 0.01 and keeper.members[0].state == "hidden" and keeper.drawn().is_empty())
-	# A hide run never heads at the ball, even with the threat beyond the member (the run from it points at the ball).
+	# A hide run never heads at the ball, even with the threat beyond the member (the run from it points at the ball):
+	# straight beyond it (boxed in, the run breaks sideways) and off to one side (the run keeps its sideways part).
+	for case in [[Vector3(8.0, 0.0, 0.0), "straight"], [Vector3(4.0, 0.0, 8.0), "oblique"]]:
+		_hide_away(case[0], case[1])
+	# A threat beyond COMBAT_M changes nothing.
+	var calm := _pool([_home("dusk_quail")])
+	_run_for(calm, 3.0, _input(Vector3(0.0, 0.0, 100.0)))
+	_run_for(calm, 2.0, _input(Vector3(0.0, 0.0, 100.0), [Vector3(AmbientKinds.COMBAT_M + 5.0, 0.0, 0.0)]))
+	_t.check("a threat past COMBAT_M is ignored", calm.members[0].state != "react" and calm.members[0].state != "hidden")
+
+
+func _hide_away(threat_at: Vector3, label: String) -> void:
 	for kind in ["dusk_quail", "puddle_toad"]:
 		var runner := _pool([_home(kind)])
 		_run_for(runner, 3.0, _input(Vector3(0.0, 0.0, 100.0)))
 		var r: AmbientPool.Member = runner.members[0]
 		var ball := r.pos + Vector3(-14.0, 0.0, 0.0)
 		var start := Vector2(r.pos.x, r.pos.z).distance_to(Vector2(ball.x, ball.z))
+		var origin := r.pos
 		var toward := 0
 		var moved := 0
 		for i in 15:
-			runner.step(DT, _input(ball, [r.pos + Vector3(8.0, 0.0, 0.0)]))
+			runner.step(DT, _input(ball, [r.pos + threat_at]))
 			if Vector2(r.vel.x, r.vel.z).length() > 0.01:
 				moved += 1
 				if Vector2(r.vel.x, r.vel.z).dot(Vector2(ball.x - r.pos.x, ball.z - r.pos.z)) > 0.0:
 					toward += 1
 		var end := Vector2(r.pos.x, r.pos.z).distance_to(Vector2(ball.x, ball.z))
-		_t.check("%s hides away from the ball with the threat beyond it: %.1f -> %.1f m, %d moving steps, %d toward" % [kind, start, end, moved, toward],
+		_t.check("%s hides away from the ball, threat %s beyond it: %.1f -> %.1f m, %d moving steps, %d toward" % [kind, label, start, end, moved, toward],
 			moved > 0 and toward == 0 and end > start)
-	# A threat beyond COMBAT_M changes nothing.
-	var calm := _pool([_home("dusk_quail")])
-	_run_for(calm, 3.0, _input(Vector3(0.0, 0.0, 100.0)))
-	_run_for(calm, 2.0, _input(Vector3(0.0, 0.0, 100.0), [Vector3(AmbientKinds.COMBAT_M + 5.0, 0.0, 0.0)]))
-	_t.check("a threat past COMBAT_M is ignored", calm.members[0].state != "react" and calm.members[0].state != "hidden")
+		if label == "straight":
+			# Boxed in on one axis, the run breaks out sideways rather than straight at the threat.
+			var run := r.pos - origin
+			_t.check("%s boxed in breaks sideways: %.1f m across, %.1f m along" % [kind, absf(run.z), run.x], absf(run.z) > absf(run.x))
 
 
 func _boss() -> void:
