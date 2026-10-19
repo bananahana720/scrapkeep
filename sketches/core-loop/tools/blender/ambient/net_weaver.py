@@ -2,7 +2,7 @@
 
 A round chubby ringtail in a lilac smock and plum sash, a civilian at rest: sitting cross-legged on the ground and
 weaving a small round hand-net in its lap. Big head, big round ears, huge friendly eyes inside a cream eye-ring mask
-painted on the head mesh, and a long fluffy tail curling round beside it with horizontal plum and cream bands (vertex
+painted on the head mesh, and a long fluffy tail curling round beside it with soft horizontal plum and lilac rings, two close tones so they read as fur and never as hazard stripes (vertex
 colour regions on swept tubes, perpendicular to the tail's length). No posts, no net held up. Soft toy look; palette,
 height and triangle band come from the record. About 0.95 m tall seated, facing Godot -Z, origin at the ground.
 
@@ -27,8 +27,9 @@ life = Critter("net_weaver")
 FUR = "rings"
 
 
-def banded_tube(bone, points, radii, first_cream=False, sides=6, run=2, start=0):
-    """A swept tube whose quad rings alternate plum and cream, `run` segments each: bands are perpendicular to the length."""
+def banded_tube(bone, points, radii, first_light=False, sides=6, run=2, start=0):
+    """A swept tube whose quad rings alternate plum and smock lilac, `run` segments each: bands are perpendicular to the
+    length. Two close tones, not plum and cream: a high-contrast band reads as a stripe (AMBIENT-LIFE.md rule 1)."""
     p = life.part(bone)
     before = len(p.bm.faces)
     life.tube(bone, FUR, points, radii, sides=sides, subsurf=1, cap=0.9)
@@ -37,9 +38,9 @@ def banded_tube(bone, points, radii, first_cream=False, sides=6, run=2, start=0)
     segs = len(points) - 1
     body, caps = faces[:segs * sides], faces[segs * sides:]
     for i in range(segs):
-        cream = ((i + start) // run) % 2 == (0 if first_cream else 1)
-        p.paint(body[i * sides:(i + 1) * sides], "critter", life.col("cream" if cream else FUR))
-    p.paint(caps[:sides], "critter", life.col(FUR if True else "cream"))
+        light = ((i + start) // run) % 2 == (0 if first_light else 1)
+        p.paint(body[i * sides:(i + 1) * sides], "critter", life.col("smock" if light else FUR))
+    p.paint(caps[:sides], "critter", life.col(FUR))
     return p
 
 
@@ -101,7 +102,7 @@ for a in (0, 60, 120):
     life.tube("net", "sash", [(NC.x + c * q, NC.y + 0.04, NC.z + s_ * q) for q in (-0.15, 0, 0.15)],
               [0.017, 0.02, 0.017], sides=5, subsurf=1, cap=0.6)
 
-# --- tail: a long fluffy swept tube curling round the right side, horizontal bands (plum, cream)
+# --- tail: a long fluffy swept tube curling round the right side, soft horizontal rings (plum, smock lilac)
 TAIL = [(0.12, 0.16, 0.22), (0.24, 0.15, 0.27), (0.38, 0.14, 0.24), (0.5, 0.13, 0.14), (0.55, 0.13, 0.0),
         (0.54, 0.13, -0.14), (0.48, 0.14, -0.27), (0.4, 0.15, -0.37)]
 TR = [0.07, 0.09, 0.105, 0.115, 0.115, 0.11, 0.1, 0.09]
@@ -125,9 +126,9 @@ def dense(points, radii, n):
 
 
 tp, tr = dense(TAIL, TR, 2)
-banded_tube("tail", tp, tr, first_cream=False, run=2)
+banded_tube("tail", tp, tr, first_light=False, run=2)
 ip, ir = dense(TIP, TIPR, 2)
-banded_tube("tail_tip", ip, ir, first_cream=False, run=2, start=len(tp) - 1)
+banded_tube("tail_tip", ip, ir, first_light=False, run=2, start=len(tp) - 1)
 
 life.rig([
     ("root", (0, 0, 0), None),

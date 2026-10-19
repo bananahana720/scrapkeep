@@ -63,7 +63,7 @@
    "loader": "src/core/ambient_kinds.gd",
    "provenance": {
     "recipe": "tools/blender/ambient/net_weaver.py",
-    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 b4fe6314f592ac059e49f934eb340571c846251d38f52ad590c0ad298483d4fe"
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 2256f0046be4c0c020390533bcda2df34311ec26fb1f16daf01ce8e7ae9a3f6e"
    }
   },
   {
