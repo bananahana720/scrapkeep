@@ -132,8 +132,10 @@ Landmarks (`park/landmarks.py`) write their own meshes and never use `Part`, so 
 welds each convex piece of a `sky.Surf`, bevels it to a quarter of its own thickness (at most 0.06 m, only edges sharper than 40 degrees and longer than 0.45 m), smooths it and bakes AO and wear over
 the base and detail shells before any `-col` mesh joins the scene. Mid and far views and every collider stay as they were.
 
-Vertices keep each class's old ratio to triangles. Shell, hero_landmark, park_large,
-landform and scenery caps are unchanged.
+Vertices keep each class's old ratio to triangles. Shell, hero_landmark, park_large and
+landform caps are unchanged. Scenery rose from 120 / 110 / 2 to 1,500 / 3,000 / 2 for the
+polished Highdraft cloud, mesa and thermal air (PR #143; largest member sky_cloud 896 T,
+sky_mesa 566 V); the recipes and their tests hold those three at 1,000 / 1,000 and 800 / 500.
 
 ## Before and after
 
