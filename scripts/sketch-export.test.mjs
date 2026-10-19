@@ -17,6 +17,7 @@ import {
   runBossSmoke,
   defaultStemsFrom,
   howToRun,
+  nextStepLine,
   missingStems,
   missingStemsMessage,
   packageName,
@@ -574,4 +575,11 @@ test("BUILD.txt records a self-play pack and the default stamp does not", () => 
   assert.match(buildStamp({ ...base, selfPlay: true }), /^self-play pack \(tools\/ included\)$/m);
   assert.equal(buildStamp(base), buildStamp({ ...base, selfPlay: false }));
   assert.doesNotMatch(buildStamp(base), /self-play/);
+});
+
+test("nextStepLine points at sketch:appimage and the launcher check", () => {
+  const line = nextStepLine();
+  assert.ok(!line.includes("\n"));
+  assert.match(line, /npm run sketch:appimage/);
+  assert.match(line, /app menu/);
 });
