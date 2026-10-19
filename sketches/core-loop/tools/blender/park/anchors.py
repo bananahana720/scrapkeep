@@ -30,9 +30,10 @@ loader ignores UVs. Whether normals stay right under the loader's Y stretch is N
 MultiMesh path of Godot's scene shader builds the normal matrix (no engine shader source was available to read), so check
 the shading of a strongly stretched post on screen before trusting it.
 
-Open joints: the strata bands (hoodoo) and the cairn stones leave their bottom ring open, because it sits on the piece
-below. The recipe clamps that ring inside the piece below's bevelled top outline (see `fit_inside`), so no player can see
-through a joint from under a ledge, and check_recipe asserts it on the built geometry.
+Open joints: the strata bands (hoodoo) and the cairn stones sit on the piece below with their bottom ring overhanging its
+bevelled top, so each band or stone after the first gets a flat, unbevelled bottom cap (`Surface.floor`, one n-gon facing
+down, its own piece so the bevel never rounds that hidden rim). No player sees through a joint from under a ledge, and
+check_recipe asserts every joint is either floored or inside its support.
 
 Authoring contract (the machine-side change to park_recipes.gd place_anchor_field reads it):
   +Y up; the origin at the post's base centre on the ground; the footprint inside the 8 m x 8 m post square
@@ -159,6 +160,7 @@ class Surface:
         self.rng = random.Random(seed)
         # Colour mottle draws from its own generator, so toggling polish never moves the geometry that follows.
         self.crng = random.Random(seed * 7919 + 17)
+        self.floors = []      # open bottom rings closed by `floor`
         self.joints = []      # (name, open bottom ring, supporting top ring, margin) for check_recipe
         self.verts, self.tris, self.colors = [], [], []
         self.pieces = []
@@ -254,6 +256,16 @@ class Surface:
             faces.append(tuple(range(sides, 2 * sides)))
         self.add(pts, faces, tone, mottle)
         return lo, hi
+
+    def floor(self, ring, tone, mottle=0.1):
+        """Close a piece's open bottom ring with one flat n-gon facing down, as its own unbevelled piece (the rim sits hidden
+        in the joint). Restores the caller's look."""
+        keep, self.look = self.look, {"bevel": 0.0}
+        cx = sum(p[0] for p in ring) / len(ring)
+        cz = sum(p[2] for p in ring) / len(ring)
+        self.add(list(ring), [tuple(range(len(ring)))], tone, mottle, centre=(cx, ring[0][1] + 1.0, cz))
+        self.look = keep
+        self.floors.append(ring)
 
     def rod(self, a, b, r, tone, sides=8, caps=(True, True)):
         """A round pole from a to b."""
@@ -419,19 +431,6 @@ def jitter(rng, sides, amount):
     return [1.0 + rng.uniform(-amount, amount) for _ in range(sides)]
 
 
-def fit_inside(top_ring, centre, margin, sides, radii):
-    """The largest bottom radius for a ring of `sides` corners (each corner scaled by `radii`) around `centre` (x, z) that
-    stays inside the polygon `top_ring` (3D points of the piece below's top) by `margin`. The polygon contains the circle of
-    its smallest corner radius times cos(pi / n) around its own centre, so a ring whose corners all fall inside that circle
-    (less the offset between the two centres) is inside at every angle."""
-    n = len(top_ring)
-    cx = sum(p[0] for p in top_ring) / n
-    cz = sum(p[2] for p in top_ring) / n
-    rho = min(math.hypot(p[0] - cx, p[2] - cz) for p in top_ring) * math.cos(math.pi / n)
-    off = math.hypot(centre[0] - cx, centre[1] - cz)
-    return max(0.0, (rho - margin - off) / max(radii))
-
-
 def inside_by(ring, poly, margin):
     """True when every point of `ring` lies inside the convex polygon `poly` (3D points in order, x and z used) by at least
     `margin`."""
@@ -465,7 +464,7 @@ HOODOO = {
           "cap": [(2.95, 3.25, 1.0), (2.75, 2.3, .6)], "tilt": (0.0, 0.0)},
     "b": {"sides": 10, "bands": 8, "profile": [(.3, 2.7), (3.0, 2.1), (5.6, 1.2), (7.1, 1.5), (7.7, 1.8)], "lean": (.11, .04), "cap_y": 7.7,
           "cap": [(2.35, 2.6, .8), (2.4, 1.9, .5)], "tilt": (.35, -.15)},
-    "c": {"sides": 12, "bands": 5, "profile": [(.3, 3.3), (2.6, 3.0), (4.6, 2.1), (6.4, 1.3), (7.0, 1.6)], "lean": (-.04, .05), "cap_y": 7.0,
+    "c": {"sides": 10, "bands": 5, "profile": [(.3, 3.3), (2.6, 3.0), (4.6, 2.1), (6.4, 1.3), (7.0, 1.6)], "lean": (-.04, .05), "cap_y": 7.0,
           "cap": [(2.6, 2.75, .9), (1.9, 2.05, .55), (1.25, .9, .55)], "tilt": (-.2, .3)},
 }
 
@@ -486,8 +485,9 @@ def hoodoo(base, variant):
     for k in range(3):
         a = r.uniform(0, 2 * math.pi)
         base.rock((math.cos(a) * 3.1, .15, math.sin(a) * 3.1), (r.uniform(.7, 1.1), r.uniform(.5, .8), r.uniform(.7, 1.1)), SANDTOP)
-    # the banded column: band edges drift, each band a frustum with its own step in radius (the strata ledges); only the
-    # first has a bottom cap, so every later band's bottom ring is clamped inside the band below's top outline
+    # the banded column: band edges drift, each band a frustum with its own step in radius (the strata ledges). Only the
+    # first has a bottom cap in its piece; every later band's bottom ring overhangs the band below's bevelled top, so it is
+    # closed with a flat unbevelled floor (Surface.floor) instead.
     y0, y1 = .3, p["cap_y"] + .05
     n = p["bands"]
     base.look = {"bevel": .08, "sharp": 80.0}
@@ -496,18 +496,13 @@ def hoodoo(base, variant):
         ya, yb = edges[k], edges[k + 1]
         step = 1.0 + r.uniform(-.06, .07)
         tone = REDS[k % 3] if k % 2 == 0 else CREAMS[(k // 2) % 2]
-        # round strata: ten to twelve sides, smooth shaded (an 80 degree crease keeps the jittered facets blended). A band
-        # after the first has no bottom cap, so its bottom ring must sit inside the band below's top outline less the bevel
-        # (the strata ledge then steps outward above the joint, an undercut, never a gap).
-        phase, radii = r.uniform(0, 1), jitter(r, sides, .07)
-        r0 = lerp_profile(p["profile"], ya) * step
+        # round strata: ten to twelve sides, smooth shaded (an 80 degree crease keeps the jittered facets blended)
+        lo_ring, top_ring = base.frustum(ya, yb, lerp_profile(p["profile"], ya) * step, lerp_profile(p["profile"], yb) * step, sides, tone,
+                                         centre(ya), centre(yb), phase=r.uniform(0, 1), radii=jitter(r, sides, .07), caps=(k == 0, True))
         if k:
-            r0 = min(r0, fit_inside(below_top, centre(ya), .08, sides, radii))
-        lo_ring, below_new = base.frustum(ya, yb, r0, lerp_profile(p["profile"], yb) * step, sides, tone,
-                                         centre(ya), centre(yb), phase=phase, radii=radii, caps=(k == 0, True))
-        if k:
+            base.floor(lo_ring, tone)
             base.joints.append(("band %d" % k, lo_ring, below_top, .08))
-        below_top = below_new
+        below_top = top_ring
     # the caprock: darker slabs, the top one ends exactly at TOP
     y = p["cap_y"]
     total = sum(h for _, _, h in p["cap"])
@@ -711,20 +706,19 @@ def cairn(base, variant):
     hs = [h * span / sum(p["h"]) for h in p["h"]]
     y = -SINK
     cx = cz = 0.0
-    # pillowy stones: nine to twelve sides (alternate stones one fewer), smooth shaded, a wide bevel on the top rim. The
-    # bottom ring stays open because it sits on the stone below, so it is clamped inside that stone's bevelled top outline
-    # (the stone flares outward as it rises, a pillowy underside, never a gap); the drift is bounded to match.
+    # pillowy stones: nine to twelve sides (alternate stones one fewer), smooth shaded, a wide bevel on the top rim. Each
+    # stone after the first overhangs the bevelled top below, so its bottom ring is closed with a flat unbevelled floor.
+    # The drift is bounded to 0.2 m a step.
     base.look = {"bevel": .2, "sharp": 80.0}
     below_top = None
     for k, (h, rad) in enumerate(zip(hs, p["r"])):
         sides = p["sides"] - k % 2
-        tone, taper, phase, radii = STONES[r.randrange(len(STONES))], r.uniform(.9, .97), r.uniform(0, 2 * math.pi), jitter(r, sides, .08)
-        r0 = rad
-        if below_top is not None:
-            r0 = min(r0, fit_inside(below_top, (cx, cz), .2, sides, radii))
-        lo_ring, top_ring = base.frustum(y, y + h, r0, rad * taper, sides, tone, (cx, cz), (cx, cz),
+        taper, tone = r.uniform(.9, .97), STONES[r.randrange(len(STONES))]
+        phase, radii = r.uniform(0, 2 * math.pi), jitter(r, sides, .08)
+        lo_ring, top_ring = base.frustum(y, y + h, rad, rad * taper, sides, tone, (cx, cz), (cx, cz),
                                          phase=phase, radii=radii, caps=(False, True), mottle=.12)
         if below_top is not None:
+            base.floor(lo_ring, tone, .12)
             base.joints.append(("stone %d" % k, lo_ring, below_top, .2))
         below_top = top_ring
         y += h - overlap
@@ -756,8 +750,8 @@ def check_recipe(rid, base, col):
         assert lo[k] >= -POST_HALF and hi[k] <= POST_HALF, (rid, "footprint inside the 8 m post square", lo, hi)
     assert 0 < len(base.tris), (rid, "no triangles")
     for name, ring, poly, margin in base.joints:
-        # An open bottom ring above the ground has no floor; it must sit inside the piece below's top outline.
-        assert inside_by(ring, poly, margin), (rid, name, "open bottom ring inside the piece below")
+        # A bottom ring above the ground is either closed by a floor piece or sits inside the piece below's top outline.
+        assert any(ring is f for f in base.floors) or inside_by(ring, poly, margin), (rid, name, "open bottom ring floored or inside the piece below")
     if polish.options() is None:
         assert len(base.tris) <= BASE_TRIS, (rid, "instanced post triangle cap (flat)", len(base.tris), BASE_TRIS)
     else:
