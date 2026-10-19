@@ -18,6 +18,7 @@ import {
   referrers,
   selectTests,
   timingsFromReceipt,
+  usableBaseRun,
 } from "./sketch-fast.mjs";
 import { importWithRetry } from "./sketch-smoke.mjs";
 
@@ -282,4 +283,15 @@ test("only a clean base verdict is cached, never a timeout or a kill", () => {
   assert.equal(cacheableBaseRun({ exit: null, killed: false, timedOut: true }), false);
   assert.equal(cacheableBaseRun({ exit: null, killed: true, timedOut: false }), false);
   assert.equal(cacheableBaseRun({ exit: null, killed: false, timedOut: false }), false);
+});
+
+test("a base timeout counts only against a head that also timed out; a lane stop never counts", () => {
+  const red = { ok: false, exit: 1, killed: false, timedOut: false };
+  const slow = { ok: false, exit: null, killed: false, timedOut: true };
+  const stopped = { ok: false, exit: null, killed: true, timedOut: false };
+  assert.equal(usableBaseRun(red, red), red);
+  assert.equal(usableBaseRun(red, slow), null);
+  assert.equal(usableBaseRun(slow, slow), slow);
+  assert.equal(usableBaseRun(red, stopped), null);
+  assert.equal(usableBaseRun(red, null), null);
 });

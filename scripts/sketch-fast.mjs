@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -398,6 +398,15 @@ export function cacheableBaseRun(run) {
   return run.exit !== null && !run.killed && !run.timedOut;
 }
 
+// The base run that may judge this run's verdict. A lane stop says nothing; a base timeout says
+// "red on the base too" only when the head rerun timed out as well, else a crash on the head
+// would hide behind a load timeout on the base.
+export function usableBaseRun(rerun, baseRun) {
+  if (!baseRun || baseRun.killed) return null;
+  if (baseRun.timedOut && !rerun.timedOut) return null;
+  return baseRun;
+}
+
 function importAsync(args) {
   return new Promise((resolve) => {
     const child = spawn(binary, [...args, "--import"], { stdio: "ignore" });
@@ -597,15 +606,24 @@ async function main() {
   let prRed = null;
   const inLane = lanePool(width);
   const stopped = (test) => ({ test, ok: false, exit: null, ms: 0, reason: "lane stopped", checks: [], tail: "", killed: true, timedOut: false });
-  const godot = (dir, test, timeoutMs, onChild) => inLane(() => (prRed ? stopped(test) : runGodot(dir, test, timeoutMs, onChild)));
+  const godot = (dir, test, timeoutMs, onChild, skip = () => false) => inLane(() => (prRed || skip() ? stopped(test) : runGodot(dir, test, timeoutMs, onChild)));
 
   // A failure is rerun on the head and on the merge base side by side before it is the PR's
   // (a solo test reruns alone first). Base verdicts are cached per base tree and Godot binary in
   // the shared git directory, so every worktree reuses them and --pre merges hit the cache too.
   const baseTreeId = git(["rev-parse", `${diffBase}^{tree}`]);
   const baseCacheFile = path.join(path.resolve(root, git(["rev-parse", "--git-common-dir"])), "sketch-fast", `base-runs-${baseTreeId.slice(0, 12)}.json`);
-  const stored = existsSync(baseCacheFile) ? JSON.parse(readFileSync(baseCacheFile, "utf8")) : {};
-  const baseCache = stored.binary === binary ? stored.tests ?? {} : {};
+  const binaryStat = existsSync(binary) ? statSync(binary) : null;
+  const binaryId = `${binary} ${binaryStat?.size ?? 0} ${binaryStat?.mtimeMs ?? 0}`;
+  const readBaseCache = () => {
+    try {
+      const stored = JSON.parse(readFileSync(baseCacheFile, "utf8"));
+      return stored.binary === binaryId ? stored.tests ?? {} : {};
+    } catch {
+      return {};
+    }
+  };
+  const baseCache = readBaseCache();
   let baseImport = null;
   async function onBase(test, timeoutMs, cancel = { cancelled: false }) {
     if (!options.baseCheck) return null;
@@ -615,6 +633,7 @@ async function main() {
     }
     const baseSketch = path.join(baseDir(), SKETCH);
     if (!existsSync(path.join(baseSketch, test))) return null;
+    if (cancel.cancelled || prRed) return null;
     baseImport ??= inLane(async () => {
       const args = ["--headless", "--path", baseSketch];
       if ((await importAsync(args)) === 0) return true;
@@ -627,14 +646,24 @@ async function main() {
     }
     if (cancel.cancelled) return null;
     log(`  running ${test} on the merge base`);
-    const run = await godot(baseSketch, test, timeoutMs, (child) => {
-      cancel.child = child;
-      if (cancel.cancelled) stopChild(child);
-    });
+    const run = await godot(
+      baseSketch,
+      test,
+      timeoutMs,
+      (child) => {
+        cancel.child = child;
+        if (cancel.cancelled) stopChild(child);
+      },
+      () => cancel.cancelled,
+    );
     if (cacheableBaseRun(run)) {
       baseCache[test] = { ok: run.ok, checks: run.checks };
+      // Another lane on this base tree may have written since; keep its entries, replace atomically.
+      const merged = { ...readBaseCache(), ...baseCache };
       mkdirSync(path.dirname(baseCacheFile), { recursive: true });
-      writeFileSync(baseCacheFile, JSON.stringify({ binary, tree: baseTreeId, tests: baseCache }, null, 2) + "\n");
+      const temp = `${baseCacheFile}.${process.pid}.tmp`;
+      writeFileSync(temp, JSON.stringify({ binary: binaryId, tree: baseTreeId, tests: merged }, null, 2) + "\n");
+      renameSync(temp, baseCacheFile);
     }
     return run;
   }
@@ -661,6 +690,9 @@ async function main() {
       }
       baseRun = await basePending;
     }
+    // A run the lane stopped is not a verdict; the PR's red already decides the lane.
+    if (rerun.killed) return { kind: "stopped", newChecks: [], rerun };
+    baseRun = usableBaseRun(rerun, baseRun);
     const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
     const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
     return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks }), rerun };
@@ -673,6 +705,7 @@ async function main() {
     if (result.ok || quarantined || result.killed) return;
     const { kind, newChecks } = await confirm(result);
     log(`  ${result.test}: ${kind}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
+    if (kind === "stopped") return;
     if (kind === "flaky") flaky.push(result.test);
     else if (kind === "base-red") baseRed.push(result.test);
     else if (!prRed) {
