@@ -97,7 +97,7 @@ test("describeDoc reads the RunStore envelope", () => {
 
 test("planCells counts jobs per cell and column, rotates builds and shares seeds across columns", () => {
   const all = planCells({ builds: builds() });
-  assert.equal(all.length, 3 * 5 * 24 + 6 * 5 * 24 + 3 * 2 * 16);
+  assert.equal(all.length, 3 * 5 * 24 + 6 * 5 * 24 + 6 * 2 * 16);
   const brindle = all.filter((j) => j.cell === "brindle");
   assert.equal(brindle.length, 120);
   assert.ok(brindle.every((j) => j.args.includes("--to-boss=1") && j.args.includes("--until=2") && j.args.includes("--from-stage=2")));
@@ -112,9 +112,17 @@ test("planCells counts jobs per cell and column, rotates builds and shares seeds
   assert.equal(w3.policy, "skipper");
   assert.equal(brindle[0].policy, "brawler");
   assert.equal(planCells({ builds: builds(), seeds: 1, only: ["w3"], wardenPersona: "brawler" })[0].policy, "brawler");
-  const world1 = all.filter((j) => j.cell === "world1");
+  // Parks are the default park measure: park N stops at its own Warden, so a park run never fights a Warden.
+  const park1 = all.filter((j) => j.cell === "park1");
+  assert.ok(park1.length && park1.every((j) => j.kind === "world" && j.entrance === null && !j.args.some((a) => a.startsWith("--from-stage")) && j.args.includes("--stop-at=engaged:1")));
+  const park4 = all.find((j) => j.cell === "park4");
+  assert.ok(park4.args.includes("--from-stage=4") && park4.args.includes("--stop-at=engaged:4") && park4.entrance);
+  assert.notDeepEqual(park4.seed, all.find((j) => j.cell === "w4").seed);
+  assert.ok(!all.some((j) => j.cell === "world1"), "the world chain runs only when asked for");
+  const chain = planCells({ builds: builds(), seeds: 2, cells: ["world"] });
+  const world1 = chain.filter((j) => j.cell === "world1");
   assert.ok(world1.every((j) => j.entrance === null && !j.missing && !j.args.some((a) => a.startsWith("--from-stage")) && j.args.includes("--stop-at=engaged:2") && j.policy === "skipper"));
-  const world3 = all.find((j) => j.cell === "world3");
+  const world3 = chain.find((j) => j.cell === "world3");
   assert.ok(world3.args.includes("--from-stage=5") && world3.args.includes("--stop-at=engaged:6") && world3.entrance);
   assert.equal(new Set(all.map((j) => j.id)).size, all.length);
 });

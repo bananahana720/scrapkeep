@@ -18,7 +18,7 @@ From the coordinator ruling, `project-guide/handoff/DECISIONS.md` section 5, 19 
 | Expert ordinary | boss, Warden | win at least 85% |
 | Expert top | boss, Warden | win at least 97%; the fight-time ratio top/ordinary is shown for the growth-ratio check |
 | Learner deaths (a1 and a5) | boss | no death before 45 s of boss time |
-| Novice, Learner a1 | park (world) | reach the Warden: Novice at most 50%, Learner at least 80% |
+| Novice, Learner a1 | park | reach the park's Warden: Novice at most 50%, Learner at least 80% |
 
 The 0.6 s tell is not measured: a bot cannot say what a person reads. It stays a design and Andrew-sitting check.
 
@@ -34,9 +34,10 @@ The top/ord fight-time ratio is reported, not graded: the 2x hive rule is graded
 | --- | --- | --- |
 | `brindle`, `waking`, `mind` | boss | Resume the last stage of the world (stages 2, 4, 6) and enter the boss at once (`--to-boss=1`). Win is `boss.defeated_s`. |
 | `w1` to `w6` | Warden | Resume stage N and play it to its exit (`--until=N`). Win is the stage note's `warden_broken_s`. The fight may last 240 s from engagement (`--fight-limit`, over 3x the 45-85 s stagger bands); the stage cap is lifted to 600 s (`--stage-limit`) so it cannot cut an engaged fight first. A `fight_capped` or `stalled` run is a timeout, never a win, and is counted beside the deaths. |
-| `world1` to `world3` | park | Resume the world's first stage (1, 3, 5) and stop the tick the world's Warden is engaged (`--stop-at=engaged:<last stage>`). Win is outcome `reached`. |
+| `park1` to `park6` | park | Resume park N and stop the tick its own Warden is engaged (`--stop-at=engaged:N`). Win is outcome `reached`. This is the default park measure: the ruling's "reaches the world's Warden" is read per park, because a Learner who wins a Warden 15-35% of the time on a first try cannot reach the next park's Warden 80% of the time. |
+| `world1` to `world3` | park, only with `--cells=world` | Resume the world's first park (1, 3, 5) and stop the tick its second park's Warden is engaged, so the run must break the first Warden on the way. Kept for comparison. |
 
-Stage 1 has no build to carry, so only `w1` and `world1` play fresh runs and the seed picks the pilot. Every other cell resumes a library doc, and the run checks it did: stage, parts count and mass must match the doc (`resumed` in the row). A run that did not resume is an error.
+Stage 1 has no build to carry, so only `w1`, `park1` and `world1` play fresh runs and the seed picks the pilot. Every other cell resumes a library doc, and the run checks it did: stage, parts count and mass must match the doc (`resumed` in the row). A run that did not resume is an error.
 
 ## Run it
 
@@ -57,8 +58,8 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 | `--lib-shard=i/n` | | With `--library`: run only shard i of n of the 48 library runs (deterministic). |
 | `--library-merge=<dir,...>` | | With `--label=<name>`: join shard library folders into `library/<label>` with one `index.json`. |
 | `--library=<dir>` | | Use a library for the table. |
-| `--cells=` | `boss,warden,world` | Which kinds. |
-| `--only=` | all | `brindle,waking,mind,w1..w6,world1..world3`. |
+| `--cells=` | `boss,warden,park` | Which kinds (`world` adds the world chains). |
+| `--only=` | all | `brindle,waking,mind,w1..w6,park1..park6,world1..world3`. |
 | `--seeds=<n>` | 24 fights, 16 parks | Runs per cell per column. Seeds are fixed per cell, so columns face the same seeds; each seed takes the next build of its bucket, so pilots mix. |
 | `--bands=` | `novice,learner1,learner5,expert` | Columns. The Expert top column is added whenever `expert` is, unless `--no-top`. Parks run only `novice` and `learner1`. |
 | `--persona=` | `brawler` | The bot policy for bosses and Wardens (`brawler` is the completionist's fight profile) for bosses; Wardens use `--warden-persona=skipper`, which beelines to the Warden (the completionist spends the stage cap on scrap lines before engaging); parks use `--park-persona=skipper`. |
