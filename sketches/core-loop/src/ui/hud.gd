@@ -22,6 +22,7 @@ const Achievements := preload("res://src/core/achievements.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
 const FirstSteps := preload("res://src/ui/first_steps.gd")
+const FieldTips := preload("res://src/ui/field_tips.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -149,6 +150,7 @@ var profile
 var ability_bar
 var key_glyphs
 var first_steps
+var field_tips
 var edge_markers
 var part_name
 var launch_card
@@ -234,6 +236,9 @@ func setup(game_ref) -> void:
 	first_steps = FirstSteps.new()
 	add_child(first_steps)
 	first_steps.setup(game, profile)
+	field_tips = FieldTips.new()
+	add_child(field_tips)
+	field_tips.setup(game, profile, self)
 
 	_objective = ObjectiveView.new()
 	add_child(_objective)
