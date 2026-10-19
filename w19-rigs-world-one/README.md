@@ -1,6 +1,6 @@
 # Rigs and motion, world one (World-2, wave 19)
 
-From `tools/blender/rig_pose_audit.py -- --world one` at 533f1c27 on `claude/happy-mayer-rtqcu5-rigs-w1` (Blender 5.2.2,
+From `tools/blender/rig_pose_audit.py -- --world one` at 776edd1c on `claude/happy-mayer-rtqcu5-rigs-w1` (Blender 5.2.2,
 Cycles CPU, since EEVEE and Workbench need libEGL, which the headless box lacks).
 
 - `pose_sheet_one.png`: one row per rig. The rest pose comes first, then the five poses with the worst defect, each
@@ -14,3 +14,4 @@ Cycles CPU, since EEVEE and Workbench need libEGL, which the headless box lacks)
   marked DELIB and rank below every real defect. warden_reactor's idle animates mesh nodes, not skin bones, so the
   Blender import has no bone fcurves for it; `tests/rig_loop_seam_test.gd` covers its seam in Godot.
 - `brute_shoulder.png`: the Plated Brute shoulder blend at rest, at the pad plant (SlamPad tY -0.47) and at BruteRear rX -30, 3x from three angles, opaque and with a ghost body (inverted strip triangles in magenta, all enclosed by the torso).
+- `miniboss_pistons.png`: the Miniboss's telescoping fist pistons (its 142 cross-bone triangles) at FistRight tZ +0.5, tY -0.6 and FistLeft tY +1.8, 3x from yaw 35 and 120, with a flipped-triangle panel.

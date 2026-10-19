@@ -1,6 +1,6 @@
 {
  "world": "one",
- "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+ "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
  "thresholds": {
   "collapse_area": 0.35,
   "collapse_edge": 0.5,
@@ -49,6 +49,9 @@
     "blended_vertices": 0,
     "max_influences": 1,
     "unweighted_vertices": 0,
+    "unweighted_no_group": 0,
+    "unweighted_neutral_bone": 0,
+    "neutral_bones": [],
     "max_weight_sum_deviation": 0.0,
     "bones_without_weights": []
    },
@@ -456,7 +459,7 @@
      }
     }
    },
-   "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+   "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
    "pairs_untested": false,
    "pair_note": null,
    "sibling_pairs": 0,
@@ -465,6 +468,7 @@
    "contact_pairs": 8,
    "rigid_islands": 43,
    "blended_triangles": 0,
+   "cross_bone_triangles": 0,
    "deliberate": {
     "break": {
      "pairs": [
@@ -5433,7 +5437,7 @@
      "worst_metric": "GAP 9MM 2%"
     }
    ],
-   "seconds": 2.3
+   "seconds": 2.2
   },
   "world_one/enemy_dispatcher.glb": {
    "glb": "world_one/enemy_dispatcher.glb",
@@ -5465,6 +5469,9 @@
     "blended_vertices": 0,
     "max_influences": 1,
     "unweighted_vertices": 0,
+    "unweighted_no_group": 0,
+    "unweighted_neutral_bone": 0,
+    "neutral_bones": [],
     "max_weight_sum_deviation": 0.0,
     "bones_without_weights": []
    },
@@ -5916,7 +5923,7 @@
      }
     }
    },
-   "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+   "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
    "pairs_untested": false,
    "pair_note": null,
    "sibling_pairs": 2,
@@ -5925,6 +5932,7 @@
    "contact_pairs": 11,
    "rigid_islands": 41,
    "blended_triangles": 0,
+   "cross_bone_triangles": 0,
    "deliberate": {
     "break": {
      "pairs": [
@@ -12736,7 +12744,7 @@
      "worst_metric": "DELIBERATE 5.0X"
     }
    ],
-   "seconds": 4.0
+   "seconds": 4.9
   },
   "world_one/enemy_splitter.glb": {
    "glb": "world_one/enemy_splitter.glb",
@@ -12768,6 +12776,9 @@
     "blended_vertices": 0,
     "max_influences": 1,
     "unweighted_vertices": 0,
+    "unweighted_no_group": 0,
+    "unweighted_neutral_bone": 0,
+    "neutral_bones": [],
     "max_weight_sum_deviation": 0.0,
     "bones_without_weights": [
      "Body",
@@ -13354,7 +13365,7 @@
      }
     }
    },
-   "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+   "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
    "pairs_untested": false,
    "pair_note": null,
    "sibling_pairs": 15,
@@ -13363,6 +13374,7 @@
    "contact_pairs": 15,
    "rigid_islands": 41,
    "blended_triangles": 0,
+   "cross_bone_triangles": 0,
    "deliberate": {
     "break_split": {
      "pairs": [
@@ -22362,7 +22374,7 @@
      "worst_metric": "GAP 21MM 6%"
     }
    ],
-   "seconds": 4.2
+   "seconds": 3.9
   },
   "world_one/enemy_splitter_piece.glb": {
    "glb": "world_one/enemy_splitter_piece.glb",
@@ -22387,6 +22399,9 @@
     "blended_vertices": 0,
     "max_influences": 1,
     "unweighted_vertices": 0,
+    "unweighted_no_group": 0,
+    "unweighted_neutral_bone": 0,
+    "neutral_bones": [],
     "max_weight_sum_deviation": 0.0,
     "bones_without_weights": [
      "Root"
@@ -22620,7 +22635,7 @@
      }
     }
    },
-   "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+   "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
    "pairs_untested": false,
    "pair_note": null,
    "sibling_pairs": 0,
@@ -22629,6 +22644,7 @@
    "contact_pairs": 3,
    "rigid_islands": 17,
    "blended_triangles": 0,
+   "cross_bone_triangles": 0,
    "deliberate": {},
    "deliberate_collapse": [],
    "flags": {
@@ -24325,7 +24341,7 @@
      "worst_metric": "GAP 5MM 2%"
     }
    ],
-   "seconds": 0.3
+   "seconds": 0.4
   },
   "world_one/enemy_linker.glb": {
    "glb": "world_one/enemy_linker.glb",
@@ -24357,6 +24373,9 @@
     "blended_vertices": 274,
     "max_influences": 3,
     "unweighted_vertices": 0,
+    "unweighted_no_group": 0,
+    "unweighted_neutral_bone": 0,
+    "neutral_bones": [],
     "max_weight_sum_deviation": 0.0,
     "bones_without_weights": []
    },
@@ -24720,7 +24739,7 @@
      }
     }
    },
-   "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+   "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
    "pairs_untested": false,
    "pair_note": null,
    "sibling_pairs": 4,
@@ -24729,6 +24748,7 @@
    "contact_pairs": 8,
    "rigid_islands": 32,
    "blended_triangles": 420,
+   "cross_bone_triangles": 0,
    "deliberate": {
     "cut": {
      "pairs": [
@@ -24765,7 +24785,7 @@
       "bone": "Boom",
       "src": "brace",
       "area_min": 0.88293,
-      "edge_min": 0.88433,
+      "edge_min": 0.88296,
       "normal_flipped": 0,
       "normal_flipped_visible": 0,
       "clip_depth_mm": 80.14,
@@ -26152,7 +26172,7 @@
      "src": "brace",
      "deliberate": false,
      "area_min": 0.88293,
-     "edge_min": 0.88433,
+     "edge_min": 0.88296,
      "normal_dev_max_deg": 11.869,
      "normal_flipped": 0,
      "collapse_focus": [
@@ -28635,6 +28655,9 @@
     "blended_vertices": 0,
     "max_influences": 1,
     "unweighted_vertices": 0,
+    "unweighted_no_group": 0,
+    "unweighted_neutral_bone": 0,
+    "neutral_bones": [],
     "max_weight_sum_deviation": 0.0,
     "bones_without_weights": []
    },
@@ -28642,7 +28665,7 @@
    "bone_budget_note": "assets/asset_budgets.json has no bone or joint budget; joint count reported",
    "range_source": "procedural table",
    "skin_check": {
-    "max_err_m": 0.0
+    "max_err_m": 1e-06
    },
    "ranges": {
     "MinibossBody": {
@@ -28661,15 +28684,10 @@
      "scale": {}
     },
     "MinibossFistLeft": {
-     "rot_deg": {
-      "X": [
-       -20.054,
-       0.0
-      ]
-     },
+     "rot_deg": {},
      "loc_m": {
       "Y": [
-       -0.685,
+       -0.6,
        1.8
       ],
       "Z": [
@@ -28680,15 +28698,10 @@
      "scale": {}
     },
     "MinibossFistRight": {
-     "rot_deg": {
-      "X": [
-       -20.054,
-       0.0
-      ]
-     },
+     "rot_deg": {},
      "loc_m": {
       "Y": [
-       -0.685,
+       -0.6,
        1.8
       ],
       "Z": [
@@ -28746,29 +28759,16 @@
     },
     "MinibossHalo": {
      "rot_deg": {
-      "X": [
-       -20.054,
-       0.0
-      ],
       "Y": [
        -180.0,
        180.0
       ]
      },
-     "loc_m": {
-      "Y": [
-       -1.035,
-       0.0
-      ]
-     },
+     "loc_m": {},
      "scale": {}
     },
     "MinibossPlateLeft": {
      "rot_deg": {
-      "X": [
-       -20.054,
-       0.0
-      ],
       "Y": [
        -65.89,
        65.89
@@ -28780,7 +28780,7 @@
        0.0
       ],
       "Y": [
-       -1.045,
+       -0.7,
        0.0
       ]
      },
@@ -28788,10 +28788,6 @@
     },
     "MinibossPlateRight": {
      "rot_deg": {
-      "X": [
-       -20.054,
-       0.0
-      ],
       "Y": [
        -65.89,
        65.89
@@ -28803,25 +28799,81 @@
        0.45
       ],
       "Y": [
-       -1.045,
+       -0.7,
        0.0
       ]
      },
      "scale": {}
     }
    },
-   "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+   "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
    "pairs_untested": true,
    "pair_note": "no parent/child or touching-at-rest island pairs: CLIP and GAP are untested, not clean",
    "sibling_pairs": 0,
    "sibling_capped": false,
-   "pose_count": 72,
+   "pose_count": 60,
    "contact_pairs": 0,
    "rigid_islands": 42,
    "blended_triangles": 0,
+   "cross_bone_triangles": 142,
    "deliberate": {},
    "deliberate_collapse": [],
-   "flags": {},
+   "flags": {
+    "COLLAPSE": {
+     "count": 7,
+     "worst": {
+      "pose": "MinibossFistRight tZ +0.5M",
+      "bone": "MinibossFistRight",
+      "src": null,
+      "area_min": 0.84806,
+      "edge_min": 0.96475,
+      "normal_flipped": 12,
+      "normal_flipped_visible": 12,
+      "clip_depth_mm": 0.0,
+      "clip_verts": 0,
+      "clip_frac": 0.0,
+      "clip_thr_mm": null,
+      "clip_open": false,
+      "clip_pair": null,
+      "clip_tri_pairs": 0,
+      "gap_mm": 0.0,
+      "gap_frac": 0.0,
+      "gap_thr_mm": null,
+      "gap_pair": null
+     },
+     "bones": [
+      "MinibossFistLeft",
+      "MinibossFistRight"
+     ]
+    },
+    "STRESS-COLLAPSE": {
+     "count": 8,
+     "worst": {
+      "pose": "MinibossFistRight tZ +0.625M",
+      "bone": "MinibossFistRight",
+      "src": null,
+      "area_min": 0.81054,
+      "edge_min": 1.0,
+      "normal_flipped": 12,
+      "normal_flipped_visible": 12,
+      "clip_depth_mm": 0.0,
+      "clip_verts": 0,
+      "clip_frac": 0.0,
+      "clip_thr_mm": null,
+      "clip_open": false,
+      "clip_pair": null,
+      "clip_tri_pairs": 0,
+      "gap_mm": 0.0,
+      "gap_frac": 0.0,
+      "gap_thr_mm": null,
+      "gap_pair": null
+     },
+     "bones": [
+      "MinibossFistLeft",
+      "MinibossFistRight"
+     ]
+    }
+   },
    "seams": {},
    "poses": [
     {
@@ -28830,11 +28882,15 @@
      "value": -20.05352282957881,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5297,
+      -0.1663
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -28859,8 +28915,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossBody",
@@ -28869,11 +28925,15 @@
      "kind": "stress",
      "of": -20.05352282957881,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5131,
+      -0.212
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -28898,8 +28958,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossBody",
@@ -28907,11 +28967,15 @@
      "value": -1.035,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      -1.0096
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -28936,8 +29000,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossBody",
@@ -28946,11 +29010,15 @@
      "kind": "stress",
      "of": -1.035,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      -1.2684
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -28975,85 +29043,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossFistLeft",
-     "axis": "rX",
-     "value": -20.05352282957881,
-     "kind": "extreme",
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossFistLeft",
-     "axis": "rX",
-     "value": -25.066903536973513,
-     "kind": "stress",
-     "of": -20.05352282957881,
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFistLeft",
@@ -29061,12 +29052,16 @@
      "value": 1.8,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.89819,
+     "edge_min": 0.92816,
+     "normal_dev_max_deg": 178.326,
+     "normal_flipped": 62,
+     "collapse_focus": [
+      -2.4583,
+      0.2147,
+      0.8879
+     ],
+     "normal_flipped_visible": 2,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29089,9 +29084,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "COLLAPSE"
+     ],
+     "severity": 1001.002,
+     "worst_metric": "COLLAPSE AREA 0.90 FLIP 2"
     },
     {
      "bone": "MinibossFistLeft",
@@ -29100,12 +29097,16 @@
      "kind": "stress",
      "of": 1.8,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 178.538,
+     "normal_flipped": 62,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
+     "normal_flipped_visible": 4,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29128,22 +29129,28 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "STRESS-COLLAPSE"
+     ],
+     "severity": 501.004,
+     "worst_metric": "COLLAPSE AREA 1.00 FLIP 4"
     },
     {
      "bone": "MinibossFistLeft",
      "axis": "tY",
-     "value": -0.685,
+     "value": -0.6,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.58562,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 151.437,
+     "normal_flipped": 5,
+     "collapse_focus": [
+      -2.4419,
+      0.2975,
+      -0.3828
+     ],
+     "normal_flipped_visible": 5,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29166,23 +29173,29 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "COLLAPSE"
+     ],
+     "severity": 1001.005,
+     "worst_metric": "COLLAPSE AREA 0.59 FLIP 5"
     },
     {
      "bone": "MinibossFistLeft",
      "axis": "tY",
-     "value": -0.8562500000000001,
+     "value": -0.75,
      "kind": "stress",
-     "of": -0.685,
+     "of": -0.6,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.65782,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 152.658,
+     "normal_flipped": 6,
+     "collapse_focus": [
+      -2.4419,
+      0.2975,
+      -0.4828
+     ],
+     "normal_flipped_visible": 6,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29205,9 +29218,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "STRESS-COLLAPSE"
+     ],
+     "severity": 501.006,
+     "worst_metric": "COLLAPSE AREA 0.66 FLIP 6"
     },
     {
      "bone": "MinibossFistLeft",
@@ -29215,12 +29230,16 @@
      "value": 0.5,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.84806,
+     "edge_min": 0.96475,
+     "normal_dev_max_deg": 176.353,
+     "normal_flipped": 8,
+     "collapse_focus": [
+      -2.2043,
+      0.2065,
+      0.5243
+     ],
+     "normal_flipped_visible": 8,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29243,9 +29262,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "COLLAPSE"
+     ],
+     "severity": 1001.008,
+     "worst_metric": "COLLAPSE AREA 0.85 FLIP 8"
     },
     {
      "bone": "MinibossFistLeft",
@@ -29254,12 +29275,16 @@
      "kind": "stress",
      "of": 0.5,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.81054,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 176.644,
+     "normal_flipped": 8,
+     "collapse_focus": [
+      -2.2043,
+      0.1232,
+      0.5243
+     ],
+     "normal_flipped_visible": 8,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29282,9 +29307,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "STRESS-COLLAPSE"
+     ],
+     "severity": 501.008,
+     "worst_metric": "COLLAPSE AREA 0.81 FLIP 8"
     },
     {
      "bone": "MinibossFistLeft",
@@ -29292,12 +29319,16 @@
      "value": -0.85,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 149.683,
+     "normal_flipped": 4,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
+     "normal_flipped_visible": 4,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29320,9 +29351,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "COLLAPSE"
+     ],
+     "severity": 1001.004,
+     "worst_metric": "COLLAPSE AREA 1.00 FLIP 4"
     },
     {
      "bone": "MinibossFistLeft",
@@ -29331,12 +29364,16 @@
      "kind": "stress",
      "of": -0.85,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 149.876,
+     "normal_flipped": 4,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
+     "normal_flipped_visible": 4,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29359,86 +29396,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossFistRight",
-     "axis": "rX",
-     "value": -20.05352282957881,
-     "kind": "extreme",
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossFistRight",
-     "axis": "rX",
-     "value": -25.066903536973513,
-     "kind": "stress",
-     "of": -20.05352282957881,
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "STRESS-COLLAPSE"
+     ],
+     "severity": 501.004,
+     "worst_metric": "COLLAPSE AREA 1.00 FLIP 4"
     },
     {
      "bone": "MinibossFistRight",
@@ -29446,11 +29408,15 @@
      "value": 1.8,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 0.89819,
+     "edge_min": 0.92816,
+     "normal_dev_max_deg": 178.326,
+     "normal_flipped": 61,
+     "collapse_focus": [
+      2.4583,
+      0.2147,
+      0.8879
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -29475,8 +29441,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 0.90"
     },
     {
      "bone": "MinibossFistRight",
@@ -29485,12 +29451,16 @@
      "kind": "stress",
      "of": 1.8,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 178.538,
+     "normal_flipped": 61,
+     "collapse_focus": [
+      -2.1719,
+      0.4451,
+      0.4999
+     ],
+     "normal_flipped_visible": 8,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29513,22 +29483,28 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "STRESS-COLLAPSE"
+     ],
+     "severity": 501.008,
+     "worst_metric": "COLLAPSE AREA 1.00 FLIP 8"
     },
     {
      "bone": "MinibossFistRight",
      "axis": "tY",
-     "value": -0.685,
+     "value": -0.6,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.42233,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 151.437,
+     "normal_flipped": 7,
+     "collapse_focus": [
+      1.9239,
+      0.3974,
+      0.3944
+     ],
+     "normal_flipped_visible": 7,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29551,23 +29527,29 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "COLLAPSE"
+     ],
+     "severity": 1001.007,
+     "worst_metric": "COLLAPSE AREA 0.42 FLIP 7"
     },
     {
      "bone": "MinibossFistRight",
      "axis": "tY",
-     "value": -0.8562500000000001,
+     "value": -0.75,
      "kind": "stress",
-     "of": -0.685,
+     "of": -0.6,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.4853,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 152.658,
+     "normal_flipped": 9,
+     "collapse_focus": [
+      1.9239,
+      0.3974,
+      0.3444
+     ],
+     "normal_flipped_visible": 9,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29590,9 +29572,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "STRESS-COLLAPSE"
+     ],
+     "severity": 501.009,
+     "worst_metric": "COLLAPSE AREA 0.49 FLIP 9"
     },
     {
      "bone": "MinibossFistRight",
@@ -29600,12 +29584,16 @@
      "value": 0.5,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.84806,
+     "edge_min": 0.96475,
+     "normal_dev_max_deg": 168.359,
+     "normal_flipped": 12,
+     "collapse_focus": [
+      2.2043,
+      0.2065,
+      0.5243
+     ],
+     "normal_flipped_visible": 12,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29628,9 +29616,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "COLLAPSE"
+     ],
+     "severity": 1001.012,
+     "worst_metric": "COLLAPSE AREA 0.85 FLIP 12"
     },
     {
      "bone": "MinibossFistRight",
@@ -29639,12 +29629,16 @@
      "kind": "stress",
      "of": 0.5,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 0.81054,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 168.535,
+     "normal_flipped": 12,
+     "collapse_focus": [
+      2.2043,
+      0.1232,
+      0.5243
+     ],
+     "normal_flipped_visible": 12,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29667,9 +29661,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "STRESS-COLLAPSE"
+     ],
+     "severity": 501.012,
+     "worst_metric": "COLLAPSE AREA 0.81 FLIP 12"
     },
     {
      "bone": "MinibossFistRight",
@@ -29677,12 +29673,16 @@
      "value": -0.85,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 149.683,
+     "normal_flipped": 4,
+     "collapse_focus": [
+      -2.1719,
+      0.4451,
+      0.4999
+     ],
+     "normal_flipped_visible": 4,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29705,9 +29705,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "COLLAPSE"
+     ],
+     "severity": 1001.004,
+     "worst_metric": "COLLAPSE AREA 1.00 FLIP 4"
     },
     {
      "bone": "MinibossFistRight",
@@ -29716,12 +29718,16 @@
      "kind": "stress",
      "of": -0.85,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 149.876,
+     "normal_flipped": 4,
+     "collapse_focus": [
+      -2.1719,
+      0.4451,
+      0.4999
+     ],
+     "normal_flipped_visible": 4,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
      "clip_frac": 0.0,
@@ -29744,9 +29750,11 @@
      "x_clip": [],
      "x_gap": [],
      "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "flags": [
+      "STRESS-COLLAPSE"
+     ],
+     "severity": 501.004,
+     "worst_metric": "COLLAPSE AREA 1.00 FLIP 4"
     },
     {
      "bone": "MinibossFootLeft",
@@ -29754,11 +29762,15 @@
      "value": 11.459155902616466,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -29783,8 +29795,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -29793,11 +29805,15 @@
      "kind": "stress",
      "of": 11.459155902616466,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -29822,8 +29838,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -29831,11 +29847,15 @@
      "value": -34.37746770784939,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -29860,8 +29880,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -29870,11 +29890,15 @@
      "kind": "stress",
      "of": -34.37746770784939,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -29899,8 +29923,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -29908,11 +29932,15 @@
      "value": 17.188733853924695,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -29937,8 +29965,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -29947,11 +29975,15 @@
      "kind": "stress",
      "of": 17.188733853924695,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -29976,8 +30008,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -29985,11 +30017,15 @@
      "value": -0.6,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30014,8 +30050,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -30024,11 +30060,15 @@
      "kind": "stress",
      "of": -0.6,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30053,8 +30093,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -30062,11 +30102,15 @@
      "value": 1.1,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30091,8 +30135,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootLeft",
@@ -30101,11 +30145,15 @@
      "kind": "stress",
      "of": 1.1,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30130,8 +30178,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30139,11 +30187,15 @@
      "value": 11.459155902616466,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30168,8 +30220,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30178,11 +30230,15 @@
      "kind": "stress",
      "of": 11.459155902616466,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30207,8 +30263,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30216,11 +30272,15 @@
      "value": -34.37746770784939,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30245,8 +30305,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30255,11 +30315,15 @@
      "kind": "stress",
      "of": -34.37746770784939,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30284,8 +30348,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30293,11 +30357,15 @@
      "value": -17.188733853924695,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30322,8 +30390,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30332,11 +30400,15 @@
      "kind": "stress",
      "of": -17.188733853924695,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30361,8 +30433,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30370,11 +30442,15 @@
      "value": 0.6,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30399,8 +30475,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30409,11 +30485,15 @@
      "kind": "stress",
      "of": 0.6,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30438,8 +30518,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30447,11 +30527,15 @@
      "value": 1.1,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30476,8 +30560,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossFootRight",
@@ -30486,11 +30570,15 @@
      "kind": "stress",
      "of": 1.1,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30515,85 +30603,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossHalo",
-     "axis": "rX",
-     "value": -20.05352282957881,
-     "kind": "extreme",
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossHalo",
-     "axis": "rX",
-     "value": -25.066903536973513,
-     "kind": "stress",
-     "of": -20.05352282957881,
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossHalo",
@@ -30601,11 +30612,15 @@
      "value": 180.0,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30630,8 +30645,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossHalo",
@@ -30640,11 +30655,15 @@
      "kind": "stress",
      "of": 180.0,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30669,8 +30688,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossHalo",
@@ -30678,11 +30697,15 @@
      "value": -180.0,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30707,8 +30730,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossHalo",
@@ -30717,11 +30740,15 @@
      "kind": "stress",
      "of": -180.0,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30746,162 +30773,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossHalo",
-     "axis": "tY",
-     "value": -1.035,
-     "kind": "extreme",
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossHalo",
-     "axis": "tY",
-     "value": -1.29375,
-     "kind": "stress",
-     "of": -1.035,
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossPlateLeft",
-     "axis": "rX",
-     "value": -20.05352282957881,
-     "kind": "extreme",
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossPlateLeft",
-     "axis": "rX",
-     "value": -25.066903536973513,
-     "kind": "stress",
-     "of": -20.05352282957881,
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateLeft",
@@ -30909,11 +30782,15 @@
      "value": 65.89014644004466,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30938,8 +30815,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateLeft",
@@ -30948,11 +30825,15 @@
      "kind": "stress",
      "of": 65.89014644004466,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -30977,8 +30858,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateLeft",
@@ -30986,11 +30867,15 @@
      "value": -65.89014644004466,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31015,8 +30900,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateLeft",
@@ -31025,11 +30910,15 @@
      "kind": "stress",
      "of": -65.89014644004466,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31054,8 +30943,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateLeft",
@@ -31063,11 +30952,15 @@
      "value": -0.45,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31092,8 +30985,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateLeft",
@@ -31102,11 +30995,15 @@
      "kind": "stress",
      "of": -0.45,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31131,20 +31028,24 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateLeft",
      "axis": "tY",
-     "value": -1.045,
+     "value": -0.7,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31169,21 +31070,25 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateLeft",
      "axis": "tY",
-     "value": -1.30625,
+     "value": -0.875,
      "kind": "stress",
-     "of": -1.045,
+     "of": -0.7,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31208,85 +31113,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossPlateRight",
-     "axis": "rX",
-     "value": -20.05352282957881,
-     "kind": "extreme",
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
-    },
-    {
-     "bone": "MinibossPlateRight",
-     "axis": "rX",
-     "value": -25.066903536973513,
-     "kind": "stress",
-     "of": -20.05352282957881,
-     "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
-     "normal_flipped_visible": 0,
-     "clip_depth_mm": 0.0,
-     "clip_verts": 0,
-     "clip_frac": 0.0,
-     "clip_thr_mm": null,
-     "clip_open": false,
-     "clip_pair": null,
-     "clip_ratio": 0.0,
-     "clip_over": false,
-     "clip_depth_max_mm": 0.0,
-     "clip_tri_pairs": 0,
-     "clip_tri_pair": null,
-     "clip_hits": [],
-     "gap_hits": [],
-     "gap_mm": 0.0,
-     "gap_frac": 0.0,
-     "gap_thr_mm": null,
-     "gap_pair": null,
-     "gap_ratio": 0.0,
-     "gap_over": false,
-     "x_clip": [],
-     "x_gap": [],
-     "x_ratio": 0.0,
-     "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateRight",
@@ -31294,11 +31122,15 @@
      "value": 65.89014644004466,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31323,8 +31155,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateRight",
@@ -31333,11 +31165,15 @@
      "kind": "stress",
      "of": 65.89014644004466,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31362,8 +31198,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateRight",
@@ -31371,11 +31207,15 @@
      "value": -65.89014644004466,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31400,8 +31240,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateRight",
@@ -31410,11 +31250,15 @@
      "kind": "stress",
      "of": -65.89014644004466,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31439,8 +31283,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateRight",
@@ -31448,11 +31292,15 @@
      "value": 0.45,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31477,8 +31325,8 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateRight",
@@ -31487,11 +31335,15 @@
      "kind": "stress",
      "of": 0.45,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31516,20 +31368,24 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateRight",
      "axis": "tY",
-     "value": -1.045,
+     "value": -0.7,
      "kind": "extreme",
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31554,21 +31410,25 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     },
     {
      "bone": "MinibossPlateRight",
      "axis": "tY",
-     "value": -1.30625,
+     "value": -0.875,
      "kind": "stress",
-     "of": -1.045,
+     "of": -0.7,
      "deliberate": false,
-     "area_min": null,
-     "edge_min": null,
-     "normal_dev_max_deg": null,
-     "normal_flipped": null,
-     "collapse_focus": null,
+     "area_min": 1.0,
+     "edge_min": 1.0,
+     "normal_dev_max_deg": 0.0,
+     "normal_flipped": 0,
+     "collapse_focus": [
+      2.2084,
+      0.5546,
+      0.0254
+     ],
      "normal_flipped_visible": 0,
      "clip_depth_mm": 0.0,
      "clip_verts": 0,
@@ -31593,11 +31453,11 @@
      "x_gap": [],
      "x_ratio": 0.0,
      "flags": [],
-     "severity": 0.0,
-     "worst_metric": "OK AREA -"
+     "severity": 0.0005,
+     "worst_metric": "OK AREA 1.00"
     }
    ],
-   "seconds": 0.2
+   "seconds": 0.3
   },
   "world_one/enemy_plated_brute.glb": {
    "glb": "world_one/enemy_plated_brute.glb",
@@ -31622,6 +31482,9 @@
     "blended_vertices": 72,
     "max_influences": 2,
     "unweighted_vertices": 0,
+    "unweighted_no_group": 0,
+    "unweighted_neutral_bone": 0,
+    "neutral_bones": [],
     "max_weight_sum_deviation": 0.0,
     "bones_without_weights": []
    },
@@ -31663,7 +31526,7 @@
      "scale": {}
     }
    },
-   "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+   "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
    "pairs_untested": false,
    "pair_note": null,
    "sibling_pairs": 5,
@@ -31672,6 +31535,7 @@
    "contact_pairs": 5,
    "rigid_islands": 16,
    "blended_triangles": 192,
+   "cross_bone_triangles": 0,
    "deliberate": {
     "proc:SlamPadLeft:tY+": {
      "pairs": [
@@ -32652,6 +32516,9 @@
     "blended_vertices": 0,
     "max_influences": 1,
     "unweighted_vertices": 0,
+    "unweighted_no_group": 0,
+    "unweighted_neutral_bone": 0,
+    "neutral_bones": [],
     "max_weight_sum_deviation": 0.0,
     "bones_without_weights": []
    },
@@ -32839,7 +32706,7 @@
      }
     }
    },
-   "git_head": "533f1c27e6f1028a11b3a97f08948219bdf5f5e8",
+   "git_head": "776edd1c364e2e5fe772b20f9ad8768b8b41715c",
    "pairs_untested": true,
    "pair_note": "no parent/child or touching-at-rest island pairs: CLIP and GAP are untested, not clean",
    "sibling_pairs": 0,
@@ -32848,6 +32715,7 @@
    "contact_pairs": 0,
    "rigid_islands": 16,
    "blended_triangles": 0,
+   "cross_bone_triangles": 0,
    "deliberate": {},
    "deliberate_collapse": [],
    "flags": {},
