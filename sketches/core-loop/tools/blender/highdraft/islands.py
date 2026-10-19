@@ -29,10 +29,12 @@ import polish
 SKETCH = Path(common.SKETCH)
 FILES = ("island_small", "island_medium", "island_large", "island_rim",
          "island_rib", "bridge_skin", "return_ramp_skin", "barge_skin")
-# Polish (tools/blender/POLISH.md) for the hardware skins only; the three islands are landforms
-# and wait for the landform pass. Bevels keep the planar faces, so the pinned bounds hold, and
-# the flat deck skins take smoothing and the bake without a bevel. The material is renamed
-# "steel" in finish(), so that is the slot that takes the bake.
+# Polish (tools/blender/POLISH.md). Bevels keep the planar faces, so the pinned bounds hold, and
+# the flat deck skins take smoothing and the bake without a bevel. finish() renames the material
+# "steel" or "stone", so that is the slot that takes the bake. The islands keep their slab
+# unbevelled, since dress_mhi_assets_test pins its flat top to the full diameter, and round
+# their keels with one subdivision fitted back to each keel's bounds.
+LANDFORM = dict(bevel=0, bake_slots=("stone",))
 POLISH = {"island_rim": dict(bevel=.03, bevel_min=.1), "island_rib": dict(bevel=.04, bevel_min=.1),
           "bridge_skin": dict(bevel=0), "return_ramp_skin": dict(bevel=0),
           "barge_skin": dict(bevel=.04, bevel_min=.15)}
@@ -149,7 +151,8 @@ def island(size, name, keels):
     elif name == "island_large":
         marker(root, "LobeKeel")
     for part_name, at, width in keels:
-        keel(p, at, width, rng)
+        with p.region(subsurf=1, detail=1, fit=True):
+            keel(p, at, width, rng)
         marker(root, part_name, at)
     for label, at in [("rim_n", (0, 0, -radius)), ("rim_e", (radius, 0, 0)),
                       ("rim_s", (0, 0, radius)), ("rim_w", (-radius, 0, 0))]:
@@ -368,8 +371,7 @@ def main():
             if name in POLISH:
                 polish.enable(bake_slots=("steel",), **POLISH[name])
             else:
-                polish._opts = common.POLISH = None
-                common.DETAIL = 1
+                polish.enable(**LANDFORM)
             if name == "island_small":
                 root = island(28, name, [("OffsetKeel", (3, -5, 0), 8)])
             elif name == "island_medium":
