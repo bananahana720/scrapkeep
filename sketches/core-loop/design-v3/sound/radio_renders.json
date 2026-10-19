@@ -192,7 +192,14 @@
    "take-top-shelf-overdrive-s5101.wav",
    "take-top-shelf-overdrive-s5102.wav"
   ],
-  "pick": "take-top-shelf-overdrive-s5101.wav"
+  "pick": "take-top-shelf-overdrive-s5101.wav",
+  "remade": {
+   "seed": 6204,
+   "model": "ACE-Step 1.5 xl-turbo, cover, final mode",
+   "caption": "Instrumental driving electro house: a bright alto saxophone calls a rising swung hook with a falling answer, a synth lead lifts it an octave on the drop, then the band steps up a whole step for the last chorus. D minor jazz chords, filtered pads, distorted synth bass and 808 under a four-on-the-floor kick. Piston kick and steam release in a tight supporting groove. Hype, unstoppable. Instrumental, no vocals. No pentatonic or East Asian melody or instruments.",
+   "strength": 0.52,
+   "note": "arm A: melody-first caption, plain cover"
+  }
  },
  {
   "id": "take-champion-club-mix",
@@ -207,7 +214,14 @@
    "take-champion-club-mix-s5101.wav",
    "take-champion-club-mix-s5102.wav"
   ],
-  "pick": "take-champion-club-mix-s5101.wav"
+  "pick": "take-champion-club-mix-s5101.wav",
+  "remade": {
+   "seed": 6302,
+   "model": "ACE-Step 1.5 xl-turbo, cover, final mode",
+   "caption": "Instrumental 90s Eurodance club mix: a bright synth-brass hook climbs in stacked thirds to a high held note and drops home, answered by jazz brass a third below, over a bouncing piano riff. D minor, a short stamped bass riff, four-on-the-floor kick. Crowd stomp and one steel gong per phrase in a tight supporting groove. Euphoric, cheesy on purpose, huge. Instrumental, no vocals. No pentatonic or East Asian melody or instruments.",
+   "strength": 0.6,
+   "note": "arm B: hybrid source (parent bass, drums -9 dB, written motif lead), melody-first caption, cover strength 0.60"
+  }
  },
  {
   "id": "take-heavyweight-big-room",
@@ -222,7 +236,14 @@
    "take-heavyweight-big-room-s5101.wav",
    "take-heavyweight-big-room-s5102.wav"
   ],
-  "pick": "take-heavyweight-big-room-s5101.wav"
+  "pick": "take-heavyweight-big-room-s5101.wav",
+  "remade": {
+   "seed": 6303,
+   "model": "ACE-Step 1.5 xl-turbo, cover, final mode",
+   "caption": "Instrumental big-room electro house: a calm tenor saxophone plays a rising arpeggio melody over a heavy stamped electro bass riff, D D E-flat D then a leap, brass stabs answering. D minor, half-time sax breakdown, double drop, four-on-the-floor kick. Anvil hits and hammering piston in a tight supporting groove. Heavy, calm, proud, pumping. Instrumental, no vocals. No pentatonic or East Asian melody or instruments.",
+   "strength": 0.6,
+   "note": "arm B: hybrid source (parent bass, drums -9 dB, written motif lead), melody-first caption, cover strength 0.60"
+  }
  },
  {
   "id": "take-brindle-afterburner",
@@ -237,7 +258,14 @@
    "take-brindle-afterburner-s5101.wav",
    "take-brindle-afterburner-s5102.wav"
   ],
-  "pick": "take-brindle-afterburner-s5101.wav"
+  "pick": "take-brindle-afterburner-s5101.wav",
+  "remade": {
+   "seed": 6304,
+   "model": "ACE-Step 1.5 xl-turbo, cover, final mode",
+   "caption": "Instrumental Eurobeat: a screaming synth lead stamps a short repeated machine riff, D D E-flat D then a leap, and an alto saxophone answers with a rising swung arpeggio, ending in a unison finale with jazz brass. D minor, driving offbeat bass locked to a four-on-the-floor kick. Cannon volley and piston kick in a tight supporting groove. Frantic, triumphant, melodramatic. Instrumental, no vocals. No pentatonic or East Asian melody or instruments.",
+   "strength": 0.6,
+   "note": "arm B: hybrid source (parent bass, drums -9 dB, written motif lead), melody-first caption, cover strength 0.60"
+  }
  },
  {
   "id": "take-upper-bench-live-wire",
@@ -282,7 +310,14 @@
    "take-highdraft-hands-up-s5101.wav",
    "take-highdraft-hands-up-s5102.wav"
   ],
-  "pick": "take-highdraft-hands-up-s5101.wav"
+  "pick": "take-highdraft-hands-up-s5101.wav",
+  "remade": {
+   "seed": 6303,
+   "model": "ACE-Step 1.5 xl-turbo, cover, final mode",
+   "caption": "Instrumental hands-up trance house: a soprano saxophone plays a long rising arpeggio that climbs, falls back and climbs higher, doubled by a supersaw lead in each drop. G minor jazz harmony with a bright raised fourth, wide pads, audible offbeat bassline, four-on-the-floor kick. Propeller whir and rope snap in a tight supporting groove. Weightless, euphoric, fast. Instrumental, no vocals. No pentatonic or East Asian melody or instruments.",
+   "strength": 0.6,
+   "note": "arm B: hybrid source (parent bass, drums -9 dB, written motif lead), melody-first caption, cover strength 0.60"
+  }
  },
  {
   "id": "take-stampede-encore",
@@ -297,7 +332,14 @@
    "take-stampede-encore-s5101.wav",
    "take-stampede-encore-s5102.wav"
   ],
-  "pick": "take-stampede-encore-s5101.wav"
+  "pick": "take-stampede-encore-s5101.wav",
+  "remade": {
+   "seed": 6202,
+   "model": "ACE-Step 1.5 xl-turbo, cover, final mode",
+   "caption": "Instrumental electro swing house: a honking baritone saxophone plays a swung hook that climbs and flops back down like a tumbling pile of junk, brass stabs replying in a short stamped riff. D minor swing chords, walking bass, a straight four-on-the-floor kick, swung hats. Clattering scrap and one hubcap roll in a tight supporting groove. Chaotic, fun, breathless. Instrumental, no vocals. No pentatonic or East Asian melody or instruments.",
+   "strength": 0.6,
+   "note": "arm A: melody-first caption, plain cover; source shifted down 3 semitones (SCORE.md:15)"
+  }
  },
  {
   "id": "take-round-arena-main-event",
@@ -312,7 +354,14 @@
    "take-round-arena-main-event-s5101.wav",
    "take-round-arena-main-event-s5102.wav"
   ],
-  "pick": "take-round-arena-main-event-s5101.wav"
+  "pick": "take-round-arena-main-event-s5101.wav",
+  "remade": {
+   "seed": 6302,
+   "model": "ACE-Step 1.5 xl-turbo, cover, final mode",
+   "caption": "Instrumental big-room electro swing house: a brass fanfare leaps up four bold notes and holds like a ring announcer, then a hype alto saxophone sings the call back with a falling tail, brass shouting in the gaps. D minor jazz chords, pumping bass riff, four-on-the-floor kick, lifting to a faster final round. Crowd stomp and ring bell in a tight supporting groove. Rowdy, proud. Instrumental, no vocals. No pentatonic or East Asian melody or instruments.",
+   "strength": 0.6,
+   "note": "arm B: hybrid source (parent bass, drums -9 dB, written motif lead), melody-first caption, cover strength 0.60"
+  }
  },
  {
   "id": "take-fabricator-overclocked",
@@ -342,7 +391,14 @@
    "take-mind-overclock-s5101.wav",
    "take-mind-overclock-s5102.wav"
   ],
-  "pick": "take-mind-overclock-s5101.wav"
+  "pick": "take-mind-overclock-s5101.wav",
+  "remade": {
+   "seed": 6205,
+   "model": "ACE-Step 1.5 xl-turbo, cover, final mode",
+   "caption": "Instrumental hard house into a Eurodance finale: a glassy chime synth plays a falling arpeggio, a soprano saxophone answers with it rising, and the whole band, brass, supersaw and a stuttering relay, plays the rising version together in G major. Jazz brass, G minor turning major, pumping offbeat 808 bass. Relay stutter and cannon hits as tight supporting groove. Relentless, triumphant. Instrumental, no vocals. No pentatonic or East Asian melody or instruments.",
+   "strength": 0.42,
+   "note": "arm A: melody-first caption, plain cover; mastered with drums -3 dB (percussion share 0.55/0.64 was borderline)"
+  }
  },
  {
   "id": "take-dam-breaks",

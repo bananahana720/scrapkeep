@@ -6,6 +6,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
@@ -272,15 +273,15 @@ func _glow(row: Dictionary) -> void:
 	var material: ShaderMaterial = row.material
 	if reduced_motion:
 		var level := clampf(1.0 - row.age / PULSE_SECONDS, 0.0, 1.0)
-		material.set_shader_parameter("pulse", Vector4(at.x, at.y, CATCH_RADIUS, level))
+		material.set_shader_parameter("pulse", Vector4(at.x, at.y, CATCH_RADIUS, FlashGuard.spike(0.0, level)))
 		return
 	var first := clampf(row.age / RIPPLE_SECONDS, 0.0, 1.0)
 	row.front = CATCH_RADIUS * first
-	material.set_shader_parameter("ring_a", Vector4(at.x, at.y, row.front, 1.0 - first if first < 1.0 else 0.0))
+	material.set_shader_parameter("ring_a", Vector4(at.x, at.y, row.front, FlashGuard.spike(0.0, 1.0 - first if first < 1.0 else 0.0)))
 	if row.captured:
 		var second := clampf((row.age - CAPTURE_AT) / CAPTURE_RIPPLE_SECONDS, 0.0, 1.0)
 		row.capture_front = CATCH_RADIUS * CAPTURE_RIPPLE_SCALE * second
-		material.set_shader_parameter("ring_b", Vector4(at.x, at.y, row.capture_front, 1.0 - second if second < 1.0 else 0.0))
+		material.set_shader_parameter("ring_b", Vector4(at.x, at.y, row.capture_front, FlashGuard.spike(0.0, 1.0 - second if second < 1.0 else 0.0)))
 
 
 func _glow_end(row: Dictionary) -> void:

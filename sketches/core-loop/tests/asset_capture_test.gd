@@ -3,6 +3,7 @@ extends SceneTree
 # tools/asset_capture.gd: black modes, frozen state, camera table and the pair refusal, on a small scene.
 const Cap := preload("res://tools/asset_capture.gd")
 const Cams := preload("res://tools/capture_cameras.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const TMP := "user://asset_capture_test"
 const T := preload("res://tests/support/t.gd")
 
@@ -193,6 +194,27 @@ func _run() -> void:
 	var called := doc.duplicate(true)
 	called["call"] = ["/root/Game/Spawn_lobber:flash:2"]
 	_check(not Cap.compare(doc, called)["errors"].is_empty(), "compare: a different staged event call is refused")
+	var placed := doc.duplicate(true)
+	placed["glb"] = ["res://assets/models/warden_kit_mind.glb@0,50,0@30"]
+	_check(not Cap.compare(doc, placed)["errors"].is_empty(), "compare: a different --glb placement is refused")
+	var older := doc.duplicate(true)
+	older.erase("glb")
+	var empty := doc.duplicate(true)
+	empty["glb"] = []
+	_check(Cap.compare(older, empty)["errors"].is_empty(), "compare: a document without glb pairs with an empty glb list")
+	var root_node := Node3D.new()
+	root.add_child(root_node)
+	var glb := Cap.place_glb(root_node, "res://assets/models/warden_kit_mind.glb@1,2,3@90")
+	_check(glb != null and glb.name == "Glb_warden_kit_mind" and glb.global_position.is_equal_approx(Vector3(1, 2, 3))
+		and is_equal_approx(glb.rotation_degrees.y, 90.0) and glb.find_child("WeakPoint", true, false) != null, "place_glb instances the model at the point and yaw")
+	_check(Cap.place_glb(root_node, "res://assets/models/no_such_model.glb@0,0,0") == null, "place_glb refuses a missing scene")
+	var kit := Cap.place_glb(root_node, "res://assets/models/park/anchor_hoodoo_a.glb@0,0,0")
+	var views: Array = kit.find_children("*", "MeshInstance3D", true, false) if kit != null else []
+	_check(views.size() == 1 and not String(views[0].name).ends_with("-col")
+		and kit.find_children("*", "StaticBody3D", true, false).is_empty(), "place_glb draws a park recipe's body without its -col mesh or collider")
+	var enamel: Material = views[0].get_surface_override_material(0) if views.size() == 1 else null
+	_check(enamel != null and enamel.resource_path == String(MaterialSlots.row("enamel")["path"]), "place_glb dresses a park recipe's enamel slot with the shared slot resource")
+	root_node.queue_free()
 	var parsed := Cap.parse_call('/root/Game/Spawn_plated_brute:on_struck:2:["x","y",{"full":true}]')
 	_check(parsed["ok"] and parsed["path"] == "/root/Game/Spawn_plated_brute" and parsed["method"] == "on_struck"
 		and parsed["frames"] == 2 and parsed["args"] == ["x", "y", {"full": true}], "parse_call keeps a JSON argument list that holds colons")

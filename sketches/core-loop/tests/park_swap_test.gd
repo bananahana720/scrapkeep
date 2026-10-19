@@ -131,7 +131,11 @@ func _run() -> void:
 		% [row_frames, rows.get_child_count() if rows != null else -1, rows.threaded_loads if rows != null else -1, rows.build_frames if rows != null else -1, rows.row_usec_max / 1000.0 if rows != null else -1.0,
 		row_frame_ms, row_step_ms, rows.slowest_step if rows != null else ""])
 	t.check("stage 2 places its park rows", rows != null and rows.is_ready() and rows.get_child_count() > 0, "%d extra frames" % row_frames)
-	t.check("stage 2's recipe GLBs and materials load on the loader thread", rows != null and rows.threaded_loads > 0, str(rows.threaded_loads if rows != null else -1))
+	# Headless (the dummy rasterizer, whose mesh RID owner is not thread-safe) the rows load on the main thread instead.
+	if DisplayServer.get_name() != "headless":
+		t.check("stage 2's recipe GLBs and materials load on the loader thread", rows != null and rows.threaded_loads > 0, str(rows.threaded_loads if rows != null else -1))
+	else:
+		t.check("headless, stage 2's recipe GLBs and materials load on the main thread, none on the loader", rows != null and rows.threaded_loads == 0 and rows.get_child_count() > 0, str(rows.threaded_loads if rows != null else -1))
 	t.check("stage 2's rows place over several frames, not in one", rows != null and rows.build_frames > 1, "%d frames" % (rows.build_frames if rows != null else -1))
 	t.check("no main-thread frame over 33 ms with the rows placing", row_frame_ms < FRAME_CAP_MS, "%.2f ms" % row_frame_ms)
 	t.check("no row placement step over 8 ms", row_step_ms < 8.0, "%.2f ms at %s" % [row_step_ms, rows.slowest_step if rows != null else ""])
