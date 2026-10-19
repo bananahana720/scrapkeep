@@ -43,7 +43,8 @@ C. Flume ride pieces (origin "entry_lip", +Z the ride): the trough cross-section
 D. Liners (section "D. liners" below; ids liner_<row>, one GLB each now that every liner is a flush lane, selected with --liners). Decoration only: no -col mesh, the
    stamped terrain stays the only collider. Registry origin "centre", no fit: park_recipes.gd places the GLB rigidly at the row's
    `at`, y = ground(at), turned by yaw_deg, never scaled, so every vertex is conformed to ground.bin (the bake): its local y is
-   ground(world x, z) - ground(at) + an offset (0.05 m base, raised features at most 0.25 m, the middle 40 % of the width flush).
+   ground(world x, z) - ground(at) + an offset (0.05 m base, raised features at most 0.25 m, the middle 40 % of the width flush) outside
+   any ride footprint; inside one the surface stands 0.03 to 0.12 m over the game's ground mesh (see FLUSH_MIN, FLUSH_LANE).
    Rebuild after a re-bake. --check re-reads ground.bin and reports the vertical gap between the base mesh and the ground.
 
 Conventions as grind.py: +Y up, one "enamel" vertex-colour slot, Southwest palette only (copper b77843, never brass),
@@ -1283,10 +1284,10 @@ SLEEPER_HALF = 0.25
 PANEL = 8.0                    # concrete panel length
 JOINT_HALF = 0.15              # half the width of a form joint
 BASE_TRIS = 7900               # under the landform budget of 8000
-# Registry class of a liner: landform (8,000 triangles) unless listed. With the surface cut to the ground mesh (at least FLUSH_MIN
-# above it everywhere, at most FLUSH_LANE inside a footprint) these rows need more: their count is what the cut measures (trestle_hollow
-# about 14k, gap_wash 8.7k, main_canal 8.1k, lateral_canal 12.9k: park_large, 16,000; wasteway_chute 18.3k: hero_landmark, 24,000, the
-# only class above it). A class only sets the cap assert; the park row's `budget` stays landform and sets the in-game draw ranges.
+# Registry class of a liner: landform (8,000 triangles) unless listed. With the surface cut to the ground mesh (at least FLUSH_MIN above
+# it everywhere, at most FLUSH_LANE inside a footprint) these rows need more; the counts the cut measures are trestle_hollow 14.0k,
+# gap_wash 9.5k, main_canal 9.5k and lateral_canal 14.3k (park_large, 16,000) and wasteway_chute 22.3k (hero_landmark, 24,000, the only
+# class above it). A class only sets the cap assert; the park row's `budget` stays landform and sets the in-game draw ranges.
 LINER_CLASS = {"liner_trestle_hollow": "park_large", "liner_gap_wash": "park_large", "liner_main_canal": "park_large",
                "liner_lateral_canal": "park_large", "liner_wasteway_chute": "hero_landmark"}
 
@@ -1334,10 +1335,11 @@ PIT_LINER_IDS = list(PIT_LINERS)
 LINERS.update(PIT_LINERS)
 # The islands' decoration-only pass (park_islands bake). fin_chute (the twin_fins collapse drops its ground 8 m) and cloud_wash_west
 # (the west_wing impact swaps in a crater) are not here: a baked-ground liner would float over the swapped ground.
-# "flush_lane": nothing drawn inside any ride row's footprint of the park stands more than FLUSH_LANE (0.12 m) above the ground, because
-# a ride lane may carry no visible bump that is not solid; the cap holds at every vertex of a cell that touches a footprint, so the
-# interpolated surface obeys it too. The sandstone, haul and rails styles are also flat across their whole lane (|x| <= the row's
-# half-width) and rim rocks start at hw + FLUSH_RIM_GAP. liner_check fails the build otherwise.
+# "flush_lane": the drawn surface inside any ride row's footprint of the park stands at most FLUSH_LANE (0.12 m) above the game's ground
+# mesh, because a ride lane may carry no visible bump that is not solid; everywhere it stands at least FLUSH_MIN (0.03 m) above it.
+# Outside every footprint (the margin strips past a row's ends, walls, lips and verges) the style's relief stands as it was, up to
+# FEATURE_MAX, and a plain cell may raise its corners to 0.22 m to clear the ground. The test is exact (tri_extremes_at), liner_check
+# fails the build otherwise, and a flush liner ships no rim props and so no detail shells.
 ISLES_LINERS = {
     "liner_run_turn_wash": {"park": "park_islands", "style": "sandstone", "at": (-60.0, -516.0), "size": (60.0, 4.0, 40.0), "yaw": 0.0, "flush_lane": True},
     "liner_lookout_stair": {"park": "park_islands", "style": "haul", "at": (-100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0, "flush_lane": True},
@@ -1469,8 +1471,7 @@ def _sat_overlap(pa, pb):
 
 
 def box_touches_footprint(row, x0, x1, z0, z1):
-    """Whether the liner-local box [x0, x1] x [z0, z1] touches any ride row's footprint of the park (the surface drawn over
-    the box is then capped at every one of its vertices, so no interpolated point inside a footprint can stand above the band)."""
+    """Whether the liner-local box [x0, x1] x [z0, z1] touches any ride row's footprint of the park."""
     box = [row.world(x, z) for x, z in ((x0, z0), (x1, z0), (x1, z1), (x0, z1))]
     for rid, at, hl, hw, f, a in ride_footprints(row.park):
         corners = [(at[0] + sf * hl * f[0] + sa * hw * a[0], at[1] + sf * hl * f[1] + sa * hw * a[1])
@@ -1582,6 +1583,24 @@ def split_poly(poly, line):
     return [x for x in (a, b) if len(x) >= 3]
 
 
+def edge_chord_hits(poly, e):
+    """Whether the chord a convex polygon makes with a footprint's edge line overlaps the edge itself. The extended line past the
+    footprint's corner is no kink of the surface (seg_kinks does not insert its crossings either), so a cell it only crosses beyond
+    the corner is not cut by it; the decision is the cell's, so every piece of a cell is cut by the same lines."""
+    nx, nz, c, other, ext, at, _ = e
+    n = len(poly)
+    ss = []
+    for i in range(n):
+        p, q = poly[i], poly[(i + 1) % n]
+        dp, dq = nx * p[0] + nz * p[1] - c, nx * q[0] + nz * q[1] - c
+        if abs(dp) <= 1e-9:
+            ss.append((p[0] - at[0]) * other[0] + (p[1] - at[1]) * other[1])
+        elif (dp < 0) != (dq < 0) and abs(dq) > 1e-9:
+            t = dp / (dp - dq)
+            ss.append((p[0] + (q[0] - p[0]) * t - at[0]) * other[0] + (p[1] + (q[1] - p[1]) * t - at[1]) * other[1])
+    return bool(ss) and not (max(ss) < -ext - 1e-6 or min(ss) > ext + 1e-6)
+
+
 def poly_area(poly):
     return 0.5 * sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1] for i in range(len(poly)))
 
@@ -1671,7 +1690,7 @@ def _bary(p, a, b, c):
 
 
 class FlushCell:
-    """A lattice cell of a flush row: corner keys in drawing order, kind rect (x0,z0 / x1,z0 / x1,z1 / x0,z1), tri or quad."""
+    """A cell of a flush row's lattice: corner keys in drawing order, kind rect (x0,z0 / x1,z0 / x1,z1 / x0,z1), tri or quad."""
 
     def __init__(self, row, V, keys, kind, colour):
         self.row, self.V, self.keys, self.kind, self.colour = row, V, keys, kind, colour
@@ -1725,18 +1744,17 @@ def _fan(verts):
 
 
 def emit_flush(row, V, cells):
-    """All drawn triangles of a flush row, as (three (lx, y, lz), colour). A cell whose plain triangles keep the band (against the
-    game's ground mesh, at lattice samples inside footprints) stays plain; the others are cut along the ground mesh's edges, the
-    footprints' edges and nothing else, each piece fan-triangulated with its vertices on the ground mesh plus the offset, held to the
-    band inside a footprint. A plain cell next to an overlaid one takes the neighbour's kink points on the shared edge, so no crack
-    opens."""
+    """All drawn triangles of a flush row, as (three (lx, y, lz), colour). A cell whose plain triangles keep the band exactly (against the
+    game's ground mesh) stays plain, its corner offsets moved within the band when that makes it fit; the others are cut along the ground
+    mesh's edges and the footprints' edges, each piece fan-triangulated with its vertices on the ground mesh plus the offset, clamped to
+    the band inside a footprint. A plain cell next to a cut one takes the neighbour's kink points on the shared edge, so no crack opens
+    (liner_check's crack_check verifies it)."""
     park = row.park
     ekey = lambda a, b: (a, b) if a <= b else (b, a)
     emap = {}
     for ci, c in enumerate(cells):
         for e in range(len(c.keys)):
             emap.setdefault(ekey(c.keys[e], c.keys[(e + 1) % len(c.keys)]), []).append(ci)
-    touches = [box_touches_footprint(row, *c.lbox) for c in cells]
     mode = ["plain"] * len(cells)
     kink_cache = {}
 
@@ -1744,7 +1762,8 @@ def emit_flush(row, V, cells):
         k = ekey(a, b)
         if k not in kink_cache:
             P, Q = (V[k[0]][2], V[k[0]][3]), (V[k[1]][2], V[k[1]][3])
-            kink_cache[k] = [(P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])) for t in seg_kinks(park, P, Q)]
+            ts = seg_kinks(park, P, Q)
+            kink_cache[k] = [(P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])) for t in ts]
         pts = kink_cache[k]
         return pts if (a, b) == k else pts[::-1]
 
@@ -1853,12 +1872,16 @@ def emit_flush(row, V, cells):
         c = cells[ci]
         x0, x1 = min(p[0] for p in c.world), max(p[0] for p in c.world)
         z0, z1 = min(p[1] for p in c.world), max(p[1] for p in c.world)
-        lines = grid_lines(x0, x1, z0, z1)
-        for fp in _fp_near(park, x0, x1, z0, z1):
-            lines += [(e[0], e[1], e[2]) for e in _fp_edges(fp)]
-        frags = [list(c.world)]
-        for line in lines:
+        ring = []
+        for e in range(len(c.keys)):
+            ring.append(c.world[e])
+        frags = [ring]
+        for line in grid_lines(x0, x1, z0, z1):
             frags = [q for f in frags for q in split_poly(f, line)]
+        for fp in _fp_near(park, x0, x1, z0, z1):
+            for e in _fp_edges(fp):
+                if edge_chord_hits(ring, e):
+                    frags = [q for f in frags for q in split_poly(f, (e[0], e[1], e[2]))]
         out = []
         for f in frags:
             if abs(poly_area(f)) < SLIVER:
@@ -1883,8 +1906,8 @@ _MESH = {}
 
 
 def rect_axes(row, step):
-    """Lattice lines of a flush row: its feature stations, filled to `step`. No refinement to the ground: an overlaid cell is cut to the
-    ground mesh, so a rough ground needs no extra lattice lines."""
+    """Lattice lines of a flush row: its feature stations, filled to `step`. No refinement to the ground: a cut cell follows the ground
+    mesh, so a rough ground needs no extra lattice lines."""
     xs = across_stations(row, step)
     zs = along_stations(row, step)
     return xs, zs
@@ -1987,12 +2010,6 @@ def flush_clip(row, spec):
         elif hi <= mine_lo + 1e-6:
             exl = min(exl, spec["at"][0] - hi)
     return exl, exr
-
-
-def lane_strict(row):
-    """Whether a flush row's whole lane (|x| <= hw) is flat, not only the part inside a ride footprint: the sheet styles, whose
-    lane is the ride surface. The concrete, canal and pond styles keep their wall, lip and rim relief outside every footprint."""
-    return row.style in ("sandstone", "haul", "rails")
 
 
 def flush_peers(rid):
@@ -2598,6 +2615,64 @@ def surface_extremes(row, pts, tris):
     return lo, hi
 
 
+def crack_check(pts, tris, detail=None):
+    """(vertical steps, T-junction mismatches) of a mesh, exact to 3 mm. Vertices at one xz (welded to 1 mm) must agree in y; every
+    welded vertex lying on a boundary edge of a face (an edge no other face shares) must lie on it in 3D. A boundary edge that is only
+    the sheet's outline or a cull edge has no vertex on it, so it costs nothing."""
+    cell = 2e-3
+    grid, reps, rep = {}, [], [0] * len(pts)
+    for i, (x, y, z) in enumerate(pts):
+        kx, kz = int(math.floor(x / cell)), int(math.floor(z / cell))
+        found = None
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                for r in grid.get((kx + dx, kz + dz), ()):
+                    if abs(reps[r][0] - x) < 1e-3 and abs(reps[r][1] - z) < 1e-3:
+                        found = r
+        if found is None:
+            found = len(reps)
+            reps.append([x, z, y, y])
+            grid.setdefault((kx, kz), []).append(found)
+        else:
+            reps[found][2], reps[found][3] = min(reps[found][2], y), max(reps[found][3], y)
+        rep[i] = found
+    steps = sum(1 for r in reps if r[3] - r[2] > 3e-3)
+    count = {}
+    for t in tris:
+        ids = [rep[i] for i in t]
+        for k in range(3):
+            a, b = ids[k], ids[(k + 1) % 3]
+            if a != b:
+                key = (min(a, b), max(a, b))
+                count[key] = count.get(key, 0) + 1
+    buckets = {}
+    for r, v in enumerate(reps):
+        buckets.setdefault((int(math.floor(v[0] / 2.0)), int(math.floor(v[1] / 2.0))), []).append(r)
+    bad = 0
+    for (a, b), n in count.items():
+        if n != 1:
+            continue
+        A, B = reps[a], reps[b]
+        dx, dz = B[0] - A[0], B[1] - A[1]
+        length2 = dx * dx + dz * dz
+        if length2 < 1e-12:
+            continue
+        for bx in range(int(math.floor(min(A[0], B[0]) / 2.0)), int(math.floor(max(A[0], B[0]) / 2.0)) + 1):
+            for bz in range(int(math.floor(min(A[1], B[1]) / 2.0)), int(math.floor(max(A[1], B[1]) / 2.0)) + 1):
+                for r in buckets.get((bx, bz), ()):
+                    if r == a or r == b:
+                        continue
+                    V = reps[r]
+                    t = ((V[0] - A[0]) * dx + (V[1] - A[1]) * dz) / length2
+                    if 1e-4 < t < 1 - 1e-4 and abs(A[0] + t * dx - V[0]) < 1e-3 and abs(A[1] + t * dz - V[1]) < 1e-3:
+                        ya = (A[2] + A[3]) / 2.0 + t * ((B[2] + B[3]) / 2.0 - (A[2] + A[3]) / 2.0)
+                        if abs(ya - (V[2] + V[3]) / 2.0) > 3e-3:
+                            bad += 1
+                            if detail is not None:
+                                detail.append((V[0], V[1], V[2], ya, A[:2], B[:2]))
+    return steps, bad
+
+
 def lane_coverage(row, pts, tris):
     """(uncovered, total) over a 0.5 m grid of the row's own lane (the pond's rim ellipse): the points no drawn triangle covers,
     apart from those another flush row's sheet takes (the cull) and those its gap rule drops."""
@@ -2666,6 +2741,10 @@ def liner_check(rid, out_dir):
                 fails.append("%s: drawn surface %.4f m above the ground at its lowest (minimum %.2f)" % (name, surf_min, FLUSH_MIN))
             if len(tris) > liner_cap(rid):
                 fails.append("%s: %d triangles over the %s cap %d" % (name, len(tris), liner_class(rid), liner_cap(rid)))
+            steps, tmis = crack_check(pts, tris)
+            print("FLUME_WORKS_FLUSH", name, "crack check: %d vertical steps, %d T-junction height mismatches  %s" % (steps, tmis, "PASS" if not (steps or tmis) else "FAIL"))
+            if steps or tmis:
+                fails.append("%s: cracks: %d vertical steps, %d T-junction mismatches" % (name, steps, tmis))
             missing, total = lane_coverage(row, pts, tris)
             print("FLUME_WORKS_FLUSH", name, "lane coverage: %d of %d grid points uncovered (%.5f)  %s" % (
                 missing, total, missing / max(total, 1), "PASS" if missing == 0 else "FAIL"))
@@ -2914,8 +2993,8 @@ def liner_registry(rid):
     if LINERS[rid].get("flush_lane"):
         text = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. "
                 "No -col mesh: the stamped terrain stays the only collider. Ships " + FLUSH_NOTES[LINERS[rid]["style"]] + ". "
-                + "Flush lane: the drawn surface, vertices and interpolated triangles, inside any ride row's footprint stays within 0.12 m of the ground" + (", the verge band included" if LINERS[rid]["style"] in ("sandstone", "haul", "rails") else "") + ", and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
-                + (" Registry class %s (%d triangles): a full cut of it to the ground mesh, held between 0.03 and 0.12 m above it, needs more than the 8,000 of landform; the park row's budget stays landform." % (liner_class(rid), liner_cap(rid)) if rid in LINER_CLASS else ""))
+                + "Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
+                + (" Registry class %s (%d triangles): cutting it to the ground mesh within that band needs more than the 8,000 triangles of landform; the park row's budget stays landform." % (liner_class(rid), liner_cap(rid)) if rid in LINER_CLASS else ""))
         return [{"id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": liner_class(rid), "origin": "centre",
                  "ships": True, "loader": "src/world/park/park_recipes.gd",
                  "provenance": {"recipe": "tools/blender/park/flume_works.py", "note": text}}]
