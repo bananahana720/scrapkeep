@@ -29,3 +29,9 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 - `fulgurite` is irregular branching pale-glass tubes in a sand scar with a short bent rod beside them: no radial symmetry, no disc, no knobbed stake (those read as a trap or mine).
 - `loom_frame` leans back and carries an awning so it does not read as a two-post gate. Plants-through-scrap are `rabbitbrush_c` (iron wheel) and `yucca_c` (gear plate). Crew warmth: hammock blanket, thermos on a stool, mug and laundry at the booth, steaming dish stone.
 - Keep `kite_pennant` 30 m from lines.
+
+## Placement (19 October 2026)
+
+`src/world/park/props/park_crown.json`: 10 templates (net-weaver: mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar; Fleet and abandoned only: abandoned_booth, dead_weather_post, cable_corner, log_post), 84 spots, 771 vignette instances plus 189 litter (960 in all), pinned. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing stands within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script (every candidate expanded with 7 yaws against `validate`), not hand-picked, so layouts differ in yaw and template across the park.
+
+Known gap: the floor line from about 250 to 450 m (the Watch Butte drop) and some kicker run-outs have no legal ground within 62 m of the line, so the bare run there stays long.

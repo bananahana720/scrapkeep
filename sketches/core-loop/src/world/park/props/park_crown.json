@@ -455,10 +455,10 @@
      "v": "c",
      "at": [
       9.5,
-      -4
+      8
      ],
      "yaw_deg": 40,
-     "scale": 1.02,
+     "scale": 0.85,
      "tilt_deg": 0
     }
    ]
@@ -493,7 +493,7 @@
      "v": "b",
      "at": [
       4,
-      2
+      8
      ],
      "yaw_deg": 0,
      "scale": 0.85,
@@ -507,7 +507,7 @@
       -3.5
      ],
      "yaw_deg": 20,
-     "scale": 0.94,
+     "scale": 1.02,
      "tilt_deg": 0
     },
     {
@@ -518,7 +518,7 @@
       3.5
      ],
      "yaw_deg": 150,
-     "scale": 0.95,
+     "scale": 0.94,
      "tilt_deg": 0
     },
     {
@@ -529,7 +529,7 @@
       6.5
      ],
      "yaw_deg": 100,
-     "scale": 0.96,
+     "scale": 0.95,
      "tilt_deg": 0
     },
     {
@@ -539,8 +539,8 @@
       -8.5,
       -2
      ],
-     "yaw_deg": 0,
-     "scale": 1.03,
+     "yaw_deg": 185,
+     "scale": 1.0,
      "tilt_deg": 0
     },
     {
@@ -562,7 +562,7 @@
       -5.5
      ],
      "yaw_deg": 200,
-     "scale": 0.99,
+     "scale": 1.03,
      "tilt_deg": 0
     }
    ]
@@ -600,7 +600,7 @@
       2.5
      ],
      "yaw_deg": 200,
-     "scale": 0.96,
+     "scale": 0.99,
      "tilt_deg": 0
     },
     {
@@ -611,7 +611,7 @@
       -4.5
      ],
      "yaw_deg": 0,
-     "scale": 1.1,
+     "scale": 0.96,
      "tilt_deg": 0
     },
     {
@@ -712,10 +712,10 @@
      "v": "a",
      "at": [
       -8,
-      -1
+      6
      ],
      "yaw_deg": 0,
-     "scale": 0.95,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -871,10 +871,10 @@
      "v": "c",
      "at": [
       -3.5,
-      -4
+      6
      ],
      "yaw_deg": 0,
-     "scale": 1.07,
+     "scale": 0.85,
      "tilt_deg": 0
     },
     {
@@ -885,7 +885,7 @@
       -3
      ],
      "yaw_deg": 310,
-     "scale": 0.9,
+     "scale": 1.07,
      "tilt_deg": 0
     },
     {
@@ -896,7 +896,7 @@
       -2
      ],
      "yaw_deg": 0,
-     "scale": 0.94,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -934,7 +934,7 @@
       1.5
      ],
      "yaw_deg": 340,
-     "scale": 1.08,
+     "scale": 0.94,
      "tilt_deg": 0
     },
     {
@@ -945,7 +945,7 @@
       -1.5
      ],
      "yaw_deg": 70,
-     "scale": 0.99,
+     "scale": 1.08,
      "tilt_deg": 0
     },
     {
@@ -953,10 +953,10 @@
      "v": "a",
      "at": [
       6.5,
-      5.5
+      7
      ],
      "yaw_deg": 0,
-     "scale": 0.95,
+     "scale": 0.9,
      "tilt_deg": 0
     },
     {
@@ -966,7 +966,7 @@
       -7.5,
       -3
      ],
-     "yaw_deg": 250,
+     "yaw_deg": 300,
      "scale": 0.98,
      "tilt_deg": 0
     },
@@ -1000,7 +1000,7 @@
       -3.5
      ],
      "yaw_deg": 160,
-     "scale": 1.01,
+     "scale": 1.04,
      "tilt_deg": 0
     }
    ]
@@ -1016,7 +1016,7 @@
       0
      ],
      "yaw_deg": 25,
-     "scale": 0.94,
+     "scale": 0.98,
      "tilt_deg": 0
     },
     {
@@ -1027,7 +1027,7 @@
       3
      ],
      "yaw_deg": 170,
-     "scale": 1.03,
+     "scale": 1.01,
      "tilt_deg": 0
     },
     {
@@ -1035,10 +1035,10 @@
      "v": "c",
      "at": [
       4,
-      2
+      7
      ],
      "yaw_deg": 0,
-     "scale": 0.97,
+     "scale": 0.85,
      "tilt_deg": 0
     },
     {
@@ -1049,7 +1049,7 @@
       -4.5
      ],
      "yaw_deg": 0,
-     "scale": 0.96,
+     "scale": 0.94,
      "tilt_deg": 0
     },
     {
@@ -1060,7 +1060,7 @@
       -3.5
      ],
      "yaw_deg": 100,
-     "scale": 0.9,
+     "scale": 1.03,
      "tilt_deg": 0
     },
     {
@@ -1070,8 +1070,8 @@
       7,
       5.5
      ],
-     "yaw_deg": 260,
-     "scale": 1.05,
+     "yaw_deg": 215,
+     "scale": 0.92,
      "tilt_deg": 0
     },
     {
@@ -1093,7 +1093,7 @@
       -2.5
      ],
      "yaw_deg": 60,
-     "scale": 0.92,
+     "scale": 0.97,
      "tilt_deg": 0
     }
    ]
@@ -1102,503 +1102,843 @@
  "spots": [
   {
    "id": "crown_01",
-   "template": "mending_yard",
+   "template": "hammock_camp",
    "at": [
-    30.0,
-    -760.0
+    26.0,
+    -738.0
    ],
-   "yaw_deg": 96,
+   "yaw_deg": 146,
    "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_02",
-   "template": "net_lesson",
+   "template": "lightning_scar",
    "at": [
-    -50.0,
-    -750.0
+    -14.0,
+    -730.0
    ],
-   "yaw_deg": -117,
+   "yaw_deg": -104,
    "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_03",
-   "template": "net_lesson",
+   "template": "hammock_camp",
    "at": [
-    70.0,
-    -720.0
+    66.0,
+    -714.0
    ],
-   "yaw_deg": 156,
+   "yaw_deg": 146,
    "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_04",
-   "template": "weaver_boneyard",
+   "template": "lightning_scar",
    "at": [
-    -50.0,
-    -710.0
+    26.0,
+    -690.0
    ],
-   "yaw_deg": -120,
+   "yaw_deg": 100,
    "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_05",
-   "template": "net_lesson",
+   "template": "lightning_scar",
    "at": [
-    40.0,
-    -680.0
+    114.0,
+    -682.0
    ],
-   "yaw_deg": -24,
+   "yaw_deg": 106,
    "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_06",
-   "template": "lightning_scar",
+   "template": "weaver_boneyard",
    "at": [
-    50.0,
-    -640.0
+    -54.0,
+    -674.0
    ],
-   "yaw_deg": 93,
+   "yaw_deg": -130,
    "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_07",
-   "template": "hammock_camp",
+   "template": "weaver_boneyard",
    "at": [
-    -40.0,
-    -620.0
+    50.0,
+    -658.0
    ],
-   "yaw_deg": -27,
+   "yaw_deg": -14,
    "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_08",
    "template": "lightning_scar",
    "at": [
-    -80.0,
-    -380.0
+    -70.0,
+    -634.0
    ],
-   "yaw_deg": -142,
-   "near": "bajada_lip, net-weaver gear"
+   "yaw_deg": -52,
+   "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_09",
-   "template": "watch_post",
+   "template": "net_lesson",
    "at": [
-    160.0,
-    -370.0
+    82.0,
+    -634.0
    ],
-   "yaw_deg": 115,
-   "near": "kick_emid_1, net-weaver gear"
+   "yaw_deg": -60,
+   "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_10",
-   "template": "lightning_scar",
+   "template": "watch_post",
    "at": [
-    210.0,
-    -360.0
+    -22.0,
+    -618.0
    ],
-   "yaw_deg": 135,
-   "near": "bajada_rim_lip_e, net-weaver gear"
+   "yaw_deg": -17,
+   "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_11",
    "template": "lightning_scar",
    "at": [
-    -220.0,
-    -330.0
+    114.0,
+    -610.0
    ],
-   "yaw_deg": -176,
-   "near": "scree_gust_lip, net-weaver gear"
+   "yaw_deg": 100,
+   "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_12",
-   "template": "watch_post",
+   "template": "net_lesson",
    "at": [
-    -90.0,
-    -330.0
+    42.0,
+    -586.0
    ],
-   "yaw_deg": -156,
-   "near": "kick_wmid_3, net-weaver gear"
+   "yaw_deg": 107,
+   "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_13",
    "template": "hammock_camp",
    "at": [
-    -260.0,
-    -320.0
+    -14.0,
+    -578.0
    ],
-   "yaw_deg": -159,
-   "near": "scree_gust_lip, net-weaver gear"
+   "yaw_deg": -20,
+   "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_14",
-   "template": "weaver_boneyard",
+   "template": "hammock_camp",
    "at": [
-    200.0,
-    -320.0
+    90.0,
+    -578.0
    ],
-   "yaw_deg": 75,
-   "near": "kick_emid_1, net-weaver gear"
+   "yaw_deg": 47,
+   "near": "watch_butte, net-weaver gear"
   },
   {
    "id": "crown_15",
-   "template": "watch_post",
+   "template": "lightning_scar",
    "at": [
-    30.0,
-    -280.0
+    106.0,
+    -370.0
    ],
-   "yaw_deg": -34,
-   "near": "turnstone, net-weaver gear"
+   "yaw_deg": -160,
+   "near": "bajada_lip, net-weaver gear"
   },
   {
    "id": "crown_16",
-   "template": "watch_post",
+   "template": "hammock_camp",
    "at": [
-    210.0,
-    -270.0
+    146.0,
+    -346.0
    ],
-   "yaw_deg": 128,
+   "yaw_deg": 105,
    "near": "kick_emid_1, net-weaver gear"
   },
   {
    "id": "crown_17",
    "template": "watch_post",
    "at": [
-    30.0,
-    -200.0
+    98.0,
+    -330.0
    ],
-   "yaw_deg": -90,
-   "near": "meander, net-weaver gear"
+   "yaw_deg": 0,
+   "near": "turnstone, net-weaver gear"
   },
   {
    "id": "crown_18",
-   "template": "net_lesson",
+   "template": "lightning_scar",
    "at": [
-    -220.0,
-    -190.0
+    -86.0,
+    -322.0
    ],
-   "yaw_deg": 61,
-   "near": "hoodoo_gust_lip_4, net-weaver gear"
+   "yaw_deg": -146,
+   "near": "kick_wmid_3, net-weaver gear"
   },
   {
    "id": "crown_19",
-   "template": "watch_post",
+   "template": "hammock_camp",
    "at": [
-    80.0,
-    -190.0
+    186.0,
+    -306.0
    ],
-   "yaw_deg": -90,
-   "near": "meander, net-weaver gear"
+   "yaw_deg": 105,
+   "near": "kick_emid_1, net-weaver gear"
   },
   {
    "id": "crown_20",
-   "template": "weaver_boneyard",
+   "template": "net_lesson",
    "at": [
-    50.0,
-    -160.0
+    18.0,
+    -298.0
    ],
-   "yaw_deg": -150,
-   "near": "meander, net-weaver gear"
+   "yaw_deg": -24,
+   "near": "turnstone, net-weaver gear"
   },
   {
    "id": "crown_21",
-   "template": "hammock_camp",
+   "template": "watch_post",
    "at": [
-    140.0,
-    -120.0
+    82.0,
+    -290.0
    ],
-   "yaw_deg": 132,
-   "near": "meander_cross_lip, net-weaver gear"
+   "yaw_deg": 105,
+   "near": "turnstone, net-weaver gear"
   },
   {
    "id": "crown_22",
-   "template": "watch_post",
+   "template": "net_lesson",
    "at": [
-    230.0,
-    -80.0
+    -54.0,
+    -274.0
    ],
-   "yaw_deg": 38,
-   "near": "east_ribs, net-weaver gear"
+   "yaw_deg": -147,
+   "near": "kick_wmid_3, net-weaver gear"
   },
   {
    "id": "crown_23",
-   "template": "mending_yard",
+   "template": "hammock_camp",
    "at": [
-    240.0,
-    -30.0
+    154.0,
+    -266.0
    ],
-   "yaw_deg": -2,
-   "near": "east_ribs, net-weaver gear"
+   "yaw_deg": -82,
+   "near": "kick_emid_1, net-weaver gear"
   },
   {
    "id": "crown_24",
-   "template": "log_post",
+   "template": "hammock_camp",
    "at": [
-    140.0,
-    -10.0
+    202.0,
+    -266.0
    ],
-   "yaw_deg": 18,
-   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+   "yaw_deg": 138,
+   "near": "kick_emid_1, net-weaver gear"
   },
   {
    "id": "crown_25",
-   "template": "dead_weather_post",
+   "template": "watch_post",
    "at": [
-    180.0,
-    10.0
+    -14.0,
+    -258.0
    ],
-   "yaw_deg": 38,
-   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+   "yaw_deg": 53,
+   "near": "turnstone, net-weaver gear"
   },
   {
    "id": "crown_26",
-   "template": "log_post",
+   "template": "watch_post",
    "at": [
-    220.0,
-    10.0
+    114.0,
+    -258.0
    ],
-   "yaw_deg": 38,
-   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+   "yaw_deg": 105,
+   "near": "meander, net-weaver gear"
   },
   {
    "id": "crown_27",
-   "template": "mending_yard",
+   "template": "net_lesson",
    "at": [
-    -130.0,
-    30.0
+    -310.0,
+    -250.0
    ],
-   "yaw_deg": 0,
-   "near": "kick_wmid_5, net-weaver gear"
+   "yaw_deg": -140,
+   "near": "alcove_talus, net-weaver gear"
   },
   {
    "id": "crown_28",
-   "template": "net_lesson",
+   "template": "watch_post",
    "at": [
-    -80.0,
-    40.0
+    74.0,
+    -250.0
    ],
-   "yaw_deg": -153,
-   "near": "kick_wmid_5, net-weaver gear"
+   "yaw_deg": -35,
+   "near": "meander, net-weaver gear"
   },
   {
    "id": "crown_29",
-   "template": "abandoned_booth",
+   "template": "watch_post",
    "at": [
-    150.0,
-    40.0
+    -270.0,
+    -242.0
    ],
-   "yaw_deg": -22,
-   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+   "yaw_deg": -189,
+   "near": "alcove_talus, net-weaver gear"
   },
   {
    "id": "crown_30",
-   "template": "lightning_scar",
+   "template": "watch_post",
    "at": [
-    -30.0,
-    100.0
+    -78.0,
+    -242.0
    ],
-   "yaw_deg": -106,
-   "near": "spire_top_ramp, net-weaver gear"
+   "yaw_deg": -107,
+   "near": "hoodoo_gust_lip_1, net-weaver gear"
   },
   {
    "id": "crown_31",
-   "template": "log_post",
+   "template": "weaver_boneyard",
    "at": [
-    110.0,
-    110.0
+    -342.0,
+    -226.0
    ],
-   "yaw_deg": 171,
-   "near": "gauntlet_west, abandoned Fleet gear"
+   "yaw_deg": -112,
+   "near": "alcove_talus, net-weaver gear"
   },
   {
    "id": "crown_32",
    "template": "hammock_camp",
    "at": [
-    -60.0,
-    220.0
+    -238.0,
+    -218.0
    ],
-   "yaw_deg": -70,
-   "near": "needle_gust_lip, net-weaver gear"
+   "yaw_deg": 11,
+   "near": "hoodoo_gust_lip_4, net-weaver gear"
   },
   {
    "id": "crown_33",
-   "template": "log_post",
+   "template": "net_lesson",
    "at": [
-    -60.0,
-    260.0
+    -46.0,
+    -218.0
    ],
-   "yaw_deg": -90,
-   "near": "crown_ramp, abandoned Fleet gear"
+   "yaw_deg": 113,
+   "near": "hoodoo_gust_lip_1, net-weaver gear"
   },
   {
    "id": "crown_34",
-   "template": "weaver_boneyard",
+   "template": "hammock_camp",
    "at": [
-    80.0,
-    280.0
+    146.0,
+    -210.0
    ],
-   "yaw_deg": -89,
-   "near": "kick_slast_14, net-weaver gear"
+   "yaw_deg": 100,
+   "near": "meander_cross_lip, net-weaver gear"
   },
   {
    "id": "crown_35",
-   "template": "net_lesson",
+   "template": "mending_yard",
    "at": [
-    -140.0,
-    310.0
+    258.0,
+    -210.0
    ],
-   "yaw_deg": 135,
-   "near": "kick_wlast_11, net-weaver gear"
+   "yaw_deg": 118,
+   "near": "east_wash, net-weaver gear"
   },
   {
    "id": "crown_36",
-   "template": "dead_weather_post",
+   "template": "weaver_boneyard",
    "at": [
-    -80.0,
-    320.0
+    82.0,
+    -202.0
    ],
-   "yaw_deg": -92,
-   "near": "crown_ramp, abandoned Fleet gear"
+   "yaw_deg": -100,
+   "near": "meander, net-weaver gear"
   },
   {
    "id": "crown_37",
-   "template": "mending_yard",
+   "template": "hammock_camp",
    "at": [
-    -130.0,
-    350.0
+    -262.0,
+    -186.0
    ],
-   "yaw_deg": 195,
-   "near": "kick_wlast_12, net-weaver gear"
+   "yaw_deg": 102,
+   "near": "alcove_talus, net-weaver gear"
   },
   {
    "id": "crown_38",
-   "template": "abandoned_booth",
+   "template": "watch_post",
    "at": [
-    -50.0,
-    350.0
+    -62.0,
+    -178.0
    ],
-   "yaw_deg": -92,
-   "near": "crown_ramp, abandoned Fleet gear"
+   "yaw_deg": 33,
+   "near": "hoodoo_gust_lip_1, net-weaver gear"
   },
   {
    "id": "crown_39",
    "template": "hammock_camp",
    "at": [
-    -90.0,
-    360.0
+    234.0,
+    -178.0
    ],
-   "yaw_deg": 135,
-   "near": "kick_wlast_12, net-weaver gear"
+   "yaw_deg": 118,
+   "near": "kick_emid_2, net-weaver gear"
   },
   {
    "id": "crown_40",
    "template": "lightning_scar",
    "at": [
-    -240.0,
-    370.0
+    74.0,
+    -162.0
    ],
-   "yaw_deg": -65,
-   "near": "kick_wlast_11, net-weaver gear"
+   "yaw_deg": -100,
+   "near": "meander, net-weaver gear"
   },
   {
    "id": "crown_41",
-   "template": "hammock_camp",
+   "template": "lightning_scar",
    "at": [
-    50.0,
-    380.0
+    -118.0,
+    -146.0
    ],
-   "yaw_deg": -112,
-   "near": "kick_slast_14, net-weaver gear"
+   "yaw_deg": -110,
+   "near": "hoodoo_gust_lip_2, net-weaver gear"
   },
   {
    "id": "crown_42",
-   "template": "net_lesson",
+   "template": "watch_post",
    "at": [
-    -180.0,
-    390.0
+    -78.0,
+    -138.0
    ],
-   "yaw_deg": -25,
-   "near": "kick_wlast_12, net-weaver gear"
+   "yaw_deg": 50,
+   "near": "hoodoo_gust_lip_3, net-weaver gear"
   },
   {
    "id": "crown_43",
    "template": "hammock_camp",
    "at": [
-    -40.0,
-    390.0
+    146.0,
+    -122.0
    ],
-   "yaw_deg": -152,
-   "near": "kick_wlast_12, net-weaver gear"
+   "yaw_deg": 27,
+   "near": "meander_cross_lip, net-weaver gear"
   },
   {
    "id": "crown_44",
-   "template": "cable_corner",
+   "template": "hammock_camp",
    "at": [
-    -80.0,
-    410.0
+    -86.0,
+    -98.0
    ],
-   "yaw_deg": 155,
-   "near": "kite_runout_lip, abandoned Fleet gear"
+   "yaw_deg": -10,
+   "near": "hoodoo_gust_lip_2, net-weaver gear"
   },
   {
    "id": "crown_45",
-   "template": "log_post",
+   "template": "watch_post",
    "at": [
-    60.0,
-    440.0
+    266.0,
+    -98.0
    ],
-   "yaw_deg": 48,
-   "near": "crown_collector, abandoned Fleet gear"
+   "yaw_deg": 62,
+   "near": "kick_emid_2, net-weaver gear"
   },
   {
    "id": "crown_46",
-   "template": "log_post",
+   "template": "hammock_camp",
    "at": [
-    -100.0,
-    480.0
+    226.0,
+    -82.0
    ],
-   "yaw_deg": -51,
-   "near": "kite_runout_lip, abandoned Fleet gear"
+   "yaw_deg": 8,
+   "near": "east_ribs, net-weaver gear"
   },
   {
    "id": "crown_47",
-   "template": "cable_corner",
+   "template": "hammock_camp",
    "at": [
-    10.0,
-    530.0
+    -118.0,
+    -74.0
    ],
-   "yaw_deg": 9,
-   "near": "crown_collector, abandoned Fleet gear"
+   "yaw_deg": 69,
+   "near": "kick_wmid_5, net-weaver gear"
   },
   {
    "id": "crown_48",
-   "template": "cable_corner",
+   "template": "net_lesson",
    "at": [
-    -40.0,
-    550.0
+    114.0,
+    -74.0
    ],
-   "yaw_deg": 69,
-   "near": "kite_runout_lip, abandoned Fleet gear"
+   "yaw_deg": 62,
+   "near": "east_ribs, net-weaver gear"
   },
   {
    "id": "crown_49",
-   "template": "abandoned_booth",
+   "template": "net_lesson",
    "at": [
-    0.0,
-    570.0
+    -38.0,
+    -66.0
    ],
-   "yaw_deg": 9,
-   "near": "crown_collector, abandoned Fleet gear"
+   "yaw_deg": 172,
+   "near": "hoodoo_gust_lip_3, net-weaver gear"
   },
   {
    "id": "crown_50",
+   "template": "lightning_scar",
+   "at": [
+    -14.0,
+    -26.0
+   ],
+   "yaw_deg": 129,
+   "near": "meander_bend, net-weaver gear"
+  },
+  {
+   "id": "crown_51",
+   "template": "lightning_scar",
+   "at": [
+    130.0,
+    -18.0
+   ],
+   "yaw_deg": 28,
+   "near": "meander_bend, net-weaver gear"
+  },
+  {
+   "id": "crown_52",
+   "template": "lightning_scar",
+   "at": [
+    -134.0,
+    -10.0
+   ],
+   "yaw_deg": -10,
+   "near": "kick_wmid_5, net-weaver gear"
+  },
+  {
+   "id": "crown_53",
+   "template": "dead_weather_post",
+   "at": [
+    178.0,
+    -10.0
+   ],
+   "yaw_deg": 28,
+   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_54",
+   "template": "net_lesson",
+   "at": [
+    -22.0,
+    14.0
+   ],
+   "yaw_deg": -4,
+   "near": "spire_top_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_55",
+   "template": "abandoned_booth",
+   "at": [
+    122.0,
+    30.0
+   ],
+   "yaw_deg": 88,
+   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_56",
+   "template": "lightning_scar",
+   "at": [
+    -118.0,
+    54.0
+   ],
+   "yaw_deg": -143,
+   "near": "kick_wmid_5, net-weaver gear"
+  },
+  {
+   "id": "crown_57",
+   "template": "net_lesson",
+   "at": [
+    -78.0,
+    54.0
+   ],
+   "yaw_deg": -143,
+   "near": "kick_wmid_5, net-weaver gear"
+  },
+  {
+   "id": "crown_58",
+   "template": "net_lesson",
+   "at": [
+    -46.0,
+    78.0
+   ],
+   "yaw_deg": 77,
+   "near": "spire_top_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_59",
+   "template": "net_lesson",
+   "at": [
+    66.0,
+    78.0
+   ],
+   "yaw_deg": 65,
+   "near": "spire_top_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_60",
+   "template": "net_lesson",
+   "at": [
+    18.0,
+    94.0
+   ],
+   "yaw_deg": 124,
+   "near": "spire_top_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_61",
+   "template": "mending_yard",
+   "at": [
+    -22.0,
+    110.0
+   ],
+   "yaw_deg": -76,
+   "near": "spire_top_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_62",
+   "template": "net_lesson",
+   "at": [
+    90.0,
+    110.0
+   ],
+   "yaw_deg": 165,
+   "near": "spire_top_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_63",
+   "template": "mending_yard",
+   "at": [
+    42.0,
+    134.0
+   ],
+   "yaw_deg": 44,
+   "near": "spire_top_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_64",
+   "template": "lightning_scar",
+   "at": [
+    -14.0,
+    150.0
+   ],
+   "yaw_deg": -156,
+   "near": "kick_clast_6, net-weaver gear"
+  },
+  {
+   "id": "crown_65",
+   "template": "watch_post",
+   "at": [
+    74.0,
+    166.0
+   ],
+   "yaw_deg": -59,
+   "near": "kick_clast_6, net-weaver gear"
+  },
+  {
+   "id": "crown_66",
+   "template": "cable_corner",
+   "at": [
+    -22.0,
+    246.0
+   ],
+   "yaw_deg": -100,
+   "near": "crown_ramp, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_67",
    "template": "log_post",
    "at": [
-    40.0,
-    570.0
+    26.0,
+    246.0
    ],
-   "yaw_deg": 22,
+   "yaw_deg": 100,
+   "near": "crown_ramp, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_68",
+   "template": "cable_corner",
+   "at": [
+    58.0,
+    278.0
+   ],
+   "yaw_deg": 100,
+   "near": "crown_ramp, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_69",
+   "template": "watch_post",
+   "at": [
+    122.0,
+    286.0
+   ],
+   "yaw_deg": -59,
+   "near": "kick_slast_14, net-weaver gear"
+  },
+  {
+   "id": "crown_70",
+   "template": "net_lesson",
+   "at": [
+    146.0,
+    342.0
+   ],
+   "yaw_deg": 98,
+   "near": "kick_slast_14, net-weaver gear"
+  },
+  {
+   "id": "crown_71",
+   "template": "watch_post",
+   "at": [
+    -150.0,
+    358.0
+   ],
+   "yaw_deg": 65,
+   "near": "kick_wlast_12, net-weaver gear"
+  },
+  {
+   "id": "crown_72",
+   "template": "log_post",
+   "at": [
+    -14.0,
+    366.0
+   ],
+   "yaw_deg": -102,
+   "near": "crown_ramp, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_73",
+   "template": "mending_yard",
+   "at": [
+    -198.0,
+    390.0
+   ],
+   "yaw_deg": -15,
+   "near": "kick_wlast_12, net-weaver gear"
+  },
+  {
+   "id": "crown_74",
+   "template": "watch_post",
+   "at": [
+    42.0,
+    390.0
+   ],
+   "yaw_deg": -122,
+   "near": "kick_slast_14, net-weaver gear"
+  },
+  {
+   "id": "crown_75",
+   "template": "abandoned_booth",
+   "at": [
+    -46.0,
+    422.0
+   ],
+   "yaw_deg": 119,
+   "near": "kite_runout_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_76",
+   "template": "watch_post",
+   "at": [
+    18.0,
+    422.0
+   ],
+   "yaw_deg": 78,
+   "near": "kick_slast_14, net-weaver gear"
+  },
+  {
+   "id": "crown_77",
+   "template": "lightning_scar",
+   "at": [
+    74.0,
+    422.0
+   ],
+   "yaw_deg": 38,
+   "near": "kick_slast_14, net-weaver gear"
+  },
+  {
+   "id": "crown_78",
+   "template": "abandoned_booth",
+   "at": [
+    114.0,
+    430.0
+   ],
+   "yaw_deg": 38,
    "near": "crown_collector, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_79",
+   "template": "log_post",
+   "at": [
+    42.0,
+    454.0
+   ],
+   "yaw_deg": 38,
+   "near": "crown_collector, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_80",
+   "template": "cable_corner",
+   "at": [
+    -110.0,
+    494.0
+   ],
+   "yaw_deg": -41,
+   "near": "kite_runout_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_81",
+   "template": "log_post",
+   "at": [
+    -38.0,
+    494.0
+   ],
+   "yaw_deg": 19,
+   "near": "kite_runout_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_82",
+   "template": "log_post",
+   "at": [
+    2.0,
+    510.0
+   ],
+   "yaw_deg": -1,
+   "near": "crown_collector, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_83",
+   "template": "log_post",
+   "at": [
+    -70.0,
+    518.0
+   ],
+   "yaw_deg": -25,
+   "near": "kite_runout_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_84",
+   "template": "dead_weather_post",
+   "at": [
+    -30.0,
+    534.0
+   ],
+   "yaw_deg": -1,
+   "near": "kite_runout_lip, abandoned Fleet gear"
   }
  ],
  "litter": {
@@ -1609,11 +1949,11 @@
    },
    {
     "kind": "fulgurite",
-    "weight": 2
+    "weight": 1
    },
    {
     "kind": "rabbitbrush",
-    "weight": 3
+    "weight": 4
    },
    {
     "kind": "yucca",
@@ -1632,11 +1972,12 @@
     "weight": 1
    }
   ],
-  "spacing_m": 10,
+  "spacing_m": 14,
   "band_m": [
-   16,
-   60
+   10,
+   30
   ],
   "seed": 31
- }
+ },
+ "pin": 1235278686
 }
