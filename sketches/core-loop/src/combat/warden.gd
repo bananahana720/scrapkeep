@@ -802,6 +802,11 @@ func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "
 	return result
 
 
+# The multiplier the last judge_hit gave this pilot's class (BossPosture.MONSTER_GAIN or 1).
+func posture_class_gain() -> float:
+	return _posture.class_gain
+
+
 # The run's heft class: from the fleet's run, else from a spec "heft_class" Callable (an arena
 # Warden has no fleet: the stub boss hands one in), else 0, which BossPosture and Ultimate read
 # as ordinary, so a Warden with no class source never gets the monster lift.

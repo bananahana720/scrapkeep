@@ -286,7 +286,7 @@ func _punch(target: Node3D, force: float, mult: float, dir: Vector3) -> void:
 		var result: Dictionary = target.judge_hit("ram", punch, false, 0)
 		result["shatter"] = false
 		if not target.staggered():
-			result["gain"] = minf(float(result.get("gain", 0.0)), Weapons.LINE_WARDEN_POSTURE)
+			result["gain"] = minf(float(result.get("gain", 0.0)), Weapons.LINE_WARDEN_POSTURE * (target.posture_class_gain() if target.has_method("posture_class_gain") else 1.0))
 			result["crack"] = false
 			# The shared glance fact drives both the slate burst and the low clank.
 			ctx.events.strike_deflected.emit(target, "ram", float(result["punch"]), float(result["plating"]))

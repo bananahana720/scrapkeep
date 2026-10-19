@@ -21,6 +21,13 @@ const MULT_MIN := 0.2
 # start (540 mass, heft 2.2) lands; the skipper's small arm stays in class I to II.
 const MULT_MAX := 3.0
 const MONSTER_CLASS := 3
+# Overpowered pays, the second half: a ceiling alone moved no grown seed, because a grown hit seldom
+# reaches 1.5x the plating. At class III and above every non-glancing hit also counts MONSTER_GAIN
+# times over, so the 0.35 to 0.65 ratio hits that fill a bar slowly (a Mind ram at 0.45 adds 10) fill
+# it in a third of the swings. It multiplies before a row's hit_cap, so the Waking's first-stagger
+# cap holds; the Ultimate's cap is already class-gated (ultimate.gd warden_cap) and Rivet's line cap
+# scales by it (rivet_kit.gd _punch).
+const MONSTER_GAIN := 3.0
 # A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
 # from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
 # monster build's still can. Without the key a hit may fill it, as before. With
@@ -45,6 +52,8 @@ var mult_min := MULT_MIN
 var mult_max := MULT_MAX
 # The row's own ceiling; mult_max is this for a monster build or an unknown pilot, less below.
 var mult_top := MULT_MAX
+# MONSTER_GAIN at class III and above, else 1; set per hit with mult_max (set_pilot_class).
+var class_gain := 1.0
 var drain_delay := DRAIN_DELAY
 var drain_rate := DRAIN_RATE
 # Set by a mounted driver before step; zero keeps the ordinary idle clock and drain.
@@ -102,6 +111,7 @@ func _init(numbers := {}) -> void:
 # mid-fight earns the lift. A rule never given a class (a hull boss, a bare test) keeps the row's ceiling.
 func set_pilot_class(heft_class: int) -> void:
 	mult_max = mult_top if heft_class >= MONSTER_CLASS else minf(mult_top, ORDINARY_RATIO)
+	class_gain = MONSTER_GAIN if heft_class >= MONSTER_CLASS and mult_top > ORDINARY_RATIO else 1.0
 
 
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
@@ -130,6 +140,8 @@ func judge(hit: Dictionary) -> Dictionary:
 	var gain := hit_base * pow(clampf(ratio, mult_min, mult_max), curve)
 	if contact and contact_gain_scale > 0.0:
 		gain *= 1.0 + contact_gain_scale * maxf(0.0, clampf(ratio, mult_min, mult_max) - contact_gain_floor)
+	if not glance:
+		gain *= class_gain
 	if hit_cap < FULL:
 		gain = minf(gain, cap_for(ratio))
 	if contact and frame == gain_frame:
