@@ -118,11 +118,12 @@ func make(kind: String) -> Node3D:
 		return null
 	if not _loaded.has(kind):
 		var path := String(Roster.row(kind)["script"])
-		if _requested.has(path):
-			# Waits only for what the stage-entry request has not finished.
+		if _requested.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED:
 			_loaded[kind] = ResourceLoader.load_threaded_get(path)
 			_requested.erase(path)
 		else:
+			# Not ready: load now, as before. Waiting on the loader thread would run the message
+			# queue mid-frame and split a frame's pack across several flushes.
 			_loaded[kind] = load(path)
 	return _loaded[kind].new()
 
