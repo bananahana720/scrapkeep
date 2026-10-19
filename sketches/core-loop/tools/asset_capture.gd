@@ -21,6 +21,10 @@ extends SceneTree
 #     [--class=<index>]   pilot to stage (0 Sable, 1 Rivet, 2 Kest)
 #     [--spawn=<kind>@x,y,z]   spawn one enemy through combat.spawn_enemy before the settle; it is
 #       named Spawn_<kind> under the game, so --subject and --anchor can address /root/Game/Spawn_<kind>
+#     [--glb=<res path>@x,y,z[@yaw degrees]]   instance a GLB at that point before the settle, painted from the park
+#       slot resources and the hero material slots and given the bake look as the game dresses its own models; it is named Glb_<file base name>
+#       under the game (/root/Game/Glb_warden_mantle_brood), for a model no stage-1 run shows (a later stage's mantle,
+#       a park landmark, an anchor kit)
 #     [--call=<node path>:<method>[:<physics frames>[:<JSON array of args>]]]   after the settle, call that method on the
 #       node (for example a hit flash), then run the given physics frames (default 0) before the freeze, so an event
 #       state is captured; e.g. --call=/root/Game/Spawn_plated_brute:on_struck:2:["x","y",{"full":true}]
@@ -35,6 +39,10 @@ extends SceneTree
 const Cams := preload("res://tools/capture_cameras.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const BakeLook := preload("res://src/presentation/bake_look.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const PARK_MODELS := "res://assets/models/park/"
 
 const VERSION := 1
 const SEED := 280928
@@ -54,6 +62,7 @@ var subject_path := ""
 var anchor_path := ""
 var class_index := 0
 var spawn_specs: Array = []
+var glb_specs: Array = []
 var call_specs: Array = []
 var anchor_offset := Vector3.ZERO
 var centre_override = null
@@ -90,6 +99,8 @@ func _initialize() -> void:
 			class_index = int(arg.trim_prefix("--class="))
 		elif arg.begins_with("--spawn="):
 			spawn_specs.append(arg.trim_prefix("--spawn="))
+		elif arg.begins_with("--glb="):
+			glb_specs.append(arg.trim_prefix("--glb="))
 		elif arg.begins_with("--call="):
 			call_specs.append(arg.trim_prefix("--call="))
 		elif arg.begins_with("--anchor="):
@@ -168,6 +179,13 @@ func _run() -> void:
 		var enemy: Node3D = game.combat.spawn_enemy(kind, _vec(spec.get_slice("@", 1)))
 		enemy.name = "Spawn_" + kind
 		print("spawned ", enemy.get_path())
+	for spec: String in glb_specs:
+		var placed := place_glb(game, spec)
+		if placed == null:
+			printerr("--glb scene missing or not a PackedScene: ", spec)
+			quit(3)
+			return
+		print("placed ", placed.get_path())
 	game.player.source = Intent.Scripted.new()
 	for i in SETTLE_PHYSICS_FRAMES:
 		await physics_frame
@@ -300,13 +318,51 @@ func _run() -> void:
 				revert(state)
 		var doc := {"tool": "asset_capture.gd", "version": VERSION, "seed": SEED, "size": [Cams.SIZE.x, Cams.SIZE.y],
 			"thumb_size": [Cams.THUMB.x, Cams.THUMB.y], "adapter": RenderingServer.get_video_adapter_name(),
-			"mode": mode, "class": class_index, "spawn": spawn_specs, "call": call_specs, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
+			"mode": mode, "class": class_index, "spawn": spawn_specs, "glb": glb_specs, "call": call_specs, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
 			"hide": hide_paths, "clay": clay_paths, "aabb": [] if aabb_arg == null else _arr(aabb_arg.position) + _arr(aabb_arg.size), "isolate": isolate_path, "isolate_rest": isolate_rest, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
 			"paused": paused, "source_sha256": _hashes(), "frames": frames}
 		var file := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
 		file.store_string(JSON.stringify(doc, "\t"))
 		file.close()
 	quit()
+
+
+# --glb: one model under the game at a world point, dressed like the game's own. A park recipe
+# (PARK_MODELS) draws as park_recipes.gd's place_parts draws it: shared slot resources and no
+# "<name>-col" mesh. Any other model gets hero_assets' slots (an unknown slot keeps its imported
+# material) and then the bake look.
+static func place_glb(parent: Node, spec: String) -> Node3D:
+	var parts := spec.split("@")
+	var packed := load(parts[0]) as PackedScene if ResourceLoader.exists(parts[0]) else null
+	if packed == null or parts.size() < 2:
+		return null
+	var node := packed.instantiate() as Node3D
+	node.name = "Glb_" + parts[0].get_file().get_basename()
+	parent.add_child(node)
+	node.global_position = _vec(parts[1])
+	if parts.size() > 2:
+		node.rotation_degrees.y = float(parts[2])
+	if not parts[0].begins_with(PARK_MODELS):
+		var hero := parent.find_child("HeroAssets", true, false)
+		if hero != null and hero.has_method("paint"):
+			hero.paint(node, {})
+		BakeLook.dress(node)
+		return node
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		# Godot keeps the collision mesh as a drawn MeshInstance3D with a live StaticBody3D; placement
+		# builds its own collider and never draws it.
+		if String(view.name).ends_with(ParkRecipes.COL_SUFFIX):
+			view.get_parent().remove_child(view)
+			view.free()
+			continue
+		if view.mesh == null:
+			continue
+		for i in view.mesh.get_surface_count():
+			var original := view.mesh.surface_get_material(i)
+			var slot := String(original.resource_name) if original != null else ""
+			if RecipeProps.is_slot_role(slot):
+				view.set_surface_override_material(i, RecipeProps.slot_material(slot))
+	return node
 
 
 # Pose the scene for one camera. Asset cameras and the look views that show the pod use the
@@ -345,7 +401,7 @@ func _first_environment() -> Environment:
 
 func _hashes() -> Dictionary:
 	var result := {}
-	for path in ["tools/asset_capture.gd", "tools/capture_cameras.gd", "src/presentation/hero_assets.gd", "src/presentation/spillway_scenery.gd", "src/world/terrain.gd", "src/core/palette.gd"]:
+	for path in ["tools/asset_capture.gd", "tools/capture_cameras.gd", "src/presentation/hero_assets.gd", "src/presentation/recipe_props.gd", "src/presentation/material_slots.gd", "src/presentation/bake_look.gd", "src/presentation/spillway_scenery.gd", "src/world/terrain.gd", "src/core/palette.gd"]:
 		result[path] = FileAccess.get_sha256("res://" + path)
 	return result
 
@@ -661,6 +717,9 @@ static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 	for key in ["mode", "class", "spawn", "call", "seed", "size", "freeze_specs", "hide", "anchor_offset", "aabb", "isolate"]:
 		if not _close(a.get(key), b.get(key)):
 			errors.append("%s differs: %s vs %s" % [key, a.get(key), b.get(key)])
+	# --glb placements: a document from before the option has no key and pairs with an empty list.
+	if not _close(a.get("glb", []), b.get("glb", [])):
+		errors.append("glb differs: %s vs %s" % [a.get("glb", []), b.get("glb", [])])
 	var fa := {}
 	var fb := {}
 	for f in a.get("frames", []):
