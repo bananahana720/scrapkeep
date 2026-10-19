@@ -1,4 +1,4 @@
-# smoke: bots timeout=1800s (seventeen park bot runs in child processes, four at a time, about 100 s each alone)
+# smoke: bots timeout=1800s (eighteen park bot runs in child processes, four at a time, about 100 s each alone)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -85,6 +85,8 @@ func _runs(t) -> void:
 	jobs.append(_job(folder, labels[-1], "skipper", 1, "novice"))
 	labels.append("skipper-1-learner")
 	jobs.append(_job(folder, labels[-1], "skipper", 1, "learner"))
+	labels.append("skipper-1-learner5")
+	jobs.append(_job(folder, labels[-1], "skipper", 1, "learner", "", 5))
 	var results := ChildRuns.run(jobs, WALL_S, 4)
 	var rows := {}
 	for i in jobs.size():
@@ -105,6 +107,19 @@ func _runs(t) -> void:
 	print("[report] tally seed 1 shots: plain %d, novice %d" % [int(rows["tally-1-plain"].get("shots", 0)), tally_shots])
 	t.check("tally novice still throws cards", rows["tally-1-novice"].get("class") == "tally" and tally_shots > 0,
 		"class %s, shots %d" % [rows["tally-1-novice"].get("class"), tally_shots])
+	# The Novice has no slot casts, no ultimate presses and no harpoon or latch bites.
+	for label in ["skipper-1-novice", "tally-1-novice"]:
+		var row: Dictionary = rows[label]
+		var casts: Dictionary = row.get("slot_casts", {})
+		var bites := _counted(row, ["harpoon_bites", "latch_bites", "latch_presses"])
+		t.check("%s uses no kit hands" % label, int(casts.get("special", -1)) == 0 and int(casts.get("line", -1)) == 0
+				and int(row.get("ult_presses", -1)) == 0 and bites == 0,
+			"casts %s, ult presses %s, bites %d" % [casts, row.get("ult_presses"), bites])
+		t.eq("%s records its band" % label, [row["band"]["name"], int(row["band"]["attempt"])], ["novice", 1])
+	t.eq("learner records its band", [rows["skipper-1-learner"]["band"]["name"], int(rows["skipper-1-learner"]["band"]["attempt"])], ["learner", 1])
+	var fifth: Dictionary = rows["skipper-1-learner5"].get("band", {})
+	t.check("learner --attempt=5 reaches its last values", int(fifth.get("attempt", 0)) == 5 and absf(float(fifth.get("reaction_s", 0.0)) - 0.30) < 0.001,
+		"band %s" % [fifth])
 	var banded: Dictionary = rows["skipper-1-expert"]
 	t.check("a banded row records its band", (banded.get("band") as Dictionary).get("name", "") == "expert"
 			and rows["skipper-1-plain"].get("band") == null, "band %s" % [banded.get("band")])
@@ -123,11 +138,13 @@ func _runs(t) -> void:
 		PostureSweep._remove_tree(folder)
 
 
-func _job(folder: String, label: String, policy: String, run_seed: int, band: String, pilot := "") -> Dictionary:
+func _job(folder: String, label: String, policy: String, run_seed: int, band: String, pilot := "", attempt := 0) -> Dictionary:
 	var args := ["--out=" + folder.path_join(label), "--policy=" + policy, "--seeds=%d" % run_seed, "--table=park",
 		"--gate=1", "--ticks=%d" % TICKS]
 	if band != "":
 		args.append("--band=" + band)
+	if attempt > 0:
+		args.append("--attempt=%d" % attempt)
 	if pilot != "":
 		args.append("--pilot=" + pilot)
 	return {"script": "res://tools/bot_run.gd", "args": args}
@@ -156,6 +173,17 @@ func _differing(a: Dictionary, b: Dictionary) -> Array:
 		if not a.has(key):
 			keys.append(key)
 	return keys
+
+
+func _counted(record: Dictionary, names: Array) -> int:
+	var total := 0
+	var notes: Array = (record.get("stages", []) as Array).duplicate()
+	if record.get("boss") is Dictionary:
+		notes.append(record["boss"])
+	for note in notes:
+		for key in names:
+			total += int(note.get(key, 0))
+	return total
 
 
 func _evasions(record: Dictionary) -> int:
