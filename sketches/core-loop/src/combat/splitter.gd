@@ -224,9 +224,9 @@ func _pose() -> void:
 	if _seam_material == null:
 		return
 	var flare := 1.0 - clampf(_flare_left / POP_DELAY, 0.0, 1.0) if _flare_left > 0.0 else 0.0
-	_seam_material.albedo_color = SEAM_BRASS.lerp(SEAM_WHITE, flare)
+	_seam_material.albedo_color = SEAM_BRASS.lerp(SEAM_WHITE, FlashGuard.whiten(flare))
 	_seam_material.emission = _seam_material.albedo_color
-	_seam_material.emission_energy_multiplier = lerpf(SEAM_IDLE, SEAM_FLARE, flare)
+	_seam_material.emission_energy_multiplier = FlashGuard.spike(SEAM_IDLE, lerpf(SEAM_IDLE, SEAM_FLARE, flare))
 
 
 # Every door hit lands here on the frame of its damage, so a kill on this frame is the last one seen.

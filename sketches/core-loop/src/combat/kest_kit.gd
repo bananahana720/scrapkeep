@@ -5,6 +5,7 @@ extends "res://src/combat/ultimate.gd"
 const Sticky := preload("res://src/combat/sticky.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Devices := preload("res://src/core/devices.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 const IDS := ["windhover", "air_raid", "minelayer"]
 const CABLE_SPEED := 60.0

@@ -128,4 +128,4 @@ func _pose() -> void:
 		return
 	var burn := clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN else 0.0
 	var blink := 0.5 + 0.5 * sin(_t * TAU * lerpf(3.0, 10.0, burn))
-	_glow.emission_energy_multiplier = lerpf(GLOW_IDLE, GLOW_FUSE, burn * blink)
+	_glow.emission_energy_multiplier = FlashGuard.spike(GLOW_IDLE, lerpf(GLOW_IDLE, GLOW_FUSE, burn * blink))
