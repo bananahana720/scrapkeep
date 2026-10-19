@@ -117,7 +117,7 @@ export function planCells(opts) {
     builds = {}, cells = ["boss", "warden", "park"], only = null, seeds = null, columns = COLUMNS.map((c) => c.id), persona = "brawler", wardenPersona = "skipper", parkPersona = "skipper",
   } = opts;
   const jobs = [];
-  const tuneArgs = opts.tune ? ["--tune=" + opts.tune] : [];
+  const tuneArgs = [...(opts.tune ? ["--tune=" + opts.tune] : []), ...(opts.tuneUnruled ? ["--tune-unruled"] : [])];
   const want = (id) => !only || only.includes(id);
   const defs = [];
   for (const b of BOSSES) if (cells.includes("boss") && want(b.id)) defs.push({ kind: "boss", ...b });
@@ -372,6 +372,7 @@ const fmt = (x, d = 1) => (x == null ? "-" : Number(x).toFixed(d));
 
 export function renderTable(table, meta = {}) {
   const lines = ["# Challenge band table", ""];
+  if (meta.tune_unruled) lines.push("Unruled: --tune-unruled was set, so pilot.* dials applied. No ruling allows them; this table is information only.", "");
   if (meta.tune) lines.push(`Tuned: --tune=${meta.tune} requested (difficulty dials, src/core/challenge_dials.gd). The applied dials are on each run row as "dials", from describe(); a rejected entry is not applied.`, "");
   if (meta.label) lines.push(`Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`, "");
   lines.push("Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. Brackets after a cell count deaths, fight caps (fight_capped, boss_stalled) and stalls; none is a win. Runs with no record, an unresumed doc or a harness kill are excluded from n and the rate and noted as `excluded`; over 10% excluded makes the column incomplete. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.", "");

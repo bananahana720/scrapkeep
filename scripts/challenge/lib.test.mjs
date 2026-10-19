@@ -119,6 +119,10 @@ test("planCells counts jobs per cell and column, rotates builds and shares seeds
   assert.ok(park4.args.includes("--from-stage=4") && park4.args.includes("--stop-at=engaged:4") && park4.entrance);
   assert.notDeepEqual(park4.seed, all.find((j) => j.cell === "w4").seed);
   assert.ok(!all.some((j) => j.cell === "world1"), "the world chain runs only when asked for");
+  // pilot.* dials need --tune-unruled on the game side; the harness passes it only when asked.
+  assert.ok(!all.some((j) => j.args.includes("--tune-unruled")));
+  const unruled = planCells({ builds: builds(), seeds: 1, only: ["brindle"], tune: "pilot.regen_delay_mult=2", tuneUnruled: true })[0];
+  assert.ok(unruled.args.includes("--tune=pilot.regen_delay_mult=2") && unruled.args.includes("--tune-unruled"));
   const chain = planCells({ builds: builds(), seeds: 2, cells: ["world"] });
   const world1 = chain.filter((j) => j.cell === "world1");
   assert.ok(world1.every((j) => j.entrance === null && !j.missing && !j.args.some((a) => a.startsWith("--from-stage")) && j.args.includes("--stop-at=engaged:2") && j.policy === "skipper"));
