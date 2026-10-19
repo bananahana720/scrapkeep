@@ -3,7 +3,7 @@ extends SceneTree
 # Park props spot finder and vignette check (Dressing lane, design-v3/park/DRESSING-KITS.md). Read-only: no file is written.
 #   godot --headless --path sketches/core-loop --script tools/park_props_plan.gd -- --map=park_dam [--line=floor] [--check] [--file=res://path.json] [--bench]
 # Without --check it prints candidate vignette spots as JSON lines, ordered along the --line (default the floor line): a
-# spot is 25 to 70 m from some line, clear under park_props.gd validate() for a vignette of VIGNETTE_RADIUS_M, on
+# spot is 25 to 64 m from some line, clear under park_props.gd validate() for a vignette of VIGNETTE_RADIUS_M, on
 # ground at most MAX_SLOPE_DEG steep, and at least SPACING_M from the spot before it. Each row names the nearest built
 # row (id, society, element, landform) so a writer can fit a story to it. Exit 0.
 # With --check it validates the map's vignette file (schema, kit names, then every expanded instance) and prints every
@@ -13,7 +13,8 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 
 const VIGNETTE_RADIUS_M := 12.0
 const VIGNETTE_HEIGHT_M := 1.0
-const LINE_BAND_M := [25.0, 70.0]
+# Top at ParkProps.Context's LINE_REACH_M: past it line_distance is INF, so a wider band would never match.
+const LINE_BAND_M := [25.0, 64.0]
 const MAX_SLOPE_DEG := 15.0
 const SPACING_M := 60.0
 const BENCH_VIGNETTES := 60
@@ -104,7 +105,7 @@ func _check(map_id: String, map, world: Dictionary, c) -> int:
 		print(JSON.stringify({"map": map_id, "error": "no vignette file at " + path}))
 		return 2
 	var kit := ParkProps.load_json(String(file.get("kit", "")))
-	var errors := ParkProps.kit_errors(kit) + ParkProps.file_errors(file, kit)
+	var errors: Array = ParkProps.kit_errors(kit) + ParkProps.file_errors(file, kit) + c.unresolved
 	for error in errors:
 		print(JSON.stringify({"map": map_id, "rule": "schema", "detail": error}))
 	if not errors.is_empty():

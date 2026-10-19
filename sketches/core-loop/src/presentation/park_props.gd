@@ -45,6 +45,10 @@ const SEAT_FLOAT_MAX_M := 0.15
 const SMALL_RADIUS_M := 0.6
 const ALIGN_MAX_DEG := 12.0
 const LINE_REACH_M := 64.0
+# A kicker's lip can be 1,600 m wide (a mesa rim), so set_dressing.gd's circle of radius width/2 + 3 covers the play rect.
+# Props use a capsule along the lip instead, and a second one for the launch run-out ahead of it.
+const KICK_MARGIN_M := 8.0
+const KICK_RUNOUT_M := 25.0
 const LITTER_CHUNK_M := 160.0
 const LITTER_GAP_RATIO := 0.5
 const CAMP_ACTIVITIES := ["enemy_camp"]
@@ -92,6 +96,8 @@ class Context:
 	var homes: Array = []
 	var camps: Array[Vector2] = []
 	var spawn := Vector2.ZERO
+	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
+	var unresolved: Array = []
 	var _cells := {}
 
 	func line_distance(p: Vector2) -> float:
@@ -161,6 +167,7 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 	c.spawn = park_map.spawn
 	var st: int = stage_of(c.map_id) if stage < 0 else stage
 	c.sites = ParkSites.new(park_map, ground, st)
+	c.sites._keepouts = kicker_keepouts(c.sites._keepouts, park_map.kickers, park_map.park.get("park_rows", []))
 	c.lanes = ParkRecipes.clear_zones(park_map.park).filter(func(z: Dictionary) -> bool: return z.has("a"))
 	var lines := load_json(LINES_PATH % c.map_id)
 	var named: Dictionary = (lines.get("pilots", {}) as Dictionary).duplicate()
@@ -176,6 +183,8 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 			var at := _place(park_map.park, point) if point is String else _pair(point)
 			if at != Vector2.INF:
 				pts.append(at)
+			else:
+				c.unresolved.append("lines.json %s waypoint %s resolves to no place" % [key, str(point)])
 		if pts.size() > 1:
 			c.lines[key] = pts
 			for i in range(1, pts.size()):
@@ -194,10 +203,31 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 					break
 		if not found.is_empty():
 			c.homes.append({"id": String(home.get("id", site)), "row": found})
+		else:
+			c.unresolved.append("home_rows site %s (home %s) names no park or activity row" % [site, String(home.get("id", site))])
 	for row: Dictionary in park_map.park.get("activity_rows", []):
 		if String(row.get("activity", "")) in CAMP_ACTIVITIES:
 			c.camps.append(_pair(row["at"]))
 	return c
+
+
+# keepouts with each "kicker ramp" circle replaced by a capsule along the lip (the ramp body behind it included, its
+# half length plus KICK_MARGIN_M wide) and a second capsule for the run-out KICK_RUNOUT_M ahead of the lip.
+static func kicker_keepouts(keepouts: Array, kickers: Array, park_rows: Array) -> Array:
+	var out := keepouts.filter(func(row: Dictionary) -> bool: return row["what"] != "kicker ramp")
+	for kicker: Dictionary in kickers:
+		var length := 12.0
+		for row: Dictionary in park_rows:
+			if row["id"] == kicker.get("id"):
+				length = float(row["size"][0])
+		var dir: Vector2 = kicker["dir"]
+		var side := Vector2(-dir.y, dir.x) * float(kicker["width"]) * 0.5
+		var radius := length * 0.5 + KICK_MARGIN_M
+		var body: Vector2 = kicker["at"] - dir * length * 0.5
+		var run: Vector2 = kicker["at"] + dir * KICK_RUNOUT_M * 0.5
+		out.append({"what": "kicker ramp", "points": PackedVector2Array([body - side, body + side]), "radius": radius, "ride": true})
+		out.append({"what": "kicker run-out", "points": PackedVector2Array([run - side, run + side]), "radius": maxf(radius, KICK_RUNOUT_M * 0.5), "ride": true})
+	return out
 
 
 static func _pair(value) -> Vector2:
@@ -727,7 +757,7 @@ static func _mesh(path: String) -> Mesh:
 	return mesh
 
 
-# Teardown: the cached meshes go with the park (and with the Game, activities.gd).
+# Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).
 static func release_shared() -> void:
 	_meshes.clear()
 	_cache_owner = ""
