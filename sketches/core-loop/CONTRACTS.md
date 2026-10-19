@@ -181,6 +181,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `boss_arena_entered` | none | E | the ball is in the arena; the music's Brindle set starts |
 | `boss_phase_changed` | `phase: int, name: String` | E | Brindle's phase and its name: 1 to 3 by hull health, then 4, `chase`, for the eject-scooter chase. The HUD toast capitalizes the name. The run log keeps the highest phase |
 | `boss_attack_telegraphed` | `attack_id: String, seconds_until: float` | E | an attack is committed and will land in seconds_until |
+| `boss_beat` | `boss_id: String, seconds_left: float` | E | the Waking or the Mind began a gated beat (challenge dial `<boss>.beat_by_phase`): its Warden takes no posture, crack, shatter or health loss for seconds_left. Not an attack: it is not `boss_attack_telegraphed`, raises no danger and counts in no attack tally; it plays the deflect clank |
 | `boss_weak_point_hit` | `point_id: String` | E | a strike landed on a weak point (a magnet, a cap, the scooter) |
 | `boss_defeated` | none | E | Brindle is beaten; flow enters `victory`, then the summary |
 

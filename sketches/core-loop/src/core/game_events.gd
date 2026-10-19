@@ -85,6 +85,7 @@ signal threat_rose(tier: int)
 signal boss_arena_entered
 signal boss_phase_changed(phase: int, name: String)
 signal boss_attack_telegraphed(attack_id: String, seconds_until: float)
+signal boss_beat(boss_id: String, seconds_left: float)
 signal boss_weak_point_hit(point_id: String)
 signal boss_defeated
 

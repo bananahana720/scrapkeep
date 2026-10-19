@@ -39,6 +39,8 @@ var _plate_verb := ""
 var _brace_due := false
 # Fight clock until which the last plate's weak window stays open.
 var _plate_until := -INF
+# Fight clock before which no attack commits (a beat's cue holds off the next warning for GAP).
+var _hold_until := -INF
 # The crown and the seat's kit (mind_dress.gd); null keeps the stub body.
 var _dress
 var _arena_dress
@@ -59,7 +61,9 @@ func _beat_plan() -> Array:
 
 
 func _on_beat_started(seconds: float) -> void:
-	ctx.events.boss_attack_telegraphed.emit("%s_beat" % BOSS_ID, seconds)
+	# No attack warning starts within GAP of the cue; the held commit goes at the first free tick.
+	_hold_until = clock + ChallengeDials.WARN_GAP
+	ctx.events.boss_beat.emit(BOSS_ID, seconds)
 
 
 func _warden_spec() -> Dictionary:
@@ -79,6 +83,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_plate_verb = ""
 	_brace_due = false
 	_plate_until = -INF
+	_hold_until = -INF
 	_arena_dress = ArenaMindDress.attach(self)
 	_dress = MindDress.attach(self)
 
@@ -115,7 +120,7 @@ func _physics_process(delta: float) -> void:
 	if clock < Rules.INTRO_SECONDS:
 		return
 	_attack_clock -= delta
-	if _attack_clock > 0.0:
+	if _attack_clock > 0.0 or clock < _hold_until:
 		return
 	_combo_left = ChallengeDials.combo_step("mind", _combo_left)
 	if _combo_left > 0:

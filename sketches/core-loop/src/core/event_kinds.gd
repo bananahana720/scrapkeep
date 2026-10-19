@@ -83,6 +83,9 @@ const ROWS := {
 	"boss_arena_entered": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "boss_arena_in", "hud": "Admiral Brindle", "objective": "Break Brindle's Requisition. Punch {punch} / hull plating {plating}.", "priority": 3},
 	"boss_phase_changed": {"group": "event", "color": Palette.BRASS, "shape": "chevron", "sound": "boss_phase", "hud": "{name}", "objective": "", "priority": 3},
 	"boss_attack_telegraphed": {"group": "combat", "color": Palette.BRASS, "shape": "wave", "sound": "boss_telegraph", "hud": "", "objective": "", "priority": 2},
+	# A gated beat (challenge dial <boss>.beat_by_phase): the Warden is shielded and takes nothing. Not a threat:
+	# no danger cue, no attack count; it wears the deflect clank, since that is what a hit on it does.
+	"boss_beat": {"group": "combat", "color": Palette.BRASS, "shape": "ring", "sound": "clank", "hud": "", "objective": "", "priority": 1},
 	"boss_weak_point_hit": {"group": "combat", "color": Palette.BRASS, "shape": "burst", "sound": "boss_weak_hit", "hud": "", "objective": "", "priority": 1},
 	"boss_defeated": {"group": "flow", "color": Palette.BRASS, "shape": "star", "sound": "stinger_boss_defeated", "hud": "Brindle routed", "objective": "", "priority": 3},
 	"threat_rose": {"group": "event", "color": Palette.RUST, "shape": "chevron", "sound": "threat_up", "hud": "Threat rising", "objective": "", "priority": 2},
@@ -365,6 +368,7 @@ const WEIGHT_EXEMPT := {
 	"boosted": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
 	"boss_arena_entered": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"boss_attack_telegraphed": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
+	"boss_beat": "A shield cue, not a strike; the deflected hits on it are strike_deflected.",
 	"boss_phase_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"cause_armed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cause_fired": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",

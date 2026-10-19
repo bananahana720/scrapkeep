@@ -1635,6 +1635,7 @@ func wire_optional() -> void:
 		_listen_optional(events, "boss_phase_changed", _on_boss_phase, true)
 	_listen_optional(events, "boss_defeated", func(): _on_boss_defeated(), true)
 	_listen_optional(events, "boss_attack_telegraphed", _on_boss_telegraph)
+	_listen_optional(events, "boss_beat", _on_boss_beat)
 	_listen_optional(events, "boss_weak_point_hit", _on_weak_point)
 	_listen_optional(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
@@ -3232,6 +3233,11 @@ func _on_boss_telegraph(_attack_id: String, seconds_until: float) -> void:
 	if engine.track == "warden":
 		engine.parameter_danger("boss_attack_telegraphed")
 	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))))
+
+
+# A gated beat: the deflect clank low and once, never the danger cue.
+func _on_boss_beat(_boss_id: String, _seconds_left: float) -> void:
+	play("boss_beat", 0.0, Harmony.ratio(-7.0))
 
 
 # Weak-point hits climb the pentatonic like a combo, so a string of them sings.

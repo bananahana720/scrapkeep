@@ -940,7 +940,7 @@ func _step_beat(delta: float) -> void:
 		# Pulses faster as it runs out, so the end reads before it comes.
 		var material := _beat_shell.material_override as StandardMaterial3D
 		var rate := 6.0 if beat_left > 1.0 else 14.0
-		material.albedo_color.a = 0.28 + 0.14 * sin(Time.get_ticks_msec() * 0.001 * rate)
+		material.albedo_color.a = 0.28 + 0.14 * sin(beat_left * rate)
 
 
 # The "can't hurt it now" cue: a brass shell round the core, gone when the beat ends.

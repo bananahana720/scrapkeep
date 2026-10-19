@@ -89,8 +89,8 @@ var _base_plating := 0.0
 # Families ridden out while carving, for the Wall Is Home find.
 var _banked := {}
 var _pulse_charging := false
-# A beat's announcement waits for a free warning slot (the GAP rule): the beat's length, or 0.
-var _beat_announce := 0.0
+# A beat's cue waits for a free warning slot (the GAP rule), and is dropped if the beat ends first.
+var _beat_announce := false
 
 
 func setup(ctx_ref) -> void:
@@ -146,7 +146,7 @@ func exit_arena() -> void:
 	_carved_at = -INF
 	_banked.clear()
 	_pulse_charging = false
-	_beat_announce = 0.0
+	_beat_announce = false
 	super()
 
 
@@ -176,9 +176,15 @@ func _physics_process(delta: float) -> void:
 			_clear_attacks()
 			_attack_clock = LANDING_ATTACK
 			_combo_left = -1
-	if _beat_announce > 0.0 and _warn_open():
-		_warned("%s_beat" % BOSS_ID, _beat_announce)
-		_beat_announce = 0.0
+	if _beat_announce:
+		if not warden.beat_immune():
+			_beat_announce = false
+		elif _warn_open():
+			# The cue counts as a warning slot for spacing but is not an attack: it never reaches
+			# boss_attack_telegraphed or the warnings ledger.
+			_last_warn = clock
+			_beat_announce = false
+			ctx.events.boss_beat.emit(BOSS_ID, warden.beat_left)
 	phase = clampi(floors.shattered + 1, 1, WakingAttacks.PIT_PHASE)
 	_read_pulse()
 	_read_ball()
@@ -235,8 +241,8 @@ func _beat_plan() -> Array:
 	return [ChallengeDials.beat(BOSS_ID, 1), ChallengeDials.beat(BOSS_ID, 2), ChallengeDials.beat(BOSS_ID, 3)]
 
 
-func _on_beat_started(seconds: float) -> void:
-	_beat_announce = seconds
+func _on_beat_started(_seconds: float) -> void:
+	_beat_announce = true
 
 
 func _warned(id: String, seconds: float) -> void:
