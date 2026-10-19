@@ -6,7 +6,8 @@
 //
 // With no --file it reads the game's own log. Godot puts user:// for a project with no
 // custom user dir at $XDG_DATA_HOME/godot/app_userdata/<config/name>/ (default
-// ~/.local/share/godot/...), and the name comes from the sketch's project.godot.
+// ~/.local/share/godot/...); with config/use_custom_user_dir=true it is
+// $XDG_DATA_HOME/<config/custom_user_dir_name>/ instead. Both come from the sketch's project.godot.
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -32,6 +33,9 @@ function projectSetting(key, fallback) {
 
 export function defaultLog(env = process.env, home = homedir()) {
   const data = env.XDG_DATA_HOME || path.join(home, ".local", "share");
+  if (projectSetting("config/use_custom_user_dir", "false") === "true") {
+    return path.join(data, projectSetting("config/custom_user_dir_name", "core-loop"), "runs.ndjson");
+  }
   const name = projectSetting("config/name", "core-loop");
   return path.join(data, "godot", "app_userdata", name, "runs.ndjson");
 }
