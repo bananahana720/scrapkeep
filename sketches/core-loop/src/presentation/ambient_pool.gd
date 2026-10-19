@@ -26,6 +26,8 @@ const LEASH_MULT := 2.5
 const LEASH_MIN_M := 3.0
 const JITTER_RAD := 0.5236
 const HIDE_RUN_S := 1.5
+# A hide run whose direction from the threat points at the ball (dot below this) is turned away from it.
+const AWAY_MIN := 0.0
 const HIDE_SINK_S := 0.5
 const DUCK_HOLD_S := 0.5
 const SCATTER_CLIMB := Vector2(12.0, 18.0)
@@ -406,11 +408,17 @@ func _react(m: Member, flat: Vector2, player: Vector2, threat: Vector2) -> void:
 	m.react_kind = "fade" if reduced else String(m.row["react"])
 	m.alt_goal = _rng.randf_range(SCATTER_CLIMB.x, SCATTER_CLIMB.y)
 	m.orbit = Vector3.ZERO
-	# Scatter lifts away from the ball; hide runs from the nearest threat.
+	# Scatter lifts away from the ball; hide runs from the nearest threat, but never toward the ball:
+	# with the threat beyond the member, the run keeps its sideways part and turns away from the ball.
 	m.dir = flat - (player if m.react_kind == "scatter" else threat)
 	if m.dir.length() < 0.001:
 		m.dir = Vector2.from_angle(_rng.randf_range(0.0, TAU))
 	m.dir = m.dir.normalized()
+	var away := flat - player
+	if away.length() > 0.001:
+		away = away.normalized()
+		if m.dir.dot(away) < AWAY_MIN:
+			m.dir = (m.dir - away * m.dir.dot(away) + away).normalized()
 	if not hushed and clock - float(_last_react_sound.get(m.kind, -99.0)) >= SOUND_GAP_S:
 		_last_react_sound[m.kind] = clock
 		m.wants_react_sound = true

@@ -13,7 +13,8 @@ const T := preload("res://tests/support/t.gd")
 
 const MIN_V := 0.12
 const MIN_GAP := 25.0
-const ENEMY_MARGIN := 10.0
+# The enemy-free window around the life band, 240° to 330°: 10° below it, 30° above it toward magenta.
+const ENEMY_MARGIN := Vector2(10.0, 30.0)
 const ENEMY_CLASSES := ["enemy", "warden_base", "warden_kit"]
 const SKIP := ["/companion/", "camp_pet"]
 const REGISTRY := "res://assets/registry.json"
@@ -91,8 +92,8 @@ func _enemy_side() -> void:
 	for file in DirAccess.get_files_at(BOSS_DIR):
 		if file.get_extension() == "glb":
 			paths[BOSS_DIR + file] = true
-	var lo: float = AmbientKinds.LIFE_HUE.x - ENEMY_MARGIN
-	var hi: float = AmbientKinds.LIFE_HUE.y + ENEMY_MARGIN
+	var lo: float = AmbientKinds.LIFE_HUE.x - ENEMY_MARGIN.x
+	var hi: float = AmbientKinds.LIFE_HUE.y + ENEMY_MARGIN.y
 	var checked := 0
 	var colours := 0
 	var nearest := 999.0
