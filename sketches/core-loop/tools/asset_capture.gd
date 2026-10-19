@@ -41,6 +41,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const PARK_MODELS := "res://assets/models/park/"
 
 const VERSION := 1
 const SEED := 280928
@@ -325,8 +327,10 @@ func _run() -> void:
 	quit()
 
 
-# --glb: one model under the game at a world point, dressed like the game's own: hero slot
-# materials (an unknown slot keeps its imported material) and then the bake look.
+# --glb: one model under the game at a world point, dressed like the game's own. A park recipe
+# (PARK_MODELS) draws as park_recipes.gd's place_parts draws it: shared slot resources and no
+# "<name>-col" mesh. Any other model gets hero_assets' slots (an unknown slot keeps its imported
+# material) and then the bake look.
 static func place_glb(parent: Node, spec: String) -> Node3D:
 	var parts := spec.split("@")
 	var packed := load(parts[0]) as PackedScene if ResourceLoader.exists(parts[0]) else null
@@ -338,22 +342,26 @@ static func place_glb(parent: Node, spec: String) -> Node3D:
 	node.global_position = _vec(parts[1])
 	if parts.size() > 2:
 		node.rotation_degrees.y = float(parts[2])
-	# Park recipes (anchor kits, landmarks) draw from the shared slot resources, as place_parts does;
-	# hero models from hero_assets' slots, which win where both know a slot.
+	if not parts[0].begins_with(PARK_MODELS):
+		var hero := parent.find_child("HeroAssets", true, false)
+		if hero != null and hero.has_method("paint"):
+			hero.paint(node, {})
+		BakeLook.dress(node)
+		return node
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
-		# Godot keeps a "<name>-col" collision mesh as a visible MeshInstance3D; placement never draws it.
-		if String(view.name).ends_with("-col"):
-			view.visible = false
+		# Godot keeps the collision mesh as a drawn MeshInstance3D with a live StaticBody3D; placement
+		# builds its own collider and never draws it.
+		if String(view.name).ends_with(ParkRecipes.COL_SUFFIX):
+			view.get_parent().remove_child(view)
+			view.free()
+			continue
+		if view.mesh == null:
 			continue
 		for i in view.mesh.get_surface_count():
 			var original := view.mesh.surface_get_material(i)
 			var slot := String(original.resource_name) if original != null else ""
 			if RecipeProps.is_slot_role(slot):
 				view.set_surface_override_material(i, RecipeProps.slot_material(slot))
-	var hero := parent.find_child("HeroAssets", true, false)
-	if hero != null and hero.has_method("paint"):
-		hero.paint(node, {})
-	BakeLook.dress(node)
 	return node
 
 
@@ -393,7 +401,7 @@ func _first_environment() -> Environment:
 
 func _hashes() -> Dictionary:
 	var result := {}
-	for path in ["tools/asset_capture.gd", "tools/capture_cameras.gd", "src/presentation/hero_assets.gd", "src/presentation/spillway_scenery.gd", "src/world/terrain.gd", "src/core/palette.gd"]:
+	for path in ["tools/asset_capture.gd", "tools/capture_cameras.gd", "src/presentation/hero_assets.gd", "src/presentation/recipe_props.gd", "src/presentation/material_slots.gd", "src/presentation/bake_look.gd", "src/presentation/spillway_scenery.gd", "src/world/terrain.gd", "src/core/palette.gd"]:
 		result[path] = FileAccess.get_sha256("res://" + path)
 	return result
 
