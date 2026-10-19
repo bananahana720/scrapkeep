@@ -1344,7 +1344,9 @@ const LANDING_WORK := 160
 # park's ground is 2 m cells, never one plane, so such a landing also flattens its near-level faces
 # into larger polygons (TerrainFaces.merge_level: normals within LEVEL_TOLERANCE_DEG, every corner
 # within LEVEL_DEVIATION m of the region's plane) and its landing share is LEVEL_LANDING_SCALE
-# times larger, so the whole carve fits it. Andrew's stand: 859 parts of work become 101.
+# times larger (400 parts at the default late_work). A level carve that fits hits on the landing
+# tick; one that still needs more takes the late path. Andrew's stand: 859 parts become 101; of 80
+# sampled level park sites, 72 % fit (scrapkeep#73-B).
 # 5 degrees, against the park's 2 m cells (360,000 sampled, scrapkeep#73-B): 85 % are under 5, only
 # 0.3 % lie between 5 and 6 and 14 % are over 10, so the line sits in a gap in the ground, above
 # Andrew's stand (3.43) and the park's rolling 2 to 3.5 degrees, below every real slope. Steeper
