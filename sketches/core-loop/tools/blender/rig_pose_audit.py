@@ -1,0 +1,1220 @@
+"""Rig pose audit: bone and weight audit, extreme-pose collapse metrics, rigid-part clip and gap
+metrics, loop seam check, and a pose contact sheet for the enemy and Warden rigs
+(AMBITION-BRIEF "Rigs and motion": range-of-motion tests at extreme poses, corrective shapes where
+joints collapse, seamless loops, bone budgets per class).
+
+  prlimit --as=12884901888 blender -b --factory-startup --threads 2 --python-exit-code 1 \
+      -P sketches/core-loop/tools/blender/rig_pose_audit.py -- --world one --out DIR \
+      [--glb world_one/enemy_foreman.glb] [--size 360] [--samples 10] [--no-render]
+
+--world one|two|three picks the set; --glb audits one rig (a path under assets/models, with or
+without assets/models/ or res://assets/models/ and .glb). Writes
+  DIR/rig_audit_<world>.json   every number below
+  DIR/pose_sheet_<world>.png   one row per rig: rest, then the 5 worst poses, labelled
+  DIR/loops_<world>.png        per looped clip: first, middle, last, last over first at 50%
+and prints one `RIG_AUDIT <glb> {json summary}` line per rig. Flags are findings, so the exit
+code is 0 whenever the audit ran.
+
+Godot axes. Poses and ranges are expressed in Godot axes about the bone head (Godot (x, y, z) is
+Blender (x, -z, y)): rotation in degrees about X, Y, Z (Euler XYZ), translation in metres, scale
+as a factor. Bones are posed relative to their parent at rest, one bone at a time, so a bone's
+extreme moves its subtree rigidly. tools/blender/world_one/kill_first_rig.py documents the
+convention these GLBs follow: each mesh island is weighted whole to one bone; only the Linker,
+the Plated Brute and warden_mind blend weights.
+
+Ranges of motion. Rigs with clips: every action sampled every 1/30 s. Procedural rigs (no clips):
+PROCEDURAL below, read from the game scripts (file:line beside each entry). A pose is each deforming
+bone at its in-game extreme on each axis it moves (both signs where both occur), plus a stress pose
+at 1.25x that extreme (+-15 degrees where the game rotates the axis by less than 10), plus each
+clip's whole-rig extreme frame (the sampled frame with the largest summed bone rotation).
+
+Metrics, on the deformed mesh (linear blend skinning in numpy, checked once per rig against
+Blender's own evaluation):
+  triangles touching a blended vertex: min deformed/rest area; max angle between the deformed
+  normal and the normal a rigid move by the triangle's dominant bone would give, and the count that
+  point the other way; edges between two blended vertices: min deformed/rest length.
+  COLLAPSE: area ratio < 0.35 or edge ratio < 0.5 at an in-game extreme; STRESS-COLLAPSE: only at
+  a stress pose.
+  Rigid islands (connected components weighted whole to one bone), parent/child bone pairs:
+  CLIP: triangle pairs overlapping at the pose that do not overlap at rest (mathutils BVHTree);
+  GAP: island pair closer than 0.01 m at rest and farther than 0.03 m at the pose. STRESS-CLIP and
+  STRESS-GAP when only a stress pose does it.
+  Loop seam (clips the game loops, LOOPS below): per bone the pose delta between the first and
+  last key, the velocity mismatch between the first and last 1/30 s steps. SEAM: location > 1 mm,
+  rotation > 0.5 degrees, scale > 0.001, or velocity jump > 25% of the bone's peak 1/30 s step.
+  tests/rig_loop_seam_test.gd runs the same check on the imported Godot animations.
+
+Renders. EEVEE and Workbench need an EGL context this box lacks, so the sheets render with Cycles
+CPU at a low sample count and the vertex colours as base colour (as glb_stills.py does). Every
+tile of a rig shares one three-quarter camera framed on the rest bounds over a neutral ground.
+Procedural in this repository; numpy and mathutils ship with Blender; no added dependencies.
+"""
+import json
+import math
+import os
+import re
+import sys
+import tempfile
+import time
+
+import bpy
+import numpy as np
+from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SKETCH = os.path.normpath(os.path.join(HERE, "..", ".."))
+MODELS = os.path.join(SKETCH, "assets", "models")
+
+WORLDS = {
+    "one": ["world_one/enemy_foreman", "world_one/enemy_dispatcher", "world_one/enemy_splitter",
+            "world_one/enemy_splitter_piece", "world_one/enemy_linker", "world_one/enemy_miniboss",
+            "world_one/enemy_plated_brute", "warden_reactor"],
+    "two": ["world_two/enemy_lamp_swarm", "warden_swarm", "warden_swarm_kit_drones"],
+    "three": ["world_three/enemy_anchor_crew", "world_three/enemy_kite_drone", "warden_mind",
+              "bosses/mind_hand"],
+}
+
+# Clips the game loops. special_rig.gd:12-17 CLIPS (foreman idle, dispatcher idle, splitter
+# crawl, splitter_piece scurry); linker.gd:48 (idle, braced); mind_hand.gd:263 (still_track);
+# hero_assets.gd:2178 replays idle whenever a Warden clip ends.
+LOOPS = {
+    "world_one/enemy_foreman": ["idle"],
+    "world_one/enemy_dispatcher": ["idle"],
+    "world_one/enemy_splitter": ["crawl"],
+    "world_one/enemy_splitter_piece": ["scurry"],
+    "world_one/enemy_linker": ["idle", "braced"],
+    "warden_reactor": ["idle"],
+    "warden_swarm": ["idle"],
+    "warden_swarm_kit_drones": ["idle"],
+    "warden_mind": ["idle"],
+    "bosses/mind_hand": ["still_track"],
+}
+
+# In-game ranges of the procedural rigs (no clips), per bone: rot {axis: (lo, hi)} degrees about
+# the Godot axis, loc {axis: (lo, hi)} metres, scale (lo, hi) uniform; "pivot": "origin" turns
+# about the rig origin instead of the bone head.
+# Not modelled: miniboss.gd:362-379 also drops the body by body * HALF_HEIGHT (3.45 m: -1.04 to
+# +3.45) and lifts the feet with it; that travel is outside the ranges the ruling lists.
+_D = math.degrees
+PROCEDURAL = {
+    # miniboss.gd:73-80 POSES, :347-413 _model_pose. Lean about X to -0.35 rad (-20.05 deg) turns
+    # body, fists, plates and halo about the rig origin (:380, :387). Feet: foot_angle -0.6 to
+    # +0.2 rad about X (:363, :368), splay rolls Z by -side*splay*0.5 (max 0.6 -> 0.3 rad, :395)
+    # and moves x by side*splay (+-0.6 m), tuck lifts y to 1.1 m (:366, :394).
+    # Fists offset (0, -0.6..1.8, -0.85..0.5) (:359, :365, :373, :376). Plates yaw +-1.15 rad
+    # (:400, weak), move x by -side*0.45 and y down 0.7 (:399). Halo spins about Y (:406).
+    "world_one/enemy_miniboss": {
+        "MinibossBody": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin"},
+        "MinibossFistLeft": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin",
+                             "loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
+        "MinibossFistRight": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin",
+                              "loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
+        "MinibossFootLeft": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (0.0, _D(0.3))},
+                             "loc": {"X": (-0.6, 0.0), "Y": (0.0, 1.1)}},
+        "MinibossFootRight": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (-_D(0.3), 0.0)},
+                              "loc": {"X": (0.0, 0.6), "Y": (0.0, 1.1)}},
+        "MinibossHalo": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-180.0, 180.0)}, "pivot": "origin"},
+        "MinibossPlateLeft": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-_D(1.15), _D(1.15))},
+                              "loc": {"X": (-0.45, 0.0), "Y": (-0.7, 0.0)}},
+        "MinibossPlateRight": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-_D(1.15), _D(1.15))},
+                               "loc": {"X": (0.0, 0.45), "Y": (-0.7, 0.0)}},
+    },
+    # plated_brute.gd:290-309 _pose, PAD_RISE 2.5 (:45), REAR_ANGLE -30 (:46).
+    "world_one/enemy_plated_brute": {
+        "SlamPadLeft": {"loc": {"Y": (0.0, 2.5)}},
+        "SlamPadRight": {"loc": {"Y": (0.0, 2.5)}},
+        "BruteRear": {"rot": {"X": (-30.0, 0.0)}},
+    },
+    # anchor_crew.gd:119-128: CrewBrace 8 deg about X and -0.08 in Y; ClutchTab i moves
+    # (0, cos, sin)(TAU i / 3) * 0.09; HostileHook -0.2 in Z.
+    "world_three/enemy_anchor_crew": {
+        "CrewBrace": {"rot": {"X": (0.0, 8.0)}, "loc": {"Y": (-0.08, 0.0)}},
+        "ClutchTab0": {"loc": {"Y": (0.0, 0.09)}},
+        "ClutchTab1": {"loc": {"Y": (-0.045, 0.0), "Z": (0.0, 0.0779)}},
+        "ClutchTab2": {"loc": {"Y": (-0.045, 0.0), "Z": (-0.0779, 0.0)}},
+        "HostileHook": {"loc": {"Z": (-0.2, 0.0)}},
+    },
+    # kite_drone.gd:171-182: wings +-5 deg about Z (left -5, right +5); paws (0, 0.08, -0.08).
+    "world_three/enemy_kite_drone": {
+        "KiteWingLeft": {"rot": {"Z": (-5.0, 0.0)}},
+        "KiteWingRight": {"rot": {"Z": (0.0, 5.0)}},
+        "KitePawLeft": {"loc": {"Y": (0.0, 0.08), "Z": (-0.08, 0.0)}},
+        "KitePawRight": {"loc": {"Y": (0.0, 0.08), "Z": (-0.08, 0.0)}},
+    },
+    # lamp_swarm.gd:183-193: LampShutter yaw -100 (side 0) or +100 (side 1, the B bones) deg
+    # about Y; LampLens scale 0.001 to 1.
+    "world_two/enemy_lamp_swarm": {
+        **{"LampShutter%d" % i: {"rot": {"Y": (-100.0, 0.0)}} for i in range(3)},
+        **{"LampShutter%dB" % i: {"rot": {"Y": (0.0, 100.0)}} for i in range(3)},
+        **{"LampLens%d" % i: {"scale": (0.001, 1.0)} for i in range(3)},
+    },
+}
+
+AREA_FLAG = 0.35
+EDGE_FLAG = 0.5
+GAP_REST = 0.01
+GAP_POSE = 0.03
+SEAM_LOC_MM = 1.0
+SEAM_ROT_DEG = 0.5
+SEAM_SCALE = 0.001
+SEAM_VEL = 0.25
+ROT_MOVES = 0.5
+LOC_MOVES = 0.001
+SCALE_MOVES = 0.002
+STRESS = 1.25
+SMALL_ROT = 10.0
+SMALL_ROT_STRESS = 15.0
+STEP = 1.0 / 30.0
+GAP_SAMPLES = 200
+KINDS_GAME = ("extreme", "clip")
+
+# Godot (x, y, z) = C @ Blender (x, y, z).
+C = np.array([[1.0, 0, 0], [0, 0, 1.0], [0, -1.0, 0]])
+AXIS = {"X": np.array([1.0, 0, 0]), "Y": np.array([0, 1.0, 0]), "Z": np.array([0, 0, 1.0])}
+
+
+def args():
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    a = {"world": "", "glb": "", "out": "", "size": 360, "samples": 10, "no-render": False}
+    i = 0
+    while i < len(argv):
+        key = argv[i].lstrip("-")
+        if key not in a:
+            raise SystemExit("rig_pose_audit: unknown flag " + argv[i])
+        if key == "no-render":
+            a[key] = True
+            i += 1
+            continue
+        if i + 1 >= len(argv):
+            raise SystemExit("rig_pose_audit: %s takes a value" % argv[i])
+        a[key] = type(a[key])(argv[i + 1])
+        i += 2
+    if not a["out"] or (not a["world"] and not a["glb"]):
+        raise SystemExit("rig_pose_audit: --out and --world or --glb are required")
+    if a["world"] and a["world"] not in WORLDS:
+        raise SystemExit("rig_pose_audit: --world is one, two or three")
+    return a
+
+
+def norm_key(path):
+    p = path.replace("res://", "").replace("\\", "/")
+    p = p.split("assets/models/")[-1]
+    return p[:-4] if p.endswith(".glb") else p
+
+
+# ---------------------------------------------------------------- bitmap font for labels
+
+_FONT = {
+    "A": "0E 11 11 1F 11 11 11", "B": "1E 11 11 1E 11 11 1E", "C": "0E 11 10 10 10 11 0E",
+    "D": "1E 11 11 11 11 11 1E", "E": "1F 10 10 1E 10 10 1F", "F": "1F 10 10 1E 10 10 10",
+    "G": "0E 11 10 17 11 11 0F", "H": "11 11 11 1F 11 11 11", "I": "0E 04 04 04 04 04 0E",
+    "J": "07 02 02 02 02 12 0C", "K": "11 12 14 18 14 12 11", "L": "10 10 10 10 10 10 1F",
+    "M": "11 1B 15 15 11 11 11", "N": "11 11 19 15 13 11 11", "O": "0E 11 11 11 11 11 0E",
+    "P": "1E 11 11 1E 10 10 10", "Q": "0E 11 11 11 15 12 0D", "R": "1E 11 11 1E 14 12 11",
+    "S": "0F 10 10 0E 01 01 1E", "T": "1F 04 04 04 04 04 04", "U": "11 11 11 11 11 11 0E",
+    "V": "11 11 11 11 11 0A 04", "W": "11 11 11 15 15 15 0A", "X": "11 11 0A 04 0A 11 11",
+    "Y": "11 11 0A 04 04 04 04", "Z": "1F 01 02 04 08 10 1F",
+    "0": "0E 11 13 15 19 11 0E", "1": "04 0C 04 04 04 04 0E", "2": "0E 11 01 02 04 08 1F",
+    "3": "1F 02 04 02 01 11 0E", "4": "02 06 0A 12 1F 02 02", "5": "1F 10 1E 01 01 11 0E",
+    "6": "06 08 10 1E 11 11 0E", "7": "1F 01 02 04 08 08 08", "8": "0E 11 11 0E 11 11 0E",
+    "9": "0E 11 11 0F 01 02 0C",
+    ".": "00 00 00 00 00 0C 0C", "-": "00 00 00 1F 00 00 00", "+": "00 04 04 1F 04 04 00",
+    ":": "00 0C 0C 00 0C 0C 00", "/": "01 01 02 04 08 10 10", "=": "00 00 1F 00 1F 00 00",
+    "_": "00 00 00 00 00 00 1F", "(": "02 04 08 08 08 04 02", ")": "08 04 02 02 02 04 08",
+    ",": "00 00 00 00 0C 04 08", "%": "18 19 02 04 08 13 03", "*": "00 04 15 0E 15 04 00",
+    "|": "04 04 04 04 04 04 04", " ": "00 00 00 00 00 00 00",
+}
+GLYPH = {}
+for _ch, _rows in _FONT.items():
+    _bits = np.zeros((7, 5), dtype=bool)
+    for _r, _hx in enumerate(_rows.split()):
+        _v = int(_hx, 16)
+        for _c in range(5):
+            _bits[_r, _c] = bool(_v & (1 << (4 - _c)))
+    GLYPH[_ch] = _bits
+
+
+def draw_text(img, x, y, text, scale=2, colour=(1.0, 1.0, 1.0)):
+    """img: (H, W, 3) top-down float array; text drawn with its top-left at (x, y)."""
+    for k, ch in enumerate(text.upper()):
+        bits = GLYPH.get(ch, GLYPH["*"])
+        px = x + k * 6 * scale
+        if px + 5 * scale > img.shape[1] or y + 7 * scale > img.shape[0]:
+            break
+        big = np.kron(bits, np.ones((scale, scale), dtype=bool))
+        img[y:y + 7 * scale, px:px + 5 * scale][big] = colour
+
+
+# ---------------------------------------------------------------- scene and rig data
+
+
+def reset_scene():
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+
+def action_fcurves(action):
+    out = []
+    for layer in action.layers:
+        for strip in layer.strips:
+            for bag in strip.channelbags:
+                out.extend(bag.fcurves)
+    return out
+
+
+_PATH = re.compile(r'pose\.bones\["(.+)"\]\.(location|rotation_quaternion|rotation_euler|scale)$')
+
+
+class Clip:
+    """One action as per-bone fcurve lists; evaluates basis values at a Blender frame."""
+
+    def __init__(self, action, fps):
+        self.name = action.name.split("|")[-1]
+        self.fps = fps
+        self.tracks = {}
+        lo, hi = math.inf, -math.inf
+        for fc in action_fcurves(action):
+            m = _PATH.match(fc.data_path)
+            if not m or not len(fc.keyframe_points):
+                continue
+            bone, prop = m.groups()
+            self.tracks.setdefault(bone, {}).setdefault(prop, {})[fc.array_index] = fc
+            lo = min(lo, fc.keyframe_points[0].co[0])
+            hi = max(hi, fc.keyframe_points[-1].co[0])
+        self.start = 0.0 if lo == math.inf else lo
+        self.end = self.start if hi == -math.inf else hi
+        self.seconds = (self.end - self.start) / fps
+
+    def frames(self, step_s=STEP):
+        n = max(1, int(round(self.seconds / step_s)))
+        return [self.start + i * step_s * self.fps for i in range(n)] + [self.end]
+
+    def sample(self, frame):
+        out = {}
+        for bone, props in self.tracks.items():
+            loc = np.array([props["location"][i].evaluate(frame) if i in props.get("location", {}) else 0.0
+                            for i in range(3)])
+            if "rotation_quaternion" in props:
+                q = props["rotation_quaternion"]
+                quat = np.array([q[i].evaluate(frame) if i in q else (1.0 if i == 0 else 0.0) for i in range(4)])
+            elif "rotation_euler" in props:
+                e = props["rotation_euler"]
+                from mathutils import Euler
+                quat = np.array(Euler([e[i].evaluate(frame) if i in e else 0.0 for i in range(3)]).to_quaternion())
+            else:
+                quat = np.array([1.0, 0, 0, 0])
+            sc = np.array([props["scale"][i].evaluate(frame) if i in props.get("scale", {}) else 1.0
+                           for i in range(3)])
+            n = np.linalg.norm(quat)
+            out[bone] = (loc, quat / n if n > 1e-12 else np.array([1.0, 0, 0, 0]), sc)
+        return out
+
+
+def quat_matrix(q):
+    w, x, y, z = q
+    return np.array([
+        [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+        [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+        [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
+
+
+def rot_axis(axis, deg):
+    a = math.radians(deg)
+    c, s = math.cos(a), math.sin(a)
+    if axis == "X":
+        return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
+    if axis == "Y":
+        return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+
+def mat4(rot=None, loc=None, scale=None):
+    m = np.eye(4)
+    r = np.eye(3) if rot is None else rot
+    if scale is not None:
+        r = r @ np.diag(scale)
+    m[:3, :3] = r
+    if loc is not None:
+        m[:3, 3] = loc
+    return m
+
+
+def rot_angle_deg(r):
+    return math.degrees(math.acos(max(-1.0, min(1.0, (np.trace(r) - 1) / 2))))
+
+
+def euler_xyz_deg(r, prev=None):
+    from mathutils import Euler, Matrix as Mx
+    e = Mx(r.tolist()).to_euler("XYZ", Euler(prev) if prev is not None else Euler((0, 0, 0)))
+    return np.array([math.degrees(v) for v in e])
+
+
+class Rig:
+    def __init__(self, key):
+        self.key = key
+        reset_scene()
+        bpy.ops.import_scene.gltf(filepath=os.path.join(MODELS, key + ".glb"))
+        self.fps = bpy.context.scene.render.fps
+        arms = [o for o in bpy.data.objects if o.type == "ARMATURE" and len(o.data.bones)]
+        if not arms:
+            raise SystemExit("rig_pose_audit: no armature in " + key)
+        self.arm = arms[0]
+        self.arm.animation_data_clear()
+        bones = list(self.arm.data.bones)
+        self.bones = bones
+        self.names = [b.name for b in bones]
+        self.index = {n: i for i, n in enumerate(self.names)}
+        self.parent = [self.index[b.parent.name] if b.parent else -1 for b in bones]
+        self.rest = np.array([np.array(b.matrix_local) for b in bones])
+        self.rest_inv = np.array([np.linalg.inv(m) for m in self.rest])
+        self.rel_rest = np.array([self.rest_inv[self.parent[i]] @ self.rest[i] if self.parent[i] >= 0 else self.rest[i]
+                                  for i in range(len(bones))])
+        self.aw = np.array(self.arm.matrix_world)
+        self.aw_inv = np.linalg.inv(self.aw)
+        self.clips = {}
+        for act in bpy.data.actions:
+            clip = Clip(act, self.fps)
+            self.clips[clip.name] = clip
+        self.meshes = [o for o in bpy.data.objects if o.type == "MESH"
+                       and any(m.type == "ARMATURE" and m.object == self.arm for m in o.modifiers)]
+        self._read_mesh()
+
+    def _read_mesh(self):
+        verts, tris, groups, offs = [], [], [], 0
+        K = 8
+        self.mesh_slices = []
+        for o in self.meshes:
+            me = o.data
+            n = len(me.vertices)
+            co = np.empty(n * 3)
+            me.vertices.foreach_get("co", co)
+            mw = np.array(o.matrix_world)
+            co = co.reshape(n, 3)
+            verts.append(co @ mw[:3, :3].T + mw[:3, 3])
+            me.calc_loop_triangles()
+            t = np.empty(len(me.loop_triangles) * 3, dtype=np.int64)
+            me.loop_triangles.foreach_get("vertices", t)
+            tris.append(t.reshape(-1, 3) + offs)
+            gname = [vg.name for vg in o.vertex_groups]
+            for v in me.vertices:
+                row = sorted(((self.index[gname[g.group]], g.weight) for g in v.groups
+                              if gname[g.group] in self.index and g.weight > 0), key=lambda p: -p[1])
+                groups.append(row)
+            self.mesh_slices.append((o, offs, n))
+            offs += n
+        self.V0 = np.concatenate(verts) if verts else np.zeros((0, 3))
+        self.T = np.concatenate(tris) if tris else np.zeros((0, 3), dtype=np.int64)
+        self.groups = groups
+        N = len(groups)
+        self.K = max(1, min(K, max((len(r) for r in groups), default=1)))
+        self.idx = np.zeros((N, self.K), dtype=np.int64)
+        self.w = np.zeros((N, self.K))
+        for i, row in enumerate(groups):
+            for k, (b, w) in enumerate(row[:self.K]):
+                self.idx[i, k] = b
+                self.w[i, k] = w
+        self.wsum = self.w.sum(1)
+
+    # -- posing
+    def chain(self, basis):
+        """basis: {bone index: 4x4 matrix_basis}. Returns world-space deltas, (B, 4, 4)."""
+        B = len(self.bones)
+        pose = [None] * B
+
+        def get(i):
+            if pose[i] is None:
+                local = self.rel_rest[i] @ basis.get(i, np.eye(4))
+                pose[i] = get(self.parent[i]) @ local if self.parent[i] >= 0 else local
+            return pose[i]
+        D = np.array([get(i) @ self.rest_inv[i] for i in range(B)])
+        return self.aw @ D @ self.aw_inv
+
+    def skin(self, Dw):
+        R = Dw[:, :3, :3]
+        t = Dw[:, :3, 3]
+        Rk = R[self.idx]
+        tk = t[self.idx]
+        moved = np.einsum("nkij,nj->nki", Rk, self.V0) + tk
+        w = self.w
+        s = self.wsum
+        safe = np.where(s > 1e-4, s, 1.0)
+        blended = (moved * w[..., None]).sum(1) / safe[:, None]
+        return np.where((s > 1e-4)[:, None], blended, self.V0)
+
+    def basis_from_arm_delta(self, bone, dp):
+        return self.rest_inv[bone] @ dp @ self.rest[bone]
+
+    def head(self, bone):
+        return self.rest[bone][:3, 3]
+
+    def to_godot(self, bone, loc, quat, sc, prev=None):
+        brot = self.rest[bone][:3, :3]
+        rarm = brot @ quat_matrix(quat) @ brot.T
+        rg = C @ rarm @ C.T
+        return euler_xyz_deg(rg, None if prev is None else [math.radians(v) for v in prev]), C @ (brot @ loc), sc
+
+    def apply_blender(self, basis_values):
+        """basis_values: {bone name: (loc, quat, scale)} written to the pose bones; others rest."""
+        for pb in self.arm.pose.bones:
+            pb.rotation_mode = "QUATERNION"
+            v = basis_values.get(pb.name)
+            if v is None:
+                pb.location = (0, 0, 0)
+                pb.rotation_quaternion = (1, 0, 0, 0)
+                pb.scale = (1, 1, 1)
+            else:
+                pb.location = tuple(v[0])
+                pb.rotation_quaternion = tuple(v[1])
+                pb.scale = tuple(v[2])
+        bpy.context.view_layer.update()
+
+
+def basis_of(values):
+    """{bone index: 4x4} from {bone index: (loc, quat, scale)}."""
+    return {b: mat4(quat_matrix(q), l, s) for b, (l, q, s) in values.items()}
+
+
+def pose_values(rig, spec):
+    """Blender-basis (loc, quat, scale) per bone for a single-bone pose spec."""
+    b = rig.index[spec["bone"]]
+    head = rig.head(b)
+    pivot = np.zeros(3) if spec.get("pivot") == "origin" else head
+    ax, val = spec["axis"], spec["value"]
+    kind = ax[0]
+    if kind == "r":
+        r_arm = C.T @ rot_axis(ax[1], val) @ C
+        dp = mat4(np.eye(3), pivot) @ mat4(r_arm) @ mat4(np.eye(3), -pivot)
+    elif kind == "t":
+        t_g = AXIS[ax[1]] * val
+        dp = mat4(np.eye(3), C.T @ t_g)
+    else:
+        s_g = np.ones(3)
+        if ax[1] == "U":
+            s_g[:] = val
+        else:
+            s_g[list("XYZ").index(ax[1])] = val
+        s_arm = C.T @ np.diag(s_g) @ C
+        dp = mat4(np.eye(3), head) @ mat4(s_arm) @ mat4(np.eye(3), -head)
+    m = rig.basis_from_arm_delta(b, dp)
+    from mathutils import Matrix as Mx
+    mm = Mx(m.tolist())
+    loc, quat, scale = mm.decompose()
+    return {spec["bone"]: (np.array(loc), np.array(quat), np.array(scale))}, {b: m}
+
+
+# ---------------------------------------------------------------- audit
+
+
+def weight_audit(rig):
+    N = len(rig.groups)
+    infl = np.array([sum(1 for _, w in row if w > 0.01) for row in rig.groups]) if N else np.zeros(0, dtype=int)
+    hist = {}
+    for c in infl:
+        hist[int(c)] = hist.get(int(c), 0) + 1
+    sums = np.array([sum(w for _, w in row) for row in rig.groups]) if N else np.zeros(0)
+    weighted = set()
+    for row in rig.groups:
+        for b, w in row:
+            if w > 0.01:
+                weighted.add(b)
+    blended = int((infl > 1).sum())
+    return {
+        "vertices": int(N),
+        "triangles": int(len(rig.T)),
+        "skinned_meshes": [o.name for o in rig.meshes],
+        "joints": len(rig.bones),
+        "deforming_bones": sorted(rig.names[b] for b in weighted),
+        "deforming_bone_count": len(weighted),
+        "influence_histogram": {str(k): v for k, v in sorted(hist.items())},
+        "blended_vertices": blended,
+        "max_influences": int(infl.max()) if N else 0,
+        "unweighted_vertices": int((infl == 0).sum()),
+        "max_weight_sum_deviation": round(float(np.abs(sums - 1).max()), 6) if N else 0.0,
+        "bones_without_weights": sorted(rig.names[b] for b in range(len(rig.bones)) if b not in weighted),
+    }, weighted
+
+
+def bone_budget():
+    path = os.path.join(SKETCH, "assets", "asset_budgets.json")
+    try:
+        data = json.load(open(path))
+    except OSError:
+        return None
+    found = {}
+    for cls, row in data.get("classes", {}).items():
+        for k in ("bones", "joints"):
+            if k in row:
+                found[cls] = {k: row[k]}
+    return found or None
+
+
+def clip_ranges(rig):
+    """Per bone ranges over every clip, sampled every 1/30 s: Godot degrees, metres, scale."""
+    rng = {}
+    for clip in rig.clips.values():
+        prev = {}
+        for f in clip.frames():
+            for bname, (loc, quat, sc) in clip.sample(f).items():
+                if bname not in rig.index:
+                    continue
+                b = rig.index[bname]
+                e, t, s = rig.to_godot(b, loc, quat, sc, prev.get(bname))
+                prev[bname] = e
+                r = rng.setdefault(bname, {"rot": {}, "loc": {}, "scale": {}})
+                for i, a in enumerate("XYZ"):
+                    for key, v in (("rot", e[i]), ("loc", t[i]), ("scale", sc[i])):
+                        lo, hi = r[key].get(a, (math.inf, -math.inf))
+                        src = r.setdefault("src", {}).setdefault((key, a), [None, None])
+                        if v < lo:
+                            src[0] = clip.name
+                        if v > hi:
+                            src[1] = clip.name
+                        r[key][a] = (min(lo, v), max(hi, v))
+    return rng
+
+
+def table_ranges(key):
+    out = {}
+    for bone, row in PROCEDURAL[key].items():
+        r = {"rot": dict(row.get("rot", {})), "loc": dict(row.get("loc", {})), "scale": {},
+             "pivot": row.get("pivot")}
+        if "scale" in row:
+            r["scale"]["U"] = row["scale"]
+        out[bone] = r
+    return out
+
+
+def make_specs(ranges, deforming_names):
+    specs = []
+    for bone, r in ranges.items():
+        if bone not in deforming_names:
+            continue
+        base = {"bone": bone, "pivot": r.get("pivot")}
+
+        def src(key, a, v, lo, hi):
+            pair = r.get("src", {}).get((key, a))
+            return {"src": pair[0] if v == lo else pair[1]} if pair else {}
+        for a, (lo, hi) in r["rot"].items():
+            for v in dict.fromkeys([x for x in (hi, lo) if abs(x) > ROT_MOVES]):
+                specs.append({**base, "axis": "r" + a, "value": v, "kind": "extreme", **src("rot", a, v, lo, hi)})
+                if abs(v) < SMALL_ROT:
+                    for sv in (SMALL_ROT_STRESS, -SMALL_ROT_STRESS):
+                        specs.append({**base, "axis": "r" + a, "value": sv, "kind": "stress", "of": v})
+                else:
+                    specs.append({**base, "axis": "r" + a, "value": v * STRESS, "kind": "stress", "of": v})
+        for a, (lo, hi) in r["loc"].items():
+            for v in dict.fromkeys([x for x in (hi, lo) if abs(x) > LOC_MOVES]):
+                specs.append({**base, "axis": "t" + a, "value": v, "kind": "extreme", **src("loc", a, v, lo, hi)})
+                specs.append({**base, "axis": "t" + a, "value": v * STRESS, "kind": "stress", "of": v})
+        for a, (lo, hi) in r["scale"].items():
+            for v in dict.fromkeys([x for x in (hi, lo) if abs(x - 1) > SCALE_MOVES]):
+                specs.append({**base, "axis": "s" + a, "value": v, "kind": "extreme", **src("scale", a, v, lo, hi)})
+                specs.append({**base, "axis": "s" + a, "value": max(0.001, 1 + (v - 1) * STRESS),
+                              "kind": "stress", "of": v})
+    return specs
+
+
+# ---------------------------------------------------------------- metrics
+
+
+def union_find_islands(n, tris):
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for a, b, c in tris.tolist():
+        ra, rb, rc = find(a), find(b), find(c)
+        if ra != rb:
+            parent[rb] = ra
+        rc = find(c)
+        ra = find(a)
+        if ra != rc:
+            parent[rc] = ra
+    return np.array([find(i) for i in range(n)])
+
+
+class Metrics:
+    def __init__(self, rig):
+        self.rig = rig
+        V0, T = rig.V0, rig.T
+        N = len(V0)
+        infl = np.array([sum(1 for _, w in row if w > 0.01) for row in rig.groups]) if N else np.zeros(0, dtype=int)
+        self.blended_v = infl > 1
+        tb = self.blended_v[T].any(1) if len(T) else np.zeros(0, dtype=bool)
+        self.bt = T[tb]
+        self.bt_area0, self.bt_n0 = self.tri_area_normal(V0, self.bt)
+        # dominant bone: the bone with most weight over the triangle's three vertices
+        self.bt_bone = np.zeros(len(self.bt), dtype=np.int64)
+        for i, tri in enumerate(self.bt):
+            acc = {}
+            for v in tri:
+                for b, w in rig.groups[v]:
+                    acc[b] = acc.get(b, 0.0) + w
+            self.bt_bone[i] = max(acc, key=acc.get) if acc else 0
+        e = np.concatenate([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]]) if len(T) else np.zeros((0, 2), dtype=np.int64)
+        e.sort(axis=1)
+        e = np.unique(e, axis=0) if len(e) else e
+        keep = self.blended_v[e[:, 0]] & self.blended_v[e[:, 1]] if len(e) else np.zeros(0, dtype=bool)
+        self.edges = e[keep]
+        self.edge0 = np.linalg.norm(V0[self.edges[:, 0]] - V0[self.edges[:, 1]], axis=1) if len(self.edges) else np.zeros(0)
+        self.edge_ok = self.edge0 > 1e-9
+        self._islands()
+        self._pairs()
+
+    @staticmethod
+    def tri_area_normal(V, tris):
+        if not len(tris):
+            return np.zeros(0), np.zeros((0, 3))
+        c = np.cross(V[tris[:, 1]] - V[tris[:, 0]], V[tris[:, 2]] - V[tris[:, 0]])
+        a = np.linalg.norm(c, axis=1)
+        return a / 2, c / np.where(a > 1e-14, a, 1.0)[:, None]
+
+    def _islands(self):
+        rig = self.rig
+        N = len(rig.V0)
+        lab = union_find_islands(N, rig.T)
+        used = np.zeros(N, dtype=bool)
+        used[rig.T.ravel()] = True
+        self.islands = []
+        by = {}
+        for v in np.nonzero(used)[0]:
+            by.setdefault(int(lab[v]), []).append(int(v))
+        tri_lab = lab[rig.T[:, 0]] if len(rig.T) else np.zeros(0, dtype=int)
+        tris_by = {}
+        for ti, l in enumerate(tri_lab):
+            tris_by.setdefault(int(l), []).append(ti)
+        for l, vs in by.items():
+            bone = -1
+            ok = True
+            for v in vs:
+                row = rig.groups[v]
+                if not row or row[0][1] < 0.99:
+                    ok = False
+                    break
+                if bone < 0:
+                    bone = row[0][0]
+                elif row[0][0] != bone:
+                    ok = False
+                    break
+            self.islands.append({"bone": bone if ok else -1, "verts": np.array(vs),
+                                 "tris": np.array(tris_by[l], dtype=np.int64)})
+        self.rigid = [isl for isl in self.islands if isl["bone"] >= 0]
+        self.bone_tris = {}
+        for isl in self.rigid:
+            self.bone_tris.setdefault(isl["bone"], []).append(isl["tris"])
+        self.bone_tris = {b: np.concatenate(v) for b, v in self.bone_tris.items()}
+
+    @staticmethod
+    def bvh(V, tri_ids, T):
+        sub = T[tri_ids]
+        u, inv = np.unique(sub.ravel(), return_inverse=True)
+        return BVHTree.FromPolygons(V[u].tolist(), inv.reshape(-1, 3).tolist(), all_triangles=True)
+
+    def _pairs(self):
+        rig = self.rig
+        V0, T = rig.V0, rig.T
+        self.pairs = []
+        for c in self.bone_tris:
+            p = rig.parent[c]
+            if p >= 0 and p in self.bone_tris:
+                self.pairs.append((p, c))
+        self.rest_overlap = {}
+        self.contacts = {}
+        for p, c in self.pairs:
+            tp, tc = self.bone_tris[p], self.bone_tris[c]
+            ov = self.bvh(V0, tp, T).overlap(self.bvh(V0, tc, T))
+            self.rest_overlap[(p, c)] = {(int(tp[i]), int(tc[j])) for i, j in ov}
+            contacts = []
+            ip = [i for i in self.rigid if i["bone"] == p]
+            ic = [i for i in self.rigid if i["bone"] == c]
+            for a in ip:
+                lo_a, hi_a = V0[a["verts"]].min(0), V0[a["verts"]].max(0)
+                for b in ic:
+                    lo_b, hi_b = V0[b["verts"]].min(0), V0[b["verts"]].max(0)
+                    if (lo_a > hi_b + GAP_REST).any() or (lo_b > hi_a + GAP_REST).any():
+                        continue
+                    small, big = (a, b) if len(a["verts"]) <= len(b["verts"]) else (b, a)
+                    sv = small["verts"][np.linspace(0, len(small["verts"]) - 1, min(GAP_SAMPLES, len(small["verts"]))).astype(int)]
+                    tree = self.bvh(V0, big["tris"], T)
+                    d = math.inf
+                    for v in sv:
+                        r = tree.find_nearest(tuple(V0[v]))
+                        if r is not None:
+                            d = min(d, r[3])
+                    if d < GAP_REST:
+                        contacts.append({"small": small, "big": big, "samples": sv, "rest": d})
+            self.contacts[(p, c)] = contacts
+
+    def evaluate(self, Vp, Dw):
+        rig = self.rig
+        out = {"area_min": None, "edge_min": None, "normal_dev_max_deg": None, "normal_flipped": None,
+               "clip_new": 0, "clip_pair": None, "gap_mm": 0.0, "gap_pair": None}
+        if len(self.bt):
+            area, n1 = self.tri_area_normal(Vp, self.bt)
+            ratio = np.where(self.bt_area0 > 1e-12, area / np.maximum(self.bt_area0, 1e-12), 1.0)
+            out["area_min"] = round(float(ratio.min()), 5)
+            ne = np.einsum("nij,nj->ni", Dw[self.bt_bone][:, :3, :3], self.bt_n0)
+            ne /= np.maximum(np.linalg.norm(ne, axis=1, keepdims=True), 1e-12)
+            valid = area > 1e-12
+            dot = np.clip((n1 * ne).sum(1), -1, 1)
+            ang = np.degrees(np.arccos(dot))
+            out["normal_dev_max_deg"] = round(float(ang[valid].max()), 3) if valid.any() else 180.0
+            out["normal_flipped"] = int(((dot < 0) & valid).sum())
+        if len(self.edges):
+            l1 = np.linalg.norm(Vp[self.edges[:, 0]] - Vp[self.edges[:, 1]], axis=1)
+            r = l1[self.edge_ok] / self.edge0[self.edge_ok]
+            out["edge_min"] = round(float(r.min()), 5) if len(r) else None
+        T = rig.T
+        for p, c in self.pairs:
+            dp, dc = Dw[p], Dw[c]
+            if np.abs(dp - dc).max() < 1e-9:
+                continue
+            tp, tc = self.bone_tris[p], self.bone_tris[c]
+            ov = self.bvh(Vp, tp, T).overlap(self.bvh(Vp, tc, T))
+            new = len({(int(tp[i]), int(tc[j])) for i, j in ov} - self.rest_overlap[(p, c)])
+            if new > out["clip_new"]:
+                out["clip_new"] = new
+                out["clip_pair"] = rig.names[p] + "/" + rig.names[c]
+            for ct in self.contacts[(p, c)]:
+                tree = self.bvh(Vp, ct["big"]["tris"], T)
+                best = math.inf
+                for v in ct["samples"]:
+                    r = tree.find_nearest(tuple(Vp[v]))
+                    if r is not None:
+                        best = min(best, r[3])
+                if best > GAP_POSE and best * 1000 > out["gap_mm"]:
+                    out["gap_mm"] = round(best * 1000, 2)
+                    out["gap_pair"] = rig.names[p] + "/" + rig.names[c]
+        return out
+
+
+def pose_flags(m, kind):
+    flags = []
+    pre = "" if kind in KINDS_GAME else "STRESS-"
+    if (m["area_min"] is not None and m["area_min"] < AREA_FLAG) or (m["edge_min"] is not None and m["edge_min"] < EDGE_FLAG):
+        flags.append(pre + "COLLAPSE")
+    if m["clip_new"] > 0:
+        flags.append(pre + "CLIP")
+    if m["gap_mm"] > 0:
+        flags.append(pre + "GAP")
+    return flags
+
+
+def severity(m):
+    """0..1 score of how bad a pose looks, and the metric that gives it."""
+    cands = []
+    if m["area_min"] is not None:
+        cands.append((1 - m["area_min"], "AREA %.2f" % m["area_min"]))
+    if m["edge_min"] is not None:
+        cands.append((1 - m["edge_min"], "EDGE %.2f" % m["edge_min"]))
+    cands.append((min(1.0, m["clip_new"] / 50.0), "CLIP %d" % m["clip_new"]))
+    cands.append((min(1.0, m["gap_mm"] / 100.0), "GAP %.0fMM" % m["gap_mm"]))
+    return max(cands, key=lambda c: c[0])
+
+
+# ---------------------------------------------------------------- loop seam
+
+
+def seam_check(rig, clip):
+    """Per bone first/last key delta and the first/last 1/30 s step mismatch."""
+    f0, f1 = clip.start, clip.end
+    dt = STEP * clip.fps
+    cache = {}
+
+    def at(f):
+        if f not in cache:
+            cache[f] = clip.sample(f)
+        return cache[f]
+    frames = clip.frames()
+    first, last = at(f0), at(f1)
+    head, tail_a, tail_b = at(f0 + dt), at(f1 - dt), None
+    rows = {}
+    for bone in first:
+        if bone not in rig.index:
+            continue
+        b = rig.index[bone]
+        brot = rig.rest[b][:3, :3]
+        l0, q0, s0 = first[bone]
+        l1, q1, s1 = last[bone]
+        dloc = np.linalg.norm(C @ (brot @ (l1 - l0))) * 1000
+        r0, r1 = quat_matrix(q0), quat_matrix(q1)
+        drot = rot_angle_deg(r0.T @ r1)
+        dscale = float(np.abs(s1 - s0).max())
+
+        def rvec(ra, rb):
+            from mathutils import Matrix as Mx
+            ax, ang = Mx((ra.T @ rb).tolist()).to_quaternion().to_axis_angle()
+            return np.array(ax) * math.degrees(ang)
+
+        def steps(fa, fb):
+            a, b2 = at(fa)[bone], at(fb)[bone]
+            return (b2[0] - a[0]) * 1000, rvec(quat_matrix(a[1]), quat_matrix(b2[1])), b2[2] - a[2]
+        h = steps(f0, f0 + dt)
+        t = steps(f1 - dt, f1)
+        peaks = [0.0, 0.0, 0.0]
+        for fa, fb in zip(frames[:-1], frames[1:]):
+            s = steps(fa, fb)
+            for k in range(3):
+                peaks[k] = max(peaks[k], float(np.linalg.norm(s[k])))
+        jumps = [float(np.linalg.norm(h[k] - t[k])) for k in range(3)]
+        vel_fail = [peaks[k] > 1e-9 and jumps[k] > SEAM_VEL * peaks[k] for k in range(3)]
+        fails = []
+        if dloc > SEAM_LOC_MM:
+            fails.append("loc %.3f mm" % dloc)
+        if drot > SEAM_ROT_DEG:
+            fails.append("rot %.3f deg" % drot)
+        if dscale > SEAM_SCALE:
+            fails.append("scale %.4f" % dscale)
+        for k, nm in enumerate(("loc", "rot", "scale")):
+            if vel_fail[k]:
+                fails.append("%s velocity jump %.4f > %.0f%% of peak %.4f" % (nm, jumps[k], SEAM_VEL * 100, peaks[k]))
+        rows[bone] = {"loc_mm": round(dloc, 4), "rot_deg": round(drot, 4), "scale": round(dscale, 5),
+                      "vel_jump": [round(j, 5) for j in jumps], "vel_peak": [round(p, 5) for p in peaks],
+                      "seam": bool(fails), "why": fails}
+    bad = {b: r for b, r in rows.items() if r["seam"]}
+    return {"clip": clip.name, "seconds": round(clip.seconds, 4), "bones": len(rows),
+            "seam": bool(bad), "failing_bones": sorted(bad), "bones_detail": rows}
+
+
+# ---------------------------------------------------------------- rendering
+
+
+class Stage:
+    def __init__(self, rig, size, samples):
+        self.rig = rig
+        self.size = size
+        scene = bpy.context.scene
+        scene.render.engine = "CYCLES"
+        scene.cycles.device = "CPU"
+        scene.cycles.samples = samples
+        scene.cycles.use_denoising = False
+        scene.render.resolution_x = size
+        scene.render.resolution_y = int(size * 0.75)
+        scene.render.resolution_percentage = 100
+        scene.view_settings.view_transform = "Standard"
+        self.tmp = os.path.join(tempfile.gettempdir(), "rig_pose_audit_%d.png" % os.getpid())
+        for mat in bpy.data.materials:
+            if not mat.use_nodes:
+                continue
+            nodes = mat.node_tree.nodes
+            bsdf = next((n for n in nodes if n.type == "BSDF_PRINCIPLED"), None)
+            if bsdf is None or bsdf.inputs["Base Color"].is_linked:
+                continue
+            if rig.meshes and any(len(o.data.color_attributes) for o in rig.meshes):
+                attr = nodes.new("ShaderNodeVertexColor")
+                attr.layer_name = rig.meshes[0].data.color_attributes[0].name if rig.meshes[0].data.color_attributes else "Color"
+                mat.node_tree.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
+        # Rest bounds: the skinned meshes at rest plus every unskinned mesh in the file.
+        pts = [rig.V0]
+        for o in bpy.data.objects:
+            if o.type == "MESH" and o not in rig.meshes and o.name not in ("Ground",) and not o.name.endswith("-col"):
+                pts.append(np.array([np.array(o.matrix_world @ Vector(c)) for c in o.bound_box]))
+        V = np.concatenate(pts)
+        lo, hi = V.min(0), V.max(0)
+        centre = Vector((lo + hi) / 2)
+        radius = max(float(np.linalg.norm(hi - lo)) / 2, 0.1)
+        world = bpy.data.worlds.new("Audit")
+        world.use_nodes = True
+        world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.5, 0.52, 0.55, 1)
+        world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.9
+        scene.world = world
+        sun = bpy.data.objects.new("Key", bpy.data.lights.new("Key", "SUN"))
+        sun.data.energy = 3.5
+        sun.rotation_euler = (math.radians(50), 0, math.radians(35))
+        scene.collection.objects.link(sun)
+        s = radius * 8
+        ground = bpy.data.meshes.new("Ground")
+        ground.from_pydata([(-s, -s, 0), (s, -s, 0), (s, s, 0), (-s, s, 0)], [], [(0, 1, 2, 3)])
+        gobj = bpy.data.objects.new("Ground", ground)
+        gobj.location.z = float(lo[2])
+        gmat = bpy.data.materials.new("GroundMat")
+        gmat.use_nodes = True
+        gmat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.42, 0.42, 0.44, 1)
+        ground.materials.append(gmat)
+        scene.collection.objects.link(gobj)
+        cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
+        cam.data.lens = 50
+        scene.collection.objects.link(cam)
+        scene.camera = cam
+        dist = radius * 3.4
+        yaw = math.radians(35)
+        eye = centre + Vector((math.sin(yaw) * dist, -math.cos(yaw) * dist, radius * 0.9))
+        cam.location = eye
+        cam.rotation_euler = (centre - eye).to_track_quat("-Z", "Y").to_euler()
+
+    def render(self, values):
+        self.rig.apply_blender(values)
+        scene = bpy.context.scene
+        scene.render.filepath = self.tmp
+        bpy.ops.render.render(write_still=True)
+        img = bpy.data.images.load(self.tmp)
+        img.colorspace_settings.name = "Non-Color"
+        h, w = img.size[1], img.size[0]
+        px = np.empty(h * w * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+        bpy.data.images.remove(img)
+        return px.reshape(h, w, 4)[::-1, :, :3].copy()
+
+
+def srgb(a):
+    return np.where(a <= 0.0031308, a * 12.92, 1.055 * np.power(np.clip(a, 0, 1), 1 / 2.4) - 0.055)
+
+
+def tile(img, lines, flagged=False):
+    """img: (h, w, 3) linear render. Returns tile with a 3 line label band below."""
+    h, w, _ = img.shape
+    band = 3 * 16 + 4
+    out = np.zeros((h + band, w, 3), dtype=np.float32)
+    out[:h] = np.clip(img, 0, 1)
+    out[h:] = (0.16, 0.05, 0.05) if flagged else (0.08, 0.09, 0.1)
+    for i, line in enumerate(lines[:3]):
+        draw_text(out, 3, h + 3 + 16 * i, line[: (w - 6) // 12], 2, (1.0, 0.75, 0.7) if flagged and i > 0 else (0.95, 0.95, 0.9))
+    return out
+
+
+def save_png(arr, path):
+    h, w, _ = arr.shape
+    rgba = np.ones((h, w, 4), dtype=np.float32)
+    rgba[..., :3] = arr
+    img = bpy.data.images.new("sheet", w, h, alpha=False, float_buffer=False)
+    img.colorspace_settings.name = "Non-Color"
+    img.pixels.foreach_set(rgba[::-1].ravel())
+    img.filepath_raw = path
+    img.file_format = "PNG"
+    img.save()
+    bpy.data.images.remove(img)
+
+
+def hstack(tiles, w, h):
+    row = np.zeros((h, w * len(tiles), 3), dtype=np.float32)
+    for i, t in enumerate(tiles):
+        row[:t.shape[0], i * w:i * w + t.shape[1]] = t
+    return row
+
+
+# ---------------------------------------------------------------- per rig
+
+
+def fmt_spec(spec):
+    ax = spec["axis"]
+    unit = "DEG" if ax[0] == "r" else ("M" if ax[0] == "t" else "X")
+    return "%s %s %+.3g%s" % (spec["bone"], ax, spec["value"], unit)
+
+
+def audit_rig(key, a, sheet_rows, loop_rows):
+    t0 = time.time()
+    rig = Rig(key)
+    audit, deforming = weight_audit(rig)
+    names = set(audit["deforming_bones"])
+    if key in PROCEDURAL:
+        ranges = table_ranges(key)
+        source = "procedural table"
+    else:
+        ranges = clip_ranges(rig)
+        source = "clips (%d actions sampled every 1/30 s)" % len(rig.clips)
+    specs = make_specs(ranges, names)
+    metrics = Metrics(rig)
+    # Whole-rig clip extreme frames.
+    clip_poses = []
+    for clip in rig.clips.values():
+        best, best_f = -1.0, clip.start
+        for f in clip.frames():
+            tot = 0.0
+            for bone, (loc, quat, sc) in clip.sample(f).items():
+                tot += math.degrees(2 * math.acos(min(1.0, abs(quat[0]))))
+            if tot > best:
+                best, best_f = tot, f
+        clip_poses.append({"bone": "*", "axis": "clip:" + clip.name, "value": round((best_f - clip.start) / clip.fps, 4),
+                           "kind": "clip", "clip": clip.name, "frame": best_f, "rot_sum_deg": round(best, 2)})
+    poses = []
+    values_for = {}
+
+    def run(spec, values, basis):
+        Dw = rig.chain(basis)
+        Vp = rig.skin(Dw)
+        m = metrics.evaluate(Vp, Dw)
+        rec = {k: spec[k] for k in ("bone", "axis", "value", "kind") if k in spec}
+        for k in ("of", "clip", "frame", "rot_sum_deg", "src"):
+            if k in spec:
+                rec[k] = spec[k]
+        rec.update(m)
+        rec["flags"] = pose_flags(m, spec["kind"])
+        rec["severity"], rec["worst_metric"] = severity(m)
+        rec["severity"] = round(rec["severity"], 4)
+        poses.append(rec)
+        values_for[len(poses) - 1] = values
+        return rec, Vp
+    check = None
+    for spec in clip_poses + specs:
+        if spec["kind"] == "clip":
+            clip = rig.clips[spec["clip"]]
+            raw = clip.sample(spec["frame"])
+            values = {b: v for b, v in raw.items() if b in rig.index}
+            basis = {rig.index[b]: m for b, m in basis_of_named(rig, values).items()}
+        else:
+            values, basis = pose_values(rig, spec)
+            basis = dict(basis)
+        rec, Vp = run(spec, values, basis)
+        if check is None:
+            check = skin_check(rig, values, Vp)
+    if check is None:
+        check = {"skipped": "no poses"}
+    # Flags per rig.
+    flags = {}
+    for p in poses:
+        for f in p["flags"]:
+            slot = flags.setdefault(f, {"count": 0, "worst": None, "bones": set()})
+            slot["count"] += 1
+            slot["bones"].add(p["bone"])
+            score = {"COLLAPSE": 1 - min(p["area_min"] if p["area_min"] is not None else 1,
+                                         p["edge_min"] if p["edge_min"] is not None else 1),
+                     "CLIP": p["clip_new"], "GAP": p["gap_mm"]}[f.replace("STRESS-", "")]
+            if slot["worst"] is None or score > slot["worst"][0]:
+                slot["worst"] = (score, p)
+    for f, slot in flags.items():
+        score, p = slot["worst"]
+        slot["bones"] = sorted(slot["bones"])
+        slot["worst"] = {"pose": fmt_spec(p) if p["bone"] != "*" else p["axis"], "bone": p["bone"],
+                         "area_min": p["area_min"], "edge_min": p["edge_min"],
+                         "clip_new": p["clip_new"], "clip_pair": p["clip_pair"],
+                         "gap_mm": p["gap_mm"], "gap_pair": p["gap_pair"]}
+    # Loop seams.
+    seams = {}
+    for cname in LOOPS.get(key, []):
+        if cname not in rig.clips:
+            seams[cname] = {"error": "clip not found", "clips": sorted(rig.clips)}
+            continue
+        seams[cname] = seam_check(rig, rig.clips[cname])
+    result = {
+        "glb": key + ".glb", "weights": audit, "bone_budget": bone_budget(),
+        "bone_budget_note": ("assets/asset_budgets.json has no bone or joint budget; joint count reported"
+                             if not bone_budget() else "see bone_budget"),
+        "range_source": source, "skin_check": check,
+        "ranges": {b: {"rot_deg": {k: [round(x, 3) for x in v] for k, v in r["rot"].items()},
+                       "loc_m": {k: [round(x, 4) for x in v] for k, v in r["loc"].items()},
+                       "scale": {k: [round(x, 4) for x in v] for k, v in r["scale"].items()}}
+                   for b, r in ranges.items()},
+        "pose_count": len(poses), "contact_pairs": len(metrics.pairs),
+        "rigid_islands": len(metrics.rigid), "blended_triangles": int(len(metrics.bt)),
+        "flags": flags, "seams": seams, "poses": poses,
+        "seconds": round(time.time() - t0, 1),
+    }
+    if not a["no-render"]:
+        render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows)
+    summary = {
+        "joints": audit["joints"], "deforming": audit["deforming_bone_count"], "verts": audit["vertices"],
+        "unweighted": audit["unweighted_vertices"], "blended": audit["blended_vertices"],
+        "max_influences": audit["max_influences"], "weight_sum_dev": audit["max_weight_sum_deviation"],
+        "poses": len(poses), "parent_child_pairs": len(metrics.pairs), "blended_tris": int(len(metrics.bt)), "skin_err_m": check.get("max_err_m"),
+        "flags": {f: {"n": s["count"], "bones": s["bones"][:6], "worst": s["worst"]} for f, s in flags.items()},
+        "seam": {c: (s.get("failing_bones", s.get("error"))) for c, s in seams.items()},
+    }
+    print("RIG_AUDIT %s %s" % (key + ".glb", json.dumps(summary)))
+    sys.stdout.flush()
+    return result
+
+
+def basis_of_named(rig, values):
+    return {b: mat4(quat_matrix(q), l, s) for b, (l, q, s) in values.items()}
+
+
+def skin_check(rig, values, Vp):
+    """Max distance between this module's skinning and Blender's evaluated meshes."""
+    rig.apply_blender(values)
+    dg = bpy.context.evaluated_depsgraph_get()
+    err = 0.0
+    for o, off, n in rig.mesh_slices:
+        eo = o.evaluated_get(dg)
+        me = eo.to_mesh()
+        co = np.empty(n * 3)
+        me.vertices.foreach_get("co", co)
+        mw = np.array(o.matrix_world)
+        co = co.reshape(n, 3) @ mw[:3, :3].T + mw[:3, 3]
+        err = max(err, float(np.abs(co - Vp[off:off + n]).max())) if n else err
+        eo.to_mesh_clear()
+    return {"max_err_m": round(err, 6)}
+
+
+def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows):
+    stage = Stage(rig, a["size"], a["samples"])
+    w, h = a["size"], int(a["size"] * 0.75)
+    ranked = sorted(range(len(poses)), key=lambda i: -poses[i]["severity"])
+    chosen, seen = [], set()
+    for i in ranked:
+        p = poses[i]
+        ident = (p["bone"], p["axis"][:2] if p["bone"] != "*" else p["axis"])
+        if ident in seen:
+            continue
+        seen.add(ident)
+        chosen.append(i)
+        if len(chosen) == 5:
+            break
+    tiles = [tile(stage.render({}), [key.split("/")[-1], "REST POSE", "ONE CAMERA PER RIG"])]
+    for i in chosen:
+        p = poses[i]
+        label = fmt_spec(p) if p["bone"] != "*" else "%s %.2fS" % (p["axis"], p["value"])
+        tiles.append(tile(stage.render(values_for[i]),
+                          [label, "%s [%s]" % (p["worst_metric"], p["kind"]),
+                           " ".join(p["flags"]) if p["flags"] else "NO FLAG"], bool(p["flags"])))
+    sheet_rows.append(hstack(tiles, w, tiles[0].shape[0]))
+    for cname, seam in seams.items():
+        if "error" in seam:
+            continue
+        clip = rig.clips[cname]
+        mid = (clip.start + clip.end) / 2
+        imgs = []
+        for f in (clip.start, mid, clip.end):
+            vals = {b: v for b, v in clip.sample(f).items() if b in rig.index}
+            imgs.append(stage.render(vals))
+        over = 0.5 * imgs[0] + 0.5 * imgs[2]
+        tag = key.split("/")[-1] + " " + cname
+        verdict = "SEAM " + ",".join(seam["failing_bones"][:3]) if seam["seam"] else "SEAM OK"
+        row = [tile(imgs[0], [tag, "FIRST FRAME %.1f" % clip.start, ""]),
+               tile(imgs[1], [tag, "MIDDLE %.1f" % mid, ""]),
+               tile(imgs[2], [tag, "LAST FRAME %.1f" % clip.end, ""]),
+               tile(over, [tag, "LAST OVER FIRST 50%", verdict], seam["seam"])]
+        loop_rows.append(hstack(row, w, row[0].shape[0]))
+
+
+def pad_rows(rows):
+    width = max(r.shape[1] for r in rows)
+    out = []
+    for r in rows:
+        if r.shape[1] < width:
+            r = np.concatenate([r, np.zeros((r.shape[0], width - r.shape[1], 3), dtype=np.float32)], axis=1)
+        out.append(r)
+    return np.concatenate(out, axis=0)
+
+
+def main():
+    a = args()
+    os.makedirs(a["out"], exist_ok=True)
+    keys = [norm_key(a["glb"])] if a["glb"] else WORLDS[a["world"]]
+    tag = a["world"] if a["world"] else "glb_" + os.path.basename(keys[0])
+    sheet_rows, loop_rows, results = [], [], {}
+    for key in keys:
+        if not os.path.isfile(os.path.join(MODELS, key + ".glb")):
+            raise SystemExit("rig_pose_audit: no such GLB " + key)
+        results[key + ".glb"] = audit_rig(key, a, sheet_rows, loop_rows)
+    path = os.path.join(a["out"], "rig_audit_%s.json" % tag)
+    with open(path, "w") as f:
+        json.dump({"world": tag, "thresholds": {
+            "collapse_area": AREA_FLAG, "collapse_edge": EDGE_FLAG, "gap_rest_m": GAP_REST, "gap_pose_m": GAP_POSE,
+            "seam_loc_mm": SEAM_LOC_MM, "seam_rot_deg": SEAM_ROT_DEG, "seam_scale": SEAM_SCALE,
+            "seam_velocity_fraction": SEAM_VEL, "stress": STRESS}, "rigs": results}, f, indent=1, default=str)
+    print("JSON", path)
+    if sheet_rows:
+        reset_scene()
+        sp = os.path.join(a["out"], "pose_sheet_%s.png" % tag)
+        save_png(pad_rows(sheet_rows), sp)
+        print("SHEET", sp)
+        if loop_rows:
+            lp = os.path.join(a["out"], "loops_%s.png" % tag)
+            save_png(pad_rows(loop_rows), lp)
+            print("LOOPS", lp)
+
+
+main()
