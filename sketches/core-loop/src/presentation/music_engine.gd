@@ -484,6 +484,13 @@ static func prepare_rest() -> void:
 		for id in ["class_up", "class_down", "stinger_milestone", "threat_up", "boss_phase"]:
 			SfxBank.samples_at(id, Harmony.STEP, shift)
 			SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
+	# Every recorded grid stinger on a boss grid, and the boss's defeat in each lifted key: a
+	# recorded cue's variants share the file's one resample, so the Mind's grid (PHASE3_STEP)
+	# and the fanfare's themes never resample it on the main thread mid-fight.
+	for id in SfxBank.STINGER_BEATS:
+		if SfxBank.file_backed(id):
+			for shift in [0, 1, 2, 3] if id == "stinger_boss_defeated" else [0]:
+				SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
 	# The restrained wobble of Brindle's drops.
 	_prepare_wobble(Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.BRINDLE, [0], [Harmony.BOSS_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE_PHRYGIAN, [1], [Harmony.BOSS_STEP], ["wub"])
