@@ -143,11 +143,12 @@ const ROWS := {
 	"haulage_bed": {"family": "grind_lines", "budget": "park_large"},
 }
 
-# Wash dressing pieces (tools/blender/park/sinkhole_tubes.py) draped on the baked ground: a seat-fit row of one of these
+# Wash dressing pieces (tools/blender/park/sinkhole_tubes.py) and the sinkhole's lava_channel (tools/blender/park/
+# lavachannels.py; its chained 58 m rows follow sagging sinkhole ground) draped on the baked ground: a seat-fit row of one of these
 # moves every drawn vertex to the ground under it plus its height over the piece's own wash profile, so the drawn wall
 # band lies on the real wall wherever the floor sags under the seat's chord, a neighbour's cut overlaps or the row's own
 # end opens onto the plain. The -col keeps the seat fit; only the views move.
-const DRAPED := ["lava_wash", "lava_wash_short", "gallery_wash", "drift_wash"]
+const DRAPED := ["lava_channel", "lava_wash", "lava_wash_short", "gallery_wash", "drift_wash"]
 
 # Each element's ride fact by its section 4 family; a row's own ride_fact wins. kicker_launch is the kicker's launch
 # path, not a WORLD_ROWS kind, so a kicker gets no ride sensor; ground and anchor_field carry none.

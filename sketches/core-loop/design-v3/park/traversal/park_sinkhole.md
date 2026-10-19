@@ -16,10 +16,21 @@ Method: `tools/traversal_line.gd -- --table=park --stage=4 --seeds=1,2,3,4,5,6,7
 | cannon | 8/8 / 8/8 | 88.23 / 90.03 vs 89.64 / 90.03 | 0.2467 / 0.2372 | 0 / 0 vs 0 / 0 | segment_s / segment_s |
 | floor | 8/8 / 8/8 | 103.73 / 105.60 vs 103.65 / 104.73 | 0.0727 / 0.0773 | 0 / 0 vs 0 / 0 | airborne_share / airborne_share |
 
+Seat gaps against the baked ground (round 2 and 3, 2026-10-19). Method: the game's own `ParkRecipes.place` on the `park_sinkhole` ground, rays down every 2 m along each row's centre line and at both lips (x = +/-(W/2 - 0.5)), gap = mesh y minus baked ground y, plus a scan of every drawn vertex with |x| < W/2. Headless geometry only; receipts `artifacts/local/seat_gap_0a85b1f9.txt` (before) and `artifacts/local/seat_gap_a_drape.txt` (after). `west_trench` and `south_flats` sit at the designed offsets (shell +0.20 m, `-col` -0.15 m) and needed nothing.
+
+| `lava_channel_1..21` | Before the drape (rigid seat) | After the drape (`lava_channel` in `DRAPED`) |
+| --- | --- | --- |
+| Centre line, shell | +3.2 m above ground down to -2.1 m below (ch_1 and ch_21 +3.1 and +3.2, ch_11 +1.7, ch_20 -2.1, ch_9 -1.6) | +0.16 to +0.23 m on 19 of 21 rows; ch_9 +0.45 / -0.02, ch_20 +0.61 / -0.15 |
+| Highest drawn vertex over the ground inside the lane | not measured | +0.21 m |
+| Lips at the crest edge | up to +4.3 m above, down to -17 m below (ch_17) | still mixed: ch_13 +3.9, ch_20 +2.9, ch_5 and ch_16 about -2 below |
+| `-col` | two slabs 6 m under the floor | unchanged: the baked stamp is the ride |
+
+`lava_chute` is not draped and is fully buried (see the sable note below).
+
 Notes for the coordinator:
 
 - Every pilot reaches the Warden on all 8 seeds on both trees. Total dead stops: sable 6 on head against 9 on base, tarn 1 against 2, all others 0.
-- Sable's airborne_share median is 0.4646 on head, against the 0.12 to 0.45 band: a miss. Base reads 0.4258, inside the band. Cause not isolated. The channel ride surface is the unchanged baked stamp (`ground.bin` is byte-identical to base, and the channel `-col` slabs sit 6 m under the floor, so nothing in the lane collides). The chute's box-to-trough change (the 0.5 m flat box became a trough with a flush centre floor) is the only main-line collider change. No tuning was done.
+- Sable's airborne_share median is 0.4646 on head, against the 0.12 to 0.45 band: a miss. Base reads 0.4258, inside the band. The chute is fully buried: its deck is at y -85.19 and the baked ground there is about -84.16, so the whole shell and its `-col` sit roughly 1 m under the terrain (every drawn vertex is at most 0.31 m below the ground, the centre line 1.05 m) and neither can touch the ride. The chute-reverted 0.4425 against 0.4638 is therefore seed noise, not a cause, and the cause of the airborne_share rise is not isolated. The channel ride surface is the unchanged baked stamp (`ground.bin` is byte-identical to base, and the channel `-col` slabs sit 6 m under the floor, so nothing in the lane collides). The chute's box-to-trough change (the 0.5 m flat box became a trough with a flush centre floor) is the only main-line collider change. No tuning was done.
 - Rerun on the merged head `0a85b1f97ccf1c2f50cbb812fcceef2b14c7d5bb` (stage `1ac1f505` merged over `dc8091ba`), sable alone, 8 seeds, `--child-timeout=900`: 8/8 reached, time_to_warden 71.28 s median / 72.51 worst, airborne_share median 0.4638 (outside the band), dead stops median 1, worst 2, 7 in total, flow share 0.9105. Receipt `artifacts/local/trav-w2-head/`.
 - Same run with only `lava_chute` reverted to `greybox:half_pipe` in an uncommitted scratch copy (the bake pins left as committed, the chute has no stamp): 8/8 reached, time_to_warden 71.28 s median / 73.75 worst, airborne_share median 0.4425 (inside the band), dead stops median 1, worst 2, 9 in total, flow share 0.9105. Receipt `artifacts/local/trav-w2-chute/`. Per-seed airborne_share ranges from 0.4258 to 0.4837 in both runs and the seeds move in different directions, so one median on either side of 0.45 does not isolate the chute; it is a pointer, not a finding.
 - Sable's dead_stops band (0 on every seed) is missed on both trees (worst seed 2 on each). Tarn's dead_stops band (worst seed 1) is also missed on both. The `segment_s` misses on rivet, kest, tarn, tally and cannon, and the floor line's airborne_share miss, are identical to base; they predate this change.
