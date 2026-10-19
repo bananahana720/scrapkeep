@@ -10,7 +10,7 @@
   "file": "variant-src/title-a-129.wav",
   "root": "music_direction",
   "native_bpm": 129,
-  "native_seconds": 64,
+  "native_seconds": 64.0,
   "semitone_shift": 0,
   "sha256": "1dd5c20b291e195b21e18b3ff27c8edf3fa54eb8d90a18e56dab4ca146d24235",
   "recorded_by_measurement": true
@@ -72,8 +72,12 @@
    "from_s": 148.826,
    "to_s": 204.64,
    "pick_from_s": 0,
+   "guide_matches_pick": {
+    "from_bar": 0,
+    "to_bar": 30
+   },
    "action": "use",
-   "note": "other stem used, the pick's first 30 bars placed at the Hard switch"
+   "note": "other stem used, the pick's first 30 bars placed at the Hard switch; guide_matches_pick: Hard switch bars 1 to 30"
   },
   {
    "part": "other",

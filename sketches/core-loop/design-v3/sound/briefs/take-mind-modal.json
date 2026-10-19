@@ -18,18 +18,18 @@
  "sources": [
   {
    "part": "drums",
-   "from_s": 0,
-   "to_s": 160,
+   "from_s": 0.0,
+   "to_s": 160.0,
    "action": "mute",
    "note": "drum stem muted, bars 0 to 86 of the take"
   },
   {
    "part": "drums",
-   "from_s": 160,
+   "from_s": 160.0,
    "to_s": 204.651,
    "pick_from_s": 7.442,
    "action": "use",
-   "note": "drum stem used, bars 86 to 110 of the take; placed later than its place in the pick (pick material starts at the pick's bar 1 of this run)"
+   "note": "drum stem used, bars 86 to 110 of the take, reading the pick from its bar 5"
   },
   {
    "part": "drums",
@@ -40,21 +40,21 @@
   },
   {
    "part": "bass",
-   "from_s": 0,
+   "from_s": 0.0,
    "to_s": 212.093,
    "action": "mute",
    "note": "bass stem muted, bars 0 to 114 of the take"
   },
   {
    "part": "other",
-   "from_s": 0,
+   "from_s": 0.0,
    "to_s": 212.093,
    "action": "mute",
-   "note": "other stem muted, bars 0 to 114 of the take"
+   "note": "other stem muted, bars 0 to 114 of the take; not used: it carries the pick's own lead (review 4)"
   }
  ],
  "edits": [
-  160,
+  160.0,
   204.651
  ],
  "sections": [

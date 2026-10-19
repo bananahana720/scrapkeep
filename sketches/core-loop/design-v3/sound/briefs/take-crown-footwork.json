@@ -19,7 +19,7 @@
   {
    "part": "guide",
    "from_s": 0,
-   "to_s": 138,
+   "to_s": 138.0,
    "action": "use",
    "note": "guide only: no pick stem is used, the rough guide of the written lead is the whole source"
   }

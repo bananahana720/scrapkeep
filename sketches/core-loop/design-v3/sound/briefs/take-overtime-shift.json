@@ -17,37 +17,14 @@
  },
  "sources": [
   {
-   "part": "drums",
+   "part": "guide",
    "from_s": 0,
    "to_s": 85.161,
-   "action": "mute",
-   "note": "drum stem muted, bars 0 to 44 of the take"
-  },
-  {
-   "part": "bass",
-   "from_s": 0,
-   "to_s": 85.161,
-   "action": "mute",
-   "note": "bass stem muted, bars 0 to 44 of the take"
-  },
-  {
-   "part": "other",
-   "from_s": 0,
-   "to_s": 77.419,
    "action": "use",
-   "note": "other stem used, bars 0 to 40 of the take"
-  },
-  {
-   "part": "other",
-   "from_s": 77.419,
-   "to_s": 85.161,
-   "action": "mute",
-   "note": "other stem muted, bars 40 to 44 of the take"
+   "note": "guide only: no pick stem is used, the rough guide of the written lead is the whole source"
   }
  ],
- "edits": [
-  77.419
- ],
+ "edits": [],
  "sections": [
   {
    "name": "Hook",
