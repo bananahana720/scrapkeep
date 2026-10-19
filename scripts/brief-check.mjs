@@ -17,6 +17,9 @@ import { fileURLToPath } from "node:url";
 //   SECTIONS_SUM   sections do not chain from 0 to `seconds`, or the journey skips/repeats/reorders one
 //   SPAN_HOLE      a part uncovered for more than one bar (a mute span covers; "guide only" in a note exempts;
 //                  gap: true on a span of that part marks its holes as deliberate)
+//   OTHER_STEM_LEAD  a 'use' source with part 'other' that is not wholly inside its own guide_matches_pick span
+//                  ({from_bar,to_bar} or {from_s,to_s}, the take span where the guide plays the pick's lead bar for bar):
+//                  the pick's 'other' stem carries its lead melody, so anywhere else the source would hold two leads
 //   BAD_SPEC       a required field is missing or malformed
 //   unchecked      a file whose root is unavailable (or no ffprobe): reported, never a pass
 // Run: node scripts/brief-check.mjs [--dir <specs dir>] [--strict] [--json]
@@ -100,6 +103,15 @@ export function phraseError(t, spec) {
   return Math.abs(k - Math.round(k)) * p;
 }
 
+// The take-timeline span [from, to] a guide_matches_pick names, or null when it is absent or malformed.
+// Bars count from 0 at grid_origin_s: {from_bar: 0, to_bar: 2} is the first two bars.
+export function guideMatchSpan(spec, g) {
+  if (!g || typeof g !== "object") return null;
+  if (num(g.from_s) && num(g.to_s)) return [g.from_s, g.to_s];
+  if (num(g.from_bar) && num(g.to_bar)) return [spec.grid_origin_s + g.from_bar * barSeconds(spec), spec.grid_origin_s + g.to_bar * barSeconds(spec)];
+  return null;
+}
+
 export function packAvailable(packDir) {
   const list = path.join(packDir, STEM_HASHES);
   if (!existsSync(list)) return false;
@@ -118,6 +130,7 @@ function validate(spec) {
   for (const [i, s] of spec.sources.entries()) {
     if (!["drums", "bass", "other", "guide"].includes(s.part) || !["use", "mute"].includes(s.action) || !num(s.from_s) || !num(s.to_s) || (s.pick_from_s !== undefined && !num(s.pick_from_s)))
       missing.push(`sources[${i}]`);
+    else if (s.guide_matches_pick !== undefined && !guideMatchSpan(spec, s.guide_matches_pick)) missing.push(`sources[${i}].guide_matches_pick`);
   }
   return missing;
 }
@@ -185,6 +198,15 @@ export function checkSpec(rawSpec, options = {}) {
     const reach = pickFrom + (s.to_s - s.from_s);
     if (reach > stretched + tol)
       find("LENGTH_RAW", `sources[${i}].to_s`, `reads the pick to ${reach.toFixed(3)} s (from ${pickFrom} s for ${(s.to_s - s.from_s).toFixed(3)} s), past the stretched pick ${stretched.toFixed(3)} s (${pick.native_seconds} s at ${pick.native_bpm} bpm played at ${spec.take_bpm})`);
+  });
+
+  // The pick's 'other' stem carries its own lead melody: allowed only where the guide matches it bar for bar.
+  spec.sources.forEach((s, i) => {
+    if (s.action !== "use" || s.part !== "other") return;
+    const span = guideMatchSpan(spec, s.guide_matches_pick);
+    if (!span) find("OTHER_STEM_LEAD", `sources[${i}].guide_matches_pick`, `'other' is used from ${s.from_s} to ${s.to_s} s with no guide_matches_pick; the pick's other stem carries its lead, so the source would hold two leads`);
+    else if (s.from_s < span[0] - tol || s.to_s > span[1] + tol)
+      find("OTHER_STEM_LEAD", `sources[${i}].guide_matches_pick`, `'other' runs ${s.from_s} to ${s.to_s} s, outside the span ${span[0]} to ${span[1]} s where the guide matches the pick's lead`);
   });
 
   // Phrase grid.

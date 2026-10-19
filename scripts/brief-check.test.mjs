@@ -221,6 +221,42 @@ test("PICK_FROM_MISSING: a use span from_s != 0 without pick_from_s; mute and fr
   assert.deepEqual(codes(checkSpec(offsetSpec({ ...miss, pick_from_s: "x" }))), ["BAD_SPEC"]);
 });
 
+// OTHER_STEM_LEAD: the clean take is 8 s, 2 s bars, other = sources[3] (drums/bass/other kept covered).
+const leadFindings = (s) => checkSpec(s).findings.filter((f) => f.code === "OTHER_STEM_LEAD");
+const withOther = (edit) => {
+  const s = clone(cleanSpec());
+  edit(s.sources[3], s);
+  return s;
+};
+
+test("OTHER_STEM_LEAD positive control: 'other' kept with no guide_matches_pick is flagged", () => {
+  const f = leadFindings(withOther((o) => delete o.guide_matches_pick));
+  assert.equal(f.length, 1);
+  assert.equal(f[0].field, "sources[3].guide_matches_pick");
+  assert.equal(f[0].id, "clean-take");
+});
+
+test("OTHER_STEM_LEAD: 'other' inside a guide_matches_pick span passes, partly outside flags", () => {
+  assert.deepEqual(leadFindings(cleanSpec()), [], "fixture span covers bars 0 to 4");
+  const inside = (g, from, to) => leadFindings(withOther((o) => Object.assign(o, { guide_matches_pick: g, from_s: from, to_s: to, loop: true })));
+  assert.deepEqual(inside({ from_s: 0, to_s: 8 }, 0, 8), [], "seconds form, exactly equal");
+  assert.deepEqual(inside({ from_bar: 1, to_bar: 3 }, 2, 6), [], "bars form, equal");
+  assert.equal(inside({ from_bar: 1, to_bar: 3 }, 0, 6).length, 1, "starts before the span");
+  assert.equal(inside({ from_bar: 1, to_bar: 3 }, 2, 8).length, 1, "ends after the span");
+  assert.equal(inside({ from_s: 2, to_s: 6 }, 2, 6.1).length, 0, "within tolerance_s");
+  assert.equal(inside({ from_s: 2, to_s: 6 }, 2, 6.2).length, 1, "past tolerance_s");
+  assert.deepEqual(codes(checkSpec(withOther((o) => (o.guide_matches_pick = { from_bar: "x" })))), ["BAD_SPEC"], "malformed span");
+});
+
+test("OTHER_STEM_LEAD leaves mute, guide, drums and bass alone", () => {
+  const s = clone(cleanSpec());
+  s.sources[3].action = "mute";
+  s.sources[3].gap = true;
+  s.sources.push({ part: "guide", from_s: 0, to_s: 8, action: "use" });
+  assert.deepEqual(leadFindings(s), [], "a muted other, a guide, drums and bass (none carry guide_matches_pick)");
+  assert.deepEqual(leadFindings(badSpec()), [], "the planted bad brief mutes other");
+});
+
 test("gap: true marks a deliberate hole for SPAN_HOLE only", () => {
   const s = clone(cleanSpec());
   s.sources[3].to_s = 4; // other uncovered 4 to 8, over a bar
