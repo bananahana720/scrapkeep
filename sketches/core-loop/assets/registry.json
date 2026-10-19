@@ -1,6 +1,17 @@
 {
  "assets": [
   {
+   "id": "scrapkeep_splash.png",
+   "path": "res://assets/app/scrapkeep_splash.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "project.godot boot_splash/image",
+   "provenance": {
+    "source": "assets/app/scrapkeep_icon.svg rendered at 256 px",
+    "note": "Launcher boot splash from PR #152 (c1687806)."
+   }
+  },
+  {
    "id": "companion_skin_till_bell",
    "path": "res://assets/cosmetics/companion_skins/companion_skin_till_bell.glb",
    "class": "detail",
@@ -1357,8 +1368,12 @@
    "id": "spil9_marks",
    "path": "res://assets/models/companion/spil9_marks.glb",
    "class": "enemy",
-   "ships": false,
-   "loader": "none (grown-mark add-ons for SPIL-9; seat via hero_assets._mount_on_bones, runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd (_mount_marks seats it on the chassis Hull bone)",
+   "exception": {
+    "draws": 7
+   },
+   "exception_why": "five grown-mark parts (Mk1Halo, Mk2Fins, Mk3Halo, Mk4Exhaust, Mk5CoreCrest), each its own mesh so _show_marks can reveal them one heft class at a time (Mk1Halo always, then each mark up to the current one); seven draws in all, reached only at the top mark",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py --asset spil9_marks"
    }
@@ -13899,6 +13914,7 @@
   "scrap_coin",
   "scrap_crate",
   "scrap_pickups",
+  "scrapkeep_splash.png",
   "shaft_drop",
   "shaft_drop_detail1",
   "shaft_drop_detail2",

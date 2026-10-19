@@ -128,8 +128,10 @@ fight confirms them.
 | gate | 2,700 | 6,000 | 11,800 |
 | chunk | 2,900 | 6,000 | 17,600 |
 
-Vertices keep each class's old ratio to triangles. Shell, hero_landmark, park_large,
-landform and scenery caps are unchanged.
+Vertices keep each class's old ratio to triangles. Shell, hero_landmark, park_large and
+landform caps are unchanged. Scenery rose from 120 / 110 / 2 to 1,500 / 3,000 / 2 for the
+polished Highdraft cloud, mesa and thermal air (PR #143; largest member sky_cloud 896 T,
+sky_mesa 566 V); the recipes and their tests hold those three at 1,000 / 1,000 and 800 / 500.
 
 ## Before and after
 
