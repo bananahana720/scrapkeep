@@ -6,7 +6,7 @@ import path from "node:path";
 import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { readRuns, summarize } from "./run-summary.mjs";
+import { defaultLog, readRuns, summarize } from "./run-summary.mjs";
 
 const scripts = path.dirname(fileURLToPath(import.meta.url));
 const scratch = mkdtempSync(path.join(tmpdir(), "run-summary-"));
@@ -77,4 +77,9 @@ test("the last line of a run is the run, and the CLI reads both kinds", () => {
   assert.equal(lines[0], `# ${file}`);
   assert.equal(lines.length, 2);
   assert.match(lines[1], /\| won \|/);
+});
+
+test("defaultLog follows the custom user dir, so the Scrapkeep rename still finds the saves", () => {
+  assert.equal(defaultLog({ XDG_DATA_HOME: "/d" }, "/h"), "/d/godot/app_userdata/core-loop/runs.ndjson");
+  assert.equal(defaultLog({}, "/h"), "/h/.local/share/godot/app_userdata/core-loop/runs.ndjson");
 });

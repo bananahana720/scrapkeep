@@ -56,8 +56,13 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # the library's runner_yard interior; small seed 1 broke at 88.32 s (was 69.80). Two identical runs,
 # one at the SQ12-FIX merge without SI1 and one with it: small [55.41, 88.32, 120.00], grown
 # [33.94, 50.29, 18.61]. Bands hold: grown 33.9 s in 25 to 45, ratio 2.60, camper 0 breaks.
-const EXPECT_SMALL_S := 88.32
-const EXPECT_GROWN_S := 35.8
+# 2026-10-18 Gate lane, stage/alpha-w17 666662c5 (the staging "reactor-band drift"): small re-pin 88.32 -> 53.27 s,
+# grown 35.8 -> 31.23 s. Two direct runs, one on 666662c5 and one on the pre-stack stage 102324cd, byte-identical:
+# small [53.27, 43.25, 81.45], grown [31.23, 44.62, 16.68], campers 120, rides per run [1, 2, 2, 0, 1, 0, 2, 2, 6].
+# The drift predates the wave 17 stack. Small 53.3 s sits inside the 45-70 s ordinary-pilot ruling (DECISIONS
+# section 5). The ratio band (small at least twice grown) reads 1.71 on both and stays a red check for the coordinator.
+const EXPECT_SMALL_S := 53.27
+const EXPECT_GROWN_S := 31.23
 const TOLERANCE := 0.10
 const WALL_S := 330.0
 

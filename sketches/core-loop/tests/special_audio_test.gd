@@ -2,6 +2,8 @@ extends SceneTree
 
 const Audio := preload("res://src/presentation/audio.gd")
 const SpecialAudio := preload("res://src/presentation/special_audio.gd")
+const Splitter := preload("res://src/combat/splitter.gd")
+const SpecialCues := preload("res://src/combat/special_cues.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -92,6 +94,19 @@ func _process(_delta: float) -> bool:
 		s.died.emit(Vector3.ZERO, 0)
 		splitter_cues.append(audio.cue_log[0][1] if not audio.cue_log.is_empty() else "")
 	_t.eq("the splitter breaks by how it was rammed", splitter_cues, ["splitter_break_split", "splitter_break_clean"])
+
+	# 2026-10-18 (w18 splitter cue): the real Splitter, which sets meta "split" and has no
+	# rammed_at_ground, must sound what machine_fx shows.
+	var real_cues: Array = []
+	var real_agree := true
+	for split in [true, false]:
+		var sp := Splitter.new()
+		sp.set_meta("split", split)
+		real_agree = real_agree and SpecialAudio.rammed(sp) == SpecialCues.rammed(sp) and SpecialAudio.rammed(sp) == split
+		real_cues.append(SpecialAudio.cue("splitter", "break", SpecialAudio.rammed(sp)))
+		sp.free()
+	_t.eq("a real Splitter breaks by its split meta", real_cues, ["splitter_break_split", "splitter_break_clean"])
+	_t.check("sound and cue agree on a real Splitter", real_agree)
 
 	var gone: Node3D = enemies[1]
 	gone.free()
