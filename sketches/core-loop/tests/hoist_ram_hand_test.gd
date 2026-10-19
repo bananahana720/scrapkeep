@@ -133,6 +133,10 @@ func _unit_pace(t) -> void:
 	for i in 40:
 		driver._hoist_wait(0.25)
 	t.check("past the wait limit the hand releases the stick to the line arm", driver._hoist_released, "waited %s" % driver._hoist_wait_s)
+	driver._hoist_new_cycle()
+	t.check("the next cycle takes the stick back and starts its own wait", not driver._hoist_released and driver._hoist_wait_s == 0.0,
+		"released %s, wait %s" % [driver._hoist_released, driver._hoist_wait_s])
+	t.check("one tick into the new cycle the hand still holds the stage", not driver._hoist_wait(1.0 / 90.0), "wait %s" % driver._hoist_wait_s)
 
 
 func _runs(t) -> void:

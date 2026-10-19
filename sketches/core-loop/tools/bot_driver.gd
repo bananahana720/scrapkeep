@@ -1972,13 +1972,21 @@ func _hoist_forget_pace() -> void:
 	_hoist_pace = 0.0
 
 
-# The seconds the hand has held the stage without a go. Past HOIST_WAIT_GIVE_UP it releases the stick to the
-# existing hand (the line arm) until the hive's next cycle starts; a go or a stagger restarts the count.
+# The seconds the hand has held the stage without a go this cycle. Past HOIST_WAIT_GIVE_UP it releases the stick
+# to the existing hand (the line arm) until the hive's next cycle starts (_hoist_new_cycle); a go or a stagger
+# restarts the count.
 func _hoist_wait(delta: float) -> bool:
 	_hoist_wait_s += delta
 	if _hoist_wait_s > HOIST_WAIT_GIVE_UP:
 		_hoist_released = true
 	return _hoist_released
+
+
+# A new hive cycle takes the stick back from a release and starts its own wait: the limit is per cycle, so
+# refused or unread cycles do not add up to cede a later good one.
+func _hoist_new_cycle() -> void:
+	_hoist_released = false
+	_hoist_wait_s = 0.0
 
 
 # The posture one ram at this speed would add, by the Warden's own rule.
@@ -2028,7 +2036,7 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 		_hoist_to_low = HOIST_TO_LOW_REST if rest_high else (HOIST_TO_LOW_PULSE if pulse_high else HOIST_TO_LOW_DOWN)
 		_hoist_cycle += 1
 		_hoist_clock = 0.0
-		_hoist_released = false
+		_hoist_new_cycle()
 	else:
 		_hoist_cue_s += delta
 	if _hoist_released:
@@ -2048,10 +2056,12 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 	# of the pit, which a rolling ball cannot climb.
 	var in_pit: bool = ball.y < rim_y - HOIST_SHELF_BELOW and game.player.state.grounded
 	if (_hoist_leg != "go" and (ball.y < rim_y - HOIST_SHELF_BELOW or distance < rim - 4.0)) or in_pit:
+		if _hoist_leg == "go" and _hoist_done != _hoist_cycle:
+			_hoist_forget_pace()
 		_hoist_leg = ""
 		return false
 	# The run leaves late enough to come to the hive as it settles low, early enough to arrive with the dwell.
-	# (the pace is the run's own average from the last go, else a little over the cruise speed)
+	# (the pace is the larger of the last staggering go's own average and a little over the cruise speed)
 	var pace: float = _hoist_run_pace(game.player.tuning.f("cruise"))
 	var run_time: float = maxf(distance - HOIST_JUMP_PAD, 0.0) / pace
 	var timed: bool = _hoist_leg == "go" or _hoist_cue_s >= _hoist_to_low - HOIST_EARLY - run_time
