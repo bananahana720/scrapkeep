@@ -1,0 +1,637 @@
+{
+ "schema": "scrapkeep-park-props-kit/1",
+ "park": "pit",
+ "recipe": "tools/blender/park/props/pit.py",
+ "kinds": {
+  "haul_truck": {
+   "class": "dress_hero",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/haul_truck_a.glb",
+      "res://assets/models/park/props/pit/haul_truck_a_lod1.glb",
+      "res://assets/models/park/props/pit/haul_truck_a_lod2.glb"
+     ],
+     "tris": [
+      8492,
+      4246,
+      1274
+     ],
+     "radius": 6.72,
+     "height": 7.489
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/haul_truck_b.glb",
+      "res://assets/models/park/props/pit/haul_truck_b_lod1.glb",
+      "res://assets/models/park/props/pit/haul_truck_b_lod2.glb"
+     ],
+     "tris": [
+      8352,
+      4176,
+      1252
+     ],
+     "radius": 8.031,
+     "height": 9.649
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/pit/haul_truck_c.glb",
+      "res://assets/models/park/props/pit/haul_truck_c_lod1.glb",
+      "res://assets/models/park/props/pit/haul_truck_c_lod2.glb"
+     ],
+     "tris": [
+      17352,
+      8676,
+      2587
+     ],
+     "radius": 7.148,
+     "height": 5.248
+    }
+   }
+  },
+  "drill_rig_wreck": {
+   "class": "dress_hero",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/drill_rig_wreck_a.glb",
+      "res://assets/models/park/props/pit/drill_rig_wreck_a_lod1.glb",
+      "res://assets/models/park/props/pit/drill_rig_wreck_a_lod2.glb"
+     ],
+     "tris": [
+      6172,
+      3086,
+      925
+     ],
+     "radius": 6.701,
+     "height": 5.316
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/drill_rig_wreck_b.glb",
+      "res://assets/models/park/props/pit/drill_rig_wreck_b_lod1.glb",
+      "res://assets/models/park/props/pit/drill_rig_wreck_b_lod2.glb"
+     ],
+     "tris": [
+      9380,
+      4690,
+      1399
+     ],
+     "radius": 7.021,
+     "height": 5.157
+    }
+   }
+  },
+  "rope_drum_wagon": {
+   "class": "dress_hero",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/rope_drum_wagon_a.glb",
+      "res://assets/models/park/props/pit/rope_drum_wagon_a_lod1.glb",
+      "res://assets/models/park/props/pit/rope_drum_wagon_a_lod2.glb"
+     ],
+     "tris": [
+      16476,
+      8238,
+      2470
+     ],
+     "radius": 6.668,
+     "height": 5.75
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/rope_drum_wagon_b.glb",
+      "res://assets/models/park/props/pit/rope_drum_wagon_b_lod1.glb",
+      "res://assets/models/park/props/pit/rope_drum_wagon_b_lod2.glb"
+     ],
+     "tris": [
+      18288,
+      9144,
+      2736
+     ],
+     "radius": 6.717,
+     "height": 5.914
+    }
+   }
+  },
+  "shift_bell": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "Shift bell on a stout post, its over-long rope left coiled flat on the ground.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/shift_bell_a.glb",
+      "res://assets/models/park/props/pit/shift_bell_a_lod1.glb",
+      "res://assets/models/park/props/pit/shift_bell_a_lod2.glb"
+     ],
+     "tris": [
+      2040,
+      1020,
+      306
+     ],
+     "radius": 1.549,
+     "height": 2.56
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/shift_bell_b.glb",
+      "res://assets/models/park/props/pit/shift_bell_b_lod1.glb",
+      "res://assets/models/park/props/pit/shift_bell_b_lod2.glb"
+     ],
+     "tris": [
+      2404,
+      1202,
+      357
+     ],
+     "radius": 2.653,
+     "height": 0.976
+    }
+   }
+  },
+  "lunch_shelf": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A pit-head shelf where the crew left their lunch pails, a mug, a folded jacket.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/lunch_shelf_a.glb",
+      "res://assets/models/park/props/pit/lunch_shelf_a_lod1.glb",
+      "res://assets/models/park/props/pit/lunch_shelf_a_lod2.glb"
+     ],
+     "tris": [
+      2924,
+      1462,
+      438
+     ],
+     "radius": 1.511,
+     "height": 1.25
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/lunch_shelf_b.glb",
+      "res://assets/models/park/props/pit/lunch_shelf_b_lod1.glb",
+      "res://assets/models/park/props/pit/lunch_shelf_b_lod2.glb"
+     ],
+     "tris": [
+      2188,
+      1094,
+      328
+     ],
+     "radius": 1.821,
+     "height": 1.365
+    }
+   }
+  },
+  "assay_bench": {
+   "class": "dress_prop",
+   "tags": [
+    "sign",
+    "machine"
+   ],
+   "story": "Assay bench: a big beam balance, sample jars and the ledger board left open at the last reading.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/assay_bench_a.glb",
+      "res://assets/models/park/props/pit/assay_bench_a_lod1.glb",
+      "res://assets/models/park/props/pit/assay_bench_a_lod2.glb"
+     ],
+     "tris": [
+      2496,
+      1248,
+      369
+     ],
+     "radius": 1.439,
+     "height": 1.822
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/assay_bench_b.glb",
+      "res://assets/models/park/props/pit/assay_bench_b_lod1.glb",
+      "res://assets/models/park/props/pit/assay_bench_b_lod2.glb"
+     ],
+     "tris": [
+      2432,
+      1216,
+      359
+     ],
+     "radius": 1.631,
+     "height": 1.925
+    }
+   }
+  },
+  "ore_cart_stub": {
+   "class": "dress_prop",
+   "tags": [
+    "machine"
+   ],
+   "story": "A stubby ore cart on a 2 m stub of track that goes nowhere.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/ore_cart_stub_a.glb",
+      "res://assets/models/park/props/pit/ore_cart_stub_a_lod1.glb",
+      "res://assets/models/park/props/pit/ore_cart_stub_a_lod2.glb"
+     ],
+     "tris": [
+      2032,
+      1016,
+      303
+     ],
+     "radius": 1.49,
+     "height": 1.556
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/ore_cart_stub_b.glb",
+      "res://assets/models/park/props/pit/ore_cart_stub_b_lod1.glb",
+      "res://assets/models/park/props/pit/ore_cart_stub_b_lod2.glb"
+     ],
+     "tris": [
+      1816,
+      908,
+      271
+     ],
+     "radius": 2.616,
+     "height": 1.609
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/pit/ore_cart_stub_c.glb",
+      "res://assets/models/park/props/pit/ore_cart_stub_c_lod1.glb",
+      "res://assets/models/park/props/pit/ore_cart_stub_c_lod2.glb"
+     ],
+     "tris": [
+      2872,
+      1436,
+      424
+     ],
+     "radius": 1.49,
+     "height": 1.805
+    }
+   }
+  },
+  "water_tank": {
+   "class": "dress_prop",
+   "tags": [
+    "machine"
+   ],
+   "story": "Round haul-road water tank on timber cribs with a hose reel, bled dry at shift end.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/water_tank_a.glb",
+      "res://assets/models/park/props/pit/water_tank_a_lod1.glb",
+      "res://assets/models/park/props/pit/water_tank_a_lod2.glb"
+     ],
+     "tris": [
+      2124,
+      1062,
+      312
+     ],
+     "radius": 2.551,
+     "height": 2.995
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/water_tank_b.glb",
+      "res://assets/models/park/props/pit/water_tank_b_lod1.glb",
+      "res://assets/models/park/props/pit/water_tank_b_lod2.glb"
+     ],
+     "tris": [
+      2832,
+      1416,
+      418
+     ],
+     "radius": 3.237,
+     "height": 2.999
+    }
+   }
+  },
+  "bench_sign": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "Painted BENCH 3 board on a stout post; benches were numbered down the wall.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/bench_sign_a.glb",
+      "res://assets/models/park/props/pit/bench_sign_a_lod1.glb",
+      "res://assets/models/park/props/pit/bench_sign_a_lod2.glb"
+     ],
+     "tris": [
+      1336,
+      668,
+      200
+     ],
+     "radius": 1.06,
+     "height": 1.429
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/bench_sign_b.glb",
+      "res://assets/models/park/props/pit/bench_sign_b_lod1.glb",
+      "res://assets/models/park/props/pit/bench_sign_b_lod2.glb"
+     ],
+     "tris": [
+      1492,
+      746,
+      218
+     ],
+     "radius": 1.879,
+     "height": 0.493
+    }
+   }
+  },
+  "timber_lagging": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "Lagging planks and short props left in a low heap beside the bench, ready for a shoring job.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/timber_lagging_a.glb",
+      "res://assets/models/park/props/pit/timber_lagging_a_lod1.glb",
+      "res://assets/models/park/props/pit/timber_lagging_a_lod2.glb"
+     ],
+     "tris": [
+      704,
+      352,
+      106
+     ],
+     "radius": 2.213,
+     "height": 0.334
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/timber_lagging_b.glb",
+      "res://assets/models/park/props/pit/timber_lagging_b_lod1.glb",
+      "res://assets/models/park/props/pit/timber_lagging_b_lod2.glb"
+     ],
+     "tris": [
+      988,
+      494,
+      148
+     ],
+     "radius": 2.436,
+     "height": 0.506
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/pit/timber_lagging_c.glb",
+      "res://assets/models/park/props/pit/timber_lagging_c_lod1.glb",
+      "res://assets/models/park/props/pit/timber_lagging_c_lod2.glb"
+     ],
+     "tris": [
+      1948,
+      974,
+      286
+     ],
+     "radius": 1.81,
+     "height": 1.308
+    }
+   }
+  },
+  "windsock": {
+   "class": "dress_prop",
+   "tags": [
+    "tall",
+    "sign"
+   ],
+   "story": "Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/windsock_a.glb",
+      "res://assets/models/park/props/pit/windsock_a_lod1.glb",
+      "res://assets/models/park/props/pit/windsock_a_lod2.glb"
+     ],
+     "tris": [
+      2076,
+      1038,
+      310
+     ],
+     "radius": 1.8,
+     "height": 3.068
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/windsock_b.glb",
+      "res://assets/models/park/props/pit/windsock_b_lod1.glb",
+      "res://assets/models/park/props/pit/windsock_b_lod2.glb"
+     ],
+     "tris": [
+      1380,
+      690,
+      203
+     ],
+     "radius": 1.903,
+     "height": 1.503
+    }
+   }
+  },
+  "rock_bucket": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "A broken shovel bucket and its tooth left in the dirt, cholla growing up through the lip.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/rock_bucket_a.glb",
+      "res://assets/models/park/props/pit/rock_bucket_a_lod1.glb",
+      "res://assets/models/park/props/pit/rock_bucket_a_lod2.glb"
+     ],
+     "tris": [
+      2808,
+      1404,
+      420
+     ],
+     "radius": 1.514,
+     "height": 2.426
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/rock_bucket_b.glb",
+      "res://assets/models/park/props/pit/rock_bucket_b_lod1.glb",
+      "res://assets/models/park/props/pit/rock_bucket_b_lod2.glb"
+     ],
+     "tris": [
+      2916,
+      1458,
+      435
+     ],
+     "radius": 1.514,
+     "height": 1.406
+    }
+   }
+  },
+  "core_trays": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "Drill-core trays on low trestles; the grey-green cores carry thin copper-carbonate veins.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/core_trays_a.glb",
+      "res://assets/models/park/props/pit/core_trays_a_lod1.glb",
+      "res://assets/models/park/props/pit/core_trays_a_lod2.glb"
+     ],
+     "tris": [
+      1296,
+      648,
+      185
+     ],
+     "radius": 1.914,
+     "height": 0.988
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/core_trays_b.glb",
+      "res://assets/models/park/props/pit/core_trays_b_lod1.glb",
+      "res://assets/models/park/props/pit/core_trays_b_lod2.glb"
+     ],
+     "tris": [
+      1184,
+      589,
+      172
+     ],
+     "radius": 1.924,
+     "height": 0.943
+    }
+   }
+  },
+  "bursage": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "Bursage and brittle desert scrub taking back the bench, greying with the season.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/bursage_a.glb",
+      "res://assets/models/park/props/pit/bursage_a_lod1.glb",
+      "res://assets/models/park/props/pit/bursage_a_lod2.glb"
+     ],
+     "tris": [
+      2072,
+      1036,
+      301
+     ],
+     "radius": 1.225,
+     "height": 0.993
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/bursage_b.glb",
+      "res://assets/models/park/props/pit/bursage_b_lod1.glb",
+      "res://assets/models/park/props/pit/bursage_b_lod2.glb"
+     ],
+     "tris": [
+      1712,
+      856,
+      245
+     ],
+     "radius": 0.998,
+     "height": 1.508
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/pit/bursage_c.glb",
+      "res://assets/models/park/props/pit/bursage_c_lod1.glb",
+      "res://assets/models/park/props/pit/bursage_c_lod2.glb"
+     ],
+     "tris": [
+      2548,
+      1274,
+      372
+     ],
+     "radius": 1.281,
+     "height": 0.796
+    }
+   }
+  },
+  "cholla": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/cholla_a.glb",
+      "res://assets/models/park/props/pit/cholla_a_lod1.glb",
+      "res://assets/models/park/props/pit/cholla_a_lod2.glb"
+     ],
+     "tris": [
+      1092,
+      546,
+      164
+     ],
+     "radius": 0.728,
+     "height": 2.094
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/cholla_b.glb",
+      "res://assets/models/park/props/pit/cholla_b_lod1.glb",
+      "res://assets/models/park/props/pit/cholla_b_lod2.glb"
+     ],
+     "tris": [
+      2484,
+      1242,
+      372
+     ],
+     "radius": 0.931,
+     "height": 1.659
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/pit/cholla_c.glb",
+      "res://assets/models/park/props/pit/cholla_c_lod1.glb",
+      "res://assets/models/park/props/pit/cholla_c_lod2.glb"
+     ],
+     "tris": [
+      2472,
+      1236,
+      370
+     ],
+     "radius": 0.993,
+     "height": 1.162
+    }
+   }
+  }
+ }
+}
