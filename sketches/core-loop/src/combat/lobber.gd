@@ -181,7 +181,7 @@ func _shell_ring() -> Dictionary:
 
 func _show_charge(value: float) -> void:
 	charge = value
-	_muzzle_material.emission_energy_multiplier = 0.8 + value * 5.0
+	_muzzle_material.emission_energy_multiplier = FlashGuard.spike(0.8, 0.8 + value * 5.0)
 	_muzzle.scale = Vector3.ONE * (1.0 + value * 0.9)
 	_pose()
 

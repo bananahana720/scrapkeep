@@ -468,7 +468,7 @@ Latch and ride are met on the line before the dam, but only on harpoon lines; fi
 | Stage | Activity | Site | First seen from the line |
 | --- | --- | --- | --- |
 | 1 | `domes_camp`, enemy camp, `hot_rivets` | [-51, -396], on the line | From the deck; passed within 12 m at 22 s (`1-park_dam.md:110`) |
-| 1 | `rim_cache`, cracked cache | [-200, 215], west rim bench | Leaving the Eye, on the right (inference from position, `1-park_dam.md:377`) |
+| 1 | `rim_cache`, cracked cache | [-210, 400], west rim bench (moved from [-206, 300] 2026-10-19, greybox) | Leaving the Eye, on the right (inference from position, `1-park_dam.md:377`; the pocket now sits 100 m farther south, off the canyon wall, door sight_ok still true) |
 | 1 | `bench_altar`, ambush altar | [330, 420], east bench | From the pipeline bridge (inference from position, `1-park_dam.md:378`) |
 | 2 | `siphon_camp`, enemy camp, `loose_trigger` | [-28, 176], on the siphon | At the second waymark (`2-park_flume.md:359`) |
 | 2 | `bend_cache`, cracked cache | [150, -80], bend overlook | From the rim road (inference, `2-park_flume.md:360`) |

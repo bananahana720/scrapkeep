@@ -400,11 +400,11 @@ Shipped 2026-10-11 as `src/world/park/park_dam.json` and re-cut the same day for
 | Pocket | Role | Door | door_m | detour_m | d_spawn | d_beacon | sight_ok | pay.rarities |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | domes_camp | online | [-48, -392] | 0 | 0 | 344 | 1016 | True | ['common'] |
-| rim_cache | reward | [-208, 304] | 307 | 307 | 1065 | 410 | True | ['rare'] |
+| rim_cache | reward | [-208, 400] | 403 | 403 | 1161 | 367 | True | ['rare'] |
 | bench_altar | risk | [208, 248] | 251 | 251 | 1137 | 445 | True | ['common', 'rare'] |
 | gallery_valve | hidden | [-168, 544] | 250 | 268 | 1394 | 196 | True | [] |
 
-The graph has no breaches, `beacon_ok=true` and `spawn.run=true`. Spawn to beacon is 1352 m by path. All pocket clear rings are clear. The round-3 ledge move changes rim-cache beacon distance to 410 m. Reported targets: reward_ratio 0.841, full_visit_ratio 1.694.
+The graph has no breaches, `beacon_ok=true` and `spawn.run=true`. Spawn to beacon is 1352 m by path. All pocket clear rings are clear. The 2026-10-19 `rim_cache` move (section 15) puts its door at [-208, 400], 367 m from the beacon. Reported targets: reward_ratio 0.859, full_visit_ratio 1.805.
 
 The shipped park file:
 
@@ -606,7 +606,7 @@ The shipped park file:
  ],
  "activity_rows": [
   {"id": "domes_camp", "activity": "enemy_camp", "site": "slickrock_domes", "at": [-51, -396], "pack": ["chaser", "chaser", "chaser"], "pay": {"named": "hot_rivets", "rarities": ["common"]}},
-  {"id": "rim_cache", "activity": "cracked_cache", "site": "west_rim_bench", "at": [-206, 300], "pack": [], "pay": {"rarities": ["rare"]}},
+  {"id": "rim_cache", "activity": "cracked_cache", "site": "west_rim_bench", "at": [-210, 400], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bench_altar", "activity": "ambush_altar", "site": "east_rim_bench", "at": [206, 250], "pack": [], "pay": {"rarities": ["common", "rare"]}}
  ]
 }
@@ -696,7 +696,9 @@ Segments, length ratios and distinct ride facts stay inside their bands on both 
 
 **Tests.** `npm run sketch:smoke -- --sketch core-loop` with every `park_park_dam*`, `park_dam*`, `park_reactor*` and `park_graph*` test and the park schema, bake, route, sight, density, pockets, place, recipes, dressing pin, table, map, events, gates and Warden tests, `SMOKE_BOT=1`: 42 runs, 0 failed, every test with a verdict line and a nonzero check count. `park_park_dam_test` is re-pinned (dated header 2026-10-16): exactly `DRESSED` names a GLB recipe and each base GLB loads, with a planted reverted row and a planted extra swap both turning it red.
 
-**Graph ratios.** Unchanged by the swap: `full_visit_ratio` 1.694 (at most 3.0) holds; `reward_ratio` 0.841 misses its 1.5 start target on the base and on this candidate. The pocket that causes it is `rim_cache`, the reward pocket at 1,065 m from the spawn against a spawn-to-objective path of about 1,266 m (1,065 / 0.841), so the reward sits nearer than the objective. Moving it is greybox work (decisions.tsv:683), not dressing.
+**Graph ratios.** Unchanged by the swap: `full_visit_ratio` 1.694 (at most 3.0) holds (the graph read 1.756 on the base when `rim_cache` moved; see below); `reward_ratio` 0.841 misses its 1.5 start target on the base and on this candidate. The pocket that causes it is `rim_cache`, the reward pocket at 1,065 m from the spawn against a spawn-to-objective path of about 1,266 m (1,065 / 0.841), so the reward sits nearer than the objective. Moving it is greybox work (decisions.tsv:683), not dressing.
+
+**`rim_cache` move, 2026-10-19 (greybox unit, decisions.tsv:683).** The attribution above is wrong on one point: `reward_ratio` is the median of the reward, risk and hidden pockets' spawn paths over the 1,352 m beacon path, and the median of 1,065 / 1,137 / 1,394 m is `bench_altar` at 1,137 m (1,137 / 1,352 = 0.841), not `rim_cache`. Moving `rim_cache` alone can raise the median only to the hidden pocket's 1,394 m, so 1.031 is the ceiling. 1.5 needs a median of 2,028 m, so two of the three pockets must sit past 2,028 m by path: `rim_cache` plus one other is enough, and on a 1,600 m map that is more than a pocket move. `rim_cache` is moved from [-206, 300] to [-210, 400], site `west_rim_bench` kept: door [-208, 400], spawn path 1,065 to 1,161 m, beacon 410 to 367 m, detour 307 to 403 m, `reward_ratio` 0.841 to 0.859 (reported, not gated; the coordinator retired the 1.5 start target for park_dam on 2026-10-19, issue #149, leaving reward-pocket spacing to the Challenge lane's band table), `full_visit_ratio` 1.756 to 1.805, no breaches, sight_ok true. Candidates tried (door, spawn m, ratio): [-300, 330] 1,079, 0.841, sight breach; [-240, 480] 1,228, 0.908, sight breach; [-300, 560] 1,311, 0.970, sight breach and 600 m detour; [-328, 520] 1,284, 0.950, sight breach; [-200, 480] 1,268, door_to_door/clear_ring/beacon breaches; east_bench_flats [165, 475] 1,312, 0.971, five breaches. Past x -210 the door loses the 240 m sight to a line node, so the chosen spot is the farthest breach-free one. Proof on this head: park, graph, graph precision, routes, schema, bake fresh, dressing pin, park_dam, pockets, table, Warden wiring, pocket kinds, pocket line clear and run tier tests all pass (13 tests, 0 failed, `run_tier_test` pins unmoved); `traversal_line.gd --table=park --stage=1` for sable, rivet, kest, tarn, tally and cannon, seeds 1 to 3 on this head against the read-only base, matches on every time_to_warden_s and flow_share (one sable seed-1 run under load showed one dead stop and did not recur on rerun); win proof seeds 1 to 3 all reach stages_done at stage 2 (193.1 s, 127.0 s, 171.0 s; seed 1 reran at 129.2 s, bot_run timing varies between runs).
 
 **Perf, p1 on card 1** (`perf_bench.gd`, two interleaved rounds, ratios to the same round's s3, memory p1 at open less s3 at open; KB6 caps 1.3, 350 MB static, 300 MB video):
 
