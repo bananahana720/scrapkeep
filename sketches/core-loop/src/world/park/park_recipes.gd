@@ -43,6 +43,7 @@ const LandmarkProxy := preload("res://src/presentation/landmark_proxy.gd")
 const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
 const WardenMind := preload("res://src/combat/warden_mind.gd")
 const IsleRig := preload("res://src/world/park/isle_rig.gd")
+const DamRig := preload("res://src/world/park/dam_rig.gd")
 
 const BUDGETS_PATH := "res://assets/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
@@ -565,7 +566,8 @@ static func landmark_datum(mark: Dictionary) -> float:
 # Places a park's hero landmark under parent (port notes P1 and P2): its GLB through place() when the base has landed,
 # views and -col collider and all, else its visual-only proxy (landmark_proxy.gd); then, when its light is the ancient
 # beam, the beam from the GLB's beam_root empty (or the proxy's) up past sight_top. The node is Landmark_<id> with meta
-# "landmark_proxy" true while it stands in. null when the park's landmark names no recipe.
+# "landmark_proxy" true while it stands in. The isle takes isle_rig.gd (P5) and the dam's gates dam_rig.gd (P6). null
+# when the park's landmark names no recipe.
 static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable()) -> Node3D:
 	var row := landmark_row(park)
 	if row.is_empty():
@@ -592,6 +594,8 @@ static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable(
 		LandmarkBeam.make(node, node.transform * (root as Vector3), float(row["sight_top"][1]), anchor_y)
 	if kind == "sky_island":
 		IsleRig.attach(node, null if node.has_meta("landmark_proxy") else _tip_shape(row))
+	if kind == "dam" and not node.has_meta("landmark_proxy"):
+		DamRig.attach(node)
 	return node
 
 
