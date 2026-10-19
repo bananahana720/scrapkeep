@@ -11,6 +11,7 @@ const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const RunMoments := preload("res://src/core/run_moments.gd")
 const Profile := preload("res://src/core/profile.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
@@ -32,12 +33,23 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const AbilityBar := preload("res://src/ui/ability_bar.gd")
+const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
-const CampHub := preload("res://src/world/camp_hub.gd")
+# The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
+# are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
+const MENU_PATHS := [
+	"res://src/world/camp_hub.gd",
+	"res://src/ui/camp_enemy_picker.gd",
+	"res://src/ui/workshop.gd",
+	"res://src/ui/pause_menu.gd",
+]
+const MENU_STEPS := 4
+const MENU_MODULES_FRAMES_APART := 2
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
@@ -101,8 +113,14 @@ var hud
 var screens
 # The pilot radio (radio_deck.gd): the HUD dial, the takes a run finds, the playlists.
 var radio_deck
-# The walkable camp (camp_hub.gd), built on the first K from the title.
-var camp_hub
+# The walkable camp (camp_hub.gd). Reading it builds the menu modules if they are not up yet.
+var camp_hub:
+	get:
+		menu_modules()
+		return camp_hub
+var _menu_step := 0
+var _menu_wait := -1
+var _menu_requested := -1
 var notes
 var panel
 var keyboard
@@ -130,10 +148,14 @@ var summary_guard_left := 0.0
 var _hit_stopped := false
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
+# Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
+const SELF_PLAY := "res://tools/self_play.gd"
 
 
 func _ready() -> void:
 	_boot("ready")
+	if not test_mode:
+		AppShell.apply()
 	dev = dev or _launch_flag("--dev")
 	ground_behind_menu = ground_behind_menu or not test_mode
 	_register_actions()
@@ -179,6 +201,11 @@ func _ready() -> void:
 	ctx.flow = flow
 	if test_mode:
 		storage_dir = "user://test-%d" % OS.get_process_id()
+		DirAccess.make_dir_recursive_absolute(storage_dir)
+	elif _launch_flag("--self-play"):
+		# A bot's run never touches the player's saves: codex, profile, run log and the run save
+		# all follow storage_dir, so they land in a folder of their own.
+		storage_dir = "user://self-play-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	apply_saved_bindings()
 	camera.apply_look_settings(settings_store())
@@ -261,14 +288,16 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
-	camp_hub = CampHub.new()
-	add_child(camp_hub)
-	camp_hub.setup(self)
-	camp_hub.camp_store = ctx.profile
-	# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
-	preload("res://src/ui/camp_enemy_picker.gd").watch(self)
-	add_child(preload("res://src/ui/workshop.gd").new())
-	add_child(preload("res://src/ui/pause_menu.gd").new())
+	# Tests and bots build the menu modules here; a played game builds them behind the menu, and
+	# at once if a run or a camp visit starts first.
+	if test_mode:
+		menu_modules()
+	else:
+		events.flow_changed.connect(func(state: String):
+			if state != "title":
+				menu_modules())
+		# A Continue starts a run without leaving class select: the picker's watch must be up for it.
+		events.run_started.connect(func(_class_id: String): menu_modules())
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
@@ -284,12 +313,91 @@ func _ready() -> void:
 	_boot("ui")
 	flow.show_title()
 	_boot("title")
+	if not test_mode:
+		_menu_wait = MENU_MODULES_FRAMES_APART
+	if _launch_flag("--self-play") and not test_mode:
+		_start_self_play()
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
 			if not is_inside_tree():
 				return
 			_boot("frame %d" % (frame + 1))
+
+
+# Builds the camp, the workshop, the pause menu and the met-enemy watch, in four steps (_menu_step).
+# Called by the first reader of game.camp_hub, by workshop(), when a run leaves the title (each
+# finishes what is left at once), and a few frames apart behind the menu, so no one frame loads them all.
+func menu_modules() -> void:
+	while _menu_step < MENU_STEPS:
+		_menu_step_once()
+
+
+func _menu_step_once() -> void:
+	if _menu_step >= MENU_STEPS:
+		return
+	var started := Time.get_ticks_msec()
+	var step := _menu_step
+	_menu_step += 1
+	var script: Script = _menu_script(step)
+	var loaded := Time.get_ticks_msec()
+	match step:
+		0:
+			var hub = script.new()
+			camp_hub = hub
+			add_child(hub)
+			hub.setup(self)
+			hub.camp_store = ctx.profile
+		1:
+			# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
+			script.watch(self)
+		2:
+			add_child(script.new())
+		3:
+			add_child(script.new())
+	_boot("menu_modules step %d: script %d ms, main-thread build %d ms" % [step, loaded - started, Time.get_ticks_msec() - loaded])
+
+
+func _menu_script(step: int) -> Script:
+	var path: String = MENU_PATHS[step]
+	if _menu_requested == step:
+		_menu_requested = -1
+		# Blocks only when a forced build (a Start, a camp visit) finds the load still running.
+		var threaded: Script = ResourceLoader.load_threaded_get(path)
+		if threaded != null:
+			return threaded
+	return load(path)
+
+
+func workshop() -> Node:
+	menu_modules()
+	return get_node("Workshop")
+
+
+# Behind the menu, once the boot card is gone: one script at a time loads on the loader's thread
+# (ONE load_threaded_request, polled a frame at a time, never a parallel pair: the preload cycles
+# deadlock), and the main thread only instantiates and sets it up once it has loaded.
+func _step_menu_modules_later() -> void:
+	if _menu_wait < 0 or _menu_step >= MENU_STEPS:
+		return
+	if get_tree().root.get_node_or_null("Boot") != null:
+		return
+	if _menu_requested < 0:
+		_menu_wait -= 1
+		if _menu_wait > 0:
+			return
+		_menu_requested = _menu_step
+		if ResourceLoader.load_threaded_request(MENU_PATHS[_menu_step], "", false) != OK:
+			_menu_requested = -1
+			_menu_step_once()
+			_menu_wait = MENU_MODULES_FRAMES_APART
+		return
+	match ResourceLoader.load_threaded_get_status(MENU_PATHS[_menu_requested]):
+		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return
+		_:
+			_menu_step_once()
+			_menu_wait = MENU_MODULES_FRAMES_APART
 
 
 func _park_on_title_ground(stage: int) -> void:
@@ -303,6 +411,23 @@ func _park_on_title_ground(stage: int) -> void:
 	player.reset_to(ctx.terrain.spawn_point(1))
 	player.body().global_position = ctx.terrain.spawn_point(1)
 	camera.snap(ctx.terrain.entry_heading(1))
+
+
+# --self-play hands the run to a bot from tools/ (tools/self_play.gd), which the shipped pack
+# leaves out; without it the game says so and quits, rather than waiting for a player.
+func _start_self_play() -> void:
+	var script_path := SELF_PLAY
+	# Test override: --self-play-script=<res path> points the hook elsewhere (a missing path proves exit 2).
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--self-play-script="):
+			script_path = arg.trim_prefix("--self-play-script=")
+	if not ResourceLoader.exists(script_path):
+		push_error("game: --self-play needs a pack with tools/ (npm run sketch:export -- --self-play)")
+		get_tree().quit(2)
+		return
+	var bot: Node = load(script_path).new()
+	bot.set("game", self)
+	add_child(bot)
 
 
 # Moss's jukebox: a tune heard in play long enough is filed in the profile and announced on
@@ -402,6 +527,7 @@ func _process(delta: float) -> void:
 	summary_guard_left = maxf(0.0, summary_guard_left - delta)
 	if test_mode:
 		return
+	_step_menu_modules_later()
 	step_restart_hold(delta, Input.is_action_pressed("cl_retry"))
 	step_stick_look(delta)
 
@@ -684,6 +810,8 @@ func set_quality(level: int) -> void:
 func set_reduced_motion(on: bool) -> void:
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
+	AbilityBar.reduced_motion = on
+	AimReticle.reduced_motion = on
 	WorldFx.preferred = on
 	if is_instance_valid(WorldFx.current):
 		WorldFx.current.set_quality(WorldFx.current.low, on)

@@ -335,6 +335,127 @@
    }
   },
   {
+   "id": "ambient_bighorn_lamb",
+   "path": "res://assets/models/ambient/bighorn_lamb.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/bighorn_lamb.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 21a3c0fa4d375b9dff561c751b53cccbb775ea68068b28b69d012e74d2520f66"
+   }
+  },
+  {
+   "id": "ambient_canyon_wren",
+   "path": "res://assets/models/ambient/canyon_wren.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/canyon_wren.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 359007a0dd5d63d9a699c2aef2f014e8c6fed2cd8872cc21b2e96c8c9376612c"
+   }
+  },
+  {
+   "id": "ambient_dam_swift",
+   "path": "res://assets/models/ambient/dam_swift.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/dam_swift.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 c90ad21f0831d4fd951d38e12f524e9f5f97dcebe09dc9aa229f76ebe9d1fb5f"
+   }
+  },
+  {
+   "id": "ambient_dusk_quail",
+   "path": "res://assets/models/ambient/dusk_quail.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/dusk_quail.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 5ea4a90d7489fdf0c53cdd75279b8901443612a1f35de8315df459eb8296ba1d"
+   }
+  },
+  {
+   "id": "ambient_horned_lizard",
+   "path": "res://assets/models/ambient/horned_lizard.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/horned_lizard.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 67ceea038358f5b8463ddcb601ef110877118d826b3303039988f7ee0425b26d"
+   }
+  },
+  {
+   "id": "ambient_net_weaver",
+   "path": "res://assets/models/ambient/net_weaver.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/net_weaver.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 2256f0046be4c0c020390533bcda2df34311ec26fb1f16daf01ce8e7ae9a3f6e"
+   }
+  },
+  {
+   "id": "ambient_pit_burro",
+   "path": "res://assets/models/ambient/pit_burro.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/pit_burro.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 e46e702f5fc320d56dcc71dcf940794865a8eac24e96a3880e97ad525a2e459a"
+   }
+  },
+  {
+   "id": "ambient_prospector",
+   "path": "res://assets/models/ambient/prospector.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/prospector.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 4ac602f901efdae45402dd6912cd236005c28e10b611f6bc5719f0fc37de6b97"
+   }
+  },
+  {
+   "id": "ambient_puddle_toad",
+   "path": "res://assets/models/ambient/puddle_toad.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/puddle_toad.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 7ab609cb3c7f728fb6dcfa1b9e96498051b8a18c296e9a359087f0bb7bcadd42"
+   }
+  },
+  {
+   "id": "ambient_tube_bat",
+   "path": "res://assets/models/ambient/tube_bat.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/tube_bat.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 74f397b6f135b5feed9f9b278b07ed7d0b26da2e4b8480aa1ce4bda86bb70fde"
+   }
+  },
+  {
+   "id": "ambient_weir_keeper",
+   "path": "res://assets/models/ambient/weir_keeper.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/weir_keeper.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 fd2ecdfc66803636473732014a6aae6ee9e45d8e9e69e7e54f8c2c0d7827c136"
+   }
+  },
+  {
    "id": "barge",
    "path": "res://assets/models/barge.glb",
    "class": "landmark",
@@ -1368,8 +1489,12 @@
    "id": "spil9_marks",
    "path": "res://assets/models/companion/spil9_marks.glb",
    "class": "enemy",
-   "ships": false,
-   "loader": "none (grown-mark add-ons for SPIL-9; seat via hero_assets._mount_on_bones, runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd (_mount_marks seats it on the chassis Hull bone)",
+   "exception": {
+    "draws": 7
+   },
+   "exception_why": "five grown-mark parts (Mk1Halo, Mk2Fins, Mk3Halo, Mk4Exhaust, Mk5CoreCrest), each its own mesh so _show_marks can reveal them one heft class at a time (Mk1Halo always, then each mark up to the current one); seven draws in all, reached only at the top mark",
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py --asset spil9_marks"
    }
@@ -8534,6 +8659,42 @@
    }
   },
   {
+   "id": "isle_adit_portal",
+   "path": "res://assets/models/park/isle_adit_portal.glb",
+   "class": "park_large",
+   "origin": "base_centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's greybox collider, which it keeps exactly; its own -col, the portal posts outside the lane, goes on a separate PieceCollider)",
+   "provenance": {
+    "recipe": "tools/blender/park/isle_pieces.py",
+    "notes": "ore_adit's timber portal hood over the ramp's uphill end (park_islands collider-locked rows, #149 2026-10-19 02:18Z); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "isle_keel_rib",
+   "path": "res://assets/models/park/isle_keel_rib.glb",
+   "class": "detail",
+   "origin": "base_centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's greybox collider, which it keeps exactly; no -col mesh)",
+   "provenance": {
+    "recipe": "tools/blender/park/isle_pieces.py",
+    "notes": "keel_rib_w and keel_rib_e's riveted keel rib (park_islands collider-locked rows, #149 2026-10-19 02:18Z); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "isle_tram_head",
+   "path": "res://assets/models/park/isle_tram_head.glb",
+   "class": "landform",
+   "origin": "base_centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's greybox collider, which it keeps exactly; no -col mesh)",
+   "provenance": {
+    "recipe": "tools/blender/park/isle_pieces.py",
+    "notes": "tram_head's plank deck, rails, wheel-stop sill and winch bed, all flush (park_islands collider-locked rows, #149 2026-10-19 02:18Z); built by this script, no external mesh"
+   }
+  },
+  {
    "id": "landmark_dam",
    "path": "res://assets/models/park/landmark_dam.glb",
    "class": "hero_landmark",
@@ -9163,6 +9324,78 @@
    }
   },
   {
+   "id": "liner_bench2_camp_lane",
+   "path": "res://assets/models/park/liner_bench2_camp_lane.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
+   }
+  },
+  {
+   "id": "liner_bench2_camp_lane_detail1",
+   "path": "res://assets/models/park/liner_bench2_camp_lane_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_bench2_camp_lane, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_bench2_camp_lane_detail2",
+   "path": "res://assets/models/park/liner_bench2_camp_lane_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_bench2_camp_lane, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_bench2_east_bank",
+   "path": "res://assets/models/park/liner_bench2_east_bank.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
+   }
+  },
+  {
+   "id": "liner_bench2_east_bank_detail1",
+   "path": "res://assets/models/park/liner_bench2_east_bank_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_bench2_east_bank, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_bench2_east_bank_detail2",
+   "path": "res://assets/models/park/liner_bench2_east_bank_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_bench2_east_bank, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
    "id": "liner_bench_run_wash",
    "path": "res://assets/models/park/liner_bench_run_wash.glb",
    "class": "landform",
@@ -9271,6 +9504,186 @@
    }
   },
   {
+   "id": "liner_canal_lip",
+   "path": "res://assets/models/park/liner_canal_lip.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip."
+   }
+  },
+  {
+   "id": "liner_canal_lip_detail1",
+   "path": "res://assets/models/park/liner_canal_lip_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_canal_lip, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_canal_lip_detail2",
+   "path": "res://assets/models/park/liner_canal_lip_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_canal_lip, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_drop_ramp",
+   "path": "res://assets/models/park/liner_drop_ramp.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. contour-banded slickrock and scree with bleached driftwood, root balls, rusted sheet and pipe sections at the margins and gravel fans."
+   }
+  },
+  {
+   "id": "liner_drop_ramp_detail1",
+   "path": "res://assets/models/park/liner_drop_ramp_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_drop_ramp, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_drop_ramp_detail2",
+   "path": "res://assets/models/park/liner_drop_ramp_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_drop_ramp, drawn by range (the detail class): slickrock chips."
+   }
+  },
+  {
+   "id": "liner_dump_wash_1",
+   "path": "res://assets/models/park/liner_dump_wash_1.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+   }
+  },
+  {
+   "id": "liner_dump_wash_1_detail1",
+   "path": "res://assets/models/park/liner_dump_wash_1_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_dump_wash_1, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_dump_wash_1_detail2",
+   "path": "res://assets/models/park/liner_dump_wash_1_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_dump_wash_1, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_dump_wash_2",
+   "path": "res://assets/models/park/liner_dump_wash_2.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+   }
+  },
+  {
+   "id": "liner_dump_wash_2_detail1",
+   "path": "res://assets/models/park/liner_dump_wash_2_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_dump_wash_2, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_dump_wash_2_detail2",
+   "path": "res://assets/models/park/liner_dump_wash_2_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_dump_wash_2, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_east_wash",
+   "path": "res://assets/models/park/liner_east_wash.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. a cracked mud floor of polygon plates with dark seams, a cut bank of banded strata under a grey cap, bleached driftwood, root balls, rusted corrugated sheet and pipe sections half-buried against the banks, gravel bars on the inside of bends."
+   }
+  },
+  {
+   "id": "liner_east_wash_detail1",
+   "path": "res://assets/models/park/liner_east_wash_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_east_wash, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_east_wash_detail2",
+   "path": "res://assets/models/park/liner_east_wash_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_east_wash, drawn by range (the detail class): crack lips and curled flakes."
+   }
+  },
+  {
    "id": "liner_gap_wash",
    "path": "res://assets/models/park/liner_gap_wash.glb",
    "class": "landform",
@@ -9304,6 +9717,42 @@
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
     "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_gap_wash, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_haul_road_west_5",
+   "path": "res://assets/models/park/liner_haul_road_west_5.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
+   }
+  },
+  {
+   "id": "liner_haul_road_west_5_detail1",
+   "path": "res://assets/models/park/liner_haul_road_west_5_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_haul_road_west_5, drawn by range (the detail class): small rocks on the rims."
+   }
+  },
+  {
+   "id": "liner_haul_road_west_5_detail2",
+   "path": "res://assets/models/park/liner_haul_road_west_5_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/flume_works.py",
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_haul_road_west_5, drawn by range (the detail class): sage tufts on the rims."
    }
   },
   {
@@ -9376,6 +9825,78 @@
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
     "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_main_canal, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_meander",
+   "path": "res://assets/models/park/liner_meander.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. a cracked mud floor of polygon plates with dark seams, a cut bank of banded strata under a grey cap, bleached driftwood, root balls, rusted corrugated sheet and pipe sections half-buried against the banks, gravel bars on the inside of bends."
+   }
+  },
+  {
+   "id": "liner_meander_bend",
+   "path": "res://assets/models/park/liner_meander_bend.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. a cracked mud floor of polygon plates with dark seams, a cut bank of banded strata under a grey cap, bleached driftwood, root balls, rusted corrugated sheet and pipe sections half-buried against the banks, gravel bars on the inside of bends."
+   }
+  },
+  {
+   "id": "liner_meander_bend_detail1",
+   "path": "res://assets/models/park/liner_meander_bend_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_meander_bend, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_meander_bend_detail2",
+   "path": "res://assets/models/park/liner_meander_bend_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_meander_bend, drawn by range (the detail class): crack lips and curled flakes."
+   }
+  },
+  {
+   "id": "liner_meander_detail1",
+   "path": "res://assets/models/park/liner_meander_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_meander, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_meander_detail2",
+   "path": "res://assets/models/park/liner_meander_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_meander, drawn by range (the detail class): crack lips and curled flakes."
    }
   },
   {
@@ -9487,6 +10008,42 @@
    }
   },
   {
+   "id": "liner_watch_butte_crest",
+   "path": "res://assets/models/park/liner_watch_butte_crest.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. contour-banded slickrock and scree with bleached driftwood, root balls, rusted sheet and pipe sections at the margins and gravel fans."
+   }
+  },
+  {
+   "id": "liner_watch_butte_crest_detail1",
+   "path": "res://assets/models/park/liner_watch_butte_crest_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_watch_butte_crest, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_watch_butte_crest_detail2",
+   "path": "res://assets/models/park/liner_watch_butte_crest_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_watch_butte_crest, drawn by range (the detail class): slickrock chips."
+   }
+  },
+  {
    "id": "liner_weir_chute",
    "path": "res://assets/models/park/liner_weir_chute.glb",
    "class": "landform",
@@ -9556,6 +10113,42 @@
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
     "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_weir_pond, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_west_wash",
+   "path": "res://assets/models/park/liner_west_wash.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. a cracked mud floor of polygon plates with dark seams, a cut bank of banded strata under a grey cap, bleached driftwood, root balls, rusted corrugated sheet and pipe sections half-buried against the banks, gravel bars on the inside of bends."
+   }
+  },
+  {
+   "id": "liner_west_wash_detail1",
+   "path": "res://assets/models/park/liner_west_wash_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_west_wash, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_west_wash_detail2",
+   "path": "res://assets/models/park/liner_west_wash_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_west_wash, drawn by range (the detail class): crack lips and curled flakes."
    }
   },
   {
@@ -11919,7 +12512,7 @@
    "path": "res://assets/models/world_one/enemy_linker.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "none (runtime integration pending; src/combat/linker.gd, wave 19)",
+   "loader": "src/combat/linker.gd:_build_model",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_linker.py",
     "build_spec": "sketches/core-loop/design-v3/ENEMY-PRIORITY.md section 4a (PR #23)"
@@ -12854,6 +13447,17 @@
   "adit_mouth",
   "adit_mouth_detail1",
   "adit_mouth_detail2",
+  "ambient_bighorn_lamb",
+  "ambient_canyon_wren",
+  "ambient_dam_swift",
+  "ambient_dusk_quail",
+  "ambient_horned_lizard",
+  "ambient_net_weaver",
+  "ambient_pit_burro",
+  "ambient_prospector",
+  "ambient_puddle_toad",
+  "ambient_tube_bat",
+  "ambient_weir_keeper",
   "ambush_altar",
   "anchor_basalt_a",
   "anchor_basalt_b",
@@ -13269,6 +13873,9 @@
   "island_rim_rusted-salvaged-plate.webp",
   "island_small",
   "island_small_sandstone-strata.webp",
+  "isle_adit_portal",
+  "isle_keel_rib",
+  "isle_tram_head",
   "kicker_wedge",
   "kicker_wedge_detail1",
   "kicker_wedge_detail2",
@@ -13340,6 +13947,12 @@
   "lift_platform_detail2",
   "lift_platform_glass",
   "lift_platform_pump",
+  "liner_bench2_camp_lane",
+  "liner_bench2_camp_lane_detail1",
+  "liner_bench2_camp_lane_detail2",
+  "liner_bench2_east_bank",
+  "liner_bench2_east_bank_detail1",
+  "liner_bench2_east_bank_detail2",
   "liner_bench_run_wash",
   "liner_bench_run_wash_detail1",
   "liner_bench_run_wash_detail2",
@@ -13349,15 +13962,39 @@
   "liner_butte_gap",
   "liner_butte_gap_detail1",
   "liner_butte_gap_detail2",
+  "liner_canal_lip",
+  "liner_canal_lip_detail1",
+  "liner_canal_lip_detail2",
+  "liner_drop_ramp",
+  "liner_drop_ramp_detail1",
+  "liner_drop_ramp_detail2",
+  "liner_dump_wash_1",
+  "liner_dump_wash_1_detail1",
+  "liner_dump_wash_1_detail2",
+  "liner_dump_wash_2",
+  "liner_dump_wash_2_detail1",
+  "liner_dump_wash_2_detail2",
+  "liner_east_wash",
+  "liner_east_wash_detail1",
+  "liner_east_wash_detail2",
   "liner_gap_wash",
   "liner_gap_wash_detail1",
   "liner_gap_wash_detail2",
+  "liner_haul_road_west_5",
+  "liner_haul_road_west_5_detail1",
+  "liner_haul_road_west_5_detail2",
   "liner_lateral_canal",
   "liner_lateral_canal_detail1",
   "liner_lateral_canal_detail2",
   "liner_main_canal",
   "liner_main_canal_detail1",
   "liner_main_canal_detail2",
+  "liner_meander",
+  "liner_meander_bend",
+  "liner_meander_bend_detail1",
+  "liner_meander_bend_detail2",
+  "liner_meander_detail1",
+  "liner_meander_detail2",
   "liner_mesa_spill",
   "liner_mesa_spill_detail1",
   "liner_mesa_spill_detail2",
@@ -13367,12 +14004,18 @@
   "liner_wasteway_chute",
   "liner_wasteway_chute_detail1",
   "liner_wasteway_chute_detail2",
+  "liner_watch_butte_crest",
+  "liner_watch_butte_crest_detail1",
+  "liner_watch_butte_crest_detail2",
   "liner_weir_chute",
   "liner_weir_chute_detail1",
   "liner_weir_chute_detail2",
   "liner_weir_pond",
   "liner_weir_pond_detail1",
   "liner_weir_pond_detail2",
+  "liner_west_wash",
+  "liner_west_wash_detail1",
+  "liner_west_wash_detail2",
   "mesa_lip_kicker",
   "mesa_lip_kicker_12x4x300",
   "mesa_lip_kicker_12x4x300_detail1",

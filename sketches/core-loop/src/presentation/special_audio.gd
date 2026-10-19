@@ -7,7 +7,7 @@ const SpecialCues := preload("res://src/combat/special_cues.gd")
 # is near before you see it: <name>_presence loops on the enemy, <name>_tell on the frame of
 # its visual tell, <name>_break on death, <name>_spawn on the next beat.
 #
-# The enemy scripts do not exist yet, so this is the contract they meet. An enemy spawned with
+# The enemy scripts (foreman.gd, dispatcher.gd, splitter.gd, linker.gd) meet this contract. An enemy spawned with
 # kind "foreman", "dispatcher", "splitter" or "linker" is picked up by audio.gd. It may emit
 # `special_tell` on the frame its tell shows (or the game calls Audio.special_tell(enemy)), and
 # the splitter's break reads SpecialCues.rammed (`rammed_at_ground` or its `split` meta). `died` ends it.

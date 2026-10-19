@@ -33,8 +33,8 @@ extends RefCounted
 #   never toughness.
 #
 # Authored packs (slice table): with `authored` set, every arrival is one whole pack from
-# that list and nothing else spawns: no single draws, no unlock clock, no build tilt, no
-# ancient share. Packs are drawn uniformly and never the same twice in a row; the
+# that list and nothing else spawns: no single draws, no unlock clock, no ancient share. Packs
+# are drawn uniformly (but for the nemesis lean below) and never the same twice in a row; the
 # `elite_arrival`-th arrival is the `elite` pack, once. Pacing stays the director's own, and
 # a pack arrives only when the cap has room for all of it.
 #
@@ -42,9 +42,15 @@ extends RefCounted
 # (BREATH, keyed by the tuning's breath option) multiplies the constants below, never replaces
 # them: pack_scale the crowd cap and pack share, interval_scale the spawn interval, elite_rate
 # the chance a later authored arrival is the elite again. A row with no pressure reads 1.0.
+#
+# 2026-10-18 (w17 nemesis): the one build tilt an authored table keeps. From Nemesis.FROM_WORLD
+# a pack that holds a kind pressing the pilot's nemesis axis (combat/nemesis.gd) weighs
+# Nemesis.PACK_WEIGHT against 1.0 for the rest, in both draws. World one, an unknown class and an
+# empty build weigh nothing, so those draws stay the uniform pick, RNG call for call.
 enum { CHASER, LOBBER }
 
 const Roster := preload("res://src/combat/roster.gd")
+const Nemesis := preload("res://src/combat/nemesis.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
@@ -396,6 +402,9 @@ func _draw_credit() -> Dictionary:
 	var pool := choices if authored.is_empty() else choices.filter(func(p: Dictionary) -> bool: return p.id != _last_pack_id)
 	if pool.is_empty():
 		pool = choices
+	var lean := _nemesis_weights(pool) if not authored.is_empty() else {}
+	for id in lean:
+		weights[id] = lean[id]
 	var total := 0.0
 	for pack in pool:
 		total += Cards.weight(pack.kinds) * float(weights.get(pack.id, 1.0))
@@ -503,7 +512,33 @@ func _draw_authored() -> Dictionary:
 	var pool := authored.filter(func(p: Dictionary) -> bool: return p["id"] != _last_pack_id)
 	if pool.is_empty():
 		pool = authored
-	return pool[_rng.randi_range(0, pool.size() - 1)]
+	var lean := _nemesis_weights(pool)
+	if lean.is_empty():
+		return pool[_rng.randi_range(0, pool.size() - 1)]
+	var total := 0.0
+	for pack in pool:
+		total += float(lean.get(pack["id"], 1.0))
+	var pick := _rng.randf() * total
+	for pack in pool:
+		pick -= float(lean.get(pack["id"], 1.0))
+		if pick < 0.0:
+			return pack
+	return pool[-1]
+
+
+# {pack id: Nemesis.PACK_WEIGHT} for the pool's packs that press the pilot's nemesis axis, or {}
+# when none do (world one, no class, or no matching pack): callers then keep the uniform pick.
+func _nemesis_weights(pool: Array) -> Dictionary:
+	var lean := {}
+	if world < Nemesis.FROM_WORLD:
+		return lean
+	var class_id := String(build.get("class", ""))
+	if Nemesis.of(class_id).is_empty():
+		return lean
+	for pack in pool:
+		if Nemesis.pack_presses(class_id, pack.get("kinds", [])):
+			lean[pack["id"]] = Nemesis.PACK_WEIGHT
+	return lean
 
 
 # --- v2 W7 enemies: pack composition -------------------------------------------------
