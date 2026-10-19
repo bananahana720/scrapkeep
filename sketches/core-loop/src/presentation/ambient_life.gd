@@ -115,8 +115,9 @@ func _roof_above(at: Vector2) -> float:
 
 func _process(delta: float) -> void:
 	# A Warden or boss beat hides members through the pool's own fade (boss in _gather), so they
-	# leave over 0.25 s instead of popping; the node itself goes dark only off play.
-	visible = _active and ctx.flow.in_play()
+	# leave over 0.25 s instead of popping; the node goes dark once the last one has faded.
+	var hiding: bool = _latched or ctx.flow.boss_active
+	visible = _active and ctx.flow.in_play() and not (hiding and (pool == null or pool.drawn().is_empty()))
 	if pool == null:
 		return
 	_since += delta
