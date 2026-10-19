@@ -1,0 +1,245 @@
+extends RefCounted
+
+# Where ambient life lives: a pure planner from a parsed park file (park_schema.gd load_park) and
+# the ambient record (src/core/ambient_kinds.gd, the one row per kind). It picks `count` homes per
+# kind from the park rows the kind's `homes` names (any landform, element or society match), draws
+# each point inside the row's footprint, and keeps every home and every member clear of play:
+# ride lines, grapple fields, routes, enemy homes, the Warden ring, spawn, activities, rescues,
+# contraptions and the reward gate slots. keepouts() and blocked() are public so a test can ask the
+# same question of any position. Deterministic for a seed; no nodes, no ground (the view lifts to it).
+
+const AmbientKinds := preload("res://src/core/ambient_kinds.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+
+# Elements a ball rides: homes keep their footprint plus RIDE_M clear. A kicker that is a mesa edge is ground.
+const RIDE_ELEMENTS := ["half_pipe", "flow_line", "grind_line", "rail", "bowl", "tunnel", "drop", "elevated_line",
+	"kicker", "crater_bowl", "flooded_cavern"]
+const RIDE_M := 6.0
+const ANCHOR_M := 8.0
+const ROUTE_M := 10.0
+const ENEMY_HOME_M := 25.0
+const RING_EXTRA_M := 10.0
+const SPOT_M := 12.0
+# A home at least this far from another home of its kind, so a kind spreads over the park.
+const SPREAD_M := 40.0
+# Members of a group spread over a disc this wide round the home.
+const GROUP_RADIUS_M := 2.5
+# Homes within this distance of a route are preferred (the player passes them); any valid point is the fallback.
+const NEAR_ROUTE_M := 80.0
+const ATTEMPTS := 400
+const VALID_PER_HOME := 6
+const EDGE_M := 20.0
+
+
+# homes: [{kind, at: Vector2, perch, group: int, members: Array[Vector2] (offsets, the first is ZERO)}].
+# `group` is the home's index in this plan, unique per call. `veto` (optional) is the runtime's say on a spot the
+# park file cannot judge, (at: Vector2, perch: String) -> bool: true rejects it (ambient_life.gd: too steep, or
+# under a structure).
+static func plan(park: Dictionary, kind_ids: Array, seed_number: int, veto := Callable()) -> Array:
+	var homes := []
+	var keep := keepouts(park)
+	var rows: Array = park["park_rows"]
+	var rect := _rect(park)
+	var routes := _route_lines(park)
+	for kind_id in kind_ids:
+		var kind: Dictionary = AmbientKinds.row(String(kind_id))
+		if kind.is_empty():
+			continue
+		var spec: Dictionary = kind["homes"]
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([seed_number, String(kind_id), String(park["map"])])
+		# A ride or grapple row is wholly inside its own keepout, so it can never hold a home: skip it up front.
+		var matching := rows.filter(func(r): return _matches(r, spec) and not _own_keepout(r, rect))
+		if matching.is_empty():
+			continue
+		var want := rng.randi_range(int(spec["count"][0]), int(spec["count"][1]))
+		var placed: Array[Vector2] = []
+		for h in want:
+			var found := _find_home(rng, matching, keep, rect, routes, spec, kind, placed, veto)
+			if found.is_empty():
+				continue
+			placed.append(found["at"])
+			found["kind"] = String(kind_id)
+			found["perch"] = String(spec["perch"])
+			found["group"] = homes.size()
+			homes.append(found)
+	return homes
+
+
+static func _own_keepout(row: Dictionary, rect: Rect2) -> bool:
+	var element := String(row["element"])
+	return element == "anchor_field" or (RIDE_ELEMENTS.has(element) and not ParkMap.mesa_edge(row, rect))
+
+
+static func _matches(row: Dictionary, spec: Dictionary) -> bool:
+	return (spec["landforms"] as Array).has(row["landform"]) or (spec["elements"] as Array).has(row["element"]) \
+		or (spec["societies"] as Array).has(row["society"])
+
+
+static func _find_home(rng: RandomNumberGenerator, matching: Array, keep: Array, rect: Rect2, routes: Array, spec: Dictionary,
+		kind: Dictionary, placed: Array[Vector2], veto := Callable()) -> Dictionary:
+	var valid := []
+	var perch := String(spec["perch"])
+	for attempt in ATTEMPTS:
+		var row: Dictionary = matching[rng.randi() % matching.size()]
+		var at := _sample(rng, row)
+		if not rect.grow(-EDGE_M).has_point(at) or blocked(keep, at) != "" or _crowded(at, placed):
+			continue
+		if veto.is_valid() and veto.call(at, perch):
+			continue
+		var members := _members(rng, at, keep, int(rng.randi_range(int(spec["group"][0]), int(spec["group"][1]))), veto, perch)
+		valid.append({"at": at, "members": members, "route": _route_distance(routes, at)})
+		if valid.size() >= VALID_PER_HOME:
+			break
+	if valid.is_empty():
+		return {}
+	var near := valid.filter(func(v): return v["route"] <= NEAR_ROUTE_M)
+	var pool: Array = near if not near.is_empty() else valid
+	var pick: Dictionary = pool[rng.randi() % pool.size()]
+	return {"at": pick["at"], "members": pick["members"]}
+
+
+# The first member stands on the home; the rest are drawn round it and kept only where they are clear too.
+static func _members(rng: RandomNumberGenerator, at: Vector2, keep: Array, count: int, veto := Callable(), perch := "") -> Array[Vector2]:
+	var offsets: Array[Vector2] = [Vector2.ZERO]
+	for i in range(1, count):
+		for attempt in 8:
+			var offset := Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(0.6, GROUP_RADIUS_M)
+			if blocked(keep, at + offset) == "" and not (veto.is_valid() and veto.call(at + offset, perch)):
+				offsets.append(offset)
+				break
+	return offsets
+
+
+static func _crowded(at: Vector2, placed: Array[Vector2]) -> bool:
+	for other in placed:
+		if other.distance_to(at) < SPREAD_M:
+			return true
+	return false
+
+
+# A uniform point in the row's rotated footprint (park_map.gd footprint_contains inverted).
+static func _sample(rng: RandomNumberGenerator, row: Dictionary) -> Vector2:
+	var half := ParkMap.footprint_half_extents(row)
+	var local := Vector2(rng.randf_range(-half.x, half.x), rng.randf_range(-half.y, half.y))
+	return Vector2(float(row["at"][0]), float(row["at"][1])) + local.rotated(-deg_to_rad(float(row["yaw_deg"])))
+
+
+static func _rect(park: Dictionary) -> Rect2:
+	var r: Array = park["play_rect"]
+	return Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+
+
+static func _v2(a: Array) -> Vector2:
+	return Vector2(float(a[0]), float(a[1]))
+
+
+# Route polylines from the rows' `at`; ids that name no row (waymarks past the rows) are skipped.
+static func _route_lines(park: Dictionary) -> Array:
+	var at := {}
+	for row in park["park_rows"]:
+		at[row["id"]] = _v2(row["at"])
+	at[park["landmark"]["id"]] = _v2(park["landmark"]["at"])
+	var lines := []
+	for route in park["routes"]:
+		var ids := [route["from"]]
+		ids.append_array(route["via"])
+		ids.append(route["to"])
+		var line := PackedVector2Array()
+		for id in ids:
+			if at.has(id):
+				line.append(at[id])
+		if line.size() >= 2:
+			lines.append(line)
+	return lines
+
+
+static func _route_distance(routes: Array, p: Vector2) -> float:
+	var best := INF
+	for line: PackedVector2Array in routes:
+		best = minf(best, _line_distance(line, p))
+	return best
+
+
+static func _line_distance(points: PackedVector2Array, p: Vector2) -> float:
+	if points.size() == 1:
+		return p.distance_to(points[0])
+	var best := INF
+	for i in points.size() - 1:
+		best = minf(best, p.distance_to(Geometry2D.get_closest_point_to_segment(p, points[i], points[i + 1])))
+	return best
+
+
+# Every place ambient life keeps out of. Each keepout is {what, shape: "rect"|"circle"|"line", ...}:
+# a rect carries the park row and a margin, a circle a centre and radius, a line points and a radius.
+static func keepouts(park: Dictionary) -> Array:
+	var out := []
+	var rect := _rect(park)
+	var at := {}
+	for row in park["park_rows"]:
+		at[row["id"]] = _v2(row["at"])
+		var element := String(row["element"])
+		if RIDE_ELEMENTS.has(element) and not ParkMap.mesa_edge(row, rect):
+			out.append(_rect_keep("ride " + String(row["id"]), row, RIDE_M))
+		elif element == "anchor_field":
+			out.append(_rect_keep("anchor " + String(row["id"]), row, ANCHOR_M))
+	for line in _route_lines(park):
+		out.append({"what": "route", "shape": "line", "points": line, "radius": ROUTE_M})
+	for home in park["home_rows"]:
+		var site: Dictionary = {}
+		for row in park["park_rows"]:
+			if row["id"] == home["site"]:
+				site = row
+				break
+		if not site.is_empty():
+			# The enemy's ground is the row's own; a big row keeps out 25 m plus up to 30 m of its half-size round its centre.
+			var reach := ENEMY_HOME_M + minf(maxf(ParkMap.footprint_half_extents(site).x, ParkMap.footprint_half_extents(site).y), 30.0)
+			out.append(_circle("enemy home " + String(home["id"]), _v2(site["at"]), reach))
+	var mark: Dictionary = park["landmark"]
+	out.append(_circle("warden ring", _v2(mark["beacon"]), float(mark["reach_m"]) + RING_EXTRA_M))
+	for slot in mark["gate_slots"]:
+		out.append(_circle("gate slot", _v2(slot["at"]), SPOT_M))
+	out.append(_circle("spawn", _v2(park["spawn"]["at"]), SPOT_M))
+	for row in park["activity_rows"]:
+		out.append(_circle("activity " + String(row["id"]), _v2(row["at"]), SPOT_M))
+	for row in park.get("rescue_rows", []):
+		out.append(_circle("rescue " + String(row["id"]), _v2(row["at"]), SPOT_M))
+	for row in park["contraption_rows"]:
+		var spots := []
+		for key in ["at", "from", "to"]:
+			if row.has(key):
+				var p: Array = row[key]
+				spots.append(Vector2(float(p[0]), float(p[p.size() - 1])))
+		if spots.is_empty() and at.has(row.get("site", "")):
+			spots.append(at[row["site"]])
+		if spots.size() == 2 and row.has("from"):
+			out.append({"what": "contraption " + String(row["id"]), "shape": "line", "points": PackedVector2Array(spots), "radius": SPOT_M})
+		else:
+			for p in spots:
+				out.append(_circle("contraption " + String(row["id"]), p, SPOT_M))
+	return out
+
+
+static func _rect_keep(what: String, row: Dictionary, margin: float) -> Dictionary:
+	var half := ParkMap.footprint_half_extents(row)
+	return {"what": what, "shape": "rect", "row": row, "margin": margin, "centre": _v2(row["at"]), "reach": half.length() + margin * 1.5}
+
+
+static func _circle(what: String, centre: Vector2, radius: float) -> Dictionary:
+	return {"what": what, "shape": "circle", "centre": centre, "radius": radius}
+
+
+# The `what` of the first keepout that holds `at`, or "".
+static func blocked(keep: Array, at: Vector2) -> String:
+	for k in keep:
+		match k["shape"]:
+			"circle":
+				if at.distance_to(k["centre"]) < float(k["radius"]):
+					return String(k["what"])
+			"line":
+				if _line_distance(k["points"], at) < float(k["radius"]):
+					return String(k["what"])
+			"rect":
+				if at.distance_to(k["centre"]) <= float(k["reach"]) and ParkMap.footprint_contains(k["row"], at, float(k["margin"])):
+					return String(k["what"])
+	return ""
