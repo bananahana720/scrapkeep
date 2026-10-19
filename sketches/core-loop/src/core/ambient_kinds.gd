@@ -47,6 +47,11 @@ const MOTIONS := ["walk", "hop", "fly"]
 const REACTS := ["hide", "scatter", "duck"]
 const PERCHES := ["ground", "rim", "ceiling", "water"]
 const LOOPS := {"idle": "idle", "move": "move", "react": "react"}
+# The react clip is a one-shot into its ducked or hidden pose; from REACT_HOLD_S to its end it
+# closes on itself, so the runtime plays it once and then loops only that hold (the recipe asserts it).
+const REACT_HOLD_S := 0.8
+# The recipes build every kind facing -Z (Godot forward); the pool's facing points +Z along travel.
+const FRONT_YAW := PI
 const MODEL_DIR := "res://assets/models/ambient/"
 const SOUND_DIR := "res://assets/audio/ambient/"
 const TRIS := [800, 6000]

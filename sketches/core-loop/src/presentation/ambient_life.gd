@@ -170,7 +170,7 @@ func _draw(alpha: float) -> void:
 		var before: Array = _prev.get(m.id, [m.pos, m.facing])
 		node.visible = visible
 		node.position = (before[0] as Vector3).lerp(m.pos, alpha)
-		node.rotation.y = lerp_angle(float(before[1]), m.facing, alpha)
+		node.rotation.y = lerp_angle(float(before[1]), m.facing, alpha) + AmbientKinds.FRONT_YAW
 		_pose(node, m)
 	for id in _worn.keys():
 		if not drawn.has(id):
@@ -258,11 +258,20 @@ static func prepare(node: Node) -> void:
 	for view in node.find_children("*", "GeometryInstance3D", true, false):
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		view.visibility_range_end = VIEW_END_M
+		# The recipes paint in vertex colours; the glTF import leaves them off the albedo.
+		if view is MeshInstance3D and view.mesh != null:
+			for i in view.mesh.get_surface_count():
+				var mat := view.get_active_material(i) as BaseMaterial3D
+				if mat != null and not mat.vertex_color_use_as_albedo:
+					mat = mat.duplicate() as BaseMaterial3D
+					mat.vertex_color_use_as_albedo = true
+					view.set_surface_override_material(i, mat)
 	for player in node.find_children("*", "AnimationPlayer", true, false):
 		for library in player.get_animation_library_list():
 			var lib: AnimationLibrary = player.get_animation_library(library)
 			for clip in lib.get_animation_list():
-				lib.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+				# react plays once into its pose, then _pose loops its hold; idle and move repeat.
+				lib.get_animation(clip).loop_mode = Animation.LOOP_NONE if String(clip).ends_with("react") else Animation.LOOP_LINEAR
 
 
 func _pose(node: Node3D, m: AmbientPool.Member) -> void:
@@ -280,6 +289,10 @@ func _pose(node: Node3D, m: AmbientPool.Member) -> void:
 		var clip := _clip(player, String(AmbientKinds.LOOPS[m.loop]))
 		if clip != "":
 			player.play(clip)
+	elif m.loop == "react" and not player.is_playing() and player.assigned_animation != "" \
+			and player.get_animation(player.assigned_animation).length > AmbientKinds.REACT_HOLD_S:
+		player.play(player.assigned_animation)
+		player.seek(AmbientKinds.REACT_HOLD_S, true)
 
 
 static func _clip(player: AnimationPlayer, want: String) -> String:

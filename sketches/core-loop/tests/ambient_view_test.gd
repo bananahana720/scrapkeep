@@ -152,9 +152,10 @@ func _run() -> void:
 		ranged = ranged and view.visibility_range_end == 140.0
 	for player in life.find_children("*", "AnimationPlayer", true, false):
 		for clip in player.get_animation_list():
-			loops = loops and player.get_animation(clip).loop_mode == Animation.LOOP_LINEAR
+			var want := Animation.LOOP_NONE if String(clip).ends_with("react") else Animation.LOOP_LINEAR
+			loops = loops and player.get_animation(clip).loop_mode == want
 	_t.check("every mesh (%d) casts no shadow, ends at 140 m" % checked, checked > 0 and shadows and ranged)
-	_t.check("every clip loops", loops)
+	_t.check("idle and move loop, react plays once into its hold", loops)
 	_t.check("an instance plays a loop clip", life.find_children("*", "AnimationPlayer", true, false).any(func(p): return p.is_playing()))
 	_t.check("two audio voices, quiet past FALLOFF_M", life.voices.size() == AmbientKinds.MAX_VOICES and life.voices[0].max_distance == AmbientKinds.FALLOFF_M)
 
