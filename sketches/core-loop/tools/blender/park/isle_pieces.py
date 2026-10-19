@@ -251,9 +251,9 @@ def adit_portal(root, rng):
             # a rubble footing round each post, kept outside the lane and sunk to within FLUSH of the ramp
             for j in range(3):
                 r = rng.uniform(0.45, 0.8)
-                adit.ico(SLOT, r, subdiv=1,
-                         loc=g(s * (ADIT_POST_X + rng.uniform(0.2, 0.9)), base + FLUSH - 0.02 - 0.6 * r,
-                               z + rng.uniform(-0.9, 0.9)),
+                rx, rz = rng.uniform(0.2, 0.9), z + rng.uniform(-0.9, 0.9)
+                # topped FLUSH over the ramp at the stone's downhill edge, where the ramp is lowest under it
+                adit.ico(SLOT, r, subdiv=1, loc=g(s * (ADIT_POST_X + rx), adit_floor(rz + r) + FLUSH - 0.02 - 0.6 * r, rz),
                          scale=(1.0, 1.0, 0.6), color=shade(STONE, rng, 0.1))
         block(adit, (-ADIT_POST_X - 0.6, base + ADIT_CAP[0], z - 0.32), (ADIT_POST_X + 0.6, base + ADIT_CAP[1], z + 0.32),
               shade(TIMBER, rng))
