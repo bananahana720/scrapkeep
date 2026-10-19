@@ -45,9 +45,14 @@ const toolsLoad = /res:\/\/tools\//;
 
 // L7: a game file under src/ that names a res://tools/ path. The release pack leaves tools/ out,
 // so the shipped game would fail to compile (wave-13 close: pocket_draw.gd preloaded park_graph.gd).
+// One exception: src/game.gd names tools/self_play.gd in the const SELF_PLAY line (the --self-play
+// launch flag), loaded at run time behind ResourceLoader.exists, never preloaded. Any other
+// tools/ path in src/, or the same line in another file or without the exists guard, still fails.
+const selfPlayLine = /^const SELF_PLAY := "res:\/\/tools\/self_play\.gd"$/;
 export function lintL7(file, text) {
+  const guarded = /(^|\/)src\/game\.gd$/.test(file) && text.includes("ResourceLoader.exists(script_path)");
   return codeLines(text)
-    .filter((line) => toolsLoad.test(line.raw))
+    .filter((line) => toolsLoad.test(line.raw) && !(guarded && selfPlayLine.test(line.code)))
     .map((line) => finding("L7", file, line.number, "game code names a res://tools/ path, which the release pack leaves out; move the shared code under src/"));
 }
 

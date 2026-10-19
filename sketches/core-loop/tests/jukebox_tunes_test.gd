@@ -8,6 +8,7 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
+const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 
 # Moss's jukebox (TUNE-JUKEBOX, Andrew 2026-10-17: "finding and discovering these different
 # tunes ... having ways to come back to them"):
@@ -208,6 +209,23 @@ func _render(audio, frames := 8192) -> void:
 	audio.engine.render(frames)
 
 
+# The game's own audio path (no device): _pump hands the band over before each block,
+# which a bare engine.render never does.
+func _pump_for(audio, frames: int) -> void:
+	var until: int = audio.engine.clock + frames
+	while audio.engine.clock < until:
+		audio._pump(mini(4096, until - audio.engine.clock))
+
+
+func _rms(buf: PackedVector2Array, minus := PackedVector2Array()) -> float:
+	if buf.is_empty():
+		return 0.0
+	var sum := 0.0
+	for i in buf.size():
+		sum += (buf[i] - (minus[i] if i < minus.size() else Vector2.ZERO)).length_squared()
+	return sqrt(sum / buf.size())
+
+
 func _oggs_in(dir: String) -> int:
 	var n := 0
 	for file in DirAccess.get_files_at(dir):
@@ -225,9 +243,15 @@ func _ace(audio) -> void:
 		return
 	_game.tuning.set_option(preload("res://src/movement/tuning.gd").MUSIC_KEY, "ace")
 	_t.check("ACE: roam-1-1 spins", audio.spin("roam-1-1"))
-	_render(audio, 44100 * 2)
+	_pump_for(audio, 44100 * 2)
 	_t.check("ACE: the recorded take plays", audio.ace_playing() and audio.ace.mode == "level", audio.ace_missing)
-	_t.check("ACE: the synth band hands over", audio.engine.band_muted)
+	# Two seconds is well past sound_from + STOP_RAMP: the synth band is muted and silent
+	# under the take, and the take itself sounds, so the hand-over leaves no hole.
+	var band_rms := _rms(audio.engine.out_music, audio.engine.out_landmark)
+	var heard_rms := _rms(audio.out_music)
+	_t.check("ACE: the synth band hands over", audio.engine.band_muted and audio._band_fade_start >= 0 and audio.engine.clock >= audio._band_fade_start + AceSequencer.STOP_RAMP, "muted=%s fade_start=%d clock=%d" % [audio.engine.band_muted, audio._band_fade_start, audio.engine.clock])
+	_t.check("ACE: the synth band is silent under the take", band_rms < 0.0001, "band rms %.5f" % band_rms)
+	_t.check("ACE: the take is heard", heard_rms > 0.01, "music rms %.5f" % heard_rms)
 	_t.check("ACE: warden-1-1 spins", audio.spin("warden-1-1"))
 	_render(audio, 44100)
 	_t.check("ACE: the Warden take plays", audio.ace_playing() and audio.ace.mode == "warden")
