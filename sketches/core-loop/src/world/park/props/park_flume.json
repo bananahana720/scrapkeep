@@ -1424,16 +1424,6 @@
    "near": "butte_gap: Saltbush and a split plank whe, 29 m off the line"
   },
   {
-   "id": "flume_v29",
-   "template": "crane_yard",
-   "at": [
-    90.0,
-    -190.0
-   ],
-   "yaw_deg": 118.3,
-   "near": "bend_zip_pier_16: Boom 3 on its blocks beside th, 45 m off the line"
-  },
-  {
    "id": "flume_v32",
    "template": "skiff_shore",
    "at": [
@@ -1452,16 +1442,6 @@
    ],
    "yaw_deg": 61.7,
    "near": "flume_ride_pier_26: The sluice shed with its wheel, 44 m off the line"
-  },
-  {
-   "id": "flume_v37",
-   "template": "crane_yard",
-   "at": [
-    -120.0,
-    -500.0
-   ],
-   "yaw_deg": 132.1,
-   "near": "flume_ride_pier_17: Boom 3 on its blocks beside th, 42 m off the line"
   },
   {
    "id": "flume_v39",
@@ -1512,26 +1492,6 @@
    ],
    "yaw_deg": -27.0,
    "near": "rim_road: The sluice shed with its wheel, 29 m off the line"
-  },
-  {
-   "id": "flume_v47",
-   "template": "washday",
-   "at": [
-    -240.0,
-    -110.0
-   ],
-   "yaw_deg": -66.0,
-   "near": "hollow_intake: Laundry day by the trestles, 22 m off the line"
-  },
-  {
-   "id": "flume_v51",
-   "template": "canal_seep",
-   "at": [
-    -270.0,
-    60.0
-   ],
-   "yaw_deg": -60.8,
-   "near": "lateral_canal: Reeds and saltbush where the c, 22 m off the line"
   },
   {
    "id": "flume_v53",
@@ -1592,16 +1552,6 @@
    ],
    "yaw_deg": 152.9,
    "near": "bend_zip_pier_11: A rowboat left on blocks when , 34 m off the line"
-  },
-  {
-   "id": "flume_v68",
-   "template": "survey_marker",
-   "at": [
-    60.0,
-    -190.0
-   ],
-   "yaw_deg": 153.4,
-   "near": "bend_zip_pier_14: A depth milepost, 22 m off the line"
   },
   {
    "id": "flume_v69",
@@ -1892,26 +1842,6 @@
    ],
    "yaw_deg": -0.0,
    "near": "heat_exchanger_annex: The sluice shed with its wheel, 45 m off the line"
-  },
-  {
-   "id": "flume_m007",
-   "template": "mini_scrub",
-   "at": [
-    -244.8,
-    78.6
-   ],
-   "yaw_deg": -60.8,
-   "near": "verge of the line: Saltbush and a split plank by the verge,"
-  },
-  {
-   "id": "flume_m008",
-   "template": "mini_planks",
-   "at": [
-    -220.3,
-    122.2
-   ],
-   "yaw_deg": -60.8,
-   "near": "verge of the line: A few fallen bent planks and a short sta"
   },
   {
    "id": "flume_m009",
@@ -2262,6 +2192,76 @@
    ],
    "yaw_deg": -55,
    "near": "mesa_ramp: crew edge of the mesa"
+  },
+  {
+   "id": "flume_v29_r36_10",
+   "template": "crane_yard",
+   "at": [
+    108.0,
+    -221.2
+   ],
+   "yaw_deg": 131.4,
+   "near": "bend_zip_pier_16: Boom 3 on its blocks beside th, 45 m off the line"
+  },
+  {
+   "id": "flume_v37_r20_3",
+   "template": "crane_yard",
+   "at": [
+    -120.0,
+    -480.0
+   ],
+   "yaw_deg": 104.5,
+   "near": "flume_ride_pier_17: Boom 3 on its blocks beside th, 42 m off the line"
+  },
+  {
+   "id": "flume_v68_r8_2",
+   "template": "survey_marker",
+   "at": [
+    64.0,
+    -183.1
+   ],
+   "yaw_deg": 133.1,
+   "near": "bend_zip_pier_14: A depth milepost, 22 m off the line"
+  },
+  {
+   "id": "flume_m007_r20_4",
+   "template": "mini_scrub",
+   "at": [
+    -254.8,
+    95.9
+   ],
+   "yaw_deg": -60.8,
+   "near": "verge of the line: Saltbush and a split plank by the verge,"
+  },
+  {
+   "id": "flume_m008_r36_3",
+   "template": "mini_planks",
+   "at": [
+    -220.3,
+    158.2
+   ],
+   "yaw_deg": -48.1,
+   "near": "verge of the line: A few fallen bent planks and a short sta"
+  },
+  {
+   "id": "flume_v51_r8_4",
+   "template": "canal_seep",
+   "at": [
+    -274.0,
+    66.9
+   ],
+   "yaw_deg": -60.8,
+   "near": "lateral_canal: Reeds and saltbush where the c, 22 m off the line"
+  },
+  {
+   "id": "flume_v47_r8_4",
+   "template": "washday",
+   "at": [
+    -244.0,
+    -103.1
+   ],
+   "yaw_deg": -66.0,
+   "near": "hollow_intake: Laundry day by the trestles, 22 m off the line"
   }
  ],
  "litter": {
@@ -2290,5 +2290,5 @@
   ],
   "seed": 1021
  },
- "pin": 3772911731
+ "pin": 4096208831
 }
