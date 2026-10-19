@@ -13,6 +13,7 @@ import {
   appRun,
   buildAppImage,
   desktopEntry,
+  WM_CLASS,
   findAppimagetool,
   installPaths,
   missingToolMessage,
@@ -62,6 +63,23 @@ test("the desktop entry names the game, its icon and the Game category", () => {
   assert.doesNotMatch(entry, /TryExec/);
   assert.match(entry, /^Actions=sitting;$/m);
   assert.ok(entry.endsWith("[Desktop Action sitting]\nName=Scrapkeep sitting (all pilots, save untouched)\nExec=scrapkeep -- --profile=sitting\n"), entry);
+});
+
+test("the desktop entry groups the window: StartupWMClass is the project name Godot uses as WM_CLASS", () => {
+  const entry = desktopEntry({ exec: APP_ID });
+  assert.match(entry, /^StartupNotify=true$/m);
+  assert.match(entry, new RegExp(`^StartupWMClass=${WM_CLASS}$`, "m"));
+  const project = readFileSync(new URL("../sketches/core-loop/project.godot", import.meta.url), "utf8");
+  assert.match(project, new RegExp(`^config/name="${WM_CLASS}"$`, "m"));
+  // The rename keeps saves where they were: the user dir stays godot/app_userdata/core-loop.
+  assert.match(project, /^config\/use_custom_user_dir=true$/m);
+  assert.match(project, /^config\/custom_user_dir_name="godot\/app_userdata\/core-loop"$/m);
+});
+
+test("the project icon is the AppImage icon, byte for byte", () => {
+  const a = readFileSync(new URL("../sketches/core-loop/assets/app/scrapkeep_icon.svg", import.meta.url));
+  const b = readFileSync(new URL("./appimage/scrapkeep.svg", import.meta.url));
+  assert.ok(a.equals(b));
 });
 
 test("AppRun runs the game from usr/lib and passes every argument through, except --install and --uninstall", () => {
@@ -174,6 +192,8 @@ test("the AppImage installs and uninstalls itself with --install and --uninstall
   assert.ok(entry.endsWith(`\nExec="${app}" -- --profile=sitting\n`), entry);
   assert.equal(entry.match(/^TryExec=/gm).length, 1);
   assert.match(entry, /^Name=Scrapkeep$/m);
+  assert.match(entry, new RegExp(`^StartupWMClass=${WM_CLASS}$`, "m"));
+  assert.match(entry, /^StartupNotify=true$/m);
   assert.ok(existsSync(path.join(dataHome, "icons/hicolor/scalable/apps/scrapkeep.svg")));
 
   // Running --install from the installed copy rewrites the entry and leaves the copy in place.
