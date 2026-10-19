@@ -41,6 +41,9 @@ from the axis, above it nothing passes 3.8 m, at rest and in every second frame 
 hoist_ride, snip, pulse, stagger_open and brood_dark (the body), and of idle, active, hoist_ride,
 stagger_open and brood_dark (the drones). Not held to it: chunk_shed and break (falling cells),
 the drones' 0.4 s pulse burst (3 m out, section 5) and their snip walk along the rope.
+The drones never sink into the hive: rig_pose_audit.py skins the body at the same clip time and
+holds the kit to it in every shared clip but break and snip. They ride DRONE_CLEAR off the hull,
+higher over opening plates and the yoke arms, and lift out of the way of the shed rings.
 In stagger_open the queen's lit core (bone QueenCore) rises 0.6 m out of the open cell and swells.
 Provenance: authored procedurally here from bmesh primitives; no external meshes or textures.
 """
@@ -573,11 +576,47 @@ def local_vector(rest3, world):
 
 
 DRONES = [  # (height z, azimuth deg, wander phase)
-    (5.75, -95.0, 0.0), (4.6, -40.0, 0.3), (3.55, 25.0, 0.55), (3.35, 95.0, 0.15),
-    (5.0, 150.0, 0.7), (4.15, 205.0, 0.4), (3.2, 255.0, 0.85), (6.15, 300.0, 0.25),
+    (5.85, -120.0, 0.0), (3.9, -40.0, 0.3), (3.55, 25.0, 0.55), (3.35, 95.0, 0.15),
+    (6.05, 120.0, 0.7), (3.85, 205.0, 0.4), (3.2, 255.0, 0.85), (6.3, 0.0, 0.25),
 ]
-DRONE_CLEAR = 0.44
+# A drone rides this far off the hull along its normal: the comb's lips and caps stand up to 0.45 m
+# proud and the pinpricks sink below the lip, so the underside (0.05 m below the frame) clears them.
+# The tuning is the least that keeps rig_pose_audit.py's kit-against-body depth at 0 mm in every
+# shared clip; more would break the 3.8 m reach over the widest part of the hull.
+DRONE_CLEAR = 0.50
+# Shuttered rings (z from SHUTTER_Z) lift their plates 0.3 to 0.5 m when they open (pulse 50
+# degrees, active 28, stagger_open 50 to 105): the drones over them ride up by PLATE_LIFT with the
+# plates. The yoke's three arms stand 0.55 m off the narrow shoulder, so a drone circling above
+# ARM_Z hops each one (ARM_HOP, within ARM_SPAN degrees of its azimuth).
+# Ring1 (z 6.25) opens 105 degrees in stagger_open, RING1_LIFT more, and the narrow shoulder above
+# HIGH_Z carries HIGH_CLEAR more (grip rims, plates). In chunk_shed the drones start up by
+# SHED_LIFT as the rings break away (the falling cells spread 12 percent, drift and tumble past
+# them) and hold it to the clip's end: the next clip blends them back down once the ring is gone.
+SHUTTER_Z = 4.3
+PLATE_LIFT = 0.40
+RING1_LIFT = 0.22
+HIGH_Z = 5.0
+HIGH_CLEAR = 0.10
+SHED_LIFT = 1.2
+ARM_Z = 5.3
+ARM_HOP = 0.2
+ARM_SPAN = 24.0
 SNIP_FILE = (0, 1, 7)
+
+
+def plate_weight(z):
+    return smooth((z - SHUTTER_Z) / 0.5)
+
+
+def high_clear(z):
+    return HIGH_CLEAR * smooth((z - HIGH_Z) / 0.6)
+
+
+def arm_hop(z, az):
+    if z < ARM_Z:
+        return 0.0
+    near = min(abs((az - a + 180.0) % 360.0 - 180.0) for a in YOKE_AZ)
+    return ARM_HOP * smooth(1.0 - near / ARM_SPAN) * smooth((z - ARM_Z) / 0.3)
 
 
 def surface_frame(z, az, heading=0.0, clear=DRONE_CLEAR):
@@ -620,7 +659,7 @@ def build_drone(m, i, frame):
     tri_prism([(0, 0.3), (-0.2, -0.16), (0.2, -0.16)], 0.05, 0.12, "ancient_enamel", PLATE, IRON)
     tip = at(0, 0.3, 0.13)
     a, b, d = m.v(tip + f * 0.06), m.v(tip - f * 0.04 + x * 0.06), m.v(tip - f * 0.04 - x * 0.06)
-    apex = m.v(tip + n * 0.07)
+    apex = m.v(tip + n * 0.05)
     m.face([a, b, d], "ancient_light", None, -n)
     for p, q in ((a, b), (b, d), (d, a)):
         m.face([p, q, apex], "ancient_light", None, (p.co + q.co) / 2 - tip)
@@ -631,28 +670,37 @@ def drone_target(clip, i, t):
     z0, az0, ph = DRONES[i]
     wander = lambda: (az0 + 14 * math.sin(math.tau * (t / 4.0 + ph)), z0 + 0.25 * math.sin(math.tau * (t / 2.0 + ph)),
                       math.radians(25) * math.cos(math.tau * (t / 4.0 + ph)))
-    if clip == "idle" or clip == "chunk_shed":
+    base = DRONE_CLEAR + high_clear(z0)
+    if clip == "idle":
         az, z, hd = wander()
-        return surface_frame(z, az, hd)
+        return surface_frame(z, az, hd, base)
+    if clip == "chunk_shed":
+        az, z, hd = wander()
+        return surface_frame(z, az, hd, base + SHED_LIFT * smooth(t / 0.2))
     if clip == "pulse":
         az, z, hd = wander()
-        mtx = surface_frame(z, az, hd)
+        # The plates open with the cell's height h (body_pose), 50 degrees until the pulse.
+        h = z0 / 7.6
+        o = smooth((t - (0.15 + 1.2 * h)) / 0.45) if t <= 2.0 else 1.0 - smooth((t - 2.0) / 0.4)
+        mtx = surface_frame(z, az, hd, base + PLATE_LIFT * plate_weight(z0) * o)
         if t > 2.0:
             k = (t - 2.0) / 0.4
             burst = 3.0 * math.sin(math.pi * min(1.0, k * 1.6)) * (1.0 - smooth(k))
             mtx = Matrix.Translation(mtx.col[1].to_3d() * burst) @ mtx
         return mtx
     if clip == "active":
-        return surface_frame(z0, az0 + 360.0 * t / 4.0, 0.0, DRONE_CLEAR - 0.06)
+        az = az0 + 360.0 * t / 4.0
+        return surface_frame(z0, az, 0.0, base + PLATE_LIFT * 0.7 * plate_weight(z0) + arm_hop(z0, az))
     if clip == "stagger_open":
-        az, z, hd = (az0 + 30 * math.sin(math.tau * (t / 1.0 + ph)), z0 + 0.22 * math.sin(math.tau * (t / 0.5 + ph)),
+        az, z, hd = (az0 + 18 * math.sin(math.tau * (t / 1.0 + ph)), z0 + 0.22 * math.sin(math.tau * (t / 0.5 + ph)),
                      math.radians(60) * math.cos(math.tau * (t / 1.0 + ph)))
-        return surface_frame(z, az, hd)
+        lift = PLATE_LIFT * plate_weight(z0) + RING1_LIFT * smooth((z0 - 5.7) / 0.3)
+        return surface_frame(z, az, hd, base + lift * smooth(t / 0.22))
     if clip == "hoist_ride":
-        return surface_frame(z0, az0, 0.0, DRONE_CLEAR - 0.1)
+        return surface_frame(z0, az0, 0.0, base)
     if clip == "brood_dark":
         az, z, hd = (az0 + 14 * math.sin(math.tau * ph), z0 + 0.25 * math.sin(math.tau * ph), math.radians(25) * math.cos(math.tau * ph))
-        return surface_frame(z, az, hd)
+        return surface_frame(z, az, hd, base)
     if clip == "snip":
         if i in SNIP_FILE:
             # The file of three walks the lined rope from Grip0 toward the ball: out along the
