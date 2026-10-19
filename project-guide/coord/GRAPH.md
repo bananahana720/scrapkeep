@@ -10,7 +10,7 @@ Goal: a finished-feeling Linux alpha by the end of wave 21, judged by Andrew's o
                   local coordinator (Andrew's PC)
           graph, admission to main, check-ins, escalations
         ┌──────────┬───────────┬───────────┬───────────┐
-   Gate + staging  Systems     World       Perf          ← cloud lanes (max 4), each a sub-coordinator
+   Gate + staging  Systems     World       Perf     Dressing   Life   ← cloud lanes (max 6), each a sub-coordinator
    stage/alpha-wN  gameplay,   Blender,    freezes,        that fans out its own agents and workflows
    red team        shell       art, GLBs   frame cost
         └──────── PRs + receipts + Wave board issue ────────┘   ← GitHub is the bus
@@ -69,6 +69,8 @@ Known base reds and cloud-only false fails are listed in [STATE.md](../handoff/S
 | Linker follow-through; FLASH-COMFORT | Systems | in progress |
 | Six landmarks soft-toy pass; sinkhole trestle (ruled option a); anchor-kit soft toy; sinkhole (24) and islands (19) greybox | World | in progress |
 | Crown (10) and pit (6) greybox; then the Sitting Kit page for the wave 21 playtest | Content | in progress |
+| Lived-in parks: per-park prop kits (12+ kinds, 2 to 3 variants, hero props up to about 20k tris with LODs), clustered vignettes, one PR per park | Dressing (cloud) | starting |
+| Ambient life: critters and locals per world, pooled and capped, flee combat, no enemy palette, sight and sound from one record | Life (cloud) | starting |
 | 4080 triangle-cost A/B for #154 and #143 (queue row 8); full-stem `--win-proof` export (row 7) | GPU bench | running / blocked on Music |
 
 Placeholders: 60 at 1a7a7299, down from 1,442 at wave 15; 59 of them are park greybox rows.
