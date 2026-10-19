@@ -41,17 +41,17 @@
    "bounds": {
     "min": [
      -2.8,
-     0.001,
+     0,
      -2.5763
     ],
     "max": [
      2.7985,
-     4.5706,
+     4.5697,
      2.5784
     ],
     "size": [
      5.5985,
-     4.5696,
+     4.5697,
      5.1547
     ]
    }
@@ -69,12 +69,12 @@
    "bounds": {
     "min": [
      -2.7848,
-     0.0104,
+     0,
      -2.5763
     ],
     "max": [
      2.7896,
-     4.5534,
+     4.543,
      2.5806
     ],
     "size": [
@@ -125,12 +125,12 @@
    "bounds": {
     "min": [
      -2.7995,
-     0.001,
+     0,
      -2.4728
     ],
     "max": [
      2.7992,
-     4.5787,
+     4.5777,
      2.4728
     ],
     "size": [
@@ -153,12 +153,12 @@
    "bounds": {
     "min": [
      -2.7904,
-     0.0163,
+     0,
      -2.4549
     ],
     "max": [
      2.7849,
-     4.5655,
+     4.5492,
      2.4979
     ],
     "size": [
@@ -209,12 +209,12 @@
    "bounds": {
     "min": [
      -2.8005,
-     0.001,
+     0,
      -2.636
     ],
     "max": [
      2.8001,
-     3.6,
+     3.599,
      2.6333
     ],
     "size": [
@@ -237,17 +237,17 @@
    "bounds": {
     "min": [
      -2.8032,
-     -0.0104,
+     0,
      -2.6411
     ],
     "max": [
      2.7856,
-     3.587,
+     3.5975,
      2.6307
     ],
     "size": [
      5.5888,
-     3.5974,
+     3.5975,
      5.2718
     ]
    }
@@ -260,23 +260,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant a LOD0 (10548 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
+    "notes": "billing_booth variant a LOD0 (10880 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -3.6735,
+     -3.6734,
      0,
-     -2.7119
+     -2.7182
     ],
     "max": [
-     3.6735,
-     4.1023,
-     2.7119
+     3.6734,
+     4.1016,
+     2.7182
     ],
     "size": [
-     7.347,
-     4.1023,
-     5.4238
+     7.3468,
+     4.1016,
+     5.4364
     ]
    }
   },
@@ -288,23 +288,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant a LOD1 (5274 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant a LOD1 (5440 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -3.6726,
      0,
-     -2.711
+     -2.7175
     ],
     "max": [
-     3.665,
-     4.1022,
-     2.7125
+     3.669,
+     4.1017,
+     2.7179
     ],
     "size": [
-     7.3376,
-     4.1022,
-     5.4235
+     7.3416,
+     4.1017,
+     5.4354
     ]
    }
   },
@@ -316,23 +316,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant a LOD2 (1554 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant a LOD2 (1604 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.6685,
-     0.0126,
-     -2.7094
+     -3.6757,
+     0,
+     -2.7188
     ],
     "max": [
-     3.673,
-     4.1024,
-     2.7078
+     3.6814,
+     4.0913,
+     2.7302
     ],
     "size": [
-     7.3415,
-     4.0898,
-     5.4172
+     7.3571,
+     4.0913,
+     5.449
     ]
    }
   },
@@ -344,23 +344,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant b LOD0 (10344 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
+    "notes": "billing_booth variant b LOD0 (11060 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -3.6737,
+     -3.6732,
      0,
-     -2.72
+     -2.7234
     ],
     "max": [
-     3.6737,
-     4.1018,
-     2.72
+     3.6732,
+     4.1029,
+     2.7234
     ],
     "size": [
-     7.3474,
-     4.1018,
-     5.44
+     7.3464,
+     4.1029,
+     5.4468
     ]
    }
   },
@@ -372,23 +372,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant b LOD1 (5172 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant b LOD1 (5530 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.6725,
-     0.0003,
-     -2.7188
+     -3.6723,
+     0,
+     -2.7229
     ],
     "max": [
-     3.6704,
-     4.1019,
-     2.7146
+     3.6696,
+     4.1027,
+     2.7186
     ],
     "size": [
-     7.3429,
-     4.1016,
-     5.4334
+     7.3419,
+     4.1027,
+     5.4415
     ]
    }
   },
@@ -400,23 +400,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant b LOD2 (1529 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant b LOD2 (1635 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.6665,
-     0.0009,
-     -2.7115
+     -3.6667,
+     0,
+     -2.7163
     ],
     "max": [
-     3.6831,
-     4.1023,
-     2.7266
+     3.6828,
+     4.1013,
+     2.7355
     ],
     "size": [
-     7.3496,
-     4.1014,
-     5.4381
+     7.3495,
+     4.1013,
+     5.4518
     ]
    }
   },
@@ -428,23 +428,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant c LOD0 (9032 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
+    "notes": "billing_booth variant c LOD0 (9752 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
      -3.7473,
      0,
-     -3.2138
+     -3.2142
     ],
     "max": [
      3.7473,
-     4.1019,
-     3.2138
+     4.1023,
+     3.2142
     ],
     "size": [
      7.4946,
-     4.1019,
-     6.4276
+     4.1023,
+     6.4284
     ]
    }
   },
@@ -456,23 +456,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant c LOD1 (4516 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant c LOD1 (4876 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.7466,
+     -3.7473,
      0,
-     -3.2131
+     -3.2141
     ],
     "max": [
-     3.7444,
-     4.1017,
-     3.2126
+     3.7442,
+     4.1023,
+     3.2138
     ],
     "size": [
-     7.491,
-     4.1017,
-     6.4257
+     7.4915,
+     4.1023,
+     6.4279
     ]
    }
   },
@@ -484,23 +484,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant c LOD2 (1354 tris): Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant c LOD2 (1462 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.7455,
-     0.0007,
-     -3.2072
+     -3.7411,
+     0,
+     -3.2067
     ],
     "max": [
-     3.7514,
-     4.1015,
-     3.2122
+     3.751,
+     4.1008,
+     3.2177
     ],
     "size": [
-     7.4969,
+     7.4921,
      4.1008,
-     6.4194
+     6.4244
     ]
    }
   },
@@ -512,23 +512,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant a LOD0 (13648 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; polished and baked."
+    "notes": "storm_station variant a LOD0 (16092 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -2.3186,
+     -2.33,
      0,
-     -2.186
+     -2.0125
     ],
     "max": [
-     2.3186,
-     6.2392,
-     2.186
+     2.33,
+     4.5169,
+     2.0125
     ],
     "size": [
-     4.6372,
-     6.2392,
-     4.372
+     4.66,
+     4.5169,
+     4.025
     ]
    }
   },
@@ -540,23 +540,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant a LOD1 (6824 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "storm_station variant a LOD1 (8046 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.3186,
+     -2.33,
      0,
-     -2.186
+     -2.0125
     ],
     "max": [
-     2.3187,
-     6.2392,
-     2.186
+     2.3299,
+     4.5169,
+     2.0125
     ],
     "size": [
-     4.6373,
-     6.2392,
-     4.372
+     4.6599,
+     4.5169,
+     4.025
     ]
    }
   },
@@ -568,23 +568,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant a LOD2 (2046 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "storm_station variant a LOD2 (2412 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.3168,
-     0.0,
-     -2.1849
+     -2.3318,
+     0,
+     -2.0104
     ],
     "max": [
-     2.3208,
-     6.2396,
-     2.1856
+     2.331,
+     4.5144,
+     2.0094
     ],
     "size": [
-     4.6376,
-     6.2396,
-     4.3705
+     4.6628,
+     4.5144,
+     4.0198
     ]
    }
   },
@@ -596,23 +596,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant b LOD0 (13704 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; polished and baked."
+    "notes": "storm_station variant b LOD0 (16264 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -2.3165,
+     -2.3296,
      0,
-     -2.1847
+     -2.021
     ],
     "max": [
-     2.3165,
-     6.2396,
-     2.1847
+     2.3296,
+     4.5185,
+     2.021
     ],
     "size": [
-     4.633,
-     6.2396,
-     4.3694
+     4.6592,
+     4.5185,
+     4.042
     ]
    }
   },
@@ -624,23 +624,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant b LOD1 (6852 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "storm_station variant b LOD1 (8132 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.3172,
-     -0.0003,
-     -2.1852
+     -2.3296,
+     0,
+     -2.021
     ],
     "max": [
-     2.3172,
-     6.2396,
-     2.1842
+     2.329,
+     4.5185,
+     2.021
     ],
     "size": [
-     4.6344,
-     6.2399,
-     4.3694
+     4.6586,
+     4.5185,
+     4.042
     ]
    }
   },
@@ -652,23 +652,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant b LOD2 (2056 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "storm_station variant b LOD2 (2438 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.3154,
-     0.0013,
-     -2.1837
+     -2.3268,
+     0,
+     -2.0291
     ],
     "max": [
-     2.3169,
-     6.2403,
-     2.1818
+     2.3273,
+     4.5186,
+     2.0281
     ],
     "size": [
-     4.6323,
-     6.239,
-     4.3655
+     4.6541,
+     4.5186,
+     4.0572
     ]
    }
   },
@@ -680,23 +680,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant c LOD0 (6368 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; polished and baked."
+    "notes": "storm_station variant c LOD0 (8752 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -2.5831,
+     -2.5839,
      0,
-     -2.1862
+     -2.0226
     ],
     "max": [
-     2.5831,
-     2.8984,
-     2.1862
+     2.5839,
+     2.927,
+     2.0226
     ],
     "size": [
-     5.1662,
-     2.8984,
-     4.3724
+     5.1678,
+     2.927,
+     4.0452
     ]
    }
   },
@@ -708,23 +708,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant c LOD1 (3184 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "storm_station variant c LOD1 (4376 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.5836,
+     -2.5837,
      0,
-     -2.1845
+     -2.0215
     ],
     "max": [
-     2.5828,
-     2.8985,
-     2.1862
+     2.5843,
+     2.9271,
+     2.0226
     ],
     "size": [
-     5.1664,
-     2.8985,
-     4.3707
+     5.168,
+     2.9271,
+     4.0441
     ]
    }
   },
@@ -736,23 +736,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "storm_station variant c LOD2 (954 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "storm_station variant c LOD2 (1312 tris): Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.5833,
-     0.0004,
-     -2.1841
+     -2.5853,
+     0,
+     -2.0237
     ],
     "max": [
-     2.5795,
-     2.8954,
-     2.1857
+     2.5865,
+     2.9106,
+     2.0261
     ],
     "size": [
-     5.1628,
-     2.895,
-     4.3698
+     5.1718,
+     2.9106,
+     4.0498
     ]
    }
   },
@@ -825,12 +825,12 @@
    "bounds": {
     "min": [
      -1.8404,
-     0.0151,
+     0,
      -0.4913
     ],
     "max": [
      1.8386,
-     1.3522,
+     1.3371,
      0.5019
     ],
     "size": [
@@ -909,12 +909,12 @@
    "bounds": {
     "min": [
      -2.0839,
-     0.0112,
+     0,
      -0.5189
     ],
     "max": [
      2.0972,
-     1.3635,
+     1.3523,
      0.4991
     ],
     "size": [
@@ -993,12 +993,12 @@
    "bounds": {
     "min": [
      -1.8441,
-     0.0169,
+     0,
      -0.5323
     ],
     "max": [
      1.8633,
-     1.3707,
+     1.3538,
      0.5339
     ],
     "size": [
@@ -1049,17 +1049,17 @@
    "bounds": {
     "min": [
      -1.6947,
-     0.0002,
+     0,
      -0.7093
     ],
     "max": [
      1.7049,
-     1.6624,
+     1.6621,
      0.7093
     ],
     "size": [
      3.3996,
-     1.6622,
+     1.6621,
      1.4186
     ]
    }
@@ -1077,12 +1077,12 @@
    "bounds": {
     "min": [
      -1.7451,
-     0.0009,
+     0,
      -0.696
     ],
     "max": [
      1.7007,
-     1.6218,
+     1.6209,
      0.6933
     ],
     "size": [
@@ -1133,12 +1133,12 @@
    "bounds": {
     "min": [
      -1.6668,
-     0.0043,
+     0,
      -0.7999
     ],
     "max": [
      1.6736,
-     1.162,
+     1.1577,
      0.7942
     ],
     "size": [
@@ -1161,12 +1161,12 @@
    "bounds": {
     "min": [
      -1.6803,
-     0.0173,
+     0,
      -0.8196
     ],
     "max": [
      1.6462,
-     1.1323,
+     1.115,
      0.8066
     ],
     "size": [
@@ -1217,12 +1217,12 @@
    "bounds": {
     "min": [
      -1.9418,
-     0.0009,
+     0,
      -0.8777
     ],
     "max": [
      1.9536,
-     1.1635,
+     1.1626,
      0.8818
     ],
     "size": [
@@ -1245,12 +1245,12 @@
    "bounds": {
     "min": [
      -1.9087,
-     0.0014,
+     0,
      -0.8585
     ],
     "max": [
      1.9442,
-     1.1564,
+     1.155,
      0.8865
     ],
     "size": [
@@ -1268,23 +1268,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant a LOD0 (2972 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; polished and baked."
+    "notes": "spool_shed variant a LOD0 (2980 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
      -1.8533,
      0,
-     -1.6827
+     -1.6825
     ],
     "max": [
      1.8533,
      2.9821,
-     1.6827
+     1.6825
     ],
     "size": [
      3.7066,
      2.9821,
-     3.3654
+     3.365
     ]
    }
   },
@@ -1296,23 +1296,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant a LOD1 (1486 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "spool_shed variant a LOD1 (1490 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -1.8545,
-     -0.0002,
-     -1.6855
+     0,
+     -1.6853
     ],
     "max": [
      1.8543,
-     2.972,
-     1.6825
+     2.9722,
+     1.6822
     ],
     "size": [
      3.7088,
      2.9722,
-     3.368
+     3.3675
     ]
    }
   },
@@ -1324,23 +1324,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant a LOD2 (446 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "spool_shed variant a LOD2 (444 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -1.8507,
-     -0.0057,
-     -1.669
+     0,
+     -1.6688
     ],
     "max": [
      1.8507,
-     2.9642,
-     1.6957
+     2.9699,
+     1.6956
     ],
     "size": [
      3.7014,
      2.9699,
-     3.3647
+     3.3644
     ]
    }
   },
@@ -1352,23 +1352,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant b LOD0 (2400 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; polished and baked."
+    "notes": "spool_shed variant b LOD0 (2980 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.8536,
+     -1.8537,
      0,
-     -1.3567
+     -1.4178
     ],
     "max": [
-     1.8536,
-     2.9816,
-     1.3567
+     1.8537,
+     2.9808,
+     1.4178
     ],
     "size": [
-     3.7072,
-     2.9816,
-     2.7134
+     3.7074,
+     2.9808,
+     2.8356
     ]
    }
   },
@@ -1380,23 +1380,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant b LOD1 (1200 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "spool_shed variant b LOD1 (1490 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.853,
-     0.0003,
-     -1.3542
+     -1.856,
+     0,
+     -1.431
     ],
     "max": [
-     1.852,
-     2.9668,
-     1.3514
+     1.8559,
+     2.9805,
+     1.4119
     ],
     "size": [
-     3.705,
-     2.9665,
-     2.7056
+     3.7119,
+     2.9805,
+     2.8429
     ]
    }
   },
@@ -1408,23 +1408,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant b LOD2 (360 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "spool_shed variant b LOD2 (444 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.8498,
-     -0.0056,
-     -1.3466
+     -1.8504,
+     0,
+     -1.4109
     ],
     "max": [
-     1.8499,
-     2.9664,
-     1.3496
+     1.8516,
+     2.9546,
+     1.3955
     ],
     "size": [
-     3.6997,
-     2.972,
-     2.6962
+     3.702,
+     2.9546,
+     2.8064
     ]
    }
   },
@@ -1469,7 +1469,7 @@
    "bounds": {
     "min": [
      -1.803,
-     -0.0,
+     0,
      -1.3388
     ],
     "max": [
@@ -1497,12 +1497,12 @@
    "bounds": {
     "min": [
      -1.8241,
-     -0.0058,
+     0,
      -1.3544
     ],
     "max": [
      1.8179,
-     2.1087,
+     2.1145,
      1.3351
     ],
     "size": [
@@ -1520,23 +1520,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant a LOD0 (2354 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; polished and baked."
+    "notes": "fulgurite variant a LOD0 (1576 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.0042,
+     -1.4262,
      0,
-     -1.001
+     -1.4369
     ],
     "max": [
-     1.0042,
-     1.3534,
-     1.001
+     1.4262,
+     0.661,
+     1.4369
     ],
     "size": [
-     2.0084,
-     1.3534,
-     2.002
+     2.8524,
+     0.661,
+     2.8738
     ]
    }
   },
@@ -1548,23 +1548,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant a LOD1 (1176 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fulgurite variant a LOD1 (788 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.0038,
+     -1.427,
      0,
-     -1.001
+     -1.4371
     ],
     "max": [
-     1.0042,
-     1.3534,
-     1.001
+     1.4349,
+     0.6588,
+     1.4259
     ],
     "size": [
-     2.008,
-     1.3534,
-     2.002
+     2.8619,
+     0.6588,
+     2.863
     ]
    }
   },
@@ -1576,23 +1576,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant a LOD2 (352 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fulgurite variant a LOD2 (236 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.0075,
-     0.0017,
-     -0.9913
+     -1.4298,
+     0,
+     -1.4303
     ],
     "max": [
-     0.9983,
-     1.3519,
-     0.9943
+     1.429,
+     0.6618,
+     1.4175
     ],
     "size": [
-     2.0058,
-     1.3502,
-     1.9856
+     2.8588,
+     0.6618,
+     2.8478
     ]
    }
   },
@@ -1604,23 +1604,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant b LOD0 (2532 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; polished and baked."
+    "notes": "fulgurite variant b LOD0 (1696 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.1526,
+     -1.426,
      0,
-     -1.3033
+     -1.5232
     ],
     "max": [
-     1.1526,
-     0.5707,
-     1.3033
+     1.426,
+     0.4018,
+     1.5232
     ],
     "size": [
-     2.3052,
-     0.5707,
-     2.6066
+     2.852,
+     0.4018,
+     3.0464
     ]
    }
   },
@@ -1632,23 +1632,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant b LOD1 (1266 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fulgurite variant b LOD1 (848 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.1537,
+     -1.426,
      0,
-     -1.3059
+     -1.5232
     ],
     "max": [
-     1.1547,
-     0.5738,
-     1.3007
+     1.4242,
+     0.4004,
+     1.5242
     ],
     "size": [
-     2.3084,
-     0.5738,
-     2.6066
+     2.8502,
+     0.4004,
+     3.0474
     ]
    }
   },
@@ -1660,23 +1660,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant b LOD2 (378 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fulgurite variant b LOD2 (254 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.1542,
-     -0.0128,
-     -1.3131
+     -1.4246,
+     0,
+     -1.5359
     ],
     "max": [
-     1.1579,
-     0.5766,
-     1.2893
+     1.3502,
+     0.3999,
+     1.5228
     ],
     "size": [
-     2.3121,
-     0.5894,
-     2.6024
+     2.7748,
+     0.3999,
+     3.0587
     ]
    }
   },
@@ -1688,23 +1688,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant c LOD0 (1788 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; polished and baked."
+    "notes": "fulgurite variant c LOD0 (1436 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.1035,
+     -1.4262,
      0,
-     -1.0741
+     -1.65
     ],
     "max": [
-     1.1035,
-     0.6813,
-     1.0741
+     1.4262,
+     0.3114,
+     1.65
     ],
     "size": [
-     2.207,
-     0.6813,
-     2.1482
+     2.8524,
+     0.3114,
+     3.3
     ]
    }
   },
@@ -1716,23 +1716,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant c LOD1 (894 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fulgurite variant c LOD1 (718 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.1035,
+     -1.4273,
      0,
-     -1.073
+     -1.6495
     ],
     "max": [
-     1.104,
-     0.6799,
-     1.0741
+     1.4351,
+     0.308,
+     1.6524
     ],
     "size": [
-     2.2075,
-     0.6799,
-     2.1471
+     2.8624,
+     0.308,
+     3.3019
     ]
    }
   },
@@ -1744,23 +1744,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "fulgurite variant c LOD2 (268 tris): Where lightning struck sand: pale fused glass tubes round a short iron survey stake. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fulgurite variant c LOD2 (214 tris): Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.0972,
-     0.0029,
-     -1.0693
+     -1.4199,
+     0,
+     -1.6438
     ],
     "max": [
-     1.1041,
-     0.6726,
-     1.0634
+     1.4276,
+     0.3149,
+     1.666
     ],
     "size": [
-     2.2013,
-     0.6697,
-     2.1327
+     2.8475,
+     0.3149,
+     3.3098
     ]
    }
   },
@@ -1805,12 +1805,12 @@
    "bounds": {
     "min": [
      -1.0598,
-     0.0002,
+     0,
      -0.801
     ],
     "max": [
      1.0566,
-     1.4732,
+     1.473,
      0.801
     ],
     "size": [
@@ -1833,12 +1833,12 @@
    "bounds": {
     "min": [
      -1.0579,
-     0.0034,
+     0,
      -0.8098
     ],
     "max": [
      1.0546,
-     1.4723,
+     1.4689,
      0.7847
     ],
     "size": [
@@ -1917,12 +1917,12 @@
    "bounds": {
     "min": [
      -1.2274,
-     -0.0019,
+     0,
      -1.1048
     ],
     "max": [
      1.2188,
-     0.941,
+     0.9429,
      1.1102
     ],
     "size": [
@@ -2001,12 +2001,12 @@
    "bounds": {
     "min": [
      -1.4017,
-     0.0052,
+     0,
      -1.0772
     ],
     "max": [
      1.4162,
-     1.3695,
+     1.3643,
      1.063
     ],
     "size": [
@@ -2057,17 +2057,17 @@
    "bounds": {
     "min": [
      -1.0657,
-     0.0006,
+     0,
      -0.9954
     ],
     "max": [
      1.0673,
-     1.5577,
+     1.5572,
      0.9947
     ],
     "size": [
      2.133,
-     1.5571,
+     1.5572,
      1.9901
     ]
    }
@@ -2085,12 +2085,12 @@
    "bounds": {
     "min": [
      -1.0598,
-     0.0095,
+     0,
      -1.0066
     ],
     "max": [
      1.0669,
-     1.5519,
+     1.5424,
      1.0051
     ],
     "size": [
@@ -2141,12 +2141,12 @@
    "bounds": {
     "min": [
      -1.472,
-     0.0006,
+     0,
      -0.9956
     ],
     "max": [
      1.4737,
-     0.4262,
+     0.4256,
      0.9953
     ],
     "size": [
@@ -2169,12 +2169,12 @@
    "bounds": {
     "min": [
      -1.4684,
-     0.0044,
+     0,
      -1.0039
     ],
     "max": [
      1.4744,
-     0.4288,
+     0.4244,
      1.0009
     ],
     "size": [
@@ -2253,17 +2253,17 @@
    "bounds": {
     "min": [
      -1.0639,
-     -0.0018,
+     0,
      -1.0009
     ],
     "max": [
      1.0761,
-     0.7322,
+     0.7339,
      0.9963
     ],
     "size": [
      2.14,
-     0.734,
+     0.7339,
      1.9972
     ]
    }
@@ -2337,17 +2337,17 @@
    "bounds": {
     "min": [
      -1.7358,
-     0.0077,
+     0,
      -0.2449
     ],
     "max": [
      1.7509,
-     1.2469,
+     1.2391,
      0.2484
     ],
     "size": [
      3.4867,
-     1.2392,
+     1.2391,
      0.4933
     ]
    }
@@ -2421,12 +2421,12 @@
    "bounds": {
     "min": [
      -1.9433,
-     0.009,
+     0,
      -0.2718
     ],
     "max": [
      1.9168,
-     1.2729,
+     1.2639,
      0.2941
     ],
     "size": [
@@ -2477,12 +2477,12 @@
    "bounds": {
     "min": [
      -2.1899,
-     -0.0018,
+     0,
      -0.5257
     ],
     "max": [
      2.1899,
-     1.2892,
+     1.291,
      0.5257
     ],
     "size": [
@@ -2505,12 +2505,12 @@
    "bounds": {
     "min": [
      -2.2019,
-     -0.0018,
+     0,
      -0.5084
     ],
     "max": [
      2.1824,
-     1.2792,
+     1.281,
      0.507
     ],
     "size": [
@@ -2561,12 +2561,12 @@
    "bounds": {
     "min": [
      -0.595,
-     -0.0001,
+     0,
      -0.4007
     ],
     "max": [
      0.5955,
-     1.5279,
+     1.528,
      0.4007
     ],
     "size": [
@@ -2589,12 +2589,12 @@
    "bounds": {
     "min": [
      -0.5805,
-     0.0053,
+     0,
      -0.4115
     ],
     "max": [
      0.6037,
-     1.5198,
+     1.5145,
      0.4017
     ],
     "size": [
@@ -2645,12 +2645,12 @@
    "bounds": {
     "min": [
      -0.7922,
-     0.0006,
+     0,
      -0.5917
     ],
     "max": [
      0.7908,
-     1.5277,
+     1.5271,
      0.5943
     ],
     "size": [
@@ -2673,12 +2673,12 @@
    "bounds": {
     "min": [
      -0.7969,
-     0.006,
+     0,
      -0.5733
     ],
     "max": [
      0.796,
-     1.4714,
+     1.4654,
      0.5964
     ],
     "size": [
@@ -2757,12 +2757,12 @@
    "bounds": {
     "min": [
      -1.0831,
-     -0.011,
+     0,
      -0.8812
     ],
     "max": [
      1.0695,
-     1.0289,
+     1.0399,
      0.8627
     ],
     "size": [
@@ -2841,12 +2841,12 @@
    "bounds": {
     "min": [
      -0.8822,
-     -0.0002,
+     0,
      -0.3045
     ],
     "max": [
      0.8816,
-     1.8213,
+     1.8215,
      0.2906
     ],
     "size": [
@@ -2925,17 +2925,17 @@
    "bounds": {
     "min": [
      -0.8991,
-     0.0003,
+     0,
      -1.1716
     ],
     "max": [
      0.897,
-     0.3069,
+     0.3065,
      1.1771
     ],
     "size": [
      1.7961,
-     0.3066,
+     0.3065,
      2.3487
     ]
    }
@@ -2981,12 +2981,12 @@
    "bounds": {
     "min": [
      -0.8743,
-     0.004,
+     0,
      -0.7402
     ],
     "max": [
      0.8743,
-     1.0484,
+     1.0444,
      0.7363
     ],
     "size": [
@@ -3009,12 +3009,12 @@
    "bounds": {
     "min": [
      -0.8784,
-     0.0034,
+     0,
      -0.7379
     ],
     "max": [
      0.8748,
-     1.0535,
+     1.0501,
      0.7372
     ],
     "size": [
@@ -3065,7 +3065,7 @@
    "bounds": {
     "min": [
      -0.8805,
-     -0.0,
+     0,
      -0.764
     ],
     "max": [
@@ -3093,17 +3093,17 @@
    "bounds": {
     "min": [
      -0.8608,
-     0.0033,
+     0,
      -0.7487
     ],
     "max": [
      0.8758,
-     1.7339,
+     1.7307,
      0.7604
     ],
     "size": [
      1.7366,
-     1.7306,
+     1.7307,
      1.5091
     ]
    }
@@ -3149,12 +3149,12 @@
    "bounds": {
     "min": [
      -0.7188,
-     0.0014,
+     0,
      -0.6689
     ],
     "max": [
      0.7188,
-     0.9768,
+     0.9754,
      0.6685
     ],
     "size": [
@@ -3177,12 +3177,12 @@
    "bounds": {
     "min": [
      -0.7038,
-     0.008,
+     0,
      -0.6703
     ],
     "max": [
      0.7036,
-     0.9575,
+     0.9495,
      0.6576
     ],
     "size": [
@@ -3233,12 +3233,12 @@
    "bounds": {
     "min": [
      -0.9503,
-     0.0002,
+     0,
      -0.9489
     ],
     "max": [
      0.9491,
-     1.648,
+     1.6478,
      0.9501
     ],
     "size": [
@@ -3261,17 +3261,17 @@
    "bounds": {
     "min": [
      -0.9565,
-     0.009,
+     0,
      -0.9372
     ],
     "max": [
      0.9522,
-     1.6264,
+     1.6175,
      0.9377
     ],
     "size": [
      1.9087,
-     1.6174,
+     1.6175,
      1.8749
     ]
    }
@@ -3317,12 +3317,12 @@
    "bounds": {
     "min": [
      -0.8771,
-     0.0021,
+     0,
      -0.8617
     ],
     "max": [
      0.8771,
-     2.3536,
+     2.3515,
      0.8617
     ],
     "size": [
@@ -3345,12 +3345,12 @@
    "bounds": {
     "min": [
      -0.8771,
-     -0.0063,
+     0,
      -0.8617
     ],
     "max": [
      0.8771,
-     2.3487,
+     2.355,
      0.8617
     ],
     "size": [
@@ -3401,12 +3401,12 @@
    "bounds": {
     "min": [
      -0.8241,
-     0.0006,
+     0,
      -0.8566
     ],
     "max": [
      0.8241,
-     1.6254,
+     1.6248,
      0.8566
     ],
     "size": [
@@ -3429,17 +3429,17 @@
    "bounds": {
     "min": [
      -0.8241,
-     -0.0062,
+     0,
      -0.8566
     ],
     "max": [
      0.8241,
-     1.6254,
+     1.6317,
      0.8566
     ],
     "size": [
      1.6482,
-     1.6316,
+     1.6317,
      1.7132
     ]
    }
@@ -3485,17 +3485,17 @@
    "bounds": {
     "min": [
      -1.1238,
-     0.0001,
+     0,
      -1.1249
     ],
     "max": [
      1.1216,
-     2.0692,
+     2.069,
      1.1249
     ],
     "size": [
      2.2454,
-     2.0691,
+     2.069,
      2.2498
     ]
    }
@@ -3513,17 +3513,17 @@
    "bounds": {
     "min": [
      -1.1347,
-     0.0079,
+     0,
      -1.1343
     ],
     "max": [
      1.1344,
-     2.0645,
+     2.0565,
      1.1194
     ],
     "size": [
      2.2691,
-     2.0566,
+     2.0565,
      2.2537
     ]
    }
@@ -3597,12 +3597,12 @@
    "bounds": {
     "min": [
      -1.0841,
-     -0.0019,
+     0,
      -0.4136
     ],
     "max": [
      1.077,
-     1.7821,
+     1.784,
      0.4118
     ],
     "size": [
@@ -3681,12 +3681,12 @@
    "bounds": {
     "min": [
      -0.6432,
-     0.0023,
+     0,
      -0.4038
     ],
     "max": [
      0.6429,
-     1.5449,
+     1.5426,
      0.4212
     ],
     "size": [
@@ -3765,17 +3765,17 @@
    "bounds": {
     "min": [
      -1.0242,
-     0.0022,
+     0,
      -0.7021
     ],
     "max": [
      1.0207,
-     0.5851,
+     0.5828,
      0.7015
     ],
     "size": [
      2.0449,
-     0.5829,
+     0.5828,
      1.4036
     ]
    }

@@ -63,7 +63,7 @@
     "sign",
     "tall"
    ],
-   "story": "Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift.",
+   "story": "Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift.",
    "variants": {
     "a": {
      "lod": [
@@ -72,11 +72,11 @@
       "res://assets/models/park/props/crown/billing_booth_a_lod2.glb"
      ],
      "tris": [
-      10548,
-      5274,
-      1554
+      10880,
+      5440,
+      1604
      ],
-     "radius": 4.493,
+     "radius": 4.5,
      "height": 4.102
     },
     "b": {
@@ -86,12 +86,12 @@
       "res://assets/models/park/props/crown/billing_booth_b_lod2.glb"
      ],
      "tris": [
-      10344,
-      5172,
-      1529
+      11060,
+      5530,
+      1635
      ],
-     "radius": 4.498,
-     "height": 4.102
+     "radius": 4.496,
+     "height": 4.103
     },
     "c": {
      "lod": [
@@ -100,11 +100,11 @@
       "res://assets/models/park/props/crown/billing_booth_c_lod2.glb"
      ],
      "tris": [
-      9032,
-      4516,
-      1354
+      9752,
+      4876,
+      1462
      ],
-     "radius": 4.545,
+     "radius": 4.544,
      "height": 4.102
     }
    }
@@ -125,12 +125,12 @@
       "res://assets/models/park/props/crown/storm_station_a_lod2.glb"
      ],
      "tris": [
-      13648,
-      6824,
-      2046
+      16092,
+      8046,
+      2412
      ],
-     "radius": 2.853,
-     "height": 6.239
+     "radius": 2.924,
+     "height": 4.517
     },
     "b": {
      "lod": [
@@ -139,12 +139,12 @@
       "res://assets/models/park/props/crown/storm_station_b_lod2.glb"
      ],
      "tris": [
-      13704,
-      6852,
-      2056
+      16264,
+      8132,
+      2438
      ],
-     "radius": 2.87,
-     "height": 6.24
+     "radius": 2.941,
+     "height": 4.519
     },
     "c": {
      "lod": [
@@ -153,12 +153,12 @@
       "res://assets/models/park/props/crown/storm_station_c_lod2.glb"
      ],
      "tris": [
-      6368,
-      3184,
-      954
+      8752,
+      4376,
+      1312
      ],
-     "radius": 3.074,
-     "height": 2.898
+     "radius": 3.128,
+     "height": 2.927
     }
    }
   },
@@ -278,9 +278,9 @@
       "res://assets/models/park/props/crown/spool_shed_a_lod2.glb"
      ],
      "tris": [
-      2972,
-      1486,
-      446
+      2980,
+      1490,
+      444
      ],
      "radius": 2.477,
      "height": 2.982
@@ -292,12 +292,12 @@
       "res://assets/models/park/props/crown/spool_shed_b_lod2.glb"
      ],
      "tris": [
-      2400,
-      1200,
-      360
+      2980,
+      1490,
+      444
      ],
-     "radius": 2.274,
-     "height": 2.982
+     "radius": 2.29,
+     "height": 2.981
     },
     "c": {
      "lod": [
@@ -318,7 +318,7 @@
   "fulgurite": {
    "class": "dress_prop",
    "tags": [],
-   "story": "Where lightning struck sand: pale fused glass tubes round a short iron survey stake.",
+   "story": "Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by.",
    "variants": {
     "a": {
      "lod": [
@@ -327,12 +327,12 @@
       "res://assets/models/park/props/crown/fulgurite_a_lod2.glb"
      ],
      "tris": [
-      2354,
-      1176,
-      352
+      1576,
+      788,
+      236
      ],
-     "radius": 1.014,
-     "height": 1.353
+     "radius": 1.605,
+     "height": 0.661
     },
     "b": {
      "lod": [
@@ -341,12 +341,12 @@
       "res://assets/models/park/props/crown/fulgurite_b_lod2.glb"
      ],
      "tris": [
-      2532,
-      1266,
-      378
+      1696,
+      848,
+      254
      ],
-     "radius": 1.495,
-     "height": 0.571
+     "radius": 1.793,
+     "height": 0.402
     },
     "c": {
      "lod": [
@@ -355,12 +355,12 @@
       "res://assets/models/park/props/crown/fulgurite_c_lod2.glb"
      ],
      "tris": [
-      1788,
-      894,
-      268
+      1436,
+      718,
+      214
      ],
-     "radius": 1.17,
-     "height": 0.681
+     "radius": 2.009,
+     "height": 0.311
     }
    }
   },

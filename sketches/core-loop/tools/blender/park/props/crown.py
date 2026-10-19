@@ -22,7 +22,11 @@ K = kit.Kit("crown")
 C.update({
     "ochre": "bd9b58", "ochre_dark": "8f7440", "ochre_pale": "d3b87c",
     "sage": "9aa58a", "sage_dark": "6f7d5f", "sage_pale": "b9c2a8",
-    "oxide": "9b513a", "oxide_dark": "74402f", "brass": "d6b256",
+    # Fleet iron oxide #9b513a / #74402f, sun-bleached toward canvas so abandoned Fleet gear
+    # reads pale and dead against red-orange sandstone, not as a live camp.
+    "oxide": mix("9b513a", "c9c1ae", 0.64), "oxide_dark": mix("74402f", "a79e83", 0.5),
+    # Stands in for BRASS #d9b44a, which the kit's hazard-colour test rejects (kit fix pending).
+    "brass": "d6b256",
     "glass": "cfc8b8", "glass_dark": "a9a291", "chalk": "ece6d2",
     "flower": "c8b865", "slate": "2f3634", "steam": "e4e1d6",
 })
@@ -198,7 +202,7 @@ def loom_frame(p, v, rng):
 
 
 @K.kind("billing_booth", hero=True, variants="abc", tags=["machine", "sign"],
-        story="Fleet signal crew's tally hut: iron oxide walls, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift.")
+        story="Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift.")
 def billing_booth(p, v, rng):
     W, D, H = 4.4, 3.4, 2.6
     # Foundation stones.
@@ -217,6 +221,13 @@ def billing_booth(p, v, rng):
             if v == "b" and s == 1 and i in (6, 7):
                 continue
             p.box((0.12, 0.22, H), (s * W / 2, y, 0.3 + H / 2), tint(C["oxide_dark"] if s == 1 else OXIDE, rng, 0.07), jit=0.004)
+    # Timber patches nailed over the weathered oxide; b and c have a stove-in panel.
+    for (px, py, pw, ph, pz) in ((-1.2, D / 2 + 0.09, 0.9, 0.7, 1.4), (1.3, D / 2 + 0.09, 0.6, 1.1, 0.9)):
+        p.box((pw, 0.07, ph), (px, py, pz), tint(C["timber_pale"], rng, 0.1), rot=(0, 0.04, 0.05), style="hard_smooth")
+    p.box((0.07, 1.1, 0.5), (W / 2 + 0.09, -0.4, 1.1), tint(C["timber"], rng, 0.1), rot=(0.05, 0, 0), style="hard_smooth")
+    if v in "bc":
+        p.box((0.1, 0.9, 1.1), (W / 2 + 0.05, 0.9, 0.75), C["timber_dark"], rot=(0.35, 0.2, 0), style="hard_smooth")
+        p.box((0.1, 0.12, 0.9), (W / 2 + 0.25, 1.1, 0.5), C["timber_grey"], rot=(0.3, 0.3, 0.2), style="hard_smooth")
     # Front wall with an open serving window, a shelf and the chalkboard to one side.
     for i in range(20):
         x = -W / 2 + 0.2 + i * (W - 0.4) / 19
@@ -235,8 +246,9 @@ def billing_booth(p, v, rng):
             t = (r + 0.5) / 7
             if v == "c" and s == -1 and r > 2:
                 continue
-            p.box((W + 0.5, 0.58, 0.09), (0, s * half * (1 - t), H + 0.28 + rise * t), tint(C["slate"], rng, 0.1),
-                  rot=(-s * th, 0, 0), jit=0.004)
+            sag_d = 0.3 * (1 - 0.5 * t) if (v == "b" and s == 1) else 0.0
+            p.box((W + 0.5, 0.58, 0.09), (0, s * half * (1 - t), H + 0.28 + rise * t - sag_d), tint(C["slate"], rng, 0.1),
+                  rot=(-s * th + (0.12 if sag_d else 0.0), 0, 0), jit=0.004)
     p.beam((-W / 2 - 0.25, 0, H + 0.28 + rise), (W / 2 + 0.25, 0, H + 0.28 + rise), 0.18, CHAR)
     p.cyl(0.14, 0.8, (-1.4, 0.9, H + 1.1), CHAR, segs=8, r2=0.12, style="hard_smooth")
     # Chalkboard on posts at the right of the window: slate with two columns of tally strokes.
@@ -295,24 +307,28 @@ def billing_booth(p, v, rng):
         story="Fleet weather post on a squat plinth: cup anemometer, and a big barometer dial whose needle sits on STORM: YES.")
 def storm_station(p, v, rng):
     # Squat stepped base with a locker.
-    p.cyl(2.2, 0.5, (0, 0, 0.25), C["concrete"], segs=14, style="hard_smooth", jit=0.004)
-    p.cyl(1.7, 0.4, (0, 0, 0.7), C["concrete_light"], segs=14, style="hard_smooth", jit=0.004)
-    p.box((2.4, 1.6, 1.5), (0.3, 0.3, 1.65), tint(OXIDE, rng, 0.05), style="hard_smooth", jit=0.004)
-    p.box((2.5, 1.7, 0.16), (0.3, 0.3, 2.45), CHAR, style="hard_smooth", jit=0.004)
-    p.box((0.9, 0.06, 1.1), (0.0, -0.58, 1.6), tint(C["oxide_dark"], rng), style="hard_smooth", jit=0.004)  # locker door
-    p.box((0.16, 0.08, 0.22), (0.35, -0.64, 1.6), BRASS, style="hard_smooth", jit=0.004) if v != "c" else None  # the one brass tag
-    # Stout mast, 3 m: a squat tower, thick so it reads as an instrument, not a pole.
-    mast_h = 3.3
+    # Irregular heap of fieldstones as a footing (no regular pad).
+    for k, (x, y, r, sq) in enumerate(((0.2, 0.2, 1.1, 0.5), (-1.4, 0.0, 0.7, 0.55), (1.6, 0.5, 0.75, 0.5), (0.5, -1.3, 0.7, 0.45),
+                                         (-0.8, 1.2, 0.65, 0.5), (1.9, -0.9, 0.5, 0.55), (-1.6, -1.1, 0.55, 0.5), (0.3, 1.6, 0.55, 0.5))):
+        p.ico(r, (x, y, r * sq * 0.9), tint(C["concrete"] if k % 2 else C["sandstone_pale"], rng, 0.08), scale=(1.0, 0.85, sq),
+              rot=(0, 0, rng.uniform(0, 3)), subdiv=1, style="round")
+    p.box((2.4, 1.6, 1.3), (0.3, 0.3, 1.25), tint(OXIDE, rng, 0.05), style="hard_smooth", jit=0.004)
+    p.box((2.5, 1.7, 0.16), (0.3, 0.3, 1.98), CHAR, style="hard_smooth", jit=0.004)
+    p.box((1.0, 0.07, 0.6), (0.9, -0.52, 1.0), tint(C["timber_pale"], rng, 0.1), rot=(0, 0, 0.06), style="hard_smooth")  # timber patch
+    p.box((0.9, 0.06, 1.0), (-0.3, -0.58, 1.2), tint(C["oxide_dark"], rng), rot=((0.0 if v == "a" else 0.3), 0, 0), style="hard_smooth", jit=0.004)  # locker door, stove in on b and c
+    p.box((0.16, 0.08, 0.22), (0.35, -0.64, 1.2), BRASS, style="hard_smooth", jit=0.004) if v != "c" else None  # the one brass tag
+    # Stout short mast (about 4.5 m overall): a weather post with a cup anemometer and a wind vane.
+    mast_h = 2.0
     mx, my = -0.5, 0.5
-    tip = (mx, my, 2.5 + mast_h)
+    tip = (mx, my, 2.05 + mast_h)
     if v == "c":
         # Mast snapped and lying across the plinth.
         p.cyl(0.2, 2.8, (-1.4, -0.3, 0.8), CHAR, segs=10, rot=(0, math.pi / 2 - 0.1, 0.5), style="hard_smooth", jit=0.004)
     else:
-        p.cyl(0.24, mast_h, (mx, my, 2.5 + mast_h / 2), CHAR, segs=10, r2=0.18, style="hard_smooth", jit=0.004)
-        for k in range(4):
-            a = TAU * k / 4 + 0.4
-            p.beam((mx + 0.7 * math.cos(a), my + 0.7 * math.sin(a), 2.5), (mx, my, 4.2), 0.14, C["iron"], h=0.12)
+        p.cyl(0.24, mast_h, (mx, my, 2.05 + mast_h / 2), CHAR, segs=10, r2=0.18, style="hard_smooth", jit=0.004)
+        for k in range(3):
+            a = TAU * k / 3 + 0.4
+            p.beam((mx + 0.6 * math.cos(a), my + 0.6 * math.sin(a), 2.05), (mx, my, 2.9), 0.14, C["iron"], h=0.12)
         # Anemometer: hub and three cup arms (static), cups are open half-spheres.
         p.cyl(0.2, 0.18, (mx, my, tip[2] + 0.1), C["iron_light"], segs=10, style="hard_smooth", jit=0.004)
         ncup = 3 if v == "a" else 2
@@ -322,6 +338,12 @@ def storm_station(p, v, rng):
             p.rod((mx, my, tip[2] + 0.1), (ex, ey, tip[2] + 0.1), 0.06, C["iron_light"])
             p.uv(0.3, (ex, ey, tip[2] + 0.2), C["canvas"], scale=(1, 1, 0.8), u=10, v=6, style="round")
             p.ring(0.18, 0.3, 0.06, (ex, ey, tip[2] + 0.34), C["canvas_dark"], segs=10)
+        # Wind vane: a short arrow on the mast with a broad flat tail, bent on b.
+        vz = 3.3
+        bend = 0.0 if v == "a" else 0.5
+        p.rod((mx + 0.8, my - 0.3, vz), (mx - 0.8, my + 0.3, vz - bend * 0.4), 0.06, C["iron_light"])
+        p.prism([(0, 0), (0.7, 0.35), (0.7, -0.35)], 0.05, (mx + 0.95, my - 0.36, vz), C["canvas_dark"], rot=(0, 0, 0.45), style="flat")
+        p.prism([(0, 0), (0.6, 0.4), (0.6, -0.4), (0.0, 0.0)], 0.05, (mx - 1.0, my + 0.35, vz - bend * 0.4), C["canvas"], rot=(0, 0, 0.45 + math.pi), style="flat")
         if v == "b":
             p.uv(0.3, (mx + 1.2, my - 1.4, 0.35), C["canvas"], scale=(1, 1, 0.8), u=10, v=6, style="round")  # fallen cup
     # Barometer dial on a front stand: pale face, ticks, needle on STORM end; "YES" slab beneath.
@@ -434,7 +456,7 @@ def spool_shed(p, v, rng):
     for x, y in posts:
         p.cyl(0.3, 0.1, (x, y, 0.05), C["concrete"], segs=6, style="flat")  # foot stones
     for k, (x, y) in enumerate(posts):
-        hh = H if not (v == "b" and k == 1) else 0.9
+        hh = H if not (v == "b" and k == 1) else 1.7
         p.beam((x, y, 0.0), (x + (0.0 if v == "b" and k == 1 else 0), y, hh), 0.2, tint(C["timber_dark"], rng), h=0.2)
     if v == "c":
         # Canopy has come down onto the spool.
@@ -448,11 +470,14 @@ def spool_shed(p, v, rng):
         for s in (-1, 1):
             for r in range(4):
                 t = (r + 0.5) / 4
-                if v == "b" and s == 1 and r in (2, 3):
-                    continue
-                p.box((3.7, 0.55, 0.09), (0, s * 1.25 * (1 - t), H + 0.1 + rise * t), tint(C["timber_grey"], rng, 0.1),
+                dz_ = -0.3 * (1 - t) if v == "b" and s == 1 else 0.0  # one slope sags toward the ground
+                p.box((3.7, 0.55, 0.09), (0, s * 1.25 * (1 - t), H + 0.1 + rise * t + dz_), tint(C["timber_grey"], rng, 0.1),
                       rot=(-s * th, 0, 0), style="hard", jit=0.005)
-        p.beam((-1.85, 0, H + 0.1 + rise), (1.85, 0, H + 0.1 + rise), 0.16, C["timber_dark"])
+        p.beam((-1.85, 0, H + 0.1 + rise), (1.85, 0, H + 0.1 + rise - (0.1 if v == "b" else 0)), 0.16, C["timber_dark"])
+        for gx in (-1.8, 1.8):  # gable end boards: the roof reads as a two-sided gable from any side
+            p.prism([(0.0, -1.2), (0.0, 1.2), (-rise, 0.0)], 0.08, (gx, 0, H + 0.1), tint(C["timber_grey"], rng, 0.1), rot=(0, math.pi / 2, 0), style="flat")
+        if v == "b":
+            p.ico(0.7, (0.5, 0.8, H + 0.55), C["canvas_dark"], scale=(2.0, 1.2, 0.12), rot=(-0.4, 0, 0.1), style="soft")  # canvas fly slung over the sag
     # The spool lying flat: two charcoal flanges and a wound wire barrel.
     sx, sy = -0.1, 0.0
     p.cyl(0.95, 0.12, (sx, sy, 0.1), CHAR, segs=14, style="hard")
@@ -473,33 +498,48 @@ def spool_shed(p, v, rng):
 
 
 @K.kind("fulgurite", tags=[], variants="abc",
-        story="Where lightning struck sand: pale fused glass tubes round a short iron survey stake.")
+        story="Where lightning struck sand: pale glass tubes branching half-buried in a scorched sand scar, a bent rod lying by.")
 def fulgurite(p, v, rng):
     glass, gd = C["glass"], C["glass_dark"]
-    p.cyl(1.0, 0.1, (0, 0, 0.05), C["soil"], segs=12, style="hard")  # scorched ground disc
-    p.cyl(0.65, 0.12, (0, 0, 0.11), C["sandstone_dark"], segs=10, style="hard")
-    n = {"a": 6, "b": 5, "c": 5}[v]
-    for k in range(n):
-        a = TAU * k / n + rng.uniform(-0.2, 0.2)
-        r0 = 0.15 + 0.15 * (k % 2)
-        ln = rng.uniform(0.5, 0.95)
-        up = rng.uniform(0.15, 0.55) if v != "b" else rng.uniform(0.0, 0.15)
-        a0 = (r0 * math.cos(a), r0 * math.sin(a), 0.1)
-        a1 = ((r0 + ln) * math.cos(a), (r0 + ln) * math.sin(a), 0.1 + up)
-        p.rod(a0, a1, 0.1, tint(glass, rng, 0.06), segs=6, r2=0.04, style="flat")
-        mid = tuple((a0[i] + a1[i]) / 2 for i in range(3))
-        p.ico(0.11, (mid[0], mid[1], mid[2] + 0.02), gd, scale=(1.2, 0.8, 0.8), subdiv=0, style="round")
-        if v == "b":
-            p.ico(0.12, (a1[0] * 1.3, a1[1] * 1.3, 0.1), glass, scale=(1.3, 0.8, 0.5), rot=(0, 0, a), subdiv=0, style="round")
+    # Sand scar: a few overlapping flat irregular patches, no disc.
+    for k, (x, y, r, a) in enumerate(((0.0, 0.0, 1.0, 0.4), (0.9, 0.5, 0.65, 1.7), (-0.8, -0.4, 0.7, 2.6), (0.3, -0.9, 0.55, 0.9))):
+        p.ico(r, (x, y, 0.04), C["sandstone_dark"] if k % 2 else C["soil"], scale=(1.3, 0.8, 0.08), rot=(0, 0, a), style="round", subdiv=0)
+
+    def tube(x, y, ang, length, r, up, depth=0.0, turns=5):
+        """A meandering glass tube; `depth` sinks it into the sand. Returns points for branching."""
+        pts = [(x, y, 0.05 + up * 0.0)]
+        for t in range(turns):
+            ang += rng.uniform(-0.7, 0.7)
+            seg = length / turns * rng.uniform(0.7, 1.3)
+            x, y = x + seg * math.cos(ang), y + seg * math.sin(ang)
+            pts.append((x, y, max(0.02, 0.08 + up * rng.uniform(0.2, 1.0) - depth)))
+        for k, (a, b) in enumerate(zip(pts, pts[1:])):
+            rr = r * (1.0 - 0.12 * k)
+            p.rod(a, b, rr, tint(glass if k % 2 else gd, rng, 0.06), segs=5, r2=rr * 0.85, style="flat")
+        return pts
+
+    rng_up = {"a": 0.5, "b": 0.25, "c": 0.12}[v]
+    main = tube(-0.9, -0.2, 0.3, 2.0, 0.1, rng_up, turns=6)
+    for k in (2, 4):
+        a0 = main[k]
+        tube(a0[0], a0[1], rng.uniform(0, math.tau), 0.8, 0.065, rng_up * 0.7, turns=3)
+    if v != "c":
+        second = tube(0.4, 0.7, 4.0, 1.4, 0.08, rng_up, turns=4)
+        tube(second[2][0], second[2][1], 2.0, 0.6, 0.05, rng_up * 0.6, turns=2)
+    # Fused lumps at the strike point and a few loose glass pieces.
+    p.ico(0.2, (main[0][0], main[0][1], 0.12), gd, scale=(1.4, 0.9, 0.6), rot=(0, 0, 0.5), subdiv=0, style="round")
+    for k in range(3 if v != "a" else 2):
+        p.ico(0.1, (rng.uniform(-0.5, 1.0), rng.uniform(-1.0, 0.1), 0.07), glass, scale=(1.5, 0.8, 0.5),
+              rot=(0, 0, rng.uniform(0, 3)), subdiv=0, style="round")
+    # A short bent lightning rod lying beside them (a and b); c has only its stub.
     if v == "a":
-        p.rod((0, 0, 0.05), (0, 0, 1.15), 0.09, C["iron"], r2=0.06, style="hard")
-        p.ico(0.2, (0, 0, 1.2), C["iron_light"], scale=(1, 1, 0.8), style="round")
+        p.rod((-0.4, 1.0, 0.1), (0.6, 1.3, 0.12), 0.07, C["iron"], style="flat")
+        p.rod((0.6, 1.3, 0.12), (1.1, 1.0, 0.1), 0.07, C["iron"], style="flat")
     elif v == "b":
-        p.rod((0, 0, 0.05), (0.2, 0.0, 0.5), 0.09, C["iron"], r2=0.07)
-        p.rod((0.2, 0, 0.5), (0.85, 0.15, 0.2), 0.08, C["iron"], r2=0.06)  # bent over
+        p.rod((-0.2, 1.1, 0.1), (0.5, 1.2, 0.12), 0.07, C["rust"], style="flat")
+        p.rod((0.5, 1.2, 0.12), (0.8, 0.8, 0.1), 0.07, C["rust"], style="flat")
     else:
-        p.rod((0.1, 0.3, 0.1), (1.2, 0.45, 0.15), 0.07, C["rust"], r2=0.05)  # stake fallen flat
-    p.ico(0.2, (0.0, 0.0, 0.3), gd, scale=(1.0, 1.0, 0.9), subdiv=1, style="round")  # fused lump
+        p.rod((0.3, 1.2, 0.08), (0.8, 1.2, 0.1), 0.06, C["rust"], style="flat")
 
 
 @K.kind("watch_stool", tags=["soft"], variants="abc",
