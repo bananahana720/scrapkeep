@@ -9,11 +9,14 @@ import { fileURLToPath } from "node:url";
 // A brief is a JSON spec (format: sketches/core-loop/design-v3/sound/briefs/README.md).
 //   FILE_MISSING   a pick or stem file that is not on disk under its root
 //   HASH_MISMATCH  sha256 differs from the spec's, or from STEMS.sha256 for anything under assets/music_ace
-//   LENGTH_RAW     a use-span runs past the tempo-stretched pick (native_seconds * native_bpm / take_bpm),
-//                  or the file's ffprobe length differs from native_seconds by more than 0.25 s
+//   LENGTH_RAW     a non-guide use-span reads past the tempo-stretched pick (native_seconds * native_bpm / take_bpm):
+//                  pick_from_s + (to_s - from_s) > stretched + tolerance_s; or the file's ffprobe length
+//                  differs from native_seconds by more than 0.25 s. A guide span is exempt, loop lets a span run past.
+//   PICK_FROM_MISSING  a non-guide, non-loop use-span with from_s != 0 and no pick_from_s (the length check would guess)
 //   OFF_PHRASE     an edit or span start/end more than tolerance_s from the nearest phrase boundary
 //   SECTIONS_SUM   sections do not chain from 0 to `seconds`, or the journey skips/repeats/reorders one
-//   SPAN_HOLE      a part uncovered for more than one bar (a mute span covers; "guide only" in a note exempts)
+//   SPAN_HOLE      a part uncovered for more than one bar (a mute span covers; "guide only" in a note exempts;
+//                  gap: true on a span of that part marks its holes as deliberate)
 //   BAD_SPEC       a required field is missing or malformed
 //   unchecked      a file whose root is unavailable (or no ffprobe): reported, never a pass
 // Run: node scripts/brief-check.mjs [--dir <specs dir>] [--strict] [--json]
@@ -113,7 +116,7 @@ function validate(spec) {
   if (!p || typeof p.file !== "string" || !["repo", "music_direction", "pack"].includes(p.root)) missing.push("pick.file/root");
   else for (const f of ["native_bpm", "native_seconds"]) if (!num(p[f])) missing.push(`pick.${f}`);
   for (const [i, s] of spec.sources.entries()) {
-    if (!["drums", "bass", "other", "guide"].includes(s.part) || !["use", "mute"].includes(s.action) || !num(s.from_s) || !num(s.to_s))
+    if (!["drums", "bass", "other", "guide"].includes(s.part) || !["use", "mute"].includes(s.action) || !num(s.from_s) || !num(s.to_s) || (s.pick_from_s !== undefined && !num(s.pick_from_s)))
       missing.push(`sources[${i}]`);
   }
   return missing;
@@ -172,11 +175,16 @@ export function checkSpec(rawSpec, options = {}) {
     }
   }
 
-  // Length after tempo stretch.
+  // Length after tempo stretch. The span reads pick material from pick_from_s (default from_s) for to_s - from_s seconds.
   spec.sources.forEach((s, i) => {
-    if (s.action !== "use" || s.loop || s.gap) return;
-    if (s.to_s > stretched + tol)
-      find("LENGTH_RAW", `sources[${i}].to_s`, `${s.to_s} s runs past the stretched pick ${stretched.toFixed(3)} s (${pick.native_seconds} s at ${pick.native_bpm} bpm played at ${spec.take_bpm})`);
+    if (s.action !== "use" || s.part === "guide" || s.loop) return;
+    if (!num(s.pick_from_s) && Math.abs(s.from_s) > EPS) {
+      find("PICK_FROM_MISSING", `sources[${i}].pick_from_s`, `use span starts at ${s.from_s} s in the take; say where in the pick it starts (pick_from_s)`);
+    }
+    const pickFrom = num(s.pick_from_s) ? s.pick_from_s : s.from_s;
+    const reach = pickFrom + (s.to_s - s.from_s);
+    if (reach > stretched + tol)
+      find("LENGTH_RAW", `sources[${i}].to_s`, `reads the pick to ${reach.toFixed(3)} s (from ${pickFrom} s for ${(s.to_s - s.from_s).toFixed(3)} s), past the stretched pick ${stretched.toFixed(3)} s (${pick.native_seconds} s at ${pick.native_bpm} bpm played at ${spec.take_bpm})`);
   });
 
   // Phrase grid.
@@ -210,6 +218,7 @@ export function checkSpec(rawSpec, options = {}) {
     const bar = barSeconds(spec);
     const parts = new Set(["drums", "bass", "other", ...spec.sources.map((s) => s.part)]);
     for (const part of parts) {
+      if (spec.sources.some((s) => s.part === part && s.gap)) continue;
       const spans = spec.sources.filter((s) => s.part === part).map((s) => [s.from_s, s.to_s]).sort((a, b) => a[0] - b[0]);
       let at = 0;
       for (const [from, to] of spans) {

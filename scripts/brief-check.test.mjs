@@ -75,7 +75,7 @@ test("phrase tolerance edges: on the boundary, within tolerance, just outside", 
   assert.ok(codes(checkSpec(s)).includes("OFF_PHRASE"), "a span end is checked too");
 });
 
-test("length is compared after tempo stretch, and loop or gap lets a span run past", () => {
+test("length is compared after tempo stretch, loop lets a span run past, gap does not", () => {
   const spec = clone(cleanSpec());
   spec.take_bpm = 128;
   spec.pick.native_bpm = 120;
@@ -87,7 +87,7 @@ test("length is compared after tempo stretch, and loop or gap lets a span run pa
   spec.sources[0].loop = true;
   assert.ok(!codes(checkSpec(spec)).includes("LENGTH_RAW"));
   spec.sources[0] = { part: "drums", from_s: 0, to_s: 5.625, action: "use", gap: true };
-  assert.ok(!codes(checkSpec(spec)).includes("LENGTH_RAW"));
+  assert.ok(codes(checkSpec(spec)).includes("LENGTH_RAW"), "gap no longer skips the length check");
 });
 
 test("an unavailable root reports unchecked, never a pass", () => {
@@ -173,4 +173,58 @@ test("a spec missing a required field reports BAD_SPEC", () => {
   const s = clone(cleanSpec());
   delete s.take_bpm;
   assert.deepEqual(codes(checkSpec(s)), ["BAD_SPEC"]);
+});
+
+// Offset stems: stretched pick 3.75 s (120 bpm pick at 128), 8 s take, one bar is 1.875 s.
+const offsetSpec = (src) => {
+  const s = clone(cleanSpec());
+  s.take_bpm = 128;
+  s.pick.native_bpm = 120;
+  s.phrase_bars = 1;
+  s.edits = [];
+  s.sources = [src];
+  return s;
+};
+const lengthFindings = (s) => checkSpec(s).findings.filter((f) => f.code === "LENGTH_RAW" || f.code === "PICK_FROM_MISSING");
+
+test("an offset stem is flagged when gap: true is the only thing hiding its length", () => {
+  const src = { part: "drums", from_s: 3.75, to_s: 7.5, action: "use", pick_from_s: 3, gap: true }; // reads 3 + 3.75 = 6.75 of 3.75
+  assert.deepEqual(lengthFindings(offsetSpec(src)).map((f) => f.code), ["LENGTH_RAW"]);
+  const { pick_from_s, ...noPick } = src;
+  assert.deepEqual(lengthFindings(offsetSpec(noPick)).map((f) => f.code), ["PICK_FROM_MISSING", "LENGTH_RAW"], "with gap and no pick_from_s it is still live");
+});
+
+test("an offset stem with a correct pick_from_s passes, one over the stretched pick by pick_from_s flags", () => {
+  const ok = { part: "drums", from_s: 3.75, to_s: 7.5, action: "use", pick_from_s: 0 };
+  assert.deepEqual(lengthFindings(offsetSpec(ok)), []);
+  const late = { ...ok, pick_from_s: 0.5 }; // 0.5 + 3.75 = 4.25 > 3.75 + 0.12
+  const f = lengthFindings(offsetSpec(late));
+  assert.equal(f.length, 1);
+  assert.equal(f[0].code, "LENGTH_RAW");
+  assert.equal(lengthFindings(offsetSpec({ ...ok, pick_from_s: 0.1 })).length, 0, "within tolerance");
+  assert.equal(lengthFindings(offsetSpec({ ...ok, loop: true, pick_from_s: 0.5 })).length, 0, "loop runs past");
+});
+
+test("a guide span is exempt from the length check", () => {
+  const src = { part: "guide", from_s: 0, to_s: 8, action: "use", note: "guide only" };
+  assert.deepEqual(lengthFindings(offsetSpec(src)), []);
+  assert.deepEqual(lengthFindings(offsetSpec({ ...src, from_s: 2 })), [], "no PICK_FROM_MISSING for a guide");
+});
+
+test("PICK_FROM_MISSING: a use span from_s != 0 without pick_from_s; mute and from_s 0 are exempt", () => {
+  const miss = { part: "drums", from_s: 1, to_s: 2, action: "use" }; // default pick_from_s = from_s reaches 2, inside the pick
+  const f = lengthFindings(offsetSpec(miss));
+  assert.deepEqual(f.map((x) => x.code), ["PICK_FROM_MISSING"]);
+  assert.equal(f[0].field, "sources[0].pick_from_s");
+  assert.deepEqual(lengthFindings(offsetSpec({ ...miss, action: "mute" })), []);
+  assert.deepEqual(lengthFindings(offsetSpec({ ...miss, from_s: 0, to_s: 2 })), []);
+  assert.deepEqual(codes(checkSpec(offsetSpec({ ...miss, pick_from_s: "x" }))), ["BAD_SPEC"]);
+});
+
+test("gap: true marks a deliberate hole for SPAN_HOLE only", () => {
+  const s = clone(cleanSpec());
+  s.sources[3].to_s = 4; // other uncovered 4 to 8, over a bar
+  assert.equal(checkSpec(s).findings.filter((x) => x.code === "SPAN_HOLE").length, 1);
+  s.sources[3].gap = true;
+  assert.equal(checkSpec(s).findings.filter((x) => x.code === "SPAN_HOLE").length, 0);
 });
