@@ -48,11 +48,17 @@
       "draws": 5,
       "set_by": "2026-10-18 model polish (tools/blender/POLISH.md; Andrew 00:04Z asked for denser, baked models while frames hold): tris 4600 to 12000 and verts 3100 to 8100 at the old ratio, pending one 4080 frame check on the densest fight; draws unchanged; earlier basis: pilot_sable_anim (4,592 T), pilot_kest_anim (3,098 V), kest and sable (5 draws); old band 400-4,800"
     },
+    "ambient": {
+      "tris": 6000,
+      "verts": 13800,
+      "draws": 1,
+      "set_by": "2026-10-19 ambient life lane (#149): 800–6,000 tris per critter or local, one draw; verts 2.3 per triangle, the prop and clutter ratio; skinned and welded, so real models sit near 0.5; first member dusk_quail (2,784 / 1,434 / 1); the per-kind bands live in src/core/ambient_kinds.gd"
+    },
     "scenery": {
-      "tris": 120,
-      "verts": 110,
+      "tris": 1500,
+      "verts": 3000,
       "draws": 2,
-      "set_by": "water_edges (112 / 106 / 2) and its 120 T / 180 V / 2 D ceiling; dam carries an exception"
+      "set_by": "PR #143 soft-toy polish of Highdraft cloud, mesa and thermal air (Andrew 00:40Z 18 Oct soft toy ruling), coordinator approval 05:41Z 18 Oct: tris 120 to 1500 and verts 110 to 3000, draws stay 2, no new surfaces or materials; largest polished member sky_cloud 896 T / 450 V, sky_mesa 836 T / 566 V (recipe and test caps hold them at 1000 / 1000 and thermal_air at 800 / 500); the headroom also covers the other scenery members (trail cosmetics, lamp modules), so a trail over 120 T still needs its own card per design-v3/CUSTOMIZE.md; earlier basis: water_edges (112 / 106 / 2) and its 120 T / 180 V / 2 D ceiling; dam carries an exception"
     },
     "landform": {
       "tris": 8000,

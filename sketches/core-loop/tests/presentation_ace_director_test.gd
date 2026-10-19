@@ -71,8 +71,8 @@ func _process(_delta: float) -> bool:
 			if _audio.sound_ready and _audio.ace != null and _audio.ace.mode == "menu":
 				_step = 1
 		1:
-			# The title's worker result has already been adopted by the menu.
-			var preloaded: bool = _audio.ace.ready() and _audio.ace.manifest.get("theme") == "title" \
+			# The title's worker result has already been adopted by the menu. With the title_a pack on disk the title row resolves to it (audio.gd), so any title variant counts.
+			var preloaded: bool = _audio.ace.ready() and _audio.ace.manifest.get("theme") in ["title", "title_a", "title_b"] \
 				and _audio._ace_loaded_from == _audio._ace_from and _audio._ace_task == -1
 			_events.run_started.emit("arc_caster")
 			_step = 2

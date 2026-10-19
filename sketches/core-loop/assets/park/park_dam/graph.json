@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "898862cc1e84aeb9e5e64b3928bb6d0171639f8a23202545b648340e58949d99",
+  "bake_sha256": "cb7334ea1d2a95dafeeb25f21a166f1dd6d6e7aea4f1189908acae9656a10e7d",
   "beacon_ok": true,
   "breaches": [],
   "bytes": 1312253,
@@ -13,15 +13,15 @@
     "sight_ok": 8462,
     "under": 0
   },
-  "full_visit_m": 2374,
-  "full_visit_ratio": "1.756",
+  "full_visit_m": 2439,
+  "full_visit_ratio": "1.805",
   "graph_sha256": "dc1882e78f465c8310492d5fd13b8587c6db68db053c9846a81aa6ae0c9e560e",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2375,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "c97c68b442d08cb1969dd3814930e0d5cbde5da06ddc5d0493112aee37447dc4",
+  "park_sha256": "f739ad32afa56c27e2943ef06b83d0b35c1e4a8f85aafdff13fdcb33cb97fd0e",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,14 +52,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 410,
-      "d_spawn": 1065,
-      "detour_m": 307,
+      "d_landmark": 367,
+      "d_spawn": 1161,
+      "detour_m": 403,
       "door_at": [
         -208,
-        304
+        400
       ],
-      "door_m": 307,
+      "door_m": 403,
       "flags": [
         "open",
         "door_ok",
@@ -67,7 +67,7 @@
       ],
       "id": "rim_cache",
       "kind": "cracked_cache",
-      "nearest_door": 394,
+      "nearest_door": 363,
       "nearest_door_id": "gallery_valve",
       "pay_named": "",
       "pay_rarities": [
@@ -94,8 +94,8 @@
       ],
       "id": "bench_altar",
       "kind": "ambush_altar",
-      "nearest_door": 560,
-      "nearest_door_id": "rim_cache",
+      "nearest_door": 615,
+      "nearest_door_id": "gallery_valve",
       "pay_named": "",
       "pay_rarities": [
         "common",
@@ -150,7 +150,7 @@
       ],
       "id": "gallery_valve",
       "kind": "valve",
-      "nearest_door": 394,
+      "nearest_door": 363,
       "nearest_door_id": "rim_cache",
       "pay_named": "",
       "pay_rarities": [],
@@ -159,7 +159,7 @@
       "site": "service_ledge"
     }
   ],
-  "reward_ratio": "0.841",
+  "reward_ratio": "0.859",
   "ride_edges": 16,
   "routes": {
     "bucket_flight": [],
@@ -197,13 +197,13 @@
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.841
+      "value": 0.859
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.756
+      "value": 1.805
     }
   ],
   "tool_sha256": "9c8c0a65217cc99dcba41bc0cd82a6d0ef2a30f39653ae2bce52fa717063cccb",
