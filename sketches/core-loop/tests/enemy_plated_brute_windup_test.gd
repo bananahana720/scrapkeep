@@ -4,6 +4,10 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
+# The recipe builds the pad arm as a 0.14 m rod; the polish pass (one Catmull-Clark level)
+# pulls its rings in to 0.121-0.123 m while keeping them in their planes.
+const ARM_RING_RADIUS := 0.122
+const ARM_RING_SLACK := 0.003
 
 var _game
 var _t := T.new("enemy_plated_brute_windup_test")
@@ -332,7 +336,7 @@ func _arms(enemy) -> void:
 					for ring in 2:
 						var center := top_center - Vector3.UP * (0.15 if ring == 1 else 0.0)
 						var offset := vertices[vertex] - center
-						if absf(offset.dot(axis)) > 0.0001 or absf(offset.length() - 0.14) > 0.0001:
+						if absf(offset.dot(axis)) > 0.0001 or absf(offset.length() - ARM_RING_RADIUS) > ARM_RING_SLACK:
 							continue
 						if not rings[ring].has(vertices[vertex]):
 							rings[ring].append(vertices[vertex])
