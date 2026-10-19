@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "ambient_dusk_quail",
+   "path": "res://assets/models/ambient/dusk_quail.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/dusk_quail.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 5ea4a90d7489fdf0c53cdd75279b8901443612a1f35de8315df459eb8296ba1d"
+   }
+  }
+ ]
+}
