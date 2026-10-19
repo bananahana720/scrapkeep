@@ -49,3 +49,17 @@ func _cases(armored: bool) -> void:
 	run.hp = run.max_hp - 0.5
 	run.damage(run.max_hp * 3.0, "test")
 	_t.check("%s: just under full, lethal hit kills" % tag, not run.alive())
+	# A scripted death (SCRIPTED_KILL or more: the tests' 9999 and 99999 kills) is never an attack.
+	for amount in [RunState.SCRIPTED_KILL, 99999.0]:
+		run = _run(armored)
+		run.mass = 400.0
+		run.damage(amount, "test")
+		_t.check("%s: full hp, scripted kill of %d kills" % [tag, int(amount)], not run.alive())
+	run = _run(armored)
+	run.damage(RunState.SCRIPTED_KILL - 1.0, "test")
+	_t.near("%s: full hp, the largest guarded hit leaves 1.0" % tag, run.hp, 1.0)
+	# The ladder's top step may thin the guard (02:29Z ruling).
+	run = _run(armored)
+	run.one_shot_guard = false
+	run.damage(run.max_hp * 3.0, "test")
+	_t.check("%s: guard off, full hp, lethal hit kills" % tag, not run.alive())

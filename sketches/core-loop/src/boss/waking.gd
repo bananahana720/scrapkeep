@@ -212,7 +212,7 @@ func _pulse_due() -> bool:
 	if not is_instance_valid(warden) or warden.staggered() or warden.state_name() == "charging":
 		return false
 	# A charge a driver holds back past its due time stops holding warnings after GAP more.
-	var due: float = Warden.pulse_cycle() - Warden.pulse_telegraph()
+	var due: float = Warden.pulse_cycle(warden.stage) - Warden.pulse_telegraph(warden.stage)
 	return warden._pulse_clock >= due - GAP and warden._pulse_clock < due + GAP and warden.flat_to_ball().length() <= warden.reach
 
 
