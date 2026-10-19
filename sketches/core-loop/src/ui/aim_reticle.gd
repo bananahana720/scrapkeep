@@ -5,7 +5,6 @@ const Augments := preload("res://src/movement/augments.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 const RING := 13.0
 const DIAMOND := 15.0

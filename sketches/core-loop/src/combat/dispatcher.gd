@@ -374,7 +374,7 @@ func _pose() -> void:
 		# Between drops the lamp holds a glow per escalation step, so a climbing Dispatcher reads.
 		_signal_material.emission_enabled = warn or escalation > 0
 		_signal_material.emission = Palette.AMBER
-		_signal_material.emission_energy_multiplier = FlashGuard.spike(0.0, 2.5 * clampf(_t / SUCK, 0.0, 1.0)) if warn else 0.6 * escalation
+		_signal_material.emission_energy_multiplier = FlashGuard.spike(0.6 * escalation, 2.5 * clampf(_t / SUCK, 0.0, 1.0)) if warn else 0.6 * escalation
 	if not warn or _t < SUCK:
 		return
 	var ring := telegraph()

@@ -33,7 +33,7 @@ const SITES := [
 	["combat/warden_look.gd", "FlashGuard.spike(1.2, OPEN_CORE_GLOW)"],
 	["combat/warden_look.gd", "FlashGuard.spike(1.2, 1.2 + 2.0 * warden.charge_fraction())"],
 	["combat/foreman.gd", "FlashGuard.spike(0.0, 3.0 * level)"],
-	["combat/dispatcher.gd", "FlashGuard.spike(0.0, 2.5 * clampf(_t / SUCK, 0.0, 1.0))"],
+	["combat/dispatcher.gd", "FlashGuard.spike(0.6 * escalation, 2.5 * clampf(_t / SUCK, 0.0, 1.0))"],
 	["combat/lobber.gd", "FlashGuard.spike(0.8, 0.8 + value * 5.0)"],
 	["presentation/highdraft_fx.gd", "FlashGuard.spike(0.0, level)"],
 	["presentation/highdraft_fx.gd", "FlashGuard.spike(0.0, 1.0 - first if first < 1.0 else 0.0)"],
