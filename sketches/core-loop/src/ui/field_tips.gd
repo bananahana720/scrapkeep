@@ -7,7 +7,7 @@ const Palette := preload("res://src/core/palette.gd")
 # carries, said once on a profile at the moment the player first meets them, as a toast.
 #   grip       the ball carves a wall at the fast tier (state.carving)
 #   jam        a field's pulse jams the special and line slots (abilities.jams)
-#   cast       a slot with a cast time starts casting (abilities.casting)
+#   cast       the bar holds a slot with a cast time, or one starts casting (abilities.casting)
 #   radio      the pilot radio's dial first draws in play
 #   stake      the ball comes within STAKE_REACH of a relay's stake post
 #   companion  SPIL-9's halo gauge fills (combat.companion_assist_full)
@@ -72,7 +72,7 @@ func _physics_process(_delta: float) -> void:
 	if abilities.jams > _jams:
 		meet("jam")
 	_jams = abilities.jams
-	if abilities.casting != AbilityState.UNSTARTED:
+	if abilities.casting != AbilityState.UNSTARTED or has_cast_slot(abilities):
 		meet("cast")
 	if not seen("radio"):
 		var deck = game.get("radio_deck")
@@ -90,6 +90,15 @@ func _physics_process(_delta: float) -> void:
 		for id in pending.keys():
 			tell(id)
 		pending.clear()
+
+
+# A pilot whose bar holds a slot with a cast time hears of it from the drop, before the first
+# cast lands in a fight (where the tip would have to wait).
+static func has_cast_slot(abilities) -> bool:
+	for slot in [AbilityState.WEAPON, AbilityState.SPECIAL, AbilityState.LINE]:
+		if abilities.cast_of(slot) > 0.0:
+			return true
+	return false
 
 
 # A verb met now: told at once, or held until the fight is over.
