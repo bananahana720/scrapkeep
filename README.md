@@ -20,3 +20,11 @@ Disposable evidence for the Ambient life PRs; nothing here ships. One folder per
 - `capture_states.txt`: the member states per second.
 - `bats_before_after.jpg`: before the roof veto, bats were planned where no roof exists. Now they roost only under a real roof, which means park_pit's adit portals; park_sinkhole has none for now.
 - `models/`: Blender stills of the burro, bat, lizard and prospector.
+
+## hd: Highdraft world (park_islands, park_crown)
+
+- `ingame_contact.jpg` and `ingame/`: calm and react frames for each kind and park, captured with `tools/ambient_capture.gd` (xvfb, opengl3, preset high, 1280x720, close capture camera). The lamb and wren frames are from Highdraft head 4eccc65b; the net weaver frames are from dc925c72, after its tail was retoned.
+- `weaver_before_after.jpg`: the first capture showed the net weaver's plum and cream tail bands as high-contrast stripes, which rule 1 keeps off ambient kinds. dc925c72 retones them to plum and lilac rings.
+- `clips/`: 6 mp4s.
+- `capture_states.txt`: the member states per second.
+- `models/`: Blender stills of the lamb, wren and net weaver (the weaver after the retone).
