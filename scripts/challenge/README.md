@@ -22,6 +22,8 @@ From the coordinator ruling, `project-guide/handoff/DECISIONS.md` section 5, 19 
 
 The 0.6 s tell is not measured: a bot cannot say what a person reads. It stays a design and Andrew-sitting check.
 
+A fight-report section follows the win rates, in the per-Warden format the coordinator set on #149 (`sketches/core-loop/design-v3/research/comps/difficulty/SUMMARY.md`, Lab measure): Expert ordinary TTK, the largest single hit as a share of pilot health with its source, and the Learner attempt-1 health lost in the first 45 s (`largest_hit*` and `hp_lost_45s` in the bot record, counted from the boss entry or the Warden fight's start). Tell lengths and recovery in data come from the attack sheet (`tools/attack_sheet.gd`).
+
 A cell's mark is a point-estimate check (`✓`/`✗`); the Wilson 95% interval sits beside it, so a `✗` inside a wide interval reads as "run more seeds", not "broken". A timeout (stall, fight cap, tick guard) is never a win and is counted apart, beside the deaths. An error (no record, boss never entered, doc not resumed) and a harness kill (`killed`, a wall timeout that a rerun alone did not fix) are excluded from n and the rate and noted per column as `excluded: N error, M killed`; when more than 10% of a column's jobs are excluded, the column is `incomplete` and gets no ✓/✗.
 
 The top/ord fight-time ratio is reported, not graded: the 2x hive rule is graded by `posture_bands_*`, and the ruling's "keeps the existing growth ratios" is not asserted here. The Learner 45 s check covers both attempt 1 and attempt 5 boss deaths.
