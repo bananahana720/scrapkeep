@@ -17,6 +17,7 @@ func _initialize() -> void:
 	_synthetic()
 	_lookup()
 	_real_run()
+	_damage_control()
 	print("matchup_lab_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -144,11 +145,42 @@ func _real_run() -> void:
 			bad += 1
 	_check("every cell has both seeds", seen.size() == 12)
 	_check("every run produced a result for the pilot asked", bad == 0)
+	var rested := true
+	for r in rows:
+		rested = rested and float(r.get("settle_s", 0.0)) >= Lab.SETTLE_S and r.has("rest_forced")
+	_check("every duel waited at least SETTLE_S before the spawn and recorded settle_s", rested and not rows.is_empty())
 	var table := Lab.build_table(rows, PILOTS_SMALL, KINDS_SMALL, 40.0)
 	var runs_ok := true
 	for key in table["cells"]:
 		runs_ok = runs_ok and table["cells"][key]["runs"] == 2
 	_check("the table has two runs in every cell", runs_ok)
+
+
+# Planted positive control for damage: an idle pilot (never fights) 6 m from a plated brute and a
+# lobber must be hurt, so a run that reports 0 damage everywhere is a lab that cannot hurt the ball.
+func _damage_control() -> void:
+	_check("planted negative: rows with no hits, damage or hull lost show no damage",
+		not Lab.damage_seen([{"hits": 0.0, "damage_taken": 0.0, "hull_lost": 0.0}, {}]))
+	_check("damage_seen reads a hit", Lab.damage_seen([{"hits": 1.0, "damage_taken": 0.0, "hull_lost": 0.0}]))
+	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("idle.ndjson")
+	if FileAccess.file_exists(out):
+		DirAccess.remove_absolute(out)
+	var output := []
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--out=" + out, "--procs=2", "--seeds=1", "--idle=1", "--range=6", "--cap=12", "--pilots=tarn", "--kinds=plated_brute,lobber", "--answer=0",
+			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	_check("the idle damage control exits 0", code == 0)
+	var rows := []
+	if FileAccess.file_exists(out):
+		for line in FileAccess.get_file_as_string(out).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary:
+				rows.append(parsed)
+	var hurt := false
+	for r in rows:
+		hurt = hurt or (float(r["hits"]) > 0.0 and float(r["damage_taken"]) > 0.0 and float(r["hull_lost"]) > 0.0)
+	_check("planted positive: an idle pilot is hit, takes damage and loses hull (2 rows)", rows.size() == 2 and hurt)
 
 
 func _check(label: String, ok: bool) -> void:

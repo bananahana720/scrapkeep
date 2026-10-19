@@ -7,19 +7,26 @@
 ```
 godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd -- \
   --out=<abs ndjson> [--procs=4] [--seeds=1,2,3,4,5,6,7,8] [--cap=40] [--dodge=0.65] \
-  [--pilots=tarn,tally] [--kinds=chaser,lobber] [--answer=1] \
+  [--pilots=tarn,tally] [--kinds=chaser,lobber] [--answer=1] [--range=18] [--idle=0] \
   [--bot-no-mix=1 --bot-no-visuals=1 --bot-no-pilot-tracks=1]
 ```
 
-- `--out` is required. The ndjson holds one row per duel (`pilot`, `class`, `kind`, `seed`, `give`, `outcome`, `ttk_s`, `hull_lost`, `damage_taken`, `hits`, `kill_dist_m`, `warnings`, `joined`, `duel_s`, `phase`). The heatmap text is written beside it as `<out>.heatmap.txt` and printed.
+- `--out` is required. The ndjson holds one row per duel (`pilot`, `class`, `kind`, `seed`, `give`, `outcome`, `ttk_s`, `hull_lost`, `damage_taken`, `hits`, `kill_dist_m`, `warnings`, `joined`, `duel_s`, `settle_s`, `rest_forced`, `phase`). The heatmap text is written beside it as `<out>.heatmap.txt` and printed.
 - Each duel is its own Godot process (a bot run repeats exactly only in a fresh one), `--procs` at a time. Run it under `nice -n 10`, at most 6 processes.
-- Runtime: about 30 to 40 s of wall time per duel, almost all of it boot, stage load and settle (a duel itself is seconds). Six processes give about 7 s per duel. 27 kinds x 6 pilots x 4 seeds is 648 duels, about 80 minutes; 8 seeds doubles it. The small test table is 12 duels, about 2 minutes.
+- Runtime: about 30 to 40 s of wall time per duel, almost all of it boot, stage load and the rest wait (a duel itself is seconds). Six processes give about 7 s per duel. 27 kinds x 6 pilots x 4 seeds is 648 duels, about 80 minutes; 8 seeds doubles it. The small test table is 12 duels, about 2 minutes.
 - `--from=<a.ndjson,b.ndjson> [--out=<txt>]` runs nothing: it rebuilds the heatmap and baseline gate from saved rows (use it to merge batches; the answer arm reads pending there).
+- `--range=<m>` sets the spawn distance (default 18). `--idle=1` makes the pilot stand and never fight: the test's planted positive control that a duel can hurt the ball (an idle tarn 6 m from a plated brute or a lobber takes hits and loses hull). Neither is part of the table.
 - `--bot-no-*` are the same fast flags `bot_run.gd` takes (audio mix, visuals, cosmetic pilot tracks).
 
 ## What a duel is
 
-The harness is `tools/priority_proof.gd`'s: a calm map (no Warden, no director packs), `Game` in test mode, the bot driver, the same dodge share (`--dodge`, default 0.65: each telegraph is answered or missed once, decided from the seed). The pilot is the brawler bot (the completionist profile, which fights with every verb) playing the class under test. After 1 s grounded the lab spawns one enemy 18 m ahead of the ball and the bot fights it until the enemy and anything it made are down (`killed`), the pilot dies (`died`), or the cap passes (`capped`). Time to kill (`ttk_s`) runs from the spawn to the enemy's death; a split kind (the Splitter) is won when its pieces are down too, while `ttk_s` keeps the main body's death. Hull lost is the run's own `hull_damage` counter over the duel.
+The harness is `tools/priority_proof.gd`'s: a calm map (no Warden, no director packs), `Game` in test mode, the bot driver, the same dodge share (`--dodge`, default 0.65: each telegraph is answered or missed once, decided from the seed). The pilot is the brawler bot (the completionist profile, which fights with every verb) playing the class under test.
+
+**Rest start.** The drop-in leaves the ball fast, so the lab waits until the ball is grounded and slower than 0.5 m/s (`REST_SPEED`) and holds that for 2.0 s (`SETTLE_S`) before it spawns anything. If the ball has not come to rest 6 s after first landing (`REST_WAIT_S`), the lab sets its velocity to zero through the player's own `set_velocity_now` and keeps waiting; at 12 s (`SETTLE_MAX_S`) the duel starts regardless. The row records `settle_s` (seconds from first landing to the spawn) and `rest_forced` (true when the zero-velocity nudge fired).
+
+**Damage.** `ctx.calm` stays on for the whole duel. It gates the Warden, the director's packs (which swamped a 40 s duel when calm was off: 12 to 27 adds joined), flood and event pushes, and hit knockback; it never gated an enemy's attack or the damage it deals (`combat._on_player_hit` always calls `run.damage`). The enemy under test attacks under the game's own rules, including its attack budget. At the spawn the lab sets max hull to 99999 (`HULL_POOL`) so a lost duel does not end the run. `hull_lost` is the run's `hull_damage` counter over the duel; `hits` and `damage_taken` count `player_hit` events from the spawn.
+
+The lab spawns one enemy 18 m ahead of the ball and the bot fights it until the enemy and anything it made are down (`killed`), the pilot dies (`died`; effectively never with the large hull), or the cap passes (`capped`). Time to kill (`ttk_s`) runs from the spawn to the enemy's death; a split kind (the Splitter) is won when its pieces are down too, while `ttk_s` keeps the main body's death. Hull lost is the run's own `hull_damage` counter over the duel.
 
 Kinds are `Director.KIND_NAMES` that the roster has built, minus `linker` (it guards a partner, so there is nothing to duel alone) and `foreman` (it never attacks; its row is its crew). Both are measured by `priority_proof.gd`. Bosses and wardens are not in `KIND_NAMES`. Every other named kind spawned and died alone in a probe run (27 kinds).
 
@@ -41,4 +48,4 @@ The verdict is FAIL if part 1 fails or any answer arm is lost, INCONCLUSIVE if a
 
 Rows are kinds with their row median in seconds; columns are pilots. Each cell reads `median-ttk[median-hull-lost]`, and a `*` marks a HARD cell. A cell of `40.0*` with seeds all capped means the pilot never killed that kind inside the cap. A `-` means no run produced a result. After the grid, one line per pilot lists its hard cells with the answer-arm status, then the gate lines.
 
-Caveats: the duel starts 1 s after landing, so the ball still carries the drop-in's speed; fast contact kills can flatten rows of light kinds. Automated bots do not establish human feel.
+Caveats: duels start from rest, so a ball that never rests on a slope is nudged to zero (see `rest_forced`); hull lost is damage dealt, not a death count. Automated bots do not establish human feel.

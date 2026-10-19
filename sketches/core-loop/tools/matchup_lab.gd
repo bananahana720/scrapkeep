@@ -17,7 +17,7 @@ const TelegraphScript := preload("res://src/combat/telegraph.gd")
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd \
 #     -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65]
-#     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>]
+#     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>] [--range=18] [--idle=0]
 #   or: -- --from=<a.ndjson,b.ndjson> [--out=<heatmap txt>]   re-render saved rows
 #
 # Each duel is its own process (a bot run repeats exactly only in a fresh one). The harness is
@@ -46,7 +46,15 @@ const MIN_ROW_S := 1.0
 const WIN_SHARE := 0.5
 const DODGE := 0.65
 const DUEL_RANGE := 18.0
-const SETTLE_S := 1.0
+# A duel starts at rest: the ball must be grounded and slower than REST_SPEED for SETTLE_S in a
+# row. If it has not come to rest REST_WAIT_S after first landing, it is set to rest where it
+# stands (the player's own set_velocity_now); at SETTLE_MAX_S the duel starts regardless.
+const SETTLE_S := 2.0
+const REST_SPEED := 0.5
+const REST_WAIT_S := 6.0
+const SETTLE_MAX_S := 12.0
+# The hull pool a duel gives the ball, so a lost duel is measured by hull_lost and does not end the run.
+const HULL_POOL := 99999.0
 const WALL_LIMIT_S := 600.0
 const PENDING := "answer: pending (no answers tags on this base)"
 
@@ -55,6 +63,9 @@ class DuelDriver extends BotDriver:
 	var enemy: Node3D = null
 	var adds: Array = []
 	var dodge := 1.0
+	# --idle=1: the pilot stands still and never fights, so the lab's damage path can be shown
+	# (the planted positive control in tests/matchup_lab_test.gd).
+	var idle := false
 	var _dodge_rng := RandomNumberGenerator.new()
 	var _answers := {}
 
@@ -70,6 +81,9 @@ class DuelDriver extends BotDriver:
 		return out
 
 	func _roam(delta: float) -> void:
+		if idle:
+			source.hold = {}
+			return
 		var target := pick()
 		if target == null:
 			source.hold = {}
@@ -122,6 +136,9 @@ var _driver
 var _spawned := false
 var _start_s := 0.0
 var _grounded_s := 0.0
+var _landed_s := 0.0
+var _rest_forced := false
+var _settle_s := 0.0
 var _hull_start := 0.0
 var _taken := 0.0
 var _hits := 0
@@ -298,6 +315,10 @@ func _spawn(job: Dictionary) -> void:
 		args.append("--give=" + String(job["give"]))
 	if _settings.has("dodge"):
 		args.append("--dodge=%s" % _settings["dodge"])
+	if _settings.has("range"):
+		args.append("--range=%s" % _settings["range"])
+	if _settings.has("idle"):
+		args.append("--idle=%s" % _settings["idle"])
 	for key in BotOptions.FAST_FLAGS:
 		if _settings.has(key):
 			args.append("--%s=%s" % [key, _settings[key]])
@@ -548,6 +569,14 @@ static func _answer_gate_word(answers: Dictionary) -> String:
 	return "PASS"
 
 
+# True when any row shows the enemy hurting the ball: a hit, damage taken or hull lost.
+static func damage_seen(rows: Array) -> bool:
+	for r in rows:
+		if float(r.get("hits", 0.0)) > 0.0 or float(r.get("damage_taken", 0.0)) > 0.0 or float(r.get("hull_lost", 0.0)) > 0.0:
+			return true
+	return false
+
+
 static func median(values: Array) -> float:
 	if values.is_empty():
 		return 0.0
@@ -599,6 +628,7 @@ func _physics_process(delta: float) -> bool:
 		_driver = DuelDriver.new(_game, "brawler", _run_seed)
 		_driver.class_index = BotDriver.class_index_for(0, _pilot)
 		_driver.dodge = float(_settings.get("dodge", str(DODGE)))
+		_driver.idle = String(_settings.get("idle", "0")) == "1"
 		_driver._dodge_rng.seed = hash(["dodge", _run_seed])
 		_driver.stage_limit = INF
 		_game.presentation.audio.bake_now()
@@ -612,8 +642,16 @@ func _physics_process(delta: float) -> bool:
 		_driver.start()
 		return false
 	if not _spawned:
-		_grounded_s = _grounded_s + delta if _game.flow.in_stage() and _game.player.state.grounded else 0.0
-		if _grounded_s >= SETTLE_S:
+		var down: bool = _game.flow.in_stage() and _game.player.state.grounded
+		if down:
+			_landed_s += delta
+		var slow: bool = _game.player.planar_velocity().length() < REST_SPEED
+		_grounded_s = _grounded_s + delta if down and slow else 0.0
+		if _landed_s >= REST_WAIT_S and not _rest_forced and _grounded_s <= 0.0:
+			_rest_forced = true
+			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
+		if _grounded_s >= SETTLE_S or _landed_s >= SETTLE_MAX_S:
+			_settle_s = _landed_s
 			_spawn_duel()
 		else:
 			_driver.source.hold = {}
@@ -667,6 +705,12 @@ func _spawn_duel() -> void:
 	_spawned = true
 	_start_s = _game.run.stage_time
 	_hull_start = float(_game.run.metrics["hull_damage"])
+	# ctx.calm gates the Warden, the director's packs, flood and event pushes, and hit knockback in
+	# combat; it does not gate an enemy's attack or the damage it deals (combat._on_player_hit
+	# always calls run.damage). Turning it off here let director packs join and swamp the duel
+	# (joined 12 to 27 in a 40 s duel), so it stays on and the enemy under test attacks under the
+	# game's own rules. The hull is deep enough to measure a lost duel.
+	_game.run.set_max_hp(HULL_POOL)
 	if _settings.has("give"):
 		_game.run.add_part(String(_settings["give"]), "matchup_lab")
 	var ball: Vector3 = _game.player.ball_position()
@@ -674,7 +718,7 @@ func _spawn_duel() -> void:
 	forward = Vector3(forward.x, 0.0, forward.z).normalized()
 	if forward.length() < 0.5:
 		forward = Vector3.FORWARD
-	var flat: Vector3 = ball + forward * DUEL_RANGE
+	var flat: Vector3 = ball + forward * float(_settings.get("range", str(DUEL_RANGE)))
 	_driver.enemy = _game.combat.spawn_enemy(_kind, _game.ctx.terrain.drop_point(flat.x, flat.z, 1.8))
 	_enemy_set = true
 
@@ -685,7 +729,7 @@ func _record() -> void:
 	var row := {"pilot": _pilot, "class": _driver.class_id(), "kind": _kind, "seed": _run_seed, "give": String(_settings.get("give", "")),
 			"outcome": _driver.outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
 			"kill_dist_m": snappedf(_kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
-			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01)}
+			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01), "settle_s": snappedf(_settle_s, 0.01), "rest_forced": _rest_forced}
 	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
 	file.store_string(JSON.stringify(row) + "\n")
 	file.close()
