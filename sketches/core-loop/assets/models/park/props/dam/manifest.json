@@ -93,12 +93,12 @@
       "res://assets/models/park/props/dam/mixer_wreck_a_lod2.glb"
      ],
      "tris": [
-      12772,
-      6386,
-      1908
+      12740,
+      6370,
+      1904
      ],
-     "radius": 7.872,
-     "height": 8.033
+     "radius": 6.555,
+     "height": 6.694
     },
     "b": {
      "lod": [
@@ -107,12 +107,12 @@
       "res://assets/models/park/props/dam/mixer_wreck_b_lod2.glb"
      ],
      "tris": [
-      17236,
-      8612,
-      2555
+      17204,
+      8596,
+      2549
      ],
-     "radius": 7.923,
-     "height": 8.047
+     "radius": 6.603,
+     "height": 6.706
     },
     "c": {
      "lod": [
@@ -121,12 +121,12 @@
       "res://assets/models/park/props/dam/mixer_wreck_c_lod2.glb"
      ],
      "tris": [
-      14596,
-      7297,
-      2172
+      14564,
+      7282,
+      2168
      ],
-     "radius": 9.479,
-     "height": 8.033
+     "radius": 7.193,
+     "height": 6.694
     }
    }
   },
@@ -283,12 +283,12 @@
       "res://assets/models/park/props/dam/lunch_pail_a_lod2.glb"
      ],
      "tris": [
-      1032,
-      516,
-      153
+      1012,
+      506,
+      151
      ],
-     "radius": 1.5,
-     "height": 1.31
+     "radius": 1.333,
+     "height": 1.184
     },
     "b": {
      "lod": [
@@ -297,12 +297,12 @@
       "res://assets/models/park/props/dam/lunch_pail_b_lod2.glb"
      ],
      "tris": [
-      1212,
-      601,
-      176
+      1192,
+      591,
+      172
      ],
-     "radius": 1.576,
-     "height": 1.039
+     "radius": 1.473,
+     "height": 0.901
     },
     "c": {
      "lod": [
@@ -311,12 +311,12 @@
       "res://assets/models/park/props/dam/lunch_pail_c_lod2.glb"
      ],
      "tris": [
-      2008,
-      996,
-      281
+      1988,
+      986,
+      280
      ],
-     "radius": 2.125,
-     "height": 1.31
+     "radius": 1.993,
+     "height": 1.174
     }
    }
   },
@@ -334,12 +334,12 @@
       "res://assets/models/park/props/dam/hardhat_rack_a_lod2.glb"
      ],
      "tris": [
-      2084,
-      1042,
-      306
+      2776,
+      1383,
+      398
      ],
-     "radius": 2.521,
-     "height": 2.865
+     "radius": 2.871,
+     "height": 2.895
     },
     "b": {
      "lod": [
@@ -348,12 +348,12 @@
       "res://assets/models/park/props/dam/hardhat_rack_b_lod2.glb"
      ],
      "tris": [
-      1736,
-      863,
-      249
+      2428,
+      1204,
+      341
      ],
-     "radius": 2.854,
-     "height": 2.865
+     "radius": 2.829,
+     "height": 2.895
     },
     "c": {
      "lod": [
@@ -362,12 +362,12 @@
       "res://assets/models/park/props/dam/hardhat_rack_c_lod2.glb"
      ],
      "tris": [
-      2624,
-      1301,
-      369
+      2932,
+      1452,
+      406
      ],
-     "radius": 3.514,
-     "height": 2.865
+     "radius": 3.472,
+     "height": 2.895
     }
    }
   },
@@ -385,9 +385,9 @@
      "tris": [
       1424,
       706,
-      222
+      197
      ],
-     "radius": 4.346,
+     "radius": 3.6,
      "height": 1.679
     },
     "b": {
@@ -401,7 +401,7 @@
       766,
       214
      ],
-     "radius": 4.604,
+     "radius": 3.474,
      "height": 1.682
     },
     "c": {
@@ -415,7 +415,7 @@
       1257,
       366
      ],
-     "radius": 5.034,
+     "radius": 4.731,
      "height": 1.5
     }
    }
@@ -423,10 +423,9 @@
   "compressor_cart": {
    "class": "dress_prop",
    "tags": [
-    "machine",
-    "tall"
+    "machine"
    ],
-   "story": "A little two-wheel air compressor, its oversized whistle still on top; nobody blew the shift whistle.",
+   "story": "A squat two-wheel air compressor on its tow bar, one stubby whistle on top; nobody blew the shift whistle.",
    "variants": {
     "a": {
      "lod": [
@@ -435,12 +434,12 @@
       "res://assets/models/park/props/dam/compressor_cart_a_lod2.glb"
      ],
      "tris": [
-      1120,
-      560,
-      164
+      1500,
+      750,
+      221
      ],
-     "radius": 2.477,
-     "height": 3.39
+     "radius": 2.172,
+     "height": 2.693
     },
     "b": {
      "lod": [
@@ -449,12 +448,12 @@
       "res://assets/models/park/props/dam/compressor_cart_b_lod2.glb"
      ],
      "tris": [
-      980,
-      490,
-      139
+      1524,
+      757,
+      221
      ],
-     "radius": 2.696,
-     "height": 2.16
+     "radius": 3.396,
+     "height": 2.698
     },
     "c": {
      "lod": [
@@ -463,12 +462,12 @@
       "res://assets/models/park/props/dam/compressor_cart_c_lod2.glb"
      ],
      "tris": [
-      2276,
-      1127,
-      322
+      2328,
+      1154,
+      332
      ],
-     "radius": 3.299,
-     "height": 3.39
+     "radius": 2.924,
+     "height": 2.505
     }
    }
   },
@@ -484,12 +483,12 @@
       "res://assets/models/park/props/dam/cold_campfire_a_lod2.glb"
      ],
      "tris": [
-      2484,
-      1242,
-      370
+      2464,
+      1232,
+      368
      ],
-     "radius": 3.519,
-     "height": 1.808
+     "radius": 3.451,
+     "height": 1.649
     },
     "b": {
      "lod": [
@@ -498,12 +497,12 @@
       "res://assets/models/park/props/dam/cold_campfire_b_lod2.glb"
      ],
      "tris": [
-      2484,
-      1242,
-      370
+      2464,
+      1232,
+      368
      ],
      "radius": 3.569,
-     "height": 1.808
+     "height": 1.649
     },
     "c": {
      "lod": [
@@ -512,12 +511,12 @@
       "res://assets/models/park/props/dam/cold_campfire_c_lod2.glb"
      ],
      "tris": [
-      2920,
-      1445,
-      418
+      2900,
+      1435,
+      414
      ],
      "radius": 3.929,
-     "height": 1.363
+     "height": 1.23
     }
    }
   },
@@ -586,11 +585,11 @@
       "res://assets/models/park/props/dam/sandbags_a_lod2.glb"
      ],
      "tris": [
-      2880,
-      1440,
-      432
+      2160,
+      1080,
+      324
      ],
-     "radius": 3.908,
+     "radius": 2.767,
      "height": 1.354
     },
     "b": {
@@ -600,11 +599,11 @@
       "res://assets/models/park/props/dam/sandbags_b_lod2.glb"
      ],
      "tris": [
-      2112,
-      1050,
-      310
+      1632,
+      810,
+      238
      ],
-     "radius": 4.58,
+     "radius": 3.894,
      "height": 1.025
     },
     "c": {
@@ -614,11 +613,11 @@
       "res://assets/models/park/props/dam/sandbags_c_lod2.glb"
      ],
      "tris": [
-      2668,
-      1320,
-      381
+      2428,
+      1200,
+      345
      ],
-     "radius": 4.471,
+     "radius": 3.945,
      "height": 1.122
     }
    }
@@ -637,12 +636,12 @@
       "res://assets/models/park/props/dam/rebar_bloom_a_lod2.glb"
      ],
      "tris": [
-      2628,
-      1309,
-      357
+      2608,
+      1299,
+      353
      ],
-     "radius": 2.25,
-     "height": 2.273
+     "radius": 2.296,
+     "height": 2.177
     },
     "b": {
      "lod": [
@@ -651,12 +650,12 @@
       "res://assets/models/park/props/dam/rebar_bloom_b_lod2.glb"
      ],
      "tris": [
-      2508,
-      1249,
-      345
+      2488,
+      1239,
+      341
      ],
-     "radius": 2.327,
-     "height": 2.028
+     "radius": 2.346,
+     "height": 1.968
     },
     "c": {
      "lod": [
@@ -665,12 +664,12 @@
       "res://assets/models/park/props/dam/rebar_bloom_c_lod2.glb"
      ],
      "tris": [
-      1764,
-      869,
-      231
+      1744,
+      859,
+      229
      ],
      "radius": 2.863,
-     "height": 2.175
+     "height": 2.119
     }
    }
   },
@@ -688,12 +687,12 @@
       "res://assets/models/park/props/dam/desert_scrub_a_lod2.glb"
      ],
      "tris": [
-      2980,
-      1480,
-      426
+      2960,
+      1470,
+      424
      ],
-     "radius": 2.726,
-     "height": 2.812
+     "radius": 2.724,
+     "height": 2.666
     },
     "b": {
      "lod": [
@@ -702,12 +701,12 @@
       "res://assets/models/park/props/dam/desert_scrub_b_lod2.glb"
      ],
      "tris": [
-      2908,
-      1448,
-      419
+      2888,
+      1438,
+      415
      ],
-     "radius": 1.85,
-     "height": 2.548
+     "radius": 1.572,
+     "height": 2.423
     },
     "c": {
      "lod": [
@@ -716,12 +715,12 @@
       "res://assets/models/park/props/dam/desert_scrub_c_lod2.glb"
      ],
      "tris": [
-      1328,
-      648,
-      182
+      1308,
+      638,
+      180
      ],
-     "radius": 2.288,
-     "height": 2.36
+     "radius": 2.329,
+     "height": 2.216
     }
    }
   }
