@@ -79,7 +79,10 @@ func _initialize() -> void:
 		var world_kinds := Roster.world_kinds(pair[1])
 		for pack in A.DEFS[pair[0]]["packs"]:
 			for kind in pack["kinds"]:
-				_check("row %d kind %s" % [pair[0] + 1, kind], (world_kinds.has(kind) or kind in Roster.SPECIALS) and Director.KIND_NAMES.has(kind),
+				# w18: a row with no "world" key is a base counter that fights in every world; a keyed
+				# row fights in its own world only here (a Dig kind stays out of the Highdraft).
+				var base_counter: bool = Roster.has(kind) and not Roster.row(kind).has("world")
+				_check("row %d kind %s" % [pair[0] + 1, kind], (world_kinds.has(kind) or kind in Roster.SPECIALS or base_counter) and Director.KIND_NAMES.has(kind),
 					"world %d" % pair[1])
 	# --table=alpha resolves through the game's selection; no choice stays the default.
 	var game = Game.new()
