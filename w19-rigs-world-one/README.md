@@ -1,6 +1,6 @@
 # Rigs and motion, world one (World-2, wave 19)
 
-From `tools/blender/rig_pose_audit.py -- --world one` at f36ef60f on `claude/happy-mayer-rtqcu5-rigs-w1` (Blender 5.2.2,
+From `tools/blender/rig_pose_audit.py -- --world one` at 70f1f489 on `claude/happy-mayer-rtqcu5-rigs-w1` (Blender 5.2.2,
 Cycles CPU, since EEVEE and Workbench need libEGL, which the headless box lacks).
 
 - `pose_sheet_one.png`: one row per rig. The rest pose comes first, then the five poses with the worst defect, each
@@ -9,4 +9,7 @@ Cycles CPU, since EEVEE and Workbench need libEGL, which the headless box lacks)
 - `loops_one.png`: each looped clip's first, middle and last frames, plus the last frame laid over the first at 50%.
 - `rig_audit_one.json`: the bone and weight audit, the ranges of motion (taken from the clips and from the procedural
   pose scripts), every pose's metrics (area and edge ratios on blended triangles, penetration depth and gaps between
-  parent and child parts), and the loop seams.
+  parent and child parts and between sibling islands that touch at rest), and the loop seams. A rig with no touching
+  pair reads PAIRS UNTESTED. Poses in the audit's DELIBERATE table (keyed by clip and part pair, with builder cites) are
+  marked DELIB and rank below every real defect. warden_reactor's idle animates mesh nodes, not skin bones, so the
+  Blender import has no bone fcurves for it; `tests/rig_loop_seam_test.gd` covers its seam in Godot.
