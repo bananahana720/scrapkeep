@@ -146,6 +146,15 @@ func _react() -> void:
 		peak = maxf(peak, m.pos.y - _ground(m.pos.x, m.pos.z))
 	_t.check("scatter kind gains height %.1f -> %.1f m and is still seen" % [rest, peak], peak - rest >= 11.0 and m.fade > 0.9 and m.state == "react")
 	_t.check("scatter wants one react sound", sound)
+	# A row of swifts never wheels in unison: once circling, no two share a radius and a turn rate.
+	var row := _pool([_home("dam_swift", Vector2.ZERO, 4)])
+	_run_for(row, 3.0, _input(Vector3(0.0, 0.0, 100.0)))
+	_run_for(row, 6.0, _input(Vector3(0.0, 0.0, 100.0), threat))
+	var orbits := {}
+	for member: AmbientPool.Member in row.members:
+		if member.orbit != Vector3.ZERO:
+			orbits["%.3f/%.3f" % [member.orbit_r, member.orbit_rate]] = true
+	_t.check("a scattered row of 4 circles on 4 different orbits (%d)" % orbits.size(), orbits.size() == 4)
 	var quail := _pool([_home("dusk_quail")])
 	_run_for(quail, 3.0, _input(Vector3(0.0, 0.0, 100.0)))
 	_run_for(quail, 4.0, _input(Vector3(0.0, 0.0, 100.0), threat))

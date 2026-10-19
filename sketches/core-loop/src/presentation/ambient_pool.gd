@@ -36,6 +36,7 @@ const DUCK_HOLD_S := 0.5
 const SCATTER_CLIMB := Vector2(12.0, 18.0)
 const SCATTER_CLIMB_RATE := 6.0
 const SCATTER_ORBIT_M := 8.0
+const SCATTER_ORBIT_SPREAD := Vector2(0.7, 1.3)
 const SOUND_GAP_S := 2.0
 const FLEE_CLEAR := 1.5
 const FLIGHT_LIFT := 1.8
@@ -77,6 +78,8 @@ class Member:
 	var return_after := 8.0
 	var react_kind := ""
 	var orbit := Vector3.ZERO
+	var orbit_r := 0.0
+	var orbit_rate := 0.0
 	var placed := false
 	var wants_call := false
 	var wants_react_sound := false
@@ -475,11 +478,15 @@ func _react_flat(m: Member, flat: Vector2, dt: float) -> Vector2:
 		flat += m.dir * speed * dt
 		return flat
 	if m.orbit == Vector3.ZERO:
-		var theta := m.dir.angle() - PI / 2.0
-		var centre := flat - Vector2.from_angle(theta) * SCATTER_ORBIT_M
+		# Each flier keeps its own radius, turn and pace, so a row never wheels in unison (identical
+		# flocking is the swarm remnants' read, VISUAL-LANGUAGE.md section 11).
+		m.orbit_r = SCATTER_ORBIT_M * _rng.randf_range(SCATTER_ORBIT_SPREAD.x, SCATTER_ORBIT_SPREAD.y)
+		m.orbit_rate = (1.0 if _rng.randf() < 0.5 else -1.0) * _rng.randf_range(SCATTER_ORBIT_SPREAD.x, SCATTER_ORBIT_SPREAD.y)
+		var theta := m.dir.angle() - PI / 2.0 * signf(m.orbit_rate)
+		var centre := flat - Vector2.from_angle(theta) * m.orbit_r
 		m.orbit = Vector3(centre.x, centre.y, theta)
-	m.orbit.z += speed / SCATTER_ORBIT_M * dt
-	return Vector2(m.orbit.x, m.orbit.y) + Vector2.from_angle(m.orbit.z) * SCATTER_ORBIT_M
+	m.orbit.z += m.orbit_rate * speed / m.orbit_r * dt
+	return Vector2(m.orbit.x, m.orbit.y) + Vector2.from_angle(m.orbit.z) * m.orbit_r
 
 
 func _hide(m: Member) -> void:
