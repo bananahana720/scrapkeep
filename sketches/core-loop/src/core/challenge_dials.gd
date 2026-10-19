@@ -24,6 +24,12 @@ const TELL_FLOOR := 0.6
 # follow-up and a scaled period never come sooner than this after the last attack.
 const WARN_GAP := 0.2
 
+# Extra phases (<boss>.beat_by_phase, waking and mind only): a gated beat right after the shatter that
+# ends phase p, entry p-1, during which the Warden takes no posture, crack, shatter or health loss.
+# Each entry is 0 (off) or BEAT_MIN to BEAT_MAX seconds; the entry after the final shatter is ignored.
+const BEAT_MIN := 3.0
+const BEAT_MAX := 5.0
+
 const ONES6 := [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 const DEFAULTS := {
@@ -35,9 +41,11 @@ const DEFAULTS := {
 	"waking.damage_mult": 1.0, "waking.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.period_mult": 1.0, "waking.period_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.tell_mult": 1.0, "waking.punish_mult": 1.0, "waking.combo": 0.0,
+	"waking.beat_by_phase": [0.0, 0.0, 0.0, 0.0],
 	"mind.damage_mult": 1.0, "mind.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"mind.period_mult": 1.0, "mind.period_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"mind.tell_mult": 1.0, "mind.punish_mult": 1.0, "mind.combo": 0.0,
+	"mind.beat_by_phase": [0.0, 0.0, 0.0, 0.0],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
 	"warden.pulse_damage_by_stage": ONES6, "warden.pulse_cycle_by_stage": ONES6, "warden.slag_damage_by_stage": ONES6,
@@ -98,7 +106,7 @@ static func set_overrides(d: Dictionary, allow_unruled := false) -> void:
 			continue
 		var raw: String = "/".join((v as Array).map(func(x): return str(x))) if v is Array else str(v)
 		if not _valid(k, raw):
-			_reject(k, "'%s' is not a non-negative number" % raw)
+			_reject(k, _why(k, raw))
 			continue
 		_overrides[k] = _coerce(k, v)
 
@@ -141,7 +149,7 @@ static func parse(spec: String) -> Dictionary:
 			continue
 		var raw := pair.substr(eq + 1).strip_edges()
 		if not _valid(k, raw):
-			_reject(k, "'%s' is not a non-negative number" % raw + (" list a/b/c/d" if k.ends_with("_by_phase") else " list a/b/c/d/e/f" if k.ends_with("_by_stage") else ""))
+			_reject(k, _why(k, raw) + (" list a/b/c/d" if k.ends_with("_by_phase") else " list a/b/c/d/e/f" if k.ends_with("_by_stage") else ""))
 			continue
 		out[k] = _coerce(k, raw)
 	return out
@@ -169,12 +177,26 @@ static func _number(raw: String) -> bool:
 	return raw.is_valid_float() and float(raw) >= 0.0
 
 
+static func _is_beat(key: String) -> bool:
+	return key.ends_with(".beat_by_phase")
+
+
+static func _why(key: String, raw: String) -> String:
+	if _is_beat(key):
+		return "'%s' is not four entries, each 0 or %.0f to %.0f seconds" % [raw, BEAT_MIN, BEAT_MAX]
+	return "'%s' is not a non-negative number" % raw
+
+
 static func _valid(key: String, raw: String) -> bool:
 	if _is_list(key):
 		var parts := raw.split("/", true)
 		for part in parts:
 			if not _number(part):
 				return false
+			if _is_beat(key) and float(part) != 0.0 and (float(part) < BEAT_MIN or float(part) > BEAT_MAX):
+				return false
+		if _is_beat(key) and parts.size() != 4:
+			return false
 		return not parts.is_empty()
 	return _number(raw)
 
@@ -248,6 +270,12 @@ static func combo(boss: String) -> int:
 # normal period (resetting its counter to -1) otherwise.
 static func combo_step(boss: String, left: int) -> int:
 	return combo(boss) if left < 0 else left - 1
+
+
+# Seconds of gated beat after the shatter that ends phase `phase` (1 to 3; the final shatter ends the fight).
+static func beat(boss: String, phase: int) -> float:
+	var a: Array = value(boss + ".beat_by_phase")
+	return float(a[phase - 1]) if phase >= 1 and phase <= a.size() else 0.0
 
 
 static func by_phase(key: String, phase: int) -> float:

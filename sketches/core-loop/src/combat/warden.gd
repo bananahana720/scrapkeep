@@ -63,6 +63,8 @@ const Augments := preload("res://src/movement/augments.gd")
 
 # The counter-pulse's hit, apart from hit_player so the combat layer records it as "warden_counter".
 signal counter_hit(amount: float, shove: Vector3)
+# A gated beat began (challenge dial <boss>.beat_by_phase): seconds long.
+signal beat_started(seconds: float)
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -156,6 +158,12 @@ var _guard_wait := 0.0
 var _charge_len := PULSE_TELEGRAPH
 var _posture: BossPosture
 var _armed := 0.0
+# Gated beats (challenge dials): beat_plan[i] seconds begin right after shatter i + 1 (0 = none, the
+# default and the only value a stage Warden has). While beat_left runs the Warden takes no posture, crack,
+# shatter or health loss; stagger and posture timing are untouched.
+var beat_plan: Array = []
+var beat_left := 0.0
+var _beat_shell: MeshInstance3D
 var _guard_scatter_frame := -1
 var _guard_paid_scatters := 0
 var _slag_burn := 0.0
@@ -333,6 +341,7 @@ func _physics_process(delta: float) -> void:
 	_hook("step", [self, delta])
 	var inside := _flat_to_ball().length() <= reach
 	_step_posture(delta)
+	_step_beat(delta)
 	if family == Roster.SWARM:
 		_step_guard(delta)
 	_step_pulse(delta, inside)
@@ -872,6 +881,10 @@ func chunk_cracked() -> bool:
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "") -> Dictionary:
 	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating_for(hit_kind, part), "smash": smash, "tier": tier,
 			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point()})
+	if beat_immune():
+		# A glance that gains nothing: the deflect feedback reads it, the posture rule never sees a gain.
+		result.merge({"full": false, "dealt": 0.0, "gain": 0.0, "glance": true, "shatter": false, "crack": false}, true)
+		return result
 	if hit_kind == "guard_rack":
 		# A rack is posture pressure, not a contact on the core. Keep judge/apply's
 		# stagger and shatter-frame boundaries while fixing its gain independently of heft.
@@ -882,6 +895,8 @@ func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "
 
 
 func _apply_posture(result: Dictionary) -> void:
+	if beat_immune():
+		return
 	var before := _posture_signature()
 	var was_staggered := _posture.staggered
 	var chunks_before: int = _posture.chunks
@@ -890,10 +905,67 @@ func _apply_posture(result: Dictionary) -> void:
 		_armed = float(result["dealt"])
 		if fleet != null:
 			fleet.discover("warden_shatter", global_position)
+		_begin_beat(_posture.chunks)
 	if _posture.staggered and not was_staggered:
 		_begin_stagger()
 	_publish_posture(before)
 	_hook_posture()
+
+
+func beat_immune() -> bool:
+	return beat_left > 0.0
+
+
+# Arms the beat planned for the shatter just applied; the last shatter kills, so it has none. A
+# stagger already running is left alone: the beat only starts when the shatter has ended it.
+func _begin_beat(chunks_now: int) -> void:
+	var index := BossPosture.CHUNKS - chunks_now - 1
+	if chunks_now <= 0 or index < 0 or index >= beat_plan.size() or _posture.staggered:
+		return
+	var seconds := float(beat_plan[index])
+	if seconds <= 0.0:
+		return
+	beat_left = seconds
+	_show_beat(true)
+	beat_started.emit(seconds)
+
+
+func _step_beat(delta: float) -> void:
+	if beat_left <= 0.0:
+		return
+	beat_left = maxf(0.0, beat_left - delta)
+	if beat_left <= 0.0:
+		_show_beat(false)
+	elif is_instance_valid(_beat_shell):
+		# Pulses faster as it runs out, so the end reads before it comes.
+		var material := _beat_shell.material_override as StandardMaterial3D
+		var rate := 6.0 if beat_left > 1.0 else 14.0
+		material.albedo_color.a = 0.28 + 0.14 * sin(Time.get_ticks_msec() * 0.001 * rate)
+
+
+# The "can't hurt it now" cue: a brass shell round the core, gone when the beat ends.
+func _show_beat(on: bool) -> void:
+	if not on:
+		if is_instance_valid(_beat_shell):
+			_beat_shell.queue_free()
+		_beat_shell = null
+		return
+	if is_instance_valid(_beat_shell):
+		return
+	var sphere := SphereMesh.new()
+	sphere.radius = RADIUS * 1.35
+	sphere.height = RADIUS * 2.7
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(Palette.BRASS, 0.3)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.emission_enabled = true
+	material.emission = Palette.BRASS
+	_beat_shell = MeshInstance3D.new()
+	_beat_shell.name = "BeatShell"
+	_beat_shell.mesh = sphere
+	_beat_shell.material_override = material
+	add_child(_beat_shell)
 
 
 func _step_posture(delta: float) -> void:

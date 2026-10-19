@@ -54,6 +54,14 @@ func _row() -> Dictionary:
 	return Worlds.BOSSES[BOSS_ID]
 
 
+func _beat_plan() -> Array:
+	return [ChallengeDials.beat(BOSS_ID, 1), ChallengeDials.beat(BOSS_ID, 2), ChallengeDials.beat(BOSS_ID, 3)]
+
+
+func _on_beat_started(seconds: float) -> void:
+	ctx.events.boss_attack_telegraphed.emit("%s_beat" % BOSS_ID, seconds)
+
+
 func _warden_spec() -> Dictionary:
 	var spec := super()
 	spec["family"] = Roster.MIND
@@ -268,6 +276,8 @@ func objective_text() -> String:
 		var braced := "nothing" if warden.braced_kinds.is_empty() else "/".join(warden.braced_kinds)
 		return "%s is staggered: hit its open lens. It braces against %s." % [who, braced]
 	var text := "Fill %s's bar to stagger it. %d chunks left." % [who, warden.chunks_left()]
+	if warden.beat_immune():
+		text += " It's bracing: wait."
 	if _family != "":
 		text += " Incoming: %s." % _family.replace("_", " ")
 	if _family == "plate" and _plate_verb != "":

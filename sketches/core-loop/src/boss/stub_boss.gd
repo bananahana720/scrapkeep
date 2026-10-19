@@ -56,6 +56,8 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	warden.global_position = center
 	warden.setup(ctx.player, self, ctx.root, Callable(ctx.flow, "in_play"), 1.0, _warden_spec())
 	warden.died.connect(_on_warden_died)
+	warden.beat_plan = _beat_plan()
+	warden.beat_started.connect(_on_beat_started)
 	warden.set_meta("plate_name", String(_row().get("name", "Warden")))
 	_posture_seen = _posture_signature()
 	state = FIGHT
@@ -64,6 +66,15 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	ctx.flow.boss_active = true
 	ctx.flow.boss_plating = live_plating()
 	ctx.events.boss_arena_entered.emit()
+
+
+# Challenge dial <boss>.beat_by_phase: the seconds of gated beat after each shatter. The stub has none.
+func _beat_plan() -> Array:
+	return []
+
+
+func _on_beat_started(_seconds: float) -> void:
+	pass
 
 
 func exit_arena() -> void:
@@ -221,7 +232,7 @@ func music_state() -> Dictionary:
 		return {}
 	return {
 		"in_phase": 1.0 if warden.staggered() else clampf(warden.posture() / 100.0, 0.0, 1.0),
-		"held": false,
+		"held": is_instance_valid(warden) and warden.beat_immune(),
 		"phase_seconds": 0.0,
 	}
 
