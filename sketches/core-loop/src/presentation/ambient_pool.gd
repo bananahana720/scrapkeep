@@ -28,6 +28,9 @@ const JITTER_RAD := 0.5236
 const HIDE_RUN_S := 1.5
 # A hide run whose direction from the threat points at the ball (dot below this) is turned away from it.
 const AWAY_MIN := 0.0
+# Nearly opposed (dot below -BOXED_IN), it runs sideways with a BOXED_AWAY share away from the ball instead.
+const BOXED_IN := 0.7
+const BOXED_AWAY := 0.6
 const HIDE_SINK_S := 0.5
 const DUCK_HOLD_S := 0.5
 const SCATTER_CLIMB := Vector2(12.0, 18.0)
@@ -417,8 +420,12 @@ func _react(m: Member, flat: Vector2, player: Vector2, threat: Vector2) -> void:
 	var away := flat - player
 	if away.length() > 0.001:
 		away = away.normalized()
-		if m.dir.dot(away) < AWAY_MIN:
-			m.dir = (m.dir - away * m.dir.dot(away) + away).normalized()
+		var along := m.dir.dot(away)
+		if along < -BOXED_IN:
+			# Ball on one side, threat on the other: break out sideways, edging away from the ball.
+			m.dir = (away.orthogonal() * (1.0 if _rng.randf() < 0.5 else -1.0) + away * BOXED_AWAY).normalized()
+		elif along < AWAY_MIN:
+			m.dir = (m.dir - away * along + away).normalized()
 	if not hushed and clock - float(_last_react_sound.get(m.kind, -99.0)) >= SOUND_GAP_S:
 		_last_react_sound[m.kind] = clock
 		m.wants_react_sound = true

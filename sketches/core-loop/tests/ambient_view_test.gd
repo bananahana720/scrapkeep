@@ -69,7 +69,7 @@ func _initialize() -> void:
 
 func _main() -> void:
 	await process_frame
-	_run()
+	await _run()
 	quit(_t.verdict())
 
 
@@ -165,6 +165,8 @@ func _run() -> void:
 		life._process(0.05)
 	_t.check("warden_engaged hides all", life.pool.drawn().is_empty() and not life.visible)
 	events.stage_entered.emit(1, false)
+	for i in 3:
+		await physics_frame
 	for i in 60:
 		life._process(0.05)
 	_t.check("stage re-entry brings them back", not life.pool.drawn().is_empty() and life.visible)
@@ -176,6 +178,8 @@ func _run() -> void:
 	events.stage_content_cleared.emit("clear")
 	_t.check("stage_content_cleared hides the node", not life.visible)
 
+	await _unfit()
+
 	# Source: nothing here publishes an event, deals damage or opens a collision layer.
 	for path in SOURCES:
 		var code := ""
@@ -183,6 +187,30 @@ func _run() -> void:
 			code += line.split("#")[0] + "\n"
 		for word in BANNED:
 			_t.check("%s has no %s" % [path.get_file(), word], not code.contains(word))
+
+
+# The build veto: steep ground and a structure over the ground are unfit, flat open ground is fit, and a ceiling
+# perch keeps its roof.
+func _unfit() -> void:
+	var flat := func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, 1.0 + lift, z)
+	var steep := func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, x * 0.8 + lift, z)
+	var gentle := func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, x * 0.4 + lift, z)
+	_t.check("ground at 39 degrees is unfit", AmbientLife.unfit(steep, null, Vector2(5.0, 5.0), "ground"))
+	_t.check("ground at 22 degrees is fit", not AmbientLife.unfit(gentle, null, Vector2(5.0, 5.0), "ground"))
+	var roof := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	(shape.shape as BoxShape3D).size = Vector3(10.0, 2.0, 10.0)
+	roof.add_child(shape)
+	roof.position = Vector3(200.0, 6.0, 200.0)
+	root.add_child(roof)
+	for i in 3:
+		await physics_frame
+	var space := root.get_world_3d().direct_space_state
+	_t.check("open flat ground is fit", not AmbientLife.unfit(flat, space, Vector2(0.0, 0.0), "ground"))
+	_t.check("ground under a structure is unfit", AmbientLife.unfit(flat, space, Vector2(200.0, 200.0), "rim"))
+	_t.check("a ceiling perch under a structure is fit", not AmbientLife.unfit(flat, space, Vector2(200.0, 200.0), "ceiling"))
+	roof.free()
 
 
 func _alive(life: Node) -> int:
