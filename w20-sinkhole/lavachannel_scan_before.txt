@@ -1,0 +1,45 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCAN: vertices >0.3 m above ground inside another row's lane
+src row | mesh | in lane of | n verts | max height m | at src-local x,z of max | src |x|>W/2 count
+lava_channel_2 | lava_channel_detail1 | lava_channel_1 | 65 | 1.18 | -15.3,-28.1 | 65 | min |x| in lane 13.0; max vertex at lane-local -13.3,9.7
+lava_channel_3 | lava_channel_detail1 | lava_channel_2 | 78 | 1.18 | -15.3,-28.3 | 78 | min |x| in lane 12.4; max vertex at lane-local -12.7,12.1
+lava_channel_4 | lava_channel_detail1 | lava_channel_5 | 48 | 1.18 | 15.3,28.4 | 48 | min |x| in lane 13.8; max vertex at lane-local 13.9,-13.6
+lava_channel_5 | lava_channel_detail1 | lava_channel_6 | 78 | 1.18 | 15.1,28.2 | 78 | min |x| in lane 11.7; max vertex at lane-local 11.7,-11.0
+lava_channel_6 | lava_channel_detail1 | lava_channel_5 | 27 | 0.46 | 17.5,-28.2 | 27 | min |x| in lane 13.1; max vertex at lane-local 13.9,10.2
+lava_channel_6 | lava_channel_detail1 | lava_channel_7 | 78 | 1.18 | 15.3,28.2 | 78 | min |x| in lane 11.3; max vertex at lane-local 11.4,-10.7
+lava_channel_7 | lava_channel_detail1 | lava_channel_6 | 27 | 0.46 | 17.5,-28.3 | 27 | min |x| in lane 12.8; max vertex at lane-local 13.6,9.6
+lava_channel_7 | lava_channel_detail1 | lava_channel_8 | 60 | 1.18 | 15.1,28.2 | 60 | min |x| in lane 12.9; max vertex at lane-local 13.0,-12.6
+lava_channel_11 | lava_channel_detail1 | lava_channel_12 | 18 | 0.48 | -16.8,28.8 | 18 | min |x| in lane 12.6; max vertex at lane-local -12.6,-9.4
+lava_channel_11 | lava_channel_detail1 | lava_channel_10 | 73 | 1.18 | -15.3,-28.1 | 73 | min |x| in lane 12.5; max vertex at lane-local -12.8,12.3
+lava_channel_12 | lava_channel_detail1 | lava_channel_13 | 23 | 0.65 | -18.0,26.5 | 23 | min |x| in lane 11.8; max vertex at lane-local -13.9,-10.0
+lava_channel_12 | lava_channel_detail1 | lava_channel_11 | 82 | 1.18 | -15.3,-28.0 | 82 | min |x| in lane 11.3; max vertex at lane-local -11.6,10.8
+lava_channel_13 | lava_channel_detail1 | lava_channel_14 | 27 | 0.68 | -18.6,27.2 | 27 | min |x| in lane 11.3; max vertex at lane-local -13.6,-8.2
+lava_channel_13 | lava_channel_detail1 | lava_channel_12 | 82 | 1.18 | -15.1,-28.2 | 82 | min |x| in lane 10.4; max vertex at lane-local -10.5,9.9
+lava_channel_14 | lava_channel_detail1 | lava_channel_15 | 40 | 0.90 | -18.5,24.9 | 40 | min |x| in lane 10.5; max vertex at lane-local -13.8,-9.6
+lava_channel_14 | lava_channel_detail1 | lava_channel_13 | 82 | 1.18 | -15.1,-27.7 | 82 | min |x| in lane 10.0; max vertex at lane-local -10.2,9.7
+lava_channel_15 | lava_channel_detail1 | lava_channel_16 | 170 | 1.84 | 17.7,21.1 | 170 | min |x| in lane 6.9; max vertex at lane-local 13.7,-10.4
+lava_channel_15 | lava_channel_detail1 | lava_channel_14 | 82 | 1.18 | -15.1,-28.2 | 82 | min |x| in lane 9.3; max vertex at lane-local -9.4,8.7
+lava_channel_16 | lava_channel_detail1 | lava_channel_17 | 180 | 1.84 | 17.7,20.1 | 180 | min |x| in lane 6.7; max vertex at lane-local 13.7,-10.3
+lava_channel_16 | lava_channel_detail1 | lava_channel_15 | 161 | 0.68 | 16.8,-22.9 | 161 | min |x| in lane 8.6; max vertex at lane-local 11.4,9.8
+lava_channel_17 | lava_channel_detail1 | lava_channel_18 | 129 | 1.72 | 17.0,20.4 | 129 | min |x| in lane 8.0; max vertex at lane-local 14.0,-12.4
+lava_channel_17 | lava_channel_detail1 | lava_channel_16 | 165 | 0.91 | 18.9,-21.0 | 165 | min |x| in lane 8.0; max vertex at lane-local 13.9,8.9
+lava_channel_18 | lava_channel_detail1 | lava_channel_17 | 161 | 0.68 | 16.4,-23.6 | 161 | min |x| in lane 9.4; max vertex at lane-local 11.8,10.2
+lava_channel_19 | lava_channel_detail1 | lava_channel_20 | 45 | 0.90 | -18.2,24.0 | 45 | min |x| in lane 9.9; max vertex at lane-local -13.5,-9.8
+lava_channel_19 | lava_channel_detail1 | lava_channel_18 | 73 | 1.18 | -15.3,-27.7 | 73 | min |x| in lane 12.5; max vertex at lane-local -12.8,12.2
+lava_channel_20 | lava_channel_detail1 | lava_channel_19 | 109 | 1.50 | -16.3,-21.1 | 109 | min |x| in lane 8.6; max vertex at lane-local -13.8,13.2
+lava_channel_20 | lava_channel_detail1 | lava_channel_21 | 9 | 0.48 | -16.8,28.8 | 9 | min |x| in lane 13.6; max vertex at lane-local -13.6,-7.3
+lava_channel_21 | lava_channel_detail1 | lava_channel_20 | 82 | 1.18 | -15.1,-24.3 | 82 | min |x| in lane 12.3; max vertex at lane-local -12.4,12.3
+SCAN total offending vertices: 2254
+LIP: row | sample z | lateral | own base shell gap | highest hit any row: mesh/row gap, hit local to hit-row x,z
+lava_channel_13 | z -13 | x -13.5 | own shell +3.91 | top any +3.91 lava_channel_13/lava_channel at hit-row-local -13.5,7.3,-13.2
+lava_channel_13 | z 3 | x 13.5 | own shell +0.56 | top any +0.56 lava_channel_13/lava_channel at hit-row-local 13.5,3.9,2.8
+lava_channel_13 | z -5 | x -13.5 | own shell +0.40 | top any +0.40 lava_channel_13/lava_channel at hit-row-local -13.5,3.5,-5.2
+lava_channel_13 | z -3 | x 13.5 | own shell +0.37 | top any +0.37 lava_channel_13/lava_channel at hit-row-local 13.5,3.9,-3.2
+lava_channel_20 | z -3 | x 13.5 | own shell +2.86 | top any +2.86 lava_channel_20/lava_channel at hit-row-local 13.5,5.9,-3.2
+lava_channel_20 | z -1 | x 13.5 | own shell +1.19 | top any +1.19 lava_channel_20/lava_channel at hit-row-local 13.5,4.8,-1.2
+lava_channel_20 | z 5 | x -13.5 | own shell +0.77 | top any +0.77 lava_channel_20/lava_channel at hit-row-local -13.5,3.7,4.8
+lava_channel_20 | z 3 | x 13.5 | own shell +0.63 | top any +0.63 lava_channel_20/lava_channel at hit-row-local 13.5,4.3,2.8
+GROUND relief lava_channel_13 at z -13 (ground minus row origin y): x-15.5:+4.00 x-14.5:+3.74 x-13.5:+3.44 x-12.5:+2.77 x-11.5:+2.02
+GROUND relief lava_channel_20 at z -3 (ground minus row origin y): x11.5:+1.72 x12.5:+2.39 x13.5:+4.12 x14.5:+10.76 x15.5:+17.20
+exit 0

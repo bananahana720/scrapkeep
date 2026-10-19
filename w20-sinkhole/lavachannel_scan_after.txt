@@ -1,0 +1,17 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCAN: vertices >0.3 m above ground inside another row's lane
+src row | mesh | in lane of | n verts | max height m | at src-local x,z of max | src |x|>W/2 count
+SCAN total offending vertices: 0
+LIP: row | sample z | lateral | own base shell gap | highest hit any row: mesh/row gap, hit local to hit-row x,z
+lava_channel_13 | z -13 | x -13.5 | own shell +0.31 | top any +0.31 lava_channel_13/lava_channel at hit-row-local -13.5,3.7,-13.2
+lava_channel_13 | z 3 | x 13.5 | own shell +0.27 | top any +0.27 lava_channel_13/lava_channel at hit-row-local 13.5,3.6,2.8
+lava_channel_13 | z 5 | x -13.5 | own shell +0.24 | top any +0.24 lava_channel_13/lava_channel at hit-row-local -13.5,3.2,4.8
+lava_channel_13 | z 11 | x -13.5 | own shell +0.22 | top any +0.22 lava_channel_13/lava_channel at hit-row-local -13.5,3.0,10.8
+lava_channel_20 | z -3 | x 13.5 | own shell +1.17 | top any +1.17 lava_channel_20/lava_channel at hit-row-local 13.5,4.2,-3.2
+lava_channel_20 | z 5 | x -13.5 | own shell +0.35 | top any +0.35 lava_channel_20/lava_channel at hit-row-local -13.5,3.3,4.8
+lava_channel_20 | z -15 | x 13.5 | own shell +0.27 | top any +0.27 lava_channel_20/lava_channel at hit-row-local 13.5,3.1,-15.2
+lava_channel_20 | z -5 | x 13.5 | own shell +0.24 | top any +0.24 lava_channel_20/lava_channel at hit-row-local 13.5,3.0,-5.2
+GROUND relief lava_channel_13 at z -13 (ground minus row origin y): x-15.5:+4.00 x-14.5:+3.74 x-13.5:+3.44 x-12.5:+2.77 x-11.5:+2.02
+GROUND relief lava_channel_20 at z -3 (ground minus row origin y): x11.5:+1.72 x12.5:+2.39 x13.5:+4.12 x14.5:+10.76 x15.5:+17.20
+exit 0
