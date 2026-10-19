@@ -9,7 +9,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks. Flush lane: nothing inside a ride row's footprint stands over 0.12 m above the ground, so the rims carry no rocks or tufts and each detail shell is one flat 0.4 m patch."
    }
   },
   {
@@ -45,7 +45,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them. Flush lane: nothing inside a ride row's footprint stands over 0.12 m above the ground, so the rims carry no rocks or tufts and each detail shell is one flat 0.4 m patch."
    }
   },
   {
@@ -81,7 +81,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them. Flush lane: nothing inside a ride row's footprint stands over 0.12 m above the ground, so the rims carry no rocks or tufts and each detail shell is one flat 0.4 m patch."
    }
   },
   {
@@ -117,7 +117,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them. Flush lane: nothing inside a ride row's footprint stands over 0.12 m above the ground, so the rims carry no rocks or tufts and each detail shell is one flat 0.4 m patch."
    }
   },
   {
@@ -153,7 +153,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks. Flush lane: nothing inside a ride row's footprint stands over 0.12 m above the ground, so the rims carry no rocks or tufts and each detail shell is one flat 0.4 m patch."
    }
   },
   {
@@ -189,7 +189,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a low light-rail bed: two rails 0.03 m proud of a gravel bed with flush colour bands for the tie sleepers, cobbles along the verges."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a low light-rail bed: two rails 0.03 m proud of a gravel bed with flush colour bands for the tie sleepers, cobbles along the verges. Flush lane: nothing inside a ride row's footprint stands over 0.12 m above the ground, so the rims carry no rocks or tufts and each detail shell is one flat 0.4 m patch."
    }
   },
   {

@@ -1314,7 +1314,7 @@ PIT_LINER_IDS = list(PIT_LINERS)
 LINERS.update(PIT_LINERS)
 # The islands' decoration-only pass (park_islands bake). fin_chute (the twin_fins collapse drops its ground 8 m) and cloud_wash_west
 # (the west_wing impact swaps in a crater) are not here: a baked-ground liner would float over the swapped ground.
-# "flush_lane": nothing drawn inside |x| < the row's half-width stands more than FLUSH_LANE (0.12 m) above the ground, and rim rocks
+# "flush_lane": nothing drawn inside |x| <= the row's half-width stands more than FLUSH_LANE (0.12 m) above the ground, and rim rocks
 # start at hw + FLUSH_RIM_GAP, because a ride lane may carry no visible bump that is not solid. liner_check fails the build otherwise.
 ISLES_LINERS = {
     "liner_run_turn_wash": {"park": "park_islands", "style": "sandstone", "at": (-60.0, -516.0), "size": (60.0, 4.0, 40.0), "yaw": 0.0, "flush_lane": True},
@@ -1385,6 +1385,54 @@ def hh(i, j, k=0):
     return ((i * 73856093) ^ (j * 19349663) ^ (k * 83492791)) % 1009 / 1009.0
 
 
+FLUSH_PROP_REACH = {"rock": 0.7, "tuft": 0.5}    # how far a rock or tuft reaches from its centre
+_RIDES = {}
+
+
+def ride_footprints(park):
+    """Every row of the park with a ride fact, as (id, at, along-half, across-half, facing, across-axis), the footprint math of
+    scatter's keep-out (size[0] along the facing, size[2] across it)."""
+    if park not in _RIDES:
+        rows = json.loads((kit.SKETCH / "src/world/park" / (park + ".json")).read_text())["park_rows"]
+        out = []
+        for r in rows:
+            if not r.get("ride_fact"):
+                continue
+            yaw = math.radians(float(r["yaw_deg"]))
+            out.append((r["id"], r["at"], r["size"][0] / 2.0, r["size"][2] / 2.0, (math.sin(yaw), math.cos(yaw)), (math.cos(yaw), -math.sin(yaw))))
+        _RIDES[park] = out
+    return _RIDES[park]
+
+
+def in_ride_footprint(row, lx, lz, reach=0.0):
+    """Whether the liner-local point, widened by reach, is inside any ride row's footprint of the park (the liner's own lane included)."""
+    x, z = row.world(lx, lz)
+    for rid, at, hl, hw, f, a in ride_footprints(row.park):
+        dx, dz = x - at[0], z - at[1]
+        if abs(dx * f[0] + dz * f[1]) <= hl + reach + 1e-6 and abs(dx * a[0] + dz * a[1]) <= hw + reach + 1e-6:
+            return True
+    return False
+
+
+def flush_clip(row, spec):
+    """(exl, exr) of a flush_lane row's sheet: where another flush_lane liner's lane starts on that side within the z range
+    of both sheets, the sheet stops at that lane's edge, so adjacent sheets do not overlap or z-fight."""
+    assert spec["yaw"] == 0.0, "flush_clip assumes an unturned row"
+    exl = exr = row.ex
+    for oid, o in LINERS.items():
+        if not o.get("flush_lane") or o is spec or o.get("park") != spec.get("park"):
+            continue
+        if abs(o["at"][1] - spec["at"][1]) >= (o["size"][0] + spec["size"][0]) / 2.0 + 2 * MARGIN:
+            continue
+        lo, hi = o["at"][0] - o["size"][2] / 2.0, o["at"][0] + o["size"][2] / 2.0
+        mine_hi, mine_lo = spec["at"][0] + row.hw, spec["at"][0] - row.hw
+        if lo >= mine_hi - 1e-6:
+            exr = min(exr, lo - spec["at"][0])
+        elif hi <= mine_lo + 1e-6:
+            exl = min(exl, spec["at"][0] - hi)
+    return exl, exr
+
+
 class Row:
     """A liner's row: the world <-> GLB-local transform of park_recipes.gd row_transform, and the ground under it."""
 
@@ -1402,6 +1450,9 @@ class Row:
         self.g0 = ground_at(self.ax, self.az, self.park)[0]
         self.hw, self.hl = self.W / 2.0, self.L / 2.0
         self.ex, self.ez = self.hw + MARGIN, self.hl + MARGIN
+        self.exl = self.exr = self.ex           # the sheet's extent on the -x and +x side (flush_lane rows clip at a neighbouring lane)
+        if self.flush:
+            self.exl, self.exr = flush_clip(self, spec)
         self.gauge_z = -0.3 * self.L
         self.cache = {}
 
@@ -1426,6 +1477,8 @@ def fill(keys, step):
 
 def across_stations(row, step):
     hw, W = row.hw, row.W
+    if row.flush and (row.exl != row.ex or row.exr != row.ex):
+        return across_clipped(row, step)
     k = [0.0, 0.2 * W, row.ex] + ([hw] if row.flush and row.style == "haul" else [])
     if row.style == "sandstone":
         k += [hw, 0.1 * W, 0.3 * W]
@@ -1439,6 +1492,16 @@ def across_stations(row, step):
         k += [hw - 1.5, hw - 0.5, hw + 0.8, hw + 2.4]
     k = sorted(set(round(v, 4) for v in k))
     return fill([-v for v in k[1:]] + k, step)
+
+
+def across_clipped(row, step):
+    """across_stations of a flush_lane row whose sheet stops short of its margin on one side: the stations are those of the
+    full sheet, cut at exl / exr (which themselves become stations)."""
+    full = Row.__new__(Row)
+    full.__dict__.update(row.__dict__)
+    full.exl = full.exr = full.ex
+    xs = across_stations(full, step)
+    return fill([-row.exl] + [x for x in xs if -row.exl < x < row.exr] + [row.exr], step)
 
 
 def along_stations(row, step):
@@ -1479,7 +1542,7 @@ def rect_off(row, lx, lz, gh):
     wt = ss((a - 0.2 * W) / (0.08 * W)) if d <= 0 else 1.0
     off = BASE_OFF
     if st == "sandstone":
-        if d <= 0:
+        if d < 0 or (d == 0 and not row.flush):
             q = (gh / 0.9) % 1.0
             f = ss(q / 0.6) if q < 0.88 else ss((1.0 - q) / 0.12)
             off += wt * (0.06 if row.flush else 0.19) * f
@@ -1754,9 +1817,9 @@ def liner_base(row):
             for lx in xs:
                 bil, hi = row.sample(lx, lz)
                 off = rect_off(row, lx, lz, bil)
-                we = edge_weight(min(row.ex - abs(lx), row.ez - abs(lz)))
+                we = edge_weight(min((row.exr - lx) if lx >= 0 else (row.exl + lx), row.ez - abs(lz)))
                 off = EDGE_OFF + (off - EDGE_OFF) * we
-                cap = FLUSH_LANE if row.flush and abs(lx) < row.hw - 1e-6 else None
+                cap = FLUSH_LANE if row.flush and in_ride_footprint(row, lx, lz) else None
                 line.append(((lx, lifted(row, bil, hi, off, abs(lx) <= 0.2 * row.W + 1e-6, cap), lz), bil))
             lat.append(line)
         for j in range(len(zs) - 1):
@@ -1809,6 +1872,8 @@ def rim_points(row, count, kind, salt):
                 lz = -row.ez + 0.7 + span * (k + 0.5 + 0.7 * (hh(k, salt, side + 2 + 9 * tries) - 0.5)) / per
                 lz = min(max(lz, -row.ez + 0.9), row.ez - 0.9)
                 lx = side * (lo + (hi - lo) * hh(k, salt, side + 5 + 9 * tries))
+                if row.flush and in_ride_footprint(row, lx, lz, FLUSH_PROP_REACH[kind]):
+                    continue
                 if settled(row, lx, lz) and (row.gap is None or abs(row.sample(lx, lz)[0] - row.g0) <= row.gap):
                     pts.append((lx, lz))
                     break
@@ -1825,9 +1890,23 @@ def rock_pal(row):
     return {"sandstone": (SAND, VARNISH), "concrete": (CONCRETE, FORM), "canal": (STONE, VARNISH), "haul": (STONE, VARNISH), "rails": (STONE, VARNISH), "pond": (STONE, SAND)}[row.style]
 
 
+def flush_patch(s, row, color):
+    """A flush_lane liner whose rims all fall inside ride footprints keeps a detail shell (the loader and the export expect one
+    mesh): one 0.4 m flat colour patch 0.03 m over the ground just outside the lane, the nearest thing to no rim."""
+    lx, lz = row.hw + 1.0, 0.0
+    pts = []
+    for dx, dz in ((-0.2, -0.2), (-0.2, 0.2), (0.2, 0.2), (0.2, -0.2)):
+        px, pz = lx + dx, lz + dz
+        pts.append((px, row.sample(px, pz)[0] + 0.03 - row.g0, pz))
+    poly_up(s, pts, color)
+
+
 def liner_rocks(row):
     def build(s):
         pts = rim_points(row, ROCKS_MAX, "rock", 11)
+        print("FLUME_WORKS_RIMS", row.rid, "rocks kept", len(pts))
+        if row.flush and not pts:
+            flush_patch(s, row, STONE)
         pa, pb = rock_pal(row)
         for k, (lx, lz) in enumerate(pts):
             bil, hi = row.sample(lx, lz)
@@ -1852,6 +1931,9 @@ def liner_rocks(row):
 def liner_tufts(row):
     def build(s):
         pts = rim_points(row, TUFTS_MAX, "tuft", 13)
+        print("FLUME_WORKS_RIMS", row.rid, "tufts kept", len(pts))
+        if row.flush and not pts:
+            flush_patch(s, row, SAGE)
         for k, (lx, lz) in enumerate(pts):
             bil, hi = row.sample(lx, lz)
             x, y, z = lx, bil - row.g0 - 0.02, lz
@@ -1916,13 +1998,19 @@ def liner_check(rid, out_dir):
             gaps.append(y + row.g0 - row.sample(x, z)[0])
         lo, hi = min(gaps), max(gaps)
         if row.flush:
-            lane = [g for (x, y, z), g in zip(pts, gaps) if abs(x) < row.hw - 1e-6]
+            lane = [g for (x, y, z), g in zip(pts, gaps) if abs(x) <= row.hw + 1e-6]
             lane_max = max(lane) if lane else 0.0
             print("FLUME_WORKS_FLUSH", name, "lane verts %d  highest inside |x| < %.1f: %.3f m (limit %.2f)  %s" % (
                 len(lane), row.hw, lane_max, FLUSH_LANE, "PASS" if lane_max <= FLUSH_LANE + 1e-4 else "FAIL"))
             if lane_max > FLUSH_LANE + 1e-4:
                 fails.append("%s: %.3f m above the ground inside the lane (flush_lane limit %.2f)" % (name, lane_max, FLUSH_LANE))
-            if name.endswith("1"):
+            ride = [g for (x, y, z), g in zip(pts, gaps) if in_ride_footprint(row, x, z)]
+            ride_max = max(ride) if ride else 0.0
+            print("FLUME_WORKS_FLUSH", name, "inside any ride footprint: %d verts, highest %.3f m (limit %.2f)  %s" % (
+                len(ride), ride_max, FLUSH_LANE, "PASS" if ride_max <= FLUSH_LANE + 1e-4 else "FAIL"))
+            if ride_max > FLUSH_LANE + 1e-4:
+                fails.append("%s: %.3f m above the ground inside a ride row's footprint (flush_lane limit %.2f)" % (name, ride_max, FLUSH_LANE))
+            if name == rid + "_detail1":
                 near = min([abs(x) for x, y, z in pts] or [0.0])
                 if near < row.hw + FLUSH_RIM_GAP - 1e-3:
                     fails.append("%s: rock vertex at |x| %.2f, inside hw + %.1f" % (name, near, FLUSH_RIM_GAP))
@@ -2143,6 +2231,8 @@ def liner_registry(rid):
     park = LINERS[rid].get("park", "park_flume")
     note = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. "
             + LINER_NOTES[LINERS[rid]["style"]] + LINER_NOTES_EXTRA.get(rid, "") + ".")
+    if LINERS[rid].get("flush_lane"):
+        note += " Flush lane: nothing inside a ride row's footprint stands over 0.12 m above the ground, so the rims carry no rocks or tufts and each detail shell is one flat 0.4 m patch."
     rows = []
     for name, base, text in ((rid, True, note),
                              (rid + "_detail1", False, "Decoration only, conformed to the %s bake; rebuild after a re-bake. Detail shell 1 of %s, drawn by range (the detail class): small rocks on the rims." % (park, rid)),
