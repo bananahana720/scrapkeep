@@ -9463,6 +9463,42 @@
    }
   },
   {
+   "id": "liner_drop_ramp",
+   "path": "res://assets/models/park/liner_drop_ramp.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. contour-banded slickrock and scree with bleached driftwood, root balls, rusted sheet and pipe sections at the margins and gravel fans."
+   }
+  },
+  {
+   "id": "liner_drop_ramp_detail1",
+   "path": "res://assets/models/park/liner_drop_ramp_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_drop_ramp, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_drop_ramp_detail2",
+   "path": "res://assets/models/park/liner_drop_ramp_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_drop_ramp, drawn by range (the detail class): slickrock chips."
+   }
+  },
+  {
    "id": "liner_dump_wash_1",
    "path": "res://assets/models/park/liner_dump_wash_1.glb",
    "class": "landform",
@@ -9532,6 +9568,42 @@
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
     "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_dump_wash_2, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_east_wash",
+   "path": "res://assets/models/park/liner_east_wash.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. a cracked mud floor of polygon plates with dark seams, a cut bank of banded strata under a grey cap, bleached driftwood, root balls, rusted corrugated sheet and pipe sections half-buried against the banks, gravel bars on the inside of bends."
+   }
+  },
+  {
+   "id": "liner_east_wash_detail1",
+   "path": "res://assets/models/park/liner_east_wash_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_east_wash, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_east_wash_detail2",
+   "path": "res://assets/models/park/liner_east_wash_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_east_wash, drawn by range (the detail class): crack lips and curled flakes."
    }
   },
   {
@@ -9679,6 +9751,78 @@
    }
   },
   {
+   "id": "liner_meander",
+   "path": "res://assets/models/park/liner_meander.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. a cracked mud floor of polygon plates with dark seams, a cut bank of banded strata under a grey cap, bleached driftwood, root balls, rusted corrugated sheet and pipe sections half-buried against the banks, gravel bars on the inside of bends."
+   }
+  },
+  {
+   "id": "liner_meander_bend",
+   "path": "res://assets/models/park/liner_meander_bend.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. a cracked mud floor of polygon plates with dark seams, a cut bank of banded strata under a grey cap, bleached driftwood, root balls, rusted corrugated sheet and pipe sections half-buried against the banks, gravel bars on the inside of bends."
+   }
+  },
+  {
+   "id": "liner_meander_bend_detail1",
+   "path": "res://assets/models/park/liner_meander_bend_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_meander_bend, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_meander_bend_detail2",
+   "path": "res://assets/models/park/liner_meander_bend_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_meander_bend, drawn by range (the detail class): crack lips and curled flakes."
+   }
+  },
+  {
+   "id": "liner_meander_detail1",
+   "path": "res://assets/models/park/liner_meander_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_meander, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_meander_detail2",
+   "path": "res://assets/models/park/liner_meander_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_meander, drawn by range (the detail class): crack lips and curled flakes."
+   }
+  },
+  {
    "id": "liner_mesa_spill",
    "path": "res://assets/models/park/liner_mesa_spill.glb",
    "class": "landform",
@@ -9787,6 +9931,42 @@
    }
   },
   {
+   "id": "liner_watch_butte_crest",
+   "path": "res://assets/models/park/liner_watch_butte_crest.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. contour-banded slickrock and scree with bleached driftwood, root balls, rusted sheet and pipe sections at the margins and gravel fans."
+   }
+  },
+  {
+   "id": "liner_watch_butte_crest_detail1",
+   "path": "res://assets/models/park/liner_watch_butte_crest_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_watch_butte_crest, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_watch_butte_crest_detail2",
+   "path": "res://assets/models/park/liner_watch_butte_crest_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_watch_butte_crest, drawn by range (the detail class): slickrock chips."
+   }
+  },
+  {
    "id": "liner_weir_chute",
    "path": "res://assets/models/park/liner_weir_chute.glb",
    "class": "landform",
@@ -9856,6 +10036,42 @@
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
     "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_weir_pond, drawn by range (the detail class): sage tufts on the rims."
+   }
+  },
+  {
+   "id": "liner_west_wash",
+   "path": "res://assets/models/park/liner_west_wash.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only, conformed to the park_crown bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets and solids; no external mesh. No -col mesh: the stamped terrain stays the only collider. a cracked mud floor of polygon plates with dark seams, a cut bank of banded strata under a grey cap, bleached driftwood, root balls, rusted corrugated sheet and pipe sections half-buried against the banks, gravel bars on the inside of bends."
+   }
+  },
+  {
+   "id": "liner_west_wash_detail1",
+   "path": "res://assets/models/park/liner_west_wash_detail1.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 1 of liner_west_wash, drawn by range (the detail class): pebbles."
+   }
+  },
+  {
+   "id": "liner_west_wash_detail2",
+   "path": "res://assets/models/park/liner_west_wash_detail2.glb",
+   "class": "detail",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/washes.py",
+    "note": "Decoration only. Detail shell 2 of liner_west_wash, drawn by range (the detail class): crack lips and curled flakes."
    }
   },
   {
@@ -13665,12 +13881,18 @@
   "liner_canal_lip",
   "liner_canal_lip_detail1",
   "liner_canal_lip_detail2",
+  "liner_drop_ramp",
+  "liner_drop_ramp_detail1",
+  "liner_drop_ramp_detail2",
   "liner_dump_wash_1",
   "liner_dump_wash_1_detail1",
   "liner_dump_wash_1_detail2",
   "liner_dump_wash_2",
   "liner_dump_wash_2_detail1",
   "liner_dump_wash_2_detail2",
+  "liner_east_wash",
+  "liner_east_wash_detail1",
+  "liner_east_wash_detail2",
   "liner_gap_wash",
   "liner_gap_wash_detail1",
   "liner_gap_wash_detail2",
@@ -13683,6 +13905,12 @@
   "liner_main_canal",
   "liner_main_canal_detail1",
   "liner_main_canal_detail2",
+  "liner_meander",
+  "liner_meander_bend",
+  "liner_meander_bend_detail1",
+  "liner_meander_bend_detail2",
+  "liner_meander_detail1",
+  "liner_meander_detail2",
   "liner_mesa_spill",
   "liner_mesa_spill_detail1",
   "liner_mesa_spill_detail2",
@@ -13692,12 +13920,18 @@
   "liner_wasteway_chute",
   "liner_wasteway_chute_detail1",
   "liner_wasteway_chute_detail2",
+  "liner_watch_butte_crest",
+  "liner_watch_butte_crest_detail1",
+  "liner_watch_butte_crest_detail2",
   "liner_weir_chute",
   "liner_weir_chute_detail1",
   "liner_weir_chute_detail2",
   "liner_weir_pond",
   "liner_weir_pond_detail1",
   "liner_weir_pond_detail2",
+  "liner_west_wash",
+  "liner_west_wash_detail1",
+  "liner_west_wash_detail2",
   "mesa_lip_kicker",
   "mesa_lip_kicker_12x4x300",
   "mesa_lip_kicker_12x4x300_detail1",
