@@ -20,17 +20,22 @@ from kit import C, mix, shade, tint
 K = kit.Kit("islands", polish_opts={"detail": 1})
 
 # Park-local colours (all safe: muted, no hazard hue, no brass outside Fleet kinds).
-ROPE = "b18a52"        # the animals' ochre rope
-ROPE_D = "8d6c3c"
-SLICK = "b58a78"       # pink slickrock
-SLICK_D = "93705f"
+ROPE = "7a6e58"        # the animals' ochre rope
+ROPE_D = "574e3f"
+SLICK = "8c7e76"       # pink slickrock
+SLICK_D = "6f645d"
 PINE = "4d6840"
 PINE_D = "394f34"
 BARK = "6b4a38"
-WICKER = "a07a4a"
-PATCH_A = "c9b88f"     # patch canvases
-PATCH_B = "bf9a74"
-PATCH_C = "a9a68a"
+WICKER = "6e6150"
+PATCH_A = "a39b86"     # patch canvases
+PATCH_B = "8e8571"
+PATCH_C = "96937f"
+TIMBER = "6c5f4d"      # desaturated: low sun warms it, so it starts grey-brown
+TIMBER_D = "4b4136"
+SAND = "b5a384"
+SAND_D = "9c8d73"
+SAND_P = "c9bb9f"
 OXIDE = "9b513a"      # Fleet only
 BRASS = "d9b44a"      # Fleet only, one tag
 
@@ -100,21 +105,21 @@ def lookout_hut(p, v, rng):
     for x in (-1.6, 1.6):
         for y in (-1.4, 1.4):
             if v == "b" and (x, y) == (1.6, 1.4):
-                p.beam((x, y, 0), (x + 0.3, y + 0.2, 0.55), 0.3, C["timber_dark"])  # a snapped stilt
+                p.beam((x, y, 0), (x + 0.3, y + 0.2, 0.55), 0.3, TIMBER_D)  # a snapped stilt
                 continue
-            p.beam((x, y, 0), (x, y, sz + 0.1), 0.3, C["timber_dark"], style="hard_smooth")
+            p.beam((x, y, 0), (x, y, sz + 0.1), 0.3, TIMBER_D, style="hard_smooth")
             rock(p, (x, y, 0.1), 0.45, SLICK_D, rng, 0.5)  # footing stone
     if v != "c":
         for z in (0.45, 0.75):
             for y in (-1.4, 1.4):
-                p.beam((-1.6, y, z), (1.6, y, z), 0.1, C["timber"], h=0.12)
+                p.beam((-1.6, y, z), (1.6, y, z), 0.1, TIMBER, h=0.12)
     # Floor deck and a porch of stacked box steps (steps are boxes, never a wedge).
-    p.box((W + 0.4, D + 0.4, 0.18), (0, 0, sz + 0.1), C["timber_dark"])
+    p.box((W + 0.4, D + 0.4, 0.18), (0, 0, sz + 0.1), TIMBER_D)
     for i in range(10):
         x = -1.75 + i * 0.39
-        p.box((0.36, D + 0.45, 0.06), (x, 0, sz + 0.21), tint(C["timber_pale"] if i % 3 else C["timber"], rng, 0.1), jit=0.004)
-    p.box((1.6, 0.9, sz * 0.5), (-0.6, -2.35, sz * 0.25), C["sandstone_dark"], style="hard_smooth")
-    p.box((1.3, 0.8, sz * 0.25), (-0.6, -2.95, sz * 0.12), C["sandstone"], style="hard_smooth")
+        p.box((0.36, D + 0.45, 0.06), (x, 0, sz + 0.21), tint(C["timber_pale"] if i % 3 else TIMBER, rng, 0.1), jit=0.004)
+    p.box((1.6, 0.9, sz * 0.5), (-0.6, -2.35, sz * 0.25), SAND_D, style="hard_smooth")
+    p.box((1.3, 0.8, sz * 0.25), (-0.6, -2.95, sz * 0.12), SAND, style="hard_smooth")
     z0 = sz + 0.25
     # Walls: back, sides, front with door gap. Planks run horizontally; state b/c lose some.
     gap_b = {3, 4, 9} if v == "b" else ({2, 3, 6, 7, 8, 12} if v == "c" else set())
@@ -124,26 +129,26 @@ def lookout_hut(p, v, rng):
             if (s == 1 and i in gap_b) or (v == "c" and s == -1 and i > 9):
                 continue
             p.box((0.12, D - 0.1, ch / 15 * 0.94), (s * W / 2, 0, z0 + ch / 15 * (i + 0.5)),
-                  tint(C["timber"] if s == -1 else C["timber_grey"], rng, 0.07), jit=0.004)
+                  tint(TIMBER if s == -1 else C["timber_grey"], rng, 0.07), jit=0.004)
     # Front wall: two planked wings around a door, and a round window.
     for i in range(15):
         zc = z0 + ch / 15 * (i + 0.5)
         for (a, b) in ((-W / 2, -0.55), (0.45, W / 2)):
             if (a, b) == (0.45, W / 2) and 5 <= i <= 10:
                 continue  # round-window gap in the right wing
-            p.box((b - a, 0.12, ch / 15 * 0.94), ((a + b) / 2, -D / 2, zc), tint(C["timber"], rng, 0.07), jit=0.004)
+            p.box((b - a, 0.12, ch / 15 * 0.94), ((a + b) / 2, -D / 2, zc), tint(TIMBER, rng, 0.07), jit=0.004)
     p.box((0.9, 0.1, ch - 0.1), (-0.05, -D / 2 + 0.03, z0 + ch / 2 - 0.05), tint(C["timber_pale"], rng, 0.05))  # door slab
     p.cyl(0.07, 0.1, (0.3, -D / 2 - 0.1, z0 + 1.1), C["iron"], segs=6, rot=(math.pi / 2, 0, 0))
     wz = z0 + ch * 0.52
     face = (math.pi / 2, 0, 0)
-    p.ring(0.34, 0.52, 0.2, (1.65, -D / 2 - 0.02, wz), C["timber_dark"], segs=16, rot=face, style="hard_smooth")
+    p.ring(0.34, 0.52, 0.2, (1.65, -D / 2 - 0.02, wz), TIMBER_D, segs=16, rot=face, style="hard_smooth")
     p.cyl(0.36, 0.05, (1.65, -D / 2 + 0.06, wz), C["iron_light"] if v != "c" else C["iron"], segs=16, rot=face, style="flat")
     # The log board: a slab on two stub posts beside the door, chalk lines.
-    p.box((0.9, 0.1, 0.7), (-1.55, -D / 2 - 0.35, z0 + 1.1), C["timber_dark"], rot=(0, 0.04, 0.04))
+    p.box((0.9, 0.1, 0.7), (-1.55, -D / 2 - 0.35, z0 + 1.1), TIMBER_D, rot=(0, 0.04, 0.04))
     for k in range(4):
         p.box((0.6 - 0.1 * (k % 2), 0.02, 0.05), (-1.55, -D / 2 - 0.42, z0 + 1.28 - k * 0.14), C["canvas"], style="flat")
-    p.beam((-1.95, -D / 2 - 0.35, z0), (-1.95, -D / 2 - 0.35, z0 + 0.8), 0.1, C["timber_dark"])
-    p.beam((-1.15, -D / 2 - 0.35, z0), (-1.15, -D / 2 - 0.35, z0 + 0.8), 0.1, C["timber_dark"])
+    p.beam((-1.95, -D / 2 - 0.35, z0), (-1.95, -D / 2 - 0.35, z0 + 0.8), 0.1, TIMBER_D)
+    p.beam((-1.15, -D / 2 - 0.35, z0), (-1.15, -D / 2 - 0.35, z0 + 0.8), 0.1, TIMBER_D)
     # Roof: planks in rows up each slope with a ridge beam; b is open to the sky, c is a heap.
     top = z0 + ch
     rise, half, rows = 1.2, 2.05, 8
@@ -159,22 +164,22 @@ def lookout_hut(p, v, rng):
             for j in range(segs):
                 x = -W / 2 - 0.25 + (j + 0.5) * (W + 0.5) / segs
                 p.box(((W + 0.5) / segs + 0.02, 0.62, 0.08), (x, s * half * (1 - t) * 0.98, top + 0.12 + rise * t),
-                      tint(C["timber_grey"] if (r + j) % 3 else C["timber_dark"], rng, 0.07),
+                      tint(C["timber_grey"] if (r + j) % 3 else TIMBER_D, rng, 0.07),
                       rot=(-s * theta, 0, 0), jit=0.005)
     for x in (-1.7, -0.6, 0.6, 1.7):
         for s in (-1, 1):
             if v == "c" and s == 1:
                 continue
-            p.beam((x, s * half, top + 0.05), (x, 0, top + rise + 0.12), 0.12, C["timber_dark"], h=0.1)
+            p.beam((x, s * half, top + 0.05), (x, 0, top + rise + 0.12), 0.12, TIMBER_D, h=0.1)
     if v != "c":
-        p.beam((-W / 2 - 0.3, 0, top + rise + 0.1), (W / 2 + 0.3, 0, top + rise + 0.1), 0.2, C["timber_dark"])
+        p.beam((-W / 2 - 0.3, 0, top + rise + 0.1), (W / 2 + 0.3, 0, top + rise + 0.1), 0.2, TIMBER_D)
     if v == "b":
         p.ico(0.8, (0.6, 0.9, top + 0.5), C["canvas_dark"], scale=(1.6, 1.1, 0.25), rot=(0.4, 0, 0.1))  # tarp slumped over the hole
         rock(p, (3.0, 1.0, 0.3), 0.55, SLICK_D, rng, 0.6)
     if v == "c":
         # Roof planks fallen across the front, and a manzanita growing through the floor.
         for k in range(6):
-            p.box((1.8, 0.4, 0.08), (-0.6 + k * 0.25, -2.0 - 0.05 * k, 0.3 + 0.12 * k), tint(C["timber_dark"], rng, 0.1),
+            p.box((1.8, 0.4, 0.08), (-0.6 + k * 0.25, -2.0 - 0.05 * k, 0.3 + 0.12 * k), tint(TIMBER_D, rng, 0.1),
                   rot=(0.2 * (k % 2), 0.15, rng.uniform(-0.6, 0.6)), jit=0.006)
         for a in (0.3, 2.4, 4.4):
             p.rod((1.2, 0.5, 0.2), (1.2 + 0.8 * math.cos(a), 0.5 + 0.8 * math.sin(a), 1.2 + 0.4 * math.sin(a)), 0.07, BARK, segs=5)
@@ -261,7 +266,7 @@ def tram_car_parked(p, v, rng):
     body = C["timber_grey"] if v == "a" else mix(C["timber_grey"], C["rust"], 0.4)
     for x in (-1.5, 0, 1.5):
         for y in (-0.85, 0.85):
-            p.box((0.7, 0.55, 0.55), (x, y, 0.27), tint(C["timber_dark"], rng, 0.1), rot=(0, 0, rng.uniform(-0.1, 0.1)))
+            p.box((0.7, 0.55, 0.55), (x, y, 0.27), tint(TIMBER_D, rng, 0.1), rot=(0, 0, rng.uniform(-0.1, 0.1)))
     p.box((L + 0.2, Wd + 0.2, 0.2), (0, 0, zf + 0.1), C["iron"], rot=(0, tilt * 0.3, 0), style="hard_smooth")
     z0 = zf + 0.2
     # Cabin planks on the long sides, ends, with a long window band.
@@ -274,36 +279,36 @@ def tram_car_parked(p, v, rng):
                 continue
             p.box((L, 0.12, H / 10 * 0.94), (0, s * Wd / 2, zc), tint(body, rng, 0.07), jit=0.004)
         for x in (-L / 2 + 0.1, -0.75, 0.75, L / 2 - 0.1):
-            p.box((0.2, 0.18, H * 0.4), (x, s * Wd / 2, z0 + H * 0.5), C["timber_dark"])
+            p.box((0.2, 0.18, H * 0.4), (x, s * Wd / 2, z0 + H * 0.5), TIMBER_D)
     for e in (-1, 1):
         for i in range(10):
             if v == "b" and e == 1 and i in (2, 3):
                 continue
             p.box((0.12, Wd, H / 10 * 0.94), (e * L / 2, 0, z0 + H / 10 * (i + 0.5)), tint(body, rng, 0.07), jit=0.004)
     # Door frame cut into the near long side (plain frame, not an arch).
-    p.box((1.1, 0.08, H - 0.4), (0.0, -Wd / 2 - 0.08, z0 + H / 2 - 0.05), C["timber_pale"] if v == "a" else C["timber_dark"],
+    p.box((1.1, 0.08, H - 0.4), (0.0, -Wd / 2 - 0.08, z0 + H / 2 - 0.05), C["timber_pale"] if v == "a" else TIMBER_D,
           rot=(0, 0, 0.0 if v != "c" else 0.08))
     # Window glazing bars (frames only; panes empty or dull).
     for s in (-1, 1):
         for x in (-1.8, -0.6, 0.6, 1.8):
-            p.box((0.1, 0.1, 0.8), (x, s * Wd / 2, z0 + H * 0.55), C["timber_dark"])
-        p.box((L, 0.1, 0.1), (0, s * Wd / 2, z0 + H * 0.4 + 0.04), C["timber_dark"])
-        p.box((L, 0.1, 0.1), (0, s * Wd / 2, z0 + H * 0.7 + 0.1), C["timber_dark"])
+            p.box((0.1, 0.1, 0.8), (x, s * Wd / 2, z0 + H * 0.55), TIMBER_D)
+        p.box((L, 0.1, 0.1), (0, s * Wd / 2, z0 + H * 0.4 + 0.04), TIMBER_D)
+        p.box((L, 0.1, 0.1), (0, s * Wd / 2, z0 + H * 0.7 + 0.1), TIMBER_D)
     # Curved roof: a barrel of boards on end ribs (static, bracket stub only, never hung).
     for k in range(9):
         a = -1.1 + k * 0.275
         if v == "c" and 3 <= k <= 5:
             continue
         p.box((L + 0.3, 0.55, 0.09), (0, math.sin(a) * Wd * 0.62, z0 + H + 0.1 + (math.cos(a) - 0.6) * 0.9),
-              tint(mix(C["rust"], C["timber_dark"], 0.4) if k % 2 else C["timber_dark"], rng, 0.08), rot=(a, 0, 0), jit=0.004)
+              tint(mix(C["rust"], TIMBER_D, 0.4) if k % 2 else TIMBER_D, rng, 0.08), rot=(a, 0, 0), jit=0.004)
     for x in (-1.6, 0, 1.6):
-        p.beam((x, -Wd * 0.58, z0 + H + 0.1), (x, 0, z0 + H + 0.62), 0.1, C["timber_dark"])
-        p.beam((x, Wd * 0.58, z0 + H + 0.1), (x, 0, z0 + H + 0.62), 0.1, C["timber_dark"])
+        p.beam((x, -Wd * 0.58, z0 + H + 0.1), (x, 0, z0 + H + 0.62), 0.1, TIMBER_D)
+        p.beam((x, Wd * 0.58, z0 + H + 0.1), (x, 0, z0 + H + 0.62), 0.1, TIMBER_D)
     p.box((0.7, 0.6, 0.3), (0, 0, z0 + H + 0.85), C["iron"], style="hard_smooth")  # stub where the hanger bolted on
     p.cyl(0.14, 0.3, (0, 0, z0 + H + 1.1), C["iron_light"], segs=8, style="hard_smooth")
     # Interior bench seen through the door, and a lantern pail on the doorstep (unlit).
-    p.box((L - 0.8, 0.5, 0.15), (0, 0.7, z0 + 0.5), C["timber"])
-    p.box((0.7, 0.5, 0.2), (0.0, -Wd / 2 - 0.6, 0.1), C["sandstone_dark"], style="hard_smooth")
+    p.box((L - 0.8, 0.5, 0.15), (0, 0.7, z0 + 0.5), TIMBER)
+    p.box((0.7, 0.5, 0.2), (0.0, -Wd / 2 - 0.6, 0.1), SAND_D, style="hard_smooth")
     p.cyl(0.14, 0.24, (0.0, -Wd / 2 - 0.62, 0.32), C["iron_light"], segs=8, r2=0.17, style="hard_smooth")
     # Iron corner straps on the long walls and plank ends (flat bands, no bolt holes).
     for s in (-1, 1):
@@ -313,11 +318,11 @@ def tram_car_parked(p, v, rng):
             p.box((0.5, 0.05, 0.12), (x, s * Wd / 2 - s * 0.08, z0 + H * 0.28), C["iron_light"], style="hard_smooth")
     # Interior: floor planks, a second bench, a rope-bound bundle, and a pail on the doorstep.
     for i in range(9):
-        p.box((0.4, Wd - 0.2, 0.05), (-1.8 + i * 0.45, 0, z0 + 0.03), tint(C["timber_dark"], rng, 0.1), jit=0.004)
-    p.box((L - 1.2, 0.45, 0.12), (0, -0.7, z0 + 0.45), C["timber"])
+        p.box((0.4, Wd - 0.2, 0.05), (-1.8 + i * 0.45, 0, z0 + 0.03), tint(TIMBER_D, rng, 0.1), jit=0.004)
+    p.box((L - 1.2, 0.45, 0.12), (0, -0.7, z0 + 0.45), TIMBER)
     for x in (-1.5, 1.5):
-        p.box((0.14, 0.4, 0.45), (x, 0.7, z0 + 0.25), C["timber_dark"])
-        p.box((0.14, 0.4, 0.45), (x, -0.7, z0 + 0.25), C["timber_dark"])
+        p.box((0.14, 0.4, 0.45), (x, 0.7, z0 + 0.25), TIMBER_D)
+        p.box((0.14, 0.4, 0.45), (x, -0.7, z0 + 0.25), TIMBER_D)
     coil(p, (1.3, 0.2, z0 + 0.05), 0.35, ROPE, rng, turns=2, tube=0.045)
     p.cyl(0.26, 0.4, (-2.0, -Wd / 2 - 0.5, 0.2), C["canvas_dark"], segs=10, r2=0.3, style="soft")  # sack
     # Gravel and brush where it was set down, plus the bolted-off axle brackets.
@@ -369,20 +374,20 @@ def mender_stool(p, v, rng):
     if v == "c":
         # Fallen on its side.
         rt = (0, math.pi / 2 - 0.2, 0)
-        p.cyl(0.4, 0.12, (0.2, 0, 0.45), C["timber"], segs=10, rot=rt, style="hard_smooth")
+        p.cyl(0.4, 0.12, (0.2, 0, 0.45), TIMBER, segs=10, rot=rt, style="hard_smooth")
         for a in (0, 2.1, 4.2):
-            p.rod((0.2, 0, 0.45), (0.2 + 0.1 * math.cos(a) - 0.5, 0.45 * math.sin(a), 0.1 + 0.2 * math.cos(a) + 0.2), 0.07, C["timber_dark"], segs=6)
+            p.rod((0.2, 0, 0.45), (0.2 + 0.1 * math.cos(a) - 0.5, 0.45 * math.sin(a), 0.1 + 0.2 * math.cos(a) + 0.2), 0.07, TIMBER_D, segs=6)
     else:
-        p.cyl(0.4, 0.12, (0, 0, h), tint(C["timber"], rng), segs=10, style="hard_smooth")
+        p.cyl(0.4, 0.12, (0, 0, h), tint(TIMBER, rng), segs=10, style="hard_smooth")
         for a in (0.4, 2.5, 4.6):
             p.rod((0.18 * math.cos(a), 0.18 * math.sin(a), h - 0.02), (0.42 * math.cos(a), 0.42 * math.sin(a), 0.0),
-                  0.07, C["timber_dark"], segs=6, r2=0.06)
+                  0.07, TIMBER_D, segs=6, r2=0.06)
         p.torus(0.28, 0.025, (0, 0, 0.3), ROPE_D, major=12, minor=4, style="fine")  # leg brace
     if v == "a":
         p.cyl(0.08, 0.14, (0.1, 0.05, h + 0.13), C["canvas"], segs=8, style="round")  # mug
     # Knot board: a flat slab lying on the ground, a lashing grid of ochre cord across it.
     bx, by = 0.95, 0.1
-    p.box((1.0, 0.7, 0.08), (bx, by, 0.04), C["timber_dark"], rot=(0, 0, 0.25 if v != "b" else 0.7), style="hard_smooth")
+    p.box((1.0, 0.7, 0.08), (bx, by, 0.04), TIMBER_D, rot=(0, 0, 0.25 if v != "b" else 0.7), style="hard_smooth")
     for k in range(4):
         p.box((0.9, 0.035, 0.03), (bx + 0.0, by - 0.24 + k * 0.16, 0.1), ROPE, rot=(0, 0, 0.25 if v != "b" else 0.7), style="fine",
               jit=0.004)
@@ -414,7 +419,7 @@ def chart_post(p, v, rng):
               rot=(tl, 0, 0.0))
     p.box((0.02, 0.4, 0.012), (0.12, 0.0, tz + 0.03), C["timber_grey"], style="flat", rot=(tl, 0, 0.0))
     # A stub of a former arm pointing downslope.
-    p.beam((0.2, 0.0, h * 0.7), (0.9, -0.1, h * 0.65), 0.18, C["timber_dark"], h=0.14)
+    p.beam((0.2, 0.0, h * 0.7), (0.9, -0.1, h * 0.65), 0.18, TIMBER_D, h=0.14)
     if v == "c":
         blob(p, 0.4, (0.6, 0.5, 0.2), C["leaf"], scale=(1.4, 1.2, 0.8))
     for i in range(3):
@@ -433,22 +438,22 @@ def ore_trolley(p, v, rng):
         p.torus(0.78, 0.05, (0, 0, zc + 0.35), C["iron_light"], rot=(0, tilt, 0), major=14, minor=5, style="fine")
         for k in range(5):
             rock(p, (rng.uniform(-0.3, 0.3), rng.uniform(-0.3, 0.3), zc + 0.35 + 0.05 * k), rng.uniform(0.15, 0.25),
-                 mix(C["sandstone_dark"], C["concrete_dark"], 0.3), rng, 0.8)
+                 mix(SAND_D, C["concrete_dark"], 0.3), rng, 0.8)
     for s in (-1, 1):
-        p.cyl(0.34, 0.14, (0, s * 0.72, 0.34), C["timber_dark"] if v != "c" else C["iron"], segs=10, rot=(math.pi / 2, 0, 0), style="hard_smooth")
+        p.cyl(0.34, 0.14, (0, s * 0.72, 0.34), TIMBER_D if v != "c" else C["iron"], segs=10, rot=(math.pi / 2, 0, 0), style="hard_smooth")
         p.cyl(0.1, 0.18, (0, s * 0.72, 0.34), C["iron_light"], segs=8, rot=(math.pi / 2, 0, 0), style="round")
     p.cyl(0.05, 1.2, (0, 0, 0.34), C["iron"], segs=6, rot=(math.pi / 2, 0, 0), style="round")
-    p.box((1.3, 0.3, 0.12), (0, 0, 0.1), C["timber_dark"])  # chock blocks both sides
-    p.box((0.4, 0.3, 0.2), (0.95, 0, 0.1), C["timber_dark"])
-    p.box((0.4, 0.3, 0.2), (-0.95, 0, 0.1), C["timber_dark"])
+    p.box((1.3, 0.3, 0.12), (0, 0, 0.1), TIMBER_D)  # chock blocks both sides
+    p.box((0.4, 0.3, 0.2), (0.95, 0, 0.1), TIMBER_D)
+    p.box((0.4, 0.3, 0.2), (-0.95, 0, 0.1), TIMBER_D)
     if v == "b":
         for k in range(3):
-            rock(p, (-1.0 + k * 0.25, -1.0, 0.1), 0.18, C["sandstone_dark"], rng, 0.6)
+            rock(p, (-1.0 + k * 0.25, -1.0, 0.1), 0.18, SAND_D, rng, 0.6)
     if v == "c":
         # Tipped on its side, mouth rim showing, ore spilled in a fan from the mouth.
         p.torus(0.76, 0.05, (0.33, 0, zc), C["iron_light"], rot=(0, 1.3, 0), major=14, minor=5, style="fine")
         for k in range(4):
-            rock(p, (0.9 + 0.25 * k, rng.uniform(-0.1, 0.1) * (k + 1), 0.12), rng.uniform(0.13, 0.26), C["sandstone_dark"], rng, 0.6)
+            rock(p, (0.9 + 0.25 * k, rng.uniform(-0.1, 0.1) * (k + 1), 0.12), rng.uniform(0.13, 0.26), SAND_D, rng, 0.6)
         blades(p, (-0.2, 0.9, 0), 10, 0.7, 0.3, rng, [C["dry_grass"], C["leaf"]])
 
 
@@ -587,7 +592,7 @@ def patch_bolt(p, v, rng):
     if v != "c":
         # A bolt of cloth: a fat roll, one end unrolled across the rock.
         p.cyl(0.17, 0.75, (-0.15, 0.05, zr + 0.17), PATCH_A, segs=10, rot=(0, math.pi / 2, 0.2), style="round")
-        p.cyl(0.06, 0.78, (-0.15, 0.05, zr + 0.17), C["timber"], segs=6, rot=(0, math.pi / 2, 0.2), style="round")
+        p.cyl(0.06, 0.78, (-0.15, 0.05, zr + 0.17), TIMBER, segs=6, rot=(0, math.pi / 2, 0.2), style="round")
         p.box((0.7, 0.55, 0.025), (0.45, -0.1, zr + 0.015), PATCH_B if v == "a" else PATCH_C, rot=(0, 0, 0.3), style="soft", jit=0.01)
     if v == "b":
         blob(p, 0.3, (0.1, 0.4, zr + 0.07), PATCH_C, scale=(1.5, 1.2, 0.3), style="soft")
@@ -611,12 +616,12 @@ def stone_scatter(p, v, rng):
         a = rng.uniform(0, math.tau)
         d = rng.uniform(0.0, 1.3)
         r = rng.uniform(0.15, 0.4) if v != "c" else rng.uniform(0.2, 0.5)
-        col = rng.choice([SLICK, SLICK_D, C["sandstone"], C["sandstone_dark"]])
+        col = rng.choice([SLICK, SLICK_D, SAND, SAND_D])
         rock(p, (d * math.cos(a), d * math.sin(a), r * 0.25), r, col, rng, 0.55)
     if v == "a":
         # A small cairn of three stones.
         for k, (r, z) in enumerate(((0.3, 0.12), (0.22, 0.34), (0.15, 0.52))):
-            rock(p, (0.0, 0.0, z), r, SLICK if k != 1 else C["sandstone_pale"], rng, 0.7)
+            rock(p, (0.0, 0.0, z), r, SLICK if k != 1 else SAND_P, rng, 0.7)
     if v == "b":
         for k in range(3):
             blob(p, 0.18, (1.1 + 0.2 * k, -0.6 - 0.15 * k, 0.1), SLICK_D, scale=(1.3, 1.0, 0.6), style="round")
