@@ -24,10 +24,10 @@ const MONSTER_CLASS := 3
 # Overpowered pays, the second half: a ceiling alone moved no grown seed, because a grown hit seldom
 # reaches 1.5x the plating. At class III and above every non-glancing hit also counts MONSTER_GAIN
 # times over, so the 0.35 to 0.65 ratio hits that fill a bar slowly (a Mind ram at 0.45 adds 10) fill
-# it in a third of the swings. It multiplies before a row's hit_cap, so the Waking's first-stagger
+# it in half the swings. It multiplies before a row's hit_cap, so the Waking's first-stagger
 # cap holds; the Ultimate's cap is already class-gated (ultimate.gd warden_cap) and Rivet's line cap
 # scales by it (rivet_kit.gd _punch).
-const MONSTER_GAIN := 3.0
+const MONSTER_GAIN := 2.0
 # A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
 # from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
 # monster build's still can. Without the key a hit may fill it, as before. With
