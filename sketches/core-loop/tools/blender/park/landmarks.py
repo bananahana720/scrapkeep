@@ -37,12 +37,14 @@ import math
 from pathlib import Path
 import sys
 
+import bmesh
 import bpy
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 import common
+import polish
 import skyislands as sky
 
 SKETCH = HERE.parents[2]
@@ -2048,8 +2050,200 @@ def material(slot):
     return mat
 
 
-def make_mesh(name, parts, parent, origin=(0.0, 0.0, 0.0)):
+# ---------------------------------------------------------------- soft toy pass (tools/blender/POLISH.md)
+# Soft toy (Andrew, 18 Oct): the drawn meshes run through the polish toolkit at export. This file writes its own meshes
+# (sky.Surf, one flat shaded fan per polygon) and never builds a common.Part, so the pass is an adapter: it recovers each
+# polygon from its fan, welds each convex piece (a run of polygons that share edges: a box, a beam, a ring of planks) into
+# a closed bmesh, bevels the hard edges of each piece to a quarter of its own thickness (thin timbers get no bevel, so
+# nothing folds shut), smooths the rest and triangulates as Part does. The AO and edge-wear bake runs over the drawn
+# meshes alone, before any -col mesh joins the scene, so a collider neither occludes it nor changes. polish.enable is not
+# called: common.export is not used, so the colliders keep their old export path byte for byte.
+SOFT = {
+    "bevel": 0.06,           # the widest bevel, metres; each piece takes at most a quarter of its thinnest side
+    "bevel_angle": 40.0,     # only edges sharper than this bevel (silhouette corners, not the facets of a round)
+    "bevel_min": 0.45,       # shorter edges keep hard: rivets, cell rims and plank ends stay cheap
+    "sharp_angle": 50.0,
+    "ao_rays": 16,
+    "ao_reach_m": 3.0,       # occlusion reach in metres (the toolkit's ao_reach is a fraction of the bounds)
+    "ao_strength": 0.45,
+    "edge": 0.12,
+    "bake_slots": ("enamel", "steel", "stone", "elastomer", "glass"),
+}
+
+
+def fan_polys(surf):
+    """The polygons of a Surf as vertex index runs: Surf.poly writes each as a fan (b, b+i, b+i+1)."""
+    polys, t, i = [], surf.t, 0
+    while i < len(t):
+        b, last = t[i][0], t[i][2]
+        assert t[i][1] == b + 1, (surf.name, "not a fan", t[i])
+        j = i + 1
+        while j < len(t) and t[j][0] == b and t[j][1] == last:
+            last = t[j][2]
+            j += 1
+        polys.append(list(range(b, last + 1)))
+        i = j
+    return polys
+
+
+def surf_pieces(surf):
+    """Polygons grouped into pieces: a polygon joins the running piece when it shares an edge with it and no edge of the
+    piece would then carry a third face."""
+    key = lambda v: (round(v[0], 4) + 0.0, round(v[1], 4) + 0.0, round(v[2], 4) + 0.0)
+    pieces, cur = [], None
+    for vs in fan_polys(surf):
+        keys = [key(surf.v[k]) for k in vs]
+        edges = [frozenset((keys[k], keys[(k + 1) % len(keys)])) for k in range(len(keys))]
+        if cur is not None and any(cur[1].get(e, 0) == 1 for e in edges) and all(cur[1].get(e, 0) < 2 for e in edges):
+            cur[0].append(vs)
+        else:
+            cur = ([vs], {})
+            pieces.append(cur)
+        for e in edges:
+            cur[1][e] = cur[1].get(e, 0) + 1
+    return [p[0] for p in pieces]
+
+
+def piece_thickness(surf, polys):
+    """The least width of a piece across any of its face normals (its true thickness, whatever its yaw)."""
+    pts = sorted({surf.v[k] for vs in polys for k in vs})
+    normals = set()
+    for vs in polys:
+        n = (0.0, 0.0, 0.0)
+        for a in range(len(vs)):
+            n = vadd(n, sky.cross(surf.v[vs[a]], surf.v[vs[(a + 1) % len(vs)]]))
+        ln = vlen(n)
+        if ln > 1e-9:
+            n = vscale(n, 1.0 / ln)
+            if (n[0], n[1], n[2]) < (0.0, 0.0, 0.0):
+                n = vscale(n, -1.0)
+            normals.add((round(n[0], 3) + 0.0, round(n[1], 3) + 0.0, round(n[2], 3) + 0.0))
+    normals = sorted(normals)
+    if len(normals) > 48:
+        normals = normals[::len(normals) // 48 + 1]
+    if not normals:
+        return 0.0
+    thin = 1e9
+    for n in normals:
+        d = [n[0] * p[0] + n[1] * p[1] + n[2] * p[2] for p in pts]
+        thin = min(thin, max(d) - min(d))
+    return thin
+
+
+def soft_bmesh(surf, slot_index, origin, o):
+    """One Surf as a polished, triangulated bmesh: faces carry slot_index and a loop colour."""
+    key = lambda v: (round(v[0], 4) + 0.0, round(v[1], 4) + 0.0, round(v[2], 4) + 0.0)
+    groups = {}
+    for polys in surf_pieces(surf):
+        w = min(o["bevel"], 0.25 * piece_thickness(surf, polys))
+        w = 0.0 if w < 0.005 else round(w * 200.0) / 200.0
+        groups.setdefault(w, []).append(polys)
+    out = bmesh.new()
+    out.loops.layers.float_color.new("Color")
+    for w in sorted(groups):
+        bm = bmesh.new()
+        layer = bm.loops.layers.float_color.new("Color")
+        for polys in groups[w]:
+            weld = {}
+            for vs in polys:
+                ring = []
+                for k in vs:
+                    kk = key(surf.v[k])
+                    if not ring or ring[-1][0] != kk:
+                        ring.append((kk, k))
+                if len(ring) > 1 and ring[0][0] == ring[-1][0]:
+                    ring.pop()
+                if len({r[0] for r in ring}) < 3 or len({r[0] for r in ring}) != len(ring):
+                    continue
+                bverts = []
+                for kk, k in ring:
+                    if kk not in weld:
+                        weld[kk] = bm.verts.new(sky.xyz(vsub(surf.v[k], origin)))
+                    bverts.append(weld[kk])
+                try:
+                    face = bm.faces.new(bverts)
+                except ValueError:
+                    continue
+                for loop, (kk, k) in zip(face.loops, ring):
+                    loop[layer] = common.rgba(surf.c[k])
+        bm.normal_update()
+        bm = polish.finish(bm, dict(o, bevel_segments=1), w, 0)
+        col_layer = bm.loops.layers.float_color["Color"]
+        bm.normal_update()
+        for f in list(bm.faces):
+            if len(f.verts) > 4 and common._convex(f):
+                vs = [loop.vert for loop in f.loops]
+                color = tuple(f.loops[0][col_layer])
+
+                def flat(k):
+                    q = vs[k:] + vs[:k]
+                    return any((q[i].co - q[0].co).cross(q[i + 1].co - q[0].co).length < 1e-9 for i in range(1, len(q) - 1))
+                k = next((k for k in range(len(vs)) if not flat(k)), 0)
+                vs = vs[k:] + vs[:k]
+                bm.faces.remove(f)
+                for i in range(1, len(vs) - 1):
+                    nf = bm.faces.new((vs[0], vs[i], vs[i + 1]))
+                    for loop in nf.loops:
+                        loop[col_layer] = color
+        fixed, alternate = [], []
+        for f in bm.faces:
+            if len(f.verts) != 4:
+                fixed.append(f)
+                continue
+            c = [tuple(v.co) for v in f.verts]
+            d02, d13 = math.dist(c[0], c[2]), math.dist(c[1], c[3])
+            first = d02 < d13 if abs(d02 - d13) > 1e-9 * max(d02, d13) else min(c[0], c[2]) < min(c[1], c[3])
+            (fixed if first else alternate).append(f)
+        bmesh.ops.triangulate(bm, faces=fixed, quad_method="FIXED", ngon_method="EAR_CLIP")
+        bmesh.ops.triangulate(bm, faces=alternate, quad_method="ALTERNATE", ngon_method="EAR_CLIP")
+        for f in bm.faces:
+            f.material_index = slot_index
+        polish._append(out, bm)
+        bm.free()
+    return polish._canonical(out)
+
+
+def soft_options(nodes):
+    lo = [1e9] * 3
+    hi = [-1e9] * 3
+    for _, parts, _ in nodes:
+        for surf, slot in parts:
+            for v in surf.v:
+                for k in range(3):
+                    lo[k], hi[k] = min(lo[k], v[k]), max(hi[k], v[k])
+    half = max(vlen(vsub(tuple(hi), tuple(lo))) * 0.5, 1.0)
+    keys = ("bevel", "bevel_angle", "bevel_min", "sharp_angle", "ao_rays", "ao_strength", "edge", "bake_slots")
+    o = dict(polish.DEFAULTS, **{k: SOFT[k] for k in keys})
+    o["ao_reach"] = SOFT["ao_reach_m"] / half
+    return o
+
+
+def make_mesh(name, parts, parent, origin=(0.0, 0.0, 0.0), soft=None):
     """parts: [(Surf, slot or None)] merged into one mesh, one material per slot; vertices relative to origin."""
+    if soft is not None:
+        slots = []
+        acc = bmesh.new()
+        for surf, slot in parts:
+            if not surf.t:
+                continue
+            if slot not in slots:
+                slots.append(slot)
+            bm = soft_bmesh(surf, slots.index(slot), origin, soft)
+            polish._append(acc, bm)
+            bm.free()
+        acc = polish._canonical(acc)
+        mesh = bpy.data.meshes.new(name)
+        acc.to_mesh(mesh)
+        acc.free()
+        mesh.color_attributes.active_color = mesh.color_attributes["Color"]
+        mesh.color_attributes.render_color_index = mesh.color_attributes.active_color_index
+        for slot in slots:
+            mesh.materials.append(material(slot))
+        obj = bpy.data.objects.new(name, mesh)
+        bpy.context.scene.collection.objects.link(obj)
+        obj.parent = parent
+        obj.location = sky.xyz(origin)
+        return obj
     verts, tris, cols, mats, slots = [], [], [], [], []
     for surf, slot in parts:
         if not surf.t:
@@ -2081,12 +2275,21 @@ def make_mesh(name, parts, parent, origin=(0.0, 0.0, 0.0)):
     return obj
 
 
-def export_glb(path, nodes, empties):
+def export_glb(path, nodes, empties, soft=False):
     """nodes: [(name, parts, origin)]; empties: {name: local point}. Returns the measured row read back from the file."""
     common.reset()
     root = common.empty(Path(path).stem + "_root")
+    drawn_nodes = [n for n in nodes if soft and n[1] and all(slot is not None for _, slot in n[1])]
+    o = soft_options(drawn_nodes) if drawn_nodes else None
     for name, parts, origin in nodes:
-        make_mesh(name, parts, root, origin)
+        if soft and parts and all(slot is not None for _, slot in parts):
+            make_mesh(name, parts, root, origin, soft=o)
+    if o is not None:
+        bpy.context.view_layer.update()
+        polish.bake(root, o)        # before any collider joins the scene: it must not occlude the bake or take its UVs
+    for name, parts, origin in nodes:
+        if not (soft and parts and all(slot is not None for _, slot in parts)):
+            make_mesh(name, parts, root, origin)
     for name, loc in empties.items():
         common.empty(name, sky.xyz(loc), root)
     common.export(root, str(path))
@@ -2113,10 +2316,10 @@ def build(rid, out_dir, count_only=False):
         nodes.append((view.name, view.surfs(), origin))
     nodes.append((rid + "-col-col", [(spec["col"], None)], (0.0, 0.0, 0.0)))
     glb = {}
-    glb[rid] = export_glb(out / (rid + ".glb"), nodes, spec["empties"])
+    glb[rid] = export_glb(out / (rid + ".glb"), nodes, spec["empties"], soft=True)
     for k, sh in enumerate(spec["shells"], start=1):
         name = "%s_detail%d" % (rid, k)
-        glb[name] = export_glb(out / (name + ".glb"), [(name, [(sh, spec["shell_slot"])], (0.0, 0.0, 0.0))], {})
+        glb[name] = export_glb(out / (name + ".glb"), [(name, [(sh, spec["shell_slot"])], (0.0, 0.0, 0.0))], {}, soft=True)
     for view_name in ("mid", "far"):
         name = "%s_%s" % (rid, view_name)
         glb[name] = export_glb(out / (name + ".glb"), [(name, spec[view_name].surfs(), (0.0, 0.0, 0.0))], {})

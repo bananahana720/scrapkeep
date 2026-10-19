@@ -128,6 +128,10 @@ fight confirms them.
 | gate | 2,700 | 6,000 | 11,800 |
 | chunk | 2,900 | 6,000 | 17,600 |
 
+Landmarks (`park/landmarks.py`) write their own meshes and never use `Part`, so they opt in through an adapter in that file: it
+welds each convex piece of a `sky.Surf`, bevels it to a quarter of its own thickness, smooths it and bakes AO and wear over
+the base and detail shells before any `-col` mesh joins the scene. Mid and far views and every collider stay as they were.
+
 Vertices keep each class's old ratio to triangles. Shell, hero_landmark, park_large,
 landform and scenery caps are unchanged.
 
