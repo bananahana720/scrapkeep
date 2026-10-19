@@ -29,6 +29,9 @@ C.update({
     "glass": "aaa496", "glass_dark": "8c8678", "chalk": "ece6d2",
     "flower": "c8b865", "slate": "2f3634", "steam": "cfccc2",
 })
+# Mid values lifted a little so props register against the dark dusk ground (no pale specks, no amber).
+C.update({"timber": shade(C["timber"], 1.14), "timber_dark": shade(C["timber_dark"], 1.15),
+          "timber_pale": shade(C["timber_pale"], 1.04), "sage": "a3ad8f", "sage_dark": "7a8a66"})
 OXIDE, CHAR, BRASS = C["oxide"], C["charcoal"], C["brass"]
 TAU = math.tau
 
