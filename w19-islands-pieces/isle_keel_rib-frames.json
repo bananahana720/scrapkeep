@@ -1,0 +1,175 @@
+{
+	"aabb": [],
+	"adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+	"anchor": "/root/Game/Glb_isle_keel_rib/isle_keel_rib_root",
+	"anchor_offset": [
+		0.0,
+		6.0,
+		0.0
+	],
+	"call": [],
+	"class": 0,
+	"clay": [],
+	"frames": [
+		{
+			"anchor": [
+				0.0,
+				406.0,
+				0.0
+			],
+			"camera_basis": [
+				-1.0,
+				0.0,
+				0.0000000874227765734759,
+				0.00000000947442835297352,
+				0.994110107421875,
+				0.108374826610088,
+				-0.0000000869078675691526,
+				0.108374826610088,
+				-0.994110107421875
+			],
+			"centre": [
+				0.0,
+				405.7294921875,
+				0.0
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				0.0,
+				409.0,
+				-30.0
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "037e85fe2a780641c2872f00b595e9d54781c3592d5cd3f92e965b9f20db26c8",
+			"target": [
+				0.0,
+				405.7294921875,
+				0.0
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "fd0d074cb425cfaa502757785aa0a90b2a6234433af8555575a70d2d92b910e0"
+		},
+		{
+			"anchor": [
+				0.0,
+				406.0,
+				0.0
+			],
+			"camera_basis": [
+				-0.0000000437113882867379,
+				0.0,
+				-1.0,
+				-0.108374826610088,
+				0.994110107421875,
+				0.00000000473721417648676,
+				0.994110107421875,
+				0.108374826610088,
+				-0.0000000434539337845763
+			],
+			"centre": [
+				0.0,
+				405.7294921875,
+				0.0
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				30.0,
+				409.0,
+				0.0
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "20d8ac6c15c408203384533c0c903d7e4e37a9629fbd4c60830ffbe057f6f9df",
+			"target": [
+				0.0,
+				405.7294921875,
+				0.0
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "4731e085377005b9eb857a7de8e80f6005fa167283e387a11ee2f7bed767d957"
+		},
+		{
+			"anchor": [
+				0.0,
+				406.0,
+				0.0
+			],
+			"camera_basis": [
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				0.994110107421875,
+				-0.108374826610088,
+				0.0,
+				0.108374826610088,
+				0.994110107421875
+			],
+			"centre": [
+				0.0,
+				405.7294921875,
+				0.0
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				0.0,
+				409.0,
+				30.0
+			],
+			"file": "asset-rear30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-rear30",
+			"ortho_size": 0.0,
+			"sha256": "4bb056f161d5e3b95173e082a5eaeffe9be0f2120ff9f572d9c5eb41115bba56",
+			"target": [
+				0.0,
+				405.7294921875,
+				0.0
+			],
+			"thumb": "asset-rear30.thumb.png",
+			"thumb_sha256": "1b11b63cd24b0d6e4274d0ee2ea817041275732c3cc5c4d6dd2d3bcea4e67625"
+		}
+	],
+	"freeze_specs": [],
+	"frozen_nodes": {},
+	"glb": [
+		"res://assets/models/park/isle_keel_rib.glb@0,400,0"
+	],
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "lit",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1b999c649e26a9ca92cb46eb3add292095aecac223b0292e92f310917e8f5c46",
+		"src/presentation/bake_look.gd": "2f0b3dc02eba5f292e777dbae5f0b2fb28217f3ba903af61eeefd8f77098ae61",
+		"src/presentation/hero_assets.gd": "e5c36c0dfd97ff1d7cc7ba23ac7909eb5004fe4aad24b64daeff4a441086030f",
+		"src/presentation/material_slots.gd": "ad9fc714dc1e2f06162bd4502a4f1d2458dea20ca7e9dbc1b68464c9ff58dba1",
+		"src/presentation/recipe_props.gd": "ee90a7b1a142433c627605acc95467ca900ec2e0a7c83dc90fc8180ebfaf47e1",
+		"src/presentation/spillway_scenery.gd": "ac0961a0f3b43fc6eef649b6a16902fa248281e155f806bf73f4121097028890",
+		"src/world/terrain.gd": "5de2b7d620cff2e91c2a65b3db9afa9892529d21a89b6f21eefd9b42c8393bea",
+		"tools/asset_capture.gd": "ec312381277cf6febaadf7daf1ca5d9f84eeacbd1c3ffffef7d4a8e4ce6cdd67",
+		"tools/capture_cameras.gd": "6c185471294f2c03f75b706504a923926b1f1ef3f04947f1beb2213dbc56fe73"
+	},
+	"spawn": [],
+	"subject": "/root/Game/Glb_isle_keel_rib/isle_keel_rib_root",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}

@@ -1,0 +1,175 @@
+{
+	"aabb": [],
+	"adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+	"anchor": "/root/Game/Glb_isle_adit_portal/isle_adit_portal_root",
+	"anchor_offset": [
+		0.0,
+		4.0,
+		0.0
+	],
+	"call": [],
+	"class": 0,
+	"clay": [],
+	"frames": [
+		{
+			"anchor": [
+				0.0,
+				404.0,
+				0.0
+			],
+			"camera_basis": [
+				-0.99999874830246,
+				0.0,
+				0.00160303851589561,
+				0.000167845762916841,
+				0.994503378868103,
+				0.104704633355141,
+				-0.00159422704018652,
+				0.104704760015011,
+				-0.994502067565918
+			],
+			"centre": [
+				0.0480918884277344,
+				403.841491699219,
+				0.0
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				0.0,
+				407.0,
+				-30.0
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "59d56b045f8f9623a3015574d6906fd6a4cbcb7a131f0edb373bd42d0aee1e37",
+			"target": [
+				0.0480918884277344,
+				403.841491699219,
+				0.0
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "af18ab9234ca220265d7d639b2a6989732b79ee5feb044a20a0c57cd2381e1b3"
+		},
+		{
+			"anchor": [
+				0.0,
+				404.0,
+				0.0
+			],
+			"camera_basis": [
+				-0.0000000437113882867379,
+				0.0,
+				-1.0,
+				-0.104871183633804,
+				0.994485855102539,
+				0.00000000458406512748866,
+				0.994485855102539,
+				0.104871183633804,
+				-0.0000000434703579799134
+			],
+			"centre": [
+				0.0480918884277344,
+				403.841491699219,
+				0.0
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				30.0,
+				407.0,
+				0.0
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "7c6330b5ec900e07aaff819dbfe284628ffb6ff9ce21345982a1af4d6657d147",
+			"target": [
+				0.0480918884277344,
+				403.841491699219,
+				0.0
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "25873f8f5ff184f483e952a6f2f9c4a5af0fd81ab76e357b7989bdaec9862cd3"
+		},
+		{
+			"anchor": [
+				0.0,
+				404.0,
+				0.0
+			],
+			"camera_basis": [
+				0.99999874830246,
+				0.0,
+				0.00160306098405272,
+				0.000167848120327108,
+				0.994503378868103,
+				-0.104704633355141,
+				-0.00159424939192832,
+				0.104704760015011,
+				0.994502067565918
+			],
+			"centre": [
+				0.0480918884277344,
+				403.841491699219,
+				0.0
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				0.0,
+				407.0,
+				30.0
+			],
+			"file": "asset-rear30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-rear30",
+			"ortho_size": 0.0,
+			"sha256": "eb6ab3aec977bbe951e7e4054b6b336923d946f41af992a9fc06bedda993d55a",
+			"target": [
+				0.0480918884277344,
+				403.841491699219,
+				0.0
+			],
+			"thumb": "asset-rear30.thumb.png",
+			"thumb_sha256": "9cd6945a3e3d7cc388cd3dd9447734e421d5fab4c5428713e15364e4dd1f14a9"
+		}
+	],
+	"freeze_specs": [],
+	"frozen_nodes": {},
+	"glb": [
+		"res://assets/models/park/isle_adit_portal.glb@0,400,0"
+	],
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "lit",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1b999c649e26a9ca92cb46eb3add292095aecac223b0292e92f310917e8f5c46",
+		"src/presentation/bake_look.gd": "2f0b3dc02eba5f292e777dbae5f0b2fb28217f3ba903af61eeefd8f77098ae61",
+		"src/presentation/hero_assets.gd": "e5c36c0dfd97ff1d7cc7ba23ac7909eb5004fe4aad24b64daeff4a441086030f",
+		"src/presentation/material_slots.gd": "ad9fc714dc1e2f06162bd4502a4f1d2458dea20ca7e9dbc1b68464c9ff58dba1",
+		"src/presentation/recipe_props.gd": "ee90a7b1a142433c627605acc95467ca900ec2e0a7c83dc90fc8180ebfaf47e1",
+		"src/presentation/spillway_scenery.gd": "ac0961a0f3b43fc6eef649b6a16902fa248281e155f806bf73f4121097028890",
+		"src/world/terrain.gd": "5de2b7d620cff2e91c2a65b3db9afa9892529d21a89b6f21eefd9b42c8393bea",
+		"tools/asset_capture.gd": "ec312381277cf6febaadf7daf1ca5d9f84eeacbd1c3ffffef7d4a8e4ce6cdd67",
+		"tools/capture_cameras.gd": "6c185471294f2c03f75b706504a923926b1f1ef3f04947f1beb2213dbc56fe73"
+	},
+	"spawn": [],
+	"subject": "/root/Game/Glb_isle_adit_portal/isle_adit_portal_root",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}
