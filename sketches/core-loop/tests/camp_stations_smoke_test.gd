@@ -8,6 +8,10 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
 
+# Every station the hub prompts with a key (the pet pen has a zone but no key).
+const KEYED := ["achieve", "camp_skee", "camp_trial", "gate", "jukebox", "lockers", "moss", "radio", "sandbox_call_box",
+	"scrapbook", "settings"]
+
 # Rule: from the real title, the main menu's Camp button enters the walk, and every station the hub reports opens its
 # page or starts its activity on its own key and gives the walk back; the list comes from the hub (zone_ids), so a
 # station added without an opener fails here. Esc then leaves to the main menu.
@@ -94,13 +98,13 @@ func _run() -> void:
 	if ids.has("gate"):
 		ids.erase("gate")
 		ids.append("gate")  # Launch ends the walk, so it goes last.
-	var keyed := 0
+	var keyed: Array = []
 	for id in ids:
 		var zone: Dictionary = _hub._zones[id]
 		var key_id: String = zone["key"]
 		if key_id == "":
 			continue
-		keyed += 1
+		keyed.append(id)
 		var keycode: int = OS.find_keycode_from_string(Keycap.label(key_id))
 		await _put_in(id)
 		_t.check("%s: the ball is in the zone" % id, _hub.inside(id), str(_hub.inside_ids()))
@@ -130,7 +134,11 @@ func _run() -> void:
 				await _frames(3)
 		_t.check("%s: closing returns to the walk" % id, _screens.walk_live() and _hub.walking and _activity() == "",
 			"walking %s, live %s" % [_screens.walking(), _screens.walk_live()])
-	_t.check("some stations have keys", keyed >= 10, str(keyed))
+	# The exact keyed set, so a station dropped by a missing socket (camp_hub._station) fails here too.
+	keyed.sort()
+	var expected := KEYED.duplicate()
+	expected.sort()
+	_t.eq("every keyed station was pressed", keyed, expected)
 	_t.check("the pet pen zone is there", ids.has("pet"), str(ids))
 
 	Push.key(root, KEY_ESCAPE)
