@@ -18,7 +18,7 @@ test("the targets are the ruling's numbers", () => {
 
 test("a boss run wins on defeated_s, loses on death and times out on a stall", () => {
   const boss = (outcome, b) => ({ outcome, boss: b });
-  assert.deepEqual(gradeRun("boss", boss("until", { defeated_s: 61.2, seconds: 61.2, hp_lost: 40 })), { result: "win", fightS: 61.2, hpLost: 40 });
+  assert.deepEqual(gradeRun("boss", boss("until", { defeated_s: 61.2, seconds: 61.2, hp_lost: 40 })), { result: "win", fightS: 61.2, hpLost: 40, largestShare: null, largestSource: null, hp45Share: null });
   assert.equal(gradeRun("boss", boss("won", { defeated_s: 80 })).result, "win");
   const loss = gradeRun("boss", boss("died", { defeated_s: null, died_s: 33, seconds: 33.01, hp_lost: 115 }));
   assert.deepEqual([loss.result, loss.diedS], ["loss", 33]);
@@ -32,9 +32,21 @@ test("a boss run wins on defeated_s, loses on death and times out on a stall", (
 test("a Warden run wins when its stage note shows the break", () => {
   const row = (outcome, note) => ({ outcome, stage_reached: 4, stages: [{ stage: 3, warden_broken_s: 50 }, note] });
   const won = gradeRun("warden", row("until", { stage: 4, warden_engaged_s: 20, warden_broken_s: 52.5, hp_lost: 12 }), { stage: 4 });
-  assert.deepEqual(won, { result: "win", fightS: 32.5, hpLost: 12 });
+  assert.deepEqual(won, { result: "win", fightS: 32.5, hpLost: 12, largestShare: null, largestSource: null, hp45Share: null });
   assert.equal(gradeRun("warden", row("died", { stage: 4, warden_engaged_s: 20, warden_broken_s: null, hp_lost: 90 }), { stage: 4 }).result, "loss");
   for (const outcome of ["stalled", "fight_capped", "ticks_done"]) assert.equal(gradeRun("warden", row(outcome, { stage: 4, warden_broken_s: null }), { stage: 4 }).result, "timeout");
+});
+
+test("a fight carries the comps report: largest hit share and first-45 s damage", () => {
+  const row = { outcome: "died", max_hp: 100, boss: { defeated_s: null, died_s: 70, seconds: 70, hp_lost: 130, largest_hit: 34, largest_hit_share: 0.34, largest_hit_source: "slag", hp_lost_45s: 22 } };
+  const g = gradeRun("boss", row);
+  assert.deepEqual([g.largestShare, g.largestSource, g.hp45Share], [0.34, "slag", 0.22]);
+  // No hit in the first 45 s is a zero share, not a missing one.
+  assert.equal(gradeRun("boss", { outcome: "won", max_hp: 80, boss: { defeated_s: 50 } }).hp45Share, 0);
+  const w = gradeRun("warden", { outcome: "until", max_hp: 90, stages: [{ stage: 2, max_hp: 120, warden_engaged_s: 5, warden_broken_s: 60, largest_hit: 30 }] }, { stage: 2 });
+  assert.equal(w.largestShare, 0.25); // the stage note's max_hp wins over the record's
+  const a = aggregate([g, { ...g, largestShare: 0.5, largestSource: "charge", hp45Share: 0.4 }, { result: "error" }]);
+  assert.deepEqual([a.largestShare, a.largestSource, a.medianHp45Share, a.maxHp45Share], [0.5, "charge", 0.31, 0.4]);
 });
 
 test("a park run wins by reaching the Warden", () => {
@@ -179,7 +191,7 @@ test("the dry-run estimate scales with jobs and parallelism", () => {
 
 test("a fight cap and a stall are timeouts shown beside deaths", () => {
   const row = (outcome) => ({ outcome, stage_reached: 1, stages: [{ stage: 1, warden_engaged_s: 20, warden_broken_s: null, hp_lost: 5 }] });
-  assert.deepEqual(gradeRun("warden", row("fight_capped"), { stage: 1 }), { result: "timeout", reason: "fight_capped", fightS: null, hpLost: 5 });
+  assert.deepEqual(gradeRun("warden", row("fight_capped"), { stage: 1 }), { result: "timeout", reason: "fight_capped", fightS: null, hpLost: 5, largestShare: null, largestSource: null, hp45Share: null });
   assert.equal(gradeRun("warden", row("stalled"), { stage: 1 }).reason, "stalled");
   const a = aggregate([{ result: "win" }, { result: "loss" }, { result: "timeout", reason: "fight_capped" }, { result: "timeout", reason: "stalled" }]);
   assert.deepEqual([a.losses, a.capped, a.stalled, a.rate], [1, 1, 1, 0.25]);

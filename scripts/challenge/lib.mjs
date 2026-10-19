@@ -176,28 +176,41 @@ export function botArgs(job, out) {
 
 // win / loss / timeout / error. A timeout (a stall, a fight cap, a tick guard) is not a win; an error
 // (no row, or no fight reached) is not either, and the table counts both apart from losses.
+// The comps study's per-fight report (research/comps/difficulty/SUMMARY.md, Lab measure), from one fight record:
+// the largest single hit as a share of pilot health and the share of health lost in the fight's first 45 s.
+export function fightReport(note, maxHp) {
+  if (!note) return {};
+  return {
+    largestShare: note.largest_hit_share ?? (note.largest_hit != null && maxHp ? note.largest_hit / maxHp : null),
+    largestSource: note.largest_hit_source ?? null,
+    hp45Share: maxHp ? Math.round(((note.hp_lost_45s ?? 0) / maxHp) * 1000) / 1000 : null,
+  };
+}
+
 export function gradeRun(kind, row, job = {}) {
   if (!row) return { result: "error", why: "no record" };
   if (row.resumed === false) return { result: "error", why: "the run did not resume its entrance doc" };
   const stages = row.stages ?? [];
   if (kind === "boss") {
     const boss = row.boss;
-    if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null };
-    if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null };
+    const rep = fightReport(boss, row.max_hp);
+    if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null, ...rep };
+    if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null, ...rep };
     // "boss" is the driver finding no boss module in the boss state: the harness's fault, not a fight.
     if (row.outcome === "boss") return { result: "error", why: "no boss module in the boss state" };
-    if (row.outcome === "boss_stalled" || boss) return { result: "timeout", reason: row.outcome, fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null };
+    if (row.outcome === "boss_stalled" || boss) return { result: "timeout", reason: row.outcome, fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, ...rep };
     return { result: "error", why: "the boss was never entered (" + row.outcome + ")" };
   }
   if (kind === "warden") {
     const note = stages.find((s) => s.stage === (job.stage ?? row.stage_reached));
+    const rep = fightReport(note, note?.max_hp ?? row.max_hp);
     if (note?.warden_broken_s != null) {
       const start = fightStart(note);
       const fightS = start != null ? round2(note.warden_broken_s - start) : null;
-      return { result: "win", fightS, hpLost: note.hp_lost ?? null };
+      return { result: "win", fightS, hpLost: note.hp_lost ?? null, ...rep };
     }
-    if (row.outcome === "died") return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null };
-    return { result: "timeout", reason: row.outcome, fightS: null, hpLost: note?.hp_lost ?? null };
+    if (row.outcome === "died") return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
+    return { result: "timeout", reason: row.outcome, fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
   }
   if (kind === "world") {
     if (row.outcome === "reached") return { result: "win", fightS: row.game_seconds ?? null, hpLost: null };
@@ -250,6 +263,8 @@ export function aggregate(grades) {
   const wins = count("win");
   const { lo, hi } = wilson(wins, n);
   const deaths = used.filter((g) => g.result === "loss" && g.diedS != null).map((g) => g.diedS);
+  const hit = used.filter((g) => g.largestShare != null).sort((a, b) => b.largestShare - a.largestShare)[0] ?? null;
+  const hp45 = used.map((g) => g.hp45Share).filter((x) => x != null);
   return {
     n, total, wins, losses: count("loss"), timeouts: count("timeout"),
     capped: used.filter((g) => g.result === "timeout" && CAPPED.includes(g.reason)).length,
@@ -261,6 +276,8 @@ export function aggregate(grades) {
     earliestDeathS: deaths.length ? Math.min(...deaths) : null,
     deathsS: deaths,
     earlyDeaths: deaths.filter((s) => s < TARGETS.earliestLearnerBossDeathS).length,
+    largestShare: hit?.largestShare ?? null, largestSource: hit?.largestSource ?? null,
+    medianHp45Share: median(hp45), maxHp45Share: hp45.length ? Math.max(...hp45) : null,
   };
 }
 
@@ -355,6 +372,16 @@ export function renderTable(table, meta = {}) {
       const t = c.tell;
       const tell = t ? (t.ok === null ? "incomplete" : t.ok ? "0 ✓" : `${t.earlyDeaths} ✗ (earliest ${fmt(t.earliestDeathS)} s)`) : "-";
       lines.push(`| ${c.cell} | ${["novice", "learner1", "learner5", "expert", "expertTop"].map((id) => cellText(c.columns[id], id === "expertTop" && c.overlap ? " (overlaps ordinary)" : "")).join(" | ")} | ${tell} | ${fmt(c.columns.expert?.medianFightS)} / ${fmt(c.columns.expertTop?.medianFightS)} | ${fmt(c.columns.expert?.medianHpLost)} | ${c.growthRatio ?? "-"}${c.growthRatio != null && c.overlap ? " (overlaps ordinary)" : ""} |`);
+    }
+    lines.push("");
+  }
+  if (fights.length) {
+    lines.push("## Fight report (comps study format)", "", "From research/comps/difficulty/SUMMARY.md, Lab measure. Reference rows, which are tuning ranges, not rulings: boss TTK 50-90 s and Warden 90-150 s at an ordinary build (rows 1, 2); an ordinary hit 15-25% of pilot health, a heavy one 30-50%, and no single hit kills from full (rows 9, 10); a Learner loses well under full health in the first 45 s (row 11). Largest hit is the biggest single hit in any band's run, with its source id. Tells and recovery come from the attack sheet (`tools/attack_sheet.gd`), not from these runs. Warden rows count from the Warden fight's start.", "");
+    lines.push("| Cell | Expert ordinary TTK s | Largest hit, share of HP (source) | Learner a1 HP lost in first 45 s, share (median / max) |", "| --- | --- | --- | --- |");
+    for (const c of fights) {
+      const all = Object.values(c.columns).filter((x) => x.largestShare != null).sort((a, b) => b.largestShare - a.largestShare)[0];
+      const l1 = c.columns.learner1;
+      lines.push(`| ${c.cell} | ${fmt(c.columns.expert?.medianFightS)} | ${all ? `${pct(all.largestShare)} (${all.largestSource ?? "?"})` : "-"} | ${l1?.medianHp45Share != null ? `${pct(l1.medianHp45Share)} / ${pct(l1.maxHp45Share)}` : "-"} |`);
     }
     lines.push("");
   }
