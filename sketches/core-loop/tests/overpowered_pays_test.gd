@@ -244,6 +244,51 @@ func _stub_boss_class() -> void:
 	_t.check("a Warden with no run keeps the 1.5x ceiling", is_equal_approx(_ceiling_after_hit(none), 1.5), "")
 	none.get_parent().free()
 	stub.free()
+	_set_piece_cap()
+	_fleet_class()
+
+
+# The integrated path: Ultimate.warden_posture reads the Warden's own class for its cap. A huge
+# judged gain is cut to 45 at class II (two pieces of 40 stop at 45), and to 70 at class III.
+# combat.gd:2258 (_cannon_set_piece_hit) calls the same warden_cap with the same class read, but
+# it needs a whole Combat, so it has no cheap seam here and is not driven.
+func _set_piece_cap() -> void:
+	for row in [[2, 45.0], [3, 70.0]]:
+		var cls: int = row[0]
+		var cap: float = row[1]
+		var ult := preload("res://src/combat/ultimate.gd").new()
+		var warden = _arena_warden({"heft_class": func() -> int: return cls})
+		var total := 0.0
+		for i in 3:
+			var result := {"gain": 40.0, "dealt": 0.0}
+			ult.warden_posture(warden, result)
+			total += float(result["gain"])
+		_t.check("a class %d set piece adds at most %d posture through warden_posture" % [cls, int(cap)], is_equal_approx(total, cap), "%.1f" % total)
+		if cls == 3:
+			_t.check("a class III set piece may exceed 45", total > 45.0, "%.1f" % total)
+		warden.get_parent().free()
+		ult.free()
+
+
+class FakeFleet:
+	var ctx
+
+	func events():
+		return null
+
+
+# The fleet's run is the first class source, read fresh at every judge.
+func _fleet_class() -> void:
+	var fleet := FakeFleet.new()
+	fleet.ctx = FakeCtx.new()
+	fleet.ctx.run = FakeRun.new(2)
+	var warden = _arena_warden({"fleet": fleet})
+	_t.check("a fleet Warden at run class 2 judges with 1.5x", is_equal_approx(_ceiling_after_hit(warden), 1.5), "%.1f" % float(warden._posture.mult_max))
+	fleet.ctx.run = FakeRun.new(3)
+	_t.check("a fleet Warden at run class 3 judges with 3.0x", is_equal_approx(_ceiling_after_hit(warden), 3.0), "%.1f" % float(warden._posture.mult_max))
+	fleet.ctx.run.heft = 2
+	_t.check("a fleet Warden whose run drops to class 2 reverts to 1.5x", is_equal_approx(_ceiling_after_hit(warden), 1.5), "%.1f" % float(warden._posture.mult_max))
+	warden.get_parent().free()
 
 
 func _arena_warden(spec: Dictionary) -> Node3D:
