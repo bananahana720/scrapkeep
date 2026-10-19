@@ -1162,37 +1162,57 @@
    "near": "lava_channel_2: pumped dry, left parked"
   },
   {
-   "id": "s005_mid_skylight_garden",
-   "template": "mid_skylight_garden",
+   "id": "s005_low_gear",
+   "template": "low_gear",
+   "at": [
+    -593.6,
+    -631.9
+   ],
+   "yaw_deg": -55.5,
+   "near": "lava_channel_4: dropped gear in the dust"
+  },
+  {
+   "id": "s006_mid_rimstone_pool",
+   "template": "mid_rimstone_pool",
    "at": [
     -560.0,
     -710.0
    ],
    "yaw_deg": 128.9,
-   "near": "lava_channel_3: ferns under the skylight"
+   "near": "lava_channel_3: rimstone lips at the seep"
   },
   {
-   "id": "s006_low_stones",
+   "id": "s007_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    -541.6,
+    -666.9
+   ],
+   "yaw_deg": 120.3,
+   "near": "lava_channel_4: ferns in the cracks"
+  },
+  {
+   "id": "s008_low_stones",
    "template": "low_stones",
    "at": [
-    -590.0,
-    -630.0
+    -571.1,
+    -598.3
    ],
    "yaw_deg": -55.5,
-   "near": "lava_channel_4: rimstone and lichen"
+   "near": "lava_channel_5: rimstone and lichen"
   },
   {
-   "id": "s007_pump_station",
-   "template": "pump_station",
+   "id": "s009_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     -630.0,
     -600.0
    ],
    "yaw_deg": -55.5,
-   "near": "lava_channel_4: pumped dry, left parked"
+   "near": "lava_channel_4: timbers down, water mark"
   },
   {
-   "id": "s008_mid_column_field",
+   "id": "s010_mid_column_field",
    "template": "mid_column_field",
    "at": [
     -530.0,
@@ -1202,37 +1222,57 @@
    "near": "lava_channel_4: basalt stubs, lichen caps"
   },
   {
-   "id": "s009_mid_rimstone_pool",
-   "template": "mid_rimstone_pool",
+   "id": "s011_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    -526.6,
+    -554.6
+   ],
+   "yaw_deg": -21.8,
+   "near": "lava_channel_6: ferns in the cracks"
+  },
+  {
+   "id": "s012_mid_skylight_garden",
+   "template": "mid_skylight_garden",
    "at": [
     -570.0,
     -560.0
    ],
    "yaw_deg": -44.6,
-   "near": "lava_channel_5: rimstone lips at the seep"
+   "near": "lava_channel_5: ferns under the skylight"
   },
   {
-   "id": "s010_low_ferns",
-   "template": "low_ferns",
+   "id": "s013_low_gear",
+   "template": "low_gear",
    "at": [
-    -472.8,
-    -535.0
+    -492.6,
+    -594.8
    ],
-   "yaw_deg": 2.3,
-   "near": "lava_channel_6: ferns in the cracks"
+   "yaw_deg": 159.6,
+   "near": "lava_channel_6: dropped gear in the dust"
   },
   {
-   "id": "s011_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s014_low_stones",
+   "template": "low_stones",
+   "at": [
+    -487.2,
+    -538.2
+   ],
+   "yaw_deg": -21.7,
+   "near": "lava_channel_6: rimstone and lichen"
+  },
+  {
+   "id": "s015_pump_station",
+   "template": "pump_station",
    "at": [
     -570.0,
     -530.0
    ],
    "yaw_deg": -44.6,
-   "near": "lava_channel_5: timbers down, water mark"
+   "near": "lava_channel_5: pumped dry, left parked"
   },
   {
-   "id": "s012_mid_skylight_garden",
+   "id": "s016_mid_skylight_garden",
    "template": "mid_skylight_garden",
    "at": [
     -490.0,
@@ -1242,57 +1282,57 @@
    "near": "lava_channel_6: ferns under the skylight"
   },
   {
-   "id": "s013_mid_rimstone_pool",
-   "template": "mid_rimstone_pool",
+   "id": "s017_mid_column_field",
+   "template": "mid_column_field",
    "at": [
     -520.0,
     -520.0
    ],
    "yaw_deg": -21.7,
-   "near": "lava_channel_6: rimstone lips at the seep"
+   "near": "lava_channel_6: basalt stubs, lichen caps"
   },
   {
-   "id": "s014_low_gear",
-   "template": "low_gear",
+   "id": "s018_low_ferns",
+   "template": "low_ferns",
    "at": [
-    -427.9,
-    -537.9
+    -435.5,
+    -537.1
    ],
    "yaw_deg": 2.3,
-   "near": "lava_channel_8: dropped gear in the dust"
+   "near": "lava_channel_8: ferns in the cracks"
   },
   {
-   "id": "s015_mid_column_field",
-   "template": "mid_column_field",
+   "id": "s019_low_stones",
+   "template": "low_stones",
+   "at": [
+    -419.7,
+    -598.8
+   ],
+   "yaw_deg": -162.0,
+   "near": "lava_channel_7: rimstone and lichen"
+  },
+  {
+   "id": "s020_mid_tailings_cart",
+   "template": "mid_tailings_cart",
    "at": [
     -440.0,
     -610.0
    ],
    "yaw_deg": -176.6,
-   "near": "lava_channel_7: basalt stubs, lichen caps"
+   "near": "lava_channel_7: carts of tailings left"
   },
   {
-   "id": "s016_low_ferns",
-   "template": "low_ferns",
-   "at": [
-    -393.4,
-    -614.7
-   ],
-   "yaw_deg": -155.3,
-   "near": "lava_channel_7: ferns in the cracks"
-  },
-  {
-   "id": "s017_mid_tailings_cart",
-   "template": "mid_tailings_cart",
+   "id": "s021_mid_rimstone_pool",
+   "template": "mid_rimstone_pool",
    "at": [
     -390.0,
     -520.0
    ],
    "yaw_deg": 18.2,
-   "near": "lava_channel_8: carts of tailings left"
+   "near": "lava_channel_8: rimstone lips at the seep"
   },
   {
-   "id": "s018_low_gear",
+   "id": "s022_low_gear",
    "template": "low_gear",
    "at": [
     -354.0,
@@ -1302,47 +1342,47 @@
    "near": "cinder_kicker: dropped gear in the dust"
   },
   {
-   "id": "s019_low_stones",
-   "template": "low_stones",
+   "id": "s023_low_ferns",
+   "template": "low_ferns",
    "at": [
-    -305.3,
-    -648.3
+    -314.2,
+    -567.6
    ],
-   "yaw_deg": -178.5,
-   "near": "lava_channel_11: rimstone and lichen"
+   "yaw_deg": 20.2,
+   "near": "lava_channel_10: ferns in the cracks"
   },
   {
-   "id": "s020_mid_skylight_garden",
-   "template": "mid_skylight_garden",
+   "id": "s024_mid_column_field",
+   "template": "mid_column_field",
    "at": [
     -350.0,
     -640.0
    ],
    "yaw_deg": -160.3,
-   "near": "lava_channel_10: ferns under the skylight"
+   "near": "lava_channel_10: basalt stubs, lichen caps"
   },
   {
-   "id": "s021_low_ferns",
-   "template": "low_ferns",
+   "id": "s025_low_stones",
+   "template": "low_stones",
    "at": [
-    -265.2,
-    -638.8
+    -265.0,
+    -637.3
    ],
    "yaw_deg": -178.5,
-   "near": "lava_channel_11: ferns in the cracks"
+   "near": "lava_channel_11: rimstone and lichen"
   },
   {
-   "id": "s022_low_gear",
+   "id": "s026_low_gear",
    "template": "low_gear",
    "at": [
-    -240.2,
-    -578.6
+    -249.6,
+    -582.2
    ],
    "yaw_deg": -21.3,
    "near": "lava_channel_12: dropped gear in the dust"
   },
   {
-   "id": "s023_lamp_wall",
+   "id": "s027_lamp_wall",
    "template": "lamp_wall",
    "at": [
     -280.0,
@@ -1352,17 +1392,27 @@
    "near": "lava_channel_11: lamps facing the wrong way"
   },
   {
-   "id": "s024_mid_column_field",
-   "template": "mid_column_field",
+   "id": "s028_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    -198.2,
+    -613.9
+   ],
+   "yaw_deg": 130.4,
+   "near": "lava_channel_13: ferns in the cracks"
+  },
+  {
+   "id": "s029_mid_tailings_cart",
+   "template": "mid_tailings_cart",
    "at": [
     -220.0,
     -650.0
    ],
    "yaw_deg": 158.7,
-   "near": "lava_channel_12: basalt stubs, lichen caps"
+   "near": "lava_channel_12: carts of tailings left"
   },
   {
-   "id": "s025_gallery_fall",
+   "id": "s030_gallery_fall",
    "template": "gallery_fall",
    "at": [
     -160.0,
@@ -1372,17 +1422,37 @@
    "near": "lava_channel_13: timbers down, water mark"
   },
   {
-   "id": "s026_mid_rimstone_pool",
-   "template": "mid_rimstone_pool",
+   "id": "s031_low_stones",
+   "template": "low_stones",
+   "at": [
+    -166.3,
+    -582.4
+   ],
+   "yaw_deg": 130.4,
+   "near": "crater_breach: rimstone and lichen"
+  },
+  {
+   "id": "s032_mid_skylight_garden",
+   "template": "mid_skylight_garden",
    "at": [
     -170.0,
     -610.0
    ],
    "yaw_deg": 130.4,
-   "near": "lava_channel_13: rimstone lips at the seep"
+   "near": "lava_channel_13: ferns under the skylight"
   },
   {
-   "id": "s027_lamp_wall",
+   "id": "s033_low_gear",
+   "template": "low_gear",
+   "at": [
+    -156.1,
+    -528.4
+   ],
+   "yaw_deg": 100.3,
+   "near": "lava_channel_14: dropped gear in the dust"
+  },
+  {
+   "id": "s034_lamp_wall",
    "template": "lamp_wall",
    "at": [
     -140.0,
@@ -1392,27 +1462,27 @@
    "near": "crater_breach: lamps facing the wrong way"
   },
   {
-   "id": "s028_mid_tailings_cart",
-   "template": "mid_tailings_cart",
+   "id": "s035_mid_rimstone_pool",
+   "template": "mid_rimstone_pool",
    "at": [
     -230.0,
     -510.0
    ],
    "yaw_deg": -115.8,
-   "near": "lava_channel_15: carts of tailings left"
+   "near": "lava_channel_15: rimstone lips at the seep"
   },
   {
-   "id": "s029_mid_skylight_garden",
-   "template": "mid_skylight_garden",
+   "id": "s036_mid_column_field",
+   "template": "mid_column_field",
    "at": [
     -130.0,
     -550.0
    ],
    "yaw_deg": 100.3,
-   "near": "lava_channel_14: ferns under the skylight"
+   "near": "lava_channel_14: basalt stubs, lichen caps"
   },
   {
-   "id": "s030_pump_station",
+   "id": "s037_pump_station",
    "template": "pump_station",
    "at": [
     -130.0,
@@ -1422,67 +1492,67 @@
    "near": "lava_channel_15: pumped dry, left parked"
   },
   {
-   "id": "s031_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s038_lamp_wall",
+   "template": "lamp_wall",
    "at": [
     -270.0,
     -470.0
    ],
    "yaw_deg": -77.7,
-   "near": "lava_channel_16: timbers down, water mark"
+   "near": "lava_channel_16: lamps facing the wrong way"
   },
   {
-   "id": "s032_low_stones",
+   "id": "s039_low_stones",
    "template": "low_stones",
    "at": [
-    -159.8,
-    -475.4
+    -157.7,
+    -466.6
    ],
    "yaw_deg": 110.2,
    "near": "lava_channel_16: rimstone and lichen"
   },
   {
-   "id": "s033_low_gear",
+   "id": "s040_low_gear",
    "template": "low_gear",
    "at": [
-    -220.0,
-    -450.0
+    -194.7,
+    -414.3
    ],
-   "yaw_deg": -69.7,
-   "near": "lava_channel_16: dropped gear in the dust"
+   "yaw_deg": -23.7,
+   "near": "lava_channel_17: dropped gear in the dust"
   },
   {
-   "id": "s034_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s041_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     -210.0,
     -310.0
    ],
    "yaw_deg": -129.4,
-   "near": "west_gallery_4: lamps facing the wrong way"
+   "near": "west_gallery_4: timbers down, water mark"
   },
   {
-   "id": "s035_mid_rimstone_pool",
-   "template": "mid_rimstone_pool",
+   "id": "s042_mid_skylight_garden",
+   "template": "mid_skylight_garden",
    "at": [
     -210.0,
     -250.0
    ],
    "yaw_deg": -108.5,
-   "near": "west_gallery_5: rimstone lips at the seep"
+   "near": "west_gallery_5: ferns under the skylight"
   },
   {
-   "id": "s036_mid_column_field",
-   "template": "mid_column_field",
+   "id": "s043_mid_tailings_cart",
+   "template": "mid_tailings_cart",
    "at": [
     -150.0,
     -390.0
    ],
    "yaw_deg": -22.1,
-   "near": "lava_channel_17: basalt stubs, lichen caps"
+   "near": "lava_channel_17: carts of tailings left"
   },
   {
-   "id": "s037_pump_station",
+   "id": "s044_pump_station",
    "template": "pump_station",
    "at": [
     -240.0,
@@ -1492,47 +1562,57 @@
    "near": "lava_channel_16: pumped dry, left parked"
   },
   {
-   "id": "s038_mid_tailings_cart",
-   "template": "mid_tailings_cart",
+   "id": "s045_mid_rimstone_pool",
+   "template": "mid_rimstone_pool",
    "at": [
     -200.0,
     -400.0
    ],
    "yaw_deg": -22.1,
-   "near": "lava_channel_17: carts of tailings left"
+   "near": "lava_channel_17: rimstone lips at the seep"
   },
   {
-   "id": "s039_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s046_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    -137.7,
+    -395.4
+   ],
+   "yaw_deg": 14.4,
+   "near": "lava_channel_17: ferns in the cracks"
+  },
+  {
+   "id": "s047_lamp_wall",
+   "template": "lamp_wall",
    "at": [
     -190.0,
     -370.0
    ],
    "yaw_deg": -22.1,
-   "near": "lava_channel_17: timbers down, water mark"
+   "near": "lava_channel_17: lamps facing the wrong way"
   },
   {
-   "id": "s040_low_ferns",
-   "template": "low_ferns",
+   "id": "s048_low_stones",
+   "template": "low_stones",
    "at": [
-    -100.0,
-    -470.0
+    -82.7,
+    -398.6
    ],
-   "yaw_deg": 176.9,
-   "near": "lava_chute: ferns in the cracks"
+   "yaw_deg": -3.1,
+   "near": "lava_channel_19: rimstone and lichen"
   },
   {
-   "id": "s041_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s049_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     -250.0,
     -210.0
    ],
    "yaw_deg": -89.6,
-   "near": "west_gallery_6: lamps facing the wrong way"
+   "near": "west_gallery_6: timbers down, water mark"
   },
   {
-   "id": "s042_mid_skylight_garden",
+   "id": "s050_mid_skylight_garden",
    "template": "mid_skylight_garden",
    "at": [
     -130.0,
@@ -1542,17 +1622,17 @@
    "near": "west_gallery_2: ferns under the skylight"
   },
   {
-   "id": "s043_mid_rimstone_pool",
-   "template": "mid_rimstone_pool",
+   "id": "s051_low_gear",
+   "template": "low_gear",
    "at": [
-    -90.0,
-    -390.0
+    -109.9,
+    -461.0
    ],
-   "yaw_deg": -3.1,
-   "near": "lava_channel_19: rimstone lips at the seep"
+   "yaw_deg": -165.6,
+   "near": "lava_chute: dropped gear in the dust"
   },
   {
-   "id": "s044_mid_column_field",
+   "id": "s052_mid_column_field",
    "template": "mid_column_field",
    "at": [
     -160.0,
@@ -1562,17 +1642,17 @@
    "near": "west_gallery_3: basalt stubs, lichen caps"
   },
   {
-   "id": "s045_low_stones",
-   "template": "low_stones",
+   "id": "s053_mid_rimstone_pool",
+   "template": "mid_rimstone_pool",
    "at": [
-    -59.9,
-    -455.2
+    -150.0,
+    -220.0
    ],
-   "yaw_deg": 176.9,
-   "near": "lava_channel_19: rimstone and lichen"
+   "yaw_deg": -116.0,
+   "near": "cannon_tube_kicker: rimstone lips at the seep"
   },
   {
-   "id": "s046_pump_station",
+   "id": "s054_pump_station",
    "template": "pump_station",
    "at": [
     -20.0,
@@ -1582,17 +1662,17 @@
    "near": "lava_channel_20: pumped dry, left parked"
   },
   {
-   "id": "s047_low_gear",
-   "template": "low_gear",
+   "id": "s055_low_ferns",
+   "template": "low_ferns",
    "at": [
-    -10.0,
-    -440.0
+    -45.1,
+    -450.7
    ],
    "yaw_deg": 141.4,
-   "near": "crust_kicker: dropped gear in the dust"
+   "near": "lava_channel_20: ferns in the cracks"
   },
   {
-   "id": "s048_lamp_wall",
+   "id": "s056_lamp_wall",
    "template": "lamp_wall",
    "at": [
     -70.0,
@@ -1602,17 +1682,27 @@
    "near": "lava_channel_19: lamps facing the wrong way"
   },
   {
-   "id": "s049_mid_column_field",
-   "template": "mid_column_field",
+   "id": "s057_low_stones",
+   "template": "low_stones",
    "at": [
-    100.0,
-    -190.0
+    13.6,
+    -384.1
    ],
-   "yaw_deg": 46.5,
-   "near": "main_tube_upper_5: basalt stubs, lichen caps"
+   "yaw_deg": 136.7,
+   "near": "lava_channel_21: rimstone and lichen"
   },
   {
-   "id": "s050_pump_station",
+   "id": "s058_mid_shift_board",
+   "template": "mid_shift_board",
+   "at": [
+    170.0,
+    -370.0
+   ],
+   "yaw_deg": 147.7,
+   "near": "east_drift_3: lunch spot, tally strokes"
+  },
+  {
+   "id": "s059_pump_station",
    "template": "pump_station",
    "at": [
     40.0,
@@ -1622,17 +1712,27 @@
    "near": "lava_channel_21: pumped dry, left parked"
   },
   {
-   "id": "s051_low_stones",
-   "template": "low_stones",
+   "id": "s060_low_ferns",
+   "template": "low_ferns",
    "at": [
-    20.0,
-    -390.0
+    33.5,
+    -295.2
    ],
-   "yaw_deg": 136.7,
-   "near": "lava_channel_21: rimstone and lichen"
+   "yaw_deg": -47.1,
+   "near": "main_tube_upper_2: ferns in the cracks"
   },
   {
-   "id": "s052_gallery_fall",
+   "id": "s061_mid_column_field",
+   "template": "mid_column_field",
+   "at": [
+    110.0,
+    -200.0
+   ],
+   "yaw_deg": 71.1,
+   "near": "main_tube_upper_4: basalt stubs, lichen caps"
+  },
+  {
+   "id": "s062_gallery_fall",
    "template": "gallery_fall",
    "at": [
     -70.0,
@@ -1642,7 +1742,7 @@
    "near": "cannon_tube_kicker: timbers down, water mark"
   },
   {
-   "id": "s053_mid_rimstone_pool",
+   "id": "s063_mid_rimstone_pool",
    "template": "mid_rimstone_pool",
    "at": [
     -10.0,
@@ -1652,47 +1752,77 @@
    "near": "main_tube_upper_6: rimstone lips at the seep"
   },
   {
-   "id": "s054_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s064_pump_station",
+   "template": "pump_station",
    "at": [
     150.0,
     -400.0
    ],
    "yaw_deg": 158.3,
-   "near": "east_drift_2: lamps facing the wrong way"
+   "near": "east_drift_2: pumped dry, left parked"
   },
   {
-   "id": "s055_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s065_lamp_wall",
+   "template": "lamp_wall",
    "at": [
     -40.0,
     -260.0
    ],
    "yaw_deg": 47.0,
-   "near": "cannon_tube_2: timbers down, water mark"
+   "near": "cannon_tube_2: lamps facing the wrong way"
   },
   {
-   "id": "s056_pump_station",
-   "template": "pump_station",
+   "id": "s066_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     200.0,
     -360.0
    ],
    "yaw_deg": 138.9,
-   "near": "east_drift_4: pumped dry, left parked"
+   "near": "east_drift_4: timbers down, water mark"
   },
   {
-   "id": "s057_low_ferns",
+   "id": "s067_low_gear",
+   "template": "low_gear",
+   "at": [
+    99.0,
+    -376.5
+   ],
+   "yaw_deg": 160.8,
+   "near": "east_drift_2: dropped gear in the dust"
+  },
+  {
+   "id": "s068_low_stones",
+   "template": "low_stones",
+   "at": [
+    -174.9,
+    -274.1
+   ],
+   "yaw_deg": -129.4,
+   "near": "west_gallery_4: rimstone and lichen"
+  },
+  {
+   "id": "s069_low_ferns",
    "template": "low_ferns",
    "at": [
-    -122.4,
-    -263.4
+    53.9,
+    -241.7
    ],
-   "yaw_deg": -118.7,
-   "near": "cannon_tube_4: ferns in the cracks"
+   "yaw_deg": -108.6,
+   "near": "main_tube_upper_4: ferns in the cracks"
   },
   {
-   "id": "s058_mid_skylight_garden",
+   "id": "s070_low_gear",
+   "template": "low_gear",
+   "at": [
+    -132.9,
+    -269.2
+   ],
+   "yaw_deg": 50.6,
+   "near": "west_gallery_4: dropped gear in the dust"
+  },
+  {
+   "id": "s071_mid_skylight_garden",
    "template": "mid_skylight_garden",
    "at": [
     40.0,
@@ -1702,27 +1832,37 @@
    "near": "main_tube_upper_5: ferns under the skylight"
   },
   {
-   "id": "s059_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s072_lamp_wall",
+   "template": "lamp_wall",
    "at": [
     90.0,
     -410.0
    ],
    "yaw_deg": 171.9,
-   "near": "east_drift_1: timbers down, water mark"
+   "near": "east_drift_1: lamps facing the wrong way"
   },
   {
-   "id": "s060_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s073_low_stones",
+   "template": "low_stones",
+   "at": [
+    107.0,
+    -288.6
+   ],
+   "yaw_deg": -39.6,
+   "near": "skylight_chain_3: rimstone and lichen"
+  },
+  {
+   "id": "s074_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     40.0,
     -270.0
    ],
    "yaw_deg": -47.1,
-   "near": "main_tube_upper_2: lamps facing the wrong way"
+   "near": "main_tube_upper_2: timbers down, water mark"
   },
   {
-   "id": "s061_mid_column_field",
+   "id": "s075_mid_column_field",
    "template": "mid_column_field",
    "at": [
     110.0,
@@ -1732,27 +1872,17 @@
    "near": "skylight_chain_7: basalt stubs, lichen caps"
   },
   {
-   "id": "s062_low_stones",
-   "template": "low_stones",
-   "at": [
-    110.0,
-    -290.0
-   ],
-   "yaw_deg": -39.6,
-   "near": "skylight_chain_3: rimstone and lichen"
-  },
-  {
-   "id": "s063_low_ferns",
+   "id": "s076_low_ferns",
    "template": "low_ferns",
    "at": [
-    210.0,
-    -310.0
+    -146.9,
+    -231.2
    ],
-   "yaw_deg": 133.5,
-   "near": "east_drift_4: ferns in the cracks"
+   "yaw_deg": -118.7,
+   "near": "cannon_tube_4: ferns in the cracks"
   },
   {
-   "id": "s064_mid_skylight_garden",
+   "id": "s077_mid_skylight_garden",
    "template": "mid_skylight_garden",
    "at": [
     -200.0,
@@ -1762,7 +1892,17 @@
    "near": "west_gallery_4: ferns under the skylight"
   },
   {
-   "id": "s065_pump_station",
+   "id": "s078_low_stones",
+   "template": "low_stones",
+   "at": [
+    140.8,
+    -253.3
+   ],
+   "yaw_deg": -58.4,
+   "near": "skylight_chain_4: rimstone and lichen"
+  },
+  {
+   "id": "s079_pump_station",
    "template": "pump_station",
    "at": [
     250.0,
@@ -1772,7 +1912,7 @@
    "near": "east_drift_5: pumped dry, left parked"
   },
   {
-   "id": "s066_mid_shift_board",
+   "id": "s080_mid_shift_board",
    "template": "mid_shift_board",
    "at": [
     240.0,
@@ -1782,17 +1922,17 @@
    "near": "east_drift_5: lunch spot, tally strokes"
   },
   {
-   "id": "s067_low_ferns",
-   "template": "low_ferns",
+   "id": "s081_low_gear",
+   "template": "low_gear",
    "at": [
-    140.0,
-    -230.0
+    208.2,
+    -305.9
    ],
-   "yaw_deg": -84.5,
-   "near": "skylight_chain_5: ferns in the cracks"
+   "yaw_deg": 133.5,
+   "near": "east_drift_4: dropped gear in the dust"
   },
   {
-   "id": "s068_mid_tailings_cart",
+   "id": "s082_mid_tailings_cart",
    "template": "mid_tailings_cart",
    "at": [
     250.0,
@@ -1802,7 +1942,17 @@
    "near": "east_drift_8: carts of tailings left"
   },
   {
-   "id": "s069_mid_shift_board",
+   "id": "s083_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    8.5,
+    -135.6
+   ],
+   "yaw_deg": 25.1,
+   "near": "main_tube_upper_7: ferns in the cracks"
+  },
+  {
+   "id": "s084_mid_shift_board",
    "template": "mid_shift_board",
    "at": [
     220.0,
@@ -1812,17 +1962,7 @@
    "near": "east_drift_9: lunch spot, tally strokes"
   },
   {
-   "id": "s070_low_gear",
-   "template": "low_gear",
-   "at": [
-    -183.6,
-    -127.8
-   ],
-   "yaw_deg": -50.1,
-   "near": "west_gallery_7: dropped gear in the dust"
-  },
-  {
-   "id": "s071_mid_tailings_cart",
+   "id": "s085_mid_tailings_cart",
    "template": "mid_tailings_cart",
    "at": [
     250.0,
@@ -1832,47 +1972,87 @@
    "near": "east_drift_6: carts of tailings left"
   },
   {
-   "id": "s072_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s086_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    -17.5,
+    -190.9
+   ],
+   "yaw_deg": -154.7,
+   "near": "main_tube_upper_6: ferns in the cracks"
+  },
+  {
+   "id": "s087_pump_station",
+   "template": "pump_station",
    "at": [
     60.0,
     -130.0
    ],
    "yaw_deg": -143.2,
-   "near": "skylight_chain_9: timbers down, water mark"
+   "near": "skylight_chain_9: pumped dry, left parked"
   },
   {
-   "id": "s073_pump_station",
-   "template": "pump_station",
+   "id": "s088_low_gear",
+   "template": "low_gear",
+   "at": [
+    -153.3,
+    -92.1
+   ],
+   "yaw_deg": -38.0,
+   "near": "west_gallery_9: dropped gear in the dust"
+  },
+  {
+   "id": "s089_low_stones",
+   "template": "low_stones",
+   "at": [
+    242.5,
+    -226.4
+   ],
+   "yaw_deg": 99.0,
+   "near": "east_drift_6: rimstone and lichen"
+  },
+  {
+   "id": "s090_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    126.7,
+    -170.2
+   ],
+   "yaw_deg": -132.6,
+   "near": "skylight_chain_7: ferns in the cracks"
+  },
+  {
+   "id": "s091_low_stones",
+   "template": "low_stones",
+   "at": [
+    -61.6,
+    -164.9
+   ],
+   "yaw_deg": -112.0,
+   "near": "main_tube_upper_8: rimstone and lichen"
+  },
+  {
+   "id": "s092_lamp_wall",
+   "template": "lamp_wall",
    "at": [
     280.0,
     -260.0
    ],
    "yaw_deg": 105.7,
-   "near": "east_drift_6: pumped dry, left parked"
+   "near": "east_drift_6: lamps facing the wrong way"
   },
   {
-   "id": "s074_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s093_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     250.0,
     -70.0
    ],
    "yaw_deg": 54.8,
-   "near": "east_drift_8: lamps facing the wrong way"
+   "near": "east_drift_8: timbers down, water mark"
   },
   {
-   "id": "s075_low_gear",
-   "template": "low_gear",
-   "at": [
-    -150.0,
-    -220.0
-   ],
-   "yaw_deg": -116.0,
-   "near": "cannon_tube_kicker: dropped gear in the dust"
-  },
-  {
-   "id": "s076_mid_rimstone_pool",
+   "id": "s094_mid_rimstone_pool",
    "template": "mid_rimstone_pool",
    "at": [
     0.0,
@@ -1882,27 +2062,17 @@
    "near": "main_tube_upper_7: rimstone lips at the seep"
   },
   {
-   "id": "s077_low_stones",
-   "template": "low_stones",
+   "id": "s095_low_ferns",
+   "template": "low_ferns",
    "at": [
-    -150.0,
-    -90.0
+    -79.8,
+    -124.8
    ],
-   "yaw_deg": -38.0,
-   "near": "west_gallery_9: rimstone and lichen"
+   "yaw_deg": -112.0,
+   "near": "cannon_tube_7: ferns in the cracks"
   },
   {
-   "id": "s078_low_gear",
-   "template": "low_gear",
-   "at": [
-    -91.0,
-    -48.8
-   ],
-   "yaw_deg": -30.1,
-   "near": "west_gallery_10: dropped gear in the dust"
-  },
-  {
-   "id": "s079_lamp_wall",
+   "id": "s096_lamp_wall",
    "template": "lamp_wall",
    "at": [
     260.0,
@@ -1912,57 +2082,67 @@
    "near": "east_drift_kicker: lamps facing the wrong way"
   },
   {
-   "id": "s080_mid_skylight_garden",
-   "template": "mid_skylight_garden",
+   "id": "s097_low_gear",
+   "template": "low_gear",
+   "at": [
+    -77.5,
+    -40.9
+   ],
+   "yaw_deg": -28.9,
+   "near": "west_gallery_10: dropped gear in the dust"
+  },
+  {
+   "id": "s098_mid_column_field",
+   "template": "mid_column_field",
    "at": [
     -220.0,
     -220.0
    ],
    "yaw_deg": -101.2,
-   "near": "west_gallery_6: ferns under the skylight"
+   "near": "west_gallery_6: basalt stubs, lichen caps"
   },
   {
-   "id": "s081_low_ferns",
-   "template": "low_ferns",
+   "id": "s099_low_stones",
+   "template": "low_stones",
    "at": [
-    -54.6,
-    -32.1
+    71.2,
+    -109.8
    ],
-   "yaw_deg": -28.9,
-   "near": "west_gallery_11: ferns in the cracks"
+   "yaw_deg": -143.2,
+   "near": "skylight_chain_9: rimstone and lichen"
   },
   {
-   "id": "s082_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s100_pump_station",
+   "template": "pump_station",
    "at": [
     -180.0,
     50.0
    ],
    "yaw_deg": -119.6,
-   "near": "west_breakthrough_4: timbers down, water mark"
+   "near": "west_breakthrough_4: pumped dry, left parked"
   },
   {
-   "id": "s083_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s101_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     -170.0,
     -50.0
    ],
    "yaw_deg": -38.0,
-   "near": "west_gallery_9: lamps facing the wrong way"
+   "near": "west_gallery_9: timbers down, water mark"
   },
   {
-   "id": "s084_pump_station",
-   "template": "pump_station",
+   "id": "s102_lamp_wall",
+   "template": "lamp_wall",
    "at": [
     -210.0,
     120.0
    ],
    "yaw_deg": -101.6,
-   "near": "west_breakthrough_5: pumped dry, left parked"
+   "near": "west_breakthrough_5: lamps facing the wrong way"
   },
   {
-   "id": "s085_gallery_fall",
+   "id": "s103_gallery_fall",
    "template": "gallery_fall",
    "at": [
     -230.0,
@@ -1972,27 +2152,27 @@
    "near": "west_gallery_7: timbers down, water mark"
   },
   {
-   "id": "s086_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s104_pump_station",
+   "template": "pump_station",
    "at": [
     280.0,
     -140.0
    ],
    "yaw_deg": 81.2,
-   "near": "east_drift_7: lamps facing the wrong way"
+   "near": "east_drift_7: pumped dry, left parked"
   },
   {
-   "id": "s087_mid_column_field",
-   "template": "mid_column_field",
+   "id": "s105_mid_skylight_garden",
+   "template": "mid_skylight_garden",
    "at": [
     -180.0,
     90.0
    ],
    "yaw_deg": -119.6,
-   "near": "west_breakthrough_4: basalt stubs, lichen caps"
+   "near": "west_breakthrough_4: ferns under the skylight"
   },
   {
-   "id": "s088_mid_shift_board",
+   "id": "s106_mid_shift_board",
    "template": "mid_shift_board",
    "at": [
     100.0,
@@ -2002,27 +2182,37 @@
    "near": "east_drift_11: lunch spot, tally strokes"
   },
   {
-   "id": "s089_mid_tailings_cart",
-   "template": "mid_tailings_cart",
+   "id": "s107_low_gear",
+   "template": "low_gear",
+   "at": [
+    173.1,
+    -60.0
+   ],
+   "yaw_deg": 31.0,
+   "near": "east_drift_9: dropped gear in the dust"
+  },
+  {
+   "id": "s108_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    -28.0,
+    54.0
+   ],
+   "yaw_deg": 41.9,
+   "near": "main_tube_lower_2: ferns in the cracks"
+  },
+  {
+   "id": "s109_mid_shift_board",
+   "template": "mid_shift_board",
    "at": [
     0.0,
     60.0
    ],
    "yaw_deg": 41.9,
-   "near": "main_tube_lower_1: carts of tailings left"
+   "near": "main_tube_lower_1: lunch spot, tally strokes"
   },
   {
-   "id": "s090_low_stones",
-   "template": "low_stones",
-   "at": [
-    10.0,
-    -80.0
-   ],
-   "yaw_deg": -144.2,
-   "near": "main_tube_upper_10: rimstone and lichen"
-  },
-  {
-   "id": "s091_mid_rimstone_pool",
+   "id": "s110_mid_rimstone_pool",
    "template": "mid_rimstone_pool",
    "at": [
     -80.0,
@@ -2032,7 +2222,17 @@
    "near": "main_tube_upper_8: rimstone lips at the seep"
   },
   {
-   "id": "s092_mid_skylight_garden",
+   "id": "s111_low_gear",
+   "template": "low_gear",
+   "at": [
+    32.9,
+    41.4
+   ],
+   "yaw_deg": -26.6,
+   "near": "east_haulage_1: dropped gear in the dust"
+  },
+  {
+   "id": "s112_mid_skylight_garden",
    "template": "mid_skylight_garden",
    "at": [
     90.0,
@@ -2042,17 +2242,17 @@
    "near": "skylight_chain_8: ferns under the skylight"
   },
   {
-   "id": "s093_pump_station",
-   "template": "pump_station",
+   "id": "s113_lamp_wall",
+   "template": "lamp_wall",
    "at": [
     180.0,
     -30.0
    ],
    "yaw_deg": 30.9,
-   "near": "east_drift_10: pumped dry, left parked"
+   "near": "east_drift_10: lamps facing the wrong way"
   },
   {
-   "id": "s094_mid_shift_board",
+   "id": "s114_mid_shift_board",
    "template": "mid_shift_board",
    "at": [
     80.0,
@@ -2062,7 +2262,7 @@
    "near": "east_haulage_3: lunch spot, tally strokes"
   },
   {
-   "id": "s095_mid_tailings_cart",
+   "id": "s115_mid_tailings_cart",
    "template": "mid_tailings_cart",
    "at": [
     -110.0,
@@ -2072,17 +2272,17 @@
    "near": "main_tube_lower_4: carts of tailings left"
   },
   {
-   "id": "s096_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s116_pump_station",
+   "template": "pump_station",
    "at": [
     210.0,
     70.0
    ],
    "yaw_deg": 124.0,
-   "near": "east_chamber: timbers down, water mark"
+   "near": "east_chamber: pumped dry, left parked"
   },
   {
-   "id": "s097_mid_shift_board",
+   "id": "s117_mid_shift_board",
    "template": "mid_shift_board",
    "at": [
     -30.0,
@@ -2092,17 +2292,47 @@
    "near": "main_tube_lower_4: lunch spot, tally strokes"
   },
   {
-   "id": "s098_pump_station",
-   "template": "pump_station",
+   "id": "s118_low_stones",
+   "template": "low_stones",
+   "at": [
+    73.8,
+    56.9
+   ],
+   "yaw_deg": -29.6,
+   "near": "east_haulage_2: rimstone and lichen"
+  },
+  {
+   "id": "s119_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     40.0,
     60.0
    ],
    "yaw_deg": -29.6,
-   "near": "east_haulage_1: pumped dry, left parked"
+   "near": "east_haulage_1: timbers down, water mark"
   },
   {
-   "id": "s099_mid_rimstone_pool",
+   "id": "s120_low_gear",
+   "template": "low_gear",
+   "at": [
+    89.0,
+    -11.0
+   ],
+   "yaw_deg": 21.5,
+   "near": "east_drift_12: dropped gear in the dust"
+  },
+  {
+   "id": "s121_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    -39.4,
+    96.9
+   ],
+   "yaw_deg": 127.5,
+   "near": "main_tube_lower_4: ferns in the cracks"
+  },
+  {
+   "id": "s122_mid_rimstone_pool",
    "template": "mid_rimstone_pool",
    "at": [
     -180.0,
@@ -2112,17 +2342,47 @@
    "near": "west_breakthrough_6: rimstone lips at the seep"
   },
   {
-   "id": "s100_mid_shift_board",
-   "template": "mid_shift_board",
+   "id": "s123_low_stones",
+   "template": "low_stones",
+   "at": [
+    107.9,
+    80.7
+   ],
+   "yaw_deg": -37.2,
+   "near": "east_haulage_3: rimstone and lichen"
+  },
+  {
+   "id": "s124_mid_tailings_cart",
+   "template": "mid_tailings_cart",
    "at": [
     140.0,
     -20.0
    ],
    "yaw_deg": 28.6,
-   "near": "east_drift_10: lunch spot, tally strokes"
+   "near": "east_drift_10: carts of tailings left"
   },
   {
-   "id": "s101_mid_column_field",
+   "id": "s125_low_gear",
+   "template": "low_gear",
+   "at": [
+    140.8,
+    104.0
+   ],
+   "yaw_deg": -46.5,
+   "near": "east_haulage_4: dropped gear in the dust"
+  },
+  {
+   "id": "s126_low_stones",
+   "template": "low_stones",
+   "at": [
+    -102.2,
+    74.7
+   ],
+   "yaw_deg": 46.4,
+   "near": "west_breakthrough_3: rimstone and lichen"
+  },
+  {
+   "id": "s127_mid_column_field",
    "template": "mid_column_field",
    "at": [
     -150.0,
@@ -2132,27 +2392,47 @@
    "near": "west_breakthrough_3: basalt stubs, lichen caps"
   },
   {
-   "id": "s102_low_stones",
-   "template": "low_stones",
+   "id": "s128_low_ferns",
+   "template": "low_ferns",
    "at": [
-    -100.0,
-    70.0
+    31.3,
+    197.6
    ],
-   "yaw_deg": 46.4,
-   "near": "west_breakthrough_3: rimstone and lichen"
+   "yaw_deg": -19.4,
+   "near": "main_tube_lower_7: ferns in the cracks"
   },
   {
-   "id": "s103_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s129_pump_station",
+   "template": "pump_station",
    "at": [
     -100.0,
     180.0
    ],
    "yaw_deg": 129.2,
-   "near": "crosscut_drift: timbers down, water mark"
+   "near": "crosscut_drift: pumped dry, left parked"
   },
   {
-   "id": "s104_lamp_wall",
+   "id": "s130_low_gear",
+   "template": "low_gear",
+   "at": [
+    150.8,
+    169.1
+   ],
+   "yaw_deg": -87.8,
+   "near": "east_haulage_6: dropped gear in the dust"
+  },
+  {
+   "id": "s131_low_stones",
+   "template": "low_stones",
+   "at": [
+    -50.7,
+    166.7
+   ],
+   "yaw_deg": -26.0,
+   "near": "main_tube_lower_5: rimstone and lichen"
+  },
+  {
+   "id": "s132_lamp_wall",
    "template": "lamp_wall",
    "at": [
     120.0,
@@ -2162,7 +2442,7 @@
    "near": "main_tube_lower_8: lamps facing the wrong way"
   },
   {
-   "id": "s105_mid_tailings_cart",
+   "id": "s133_mid_tailings_cart",
    "template": "mid_tailings_cart",
    "at": [
     150.0,
@@ -2172,67 +2452,87 @@
    "near": "east_haulage_kicker: carts of tailings left"
   },
   {
-   "id": "s106_mid_skylight_garden",
-   "template": "mid_skylight_garden",
+   "id": "s134_mid_rimstone_pool",
+   "template": "mid_rimstone_pool",
    "at": [
     100.0,
     160.0
    ],
    "yaw_deg": 117.8,
-   "near": "main_tube_lower_8: ferns under the skylight"
+   "near": "main_tube_lower_8: rimstone lips at the seep"
   },
   {
-   "id": "s107_mid_column_field",
-   "template": "mid_column_field",
+   "id": "s135_mid_skylight_garden",
+   "template": "mid_skylight_garden",
    "at": [
     10.0,
     110.0
    ],
    "yaw_deg": 143.9,
-   "near": "main_tube_lower_6: basalt stubs, lichen caps"
+   "near": "main_tube_lower_6: ferns under the skylight"
   },
   {
-   "id": "s108_mid_rimstone_pool",
-   "template": "mid_rimstone_pool",
+   "id": "s136_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    70.0,
+    147.7
+   ],
+   "yaw_deg": 157.0,
+   "near": "main_tube_lower_7: ferns in the cracks"
+  },
+  {
+   "id": "s137_low_stones",
+   "template": "low_stones",
+   "at": [
+    114.7,
+    217.6
+   ],
+   "yaw_deg": -140.3,
+   "near": "main_tube_lower_9: rimstone and lichen"
+  },
+  {
+   "id": "s138_mid_column_field",
+   "template": "mid_column_field",
    "at": [
     50.0,
     120.0
    ],
    "yaw_deg": 157.0,
-   "near": "main_tube_lower_7: rimstone lips at the seep"
+   "near": "main_tube_lower_7: basalt stubs, lichen caps"
   },
   {
-   "id": "s109_low_ferns",
-   "template": "low_ferns",
+   "id": "s139_low_gear",
+   "template": "low_gear",
    "at": [
-    30.0,
-    200.0
+    -116.5,
+    118.4
    ],
-   "yaw_deg": -19.4,
-   "near": "main_tube_lower_7: ferns in the cracks"
+   "yaw_deg": 60.4,
+   "near": "main_tube_lower_4: dropped gear in the dust"
   },
   {
-   "id": "s110_pump_station",
-   "template": "pump_station",
+   "id": "s140_gallery_fall",
+   "template": "gallery_fall",
    "at": [
     120.0,
     110.0
    ],
    "yaw_deg": -46.5,
-   "near": "east_haulage_4: pumped dry, left parked"
+   "near": "east_haulage_4: timbers down, water mark"
   },
   {
-   "id": "s111_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s141_pump_station",
+   "template": "pump_station",
    "at": [
     160.0,
     280.0
    ],
    "yaw_deg": 39.7,
-   "near": "east_haulage_8: timbers down, water mark"
+   "near": "east_haulage_8: pumped dry, left parked"
   },
   {
-   "id": "s112_mid_shift_board",
+   "id": "s142_mid_shift_board",
    "template": "mid_shift_board",
    "at": [
     200.0,
@@ -2242,7 +2542,27 @@
    "near": "east_haulage_7: lunch spot, tally strokes"
   },
   {
-   "id": "s113_mid_tailings_cart",
+   "id": "s143_low_ferns",
+   "template": "low_ferns",
+   "at": [
+    -123.7,
+    175.9
+   ],
+   "yaw_deg": 102.3,
+   "near": "west_breakthrough_6: ferns in the cracks"
+  },
+  {
+   "id": "s144_low_gear",
+   "template": "low_gear",
+   "at": [
+    -85.9,
+    216.2
+   ],
+   "yaw_deg": 142.4,
+   "near": "crosscut_drift: dropped gear in the dust"
+  },
+  {
+   "id": "s145_mid_tailings_cart",
    "template": "mid_tailings_cart",
    "at": [
     -10.0,
@@ -2252,14 +2572,14 @@
    "near": "main_tube_lower_kicker: carts of tailings left"
   },
   {
-   "id": "s114_mid_rimstone_pool",
-   "template": "mid_rimstone_pool",
+   "id": "s146_mid_column_field",
+   "template": "mid_column_field",
    "at": [
     -50.0,
     180.0
    ],
    "yaw_deg": -26.0,
-   "near": "main_tube_lower_5: rimstone lips at the seep"
+   "near": "main_tube_lower_5: basalt stubs, lichen caps"
   },
   {
    "id": "f02_low_stones",
@@ -2312,114 +2632,34 @@
    "near": "lava_channel_21: ferns under the skylight"
   },
   {
-   "id": "f09_low_stones",
-   "template": "low_stones",
+   "id": "f10_low_gear",
+   "template": "low_gear",
    "at": [
-    -421.0,
-    -538.7
+    -54.6,
+    -32.1
    ],
-   "yaw_deg": 18.2,
-   "near": "line verge: worked wall foot"
-  },
-  {
-   "id": "f10_mid_shift_board",
-   "template": "mid_shift_board",
-   "at": [
-    -110.0,
-    120.0
-   ],
-   "yaw_deg": -62.3,
-   "near": "main_tube_lower_4: worked wall foot"
+   "yaw_deg": -28.9,
+   "near": "west_chamber verge: gear dropped"
   },
   {
    "id": "f11_low_stones",
    "template": "low_stones",
    "at": [
-    -302.8,
-    -585.0
+    -60.0,
+    -31.3
    ],
-   "yaw_deg": 20.2,
-   "near": "line verge: worked wall foot"
+   "yaw_deg": -28.9,
+   "near": "west_chamber verge: rimstone"
   },
   {
-   "id": "f12_mid_shift_board",
-   "template": "mid_shift_board",
-   "at": [
-    0.0,
-    -130.0
-   ],
-   "yaw_deg": 25.1,
-   "near": "main_tube_upper_7: worked wall foot"
-  },
-  {
-   "id": "f13_mid_rimstone_pool",
-   "template": "mid_rimstone_pool",
-   "at": [
-    -220.0,
-    -220.0
-   ],
-   "yaw_deg": -101.2,
-   "near": "west_gallery_6: worked wall foot"
-  },
-  {
-   "id": "f14_low_gear",
-   "template": "low_gear",
-   "at": [
-    -190.0,
-    -240.0
-   ],
-   "yaw_deg": -108.5,
-   "near": "west_gallery_5: worked wall foot"
-  },
-  {
-   "id": "f16_mid_column_field",
-   "template": "mid_column_field",
-   "at": [
-    10.0,
-    200.0
-   ],
-   "yaw_deg": -10.4,
-   "near": "main_tube_lower_7: worked wall foot"
-  },
-  {
-   "id": "f18_low_gear",
-   "template": "low_gear",
-   "at": [
-    -120.0,
-    -260.0
-   ],
-   "yaw_deg": -118.7,
-   "near": "cannon_tube_4: worked wall foot"
-  },
-  {
-   "id": "f20_low_ferns",
+   "id": "f12_low_ferns",
    "template": "low_ferns",
    "at": [
-    -66.7,
-    -141.0
+    -63.5,
+    -36.7
    ],
-   "yaw_deg": -112.0,
-   "near": "line verge: worked wall foot"
-  },
-  {
-   "id": "f21_low_ferns",
-   "template": "low_ferns",
-   "at": [
-    155.5,
-    127.8
-   ],
-   "yaw_deg": -65.4,
-   "near": "line verge: worked wall foot"
-  },
-  {
-   "id": "f22_mid_column_field",
-   "template": "mid_column_field",
-   "at": [
-    -180.0,
-    210.0
-   ],
-   "yaw_deg": -63.9,
-   "near": "west_breakthrough_6: worked wall foot"
+   "yaw_deg": -28.9,
+   "near": "west_chamber verge: ferns"
   },
   {
    "id": "g01_granary_ledge",
@@ -2482,14 +2722,5 @@
   ],
   "seed": 6
  },
- "pin": 761422810,
- "low_ground_rows": [
-  "cinder_cone",
-  "rim_south",
-  "rim_east",
-  "rim_west",
-  "great_room",
-  "sinkhole_walls",
-  "caisson_bowl"
- ]
+ "pin": 1658740261
 }
