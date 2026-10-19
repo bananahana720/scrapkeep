@@ -75,3 +75,31 @@ test("parseArgs rejects an unknown pilot", () => {
   assert.throws(() => parseArgs(["--pilots=nobody"]), /unknown pilot/);
   assert.deepEqual(parseArgs(["--pilots=tarn,tally"]).pilots, ["tarn", "tally"]);
 });
+
+// HELP-REFRESH (WHATS-LEFT row 8): the seven verbs the help page names each have a row, taught by
+// the first-meet tip, and a row that is optional says why.
+const HELP_VERBS = { grip: "grip_used", jam: "jam_hit", cast: "cast_started", radio: "radio_live", stake: "relay_met", companion: "companion_full", active: "active_racked" };
+
+test("the seven help verbs each have a row taught by their tip", () => {
+  for (const [id, need] of Object.entries(HELP_VERBS)) {
+    const row = mechanic(id);
+    assert.ok(row, `${id} row`);
+    assert.equal(row.need, need);
+    assert.deepEqual(row.teach, [`prompt:tip_${id}`]);
+    if (row.needed === "optional") assert.ok(row.note && row.note.length > 20, `${id} optional needs a stated reason`);
+  }
+});
+
+test("a tip on the same tick as the verb's first need passes, one long after fails", () => {
+  for (const [id, need] of Object.entries(HELP_VERBS)) {
+    const ok = probe({ [`prompt:tip_${id}`]: { tick: 300, stage: 1 } }, { [need]: { tick: 300, stage: 1 } });
+    assert.equal(judge(mechanic(id), ok).verdict, "ok", id);
+    const late = probe({ [`prompt:tip_${id}`]: { tick: 300 + GRACE_TICKS + 1, stage: 1 } }, { [need]: { tick: 300, stage: 1 } });
+    assert.equal(judge(mechanic(id), late).verdict, "late", id);
+  }
+});
+
+test("an untaught radio dial fails the audit", () => {
+  const p = probe({}, { radio_live: { tick: 10, stage: 1 } });
+  assert.equal(audit([p]).rows.find((r) => r.id === "radio").failed, true);
+});
