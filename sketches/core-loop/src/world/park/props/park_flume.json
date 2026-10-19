@@ -1,0 +1,1705 @@
+{
+ "schema": "scrapkeep-park-props/1",
+ "map": "park_flume",
+ "kit": "res://assets/models/park/props/flume/manifest.json",
+ "templates": {
+  "washday": {
+   "story": "Laundry day by the trestles: a tub, a slack line, a cot dragged out for the sun.",
+   "props": [
+    {
+     "kind": "washline",
+     "v": "a",
+     "at": [
+      0.5,
+      2.5
+     ],
+     "yaw_deg": 8,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "b",
+     "at": [
+      4.5,
+      -0.5
+     ],
+     "yaw_deg": 40,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bunk_cots",
+     "v": "c",
+     "at": [
+      -5.0,
+      4.0
+     ],
+     "yaw_deg": -25,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "a",
+     "at": [
+      7.0,
+      5.0
+     ],
+     "yaw_deg": 72,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -8.0,
+      -1.0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      8.5,
+      -3.0
+     ],
+     "yaw_deg": 140,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "b",
+     "at": [
+      1.5,
+      -3.5
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "c",
+     "at": [
+      -3.0,
+      -5.0
+     ],
+     "yaw_deg": 60,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "c",
+     "at": [
+      -2.5,
+      0.0
+     ],
+     "yaw_deg": 200,
+     "scale": 0.85,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "tie_yard": {
+   "story": "A yard of spare ties and pipe, bundled and left where the cart stopped.",
+   "props": [
+    {
+     "kind": "timber_ties",
+     "v": "a",
+     "at": [
+      0.0,
+      3.0
+     ],
+     "yaw_deg": 12,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "b",
+     "at": [
+      5.5,
+      1.0
+     ],
+     "yaw_deg": 55,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "a",
+     "at": [
+      -5.5,
+      5.5
+     ],
+     "yaw_deg": -35,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pipe_section",
+     "v": "c",
+     "at": [
+      4.0,
+      6.5
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "a",
+     "at": [
+      -4.0,
+      -1.5
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 4
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "c",
+     "at": [
+      2.0,
+      -3.0
+     ],
+     "yaw_deg": -20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -8.0,
+      1.0
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "c",
+     "at": [
+      8.0,
+      -2.0
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      1.0,
+      8.5
+     ],
+     "yaw_deg": 160,
+     "scale": 1.15,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "canal_seep": {
+   "story": "Reeds and saltbush where the canal seeps; only a spare pipe, long left alone.",
+   "props": [
+    {
+     "kind": "reed_clump",
+     "v": "c",
+     "at": [
+      0.0,
+      1.0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.2,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "c",
+     "at": [
+      4.0,
+      3.5
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "c",
+     "at": [
+      -4.5,
+      4.0
+     ],
+     "yaw_deg": 200,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      7.0,
+      -1.0
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -7.5,
+      -0.5
+     ],
+     "yaw_deg": 130,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      1.0,
+      7.0
+     ],
+     "yaw_deg": 250,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pipe_section",
+     "v": "c",
+     "at": [
+      -1.5,
+      -4.5
+     ],
+     "yaw_deg": 75,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "c",
+     "at": [
+      3.5,
+      -4.0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "camp_corner": {
+   "story": "A crew camp corner: two cots, a cold hearth, a washtub and the day's tools.",
+   "props": [
+    {
+     "kind": "bunk_cots",
+     "v": "c",
+     "at": [
+      0.0,
+      3.5
+     ],
+     "yaw_deg": 5,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bunk_cots",
+     "v": "c",
+     "at": [
+      5.5,
+      5.0
+     ],
+     "yaw_deg": -40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "a",
+     "at": [
+      -1.5,
+      -1.0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "washline",
+     "v": "b",
+     "at": [
+      -6.5,
+      3.0
+     ],
+     "yaw_deg": 85,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_peg",
+     "v": "c",
+     "at": [
+      8.0,
+      0.5
+     ],
+     "yaw_deg": -70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fish_rack",
+     "v": "c",
+     "at": [
+      -5.0,
+      -4.0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      2.5,
+      9.0
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "b",
+     "at": [
+      4.0,
+      -3.5
+     ],
+     "yaw_deg": 110,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "c",
+     "at": [
+      3.0,
+      0.5
+     ],
+     "yaw_deg": 250,
+     "scale": 0.85,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "bent_scatter": {
+   "story": "Fallen numbered bent planks, count off by one, and grass coming up through the gaps.",
+   "props": [
+    {
+     "kind": "bent_numbers",
+     "v": "a",
+     "at": [
+      0.0,
+      1.5
+     ],
+     "yaw_deg": 15,
+     "scale": 1.2,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "b",
+     "at": [
+      4.5,
+      3.5
+     ],
+     "yaw_deg": 70,
+     "scale": 1.1,
+     "tilt_deg": 6
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "c",
+     "at": [
+      -4.0,
+      4.5
+     ],
+     "yaw_deg": -50,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "b",
+     "at": [
+      2.0,
+      -3.5
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "a",
+     "at": [
+      -6.5,
+      -0.5
+     ],
+     "yaw_deg": 25,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pipe_section",
+     "v": "c",
+     "at": [
+      7.5,
+      -1.0
+     ],
+     "yaw_deg": 150,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "milepost",
+     "v": "c",
+     "at": [
+      -1.0,
+      7.0
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      6.0,
+      7.0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -8.0,
+      6.5
+     ],
+     "yaw_deg": 190,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "c",
+     "at": [
+      0.5,
+      -6.0
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "survey_marker": {
+   "story": "A depth milepost, crossed out and painted deeper, with a crew's tea cups beside it.",
+   "props": [
+    {
+     "kind": "milepost",
+     "v": "c",
+     "at": [
+      0.0,
+      3.0
+     ],
+     "yaw_deg": 10,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "c",
+     "at": [
+      3.5,
+      1.0
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_peg",
+     "v": "c",
+     "at": [
+      -5.0,
+      4.5
+     ],
+     "yaw_deg": -20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "c",
+     "at": [
+      5.0,
+      -1.5
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -6.0,
+      -1.0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "c",
+     "at": [
+      7.5,
+      4.5
+     ],
+     "yaw_deg": 80,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fish_rack",
+     "v": "c",
+     "at": [
+      -2.5,
+      -3.5
+     ],
+     "yaw_deg": 170,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "crane_yard": {
+   "story": "Boom 3 on its blocks beside the winch cab, the lock still on, tools left around the footing.",
+   "props": [
+    {
+     "kind": "boom_crane_wreck",
+     "v": "*",
+     "at": [
+      0.0,
+      7.0
+     ],
+     "yaw_deg": 8,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_peg",
+     "v": "*",
+     "at": [
+      -9.0,
+      -2.0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "*",
+     "at": [
+      7.0,
+      -2.0
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pipe_section",
+     "v": "*",
+     "at": [
+      -6.0,
+      -6.0
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "b",
+     "at": [
+      2.0,
+      -3.5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      10.0,
+      2.5
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -11.0,
+      5.0
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "*",
+     "at": [
+      5.0,
+      -6.0
+     ],
+     "yaw_deg": 50,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bunk_cots",
+     "v": "*",
+     "at": [
+      -3.0,
+      -1.0
+     ],
+     "yaw_deg": 200,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "*",
+     "at": [
+      12.0,
+      -3.0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "skiff_shore": {
+   "story": "A rowboat left on blocks when the canal dropped, nets drying and a kettle beside it.",
+   "props": [
+    {
+     "kind": "skiff_on_blocks",
+     "v": "*",
+     "at": [
+      0.0,
+      6.0
+     ],
+     "yaw_deg": 12,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fish_rack",
+     "v": "*",
+     "at": [
+      -7.5,
+      -1.5
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "a",
+     "at": [
+      5.5,
+      -2.5
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bunk_cots",
+     "v": "*",
+     "at": [
+      -3.5,
+      -4.5
+     ],
+     "yaw_deg": -30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "*",
+     "at": [
+      8.5,
+      4.0
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "*",
+     "at": [
+      -9.0,
+      5.0
+     ],
+     "yaw_deg": 130,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      3.0,
+      -6.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "*",
+     "at": [
+      -6.0,
+      8.0
+     ],
+     "yaw_deg": 100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "washline",
+     "v": "*",
+     "at": [
+      9.0,
+      -4.5
+     ],
+     "yaw_deg": 160,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "sluice_station": {
+   "story": "The sluice shed with its wheel, a gauge hut and a depth post: every number logged as steady.",
+   "props": [
+    {
+     "kind": "sluice_shed",
+     "v": "*",
+     "at": [
+      0.0,
+      8.0
+     ],
+     "yaw_deg": 5,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "gauge_dial_shed",
+     "v": "*",
+     "at": [
+      -11.0,
+      1.0
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "milepost",
+     "v": "*",
+     "at": [
+      8.0,
+      -3.0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "*",
+     "at": [
+      -4.0,
+      -4.0
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_peg",
+     "v": "*",
+     "at": [
+      4.5,
+      -5.5
+     ],
+     "yaw_deg": 160,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "*",
+     "at": [
+      10.5,
+      4.5
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -8.0,
+      -6.0
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "*",
+     "at": [
+      -2.0,
+      -8.0
+     ],
+     "yaw_deg": 30,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "gauge_post": {
+   "story": "A little dial hut and a depth post by the weir path, with a stool and tea cups left out.",
+   "props": [
+    {
+     "kind": "gauge_dial_shed",
+     "v": "*",
+     "at": [
+      0.0,
+      4.0
+     ],
+     "yaw_deg": 8,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "milepost",
+     "v": "*",
+     "at": [
+      5.0,
+      0.5
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_peg",
+     "v": "*",
+     "at": [
+      -5.5,
+      1.5
+     ],
+     "yaw_deg": -60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bunk_cots",
+     "v": "*",
+     "at": [
+      6.5,
+      6.5
+     ],
+     "yaw_deg": 50,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "*",
+     "at": [
+      -2.5,
+      -3.0
+     ],
+     "yaw_deg": 140,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "*",
+     "at": [
+      2.0,
+      -5.0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -7.5,
+      6.0
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "*",
+     "at": [
+      9.0,
+      3.5
+     ],
+     "yaw_deg": 130,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "bunk_camp": {
+   "story": "A lean-to bunk camp: cots, wash line, drying fish and a kettle gone cold.",
+   "props": [
+    {
+     "kind": "bunk_cots",
+     "v": "*",
+     "at": [
+      0.0,
+      4.0
+     ],
+     "yaw_deg": 5,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bunk_cots",
+     "v": "*",
+     "at": [
+      6.0,
+      6.5
+     ],
+     "yaw_deg": -45,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bunk_cots",
+     "v": "*",
+     "at": [
+      -6.0,
+      7.0
+     ],
+     "yaw_deg": 60,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "*",
+     "at": [
+      1.0,
+      -2.0
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "washline",
+     "v": "*",
+     "at": [
+      -7.5,
+      0.0
+     ],
+     "yaw_deg": 95,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fish_rack",
+     "v": "*",
+     "at": [
+      7.5,
+      0.5
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_peg",
+     "v": "*",
+     "at": [
+      -1.0,
+      11.0
+     ],
+     "yaw_deg": 5,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "*",
+     "at": [
+      4.0,
+      -5.0
+     ],
+     "yaw_deg": 20,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -10.0,
+      8.0
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "*",
+     "at": [
+      11.0,
+      6.5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  }
+ },
+ "spots": [
+  {
+   "id": "flume_v01",
+   "template": "bent_scatter",
+   "at": [
+    -430.0,
+    -710.0
+   ],
+   "yaw_deg": 153.4,
+   "near": "mesa_wash_1: Fallen numbered bent planks, 67 m off the line"
+  },
+  {
+   "id": "flume_v02",
+   "template": "crane_yard",
+   "at": [
+    -490.0,
+    -700.0
+   ],
+   "yaw_deg": -149.0,
+   "near": "weir_deck: Boom 3 on its blocks beside th, 58 m off the line"
+  },
+  {
+   "id": "flume_v03",
+   "template": "skiff_shore",
+   "at": [
+    -530.0,
+    -650.0
+   ],
+   "yaw_deg": -90.0,
+   "near": "weir_gatehouse: A rowboat left on blocks when , 70 m off the line"
+  },
+  {
+   "id": "flume_v04",
+   "template": "sluice_station",
+   "at": [
+    -340.0,
+    -660.0
+   ],
+   "yaw_deg": 172.6,
+   "near": "weir_chute: The sluice shed with its wheel, 68 m off the line"
+  },
+  {
+   "id": "flume_v05",
+   "template": "gauge_post",
+   "at": [
+    -400.0,
+    -660.0
+   ],
+   "yaw_deg": 130.6,
+   "near": "weir_deck: A little dial hut and a depth , 52 m off the line"
+  },
+  {
+   "id": "flume_v06",
+   "template": "bunk_camp",
+   "at": [
+    -280.0,
+    -650.0
+   ],
+   "yaw_deg": 162.6,
+   "near": "weir_chute: A lean-to bunk camp, 67 m off the line"
+  },
+  {
+   "id": "flume_v07",
+   "template": "tie_yard",
+   "at": [
+    -540.0,
+    -390.0
+   ],
+   "yaw_deg": -90.0,
+   "near": "mesa_ramp: A yard of spare ties and pipe, 70 m off the line"
+  },
+  {
+   "id": "flume_v08",
+   "template": "crane_yard",
+   "at": [
+    -520.0,
+    -590.0
+   ],
+   "yaw_deg": -87.5,
+   "near": "weir_gatehouse: Boom 3 on its blocks beside th, 63 m off the line"
+  },
+  {
+   "id": "flume_v09",
+   "template": "skiff_shore",
+   "at": [
+    -210.0,
+    -600.0
+   ],
+   "yaw_deg": 143.3,
+   "near": "flume_ride_pier_10: A rowboat left on blocks when , 65 m off the line"
+  },
+  {
+   "id": "flume_v10",
+   "template": "sluice_station",
+   "at": [
+    -140.0,
+    -530.0
+   ],
+   "yaw_deg": 141.9,
+   "near": "flume_ride_pier_17: The sluice shed with its wheel, 52 m off the line"
+  },
+  {
+   "id": "flume_v11",
+   "template": "survey_marker",
+   "at": [
+    -430.0,
+    -460.0
+   ],
+   "yaw_deg": 85.4,
+   "near": "mesa_wash_4: A depth milepost, 37 m off the line"
+  },
+  {
+   "id": "flume_v12",
+   "template": "tie_yard",
+   "at": [
+    -190.0,
+    -540.0
+   ],
+   "yaw_deg": 141.9,
+   "near": "flume_ride_pier_17: A yard of spare ties and pipe, 29 m off the line"
+  },
+  {
+   "id": "flume_v13",
+   "template": "bent_scatter",
+   "at": [
+    -520.0,
+    -320.0
+   ],
+   "yaw_deg": -78.7,
+   "near": "mesa_ramp: Fallen numbered bent planks, 51 m off the line"
+  },
+  {
+   "id": "flume_v14",
+   "template": "canal_seep",
+   "at": [
+    -490.0,
+    -260.0
+   ],
+   "yaw_deg": -46.4,
+   "near": "main_canal: Reeds and saltbush where the c, 63 m off the line"
+  },
+  {
+   "id": "flume_v15",
+   "template": "canal_seep",
+   "at": [
+    -440.0,
+    -220.0
+   ],
+   "yaw_deg": -15.9,
+   "near": "main_canal: Reeds and saltbush where the c, 68 m off the line"
+  },
+  {
+   "id": "flume_v16",
+   "template": "bent_scatter",
+   "at": [
+    -290.0,
+    -350.0
+   ],
+   "yaw_deg": -112.4,
+   "near": "gap_wash: Fallen numbered bent planks, 69 m off the line"
+  },
+  {
+   "id": "flume_v17",
+   "template": "gauge_post",
+   "at": [
+    -240.0,
+    -450.0
+   ],
+   "yaw_deg": -117.0,
+   "near": "flume_ride_pier_13: A little dial hut and a depth , 69 m off the line"
+  },
+  {
+   "id": "flume_v18",
+   "template": "bent_scatter",
+   "at": [
+    -390.0,
+    -110.0
+   ],
+   "yaw_deg": -111.2,
+   "near": "field_bank_4: Fallen numbered bent planks, 69 m off the line"
+  },
+  {
+   "id": "flume_v19",
+   "template": "tie_yard",
+   "at": [
+    -380.0,
+    -50.0
+   ],
+   "yaw_deg": -60.8,
+   "near": "field_bank_4: A yard of spare ties and pipe, 64 m off the line"
+  },
+  {
+   "id": "flume_v20",
+   "template": "survey_marker",
+   "at": [
+    -160.0,
+    -250.0
+   ],
+   "yaw_deg": 164.5,
+   "near": "pad_bank_4: A depth milepost, 59 m off the line"
+  },
+  {
+   "id": "flume_v22",
+   "template": "bunk_camp",
+   "at": [
+    -30.0,
+    -240.0
+   ],
+   "yaw_deg": 178.7,
+   "near": "bend_zip_pier_10: A lean-to bunk camp, 68 m off the line"
+  },
+  {
+   "id": "flume_v24",
+   "template": "camp_corner",
+   "at": [
+    90.0,
+    -190.0
+   ],
+   "yaw_deg": 118.3,
+   "near": "bend_zip_pier_16: A crew camp corner, 45 m off the line"
+  },
+  {
+   "id": "flume_v25",
+   "template": "survey_marker",
+   "at": [
+    -110.0,
+    -450.0
+   ],
+   "yaw_deg": 63.0,
+   "near": "canal_wash_5: A depth milepost, 47 m off the line"
+  },
+  {
+   "id": "flume_v26",
+   "template": "canal_seep",
+   "at": [
+    -350.0,
+    10.0
+   ],
+   "yaw_deg": -60.8,
+   "near": "lateral_canal: Reeds and saltbush where the c, 67 m off the line"
+  },
+  {
+   "id": "flume_v27",
+   "template": "canal_seep",
+   "at": [
+    -310.0,
+    60.0
+   ],
+   "yaw_deg": -60.8,
+   "near": "lateral_canal: Reeds and saltbush where the c, 57 m off the line"
+  },
+  {
+   "id": "flume_v28",
+   "template": "camp_corner",
+   "at": [
+    -140.0,
+    -120.0
+   ],
+   "yaw_deg": -27.0,
+   "near": "rim_road_kicker: A crew camp corner, 34 m off the line"
+  },
+  {
+   "id": "flume_v29",
+   "template": "survey_marker",
+   "at": [
+    -260.0,
+    -100.0
+   ],
+   "yaw_deg": -66.0,
+   "near": "hollow_intake: A depth milepost, 44 m off the line"
+  },
+  {
+   "id": "flume_v30",
+   "template": "canal_seep",
+   "at": [
+    -260.0,
+    -40.0
+   ],
+   "yaw_deg": 119.2,
+   "near": "lateral_canal: Reeds and saltbush where the c, 36 m off the line"
+  },
+  {
+   "id": "flume_v31",
+   "template": "bent_scatter",
+   "at": [
+    -220.0,
+    10.0
+   ],
+   "yaw_deg": -76.5,
+   "near": "trestle_hollow: Fallen numbered bent planks, 33 m off the line"
+  },
+  {
+   "id": "flume_v32",
+   "template": "crane_yard",
+   "at": [
+    -100.0,
+    -70.0
+   ],
+   "yaw_deg": -27.0,
+   "near": "rim_road: Boom 3 on its blocks beside th, 60 m off the line"
+  },
+  {
+   "id": "flume_v33",
+   "template": "skiff_shore",
+   "at": [
+    -40.0,
+    -40.0
+   ],
+   "yaw_deg": -27.9,
+   "near": "flume_hollow_reach: A rowboat left on blocks when , 60 m off the line"
+  },
+  {
+   "id": "flume_v34",
+   "template": "sluice_station",
+   "at": [
+    30.0,
+    -240.0
+   ],
+   "yaw_deg": 178.7,
+   "near": "bend_zip_pier_14: The sluice shed with its wheel, 70 m off the line"
+  },
+  {
+   "id": "flume_v35",
+   "template": "camp_corner",
+   "at": [
+    10.0,
+    -120.0
+   ],
+   "yaw_deg": 152.9,
+   "near": "bend_zip_pier_11: A crew camp corner, 34 m off the line"
+  },
+  {
+   "id": "flume_v36",
+   "template": "gauge_post",
+   "at": [
+    -280.0,
+    130.0
+   ],
+   "yaw_deg": -60.8,
+   "near": "tally_field_kicker: A little dial hut and a depth , 65 m off the line"
+  },
+  {
+   "id": "flume_v38",
+   "template": "tie_yard",
+   "at": [
+    -140.0,
+    60.0
+   ],
+   "yaw_deg": 103.5,
+   "near": "tally_field_kicker: A yard of spare ties and pipe, 33 m off the line"
+  },
+  {
+   "id": "flume_v39",
+   "template": "bent_scatter",
+   "at": [
+    -210.0,
+    200.0
+   ],
+   "yaw_deg": -9.5,
+   "near": "turnout_kicker: Fallen numbered bent planks, 61 m off the line"
+  },
+  {
+   "id": "flume_v42",
+   "template": "canal_seep",
+   "at": [
+    -240.0,
+    160.0
+   ],
+   "yaw_deg": -60.8,
+   "near": "turnout_kicker: Reeds and saltbush where the c, 45 m off the line"
+  },
+  {
+   "id": "flume_v44",
+   "template": "tie_yard",
+   "at": [
+    170.0,
+    80.0
+   ],
+   "yaw_deg": 59.7,
+   "near": "pad_bank_7: A yard of spare ties and pipe, 69 m off the line"
+  },
+  {
+   "id": "flume_v45",
+   "template": "survey_marker",
+   "at": [
+    50.0,
+    -20.0
+   ],
+   "yaw_deg": -30.3,
+   "near": "bend_turn_pier: A depth milepost, 35 m off the line"
+  },
+  {
+   "id": "flume_v46",
+   "template": "bunk_camp",
+   "at": [
+    -20.0,
+    70.0
+   ],
+   "yaw_deg": -131.7,
+   "near": "siphon_turn_coping: A lean-to bunk camp, 65 m off the line"
+  },
+  {
+   "id": "flume_v47",
+   "template": "canal_seep",
+   "at": [
+    20.0,
+    20.0
+   ],
+   "yaw_deg": -126.9,
+   "near": "bend_return_wash: Reeds and saltbush where the c, 64 m off the line"
+  },
+  {
+   "id": "flume_v48",
+   "template": "bent_scatter",
+   "at": [
+    80.0,
+    130.0
+   ],
+   "yaw_deg": 40.9,
+   "near": "pad_bank_7: Fallen numbered bent planks, 45 m off the line"
+  },
+  {
+   "id": "flume_v49",
+   "template": "crane_yard",
+   "at": [
+    110.0,
+    180.0
+   ],
+   "yaw_deg": 140.2,
+   "near": "bluff_ride_pier_3: Boom 3 on its blocks beside th, 63 m off the line"
+  },
+  {
+   "id": "flume_v50",
+   "template": "skiff_shore",
+   "at": [
+    160.0,
+    220.0
+   ],
+   "yaw_deg": 140.2,
+   "near": "bluff_ride_pier_7: A rowboat left on blocks when , 64 m off the line"
+  },
+  {
+   "id": "flume_v51",
+   "template": "sluice_station",
+   "at": [
+    -10.0,
+    320.0
+   ],
+   "yaw_deg": 55.3,
+   "near": "siphon_runout_pier: The sluice shed with its wheel, 52 m off the line"
+  },
+  {
+   "id": "flume_v52",
+   "template": "tie_yard",
+   "at": [
+    -140.0,
+    280.0
+   ],
+   "yaw_deg": -104.0,
+   "near": "bench_run_wash: A yard of spare ties and pipe, 61 m off the line"
+  },
+  {
+   "id": "flume_v53",
+   "template": "survey_marker",
+   "at": [
+    -150.0,
+    340.0
+   ],
+   "yaw_deg": -104.0,
+   "near": "bench_exit_grade: A depth milepost, 56 m off the line"
+  },
+  {
+   "id": "flume_v54",
+   "template": "canal_seep",
+   "at": [
+    -160.0,
+    400.0
+   ],
+   "yaw_deg": -84.8,
+   "near": "bench_exit_grade: Reeds and saltbush where the c, 62 m off the line"
+  },
+  {
+   "id": "flume_v55",
+   "template": "gauge_post",
+   "at": [
+    -150.0,
+    460.0
+   ],
+   "yaw_deg": -57.5,
+   "near": "bench_return_pier: A little dial hut and a depth , 65 m off the line"
+  },
+  {
+   "id": "flume_v56",
+   "template": "washday",
+   "at": [
+    -90.0,
+    470.0
+   ],
+   "yaw_deg": -9.1,
+   "near": "bench_return_pier: Laundry day by the trestles, 44 m off the line"
+  },
+  {
+   "id": "flume_v57",
+   "template": "bunk_camp",
+   "at": [
+    -30.0,
+    500.0
+   ],
+   "yaw_deg": -9.0,
+   "near": "bench_return_pier: A lean-to bunk camp, 64 m off the line"
+  },
+  {
+   "id": "flume_v58",
+   "template": "crane_yard",
+   "at": [
+    270.0,
+    310.0
+   ],
+   "yaw_deg": 140.2,
+   "near": "bluff_ride_pier_20: Boom 3 on its blocks beside th, 65 m off the line"
+  },
+  {
+   "id": "flume_v59",
+   "template": "skiff_shore",
+   "at": [
+    30.0,
+    500.0
+   ],
+   "yaw_deg": -2.1,
+   "near": "bench_coping_pier: A rowboat left on blocks when , 61 m off the line"
+  },
+  {
+   "id": "flume_v60",
+   "template": "sluice_station",
+   "at": [
+    90.0,
+    500.0
+   ],
+   "yaw_deg": -0.0,
+   "near": "bench_coping_pier: The sluice shed with its wheel, 60 m off the line"
+  }
+ ],
+ "litter": {
+  "kinds": [
+   {
+    "kind": "saltbush",
+    "weight": 4
+   },
+   {
+    "kind": "reed_clump",
+    "weight": 2
+   },
+   {
+    "kind": "bent_numbers",
+    "weight": 2
+   },
+   {
+    "kind": "timber_ties",
+    "weight": 1
+   },
+   {
+    "kind": "tea_hearth",
+    "weight": 1
+   },
+   {
+    "kind": "washline",
+    "weight": 1
+   }
+  ],
+  "spacing_m": 26,
+  "band_m": [
+   18,
+   60
+  ],
+  "seed": 1021
+ }
+}
