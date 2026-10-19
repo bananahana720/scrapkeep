@@ -55,7 +55,7 @@ window.SITTING = {
     {
       id: "wardens-bosses",
       name: "Wardens and bosses",
-      question: "Accept: every Warden and boss is beatable and readable, and earns its first stagger in about 45 to 70 s for an ordinary pilot.",
+      question: "Accept: every Warden and boss is beatable and readable, and earns its first stagger in about 45 to 70 s for an ordinary pilot (60 to 85 s for the stage 3 hive Warden).",
       try: [
         "Beat the stage 3 hive Warden and note when it first staggers.",
         "Fight the sinkhole Warden and watch its first stagger.",
@@ -149,7 +149,7 @@ window.SITTING = {
       ],
       where: ["Main menu, Play, pilot select", "Spillway and the sinkhole", "Slopes and flat ground", "Any stage", "The Highdraft sky islands"],
       rulings: [
-        { text: "Pilots climb out for two bars (about 3.7 s), do one signature bit, and hop back in. Sable balances, Rivet leans backwards, Kest hovers then drops, Tarn sits, Tally stamps PAID, the Cannon waves.", src: "DECISIONS.md section 3" },
+        { text: "Pilots climb out for two bars (about 3.7 s), do one signature bit, and hop back in. Sable balances, Rivet leans on it facing the wrong way, then turns, surprised, Kest hovers then drops, Tarn sits, Tally stamps PAID, the Cannon waves.", src: "DECISIONS.md section 3" },
         { text: "Movement belongs to the pilot. Shared parts change what a verb does, not how far or fast the ball moves.", src: "DECISIONS.md, older rulings" },
         { text: "Whether a cast keeps the ball rolling depends on the pilot.", src: "DECISIONS.md section 6" },
         { text: "Tarn and the Cannon ship on their current first-pass animations.", src: "DECISIONS.md section 9" },
@@ -259,10 +259,10 @@ window.SITTING = {
         "Open Help from the main menu, then start a fresh run and watch the first-time hints.",
         "Press every main-menu item: Play, Camp, Settings, Help, Achievements, Quit. Note any dead button.",
         "Watch a pack's telegraphs and check the damage lands where they showed.",
-        "Turn on Reduce flashes under Settings, Display, and fight a pack.",
+        "Turn on the Reduce flashes toggle and fight a pack.",
         "Fight with many attackers. Is every warning readable?",
       ],
-      where: ["Main menu, Help; first stage", "Main menu", "Any fight", "Main menu, Settings, Display", "The stage 3 hive"],
+      where: ["Main menu, Help; first stage", "Main menu", "Any fight", "Main menu, Settings", "The stage 3 hive"],
       rulings: [
         { text: "Warnings never fall within 0.2 s between packs or kinds. One pack's warnings start together.", src: "DECISIONS.md section 5" },
         { text: "Near a live hive, defenders skip the 0.2 s gap, so their wind-ups can stack.", src: "DECISIONS.md section 5" },
@@ -298,7 +298,7 @@ window.SITTING = {
         { text: "Difficulty never raises enemy health. Run tier caps health at 1.6x and damage at 1.3x, Wardens excluded.", src: "DECISIONS.md, older rulings" },
         { text: "Normal difficulty is tuned toward winning 3 of 5 runs.", src: "DECISIONS.md, older rulings" },
         { text: "Resistances lean but never wall a build off.", src: "DECISIONS.md section 5" },
-        { text: "Electric fields jam casts and specials for 0.5 s. The ball keeps full speed.", src: "DECISIONS.md section 5" },
+        { text: "Electric fields jam casts, charges and specials for 0.5 s. The ball keeps full speed.", src: "DECISIONS.md section 5" },
         { text: "One retry per world, spent only by death.", src: "DECISIONS.md, older rulings" },
       ],
       vetos: [
@@ -323,10 +323,10 @@ window.SITTING = {
       ],
       where: ["The desktop app menu", "Main menu", "Whole run, dense fights, stage swaps", "Any stage", "Main menu, Quit", "Whole run"],
       rulings: [
-        { text: "A frame p99 over 16.7 ms across a stage, or a repeating hitch over 33 ms, is a major bug. A crash, soft-lock, unbeatable boss, lost save or dead menu item is a blocker, even if it happened once.", src: "BUG-BAR.md; DECISIONS.md section 10" },
+        { text: "A frame p99 over 16.7 ms across a stage, or a repeating hitch over 33 ms, is a major bug. A crash, soft-lock, unbeatable boss, lost save or dead menu item is a blocker. A crash is a blocker even if it happened once. A hitch during the stage-swap launch flight is major.", src: "BUG-BAR.md; DECISIONS.md section 10" },
         { text: "Accepted at the sitting means 11 areas marked, none Not yet, no open blocker, frame times in budget, zero placeholders.", src: "DECISIONS.md section 1" },
         { text: "AppImage plus an app-menu entry. A gamepad is optional.", src: "DECISIONS.md section 1" },
-        { text: "Launch screen: the 2D title is interactive in about 2 s and the 3D park title crossfades in. Cold boot measured 7.8 to 8.3 s against the 5 s target. Your ruling, not a veto.", src: "DECISIONS.md; veto list, 19 Oct" },
+        { text: "Launch screen: the 2D title is interactive in about 2 s and the 3D park title crossfades in. Cold boot measured 7.8 to 8.3 s against the 5 s target. Your ruling, not a veto.", src: "veto list, 18 Oct" },
       ],
       vetos: [],
       watch: [],

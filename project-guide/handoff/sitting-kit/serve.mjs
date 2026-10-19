@@ -70,12 +70,17 @@ function readBody(req, limit) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    let refused = false;
     req.on("data", (chunk) => {
       size += chunk.length;
       if (size > limit) {
-        reject(new Error("too large"));
-        req.destroy();
-      } else {
+        // Keep draining and answer 413 once the body ends, so the client sees the status and not a reset.
+        if (!refused) {
+          refused = true;
+          chunks.length = 0;
+          reject(new Error("too large"));
+        }
+      } else if (!refused) {
         chunks.push(chunk);
       }
     });
@@ -85,40 +90,67 @@ function readBody(req, limit) {
 }
 
 // A page on another origin must not write his verdicts: only a request from this server's own origin passes.
-export function sameOrigin(req, port) {
+export function sameOrigin(req) {
   const origin = req.headers.origin;
   if (origin === undefined) {
     return true;
   }
+  const port = req.socket.localPort;
   return origin === `http://localhost:${port}` || origin === `http://${HOST}:${port}`;
+}
+
+// The Host header must name this machine, which closes DNS rebinding: a page on another name cannot read the verdicts.
+export function localHost(req) {
+  const host = String(req.headers.host ?? "").replace(/:\d+$/, "");
+  return host === "localhost" || host === HOST;
 }
 
 export function createKitServer({ port = 8765, verdictFile = VERDICT_FILE, buildOf = readBuild } = {}) {
   return createServer(async (req, res) => {
-    const url = new URL(req.url ?? "/", `http://${HOST}:${port}`);
+    try {
+      await handle(req, res);
+    } catch (error) {
+      send(res, 500, { error: String(error.message) });
+    }
+  });
+
+  async function handle(req, res) {
+    if (!localHost(req)) {
+      send(res, 403, { error: "host not allowed" });
+      return;
+    }
+    let url;
+    try {
+      url = new URL(req.url ?? "/", `http://${HOST}:${port}`);
+    } catch {
+      send(res, 400, { error: "bad request target" });
+      return;
+    }
     if (url.pathname === "/api/build" && req.method === "GET") {
       send(res, 200, buildOf());
     } else if (url.pathname === "/api/verdicts" && req.method === "GET") {
       send(res, 200, readVerdicts(verdictFile));
     } else if (url.pathname === "/api/verdicts" && req.method === "POST") {
-      if (!sameOrigin(req, port)) {
+      if (!sameOrigin(req)) {
         send(res, 403, { error: "cross-origin write refused" });
         return;
       }
+      let parsed;
       try {
-        const parsed = JSON.parse(await readBody(req, MAX_BODY));
-        if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-          send(res, 400, { error: "body must be a JSON object" });
-        } else {
-          writeVerdicts(parsed, verdictFile);
-          send(res, 200, { ok: true, saved: new Date().toISOString() });
-        }
+        parsed = JSON.parse(await readBody(req, MAX_BODY));
       } catch (error) {
         send(res, error.message === "too large" ? 413 : 400, { error: String(error.message) });
+        return;
+      }
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+        send(res, 400, { error: "body must be a JSON object" });
+      } else {
+        writeVerdicts(parsed, verdictFile);
+        send(res, 200, { ok: true, saved: new Date().toISOString() });
       }
     } else if (req.method === "GET") {
       const name = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
-      if (!SERVED.has(name)) {
+      if (!SERVED.has(name) || !existsSync(path.join(here, name))) {
         send(res, 404, "not found", "text/plain; charset=utf-8");
       } else {
         send(res, 200, readFileSync(path.join(here, name)), TYPES[path.extname(name)] ?? "application/octet-stream");
@@ -126,7 +158,7 @@ export function createKitServer({ port = 8765, verdictFile = VERDICT_FILE, build
     } else {
       send(res, 405, { error: "method not allowed" });
     }
-  });
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

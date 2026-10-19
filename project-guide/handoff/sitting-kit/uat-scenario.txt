@@ -6,6 +6,7 @@ You are testing a local checklist page called "Sitting Kit" (a form with 11 numb
 5. Click numbered button 2. In area 2 (Wardens and bosses), find the section "Coordinator calls" and press its "Veto" button. Confirm the Veto button looks pressed (filled) and the Keep button does not.
 6. Reload the page (navigate to the same URL again). Confirm the status still reads "2 of 11 marked", numbered button 3 is still red/orange, area 3's Notes box still holds "stamina bar unreadable", and area 2's Veto button is still pressed.
 7. Scroll to the bottom. Click "Show Markdown". Read the text with get_page_text or read_page (the panel is a region labelled Markdown export). Confirm the text shown lists area 3 "In-run growth" as "Not yet", lists "stamina bar unreadable" under fix notes, and lists a vetoed coordinator call.
+8. Scroll to the bottom again. Press the "Clear all marks" button; its label changes to "Press again to clear every mark and note". Press it again. The page reloads. Confirm the status reads "0 of 11 marked" and area 3's Notes box is empty.
 Report PASS only if every step matched. Name any step that did not match.
 
 How to work: read the page with the text and find tools and click by element reference; take at most 3 screenshots in the whole run (only to check a colour or a pressed button), because old screenshots are dropped from your context.

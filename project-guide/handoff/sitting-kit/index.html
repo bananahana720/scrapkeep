@@ -105,6 +105,7 @@ details.how > summary { cursor: pointer; font-weight: 800; }
 .area h2 { margin: 0; font-size: 22px; line-height: 1.2; }
 .question { margin: 2px 0 0; color: var(--ink-dim); font-size: 15px; }
 
+fieldset.verdicts { border: 0; margin: 0; min-width: 0; }
 .verdicts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px 16px 14px; }
 .vbtn { position: relative; }
 .vbtn input { position: absolute; opacity: 0; inset: 0; cursor: pointer; margin: 0; width: 100%; height: 100%; }
@@ -252,6 +253,12 @@ const svg = (d, cls) => {
   return s;
 };
 
+// Ticks and vetoes are keyed by a hash of their text, so refreshing areas.js never moves a saved mark onto another line.
+function keyOf(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
 function areaState(id) {
   if (!state.areas[id]) state.areas[id] = { verdict: "", note: "", tried: {}, vetos: {} };
   return state.areas[id];
@@ -268,20 +275,29 @@ function blobOf() {
   return { schema: "scrapkeep-sitting-kit/1", savedAt: state.savedAt, build: state.build, soundOn: state.soundOn, areas: state.areas };
 }
 let saveTimer = 0;
+let dirty = false;
 function save() {
   state.savedAt = new Date().toISOString();
   writeLocal(blobOf());
   setSave("local", "Saved in this browser");
+  dirty = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushToServer, 350);
 }
-async function pushToServer() {
+// Send the pending save now: before a reload, and when the tab hides or closes, so the PC file never trails the page.
+function flush() {
+  clearTimeout(saveTimer);
+  return dirty ? pushToServer(true) : Promise.resolve();
+}
+async function pushToServer(keepalive = false) {
   if (mode !== "server") return;
+  dirty = false;
   try {
-    const r = await fetch("/api/verdicts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(blobOf()) });
+    const r = await fetch("/api/verdicts", { method: "POST", keepalive, headers: { "content-type": "application/json" }, body: JSON.stringify(blobOf()) });
     if (!r.ok) throw new Error(String(r.status));
     setSave("pc", "Saved to your PC " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
   } catch {
+    dirty = true;
     setSave("error", "Could not reach the PC file. Saved in this browser.");
   }
 }
@@ -356,7 +372,7 @@ function gateState() {
   if (marked < vs.length) return { state: "open", text: `${marked} of ${vs.length} marked`, glyph: "M12 7v5l3 2" };
   if (notyet > 0) return { state: "blocked", text: `Not accepted: ${notyet} area${notyet > 1 ? "s" : ""} Not yet`, glyph: VERDICTS.notyet.glyph };
   if (fixes > 0) return { state: "fixes", text: `Accepted. ${fixes} area${fixes > 1 ? "s" : ""} with fixes become cards`, glyph: VERDICTS.fixes.glyph };
-  return { state: "accepted", text: "All 11 accepted", glyph: VERDICTS.accept.glyph };
+  return { state: "accepted", text: "All 11 accepted. Blockers, frame times and placeholders are checked apart", glyph: VERDICTS.accept.glyph };
 }
 function renderGate() {
   const g = gateState();
@@ -376,7 +392,7 @@ function renderArea(area, index) {
   const s = areaState(area.id);
   const card = el("section", { class: "area", id: "a-" + area.id, "aria-labelledby": "h-" + area.id });
   const head = el("header", {}, el("div", { class: "num", text: String(index + 1) }), el("div", {}, el("h2", { id: "h-" + area.id, text: area.name }), el("p", { class: "question", text: area.question })));
-  const group = el("div", { class: "verdicts", role: "radiogroup", "aria-label": `Verdict for ${area.name}` });
+  const group = el("fieldset", { class: "verdicts" }, el("legend", { class: "sr", text: `Verdict for ${area.name}` }));
   for (const key of ORDER) {
     const v = VERDICTS[key];
     const input = el("input", { type: "radio", name: "v-" + area.id, id: `v-${area.id}-${key}`, value: key, checked: s.verdict === key, onchange: () => { s.verdict = key; paintArea(area.id); refresh(); save(); chime(v.tune); } });
@@ -385,8 +401,9 @@ function renderArea(area, index) {
   const body = el("div", { class: "body" });
   const tries = el("ul", { class: "try" });
   area.try.forEach((line, i) => {
-    const box = el("input", { type: "checkbox", id: `t-${area.id}-${i}`, checked: !!s.tried[i], onchange: (e) => { s.tried[i] = e.target.checked; li.classList.toggle("done", e.target.checked); save(); } });
-    const li = el("li", { class: s.tried[i] ? "done" : "" }, box, el("label", { for: box.id }, line, area.where && area.where[i] ? el("span", { class: "where", text: area.where[i] }) : null));
+    const tk = keyOf(line);
+    const box = el("input", { type: "checkbox", id: `t-${area.id}-${i}`, checked: !!s.tried[tk], onchange: (e) => { s.tried[tk] = e.target.checked; li.classList.toggle("done", e.target.checked); save(); } });
+    const li = el("li", { class: s.tried[tk] ? "done" : "" }, box, el("label", { for: box.id }, line, area.where && area.where[i] ? el("span", { class: "where", text: area.where[i] }) : null));
     tries.append(li);
   });
   body.append(el("div", {}, el("h3", { text: "Try" }), tries));
@@ -397,10 +414,11 @@ function renderArea(area, index) {
   lists.append(el("div", {}, el("h3", { text: "Rulings that apply" }), (area.rulings || []).length ? rul : el("p", { class: "empty", text: "None recorded for this area." })));
   const vs = el("div", { class: "vetos" });
   (area.vetos || []).forEach((v, i) => {
-    const cur = s.vetos[i] || "keep";
+    const vk = keyOf(v.text);
+    const cur = s.vetos[vk] || "keep";
     const keep = el("button", { type: "button", "data-choice": "keep", "aria-pressed": String(cur === "keep"), text: "Keep" });
     const veto = el("button", { type: "button", "data-choice": "veto", "aria-pressed": String(cur === "veto"), text: "Veto" });
-    const set = (choice) => { s.vetos[i] = choice; keep.setAttribute("aria-pressed", String(choice === "keep")); veto.setAttribute("aria-pressed", String(choice === "veto")); save(); };
+    const set = (choice) => { s.vetos[vk] = choice; keep.setAttribute("aria-pressed", String(choice === "keep")); veto.setAttribute("aria-pressed", String(choice === "veto")); save(); };
     keep.addEventListener("click", () => set("keep")); veto.addEventListener("click", () => set("veto"));
     vs.append(el("div", { class: "veto" }, el("div", {}, v.text, el("span", { class: "src", text: v.src })), el("div", { class: "toggle", role: "group", "aria-label": "Keep or veto this call" }, keep, veto)));
   });
@@ -434,9 +452,9 @@ function markdown() {
   });
   if (cards.length) lines.push(``, `## Fix notes (each line becomes a card)`, ``, ...cards);
   const vetoed = [];
-  DATA.areas.forEach((a) => (a.vetos || []).forEach((v, i) => { if (areaState(a.id).vetos[i] === "veto") vetoed.push(`- ${v.text} (${v.src})`); }));
+  DATA.areas.forEach((a) => (a.vetos || []).forEach((v) => { if (areaState(a.id).vetos[keyOf(v.text)] === "veto") vetoed.push(`- ${v.text} (${v.src})`); }));
   lines.push(``, `## Vetoed coordinator calls`, ``, ...(vetoed.length ? vetoed : [`- none`]));
-  const ticks = DATA.areas.map((a) => { const n = a.try.filter((_, i) => areaState(a.id).tried[i]).length; return `${a.name} ${n}/${a.try.length}`; });
+  const ticks = DATA.areas.map((a) => { const n = a.try.filter((line) => areaState(a.id).tried[keyOf(line)]).length; return `${a.name} ${n}/${a.try.length}`; });
   lines.push(``, `## Try lines done`, ``, ticks.join(", "));
   return lines.join("\n") + "\n";
 }
@@ -456,9 +474,17 @@ function boot() {
     const a = el("a", { href: URL.createObjectURL(new Blob([JSON.stringify(blobOf(), null, 2)], { type: "application/json" })), download: "sitting-verdicts.json" });
     document.body.append(a); a.click(); a.remove();
   });
-  $("#reset").addEventListener("click", () => {
-    if (!confirm("Clear every mark, tick and note on this page?")) return;
-    state.areas = {}; save(); location.reload();
+  // Two presses, no native dialog: the first arms the button for four seconds, the second clears.
+  let armed = 0;
+  const reset = $("#reset");
+  reset.addEventListener("click", () => {
+    if (!armed) {
+      reset.textContent = "Press again to clear every mark and note";
+      armed = setTimeout(() => { armed = 0; reset.textContent = "Clear all marks"; }, 4000);
+      return;
+    }
+    clearTimeout(armed);
+    state.areas = {}; save(); flush().finally(() => location.reload());
   });
   const sound = $("#sound");
   sound.setAttribute("aria-pressed", String(state.soundOn)); sound.textContent = state.soundOn ? "Sound on" : "Sound off";
@@ -473,6 +499,8 @@ function boot() {
   document.querySelectorAll(".area").forEach((n) => seen.observe(n));
 }
 
+addEventListener("pagehide", flush);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
 load().then(boot);
 </script>
 </body>

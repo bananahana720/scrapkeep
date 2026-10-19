@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import http from "node:http";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -50,15 +51,52 @@ test("verdicts round-trip through disk and a bad body is refused without touchin
   });
 });
 
-test("an oversized body is refused and a write from another origin is refused", async () => {
-  await withServer(async ({ base, file }) => {
+// fetch() normalizes "/../x" away, so the traversal probes go out as raw requests.
+function raw(port, target, { method = "GET", headers = {}, body } = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: HOST, port, path: target, method, headers }, (res) => {
+      let text = "";
+      res.on("data", (chunk) => (text += chunk));
+      res.on("end", () => resolve({ status: res.statusCode, text }));
+    });
+    req.on("error", reject);
+    req.end(body);
+  });
+}
+
+test("no raw path walks out of the folder, and a bad target or a missing file does not kill the server", async () => {
+  await withServer(async ({ port, base }) => {
+    for (const target of ["/../../DECISIONS.md", "/%2e%2e/%2e%2e/DECISIONS.md", "/..\\..\\DECISIONS.md", "/index.html/../../serve.mjs"]) {
+      const response = await raw(port, target);
+      assert.equal(response.status, 404, `${target} is not served`);
+      assert.doesNotMatch(response.text, /createKitServer|# Sitting Kit/, `${target} serves no file`);
+    }
+    assert.equal((await raw(port, "http://[bad")).status, 400, "a request target URL rejects is a 400, not a crash");
+    assert.equal((await fetch(`${base}/api/build`)).status, 200, "the server is still up");
+  });
+});
+
+test("a body over the limit gets a 413 and the file is untouched", async () => {
+  await withServer(async ({ base }) => {
     const big = JSON.stringify({ note: "x".repeat(MAX_BODY + 10) });
-    const response = await fetch(`${base}/api/verdicts`, { method: "POST", body: big }).catch(() => null);
-    assert.ok(response === null || response.status === 413, "oversized body is cut off");
-    const foreign = await fetch(`${base}/api/verdicts`, { method: "POST", headers: { origin: "http://evil.example" }, body: "{}" });
+    const response = await fetch(`${base}/api/verdicts`, { method: "POST", body: big });
+    assert.equal(response.status, 413);
+    assert.deepEqual(await fetch(`${base}/api/verdicts`).then((r) => r.json()), {});
+  });
+});
+
+test("only this server's own origin may write, and only a local Host may read", async () => {
+  await withServer(async ({ port, file, base }) => {
+    const foreign = await raw(port, "/api/verdicts", { method: "POST", headers: { origin: "http://evil.example" }, body: "{}" });
     assert.equal(foreign.status, 403);
     assert.deepEqual(await fetch(`${base}/api/verdicts`).then((r) => r.json()), {}, "nothing was written");
-    assert.equal(file.includes("out"), true);
+    for (const origin of [`http://localhost:${port}`, `http://127.0.0.1:${port}`]) {
+      const own = await raw(port, "/api/verdicts", { method: "POST", headers: { origin }, body: '{"areas":{}}' });
+      assert.equal(own.status, 200, `${origin} may write`);
+    }
+    assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), { areas: {} });
+    const rebound = await raw(port, "/api/verdicts", { headers: { host: `attacker.example:${port}` } });
+    assert.equal(rebound.status, 403, "a rebinding Host reads nothing");
   });
 });
 
