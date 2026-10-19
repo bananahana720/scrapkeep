@@ -11853,23 +11853,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant a LOD0 (1928 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; polished and baked."
+    "notes": "fish_rack variant a LOD0 (1496 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -2.1461,
+     -2.0969,
      0,
-     -0.8312
+     -1.0683
     ],
     "max": [
-     2.1461,
-     1.6433,
-     0.8312
+     2.0969,
+     1.6971,
+     1.0683
     ],
     "size": [
-     4.2922,
-     1.6433,
-     1.6624
+     4.1938,
+     1.6971,
+     2.1366
     ]
    }
   },
@@ -11881,23 +11881,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant a LOD1 (964 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fish_rack variant a LOD1 (748 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.1461,
+     -2.0969,
      0,
-     -0.8312
+     -1.0683
     ],
     "max": [
-     2.1479,
-     1.6433,
-     0.8338
+     2.0969,
+     1.6971,
+     1.0688
     ],
     "size": [
-     4.294,
-     1.6433,
-     1.665
+     4.1938,
+     1.6971,
+     2.1371
     ]
    }
   },
@@ -11909,23 +11909,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant a LOD2 (288 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fish_rack variant a LOD2 (224 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.1294,
+     -2.0833,
      0,
-     -0.8209
+     -1.0631
     ],
     "max": [
-     2.1462,
-     1.6158,
-     0.8362
+     2.0905,
+     1.6921,
+     1.0746
     ],
     "size": [
-     4.2756,
-     1.6158,
-     1.6571
+     4.1738,
+     1.6921,
+     2.1377
     ]
    }
   },
@@ -11937,23 +11937,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant b LOD0 (1456 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; polished and baked."
+    "notes": "fish_rack variant b LOD0 (1136 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
      -2.6942,
      0,
-     -0.8312
+     -1.0662
     ],
     "max": [
      2.6942,
-     1.6433,
-     0.8312
+     1.501,
+     1.0662
     ],
     "size": [
      5.3884,
-     1.6433,
-     1.6624
+     1.501,
+     2.1324
     ]
    }
   },
@@ -11965,23 +11965,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant b LOD1 (728 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fish_rack variant b LOD1 (568 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -2.6942,
      0,
-     -0.8312
+     -1.0662
     ],
     "max": [
      2.6942,
-     1.6433,
-     0.831
+     1.501,
+     1.0672
     ],
     "size": [
      5.3884,
-     1.6433,
-     1.6622
+     1.501,
+     2.1334
     ]
    }
   },
@@ -11993,23 +11993,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant b LOD2 (218 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fish_rack variant b LOD2 (170 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -2.6996,
      0,
-     -0.8209
+     -1.0638
     ],
     "max": [
      2.6883,
-     1.6158,
-     0.8296
+     1.5017,
+     1.0698
     ],
     "size": [
      5.3879,
-     1.6158,
-     1.6505
+     1.5017,
+     2.1336
     ]
    }
   },
@@ -12021,23 +12021,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant c LOD0 (1944 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; polished and baked."
+    "notes": "fish_rack variant c LOD0 (1692 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -2.1461,
+     -2.0488,
      0,
-     -0.9036
+     -1.1821
     ],
     "max": [
-     2.1461,
-     1.4031,
-     0.9036
+     2.0488,
+     1.3895,
+     1.1821
     ],
     "size": [
-     4.2922,
-     1.4031,
-     1.8072
+     4.0976,
+     1.3895,
+     2.3642
     ]
    }
   },
@@ -12049,23 +12049,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant c LOD1 (972 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fish_rack variant c LOD1 (846 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.1461,
+     -2.0488,
      0,
-     -0.9036
+     -1.171
     ],
     "max": [
-     2.1496,
-     1.4031,
-     0.9062
+     2.0506,
+     1.3873,
+     1.1822
     ],
     "size": [
-     4.2957,
-     1.4031,
-     1.8098
+     4.0994,
+     1.3873,
+     2.3532
     ]
    }
   },
@@ -12077,23 +12077,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "fish_rack variant c LOD2 (292 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "fish_rack variant c LOD2 (254 tris): A drying rack with grey hemp nets and split fish: cooked down off the trestles. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.1294,
+     -2.0347,
      0,
-     -0.8824
+     -1.1802
     ],
     "max": [
-     2.1471,
-     1.3777,
-     0.9087
+     2.0489,
+     1.3784,
+     1.1798
     ],
     "size": [
-     4.2765,
-     1.3777,
-     1.7911
+     4.0836,
+     1.3784,
+     2.36
     ]
    }
   },

@@ -79,12 +79,6 @@ def boom_crane_wreck(p, v, rng):
     plank_wall_x(p, rng, -5.9, -2.5, 1.4, 0.4, 2.5, 14, C["timber_grey"], skip=(5, 6) if v != "a" else ())
     plank_wall_y(p, rng, -1.4, 1.4, -5.9, 0.4, 2.5, 12, C["timber_dark"])
     plank_wall_y(p, rng, -1.4, 1.4, -2.5, 0.4, 2.5, 12, C["timber"], skip=(4, 5, 6, 7))  # open front for the drum
-    for i in range(9):
-        s = -1 if i % 2 else 1
-        if v == "c" and i > 5:
-            continue
-        p.box((4.2, 0.5, 0.09), (-4.2, 0, 2.55 + 0.04), tint(C["timber_grey"], rng, 0.1),
-              rot=(0.25 * s, 0, 0), jit=0.004) if False else None
     for s in (-1, 1):
         for r in range(6):
             if v == "c" and s == 1 and r > 2:
@@ -178,7 +172,6 @@ def hull(p, rng, v, sink=0.0, length=7.6, beam_w=2.4):
     """Clinker rowboat hull from strakes of planks, bow at +x. Returns nothing."""
     segs = 12
     rows = 5
-    holed = 4 if v == "b" else -1
     for side in (-1, 1):
         for r in range(rows):
             t = r / (rows - 1)
@@ -207,15 +200,10 @@ def hull(p, rng, v, sink=0.0, length=7.6, beam_w=2.4):
 @K.kind("skiff_on_blocks", hero=True, tags=["soft"], variants="abc",
         story="A rowboat left on trestle blocks when the canal dropped, nets drying beside it.")
 def skiff_on_blocks(p, v, rng):
-    z = 0.85
-    # hull lifted on blocks: shift by drawing blocks then hull at z offset via repositioned sleepers
+    # Hull lifted on blocks: an offset wrapper raises the hull's beams and boxes over the sleepers.
     for x in (-2.2, 2.2):
         sleeper_stack(p, rng, x, 0, 3, long=3.3, col=C["timber_grey"])
-        for s in (-1, 1):
-            p.beam((x, s * 1.2, 0.0), (x + s * 0.5 * (1 if x > 0 else -1), s * 1.5, 0.9), 0.18, C["timber_dark"]) if False else None
     # draw the hull above the blocks: wrap in a temporary offset by building at z then lifting
-    start = len(p.parts)
-    _lift = z
     # Build the hull by monkey-shifting beam/box with an offset wrapper.
     class Off:
         def __init__(self, base, dz):
@@ -250,7 +238,6 @@ def skiff_on_blocks(p, v, rng):
     p.torus(0.2, 0.025, (3.7, -1.3, 0.42), C["cable"], major=10, minor=4)
     rope_coil(p, (3.3, 1.5, 0.05), 0.55, C["timber_pale"], turns=3)
     # Fish rack: a fat low frame with split grey fish, hung beside (a: full, b: half, c: bare).
-    rx = 0.0
     # Leaning A-frame with a short cross-arm (not two posts and a lintel): fish hang from the arm.
     p.beam((-1.0, 3.2, 0.0), (0.0, 2.9, 3.0), 0.3, C["timber_dark"])
     p.beam((1.0, 3.2, 0.0), (0.0, 2.9, 3.0), 0.3, C["timber_dark"])
@@ -268,7 +255,6 @@ def skiff_on_blocks(p, v, rng):
 @K.kind("sluice_shed", hero=True, tags=["machine"], variants="abc",
         story="A gabled shed over the sluice wheel, a warm flask still hung on the post.")
 def sluice_shed(p, v, rng):
-    sag = 0.0 if v == "a" else (0.3 if v == "b" else 0.0)
     # Stone footing and floor.
     p.box((5.6, 4.4, 0.5), (0, 0, 0.25), C["concrete_dark"], style="hard_smooth")
     for x, y in ((-2.7, -2.1), (2.7, 2.1), (2.6, -2.15), (-2.6, 2.2)):
@@ -318,7 +304,6 @@ def sluice_shed(p, v, rng):
         broken = v != "a" and k in (2, 3, 7)
         r_end = wr * (0.55 if broken else 1.0)
         for sy in (-1.05, 1.05):
-            p.rod((wx + 0.3, sy, wz), (wx + 0.3, sy + 0.0, wz) if False else (wx + 0.3 + 0.0, sy, wz), 0.01, C["iron"]) if False else None
             p.beam((wx + 0.3 + 0.0, sy, wz), (wx + 0.3 + r_end * math.sin(a), sy, wz + r_end * math.cos(a)), 0.2, C["timber_dark"], h=0.16)
         if not broken:
             p.box((0.14, 2.3, 0.7), (wx + 0.3 + wr * math.sin(a), 0, wz + wr * math.cos(a)), tint(C["timber"], rng),
@@ -443,7 +428,6 @@ def tea_hearth(p, v, rng):
     p.uv(0.38, (kx, ky, 0.36), C["iron"], scale=(1, 1, 0.85), rot=(tip, 0, 0), style="round")
     p.cyl(0.16, 0.1, (kx, ky, 0.7), C["iron_light"], segs=10, style="hard_smooth")
     p.rod((kx + 0.3, ky, 0.4), (kx + 0.62, ky + 0.0, 0.6), 0.07, C["iron"])
-    p.torus(0.3, 0.035, (kx, ky, 0.62), C["iron_light"], rot=(0, 0.0, 0), major=12, minor=4) if False else None
     p.rod((kx - 0.3, ky, 0.55), (kx, ky, 0.78), 0.035, C["iron_light"])
     p.rod((kx + 0.3, ky, 0.55), (kx, ky, 0.78), 0.035, C["iron_light"])
     # Cups and a log seat.
@@ -463,7 +447,6 @@ def tea_hearth(p, v, rng):
         polish_opts={"bevel_min": 0.2}, story="A tub, a washboard and a short line of shirts: laundry day, interrupted.")
 def washline(p, v, rng):
     # Two squat posts, a slack line (draped, never taut), shirts hung on it.
-    hang = {"a": 1.0, "b": 0.8, "c": 0.0}[v]
     for x in (-2.0, 2.0):
         p.beam((x, 0, 0.1), (x, 0, 1.35), 0.2, C["timber_dark"])
         p.cyl(0.19, 0.12, (x, 0, 1.4), C["timber_dark"], segs=8, style="hard_smooth")
@@ -512,7 +495,6 @@ def timber_ties(p, v, rng):
                   rot=(0, 0, yaw), jit=0.006)
     if v == "a":
         for y in (-0.8, 0.8):
-            p.torus(0.0, 0.0, (0, 0, 0), C["cable"]) if False else None
             p.box((2.5, 0.07, 0.07), (0, y, 1.0), C["timber_pale"], style="fine")
     if v == "b":
         p.box((0.5, 3.0, 0.36), (1.8, 0.8, 0.18), C["timber_dark"], rot=(0, 0, 0.5), jit=0.006)
@@ -561,7 +543,6 @@ def tool_peg(p, v, rng):
 @K.kind("gauge_dial_shed", tags=["machine", "sign", "tall"], variants="abc",
         polish_opts={"bevel_min": 0.2}, story="A hut with one big chalk-white dial: flume flow logged as steady, whatever it does.")
 def gauge_dial_shed(p, v, rng):
-    lean = {"a": 0.0, "b": 0.0, "c": 0.07}[v]
     p.box((2.4, 2.0, 0.3), (0, 0, 0.15), C["concrete"], style="hard_smooth")
     plank_wall_x(p, rng, -1.05, 1.05, 0.9, 0.3, 2.2, 5, C["timber"])
     plank_wall_x(p, rng, -1.05, 1.05, -0.9, 0.3, 2.2, 5, C["timber_pale"], skip=(2,) if v == "b" else ())
@@ -597,30 +578,36 @@ def gauge_dial_shed(p, v, rng):
 @K.kind("fish_rack", tags=["soft"], variants="abc",
         story="A drying rack with grey hemp nets and split fish: cooked down off the trestles.")
 def fish_rack(p, v, rng):
-    for x in (-1.6, 1.6):
-        for y in (-0.5, 0.5):
-            p.beam((x, y, 0.0), (x, y * 0.3, 1.55 if v != "c" else 0.9), 0.15, C["timber_dark"])
-    p.beam((-1.8, 0, 1.55 if v != "c" else 0.9), (1.8, 0, 1.55 if v != "c" else 0.9), 0.17, C["timber_dark"])
-    p.beam((-1.7, 0, 0.8), (1.7, 0, 0.8), 0.12, C["timber_grey"])
-    zt = 1.5 if v != "c" else 0.85
-    nets = {"a": 2, "b": 1, "c": 0}[v]
-    for k in range(nets):
-        x = -0.8 + k * 1.6
-        p.ico(0.8, (x, 0.02, zt - 0.55), C["canvas_stain"] if k else C["timber_grey"], scale=(1.0, 0.11, 0.8), style="round", subdiv=0)
-        for j in range(4):  # knot ridges on the net
-            p.torus(0.0, 0.0, (0, 0, 0), C["cable"]) if False else None
-            p.box((0.05, 0.14, 0.75), (x - 0.5 + j * 0.33, 0.02, zt - 0.6), mix(C["timber_grey"], C["cable"], 0.2), style="fine")
-    nfish = {"a": 6, "b": 3, "c": 0}[v]
-    for i in range(nfish):
-        x = -1.5 + i * 0.6 if v == "a" else -1.2 + i * 0.9
-        p.ico(0.2, (x, -0.1, 1.0), C["bone"] if i % 2 else C["timber_grey"], scale=(0.55, 0.3, 1.6), style="round", subdiv=0)
-    p.cyl(0.28, 0.4, (2.2, -0.8, 0.2), C["iron_light"], segs=10, r2=0.32, style="hard_smooth")  # salt pail
-    if v == "b":
-        p.ico(0.5, (-2.3, -0.6, 0.18), C["canvas_stain"], scale=(1.4, 0.9, 0.35), style="round", subdiv=0)  # dropped net
-    if v == "c":
+    # A leaning A-frame (legs meet at an apex, a back brace behind) with one off-level cross-arm:
+    # no open span under a straight lintel. c is the same frame fallen over.
+    if v != "c":
+        ax, az = 0.2, 1.65 if v == "a" else 1.45
+        lean = 0.0 if v == "a" else 0.25
+        p.beam((-1.0, 0, 0.0), (ax, 0, az), 0.16, C["timber_dark"])
+        p.beam((1.1, 0, 0.0), (ax + lean, 0, az), 0.16, C["timber_dark"])
+        p.beam((0.5, 1.0, 0.0), (ax, 0, az - 0.1), 0.14, C["timber_dark"])
+        z1, z2 = (1.15, 1.3) if v == "a" else (0.75, 1.2)
+        p.beam((-1.7, 0, z1), (1.6, 0, z2), 0.14, C["timber_pale"])  # off-level cross-arm
+        zt = z1 + 0.1
+        nets = 2 if v == "a" else 1
+        for k in range(nets):
+            x = -0.9 + k * 1.5
+            p.ico(0.6, (x, -0.02, zt - 0.4), C["canvas_stain"] if k else C["timber_grey"], scale=(1.0, 0.12, 0.8), style="round", subdiv=0)
+        nfish = 5 if v == "a" else 2
+        for i in range(nfish):
+            x = -1.4 + i * 0.55 if v == "a" else -1.2 + i * 1.0
+            p.ico(0.2, (x, -0.1, 0.7), C["bone"] if i % 2 else C["timber_grey"], scale=(0.55, 0.3, 1.6), style="round", subdiv=0)
+        if v == "b":
+            p.ico(0.5, (-2.3, -0.6, 0.18), C["canvas_stain"], scale=(1.4, 0.9, 0.35), style="round", subdiv=0)  # dropped net
+    else:
+        # Fallen: legs and arm lying at different angles, net heaped, grass coming through.
+        p.beam((-1.2, -0.3, 0.12), (0.8, 0.5, 0.45), 0.16, C["timber_dark"])
+        p.beam((0.2, 0.9, 0.12), (1.5, -0.4, 0.3), 0.16, C["timber_grey"])
+        p.beam((-1.6, 0.9, 0.1), (0.3, 1.2, 0.1), 0.14, C["timber_pale"])
         p.ico(0.8, (0.2, 0.2, 0.2), C["canvas_stain"], scale=(1.9, 0.8, 0.3), style="round", subdiv=0)
-        for i in range(9):
-            p.ico(0.3, (rng.uniform(-1.6, 1.6), rng.uniform(-0.6, 0.6), 0.5), C["dry_grass"] if i % 2 else C["leaf"], scale=(0.5, 0.5, 1.9), style="round", subdiv=0)
+        for i in range(8):
+            p.ico(0.3, (rng.uniform(-1.6, 1.6), rng.uniform(-0.6, 1.0), 0.5), C["dry_grass"] if i % 2 else C["leaf"], scale=(0.5, 0.5, 1.9), style="round", subdiv=0)
+    p.cyl(0.28, 0.4, (2.2, -0.8, 0.2), C["iron_light"], segs=10, r2=0.32, style="hard_smooth")  # salt pail
 
 
 # --------------------------------------------------------------------------------------
@@ -728,7 +715,6 @@ def pipe_section(p, v, rng):
         p.ico(0.5, (-1.8, 0.8, 0.2), C["canvas_stain"], scale=(1.3, 1.0, 0.3), style="round", subdiv=0)
     if v == "b":
         p.cyl(0.14, 0.3, (-1.9, -0.9, 0.15), C["iron_light"], segs=8, style="hard_smooth")
-        p.cyl(0.14, 0.3, (-1.9, -0.9, 0.5), C["canvas"], segs=8, style="hard_smooth") if False else None
 
 
 if __name__ == "__main__":

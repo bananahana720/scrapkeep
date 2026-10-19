@@ -528,12 +528,12 @@
       "res://assets/models/park/props/flume/fish_rack_a_lod2.glb"
      ],
      "tris": [
-      1928,
-      964,
-      288
+      1496,
+      748,
+      224
      ],
-     "radius": 2.227,
-     "height": 1.643
+     "radius": 2.259,
+     "height": 1.697
     },
     "b": {
      "lod": [
@@ -542,12 +542,12 @@
       "res://assets/models/park/props/flume/fish_rack_b_lod2.glb"
      ],
      "tris": [
-      1456,
-      728,
-      218
+      1136,
+      568,
+      170
      ],
-     "radius": 2.757,
-     "height": 1.643
+     "radius": 2.819,
+     "height": 1.501
     },
     "c": {
      "lod": [
@@ -556,12 +556,12 @@
       "res://assets/models/park/props/flume/fish_rack_c_lod2.glb"
      ],
      "tris": [
-      1944,
-      972,
-      292
+      1692,
+      846,
+      254
      ],
-     "radius": 2.248,
-     "height": 1.403
+     "radius": 2.261,
+     "height": 1.389
     }
    }
   },

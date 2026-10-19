@@ -270,14 +270,14 @@
      "tilt_deg": 0
     },
     {
-     "kind": "tea_hearth",
-     "v": "c",
+     "kind": "bent_numbers",
+     "v": "a",
      "at": [
       6.5,
       6.5
      ],
      "yaw_deg": 160,
-     "scale": 0.8,
+     "scale": 0.9,
      "tilt_deg": 0
     }
    ]
@@ -1260,6 +1260,66 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "mini_mixed": {
+   "story": "Odd scraps by the siphon verge: a milepost stub, ties, a cup and scrub.",
+   "props": [
+    {
+     "kind": "milepost",
+     "v": "c",
+     "at": [
+      0.0,
+      0.5
+     ],
+     "yaw_deg": 20,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "b",
+     "at": [
+      3.0,
+      1.5
+     ],
+     "yaw_deg": 70,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "c",
+     "at": [
+      -3.0,
+      1.5
+     ],
+     "yaw_deg": 200,
+     "scale": 0.8,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      1.5,
+      3.5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "c",
+     "at": [
+      -1.5,
+      -1.0
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -1324,34 +1384,14 @@
    "near": "mesa_entry_kicker: A yard of spare ties and pipe, 23 m off the line"
   },
   {
-   "id": "flume_v17",
+   "id": "flume_v19",
    "template": "camp_corner",
    "at": [
-    -500.0,
-    -420.0
+    -508,
+    -356
    ],
-   "yaw_deg": -90.0,
+   "yaw_deg": -104,
    "near": "mesa_ramp: A crew camp corner, 30 m off the line"
-  },
-  {
-   "id": "flume_v19",
-   "template": "survey_marker",
-   "at": [
-    -500.0,
-    -360.0
-   ],
-   "yaw_deg": -90.0,
-   "near": "mesa_ramp: A depth milepost, 30 m off the line"
-  },
-  {
-   "id": "flume_v20",
-   "template": "bent_debris",
-   "at": [
-    -500.0,
-    -300.0
-   ],
-   "yaw_deg": -46.4,
-   "near": "mesa_ramp: Fallen numbered bent planks, 42 m off the line"
   },
   {
    "id": "flume_v22",
@@ -1425,13 +1465,13 @@
   },
   {
    "id": "flume_v39",
-   "template": "washday",
+   "template": "survey_marker",
    "at": [
     -160.0,
     -410.0
    ],
    "yaw_deg": 63.0,
-   "near": "flume_ride_pier_24: Laundry day by the trestles, 20 m off the line"
+   "near": "flume_ride_pier_24: A depth milepost, 20 m off the line"
   },
   {
    "id": "flume_v41",
@@ -1475,13 +1515,13 @@
   },
   {
    "id": "flume_v47",
-   "template": "tie_yard",
+   "template": "washday",
    "at": [
     -240.0,
     -110.0
    ],
    "yaw_deg": -66.0,
-   "near": "hollow_intake: A yard of spare ties and pipe, 22 m off the line"
+   "near": "hollow_intake: Laundry day by the trestles, 22 m off the line"
   },
   {
    "id": "flume_v51",
@@ -1505,13 +1545,13 @@
   },
   {
    "id": "flume_v56",
-   "template": "camp_corner",
+   "template": "tie_yard",
    "at": [
     -370.0,
     -80.0
    ],
    "yaw_deg": -83.5,
-   "near": "field_bank_4: A crew camp corner, 44 m off the line"
+   "near": "field_bank_4: A yard of spare ties and pipe, 44 m off the line"
   },
   {
    "id": "flume_v60",
@@ -1525,13 +1565,13 @@
   },
   {
    "id": "flume_v61",
-   "template": "survey_marker",
+   "template": "seep_edge",
    "at": [
     -230.0,
     -60.0
    ],
    "yaw_deg": -76.5,
-   "near": "trestle_hollow: A depth milepost, 27 m off the line"
+   "near": "trestle_hollow: A crew camp corner, 27 m off the line"
   },
   {
    "id": "flume_v62",
@@ -1555,23 +1595,23 @@
   },
   {
    "id": "flume_v68",
-   "template": "washday",
+   "template": "survey_marker",
    "at": [
     60.0,
     -190.0
    ],
    "yaw_deg": 153.4,
-   "near": "bend_zip_pier_14: Laundry day by the trestles, 22 m off the line"
+   "near": "bend_zip_pier_14: A depth milepost, 22 m off the line"
   },
   {
    "id": "flume_v69",
-   "template": "tie_yard",
+   "template": "washday",
    "at": [
     50.0,
     -30.0
    ],
    "yaw_deg": -30.3,
-   "near": "bend_turn_pier: A yard of spare ties and pipe, 26 m off the line"
+   "near": "bend_turn_pier: Laundry day by the trestles, 26 m off the line"
   },
   {
    "id": "flume_v70",
@@ -1585,43 +1625,43 @@
   },
   {
    "id": "flume_v72",
-   "template": "camp_corner",
+   "template": "tie_yard",
    "at": [
     150.0,
     -70.0
    ],
    "yaw_deg": 118.3,
-   "near": "bend_overlook: A crew camp corner, 41 m off the line"
+   "near": "bend_overlook: A yard of spare ties and pipe, 41 m off the line"
   },
   {
    "id": "flume_v73",
-   "template": "survey_marker",
+   "template": "camp_corner",
    "at": [
     -170.0,
     190.0
    ],
    "yaw_deg": -9.5,
-   "near": "turnout_kicker: A depth milepost, 44 m off the line"
+   "near": "turnout_kicker: A crew camp corner, 44 m off the line"
   },
   {
    "id": "flume_v75",
-   "template": "washday",
+   "template": "survey_marker",
    "at": [
     -120.0,
     180.0
    ],
    "yaw_deg": -9.5,
-   "near": "siphon_approach_bank: Laundry day by the trestles, 26 m off the line"
+   "near": "siphon_approach_bank: A depth milepost, 26 m off the line"
   },
   {
    "id": "flume_v76",
-   "template": "tie_yard",
+   "template": "washday",
    "at": [
     120.0,
     90.0
    ],
    "yaw_deg": 47.0,
-   "near": "pad_bank_7: A yard of spare ties and pipe, 41 m off the line"
+   "near": "pad_bank_7: Laundry day by the trestles, 41 m off the line"
   },
   {
    "id": "flume_v77",
@@ -1635,13 +1675,13 @@
   },
   {
    "id": "flume_v80",
-   "template": "camp_corner",
+   "template": "tie_yard",
    "at": [
     130.0,
     30.0
    ],
    "yaw_deg": 60.6,
-   "near": "bend_return_wash: A crew camp corner, 19 m off the line"
+   "near": "bend_return_wash: A yard of spare ties and pipe, 19 m off the line"
   },
   {
    "id": "flume_v81",
@@ -1664,24 +1704,14 @@
    "near": "bend_zip_pier_20: The sluice shed with its wheel, 43 m off the line"
   },
   {
-   "id": "flume_v83",
-   "template": "seep_edge",
-   "at": [
-    130.0,
-    -30.0
-   ],
-   "yaw_deg": 71.6,
-   "near": "bend_overlook: Saltbush and a split plank whe, 13 m off the line"
-  },
-  {
    "id": "flume_v84",
-   "template": "survey_marker",
+   "template": "camp_corner",
    "at": [
     20.0,
     60.0
    ],
    "yaw_deg": -126.9,
-   "near": "bend_return_wash: A depth milepost, 40 m off the line"
+   "near": "bend_return_wash: A crew camp corner, 40 m off the line"
   },
   {
    "id": "flume_v85",
@@ -1695,13 +1725,13 @@
   },
   {
    "id": "flume_v86",
-   "template": "washday",
+   "template": "survey_marker",
    "at": [
     0.0,
     120.0
    ],
    "yaw_deg": -131.7,
-   "near": "siphon_ride_pier_1: Laundry day by the trestles, 17 m off the line"
+   "near": "siphon_ride_pier_1: A depth milepost, 17 m off the line"
   },
   {
    "id": "flume_v88",
@@ -1715,83 +1745,63 @@
   },
   {
    "id": "flume_v89",
-   "template": "cold_hearth",
+   "template": "bent_debris",
    "at": [
     100.0,
     280.0
    ],
    "yaw_deg": 135.0,
-   "near": "bluff_ride_pier_7: A cold hearth and a dragged-ou, 11 m off the line"
-  },
-  {
-   "id": "flume_v90",
-   "template": "bent_debris",
-   "at": [
-    80.0,
-    220.0
-   ],
-   "yaw_deg": 140.2,
-   "near": "bluff_ride_pier_3: Fallen numbered bent planks, 13 m off the line"
-  },
-  {
-   "id": "flume_v91",
-   "template": "seep_edge",
-   "at": [
-    -20.0,
-    280.0
-   ],
-   "yaw_deg": 55.3,
-   "near": "siphon_runout_pier: Saltbush and a split plank whe, 22 m off the line"
+   "near": "bluff_ride_pier_7: Fallen numbered bent planks, 11 m off the line"
   },
   {
    "id": "flume_v94",
-   "template": "tie_yard",
+   "template": "washday",
    "at": [
     -230.0,
     140.0
    ],
    "yaw_deg": -60.8,
-   "near": "turnout_kicker: A yard of spare ties and pipe, 26 m off the line"
+   "near": "turnout_kicker: Laundry day by the trestles, 26 m off the line"
   },
   {
    "id": "flume_v95",
-   "template": "camp_corner",
+   "template": "tie_yard",
    "at": [
     -110.0,
     300.0
    ],
    "yaw_deg": -104.0,
-   "near": "bench_run_wash: A crew camp corner, 27 m off the line"
+   "near": "bench_run_wash: A yard of spare ties and pipe, 27 m off the line"
   },
   {
    "id": "flume_v96",
-   "template": "survey_marker",
+   "template": "camp_corner",
    "at": [
     -50.0,
     340.0
    ],
    "yaw_deg": 61.9,
-   "near": "bench_exit_grade: A depth milepost, 28 m off the line"
+   "near": "bench_exit_grade: A crew camp corner, 28 m off the line"
   },
   {
    "id": "flume_v98",
-   "template": "washday",
+   "template": "survey_marker",
    "at": [
     -140.0,
     420.0
    ],
    "yaw_deg": -84.8,
-   "near": "bench_exit_grade: Laundry day by the trestles, 44 m off the line"
+   "near": "bench_exit_grade: A depth milepost, 44 m off the line"
   },
   {
    "id": "flume_v99",
-   "template": "tie_yard",
+   "template": "washday",
    "at": [
     -120.0,
     360.0
    ],
    "yaw_deg": -104.0,
-   "near": "bench_exit_grade: A yard of spare ties and pipe, 22 m off the line"
+   "near": "bench_exit_grade: Laundry day by the trestles, 22 m off the line"
   },
   {
    "id": "flume_v102",
@@ -1815,23 +1825,23 @@
   },
   {
    "id": "flume_v104",
-   "template": "camp_corner",
+   "template": "tie_yard",
    "at": [
     -40.0,
     460.0
    ],
    "yaw_deg": -9.1,
-   "near": "bench_return_pier: A crew camp corner, 26 m off the line"
+   "near": "bench_return_pier: A yard of spare ties and pipe, 26 m off the line"
   },
   {
    "id": "flume_v105",
-   "template": "survey_marker",
+   "template": "camp_corner",
    "at": [
     120.0,
     300.0
    ],
    "yaw_deg": 121.0,
-   "near": "bluff_ride_pier_11: A depth milepost, 16 m off the line"
+   "near": "bluff_ride_pier_11: A crew camp corner, 16 m off the line"
   },
   {
    "id": "flume_v106",
@@ -2094,26 +2104,6 @@
    "near": "verge of the line: Saltbush and a split plank by the verge,"
   },
   {
-   "id": "flume_m003",
-   "template": "mini_planks",
-   "at": [
-    -497.0,
-    -400.8
-   ],
-   "yaw_deg": -90.0,
-   "near": "verge of the line: A few fallen bent planks and a short sta"
-  },
-  {
-   "id": "flume_m005",
-   "template": "mini_hearth",
-   "at": [
-    -368.9,
-    -242.4
-   ],
-   "yaw_deg": -15.9,
-   "near": "verge of the line: A cold hearth, one cup and a cot left ou"
-  },
-  {
    "id": "flume_m014",
    "template": "mini_scrub",
    "at": [
@@ -2132,16 +2122,6 @@
    ],
    "yaw_deg": -76.5,
    "near": "verge of the line: A few fallen bent planks and a short sta"
-  },
-  {
-   "id": "flume_m043",
-   "template": "mini_hearth",
-   "at": [
-    -236.7,
-    -238.0
-   ],
-   "yaw_deg": 152.7,
-   "near": "verge of the line: A cold hearth, one cup and a cot left ou"
   },
   {
    "id": "flume_m044",
@@ -2204,16 +2184,6 @@
    "near": "verge of the line: A few fallen bent planks and a short sta"
   },
   {
-   "id": "flume_n024",
-   "template": "mini_hearth",
-   "at": [
-    -160.1,
-    0.4
-   ],
-   "yaw_deg": 103.5,
-   "near": "verge of the line: A cold hearth, one cup and a cot left ou"
-  },
-  {
    "id": "flume_n037",
    "template": "mini_scrub",
    "at": [
@@ -2242,6 +2212,56 @@
    ],
    "yaw_deg": -0.0,
    "near": "verge of the line: A cold hearth, one cup and a cot left ou"
+  },
+  {
+   "id": "flume_s080",
+   "template": "mini_scrub",
+   "at": [
+    -1,
+    229
+   ],
+   "yaw_deg": -24.0,
+   "near": "scan"
+  },
+  {
+   "id": "flume_s093",
+   "template": "mini_mixed",
+   "at": [
+    13,
+    187
+   ],
+   "yaw_deg": 140.4,
+   "near": "scan"
+  },
+  {
+   "id": "flume_s098",
+   "template": "mini_mixed",
+   "at": [
+    20,
+    201
+   ],
+   "yaw_deg": 140.4,
+   "near": "scan"
+  },
+  {
+   "id": "flume_a03",
+   "template": "camp_corner",
+   "at": [
+    -502,
+    -425
+   ],
+   "yaw_deg": -95,
+   "near": "mesa_ramp: crew edge of the mesa"
+  },
+  {
+   "id": "flume_a06",
+   "template": "bent_debris",
+   "at": [
+    -494,
+    -298
+   ],
+   "yaw_deg": -55,
+   "near": "mesa_ramp: crew edge of the mesa"
   }
  ],
  "litter": {
@@ -2261,14 +2281,6 @@
    {
     "kind": "timber_ties",
     "weight": 1
-   },
-   {
-    "kind": "tea_hearth",
-    "weight": 1
-   },
-   {
-    "kind": "washline",
-    "weight": 1
    }
   ],
   "spacing_m": 6,
@@ -2278,5 +2290,5 @@
   ],
   "seed": 1021
  },
- "pin": 1240983362
+ "pin": 3772911731
 }
