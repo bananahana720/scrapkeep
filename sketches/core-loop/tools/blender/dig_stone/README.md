@@ -3,7 +3,9 @@
 Eight static GLBs follow the D1 stone file contract. The recipes author continuous
 surfaces in Godot metres, convert to Blender Z-up and export back to glTF Y-up.
 They use the existing `common.py` export and index canonicalization helpers without
-editing them. Every GLB has one mesh and one `stone` surface. No colliders, lights,
+editing them. They opt into polish (`tools/blender/POLISH.md`) with no bevel or
+subdivision: smooth shading with hard creases and the AO and wear bake on the grayscale
+wear colour. Every GLB has one mesh and one `stone` surface. No colliders, lights,
 cameras, animations, placement code or registry entries are exported.
 
 Run from the worktree root with Blender 5.2.2 LTS and the recorded Godot 4.7.2 binary:
