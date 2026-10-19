@@ -67,6 +67,8 @@ C = {
     "leaf": "6f7f4a", "leaf_dark": "4f5e38", "dry_grass": "a39a64",
 }
 BANNED = {"ff5a3c", "9dff3c", "8bf0d3"}  # HAZARD, ANCIENT, MINT
+# A colour this close (Euclidean, 0..1 sRGB) to a banned hex reads as that hex, so it fails too.
+BANNED_NEAR = 0.08
 WARN = {"e5a044", "b77843", "d9b44a"}  # AMBER, COPPER (never dominant), BRASS (Fleet only)
 
 
@@ -80,11 +82,19 @@ def hexcolor(c):
     return "".join("%02x" % round(max(0.0, min(1.0, x)) * 255) for x in c)
 
 
+def _distance(a, b):
+    """Euclidean distance of two 6-digit hexes in 0..1 sRGB."""
+    return math.sqrt(sum((int(a[i:i + 2], 16) - int(b[i:i + 2], 16)) ** 2 for i in (0, 2, 4))) / 255
+
+
 def check_colour(c, quiet=False):
     """Hard readability rule: no banned hexes, no hot red/orange stripes. The exact WARN hexes (AMBER, COPPER, BRASS) only warn."""
     h = hexcolor(c)
     if h in BANNED:
         raise ValueError("banned colour #" + h)
+    for banned in BANNED:
+        if _distance(h, banned) < BANNED_NEAR:
+            raise ValueError("colour #%s is within %.2f of banned #%s" % (h, BANNED_NEAR, banned))
     if h in WARN:
         if not quiet:
             print("KIT warning: #%s is AMBER/COPPER/BRASS; never dominant, brass is Fleet-only" % h, flush=True)
@@ -99,7 +109,7 @@ def check_colour(c, quiet=False):
 def _selftest_colours():
     for ok in ("d9b44a", "e5a044", "b77843", "6f7f4a"):
         check_colour(ok, quiet=True)
-    for bad in ("ff5a3c", "9dff3c", "8bf0d3", "ff3a20", "ff8a1c"):
+    for bad in ("ff5a3c", "9dff3c", "8bf0d3", "ff3a20", "ff8a1c", "f95a3c", "9bff3a", "8bf0d8", "90f0d0"):
         try:
             check_colour(bad, quiet=True)
         except ValueError:
