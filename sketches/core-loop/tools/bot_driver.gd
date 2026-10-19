@@ -434,6 +434,8 @@ var _plant_cool := 0.0
 var _plant_face := Vector3.ZERO
 var _plant_target: Node3D = null
 var _boss_clock := 0.0
+# The hull at the last tick or hit: a hit's hull loss is what it took off this, after scrap armour.
+var _hull_seen := -1.0
 # The opening the 19 Oct ruling protects: no boss kills a Learner in its first 45 s.
 const FIRST_45_S := 45.0
 # Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
@@ -647,6 +649,7 @@ func tick(delta: float) -> bool:
 	if outcome != "":
 		return true
 	ticks += 1
+	_hull_seen = float(game.run.hp)
 	var flow = game.flow
 	var state: String = flow.state_name()
 	match state:
@@ -917,7 +920,11 @@ func _in_boss() -> bool:
 
 
 func _on_player_hit(amount: float, source_id: String) -> void:
+	# hp_lost and the largest hit are the whole hit before scrap armour; hull_lost is what reached the hull.
+	var hull: float = amount if _hull_seen < 0.0 else maxf(0.0, _hull_seen - float(game.run.hp))
+	_hull_seen = float(game.run.hp)
 	_count("hp_lost", amount)
+	_count("hull_lost", hull)
 	_count("hits")
 	var in_boss := _in_boss()
 	var into: Dictionary = boss_note if in_boss else _note
@@ -936,8 +943,12 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 				into["largest_hit"] = snappedf(amount, 0.1)
 				into["largest_hit_source"] = source_id
 				into["largest_hit_share"] = snappedf(amount / maxf(float(game.run.max_hp), 1.0), 0.001)
+			if hull > float(into.get("largest_hull_hit", 0.0)):
+				into["largest_hull_hit"] = snappedf(hull, 0.1)
+				into["largest_hull_hit_share"] = snappedf(hull / maxf(float(game.run.max_hp), 1.0), 0.001)
 			if fight_s <= FIRST_45_S:
 				into["hp_lost_45s"] = snappedf(float(into.get("hp_lost_45s", 0.0)) + amount, 0.1)
+				into["hull_lost_45s"] = snappedf(float(into.get("hull_lost_45s", 0.0)) + hull, 0.1)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
@@ -973,6 +984,7 @@ func _close_note() -> void:
 		return
 	_note["exit_s"] = snappedf(game.run.stage_time, 0.01)
 	_note["hp_lost"] = snappedf(float(_note["hp_lost"]), 0.1)
+	_note["hull_lost"] = snappedf(float(_note.get("hull_lost", 0.0)), 0.1)
 	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
 	stage_notes.append(_note)
 	_note = {}
