@@ -96,6 +96,8 @@ func _start() -> void:
 	_game.ctx.calm = true
 	_game.flow.force_warden = true
 	_game.player.source = Intent.Scripted.new()
+	# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This test ends on the summary.
+	_game.flow.victory_lap = false
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 

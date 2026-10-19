@@ -1,6 +1,6 @@
 # Alpha scope: settled decisions (grill-me, 16 Oct 2026)
 
-> Superseded in part (17 Oct): the five first-time players rule was dropped; the 11-area sitting is the only gate. Current rulings: project-guide/DECISIONS.md.
+> Superseded in part (17 Oct): the five first-time players rule was dropped; the 11-area sitting is the only gate. Current rulings: project-guide/handoff/DECISIONS.md.
 
 Andrew settled these on 16 Oct 2026 in the "Alpha playtest playbook" thread. "Mine" means he took Claude's recommendation; "his" means he chose a different option.
 

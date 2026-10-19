@@ -25,9 +25,12 @@ const Intent := preload("res://src/movement/intent.gd")
 # 2026-10-17 pit authored pass re-pin: stage 3 park_pit 3689678730 -> 2247843387, because the four west drifts
 # rebake the ground and the scatter now dresses floor_sump and tailings_bench_east and keeps out of the new
 # cut adits; the others unchanged.
+# 2026-10-17 flume authored pass re-pin: stage 2 park_flume 1284262125 -> 1448453723, because siphon_camp moved from
+# [-28, 176] to [-26, 174] (inside the 12 m reach of the momentum line on the flume) and its 11 m activity keep-out
+# moves with it; with the camp at its old spot the 1284262125 pin still holds. The others unchanged.
 const PINS := {
 	1: ["park_dam", 13, 2427938025],
-	2: ["park_flume", 13, 1284262125],
+	2: ["park_flume", 13, 1448453723],
 	3: ["park_pit", 13, 2247843387],
 	4: ["park_sinkhole", 13, 3017710206],
 	5: ["park_islands", 13, 3681139656],

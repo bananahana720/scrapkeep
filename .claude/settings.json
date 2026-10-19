@@ -36,7 +36,10 @@
       "mcp__github__create_pull_request",
       "Bash(node scripts/crash-harvest.mjs *)",
       "Bash(node scripts/redteam/run.mjs *)",
-      "Bash(node scripts/redteam/merge.mjs *)"
+      "Bash(node scripts/redteam/merge.mjs *)",
+      "Bash(npm view *)",
+      "Bash(claude plugin validate *)",
+      "Bash(git merge-base *)"
     ],
     "deny": [
       "Bash(git push --force*)",
