@@ -1,0 +1,1616 @@
+{
+ "schema": "scrapkeep-park-props/1",
+ "map": "park_sinkhole",
+ "kit": "res://assets/models/park/props/sinkhole/manifest.json",
+ "templates": {
+  "pump_station": {
+   "story": "The caisson crew's pump parked off mid-shift: hose on its reel, a cart of tailings, drill steels and the tally of shifts nobody finished.",
+   "props": [
+    {
+     "kind": "pump_engine",
+     "v": "*",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_reel",
+     "v": "a",
+     "at": [
+      -6.5,
+      -1.5
+     ],
+     "yaw_deg": 70,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tin_cart",
+     "v": "a",
+     "at": [
+      5.5,
+      -3.5
+     ],
+     "yaw_deg": 100,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "drill_steels",
+     "v": "a",
+     "at": [
+      -3,
+      -6.5
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_post",
+     "v": "a",
+     "at": [
+      8,
+      0.5
+     ],
+     "yaw_deg": -35,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rain_gauge",
+     "v": "a",
+     "at": [
+      -9,
+      2.5
+     ],
+     "yaw_deg": 15,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      -8.5,
+      8
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_reel",
+     "v": "b",
+     "at": [
+      9.5,
+      -6.5
+     ],
+     "yaw_deg": 160,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "c",
+     "at": [
+      3.5,
+      12
+     ],
+     "yaw_deg": 40,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mist_rings",
+     "v": "b",
+     "at": [
+      -2,
+      -10
+     ],
+     "yaw_deg": 0,
+     "scale": 0.7,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lamp_wall": {
+   "story": "A lamp rack with every unlit lamp facing the wrong way, and the coat, mug and roster board of the crew that left them.",
+   "props": [
+    {
+     "kind": "lamp_rack",
+     "v": "*",
+     "at": [
+      0,
+      6.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "coat_hooks",
+     "v": "a",
+     "at": [
+      -6,
+      -1
+     ],
+     "yaw_deg": 15,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_post",
+     "v": "b",
+     "at": [
+      6.5,
+      -1.5
+     ],
+     "yaw_deg": -20,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tin_cart",
+     "v": "b",
+     "at": [
+      -8,
+      -6
+     ],
+     "yaw_deg": 110,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "drill_steels",
+     "v": "b",
+     "at": [
+      4,
+      -5.5
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      9,
+      4
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "a",
+     "at": [
+      -9,
+      6.5
+     ],
+     "yaw_deg": 30,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rain_gauge",
+     "v": "b",
+     "at": [
+      2.5,
+      -9
+     ],
+     "yaw_deg": 10,
+     "scale": 0.85,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "gallery_fall": {
+   "story": "A gallery timber set came down; its lagging, a coat and a cart left in the dust, a painted water mark on the one post still up.",
+   "props": [
+    {
+     "kind": "gallery_collapse",
+     "v": "*",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 25,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "coat_hooks",
+     "v": "b",
+     "at": [
+      -6,
+      -2.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tin_cart",
+     "v": "b",
+     "at": [
+      6.5,
+      -3
+     ],
+     "yaw_deg": -70,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "drill_steels",
+     "v": "b",
+     "at": [
+      -2.5,
+      -7.5
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      8,
+      1.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "c",
+     "at": [
+      -8.5,
+      5
+     ],
+     "yaw_deg": 20,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_reel",
+     "v": "b",
+     "at": [
+      1.5,
+      -11
+     ],
+     "yaw_deg": 200,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      -4,
+      12
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mist_rings",
+     "v": "b",
+     "at": [
+      10,
+      -7
+     ],
+     "yaw_deg": 0,
+     "scale": 0.7,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "tailings_cart": {
+   "story": "An ore cart left with its pails of tailings, a second one tipped, a hose and the drill steels leaned against the wall.",
+   "props": [
+    {
+     "kind": "tin_cart",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 25,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tin_cart",
+     "v": "b",
+     "at": [
+      6.5,
+      3.5
+     ],
+     "yaw_deg": -60,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_reel",
+     "v": "b",
+     "at": [
+      -6,
+      -2.5
+     ],
+     "yaw_deg": 80,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "drill_steels",
+     "v": "a",
+     "at": [
+      -3.5,
+      5.5
+     ],
+     "yaw_deg": 150,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      8,
+      -3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "a",
+     "at": [
+      -7.5,
+      6.5
+     ],
+     "yaw_deg": 40,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      4,
+      8
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "drill_steels",
+     "v": "b",
+     "at": [
+      2,
+      -6
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "skylight_garden": {
+   "story": "Ferns and moss mats where a skylight lets the afternoon down, growing round a few basalt stubs and a rimstone lip.",
+   "props": [
+    {
+     "kind": "cave_fern",
+     "v": "b",
+     "at": [
+      0,
+      3
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      -4.5,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      3.5,
+      -3.5
+     ],
+     "yaw_deg": 30,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      -2,
+      -5.5
+     ],
+     "yaw_deg": 120,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      7.5,
+      2.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "b",
+     "at": [
+      -8,
+      5.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "a",
+     "at": [
+      4,
+      6.5
+     ],
+     "yaw_deg": 50,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "c",
+     "at": [
+      -5.5,
+      8
+     ],
+     "yaw_deg": 10,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mist_rings",
+     "v": "a",
+     "at": [
+      -1.5,
+      -9
+     ],
+     "yaw_deg": 0,
+     "scale": 0.7,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      9,
+      -4
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      1,
+      10.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.1,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "horn_post": {
+   "story": "The signal horn on its cradle, aimed into the dark to count the crew in; a gauge, a tally board and a pail left at its foot.",
+   "props": [
+    {
+     "kind": "echo_horn",
+     "v": "a",
+     "at": [
+      0,
+      7
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rain_gauge",
+     "v": "a",
+     "at": [
+      -6.5,
+      1.5
+     ],
+     "yaw_deg": 30,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_post",
+     "v": "a",
+     "at": [
+      6,
+      -0.5
+     ],
+     "yaw_deg": 200,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tin_cart",
+     "v": "a",
+     "at": [
+      -8.5,
+      -5.5
+     ],
+     "yaw_deg": 70,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "a",
+     "at": [
+      8.5,
+      5.5
+     ],
+     "yaw_deg": 10,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      -9,
+      6
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "drill_steels",
+     "v": "b",
+     "at": [
+      3,
+      -6
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      5.5,
+      11
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "column_field": {
+   "story": "Broken basalt column stubs from the floor, pale lichen on their tops, ferns in the cracks, a few fallen across the way.",
+   "props": [
+    {
+     "kind": "column_stubs",
+     "v": "a",
+     "at": [
+      0,
+      3
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "c",
+     "at": [
+      -6,
+      0
+     ],
+     "yaw_deg": -30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "a",
+     "at": [
+      5.5,
+      -2
+     ],
+     "yaw_deg": 80,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "b",
+     "at": [
+      -3,
+      8
+     ],
+     "yaw_deg": 0,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "c",
+     "at": [
+      8,
+      5
+     ],
+     "yaw_deg": 50,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      -8.5,
+      5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      3,
+      -6.5
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "b",
+     "at": [
+      5,
+      10.5
+     ],
+     "yaw_deg": 20,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mist_rings",
+     "v": "b",
+     "at": [
+      -4.5,
+      -6
+     ],
+     "yaw_deg": 60,
+     "scale": 0.7,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      -1,
+      13
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "shift_board": {
+   "story": "A lunch spot by the shift board: coats on a post, a gauge, a tally of strokes and a lamp nobody lit.",
+   "props": [
+    {
+     "kind": "coat_hooks",
+     "v": "a",
+     "at": [
+      0,
+      1
+     ],
+     "yaw_deg": -10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_post",
+     "v": "a",
+     "at": [
+      5,
+      -1.5
+     ],
+     "yaw_deg": -30,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_post",
+     "v": "b",
+     "at": [
+      -5.5,
+      -2
+     ],
+     "yaw_deg": 50,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rain_gauge",
+     "v": "a",
+     "at": [
+      8,
+      3
+     ],
+     "yaw_deg": 20,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tin_cart",
+     "v": "b",
+     "at": [
+      -7.5,
+      4
+     ],
+     "yaw_deg": -80,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "drill_steels",
+     "v": "a",
+     "at": [
+      3,
+      6
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      -4,
+      8
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_reel",
+     "v": "a",
+     "at": [
+      9,
+      -5.5
+     ],
+     "yaw_deg": 100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "rimstone_pool": {
+   "story": "Stepped limestone lips where the pool edge seeps, ferns and lichen on the wet side and a mist of nothing but water.",
+   "props": [
+    {
+     "kind": "mist_rings",
+     "v": "a",
+     "at": [
+      0,
+      1
+     ],
+     "yaw_deg": 10,
+     "scale": 0.7,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mist_rings",
+     "v": "b",
+     "at": [
+      6,
+      -2.5
+     ],
+     "yaw_deg": 70,
+     "scale": 0.7,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mist_rings",
+     "v": "a",
+     "at": [
+      -5,
+      -3.5
+     ],
+     "yaw_deg": 200,
+     "scale": 0.7,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "b",
+     "at": [
+      -4.5,
+      5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      4,
+      5.5
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      9,
+      2.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "c",
+     "at": [
+      -8.5,
+      1
+     ],
+     "yaw_deg": 50,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "a",
+     "at": [
+      1,
+      9.5
+     ],
+     "yaw_deg": 30,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "wreck_yard": {
+   "story": "A machine graveyard in the cinder: a horn knocked off its cradle, a rusted hose, a tipped cart, coats left to ferns.",
+   "props": [
+    {
+     "kind": "echo_horn",
+     "v": "b",
+     "at": [
+      0,
+      3
+     ],
+     "yaw_deg": 35,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_reel",
+     "v": "b",
+     "at": [
+      -6.5,
+      -1
+     ],
+     "yaw_deg": 90,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tin_cart",
+     "v": "b",
+     "at": [
+      6,
+      -2.5
+     ],
+     "yaw_deg": -40,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "coat_hooks",
+     "v": "b",
+     "at": [
+      -3,
+      -6.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "drill_steels",
+     "v": "b",
+     "at": [
+      4,
+      -7.5
+     ],
+     "yaw_deg": 130,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      8.5,
+      3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      -8,
+      5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "c",
+     "at": [
+      1,
+      8
+     ],
+     "yaw_deg": 20,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tin_cart",
+     "v": "a",
+     "at": [
+      -9,
+      -8
+     ],
+     "yaw_deg": 150,
+     "scale": 0.85,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "granary_ledge": {
+   "story": "The old trench people's seed jars, lidded on a stone shelf and left quiet: no hearth, nobody home, only a fern and a fallen column.",
+   "props": [
+    {
+     "kind": "granary_jars",
+     "v": "a",
+     "at": [
+      0,
+      2
+     ],
+     "yaw_deg": 5,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "granary_jars",
+     "v": "b",
+     "at": [
+      5.5,
+      -1.5
+     ],
+     "yaw_deg": 70,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "granary_jars",
+     "v": "c",
+     "at": [
+      -5,
+      -2
+     ],
+     "yaw_deg": 160,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "column_stubs",
+     "v": "c",
+     "at": [
+      -3,
+      8
+     ],
+     "yaw_deg": 20,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "a",
+     "at": [
+      8,
+      4
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cave_fern",
+     "v": "c",
+     "at": [
+      -8,
+      3
+     ],
+     "yaw_deg": 0,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  }
+ },
+ "spots": [
+  {
+   "id": "s01_rimstone_pool",
+   "template": "rimstone_pool",
+   "at": [
+    -620.0,
+    -770.0
+   ],
+   "yaw_deg": 165.3,
+   "near": "lava_channel_1: rimstone lips at the seep"
+  },
+  {
+   "id": "s02_wreck_yard",
+   "template": "wreck_yard",
+   "at": [
+    -560.0,
+    -760.0
+   ],
+   "yaw_deg": 137.2,
+   "near": "lava_channel_2: machine graveyard in cinder"
+  },
+  {
+   "id": "s03_column_field",
+   "template": "column_field",
+   "at": [
+    -630.0,
+    -590.0
+   ],
+   "yaw_deg": -55.5,
+   "near": "lava_channel_4: basalt stubs, lichen caps"
+  },
+  {
+   "id": "s04_skylight_garden",
+   "template": "skylight_garden",
+   "at": [
+    -590.0,
+    -550.0
+   ],
+   "yaw_deg": -44.6,
+   "near": "lava_channel_5: ferns under the skylight"
+  },
+  {
+   "id": "s05_tailings_cart",
+   "template": "tailings_cart",
+   "at": [
+    -530.0,
+    -540.0
+   ],
+   "yaw_deg": -21.7,
+   "near": "lava_channel_6: carts of tailings left"
+  },
+  {
+   "id": "s06_column_field",
+   "template": "column_field",
+   "at": [
+    -410.0,
+    -490.0
+   ],
+   "yaw_deg": 15.4,
+   "near": "lava_channel_8: basalt stubs, lichen caps"
+  },
+  {
+   "id": "s07_skylight_garden",
+   "template": "skylight_garden",
+   "at": [
+    -350.0,
+    -520.0
+   ],
+   "yaw_deg": 24.8,
+   "near": "cinder_kicker: ferns under the skylight"
+  },
+  {
+   "id": "s08_tailings_cart",
+   "template": "tailings_cart",
+   "at": [
+    -340.0,
+    -660.0
+   ],
+   "yaw_deg": -160.3,
+   "near": "lava_channel_10: carts of tailings left"
+  },
+  {
+   "id": "s09_wreck_yard",
+   "template": "wreck_yard",
+   "at": [
+    -220.0,
+    -680.0
+   ],
+   "yaw_deg": 158.7,
+   "near": "lava_channel_12: machine graveyard in cinder"
+  },
+  {
+   "id": "s10_rimstone_pool",
+   "template": "rimstone_pool",
+   "at": [
+    -160.0,
+    -650.0
+   ],
+   "yaw_deg": 130.4,
+   "near": "lava_channel_13: rimstone lips at the seep"
+  },
+  {
+   "id": "s11_tailings_cart",
+   "template": "tailings_cart",
+   "at": [
+    -110.0,
+    -580.0
+   ],
+   "yaw_deg": 102.5,
+   "near": "crater_breach: carts of tailings left"
+  },
+  {
+   "id": "s12_column_field",
+   "template": "column_field",
+   "at": [
+    -270.0,
+    -470.0
+   ],
+   "yaw_deg": -77.7,
+   "near": "lava_channel_16: basalt stubs, lichen caps"
+  },
+  {
+   "id": "s13_wreck_yard",
+   "template": "wreck_yard",
+   "at": [
+    -140.0,
+    -480.0
+   ],
+   "yaw_deg": 69.2,
+   "near": "lava_channel_15: machine graveyard in cinder"
+  },
+  {
+   "id": "s14_rimstone_pool",
+   "template": "rimstone_pool",
+   "at": [
+    -250.0,
+    -410.0
+   ],
+   "yaw_deg": -69.7,
+   "near": "lava_channel_16: rimstone lips at the seep"
+  },
+  {
+   "id": "s15_horn_post",
+   "template": "horn_post",
+   "at": [
+    -250.0,
+    -210.0
+   ],
+   "yaw_deg": -89.6,
+   "near": "west_gallery_6: horn aimed at the dark"
+  },
+  {
+   "id": "s16_skylight_garden",
+   "template": "skylight_garden",
+   "at": [
+    -200.0,
+    -330.0
+   ],
+   "yaw_deg": -129.4,
+   "near": "west_gallery_4: ferns under the skylight"
+  },
+  {
+   "id": "s17_column_field",
+   "template": "column_field",
+   "at": [
+    -140.0,
+    -380.0
+   ],
+   "yaw_deg": 2.4,
+   "near": "lava_channel_18: basalt stubs, lichen caps"
+  },
+  {
+   "id": "s18_rimstone_pool",
+   "template": "rimstone_pool",
+   "at": [
+    -80.0,
+    -510.0
+   ],
+   "yaw_deg": 176.9,
+   "near": "lava_channel_19: rimstone lips at the seep"
+  },
+  {
+   "id": "s19_wreck_yard",
+   "template": "wreck_yard",
+   "at": [
+    -20.0,
+    -500.0
+   ],
+   "yaw_deg": 150.7,
+   "near": "lava_channel_20: machine graveyard in cinder"
+  },
+  {
+   "id": "s20_skylight_garden",
+   "template": "skylight_garden",
+   "at": [
+    20.0,
+    -420.0
+   ],
+   "yaw_deg": 136.7,
+   "near": "lava_channel_21: ferns under the skylight"
+  },
+  {
+   "id": "s21_shift_board",
+   "template": "shift_board",
+   "at": [
+    80.0,
+    -430.0
+   ],
+   "yaw_deg": 179.8,
+   "near": "east_drift_1: lunch spot, tally strokes"
+  },
+  {
+   "id": "s22_column_field",
+   "template": "column_field",
+   "at": [
+    -60.0,
+    -190.0
+   ],
+   "yaw_deg": -146.5,
+   "near": "main_tube_upper_7: basalt stubs, lichen caps"
+  },
+  {
+   "id": "s23_rimstone_pool",
+   "template": "rimstone_pool",
+   "at": [
+    40.0,
+    -270.0
+   ],
+   "yaw_deg": -47.1,
+   "near": "main_tube_upper_2: rimstone lips at the seep"
+  },
+  {
+   "id": "s24_pump_station",
+   "template": "pump_station",
+   "at": [
+    200.0,
+    -380.0
+   ],
+   "yaw_deg": 147.7,
+   "near": "east_drift_3: pumped dry, left parked"
+  },
+  {
+   "id": "s25_lamp_wall",
+   "template": "lamp_wall",
+   "at": [
+    140.0,
+    -390.0
+   ],
+   "yaw_deg": 160.8,
+   "near": "east_drift_2: lamps facing the wrong way"
+  },
+  {
+   "id": "s26_skylight_garden",
+   "template": "skylight_garden",
+   "at": [
+    130.0,
+    -200.0
+   ],
+   "yaw_deg": -112.4,
+   "near": "skylight_chain_6: ferns under the skylight"
+  },
+  {
+   "id": "s27_gallery_fall",
+   "template": "gallery_fall",
+   "at": [
+    250.0,
+    -280.0
+   ],
+   "yaw_deg": 115.3,
+   "near": "east_drift_5: timbers down, water mark"
+  },
+  {
+   "id": "s28_column_field",
+   "template": "column_field",
+   "at": [
+    90.0,
+    -150.0
+   ],
+   "yaw_deg": -138.5,
+   "near": "skylight_chain_8: basalt stubs, lichen caps"
+  },
+  {
+   "id": "s29_rimstone_pool",
+   "template": "rimstone_pool",
+   "at": [
+    40.0,
+    -110.0
+   ],
+   "yaw_deg": -143.2,
+   "near": "skylight_chain_9: rimstone lips at the seep"
+  },
+  {
+   "id": "s30_horn_post",
+   "template": "horn_post",
+   "at": [
+    -230.0,
+    -110.0
+   ],
+   "yaw_deg": -64.9,
+   "near": "west_gallery_7: horn aimed at the dark"
+  },
+  {
+   "id": "s31_pump_station",
+   "template": "pump_station",
+   "at": [
+    270.0,
+    -90.0
+   ],
+   "yaw_deg": 62.9,
+   "near": "east_drift_8: pumped dry, left parked"
+  },
+  {
+   "id": "s32_skylight_garden",
+   "template": "skylight_garden",
+   "at": [
+    -40.0,
+    -260.0
+   ],
+   "yaw_deg": 47.0,
+   "near": "cannon_tube_2: ferns under the skylight"
+  },
+  {
+   "id": "s33_shift_board",
+   "template": "shift_board",
+   "at": [
+    280.0,
+    -220.0
+   ],
+   "yaw_deg": 99.0,
+   "near": "east_drift_6: lunch spot, tally strokes"
+  },
+  {
+   "id": "s34_gallery_fall",
+   "template": "gallery_fall",
+   "at": [
+    290.0,
+    -160.0
+   ],
+   "yaw_deg": 81.2,
+   "near": "east_drift_7: timbers down, water mark"
+  },
+  {
+   "id": "s35_tailings_cart",
+   "template": "tailings_cart",
+   "at": [
+    190.0,
+    -20.0
+   ],
+   "yaw_deg": 30.9,
+   "near": "east_chamber: carts of tailings left"
+  },
+  {
+   "id": "s36_horn_post",
+   "template": "horn_post",
+   "at": [
+    -210.0,
+    90.0
+   ],
+   "yaw_deg": -111.9,
+   "near": "west_breakthrough_4: horn aimed at the dark"
+  },
+  {
+   "id": "s37_column_field",
+   "template": "column_field",
+   "at": [
+    -140.0,
+    -30.0
+   ],
+   "yaw_deg": -33.3,
+   "near": "west_gallery_10: basalt stubs, lichen caps"
+  },
+  {
+   "id": "s38_shift_board",
+   "template": "shift_board",
+   "at": [
+    40.0,
+    60.0
+   ],
+   "yaw_deg": -29.6,
+   "near": "east_haulage_1: lunch spot, tally strokes"
+  },
+  {
+   "id": "s39_tailings_cart",
+   "template": "tailings_cart",
+   "at": [
+    110.0,
+    100.0
+   ],
+   "yaw_deg": -46.5,
+   "near": "east_haulage_4: carts of tailings left"
+  },
+  {
+   "id": "s40_shift_board",
+   "template": "shift_board",
+   "at": [
+    -100.0,
+    180.0
+   ],
+   "yaw_deg": 129.2,
+   "near": "crosscut_drift: lunch spot, tally strokes"
+  },
+  {
+   "id": "s41_shift_board",
+   "template": "shift_board",
+   "at": [
+    120.0,
+    200.0
+   ],
+   "yaw_deg": -140.3,
+   "near": "east_haulage_8: lunch spot, tally strokes"
+  },
+  {
+   "id": "s42_horn_post",
+   "template": "horn_post",
+   "at": [
+    -40.0,
+    200.0
+   ],
+   "yaw_deg": -23.6,
+   "near": "main_tube_lower_5: horn aimed at the dark"
+  },
+  {
+   "id": "s43_rimstone_pool",
+   "template": "rimstone_pool",
+   "at": [
+    50.0,
+    120.0
+   ],
+   "yaw_deg": 157.0,
+   "near": "main_tube_lower_7: rimstone lips at the seep"
+  },
+  {
+   "id": "s44_wreck_yard",
+   "template": "wreck_yard",
+   "at": [
+    220.0,
+    70.0
+   ],
+   "yaw_deg": 119.4,
+   "near": "east_chamber: machine graveyard in cinder"
+  },
+  {
+   "id": "s45_lamp_wall",
+   "template": "lamp_wall",
+   "at": [
+    170.0,
+    280.0
+   ],
+   "yaw_deg": 39.7,
+   "near": "east_haulage_8: lamps facing the wrong way"
+  },
+  {
+   "id": "s46_tailings_cart",
+   "template": "tailings_cart",
+   "at": [
+    -210.0,
+    160.0
+   ],
+   "yaw_deg": -82.6,
+   "near": "west_breakthrough_kicker: carts of tailings left"
+  },
+  {
+   "id": "s47_horn_post",
+   "template": "horn_post",
+   "at": [
+    -160.0,
+    280.0
+   ],
+   "yaw_deg": -37.6,
+   "near": "west_breakthrough_8: horn aimed at the dark"
+  },
+  {
+   "id": "s90_granary_ledge",
+   "template": "granary_ledge",
+   "at": [
+    -560,
+    -42
+   ],
+   "yaw_deg": 0,
+   "near": "trench_granaries: seed jars, nobody home"
+  }
+ ],
+ "litter": {
+  "kinds": [
+   {
+    "kind": "cave_fern",
+    "weight": 4
+   },
+   {
+    "kind": "mist_rings",
+    "weight": 2
+   },
+   {
+    "kind": "drill_steels",
+    "weight": 2
+   },
+   {
+    "kind": "rain_gauge",
+    "weight": 1
+   }
+  ],
+  "spacing_m": 24,
+  "band_m": [
+   18,
+   60
+  ],
+  "seed": 4
+ },
+ "pin": 3586117129
+}
