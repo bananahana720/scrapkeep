@@ -47,7 +47,7 @@ const RETRY_MS := 20.0
 const FIRST_MS := 50.0
 const DRESSING_MS := 4.0
 const NEW_DRESSING_MS := 15.0
-# SWAP-HITCH-4: a plan still drawing at the entry is built by _process when its worker is done.
+# DRESS-ENTRY: a plan still drawing at the entry is built by _process when its worker is done.
 const DRESSING_FRAMES_MAX := 240
 const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
@@ -126,7 +126,7 @@ func _run() -> void:
 	_report("exit into stage 2", exit_1)
 	_t.check("the exit entered park stage 2", _game.flow.stage() == 2 and _park_id() != "", "stage %d map %s" % [_game.flow.stage(), _park_id()])
 	_t.check("exit into stage 2: activities within %.0f ms" % FIRST_MS, exit_1.get("activities", INF) <= FIRST_MS, _ms(exit_1, "activities"))
-	_t.check("exit into stage 2: set dressing builds the new stage within %.0f ms" % NEW_DRESSING_MS, exit_1.get("set_dressing", INF) <= NEW_DRESSING_MS, _ms(exit_1, "set_dressing"))
+	_t.check("exit into stage 2: set dressing's entry frame within %.0f ms" % NEW_DRESSING_MS, exit_1.get("set_dressing", INF) <= NEW_DRESSING_MS, _ms(exit_1, "set_dressing"))
 	var entry_deferred: bool = _game.presentation.set_dressing.entry_deferred
 	var complete := await _await_dressing()
 	print("stage_entry_budget_test: exit into stage 2: dressing deferred %s, complete after %d frames" % [entry_deferred, complete.frames])
@@ -161,7 +161,7 @@ func _run() -> void:
 	quit(_t.verdict())
 
 
-# Frames until the set dressing has built the batches its plan gives (no wall clock, SWAP-HITCH-4).
+# Frames until the set dressing has built the batches its plan gives (no wall clock, DRESS-ENTRY).
 func _await_dressing() -> Dictionary:
 	var dressing = _game.presentation.set_dressing
 	var frames := 0
@@ -185,8 +185,11 @@ func _check_slow_plan_control() -> void:
 	var seed_two: int = String(_game.ctx.stages.of(2).map).hash()
 	var flags: Dictionary = dressing._flags()
 	var out := {}
+	# The built stage 2 stays up, so "bare" below is the deferral's own clear; a plan already in
+	# flight (the next stage's) is collected first, not dropped.
 	dressing._built_for = []
-	dressing._clear_children()
+	if not dressing._prep.is_empty():
+		WorkerThreadPool.wait_for_task_completion(dressing._prep.task)
 	dressing._prep = {"key": dressing._key(2, terrain.geometry_root(2)), "out": out,
 		"task": WorkerThreadPool.add_task(func():
 			out.merge(dressing.plan(rows, keep, ground, seed_two, flags)), false, "planted slow plan")}

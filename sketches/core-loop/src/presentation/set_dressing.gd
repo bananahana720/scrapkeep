@@ -92,7 +92,7 @@ func _build_stage() -> void:
 	if key == _built_for and get_child_count() > 0:
 		_update_protection()
 		return
-	# A plan still drawing is never waited on here (SWAP-HITCH-4: the wait was 140 to 380 ms of a
+	# A plan still drawing is never waited on here (DRESS-ENTRY: the wait was 140 to 380 ms of a
 	# stage entry on a quick exit, the plan taking ~360 ms on a worker, the build ~2 ms). The old
 	# stage's dressing goes, and _process builds this one the frame the worker is done.
 	if not _prep.is_empty() and _prep.key == key and not WorkerThreadPool.is_task_completed(_prep.task):
