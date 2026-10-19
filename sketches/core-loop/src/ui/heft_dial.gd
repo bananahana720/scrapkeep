@@ -3,6 +3,7 @@ extends Control
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Palette := preload("res://src/core/palette.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # Heft as a pressure dial (VISUAL-LANGUAGE.md section 7): a half dial with one tick per
 # heft class, a needle at the class plus the share of the way to the next, and the
@@ -60,7 +61,7 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var tint := color.lerp(_flash_color, _flash / FLASH_SECONDS) if _flash > 0.0 else color
+	var tint := color.lerp(_flash_color, FlashGuard.info(_flash / FLASH_SECONDS)) if _flash > 0.0 else color
 	var mid := size.y * 0.5
 	draw_texture_rect(Icons.texture("res_heft"), Rect2(Vector2(0.0, mid - ICON * 0.5), Vector2(ICON, ICON)), false, Icons.tint("res_heft", tint))
 	var hub := Vector2(ICON + GAP + RADIUS, size.y - 3.0)

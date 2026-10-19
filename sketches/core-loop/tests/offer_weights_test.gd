@@ -1,3 +1,4 @@
+# smoke: solo timeout=360s (the alpha share check is a mean over 20 seeds: about 140 s on an idle box)
 extends SceneTree
 
 const Parts := preload("res://src/build/parts.gd")
@@ -51,6 +52,10 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # slot (maker_sets_case proves that per slot); it moves which piece of a bucket shows, and so the
 # bots' picks and the seeded path. One more pass with it on checks every pilot's bucket shares
 # stay within NUDGE_DRIFT of the pass without it (about two standard errors of a 10-run share).
+# 2026-10-18 (coordinator ruling on #149, nemesis offer lean at 1.5): the alpha list's weighted-share
+# check is the mean over SEEDS seeds (seed 0 is the seed above) against the unchanged SHARE_BAND, with
+# the per-seed min and max printed. One seed near the edge decided it: alpha Tally random read 0.807
+# on one seed, while the base crosses 0.80 on 7 of 20 seeds. Every other check is unchanged.
 # Evidence limit: the offer draw only. Whether each pilot still wins its bot
 # runs is bot_six_*_test's claim, and how the lean feels is Andrew's to play.
 
@@ -80,6 +85,7 @@ const ALPHA_OVERLAP_MAX := 0.50
 const ALPHA_MIN_PAIRS := 4
 const TALLY_PART := "winch_pawl"
 const NUDGE_DRIFT := 0.03
+const SEEDS := 20
 
 var _t := preload("res://tests/support/t.gd").new("offer_weights_test")
 
@@ -177,6 +183,33 @@ func _nudge_drift(plain: Dictionary, nudged: Dictionary) -> void:
 			"worst %.3f: %s against %s" % [worst, _bucket_shares(b), _bucket_shares(a)])
 
 
+# The weighted kit share of one pilot and bot on SEEDS seeds; seed 0 reads _measure's own seeds.
+func _seed_shares(pilot: String, bot: String) -> Array:
+	var pi := PILOTS.find(pilot)
+	var out: Array = []
+	for k in SEEDS:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 19000 + pi * 10 + (0 if bot == "greedy" else 1) + k * 1000
+		var pick_rng := RandomNumberGenerator.new()
+		pick_rng.seed = 91000 + pi * 10 + (0 if bot == "greedy" else 1) + k * 1000
+		var slots := 0
+		var kit := 0
+		for _run in RUNS:
+			var held: Array = []
+			for stage in range(1, STAGES + 1):
+				var offered := {}
+				for _gate in GATES_PER_STAGE:
+					var picks: Array = Parts.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered)
+					for id in picks:
+						offered[id] = offered.get(id, 0) + 1
+						slots += 1
+						kit += 1 if Parts.in_kit(pilot, id) else 0
+					if not picks.is_empty():
+						held.append(_pick(bot, pilot, picks, pick_rng))
+		out.append(float(kit) / float(maxi(1, slots)))
+	return out
+
+
 func _pick(bot: String, pilot: String, picks: Array, rng: RandomNumberGenerator) -> String:
 	if bot == "random":
 		return picks[rng.randi_range(0, picks.size() - 1)]
@@ -245,9 +278,17 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 			var s: Dictionary = stats[pilot][bot]
 			_t.check("%s %s %s draws" % [label, pilot, bot], s["draws"] == RUNS * STAGES * GATES_PER_STAGE and s["slots"] > s["draws"], "%d draws, %d slots" % [s["draws"], s["slots"]])
 			var share := _share(s, "kit")
+			var detail := "%.3f" % share
+			if not strict:
+				var seeds := _seed_shares(pilot, bot)
+				share = 0.0
+				for x in seeds:
+					share += x
+				share /= seeds.size()
+				detail = "mean %.3f over %d seeds, min %.3f max %.3f" % [share, seeds.size(), seeds.min(), seeds.max()]
 			var floor_share: float = GREEDY_SHARE_FLOOR if bot == "greedy" else SHARE_BAND[0]
 			var in_band: bool = share >= floor_share and share <= SHARE_BAND[1]
-			_t.check("%s %s %s weighted share inside %d to 80%%" % [label, pilot, bot, roundi(floor_share * 100.0)], in_band, "%.3f" % share)
+			_t.check("%s %s %s weighted share inside %d to 80%%" % [label, pilot, bot, roundi(floor_share * 100.0)], in_band, detail)
 			_t.check("%s %s %s movement at most 15%%" % [label, pilot, bot], _bucket_share(s, "movement") <= MOVEMENT_MAX, "%.3f" % _bucket_share(s, "movement"))
 			_t.check("%s %s %s no neutral part over its repeat cap" % [label, pilot, bot], s["neutral_max"] <= Parts.NEUTRAL_REPEAT_CAP,
 				"max %d a stage, cap %d" % [s["neutral_max"], Parts.NEUTRAL_REPEAT_CAP])

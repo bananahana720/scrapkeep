@@ -7,8 +7,8 @@
 # lives only in thin ancient_light seams set in charcoal grooves twice their width, and
 # the enamel is dull petrol with sandstone dust on top faces, under the section 11 cap.
 # Provenance: authored procedurally here from Blender primitives and bmesh operators;
-# no external assets. Look pass 2: base 4492; kits reactor 1476, hive 1272, mind
-# 1464 (targets 4000 to 6000 and 800 to 1500).
+# no external assets. Polished (#107): base 13164; kits reactor 3500, hive 4420, mind
+# 3976 (BASE_TRIS and KIT_TRIS below).
 # WM: the unchanged crown exterior is cut into ArmourSegment0..3; InnerL/InnerR
 # stay below it and CoreAssembly cages a 1 m HeartSurface. Base 4956 triangles.
 #
@@ -37,7 +37,8 @@ import polish  # noqa: E402
 from common import Part, Vector  # noqa: E402
 
 # Cast ancient castings: 4 cm chamfers on real corners, doubled curves, baked AO (POLISH.md).
-# Hex cells stay six-sided. The Mind's kit builds unpolished: the Mind is rebuilt elsewhere.
+# Hex cells stay six-sided. The Mind's kit (the clamp path's stage 5 and 6 Wardens) is polished
+# too; its claws, knuckles, rings and lens keep their own segment counts (see mind_extras).
 # No edge lightening and softer AO: dark quantised corners pushed enamel saturation past
 # the section 11 cap of 0.45 (hero_assets_test).
 polish.enable(detail=2, bevel=0.04, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
@@ -357,18 +358,24 @@ def mind_extras():
                Vector((-2.3, side * 1.4, 3.4))]
         for a, b in zip(pts, pts[1:]):
             arm.rod("ancient_enamel", a, b, 0.11, 6, color=ENAMEL, r2=0.08)
+        # Knuckles, their light rings, the claws and the lens keep their unpolished segment counts:
+        # smooth shading rounds them, and the polished kit stays inside the kit band.
         for q in pts[1:]:
-            arm.ico("ancient_enamel", 0.17, 1, loc=q, color=ENAMEL)
-            arm.ring("ancient_light", 0.12, 0.18, 0.03, 8, loc=q, rot=(math.pi / 2, 0, 0))
+            with arm.region(detail=1):
+                arm.ico("ancient_enamel", 0.17, 1, loc=q, color=ENAMEL)
+                arm.ring("ancient_light", 0.12, 0.18, 0.03, 8, loc=q, rot=(math.pi / 2, 0, 0))
         tip = pts[-1]
-        for k in range(3):
-            a = (k - 1) * 0.6
-            end = tip + Vector((-0.45 * math.cos(a), side * 0.45 * math.sin(a), -0.35))
-            arm.rod("bare_metal", tip, end, 0.04, 5, r2=0.015)
+        # The claws taper to 1.5 cm, under the chamfer: unbevelled, or the bevel folds them shut.
+        with arm.region(bevel=0, detail=1):
+            for k in range(3):
+                a = (k - 1) * 0.6
+                end = tip + Vector((-0.45 * math.cos(a), side * 0.45 * math.sin(a), -0.35))
+                arm.rod("bare_metal", tip, end, 0.04, 5, r2=0.015)
         out.append((arm, tuple(pts[0])))
     lens = Part("WeakPoint")
     c = Vector((0.1, 0, 2.2))
-    lens.ico("ancient_enamel", 0.42, 2, loc=c, scale=(0.8, 1, 1), color=ENAMEL)
+    with lens.region(detail=1):
+        lens.ico("ancient_enamel", 0.42, 2, loc=c, scale=(0.8, 1, 1), color=ENAMEL)
     for k, off in enumerate(((0, 0), (0.22, 0.2), (-0.22, 0.2), (0.22, -0.2), (-0.22, -0.2))):
         at = c + Vector((0.34, off[0], off[1]))
         r = 0.13 if k == 0 else 0.08
@@ -437,13 +444,9 @@ def main():
     kits = []
     for fam, body, extras in (("reactor", kit_reactor, reactor_extras), ("hive", kit_hive, hive_extras),
                               ("mind", kit_mind, mind_extras)):
-        polished = common.POLISH, common.DETAIL
-        if fam == "mind":
-            common.POLISH, common.DETAIL = None, 1
         root = build_kit("WardenKit" + fam.capitalize(), body(rng), extras())
         rows.append(("kit_" + fam, common.tri_total(root), KIT_TRIS))
         common.export(root, os.path.join(out_dir, "warden_kit_%s.glb" % fam))
-        common.POLISH, common.DETAIL = polished
         # Blender names are file-global; free this kit's names (WeakPoint, Body) for the next.
         for o in common.tree(root)[1:]:
             o.name = fam + "_" + o.name

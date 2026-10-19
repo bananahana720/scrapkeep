@@ -54,6 +54,9 @@ strips one "-col"), budgets from asset_budgets.json (landform 8000 tris, detail 
       sketches/core-loop/tools/blender/park/flume_works.py -- [--out-dir DIR] [--only ID] [--liners] [--count-only] [--check] [--registry]
   --check     rebuild nothing: verify the GLBs already in --out-dir (collider boxes / wedges, hugging, flume section, rails)
   --registry  print the registry.d fragment (assets/registry.d/park_flume_works.json) for these ids
+  --pit       act on the pit liners (liner_dump_wash_1..2, liner_canal_lip, liner_haul_road_west_5, liner_bench2_camp_lane,
+              liner_bench2_east_bank; conformed to assets/park/park_pit/ground.bin), with --check, --count-only or --registry
+              (assets/registry.d/park_pit_liners.json)
 """
 import argparse
 import hashlib
@@ -1255,7 +1258,7 @@ for _rid, _spec in RECIPES.items():
 
 # ------------------------------------------------------------------ D. liners (decoration only, conformed to the bake)
 
-GROUND_BIN = kit.SKETCH / "assets/park/park_flume/ground.bin"
+GROUND_BINS = {"park_flume": kit.SKETCH / "assets/park/park_flume/ground.bin", "park_pit": kit.SKETCH / "assets/park/park_pit/ground.bin"}
 GROUND_N = 801                 # 801 x 801 float32, row-major z then x, 2 m apart over -800..800
 GROUND_STEP = 2.0
 GROUND_HALF = 800.0
@@ -1289,23 +1292,37 @@ LINERS = {
     "liner_lateral_canal": {"style": "canal", "at": (-270.0, 15.0), "size": (286.5, 3.0, 40.0), "yaw": 29.2},
 }
 LINER_IDS = list(LINERS)
+# The pit's rows (park_pit bake). Each size and yaw is the row's own in src/world/park/park_pit.json; a liner is placed rigidly at the
+# row's `at` (no fit), so these must follow the row if it moves. "gap": the canal is left out where the arroyo cuts it or the mound
+# at its west end rises (ground more than 0.35 m off the canal's own level), so no lining bridges a cut or climbs a hill.
+PIT_LINERS = {
+    "liner_dump_wash_1": {"park": "park_pit", "style": "sandstone", "at": (-465.7, -531.2), "size": (67.8, 10.0, 36.0), "yaw": 74.8},
+    "liner_dump_wash_2": {"park": "park_pit", "style": "sandstone", "at": (-402.3, -519.4), "size": (61.7, 10.0, 36.0), "yaw": 84.6},
+    "liner_canal_lip": {"park": "park_pit", "style": "canal", "at": (-356.0, -501.0), "size": (300.0, 0.1, 16.0), "yaw": 45.0, "gap": 0.35},
+    "liner_haul_road_west_5": {"park": "park_pit", "style": "haul", "at": (-95.0, 200.0), "size": (103.0, 0.1, 24.0), "yaw": 60.9},
+    "liner_bench2_camp_lane": {"park": "park_pit", "style": "haul", "at": (250.0, -152.0), "size": (70.0, 0.1, 20.0), "yaw": 90.0},
+    "liner_bench2_east_bank": {"park": "park_pit", "style": "haul", "at": (337.5, -60.0), "size": (190.0, 0.1, 40.0), "yaw": 0.0},
+}
+PIT_LINER_IDS = list(PIT_LINERS)
+LINERS.update(PIT_LINERS)
 LINER_NOTES = {
     "sandstone": "banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks",
     "concrete": "board-formed concrete liner panels with dark form joints and a worn cream coping strip at the rims",
     "pond": "concrete rim ring and a stone pitched lining around a flush floor",
     "canal": "earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip",
+    "haul": "a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them",
 }
 LINER_NOTES_EXTRA = {"liner_wasteway_chute": "; a painted gauge staff on one wall"}
 
-_GROUND = []
+_GROUND = {}
 
 
-def ground_rows():
-    """The park_flume bake's ground heights, decoded once from Godot's compressed file (GCPF, zstd blocks)."""
-    if not _GROUND:
+def ground_rows(park="park_flume"):
+    """A park bake's ground heights, decoded once from Godot's compressed file (GCPF, zstd blocks)."""
+    if park not in _GROUND:
         import numpy
         import zstandard
-        raw = GROUND_BIN.read_bytes()
+        raw = GROUND_BINS[park].read_bytes()
         assert raw[:4] == b"GCPF", raw[:4]
         mode, block, total = struct.unpack_from("<3I", raw, 4)
         assert mode == 2, mode
@@ -1318,13 +1335,13 @@ def ground_rows():
             out += dec.decompress(raw[pos:pos + size], max_output_size=block)
             pos += size
         assert len(out) == total == GROUND_N * GROUND_N * 4, (len(out), total)
-        _GROUND.append(numpy.frombuffer(bytes(out), dtype="<f4").reshape(GROUND_N, GROUND_N).astype("float64"))
-    return _GROUND[0]
+        _GROUND[park] = numpy.frombuffer(bytes(out), dtype="<f4").reshape(GROUND_N, GROUND_N).astype("float64")
+    return _GROUND[park]
 
 
-def ground_at(x, z):
+def ground_at(x, z, park="park_flume"):
     """(bilinear height, highest of the bilinear and both diagonal triangulations of the cell) at world x, z."""
-    g = ground_rows()
+    g = ground_rows(park)
     fx = min(max((x + GROUND_HALF) / GROUND_STEP, 0.0), GROUND_N - 1 - 1e-9)
     fz = min(max((z + GROUND_HALF) / GROUND_STEP, 0.0), GROUND_N - 1 - 1e-9)
     ix, iz = int(fx), int(fz)
@@ -1352,12 +1369,14 @@ class Row:
     def __init__(self, rid):
         spec = LINERS[rid]
         self.rid, self.style = rid, spec["style"]
+        self.park = spec.get("park", "park_flume")
+        self.gap = spec.get("gap")          # a lining left out wherever the ground departs this far from the row's own level
         self.gauge = spec.get("gauge", False)
         self.ax, self.az = spec["at"]
         self.L, self.H, self.W = spec["size"]
         yaw = math.radians(spec["yaw"])
         self.c, self.s = math.cos(yaw), math.sin(yaw)
-        self.g0 = ground_at(self.ax, self.az)[0]
+        self.g0 = ground_at(self.ax, self.az, self.park)[0]
         self.hw, self.hl = self.W / 2.0, self.L / 2.0
         self.ex, self.ez = self.hw + MARGIN, self.hl + MARGIN
         self.gauge_z = -0.3 * self.L
@@ -1369,7 +1388,7 @@ class Row:
     def sample(self, lx, lz):
         key = (round(lx, 5), round(lz, 5))
         if key not in self.cache:
-            self.cache[key] = ground_at(*self.world(lx, lz))
+            self.cache[key] = ground_at(*self.world(lx, lz), self.park)
         return self.cache[key]
 
 
@@ -1389,6 +1408,8 @@ def across_stations(row, step):
         k += [hw, 0.1 * W, 0.3 * W]
     elif row.style == "concrete":
         k += [hw - 0.6, hw - 0.1, hw + 0.7, hw + 1.2, hw - 1.0]
+    elif row.style == "haul":
+        k += [3.0, 4.0, hw - 1.0, hw - 0.3, hw + 0.5, hw + 2.0]
     else:
         k += [hw - 1.5, hw - 0.5, hw + 0.8, hw + 2.4]
     k = sorted(set(round(v, 4) for v in k))
@@ -1432,6 +1453,10 @@ def rect_off(row, lx, lz, gh):
         if row.gauge and lx > 0 and abs(lz - row.gauge_z) <= 0.56 and d <= -0.6:
             off += 0.05 * wt
         off = min(off, FEATURE_MAX)
+    elif st == "haul":
+        if -1.0 < d < 1.4:      # cobbles along the verge, low and soft: nothing in the lane stands up
+            bump = ss((d + 1.0) / 0.8) if d < 0.2 else 1.0 - ss((d - 0.2) / 1.2)
+            off += 0.10 * bump
     else:
         if -0.5 < d < 2.4:
             bump = ss((d + 0.5) / 1.3) if d < 0.8 else 1.0 - ss((d - 0.8) / 1.6)
@@ -1473,6 +1498,16 @@ def rect_colour(row, lx, lz, gh, i, j):
             return OXIDE if tick % 4 == 0 else (CREAM if tick % 2 == 0 else DARK)
         panel = int(p // PANEL)
         return tone(CONCRETE, FORM, panel * 3 + (1 if lx > 0 else 0), 0.3)
+    if st == "haul":
+        if d > 2.0 or out_of_run:
+            return tone(SAGE, SAND, i + j, 0.35) if hh(i, j, 3) < 0.07 else tone(SAND, CREAM, i * 3 + j, 0.5)
+        if -1.0 <= d <= 0.8:
+            return tone((STONE, VARNISH, CREAM, STONE)[int(hh(i, j, 2) * 4)], SAND, i + j, 0.45) if hh(i, j, 1) < 0.5 else tone(EARTH, SAND, i + j, 0.4)
+        if d > 0.8:
+            return tone(EARTH, SAND, i * 2 + j, 0.35)
+        if 3.0 <= a <= 4.0:
+            return tone(IRON, VARNISH, i + j, 0.45)
+        return tone(SAND, SILT, i * 5 + j, 0.5) if hh(i, j, 6) < 0.8 else tone(CREAM, SAND, i + j, 0.4)
     # canal
     if d > 2.4 or out_of_run:
         return tone(SAGE, SAND, i + j, 0.35) if hh(i, j, 3) < 0.07 else tone(SAND, CREAM, i * 3 + j, 0.5)
@@ -1659,6 +1694,8 @@ def liner_base(row):
         for j in range(len(zs) - 1):
             for i in range(len(xs) - 1):
                 quad = [lat[j][i], lat[j + 1][i], lat[j + 1][i + 1], lat[j][i + 1]]
+                if row.gap is not None and max(abs(q[1] - row.g0) for q in quad) > row.gap:
+                    continue
                 gh = sum(q[1] for q in quad) / 4.0
                 lx, lz = (xs[i] + xs[i + 1]) / 2.0, (zs[j] + zs[j + 1]) / 2.0
                 poly_up(s, [q[0] for q in quad], rect_colour(row, lx, lz, gh, i, j))
@@ -1690,6 +1727,7 @@ def rim_points(row, count, kind, salt):
         "sandstone": {"rock": (hw - 0.4, hw + 2.6), "tuft": (hw + 0.6, hw + 2.8)},
         "concrete": {"rock": (hw + 1.3, hw + 2.8), "tuft": (hw + 1.3, hw + 2.8)},
         "canal": {"rock": (hw - 1.3, hw + 0.1), "tuft": (hw + 2.0, hw + 2.8)},
+        "haul": {"rock": (hw - 0.8, hw + 0.4), "tuft": (hw + 1.2, hw + 2.8)},
     }[row.style][kind]
     per = max(1, count // 2)
     span = row.ez * 2.0 - 1.4
@@ -1699,7 +1737,7 @@ def rim_points(row, count, kind, salt):
                 lz = -row.ez + 0.7 + span * (k + 0.5 + 0.7 * (hh(k, salt, side + 2 + 9 * tries) - 0.5)) / per
                 lz = min(max(lz, -row.ez + 0.9), row.ez - 0.9)
                 lx = side * (lo + (hi - lo) * hh(k, salt, side + 5 + 9 * tries))
-                if settled(row, lx, lz):
+                if settled(row, lx, lz) and (row.gap is None or abs(row.sample(lx, lz)[0] - row.g0) <= row.gap):
                     pts.append((lx, lz))
                     break
     return pts
@@ -1712,7 +1750,7 @@ def surface_off(row, lx, lz, bil):
 
 
 def rock_pal(row):
-    return {"sandstone": (SAND, VARNISH), "concrete": (CONCRETE, FORM), "canal": (STONE, VARNISH), "pond": (STONE, SAND)}[row.style]
+    return {"sandstone": (SAND, VARNISH), "concrete": (CONCRETE, FORM), "canal": (STONE, VARNISH), "haul": (STONE, VARNISH), "pond": (STONE, SAND)}[row.style]
 
 
 def liner_rocks(row):
@@ -2019,21 +2057,22 @@ def intake_check(rid, out_dir):
 
 
 def liner_registry(rid):
-    note = ("Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. "
+    park = LINERS[rid].get("park", "park_flume")
+    note = ("Decoration only, conformed to the " + park + " bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. "
             + LINER_NOTES[LINERS[rid]["style"]] + LINER_NOTES_EXTRA.get(rid, "") + ".")
     rows = []
     for name, base, text in ((rid, True, note),
-                             (rid + "_detail1", False, "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of %s, drawn by range (the detail class): small rocks on the rims." % rid),
-                             (rid + "_detail2", False, "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of %s, drawn by range (the detail class): sage tufts on the rims." % rid)):
+                             (rid + "_detail1", False, "Decoration only, conformed to the %s bake; rebuild after a re-bake. Detail shell 1 of %s, drawn by range (the detail class): small rocks on the rims." % (park, rid)),
+                             (rid + "_detail2", False, "Decoration only, conformed to the %s bake; rebuild after a re-bake. Detail shell 2 of %s, drawn by range (the detail class): sage tufts on the rims." % (park, rid))):
         rows.append({"id": name, "path": "res://assets/models/park/%s.glb" % name, "class": "landform" if base else "detail", "origin": "centre",
                      "ships": True, "loader": "src/world/park/park_recipes.gd",
                      "provenance": {"recipe": "tools/blender/park/flume_works.py", "note": text}})
     return rows
 
 
-def registry_doc():
+def registry_doc(pit=False):
     rows = []
-    for rid in IDS + LINER_IDS:
+    for rid in (PIT_LINER_IDS if pit else IDS + LINER_IDS):
         if rid in LINERS:
             rows += liner_registry(rid)
             continue
@@ -2080,11 +2119,12 @@ def main():
     parser.add_argument("--check", action="store_true", help="verify the GLBs in --out-dir instead of building")
     parser.add_argument("--liners", action="store_true", help="act on the liner ids only (default: the original pieces)")
     parser.add_argument("--registry", action="store_true", help="print the registry.d fragment")
+    parser.add_argument("--pit", action="store_true", help="the pit liners (assets/registry.d/park_pit_liners.json) instead of the flume's")
     args = parser.parse_args(argv)
     if args.registry:
-        print(json.dumps(registry_doc(), indent=1))
+        print(json.dumps(registry_doc(args.pit), indent=1))
         return
-    ids = [rid for rid in (LINER_IDS if args.liners else IDS) + ([args.only] if args.only else []) if not args.only or rid == args.only]
+    ids = [rid for rid in (PIT_LINER_IDS if args.pit else LINER_IDS if args.liners else IDS) + ([args.only] if args.only else []) if not args.only or rid == args.only]
     ids = list(dict.fromkeys(ids))
     if args.check:
         bad = []

@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "take-stampede-encore-s5101.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/radio/take-stampede-encore-s5101.wav",
-   "stretched": "/home/andrew/scratch/w16/radio-pack2/stretched/take_stampede_encore.wav",
-   "bpm_before": 150.02,
-   "bpm_after": 150.0,
+   "take": "master.wav",
+   "source": "/home/andrew/scratch/w17/qp/remake/work/cands/take-stampede-encore/s6202/master.wav",
+   "stretched": "/home/andrew/scratch/w17/qp/remake/work/pack/stretched/take_stampede_encore.wav",
+   "bpm_before": 150,
+   "bpm_after": 150,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_stampede_encore/drums.wav",
-     "sha256": "bb0d3b9836f6aa32a6f39ba360e29adf8539993e1141aee5b0026b9619370c9f"
+     "path": "/home/andrew/scratch/w17/qp/remake/work/pack/stems/htdemucs/take_stampede_encore/drums.wav",
+     "sha256": "5b9976e6d56484dbfd075ffefe082c5d6e0d7174360d2309d611b310ceb6f114"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_stampede_encore/bass.wav",
-     "sha256": "6b4640b1068dff4d36f94bd27d6db97bce0310c4d236485f2d56b5e651109c59"
+     "path": "/home/andrew/scratch/w17/qp/remake/work/pack/stems/htdemucs/take_stampede_encore/bass.wav",
+     "sha256": "389724594ec6a765d1571a89fef7c9005770794defc3cdbda1f5c96fd75eb0d7"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_stampede_encore/other.wav",
-     "sha256": "cc5a07bb9207ef753731d165f3352d9bd02a236a7c89c883a20cb90ab65d253a"
+     "path": "/home/andrew/scratch/w17/qp/remake/work/pack/stems/htdemucs/take_stampede_encore/other.wav",
+     "sha256": "d05d8e71010354858668e22382453e369bba10a56b4eadd529744b09ce35c8d9"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_stampede_encore/vocals.wav",
-     "sha256": "1aff1c5ef7628024002ef1604b7b3afd78ecc5557eda023abccab696cf2c8cf4"
+     "path": "/home/andrew/scratch/w17/qp/remake/work/pack/stems/htdemucs/take_stampede_encore/vocals.wav",
+     "sha256": "0d4f7bf312c549296aab8a7d2a5df70b239d3b6d20bc3471509504c2b0d2833a"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,8 +49,8 @@
   "main": {
    "parent": "single",
    "take": "take-stampede-encore",
-   "source_start": 12544,
-   "take_start": 12544,
+   "source_start": 12480,
+   "take_start": 12480,
    "bpm": 150,
    "beat": 17640,
    "bar": 70560,
@@ -183,7 +183,7 @@
  "cuts": "measured-beat-phase",
  "whole": true,
  "timing_verified": false,
- "gain_db": 0.3,
+ "gain_db": 3.9,
  "measured": {
   "lufs": -16.0,
   "true_peak": -1.9,
