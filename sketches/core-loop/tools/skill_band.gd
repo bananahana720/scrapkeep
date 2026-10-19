@@ -8,13 +8,21 @@ extends RefCounted
 #
 #   Novice:  late reactions, misses many tells, basic attack and ram only.
 #   Learner: reads most tells, uses the base kit, and improves across attempts at a boss.
-#   Expert:  fast reads and the full kit (actives, chain, plant, harpoon, weak points,
-#            ultimate timing). The driver has no separate carve or wall-grip hand, so those
-#            ride on the Expert's other verbs and get no verb of their own here.
+#   Expert:  fast reads and the full kit.
 #
-# "active" (the F-key item actives, Intent active_pressed) is Expert-only here, but the driver has
-# no active hand yet: nothing presses one at any band, so the Expert lacks actives until one is
-# added. Adding it would move Expert results, so it is a separate decision. The verb has no call site.
+# What the bands mean, and do not:
+#   - Expert is the unbanded driver. "Full kit" is every hand the driver has. It has no active hand
+#     (the F-key item actives, Intent active_pressed: nothing presses one at any band), no separate
+#     carve hand and no wall-grip hand, so the Expert lacks those. Adding one would move Expert
+#     results, which is a separate decision. The "active" verb is kept, Expert-only, with no call site.
+#   - Harpoon is in the Learner's base kit because the grapple is a core verb on every pilot
+#     (DECISIONS direction row: enemies "build on the core verbs (roll, ram, grapple, carve)") and
+#     every park Warden is a harpoon anchor. The Expert-only harpoon play is the chain hand.
+#   - The Learner model: attempt is a command-line index (--attempt=N). Reaction and read chance move
+#     linearly with it, the kit is fixed, every attempt plays the same game seed, and nothing is
+#     learned inside a run.
+#   - A Novice never runs the latch arm, so its non-wins at Wardens are mostly stalls. It still runs
+#     the dam's spillway sheet hand, which is a ram.
 #
 # Reaction is the seconds from a committed telegraph appearing to the bot seeing it. The
 # basis is human reaction time: a simple visual response is about 0.2-0.25 s for a
