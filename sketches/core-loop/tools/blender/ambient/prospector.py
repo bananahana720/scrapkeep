@@ -16,7 +16,9 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+import bmesh  # noqa: E402
+from mathutils import Vector  # noqa: E402
+from _life import Critter, _B, _m  # noqa: E402
 
 life = Critter("prospector")
 
@@ -24,28 +26,39 @@ life = Critter("prospector")
 life.ellipsoid("legs", "stripe", (0, 0.16, 0.06), (0.21, 0.15, 0.2), subsurf=1, u=8, v=5)
 for s in (-1, 1):
     life.capsule("legs", "stripe", (0.13 * s, 0.075, -0.1), (0.13 * s, 0.07, 0.25), 0.075, 0.062, subsurf=1, u=6, v=4)
-    life.ellipsoid("legs", "cream", (0.13 * s, 0.045, 0.31), (0.06, 0.04, 0.075), subsurf=1, u=8, v=4)
+    life.ellipsoid("legs", "cream", (0.13 * s, 0.045, 0.31), (0.06, 0.04, 0.075), subsurf=0, u=8, v=4)
 
 # --- torso: a round pear in the violet flannel, plum braces, cream collar
 life.ellipsoid("body", "shirt", (0, 0.5, 0.01), (0.27, 0.3, 0.25), subsurf=1, u=10, v=6)
 life.ellipsoid("body", "cream", (0, 0.72, -0.07), (0.15, 0.06, 0.1), subsurf=1, u=6, v=4)
-for s in (-1, 1):
-    life.ellipsoid("body", "hat", (0.1 * s, 0.55, -0.222), (0.032, 0.2, 0.035), rot=(-3, 0, 0), subsurf=0, u=6, v=4)
-life.ellipsoid("body", "hat", (0, 0.25, -0.2), (0.27, 0.06, 0.1), subsurf=0, u=10, v=4)  # belt band
+# a soft rounded bib panel in plum, proud of the chest
+life.ellipsoid("body", "stripe", (0, 0.5, -0.2), (0.15, 0.17, 0.06), subsurf=1, u=8, v=4)
 
 # --- head: broad cream face, plum stripes running front to back, round ears
-life.ellipsoid("head", "cream", (0, 0.82, -0.08), (0.175, 0.15, 0.19), subsurf=1, u=10, v=6)
+HC, HR = Vector((0, 0.82, -0.08)), (0.175, 0.15, 0.19)
+hp = life.part("head")
+with hp.region(bevel=0, subsurf=1, detail=1):
+    r = bmesh.ops.create_uvsphere(hp.bm, u_segments=12, v_segments=8, radius=1.0, matrix=_B @ _m(tuple(HC), (0, 0, 0), HR))
+    hp.bm.verts.index_update()
+    hp.bm.faces.index_update()
+    faces = sorted({f for v in r["verts"] for f in v.link_faces}, key=lambda f: f.index)
+    band = []
+    for f in faces:
+        c = f.calc_center_median()  # Blender axes; back to Godot (x, bz, -by)
+        gx, gy = (c.x - HC.x) / HR[0], (c.z - HC.y) / HR[1]
+        if 0.3 <= abs(gx) <= 0.72 and gy > -0.3:
+            band.append(f)
+    hp.paint(faces, "critter", life.col("cream"))
+    hp.paint(band, "critter", life.col("stripe"))
 life.ellipsoid("head", "cream", (0, 0.77, -0.25), (0.075, 0.06, 0.09), subsurf=1, u=6, v=4)
 life.ellipsoid("head", "eye", (0, 0.785, -0.335), (0.03, 0.025, 0.025), subsurf=0, u=6, v=4)
 for s in (-1, 1):
-    life.ellipsoid("head", "stripe", (0.068 * s, 0.925, -0.1), (0.032, 0.05, 0.14), rot=(-8, 0, 0), subsurf=1, u=6, v=4)
-    life.ellipsoid("head", "stripe", (0.11 * s, 0.8, -0.12), (0.045, 0.045, 0.135), subsurf=1, u=6, v=4)
     life.ellipsoid("head", "eye", (0.09 * s, 0.825, -0.215), (0.026, 0.029, 0.02), subsurf=0, u=6, v=4)
     life.ellipsoid("head", "stripe", (0.145 * s, 0.94, 0.0), (0.045, 0.05, 0.035), subsurf=1, u=6, v=4)
 
 # --- hat: a soft battered crown on a droopy brim, pushed back so the stripes show
 life.ellipsoid("hat", "hat", (0, 1.02, 0.05), (0.14, 0.08, 0.14), rot=(6, 0, 4), subsurf=1, u=8, v=5)
-life.ellipsoid("hat", "hat", (0, 0.965, 0.05), (0.235, 0.025, 0.23), rot=(-6, 0, 0), subsurf=1, u=10, v=4)
+life.ellipsoid("hat", "hat", (0, 0.965, 0.05), (0.235, 0.025, 0.23), rot=(-6, 0, 0), subsurf=1, u=16, v=4)
 life.ellipsoid("hat", "stripe", (0, 0.985, 0.05), (0.15, 0.025, 0.15), subsurf=0, u=10, v=4)  # band
 
 # --- arms (shirt sleeves, cream paws) reaching down to the pan rim
@@ -54,11 +67,11 @@ for s, bone in ((-1, "arm_l"), (1, "arm_r")):
     life.ellipsoid(bone, "cream", (0.19 * s, 0.4, -0.3), (0.055, 0.05, 0.055), subsurf=1, u=8, v=4)
 
 # --- pan: wide, shallow, round, with a heap of plum gravel
-life.ellipsoid("pan", "pan", (0, 0.37, -0.3), (0.22, 0.035, 0.22), subsurf=1, u=10, v=4)
-life.ellipsoid("pan", "stripe", (0, 0.395, -0.3), (0.15, 0.02, 0.15), subsurf=0, u=10, v=4)
+life.ellipsoid("pan", "pan", (0, 0.37, -0.3), (0.22, 0.035, 0.22), subsurf=1, u=16, v=6)
+life.ellipsoid("pan", "stripe", (0, 0.395, -0.3), (0.15, 0.02, 0.15), subsurf=0, u=16, v=4)
 
 # --- pick: short, rounded handle and blunt rounded head, lying on the ground to his right
-life.tube("root", "stripe", [(0.52, 0.035, 0.2), (0.52, 0.04, -0.05), (0.5, 0.05, -0.28)], [0.026, 0.026, 0.024], sides=7, subsurf=1)
+life.tube("root", "stripe", [(0.52, 0.035, 0.2), (0.5, 0.05, -0.28)], [0.026, 0.024], sides=6, subsurf=1)
 life.ellipsoid("root", "pan", (0.5, 0.07, -0.32), (0.13, 0.05, 0.045), subsurf=1, u=10, v=5)
 
 life.rig([
