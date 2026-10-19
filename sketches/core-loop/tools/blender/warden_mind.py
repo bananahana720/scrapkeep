@@ -864,6 +864,7 @@ def build():
     body = part.to_object((0, 0, 0))
     for g in groups:
         body.vertex_groups.new(name=g)
+    unblend_lens_mount(body)
     arm = make_rig(bones)
     arm.parent = pose_node
     body.parent = arm
@@ -873,6 +874,21 @@ def build():
     for i, (_, at) in enumerate(KNUCKLES):
         socket("Hardpoint%d" % i, arm, "Knuckle%d" % i, (at[0], at[1] - 0.2, at[2]))
     return root, arm, body
+
+
+def unblend_lens_mount(body):
+    """RigPart.on numbers a primitive's vertices by index range, so a primitive that deletes an
+    earlier one's vertices hands the shifted survivors a second bone. One corner edge of the
+    LensMount neck (two vertices) ended up half on Lens, and the final_quiet turn of Lens tore a
+    wedge out of the neck (audit COLLAPSE, area ratio 0.32). Those vertices belong to the neck's
+    own bone, so the Lens influence goes (rigid-bind, 2026-10-19, rigs w3)."""
+    mount = body.vertex_groups["LensMount"]
+    lens = body.vertex_groups["Lens"]
+    stray = [v.index for v in body.data.vertices
+             if {body.vertex_groups[g.group].name for g in v.groups} == {"LensMount", "Lens"}]
+    if stray:
+        lens.remove(stray)
+        mount.add(stray, 1.0, "REPLACE")
 
 
 def rest_points(body):
