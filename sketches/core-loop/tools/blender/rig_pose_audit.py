@@ -163,15 +163,15 @@ DELIBERATE = {
     },
     "warden_mind": {
         **{c: {"pairs": [("Finger*", "Finger*")],
-               "cite": "wm:45-48 'A lost finger folds shut under its neighbours: the last two segments drop about a metre'; fold wm:636, :709-711"}
+               "cite": "wm:45-48 'A lost finger folds shut under its neighbours: the last two segments drop about a metre'; fold wm:639-647, :712-717"}
            for c in ("chunk_lost", "chunk_lost_ring", "chunk_lost_middle", "chunk_lost_index")},
         "grip_falter": {"pairs": [("Stalk*", "*"), ("LensMount", "*"), ("Lens", "*")],
-                        "cite": "wm:737-743 Stalk1, Stalk2 and LensMount drop DROP/3, the lens swells"},
+                        "cite": "wm:740-746 Stalk1, Stalk2 and LensMount drop DROP/3, the lens swells"},
         **{c: {"pairs": [("Knuckle*", "*")],
-               "cite": "wm:725-731 the knuckle flicks out along its dome normal and swells 25%; design-v3/wardens/mind.md:127 'shrug: the flared knuckle flicks outward'"}
+               "cite": "wm:728-734 the knuckle flicks out along its dome normal and swells 25%; design-v3/wardens/mind.md:127 'shrug: the flared knuckle flicks outward'"}
            for c in ("shrug", "shrug_1", "shrug_2")},
         "knocked_down": {"pairs": [("Hand", "*"), ("Palm", "*"), ("Finger*", "*"), ("Stalk*", "Lens"), ("LensMount", "Lens")],
-                         "cite": "wm:766-772 the hand tumbles over and the fingers splay; wm:913 'tumble the hand (knocked_down)'; wm:773 the lens swells 1.3x over the last sleeve end"},
+                         "cite": "wm:769-775 the hand tumbles over and the fingers splay; wm:979 'tumble the hand (knocked_down)'; wm:773 the lens swells 1.3x over the last sleeve end"},
         "active": {"pairs": [("Stalk*", "Lens"), ("LensMount", "Lens")],
                    "cite": "wm:705-710 Lens scales 1.3 about its centre; the shell grows over Stalk2's sleeve end and the neck core, which sit inside the cap at rest (renders: nothing shows through)"},
         "glide": {"pairs": [("LensMount", "Lens"), ("Stalk*", "Lens")],
@@ -183,11 +183,11 @@ DELIBERATE = {
                ("takeoff", [("Palm", "Thumb_0"), ("Thumb_?", "Thumb_?")],
                 "wm:747-754 the fist: every finger curls to CURL_SHUT (wm:638), thumbs turn 0.5/0.6/0.5 rad; the land contacts (wm:762-768, ROOT_Y :197, JOINT_R :194) plus the thumb drums"))},
         "final_quiet": {"pairs": [("Thumb_*", "*"), ("Lens*", "*"), ("SmallLens*", "*")],
-                        "cite": "wm:773-783 thumbs fold shut and the iris closes"},
+                        "cite": "wm:776-785 thumbs fold shut and the iris closes"},
         "perch": {"pairs": [("Stalk*", "Stalk*"), ("Stalk*", "LensMount"), ("Stalk*", "Lens"), ("Finger?_1", "Finger?_2"),
                             ("Thumb_?", "Thumb_?")],
-                  "cite": "wm:720-724 the thumb turns 0.45 and 0.6 rad and its wedge sits inside the 0.22 m joint drum (wm:483); wm:491-492 each stalk core 'hides in the sleeve above it at rest'; wm:645-646, :722-724 the perch "
-                          "lift slides Stalk1, Stalk2 and LensMount up into their sleeves; wm:717-719 the hook folds segment 2 "
+                  "cite": "wm:720-724 the thumb turns 0.45 and 0.6 rad and its wedge sits inside the 0.22 m joint drum (wm:483); wm:491-492 each stalk core 'hides in the sleeve above it at rest'; wm:648-649, :725-727 the perch "
+                          "lift slides Stalk1, Stalk2 and LensMount up into their sleeves; wm:720-722 the hook folds segment 2 "
                           "back under segment 1 (pi + 0.1 - c1), touching only at the knuckle cap; the same lift telescopes the lens up "
                           "into the stalk's last sleeve (renders: the lens cap rides under the sleeve ring, nothing shows through)"},
     },
