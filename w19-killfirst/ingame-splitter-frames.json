@@ -1,0 +1,175 @@
+{
+	"aabb": [],
+	"adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+	"anchor": "/root/Game/Spawn_splitter",
+	"anchor_offset": [
+		0.0,
+		0.0,
+		0.0
+	],
+	"call": [],
+	"class": 0,
+	"clay": [],
+	"frames": [
+		{
+			"anchor": [
+				-58.9248962402344,
+				36.7085914611816,
+				-134.706771850586
+			],
+			"camera_basis": [
+				-1.0,
+				0.0,
+				0.0000000874227765734759,
+				0.00000000821842593978772,
+				0.995571494102478,
+				0.0940078273415565,
+				-0.0000000870356231530423,
+				0.0940078273415565,
+				-0.995571494102478
+			],
+			"centre": [
+				-58.9248962402344,
+				36.8933944702148,
+				-134.892974853516
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-58.9248962402344,
+				39.7085914611816,
+				-164.706771850586
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "934650f7c4b0d4be3bfcc692bd0627963d60e76603ff923199fb46f676fe1a13",
+			"target": [
+				-58.9248962402344,
+				36.8933944702148,
+				-134.892974853516
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "88add67b3d3e148ba85bc78f4ac25c923ba01e0e2463f7a8f763c5d04a6d6d6a"
+		},
+		{
+			"anchor": [
+				-58.9248962402344,
+				36.7085914611816,
+				-134.706771850586
+			],
+			"camera_basis": [
+				0.00620666751638055,
+				0.0,
+				-0.999980747699738,
+				-0.0934258624911308,
+				0.995626091957092,
+				-0.000579874438699335,
+				0.995606899261475,
+				0.0934276580810547,
+				0.00617951992899179
+			],
+			"centre": [
+				-58.9248962402344,
+				36.8933944702148,
+				-134.892974853516
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-28.9248962402344,
+				39.7085914611816,
+				-134.706771850586
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "48cdf03d5c201d827eedc8042fc56d1e8bc7e78d8b3bf6ae3a6e17376185908b",
+			"target": [
+				-58.9248962402344,
+				36.8933944702148,
+				-134.892974853516
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "a6248d42236a9a03fddc7782fff5987418677ca94621b8f23d691a279b0e633e"
+		},
+		{
+			"anchor": [
+				-58.9248962402344,
+				36.7085914611816,
+				-134.706771850586
+			],
+			"camera_basis": [
+				-1.0,
+				0.0,
+				0.0000000874227765734759,
+				0.0000000381006408645135,
+				0.900033593177795,
+				0.435820519924164,
+				-0.0000000786834348787124,
+				0.435820519924164,
+				-0.900033593177795
+			],
+			"centre": [
+				-58.9248962402344,
+				36.8933944702148,
+				-134.892974853516
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-58.9248962402344,
+				39.7085914611816,
+				-140.706771850586
+			],
+			"file": "asset-use6.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-use6",
+			"ortho_size": 0.0,
+			"sha256": "9c8a716fafc64710921eeb23c100d64f93654ebcf6a698effdbafad24d855cbc",
+			"target": [
+				-58.9248962402344,
+				36.8933944702148,
+				-134.892974853516
+			],
+			"thumb": "asset-use6.thumb.png",
+			"thumb_sha256": "c1d7ecbdafdc489393f1723bb44a79eadb01bdf6fcb9f9445643afa62a1d833b"
+		}
+	],
+	"freeze_specs": [],
+	"frozen_nodes": {},
+	"glb": [],
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "lit",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1b999c649e26a9ca92cb46eb3add292095aecac223b0292e92f310917e8f5c46",
+		"src/presentation/bake_look.gd": "2f0b3dc02eba5f292e777dbae5f0b2fb28217f3ba903af61eeefd8f77098ae61",
+		"src/presentation/hero_assets.gd": "e5c36c0dfd97ff1d7cc7ba23ac7909eb5004fe4aad24b64daeff4a441086030f",
+		"src/presentation/material_slots.gd": "ad9fc714dc1e2f06162bd4502a4f1d2458dea20ca7e9dbc1b68464c9ff58dba1",
+		"src/presentation/recipe_props.gd": "ee90a7b1a142433c627605acc95467ca900ec2e0a7c83dc90fc8180ebfaf47e1",
+		"src/presentation/spillway_scenery.gd": "ac0961a0f3b43fc6eef649b6a16902fa248281e155f806bf73f4121097028890",
+		"src/world/terrain.gd": "5de2b7d620cff2e91c2a65b3db9afa9892529d21a89b6f21eefd9b42c8393bea",
+		"tools/asset_capture.gd": "ec312381277cf6febaadf7daf1ca5d9f84eeacbd1c3ffffef7d4a8e4ce6cdd67",
+		"tools/capture_cameras.gd": "6c185471294f2c03f75b706504a923926b1f1ef3f04947f1beb2213dbc56fe73"
+	},
+	"spawn": [
+		"splitter@-58,52,-128"
+	],
+	"subject": "/root/Game/Spawn_splitter",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}

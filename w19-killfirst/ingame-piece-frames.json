@@ -1,0 +1,175 @@
+{
+	"aabb": [],
+	"adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+	"anchor": "/root/Game/Glb_enemy_splitter_piece",
+	"anchor_offset": [
+		0.0,
+		0.0,
+		0.0
+	],
+	"call": [],
+	"class": 0,
+	"clay": [],
+	"frames": [
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.866030037403107,
+				0.0,
+				0.499991983175278,
+				0.0509208999574184,
+				0.994800448417664,
+				0.0881994739174843,
+				-0.497392237186432,
+				0.101843439042568,
+				-0.86152708530426
+			],
+			"centre": [
+				-58.0278053283691,
+				51.9343719482422,
+				-128.047607421875
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-73.0,
+				55.0,
+				-153.980758666992
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "a9b428fbc0424470e5aa57cc18588a1f406097ab21ffbe7ef7309e6ec7a86a5a",
+			"target": [
+				-58.0278053283691,
+				51.9343719482422,
+				-128.047607421875
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "21e736534535920dc08167e1ac81ac4edd6209b3e4d9d2ad98630b93154937ee"
+		},
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.498407691717148,
+				0.0,
+				-0.866942763328552,
+				-0.088130883872509,
+				0.994819521903992,
+				0.0506666786968708,
+				0.862451612949371,
+				0.101657100021839,
+				-0.495825707912445
+			],
+			"centre": [
+				-58.0278053283691,
+				51.9343719482422,
+				-128.047607421875
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-32.0192375183105,
+				55.0,
+				-143.0
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "a3f2da38a1769045fea68c9979bc2d8e95cb6a8d86bff93945906b1e6fd6defe",
+			"target": [
+				-58.0278053283691,
+				51.9343719482422,
+				-128.047607421875
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "c2b38b3956acd70c7b62902eb1937e8ffa63dbf93c3072ccc98313cd23f38385"
+		},
+		{
+			"anchor": [
+				-58.0,
+				52.0,
+				-128.0
+			],
+			"camera_basis": [
+				-0.866048634052277,
+				0.0,
+				0.499959766864777,
+				0.229144185781479,
+				0.88878458738327,
+				0.396931976079941,
+				-0.44435653090477,
+				0.458325237035751,
+				-0.769730687141418
+			],
+			"centre": [
+				-58.0278053283691,
+				51.9343719482422,
+				-128.047607421875
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-61.0,
+				55.0,
+				-133.196151733398
+			],
+			"file": "asset-use6.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-use6",
+			"ortho_size": 0.0,
+			"sha256": "5fb909125062316822c2c506f3eff62a960a2f58160215dc0396c0ffa7a1edc3",
+			"target": [
+				-58.0278053283691,
+				51.9343719482422,
+				-128.047607421875
+			],
+			"thumb": "asset-use6.thumb.png",
+			"thumb_sha256": "57498c9bb7f3c714db3f4720cb290bd70faf24b6475c5ee7599abd4cc91499b3"
+		}
+	],
+	"freeze_specs": [],
+	"frozen_nodes": {},
+	"glb": [
+		"res://assets/models/world_one/enemy_splitter_piece.glb@-58,52,-128@30"
+	],
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "lit",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1b999c649e26a9ca92cb46eb3add292095aecac223b0292e92f310917e8f5c46",
+		"src/presentation/bake_look.gd": "2f0b3dc02eba5f292e777dbae5f0b2fb28217f3ba903af61eeefd8f77098ae61",
+		"src/presentation/hero_assets.gd": "e5c36c0dfd97ff1d7cc7ba23ac7909eb5004fe4aad24b64daeff4a441086030f",
+		"src/presentation/material_slots.gd": "ad9fc714dc1e2f06162bd4502a4f1d2458dea20ca7e9dbc1b68464c9ff58dba1",
+		"src/presentation/recipe_props.gd": "ee90a7b1a142433c627605acc95467ca900ec2e0a7c83dc90fc8180ebfaf47e1",
+		"src/presentation/spillway_scenery.gd": "ac0961a0f3b43fc6eef649b6a16902fa248281e155f806bf73f4121097028890",
+		"src/world/terrain.gd": "5de2b7d620cff2e91c2a65b3db9afa9892529d21a89b6f21eefd9b42c8393bea",
+		"tools/asset_capture.gd": "ec312381277cf6febaadf7daf1ca5d9f84eeacbd1c3ffffef7d4a8e4ce6cdd67",
+		"tools/capture_cameras.gd": "6c185471294f2c03f75b706504a923926b1f1ef3f04947f1beb2213dbc56fe73"
+	},
+	"spawn": [],
+	"subject": "/root/Game/Glb_enemy_splitter_piece",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}

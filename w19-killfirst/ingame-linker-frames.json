@@ -1,0 +1,175 @@
+{
+	"aabb": [],
+	"adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+	"anchor": "/root/Game/Spawn_linker",
+	"anchor_offset": [
+		0.0,
+		0.0,
+		0.0
+	],
+	"call": [],
+	"class": 0,
+	"clay": [],
+	"frames": [
+		{
+			"anchor": [
+				-58.0,
+				30.559196472168,
+				-128.0
+			],
+			"camera_basis": [
+				-0.998408854007721,
+				0.0,
+				0.0563898347318172,
+				0.00367963081225753,
+				0.997868776321411,
+				0.0651496201753616,
+				-0.0562696531414986,
+				0.0652534514665604,
+				-0.99628096818924
+			],
+			"centre": [
+				-56.2624130249023,
+				31.5441970825195,
+				-127.235252380371
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-58.0,
+				33.559196472168,
+				-158.0
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "b439c5c2b8c2db7eff98c871bbeacfe3ba29ed2f7d2841f93d82ae57ff4f1eef",
+			"target": [
+				-56.2624130249023,
+				31.5441970825195,
+				-127.235252380371
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "6a19d7deede903dfac4c81c7a8050922112c78854731f1148bb543bc60ab5031"
+		},
+		{
+			"anchor": [
+				-58.0,
+				30.559196472168,
+				-128.0
+			],
+			"camera_basis": [
+				-0.0270489100366831,
+				0.0,
+				-0.999634146690369,
+				-0.0710636749863625,
+				0.997469961643219,
+				0.00192289834376425,
+				0.997104942798615,
+				0.0710896775126457,
+				-0.02698047272861
+			],
+			"centre": [
+				-56.2624130249023,
+				31.5441970825195,
+				-127.235252380371
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-28.0,
+				33.559196472168,
+				-128.0
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "a5a736411ae50d534bed23af4b8ff1afd096b8e9914636af3c34e2bf7db169ef",
+			"target": [
+				-56.2624130249023,
+				31.5441970825195,
+				-127.235252380371
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "812ea1936b16c571dbe9921b065badf8840f04bf70f2d720a470bb2cf2be5be7"
+		},
+		{
+			"anchor": [
+				-58.0,
+				30.559196472168,
+				-128.0
+			],
+			"camera_basis": [
+				-0.968559205532074,
+				0.0,
+				0.248783200979233,
+				0.0689619481563568,
+				0.960813164710999,
+				0.26848167181015,
+				-0.239034175872803,
+				0.277196943759918,
+				-0.93060439825058
+			],
+			"centre": [
+				-56.2624130249023,
+				31.5441970825195,
+				-127.235252380371
+			],
+			"exposure": 1.10000002384186,
+			"eye": [
+				-58.0,
+				33.559196472168,
+				-134.0
+			],
+			"file": "asset-use6.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "asset-use6",
+			"ortho_size": 0.0,
+			"sha256": "3d74e2ee60b77e2a894f3cb1b5b86110cb8ef88c5cc0380d8d8a1aba30025a05",
+			"target": [
+				-56.2624130249023,
+				31.5441970825195,
+				-127.235252380371
+			],
+			"thumb": "asset-use6.thumb.png",
+			"thumb_sha256": "a051ccd245028cd0fb911c7edb854f9eac4019eea95a376a48d88905bb51c7fb"
+		}
+	],
+	"freeze_specs": [],
+	"frozen_nodes": {},
+	"glb": [],
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "lit",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1b999c649e26a9ca92cb46eb3add292095aecac223b0292e92f310917e8f5c46",
+		"src/presentation/bake_look.gd": "2f0b3dc02eba5f292e777dbae5f0b2fb28217f3ba903af61eeefd8f77098ae61",
+		"src/presentation/hero_assets.gd": "e5c36c0dfd97ff1d7cc7ba23ac7909eb5004fe4aad24b64daeff4a441086030f",
+		"src/presentation/material_slots.gd": "ad9fc714dc1e2f06162bd4502a4f1d2458dea20ca7e9dbc1b68464c9ff58dba1",
+		"src/presentation/recipe_props.gd": "ee90a7b1a142433c627605acc95467ca900ec2e0a7c83dc90fc8180ebfaf47e1",
+		"src/presentation/spillway_scenery.gd": "ac0961a0f3b43fc6eef649b6a16902fa248281e155f806bf73f4121097028890",
+		"src/world/terrain.gd": "5de2b7d620cff2e91c2a65b3db9afa9892529d21a89b6f21eefd9b42c8393bea",
+		"tools/asset_capture.gd": "ec312381277cf6febaadf7daf1ca5d9f84eeacbd1c3ffffef7d4a8e4ce6cdd67",
+		"tools/capture_cameras.gd": "6c185471294f2c03f75b706504a923926b1f1ef3f04947f1beb2213dbc56fe73"
+	},
+	"spawn": [
+		"linker@-58,52,-128"
+	],
+	"subject": "/root/Game/Spawn_linker",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}
