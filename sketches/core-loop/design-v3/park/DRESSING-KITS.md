@@ -18,6 +18,10 @@ This page is the lane's contract. Writers build to it, and reviewers judge again
 | `tests/park_props_test.gd` | Clearance, schema, budgets, ranges, shadows and determinism, with planted controls |
 | `src/presentation/presentation.gd` (edit, a few lines) | Installs ParkProps beside SetDressing |
 | `assets/asset_budgets.json` (edit) | Two classes: `dress_hero`, `dress_prop` |
+| `src/world/activities.gd` (edit, one line) | `_exit_tree` calls `ParkProps.release_shared()` beside the other shared caches |
+| `scripts/sketch-fast.mjs` (edit) | The fast lane's "park data" path rule lists `tests/park_props_test.gd` |
+| `sketches/core-loop/.gitignore` (edit) | Re-includes `assets/models/park/props/*/*.glb.import` |
+| `assets/registry.json` (fold) | The Gate lane's fold of `registry.d/park_props_<park>.json`, not hand-edited |
 
 Never edited: park JSON, bakes, graph, `lines.json`, landforms and landmarks (`landmarks.py`, World), anchor fields (World), the crown and pit greybox rows (Content), enemies, scrap, gates and telegraphs. Props carry no collision, so movement, schedules and run hashes cannot move. `run_tier_test` and the park ride tests prove that on each park PR.
 
@@ -54,7 +58,15 @@ Each park has a kit of at least 12 kinds, and each kind has 2 or 3 variants (dif
   - Why: the first dam placement passed the old rules (15 to 30 m from a line, 20 m lanes for every prop, a keepout on every footprint including canyon floors) with 619 instances, yet the before and after stills from the chase camera were identical: legal dressing sat outside the frame. Andrew's rule is to keep ride lines, landing spots, telegraphs and enemy silhouettes clear, which means the line itself and the landing, not a 40 m corridor. The tiers keep the line clear and let low dressing sit near it.
   - At least 25 m from enemy `home_rows` and camps, and inside the play rect.
   - On ground no steeper than 25 degrees, with the foot seated on the baked ground.
-- **Vignettes, not scatter.** Props stand in clusters that each tell one moment: a camp corner, a collapsed workshop, an overgrown cart, a laundry line. A sparse litter layer (small debris and plants, 25 to 60 m off the line) carries the eye between vignettes. Repeated small props use MultiMesh.
+- **Explicit surfaces (`ground_rows`).** A vignette file may carry a top-level `"ground_rows": ["<park row id>", ...]`. Some parks have no continuous ground (islands: the ground callable is one plane under every island, so seat and slope cannot stop a prop floating between islands, and the islands are `sky_island` and `terrace` rows with `ride_fact`s, which are ride features). When the list is present it turns the rows into the placement surfaces:
+  - A listed row stops being a footprint keepout for props.
+  - Every instance, litter included, must stand inside a listed row's footprint, its own radius plus `GROUND_ROW_INSET_M` (8 m) in from the edge, so nothing sits on a drop lip or a bowl edge. The rule is `ground_row`.
+  - Every other rule still applies: line tiers, kicker capsules and run-outs, homes and camps, sites, slope and seat.
+  - A row with a `home`, or the site of a `home_rows` entry, can never be listed (the 25 m home rule covers its whole footprint anyway), and an unknown id is a file error. A file without `ground_rows` is unaffected.
+  - Long `sky_island` stamps (past `ParkSites.STAMP_KEEP_M`, 1,600 m on islands) are left out of ParkSites' footprint cells, because set dressing treats long stamps as the landform. `Context` keeps them out for props itself (`Context.stamped`), so an unlisted sky island blocks props like any other ride feature.
+  - `tools/park_props_plan.gd` honours the list in `--check`, and the spot finder reads it from the file (or `--ground-rows=a,b,c`).
+- **Perch anchors.** A variant 6 m tall or taller carries `perch: [x, y, z]` in the manifest (metres, the prop's local frame, origin at the foot centre, on its top surface; `kit.py` takes the recipe's `p.perch(point)` or the top-centre of the highest face), the contract in `PERCH-ANCHOR.md`. `park_props_test` checks every manifest's perch: finite, above the foot, inside the footprint radius, at least 6 m up.
+- **Vignettes, not scatter.** Props stand in clusters that each tell one moment: a camp corner, a collapsed workshop, an overgrown cart, a laundry line. A sparse litter layer (small debris and plants, off the line inside the tier bands: `band_m` near at least 6 m, far at most 64 m) carries the eye between vignettes. Repeated small props use MultiMesh.
 
 ## Frame cost
 

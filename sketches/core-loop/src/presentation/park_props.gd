@@ -11,7 +11,8 @@ extends Node3D
 #   {"schema", "map": "park_dam", "kit": "res://.../manifest.json",
 #    "templates": {"<tid>": {"story", "props": [{"kind", "v": "a" or "*", "at": [dx, dz], "yaw_deg", "scale", "tilt_deg"}]}},
 #    "spots": [{"id", "template", "at": [x, z], "yaw_deg", "near"}],
-#    "litter": {"kinds": [{"kind", "weight"}], "spacing_m", "band_m": [near, far], "seed"}}
+#    "litter": {"kinds": [{"kind", "weight"}], "spacing_m", "band_m": [near, far], "seed"},
+#    "ground_rows": ["<park row id>", ...]}   (optional: the explicit surfaces, see check_one's ground_row rule)
 # Kit manifest (scrapkeep-park-props-kit/1): kinds -> {class, tags, story, variants -> {lod [3 GLBs], tris [3], radius, height}}.
 
 const ParkSites := preload("res://src/presentation/park_sites.gd")
@@ -57,6 +58,15 @@ const KICK_RUNOUT_M := 40.0
 const LITTER_CHUNK_M := 160.0
 const LITTER_GAP_RATIO := 0.5
 const CAMP_ACTIVITIES := ["enemy_camp"]
+# Explicit surfaces: with a file "ground_rows" list, every instance stands inside a listed row's footprint, inset at least this far
+# (beyond its own radius) from the edge, so nothing sits on a drop lip or a bowl edge. Listed rows stop being footprint keepouts.
+const GROUND_ROW_INSET_M := 8.0
+# Elements whose long stamps (past ParkSites.STAMP_KEEP_M, which treats them as the landform) still keep props out: a sky island
+# is a ride surface, and ParkSites leaves its 1,600 m stamps out of its footprint cells.
+const STAMP_BLOCKING := ["sky_island"]
+# A litter band must sit inside the tier bands: LOW's 6 m line clearance, and the line reach past which distance is unknown.
+const LITTER_BAND_MIN_M := 6.0
+const LITTER_BAND_MAX_M := 64.0
 
 # Visibility ranges by class, LOD0 to LOD2: [begin, end] metres (the contract's "Frame cost").
 const HERO_RANGES := [[0.0, 70.0], [70.0, 180.0], [180.0, 450.0]]
@@ -70,12 +80,14 @@ const BUILD_SLICE_USEC := 3000
 static var file_overrides := {}
 static var _meshes := {}
 static var _cache_owner := ""
+static var _material: StandardMaterial3D
 
 var ctx
 var map_id := ""
 var instances: Array = []
 var views: Array[GeometryInstance3D] = []
-# The main-thread time of the last stage entry's build, for stage_entry_budget_test.
+# The main-thread time of the last stage entry's build call (the worker's expansion and the node slices are not in it).
+# stage_entry_budget_test does not read it: its modules table lists activities and set_dressing only.
 var last_entry_usec := 0
 var _built_for := []
 var _pending := false
@@ -101,6 +113,9 @@ class Context:
 	var homes: Array = []
 	var camps: Array[Vector2] = []
 	var spawn := Vector2.ZERO
+	# Row id -> row of the file's explicit surfaces (empty: no restriction), and the long stamped rows ParkSites leaves unbucketed.
+	var ground_rows := {}
+	var stamped: Array = []
 	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
 	var unresolved: Array = []
 	var _cells := {}
@@ -129,9 +144,21 @@ class Context:
 		if what != "":
 			return what
 		for row: Dictionary in sites._cells.get(ParkSites._cell(p), []):
-			if blocks_props(row) and ParkMap.footprint_contains(row, p, margin):
+			if blocks_props(row) and not ground_rows.has(row.get("id")) and ParkMap.footprint_contains(row, p, margin):
+				return "built row " + String(row.get("id", "?"))
+		for row: Dictionary in stamped:
+			if not ground_rows.has(row.get("id")) and ParkMap.footprint_contains(row, p, margin):
 				return "built row " + String(row.get("id", "?"))
 		return ""
+
+	# Takes the explicit surfaces from a file's "ground_rows" (ids of park rows); unknown ids are file_errors' to report.
+	func use_ground_rows(ids) -> void:
+		ground_rows = {}
+		if not ids is Array:
+			return
+		for row: Dictionary in map.park.get("park_rows", []):
+			if (ids as Array).has(row.get("id")):
+				ground_rows[row["id"]] = row
 
 	func add_leg(a: Vector2, b: Vector2) -> void:
 		var low := _cell(Vector2(minf(a.x, b.x), minf(a.y, b.y)) - Vector2.ONE * LINE_REACH_M)
@@ -230,6 +257,10 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 			c.homes.append({"id": String(home.get("id", site)), "row": found})
 		else:
 			c.unresolved.append("home_rows site %s (home %s) names no park or activity row" % [site, String(home.get("id", site))])
+	for row: Dictionary in park_map.park.get("park_rows", []):
+		if String(row.get("element", "")) in STAMP_BLOCKING and not String(row.get("stamp", "")).is_empty() \
+				and maxf(float(row["size"][0]), float(row["size"][2])) > ParkSites.STAMP_KEEP_M and Context.blocks_props(row):
+			c.stamped.append(row)
 	for row: Dictionary in park_map.park.get("activity_rows", []):
 		if String(row.get("activity", "")) in CAMP_ACTIVITIES:
 			c.camps.append(_pair(row["at"]))
@@ -277,7 +308,8 @@ static func _place(park: Dictionary, id: String) -> Vector2:
 # --- Schema ---------------------------------------------------------------------------------------
 
 # Rows of text for a vignette file that breaks its schema or names a kind or variant the kit lacks.
-static func file_errors(file: Dictionary, kit: Dictionary) -> Array:
+# park_map, when given, lets ground_rows be checked against the park's rows.
+static func file_errors(file: Dictionary, kit: Dictionary, park_map = null) -> Array:
 	var errors := []
 	if file.get("schema") != FILE_SCHEMA:
 		errors.append("schema is not " + FILE_SCHEMA)
@@ -333,6 +365,8 @@ static func file_errors(file: Dictionary, kit: Dictionary) -> Array:
 		var band = litter.get("band_m")
 		if not band is Array or (band as Array).size() != 2 or float(band[0]) < 0.0 or float(band[1]) < float(band[0]):
 			errors.append("litter band_m is not [near, far]")
+		elif float(band[0]) < LITTER_BAND_MIN_M or float(band[1]) > LITTER_BAND_MAX_M:
+			errors.append("litter band_m [%s, %s] is outside the tier bands: near at least %.0f, far at most %.0f" % [str(band[0]), str(band[1]), LITTER_BAND_MIN_M, LITTER_BAND_MAX_M])
 		if not litter.get("seed") is float and not litter.get("seed") is int:
 			errors.append("litter seed is not a number")
 		if not litter.get("kinds") is Array or (litter.get("kinds") as Array).is_empty():
@@ -344,6 +378,34 @@ static func file_errors(file: Dictionary, kit: Dictionary) -> Array:
 					errors.append("litter kind weight is not positive")
 	elif file.has("litter"):
 		errors.append("litter is not an object")
+	if file.has("ground_rows"):
+		errors.append_array(_ground_row_errors(file["ground_rows"], park_map))
+	return errors
+
+
+static func _ground_row_errors(ids, park_map) -> Array:
+	if not ids is Array or (ids as Array).is_empty():
+		return ["ground_rows is not a non-empty list of park row ids"]
+	var errors := []
+	var rows := {}
+	if park_map != null:
+		for row: Dictionary in park_map.park.get("park_rows", []):
+			rows[row["id"]] = row
+	var home_sites := {}
+	if park_map != null:
+		for home: Dictionary in park_map.park.get("home_rows", []):
+			home_sites[String(home.get("site", ""))] = String(home.get("id", ""))
+	for id in ids:
+		if not id is String:
+			errors.append("ground_rows entry %s is not a row id" % str(id))
+		elif park_map != null and not rows.has(id):
+			errors.append("ground_rows names %s, which is no park row" % id)
+		elif park_map != null:
+			var home = rows[id].get("home")
+			if home is String and not (home as String).is_empty():
+				errors.append("ground_rows lists %s, a row with a home (%s); a home row can never be a placement surface" % [id, home])
+			elif home_sites.has(id):
+				errors.append("ground_rows lists %s, the site of home %s; a home row can never be a placement surface" % [id, home_sites[id]])
 	return errors
 
 
@@ -401,6 +463,7 @@ static func expand(file: Dictionary, kit: Dictionary, park_map, ground: Callable
 	if c == null:
 		c = context(park_map, ground)
 	var out := []
+	c.use_ground_rows(file.get("ground_rows"))
 	var id := String(file.get("map", ""))
 	var templates: Dictionary = file.get("templates", {})
 	var spots: Array = file.get("spots", [])
@@ -535,7 +598,7 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 # --- Validate -------------------------------------------------------------------------------------
 
 # Violations {vignette, kind, pos, rule, detail} of the placement rules: line_clear, route_lane, keepout, home_clear,
-# play_rect, slope, seat. Empty means every instance is placeable.
+# play_rect, ground_row (only with a file ground_rows list), slope, seat. Empty means every instance is placeable.
 static func validate(list: Array, park_map, ground: Callable, stage := -1, c: Context = null) -> Array:
 	if c == null:
 		c = context(park_map, ground, stage)
@@ -552,7 +615,7 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	var r: float = inst["radius"]
 	var height: float = inst["height"]
 	var hero: bool = inst["class"] == HERO
-	var tall: bool = hero or height > TALL_HEIGHT_M or "tall" in inst["tags"]
+	var tall: bool = tier_of(inst) == "tall"
 	var fail := func(rule: String, detail: String) -> void:
 		out.append({"vignette": inst["vignette"], "kind": inst["kind"], "pos": pos, "rule": rule, "detail": detail})
 	var edge := c.line_distance(p) - r
@@ -580,6 +643,15 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	for camp in c.camps:
 		if camp.distance_to(p) < HOME_CLEAR_M + r:
 			fail.call("home_clear", "within %.0f m of an enemy camp" % HOME_CLEAR_M)
+	if not c.ground_rows.is_empty():
+		var inside := false
+		for row: Dictionary in c.ground_rows.values():
+			var half := ParkMap.footprint_half_extents(row) - Vector2.ONE * (GROUND_ROW_INSET_M + r)
+			if half.x >= 0.0 and half.y >= 0.0 and ParkMap.footprint_contains(row, p, 0.0, Vector2.INF, half):
+				inside = true
+				break
+		if not inside:
+			fail.call("ground_row", "outside every listed ground row, or within %.0f m of its edge" % GROUND_ROW_INSET_M)
 	var slope := float(inst["slope_deg"])
 	if slope > SLOPE_MAX_DEG:
 		fail.call("slope", "%.1f degrees under the footprint, want at most %.0f" % [slope, SLOPE_MAX_DEG])
@@ -635,6 +707,8 @@ static func build_job(parent: Node3D, job: Dictionary, kit: Dictionary, low: boo
 	parent.add_child(holder)
 	var groups := {}
 	var keys := []
+	# The far LOD of a vignette's props is one merged mesh, not one batch per (mesh, LOD): see _merged_far.
+	var far_members := []
 	for inst: Dictionary in job["members"]:
 		if inst["class"] == HERO:
 			_hero(holder, inst, kit)
@@ -653,8 +727,10 @@ static func build_job(parent: Node3D, job: Dictionary, kit: Dictionary, low: boo
 		if job["litter"]:
 			_batch(holder, "Litter_" + String(key), _mesh(lods[1]), groups[key], first, 1, LITTER_RANGE, PROP_MARGIN_M, true)
 			continue
-		for lod in 3:
+		for lod in 2:
 			_batch(holder, "%s_L%d" % [key, lod], _mesh(lods[lod]), groups[key], first, lod, _range(PROP_RANGES[lod], low, lod), PROP_MARGIN_M, false)
+		far_members.append_array(groups[key])
+	_merged_far(holder, far_members, kit, _range(PROP_RANGES[2], low, 2))
 	return holder
 
 
@@ -677,7 +753,7 @@ static func prepare(id: String, park_map, ground: Callable, stage: int, low: boo
 	if file.is_empty():
 		return {}
 	var kit := load_json(String(file.get("kit", "")))
-	var errors := kit_errors(kit) + file_errors(file, kit)
+	var errors := kit_errors(kit) + file_errors(file, kit, park_map)
 	if not errors.is_empty():
 		return {"errors": errors}
 	var list := expand(file, kit, park_map, ground, context(park_map, ground, stage))
@@ -740,6 +816,68 @@ static func _batch(holder: Node3D, label: String, mesh: Mesh, members: Array, fi
 	holder.add_child(view)
 
 
+# A vignette's props at LOD2 as ONE mesh (one draw): the LOD2 meshes are 40 to 450 triangles, so the vignette's few dozen of them
+# bake into a single surface of a few thousand, where a batch per (mesh, LOD) cost a draw each (a dozen per vignette, 100 at the
+# dam's peak pose). The range is the props' LOD2 range, measured to the merged bounds centre like every other batch here. The
+# merged view keeps its members' positions and kinds in meta, so the audit still counts each prop in view.
+static func _merged_far(holder: Node3D, members: Array, kit: Dictionary, begin_end: Array) -> void:
+	if members.is_empty():
+		return
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colours := PackedColorArray()
+	var indices := PackedInt32Array()
+	var positions := PackedVector3Array()
+	var kinds := PackedStringArray()
+	var centre := Vector3.ZERO
+	for inst: Dictionary in members:
+		centre += (inst["pos"] as Vector3) / members.size()
+	for inst: Dictionary in members:
+		var mesh := _mesh(_lod_paths(kit, inst)[2])
+		if mesh == null or mesh.get_surface_count() == 0:
+			continue
+		var arrays := mesh.surface_get_arrays(0)
+		var src_v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var src_n = arrays[Mesh.ARRAY_NORMAL]
+		var src_c = arrays[Mesh.ARRAY_COLOR]
+		var src_i = arrays[Mesh.ARRAY_INDEX]
+		if src_v.is_empty() or src_i == null:
+			continue
+		var tr := _transform(inst)
+		var basis := (inst["basis"] as Basis)
+		var base := vertices.size()
+		for k in src_v.size():
+			vertices.append(tr * src_v[k] - centre)
+			normals.append((basis * (src_n[k] if src_n != null else Vector3.UP)).normalized())
+			colours.append(src_c[k] if src_c != null else Color.WHITE)
+		for index in (src_i as PackedInt32Array):
+			indices.append(base + index)
+		positions.append(inst["pos"])
+		kinds.append(String(inst["kind"]))
+	if vertices.is_empty():
+		return
+	var built := []
+	built.resize(Mesh.ARRAY_MAX)
+	built[Mesh.ARRAY_VERTEX] = vertices
+	built[Mesh.ARRAY_NORMAL] = normals
+	built[Mesh.ARRAY_COLOR] = colours
+	built[Mesh.ARRAY_INDEX] = indices
+	var merged := ArrayMesh.new()
+	merged.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built)
+	merged.surface_set_material(0, _vertex_material())
+	var view := MeshInstance3D.new()
+	view.name = "Far_L2"
+	view.mesh = merged
+	view.position = centre
+	_ranges(view, begin_end, PROP_MARGIN_M)
+	_tag(view, members[0], 2, false)
+	view.set_meta("dress_tier", "merged")
+	view.set_meta("dress_count", positions.size())
+	view.set_meta("dress_member_pos", positions)
+	view.set_meta("dress_member_kinds", kinds)
+	holder.add_child(view)
+
+
 static func _ranges(view: GeometryInstance3D, begin_end: Array, margin: float) -> void:
 	view.visibility_range_begin = begin_end[0]
 	view.visibility_range_end = begin_end[1]
@@ -754,6 +892,15 @@ static func _tag(view: GeometryInstance3D, inst: Dictionary, lod: int, shadow: b
 	view.set_meta("dress_kind", inst["kind"])
 	view.set_meta("dress_class", inst["class"])
 	view.set_meta("dress_lod", lod)
+	view.set_meta("dress_tier", tier_of(inst))
+
+
+# The height tier of an instance, as the line-clearance rule reads it: "tall", "mid" or "low".
+static func tier_of(inst: Dictionary) -> String:
+	var height := float(inst["height"])
+	if inst["class"] == HERO or height > TALL_HEIGHT_M or "tall" in inst["tags"]:
+		return "tall"
+	return "mid" if height > LOW_HEIGHT_M else "low"
 
 
 static func _transform(inst: Dictionary) -> Transform3D:
@@ -773,15 +920,53 @@ static func _mesh(path: String) -> Mesh:
 			var found := scene.find_children("*", "MeshInstance3D", true, false)
 			view = found[0] if not found.is_empty() else null
 		if view != null:
-			mesh = view.mesh
+			mesh = vertex_coloured(view.mesh)
 		scene.free()
 	_meshes[path] = mesh
 	return mesh
 
 
+# The kit GLBs carry linear COLOR_0 and no texture, but Godot imports them with an albedo-white material that ignores it, so every
+# prop would render flat white. A copy of the mesh (the imported resource stays as it is) with one vertex-colour material per
+# surface: vertex_color_use_as_albedo on, linear data, roughness 0.8, metallic 0, no emission.
+static func vertex_coloured(source: Mesh) -> Mesh:
+	if source == null:
+		return null
+	var mesh: Mesh = source.duplicate()
+	var material := _vertex_material()
+	for surface in mesh.get_surface_count():
+		mesh.surface_set_material(surface, material)
+	return mesh
+
+
+static func _vertex_material() -> StandardMaterial3D:
+	if _material == null:
+		_material = StandardMaterial3D.new()
+		_material.vertex_color_use_as_albedo = true
+		_material.vertex_color_is_srgb = false
+		_material.roughness = 0.8
+		_material.metallic = 0.0
+	return _material
+
+
+# Rows of text for a mesh whose surfaces would not show their vertex colours: no ARRAY_COLOR, or a material that ignores it.
+static func colour_errors(mesh: Mesh, label := "mesh") -> Array:
+	var errors := []
+	if mesh == null or mesh.get_surface_count() == 0:
+		return [label + " has no surface"]
+	for surface in mesh.get_surface_count():
+		if not mesh.surface_get_format(surface) & Mesh.ARRAY_FORMAT_COLOR:
+			errors.append("%s surface %d has no ARRAY_COLOR" % [label, surface])
+		var material := mesh.surface_get_material(surface)
+		if not material is BaseMaterial3D or not (material as BaseMaterial3D).vertex_color_use_as_albedo:
+			errors.append("%s surface %d material does not use vertex colour as albedo" % [label, surface])
+	return errors
+
+
 # Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).
 static func release_shared() -> void:
 	_meshes.clear()
+	_material = null
 	_cache_owner = ""
 
 
