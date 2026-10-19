@@ -13,6 +13,9 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 # four icons in their event colours (the last is the next world), then the controls
 # diagram Tab's first page draws, with no pilot chosen yet. Nothing here is written twice: the keys and words are
 # FieldNotes.CONTROLS, the colours are event_kinds rows. Back presses H, as H opened it.
+# The page button walks the controls and then the picture pages (MechanicsDiagram.PAGES):
+# breach, lift and SPIL-9's modules; wall grip, actives and jam fields; relay stakes, the
+# radio and SPIL-9's halo.
 
 const GOAL := [
 	{"icon": "res_heft", "kind": "heft_class_changed", "words": "Grow"},
@@ -25,7 +28,10 @@ var back: Button
 var diagram
 var pictures := {}
 var page_button: Button
+# 0 is the controls diagram; 1 onward are MechanicsDiagram.PAGES rows.
+var page := 0
 var _mechanics: HBoxContainer
+var _rows: Array[HBoxContainer] = []
 
 
 func _init() -> void:
@@ -37,9 +43,12 @@ func _init() -> void:
 	diagram = ControlsDiagram.new()
 	diagram.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(diagram)
-	_mechanics = _mechanics_row()
-	_mechanics.visible = false
-	add_child(_mechanics)
+	for ids in MechanicsDiagram.PAGES:
+		var row := _mechanics_row(ids)
+		row.visible = false
+		_rows.append(row)
+		add_child(row)
+	_mechanics = _rows[0]
 	var actions := _hbox(18)
 	page_button = ChoiceButton.new("pictures", "", "Pictures")
 	page_button.pressed.connect(toggle_pictures)
@@ -51,27 +60,37 @@ func _init() -> void:
 	visibility_changed.connect(_reset_page)
 
 
+# Controls, then each picture page, then back to controls.
 func toggle_pictures() -> void:
-	_mechanics.visible = not _mechanics.visible
-	diagram.visible = not _mechanics.visible
-	page_button.text = "Controls" if _mechanics.visible else "Pictures"
+	show_page((page + 1) % (_rows.size() + 1))
+
+
+func show_page(index: int) -> void:
+	page = index
+	diagram.visible = page == 0
+	for i in _rows.size():
+		_rows[i].visible = page == i + 1
+	_mechanics = _rows[maxi(page - 1, 0)]
+	page_button.text = "Pictures" if page == 0 else ("More" if page < _rows.size() else "Controls")
+
+
+func pictures_showing() -> bool:
+	return page > 0
 
 
 func _reset_page() -> void:
 	if not visible:
-		_mechanics.visible = false
-		diagram.visible = true
-		page_button.text = "Pictures"
+		show_page(0)
 
 
 static func key_rows() -> Array:
 	return FieldNotes.CONTROLS.filter(func(row): return row.has("short") and row.has("caps"))
 
 
-func _mechanics_row() -> HBoxContainer:
+func _mechanics_row(ids: Array) -> HBoxContainer:
 	var row := _hbox(18)
-	row.name = "MechanicsPictures"
-	for id in ["breach", "lift", "companion"]:
+	row.name = "MechanicsPictures%d" % (_rows.size() + 1)
+	for id in ids:
 		var card := VBoxContainer.new()
 		card.add_theme_constant_override("separation", 8)
 		card.mouse_filter = Control.MOUSE_FILTER_IGNORE

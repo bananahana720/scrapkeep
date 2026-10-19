@@ -23,7 +23,12 @@ func _run() -> void:
 	_t.check("Help stays open after Pictures", game.screens.help_open())
 	Push.pad(root, JOY_BUTTON_A)
 	await process_frame
-	_t.check("gamepad A returns to Controls", help.diagram.visible and not help._mechanics.visible)
+	_t.check("gamepad A turns to the next pictures", help.page == 2 and not help.diagram.visible)
+	Push.pad(root, JOY_BUTTON_A)
+	await process_frame
+	Push.pad(root, JOY_BUTTON_A)
+	await process_frame
+	_t.check("gamepad A returns to Controls", help.diagram.visible and not help.pictures_showing())
 	help.back.grab_focus()
 	Push.pad(root, JOY_BUTTON_A)
 	await process_frame

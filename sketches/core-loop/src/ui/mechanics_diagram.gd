@@ -5,12 +5,22 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Bindings := preload("res://src/core/bindings.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 
 const CAPTIONS := {
 	"breach": "Breach · Slam the Dig's cracked plates.",
 	"lift": "Lift · Glide through Highdraft thermals.",
 	"companion": "SPIL-9 · Mix two module families.",
+	"grip": "Grip · At top speed, walls count as ground.",
+	"cast": "Actives · F winds up, then fires.",
+	"jam": "Jam field · A pulse cancels the wind-up.",
+	"stake": "Relay stake · Hold E to raise the bet.",
+	"radio": "Radio · Change the pilot's station.",
+	"halo": "SPIL-9 · Full halo: your next ram calls it.",
 }
+# The help page's picture pages, in the order its page button walks them.
+const PAGES := [["breach", "lift", "companion"], ["grip", "cast", "jam"], ["stake", "radio", "halo"]]
+const RADIO_ACTIONS := ["cl_radio_prev", "cl_radio_next", "cl_radio_skip", "cl_radio_pin"]
 const PICTURE_SIZE := Vector2(410.0, 158.0)
 
 var mechanic := ""
@@ -33,6 +43,18 @@ func _draw() -> void:
 			_lift()
 		"companion":
 			_companion()
+		"grip":
+			_grip()
+		"cast":
+			_cast()
+		"jam":
+			_jam()
+		"stake":
+			_stake()
+		"radio":
+			_radio()
+		"halo":
+			_halo()
 	draw_set_transform(Vector2.ZERO)
 
 
@@ -46,7 +68,31 @@ func drawn_words() -> PackedStringArray:
 			return words
 		"companion":
 			return PackedStringArray(["2 sockets", "Primer", "Ram", "Escape"])
+		"grip":
+			return PackedStringArray(["top speed"])
+		"cast":
+			var words := Keycap.words(Bindings.glyph("active"))
+			words.append("wind-up")
+			return words
+		"jam":
+			return PackedStringArray(["refund"])
+		"stake":
+			var words := Keycap.words(Bindings.glyph("interact"))
+			words.append_array(["x1", "x2", "x3"])
+			return words
+		"radio":
+			var words := PackedStringArray()
+			for action in RADIO_ACTIONS:
+				words.append_array(Keycap.words(radio_key(action)))
+			return words
+		"halo":
+			return PackedStringArray(["Ram"])
 	return PackedStringArray()
+
+
+# The radio's keys from the live bindings: comma, period, slash and semicolon until rebound.
+static func radio_key(action: String) -> String:
+	return Glyphs.of_action(action, "key_" + OS.get_keycode_string(Bindings.EXTRA_ACTIONS[action]["keys"][0]).to_lower())
 
 
 func _breach() -> void:
@@ -110,6 +156,91 @@ func _companion() -> void:
 	draw_dashed_line(centers[1] + Vector2(0, -24), Vector2(227, 39), Color(Palette.ARC, 0.6), 2.0, 5.0, true)
 	for i in 3:
 		_words(["Primer", "Ram", "Escape"][i], centers[i] + Vector2(-27, 36), 15, Palette.SAND)
+
+
+func _grip() -> void:
+	# Floor into a wall: the fast ball keeps rolling up the face instead of bouncing off it.
+	_plate(Rect2(22, 124, 300, 14), Palette.VERDIGRIS)
+	_plate(Rect2(322, 18, 30, 120), Palette.SANDSTONE.darkened(0.3))
+	_ball(Vector2(110, 106), 17.0)
+	for i in 3:
+		draw_line(Vector2(48 - i * 6, 96 + i * 9), Vector2(80 - i * 6, 96 + i * 9), Color(Palette.SAND, 0.7), 2.0, true)
+	draw_arc(Vector2(264, 66), 46, PI * 0.5, PI * 0.02, 18, Palette.ARC, 3.0, true)
+	_arrow(Vector2(310, 72), Vector2(310, 40), Palette.ARC)
+	_ball(Vector2(304, 30), 12.0)
+	_words("top speed", Vector2(36, 40), 16, Palette.SAND)
+
+
+func _cast() -> void:
+	# Press F, a ring fills round the ball (the wind-up), then the shot leaves.
+	Keycap.draw(self, Vector2(52, 79), Bindings.glyph("active"), Palette.SAND, 26.0)
+	_arrow(Vector2(78, 79), Vector2(118, 79), Palette.SAND)
+	_ball(Vector2(172, 79), 20.0)
+	draw_arc(Vector2(172, 79), 31, -PI * 0.5, PI * 0.9, 24, Palette.ARC, 4.0, true)
+	draw_arc(Vector2(172, 79), 31, PI * 0.9, PI * 1.5, 12, Color(Palette.SAND, 0.3), 4.0, true)
+	_words("wind-up", Vector2(140, 136), 16, Palette.SAND)
+	_arrow(Vector2(212, 79), Vector2(320, 79), Palette.COPPER)
+	for i in 6:
+		var angle := TAU * i / 6.0
+		draw_line(Vector2(352, 79) + Vector2.from_angle(angle) * 10, Vector2(352, 79) + Vector2.from_angle(angle) * 26, Palette.COPPER, 3.0, true)
+
+
+func _jam() -> void:
+	# Inside the pulsing field a half-filled wind-up is struck through; the charge comes back.
+	draw_circle(Vector2(150, 79), 64, Color(Palette.ARC, 0.12))
+	draw_arc(Vector2(150, 79), 64, 0.0, TAU, 40, Color(Palette.ARC, 0.7), 2.0, true)
+	draw_arc(Vector2(150, 79), 48, 0.0, TAU, 32, Color(Palette.ARC, 0.4), 2.0, true)
+	_ball(Vector2(150, 79), 18.0)
+	draw_arc(Vector2(150, 79), 27, -PI * 0.5, PI * 0.3, 16, Palette.ARC, 4.0, true)
+	draw_line(Vector2(126, 103), Vector2(174, 55), Palette.COPPER, 4.0, true)
+	_arrow(Vector2(222, 79), Vector2(282, 79), Palette.SAND)
+	draw_arc(Vector2(318, 79), 22, -PI * 0.2, PI * 1.6, 18, Palette.SAND, 3.0, true)
+	_arrow(Vector2(318, 57) + Vector2(12, -2), Vector2(318, 57) + Vector2(18, 4), Palette.SAND)
+	_words("refund", Vector2(292, 128), 16, Palette.SAND)
+
+
+func _stake() -> void:
+	# The post with its E, three stake chips stacking up, and the ring on the ground ahead.
+	_plate(Rect2(22, 124, 366, 12), Palette.VERDIGRIS)
+	_plate(Rect2(60, 44, 18, 80), Palette.COPPER)
+	Keycap.draw(self, Vector2(69, 28), Bindings.glyph("interact"), Palette.SAND, 24.0)
+	for i in 3:
+		var at := Vector2(124 + i * 52, 104 - i * 14)
+		draw_rect(Rect2(at - Vector2(18, 10), Vector2(36, 20)), Palette.CHARCOAL)
+		draw_rect(Rect2(at - Vector2(18, 10), Vector2(36, 20)), Palette.AMBER, false, 2.0)
+		_words("x%d" % (i + 1), at + Vector2(-11, 6), 15, Palette.AMBER)
+	draw_arc(Vector2(330, 118), 44, PI * 1.08, PI * 1.92, 20, Palette.AMBER, 3.0, true)
+	_ball(Vector2(330, 102), 14.0)
+
+
+func _radio() -> void:
+	# The HUD knob and its four keys in dial order: back, next, skip, pin.
+	draw_circle(Vector2(96, 79), 40, Palette.CHARCOAL)
+	draw_arc(Vector2(96, 79), 40, 0.0, TAU, 32, Palette.COPPER, 3.0, true)
+	for i in 7:
+		var angle := PI * (0.8 + i * 0.233)
+		draw_line(Vector2(96, 79) + Vector2.from_angle(angle) * 44, Vector2(96, 79) + Vector2.from_angle(angle) * 52, Palette.SAND, 2.0, true)
+	draw_line(Vector2(96, 79), Vector2(96, 79) + Vector2.from_angle(PI * 1.4) * 32, Palette.ARC, 4.0, true)
+	var marks := ["<", ">", ">>", "*"]
+	for i in RADIO_ACTIONS.size():
+		var at := Vector2(196 + i * 56, 64)
+		Keycap.draw(self, at, radio_key(RADIO_ACTIONS[i]), Palette.SAND, 30.0)
+		_words(marks[i], at + Vector2(-6 - (marks[i].length() - 1) * 4, 46), 18, Palette.ARC)
+
+
+func _halo() -> void:
+	# SPIL-9's halo in segments, all lit; the next ram (the ball into a plate) calls the assist.
+	var spil := Vector2(92, 74)
+	for i in 12:
+		var start := TAU * i / 12.0 - PI * 0.5
+		draw_arc(spil, 36, start + 0.06, start + TAU / 12.0 - 0.06, 4, Palette.ARC, 6.0, true)
+	draw_circle(spil, 20, Palette.VERDIGRIS.lightened(0.2))
+	draw_circle(spil + Vector2(0, -3), 7, Palette.SAND)
+	_ball(Vector2(214, 96), 18.0)
+	_arrow(Vector2(236, 96), Vector2(300, 96), Palette.COPPER)
+	_plate(Rect2(306, 60, 40, 72), Palette.SANDSTONE.darkened(0.3))
+	draw_dashed_line(spil + Vector2(38, 4), Vector2(300, 84), Color(Palette.ARC, 0.6), 2.0, 6.0, true)
+	_words("Ram", Vector2(248, 132), 16, Palette.SAND)
 
 
 func _ball(at: Vector2, radius: float) -> void:

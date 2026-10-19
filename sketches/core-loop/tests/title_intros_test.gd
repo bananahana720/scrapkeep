@@ -94,6 +94,7 @@ func _picks() -> void:
 	_t.check("the Cannon waits for the ending", not TitleIntros.available(TitleIntros.facts_from(profile, everything)).has("cannon"))
 	profile.achievements.append("mind_quieted")
 	_t.eq("after the ending the Cannon is newest", _pick(profile, everything), "cannon")
+	_late_unlocks()
 	var locked := FakeProfile.new()
 	TitleIntros.mark_shown(locked, "sable")
 	_t.eq("with nothing flyable, Sable and Spillway still rotate", str(TitleIntros.available(TitleIntros.facts_from(locked, none))), str(["sable", "spillway"]))
@@ -231,3 +232,27 @@ func _colliders(node: Node) -> int:
 	for child in node.get_children():
 		count += _colliders(child)
 	return count
+
+
+# The rows the main walk never reaches: Tarn and Tally once flyable, the Highdraft once reached,
+# the Mind once its arena is entered (mark_met, as the title stage does on boss_arena_entered).
+func _late_unlocks() -> void:
+	var profile := FakeProfile.new()
+	var pilots: Array[String] = ["pylon_engineer", "runner_gunner", "demolitions_caster"]
+	var flyable := func(pilot: String) -> bool: return pilots.has(pilot)
+	for id in ["sable", "kest", "rivet", "spillway"]:
+		TitleIntros.mark_shown(profile, id)
+	pilots.append("tarn")
+	_t.eq("unlocking Tarn plays Tarn next", _pick(profile, flyable), "tarn")
+	TitleIntros.mark_shown(profile, "tarn")
+	pilots.append("tally")
+	_t.eq("unlocking Tally plays Tally next", _pick(profile, flyable), "tally")
+	TitleIntros.mark_shown(profile, "tally")
+	_t.check("no Highdraft before it is reached", not TitleIntros.available(TitleIntros.facts_from(profile, flyable)).has("highdraft"))
+	profile.achievements.append("highdraft_reached")
+	_t.eq("reaching the Highdraft unlocks its opening", _pick(profile, flyable), "highdraft")
+	TitleIntros.mark_shown(profile, "highdraft")
+	_t.check("no Mind before its arena", not TitleIntros.available(TitleIntros.facts_from(profile, flyable)).has("mind"))
+	_t.check("entering the Mind's arena records it", TitleIntros.mark_met(profile, "mind"))
+	_t.eq("a met Mind is the newest unseen", _pick(profile, flyable), "mind")
+	_t.check("meeting the Mind is not the ending", not TitleIntros.available(TitleIntros.facts_from(profile, func(_p): return true)).has("cannon"))
