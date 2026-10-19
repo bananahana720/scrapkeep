@@ -19,14 +19,12 @@ def build():
     common.reset()
     # The runtime's instance flash material supplies the enamel colour.
     common.SLOTS["ancient_enamel"] = {"color": "petrol", "rough": 0.55}
-    # Polish (POLISH.md): remnants stay flat, identical triangles. The slab's corner chamfers turn
-    # 60 degrees, so sharp_angle sits below that and every face keeps its own flat normals.
-    polish.enable(detail=1, subsurf=0, sharp_angle=50.0)
+    # Polish (POLISH.md): remnants stay flat, identical triangles. The slab keeps its bevel; sharp_angle 30
+    # splits the 45 degree bevel facets from the faces, so the faces toward the heading keep
+    # flat normals (the runtime's threat stripe surface needs z > 0 on all of them).
+    polish.enable(detail=1, subsurf=0, sharp_angle=30.0)
     root = common.empty("SwarmRemnant")
     body = Part("RemnantBody")
-    # No bevel on the slab: the runtime splits its faces toward the heading into the threat
-    # stripe surface, and blended bevel or chamfer normals leave z <= 0 normals on that surface.
-    body.bevel = 0.0
     corners = [(0, -0.75), (math.sqrt(3) * 0.375, 0.375), (-math.sqrt(3) * 0.375, 0.375)]
     outline = []
     for i, p in enumerate(corners):
