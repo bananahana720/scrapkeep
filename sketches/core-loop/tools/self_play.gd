@@ -16,6 +16,10 @@ extends Node
 #   --self-play-hold=<s>      keep playing this long after the goal (default 30)
 #   --self-play-min=<s>       and until this many seconds since launch (default 0)
 #   --self-play-stall=<s>     seconds the exit may stay untaken after the fight ends (default 120)
+#   --self-play-plant-stall   TEST PLANT: freeze the bot after its first tick and count the fight as
+#                             ended then, so the stall detector fires after --self-play-stall
+#   --self-play-plant-limit=<s>  TEST PLANT: give the driver this stage limit (sim seconds), so its
+#                             own stall limit ends the run (the driver-limit branch)
 #   --self-play-beat=<s>      print a "self-play: beat" progress line every s seconds (default off)
 #
 # Lines: "self-play: stage <n> entered at <s> s" (one per stage entered, retries marked),
@@ -41,6 +45,8 @@ var _stage := 0
 var _beat := 0.0
 var _beat_at := 0.0
 var _quit_code := -1
+var _plant_stall := false
+var _plant_limit := 0.0
 
 
 func _ready() -> void:
@@ -65,6 +71,10 @@ func _ready() -> void:
 			_until = arg.trim_prefix("--self-play-until=")
 		elif arg.begins_with("--self-play-stall="):
 			_stall = float(arg.trim_prefix("--self-play-stall="))
+		elif arg == "--self-play-plant-stall":
+			_plant_stall = true
+		elif arg.begins_with("--self-play-plant-limit="):
+			_plant_limit = float(arg.trim_prefix("--self-play-plant-limit="))
 		elif arg.begins_with("--self-play-beat="):
 			_beat = float(arg.trim_prefix("--self-play-beat="))
 	if not (_policy in BotDriver.POLICIES or _policy in BotDriver.PROFILES):
@@ -96,6 +106,14 @@ func _physics_process(delta: float) -> void:
 		_beat_at = _now()
 		var b: Vector3 = game.player.ball_position()
 		print("self-play: beat %.1f s stage %d %s%s stage_time %.1f pos %.0f,%.0f,%.0f" % [_now(), game.run.stage, state, " PAUSED" if get_tree().paused else "", game.run.stage_time, b.x, b.y, b.z])
+	if _plant_stall:
+		# Planted stall: the bot stands still and the fight counts as over from now.
+		_driver.source.hold = {}
+		if _fight_end < 0.0:
+			_fight_end = _now()
+		if _now() - _fight_end > _stall:
+			_stalled("exit")
+		return
 	var over: bool = _driver.tick(delta)
 	if over:
 		_finish()
@@ -131,6 +149,8 @@ func _start() -> void:
 	# The played game's workshop pauses the tree on an upgrade pick (bot_run's test_mode game has no
 	# workshop); the driver answers each offer as it arrives, with a seeded random pick.
 	_driver.tree_policy = "random"
+	if _plant_limit > 0.0:
+		_driver.stage_limit = _plant_limit
 	game.events.stage_entered.connect(_on_stage_entered)
 	game.events.stage_cleared.connect(_on_stage_cleared)
 	_driver.start(false)

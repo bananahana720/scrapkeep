@@ -312,11 +312,16 @@ func _park_on_title_ground(stage: int) -> void:
 # --self-play hands the run to a bot from tools/ (tools/self_play.gd), which the shipped pack
 # leaves out; without it the game says so and quits, rather than waiting for a player.
 func _start_self_play() -> void:
-	if not ResourceLoader.exists(SELF_PLAY):
+	var script_path := SELF_PLAY
+	# Test override: --self-play-script=<res path> points the hook elsewhere (a missing path proves exit 2).
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--self-play-script="):
+			script_path = arg.trim_prefix("--self-play-script=")
+	if not ResourceLoader.exists(script_path):
 		push_error("game: --self-play needs a pack with tools/ (npm run sketch:export -- --self-play)")
 		get_tree().quit(2)
 		return
-	var bot: Node = load(SELF_PLAY).new()
+	var bot: Node = load(script_path).new()
 	bot.set("game", self)
 	add_child(bot)
 
