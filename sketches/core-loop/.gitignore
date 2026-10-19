@@ -8,3 +8,5 @@ assets/music_ace/.gdignore
 !assets/audio/event_set/*.wav.import
 # Pilot animation GLBs keep their _loop clip names: name suffixes off, loop clips set (PE round 2, 2026-10-11).
 !assets/models/pilot_*_anim.glb.import
+# Park dressing kit GLBs use our own LODs: Godot's automatic mesh LOD generation is off (Dressing lane, 2026-10-19).
+!assets/models/park/props/*/*.glb.import
