@@ -864,7 +864,7 @@ def build():
     body = part.to_object((0, 0, 0))
     for g in groups:
         body.vertex_groups.new(name=g)
-    unblend_lens_mount(body)
+    unblend(body)
     arm = make_rig(bones)
     arm.parent = pose_node
     body.parent = arm
@@ -876,19 +876,27 @@ def build():
     return root, arm, body
 
 
-def unblend_lens_mount(body):
-    """RigPart.on numbers a primitive's vertices by index range, so a primitive that deletes an
-    earlier one's vertices hands the shifted survivors a second bone. One corner edge of the
-    LensMount neck (two vertices) ended up half on Lens, and the final_quiet turn of Lens tore a
-    wedge out of the neck (audit COLLAPSE, area ratio 0.32). Those vertices belong to the neck's
-    own bone, so the Lens influence goes (rigid-bind, 2026-10-19, rigs w3)."""
-    mount = body.vertex_groups["LensMount"]
-    lens = body.vertex_groups["Lens"]
-    stray = [v.index for v in body.data.vertices
-             if {body.vertex_groups[g.group].name for g in v.groups} == {"LensMount", "Lens"}]
-    if stray:
-        lens.remove(stray)
-        mount.add(stray, 1.0, "REPLACE")
+# RigPart.on numbers a primitive's vertices by index range, so a primitive that deletes an earlier
+# one's vertices hands the shifted survivors a second bone. Each blended pair below is a known
+# stray: the vertices belong to the bone on the right and lose the other influence
+# (rigid-bind, 2026-10-19, rigs w3).
+#   {LensMount, Lens}: one corner edge of the LensMount neck (two vertices); the final_quiet turn
+#     of Lens tore a wedge out of the neck (audit COLLAPSE, area ratio 0.32).
+#   {Hand, Palm}: four vertices of the Hand wrist flare cone (near Godot (-0.51, 2.18, -1.25)).
+STRAY_OWNER = {frozenset(("LensMount", "Lens")): "LensMount", frozenset(("Hand", "Palm")): "Hand"}
+
+
+def unblend(body):
+    """Make every blended vertex rigid on its STRAY_OWNER bone; any other blend fails the build."""
+    names = {i: g.name for i, g in enumerate(body.vertex_groups)}
+    for v in body.data.vertices:
+        held = {names[g.group] for g in v.groups}
+        if len(held) < 2:
+            continue
+        owner = STRAY_OWNER[frozenset(held)]
+        for g in held - {owner}:
+            body.vertex_groups[g].remove([v.index])
+        body.vertex_groups[owner].add([v.index], 1.0, "REPLACE")
 
 
 def rest_points(body):
