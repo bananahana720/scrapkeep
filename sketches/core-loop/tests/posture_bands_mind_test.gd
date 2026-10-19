@@ -54,23 +54,22 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # no driver measured 78.6 / 41.5 s (1.89).
 # 2026-10-18 (Overpowered pays, #104, U1): the pin stays at Andrew's accepted 101.5 s. The 89.2 s re-pin (f472f71b)
 # was measured on cand/alpha-w16 b696fbbb; #104 leaves the Mind arms byte-identical to the stage base (the Mind is a stage
-# Warden, class-gated like the hive: small stays under class III and grown's ratios do not pass 1.5 at plating 170),
-# which measures 111.2 / 58.5 s (small /
+# Warden, class-gated like the hive: small stays under class III [superseded 2026-10-19: a small pilot can reach class III
+# mid-fight, but the measurement below shows the PR head and the stage give identical fights] and grown's ratios do not pass 1.5
+# at plating 170), which measures 111.2 / 58.5 s (small /
 # grown) at 102324cd, inside the small tolerance. The grown miss is stage drift, not #104.
-# 2026-10-19 (stage/alpha-w17 958bbdcd; Overpowered pays, class III gain; the Mind row's "monster_gain" 1.5, boss_posture.gd):
-# grown re-pinned 42.7 -> 36.96 s. Cause: from heft class III every non-glancing hit counts 1.5x, so the 0.35 to 0.65 ratio rams
-# that open a stagger slowly (a ram at 0.45 added 10) fill the bar in fewer swings; grown starts at class III. Before, on the
-# same stage with the row's gain at 1: small [103.05, 115.41, 111.33] median 111.3, grown [50.88, 61.72, 44.49] median 50.9
-# (the band's grown 25 to 45 and 2x checks red; 58.5 s on 102324cd, where seed 2 was 58.45). After: small [99.54, 110.01, 80.23]
-# median 99.54, grown [36.96, 29.89, 44.49] median 36.96, ratio 2.69, camper 150 on every seed. Small seed 2 fell 111.33 ->
-# 80.23 s because that pilot reaches class III near 64.5 s of stage time and its last three chunks then fill under the gain;
-# seeds 0 and 1 hardly move. The small pin holds (99.54 against 101.5). Earlier sweeps on the older stage: with
-# the row gain at 1.3, 1.35, 1.4, 1.5 and 2.0 the small / grown medians were 90.6 / 42.9, 90.6 / 30.2, 90.6 / 37.0, 99.5 / 37.0
-# and 107.6 / 33.1 s (only 1.5 and 2.0 keep the small pin). The committed test passes under its own limits, alone on a 4-core box: 308 s
-# and 326 s wall in two runs against its 330 s child cap and 360 s solo ceiling, so a loaded machine can time it out; the bot tier
-# (swarm and alpha band tests) would give it room, but BOT-SHARDS.md would have to list it.
+# 2026-10-19 (stage/alpha-w17 2e247fc8; Overpowered pays, #104): the pins stay at 101.5 and 42.7 s. #104 adds no Mind row key (an
+# experimental stage-5 gain was dropped: it moved ordinary pilots at class III-V too), and the arms measure identical on the PR
+# head (2ef78ef4 plus this commit) and on the pristine stage 2e247fc8, three sweeps each (all six agree to the hundredth):
+# small [103.05, 115.41, 111.33] median 111.3 s (inside 101.5 plus 10 percent), grown [50.88, 61.72, 44.49] median 50.9 s, camper
+# 150 on every seed that reported. The grown miss (band 25 to 45 and the 2x check, pin 42.7) is stage drift (ORCHESTRATOR.md),
+# not #104: the same lists come from the stage alone, and 58.5 s on 102324cd and 50.9 s here are the same drift. Grown stays unpinned
+# at the new value: the band is red either way and the pin is Andrew's accepted 42.7. Wall time: the camper children hit the 330 s
+# child cap on the 4-core box (2, 1 and 1 of 3 camper seeds with no result on the PR head sweeps; 3, 2 and 2 on the stage), so the
+# test exits 1 at 337 to 341 s on both; the skipper arms finish. Earlier on 958bbdcd it passed under the cap at 308 and 326 s, so
+# the margin is thin; the bot tier (BOT-SHARDS.md, coordinator-owned) would give it room.
 const EXPECT_SMALL_S := 101.5
-const EXPECT_GROWN_S := 36.96
+const EXPECT_GROWN_S := 42.7
 const TOLERANCE := 0.10
 
 var _settings := {}
