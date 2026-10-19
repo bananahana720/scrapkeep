@@ -50,14 +50,12 @@ const KIND_AXES := {
 
 # Start values (section 4, levers 2b and 8).
 const PACK_WEIGHT := 1.5
-# 2026-10-18 (w17 answers): Andrew's ruling is 1.5. At 1.5 offer_weights_test failed one check on its
-# fixed seed, the alpha Tally random bot's weighted share (0.807 against the 0.80 cap; base 0.787).
-# The sweep was non-monotonic: 1.45 and 1.4 held, 1.35 and 1.3 failed the same check, 1.25 and
-# below held. The largest multiplier that holds in 0.05 steps is 1.45, left here for Andrew to veto.
-# Measured over 20 seeds (alpha list, Tally random bot, same quantity): mean 0.790 sd 0.020 at 1.0
-# (nudge off; 7 of 20 seeds already over 0.80), 0.783 sd 0.019 at 1.45, 0.788 sd 0.025 at 1.5. The
-# means differ by less than the sd, so the 1.5 failure is that seed's draw, not a shifted mean.
-const OFFER_WEIGHT := 1.45
+# 2026-10-18 (w17 answers): Andrew's 1.5. On offer_weights_test's one fixed seed, alpha Tally's
+# random bot read 0.807 against the 0.80 cap (base 0.787). Over 20 seeds (alpha list, Tally random
+# bot) the mean share is 0.790 sd 0.020 at 1.0, 0.783 at 1.45 and 0.788 sd 0.025 at 1.5, and the
+# base crosses 0.80 on 7 of 20 seeds, so that was seed noise. Coordinator ruling on #149: keep 1.5
+# and judge the alpha share check on the mean over 20 seeds against the unchanged 60 to 80% band.
+const OFFER_WEIGHT := 1.5
 # Nemesis packs lean in from this world on; world one teaches the verbs first.
 const FROM_WORLD := 2
 
