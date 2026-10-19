@@ -244,6 +244,9 @@ func _make(kind: String) -> Node3D:
 		return null
 	node.set_meta("kind", kind)
 	prepare(node)
+	# Looked up once here, not per frame in _pose.
+	node.set_meta("views", node.find_children("*", "GeometryInstance3D", true, false))
+	node.set_meta("players", node.find_children("*", "AnimationPlayer", true, false))
 	add_child(node)
 	_alive += 1
 	return node
@@ -277,9 +280,9 @@ static func prepare(node: Node) -> void:
 func _pose(node: Node3D, m: AmbientPool.Member) -> void:
 	if _fade_now.get(m.id, -1.0) != m.fade:
 		_fade_now[m.id] = m.fade
-		for view in node.find_children("*", "GeometryInstance3D", true, false):
+		for view: GeometryInstance3D in node.get_meta("views"):
 			view.transparency = 1.0 - m.fade
-	var players := node.find_children("*", "AnimationPlayer", true, false)
+	var players: Array = node.get_meta("players")
 	if players.is_empty():
 		return
 	var player: AnimationPlayer = players[0]
