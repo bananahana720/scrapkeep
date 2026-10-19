@@ -22,7 +22,10 @@ extends RefCounted
 #     linearly with it, the kit is fixed, every attempt plays the same game seed, and nothing is
 #     learned inside a run.
 #   - A Novice never runs the latch arm, so its non-wins at Wardens are mostly stalls. It still runs
-#     the dam's spillway sheet hand, which is a ram.
+#     the dam's spillway sheet hand, which is a ram, but below the full kit the hand plays by sight:
+#     it launches only at an open sheet it has seen for its reaction time and read this cycle, keeps
+#     dodging on the way, fires freely, and only the base kit re-rams in a stagger. The pre-pulse
+#     launch off the Warden's clock and the hold-fire discipline are the Expert's (timed_sheet).
 #
 # Reaction is the seconds from a committed telegraph appearing to the bot seeing it. The
 # basis is human reaction time: a simple visual response is about 0.2-0.25 s for a
@@ -103,6 +106,12 @@ func allows(verb: String) -> bool:
 
 # Ultimate timing (an open core, a crowd) is the Expert's. Below it the press is untimed.
 func timed_ultimate() -> bool:
+	return kit == "full"
+
+
+# The dam sheet's pre-pulse launch (read off the Warden's charge clock) and its hold-fire near a
+# full bar are the Expert's. Below it the sheet hand waits for the open sheet it can see.
+func timed_sheet() -> bool:
 	return kit == "full"
 
 
