@@ -80,8 +80,9 @@ func _stage_entered(stage: int, _retry: bool) -> void:
 		return
 	_release_all()
 	pool = null
+	var tree := get_tree()
 	for i in PLAN_AFTER_STEPS:
-		await get_tree().physics_frame
+		await tree.physics_frame
 	if serial == _entries and is_inside_tree():
 		_build_stage(stage)
 
