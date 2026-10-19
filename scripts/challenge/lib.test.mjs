@@ -164,6 +164,7 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
     runs.push(run("brindle", "boss", 2, "expert", i < 19 ? "win" : "timeout", { fightS: 60, hpLost: 30, reason: "boss_stalled" }));
     runs.push(run("brindle", "boss", 2, "expertTop", "win", { fightS: 30, hpLost: 10 }));
   }
+  for (let i = 0; i < 10; i++) runs.push(run("park1", "world", 1, "novice", i < 8 ? "win" : "loss", { fightS: 100 }));
   for (let i = 0; i < 10; i++) runs.push(run("world1", "world", 1, "novice", i < 8 ? "win" : "loss", { fightS: 100 }));
   const table = buildTable(runs);
   const b = table.find((c) => c.cell === "brindle");
@@ -174,8 +175,13 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
   assert.equal(b.growthRatio, 0.5);
   assert.deepEqual(b.tell, { earlyDeaths: 1, earliestDeathS: 30, ok: false });
   assert.equal(cellVerdict(b), "fail");
+  const p = table.find((c) => c.cell === "park1");
+  assert.equal(p.columns.novice.ok, false);
+  // The world chain is information only (ruling 19 Oct 04:32Z): same runs, no target, no ✓/✗, never failing.
   const w = table.find((c) => c.cell === "world1");
-  assert.equal(w.columns.novice.ok, false);
+  assert.equal(w.columns.novice.target, null);
+  assert.equal(w.columns.novice.ok, null);
+  assert.equal(cellVerdict(w), "info");
   assert.equal(table[0].cell, "brindle");
   const md = renderTable(table, { label: "t" });
   assert.match(md, /\| brindle \| 10% \(20\) \[\d+%-\d+%\] ✓ vs <= 15% \(18 died\) \|/);
@@ -183,7 +189,9 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
   assert.match(md, /95% \(20\) \[\d+%-\d+%\] ✓ vs >= 85% \(1 capped\)/);
   assert.match(md, /80% \(10\) \[\d+%-\d+%\] ✗ vs <= 50%/);
   assert.match(md, /1 ✗ \(earliest 30\.0 s\)/);
-  assert.match(md, /Cells with a ✗: brindle, world1\./);
+  assert.match(md, /## Parks \(reach the Warden\)[\s\S]*\| park1 \| 80% \(10\) \[\d+%-\d+%\] ✗ vs <= 50%/);
+  assert.match(md, /## World chains \(information only, not graded\)[\s\S]*\| world1 \| 80% \(10\) \[\d+%-\d+%\] \(2 died\) \|/);
+  assert.match(md, /Cells with a ✗: brindle, park1\./);
   assert.ok(aggregate([{ result: "win", fightS: 1 }]).rate === 1);
 });
 
