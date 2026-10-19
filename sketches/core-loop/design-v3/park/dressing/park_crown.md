@@ -30,8 +30,8 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 - `loom_frame` leans back and carries an awning so it does not read as a two-post gate. Plants-through-scrap are `rabbitbrush_c` (iron wheel) and `yucca_c` (gear plate). Crew warmth: hammock blanket, thermos on a stool, mug and laundry at the booth, steaming dish stone.
 - Keep `kite_pennant` 30 m from lines.
 
-## Placement (19 October 2026)
+## Placement (19 October 2026, round 3)
 
-`src/world/park/props/park_crown.json`: 10 templates (net-weaver: mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar; Fleet and abandoned only: abandoned_booth, dead_weather_post, cable_corner, log_post), 84 spots, 771 vignette instances plus 189 litter (960 in all), pinned. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing stands within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script (every candidate expanded with 7 yaws against `validate`), not hand-picked, so layouts differ in yaw and template across the park.
+`src/world/park/props/park_crown.json`: 10 templates (net-weaver: mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar; Fleet and abandoned only: abandoned_booth, dead_weather_post, cable_corner, log_post), 95 spots, 864 vignette instances plus 138 litter (1002 in all), pinned. Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate`.
 
-Known gap: the floor line from about 250 to 450 m (the Watch Butte drop) and some kicker run-outs have no legal ground within 62 m of the line, so the bare run there stays long.
+Known gaps: the Watch Butte drop (floor and pilot lines from about z -720 to -320) sits inside the `drop_ramp` flow_line and `bajada_lip` kicker keepouts, so several density windows there have no legal ground.

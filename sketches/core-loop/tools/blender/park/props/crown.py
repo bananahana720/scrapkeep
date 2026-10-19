@@ -20,14 +20,14 @@ K = kit.Kit("crown")
 
 # Crown palette: pale and dusty so props separate from red-orange sandstone ground.
 C.update({
-    "ochre": "bd9b58", "ochre_dark": "8f7440", "ochre_pale": "d3b87c",
+    "ochre": "b49d6a", "ochre_dark": "857248", "ochre_pale": "cdb98a",  # a touch greyer: low sun turns saturated ochre to amber
     "sage": "9aa58a", "sage_dark": "6f7d5f", "sage_pale": "b9c2a8",
     # Fleet iron oxide #9b513a / #74402f, sun-bleached toward canvas so abandoned Fleet gear
     # reads pale and dead against red-orange sandstone, not as a live camp.
     "oxide": mix("9b513a", "c9c1ae", 0.64), "oxide_dark": mix("74402f", "a79e83", 0.5),
     "brass": "d9b44a",  # Fleet tags only
-    "glass": "cfc8b8", "glass_dark": "a9a291", "chalk": "ece6d2",
-    "flower": "c8b865", "slate": "2f3634", "steam": "e4e1d6",
+    "glass": "aaa496", "glass_dark": "8c8678", "chalk": "ece6d2",
+    "flower": "c8b865", "slate": "2f3634", "steam": "cfccc2",
 })
 OXIDE, CHAR, BRASS = C["oxide"], C["charcoal"], C["brass"]
 TAU = math.tau
@@ -574,7 +574,7 @@ def watch_stool(p, v, rng):
 def dish_stones(p, v, rng):
     spots = [(-0.8, 0.1, 0.55), (0.55, 0.5, 0.48), (0.2, -0.75, 0.5)]
     for k, (x, y, r) in enumerate(spots):
-        col = tint(C["sandstone_pale"] if k != 1 else C["concrete_light"], rng, 0.05)
+        col = tint(shade(C["sandstone_pale"], 0.84) if k != 1 else shade(C["concrete_light"], 0.84), rng, 0.05)
         p.ico(r, (x, y, 0.2), col, scale=(1.0, 1.0, 0.42), rot=(0, 0, rng.uniform(0, 3)), subdiv=2, style="soft")
         p.cyl(r * 0.6, 0.1, (x, y, 0.37), shade(col, 0.78), segs=10, style="round")  # dish hollow
     # Steam on the first dish: stacked pale soft puffs, opaque (no glow).
