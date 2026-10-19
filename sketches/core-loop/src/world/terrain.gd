@@ -408,8 +408,8 @@ func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
 
-# A perch top for the Dispatcher within PerchPoints.RANGE_M of `point`, 6 to 10 m over the ground
-# under it and clear of landform colliders (perch_points.gd); Vector3.INF when the stage has none,
+# A perch top for the Dispatcher within PerchPoints.RANGE_M of `point`: a park post top or a landform
+# top, 6 to 10 m up and clear of colliders (perch_points.gd); Vector3.INF when the stage has none,
 # and the Dispatcher builds its own mast. `salt` varies the pick; one salt always picks the same.
 func perch_near(point: Vector3, salt := 0) -> Vector3:
 	var m = map()
@@ -418,8 +418,8 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 	var i := _index(stage)
 	if not _perches.has(i):
 		_ensure(stage)
-		_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park)}
-	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt)
+		_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
+	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
 
 
 func spawn_point(index: int) -> Vector3:
