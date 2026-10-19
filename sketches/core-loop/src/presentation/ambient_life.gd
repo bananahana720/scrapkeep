@@ -17,6 +17,12 @@ const VIEW_END_M := 140.0
 const ROOF_REACH_M := 14.0
 const FALLBACK_ROOF_M := 2.5
 const WORLD_MASK := 1
+# A home steeper than this (from the ground callable) or with a structure over it is vetoed at build.
+const MAX_SLOPE_DEG := 30.0
+const SLOPE_STEP_M := 1.0
+const COVER_REACH_M := 40.0
+const COVER_DY_M := 0.5
+const PLAN_AFTER_STEPS := 2
 
 var ctx
 var map_id := ""
@@ -33,6 +39,7 @@ var _streams := {}
 var _active := true
 var _latched := false
 var _built_for := -1
+var _entries := 0
 var _since := 0.0
 var _ground: Callable
 var _prev := {}
@@ -63,7 +70,19 @@ func setup(context) -> void:
 func _stage_entered(stage: int, _retry: bool) -> void:
 	_active = true
 	_latched = false
-	_build_stage(stage)
+	# A retry keeps its homes. A new stage's structures join the physics space on the next physics
+	# steps, so the plan waits for them and the cover veto (unfit) sees a gatehouse built this frame.
+	var serial := _entries + 1
+	_entries = serial
+	if stage == _built_for and pool != null:
+		_build_stage(stage)
+		return
+	_release_all()
+	pool = null
+	for i in PLAN_AFTER_STEPS:
+		await get_tree().physics_frame
+	if serial == _entries and is_inside_tree():
+		_build_stage(stage)
 
 
 func _clear_stage(_reason: String) -> void:
@@ -91,14 +110,32 @@ func _build_stage(stage: int) -> void:
 			kinds.append(id)
 	if kinds.is_empty():
 		return
-	var homes := AmbientHomes.plan(park, kinds, map_id.hash())
 	_ground = ctx.terrain.ground_callable(stage)
+	var ground := _ground
+	var space := get_world_3d().direct_space_state if is_inside_tree() else null
+	var homes := AmbientHomes.plan(park, kinds, map_id.hash(), func(at: Vector2, perch: String) -> bool: return unfit(ground, space, at, perch))
 	for home in homes:
 		if home["perch"] == "ceiling":
 			home["roof"] = _roof_above(home["at"])
 	pool = AmbientPool.new()
 	pool.setup(homes, map_id.hash())
 	_prev.clear()
+
+
+# A spot the park file cannot judge: ground steeper than MAX_SLOPE_DEG, or (except under a ceiling perch, which
+# wants its roof) a structure standing over the ground, such as a gatehouse the heightfield does not know.
+static func unfit(ground: Callable, space: PhysicsDirectSpaceState3D, at: Vector2, perch: String) -> bool:
+	var e := SLOPE_STEP_M
+	var dx: float = (ground.call(at.x + e, at.y, 0.0).y - ground.call(at.x - e, at.y, 0.0).y) / (2.0 * e)
+	var dz: float = (ground.call(at.x, at.y + e, 0.0).y - ground.call(at.x, at.y - e, 0.0).y) / (2.0 * e)
+	if rad_to_deg(atan(Vector2(dx, dz).length())) > MAX_SLOPE_DEG:
+		return true
+	if space == null or perch == "ceiling":
+		return false
+	var floor_y: float = ground.call(at.x, at.y, 0.0).y
+	var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, floor_y + COVER_REACH_M, at.y), Vector3(at.x, floor_y - 1.0, at.y), WORLD_MASK)
+	var hit := space.intersect_ray(query)
+	return not hit.is_empty() and float(hit["position"].y) - floor_y > COVER_DY_M
 
 
 # One upward ray at build for a bat's ceiling: height above the ground there, else a low fallback.
@@ -244,6 +281,9 @@ func _make(kind: String) -> Node3D:
 		return null
 	node.set_meta("kind", kind)
 	prepare(node)
+	# Looked up once here, not per frame in _pose.
+	node.set_meta("views", node.find_children("*", "GeometryInstance3D", true, false))
+	node.set_meta("players", node.find_children("*", "AnimationPlayer", true, false))
 	add_child(node)
 	_alive += 1
 	return node
@@ -277,9 +317,9 @@ static func prepare(node: Node) -> void:
 func _pose(node: Node3D, m: AmbientPool.Member) -> void:
 	if _fade_now.get(m.id, -1.0) != m.fade:
 		_fade_now[m.id] = m.fade
-		for view in node.find_children("*", "GeometryInstance3D", true, false):
+		for view: GeometryInstance3D in node.get_meta("views"):
 			view.transparency = 1.0 - m.fade
-	var players := node.find_children("*", "AnimationPlayer", true, false)
+	var players: Array = node.get_meta("players")
 	if players.is_empty():
 		return
 	var player: AnimationPlayer = players[0]
