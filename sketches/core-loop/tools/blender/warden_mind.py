@@ -865,6 +865,7 @@ def build():
     for g in groups:
         body.vertex_groups.new(name=g)
     unblend(body)
+    bind_orphans(body)
     arm = make_rig(bones)
     arm.parent = pose_node
     body.parent = arm
@@ -897,6 +898,44 @@ def unblend(body):
         for g in held - {owner}:
             body.vertex_groups[g].remove([v.index])
         body.vertex_groups[owner].add([v.index], 1.0, "REPLACE")
+
+
+def bind_orphans(body):
+    """RigPart.on leaves a primitive's first vertices unbound when it deletes vertices (the
+    numbering by index range misses them), and the export then parks them on a static
+    neutral_bone: 224 vertices (Lens, Palm, Knuckle0-2, Thumb_0-2, every finger segment) stretched
+    their triangles to fixed points whenever the bone turned. Each unbound vertex takes the one
+    bone of the connected mesh island (shared edges) it sits in. Fails the build if a vertex stays
+    unbound or the island holds more than one bone (rigid-bind, 2026-10-19, rigs w3)."""
+    names = {i: g.name for i, g in enumerate(body.vertex_groups)}
+    me = body.data
+    parent = list(range(len(me.vertices)))
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+    for e in me.edges:
+        a, b = find(e.vertices[0]), find(e.vertices[1])
+        if a != b:
+            parent[max(a, b)] = min(a, b)
+    bones, orphans = {}, {}
+    for v in me.vertices:
+        r = find(v.index)
+        if v.groups:
+            bones.setdefault(r, set()).add(names[v.groups[0].group])
+        else:
+            orphans.setdefault(r, []).append(v.index)
+    for r, idx in orphans.items():
+        held = bones.get(r, set())
+        if len(held) != 1:
+            raise SystemExit("bind_orphans: island of vertex %d holds bones %s" % (idx[0], sorted(held)))
+        body.vertex_groups[next(iter(held))].add(idx, 1.0, "REPLACE")
+    left = [v.index for v in me.vertices if not v.groups]
+    if left:
+        raise SystemExit("bind_orphans: %d vertices still unbound, first %d" % (len(left), left[0]))
+    print("CHECK bind_orphans bound %d vertices in %d islands" % (sum(map(len, orphans.values())), len(orphans)))
 
 
 def rest_points(body):
