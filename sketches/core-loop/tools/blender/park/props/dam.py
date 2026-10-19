@@ -98,7 +98,7 @@ def gate_wheelhouse(p, v, rng):
     ring_x = wx - 0.05
     p.ring(0.05, 0.12, 0.08, (ring_x, -1.85, 0.5), C["iron"], segs=8, rot=(math.pi / 2, 0, 0))
     if v == "a":
-        p.chain((wx, wy - 0.12, wz + wr), (ring_x, -1.85, 0.55), C["cable"], link=0.12, radius=0.022, sag=0.0)
+        p.chain((wx, wy - 0.12, wz + wr), (ring_x, -1.85, 0.55), C["cable"], link=0.12, radius=0.022, sag=0.3)
         p.chain((wx + wr, wy - 0.12, wz), (ring_x + 0.1, -1.85, 0.55), C["cable"], link=0.12, radius=0.022, sag=0.35)
     else:
         p.chain((wx, wy - 0.12, wz + wr), (ring_x + 0.4, -2.3, 0.1), C["cable"], link=0.12, radius=0.022, sag=0.3)
