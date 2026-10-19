@@ -26,6 +26,7 @@ const SIZE := Vector2i(1280, 720)
 const FAR_M := 25.0
 const NEAR_M := 5.0
 const CAM_M := 7.0
+const ROOST_CAM_M := 1.5
 const SETTLE_S := 3.0
 const GIF_MAX_BYTES := 3000000
 
@@ -158,6 +159,21 @@ func _centre(list: Array, live_only := true) -> Vector3:
 	return sum / n if n > 0 else Vector3.ZERO
 
 
+# The side of a roost whose floor is level with the floor under it, so the camera stands in the open below the roof
+# and not up on the hill the roof is cut into.
+func _roost_side(home: Vector2) -> Vector2:
+	var best := Vector2.RIGHT
+	var best_dy := INF
+	for i in 16:
+		var d := Vector2.RIGHT.rotated(TAU * i / 16.0)
+		var p := home + d * ROOST_CAM_M
+		var dy := absf(_gh(p.x, p.y) - _gh(home.x, home.y))
+		if dy < best_dy:
+			best_dy = dy
+			best = d
+	return best
+
+
 func _frame(dir_out: String, name: String) -> void:
 	get_root().get_viewport().get_texture().get_image().save_png(dir_out.path_join(name))
 
@@ -181,6 +197,9 @@ func _shoot(life, kind: String, home_index: int) -> void:
 	_ball(ball_at.call(FAR_M))
 	var follow := Vector3(home.x, _gh(home.x, home.y), home.y)
 	var cam_offset := Vector3(side.x * CAM_M, 2.2, side.y * CAM_M)
+	# A roost hangs under a roof, so its camera stands out on the open side at eye height and looks up into it.
+	var roost := String(AmbientKinds.row(kind).get("homes", {}).get("perch", "")) == "ceiling"
+	var roost_dir := _roost_side(home) if roost else dir
 	var states_log: Array = []
 	var clock := 0.0
 	var frames := 0
@@ -211,8 +230,13 @@ func _shoot(life, kind: String, home_index: int) -> void:
 		var c := _centre(list)
 		if c != Vector3.ZERO:
 			follow = follow.lerp(c, clampf(dt * 10.0, 0.0, 1.0))
-		_cam.global_position = follow + cam_offset
-		_cam.look_at(follow + Vector3(0, 0.4, 0), Vector3.UP)
+		if roost:
+			var stand := home + roost_dir * ROOST_CAM_M
+			_cam.global_position = Vector3(stand.x, _gh(home.x, home.y) + 1.4, stand.y)
+			_cam.look_at(follow, Vector3.UP)
+		else:
+			_cam.global_position = follow + cam_offset
+			_cam.look_at(follow + Vector3(0, 0.4, 0), Vector3.UP)
 		_cam.current = true
 		if telegraph != null:
 			telegraph.set("center", Vector3(follow.x, _gh(follow.x, follow.z), follow.z))
