@@ -2,7 +2,7 @@ extends SceneTree
 # Placeholder burndown: the anchors family (tools/blender/park/anchors.py), the harpoon anchor posts an anchor field row
 # with an anchors kit recipe (park_recipes.gd ANCHOR_KITS) draws through one MultiMesh instead of grey boxes.
 # (a) Each of the 15 recipe GLBs (5 families x 3 variants) exists and loads.
-# (b) Its render mesh is one mesh with one surface and at most 700 triangles (the instanced-post cap; 400 before the soft-toy pass)
+# (b) Its render mesh is one mesh with one surface and at most 1,000 triangles (the instanced-post cap; 700 before the 19 Oct ruling on #149, 400 before the soft-toy pass)
 #     and carries vertex colour (not near-white) and normals, which the soft-toy bake and smooth shading write.
 # (c) The render mesh's AABB stays inside the authoring contract: x and z in [-4.05, 4.05], y in [-1.05, 9.05].
 # (d) It carries the <id>-col collision mesh (ledges.py convention; never drawn).
@@ -19,7 +19,7 @@ const T := preload("res://tests/support/t.gd")
 const DIR := "res://assets/models/park/"
 const FAMILIES := ["hoodoo", "basalt", "timber", "saguaro", "cairn"]
 const VARIANTS := ["a", "b", "c"]
-const MAX_TRIS := 700
+const MAX_TRIS := 1000
 const XZ_LIMIT := 4.05
 const Y_MIN := -1.05
 const Y_MAX := 9.05
