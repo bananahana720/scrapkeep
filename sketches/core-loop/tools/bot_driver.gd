@@ -2895,9 +2895,23 @@ func _hazards() -> Array:
 			continue
 		out.append(child)
 	var boss = _boss() if game.flow.state_name() == "boss" else null
-	if boss != null and boss.has_method("active_hazards"):
-		for h in boss.active_hazards():
+	if boss != null:
+		for h in (boss.active_hazards() if boss.has_method("active_hazards") else _laid_hazards(boss)):
 			if is_instance_valid(h) and h.has_method("contains"):
+				out.append(h)
+	return out
+
+
+# The Waking's and the Mind's laid hazards: a stub boss keeps them per committed attack
+# (attacks[*].hazards), not in one list, but each is the same warned region a player sees.
+func _laid_hazards(boss) -> Array:
+	var out: Array = []
+	var attacks = boss.get("attacks")
+	if not attacks is Array:
+		return out
+	for attack in attacks:
+		for h in (attack as Dictionary).get("hazards", []):
+			if is_instance_valid(h) and not h.is_done():
 				out.append(h)
 	return out
 
