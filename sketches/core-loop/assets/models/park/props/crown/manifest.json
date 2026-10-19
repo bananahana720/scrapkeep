@@ -162,6 +162,73 @@
     }
    }
   },
+  "lookout_deck": {
+   "class": "dress_hero",
+   "tags": [
+    "soft",
+    "tall"
+   ],
+   "story": "A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/lookout_deck_a.glb",
+      "res://assets/models/park/props/crown/lookout_deck_a_lod1.glb",
+      "res://assets/models/park/props/crown/lookout_deck_a_lod2.glb"
+     ],
+     "tris": [
+      15464,
+      7732,
+      2208
+     ],
+     "radius": 3.734,
+     "height": 9.308,
+     "perch": [
+      0.089,
+      7.054,
+      -0.066
+     ]
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/lookout_deck_b.glb",
+      "res://assets/models/park/props/crown/lookout_deck_b_lod1.glb",
+      "res://assets/models/park/props/crown/lookout_deck_b_lod2.glb"
+     ],
+     "tris": [
+      15532,
+      7766,
+      2218
+     ],
+     "radius": 3.67,
+     "height": 9.058,
+     "perch": [
+      0.061,
+      7.057,
+      -0.044
+     ]
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/crown/lookout_deck_c.glb",
+      "res://assets/models/park/props/crown/lookout_deck_c_lod1.glb",
+      "res://assets/models/park/props/crown/lookout_deck_c_lod2.glb"
+     ],
+     "tris": [
+      15532,
+      7766,
+      2218
+     ],
+     "radius": 3.74,
+     "height": 8.401,
+     "perch": [
+      0.109,
+      7.057,
+      -0.078
+     ]
+    }
+   }
+  },
   "hammock_rig": {
    "class": "dress_prop",
    "tags": [

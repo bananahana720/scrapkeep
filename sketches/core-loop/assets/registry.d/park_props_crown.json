@@ -757,6 +757,258 @@
    }
   },
   {
+   "id": "dprop_crown_lookout_deck_a",
+   "path": "res://assets/models/park/props/crown/lookout_deck_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant a LOD0 (15464 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.5592,
+     0,
+     -3.4331
+    ],
+    "max": [
+     3.5592,
+     9.3084,
+     3.4331
+    ],
+    "size": [
+     7.1184,
+     9.3084,
+     6.8662
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lookout_deck_a_lod1",
+   "path": "res://assets/models/park/props/crown/lookout_deck_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant a LOD1 (7732 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.5592,
+     0,
+     -3.4356
+    ],
+    "max": [
+     3.5625,
+     9.3058,
+     3.4331
+    ],
+    "size": [
+     7.1217,
+     9.3058,
+     6.8687
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lookout_deck_a_lod2",
+   "path": "res://assets/models/park/props/crown/lookout_deck_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant a LOD2 (2208 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.558,
+     0,
+     -3.4386
+    ],
+    "max": [
+     3.548,
+     9.2981,
+     3.4326
+    ],
+    "size": [
+     7.106,
+     9.2981,
+     6.8712
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lookout_deck_b",
+   "path": "res://assets/models/park/props/crown/lookout_deck_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant b LOD0 (15532 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.5921,
+     0,
+     -3.5038
+    ],
+    "max": [
+     3.5921,
+     9.0578,
+     3.5038
+    ],
+    "size": [
+     7.1842,
+     9.0578,
+     7.0076
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lookout_deck_b_lod1",
+   "path": "res://assets/models/park/props/crown/lookout_deck_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant b LOD1 (7766 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.59,
+     0,
+     -3.5038
+    ],
+    "max": [
+     3.5955,
+     9.0564,
+     3.507
+    ],
+    "size": [
+     7.1855,
+     9.0564,
+     7.0108
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lookout_deck_b_lod2",
+   "path": "res://assets/models/park/props/crown/lookout_deck_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant b LOD2 (2218 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.5792,
+     0,
+     -3.508
+    ],
+    "max": [
+     3.5985,
+     9.0329,
+     3.5115
+    ],
+    "size": [
+     7.1777,
+     9.0329,
+     7.0195
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lookout_deck_c",
+   "path": "res://assets/models/park/props/crown/lookout_deck_c.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant c LOD0 (15532 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.5311,
+     0,
+     -3.493
+    ],
+    "max": [
+     3.5311,
+     8.4009,
+     3.493
+    ],
+    "size": [
+     7.0622,
+     8.4009,
+     6.986
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lookout_deck_c_lod1",
+   "path": "res://assets/models/park/props/crown/lookout_deck_c_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant c LOD1 (7766 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.5348,
+     0,
+     -3.493
+    ],
+    "max": [
+     3.5311,
+     8.4008,
+     3.4961
+    ],
+    "size": [
+     7.0659,
+     8.4008,
+     6.9891
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lookout_deck_c_lod2",
+   "path": "res://assets/models/park/props/crown/lookout_deck_c_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lookout_deck variant c LOD2 (2218 tris): A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.5194,
+     0,
+     -3.4909
+    ],
+    "max": [
+     3.5461,
+     8.3531,
+     3.497
+    ],
+    "size": [
+     7.0655,
+     8.3531,
+     6.9879
+    ]
+   }
+  },
+  {
    "id": "dprop_crown_hammock_rig_a",
    "path": "res://assets/models/park/props/crown/hammock_rig_a.glb",
    "class": "dress_prop",

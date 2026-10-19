@@ -1255,6 +1255,262 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "low_cairn": {
+   "story": "A net-weaver's rest cairn: a stool, a cup on a rock, a sprig of brush; all kept low.",
+   "props": [
+    {
+     "kind": "watch_stool",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      2.8,
+      -1.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.17,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "c",
+     "at": [
+      -2.6,
+      1.8
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -3.6,
+      -2.2
+     ],
+     "yaw_deg": 265,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "a",
+     "at": [
+      3.4,
+      3.0
+     ],
+     "yaw_deg": 120,
+     "scale": 1.3,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "low_slab": {
+   "story": "Fleet tally slabs left lying low in the dust, a glassy fulgurite by them.",
+   "props": [
+    {
+     "kind": "tally_slab",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 25,
+     "scale": 1.15,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_slab",
+     "v": "b",
+     "at": [
+      3.0,
+      2.0
+     ],
+     "yaw_deg": 110,
+     "scale": 1.28,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "b",
+     "at": [
+      -2.8,
+      -1.8
+     ],
+     "yaw_deg": 40,
+     "scale": 1.3,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -3.8,
+      2.4
+     ],
+     "yaw_deg": 190,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lookout_a": {
+   "story": "A net-weavers' log-crib lookout deck, with a few low things at its foot.",
+   "props": [
+    {
+     "kind": "lookout_deck",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      6.0,
+      3.0
+     ],
+     "yaw_deg": 10,
+     "scale": 1.3,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      -6.0,
+      2.0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.18,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      5.0,
+      -6.0
+     ],
+     "yaw_deg": 80,
+     "scale": 1.21,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lookout_b": {
+   "story": "A net-weavers' log-crib lookout deck, with a few low things at its foot.",
+   "props": [
+    {
+     "kind": "lookout_deck",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      6.0,
+      3.0
+     ],
+     "yaw_deg": 60,
+     "scale": 1.28,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      -6.0,
+      2.0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.16,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      5.0,
+      -6.0
+     ],
+     "yaw_deg": 80,
+     "scale": 1.17,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lookout_c": {
+   "story": "A net-weavers' log-crib lookout deck, with a few low things at its foot.",
+   "props": [
+    {
+     "kind": "lookout_deck",
+     "v": "c",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      6.0,
+      3.0
+     ],
+     "yaw_deg": 5,
+     "scale": 1.22,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      -6.0,
+      2.0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.27,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      5.0,
+      -6.0
+     ],
+     "yaw_deg": 80,
+     "scale": 1.2,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -2307,6 +2563,406 @@
    ],
    "yaw_deg": -26,
    "near": "kite_runout_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lk_01",
+   "template": "lookout_a",
+   "at": [
+    -32.0,
+    120.0
+   ],
+   "yaw_deg": 0,
+   "near": "net-weaver log lookout, perch deck"
+  },
+  {
+   "id": "crown_lk_02",
+   "template": "lookout_b",
+   "at": [
+    32.0,
+    144.0
+   ],
+   "yaw_deg": 0,
+   "near": "net-weaver log lookout, perch deck"
+  },
+  {
+   "id": "crown_lk_03",
+   "template": "lookout_c",
+   "at": [
+    -48.0,
+    232.0
+   ],
+   "yaw_deg": 0,
+   "near": "net-weaver log lookout, perch deck"
+  },
+  {
+   "id": "crown_lk_04",
+   "template": "lookout_a",
+   "at": [
+    80.0,
+    -392.0
+   ],
+   "yaw_deg": 180,
+   "near": "net-weaver log lookout, perch deck"
+  },
+  {
+   "id": "crown_lk_05",
+   "template": "lookout_b",
+   "at": [
+    -72.0,
+    32.0
+   ],
+   "yaw_deg": 0,
+   "near": "net-weaver log lookout, perch deck"
+  },
+  {
+   "id": "crown_lk_06",
+   "template": "lookout_c",
+   "at": [
+    32.0,
+    240.0
+   ],
+   "yaw_deg": 0,
+   "near": "net-weaver log lookout, perch deck"
+  },
+  {
+   "id": "crown_lk_07",
+   "template": "lookout_a",
+   "at": [
+    296.0,
+    240.0
+   ],
+   "yaw_deg": 0,
+   "near": "net-weaver log lookout, perch deck"
+  },
+  {
+   "id": "crown_lo_01",
+   "template": "low_slab",
+   "at": [
+    102.0,
+    -594.0
+   ],
+   "yaw_deg": 90,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_02",
+   "template": "low_slab",
+   "at": [
+    78.0,
+    -698.0
+   ],
+   "yaw_deg": 201,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_03",
+   "template": "low_slab",
+   "at": [
+    30.0,
+    -578.0
+   ],
+   "yaw_deg": 102,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_04",
+   "template": "low_cairn",
+   "at": [
+    -26.0,
+    -674.0
+   ],
+   "yaw_deg": -140,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_05",
+   "template": "low_slab",
+   "at": [
+    62.0,
+    -586.0
+   ],
+   "yaw_deg": -98,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_06",
+   "template": "low_slab",
+   "at": [
+    46.0,
+    -602.0
+   ],
+   "yaw_deg": 102,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_07",
+   "template": "low_cairn",
+   "at": [
+    86.0,
+    -634.0
+   ],
+   "yaw_deg": -90,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_08",
+   "template": "low_cairn",
+   "at": [
+    -2.0,
+    -570.0
+   ],
+   "yaw_deg": -90,
+   "near": "drop_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_09",
+   "template": "low_slab",
+   "at": [
+    -50.0,
+    -650.0
+   ],
+   "yaw_deg": -90,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_10",
+   "template": "low_cairn",
+   "at": [
+    -2.0,
+    -658.0
+   ],
+   "yaw_deg": -90,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_11",
+   "template": "low_cairn",
+   "at": [
+    -2.0,
+    -698.0
+   ],
+   "yaw_deg": -90,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_12",
+   "template": "low_slab",
+   "at": [
+    86.0,
+    -658.0
+   ],
+   "yaw_deg": -45,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_13",
+   "template": "low_cairn",
+   "at": [
+    46.0,
+    -714.0
+   ],
+   "yaw_deg": 156,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_14",
+   "template": "low_cairn",
+   "at": [
+    86.0,
+    -610.0
+   ],
+   "yaw_deg": -90,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_15",
+   "template": "low_slab",
+   "at": [
+    -2.0,
+    -594.0
+   ],
+   "yaw_deg": -45,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_16",
+   "template": "low_cairn",
+   "at": [
+    30.0,
+    -626.0
+   ],
+   "yaw_deg": 153,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_17",
+   "template": "low_cairn",
+   "at": [
+    -2.0,
+    -618.0
+   ],
+   "yaw_deg": -90,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_18",
+   "template": "low_slab",
+   "at": [
+    22.0,
+    -602.0
+   ],
+   "yaw_deg": -123,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_19",
+   "template": "low_cairn",
+   "at": [
+    30.0,
+    -698.0
+   ],
+   "yaw_deg": -24,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_20",
+   "template": "low_cairn",
+   "at": [
+    102.0,
+    -690.0
+   ],
+   "yaw_deg": 149,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_21",
+   "template": "low_slab",
+   "at": [
+    14.0,
+    -730.0
+   ],
+   "yaw_deg": 201,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_22",
+   "template": "low_cairn",
+   "at": [
+    -34.0,
+    -634.0
+   ],
+   "yaw_deg": -27,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_23",
+   "template": "low_cairn",
+   "at": [
+    86.0,
+    -578.0
+   ],
+   "yaw_deg": 37,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_24",
+   "template": "low_slab",
+   "at": [
+    62.0,
+    -682.0
+   ],
+   "yaw_deg": -24,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_25",
+   "template": "low_cairn",
+   "at": [
+    110.0,
+    -650.0
+   ],
+   "yaw_deg": 90,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_26",
+   "template": "low_cairn",
+   "at": [
+    110.0,
+    -618.0
+   ],
+   "yaw_deg": 90,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_27",
+   "template": "low_slab",
+   "at": [
+    22.0,
+    -658.0
+   ],
+   "yaw_deg": 0,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_28",
+   "template": "low_cairn",
+   "at": [
+    -10.0,
+    -722.0
+   ],
+   "yaw_deg": -96,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_29",
+   "template": "low_cairn",
+   "at": [
+    54.0,
+    -626.0
+   ],
+   "yaw_deg": 139,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_30",
+   "template": "low_slab",
+   "at": [
+    118.0,
+    -674.0
+   ],
+   "yaw_deg": 90,
+   "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_lo_31",
+   "template": "low_cairn",
+   "at": [
+    -50.0,
+    -674.0
+   ],
+   "yaw_deg": -140,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_32",
+   "template": "low_cairn",
+   "at": [
+    70.0,
+    -722.0
+   ],
+   "yaw_deg": 156,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_lo_33",
+   "template": "low_slab",
+   "at": [
+    -2.0,
+    -746.0
+   ],
+   "yaw_deg": -159,
+   "near": "watch_butte, abandoned Fleet gear"
   }
  ],
  "litter": {
@@ -2347,5 +3003,10 @@
   ],
   "seed": 31
  },
- "pin": 799386229
+ "pin": 4193955765,
+ "low_ground_rows": [
+  "drop_ramp",
+  "watch_butte",
+  "watch_butte_crest"
+ ]
 }

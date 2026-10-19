@@ -375,6 +375,79 @@ def storm_station(p, v, rng):
 # ---------------------------------------------------------------------------------------
 # Props
 # ---------------------------------------------------------------------------------------
+@K.kind("lookout_deck", hero=True, variants="abc", tags=["soft"],
+        story="A net-weavers' lookout: a battered crib of lashed logs and fieldstone holding a roped plank deck, a net hung over its rail, a lean-to cloth for shade.")
+def lookout_deck(p, v, rng):
+    DECK = 6.9   # deck top, metres over the foot: the perch anchor (6 to 10 m at scale 0.85 to 1.25)
+    # Fieldstone footing ring.
+    for k in range(10):
+        a = TAU * k / 10 + 0.2
+        r = rng.uniform(0.8, 1.1)
+        p.ico(r, (2.7 * math.cos(a), 2.7 * math.sin(a), r * 0.38), tint(C["concrete"] if k % 2 else C["sandstone_pale"], rng, 0.08),
+              scale=(1.0, 0.9, 0.55), rot=(0, 0, rng.uniform(0, 3)), subdiv=1, style="round")
+    # Core of packed stone and brush so the crib reads as solid.
+    p.box((2.5, 2.5, DECK - 1.1), (0, 0, 0.5 + (DECK - 1.1) / 2), shade(C["timber_dark"], 0.9), style="hard_smooth", jit=0.004)
+    # Log crib: alternating courses, battering inward with height.
+    n = 14
+    for i in range(n):
+        t = i / (n - 1)
+        z = 0.45 + i * (DECK - 1.0) / (n - 1)
+        hw = 2.05 - 0.45 * t
+        ln = 5.0 - 0.9 * t
+        along_x = i % 2 == 0
+        for s in (-1, 1):
+            col = tint(C["timber"] if (i + (s > 0)) % 3 else C["timber_dark"], rng, 0.07)
+            sag = rng.uniform(-0.05, 0.05)
+            if along_x:
+                p.cyl(0.25, ln, (sag, s * hw, z), col, segs=8, rot=(0, math.pi / 2, 0), style="hard", jit=0.004)
+            else:
+                p.cyl(0.25, ln, (s * hw, sag, z), col, segs=8, rot=(math.pi / 2, 0, 0), style="hard", jit=0.004)
+    # Rope lashings at the four corners of the upper crib.
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            for z in (DECK - 2.3, DECK - 1.5):
+                p.torus(0.34, 0.06, (sx * 1.6, sy * 1.6, z), C["ochre"], major=10, minor=4)
+    # Deck: cross-planks on two bearers, rope-bound; flat to the eye and to the rule.
+    for sy in (-1.5, 1.5):
+        p.box((4.8, 0.4, 0.3), (0, sy, DECK - 0.3), C["timber_dark"], style="hard_smooth", jit=0.004)
+    for k in range(8):
+        x = -1.95 + k * 0.56
+        p.box((0.52, 4.4, 0.18), (x, 0, DECK - 0.09), tint(C["timber_pale"] if k % 3 else C["timber"], rng, 0.06), style="hard", jit=0.004)
+    # Rail posts at the corners, rope rail on three sides (the front, -y, is open for hauling).
+    posts = [(-2.2, -2.2), (2.2, -2.2), (-2.2, 2.2), (2.2, 2.2)]
+    for x, y in posts:
+        p.beam((x, y, DECK - 0.2), (x, y, DECK + 1.15), 0.2, C["timber_dark"], h=0.2, style="hard")
+    for z, sg in ((DECK + 1.0, 0.18), (DECK + 0.55, 0.22)):
+        rope(p, posts[2] + (z,), posts[3] + (z,), 0.045, C["ochre"], sag=sg, n=8)
+        rope(p, posts[0] + (z,), posts[2] + (z,), 0.045, C["ochre"], sag=sg, n=8)
+        rope(p, posts[1] + (z,), posts[3] + (z,), 0.045, C["ochre"], sag=sg, n=8)
+    # A net slung over the back rail.
+    net(p, -2.0, 2.0, DECK + 0.35, DECK + 1.0, 2.28, 12, 4, 0.03, C["ochre_dark"], rng, sag=0.15, drop=0.1)
+    # Gear on the deck: a stool and a coiled line (kept off the 3.6 m centre square's middle).
+    p.cyl(0.28, 0.45, (1.5, 1.2, DECK + 0.22), C["timber"], segs=8, style="hard")
+    for k in range(3):
+        p.torus(0.4 - 0.07 * k, 0.06, (-1.4, 1.1, DECK + 0.1 + 0.08 * k), C["ochre"], major=12, minor=5)
+    p.box((0.18, 0.04, 0.3), (2.2, 0.0, DECK + 0.65), C["canvas"], rot=(0, 0, 0.1), style="fine")  # cloth tag on the rail
+    if v == "a":
+        # Lean-to cloth over the back half, on two taller posts.
+        for x in (-2.2, 2.2):
+            p.beam((x, 2.2, DECK), (x, 2.2, DECK + 2.0), 0.2, C["timber_dark"], h=0.2)
+            p.beam((x, -0.3, DECK), (x, -0.3, DECK + 1.4), 0.18, C["timber_dark"], h=0.18)
+        p.box((4.9, 3.3, 0.09), (0, 0.95, DECK + 1.75), C["ochre"], rot=(0.3, 0, 0), style="hard_smooth", jit=0.004)
+        p.beam((-2.2, 2.2, DECK + 2.0), (-2.2, -0.3, DECK + 1.4), 0.14, C["timber"], h=0.14)
+        p.beam((2.2, 2.2, DECK + 2.0), (2.2, -0.3, DECK + 1.4), 0.14, C["timber"], h=0.14)
+    elif v == "b":
+        # The cloth has come down on one side and hangs from a single post.
+        p.beam((-2.2, 2.2, DECK), (-2.2, 2.2, DECK + 2.0), 0.2, C["timber_dark"], h=0.2)
+        p.ico(0.5, (-1.3, 1.4, DECK + 0.55), C["ochre_dark"], scale=(2.9, 2.0, 0.1), rot=(0.4, 0.5, 0.3), subdiv=1, style="soft")
+    else:
+        # Bare: a spare timber leaning on the rail and a rolled hammock.
+        p.beam((-2.0, 2.2, DECK + 0.1), (-0.3, 2.3, DECK + 1.3), 0.16, C["timber"], h=0.16)
+        p.ico(0.35, (0.9, 1.6, DECK + 0.4), C["ochre_pale"], scale=(2.0, 0.8, 0.8), rot=(0, 0, 0.2), subdiv=1, style="soft")
+    p.perch((0.0, 0.0, DECK))
+    return
+
+
 @K.kind("hammock_rig", tags=["soft"], variants="abc",
         story="Net-weavers' low hammock on two short posts, a blanket still in it; run down, it sags to the dust.")
 def hammock_rig(p, v, rng):
