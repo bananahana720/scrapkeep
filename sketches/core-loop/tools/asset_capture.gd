@@ -341,6 +341,10 @@ static func place_glb(parent: Node, spec: String) -> Node3D:
 	# Park recipes (anchor kits, landmarks) draw from the shared slot resources, as place_parts does;
 	# hero models from hero_assets' slots, which win where both know a slot.
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		# Godot keeps a "<name>-col" collision mesh as a visible MeshInstance3D; placement never draws it.
+		if String(view.name).ends_with("-col"):
+			view.visible = false
+			continue
 		for i in view.mesh.get_surface_count():
 			var original := view.mesh.surface_get_material(i)
 			var slot := String(original.resource_name) if original != null else ""

@@ -207,6 +207,15 @@ func _run() -> void:
 	_check(glb != null and glb.name == "Glb_warden_kit_mind" and glb.global_position.is_equal_approx(Vector3(1, 2, 3))
 		and is_equal_approx(glb.rotation_degrees.y, 90.0) and glb.find_child("WeakPoint", true, false) != null, "place_glb instances the model at the point and yaw")
 	_check(Cap.place_glb(root_node, "res://assets/models/no_such_model.glb@0,0,0") == null, "place_glb refuses a missing scene")
+	var kit := Cap.place_glb(root_node, "res://assets/models/park/anchor_hoodoo_a.glb@0,0,0")
+	var drawn := 0
+	var col_hidden := 0
+	for view: MeshInstance3D in kit.find_children("*", "MeshInstance3D", true, false) if kit != null else []:
+		if String(view.name).ends_with("-col"):
+			col_hidden += int(not view.visible)
+		else:
+			drawn += int(view.visible)
+	_check(drawn == 1 and col_hidden == 1, "place_glb draws a recipe's body and hides its -col mesh")
 	root_node.queue_free()
 	var parsed := Cap.parse_call('/root/Game/Spawn_plated_brute:on_struck:2:["x","y",{"full":true}]')
 	_check(parsed["ok"] and parsed["path"] == "/root/Game/Spawn_plated_brute" and parsed["method"] == "on_struck"
