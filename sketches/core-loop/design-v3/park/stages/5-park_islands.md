@@ -1,5 +1,7 @@
 # Stage 5: Highdraft, the sky islands (`park_islands`)
 
+**Decoration-only pass, 2026-10-19 (wave 18, islands unit).** Thirteen of the stage's greybox rows stop standing in: `isle_apron`, `slickrock_run`, `fan_band`, `net_carve`, `net_bowl`, `west_shelf` and `ore_bench` become `scatter` (the precedent of park_flume `horseshoe_gorge` and park_pit `floor_sump`); `run_turn_wash`, `lookout_stair`, `east_ribs`, `net_post_run`, `cloud_wash_east` and `ore_chute` draw bake-conformed, decoration-only liners (`liner_<row id>`, `tools/blender/park/flume_works.py --isles`, over `assets/park/park_islands/ground.bin`, no `-col`, no `fit`). All of these were stamped, so none ever drew a box or collided; nothing physical changed. Left greybox on purpose: `fin_chute` (the `fin_rim_collapse` event drops twin_fins' ground 8 m and a baked-ground liner would hang over it) and `cloud_wash_west` (the `isle_shed` impact swaps `west_wing` to a crater); `ore_adit`, `tram_head`, `keel_rib_w` and `keel_rib_e` belong to another unit. Wash liners use the `sandstone` style, one style name per row in `flume_works.py` `ISLES_LINERS`, so a Content dry-wash kit can replace it by editing that field. Traversal re-measured against the unchanged stage: `design-v3/park/traversal/park_islands.md`, 2026-10-19.
+
 ## Round 5 measurement, 2026-10-13
 
 Admission remains held. Candidate `3debeb8` merged without conflicts at

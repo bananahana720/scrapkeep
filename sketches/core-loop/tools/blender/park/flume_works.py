@@ -54,6 +54,8 @@ strips one "-col"), budgets from asset_budgets.json (landform 8000 tris, detail 
       sketches/core-loop/tools/blender/park/flume_works.py -- [--out-dir DIR] [--only ID] [--liners] [--count-only] [--check] [--registry]
   --check     rebuild nothing: verify the GLBs already in --out-dir (collider boxes / wedges, hugging, flume section, rails)
   --registry  print the registry.d fragment (assets/registry.d/park_flume_works.json) for these ids
+  --isles     act on the islands liners (liner_run_turn_wash, liner_lookout_stair, liner_east_ribs, liner_net_post_run, liner_cloud_wash_east,
+              liner_ore_chute; conformed to assets/park/park_islands/ground.bin; registry fragment assets/registry.d/park_islands_liners.json)
   --pit       act on the pit liners (liner_dump_wash_1..2, liner_canal_lip, liner_haul_road_west_5, liner_bench2_camp_lane,
               liner_bench2_east_bank; conformed to assets/park/park_pit/ground.bin), with --check, --count-only or --registry
               (assets/registry.d/park_pit_liners.json)
@@ -1258,7 +1260,8 @@ for _rid, _spec in RECIPES.items():
 
 # ------------------------------------------------------------------ D. liners (decoration only, conformed to the bake)
 
-GROUND_BINS = {"park_flume": kit.SKETCH / "assets/park/park_flume/ground.bin", "park_pit": kit.SKETCH / "assets/park/park_pit/ground.bin"}
+GROUND_BINS = {"park_flume": kit.SKETCH / "assets/park/park_flume/ground.bin", "park_pit": kit.SKETCH / "assets/park/park_pit/ground.bin",
+               "park_islands": kit.SKETCH / "assets/park/park_islands/ground.bin"}
 GROUND_N = 801                 # 801 x 801 float32, row-major z then x, 2 m apart over -800..800
 GROUND_STEP = 2.0
 GROUND_HALF = 800.0
@@ -1271,6 +1274,8 @@ EDGE_OFF = 0.02                # and eases to this at its outer edge, where it m
 HI_LIFT = 0.02                 # never lower than this above either triangulation of a ground cell
 FEATURE_MAX = 0.25             # stones, cobbles, lips and joints stay under this above the ground
 MARGIN = 3.0                   # the liner runs this far past the row's rims
+SLEEPER_PITCH = 2.0            # rails style: a tie every 2 m, 0.5 m wide
+SLEEPER_HALF = 0.25
 PANEL = 8.0                    # concrete panel length
 JOINT_HALF = 0.15              # half the width of a form joint
 BASE_TRIS = 7900               # under the landform budget of 8000
@@ -1305,11 +1310,24 @@ PIT_LINERS = {
 }
 PIT_LINER_IDS = list(PIT_LINERS)
 LINERS.update(PIT_LINERS)
+# The islands' decoration-only pass (park_islands bake). fin_chute (the twin_fins collapse drops its ground 8 m) and cloud_wash_west
+# (the west_wing impact swaps in a crater) are not here: a baked-ground liner would float over the swapped ground.
+ISLES_LINERS = {
+    "liner_run_turn_wash": {"park": "park_islands", "style": "sandstone", "at": (-60.0, -516.0), "size": (60.0, 4.0, 40.0), "yaw": 0.0},
+    "liner_lookout_stair": {"park": "park_islands", "style": "sandstone", "at": (-100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0},
+    "liner_east_ribs": {"park": "park_islands", "style": "sandstone", "at": (100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0},
+    "liner_net_post_run": {"park": "park_islands", "style": "haul", "at": (0.0, 200.0), "size": (160.0, 0.01, 120.0), "yaw": 0.0},
+    "liner_cloud_wash_east": {"park": "park_islands", "style": "sandstone", "at": (210.0, 260.0), "size": (300.0, 0.01, 30.0), "yaw": 0.0},
+    "liner_ore_chute": {"park": "park_islands", "style": "rails", "at": (110.0, 0.0), "size": (150.0, 0.01, 16.0), "yaw": 0.0},
+}
+ISLES_LINER_IDS = list(ISLES_LINERS)
+LINERS.update(ISLES_LINERS)
 LINER_NOTES = {
     "sandstone": "banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks",
     "concrete": "board-formed concrete liner panels with dark form joints and a worn cream coping strip at the rims",
     "pond": "concrete rim ring and a stone pitched lining around a flush floor",
     "canal": "earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip",
+    "rails": "a low light-rail bed: two rails 0.03 m proud on tie sleepers over a gravel bed, cobbles along the verges",
     "haul": "a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them",
 }
 LINER_NOTES_EXTRA = {"liner_wasteway_chute": "; a painted gauge staff on one wall"}
@@ -1410,6 +1428,8 @@ def across_stations(row, step):
         k += [hw - 0.6, hw - 0.1, hw + 0.7, hw + 1.2, hw - 1.0]
     elif row.style == "haul":
         k += [3.0, 4.0, hw - 1.0, hw - 0.3, hw + 0.5, hw + 2.0]
+    elif row.style == "rails":
+        k += [1.45, 1.75, 2.4, hw - 1.0, hw - 0.3, hw + 0.5, hw + 2.0]
     else:
         k += [hw - 1.5, hw - 0.5, hw + 0.8, hw + 2.4]
     k = sorted(set(round(v, 4) for v in k))
@@ -1425,6 +1445,11 @@ def along_stations(row, step):
             z += PANEL
         if row.gauge:
             k += [row.gauge_z - 0.55, row.gauge_z + 0.55]
+    elif row.style == "rails":
+        z = -row.hl + SLEEPER_PITCH
+        while z < row.hl - 1.0:
+            k += [z - SLEEPER_HALF, z + SLEEPER_HALF]
+            z += SLEEPER_PITCH
     return fill(k, step)
 
 
@@ -1453,6 +1478,13 @@ def rect_off(row, lx, lz, gh):
         if row.gauge and lx > 0 and abs(lz - row.gauge_z) <= 0.56 and d <= -0.6:
             off += 0.05 * wt
         off = min(off, FEATURE_MAX)
+    elif st == "rails":
+        a_ = abs(lx)
+        if 1.45 <= a_ <= 1.75 and 1.0 < lz + row.hl < row.L - 1.0:
+            off += 0.03
+        elif -1.0 < d < 1.4:
+            bump = ss((d + 1.0) / 0.8) if d < 0.2 else 1.0 - ss((d - 0.2) / 1.2)
+            off += 0.08 * bump
     elif st == "haul":
         if -1.0 < d < 1.4:      # cobbles along the verge, low and soft: nothing in the lane stands up
             bump = ss((d + 1.0) / 0.8) if d < 0.2 else 1.0 - ss((d - 0.2) / 1.2)
@@ -1498,6 +1530,20 @@ def rect_colour(row, lx, lz, gh, i, j):
             return OXIDE if tick % 4 == 0 else (CREAM if tick % 2 == 0 else DARK)
         panel = int(p // PANEL)
         return tone(CONCRETE, FORM, panel * 3 + (1 if lx > 0 else 0), 0.3)
+    if st == "rails":
+        if d > 2.0 or out_of_run:
+            return tone(SAGE, SAND, i + j, 0.35) if hh(i, j, 3) < 0.07 else tone(SAND, CREAM, i * 3 + j, 0.5)
+        if -1.0 <= d <= 0.8:
+            return tone((STONE, VARNISH, CREAM, STONE)[int(hh(i, j, 2) * 4)], SAND, i + j, 0.45) if hh(i, j, 1) < 0.5 else tone(EARTH, SAND, i + j, 0.4)
+        if d > 0.8:
+            return tone(EARTH, SAND, i * 2 + j, 0.35)
+        if 1.45 <= a <= 1.75:
+            return tone(IRON, DARK, i + j, 0.3)
+        p = lz + row.hl
+        m = p % SLEEPER_PITCH
+        if a <= 2.4 and 1.0 < p < row.L - 1.0 and min(m, SLEEPER_PITCH - m) <= SLEEPER_HALF + 1e-6:
+            return tone(VARNISH, DARK, i + j, 0.4)
+        return tone(SAND, SILT, i * 5 + j, 0.5) if hh(i, j, 6) < 0.8 else tone(CREAM, SAND, i + j, 0.4)
     if st == "haul":
         if d > 2.0 or out_of_run:
             return tone(SAGE, SAND, i + j, 0.35) if hh(i, j, 3) < 0.07 else tone(SAND, CREAM, i * 3 + j, 0.5)
@@ -1621,7 +1667,7 @@ def rect_plan(row):
     if row.rid in _PLANS:
         return _PLANS[row.rid]
     xs0 = across_stations(row, 2.0)
-    for step in (2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0):
+    for step in (2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 16.0):
         zs = refine(along_stations(row, step),
                     lambda a, b: max(abs(row.sample(x, (a + b) / 2.0)[0] - (row.sample(x, a)[0] + row.sample(x, b)[0]) / 2.0) for x in xs0))
         xs = refine(xs0, lambda a, b: max(abs(row.sample((a + b) / 2.0, z)[0] - (row.sample(a, z)[0] + row.sample(b, z)[0]) / 2.0) for z in zs))
@@ -1728,6 +1774,7 @@ def rim_points(row, count, kind, salt):
         "concrete": {"rock": (hw + 1.3, hw + 2.8), "tuft": (hw + 1.3, hw + 2.8)},
         "canal": {"rock": (hw - 1.3, hw + 0.1), "tuft": (hw + 2.0, hw + 2.8)},
         "haul": {"rock": (hw - 0.8, hw + 0.4), "tuft": (hw + 1.2, hw + 2.8)},
+        "rails": {"rock": (hw - 0.8, hw + 0.4), "tuft": (hw + 1.2, hw + 2.8)},
     }[row.style][kind]
     per = max(1, count // 2)
     span = row.ez * 2.0 - 1.4
@@ -1750,7 +1797,7 @@ def surface_off(row, lx, lz, bil):
 
 
 def rock_pal(row):
-    return {"sandstone": (SAND, VARNISH), "concrete": (CONCRETE, FORM), "canal": (STONE, VARNISH), "haul": (STONE, VARNISH), "pond": (STONE, SAND)}[row.style]
+    return {"sandstone": (SAND, VARNISH), "concrete": (CONCRETE, FORM), "canal": (STONE, VARNISH), "haul": (STONE, VARNISH), "rails": (STONE, VARNISH), "pond": (STONE, SAND)}[row.style]
 
 
 def liner_rocks(row):
@@ -2070,9 +2117,9 @@ def liner_registry(rid):
     return rows
 
 
-def registry_doc(pit=False):
+def registry_doc(pit=False, isles=False):
     rows = []
-    for rid in (PIT_LINER_IDS if pit else IDS + LINER_IDS):
+    for rid in (ISLES_LINER_IDS if isles else PIT_LINER_IDS if pit else IDS + LINER_IDS):
         if rid in LINERS:
             rows += liner_registry(rid)
             continue
@@ -2119,12 +2166,13 @@ def main():
     parser.add_argument("--check", action="store_true", help="verify the GLBs in --out-dir instead of building")
     parser.add_argument("--liners", action="store_true", help="act on the liner ids only (default: the original pieces)")
     parser.add_argument("--registry", action="store_true", help="print the registry.d fragment")
+    parser.add_argument("--isles", action="store_true", help="the islands liners (assets/registry.d/park_islands_liners.json)")
     parser.add_argument("--pit", action="store_true", help="the pit liners (assets/registry.d/park_pit_liners.json) instead of the flume's")
     args = parser.parse_args(argv)
     if args.registry:
-        print(json.dumps(registry_doc(args.pit), indent=1))
+        print(json.dumps(registry_doc(args.pit, args.isles), indent=1))
         return
-    ids = [rid for rid in (PIT_LINER_IDS if args.pit else LINER_IDS if args.liners else IDS) + ([args.only] if args.only else []) if not args.only or rid == args.only]
+    ids = [rid for rid in (ISLES_LINER_IDS if args.isles else PIT_LINER_IDS if args.pit else LINER_IDS if args.liners else IDS) + ([args.only] if args.only else []) if not args.only or rid == args.only]
     ids = list(dict.fromkeys(ids))
     if args.check:
         bad = []
