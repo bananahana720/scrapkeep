@@ -66,8 +66,9 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # 80.23 s because that pilot reaches class III near 64.5 s of stage time and its last three chunks then fill under the gain;
 # seeds 0 and 1 hardly move. The small pin holds (99.54 against 101.5). Earlier sweeps on the older stage: with
 # the row gain at 1.3, 1.35, 1.4, 1.5 and 2.0 the small / grown medians were 90.6 / 42.9, 90.6 / 30.2, 90.6 / 37.0, 99.5 / 37.0
-# and 107.6 / 33.1 s (only 1.5 and 2.0 keep the small pin). The committed test passes under its own limits: 308 s wall alone on a
-# 4-core box against its 330 s child cap, so it has little margin on a loaded machine.
+# and 107.6 / 33.1 s (only 1.5 and 2.0 keep the small pin). The committed test passes under its own limits, alone on a 4-core box: 308 s
+# and 326 s wall in two runs against its 330 s child cap and 360 s solo ceiling, so a loaded machine can time it out; the bot tier
+# (swarm and alpha band tests) would give it room, but BOT-SHARDS.md would have to list it.
 const EXPECT_SMALL_S := 101.5
 const EXPECT_GROWN_S := 36.96
 const TOLERANCE := 0.10
