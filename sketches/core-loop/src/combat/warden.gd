@@ -802,12 +802,17 @@ func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "
 	return result
 
 
-# The run's heft class, 0 when no run is in reach (see BossPosture.set_pilot_class).
+# The run's heft class: from the fleet's run, else from a spec "heft_class" Callable (an arena
+# Warden has no fleet: the stub boss hands one in), else 0, which BossPosture and Ultimate read
+# as ordinary, so a Warden with no class source never gets the monster lift.
 func pilot_heft_class() -> int:
 	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
-	if run == null or not run.has_method("heft_class"):
-		return 0
-	return int(run.heft_class())
+	if run != null and run.has_method("heft_class"):
+		return int(run.heft_class())
+	var source = spec.get("heft_class")
+	if source is Callable and source.is_valid():
+		return int(source.call())
+	return 0
 
 
 func _apply_posture(result: Dictionary) -> void:

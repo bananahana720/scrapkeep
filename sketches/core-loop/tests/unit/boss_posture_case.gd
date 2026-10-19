@@ -67,9 +67,14 @@ func _gain(t) -> void:
 	_hit("runner", PLATING * 0.5, charging, {"charging": true})
 	t.near("a gun gains 3.0 times the multiplier while charging", charging.posture, 3.0 * 0.5)
 	var strong := Posture.new()
+	strong.set_pilot_class(3)
 	_hit("ram", PLATING * 4.0, strong)
 	# Andrew's tap "Lift the ceiling" (17 Oct 22:04Z): the cap is 3.0, was 1.5.
 	t.near("the multiplier caps at MULT_MAX 3.0", strong.posture, 90.0)
+	var ordinary := Posture.new()
+	ordinary.set_pilot_class(2)
+	_hit("ram", PLATING * 4.0, ordinary)
+	t.near("an ordinary class keeps the old 1.5 ceiling", ordinary.posture, 45.0)
 
 
 func _frame_max(t) -> void:

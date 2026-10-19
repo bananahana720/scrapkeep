@@ -797,9 +797,9 @@ func defend(amount: float, hp: float) -> float:
 	return clampf(amount * DAMAGE_TAKEN, 0.0, maxf(0.0, hp - 1.0))
 
 
-# The most one set piece adds on a closed Warden guard at this heft class (0 = unknown, the full cap).
+# The most one set piece adds on a closed Warden guard at this heft class (0 = unknown, ordinary).
 static func warden_cap(heft_class: int) -> float:
-	if heft_class > 0 and heft_class < BossPosture.MONSTER_CLASS:
+	if heft_class < BossPosture.MONSTER_CLASS:
 		return WARDEN_POSTURE_CAP_ORDINARY
 	return WARDEN_POSTURE_CAP
 

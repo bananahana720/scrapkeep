@@ -175,4 +175,18 @@ func _pilot_class() -> void:
 	_t.eq("the set piece cap is 45 at class II", Ult.warden_cap(2), 45.0)
 	_t.eq("the set piece cap is 70 at class III", Ult.warden_cap(3), 70.0)
 	_t.eq("the set piece cap is 70 at class V", Ult.warden_cap(5), 70.0)
-	_t.eq("the set piece cap is 70 when the class is unknown", Ult.warden_cap(0), 70.0)
+	_t.eq("the set piece cap is 45 when the class is unknown", Ult.warden_cap(0), 45.0)
+	var unknown := BossPosture.new(flat)
+	unknown.set_pilot_class(0)
+	_t.check("an unknown class fails closed at 1.5", unknown.mult_max == 1.5, str(unknown.mult_max))
+	_warden_class_source()
+
+
+# A fleet-less Warden with no class source stays ordinary; one handed a class reads it.
+func _warden_class_source() -> void:
+	var Warden := preload("res://src/combat/warden.gd")
+	var bare = Warden.new()
+	_t.eq("a fleet-less Warden with no class source reads class 0", bare.pilot_heft_class(), 0)
+	bare.spec = {"heft_class": func() -> int: return 4}
+	_t.eq("a fleet-less Warden reads the class its spec hands in", bare.pilot_heft_class(), 4)
+	bare.free()

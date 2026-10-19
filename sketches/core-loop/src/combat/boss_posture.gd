@@ -97,10 +97,11 @@ func _init(numbers := {}) -> void:
 	hit_cap_until_stagger = bool(numbers.get("hit_cap_until_stagger", false))
 
 
-# The pilot's heft class for the next judge: 0 means unknown (the full ceiling, as a hull boss or a
-# test with no run reads it). Read per hit so a pilot who grows mid-fight earns the lift.
+# The pilot's heft class for the next judge. Unknown (0 or less) fails closed: the ordinary ceiling,
+# as Ultimate._heft_index reads an unknown class as class I. Read per hit so a pilot who grows
+# mid-fight earns the lift. A rule never given a class (a hull boss, a bare test) keeps the row's ceiling.
 func set_pilot_class(heft_class: int) -> void:
-	mult_max = mult_top if heft_class <= 0 or heft_class >= MONSTER_CLASS else minf(mult_top, ORDINARY_RATIO)
+	mult_max = mult_top if heft_class >= MONSTER_CLASS else minf(mult_top, ORDINARY_RATIO)
 
 
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
@@ -139,6 +140,7 @@ func judge(hit: Dictionary) -> Dictionary:
 
 # The most one hit at this ratio may add (see ORDINARY_RATIO).
 func cap_for(ratio: float) -> float:
+	# When mult_top <= ORDINARY_RATIO (a hull boss) a row's hit_cap is disabled.
 	if hit_cap >= FULL or mult_top <= ORDINARY_RATIO or (hit_cap_until_stagger and staggers > 0):
 		return FULL
 	# An ordinary pilot (mult_max held at ORDINARY_RATIO) always meets the ordinary cap.
