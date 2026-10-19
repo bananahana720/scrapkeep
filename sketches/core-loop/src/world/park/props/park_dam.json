@@ -2184,36 +2184,6 @@
    "near": "dome_23: A survey tripod dropped with its sandbag"
   },
   {
-   "id": "low_peg_line_63",
-   "template": "low_peg_line",
-   "at": [
-    -67,
-    -231
-   ],
-   "yaw_deg": 96,
-   "near": "dome_23: A survey peg line"
-  },
-  {
-   "id": "low_brittle_rebar_66",
-   "template": "low_brittle_rebar",
-   "at": [
-    -62,
-    -172
-   ],
-   "yaw_deg": 99,
-   "near": "wash_fin_west: Rebar stubs half taken by brittlebush"
-  },
-  {
-   "id": "low_cold_fire_68",
-   "template": "low_cold_fire",
-   "at": [
-    -52,
-    -132
-   ],
-   "yaw_deg": 99,
-   "near": "wash_fin_west: A cold fire ring with pails and a sandba"
-  },
-  {
    "id": "low_spool_stub_69",
    "template": "low_spool_stub",
    "at": [
@@ -2442,106 +2412,6 @@
    ],
    "yaw_deg": 135,
    "near": "dome_23: The sluice crew's wheelhouse and the odd"
-  },
-  {
-   "id": "low_slump_bags_99",
-   "template": "low_slump_bags",
-   "at": [
-    -51,
-    -251
-   ],
-   "yaw_deg": -45,
-   "near": "dome_23: Sandbags slumping against the bank"
-  },
-  {
-   "id": "mid_hat_wall_100",
-   "template": "mid_hat_wall",
-   "at": [
-    -11,
-    -263
-   ],
-   "yaw_deg": 135,
-   "near": "dome_23: A hat wall sagging in the sun"
-  },
-  {
-   "id": "low_lunch_rock_101",
-   "template": "low_lunch_rock",
-   "at": [
-    -4,
-    -236
-   ],
-   "yaw_deg": 110,
-   "near": "dome_23: Three pails on a flat rock and a brittle"
-  },
-  {
-   "id": "mixer_graveyard_102",
-   "template": "mixer_graveyard",
-   "at": [
-    20,
-    -204
-   ],
-   "yaw_deg": 110,
-   "near": "dome_23: A mixer truck gone to brittlebush"
-  },
-  {
-   "id": "low_tool_roll_103",
-   "template": "low_tool_roll",
-   "at": [
-    16,
-    -182
-   ],
-   "yaw_deg": 110,
-   "near": "dome_23: A survey tripod dropped with its sandbag"
-  },
-  {
-   "id": "mid_tool_bench_104",
-   "template": "mid_tool_bench",
-   "at": [
-    30,
-    -166
-   ],
-   "yaw_deg": 110,
-   "near": "dome_23: A cable spool"
-  },
-  {
-   "id": "low_brittle_rebar_107",
-   "template": "low_brittle_rebar",
-   "at": [
-    33,
-    27
-   ],
-   "yaw_deg": 89,
-   "near": "slot_fin_far: Rebar stubs half taken by brittlebush"
-  },
-  {
-   "id": "low_cold_fire_108",
-   "template": "low_cold_fire",
-   "at": [
-    33,
-    45
-   ],
-   "yaw_deg": 89,
-   "near": "slot_fin_far: A cold fire ring with pails and a sandba"
-  },
-  {
-   "id": "low_spool_stub_109",
-   "template": "low_spool_stub",
-   "at": [
-    32,
-    81
-   ],
-   "yaw_deg": 89,
-   "near": "eye_fin_east: A cable spool on its side with a sandbag"
-  },
-  {
-   "id": "low_slump_bags_110",
-   "template": "low_slump_bags",
-   "at": [
-    24,
-    123
-   ],
-   "yaw_deg": 76,
-   "near": "eye_fin_east: Sandbags slumping against the bank"
   },
   {
    "id": "low_lunch_rock_111",
@@ -2804,26 +2674,6 @@
    "near": "dome_23: Rebar stubs half taken by brittlebush"
   },
   {
-   "id": "low_cold_fire_150",
-   "template": "low_cold_fire",
-   "at": [
-    3,
-    -218
-   ],
-   "yaw_deg": 110,
-   "near": "dome_23: A cold fire ring with pails and a sandba"
-  },
-  {
-   "id": "low_spool_stub_151",
-   "template": "low_spool_stub",
-   "at": [
-    -4,
-    -154
-   ],
-   "yaw_deg": -70,
-   "near": "wash_fin_west: A cable spool on its side with a sandbag"
-  },
-  {
    "id": "mid_hat_wall_153",
    "template": "mid_hat_wall",
    "at": [
@@ -2852,16 +2702,6 @@
    ],
    "yaw_deg": 111,
    "near": "eye_chute_east: The Fleet's 'surplus concrete' docket"
-  },
-  {
-   "id": "low_fleet_docket_156",
-   "template": "low_fleet_docket",
-   "at": [
-    -40,
-    -118
-   ],
-   "yaw_deg": 99,
-   "near": "wash_fin_west: A Fleet docket marker"
   },
   {
    "id": "tool_wall_158",
@@ -2914,246 +2754,6 @@
    "near": "the_eye: A survey crew's tent"
   },
   {
-   "id": "low_chalk_tally_tally_0",
-   "template": "low_chalk_tally",
-   "at": [
-    46,
-    398
-   ],
-   "yaw_deg": -103,
-   "near": "tally fill, 41 m from line"
-  },
-  {
-   "id": "low_cold_fire_tally_1",
-   "template": "low_cold_fire",
-   "at": [
-    -14,
-    404
-   ],
-   "yaw_deg": 126,
-   "near": "tally fill, 11 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_2",
-   "template": "low_chalk_tally",
-   "at": [
-    72,
-    -107
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 58 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_3",
-   "template": "low_chalk_tally",
-   "at": [
-    72,
-    -89
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 57 m from line"
-  },
-  {
-   "id": "mid_pour_edge_canyon_4",
-   "template": "mid_pour_edge",
-   "at": [
-    90,
-    -89
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 75 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_5",
-   "template": "low_chalk_tally",
-   "at": [
-    72,
-    -71
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 56 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_6",
-   "template": "low_chalk_tally",
-   "at": [
-    72,
-    -47
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 54 m from line"
-  },
-  {
-   "id": "mid_overgrown_canyon_7",
-   "template": "mid_overgrown",
-   "at": [
-    84,
-    -59
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 67 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_8",
-   "template": "low_chalk_tally",
-   "at": [
-    72,
-    -29
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 53 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_9",
-   "template": "low_chalk_tally",
-   "at": [
-    90,
-    -23
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 71 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_10",
-   "template": "low_chalk_tally",
-   "at": [
-    72,
-    7
-   ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 52 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_11",
-   "template": "low_chalk_tally",
-   "at": [
-    72,
-    25
-   ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 53 m from line"
-  },
-  {
-   "id": "mid_pour_edge_canyon_12",
-   "template": "mid_pour_edge",
-   "at": [
-    90,
-    19
-   ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 70 m from line"
-  },
-  {
-   "id": "low_chalk_tally_canyon_13",
-   "template": "low_chalk_tally",
-   "at": [
-    72,
-    55
-   ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 53 m from line"
-  },
-  {
-   "id": "mid_overgrown_canyon_14",
-   "template": "mid_overgrown",
-   "at": [
-    78,
-    73
-   ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 60 m from line"
-  },
-  {
-   "id": "mid_pour_edge_canyon_15",
-   "template": "mid_pour_edge",
-   "at": [
-    48,
-    109
-   ],
-   "yaw_deg": 76,
-   "near": "canyon fill, 34 m from line"
-  },
-  {
-   "id": "rebar_thicket_rim_16",
-   "template": "rebar_thicket",
-   "at": [
-    -190,
-    -95
-   ],
-   "yaw_deg": -78,
-   "near": "rim fill, 71 m from line"
-  },
-  {
-   "id": "wheelhouse_yard_rim_17",
-   "template": "wheelhouse_yard",
-   "at": [
-    -170,
-    -45
-   ],
-   "yaw_deg": -76,
-   "near": "rim fill, 62 m from line"
-  },
-  {
-   "id": "crew_camp_rim_18",
-   "template": "crew_camp",
-   "at": [
-    -160,
-    -5
-   ],
-   "yaw_deg": -69,
-   "near": "rim fill, 66 m from line"
-  },
-  {
-   "id": "bunk_collapse_rim_19",
-   "template": "bunk_collapse",
-   "at": [
-    -160,
-    35
-   ],
-   "yaw_deg": -69,
-   "near": "rim fill, 80 m from line"
-  },
-  {
-   "id": "flood_gauge_rim_20",
-   "template": "flood_gauge",
-   "at": [
-    -160,
-    75
-   ],
-   "yaw_deg": -69,
-   "near": "rim fill, 94 m from line"
-  },
-  {
-   "id": "rebar_thicket_rim_21",
-   "template": "rebar_thicket",
-   "at": [
-    -160,
-    115
-   ],
-   "yaw_deg": -60,
-   "near": "rim fill, 110 m from line"
-  },
-  {
-   "id": "low_peg_line_view_0",
-   "template": "low_peg_line",
-   "at": [
-    138,
-    366
-   ],
-   "yaw_deg": -85,
-   "near": "density window cannon 0 m, 8 m from line"
-  },
-  {
-   "id": "low_peg_line_view_1",
-   "template": "low_peg_line",
-   "at": [
-    156,
-    372
-   ],
-   "yaw_deg": 95,
-   "near": "density window cannon 0 m, 9 m from line"
-  },
-  {
    "id": "low_peg_line_view_2",
    "template": "low_peg_line",
    "at": [
@@ -3184,16 +2784,6 @@
    "near": "density window rivet 0 m, 9 m from line"
   },
   {
-   "id": "low_lunch_rock_view_5",
-   "template": "low_lunch_rock",
-   "at": [
-    -192,
-    -528
-   ],
-   "yaw_deg": 8,
-   "near": "density window rivet 0 m, 10 m from line"
-  },
-  {
    "id": "low_tool_roll_view_6",
    "template": "low_tool_roll",
    "at": [
@@ -3202,6 +2792,306 @@
    ],
    "yaw_deg": -54,
    "near": "density window tally 0 m, 12 m from line"
+  },
+  {
+   "id": "low_chalk_tally_tally_0",
+   "template": "low_chalk_tally",
+   "at": [
+    46,
+    398
+   ],
+   "yaw_deg": -103,
+   "near": "tally fill, 41 m from line"
+  },
+  {
+   "id": "low_cold_fire_tally_1",
+   "template": "low_cold_fire",
+   "at": [
+    -14,
+    404
+   ],
+   "yaw_deg": 126,
+   "near": "tally fill, 11 m from line"
+  },
+  {
+   "id": "low_spool_stub_tally_2",
+   "template": "low_spool_stub",
+   "at": [
+    52,
+    428
+   ],
+   "yaw_deg": -103,
+   "near": "tally fill, 28 m from line"
+  },
+  {
+   "id": "low_brittle_rebar_tally_3",
+   "template": "low_brittle_rebar",
+   "at": [
+    52,
+    452
+   ],
+   "yaw_deg": -103,
+   "near": "tally fill, 23 m from line"
+  },
+  {
+   "id": "low_slump_bags_canyon_5",
+   "template": "low_slump_bags",
+   "at": [
+    78,
+    -107
+   ],
+   "yaw_deg": 93,
+   "near": "canyon fill, 64 m from line"
+  },
+  {
+   "id": "low_lunch_rock_canyon_6",
+   "template": "low_lunch_rock",
+   "at": [
+    72,
+    -89
+   ],
+   "yaw_deg": 93,
+   "near": "canyon fill, 57 m from line"
+  },
+  {
+   "id": "mid_pour_edge_canyon_7",
+   "template": "mid_pour_edge",
+   "at": [
+    90,
+    -89
+   ],
+   "yaw_deg": 93,
+   "near": "canyon fill, 75 m from line"
+  },
+  {
+   "id": "low_tool_roll_canyon_8",
+   "template": "low_tool_roll",
+   "at": [
+    72,
+    -71
+   ],
+   "yaw_deg": 93,
+   "near": "canyon fill, 56 m from line"
+  },
+  {
+   "id": "low_chalk_tally_canyon_9",
+   "template": "low_chalk_tally",
+   "at": [
+    72,
+    -47
+   ],
+   "yaw_deg": 93,
+   "near": "canyon fill, 54 m from line"
+  },
+  {
+   "id": "mid_overgrown_canyon_10",
+   "template": "mid_overgrown",
+   "at": [
+    84,
+    -59
+   ],
+   "yaw_deg": 93,
+   "near": "canyon fill, 67 m from line"
+  },
+  {
+   "id": "low_cold_fire_canyon_11",
+   "template": "low_cold_fire",
+   "at": [
+    72,
+    -29
+   ],
+   "yaw_deg": 93,
+   "near": "canyon fill, 53 m from line"
+  },
+  {
+   "id": "low_spool_stub_canyon_13",
+   "template": "low_spool_stub",
+   "at": [
+    72,
+    7
+   ],
+   "yaw_deg": 89,
+   "near": "canyon fill, 52 m from line"
+  },
+  {
+   "id": "low_slump_bags_canyon_14",
+   "template": "low_slump_bags",
+   "at": [
+    72,
+    25
+   ],
+   "yaw_deg": 89,
+   "near": "canyon fill, 53 m from line"
+  },
+  {
+   "id": "mid_laundry_canyon_15",
+   "template": "mid_laundry",
+   "at": [
+    90,
+    19
+   ],
+   "yaw_deg": 89,
+   "near": "canyon fill, 70 m from line"
+  },
+  {
+   "id": "low_chalk_tally_canyon_16",
+   "template": "low_chalk_tally",
+   "at": [
+    72,
+    55
+   ],
+   "yaw_deg": 89,
+   "near": "canyon fill, 53 m from line"
+  },
+  {
+   "id": "mid_hat_wall_canyon_17",
+   "template": "mid_hat_wall",
+   "at": [
+    78,
+    73
+   ],
+   "yaw_deg": 89,
+   "near": "canyon fill, 60 m from line"
+  },
+  {
+   "id": "low_cold_fire_canyon_18",
+   "template": "low_cold_fire",
+   "at": [
+    48,
+    109
+   ],
+   "yaw_deg": 76,
+   "near": "canyon fill, 34 m from line"
+  },
+  {
+   "id": "mid_tool_bench_canyon_19",
+   "template": "mid_tool_bench",
+   "at": [
+    66,
+    109
+   ],
+   "yaw_deg": 76,
+   "near": "canyon fill, 51 m from line"
+  },
+  {
+   "id": "rebar_thicket_rim_20",
+   "template": "rebar_thicket",
+   "at": [
+    -190,
+    -85
+   ],
+   "yaw_deg": -78,
+   "near": "rim fill, 73 m from line"
+  },
+  {
+   "id": "tool_wall_rim_21",
+   "template": "tool_wall",
+   "at": [
+    -170,
+    -45
+   ],
+   "yaw_deg": -76,
+   "near": "rim fill, 62 m from line"
+  },
+  {
+   "id": "wheelhouse_yard_rim_22",
+   "template": "wheelhouse_yard",
+   "at": [
+    -160,
+    -5
+   ],
+   "yaw_deg": -69,
+   "near": "rim fill, 66 m from line"
+  },
+  {
+   "id": "mixer_graveyard_rim_23",
+   "template": "mixer_graveyard",
+   "at": [
+    -160,
+    35
+   ],
+   "yaw_deg": -69,
+   "near": "rim fill, 80 m from line"
+  },
+  {
+   "id": "crew_camp_rim_24",
+   "template": "crew_camp",
+   "at": [
+    -160,
+    75
+   ],
+   "yaw_deg": -69,
+   "near": "rim fill, 94 m from line"
+  },
+  {
+   "id": "bunk_collapse_rim_25",
+   "template": "bunk_collapse",
+   "at": [
+    -160,
+    115
+   ],
+   "yaw_deg": -60,
+   "near": "rim fill, 110 m from line"
+  },
+  {
+   "id": "low_peg_line_view_0",
+   "template": "low_peg_line",
+   "at": [
+    -84,
+    -192
+   ],
+   "yaw_deg": -81,
+   "near": "density window floor 0 m, 8 m from line"
+  },
+  {
+   "id": "low_peg_line_view_1",
+   "template": "low_peg_line",
+   "at": [
+    -90,
+    -228
+   ],
+   "yaw_deg": -84,
+   "near": "density window floor 0 m, 9 m from line"
+  },
+  {
+   "id": "low_lunch_rock_view_2",
+   "template": "low_lunch_rock",
+   "at": [
+    -90,
+    -216
+   ],
+   "yaw_deg": -81,
+   "near": "density window floor 0 m, 10 m from line"
+  },
+  {
+   "id": "low_brittle_rebar_view_3",
+   "template": "low_brittle_rebar",
+   "at": [
+    -12,
+    -186
+   ],
+   "yaw_deg": -70,
+   "near": "density window kest 0 m, 11 m from line"
+  },
+  {
+   "id": "low_peg_line_view_4_b132",
+   "template": "low_peg_line",
+   "at": [
+    36,
+    -144
+   ],
+   "yaw_deg": 93,
+   "near": "density window kest 0 m, 24 m from line"
+  },
+  {
+   "id": "low_chalk_tally_view_5",
+   "template": "low_chalk_tally",
+   "at": [
+    36,
+    -156
+   ],
+   "yaw_deg": 104,
+   "near": "density window kest 0 m, 25 m from line"
   }
  ],
  "litter": {
@@ -3230,5 +3120,5 @@
   ],
   "seed": 11
  },
- "pin": 3264395950
+ "pin": 3133846017
 }
