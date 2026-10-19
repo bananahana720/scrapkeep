@@ -358,6 +358,13 @@ func _on_end() -> void:
 	_free_pod()
 
 
+# Killed with its stream running: the trick fires and the chute goes quiet.
+func _die() -> void:
+	if drops > 0 and fleet != null:
+		fleet.discover("stream_cut", global_position)
+	super()
+
+
 func _free_pod() -> void:
 	if is_instance_valid(_pod):
 		_pod.queue_free()
