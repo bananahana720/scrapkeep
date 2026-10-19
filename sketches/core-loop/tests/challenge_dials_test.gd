@@ -50,7 +50,10 @@ func _rules() -> void:
 	_t.eq("parse floats", parsed["mind.damage_mult"], 1.5)
 	_t.eq("parse _by_phase arrays", parsed["waking.damage_by_phase"], [1.0, 1.25, 1.5, 2.0])
 	_t.eq("parse the combo", parsed["brindle.combo"], 2.0)
+	ChallengeDials.quiet = true
 	_t.eq("parse drops an unknown key", ChallengeDials.parse("nope.nothing=3").size(), 0)
+	_t.eq("the unknown key is recorded as refused", ChallengeDials.rejected, ["challenge_dials: unknown dial 'nope.nothing' ignored"])
+	ChallengeDials.quiet = false
 	ChallengeDials.set_overrides(parsed)
 	_t.eq("override wins", ChallengeDials.value("mind.damage_mult"), 1.5)
 	_t.eq("describe lists only the non-defaults", ChallengeDials.describe().keys().size(), 3)
@@ -97,7 +100,9 @@ func _rules() -> void:
 	_t.near("a period never drops under the warning gap", ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1), ChallengeDials.WARN_GAP, 0.0)
 	ChallengeDials.reset()
 
-	# --tune parsing refuses what it cannot read: no silent zeros.
+	# --tune parsing refuses what it cannot read: no silent zeros. Quiet, so the refusals this block
+	# feeds on purpose are recorded and counted below instead of printed as ERROR lines.
+	ChallengeDials.quiet = true
 	_t.eq("a non-numeric value is ignored", ChallengeDials.parse("mind.damage_mult=abc").size(), 0)
 	_t.eq("a negative multiplier is ignored", ChallengeDials.parse("mind.damage_mult=-1").size(), 0)
 	_t.eq("a bad entry in a by-phase list is ignored", ChallengeDials.parse("mind.damage_by_phase=1/x/2/3").size(), 0)
@@ -108,7 +113,10 @@ func _rules() -> void:
 	_t.eq("set_overrides refuses negative, non-numeric and pilot values", ChallengeDials.describe(), {"mind.punish_mult": 3.0})
 	ChallengeDials.set_overrides({"pilot.regen_rate_mult": 2.0}, true)
 	_t.eq("set_overrides takes a pilot dial only with the opt-in", ChallengeDials.describe(), {"pilot.regen_rate_mult": 2.0})
+	_t.eq("each refused entry is recorded once per refusal", ChallengeDials.rejected.size(), 9)
+	_t.check("the refusals name their dials", ChallengeDials.rejected.all(func(m): return m.begins_with("challenge_dials: dial '")))
 	ChallengeDials.reset()
+	_t.eq("reset clears the refusals and quiet", [ChallengeDials.rejected.size(), ChallengeDials.quiet], [0, false])
 	_director()
 
 

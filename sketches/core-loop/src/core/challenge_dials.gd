@@ -49,6 +49,10 @@ static var _overrides := {}
 static var _cli_loaded := false
 static var _cli := {}
 static var _warned := {}
+# Every refusal's message, in order, for tests to read. With quiet set, a refusal is recorded but not
+# printed: only a test that feeds bad input on purpose sets it (an ERROR line fails the test lane).
+static var rejected: Array[String] = []
+static var quiet := false
 
 
 static func value(key: String) -> Variant:
@@ -91,6 +95,8 @@ static func reset() -> void:
 	_cli = {}
 	_cli_loaded = false
 	_warned = {}
+	rejected = []
+	quiet = false
 
 
 # Only the non-default values, for run records.
@@ -156,11 +162,7 @@ static func _valid(key: String, raw: String) -> bool:
 
 
 static func _reject(key: String, why: String) -> void:
-	var id := key + why
-	if _warned.has(id):
-		return
-	_warned[id] = true
-	push_error("challenge_dials: dial '%s' ignored: %s" % [key, why])
+	_refuse(key + why, "challenge_dials: dial '%s' ignored: %s" % [key, why])
 
 
 static func _coerce(key: String, raw: Variant) -> Variant:
@@ -177,10 +179,16 @@ static func _coerce(key: String, raw: Variant) -> Variant:
 
 
 static func _unknown(key: String) -> void:
-	if _warned.has(key):
+	_refuse(key, "challenge_dials: unknown dial '%s' ignored" % key)
+
+
+# Records every refusal; prints each distinct one once unless quiet.
+static func _refuse(id: String, message: String) -> void:
+	rejected.append(message)
+	if quiet or _warned.has(id):
 		return
-	_warned[key] = true
-	push_error("challenge_dials: unknown dial '%s' ignored" % key)
+	_warned[id] = true
+	push_error(message)
 
 
 # --- Readings the game's wire points share ----------------------------------------------
