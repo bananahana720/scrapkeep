@@ -41,12 +41,9 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-18 Dig plated elites and Highdraft ring-outs (#69) merged onto stage/alpha-w17; recorded with --record-base --section=runtime.
 # 2026-10-18 stage/alpha-w17 re-record at 04eb0d00 (Gate lane): #125, #127, #129, #139, #140, #106, #142, #144, #105 and the #126
 # flume pass (park rows) together; recorded with --record-base --section=runtime, seeds 0..19 in four-wide batches.
-# 2026-10-18 W18-PACKS re-pin: park_defs.gd gains the nine authored nemesis, Dispatcher and Splitter packs; all 20 schedule and all 20
-# whole-run hashes moved. Values read from this test's own MEASURE lines (schedule0, tier0.hash) on the unmodified test.
-# 2026-10-18 W18-PACKS follow-up: split_yard removed again (it stalled the skipper bot at stage 2); all 20 moved again, same method. The whole-run
-# pins (BASE_RUN) also carry the Systems A nemesis lean, because world.gd now feeds the director a build, so they moved for both reasons.
-# 2026-10-19 merge of origin/cand/alpha-w17-stack (8d89be00, incl. #196's final nemesis wiring) into claude/systems-b-w18: schedule and
-# whole-run pins re-read from this test's own MEASURE lines (schedule0, tier0.hash) on the unmodified test, seeds 0..19.
+# 2026-10-19 stage/alpha-w17 re-record at 958bbdcd (Gate lane): the candidate stack's park PRs (#170 crown, #180 pit,
+# #183 islands, #185 dam rim_cache) move park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged.
+# 2026-10-19 merge of origin/stage/alpha-w17 (2e247fc8) into claude/systems-b-w18: pins re-read from this test's own MEASURE lines (schedule0, tier0.hash), seeds 0..19.
 const BASE_SCHEDULE := [
 	"d7f0bdc767c82f9a92e0b5a8e87d1c8d15b040b50bfb0b904d78dae4853284a3",
 	"efde2222ac27378d3043643093d96405c0ba901ec553c84af02a1f9f160cc65d",
