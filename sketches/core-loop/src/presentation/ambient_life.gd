@@ -15,6 +15,7 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const TICK_S := 0.1
 const VIEW_END_M := 140.0
 const ROOF_REACH_M := 14.0
+const ROOF_MIN_M := 1.5
 const FALLBACK_ROOF_M := 2.5
 const WORLD_MASK := 1
 # A home steeper than this (from the ground callable) or with a structure over it is vetoed at build.
@@ -79,8 +80,9 @@ func _stage_entered(stage: int, _retry: bool) -> void:
 		return
 	_release_all()
 	pool = null
+	var tree := get_tree()
 	for i in PLAN_AFTER_STEPS:
-		await get_tree().physics_frame
+		await tree.physics_frame
 	if serial == _entries and is_inside_tree():
 		_build_stage(stage)
 
@@ -122,20 +124,31 @@ func _build_stage(stage: int) -> void:
 	_prev.clear()
 
 
-# A spot the park file cannot judge: ground steeper than MAX_SLOPE_DEG, or (except under a ceiling perch, which
-# wants its roof) a structure standing over the ground, such as a gatehouse the heightfield does not know.
+# A spot the park file cannot judge: ground steeper than MAX_SLOPE_DEG, a structure standing over the ground (such
+# as a gatehouse the heightfield does not know), or, for a ceiling perch, no real roof to hang from.
 static func unfit(ground: Callable, space: PhysicsDirectSpaceState3D, at: Vector2, perch: String) -> bool:
+	# A roost hangs from its roof, so the floor under it may slope.
+	if perch == "ceiling":
+		return space == null or not _has_roof(ground, space, at)
 	var e := SLOPE_STEP_M
 	var dx: float = (ground.call(at.x + e, at.y, 0.0).y - ground.call(at.x - e, at.y, 0.0).y) / (2.0 * e)
 	var dz: float = (ground.call(at.x, at.y + e, 0.0).y - ground.call(at.x, at.y - e, 0.0).y) / (2.0 * e)
 	if rad_to_deg(atan(Vector2(dx, dz).length())) > MAX_SLOPE_DEG:
 		return true
-	if space == null or perch == "ceiling":
+	if space == null:
 		return false
 	var floor_y: float = ground.call(at.x, at.y, 0.0).y
 	var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, floor_y + COVER_REACH_M, at.y), Vector3(at.x, floor_y - 1.0, at.y), WORLD_MASK)
 	var hit := space.intersect_ray(query)
 	return not hit.is_empty() and float(hit["position"].y) - floor_y > COVER_DY_M
+
+
+# A bat hangs only under real cover: something solid between ROOF_MIN_M and ROOF_REACH_M above the ground.
+static func _has_roof(ground: Callable, space: PhysicsDirectSpaceState3D, at: Vector2) -> bool:
+	var floor_y: float = ground.call(at.x, at.y, 0.0).y
+	var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, floor_y + 0.5, at.y), Vector3(at.x, floor_y + ROOF_REACH_M, at.y), WORLD_MASK)
+	var hit := space.intersect_ray(query)
+	return not hit.is_empty() and float(hit["position"].y) - floor_y >= ROOF_MIN_M
 
 
 # One upward ray at build for a bat's ceiling: height above the ground there, else a low fallback.

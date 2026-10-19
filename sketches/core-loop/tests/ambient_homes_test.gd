@@ -61,7 +61,11 @@ func _run() -> void:
 	for home in east:
 		for offset: Vector2 in home["members"]:
 			west += 1 if (home["at"] + offset).x < 0.0 else 0
+	var east_kinds := {}
+	for home in east:
+		east_kinds[home["kind"]] = true
 	_t.check("veto keeps every position east (%d homes)" % east.size(), west == 0 and east.size() > 0, "%d west" % west)
+	_t.eq("every park_dam kind still has an east home", east_kinds.size(), AmbientKinds.for_park("park_dam").size())
 	# blocked() really blocks: the spawn and the beacon are inside keepouts.
 	var park: Dictionary = ParkSchema.load_park("res://src/world/park/park_dam.json")["data"]
 	var keep := AmbientHomes.keepouts(park)
