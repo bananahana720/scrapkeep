@@ -22,7 +22,9 @@ From the coordinator ruling, `project-guide/handoff/DECISIONS.md` section 5, 19 
 
 The 0.6 s tell is not measured: a bot cannot say what a person reads. It stays a design and Andrew-sitting check.
 
-A cell's mark is a point-estimate check (`✓`/`✗`); the Wilson 95% interval sits beside it, so a `✗` inside a wide interval reads as "run more seeds", not "broken". A timeout (stall, fight cap, tick guard) is never a win and is counted apart; so is an error (no record).
+A cell's mark is a point-estimate check (`✓`/`✗`); the Wilson 95% interval sits beside it, so a `✗` inside a wide interval reads as "run more seeds", not "broken". A timeout (stall, fight cap, tick guard) is never a win and is counted apart, beside the deaths. An error (no record, boss never entered, doc not resumed) and a harness kill (`killed`, a wall timeout that a rerun alone did not fix) are excluded from n and the rate and noted per column as `excluded: N error, M killed`; when more than 10% of a column's jobs are excluded, the column is `incomplete` and gets no ✓/✗.
+
+The top/ord fight-time ratio is reported, not graded: the 2x hive rule is graded by `posture_bands_*`, and the ruling's "keeps the existing growth ratios" is not asserted here. The Learner 45 s check covers both attempt 1 and attempt 5 boss deaths.
 
 ## Cells
 
@@ -32,7 +34,7 @@ A cell's mark is a point-estimate check (`✓`/`✗`); the Wilson 95% interval s
 | `w1` to `w6` | Warden | Resume stage N and play it to its exit (`--until=N`). Win is the stage note's `warden_broken_s`. The fight may last 240 s from engagement (`--fight-limit`, over 3x the 45-85 s stagger bands); the stage cap is lifted to 600 s (`--stage-limit`) so it cannot cut an engaged fight first. A `fight_capped` or `stalled` run is a timeout, never a win, and is counted beside the deaths. |
 | `world1` to `world3` | park | Resume the world's first stage (1, 3, 5) and stop the tick the world's Warden is engaged (`--stop-at=engaged:<last stage>`). Win is outcome `reached`. |
 
-Stage 1 has no build to carry, so `w1`, `brindle`-style stage-1 cells and `world1` play fresh and the seed picks the pilot.
+Stage 1 has no build to carry, so only `w1` and `world1` play fresh runs and the seed picks the pilot. Every other cell resumes a library doc, and the run checks it did: stage, parts count and mass must match the doc (`resumed` in the row). A run that did not resume is an error.
 
 ## Run it
 
@@ -61,7 +63,10 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 | `--jobs=<n>` | 4 | Godot processes at once (at most 6). Band sweeps can run out of memory; a job that times out or is killed is rerun once alone before it counts. |
 | `--label=` | `run-<stamp>` | Output folder name under `artifacts/local/challenge/`. |
 | `--shard=i/n` | | Jobs `k` where `k mod n = i-1`, over the planned list: deterministic, disjoint, joined by `--merge`. |
-| `--merge=<dir,...>` | | Aggregate existing `runs.ndjson` files and print the table; runs nothing. |
+| `--merge=<dir,...>` | | Aggregate run folders and print the table; runs nothing. Each folder's `meta.json` (shard, plan hash, commit, library) must agree, and every shard i of n must be present, or the merge is refused (`--allow-mixed` waives the plan and commit check only). |
+| `--resume` | | Continue an existing `--label`. Without it an existing label is refused, so rows never pile up across runs. Jobs whose row is for this plan and commit are skipped. |
+| `--allow-mixed` | | Let the table or a merge take rows or folders from different commits or plans. |
+| `--tune=<text>` | | Free text folded into the plan hash and forwarded to the runner as `--tune=`. |
 | `--dry-run` | | Print the job count and an estimated wall time. |
 | `--strict` | | Exit 1 when any cell has a `✗`. Otherwise exit 0 whenever the harness ran. |
 
@@ -69,13 +74,13 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 
 `runs.ndjson` keeps each job's entrance relative to its library and grading reads only the record, so run folders from different machines merge with `--merge`. The run ends by printing wall and game medians per job kind, saved as `timing` in `table.json`, to re-estimate `--dry-run`.
 
-Output: `artifacts/local/challenge/<label>/`: `runs.ndjson` (one line per job: its fields, the bot row, the grade, wall seconds), `table.md`, `table.json` and `jobs/<id>/` (log and `out/bots.ndjson`).
+Output: `artifacts/local/challenge/<label>/`: `meta.json` (shard, plan hash, commit, library, buckets), `runs.ndjson` (one line per job: its fields, `key` = library:plan:commit:id, the bot row, the grade, wall seconds), `table.md`, `table.json` and `jobs/<id>/` (log and `out/bots.ndjson`).
 
 ## Limits
 
 - Bots, not people. The bands model reaction and skill with parameters; a win rate here says how the bands fare, and Andrew's sitting decides whether a Learner feels like one. The 0.6 s tell is a design check and is not measured.
 - Headless simulation time at 90 ticks a second, one process per run, on the source tree, with the park table and the gate switches. It is not a frame-time or hardware result.
-- Builds come from today's bot runs (no band), at each stage entrance: they are what the completionist and skipper happen to carry, not what a player would build. "Ordinary" is the middle fifth of the library by mass, then parts count; "top" is the top tenth. A library from a different commit measures a different game; the table's `table.json` records the commit it ran on, not the library's.
+- Builds come from today's bot runs (no band), at each stage entrance: they are what the completionist and skipper happen to carry, not what a player would build. "Ordinary" is the 40th to 60th percentile of the library by mass, then parts count; "top" is the 90th and up. A bucket under three docs widens (ordinary one rank each way, top downward) until it has three or holds every doc, so a small library makes the buckets overlap, even share docs. The table lists each stage's bucket sizes and the overlap, and marks the Expert-top column and ratio `(overlaps ordinary)` when it is not zero; with overlap the top-vs-ordinary contrast is not measured. A library from a different commit measures a different game; the table's `table.json` records the commit it ran on, not the library's.
 - Boss cells enter the boss at the stage's start with the saved ball position, not carried from the exit run; a Warden fight starts from the stage's entrance, so it includes the approach.
 - One Learner attempt number per run: the a5 column plays attempt 5 fresh with the band's teaching applied, not five consecutive fights.
 - The seed counts decide the interval width; 16 seeds per column gives about plus or minus 20 points near 50%.

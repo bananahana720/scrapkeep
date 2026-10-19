@@ -18,7 +18,8 @@ extends "res://tools/bot_run.gd"
 # --stop-at=engaged:<stage> ends the run as "reached" the tick that stage's Warden is engaged.
 # --fight-limit=<s> sets the driver's fight_limit (a Warden fight past that many seconds from engagement ends
 # "fight_capped"); --stage-limit=<s> sets its stage_limit, so the stall cap cannot cut an engaged fight first.
-# The row keeps bot_run's format and gains "entrance" (the doc's basename) and "cell".
+# The row keeps bot_run's format and gains "entrance" (the doc's basename), "cell" and "resumed" (true when the run
+# matches the doc's stage, parts count and mass after the resume; null without --entrance).
 # The band flags (--band, --attempt) are tools/bot_run.gd's, from tools/skill_band.gd.
 
 var _band_hooked := false
@@ -28,6 +29,8 @@ var _band_reached := false
 var _band_stop_stage := -1
 var _band_rows_seen := 0
 var _band_limits_set := false
+var _band_resumed = null
+var _band_checked := false
 
 
 func _initialize() -> void:
@@ -79,6 +82,9 @@ func _physics_process(delta: float) -> bool:
 				_band_boss_done = true
 				_game.flow.enter_boss(Vector3(15.0, 0.0, 0.0))
 	var over := super._physics_process(delta)
+	if not _band_checked and _driver != null and _game != null and _game.run != null:
+		_band_checked = true
+		_band_resumed = _check_resumed()
 	# The doc is saved at the end of enter_stage, so by here it is on disk, even on the tick that ends an --until run.
 	if _band_copy_stage >= 0 and _settings.get("keep-entrances", "0") == "1":
 		_keep_entrance()
@@ -108,6 +114,24 @@ func _keep_entrance() -> void:
 		file.store_string(text)
 
 
+# With --entrance, did the run really continue the doc? Stage, parts count and mass must match what was saved.
+# null when no doc was named.
+func _check_resumed():
+	if not _settings.has("entrance"):
+		return null
+	var doc = JSON.parse_string(FileAccess.get_file_as_string(String(_settings["entrance"])))
+	if not doc is Dictionary:
+		return false
+	var run = doc.get("run", doc)
+	var ok: bool = _game.run.stage == int(run.get("stage", -1)) \
+		and _game.run.parts.size() == (run.get("parts", []) as Array).size() \
+		and absf(float(_game.run.mass) - float(run.get("mass", 0.0))) <= 0.01
+	if not ok:
+		printerr("band_run: --entrance was not resumed: run stage %d, %d parts, mass %s; doc stage %s, %d parts, mass %s" % [
+			_game.run.stage, _game.run.parts.size(), _game.run.mass, run.get("stage"), (run.get("parts", []) as Array).size(), run.get("mass")])
+	return ok
+
+
 # bot_run appends the row inside its tick; rewrite the last line with the harness fields.
 func _annotate_row() -> void:
 	var path := _out.path_join("bots.ndjson")
@@ -117,6 +141,7 @@ func _annotate_row() -> void:
 	var row = JSON.parse_string(lines[lines.size() - 1])
 	if not row is Dictionary:
 		return
+	row["resumed"] = _band_resumed
 	row["entrance"] = String(_settings["entrance"]).get_file() if _settings.has("entrance") else null
 	row["cell"] = String(_settings["cell"]) if _settings.has("cell") else null
 	lines[lines.size() - 1] = JSON.stringify(row)

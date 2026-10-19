@@ -14,7 +14,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLUMNS, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
+import { COLUMNS, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -22,7 +22,7 @@ const outRoot = path.join(root, "artifacts/local/challenge");
 const KIND_TIMEOUT_MS = 40 * 60_000;
 
 const opts = {
-  library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "world"], only: null, seeds: null, libShard: null, libraryMerge: null, wardenPersona: "skipper",
+  library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "world"], only: null, seeds: null, libShard: null, libraryMerge: null, wardenPersona: "skipper", tune: "", resume: false, allowMixed: false,
   bands: ["novice", "learner1", "learner5", "expert"], top: true, persona: "brawler", parkPersona: "skipper", jobs: 4, label: null,
   shard: null, merge: null, dryRun: false, strict: false,
 };
@@ -45,6 +45,9 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "label") opts.label = v;
   else if (k === "shard") opts.shard = v;
   else if (k === "merge") opts.merge = v.split(",");
+  else if (k === "tune") opts.tune = v ?? "";
+  else if (k === "resume") opts.resume = true;
+  else if (k === "allow-mixed") opts.allowMixed = true;
   else if (k === "dry-run") opts.dryRun = true;
   else if (k === "strict") opts.strict = true;
   else die("unknown option " + arg);
@@ -65,8 +68,7 @@ for (const b of opts.bands) if (!COLUMNS.some((c) => c.id === b)) die(`--bands: 
 const columns = opts.top && opts.bands.includes("expert") ? [...opts.bands, "expertTop"] : opts.bands;
 
 if (opts.merge) {
-  const runs = opts.merge.flatMap((d) => parseNdjson(read(statSyncDir(d))));
-  finish(dedupe(runs), path.join(outRoot, opts.label ?? "merged-" + stamp), { label: opts.label ?? "merged" });
+  mergeRuns();
 } else if (opts.libraryMerge) {
   mergeLibraries();
 } else if (opts.buildLibrary) {
@@ -75,15 +77,24 @@ if (opts.merge) {
   await runTable();
 }
 
-function statSyncDir(d) {
+function runFolder(d) {
   const p = path.resolve(d);
-  return existsSync(p) && statSync(p).isDirectory() ? path.join(p, "runs.ndjson") : p;
+  return existsSync(p) && statSync(p).isDirectory() ? p : path.dirname(p);
 }
 
-function dedupe(runs) {
-  const byId = new Map();
-  for (const r of runs) byId.set(r.id, r);
-  return [...byId.values()];
+// --merge=<run folder,...>: refuses folders of different plans or commits (unless --allow-mixed) and sharded
+// sets with a shard missing; each folder's meta.json says which it is.
+function mergeRuns() {
+  const dirs = opts.merge.map(runFolder);
+  const metas = dirs.map((d) => (existsSync(path.join(d, "meta.json")) ? JSON.parse(read(path.join(d, "meta.json"))) : null));
+  const check = checkMerge(metas, { allowMixed: opts.allowMixed });
+  if (check.errors.length) die("refusing to merge:\n  " + check.errors.join("\n  "));
+  const runs = dedupeBy(dirs.flatMap((d) => parseNdjson(read(path.join(d, "runs.ndjson")))), "key");
+  const first = metas[0] ?? {};
+  finish(runs, path.join(outRoot, opts.label ?? "merged-" + stamp), {
+    label: opts.label ?? "merged", commit: first.commit, plan_hash: first.plan_hash, library: first.library, buckets: first.buckets,
+    shards: check.shards, warnings: check.warnings,
+  });
 }
 
 function needGodot() {
@@ -194,8 +205,8 @@ function loadLibrary(dir) {
   for (let stage = 1; stage <= 6; stage++) {
     const mine = docs.filter((d) => d.stage === stage).map((d) => ({ ...d, file: path.join(dir, d.file) }));
     if (mine.length) {
-      const { ordinary, top } = pickBuilds(mine);
-      builds[stage] = { ordinary, top };
+      const { ordinary, top, ranked, overlap } = pickBuilds(mine);
+      builds[stage] = { ordinary, top, ranked, overlap };
     }
   }
   return builds;
@@ -205,7 +216,7 @@ function loadLibrary(dir) {
 
 async function runTable() {
   const builds = opts.library ? loadLibrary(opts.library) : {};
-  let jobs = planCells({ builds, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona });
+  let jobs = planCells({ tune: opts.tune, builds, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona });
   jobs = shardJobs(jobs, opts.shard);
   const missing = jobs.filter((j) => j.missing);
   if (missing.length) {
@@ -219,9 +230,25 @@ async function runTable() {
   needGodot();
   const label = opts.label ?? "run-" + stamp;
   const outDir = path.join(outRoot, label);
-  mkdirSync(path.join(outDir, "jobs"), { recursive: true });
   const runsFile = path.join(outDir, "runs.ndjson");
   const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
+  const libraryLabel = opts.library ? path.basename(opts.library) : null;
+  const libraryDigest = opts.library ? hashString(read(path.join(opts.library, "index.json"))) : null;
+  const plan = planHash({ libraryLabel, libraryDigest, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona, tune: opts.tune });
+  const meta = { label, shard: opts.shard, plan_hash: plan, commit, library: libraryLabel, tune: opts.tune, buckets: bucketInfo(builds), jobs: jobs.length };
+  // A label is one experiment: an existing folder is refused, not appended to, unless --resume continues the same plan.
+  if (existsSync(runsFile) || existsSync(path.join(outDir, "meta.json"))) {
+    if (!opts.resume) die(`label ${label} already has results; pick a new --label or pass --resume to continue the same plan`);
+    const old = existsSync(path.join(outDir, "meta.json")) ? JSON.parse(read(path.join(outDir, "meta.json"))) : null;
+    if (!old || old.plan_hash !== plan || old.shard !== opts.shard) die(`--resume: ${label} was a different plan or shard`);
+  } else if (opts.resume) die(`--resume: ${label} has nothing to resume`);
+  mkdirSync(path.join(outDir, "jobs"), { recursive: true });
+  writeFileSync(path.join(outDir, "meta.json"), JSON.stringify(meta, null, 1) + "\n");
+  // With --resume, a job is done when its row exists for this plan and this commit; others rerun and replace the older row.
+  const done = new Set(parseNdjson(read(runsFile)).map((r) => r.key));
+  const keyOf = (job) => jobKey(job, { libraryLabel, plan, commit });
+  const todo = jobs.filter((j) => !done.has(keyOf(j)));
+  if (todo.length < jobs.length) log(`resume: ${jobs.length - todo.length} jobs already done on this commit`);
 
   async function play(job, attempt) {
     const dir = path.join(outDir, "jobs", job.id + (attempt > 1 ? "-rerun" : ""));
@@ -233,15 +260,15 @@ async function runTable() {
   }
 
   const record = (job, { p, row }, rerun) => {
-    const grade = row ? gradeRun(job.kind, row, job) : { result: p.timedOut ? "timeout" : "error", why: p.timedOut ? "killed at the wall timeout" : "exit " + p.exit + ", no record" };
+    const grade = row ? gradeRun(job.kind, row, job) : { result: p.timedOut ? "killed" : "error", why: p.timedOut ? "killed at the wall timeout" : "exit " + p.exit + ", no record" };
     // The entrance is kept relative to the library, so run folders from other machines merge as they are.
-    const line = { ...job, entrance: job.entrance && opts.library ? path.relative(opts.library, job.entrance) : job.entrance, row, grade, exit: p.exit, timedOut: p.timedOut, wallS: Math.round(p.wallS * 10) / 10, rerun };
+    const line = { ...job, key: keyOf(job), commit, plan_hash: plan, entrance: job.entrance && opts.library ? path.relative(opts.library, job.entrance) : job.entrance, row, grade, exit: p.exit, timedOut: p.timedOut, wallS: Math.round(p.wallS * 10) / 10, rerun };
     appendFileSync(runsFile, JSON.stringify(line) + "\n");
     log(`done  ${job.id}: ${grade.result}${row ? " (" + row.outcome + ", " + row.game_seconds + " s game)" : ""}, ${p.wallS.toFixed(0)} s wall`);
   };
 
   const failed = [];
-  await pool(jobs.map((job) => async () => {
+  await pool(todo.map((job) => async () => {
     log("start " + job.id);
     const r = await play(job, 1);
     if (r.ok) record(job, r, false);
@@ -252,12 +279,14 @@ async function runTable() {
     log(`rerun ${job.id} alone (first try: ${first.p.timedOut ? "timeout" : "exit " + first.p.exit})`);
     record(job, await play(job, 2), true);
   }
-  finish(parseNdjson(read(runsFile)), outDir, { label, commit });
+  finish(dedupeBy(parseNdjson(read(runsFile)), "id"), outDir, { label, commit, plan_hash: plan, library: libraryLabel, buckets: meta.buckets, shards: opts.shard ? [opts.shard] : null });
 }
 
 function finish(runs, outDir, meta) {
+  const commits = [...new Set(runs.map((r) => r.commit).filter(Boolean))];
+  if (commits.length > 1 && !opts.allowMixed) die(`the rows carry ${commits.length} commits (${commits.map((c) => c.slice(0, 8)).join(", ")}); rerun on one commit or pass --allow-mixed`);
   mkdirSync(outDir, { recursive: true });
-  const table = buildTable(runs);
+  const table = buildTable(runs, meta.buckets ?? {});
   const timing = wallStats(runs);
   const md = renderTable(table, { ...meta, when: new Date().toISOString().slice(0, 16) + "Z" });
   writeFileSync(path.join(outDir, "table.md"), md);

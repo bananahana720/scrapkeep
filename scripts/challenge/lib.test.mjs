@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson } from "./lib.mjs";
+import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson } from "./lib.mjs";
 
 const docs = (n, stage = 2) => Array.from({ length: n }, (_, i) => ({ file: `s${stage}/d${i}.json`, stage, mass: 100 + i * 10, parts: i % 5, pilot: "tarn" }));
 const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuilds(docs(24, s))]));
@@ -198,4 +198,89 @@ test("shard libraries join into one index and run folders carry no machine paths
   assert.deepEqual(w.boss, { jobs: 3, medianWallS: 200, maxWallS: 300, medianGameS: 80 });
   const shardsOfLib = [1, 2, 3].map((i) => shardJobs(Array.from({ length: 48 }, (_, k) => ({ id: k })), `${i}/3`));
   assert.equal(shardsOfLib.flat().length, 48);
+});
+
+test("errors and kills are excluded from n and the rate; over 10% excluded makes the column incomplete", () => {
+  const g = (result, extra = {}) => ({ result, ...extra });
+  const a = aggregate([...Array(9).fill(g("win")), g("loss"), g("error")]);
+  assert.deepEqual([a.n, a.total, a.rate, a.excluded, a.incomplete], [10, 11, 0.9, { error: 1, killed: 0 }, false]);
+  const b = aggregate([...Array(7).fill(g("win")), g("killed"), g("killed"), g("error")]);
+  assert.equal(b.incomplete, true);
+  assert.equal(b.n, 7);
+  const runs = [...Array(7).fill(0).map(() => run("w2", "warden", 2, "expert", "win")), run("w2", "warden", 2, "expert", "killed"), run("w2", "warden", 2, "expert", "error")];
+  const [c] = buildTable(runs);
+  assert.equal(c.columns.expert.ok, null);
+  assert.equal(cellVerdict(c), "incomplete");
+  const md = renderTable([c]);
+  assert.match(md, /incomplete: 7 of 9 counted \(excluded: 1 error, 1 killed\)/);
+  assert.match(md, /Incomplete cells.*w2/);
+  const ok = buildTable([...Array(19).fill(0).map(() => run("w2", "warden", 2, "expert", "win")), run("w2", "warden", 2, "expert", "killed")])[0];
+  assert.equal(ok.columns.expert.ok, true);
+  assert.match(renderTable([ok]), /100% \(19\).*✓ vs >= 85% \(excluded: 1 killed\)/);
+  assert.equal(gradeRun("boss", { resumed: false, outcome: "until", boss: { defeated_s: 50 } }).result, "error");
+  assert.equal(gradeRun("boss", { resumed: true, outcome: "until", boss: { defeated_s: 50 } }).result, "win");
+});
+
+test("the Warden fight clock is the later of the turn and the engagement", () => {
+  assert.equal(fightStart({ warden_fight_s: 30, warden_engaged_s: 20 }), 30);
+  assert.equal(fightStart({ warden_fight_s: null, warden_engaged_s: 20 }), 20);
+  assert.equal(fightStart({ warden_fight_s: 5, warden_engaged_s: null }), 5);
+  const row = { outcome: "until", stages: [{ stage: 1, warden_fight_s: 30, warden_engaged_s: 20, warden_broken_s: 70 }] };
+  assert.equal(gradeRun("warden", row, { stage: 1 }).fightS, 40);
+});
+
+test("a plan hash and job key tell experiments apart", () => {
+  const o = { libraryLabel: "lib", libraryDigest: "d", cells: ["boss"], only: null, seeds: 24, columns: ["expert"], persona: "brawler", wardenPersona: "skipper", parkPersona: "skipper", tune: "" };
+  const h = planHash(o);
+  assert.equal(h, planHash({ ...o }));
+  for (const change of [{ seeds: 16 }, { columns: ["novice"] }, { persona: "skipper" }, { tune: "x" }, { libraryLabel: "other" }, { libraryDigest: "e" }]) assert.notEqual(planHash({ ...o, ...change }), h);
+  const j = { id: "w1-expert-40300" };
+  assert.notEqual(jobKey(j, { libraryLabel: "lib", plan: h, commit: "aaaaaaaa11" }), jobKey(j, { libraryLabel: "lib", plan: h, commit: "bbbbbbbb11" }));
+  assert.equal(dedupeBy([{ id: 1, v: "old" }, { id: 2 }, { id: 1, v: "new" }]).find((r) => r.id === 1).v, "new");
+});
+
+test("merging refuses different plans or commits and missing shards", () => {
+  const m = (i, over = {}) => ({ shard: `${i}/3`, plan_hash: "p", commit: "c", library: "lib", ...over });
+  assert.deepEqual(checkMerge([m(1), m(2), m(3)]).errors, []);
+  assert.match(checkMerge([m(1), m(3)]).errors[0], /shard 2\/3 is missing/);
+  assert.match(checkMerge([m(1), m(2), m(3, { commit: "d" })]).errors[0], /commit/);
+  assert.match(checkMerge([m(1), m(2), m(3, { plan_hash: "q" })]).errors[0], /plan hash/);
+  const mixed = checkMerge([m(1), m(2), m(3, { commit: "d" })], { allowMixed: true });
+  assert.deepEqual(mixed.errors, []);
+  assert.equal(mixed.warnings.length, 1);
+  assert.ok(checkMerge([m(1), m(2, { shard: "2/4" }), m(3)]).errors.length > 0);
+  assert.ok(checkMerge([m(1), m(1), m(2), m(3)]).errors.some((e) => /twice/.test(e)));
+  assert.ok(checkMerge([null]).errors.length > 0);
+  assert.deepEqual(checkMerge([{ shard: null, plan_hash: "p", commit: "c", library: "l" }]).errors, []);
+});
+
+test("overlapping buckets are reported and mark the Expert-top column and the ratio", () => {
+  const small = pickBuilds(docs(4, 2));
+  assert.ok(small.overlap > 0);
+  assert.equal(pickBuilds(docs(40, 2)).overlap, 0);
+  const info = bucketInfo({ 2: small });
+  assert.equal(info[2].docs, 4);
+  const runs = [run("brindle", "boss", 2, "expert", "win", { fightS: 50 }), run("brindle", "boss", 2, "expertTop", "win", { fightS: 40 })];
+  const table = buildTable(runs, info);
+  assert.equal(table[0].overlap, small.overlap);
+  const md = renderTable(table, { buckets: info });
+  assert.match(md, /✓ vs >= 97% \(overlaps ordinary\)/);
+  assert.match(md, /0\.8 \(overlaps ordinary\)/);
+  assert.match(md, /## Build buckets/);
+  assert.match(md, /\| 2 \| 4 \| \d \| \d \| \d \(Expert top overlaps ordinary\) \|/);
+  assert.match(md, /top\/ord \(reported, not graded\)/);
+  assert.doesNotMatch(renderTable(buildTable(runs, { 2: pickBuilds(docs(40, 2)) }), {}), /overlaps ordinary/);
+});
+
+test("the 45 s check covers Learner attempt 1 and attempt 5", () => {
+  const runs = [
+    run("brindle", "boss", 2, "learner1", "loss", { diedS: 60 }),
+    run("brindle", "boss", 2, "learner5", "loss", { diedS: 40 }),
+    run("brindle", "boss", 2, "learner5", "win", {}),
+  ];
+  const [c] = buildTable(runs);
+  assert.deepEqual(c.tell, { earlyDeaths: 1, earliestDeathS: 40, ok: false });
+  assert.equal(cellVerdict(c), "fail");
+  const clean = buildTable([run("brindle", "boss", 2, "learner5", "loss", { diedS: 50 })])[0];
+  assert.equal(clean.tell.ok, true);
 });
