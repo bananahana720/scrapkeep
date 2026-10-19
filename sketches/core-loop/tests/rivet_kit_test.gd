@@ -14,7 +14,7 @@ const AudioRows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 51 checks,
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 54 checks,
 # 2026-10-12 (PC-RIVET round 3): arrival preview, early cues, shared guard feedback and cue gain/key.
 # 2026-10-12 (PC-RIVET r4): 45 -> 50, inspect actual PCM cue offsets and duration at key 3.
 # 2026-10-12 (coordinator, KE9 r1 gate): 50 -> 51, a freed target drops its pulse without an error.

@@ -68,22 +68,24 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #        (build, flight, landing, after); the window lasts RECORD_FRAMES or until 30 frames past the landing.
 #   p3   p1's stand, then Rivet carves where the ball stands every CARVE_EVERY frames of the window, turn
 #        about between the Breach Skid landing's sector and Full Cut's (RIVET-CURVE, wave 17): the park
-#        drop-in's carve against the 16.7 ms frame, with no ultimate to wait for. A Breach carve runs as a
-#        landing does, a LANDING_WORK share on the landing frame and one per frame after (the game takes
-#        one per 90 Hz tick, about 1.5 a frame), hitting once carved and due. Each carve's shares' wall
-#        times (ms is the largest) and part count go to "carves"; its terrain face count before and after
+#        drop-in's carve against the 16.7 ms frame, with no ultimate to wait for. A Breach is the kit's own
+#        landing(): a LANDING_WORK share on the call, the rest one per physics tick from the kit's _step_late,
+#        the hit when the kit decides. Each carve's landing-call ms, the ms of each tick it was queued in (ms is
+#        the largest), its measured ticks to the hit and its ground angle go to "carves"; its terrain face count before and after
 #        the coplanar merge is read after the window, so it costs no recorded frame.
 # The carve check cannot pass by not firing (lesson 34, "a check that can't fire proves nothing"). RivetKit counts
 # its carves (carve_stats) and the terrain cache its builds; the window's deltas go to "carve_window" and
 # "terrain_window" and print on the result line. p3 fails (valid false, exit 1) when its window committed no
 # Full Cut, no Breach carve that cut terrain, no Breach hit or no carve share, or when the pilot is not Rivet.
 # p1 is the no-carve control: it fails if any carve fired in it. Both fail if the terrain cache started more
-# than TERRAIN_BUILDS_PER_WARM builds a warm-up cycle in the window (the 100-175 ms ticks that reverted
+# than 0 builds in the window (the 100-175 ms ticks that reverted
 # 8e40be12: a standing Rivet's warm-up must find its park cached).
 #   --pilot=<class id>   the class the bot plays (default the Rivet seed). Planted negative: p3 with
 #                        --pilot=pylon_engineer must fail.
 #   --plant=no-carve     p3 skips its carves. Planted negative: it must fail.
 #   --plant=no-flat      p3 skips its flat-ground Breaches. Planted negative: it must fail.
+#   --plant=late-flat    p3's slab Breaches get a one-part landing budget, so they go through the late path and
+#                        hit ticks after landing. Planted negative: the measured flat-hit check must fail.
 # The one-placement control (the old keying) is tests/rivet_warm_hitch_test.gd's: Andrew's park has no
 # shared shape placed twice near the stand, so a planted run here would not trip (tried: 0 builds).
 # Every scene records memory at the window's open and close; p2 also at two_stages (stage 2 built, stage 1
@@ -105,19 +107,24 @@ const SCENES := {
 	"p3": {"packs": 0, "per_type": 0, "warden": false, "view": "carve", "table": "park"},
 }
 const CARVE_EVERY := 60
-# p3 keeps its original schedule (a carve on frame 59 of every 60, Full Cut and slope Breach alternating, so its
-# 4080 history stays comparable) and adds a flat-ground Breach on frame 29 of every 60, on a slab floating
-# FLAT_LIFT above the stand, so Andrew's merge condition (flat carves under 16.7 ms) is measured, not assumed.
+# p3 keeps its original schedule (a carve on frame 59 of every 60, Full Cut and Breach alternating at the park
+# stand, so its 4080 history stays comparable) and adds a Breach on frame 29 of every 60 on a slab floating
+# FLAT_LIFT above the stand. The slab is a synthetic plane: it proves the instant light path (one share, hit on
+# the landing tick). The stand is the park's own ground: it proves the park-ground cost, and every Breach
+# there takes the heavy path, so its number is not a flat-ground number. Rows and maxima are keyed by
+# location (slab, stand) as well as by the kit's class (flat: done on the landing share; slope: later).
 const FLAT_LIFT := 40.0
 const FLAT_AHEAD := 30.0
 # Thick, so its underside is out of the carve's reach and the floor is one plane.
 const FLAT_THICK := 30.0
 # The ruling (DECISIONS.md, "Instant, 0.11 s later"): a flat Breach hits on its carve tick; a slope Breach
-# lands by about 0.18 s.
+# lands by about 0.18 s. Both are measured: the kit's own _step_late runs each physics tick and the bench reads
+# the tick its breach_hits count rose (the Probe runs after every node). Nothing is derived.
 const SLOPE_HIT_SECONDS := 0.18
 const CARVE_BUDGET_MS := 16.7
-const TERRAIN_BUILDS_PER_WARM := 1
-const PLANTS := ["no-carve", "no-flat"]
+const LEVEL_DEG := 0.5
+const PLANTS := ["no-carve", "no-flat", "late-flat"]
+const Hitscan := preload("res://src/combat/hitscan.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
@@ -206,8 +213,8 @@ var _landed := 0
 var _swap := {}
 var _carves: Array = []
 # p3's Breach carve in progress (RivetKit._carve_late's record) and its row in _carves.
-var _breach_late := {}
-var _breach_row := {}
+var _pending: Array = []
+var _hits_seen := 0
 var _stand_heading := Vector3.FORWARD
 var _flat_at := Vector3.INF
 var _slots := 0
@@ -337,10 +344,7 @@ func _process(delta: float) -> bool:
 			if _view == "swap" and _phase == "record":
 				_step_swap()
 			if _view == "carve" and _phase == "record" and _plant != "no-carve":
-				var kit = _game.combat.get_node_or_null("RivetKit")
-				if kit != null and not _breach_late.is_empty():
-					_step_carve_shares(kit)
-				elif _frame % CARVE_EVERY == CARVE_EVERY - 1:
+				if _frame % CARVE_EVERY == CARVE_EVERY - 1:
 					_step_carve()
 				elif _frame % CARVE_EVERY == CARVE_EVERY / 2 - 1:
 					_step_flat()
@@ -361,6 +365,7 @@ func _physics_process(_delta: float) -> bool:
 
 
 func _physics_end() -> void:
+	_watch_hits()
 	_phys_acc += Time.get_ticks_usec() - _phys_start
 	_ticks += 1
 
@@ -468,7 +473,8 @@ func _build_stand() -> void:
 		shape.shape = box
 		slab.add_child(shape)
 		_game.add_child(slab)
-		var ball: Vector3 = _game.player.ball_position()
+		# The reset target, not ball_position(): the body has not moved yet on this frame.
+		var ball: Vector3 = _ground(drop_in)
 		_flat_at = ball + heading * FLAT_AHEAD + Vector3.UP * FLAT_LIFT
 		slab.global_position = _flat_at - Vector3.UP * (1.0 + FLAT_THICK * 0.5)
 	_swap["landmark"] = [mark.x, mark.y, mark.z] if mark != Vector3.INF else []
@@ -476,65 +482,101 @@ func _build_stand() -> void:
 
 
 func _step_carve() -> void:
-	var kit = _game.combat.get_node_or_null("RivetKit")
+	var kit = _kit()
 	if kit == null:
 		_errors.append("p3 needs Rivet: the combat has no RivetKit")
 		return
 	var at: Vector3 = _game.player.ball_position()
-	var heading := _stand_heading
 	var breach := _slots % 2 == 0
 	_slots += 1
-	var reach: float = kit.breach_reach() if breach else Weapons.FULL_CUT_REACH
-	var half: float = acos(PlayerBall.SKID_CONE) if breach else deg_to_rad(Weapons.FULL_CUT_DEG * 0.5)
-	var row := {"frame": _frame, "kind": "breach" if breach else "full_cut", "at": [at.x, at.y, at.z], "shares_ms": [],
-		"heading": [heading.x, heading.y, heading.z], "start_tick": Engine.get_physics_frames()}
-	_carves.append(row)
-	var begin := Time.get_ticks_usec()
 	if breach:
-		# The landing's own path: its first share on the landing tick, the rest one per frame
-		# (_step_carve_shares), the hits once it is done.
-		_breach_late = kit._carve_late("p3", at, heading, reach, 1.0, 0.0)
-		_breach_row = row
-		_step_carve_shares(kit, begin, true)
-	else:
-		kit.full_cut(at, heading, 1.0)
-		_close_carve(row, kit.volume_indicator.shapes.get("rivet_scar", {}), begin)
-
-
-# A Breach landing on the flat slab: the same path as the slope Breach's, at the slab's point.
-func _step_flat() -> void:
-	var kit = _game.combat.get_node_or_null("RivetKit")
-	if kit == null or _flat_at == Vector3.INF or _plant == "no-flat":
+		_landing(kit, at, "stand")
 		return
 	var heading := _stand_heading
-	var row := {"frame": _frame, "kind": "breach", "at": [_flat_at.x, _flat_at.y, _flat_at.z], "shares_ms": [],
-		"heading": [heading.x, heading.y, heading.z], "slab": true, "start_tick": Engine.get_physics_frames()}
-	_carves.append(row)
+	var row := _row(at, "full_cut", "stand")
+	var built: int = kit.terrain.builds
 	var begin := Time.get_ticks_usec()
-	_breach_late = kit._carve_late("p3", _flat_at, heading, kit.breach_reach(), 1.0, 0.0)
-	_breach_row = row
-	_step_carve_shares(kit, begin, true)
+	kit.full_cut(at, heading, 1.0)
+	row["landing_ms"] = snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001)
+	row["ms"] = row["landing_ms"]
+	row["builds"] = kit.terrain.builds - built
+	row["parts"] = ((kit.volume_indicator.shapes.get("rivet_scar", {}) as Dictionary).get("cells", []) as Array).size()
+	_carves.append(row)
 
 
-# One share of the pending Breach carve, from begin; the hits once it is done.
-func _step_carve_shares(kit, begin := Time.get_ticks_usec(), landing := false) -> void:
-	if _breach_late.is_empty():
+func _row(at: Vector3, kind: String, where: String) -> Dictionary:
+	var heading := _stand_heading
+	var row := {"frame": _frame, "kind": kind, "where": where, "at": [at.x, at.y, at.z], "heading": [heading.x, heading.y, heading.z],
+		"landing_tick": Engine.get_physics_frames()}
+	var space: PhysicsDirectSpaceState3D = _game.ctx.root.get_world_3d().direct_space_state
+	var ray := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.5, at + Vector3.DOWN * 6.0, Hitscan.WORLD)
+	var hit := space.intersect_ray(ray)
+	if not hit.is_empty():
+		var normal: Vector3 = hit["normal"]
+		row["normal"] = [snappedf(normal.x, 0.0001), snappedf(normal.y, 0.0001), snappedf(normal.z, 0.0001)]
+		row["angle_deg"] = snappedf(rad_to_deg(acos(clampf(normal.y, -1.0, 1.0))), 0.01)
+	return row
+
+
+# The kit's own landing (RivetKit.landing): its first share on this call, the rest one per physics tick from
+# the kit's _step_late, the hit when the kit decides. A light carve hits inside the call; a heavy one is
+# queued and its hit tick is read by _watch_hits.
+func _landing(kit, at: Vector3, where: String) -> void:
+	var ult = _game.combat.ultimate
+	if ult != null:
+		ult._plan = {"legs": []}
+	var row := _row(at, "breach", where)
+	var built: int = kit.terrain.builds
+	var hits_before: int = kit.carve_stats["breach_hits"]
+	var queued: int = kit._late.size()
+	var saved: int = kit.late_work
+	if _plant == "late-flat" and where == "slab":
+		kit.late_work = 1
+	var begin := Time.get_ticks_usec()
+	kit.landing("p3", at, 1.0, 1.0)
+	row["landing_ms"] = snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001)
+	kit.late_work = saved
+	row["builds"] = kit.terrain.builds - built
+	row["tick_ms"] = []
+	if kit._late.size() > queued:
+		row["late"] = kit._late.back()
+		_pending.append(row)
+	else:
+		row["hit_tick"] = Engine.get_physics_frames()
+		row["ticks"] = int(row["hit_tick"]) - int(row["landing_tick"])
+		row["shares"] = 1
+		row["hit_in_call"] = int(kit.carve_stats["breach_hits"]) - hits_before
+	row["ms"] = row["landing_ms"]
+	_hits_seen = kit.carve_stats["breach_hits"]
+	_carves.append(row)
+
+
+# After every physics node: time the tick a queued carve is in, and stamp the tick its hit landed.
+func _watch_hits() -> void:
+	var kit = _kit()
+	if kit == null or _pending.is_empty():
 		return
-	var now := Engine.get_physics_frames()
-	var carved: bool = _breach_late.has("result")
-	var done: bool = kit._shade_late(_breach_late, mini(kit.late_work, kit.LANDING_WORK) if landing else -1)
-	# As in the game: a light carve hits on the landing frame, a heavy one on a later frame once
-	# carved and due.
-	var hits := done and (landing or carved and now >= int(_breach_late["due"]))
-	if not hits:
-		if not carved:
-			(_breach_row["shares_ms"] as Array).append(snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001))
+	var tick_ms := snappedf((Time.get_ticks_usec() - _phys_start) / 1000.0, 0.001)
+	for row in _pending:
+		(row["tick_ms"] as Array).append(tick_ms)
+		row["ms"] = maxf(float(row["ms"]), tick_ms)
+	var hits: int = kit.carve_stats["breach_hits"]
+	while hits > _hits_seen and not _pending.is_empty():
+		var row: Dictionary = _pending.pop_front()
+		_hits_seen += 1
+		row["hit_tick"] = Engine.get_physics_frames()
+		row["ticks"] = int(row["hit_tick"]) - int(row["landing_tick"])
+		row["shares"] = int((row["late"] as Dictionary).get("shares", 0))
+		row.erase("late")
+	_hits_seen = hits
+
+
+# A Breach landing on the synthetic flat slab.
+func _step_flat() -> void:
+	var kit = _kit()
+	if kit == null or _flat_at == Vector3.INF or _plant == "no-flat":
 		return
-	var late := _breach_late
-	_breach_late = {}
-	var shape: Dictionary = kit._late_shape(late)
-	kit._breach(shape, late["at"], late["heading"], late["reach"], 1.0, 0.0)
-	_close_carve(_breach_row, shape, begin)
+	_landing(kit, _flat_at, "slab")
 
 
 # Each carve's face counts, read once the record is over so they cost no recorded frame.
@@ -553,31 +595,40 @@ func _carve_stats() -> void:
 		row["faces"] = (found["faces"] as Array).size()
 		row["merged"] = TerrainFaces.merge(found["faces"]).size()
 		row.erase("heading")
+		row.erase("late")
 
 
-# The largest share time of each carve kind: flat Breach, slope Breach, Full Cut.
+# The largest carve time (landing call, or any tick it was queued in) by kit class (flat: done on the landing
+# share; slope: later), by location (slab, stand) and Full Cut.
 func _max_by_ground() -> Dictionary:
-	var out := {"flat": 0.0, "slope": 0.0, "full_cut": 0.0}
+	var out := {"flat": 0.0, "slope": 0.0, "full_cut": 0.0, "slab": 0.0, "stand": 0.0}
 	for row in _carves:
-		var key: String = String(row.get("ground", "")) if row["kind"] == "breach" else "full_cut"
-		if out.has(key):
-			out[key] = maxf(out[key], (row["shares_ms"] as Array).max() if not (row["shares_ms"] as Array).is_empty() else 0.0)
+		var ms: float = float(row.get("ms", 0.0))
+		if row["kind"] == "full_cut":
+			out["full_cut"] = maxf(out["full_cut"], ms)
+			continue
+		var cls := "flat" if int(row.get("shares", 0)) == 1 else "slope"
+		out[cls] = maxf(out[cls], ms)
+		out[row["where"]] = maxf(out[row["where"]], ms)
 	return out
 
 
-func _close_carve(row: Dictionary, shape: Dictionary, begin: int) -> void:
-	row["hit_tick"] = Engine.get_physics_frames()
-	row["tick_delta"] = int(row["hit_tick"]) - int(row["start_tick"])
-	if row["kind"] == "breach":
-		# Done on its landing share: flat. Shares ahead of the hit: slope.
-		row["ground"] = "flat" if (row["shares_ms"] as Array).is_empty() else "slope"
-		# The game takes one share a tick and hits the tick after the last, never before LATE_TICKS; the
-		# harness takes a share a frame, so its tick_delta follows the frame time. game_ticks does not.
-		row["shares"] = maxi(1, (row["shares_ms"] as Array).size())
-		row["game_ticks"] = 0 if row["ground"] == "flat" else maxi(int(row["shares"]), _kit().LATE_TICKS)
-	(row["shares_ms"] as Array).append(snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001))
-	row["ms"] = (row["shares_ms"] as Array).max()
-	row["parts"] = (shape.get("cells", []) as Array).size()
+# Rows to report per location: landing-share ms, shares, measured ticks to the hit, ground angle.
+func _where_summary() -> Dictionary:
+	var out := {}
+	for where in ["slab", "stand"]:
+		var rows := _carves.filter(func(r): return r["kind"] == "breach" and r["where"] == where)
+		var landing := 0.0
+		var shares := 0
+		var ticks := 0
+		var angle := 0.0
+		for r in rows:
+			landing = maxf(landing, float(r["landing_ms"]))
+			shares = maxi(shares, int(r.get("shares", 0)))
+			ticks = maxi(ticks, int(r.get("ticks", 0)))
+			angle = maxf(angle, float(r.get("angle_deg", 0.0)))
+		out[where] = {"n": rows.size(), "landing_ms_max": landing, "shares_max": shares, "ticks_max_measured": ticks, "angle_deg_max": angle}
+	return out
 
 
 func _kit():
@@ -588,6 +639,11 @@ func _open_counts() -> void:
 	var kit = _kit()
 	if kit == null:
 		return
+	# The warm phase is 120 frames, under one 45-tick warm-up cycle at headless frame times, so the slab
+	# (added with the stand) would be first read by a carve. One cycle now, before the counters open, leaves
+	# the window with only a standing Rivet's own warm-up: its builds must be 0.
+	if _scene_id == "p3" and kit._rivet():
+		kit.warm_cycle()
 	_carve_open = kit.carve_stats.duplicate()
 	_terrain_open = {"builds": kit.terrain.builds, "hits": kit.terrain.hits, "warm_cycles": kit.warm_cycles}
 
@@ -601,7 +657,7 @@ func _window_counts() -> Dictionary:
 	for key in kit.carve_stats:
 		carves[key] = int(kit.carve_stats[key]) - int(_carve_open[key])
 	var terrain := {"builds": kit.terrain.builds - int(_terrain_open["builds"]), "hits": kit.terrain.hits - int(_terrain_open["hits"]),
-		"warm_cycles": kit.warm_cycles - int(_terrain_open["warm_cycles"]), "builds_per_warm_max": TERRAIN_BUILDS_PER_WARM}
+		"warm_cycles": kit.warm_cycles - int(_terrain_open["warm_cycles"])}
 	return {"carve_window": carves, "terrain_window": terrain, "rivet": kit._rivet()}
 
 
@@ -630,29 +686,33 @@ func _gate_carves(counts: Dictionary) -> void:
 		if int(carves["breach_slope"]) < 1:
 			_errors.append("p3: no slope Breach carve in the window")
 		var limit := int(ceil(SLOPE_HIT_SECONDS * Engine.physics_ticks_per_second))
-		var flat_hit := 0
-		var slope_hit := 0
+		var slab_hit := 0
+		var stand_hit := 0
 		for row in _carves:
-			if row["kind"] != "breach" or not row.has("tick_delta"):
+			if row["kind"] != "breach":
 				continue
-			if row["ground"] == "flat":
-				flat_hit += 1
-				if int(row["tick_delta"]) != 0:
-					_errors.append("p3: a flat Breach hit %d ticks after its carve (the ruling: the same tick)" % int(row["tick_delta"]))
+			if not row.has("ticks"):
+				continue
+			if row["where"] == "slab":
+				slab_hit += 1
+				if int(row["ticks"]) != 0:
+					_errors.append("p3: a flat (slab) Breach hit %d ticks after landing, measured (the ruling: the same tick)" % int(row["ticks"]))
+				if float(row.get("angle_deg", 99.0)) > LEVEL_DEG:
+					_errors.append("p3: the slab is not level (%.2f degrees)" % float(row.get("angle_deg", 99.0)))
 			else:
-				slope_hit += 1
-				if int(row["game_ticks"]) > limit:
-					_errors.append("p3: a slope Breach takes %d ticks to hit (the ruling: within %d, %.2f s)" % [int(row["game_ticks"]), limit, SLOPE_HIT_SECONDS])
-		if flat_hit < 1 or slope_hit < 1:
-			_errors.append("p3: %d flat and %d slope Breaches hit; each needs one" % [flat_hit, slope_hit])
+				stand_hit += 1
+				if int(row["ticks"]) > limit:
+					_errors.append("p3: a stand Breach hit %d ticks after landing, measured (the ruling: within %d, %.2f s)" % [int(row["ticks"]), limit, SLOPE_HIT_SECONDS])
+		if slab_hit < 1 or stand_hit < 1:
+			_errors.append("p3: %d slab and %d stand Breaches hit; each needs one" % [slab_hit, stand_hit])
 		if int(carves["breach_hits"]) < 1:
 			_errors.append("p3: no Breach carve hit in the window")
 		if int(carves["shares"]) < 1:
 			_errors.append("p3: no carve share ran in the window")
 		if _carves.is_empty():
 			_errors.append("p3: no carve rows recorded")
-	if bool(counts["rivet"]) and int(terrain["builds"]) > int(terrain["builds_per_warm_max"]) * maxi(int(terrain["warm_cycles"]), 1):
-		_errors.append("%s: the terrain cache started %d builds in %d warm-up cycles (bound %d a cycle)" % [_scene_id, int(terrain["builds"]), int(terrain["warm_cycles"]), int(terrain["builds_per_warm_max"])])
+	if bool(counts["rivet"]) and int(terrain["builds"]) > 0:
+		_errors.append("%s: the terrain cache started %d builds in %d warm-up cycles while Rivet stood (bound 0)" % [_scene_id, int(terrain["builds"]), int(terrain["warm_cycles"])])
 
 
 func _record_done() -> bool:
@@ -1130,9 +1190,13 @@ func _finish() -> void:
 		"view": _view, "memory": _memory, "swap": _swap, "segments": segments, "segment_starts": _segment_at,
 		"carve_window": counts.get("carve_window", {}), "terrain_window": counts.get("terrain_window", {}), "pilot": _pilot, "plant": _plant,
 		"carves": _carves, "carve_budget_ms": CARVE_BUDGET_MS,
-		"carve_max_ms_by": _max_by_ground(),
-		"carve_max_ms": _carves.reduce(func(m, c): return maxf(m, (c["shares_ms"] as Array).max() if not (c["shares_ms"] as Array).is_empty() else 0.0), 0.0),
-		"carves_over_budget": _carves.filter(func(c): return (c["shares_ms"] as Array).any(func(ms): return float(ms) > CARVE_BUDGET_MS)).size(),
+		"carve_max_ms_by": _max_by_ground(), "carve_where": _where_summary(),
+		"carve_builds": _carves.reduce(func(n, c): return n + int(c.get("builds", 0)), 0),
+		"notes": {"derived": "none: ticks to the hit are read from the kit's breach_hits count after its own _step_late, one physics tick at a time",
+			"old_keying_at_the_p3_stand": "planted keep_one_placement made 0 builds at this stand (Andrew's park shares no shape placed twice near it); the hitch fix is proven synthetically, by tests/rivet_warm_hitch_test.gd",
+			"carve_time": "landing_ms is the landing call (first share, and the hit when light); tick_ms is each physics tick a queued carve was in (its later shares and its hit)"},
+		"carve_max_ms": _carves.reduce(func(m, c): return maxf(m, float(c.get("ms", 0.0))), 0.0),
+		"carves_over_budget": _carves.filter(func(c): return float(c.get("ms", 0.0)) > CARVE_BUDGET_MS).size(),
 	}
 	var file := FileAccess.open(_out, FileAccess.WRITE)
 	if file == null:
@@ -1141,7 +1205,11 @@ func _finish() -> void:
 		return
 	file.store_string(JSON.stringify(info, "  "))
 	file.close()
-	print("perf_bench: %s ground:harness_tick_delta/game_ticks %s max_ms %s" % [_scene_id, _carves.filter(func(c): return c.has("tick_delta") and c["kind"] == "breach").map(func(c): return "%s:%d/%d" % [c["ground"], c["tick_delta"], c["game_ticks"]]), _max_by_ground()])
+	var where := _where_summary()
+	if _scene_id == "p3":
+		print("perf_bench: p3 stand Breach landing-share %.3f ms, %d shares, %d ticks to the hit (measured), ground angle max %.2f deg | slab Breach landing-share %.3f ms, %d shares, %d ticks (measured), angle max %.2f deg | max_ms %s" % [
+			where["stand"]["landing_ms_max"], where["stand"]["shares_max"], where["stand"]["ticks_max_measured"], where["stand"]["angle_deg_max"],
+			where["slab"]["landing_ms_max"], where["slab"]["shares_max"], where["slab"]["ticks_max_measured"], where["slab"]["angle_deg_max"], _max_by_ground()])
 	print("perf_bench: %s carve_window %s terrain_window %s valid %s errors %s" % [_scene_id, counts.get("carve_window", {}), counts.get("terrain_window", {}), _errors.is_empty(), _errors])
 	print("perf_bench: %s %s frame p50 %.2f p99 %.2f ms -> %s" % [_scene_id, ablations, stats["frame_ms"].get("p50", -1.0), stats["frame_ms"].get("p99", -1.0), _out])
 	quit(0 if _errors.is_empty() else 1)
