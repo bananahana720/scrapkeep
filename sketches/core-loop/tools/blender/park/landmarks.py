@@ -27,6 +27,10 @@ machinery (never brass), basalt and limestone, red and cream slickrock, desert v
 Real-culture guardrail (PARK.md section 4): every landmark is dam-era, mining, natural, ancient or Fleet work; nothing
 here names or imitates a living people's work.
 
+Soft toy (Andrew, 18 Oct): the base GLB and the detail shells run through the polish toolkit's bevel, smooth shading and AO/edge-wear
+bake (the SOFT adapter below; tools/blender/POLISH.md). Those meshes carry a zeroed first UV map (UVMap) and the toolkit's second
+map (Bake: x unoccluded fraction, y wear); the -col meshes, the mid and far views and the isle tip stay unpolished and map-free.
+
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/park/landmarks.py -- \
       [--out-dir DIR] [--only landmark_dam,...] [--count-only]
 """
@@ -1272,16 +1276,17 @@ def sink_alcove_rim(s, step, color_fn):
 
 # The trestle: a timber span over the wash trough, closing the ring (Andrew 16 Oct: "sinkhole a full ring"). It follows the
 # deck's arc from bearing 142 to 183, planked flush with the deck (top SINK_FLOOR + 0.1) and slung on four fish-belly
-# stringers whose soffit sags 0.9 m at mid-span, so the lowest timber is y -101.44, 6.3 m over the trough floor at -107.8.
-# Two bents (three legs, a cap beam, knee braces) stand at the trough's bearings, 0.6 degrees inside the span; no bent
-# stands in the trough itself, so the ball's line down it stays open. Visual only: nothing here enters the -col mesh.
+# stringers whose soffit sags 0.9 m at mid-span, so the span's lowest timber is y -101.44, 6.3 m over the trough floor at
+# -107.8. Two bents (three legs, a cap beam, knee braces) stand on the trough's flanks, 0.6 degrees (0.5 to 0.6 m) inside the
+# sampled bearings 142 and 183, and their legs run down to the floor at -107.8; the span between them carries no support, so
+# the ball's line down the trough stays open. Visual only: nothing here enters the -col mesh.
 TRESTLE_N = 30
 TRESTLE_PLANK = 0.14
 TRESTLE_STRINGERS = (47.2, 51.4, 55.6, 59.8)
 TRESTLE_SAG = 0.9
 TRESTLE_DEPTH = 0.5
 TRESTLE_BENT_INSET = math.radians(0.6)
-TRESTLE_LEG_FOOT = -105.0
+TRESTLE_LEG_FOOT = -107.8
 
 
 def sink_pt(r, t, y):
@@ -2094,11 +2099,14 @@ def surf_pieces(surf):
     for vs in fan_polys(surf):
         keys = [key(surf.v[k]) for k in vs]
         edges = [frozenset((keys[k], keys[(k + 1) % len(keys)])) for k in range(len(keys))]
-        if cur is not None and any(cur[1].get(e, 0) == 1 for e in edges) and all(cur[1].get(e, 0) < 2 for e in edges):
+        same = frozenset(keys)
+        # a polygon on the same points as one already in the piece is a two-sided card's back: its own piece keeps both windings
+        if cur is not None and same not in cur[2] and any(cur[1].get(e, 0) == 1 for e in edges) and all(cur[1].get(e, 0) < 2 for e in edges):
             cur[0].append(vs)
         else:
-            cur = ([vs], {})
+            cur = ([vs], {}, set())
             pieces.append(cur)
+        cur[2].add(same)
         for e in edges:
             cur[1][e] = cur[1].get(e, 0) + 1
     return [p[0] for p in pieces]
@@ -2163,7 +2171,7 @@ def soft_bmesh(surf, slot_index, origin, o):
                 try:
                     face = bm.faces.new(bverts)
                 except ValueError:
-                    continue
+                    raise AssertionError((surf.name, "soft pass would drop a face on existing points", [tuple(v.co) for v in bverts]))
                 for loop, (kk, k) in zip(face.loops, ring):
                     loop[layer] = common.rgba(surf.c[k])
         bm.normal_update()
