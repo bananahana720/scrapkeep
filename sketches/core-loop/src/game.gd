@@ -40,7 +40,16 @@ const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
-const CampHub := preload("res://src/world/camp_hub.gd")
+# The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
+# are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
+const MENU_PATHS := [
+	"res://src/world/camp_hub.gd",
+	"res://src/ui/camp_enemy_picker.gd",
+	"res://src/ui/workshop.gd",
+	"res://src/ui/pause_menu.gd",
+]
+const MENU_STEPS := 4
+const MENU_MODULES_FRAMES_APART := 2
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
@@ -104,8 +113,14 @@ var hud
 var screens
 # The pilot radio (radio_deck.gd): the HUD dial, the takes a run finds, the playlists.
 var radio_deck
-# The walkable camp (camp_hub.gd), built on the first K from the title.
-var camp_hub
+# The walkable camp (camp_hub.gd). Reading it builds the menu modules if they are not up yet.
+var camp_hub:
+	get:
+		menu_modules()
+		return camp_hub
+var _menu_step := 0
+var _menu_wait := -1
+var _menu_requested := -1
 var notes
 var panel
 var keyboard
@@ -273,14 +288,16 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
-	camp_hub = CampHub.new()
-	add_child(camp_hub)
-	camp_hub.setup(self)
-	camp_hub.camp_store = ctx.profile
-	# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
-	preload("res://src/ui/camp_enemy_picker.gd").watch(self)
-	add_child(preload("res://src/ui/workshop.gd").new())
-	add_child(preload("res://src/ui/pause_menu.gd").new())
+	# Tests and bots build the menu modules here; a played game builds them behind the menu, and
+	# at once if a run or a camp visit starts first.
+	if test_mode:
+		menu_modules()
+	else:
+		events.flow_changed.connect(func(state: String):
+			if state != "title":
+				menu_modules())
+		# A Continue starts a run without leaving class select: the picker's watch must be up for it.
+		events.run_started.connect(func(_class_id: String): menu_modules())
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
@@ -296,6 +313,8 @@ func _ready() -> void:
 	_boot("ui")
 	flow.show_title()
 	_boot("title")
+	if not test_mode:
+		_menu_wait = MENU_MODULES_FRAMES_APART
 	if _launch_flag("--self-play") and not test_mode:
 		_start_self_play()
 	if _launch_flag("--boot-profile"):
@@ -304,6 +323,81 @@ func _ready() -> void:
 			if not is_inside_tree():
 				return
 			_boot("frame %d" % (frame + 1))
+
+
+# Builds the camp, the workshop, the pause menu and the met-enemy watch, in four steps (_menu_step).
+# Called by the first reader of game.camp_hub, by workshop(), when a run leaves the title (each
+# finishes what is left at once), and a few frames apart behind the menu, so no one frame loads them all.
+func menu_modules() -> void:
+	while _menu_step < MENU_STEPS:
+		_menu_step_once()
+
+
+func _menu_step_once() -> void:
+	if _menu_step >= MENU_STEPS:
+		return
+	var started := Time.get_ticks_msec()
+	var step := _menu_step
+	_menu_step += 1
+	var script: Script = _menu_script(step)
+	var loaded := Time.get_ticks_msec()
+	match step:
+		0:
+			var hub = script.new()
+			camp_hub = hub
+			add_child(hub)
+			hub.setup(self)
+			hub.camp_store = ctx.profile
+		1:
+			# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
+			script.watch(self)
+		2:
+			add_child(script.new())
+		3:
+			add_child(script.new())
+	_boot("menu_modules step %d: script %d ms, main-thread build %d ms" % [step, loaded - started, Time.get_ticks_msec() - loaded])
+
+
+func _menu_script(step: int) -> Script:
+	var path: String = MENU_PATHS[step]
+	if _menu_requested == step:
+		_menu_requested = -1
+		# Blocks only when a forced build (a Start, a camp visit) finds the load still running.
+		var threaded: Script = ResourceLoader.load_threaded_get(path)
+		if threaded != null:
+			return threaded
+	return load(path)
+
+
+func workshop() -> Node:
+	menu_modules()
+	return get_node("Workshop")
+
+
+# Behind the menu, once the boot card is gone: one script at a time loads on the loader's thread
+# (ONE load_threaded_request, polled a frame at a time, never a parallel pair: the preload cycles
+# deadlock), and the main thread only instantiates and sets it up once it has loaded.
+func _step_menu_modules_later() -> void:
+	if _menu_wait < 0 or _menu_step >= MENU_STEPS:
+		return
+	if get_tree().root.get_node_or_null("Boot") != null:
+		return
+	if _menu_requested < 0:
+		_menu_wait -= 1
+		if _menu_wait > 0:
+			return
+		_menu_requested = _menu_step
+		if ResourceLoader.load_threaded_request(MENU_PATHS[_menu_step], "", false) != OK:
+			_menu_requested = -1
+			_menu_step_once()
+			_menu_wait = MENU_MODULES_FRAMES_APART
+		return
+	match ResourceLoader.load_threaded_get_status(MENU_PATHS[_menu_requested]):
+		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return
+		_:
+			_menu_step_once()
+			_menu_wait = MENU_MODULES_FRAMES_APART
 
 
 func _park_on_title_ground(stage: int) -> void:
@@ -433,6 +527,7 @@ func _process(delta: float) -> void:
 	summary_guard_left = maxf(0.0, summary_guard_left - delta)
 	if test_mode:
 		return
+	_step_menu_modules_later()
 	step_restart_hold(delta, Input.is_action_pressed("cl_retry"))
 	step_stick_look(delta)
 
