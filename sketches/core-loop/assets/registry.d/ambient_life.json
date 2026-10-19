@@ -30,7 +30,7 @@
    "loader": "src/core/ambient_kinds.gd",
    "provenance": {
     "recipe": "tools/blender/ambient/dam_swift.py",
-    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 3b3dfcdde86c87a6c88bb960708431aee52f4e3b5ef705dfaf963d5f43f98c5f"
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 c90ad21f0831d4fd951d38e12f524e9f5f97dcebe09dc9aa229f76ebe9d1fb5f"
    }
   },
   {
