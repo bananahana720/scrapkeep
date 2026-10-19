@@ -6,7 +6,7 @@
    "class": "park_large",
    "origin": "base_centre",
    "ships": true,
-   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's greybox collider, which it keeps exactly; no -col mesh)",
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's greybox collider, which it keeps exactly; its own -col, the portal posts outside the lane, goes on a separate PieceCollider)",
    "provenance": {
     "recipe": "tools/blender/park/isle_pieces.py",
     "notes": "ore_adit's timber portal hood over the ramp's uphill end (park_islands collider-locked rows, #149 2026-10-19 02:18Z); built by this script, no external mesh"
