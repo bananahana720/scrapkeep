@@ -130,6 +130,8 @@ var summary_guard_left := 0.0
 var _hit_stopped := false
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
+# Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
+const SELF_PLAY := "res://tools/self_play.gd"
 
 
 func _ready() -> void:
@@ -179,6 +181,11 @@ func _ready() -> void:
 	ctx.flow = flow
 	if test_mode:
 		storage_dir = "user://test-%d" % OS.get_process_id()
+		DirAccess.make_dir_recursive_absolute(storage_dir)
+	elif _launch_flag("--self-play"):
+		# A bot's run never touches the player's saves: codex, profile, run log and the run save
+		# all follow storage_dir, so they land in a folder of their own.
+		storage_dir = "user://self-play-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	apply_saved_bindings()
 	camera.apply_look_settings(settings_store())
@@ -284,6 +291,8 @@ func _ready() -> void:
 	_boot("ui")
 	flow.show_title()
 	_boot("title")
+	if _launch_flag("--self-play") and not test_mode:
+		_start_self_play()
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
@@ -303,6 +312,23 @@ func _park_on_title_ground(stage: int) -> void:
 	player.reset_to(ctx.terrain.spawn_point(1))
 	player.body().global_position = ctx.terrain.spawn_point(1)
 	camera.snap(ctx.terrain.entry_heading(1))
+
+
+# --self-play hands the run to a bot from tools/ (tools/self_play.gd), which the shipped pack
+# leaves out; without it the game says so and quits, rather than waiting for a player.
+func _start_self_play() -> void:
+	var script_path := SELF_PLAY
+	# Test override: --self-play-script=<res path> points the hook elsewhere (a missing path proves exit 2).
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--self-play-script="):
+			script_path = arg.trim_prefix("--self-play-script=")
+	if not ResourceLoader.exists(script_path):
+		push_error("game: --self-play needs a pack with tools/ (npm run sketch:export -- --self-play)")
+		get_tree().quit(2)
+		return
+	var bot: Node = load(script_path).new()
+	bot.set("game", self)
+	add_child(bot)
 
 
 # Moss's jukebox: a tune heard in play long enough is filed in the profile and announced on
