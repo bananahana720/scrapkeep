@@ -2222,6 +2222,26 @@
    ],
    "yaw_deg": 152.9,
    "near": "verge of the line: Saltbush and a split plank by the verge,"
+  },
+  {
+   "id": "flume_n007",
+   "template": "mini_planks",
+   "at": [
+    -169.4,
+    -394.3
+   ],
+   "yaw_deg": 61.7,
+   "near": "verge of the line: A few fallen bent planks and a short sta"
+  },
+  {
+   "id": "flume_n003",
+   "template": "mini_hearth",
+   "at": [
+    79.7,
+    467.0
+   ],
+   "yaw_deg": -0.0,
+   "near": "verge of the line: A cold hearth, one cup and a cot left ou"
   }
  ],
  "litter": {
@@ -2258,5 +2278,5 @@
   ],
   "seed": 1021
  },
- "pin": 4116187421
+ "pin": 1240983362
 }
