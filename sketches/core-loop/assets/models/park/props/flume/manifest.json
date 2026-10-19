@@ -18,12 +18,12 @@
       "res://assets/models/park/props/flume/boom_crane_wreck_a_lod2.glb"
      ],
      "tris": [
-      16656,
-      8328,
-      2498
+      17782,
+      8890,
+      2666
      ],
-     "radius": 7.084,
-     "height": 4.325
+     "radius": 7.306,
+     "height": 4.76
     },
     "b": {
      "lod": [
@@ -32,12 +32,12 @@
       "res://assets/models/park/props/flume/boom_crane_wreck_b_lod2.glb"
      ],
      "tris": [
-      16336,
-      8168,
-      2450
+      17838,
+      8918,
+      2676
      ],
-     "radius": 7.087,
-     "height": 4.325
+     "radius": 7.171,
+     "height": 4.758
     },
     "c": {
      "lod": [
@@ -46,12 +46,12 @@
       "res://assets/models/park/props/flume/boom_crane_wreck_c_lod2.glb"
      ],
      "tris": [
-      19396,
-      9698,
-      2908
+      18382,
+      9190,
+      2756
      ],
-     "radius": 7.785,
-     "height": 4.337
+     "radius": 7.293,
+     "height": 4.77
     }
    }
   },
@@ -70,12 +70,12 @@
       "res://assets/models/park/props/flume/skiff_on_blocks_a_lod2.glb"
      ],
      "tris": [
-      11764,
-      5882,
-      1764
+      11524,
+      5762,
+      1728
      ],
-     "radius": 4.23,
-     "height": 3.524
+     "radius": 4.407,
+     "height": 3.09
     },
     "b": {
      "lod": [
@@ -84,12 +84,12 @@
       "res://assets/models/park/props/flume/skiff_on_blocks_b_lod2.glb"
      ],
      "tris": [
-      10900,
-      5450,
-      1634
+      10780,
+      5390,
+      1616
      ],
-     "radius": 4.263,
-     "height": 3.525
+     "radius": 4.407,
+     "height": 3.09
     },
     "c": {
      "lod": [
@@ -102,8 +102,8 @@
       5942,
       1782
      ],
-     "radius": 4.263,
-     "height": 3.523
+     "radius": 4.407,
+     "height": 3.435
     }
    }
   },
@@ -173,12 +173,12 @@
       "res://assets/models/park/props/flume/bunk_cots_a_lod2.glb"
      ],
      "tris": [
-      1224,
-      612,
-      184
+      1356,
+      678,
+      200
      ],
-     "radius": 1.622,
-     "height": 1.51
+     "radius": 1.602,
+     "height": 1.61
     },
     "b": {
      "lod": [
@@ -187,12 +187,12 @@
       "res://assets/models/park/props/flume/bunk_cots_b_lod2.glb"
      ],
      "tris": [
-      1076,
-      538,
-      160
+      1236,
+      618,
+      184
      ],
-     "radius": 1.622,
-     "height": 1.51
+     "radius": 1.612,
+     "height": 1.952
     },
     "c": {
      "lod": [
@@ -201,12 +201,12 @@
       "res://assets/models/park/props/flume/bunk_cots_c_lod2.glb"
      ],
      "tris": [
-      1712,
-      856,
-      256
+      1624,
+      812,
+      244
      ],
-     "radius": 1.623,
-     "height": 1.0
+     "radius": 1.721,
+     "height": 1.049
     }
    }
   },
@@ -224,9 +224,9 @@
       "res://assets/models/park/props/flume/milepost_a_lod2.glb"
      ],
      "tris": [
-      1788,
-      894,
-      268
+      1732,
+      866,
+      260
      ],
      "radius": 0.884,
      "height": 1.665
@@ -238,9 +238,9 @@
       "res://assets/models/park/props/flume/milepost_b_lod2.glb"
      ],
      "tris": [
-      2268,
-      1134,
-      340
+      2072,
+      1036,
+      310
      ],
      "radius": 0.972,
      "height": 1.654
@@ -252,9 +252,9 @@
       "res://assets/models/park/props/flume/milepost_c_lod2.glb"
      ],
      "tris": [
-      2128,
-      1064,
-      318
+      2072,
+      1036,
+      310
      ],
      "radius": 1.013,
      "height": 1.174

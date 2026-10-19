@@ -100,80 +100,74 @@ def boom_crane_wreck(p, v, rng):
     for k in range(4):
         a = math.tau * k / 4
         p.rod((-3.4, 1.15, 1.0), (-3.4 + 0.6 * math.cos(a), 1.15, 1.0 + 0.6 * math.sin(a)), 0.05, C["iron"])
-    # Cribbing blocks the boom lies on.
-    xs = (-1.0, 2.2, 5.4)
-    layers = (4, 3, 2)
-    for x, n in zip(xs, layers):
-        sleeper_stack(p, rng, x, 0, n, col=C["timber_grey"] if v != "a" else C["timber"])
+    # Cribbing the broken boom rests on (positions follow the segments below).
+    xs = (-1.0,)
+    stacks = {"a": ((-1.0, 0, 4), (2.9, 0.9, 3), (5.5, 2.5, 2)), "b": ((-1.0, 0, 4), (2.9, 0.9, 3), (5.4, -2.2, 2)),
+              "c": ((-1.0, 0, 4), (3.2, -1.4, 1), (5.6, 1.4, 2))}[v]
+    for x, y, n in stacks:
+        sleeper_stack(p, rng, x, y, n, col=C["timber_grey"] if v != "a" else C["timber"])
     # A-frame stub behind the foot (stout, apex capped; not a gate).
     for s in (-1, 1):
         p.beam((-1.9, s * 1.4, 0.2), (-2.5, s * 0.25, 4.1), 0.34, C["timber_dark"])
     p.box((0.5, 1.2, 0.34), (-2.5, 0, 4.15), C["timber_dark"], style="hard_smooth")
     p.cyl(0.4, 0.3, (-2.5, 0, 3.75), C["iron"], segs=12, rot=FACE, style="hard_smooth")
     p.beam((-2.0, -1.3, 1.2), (-2.5, 0, 3.0), 0.12, C["timber_dark"])
-    # The boom: tapered lattice, two chords and struts (a chunky truss, thick in section).
-    tip_z = {"a": 1.95, "b": 1.7, "c": 1.8}[v]
-    z0, x0, x1 = 1.95, -2.3, 7.4
-    def bz(x):
-        return z0 + (tip_z - z0) * (x - x0) / (x1 - x0)
-    def bw(x):
-        return 0.7 - 0.3 * (x - x0) / (x1 - x0)
-    cut = 4.6 if v == "c" else x1  # variant c: the tip section snapped off
-    n = 8
-    for s in (-1, 1):
-        for zz in (-1, 1):
-            a = x0
-            for i in range(n):
-                xa, xb = x0 + (cut - x0) * i / n, x0 + (cut - x0) * (i + 1) / n
-                if xb > cut + 0.01:
-                    break
-                p.beam((xa, s * bw(xa), bz(xa) + zz * bw(xa)), (xb, s * bw(xb), bz(xb) + zz * bw(xb)),
-                       0.3 - 0.08 * i / n, tint(C["timber"] if zz > 0 else C["timber_dark"], rng, 0.05))
-    for i in range(n):
-        xa, xb = x0 + (cut - x0) * i / n, x0 + (cut - x0) * (i + 1) / n
-        if xb > cut + 0.01:
-            break
-        sgn = 1 if i % 2 else -1
-        for s in (-1, 1):
-            p.beam((xa, s * bw(xa), bz(xa) - sgn * bw(xa)), (xb, s * bw(xb), bz(xb) + sgn * bw(xb)), 0.1, C["timber_grey"])
-        p.beam((xa, -bw(xa), bz(xa)), (xa, bw(xa), bz(xa)), 0.12, C["timber_dark"], h=0.12)
-    # Hinge bracket, and the lock-and-chain: a fat iron padlock block with chain around the cribbing.
-    p.box((0.9, 1.5, 0.3), (x0 + 0.2, 0, bz(x0) - 0.55), C["iron"], style="hard_smooth")
+    # The boom, jack-knifed into chunky lattice segments (steep or short, never a long shallow run).
+    def lattice(a, b, w, n=4):
+        d = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
+        ln = math.sqrt(sum(c * c for c in d))
+        d = tuple(c / ln for c in d)
+        side = (d[1] * 1.0, -d[0] * 1.0, 0.0)
+        sl = math.hypot(side[0], side[1]) or 1.0
+        side = (side[0] / sl, side[1] / sl, 0.0)
+        up = (d[1] * side[2] - d[2] * side[1], d[2] * side[0] - d[0] * side[2], d[0] * side[1] - d[1] * side[0])
+        def at(t, sg, ug, ww):
+            return tuple(a[k] + (b[k] - a[k]) * t + side[k] * sg * ww + up[k] * ug * ww for k in range(3))
+        for sg in (-1, 1):
+            for ug in (-1, 1):
+                p.beam(at(0, sg, ug, w), at(1, sg, ug, w * 0.75), 0.3, tint(C["timber"] if ug > 0 else C["timber_dark"], rng, 0.05))
+        for k in range(n):
+            t0, t1 = k / n, (k + 1) / n
+            sgn = 1 if k % 2 else -1
+            for sg in (-1, 1):
+                p.beam(at(t0, sg, -sgn, w * (1 - 0.25 * t0)), at(t1, sg, sgn, w * (1 - 0.25 * t1)), 0.12, C["timber_grey"])
+            p.beam(at(t0, -1, 0, w), at(t0, 1, 0, w), 0.14, C["timber_dark"], h=0.14)
+        p.box((0.5, 0.5, 0.5), at(0, 0, 0, 0), C["iron"], style="hard_smooth")  # joint plate
+    P1 = (-2.0, 0, 2.0)
+    P2 = (0.8, 0, 4.3)
+    if v in ("a", "b"):
+        P3 = (2.9, 0.9, 1.0)
+        P4 = (5.6, 2.6, 0.9) if v == "a" else (5.4, -2.2, 0.9)
+        lattice(P1, P2, 0.6)
+        lattice(P2, P3, 0.6)
+        lattice((P3[0], P3[1], P3[2] - 0.1), P4, 0.5, n=3)
+        hx, hy = (6.2, 3.1) if v == "a" else (6.0, -2.7)
+    else:
+        lattice(P1, P2, 0.6)
+        p.beam(P2, (1.7, 0.2, 3.3), 0.3, C["timber_pale"])  # splintered stub where the second section snapped
+        lattice((2.4, -1.5, 0.7), (5.6, -0.3, 1.0), 0.55, n=3)
+        lattice((4.2, -2.0, 0.8), (5.5, 1.3, 2.3), 0.5, n=2)
+        for i in range(4):
+            p.ico(0.3, (3.6 + i * 0.8, -1.2 + 0.5 * (i % 2), 0.45), C["leaf"] if i % 2 else C["leaf_dark"], scale=(0.6, 0.6, 1.9), style="round", subdiv=0)
+        hx, hy = 6.6, 0.9
+    # Lock block and chain on the first cribbing stack.
     lx = xs[0]
     p.box((0.4, 0.28, 0.5), (lx, -0.62, 1.55 + (0.2 if v == "a" else -0.2)), C["iron"], style="hard_smooth")
     p.torus(0.17, 0.06, (lx, -0.62, 1.85 + (0.2 if v == "a" else -0.2)), C["iron_light"], rot=FACE, major=10, minor=5)
     sag = 0.2 if v == "a" else 0.7
     p.chain((lx, -0.62, 1.6), (lx - 0.3, -0.5, 1.0), C["cable"], link=0.2, radius=0.04, sag=sag)
     p.chain((lx, -0.62, 1.6), (lx + 0.5, 0.6, 1.7), C["cable"], link=0.2, radius=0.04, sag=sag)
-    # Hook block at the tip (rests on the ground or the blocks), chain slack to it.
-    hx = (cut - 0.2) if v != "c" else 6.6
-    hy = 0.0 if v != "c" else 0.9
-    if v == "c":
-        # snapped tip lying beside, half grown over with reeds
-        a, b = (4.6, 1.8, 0.3), (8.2, 2.6, 0.35)
-        for s in (-1, 1):
-            p.beam((a[0], a[1] + s * 0.4, a[2] + 0.4), (b[0], b[1] + s * 0.25, b[2] + 0.25), 0.2, C["timber_grey"])
-            p.beam((a[0], a[1] + s * 0.4, a[2]), (b[0], b[1] + s * 0.25, b[2]), 0.2, C["timber_dark"])
-        for i in range(6):
-            t = i / 5
-            p.beam((a[0] + 3.6 * t, a[1] + 0.8 * t - 0.45, 0.45 + 0.05 * t), (a[0] + 3.6 * t, a[1] + 0.8 * t + 0.45, 0.45 + 0.05 * t), 0.1, C["timber"])
-        for i in range(4):
-            p.ico(0.3, (5.2 + i * 0.8, 2.2 + 0.1 * (i % 2), 0.45 + rng.uniform(0, 0.35)),
-                  C["leaf"] if i % 2 else C["leaf_dark"], scale=(0.6, 0.6, 1.9), style="round", subdiv=0)
-        p.beam((cut, -0.2, bz(cut) + 0.25), (cut + 0.9, -0.5, bz(cut) - 0.4), 0.14, C["timber_pale"])  # splintered stub
-    p.box((0.6, 0.5, 0.8), (hx, hy, 0.4 if v != "a" else 0.4), C["iron"], style="hard_smooth")
+    # Hook block on the ground by the boom's end, chain slack in a heap.
+    p.box((0.6, 0.5, 0.8), (hx, hy, 0.4), C["iron"], style="hard_smooth")
     p.cyl(0.32, 0.2, (hx, hy - 0.3, 0.45), C["iron_light"], segs=12, rot=FACE, style="hard_smooth")
     p.torus(0.22, 0.07, (hx, hy, 0.95), C["iron"], rot=FACE, major=10, minor=5)
-    if v != "c":
-        p.chain((cut - 0.1, 0, bz(cut) - 0.2), (hx, hy, 0.9), C["cable"], link=0.2, radius=0.04, sag=0.9)
-    else:
-        p.chain((hx, hy, 0.9), (hx + 1.5, hy - 1.4, 0.1), C["cable"], link=0.2, radius=0.04, sag=0.3)
+    p.chain((hx, hy, 0.9), (hx + 1.2, hy + (-1.3 if hy > 0 else 1.3), 0.1), C["cable"], link=0.2, radius=0.04, sag=0.3)
     # Crew warmth: a night lantern (unlit, plain glass-white) and a jacket slung on the cab.
     p.cyl(0.15, 0.3, (-6.3, 0.6, 1.0), C["iron"], segs=8, style="hard_smooth")
     p.cyl(0.11, 0.2, (-6.3, 0.6, 1.25), WHITE, segs=8, style="hard_smooth")
     p.ico(0.45, (-6.15, -0.6, 1.4), C["canvas_dark"], scale=(0.4, 1.1, 1.3), style="round", subdiv=0)
     if v == "b":
-        p.ico(0.8, (2.4, 0.1, 2.8), C["canvas_dark"], scale=(2.0, 1.1, 0.28), rot=(0.1, 0, 0.1), style="round", subdiv=0)  # tarp over the boom
+        p.ico(0.8, (5.2, -2.2, 1.4), C["canvas_dark"], scale=(1.8, 1.0, 0.3), rot=(0.1, 0, 0.1), style="round", subdiv=0)  # tarp over the boom
     if v == "c":
         for i in range(4):
             p.ico(0.35, (-5.0 + i * 1.1, -1.8 + rng.uniform(-0.2, 0.2), 0.4), C["leaf_dark"], scale=(0.6, 0.6, 1.8), style="round", subdiv=0)
@@ -257,14 +251,15 @@ def skiff_on_blocks(p, v, rng):
     rope_coil(p, (3.3, 1.5, 0.05), 0.55, C["timber_pale"], turns=3)
     # Fish rack: a fat low frame with split grey fish, hung beside (a: full, b: half, c: bare).
     rx = 0.0
-    for s in (-1, 1):
-        p.beam((s * 2.2, 3.0, 0.0), (s * 2.2, 3.0, 3.4), 0.28, C["timber_dark"])
-    p.beam((-2.4, 3.0, 3.4), (2.4, 3.0, 3.4), 0.24, C["timber_dark"])
-    p.beam((-2.4, 3.0, 1.9), (2.4, 3.0, 1.9), 0.2, C["timber_dark"])
-    n = {"a": 9, "b": 4, "c": 0}[v]
+    # Leaning A-frame with a short cross-arm (not two posts and a lintel): fish hang from the arm.
+    p.beam((-1.0, 3.2, 0.0), (0.0, 2.9, 3.0), 0.3, C["timber_dark"])
+    p.beam((1.0, 3.2, 0.0), (0.0, 2.9, 3.0), 0.3, C["timber_dark"])
+    p.beam((0.0, 3.9, 0.0), (0.0, 2.9, 3.0), 0.26, C["timber_dark"])  # back leg
+    p.beam((-1.6, 2.9, 2.5), (1.5, 2.9, 2.7), 0.2, C["timber_pale"])  # cross-arm, off-level
+    n = {"a": 7, "b": 3, "c": 0}[v]
     for i in range(n):
-        x = -2.0 + i * 0.5
-        p.ico(0.3, (x, 2.9, 2.7), C["timber_grey"] if i % 2 else C["bone"], scale=(0.4, 0.25, 1.4), style="round", subdiv=0)
+        x = -1.4 + i * 0.45
+        p.ico(0.3, (x, 2.9, 1.9), C["timber_grey"] if i % 2 else C["bone"], scale=(0.4, 0.25, 1.4), style="round", subdiv=0)
     if v != "a":
         p.ico(0.5, (0.0, 3.0, 0.3), C["leaf_dark"], scale=(1.8, 0.8, 0.5), style="round", subdiv=0)
 
@@ -349,18 +344,31 @@ def sluice_shed(p, v, rng):
 @K.kind("bunk_cots", tags=["soft"], variants="abc",
         story="A canvas cot under a lean-to, boots tucked beneath.")
 def bunk_cots(p, v, rng):
-    # Lean-to roof on two short posts (low, soft; not an arch).
-    for x in (-1.1, 1.1):
-        p.beam((x, 0.9, 0.0), (x, 0.9, 1.5 if v != "c" else 1.0), 0.14, C["timber_dark"])
-        p.beam((x, -0.9, 0.0), (x, -0.9, 1.1 if v != "c" else 0.5), 0.14, C["timber_dark"])
+    # A pitched, sagging canvas over a ridge pole (no flat top): dusty canvas draped both sides.
+    dusty = mix(C["canvas_dark"], C["timber_grey"], 0.25)
     if v != "c":
-        for r in range(4):
-            if v == "b" and r == 1:
-                continue  # a torn-out strip of roof
-            p.box((2.7, 0.5, 0.05), (0, 0.65 - r * 0.4, 1.45 - r * 0.1 - (0.25 if (v == "b" and r == 2) else 0)), tint(C["canvas_dark"] if v == "b" else C["canvas"], rng, 0.05),
-                  rot=(0.15 + (0.35 if (v == "b" and r == 2) else 0), 0, 0), style="fine")
+        for x in (-1.4, 1.4):
+            p.beam((x, 0, 0.0), (x, 0, 1.55), 0.16, C["timber_dark"])
+        p.beam((-1.6, 0, 1.55), (1.6, 0, 1.55), 0.12, C["timber_dark"])
+        for sd in (-1, 1):
+            y, z = 0.0, 1.55
+            angs = (0.75, 1.0, 1.3) if not (v == "b" and sd == 1) else (0.9, 1.3, 1.5)
+            if v == "b" and sd == 1:
+                angs = (0.9, 1.3, 1.5, 1.5)  # this side has slumped nearly to the ground
+            for k, a in enumerate(angs):
+                ln = 0.5
+                ny, nz = y + sd * ln * math.cos(a), z - ln * math.sin(a)
+                if v == "b" and sd == -1 and k == 2:
+                    break  # torn off the low edge
+                p.box((2.9 - 0.12 * k, ln + 0.04, 0.05), (0, (y + ny) / 2, (z + nz) / 2), tint(dusty, rng, 0.06),
+                      rot=(sd * a, 0, 0), style="fine")
+                y, z = ny, nz
+        # Stain patch and a sagging belly fold of loose canvas at the front.
+        p.ico(0.4, (0.9, -0.55, 0.7), mix(dusty, C["canvas_stain"], 0.5), scale=(1.2, 0.5, 0.5), style="round", subdiv=0)
     else:
-        p.ico(0.9, (0.2, 0.0, 0.5), C["canvas_stain"], scale=(1.7, 1.1, 0.3), rot=(0.1, 0.2, 0.1), style="round", subdiv=0)
+        for x in (-1.4, 1.4):
+            p.beam((x, 0, 0.0), (x + 0.5, 0.2, 1.0), 0.16, C["timber_dark"])
+        p.ico(0.9, (0.2, 0.0, 0.5), mix(dusty, C["canvas_stain"], 0.4), scale=(1.7, 1.1, 0.3), rot=(0.1, 0.2, 0.1), style="round", subdiv=0)
     # Cot: frame, legs, sagging canvas, bedroll.
     sag = 0.12 if v == "a" else 0.25
     for s in (-1, 1):
@@ -390,17 +398,19 @@ def milepost(p, v, rng):
     top = (math.sin(lean) * ph, 0, ph * math.cos(lean))
     p.beam((0, 0, 0.2), top, 0.46, C["timber_grey"] if v != "a" else C["timber"], h=0.34)
     p.cyl(0.26, 0.18, (top[0], top[1], top[2] + 0.07), C["timber_dark"], segs=8, style="hard_smooth")
-    # Painted depth marks: a chalk band with tick strokes under it; the middle one struck through.
+    # Painted depth marks: two or three short, uneven daubs (offset left and right, tilted) with tick strokes;
+    # the middle one is struck through. Nothing spans the post, so it never reads as rungs.
     face = -0.19
-    for i, z in enumerate((0.45, 0.85, 1.2)):
-        zz, xx = z * math.cos(lean), math.sin(lean) * z
-        if v == "c" and i == 2:
+    marks = ((0.5, -0.1, 0.28, 0.08), (0.95, 0.09, 0.22, -0.1), (1.28, -0.05, 0.18, 0.05))
+    for i, (z, dx, wd, tilt) in enumerate(marks):
+        if (v == "c" and i == 2) or (v == "b" and i == 0):
             continue
-        p.box((0.5, 0.04, 0.09), (xx, face, zz), WHITE, rot=(0, lean, 0), style="fine")
-        for k in range(i + 2):
-            p.box((0.05, 0.04, 0.13), (xx - 0.15 + 0.1 * k, face, zz - 0.12), WHITE, rot=(0, lean, 0), style="fine")
+        zz, xx = z * math.cos(lean), math.sin(lean) * z + dx
+        p.box((wd, 0.04, 0.1), (xx, face, zz), WHITE, rot=(0, lean + tilt, 0), style="fine")
+        for k in range(1 + (i % 2) + (v == "a")):
+            p.box((0.05, 0.04, 0.12 + 0.03 * k), (xx - wd / 2 + 0.05 + 0.08 * k, face, zz - 0.14), WHITE, rot=(0, lean + tilt, 0), style="fine")
         if i == 1:
-            p.box((0.7, 0.05, 0.05), (xx, face - 0.02, zz - 0.04), C["charcoal"], rot=(0, lean + 0.5, 0), style="fine")
+            p.box((0.5, 0.05, 0.05), (xx, face - 0.02, zz - 0.05), C["charcoal"], rot=(0, lean + 0.7, 0), style="fine")
     # Painter's pail and brush.
     p.cyl(0.2, 0.3, (0.7, -0.5, 0.15), C["iron_light"], segs=8, r2=0.24, style="hard_smooth")
     p.cyl(0.17, 0.04, (0.7, -0.5, 0.31), WHITE, segs=8, style="fine")
