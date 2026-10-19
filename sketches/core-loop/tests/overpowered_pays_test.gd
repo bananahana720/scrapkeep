@@ -145,3 +145,34 @@ func _ceiling() -> void:
 	first.staggers = 1
 	_t.check("hit_cap_until_stagger lets go after it", float(first.judge(ram)["gain"]) > 15.0, "%.1f" % float(first.judge(ram)["gain"]))
 	_t.eq("the ultimate fills up to 70 on a closed guard", preload("res://src/combat/ultimate.gd").WARDEN_POSTURE_CAP, 70.0)
+	_pilot_class()
+
+
+# DECISIONS section 5: monster builds get the lift, ordinary pilots keep the old ceiling and cap.
+func _pilot_class() -> void:
+	var Ult := preload("res://src/combat/ultimate.gd")
+	var flat := {"curve": 1.0}
+	var ordinary := BossPosture.new(flat)
+	ordinary.set_pilot_class(2)
+	var at_cap := float(ordinary.judge({"kind": "ram", "punch": 250.0, "plating": 100.0, "frame": 1})["gain"])
+	_t.check("a class II hit at ratio 2.5 gains as if capped at 1.5", is_equal_approx(at_cap, _gain(flat, 1.5)), "%.1f vs %.1f" % [at_cap, _gain(flat, 1.5)])
+	for cls in [3, 4, 5]:
+		var monster := BossPosture.new(flat)
+		monster.set_pilot_class(cls)
+		var gain := float(monster.judge({"kind": "ram", "punch": 250.0, "plating": 100.0, "frame": 1})["gain"])
+		_t.check("a class %d hit at ratio 2.5 counts the lifted ceiling" % cls, is_equal_approx(gain, _gain(flat, 2.5)), "%.1f" % gain)
+		_t.check("a class %d hit tops out at 3x" % cls, is_equal_approx(float(monster.judge({"kind": "ram", "punch": 500.0, "plating": 100.0, "frame": 2})["gain"]), _gain(flat, 3.0)), "")
+	var grows := BossPosture.new(flat)
+	grows.set_pilot_class(2)
+	grows.set_pilot_class(3)
+	_t.check("a pilot who grows mid-fight earns the lift on the next hit", grows.mult_max == 3.0, str(grows.mult_max))
+	var hull := BossPosture.new(BossRules.POSTURE)
+	hull.set_pilot_class(5)
+	_t.check("a hull boss stays at 1.5 at any class", hull.mult_max == 1.5, str(hull.mult_max))
+	var waking := BossPosture.new({"curve": 2.0, "hit_cap": 20.0, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55})
+	waking.set_pilot_class(2)
+	_t.check("an ordinary pilot's hit_cap holds", float(waking.judge({"kind": "ram", "punch": 300.0, "plating": 100.0, "frame": 1})["gain"]) < BossPosture.FULL, "")
+	_t.eq("the set piece cap is 45 at class II", Ult.warden_cap(2), 45.0)
+	_t.eq("the set piece cap is 70 at class III", Ult.warden_cap(3), 70.0)
+	_t.eq("the set piece cap is 70 at class V", Ult.warden_cap(5), 70.0)
+	_t.eq("the set piece cap is 70 when the class is unknown", Ult.warden_cap(0), 70.0)

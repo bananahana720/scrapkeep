@@ -790,6 +790,7 @@ func chunk_cracked() -> bool:
 # What the rule says a hit does. The judge meets the plating this kind and part meet
 # (plating_for: the choir brace, the open point), so combat.resolve passes the part (F004).
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "") -> Dictionary:
+	_posture.set_pilot_class(pilot_heft_class())
 	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating_for(hit_kind, part), "smash": smash, "tier": tier,
 			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point()})
 	if hit_kind == "guard_rack":
@@ -799,6 +800,14 @@ func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "
 		result["glance"] = false
 		result["full"] = true
 	return result
+
+
+# The run's heft class, 0 when no run is in reach (see BossPosture.set_pilot_class).
+func pilot_heft_class() -> int:
+	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
+	if run == null or not run.has_method("heft_class"):
+		return 0
+	return int(run.heft_class())
 
 
 func _apply_posture(result: Dictionary) -> void:

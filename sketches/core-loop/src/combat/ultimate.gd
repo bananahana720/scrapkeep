@@ -1,5 +1,6 @@
 extends Node
 
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -63,6 +64,9 @@ const DAMAGE_TAKEN := 0.2
 # together (section 12, item 7); 70 since Andrew's tap "Lift the ceiling" (17 Oct 22:04Z),
 # was 45. Volleys on a Warden deal half damage; a boss takes half.
 const WARDEN_POSTURE_CAP := 70.0
+# The lift is for monster builds (DECISIONS section 5: "Monster builds stagger Wardens faster ...
+# Ordinary pilots still take 45-70 s"): below heft class III the cap is the old 45.
+const WARDEN_POSTURE_CAP_ORDINARY := 45.0
 const WARDEN_VOLLEY := 0.5
 const BOSS_MULT := 0.5
 const CONTACT_GAP := 0.5
@@ -793,13 +797,20 @@ func defend(amount: float, hp: float) -> float:
 	return clampf(amount * DAMAGE_TAKEN, 0.0, maxf(0.0, hp - 1.0))
 
 
+# The most one set piece adds on a closed Warden guard at this heft class (0 = unknown, the full cap).
+static func warden_cap(heft_class: int) -> float:
+	if heft_class > 0 and heft_class < BossPosture.MONSTER_CLASS:
+		return WARDEN_POSTURE_CAP_ORDINARY
+	return WARDEN_POSTURE_CAP
+
+
 # Posture a hit on a closed Warden guard may still add in this set piece: the cap counts
 # volleys and landing together. Applies `result` (the Warden's own judge) with its gain cut
 # to what is left.
 func warden_posture(warden: Node3D, result: Dictionary) -> void:
 	var id := warden.get_instance_id()
 	var spent := float(_posture_spent.get(id, 0.0))
-	var gain := minf(float(result.get("gain", 0.0)), maxf(0.0, WARDEN_POSTURE_CAP - spent))
+	var gain := minf(float(result.get("gain", 0.0)), maxf(0.0, warden_cap(warden.pilot_heft_class() if warden.has_method("pilot_heft_class") else 0) - spent))
 	result["gain"] = gain
 	result["shatter"] = false
 	result["crack"] = false

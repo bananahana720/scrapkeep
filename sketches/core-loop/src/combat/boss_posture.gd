@@ -14,7 +14,13 @@ const MULT_MIN := 0.2
 # Overpowered pays (Andrew's tap "Lift the ceiling", 17 Oct 22:04Z): a hit counts up to 3x
 # the plating it meets, so a monster build staggers a Warden well under the 45-70 s an
 # ordinary pilot takes; it was 1.5x. The hull bosses keep 1.5 in boss_rules.gd POSTURE.
+# The lift is for monster builds only: Andrew's rulings read "Monster builds stagger Wardens faster"
+# and "Ordinary pilots still take 45-70 s" (DECISIONS section 5). A Warden tells the rule the
+# pilot's heft class on every hit (set_pilot_class); below MONSTER_CLASS the ceiling stays at
+# ORDINARY_RATIO, at it or above it reaches the row's mult_max. Class III is where a grown
+# start (540 mass, heft 2.2) lands; the skipper's small arm stays in class I to II.
 const MULT_MAX := 3.0
+const MONSTER_CLASS := 3
 # A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
 # from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
 # monster build's still can. Without the key a hit may fill it, as before. With
@@ -37,6 +43,8 @@ var other_base := OTHER_BASE
 var other_base_charging := OTHER_BASE_CHARGING
 var mult_min := MULT_MIN
 var mult_max := MULT_MAX
+# The row's own ceiling; mult_max is this for a monster build or an unknown pilot, less below.
+var mult_top := MULT_MAX
 var drain_delay := DRAIN_DELAY
 var drain_rate := DRAIN_RATE
 # Set by a mounted driver before step; zero keeps the ordinary idle clock and drain.
@@ -75,6 +83,7 @@ func _init(numbers := {}) -> void:
 	other_base_charging = float(numbers.get("other_base_charging", OTHER_BASE_CHARGING))
 	mult_min = float(numbers.get("mult_min", MULT_MIN))
 	mult_max = float(numbers.get("mult_max", MULT_MAX))
+	mult_top = mult_max
 	drain_delay = float(numbers.get("drain_delay", DRAIN_DELAY))
 	drain_rate = float(numbers.get("drain_rate", DRAIN_RATE))
 	contact_drain_delay = float(numbers.get("contact_drain_delay", 0.0))
@@ -86,6 +95,12 @@ func _init(numbers := {}) -> void:
 	contact_gain_floor = float(numbers.get("contact_gain_floor", 0.0))
 	hit_cap = float(numbers.get("hit_cap", FULL))
 	hit_cap_until_stagger = bool(numbers.get("hit_cap_until_stagger", false))
+
+
+# The pilot's heft class for the next judge: 0 means unknown (the full ceiling, as a hull boss or a
+# test with no run reads it). Read per hit so a pilot who grows mid-fight earns the lift.
+func set_pilot_class(heft_class: int) -> void:
+	mult_max = mult_top if heft_class <= 0 or heft_class >= MONSTER_CLASS else minf(mult_top, ORDINARY_RATIO)
 
 
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
@@ -124,9 +139,10 @@ func judge(hit: Dictionary) -> Dictionary:
 
 # The most one hit at this ratio may add (see ORDINARY_RATIO).
 func cap_for(ratio: float) -> float:
-	if hit_cap >= FULL or mult_max <= ORDINARY_RATIO or (hit_cap_until_stagger and staggers > 0):
+	if hit_cap >= FULL or mult_top <= ORDINARY_RATIO or (hit_cap_until_stagger and staggers > 0):
 		return FULL
-	var t := clampf((ratio - ORDINARY_RATIO) / (mult_max - ORDINARY_RATIO), 0.0, 1.0)
+	# An ordinary pilot (mult_max held at ORDINARY_RATIO) always meets the ordinary cap.
+	var t := clampf((minf(ratio, mult_max) - ORDINARY_RATIO) / (mult_top - ORDINARY_RATIO), 0.0, 1.0)
 	return lerpf(hit_cap, FULL, t)
 
 
