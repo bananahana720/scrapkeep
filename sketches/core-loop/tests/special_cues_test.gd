@@ -171,8 +171,11 @@ func _run() -> void:
 	t.check("the Linker's brace sounds its tell once", _count(audio, "linker_tell") == braces + 1 and fx.spawned.get("linker_tell", 0) == fx_braces + 1,
 		"sound %d, effects %d" % [_count(audio, "linker_tell") - braces, fx.spawned.get("linker_tell", 0) - fx_braces])
 	var ends: Array = linker.cable_ends()
+	var sockets: Array = [linker._sockets.get("cable_base"), linker._sockets.get("cable_dish")]
 	t.check("the Linker's cable_ends are two distinct world points", ends.size() == 2 and ends[0] is Vector3 and ends[1] is Vector3
-		and (ends[0] as Vector3).distance_to(ends[1]) > 0.5, str(ends))
+		and (ends[0] as Vector3).distance_to(ends[1]) > 0.5 and sockets.all(func(n): return n is Node3D)
+		and (ends[0] as Vector3).is_equal_approx(sockets[0].global_position) and (ends[1] as Vector3).is_equal_approx(sockets[1].global_position)
+		and (ends[1] as Vector3).distance_to(linker.global_position) < linker.BOOM + 3.0, str(ends))
 	var after_brace := _count(audio, "linker_tell")
 	linker.cut_cable("struck")
 	t.check("cutting the cable sounds no second tell", _count(audio, "linker_tell") == after_brace)
