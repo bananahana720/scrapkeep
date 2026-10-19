@@ -2,7 +2,8 @@ extends SceneTree
 # Placeholder burndown: the anchors family (tools/blender/park/anchors.py), the harpoon anchor posts an anchor field row
 # with an anchors kit recipe (park_recipes.gd ANCHOR_KITS) draws through one MultiMesh instead of grey boxes.
 # (a) Each of the 15 recipe GLBs (5 families x 3 variants) exists and loads.
-# (b) Its render mesh is one mesh with one surface and at most 400 triangles (the instanced-post cap).
+# (b) Its render mesh is one mesh with one surface and at most 700 triangles (the instanced-post cap; 400 before the soft-toy pass)
+#     and carries vertex colour (not near-white) and normals, which the soft-toy bake and smooth shading write.
 # (c) The render mesh's AABB stays inside the authoring contract: x and z in [-4.05, 4.05], y in [-1.05, 9.05].
 # (d) It carries the <id>-col collision mesh (ledges.py convention; never drawn).
 # (e) A kit row places through place_row: the same posts and box colliders as greybox:anchor_field and one Posts view
@@ -18,7 +19,7 @@ const T := preload("res://tests/support/t.gd")
 const DIR := "res://assets/models/park/"
 const FAMILIES := ["hoodoo", "basalt", "timber", "saguaro", "cairn"]
 const VARIANTS := ["a", "b", "c"]
-const MAX_TRIS := 400
+const MAX_TRIS := 700
 const XZ_LIMIT := 4.05
 const Y_MIN := -1.05
 const Y_MAX := 9.05
@@ -137,6 +138,25 @@ func _check(id: String) -> void:
 		var b: AABB = _local_to_root(m, scene) * m.mesh.get_aabb()
 		box = b if k == 0 else box.merge(b)
 	_t.check("(b) %s has one render mesh with one surface" % id, render.size() == 1 and surfaces == 1, "meshes %d surfaces %d" % [render.size(), surfaces])
+	var colours := 0
+	var normals := 0
+	var bright := 0
+	var total := 0
+	for m: MeshInstance3D in render:
+		for si in m.mesh.get_surface_count():
+			var arrays := m.mesh.surface_get_arrays(si)
+			var cols = arrays[Mesh.ARRAY_COLOR]
+			if cols != null and cols.size() > 0:
+				colours += 1
+				for c: Color in cols:
+					total += 1
+					if c.r > 0.95 and c.g > 0.95 and c.b > 0.95:
+						bright += 1
+			var nrm = arrays[Mesh.ARRAY_NORMAL]
+			if nrm != null and nrm.size() > 0:
+				normals += 1
+	_t.check("(b) %s render mesh has ARRAY_COLOR, not uniformly near-white" % id, colours == surfaces and total > 0 and bright * 2 < total, "colour surfaces %d of %d, near-white %d of %d" % [colours, surfaces, bright, total])
+	_t.check("(b) %s render mesh has ARRAY_NORMAL" % id, normals == surfaces and surfaces > 0, "normal surfaces %d of %d" % [normals, surfaces])
 	_t.check("(b) %s render mesh is at most %d triangles" % [id, MAX_TRIS], tris > 0 and tris <= MAX_TRIS, "tris %d" % tris)
 	var lo := box.position
 	var hi := box.end

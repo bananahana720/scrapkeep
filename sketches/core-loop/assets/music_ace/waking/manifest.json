@@ -211,6 +211,12 @@
     "drums": "calm.drums.ogg",
     "bass": "calm.bass.ogg",
     "other": "calm.other.ogg"
+   },
+   "gain_db": -0.8,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.5,
+    "note": "summed stems before Ogg re-encode, after level_packs.py"
    }
   },
   "travel": {
@@ -237,6 +243,12 @@
     "drums": "travel.drums.ogg",
     "bass": "travel.bass.ogg",
     "other": "travel.other.ogg"
+   },
+   "gain_db": 0.6,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.2,
+    "note": "summed stems before Ogg re-encode, after level_packs.py"
    }
   },
   "pivot": {
@@ -289,6 +301,12 @@
     "drums": "build.drums.ogg",
     "bass": "build.bass.ogg",
     "other": "build.other.ogg"
+   },
+   "gain_db": -0.8,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.3,
+    "note": "summed stems before Ogg re-encode, after level_packs.py"
    }
   },
   "telegraph": {

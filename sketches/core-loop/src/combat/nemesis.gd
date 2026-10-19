@@ -50,6 +50,11 @@ const KIND_AXES := {
 
 # Start values (section 4, levers 2b and 8).
 const PACK_WEIGHT := 1.5
+# 2026-10-18 (w17 answers): Andrew's 1.5. On offer_weights_test's one fixed seed, alpha Tally's
+# random bot read 0.807 against the 0.80 cap (base 0.787). Over 20 seeds (alpha list, Tally random
+# bot) the mean share is 0.790 sd 0.020 at 1.0, 0.783 at 1.45 and 0.788 sd 0.025 at 1.5, and the
+# base crosses 0.80 on 7 of 20 seeds, so that was seed noise. Coordinator ruling on #149: keep 1.5
+# and judge the alpha share check on the mean over 20 seeds against the unchanged 60 to 80% band.
 const OFFER_WEIGHT := 1.5
 # Nemesis packs lean in from this world on; world one teaches the verbs first.
 const FROM_WORLD := 2
