@@ -117,7 +117,7 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 90.0, "warden_hp": 650.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[0]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[0], "warden_hint": "Break its guard, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[0]["posture_curve"], "ram_shatters": false, "monster_gain": 1.25}, "pressure": PRESSURE[0], "warden_hint": "Break its guard, then smash the core.",
 		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
 	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": "cable_reach"}, "warden_family": "reactor", "name": "The Cable Reach", "map": "reach", "threat": 1.0,
 		"unlock_base": 4, "ancient": "reactor_relic",
