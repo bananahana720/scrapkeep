@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "take-heavyweight-big-room-s5101.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/radio/take-heavyweight-big-room-s5101.wav",
-   "stretched": "/home/andrew/scratch/w16/radio-pack2/stretched/take_heavyweight_big_room.wav",
-   "bpm_before": 131.99,
-   "bpm_after": 132.0,
+   "take": "master.wav",
+   "source": "/home/andrew/scratch/w17/qp/remake/workB/cands/take-heavyweight-big-room/s6303/master.wav",
+   "stretched": "/home/andrew/scratch/w17/qp/remake/workB/pack/stretched/take_heavyweight_big_room.wav",
+   "bpm_before": 132,
+   "bpm_after": 132,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_heavyweight_big_room/drums.wav",
-     "sha256": "08e971f7f66be01c705cffb54cf1e3e82267d5805e9cf863503955ee80832d57"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_heavyweight_big_room/drums.wav",
+     "sha256": "ec0d66320e1a7531065e1e5d45da3f402b38a84de2200a94a0dcdd2089b0496e"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_heavyweight_big_room/bass.wav",
-     "sha256": "434619035c7dd90b60a2032deb751920f48491597c2d7791c7a185bed702b615"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_heavyweight_big_room/bass.wav",
+     "sha256": "0c449eee2ef382b9e937dc59f76a1eb213f03df0d10b5dc28d7bc41d8dd09e08"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_heavyweight_big_room/other.wav",
-     "sha256": "bf94f07b1e3a31367eb4e7e43c4fbb7a0a620ec4dc08a5731cc3f62997d68bfe"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_heavyweight_big_room/other.wav",
+     "sha256": "4fc806b1727715e00e5665b91a516cfc7792ee582e259137336755a677b0c028"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_heavyweight_big_room/vocals.wav",
-     "sha256": "175841075fc96b114ca2a1d18bd4843aa05679ffa2aa32a275da34e1970c9ea4"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_heavyweight_big_room/vocals.wav",
+     "sha256": "f2855f0fbbdb8165e9aab80df93f3537826b33d2f0866429cb9ddf1a27541279"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,19 +49,19 @@
   "main": {
    "parent": "single",
    "take": "take-heavyweight-big-room",
-   "source_start": 16960,
-   "take_start": 16960,
+   "source_start": 19456,
+   "take_start": 19456,
    "bpm": 132,
    "beat": 20045,
    "bar": 80180,
    "beats_per_bar": 4,
-   "bars": 74,
+   "bars": 73,
    "entry": 4096,
-   "exit": 5937416,
+   "exit": 5857236,
    "loop": true,
    "loop_offset": 4096,
    "loop_to_bar": 1,
-   "sample_count": 5937416,
+   "sample_count": 5857236,
    "key": "D",
    "key_offset": 0,
    "files": {
@@ -183,10 +183,10 @@
  "cuts": "measured-beat-phase",
  "whole": true,
  "timing_verified": false,
- "gain_db": 0.4,
+ "gain_db": 0.0,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.9,
+  "true_peak": -2.0,
   "note": "summed stems before Ogg encode"
  }
 }
