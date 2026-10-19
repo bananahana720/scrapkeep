@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Park props spot finder and vignette check (Dressing lane, design-v3/park/DRESSING-KITS.md). Read-only: no file is written.
-#   godot --headless --path sketches/core-loop --script tools/park_props_plan.gd -- --map=park_dam [--line=floor] [--check] [--tier=low|mid|tall] [--file=res://path.json] [--ground-rows=a,b,c] [--bench]
+#   godot --headless --path sketches/core-loop --script tools/park_props_plan.gd -- --map=park_dam [--line=floor] [--check] [--tier=low|mid|tall] [--file=res://path.json] [--ground-rows=a,b,c] [--low-ground-rows=a,b] [--bench]
 # Without --check it prints candidate vignette spots as JSON lines, ordered along the --line (default the floor line): a
 # spot is in the --tier band (default tall, 20 to 64 m) of some line, clear under park_props.gd validate() for a vignette of VIGNETTE_RADIUS_M, on
 # ground at most MAX_SLOPE_DEG steep, and at least SPACING_M from the spot before it. Each row names the nearest built
@@ -9,6 +9,7 @@ extends SceneTree
 # With --check it validates the map's vignette file (schema, kit names, then every expanded instance) and prints every
 # violation as a JSON line (--file checks another vignette file, a fixture, for the map); exit 1 on any violation or schema error, 2 on bad input.
 # "ground_rows" (the explicit surfaces, DRESSING-KITS.md) in the file applies to --check, and to the spot finder, which also takes --ground-rows=a,b,c.
+# "low_ground_rows" (low clutter in area rows, opt-in) likewise; the spot finder takes --low-ground-rows=a,b with --tier=low (its probe is 1.0 m tall).
 
 const ParkProps := preload("res://src/presentation/park_props.gd")
 
@@ -37,6 +38,7 @@ func _initialize() -> void:
 	var file_arg := ""
 	var bench := false
 	var ground_rows_arg := ""
+	var low_rows_arg := ""
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--map="):
 			map_id = arg.trim_prefix("--map=")
@@ -46,6 +48,8 @@ func _initialize() -> void:
 			file_arg = arg.trim_prefix("--file=")
 		elif arg.begins_with("--ground-rows="):
 			ground_rows_arg = arg.trim_prefix("--ground-rows=")
+		elif arg.begins_with("--low-ground-rows="):
+			low_rows_arg = arg.trim_prefix("--low-ground-rows=")
 		elif arg == "--bench":
 			bench = true
 		elif arg.begins_with("--tier="):
@@ -77,6 +81,10 @@ func _initialize() -> void:
 		c.use_ground_rows(Array(ground_rows_arg.split(",", false)))
 	else:
 		c.use_ground_rows(ParkProps.load_json(ParkProps.file_path(map_id)).get("ground_rows"))
+	if not low_rows_arg.is_empty():
+		c.use_low_ground_rows(Array(low_rows_arg.split(",", false)))
+	else:
+		c.use_low_ground_rows(ParkProps.load_json(ParkProps.file_path(map_id)).get("low_ground_rows"))
 	if bench:
 		quit(_bench(map_id, map, world))
 		return
@@ -194,7 +202,7 @@ func _ring_clear(c, at: Vector2) -> bool:
 	for reach in [VIGNETTE_RADIUS_M * 0.5, VIGNETTE_RADIUS_M]:
 		for k in 8:
 			var p: Vector2 = at + Vector2.from_angle(k * TAU / 8.0) * reach
-			if c.keepout_at(p, ParkProps.ParkSites.MARGIN) != "" or (tier == "tall" and ParkProps.ParkRecipes.in_clear(c.lanes, p, 0.0)):
+			if c.keepout_at(p, ParkProps.ParkSites.MARGIN, VIGNETTE_HEIGHT_M <= ParkProps.LOW_GROUND_MAX_M) != "" or (tier == "tall" and ParkProps.ParkRecipes.in_clear(c.lanes, p, 0.0)):
 				return false
 	return true
 

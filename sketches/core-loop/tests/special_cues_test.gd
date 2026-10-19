@@ -156,13 +156,35 @@ func _run() -> void:
 	t.check("the Foreman's horn sounds its tell once", _count(audio, "foreman_tell") == horns + 1 and fx.spawned.get("foreman_tell", 0) == fx_horns + 1,
 		"sound %d, effects %d" % [_count(audio, "foreman_tell") - horns, fx.spawned.get("foreman_tell", 0) - fx_horns])
 	spawner.spawn_enemy("plated_brute", game.ctx.terrain.drop_point(ball.x + 10, ball.z, 1.8))
+	audio.cue_log.clear()
 	var linker: Node3D = spawner.spawn_enemy("linker", game.ctx.terrain.drop_point(ball.x + 16, ball.z + 5, 1.8))
+	var spawn_cues: Array = audio.cue_log.filter(func(r: Array): return r[1] == "linker_spawn")
+	var spawn_cue: Array = spawn_cues.front() if not spawn_cues.is_empty() else []
+	t.check("the real Linker's spawn answer is queued to the beat", spawn_cue.size() > 2 and spawn_cue[2] == "beat", str(spawn_cue))
+	var loop := linker.get_node_or_null("SpecialPresence") as AudioStreamPlayer3D
+	t.check("the real Linker carries a looping presence player in the world", loop != null and loop.is_inside_tree()
+		and (loop.stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD and loop.global_position.is_equal_approx(linker.global_position))
 	await _frames(10)
 	var braces := _count(audio, "linker_tell")
 	var fx_braces: int = fx.spawned.get("linker_tell", 0)
 	linker._brace()
 	t.check("the Linker's brace sounds its tell once", _count(audio, "linker_tell") == braces + 1 and fx.spawned.get("linker_tell", 0) == fx_braces + 1,
 		"sound %d, effects %d" % [_count(audio, "linker_tell") - braces, fx.spawned.get("linker_tell", 0) - fx_braces])
+	var ends: Array = linker.cable_ends()
+	var sockets: Array = [linker._sockets.get("cable_base"), linker._sockets.get("cable_dish")]
+	t.check("the Linker's cable_ends are two distinct world points", ends.size() == 2 and ends[0] is Vector3 and ends[1] is Vector3
+		and (ends[0] as Vector3).distance_to(ends[1]) > 0.5 and sockets.all(func(n): return n is Node3D)
+		and (ends[0] as Vector3).is_equal_approx(sockets[0].global_position) and (ends[1] as Vector3).is_equal_approx(sockets[1].global_position)
+		and (ends[1] as Vector3).distance_to(linker.global_position) < linker.BOOM + 3.0, str(ends))
+	var after_brace := _count(audio, "linker_tell")
+	linker.cut_cable("struck")
+	t.check("cutting the cable sounds no second tell", _count(audio, "linker_tell") == after_brace)
+	var broken := _count(audio, "linker_break")
+	var linker_id := linker.get_instance_id()
+	linker.take_damage(99999.0)
+	await _frames(2)
+	t.check("the real Linker's death sounds its break once and stops its loop", _count(audio, "linker_break") == broken + 1
+		and not audio._specials.has(linker_id))
 
 	Density.live().force(0.0)
 	game.free()

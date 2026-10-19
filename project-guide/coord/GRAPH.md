@@ -10,12 +10,14 @@ Goal: a finished-feeling Linux alpha by the end of wave 21, judged by Andrew's o
                   local coordinator (Andrew's PC)
           graph, admission to main, check-ins, escalations
         ┌──────────┬───────────┬───────────┬───────────┐
-   Gate + staging  Systems     World       Perf          ← cloud lanes (max 4), each a sub-coordinator
+   Gate + staging  Systems     World       Perf  Dressing  Life  Challenge  ← cloud lanes (max 7), each a sub-coordinator
    stage/alpha-wN  gameplay,   Blender,    freezes,        that fans out its own agents and workflows
    red team        shell       art, GLBs   frame cost
         └──────── PRs + receipts + Wave board issue ────────┘   ← GitHub is the bus
-                  GPU bench (4080)   Music (ACE-Step)        ← local sessions on the PC
+   GPU bench (4080)   Music (ACE-Step)   Systems B (w18)   Content (w20)   ← local sessions on the PC
 ```
+
+Local CPU budget (19 Oct): Systems B at most 12 concurrent Godot, Content 8, all at nice 10 through `cpuq`; the GPU bench times runs only below a 1-minute load of 40, interleaving base and PR runs.
 
 ## Ownership
 
@@ -50,18 +52,30 @@ Known base reds and cloud-only false fails are listed in [STATE.md](../handoff/S
 
 | Unit | Lane | Depends on | State |
 | --- | --- | --- | --- |
-| Stack #125 victory lap, #127 hidden rooms, #129 stage-entry freeze, #139 old-drafts bundle, #140 idle loops | Coordinator then Gate | gate PASS receipts on 3b9bb44a, 07b24fcc, 1389e7e5, 695bc6f3, 69512b34 | ready |
-| Merge main's 7 commits into the stage | Gate | - | ready |
-| Re-gate #105 themes, #106 fast lane, #126 flume (confirm the flume merge landed), #142 grown-hit sound, #144 crown wire | Gate | heads past their last PASS | waiting |
-| run_tier re-record; reactor-band drift | Gate | stage settles | waiting |
-| #104 Overpowered pays: swarm ratio 1.92x, Mind small 89.2 s vs pin 101.5 | Perf | - | needs fix |
-| #73 Rivet carve: fix head 083d83ca, then 4080 p1/p3 | Perf, GPU bench | gate | needs gate + GPU |
-| #129 cold boot 8.94 s against 5 s | Perf, GPU bench | #129 stacked | follow-up |
-| Boss spawn freeze (#147 profiler), dense fights (#146, stage 6 fight 30% over), SWAP-HITCH-6 flag | Perf | - | in progress |
-| Three Warden GLB rebuilds (mantle_brood, mantle_choir, kit_mind); #143 landforms part 2 | World | - | waiting |
-| Hook-out hold break, nemesis column, answer weighting; #145 bot hands | Systems | - | not started |
-| Close #84 now; #66, #25, #52 once #139 lands | Coordinator | #139 | ready |
+| Full gate plus persona on stage 1a7a7299 (#116 verdict about 03:30Z) | Gate | - | running |
+| Stack #151 radio pack, #152 launch shell, #153 Splitter cue, #154 Warden GLBs, #155 SPIL-9 marks, #143 landforms part 2 | Gate | fast-lane PASS on the named heads | ready |
+| #106 fast lane without the WIP self-play commits; self-play in its own Perf PR | Gate, Perf | - | in progress |
+| Music levels and Ogg-vs-manifest export check | Music | - | in progress |
+| #104 Overpowered pays; grown-pilot ratio reds (Mind, hive, reactor) | Challenge (from Perf, 19 Oct) | - | needs fix |
+| #73 Rivet carve; #146 dense fights; #147 boss-freeze profiler; launch title (Andrew's option A: 2D title in about 2 s, 3D crossfades in) | Perf, GPU bench | - | in progress |
+| Hook-out hold break, nemesis column, answer weighting, #145 bot hands | Systems | - | in progress |
 | Promote #116 to main, cut `stage/alpha-w18` | Coordinator | gate + persona clean | waiting |
+
+## Pulled forward (19 Oct)
+
+| Unit | Lane | State |
+| --- | --- | --- |
+| SR10 director cards, SI3 stage modifiers (skipper-pair HOLD under test), Dispatcher and Splitter packs, nemesis packs, title intros | Systems B | in progress |
+| Linker follow-through; FLASH-COMFORT | Systems | in progress |
+| Six landmarks soft-toy pass; sinkhole trestle (ruled option a); anchor-kit soft toy; sinkhole (24) and islands (19) greybox | World | in progress |
+| Crown (10) and pit (6) greybox; then the Sitting Kit page for the wave 21 playtest | Content | in progress |
+| Lived-in parks: per-park prop kits (12+ kinds, 2 to 3 variants, hero props up to about 20k tris with LODs), clustered vignettes, one PR per park | Dressing (cloud) | starting |
+| Ambient life: critters and locals per world, pooled and capped, flee combat, no enemy palette, sight and sound from one record | Life (cloud) | starting |
+| Difficulty: Novice, Learner and Expert skill-band bots, a band-table harness, per-world boss and mob tuning to the DECISIONS section 5 targets, the HARD tier grown into a replay ladder, and #104 (taken from Perf) | Challenge (cloud) | starting |
+| Comps difficulty reference from the decompiled Isaac, Roboquest, Gunfire and RoR2 data (research/comps/difficulty/) | Study (PC) | in progress |
+| 4080 triangle-cost A/B for #154 and #143 (queue row 8); full-stem `--win-proof` export (row 7) | GPU bench | running / blocked on Music |
+
+Placeholders: 60 at 1a7a7299, down from 1,442 at wave 15; 59 of them are park greybox rows.
 
 ## Waves 18 to 21 (refreshed at each wave cut)
 
