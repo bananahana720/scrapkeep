@@ -184,6 +184,7 @@ const HOIST_PACE := 1.2
 const HOIST_ATTAIN := 1.6
 const HOIST_REACH_MARGIN := 1.1
 const HOIST_GIVE_UP := 8.5
+const HOIST_WAIT_GIVE_UP := 30.0
 # A Warden charge beyond RUNUP that gains less than CHARGE_PROGRESS on its best distance for
 # CHARGE_WINDOW seconds is pinned (a cache pocket's back wall, a pit): the ball moves fast enough
 # to dodge the stuck detour without getting anywhere. It recovers: back RECOVER_BACK off the
@@ -487,6 +488,8 @@ var _hoist_pending := {}
 var _hoist_to_low := 0.0
 var _hoist_rose := false
 var _hoist_pace := 0.0
+var _hoist_wait_s := 0.0
+var _hoist_released := false
 var _hoist_go_d := 0.0
 var _hoist_go_t := 0.0
 var _hoist_aim := 0.0
@@ -1905,6 +1908,9 @@ func _hoist_reset() -> void:
 	_hoist_az = INF
 	_hoist_pending = {}
 	_hoist_pace = 0.0
+	_hoist_rose = false
+	_hoist_wait_s = 0.0
+	_hoist_released = false
 
 
 # The ball speed the run in aims for: the smallest ram speed whose single contact fills the posture bar
@@ -1947,8 +1953,32 @@ func _hoist_reach_speed(rim: float) -> float:
 # window is what a player learns of the hoist by watching it (from the pulse cue at the high dwell, or from
 # the hive coming down), not the hoist's clock.
 func _hoist_arc_speed(distance: float) -> float:
+	return _hoist_arc_speed_at(distance, game.player.tuning.f("cruise"))
+
+
+func _hoist_arc_speed_at(distance: float, cruise: float) -> float:
 	var left: float = _hoist_to_low + HOIST_LOW_HOLD - maxf(_hoist_cue_s, 0.0)
-	return maxf((distance - HOIST_JUMP_PAD) / maxf(left, 0.5), game.player.tuning.f("cruise"))
+	return maxf((distance - HOIST_JUMP_PAD) / maxf(left, 0.5), cruise)
+
+
+# The run's pace for the timing and the window: the last go's own average, never under the cruise pace the
+# first go assumes (a braked start averaged over a long flight would otherwise refuse every later window).
+func _hoist_run_pace(cruise: float) -> float:
+	return maxf(_hoist_pace, cruise * HOIST_PACE)
+
+
+# A go that ended without a staggering contact teaches nothing about the next run: the learned pace is dropped.
+func _hoist_forget_pace() -> void:
+	_hoist_pace = 0.0
+
+
+# The seconds the hand has held the stage without a go. Past HOIST_WAIT_GIVE_UP it releases the stick to the
+# existing hand (the line arm) until the hive's next cycle starts; a go or a stagger restarts the count.
+func _hoist_wait(delta: float) -> bool:
+	_hoist_wait_s += delta
+	if _hoist_wait_s > HOIST_WAIT_GIVE_UP:
+		_hoist_released = true
+	return _hoist_released
 
 
 # The posture one ram at this speed would add, by the Warden's own rule.
@@ -1976,7 +2006,10 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 	var distance := _flat(ball, at)
 	if staggered or distance > HOIST_REACH:
 		_hoist_cue_s = -1.0
+		if _hoist_leg == "go" and not staggered and _hoist_done != _hoist_cycle:
+			_hoist_forget_pace()
 		_hoist_leg = ""
+		_hoist_wait_s = 0.0
 		return false
 	# The hive's rest mark is the collar (its home): low is at the collar, still is not moving.
 	var over_collar: float = at.y - home.y
@@ -1995,8 +2028,12 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 		_hoist_to_low = HOIST_TO_LOW_REST if rest_high else (HOIST_TO_LOW_PULSE if pulse_high else HOIST_TO_LOW_DOWN)
 		_hoist_cycle += 1
 		_hoist_clock = 0.0
+		_hoist_released = false
 	else:
 		_hoist_cue_s += delta
+	if _hoist_released:
+		_hoist_leg = ""
+		return false
 	if _hoist_az == INF and distance > HOIST_RIM_FROM:
 		_hoist_az = atan2(ball.z - home.z, ball.x - home.x)
 	var az: float = _hoist_az if _hoist_az != INF else 0.0
@@ -2015,7 +2052,7 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 		return false
 	# The run leaves late enough to come to the hive as it settles low, early enough to arrive with the dwell.
 	# (the pace is the run's own average from the last go, else a little over the cruise speed)
-	var pace: float = _hoist_pace if _hoist_pace > 0.0 else game.player.tuning.f("cruise") * HOIST_PACE
+	var pace: float = _hoist_run_pace(game.player.tuning.f("cruise"))
 	var run_time: float = maxf(distance - HOIST_JUMP_PAD, 0.0) / pace
 	var timed: bool = _hoist_leg == "go" or _hoist_cue_s >= _hoist_to_low - HOIST_EARLY - run_time
 	var go: bool = timed and _hoist_cue_s >= _reaction() and _hoist_done != _hoist_cycle \
@@ -2024,6 +2061,7 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 		_hoist_clock += delta
 		if _hoist_clock > HOIST_GIVE_UP:
 			_hoist_done = _hoist_cycle
+			_hoist_forget_pace()
 			go = false
 	# Short of a run in the ball cannot reach the rim at the speed the arc needs: run out to the stage first.
 	var outside: bool = distance >= rim + HOIST_MIN_RUN
@@ -2035,7 +2073,10 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 		_hoist_jumped = false
 		_hoist_go_d = distance
 		_hoist_go_t = 0.0
+		_hoist_wait_s = 0.0
 	elif not go:
+		if _hoist_leg == "go" and _hoist_done != _hoist_cycle:
+			_hoist_forget_pace()
 		_hoist_leg = "stage"
 	if game.player.kit.hooked:
 		source.press["harpoon_released"] = true
@@ -2046,7 +2087,8 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 		_goal = "hoist ram"
 		_hoist_go_t += delta
 		if _hoist_go_t >= 2.0 and distance < rim + 8.0:
-			_hoist_pace = (_hoist_go_d - distance) / _hoist_go_t
+			_hoist_pace = maxf((_hoist_go_d - distance) / _hoist_go_t, 0.0)
+			_note_set("hoist_pace", snappedf(_hoist_pace, 0.1))
 		var speed: float = game.player.planar_velocity().length()
 		_act(at, target, delta)
 		# The run in is boosted until the speed clears the punch the plating asks for.
@@ -2073,6 +2115,9 @@ func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -
 			if arrive <= at.y + HOIST_AIM_ABOVE:
 				source.press["jump_pressed"] = true
 		return true
+	if _hoist_wait(delta):
+		_hoist_leg = ""
+		return false
 	_goal = "hoist stage"
 	_act(stage, target, delta)
 	if _flat(ball, stage) < 6.0:
@@ -2092,13 +2137,16 @@ func _on_hoist_struck(enemy: Node3D, kind: String, force: float) -> void:
 
 
 # The tick after a contact: a "ram" is a contact that staggered the Warden (the bar filled), a "glance" one
-# that did not. The last-contact fields keep the punch and plating it met, the bar before it and the speed aimed for.
+# that did not. The last-contact fields keep the punch and plating it met, the posture read in the enemy_struck
+# handler (a same-emit guard-rack posture may already be applied) and the speed aimed for.
 func _hoist_settle(target: Node3D, staggered: bool) -> void:
 	if _hoist_pending.is_empty():
 		return
 	var hit: Dictionary = _hoist_pending
 	_hoist_pending = {}
 	_count("hoist_rams" if staggered else "hoist_glance")
+	if not staggered:
+		_hoist_forget_pace()
 	if hit["kind"] == "stomp":
 		_count("hoist_stomps")
 	_note_set("hoist_last_punch", snappedf(hit["punch"], 0.1))

@@ -1,4 +1,4 @@
-# smoke: bots timeout=1800s (five stage-3 bot runs in child processes, two at a time, about 60 s each alone)
+# smoke: bots timeout=1800s (six stage-3 bot runs in child processes, two at a time, about 60 s each alone, the tarn's 150 s fight longer)
 extends "res://tools/band_run.gd"
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -8,7 +8,7 @@ const T := preload("res://tests/support/t.gd")
 # Challenge lane unit C3-hoist: the bot's hoist ram-at-dwell hand (tools/bot_driver.gd _hoist_hand; the
 # "hoist_ram" verb in tools/skill_band.gd). The stage-3 Warden is the swarm hive on the hoist; at its
 # low dwell it hangs level with the pit's shelf but 36 m in, so the hand flies the ball off the rim at
-# it with punch at or over the plating (130), where a latch-ride's contacts land under.
+# it with punch at or over the posture rule's stagger threshold, where a latch-ride's contacts land under.
 #
 # The unit half checks the kit gate: Novice never selects the hand, Learner and Expert can, and the
 # Expert's band plays like no band (an Expert reads every tell, so its stream is never touched).
@@ -23,16 +23,17 @@ const T := preload("res://tests/support/t.gd")
 #   novice   no hoist keys: the Novice does not run the hand.
 #   learner  the base kit at its fifth attempt runs the hand: its kit allows it and the run is clean
 #            (its read roll is per cycle, so a count is printed, not asserted).
-#   tarn     the Expert from an ordinary build's entrance (a tarn at heft class 3 of the challenge library, below).
+#   tarn     the Expert from an ordinary build's entrance (a tarn at heft class 2 of the challenge library, below).
 # This file is the parent and, with --hoist-child=1, the child: band_run, with the control switch.
 #
 # The tarn fixture, tests/fixtures/hoist_entrance_stage3_tarn.json, is artifacts/challenge-lib/lib-base/s3/
 # tarn-skipper-9001.json of the challenge library (run seed 1598811041, the same pit as the pylon fixture's
 # seed; heft 2.19 at the Warden). --seeds=40500 is the bot's own seed for the resume, not the document's run
 # seed (the document carries that). The ordinary build is not yet landing a staggering ram from its run in:
-# its ball clips a static piece 15 m from the hive on the arc (the pylon, at heft class 4, flies over it), so
-# TARN_RAMS_REQUIRED is false and the row is reported, with its checks on the record's shape only. Set it
-# true once the arc clears the piece.
+# its run clips the headframe landmark's collider (Landmark_headframe StaticBody3D "Collider", the -col meshes
+# of assets/models/park/landmark_headframe.glb, park_recipes.gd:793; the frame has six legs) about 15 m from the
+# hive (the pylon, at heft class 4, flies over it), so TARN_RAMS_REQUIRED is false and the row is reported, with
+# its checks on the record's shape only. Set it true once the arc clears the frame.
 
 const ENTRANCE := "res://tests/fixtures/hoist_entrance_stage3.json"
 const STAGE := 3
@@ -93,6 +94,45 @@ func _unit(t) -> void:
 	t.check("expert reads every hoist cycle without touching its stream", all_read and expert._rng.state == before)
 	var again = SkillBand.make("learner", 1, 7)
 	t.check("a learner's read of a cycle is stable", again.reads(7001 * 1000 + 3) == learner.reads(7001 * 1000 + 3))
+	_unit_pace(t)
+
+
+# The learned pace cannot lock the hand: after a slow, non-staggering go a later cycle's window still holds.
+func _unit_pace(t) -> void:
+	var stub = GDScript.new()
+	stub.source_code = "extends RefCounted\nvar bot_driven := false\n"
+	stub.reload()
+	var driver = BotDriver.new(stub.new(), "skipper", 1)
+	var cruise := 14.0
+	var floor_pace: float = cruise * BotDriver.HOIST_PACE
+	driver._hoist_pace = 2.0
+	t.check("a slow learned pace is floored at cruise times the pace margin", driver._hoist_run_pace(cruise) == floor_pace, "pace %s" % driver._hoist_run_pace(cruise))
+	driver._hoist_pace = 40.0
+	t.check("a fast learned pace is kept", driver._hoist_run_pace(cruise) == 40.0, "pace %s" % driver._hoist_run_pace(cruise))
+	# A mid-window start (cue 3 s into a 6 s rest dwell, 60 m out) needs less than the floor, so the go is not refused.
+	driver._hoist_to_low = BotDriver.HOIST_TO_LOW_REST
+	driver._hoist_cue_s = 3.0
+	driver._hoist_pace = 2.0
+	var refused: bool = driver._hoist_arc_speed_at(60.0, cruise) > driver._hoist_run_pace(cruise)
+	t.check("a later cycle still runs after a slow learned pace", not refused,
+		"arc %.1f vs pace %.1f" % [driver._hoist_arc_speed_at(60.0, cruise), driver._hoist_run_pace(cruise)])
+	driver._hoist_forget_pace()
+	t.check("a go that ends without a staggering contact drops the learned pace", driver._hoist_pace == 0.0 and driver._hoist_run_pace(cruise) == floor_pace,
+		"pace %s" % driver._hoist_pace)
+	driver._hoist_rose = true
+	driver._hoist_wait_s = 5.0
+	driver._hoist_released = true
+	driver._hoist_pace = 3.0
+	driver._hoist_reset()
+	t.check("a target change clears the rise mark, the wait and the pace", not driver._hoist_rose and driver._hoist_wait_s == 0.0 and not driver._hoist_released and driver._hoist_pace == 0.0,
+		"rose %s, wait %s" % [driver._hoist_rose, driver._hoist_wait_s])
+	var held := true
+	for i in 100:
+		held = held and not driver._hoist_wait(0.25)
+	t.check("the hand holds the stage for up to the wait limit", held and not driver._hoist_released, "waited %s" % driver._hoist_wait_s)
+	for i in 40:
+		driver._hoist_wait(0.25)
+	t.check("past the wait limit the hand releases the stick to the line arm", driver._hoist_released, "waited %s" % driver._hoist_wait_s)
 
 
 func _runs(t) -> void:
@@ -138,17 +178,19 @@ func _runs(t) -> void:
 		PostureSweep._remove_tree(folder)
 
 
-# The ordinary build's row: it resumed and the hoist record is well formed; a staggering ram is required only
+# The ordinary build's row: it ran, resumed and fought the hive (checked per label) and any hoist contact is a ram or stomp after engagement; a staggering ram is required only
 # once TARN_RAMS_REQUIRED is on.
 func _tarn(t, row: Dictionary) -> void:
 	var note := _note(row)
 	var engaged := float(note.get("warden_engaged_s", 0.0)) if note.get("warden_engaged_s") != null else 0.0
 	var last_s := float(note.get("hoist_last_s", 0.0)) if note.get("hoist_last_s") != null else 0.0
-	print("[report] tarn: hoist_rams %d, hoist_glance %d, last %s staggered %s at %.2f s (engaged %.2f s), heft %s" % [
+	print("[report] tarn: hoist_rams %d, hoist_glance %d, last %s staggered %s at %.2f s (engaged %.2f s), heft %s, learned pace %s" % [
 		int(note.get("hoist_rams", 0)), int(note.get("hoist_glance", 0)), note.get("hoist_last_kind"), note.get("hoist_last_staggered"),
-		last_s, engaged, note.get("warden_fight_heft")])
-	t.check("the tarn's hoist record is well formed", not note.has("hoist_rams") or note.get("hoist_last_staggered") == true or int(note.get("hoist_glance", 0)) > 0,
-		"keys %s" % [_hoist_keys(row)])
+		last_s, engaged, note.get("warden_fight_heft"), note.get("hoist_pace")])
+	var counted := _hoist_counts(row) > 0
+	t.check("the tarn's hoist record has a ram or stomp contact at or after engagement when any is counted",
+		not counted or (note.get("hoist_last_kind") in ["ram", "stomp"] and last_s >= engaged),
+		"kind %s, last %.2f s, engaged %.2f s" % [note.get("hoist_last_kind"), last_s, engaged])
 	if TARN_RAMS_REQUIRED:
 		t.check("the tarn's hand lands a staggering ram within the fight limit", int(note.get("hoist_rams", 0)) >= 1 and last_s > 0.0,
 			"hoist_rams %s, glance %s" % [note.get("hoist_rams"), note.get("hoist_glance")])
