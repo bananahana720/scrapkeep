@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // node scripts/challenge/run.mjs --library [--lib-seeds=4] [--lib-pilots=a,b] [--label=<name>]
 // node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,world] [--only=brindle,w1,world1]
-//     [--seeds=16] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--park-persona=skipper]
+//     [--seeds=<n>: 24 fights, 16 parks] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--warden-persona=skipper] [--park-persona=skipper]
 //     [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
+// node scripts/challenge/run.mjs --library [--lib-shard=i/n]; --library-merge=<dir,dir> --label=<name>
 // node scripts/challenge/run.mjs --merge=<dir,dir>
 //
 // The band table (scripts/challenge/README.md): plays each boss, Warden and park with the Novice,
@@ -13,7 +14,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLUMNS, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, estimate, gradeRun, parseNdjson, pickBuilds, planCells, renderTable, shardJobs } from "./lib.mjs";
+import { COLUMNS, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -21,7 +22,7 @@ const outRoot = path.join(root, "artifacts/local/challenge");
 const KIND_TIMEOUT_MS = 40 * 60_000;
 
 const opts = {
-  library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "world"], only: null, seeds: 16,
+  library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "world"], only: null, seeds: null, libShard: null, libraryMerge: null, wardenPersona: "skipper",
   bands: ["novice", "learner1", "learner5", "expert"], top: true, persona: "brawler", parkPersona: "skipper", jobs: 4, label: null,
   shard: null, merge: null, dryRun: false, strict: false,
 };
@@ -35,6 +36,9 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "seeds") opts.seeds = Number(v);
   else if (k === "bands") opts.bands = v.split(",");
   else if (k === "no-top") opts.top = false;
+  else if (k === "lib-shard") opts.libShard = v;
+  else if (k === "library-merge") opts.libraryMerge = v.split(",");
+  else if (k === "warden-persona") opts.wardenPersona = v;
   else if (k === "persona") opts.persona = v;
   else if (k === "park-persona") opts.parkPersona = v;
   else if (k === "jobs") opts.jobs = Number(v);
@@ -63,6 +67,8 @@ const columns = opts.top && opts.bands.includes("expert") ? [...opts.bands, "exp
 if (opts.merge) {
   const runs = opts.merge.flatMap((d) => parseNdjson(read(statSyncDir(d))));
   finish(dedupe(runs), path.join(outRoot, opts.label ?? "merged-" + stamp), { label: opts.label ?? "merged" });
+} else if (opts.libraryMerge) {
+  mergeLibraries();
 } else if (opts.buildLibrary) {
   await buildLibrary();
 } else {
@@ -132,6 +138,7 @@ async function buildLibrary() {
     if (!PILOTS.includes(pilot)) die("--lib-pilots: unknown pilot " + pilot);
     for (const policy of ["completionist", "skipper"]) for (let i = 0; i < opts.libSeeds; i++) jobs.push({ pilot, policy, seed: 9000 + i });
   }
+  jobs.splice(0, jobs.length, ...shardJobs(jobs, opts.libShard));
   if (opts.dryRun) return console.log(`library ${label}: ${jobs.length} full park runs (to stage 6), 4 parallel; about ${Math.ceil((jobs.length * 600) / opts.jobs / 60)} min at 10 min a run`);
   mkdirSync(dir, { recursive: true });
   const index = [];
@@ -165,6 +172,20 @@ async function buildLibrary() {
   console.log(`library ${dir}: ${index.length} docs (${per})`);
 }
 
+// --library-merge=<shard dir,...> --label=<name>: join shard libraries into library/<label> with one index.json.
+function mergeLibraries() {
+  if (!opts.label) die("--library-merge needs --label=<name>");
+  const dir = path.join(outRoot, "library", opts.label);
+  const shards = opts.libraryMerge.map((d) => ({ dir: path.resolve(d), index: JSON.parse(readFileSync(path.join(path.resolve(d), "index.json"), "utf8")) }));
+  const merged = mergeLibraryIndexes(shards);
+  for (const d of merged) {
+    mkdirSync(path.join(dir, path.dirname(d.file)), { recursive: true });
+    copyFileSync(path.join(d.from, d.file), path.join(dir, d.file));
+  }
+  writeFileSync(path.join(dir, "index.json"), JSON.stringify(merged.map(({ from, ...d }) => d), null, 1) + "\n");
+  console.log(`library ${dir}: ${merged.length} docs from ${shards.length} shards`);
+}
+
 function loadLibrary(dir) {
   const indexFile = path.join(dir, "index.json");
   if (!existsSync(indexFile)) die(`no index.json in ${dir}; build one with --library`);
@@ -184,7 +205,7 @@ function loadLibrary(dir) {
 
 async function runTable() {
   const builds = opts.library ? loadLibrary(opts.library) : {};
-  let jobs = planCells({ builds, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, parkPersona: opts.parkPersona });
+  let jobs = planCells({ builds, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona });
   jobs = shardJobs(jobs, opts.shard);
   const missing = jobs.filter((j) => j.missing);
   if (missing.length) {
@@ -213,7 +234,8 @@ async function runTable() {
 
   const record = (job, { p, row }, rerun) => {
     const grade = row ? gradeRun(job.kind, row, job) : { result: p.timedOut ? "timeout" : "error", why: p.timedOut ? "killed at the wall timeout" : "exit " + p.exit + ", no record" };
-    const line = { ...job, row, grade, exit: p.exit, timedOut: p.timedOut, wallS: Math.round(p.wallS * 10) / 10, rerun };
+    // The entrance is kept relative to the library, so run folders from other machines merge as they are.
+    const line = { ...job, entrance: job.entrance && opts.library ? path.relative(opts.library, job.entrance) : job.entrance, row, grade, exit: p.exit, timedOut: p.timedOut, wallS: Math.round(p.wallS * 10) / 10, rerun };
     appendFileSync(runsFile, JSON.stringify(line) + "\n");
     log(`done  ${job.id}: ${grade.result}${row ? " (" + row.outcome + ", " + row.game_seconds + " s game)" : ""}, ${p.wallS.toFixed(0)} s wall`);
   };
@@ -236,10 +258,13 @@ async function runTable() {
 function finish(runs, outDir, meta) {
   mkdirSync(outDir, { recursive: true });
   const table = buildTable(runs);
+  const timing = wallStats(runs);
   const md = renderTable(table, { ...meta, when: new Date().toISOString().slice(0, 16) + "Z" });
   writeFileSync(path.join(outDir, "table.md"), md);
-  writeFileSync(path.join(outDir, "table.json"), JSON.stringify({ ...meta, runs: runs.length, table }, null, 1) + "\n");
+  writeFileSync(path.join(outDir, "table.json"), JSON.stringify({ ...meta, runs: runs.length, timing, table }, null, 1) + "\n");
   console.log(md);
+  console.log("Wall medians per job (re-estimate SECONDS_PER_JOB in lib.mjs from these):");
+  for (const [k, t] of Object.entries(timing)) console.log(`  ${k}: ${t.jobs} jobs, median ${t.medianWallS?.toFixed(0)} s wall (max ${t.maxWallS.toFixed(0)}), median ${t.medianGameS?.toFixed(0)} s game`);
   console.log(`table written to ${path.join(outDir, "table.md")}`);
   if (opts.strict && table.some((c) => cellVerdict(c) === "fail")) process.exit(1);
 }

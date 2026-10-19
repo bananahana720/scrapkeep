@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson } from "./lib.mjs";
+import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson } from "./lib.mjs";
 
 const docs = (n, stage = 2) => Array.from({ length: n }, (_, i) => ({ file: `s${stage}/d${i}.json`, stage, mass: 100 + i * 10, parts: i % 5, pilot: "tarn" }));
 const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuilds(docs(24, s))]));
@@ -76,10 +76,10 @@ test("describeDoc reads the RunStore envelope", () => {
 });
 
 test("planCells counts jobs per cell and column, rotates builds and shares seeds across columns", () => {
-  const all = planCells({ builds: builds(), seeds: 16 });
-  assert.equal(all.length, 3 * 5 * 16 + 6 * 5 * 16 + 3 * 2 * 16);
+  const all = planCells({ builds: builds() });
+  assert.equal(all.length, 3 * 5 * 24 + 6 * 5 * 24 + 3 * 2 * 16);
   const brindle = all.filter((j) => j.cell === "brindle");
-  assert.equal(brindle.length, 80);
+  assert.equal(brindle.length, 120);
   assert.ok(brindle.every((j) => j.args.includes("--to-boss=1") && j.args.includes("--until=2") && j.args.includes("--from-stage=2")));
   const top = brindle.filter((j) => j.column === "expertTop");
   assert.ok(top.every((j) => j.build === "top" && j.band === "expert"));
@@ -88,7 +88,10 @@ test("planCells counts jobs per cell and column, rotates builds and shares seeds
   const l5 = brindle.find((j) => j.column === "learner5");
   assert.ok(l5.args.includes("--band=learner") && l5.args.includes("--attempt=5"));
   const w3 = all.find((j) => j.cell === "w3");
-  assert.ok(w3.args.includes("--until=3") && w3.args.includes("--ticks=29700") && w3.policy === "brawler");
+  assert.ok(w3.args.includes("--until=3") && w3.args.includes("--fight-limit=240") && w3.args.includes("--stage-limit=600") && w3.args.includes("--ticks=63000"));
+  assert.equal(w3.policy, "skipper");
+  assert.equal(brindle[0].policy, "brawler");
+  assert.equal(planCells({ builds: builds(), seeds: 1, only: ["w3"], wardenPersona: "brawler" })[0].policy, "brawler");
   const world1 = all.filter((j) => j.cell === "world1");
   assert.ok(world1.every((j) => j.entrance === null && !j.missing && !j.args.some((a) => a.startsWith("--from-stage")) && j.args.includes("--stop-at=engaged:2") && j.policy === "skipper"));
   const world3 = all.find((j) => j.cell === "world3");
@@ -130,7 +133,7 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
   for (let i = 0; i < 20; i++) {
     runs.push(run("brindle", "boss", 2, "novice", i < 2 ? "win" : "loss", { fightS: 70, hpLost: 100, diedS: 50 }));
     runs.push(run("brindle", "boss", 2, "learner1", i < 7 ? "win" : "loss", { fightS: 80, hpLost: 90, diedS: i === 19 ? 30 : 60 }));
-    runs.push(run("brindle", "boss", 2, "expert", i < 19 ? "win" : "timeout", { fightS: 60, hpLost: 30 }));
+    runs.push(run("brindle", "boss", 2, "expert", i < 19 ? "win" : "timeout", { fightS: 60, hpLost: 30, reason: "boss_stalled" }));
     runs.push(run("brindle", "boss", 2, "expertTop", "win", { fightS: 30, hpLost: 10 }));
   }
   for (let i = 0; i < 10; i++) runs.push(run("world1", "world", 1, "novice", i < 8 ? "win" : "loss", { fightS: 100 }));
@@ -147,9 +150,9 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
   assert.equal(w.columns.novice.ok, false);
   assert.equal(table[0].cell, "brindle");
   const md = renderTable(table, { label: "t" });
-  assert.match(md, /\| brindle \| 10% \(20\) \[\d+%-\d+%\] ✓ vs <= 15% \|/);
+  assert.match(md, /\| brindle \| 10% \(20\) \[\d+%-\d+%\] ✓ vs <= 15% \(18 died\) \|/);
   assert.match(md, /35% \(20\) \[\d+%-\d+%\] ✓ vs 15%-35%/);
-  assert.match(md, /95% \(20\) \[\d+%-\d+%\] ✓ vs >= 85% \(1 timeout\)/);
+  assert.match(md, /95% \(20\) \[\d+%-\d+%\] ✓ vs >= 85% \(1 capped\)/);
   assert.match(md, /80% \(10\) \[\d+%-\d+%\] ✗ vs <= 50%/);
   assert.match(md, /1 ✗ \(earliest 30\.0 s\)/);
   assert.match(md, /Cells with a ✗: brindle, world1\./);
@@ -157,11 +160,11 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
 });
 
 test("a cell short of its target shows ✗ and a timeout is not a win", () => {
-  const runs = Array.from({ length: 10 }, (_, i) => run("w1", "warden", 1, "expert", i < 5 ? "win" : "timeout", { fightS: 20 }));
+  const runs = Array.from({ length: 10 }, (_, i) => run("w1", "warden", 1, "expert", i < 5 ? "win" : "timeout", { fightS: 20, reason: "stalled" }));
   const [c] = buildTable(runs);
   assert.equal(c.columns.expert.rate, 0.5);
   assert.equal(c.columns.expert.ok, false);
-  assert.match(renderTable([c]), /50% \(10\) \[\d+%-\d+%\] ✗ vs >= 85% \(5 timeout\)/);
+  assert.match(renderTable([c]), /50% \(10\) \[\d+%-\d+%\] ✗ vs >= 85% \(5 stalled\)/);
 });
 
 test("the dry-run estimate scales with jobs and parallelism", () => {
@@ -171,4 +174,28 @@ test("the dry-run estimate scales with jobs and parallelism", () => {
   assert.equal(e.wallSeconds, Math.ceil((jobs.length * 100) / 4));
   assert.equal(BOSSES.length, 3);
   assert.equal(COLUMNS.length, 5);
+});
+
+test("a fight cap and a stall are timeouts shown beside deaths", () => {
+  const row = (outcome) => ({ outcome, stage_reached: 1, stages: [{ stage: 1, warden_engaged_s: 20, warden_broken_s: null, hp_lost: 5 }] });
+  assert.deepEqual(gradeRun("warden", row("fight_capped"), { stage: 1 }), { result: "timeout", reason: "fight_capped", fightS: null, hpLost: 5 });
+  assert.equal(gradeRun("warden", row("stalled"), { stage: 1 }).reason, "stalled");
+  const a = aggregate([{ result: "win" }, { result: "loss" }, { result: "timeout", reason: "fight_capped" }, { result: "timeout", reason: "stalled" }]);
+  assert.deepEqual([a.losses, a.capped, a.stalled, a.rate], [1, 1, 1, 0.25]);
+  const [c] = buildTable([run("w2", "warden", 2, "expert", "win"), run("w2", "warden", 2, "expert", "loss"), run("w2", "warden", 2, "expert", "timeout", { reason: "fight_capped" }), run("w2", "warden", 2, "expert", "timeout", { reason: "stalled" })]);
+  assert.match(renderTable([c]), /\(1 died, 1 capped, 1 stalled\)/);
+});
+
+test("shard libraries join into one index and run folders carry no machine paths that matter", () => {
+  const idx = (n, pilot) => Array.from({ length: n }, (_, i) => ({ file: `s2/${pilot}-${i}.json`, stage: 2, mass: i }));
+  const merged = mergeLibraryIndexes([{ dir: "/a", index: idx(2, "tarn") }, { dir: "/b", index: [...idx(2, "tally"), ...idx(1, "tarn")] }]);
+  assert.equal(merged.length, 4);
+  assert.deepEqual(merged.map((d) => d.from).sort(), ["/a", "/a", "/b", "/b"]);
+  // Grading reads the record only, never the entrance path.
+  const runs = [{ id: "x", cell: "w1", kind: "warden", stage: 1, column: "expert", entrance: "/other/machine/s2/a.json", row: { outcome: "until", stage_reached: 2, game_seconds: 90, stages: [{ stage: 1, warden_engaged_s: 5, warden_broken_s: 30, hp_lost: 1 }] } }];
+  assert.equal(buildTable(runs)[0].columns.expert.wins, 1);
+  const w = wallStats([{ kind: "boss", wallS: 100, row: { game_seconds: 80 } }, { kind: "boss", wallS: 300, row: { game_seconds: 90 } }, { kind: "boss", wallS: 200, row: { game_seconds: 70 } }]);
+  assert.deepEqual(w.boss, { jobs: 3, medianWallS: 200, maxWallS: 300, medianGameS: 80 });
+  const shardsOfLib = [1, 2, 3].map((i) => shardJobs(Array.from({ length: 48 }, (_, k) => ({ id: k })), `${i}/3`));
+  assert.equal(shardsOfLib.flat().length, 48);
 });

@@ -48,7 +48,12 @@ export const BOSSES = [
 export const WARDENS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "w" + n, stage: n, world: Math.ceil(n / 2) }));
 export const WORLDS = [1, 2, 3].map((w) => ({ id: "world" + w, world: w, first: 2 * w - 1, last: 2 * w }));
 
-export const WARDEN_TICKS = (240 + 90) * 90; // a Warden run's guard: 240 s of fight and 90 s of getting there
+// A Warden run: the fight may last 240 s from engagement (over 3x the 45-85 s stagger bands); the stage cap is lifted
+// to 600 s so it cannot cut an engaged fight first, and the tick guard sits past it.
+export const WARDEN_FIGHT_LIMIT_S = 240;
+export const WARDEN_STAGE_LIMIT_S = 600;
+export const WARDEN_TICKS = (WARDEN_STAGE_LIMIT_S + 100) * 90;
+export const DEFAULT_SEEDS = { fight: 24, world: 16 };
 export const BOSS_TICKS = 480 * 90; // the driver's own boss limit is 420 s
 export const WORLD_TICKS = 700 * 90;
 export const LIBRARY_STAGES = 6;
@@ -96,7 +101,7 @@ export function describeDoc(file, text) {
 // A cell is a fight or a park; a column is a band (and a build bucket); a job is one seed of one column of one cell.
 export function planCells(opts) {
   const {
-    builds = {}, cells = ["boss", "warden", "world"], only = null, seeds = 16, columns = COLUMNS.map((c) => c.id), persona = "brawler", parkPersona = "skipper",
+    builds = {}, cells = ["boss", "warden", "world"], only = null, seeds = null, columns = COLUMNS.map((c) => c.id), persona = "brawler", wardenPersona = "skipper", parkPersona = "skipper",
   } = opts;
   const jobs = [];
   const want = (id) => !only || only.includes(id);
@@ -110,13 +115,14 @@ export function planCells(opts) {
       const stage = def.kind === "world" ? def.first : def.stage;
       // Stage 1 is the start of a run: no build to carry, so it plays fresh (the seed picks the pilot).
       const docs = stage === 1 ? [null] : (builds[stage]?.[col.build] ?? []);
-      for (let i = 0; i < seeds; i++) {
+      const count = seeds ?? (def.kind === "world" ? DEFAULT_SEEDS.world : DEFAULT_SEEDS.fight);
+      for (let i = 0; i < count; i++) {
         const doc = docs.length ? docs[i % docs.length] : undefined;
         if (doc === undefined) {
-          jobs.push({ ...base(def, col, i, persona, parkPersona), missing: true });
+          jobs.push({ ...base(def, col, i, persona, wardenPersona, parkPersona), missing: true });
           continue;
         }
-        jobs.push(base(def, col, i, persona, parkPersona, doc));
+        jobs.push(base(def, col, i, persona, wardenPersona, parkPersona, doc));
       }
     }
   }
@@ -129,15 +135,15 @@ function cellSeed(def, i) {
   return 40000 + slot * 100 + i;
 }
 
-function base(def, col, i, persona, parkPersona, doc = null) {
+function base(def, col, i, persona, wardenPersona, parkPersona, doc = null) {
   const seed = cellSeed(def, i);
-  const policy = def.kind === "world" ? parkPersona : persona;
+  const policy = def.kind === "world" ? parkPersona : def.kind === "warden" ? wardenPersona : persona;
   const from = def.kind === "world" ? def.first : def.stage;
   const args = ["--band=" + col.band, "--attempt=" + col.attempt, "--cell=" + def.id];
   if (doc) args.push("--entrance=" + doc.file, "--from-stage=" + from);
   else if (from !== 1) args.push("--from-stage=" + from);
   if (def.kind === "boss") args.push("--to-boss=1", "--until=" + def.stage, "--ticks=" + BOSS_TICKS);
-  else if (def.kind === "warden") args.push("--until=" + def.stage, "--ticks=" + WARDEN_TICKS);
+  else if (def.kind === "warden") args.push("--until=" + def.stage, "--fight-limit=" + WARDEN_FIGHT_LIMIT_S, "--stage-limit=" + WARDEN_STAGE_LIMIT_S, "--ticks=" + WARDEN_TICKS);
   else args.push("--stop-at=engaged:" + def.last, "--ticks=" + WORLD_TICKS);
   return {
     id: `${def.id}-${col.id}-${seed}`, kind: def.kind, cell: def.id, stage: def.stage, column: col.id, band: col.band, attempt: col.attempt,
@@ -171,7 +177,7 @@ export function gradeRun(kind, row, job = {}) {
     const boss = row.boss;
     if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null };
     if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null };
-    if (row.outcome === "boss_stalled" || boss) return { result: "timeout", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null };
+    if (row.outcome === "boss_stalled" || boss) return { result: "timeout", reason: row.outcome, fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null };
     return { result: "error", why: "the boss was never entered (" + row.outcome + ")" };
   }
   if (kind === "warden") {
@@ -181,12 +187,12 @@ export function gradeRun(kind, row, job = {}) {
       return { result: "win", fightS, hpLost: note.hp_lost ?? null };
     }
     if (row.outcome === "died") return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null };
-    return { result: "timeout", fightS: null, hpLost: note?.hp_lost ?? null };
+    return { result: "timeout", reason: row.outcome, fightS: null, hpLost: note?.hp_lost ?? null };
   }
   if (kind === "world") {
     if (row.outcome === "reached") return { result: "win", fightS: row.game_seconds ?? null, hpLost: null };
     if (row.outcome === "died") return { result: "loss", fightS: row.game_seconds ?? null, hpLost: null };
-    return { result: "timeout", fightS: row.game_seconds ?? null, hpLost: null };
+    return { result: "timeout", reason: row.outcome, fightS: row.game_seconds ?? null, hpLost: null };
   }
   throw new Error("unknown kind " + kind);
 }
@@ -217,7 +223,9 @@ export function aggregate(grades) {
   const { lo, hi } = wilson(wins, n);
   const deaths = grades.filter((g) => g.result === "loss" && g.diedS != null).map((g) => g.diedS);
   return {
-    n, wins, losses: count("loss"), timeouts: count("timeout"), errors: count("error"), rate: n ? wins / n : null, lo, hi,
+    n, wins, losses: count("loss"), timeouts: count("timeout"),
+    capped: grades.filter((g) => g.result === "timeout" && ["fight_capped", "boss_stalled", "ticks_done"].includes(g.reason)).length,
+    stalled: grades.filter((g) => g.result === "timeout" && !["fight_capped", "boss_stalled", "ticks_done"].includes(g.reason)).length, errors: count("error"), rate: n ? wins / n : null, lo, hi,
     medianFightS: median(grades.filter((g) => g.result === "win").map((g) => g.fightS)),
     medianHpLost: median(grades.map((g) => g.hpLost)),
     earliestDeathS: deaths.length ? Math.min(...deaths) : null,
@@ -285,7 +293,8 @@ export function cellVerdict(cell) {
 function cellText(c) {
   if (!c) return "-";
   const mark = c.ok === null ? "" : c.ok ? " ✓" : " ✗";
-  const extra = [c.timeouts ? `${c.timeouts} timeout` : "", c.errors ? `${c.errors} error` : ""].filter(Boolean).join(", ");
+  // A stall or a fight cap is the fight beating the player, not a win: shown beside the deaths.
+  const extra = [c.losses ? `${c.losses} died` : "", c.capped ? `${c.capped} capped` : "", c.stalled ? `${c.stalled} stalled` : "", c.errors ? `${c.errors} error` : ""].filter(Boolean).join(", ");
   return `${pct(c.rate)} (${c.n}) [${pct(c.lo)}-${pct(c.hi)}]${mark} vs ${describeTarget(c.target)}${extra ? " (" + extra + ")" : ""}`;
 }
 
@@ -294,7 +303,7 @@ const fmt = (x, d = 1) => (x == null ? "-" : Number(x).toFixed(d));
 export function renderTable(table, meta = {}) {
   const lines = ["# Challenge band table", ""];
   if (meta.label) lines.push(`Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`, "");
-  lines.push("Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. A timeout is not a win. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.", "");
+  lines.push("Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. Brackets after a cell count deaths, fight caps (fight_capped, boss_stalled) and stalls; none is a win. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.", "");
   const fights = table.filter((c) => c.kind !== "world");
   if (fights.length) {
     lines.push("## Bosses and Wardens", "");
@@ -338,4 +347,30 @@ export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330 }; // wall s
 export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   const total = jobs.reduce((s, j) => s + (perKind[j.kind] ?? 120), 0);
   return { jobs: jobs.length, cpuSeconds: total, wallSeconds: Math.ceil(total / Math.max(1, parallel)) };
+}
+
+// Library sharding: shards are separate folders with their own index.json (file paths relative to the folder).
+// Returns the joined entries, each with `from` (its shard folder); a file name seen twice keeps the first.
+export function mergeLibraryIndexes(shards) {
+  const seen = new Set();
+  const out = [];
+  for (const { dir, index } of shards) {
+    for (const d of index) {
+      if (seen.has(d.file)) continue;
+      seen.add(d.file);
+      out.push({ ...d, from: dir });
+    }
+  }
+  return out.sort((a, b) => a.stage - b.stage || a.file.localeCompare(b.file));
+}
+
+// Wall and game seconds per job by kind, for re-estimating --dry-run.
+export function wallStats(runs) {
+  const out = {};
+  for (const kind of ["boss", "warden", "world"]) {
+    const r = runs.filter((x) => x.kind === kind);
+    if (!r.length) continue;
+    out[kind] = { jobs: r.length, medianWallS: median(r.map((x) => x.wallS)), maxWallS: Math.max(...r.map((x) => x.wallS ?? 0)), medianGameS: median(r.map((x) => x.row?.game_seconds)) };
+  }
+  return out;
 }

@@ -16,6 +16,8 @@ extends "res://tools/bot_run.gd"
 # --to-boss=1 calls flow.enter_boss once the run is in play, so the bot fights the world's boss at
 # once. The run ends on the boss's result, or "until" if --until=N is set and the boss falls.
 # --stop-at=engaged:<stage> ends the run as "reached" the tick that stage's Warden is engaged.
+# --fight-limit=<s> sets the driver's fight_limit (a Warden fight past that many seconds from engagement ends
+# "fight_capped"); --stage-limit=<s> sets its stage_limit, so the stall cap cannot cut an engaged fight first.
 # The row keeps bot_run's format and gains "entrance" (the doc's basename) and "cell".
 # The band flags (--band, --attempt) are tools/bot_run.gd's, from tools/skill_band.gd.
 
@@ -25,6 +27,7 @@ var _band_boss_done := false
 var _band_reached := false
 var _band_stop_stage := -1
 var _band_rows_seen := 0
+var _band_limits_set := false
 
 
 func _initialize() -> void:
@@ -63,6 +66,12 @@ func _physics_process(delta: float) -> bool:
 					if stage == _band_stop_stage:
 						_band_reached = true)
 		if _driver != null:
+			if not _band_limits_set:
+				_band_limits_set = true
+				if _settings.has("fight-limit"):
+					_driver.fight_limit = float(_settings["fight-limit"])
+				if _settings.has("stage-limit"):
+					_driver.stage_limit = float(_settings["stage-limit"])
 			if _band_reached:
 				_driver._end("reached")
 			elif _settings.get("to-boss", "0") == "1" and not _band_boss_done and _game.flow.in_stage() \

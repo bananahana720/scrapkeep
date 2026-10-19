@@ -29,7 +29,7 @@ A cell's mark is a point-estimate check (`✓`/`✗`); the Wilson 95% interval s
 | Id | Cell | What runs |
 | --- | --- | --- |
 | `brindle`, `waking`, `mind` | boss | Resume the last stage of the world (stages 2, 4, 6) and enter the boss at once (`--to-boss=1`). Win is `boss.defeated_s`. |
-| `w1` to `w6` | Warden | Resume stage N and play it to its exit (`--until=N`). Win is the stage note's `warden_broken_s`. Guard (240+90) s. |
+| `w1` to `w6` | Warden | Resume stage N and play it to its exit (`--until=N`). Win is the stage note's `warden_broken_s`. The fight may last 240 s from engagement (`--fight-limit`, over 3x the 45-85 s stagger bands); the stage cap is lifted to 600 s (`--stage-limit`) so it cannot cut an engaged fight first. A `fight_capped` or `stalled` run is a timeout, never a win, and is counted beside the deaths. |
 | `world1` to `world3` | park | Resume the world's first stage (1, 3, 5) and stop the tick the world's Warden is engaged (`--stop-at=engaged:<last stage>`). Win is outcome `reached`. |
 
 Stage 1 has no build to carry, so `w1`, `brindle`-style stage-1 cells and `world1` play fresh and the seed picks the pilot.
@@ -50,12 +50,14 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 | Option | Default | What it does |
 | --- | --- | --- |
 | `--library` (bare) | | Build the library. `--lib-seeds=<n>` (4) seeds for each of 6 pilots and 2 policies (completionist, skipper); `--lib-pilots=a,b` restricts the pilots. No band: today's bot. Cut at `--until=6`, 3600 s timeout. Runs that die early still add the stages they reached. |
+| `--lib-shard=i/n` | | With `--library`: run only shard i of n of the 48 library runs (deterministic). |
+| `--library-merge=<dir,...>` | | With `--label=<name>`: join shard library folders into `library/<label>` with one `index.json`. |
 | `--library=<dir>` | | Use a library for the table. |
 | `--cells=` | `boss,warden,world` | Which kinds. |
 | `--only=` | all | `brindle,waking,mind,w1..w6,world1..world3`. |
-| `--seeds=<n>` | 16 | Runs per cell per column. Seeds are fixed per cell, so columns face the same seeds; each seed takes the next build of its bucket, so pilots mix. |
+| `--seeds=<n>` | 24 fights, 16 parks | Runs per cell per column. Seeds are fixed per cell, so columns face the same seeds; each seed takes the next build of its bucket, so pilots mix. |
 | `--bands=` | `novice,learner1,learner5,expert` | Columns. The Expert top column is added whenever `expert` is, unless `--no-top`. Parks run only `novice` and `learner1`. |
-| `--persona=` | `brawler` | The bot policy for bosses and Wardens (`brawler` is the completionist's fight profile). `--park-persona=skipper` for parks. |
+| `--persona=` | `brawler` | The bot policy for bosses and Wardens (`brawler` is the completionist's fight profile) for bosses; Wardens use `--warden-persona=skipper`, which beelines to the Warden (the completionist spends the stage cap on scrap lines before engaging); parks use `--park-persona=skipper`. |
 | `--jobs=<n>` | 4 | Godot processes at once (at most 6). Band sweeps can run out of memory; a job that times out or is killed is rerun once alone before it counts. |
 | `--label=` | `run-<stamp>` | Output folder name under `artifacts/local/challenge/`. |
 | `--shard=i/n` | | Jobs `k` where `k mod n = i-1`, over the planned list: deterministic, disjoint, joined by `--merge`. |
@@ -64,6 +66,8 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 | `--strict` | | Exit 1 when any cell has a `✗`. Otherwise exit 0 whenever the harness ran. |
 
 `tools/band_run.gd` is the Godot side: `tools/bot_run.gd` plus `--entrance=<file>` (resume a saved doc), `--keep-entrances=1` (save each stage entrance as `entrance-s<N>.json`), `--to-boss=1`, `--stop-at=engaged:<stage>` and `--cell=<id>`.
+
+`runs.ndjson` keeps each job's entrance relative to its library and grading reads only the record, so run folders from different machines merge with `--merge`. The run ends by printing wall and game medians per job kind, saved as `timing` in `table.json`, to re-estimate `--dry-run`.
 
 Output: `artifacts/local/challenge/<label>/`: `runs.ndjson` (one line per job: its fields, the bot row, the grade, wall seconds), `table.md`, `table.json` and `jobs/<id>/` (log and `out/bots.ndjson`).
 
@@ -85,4 +89,4 @@ Output: `artifacts/local/challenge/<label>/`: `runs.ndjson` (one line per job: i
 | Warden cell (`w1`) | 240 (cap) or 207 | 165 to 410 |
 | Park cell (`world1`, 2 jobs at once) | 207 to 240 | 129 to 147 |
 
-The default table is 816 jobs (boss 240, Warden 480, park 96), about 19 hours at 4 parallel on the loaded numbers; `--dry-run` prints the estimate. Split it with `--shard`. Stage-1 Warden runs stall at the 240 s guard for some pilots (`w1` seeds 40300, 40301 Novice, Expert); a stall counts as a timeout, not a win.
+The default table is now 1,176 jobs (boss 360, Warden 720, park 96), about 27 hours at 4 parallel on the loaded numbers; `--dry-run` prints the estimate. Split it with `--shard`. These numbers were taken with the completionist Warden persona, whose w1 runs stalled at the 240 s stage cap before engaging; Warden cells now use the skipper.
