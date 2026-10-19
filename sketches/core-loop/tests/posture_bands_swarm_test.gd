@@ -78,15 +78,15 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 # 42.69 s of [62.85, 38.09, 42.69, 51.71, 61.81, 38.15, 37.85, 38.71], 2.33x; the camper broke it on
 # none. The #104 thread's sweep on f9f58944 (gate/pr104-swarm-ablation.txt) gave the same fights to the
 # hundredth except grown seed 1, which the kernel killed for memory there and which is 38.09 s here.
-# 2026-10-19 (stage/alpha-w17 958bbdcd, the #104 grown-pilot branch): small re-pinned 99.54 -> 83.09 s; grown stays at 42.69 s
-# (38.96 s is inside the 10 percent). Seeds 0 to 7, before on b95e1799 (the Challenge lane's RESULTS.md, #104 head 99aac660) ->
-# after on 958bbdcd: small [77.24, 105.73, 97.49, 95.67, 93.88, 76.19, 71.83, 79.90] -> [77.24, 83.09, 85.70, 95.67, 72.99,
-# 82.75, 71.83, 94.03], median 93.88 -> 83.09; grown [51.93, 48.08, 42.69, 51.70, 61.75, 38.15, 37.85, 38.71] -> [51.93, 38.96,
-# 32.62, 51.70, 44.90, 38.15, 37.85, 38.73], median 48.08 -> 38.96, ratio 1.95 -> 2.14; the camper broke none of the eight
-# (seed 5 broke it at 165.63 s on b95e1799). Three agreeing sweeps: with no hive gain, and with a stage-3 monster_gain of 1.7 and
-# of 2.0 (boss_posture.gd): the small lists are identical in all three and the grown median is 38.96 s in all three. So the
-# change is stage drift between b95e1799 and 958bbdcd, not this branch; which stage commit moved seeds 1, 4, 5 and 7 was not
-# isolated (unknown). The branch leaves the hive without a gain, because a gain moved no median on 958bbdcd.
+# 2026-10-19 (stage drift, not a #104 result): small re-pinned 99.54 -> 83.09 s; grown stays at 42.69 s (38.96 s is inside the
+# 10 percent). The hive row and driver are the stage's own: the #104 grown-pilot branch carries no hive-specific change, so the
+# move below is stage/alpha-w17 drifting between b95e1799 and 958bbdcd (which stage commit moved seeds 1, 4, 5 and 7 was not
+# isolated: unknown). Seeds 0 to 7, before on b95e1799 (the Challenge lane's RESULTS.md, #104 head 99aac660) -> after on 958bbdcd:
+# small [77.24, 105.73, 97.49, 95.67, 93.88, 76.19, 71.83, 79.90] -> [77.24, 83.09, 85.70, 95.67, 72.99, 82.75, 71.83, 94.03],
+# median 93.88 -> 83.09; grown [51.93, 48.08, 42.69, 51.70, 61.75, 38.15, 37.85, 38.71] -> [51.93, 38.96, 32.62, 51.70, 44.90,
+# 38.15, 37.85, 38.73], median 48.08 -> 38.96, ratio 1.95 -> 2.14; the camper broke none of the eight (seed 5 broke it at 165.63 s
+# on b95e1799). Three agreeing sweeps on 958bbdcd (one with no key, two with an experimental stage-3 gain since removed from the
+# branch, which moved nothing): the small lists were identical and the grown median 38.96 s in all three.
 const EXPECT_SMALL_S := 83.09
 const EXPECT_GROWN_S := 42.69
 const TOLERANCE := 0.10
