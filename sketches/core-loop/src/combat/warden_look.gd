@@ -5,6 +5,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # The Warden's body as a landmark, visual only: nothing here collides, and every
 # number the fight uses stays in warden.gd. It has to answer "what do I break?" from
@@ -290,13 +291,13 @@ func _turn_jaws(delta: float) -> void:
 
 func _update_core() -> void:
 	# Kept low enough that the core keeps its colour instead of blowing out to white.
-	var energy: float = 1.2 + 2.0 * warden.charge_fraction()
+	var energy: float = FlashGuard.spike(1.2, 1.2 + 2.0 * warden.charge_fraction())
 	if posture_fight():
 		var live := EventKinds.state_color("open")
 		var shown := live if warden.staggered() else _rest_core_color()
 		_core_material.albedo_color = shown
 		_core_material.emission = shown
-		energy = OPEN_CORE_GLOW if warden.staggered() else 1.2
+		energy = FlashGuard.spike(1.2, OPEN_CORE_GLOW) if warden.staggered() else 1.2
 	_core_material.emission_energy_multiplier = energy
 
 
