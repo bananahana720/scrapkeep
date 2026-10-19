@@ -45,6 +45,20 @@ const PATHS := {
 	"audio": "res://src/presentation/audio.gd",
 }
 
+# The Threat.Type each unit's script commits (read from its _commit_ring, _commit_lane or Telegraph call; not a
+# constant, so named here). A kind absent from this table is "declared kind, unverified" on the sheet.
+const MOB_TYPE := {
+	"chaser": "LANE", "lobber": "PROJECTILE", "plated_brute": "INSTANT", "reactor_relic": "INSTANT", "kite_drone": "INSTANT",
+	"swatter": "INSTANT", "drill_crew": "INSTANT", "burrower": "INSTANT", "pit_jaw": "INSTANT", "line_cutter": "PROJECTILE",
+	"bola_thrower": "PROJECTILE", "dispatcher": "PROJECTILE", "splitter_pod": "INSTANT", "ballast_heavy": "INSTANT",
+	"hooker": "LANE", "mag_trapper": "INSTANT", "netcaster": "INSTANT", "winch_drone": "LANE", "gyro_jammer": "INSTANT",
+	"deflector": "LANE", "ramp_flipper": "INSTANT", "catch_trap": "INSTANT", "anchor_crew": "LANE", "gap_net": "LANE",
+	"jolt_layer": "INSTANT",
+}
+# Units that extend enemy.gd, not counter.gd, and set no owner_voice or mechanic_tag.
+const NO_VOICE := ["chaser", "lobber"]
+const DIRECTOR_SCALED := ["Mind hand", "Swarm", "Miniboss", "Elite affixes", "Mobs"]
+
 const LETHAL_FLAG := "LETHAL TELL < 0.6 s"
 const LETHAL_FLOOR := 0.6
 const EPS := 0.000001
@@ -68,23 +82,24 @@ static func rows() -> Array:
 	var r: Array = []
 	# Brindle: boss.gd commits each hazard and publishes boss_attack_telegraphed that frame.
 	r.append(["Brindle", "crane sweep (phase 1)", _hz(["rules", "CRANE_WARN"]), ["rules", "CRANE_SWEEP"], null, null, "zero",
-		{"type": "WAVE", "event": true}, "Steals a share of mass (STEAL_SHARE, clamped) and tugs; no hull damage. Period CRANE_PERIOD."])
+		{"id": "B01", "type": "WAVE", "event": true}, "Steals a share of mass (STEAL_SHARE, clamped) and tugs; no hull damage. Period CRANE_PERIOD."])
 	r.append(["Brindle", "slag ring (phase 2)", _hz(["rules", "SLAG_WARN"]), ["rules", "SLAG_LIVE"], ["rules", "SLAG_GAP"], ["rules", "QUENCH_SECONDS"], ["rules", "SLAG_DAMAGE"],
-		{"type": "INSTANT", "event": true}, "Punish is the quench the pilot lays (QUENCH_SECONDS), not a boss opening. Recovery is the gap before the next ring."])
+		{"id": "B02", "type": "INSTANT", "event": true}, "Punish is the quench the pilot lays (QUENCH_SECONDS), not a boss opening. Recovery is the gap before the next ring."])
 	r.append(["Brindle", "drone pad (phase 2)", _hz(["rules", "DRONE_WARN"]), ["rules", "DRONE_WAIT"], null, null, "zero",
-		{"none": "amber marker is not hostile, so it joins no threat group and plays no threat sound"}, "A marker for the lobber drone's arrival; the drone's shell is the lobber row."])
-	r.append(["Brindle", "charge (phase 3)", _hz(["rules", "CHARGE_WARN"]), null, ["rules", "CHARGE_RECOVER"], ["rules", "WALL_STUN"], ["rules", "CHARGE_DAMAGE"],
-		{"type": "LANE", "event": true}, "Active is travel at CHARGE_SPEED over the committed length. Punish is the wall stun when the nose buries; CHARGE_REST follows."])
+		{"id": "B04", "none": "amber marker is not hostile, so it joins no threat group and plays no threat sound"}, "A marker for the lobber drone's arrival; the drone's shell is the lobber row."])
+	r.append(["Brindle", "charge (phase 3)", _hz(["rules", "CHARGE_WARN"]), {"text": "length / %s + 0.2 (geometry)", "args": [["rules", "CHARGE_SPEED"]]}, ["rules", "CHARGE_RECOVER"], ["rules", "WALL_STUN"], ["rules", "CHARGE_DAMAGE"],
+		{"id": "B03", "type": "LANE", "event": true}, "Active is travel over the committed length plus 0.2 s (boss.gd _commit_charge). Punish is the wall stun when the nose buries; CHARGE_REST follows."])
 	r.append(["Brindle", "eject (finale)", ["rules", "EJECT_FLIGHT"], null, null, null, "zero",
-		{"none": "published as boss_attack_telegraphed only; no hazard is laid"}, "A 2.5 s arc to the ring then a chase; no direct damage."])
+		{"id": "B05", "none": "published as boss_attack_telegraphed only; no hazard is laid"}, "A 2.5 s arc to the ring then a chase; no direct damage."])
 	# The Waking: three Dig families, then the floor drop.
 	for family in [["burrow", "BURROW_WARN", "BURROW_LIVE", "LANE", "Seam on adds a second lane"],
 			["cave_in", "CAVE_WARN", "CAVE_LIVE", "INSTANT", "three holes, each warning GAP after the last"],
 			["bore", "BORE_WARN", "BORE_LIVE", "INSTANT", "the pit adds a spray of lanes"]]:
 		var punish = ["waking", "BORE_JAM"] if family[0] == "bore" else null
 		r.append(["Waking", "%s (%s)" % [family[0], family[4]], {"tight": [["wa", family[1]], ["wa", "PHASE_TIGHTEN"], ["wa", "TIGHTEN_PHASES"], [["hazard", "MIN_WARN"]]]},
-			["wa", family[2]], null, punish, ["wa", "DAMAGE", family[0]], {"type": family[3], "event": true},
-			"Lands once, only on a ball on the floor. Cadence ATTACK_PERIOD (PIT_PERIOD in the pit)." + (" Punish is the drill jam (BORE_JAM), which cuts the Waking's plating." if punish != null else "")])
+			["wa", family[2]], {"gap": [["waking", "ATTACK_PERIOD"], {"tight": [["wa", family[1]], ["wa", "PHASE_TIGHTEN"], ["wa", "TIGHTEN_PHASES"], [["hazard", "MIN_WARN"]]]}, ["wa", family[2]]]}, punish, ["wa", "DAMAGE", family[0]], {"type": family[3], "event": true},
+			"Lands once, only on a ball on the floor. Recovery is the cadence gap (ATTACK_PERIOD minus tell minus active); the pit uses PIT_PERIOD, see cadence_gap_pit_s." + (" Punish is the drill jam (BORE_JAM), which cuts the Waking's plating." if punish != null else ""),
+			{"cadence_pit": {"gap": [["waking", "PIT_PERIOD"], {"tight": [["wa", family[1]], ["wa", "PHASE_TIGHTEN"], ["wa", "TIGHTEN_PHASES"], [["hazard", "MIN_WARN"]]]}, ["wa", family[2]]]}}])
 	r.append(["Waking", "floor drop", ["waking", "FLOOR_WARN"], null, null, ["waking", "BREACH_WINDOW"], "zero",
 		{"none": "waking.gd _warned publishes the event; no hazard node, so no threat group sound"}, "Sinks a tier; no damage. Punish is the breach-slam window after the drop."])
 	# The Mind: four families; phase k exposes the first k.
@@ -92,24 +107,26 @@ static func rows() -> Array:
 			["rush", "RUSH_WARN", "RUSH_LIVE", "INSTANT"], ["plate", "PLATE_WARN", "PLATE_LIVE", "WAVE"]]:
 		var punish = ["ma", "PLATE_WINDOW"] if family[0] == "plate" else null
 		r.append(["Mind", family[0], {"tight": [["ma", family[1]], ["ma", "PHASE_TIGHTEN"], ["ma", "TIGHTEN_PHASES"], [["ma", "WARN_FLOOR"], ["hazard", "MIN_WARN"]]]},
-			["ma", family[2]], null, punish, ["mind", "ATTACK_DAMAGE"], {"type": family[3], "event": true},
-			"Cadence ATTACK_PERIOD." + (" Punish is the weak window after the plate (PLATE_WINDOW)." if punish != null else "")])
-	r.append(["Mind hand", "strike", ["hand", "WARN"], null, ["rec", "RECOVERY"], null, ["hand", "STRIKE_DAMAGE"], {"id": "E18"}, "A roster enemy the Mind sends from phase 2."])
+			["ma", family[2]], {"gap": [["mind", "ATTACK_PERIOD"], {"tight": [["ma", family[1]], ["ma", "PHASE_TIGHTEN"], ["ma", "TIGHTEN_PHASES"], [["ma", "WARN_FLOOR"], ["hazard", "MIN_WARN"]]]}, ["ma", family[2]]]}, punish, ["mind", "ATTACK_DAMAGE"], {"type": family[3], "event": true},
+			"Recovery is the cadence gap (ATTACK_PERIOD minus tell minus active)." + (" Punish is the weak window after the plate (PLATE_WINDOW)." if punish != null else "")])
+	r.append(["Mind hand", "strike", ["hand", "WARN"], null, ["rec", "RECOVERY"], null, ["hand", "STRIKE_DAMAGE"], {"id": "E18", "type": "LANE", "voice": "counter"}, "A roster enemy the Mind sends from phase 2."])
 	# Wardens (combat/warden.gd and its drivers).
-	for w in [["Reactor Warden pulse", "W01", null], ["Hive Warden pulse", "W02", null], ["Mind Warden pulse", "W04", ["wmind", "ROWS", "pulse", "recovery"]]]:
+	for w in [["Reactor Warden pulse", "W01", null, "faction"], ["Hive Warden pulse", "W02", null, "faction"], ["Mind Warden pulse", "W04", ["wmind", "ROWS", "pulse", "recovery"], "none"]]:
 		r.append(["Wardens", w[0], ["warden", "PULSE_TELEGRAPH"], null, w[2], ["posture", "STAGGER_SECONDS"], ["warden", "PULSE_DAMAGE"],
-			{"id": w[1]}, "Cycle PULSE_CYCLE. Punish is the stagger that opens the core (STAGGER_SECONDS). Damage only inside the core ring (CORE_RADIUS). Only the Mind driver states a pulse recovery."])
+			{"id": w[1], "type": "INSTANT", "voice": w[3]}, "Cycle PULSE_CYCLE. Punish is the stagger that opens the core (STAGGER_SECONDS). Damage only inside the core ring (CORE_RADIUS). Only the Mind driver states a pulse recovery."])
 	r.append(["Wardens", "meltdown slag lane", ["warden", "SLAG_WARN"], ["warden", "SLAG_SECONDS"], null, null, ["warden", "SLAG_DAMAGE"],
 		{"type": "LANE"}, "Damage is per second burned on a grounded ball."])
-	r.append(["Wardens", "Mind Warden tilt", ["wmind", "ROWS", "tilt", "charge"], null, ["wmind", "ROWS", "tilt", "recovery"], null, "zero", {"id": "W04"}, "Swings the island; no hit."])
-	r.append(["Wardens", "Mind Warden knock-down", ["wmind", "ROWS", "knock_down", "charge"], null, ["wmind", "ROWS", "knock_down", "recovery"], null, "zero", {"id": "W04"}, "The fall; no hit."])
-	r.append(["Swarm", "Hive guard dive (formation)", ["swarm", "LOCK_WARN"], ["swarm", "DIVE_TIME"], ["swarm", "REST"], null, ["swarm_remnant", "DIVE_DAMAGE"], {"id": "W03"}, "One sting per dive for the whole rack."])
-	r.append(["Swarm", "free remnant dive", ["rec", "ROWS", "E17", "pre_shoot"], ["swarm", "DIVE_TIME"], ["rec", "RECOVERY"], null, ["swarm_remnant", "DIVE_DAMAGE"], {"id": "E17"}, "The same formation, free of a Warden."])
-	r.append(["Miniboss", "leap slam", {"sum": [["mini", "SLAM_CROUCH"], ["mini", "SLAM_LEAP"]]}, null, null, ["mini", "WEAK_SECONDS"], ["mini", "SLAM_DAMAGE"], {"id": "E03"}, "Tell is crouch plus leap; punish is the weak window after either attack."])
-	r.append(["Miniboss", "charge", ["mini", "CHARGE_BRACE"], ["mini", "CHARGE_TIME"], null, ["mini", "WEAK_SECONDS"], ["mini", "CHARGE_DAMAGE"], {"id": "E04"}, ""])
+	r.append(["Wardens", "Mind Warden tilt", ["wmind", "ROWS", "tilt", "charge"], null, ["wmind", "ROWS", "tilt", "recovery"], null, "zero", {"id": "W04", "none": "attack_cue only, no threat node (warden_mind.gd emits attack_cue)"}, "Swings the island; no hit."])
+	r.append(["Wardens", "Mind Warden knock-down", ["wmind", "ROWS", "knock_down", "charge"], null, ["wmind", "ROWS", "knock_down", "recovery"], null, "zero", {"id": "W04", "none": "attack_cue only, no threat node (warden_mind.gd emits attack_cue)"}, "The fall; no hit."])
+	r.append(["Wardens", "Mind Warden adaptation", null, ["warden", "ADAPT_CYCLE"], null, null, "zero", {"id": "W06", "none": "neutral read: no threat node"}, "A neutral field that moves the open lens every ADAPT_CYCLE; no hit. Active is that cycle."])
+	r.append(["Wardens", "caught-pulse crater", null, null, null, null, "zero", {"id": "W07", "none": "ATTACK_ROWS declares no threat: a crater with no advance warning"}, "Reactor Warden aftermath. No script constant gives a crater damage or window, so this row is a placeholder (damage 0); the nearest number is reactor_relic.gd BURN."])
+	r.append(["Swarm", "Hive guard dive (formation)", ["swarm", "LOCK_WARN"], ["swarm", "DIVE_TIME"], ["swarm", "REST"], null, ["swarm_remnant", "DIVE_DAMAGE"], {"id": "W03", "type": "LANE", "voice": "remnant"}, "One sting per dive for the whole rack."])
+	r.append(["Swarm", "free remnant dive", ["rec", "ROWS", "E17", "pre_shoot"], ["swarm", "DIVE_TIME"], ["rec", "RECOVERY"], null, ["swarm_remnant", "DIVE_DAMAGE"], {"id": "E17", "type": "LANE", "voice": "remnant"}, "The same formation, free of a Warden."])
+	r.append(["Miniboss", "leap slam", {"sum": [["mini", "SLAM_CROUCH"], ["mini", "SLAM_LEAP"]]}, null, null, ["mini", "WEAK_SECONDS"], ["mini", "SLAM_DAMAGE"], {"id": "E03", "type": "PROJECTILE", "voice": "none"}, "Tell is crouch plus leap; punish is the weak window after either attack."])
+	r.append(["Miniboss", "charge", ["mini", "CHARGE_BRACE"], ["mini", "CHARGE_TIME"], null, ["mini", "WEAK_SECONDS"], ["mini", "CHARGE_DAMAGE"], {"id": "E04", "type": "LANE", "voice": "none"}, ""])
 	# Elite affixes: every row of elite_affixes.gd ROWS.
 	for id in ["stamp", "rail", "rearblast"]:
-		r.append(["Elite affixes", id, ["affix", "ROWS", id, "warn_seconds"], null, ["rec", "RECOVERY"], null, ["affix", "ROWS", id, "damage"], {"elite": id},
+		r.append(["Elite affixes", id, ["affix", "ROWS", id, "warn_seconds"], null, ["rec", "RECOVERY"], null, ["affix", "ROWS", id, "damage"], {"elite": id, "owner": "plated_brute"},
 			"A plated brute with this attack added; the affix tightens a stat, not the warn."])
 	# Pack mobs: tell and cooldown from telegraph_record.gd, damage from the unit's own script.
 	# [kind, ATTACK_ROWS id, attack, active, damage, extra tell, lag, note]
@@ -140,6 +157,7 @@ static func rows() -> Array:
 		["lamp_swarm", "E21", "lure bloom", null, "zero", null, null, "A lure that pulls the ball; no direct damage."],
 		["anchor_crew", "E23", "winch", null, "zero", null, null, "A hold: it winches the ball; no direct damage."],
 		["gap_net", "E33", "net charge", null, "zero", null, null, "A net that holds; no direct damage."],
+		["jolt_layer", "E27", "mat", null, "zero", null, null, "A static jam field; no direct damage."],
 		["linker", "", "link", null, "zero", null, null, "No attack row and no telegraph: a cable relay with no direct damage."],
 		["foreman", "", "wipe horn", null, "zero", null, null, "No attack row: a horn that wipes the field on the beat; no direct damage."],
 	]
@@ -156,7 +174,9 @@ static func rows() -> Array:
 				extra["wind_up"] = tell
 				tell = {"sum": [tell, m[5]]}
 			recovery = ["rec", "RECOVERY"]
-			sound = {"id": id}
+			sound = {"id": id, "voice": "none" if m[0] in NO_VOICE else "counter", "owner": m[0]}
+			if MOB_TYPE.has(m[0]):
+				sound["type"] = MOB_TYPE[m[0]]
 			if m[6] != null:
 				sound["lag"] = m[6]
 		r.append(["Mobs", "%s %s" % [m[0], m[2]], tell, m[3], recovery, null, m[4], sound, m[7], extra])
@@ -197,6 +217,13 @@ func value(spec) -> float:
 			for part in spec["sum"]:
 				total += value(part)
 			return total
+		if spec.has("gap"):
+			var g: Array = spec["gap"]
+			return value(g[0]) - value(g[1]) - value(g[2])
+		if spec.has("text"):
+			for a in spec["args"]:
+				value(a)
+			return NAN
 		if spec.has("tight"):
 			var t: Array = spec["tight"]
 			var base := value(t[0])
@@ -236,7 +263,7 @@ func _collect(spec, into: Array) -> void:
 	if spec == null or spec is String:
 		return
 	if spec is Dictionary:
-		var parts: Array = spec.get("sum", [])
+		var parts: Array = spec.get("sum", spec.get("gap", spec.get("args", [])))
 		if spec.has("tight"):
 			parts = [spec["tight"][0], spec["tight"][1], spec["tight"][2]] + spec["tight"][3]
 		for p in parts:
@@ -271,6 +298,9 @@ func hulls() -> Dictionary:
 func header() -> Dictionary:
 	var run := _constants(_path("run"))
 	var h := hulls()
+	var tier := _constants("res://src/core/run_tier.gd")
+	if not tier.has("DAMAGE_DIAL_CAP"):
+		problems.append("missing constant core/run_tier.gd:DAMAGE_DIAL_CAP")
 	var need := ["SCRAP_PER_HP", "REGEN_DELAY", "REGEN_RATE", "MAX_HP", "SPILL_SHARE"]
 	for n in need:
 		if not run.has(n):
@@ -287,70 +317,121 @@ func header() -> Dictionary:
 		problems.append("audio.gd _on_boss_telegraph no longer plays unquantized; the sound column is stale")
 	return {"hull_min": h["min"], "hull_min_id": h["min_id"], "hull_max": h["max"], "hull_max_id": h["max_id"],
 		"scrap_per_hp": run.get("SCRAP_PER_HP", NAN), "spill_share": run.get("SPILL_SHARE", NAN),
-		"regen_delay": run.get("REGEN_DELAY", NAN), "regen_rate": run.get("REGEN_RATE", NAN), "run_max_hp": run.get("MAX_HP", NAN),
+		"damage_dial_cap": tier.get("DAMAGE_DIAL_CAP", NAN), "regen_delay": run.get("REGEN_DELAY", NAN), "regen_rate": run.get("REGEN_RATE", NAN), "run_max_hp": run.get("MAX_HP", NAN),
 		"audio": checks}
 
 
 func _threat_sound(kind: String) -> String:
 	var rows: Dictionary = _constants(_path("events")).get("THREAT_ROWS", {})
-	return String(rows.get(kind, {}).get("sound", ""))
+	var snd := String(rows.get(kind, {}).get("sound", ""))
+	if snd == "":
+		problems.append("no THREAT_ROWS sound for threat kind '%s'" % kind)
+	return snd
 
 
-func sound(spec: Dictionary) -> Dictionary:
-	if spec.has("none"):
-		return {"text": "none", "sync": "n/a", "detail": String(spec["none"])}
-	var threat_kinds: Array = _constants(_path("threat")).get("KINDS", [])
+func _kind_of_type(type_name: String) -> String:
+	var kinds: Array = _constants(_path("threat")).get("KINDS", [])
 	var types: Dictionary = _constants(_path("threat")).get("Type", {})
-	var kind := ""
-	var layers: Array = []
-	if spec.has("type"):
-		if not types.has(spec["type"]):
-			problems.append("unknown Threat.Type %s" % spec["type"])
-			return {"text": "?", "sync": "?", "detail": ""}
-		kind = String(threat_kinds[int(types[spec["type"]])])
-	elif spec.has("id"):
-		var row: Dictionary = _constants(_path("events")).get("ATTACK_ROWS", {}).get(spec["id"], {})
-		if row.is_empty():
+	if not types.has(type_name):
+		problems.append("unknown Threat.Type %s" % type_name)
+		return ""
+	var i := int(types[type_name])
+	if i < 0 or i >= kinds.size():
+		problems.append("threat_grammar.gd KINDS has no entry %d for Type.%s" % [i, type_name])
+		return ""
+	return String(kinds[i])
+
+
+# What the node actually commits decides the sound: "type" is the Threat.Type the unit's script commits.
+# Without it the kind is ATTACK_ROWS' declared one and the sheet says so.
+func sound(spec: Dictionary) -> Dictionary:
+	var arow: Dictionary = {}
+	var notices: Array = []
+	if spec.has("id"):
+		arow = _constants(_path("events")).get("ATTACK_ROWS", {}).get(spec["id"], {})
+		if arow.is_empty():
 			problems.append("missing ATTACK_ROWS %s" % spec["id"])
-			return {"text": "?", "sync": "?", "detail": ""}
-		kind = String(row["threat"])
-		layers = _roster_layers(String(row["owner_kind"]), String(row["owner"]))
-	elif spec.has("elite"):
+	var declared := String(arow.get("threat", ""))
+	if spec.has("none"):
+		return {"text": "none", "sync": "n/a", "detail": String(spec["none"]), "notices": notices}
+	var kind := ""
+	var unverified := false
+	var layers: Array = []
+	if spec.has("elite"):
 		var erow: Dictionary = _constants(_path("affix")).get("ROWS", {}).get(spec["elite"], {})
 		if erow.is_empty():
 			problems.append("missing elite row %s" % spec["elite"])
-			return {"text": "?", "sync": "?", "detail": ""}
-		kind = String(threat_kinds[int(erow["telegraph"])])
-		layers = ["clank", String(erow.get("mechanic_tag", ""))]
-	var parts: Array = [_threat_sound(kind)] if kind != "" else []
+			return {"text": "?", "sync": "?", "detail": "", "notices": notices}
+		var tkinds: Array = _constants(_path("threat")).get("KINDS", [])
+		var ti := int(erow["telegraph"])
+		if ti < 0 or ti >= tkinds.size():
+			problems.append("threat_grammar.gd KINDS has no entry %d (elite %s)" % [ti, spec["elite"]])
+			return {"text": "?", "sync": "?", "detail": "", "notices": notices}
+		kind = String(tkinds[ti])
+		layers = [_counter_voice(String(spec["owner"])), String(erow.get("mechanic_tag", ""))]
+	elif spec.has("type"):
+		kind = _kind_of_type(String(spec["type"]))
+		if declared != "" and kind != "" and kind != declared:
+			notices.append("committed %s but ATTACK_ROWS %s declares %s" % [kind, spec["id"], declared])
+	else:
+		kind = declared
+		unverified = true
+	match String(spec.get("voice", "none")):
+		"counter":
+			var owner := String(spec.get("owner", arow.get("owner", "")))
+			layers = _counter_layers(owner)
+		"remnant":
+			layers = _counter_layers("swarm_remnant")
+		"faction":
+			var factions: Dictionary = _constants(_path("roster")).get("FACTIONS", {})
+			if not factions.has(arow.get("owner", "")):
+				problems.append("no faction '%s' for voice of %s" % [arow.get("owner", ""), spec.get("id", "")])
+			else:
+				layers = [_voiced(String(factions[arow["owner"]].get("voice", "")))]
+	var parts: Array = []
+	if kind != "":
+		parts.append(_threat_sound(kind))
 	for l in layers:
 		if String(l) != "" and not parts.has(String(l)):
 			parts.append(String(l))
 	if spec.get("event", false):
 		parts.append("boss_attack_telegraphed")
 	if parts.is_empty():
-		return {"text": "none", "sync": "n/a", "detail": "the attack declares no threat"}
+		return {"text": "none", "sync": "n/a", "detail": "the attack declares no threat", "notices": notices}
 	var sync := "declare frame"
 	var lag := NAN
 	if spec.has("lag"):
 		lag = value(spec["lag"])
 		sync = "lags body wind-up %.2f s" % lag
-	return {"text": "+".join(parts), "sync": sync, "lag": lag, "detail": "threat kind %s" % kind}
+	var text := "+".join(parts)
+	if unverified:
+		text += " [declared kind, unverified]"
+	return {"text": text, "sync": sync, "lag": lag, "detail": "threat kind %s" % kind, "notices": notices}
 
 
-func _roster_layers(owner_kind: String, owner: String) -> Array:
+# The Mind plays the pilot's class motif back: roster.gd voiced() maps mind_quote to mind_<motif>.
+func _voiced(id: String) -> String:
+	return "mind_<motif>" if id == "mind_quote" else id
+
+
+func _counter_voice(owner: String) -> String:
 	var roster = load(_path("roster"))
-	var out: Array = []
-	if roster == null:
-		return out
+	var row: Dictionary = roster.row(owner) if roster != null else {}
 	var factions: Dictionary = _constants(_path("roster")).get("FACTIONS", {})
-	if owner_kind == "faction":
-		out.append(String(factions.get(owner, {}).get("voice", "")))
-		return out
-	var row: Dictionary = roster.row(owner)
-	out.append(String(factions.get(String(row.get("faction", "")), {}).get("voice", "")))
-	out.append(String(row.get("tag", "")))
-	return out
+	if row.is_empty() or not factions.has(row.get("faction", "")):
+		problems.append("no roster row or faction voice for '%s'" % owner)
+		return ""
+	return _voiced(String(factions[row["faction"]].get("voice", "")))
+
+
+# counter.gd _voice(): the faction's voice and the row's tag. The sheet only lists a layer a unit sets.
+func _counter_layers(owner: String) -> Array:
+	var roster = load(_path("roster"))
+	var row: Dictionary = roster.row(owner) if roster != null else {}
+	if row.is_empty():
+		problems.append("no roster row for '%s'" % owner)
+		return []
+	return [_counter_voice(owner), _voiced(String(row.get("tag", "")))]
 
 
 # --- Build -------------------------------------------------------------------------------
@@ -400,7 +481,23 @@ func build() -> Dictionary:
 			row["wind_up_s"] = _num(wind_up)
 			if damage > 0.0 and wind_up < LETHAL_FLOOR - EPS:
 				notices.append("wind-up alone %s s is under %s s; the committed ring stands %s s" % [_fmt(wind_up), _fmt(LETHAL_FLOOR, 1), _fmt(tell)])
+		for n in snd.get("notices", []):
+			notices.append(n)
 		row["notices"] = notices
+		if r[7].has("id"):
+			row["attack_id"] = r[7]["id"]
+		if r[3] is Dictionary and r[3].has("text"):
+			var shown: Array = []
+			for a in r[3]["args"]:
+				shown.append(_fmt(value(a)))
+			row["active_text"] = String(r[3]["text"]) % shown
+		if r[4] is Dictionary and r[4].has("gap"):
+			row["recovery_kind"] = "cadence gap"
+		if extra.has("cadence_pit"):
+			row["cadence_gap_pit_s"] = _num(value(extra["cadence_pit"]))
+			_collect(extra["cadence_pit"], refs)
+			row["source"] = ", ".join(refs)
+		row["director_scaled"] = DIRECTOR_SCALED.has(r[0])
 		out_rows.append(row)
 	return {"header": head, "rows": out_rows, "problems": problems.duplicate()}
 
@@ -428,6 +525,7 @@ static func markdown(sheet: Dictionary) -> String:
 		_fmt(h["hull_min"], 0), h["hull_min_id"], _fmt(h["hull_max"], 0), h["hull_max_id"], _fmt(h["run_max_hp"], 0)])
 	lines.append("- Scrap armour: %s scrap absorbs 1 HP (`run_state.gd` SCRAP_PER_HP); %s of removed scrap spills (SPILL_SHARE). The shares below ignore scrap armour." % [
 		_fmt(h["scrap_per_hp"], 0), _fmt(h["spill_share"], 2)])
+	lines.append("- Tier: the shares are base tier. Enemy hits (rows marked in the JSON `director_scaled`: Mind hand, Swarm, Miniboss, Elite affixes, Mobs) are multiplied by `director.damage_scale()` (combat.gd `_on_player_hit`) up to x%s (`run_tier.gd` DAMAGE_DIAL_CAP) on the hardest dial; boss hazard damage (Brindle, Waking, Mind) and Warden hits are unscaled." % _fmt(h["damage_dial_cap"], 2))
 	lines.append("- Regen: %s HP/s after %s s without damage (`run_state.gd` REGEN_RATE, REGEN_DELAY). Hits to kill ignore regen." % [_fmt(h["regen_rate"], 0), _fmt(h["regen_delay"], 1)])
 	lines.append("- Tell is the tightest reachable: phase tightening applied (minus step per phase, capped at the family's TIGHTEN_PHASES) and clamped to hazard.gd MIN_WARN and mind_attacks.gd WARN_FLOOR.")
 	lines.append("- Sound: `audio.gd` `_warn_threat` plays a threat's type sound (threat_tick instant, threat_whoosh wave, threat_whistle projectile, threat_hum lane) and the owner voice and mechanic tag on the game frame the threat is declared, not on the beat; `boss_attack_telegraphed` is unquantized too. Sync says whether sound starts with the tell or later. The reserved `atk_*_warn` cues are %s." % (
@@ -464,11 +562,14 @@ static func markdown(sheet: Dictionary) -> String:
 		lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
 		for row in in_group:
 			lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % [
-				row["attack"], _fmt(row["tell_s"]), _fmt(row["active_s"]), _fmt(row["recovery_s"]), _fmt(row["punish_s"]), _fmt(row["damage"], 0),
+				("[%s] " % row["attack_id"] if row.has("attack_id") else "") + row["attack"], _fmt(row["tell_s"]), String(row["active_text"]) if row.has("active_text") else _fmt(row["active_s"]),
+				_fmt(row["recovery_s"]) + (" (%s)" % row["recovery_kind"] if row.has("recovery_kind") and row["recovery_s"] != null else ""), _fmt(row["punish_s"]), _fmt(row["damage"], 0),
 				_fmt(row["pct_hull_min"], 1) if row["damage"] > 0.0 else "-", _fmt(row["pct_hull_max"], 1) if row["damage"] > 0.0 else "-",
 				str(row["hits_to_kill"]) if row["hits_to_kill"] != null else "-", row["sound"], row["sound_sync"], row["source"], ", ".join(row["flags"])])
 		lines.append("")
 		for row in in_group:
+			if row.has("cadence_gap_pit_s"):
+				lines.append("- %s: in the pit the cadence gap is %s s (PIT_PERIOD)." % [row["attack"], _fmt(row["cadence_gap_pit_s"])])
 			if String(row["note"]) != "" or String(row["sound_detail"]) != "":
 				lines.append("- %s: %s %s" % [row["attack"], row["note"], ("Sound: " + row["sound_detail"] + ".") if row["sound"] == "none" else ""])
 	if not sheet["problems"].is_empty():

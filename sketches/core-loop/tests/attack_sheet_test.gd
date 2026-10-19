@@ -39,5 +39,8 @@ func _initialize() -> void:
 		if not row["flags"].is_empty():
 			flagged += 1
 			print("REPORT %s / %s: tell %s s, damage %s: %s" % [row["group"], row["attack"], row["tell_s"], row["damage"], ", ".join(row["flags"])])
+	for row in sheet["rows"]:
+		for n in row.get("notices", []):
+			print("NOTICE %s / %s: %s" % [row["group"], row["attack"], n])
 	print("attack_sheet_test: %d rows, %d flagged (reported, not failed)" % [sheet["rows"].size(), flagged])
 	quit(t.verdict())
