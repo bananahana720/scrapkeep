@@ -129,7 +129,7 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 130.0, "warden_hp": 950.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "crack_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "crack_shatters": false, "gain_class": 4, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower", "prop_crew"]},
