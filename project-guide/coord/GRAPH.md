@@ -56,7 +56,7 @@ Known base reds and cloud-only false fails are listed in [STATE.md](../handoff/S
 | Stack #151 radio pack, #152 launch shell, #153 Splitter cue, #154 Warden GLBs, #155 SPIL-9 marks, #143 landforms part 2 | Gate | fast-lane PASS on the named heads | ready |
 | #106 fast lane without the WIP self-play commits; self-play in its own Perf PR | Gate, Perf | - | in progress |
 | Music levels and Ogg-vs-manifest export check | Music | - | in progress |
-| #104 Overpowered pays; grown-pilot ratio reds (Mind, hive, reactor) | Perf | - | needs fix |
+| #104 Overpowered pays; grown-pilot ratio reds (Mind, hive, reactor) | Challenge (from Perf, 19 Oct) | - | needs fix |
 | #73 Rivet carve; #146 dense fights; #147 boss-freeze profiler; launch title (Andrew's option A: 2D title in about 2 s, 3D crossfades in) | Perf, GPU bench | - | in progress |
 | Hook-out hold break, nemesis column, answer weighting, #145 bot hands | Systems | - | in progress |
 | Promote #116 to main, cut `stage/alpha-w18` | Coordinator | gate + persona clean | waiting |
