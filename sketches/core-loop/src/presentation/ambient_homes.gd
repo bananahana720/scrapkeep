@@ -32,8 +32,10 @@ const EDGE_M := 20.0
 
 
 # homes: [{kind, at: Vector2, perch, group: int, members: Array[Vector2] (offsets, the first is ZERO)}].
-# `group` is the home's index in this plan, unique per call.
-static func plan(park: Dictionary, kind_ids: Array, seed_number: int) -> Array:
+# `group` is the home's index in this plan, unique per call. `veto` (optional) is the runtime's say on a spot the
+# park file cannot judge, (at: Vector2, perch: String) -> bool: true rejects it (ambient_life.gd: too steep, or
+# under a structure).
+static func plan(park: Dictionary, kind_ids: Array, seed_number: int, veto := Callable()) -> Array:
 	var homes := []
 	var keep := keepouts(park)
 	var rows: Array = park["park_rows"]
@@ -53,7 +55,7 @@ static func plan(park: Dictionary, kind_ids: Array, seed_number: int) -> Array:
 		var want := rng.randi_range(int(spec["count"][0]), int(spec["count"][1]))
 		var placed: Array[Vector2] = []
 		for h in want:
-			var found := _find_home(rng, matching, keep, rect, routes, spec, kind, placed)
+			var found := _find_home(rng, matching, keep, rect, routes, spec, kind, placed, veto)
 			if found.is_empty():
 				continue
 			placed.append(found["at"])
@@ -75,14 +77,17 @@ static func _matches(row: Dictionary, spec: Dictionary) -> bool:
 
 
 static func _find_home(rng: RandomNumberGenerator, matching: Array, keep: Array, rect: Rect2, routes: Array, spec: Dictionary,
-		kind: Dictionary, placed: Array[Vector2]) -> Dictionary:
+		kind: Dictionary, placed: Array[Vector2], veto := Callable()) -> Dictionary:
 	var valid := []
+	var perch := String(spec["perch"])
 	for attempt in ATTEMPTS:
 		var row: Dictionary = matching[rng.randi() % matching.size()]
 		var at := _sample(rng, row)
 		if not rect.grow(-EDGE_M).has_point(at) or blocked(keep, at) != "" or _crowded(at, placed):
 			continue
-		var members := _members(rng, at, keep, int(rng.randi_range(int(spec["group"][0]), int(spec["group"][1]))))
+		if veto.is_valid() and veto.call(at, perch):
+			continue
+		var members := _members(rng, at, keep, int(rng.randi_range(int(spec["group"][0]), int(spec["group"][1]))), veto, perch)
 		valid.append({"at": at, "members": members, "route": _route_distance(routes, at)})
 		if valid.size() >= VALID_PER_HOME:
 			break
@@ -95,12 +100,12 @@ static func _find_home(rng: RandomNumberGenerator, matching: Array, keep: Array,
 
 
 # The first member stands on the home; the rest are drawn round it and kept only where they are clear too.
-static func _members(rng: RandomNumberGenerator, at: Vector2, keep: Array, count: int) -> Array[Vector2]:
+static func _members(rng: RandomNumberGenerator, at: Vector2, keep: Array, count: int, veto := Callable(), perch := "") -> Array[Vector2]:
 	var offsets: Array[Vector2] = [Vector2.ZERO]
 	for i in range(1, count):
 		for attempt in 8:
 			var offset := Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(0.6, GROUP_RADIUS_M)
-			if blocked(keep, at + offset) == "":
+			if blocked(keep, at + offset) == "" and not (veto.is_valid() and veto.call(at + offset, perch)):
 				offsets.append(offset)
 				break
 	return offsets

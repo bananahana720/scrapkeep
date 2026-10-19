@@ -54,6 +54,14 @@ func _run() -> void:
 			var count := homes.filter(func(h): return h["kind"] == kind).size()
 			var spec: Dictionary = AmbientKinds.row(kind)["homes"]
 			_t.check("%s %s has homes" % [map_id, kind], count >= 1, "%d (want %d..%d)" % [count, spec["count"][0], spec["count"][1]])
+	# A veto rejects homes and members: with the west half vetoed every position stands east, and kinds still get homes.
+	var dam: Dictionary = ParkSchema.load_park("res://src/world/park/park_dam.json")["data"]
+	var east := AmbientHomes.plan(dam, AmbientKinds.for_park("park_dam"), SEED, func(at: Vector2, _perch: String) -> bool: return at.x < 0.0)
+	var west := 0
+	for home in east:
+		for offset: Vector2 in home["members"]:
+			west += 1 if (home["at"] + offset).x < 0.0 else 0
+	_t.check("veto keeps every position east (%d homes)" % east.size(), west == 0 and east.size() > 0, "%d west" % west)
 	# blocked() really blocks: the spawn and the beacon are inside keepouts.
 	var park: Dictionary = ParkSchema.load_park("res://src/world/park/park_dam.json")["data"]
 	var keep := AmbientHomes.keepouts(park)
