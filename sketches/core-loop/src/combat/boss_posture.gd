@@ -43,7 +43,10 @@ const FULL := 100.0
 
 # The numbers this rule runs on. A stage row's "posture" dictionary overrides any of them
 # by key; a missing key keeps the constant above. "curve" is the exponent on the clamped
-# ratio and "ram_shatters" says whether a ram at SHATTER_TIER shatters an open core.
+# ratio and "ram_shatters" says whether a ram at SHATTER_TIER shatters an open core. With
+# "crack_shatters" false a crack in one stagger no longer lets any core contact in a later stagger
+# shatter: only a smash (or a fast ram where ram_shatters) takes the chunk, so a pilot who never
+# closes cannot wear a Warden down by leaning on its open core.
 var base := BASE.duplicate()
 var smash_base := SMASH_BASE
 var other_base := OTHER_BASE
@@ -62,6 +65,7 @@ var stagger_seconds := STAGGER_SECONDS
 var shatter_tier := SHATTER_TIER
 var curve := 1.0
 var ram_shatters := true
+var crack_shatters := true
 var contact_gain_scale := 0.0
 var contact_gain_floor := 0.0
 var hit_cap := FULL
@@ -100,6 +104,7 @@ func _init(numbers := {}) -> void:
 	shatter_tier = int(numbers.get("shatter_tier", SHATTER_TIER))
 	curve = float(numbers.get("curve", 1.0))
 	ram_shatters = bool(numbers.get("ram_shatters", true))
+	crack_shatters = bool(numbers.get("crack_shatters", true))
 	contact_gain_scale = float(numbers.get("contact_gain_scale", 0.0))
 	contact_gain_floor = float(numbers.get("contact_gain_floor", 0.0))
 	hit_cap = float(numbers.get("hit_cap", FULL))
@@ -163,7 +168,7 @@ func cap_for(ratio: float) -> float:
 func _judge_core(result: Dictionary, hit: Dictionary) -> void:
 	var smash := bool(hit.get("smash", false))
 	var fast_ram := ram_shatters and String(hit.get("kind", "")) == "ram" and int(hit.get("tier", 0)) >= shatter_tier
-	if smash or fast_ram or (cracked and crack_stagger < staggers):
+	if smash or fast_ram or (crack_shatters and cracked and crack_stagger < staggers):
 		var max_hp := float(hit.get("max_hp", 0.0))
 		result["shatter"] = true
 		result["dealt"] = maxf(0.0, float(hit.get("hp", 0.0)) - max_hp * (chunks - 1) / CHUNKS)
