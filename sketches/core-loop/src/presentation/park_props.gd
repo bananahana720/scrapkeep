@@ -12,7 +12,8 @@ extends Node3D
 #    "templates": {"<tid>": {"story", "props": [{"kind", "v": "a" or "*", "at": [dx, dz], "yaw_deg", "scale", "tilt_deg"}]}},
 #    "spots": [{"id", "template", "at": [x, z], "yaw_deg", "near"}],
 #    "litter": {"kinds": [{"kind", "weight"}], "spacing_m", "band_m": [near, far], "seed"},
-#    "ground_rows": ["<park row id>", ...]}   (optional: the explicit surfaces, see check_one's ground_row rule)
+#    "ground_rows": ["<park row id>", ...],   (optional: the explicit surfaces, see check_one's ground_row rule)
+#    "low_ground_rows": ["<park row id>", ...]}   (optional: area rows that admit instances up to LOW_GROUND_MAX_M tall, see low_ground)
 # Kit manifest (scrapkeep-park-props-kit/1): kinds -> {class, tags, story, variants -> {lod [3 GLBs], tris [3], radius, height}}.
 
 const ParkSites := preload("res://src/presentation/park_sites.gd")
@@ -64,6 +65,14 @@ const GROUND_ROW_INSET_M := 8.0
 # Elements whose long stamps (past ParkSites.STAMP_KEEP_M, which treats them as the landform) still keep props out: a sky island
 # is a ride surface, and ParkSites leaves its 1,600 m stamps out of its footprint cells.
 const STAMP_BLOCKING := ["sky_island"]
+# Low ground in area rows (opt-in): a file "low_ground_rows" list names big area rows that admit instances no taller than
+# LOW_GROUND_MAX_M (litter included); anything taller there still fails as low_ground. Eligible: a flow_line, bowl, drop or
+# sky_island footprint at least LOW_GROUND_MIN_M on both axes, or a home site longer than LOW_GROUND_HOME_MIN_M on either axis.
+# Narrow features are never eligible.
+const LOW_GROUND_MAX_M := 1.0
+const LOW_GROUND_MIN_M := 60.0
+const LOW_GROUND_HOME_MIN_M := 200.0
+const LOW_GROUND_ELEMENTS := ["flow_line", "bowl", "drop", "sky_island"]
 # A litter band must sit inside the tier bands: LOW's 6 m line clearance, and the line reach past which distance is unknown.
 const LITTER_BAND_MIN_M := 6.0
 const LITTER_BAND_MAX_M := 64.0
@@ -115,6 +124,7 @@ class Context:
 	var spawn := Vector2.ZERO
 	# Row id -> row of the file's explicit surfaces (empty: no restriction), and the long stamped rows ParkSites leaves unbucketed.
 	var ground_rows := {}
+	var low_rows := {}
 	var stamped: Array = []
 	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
 	var unresolved: Array = []
@@ -138,16 +148,17 @@ class Context:
 		return element in RIDE_ELEMENTS or (fact != null and not (fact is String and (fact as String).is_empty()) and not (fact is bool and not fact) and not element in OPEN_ELEMENTS)
 
 	# What keeps a prop out at p: a keepout row (spawn, beacon, gates, sites, cages, kicker capsules) or a built footprint
-	# of a ride-feature row ("" when clear). Ground, bank, terrace and anchor-field rows without a home are open.
-	func keepout_at(p: Vector2, margin: float) -> String:
+	# of a ride-feature row ("" when clear). Ground, bank, terrace and anchor-field rows without a home are open. With low_ok
+	# (the prop is at most LOW_GROUND_MAX_M tall) the file's low_ground_rows stop being footprint keepouts too.
+	func keepout_at(p: Vector2, margin: float, low_ok := false) -> String:
 		var what: String = SetDressing.blocked(sites._keepouts, p, margin)
 		if what != "":
 			return what
 		for row: Dictionary in sites._cells.get(ParkSites._cell(p), []):
-			if blocks_props(row) and not ground_rows.has(row.get("id")) and ParkMap.footprint_contains(row, p, margin):
+			if blocks_props(row) and not ground_rows.has(row.get("id")) and not (low_ok and low_rows.has(row.get("id"))) and ParkMap.footprint_contains(row, p, margin):
 				return "built row " + String(row.get("id", "?"))
 		for row: Dictionary in stamped:
-			if not ground_rows.has(row.get("id")) and ParkMap.footprint_contains(row, p, margin):
+			if not ground_rows.has(row.get("id")) and not (low_ok and low_rows.has(row.get("id"))) and ParkMap.footprint_contains(row, p, margin):
 				return "built row " + String(row.get("id", "?"))
 		return ""
 
@@ -159,6 +170,15 @@ class Context:
 		for row: Dictionary in map.park.get("park_rows", []):
 			if (ids as Array).has(row.get("id")):
 				ground_rows[row["id"]] = row
+
+	# Takes the opt-in low ground from a file's "low_ground_rows"; unknown ids and ineligible rows are file_errors' to report.
+	func use_low_ground_rows(ids) -> void:
+		low_rows = {}
+		if not ids is Array:
+			return
+		for row: Dictionary in map.park.get("park_rows", []):
+			if (ids as Array).has(row.get("id")):
+				low_rows[row["id"]] = row
 
 	func add_leg(a: Vector2, b: Vector2) -> void:
 		var low := _cell(Vector2(minf(a.x, b.x), minf(a.y, b.y)) - Vector2.ONE * LINE_REACH_M)
@@ -380,6 +400,45 @@ static func file_errors(file: Dictionary, kit: Dictionary, park_map = null) -> A
 		errors.append("litter is not an object")
 	if file.has("ground_rows"):
 		errors.append_array(_ground_row_errors(file["ground_rows"], park_map))
+	if file.has("low_ground_rows"):
+		errors.append_array(_low_ground_row_errors(file["low_ground_rows"], park_map))
+	return errors
+
+
+# Rows of text for a low_ground_rows list: every entry a park row that is eligible (see LOW_GROUND_ELEMENTS). Without a park_map
+# only the list's shape can be judged.
+static func _low_ground_row_errors(ids, park_map) -> Array:
+	if not ids is Array or (ids as Array).is_empty():
+		return ["low_ground_rows is not a non-empty list of park row ids"]
+	var errors := []
+	var rows := {}
+	var home_sites := {}
+	if park_map != null:
+		for row: Dictionary in park_map.park.get("park_rows", []):
+			rows[row["id"]] = row
+		for home: Dictionary in park_map.park.get("home_rows", []):
+			home_sites[String(home.get("site", ""))] = true
+	for id in ids:
+		if not id is String:
+			errors.append("low_ground_rows entry %s is not a row id" % str(id))
+			continue
+		if park_map == null:
+			continue
+		if not rows.has(id):
+			errors.append("low_ground_rows names %s, which is no park row" % id)
+			continue
+		var row: Dictionary = rows[id]
+		var element := String(row.get("element", ""))
+		var width := absf(float(row["size"][2]))
+		var length := absf(float(row["size"][0]))
+		var home = row.get("home")
+		if element not in LOW_GROUND_ELEMENTS:
+			errors.append("low_ground_rows lists %s, a %s; only a flow_line, bowl, drop or sky_island can be low ground (narrow features never)" % [id, element])
+		elif (home is String and not (home as String).is_empty()) or home_sites.has(id):
+			if maxf(width, length) <= LOW_GROUND_HOME_MIN_M:
+				errors.append("low_ground_rows lists %s, a home site %.0f by %.0f m; a home site must be longer than %.0f m" % [id, length, width, LOW_GROUND_HOME_MIN_M])
+		elif minf(width, length) < LOW_GROUND_MIN_M:
+			errors.append("low_ground_rows lists %s, %.0f by %.0f m; both axes must be at least %.0f m" % [id, length, width, LOW_GROUND_MIN_M])
 	return errors
 
 
@@ -464,6 +523,7 @@ static func expand(file: Dictionary, kit: Dictionary, park_map, ground: Callable
 		c = context(park_map, ground)
 	var out := []
 	c.use_ground_rows(file.get("ground_rows"))
+	c.use_low_ground_rows(file.get("low_ground_rows"))
 	var id := String(file.get("map", ""))
 	var templates: Dictionary = file.get("templates", {})
 	var spots: Array = file.get("spots", [])
@@ -597,7 +657,7 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 
 # --- Validate -------------------------------------------------------------------------------------
 
-# Violations {vignette, kind, pos, rule, detail} of the placement rules: line_clear, route_lane, keepout, home_clear,
+# Violations {vignette, kind, pos, rule, detail} of the placement rules: line_clear, route_lane, keepout, low_ground, home_clear,
 # play_rect, ground_row (only with a file ground_rows list), slope, seat. Empty means every instance is placeable.
 static func validate(list: Array, park_map, ground: Callable, stage := -1, c: Context = null) -> Array:
 	if c == null:
@@ -628,12 +688,18 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 		fail.call("play_rect", "outside the play rect")
 	else:
 		var margin := clampf(r + ParkSites.MARGIN, ParkSites.MARGIN, ParkSites.MARGIN_MAX)
-		var what := c.keepout_at(p, margin)
+		var low := height <= LOW_GROUND_MAX_M + 0.0001
+		# A listed row never counts as a keepout here; a prop over LOW_GROUND_MAX_M that only a listed row blocks fails low_ground.
+		var what := c.keepout_at(p, margin, true)
 		if what != "":
 			fail.call("keepout", "within %.1f m of %s" % [margin, what])
+		elif not low and not c.low_rows.is_empty() and c.keepout_at(p, margin) != "":
+			fail.call("low_ground", "%.2f m tall inside a low_ground_rows row, want at most %.1f" % [height, LOW_GROUND_MAX_M])
 	for home: Dictionary in c.homes:
 		var row: Dictionary = home["row"]
 		var near := false
+		if not row.has("point") and c.low_rows.has(row.get("id")):
+			continue
 		if row.has("point"):
 			near = _pair(row["at"]).distance_to(p) < HOME_CLEAR_M + r
 		else:

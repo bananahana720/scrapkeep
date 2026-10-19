@@ -859,6 +859,7 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 # are the audit's deduplicated union (a stretch shared by two lines belongs to the first, floor first). A window is exempt when its
 # midpoint (the window's sample nearest the middle) lies in:
 #   arena      the footprint of a home_rows site (park row, or the activity row's point) or the landmark row, grown by ENGAGE_RING_M
+#   camp       an activity_rows enemy_camp (the camp's `at` point), grown by ENGAGE_RING_M (the validator's camp ring)
 #   telegraph  the footprint of an event_rows site (park row), grown by the event's hold_clear_m (0 when absent)
 #   open       a --open=x:z:r space (a ruling keeps it open; the park JSON carries none)
 func _density(samples: Array) -> Dictionary:
@@ -926,6 +927,9 @@ func _density_exempt(at: Vector2) -> String:
 				return "arena"
 	if park.has("landmark") and ParkMap.footprint_contains(park["landmark"], at, ENGAGE_RING_M):
 		return "arena"
+	for act in park.get("activity_rows", []):
+		if String(act.get("activity", "")) == "enemy_camp" and Vector2(float(act["at"][0]), float(act["at"][1])).distance_to(at) <= ENGAGE_RING_M:
+			return "camp"
 	for ev in park.get("event_rows", []):
 		var row = rows.get(String(ev.get("site", "")))
 		if row != null and ParkMap.footprint_contains(row, at, float(ev.get("hold_clear_m", 0.0))):
