@@ -32,7 +32,7 @@ PATCH_A = "c9b88f"     # patch canvases
 PATCH_B = "bf9a74"
 PATCH_C = "a9a68a"
 OXIDE = "9b513a"      # Fleet only
-BRASS = "d9b452"      # stands in for BRASS #d9b44a (the kit check rejects the exact hex); Fleet only, one tag
+BRASS = "d9b44a"      # Fleet only, one tag
 
 
 def rock(p, loc, r, col, rng, sq=0.7, style="round", sub=0):
