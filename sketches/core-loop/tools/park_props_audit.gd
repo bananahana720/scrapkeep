@@ -171,6 +171,9 @@ func _run() -> void:
 	while waited < 2400 and not (terrain.rows_ready(stage_index) and terrain.is_ready(stage_index) and game.presentation.set_dressing != null and game.presentation.set_dressing.batches.size() > 0 and game.flow.state_name() == "stage"):
 		await process_frame
 		waited += 1
+	var pp = game.presentation.park_props
+	if pp != null:
+		pp.finish()
 	await _frames(30)
 	print("park_props_audit: %s built in %d frames, flow %s" % [map_id, waited, game.flow.state_name()])
 	game.player.body().freeze = true
