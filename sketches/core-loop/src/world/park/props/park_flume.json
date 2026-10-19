@@ -1331,7 +1331,7 @@
     -620.0
    ],
    "yaw_deg": -87.5,
-   "near": "weir_gatehouse: Boom 3 on its blocks beside th, 41 m off the line"
+   "near": "weir_gatehouse: Boom 3 on its blocks beside the winch ca"
   },
   {
    "id": "flume_v04",
@@ -1341,7 +1341,7 @@
     -680.0
    ],
    "yaw_deg": -135.0,
-   "near": "weir_deck: A rowboat left on blocks when , 42 m off the line"
+   "near": "weir_deck: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v09",
@@ -1351,7 +1351,7 @@
     -600.0
    ],
    "yaw_deg": 92.5,
-   "near": "weir_gatehouse: A cold hearth and a dragged-ou, 18 m off the line"
+   "near": "weir_gatehouse: A cold hearth and a dragged-out cot"
   },
   {
    "id": "flume_v10",
@@ -1361,7 +1361,7 @@
     -570.0
    ],
    "yaw_deg": -7.4,
-   "near": "flume_ride_pier_6: Laundry day by the trestles, 21 m off the line"
+   "near": "flume_ride_pier_6: Laundry day by the trestles"
   },
   {
    "id": "flume_v12",
@@ -1371,7 +1371,7 @@
     -530.0
    ],
    "yaw_deg": 141.9,
-   "near": "flume_ride_pier_17: The sluice shed with its wheel, 28 m off the line"
+   "near": "flume_ride_pier_17: The sluice shed with its wheel"
   },
   {
    "id": "flume_v15",
@@ -1381,17 +1381,17 @@
     -550.0
    ],
    "yaw_deg": -96.3,
-   "near": "mesa_entry_kicker: A yard of spare ties and pipe, 23 m off the line"
+   "near": "mesa_entry_kicker: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v19",
-   "template": "camp_corner",
+   "template": "tie_yard",
    "at": [
     -508,
     -356
    ],
    "yaw_deg": -104,
-   "near": "mesa_ramp: A crew camp corner, 30 m off the line"
+   "near": "mesa_ramp: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v22",
@@ -1401,7 +1401,7 @@
     -310.0
    ],
    "yaw_deg": 164.1,
-   "near": "main_canal: Saltbush and a split plank whe, 29 m off the line"
+   "near": "main_canal: Saltbush and a split plank where the can"
   },
   {
    "id": "flume_v25",
@@ -1411,7 +1411,7 @@
     -210.0
    ],
    "yaw_deg": -25.4,
-   "near": "butte_gap: Reeds and saltbush where the c, 44 m off the line"
+   "near": "butte_gap: Reeds and saltbush where the canal seeps"
   },
   {
    "id": "flume_v27",
@@ -1421,7 +1421,7 @@
     -130.0
    ],
    "yaw_deg": -111.2,
-   "near": "butte_gap: Saltbush and a split plank whe, 29 m off the line"
+   "near": "butte_gap: Saltbush and a split plank where the can"
   },
   {
    "id": "flume_v32",
@@ -1431,7 +1431,7 @@
     -230.0
    ],
    "yaw_deg": 164.5,
-   "near": "bend_zip_pier_1: A rowboat left on blocks when , 43 m off the line"
+   "near": "bend_zip_pier_1: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v33",
@@ -1441,7 +1441,7 @@
     -360.0
    ],
    "yaw_deg": 61.7,
-   "near": "flume_ride_pier_26: The sluice shed with its wheel, 44 m off the line"
+   "near": "flume_ride_pier_26: The sluice shed with its wheel"
   },
   {
    "id": "flume_v39",
@@ -1451,7 +1451,7 @@
     -410.0
    ],
    "yaw_deg": 63.0,
-   "near": "flume_ride_pier_24: A depth milepost, 20 m off the line"
+   "near": "flume_ride_pier_24: A depth milepost"
   },
   {
    "id": "flume_v41",
@@ -1461,7 +1461,7 @@
     -180.0
    ],
    "yaw_deg": -59.2,
-   "near": "butte_gap: Reeds and saltbush where the c, 17 m off the line"
+   "near": "butte_gap: Reeds and saltbush where the canal seeps"
   },
   {
    "id": "flume_v42",
@@ -1471,7 +1471,7 @@
     -440.0
    ],
    "yaw_deg": 63.0,
-   "near": "flume_ride_pier_22: A rowboat left on blocks when , 33 m off the line"
+   "near": "flume_ride_pier_22: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v45",
@@ -1481,7 +1481,7 @@
     0.0
    ],
    "yaw_deg": -60.8,
-   "near": "lateral_canal: Saltbush and a split plank whe, 28 m off the line"
+   "near": "lateral_canal: Saltbush and a split plank where the can"
   },
   {
    "id": "flume_v46",
@@ -1491,7 +1491,7 @@
     -120.0
    ],
    "yaw_deg": -27.0,
-   "near": "rim_road: The sluice shed with its wheel, 29 m off the line"
+   "near": "rim_road: The sluice shed with its wheel"
   },
   {
    "id": "flume_v53",
@@ -1501,7 +1501,7 @@
     20.0
    ],
    "yaw_deg": 119.2,
-   "near": "lateral_canal: Saltbush and a split plank whe, 24 m off the line"
+   "near": "lateral_canal: Saltbush and a split plank where the can"
   },
   {
    "id": "flume_v56",
@@ -1511,7 +1511,7 @@
     -80.0
    ],
    "yaw_deg": -83.5,
-   "near": "field_bank_4: A yard of spare ties and pipe, 44 m off the line"
+   "near": "field_bank_4: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v60",
@@ -1521,17 +1521,17 @@
     -40.0
    ],
    "yaw_deg": 119.2,
-   "near": "lateral_canal: Reeds and saltbush where the c, 27 m off the line"
+   "near": "lateral_canal: Reeds and saltbush where the canal seeps"
   },
   {
    "id": "flume_v61",
-   "template": "seep_edge",
+   "template": "tie_yard",
    "at": [
     -230.0,
     -60.0
    ],
    "yaw_deg": -76.5,
-   "near": "trestle_hollow: A crew camp corner, 27 m off the line"
+   "near": "trestle_hollow: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v62",
@@ -1541,7 +1541,7 @@
     -90.0
    ],
    "yaw_deg": -27.0,
-   "near": "rim_road: Boom 3 on its blocks beside th, 29 m off the line"
+   "near": "rim_road: Boom 3 on its blocks beside the winch ca"
   },
   {
    "id": "flume_v65",
@@ -1551,7 +1551,7 @@
     -120.0
    ],
    "yaw_deg": 152.9,
-   "near": "bend_zip_pier_11: A rowboat left on blocks when , 34 m off the line"
+   "near": "bend_zip_pier_11: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v69",
@@ -1561,7 +1561,7 @@
     -30.0
    ],
    "yaw_deg": -30.3,
-   "near": "bend_turn_pier: Laundry day by the trestles, 26 m off the line"
+   "near": "bend_turn_pier: Laundry day by the trestles"
   },
   {
    "id": "flume_v70",
@@ -1571,7 +1571,7 @@
     60.0
    ],
    "yaw_deg": 103.5,
-   "near": "tally_field_kicker: The sluice shed with its wheel, 33 m off the line"
+   "near": "tally_field_kicker: The sluice shed with its wheel"
   },
   {
    "id": "flume_v72",
@@ -1581,17 +1581,17 @@
     -70.0
    ],
    "yaw_deg": 118.3,
-   "near": "bend_overlook: A yard of spare ties and pipe, 41 m off the line"
+   "near": "bend_overlook: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v73",
-   "template": "camp_corner",
+   "template": "tie_yard",
    "at": [
     -170.0,
     190.0
    ],
    "yaw_deg": -9.5,
-   "near": "turnout_kicker: A crew camp corner, 44 m off the line"
+   "near": "turnout_kicker: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v75",
@@ -1601,7 +1601,7 @@
     180.0
    ],
    "yaw_deg": -9.5,
-   "near": "siphon_approach_bank: A depth milepost, 26 m off the line"
+   "near": "siphon_approach_bank: A depth milepost"
   },
   {
    "id": "flume_v76",
@@ -1611,7 +1611,7 @@
     90.0
    ],
    "yaw_deg": 47.0,
-   "near": "pad_bank_7: Laundry day by the trestles, 41 m off the line"
+   "near": "pad_bank_7: Laundry day by the trestles"
   },
   {
    "id": "flume_v77",
@@ -1621,7 +1621,7 @@
     90.0
    ],
    "yaw_deg": -131.7,
-   "near": "siphon_ride_pier_1: Boom 3 on its blocks beside th, 44 m off the line"
+   "near": "siphon_ride_pier_1: Boom 3 on its blocks beside the winch ca"
   },
   {
    "id": "flume_v80",
@@ -1631,7 +1631,7 @@
     30.0
    ],
    "yaw_deg": 60.6,
-   "near": "bend_return_wash: A yard of spare ties and pipe, 19 m off the line"
+   "near": "bend_return_wash: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v81",
@@ -1641,7 +1641,7 @@
     130.0
    ],
    "yaw_deg": 40.9,
-   "near": "siphon_ride_pier_1: A rowboat left on blocks when , 38 m off the line"
+   "near": "siphon_ride_pier_1: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v82",
@@ -1651,7 +1651,7 @@
     -130.0
    ],
    "yaw_deg": 118.3,
-   "near": "bend_zip_pier_20: The sluice shed with its wheel, 43 m off the line"
+   "near": "bend_zip_pier_20: The sluice shed with its wheel"
   },
   {
    "id": "flume_v84",
@@ -1661,7 +1661,7 @@
     60.0
    ],
    "yaw_deg": -126.9,
-   "near": "bend_return_wash: A crew camp corner, 40 m off the line"
+   "near": "bend_return_wash: A crew camp corner"
   },
   {
    "id": "flume_v85",
@@ -1671,7 +1671,7 @@
     190.0
    ],
    "yaw_deg": 140.2,
-   "near": "bluff_ride_pier_3: Boom 3 on its blocks beside th, 42 m off the line"
+   "near": "bluff_ride_pier_3: Boom 3 on its blocks beside the winch ca"
   },
   {
    "id": "flume_v86",
@@ -1681,7 +1681,7 @@
     120.0
    ],
    "yaw_deg": -131.7,
-   "near": "siphon_ride_pier_1: A depth milepost, 17 m off the line"
+   "near": "siphon_ride_pier_1: A depth milepost"
   },
   {
    "id": "flume_v88",
@@ -1691,7 +1691,7 @@
     230.0
    ],
    "yaw_deg": 140.2,
-   "near": "bluff_ride_pier_7: A rowboat left on blocks when , 44 m off the line"
+   "near": "bluff_ride_pier_7: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v89",
@@ -1701,17 +1701,17 @@
     280.0
    ],
    "yaw_deg": 135.0,
-   "near": "bluff_ride_pier_7: Fallen numbered bent planks, 11 m off the line"
+   "near": "bluff_ride_pier_7: Fallen numbered bent planks"
   },
   {
    "id": "flume_v94",
-   "template": "washday",
+   "template": "tie_yard",
    "at": [
     -230.0,
     140.0
    ],
    "yaw_deg": -60.8,
-   "near": "turnout_kicker: Laundry day by the trestles, 26 m off the line"
+   "near": "turnout_kicker: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v95",
@@ -1721,7 +1721,7 @@
     300.0
    ],
    "yaw_deg": -104.0,
-   "near": "bench_run_wash: A yard of spare ties and pipe, 27 m off the line"
+   "near": "bench_run_wash: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v96",
@@ -1731,7 +1731,7 @@
     340.0
    ],
    "yaw_deg": 61.9,
-   "near": "bench_exit_grade: A crew camp corner, 28 m off the line"
+   "near": "bench_exit_grade: A crew camp corner"
   },
   {
    "id": "flume_v98",
@@ -1741,7 +1741,7 @@
     420.0
    ],
    "yaw_deg": -84.8,
-   "near": "bench_exit_grade: A depth milepost, 44 m off the line"
+   "near": "bench_exit_grade: A depth milepost"
   },
   {
    "id": "flume_v99",
@@ -1751,7 +1751,7 @@
     360.0
    ],
    "yaw_deg": -104.0,
-   "near": "bench_exit_grade: Laundry day by the trestles, 22 m off the line"
+   "near": "bench_exit_grade: Laundry day by the trestles"
   },
   {
    "id": "flume_v102",
@@ -1761,7 +1761,7 @@
     450.0
    ],
    "yaw_deg": -60.9,
-   "near": "bench_return_pier: The sluice shed with its wheel, 51 m off the line"
+   "near": "bench_return_pier: The sluice shed with its wheel"
   },
   {
    "id": "flume_v103",
@@ -1771,7 +1771,7 @@
     460.0
    ],
    "yaw_deg": -9.1,
-   "near": "bench_return_pier: Boom 3 on its blocks beside th, 34 m off the line"
+   "near": "bench_return_pier: Boom 3 on its blocks beside the winch ca"
   },
   {
    "id": "flume_v104",
@@ -1781,7 +1781,7 @@
     460.0
    ],
    "yaw_deg": -9.1,
-   "near": "bench_return_pier: A yard of spare ties and pipe, 26 m off the line"
+   "near": "bench_return_pier: A yard of spare ties and pipe"
   },
   {
    "id": "flume_v105",
@@ -1791,7 +1791,7 @@
     300.0
    ],
    "yaw_deg": 121.0,
-   "near": "bluff_ride_pier_11: A crew camp corner, 16 m off the line"
+   "near": "bluff_ride_pier_11: A crew camp corner"
   },
   {
    "id": "flume_v106",
@@ -1801,7 +1801,7 @@
     270.0
    ],
    "yaw_deg": 140.2,
-   "near": "bluff_ride_pier_14: A rowboat left on blocks when , 45 m off the line"
+   "near": "bluff_ride_pier_14: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v109",
@@ -1811,7 +1811,7 @@
     320.0
    ],
    "yaw_deg": 140.2,
-   "near": "bluff_ride_pier_20: The sluice shed with its wheel, 45 m off the line"
+   "near": "bluff_ride_pier_20: The sluice shed with its wheel"
   },
   {
    "id": "flume_v111",
@@ -1821,7 +1821,7 @@
     490.0
    ],
    "yaw_deg": -2.1,
-   "near": "bench_coping_pier: Boom 3 on its blocks beside th, 51 m off the line"
+   "near": "bench_coping_pier: Boom 3 on its blocks beside the winch ca"
   },
   {
    "id": "flume_v114",
@@ -1831,7 +1831,7 @@
     490.0
    ],
    "yaw_deg": -0.0,
-   "near": "bench_coping_pier: A rowboat left on blocks when , 50 m off the line"
+   "near": "bench_coping_pier: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v116",
@@ -1841,7 +1841,7 @@
     490.0
    ],
    "yaw_deg": -0.0,
-   "near": "heat_exchanger_annex: The sluice shed with its wheel, 45 m off the line"
+   "near": "heat_exchanger_annex: The sluice shed with its wheel"
   },
   {
    "id": "flume_m009",
@@ -2164,16 +2164,6 @@
    "near": "scan"
   },
   {
-   "id": "flume_s098",
-   "template": "mini_mixed",
-   "at": [
-    20,
-    201
-   ],
-   "yaw_deg": 140.4,
-   "near": "scan"
-  },
-  {
    "id": "flume_a03",
    "template": "camp_corner",
    "at": [
@@ -2181,7 +2171,7 @@
     -425
    ],
    "yaw_deg": -95,
-   "near": "mesa_ramp: crew edge of the mesa"
+   "near": "mesa_ramp: A crew camp corner"
   },
   {
    "id": "flume_a06",
@@ -2191,7 +2181,7 @@
     -298
    ],
    "yaw_deg": -55,
-   "near": "mesa_ramp: crew edge of the mesa"
+   "near": "mesa_ramp: Fallen numbered bent planks"
   },
   {
    "id": "flume_v29_r36_10",
@@ -2201,7 +2191,7 @@
     -221.2
    ],
    "yaw_deg": 131.4,
-   "near": "bend_zip_pier_16: Boom 3 on its blocks beside th, 45 m off the line"
+   "near": "bend_zip_pier_16: Boom 3 on its blocks beside the winch ca"
   },
   {
    "id": "flume_v37_r20_3",
@@ -2211,7 +2201,7 @@
     -480.0
    ],
    "yaw_deg": 104.5,
-   "near": "flume_ride_pier_17: Boom 3 on its blocks beside th, 42 m off the line"
+   "near": "flume_ride_pier_17: Boom 3 on its blocks beside the winch ca"
   },
   {
    "id": "flume_v68_r8_2",
@@ -2221,7 +2211,7 @@
     -183.1
    ],
    "yaw_deg": 133.1,
-   "near": "bend_zip_pier_14: A depth milepost, 22 m off the line"
+   "near": "bend_zip_pier_14: A depth milepost"
   },
   {
    "id": "flume_m007_r20_4",
@@ -2251,7 +2241,7 @@
     66.9
    ],
    "yaw_deg": -60.8,
-   "near": "lateral_canal: Reeds and saltbush where the c, 22 m off the line"
+   "near": "lateral_canal: Reeds and saltbush where the canal seeps"
   },
   {
    "id": "flume_v47_r8_4",
@@ -2261,7 +2251,7 @@
     -103.1
    ],
    "yaw_deg": -66.0,
-   "near": "hollow_intake: Laundry day by the trestles, 22 m off the line"
+   "near": "hollow_intake: Laundry day by the trestles"
   }
  ],
  "litter": {
@@ -2290,5 +2280,5 @@
   ],
   "seed": 1021
  },
- "pin": 4096208831
+ "pin": 875855731
 }
