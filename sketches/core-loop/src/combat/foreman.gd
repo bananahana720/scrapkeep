@@ -291,7 +291,7 @@ func _show_signal(level: float) -> void:
 		return
 	_signal_material.emission_enabled = level > 0.0
 	_signal_material.emission = Palette.AMBER
-	_signal_material.emission_energy_multiplier = 3.0 * level
+	_signal_material.emission_energy_multiplier = FlashGuard.spike(0.0, 3.0 * level)
 
 
 # The clock's one hand ticks a twelfth of a turn on every beat (the presence loop's tick).

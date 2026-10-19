@@ -60,6 +60,8 @@ func _run() -> void:
 	_check_controls(world, kit, c)
 	_check_file_bands(file, kit)
 	_check_ground_rows(kit)
+	_check_low_ground(kit)
+	_check_long_stamped(kit)
 	_check_synthetic(file, kit, world)
 	_check_prepare(file, kit, world, list)
 	await _check_game()
@@ -73,7 +75,7 @@ func _check_park(id: String, path: String, min_kinds: int, min_variants: int, wo
 	_t.check("%s: vignette file and kit load" % id, not file.is_empty() and not kit.is_empty(), path)
 	_t.eq("%s: file map is the park" % id, file.get("map"), id)
 	_t.eq("%s: kit schema and glbs" % id, ParkProps.kit_errors(kit, min_kinds, min_variants), [])
-	_t.eq("%s: file schema and kit names" % id, ParkProps.file_errors(file, kit), [])
+	_t.eq("%s: file schema and kit names" % id, ParkProps.file_errors(file, kit, world["map"]), [])
 	var c := ParkProps.context(world["map"], world["ground"], world["stage"])
 	_t.eq("%s: every home site and line waypoint resolves" % id, c.unresolved, [])
 	var list := ParkProps.expand(file, kit, world["map"], world["ground"], c)
@@ -335,7 +337,8 @@ func _check_ground_rows(kit: Dictionary) -> void:
 	var unlisted := _only("keepout", inner, kit, c, ground, none)
 	_t.check("planted: an unlisted sky_island point turns keepout red (a long stamp ParkSites skips)", not unlisted.is_empty(), "%d candidates" % inner.size())
 	var listed := ParkProps.context(map, ground, world["stage"])
-	listed.use_ground_rows([row["id"]])
+	# anvil_rock is covered by the long anvil_step drops, which block props since the long-stamp fix, so the file lists them too.
+	listed.use_ground_rows([row["id"], "anvil_step_1", "anvil_step_2", "anvil_step_3", "anvil_step_4"] if row["id"] == "anvil_rock" else [row["id"]])
 	var passes := _only_rules([], inner, kit, listed, ground)
 	_t.check("planted: a listed sky_island point at least 8 m inside passes every rule", not passes.is_empty())
 	var inset := _only_rules(["ground_row"], edge5, kit, listed, ground)
@@ -357,6 +360,201 @@ func _check_ground_rows(kit: Dictionary) -> void:
 	fine["ground_rows"] = ["twin_fins"]
 	_t.check("planted: listing a non-home row is no ground_rows error", not ParkProps.file_errors(fine, kit, map).any(func(e: String) -> bool: return e.begins_with("ground_rows")))
 	_t.check("planted: a file without ground_rows has no ground_rows error", not ParkProps.file_errors(file, kit, map).any(func(e: String) -> bool: return e.begins_with("ground_rows")))
+
+
+# low_ground_rows, low clutter in area rows (opt-in): crown's drop_ramp is a 160 by 200 m flow_line, islands' lookout_mesa a 1,600 m
+# home stamp. A listed row admits instances up to LOW_GROUND_MAX_M; every other rule still applies.
+func _check_low_ground(kit: Dictionary) -> void:
+	var crown := ParkProps.world_for("park_crown")
+	var cmap = crown["map"]
+	var cground: Callable = crown["ground"]
+	var row := _park_row(cmap, "drop_ramp")
+	_t.check("crown has the drop_ramp flow_line", not row.is_empty() and row["element"] == "flow_line")
+	var points := _row_grid(row, 6, 10)
+	var plain := ParkProps.context(cmap, cground, crown["stage"])
+	var listed := ParkProps.context(cmap, cground, crown["stage"])
+	listed.use_low_ground_rows(["drop_ramp"])
+	var low := 0.8
+	var ok := _first_low([], points, kit, listed, cground, low)
+	_t.check("planted: a 0.8 m prop inside a listed flow_line passes every rule", not ok.is_empty(), "%d candidates" % points.size())
+	if not ok.is_empty():
+		var at := Vector2(ok["pos"].x, ok["pos"].z)
+		_t.eq("planted: a 1.4 m prop at the same point fails low_ground alone", _rules(_with(ok, "height", 1.4), listed), ["low_ground"])
+		_t.eq("planted: a 1.0 m prop at the same point passes", _rules(_with(ok, "height", 1.0), listed), [])
+		_t.eq("planted: the same 0.8 m point with the row unlisted fails keepout alone", _rules(ok, plain), ["keepout"])
+		# A kicker run-out over the point: keepout, though the row is listed.
+		var kicked := ParkProps.context(cmap, cground, crown["stage"])
+		kicked.use_low_ground_rows(["drop_ramp"])
+		var rows: Array = cmap.park["park_rows"]
+		kicked.sites._keepouts = ParkProps.kicker_keepouts(kicked.sites._keepouts, [{"id": "planted_lip", "at": at - Vector2(0.0, 20.0), "dir": Vector2(0.0, 1.0), "width": 20.0}], rows)
+		_t.eq("planted: a 0.8 m prop inside a listed row and a kicker run-out fails keepout", _rules(ok, kicked), ["keepout"])
+		# A planted camp 10 m off: home_clear still binds in a listed row.
+		var camped := ParkProps.context(cmap, cground, crown["stage"])
+		camped.use_low_ground_rows(["drop_ramp"])
+		camped.camps.append(at + Vector2(10.0, 0.0))
+		_t.eq("planted: a 0.8 m prop 10 m from a camp inside a listed row fails home_clear alone", _rules(ok, camped), ["home_clear"])
+	var near_line := _first_low(["line_clear"], _row_grid(row, 2, 4), kit, listed, cground, low, func(inst: Dictionary) -> bool:
+		var d: float = listed.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"])
+		return d > 2.0 and d < 5.5)
+	_t.check("planted: a 0.8 m prop in a listed row about 4 m from a line fails line_clear alone", not near_line.is_empty())
+
+	# Schema: narrow features and narrow area rows are file errors; a long home stamp and a big flow_line are not.
+	var islands := ParkProps.world_for("park_islands")
+	var imap = islands["map"]
+	var file := {"schema": ParkProps.FILE_SCHEMA, "map": "park_islands", "kit": "res://x", "templates": {"t": {"props": [{"kind": "fix_bench", "v": "*", "at": [0, 0]}]}}, "spots": [{"id": "s", "template": "t", "at": [0, 0]}]}
+	var rows_ok := func(ids: Array, map) -> bool:
+		var f := file.duplicate(true)
+		f["low_ground_rows"] = ids
+		return not ParkProps.file_errors(f, kit, map).any(func(e: String) -> bool: return e.begins_with("low_ground_rows"))
+	for narrow in ["lookout_lip", "net_carve", "ore_adit", "fin_chute", "mooring_mesa", "run_turn_wash", "no_such_row"]:
+		_t.check("planted: listing %s is a file error" % narrow, not rows_ok.call([narrow], imap))
+	_t.check("planted: an empty or non-list low_ground_rows is a file error", not rows_ok.call([], imap))
+	var wide := file.duplicate(true)
+	wide["low_ground_rows"] = "lookout_mesa"
+	_t.check("planted: a bare-string low_ground_rows is a file error", ParkProps.file_errors(wide, kit, imap).any(func(e: String) -> bool: return e.begins_with("low_ground_rows")))
+	_t.check("planted: the 1,600 m lookout_mesa home stamp is accepted", rows_ok.call(["lookout_mesa"], imap))
+	_t.check("planted: a sky_island strip (anvil_rock) and a 240 by 140 m sky_island (twin_fins) are accepted", rows_ok.call(["anvil_rock", "twin_fins"], imap))
+	_t.check("planted: crown's drop_ramp is accepted", rows_ok.call(["drop_ramp"], cmap))
+
+	# A listed home stamp: the home's footprint stops being home_clear, its camps do not.
+	var mesa := _park_row(imap, "lookout_mesa")
+	var mesa_points := _row_grid(mesa, 20, 10)
+	var iplain := ParkProps.context(imap, islands["ground"], islands["stage"])
+	var ilisted := ParkProps.context(imap, islands["ground"], islands["stage"])
+	ilisted.use_low_ground_rows(["lookout_mesa"])
+	var spot := _first_low([], mesa_points, kit, ilisted, islands["ground"], low)
+	_t.check("planted: a 0.8 m prop on a listed home stamp passes (no whole-footprint home_clear)", not spot.is_empty(), "%d candidates" % mesa_points.size())
+	if not spot.is_empty():
+		var rules := _rules(spot, iplain)
+		_t.check("planted: the same point on the unlisted home stamp fails home_clear and keepout", rules.has("home_clear") and rules.has("keepout"), str(rules))
+		_t.eq("planted: a 1.4 m prop there fails low_ground alone", _rules(_with(spot, "height", 1.4), ilisted).filter(func(r: String) -> bool: return r != "line_clear"), ["low_ground"])
+		var at := Vector2(spot["pos"].x, spot["pos"].z)
+		ilisted.camps.append(at + Vector2(10.0, 0.0))
+		_t.eq("planted: a prop within 25 m of one of the stamp's camps fails home_clear alone", _rules(spot, ilisted), ["home_clear"])
+
+
+# Long stamped rows (past ParkSites.STAMP_KEEP_M) are left out of ParkSites' footprint cells; context() re-adds the narrow ones
+# (under STAMP_NARROW_M, a ridden feature) and every sky_island. A wider long stamp is the landform and stays open, but a listed
+# low_ground_rows row still caps what stands in it.
+func _check_long_stamped(kit: Dictionary) -> void:
+	var low := 0.8
+	var sink := ParkProps.world_for("park_sinkhole")
+	var smap = sink["map"]
+	var sground: Callable = sink["ground"]
+	var rim := _park_row(smap, "rim_south")
+	_t.check("sinkhole rim_south is a wide long stamped drop, at least 60 m on both axes", not rim.is_empty() and rim["element"] == "drop" \
+		and float(rim["size"][2]) > ParkProps.ParkSites.STAMP_KEEP_M and minf(absf(float(rim["size"][0])), absf(float(rim["size"][2]))) >= ParkProps.LOW_GROUND_MIN_M)
+	var plain := ParkProps.context(smap, sground, sink["stage"])
+	var listed := ParkProps.context(smap, sground, sink["stage"])
+	listed.use_low_ground_rows(["rim_south"])
+	_t.check("the context leaves the wide long drop rim_south open (landform)", not plain.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "rim_south"))
+	var points := _row_grid(rim, 20, 10)
+	var ok := _first_low([], points, kit, listed, sground, low)
+	_t.check("planted: a 0.8 m prop inside a listed long-stamped drop passes every rule", not ok.is_empty(), "%d candidates" % points.size())
+	if not ok.is_empty():
+		_t.eq("planted: a 1.4 m prop at the same point fails low_ground alone", _rules(_with(ok, "height", 1.4), listed), ["low_ground"])
+		_t.eq("planted: the same point with the wide drop unlisted admits a 1.4 m prop (landform)", _rules(_with(ok, "height", 1.4), plain), [])
+		var hero := _with(_with(ok, "height", 4.0), "class", ParkProps.HERO)
+		_t.eq("planted: a 4 m hero at the same point inside listed rim_south fails low_ground", _rules(hero, listed).filter(func(r: String) -> bool: return r != "line_clear"), ["low_ground"])
+		_t.eq("planted: a 1.0 m prop at the same point passes", _rules(_with(ok, "height", 1.0), listed), [])
+
+	var dam := ParkProps.world_for("park_dam")
+	var dmap = dam["map"]
+	var dground: Callable = dam["ground"]
+	var slot := _park_row(dmap, "upper_slot")
+	_t.check("dam upper_slot is a narrow long stamped flow_line", not slot.is_empty() and slot["element"] == "flow_line" and float(slot["size"][0]) > ParkProps.ParkSites.STAMP_KEEP_M and float(slot["size"][2]) < ParkProps.STAMP_NARROW_M)
+	var dc := ParkProps.context(dmap, dground, dam["stage"])
+	_t.check("the context indexes the long flow_line upper_slot", dc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "upper_slot"))
+	var in_slot := _first_low(["keepout"], _row_grid(slot, 4, 2), kit, dc, dground, low, func(inst: Dictionary) -> bool:
+		return dc.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_LOW_M)
+	_t.check("planted: a 0.8 m prop inside the unlisted long flow_line upper_slot, beyond the line tiers, fails keepout alone", not in_slot.is_empty())
+	var tall_slot := _first_low(["keepout"], _row_grid(slot, 4, 2), kit, dc, dground, 2.5, func(inst: Dictionary) -> bool:
+		return dc.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M)
+	_t.check("planted: a 2.5 m prop inside upper_slot, beyond the mid tier, fails keepout alone", not tall_slot.is_empty())
+
+	# A wide long stamp is landform: pit's 900 by 900 m bowl admits mid and tall props that clear the lines.
+	var pit := ParkProps.world_for("park_pit")
+	var pmap = pit["map"]
+	var bowl := _park_row(pmap, "pit")
+	var pc := ParkProps.context(pmap, pit["ground"], pit["stage"])
+	_t.check("pit's bowl is a wide long stamp the context leaves open", not bowl.is_empty() and bowl["element"] == "bowl" and float(bowl["size"][0]) > ParkProps.ParkSites.STAMP_KEEP_M \
+		and not pc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "pit"))
+	var pgrid := _row_grid(bowl, 40, 20)
+	var pit_mid := _first_low([], pgrid, kit, pc, pit["ground"], 2.5)
+	_t.check("planted: a 2.5 m prop inside the unlisted pit bowl passes every rule", not pit_mid.is_empty(), "%d candidates" % pgrid.size())
+	var pit_tall := _first_low([], pgrid, kit, pc, pit["ground"], 5.0)
+	_t.check("planted: a 5 m (tall) prop inside the unlisted pit bowl passes every rule", not pit_tall.is_empty(), "%d candidates" % pgrid.size())
+
+	# A narrow long stamped step face blocks: islands' 38 m anvil_step_2.
+	var stepw := ParkProps.world_for("park_islands")
+	var stepmap = stepw["map"]
+	var step := _park_row(stepmap, "anvil_step_2")
+	var stepc := ParkProps.context(stepmap, stepw["ground"], stepw["stage"])
+	_t.check("islands anvil_step_2 is a narrow long stamped drop in the context", not step.is_empty() and step["element"] == "drop" and stepc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "anvil_step_2"))
+	var in_step := _first_low(["keepout"], _row_grid(step, 6, 4), kit, stepc, stepw["ground"], low)
+	_t.check("planted: a 0.8 m prop inside unlisted anvil_step_2, clear of lines and capsules, fails keepout alone", not in_step.is_empty())
+
+	# A long stamped ground row (open element, no home) still admits a prop.
+	var shelf := _park_row(dmap, "shelf_sag")
+	_t.check("dam shelf_sag is a long stamped ground row", not shelf.is_empty() and shelf["element"] == "ground" and float(shelf["size"][2]) > ParkProps.ParkSites.STAMP_KEEP_M)
+	_t.check("the context does not index the open ground row shelf_sag", not dc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "shelf_sag"))
+	var open := _first_low([], _row_grid(shelf, 40, 10), kit, dc, dground, low)
+	_t.check("planted: a 0.8 m prop inside a long stamped ground row passes every rule", not open.is_empty())
+	if not open.is_empty():
+		_t.check("planted: that point is inside the shelf_sag footprint", ParkMap.footprint_contains(shelf, Vector2(open["pos"].x, open["pos"].z), 0.0))
+
+	# A low prop inside a listed low_ground_rows row satisfies ground_row's containment too; a taller one needs a ground_rows row.
+	var isl := ParkProps.world_for("park_islands")
+	var imap = isl["map"]
+	var mesa := _park_row(imap, "lookout_mesa")
+	var both_ctx := ParkProps.context(imap, isl["ground"], isl["stage"])
+	both_ctx.use_ground_rows(["twin_fins"])
+	both_ctx.use_low_ground_rows(["lookout_mesa"])
+	var low_spot := _first_low([], _row_grid(mesa, 10, 12), kit, both_ctx, isl["ground"], low)
+	_t.check("planted: a 0.8 m prop in listed low lookout_mesa (ground_rows present, not listing it) passes every rule", not low_spot.is_empty())
+	if not low_spot.is_empty():
+		var rules := _rules(_with(low_spot, "height", 1.4), both_ctx)
+		rules.sort()
+		_t.eq("planted: the same spot with a 1.4 m prop fails ground_row and low_ground, nothing else", rules, ["ground_row", "low_ground"])
+
+	# A row in both lists skips the 1.0 m cap: a file error.
+	var f := {"schema": ParkProps.FILE_SCHEMA, "map": "park_sinkhole", "kit": "res://x", "templates": {"t": {"props": [{"kind": "fix_bench", "v": "*", "at": [0, 0]}]}}, "spots": [{"id": "s", "template": "t", "at": [0, 0]}]}
+	f["ground_rows"] = ["rim_south"]
+	f["low_ground_rows"] = ["rim_south"]
+	var both := func(file: Dictionary) -> bool:
+		return ParkProps.file_errors(file, kit, smap).any(func(e: String) -> bool: return e.contains("both ground_rows and low_ground_rows"))
+	_t.check("planted: a row in both ground_rows and low_ground_rows is a file error", both.call(f))
+	f["ground_rows"] = ["rim_east"]
+	_t.check("planted: the same lists with distinct rows are not", not both.call(f))
+
+
+func _park_row(map, id: String) -> Dictionary:
+	for r: Dictionary in map.park["park_rows"]:
+		if r["id"] == id:
+			return r
+	return {}
+
+
+# World points on a grid of `step` m in a row's frame, inset `inset` m from its footprint edge (x across half.x, y along half.y).
+func _row_grid(row: Dictionary, step: int, inset: int) -> Array:
+	var half := ParkMap.footprint_half_extents(row)
+	var yaw := deg_to_rad(float(row["yaw_deg"]))
+	var centre := ParkProps._pair(row["at"])
+	var out := []
+	for ix in range(-int(half.x) + inset, int(half.x) - inset + 1, step):
+		for iy in range(-int(half.y) + inset, int(half.y) - inset + 1, step):
+			out.append(centre + Vector2(ix, iy).rotated(-yaw))
+	return out
+
+
+# The first candidate whose planted bench of `height` breaks exactly `rules` (and passes accept, if given); {} if none. The bench is
+# laid flat and seated (slope and seat are other controls' to judge; crown's drop_ramp is a steep drop).
+func _first_low(rules: Array, points: Array, kit: Dictionary, c, ground: Callable, height: float, accept := Callable()) -> Dictionary:
+	for at: Vector2 in points:
+		var inst := _with(_with(_with(_planted(kit, "fix_bench", at, ground), "height", height), "slope_deg", 0.0), "float_m", 0.0)
+		if _rules(inst, c) == rules and (accept.is_null() or accept.call(inst)):
+			return inst
+	return {}
 
 
 func _grid(rect: Rect2, step: int) -> Array:

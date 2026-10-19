@@ -5,7 +5,7 @@
  "flat": true,
  "rate": 44100,
  "key": "G",
- "key_offset": 5,
+ "key_offset": 0,
  "stems": [
   "drums",
   "bass",
@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "take-highdraft-hands-up-s5101.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/radio/take-highdraft-hands-up-s5101.wav",
-   "stretched": "/home/andrew/scratch/w16/radio-pack2/stretched/take_highdraft_hands_up.wav",
-   "bpm_before": 149.9,
-   "bpm_after": 144.75,
+   "take": "master.wav",
+   "source": "/home/andrew/scratch/w17/qp/remake/workB/cands/take-highdraft-hands-up/s6303/master.wav",
+   "stretched": "/home/andrew/scratch/w17/qp/remake/workB/pack/stretched/take_highdraft_hands_up.wav",
+   "bpm_before": 145,
+   "bpm_after": 145,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_highdraft_hands_up/drums.wav",
-     "sha256": "a5cec84f129a3dacd89f8885aa1c5e4726212907faca5fa645ee9f8d6a26988c"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_highdraft_hands_up/drums.wav",
+     "sha256": "45dda691f2f9d45046c4496615de0d7bea6072a084876e47cc2529a4bccd11d8"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_highdraft_hands_up/bass.wav",
-     "sha256": "eaa6cbe7b11857c1f46116a1476d16b37c2a9143145244e8ee1fb240d868c3a6"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_highdraft_hands_up/bass.wav",
+     "sha256": "533b1a750c0761b1aeefa3629fefd7fbb890ff99523a7151d7c0d9953efb3bfc"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_highdraft_hands_up/other.wav",
-     "sha256": "e06206741bdae1d4d0648ab2cd3c68761cb3a7d4b9fc1c25293f31a1a84a5b2b"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_highdraft_hands_up/other.wav",
+     "sha256": "549c80ec2c2b6e8c06085823f9dc2630b11b86dab511ab7631aac9f3444c6ec9"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_highdraft_hands_up/vocals.wav",
-     "sha256": "f998b7e60fd2452d3fe8dd4bc987b6b273b77491027340751911d5534a9f7012"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_highdraft_hands_up/vocals.wav",
+     "sha256": "f2855f0fbbdb8165e9aab80df93f3537826b33d2f0866429cb9ddf1a27541279"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,21 +49,21 @@
   "main": {
    "parent": "single",
    "take": "take-highdraft-hands-up",
-   "source_start": 11776,
-   "take_start": 11776,
+   "source_start": 5632,
+   "take_start": 5632,
    "bpm": 145,
    "beat": 18248,
    "bar": 72992,
    "beats_per_bar": 4,
-   "bars": 84,
+   "bars": 81,
    "entry": 4096,
-   "exit": 6135424,
+   "exit": 5916448,
    "loop": true,
    "loop_offset": 4096,
    "loop_to_bar": 1,
-   "sample_count": 6135424,
+   "sample_count": 5916448,
    "key": "G",
-   "key_offset": 5,
+   "key_offset": 0,
    "files": {
     "drums": "main.drums.ogg",
     "bass": "main.bass.ogg",
@@ -183,10 +183,10 @@
  "cuts": "measured-beat-phase",
  "whole": true,
  "timing_verified": false,
- "gain_db": 1.7,
+ "gain_db": 0.0,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.3,
+  "true_peak": -1.8,
   "note": "summed stems before Ogg encode"
  }
 }
