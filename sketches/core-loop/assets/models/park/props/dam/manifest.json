@@ -77,6 +77,537 @@
      "height": 0.42
     }
    }
+  },
+  "crew_cookshack": {
+   "class": "dress_hero",
+   "tags": [
+    "camp",
+    "tall"
+   ],
+   "story": "The cook's canvas shack: a stove pipe through the roof, a long table, and the menu board that never changes.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/crew_cookshack_a.glb",
+      "res://assets/models/park/props/dam/crew_cookshack_a_lod1.glb",
+      "res://assets/models/park/props/dam/crew_cookshack_a_lod2.glb"
+     ],
+     "tris": [
+      12024,
+      6012,
+      1804
+     ],
+     "radius": 3.172,
+     "height": 3.752
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/crew_cookshack_b.glb",
+      "res://assets/models/park/props/dam/crew_cookshack_b_lod1.glb",
+      "res://assets/models/park/props/dam/crew_cookshack_b_lod2.glb"
+     ],
+     "tris": [
+      12304,
+      6152,
+      1846
+     ],
+     "radius": 3.17,
+     "height": 3.749
+    }
+   }
+  },
+  "haul_wagon": {
+   "class": "dress_hero",
+   "tags": [
+    "machine"
+   ],
+   "story": "A sandbag wagon on four big spoked wheels; b threw a wheel and the crew propped the corner on stones and went to lunch.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/haul_wagon_a.glb",
+      "res://assets/models/park/props/dam/haul_wagon_a_lod1.glb",
+      "res://assets/models/park/props/dam/haul_wagon_a_lod2.glb"
+     ],
+     "tris": [
+      17636,
+      8818,
+      2644
+     ],
+     "radius": 2.981,
+     "height": 1.73
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/haul_wagon_b.glb",
+      "res://assets/models/park/props/dam/haul_wagon_b_lod1.glb",
+      "res://assets/models/park/props/dam/haul_wagon_b_lod2.glb"
+     ],
+     "tris": [
+      17496,
+      8748,
+      2624
+     ],
+     "radius": 3.499,
+     "height": 1.747
+    }
+   }
+  },
+  "crew_campfire": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "The night shift's fire ring: a kettle on the stones, and in b a forgotten toasting stick still upright in the sand.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/crew_campfire_a.glb",
+      "res://assets/models/park/props/dam/crew_campfire_a_lod1.glb",
+      "res://assets/models/park/props/dam/crew_campfire_a_lod2.glb"
+     ],
+     "tris": [
+      2232,
+      1116,
+      334
+     ],
+     "radius": 1.567,
+     "height": 0.572
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/crew_campfire_b.glb",
+      "res://assets/models/park/props/dam/crew_campfire_b_lod1.glb",
+      "res://assets/models/park/props/dam/crew_campfire_b_lod2.glb"
+     ],
+     "tris": [
+      2128,
+      1064,
+      317
+     ],
+     "radius": 1.475,
+     "height": 1.012
+    }
+   }
+  },
+  "timber_stack": {
+   "class": "dress_prop",
+   "tags": [
+    "build"
+   ],
+   "story": "Form timber stacked on bearers to season; b slid when someone pulled from the bottom.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/timber_stack_a.glb",
+      "res://assets/models/park/props/dam/timber_stack_a_lod1.glb",
+      "res://assets/models/park/props/dam/timber_stack_a_lod2.glb"
+     ],
+     "tris": [
+      1388,
+      694,
+      208
+     ],
+     "radius": 1.696,
+     "height": 0.94
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/timber_stack_b.glb",
+      "res://assets/models/park/props/dam/timber_stack_b_lod1.glb",
+      "res://assets/models/park/props/dam/timber_stack_b_lod2.glb"
+     ],
+     "tris": [
+      844,
+      422,
+      123
+     ],
+     "radius": 2.34,
+     "height": 0.683
+    }
+   }
+  },
+  "sandbag_berm": {
+   "class": "dress_prop",
+   "tags": [
+    "build"
+   ],
+   "story": "A curved sandbag berm from the flood that never came; b has a gap where a shovel is still stuck in the pile.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/sandbag_berm_a.glb",
+      "res://assets/models/park/props/dam/sandbag_berm_a_lod1.glb",
+      "res://assets/models/park/props/dam/sandbag_berm_a_lod2.glb"
+     ],
+     "tris": [
+      2160,
+      1080,
+      324
+     ],
+     "radius": 1.882,
+     "height": 0.429
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/sandbag_berm_b.glb",
+      "res://assets/models/park/props/dam/sandbag_berm_b_lod1.glb",
+      "res://assets/models/park/props/dam/sandbag_berm_b_lod2.glb"
+     ],
+     "tris": [
+      2244,
+      1122,
+      335
+     ],
+     "radius": 1.864,
+     "height": 1.296
+    }
+   }
+  },
+  "wheelbarrow": {
+   "class": "dress_prop",
+   "tags": [
+    "tool"
+   ],
+   "story": "A crew barrow: a parked one with a set lump of concrete in the tray, or one tipped on its nose after a race.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/wheelbarrow_a.glb",
+      "res://assets/models/park/props/dam/wheelbarrow_a_lod1.glb",
+      "res://assets/models/park/props/dam/wheelbarrow_a_lod2.glb"
+     ],
+     "tris": [
+      1360,
+      680,
+      204
+     ],
+     "radius": 1.083,
+     "height": 1.156
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/wheelbarrow_b.glb",
+      "res://assets/models/park/props/dam/wheelbarrow_b_lod1.glb",
+      "res://assets/models/park/props/dam/wheelbarrow_b_lod2.glb"
+     ],
+     "tris": [
+      1576,
+      788,
+      236
+     ],
+     "radius": 0.935,
+     "height": 1.877
+    }
+   }
+  },
+  "culvert_pipe": {
+   "class": "dress_prop",
+   "tags": [
+    "build"
+   ],
+   "story": "Concrete culvert sections left where the truck dropped them; b has one stood on end with a tarp nest inside.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/culvert_pipe_a.glb",
+      "res://assets/models/park/props/dam/culvert_pipe_a_lod1.glb",
+      "res://assets/models/park/props/dam/culvert_pipe_a_lod2.glb"
+     ],
+     "tris": [
+      1944,
+      972,
+      292
+     ],
+     "radius": 1.73,
+     "height": 1.32
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/culvert_pipe_b.glb",
+      "res://assets/models/park/props/dam/culvert_pipe_b_lod1.glb",
+      "res://assets/models/park/props/dam/culvert_pipe_b_lod2.glb"
+     ],
+     "tris": [
+      1916,
+      958,
+      286
+     ],
+     "radius": 1.659,
+     "height": 1.44
+    }
+   }
+  },
+  "survey_stakes": {
+   "class": "dress_prop",
+   "tags": [
+    "survey"
+   ],
+   "story": "Grade stakes with canvas flagging and a slack stringline; b is the line the crew swore was straight.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/survey_stakes_a.glb",
+      "res://assets/models/park/props/dam/survey_stakes_a_lod1.glb",
+      "res://assets/models/park/props/dam/survey_stakes_a_lod2.glb"
+     ],
+     "tris": [
+      1008,
+      504,
+      137
+     ],
+     "radius": 1.67,
+     "height": 0.76
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/survey_stakes_b.glb",
+      "res://assets/models/park/props/dam/survey_stakes_b_lod1.glb",
+      "res://assets/models/park/props/dam/survey_stakes_b_lod2.glb"
+     ],
+     "tris": [
+      1008,
+      504,
+      137
+     ],
+     "radius": 1.69,
+     "height": 0.777
+    }
+   }
+  },
+  "crew_sign": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "Hand-painted crew boards propped on rocks: an arrow to the dam, an arrow to lunch, and one arrow pointing straight up.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/crew_sign_a.glb",
+      "res://assets/models/park/props/dam/crew_sign_a_lod1.glb",
+      "res://assets/models/park/props/dam/crew_sign_a_lod2.glb"
+     ],
+     "tris": [
+      1034,
+      516,
+      154
+     ],
+     "radius": 0.602,
+     "height": 0.844
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/crew_sign_b.glb",
+      "res://assets/models/park/props/dam/crew_sign_b_lod1.glb",
+      "res://assets/models/park/props/dam/crew_sign_b_lod2.glb"
+     ],
+     "tris": [
+      1102,
+      550,
+      164
+     ],
+     "radius": 0.715,
+     "height": 0.838
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/crew_sign_c.glb",
+      "res://assets/models/park/props/dam/crew_sign_c_lod1.glb",
+      "res://assets/models/park/props/dam/crew_sign_c_lod2.glb"
+     ],
+     "tris": [
+      1030,
+      514,
+      154
+     ],
+     "radius": 0.548,
+     "height": 1.363
+    }
+   }
+  },
+  "tool_drop": {
+   "class": "dress_prop",
+   "tags": [
+    "tool"
+   ],
+   "story": "Tools where the shift dropped them at the whistle: shovel and pick crossed, gloves, a canvas bag.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/tool_drop_a.glb",
+      "res://assets/models/park/props/dam/tool_drop_a_lod1.glb",
+      "res://assets/models/park/props/dam/tool_drop_a_lod2.glb"
+     ],
+     "tris": [
+      832,
+      416,
+      124
+     ],
+     "radius": 0.847,
+     "height": 0.479
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/tool_drop_b.glb",
+      "res://assets/models/park/props/dam/tool_drop_b_lod1.glb",
+      "res://assets/models/park/props/dam/tool_drop_b_lod2.glb"
+     ],
+     "tris": [
+      784,
+      392,
+      118
+     ],
+     "radius": 0.901,
+     "height": 0.209
+    }
+   }
+  },
+  "survey_cairn": {
+   "class": "dress_prop",
+   "tags": [
+    "survey"
+   ],
+   "story": "A survey cairn of flat stones around a marker; somebody topped b with a spare boot.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/survey_cairn_a.glb",
+      "res://assets/models/park/props/dam/survey_cairn_a_lod1.glb",
+      "res://assets/models/park/props/dam/survey_cairn_a_lod2.glb"
+     ],
+     "tris": [
+      2768,
+      1384,
+      414
+     ],
+     "radius": 0.591,
+     "height": 1.305
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/survey_cairn_b.glb",
+      "res://assets/models/park/props/dam/survey_cairn_b_lod1.glb",
+      "res://assets/models/park/props/dam/survey_cairn_b_lod2.glb"
+     ],
+     "tris": [
+      2668,
+      1334,
+      399
+     ],
+     "radius": 0.569,
+     "height": 1.251
+    }
+   }
+  },
+  "staff_gauge": {
+   "class": "dress_prop",
+   "tags": [
+    "survey"
+   ],
+   "story": "A painted water gauge on a footing; the crew's flood mark is chalked a hand above the top.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/staff_gauge_a.glb",
+      "res://assets/models/park/props/dam/staff_gauge_a_lod1.glb",
+      "res://assets/models/park/props/dam/staff_gauge_a_lod2.glb"
+     ],
+     "tris": [
+      1108,
+      554,
+      150
+     ],
+     "radius": 0.434,
+     "height": 2.349
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/staff_gauge_b.glb",
+      "res://assets/models/park/props/dam/staff_gauge_b_lod1.glb",
+      "res://assets/models/park/props/dam/staff_gauge_b_lod2.glb"
+     ],
+     "tris": [
+      952,
+      476,
+      126
+     ],
+     "radius": 0.614,
+     "height": 2.371
+    }
+   }
+  },
+  "prickly_pear": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "Prickly pear grown through the old works, pads stacked like the crew's lunch plates.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/prickly_pear_a.glb",
+      "res://assets/models/park/props/dam/prickly_pear_a_lod1.glb",
+      "res://assets/models/park/props/dam/prickly_pear_a_lod2.glb"
+     ],
+     "tris": [
+      1536,
+      768,
+      230
+     ],
+     "radius": 0.524,
+     "height": 1.25
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/prickly_pear_b.glb",
+      "res://assets/models/park/props/dam/prickly_pear_b_lod1.glb",
+      "res://assets/models/park/props/dam/prickly_pear_b_lod2.glb"
+     ],
+     "tris": [
+      2160,
+      1080,
+      324
+     ],
+     "radius": 0.493,
+     "height": 0.886
+    }
+   }
+  },
+  "brittlebush": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "Brittlebush mounds with dry seed heads, the only crew that stayed on.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/brittlebush_a.glb",
+      "res://assets/models/park/props/dam/brittlebush_a_lod1.glb",
+      "res://assets/models/park/props/dam/brittlebush_a_lod2.glb"
+     ],
+     "tris": [
+      2036,
+      1018,
+      297
+     ],
+     "radius": 0.764,
+     "height": 1.221
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/brittlebush_b.glb",
+      "res://assets/models/park/props/dam/brittlebush_b_lod1.glb",
+      "res://assets/models/park/props/dam/brittlebush_b_lod2.glb"
+     ],
+     "tris": [
+      1564,
+      782,
+      229
+     ],
+     "radius": 0.979,
+     "height": 1.223
+    }
+   }
   }
  }
 }

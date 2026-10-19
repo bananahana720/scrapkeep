@@ -1,0 +1,893 @@
+{
+ "schema": "scrapkeep-park-props/1",
+ "map": "park_dam",
+ "kit": "res://assets/models/park/props/dam/manifest.json",
+ "templates": {
+  "cook_camp": {
+   "story": "Survey crew's cook camp: the shack, the fire ring, the instrument they knocked flat, and the board pointing to lunch.",
+   "props": [
+    {
+     "kind": "crew_cookshack",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "crew_campfire",
+     "v": "a",
+     "at": [
+      6.5,
+      -3
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "*",
+     "at": [
+      -5.5,
+      -4.5
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "a",
+     "at": [
+      3.5,
+      -6.5
+     ],
+     "yaw_deg": -30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "crew_sign",
+     "v": "b",
+     "at": [
+      -2.5,
+      -7.5
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "brittlebush",
+     "v": "*",
+     "at": [
+      7,
+      4
+     ],
+     "yaw_deg": 0,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_stack",
+     "v": "a",
+     "at": [
+      -6.5,
+      2.5
+     ],
+     "yaw_deg": 95,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "sluice_post": {
+   "story": "A gate crew's post: the wheelhouse chained shut, a berm for the flood that never came, the gauge with its hopeful chalk mark.",
+   "props": [
+    {
+     "kind": "gate_wheelhouse",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbag_berm",
+     "v": "a",
+     "at": [
+      0.5,
+      -6.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "staff_gauge",
+     "v": "*",
+     "at": [
+      5.5,
+      -4.5
+     ],
+     "yaw_deg": -15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "culvert_pipe",
+     "v": "*",
+     "at": [
+      -6.5,
+      1.5
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "wheelbarrow",
+     "v": "a",
+     "at": [
+      4.5,
+      3.5
+     ],
+     "yaw_deg": 150,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      -4.5,
+      -5.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "haul_stop": {
+   "story": "Where the sandbag wagon stopped: timber waiting to be loaded, tools down, the shift gone to the cook shack.",
+   "props": [
+    {
+     "kind": "haul_wagon",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_stack",
+     "v": "*",
+     "at": [
+      -5.5,
+      3.5
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "b",
+     "at": [
+      4,
+      -4.5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbag_berm",
+     "v": "b",
+     "at": [
+      5.5,
+      3.5
+     ],
+     "yaw_deg": -60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      -5,
+      -4.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_cairn",
+     "v": "*",
+     "at": [
+      7.5,
+      -1
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "pipe_drop": {
+   "story": "Culvert sections dropped off the truck, a barrow tipped racing back, and a gauge nobody ever set.",
+   "props": [
+    {
+     "kind": "culvert_pipe",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "wheelbarrow",
+     "v": "b",
+     "at": [
+      3.5,
+      -2.5
+     ],
+     "yaw_deg": -40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "staff_gauge",
+     "v": "*",
+     "at": [
+      -3,
+      -2.5
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "brittlebush",
+     "v": "*",
+     "at": [
+      2.5,
+      3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_stakes",
+     "v": "*",
+     "at": [
+      -1.5,
+      3.5
+     ],
+     "yaw_deg": 75,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "cairn_line": {
+   "story": "A survey station: cairn, stakes off at an angle the crew swore was straight, and a sign that points up.",
+   "props": [
+    {
+     "kind": "survey_cairn",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_stakes",
+     "v": "b",
+     "at": [
+      3,
+      1.5
+     ],
+     "yaw_deg": -20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "crew_sign",
+     "v": "c",
+     "at": [
+      -2,
+      -2
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      -3,
+      2
+     ],
+     "yaw_deg": 0,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      2,
+      -2.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "flood_berm": {
+   "story": "A short berm thrown up in a hurry, a shovel left standing, and the gauge to watch.",
+   "props": [
+    {
+     "kind": "sandbag_berm",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "staff_gauge",
+     "v": "*",
+     "at": [
+      3.5,
+      1.5
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "brittlebush",
+     "v": "*",
+     "at": [
+      -3.5,
+      1.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "wheelbarrow",
+     "v": "a",
+     "at": [
+      -2,
+      -2.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lunch_spot": {
+   "story": "Somebody's lunch spot: a little fire ring, timber to sit on, a crew board that says DAM with an arrow.",
+   "props": [
+    {
+     "kind": "crew_campfire",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_stack",
+     "v": "b",
+     "at": [
+      -3,
+      1.5
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "crew_sign",
+     "v": "a",
+     "at": [
+      2.5,
+      -1.5
+     ],
+     "yaw_deg": -10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      1.5,
+      2.5
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "slot_marker": {
+   "story": "Where the slot narrows the crew left a board, a run of stakes and nothing else: no room to stop.",
+   "props": [
+    {
+     "kind": "crew_sign",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_stakes",
+     "v": "a",
+     "at": [
+      0,
+      2.5
+     ],
+     "yaw_deg": 90,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "b",
+     "at": [
+      0,
+      -2.2
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "survey_drop": {
+   "story": "A survey party's dropped gear: the tripod knocked flat and the stakes they never finished.",
+   "props": [
+    {
+     "kind": "survey_tripod",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_stakes",
+     "v": "a",
+     "at": [
+      2.5,
+      2
+     ],
+     "yaw_deg": -10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      -2.5,
+      1.5
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbag_berm",
+     "v": "a",
+     "at": [
+      -1,
+      -3
+     ],
+     "yaw_deg": 5,
+     "scale": 0.8,
+     "tilt_deg": 0
+    }
+   ]
+  }
+ },
+ "spots": [
+  {
+   "id": "cook_shelf",
+   "template": "cook_camp",
+   "at": [
+    -120,
+    -720
+   ],
+   "yaw_deg": 160,
+   "near": "top_shelf_deck"
+  },
+  {
+   "id": "haul_dome3",
+   "template": "haul_stop",
+   "at": [
+    -270,
+    -590
+   ],
+   "yaw_deg": 40,
+   "near": "dome_3"
+  },
+  {
+   "id": "sluice_dome11",
+   "template": "sluice_post",
+   "at": [
+    -430,
+    -620
+   ],
+   "yaw_deg": 110,
+   "near": "dome_11"
+  },
+  {
+   "id": "sluice_dome7",
+   "template": "sluice_post",
+   "at": [
+    100,
+    -610
+   ],
+   "yaw_deg": 250,
+   "near": "dome_7"
+  },
+  {
+   "id": "haul_dome17",
+   "template": "haul_stop",
+   "at": [
+    -200,
+    -450
+   ],
+   "yaw_deg": 200,
+   "near": "dome_17"
+  },
+  {
+   "id": "cook_dome19",
+   "template": "cook_camp",
+   "at": [
+    0,
+    -510
+   ],
+   "yaw_deg": 300,
+   "near": "dome_19"
+  },
+  {
+   "id": "sluice_dome23",
+   "template": "sluice_post",
+   "at": [
+    10,
+    -370
+   ],
+   "yaw_deg": 75,
+   "near": "dome_23"
+  },
+  {
+   "id": "haul_slotfin",
+   "template": "haul_stop",
+   "at": [
+    80,
+    -70
+   ],
+   "yaw_deg": 260,
+   "near": "slot_fin_far"
+  },
+  {
+   "id": "cook_eyefin",
+   "template": "cook_camp",
+   "at": [
+    80,
+    50
+   ],
+   "yaw_deg": 280,
+   "near": "eye_fin_east"
+  },
+  {
+   "id": "haul_canal",
+   "template": "haul_stop",
+   "at": [
+    210,
+    360
+   ],
+   "yaw_deg": 280,
+   "near": "canal_lips"
+  },
+  {
+   "id": "sluice_abutment",
+   "template": "sluice_post",
+   "at": [
+    210,
+    560
+   ],
+   "yaw_deg": 220,
+   "near": "east_abutment"
+  },
+  {
+   "id": "cairn_finwest",
+   "template": "cairn_line",
+   "at": [
+    -380,
+    -530
+   ],
+   "yaw_deg": 30,
+   "near": "domes_fin_west"
+  },
+  {
+   "id": "pipes_dome4",
+   "template": "pipe_drop",
+   "at": [
+    -160,
+    -610
+   ],
+   "yaw_deg": 120,
+   "near": "dome_4"
+  },
+  {
+   "id": "berm_dome2",
+   "template": "flood_berm",
+   "at": [
+    -50,
+    -700
+   ],
+   "yaw_deg": 340,
+   "near": "dome_2"
+  },
+  {
+   "id": "cairn_dome14",
+   "template": "cairn_line",
+   "at": [
+    30,
+    -610
+   ],
+   "yaw_deg": 200,
+   "near": "dome_14"
+  },
+  {
+   "id": "berm_domes",
+   "template": "flood_berm",
+   "at": [
+    -130,
+    -530
+   ],
+   "yaw_deg": 15,
+   "near": "slickrock_domes"
+  },
+  {
+   "id": "pipes_dome10",
+   "template": "pipe_drop",
+   "at": [
+    -330,
+    -480
+   ],
+   "yaw_deg": 260,
+   "near": "dome_10"
+  },
+  {
+   "id": "cairn_finmid",
+   "template": "cairn_line",
+   "at": [
+    -100,
+    -450
+   ],
+   "yaw_deg": 90,
+   "near": "domes_fin_mid"
+  },
+  {
+   "id": "pipes_dome25",
+   "template": "pipe_drop",
+   "at": [
+    -60,
+    -330
+   ],
+   "yaw_deg": 170,
+   "near": "dome_25"
+  },
+  {
+   "id": "berm_eye",
+   "template": "flood_berm",
+   "at": [
+    -30,
+    180
+   ],
+   "yaw_deg": 300,
+   "near": "the_eye"
+  },
+  {
+   "id": "cairn_apron",
+   "template": "cairn_line",
+   "at": [
+    40,
+    430
+   ],
+   "yaw_deg": 45,
+   "near": "apron_kicker"
+  },
+  {
+   "id": "pipes_toe",
+   "template": "pipe_drop",
+   "at": [
+    20,
+    510
+   ],
+   "yaw_deg": 0,
+   "near": "toe_apron"
+  },
+  {
+   "id": "lunch_shelf",
+   "template": "lunch_spot",
+   "at": [
+    -190,
+    -700
+   ],
+   "yaw_deg": 80,
+   "near": "top_shelf_deck"
+  },
+  {
+   "id": "survey_dome9",
+   "template": "survey_drop",
+   "at": [
+    -340,
+    -640
+   ],
+   "yaw_deg": 150,
+   "near": "dome_9"
+  },
+  {
+   "id": "lunch_dome19",
+   "template": "lunch_spot",
+   "at": [
+    -60,
+    -540
+   ],
+   "yaw_deg": 230,
+   "near": "dome_19"
+  },
+  {
+   "id": "survey_dome20",
+   "template": "survey_drop",
+   "at": [
+    70,
+    -500
+   ],
+   "yaw_deg": 20,
+   "near": "dome_20"
+  },
+  {
+   "id": "lunch_dome13",
+   "template": "lunch_spot",
+   "at": [
+    -250,
+    -500
+   ],
+   "yaw_deg": 310,
+   "near": "dome_13"
+  },
+  {
+   "id": "survey_lip",
+   "template": "survey_drop",
+   "at": [
+    -50,
+    -250
+   ],
+   "yaw_deg": 280,
+   "near": "shelf_lip"
+  },
+  {
+   "id": "lunch_eye",
+   "template": "lunch_spot",
+   "at": [
+    20,
+    130
+   ],
+   "yaw_deg": 190,
+   "near": "the_eye"
+  },
+  {
+   "id": "survey_powerhouse",
+   "template": "survey_drop",
+   "at": [
+    70,
+    550
+   ],
+   "yaw_deg": 270,
+   "near": "powerhouse_roof_ramp"
+  },
+  {
+   "id": "survey_finest",
+   "template": "survey_drop",
+   "at": [
+    70,
+    -560
+   ],
+   "yaw_deg": 330,
+   "near": "domes_fin_east"
+  },
+  {
+   "id": "marker_slot",
+   "template": "slot_marker",
+   "at": [
+    -10,
+    -175
+   ],
+   "yaw_deg": 0,
+   "near": "slot_fin_east"
+  }
+ ],
+ "litter": {
+  "kinds": [
+   {
+    "kind": "brittlebush",
+    "weight": 3
+   },
+   {
+    "kind": "prickly_pear",
+    "weight": 2
+   },
+   {
+    "kind": "tool_drop",
+    "weight": 2
+   },
+   {
+    "kind": "survey_stakes",
+    "weight": 1
+   },
+   {
+    "kind": "survey_cairn",
+    "weight": 1
+   },
+   {
+    "kind": "crew_sign",
+    "weight": 1
+   }
+  ],
+  "spacing_m": 10.0,
+  "band_m": [
+   6,
+   26
+  ],
+  "seed": 19
+ },
+ "pin": 3587042929
+}
