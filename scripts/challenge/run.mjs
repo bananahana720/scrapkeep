@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // node scripts/challenge/run.mjs --library [--lib-seeds=4] [--lib-pilots=a,b] [--label=<name>]
-// node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,world] [--only=brindle,w1,world1]
+// node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,park,world] [--only=brindle,w1,park1]
 //     [--seeds=<n>: 24 fights, 16 parks] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--warden-persona=skipper] [--park-persona=skipper]
 //     [--tune=key=value,key=value] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
 // node scripts/challenge/run.mjs --library [--lib-shard=i/n]; --library-merge=<dir,dir> --label=<name>
@@ -22,7 +22,7 @@ const outRoot = path.join(root, "artifacts/local/challenge");
 const KIND_TIMEOUT_MS = 40 * 60_000;
 
 const opts = {
-  library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "world"], only: null, seeds: null, libShard: null, libraryMerge: null, wardenPersona: "skipper", tune: "", resume: false, allowMixed: false,
+  library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "park"], only: null, seeds: null, libShard: null, libraryMerge: null, wardenPersona: "skipper", tune: "", resume: false, allowMixed: false,
   bands: ["novice", "learner1", "learner5", "expert"], top: true, persona: "brawler", parkPersona: "skipper", jobs: 4, label: null,
   shard: null, merge: null, dryRun: false, strict: false,
 };

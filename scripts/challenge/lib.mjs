@@ -47,6 +47,10 @@ export const BOSSES = [
 ];
 export const WARDENS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "w" + n, stage: n, world: Math.ceil(n / 2) }));
 export const WORLDS = [1, 2, 3].map((w) => ({ id: "world" + w, world: w, first: 2 * w - 1, last: 2 * w }));
+// A park cell: resume park N and stop the tick its own Warden is engaged. This is the default park measure: the
+// world chain above has to break the first park's Warden on the way, so it mixes the park target with the Warden one
+// (a Learner who wins that Warden 15-35% of the time cannot reach the second park's Warden 80% of the time).
+export const PARKS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "park" + n, park: n, world: Math.ceil(n / 2), first: n, last: n }));
 
 // A Warden run: the fight may last 240 s from engagement (over 3x the 45-85 s stagger bands); the stage cap is lifted
 // to 600 s so it cannot cut an engaged fight first, and the tick guard sits past it.
@@ -106,7 +110,7 @@ export function describeDoc(file, text) {
 // A cell is a fight or a park; a column is a band (and a build bucket); a job is one seed of one column of one cell.
 export function planCells(opts) {
   const {
-    builds = {}, cells = ["boss", "warden", "world"], only = null, seeds = null, columns = COLUMNS.map((c) => c.id), persona = "brawler", wardenPersona = "skipper", parkPersona = "skipper",
+    builds = {}, cells = ["boss", "warden", "park"], only = null, seeds = null, columns = COLUMNS.map((c) => c.id), persona = "brawler", wardenPersona = "skipper", parkPersona = "skipper",
   } = opts;
   const jobs = [];
   const tuneArgs = opts.tune ? ["--tune=" + opts.tune] : [];
@@ -115,6 +119,7 @@ export function planCells(opts) {
   for (const b of BOSSES) if (cells.includes("boss") && want(b.id)) defs.push({ kind: "boss", ...b });
   for (const w of WARDENS) if (cells.includes("warden") && want(w.id)) defs.push({ kind: "warden", ...w });
   for (const w of WORLDS) if (cells.includes("world") && want(w.id)) defs.push({ kind: "world", ...w, stage: w.first });
+  for (const p of PARKS) if (cells.includes("park") && want(p.id)) defs.push({ kind: "world", ...p, stage: p.first });
   for (const def of defs) {
     const cols = COLUMNS.filter((c) => columns.includes(c.id) && (def.kind !== "world" || WORLD_COLUMNS.includes(c.id)));
     for (const col of cols) {
@@ -137,7 +142,7 @@ export function planCells(opts) {
 
 // Seeds depend on the cell and the index only, so columns of a cell face the same seeds.
 function cellSeed(def, i) {
-  const slot = def.kind === "boss" ? def.world - 1 : def.kind === "warden" ? 3 + def.stage - 1 : 9 + def.world - 1;
+  const slot = def.kind === "boss" ? def.world - 1 : def.kind === "warden" ? 3 + def.stage - 1 : def.park ? 12 + def.park - 1 : 9 + def.world - 1;
   return 40000 + slot * 100 + i;
 }
 
@@ -313,7 +318,7 @@ export function buildTable(runs, buckets = {}) {
     const c = cells.get(key);
     (c.grades[r.column] ??= []).push(r.grade ?? gradeRun(r.kind, r.row, r));
   }
-  const order = [...BOSSES, ...WARDENS, ...WORLDS].map((d) => d.id);
+  const order = [...BOSSES, ...WARDENS, ...PARKS, ...WORLDS].map((d) => d.id);
   return [...cells.values()].sort((a, b) => order.indexOf(a.cell) - order.indexOf(b.cell)).map((c) => {
     const columns = {};
     for (const col of COLUMNS) {
@@ -389,8 +394,8 @@ export function renderTable(table, meta = {}) {
   }
   const worlds = table.filter((c) => c.kind === "world");
   if (worlds.length) {
-    lines.push("## Parks (reach the world's Warden)", "");
-    lines.push("| World | Novice | Learner a1 | Game s to reach (Learner) |", "| --- | --- | --- | --- |");
+    lines.push("## Parks (reach the Warden)", "", "`parkN` resumes park N and stops when that park's Warden is engaged. `worldN` (only with `--cells=world`) starts at the world's first park and stops at its second park's Warden, so it must break the first Warden on the way.", "");
+    lines.push("| Cell | Novice | Learner a1 | Game s to reach (Learner) |", "| --- | --- | --- | --- |");
     for (const c of worlds) lines.push(`| ${c.cell} | ${cellText(c.columns.novice)} | ${cellText(c.columns.learner1)} | ${fmt(c.columns.learner1?.medianFightS)} |`);
     lines.push("");
   }
