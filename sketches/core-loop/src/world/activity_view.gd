@@ -28,6 +28,8 @@ var word: Label3D
 var shown := true
 var cue_record := {}
 var _tell_audio
+# How far the word reads; a stage modifier scales it with the column (set_sight).
+var word_reach := WORD_REACH
 var _tell_heard := false
 
 
@@ -68,11 +70,23 @@ func build(activity_id: String, ring_radius: float, tell := {}, tell_audio = nul
 	add_child(word)
 
 
+# A stage modifier's sight scale (SI3): the column, its glyph and the word's reach grow or shrink
+# together. It only draws; 1.0 leaves the view as built.
+func set_sight(scale: float) -> void:
+	if column == null or is_equal_approx(scale, 1.0):
+		return
+	var height := COLUMN_HEIGHT * scale
+	(column.mesh as BoxMesh).size.y = height
+	column.position = Vector3.UP * height * 0.5
+	glyph.position = Vector3.UP * (height + GLYPH_SIZE)
+	word_reach = WORD_REACH * scale
+
+
 # The word shows only near the site. A finished site shows nothing.
 func near(ball: Vector3) -> void:
 	if word == null or not shown:
 		return
-	word.visible = Vector2(ball.x - global_position.x, ball.z - global_position.z).length() <= WORD_REACH
+	word.visible = Vector2(ball.x - global_position.x, ball.z - global_position.z).length() <= word_reach
 	if word.visible and _tell_audio != null and not _tell_heard:
 		_tell_heard = _tell_audio.play("interaction_found", 0.0, 1.0, "SFX", PresentationRows.heard(cue_record, _tell_audio.cue_context()))
 

@@ -190,12 +190,14 @@ func _process(_delta: float) -> bool:
 			var ratio := lifted_pitch / maxf(home_pitch, 0.0001)
 			var home: PackedFloat32Array = SfxBank.samples_at("class_up", Harmony.STEP, 0)
 			var up: PackedFloat32Array = SfxBank.samples_at("class_up", Harmony.STEP, 1)
-			var fanfares := [SfxBank.samples_at("synergy_fanfare", Harmony.STEP, 0, 0), SfxBank.samples_at("synergy_fanfare", Harmony.STEP, 0, 1)]
+			# 2026-10-18: synergy_fanfare has been a recorded event-set cue since c4cffb6a (SOUND-INT), so it
+			# no longer quotes each level's motif (the theme arg is ignored); it still follows the live key.
+			var fanfares := [SfxBank.samples_at("synergy_fanfare", Harmony.STEP, 0, 0), SfxBank.samples_at("synergy_fanfare", Harmony.STEP, 1, 0)]
 			engine.schedule_stinger("class_up")
 			engine.render(engine.beat_len() + 64)
 			var stinger_ok: bool = engine.stinger_starts.size() > 0 and engine.stinger_starts[engine.stinger_starts.size() - 1][0] == "class_up"
 			_check("live key", absf(ratio - Harmony.ratio(1.0)) < 0.001 and home != up and fanfares[0] != fanfares[1] and stinger_ok,
-				"after a lift to Eb a scrap chime sounds %.4f higher (a half step is %.4f); the class-up stinger is baked in the lifted key; the synergy fanfare quotes each level's motif" % [ratio, Harmony.ratio(1.0)])
+				"after a lift to Eb a scrap chime sounds %.4f higher (a half step is %.4f); the class-up stinger is baked in the lifted key; the recorded synergy fanfare is moved up with the key" % [ratio, Harmony.ratio(1.0)])
 			engine._set_key(0)
 			# R in the arena: stage_content_cleared("arena_retry") restarts Brindle from phase 1.
 			_game.events.boss_arena_entered.emit()

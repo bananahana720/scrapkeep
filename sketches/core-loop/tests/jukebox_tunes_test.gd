@@ -395,4 +395,5 @@ func _run() -> void:
 	_t.check("leaving the title releases the deck", audio.spinning == "" and not screens.jukebox_open(), "spinning %s, flow %s" % [audio.spinning, _game.flow.state_name()])
 	_t.check("and the run parameters", audio.engine.parameter_source == Callable(audio, "sample_run_parameters"))
 
+	_game.free()
 	quit(_t.verdict())

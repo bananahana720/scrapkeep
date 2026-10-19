@@ -12,7 +12,8 @@ const Trigger := preload("res://tests/support/pilot_clip_trigger.gd")
 # "Pilot" placeholder hidden the way hide_placeholder hides it.
 #
 # Two checks added 2026-10-11 (PE-0, PILOT-CLIPS sections 1.4 and 3 rule 9), on synthetic clips
-# because today's GLBs carry neither: the preview pilot plays idle_loop when the GLB has it, and
+# where the GLB lacks them (Sable ships idle_loop since 2026-10-18, not unlock): the preview pilot
+# plays idle_loop when the GLB has it, and
 # under --profile=sitting the first focus of a launch plays unlock, then idle_loop, and a second
 # focus plays nothing new.
 
@@ -74,7 +75,9 @@ func _check_clips() -> void:
 		_t.check("preview pilot has an animator", false)
 		preview.free()
 		return
-	var seated_still := not animator.is_playing()
+	# Sable's GLB ships a real idle_loop (2026-10-18): the preview must already be playing it.
+	var seated_still := (animator.is_playing() and animator.current_animation == "idle_loop") \
+		if animator.has_animation("idle_loop") else not animator.is_playing()
 	Trigger.add_synthetic_clips(animator, "pylon_engineer")
 	_t.check("preview plays idle_loop when the GLB has it (seated still before)",
 		seated_still and preview.seat_pilot() == "idle_loop" and animator.is_playing() and animator.current_animation == "idle_loop")
