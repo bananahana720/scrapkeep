@@ -36,6 +36,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 
 const NEAR_M := 60.0
 const FAR_M := 120.0
@@ -44,6 +45,12 @@ const DEDUP_M := 10.0
 # or distinct kinds within FAR_M in view is below BARE_MIN_KINDS.
 const BARE_MIN_NEAR := 5
 const BARE_MIN_KINDS := 4
+# The density bar (project-guide/coord/AMBITION-BRIEF.md, "Lived-in parks"): every 150 m of track has at least 3 distinct prop kinds
+# visible within 60 m of the player camera. Exempt windows are named in _density_exempt.
+const DENSITY_WINDOW_M := 150.0
+const DENSITY_MIN_KINDS := 3
+const DENSITY_TAIL_MIN_M := 75.0
+const ENGAGE_RING_M := 25.0
 const STILL_SPACING_M := 100.0
 const FIXED_STILLS := 4
 const CATS := ["props", "clutter", "scatter", "anchors", "rows", "scenery", "landforms"]
@@ -75,6 +82,8 @@ var draw_count := 40
 var counts_only := false
 var poses_file := ""
 var cam_name := "mid"
+# --open=x:z:r,x:z:r : ruled open spaces (centre and radius, metres) whose windows are exempt from the density bar.
+var open_spaces: Array = []
 
 var game
 var cam: Camera3D
@@ -111,6 +120,11 @@ func _initialize() -> void:
 			poses_file = a.trim_prefix("--poses=")
 		elif a.begins_with("--cam="):
 			cam_name = a.trim_prefix("--cam=")
+		elif a.begins_with("--open="):
+			for part in a.trim_prefix("--open=").split(",", false):
+				var f := part.split(":")
+				if f.size() == 3:
+					open_spaces.append([Vector2(float(f[0]), float(f[1])), float(f[2])])
 		elif a == "--counts-only":
 			counts_only = true
 	if map_id == "" or out_root == "" or not CAMERAS.has(cam_name):
@@ -252,6 +266,7 @@ func _run() -> void:
 		else:
 			s["draw_calls_no_props"] = s["draw_calls"]
 			s["primitives_no_props"] = s["primitives"]
+		s["props_breakdown"] = _props_breakdown()
 		print("park_props_audit: sample %d draws %d prims %d%s" % [idx, s["draw_calls"], s["primitives"], " still " + png if png != "" else ""])
 
 	var summary := _summary(samples, draw_idx, line_info)
@@ -386,7 +401,14 @@ func _collect() -> void:
 	for top in props_nodes:
 		for v in _visuals(top):
 			var k := _dress_kind(v, top)
-			if v is MultiMeshInstance3D:
+			if v.has_meta("dress_member_pos"):
+				# A vignette's merged far LOD: one draw, but every member prop counts where it stands.
+				var at: PackedVector3Array = v.get_meta("dress_member_pos")
+				var names: PackedStringArray = v.get_meta("dress_member_kinds")
+				var ni := _register(v, v.global_transform * v.get_aabb().get_center())
+				for m in at.size():
+					_push(at[m], C_PROPS, _kind_id(names[m]), ni)
+			elif v is MultiMeshInstance3D:
 				_add_multi(v, C_PROPS, k)
 			else:
 				_add_mesh(v, C_PROPS, k)
@@ -466,6 +488,34 @@ func _collect() -> void:
 				var ni2 := nodes.size()
 				nodes.append({"begin": 0.0, "end": 0.0, "centre": box2.get_center()})
 				_push(box2.get_center(), C_SCENERY, _kind_id(kname), ni2)
+
+
+# The props views a camera pose draws, by "hero|vignette|litter / LOD / height tier": views in range (the end margin included) whose
+# bounds meet the frustum, which is what the renderer submits (one draw each). Tier is the view's dress_tier meta.
+func _props_breakdown() -> Dictionary:
+	var cp := cam.global_position
+	var planes := cam.get_frustum()
+	var out := {}
+	for n in props_nodes:
+		if not is_instance_valid(n) or not n is GeometryInstance3D or not n.is_visible_in_tree():
+			continue
+		var view: GeometryInstance3D = n
+		var box: AABB = view.global_transform * view.get_aabb()
+		var d := cp.distance_to(box.get_center())
+		if d < view.visibility_range_begin - view.visibility_range_begin_margin or (view.visibility_range_end > 0.0 and d > view.visibility_range_end + view.visibility_range_end_margin):
+			continue
+		var inside := true
+		for pl in planes:
+			var far_corner := box.position + Vector3(box.size.x if pl.normal.x < 0.0 else 0.0, box.size.y if pl.normal.y < 0.0 else 0.0, box.size.z if pl.normal.z < 0.0 else 0.0)
+			if pl.is_point_over(far_corner):
+				inside = false
+				break
+		if not inside:
+			continue
+		var group := "hero" if view.get_meta("dress_class", "") == "dress_hero" else ("litter" if view.get_parent().name == "Litter" else "vignette")
+		var key := "%s/L%d/%s" % [group, int(view.get_meta("dress_lod", -1)), String(view.get_meta("dress_tier", "?"))]
+		out[key] = int(out.get(key, 0)) + 1
+	return out
 
 
 func _set_props_visible(on: bool) -> void:
@@ -578,6 +628,7 @@ func _count() -> Dictionary:
 	var c60 := [0, 0, 0, 0, 0, 0, 0]
 	var k120 := {}
 	var k60 := {}
+	var pk60 := {}
 	var far2 := FAR_M * FAR_M
 	var near2 := NEAR_M * NEAR_M
 	for i in ix.size():
@@ -604,6 +655,8 @@ func _count() -> Dictionary:
 		if cat != C_LAND:
 			k120[ikind[i]] = true
 		if d2 <= near2:
+			if cat == C_PROPS:
+				pk60[kind_names[ikind[i]]] = true
 			c60[cat] += 1
 			if cat != C_LAND:
 				k60[ikind[i]] = true
@@ -621,6 +674,7 @@ func _count() -> Dictionary:
 	out["core_60"] = c60[C_PROPS] + c60[C_CLUTTER] + c60[C_SCENERY] + c60[C_ROWS]
 	out["kinds_120"] = k120.size()
 	out["kinds_60"] = k60.size()
+	out["prop_kinds_60"] = pk60.keys()
 	return out
 
 
@@ -788,7 +842,98 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 	sm["props_only_draw_delta"] = {"median": _pct(deltas, 0.5), "max": (_sorted(deltas).back() if not deltas.is_empty() else 0), "park_props_nodes": props_nodes.size()}
 	sm["props_only_primitive_delta"] = {"median": _pct(pdeltas, 0.5), "max": (_sorted(pdeltas).back() if not pdeltas.is_empty() else 0)}
 	sm["draw_sample_idx"] = draw_idx
+	sm.merge(_density(samples))
+	# The props-only peak pose: its breakdown by group / LOD / tier.
+	var peak := -1
+	var peak_at := {}
+	for s in samples:
+		if s.has("draw_calls") and int(s["draw_calls"]) - int(s["draw_calls_no_props"]) > peak:
+			peak = int(s["draw_calls"]) - int(s["draw_calls_no_props"])
+			peak_at = {"idx": s["idx"], "x": s["x"], "z": s["z"], "delta": peak, "breakdown": s.get("props_breakdown", {})}
+	sm["props_peak_pose"] = peak_at
 	return sm
+
+
+# The density bar. Per line, 150 m windows of its samples (full windows, and a tail of at least DENSITY_TAIL_MIN_M); a window's kinds are
+# the union of the park-prop kinds (group "park_props" only, not set dressing) in view within 60 m at any of its sample poses. Samples
+# are the audit's deduplicated union (a stretch shared by two lines belongs to the first, floor first). A window is exempt when its
+# midpoint (the window's sample nearest the middle) lies in:
+#   arena      the footprint of a home_rows site (park row, or the activity row's point) or the landmark row, grown by ENGAGE_RING_M
+#   telegraph  the footprint of an event_rows site (park row), grown by the event's hold_clear_m (0 when absent)
+#   open       a --open=x:z:r space (a ruling keeps it open; the park JSON carries none)
+func _density(samples: Array) -> Dictionary:
+	var by_line := {}
+	for s in samples:
+		if not by_line.has(s["line"]):
+			by_line[s["line"]] = []
+		by_line[s["line"]].append(s)
+	var windows := 0
+	var exempt := 0
+	var passed := 0
+	var reasons := {}
+	var fails: Array = []
+	var line_names := by_line.keys()
+	line_names.sort()
+	for line in line_names:
+		var list: Array = by_line[line]
+		list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["along_m"]) < float(b["along_m"]))
+		var end_m := float(list.back()["along_m"])
+		var start := 0.0
+		while start < end_m:
+			var stop := minf(start + DENSITY_WINDOW_M, end_m)
+			if stop - start < (DENSITY_WINDOW_M if start + DENSITY_WINDOW_M <= end_m else DENSITY_TAIL_MIN_M):
+				break
+			var kinds := {}
+			var mid: Dictionary = {}
+			var best := INF
+			for smp in list:
+				var a := float(smp["along_m"])
+				if a < start or a >= start + DENSITY_WINDOW_M:
+					continue
+				for k in smp.get("prop_kinds_60", []):
+					kinds[k] = true
+				if absf(a - (start + stop) * 0.5) < best:
+					best = absf(a - (start + stop) * 0.5)
+					mid = smp
+			start += DENSITY_WINDOW_M
+			if mid.is_empty():
+				continue
+			windows += 1
+			var why := _density_exempt(Vector2(mid["x"], mid["z"]))
+			if why != "":
+				exempt += 1
+				reasons[why] = int(reasons.get(why, 0)) + 1
+			elif kinds.size() >= DENSITY_MIN_KINDS:
+				passed += 1
+			else:
+				fails.append({"line": line, "start_m": start - DENSITY_WINDOW_M, "kinds": kinds.size(), "at": [mid["x"], mid["z"]]})
+	var counted := windows - exempt
+	return {"density_windows": windows, "density_exempt": exempt, "density_exempt_by": reasons, "density_pass": passed,
+		"density_fail_windows": fails, "density_share": snappedf(float(passed) / maxf(1.0, counted), 0.001),
+		"density_rule": "%d+ distinct park-prop kinds in view within %.0f m per %.0f m window" % [DENSITY_MIN_KINDS, NEAR_M, DENSITY_WINDOW_M]}
+
+
+func _density_exempt(at: Vector2) -> String:
+	var rows := {}
+	for row in park.get("park_rows", []):
+		rows[row["id"]] = row
+	for home in park.get("home_rows", []):
+		var site := String(home.get("site", ""))
+		if rows.has(site) and ParkMap.footprint_contains(rows[site], at, ENGAGE_RING_M):
+			return "arena"
+		for act in park.get("activity_rows", []):
+			if act.get("id") == site and Vector2(float(act["at"][0]), float(act["at"][1])).distance_to(at) <= ENGAGE_RING_M:
+				return "arena"
+	if park.has("landmark") and ParkMap.footprint_contains(park["landmark"], at, ENGAGE_RING_M):
+		return "arena"
+	for ev in park.get("event_rows", []):
+		var row = rows.get(String(ev.get("site", "")))
+		if row != null and ParkMap.footprint_contains(row, at, float(ev.get("hold_clear_m", 0.0))):
+			return "telegraph"
+	for space in open_spaces:
+		if (space[0] as Vector2).distance_to(at) <= float(space[1]):
+			return "open"
+	return ""
 
 
 func _write(path: String, data: Variant) -> void:
