@@ -335,6 +335,50 @@
    }
   },
   {
+   "id": "ambient_dam_swift",
+   "path": "res://assets/models/ambient/dam_swift.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/dam_swift.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 3b3dfcdde86c87a6c88bb960708431aee52f4e3b5ef705dfaf963d5f43f98c5f"
+   }
+  },
+  {
+   "id": "ambient_dusk_quail",
+   "path": "res://assets/models/ambient/dusk_quail.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/dusk_quail.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 5ea4a90d7489fdf0c53cdd75279b8901443612a1f35de8315df459eb8296ba1d"
+   }
+  },
+  {
+   "id": "ambient_puddle_toad",
+   "path": "res://assets/models/ambient/puddle_toad.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/puddle_toad.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 7ab609cb3c7f728fb6dcfa1b9e96498051b8a18c296e9a359087f0bb7bcadd42"
+   }
+  },
+  {
+   "id": "ambient_weir_keeper",
+   "path": "res://assets/models/ambient/weir_keeper.glb",
+   "class": "ambient",
+   "ships": true,
+   "loader": "src/core/ambient_kinds.gd",
+   "provenance": {
+    "recipe": "tools/blender/ambient/weir_keeper.py",
+    "note": "Ambient life kit (issue #149, wave 17). Authored procedurally in this repository from soft ellipsoids, capsules and swept tubes (tools/blender/ambient/_life.py), one skinned mesh, one vertex-colour material, clips idle, move and react baked in; palette, height and triangle band read from src/core/ambient_kinds.gd; no imported mesh, texture or scan. assets/models/ambient/ambient.PROVENANCE.txt. sha256 fd2ecdfc66803636473732014a6aae6ee9e45d8e9e69e7e54f8c2c0d7827c136"
+   }
+  },
+  {
    "id": "barge",
    "path": "res://assets/models/barge.glb",
    "class": "landmark",
@@ -12854,6 +12898,10 @@
   "adit_mouth",
   "adit_mouth_detail1",
   "adit_mouth_detail2",
+  "ambient_dam_swift",
+  "ambient_dusk_quail",
+  "ambient_puddle_toad",
+  "ambient_weir_keeper",
   "ambush_altar",
   "anchor_basalt_a",
   "anchor_basalt_b",
