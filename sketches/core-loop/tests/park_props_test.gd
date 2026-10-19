@@ -434,7 +434,7 @@ func _check_low_ground(kit: Dictionary) -> void:
 
 
 # Long stamped rows (past ParkSites.STAMP_KEEP_M) are left out of ParkSites' footprint cells; context() re-adds the narrow ones
-# (under STAMP_NARROW_M, a ridden feature) and every sky_island. A wider long stamp is the landform and stays open, but a listed
+# (STAMP_NARROW_M or narrower, a ridden feature) and every sky_island. A wider long stamp is the landform and stays open, but a listed
 # low_ground_rows row still caps what stands in it.
 func _check_long_stamped(kit: Dictionary) -> void:
 	var low := 0.8
@@ -471,6 +471,15 @@ func _check_long_stamped(kit: Dictionary) -> void:
 	var tall_slot := _first_low(["keepout"], _row_grid(slot, 4, 2), kit, dc, dground, 2.5, func(inst: Dictionary) -> bool:
 		return dc.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M)
 	_t.check("planted: a 2.5 m prop inside upper_slot, beyond the mid tier, fails keepout alone", not tall_slot.is_empty())
+
+	# The boundary: sinkhole's south_flats is exactly 60 m on its short axis, so it still blocks.
+	var flats := _park_row(smap, "south_flats")
+	_t.check("sinkhole south_flats is a long half_pipe exactly STAMP_NARROW_M wide in the context", not flats.is_empty() and flats["element"] == "half_pipe" \
+		and absf(float(flats["size"][2])) == ParkProps.STAMP_NARROW_M and float(flats["size"][0]) > ParkProps.ParkSites.STAMP_KEEP_M \
+		and plain.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "south_flats"))
+	var in_flats := _first_low(["keepout"], _row_grid(flats, 6, 4), kit, plain, sground, 2.5, func(inst: Dictionary) -> bool:
+		return plain.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M)
+	_t.check("planted: a 2.5 m prop inside south_flats, past the mid tier, fails keepout alone", not in_flats.is_empty())
 
 	# A wide long stamp is landform: pit's 900 by 900 m bowl admits mid and tall props that clear the lines.
 	var pit := ParkProps.world_for("park_pit")
