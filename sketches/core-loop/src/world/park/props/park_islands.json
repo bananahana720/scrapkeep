@@ -1571,6 +1571,366 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "net_mending": {
+   "story": "Net-crew mending spot: a stool, a half-folded net, a needle roll and a spare rope basket.",
+   "props": [
+    {
+     "kind": "mender_stool",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 20,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "a",
+     "at": [
+      -2.4,
+      1.2
+     ],
+     "yaw_deg": -30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "a",
+     "at": [
+      1.8,
+      -1.6
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_basket",
+     "v": "b",
+     "at": [
+      2.4,
+      1.6
+     ],
+     "yaw_deg": -70,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      -2.0,
+      -2.0
+     ],
+     "yaw_deg": 110,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "chart_stones": {
+   "story": "Chart stones: numbered flat stones laid in a curve, a cairn at one end, tufts between.",
+   "props": [
+    {
+     "kind": "stair_stones",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "b",
+     "at": [
+      2.4,
+      1.0
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      -2.4,
+      1.2
+     ],
+     "yaw_deg": -50,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "c",
+     "at": [
+      1.4,
+      -2.2
+     ],
+     "yaw_deg": 80,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "a",
+     "at": [
+      -1.6,
+      -2.0
+     ],
+     "yaw_deg": 150,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "dropped_bolt": {
+   "story": "A dropped bolt of patch cloth, unrolled in the wind, the crew's spare net pinned under a stone.",
+   "props": [
+    {
+     "kind": "patch_bolt",
+     "v": "c",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 35,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "b",
+     "at": [
+      2.0,
+      1.6
+     ],
+     "yaw_deg": -80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "c",
+     "at": [
+      -2.2,
+      1.4
+     ],
+     "yaw_deg": 15,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "b",
+     "at": [
+      1.2,
+      -2.0
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "a",
+     "at": [
+      -2.0,
+      -1.8
+     ],
+     "yaw_deg": -20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "rope_basket_rest": {
+   "story": "A rope basket and a stool left where the crew stopped for tea, a few cobbles for a hearth.",
+   "props": [
+    {
+     "kind": "rope_basket",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": -40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mender_stool",
+     "v": "c",
+     "at": [
+      2.4,
+      -0.6
+     ],
+     "yaw_deg": 70,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      -1.8,
+      -1.8
+     ],
+     "yaw_deg": 10,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "b",
+     "at": [
+      -2.2,
+      1.6
+     ],
+     "yaw_deg": 100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "c",
+     "at": [
+      1.6,
+      2.2
+     ],
+     "yaw_deg": -10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "tuft_cairn": {
+   "story": "A knee-high cairn with a pine seedling and dry tufts, a patch of cloth caught on it.",
+   "props": [
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pine_sapling",
+     "v": "c",
+     "at": [
+      1.8,
+      1.4
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      -2.0,
+      0.8
+     ],
+     "yaw_deg": -60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "c",
+     "at": [
+      1.4,
+      -2.0
+     ],
+     "yaw_deg": 90,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "a",
+     "at": [
+      -1.4,
+      -2.2
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "net_drying": {
+   "story": "Nets laid out to dry on the slickrock, a mending stool pushed aside.",
+   "props": [
+    {
+     "kind": "net_bundle",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 25,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "net_bundle",
+     "v": "c",
+     "at": [
+      2.6,
+      0.6
+     ],
+     "yaw_deg": -35,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "mender_stool",
+     "v": "b",
+     "at": [
+      -2.2,
+      1.4
+     ],
+     "yaw_deg": 50,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "b",
+     "at": [
+      0.8,
+      -2.2
+     ],
+     "yaw_deg": -75,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      -2.0,
+      -1.6
+     ],
+     "yaw_deg": 95,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -1973,6 +2333,256 @@
    ],
    "yaw_deg": 68.0,
    "near": "east_wing, Spare nets and a rope bale dumped where the "
+  },
+  {
+   "id": "w001",
+   "template": "net_mending",
+   "at": [
+    -120.0,
+    70.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "mooring_pad_ramp, Net-crew mending spot"
+  },
+  {
+   "id": "w003",
+   "template": "dropped_bolt",
+   "at": [
+    -145.0,
+    80.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "ledger_lip, A dropped bolt of patch cloth"
+  },
+  {
+   "id": "w004",
+   "template": "rope_basket_rest",
+   "at": [
+    -105.0,
+    85.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "mooring_pad_ramp, A rope basket and a stool left where the cre"
+  },
+  {
+   "id": "w005",
+   "template": "tuft_cairn",
+   "at": [
+    -125.0,
+    95.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "ledger_lip, A knee-high cairn with a pine seedling and d"
+  },
+  {
+   "id": "w006",
+   "template": "net_drying",
+   "at": [
+    -150.0,
+    100.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "ledger_lip, Nets laid out to dry on the slickrock"
+  },
+  {
+   "id": "w007",
+   "template": "net_mending",
+   "at": [
+    -220.0,
+    130.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "manifest_lip, Net-crew mending spot"
+  },
+  {
+   "id": "w008",
+   "template": "chart_stones",
+   "at": [
+    -190.0,
+    215.0
+   ],
+   "yaw_deg": 74.0,
+   "near": "west_wing, Chart stones"
+  },
+  {
+   "id": "w010",
+   "template": "rope_basket_rest",
+   "at": [
+    -220.0,
+    375.0
+   ],
+   "yaw_deg": -52.0,
+   "near": "west_wing, A rope basket and a stool left where the cre"
+  },
+  {
+   "id": "w011",
+   "template": "tuft_cairn",
+   "at": [
+    -200.0,
+    375.0
+   ],
+   "yaw_deg": -52.0,
+   "near": "west_wing, A knee-high cairn with a pine seedling and d"
+  },
+  {
+   "id": "w012",
+   "template": "net_drying",
+   "at": [
+    -180.0,
+    375.0
+   ],
+   "yaw_deg": -49.0,
+   "near": "west_wing, Nets laid out to dry on the slickrock"
+  },
+  {
+   "id": "w013",
+   "template": "net_mending",
+   "at": [
+    150.0,
+    85.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, Net-crew mending spot"
+  },
+  {
+   "id": "w014",
+   "template": "chart_stones",
+   "at": [
+    170.0,
+    95.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, Chart stones"
+  },
+  {
+   "id": "w015",
+   "template": "dropped_bolt",
+   "at": [
+    125.0,
+    105.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, A dropped bolt of patch cloth"
+  },
+  {
+   "id": "w016",
+   "template": "rope_basket_rest",
+   "at": [
+    145.0,
+    105.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, A rope basket and a stool left where the cre"
+  },
+  {
+   "id": "w017",
+   "template": "tuft_cairn",
+   "at": [
+    190.0,
+    105.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, A knee-high cairn with a pine seedling and d"
+  },
+  {
+   "id": "w019",
+   "template": "net_mending",
+   "at": [
+    210.0,
+    115.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "wing_gust_lip_e, Net-crew mending spot"
+  },
+  {
+   "id": "w020",
+   "template": "chart_stones",
+   "at": [
+    180.0,
+    130.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "wing_gust_lip_e, Chart stones"
+  },
+  {
+   "id": "w021",
+   "template": "dropped_bolt",
+   "at": [
+    225.0,
+    130.0
+   ],
+   "yaw_deg": 150.0,
+   "near": "wing_gust_lip_e, A dropped bolt of patch cloth"
+  },
+  {
+   "id": "w022",
+   "template": "rope_basket_rest",
+   "at": [
+    200.0,
+    135.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "wing_gust_lip_e, A rope basket and a stool left where the cre"
+  },
+  {
+   "id": "w023",
+   "template": "tuft_cairn",
+   "at": [
+    190.0,
+    215.0
+   ],
+   "yaw_deg": -74.0,
+   "near": "east_wing, A knee-high cairn with a pine seedling and d"
+  },
+  {
+   "id": "w024",
+   "template": "net_drying",
+   "at": [
+    210.0,
+    215.0
+   ],
+   "yaw_deg": -74.0,
+   "near": "east_wing, Nets laid out to dry on the slickrock"
+  },
+  {
+   "id": "w025",
+   "template": "net_mending",
+   "at": [
+    170.0,
+    295.0
+   ],
+   "yaw_deg": -120.0,
+   "near": "east_wing, Net-crew mending spot"
+  },
+  {
+   "id": "w026",
+   "template": "chart_stones",
+   "at": [
+    200.0,
+    375.0
+   ],
+   "yaw_deg": 37.0,
+   "near": "east_wing, Chart stones"
+  },
+  {
+   "id": "w027",
+   "template": "dropped_bolt",
+   "at": [
+    220.0,
+    375.0
+   ],
+   "yaw_deg": 37.0,
+   "near": "east_wing, A dropped bolt of patch cloth"
+  },
+  {
+   "id": "w028",
+   "template": "rope_basket_rest",
+   "at": [
+    240.0,
+    375.0
+   ],
+   "yaw_deg": 45.0,
+   "near": "east_wing, A rope basket and a stool left where the cre"
   }
  ],
  "ground_rows": [
@@ -1982,6 +2592,13 @@
   "west_shelf",
   "ore_bench",
   "keel_bench"
+ ],
+ "low_ground_rows": [
+  "lookout_mesa",
+  "anvil_rock",
+  "twin_fins",
+  "west_wing",
+  "east_wing"
  ],
  "litter": {
   "kinds": [
@@ -2025,5 +2642,5 @@
   ],
   "seed": 5
  },
- "pin": 1825754526
+ "pin": 2735468908
 }
