@@ -244,8 +244,9 @@ async function runTable() {
   } else if (opts.resume) die(`--resume: ${label} has nothing to resume`);
   mkdirSync(path.join(outDir, "jobs"), { recursive: true });
   writeFileSync(path.join(outDir, "meta.json"), JSON.stringify(meta, null, 1) + "\n");
-  // With --resume, a job is done when its row exists for this plan and this commit; others rerun and replace the older row.
-  const done = new Set(parseNdjson(read(runsFile)).map((r) => r.key));
+  // With --resume, a job is done when its row exists for this plan and this commit and graded as a result;
+  // an error or a harness kill reruns and replaces the older row.
+  const done = new Set(parseNdjson(read(runsFile)).filter((r) => !["error", "killed"].includes(r.grade?.result)).map((r) => r.key));
   const keyOf = (job) => jobKey(job, { libraryLabel, plan, commit });
   const todo = jobs.filter((j) => !done.has(keyOf(j)));
   if (todo.length < jobs.length) log(`resume: ${jobs.length - todo.length} jobs already done on this commit`);

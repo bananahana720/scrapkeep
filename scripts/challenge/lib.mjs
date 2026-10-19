@@ -184,6 +184,8 @@ export function gradeRun(kind, row, job = {}) {
     const boss = row.boss;
     if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null };
     if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null };
+    // "boss" is the driver finding no boss module in the boss state: the harness's fault, not a fight.
+    if (row.outcome === "boss") return { result: "error", why: "no boss module in the boss state" };
     if (row.outcome === "boss_stalled" || boss) return { result: "timeout", reason: row.outcome, fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null };
     return { result: "error", why: "the boss was never entered (" + row.outcome + ")" };
   }

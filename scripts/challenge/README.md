@@ -17,7 +17,7 @@ From the coordinator ruling, `project-guide/handoff/DECISIONS.md` section 5, 19 
 | Learner a5 | boss, Warden | win at least 60% on attempt 5 |
 | Expert ordinary | boss, Warden | win at least 85% |
 | Expert top | boss, Warden | win at least 97%; the fight-time ratio top/ordinary is shown for the growth-ratio check |
-| Learner a1 deaths | boss | no death before 45 s of boss time |
+| Learner deaths (a1 and a5) | boss | no death before 45 s of boss time |
 | Novice, Learner a1 | park (world) | reach the Warden: Novice at most 50%, Learner at least 80% |
 
 The 0.6 s tell is not measured: a bot cannot say what a person reads. It stays a design and Andrew-sitting check.
@@ -63,7 +63,7 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 | `--jobs=<n>` | 4 | Godot processes at once (at most 6). Band sweeps can run out of memory; a job that times out or is killed is rerun once alone before it counts. |
 | `--label=` | `run-<stamp>` | Output folder name under `artifacts/local/challenge/`. |
 | `--shard=i/n` | | Jobs `k` where `k mod n = i-1`, over the planned list: deterministic, disjoint, joined by `--merge`. |
-| `--merge=<dir,...>` | | Aggregate run folders and print the table; runs nothing. Each folder's `meta.json` (shard, plan hash, commit, library) must agree, and every shard i of n must be present, or the merge is refused (`--allow-mixed` waives the plan and commit check only). |
+| `--merge=<dir,...>` | | Aggregate run folders and print the table; runs nothing. Each folder's `meta.json` (shard, plan hash, commit, library) must agree, and every shard i of n must be present, or the merge is refused (`--allow-mixed` waives the plan, commit and library checks, never a missing or duplicate shard; with it, the same cell from two plans counts twice). |
 | `--resume` | | Continue an existing `--label`. Without it an existing label is refused, so rows never pile up across runs. Jobs whose row is for this plan and commit are skipped. |
 | `--allow-mixed` | | Let the table or a merge take rows or folders from different commits or plans. |
 | `--tune=<text>` | | Free text folded into the plan hash and forwarded to the runner as `--tune=`. |

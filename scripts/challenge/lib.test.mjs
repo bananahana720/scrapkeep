@@ -25,6 +25,7 @@ test("a boss run wins on defeated_s, loses on death and times out on a stall", (
   assert.equal(gradeRun("boss", boss("boss_stalled", { defeated_s: null, seconds: 420 })).result, "timeout");
   assert.equal(gradeRun("boss", boss("ticks_done", { defeated_s: null, seconds: 400 })).result, "timeout");
   assert.equal(gradeRun("boss", { outcome: "stalled", boss: null }).result, "error");
+  assert.equal(gradeRun("boss", boss("boss", { defeated_s: null, seconds: 2 })).result, "error");
   assert.equal(gradeRun("boss", null).result, "error");
 });
 
