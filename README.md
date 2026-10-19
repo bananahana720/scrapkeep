@@ -12,3 +12,11 @@ Disposable evidence for the Ambient life PRs; nothing here ships. One folder per
 - `models/`: Blender stills of the four Spillway kinds (front three-quarter, side, react).
 - `reference/enemies_sheet.jpg`: 12 world-one enemies (Cycles CPU, `tools/blender/glb_stills.py`), for the first-look comparison.
 - `models/dam_swift_*.jpg` show the swift after b76cd78a lifted its body tone (first-look note); the in-game frames still show the older, darker swift.
+
+## dig: Dig world (park_pit, park_sinkhole)
+
+- `ingame_contact.jpg` and `ingame/`: calm and react frames for each kind and park, captured with `tools/ambient_capture.gd` (this PR) at Dig head 441a38ec (xvfb, opengl3, preset high, 1280x720, close capture camera).
+- `clips/`: 7 mp4s.
+- `capture_states.txt`: the member states per second.
+- `bats_before_after.jpg`: before the roof veto, bats were planned where no roof exists. Now they roost only under a real roof, which means park_pit's adit portals; park_sinkhole has none for now.
+- `models/`: Blender stills of the burro, bat, lizard and prospector.
