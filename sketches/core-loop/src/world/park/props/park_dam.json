@@ -1,0 +1,1945 @@
+{
+ "schema": "scrapkeep-park-props/1",
+ "map": "park_dam",
+ "kit": "res://assets/models/park/props/dam/manifest.json",
+ "templates": {
+  "wheelhouse_yard": {
+   "story": "The sluice crew's wheelhouse and the odds and ends of their last shift.",
+   "props": [
+    {
+     "kind": "gate_wheelhouse",
+     "v": "*",
+     "at": [
+      1,
+      7.5
+     ],
+     "yaw_deg": 8,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cable_drum",
+     "v": "a",
+     "at": [
+      -6,
+      2.5
+     ],
+     "yaw_deg": 20,
+     "scale": 0.81,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "b",
+     "at": [
+      3,
+      -2
+     ],
+     "yaw_deg": -30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "b",
+     "at": [
+      6.5,
+      0
+     ],
+     "yaw_deg": 70,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -8,
+      5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "b",
+     "at": [
+      -3.5,
+      -4
+     ],
+     "yaw_deg": 110,
+     "scale": 0.63,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stencil_post",
+     "v": "a",
+     "at": [
+      -4,
+      7
+     ],
+     "yaw_deg": -15,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "b",
+     "at": [
+      5,
+      -5
+     ],
+     "yaw_deg": 150,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "c",
+     "at": [
+      8,
+      6.5
+     ],
+     "yaw_deg": 200,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "a",
+     "at": [
+      -1,
+      -6
+     ],
+     "yaw_deg": 100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "mixer_graveyard": {
+   "story": "A mixer truck gone to brittlebush, with a compressor and cable spool beside it.",
+   "props": [
+    {
+     "kind": "mixer_wreck",
+     "v": "b",
+     "at": [
+      0,
+      8
+     ],
+     "yaw_deg": -12,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "compressor_cart",
+     "v": "b",
+     "at": [
+      -8,
+      4.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 3
+    },
+    {
+     "kind": "cable_drum",
+     "v": "b",
+     "at": [
+      7,
+      0
+     ],
+     "yaw_deg": 15,
+     "scale": 0.81,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "a",
+     "at": [
+      -5,
+      -3
+     ],
+     "yaw_deg": 10,
+     "scale": 0.63,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      9,
+      5
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "c",
+     "at": [
+      3.5,
+      -4.5
+     ],
+     "yaw_deg": 95,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "c",
+     "at": [
+      -2,
+      -7
+     ],
+     "yaw_deg": -70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      -9,
+      7
+     ],
+     "yaw_deg": 120,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "c",
+     "at": [
+      6,
+      -6
+     ],
+     "yaw_deg": 200,
+     "scale": 0.63,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "a",
+     "at": [
+      -6,
+      -6
+     ],
+     "yaw_deg": 35,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "c",
+     "at": [
+      1,
+      -5
+     ],
+     "yaw_deg": 260,
+     "scale": 0.51,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "survey_station": {
+   "story": "A survey crew's tent, tripod and chalk tally, set up on a dome for the view.",
+   "props": [
+    {
+     "kind": "survey_tent",
+     "v": "a",
+     "at": [
+      0,
+      7
+     ],
+     "yaw_deg": 5,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "a",
+     "at": [
+      -5,
+      -2
+     ],
+     "yaw_deg": 60,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "b",
+     "at": [
+      -3,
+      -5
+     ],
+     "yaw_deg": -110,
+     "scale": 0.92,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stencil_post",
+     "v": "b",
+     "at": [
+      4.5,
+      1
+     ],
+     "yaw_deg": -25,
+     "scale": 0.67,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cold_campfire",
+     "v": "a",
+     "at": [
+      -6,
+      3
+     ],
+     "yaw_deg": 30,
+     "scale": 0.81,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "a",
+     "at": [
+      3,
+      -4
+     ],
+     "yaw_deg": 90,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      8,
+      4
+     ],
+     "yaw_deg": 10,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "laundry_line",
+     "v": "b",
+     "at": [
+      -8,
+      8
+     ],
+     "yaw_deg": 70,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      5,
+      -6
+     ],
+     "yaw_deg": 150,
+     "scale": 0.51,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "a",
+     "at": [
+      -9,
+      -1
+     ],
+     "yaw_deg": 260,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "crew_camp": {
+   "story": "A cold crew campfire with a seat log, a kettle, a washing line and lunch left out.",
+   "props": [
+    {
+     "kind": "cold_campfire",
+     "v": "*",
+     "at": [
+      0,
+      2
+     ],
+     "yaw_deg": 15,
+     "scale": 0.81,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "laundry_line",
+     "v": "a",
+     "at": [
+      -6.5,
+      7
+     ],
+     "yaw_deg": 75,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "b",
+     "at": [
+      4,
+      -2
+     ],
+     "yaw_deg": -40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hardhat_rack",
+     "v": "b",
+     "at": [
+      6,
+      7
+     ],
+     "yaw_deg": 15,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "b",
+     "at": [
+      -7,
+      -1
+     ],
+     "yaw_deg": 115,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      9,
+      2
+     ],
+     "yaw_deg": 200,
+     "scale": 0.51,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      -9,
+      3
+     ],
+     "yaw_deg": 30,
+     "scale": 0.51,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "b",
+     "at": [
+      -2,
+      -6
+     ],
+     "yaw_deg": -30,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "c",
+     "at": [
+      3,
+      8.5
+     ],
+     "yaw_deg": 95,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "a",
+     "at": [
+      -3.5,
+      -4
+     ],
+     "yaw_deg": 60,
+     "scale": 0.85,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "bunk_collapse": {
+   "story": "A collapsed canvas tent with a washing line and boots, plants taking the deck.",
+   "props": [
+    {
+     "kind": "survey_tent",
+     "v": "b",
+     "at": [
+      0,
+      6.5
+     ],
+     "yaw_deg": -8,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "laundry_line",
+     "v": "c",
+     "at": [
+      -7,
+      5
+     ],
+     "yaw_deg": 110,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cold_campfire",
+     "v": "c",
+     "at": [
+      5,
+      -1
+     ],
+     "yaw_deg": 35,
+     "scale": 0.81,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "c",
+     "at": [
+      -3,
+      -4
+     ],
+     "yaw_deg": -30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "c",
+     "at": [
+      8,
+      5
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -8,
+      8
+     ],
+     "yaw_deg": 20,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "c",
+     "at": [
+      3,
+      -6
+     ],
+     "yaw_deg": 130,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "b",
+     "at": [
+      -6,
+      -2
+     ],
+     "yaw_deg": 220,
+     "scale": 0.63,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cable_drum",
+     "v": "c",
+     "at": [
+      8,
+      -4.5
+     ],
+     "yaw_deg": 40,
+     "scale": 0.81,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "flood_gauge": {
+   "story": "The water-level staff and its stencil post: three high-water marks, each painted higher.",
+   "props": [
+    {
+     "kind": "flood_staff",
+     "v": "a",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stencil_post",
+     "v": "a",
+     "at": [
+      -5,
+      1
+     ],
+     "yaw_deg": -30,
+     "scale": 0.67,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "a",
+     "at": [
+      4.5,
+      -1
+     ],
+     "yaw_deg": 80,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "b",
+     "at": [
+      1,
+      -5.5
+     ],
+     "yaw_deg": 100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "b",
+     "at": [
+      -3,
+      -4
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      7,
+      5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -7,
+      6
+     ],
+     "yaw_deg": 160,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "a",
+     "at": [
+      -8,
+      -3
+     ],
+     "yaw_deg": 190,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "flood_staff",
+     "v": "c",
+     "at": [
+      8,
+      -5
+     ],
+     "yaw_deg": 15,
+     "scale": 0.8,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "rebar_thicket": {
+   "story": "Rebar bundles and slab chunks left where the forms came down, brittlebush through all of it.",
+   "props": [
+    {
+     "kind": "rebar_bloom",
+     "v": "a",
+     "at": [
+      0,
+      4
+     ],
+     "yaw_deg": 10,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "b",
+     "at": [
+      -6,
+      0
+     ],
+     "yaw_deg": 70,
+     "scale": 0.63,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "c",
+     "at": [
+      5.5,
+      -2
+     ],
+     "yaw_deg": 200,
+     "scale": 0.63,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -3,
+      7.5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      8,
+      3
+     ],
+     "yaw_deg": 120,
+     "scale": 0.51,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "c",
+     "at": [
+      -9,
+      5
+     ],
+     "yaw_deg": 260,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cable_drum",
+     "v": "c",
+     "at": [
+      3,
+      -6
+     ],
+     "yaw_deg": 25,
+     "scale": 0.81,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "c",
+     "at": [
+      -5,
+      -5
+     ],
+     "yaw_deg": 100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "c",
+     "at": [
+      1,
+      -3
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lunch_spot": {
+   "story": "Where a crew sat out of the sun: pails, a cold fire, a compressor for a table.",
+   "props": [
+    {
+     "kind": "lunch_pail",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "b",
+     "at": [
+      3,
+      -2
+     ],
+     "yaw_deg": -60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "c",
+     "at": [
+      -3.5,
+      -1.5
+     ],
+     "yaw_deg": 110,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cold_campfire",
+     "v": "c",
+     "at": [
+      -1,
+      6
+     ],
+     "yaw_deg": 50,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "compressor_cart",
+     "v": "c",
+     "at": [
+      6,
+      4
+     ],
+     "yaw_deg": -25,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stencil_post",
+     "v": "c",
+     "at": [
+      -7,
+      4
+     ],
+     "yaw_deg": 75,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      7.5,
+      -3
+     ],
+     "yaw_deg": 210,
+     "scale": 0.51,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      -8,
+      -4
+     ],
+     "yaw_deg": 30,
+     "scale": 0.51,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "b",
+     "at": [
+      2,
+      8
+     ],
+     "yaw_deg": 95,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "tool_wall": {
+   "story": "A works wall of hard hats, a compressor, and a cable spool awaiting a crew that went home.",
+   "props": [
+    {
+     "kind": "hardhat_rack",
+     "v": "a",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 0,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "compressor_cart",
+     "v": "a",
+     "at": [
+      -6,
+      4.5
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cable_drum",
+     "v": "a",
+     "at": [
+      5.5,
+      2
+     ],
+     "yaw_deg": -20,
+     "scale": 0.81,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stencil_post",
+     "v": "b",
+     "at": [
+      -3,
+      -3
+     ],
+     "yaw_deg": -30,
+     "scale": 0.67,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "a",
+     "at": [
+      2,
+      -3.5
+     ],
+     "yaw_deg": -70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "b",
+     "at": [
+      6,
+      -4
+     ],
+     "yaw_deg": 160,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -8,
+      7
+     ],
+     "yaw_deg": 180,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "c",
+     "at": [
+      9,
+      6
+     ],
+     "yaw_deg": 250,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "a",
+     "at": [
+      -2,
+      -7
+     ],
+     "yaw_deg": 95,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "pour_site": {
+   "story": "A mixer sunk to its axles in silt at the last pour, a gauge staff lying beside it.",
+   "props": [
+    {
+     "kind": "mixer_wreck",
+     "v": "c",
+     "at": [
+      0,
+      8.5
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "flood_staff",
+     "v": "c",
+     "at": [
+      -8,
+      2
+     ],
+     "yaw_deg": 50,
+     "scale": 0.8,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "b",
+     "at": [
+      5,
+      -1
+     ],
+     "yaw_deg": 85,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "compressor_cart",
+     "v": "b",
+     "at": [
+      8,
+      4.5
+     ],
+     "yaw_deg": 120,
+     "scale": 0.95,
+     "tilt_deg": 3
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "b",
+     "at": [
+      -2,
+      -4
+     ],
+     "yaw_deg": -40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -9,
+      8
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "b",
+     "at": [
+      4,
+      -6
+     ],
+     "yaw_deg": 160,
+     "scale": 0.63,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "c",
+     "at": [
+      9,
+      -4
+     ],
+     "yaw_deg": 40,
+     "scale": 0.51,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cable_drum",
+     "v": "b",
+     "at": [
+      -5,
+      -6
+     ],
+     "yaw_deg": 140,
+     "scale": 0.81,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "low_lunch": {
+   "story": "A crew's lunch spot on a flat rock, with a pail left tipped and brittlebush seedlings.",
+   "props": [
+    {
+     "kind": "lunch_pail",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "b",
+     "at": [
+      3.2,
+      -1.5
+     ],
+     "yaw_deg": -60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "c",
+     "at": [
+      -3,
+      1.5
+     ],
+     "yaw_deg": 110,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "b",
+     "at": [
+      -5,
+      -3
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      5,
+      3
+     ],
+     "yaw_deg": 210,
+     "scale": 0.5,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "b",
+     "at": [
+      -1,
+      5
+     ],
+     "yaw_deg": 95,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      -6,
+      5
+     ],
+     "yaw_deg": 30,
+     "scale": 0.5,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "low_camp": {
+   "story": "A cold fire pit with a few sandbags kept as windbreak, and a spare tripod.",
+   "props": [
+    {
+     "kind": "cold_campfire",
+     "v": "c",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 15,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "a",
+     "at": [
+      -1,
+      4.5
+     ],
+     "yaw_deg": 95,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "a",
+     "at": [
+      4,
+      -1.5
+     ],
+     "yaw_deg": -60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "a",
+     "at": [
+      -5,
+      -2
+     ],
+     "yaw_deg": 30,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "c",
+     "at": [
+      5,
+      4
+     ],
+     "yaw_deg": 130,
+     "scale": 0.5,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "c",
+     "at": [
+      -6,
+      2.5
+     ],
+     "yaw_deg": 200,
+     "scale": 0.6,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "c",
+     "at": [
+      2,
+      -5
+     ],
+     "yaw_deg": 70,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "low_wall": {
+   "story": "Sandbags slumping against the wash, a pail of tools and rebar half-buried in weeds.",
+   "props": [
+    {
+     "kind": "sandbags",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "sandbags",
+     "v": "c",
+     "at": [
+      4,
+      3
+     ],
+     "yaw_deg": 110,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rebar_bloom",
+     "v": "c",
+     "at": [
+      -4,
+      3
+     ],
+     "yaw_deg": 30,
+     "scale": 0.6,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_pail",
+     "v": "b",
+     "at": [
+      2,
+      -3
+     ],
+     "yaw_deg": 150,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "b",
+     "at": [
+      -5,
+      -2
+     ],
+     "yaw_deg": 10,
+     "scale": 0.5,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "survey_tripod",
+     "v": "b",
+     "at": [
+      6,
+      -2
+     ],
+     "yaw_deg": 60,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "desert_scrub",
+     "v": "a",
+     "at": [
+      -1,
+      6
+     ],
+     "yaw_deg": 200,
+     "scale": 0.5,
+     "tilt_deg": 0
+    }
+   ]
+  }
+ },
+ "spots": [
+  {
+   "id": "low_lunch_1",
+   "template": "low_lunch",
+   "at": [
+    -5,
+    -705
+   ],
+   "yaw_deg": -173,
+   "near": "dome_7: lunch spot on flat rock"
+  },
+  {
+   "id": "wheelhouse_yard_2",
+   "template": "wheelhouse_yard",
+   "at": [
+    -335,
+    -700
+   ],
+   "yaw_deg": -151,
+   "near": "dome_9: sluice crew's last shift"
+  },
+  {
+   "id": "mixer_graveyard_3",
+   "template": "mixer_graveyard",
+   "at": [
+    -40,
+    -700
+   ],
+   "yaw_deg": -169,
+   "near": "dome_2: mixer left to brittlebush"
+  },
+  {
+   "id": "low_camp_4",
+   "template": "low_camp",
+   "at": [
+    -35,
+    -680
+   ],
+   "yaw_deg": -171,
+   "near": "dome_2: cold fire, windbreak"
+  },
+  {
+   "id": "survey_station_5",
+   "template": "survey_station",
+   "at": [
+    0,
+    -680
+   ],
+   "yaw_deg": -173,
+   "near": "dome_7: survey set up for view"
+  },
+  {
+   "id": "crew_camp_6",
+   "template": "crew_camp",
+   "at": [
+    85,
+    -680
+   ],
+   "yaw_deg": 130,
+   "near": "dome_7: cold camp, kettle waiting"
+  },
+  {
+   "id": "bunk_collapse_7",
+   "template": "bunk_collapse",
+   "at": [
+    -390,
+    -670
+   ],
+   "yaw_deg": -151,
+   "near": "dome_9: collapsed tent, weeds"
+  },
+  {
+   "id": "flood_gauge_8",
+   "template": "flood_gauge",
+   "at": [
+    65,
+    -665
+   ],
+   "yaw_deg": 130,
+   "near": "dome_7: gauge painted higher"
+  },
+  {
+   "id": "rebar_thicket_9",
+   "template": "rebar_thicket",
+   "at": [
+    -375,
+    -645
+   ],
+   "yaw_deg": -151,
+   "near": "dome_9: rebar through brittlebush"
+  },
+  {
+   "id": "lunch_spot_10",
+   "template": "lunch_spot",
+   "at": [
+    100,
+    -640
+   ],
+   "yaw_deg": 130,
+   "near": "dome_7: lunch never finished"
+  },
+  {
+   "id": "tool_wall_11",
+   "template": "tool_wall",
+   "at": [
+    -255,
+    -625
+   ],
+   "yaw_deg": 29,
+   "near": "dome_3: works wall, hats left"
+  },
+  {
+   "id": "pour_site_12",
+   "template": "pour_site",
+   "at": [
+    125,
+    -610
+   ],
+   "yaw_deg": 130,
+   "near": "dome_8: mixer sunk in silt"
+  },
+  {
+   "id": "wheelhouse_yard_13",
+   "template": "wheelhouse_yard",
+   "at": [
+    -265,
+    -605
+   ],
+   "yaw_deg": 29,
+   "near": "dome_3: sluice crew's last shift"
+  },
+  {
+   "id": "mixer_graveyard_14",
+   "template": "mixer_graveyard",
+   "at": [
+    -295,
+    -600
+   ],
+   "yaw_deg": 29,
+   "near": "dome_3: mixer left to brittlebush"
+  },
+  {
+   "id": "survey_station_15",
+   "template": "survey_station",
+   "at": [
+    -245,
+    -600
+   ],
+   "yaw_deg": 29,
+   "near": "dome_3: survey set up for view"
+  },
+  {
+   "id": "low_wall_16",
+   "template": "low_wall",
+   "at": [
+    -325,
+    -595
+   ],
+   "yaw_deg": 29,
+   "near": "dome_3: sandbags slumping in wash"
+  },
+  {
+   "id": "crew_camp_17",
+   "template": "crew_camp",
+   "at": [
+    110,
+    -595
+   ],
+   "yaw_deg": 130,
+   "near": "dome_8: cold camp, kettle waiting"
+  },
+  {
+   "id": "low_lunch_18",
+   "template": "low_lunch",
+   "at": [
+    -150,
+    -590
+   ],
+   "yaw_deg": 0,
+   "near": "dome_5: lunch spot on flat rock"
+  },
+  {
+   "id": "bunk_collapse_19",
+   "template": "bunk_collapse",
+   "at": [
+    -260,
+    -580
+   ],
+   "yaw_deg": -172,
+   "near": "dome_3: collapsed tent, weeds"
+  },
+  {
+   "id": "flood_gauge_20",
+   "template": "flood_gauge",
+   "at": [
+    -230,
+    -580
+   ],
+   "yaw_deg": -172,
+   "near": "dome_4: gauge painted higher"
+  },
+  {
+   "id": "low_camp_21",
+   "template": "low_camp",
+   "at": [
+    -175,
+    -575
+   ],
+   "yaw_deg": -176,
+   "near": "dome_4: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_22",
+   "template": "low_wall",
+   "at": [
+    -210,
+    -570
+   ],
+   "yaw_deg": -172,
+   "near": "dome_4: sandbags slumping in wash"
+  },
+  {
+   "id": "rebar_thicket_23",
+   "template": "rebar_thicket",
+   "at": [
+    25,
+    -550
+   ],
+   "yaw_deg": -132,
+   "near": "domes_fin_east: rebar through brittlebush"
+  },
+  {
+   "id": "low_lunch_24",
+   "template": "low_lunch",
+   "at": [
+    5,
+    -545
+   ],
+   "yaw_deg": 72,
+   "near": "domes_fin_east: lunch spot on flat rock"
+  },
+  {
+   "id": "lunch_spot_25",
+   "template": "lunch_spot",
+   "at": [
+    0,
+    -525
+   ],
+   "yaw_deg": 72,
+   "near": "domes_fin_east: lunch never finished"
+  },
+  {
+   "id": "low_camp_26",
+   "template": "low_camp",
+   "at": [
+    20,
+    -520
+   ],
+   "yaw_deg": -132,
+   "near": "domes_fin_east: cold fire, windbreak"
+  },
+  {
+   "id": "tool_wall_27",
+   "template": "tool_wall",
+   "at": [
+    115,
+    -515
+   ],
+   "yaw_deg": 48,
+   "near": "dome_8: works wall, hats left"
+  },
+  {
+   "id": "low_wall_28",
+   "template": "low_wall",
+   "at": [
+    135,
+    -500
+   ],
+   "yaw_deg": 48,
+   "near": "dome_8: sandbags slumping in wash"
+  },
+  {
+   "id": "low_lunch_29",
+   "template": "low_lunch",
+   "at": [
+    -10,
+    -490
+   ],
+   "yaw_deg": -132,
+   "near": "dome_19: lunch spot on flat rock"
+  },
+  {
+   "id": "pour_site_30",
+   "template": "pour_site",
+   "at": [
+    110,
+    -470
+   ],
+   "yaw_deg": 48,
+   "near": "dome_8: mixer sunk in silt"
+  },
+  {
+   "id": "low_camp_31",
+   "template": "low_camp",
+   "at": [
+    -30,
+    -460
+   ],
+   "yaw_deg": 72,
+   "near": "dome_19: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_32",
+   "template": "low_wall",
+   "at": [
+    40,
+    -435
+   ],
+   "yaw_deg": 48,
+   "near": "dome_20: sandbags slumping in wash"
+  },
+  {
+   "id": "wheelhouse_yard_33",
+   "template": "wheelhouse_yard",
+   "at": [
+    60,
+    -415
+   ],
+   "yaw_deg": 48,
+   "near": "dome_23: sluice crew's last shift"
+  },
+  {
+   "id": "mixer_graveyard_34",
+   "template": "mixer_graveyard",
+   "at": [
+    45,
+    -400
+   ],
+   "yaw_deg": 56,
+   "near": "dome_23: mixer left to brittlebush"
+  },
+  {
+   "id": "low_lunch_35",
+   "template": "low_lunch",
+   "at": [
+    -135,
+    -375
+   ],
+   "yaw_deg": -47,
+   "near": "dome_23: lunch spot on flat rock"
+  },
+  {
+   "id": "low_camp_36",
+   "template": "low_camp",
+   "at": [
+    -5,
+    -365
+   ],
+   "yaw_deg": 56,
+   "near": "dome_23: cold fire, windbreak"
+  },
+  {
+   "id": "survey_station_37",
+   "template": "survey_station",
+   "at": [
+    10,
+    -345
+   ],
+   "yaw_deg": 56,
+   "near": "dome_23: survey set up for view"
+  },
+  {
+   "id": "low_wall_38",
+   "template": "low_wall",
+   "at": [
+    -175,
+    -300
+   ],
+   "yaw_deg": -119,
+   "near": "dome_23: sandbags slumping in wash"
+  },
+  {
+   "id": "crew_camp_39",
+   "template": "crew_camp",
+   "at": [
+    -170,
+    -20
+   ],
+   "yaw_deg": -69,
+   "near": "wash_fin_west: cold camp, kettle waiting"
+  },
+  {
+   "id": "bunk_collapse_40",
+   "template": "bunk_collapse",
+   "at": [
+    -160,
+    10
+   ],
+   "yaw_deg": -69,
+   "near": "wash_fin_west: collapsed tent, weeds"
+  },
+  {
+   "id": "flood_gauge_41",
+   "template": "flood_gauge",
+   "at": [
+    -145,
+    40
+   ],
+   "yaw_deg": -69,
+   "near": "wash_fin_west: gauge painted higher"
+  },
+  {
+   "id": "rebar_thicket_42",
+   "template": "rebar_thicket",
+   "at": [
+    90,
+    45
+   ],
+   "yaw_deg": 89,
+   "near": "slot_fin_far: rebar through brittlebush"
+  },
+  {
+   "id": "lunch_spot_43",
+   "template": "lunch_spot",
+   "at": [
+    -135,
+    70
+   ],
+   "yaw_deg": -69,
+   "near": "eye_fin_west: lunch never finished"
+  },
+  {
+   "id": "tool_wall_44",
+   "template": "tool_wall",
+   "at": [
+    75,
+    75
+   ],
+   "yaw_deg": 89,
+   "near": "eye_fin_east: works wall, hats left"
+  },
+  {
+   "id": "pour_site_45",
+   "template": "pour_site",
+   "at": [
+    -110,
+    120
+   ],
+   "yaw_deg": -54,
+   "near": "eye_fin_west: mixer sunk in silt"
+  },
+  {
+   "id": "wheelhouse_yard_46",
+   "template": "wheelhouse_yard",
+   "at": [
+    55,
+    120
+   ],
+   "yaw_deg": 76,
+   "near": "eye_fin_east: sluice crew's last shift"
+  },
+  {
+   "id": "low_lunch_47",
+   "template": "low_lunch",
+   "at": [
+    80,
+    125
+   ],
+   "yaw_deg": 76,
+   "near": "eye_fin_east: lunch spot on flat rock"
+  },
+  {
+   "id": "mixer_graveyard_48",
+   "template": "mixer_graveyard",
+   "at": [
+    -55,
+    225
+   ],
+   "yaw_deg": -90,
+   "near": "the_eye: mixer left to brittlebush"
+  },
+  {
+   "id": "survey_station_49",
+   "template": "survey_station",
+   "at": [
+    -80,
+    235
+   ],
+   "yaw_deg": -145,
+   "near": "the_eye: survey set up for view"
+  },
+  {
+   "id": "low_camp_50",
+   "template": "low_camp",
+   "at": [
+    50,
+    235
+   ],
+   "yaw_deg": 145,
+   "near": "the_eye: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_51",
+   "template": "low_wall",
+   "at": [
+    80,
+    240
+   ],
+   "yaw_deg": -180,
+   "near": "eye_chute_east: sandbags slumping in wash"
+  },
+  {
+   "id": "crew_camp_52",
+   "template": "crew_camp",
+   "at": [
+    -60,
+    245
+   ],
+   "yaw_deg": -145,
+   "near": "the_eye: cold camp, kettle waiting"
+  },
+  {
+   "id": "bunk_collapse_53",
+   "template": "bunk_collapse",
+   "at": [
+    160,
+    290
+   ],
+   "yaw_deg": 111,
+   "near": "eye_chute_east: collapsed tent, weeds"
+  },
+  {
+   "id": "low_lunch_54",
+   "template": "low_lunch",
+   "at": [
+    40,
+    300
+   ],
+   "yaw_deg": -35,
+   "near": "the_eye: lunch spot on flat rock"
+  },
+  {
+   "id": "low_camp_55",
+   "template": "low_camp",
+   "at": [
+    35,
+    370
+   ],
+   "yaw_deg": -103,
+   "near": "the_eye: cold fire, windbreak"
+  },
+  {
+   "id": "low_wall_56",
+   "template": "low_wall",
+   "at": [
+    40,
+    400
+   ],
+   "yaw_deg": -103,
+   "near": "the_eye: sandbags slumping in wash"
+  }
+ ],
+ "litter": {
+  "kinds": [
+   {
+    "kind": "lunch_pail",
+    "weight": 3
+   },
+   {
+    "kind": "sandbags",
+    "weight": 2
+   },
+   {
+    "kind": "survey_tripod",
+    "weight": 1
+   },
+   {
+    "kind": "desert_scrub",
+    "weight": 4
+   },
+   {
+    "kind": "rebar_bloom",
+    "weight": 1
+   },
+   {
+    "kind": "stencil_post",
+    "weight": 1
+   }
+  ],
+  "spacing_m": 8,
+  "band_m": [
+   16,
+   60
+  ],
+  "seed": 11
+ },
+ "pin": 2986789108
+}
