@@ -1,3 +1,4 @@
+# smoke: solo timeout=360s (the alpha share check is a mean over 20 seeds: about 140 s on an idle box)
 extends SceneTree
 
 const Parts := preload("res://src/build/parts.gd")
