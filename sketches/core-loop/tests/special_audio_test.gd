@@ -3,7 +3,7 @@ extends SceneTree
 const Audio := preload("res://src/presentation/audio.gd")
 const SpecialAudio := preload("res://src/presentation/special_audio.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
-const GameEvents :=preload("res://src/core/game_events.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The kill-first specials' hooks (INTEGRATION.md section 7, item 5): the presence loop is a

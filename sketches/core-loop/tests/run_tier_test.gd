@@ -42,7 +42,8 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-18 stage/alpha-w17 re-record at 04eb0d00 (Gate lane): #125, #127, #129, #139, #140, #106, #142, #144, #105 and the #126
 # flume pass (park rows) together; recorded with --record-base --section=runtime, seeds 0..19 in four-wide batches.
 # 2026-10-18 W18-PACKS re-pin: park_defs.gd gains the nine authored nemesis, Dispatcher and Splitter packs; all 20 schedule and all 20
-# whole-run hashes moved. Values read from this test's own MEASURE lines (schedule0, tier0.hash) on the unmodified test.
+# whole-run hashes moved. Values read from this test's own MEASURE lines (schedule0, tier0.hash) on the unmodified test. The whole-run
+# pins (BASE_RUN) also carry the Systems A nemesis lean, because world.gd now feeds the director a build, so they moved for both reasons.
 const BASE_SCHEDULE := [
 	"e5f91c32e612d43fa54b204661fdc33470d6cf02759a05231c88486d6b691ec9",
 	"dab0241e2d8ccf925cf0cb4e201e55d780cc3aba4ff490d21c39b5248a635508",

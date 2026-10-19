@@ -16,6 +16,7 @@ const T := preload("res://tests/support/t.gd")
 # Every pack must be a purchasable priced group whose size fits the stage's crowd cap and the
 # attacker budget, and whose price does not pass the stage's own elite.
 
+# Park-table kill-first kinds: the park table holds no Linker pack (the alpha table has four), so the Linker is not counted here.
 const KILL_FIRST := ["foreman", "dispatcher"]
 const SHARE_MIN := 0.25
 const SHARE_MAX := 0.40

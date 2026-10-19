@@ -16,7 +16,7 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const PerchPoints := preload("res://src/world/perch_points.gd")
-const SimClock :=preload("res://src/core/sim_clock.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # A park map id (`--table=park`, park_defs.gd) reads its park file: src/world/park/<id>.json once a
 # stage unit (KD1 to KD6) lands it, else the stage-1 stand-in under assets/park/ (KD0). A park id

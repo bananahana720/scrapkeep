@@ -43,7 +43,7 @@ const CARDS := {
 	"splitter": {"cost": 3, "weight": 1.0, "stage_cap": 2},
 	"ballast_heavy": {"cost": 5, "weight": 1.0, "stage_cap": 2},
 	"gap_net": {"cost": 3, "weight": 1.0, "stage_cap": 2},
-	# A kill-first spawner: it drops a chaser every 8 s, so one stands at a time (cost 4, a deflector's).
+	# A kill-first spawner: it drops a chaser every 8 s, its budget ask caps what it adds, though two can stand at once (cost 4, a deflector's).
 	"dispatcher": {"cost": 4, "weight": 1.0, "stage_cap": 1},
 }
 
