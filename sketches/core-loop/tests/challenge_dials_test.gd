@@ -7,6 +7,8 @@ const Waking := preload("res://src/boss/waking.gd")
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
+const Director := preload("res://src/world/director.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const T := preload("res://tests/support/t.gd")
@@ -60,33 +62,81 @@ func _rules() -> void:
 	ChallengeDials.reset()
 	_t.eq("reset restores defaults", ChallengeDials.describe(), {})
 
-	# The 0.6 s floor on every boss family's warn computation.
+	# The tell floor: what the committed hazard shows never drops under Hazard.MIN_WARN (the Mind's
+	# WARN_FLOOR), and tell() is the identity at tell_mult 1.
 	ChallengeDials.set_overrides({"brindle.tell_mult": 0.1, "waking.tell_mult": 0.1, "mind.tell_mult": 0.1,
 		"warden.pulse_cycle_mult": 0.01})
 	for w in [Rules.CRANE_WARN, Rules.SLAG_WARN, Rules.CHARGE_WARN]:
-		_t.near("brindle tell %.1f floors at 0.6" % w, ChallengeDials.tell("brindle", w), 0.6, 0.0)
+		_t.near("brindle tell %.1f floors at MIN_WARN" % w, ChallengeDials.tell("brindle", w, Hazard.MIN_WARN), Hazard.MIN_WARN, 0.0)
 	var center := Vector3(5.0, 12.0, -3.0)
 	var ball := center + Vector3(10.0, 0.0, 4.0)
 	var least := INF
 	for phase in range(1, 5):
 		for family in WakingAttacks.exposed(phase):
 			for d in WakingAttacks.commit(family, 7, ball, Vector3.ZERO, center, phase, RADIUS):
-				least = minf(least, float(d["warn"]))
-	_t.check("waking tells with tell_mult 0.1 stay >= 0.6", least >= 0.6 - 1e-6 and least < INF, str(least))
+				var h = MindAttacks.build(d)
+				least = minf(least, h.warn_seconds)
+				h.free()
+	_t.check("committed waking hazards at tell_mult 0.1 stay >= MIN_WARN", least >= Hazard.MIN_WARN - 1e-6 and least < INF, str(least))
 	least = INF
 	for phase in range(1, MindAttacks.phase_cap() + 1):
 		for family in MindAttacks.exposed(phase):
 			for d in MindAttacks.commit(family, 7, ball, center, phase, RADIUS):
-				least = minf(least, float(d["warn"]))
-	_t.check("mind tells with tell_mult 0.1 stay >= 0.6", least >= 0.6 - 1e-6 and least < INF, str(least))
+				var h = MindAttacks.build(d)
+				least = minf(least, h.warn_seconds)
+				h.free()
+	_t.check("committed mind hazards at tell_mult 0.1 stay >= WARN_FLOOR", least >= MindAttacks.WARN_FLOOR - 1e-6 and least < INF, str(least))
 	_t.check("warden pulse cycle floors at 0.6", Warden.pulse_cycle() >= 0.6, str(Warden.pulse_cycle()))
 	_t.check("warden telegraph is never longer than the cycle", Warden.pulse_telegraph() <= Warden.pulse_cycle()
 			and Warden.pulse_telegraph() >= 0.6, str(Warden.pulse_telegraph()))
 	ChallengeDials.reset()
+	_t.near("tell is the identity at tell_mult 1", ChallengeDials.tell("mind", 1.7, MindAttacks.WARN_FLOOR), 1.7, 0.0)
 	_t.near("default warden cycle", Warden.pulse_cycle(), Warden.PULSE_CYCLE, 0.0)
 	_t.near("default warden telegraph", Warden.pulse_telegraph(), Warden.PULSE_TELEGRAPH, 0.0)
 	ChallengeDials.set_overrides({"brindle.period_mult": 0.001})
 	_t.near("a period never drops under the warning gap", ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1), ChallengeDials.WARN_GAP, 0.0)
+	ChallengeDials.reset()
+
+	# --tune parsing refuses what it cannot read: no silent zeros.
+	_t.eq("a non-numeric value is ignored", ChallengeDials.parse("mind.damage_mult=abc").size(), 0)
+	_t.eq("a negative multiplier is ignored", ChallengeDials.parse("mind.damage_mult=-1").size(), 0)
+	_t.eq("a bad entry in a by-phase list is ignored", ChallengeDials.parse("mind.damage_by_phase=1/x/2/3").size(), 0)
+	_t.eq("a negative by-phase entry is ignored", ChallengeDials.parse("mind.damage_by_phase=1/-1/2/3").size(), 0)
+	_t.eq("pilot dials are refused without --tune-unruled", ChallengeDials.parse("pilot.regen_rate_mult=2").size(), 0)
+	_t.eq("a good entry beside a bad one is kept", ChallengeDials.parse("mind.damage_mult=abc,mind.combo=1"), {"mind.combo": 1.0})
+	_director()
+
+
+# The director's crowd cap, spawn interval, pack share and elite repeat read the mobs dials.
+func _director() -> void:
+	var d = Director.new(0)
+	d.spike = true
+	var cap0: int = d.cap()
+	var interval0: float = d.interval()
+	var share0: float = d.reinforcement_weight()
+	ChallengeDials.set_overrides({"mobs.pack_scale_mult": 2.0, "mobs.interval_scale_mult": 3.0})
+	_t.eq("pack_scale_mult doubles the crowd cap", d.cap(), cap0 * 2)
+	_t.near("interval_scale_mult triples the spawn interval", d.interval(), interval0 * 3.0, 0.0001)
+	_t.check("pack_scale_mult raises the pack share, under PACK_MAX", d.reinforcement_weight() > share0 + 1e-6 and d.reinforcement_weight() <= Director.PACK_MAX, "%.3f -> %.3f" % [share0, d.reinforcement_weight()])
+	ChallengeDials.reset()
+	d.spike = false
+	for path in ["credit", "authored"]:
+		var counts := []
+		for mult in [0.0, 1.0e6]:
+			ChallengeDials.set_overrides({"mobs.elite_rate_mult": mult})
+			var e = Director.new(5)
+			e.elite = {"id": "elite", "kinds": ["chaser"]}
+			e.elite_arrival = 1
+			e.authored = [{"id": "plain", "kinds": ["chaser"]}] if path == "authored" else []
+			var n := 0
+			for i in 100:
+				e._arrivals_made = 1
+				e._last_was_elite = false
+				var credit: Dictionary = e._draw_authored() if path == "authored" else e._draw_credit()
+				n += 1 if credit.get("id", "") == "elite" else 0
+			counts.append(n)
+		_t.eq("elite_rate_mult 0 never repeats the elite (%s draw)" % path, counts[0], 0)
+		_t.eq("elite_rate_mult huge always repeats it (%s draw)" % path, counts[1], 100)
 	ChallengeDials.reset()
 
 
@@ -97,8 +147,12 @@ func _run() -> void:
 	_game.ctx.events.player_hit.connect(func(amount: float, source: String): _hits.append([source, amount]))
 	await _hazard("The Waking", 2, "waking", "cave_in", "waking_cave_in", WakingAttacks.DAMAGE["cave_in"])
 	await _combo("The Waking", 2, "waking")
+	await _period("The Waking", 2, "waking", Waking.ATTACK_PERIOD)
+	await _waking_punish()
 	await _hazard("The Mind", 3, "mind", "rush", "mind_rush", 10.0)
 	await _combo("The Mind", 3, "mind")
+	await _period("The Mind", 3, "mind", 3.5)
+	await _mind_punish()
 	_game.free()
 	ChallengeDials.reset()
 	quit(_t.verdict())
@@ -171,3 +225,82 @@ func _combo(label: String, world: int, boss: String) -> void:
 		gaps.append(mod.warnings[i]["at"] - mod.warnings[i - 1]["at"])
 	_t.check(label + " no two warnings within the gap", gaps.all(func(g): return g >= WakingAttacks.GAP - 0.001), str(gaps))
 	ChallengeDials.reset()
+
+
+# period_mult 2 doubles the clock set when an attack commits.
+func _period(label: String, world: int, boss: String, base: float) -> void:
+	var mod = Harness.module(_game, world)
+	mod._clear_attacks()
+	mod._combo_left = -1
+	for mult in [1.0, 2.0]:
+		ChallengeDials.set_overrides({boss + ".period_mult": mult})
+		mod.clock = 100.0
+		mod._attack_clock = 0.0
+		var seen: int = mod.attack_count
+		var frames := 0
+		while mod.attack_count == seen and frames < 90 * 3:
+			await physics_frame
+			frames += 1
+		_t.check("%s period x%.0f" % [label, mult], mod.attack_count != seen and absf(mod._attack_clock - base * mult) < 0.05,
+				"%.3f s, want %.1f" % [mod._attack_clock, base * mult])
+		mod._clear_attacks()
+	ChallengeDials.reset()
+
+
+# The bore's jam lasts BORE_JAM x punish_mult and ends a combo; the breach window scales and ends one.
+func _waking_punish() -> void:
+	var mod = Harness.module(_game, 2)
+	var center: Vector3 = Vector3(mod._center.x, mod._top(), mod._center.z)
+	mod._attack_clock = 1.0e9
+	mod._clear_attacks()
+	ChallengeDials.set_overrides({"waking.punish_mult": 2.0, "waking.combo": 2.0})
+	mod._combo_left = 2
+	var d := {"family": "bore", "family_index": 3, "id": "waking_bore_0", "shape": "annulus", "type": Threat.Type.INSTANT,
+		"warn": 1.0, "live": 1.0, "height": WakingAttacks.HEIGHT, "at": center, "band": Vector2(0.0, 6.0), "delay": 0.0}
+	var h = MindAttacks.build(d)
+	h.ground = Callable(mod, "ground_height_at")
+	mod.ctx.root.add_child(h)
+	mod.attacks.append({"hazards": [h], "family": "bore", "landed": false, "descs": [d]})
+	var frames := 0
+	while not h.is_live() and frames < 90 * 3:
+		await physics_frame
+		frames += 1
+	await physics_frame
+	var left: float = mod._jammed_until - mod.clock
+	_t.check("the bore jam lasts BORE_JAM x2", mod.jammed() and left >= Waking.BORE_JAM * 2.0 and left <= Waking.BORE_JAM * 2.0 + 1.1, "%.2f s" % left)
+	_t.eq("the jam drops the owed combo", mod._combo_left, -1)
+	mod._clear_attacks()
+	# The breach window: a slam 3 s after a floor drop is outside the 2 s default and inside x2.
+	mod.warden.set("_staggered", false)
+	for mult in [1.0, 2.0]:
+		ChallengeDials.set_overrides({"waking.punish_mult": mult})
+		mod._combo_left = 2
+		mod._dropped_at = mod.clock - 3.0
+		mod._on_enemy_struck(mod.warden, "slam", 1.0)
+		_t.eq("breach window x%.0f %s the owed combo" % [mult, "keeps" if mult == 1.0 else "drops"], mod._combo_left, 2 if mult == 1.0 else -1)
+	ChallengeDials.reset()
+
+
+# The plate's weak window scales in the descriptor and in the Mind's own clock, and ends a combo; a
+# hand carries the Mind's phase.
+func _mind_punish() -> void:
+	var mod = Harness.module(_game, 3)
+	mod._attack_clock = 1.0e9
+	mod._clear_attacks()
+	ChallengeDials.set_overrides({"mind.punish_mult": 2.0, "mind.combo": 2.0})
+	var ball: Vector3 = _game.ctx.player.ball_position()
+	var center: Vector3 = mod.pad.global_position if is_instance_valid(mod.pad) else mod.warden.global_position
+	var plate: Array = MindAttacks.plate(1, ball, center, 4)
+	_t.near("plate descriptor weak_window is PLATE_WINDOW x2", float(plate[0]["weak_window"]), MindAttacks.PLATE_WINDOW * 2.0)
+	mod._combo_left = 2
+	mod.clock = 100.0
+	mod._commit_attack("plate")
+	var span: float = mod._plate_until - mod.clock
+	_t.check("the Mind's plate window runs PLATE_WINDOW x2 past the plate", span >= MindAttacks.PLATE_WINDOW * 2.0 + 1.0 and span < MindAttacks.PLATE_WINDOW * 2.0 + 4.0, "%.2f s" % span)
+	_t.eq("the plate drops the owed combo", mod._combo_left, -1)
+	mod._clear_attacks()
+	ChallengeDials.reset()
+	mod.phase = 3
+	mod._send_hand()
+	var hands: Array = mod.hands.filter(func(x): return is_instance_valid(x))
+	_t.check("a sent hand carries the Mind's phase", not hands.is_empty() and hands[0].boss_phase == 3, str(hands.size()))

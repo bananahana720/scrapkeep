@@ -266,7 +266,7 @@ static func _base(family: String, n: int, shape: String, type: int, warn: float,
 
 
 static func _warn(base: float, phase: int) -> float:
-	return ChallengeDials.tell("mind", base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1))
+	return ChallengeDials.tell("mind", base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1), WARN_FLOOR)
 
 
 static func _bearing(rng: RandomNumberGenerator, ball: Vector3, center: Vector3) -> float:

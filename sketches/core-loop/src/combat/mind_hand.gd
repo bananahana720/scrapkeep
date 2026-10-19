@@ -47,6 +47,8 @@ var habit := ""
 var braced_kinds: Array = []
 var adaptations := 0
 var strikes_landed := 0
+# The Mind's phase, kept current by mind.gd, for the mind.damage_by_phase dial.
+var boss_phase := 1
 var _lens: Node3D
 var _lens_glass: MeshInstance3D
 var _icon: Sprite3D
@@ -121,7 +123,7 @@ func _go_live() -> void:
 	var lane := telegraph()
 	if lane != null and lane.contains(_real_ball()):
 		strikes_landed += 1
-		hit_player.emit(ChallengeDials.damage("mind", STRIKE_DAMAGE, 1), lane.dir * STRIKE_SHOVE)  # mind.damage_mult only: the hand has no phase
+		hit_player.emit(ChallengeDials.damage("mind", STRIKE_DAMAGE, boss_phase), lane.dir * STRIKE_SHOVE)
 	if fleet != null:
 		fleet.events().weak_point_opened.emit("lens", lens_point(), BRACE)
 

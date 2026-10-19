@@ -104,7 +104,14 @@ static func parse(spec: String) -> Dictionary:
 		if not DEFAULTS.has(k):
 			_unknown(k)
 			continue
-		out[k] = _coerce(k, pair.substr(eq + 1).strip_edges())
+		if k.begins_with("pilot.") and not _unruled():
+			_reject(k, "pilot dials are not allowed levers yet (no ruling); add --tune-unruled to override")
+			continue
+		var raw := pair.substr(eq + 1).strip_edges()
+		if not _valid(k, raw):
+			_reject(k, "'%s' is not a non-negative number" % raw + (" list a/b/c/d" if k.ends_with("_by_phase") else ""))
+			continue
+		out[k] = _coerce(k, raw)
 	return out
 
 
@@ -116,6 +123,32 @@ static func _load_cli() -> void:
 		for arg in args:
 			if String(arg).begins_with("--tune="):
 				_cli.merge(parse(String(arg).trim_prefix("--tune=")), true)
+
+
+static func _unruled() -> bool:
+	return "--tune-unruled" in OS.get_cmdline_args() or "--tune-unruled" in OS.get_cmdline_user_args()
+
+
+static func _number(raw: String) -> bool:
+	return raw.is_valid_float() and float(raw) >= 0.0
+
+
+static func _valid(key: String, raw: String) -> bool:
+	if key.ends_with("_by_phase"):
+		var parts := raw.split("/", true)
+		for part in parts:
+			if not _number(part):
+				return false
+		return not parts.is_empty()
+	return _number(raw)
+
+
+static func _reject(key: String, why: String) -> void:
+	var id := key + why
+	if _warned.has(id):
+		return
+	_warned[id] = true
+	push_error("challenge_dials: dial '%s' ignored: %s" % [key, why])
 
 
 static func _coerce(key: String, raw: Variant) -> Variant:
@@ -150,9 +183,16 @@ static func period(boss: String, base: float, phase: int) -> float:
 	return maxf(WARN_GAP, base * f(boss + ".period_mult") * by_phase(boss + ".period_by_phase", phase))
 
 
-# A boss warn seconds, scaled by tell_mult and then floored at TELL_FLOOR.
-static func tell(boss: String, seconds: float) -> float:
-	return maxf(TELL_FLOOR, seconds * f(boss + ".tell_mult"))
+# A boss warn seconds, scaled by tell_mult but never under min(seconds, floor), where floor is
+# the larger of TELL_FLOOR and the module's own floor (Hazard.MIN_WARN, the Mind's WARN_FLOOR),
+# so the number is what the committed hazard shows. Identity at tell_mult 1.
+static func tell(boss: String, seconds: float, module_floor := 0.0) -> float:
+	return floored(seconds, f(boss + ".tell_mult"), module_floor)
+
+
+static func floored(seconds: float, mult: float, module_floor := 0.0) -> float:
+	var floor_s := maxf(TELL_FLOOR, module_floor)
+	return maxf(minf(seconds, floor_s), seconds * mult)
 
 
 # A punish window (seconds).

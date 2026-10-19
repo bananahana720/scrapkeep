@@ -100,6 +100,9 @@ func _physics_process(delta: float) -> void:
 		_brace_due = true
 		_attack_clock = minf(_attack_clock, 0.0)
 	phase = next
+	for hand in hands:
+		if is_instance_valid(hand):
+			hand.boss_phase = phase
 	_step_attacks(delta)
 	if clock < Rules.INTRO_SECONDS:
 		return
@@ -159,6 +162,7 @@ func _commit_attack(family := "") -> void:
 		_family = String(d["family"])
 		if d.has("verb"):
 			_plate_verb = String(d["verb"])
+			_combo_left = -1  # the plate's weak window ends any combo
 			_plate_until = clock + h.warn_seconds + h.live_seconds + ChallengeDials.punish("mind", MindAttacks.PLATE_WINDOW)
 		ctx.events.boss_attack_telegraphed.emit(String(d["id"]), h.warn_seconds)
 	var ledger: Dictionary = ctx.run.get_meta("boss_attacks", {})
@@ -236,6 +240,7 @@ func _send_hand() -> void:
 	flat = flat.limit_length(PAD_RADIUS - HAND_EDGE)
 	var hand = ctx.spawner.spawn_enemy("mind_hand", drop_point(center.x + flat.x, center.z + flat.z))
 	if hand != null:
+		hand.boss_phase = phase
 		hands.append(hand)
 
 

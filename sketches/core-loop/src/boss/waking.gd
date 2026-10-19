@@ -291,6 +291,7 @@ func _step_attacks(delta: float) -> void:
 				elif carving:
 					_bank_ride(attack["family"], ball)
 			if h.is_live() and attack["family"] == "bore" and h.attack_id.begins_with("waking_bore_0"):
+				_combo_left = -1  # a punish window ends any combo
 				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + ChallengeDials.punish("waking", BORE_JAM)
 			if not (h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5):
 				done = false
@@ -361,6 +362,7 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 		_discover(CodexEntries.WAKING_LIP_DROP, at)
 	if clock - _dropped_at >= ChallengeDials.punish("waking", BREACH_WINDOW):
 		return
+	_combo_left = -1  # a punish window ends any combo
 	_discover(CodexEntries.WAKING_BREACH_SLAM, at)
 	_breach_floors[floors.current_floor()] = true
 	if _breach_floors.size() >= 2:

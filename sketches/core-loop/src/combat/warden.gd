@@ -681,7 +681,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 # Challenge dial warden.pulse_cycle_mult: the pulse cycle never drops under the boss tell floor,
 # and the telegraph is PULSE_TELEGRAPH, never longer than the cycle.
 static func pulse_cycle() -> float:
-	return maxf(ChallengeDials.TELL_FLOOR, PULSE_CYCLE * ChallengeDials.f("warden.pulse_cycle_mult"))
+	return ChallengeDials.floored(PULSE_CYCLE, ChallengeDials.f("warden.pulse_cycle_mult"))
 
 
 static func pulse_telegraph() -> float:
