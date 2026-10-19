@@ -7,7 +7,8 @@ extends RefCounted
 # tuning the bands is this file and nothing else.
 #
 #   Novice:  late reactions, misses many tells, basic attack and ram only.
-#   Learner: reads most tells, uses the base kit, and improves across attempts at a boss.
+#   Learner: reads most tells, plays the core verbs first and the base kit from attempt 3, and
+#            improves across attempts at a boss.
 #   Expert:  fast reads and the full kit.
 #
 # What the bands mean, and do not:
@@ -19,8 +20,12 @@ extends RefCounted
 #     (DECISIONS direction row: enemies "build on the core verbs (roll, ram, grapple, carve)") and
 #     every park Warden is a harpoon anchor. The Expert-only harpoon play is the chain hand.
 #   - The Learner model: attempt is a command-line index (--attempt=N). Reaction and read chance move
-#     linearly with it, the kit is fixed, every attempt plays the same game seed, and nothing is
-#     learned inside a run.
+#     linearly with it, every attempt plays the same game seed, and nothing is learned inside a run.
+#     The kit steps instead: attempts 1 and 2 play the core verbs (harpoon, line cast, plant), and
+#     from kit_learn_attempt (3) the Learner has found weak points, specials and the ultimate, the
+#     base kit. A first-timer does not yet use the slot kit, and read and reaction alone barely
+#     separate a Learner from an Expert, because most bot damage is plan-driven. Attempt 5 and later
+#     are the base kit with the last reaction and read values.
 #   - A Novice never runs the latch arm, so its non-wins at Wardens are mostly stalls. It still runs
 #     the dam's spillway sheet hand, which is a ram, but below the full kit the hand plays by sight:
 #     it launches only at an open sheet it has seen for its reaction time and read this cycle, keeps
@@ -38,14 +43,15 @@ const BANDS := {
 	"expert": {"reaction_first": 0.25, "reaction_last": 0.25, "read_first": 1.0, "read_last": 1.0,
 		"learn_attempts": 1, "kit": "full"},
 	"learner": {"reaction_first": 0.45, "reaction_last": 0.30, "read_first": 0.65, "read_last": 0.92,
-		"learn_attempts": 5, "kit": "base"},
+		"learn_attempts": 5, "kit": "core", "kit_learn_attempt": 3, "kit_learned": "base"},
 	"novice": {"reaction_first": 0.70, "reaction_last": 0.70, "read_first": 0.35, "read_last": 0.35,
 		"learn_attempts": 1, "kit": "basic"},
 }
 
 # What each kit level lets the driver's hands do. The Novice only fires its gun, rams,
 # jumps and boosts, which are not verbs here because every band has them. "active" and
-# "chain" are in neither list: only the full kit has them.
+# "chain" are in neither list: only the full kit has them. Kits nest: core, base, full.
+const CORE_VERBS := ["harpoon", "line_cast", "plant"]
 const BASE_VERBS := ["special", "line_cast", "plant", "harpoon", "weak_points", "ultimate"]
 
 var name := "expert"
@@ -73,6 +79,8 @@ static func make(band_name: String, attempt_number: int, seed_value: int):
 	band.reaction_s = lerpf(float(row["reaction_first"]), float(row["reaction_last"]), t)
 	band.read_chance = lerpf(float(row["read_first"]), float(row["read_last"]), t)
 	band.kit = String(row["kit"])
+	if row.has("kit_learn_attempt") and band.attempt >= int(row["kit_learn_attempt"]):
+		band.kit = String(row["kit_learned"])
 	band._rng.seed = hash(["band", key, band.attempt, seed_value])
 	return band
 
@@ -101,6 +109,8 @@ func allows(verb: String) -> bool:
 		return true
 	if kit == "base":
 		return verb in BASE_VERBS
+	if kit == "core":
+		return verb in CORE_VERBS
 	return false
 
 

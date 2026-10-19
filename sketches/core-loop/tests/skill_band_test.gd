@@ -49,6 +49,30 @@ func _unit(t) -> void:
 			gave.append(verb)
 	t.check("novice allows none of the kit verbs", gave.is_empty(), "allowed %s" % [gave])
 	var learner = SkillBand.make("learner", 1, 7)
+	for attempt in [1, 2, 3, 4, 5, 9]:
+		var want := "core" if attempt < 3 else "base"
+		t.eq("learner attempt %d kit" % attempt, SkillBand.make("learner", attempt, 7).kit, want)
+		t.eq("learner attempt %d describe reports the kit" % attempt, SkillBand.make("learner", attempt, 7).describe()["kit"], want)
+	var core = SkillBand.make("learner", 2, 7)
+	var core_bad := []
+	for verb in SkillBand.CORE_VERBS:
+		if not core.allows(verb):
+			core_bad.append(verb)
+	for verb in ["special", "weak_points", "ultimate", "active", "chain"]:
+		if core.allows(verb):
+			core_bad.append(verb)
+	t.check("core allows harpoon, line_cast and plant only", core_bad.is_empty() and not core.timed_ultimate() and not core.timed_sheet(),
+		"wrong %s" % [core_bad])
+	var kits_nest := true
+	var base_band = SkillBand.make("learner", 3, 7)
+	for verb in SkillBand.CORE_VERBS:
+		kits_nest = kits_nest and base_band.allows(verb) and expert.allows(verb)
+	for verb in SkillBand.BASE_VERBS:
+		kits_nest = kits_nest and expert.allows(verb) and base_band.allows(verb)
+	t.check("core is within base is within full", kits_nest)
+	t.eq("expert kit is full", expert.kit, "full")
+	t.eq("novice kit is basic", novice.kit, "basic")
+	learner = SkillBand.make("learner", 5, 7)
 	t.check("learner has the base kit, untimed ultimate, no actives or chain",
 		learner.allows("special") and learner.allows("line_cast") and learner.allows("plant") and learner.allows("harpoon")
 		and learner.allows("weak_points") and learner.allows("ultimate") and not learner.timed_ultimate()
