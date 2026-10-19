@@ -76,7 +76,13 @@ const DRESSED := {"hoodoo_gust_lip_1": "mesa_lip_kicker", "hoodoo_gust_lip_2": "
 	"kick_emid_1": "mesa_lip_kicker_24x6x36", "kick_emid_2": "mesa_lip_kicker_24x6x36", "kick_wmid_4": "mesa_lip_kicker_24x6x36",
 	"kick_wmid_5": "mesa_lip_kicker_24x6x36", "kick_clast_6": "mesa_lip_kicker_24x6x36", "kick_nlast_7": "mesa_lip_kicker_24x6x36",
 	"kick_nlast_8": "mesa_lip_kicker_24x6x36", "kick_nlast_9": "mesa_lip_kicker_24x6x36",
-	"kick_wlast_12": "mesa_lip_kicker_24x6x36", "kick_slast_14": "mesa_lip_kicker_24x6x36"}
+	"kick_wlast_12": "mesa_lip_kicker_24x6x36", "kick_slast_14": "mesa_lip_kicker_24x6x36",
+	# 2026-10-18 content lane, crown greybox rows: the last ten stand-ins. The stamped washes and ramps are dressed by the
+	# park's ground scatter (their stamp is the whole shape); the ledges, the kicker and the net's two 80 m cells (net_deck does
+	# not tile, so gauntlet_net is split in two) take their ride pieces.
+	"west_wash": "scatter", "east_wash": "scatter", "meander": "scatter", "meander_bend": "scatter",
+	"watch_butte_crest": "scatter", "drop_ramp": "scatter", "kick_wlast_11": "mesa_lip_kicker_24x6x36",
+	"crown_collector": "viga_pivot", "alcove_ledge": "cliff_dwelling_row", "gauntlet_net": "net_deck", "gauntlet_net_2": "net_deck"}
 const POCKETS := {
 	"camp_signal": {"role": "online", "rarities": ["common"]},
 	"cache_turnstone": {"role": "reward", "rarities": ["rare"]},
@@ -299,8 +305,8 @@ static func pin_failures(park: Dictionary) -> Array:
 			if recipe != "":
 				out.append("%s carries recipe %s, want none (left unplaced)" % [id, recipe])
 		elif DRESSED.has(id):
-			if recipe != DRESSED[id] or not ResourceLoader.exists(ParkRecipes.GLB_DIR + recipe + ".glb"):
-				out.append("%s carries recipe %s, want %s with its GLB" % [id, recipe, DRESSED[id]])
+			if recipe != DRESSED[id] or not (ParkRecipes.SENSOR_ONLY.has(recipe) or ResourceLoader.exists(ParkRecipes.GLB_DIR + recipe + ".glb")):
+				out.append("%s carries recipe %s, want %s%s" % [id, recipe, DRESSED[id], "" if ParkRecipes.SENSOR_ONLY.has(DRESSED[id]) else " with its GLB"])
 		elif recipe != "greybox:" + String(r["element"]) and not (r["element"] == "anchor_field" and ParkRecipes.ANCHOR_KITS.has(recipe)):
 			out.append("%s carries recipe %s, want greybox:%s" % [id, recipe, r["element"]])
 		if id.ends_with("_rise"):

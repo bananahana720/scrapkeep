@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "a64f82572a9782f211ed87fb50c828ca234f68ee9176e789fb5d1d38576b33bf",
+  "bake_sha256": "745d2be6dd8ccf25d5a3344e87f4bda26376269c8113a14b5f15b455f0813a77",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1006901,
-  "edges": 328600,
+  "bytes": 1006282,
+  "edges": 328316,
   "first_failed": "",
   "flags": {
-    "deck": 1427,
-    "door_ok": 39657,
+    "deck": 1370,
+    "door_ok": 39680,
     "line": 387,
-    "open": 40806,
-    "sight_ok": 9111,
+    "open": 40828,
+    "sight_ok": 9108,
     "under": 0
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "7e637cf0d1543967c1ae2844dd3a13d53e3b5e9dd0e8d8aec9c0efe025948c71",
+  "graph_sha256": "2b16d0bd339b163395a2ff76cea02b59781c9db0bf90c8c1532fca761f429fff",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
-  "nodes": 41828,
-  "park_sha256": "890119ad6ac1acc8f36efb8ffcd3eea5c28047abd9112012229a025c59739bab",
+  "nodes": 41771,
+  "park_sha256": "6f1da141e48c79743d1ed624bae33d2acb34cf3d6a87fda09c8e740d919916e9",
   "pockets": [
     {
       "clear_ring": [],
@@ -199,7 +199,7 @@
         "viable": true
       },
       {
-        "cost": 1299.9,
+        "cost": 1305.0,
         "d_landmark": 251.3,
         "name": "gauntlet_shelf",
         "on_route": false,
@@ -245,6 +245,14 @@
         "on_route": false,
         "rank": 0,
         "viable": false
+      },
+      {
+        "cost": 1136.9,
+        "d_landmark": 431.1,
+        "name": "gauntlet_net_2",
+        "on_route": false,
+        "rank": 4,
+        "viable": true
       },
       {
         "cost": 1131.9,
@@ -347,7 +355,7 @@
         "d_landmark": 607.9,
         "name": "east_ribs",
         "on_route": false,
-        "rank": 4,
+        "rank": 5,
         "viable": true
       },
       {
@@ -387,7 +395,7 @@
         "d_landmark": 422.6,
         "name": "meander_bend",
         "on_route": false,
-        "rank": 5,
+        "rank": 6,
         "viable": true
       },
       {
@@ -416,7 +424,7 @@
       },
       {
         "cost": 529.1,
-        "d_landmark": 1010.4,
+        "d_landmark": 1012.4,
         "name": "bajada_rim_lip_w",
         "on_route": false,
         "rank": 0,
@@ -471,11 +479,11 @@
         "viable": true
       }
     ],
-    "count": 71,
+    "count": 72,
     "crossings": {
-      "drop": 27,
+      "drop": 30,
       "ride": 9,
-      "walk": 77
+      "walk": 76
     },
     "hidden": [
       {
