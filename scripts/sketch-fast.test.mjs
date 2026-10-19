@@ -294,4 +294,7 @@ test("a base timeout counts only against a head that also timed out; a lane stop
   assert.equal(usableBaseRun(slow, slow), slow);
   assert.equal(usableBaseRun(red, stopped), null);
   assert.equal(usableBaseRun(red, null), null);
+  const outsideKill = { ok: false, exit: null, killed: false, timedOut: false };
+  assert.equal(usableBaseRun(red, outsideKill), null);
+  assert.equal(usableBaseRun(slow, outsideKill), outsideKill);
 });

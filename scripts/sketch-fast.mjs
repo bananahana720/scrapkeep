@@ -398,12 +398,12 @@ export function cacheableBaseRun(run) {
   return run.exit !== null && !run.killed && !run.timedOut;
 }
 
-// The base run that may judge this run's verdict. A lane stop says nothing; a base timeout says
-// "red on the base too" only when the head rerun timed out as well, else a crash on the head
-// would hide behind a load timeout on the base.
+// The base run that may judge this run's verdict. A lane stop says nothing; a base timeout or
+// outside kill (exit null, say the OOM killer) says "red on the base too" only when the head rerun
+// timed out as well, else a crash on the head would hide behind a load failure on the base.
 export function usableBaseRun(rerun, baseRun) {
   if (!baseRun || baseRun.killed) return null;
-  if (baseRun.timedOut && !rerun.timedOut) return null;
+  if ((baseRun.timedOut || baseRun.exit === null) && !rerun.timedOut) return null;
   return baseRun;
 }
 
@@ -635,6 +635,7 @@ async function main() {
     if (!existsSync(path.join(baseSketch, test))) return null;
     if (cancel.cancelled || prRed) return null;
     baseImport ??= inLane(async () => {
+      if (prRed) return false;
       const args = ["--headless", "--path", baseSketch];
       if ((await importAsync(args)) === 0) return true;
       log(`${SKETCH} (base) import failed; retrying once`);
@@ -660,10 +661,14 @@ async function main() {
       baseCache[test] = { ok: run.ok, checks: run.checks };
       // Another lane on this base tree may have written since; keep its entries, replace atomically.
       const merged = { ...readBaseCache(), ...baseCache };
-      mkdirSync(path.dirname(baseCacheFile), { recursive: true });
-      const temp = `${baseCacheFile}.${process.pid}.tmp`;
-      writeFileSync(temp, JSON.stringify({ binary: binaryId, tree: baseTreeId, tests: merged }, null, 2) + "\n");
-      renameSync(temp, baseCacheFile);
+      try {
+        mkdirSync(path.dirname(baseCacheFile), { recursive: true });
+        const temp = `${baseCacheFile}.${process.pid}.tmp`;
+        writeFileSync(temp, JSON.stringify({ binary: binaryId, tree: baseTreeId, tests: merged }, null, 2) + "\n");
+        renameSync(temp, baseCacheFile);
+      } catch (error) {
+        log(`  base verdict cache not written (${error.message}); the verdict still stands`);
+      }
     }
     return run;
   }
