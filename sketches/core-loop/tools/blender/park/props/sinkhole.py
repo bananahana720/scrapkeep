@@ -264,14 +264,14 @@ def tin_cart(p, v, rng):
         # Tailings and two pails sitting in the bin.
         p.ico(0.8, (0, 0, 1.18), LIME_D if over else BASALT, scale=(1.2, 0.8, 0.28), subdiv=0, style="soft")
         for x in (-0.5, 0.5):
-            p.cyl(0.26, 0.4, (x, 0.0, 1.35), C["iron_light"], segs=6, r2=0.3, style="hard")
+            p.cyl(0.26, 0.4, (x, 0.0, 1.18), C["iron_light"], segs=6, r2=0.3, style="hard")
         # Bone tag on a short peg at the front.
-        p.cyl(0.04, 0.4, (1.2, -0.45, 1.2), C["timber_dark"], segs=6)
-        p.box((0.28, 0.06, 0.38), (1.2, -0.45, 1.5), C["bone"], style="hard_smooth")
+        p.cyl(0.04, 0.3, (1.2, -0.45, 1.1), C["timber_dark"], segs=6)
+        p.box((0.28, 0.06, 0.34), (1.2, -0.45, 1.3), C["bone"], style="hard_smooth")
         for k in range(3):
-            p.box((0.04, 0.02, 0.2), (1.12 + k * 0.08, -0.49, 1.5), C["charcoal"], style="fine")
+            p.box((0.04, 0.02, 0.2), (1.12 + k * 0.08, -0.49, 1.3), C["charcoal"], style="fine")
         if over:
-            fern_tuft(p, rng, (0, 0, 1.3), 6, 1.0, FERN, 0.45)
+            fern_tuft(p, rng, (0, 0, 1.2), 6, 0.7, FERN, 0.4)
             p.ico(0.55, (-1.2, 0.6, 0.35), LICHEN, scale=(1.4, 1.0, 0.4), subdiv=0, style="soft")
         else:
             p.cyl(0.2, 0.34, (1.8, 0.8, 0.17), C["iron_light"], segs=6, r2=0.23, style="hard")  # pail on ground
@@ -401,9 +401,9 @@ def hose_reel(p, v, rng):
     p.box((0.2, 1.3, 0.2), (-0.8, 0, 0.1), C["timber_dark"])
     p.box((0.2, 1.3, 0.2), (0.8, 0, 0.1), C["timber_dark"])
     if v == "a":
-        zc = 0.9
+        zc = 0.72
         for s in (-1, 1):
-            p.cyl(0.75, 0.1, (0, s * 0.45, zc), C["timber_pale"], segs=6, rot=(FLAT, 0, 0), style="hard_smooth")
+            p.cyl(0.66, 0.1, (0, s * 0.45, zc), C["timber_pale"], segs=6, rot=(FLAT, 0, 0), style="hard_smooth")
             p.beam((s * 0.7, s * 0.55, 0.2), (s * 0.5, s * 0.5, zc), 0.14, C["timber_dark"])
         p.cyl(0.25, 0.9, (0, 0, zc), C["timber_dark"], segs=6, rot=(FLAT, 0, 0), style="hard_smooth")
         for k in range(5):
@@ -454,7 +454,7 @@ def cave_fern(p, v, rng):
         fern_tuft(p, rng, (0.6, 0.4, 0), 6, 1.0, FERN_D, 0.4)
         p.ico(0.5, (0, 0, 0.05), LICHEN, scale=(1.6, 1.6, 0.3), subdiv=0, style="soft")
     elif v == "b":
-        fern_tuft(p, rng, (0, 0, 0), 11, 2.4, FERN, 0.6, 0.5)
+        fern_tuft(p, rng, (0, 0, 0), 11, 2.0, FERN, 0.55, 0.5)
         fern_tuft(p, rng, (-0.7, 0.5, 0), 8, 1.4, FERN_D, 0.45)
         fern_tuft(p, rng, (0.8, -0.5, 0), 7, 1.1, FERN, 0.4)
         p.ico(0.6, (0, 0, 0.1), tint(LICHEN, rng), scale=(1.7, 1.7, 0.3), subdiv=0, style="soft")
