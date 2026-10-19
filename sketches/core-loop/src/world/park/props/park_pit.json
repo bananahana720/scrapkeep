@@ -3,6 +3,345 @@
  "map": "park_pit",
  "kit": "res://assets/models/park/props/pit/manifest.json",
  "templates": {
+  "low_marker": {
+   "story": "Bench marker knocked flat, the old bell on its side, lagging dropped where the crew left.",
+   "props": [
+    {
+     "kind": "bench_sign",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 24,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "shift_bell",
+     "v": "b",
+     "at": [
+      2.6,
+      1.4
+     ],
+     "yaw_deg": -70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -3.2,
+      1.6
+     ],
+     "yaw_deg": 50,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "core_trays",
+     "v": "b",
+     "at": [
+      3.8,
+      -1.8
+     ],
+     "yaw_deg": -15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -4.5,
+      -0.8
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      1.0,
+      3.6
+     ],
+     "yaw_deg": 20,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -1.5,
+      -3.2
+     ],
+     "yaw_deg": 70,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "a",
+     "at": [
+      5.2,
+      2.6
+     ],
+     "yaw_deg": -40,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "low_cores": {
+   "story": "Spilled drill-core trays beside dropped lagging, scrub taking the cuttings.",
+   "props": [
+    {
+     "kind": "core_trays",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "core_trays",
+     "v": "b",
+     "at": [
+      3.6,
+      -1.4
+     ],
+     "yaw_deg": -35,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "a",
+     "at": [
+      -3.2,
+      0.8
+     ],
+     "yaw_deg": 65,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -4.4,
+      -1.6
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      2.6,
+      2.8
+     ],
+     "yaw_deg": 90,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      5.2,
+      1.2
+     ],
+     "yaw_deg": -60,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -1.0,
+      -3.4
+     ],
+     "yaw_deg": 120,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "low_scrub": {
+   "story": "Bursage and cholla thickening along the haul road's edge.",
+   "props": [
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      2.6,
+      1.4
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -2.8,
+      1.0
+     ],
+     "yaw_deg": -40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      1.2,
+      -2.8
+     ],
+     "yaw_deg": 70,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -4.6,
+      -1.6
+     ],
+     "yaw_deg": 10,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      4.4,
+      -1.8
+     ],
+     "yaw_deg": -80,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -1.0,
+      3.8
+     ],
+     "yaw_deg": 160,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "low_bell_tail": {
+   "story": "The fallen shift bell with its rope tail, a sign board face-up beside it.",
+   "props": [
+    {
+     "kind": "shift_bell",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bench_sign",
+     "v": "b",
+     "at": [
+      3.4,
+      0.8
+     ],
+     "yaw_deg": -30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -3.0,
+      1.0
+     ],
+     "yaw_deg": 55,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "core_trays",
+     "v": "b",
+     "at": [
+      1.0,
+      -3.2
+     ],
+     "yaw_deg": 90,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "a",
+     "at": [
+      -4.4,
+      -1.6
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      5.0,
+      -2.2
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      3.6,
+      3.4
+     ],
+     "yaw_deg": -100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
   "lunch_spot": {
    "story": "Crew lunch spot: a pail shelf, offcuts to sit on, scrub taking the shade.",
    "props": [
@@ -117,8 +456,8 @@
      "tilt_deg": 0
     },
     {
-     "kind": "rock_bucket",
-     "v": "b",
+     "kind": "bursage",
+     "v": "c",
      "at": [
       7.5,
       -5.5
@@ -158,812 +497,6 @@
      ],
      "yaw_deg": -134,
      "scale": 0.88,
-     "tilt_deg": 0
-    }
-   ]
-  },
-  "fallen_marker": {
-   "story": "Bench marker knocked flat, the old bell on its side, lagging dropped where the crew left.",
-   "props": [
-    {
-     "kind": "bench_sign",
-     "v": "b",
-     "at": [
-      -1,
-      -1.5
-     ],
-     "yaw_deg": 24,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "shift_bell",
-     "v": "b",
-     "at": [
-      2.5,
-      1.2
-     ],
-     "yaw_deg": -70,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "b",
-     "at": [
-      -3.5,
-      1.8
-     ],
-     "yaw_deg": 50,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "core_trays",
-     "v": "b",
-     "at": [
-      4.5,
-      -2.2
-     ],
-     "yaw_deg": -15,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      -5.5,
-      -1.0
-     ],
-     "yaw_deg": 80,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      1.0,
-      3.8
-     ],
-     "yaw_deg": -120,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      6.5,
-      1.5
-     ],
-     "yaw_deg": 20,
-     "scale": 0.95,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      0.2,
-      5.7
-     ],
-     "yaw_deg": 0,
-     "scale": 0.95,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      -8.4,
-      3.6
-     ],
-     "yaw_deg": 1,
-     "scale": 0.92,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      6.8,
-      2.2
-     ],
-     "yaw_deg": -57,
-     "scale": 1.14,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      -3.9,
-      -5.3
-     ],
-     "yaw_deg": -51,
-     "scale": 0.98,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "b",
-     "at": [
-      8.0,
-      -0.7
-     ],
-     "yaw_deg": -112,
-     "scale": 0.96,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      -1.5,
-      4.5
-     ],
-     "yaw_deg": 86,
-     "scale": 0.95,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      1.1,
-      5.6
-     ],
-     "yaw_deg": -94,
-     "scale": 1.06,
-     "tilt_deg": 0
-    }
-   ]
-  },
-  "scrub_patch": {
-   "story": "A scrub patch on thin ground: bursage, cholla and a stone or two.",
-   "props": [
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      0,
-      0
-     ],
-     "yaw_deg": 30,
-     "scale": 1.1,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      3.0,
-      1.5
-     ],
-     "yaw_deg": 120,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      -3.2,
-      1.0
-     ],
-     "yaw_deg": -40,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      -1.0,
-      -3.5
-     ],
-     "yaw_deg": 70,
-     "scale": 0.95,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      4.6,
-      -1.8
-     ],
-     "yaw_deg": 10,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "b",
-     "at": [
-      -5.5,
-      -2.5
-     ],
-     "yaw_deg": -80,
-     "scale": 0.8,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      -8.0,
-      -0.5
-     ],
-     "yaw_deg": 55,
-     "scale": 1.11,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      9.4,
-      3.7
-     ],
-     "yaw_deg": 77,
-     "scale": 1.03,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      -3.2,
-      -3.6
-     ],
-     "yaw_deg": 135,
-     "scale": 0.92,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      10.2,
-      -3.2
-     ],
-     "yaw_deg": -55,
-     "scale": 1.02,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "b",
-     "at": [
-      -5.0,
-      9.4
-     ],
-     "yaw_deg": -167,
-     "scale": 1.01,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      7.1,
-      -5.9
-     ],
-     "yaw_deg": 65,
-     "scale": 1.11,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      -5.3,
-      -1.6
-     ],
-     "yaw_deg": 17,
-     "scale": 0.99,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "a",
-     "at": [
-      -2.8,
-      -4.8
-     ],
-     "yaw_deg": -48,
-     "scale": 0.9,
-     "tilt_deg": 0
-    }
-   ]
-  },
-  "haul_graveyard": {
-   "story": "Where the last haul truck died: tyre flat, bed tipped, lagging and scrub left around it.",
-   "props": [
-    {
-     "kind": "haul_truck",
-     "v": "*",
-     "at": [
-      0,
-      6
-     ],
-     "yaw_deg": 22,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "b",
-     "at": [
-      -6,
-      -2
-     ],
-     "yaw_deg": -35,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      -9,
-      1
-     ],
-     "yaw_deg": 80,
-     "scale": 1.1,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      8,
-      -1
-     ],
-     "yaw_deg": 10,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      5,
-      -4
-     ],
-     "yaw_deg": 60,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "water_tank",
-     "v": "b",
-     "at": [
-      -10,
-      8
-     ],
-     "yaw_deg": -15,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "lunch_shelf",
-     "v": "b",
-     "at": [
-      8.5,
-      -4.5
-     ],
-     "yaw_deg": -30,
-     "scale": 0.95,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "b",
-     "at": [
-      10,
-      3
-     ],
-     "yaw_deg": 0,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "c",
-     "at": [
-      3,
-      -5.5
-     ],
-     "yaw_deg": 95,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      5.1,
-      3.6
-     ],
-     "yaw_deg": 68,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      4.6,
-      -5.1
-     ],
-     "yaw_deg": 111,
-     "scale": 0.96,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      -0.4,
-      4.6
-     ],
-     "yaw_deg": 63,
-     "scale": 0.97,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      6.0,
-      2.7
-     ],
-     "yaw_deg": -105,
-     "scale": 1.13,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "b",
-     "at": [
-      5.4,
-      -7.3
-     ],
-     "yaw_deg": 127,
-     "scale": 0.98,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      0.8,
-      7.9
-     ],
-     "yaw_deg": -88,
-     "scale": 0.95,
-     "tilt_deg": 0
-    }
-   ]
-  },
-  "drill_yard": {
-   "story": "Powder-cut drill rig left in its yard, steels and cuttings spilled toward the track.",
-   "props": [
-    {
-     "kind": "drill_rig_wreck",
-     "v": "*",
-     "at": [
-      0,
-      6
-     ],
-     "yaw_deg": -20,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "a",
-     "at": [
-      -6,
-      -2
-     ],
-     "yaw_deg": 30,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "b",
-     "at": [
-      8,
-      0
-     ],
-     "yaw_deg": -60,
-     "scale": 1.1,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "c",
-     "at": [
-      5,
-      -4
-     ],
-     "yaw_deg": -10,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "b",
-     "at": [
-      -9,
-      3
-     ],
-     "yaw_deg": 70,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "core_trays",
-     "v": "a",
-     "at": [
-      -3.5,
-      -5
-     ],
-     "yaw_deg": 20,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      3,
-      -7
-     ],
-     "yaw_deg": 130,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      10,
-      -3
-     ],
-     "yaw_deg": -100,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      -5.1,
-      7.7
-     ],
-     "yaw_deg": 87,
-     "scale": 1.03,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      -1.1,
-      -4.3
-     ],
-     "yaw_deg": -161,
-     "scale": 0.95,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      1.2,
-      -4.3
-     ],
-     "yaw_deg": -32,
-     "scale": 0.85,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      5.1,
-      -4.6
-     ],
-     "yaw_deg": 74,
-     "scale": 0.89,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "b",
-     "at": [
-      -2.2,
-      6.3
-     ],
-     "yaw_deg": -53,
-     "scale": 0.88,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      5.1,
-      2.9
-     ],
-     "yaw_deg": 63,
-     "scale": 0.99,
-     "tilt_deg": 0
-    }
-   ]
-  },
-  "rope_yard": {
-   "story": "Hoist-rope wagon parked by its bell, the long rope coiled where the shift ended.",
-   "props": [
-    {
-     "kind": "rope_drum_wagon",
-     "v": "*",
-     "at": [
-      0,
-      6
-     ],
-     "yaw_deg": 30,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "shift_bell",
-     "v": "a",
-     "at": [
-      -8,
-      0
-     ],
-     "yaw_deg": -30,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "a",
-     "at": [
-      5,
-      -4
-     ],
-     "yaw_deg": -75,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      8,
-      -1
-     ],
-     "yaw_deg": 15,
-     "scale": 1.1,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "a",
-     "at": [
-      -10,
-      5
-     ],
-     "yaw_deg": 0,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      -4,
-      -4
-     ],
-     "yaw_deg": 100,
-     "scale": 0.95,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "lunch_shelf",
-     "v": "a",
-     "at": [
-      7,
-      3
-     ],
-     "yaw_deg": 180,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      2,
-      -6
-     ],
-     "yaw_deg": 30,
-     "scale": 0.9,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      0.5,
-      -4.4
-     ],
-     "yaw_deg": -51,
-     "scale": 0.95,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "cholla",
-     "v": "c",
-     "at": [
-      -1.6,
-      -3.7
-     ],
-     "yaw_deg": -29,
-     "scale": 0.97,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "c",
-     "at": [
-      6.2,
-      3.3
-     ],
-     "yaw_deg": 1,
-     "scale": 1.09,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rock_bucket",
-     "v": "b",
-     "at": [
-      -1.8,
-      6.9
-     ],
-     "yaw_deg": 156,
-     "scale": 1.03,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "timber_lagging",
-     "v": "b",
-     "at": [
-      3.8,
-      -2.0
-     ],
-     "yaw_deg": -74,
-     "scale": 0.89,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "bursage",
-     "v": "a",
-     "at": [
-      -0.3,
-      8.9
-     ],
-     "yaw_deg": -160,
-     "scale": 1.03,
      "tilt_deg": 0
     }
    ]
@@ -1093,8 +626,8 @@
      "tilt_deg": 0
     },
     {
-     "kind": "rock_bucket",
-     "v": "b",
+     "kind": "bursage",
+     "v": "c",
      "at": [
       2.6,
       4.2
@@ -1252,8 +785,8 @@
      "tilt_deg": 0
     },
     {
-     "kind": "rock_bucket",
-     "v": "b",
+     "kind": "bursage",
+     "v": "c",
      "at": [
       3.5,
       -5.6
@@ -1411,8 +944,8 @@
      "tilt_deg": 0
     },
     {
-     "kind": "rock_bucket",
-     "v": "b",
+     "kind": "bursage",
+     "v": "c",
      "at": [
       9.4,
       -0.0
@@ -1570,8 +1103,8 @@
      "tilt_deg": 0
     },
     {
-     "kind": "rock_bucket",
-     "v": "b",
+     "kind": "bursage",
+     "v": "c",
      "at": [
       -6.1,
       8.7
@@ -1620,7 +1153,7 @@
     },
     {
      "kind": "windsock",
-     "v": "a",
+     "v": "b",
      "at": [
       -6,
       5
@@ -1718,8 +1251,8 @@
      "tilt_deg": 0
     },
     {
-     "kind": "rock_bucket",
-     "v": "b",
+     "kind": "bursage",
+     "v": "c",
      "at": [
       -2.2,
       7.0
@@ -1762,778 +1295,1266 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "haul_graveyard": {
+   "story": "Where the last haul truck died: tyre flat, bed tipped, lagging and scrub left around it.",
+   "props": [
+    {
+     "kind": "haul_truck",
+     "v": "*",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 22,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -6,
+      -2
+     ],
+     "yaw_deg": -35,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -9,
+      1
+     ],
+     "yaw_deg": 80,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      8,
+      -1
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      5,
+      -4
+     ],
+     "yaw_deg": 60,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "water_tank",
+     "v": "b",
+     "at": [
+      -10,
+      8
+     ],
+     "yaw_deg": -15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_shelf",
+     "v": "b",
+     "at": [
+      8.5,
+      -4.5
+     ],
+     "yaw_deg": -30,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "b",
+     "at": [
+      10,
+      3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "c",
+     "at": [
+      3,
+      -5.5
+     ],
+     "yaw_deg": 95,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      5.1,
+      3.6
+     ],
+     "yaw_deg": 68,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      4.6,
+      -5.1
+     ],
+     "yaw_deg": 111,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -0.4,
+      4.6
+     ],
+     "yaw_deg": 63,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      6.0,
+      2.7
+     ],
+     "yaw_deg": -105,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      5.4,
+      -7.3
+     ],
+     "yaw_deg": 127,
+     "scale": 0.98,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      0.8,
+      7.9
+     ],
+     "yaw_deg": -88,
+     "scale": 0.95,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "drill_yard": {
+   "story": "Powder-cut drill rig left in its yard, steels and cuttings spilled toward the track.",
+   "props": [
+    {
+     "kind": "drill_rig_wreck",
+     "v": "*",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": -20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "a",
+     "at": [
+      -6,
+      -2
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "b",
+     "at": [
+      8,
+      0
+     ],
+     "yaw_deg": -60,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "c",
+     "at": [
+      5,
+      -4
+     ],
+     "yaw_deg": -10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "b",
+     "at": [
+      -9,
+      3
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "core_trays",
+     "v": "a",
+     "at": [
+      -3.5,
+      -5
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      3,
+      -7
+     ],
+     "yaw_deg": 130,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      10,
+      -3
+     ],
+     "yaw_deg": -100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -5.1,
+      7.7
+     ],
+     "yaw_deg": 87,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -1.1,
+      -4.3
+     ],
+     "yaw_deg": -161,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      1.2,
+      -4.3
+     ],
+     "yaw_deg": -32,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      5.1,
+      -4.6
+     ],
+     "yaw_deg": 74,
+     "scale": 0.89,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      -2.2,
+      6.3
+     ],
+     "yaw_deg": -53,
+     "scale": 0.88,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      5.1,
+      2.9
+     ],
+     "yaw_deg": 63,
+     "scale": 0.99,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "rope_yard": {
+   "story": "Hoist-rope wagon parked by its bell, the long rope coiled where the shift ended.",
+   "props": [
+    {
+     "kind": "rope_drum_wagon",
+     "v": "*",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "shift_bell",
+     "v": "a",
+     "at": [
+      -8,
+      0
+     ],
+     "yaw_deg": -30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "a",
+     "at": [
+      5,
+      -4
+     ],
+     "yaw_deg": -75,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      8,
+      -1
+     ],
+     "yaw_deg": 15,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "a",
+     "at": [
+      -10,
+      5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -4,
+      -4
+     ],
+     "yaw_deg": 100,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lunch_shelf",
+     "v": "a",
+     "at": [
+      7,
+      3
+     ],
+     "yaw_deg": 180,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rock_bucket",
+     "v": "b",
+     "at": [
+      2,
+      -6
+     ],
+     "yaw_deg": 30,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      0.5,
+      -4.4
+     ],
+     "yaw_deg": -51,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "cholla",
+     "v": "c",
+     "at": [
+      -1.6,
+      -3.7
+     ],
+     "yaw_deg": -29,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      6.2,
+      3.3
+     ],
+     "yaw_deg": 1,
+     "scale": 1.09,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "c",
+     "at": [
+      -1.8,
+      6.9
+     ],
+     "yaw_deg": 156,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_lagging",
+     "v": "b",
+     "at": [
+      3.8,
+      -2.0
+     ],
+     "yaw_deg": -74,
+     "scale": 0.89,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bursage",
+     "v": "a",
+     "at": [
+      -0.3,
+      8.9
+     ],
+     "yaw_deg": -160,
+     "scale": 1.03,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
   {
-   "id": "pit_01",
-   "template": "haul_graveyard",
+   "id": "pit_011",
+   "template": "low_scrub",
    "at": [
-    -590.0,
-    -710.0
-   ],
-   "yaw_deg": -146.3,
-   "near": "dump_berm_west, where the last haul truck died"
-  },
-  {
-   "id": "pit_04",
-   "template": "rope_yard",
-   "at": [
-    -500.0,
-    -480.0
-   ],
-   "yaw_deg": -15.5,
-   "near": "wash_berm, hoist-rope wagon parked by its bell,"
-  },
-  {
-   "id": "pit_05",
-   "template": "assay_post",
-   "at": [
-    -440.0,
-    -480.0
+    -409,
+    -494
    ],
    "yaw_deg": -35.6,
-   "near": "wash_berm, assay post at the bench face"
+   "near": "wash_berm, bursage and cholla thickening along "
   },
   {
-   "id": "pit_06",
-   "template": "scrub_patch",
+   "id": "pit_014",
+   "template": "low_cores",
    "at": [
-    -350.0,
-    -570.0
-   ],
-   "yaw_deg": -154.8,
-   "near": "slickrock_21, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_07",
-   "template": "scrub_patch",
-   "at": [
-    -340.0,
-    -400.0
+    -298,
+    -413
    ],
    "yaw_deg": -35.6,
-   "near": "slickrock_15, a scrub patch on thin ground"
+   "near": "slickrock_15, spilled drill-core trays beside drop"
   },
   {
-   "id": "pit_08",
-   "template": "scrub_patch",
+   "id": "pit_017",
+   "template": "low_marker",
    "at": [
-    -260.0,
-    -480.0
+    -248,
+    -408
    ],
    "yaw_deg": 144.4,
-   "near": "slickrock_8, a scrub patch on thin ground"
+   "near": "slickrock_8, bench marker knocked flat, the old b"
   },
   {
-   "id": "pit_09",
-   "template": "scrub_patch",
-   "at": [
-    -200.0,
-    -440.0
-   ],
-   "yaw_deg": 168.7,
-   "near": "slickrock_8, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_10",
+   "id": "pit_024",
    "template": "water_stop",
    "at": [
-    -290.0,
-    -360.0
+    -274,
+    -390
    ],
    "yaw_deg": -35.6,
    "near": "rim_haul_ramp, haul-road water stop"
   },
   {
-   "id": "pit_11",
-   "template": "cart_overgrown",
-   "at": [
-    -300.0,
-    -300.0
-   ],
-   "yaw_deg": -83.3,
-   "near": "rim_haul_ramp, ore cart gone to bursage on its stub"
-  },
-  {
-   "id": "pit_12",
-   "template": "fallen_marker",
-   "at": [
-    -200.0,
-    -310.0
-   ],
-   "yaw_deg": -51.3,
-   "near": "haul_ramp_berm, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_13",
-   "template": "scrub_patch",
-   "at": [
-    -250.0,
-    -240.0
-   ],
-   "yaw_deg": -39.3,
-   "near": "north_dive_windrow_2, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_14",
-   "template": "shift_corner",
-   "at": [
-    -220.0,
-    -150.0
-   ],
-   "yaw_deg": -112.0,
-   "near": "west_dive_windrow_2, shift corner"
-  },
-  {
-   "id": "pit_15",
-   "template": "bench_survey",
-   "at": [
-    -220.0,
-    -40.0
-   ],
-   "yaw_deg": -80.5,
-   "near": "bench3_west_berm, bench survey station"
-  },
-  {
-   "id": "pit_16",
-   "template": "haul_graveyard",
-   "at": [
-    -190.0,
-    40.0
-   ],
-   "yaw_deg": -75.6,
-   "near": "bench4_ore_bin, where the last haul truck died"
-  },
-  {
-   "id": "pit_18",
-   "template": "fallen_marker",
-   "at": [
-    -110.0,
-    0.0
-   ],
-   "yaw_deg": 104.4,
-   "near": "bench4_ore_bin, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_19",
+   "id": "pit_026",
    "template": "drill_yard",
    "at": [
-    -50.0,
-    -350.0
+    -430,
+    -483
    ],
-   "yaw_deg": 179.0,
-   "near": "rim_road_lane_2, powder-cut drill rig left in its yar"
+   "yaw_deg": -35.6,
+   "near": "wash_berm, powder-cut drill rig left in its yar"
   },
   {
-   "id": "pit_20",
-   "template": "rope_yard",
+   "id": "pit_028",
+   "template": "haul_graveyard",
    "at": [
-    -10.0,
-    -90.0
+    -318,
+    -396
    ],
-   "yaw_deg": -0.0,
-   "near": "bench2_north_lane, hoist-rope wagon parked by its bell,"
+   "yaw_deg": -35.6,
+   "near": "slickrock_15, where the last haul truck died"
   },
   {
-   "id": "pit_21",
-   "template": "assay_post",
+   "id": "pit_046",
+   "template": "low_scrub",
    "at": [
-    10.0,
-    -350.0
+    -232,
+    -246
    ],
-   "yaw_deg": 178.6,
-   "near": "rim_road_lane_2, assay post at the bench face"
+   "yaw_deg": -22.6,
+   "near": "north_dive_windrow_2, bursage and cholla thickening along "
   },
   {
-   "id": "pit_22",
-   "template": "scrub_patch",
+   "id": "pit_055",
+   "template": "lunch_spot",
    "at": [
-    100.0,
-    -310.0
+    -165,
+    -267
    ],
-   "yaw_deg": 126.9,
-   "near": "back_door_portal, a scrub patch on thin ground"
+   "yaw_deg": 166.3,
+   "near": "haul_ramp_berm, crew lunch spot"
   },
   {
-   "id": "pit_23",
-   "template": "water_stop",
+   "id": "pit_060",
+   "template": "low_cores",
    "at": [
-    140.0,
-    -260.0
+    -130,
+    -228
    ],
-   "yaw_deg": 126.9,
-   "near": "camp_ore_bin, haul-road water stop"
+   "yaw_deg": -0.6,
+   "near": "north_dive_windrow_2, spilled drill-core trays beside drop"
   },
   {
-   "id": "pit_25",
+   "id": "pit_069",
+   "template": "low_scrub",
+   "at": [
+    36,
+    -256
+   ],
+   "yaw_deg": 179.4,
+   "near": "rim_road_lane_2, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_071",
    "template": "cart_overgrown",
    "at": [
-    50.0,
-    -60.0
+    -114,
+    -262
    ],
-   "yaw_deg": -118.1,
-   "near": "bench4_dive_windrow_2, ore cart gone to bursage on its stub"
+   "yaw_deg": 179.4,
+   "near": "haul_ramp_berm, ore cart gone to bursage on its stub"
   },
   {
-   "id": "pit_26",
-   "template": "shift_corner",
+   "id": "pit_084",
+   "template": "low_marker",
    "at": [
-    200.0,
-    -230.0
+    56,
+    -222
    ],
-   "yaw_deg": 153.7,
-   "near": "camp_dive_windrow_3, shift corner"
+   "yaw_deg": -12.3,
+   "near": "camp_ore_bin, bench marker knocked flat, the old b"
   },
   {
-   "id": "pit_27",
-   "template": "fallen_marker",
+   "id": "pit_095",
+   "template": "low_marker",
    "at": [
-    160.0,
-    0.0
+    183,
+    -207
    ],
-   "yaw_deg": 69.9,
-   "near": "bench4_dive_windrow_1, bench marker knocked flat, the old b"
+   "yaw_deg": 159.2,
+   "near": "camp_dive_windrow_3, bench marker knocked flat, the old b"
   },
   {
-   "id": "pit_28",
+   "id": "pit_098",
+   "template": "low_bell_tail",
+   "at": [
+    220,
+    -170
+   ],
+   "yaw_deg": 169.4,
+   "near": "camp_dive_windrow_1, the fallen shift bell with its rope "
+  },
+  {
+   "id": "pit_1003",
+   "template": "low_scrub",
+   "at": [
+    321,
+    -121
+   ],
+   "yaw_deg": -29.1,
+   "near": "bench3_dive_windrow_1, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_101",
+   "template": "low_scrub",
+   "at": [
+    274,
+    -177
+   ],
+   "yaw_deg": 159.2,
+   "near": "camp_dive_windrow_1, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_1022",
+   "template": "low_bell_tail",
+   "at": [
+    353,
+    -4
+   ],
+   "yaw_deg": 90.0,
+   "near": "bench2_east_bank, the fallen shift bell with its rope "
+  },
+  {
+   "id": "pit_109",
    "template": "bench_survey",
    "at": [
-    260.0,
-    -220.0
+    210,
+    -208
    ],
    "yaw_deg": 159.2,
    "near": "camp_dive_windrow_1, bench survey station"
   },
   {
-   "id": "pit_29",
+   "id": "pit_1109",
+   "template": "shift_corner",
+   "at": [
+    -265,
+    -314
+   ],
+   "yaw_deg": -83.3,
+   "near": "rim_haul_ramp, shift corner"
+  },
+  {
+   "id": "pit_113",
+   "template": "cart_overgrown",
+   "at": [
+    293,
+    -173
+   ],
+   "yaw_deg": 159.2,
+   "near": "camp_dive_windrow_1, ore cart gone to bursage on its stub"
+  },
+  {
+   "id": "pit_115",
+   "template": "rope_yard",
+   "at": [
+    148,
+    -258
+   ],
+   "yaw_deg": 126.9,
+   "near": "camp_ore_bin, hoist-rope wagon parked by its bell,"
+  },
+  {
+   "id": "pit_1159",
+   "template": "low_bell_tail",
+   "at": [
+    90,
+    -210
+   ],
+   "yaw_deg": -86.3,
+   "near": "camp_ore_bin, the fallen shift bell with its rope "
+  },
+  {
+   "id": "pit_119",
    "template": "haul_graveyard",
    "at": [
-    330.0,
-    -210.0
+    283,
+    -214
    ],
-   "yaw_deg": 153.4,
+   "yaw_deg": 159.2,
    "near": "camp_dive_windrow_1, where the last haul truck died"
   },
   {
-   "id": "pit_30",
-   "template": "drill_yard",
+   "id": "pit_121",
+   "template": "low_cores",
    "at": [
-    390.0,
-    -170.0
+    317,
+    -159
    ],
-   "yaw_deg": 135.0,
-   "near": "bench2_east_bank, powder-cut drill rig left in its yar"
+   "yaw_deg": 150.9,
+   "near": "camp_dive_windrow_1, spilled drill-core trays beside drop"
   },
   {
-   "id": "pit_31",
-   "template": "rope_yard",
-   "at": [
-    290.0,
-    -90.0
-   ],
-   "yaw_deg": -95.4,
-   "near": "bench3_dive_windrow_1, hoist-rope wagon parked by its bell,"
-  },
-  {
-   "id": "pit_32",
-   "template": "assay_post",
-   "at": [
-    390.0,
-    -70.0
-   ],
-   "yaw_deg": 84.6,
-   "near": "bench2_east_bank, assay post at the bench face"
-  },
-  {
-   "id": "pit_33",
-   "template": "water_stop",
-   "at": [
-    390.0,
-    -10.0
-   ],
-   "yaw_deg": 90.0,
-   "near": "bench2_east_bank, haul-road water stop"
-  },
-  {
-   "id": "pit_34",
+   "id": "pit_1227",
    "template": "cart_overgrown",
    "at": [
-    270.0,
-    50.0
-   ],
-   "yaw_deg": -90.0,
-   "near": "east_dive_windrow_2, ore cart gone to bursage on its stub"
-  },
-  {
-   "id": "pit_35",
-   "template": "shift_corner",
-   "at": [
-    210.0,
-    90.0
-   ],
-   "yaw_deg": -166.9,
-   "near": "east_dive_2_windrow_2, shift corner"
-  },
-  {
-   "id": "pit_36",
-   "template": "bench_survey",
-   "at": [
-    210.0,
-    210.0
-   ],
-   "yaw_deg": 16.1,
-   "near": "east_dive_2_windrow_1, bench survey station"
-  },
-  {
-   "id": "pit_39",
-   "template": "drill_yard",
-   "at": [
-    40.0,
-    0.0
-   ],
-   "yaw_deg": -125.0,
-   "near": "bench4_dive_windrow_2, powder-cut drill rig left in its yar"
-  },
-  {
-   "id": "pit_40",
-   "template": "rope_yard",
-   "at": [
-    140.0,
-    220.0
-   ],
-   "yaw_deg": 6.3,
-   "near": "east_dive_3_windrow_1, hoist-rope wagon parked by its bell,"
-  },
-  {
-   "id": "pit_41",
-   "template": "assay_post",
-   "at": [
-    20.0,
-    80.0
+    22,
+    130
    ],
    "yaw_deg": -111.9,
-   "near": "floor_dive_windrow_2, assay post at the bench face"
+   "near": "ore_pile_north, ore cart gone to bursage on its stub"
   },
   {
-   "id": "pit_43",
-   "template": "water_stop",
-   "at": [
-    -40.0,
-    310.0
-   ],
-   "yaw_deg": -16.5,
-   "near": "collar_dish, haul-road water stop"
-  },
-  {
-   "id": "pit_44",
-   "template": "cart_overgrown",
-   "at": [
-    -180.0,
-    130.0
-   ],
-   "yaw_deg": -75.6,
-   "near": "floor_sump, ore cart gone to bursage on its stub"
-  },
-  {
-   "id": "pit_47",
-   "template": "fallen_marker",
-   "at": [
-    -550.0,
-    -610.0
-   ],
-   "yaw_deg": -145.0,
-   "near": "dump_berm_west, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_54",
-   "template": "scrub_patch",
-   "at": [
-    -270.0,
-    -300.0
-   ],
-   "yaw_deg": -83.3,
-   "near": "rim_haul_ramp, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_57",
-   "template": "assay_post",
-   "at": [
-    -290.0,
-    -240.0
-   ],
-   "yaw_deg": -69.2,
-   "near": "north_dive_windrow_2, assay post at the bench face"
-  },
-  {
-   "id": "pit_58",
-   "template": "fallen_marker",
-   "at": [
-    -180.0,
-    -170.0
-   ],
-   "yaw_deg": -78.7,
-   "near": "north_dive_windrow_2, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_59",
-   "template": "scrub_patch",
-   "at": [
-    -180.0,
-    -10.0
-   ],
-   "yaw_deg": -75.6,
-   "near": "bench3_west_berm, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_63",
-   "template": "shift_corner",
-   "at": [
-    120.0,
-    -330.0
-   ],
-   "yaw_deg": 126.9,
-   "near": "back_door_portal, shift corner"
-  },
-  {
-   "id": "pit_65",
-   "template": "scrub_patch",
-   "at": [
-    0.0,
-    -120.0
-   ],
-   "yaw_deg": -0.0,
-   "near": "bench2_north_lane, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_84",
-   "template": "fallen_marker",
-   "at": [
-    -20.0,
-    130.0
-   ],
-   "yaw_deg": -169.5,
-   "near": "ore_pile_north, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_106",
-   "template": "rope_yard",
-   "at": [
-    410.0,
-    -140.0
-   ],
-   "yaw_deg": 103.0,
-   "near": "bench2_east_bank, hoist-rope wagon parked by its bell,"
-  },
-  {
-   "id": "pit_108",
-   "template": "water_stop",
-   "at": [
-    400.0,
-    20.0
-   ],
-   "yaw_deg": 90.0,
-   "near": "bench2_east_bank, haul-road water stop"
-  },
-  {
-   "id": "pit_110",
-   "template": "shift_corner",
-   "at": [
-    200.0,
-    -10.0
-   ],
-   "yaw_deg": 69.9,
-   "near": "bench4_dive_windrow_1, shift corner"
-  },
-  {
-   "id": "pit_114",
-   "template": "rope_yard",
-   "at": [
-    180.0,
-    50.0
-   ],
-   "yaw_deg": 67.4,
-   "near": "floor_dive_windrow_1, hoist-rope wagon parked by its bell,"
-  },
-  {
-   "id": "pit_116",
-   "template": "fallen_marker",
-   "at": [
-    80.0,
-    -50.0
-   ],
-   "yaw_deg": -125.5,
-   "near": "bench4_dive_windrow_2, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_120",
-   "template": "water_stop",
-   "at": [
-    -80.0,
-    -90.0
-   ],
-   "yaw_deg": -0.0,
-   "near": "west_dive_windrow_1, haul-road water stop"
-  },
-  {
-   "id": "pit_123",
-   "template": "scrub_patch",
-   "at": [
-    -120.0,
-    -40.0
-   ],
-   "yaw_deg": 99.5,
-   "near": "bench3_west_berm, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_124",
-   "template": "shift_corner",
-   "at": [
-    -210.0,
-    10.0
-   ],
-   "yaw_deg": -75.6,
-   "near": "bench4_ore_bin, shift corner"
-  },
-  {
-   "id": "pit_126",
+   "id": "pit_125",
    "template": "bench_survey",
    "at": [
-    -190.0,
-    70.0
+    337,
+    -155
    ],
-   "yaw_deg": -75.6,
-   "near": "bench4_ore_bin, bench survey station"
+   "yaw_deg": 150.9,
+   "near": "camp_dive_windrow_1, bench survey station"
   },
   {
    "id": "pit_127",
-   "template": "haul_graveyard",
+   "template": "low_marker",
    "at": [
-    -50.0,
-    90.0
+    360,
+    -109
    ],
-   "yaw_deg": 104.4,
-   "near": "ore_pile_nw, where the last haul truck died"
+   "yaw_deg": 84.6,
+   "near": "bench2_east_bank, bench marker knocked flat, the old b"
   },
   {
-   "id": "pit_130",
-   "template": "assay_post",
+   "id": "pit_129",
+   "template": "low_scrub",
    "at": [
-    100.0,
-    130.0
+    350,
+    -72
    ],
-   "yaw_deg": 68.1,
-   "near": "ore_pile_mid, assay post at the bench face"
+   "yaw_deg": 84.6,
+   "near": "bench2_east_bank, bursage and cholla thickening along "
   },
   {
    "id": "pit_132",
-   "template": "cart_overgrown",
+   "template": "assay_post",
    "at": [
-    180.0,
-    210.0
+    319,
+    -102
+   ],
+   "yaw_deg": -95.4,
+   "near": "bench3_dive_windrow_1, assay post at the bench face"
+  },
+  {
+   "id": "pit_138",
+   "template": "low_marker",
+   "at": [
+    323,
+    -27
+   ],
+   "yaw_deg": -90.0,
+   "near": "bench2_east_bank, bench marker knocked flat, the old b"
+  },
+  {
+   "id": "pit_177",
+   "template": "lunch_spot",
+   "at": [
+    185,
+    181
    ],
    "yaw_deg": 16.1,
-   "near": "east_dive_3_windrow_1, ore cart gone to bursage on its stub"
+   "near": "east_dive_3_windrow_1, crew lunch spot"
   },
   {
-   "id": "pit_156",
+   "id": "pit_224",
+   "template": "low_scrub",
+   "at": [
+    -196,
+    -345
+   ],
+   "yaw_deg": -64.5,
+   "near": "haul_ramp_berm, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_233",
+   "template": "lunch_spot",
+   "at": [
+    -151,
+    -346
+   ],
+   "yaw_deg": 148.1,
+   "near": "haul_ramp_berm, crew lunch spot"
+  },
+  {
+   "id": "pit_239",
+   "template": "low_scrub",
+   "at": [
+    -73,
+    -315
+   ],
+   "yaw_deg": 179.0,
+   "near": "rim_road_lane_2, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_243",
    "template": "water_stop",
    "at": [
-    50.0,
-    -90.0
+    -109,
+    -325
    ],
-   "yaw_deg": -0.0,
-   "near": "bench4_dive_windrow_2, haul-road water stop"
+   "yaw_deg": 179.0,
+   "near": "rim_road_lane_2, haul-road water stop"
   },
   {
-   "id": "pit_168",
-   "template": "fallen_marker",
-   "at": [
-    150.0,
-    30.0
-   ],
-   "yaw_deg": 69.9,
-   "near": "floor_dive_windrow_1, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_171",
-   "template": "drill_yard",
-   "at": [
-    10.0,
-    30.0
-   ],
-   "yaw_deg": -112.6,
-   "near": "floor_dive_windrow_2, powder-cut drill rig left in its yar"
-  },
-  {
-   "id": "pit_172",
+   "id": "pit_249",
    "template": "rope_yard",
    "at": [
-    110.0,
-    90.0
+    -31,
+    -332
    ],
-   "yaw_deg": 76.0,
-   "near": "floor_dive_windrow_1, hoist-rope wagon parked by its bell,"
+   "yaw_deg": 179.0,
+   "near": "rim_road_lane_2, hoist-rope wagon parked by its bell,"
   },
   {
-   "id": "pit_206",
-   "template": "scrub_patch",
+   "id": "pit_253",
+   "template": "low_cores",
    "at": [
-    100.0,
-    -120.0
+    44,
+    -312
    ],
-   "yaw_deg": -0.0,
-   "near": "bench3_dive_windrow_2, a scrub patch on thin ground"
+   "yaw_deg": 178.6,
+   "near": "rim_road_lane_2, spilled drill-core trays beside drop"
   },
   {
-   "id": "pit_212",
-   "template": "shift_corner",
+   "id": "pit_257",
+   "template": "water_stop",
    "at": [
-    180.0,
-    100.0
+    27,
+    -318
    ],
-   "yaw_deg": -163.9,
-   "near": "east_dive_3_windrow_2, shift corner"
+   "yaw_deg": 178.6,
+   "near": "rim_road_lane_2, haul-road water stop"
   },
   {
-   "id": "pit_256",
-   "template": "fallen_marker",
+   "id": "pit_265",
+   "template": "low_bell_tail",
    "at": [
-    310.0,
-    -180.0
+    118,
+    -242
    ],
-   "yaw_deg": 159.2,
-   "near": "camp_dive_windrow_1, bench marker knocked flat, the old b"
+   "yaw_deg": 126.9,
+   "near": "camp_ore_bin, the fallen shift bell with its rope "
   },
   {
-   "id": "pit_298",
+   "id": "pit_271",
    "template": "bench_survey",
    "at": [
-    400.0,
-    -40.0
+    98,
+    -287
+   ],
+   "yaw_deg": 126.9,
+   "near": "back_door_portal, bench survey station"
+  },
+  {
+   "id": "pit_317",
+   "template": "drill_yard",
+   "at": [
+    390,
+    -73
    ],
    "yaw_deg": 84.6,
+   "near": "bench2_east_bank, powder-cut drill rig left in its yar"
+  },
+  {
+   "id": "pit_329",
+   "template": "bench_survey",
+   "at": [
+    357,
+    -32
+   ],
+   "yaw_deg": 90.0,
    "near": "bench2_east_bank, bench survey station"
   },
   {
-   "id": "pit_313",
-   "template": "fallen_marker",
-   "at": [
-    -160.0,
-    70.0
-   ],
-   "yaw_deg": -75.6,
-   "near": "bench4_ore_bin, bench marker knocked flat, the old b"
-  },
-  {
-   "id": "pit_321",
+   "id": "pit_330",
    "template": "lunch_spot",
    "at": [
-    -415,
-    -478
+    318,
+    -5
    ],
-   "yaw_deg": -35.6,
-   "near": "wash_berm, crew lunch spot"
+   "yaw_deg": -90.0,
+   "near": "bench2_east_bank, crew lunch spot"
   },
   {
-   "id": "pit_325",
-   "template": "scrub_patch",
+   "id": "pit_361",
+   "template": "drill_yard",
    "at": [
-    -317,
-    -386
+    252,
+    202
    ],
-   "yaw_deg": -35.6,
-   "near": "slickrock_15, a scrub patch on thin ground"
-  },
-  {
-   "id": "pit_356",
-   "template": "water_stop",
-   "at": [
-    337,
-    -179
-   ],
-   "yaw_deg": 150.9,
-   "near": "camp_dive_windrow_1, haul-road water stop"
-  },
-  {
-   "id": "pit_397",
-   "template": "fallen_marker",
-   "at": [
-    -33,
-    -329
-   ],
-   "yaw_deg": 179.0,
-   "near": "rim_road_lane_2, bench marker knocked flat, the old b"
+   "yaw_deg": 13.1,
+   "near": "east_dive_2_windrow_1, powder-cut drill rig left in its yar"
   },
   {
    "id": "pit_399",
-   "template": "scrub_patch",
+   "template": "water_stop",
    "at": [
-    31,
-    -337
+    -229,
+    -406
    ],
-   "yaw_deg": 178.6,
-   "near": "rim_road_lane_2, a scrub patch on thin ground"
+   "yaw_deg": 144.4,
+   "near": "slickrock_8, haul-road water stop"
   },
   {
-   "id": "pit_463",
-   "template": "scrub_patch",
+   "id": "pit_437",
+   "template": "low_scrub",
    "at": [
-    74,
-    -125
+    -80,
+    -231
+   ],
+   "yaw_deg": -0.6,
+   "near": "north_dive_windrow_2, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_447",
+   "template": "water_stop",
+   "at": [
+    -99,
+    -217
+   ],
+   "yaw_deg": -0.6,
+   "near": "north_dive_windrow_2, haul-road water stop"
+  },
+  {
+   "id": "pit_453",
+   "template": "water_stop",
+   "at": [
+    37,
+    -217
+   ],
+   "yaw_deg": -0.6,
+   "near": "bench2_north_lane, haul-road water stop"
+  },
+  {
+   "id": "pit_478",
+   "template": "low_marker",
+   "at": [
+    72,
+    -135
    ],
    "yaw_deg": -0.0,
-   "near": "bench2_north_lane, a scrub patch on thin ground"
+   "near": "bench2_north_lane, bench marker knocked flat, the old b"
   },
   {
-   "id": "pit_489",
-   "template": "rope_yard",
+   "id": "pit_484",
+   "template": "low_scrub",
    "at": [
-    -43,
-    116
+    34,
+    -135
+   ],
+   "yaw_deg": -0.0,
+   "near": "bench2_north_lane, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_488",
+   "template": "low_scrub",
+   "at": [
+    -28,
+    -136
+   ],
+   "yaw_deg": -0.0,
+   "near": "bench2_north_lane, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_492",
+   "template": "low_scrub",
+   "at": [
+    -88,
+    -139
+   ],
+   "yaw_deg": -0.0,
+   "near": "west_dive_windrow_1, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_494",
+   "template": "lunch_spot",
+   "at": [
+    16,
+    -129
+   ],
+   "yaw_deg": -0.0,
+   "near": "bench2_north_lane, crew lunch spot"
+  },
+  {
+   "id": "pit_526",
+   "template": "bench_survey",
+   "at": [
+    -130,
+    -37
+   ],
+   "yaw_deg": 99.5,
+   "near": "bench3_west_berm, bench survey station"
+  },
+  {
+   "id": "pit_531",
+   "template": "low_cores",
+   "at": [
+    -152,
+    33
+   ],
+   "yaw_deg": -75.6,
+   "near": "bench4_ore_bin, spilled drill-core trays beside drop"
+  },
+  {
+   "id": "pit_534",
+   "template": "low_marker",
+   "at": [
+    -113,
+    77
+   ],
+   "yaw_deg": 104.4,
+   "near": "bench4_ore_bin, bench marker knocked flat, the old b"
+  },
+  {
+   "id": "pit_539",
+   "template": "low_cores",
+   "at": [
+    -117,
+    162
+   ],
+   "yaw_deg": -75.6,
+   "near": "floor_sump, spilled drill-core trays beside drop"
+  },
+  {
+   "id": "pit_550",
+   "template": "haul_graveyard",
+   "at": [
+    -111,
+    -5
+   ],
+   "yaw_deg": 104.4,
+   "near": "bench4_ore_bin, where the last haul truck died"
+  },
+  {
+   "id": "pit_557",
+   "template": "low_bell_tail",
+   "at": [
+    -66,
+    179
+   ],
+   "yaw_deg": 7.3,
+   "near": "ore_pile_north, the fallen shift bell with its rope "
+  },
+  {
+   "id": "pit_564",
+   "template": "low_cores",
+   "at": [
+    -45,
+    149
    ],
    "yaw_deg": -168.7,
-   "near": "ore_pile_north, hoist-rope wagon parked by its bell,"
+   "near": "ore_pile_north, spilled drill-core trays beside drop"
   },
   {
-   "id": "pit_495",
-   "template": "scrub_patch",
+   "id": "pit_580",
+   "template": "low_scrub",
    "at": [
-    -349,
-    -426
+    -333,
+    -437
    ],
    "yaw_deg": -35.6,
-   "near": "slickrock_15, a scrub patch on thin ground"
+   "near": "slickrock_15, bursage and cholla thickening along "
   },
   {
-   "id": "pit_538",
-   "template": "shift_corner",
+   "id": "pit_619",
+   "template": "low_marker",
    "at": [
-    88,
-    152
+    -195,
+    -233
    ],
-   "yaw_deg": 68.1,
-   "near": "ore_pile_mid, shift corner"
+   "yaw_deg": -22.6,
+   "near": "north_dive_windrow_2, bench marker knocked flat, the old b"
   },
   {
-   "id": "pit_622",
-   "template": "fallen_marker",
+   "id": "pit_623",
+   "template": "assay_post",
    "at": [
-    243,
-    -127
+    -213,
+    -229
    ],
-   "yaw_deg": -5.1,
-   "near": "bench3_dive_windrow_1, bench marker knocked flat, the old b"
+   "yaw_deg": -22.6,
+   "near": "north_dive_windrow_2, assay post at the bench face"
   },
   {
-   "id": "pit_693",
-   "template": "shift_corner",
+   "id": "pit_648",
+   "template": "low_cores",
    "at": [
-    35,
+    -65,
+    -180
+   ],
+   "yaw_deg": -180.0,
+   "near": "bench2_north_lane, spilled drill-core trays beside drop"
+  },
+  {
+   "id": "pit_656",
+   "template": "low_cores",
+   "at": [
+    66,
+    -181
+   ],
+   "yaw_deg": -180.0,
+   "near": "bench2_north_lane, spilled drill-core trays beside drop"
+  },
+  {
+   "id": "pit_679",
+   "template": "assay_post",
+   "at": [
+    113,
+    -136
+   ],
+   "yaw_deg": 42.9,
+   "near": "bench3_dive_windrow_2, assay post at the bench face"
+  },
+  {
+   "id": "pit_687",
+   "template": "low_marker",
+   "at": [
+    142,
+    -73
+   ],
+   "yaw_deg": -110.1,
+   "near": "bench3_dive_windrow_2, bench marker knocked flat, the old b"
+  },
+  {
+   "id": "pit_704",
+   "template": "haul_graveyard",
+   "at": [
+    184,
+    1
+   ],
+   "yaw_deg": 69.9,
+   "near": "bench4_dive_windrow_1, where the last haul truck died"
+  },
+  {
+   "id": "pit_706",
+   "template": "low_bell_tail",
+   "at": [
+    125,
     36
    ],
-   "yaw_deg": -116.6,
-   "near": "floor_dive, shift corner"
+   "yaw_deg": 29.7,
+   "near": "floor_dive_windrow_1, the fallen shift bell with its rope "
+  },
+  {
+   "id": "pit_722",
+   "template": "low_scrub",
+   "at": [
+    60,
+    142
+   ],
+   "yaw_deg": 68.1,
+   "near": "ore_pile_mid, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_726",
+   "template": "cart_overgrown",
+   "at": [
+    78,
+    121
+   ],
+   "yaw_deg": 68.1,
+   "near": "ore_pile_mid, ore cart gone to bursage on its stub"
+  },
+  {
+   "id": "pit_729",
+   "template": "drill_yard",
+   "at": [
+    26,
+    85
+   ],
+   "yaw_deg": -111.9,
+   "near": "floor_dive_windrow_2, powder-cut drill rig left in its yar"
+  },
+  {
+   "id": "pit_751",
+   "template": "bench_survey",
+   "at": [
+    -335,
+    -419
+   ],
+   "yaw_deg": -35.6,
+   "near": "slickrock_15, bench survey station"
+  },
+  {
+   "id": "pit_764",
+   "template": "low_marker",
+   "at": [
+    -202,
+    -389
+   ],
+   "yaw_deg": 168.7,
+   "near": "slickrock_8, bench marker knocked flat, the old b"
+  },
+  {
+   "id": "pit_829",
+   "template": "low_scrub",
+   "at": [
+    156,
+    -127
+   ],
+   "yaw_deg": -29.8,
+   "near": "bench3_dive_windrow_2, bursage and cholla thickening along "
+  },
+  {
+   "id": "pit_922",
+   "template": "rope_yard",
+   "at": [
+    -201,
+    -327
+   ],
+   "yaw_deg": -64.5,
+   "near": "haul_ramp_berm, hoist-rope wagon parked by its bell,"
+  },
+  {
+   "id": "pit_993",
+   "template": "water_stop",
+   "at": [
+    267,
+    -128
+   ],
+   "yaw_deg": -5.1,
+   "near": "bench3_dive_windrow_1, haul-road water stop"
   }
  ],
  "litter": {
@@ -2551,10 +2572,6 @@
     "weight": 2
    },
    {
-    "kind": "rock_bucket",
-    "weight": 1
-   },
-   {
     "kind": "core_trays",
     "weight": 1
    },
@@ -2565,10 +2582,10 @@
   ],
   "spacing_m": 20.0,
   "band_m": [
-   22,
-   55
+   7,
+   22
   ],
-  "seed": 2
+  "seed": 3
  },
- "pin": 143236698
+ "pin": 460983251
 }
