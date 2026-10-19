@@ -271,7 +271,8 @@ def rock(p, x, y, r, rng, col="sandstone", sc=(1.2, 1.0, 0.55)):
 @K.kind("mixer_wreck", hero=True, tags=["machine"], variants="abc",
         story="A concrete mixer truck from the last pour: drum tipped, left where the crew walked off.")
 def mixer_wreck(p, v, rng):
-    p = Sc(p, 1.25)
+    # Scaled so it stays under 6 m: the tipped drum has no flat 3.6 m deck, so it carries no perch.
+    p = Sc(p, 1.1)
     dz = -0.75 if v == "c" else 0.0   # sunk to the axles in silt
     # Chassis frame and tandem axles (cab toward -Y).
     p.box((1.5, 7.6, 0.34), (0, 0.3, 0.88 + dz), "iron", style="hard_smooth")
@@ -385,7 +386,6 @@ def survey_tent(p, v, rng):
         if v == "b" and i in (4, 5, 12):
             continue
         p.box((4.0, 0.25, 0.1), (0, y, 0.35), tint("timber_grey" if v == "b" else "timber", rng, 0.08), jit=0.004)
-    p.box((1.6, 0.6, 0.24), (0, -3.0, 0.12), "timber_pale")  # step block, box not wedge
     if v == "a":
         sag = 0.22
         wall = "canvas"
@@ -602,7 +602,7 @@ def hat(p, loc, col, rot=(0, 0, 0), rng=None):
 @K.kind("hardhat_rack", hero=False, tags=["sign"], variants="abc",
         story="A peg board of hard hats against the works wall, one fallen where its owner went home.")
 def hardhat_rack(p, v, rng):
-    p = Sc(p, 1.5, lite=True)
+    p = Sc(p, 1.35, lite=True)
     cols = ["canvas", "bone", "canvas_dark", DUSK_BLUE, "canvas", "bone"]
     # Short concrete wall stub the board hangs on (a wall, never an arch).
     p.box((3.0, 0.5, 1.7), (0, 0.3, 0.85), mix("concrete", "concrete_stain", 0.55), style="hard_smooth", jit=0.02)
@@ -710,7 +710,7 @@ def compressor_cart(p, v, rng):
             continue
         wheel(p, sx * 0.85, 0.1, 0.4, 0.4, 0.22, rng)
     # Short tow bar with an eye, dropped to the ground (never a rail: 1.1 m).
-    p.rod((0, -0.45, 0.5), (0.1, -1.5, 0.2), 0.05, "iron_light", segs=6)
+    p.rod((0, -0.45, 0.16), (0.1, -1.5, 0.12), 0.05, "iron_light", segs=6)
     p.torus(0.1, 0.03, (0.1, -1.6, 0.14), "iron", major=10, minor=4)
     # Coiled hose on top, and one stubby whistle.
     for k in range(3):
