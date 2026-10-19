@@ -1,0 +1,691 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const BotOptions := preload("res://tools/bot_options.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
+const Roster := preload("res://src/combat/roster.gd")
+const Director := preload("res://src/world/director.gd")
+const Parts := preload("res://src/build/parts.gd")
+const TelegraphScript := preload("res://src/combat/telegraph.gd")
+
+# MATCHUP LAB (design-v3/ENEMY-PRIORITY.md lever 7; usage and definitions in tools/matchup_lab.md).
+# A headless duel table: each pilot alone against each enemy kind, N seeds, recording time to
+# kill and hull lost. It prints a pilot x kind heatmap, marks the HARD cells, and grades the
+# gate: every pilot has a hard cell, and the brawler bot wins each hard cell once given that
+# cell's answer item (a part whose row carries an `answers` tag for the cell's axis).
+#
+#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd \
+#     -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65]
+#     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>]
+#   or: -- --from=<a.ndjson,b.ndjson> [--out=<heatmap txt>]   re-render saved rows
+#
+# Each duel is its own process (a bot run repeats exactly only in a fresh one). The harness is
+# tools/priority_proof.gd's: calm map, bot driver, the dodge share, the settle wait.
+
+# The two kill-first specials are measured by tools/priority_proof.gd: the Linker guards a
+# partner (nothing to duel alone) and the Foreman never attacks (its row is its crew).
+const SKIP_KINDS := ["linker", "foreman"]
+# The axis a kind's answer item must carry (ENEMY-PRIORITY section 5; items/parts tag
+# `answers`: range, spread, fuse, cc, air, plating). A kind not listed answers to range.
+const ANSWER_AXIS := {
+	"plated_brute": "plating", "deflector": "plating", "ballast_heavy": "plating",
+	"swarm_remnant": "spread", "lamp_swarm": "spread", "drill_crew": "spread", "prop_crew": "spread",
+	"chaser": "fuse", "burrower": "fuse", "splitter": "fuse",
+	"mag_trapper": "cc", "catch_trap": "cc", "anchor_crew": "cc", "hooker": "cc", "netcaster": "cc",
+	"bola_thrower": "cc", "gyro_jammer": "cc", "ramp_flipper": "cc", "swatter": "cc", "pit_jaw": "cc", "gap_net": "cc",
+	"kite_drone": "air", "winch_drone": "air",
+}
+const AXES := ["range", "spread", "fuse", "cc", "air", "plating"]
+# HARD: a cell's median time to kill over 2.0 x its row's median (row = that kind across pilots),
+# with the row median floored at MIN_ROW_S so a row of instant kills cannot make a second hard.
+const HARD_RATIO := 2.0
+const MIN_ROW_S := 1.0
+# The answer arm wins a cell when the bot kills in at least this share of seeds and the cell
+# is no longer hard against the unchanged baseline row median.
+const WIN_SHARE := 0.5
+const DODGE := 0.65
+const DUEL_RANGE := 18.0
+const SETTLE_S := 1.0
+const WALL_LIMIT_S := 600.0
+const PENDING := "answer: pending (no answers tags on this base)"
+
+
+class DuelDriver extends BotDriver:
+	var enemy: Node3D = null
+	var adds: Array = []
+	var dodge := 1.0
+	var _dodge_rng := RandomNumberGenerator.new()
+	var _answers := {}
+
+	# Each telegraph is answered or missed once, when first seen, from the run's own stream.
+	func _threats() -> Array:
+		var out: Array = []
+		for h in super._threats():
+			var id: int = h.get_instance_id()
+			if not _answers.has(id):
+				_answers[id] = _dodge_rng.randf() < dodge
+			if _answers[id]:
+				out.append(h)
+		return out
+
+	func _roam(delta: float) -> void:
+		var target := pick()
+		if target == null:
+			source.hold = {}
+			return
+		_fight(target, delta)
+
+	func pick() -> Node3D:
+		if alive(enemy):
+			return enemy
+		var ball: Vector3 = game.player.ball_position()
+		var best: Node3D = null
+		var best_d := INF
+		for add in adds:
+			if alive(add) and ball.distance_to(add.global_position) < best_d:
+				best_d = ball.distance_to(add.global_position)
+				best = add
+		return best
+
+	static func alive(e) -> bool:
+		return e != null and is_instance_valid(e) and not (e.has_method("is_dead") and e.is_dead())
+
+
+var _settings := {}
+var _bot_options
+var _cap := 40.0
+var _parent := false
+var _done := false
+
+# Parent state.
+var _queue: Array = []
+var _running: Array = []
+var _results: Array = []
+var _answer_results: Array = []
+var _procs := 4
+var _total := 0
+var _sweep_dir := ""
+var _phase := 1
+var _pilots: Array = []
+var _kinds: Array = []
+var _seeds: Array[int] = []
+var _answer_plan := {}
+var _out_rows: Array = []
+
+# Child state.
+var _pilot := ""
+var _kind := ""
+var _run_seed := 0
+var _game
+var _driver
+var _spawned := false
+var _start_s := 0.0
+var _grounded_s := 0.0
+var _hull_start := 0.0
+var _taken := 0.0
+var _hits := 0
+var _kill_s := -1.0
+var _kill_dist := -1.0
+var _last_dist := -1.0
+var _enemy_set := false
+var _warnings := 0
+var _joined := 0
+var _scrap_serial := 0
+var _counter_serial := 0
+
+
+func _initialize() -> void:
+	SimClock.ticks = true
+	_settings = _parse(OS.get_cmdline_user_args())
+	_bot_options = BotOptions.new(_settings, self)
+	_cap = float(_settings.get("cap", "40"))
+	if _settings.has("kind"):
+		_begin_child()
+		return
+	if _settings.has("from"):
+		_render_from()
+		return
+	if not _settings.has("out"):
+		printerr("matchup_lab: usage: -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65] [--pilots=a,b] [--kinds=a,b] [--answer=1]")
+		quit(2)
+		return
+	for part in String(_settings.get("seeds", "1,2,3,4,5,6,7,8")).split(",", false):
+		_seeds.append(int(part))
+	_pilots = Array(String(_settings.get("pilots", ",".join(PILOTS))).split(",", false))
+	_kinds = Array(String(_settings.get("kinds", ",".join(default_kinds()))).split(",", false))
+	for p in _pilots:
+		if BotDriver.class_index_for(0, p) < 0:
+			printerr("matchup_lab: unknown pilot %s" % p)
+			quit(2)
+			return
+	var n := 0
+	for kind in _kinds:
+		for pilot in _pilots:
+			for seed_value in _seeds:
+				_queue.append({"n": n, "pilot": pilot, "kind": kind, "seed": seed_value, "give": ""})
+				n += 1
+	_total = n
+	_procs = clampi(int(_settings.get("procs", "4")), 1, 8)
+	_sweep_dir = OS.get_user_data_dir().path_join("matchup_lab").path_join("p%d" % OS.get_process_id())
+	DirAccess.make_dir_recursive_absolute(_sweep_dir)
+	_parent = true
+
+
+# --from=<a.ndjson,b.ndjson>: rebuild the heatmap and baseline gate from saved rows (runs nothing).
+# The answer arm is not replayed, so its cells read pending.
+func _render_from() -> void:
+	var rows := []
+	for path in String(_settings["from"]).split(",", false):
+		for line in FileAccess.get_file_as_string(path).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary and String(parsed.get("give", "")) == "":
+				rows.append(parsed)
+	var pilots := []
+	for p in PILOTS:
+		for r in rows:
+			if r["pilot"] == p:
+				pilots.append(p)
+				break
+	var kinds := []
+	for k in default_kinds():
+		for r in rows:
+			if r["kind"] == k:
+				kinds.append(k)
+				break
+	var table := build_table(rows, pilots, kinds, _cap)
+	var lines := heatmap(table)
+	lines.append_array(gate_lines(table, grade_answers(table, [], {}, _cap, 0)))
+	for line in lines:
+		print(line)
+	if _settings.has("out"):
+		var f := FileAccess.open(String(_settings["out"]), FileAccess.WRITE)
+		for line in lines:
+			f.store_line(line)
+		f.close()
+	quit(0)
+
+
+const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
+
+
+static func _parse(args: PackedStringArray) -> Dictionary:
+	var out := {}
+	for arg in args:
+		if arg.begins_with("--") and "=" in arg:
+			out[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
+	return out
+
+
+# Every spawnable, built kind the director names, bar SKIP_KINDS.
+static func default_kinds() -> Array:
+	var out := []
+	for kind in Director.KIND_NAMES:
+		if kind in SKIP_KINDS:
+			continue
+		if Roster.ROWS.has(kind) and Roster.built(kind):
+			out.append(kind)
+	return out
+
+
+# ---- Answer lookup ----------------------------------------------------------------------
+
+# The `answers` tags of a part row, as an array; empty when the field is absent.
+static func answers_of(row: Dictionary) -> Array:
+	var raw = row.get("answers", [])
+	if raw is String:
+		return [raw]
+	return raw if raw is Array else []
+
+
+# True when any part row carries an `answers` field at all (the Systems lane's branch).
+static func answers_field_exists(rows: Dictionary) -> bool:
+	for id in rows:
+		if rows[id] is Dictionary and (rows[id] as Dictionary).has("answers"):
+			return true
+	return false
+
+
+# The part to hand `pilot` for `kind`'s axis: the first id (sorted) whose answers carry the
+# axis and whose class gate admits the pilot. "" when none, or when the field does not exist.
+static func answer_item(rows: Dictionary, pilot: String, kind: String) -> String:
+	var axis: String = ANSWER_AXIS.get(kind, "range")
+	var ids := rows.keys()
+	ids.sort()
+	for id in ids:
+		var row = rows[id]
+		if not row is Dictionary:
+			continue
+		if axis not in answers_of(row):
+			continue
+		var only := String(row.get("class", ""))
+		if only != "" and only != pilot:
+			continue
+		return String(id)
+	return ""
+
+
+# ---- Parent: the pool -------------------------------------------------------------------
+
+func _process(_delta: float) -> bool:
+	if not _parent or _done:
+		return false
+	for run in _running.duplicate():
+		if not OS.is_process_running(run["pid"]):
+			_reap(run, false)
+		elif float(Time.get_ticks_msec() - int(run["started"])) / 1000.0 > WALL_LIMIT_S:
+			OS.kill(run["pid"])
+			_reap(run, true)
+	while _running.size() < _procs and not _queue.is_empty():
+		_spawn(_queue.pop_front())
+	if _running.is_empty() and _queue.is_empty():
+		if _phase == 1 and _begin_answer_phase():
+			return false
+		_done = true
+		_finish()
+		return false
+	OS.delay_msec(250)
+	return false
+
+
+func _spawn(job: Dictionary) -> void:
+	var home := _sweep_dir.path_join("job%d_%d" % [_phase, job["n"]])
+	DirAccess.make_dir_recursive_absolute(home)
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+			"--script", "res://tools/matchup_lab.gd", "--", "--pilot=" + String(job["pilot"]), "--kind=" + String(job["kind"]),
+			"--run-seed=%d" % job["seed"], "--cap=%s" % _cap, "--result=" + home.path_join("result.json"), "--home=" + home])
+	if String(job["give"]) != "":
+		args.append("--give=" + String(job["give"]))
+	if _settings.has("dodge"):
+		args.append("--dodge=%s" % _settings["dodge"])
+	for key in BotOptions.FAST_FLAGS:
+		if _settings.has(key):
+			args.append("--%s=%s" % [key, _settings[key]])
+	var previous := {}
+	for kind in ["DATA", "CONFIG", "CACHE"]:
+		var key: String = "XDG_%s_HOME" % kind
+		previous[key] = OS.get_environment(key)
+		OS.set_environment(key, home.path_join("state-" + kind.to_lower()))
+	var pid := OS.create_process(OS.get_executable_path(), args)
+	for key in previous:
+		if previous[key].is_empty():
+			OS.unset_environment(key)
+		else:
+			OS.set_environment(key, previous[key])
+	job["pid"] = pid
+	job["home"] = home
+	job["started"] = Time.get_ticks_msec()
+	_running.append(job)
+
+
+func _reap(run: Dictionary, timed_out: bool) -> void:
+	_running.erase(run)
+	var home: String = run["home"]
+	var path := home.path_join("result.json")
+	var result = null
+	if FileAccess.file_exists(path) and not timed_out:
+		result = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not result is Dictionary:
+		result = {"pilot": run["pilot"], "kind": run["kind"], "seed": run["seed"], "give": run["give"],
+				"outcome": "wall_timeout" if timed_out else "no_result", "ttk_s": -1.0, "hull_lost": 0.0}
+	result["phase"] = "answer" if _phase == 2 else "baseline"
+	(_answer_results if _phase == 2 else _results).append(result)
+	_remove_tree(home)
+	print("matchup_lab: %d of %d (phase %d): %s" % [_results.size() + _answer_results.size(), _total, _phase, JSON.stringify(result)])
+
+
+static func _remove_tree(path: String) -> void:
+	if not DirAccess.dir_exists_absolute(path):
+		return
+	for sub in DirAccess.get_directories_at(path):
+		_remove_tree(path.path_join(sub))
+	for file in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(file))
+	DirAccess.remove_absolute(path)
+
+
+# After the baseline table: for each hard cell, look up its answer item and queue the paired
+# duels with it in hand. Returns true when jobs were queued. With no `answers` field on this
+# base's part rows (or no row for a cell's axis) the cell is reported pending and nothing runs.
+func _begin_answer_phase() -> bool:
+	_phase = 2
+	if String(_settings.get("answer", "1")) != "1":
+		return false
+	var table := build_table(_results, _pilots, _kinds, _cap)
+	var rows := Parts.rows()
+	var field := answers_field_exists(rows)
+	var n := _total
+	for cell in table["hard"]:
+		var item := answer_item(rows, cell["pilot"], cell["kind"]) if field else ""
+		_answer_plan[cell_key(cell["pilot"], cell["kind"])] = item
+		if item == "":
+			continue
+		for seed_value in _seeds:
+			_queue.append({"n": n, "pilot": cell["pilot"], "kind": cell["kind"], "seed": seed_value, "give": item})
+			n += 1
+	return not _queue.is_empty()
+
+
+func _finish() -> void:
+	var table := build_table(_results, _pilots, _kinds, _cap)
+	var answers := grade_answers(table, _answer_results, _answer_plan, _cap, _seeds.size(), _settings.get("answer", "1") == "1")
+	var path := String(_settings["out"])
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	for r in _results + _answer_results:
+		file.store_line(JSON.stringify(r))
+	file.close()
+	var lines := heatmap(table)
+	lines.append_array(gate_lines(table, answers))
+	var text_file := FileAccess.open(path.get_basename() + ".heatmap.txt", FileAccess.WRITE)
+	for line in lines:
+		print(line)
+		text_file.store_line(line)
+	text_file.close()
+	_remove_tree(_sweep_dir)
+	quit(0)
+
+
+# ---- Pure parts: table, hard cells, gate, heatmap ---------------------------------------
+
+static func cell_key(pilot: String, kind: String) -> String:
+	return "%s|%s" % [pilot, kind]
+
+
+# One cell per pilot x kind from baseline result rows: median time to kill over the seeds that
+# produced a result (a duel not won counts the cap), median hull lost, kills and runs. Then each
+# kind's row median (the median of its pilots' cell medians, floored at MIN_ROW_S) and the HARD
+# cells: median above HARD_RATIO x row median.
+static func build_table(results: Array, pilots: Array, kinds: Array, cap: float) -> Dictionary:
+	var cells := {}
+	for pilot in pilots:
+		for kind in kinds:
+			cells[cell_key(pilot, kind)] = {"pilot": pilot, "kind": kind, "ttk": [], "hull": [], "kills": 0, "runs": 0, "hard": false}
+	for r in results:
+		var key := cell_key(String(r.get("pilot", "")), String(r.get("kind", "")))
+		if not cells.has(key) or String(r.get("outcome", "")) in ["no_result", "wall_timeout"]:
+			continue
+		var cell: Dictionary = cells[key]
+		var killed := float(r.get("ttk_s", -1.0)) >= 0.0
+		cell["ttk"].append(float(r["ttk_s"]) if killed else cap)
+		cell["hull"].append(float(r.get("hull_lost", 0.0)))
+		cell["runs"] += 1
+		if killed:
+			cell["kills"] += 1
+	var row_median := {}
+	var hard := []
+	for kind in kinds:
+		var meds := []
+		for pilot in pilots:
+			var cell: Dictionary = cells[cell_key(pilot, kind)]
+			cell["median_ttk"] = median(cell["ttk"])
+			cell["median_hull"] = median(cell["hull"])
+			if cell["runs"] > 0:
+				meds.append(cell["median_ttk"])
+		row_median[kind] = maxf(median(meds), MIN_ROW_S)
+	for kind in kinds:
+		for pilot in pilots:
+			var cell: Dictionary = cells[cell_key(pilot, kind)]
+			cell["row_median"] = row_median[kind]
+			cell["hard"] = cell["runs"] > 0 and cell["median_ttk"] > HARD_RATIO * row_median[kind]
+			if cell["hard"]:
+				hard.append(cell)
+	return {"cells": cells, "pilots": pilots, "kinds": kinds, "row_median": row_median, "hard": hard, "cap": cap}
+
+
+# Hard cells per pilot, in kind order.
+static func hard_by_pilot(table: Dictionary) -> Dictionary:
+	var out := {}
+	for pilot in table["pilots"]:
+		out[pilot] = []
+	for cell in table["hard"]:
+		out[cell["pilot"]].append(cell["kind"])
+	return out
+
+
+# Gate part one: every pilot has at least one hard cell. {ok, missing}.
+static func gate_hard(table: Dictionary) -> Dictionary:
+	var missing := []
+	var by := hard_by_pilot(table)
+	for pilot in table["pilots"]:
+		if (by[pilot] as Array).is_empty():
+			missing.append(pilot)
+	return {"ok": missing.is_empty() and not (table["pilots"] as Array).is_empty(), "missing": missing}
+
+
+# Gate part two, per hard cell: "won" (the answer arm killed in at least WIN_SHARE of its seeds
+# and its median time is no longer hard against the baseline row median), "lost", or "pending"
+# (no answer item exists on this base). `plan` maps cell key to the item given ("" = none).
+static func grade_answers(table: Dictionary, answer_results: Array, plan: Dictionary, cap: float, seeds_per_cell: int, enabled := true) -> Dictionary:
+	var out := {}
+	for cell in table["hard"]:
+		var key := cell_key(cell["pilot"], cell["kind"])
+		var item := String(plan.get(key, ""))
+		if not enabled or item == "":
+			out[key] = {"status": "pending", "item": "", "text": PENDING}
+			continue
+		var ttk := []
+		var kills := 0
+		var runs := 0
+		for r in answer_results:
+			if cell_key(String(r.get("pilot", "")), String(r.get("kind", ""))) != key or String(r.get("outcome", "")) in ["no_result", "wall_timeout"]:
+				continue
+			runs += 1
+			if float(r.get("ttk_s", -1.0)) >= 0.0:
+				kills += 1
+				ttk.append(float(r["ttk_s"]))
+			else:
+				ttk.append(cap)
+		var won := runs > 0 and float(kills) / float(maxi(runs, 1)) >= WIN_SHARE and median(ttk) <= HARD_RATIO * float(cell["row_median"])
+		out[key] = {"status": "won" if won else "lost", "item": item, "kills": kills, "runs": runs, "median_ttk": median(ttk),
+				"text": "answer %s: %s (%d of %d killed, median %.1fs)" % [item, "won" if won else "lost", kills, runs, median(ttk)]}
+	return out
+
+
+# Overall verdict: PASS needs every pilot hard-celled and every hard cell won; any pending
+# answer makes the second half INCONCLUSIVE rather than a pass.
+static func gate_verdict(table: Dictionary, answers: Dictionary) -> String:
+	if not gate_hard(table)["ok"]:
+		return "FAIL"
+	var pending := false
+	for key in answers:
+		match answers[key]["status"]:
+			"lost":
+				return "FAIL"
+			"pending":
+				pending = true
+	return "INCONCLUSIVE" if pending else "PASS"
+
+
+static func heatmap(table: Dictionary) -> Array:
+	var pilots: Array = table["pilots"]
+	var lines := []
+	var head := "%-14s" % "kind (row med)"
+	for pilot in pilots:
+		head += " %9s" % String(pilot).substr(0, 9)
+	lines.append("matchup_lab: heatmap, median seconds to kill (cap %.0fs); * = HARD (over %.1fx row median); med hull lost in brackets" % [table["cap"], HARD_RATIO])
+	lines.append(head)
+	for kind in table["kinds"]:
+		var line := "%-9s%5.1f" % [String(kind).substr(0, 9), table["row_median"][kind]]
+		for pilot in pilots:
+			var cell: Dictionary = table["cells"][cell_key(pilot, kind)]
+			if cell["runs"] == 0:
+				line += " %9s" % "-"
+			else:
+				line += " %9s" % ("%.1f%s[%d]" % [cell["median_ttk"], "*" if cell["hard"] else "", int(round(cell["median_hull"]))])
+		lines.append(line)
+	return lines
+
+
+static func gate_lines(table: Dictionary, answers: Dictionary) -> Array:
+	var lines := []
+	var by := hard_by_pilot(table)
+	for pilot in table["pilots"]:
+		var cells := []
+		for kind in by[pilot]:
+			var key := cell_key(pilot, kind)
+			cells.append("%s (%s)" % [kind, answers[key]["text"] if answers.has(key) else "-"])
+		lines.append("matchup_lab: hard cells %s: %s" % [pilot, ", ".join(cells) if not cells.is_empty() else "none"])
+	var g := gate_hard(table)
+	lines.append("matchup_lab: gate every pilot has a hard cell: %s%s" % ["PASS" if g["ok"] else "FAIL", "" if g["ok"] else " (missing: %s)" % ", ".join(g["missing"])])
+	lines.append("matchup_lab: gate brawler wins each hard cell with its answer item: %s" % _answer_gate_word(answers))
+	lines.append("matchup_lab: gate verdict %s" % gate_verdict(table, answers))
+	return lines
+
+
+static func _answer_gate_word(answers: Dictionary) -> String:
+	var pending := 0
+	var lost := 0
+	for key in answers:
+		if answers[key]["status"] == "pending":
+			pending += 1
+		elif answers[key]["status"] == "lost":
+			lost += 1
+	if lost > 0:
+		return "FAIL (%d lost)" % lost
+	if pending > 0:
+		return "INCONCLUSIVE (%d of %d hard cells pending; %s)" % [pending, answers.size(), PENDING]
+	return "PASS"
+
+
+static func median(values: Array) -> float:
+	if values.is_empty():
+		return 0.0
+	var sorted := values.duplicate()
+	sorted.sort()
+	var mid := sorted.size() / 2
+	return float(sorted[mid]) if sorted.size() % 2 == 1 else (float(sorted[mid - 1]) + float(sorted[mid])) * 0.5
+
+
+# ---- Child: one duel --------------------------------------------------------------------
+
+func _begin_child() -> void:
+	_pilot = String(_settings.get("pilot", ""))
+	_kind = String(_settings["kind"])
+	if BotDriver.class_index_for(0, _pilot) < 0 or not _settings.has("result") or not _settings.has("home"):
+		printerr("matchup_lab: a child needs a known --pilot, --kind, --result and --home")
+		quit(2)
+		return
+	_run_seed = int(_settings.get("run-seed", "1"))
+	node_added.connect(_on_node_added)
+	seed(_run_seed)
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+
+
+func _on_node_added(node: Node) -> void:
+	if _game == null or _game.build == null:
+		return
+	if _spawned and node.get_script() == TelegraphScript and node.get_parent() == _game:
+		_warnings += 1
+	if "_strafe" in node:
+		node.set_meta("bot_strafe", 1.0 if (_counter_serial + _run_seed) % 2 == 0 else -1.0)
+		_counter_serial += 1
+	if node.get_parent() == _game.build.scrap:
+		node.set_meta("bot_side", 1.0 if (_scrap_serial + _run_seed) % 2 == 0 else -1.0)
+		_scrap_serial += 1
+
+
+func _physics_process(delta: float) -> bool:
+	if _parent or _done or _game == null or _game.flow == null:
+		return false
+	if _driver == null:
+		_game.ctx.calm = true
+		var home := String(_settings["home"])
+		_game.codex.storage_dir = home
+		_game.run_log.storage_dir = home
+		# The brawler bot: the completionist profile, which fights with every verb it has.
+		_driver = DuelDriver.new(_game, "brawler", _run_seed)
+		_driver.class_index = BotDriver.class_index_for(0, _pilot)
+		_driver.dodge = float(_settings.get("dodge", str(DODGE)))
+		_driver._dodge_rng.seed = hash(["dodge", _run_seed])
+		_driver.stage_limit = INF
+		_game.presentation.audio.bake_now()
+		_bot_options.apply_audio(_game.presentation.audio)
+		_game.events.player_hit.connect(func(amount: float, _source: String):
+			if _spawned:
+				_hits += 1
+				_taken += amount)
+		_game.ctx.events.enemy_spawned.connect(_on_enemy_spawned)
+		_game.run.run_seed_override = _run_seed
+		_driver.start()
+		return false
+	if not _spawned:
+		_grounded_s = _grounded_s + delta if _game.flow.in_stage() and _game.player.state.grounded else 0.0
+		if _grounded_s >= SETTLE_S:
+			_spawn_duel()
+		else:
+			_driver.source.hold = {}
+			return false
+	var over: bool = _driver.tick(delta)
+	var t := _duel_s()
+	# A freed object compares equal to null, so the duel's own flag says the enemy was ever set.
+	if _kill_s < 0.0 and _enemy_set and not DuelDriver.alive(_driver.enemy):
+		_kill_s = t
+		_kill_dist = _last_dist
+	elif DuelDriver.alive(_driver.enemy):
+		_last_dist = _game.player.ball_position().distance_to(_driver.enemy.global_position)
+	if not over and _cleared():
+		_driver._end("killed")
+		over = true
+	if not over and t >= _cap:
+		_driver._end("capped")
+		over = true
+	if not over:
+		return false
+	_done = true
+	_record()
+	_game.free()
+	_game = null
+	quit(0)
+	return false
+
+
+func _on_enemy_spawned(enemy: Node3D, _k: String) -> void:
+	# spawn_enemy emits this before it returns, so the duel's own enemy is not yet assigned.
+	if _spawned and _enemy_set and enemy != _driver.enemy and enemy not in _driver.adds:
+		_driver.adds.append(enemy)
+		_joined += 1
+
+
+func _duel_s() -> float:
+	return _game.run.stage_time - _start_s
+
+
+# Won means the enemy and anything it made are down and nothing is still to come.
+func _cleared() -> bool:
+	if not _game.get_tree().get_nodes_in_group("enemy_pending").is_empty():
+		return false
+	for add in _driver.adds:
+		if DuelDriver.alive(add):
+			return false
+	return not DuelDriver.alive(_driver.enemy)
+
+
+func _spawn_duel() -> void:
+	_spawned = true
+	_start_s = _game.run.stage_time
+	_hull_start = float(_game.run.metrics["hull_damage"])
+	if _settings.has("give"):
+		_game.run.add_part(String(_settings["give"]), "matchup_lab")
+	var ball: Vector3 = _game.player.ball_position()
+	var forward: Vector3 = _game.ctx.aim_forward()
+	forward = Vector3(forward.x, 0.0, forward.z).normalized()
+	if forward.length() < 0.5:
+		forward = Vector3.FORWARD
+	var flat: Vector3 = ball + forward * DUEL_RANGE
+	_driver.enemy = _game.combat.spawn_enemy(_kind, _game.ctx.terrain.drop_point(flat.x, flat.z, 1.8))
+	_enemy_set = true
+
+
+func _record() -> void:
+	var lost: float = float(_game.run.metrics["hull_damage"]) - _hull_start if _spawned else 0.0
+	var killed: bool = _kill_s >= 0.0 and _driver.outcome == "killed"
+	var row := {"pilot": _pilot, "class": _driver.class_id(), "kind": _kind, "seed": _run_seed, "give": String(_settings.get("give", "")),
+			"outcome": _driver.outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
+			"kill_dist_m": snappedf(_kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
+			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01)}
+	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
+	file.store_string(JSON.stringify(row) + "\n")
+	file.close()
