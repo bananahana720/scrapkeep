@@ -225,7 +225,7 @@
    "tags": [
     "sign"
    ],
-   "story": "A low post with a stencilled warning plate and a foreman's chalk tally board.",
+   "story": "Stencil post and chalk tally board; variant c is the Fleet docket marker, a pile of 'surplus concrete' slabs.",
    "variants": {
     "a": {
      "lod": [
@@ -262,12 +262,12 @@
       "res://assets/models/park/props/dam/stencil_post_c_lod2.glb"
      ],
      "tris": [
-      1368,
-      679,
-      189
+      556,
+      273,
+      65
      ],
-     "radius": 2.89,
-     "height": 2.018
+     "radius": 3.007,
+     "height": 1.6
     }
    }
   },

@@ -517,25 +517,41 @@ def flood_staff(p, v, rng):
 
 # --- stencil_post ------------------------------------------------------------------------
 @K.kind("stencil_post", hero=False, tags=["sign"], variants="abc",
-        story="A low post with a stencilled warning plate and a foreman's chalk tally board.")
+        story="Stencil post and chalk tally board; variant c is the Fleet docket marker, a pile of 'surplus concrete' slabs.")
 def stencil_post(p, v, rng):
     p = Sc(p, 1.5, lite=True)
-    broken = v == "c"
+    if v == "c":
+        # Fleet docket marker: a heap of surplus slabs, a charcoal tally board with one brass tag. A heap and a board,
+        # never a camp: no tent, no fire, nothing that stands up.
+        for i, (x, y, z, sx, sy, sz, r) in enumerate(((0, 0, 0.12, 1.5, 1.0, 0.24, 0.1), (0.1, -0.05, 0.34, 1.3, 0.9, 0.2, -0.25),
+                                                      (-0.15, 0.1, 0.52, 1.0, 0.8, 0.16, 0.5), (0.9, 0.55, 0.1, 0.9, 0.7, 0.2, 0.9),
+                                                      (-0.95, -0.4, 0.09, 0.8, 0.6, 0.18, -0.6))):
+            p.box((sx, sy, sz), (x, y, z), tint("concrete" if i % 2 else "concrete_light", rng, 0.06),
+                  rot=(0.05 * (i % 3 - 1), 0.07 * (i % 2), r), style="hard_smooth", jit=0.01)
+        bx, by = 1.3, -0.9
+        for dx in (-0.4, 0.4):
+            p.box((0.14, 0.4, 0.3), (bx + dx, by, 0.15), "timber_dark")
+        p.box((1.1, 0.1, 0.7), (bx, by - 0.05, 0.62), "charcoal", rot=(0.12, 0, 0.08), style="hard_smooth")
+        p.box((1.14, 0.06, 0.06), (bx, by - 0.12, 0.98), "rust", rot=(0.12, 0, 0.08), style="flat")
+        for g in range(2):
+            for k in range(4):
+                p.box((0.03, 0.03, 0.22), (bx - 0.35 + g * 0.4 + k * 0.06, by - 0.12, 0.68), "canvas", rot=(0.12, 0, 0.08), style="flat")
+            p.box((0.26, 0.03, 0.03), (bx - 0.28 + g * 0.4, by - 0.12, 0.68), "canvas", rot=(0.12, 0, 0.28), style="flat")
+        p.box((0.22, 0.04, 0.16), (bx + 0.3, by - 0.14, 0.4), "d9b44a", rot=(0.12, 0, 0.08), style="flat")  # the one brass tag
+        tuft(p, -1.3, 0.7, 0.4, rng, n=5, h=0.4)
+        return
     p.box((0.8, 0.8, 0.12), (0, 0, 0.06), "concrete_light", style="hard_smooth")
-    p.box((0.52, 0.52, 0.5 if broken else 0.9), (0, 0, 0.12 + (0.25 if broken else 0.45)), "concrete", style="hard_smooth")
-    if not broken:
-        p.box((0.6, 0.6, 0.12), (0, 0, 1.08), "concrete_light", style="hard_smooth")
+    p.box((0.52, 0.52, 0.9), (0, 0, 0.57), "concrete", style="hard_smooth")
+    p.box((0.6, 0.6, 0.12), (0, 0, 1.08), "concrete_light", style="hard_smooth")
     # Plate with stencilled word bars (plain, no stripes). Hangs on the post front.
-    tilt = {"a": 0.0, "b": 0.35, "c": 1.35}[v]
-    pc = (0, -0.34, 0.75) if v != "c" else (0.5, -0.9, 0.16)
-    rot = (0, 0, 0) if v == "a" else ((0, tilt, 0.2) if v == "b" else (math.pi / 2 * 0.1, 0.05, 0.4))
+    tilt = {"a": 0.0, "b": 0.35}[v]
+    pc = (0, -0.34, 0.75)
+    rot = (0, 0, 0) if v == "a" else (0, tilt, 0.2)
     p.box((1.3, 0.1, 0.7), pc, "iron", rot=rot, style="hard_smooth")
     p.box((1.18, 0.12, 0.58), pc, "canvas", rot=rot, style="hard")
     for row, widths in enumerate(((0.9, 0.7), (0.5, 0.3, 0.3), (0.9,))):
         x = -sum(widths) / 2 - 0.1 * (len(widths) - 1) / 2
         for wd in widths:
-            if v == "c":
-                break
             p.box((wd * 0.9, 0.14, 0.09), (pc[0] + x + wd * 0.45, pc[1] - 0.01, pc[2] + 0.18 - row * 0.17),
                   "charcoal", rot=rot, style="fine")
             x += wd + 0.1
@@ -543,16 +559,13 @@ def stencil_post(p, v, rng):
     bx = 1.7
     for dx in (-0.55, 0.55):
         p.box((0.16, 0.5, 0.5), (bx + dx, 0, 0.25), "timber_dark")
-    p.box((1.4, 0.12, 0.85), (bx, -0.08, 0.7), "charcoal", rot=(0.14, 0, 0.05 if v == "a" else 0.3 * (v == "b")), style="hard_smooth")
-    marks = {"a": 4, "b": 2, "c": 1}[v]
+    p.box((1.4, 0.12, 0.85), (bx, -0.08, 0.7), "charcoal", rot=(0.14, 0, 0.05 if v == "a" else 0.3), style="hard_smooth")
+    marks = {"a": 4, "b": 2}[v]
     for g in range(marks):
         for k in range(4):
             p.box((0.03, 0.03, 0.26), (bx - 0.5 + g * 0.42 + k * 0.07, -0.16, 0.74), "canvas", rot=(0.14, 0, 0), style="flat")
         p.box((0.32, 0.03, 0.03), (bx - 0.4 + g * 0.42, -0.16, 0.74), "canvas", rot=(0.14, 0, 0.2), style="flat")
-    if v == "c":
-        bush(p, -0.6, 0.7, 0.45, rng, n=7)
-    else:
-        p.cyl(0.04, 0.2, (bx + 0.7, -0.4, 0.04), "canvas", segs=6, rot=(0, math.pi / 2, 0.5), style="round")  # chalk stub
+    p.cyl(0.04, 0.2, (bx + 0.7, -0.4, 0.04), "canvas", segs=6, rot=(0, math.pi / 2, 0.5), style="round")  # chalk stub
 
 
 # --- lunch_pail --------------------------------------------------------------------------
