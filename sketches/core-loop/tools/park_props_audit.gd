@@ -205,6 +205,7 @@ func _run() -> void:
 		_place(s)
 		s.merge(_count(), true)
 	_flag_bare(samples)
+	_flag_void(samples)
 
 	var still_idx: Array = []
 	var draw_idx: Array = []
@@ -239,7 +240,7 @@ func _run() -> void:
 			png = "%s-%d-%d_%d.png" % [map_id, idx, int(round(s["x"])), int(round(s["z"]))]
 			root.get_texture().get_image().save_png(dir.path_join(png))
 			stills.append({"file": png, "idx": idx, "x": s["x"], "z": s["z"], "yaw": s["yaw"], "line": s["line"], "along_m": s["along_m"],
-				"props_120": s["total_120"], "core_60": s["core_60"], "kinds_120": s["kinds_120"], "bare": s["bare"]})
+				"props_120": s["total_120"], "core_60": s["core_60"], "kinds_120": s["kinds_120"], "bare": s["bare"], "void": s["void"]})
 		s["draw_calls"] = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
 		s["primitives"] = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
 		if has_props:
@@ -628,6 +629,33 @@ func _flag_bare(samples: Array) -> void:
 		s["bare"] = int(s["core_60"]) < BARE_MIN_NEAR or int(s["kinds_120"]) < BARE_MIN_KINDS
 
 
+# A void pose has no usable ground in view: fewer than VOID_GROUND_SHARE of a grid over the view cone (to VOID_VIEW_M
+# ahead, VOID_HALF_FOV_DEG each side) lies within VOID_VERTICAL_M of the ball's height. Reporting only; BARE is unchanged.
+const VOID_VIEW_M := 60.0
+const VOID_HALF_FOV_DEG := 35.0
+const VOID_VERTICAL_M := 40.0
+const VOID_GROUND_SHARE := 0.2
+
+
+func _flag_void(samples: Array) -> void:
+	for s in samples:
+		var forward := Vector2(-sin(float(s["yaw"])), -cos(float(s["yaw"])))
+		var side := Vector2(-forward.y, forward.x)
+		var ball_y: float = game.ctx.terrain.height(float(s["x"]), float(s["z"])) + 1.0
+		var space: PhysicsDirectSpaceState3D = game.get_world_3d().direct_space_state
+		var hit := 0
+		var total := 0
+		for d in [10.0, 20.0, 30.0, 40.0, 50.0, 60.0]:
+			for lateral in [-1.0, -0.5, 0.0, 0.5, 1.0]:
+				var at: Vector2 = Vector2(float(s["x"]), float(s["z"])) + forward * d + side * lateral * d * tan(deg_to_rad(VOID_HALF_FOV_DEG))
+				# The terrain's height function is a smooth floor even where nothing is built, so ask the physics world.
+				var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, ball_y + VOID_VERTICAL_M, at.y), Vector3(at.x, ball_y - VOID_VERTICAL_M, at.y))
+				total += 1
+				if not space.intersect_ray(query).is_empty():
+					hit += 1
+		s["void"] = float(hit) / float(total) < VOID_GROUND_SHARE
+
+
 func _pick_stills(samples: Array) -> Array:
 	var picked: Array = []
 	var order := range(samples.size())
@@ -720,6 +748,32 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 	sm["bare_samples"] = bare
 	sm["bare_share_pct"] = snappedf(100.0 * bare / samples.size(), 0.1)
 	sm["longest_bare_run_m"] = longest * step
+	# Ground-only view of the same rule: BARE poses on real ground, and the longest contiguous run of them.
+	var bare_ground := 0
+	var ground_poses := 0
+	var gruns := 0
+	var glongest := 0
+	var voids := 0
+	var gline := ""
+	var galong := -1e9
+	for s in samples:
+		var contiguous: bool = s["line"] == gline and float(s["along_m"]) - galong <= step * 1.5
+		if s["void"]:
+			voids += 1
+			gruns = 0
+		else:
+			ground_poses += 1
+			if s["bare"]:
+				bare_ground += 1
+				gruns = gruns + 1 if contiguous and gruns > 0 else 1
+				glongest = maxi(glongest, gruns)
+			else:
+				gruns = 0
+		gline = s["line"]
+		galong = float(s["along_m"])
+	sm["void_poses"] = voids
+	sm["bare_ground_share"] = snappedf(100.0 * bare_ground / maxf(1.0, ground_poses), 0.1)
+	sm["longest_bare_ground_run_m"] = glongest * step
 	var draws := _column(samples, "draw_calls")
 	var prims := _column(samples, "primitives")
 	var deltas := []

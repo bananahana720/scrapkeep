@@ -34,11 +34,16 @@ const GROUP := "park_props"
 const LOW_PRESET := "low"
 
 # Placement minimums (the contract's "Placement" rules), in metres and degrees.
-const LINE_CLEAR_M := 15.0
-const LINE_CLEAR_TALL_M := 30.0
+# Line clearance from the footprint edge to the nearest lines.json leg, by height tier: LOW (up to LOW_HEIGHT_M), MID (up
+# to TALL_HEIGHT_M), TALL (a tall tag, a hero, or taller than TALL_HEIGHT_M). Route lanes bind TALL only.
+const LINE_CLEAR_LOW_M := 6.0
+const LINE_CLEAR_MID_M := 10.0
+const LINE_CLEAR_TALL_M := 20.0
+const LOW_HEIGHT_M := 1.2
 const TALL_HEIGHT_M := 3.0
-const NEAR_LINE_M := 30.0
-const NEAR_LINE_MAX_HEIGHT_M := 1.5
+# Row footprints keep props out when the row is a ride feature; ground, banks, terraces and anchor fields do not.
+const RIDE_ELEMENTS := ["kicker", "drop", "rail", "grind_line", "half_pipe", "bowl", "elevated_line", "ledge", "tunnel", "flow_line", "sky_island"]
+const OPEN_ELEMENTS := ["ground", "bank", "terrace", "anchor_field"]
 const HOME_CLEAR_M := 25.0
 const SLOPE_MAX_DEG := 25.0
 const SEAT_FLOAT_MAX_M := 0.15
@@ -48,7 +53,7 @@ const LINE_REACH_M := 64.0
 # A kicker's lip can be 1,600 m wide (a mesa rim), so set_dressing.gd's circle of radius width/2 + 3 covers the play rect.
 # Props use a capsule along the lip instead, and a second one for the launch run-out ahead of it.
 const KICK_MARGIN_M := 8.0
-const KICK_RUNOUT_M := 25.0
+const KICK_RUNOUT_M := 40.0
 const LITTER_CHUNK_M := 160.0
 const LITTER_GAP_RATIO := 0.5
 const CAMP_ACTIVITIES := ["enemy_camp"]
@@ -107,6 +112,26 @@ class Context:
 			var b := Vector2(leg.z, leg.w)
 			best = minf(best, p.distance_to(Geometry2D.get_closest_point_to_segment(p, a, b)))
 		return best
+
+	# A row's footprint keeps props out when it is a ride feature or a home; the landmark (no element) always does.
+	static func blocks_props(row: Dictionary) -> bool:
+		var element := String(row.get("element", ""))
+		var home = row.get("home")
+		var fact = row.get("ride_fact")
+		if element.is_empty() or (home is String and not (home as String).is_empty()):
+			return true
+		return element in RIDE_ELEMENTS or (fact != null and not (fact is String and (fact as String).is_empty()) and not (fact is bool and not fact) and not element in OPEN_ELEMENTS)
+
+	# What keeps a prop out at p: a keepout row (spawn, beacon, gates, sites, cages, kicker capsules) or a built footprint
+	# of a ride-feature row ("" when clear). Ground, bank, terrace and anchor-field rows without a home are open.
+	func keepout_at(p: Vector2, margin: float) -> String:
+		var what: String = SetDressing.blocked(sites._keepouts, p, margin)
+		if what != "":
+			return what
+		for row: Dictionary in sites._cells.get(ParkSites._cell(p), []):
+			if blocks_props(row) and ParkMap.footprint_contains(row, p, margin):
+				return "built row " + String(row.get("id", "?"))
+		return ""
 
 	func add_leg(a: Vector2, b: Vector2) -> void:
 		var low := _cell(Vector2(minf(a.x, b.x), minf(a.y, b.y)) - Vector2.ONE * LINE_REACH_M)
@@ -531,21 +556,18 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	var fail := func(rule: String, detail: String) -> void:
 		out.append({"vignette": inst["vignette"], "kind": inst["kind"], "pos": pos, "rule": rule, "detail": detail})
 	var edge := c.line_distance(p) - r
-	if edge < LINE_CLEAR_M:
-		fail.call("line_clear", "%.1f m from a line, want %.0f" % [edge, LINE_CLEAR_M])
-	elif tall and edge < LINE_CLEAR_TALL_M:
-		fail.call("line_clear", "tall or hero, %.1f m from a line, want %.0f" % [edge, LINE_CLEAR_TALL_M])
-	elif edge < NEAR_LINE_M and height > NEAR_LINE_MAX_HEIGHT_M:
-		fail.call("line_clear", "%.1f m tall at %.1f m from a line, want under %.1f m tall inside %.0f" % [height, edge, NEAR_LINE_MAX_HEIGHT_M, NEAR_LINE_M])
-	if ParkRecipes.in_clear(c.lanes, p, r):
-		fail.call("route_lane", "inside a route lane")
+	var need := LINE_CLEAR_TALL_M if tall else (LINE_CLEAR_MID_M if height > LOW_HEIGHT_M else LINE_CLEAR_LOW_M)
+	if edge < need:
+		fail.call("line_clear", "%s, %.1f m from a line, want %.0f" % ["tall or hero" if tall else ("mid" if height > LOW_HEIGHT_M else "low"), edge, need])
+	if tall and ParkRecipes.in_clear(c.lanes, p, r):
+		fail.call("route_lane", "tall, inside a route lane")
 	if not c.rect.grow(-r).has_point(p):
 		fail.call("play_rect", "outside the play rect")
 	else:
 		var margin := clampf(r + ParkSites.MARGIN, ParkSites.MARGIN, ParkSites.MARGIN_MAX)
-		if not c.sites.clear(p, margin):
-			var what := SetDressing.blocked(c.sites._keepouts, p, margin)
-			fail.call("keepout", "within %.1f m of %s" % [margin, what if what != "" else "a built row footprint"])
+		var what := c.keepout_at(p, margin)
+		if what != "":
+			fail.call("keepout", "within %.1f m of %s" % [margin, what])
 	for home: Dictionary in c.homes:
 		var row: Dictionary = home["row"]
 		var near := false

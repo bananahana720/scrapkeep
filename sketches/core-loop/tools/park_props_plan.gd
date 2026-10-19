@@ -1,9 +1,9 @@
 extends SceneTree
 
 # Park props spot finder and vignette check (Dressing lane, design-v3/park/DRESSING-KITS.md). Read-only: no file is written.
-#   godot --headless --path sketches/core-loop --script tools/park_props_plan.gd -- --map=park_dam [--line=floor] [--check] [--file=res://path.json] [--bench]
+#   godot --headless --path sketches/core-loop --script tools/park_props_plan.gd -- --map=park_dam [--line=floor] [--check] [--tier=low|mid|tall] [--file=res://path.json] [--bench]
 # Without --check it prints candidate vignette spots as JSON lines, ordered along the --line (default the floor line): a
-# spot is 25 to 64 m from some line, clear under park_props.gd validate() for a vignette of VIGNETTE_RADIUS_M, on
+# spot is in the --tier band (default tall, 20 to 64 m) of some line, clear under park_props.gd validate() for a vignette of VIGNETTE_RADIUS_M, on
 # ground at most MAX_SLOPE_DEG steep, and at least SPACING_M from the spot before it. Each row names the nearest built
 # row (id, society, element, landform) so a writer can fit a story to it. Exit 0.
 # With --check it validates the map's vignette file (schema, kit names, then every expanded instance) and prints every
@@ -11,10 +11,17 @@ extends SceneTree
 
 const ParkProps := preload("res://src/presentation/park_props.gd")
 
-const VIGNETTE_RADIUS_M := 12.0
-const VIGNETTE_HEIGHT_M := 1.0
-# Top at ParkProps.Context's LINE_REACH_M: past it line_distance is INF, so a wider band would never match.
-const LINE_BAND_M := [25.0, 64.0]
+# --tier picks the candidate band (metres from a line), the disc radius and a probe height; the default is the old mid-wide band.
+# Band tops stay at or under ParkProps.Context's LINE_REACH_M: past it line_distance is INF.
+const TIERS := {
+	"low": {"band": [6.0, 30.0], "radius": 4.0, "height": 1.0, "tags": []},
+	"mid": {"band": [10.0, 45.0], "radius": 6.0, "height": 2.0, "tags": []},
+	"tall": {"band": [20.0, 64.0], "radius": 12.0, "height": 5.0, "tags": ["tall"]},
+}
+var tier := "tall"
+var VIGNETTE_RADIUS_M := 12.0
+var VIGNETTE_HEIGHT_M := 1.0
+var LINE_BAND_M := [20.0, 64.0]
 const MAX_SLOPE_DEG := 15.0
 const SPACING_M := 60.0
 const BENCH_VIGNETTES := 60
@@ -37,8 +44,17 @@ func _initialize() -> void:
 			file_arg = arg.trim_prefix("--file=")
 		elif arg == "--bench":
 			bench = true
+		elif arg.begins_with("--tier="):
+			tier = arg.trim_prefix("--tier=")
 		elif arg == "--check":
 			check = true
+	if not TIERS.has(tier):
+		push_error("park_props_plan: --tier is one of %s" % str(TIERS.keys()))
+		quit(2)
+		return
+	VIGNETTE_RADIUS_M = TIERS[tier]["radius"]
+	VIGNETTE_HEIGHT_M = TIERS[tier]["height"]
+	LINE_BAND_M = TIERS[tier]["band"]
 	if ParkProps.stage_of(map_id) == 0:
 		push_error("park_props_plan: name a park with --map=park_dam (one of %s)" % str(ParkProps.PARKS))
 		quit(2)
@@ -138,7 +154,7 @@ func _plan(map_id: String, map, world: Dictionary, c, line_key: String) -> int:
 			var d: float = c.line_distance(at)
 			if d < LINE_BAND_M[0] or d > LINE_BAND_M[1]:
 				continue
-			var probe := {"vignette": "plan", "kind": "plan", "class": ParkProps.PROP, "tags": [], "pos": Vector3(at.x, 0.0, at.y), "radius": VIGNETTE_RADIUS_M,
+			var probe := {"vignette": "plan", "kind": "plan", "class": ParkProps.PROP, "tags": TIERS[tier]["tags"], "pos": Vector3(at.x, 0.0, at.y), "radius": VIGNETTE_RADIUS_M,
 				"height": VIGNETTE_HEIGHT_M, "litter": false, "float_m": 0.0, "slope_deg": 0.0}
 			probe["slope_deg"] = _slope(ground, at)
 			if probe["slope_deg"] > MAX_SLOPE_DEG or not ParkProps.check_one(probe, c).is_empty() or not _ring_clear(c, at):
@@ -159,7 +175,7 @@ func _plan(map_id: String, map, world: Dictionary, c, line_key: String) -> int:
 		print(JSON.stringify({"at": [spot["at"].x, spot["at"].y], "line_m": snappedf(spot["line_m"], 0.1), "along_m": snappedf(spot["along_m"], 1.0),
 			"slope_deg": snappedf(spot["slope"], 0.1), "row": row["id"], "society": row["society"], "element": row["element"], "landform": row["landform"],
 			"row_m": snappedf(row["distance"], 1.0)}))
-	print("park_props_plan: %s %d candidates, %d spots %.0f m apart along %s" % [map_id, found.size(), printed, SPACING_M, line_key])
+	print("park_props_plan: %s %d candidates (tier %s), %d spots %.0f m apart along %s" % [map_id, found.size(), tier, printed, SPACING_M, line_key])
 	return 0
 
 
@@ -169,7 +185,7 @@ func _ring_clear(c, at: Vector2) -> bool:
 	for reach in [VIGNETTE_RADIUS_M * 0.5, VIGNETTE_RADIUS_M]:
 		for k in 8:
 			var p: Vector2 = at + Vector2.from_angle(k * TAU / 8.0) * reach
-			if not c.sites.clear(p, ParkProps.ParkSites.MARGIN) or ParkProps.ParkRecipes.in_clear(c.lanes, p, 0.0):
+			if c.keepout_at(p, ParkProps.ParkSites.MARGIN) != "" or (tier == "tall" and ParkProps.ParkRecipes.in_clear(c.lanes, p, 0.0)):
 				return false
 	return true
 
