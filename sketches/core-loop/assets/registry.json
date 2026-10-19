@@ -12189,23 +12189,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "drill_rig_wreck variant b LOD0 (9380 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; polished and baked."
+    "notes": "drill_rig_wreck variant b LOD0 (9952 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
      -5.2647,
      0,
-     -6.3473
+     -6.7805
     ],
     "max": [
      5.2647,
-     5.1574,
-     6.3473
+     5.1583,
+     6.7805
     ],
     "size": [
      10.5294,
-     5.1574,
-     12.6946
+     5.1583,
+     13.561
     ]
    }
   },
@@ -12217,23 +12217,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "drill_rig_wreck variant b LOD1 (4690 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "drill_rig_wreck variant b LOD1 (4976 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -5.2651,
+     -5.265,
      0,
-     -6.3459
+     -6.7791
     ],
     "max": [
      5.2647,
-     5.1692,
-     6.3473
+     5.1621,
+     6.7789
     ],
     "size": [
-     10.5298,
-     5.1692,
-     12.6932
+     10.5297,
+     5.1621,
+     13.558
     ]
    }
   },
@@ -12245,23 +12245,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "drill_rig_wreck variant b LOD2 (1399 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "drill_rig_wreck variant b LOD2 (1485 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -5.2735,
+     -5.2711,
      0,
-     -6.3674
+     -6.8007
     ],
     "max": [
      5.2556,
-     5.1594,
-     6.3418
+     5.1551,
+     6.7612
     ],
     "size": [
-     10.5291,
-     5.1594,
-     12.7092
+     10.5267,
+     5.1551,
+     13.5619
     ]
    }
   },
@@ -12273,7 +12273,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant a LOD0 (8492 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; polished and baked."
+    "notes": "haul_truck variant a LOD0 (8608 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -12301,7 +12301,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant a LOD1 (4246 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "haul_truck variant a LOD1 (4304 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -12329,7 +12329,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant a LOD2 (1274 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "haul_truck variant a LOD2 (1290 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -12357,7 +12357,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant b LOD0 (8352 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; polished and baked."
+    "notes": "haul_truck variant b LOD0 (8468 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -12385,7 +12385,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant b LOD1 (4176 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "haul_truck variant b LOD1 (4234 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -12413,7 +12413,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant b LOD2 (1252 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "haul_truck variant b LOD2 (1269 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -12422,12 +12422,12 @@
      -7.13
     ],
     "max": [
-     5.4653,
+     5.5008,
      9.6417,
      7.1271
     ],
     "size": [
-     10.9301,
+     10.9656,
      9.6417,
      14.2571
     ]
@@ -12441,7 +12441,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant c LOD0 (17352 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; polished and baked."
+    "notes": "haul_truck variant c LOD0 (17468 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -12451,12 +12451,12 @@
     ],
     "max": [
      3.9021,
-     5.2484,
+     6.4984,
      6.6883
     ],
     "size": [
      7.8042,
-     5.2484,
+     6.4984,
      13.3766
     ]
    }
@@ -12469,7 +12469,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant c LOD1 (8676 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "haul_truck variant c LOD1 (8734 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -12479,12 +12479,12 @@
     ],
     "max": [
      3.9021,
-     5.2484,
+     6.4984,
      6.6883
     ],
     "size": [
      7.8042,
-     5.2484,
+     6.4984,
      13.3745
     ]
    }
@@ -12497,7 +12497,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant c LOD2 (2587 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "haul_truck variant c LOD2 (2605 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -12507,12 +12507,12 @@
     ],
     "max": [
      3.9008,
-     5.2176,
+     6.4676,
      6.673
     ],
     "size": [
      7.7944,
-     5.2176,
+     6.4676,
      13.3367
     ]
    }
@@ -12525,7 +12525,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "lunch_shelf variant a LOD0 (2924 tris): A pit-head shelf where the crew left their lunch pails, a mug, a folded jacket. Deterministic; polished and baked."
+    "notes": "lunch_shelf variant a LOD0 (2848 tris): A pit-head shelf where the crew left their lunch pails, a mug, a folded jacket. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -12535,12 +12535,12 @@
     ],
     "max": [
      1.4693,
-     1.25,
+     1.2909,
      0.4681
     ],
     "size": [
      2.9386,
-     1.25,
+     1.2909,
      0.9362
     ]
    }
@@ -12553,7 +12553,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "lunch_shelf variant a LOD1 (1462 tris): A pit-head shelf where the crew left their lunch pails, a mug, a folded jacket. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lunch_shelf variant a LOD1 (1424 tris): A pit-head shelf where the crew left their lunch pails, a mug, a folded jacket. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -12563,12 +12563,12 @@
     ],
     "max": [
      1.4688,
-     1.25,
+     1.2909,
      0.4663
     ],
     "size": [
      2.9358,
-     1.25,
+     1.2909,
      0.9344
     ]
    }
@@ -12581,7 +12581,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "lunch_shelf variant a LOD2 (438 tris): A pit-head shelf where the crew left their lunch pails, a mug, a folded jacket. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lunch_shelf variant a LOD2 (426 tris): A pit-head shelf where the crew left their lunch pails, a mug, a folded jacket. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -12591,13 +12591,13 @@
     ],
     "max": [
      1.4617,
-     1.2179,
-     0.447
+     1.2745,
+     0.4593
     ],
     "size": [
      2.9287,
-     1.2179,
-     0.9035
+     1.2745,
+     0.9158
     ]
    }
   },
@@ -13711,12 +13711,12 @@
     ],
     "max": [
      2.165,
-     2.995,
+     2.895,
      1.54
     ],
     "size": [
      4.33,
-     2.995,
+     2.895,
      3.08
     ]
    }
@@ -13739,12 +13739,12 @@
     ],
     "max": [
      2.165,
-     2.995,
+     2.895,
      1.5364
     ],
     "size": [
      4.3222,
-     2.995,
+     2.895,
      3.0666
     ]
    }
@@ -13767,12 +13767,12 @@
     ],
     "max": [
      2.2337,
-     2.9874,
+     2.8874,
      1.5324
     ],
     "size": [
      4.3909,
-     2.9874,
+     2.8874,
      3.0626
     ]
    }
@@ -13795,12 +13795,12 @@
     ],
     "max": [
      2.783,
-     2.9992,
+     2.8992,
      1.856
     ],
     "size": [
      5.566,
-     2.9992,
+     2.8992,
      3.712
     ]
    }
@@ -13823,12 +13823,12 @@
     ],
     "max": [
      2.783,
-     2.9992,
+     2.8992,
      1.8525
     ],
     "size": [
      5.5703,
-     2.9992,
+     2.8992,
      3.7078
     ]
    }
@@ -13851,12 +13851,12 @@
     ],
     "max": [
      2.7663,
-     2.9869,
+     2.8869,
      1.8602
     ],
     "size": [
      5.5385,
-     2.9869,
+     2.8869,
      3.6927
     ]
    }

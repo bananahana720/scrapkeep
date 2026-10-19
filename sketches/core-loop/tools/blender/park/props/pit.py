@@ -180,11 +180,14 @@ def haul_truck(p, v, rng):
     p.box((0.12, 1.6, 0.9), (-2.57, -1.6, 3.9), GLASS, style="fine")
     p.box((0.12, 1.6, 0.9), (-0.43, -1.6, 3.9), GLASS, style="fine")
     p.box((2.6, 3.2, 0.2), (-1.5, -1.9, 4.7), trim, style="hard")
+    # A level sunshade deck on four stout posts above the cab roof: a flat 3.6 m top that holds without a mast.
+    for dx in (-1.7, 1.7):
+        for dy in (-1.7, 1.7):
+            p.box((0.3, 0.3, 1.6), (-1.5 + dx, -1.9 + dy, 5.5), C["iron"], style="hard")
+    p.box((3.8, 3.8, 0.3), (-1.5, -1.9, 6.25), shade(trim, 1.1), style="hard")
     p.cyl(0.14, 1.0, (-2.6, -0.2, 3.2), C["charcoal"], segs=8, style="round")
-    # Front steps up to the cab: stacked boxes (never a ramp).
-    for k in range(3):
-        p.box((0.9, 0.55, 0.12), (-3.1, -2.2 + k * 0.05, 0.9 + k * 0.5), C["iron_light"], style="fine")
-    p.box((0.12, 0.12, 1.5), (-3.5, -2.2, 1.85), C["iron"], style="fine")
+    # A single grab handle on the cab's front pillar (no steps).
+    p.rod((-3.0, -2.75, 3.1), (-3.0, -2.75, 3.6), 0.05, C["iron_light"], segs=6)
     # Dump bed on a hinge at the rear. Tipped angle by variant.
     ang = {"a": 0.22, "b": 0.45, "c": 0.0}[v]
     hy, hz = 4.6, 2.5
@@ -206,8 +209,7 @@ def haul_truck(p, v, rng):
         bed_box((0.45, L + 0.1, 0.3), sx * 2.5, cy, hz + 1.75, trim)          # rim
     bed_box((5.4, 0.45, 2.2), 0, cy - L / 2 + 0.2, hz + 1.2, body)            # front wall
     bed_box((5.6, 1.2, 0.5), 0, cy - L / 2 - 0.6, hz + 2.4, trim)             # canopy over cab
-    py, pz = bp(cy - L / 2 - 0.6, hz + 2.55)
-    p.perch((0, py, pz))  # the canopy over the cab, raised with the bed (6 m or more up in a and b)
+    p.perch((-1.5, -1.9, 6.4))  # centre of the level sunshade deck, on its top face
     for k in range(5):                                                         # ribs on the sides
         for sx in (-1, 1):
             bed_box((0.15, 0.35, 1.4), sx * 2.72, cy - 3.6 + k * 1.8, hz + 0.9, shade(trim, 0.9))
@@ -289,15 +291,16 @@ def drill_rig_wreck(p, v, rng):
         p.cyl(0.55, 0.9, (0, my1 + 0.2, mz), C["iron"], segs=10, rot=(math.pi / 2, 0, 0), style="hard")
         p.cyl(0.4, 0.8, (0, my0 - 0.2, mz), C["iron_light"], segs=10, rot=(math.pi / 2, 0, 0), style="hard")
     else:
-        # Mast slipped off its cradle: nose on the ground, tail on the deck, bursage in the gap.
-        a_pt, b_pt = (0.4, -5.2, 0.7), (0.0, 3.4, 4.4)
-        p.beam(a_pt, b_pt, 1.0, OXIDE, h=0.9, roll=0.0)
-        n = 9
-        for k in range(n):
-            t = (k + 0.5) / n
-            q = tuple(a_pt[i] + (b_pt[i] - a_pt[i]) * t for i in range(3))
-            p.box((1.2, 0.28, 1.1), q, shade(OXIDE, 0.85), rot=(math.atan2(b_pt[2] - a_pt[2], b_pt[1] - a_pt[1]), 0, 0),
-                  style="hard")
+        # Mast slipped off its cradle: nose propped on a rock well clear of the ground, a kink mid-run, tail on the deck.
+        rock(p, 0.4, -5.3, 0.0, 1.0, rng, vein=True)
+        pts = [(0.4, -5.2, 1.75), (0.15, -1.2, 2.45), (0.0, 3.4, 4.4)]
+        for a_pt, b_pt in zip(pts, pts[1:]):
+            p.beam(a_pt, b_pt, 1.0, OXIDE, h=0.9, roll=0.0)
+            ang = math.atan2(b_pt[2] - a_pt[2], b_pt[1] - a_pt[1])
+            for k in range(5):
+                t = (k + 0.5) / 5
+                q = tuple(a_pt[i] + (b_pt[i] - a_pt[i]) * t for i in range(3))
+                p.box((1.2, 0.28, 1.1), q, shade(OXIDE, 0.85), rot=(ang, 0, 0), style="hard")
         p.cyl(0.55, 0.9, (0.0, 3.6, 4.5), C["iron"], segs=10, rot=(math.pi / 2, 0, 0), style="hard")
         bursage(p, 1.8, -4.2, 0.0, 1.8, rng)
         bursage(p, -2.4, -4.8, 0.0, 1.4, rng, dry=True)
@@ -411,8 +414,8 @@ def lunch_shelf(p, v, rng):
     p.box((2.5, 0.12, 0.7), (0, 0.4, 0.82), C["timber"], style="hard")
     if v == "a":
         p.box((2.5, 0.65, 0.12), (0, 0.05, 0.65), C["timber_pale"], style="hard")
-        for k in range(5):
-            pail(p, -0.95 + k * 0.48, 0.05, 0.71, cols[k], rng, lid=(k % 2 == 0), s=0.9)
+        for k, (px, ps) in enumerate(((-1.0, 0.9), (-0.48, 1.05), (0.1, 0.8), (0.6, 0.95), (1.0, 0.85))):
+            pail(p, px, 0.05 + 0.04 * (k % 2), 0.71, cols[k], rng, lid=(k in (1, 4)), s=ps)
         p.cyl(0.07, 0.1, (1.15, -0.28, 0.76), C["canvas_dark"], segs=8, style="hard")  # a tin mug
         p.torus(0.045, 0.012, (1.22, -0.28, 0.76), C["canvas_dark"], rot=(math.pi / 2, 0, 0), major=8, minor=4)
         soft_ico(p, 0.3, (0.0, -0.1, 0.35), C["canvas"], scale=(1.5, 1.0, 0.45), rot=(0, 0, 0.3), style="soft")  # jacket on the lower plank
@@ -524,7 +527,7 @@ def water_tank(p, v, rng):
         p.cyl(0.32, h, (x, y, h / 2), C["timber_dark"], segs=8, style="flat")
     p.box((2.4, 0.35, 0.28), (0, 0, 1.0 - drop * 0.4), C["timber"], rot=(0, tilt, 0), style="hard")
     p.box((0.35, 2.4, 0.28), (0, 0, 1.15 - drop * 0.4), C["timber"], rot=(0, tilt, 0), style="hard")
-    zt = 1.45
+    zt = 1.35
     # Tank: barrel body in oxide steel, rounded cap, banding hoops.
     p.cyl(1.3, 1.0, (0, 0, zt + 0.5), shade(OXIDE, 1.05), segs=12, rot=(0, tilt, 0), style="hard")
     p.uv(1.3, (0, 0, zt + 1.0), shade(OXIDE, 1.05), scale=(1, 1, 0.35), u=12, v=4, rot=(0, tilt, 0), style="hard")

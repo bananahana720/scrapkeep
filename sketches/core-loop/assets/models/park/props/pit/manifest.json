@@ -18,16 +18,16 @@
       "res://assets/models/park/props/pit/haul_truck_a_lod2.glb"
      ],
      "tris": [
-      8492,
-      4246,
-      1274
+      8608,
+      4304,
+      1290
      ],
      "radius": 6.72,
      "height": 7.489,
      "perch": [
-      0.0,
-      7.269,
-      4.86
+      -1.5,
+      6.498,
+      2.157
      ]
     },
     "b": {
@@ -37,16 +37,16 @@
       "res://assets/models/park/props/pit/haul_truck_b_lod2.glb"
      ],
      "tris": [
-      8352,
-      4176,
-      1252
+      8468,
+      4234,
+      1269
      ],
      "radius": 8.031,
      "height": 9.649,
      "perch": [
-      -1.811,
-      9.316,
-      4.238
+      -3.311,
+      6.57,
+      2.842
      ]
     },
     "c": {
@@ -56,12 +56,17 @@
       "res://assets/models/park/props/pit/haul_truck_c_lod2.glb"
      ],
      "tris": [
-      17352,
-      8676,
-      2587
+      17468,
+      8734,
+      2605
      ],
      "radius": 7.148,
-     "height": 5.248
+     "height": 6.498,
+     "perch": [
+      -1.74,
+      6.498,
+      2.388
+     ]
     }
    }
   },
@@ -94,12 +99,12 @@
       "res://assets/models/park/props/pit/drill_rig_wreck_b_lod2.glb"
      ],
      "tris": [
-      9380,
-      4690,
-      1399
+      9952,
+      4976,
+      1485
      ],
-     "radius": 7.021,
-     "height": 5.157
+     "radius": 6.788,
+     "height": 5.158
     }
    }
   },
@@ -192,12 +197,12 @@
       "res://assets/models/park/props/pit/lunch_shelf_a_lod2.glb"
      ],
      "tris": [
-      2924,
-      1462,
-      438
+      2848,
+      1424,
+      426
      ],
      "radius": 1.511,
-     "height": 1.25
+     "height": 1.291
     },
     "b": {
      "lod": [
@@ -323,7 +328,7 @@
       312
      ],
      "radius": 2.551,
-     "height": 2.995
+     "height": 2.895
     },
     "b": {
      "lod": [
@@ -337,7 +342,7 @@
       418
      ],
      "radius": 3.237,
-     "height": 2.999
+     "height": 2.899
     }
    }
   },
