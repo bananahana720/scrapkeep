@@ -23,9 +23,16 @@
 Soft toy (Andrew, 18 Oct): polish.enable below opts the kit into tools/blender/POLISH.md. Each convex piece is bevelled on its
 hard edges (a few cm to 0.2 m, never more than a quarter of the piece's thinnest side) and smooth shaded; edges past a
 per-piece crease angle stay hard (hex basalt corners, timber and strap corners keep a crisp bevelled edge). Round profiles
-carry 10 to 16 sides, and the AO and edge-wear bake multiplies the `enamel` vertex colour. The bake adds a `Bake` UV map
-(TEXCOORD_1) to both meshes; the loader ignores UVs. Normals stay right under the loader's Y stretch because Godot builds
-the normal matrix from the inverse transpose.
+carry 8 to 16 sides (hoodoo 10 or 12, cairn 9 to 12, saguaro 16 ribs, the small rings 8), and the AO and edge-wear bake
+multiplies the `enamel` vertex colour. The bake runs on the render mesh before the `-col` box is attached, so the box
+casts no occlusion and gets no UV. The render mesh carries a zeroed TEXCOORD_0 and the `Bake` UV map (TEXCOORD_1); the
+loader ignores UVs. Whether normals stay right under the loader's Y stretch is NOT verified here: it depends on how the
+MultiMesh path of Godot's scene shader builds the normal matrix (no engine shader source was available to read), so check
+the shading of a strongly stretched post on screen before trusting it.
+
+Open joints: the strata bands (hoodoo) and the cairn stones leave their bottom ring open, because it sits on the piece
+below. The recipe clamps that ring inside the piece below's bevelled top outline (see `fit_inside`), so no player can see
+through a joint from under a ledge, and check_recipe asserts it on the built geometry.
 
 Authoring contract (the machine-side change to park_recipes.gd place_anchor_field reads it):
   +Y up; the origin at the post's base centre on the ground; the footprint inside the 8 m x 8 m post square
@@ -36,12 +43,12 @@ Authoring contract (the machine-side change to park_recipes.gd place_anchor_fiel
   eye, crown and collar, pin and ring) sits in the top 20 % (y 7 and up); every round feature is a horizontal ring or a
   vertical column, which stay round under a Y stretch. Geometry is continuous from y -1 up, so no part floats at any
   stretch.
-  Instanced through one MultiMesh per field: each render mesh is at most 900 triangles (BASE_TRIS; 400 before the soft-toy
-  pass), a single mesh, a single material (`enamel`, vertex colour as albedo, as ledges.py). Deliberate deviation from the park family convention: no detail
+  Instanced through one MultiMesh per field: each render mesh is at most 700 triangles (BASE_TRIS; 400 before the soft-toy
+  pass; the dam and crown fields each draw over 6,000 posts, so the cap stays low until a frame check clears a higher one), a single mesh, a single material (`enamel`, vertex colour as albedo, as ledges.py). Deliberate deviation from the park family convention: no detail
   shells (_detail1/_detail2); instanced posts get no shells. Each GLB still carries the collision mesh `<id>-col`
   (the 8 x 8 x 10 post box, never drawn) so it matches the family's file shape; the loader keeps its BoxShape3D colliders.
 
-Files per recipe id (assets/asset_budgets.json class detail: 1,500 triangles, 3,000 vertices, one draw):
+Files per recipe id (assets/asset_budgets.json class detail: 4,000 triangles, 8,000 vertices, one draw):
   <id>.glb   the render mesh `<id>` and the collision mesh `<id>-col`
 
 Colour: Southwest palette as vertex colour: sandstone c6a274, cream e6d9b8, iron-oxide red 9b513a, desert varnish 3a3027,
@@ -71,8 +78,8 @@ import polish  # noqa: E402
 
 # Soft-toy pass (tools/blender/POLISH.md): every piece is bevelled and smooth shaded in Surface.finish, and common.export
 # bakes ambient occlusion and edge wear into the `enamel` vertex colour. Remove this line and the posts build flat shaded as
-# before (but BASE_TRIS then no longer matches: it is 900 for the polished mesh, the flat one was at most 400).
-polish.enable(detail=2, bevel=0.06, bevel_angle=50.0, sharp_angle=50.0, ao_rays=24, ao_reach=0.18, ao_strength=0.5, edge=0.12,
+# before (the flat mesh is smaller; colour mottle has its own RNG, so the geometry is the same either way).
+polish.enable(bevel=0.06, bevel_angle=50.0, sharp_angle=50.0, ao_rays=24, ao_reach=0.18, ao_strength=0.5, edge=0.12,
               bake_slots=("enamel",))
 
 MODELS = Path(common.SKETCH) / "assets/models/park"
@@ -80,8 +87,8 @@ MODELS = Path(common.SKETCH) / "assets/models/park"
 POST_HALF = 4.0            # ANCHOR_POST_M / 2 (park_recipes.gd)
 SINK = 1.0                 # ANCHOR_SINK_M
 TOP = 9.0                  # authored height 10 m from y -1
-BASE_TRIS = 900            # MultiMesh instancing cap per post, polished (was 400 flat shaded; class detail caps at 1,500)
-DETAIL_VERTS = 3000        # assets/asset_budgets.json class detail
+BASE_TRIS = 700            # MultiMesh instancing cap per post, polished (was 400 flat shaded; class detail caps at 4,000)
+DETAIL_VERTS = 8000        # assets/asset_budgets.json class detail
 IDENTITY_Y = TOP - 2.0     # the top 20 % of the 10 m
 
 # Tones (top face, side face, underside), sRGB hex.
@@ -150,6 +157,9 @@ class Surface:
     def __init__(self, name, seed, colored=True):
         self.name, self.colored = name, colored
         self.rng = random.Random(seed)
+        # Colour mottle draws from its own generator, so toggling polish never moves the geometry that follows.
+        self.crng = random.Random(seed * 7919 + 17)
+        self.joints = []      # (name, open bottom ring, supporting top ring, margin) for check_recipe
         self.verts, self.tris, self.colors = [], [], []
         self.pieces = []
         self.look = {}
@@ -165,7 +175,7 @@ class Surface:
         kept = []
         # Smooth shaded pieces take one mottle per piece: a tone per face would read as facets again under smooth normals.
         flat_tone = polish.options() is None
-        piece_t = 0.0 if flat_tone else self.rng.uniform(-1, 1) * mottle
+        piece_t = 0.0 if flat_tone else self.crng.uniform(-1, 1) * mottle
         for f in faces:
             ring = [pts[remap[i]] for i in f]
             n = (0.0, 0.0, 0.0)
@@ -184,7 +194,7 @@ class Surface:
             ny = n[1] / length
             base = hexf(tone[0] if ny > .6 else tone[2] if ny < -.6 else tone[1])
             if flat_tone:
-                t = self.rng.uniform(-1, 1) * mottle
+                t = self.crng.uniform(-1, 1) * mottle
             else:
                 t = piece_t
             c = mixf(base, hexf(VARNISH[0]) if t < 0 else hexf(CREAM[0]), abs(t))
@@ -234,7 +244,7 @@ class Surface:
             if caps[0]:
                 faces.append(tuple(range(sides)))
             self.add(pts, faces, tone, mottle)
-            return
+            return lo, None
         hi = [(c1[0] + math.cos(a) * r1 * m, y1, c1[1] + math.sin(a) * r1 * m) for a, m in zip(ang, radii)]
         pts = lo + hi
         faces = [(k, (k + 1) % sides, sides + (k + 1) % sides, sides + k) for k in range(sides)]
@@ -243,6 +253,7 @@ class Surface:
         if caps[1]:
             faces.append(tuple(range(sides, 2 * sides)))
         self.add(pts, faces, tone, mottle)
+        return lo, hi
 
     def rod(self, a, b, r, tone, sides=8, caps=(True, True)):
         """A round pole from a to b."""
@@ -259,7 +270,7 @@ class Surface:
             faces.append(tuple(range(sides, 2 * sides)))
         self.add(pts, faces, tone, 0.12)
 
-    def ring(self, centre, radius, tube, tone, segments=10, sides=6):
+    def ring(self, centre, radius, tube, tone, segments=8, sides=4):
         """A horizontal ring (anchor or cable ring) as open tube segments, each its own convex piece; lying flat, it stays
         round under the loader's Y stretch."""
         for s in range(segments):
@@ -401,11 +412,40 @@ def stone_material():
     return mat
 
 
-ROCK_LOOK = {"bevel": .12}
+ROCK_LOOK = {"bevel": 0.0}     # part-buried rocks: the ground hides the edge a bevel would round
 
 
 def jitter(rng, sides, amount):
     return [1.0 + rng.uniform(-amount, amount) for _ in range(sides)]
+
+
+def fit_inside(top_ring, centre, margin, sides, radii):
+    """The largest bottom radius for a ring of `sides` corners (each corner scaled by `radii`) around `centre` (x, z) that
+    stays inside the polygon `top_ring` (3D points of the piece below's top) by `margin`. The polygon contains the circle of
+    its smallest corner radius times cos(pi / n) around its own centre, so a ring whose corners all fall inside that circle
+    (less the offset between the two centres) is inside at every angle."""
+    n = len(top_ring)
+    cx = sum(p[0] for p in top_ring) / n
+    cz = sum(p[2] for p in top_ring) / n
+    rho = min(math.hypot(p[0] - cx, p[2] - cz) for p in top_ring) * math.cos(math.pi / n)
+    off = math.hypot(centre[0] - cx, centre[1] - cz)
+    return max(0.0, (rho - margin - off) / max(radii))
+
+
+def inside_by(ring, poly, margin):
+    """True when every point of `ring` lies inside the convex polygon `poly` (3D points in order, x and z used) by at least
+    `margin`."""
+    n = len(poly)
+    area = sum(poly[i][0] * poly[(i + 1) % n][2] - poly[(i + 1) % n][0] * poly[i][2] for i in range(n))
+    sign = 1.0 if area > 0 else -1.0
+    for q in ring:
+        for i in range(n):
+            a, b = poly[i], poly[(i + 1) % n]
+            ex, ez = b[0] - a[0], b[2] - a[2]
+            d = sign * (ex * (q[2] - a[2]) - ez * (q[0] - a[0])) / math.hypot(ex, ez)
+            if d < margin - 1e-6:
+                return False
+    return True
 
 
 def lerp_profile(profile, y):
@@ -446,7 +486,8 @@ def hoodoo(base, variant):
     for k in range(3):
         a = r.uniform(0, 2 * math.pi)
         base.rock((math.cos(a) * 3.1, .15, math.sin(a) * 3.1), (r.uniform(.7, 1.1), r.uniform(.5, .8), r.uniform(.7, 1.1)), SANDTOP)
-    # the banded column: band edges drift, each band a closed frustum with its own step in radius (the strata ledges)
+    # the banded column: band edges drift, each band a frustum with its own step in radius (the strata ledges); only the
+    # first has a bottom cap, so every later band's bottom ring is clamped inside the band below's top outline
     y0, y1 = .3, p["cap_y"] + .05
     n = p["bands"]
     base.look = {"bevel": .08, "sharp": 80.0}
@@ -455,9 +496,18 @@ def hoodoo(base, variant):
         ya, yb = edges[k], edges[k + 1]
         step = 1.0 + r.uniform(-.06, .07)
         tone = REDS[k % 3] if k % 2 == 0 else CREAMS[(k // 2) % 2]
-        # round strata: ten to twelve sides, smooth shaded (a 80 degree crease keeps the jittered facets blended); the bottom cap of every band after the first is hidden on the band below
-        base.frustum(ya, yb, lerp_profile(p["profile"], ya) * step, lerp_profile(p["profile"], yb) * step, sides, tone,
-                     centre(ya), centre(yb), phase=r.uniform(0, 1), radii=jitter(r, sides, .07), caps=(k == 0, True))
+        # round strata: ten to twelve sides, smooth shaded (an 80 degree crease keeps the jittered facets blended). A band
+        # after the first has no bottom cap, so its bottom ring must sit inside the band below's top outline less the bevel
+        # (the strata ledge then steps outward above the joint, an undercut, never a gap).
+        phase, radii = r.uniform(0, 1), jitter(r, sides, .07)
+        r0 = lerp_profile(p["profile"], ya) * step
+        if k:
+            r0 = min(r0, fit_inside(below_top, centre(ya), .08, sides, radii))
+        lo_ring, below_new = base.frustum(ya, yb, r0, lerp_profile(p["profile"], yb) * step, sides, tone,
+                                         centre(ya), centre(yb), phase=phase, radii=radii, caps=(k == 0, True))
+        if k:
+            base.joints.append(("band %d" % k, lo_ring, below_top, .08))
+        below_top = below_new
     # the caprock: darker slabs, the top one ends exactly at TOP
     y = p["cap_y"]
     total = sum(h for _, _, h in p["cap"])
@@ -479,8 +529,8 @@ BASALT_COLS = {
     "a": [(0.0, 0.0, 1.75, TOP, 0.0, 0.0, 3), (2.15, .6, 1.25, 7.6, .25, .05, 2), (-1.6, 1.55, 1.2, 6.8, -.2, .2, 2),
           (-.9, -2.05, 1.3, 8.2, -.1, -.25, 2), (1.35, -1.85, 1.0, 5.6, .2, -.15, 2)],
     "b": [(-.4, -.2, 2.2, TOP, .9, .35, 4), (2.2, 1.5, 1.05, 4.2, .1, .1, 2), (-2.3, 1.6, 1.0, 3.1, -.1, .15, 1)],
-    "c": [(-2.2, -1.2, 1.15, 5.2, 0, 0, 1), (-.6, -1.9, 1.15, 6.1, 0, 0, 2), (1.05, -1.0, 1.2, 7.0, 0, 0, 2),
-          (.8, 1.0, 1.25, 7.9, 0, 0, 2), (-.95, .9, 1.3, TOP, 0, 0, 2), (2.45, .5, .95, 4.4, 0, 0, 1)],
+    "c": [(-2.2, -1.2, 1.15, 5.2, 0, 0, 1), (-.6, -1.9, 1.15, 6.1, 0, 0, 1), (1.05, -1.0, 1.2, 7.0, 0, 0, 1),
+          (.8, 1.0, 1.25, 7.9, 0, 0, 1), (-.95, .9, 1.3, TOP, 0, 0, 1), (2.45, .5, .95, 4.4, 0, 0, 1)],
 }
 
 
@@ -488,7 +538,7 @@ def basalt(base, variant):
     r = base.rng
     # a dark rubble apron, sunk to y -1, ties the cluster to the ground
     base.look = {"bevel": .1}
-    base.frustum(-SINK, .25, 3.72, 3.3, 12, BASALT2, phase=r.uniform(0, 1), radii=jitter(r, 12, .05), caps=(False, True))
+    base.frustum(-SINK, .25, 3.72, 3.3, 8, BASALT2, phase=r.uniform(0, 1), radii=jitter(r, 8, .05), caps=(False, True))
     for x, z, rad, top, lx, lz, drips in BASALT_COLS[variant]:
         phase = r.uniform(0, math.pi / 3)
         span = top - .25
@@ -502,8 +552,9 @@ def basalt(base, variant):
         crust_h = .45 + .05 * rad
         # the glow band rising out of the apron, then the column, then the crust lip. The cut faces stay hexagonal: the six
         # vertical edges take a bevel wide enough to read from 40 m, and smooth shading rounds what is left of each corner.
-        base.look = {"bevel": .13}
+        base.look = {"bevel": 0.0}      # the glow band is short and half buried in the apron: no bevel, to hold the triangle cap
         base.frustum(g0, g1, rad * 1.03, rad, 6, GLOW, at(g0), at(g1), phase, caps=(False, False), mottle=.04)
+        base.look = {"bevel": .13}
         base.frustum(g1, top - crust_h, rad, rad * .94, 6, tone, at(g1), at(top - crust_h), phase, caps=(False, False))
         base.frustum(top - crust_h, top, rad * 1.1, rad * 1.04, 6, CRUST, at(top - crust_h), at(top), phase)
         cx, cz = at(top - crust_h)
@@ -511,9 +562,9 @@ def basalt(base, variant):
         for k in range(drips):
             face = phase + math.pi / 6 + (math.pi / 3) * r.randrange(6)
             base.drip(cx, cz, face, rad * .94 * math.cos(math.pi / 6), top - crust_h + .02, r.uniform(.9, 1.8) * (rad / 1.5 + .3), r.uniform(.18, .3), CRUST)
-    # embers: two small warm stones in the apron
+    # an ember: one small warm stone in the apron
     base.look = ROCK_LOOK
-    for k in range(2):
+    for k in range(1):
         a = r.uniform(0, 2 * math.pi)
         base.rock((math.cos(a) * 3.2, .3, math.sin(a) * 3.2), (.6, .35, .6), EMBER)
 
@@ -605,8 +656,8 @@ def saguaro(base, variant):
         f = max(0.0, y) / TOP
         return (lean[0] * f * f, lean[1] * f * f)
 
-    # soft flutes: sixteen sides, eight ribs, smooth to a 75 degree crease so the flutes round instead of cutting
-    base.look = {"bevel": .1, "segments": 2, "sharp": 75.0}
+    # soft flutes: sixteen sides, eight ribs, smooth to a 75 degree crease so the flutes round instead of cutting; one bevel segment on the mound
+    base.look = {"bevel": .1, "sharp": 75.0}
     base.frustum(-SINK, .35, 2.9, 2.0, 12, SAND, phase=r.uniform(0, 1), radii=jitter(r, 12, .08), caps=(False, True))
     base.look = {"bevel": 0.0, "sharp": 75.0}
     collar0, collar1 = 7.25, 7.75
@@ -660,17 +711,26 @@ def cairn(base, variant):
     hs = [h * span / sum(p["h"]) for h in p["h"]]
     y = -SINK
     cx = cz = 0.0
-    # pillowy stones: ten to twelve sides (alternate stones one fewer), smooth shaded, a wide two-step bevel on the top rim; the bottom rim sits on the
-    # stone below, so it stays open
+    # pillowy stones: nine to twelve sides (alternate stones one fewer), smooth shaded, a wide bevel on the top rim. The
+    # bottom ring stays open because it sits on the stone below, so it is clamped inside that stone's bevelled top outline
+    # (the stone flares outward as it rises, a pillowy underside, never a gap); the drift is bounded to match.
     base.look = {"bevel": .2, "sharp": 80.0}
+    below_top = None
     for k, (h, rad) in enumerate(zip(hs, p["r"])):
         sides = p["sides"] - k % 2
-        base.frustum(y, y + h, rad, rad * r.uniform(.9, .97), sides, STONES[r.randrange(len(STONES))], (cx, cz), (cx, cz),
-                     phase=r.uniform(0, 2 * math.pi), radii=jitter(r, sides, .08), caps=(False, True), mottle=.12)
+        tone, taper, phase, radii = STONES[r.randrange(len(STONES))], r.uniform(.9, .97), r.uniform(0, 2 * math.pi), jitter(r, sides, .08)
+        r0 = rad
+        if below_top is not None:
+            r0 = min(r0, fit_inside(below_top, (cx, cz), .2, sides, radii))
+        lo_ring, top_ring = base.frustum(y, y + h, r0, rad * taper, sides, tone, (cx, cz), (cx, cz),
+                                         phase=phase, radii=radii, caps=(False, True), mottle=.12)
+        if below_top is not None:
+            base.joints.append(("stone %d" % k, lo_ring, below_top, .2))
+        below_top = top_ring
         y += h - overlap
         if k + 1 < len(hs):
-            cx += p["drift"][0] + r.uniform(-.12, .12)
-            cz += p["drift"][1] + r.uniform(-.12, .12)
+            cx += max(-.2, min(.2, p["drift"][0] + r.uniform(-.12, .12)))
+            cz += max(-.2, min(.2, p["drift"][1] + r.uniform(-.12, .12)))
     ytop = y + overlap
     base.look = ROCK_LOOK
     for k in range(2):
@@ -679,6 +739,7 @@ def cairn(base, variant):
     # the iron pin set in the top stone and the cable ring round it
     base.look = {"bevel": .04}
     base.box((cx - .16, ytop - .1, cz - .16), (cx + .16, TOP, cz + .16), IRON, skip=("-y",), mottle=.04)
+    base.look = {"bevel": 0.0}
     base.ring((cx, ytop + pin * .45, cz), .5, .1, IRON)
 
 
@@ -694,7 +755,12 @@ def check_recipe(rid, base, col):
     for k in (0, 2):
         assert lo[k] >= -POST_HALF and hi[k] <= POST_HALF, (rid, "footprint inside the 8 m post square", lo, hi)
     assert 0 < len(base.tris), (rid, "no triangles")
-    if polish.options() is not None:
+    for name, ring, poly, margin in base.joints:
+        # An open bottom ring above the ground has no floor; it must sit inside the piece below's top outline.
+        assert inside_by(ring, poly, margin), (rid, name, "open bottom ring inside the piece below")
+    if polish.options() is None:
+        assert len(base.tris) <= BASE_TRIS, (rid, "instanced post triangle cap (flat)", len(base.tris), BASE_TRIS)
+    else:
         # The polished mesh is what ships: its triangles and bounds, in Godot axes (Blender x, -z up y).
         bm = base.polished()
         count = len(bm.faces)
@@ -733,7 +799,16 @@ def export_one(path, name, surfaces):
     root = common.empty(name + "_root")
     for s in surfaces:
         s.finish(root)
-    common.export(root, str(path))
+        if s.colored and common.POLISH is not None:
+            # Bake before the -col box exists, so it neither occludes the render tops nor gets a UV map.
+            bpy.context.view_layer.update()
+            polish.bake(root, common.POLISH)
+    bake = polish.bake
+    polish.bake = lambda *a, **k: None      # already baked above; common.export must not bake the whole tree again
+    try:
+        common.export(root, str(path))
+    finally:
+        polish.bake = bake
     return gltf_metrics(path)
 
 
