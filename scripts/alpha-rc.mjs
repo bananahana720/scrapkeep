@@ -25,7 +25,7 @@
 // Output: artifacts/local/alpha-rc/<stamp>/ with RC.md, rc.json and one log per step.
 // Exit 0 GO, 1 any step failed, 2 nothing failed but a step did not run (or a cloud rehearsal).
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -211,17 +211,28 @@ export function freshProfile() {
   return { home, env };
 }
 
-// The player's machine has no Godot: drop GODOT_BIN and every PATH entry holding a godot binary.
+// The player's machine has no Godot: drop GODOT_BIN and shadow every godot* name on PATH with a
+// shim that exits 127, first on PATH. Dropping whole PATH entries instead removed /usr/bin on
+// Arch, where godot sits beside sh and sleep, and failed every cold launch on the PC (19 Oct).
 export function launchEnv(env, profileEnv) {
-  const pathDirs = (env.PATH ?? "").split(":").filter((dir) => {
+  const pathDirs = (env.PATH ?? "").split(":").filter(Boolean);
+  const names = new Set();
+  for (const dir of pathDirs) {
     try {
-      return !readdirSync(dir).some((name) => /^godot/i.test(name));
+      for (const name of readdirSync(dir)) if (/^godot/i.test(name)) names.add(name);
     } catch {
-      return false;
+      // A missing or unreadable PATH entry holds nothing to shadow.
     }
-  });
+  }
+  const shims = path.join(profileEnv.HOME, ".no-godot");
+  mkdirSync(shims, { recursive: true });
+  for (const name of names) {
+    const file = path.join(shims, name);
+    writeFileSync(file, `#!/bin/sh\necho "alpha-rc: ${name} called on a machine without Godot" >&2\nexit 127\n`);
+    chmodSync(file, 0o755);
+  }
   const { GODOT_BIN: _godot, ...rest } = env;
-  return { ...rest, PATH: pathDirs.join(":"), ...profileEnv };
+  return { ...rest, PATH: [shims, ...pathDirs].join(":"), ...profileEnv };
 }
 
 // SIGTERM to the whole process group, SIGKILL after a grace, resolved once the leader has exited.

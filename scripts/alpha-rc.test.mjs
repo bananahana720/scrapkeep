@@ -202,15 +202,24 @@ test("gitState reads HEAD and dirtiness through git, including in a linked workt
   assert.equal(gitState(tmp()).head, null);
 });
 
-test("launch env drops GODOT_BIN and PATH entries holding godot", () => {
+test("launch env drops GODOT_BIN and shadows each godot on PATH with a failing shim, keeping the rest", () => {
   const withGodot = tmp();
-  writeFileSync(path.join(withGodot, "godot4"), "");
+  writeFileSync(path.join(withGodot, "godot4"), "#!/bin/sh\nexit 0\n");
+  chmodSync(path.join(withGodot, "godot4"), 0o755);
+  writeFileSync(path.join(withGodot, "tool"), "#!/bin/sh\necho tool-ran\n");
+  chmodSync(path.join(withGodot, "tool"), 0o755);
   const clean = tmp();
-  const env = launchEnv({ PATH: `${withGodot}:${clean}`, GODOT_BIN: "/opt/godot", DISPLAY: ":0" }, { HOME: "/fresh" });
-  assert.equal(env.PATH, clean);
+  const home = tmp();
+  const env = launchEnv({ PATH: `${withGodot}:${clean}`, GODOT_BIN: "/opt/godot", DISPLAY: ":0" }, { HOME: home });
+  assert.equal(env.PATH, `${path.join(home, ".no-godot")}:${withGodot}:${clean}`);
   assert.equal(env.GODOT_BIN, undefined);
   assert.equal(env.DISPLAY, ":0");
-  assert.equal(env.HOME, "/fresh");
+  assert.equal(env.HOME, home);
+  const godot = spawnSync("godot4", [], { env, encoding: "utf8" });
+  assert.equal(godot.status, 127);
+  assert.match(godot.stderr, /godot4 called on a machine without Godot/);
+  // A tool sharing godot's directory (sh, sleep in /usr/bin on Arch) still runs.
+  assert.equal(spawnSync("tool", [], { env, encoding: "utf8" }).stdout.trim(), "tool-ran");
 });
 
 function fake(dir, name, body) {
