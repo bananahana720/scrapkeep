@@ -11,6 +11,7 @@ const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const RunMoments := preload("res://src/core/run_moments.gd")
 const Profile := preload("res://src/core/profile.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
@@ -138,6 +139,8 @@ const SELF_PLAY := "res://tools/self_play.gd"
 
 func _ready() -> void:
 	_boot("ready")
+	if not test_mode:
+		AppShell.apply()
 	dev = dev or _launch_flag("--dev")
 	ground_behind_menu = ground_behind_menu or not test_mode
 	_register_actions()
