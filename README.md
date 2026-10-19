@@ -15,3 +15,7 @@ Anchor kit soft-toy pass, Cycles CPU (`tools/blender/glb_stills.py`, 16 samples)
 ## w19-landmarks
 
 Landmark soft-toy pass and sinkhole trestle, Cycles CPU (`glb_stills.py`, 16 samples, 720 px). `landmarks-base-vs-head.jpg`: each pair is stage b95e1799 over head, three-quarter view. `sinkhole-trestle-trough-side.jpg` and `sinkhole-full-ring-trough-side.jpg`: the gallery ring from the trough side, closed by the timber trestle (ground plane at the trough floor, y -107.8).
+
+## w18-pit
+
+Pit greybox rows dressed as decoration-only liners (no collider), Cycles CPU three-quarter stills of four of the six liners (`glb_stills.py`). Each sheet is conformed to the park_pit ground bake; the dark patches are the sandstone style's varnish banding (dark-vertex share 9%, in line with the shipped flume liners).
