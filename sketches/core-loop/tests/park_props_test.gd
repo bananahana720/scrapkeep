@@ -139,7 +139,7 @@ func _check_build(list: Array, kit: Dictionary) -> void:
 	var colourless := []
 	for view: GeometryInstance3D in views:
 		var shown: Mesh = (view as MultiMeshInstance3D).multimesh.mesh if view is MultiMeshInstance3D else (view as MeshInstance3D).mesh
-		colourless.append_array(ParkProps.colour_errors(shown, String(view.name)))
+		colourless.append_array(ParkProps.colour_errors(shown, String(view.name), view))
 	_t.eq("every built MultiMesh and hero mesh surface has ARRAY_COLOR and a vertex-colour material", colourless.slice(0, 3), [])
 	_t.eq("every view has a visibility range end and the contract's ranges", bad_range, [])
 	_t.eq("shadows are off but a hero's LOD0", bad_shadow, [])
@@ -209,7 +209,11 @@ func _check_kits(fixture_kit: Dictionary) -> void:
 				var label := "%s/%s/%s" % [name, kind, v]
 				variants += 1
 				bad_tris.append_array(_tri_errors(label, String(def["class"]), row["tris"], name == "fixture"))
-				bad_colour.append_array(ParkProps.colour_errors(ParkProps._mesh(String(row["lod"][0])), label))
+				var probe := MeshInstance3D.new()
+				probe.mesh = ParkProps._mesh(String(row["lod"][0]))
+				ParkProps.style_view(probe)
+				bad_colour.append_array(ParkProps.colour_errors(probe.mesh, label, probe))
+				probe.free()
 	_t.check("%d kit variants read" % variants, variants > 0)
 	_t.eq("LOD triangles: LOD0 in the class floor and cap, LOD1 40 to 60%, LOD2 10 to 20% (props at least 40)", bad_tris.slice(0, 4), [])
 	_t.eq("every kit LOD0 mesh has ARRAY_COLOR and a vertex-colour material", bad_colour.slice(0, 4), [])
@@ -226,9 +230,15 @@ func _check_kits(fixture_kit: Dictionary) -> void:
 		_t.check("planted: perch %s fails" % var_to_str(bad), not _perch_errors(perch_kit, "p").is_empty())
 	var path := String(fixture_kit["kinds"].values()[0]["variants"].values()[0]["lod"][0])
 	var raw := _raw_mesh(path)
-	_t.check("planted: the imported mesh, its material ignoring COLOR_0, fails the colour check", not ParkProps.colour_errors(raw, "raw").is_empty())
-	_t.eq("planted: vertex_coloured fixes it", ParkProps.colour_errors(ParkProps.vertex_coloured(raw), "fixed"), [])
-	_t.check("vertex_coloured leaves the imported resource unchanged", ParkProps.colour_errors(raw, "raw").size() > 0)
+	var view := MeshInstance3D.new()
+	view.mesh = raw
+	_t.check("planted: the imported mesh, its material ignoring COLOR_0, fails the colour check", not ParkProps.colour_errors(raw, "raw", view).is_empty())
+	ParkProps.style_view(view)
+	_t.eq("planted: style_view fixes it", ParkProps.colour_errors(raw, "styled", view), [])
+	var flag_off := StandardMaterial3D.new()
+	view.material_override = flag_off
+	_t.check("planted: a view whose material has vertex_color_use_as_albedo off fails", not ParkProps.colour_errors(raw, "off", view).is_empty())
+	view.free()
 
 
 func _raw_mesh(path: String) -> Mesh:

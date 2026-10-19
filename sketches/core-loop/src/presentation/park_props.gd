@@ -864,7 +864,6 @@ static func _merged_far(holder: Node3D, members: Array, kit: Dictionary, begin_e
 	built[Mesh.ARRAY_INDEX] = indices
 	var merged := ArrayMesh.new()
 	merged.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built)
-	merged.surface_set_material(0, _vertex_material())
 	var view := MeshInstance3D.new()
 	view.name = "Far_L2"
 	view.mesh = merged
@@ -888,6 +887,7 @@ static func _ranges(view: GeometryInstance3D, begin_end: Array, margin: float) -
 
 static func _tag(view: GeometryInstance3D, inst: Dictionary, lod: int, shadow: bool) -> void:
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	style_view(view)
 	view.add_to_group(GROUP)
 	view.set_meta("dress_kind", inst["kind"])
 	view.set_meta("dress_class", inst["class"])
@@ -920,23 +920,34 @@ static func _mesh(path: String) -> Mesh:
 			var found := scene.find_children("*", "MeshInstance3D", true, false)
 			view = found[0] if not found.is_empty() else null
 		if view != null:
-			mesh = vertex_coloured(view.mesh)
+			mesh = view.mesh
 		scene.free()
 	_meshes[path] = mesh
 	return mesh
 
 
 # The kit GLBs carry linear COLOR_0 and no texture, but Godot imports them with an albedo-white material that ignores it, so every
-# prop would render flat white. A copy of the mesh (the imported resource stays as it is) with one vertex-colour material per
-# surface: vertex_color_use_as_albedo on, linear data, roughness 0.8, metallic 0, no emission.
-static func vertex_coloured(source: Mesh) -> Mesh:
-	if source == null:
-		return null
-	var mesh: Mesh = source.duplicate()
-	var material := _vertex_material()
+# prop would render flat white. Every view gets one shared vertex-colour material as its material_override: vertex_color_use_as_albedo
+# on, linear data, roughness 0.8, metallic 0, no emission. The imported mesh stays as it is and the worker never touches the renderer
+# (copying a mesh reads its surfaces back, which blocks a worker while the main thread waits on it).
+static func style_view(view: GeometryInstance3D) -> void:
+	view.material_override = _vertex_material()
+
+
+# Rows of text for a view whose surfaces would not show their vertex colours: no ARRAY_COLOR on a surface, or neither an override
+# nor a surface material that uses vertex colour as albedo.
+static func colour_errors(mesh: Mesh, label := "mesh", view: GeometryInstance3D = null) -> Array:
+	var errors := []
+	if mesh == null or mesh.get_surface_count() == 0:
+		return [label + " has no surface"]
+	var override := view.material_override if view != null else null
 	for surface in mesh.get_surface_count():
-		mesh.surface_set_material(surface, material)
-	return mesh
+		if not mesh.surface_get_format(surface) & Mesh.ARRAY_FORMAT_COLOR:
+			errors.append("%s surface %d has no ARRAY_COLOR" % [label, surface])
+		var material: Material = override if override != null else mesh.surface_get_material(surface)
+		if not material is BaseMaterial3D or not (material as BaseMaterial3D).vertex_color_use_as_albedo:
+			errors.append("%s surface %d material does not use vertex colour as albedo" % [label, surface])
+	return errors
 
 
 static func _vertex_material() -> StandardMaterial3D:
@@ -947,20 +958,6 @@ static func _vertex_material() -> StandardMaterial3D:
 		_material.roughness = 0.8
 		_material.metallic = 0.0
 	return _material
-
-
-# Rows of text for a mesh whose surfaces would not show their vertex colours: no ARRAY_COLOR, or a material that ignores it.
-static func colour_errors(mesh: Mesh, label := "mesh") -> Array:
-	var errors := []
-	if mesh == null or mesh.get_surface_count() == 0:
-		return [label + " has no surface"]
-	for surface in mesh.get_surface_count():
-		if not mesh.surface_get_format(surface) & Mesh.ARRAY_FORMAT_COLOR:
-			errors.append("%s surface %d has no ARRAY_COLOR" % [label, surface])
-		var material := mesh.surface_get_material(surface)
-		if not material is BaseMaterial3D or not (material as BaseMaterial3D).vertex_color_use_as_albedo:
-			errors.append("%s surface %d material does not use vertex colour as albedo" % [label, surface])
-	return errors
 
 
 # Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).

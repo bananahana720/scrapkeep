@@ -35,6 +35,7 @@ Each park has a kit of at least 12 kinds, and each kind has 2 or 3 variants (dif
 | `dress_prop` | 300 to 3,000 | about 50% | about 15% (at least 40 tris) | 1 per LOD | never |
 
 - Each GLB has one surface, one vertex-colour material, baked AO and wear (`polish.py`), its origin at the foot centre, the floor at y 0, and Y up after import.
+- Colour travels as linear `COLOR_0` and nothing else. `kit.py` `inspect_glb` asserts every exported GLB has it. Godot imports the GLB with an albedo-white material that ignores vertex colour, so `park_props.gd` `_mesh()` gives each cached mesh (a copy; the import stays as it is) one material with `vertex_color_use_as_albedo` on, `vertex_color_is_srgb` off, roughness 0.8, metallic 0 and no emission. `park_props_test` checks every built surface has `ARRAY_COLOR` and that material.
 - Builds are deterministic: a rebuild is byte-identical.
 - `manifest.json` lists, per variant: kind, class, footprint radius, height, triangles per LOD, and tags (`tall`, `plant`, `sign`, `machine`, `soft`).
 
@@ -57,6 +58,7 @@ Each park has a kit of at least 12 kinds, and each kind has 2 or 3 variants (dif
   - Each kicker keeps a capsule along its lip (row length / 2 + 8 m wide) and a run-out capsule 40 m ahead of the lip for landing spots, rather than set_dressing.gd's circle of radius width / 2 + 3 (mesa lips are up to 1,600 m wide).
   - Why: the first dam placement passed the old rules (15 to 30 m from a line, 20 m lanes for every prop, a keepout on every footprint including canyon floors) with 619 instances, yet the before and after stills from the chase camera were identical: legal dressing sat outside the frame. Andrew's rule is to keep ride lines, landing spots, telegraphs and enemy silhouettes clear, which means the line itself and the landing, not a 40 m corridor. The tiers keep the line clear and let low dressing sit near it.
   - At least 25 m from enemy `home_rows` and camps, and inside the play rect.
+  - With a file `ground_rows` list, inside a listed row (see "Explicit surfaces").
   - On ground no steeper than 25 degrees, with the foot seated on the baked ground.
 - **Explicit surfaces (`ground_rows`).** A vignette file may carry a top-level `"ground_rows": ["<park row id>", ...]`. Some parks have no continuous ground (islands: the ground callable is one plane under every island, so seat and slope cannot stop a prop floating between islands, and the islands are `sky_island` and `terrace` rows with `ride_fact`s, which are ride features). When the list is present it turns the rows into the placement surfaces:
   - A listed row stops being a footprint keepout for props.
@@ -71,12 +73,16 @@ Each park has a kit of at least 12 kinds, and each kind has 2 or 3 variants (dif
 ## Frame cost
 
 - Ranges are set on every view. Heroes: LOD0 to 70 m, LOD1 to 180 m, LOD2 to 450 m. Props: LOD0 to 35 m, LOD1 to 90 m, LOD2 to 200 m. Litter: LOD1 to 70 m only. Fade mode is self, with margins.
-- Draws: one MultiMesh per (mesh, LOD) per vignette, and litter batched per 160 m chunk. The bar is dressing adding at most 120 draws at any sampled ride-path pose, measured as the OpenGL proxy in the cloud. The park stays inside PARK.md's caps: draws p99 at most 1.3 times base on s3, and at most 1,400 on p1.
+- Draws: per vignette, one MultiMesh per (mesh, LOD0) and per (mesh, LOD1), and the vignette's whole LOD2 as ONE merged mesh (`Far_L2`: every non-hero member's LOD2 baked into one vertex-colour surface, with the members' positions and kinds kept in meta for the audit); litter batched per 160 m chunk. Measured on the dam and islands files at their peak poses, the per-(mesh, LOD2) batches were 100 to 130 of the 157 to 168 props-only draws (low props, 90 to 200 m out), and the merge takes the peaks to 70 and the islands' to ISLES_AFTER with primitives up under 6% at the peak (a merged mesh is not frustum-culled per member). A range scale by size (LOW props ending sooner) was not needed. The bar is dressing adding at most 120 draws at any sampled ride-path pose, measured as the OpenGL proxy in the cloud. The park stays inside PARK.md's caps: draws p99 at most 1.3 times base on s3, and at most 1,400 on p1.
 - Litter batches extend `visibility_range_end` by the chunk's spread (the farthest member from the bounds centre), because a visibility range is measured to the batch's bounds centre, not to each member (same reasoning as `set_dressing.gd`). A chunk therefore keeps every member visible out to 70 m.
 - Heroes keep LOD0 shadows and full ranges on the low preset; the low preset only drops litter and halves the props' LOD0 and LOD1 ends.
 - No shadow casters on small props or litter.
 - The ruling is DECISIONS.md section 8, "Lived-in parks", 19 Oct 01:40, on main.
 - Every park PR posts `NEEDS: gpu` on the Wave board for a 4080 A/B. Cloud frame times never count.
+
+## Density bar (acceptance)
+
+AMBITION-BRIEF.md, "Lived-in parks": every 150 m of ride line has at least 3 distinct prop kinds in view within 60 m of the player camera. Exempt: arenas and engage rings, telegraph and hazard zones, and spaces a ruling keeps open. `park_props_audit.gd` writes `density_windows`, `density_exempt` (and `density_exempt_by`), `density_pass`, `density_fail_windows` (line, start m, kinds) and `density_share` to `summary.json`: per line, 150 m windows of the audit's samples (a tail of at least 75 m counts); a window's kinds are the union of park-prop kinds (group `park_props` only, set dressing excluded) in view within 60 m at any of its poses. A window is exempt when its midpoint lies in a `home_rows` site footprint or the landmark footprint grown 25 m (arena), an `event_rows` site footprint grown by `hold_clear_m` (telegraph), or a `--open=x:z:r` space. This replaces the lane's own bare-share target as the acceptance metric.
 
 ## Evidence per park PR
 
