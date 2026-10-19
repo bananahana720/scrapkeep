@@ -5,7 +5,7 @@
  "flat": true,
  "rate": 44100,
  "key": "G",
- "key_offset": 5,
+ "key_offset": 0,
  "stems": [
   "drums",
   "bass",
@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "take-mind-overclock-s5101.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/radio/take-mind-overclock-s5101.wav",
-   "stretched": "/home/andrew/scratch/w16/radio-pack/stretched/take_mind_overclock.wav",
-   "bpm_before": 149.94,
-   "bpm_after": 150.0,
+   "take": "master.wav",
+   "source": "/home/andrew/scratch/w17/qp/remake/work/cands/take-mind-overclock/s6205/master.wav",
+   "stretched": "/home/andrew/scratch/w17/qp/remake/work/pack/stretched/take_mind_overclock.wav",
+   "bpm_before": 150,
+   "bpm_after": 150,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/radio-pack/stems/htdemucs/take_mind_overclock/drums.wav",
-     "sha256": "994fca896838915e33c6e4f89fc1a237f34de05e59976dd80656785417e24aa8"
+     "path": "/home/andrew/scratch/w17/qp/remake/work/pack/stems/htdemucs/take_mind_overclock/drums.wav",
+     "sha256": "6e257282183749e63f8b74dca5403f33231556c544960d35a2e8ec03aa67fda2"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/radio-pack/stems/htdemucs/take_mind_overclock/bass.wav",
-     "sha256": "a89e2d7328e9e7bd4187bfa536798179742123b919d9641a71bf3782a2913e71"
+     "path": "/home/andrew/scratch/w17/qp/remake/work/pack/stems/htdemucs/take_mind_overclock/bass.wav",
+     "sha256": "e9b99ff4c18372a3c9ab99396e041f5a75bfd54dcaf8f8a13fbdb85f0661f8f8"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/radio-pack/stems/htdemucs/take_mind_overclock/other.wav",
-     "sha256": "9c94ceb261de1dce98b7d0489c1f644121563ae56ab0aad40cf939cba00b7f11"
+     "path": "/home/andrew/scratch/w17/qp/remake/work/pack/stems/htdemucs/take_mind_overclock/other.wav",
+     "sha256": "a6042f336dc5189f4dc3a723a3765743382a990d89cd24f0b8937907fd6596df"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/radio-pack/stems/htdemucs/take_mind_overclock/vocals.wav",
-     "sha256": "9e7d2864c069eadbdb6c8cfeb818b9c4d8e51eb2e49d3eee9220665e8d260c07"
+     "path": "/home/andrew/scratch/w17/qp/remake/work/pack/stems/htdemucs/take_mind_overclock/vocals.wav",
+     "sha256": "b09c4a76991c4b7d84d48799a18f6e68315d4b0283f2521ade59eec08955370a"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,8 +49,8 @@
   "main": {
    "parent": "single",
    "take": "take-mind-overclock",
-   "source_start": 11648,
-   "take_start": 11648,
+   "source_start": 9216,
+   "take_start": 9216,
    "bpm": 150,
    "beat": 17640,
    "bar": 70560,
@@ -63,7 +63,7 @@
    "loop_to_bar": 1,
    "sample_count": 9247456,
    "key": "G",
-   "key_offset": 5,
+   "key_offset": 0,
    "files": {
     "drums": "main.drums.ogg",
     "bass": "main.bass.ogg",
@@ -183,10 +183,10 @@
  "cuts": "measured-beat-phase",
  "whole": true,
  "timing_verified": false,
- "gain_db": 0.9,
+ "gain_db": -0.4,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.5,
+  "true_peak": -2.2,
   "note": "summed stems before Ogg encode"
  }
 }
