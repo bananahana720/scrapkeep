@@ -185,7 +185,13 @@ func _landform_tops() -> void:
 # perch within 40 m at least as often as before, and a park whose tops are emptied gets none.
 func _park_coverage() -> void:
 	# Floors are the measured counts less a margin (coordinator target 60 percent is not met: see the report).
-	var floors := {"dam": [20, 10], "flume": [20, 25], "sinkhole": [6, 1], "islands": [20, 45], "pit": [6, 20], "crown": [6, 25]}
+	# Crown's pack-coverage floor is 20: 36 of 200 on a232338f, 23 on cand/alpha-w17-stack. Cause (measured by
+	# reverting only these rows): commit 7f7435c7 (Content, crown greybox stand-ins) moved gauntlet_net
+	# [280,175] -> [302.9,142.2], shrank it to [80,19.5,80] and added gauntlet_net_2 plus lane waypoints, so
+	# the gauntlet and last_net pack points have no landform top within 40 m; the 66 tops are unchanged.
+	# Restore trigger: Dressing's perch anchors on the crown net decks; raise this back to at least 36 in
+	# the perch-reader PR once they land.
+	var floors := {"dam": [20, 10], "flume": [20, 25], "sinkhole": [6, 1], "islands": [20, 45], "pit": [6, 20], "crown": [6, 20]}
 	for id: String in floors:
 		var park_map := ParkMap.new("res://src/world/park/park_%s.json" % id)
 		var ground := ParkGround.ground("park_%s" % id)
