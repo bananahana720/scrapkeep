@@ -2568,7 +2568,7 @@ func _charge_plan(boss, hull: Node3D, ball: Vector3, punch: float, delta: float)
 # speed, and it can line up with the lane's axis before the front arrives. Latched per lane
 # once taken, so the clash does not flicker.
 func _clash_viable(boss, h, ball: Vector3, punch: float, id: int) -> bool:
-	if not _kit("active"):
+	if band != null and band.kit != "full":
 		return false
 	var clash_punch: float = float(boss.get("clash_punch") if boss.get("clash_punch") != null else 150.0)
 	if punch < clash_punch:
