@@ -62,15 +62,18 @@ const CAMP_ACTIVITIES := ["enemy_camp"]
 # Explicit surfaces: with a file "ground_rows" list, every instance stands inside a listed row's footprint, inset at least this far
 # (beyond its own radius) from the edge, so nothing sits on a drop lip or a bowl edge. Listed rows stop being footprint keepouts.
 const GROUND_ROW_INSET_M := 8.0
-# ParkSites leaves every stamped row longer than ParkSites.STAMP_KEEP_M out of its footprint cells (it treats it as the landform),
-# so context() re-adds each such row that blocks_props to Context.stamped, whatever its element: a long flow_line, drop, bowl,
-# half_pipe, rail or sky_island is still a ridden surface. ground_rows and low_ground_rows open them like any other row.
+# ParkSites leaves every stamped row longer than ParkSites.STAMP_KEEP_M out of its footprint cells (it treats it as the landform).
+# context() re-adds the ones that are ridden built features to Context.stamped: a long stamp narrower than STAMP_NARROW_M (a wash,
+# slot, fin, rail, lip or step face) keeps props out, because the pilot rides it. A wider long stamp (a pit bowl, a rim drop, a
+# fan band) is the landform itself and stays open, guarded by slope, seat, the line tiers and route lanes, as ParkSites intends.
+# A sky_island is always re-added whatever its width; ground_rows and low_ground_rows open stamped rows like any other row.
 # Low ground in area rows (opt-in): a file "low_ground_rows" list names big area rows that admit instances no taller than
 # LOW_GROUND_MAX_M (litter included); anything taller there still fails as low_ground. Eligible: a flow_line, bowl, drop or
 # sky_island footprint at least LOW_GROUND_MIN_M on both axes, or a home site longer than LOW_GROUND_HOME_MIN_M on either axis.
 # Narrow features are never eligible.
 const LOW_GROUND_MAX_M := 1.0
 const LOW_GROUND_MIN_M := 60.0
+const STAMP_NARROW_M := LOW_GROUND_MIN_M
 const LOW_GROUND_HOME_MIN_M := 200.0
 const LOW_GROUND_ELEMENTS := ["flow_line", "bowl", "drop", "sky_island"]
 # A litter band must sit inside the tier bands: LOW's 6 m line clearance, and the line reach past which distance is unknown.
@@ -281,7 +284,8 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 			c.unresolved.append("home_rows site %s (home %s) names no park or activity row" % [site, String(home.get("id", site))])
 	for row: Dictionary in park_map.park.get("park_rows", []):
 		if not String(row.get("stamp", "")).is_empty() \
-				and maxf(float(row["size"][0]), float(row["size"][2])) > ParkSites.STAMP_KEEP_M and Context.blocks_props(row):
+				and maxf(float(row["size"][0]), float(row["size"][2])) > ParkSites.STAMP_KEEP_M and Context.blocks_props(row) \
+				and (String(row.get("element", "")) == "sky_island" or minf(absf(float(row["size"][0])), absf(float(row["size"][2]))) < STAMP_NARROW_M):
 			c.stamped.append(row)
 	for row: Dictionary in park_map.park.get("activity_rows", []):
 		if String(row.get("activity", "")) in CAMP_ACTIVITIES:
@@ -699,8 +703,12 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 		var what := c.keepout_at(p, margin, true)
 		if what != "":
 			fail.call("keepout", "within %.1f m of %s" % [margin, what])
-		elif not low and not c.low_rows.is_empty() and c.keepout_at(p, margin) != "":
-			fail.call("low_ground", "%.2f m tall inside a low_ground_rows row, want at most %.1f" % [height, LOW_GROUND_MAX_M])
+		elif not low:
+			# A listed row caps what stands in it whether or not the row blocks (a wide long stamp is open).
+			for row: Dictionary in c.low_rows.values():
+				if ParkMap.footprint_contains(row, p, margin):
+					fail.call("low_ground", "%.2f m tall inside low_ground_rows row %s, want at most %.1f" % [height, row.get("id", "?"), LOW_GROUND_MAX_M])
+					break
 	for home: Dictionary in c.homes:
 		var row: Dictionary = home["row"]
 		var near := false

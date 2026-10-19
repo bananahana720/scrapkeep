@@ -433,33 +433,36 @@ func _check_low_ground(kit: Dictionary) -> void:
 		_t.eq("planted: a prop within 25 m of one of the stamp's camps fails home_clear alone", _rules(spot, ilisted), ["home_clear"])
 
 
-# Long stamped rows (past ParkSites.STAMP_KEEP_M) are left out of ParkSites' footprint cells; context() re-adds every one that
-# blocks props, so a long flow_line, drop or half_pipe keeps props out and the low_ground cap still binds in a listed one.
+# Long stamped rows (past ParkSites.STAMP_KEEP_M) are left out of ParkSites' footprint cells; context() re-adds the narrow ones
+# (under STAMP_NARROW_M, a ridden feature) and every sky_island. A wider long stamp is the landform and stays open, but a listed
+# low_ground_rows row still caps what stands in it.
 func _check_long_stamped(kit: Dictionary) -> void:
 	var low := 0.8
 	var sink := ParkProps.world_for("park_sinkhole")
 	var smap = sink["map"]
 	var sground: Callable = sink["ground"]
 	var rim := _park_row(smap, "rim_south")
-	_t.check("sinkhole rim_south is a long stamped drop, at least 60 m on both axes", not rim.is_empty() and rim["element"] == "drop" \
+	_t.check("sinkhole rim_south is a wide long stamped drop, at least 60 m on both axes", not rim.is_empty() and rim["element"] == "drop" \
 		and float(rim["size"][2]) > ParkProps.ParkSites.STAMP_KEEP_M and minf(absf(float(rim["size"][0])), absf(float(rim["size"][2]))) >= ParkProps.LOW_GROUND_MIN_M)
 	var plain := ParkProps.context(smap, sground, sink["stage"])
 	var listed := ParkProps.context(smap, sground, sink["stage"])
 	listed.use_low_ground_rows(["rim_south"])
-	_t.check("the context indexes the long drop rim_south", plain.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "rim_south"))
+	_t.check("the context leaves the wide long drop rim_south open (landform)", not plain.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "rim_south"))
 	var points := _row_grid(rim, 20, 10)
 	var ok := _first_low([], points, kit, listed, sground, low)
 	_t.check("planted: a 0.8 m prop inside a listed long-stamped drop passes every rule", not ok.is_empty(), "%d candidates" % points.size())
 	if not ok.is_empty():
 		_t.eq("planted: a 1.4 m prop at the same point fails low_ground alone", _rules(_with(ok, "height", 1.4), listed), ["low_ground"])
-		_t.eq("planted: the same 0.8 m point with the long drop unlisted fails keepout alone", _rules(ok, plain), ["keepout"])
+		_t.eq("planted: the same point with the wide drop unlisted admits a 1.4 m prop (landform)", _rules(_with(ok, "height", 1.4), plain), [])
+		var hero := _with(_with(ok, "height", 4.0), "class", ParkProps.HERO)
+		_t.eq("planted: a 4 m hero at the same point inside listed rim_south fails low_ground", _rules(hero, listed).filter(func(r: String) -> bool: return r != "line_clear"), ["low_ground"])
 		_t.eq("planted: a 1.0 m prop at the same point passes", _rules(_with(ok, "height", 1.0), listed), [])
 
 	var dam := ParkProps.world_for("park_dam")
 	var dmap = dam["map"]
 	var dground: Callable = dam["ground"]
 	var slot := _park_row(dmap, "upper_slot")
-	_t.check("dam upper_slot is a long stamped flow_line", not slot.is_empty() and slot["element"] == "flow_line" and float(slot["size"][0]) > ParkProps.ParkSites.STAMP_KEEP_M)
+	_t.check("dam upper_slot is a narrow long stamped flow_line", not slot.is_empty() and slot["element"] == "flow_line" and float(slot["size"][0]) > ParkProps.ParkSites.STAMP_KEEP_M and float(slot["size"][2]) < ParkProps.STAMP_NARROW_M)
 	var dc := ParkProps.context(dmap, dground, dam["stage"])
 	_t.check("the context indexes the long flow_line upper_slot", dc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "upper_slot"))
 	var in_slot := _first_low(["keepout"], _row_grid(slot, 4, 2), kit, dc, dground, low, func(inst: Dictionary) -> bool:
@@ -468,6 +471,28 @@ func _check_long_stamped(kit: Dictionary) -> void:
 	var tall_slot := _first_low(["keepout"], _row_grid(slot, 4, 2), kit, dc, dground, 2.5, func(inst: Dictionary) -> bool:
 		return dc.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M)
 	_t.check("planted: a 2.5 m prop inside upper_slot, beyond the mid tier, fails keepout alone", not tall_slot.is_empty())
+
+	# A wide long stamp is landform: pit's 900 by 900 m bowl admits mid and tall props that clear the lines.
+	var pit := ParkProps.world_for("park_pit")
+	var pmap = pit["map"]
+	var bowl := _park_row(pmap, "pit")
+	var pc := ParkProps.context(pmap, pit["ground"], pit["stage"])
+	_t.check("pit's bowl is a wide long stamp the context leaves open", not bowl.is_empty() and bowl["element"] == "bowl" and float(bowl["size"][0]) > ParkProps.ParkSites.STAMP_KEEP_M \
+		and not pc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "pit"))
+	var pgrid := _row_grid(bowl, 40, 20)
+	var pit_mid := _first_low([], pgrid, kit, pc, pit["ground"], 2.5)
+	_t.check("planted: a 2.5 m prop inside the unlisted pit bowl passes every rule", not pit_mid.is_empty(), "%d candidates" % pgrid.size())
+	var pit_tall := _first_low([], pgrid, kit, pc, pit["ground"], 5.0)
+	_t.check("planted: a 5 m (tall) prop inside the unlisted pit bowl passes every rule", not pit_tall.is_empty(), "%d candidates" % pgrid.size())
+
+	# A narrow long stamped step face blocks: islands' 38 m anvil_step_2.
+	var stepw := ParkProps.world_for("park_islands")
+	var stepmap = stepw["map"]
+	var step := _park_row(stepmap, "anvil_step_2")
+	var stepc := ParkProps.context(stepmap, stepw["ground"], stepw["stage"])
+	_t.check("islands anvil_step_2 is a narrow long stamped drop in the context", not step.is_empty() and step["element"] == "drop" and stepc.stamped.any(func(r: Dictionary) -> bool: return r["id"] == "anvil_step_2"))
+	var in_step := _first_low(["keepout"], _row_grid(step, 6, 4), kit, stepc, stepw["ground"], low)
+	_t.check("planted: a 0.8 m prop inside unlisted anvil_step_2, clear of lines and capsules, fails keepout alone", not in_step.is_empty())
 
 	# A long stamped ground row (open element, no home) still admits a prop.
 	var shelf := _park_row(dmap, "shelf_sag")
