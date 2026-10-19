@@ -190,7 +190,7 @@ func _run() -> void:
 
 
 # The build veto: steep ground and a structure over the ground are unfit, flat open ground is fit, and a ceiling
-# perch keeps its roof.
+# perch needs its roof.
 func _unfit() -> void:
 	var flat := func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, 1.0 + lift, z)
 	var steep := func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, x * 0.8 + lift, z)
@@ -210,6 +210,7 @@ func _unfit() -> void:
 	_t.check("open flat ground is fit", not AmbientLife.unfit(flat, space, Vector2(0.0, 0.0), "ground"))
 	_t.check("ground under a structure is unfit", AmbientLife.unfit(flat, space, Vector2(200.0, 200.0), "rim"))
 	_t.check("a ceiling perch under a structure is fit", not AmbientLife.unfit(flat, space, Vector2(200.0, 200.0), "ceiling"))
+	_t.check("a ceiling perch with no roof is unfit", AmbientLife.unfit(flat, space, Vector2(0.0, 0.0), "ceiling"))
 	roof.free()
 
 
