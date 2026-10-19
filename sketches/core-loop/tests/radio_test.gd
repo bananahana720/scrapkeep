@@ -30,11 +30,19 @@ var _t := T.new("radio_test")
 var _game
 
 
-# A take plays its own pack once one is packaged at assets/music_ace/<take id>/; until then it
-# has none and the radio plays its parent record. Rows that name a pack keep it.
+# A take plays its own pack once one is packaged at assets/music_ace/<take id>/; with no pack
+# the radio plays its parent record. All 81 takes are packaged, so each resolves to its manifest
+# (the Oggs are gitignored, the manifests are not); an id that is no take has none.
+# Rows that name a pack keep it.
 func _packs() -> void:
-	var some := String(RadioTakes.take_ids()[0])
-	_t.eq("an unpackaged take has no pack", MusicRows.take_manifest(some), "")
+	var ids := RadioTakes.take_ids()
+	var unpackaged := []
+	for id in ids:
+		if MusicRows.take_manifest(String(id)) == "":
+			unpackaged.append(String(id))
+	_t.eq("every catalogue take has a pack", unpackaged, [])
+	_t.eq("the catalogue holds 81 takes", ids.size(), 81)
+	_t.eq("an id that is no take has no pack", MusicRows.take_manifest("take-not-a-take"), "")
 	_t.eq("a row that names a pack keeps it", MusicRows.take_manifest("1-1"), MusicRows.ROWS["1-1"]["ace_manifest"])
 	_t.eq("an unknown id has no pack", MusicRows.take_manifest("nope"), "")
 
@@ -190,7 +198,9 @@ func _run() -> void:
 	deck.radio.track = a
 	deck._plan_now()
 	_t.eq("then the radio holds the take", audio.radio_hold, a)
-	_t.eq("the band plays the take's record", audio.spinning, RadioTakes.record_of(a))
+	# A packaged take plays its own pack; one with no manifest plays its parent record.
+	var played := a if MusicRows.take_manifest(a) != "" else RadioTakes.record_of(a)
+	_t.eq("the band plays the take's pack, else its record", audio.spinning, played)
 	_t.check("with the run's own parameters", audio.engine.parameter_source == Callable(audio, "sample_run_parameters"))
 	_t.eq("the dial names it", deck.reading()["line"], String(RadioTakes.take(a)["name"]))
 
@@ -205,7 +215,7 @@ func _run() -> void:
 
 	audio._flow_queue.append(["stage", 1, true])
 	audio._flush_flow()
-	_t.eq("a stage hit keeps the track", [audio.radio_hold, audio.spinning], [a, RadioTakes.record_of(a)])
+	_t.eq("a stage hit keeps the track", [audio.radio_hold, audio.spinning], [a, played])
 
 	var yielded := []
 	audio.radio_yielded.connect(func(reason: String): yielded.append(reason))
