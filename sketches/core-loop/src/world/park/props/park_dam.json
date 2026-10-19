@@ -417,44 +417,6 @@
     }
    ]
   },
-  "low_fleet_docket": {
-   "story": "A Fleet docket marker: surplus concrete slabs and a tally board with one brass tag.",
-   "props": [
-    {
-     "kind": "stencil_post",
-     "v": "c",
-     "at": [
-      0,
-      0
-     ],
-     "yaw_deg": 20,
-     "scale": 0.7,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "rebar_bloom",
-     "v": "c",
-     "at": [
-      3.4,
-      1.5
-     ],
-     "yaw_deg": 110,
-     "scale": 0.5,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "desert_scrub",
-     "v": "c",
-     "at": [
-      -3,
-      -1.5
-     ],
-     "yaw_deg": 30,
-     "scale": 0.5,
-     "tilt_deg": 0
-    }
-   ]
-  },
   "mid_tool_bench": {
    "story": "A cable spool, a small compressor and a pail left on a bench of sandbags.",
    "props": [
@@ -2144,16 +2106,6 @@
    "near": "dome_4: A mixer truck gone to brittlebush"
   },
   {
-   "id": "low_spool_stub_59",
-   "template": "low_spool_stub",
-   "at": [
-    -116,
-    -420
-   ],
-   "yaw_deg": -47,
-   "near": "dome_19: A cable spool on its side with a sandbag"
-  },
-  {
    "id": "low_slump_bags_60",
    "template": "low_slump_bags",
    "at": [
@@ -2844,16 +2796,6 @@
    "near": "canyon fill, 64 m from line"
   },
   {
-   "id": "low_lunch_rock_canyon_6",
-   "template": "low_lunch_rock",
-   "at": [
-    72,
-    -89
-   ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 57 m from line"
-  },
-  {
    "id": "mid_pour_edge_canyon_7",
    "template": "mid_pour_edge",
    "at": [
@@ -3092,6 +3034,36 @@
    ],
    "yaw_deg": 104,
    "near": "density window kest 0 m, 25 m from line"
+  },
+  {
+   "id": "low_lunch_rock_p132",
+   "template": "low_lunch_rock",
+   "at": [
+    -319,
+    -639
+   ],
+   "yaw_deg": -151,
+   "near": "pose 61, sable opening, south bank, 10 m from line"
+  },
+  {
+   "id": "low_spool_stub_p133",
+   "template": "low_spool_stub",
+   "at": [
+    -316,
+    -618
+   ],
+   "yaw_deg": 29,
+   "near": "pose 61, sable opening, north bank, 10 m from line"
+  },
+  {
+   "id": "low_cold_fire_p134",
+   "template": "low_cold_fire",
+   "at": [
+    29,
+    124
+   ],
+   "yaw_deg": 76,
+   "near": "pose 161, north mouth of upper_slot, 19 m from line"
   }
  ],
  "litter": {
@@ -3120,5 +3092,5 @@
   ],
   "seed": 11
  },
- "pin": 3133846017
+ "pin": 1759471770
 }
