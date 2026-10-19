@@ -189,25 +189,26 @@ PROCEDURAL = {
     # body, fists, plates and halo about the rig origin (:380, :387). Feet: foot_angle -0.6 to
     # +0.2 rad about X (:363, :368), splay rolls Z by -side*splay*0.5 (max 0.6 -> 0.3 rad, :395)
     # and moves x by side*splay (+-0.6 m), tuck lifts y to 1.1 m (:366, :394).
-    # Fists offset (0, -0.6..1.8, -0.85..0.5) (:359, :365, :373, :376), down to -0.685 with the
-    # crouch drop (+0.35 - 1.035). Plates yaw +-1.15 rad (:400, weak), move x by -side*0.45 and y
-    # down 0.7 (:399), -1.045 with the charge drop -0.345. Halo spins about Y (:406).
+    # Fists offset (0, -0.6..1.8, -0.85..0.5) from the body (:359, :365, :373, :376); the drop and
+    # lean they ride are the Body group pose. Plates yaw +-1.15 rad (:400, weak), move x by
+    # -side*0.45 and y down 0.7 (:399). Halo spins about Y (:406).
     "world_one/enemy_miniboss": {
-        "MinibossBody": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin", "loc": {"Y": (-1.035, 0.0)}},
-        "MinibossFistLeft": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin",
-                             "loc": {"Y": (-0.685, 1.8), "Z": (-0.85, 0.5)}},
-        "MinibossFistRight": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin",
-                              "loc": {"Y": (-0.685, 1.8), "Z": (-0.85, 0.5)}},
+        # Lean and body drop move the body, fists, plates and halo as one group about the rig
+        # origin (miniboss.gd:380-407: every non-foot bone takes body_basis and UP * drop); the feet
+        # do not follow, so the group pose is the relative travel.
+        "MinibossBody": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin", "loc": {"Y": (-1.035, 0.0)},
+                         "group": ["MinibossFistLeft", "MinibossFistRight", "MinibossPlateLeft", "MinibossPlateRight",
+                                   "MinibossHalo"]},
+        # Fists keep only their own offset from the body (:359-376), not the drop they ride.
+        "MinibossFistLeft": {"loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
+        "MinibossFistRight": {"loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
         "MinibossFootLeft": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (0.0, _D(0.3))},
                              "loc": {"X": (-0.6, 0.0), "Y": (0.0, 1.1)}},
         "MinibossFootRight": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (-_D(0.3), 0.0)},
                               "loc": {"X": (0.0, 0.6), "Y": (0.0, 1.1)}},
-        "MinibossHalo": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-180.0, 180.0)}, "pivot": "origin",
-                         "loc": {"Y": (-1.035, 0.0)}},
-        "MinibossPlateLeft": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-_D(1.15), _D(1.15))},
-                              "loc": {"X": (-0.45, 0.0), "Y": (-1.045, 0.0)}},
-        "MinibossPlateRight": {"rot": {"X": (-_D(0.35), 0.0), "Y": (-_D(1.15), _D(1.15))},
-                               "loc": {"X": (0.0, 0.45), "Y": (-1.045, 0.0)}},
+        "MinibossHalo": {"rot": {"Y": (-180.0, 180.0)}},
+        "MinibossPlateLeft": {"rot": {"Y": (-_D(1.15), _D(1.15))}, "loc": {"X": (-0.45, 0.0), "Y": (-0.7, 0.0)}},
+        "MinibossPlateRight": {"rot": {"Y": (-_D(1.15), _D(1.15))}, "loc": {"X": (0.0, 0.45), "Y": (-0.7, 0.0)}},
     },
     # plated_brute.gd:290-309 _pose, PAD_RISE 2.5 (:45), REAR_ANGLE -30 (:46); the pads plant
     # PAD_PLANT -0.47 m below rest on every slam's hit frame (:48, :302: lift = PAD_PLANT / PAD_RISE).
@@ -596,11 +597,15 @@ def pose_values(rig, spec):
             s_g[list("XYZ").index(ax[1])] = val
         s_arm = C.T @ np.diag(s_g) @ C
         dp = mat4(np.eye(3), head) @ mat4(s_arm) @ mat4(np.eye(3), -head)
-    m = rig.basis_from_arm_delta(b, dp)
     from mathutils import Matrix as Mx
-    mm = Mx(m.tolist())
-    loc, quat, scale = mm.decompose()
-    return {spec["bone"]: (np.array(loc), np.array(quat), np.array(scale))}, {b: m}
+    values, basis = {}, {}
+    for name in [spec["bone"]] + list(spec.get("group", [])):
+        bi = rig.index[name]
+        m = rig.basis_from_arm_delta(bi, dp)  # the same arm-space move for every bone in the group
+        loc, quat, scale = Mx(m.tolist()).decompose()
+        values[name] = (np.array(loc), np.array(quat), np.array(scale))
+        basis[bi] = m
+    return values, basis
 
 
 # ---------------------------------------------------------------- audit
@@ -688,7 +693,7 @@ def table_ranges(key):
     out = {}
     for bone, row in PROCEDURAL[key].items():
         r = {"rot": dict(row.get("rot", {})), "loc": dict(row.get("loc", {})), "scale": {},
-             "pivot": row.get("pivot")}
+             "pivot": row.get("pivot"), "group": row.get("group", [])}
         if "scale" in row:
             r["scale"]["U"] = row["scale"]
         out[bone] = r
@@ -700,7 +705,7 @@ def make_specs(ranges, deforming_names):
     for bone, r in ranges.items():
         if bone not in deforming_names:
             continue
-        base = {"bone": bone, "pivot": r.get("pivot")}
+        base = {"bone": bone, "pivot": r.get("pivot"), "group": r.get("group", [])}
 
         def src(key, a, v, lo, hi):
             pair = r.get("src", {}).get((key, a))
