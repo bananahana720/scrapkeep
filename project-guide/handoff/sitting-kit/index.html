@@ -318,7 +318,15 @@ async function load() {
   if (pick && pick.areas) { state.areas = pick.areas; state.savedAt = pick.savedAt || null; state.soundOn = pick.soundOn !== false; }
   if (mode === "server") {
     try { state.build = await fetch("/api/build").then((r) => r.json()); } catch { /* keep null */ }
-    setSave(state.savedAt ? "pc" : "local", state.savedAt ? "Saved to your PC" : "Saves to your PC as you click");
+    const stale = pick === local && local && (!remote || (remote.savedAt || "") < (local.savedAt || ""));
+    if (stale && state.savedAt) {
+      // The browser copy is newer than the PC file (an earlier push failed): push it now.
+      dirty = true;
+      setSave("local", "Saved in this browser; sending to your PC");
+      flush();
+    } else {
+      setSave(state.savedAt ? "pc" : "local", state.savedAt ? "Saved to your PC" : "Saves to your PC as you click");
+    }
   } else {
     setSave("local", "Opened as a file: saves in this browser only");
   }

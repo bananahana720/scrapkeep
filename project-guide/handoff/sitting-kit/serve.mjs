@@ -74,7 +74,7 @@ function readBody(req, limit) {
     req.on("data", (chunk) => {
       size += chunk.length;
       if (size > limit) {
-        // Keep draining and answer 413 once the body ends, so the client sees the status and not a reset.
+        // Answer 413 at once and keep draining the rest, so the client sees the status and not a reset.
         if (!refused) {
           refused = true;
           chunks.length = 0;
