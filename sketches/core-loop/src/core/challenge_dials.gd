@@ -35,8 +35,9 @@ const DEFAULTS := {
 	# Brindle (world 1 boss) is tuned: phases Requisition, Furnace, Scuttle, chase. Band table: sweep
 	# tbr-k, 12 seeds, scratch/challenge-tune-tbr-k 2a45b9c2: Novice 0%, Learner a5 100%, Expert 100%,
 	# Top 100%, no Learner death under 45 s, largest hit 30% (brindle_slag). Learner a1 100% is reported,
-	# not graded (NEEDS 6267672032).
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.5, 2.0, 1.3, 1.0],
+	# not graded (NEEDS 6267672032). Requisition (phase 1) deals no damage, so its damage entry stays 1.0;
+	# the tbr-k sweep ran it at 1.5 with the same result.
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 2.0, 1.3, 1.0],
 	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.5, 1.0, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	"waking.damage_mult": 1.0, "waking.damage_by_phase": [1.0, 1.0, 1.0, 1.0],

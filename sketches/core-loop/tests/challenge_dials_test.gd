@@ -52,7 +52,7 @@ func _rules() -> void:
 	_t.near("default damage is the base", ChallengeDials.damage("mind", 10.0, 2), 10.0, 0.0)
 	# Brindle ships tuned (Spillway PR): the per-phase lists carry the band-swept values, every other key is identity.
 	_t.eq("brindle tuned period_by_phase", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.5, 1.0, 1.0])
-	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [1.5, 2.0, 1.3, 1.0])
+	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 2.0, 1.3, 1.0])
 	_t.near("tuned Requisition period", ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1), Rules.CRANE_PERIOD * 0.6, 1e-6)
 	_t.near("tuned Furnace period", ChallengeDials.period("brindle", 2.0, 2), 1.0, 1e-6)
 	_t.near("Scuttle and chase periods are the base", ChallengeDials.period("brindle", 2.0, 3), 2.0, 0.0)
