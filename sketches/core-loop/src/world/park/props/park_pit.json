@@ -2140,8 +2140,8 @@
    "id": "pit_211",
    "template": "lunch_spot",
    "at": [
-    -235,
-    -406
+    -230,
+    -411
    ],
    "yaw_deg": 144.4,
    "near": "slickrock_8, crew lunch spot"
@@ -2737,5 +2737,5 @@
   ],
   "seed": 3
  },
- "pin": 3832111157
+ "pin": 2710067272
 }
