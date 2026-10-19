@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 // "self-play:" lines are kept in self-play.log and summary.json (stage entries as seconds since
 // launch and in the MangoHud log's own time, with the worst frame from 1 s before to 5 s after
 // each). Keep the log alive to its end: --self-play-min=<warmup + seconds + 10>.
+// A self-play game runs on its own XDG data and config under the run folder (xdg-data, xdg-config).
 // A self-play game that exits non-zero (1 run ended early, 2 no tools/ in the pack, 3 stalled)
 // fails the check with exit 1, or 2 for code 2.
 // Exit 0 inside budget, 1 over it, 2 when nothing was measured. Never downloads anything.
@@ -74,6 +75,8 @@ export function parseArgs(argv) {
     else if (arg === "--keep-vsync") args.keepVsync = true;
     else if (arg === "--hud") args.hud = true;
     else if (arg === "--self-play") args.selfPlay = true;
+    else if (arg.startsWith("--self-play-script="))
+      throw new FrametimeError("--self-play-script= is a test override of the game and is not forwarded");
     else if (/^--self-play-[a-z]+=/.test(arg)) args.selfPlayArgs.push(arg);
     else throw new FrametimeError("unknown argument: " + arg);
   }
@@ -88,6 +91,14 @@ export function parseArgs(argv) {
 export function gameArgv(args) {
   if (!args.selfPlay) return args.gameArgs;
   return ["--", "--self-play", ...args.selfPlayArgs, ...args.gameArgs];
+}
+
+export function selfPlayXdg(outDir) {
+  const data = path.join(outDir, "xdg-data");
+  const config = path.join(outDir, "xdg-config");
+  mkdirSync(data, { recursive: true });
+  mkdirSync(config, { recursive: true });
+  return { XDG_DATA_HOME: data, XDG_CONFIG_HOME: config };
 }
 
 // The "self-play:" lines of a game's stdout, as stage entries (seconds since launch) plus the
@@ -363,7 +374,9 @@ export function main(
     `Logging starts ${args.warmup} s after launch and runs ${args.seconds} s. Play normally for about ${minutes} min, then quit.`,
   );
   // A self-play game's stdout is read for its "self-play:" lines and echoed; otherwise it is inherited.
-  const launch = { env: { ...env, MANGOHUD_CONFIG: config } };
+  // A self-play game saves into its own XDG data and config under the run folder, never the player's
+  // (the cache stays shared, so shader compiles are not part of the measure).
+  const launch = { env: { ...env, MANGOHUD_CONFIG: config, ...(args.selfPlay ? selfPlayXdg(outDir) : {}) } };
   const run = spawnSync(
     mangohud,
     [target, ...gameArgv(args)],

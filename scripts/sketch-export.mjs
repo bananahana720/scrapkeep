@@ -7,7 +7,7 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -252,6 +252,7 @@ export function buildStamp({
   stemsFrom,
   winProof,
   bossSmoke,
+  selfPlay = false,
 }) {
   return (
     [
@@ -260,6 +261,7 @@ export function buildStamp({
       "built: " + stamp,
       "godot: " + godot,
       "stems: " + stems + " from " + stemsFrom,
+      ...(selfPlay ? ["self-play pack (tools/ included)"] : []),
       ...(bossSmoke ? [bossSmoke] : []),
       winProof ?? "win proof: not run (pass --win-proof)",
     ].join("\n") + "\n"
@@ -552,14 +554,23 @@ async function main() {
   await mkdir(outDir, { recursive: true });
   const exe = path.join(outDir, "core-loop.x86_64");
   // --self-play swaps the shipped preset's exclude_filter for the export alone and restores the
-  // file at once, so the checkout is clean for the dirty check below.
+  // file at once, so the checkout is clean for the dirty check below. The restore also runs on any
+  // exit (fail() included) and on SIGINT/SIGTERM, so an interrupted export leaves the file as it was.
   const presetPath = path.join(project, "export_presets.cfg");
-  if (args.selfPlay) await writeFile(presetPath, selfPlayPresetText(presetText));
+  const restorePreset = () => writeFileSync(presetPath, presetText);
   let exported;
   try {
+    if (args.selfPlay) {
+      process.once("exit", restorePreset);
+      for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => process.exit(128));
+      await writeFile(presetPath, selfPlayPresetText(presetText));
+    }
     exported = run(binary, ["--headless", "--path", project, "--export-release", preset, exe]);
   } finally {
-    if (args.selfPlay) await writeFile(presetPath, presetText);
+    if (args.selfPlay) {
+      restorePreset();
+      process.removeListener("exit", restorePreset);
+    }
   }
   const exportText = exported.stdout + exported.stderr;
   if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(exe))
@@ -616,6 +627,7 @@ async function main() {
       stemsFrom,
       winProof: proofLine,
       bossSmoke: smoke.lines.join("\n"),
+      selfPlay: args.selfPlay,
     }),
   );
   await writeFile(

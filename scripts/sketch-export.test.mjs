@@ -568,3 +568,10 @@ test("the self-play package is named apart from the shipped one", () => {
   assert.ok(tarArgs("/a/b/20261005T051752", "abc1234", false, true)[1].endsWith("abc1234-selfplay.tar.gz"));
   assert.deepEqual(tarArgs("/a/b/s", "abc1234"), tarArgs("/a/b/s", "abc1234", false, false));
 });
+
+test("BUILD.txt records a self-play pack and the default stamp does not", () => {
+  const base = { sha: "a", dirty: false, stamp: "s", godot: "g", stems: 1, stemsFrom: "/x", winProof: null, bossSmoke: null };
+  assert.match(buildStamp({ ...base, selfPlay: true }), /^self-play pack \(tools\/ included\)$/m);
+  assert.equal(buildStamp(base), buildStamp({ ...base, selfPlay: false }));
+  assert.doesNotMatch(buildStamp(base), /self-play/);
+});

@@ -215,6 +215,7 @@ test("--self-play passes the flag and its options to the game; the default launc
   assert.equal(self.seconds, 60);
   assert.deepEqual(gameArgv(self), ["--", "--self-play", "--self-play-from=6", "--self-play-seed=2506"]);
   assert.throws(() => parseArgs(["--self-play-from=6"]), /need --self-play/);
+  assert.throws(() => parseArgs(["--self-play", "--self-play-script=res://x.gd"]), /not forwarded/);
 });
 
 test("parseSelfPlay reads stage entries on the launch and log clocks, and the stall", () => {
@@ -256,6 +257,7 @@ function selfPlayRun(exitCode, stdoutLines) {
     fake,
     `#!/bin/sh\nout=$(printf '%s' "$MANGOHUD_CONFIG" | tr ',' '\\n' | sed -n 's/^output_folder=//p')\n` +
       `printf '%s\\n' "$@" > "$out/args.txt"\n` +
+      `printf '%s\\n%s\\n' "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" > "$out/xdg.txt"\n` +
       `printf '${SYSTEM.replace(/\n/g, "\\n")}${HEADER.replace(/\n/g, "\\n")}${rows}\\n' > "$out/core-loop_2026.csv"\n` +
       stdoutLines.map((line) => `echo '${line}'\n`).join("") +
       `exit ${exitCode}\n`,
@@ -292,6 +294,9 @@ test("main --self-play launches the game with the flag and records the self-play
     "--self-play-from=6",
     "--self-play-stall=100",
   ]);
+  const [data, config] = readFileSync(path.join(run.dir, "xdg.txt"), "utf8").trim().split("\n");
+  assert.equal(data, path.join(run.dir, "xdg-data"));
+  assert.equal(config, path.join(run.dir, "xdg-config"));
   assert.equal(readFileSync(path.join(run.dir, "self-play.log"), "utf8").trim().split("\n").length, 2);
   assert.equal(run.summary.self_play.exit, 0);
   assert.equal(run.summary.self_play.stages[0].stage, 6);

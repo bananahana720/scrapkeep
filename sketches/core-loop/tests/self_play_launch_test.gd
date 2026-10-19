@@ -1,4 +1,4 @@
-# smoke: bots timeout=900s (five real-tick played game children: three boot-only quits, one planted-limit run, one from the title through stage 1 into stage 2; about 250 s for the last on the loaded cloud box, 2026-10-18)
+# smoke: bots timeout=900s (six real-tick played game children: four boot-only quits, one planted-limit run, one from the title through stage 1 into stage 2; about 250 s for the last on the loaded cloud box, 2026-10-18)
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
@@ -18,6 +18,9 @@ func _initialize() -> void:
 	t.eq("an unreadable --self-play-until quits 2", bad_until["code"], 2)
 	var missing := _launch(["--self-play-script=res://tools/not_there.gd"])
 	t.eq("a pack without the self-play script quits 2", missing["code"], 2)
+	var ended := _launch(["--self-play-plant-end"])
+	t.eq("a run that ends before the goal quits 1", ended["code"], 1)
+	t.check("the ended line names the outcome", ended["text"].contains("self-play: run ended 'planted_end'"))
 	var planted := _launch(["--self-play-plant-stall", "--self-play-stall=2"])
 	t.eq("a planted stall quits 3", planted["code"], 3)
 	var stall_line := _line(planted["text"], "self-play: stalled at stage ")
@@ -32,6 +35,16 @@ func _initialize() -> void:
 	t.check("stage 1's exit is announced", text.contains("self-play: stage 1 exit taken at "))
 	t.check("stage 2 is announced with seconds since launch", text.contains("self-play: stage 2 entered at "))
 	t.check("the run finishes with done", text.contains("self-play: done at "))
+	# Saves: the child's own profile holds a self-play-<pid> folder, and nothing of the run sits at
+	# the profile's root (run.json, profile.json), where a player's saves live.
+	var userdata := _find_userdata(run["data"])
+	t.check("the child has an app_userdata folder", userdata != "")
+	var root_files := DirAccess.get_files_at(userdata)
+	t.check("no run or profile save at the profile root", not root_files.has("run.json") and not root_files.has("profile.json"))
+	var own := false
+	for dir in DirAccess.get_directories_at(userdata):
+		own = own or (dir.begins_with("self-play-") and DirAccess.get_files_at(userdata.path_join(dir)).has("run.json"))
+	t.check("the run saved into its own self-play folder", own)
 	quit(t.verdict())
 
 
@@ -42,9 +55,26 @@ func _line(text: String, prefix: String) -> String:
 	return ""
 
 
+func _find_userdata(data: String) -> String:
+	var apps := data.path_join("godot/app_userdata")
+	for dir in DirAccess.get_directories_at(apps):
+		return apps.path_join(dir)
+	return ""
+
+
+var _serial := 0
+
+
+# Each child gets its own XDG data, config and cache, as sketch-export.mjs does for its proofs.
 func _launch(extra: Array) -> Dictionary:
-	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--", "--self-play"]
+	_serial += 1
+	var base := ProjectSettings.globalize_path("user://").path_join("sp-%d-%d" % [OS.get_process_id(), _serial])
+	for dir in ["data", "config", "cache"]:
+		DirAccess.make_dir_recursive_absolute(base.path_join(dir))
+	var args := ["XDG_DATA_HOME=" + base.path_join("data"), "XDG_CONFIG_HOME=" + base.path_join("config"),
+		"XDG_CACHE_HOME=" + base.path_join("cache"), OS.get_executable_path(),
+		"--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--", "--self-play"]
 	args.append_array(extra)
 	var output := []
-	var code := OS.execute(OS.get_executable_path(), args, output, true)
-	return {"code": code, "text": "\n".join(output)}
+	var code := OS.execute("env", args, output, true)
+	return {"code": code, "text": "\n".join(output), "data": base.path_join("data")}

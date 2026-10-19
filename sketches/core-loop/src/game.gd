@@ -130,8 +130,8 @@ var summary_guard_left := 0.0
 var _hit_stopped := false
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
-# Named in parts: it is loaded at run time only when the pack carries tools/, never preloaded (lint L7).
-const SELF_PLAY := "res://%s/self_play.gd" % "tools"
+# Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
+const SELF_PLAY := "res://tools/self_play.gd"
 
 
 func _ready() -> void:
@@ -181,6 +181,11 @@ func _ready() -> void:
 	ctx.flow = flow
 	if test_mode:
 		storage_dir = "user://test-%d" % OS.get_process_id()
+		DirAccess.make_dir_recursive_absolute(storage_dir)
+	elif _launch_flag("--self-play"):
+		# A bot's run never touches the player's saves: codex, profile, run log and the run save
+		# all follow storage_dir, so they land in a folder of their own.
+		storage_dir = "user://self-play-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	apply_saved_bindings()
 	camera.apply_look_settings(settings_store())
@@ -286,7 +291,7 @@ func _ready() -> void:
 	_boot("ui")
 	flow.show_title()
 	_boot("title")
-	if _launch_flag("--self-play"):
+	if _launch_flag("--self-play") and not test_mode:
 		_start_self_play()
 	if _launch_flag("--boot-profile"):
 		for frame in 5:

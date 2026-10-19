@@ -18,6 +18,7 @@ extends Node
 #   --self-play-stall=<s>     seconds the exit may stay untaken after the fight ends (default 120)
 #   --self-play-plant-stall   TEST PLANT: freeze the bot after its first tick and count the fight as
 #                             ended then, so the stall detector fires after --self-play-stall
+#   --self-play-plant-end     TEST PLANT: end the run at once (outcome planted_end), so it quits 1
 #   --self-play-plant-limit=<s>  TEST PLANT: give the driver this stage limit (sim seconds), so its
 #                             own stall limit ends the run (the driver-limit branch)
 #   --self-play-beat=<s>      print a "self-play: beat" progress line every s seconds (default off)
@@ -25,7 +26,7 @@ extends Node
 # Lines: "self-play: stage <n> entered at <s> s" (one per stage entered, retries marked),
 # "self-play: stage <n> exit taken at <s> s", "self-play: done at <s> s".
 # Quit codes: 0 goal reached, 1 the run ended first, 2 bad flag or no tools/ in the pack
-# (game.gd), 3 stalled (1 and 3 wait for --self-play-min first, so a frame log stays whole): "self-play: stalled at stage <n> exit at <s> s pos <x,y,z>".
+# (game.gd), 3 stalled (every code waits for --self-play-min first, so a frame log stays whole): "self-play: stalled at stage <n> exit at <s> s pos <x,y,z>".
 
 const BotDriver := preload("res://tools/bot_driver.gd")
 
@@ -46,6 +47,7 @@ var _beat := 0.0
 var _beat_at := 0.0
 var _quit_code := -1
 var _plant_stall := false
+var _plant_end := false
 var _plant_limit := 0.0
 
 
@@ -73,6 +75,8 @@ func _ready() -> void:
 			_stall = float(arg.trim_prefix("--self-play-stall="))
 		elif arg.begins_with("--self-play-script="):
 			pass  # test override, read by src/game.gd; named here so the launch-flag lint finds its parser
+		elif arg == "--self-play-plant-end":
+			_plant_end = true
 		elif arg == "--self-play-plant-stall":
 			_plant_stall = true
 		elif arg.begins_with("--self-play-plant-limit="):
@@ -98,7 +102,7 @@ func _physics_process(delta: float) -> void:
 		_start()
 		return
 	if _quit_code >= 0:
-		# A failed run idles until --self-play-min so a frame log that needs its full length is whole.
+		# Every ending idles until --self-play-min so a frame log that needs its full length is whole.
 		if _now() >= _min:
 			get_tree().quit(_quit_code)
 		return
@@ -127,7 +131,7 @@ func _physics_process(delta: float) -> void:
 		return
 	if _goal_at >= 0.0 and _now() >= maxf(_goal_at + _hold, _min):
 		print("self-play: done at %.2f s" % _now())
-		get_tree().quit(0)
+		_end_run(0)
 
 
 # A pick the offer signal did not settle (the workshop reopened it) is taken by its first card, so
@@ -153,6 +157,8 @@ func _start() -> void:
 	_driver.tree_policy = "random"
 	if _plant_limit > 0.0:
 		_driver.stage_limit = _plant_limit
+	if _plant_end:
+		_driver._end("planted_end")
 	game.events.stage_entered.connect(_on_stage_entered)
 	game.events.stage_cleared.connect(_on_stage_cleared)
 	_driver.start(false)
@@ -167,10 +173,10 @@ func _finish() -> void:
 	var outcome: String = _driver.outcome
 	if _goal_at >= 0.0:
 		print("self-play: done at %.2f s" % _now())
-		get_tree().quit(0)
+		_end_run(0)
 	elif outcome == "won" and _until == "win":
 		print("self-play: run won at %.2f s" % _now())
-		get_tree().quit(0)
+		_end_run(0)
 	elif outcome == "stalled" or outcome == "boss_stalled" or outcome == "fight_capped":
 		_stalled("exit" if _fight_end >= 0.0 else outcome)
 	else:
