@@ -1010,7 +1010,7 @@ func _open_ending() -> void:
 	_ending_body.text = "\n".join(ending_lines) + "\n\n" + String(Worlds.ENDING["sign"])
 	_ending.visible = true
 	_ending_left = ENDING_HOLD
-	for node in [_title, _body, _stats, _actions]:
+	for node in [_title, _body, _stats, _comic_row, _actions]:
 		node.visible = false
 
 
@@ -1027,6 +1027,7 @@ func _close_ending() -> void:
 	_title.visible = true
 	_body.visible = _body.text != ""
 	_stats.visible = true
+	_comic_row.visible = true
 	_actions.visible = true
 	game.summary_guard_left = game.SUMMARY_GUARD
 	_fade(true)
