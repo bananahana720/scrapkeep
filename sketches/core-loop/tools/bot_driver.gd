@@ -9,6 +9,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -417,6 +418,12 @@ var _plate_hand := {}
 var _ignore_walls := false
 # Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
 var _seen := {}
+# A skill band (tools/skill_band.gd) or null. Null is the driver as it always was: REACTION,
+# every tell read, every hand on. A band slows the reaction, drops unread tells and refuses
+# the kit hands it does not have (see _kit).
+var band = null
+# The lowest hull the run reached, for the record; it steers nothing.
+var _min_hp := INF
 var _evaded := {}
 # The pulse ring the caps loop takes on purpose, by its centre.
 var _welcome_ring_at := Vector3.INF
@@ -670,6 +677,7 @@ func tick(delta: float) -> bool:
 		return true
 	_boost_clock -= delta
 	_play_clock += delta
+	_min_hp = minf(_min_hp, float(game.run.hp))
 	_ult_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
@@ -775,6 +783,8 @@ func _end(why: String) -> void:
 	outcome = why
 	_close_note()
 	if not boss_note.is_empty():
+		if why == "died" and not boss_note.has("outcome"):
+			boss_note["died_s"] = snappedf(_boss_clock, 0.01)
 		boss_note["outcome"] = why
 		boss_note["seconds"] = snappedf(_boss_clock, 0.01)
 		var boss = _boss()
@@ -1604,7 +1614,7 @@ func _fight(target: Node3D, delta: float) -> void:
 	if short:
 		_count("punch_short_s", delta)
 	_note_shred(target, delta)
-	if _anchor_warden(target):
+	if _anchor_warden(target) and _kit("harpoon"):
 		_anchor_fight(target, short, delta)
 		return
 	_ground_fight(target, short, delta)
@@ -1613,7 +1623,7 @@ func _fight(target: Node3D, delta: float) -> void:
 # The fight on the ground: the caps loop when punch is short of a caps Warden, else ram laps.
 func _ground_fight(target: Node3D, short: bool, delta: float) -> void:
 	var caps: bool = target.has_method("cap_points") and not (target.cap_points() as Array).is_empty()
-	if caps and short:
+	if caps and short and _kit("weak_points"):
 		_goal = "caps %s" % target.get("kind")
 		_cap_loop(target, delta)
 		return
@@ -1919,6 +1929,8 @@ func _note_shred(target: Node3D, delta: float) -> void:
 # The press is withheld where the player discards it (a charging special or slingshot, a
 # frozen ball), so a bite counts only when it can land.
 func _harpoon_hand(target: Node3D, delta: float) -> void:
+	if not _kit("harpoon"):
+		return
 	var kit = game.player.kit
 	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
 	if _cast_phase == "await_smash":
@@ -1964,7 +1976,7 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
-		if chain_hand_enabled and policy == "completionist" and not _in_boss() \
+		if chain_hand_enabled and _kit("chain") and policy == "completionist" and not _in_boss() \
 				and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump"):
 			var second := _chain_partner(target)
 			if second != null:
@@ -2329,7 +2341,7 @@ func _cap_loop(target: Node3D, delta: float) -> void:
 # What to point the gun at: the weak point when punch is short and one shows (the
 # magnet while it tugs), else the body.
 func _aim_node(target: Node3D, short: bool):
-	if short and target.has_method("weak_points") and not (target.weak_points() as Array).is_empty():
+	if short and _kit("weak_points") and target.has_method("weak_points") and not (target.weak_points() as Array).is_empty():
 		return {"at": target.weak_points()[0]["at"]}
 	return target
 
@@ -2409,18 +2421,18 @@ func _fight_boss(delta: float) -> void:
 		return
 	match phase:
 		1:
-			var magnet := _live_part(boss, ship.magnets, ball)
+			var magnet: Node3D = _live_part(boss, ship.magnets, ball) if _kit("weak_points") else null
 			if pickup != Vector3.INF:
 				_goal = "boss pickup"
 				_act(pickup, magnet if magnet != null else hull, delta)
-			elif punch >= _plating(hull):
+			elif punch >= _plating(hull) or not _kit("weak_points"):
 				_goal = "boss ram"
 				_ram_laps(hull, magnet if magnet != null else hull, delta)
 			else:
 				_goal = "boss magnets"
 				_act(_orbit_point(arena, ball, BOSS_ORBIT), magnet if magnet != null else hull, delta)
 		2:
-			if punch >= _plating(hull):
+			if punch >= _plating(hull) or not _kit("weak_points"):
 				_goal = "boss ram"
 				_ram_laps(hull, hull, delta)
 			else:
@@ -2776,7 +2788,7 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 	# A plant face does not replace a fight climb's waypoint: the face beside the crown's beacon
 	# ramp slingshots the engineer back to the deck before she reaches the Warden's floor.
 	# A seek dropped for the climb is not resumed afterwards: its face may lie back down the ramp.
-	if _engineer() and fight != null and is_instance_valid(fight):
+	if _engineer() and _kit("plant") and fight != null and is_instance_valid(fight):
 		if _climbing(player.ball_position(), fight.global_position):
 			_plant_state = "idle" if _plant_state == "seek" else _plant_state
 		else:
@@ -2800,7 +2812,9 @@ func _threats() -> Array:
 		if not _seen.has(id):
 			_seen[id] = ticks
 			continue
-		if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < REACTION:
+		if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < _reaction():
+			continue
+		if band != null and not band.reads(id):
 			continue
 		if _welcome_ring_at != Vector3.INF and h.get("center") != null and _flat(h.center, _welcome_ring_at) < 1.0:
 			continue
@@ -2810,7 +2824,19 @@ func _threats() -> Array:
 		for id in _seen.keys():
 			if not live.has(id):
 				_seen.erase(id)
+	if band != null:
+		band.forget(live)
 	return out
+
+
+# Seconds from a telegraph appearing to the bot seeing it.
+func _reaction() -> float:
+	return REACTION if band == null else band.reaction_s
+
+
+# Whether the band has this verb's hand. No band has them all.
+func _kit(verb: String) -> bool:
+	return band == null or band.allows(verb)
 
 
 # The telegraphs a player can see: combat's rings and lanes under the game root (not
@@ -2981,6 +3007,8 @@ func _find_face(fight: Node3D) -> Vector3:
 
 
 func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
+	if not _kit("special"):
+		return
 	var ball: Vector3 = game.player.ball_position()
 	var near := 0
 	for node in game.get_tree().get_nodes_in_group("enemy"):
@@ -3056,6 +3084,8 @@ func _cast_hands() -> void:
 # Slot 3 while a body line stands on an enemy within LINE_CAST_REACH. The load before a planned
 # bite is cast from _harpoon_hand, on the bite's own tick.
 func _line_hands() -> void:
+	if not _kit("line_cast"):
+		return
 	var kit = game.player.kit
 	if not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
 		return
@@ -3083,6 +3113,8 @@ func _set_piece_up() -> bool:
 # every policy is already looking at its target or along its way.
 func _ultimate_hands(fight: Node3D) -> void:
 	if _cast_phase == "await_smash": _await_smash_holds()
+	if not _kit("ultimate"):
+		return
 	if _ult_wait > 0.0 or _set_piece_up() or _cast_phase != "":
 		return
 	if String(game.player.abilities.ultimate().get("state", "")) != AbilityState.READY:
@@ -3093,6 +3125,10 @@ func _ultimate_hands(fight: Node3D) -> void:
 		if _traverse_point != Vector3.INF:
 			var ahead := _flat(ball, _traverse_point)
 			want = ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
+	elif band != null and not band.timed_ultimate():
+		# Below the Expert the press is untimed: the meter is ready and a fight is on.
+		var near_lock: bool = fight != null and is_instance_valid(fight) and ball.distance_to(fight.global_position) <= ULT_CROWD_RADIUS
+		want = near_lock or _enemies_within(ball, ULT_CROWD_RADIUS) >= 1
 	else:
 		want = _core_open(fight, ball) or _enemies_within(ball, ULT_CROWD_RADIUS) >= ULT_CROWD
 	if not want:
@@ -3280,6 +3316,8 @@ const TALLY_GATHER_RADIUS := 12.0
 
 
 func _card_hands() -> void:
+	if not _kit("active"):
+		return
 	if game.player.abilities.cap(AbilityState.WEAPON, "cards", null) == null:
 		return
 	_tally_gather_hands()
@@ -3419,6 +3457,8 @@ func record(wall_seconds: float) -> Dictionary:
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
 		"boss": boss_note if not boss_note.is_empty() else null,
 		"reaction_s": REACTION,
+		"band": band.describe() if band else null,
+		"min_hp": snappedf(_min_hp, 0.1) if _min_hp != INF else null, "max_hp": game.run.max_hp,
 		# The skill bar (SKILL-BAR section 8): casts of slots 2 and 3, set pieces started, Q presses,
 		# the in-play seconds each fill took (run start or the last set piece to a full meter), and
 		# the in-play seconds played, which bounds a meter that never filled.
