@@ -15,7 +15,8 @@ const Scatter := preload("res://src/world/scatter.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
-const SimClock := preload("res://src/core/sim_clock.gd")
+const PerchPoints := preload("res://src/world/perch_points.gd")
+const SimClock :=preload("res://src/core/sim_clock.gd")
 
 # A park map id (`--table=park`, park_defs.gd) reads its park file: src/world/park/<id>.json once a
 # stage unit (KD1 to KD6) lands it, else the stage-1 stand-in under assets/park/ (KD0). A park id
@@ -92,6 +93,8 @@ const SWAP_METER_FRAMES := 120
 var publish: Callable
 # Per global stage: whether its park ground builds on worker threads, so its rows place the same way (KB9).
 var _threaded: Array[bool] = []
+# Per stage index: {"tops": [Vector3], "blockers": [zone]} for perch_near, derived on the first ask.
+var _perches := {}
 
 # A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
 # root (world.gd's contraptions) drops them.
@@ -358,6 +361,7 @@ func _free_stage(i: int) -> void:
 	_roots[i] = null
 	_grounds[i] = null
 	_cave_roofs.erase(i)
+	_perches.erase(i)
 	_placement_holes.erase(i)
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
@@ -402,6 +406,20 @@ func height(x: float, z: float) -> float:
 
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
+
+
+# A perch top for the Dispatcher within PerchPoints.RANGE_M of `point`, 6 to 10 m over the ground
+# under it and clear of landform colliders (perch_points.gd); Vector3.INF when the stage has none,
+# and the Dispatcher builds its own mast. `salt` varies the pick; one salt always picks the same.
+func perch_near(point: Vector3, salt := 0) -> Vector3:
+	var m = map()
+	if not (m is ParkMap) or not m.ok:
+		return Vector3.INF
+	var i := _index(stage)
+	if not _perches.has(i):
+		_ensure(stage)
+		_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park)}
+	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt)
 
 
 func spawn_point(index: int) -> Vector3:

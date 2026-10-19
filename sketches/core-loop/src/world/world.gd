@@ -571,7 +571,14 @@ func _step_director(delta: float) -> void:
 		if ctx.calm or ctx.spawner == null:
 			continue
 		var at: Vector2 = spawn["at"]
-		var enemy: Node3D = ctx.spawner.spawn_enemy(Director.KIND_NAMES[spawn["kind"]], terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")))
+		var kind_name: String = Director.KIND_NAMES[spawn["kind"]]
+		var enemy: Node3D
+		if kind_name == "dispatcher":
+			# The Dispatcher perches on a park post near its pack, 6 to 10 m up; none within 40 m, it brings its mast.
+			var perch: Vector3 = terrain.perch_near(Vector3(at.x, 0.0, at.y), ctx.flow.stage())
+			enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")), perch)
+		else:
+			enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")))
 		# The attacker budget reads one pack of one kind as one threat (attack_budget.gd).
 		if enemy != null:
 			enemy.set_meta("pack_seq", int(spawn.get("pack", -1)))

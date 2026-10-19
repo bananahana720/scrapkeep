@@ -2367,6 +2367,8 @@ func special_spawned(enemy: Node3D, name: String) -> void:
 	if enemy.has_signal("special_tell"):
 		# The bodies emit special_tell(moment); the tell cue sounds on the "tell" moment only.
 		enemy.connect("special_tell", func(moment: String): if moment == "tell": special_tell(enemy))
+	if enemy.has_signal("dispatched"):
+		enemy.connect("dispatched", func(_add = null): special_drop(enemy))
 	if enemy.has_signal("died"):
 		enemy.connect("died", func(_a = null, _b = null): special_broken(enemy))
 	enemy.tree_exiting.connect(_special_gone.bind(id), CONNECT_ONE_SHOT)
@@ -2378,6 +2380,15 @@ func special_tell(enemy: Node3D) -> bool:
 	if row.is_empty():
 		return false
 	return play("special_tell", 0.0, 1.0, "SFX", SpecialAudio.cue(row["name"], "tell"))
+
+
+# A Dispatcher landed a chaser: its spawn cue answers it on the next beat, a notch under the
+# arrival. It takes no presence player, so the two-loop cap is untouched. -1 when it sounds nothing.
+func special_drop(enemy: Node3D) -> int:
+	var row: Dictionary = _specials.get(enemy.get_instance_id(), {})
+	if row.is_empty():
+		return -1
+	return on_beat("special_drop", SpecialAudio.DROP_DB, false, 1, SpecialAudio.cue(row["name"], "drop"))
 
 
 # The special died: its loop stops and its break sounds, the splitter's by how it was rammed.
