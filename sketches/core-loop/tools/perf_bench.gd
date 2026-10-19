@@ -83,7 +83,7 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #   --pilot=<class id>   the class the bot plays (default the Rivet seed). Planted negative: p3 with
 #                        --pilot=pylon_engineer must fail.
 #   --plant=no-carve     p3 skips its carves. Planted negative: it must fail.
-#   --plant=no-flat      p3 skips its flat-ground Breaches. Planted negative: it must fail.
+#   --plant=no-flat      p3 skips its flat-ground (slab) Breaches. Planted negative: it must fail.
 #   --plant=late-flat    p3's slab Breaches get a one-part landing budget, so they go through the late path and
 #                        hit ticks after landing. Planted negative: the measured flat-hit check must fail.
 # The one-placement control (the old keying) is tests/rivet_warm_hitch_test.gd's: Andrew's park has no
@@ -542,10 +542,14 @@ func _landing(kit, at: Vector3, where: String) -> void:
 		row["late"] = kit._late.back()
 		_pending.append(row)
 	else:
-		row["hit_tick"] = Engine.get_physics_frames()
-		row["ticks"] = int(row["hit_tick"]) - int(row["landing_tick"])
 		row["shares"] = 1
 		row["hit_in_call"] = int(kit.carve_stats["breach_hits"]) - hits_before
+		# A light carve hits inside the landing call: the hit is the kit's breach_hits rise, read here.
+		if int(row["hit_in_call"]) == 1:
+			row["hit_tick"] = Engine.get_physics_frames()
+			row["ticks"] = int(row["hit_tick"]) - int(row["landing_tick"])
+		else:
+			_errors.append("p3: a %s Breach finished its carve in the landing call but its hit count rose %d (want 1)" % [where, int(row["hit_in_call"])])
 	row["ms"] = row["landing_ms"]
 	_hits_seen = kit.carve_stats["breach_hits"]
 	_carves.append(row)
@@ -711,6 +715,8 @@ func _gate_carves(counts: Dictionary) -> void:
 			_errors.append("p3: no carve share ran in the window")
 		if _carves.is_empty():
 			_errors.append("p3: no carve rows recorded")
+		if not _pending.is_empty():
+			_errors.append("p3: %d queued Breach carves never hit inside the window" % _pending.size())
 	if bool(counts["rivet"]) and int(terrain["builds"]) > 0:
 		_errors.append("%s: the terrain cache started %d builds in %d warm-up cycles while Rivet stood (bound 0)" % [_scene_id, int(terrain["builds"]), int(terrain["warm_cycles"])])
 
@@ -1192,7 +1198,7 @@ func _finish() -> void:
 		"carves": _carves, "carve_budget_ms": CARVE_BUDGET_MS,
 		"carve_max_ms_by": _max_by_ground(), "carve_where": _where_summary(),
 		"carve_builds": _carves.reduce(func(n, c): return n + int(c.get("builds", 0)), 0),
-		"notes": {"derived": "none: ticks to the hit are read from the kit's breach_hits count after its own _step_late, one physics tick at a time",
+		"notes": {"derived": "none: a queued carve's ticks to the hit are read from the kit's breach_hits count after its own _step_late, one physics tick at a time; a light (slab) carve's 0 ticks are its breach_hits rise inside the landing call (hit_in_call 1)",
 			"old_keying_at_the_p3_stand": "planted keep_one_placement made 0 builds at this stand (Andrew's park shares no shape placed twice near it); the hitch fix is proven synthetically, by tests/rivet_warm_hitch_test.gd",
 			"carve_time": "landing_ms is the landing call (first share, and the hit when light); tick_ms is each physics tick a queued carve was in (its later shares and its hit)"},
 		"carve_max_ms": _carves.reduce(func(m, c): return maxf(m, float(c.get("ms", 0.0))), 0.0),
