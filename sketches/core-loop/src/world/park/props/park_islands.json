@@ -1261,18 +1261,1348 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "stone_nook": {
+   "story": "A kicked cairn, a few cobbles and dry grass in a slickrock crack.",
+   "props": [
+    {
+     "kind": "stone_scatter",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 52,
+     "scale": 1.12,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "*",
+     "at": [
+      2.5,
+      1.0
+     ],
+     "yaw_deg": -141,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "c",
+     "at": [
+      -2.0,
+      2.0
+     ],
+     "yaw_deg": 139,
+     "scale": 1.11,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "*",
+     "at": [
+      3.0,
+      3.5
+     ],
+     "yaw_deg": 85,
+     "scale": 1.02,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "b",
+     "at": [
+      -2.5,
+      -1.0
+     ],
+     "yaw_deg": -109,
+     "scale": 1.12,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "rope_heap": {
+   "story": "Spare nets and a rope bale dumped where the crew stopped to rest.",
+   "props": [
+    {
+     "kind": "net_bundle",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": -57,
+     "scale": 1.12,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_basket",
+     "v": "*",
+     "at": [
+      2.5,
+      -0.5
+     ],
+     "yaw_deg": 160,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "patch_bolt",
+     "v": "*",
+     "at": [
+      -2.0,
+      1.5
+     ],
+     "yaw_deg": -34,
+     "scale": 1.16,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "*",
+     "at": [
+      2.0,
+      3.0
+     ],
+     "yaw_deg": 76,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "*",
+     "at": [
+      -3.0,
+      -1.5
+     ],
+     "yaw_deg": -127,
+     "scale": 0.93,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "sapling_corner": {
+   "story": "A relict pine and manzanita finding root beside a worn stair stone.",
+   "props": [
+    {
+     "kind": "pine_sapling",
+     "v": "*",
+     "at": [
+      0,
+      1.5
+     ],
+     "yaw_deg": 138,
+     "scale": 1.12,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "manzanita",
+     "v": "*",
+     "at": [
+      3.0,
+      0.5
+     ],
+     "yaw_deg": -120,
+     "scale": 1.13,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stair_stones",
+     "v": "*",
+     "at": [
+      -2.5,
+      -0.5
+     ],
+     "yaw_deg": 163,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "grass_tufts",
+     "v": "*",
+     "at": [
+      1.0,
+      3.5
+     ],
+     "yaw_deg": -51,
+     "scale": 1.04,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "stone_scatter",
+     "v": "*",
+     "at": [
+      -3.0,
+      2.5
+     ],
+     "yaw_deg": -125,
+     "scale": 0.88,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
   {
-   "id": "dummy",
+   "id": "is00",
+   "template": "stair_marker",
+   "at": [
+    -190.0,
+    -400.0
+   ],
+   "yaw_deg": -157.0,
+   "near": "saddle_gust_lip_w, hikers' numbered stones"
+  },
+  {
+   "id": "is01",
+   "template": "patchwork_rock",
+   "at": [
+    165.0,
+    -400.0
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is02",
+   "template": "stair_marker",
+   "at": [
+    -165.0,
+    -400.0
+   ],
+   "yaw_deg": -157.0,
+   "near": "lookout_stair, hikers' numbered stones"
+  },
+  {
+   "id": "is04",
    "template": "pine_ledge",
    "at": [
-    0,
-    0
+    -75.0,
+    -400.0
    ],
-   "yaw_deg": 0,
-   "near": "dummy"
+   "yaw_deg": -162.0,
+   "near": "saddle, pines and manzanita ledge"
+  },
+  {
+   "id": "is05",
+   "template": "net_crew_corner",
+   "at": [
+    -230.0,
+    -380.0
+   ],
+   "yaw_deg": -152.0,
+   "near": "saddle_gust_lip_w, menders' corner, nets drying"
+  },
+  {
+   "id": "is06",
+   "template": "ore_spill",
+   "at": [
+    185.0,
+    -380.0
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head_lip, tipped bin, ore trail"
+  },
+  {
+   "id": "is07",
+   "template": "patchwork_rock",
+   "at": [
+    -205.0,
+    -380.0
+   ],
+   "yaw_deg": -152.0,
+   "near": "saddle_gust_lip_w, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is08",
+   "template": "net_crew_corner",
+   "at": [
+    -180.0,
+    -380.0
+   ],
+   "yaw_deg": -157.0,
+   "near": "west_shelf, menders' corner, nets drying"
+  },
+  {
+   "id": "is09",
+   "template": "patchwork_rock",
+   "at": [
+    205.0,
+    -365.0
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head_lip, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is10",
+   "template": "stair_marker",
+   "at": [
+    -255.0,
+    -365.0
+   ],
+   "yaw_deg": -148.0,
+   "near": "saddle_gust_lip_w, hikers' numbered stones"
+  },
+  {
+   "id": "is15",
+   "template": "patchwork_rock",
+   "at": [
+    215.0,
+    -10.0
+   ],
+   "yaw_deg": 20.0,
+   "near": "ore_adit, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is18",
+   "template": "ore_spill",
+   "at": [
+    185.0,
+    0.0
+   ],
+   "yaw_deg": 20.0,
+   "near": "ore_adit, tipped bin, ore trail"
+  },
+  {
+   "id": "is21",
+   "template": "patchwork_rock",
+   "at": [
+    55.0,
+    35.0
+   ],
+   "yaw_deg": 52.0,
+   "near": "anvil_step_2, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is23",
+   "template": "ore_spill",
+   "at": [
+    175.0,
+    65.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, tipped bin, ore trail"
+  },
+  {
+   "id": "is25",
+   "template": "tram_halt",
+   "at": [
+    195.0,
+    75.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, mining tram parked"
+  },
+  {
+   "id": "is26",
+   "template": "tram_wreck",
+   "at": [
+    155.0,
+    80.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, sagging tram, spilled ore"
+  },
+  {
+   "id": "is27",
+   "template": "patchwork_rock",
+   "at": [
+    -250.0,
+    105.0
+   ],
+   "yaw_deg": -143.0,
+   "near": "manifest_lip, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is28",
+   "template": "stair_marker",
+   "at": [
+    250.0,
+    105.0
+   ],
+   "yaw_deg": 143.0,
+   "near": "wing_gust_lip_e, hikers' numbered stones"
+  },
+  {
+   "id": "is31",
+   "template": "balloon_landing",
+   "at": [
+    275.0,
+    135.0
+   ],
+   "yaw_deg": 131.0,
+   "near": "wing_gust_lip_e, balloon down, nets out"
+  },
+  {
+   "id": "is32",
+   "template": "balloon_graveyard",
+   "at": [
+    225.0,
+    135.0
+   ],
+   "yaw_deg": 146.0,
+   "near": "wing_gust_lip_e, old envelope, pine through"
+  },
+  {
+   "id": "is33",
+   "template": "patchwork_rock",
+   "at": [
+    -160.0,
+    215.0
+   ],
+   "yaw_deg": 74.0,
+   "near": "west_wing, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is34",
+   "template": "lookout_post",
+   "at": [
+    160.0,
+    215.0
+   ],
+   "yaw_deg": 87.0,
+   "near": "east_wing, fire crew's log cab"
+  },
+  {
+   "id": "is36",
+   "template": "stair_marker",
+   "at": [
+    -185.0,
+    215.0
+   ],
+   "yaw_deg": 74.0,
+   "near": "west_wing, hikers' numbered stones"
+  },
+  {
+   "id": "is37",
+   "template": "lookout_post",
+   "at": [
+    185.0,
+    215.0
+   ],
+   "yaw_deg": -74.0,
+   "near": "east_wing, fire crew's log cab"
+  },
+  {
+   "id": "is38",
+   "template": "stair_marker",
+   "at": [
+    135.0,
+    215.0
+   ],
+   "yaw_deg": 86.0,
+   "near": "east_wing, hikers' numbered stones"
+  },
+  {
+   "id": "is39",
+   "template": "patchwork_rock",
+   "at": [
+    -140.0,
+    295.0
+   ],
+   "yaw_deg": 120.0,
+   "near": "west_wing, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is40",
+   "template": "stair_marker",
+   "at": [
+    -35.0,
+    295.0
+   ],
+   "yaw_deg": -148.0,
+   "near": "carve_step_5, hikers' numbered stones"
+  },
+  {
+   "id": "is41",
+   "template": "pine_ledge",
+   "at": [
+    145.0,
+    295.0
+   ],
+   "yaw_deg": -120.0,
+   "near": "east_wing, pines and manzanita ledge"
+  },
+  {
+   "id": "is42",
+   "template": "net_crew_corner",
+   "at": [
+    -280.0,
+    295.0
+   ],
+   "yaw_deg": -69.0,
+   "near": "wing_hammock_w, menders' corner, nets drying"
+  },
+  {
+   "id": "is43",
+   "template": "patchwork_rock",
+   "at": [
+    -165.0,
+    295.0
+   ],
+   "yaw_deg": 120.0,
+   "near": "west_wing, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is44",
+   "template": "stair_marker",
+   "at": [
+    120.0,
+    295.0
+   ],
+   "yaw_deg": 71.0,
+   "near": "east_wing, hikers' numbered stones"
+  },
+  {
+   "id": "is45",
+   "template": "pine_ledge",
+   "at": [
+    170.0,
+    295.0
+   ],
+   "yaw_deg": -120.0,
+   "near": "east_wing, pines and manzanita ledge"
+  },
+  {
+   "id": "is46",
+   "template": "lookout_post",
+   "at": [
+    -255.0,
+    295.0
+   ],
+   "yaw_deg": -68.0,
+   "near": "west_wing, fire crew's log cab"
+  },
+  {
+   "id": "is47",
+   "template": "patchwork_rock",
+   "at": [
+    -255.0,
+    375.0
+   ],
+   "yaw_deg": -56.0,
+   "near": "roost_foot_lip, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is48",
+   "template": "stair_marker",
+   "at": [
+    285.0,
+    375.0
+   ],
+   "yaw_deg": 52.0,
+   "near": "wing_hammock_e, hikers' numbered stones"
+  },
+  {
+   "id": "is49",
+   "template": "patchwork_rock",
+   "at": [
+    260.0,
+    375.0
+   ],
+   "yaw_deg": 45.0,
+   "near": "wing_hammock_e, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is51",
+   "template": "stair_marker",
+   "at": [
+    -150.0,
+    450.0
+   ],
+   "yaw_deg": -43.0,
+   "near": "knuckle_w, hikers' numbered stones"
+  },
+  {
+   "id": "is52",
+   "template": "patchwork_rock",
+   "at": [
+    150.0,
+    450.0
+   ],
+   "yaw_deg": 43.0,
+   "near": "knuckle_e, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is53",
+   "template": "net_crew_corner",
+   "at": [
+    -135.0,
+    470.0
+   ],
+   "yaw_deg": -43.0,
+   "near": "knuckle_w, menders' corner, nets drying"
+  },
+  {
+   "id": "is54",
+   "template": "balloon_landing",
+   "at": [
+    135.0,
+    470.0
+   ],
+   "yaw_deg": 43.0,
+   "near": "knuckle_e, balloon down, nets out"
+  },
+  {
+   "id": "is55",
+   "template": "patchwork_rock",
+   "at": [
+    -100.0,
+    530.0
+   ],
+   "yaw_deg": -43.0,
+   "near": "knuckle_w, sewing rock, cloth bolt"
+  },
+  {
+   "id": "is56",
+   "template": "balloon_graveyard",
+   "at": [
+    100.0,
+    530.0
+   ],
+   "yaw_deg": 43.0,
+   "near": "knuckle_e, old envelope, pine through"
+  },
+  {
+   "id": "im001",
+   "template": "rope_heap",
+   "at": [
+    -60.0,
+    -400.0
+   ],
+   "yaw_deg": -31.0,
+   "near": "saddle, spare nets dumped"
+  },
+  {
+   "id": "im004",
+   "template": "rope_heap",
+   "at": [
+    -240.0,
+    -365.0
+   ],
+   "yaw_deg": -148.0,
+   "near": "saddle_gust_lip_w, spare nets dumped"
+  },
+  {
+   "id": "im005",
+   "template": "sapling_corner",
+   "at": [
+    -225.0,
+    -365.0
+   ],
+   "yaw_deg": -150.0,
+   "near": "saddle_gust_lip_w, pine and stair stone"
+  },
+  {
+   "id": "im006",
+   "template": "stone_nook",
+   "at": [
+    -210.0,
+    -365.0
+   ],
+   "yaw_deg": -152.0,
+   "near": "west_shelf, cairn and cobbles"
+  },
+  {
+   "id": "im007",
+   "template": "rope_heap",
+   "at": [
+    -195.0,
+    -365.0
+   ],
+   "yaw_deg": -152.0,
+   "near": "west_shelf, spare nets dumped"
+  },
+  {
+   "id": "im009",
+   "template": "stone_nook",
+   "at": [
+    180.0,
+    -365.0
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head_lip, cairn and cobbles"
+  },
+  {
+   "id": "im010",
+   "template": "rope_heap",
+   "at": [
+    40.0,
+    -360.0
+   ],
+   "yaw_deg": -11.0,
+   "near": "saddle_step_2, spare nets dumped"
+  },
+  {
+   "id": "im012",
+   "template": "stone_nook",
+   "at": [
+    25.0,
+    -340.0
+   ],
+   "yaw_deg": 90.0,
+   "near": "fan_step_1, cairn and cobbles"
+  },
+  {
+   "id": "im013",
+   "template": "rope_heap",
+   "at": [
+    55.0,
+    -340.0
+   ],
+   "yaw_deg": -11.0,
+   "near": "fan_step_1, spare nets dumped"
+  },
+  {
+   "id": "im015",
+   "template": "stone_nook",
+   "at": [
+    70.0,
+    -335.0
+   ],
+   "yaw_deg": -11.0,
+   "near": "fan_step_1, cairn and cobbles"
+  },
+  {
+   "id": "im016",
+   "template": "rope_heap",
+   "at": [
+    105.0,
+    -335.0
+   ],
+   "yaw_deg": -43.0,
+   "near": "tram_head, spare nets dumped"
+  },
+  {
+   "id": "im018",
+   "template": "stone_nook",
+   "at": [
+    150.0,
+    -10.0
+   ],
+   "yaw_deg": 27.0,
+   "near": "ore_chute, cairn and cobbles"
+  },
+  {
+   "id": "im019",
+   "template": "rope_heap",
+   "at": [
+    165.0,
+    -10.0
+   ],
+   "yaw_deg": 27.0,
+   "near": "ore_chute, spare nets dumped"
+  },
+  {
+   "id": "im020",
+   "template": "sapling_corner",
+   "at": [
+    200.0,
+    -10.0
+   ],
+   "yaw_deg": 20.0,
+   "near": "ore_adit, pine and stair stone"
+  },
+  {
+   "id": "im021",
+   "template": "stone_nook",
+   "at": [
+    -35.0,
+    -5.0
+   ],
+   "yaw_deg": 142.0,
+   "near": "anvil_step_1, cairn and cobbles"
+  },
+  {
+   "id": "im024",
+   "template": "stone_nook",
+   "at": [
+    70.0,
+    15.0
+   ],
+   "yaw_deg": 43.0,
+   "near": "ore_chute, cairn and cobbles"
+  },
+  {
+   "id": "im025",
+   "template": "rope_heap",
+   "at": [
+    70.0,
+    40.0
+   ],
+   "yaw_deg": 52.0,
+   "near": "ore_chute, spare nets dumped"
+  },
+  {
+   "id": "im027",
+   "template": "stone_nook",
+   "at": [
+    150.0,
+    55.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, cairn and cobbles"
+  },
+  {
+   "id": "im028",
+   "template": "rope_heap",
+   "at": [
+    -85.0,
+    70.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "mooring_pad_ramp, spare nets dumped"
+  },
+  {
+   "id": "im029",
+   "template": "sapling_corner",
+   "at": [
+    170.0,
+    80.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "ore_chute, pine and stair stone"
+  },
+  {
+   "id": "im031",
+   "template": "rope_heap",
+   "at": [
+    -235.0,
+    100.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "ledger_lip, spare nets dumped"
+  },
+  {
+   "id": "im032",
+   "template": "sapling_corner",
+   "at": [
+    235.0,
+    100.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "wing_gust_lip_e, pine and stair stone"
+  },
+  {
+   "id": "im033",
+   "template": "stone_nook",
+   "at": [
+    -235.0,
+    115.0
+   ],
+   "yaw_deg": -149.0,
+   "near": "manifest_lip, cairn and cobbles"
+  },
+  {
+   "id": "im034",
+   "template": "rope_heap",
+   "at": [
+    235.0,
+    115.0
+   ],
+   "yaw_deg": 149.0,
+   "near": "wing_gust_lip_e, spare nets dumped"
+  },
+  {
+   "id": "im035",
+   "template": "sapling_corner",
+   "at": [
+    -235.0,
+    130.0
+   ],
+   "yaw_deg": -138.0,
+   "near": "manifest_lip, pine and stair stone"
+  },
+  {
+   "id": "im036",
+   "template": "stone_nook",
+   "at": [
+    -190.0,
+    130.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "ledger_lip, cairn and cobbles"
+  },
+  {
+   "id": "im037",
+   "template": "rope_heap",
+   "at": [
+    190.0,
+    130.0
+   ],
+   "yaw_deg": 153.0,
+   "near": "wing_gust_lip_e, spare nets dumped"
+  },
+  {
+   "id": "im038",
+   "template": "sapling_corner",
+   "at": [
+    240.0,
+    130.0
+   ],
+   "yaw_deg": 133.0,
+   "near": "wing_gust_lip_e, pine and stair stone"
+  },
+  {
+   "id": "im040",
+   "template": "rope_heap",
+   "at": [
+    -220.0,
+    135.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "manifest_lip, spare nets dumped"
+  },
+  {
+   "id": "im045",
+   "template": "stone_nook",
+   "at": [
+    -280.0,
+    200.0
+   ],
+   "yaw_deg": -106.0,
+   "near": "wing_gust_lip_w, cairn and cobbles"
+  },
+  {
+   "id": "im046",
+   "template": "rope_heap",
+   "at": [
+    -265.0,
+    200.0
+   ],
+   "yaw_deg": -106.0,
+   "near": "manifest_lip, spare nets dumped"
+  },
+  {
+   "id": "im048",
+   "template": "stone_nook",
+   "at": [
+    -185.0,
+    200.0
+   ],
+   "yaw_deg": 62.0,
+   "near": "west_wing, cairn and cobbles"
+  },
+  {
+   "id": "im049",
+   "template": "rope_heap",
+   "at": [
+    -170.0,
+    200.0
+   ],
+   "yaw_deg": 62.0,
+   "near": "west_wing, spare nets dumped"
+  },
+  {
+   "id": "im050",
+   "template": "sapling_corner",
+   "at": [
+    -155.0,
+    200.0
+   ],
+   "yaw_deg": 27.0,
+   "near": "west_wing, pine and stair stone"
+  },
+  {
+   "id": "im051",
+   "template": "stone_nook",
+   "at": [
+    -140.0,
+    200.0
+   ],
+   "yaw_deg": 27.0,
+   "near": "west_wing, cairn and cobbles"
+  },
+  {
+   "id": "im052",
+   "template": "rope_heap",
+   "at": [
+    70.0,
+    200.0
+   ],
+   "yaw_deg": -90.0,
+   "near": "net_post_run, spare nets dumped"
+  },
+  {
+   "id": "im053",
+   "template": "sapling_corner",
+   "at": [
+    135.0,
+    200.0
+   ],
+   "yaw_deg": 90.0,
+   "near": "east_wing, pine and stair stone"
+  },
+  {
+   "id": "im054",
+   "template": "stone_nook",
+   "at": [
+    150.0,
+    200.0
+   ],
+   "yaw_deg": 90.0,
+   "near": "east_wing, cairn and cobbles"
+  },
+  {
+   "id": "im055",
+   "template": "rope_heap",
+   "at": [
+    165.0,
+    200.0
+   ],
+   "yaw_deg": -27.0,
+   "near": "east_wing, spare nets dumped"
+  },
+  {
+   "id": "im056",
+   "template": "sapling_corner",
+   "at": [
+    180.0,
+    200.0
+   ],
+   "yaw_deg": -62.0,
+   "near": "east_wing, pine and stair stone"
+  },
+  {
+   "id": "im058",
+   "template": "rope_heap",
+   "at": [
+    -280.0,
+    215.0
+   ],
+   "yaw_deg": -92.0,
+   "near": "wing_gust_lip_w, spare nets dumped"
+  },
+  {
+   "id": "im060",
+   "template": "stone_nook",
+   "at": [
+    115.0,
+    215.0
+   ],
+   "yaw_deg": 82.0,
+   "near": "east_wing, cairn and cobbles"
+  },
+  {
+   "id": "im061",
+   "template": "rope_heap",
+   "at": [
+    320.0,
+    215.0
+   ],
+   "yaw_deg": 108.0,
+   "near": "wing_gust_lip_e, spare nets dumped"
+  },
+  {
+   "id": "im063",
+   "template": "stone_nook",
+   "at": [
+    -280.0,
+    280.0
+   ],
+   "yaw_deg": -81.0,
+   "near": "wing_hammock_w, cairn and cobbles"
+  },
+  {
+   "id": "im064",
+   "template": "rope_heap",
+   "at": [
+    -265.0,
+    280.0
+   ],
+   "yaw_deg": -81.0,
+   "near": "west_wing, spare nets dumped"
+  },
+  {
+   "id": "im067",
+   "template": "rope_heap",
+   "at": [
+    -170.0,
+    280.0
+   ],
+   "yaw_deg": 112.0,
+   "near": "west_wing, spare nets dumped"
+  },
+  {
+   "id": "im068",
+   "template": "sapling_corner",
+   "at": [
+    -155.0,
+    280.0
+   ],
+   "yaw_deg": 120.0,
+   "near": "west_wing, pine and stair stone"
+  },
+  {
+   "id": "im069",
+   "template": "stone_nook",
+   "at": [
+    115.0,
+    280.0
+   ],
+   "yaw_deg": 73.0,
+   "near": "east_wing, cairn and cobbles"
+  },
+  {
+   "id": "im070",
+   "template": "rope_heap",
+   "at": [
+    130.0,
+    280.0
+   ],
+   "yaw_deg": 73.0,
+   "near": "east_wing, spare nets dumped"
+  },
+  {
+   "id": "im071",
+   "template": "sapling_corner",
+   "at": [
+    145.0,
+    280.0
+   ],
+   "yaw_deg": 73.0,
+   "near": "east_wing, pine and stair stone"
+  },
+  {
+   "id": "im072",
+   "template": "stone_nook",
+   "at": [
+    160.0,
+    280.0
+   ],
+   "yaw_deg": -120.0,
+   "near": "east_wing, cairn and cobbles"
+  },
+  {
+   "id": "im073",
+   "template": "rope_heap",
+   "at": [
+    175.0,
+    280.0
+   ],
+   "yaw_deg": -112.0,
+   "near": "east_wing, spare nets dumped"
+  },
+  {
+   "id": "im076",
+   "template": "rope_heap",
+   "at": [
+    90.0,
+    295.0
+   ],
+   "yaw_deg": 65.0,
+   "near": "carve_step_5, spare nets dumped"
+  },
+  {
+   "id": "im078",
+   "template": "stone_nook",
+   "at": [
+    -260.0,
+    360.0
+   ],
+   "yaw_deg": -60.0,
+   "near": "roost_foot_lip, cairn and cobbles"
+  },
+  {
+   "id": "im080",
+   "template": "sapling_corner",
+   "at": [
+    -230.0,
+    360.0
+   ],
+   "yaw_deg": -54.0,
+   "near": "west_wing, pine and stair stone"
+  },
+  {
+   "id": "im081",
+   "template": "stone_nook",
+   "at": [
+    -215.0,
+    360.0
+   ],
+   "yaw_deg": -52.0,
+   "near": "west_wing, cairn and cobbles"
+  },
+  {
+   "id": "im084",
+   "template": "stone_nook",
+   "at": [
+    -100.0,
+    360.0
+   ],
+   "yaw_deg": -129.0,
+   "near": "carve_step_6, cairn and cobbles"
+  },
+  {
+   "id": "im085",
+   "template": "rope_heap",
+   "at": [
+    25.0,
+    360.0
+   ],
+   "yaw_deg": 32.0,
+   "near": "carve_step_6, spare nets dumped"
+  },
+  {
+   "id": "im086",
+   "template": "sapling_corner",
+   "at": [
+    55.0,
+    360.0
+   ],
+   "yaw_deg": 32.0,
+   "near": "carve_step_6, pine and stair stone"
+  },
+  {
+   "id": "im087",
+   "template": "stone_nook",
+   "at": [
+    70.0,
+    360.0
+   ],
+   "yaw_deg": 32.0,
+   "near": "carve_step_6, cairn and cobbles"
+  },
+  {
+   "id": "im088",
+   "template": "rope_heap",
+   "at": [
+    85.0,
+    360.0
+   ],
+   "yaw_deg": 32.0,
+   "near": "carve_step_6, spare nets dumped"
+  },
+  {
+   "id": "im090",
+   "template": "stone_nook",
+   "at": [
+    115.0,
+    360.0
+   ],
+   "yaw_deg": -135.0,
+   "near": "carve_step_6, cairn and cobbles"
+  },
+  {
+   "id": "im092",
+   "template": "sapling_corner",
+   "at": [
+    260.0,
+    360.0
+   ],
+   "yaw_deg": 47.0,
+   "near": "wing_hammock_e, pine and stair stone"
+  },
+  {
+   "id": "im093",
+   "template": "stone_nook",
+   "at": [
+    275.0,
+    360.0
+   ],
+   "yaw_deg": 54.0,
+   "near": "wing_hammock_e, cairn and cobbles"
+  },
+  {
+   "id": "im094",
+   "template": "rope_heap",
+   "at": [
+    290.0,
+    360.0
+   ],
+   "yaw_deg": 54.0,
+   "near": "wing_hammock_e, spare nets dumped"
+  },
+  {
+   "id": "im095",
+   "template": "sapling_corner",
+   "at": [
+    -240.0,
+    375.0
+   ],
+   "yaw_deg": -52.0,
+   "near": "roost_foot_lip, pine and stair stone"
+  },
+  {
+   "id": "im096",
+   "template": "stone_nook",
+   "at": [
+    -225.0,
+    375.0
+   ],
+   "yaw_deg": -52.0,
+   "near": "roost_foot_lip, cairn and cobbles"
+  },
+  {
+   "id": "im097",
+   "template": "rope_heap",
+   "at": [
+    -210.0,
+    375.0
+   ],
+   "yaw_deg": -52.0,
+   "near": "west_wing, spare nets dumped"
+  },
+  {
+   "id": "im098",
+   "template": "sapling_corner",
+   "at": [
+    245.0,
+    375.0
+   ],
+   "yaw_deg": 45.0,
+   "near": "east_wing, pine and stair stone"
+  },
+  {
+   "id": "im100",
+   "template": "rope_heap",
+   "at": [
+    -115.0,
+    450.0
+   ],
+   "yaw_deg": -43.0,
+   "near": "knuckle_w, spare nets dumped"
+  },
+  {
+   "id": "im102",
+   "template": "stone_nook",
+   "at": [
+    -135.0,
+    455.0
+   ],
+   "yaw_deg": -43.0,
+   "near": "knuckle_w, cairn and cobbles"
+  },
+  {
+   "id": "im103",
+   "template": "rope_heap",
+   "at": [
+    130.0,
+    455.0
+   ],
+   "yaw_deg": 43.0,
+   "near": "knuckle_e, spare nets dumped"
+  },
+  {
+   "id": "im105",
+   "template": "stone_nook",
+   "at": [
+    -100.0,
+    510.0
+   ],
+   "yaw_deg": -43.0,
+   "near": "knuckle_w, cairn and cobbles"
+  },
+  {
+   "id": "im106",
+   "template": "rope_heap",
+   "at": [
+    100.0,
+    510.0
+   ],
+   "yaw_deg": 43.0,
+   "near": "knuckle_e, spare nets dumped"
   }
  ],
  "litter": {
