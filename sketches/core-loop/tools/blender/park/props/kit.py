@@ -79,18 +79,34 @@ def hexcolor(c):
     return "".join("%02x" % round(max(0.0, min(1.0, x)) * 255) for x in c)
 
 
-def check_colour(c):
-    """Hard readability rule: no banned hexes, no hot red/orange/amber stripes."""
+def check_colour(c, quiet=False):
+    """Hard readability rule: no banned hexes, no hot red/orange stripes. The exact WARN hexes (AMBER, COPPER, BRASS) only warn."""
     h = hexcolor(c)
     if h in BANNED:
         raise ValueError("banned colour #" + h)
+    if h in WARN:
+        if not quiet:
+            print("KIT warning: #%s is AMBER/COPPER/BRASS; never dominant, brass is Fleet-only" % h, flush=True)
+        return h
     r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
     hue, sat, val = colorsys.rgb_to_hsv(r, g, b)
     if sat > 0.65 and val > 0.75 and (hue < 0.13 or hue > 0.95):
         raise ValueError("hazard-like colour #" + h)
-    if h in WARN:
-        print("KIT warning: #%s is AMBER/COPPER/BRASS; never dominant, brass is Fleet-only" % h, flush=True)
     return h
+
+
+def _selftest_colours():
+    for ok in ("d9b44a", "e5a044", "b77843", "6f7f4a"):
+        check_colour(ok, quiet=True)
+    for bad in ("ff5a3c", "9dff3c", "8bf0d3", "ff3a20", "ff8a1c"):
+        try:
+            check_colour(bad, quiet=True)
+        except ValueError:
+            continue
+        raise AssertionError("colour #%s should fail check_colour" % bad)
+
+
+_selftest_colours()
 
 
 def mix(a, b, t):
@@ -242,6 +258,7 @@ class Kit:
         self.kinds = {}
         self.polish_opts = dict(detail=2, bevel=0.04, bevel_min=0.08)
         self.polish_opts.update(polish_opts or {})
+        assert self.polish_opts["detail"] >= 1, "polish detail %r: common _segs(n) returns 0 below 1 and every cylinder and sphere vanishes" % (self.polish_opts["detail"],)
 
     def kind(self, name, hero=False, tags=(), story="", variants="ab", polish_opts=None):
         def deco(fn):
@@ -259,7 +276,9 @@ class Kit:
     def build(self, kind, variant):
         spec = self.kinds[kind]
         rng = random.Random("%s/%s/%s" % (self.park, kind, variant))
-        polish.enable(**dict(self.polish_opts, **spec["polish"]))
+        opts = dict(self.polish_opts, **spec["polish"])
+        assert opts["detail"] >= 1, "%s: polish detail %r; common _segs(n) returns 0 below 1 and every cylinder and sphere vanishes" % (kind, opts["detail"])
+        polish.enable(**opts)
         p = Prop("%s_%s" % (kind, variant), rng)
         spec["fn"](p, variant, rng)
         return p.root, p.finish()
