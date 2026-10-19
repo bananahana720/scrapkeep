@@ -1,0 +1,1642 @@
+{
+ "schema": "scrapkeep-park-props/1",
+ "map": "park_crown",
+ "kit": "res://assets/models/park/props/crown/manifest.json",
+ "templates": {
+  "mending_yard": {
+   "story": "Net-weavers' mending yard: a loom with a half-woven net, a knot board and a hammock, set down mid-lesson.",
+   "props": [
+    {
+     "kind": "loom_frame",
+     "v": "a",
+     "at": [
+      0,
+      8
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "knot_board",
+     "v": "a",
+     "at": [
+      -5.5,
+      4
+     ],
+     "yaw_deg": -25,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "knot_board",
+     "v": "c",
+     "at": [
+      4,
+      -1
+     ],
+     "yaw_deg": 70,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hammock_rig",
+     "v": "a",
+     "at": [
+      -8,
+      7
+     ],
+     "yaw_deg": 95,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "a",
+     "at": [
+      5.5,
+      3
+     ],
+     "yaw_deg": 200,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "a",
+     "at": [
+      -3,
+      -3
+     ],
+     "yaw_deg": 30,
+     "scale": 1.01,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "a",
+     "at": [
+      8.5,
+      -4
+     ],
+     "yaw_deg": 15,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "a",
+     "at": [
+      -10.5,
+      2
+     ],
+     "yaw_deg": 295,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "a",
+     "at": [
+      10,
+      10
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      -4,
+      12
+     ],
+     "yaw_deg": 140,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "a",
+     "at": [
+      3.5,
+      -4.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "c",
+     "at": [
+      -6.5,
+      -4.5
+     ],
+     "yaw_deg": 250,
+     "scale": 1.07,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "weaver_boneyard": {
+   "story": "A loom that came down in a gale, its net and hammock left to the brush.",
+   "props": [
+    {
+     "kind": "loom_frame",
+     "v": "c",
+     "at": [
+      0,
+      7
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hammock_rig",
+     "v": "c",
+     "at": [
+      -7.5,
+      3
+     ],
+     "yaw_deg": 60,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "knot_board",
+     "v": "c",
+     "at": [
+      5,
+      0.5
+     ],
+     "yaw_deg": 110,
+     "scale": 1.06,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "c",
+     "at": [
+      -3,
+      -3.5
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "b",
+     "at": [
+      6.5,
+      6
+     ],
+     "yaw_deg": 75,
+     "scale": 1.02,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "c",
+     "at": [
+      -9.5,
+      -1
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "c",
+     "at": [
+      8.5,
+      -3.5
+     ],
+     "yaw_deg": 130,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      2,
+      -5.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "c",
+     "at": [
+      -5,
+      9
+     ],
+     "yaw_deg": 40,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      10.5,
+      4
+     ],
+     "yaw_deg": 160,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "hammock_camp": {
+   "story": "A weaver sleeping spot: two hammocks, a lantern, a morning dish.",
+   "props": [
+    {
+     "kind": "hammock_rig",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hammock_rig",
+     "v": "b",
+     "at": [
+      7,
+      4
+     ],
+     "yaw_deg": 110,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "a",
+     "at": [
+      -3.5,
+      -3
+     ],
+     "yaw_deg": 30,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "b",
+     "at": [
+      2.5,
+      -4
+     ],
+     "yaw_deg": 140,
+     "scale": 1.01,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "a",
+     "at": [
+      -7.5,
+      3.5
+     ],
+     "yaw_deg": 160,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "c",
+     "at": [
+      5,
+      -3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -9.5,
+      6
+     ],
+     "yaw_deg": 250,
+     "scale": 1.09,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      10.5,
+      -1
+     ],
+     "yaw_deg": 250,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "knot_board",
+     "v": "b",
+     "at": [
+      -2,
+      6
+     ],
+     "yaw_deg": 35,
+     "scale": 1.03,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "net_lesson": {
+   "story": "A mending lesson: spare net in a basket, knot samples, a fence for the apprentices.",
+   "props": [
+    {
+     "kind": "knot_board",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.02,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "knot_board",
+     "v": "c",
+     "at": [
+      -4.5,
+      2
+     ],
+     "yaw_deg": 60,
+     "scale": 0.93,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "b",
+     "at": [
+      5,
+      -2.5
+     ],
+     "yaw_deg": 8,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hammock_rig",
+     "v": "b",
+     "at": [
+      4,
+      6
+     ],
+     "yaw_deg": 70,
+     "scale": 1.01,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "c",
+     "at": [
+      -3,
+      -4.5
+     ],
+     "yaw_deg": 35,
+     "scale": 0.91,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "c",
+     "at": [
+      -7.5,
+      -2
+     ],
+     "yaw_deg": 150,
+     "scale": 1.02,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      8.5,
+      3
+     ],
+     "yaw_deg": 295,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      -8.5,
+      6.5
+     ],
+     "yaw_deg": 300,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "kite_pennant",
+     "v": "c",
+     "at": [
+      9.5,
+      -4
+     ],
+     "yaw_deg": 40,
+     "scale": 1.02,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "watch_post": {
+   "story": "A lookout's perch: stool, lantern and a cup, a pennant to read the wind.",
+   "props": [
+    {
+     "kind": "watch_stool",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "a",
+     "at": [
+      -2.5,
+      0.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "kite_pennant",
+     "v": "b",
+     "at": [
+      4,
+      2
+     ],
+     "yaw_deg": 0,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "a",
+     "at": [
+      2,
+      -3.5
+     ],
+     "yaw_deg": 20,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "a",
+     "at": [
+      -6.5,
+      3.5
+     ],
+     "yaw_deg": 150,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hammock_rig",
+     "v": "a",
+     "at": [
+      6,
+      6.5
+     ],
+     "yaw_deg": 100,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -8.5,
+      -2
+     ],
+     "yaw_deg": 0,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      9.5,
+      -3
+     ],
+     "yaw_deg": 70,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "c",
+     "at": [
+      -4,
+      -5.5
+     ],
+     "yaw_deg": 200,
+     "scale": 0.99,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lightning_scar": {
+   "story": "Where the storm walked: glass tubes in a sand scar, a bent rod, and a lantern someone left.",
+   "props": [
+    {
+     "kind": "fulgurite",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "b",
+     "at": [
+      6.5,
+      3
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "c",
+     "at": [
+      -5.5,
+      2.5
+     ],
+     "yaw_deg": 200,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "b",
+     "at": [
+      3,
+      -4.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "c",
+     "at": [
+      -7.5,
+      -3.5
+     ],
+     "yaw_deg": 25,
+     "scale": 1.1,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -3,
+      6.5
+     ],
+     "yaw_deg": 50,
+     "scale": 1.04,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      9.5,
+      -2
+     ],
+     "yaw_deg": 310,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      -1,
+      -5.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "kite_pennant",
+     "v": "c",
+     "at": [
+      8.5,
+      7.5
+     ],
+     "yaw_deg": 50,
+     "scale": 0.95,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "abandoned_booth": {
+   "story": "A signal-crew tally hut left mid-shift, its slate half-counted.",
+   "props": [
+    {
+     "kind": "billing_booth",
+     "v": "a",
+     "at": [
+      0,
+      9
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_slab",
+     "v": "a",
+     "at": [
+      5.5,
+      2.5
+     ],
+     "yaw_deg": 20,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "c",
+     "at": [
+      -4.5,
+      3.5
+     ],
+     "yaw_deg": 60,
+     "scale": 0.91,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "kite_pennant",
+     "v": "a",
+     "at": [
+      -8,
+      -1
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_slab",
+     "v": "c",
+     "at": [
+      -3,
+      -3.5
+     ],
+     "yaw_deg": 200,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "a",
+     "at": [
+      3.5,
+      -4.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "c",
+     "at": [
+      10,
+      6.5
+     ],
+     "yaw_deg": 130,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "c",
+     "at": [
+      -10,
+      9
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      8,
+      -3.5
+     ],
+     "yaw_deg": 250,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "c",
+     "at": [
+      -1,
+      -7.5
+     ],
+     "yaw_deg": 100,
+     "scale": 0.98,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      2.5,
+      -8
+     ],
+     "yaw_deg": 0,
+     "scale": 1.07,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "dead_weather_post": {
+   "story": "A Fleet weather post gone quiet: the dial stuck on STORM, a slab, a spool under its roof.",
+   "props": [
+    {
+     "kind": "storm_station",
+     "v": "b",
+     "at": [
+      0,
+      9
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_slab",
+     "v": "b",
+     "at": [
+      -5.5,
+      2
+     ],
+     "yaw_deg": 30,
+     "scale": 0.98,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "spool_shed",
+     "v": "c",
+     "at": [
+      7,
+      3.5
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "c",
+     "at": [
+      -9,
+      6.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "c",
+     "at": [
+      10,
+      11
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "b",
+     "at": [
+      3,
+      -3.5
+     ],
+     "yaw_deg": 80,
+     "scale": 1.09,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "kite_pennant",
+     "v": "c",
+     "at": [
+      -3.5,
+      -4
+     ],
+     "yaw_deg": 0,
+     "scale": 1.07,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "b",
+     "at": [
+      -7.5,
+      -3
+     ],
+     "yaw_deg": 310,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "c",
+     "at": [
+      8.5,
+      -2
+     ],
+     "yaw_deg": 0,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      -10.5,
+      12
+     ],
+     "yaw_deg": 140,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "cable_corner": {
+   "story": "A cable spool under its canopy and the crew's slates, abandoned where the wire ran out.",
+   "props": [
+    {
+     "kind": "spool_shed",
+     "v": "a",
+     "at": [
+      0,
+      6
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_slab",
+     "v": "a",
+     "at": [
+      -5.5,
+      1.5
+     ],
+     "yaw_deg": 340,
+     "scale": 1.08,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "c",
+     "at": [
+      4,
+      -1.5
+     ],
+     "yaw_deg": 70,
+     "scale": 0.99,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "kite_pennant",
+     "v": "a",
+     "at": [
+      6.5,
+      5.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -7.5,
+      -3
+     ],
+     "yaw_deg": 250,
+     "scale": 0.98,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "c",
+     "at": [
+      -9,
+      8
+     ],
+     "yaw_deg": 300,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "a",
+     "at": [
+      3,
+      -5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_slab",
+     "v": "c",
+     "at": [
+      8.5,
+      -3.5
+     ],
+     "yaw_deg": 160,
+     "scale": 1.01,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "log_post": {
+   "story": "A crew log post: tally slabs, a dead lantern and a pennant on a cairn, nobody home.",
+   "props": [
+    {
+     "kind": "tally_slab",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 25,
+     "scale": 0.94,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_slab",
+     "v": "c",
+     "at": [
+      -4,
+      3
+     ],
+     "yaw_deg": 170,
+     "scale": 1.03,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "kite_pennant",
+     "v": "c",
+     "at": [
+      4,
+      2
+     ],
+     "yaw_deg": 0,
+     "scale": 0.97,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "c",
+     "at": [
+      -2,
+      -4.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.96,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "c",
+     "at": [
+      3.5,
+      -3.5
+     ],
+     "yaw_deg": 100,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      7,
+      5.5
+     ],
+     "yaw_deg": 260,
+     "scale": 1.05,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      -8,
+      -1
+     ],
+     "yaw_deg": 200,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "c",
+     "at": [
+      8.5,
+      -2.5
+     ],
+     "yaw_deg": 60,
+     "scale": 0.92,
+     "tilt_deg": 0
+    }
+   ]
+  }
+ },
+ "spots": [
+  {
+   "id": "crown_01",
+   "template": "mending_yard",
+   "at": [
+    30.0,
+    -760.0
+   ],
+   "yaw_deg": 96,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_02",
+   "template": "net_lesson",
+   "at": [
+    -50.0,
+    -750.0
+   ],
+   "yaw_deg": -117,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_03",
+   "template": "net_lesson",
+   "at": [
+    70.0,
+    -720.0
+   ],
+   "yaw_deg": 156,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_04",
+   "template": "weaver_boneyard",
+   "at": [
+    -50.0,
+    -710.0
+   ],
+   "yaw_deg": -120,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_05",
+   "template": "net_lesson",
+   "at": [
+    40.0,
+    -680.0
+   ],
+   "yaw_deg": -24,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_06",
+   "template": "lightning_scar",
+   "at": [
+    50.0,
+    -640.0
+   ],
+   "yaw_deg": 93,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_07",
+   "template": "hammock_camp",
+   "at": [
+    -40.0,
+    -620.0
+   ],
+   "yaw_deg": -27,
+   "near": "watch_butte, net-weaver gear"
+  },
+  {
+   "id": "crown_08",
+   "template": "lightning_scar",
+   "at": [
+    -80.0,
+    -380.0
+   ],
+   "yaw_deg": -142,
+   "near": "bajada_lip, net-weaver gear"
+  },
+  {
+   "id": "crown_09",
+   "template": "watch_post",
+   "at": [
+    160.0,
+    -370.0
+   ],
+   "yaw_deg": 115,
+   "near": "kick_emid_1, net-weaver gear"
+  },
+  {
+   "id": "crown_10",
+   "template": "lightning_scar",
+   "at": [
+    210.0,
+    -360.0
+   ],
+   "yaw_deg": 135,
+   "near": "bajada_rim_lip_e, net-weaver gear"
+  },
+  {
+   "id": "crown_11",
+   "template": "lightning_scar",
+   "at": [
+    -220.0,
+    -330.0
+   ],
+   "yaw_deg": -176,
+   "near": "scree_gust_lip, net-weaver gear"
+  },
+  {
+   "id": "crown_12",
+   "template": "watch_post",
+   "at": [
+    -90.0,
+    -330.0
+   ],
+   "yaw_deg": -156,
+   "near": "kick_wmid_3, net-weaver gear"
+  },
+  {
+   "id": "crown_13",
+   "template": "hammock_camp",
+   "at": [
+    -260.0,
+    -320.0
+   ],
+   "yaw_deg": -159,
+   "near": "scree_gust_lip, net-weaver gear"
+  },
+  {
+   "id": "crown_14",
+   "template": "weaver_boneyard",
+   "at": [
+    200.0,
+    -320.0
+   ],
+   "yaw_deg": 75,
+   "near": "kick_emid_1, net-weaver gear"
+  },
+  {
+   "id": "crown_15",
+   "template": "watch_post",
+   "at": [
+    30.0,
+    -280.0
+   ],
+   "yaw_deg": -34,
+   "near": "turnstone, net-weaver gear"
+  },
+  {
+   "id": "crown_16",
+   "template": "watch_post",
+   "at": [
+    210.0,
+    -270.0
+   ],
+   "yaw_deg": 128,
+   "near": "kick_emid_1, net-weaver gear"
+  },
+  {
+   "id": "crown_17",
+   "template": "watch_post",
+   "at": [
+    30.0,
+    -200.0
+   ],
+   "yaw_deg": -90,
+   "near": "meander, net-weaver gear"
+  },
+  {
+   "id": "crown_18",
+   "template": "net_lesson",
+   "at": [
+    -220.0,
+    -190.0
+   ],
+   "yaw_deg": 61,
+   "near": "hoodoo_gust_lip_4, net-weaver gear"
+  },
+  {
+   "id": "crown_19",
+   "template": "watch_post",
+   "at": [
+    80.0,
+    -190.0
+   ],
+   "yaw_deg": -90,
+   "near": "meander, net-weaver gear"
+  },
+  {
+   "id": "crown_20",
+   "template": "weaver_boneyard",
+   "at": [
+    50.0,
+    -160.0
+   ],
+   "yaw_deg": -150,
+   "near": "meander, net-weaver gear"
+  },
+  {
+   "id": "crown_21",
+   "template": "hammock_camp",
+   "at": [
+    140.0,
+    -120.0
+   ],
+   "yaw_deg": 132,
+   "near": "meander_cross_lip, net-weaver gear"
+  },
+  {
+   "id": "crown_22",
+   "template": "watch_post",
+   "at": [
+    230.0,
+    -80.0
+   ],
+   "yaw_deg": 38,
+   "near": "east_ribs, net-weaver gear"
+  },
+  {
+   "id": "crown_23",
+   "template": "mending_yard",
+   "at": [
+    240.0,
+    -30.0
+   ],
+   "yaw_deg": -2,
+   "near": "east_ribs, net-weaver gear"
+  },
+  {
+   "id": "crown_24",
+   "template": "log_post",
+   "at": [
+    140.0,
+    -10.0
+   ],
+   "yaw_deg": 18,
+   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_25",
+   "template": "dead_weather_post",
+   "at": [
+    180.0,
+    10.0
+   ],
+   "yaw_deg": 38,
+   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_26",
+   "template": "log_post",
+   "at": [
+    220.0,
+    10.0
+   ],
+   "yaw_deg": 38,
+   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_27",
+   "template": "mending_yard",
+   "at": [
+    -130.0,
+    30.0
+   ],
+   "yaw_deg": 0,
+   "near": "kick_wmid_5, net-weaver gear"
+  },
+  {
+   "id": "crown_28",
+   "template": "net_lesson",
+   "at": [
+    -80.0,
+    40.0
+   ],
+   "yaw_deg": -153,
+   "near": "kick_wmid_5, net-weaver gear"
+  },
+  {
+   "id": "crown_29",
+   "template": "abandoned_booth",
+   "at": [
+    150.0,
+    40.0
+   ],
+   "yaw_deg": -22,
+   "near": "gauntlet_toe_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_30",
+   "template": "lightning_scar",
+   "at": [
+    -30.0,
+    100.0
+   ],
+   "yaw_deg": -106,
+   "near": "spire_top_ramp, net-weaver gear"
+  },
+  {
+   "id": "crown_31",
+   "template": "log_post",
+   "at": [
+    110.0,
+    110.0
+   ],
+   "yaw_deg": 171,
+   "near": "gauntlet_west, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_32",
+   "template": "hammock_camp",
+   "at": [
+    -60.0,
+    220.0
+   ],
+   "yaw_deg": -70,
+   "near": "needle_gust_lip, net-weaver gear"
+  },
+  {
+   "id": "crown_33",
+   "template": "log_post",
+   "at": [
+    -60.0,
+    260.0
+   ],
+   "yaw_deg": -90,
+   "near": "crown_ramp, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_34",
+   "template": "weaver_boneyard",
+   "at": [
+    80.0,
+    280.0
+   ],
+   "yaw_deg": -89,
+   "near": "kick_slast_14, net-weaver gear"
+  },
+  {
+   "id": "crown_35",
+   "template": "net_lesson",
+   "at": [
+    -140.0,
+    310.0
+   ],
+   "yaw_deg": 135,
+   "near": "kick_wlast_11, net-weaver gear"
+  },
+  {
+   "id": "crown_36",
+   "template": "dead_weather_post",
+   "at": [
+    -80.0,
+    320.0
+   ],
+   "yaw_deg": -92,
+   "near": "crown_ramp, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_37",
+   "template": "mending_yard",
+   "at": [
+    -130.0,
+    350.0
+   ],
+   "yaw_deg": 195,
+   "near": "kick_wlast_12, net-weaver gear"
+  },
+  {
+   "id": "crown_38",
+   "template": "abandoned_booth",
+   "at": [
+    -50.0,
+    350.0
+   ],
+   "yaw_deg": -92,
+   "near": "crown_ramp, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_39",
+   "template": "hammock_camp",
+   "at": [
+    -90.0,
+    360.0
+   ],
+   "yaw_deg": 135,
+   "near": "kick_wlast_12, net-weaver gear"
+  },
+  {
+   "id": "crown_40",
+   "template": "lightning_scar",
+   "at": [
+    -240.0,
+    370.0
+   ],
+   "yaw_deg": -65,
+   "near": "kick_wlast_11, net-weaver gear"
+  },
+  {
+   "id": "crown_41",
+   "template": "hammock_camp",
+   "at": [
+    50.0,
+    380.0
+   ],
+   "yaw_deg": -112,
+   "near": "kick_slast_14, net-weaver gear"
+  },
+  {
+   "id": "crown_42",
+   "template": "net_lesson",
+   "at": [
+    -180.0,
+    390.0
+   ],
+   "yaw_deg": -25,
+   "near": "kick_wlast_12, net-weaver gear"
+  },
+  {
+   "id": "crown_43",
+   "template": "hammock_camp",
+   "at": [
+    -40.0,
+    390.0
+   ],
+   "yaw_deg": -152,
+   "near": "kick_wlast_12, net-weaver gear"
+  },
+  {
+   "id": "crown_44",
+   "template": "cable_corner",
+   "at": [
+    -80.0,
+    410.0
+   ],
+   "yaw_deg": 155,
+   "near": "kite_runout_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_45",
+   "template": "log_post",
+   "at": [
+    60.0,
+    440.0
+   ],
+   "yaw_deg": 48,
+   "near": "crown_collector, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_46",
+   "template": "log_post",
+   "at": [
+    -100.0,
+    480.0
+   ],
+   "yaw_deg": -51,
+   "near": "kite_runout_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_47",
+   "template": "cable_corner",
+   "at": [
+    10.0,
+    530.0
+   ],
+   "yaw_deg": 9,
+   "near": "crown_collector, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_48",
+   "template": "cable_corner",
+   "at": [
+    -40.0,
+    550.0
+   ],
+   "yaw_deg": 69,
+   "near": "kite_runout_lip, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_49",
+   "template": "abandoned_booth",
+   "at": [
+    0.0,
+    570.0
+   ],
+   "yaw_deg": 9,
+   "near": "crown_collector, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_50",
+   "template": "log_post",
+   "at": [
+    40.0,
+    570.0
+   ],
+   "yaw_deg": 22,
+   "near": "crown_collector, abandoned Fleet gear"
+  }
+ ],
+ "litter": {
+  "kinds": [
+   {
+    "kind": "dish_stones",
+    "weight": 2
+   },
+   {
+    "kind": "fulgurite",
+    "weight": 2
+   },
+   {
+    "kind": "rabbitbrush",
+    "weight": 3
+   },
+   {
+    "kind": "yucca",
+    "weight": 3
+   },
+   {
+    "kind": "watch_stool",
+    "weight": 1
+   },
+   {
+    "kind": "knot_board",
+    "weight": 1
+   },
+   {
+    "kind": "rope_fence",
+    "weight": 1
+   }
+  ],
+  "spacing_m": 10,
+  "band_m": [
+   16,
+   60
+  ],
+  "seed": 31
+ }
+}

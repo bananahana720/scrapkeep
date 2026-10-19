@@ -25,8 +25,7 @@ C.update({
     # Fleet iron oxide #9b513a / #74402f, sun-bleached toward canvas so abandoned Fleet gear
     # reads pale and dead against red-orange sandstone, not as a live camp.
     "oxide": mix("9b513a", "c9c1ae", 0.64), "oxide_dark": mix("74402f", "a79e83", 0.5),
-    # Stands in for BRASS #d9b44a, which the kit's hazard-colour test rejects (kit fix pending).
-    "brass": "d6b256",
+    "brass": "d9b44a",  # Fleet tags only
     "glass": "cfc8b8", "glass_dark": "a9a291", "chalk": "ece6d2",
     "flower": "c8b865", "slate": "2f3634", "steam": "e4e1d6",
 })
