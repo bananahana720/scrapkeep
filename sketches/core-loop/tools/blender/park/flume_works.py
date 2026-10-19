@@ -1286,29 +1286,29 @@ TUFTS_MAX = 60                 # 18 tris each
 CHECK_MIN, CHECK_MAX = -0.05, 0.30
 
 LINERS = {
-    "liner_trestle_hollow": {"style": "sandstone", "at": (-185.0, 10.0), "size": (289.0, 8.0, 40.0), "yaw": 14.0},
-    "liner_gap_wash": {"style": "sandstone", "at": (-255.0, -335.0), "size": (180.0, 4.0, 40.0), "yaw": -16.0},
-    "liner_mesa_spill": {"style": "sandstone", "at": (-570.0, -520.0), "size": (120.0, 4.0, 30.0), "yaw": 90.0},
-    "liner_bend_return_wash": {"style": "sandstone", "at": (75.0, 35.0), "size": (147.6, 4.0, 50.0), "yaw": -28.3},
-    "liner_bench_run_wash": {"style": "sandstone", "at": (-80.0, 305.0), "size": (190.0, 4.0, 30.0), "yaw": -15.0},
-    "liner_wasteway_chute": {"style": "concrete", "at": (85.0, 335.0), "size": (214.0, 10.0, 30.0), "yaw": 37.4, "gauge": True},
-    "liner_weir_chute": {"style": "concrete", "at": (-299.0, -595.0), "size": (140.0, 40.0, 30.0), "yaw": 90.0},
-    "liner_weir_pond": {"style": "pond", "at": (-650.0, -690.0), "size": (140.0, 3.0, 160.0), "yaw": 0.0},
-    "liner_main_canal": {"style": "canal", "at": (-385.0, -275.0), "size": (177.2, 3.0, 40.0), "yaw": 73.6},
-    "liner_butte_gap": {"style": "canal", "at": (-280.0, -230.0), "size": (80.0, 3.0, 24.0), "yaw": 30.0},
-    "liner_lateral_canal": {"style": "canal", "at": (-270.0, 15.0), "size": (286.5, 3.0, 40.0), "yaw": 29.2},
+    "liner_trestle_hollow": {"style": "sandstone", "at": (-185.0, 10.0), "size": (289.0, 8.0, 40.0), "yaw": 14.0, "flush_lane": True},
+    "liner_gap_wash": {"style": "sandstone", "at": (-255.0, -335.0), "size": (180.0, 4.0, 40.0), "yaw": -16.0, "flush_lane": True},
+    "liner_mesa_spill": {"style": "sandstone", "at": (-570.0, -520.0), "size": (120.0, 4.0, 30.0), "yaw": 90.0, "flush_lane": True},
+    "liner_bend_return_wash": {"style": "sandstone", "at": (75.0, 35.0), "size": (147.6, 4.0, 50.0), "yaw": -28.3, "flush_lane": True},
+    "liner_bench_run_wash": {"style": "sandstone", "at": (-80.0, 305.0), "size": (190.0, 4.0, 30.0), "yaw": -15.0, "flush_lane": True},
+    "liner_wasteway_chute": {"style": "concrete", "at": (85.0, 335.0), "size": (214.0, 10.0, 30.0), "yaw": 37.4, "gauge": True, "flush_lane": True},
+    "liner_weir_chute": {"style": "concrete", "at": (-299.0, -595.0), "size": (140.0, 40.0, 30.0), "yaw": 90.0, "flush_lane": True},
+    "liner_weir_pond": {"style": "pond", "at": (-650.0, -690.0), "size": (140.0, 3.0, 160.0), "yaw": 0.0, "flush_lane": True},
+    "liner_main_canal": {"style": "canal", "at": (-385.0, -275.0), "size": (177.2, 3.0, 40.0), "yaw": 73.6, "flush_lane": True},
+    "liner_butte_gap": {"style": "canal", "at": (-280.0, -230.0), "size": (80.0, 3.0, 24.0), "yaw": 30.0, "flush_lane": True},
+    "liner_lateral_canal": {"style": "canal", "at": (-270.0, 15.0), "size": (286.5, 3.0, 40.0), "yaw": 29.2, "flush_lane": True},
 }
 LINER_IDS = list(LINERS)
 # The pit's rows (park_pit bake). Each size and yaw is the row's own in src/world/park/park_pit.json; a liner is placed rigidly at the
 # row's `at` (no fit), so these must follow the row if it moves. "gap": the canal is left out where the arroyo cuts it or the mound
 # at its west end rises (ground more than 0.35 m off the canal's own level), so no lining bridges a cut or climbs a hill.
 PIT_LINERS = {
-    "liner_dump_wash_1": {"park": "park_pit", "style": "sandstone", "at": (-465.7, -531.2), "size": (67.8, 10.0, 36.0), "yaw": 74.8},
-    "liner_dump_wash_2": {"park": "park_pit", "style": "sandstone", "at": (-402.3, -519.4), "size": (61.7, 10.0, 36.0), "yaw": 84.6},
-    "liner_canal_lip": {"park": "park_pit", "style": "canal", "at": (-356.0, -501.0), "size": (300.0, 0.1, 16.0), "yaw": 45.0, "gap": 0.35},
-    "liner_haul_road_west_5": {"park": "park_pit", "style": "haul", "at": (-95.0, 200.0), "size": (103.0, 0.1, 24.0), "yaw": 60.9},
-    "liner_bench2_camp_lane": {"park": "park_pit", "style": "haul", "at": (250.0, -152.0), "size": (70.0, 0.1, 20.0), "yaw": 90.0},
-    "liner_bench2_east_bank": {"park": "park_pit", "style": "haul", "at": (337.5, -60.0), "size": (190.0, 0.1, 40.0), "yaw": 0.0},
+    "liner_dump_wash_1": {"park": "park_pit", "style": "sandstone", "at": (-465.7, -531.2), "size": (67.8, 10.0, 36.0), "yaw": 74.8, "flush_lane": True},
+    "liner_dump_wash_2": {"park": "park_pit", "style": "sandstone", "at": (-402.3, -519.4), "size": (61.7, 10.0, 36.0), "yaw": 84.6, "flush_lane": True},
+    "liner_canal_lip": {"park": "park_pit", "style": "canal", "at": (-356.0, -501.0), "size": (300.0, 0.1, 16.0), "yaw": 45.0, "gap": 0.35, "flush_lane": True},
+    "liner_haul_road_west_5": {"park": "park_pit", "style": "haul", "at": (-95.0, 200.0), "size": (103.0, 0.1, 24.0), "yaw": 60.9, "flush_lane": True},
+    "liner_bench2_camp_lane": {"park": "park_pit", "style": "haul", "at": (250.0, -152.0), "size": (70.0, 0.1, 20.0), "yaw": 90.0, "flush_lane": True},
+    "liner_bench2_east_bank": {"park": "park_pit", "style": "haul", "at": (337.5, -60.0), "size": (190.0, 0.1, 40.0), "yaw": 0.0, "flush_lane": True},
 }
 PIT_LINER_IDS = list(PIT_LINERS)
 LINERS.update(PIT_LINERS)
@@ -1417,10 +1417,11 @@ def in_ride_footprint(row, lx, lz, reach=0.0):
 def flush_clip(row, spec):
     """(exl, exr) of a flush_lane row's sheet: where another flush_lane liner's lane starts on that side within the z range
     of both sheets, the sheet stops at that lane's edge, so adjacent sheets do not overlap or z-fight."""
-    assert spec["yaw"] == 0.0, "flush_clip assumes an unturned row"
     exl = exr = row.ex
+    if spec["yaw"] != 0.0:      # a turned row is separated from its flush neighbours by flush_cull, cell by cell
+        return exl, exr
     for oid, o in LINERS.items():
-        if not o.get("flush_lane") or o is spec or o.get("park") != spec.get("park"):
+        if not o.get("flush_lane") or o is spec or o.get("park") != spec.get("park") or o["yaw"] != 0.0:
             continue
         if abs(o["at"][1] - spec["at"][1]) >= (o["size"][0] + spec["size"][0]) / 2.0 + 2 * MARGIN:
             continue
@@ -1431,6 +1432,53 @@ def flush_clip(row, spec):
         elif hi <= mine_lo + 1e-6:
             exl = min(exl, spec["at"][0] - hi)
     return exl, exr
+
+
+def lane_strict(row):
+    """Whether a flush row's whole lane (|x| <= hw) is flat, not only the part inside a ride footprint: the sheet styles, whose
+    lane is the ride surface. The concrete, canal and pond styles keep their wall, lip and rim relief outside every footprint."""
+    return row.style in ("sandstone", "haul", "rails")
+
+
+def flush_peers(rid):
+    """The flush_lane rows of the same park that a turned row shares ground with, as (earlier, id): the pairs flush_clip cannot
+    clip (it is axis-aligned and handles only two unturned rows). Of two such rows the one earlier in LINERS wins the overlap."""
+    spec = LINERS[rid]
+    order = list(LINERS)
+    out = []
+    for oid, o in LINERS.items():
+        if oid == rid or not o.get("flush_lane") or o.get("park") != spec.get("park"):
+            continue
+        if spec["yaw"] == 0.0 and o["yaw"] == 0.0:
+            continue
+        out.append((order.index(oid) < order.index(rid), oid))
+    return out
+
+
+def sheet_zone(spec, x, z):
+    """2 inside the lane of the row's spec at world (x, z), 1 inside its sheet (lane plus MARGIN), else 0."""
+    yaw = math.radians(spec["yaw"])
+    c, s = math.cos(yaw), math.sin(yaw)
+    dx, dz = x - spec["at"][0], z - spec["at"][1]
+    lx, lz = dx * c - dz * s, dx * s + dz * c
+    hw, hl = spec["size"][2] / 2.0, spec["size"][0] / 2.0
+    if spec["style"] == "pond":
+        return 0        # the pond's sheet is elliptical and no pond shares ground with another flush row
+    if abs(lx) <= hw and abs(lz) <= hl:
+        return 2
+    return 1 if abs(lx) <= hw + MARGIN and abs(lz) <= hl + MARGIN else 0
+
+
+def flush_covered(row, lx, lz):
+    """Whether another flush_lane row's sheet takes the liner-local point: it is inside that row's lane and not this row's, or in
+    both sheets and that row is the earlier one. A covered cell is left out, so overlapping turned sheets never z-fight."""
+    x, z = row.world(lx, lz)
+    mine = sheet_zone(LINERS[row.rid], x, z)
+    for earlier, oid in row.peers:
+        theirs = sheet_zone(LINERS[oid], x, z)
+        if theirs > mine or (theirs == mine and theirs and earlier):
+            return True
+    return False
 
 
 class Row:
@@ -1451,6 +1499,7 @@ class Row:
         self.hw, self.hl = self.W / 2.0, self.L / 2.0
         self.ex, self.ez = self.hw + MARGIN, self.hl + MARGIN
         self.exl = self.exr = self.ex           # the sheet's extent on the -x and +x side (flush_lane rows clip at a neighbouring lane)
+        self.peers = flush_peers(rid) if self.flush else []
         if self.flush:
             self.exl, self.exr = flush_clip(self, spec)
         self.gauge_z = -0.3 * self.L
@@ -1798,7 +1847,8 @@ def liner_base(row):
                     off = pond_off(row, rho, k)
                     we = edge_weight((ref - rho) * min(a_rim, b_rim))
                     off = EDGE_OFF + (off - EDGE_OFF) * we
-                    line.append(((lx, lifted(row, bil, hi, off, rho <= 0.4 + 1e-6), lz), bil, rho))
+                    cap = FLUSH_LANE if row.flush and in_ride_footprint(row, lx, lz) else None
+                    line.append(((lx, lifted(row, bil, hi, off, rho <= 0.4 + 1e-6, cap), lz), bil, rho))
                 lat.append(line)
             for k in range(len(rings) - 1):
                 for i in range(nang):
@@ -1819,7 +1869,7 @@ def liner_base(row):
                 off = rect_off(row, lx, lz, bil)
                 we = edge_weight(min((row.exr - lx) if lx >= 0 else (row.exl + lx), row.ez - abs(lz)))
                 off = EDGE_OFF + (off - EDGE_OFF) * we
-                cap = FLUSH_LANE if row.flush and in_ride_footprint(row, lx, lz) else None
+                cap = FLUSH_LANE if row.flush and (in_ride_footprint(row, lx, lz) or (lane_strict(row) and abs(lx) <= row.hw + 1e-6)) else None
                 line.append(((lx, lifted(row, bil, hi, off, abs(lx) <= 0.2 * row.W + 1e-6, cap), lz), bil))
             lat.append(line)
         for j in range(len(zs) - 1):
@@ -1829,6 +1879,8 @@ def liner_base(row):
                     continue
                 gh = sum(q[1] for q in quad) / 4.0
                 lx, lz = (xs[i] + xs[i + 1]) / 2.0, (zs[j] + zs[j + 1]) / 2.0
+                if row.peers and flush_covered(row, lx, lz):
+                    continue
                 poly_up(s, [q[0] for q in quad], rect_colour(row, lx, lz, gh, i, j))
     return build
 
@@ -1982,7 +2034,7 @@ def liner_check(rid, out_dir):
             gaps.append(y + row.g0 - row.sample(x, z)[0])
         lo, hi = min(gaps), max(gaps)
         if row.flush:
-            lane = [g for (x, y, z), g in zip(pts, gaps) if abs(x) <= row.hw + 1e-6]
+            lane = [g for (x, y, z), g in zip(pts, gaps) if lane_strict(row) and abs(x) <= row.hw + 1e-6]
             lane_max = max(lane) if lane else 0.0
             print("FLUME_WORKS_FLUSH", name, "lane verts %d  highest inside |x| < %.1f: %.3f m (limit %.2f)  %s" % (
                 len(lane), row.hw, lane_max, FLUSH_LANE, "PASS" if lane_max <= FLUSH_LANE + 1e-4 else "FAIL"))
@@ -2215,6 +2267,9 @@ FLUSH_NOTES = {
     "sandstone": "a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane",
     "haul": "a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief",
     "rails": "a flush light-rail bed: two rails 0.03 m proud of a gravel bed, flush colour bands for the tie sleepers and a verge band of low cobble relief",
+    "concrete": "a board-formed concrete chute: form joints, coping bands and the painted gauge staff as colour, and the wall and joint relief kept only outside every ride row's footprint (flat at most 0.12 m above the ground inside one)",
+    "canal": "a canal lining with its lip band, earth batter and colour bands, the lip relief kept only outside every ride row's footprint (flat at most 0.12 m above the ground inside one)",
+    "pond": "a stone-pitched pond lining with concrete rim ring and flush floor, the rim and pitching relief kept only outside every ride row's footprint (flat at most 0.12 m above the ground inside one)",
 }
 
 

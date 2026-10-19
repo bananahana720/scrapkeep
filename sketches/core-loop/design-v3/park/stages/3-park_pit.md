@@ -613,3 +613,5 @@ Generated from the tables above and checked for enums, id references, home landf
  ]
 }
 ```
+
+**Flush liners, 2026-10-19 (coordinator's #183 ruling; World's 07:32Z recommendation (a)).** All six bake-conformed liners of this stage (`liner_dump_wash_1`, `liner_dump_wash_2`, `liner_canal_lip`, `liner_haul_road_west_5`, `liner_bench2_camp_lane`, `liner_bench2_east_bank`) now carry `flush_lane` in `tools/blender/park/flume_works.py`, loading the ride footprints of `park_pit`. A liner has no `-col`, so anything visible in a ride lane taller than the 0.12 m flush band must be solid: every liner vertex inside any ride row's footprint stands at most 0.12 m above the baked ground (the haul verge cobbles and canal lip are capped there and keep their relief outside), and `--check` fails the build otherwise. The sheets ship no rim rocks, tufts or detail shells, so the twelve `liner_*_detail{1,2}.glb` of these rows are deleted. `liner_dump_wash_1` and `liner_dump_wash_2` overlap (and `dump_wash_2` crosses `canal_lip`); the earlier row keeps the overlapping cells. Pit colliders, sensors and the bake are unchanged; this is draw-only.
