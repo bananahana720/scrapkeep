@@ -550,7 +550,7 @@ def export(root, path, name):
             triangles += doc["accessors"][prim["indices"]]["count"] // 3
             vertices += doc["accessors"][prim["attributes"]["POSITION"]]["count"]
             draws += 1
-    # thermal_air polish: was (120, 110, 2), the scenery class; registry exception matches
+    # thermal_air polish: was (120, 110, 2); now under the scenery class cap 1500/3000/2 (asset_budgets.json)
     cap = (800, 500, 2) if name == "thermal_air" else PROP_CAP
     assert 0 < triangles <= cap[0] and 0 < vertices <= cap[1] and draws <= cap[2], (name, triangles, vertices, draws)
     assert len(doc["materials"]) == 1

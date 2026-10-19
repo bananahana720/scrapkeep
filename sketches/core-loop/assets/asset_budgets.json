@@ -52,7 +52,7 @@
       "tris": 1500,
       "verts": 3000,
       "draws": 2,
-      "set_by": "PR #143 soft-toy polish of Highdraft cloud, mesa and thermal air (Andrew 00:40Z 18 Oct soft toy ruling), coordinator approval 05:41Z 18 Oct: tris 120 to 1500 and verts 110 to 3000, draws stay 2, no new surfaces or materials; earlier basis: water_edges (112 / 106 / 2) and its 120 T / 180 V / 2 D ceiling; dam carries an exception"
+      "set_by": "PR #143 soft-toy polish of Highdraft cloud, mesa and thermal air (Andrew 00:40Z 18 Oct soft toy ruling), coordinator approval 05:41Z 18 Oct: tris 120 to 1500 and verts 110 to 3000, draws stay 2, no new surfaces or materials; largest polished member sky_cloud 896 T / 450 V, sky_mesa 836 T / 566 V (recipe and test caps hold them at 1000 / 1000 and thermal_air at 800 / 500); the headroom also covers the other scenery members (trail cosmetics, lamp modules), so a trail over 120 T still needs its own card per design-v3/CUSTOMIZE.md; earlier basis: water_edges (112 / 106 / 2) and its 120 T / 180 V / 2 D ceiling; dam carries an exception"
     },
     "landform": {
       "tris": 8000,

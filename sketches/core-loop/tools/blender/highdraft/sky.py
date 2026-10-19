@@ -34,7 +34,7 @@ ASSETS = ("sky_cloud", "sky_mesa", "sky_cradle", "sky_loom", "sky_blades")
 POLISH = {"sky_cradle": dict(bevel=.12, bevel_min=.5), "sky_loom": dict(bevel=.1, bevel_min=.5),
           "sky_blades": dict(bevel=.15, bevel_min=.5), "sky_mesa": dict(bevel=0, bake_slots=("M1_stone",))}
 HARDWARE_CAP = (500, 320, 1)  # polish: was (270, 610, 1); dress_mhs_assets_test caps match
-# polish: was (120, 110, 2), the scenery class; registry exceptions and dress_mhs_assets_test match
+# polish: was (120, 110, 2); now under the scenery class cap 1500/3000/2 (asset_budgets.json); dress_mhs_assets_test matches
 LANDFORM_CAP = (1000, 1000, 2)
 PETROL = "53686d"
 CHALK = "c8bda5"
