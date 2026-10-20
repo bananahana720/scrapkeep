@@ -67,16 +67,16 @@ const DRESSING_MS := 4.0
 const NEW_DRESSING_MS := 15.0
 # DRESS-ENTRY: a plan still drawing at the entry is built by _process when its worker is done.
 const DRESSING_FRAMES_MAX := 240
-# ENTRY-FRAMES (measured 2026-10-20 at 03f19df8 plus this unit, 4 vCPU cloud box, headless, loadavg 2 to 6, with
-# the 60-vignette fixture: 470 instances, 659 views): the most main-thread ms the set dressing's _process and
-# ParkProps' _process spend together in one frame after a stage entry. A ParkProps slice runs 3 ms
-# (BUILD_SLICE_USEC) plus the job that crosses it, 3.3 to 4.7 ms; the dressing's deferred build adds about 1.9 ms.
-# Good runs: the exit peaked at 8.2 ms over 30 slice frames; the quick exit at 9.6 ms (the entry frame, with the
-# handlers) over 31 slice frames, the build and first slice sharing a frame at 5.9 ms. Planted (a temporary
-# park_props.gd patch slicing without a budget, two runs): the whole build took 99.9 and 101.5 ms at the exit and
-# 99.2 and 127.6 ms in the quick exit, in 1 slice frame, so both the frame check and the slice-frame count failed
-# every time. The count is CPU-independent: a budgeted build spans many frames on any CPU, a whole one is 1.
-# 12 ms clears the good peaks and sits 4.7 ms under the 16.7 ms frame.
+# ENTRY-FRAMES (measured 2026-10-20 at 03f19df8 plus this unit, 4 vCPU cloud box, headless, with the 60-vignette
+# fixture: 470 instances, 659 views): the most main-thread ms the set dressing's _process and ParkProps' _process
+# spend together in one frame after the entry frame (frames 1..N; frame 0 is reported, not gated). A ParkProps
+# slice runs 3 ms (BUILD_SLICE_USEC) plus the job that crosses it, 3.3 to 4.7 ms; the dressing's deferred build
+# adds about 1.9 ms. Worst gated frames in good runs: verifier receipts at load 2 to 4 were 4.5 to 5.2 ms at the
+# exit and 4.7 to 5.8 ms in the quick exit; loaded runs reached 8.2 ms at the exit and 6.3 ms in the quick exit
+# (the build and first slice sharing a frame). Planted (a temporary park_props.gd patch slicing without a
+# budget): the whole build took 65.8 to 127.6 ms in 1 slice frame, so both the frame check and the slice-frame
+# count failed every time. The count is CPU-independent: a budgeted build spans many frames on any CPU, a whole
+# one is 1. 12 ms clears these gated peaks and sits 4.7 ms under the 16.7 ms frame.
 const FRAME_MS := 12.0
 # The held plan of the quick exit is let go after this many frames whatever ParkProps is doing.
 const GATE_FRAMES_MAX := 600
@@ -324,9 +324,10 @@ func _check_frames(label: String, watch: Dictionary, quick: bool) -> void:
 	var overlap_same := 0
 	var overlap_adjacent := 0
 	for i in ms.size():
-		# Frame 0, the entry frame, is reported and not gated here: the handlers' own budgets cover it (SWAP-HITCH,
-		# DRESS-ENTRY's 15 ms), and ParkProps' entry frees the previous stage's views, 8.9 to 15.7 ms of frame 0
-		# under load with the 60-vignette fixture.
+		# Frame 0 is the entry frame, which this file leaves to tools/perf_bench.gd (see the header). set_dressing's
+		# handler keeps its own NEW_DRESSING_MS check. ParkProps' entry (freeing the previous stage's views: 7.1 to
+		# 9.3 ms with the 60-vignette fixture, up to 15.7 ms under load) and the frame's first _process are
+		# reported here, not budgeted.
 		if i > 0:
 			worst = maxf(worst, ms[i])
 			if ms[i] > FRAME_MS:
