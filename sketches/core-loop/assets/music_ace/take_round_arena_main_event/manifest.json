@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "take-round-arena-main-event-s5101.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/radio/take-round-arena-main-event-s5101.wav",
-   "stretched": "/home/andrew/scratch/w16/radio-pack2/stretched/take_round_arena_main_event.wav",
-   "bpm_before": 128.94,
-   "bpm_after": 129.04,
+   "take": "master.wav",
+   "source": "/home/andrew/scratch/w17/qp/remake/workB/cands/take-round-arena-main-event/s6302/master.wav",
+   "stretched": "/home/andrew/scratch/w17/qp/remake/workB/pack/stretched/take_round_arena_main_event.wav",
+   "bpm_before": 129,
+   "bpm_after": 129,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_round_arena_main_event/drums.wav",
-     "sha256": "40bf2a2c54956ed3a5517fcd62cfb97ae31afabd6d2588cf86681750c2e276a7"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_round_arena_main_event/drums.wav",
+     "sha256": "95488ab3e15b4924cfee1cd518ce09208ad10a1885fb4090cfa9cecd2a41af5a"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_round_arena_main_event/bass.wav",
-     "sha256": "7c374669f9fe57354b3d15e600bb77a04984b7e1e88cfe0923422cfcd0f1e9e1"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_round_arena_main_event/bass.wav",
+     "sha256": "749a6db38b5ac222bfb2f71df4a1a830eb49f2981d536cc135c11a01dddfa0d4"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_round_arena_main_event/other.wav",
-     "sha256": "5a1376c9fe0a9d99c27c117bd016de2eb0962a27f02cc06fe1f7b0b456f0ff8d"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_round_arena_main_event/other.wav",
+     "sha256": "65ae4fe74f5010055d05627020fc528d1e6557866cc919c0f7f17122bd8aac85"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/radio-pack2/stems/htdemucs/take_round_arena_main_event/vocals.wav",
-     "sha256": "64bef788fb6a79b4ab97263cfda7880268c4a542f9e6b07d89c242204450ee26"
+     "path": "/home/andrew/scratch/w17/qp/remake/workB/pack/stems/htdemucs/take_round_arena_main_event/vocals.wav",
+     "sha256": "f2855f0fbbdb8165e9aab80df93f3537826b33d2f0866429cb9ddf1a27541279"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,8 +49,8 @@
   "main": {
    "parent": "single",
    "take": "take-round-arena-main-event",
-   "source_start": 15360,
-   "take_start": 15360,
+   "source_start": 12032,
+   "take_start": 12032,
    "bpm": 129,
    "beat": 20512,
    "bar": 82048,
@@ -183,10 +183,10 @@
  "cuts": "measured-beat-phase",
  "whole": true,
  "timing_verified": false,
- "gain_db": 0.5,
+ "gain_db": 0.0,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.7,
+  "true_peak": -1.9,
   "note": "summed stems before Ogg encode"
  }
 }

@@ -692,7 +692,7 @@ func walk_customize() -> void:
 
 # Moss's bench at his stall. The panel refuses under an overlay, so the walk steps aside for the call.
 func walk_companion() -> void:
-	var workshop = game.get_node("Workshop")
+	var workshop = game.workshop()
 	_walking = false
 	_camp.visible = false
 	var opened: bool = workshop.open_companion()
@@ -707,7 +707,7 @@ func _hook_companion() -> void:
 	if _companion_hooked:
 		return
 	_companion_hooked = true
-	game.get_node("Workshop").companion_panel.closed.connect(_sync_walk)
+	game.workshop().companion_panel.closed.connect(_sync_walk)
 
 
 func _close_camp_silently() -> void:
@@ -1176,7 +1176,7 @@ func _make_primary(button: Button) -> void:
 # (workshop.gd owns the M key); it is offered only when there is something to assemble.
 func _companion_action() -> void:
 	var button := ChoiceButton.new("companion", "key_m", "Companion")
-	button.pressed.connect(func(): game.get_node("Workshop").open_companion())
+	button.pressed.connect(func(): game.workshop().open_companion())
 	_actions.add_child(button)
 
 

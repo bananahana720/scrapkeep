@@ -298,8 +298,13 @@ class Chunked extends Node3D:
 	# the build is cold whatever the process has cached), and the main thread only turns the
 	# loaded scene into a source in a later frame (LOADING); a kit or primitive mesh is built here.
 	# Its cost lands in the stage-build frame, so it is metered as the START step.
+	# Headless only, the glb and material sources load here on the main thread instead: the headless display server
+	# installs the dummy rasterizer, whose mesh RID owner is not thread-safe, so a loader-thread load raced this
+	# frame's kit meshes ("Attempting to initialize the wrong RID", 13 of 30 boots); ending_sequence.gd's
+	# _build_crater has the same gate and its reasoning. GPU renderers keep the loader thread.
 	func start(map, ground: Callable, rows: Array, threaded: bool) -> void:
 		var t0 := Time.get_ticks_usec()
+		var loader := threaded and DisplayServer.get_name() != "headless"
 		_map = map
 		_ground = ground
 		_threaded = threaded
@@ -312,7 +317,7 @@ class Chunked extends Node3D:
 			by_kind[kind]["rows"].append(row)
 		for group: Dictionary in _groups:
 			var spec: String = group["spec"]
-			if threaded and spec.begins_with("glb:") and ResourceLoader.exists(spec.trim_prefix("glb:")):
+			if loader and spec.begins_with("glb:") and ResourceLoader.exists(spec.trim_prefix("glb:")):
 				var path := spec.trim_prefix("glb:")
 				if ResourceLoader.load_threaded_request(path, "PackedScene", false, ResourceLoader.CACHE_MODE_IGNORE) == OK:
 					group["path"] = path
@@ -322,7 +327,7 @@ class Chunked extends Node3D:
 			# A slot that is a material resource (stone.tres: shader and textures, 80 ms cold) loads on the
 			# loader thread too; the other slots are built in code and cost well under a millisecond.
 			var slot_row: Dictionary = Colours.SLOT_TABLE.row(group["slot"])
-			if threaded and String(slot_row.get("kind", "")) == "resource" and ResourceLoader.exists(String(slot_row["path"])):
+			if loader and String(slot_row.get("kind", "")) == "resource" and ResourceLoader.exists(String(slot_row["path"])):
 				if ResourceLoader.load_threaded_request(String(slot_row["path"]), "Material") == OK:
 					group["material_path"] = String(slot_row["path"])
 					threaded_materials += 1
