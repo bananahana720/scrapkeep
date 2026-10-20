@@ -10,7 +10,8 @@ extends RefCounted
 # multiply on top of the tuned list.
 #
 # Allowed levers: boss damage, attack patterns, combos, punish windows, extra phases, mob
-# aggression, elite affixes. Frozen, and not dials: stagger and posture timing, the attacker
+# aggression, elite affixes, posture gain (warden.posture_gain). Frozen, and not dials: stagger and
+# posture timing, stagger length, chunk count, the shatter and crack rules, the attacker
 # caps (combat/attack_budget.gd), the 0.2 s warning gap, growth ratios, and enemy HEALTH
 # (difficulty never raises enemy health). Every lethal attack keeps a tell of at least TELL_FLOOR.
 #
@@ -49,6 +50,11 @@ const DEFAULTS := {
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
 	"warden.pulse_damage_by_stage": ONES6, "warden.pulse_cycle_by_stage": ONES6, "warden.slag_damage_by_stage": ONES6,
+	# Posture a Warden takes per hit, a multiplier (must be above 0). Generic posture judge only
+	# (boss_posture.gd judge(), the guard rack, the stage 3 hive); the dam sheet ram and the flume line bolt
+	# (warden_reactor.gd mount drivers, stages 1 and 2) pay their own and stay unscaled. The ultimate's and
+	# the line's posture caps apply after the scale, so a capped hit is not raised.
+	"warden.posture_gain_mult": 1.0, "warden.posture_gain_by_stage": ONES6,
 	# The Warden's counter-pulse (warden.gd): a second core ring committed inside a stagger. Damage is an
 	# absolute value per stage (0 = off, the default: nothing is built or rolled); the telegraph is floored at
 	# TELL_FLOOR; the delay is seconds into the stagger before it starts charging.
@@ -178,13 +184,14 @@ static func _number(raw: String) -> bool:
 
 
 static func _valid(key: String, raw: String) -> bool:
+	var positive := key.begins_with("warden.posture_gain")
 	if _is_list(key):
 		var parts := raw.split("/", true)
 		for part in parts:
-			if not _number(part):
+			if not _number(part) or (positive and float(part) <= 0.0):
 				return false
 		return not parts.is_empty()
-	return _number(raw)
+	return _number(raw) and (not positive or float(raw) > 0.0)
 
 
 static func _reject(key: String, why: String) -> void:

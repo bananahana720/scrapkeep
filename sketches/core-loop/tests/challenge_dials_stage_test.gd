@@ -109,9 +109,77 @@ func _run() -> void:
 		_t.near("stage %d pulse with warden.pulse_damage_by_stage [2,1,..]" % stage, amount, Warden.PULSE_DAMAGE * (2.0 if stage == 1 else 1.0))
 	_t.near("stage 1 pulse cycle is unmoved", Warden.pulse_cycle(1), Warden.PULSE_CYCLE)
 	_t.near("stage 3 pulse cycle is halved", Warden.pulse_cycle(3), Warden.PULSE_CYCLE * 0.5)
+	_posture_gain()
 	ChallengeDials.reset()
 	_game.free()
 	quit(_t.verdict())
+
+
+# warden.posture_gain_by_stage: identity at defaults, x1.5 on a stage 3 Warden's real judge path (a
+# ram, a weak non-contact hit and the guard rack), a stage 1 Warden unmoved, and the same-frame top-up
+# still paying the max of a ram's contacts under the scale. The dam and flume mount drivers stay unscaled.
+func _posture_gain() -> void:
+	ChallengeDials.reset()
+	_t.near("posture_gain_mult defaults to 1.0", float(ChallengeDials.value("warden.posture_gain_mult")), 1.0)
+	_t.eq("posture_gain_by_stage defaults to six 1.0", ChallengeDials.value("warden.posture_gain_by_stage"), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+	var base3 := _gains(3)
+	var base1 := _gains(1)
+	_t.check("default scale is exactly 1.0 and gains are positive", _scale(3) == 1.0 and float(base3["ram"]) > 0.0 and float(base3["rack"]) == Warden.GUARD_RACK_POSTURE)
+	ChallengeDials.set_overrides({"warden.posture_gain_by_stage": [1, 1, 1.5, 1, 1, 1]})
+	var up3 := _gains(3)
+	var up1 := _gains(1)
+	_t.near("stage 3 ram gain x1.5", float(up3["ram"]), float(base3["ram"]) * 1.5)
+	_t.near("stage 3 other hit gain x1.5", float(up3["other"]), float(base3["other"]) * 1.5)
+	_t.near("stage 3 guard rack gain x1.5", float(up3["rack"]), Warden.GUARD_RACK_POSTURE * 1.5)
+	_t.near("stage 1 ram gain unmoved", float(up1["ram"]), float(base1["ram"]))
+	_t.near("stage 1 guard rack unmoved", float(up1["rack"]), Warden.GUARD_RACK_POSTURE)
+	_t.near("stage 3 same-frame top-up pays the max, not the sum (x1.5)", float(up3["topup_total"]), float(base3["topup_total"]) * 1.5)
+	_t.near("stage 3 identical second contact pays 0 in the frame", float(up3["repeat"]), 0.0)
+	ChallengeDials.set_overrides({"warden.posture_gain_mult": 2.0, "warden.posture_gain_by_stage": [1, 1, 1.5, 1, 1, 1]})
+	_t.near("global posture_gain_mult multiplies the stage entry", _scale(3), 3.0)
+	ChallengeDials.quiet = true
+	ChallengeDials.set_overrides({"warden.posture_gain_by_stage": [1, 1, 0, 1, 1, 1], "warden.posture_gain_mult": -1.0})
+	_t.eq("zero and negative posture gain are refused", ChallengeDials.rejected.size(), 2)
+	_t.near("a refused posture gain leaves the identity", _scale(3), 1.0)
+	_t.eq("a bad CLI posture list is dropped", ChallengeDials.parse("warden.posture_gain_by_stage=1/x/1/1/1/1").size(), 0)
+	_t.eq("a good CLI posture list parses", ChallengeDials.parse("warden.posture_gain_by_stage=1/1/1.25/1/1/1")["warden.posture_gain_by_stage"], [1.0, 1.0, 1.25, 1.0, 1.0, 1.0])
+	ChallengeDials.reset()
+	var reactor := FileAccess.get_file_as_string("res://src/combat/warden_reactor.gd")
+	_t.check("the dam and flume mount drivers do not read gain_scale (stay unscaled)", not reactor.contains("gain_scale"))
+
+
+func _scale(stage: int) -> float:
+	return ChallengeDials.stage_mult("warden.posture_gain", stage)
+
+
+# One fresh Warden of `stage`: the gain of a ram, of a weak non-contact hit and of the guard rack,
+# then the posture after a small ram and a bigger one in one frame (the top-up), and a repeat's gain.
+func _gains(stage: int) -> Dictionary:
+	var warden = _warden(stage)
+	var out := {}
+	out["ram"] = float(warden.judge_hit("ram", 30.0, false, 0)["gain"])
+	out["other"] = float(warden.judge_hit("cannon", 30.0, false, 0)["gain"])
+	out["rack"] = float(warden.judge_hit("guard_rack", 0.0, false, 0)["gain"])
+	warden._apply_posture(warden.judge_hit("ram", 15.0, false, 0))
+	warden._apply_posture(warden.judge_hit("ram", 30.0, false, 0))
+	out["topup_total"] = warden.posture()
+	out["repeat"] = float(warden.judge_hit("ram", 30.0, false, 0)["gain"])
+	warden.free()
+	return out
+
+
+func _warden(stage: int):
+	var fleet := preload("res://src/combat/fleet.gd").new()
+	var ctx := CtxDouble.new()
+	ctx.events = _game.ctx.events
+	fleet.ctx = ctx
+	fleet.combat = _game.ctx.spawner
+	var warden := Warden.new()
+	_game.add_child(warden)
+	warden.setup(_game.player, _game.ctx.terrain, _game, func(): return false, 1.0,
+		fleet.dress("warden", {"family": Roster.warden_family(stage), "stage": stage, "variant": "", "plating": 30.0, "hp": 800.0}))
+	fleet.free()
+	return warden
 
 
 # The damage of one pulse landing on a ball under a Warden's core ring (-1.0 if none landed).

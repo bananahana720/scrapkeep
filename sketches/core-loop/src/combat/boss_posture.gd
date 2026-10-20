@@ -38,6 +38,8 @@ var curve := 1.0
 var ram_shatters := true
 var contact_gain_scale := 0.0
 var contact_gain_floor := 0.0
+# Challenge dial warden.posture_gain: a multiplier on every gain judge() computes, set by the Warden.
+var gain_scale := 1.0
 
 var posture := 0.0
 var staggered := false
@@ -101,6 +103,8 @@ func judge(hit: Dictionary) -> Dictionary:
 	var gain := hit_base * pow(clampf(ratio, mult_min, mult_max), curve)
 	if contact and contact_gain_scale > 0.0:
 		gain *= 1.0 + contact_gain_scale * maxf(0.0, clampf(ratio, mult_min, mult_max) - contact_gain_floor)
+	# Scaled before the same-frame top-up, so one ram still pays the max of its contacts.
+	gain *= gain_scale
 	if contact and frame == gain_frame:
 		gain = maxf(0.0, gain - gain_in_frame)
 	result["gain"] = gain

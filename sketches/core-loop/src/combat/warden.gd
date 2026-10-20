@@ -191,6 +191,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 		numbers = numbers.duplicate()
 		numbers["stagger_seconds"] = BossPosture.STAGGER_SECONDS * MELTDOWN_WINDOW
 	_posture = BossPosture.new(numbers)
+	_posture.gain_scale = ChallengeDials.stage_mult("warden.posture_gain", stage)
 	faction = family
 	fleet = spec.get("fleet")
 	if family == Roster.SWARM and fleet != null:
@@ -875,7 +876,7 @@ func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "
 	if hit_kind == "guard_rack":
 		# A rack is posture pressure, not a contact on the core. Keep judge/apply's
 		# stagger and shatter-frame boundaries while fixing its gain independently of heft.
-		result["gain"] = GUARD_RACK_POSTURE if not staggered() and Engine.get_physics_frames() != _posture.shatter_frame else 0.0
+		result["gain"] = GUARD_RACK_POSTURE * _posture.gain_scale if not staggered() and Engine.get_physics_frames() != _posture.shatter_frame else 0.0
 		result["glance"] = false
 		result["full"] = true
 	return result
