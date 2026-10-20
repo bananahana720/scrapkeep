@@ -55,6 +55,11 @@ func _initialize() -> void:
 		row.get("outcome") if row is Dictionary else null, broken, note.get("latch_hauls"), note.get("latch_chunks"), note.get("exit_s")])
 	t.check("the stage-%d Warden breaks before the %.0f s stage cap" % [STAGE, cap], broken != null and float(broken) < cap,
 		"broken at %s; evidence %s" % [broken, folder])
+	var stagger = note.get("warden_first_stagger_s")
+	var engaged = note.get("warden_engaged_s")
+	t.check("a broken Warden's first stagger is recorded between engagement and the break",
+		broken == null or (stagger != null and engaged != null and float(engaged) <= float(stagger) and float(stagger) <= float(broken)),
+		"engaged %s, first stagger %s, broken %s" % [engaged, stagger, broken])
 	t.check("the run leaves stage %d" % STAGE, row is Dictionary and row.get("outcome") == "until",
 		"outcome %s" % [row.get("outcome") if row is Dictionary else null])
 	if t.failures == 0:

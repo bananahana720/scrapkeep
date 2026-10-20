@@ -614,6 +614,10 @@ func start(resume := false) -> void:
 		_note_set("warden_engaged_s", snappedf(game.run.stage_time, 0.01))
 		# The descent's speed is not a ram the fight can repeat; judge from here on.
 		_punch_seen = float(game.flow.punch_now()))
+	events.posture_changed.connect(func(enemy: Node3D, _posture: float, staggered: bool):
+		if staggered and not _note.is_empty() and _note.get("warden_first_stagger_s") == null \
+				and is_instance_valid(enemy) and enemy == game.flow.warden:
+			_note_set("warden_first_stagger_s", snappedf(game.run.stage_time, 0.01)))
 	events.beacon_unsealed.connect(func(_s: int):
 		_note_set("warden_broken_s", snappedf(game.run.stage_time, 0.01))
 		# The latch arm's haul broke it: a haul in the breaking stagger, a drop when from over the open point.
@@ -917,7 +921,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_plant_cool = 0.0
 	_warden_hp_at = -1.0
 	_warden_kinds = {}
-	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
+	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "warden_first_stagger_s": null, "exit_s": null, "events_joined": [],
 		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
 		"specials": 0, "punch_short_s": 0.0, "plate_slams": 0, "thermal_rides": 0}
