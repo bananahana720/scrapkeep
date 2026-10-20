@@ -47,6 +47,9 @@ var built_from_worker := false
 # Whether the last stage entry found its plan still drawing and left the build to _process, for
 # stage_entry_budget_test.
 var entry_deferred := false
+# The main-thread time of the whole _process in the frame it last ran (Engine.get_process_frames), every frame, for stage_entry_budget_test.
+var last_process_usec := 0
+var last_process_frame := -1
 # The clutter kit's meshes and their target materials, read once (_kit_meshes).
 var _kit := {}
 var _kit_materials: Array[ShaderMaterial] = []
@@ -557,6 +560,12 @@ func _clutter_batch(label: String, mesh: Mesh, buffer: PackedFloat32Array) -> Mu
 	return view
 
 func _process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
+	_work(delta)
+	last_process_usec = Time.get_ticks_usec() - started
+	last_process_frame = Engine.get_process_frames()
+
+func _work(delta: float) -> void:
 	_prepare_next()
 	if _dress_when_planned and not _prep.is_empty() and WorkerThreadPool.is_task_completed(_prep.task):
 		_build_stage()

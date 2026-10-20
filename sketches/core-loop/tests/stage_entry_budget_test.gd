@@ -20,11 +20,12 @@ extends SceneTree
 #
 # ENTRY-FRAMES (see the measured basis at FRAME_MS below): each module's handler is timed alone above,
 # but a quick exit can put the set dressing's deferred build (DRESS-ENTRY) and ParkProps' node slices
-# (3 ms a frame) in the same frames. From the entry until both are done, this test turns off the two
-# nodes' own processing and calls their _process itself once a frame, timing each call, so the main-thread
-# time they spend together in a frame is read and held under FRAME_MS. It watches the exit into stage 2
-# and a quick exit (the planted slow plan, with ParkProps asked to build again), and checks that a props
-# slice and the dressing's deferred build really ran in the timed frames and whether they shared one.
+# (3 ms a frame) in the same frames. From the entry until both are done, this test reads what the two
+# nodes record of their own _process (last_process_usec and last_process_frame, as last_entry_usec above),
+# pairs the readings by frame, and holds the main-thread time they spend together in a frame under FRAME_MS.
+# It watches the exit into stage 2 and a quick exit (the planted slow plan, with ParkProps asked to build
+# again), and checks that a props slice and the dressing's deferred build really ran in the timed frames
+# and whether they shared one.
 #
 # Also checked: the worker's results equal the synchronous computation on the live map, and the
 # audio and activities share one graph per map.
@@ -42,6 +43,7 @@ extends SceneTree
 # site specs drawn again from a fresh graph and the run's memory as it stood before the exit.
 
 const T := preload("res://tests/support/t.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
@@ -49,9 +51,13 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
-# No park ships a vignette file yet, so stage 2 (park_flume) borrows park_props_test's fixture and ParkProps
-# has nodes to build in the frames after the entry.
+# No park ships a vignette file yet, so stage 2 (park_flume) borrows park_props_test's park_dam file, which
+# ParkProps places on park_flume's map, and so has nodes to build in the frames after the entry.
 const PROPS_FIXTURE := "res://tests/fixtures/park_props/park_dam.json"
+# ... with its spots copied to this many vignettes (park_props_test's _check_synthetic does the same), so the
+# build takes many frames at the slice budget on any CPU and a build without it takes exactly one.
+const SYNTHETIC_VIGNETTES := 60
+const SLICE_FRAMES_MIN := 2
 const NATURAL_PATH := "res://src/world/events/natural.gd"
 const DIRECTOR_PATH := "res://src/world/director.gd"
 
@@ -61,14 +67,20 @@ const DRESSING_MS := 4.0
 const NEW_DRESSING_MS := 15.0
 # DRESS-ENTRY: a plan still drawing at the entry is built by _process when its worker is done.
 const DRESSING_FRAMES_MAX := 240
-# ENTRY-FRAMES (measured 2026-10-20 at 03f19df8, 4 vCPU cloud box, headless): the most main-thread ms the set
-# dressing's _process and ParkProps' _process spend together in one frame after a stage entry. ParkProps slices
-# run 3 ms (BUILD_SLICE_USEC) plus the job that crosses it, 3.2 to 3.7 ms on the fixture; the dressing's deferred
-# build adds about 1.9 ms (5.0 ms in the frame where both land, the quick exit); the exit into stage 2 peaked at
-# 6.2 ms (a cold first slice), the quick exit 7.1 ms at worst over six runs on a loaded box, the entry frame 2.3 to 2.8 ms.
-# Planted: a whole props build in one frame took 16.1 ms (exit) and 11.8 ms (quick exit, with the dressing). 10 ms sits
-# between them and 6.7 ms under the 16.7 ms frame.
-const FRAME_MS := 10.0
+# ENTRY-FRAMES (measured 2026-10-20 at 03f19df8 plus this unit, 4 vCPU cloud box, headless, loadavg 2 to 6, with
+# the 60-vignette fixture: 470 instances, 659 views): the most main-thread ms the set dressing's _process and
+# ParkProps' _process spend together in one frame after a stage entry. A ParkProps slice runs 3 ms
+# (BUILD_SLICE_USEC) plus the job that crosses it, 3.3 to 4.7 ms; the dressing's deferred build adds about 1.9 ms.
+# Good runs: the exit peaked at 8.2 ms over 30 slice frames; the quick exit at 9.6 ms (the entry frame, with the
+# handlers) over 31 slice frames, the build and first slice sharing a frame at 5.9 ms. Planted (a temporary
+# park_props.gd patch slicing without a budget, two runs): the whole build took 99.9 and 101.5 ms at the exit and
+# 99.2 and 127.6 ms in the quick exit, in 1 slice frame, so both the frame check and the slice-frame count failed
+# every time. The count is CPU-independent: a budgeted build spans many frames on any CPU, a whole one is 1.
+# 12 ms clears the good peaks and sits 4.7 ms under the 16.7 ms frame.
+const FRAME_MS := 12.0
+# The held plan of the quick exit is let go after this many frames whatever ParkProps is doing.
+const GATE_FRAMES_MAX := 600
+const GATE_SPIN_MAX := 20000000
 const FRAMES_WATCH_MAX := 3000
 const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
@@ -78,6 +90,27 @@ var _game
 var _t := T.new("stage_entry_budget_test")
 # The run's trade and pocket memory just before the exit into stage 2, for the fresh site draw.
 var _before_exit := {}
+# '<node id>_<frame>' of every _process reading already added to a frame's sum.
+var _seen := {}
+# The enlarged vignette file under user://, one folder per process (worktrees share user://).
+var _big_file := ""
+
+
+# park_dam.json with its spots copied to SYNTHETIC_VIGNETTES vignettes, written under user:// (ParkProps reads any path).
+func _write_big_fixture() -> String:
+	var file := ParkProps.load_json(PROPS_FIXTURE)
+	var source: Array = file["spots"]
+	var spots: Array = []
+	for i in SYNTHETIC_VIGNETTES:
+		var spot: Dictionary = (source[i % source.size()] as Dictionary).duplicate(true)
+		spot["id"] = "synthetic_%d" % i
+		spots.append(spot)
+	file["spots"] = spots
+	var dir := "user://stage_entry_budget_test_%d" % OS.get_process_id()
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path := dir + "/park_flume.json"
+	SafeStore.write_atomic(path, JSON.stringify(file))
+	return path
 
 
 # The run fields TradePockets.stage_site and PocketDraw.stage_sites read, so a fresh draw can use
@@ -99,7 +132,8 @@ func _initialize() -> void:
 func _run() -> void:
 	print("stage_entry_budget_test: machine load at start (1 min) %s" % FileAccess.get_file_as_string("/proc/loadavg").split(" ")[0])
 	SimClock.ticks = true
-	ParkProps.file_overrides["park_flume"] = PROPS_FIXTURE
+	_big_file = _write_big_fixture()
+	ParkProps.file_overrides["park_flume"] = _big_file
 	seed(11)
 	_game = Game.new()
 	_game.test_mode = true
@@ -157,6 +191,7 @@ func _run() -> void:
 	_check_watch_builds_same(watch)
 	_t.check("exit into stage 2: the dressing is complete within %d frames" % DRESSING_FRAMES_MAX, complete.done and complete.frames <= DRESSING_FRAMES_MAX,
 		"%d frames, deferred %s" % [complete.frames, entry_deferred])
+	_check_big_fixture()
 	_check_prepared()
 	_check_stage_two_workers()
 	_check_natural_fresh("exit into stage 2")
@@ -184,60 +219,96 @@ func _run() -> void:
 	_game.queue_free()
 	await physics_frame
 	ParkProps.file_overrides.clear()
+	DirAccess.remove_absolute(_big_file)
+	DirAccess.remove_absolute(_big_file.get_base_dir())
 	quit(_t.verdict())
 
 
 # ENTRY-FRAMES: from the frame of a stage entry until the set dressing is built and ParkProps has no work
-# left (bounded), the two nodes' processing is off and this calls each _process once a frame, timing the
-# calls. They do what their own process would (same calls, same order of the two, same delta), only
-# measured; _check_watch_builds_same compares what they build. Frame 0 is the entry itself: the two
-# handlers' last_entry_usec. Returns the frames' ms, and per frame whether each did its build work.
+# left (bounded), read what the two nodes record of their own _process (last_process_usec, stamped with
+# last_process_frame). process_frame emits before the nodes' _process, so each wake sees the frame before:
+# the readings are keyed by their frame stamp and paired by it into one sum per frame. Frame 0 is the
+# entry itself: the two handlers' last_entry_usec and the first stamp's _process readings. Returns the
+# frames' ms, and per frame whether each did its build work (the dressing's wait flag dropped; ParkProps'
+# views grew).
 func _watch_frames(gate := {}) -> Dictionary:
 	var dressing = _game.presentation.set_dressing
 	var props = _game.presentation.park_props
-	dressing.set_process(false)
-	props.set_process(false)
-	var ms: Array[float] = [(dressing.last_entry_usec + props.last_entry_usec) / 1000.0]
-	var dress_ran: Array[bool] = [false]
-	var slice_ran: Array[bool] = [false]
+	# Readings up to now belong to frames before the entry; only newer stamps are the entry's and after.
+	for node in [dressing, props]:
+		_seen["%d_%d" % [node.get_instance_id(), node.last_process_frame]] = true
+	var by_frame := {}
+	var dress_at := {}
+	var slice_at := {}
 	var frames := 0
 	var dressing_frames := -1
-	var deferred_built := false
 	var dressing_done: bool = not dressing.batches.is_empty() and not dressing._dress_when_planned
+	var was_waiting: bool = dressing._dress_when_planned
+	var views_was: int = props.views.size()
+	var deferred_built := false
 	while frames < FRAMES_WATCH_MAX and not (dressing_done and props.is_built()):
 		await process_frame
 		frames += 1
-		var delta := 1.0 / 60.0
-		# The quick-exit control: the planted plan is held until ParkProps' worker is done, then let go
-		# at once, so the deferred build and the first slice land in one frame, the worst the two can do.
-		if not gate.is_empty() and not gate.open and props._task >= 0 and WorkerThreadPool.is_task_completed(props._task):
-			gate.open = true
-			gate.sem.post()
-			while not WorkerThreadPool.is_task_completed(dressing._prep.task):
-				pass
-		var views_before: int = props.views.size()
-		var was_waiting: bool = dressing._dress_when_planned
-		var t0 := Time.get_ticks_usec()
-		dressing._process(delta)
-		var t1 := Time.get_ticks_usec()
-		props._process(delta)
-		var t2 := Time.get_ticks_usec()
-		var built: bool = was_waiting and not dressing._dress_when_planned
-		deferred_built = deferred_built or built
+		_read_frame(by_frame, dressing, props, dress_at, slice_at, was_waiting, views_was)
+		was_waiting = dressing._dress_when_planned
+		views_was = props.views.size()
+		# The quick-exit control: the planted plan is held until ParkProps' worker is done (or already taken),
+		# then let go at once, so the deferred build and the first slice land in one frame, the worst the two
+		# can do. A missed condition is let go after GATE_FRAMES_MAX frames.
+		if not gate.is_empty() and not gate.open:
+			var how := ""
+			if props._task < 0:
+				how = "worker taken"
+			elif WorkerThreadPool.is_task_completed(props._task):
+				how = "worker done"
+			elif frames >= GATE_FRAMES_MAX:
+				how = "frame limit"
+			if how != "":
+				gate.open = true
+				gate.how = how
+				gate.sem.post()
+				var spins := 0
+				while not dressing._prep.is_empty() and not WorkerThreadPool.is_task_completed(dressing._prep.task) and spins < GATE_SPIN_MAX:
+					spins += 1
+				print("stage_entry_budget_test: the held plan was let go at frame %d: %s" % [frames, how])
 		dressing_done = not dressing.batches.is_empty() and not dressing._dress_when_planned
 		if dressing_done and dressing_frames < 0:
 			dressing_frames = frames
-		ms.append((t2 - t0) / 1000.0)
-		dress_ran.append(built)
-		slice_ran.append(props.views.size() > views_before)
 	if not gate.is_empty() and not gate.open:
 		gate.open = true
+		gate.how = "after the watch"
 		gate.sem.post()
-	dressing.set_process(true)
-	props.set_process(true)
+	await process_frame
+	_read_frame(by_frame, dressing, props, dress_at, slice_at, was_waiting, views_was)
+	var stamps := by_frame.keys()
+	stamps.sort()
+	# Frame 0 is the entry frame: the handlers and the nodes' own _process, which share the engine frame.
+	var ms: Array[float] = [(dressing.last_entry_usec + props.last_entry_usec) / 1000.0 + (by_frame[stamps[0]] if not stamps.is_empty() else 0.0)]
+	var dress_ran: Array[bool] = [false]
+	var slice_ran: Array[bool] = [false]
+	for stamp in stamps.slice(1):
+		ms.append(by_frame[stamp])
+		dress_ran.append(dress_at.has(stamp))
+		slice_ran.append(slice_at.has(stamp))
+		deferred_built = deferred_built or dress_at.has(stamp)
 	return {"ms": ms, "dress_ran": dress_ran, "slice_ran": slice_ran, "frames": frames, "dressing_frames": dressing_frames, "dressing_done": dressing_done,
 		"props_built": props.is_built(), "deferred_built": deferred_built, "views": props.views.size(), "batches": dressing.batches.size(),
 		"children": dressing.get_child_count(), "instances": props.instances.size()}
+
+
+# One wake's readings: both nodes' last _process, summed under the frame they ran in. A frame only one of them
+# stamped counts that one alone; state changes since the last wake belong to the frame the stamps name.
+func _read_frame(by_frame: Dictionary, dressing, props, dress_at: Dictionary, slice_at: Dictionary, was_waiting: bool, views_was: int) -> void:
+	for node in [dressing, props]:
+		var stamp: int = node.last_process_frame
+		var key := "%d_%d" % [node.get_instance_id(), stamp]
+		if stamp >= 0 and not _seen.has(key):
+			_seen[key] = true
+			by_frame[stamp] = by_frame.get(stamp, 0.0) + node.last_process_usec / 1000.0
+	if was_waiting and not dressing._dress_when_planned:
+		dress_at[dressing.last_process_frame] = true
+	if props.views.size() > views_was:
+		slice_at[props.last_process_frame] = true
 
 
 # ENTRY-FRAMES: the frames after an entry stay under FRAME_MS together, and the check could fire: a props
@@ -271,16 +342,25 @@ func _check_frames(label: String, watch: Dictionary, quick: bool) -> void:
 		"worst %.1f ms, %d of %d frames over" % [worst, over, ms.size()])
 	_t.check("%s: the dressing and ParkProps both finished inside the timed frames" % label, watch.dressing_done and watch.props_built and watch.frames < FRAMES_WATCH_MAX,
 		"%d frames, dressing %s, props %s" % [watch.frames, watch.dressing_done, watch.props_built])
-	_t.check("%s: a ParkProps slice ran in the timed frames" % label, slices >= 1, "%d slice frames, %d views" % [slices, watch.views])
+	_t.check("%s: ParkProps' build spanned at least %d slice frames (a whole build in one frame is 1)" % [label, SLICE_FRAMES_MIN], slices >= SLICE_FRAMES_MIN,
+		"%d slice frames, %d views" % [slices, watch.views])
 	if quick:
 		_t.check("%s: the dressing's deferred build ran in the timed frames" % label, watch.deferred_built, "%d frames" % dress_frames)
 		_t.check("%s: the build and a props slice fell in the same or adjacent frames" % label, overlap_same + overlap_adjacent >= 1,
 			"same %d, adjacent %d" % [overlap_same, overlap_adjacent])
 
 
-# Calling _process from the test builds what the nodes' own processing does: ParkProps rebuilt whole by
-# finish() has the same instance and view counts, and the dressing the same batch and child counts as the
-# watched build (the instance buffers are compared to a fresh plan by _check_dressing_fresh).
+# The enlarged vignette file is valid on park_flume's map, so a smaller build later means a real change.
+func _check_big_fixture() -> void:
+	var file := ParkProps.load_json(_big_file)
+	var kit := ParkProps.load_json(String(file.get("kit", "")))
+	var errors := ParkProps.file_errors(file, kit, _game.ctx.terrain.map_for(2)) + ParkProps.kit_errors(kit)
+	_t.check("the enlarged vignette file has %d spots and no file errors on park_flume's map" % SYNTHETIC_VIGNETTES, file.get("spots", []).size() == SYNTHETIC_VIGNETTES and errors.is_empty(), str(errors))
+
+
+# The timed build equals the others: ParkProps rebuilt whole by finish() has the same instance and view counts,
+# and the dressing has the batch and child counts of a fresh synchronous plan (the instance buffers are
+# compared to a fresh plan by _check_dressing_fresh).
 func _check_watch_builds_same(watch: Dictionary) -> void:
 	var props = _game.presentation.park_props
 	props._built_for = []
@@ -289,8 +369,16 @@ func _check_watch_builds_same(watch: Dictionary) -> void:
 	_t.check("the timed ParkProps build equals a whole build by finish()", watch.instances > 0 and props.instances.size() == watch.instances and props.views.size() == watch.views,
 		"timed %d instances %d views, finish() %d and %d" % [watch.instances, watch.views, props.instances.size(), props.views.size()])
 	var dressing = _game.presentation.set_dressing
-	_t.check("the timed dressing build has the batches and children of a normal build", watch.batches > 0 and dressing.batches.size() == watch.batches and dressing.get_child_count() == watch.children,
-		"timed %d batches %d children, now %d and %d" % [watch.batches, watch.children, dressing.batches.size(), dressing.get_child_count()])
+	var terrain = _game.ctx.terrain
+	var map = terrain.map_for(2)
+	var fresh: Dictionary = dressing.plan(dressing.map_rows(map), dressing.keepouts(map, 2), terrain.ground_callable(2),
+		String(_game.ctx.stages.of(2).map).hash(), dressing._flags())
+	var want := 0
+	for key in ["rock", "dust", "streaks"]:
+		want += 1 if fresh.get(key) != null else 0
+	want += fresh.get("clutter", {}).size()
+	_t.check("the timed dressing build has the batch and child counts of a fresh plan", want > 0 and watch.batches == want and watch.children == want,
+		"timed %d batches %d children, fresh plan %d" % [watch.batches, watch.children, want])
 
 
 # The planted control (lesson 34): the stage entered the moment its plan starts on a worker (the
@@ -307,10 +395,11 @@ func _check_slow_plan_control() -> void:
 	var seed_two: int = String(_game.ctx.stages.of(2).map).hash()
 	var flags: Dictionary = dressing._flags()
 	var out := {}
-	# Held open by _watch_frames, so the dressing's build can be made to share a frame with ParkProps' slices.
+	# Held open by _watch_frames once the entry has returned (armed), so a handler that waits on the plan waits
+	# the plan only and fails the entry budget; the dressing's build can be made to share a frame with ParkProps' slices.
 	# The pool runs one low-priority task at a time (4 threads, 0.3 of them), so a held low-priority plan would
 	# starve ParkProps' worker; this one holds a normal-priority thread. In play the two workers run one after the other.
-	var gate := {"open": false, "sem": Semaphore.new()}
+	var gate := {"open": false, "armed": false, "how": "", "sem": Semaphore.new()}
 	# The built stage 2 stays up, so "bare" below is the deferral's own clear; a plan already in
 	# flight (the next stage's) is collected first, not dropped.
 	dressing._built_for = []
@@ -318,10 +407,12 @@ func _check_slow_plan_control() -> void:
 		WorkerThreadPool.wait_for_task_completion(dressing._prep.task)
 	var planted := func():
 		out.merge(dressing.plan(rows, keep, ground, seed_two, flags))
-		gate.sem.wait()
+		if gate.armed:
+			gate.sem.wait()
 	dressing._prep = {"key": dressing._key(2, terrain.geometry_root(2)), "out": out,
 		"task": WorkerThreadPool.add_task(planted, true, "planted slow plan")}
 	dressing._stage_entered(2, false)
+	gate.armed = true
 	var entry_ms: float = dressing.last_entry_usec / 1000.0
 	var bare: bool = dressing.get_child_count() == 0
 	_t.check("planted slow plan: the entry stays within %.0f ms and leaves the stage bare" % NEW_DRESSING_MS,
