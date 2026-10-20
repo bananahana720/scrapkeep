@@ -356,6 +356,10 @@ func _perched_pure() -> void:
 	_check("an all-no_perch table cell reads as no runs", Lab.build_table([rows[2]], ["a"], ["dispatcher@park"], 40.0)["cells"]["a|dispatcher@park"]["runs"] == 0)
 	var kid := Lab.child_args({"pilot": "tarn", "kind": "dispatcher@mast", "seed": 1, "give": "", "n": 0}, 40.0, {}, "park", "/x", "/p")
 	_check("a perched child gets --perched= and no --table=", "--perched=mast" in kid and not Array(kid).any(func(a): return String(a).begins_with("--table=")))
+	var np := {"pilot": "a", "kind": "dispatcher@park", "seed": 4, "outcome": "not_perched", "ttk_s": -1.0, "hull_lost": 0.0}
+	var with_np := Lab.build_table([rows[0], rows[1], np], ["a"], ["dispatcher@park"], 40.0)
+	_check("not_perched is a no-result outcome and build_table drops its row", "not_perched" in Lab.NO_RESULT and with_np["cells"]["a|dispatcher@park"]["runs"] == 2
+		and Lab.build_table([np], ["a"], ["dispatcher@park"], 40.0)["cells"]["a|dispatcher@park"]["runs"] == 0)
 	_check("perched labels stay distinct in 9 chars", Lab.row_label("dispatcher@park") == "disp@park" and Lab.row_label("dispatcher@mast") == "disp@mast")
 	# --from: kind rows, then pack rows, then perched rows, each first-seen.
 	var dir := OS.get_user_data_dir().path_join("matchup_lab_test")
@@ -379,7 +383,8 @@ func _perched_pure() -> void:
 	_check("--from lists kind, pack, then perched rows in first-seen order", code == 0 and lobber >= 0 and pack > lobber and mast > pack and park > mast)
 
 
-# Two real perched duels (1 pilot, seed 2 - the seeds whose standoff is both clear and under the top; seed 1 and 4 are clear but not under on park_dam; low cap): the park row stands the Dispatcher on a real
+# Two real perched duels (1 pilot, seed 2 and a low cap). Seed 2 is the only park_dam seed of 1 to 4 whose standoff is both clear and under the top:
+# seeds 1 and 4 are clear but not under, seed 3 is under but not clear (those read not_perched). The park row stands the Dispatcher on a real
 # perch top with no mast; the mast row, planted as the negative, builds one.
 func _perched_duel() -> void:
 	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("perched.ndjson")

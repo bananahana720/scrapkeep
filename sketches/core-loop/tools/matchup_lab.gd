@@ -84,7 +84,7 @@ const SETTLE_MAX_S := 12.0
 const HULL_POOL := 99999.0
 const WALL_LIMIT_S := 600.0
 # Outcomes that measured nothing: left out of the table and the answer arm.
-const NO_RESULT := ["no_result", "wall_timeout", "stage_changed", "no_perch"]
+const NO_RESULT := ["no_result", "wall_timeout", "stage_changed", "no_perch", "not_perched"]
 const PENDING := "answer: pending (no answers tags on this base)"
 
 
@@ -198,7 +198,8 @@ var _counter_serial := 0
 # Perched duel state (child).
 var _perched := ""
 var _perch_chosen := false
-var _no_perch := false
+var _early := ""
+var _standoff_tried := false
 var _relocated := false
 var _perch_top := Vector3.INF
 var _perch_source := "unknown"
@@ -898,8 +899,9 @@ func _physics_process(delta: float) -> bool:
 			if _perched != "" and not _perch_chosen:
 				_perch_chosen = true
 				var step := _choose_perch()
-				if step == "no_perch":
-					_no_perch = true
+				if step == "no_perch" or step == "not_perched":
+					# Ended before the spawn: nothing to fight. not_perched keeps its diagnostic fields on the row.
+					_early = step
 					_done = true
 					_record()
 					_game.free()
@@ -1038,8 +1040,10 @@ func _all_tops() -> Array:
 
 
 # Chooses this seed's perch top. "near": the terrain's own pick was within reach of the resting ball.
-# "relocated": none was, so the ball was moved to a flat standoff `--range` from a top chosen from
-# the whole stage by the seed. "no_perch": the stage has no top at all.
+# "relocated": none was, so the ball was moved to a standoff `--range` from a top chosen from the whole
+# stage by the seed. "no_perch": the stage has no top at all. "not_perched": the standoff (or the resting
+# ball) is not clear of landforms or not PERCH_MIN under the top, or no spot lies in the play rect; the duel
+# ends before the spawn.
 func _choose_perch() -> String:
 	var terrain = _game.ctx.terrain
 	var tops := _all_tops()
@@ -1055,26 +1059,44 @@ func _choose_perch() -> String:
 		rng.seed = hash(["perch_pick", _run_seed])
 		_perch_top = tops[rng.randi_range(0, tops.size() - 1)]["top"]
 		var found := _standoff(_perch_top, float(_settings.get("range", str(PERCH_RANGE))), rng.randf() * TAU)
+		_standoff_tried = true
+		_match_top(tops)
+		if found.is_empty():
+			return "not_perched"
 		var spot: Vector2 = found["p"]
 		_standoff_m = found["dist"]
 		_standoff_ok = found["ok"]
 		_standoff_clear = found["clear"]
 		_standoff_at = spot
+		_perched_under = found["under"]
+		_perch_over_ball = _perch_top.y - float(terrain.height(spot.x, spot.y))
+		if not (found["clear"] and found["under"]):
+			return "not_perched"
 		_game.player.reset_to(terrain.drop_point(spot.x, spot.y, 1.05))
 		_relocated = true
+	_match_top(tops)
+	if not _relocated and _perch_top.y - float(terrain.height(ball.x, ball.z)) < PerchPoints.PERCH_MIN:
+		# The terrain's own pick is not PERCH_MIN over the resting ball: not a perched duel.
+		_perched_under = false
+		_perch_over_ball = _perch_top.y - float(terrain.height(ball.x, ball.z))
+		return "not_perched"
+	return "relocated" if _relocated else "near"
+
+
+# The chosen top's source and base rise, read from the stage's tops.
+func _match_top(tops: Array) -> void:
 	for entry in tops:
 		if (entry["top"] as Vector3).is_equal_approx(_perch_top):
 			_perch_source = entry["source"]
 			_perch_base_rise = float(entry["base_rise"])
-	return "relocated" if _relocated else "near"
 
 
 # A level, landform-clear spot for the ball: bearings (16, from `start`) at `distance`, then the radius
 # stepped out by STANDOFF_STEP_M up to STANDOFF_REACH_M past it. The first spot whose ground spread over
 # STANDOFF_PROBES is within STANDOFF_FLAT_M, clear of landforms and PERCH_MIN under the top wins (ok = true).
 # When none is, the best of: clear of landforms, then under the top, then least spread, is used with
-# ok = false: the run still goes, marked. Spots outside the map's play rect are never used.
-# Returns {p (x, z), dist, ok, clear}.
+# ok = false. Spots outside the map's play rect are never candidates; when none lies inside it the result is
+# empty (never an unchecked spot). Returns {p (x, z), dist, ok, clear, under}, or {}.
 func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 	var terrain = _game.ctx.terrain
 	var m = terrain.map()
@@ -1083,33 +1105,33 @@ func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 	var play := Rect2()
 	if m is ParkMap and m.ok:
 		play = m.play_rect
-	var best := {"p": Vector2(top.x, top.z) + Vector2(cos(start), sin(start)) * distance, "dist": distance, "ok": false, "clear": false}
+	var best := {}
 	var best_score := INF
 	for r in range(steps + 1):
 		var dist := distance + STANDOFF_STEP_M * r
 		for k in STANDOFF_BEARINGS:
 			var a := start + TAU * k / float(STANDOFF_BEARINGS)
 			var p := Vector2(top.x, top.z) + Vector2(cos(a), sin(a)) * dist
+			if play.size != Vector2.ZERO and not play.has_point(p):
+				continue
 			var lo := INF
 			var hi := -INF
 			for d in STANDOFF_PROBES:
 				var h: float = terrain.height(p.x + d.x, p.y + d.y)
 				lo = minf(lo, h)
 				hi = maxf(hi, h)
-			if play.size != Vector2.ZERO and not play.has_point(p):
-				continue
 			var clear := not ParkRecipes.in_clear(blocked, p, STANDOFF_CLEAR_M)
 			# The top must stand PERCH_MIN over the ground the ball is held on: stamped landforms are terrain,
 			# not blockers, so a spot can lie on the same plateau as a ledge top (a Dispatcher 2 m over the ball).
 			var under: bool = top.y - float(terrain.height(p.x, p.y)) >= PerchPoints.PERCH_MIN
 			if under and clear and hi - lo <= STANDOFF_FLAT_M:
-				return {"p": p, "dist": dist, "ok": true, "clear": true}
+				return {"p": p, "dist": dist, "ok": true, "clear": true, "under": true}
 			# Clear first (a ball placed in a solid is wrong whatever the rise), then under, then spread; a
 			# clear spot that is not under the top is flagged by perched_under false.
 			var score := (hi - lo) + (0.0 if under else 1000.0) + (0.0 if clear else 10000.0)
 			if score < best_score:
 				best_score = score
-				best = {"p": p, "dist": dist, "ok": false, "clear": clear}
+				best = {"p": p, "dist": dist, "ok": false, "clear": clear, "under": under}
 	return best
 
 
@@ -1158,7 +1180,7 @@ func _spawn_pack(center: Vector3, forward: Vector3) -> void:
 
 func _record() -> void:
 	var lost: float = float(_game.run.metrics["hull_damage"]) - _hull_start if _spawned else 0.0
-	var outcome: String = "no_perch" if _no_perch else (pack_outcome(_pack_spawned, _driver.outcome) if _pack_mode else _driver.outcome)
+	var outcome: String = _early if _early != "" else (pack_outcome(_pack_spawned, _driver.outcome) if _pack_mode else _driver.outcome)
 	var killed: bool = _kill_s >= 0.0 and outcome == "killed"
 	var row := {"pilot": _pilot, "class": _driver.class_id(), "kind": _kind, "seed": _run_seed, "give": String(_settings.get("give", "")),
 			"outcome": outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
@@ -1177,10 +1199,11 @@ func _record() -> void:
 		row["landed_hits"] = int(_snap.get("landed_hits", 0))
 		row["escalation"] = int(_snap.get("escalation", 0))
 		row["relocated"] = _relocated
-		row["standoff_m"] = snappedf(_standoff_m, 0.1)
-		row["standoff_ok"] = _standoff_ok
-		row["standoff_clear"] = _standoff_clear
-		row["standoff_at"] = [snappedf(_standoff_at.x, 0.1), snappedf(_standoff_at.y, 0.1)]
+		if _standoff_tried and _standoff_at != Vector2.ZERO:
+			row["standoff_m"] = snappedf(_standoff_m, 0.1)
+			row["standoff_ok"] = _standoff_ok
+			row["standoff_clear"] = _standoff_clear
+			row["standoff_at"] = [snappedf(_standoff_at.x, 0.1), snappedf(_standoff_at.y, 0.1)]
 		row["held"] = _held
 		row["perched_under"] = _perched_under
 		row["perch_over_ball_m"] = snappedf(_perch_over_ball, 0.01)
