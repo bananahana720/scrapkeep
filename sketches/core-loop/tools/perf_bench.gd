@@ -62,13 +62,15 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 # level-sites   (LEVEL-SITES-BENCH, scrapkeep#149 ruling 3, wave 17) what a level Breach landing costs on its landing tick
 # against how often it fits, over a seeded sample of level park ground, on #205's live merge_level path:
 #   godot --headless --path sketches/core-loop --script res://tools/perf_bench.gd -- --scene=level-sites --out=/abs/sites.json [--seed=7301] [--sites=80] [--landing-scale=N]
-# The park stand as p1, then --sites random level landing sites within 50 m of the drop-in, headings turned by the camera (tries
-# are drawn from --seed, so every run and scale sees the same sites). Each site times RivetKit.landing() itself (carve, first
+# The park stand as p1, then --sites random level landing sites in a ±50 m square around the drop-in, headings drawn from the same seeded RNG and
+# handed to landing() through a stub ride (tries are drawn from --seed, so every run and scale sees the same sites). Each site times RivetKit.landing() itself (carve, first
 # share, the hit when it fits, the bookkeeping), then a second pass of its parts for the split: carve_ms, share_ms, breach_ms.
-# A queued carve is dropped after each site. --landing-scale=N sets the level budget to N x LATE_WORK parts (default: the shipped
+# This measures landing() ms, not the landing frame: the scar mesh build in VolumeIndicator._process and the report_landing
+# listeners are outside the timed span. The split pass runs hot (the same site a second time), so its parts need not sum to
+# landing_ms. A queued carve is dropped after each site. --landing-scale=N sets the level budget to N x LATE_WORK parts (default: the shipped
 # LEVEL_LANDING_SCALE). Per site: fit (the carve hit inside landing()), work, shares, builds and the ms; the summary gives fit,
 # median/p90/max landing ms over level sites ("all") and over the fitting ones, and the stand's landing ms (median of 5). The run is
-# invalid if any timed landing started a terrain build. The warm-up cache variant (merge_level moved to a worker) was measured and
+# invalid if any row's builds delta, which covers both the timed landing and the split pass, shows a terrain build. The warm-up cache variant (merge_level moved to a worker) was measured and
 # closed: 27444187 on claude/perf-merge-level-warm; cloud 80 sites, live 400 56/80 median 21.9 ms, cached 400/800/1000 40/56/59 of 80 at 20.5/33.1/34.9 ms.
 # Park scenes (PARK.md section 9, unit KB6) run on the park table with ctx.calm set, so no enemy arrives:
 #   p1   stage 1 standing: the ball frozen at the drop-in, the camera on the landmark.
@@ -283,7 +285,7 @@ func _initialize() -> void:
 		quit(2)
 		return
 	if not SCENES.has(_scene_id) or not _out.is_absolute_path() or not _out.ends_with(".json"):
-		printerr("perf_bench: needs -- --scene=s1|s2|s3|p1|p2|p3 --out=<absolute .json path>")
+		printerr("perf_bench: needs -- --scene=s1|s2|s3|p1|p2|p3|level-sites --out=<absolute .json path>")
 		quit(2)
 		return
 	_view = String(SCENES[_scene_id]["view"])
