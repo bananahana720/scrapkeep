@@ -86,7 +86,7 @@ Placeholders: 60 at 1a7a7299, down from 1,442 at wave 15; 59 of them are park gr
 | 20 | HELP and ACHIEVEMENTS refresh; FLASH-COMFORT; bug bar | placeholder burn-down to zero | PERF-NIGHT on the 4080 after radio renders | frametime gate |
 | 21 | ALPHA-RC AppImage release candidate | last art holes | final 4080 pass | RC gate: `--win-proof` four proofs, five personas |
 
-Source plan: [PLAN-w16-plus.md](PLAN-w16-plus.md); where it differs from the 17 to 18 Oct handoff, the handoff wins.
+Source plan: [PLAN-w16-plus.md](PLAN-w16-plus.md); where it differs from the 17 to 18 Oct handoff, the handoff wins. The budgeted plan with wave 17 carry-over and cut candidates is [ROADMAP.md](ROADMAP.md) (20 Oct); the 20 Oct reconciliation of every open PR is [BASELINE-2026-10-20.md](BASELINE-2026-10-20.md).
 
 ## PC queue
 
