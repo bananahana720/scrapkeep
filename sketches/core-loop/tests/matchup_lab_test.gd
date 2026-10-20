@@ -1,4 +1,4 @@
-# smoke: solo timeout=300s (a small real table: 2 pilots x 3 kinds x 2 seeds, 12 duel processes)
+# smoke: solo timeout=480s (a small real table: 2 pilots x 3 kinds x 2 seeds, 12 duel processes, plus one pack duel)
 extends SceneTree
 
 const Lab := preload("res://tools/matchup_lab.gd")
@@ -18,6 +18,8 @@ func _initialize() -> void:
 	_lookup()
 	_real_run()
 	_damage_control()
+	_packs_pure()
+	_pack_duel()
 	print("matchup_lab_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -181,6 +183,99 @@ func _damage_control() -> void:
 	for r in rows:
 		hurt = hurt or (float(r["hits"]) > 0.0 and float(r["damage_taken"]) > 0.0 and float(r["hull_lost"]) > 0.0)
 	_check("planted positive: an idle pilot is hit, takes damage and loses hull (2 rows)", rows.size() == 2 and hurt)
+
+
+func _packs_pure() -> void:
+	_check("run_down is chaser x3 + lobber on the park table", Lab.pack_kinds("park", "run_down") == ["chaser", "chaser", "chaser", "lobber"])
+	_check("an unknown pack id is empty", Lab.pack_kinds("park", "no_such_pack").is_empty() and Lab.pack_kinds("alpha", "").is_empty())
+	var ids: Array = Lab.pack_ids("park")
+	_check("pack_ids lists run_down then grounded first, each once, and includes the elite", ids.size() >= 3 and ids[0] == "run_down" and ids[1] == "grounded"
+		and "elite" in ids and ids.count("run_down") == 1)
+	var all_known := true
+	for id in ids:
+		all_known = all_known and not Lab.pack_kinds("park", id).is_empty()
+	_check("every listed pack id resolves to members", all_known)
+	_check("the alpha table has packs too", not Lab.pack_ids("alpha").is_empty())
+	# Axis: most common ANSWER_AXIS; ties by AXES order.
+	_check("run_down answers on fuse (3 chasers beat 1 lobber)", Lab.pack_axis(Lab.pack_kinds("park", "run_down")) == "fuse")
+	_check("an axis tie goes to the earlier AXES entry (lobber range vs mag_trapper cc)", Lab.pack_axis(["mag_trapper", "lobber"]) == "range")
+	_check("a pack row finds its answer item by the pack axis", Lab.answer_item({"p_fuse": {"answers": ["fuse"]}, "p_range": {"answers": ["range"]}}, "tarn", "pack:run_down", ["chaser", "chaser", "chaser", "lobber"]) == "p_fuse")
+	_check("the heatmap label is +id in 9 chars; a kind keeps its name", Lab.row_label("pack:run_down") == "+run_down" and Lab.row_label("pack:elite_highdraft") == "+elite_hi" and Lab.row_label("chaser") == "chaser")
+	# A mixed table: a kind row and two pack rows; the slow pack cell is HARD, the fast one is not.
+	var pilots := ["a", "b", "c"]
+	var kinds := ["chaser", "pack:slow", "pack:fast"]
+	var mixed := _table({"a|chaser": 2.0, "b|chaser": 2.0, "c|chaser": 2.0, "a|pack:slow": 3.0, "b|pack:slow": 3.0, "c|pack:slow": 12.0,
+			"a|pack:fast": 3.0, "b|pack:fast": 3.0, "c|pack:fast": 5.0}, pilots, kinds)
+	var hard_keys := []
+	for cell in mixed["hard"]:
+		hard_keys.append(Lab.cell_key(cell["pilot"], cell["kind"]))
+	_check("a planted slow pack cell is HARD and the fast pack cell is not", hard_keys == ["c|pack:slow"])
+	_check("planted negative: a slow-looking pack cell under 2x its row median is not hard", not mixed["cells"]["c|pack:fast"]["hard"] and not mixed["cells"]["a|pack:slow"]["hard"])
+	_check("pack rows feed the pilot hard-cell gate", Lab.gate_hard(mixed)["missing"] == ["a", "b"] and Lab.hard_by_pilot(mixed)["c"] == ["pack:slow"])
+	var heat := Lab.heatmap(mixed)
+	_check("the heatmap shows the pack row labelled +slow with its star", heat.size() == 5 and heat[3].begins_with("+slow") and "12.0*" in heat[3] and heat[2].begins_with("chaser"))
+	_merge_from()
+
+
+# --from merge order: kind rows (default kinds order) first, then pack rows in first-seen order.
+func _merge_from() -> void:
+	var dir := OS.get_user_data_dir().path_join("matchup_lab_test")
+	DirAccess.make_dir_recursive_absolute(dir)
+	var kind_path := dir.path_join("from_kinds.ndjson")
+	var pack_path := dir.path_join("from_packs.ndjson")
+	var out_path := dir.path_join("from_merge.txt")
+	var f := FileAccess.open(kind_path, FileAccess.WRITE)
+	for s in [1, 2]:
+		f.store_line(JSON.stringify(_row("tarn", "lobber", s, 2.0)))
+		f.store_line(JSON.stringify(_row("tarn", "chaser", s, 2.0)))
+	f.close()
+	f = FileAccess.open(pack_path, FileAccess.WRITE)
+	for s in [1, 2]:
+		f.store_line(JSON.stringify(_row("tarn", "pack:grounded", s, 6.0)))
+		f.store_line(JSON.stringify(_row("tarn", "pack:run_down", s, 7.0)))
+	f.close()
+	var output := []
+	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--from=" + pack_path + "," + kind_path, "--out=" + out_path]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var text := "\n".join(output)
+	_check("--from merges a pack file and a kind file and exits 0", code == 0 and "matchup_lab: heatmap" in text)
+	var chaser := text.find("chaser ")
+	var lobber := text.find("lobber ")
+	var grounded := text.find("+grounded")
+	var run_down := text.find("+run_down")
+	_check("--from lists kind rows first (default order), then pack rows in first-seen order",
+		chaser >= 0 and lobber >= 0 and grounded > lobber and grounded > chaser and run_down > grounded)
+
+
+# One small real pack duel: run_down (3 chasers + a lobber), one pilot, one seed, a low cap.
+func _pack_duel() -> void:
+	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("pack.ndjson")
+	if FileAccess.file_exists(out):
+		DirAccess.remove_absolute(out)
+	var output := []
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--out=" + out, "--procs=1", "--seeds=1", "--cap=15", "--pilots=tarn", "--packs=run_down", "--answer=0",
+			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	_check("the pack duel exits 0", code == 0)
+	var rows := []
+	if FileAccess.file_exists(out):
+		for line in FileAccess.get_file_as_string(out).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary:
+				rows.append(parsed)
+	_check("one pack row keyed pack:run_down with its pack, members and table", rows.size() == 1 and rows[0]["kind"] == "pack:run_down"
+		and rows[0]["pack"] == "run_down" and rows[0]["table"] == "park" and (rows[0]["members"] as Array).size() == 4)
+	if rows.is_empty():
+		return
+	var r: Dictionary = rows[0]
+	_check("more than one member spawned", int(r.get("spawned", 0)) > 1)
+	_check("the outcome is killed or capped", String(r["outcome"]) in ["killed", "capped"])
+	if String(r["outcome"]) == "killed":
+		_check("ttk_s covers the whole pack (not before the first member went down)", float(r["ttk_s"]) >= float(r["first_down_s"]) and float(r["first_down_s"]) >= 0.0)
+	else:
+		_check("a capped pack duel records no ttk", float(r["ttk_s"]) < 0.0)
 
 
 func _check(label: String, ok: bool) -> void:

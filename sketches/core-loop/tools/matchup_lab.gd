@@ -8,6 +8,8 @@ const Roster := preload("res://src/combat/roster.gd")
 const Director := preload("res://src/world/director.gd")
 const Parts := preload("res://src/build/parts.gd")
 const TelegraphScript := preload("res://src/combat/telegraph.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 
 # MATCHUP LAB (design-v3/ENEMY-PRIORITY.md lever 7; usage and definitions in tools/matchup_lab.md).
 # A headless duel table: each pilot alone against each enemy kind, N seeds, recording time to
@@ -18,6 +20,7 @@ const TelegraphScript := preload("res://src/combat/telegraph.gd")
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd \
 #     -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65]
 #     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>] [--range=18] [--idle=0]
+#   pack mode: -- --out=<abs ndjson> --packs=<id,id|all> [--table=park|alpha] [--range=12] ...
 #   or: -- --from=<a.ndjson,b.ndjson> [--out=<heatmap txt>]   re-render saved rows
 #
 # Each duel is its own process (a bot run repeats exactly only in a fresh one). The harness is
@@ -46,6 +49,10 @@ const MIN_ROW_S := 1.0
 const WIN_SHARE := 0.5
 const DODGE := 0.65
 const DUEL_RANGE := 18.0
+# Pack mode (--packs): a named authored pack is the opponent, closer in, spaced like Director._place_pack.
+const PACK_RANGE := 12.0
+const PACK_PREFIX := "pack:"
+const TABLES := ["park", "alpha"]
 # A duel starts at rest: the ball must be grounded and slower than REST_SPEED for SETTLE_S in a
 # row. If it has not come to rest REST_WAIT_S after first landing, it is set to rest where it
 # stands (the player's own set_velocity_now); at SETTLE_MAX_S the duel starts regardless.
@@ -62,6 +69,8 @@ const PENDING := "answer: pending (no answers tags on this base)"
 class DuelDriver extends BotDriver:
 	var enemy: Node3D = null
 	var adds: Array = []
+	# Pack mode: the pack's members; the driver fights the nearest live one (or add).
+	var members: Array = []
 	var dodge := 1.0
 	# --idle=1: the pilot stands still and never fights, so the lab's damage path can be shown
 	# (the planted positive control in tests/matchup_lab_test.gd).
@@ -96,6 +105,10 @@ class DuelDriver extends BotDriver:
 		var ball: Vector3 = game.player.ball_position()
 		var best: Node3D = null
 		var best_d := INF
+		for member in members:
+			if alive(member) and ball.distance_to(member.global_position) < best_d:
+				best_d = ball.distance_to(member.global_position)
+				best = member
 		for add in adds:
 			if alive(add) and ball.distance_to(add.global_position) < best_d:
 				best_d = ball.distance_to(add.global_position)
@@ -123,6 +136,7 @@ var _sweep_dir := ""
 var _phase := 1
 var _pilots: Array = []
 var _kinds: Array = []
+var _table_id := "park"
 var _seeds: Array[int] = []
 var _answer_plan := {}
 var _out_rows: Array = []
@@ -146,6 +160,13 @@ var _kill_s := -1.0
 var _kill_dist := -1.0
 var _last_dist := -1.0
 var _enemy_set := false
+var _pack_mode := false
+var _pack_id := ""
+var _pack_members: Array = []
+var _pack_spawned := 0
+var _pack_skipped: Array = []
+var _collecting := false
+var _first_down_s := -1.0
 var _warnings := 0
 var _joined := 0
 var _scrap_serial := 0
@@ -164,13 +185,32 @@ func _initialize() -> void:
 		_render_from()
 		return
 	if not _settings.has("out"):
-		printerr("matchup_lab: usage: -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65] [--pilots=a,b] [--kinds=a,b] [--answer=1]")
+		printerr("matchup_lab: usage: -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65] [--pilots=a,b] [--kinds=a,b | --packs=a,b|all --table=park|alpha] [--answer=1]")
 		quit(2)
 		return
 	for part in String(_settings.get("seeds", "1,2,3,4,5,6,7,8")).split(",", false):
 		_seeds.append(int(part))
 	_pilots = Array(String(_settings.get("pilots", ",".join(PILOTS))).split(",", false))
 	_kinds = Array(String(_settings.get("kinds", ",".join(default_kinds()))).split(",", false))
+	if _settings.has("packs"):
+		_table_id = String(_settings.get("table", "park"))
+		if _table_id not in TABLES:
+			printerr("matchup_lab: unknown --table %s (park or alpha)" % _table_id)
+			quit(2)
+			return
+		var ids: Array = pack_ids(_table_id) if String(_settings["packs"]) == "all" else Array(String(_settings["packs"]).split(",", false))
+		_kinds = []
+		for id in ids:
+			if pack_kinds(_table_id, id).is_empty():
+				printerr("matchup_lab: unknown pack %s on the %s table" % [id, _table_id])
+				quit(2)
+				return
+			if PACK_PREFIX + id not in _kinds:
+				_kinds.append(PACK_PREFIX + id)
+		if _kinds.is_empty():
+			printerr("matchup_lab: --packs named no pack")
+			quit(2)
+			return
 	for p in _pilots:
 		if BotDriver.class_index_for(0, p) < 0:
 			printerr("matchup_lab: unknown pilot %s" % p)
@@ -210,6 +250,10 @@ func _render_from() -> void:
 			if r["kind"] == k:
 				kinds.append(k)
 				break
+	for r in rows:
+		var k := String(r["kind"])
+		if k.begins_with(PACK_PREFIX) and k not in kinds:
+			kinds.append(k)
 	var table := build_table(rows, pilots, kinds, _cap)
 	var lines := heatmap(table)
 	lines.append_array(gate_lines(table, grade_answers(table, [], {}, _cap, 0)))
@@ -245,6 +289,58 @@ static func default_kinds() -> Array:
 	return out
 
 
+# ---- Pack tables ------------------------------------------------------------------------
+
+static func _defs(table: String) -> Array:
+	return AlphaDefs.DEFS if table == "alpha" else ParkDefs.DEFS
+
+
+# Every distinct pack id on a table, in first-seen stage order: each stage's `packs`, then its `elite`.
+static func pack_ids(table: String) -> Array:
+	var out := []
+	for def in _defs(table):
+		var entries: Array = (def.get("packs", []) as Array).duplicate()
+		if def.get("elite") is Dictionary:
+			entries.append(def["elite"])
+		for pack in entries:
+			if String(pack["id"]) not in out:
+				out.append(String(pack["id"]))
+	return out
+
+
+# The member kinds of a pack id: the first stage that names it wins (empty for an unknown id).
+static func pack_kinds(table: String, id: String) -> Array:
+	for def in _defs(table):
+		var entries: Array = (def.get("packs", []) as Array).duplicate()
+		if def.get("elite") is Dictionary:
+			entries.append(def["elite"])
+		for pack in entries:
+			if String(pack["id"]) == id:
+				return (pack["kinds"] as Array).duplicate()
+	return []
+
+
+# The axis a pack's answer must carry: the most common ANSWER_AXIS among its members, ties by AXES order.
+static func pack_axis(members: Array) -> String:
+	var counts := {}
+	for k in members:
+		var axis: String = ANSWER_AXIS.get(k, "range")
+		counts[axis] = int(counts.get(axis, 0)) + 1
+	var best := "range"
+	var best_n := 0
+	for axis in AXES:
+		if int(counts.get(axis, 0)) > best_n:
+			best_n = int(counts[axis])
+			best = axis
+	return best
+
+
+# The 9-char heatmap row label: kinds as is, a pack row `+<id>`.
+static func row_label(kind: String) -> String:
+	var text := "+" + kind.substr(PACK_PREFIX.length()) if kind.begins_with(PACK_PREFIX) else kind
+	return text.substr(0, 9)
+
+
 # ---- Answer lookup ----------------------------------------------------------------------
 
 # The `answers` tags of a part row, as an array; empty when the field is absent.
@@ -265,8 +361,8 @@ static func answers_field_exists(rows: Dictionary) -> bool:
 
 # The part to hand `pilot` for `kind`'s axis: the first id (sorted) whose answers carry the
 # axis and whose class gate admits the pilot. "" when none, or when the field does not exist.
-static func answer_item(rows: Dictionary, pilot: String, kind: String) -> String:
-	var axis: String = ANSWER_AXIS.get(kind, "range")
+static func answer_item(rows: Dictionary, pilot: String, kind: String, members := []) -> String:
+	var axis: String = pack_axis(members) if kind.begins_with(PACK_PREFIX) else ANSWER_AXIS.get(kind, "range")
 	var ids := rows.keys()
 	ids.sort()
 	for id in ids:
@@ -319,6 +415,8 @@ func _spawn(job: Dictionary) -> void:
 		args.append("--range=%s" % _settings["range"])
 	if _settings.has("idle"):
 		args.append("--idle=%s" % _settings["idle"])
+	if String(job["kind"]).begins_with(PACK_PREFIX):
+		args.append("--table=" + _table_id)
 	for key in BotOptions.FAST_FLAGS:
 		if _settings.has(key):
 			args.append("--%s=%s" % [key, _settings[key]])
@@ -349,6 +447,11 @@ func _reap(run: Dictionary, timed_out: bool) -> void:
 	if not result is Dictionary:
 		result = {"pilot": run["pilot"], "kind": run["kind"], "seed": run["seed"], "give": run["give"],
 				"outcome": "wall_timeout" if timed_out else "no_result", "ttk_s": -1.0, "hull_lost": 0.0}
+	if String(run["kind"]).begins_with(PACK_PREFIX):
+		result["pack"] = String(run["kind"]).substr(PACK_PREFIX.length())
+		result["table"] = _table_id
+		if not result.has("members"):
+			result["members"] = pack_kinds(_table_id, result["pack"])
 	result["phase"] = "answer" if _phase == 2 else "baseline"
 	(_answer_results if _phase == 2 else _results).append(result)
 	_remove_tree(home)
@@ -377,7 +480,7 @@ func _begin_answer_phase() -> bool:
 	var field := answers_field_exists(rows)
 	var n := _total
 	for cell in table["hard"]:
-		var item := answer_item(rows, cell["pilot"], cell["kind"]) if field else ""
+		var item := answer_item(rows, cell["pilot"], cell["kind"], _row_members(cell["kind"])) if field else ""
 		_answer_plan[cell_key(cell["pilot"], cell["kind"])] = item
 		if item == "":
 			continue
@@ -385,6 +488,10 @@ func _begin_answer_phase() -> bool:
 			_queue.append({"n": n, "pilot": cell["pilot"], "kind": cell["kind"], "seed": seed_value, "give": item})
 			n += 1
 	return not _queue.is_empty()
+
+
+func _row_members(kind: String) -> Array:
+	return pack_kinds(_table_id, kind.substr(PACK_PREFIX.length())) if kind.begins_with(PACK_PREFIX) else []
 
 
 func _finish() -> void:
@@ -527,7 +634,7 @@ static func heatmap(table: Dictionary) -> Array:
 	lines.append("matchup_lab: heatmap, median seconds to kill (cap %.0fs); * = HARD (over %.1fx row median); med hull lost in brackets" % [table["cap"], HARD_RATIO])
 	lines.append(head)
 	for kind in table["kinds"]:
-		var line := "%-9s%5.1f" % [String(kind).substr(0, 9), table["row_median"][kind]]
+		var line := "%-9s%5.1f" % [row_label(String(kind)), table["row_median"][kind]]
 		for pilot in pilots:
 			var cell: Dictionary = table["cells"][cell_key(pilot, kind)]
 			if cell["runs"] == 0:
@@ -596,6 +703,15 @@ func _begin_child() -> void:
 		quit(2)
 		return
 	_run_seed = int(_settings.get("run-seed", "1"))
+	if _kind.begins_with(PACK_PREFIX):
+		_pack_mode = true
+		_pack_id = _kind.substr(PACK_PREFIX.length())
+		_table_id = String(_settings.get("table", "park"))
+		_pack_members = pack_kinds(_table_id, _pack_id)
+		if _pack_members.is_empty():
+			printerr("matchup_lab: unknown pack %s on the %s table" % [_pack_id, _table_id])
+			quit(2)
+			return
 	node_added.connect(_on_node_added)
 	seed(_run_seed)
 	_game = Game.new()
@@ -659,12 +775,20 @@ func _physics_process(delta: float) -> bool:
 	var over: bool = _driver.tick(delta)
 	var t := _duel_s()
 	# A freed object compares equal to null, so the duel's own flag says the enemy was ever set.
-	if _kill_s < 0.0 and _enemy_set and not DuelDriver.alive(_driver.enemy):
+	if _pack_mode:
+		if _first_down_s < 0.0 and _enemy_set:
+			for m in _driver.members:
+				if not DuelDriver.alive(m):
+					_first_down_s = t
+					break
+	elif _kill_s < 0.0 and _enemy_set and not DuelDriver.alive(_driver.enemy):
 		_kill_s = t
 		_kill_dist = _last_dist
-	elif DuelDriver.alive(_driver.enemy):
+	elif not _pack_mode and DuelDriver.alive(_driver.enemy):
 		_last_dist = _game.player.ball_position().distance_to(_driver.enemy.global_position)
 	if not over and _cleared():
+		if _pack_mode and _kill_s < 0.0:
+			_kill_s = t
 		_driver._end("killed")
 		over = true
 	if not over and t >= _cap:
@@ -682,6 +806,10 @@ func _physics_process(delta: float) -> bool:
 
 func _on_enemy_spawned(enemy: Node3D, _k: String) -> void:
 	# spawn_enemy emits this before it returns, so the duel's own enemy is not yet assigned.
+	if _collecting:
+		if enemy not in _driver.members:
+			_driver.members.append(enemy)
+		return
 	if _spawned and _enemy_set and enemy != _driver.enemy and enemy not in _driver.adds:
 		_driver.adds.append(enemy)
 		_joined += 1
@@ -697,6 +825,9 @@ func _cleared() -> bool:
 		return false
 	for add in _driver.adds:
 		if DuelDriver.alive(add):
+			return false
+	for m in _driver.members:
+		if DuelDriver.alive(m):
 			return false
 	return not DuelDriver.alive(_driver.enemy)
 
@@ -718,8 +849,31 @@ func _spawn_duel() -> void:
 	forward = Vector3(forward.x, 0.0, forward.z).normalized()
 	if forward.length() < 0.5:
 		forward = Vector3.FORWARD
-	var flat: Vector3 = ball + forward * float(_settings.get("range", str(DUEL_RANGE)))
+	var flat: Vector3 = ball + forward * float(_settings.get("range", str(PACK_RANGE if _pack_mode else DUEL_RANGE)))
+	if _pack_mode:
+		_spawn_pack(flat, forward)
+		return
 	_driver.enemy = _game.combat.spawn_enemy(_kind, _game.ctx.terrain.drop_point(flat.x, flat.z, 1.8))
+	_enemy_set = true
+
+
+# The pack side by side across the line, centered offsets like Director._place_pack. Members the
+# roster has not built are skipped and recorded. Anything a member makes while it spawns joins the pack.
+func _spawn_pack(center: Vector3, forward: Vector3) -> void:
+	var side := Vector3(-forward.z, 0.0, forward.x)
+	_collecting = true
+	for i in _pack_members.size():
+		var kind: String = _pack_members[i]
+		if not Roster.ROWS.has(kind) or not Roster.built(kind):
+			_pack_skipped.append(kind)
+			continue
+		var spot: Vector3 = center + side * Director.PACK_SPREAD * (float(i) - float(_pack_members.size() - 1) * 0.5)
+		var enemy = _game.combat.spawn_enemy(kind, _game.ctx.terrain.drop_point(spot.x, spot.z, 1.8))
+		if enemy != null:
+			_pack_spawned += 1
+			if enemy not in _driver.members:
+				_driver.members.append(enemy)
+	_collecting = false
 	_enemy_set = true
 
 
@@ -730,6 +884,13 @@ func _record() -> void:
 			"outcome": _driver.outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
 			"kill_dist_m": snappedf(_kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
 			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01), "settle_s": snappedf(_settle_s, 0.01), "rest_forced": _rest_forced}
+	if _pack_mode:
+		row["pack"] = _pack_id
+		row["members"] = _pack_members
+		row["table"] = _table_id
+		row["spawned"] = _pack_spawned
+		row["skipped"] = _pack_skipped
+		row["first_down_s"] = snappedf(_first_down_s, 0.01)
 	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
 	file.store_string(JSON.stringify(row) + "\n")
 	file.close()
