@@ -217,6 +217,25 @@ func _packs_pure() -> void:
 	var heat := Lab.heatmap(mixed)
 	_check("the heatmap shows the pack row labelled +slow with its star", heat.size() == 5 and heat[3].begins_with("+slow") and "12.0*" in heat[3] and heat[2].begins_with("chaser"))
 	_merge_from()
+	_child_args_and_empty()
+
+
+func _child_args_and_empty() -> void:
+	var job := {"pilot": "tarn", "kind": "pack:run_down", "seed": 1, "give": "", "n": 0}
+	var args := Lab.child_args(job, 15.0, {"table": "alpha", "range": "9"}, "alpha", "/h", "/p")
+	var bare := false
+	for a in args:
+		bare = bare or a.begins_with("--table=")
+	_check("a pack child's args carry --pack-table and never a bare --table= (Game would pick a stage map)", not bare and "--pack-table=alpha" in args and "--range=9" in args)
+	var kind_args := Lab.child_args({"pilot": "tarn", "kind": "lobber", "seed": 1, "give": "", "n": 0}, 15.0, {}, "park", "/h", "/p")
+	var kind_bare := false
+	for a in kind_args:
+		kind_bare = kind_bare or a.begins_with("--table=") or a.begins_with("--pack-table=")
+	_check("a kind child gets no table arg at all", not kind_bare)
+	_check("planted negative: the bare-table detector would catch the old arg", "--table=park".begins_with("--table="))
+	_check("a pack with nothing spawned is no_result, one that spawned keeps its outcome", Lab.pack_outcome(0, "killed") == "no_result" and Lab.pack_outcome(3, "capped") == "capped")
+	var empty := Lab.build_table([{"pilot": "a", "kind": "pack:x", "outcome": Lab.pack_outcome(0, "killed"), "ttk_s": 0.0}], ["a"], ["pack:x"], 40.0)
+	_check("an all-skipped pack row is left out of the table", empty["cells"]["a|pack:x"]["runs"] == 0)
 
 
 # --from merge order: kind rows (default kinds order) first, then pack rows in first-seen order.
@@ -278,6 +297,26 @@ func _pack_duel() -> void:
 		_check("ttk_s covers the whole pack (not before the first member went down)", float(r["ttk_s"]) >= float(r["first_down_s"]) and float(r["first_down_s"]) >= 0.0)
 	else:
 		_check("a capped pack duel records no ttk", float(r["ttk_s"]) < 0.0)
+	_pack_capped()
+
+
+# An idle pilot cannot finish the pack inside a 1 s cap: live members must keep it from reading cleared.
+func _pack_capped() -> void:
+	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("pack_capped.ndjson")
+	if FileAccess.file_exists(out):
+		DirAccess.remove_absolute(out)
+	var output := []
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--out=" + out, "--procs=1", "--seeds=1", "--cap=1", "--idle=1", "--pilots=tarn", "--packs=run_down", "--answer=0",
+			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var rows := []
+	if FileAccess.file_exists(out):
+		for line in FileAccess.get_file_as_string(out).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary:
+				rows.append(parsed)
+	_check("an idle pilot on a 1 s cap leaves the pack alive: capped, ttk -1", code == 0 and rows.size() == 1 and rows[0]["outcome"] == "capped" and float(rows[0]["ttk_s"]) < 0.0)
 
 
 func _perched_pure() -> void:
@@ -297,6 +336,8 @@ func _perched_pure() -> void:
 		and is_equal_approx(float(table["cells"]["a|dispatcher@park"]["median_ttk"]), 4.0))
 	var graded := Lab.grade_answers(table, [{"pilot": "a", "kind": "dispatcher@park", "outcome": "no_perch", "ttk_s": -1.0}], {"a|dispatcher@park": "x"}, 40.0, 1)
 	_check("an all-no_perch table cell reads as no runs", Lab.build_table([rows[2]], ["a"], ["dispatcher@park"], 40.0)["cells"]["a|dispatcher@park"]["runs"] == 0 and graded.is_empty())
+	var kid := Lab.child_args({"pilot": "tarn", "kind": "dispatcher@mast", "seed": 1, "give": "", "n": 0}, 40.0, {}, "park", "/x", "/p")
+	_check("a perched child gets --perched= and no --table=", "--perched=mast" in kid and not Array(kid).any(func(a): return String(a).begins_with("--table=")))
 	_check("perched labels stay distinct in 9 chars", Lab.row_label("dispatcher@park") == "disp@park" and Lab.row_label("dispatcher@mast") == "disp@mast")
 	# --from: kind rows, then pack rows, then perched rows, each first-seen.
 	var dir := OS.get_user_data_dir().path_join("matchup_lab_test")

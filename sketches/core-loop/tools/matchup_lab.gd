@@ -480,27 +480,40 @@ func _process(_delta: float) -> bool:
 	return false
 
 
-func _spawn(job: Dictionary) -> void:
-	var home := _sweep_dir.path_join("job%d_%d" % [_phase, job["n"]])
-	DirAccess.make_dir_recursive_absolute(home)
-	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+# The child's command line. A pack child names its pack list with --pack-table; a bare --table= here
+# would be read by Game._chosen_table() and move the duel onto a park or alpha stage map, away from
+# the legacy map the kind duels play.
+static func child_args(job: Dictionary, cap: float, settings: Dictionary, table_id: String, home: String, project_path: String) -> PackedStringArray:
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", project_path,
 			"--script", "res://tools/matchup_lab.gd", "--", "--pilot=" + String(job["pilot"]), "--kind=" + String(job["kind"]),
-			"--run-seed=%d" % job["seed"], "--cap=%s" % _cap, "--result=" + home.path_join("result.json"), "--home=" + home])
+			"--run-seed=%d" % job["seed"], "--cap=%s" % cap, "--result=" + home.path_join("result.json"), "--home=" + home])
 	if String(job["give"]) != "":
 		args.append("--give=" + String(job["give"]))
-	if _settings.has("dodge"):
-		args.append("--dodge=%s" % _settings["dodge"])
-	if _settings.has("range"):
-		args.append("--range=%s" % _settings["range"])
-	if _settings.has("idle"):
-		args.append("--idle=%s" % _settings["idle"])
+	if settings.has("dodge"):
+		args.append("--dodge=%s" % settings["dodge"])
+	if settings.has("range"):
+		args.append("--range=%s" % settings["range"])
+	if settings.has("idle"):
+		args.append("--idle=%s" % settings["idle"])
 	if String(job["kind"]).begins_with(PACK_PREFIX):
-		args.append("--table=" + _table_id)
+		args.append("--pack-table=" + table_id)
 	if perched_mode(String(job["kind"])) != "":
 		args.append("--perched=" + perched_mode(String(job["kind"])))
 	for key in BotOptions.FAST_FLAGS:
-		if _settings.has(key):
-			args.append("--%s=%s" % [key, _settings[key]])
+		if settings.has(key):
+			args.append("--%s=%s" % [key, settings[key]])
+	return args
+
+
+# A pack whose members were all skipped (or never spawned) measured nothing: no_result, left out of the table.
+static func pack_outcome(spawned: int, outcome: String) -> String:
+	return "no_result" if spawned <= 0 else outcome
+
+
+func _spawn(job: Dictionary) -> void:
+	var home := _sweep_dir.path_join("job%d_%d" % [_phase, job["n"]])
+	DirAccess.make_dir_recursive_absolute(home)
+	var args := child_args(job, _cap, _settings, _table_id, home, ProjectSettings.globalize_path("res://"))
 	var previous := {}
 	for kind in ["DATA", "CONFIG", "CACHE"]:
 		var key: String = "XDG_%s_HOME" % kind
@@ -793,7 +806,7 @@ func _begin_child() -> void:
 	if _kind.begins_with(PACK_PREFIX):
 		_pack_mode = true
 		_pack_id = _kind.substr(PACK_PREFIX.length())
-		_table_id = String(_settings.get("table", "park"))
+		_table_id = String(_settings.get("pack-table", "park"))
 		_pack_members = pack_kinds(_table_id, _pack_id)
 		if _pack_members.is_empty():
 			printerr("matchup_lab: unknown pack %s on the %s table" % [_pack_id, _table_id])
@@ -1086,7 +1099,7 @@ func _spawn_pack(center: Vector3, forward: Vector3) -> void:
 
 func _record() -> void:
 	var lost: float = float(_game.run.metrics["hull_damage"]) - _hull_start if _spawned else 0.0
-	var outcome: String = "no_perch" if _no_perch else _driver.outcome
+	var outcome: String = "no_perch" if _no_perch else (pack_outcome(_pack_spawned, _driver.outcome) if _pack_mode else _driver.outcome)
 	var killed: bool = _kill_s >= 0.0 and outcome == "killed"
 	var row := {"pilot": _pilot, "class": _driver.class_id(), "kind": _kind, "seed": _run_seed, "give": String(_settings.get("give", "")),
 			"outcome": outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),

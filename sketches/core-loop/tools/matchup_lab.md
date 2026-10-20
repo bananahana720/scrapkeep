@@ -11,7 +11,7 @@ godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/m
   [--bot-no-mix=1 --bot-no-visuals=1 --bot-no-pilot-tracks=1]
 
 # pack mode: authored packs as the opponent instead of single kinds
-godot ... -- --out=<abs ndjson> --packs=run_down,grounded|all [--table=park|alpha] [--pilots=...] [--seeds=...]
+godot ... -- --out=<abs ndjson> --packs=run_down,grounded|all [--table=park|alpha]  # --table only picks the pack list [--pilots=...] [--seeds=...]
 ```
 
 - `--out` is required. The ndjson holds one row per duel (`pilot`, `class`, `kind`, `seed`, `give`, `outcome`, `ttk_s`, `hull_lost`, `damage_taken`, `hits`, `kill_dist_m`, `warnings`, `joined`, `duel_s`, `settle_s`, `rest_forced`, `phase`). The heatmap text is written beside it as `<out>.heatmap.txt` and printed.
@@ -37,7 +37,7 @@ Kinds are `Director.KIND_NAMES` that the roster has built, minus `linker` (it gu
 
 ## Pack duels
 
-A pack duel puts one named authored pack in front of the pilot instead of one kind, so a counter pack (a plated rig over a catch cup, three chasers and a lobber) can show up as a hard cell that no single-kind row reveals. The pack table is each stage's `packs` plus its `elite` from `ParkDefs.DEFS` (or `AlphaDefs.DEFS` with `--table=alpha`). `--packs=all` is every distinct id in first-seen stage order (a stage's packs, then its elite). Duplicate ids collapse; if one id carried different kinds in different stages the first stage's kinds are used. `pack_kinds(table, id)` and `pack_ids(table)` are the pure lookups.
+A pack duel puts one named authored pack in front of the pilot instead of one kind, so a counter pack (a plated rig over a catch cup, three chasers and a lobber) can show up as a hard cell that no single-kind row reveals. The pack table is each stage's `packs` plus its `elite` from `ParkDefs.DEFS` (or `AlphaDefs.DEFS` with `--table=alpha`). `--table` only picks which pack list; pack duels play the same calm legacy map as kind duels. The parent hands each child `--pack-table=<id>`, never `--table=`, because `Game._chosen_table()` reads `--table=` from the command line and would move the duel onto a park or alpha stage map. `--packs=all` is every distinct id in first-seen stage order (a stage's packs, then its elite). Duplicate ids collapse; if one id carried different kinds in different stages the first stage's kinds are used. `pack_kinds(table, id)` and `pack_ids(table)` are the pure lookups.
 
 - Same harness as a kind duel: rest start, calm map, `HULL_POOL`, the dodge share and the brawler driver. `ctx.calm` stays on exactly as in Damage above: it gates director packs, the Warden, flood and event pushes and hit knockback, not enemy attacks or the damage they deal, so the pack hurts the ball under the game's own rules. It is not turned off.
 - Every member spawns with `combat.spawn_enemy` side by side across the line at the duel range, spaced `Director.PACK_SPREAD` (4.5 m) with the centered offsets `(i - (n-1)/2) * spread` along the side vector, as `Director._place_pack` does, each dropped with `terrain.drop_point`. The default range is 12 m (`PACK_RANGE`), shorter than 18, so the whole line is in play; `--range` overrides it. Members the roster has not built are skipped and listed in the row's `skipped`. Linker and Foreman are legitimate in packs (they are skipped only as single-kind rows).
@@ -46,7 +46,7 @@ A pack duel puts one named authored pack in front of the pilot instead of one ki
 - Answer arm: the axis is the most common `ANSWER_AXIS` among the members (ties go to the earlier entry of `AXES`), then the lookup and the paired re-duel are unchanged.
 - Entering the gate: `--from=<kinds.ndjson>,<packs.ndjson>` lists kind rows first (default kind order) and pack rows after, in first-seen order, in one heatmap and one gate; pack rows count toward each pilot's hard cell like kind rows. A pack id from the park and alpha tables with the same id would share a row in a merge, so merge one table's packs at a time.
 - Runtime: a pack duel costs the same boot and rest wait as a kind duel (about 30 to 40 s of wall time, 12 s of it the rest start under `--procs=2`). `--packs=all` on the park table is about 15 packs; 15 x 6 pilots x 4 seeds is 360 duels, roughly 45 minutes at six processes. The small pack smoke (2 packs x 2 pilots x 1 seed, 4 duels) takes about a minute.
-- Caveats: the Director's Ballast heavy rim placement (`rim_spot`) and the park safe-spot and pack-gap filters are not reproduced; the line sits flat at the duel range. Pack duels are one pack alone on a calm map, not a live arrival with the director's pressure.
+- Caveats: members spawn without the Director's arrival effects: no elite affixes (the HARD-tier plated_brute affix, the Dig's PLATED on elites), so `dig_elite` and `elite` are measured unarmoured, and every member gets stage 1's HP, threat and world, not its home stage's. A pack whose members all fail to spawn records `no_result` and is left out of the table. The Director's Ballast heavy rim placement (`rim_spot`) and the park safe-spot and pack-gap filters are not reproduced; the line sits flat at the duel range. Pack duels are one pack alone on a calm map, not a live arrival with the director's pressure.
 
 ## Perched duel
 
