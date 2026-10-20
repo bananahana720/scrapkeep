@@ -12,6 +12,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -152,6 +153,40 @@ const SHEET_LAUNCH_LINED := 0.97
 # At this posture or more the hand holds fire on the dam Warden: a weapon, cast or ultimate hit
 # that fills the bar opens a stagger, not the break.
 const SHEET_HOLD_FIRE := 90.0
+# The swarm hoist's ram-at-dwell hand (_hoist_hand, skill_band.gd "hoist_ram"): see the comment there.
+# HOIST_REACH is how far from the hive it takes the stick; HOIST_LOW the hive's height over its collar that
+# still counts as low; HOIST_RUNUP the stage's run in beyond the rim and HOIST_MIN_RUN the least run in it
+# will launch from; HOIST_SHELF_BELOW how far under the rim's level the ball is in the bowl; HOIST_STAGE_LEVEL
+# and _STEP how the stage is pulled in until its ground is level with the rim's; HOIST_RIM_* the rim search
+# (from, to, and how far under the collar its ground may be); HOIST_JUMP_PAD the stand-off of the arc's end
+# and HOIST_AIM_ABOVE the height over the hive's centre it aims the air jump at; HOIST_MARGIN the share over
+# the plating the speed aims for; HOIST_GIVE_UP the seconds a cycle's run is chased before the old hand
+# has the stick back.
+const HOIST_LOW := 1.0
+const HOIST_REACH := 140.0
+const HOIST_RUNUP := 50.0
+const HOIST_MIN_RUN := 24.0
+const HOIST_SHELF_BELOW := 4.0
+const HOIST_STAGE_LEVEL := 2.0
+const HOIST_STAGE_STEP := 8.0
+const HOIST_RIM_FROM := 12.0
+const HOIST_RIM_TO := 80.0
+const HOIST_RIM_BELOW := 3.5
+const HOIST_JUMP_PAD := 4.0
+const HOIST_AIM_ABOVE := 0.5
+const HOIST_MARGIN := 1.08
+const HOIST_GAIN_MARGIN := 1.05
+const HOIST_SPEED_CAP := 90.0
+const HOIST_TO_LOW_REST := 6.0
+const HOIST_TO_LOW_PULSE := 4.0
+const HOIST_TO_LOW_DOWN := 2.0
+const HOIST_LOW_HOLD := 3.0
+const HOIST_EARLY := 0.0
+const HOIST_PACE := 1.2
+const HOIST_ATTAIN := 1.6
+const HOIST_REACH_MARGIN := 1.1
+const HOIST_GIVE_UP := 8.5
+const HOIST_WAIT_GIVE_UP := 30.0
 # A Warden charge beyond RUNUP that gains less than CHARGE_PROGRESS on its best distance for
 # CHARGE_WINDOW seconds is pinned (a cache pocket's back wall, a pit): the ball moves fast enough
 # to dodge the stuck detour without getting anywhere. It recovers: back RECOVER_BACK off the
@@ -456,6 +491,26 @@ var _hull_seen := -1.0
 const FIRST_45_S := 45.0
 # Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
 var _sheet_live_s := -1.0
+# The hoist hand (_hoist_hand). hoist_hand_enabled is its control switch, as chain_hand_enabled is the explorer's.
+# Then: seconds the hive has been in the coming-down-or-sitting-low cue, the cycle it is in, the cycle
+# already rammed, the leg ("stage" out on the shelf, "go" at the hive), the shelf azimuth and the jump.
+var hoist_hand_enabled := true
+var _hoist_cue_s := -1.0
+var _hoist_cycle := 0
+var _hoist_done := -1
+var _hoist_leg := ""
+var _hoist_clock := 0.0
+var _hoist_az := INF
+var _hoist_jumped := false
+var _hoist_pending := {}
+var _hoist_to_low := 0.0
+var _hoist_rose := false
+var _hoist_pace := 0.0
+var _hoist_wait_s := 0.0
+var _hoist_released := false
+var _hoist_go_d := 0.0
+var _hoist_go_t := 0.0
+var _hoist_aim := 0.0
 var _punch_seen := 0.0
 var _warden_hp_at := -1.0
 var _warden_kinds := {}
@@ -549,6 +604,7 @@ func start(resume := false) -> void:
 	if policy == "completionist":
 		events.line_state_changed.connect(_on_explorer_line)
 	events.stage_entered.connect(_on_stage_entered)
+	events.enemy_struck.connect(_on_hoist_struck)
 	events.stage_cleared.connect(func(_s: int): _close_note())
 	events.reward_offered.connect(_on_offers)
 	events.reward_chosen.connect(func(_id: String): _offers = [])
@@ -1728,11 +1784,13 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_haul_pressed_above = false
 		_drop_jumped = false
 		_anchor_seen_hung = false
+		_hoist_reset()
 	_anchor_vy = (at.y - _anchor_last_y) / maxf(delta, 0.0001)
 	_anchor_last_y = at.y
 	var staggered: bool = target.staggered()
 	_anchor_seen_hung = _anchor_seen_hung or _anchor_hung(target)
 	_watch_haul(target, staggered)
+	_hoist_settle(target, staggered)
 	var lined: bool = kit.hooked and kit.on_body and kit.anchor_body == target
 	if lined and not _anchor_lined:
 		_count("latch_bites")
@@ -1828,6 +1886,8 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 				_boost_clock = BOOST_GAP
 				_shift_left = SHIFT_HOLD
 		return
+	if _hoist_hand(target, staggered, ball, delta):
+		return
 	if lined:
 		_anchor_ride(target, staggered, ball, delta)
 		return
@@ -1851,6 +1911,296 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		away = Vector3.FORWARD
 	var standoff := clampf((at.y - ball.y) * LATCH_STANDOFF, LINE_FINISH_STANDOFF if finish else 0.0, LATCH_STANDOFF_MAX)
 	_act(at + away.normalized() * standoff, target, delta, target)
+
+
+# --- the swarm hoist's ram at the dwell (unit C3-hoist) ------------------------------------------
+# The stage-3 Warden is the hive on the hoist (warden_swarm.gd), hung over a pit: at its collar the hive
+# sits level with the pit's shelf but 36 m in from its rim and 13 m over its floor, so only a ball flying
+# in off the rim reaches it, and a rolling ball cannot climb out of the pit again (the line is its way out).
+# A latch-ride's contacts are slow; the answer is a fast contact at the dwell. How fast comes from the
+# Warden's own posture rule (_hoist_speed_needed: one ram that fills the bar, by judge_hit), and the arc's
+# own needs (the window the dwell leaves, the jump's reach across the pit) can ask for more. The hand waits
+# out on the shelf (the "stage": HOIST_RUNUP past the rim, level with it), and when it sees the hive come to
+# rest at the top (or the pulse telegraph, or the hive coming down) it times a run in on the hive so that it
+# arrives as the hive settles low, boosting to the speed those needs set, jumps at the rim and air-jumps as
+# late as still reaches the hive's height, so the arc meets its side. It plays by sight: the hive's height
+# and motion and the pulse telegraph, never the hoist's clock; the cue must be seen for the band's reaction
+# and read this cycle (a Learner rolls once per cycle). A contact is judged the tick after it
+# (_hoist_settle): hoist_rams if it staggered the Warden, hoist_glance if the bar did not fill. Off the
+# swarm hoist, in a stagger, out of reach, or with the ball in the pit or inside the rim, it returns false
+# and the existing hand has the stick (a rolling ball cannot climb out of the pit; the line is its way out).
+func _hoist_warden(target: Node3D) -> bool:
+	return target.get("family") == "swarm" and target.get("mounting") == "headframe" \
+			and target.get("mount_driver") != null
+
+
+func _hoist_reset() -> void:
+	_hoist_cue_s = -1.0
+	_hoist_cycle = 0
+	_hoist_done = -1
+	_hoist_leg = ""
+	_hoist_clock = 0.0
+	_hoist_az = INF
+	_hoist_pending = {}
+	_hoist_pace = 0.0
+	_hoist_rose = false
+	_hoist_wait_s = 0.0
+	_hoist_released = false
+
+
+# The ball speed the run in aims for: the smallest ram speed whose single contact fills the posture bar
+# (the Warden's own judge_hit, a hypothetical hit that changes nothing, with the pilot's heft in punch_of and
+# the row's curve and contact gain in the posture object), HOIST_GAIN_MARGIN over the bar's remaining fill,
+# never under the cruise floor. A Warden without a judge falls back on punch at the plating.
+func _hoist_speed_needed(target: Node3D) -> float:
+	var spawner = game.ctx.spawner
+	var cruise: float = game.player.tuning.f("cruise")
+	if not target.has_method("judge_hit") or not target.has_method("posture"):
+		var low: float = spawner.punch_of("ram", 0.0)
+		var slope: float = (float(spawner.punch_of("ram", 10.0)) - low) / 10.0
+		return INF if slope <= 0.0 else maxf((_plating(target) * HOIST_MARGIN - low) / slope, cruise)
+	var want: float = (BossPosture.FULL - float(target.posture())) * HOIST_GAIN_MARGIN
+	var lo := cruise
+	var hi := HOIST_SPEED_CAP
+	if _hoist_gain(target, lo) >= want:
+		return lo
+	if _hoist_gain(target, hi) < want:
+		return hi
+	for i in 24:
+		var mid := (lo + hi) * 0.5
+		if _hoist_gain(target, mid) >= want:
+			hi = mid
+		else:
+			lo = mid
+	return hi
+
+
+# The ball speed whose jump and air jump carry it across the pit from the rim to the hive: the flight is
+# the jump's rise and fall twice over (the air jump taken as low as it still climbs back to the hive's level),
+# 4 jump speeds over gravity, from the player's own tuning, with a margin for the descent into the hive.
+func _hoist_reach_speed(rim: float) -> float:
+	var tuning = game.player.tuning
+	var airtime: float = 4.0 * tuning.f("jump_speed") / maxf(tuning.f("gravity"), 0.1)
+	return maxf((rim - HOIST_JUMP_PAD * 0.5) / airtime * HOIST_REACH_MARGIN, tuning.f("cruise"))
+
+
+# The speed that arrives while the hive still hangs low: the run left over the time the window has left. The
+# window is what a player learns of the hoist by watching it (from the pulse cue at the high dwell, or from
+# the hive coming down), not the hoist's clock.
+func _hoist_arc_speed(distance: float) -> float:
+	return _hoist_arc_speed_at(distance, game.player.tuning.f("cruise"))
+
+
+func _hoist_arc_speed_at(distance: float, cruise: float) -> float:
+	var left: float = _hoist_to_low + HOIST_LOW_HOLD - maxf(_hoist_cue_s, 0.0)
+	return maxf((distance - HOIST_JUMP_PAD) / maxf(left, 0.5), cruise)
+
+
+# The run's pace for the timing and the window: the last go's own average, never under the cruise pace the
+# first go assumes (a braked start averaged over a long flight would otherwise refuse every later window).
+func _hoist_run_pace(cruise: float) -> float:
+	return maxf(_hoist_pace, cruise * HOIST_PACE)
+
+
+# A go that ended without a staggering contact teaches nothing about the next run: the learned pace is dropped.
+func _hoist_forget_pace() -> void:
+	_hoist_pace = 0.0
+
+
+# The seconds the hand has held the stage without a go this cycle. Past HOIST_WAIT_GIVE_UP it releases the stick
+# to the existing hand (the line arm) until the hive's next cycle starts (_hoist_new_cycle); a go or a stagger
+# restarts the count.
+func _hoist_wait(delta: float) -> bool:
+	_hoist_wait_s += delta
+	if _hoist_wait_s > HOIST_WAIT_GIVE_UP:
+		_hoist_released = true
+	return _hoist_released
+
+
+# A new hive cycle takes the stick back from a release and starts its own wait: the limit is per cycle, so
+# refused or unread cycles do not add up to cede a later good one.
+func _hoist_new_cycle() -> void:
+	_hoist_released = false
+	_hoist_wait_s = 0.0
+
+
+# The posture one ram at this speed would add, by the Warden's own rule.
+func _hoist_gain(target: Node3D, speed: float) -> float:
+	var punch: float = float(game.ctx.spawner.punch_of("ram", speed))
+	return float(target.judge_hit("ram", punch, false, 0, "").get("gain", 0.0))
+
+
+# The radius at which the ground first rises to within HOIST_RIM_BELOW of the hive's collar along
+# an azimuth: the rim the ball flies in from.
+func _hoist_rim(home: Vector3, az: float) -> float:
+	var r := HOIST_RIM_FROM
+	while r < HOIST_RIM_TO:
+		if _ground_point(home.x + cos(az) * r, home.z + sin(az) * r).y >= home.y - HOIST_RIM_BELOW:
+			return r
+		r += 2.0
+	return HOIST_RIM_TO
+
+
+func _hoist_hand(target: Node3D, staggered: bool, ball: Vector3, delta: float) -> bool:
+	if not hoist_hand_enabled or not _kit("hoist_ram") or not _hoist_warden(target):
+		return false
+	var at: Vector3 = target.global_position
+	var home: Vector3 = target.home
+	var distance := _flat(ball, at)
+	if staggered or distance > HOIST_REACH:
+		_hoist_cue_s = -1.0
+		if _hoist_leg == "go" and not staggered and _hoist_done != _hoist_cycle:
+			_hoist_forget_pace()
+		_hoist_leg = ""
+		_hoist_wait_s = 0.0
+		return false
+	# The hive's rest mark is the collar (its home): low is at the collar, still is not moving.
+	var over_collar: float = at.y - home.y
+	var coming_down: bool = _anchor_vy < -ANCHOR_MOVING
+	var low_still: bool = over_collar <= HOIST_LOW and absf(_anchor_vy) <= ANCHOR_MOVING
+	# The pulse telegraph at the high dwell is the cue's lead: the hive comes down as it ends.
+	var pulse_high: bool = over_collar > HOIST_LOW and absf(_anchor_vy) <= ANCHOR_MOVING and target.state_name() == "charging"
+	if _anchor_vy > ANCHOR_MOVING:
+		_hoist_rose = true
+	# The hive seen to rise and come to rest at the top starts the cue a full dwell before it comes down.
+	var rest_high: bool = _hoist_rose and over_collar > HOIST_LOW and absf(_anchor_vy) <= ANCHOR_MOVING
+	if not (coming_down or low_still or pulse_high or rest_high):
+		_hoist_cue_s = -1.0
+	elif _hoist_cue_s < 0.0:
+		_hoist_cue_s = 0.0
+		_hoist_to_low = HOIST_TO_LOW_REST if rest_high else (HOIST_TO_LOW_PULSE if pulse_high else HOIST_TO_LOW_DOWN)
+		_hoist_cycle += 1
+		_hoist_clock = 0.0
+		_hoist_new_cycle()
+	else:
+		_hoist_cue_s += delta
+	if _hoist_released:
+		_hoist_leg = ""
+		return false
+	if _hoist_az == INF and distance > HOIST_RIM_FROM:
+		_hoist_az = atan2(ball.z - home.z, ball.x - home.x)
+	var az: float = _hoist_az if _hoist_az != INF else 0.0
+	var rim := _hoist_rim(home, az)
+	# The stage is the furthest point of the rim's own level within HOIST_RUNUP, so the run in has room for speed.
+	var rim_y := _ground_point(home.x + cos(az) * rim, home.z + sin(az) * rim).y
+	var stage_r := rim + HOIST_RUNUP
+	while stage_r > rim + RUNUP_MIN and absf(_ground_point(home.x + cos(az) * stage_r, home.z + sin(az) * stage_r).y - rim_y) > HOIST_STAGE_LEVEL:
+		stage_r -= HOIST_STAGE_STEP
+	var stage := _ground_point(home.x + cos(az) * stage_r, home.z + sin(az) * stage_r)
+	# Off the shelf (in the bowl, or on the line) the existing hand has the ball: its line is the way out
+	# of the pit, which a rolling ball cannot climb.
+	var in_pit: bool = ball.y < rim_y - HOIST_SHELF_BELOW and game.player.state.grounded
+	if (_hoist_leg != "go" and (ball.y < rim_y - HOIST_SHELF_BELOW or distance < rim - 4.0)) or in_pit:
+		if _hoist_leg == "go" and _hoist_done != _hoist_cycle:
+			_hoist_forget_pace()
+		_hoist_leg = ""
+		return false
+	# The run leaves late enough to come to the hive as it settles low, early enough to arrive with the dwell.
+	# (the pace is the larger of the last staggering go's own average and a little over the cruise speed)
+	var pace: float = _hoist_run_pace(game.player.tuning.f("cruise"))
+	var run_time: float = maxf(distance - HOIST_JUMP_PAD, 0.0) / pace
+	var timed: bool = _hoist_leg == "go" or _hoist_cue_s >= _hoist_to_low - HOIST_EARLY - run_time
+	var go: bool = timed and _hoist_cue_s >= _reaction() and _hoist_done != _hoist_cycle \
+			and (band == null or band.reads(target.get_instance_id() * 1000 + _hoist_cycle))
+	if go:
+		_hoist_clock += delta
+		if _hoist_clock > HOIST_GIVE_UP:
+			_hoist_done = _hoist_cycle
+			_hoist_forget_pace()
+			go = false
+	# Short of a run in the ball cannot reach the rim at the speed the arc needs: run out to the stage first.
+	var outside: bool = distance >= rim + HOIST_MIN_RUN
+	# A run the window cannot hold (the speed that arrives in time is beyond the ball's reach) waits for the next cycle.
+	if go and _hoist_leg != "go" and (_hoist_arc_speed(distance) > pace or _hoist_reach_speed(rim) > game.player.tuning.f("cruise") * HOIST_ATTAIN):
+		go = false
+	if go and outside and _hoist_leg != "go":
+		_hoist_leg = "go"
+		_hoist_jumped = false
+		_hoist_go_d = distance
+		_hoist_go_t = 0.0
+		_hoist_wait_s = 0.0
+	elif not go:
+		if _hoist_leg == "go" and _hoist_done != _hoist_cycle:
+			_hoist_forget_pace()
+		_hoist_leg = "stage"
+	if game.player.kit.hooked:
+		source.press["harpoon_released"] = true
+		_harpoon_held = false
+		_harpoon_commit = false
+	_anchor_below = 0.0
+	if _hoist_leg == "go":
+		_goal = "hoist ram"
+		_hoist_go_t += delta
+		if _hoist_go_t >= 2.0 and distance < rim + 8.0:
+			_hoist_pace = maxf((_hoist_go_d - distance) / _hoist_go_t, 0.0)
+			_note_set("hoist_pace", snappedf(_hoist_pace, 0.1))
+		var speed: float = game.player.planar_velocity().length()
+		_act(at, target, delta)
+		# The run in is boosted until the speed clears the punch the plating asks for.
+		var need := maxf(maxf(_hoist_speed_needed(target), _hoist_arc_speed(distance)), _hoist_reach_speed(rim))
+		_hoist_aim = need
+		if game.player.state.grounded and speed < need and distance > rim + HOIST_JUMP_PAD and _boost_clock <= 0.0 \
+				and game.player.verb_ready("boost"):
+			source.press["shift_pressed"] = true
+			source.hold["shift_held"] = true
+			_boost_clock = BOOST_GAP
+			_shift_left = SHIFT_HOLD
+		# The ball leaves the rim in a jump, and the air jump at its top holds it up over the bowl until the hive.
+		var state = game.player.state
+		if state.grounded:
+			if not _hoist_jumped and distance <= rim + HOIST_JUMP_PAD * 0.5 and game.player.verb_ready("jump"):
+				source.press["jump_pressed"] = true
+				_hoist_jumped = true
+		elif _hoist_jumped and state.velocity.y < 1.0 and state.air_actions > 0 and distance > HOIST_JUMP_PAD:
+			# The air jump comes as late as still reaches the hive's height, so the ball meets the body's
+			# side (a ram) and not its top (a stomp): the arc it would fly if it jumped now, ending there.
+			var tuning = game.player.tuning
+			var flight: float = (distance - HOIST_JUMP_PAD) / maxf(speed, 1.0)
+			var arrive: float = ball.y + tuning.f("jump_speed") * flight - tuning.f("gravity") * 0.5 * flight * flight
+			if arrive <= at.y + HOIST_AIM_ABOVE:
+				source.press["jump_pressed"] = true
+		return true
+	if _hoist_wait(delta):
+		_hoist_leg = ""
+		return false
+	_goal = "hoist stage"
+	_act(stage, target, delta)
+	if _flat(ball, stage) < 6.0:
+		source.hold["brake_held"] = true
+	return true
+
+
+# The first contact on the hoist's body while the hand is on its go leg, once a cycle: a ram on the side,
+# or a stomp where the arc comes down on the top. It is held until the next tick (_hoist_settle), when the
+# posture state shows what it did: the posture rule (boss_posture.gd judge) decides, not the plating alone.
+func _on_hoist_struck(enemy: Node3D, kind: String, force: float) -> void:
+	if _hoist_leg != "go" or not kind in ["ram", "stomp"] or enemy != _anchor_target or _hoist_done == _hoist_cycle:
+		return
+	_hoist_pending = {"punch": float(game.ctx.spawner.punch_of(kind, force)), "plating": _plating(enemy), "kind": kind,
+			"posture": float(enemy.posture()) if enemy.has_method("posture") else 0.0}
+	_hoist_done = _hoist_cycle
+
+
+# The tick after a contact: a "ram" is a contact that staggered the Warden (the bar filled), a "glance" one
+# that did not. The last-contact fields keep the punch and plating it met, the posture read in the enemy_struck
+# handler (a same-emit guard-rack posture may already be applied) and the speed aimed for.
+func _hoist_settle(target: Node3D, staggered: bool) -> void:
+	if _hoist_pending.is_empty():
+		return
+	var hit: Dictionary = _hoist_pending
+	_hoist_pending = {}
+	_count("hoist_rams" if staggered else "hoist_glance")
+	if not staggered:
+		_hoist_forget_pace()
+	if hit["kind"] == "stomp":
+		_count("hoist_stomps")
+	_note_set("hoist_last_punch", snappedf(hit["punch"], 0.1))
+	_note_set("hoist_last_plating", snappedf(hit["plating"], 0.1))
+	_note_set("hoist_last_kind", hit["kind"])
+	_note_set("hoist_last_posture", snappedf(hit["posture"], 0.1))
+	_note_set("hoist_last_staggered", staggered)
+	_note_set("hoist_last_aim", snappedf(_hoist_aim, 0.1))
+	_note_set("hoist_last_s", snappedf(game.run.stage_time, 0.01))
 
 
 # Whether the posture bar is high enough that the stagger should open with the ball on the line.
@@ -2978,6 +3328,9 @@ func _threats() -> Array:
 			if not live.has(id):
 				_seen.erase(id)
 	if band != null:
+		# The hoist cycle's answer is not a hazard id: keep it live so a Learner rolls each cycle once.
+		if is_instance_valid(_anchor_target) and _hoist_cycle > 0:
+			live[_anchor_target.get_instance_id() * 1000 + _hoist_cycle] = true
 		band.forget(live)
 	return out
 

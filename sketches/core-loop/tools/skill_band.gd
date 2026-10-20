@@ -21,6 +21,9 @@ extends RefCounted
 #   - The Learner model: attempt is a command-line index (--attempt=N). Reaction and read chance move
 #     linearly with it, the kit is fixed, every attempt plays the same game seed, and nothing is
 #     learned inside a run.
+#   - "hoist_ram" is the stage-3 swarm hoist's ram at the dwell (bot_driver.gd _hoist_hand): a ram fast
+#     enough to clear the Warden's plating while the hive sits at the collar. Learner and Expert have it
+#     (the Learner rolls its read once per hoist cycle); the Novice stays on the basic hands.
 #   - A Novice never runs the latch arm, so its non-wins at Wardens are mostly stalls. It still runs
 #     the dam's spillway sheet hand, which is a ram, but below the full kit the hand plays by sight:
 #     it launches only at an open sheet it has seen for its reaction time and read this cycle, keeps
@@ -46,7 +49,7 @@ const BANDS := {
 # What each kit level lets the driver's hands do. The Novice only fires its gun, rams,
 # jumps and boosts, which are not verbs here because every band has them. "active" and
 # "chain" are in neither list: only the full kit has them.
-const BASE_VERBS := ["special", "line_cast", "plant", "harpoon", "weak_points", "ultimate"]
+const BASE_VERBS := ["special", "line_cast", "plant", "harpoon", "weak_points", "ultimate", "hoist_ram"]
 
 var name := "expert"
 var attempt := 1

@@ -44,14 +44,14 @@ func _unit(t) -> void:
 		"state %d -> %d" % [before, expert._rng.state])
 	var novice = SkillBand.make("novice", 1, 7)
 	var gave := []
-	for verb in ["special", "line_cast", "plant", "harpoon", "weak_points", "ultimate", "active", "chain"]:
+	for verb in ["special", "line_cast", "plant", "harpoon", "weak_points", "ultimate", "hoist_ram", "active", "chain"]:
 		if novice.allows(verb):
 			gave.append(verb)
 	t.check("novice allows none of the kit verbs", gave.is_empty(), "allowed %s" % [gave])
 	var learner = SkillBand.make("learner", 1, 7)
-	t.check("learner has the base kit, untimed ultimate, no actives or chain",
+	t.check("learner has the base kit (with the hoist ram), untimed ultimate, no actives or chain",
 		learner.allows("special") and learner.allows("line_cast") and learner.allows("plant") and learner.allows("harpoon")
-		and learner.allows("weak_points") and learner.allows("ultimate") and not learner.timed_ultimate()
+		and learner.allows("weak_points") and learner.allows("ultimate") and learner.allows("hoist_ram") and not learner.timed_ultimate()
 		and not learner.allows("active") and not learner.allows("chain"), "kit %s" % learner.kit)
 	t.check("expert allows everything and times the ultimate", expert.allows("active") and expert.allows("chain") and expert.timed_ultimate())
 	var read := 0
