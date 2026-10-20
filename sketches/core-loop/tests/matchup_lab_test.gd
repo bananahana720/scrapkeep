@@ -390,11 +390,10 @@ func _perched_duel() -> void:
 	_check("park: the row records its perch fields", park.has("ball_to_perch_m") and park.has("drops") and park.has("landed_hits")
 		and park.has("escalation") and park.has("relocated") and park.has("dispatcher_down_s"))
 	_check("contrast row: the mast row builds its own mast, 8 m up", mast["mast_built"] == true and is_equal_approx(float(mast["perch_rise_m"]), 8.0))
-	# park_dam has no level, clear standoff near its tops (measured), so standoff_ok is reported, not required;
-	# when a spot is ok the ball must have stayed within 3 m of it.
-	_check("park: a relocated row records standoff_ok and standoff_m", park["relocated"] == false or (park.has("standoff_ok") and float(park["standoff_m"]) >= 15.0))
-	_check("park: an ok standoff holds the ball near it at the spawn", park["relocated"] == false or park["standoff_ok"] == false
-		or absf(float(park["ball_to_perch_m"]) - float(park["standoff_m"])) <= 3.0)
+	# park_dam has no level, clear standoff near its tops, so the lab holds the ball there until the spawn.
+	for row: Dictionary in [park, mast]:
+		_check("%s: a relocated ball was held and stood within 3 m of its standoff at the spawn" % row["kind"], row["relocated"] == true and row["held"] == true
+			and absf(float(row["ball_to_perch_m"]) - float(row["standoff_m"])) <= 3.0)
 	_check("mast: the Dispatcher stands at least PERCH_MIN over the ball", float(mast["perch_over_ball_m"]) >= Lab.PerchPoints.PERCH_MIN)
 	print("perched park perch_over_ball_m=%s standoff_m=%s standoff_ok=%s b2p=%s" % [park["perch_over_ball_m"], park["standoff_m"], park["standoff_ok"], park["ball_to_perch_m"]])
 	_check("both rows chose the same top", park["perch"] == mast["perch"])

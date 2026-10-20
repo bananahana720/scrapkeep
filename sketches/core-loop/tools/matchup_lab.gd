@@ -201,6 +201,7 @@ var _perch_source := "unknown"
 var _perch_base_rise := -1.0
 var _standoff_m := -1.0
 var _standoff_ok := false
+var _held := false
 var _perch_over_ball := 0.0
 var _ball_to_perch := -1.0
 var _perch_rise := -1.0
@@ -868,6 +869,11 @@ func _physics_process(delta: float) -> bool:
 		_driver.start()
 		return false
 	if not _spawned:
+		if _relocated:
+			# Perched duel: hold the relocated ball at its standoff (no level spot exists near the tops), zeroing
+			# its velocity every frame with the player's own set_velocity_now until the spawn.
+			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
+			_held = true
 		var down: bool = _game.flow.in_stage() and _game.player.state.grounded
 		if down:
 			_landed_s += delta
@@ -1141,6 +1147,7 @@ func _record() -> void:
 		row["relocated"] = _relocated
 		row["standoff_m"] = snappedf(_standoff_m, 0.1)
 		row["standoff_ok"] = _standoff_ok
+		row["held"] = _held
 		row["perch_over_ball_m"] = snappedf(_perch_over_ball, 0.01)
 	if _pack_mode:
 		row["pack"] = _pack_id
