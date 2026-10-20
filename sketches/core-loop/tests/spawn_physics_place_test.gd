@@ -13,6 +13,8 @@ const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 
 const BASE_KINDS := ["chaser", "lobber", "miniboss", "vault", "warden"]
+# Kinds fleet makes from a roster row's script rather than its SCRIPTS table.
+const ROSTER_KINDS := ["jolt_layer", "linker"]
 const FAR := Vector3(37.0, 0.0, -41.0)
 
 var _t := T.new("spawn_physics_place_test")
@@ -50,8 +52,8 @@ func _physics_process(_delta: float) -> bool:
 func _check_kinds() -> void:
 	var ctx = _game.ctx
 	var kinds: Array = BASE_KINDS.duplicate()
-	for kind in ctx.spawner.fleet.SCRIPTS:
-		if not kind in kinds:
+	for kind in ctx.spawner.fleet.SCRIPTS.keys() + ROSTER_KINDS:
+		if not kind in kinds and ctx.spawner.fleet.makes(kind):
 			kinds.append(kind)
 	var bodies := 0
 	var misplaced: Array = []

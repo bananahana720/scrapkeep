@@ -92,6 +92,11 @@ func _initialize() -> void:
 	_out = _settings.get("out", "user://item-fuzz")
 	_seconds = float(_settings.get("seconds", "90"))
 	_seeds = _seed_list(String(_settings.get("seeds", "1-200")))
+	# --path moves the working directory to the project, so a relative --out is read from
+	# the shell's directory, as traversal_line reads it; parent, children and outliers share it.
+	_out = ProjectSettings.globalize_path(_out)
+	if not _out.is_absolute_path():
+		_out = OS.get_environment("PWD").path_join(_out)
 	if _settings.has("child") and _seeds.size() != 1:
 		printerr("item_fuzz: a child must run exactly one seed")
 		quit(2)
@@ -112,9 +117,7 @@ func _initialize() -> void:
 # after 2750 drifted from tick 568 on (19 Oct speedrunner persona). GNU timeout owns the
 # child's process group, so a deadline kills descendants too.
 func _run_children() -> void:
-	var out := ProjectSettings.globalize_path(_out)
-	if not out.is_absolute_path():
-		out = OS.get_environment("PWD").path_join(out)
+	var out := _out
 	var inconclusive := 0
 	for i in _seeds.size():
 		var child_out := out.path_join("children/%d-seed-%d" % [i + 1, _seeds[i]])
