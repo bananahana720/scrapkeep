@@ -210,8 +210,7 @@ func _check_combat() -> void:
 	miniboss._begin_attack(ball - miniboss.global_position)
 	tags["miniboss charge"] = miniboss.telegraph()
 	var warden: Node3D = ctx.spawner.spawn_enemy("warden", ball + Vector3(0.0, 0.0, 12.0))
-	# The stage's own cycle: a tuned pulse_cycle_by_stage default (stage 3 runs x1.5) moves the pulse start.
-	warden._pulse_clock = Warden.pulse_cycle(warden.stage) - Warden.pulse_telegraph(warden.stage)
+	warden._pulse_clock = Warden.PULSE_CYCLE - Warden.PULSE_TELEGRAPH
 	warden._step_pulse(DT, true)
 	tags["warden pulse"] = warden.telegraph()
 	tags["warden core"] = warden.get("_core_ring")
