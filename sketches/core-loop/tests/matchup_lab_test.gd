@@ -1,4 +1,4 @@
-# smoke: bots timeout=1200s (real duels in child processes: a 12-duel table, an idle control, a pack duel and a 30 s capped pack duel that must outlast the beacon charge; 264 s alone on the base, 701 s and 894 s beside a lab table, killed at the 360 s solo ceiling in sketch:fast on 2026-10-20, so it joins the bot tier like alpha_posture_bands_test)
+# smoke: bots timeout=1200s (real duels in child processes: a 12-duel table, an idle control, a pack duel and a 30 s capped pack duel that must outlast the beacon charge, two perched duels (park and mast); 264 s alone on the base, 701 s and 894 s beside a lab table, killed at the 360 s solo ceiling in sketch:fast on 2026-10-20, so it joins the bot tier like alpha_posture_bands_test)
 extends SceneTree
 
 const Lab := preload("res://tools/matchup_lab.gd")
