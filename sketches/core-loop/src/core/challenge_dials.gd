@@ -48,11 +48,7 @@ const DEFAULTS := {
 	"mind.tell_mult": 1.0, "mind.punish_mult": 1.0, "mind.combo": 0.0,
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
-	"warden.pulse_damage_by_stage": ONES6,
-	# Warden 3 (the pit hive) is tuned: pulse cycle x1.5. Band table: sweeps tpc15-1 and tpc15-2 (warden.pulse_cycle_mult=1.5,
-	# 5 seeds each), scratch/challenge-tune-tpc15-1 2f32a498 and -2 a5b41871: Novice 0%, Learner a5 90%, Expert 100%,
-	# Top 100%. Learner a1 is reported, not graded (ruling 15 (b′), #149 6274605849). The head's own table is in the w3 PR.
-	"warden.pulse_cycle_by_stage": [1.0, 1.0, 1.5, 1.0, 1.0, 1.0], "warden.slag_damage_by_stage": ONES6,
+	"warden.pulse_damage_by_stage": ONES6, "warden.pulse_cycle_by_stage": ONES6, "warden.slag_damage_by_stage": ONES6,
 	# The Warden's counter-pulse (warden.gd): a second core ring committed inside a stagger. Damage is an
 	# absolute value per stage (0 = off, the default: nothing is built or rolled); the telegraph is floored at
 	# TELL_FLOOR; the delay is seconds into the stagger before it starts charging.

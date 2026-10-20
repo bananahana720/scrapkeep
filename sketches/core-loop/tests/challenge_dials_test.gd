@@ -60,12 +60,8 @@ func _rules() -> void:
 	_t.near("chase damage is the base", ChallengeDials.damage("brindle", 10.0, 4), 10.0, 0.0)
 	_t.eq("a --tune/override REPLACES the tuned list: 1/1/1/1 is the raw identity", _raw_identity(), 3.4)
 	_t.eq("and the tuned default returns after reset", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.5, 1.0, 1.0])
-	# Warden 3 (the pit hive) ships tuned: pulse cycle x1.5 at stage 3 only.
-	_t.eq("warden tuned pulse_cycle_by_stage", ChallengeDials.value("warden.pulse_cycle_by_stage"), [1.0, 1.0, 1.5, 1.0, 1.0, 1.0])
-	_t.near("tuned stage 3 pulse cycle", Warden.pulse_cycle(3), Warden.PULSE_CYCLE * 1.5, 1e-6)
-	_t.near("other stages keep the base pulse cycle", Warden.pulse_cycle(2), Warden.PULSE_CYCLE, 0.0)
 	for key in ChallengeDials.DEFAULTS:
-		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "warden.pulse_cycle_by_stage"]:
+		if key in ["brindle.period_by_phase", "brindle.damage_by_phase"]:
 			continue
 		var d: Variant = ChallengeDials.DEFAULTS[key]
 		var ident: bool = true
