@@ -51,10 +51,12 @@ func _rules() -> void:
 	_t.eq("a six-entry list parses", parsed["mobs.damage_by_stage"], [2.0, 1.0, 1.5, 1.0, 1.0, 0.5])
 	_t.eq("a short list parses as given", parsed["warden.pulse_cycle_by_stage"], [3.0])
 	for key in KEYS:
-		_t.eq("%s defaults to six 1.0" % key, ChallengeDials.value(key), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+		# Warden 3's pulse cycle ships tuned (x1.5 at stage 3); every other key is identity.
+		var tuned: bool = key == "warden.pulse_cycle_by_stage"
+		_t.eq("%s defaults to six 1.0" % key, ChallengeDials.value(key), [1.0, 1.0, 1.5, 1.0, 1.0, 1.0] if tuned else [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 		var all_one := true
 		for stage in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 99]:
-			all_one = all_one and ChallengeDials.by_stage(key, stage) == 1.0
+			all_one = all_one and ChallengeDials.by_stage(key, stage) == (1.5 if tuned and stage == 3 else 1.0)
 		_t.check("%s reads 1.0 for every stage and out of range" % key, all_one)
 	_t.check("stage_mult is exactly 1.0 at defaults", ChallengeDials.stage_mult("mobs.damage", 3) == 1.0 and ChallengeDials.stage_mult("warden.slag_damage", 0) == 1.0)
 	ChallengeDials.set_overrides({"mobs.damage_by_stage": [2, 1, 1, 1, 1, 1], "mobs.damage_mult": 1.5})
