@@ -59,6 +59,19 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #                        process disabled, its root hidden, event listeners cut.
 # Synthetic attacks recycle and never resolve damage. HP is topped up every tick.
 #
+# level-sites   (LEVEL-SITES-BENCH, scrapkeep#149 ruling 3, wave 17) what a level Breach landing costs on its landing tick
+# against how often it fits, over a seeded sample of level park ground, on #205's live merge_level path:
+#   godot --headless --path sketches/core-loop --script res://tools/perf_bench.gd -- --scene=level-sites --out=/abs/sites.json [--seed=7301] [--sites=80] [--landing-scale=N]
+# The park stand as p1, then --sites random level landing sites in a ±50 m square around the drop-in, headings drawn from the same seeded RNG and
+# handed to landing() through a stub ride (tries are drawn from --seed, so every run and scale sees the same sites). Each site times RivetKit.landing() itself (carve, first
+# share, the hit when it fits, the bookkeeping), then a second pass of its parts for the split: carve_ms, share_ms, breach_ms.
+# This measures landing() ms, not the landing frame: the scar mesh build in VolumeIndicator._process and the report_landing
+# listeners are outside the timed span. The split pass runs hot (the same site a second time), so its parts need not sum to
+# landing_ms. A queued carve is dropped after each site. --landing-scale=N sets the level budget to N x LATE_WORK parts (default: the shipped
+# LEVEL_LANDING_SCALE). Per site: fit (the carve hit inside landing()), work, shares, builds and the ms; the summary gives fit,
+# median/p90/max landing ms over level sites ("all") and over the fitting ones, and the stand's landing ms (median of 5). The run is
+# invalid if any row's builds delta, which covers both the timed landing and the split pass, shows a terrain build. The warm-up cache variant (merge_level moved to a worker) was measured and
+# closed: 27444187 on claude/perf-merge-level-warm; cloud 80 sites, live 400 56/80 median 21.9 ms, cached 400/800/1000 40/56/59 of 80 at 20.5/33.1/34.9 ms.
 # Park scenes (PARK.md section 9, unit KB6) run on the park table with ctx.calm set, so no enemy arrives:
 #   p1   stage 1 standing: the ball frozen at the drop-in, the camera on the landmark.
 #   p2   p1's stand, then the swap: the recorded window opens with terrain.prepare(2) (what the Warden's
@@ -108,6 +121,7 @@ const SCENES := {
 	"p1": {"packs": 0, "per_type": 0, "warden": false, "view": "stand", "table": "park"},
 	"p2": {"packs": 0, "per_type": 0, "warden": false, "view": "swap", "table": "park"},
 	"p3": {"packs": 0, "per_type": 0, "warden": false, "view": "carve", "table": "park"},
+	"level-sites": {"packs": 0, "per_type": 0, "warden": false, "view": "sites", "table": "park"},
 }
 const CARVE_EVERY := 60
 # p3 keeps its original schedule (a carve on frame 59 of every 60, Full Cut and Breach alternating at the park
@@ -235,6 +249,9 @@ var _slope_sites: Array = []
 var _slots := 0
 var _pilot := ""
 var _plant := ""
+var _sites_seed := 7301
+var _sites_count := 80
+var _sites_scale := 0.0
 var _carve_open := {}
 var _terrain_open := {}
 
@@ -260,12 +277,15 @@ func _initialize() -> void:
 	_table = String(settings.get("table", ""))
 	_pilot = String(settings.get("pilot", ""))
 	_plant = String(settings.get("plant", ""))
+	_sites_seed = int(settings.get("seed", str(_sites_seed)))
+	_sites_count = int(settings.get("sites", str(_sites_count)))
+	_sites_scale = float(settings.get("landing-scale", "0"))
 	if _plant != "" and not _plant in PLANTS:
 		printerr("perf_bench: unknown --plant=" + _plant)
 		quit(2)
 		return
 	if not SCENES.has(_scene_id) or not _out.is_absolute_path() or not _out.ends_with(".json"):
-		printerr("perf_bench: needs -- --scene=s1|s2|s3|p1|p2|p3 --out=<absolute .json path>")
+		printerr("perf_bench: needs -- --scene=s1|s2|s3|p1|p2|p3|level-sites --out=<absolute .json path>")
 		quit(2)
 		return
 	_view = String(SCENES[_scene_id]["view"])
@@ -358,6 +378,10 @@ func _process(delta: float) -> bool:
 				_game.combat.effects.clear()
 			if _view == "swap" and _phase == "record":
 				_step_swap()
+			if _view == "sites" and _phase == "record" and _frame == 3:
+				_level_sites()
+				quit(0 if _errors.is_empty() else 1)
+				return false
 			if _view == "carve" and _phase == "record" and _plant != "no-carve":
 				if _frame % CARVE_EVERY == CARVE_EVERY - 1:
 					_step_carve()
@@ -1300,3 +1324,110 @@ func _finish() -> void:
 	print("perf_bench: %s carve_window %s terrain_window %s valid %s errors %s" % [_scene_id, counts.get("carve_window", {}), counts.get("terrain_window", {}), _errors.is_empty(), _errors])
 	print("perf_bench: %s %s frame p50 %.2f p99 %.2f ms -> %s" % [_scene_id, ablations, stats["frame_ms"].get("p50", -1.0), stats["frame_ms"].get("p99", -1.0), _out])
 	quit(0 if _errors.is_empty() else 1)
+
+
+# The level-sites scene (see the header): landing-tick cost against fit on a seeded sample of level park ground.
+func _level_sites() -> void:
+	var kit = _kit()
+	if kit == null:
+		_errors.append("level-sites needs Rivet: the combat has no RivetKit")
+		return
+	var ult = _game.combat.ultimate
+	if ult != null:
+		ult._plan = {"legs": []}
+	kit.warm_cycle()
+	kit.terrain.finish()
+	var scale := _sites_scale if _sites_scale > 0.0 else float(RivetKit.LEVEL_LANDING_SCALE)
+	kit.late_work = roundi(float(RivetKit.LATE_WORK) * scale / float(RivetKit.LEVEL_LANDING_SCALE))
+	var budget: int = kit.landing_work(true)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _sites_seed
+	var centre: Vector3 = _game.player.ball_position()
+	var rows: Array = []
+	var tries := 0
+	while rows.size() < _sites_count and tries < 4000:
+		tries += 1
+		var p := centre + Vector3(rng.randf_range(-50.0, 50.0), 0.0, rng.randf_range(-50.0, 50.0))
+		var heading := Vector3.FORWARD.rotated(Vector3.UP, rng.randf() * TAU)
+		var at: Vector3 = _ground(p)
+		var row := _site_landing(kit, at, heading, budget)
+		if bool(row["level"]):
+			row["at"] = [snappedf(at.x, 0.01), snappedf(at.y, 0.01), snappedf(at.z, 0.01)]
+			rows.append(row)
+	var stand: Array = []
+	var stand_row := {}
+	for i in 5:
+		stand_row = _site_landing(kit, _game.player.ball_position(), _stand_heading, budget)
+		stand.append(float(stand_row["landing_ms"]))
+		rows.append(stand_row.merged({"stand": true}))
+	stand.sort()
+	var sample: Array = rows.filter(func(r): return not r.has("stand"))
+	var built := 0
+	for r in rows:
+		built += int(r["builds"])
+	if built > 0:
+		_errors.append("level-sites: %d terrain builds started inside timed landings (the cache was not warm)" % built)
+	if sample.size() < _sites_count:
+		_errors.append("level-sites: found %d of %d level sites in %d tries" % [sample.size(), _sites_count, tries])
+	var summary := {"budget": budget, "seed": _sites_seed, "sites": sample.size(), "tries": tries, "fit": sample.filter(func(r): return r["fit"]).size(),
+		"all": _ms_stats(sample), "fitting": _ms_stats(sample.filter(func(r): return r["fit"])), "stand_landing_ms_median": stand[2],
+		"stand_fit": stand_row["fit"], "stand_work": stand_row["work"], "builds": built, "valid": _errors.is_empty(), "errors": _errors}
+	var file := FileAccess.open(_out, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"summary": summary, "rows": rows}, "\t"))
+	file.close()
+	print("perf_bench: level-sites %s" % [summary])
+
+
+# A stand-in for the ride landing() reads its heading from and hands its exit speed to.
+class SiteRide extends RefCounted:
+	var heading := Vector3.FORWARD
+	var mode := 0
+	var velocity := Vector3.ZERO
+	var release_speed := 0.0
+
+
+# One Breach landing: RivetKit.landing() timed whole, then its parts timed on a second pass of the same site. The ride
+# is a stub carrying `heading` (landing() reads only that), removed again after the call; the plan has no legs, and the carve a
+# landing queues is dropped, so repeated sites do not stack.
+func _site_landing(kit, at: Vector3, heading: Vector3, budget: int) -> Dictionary:
+	var ult = _game.combat.ultimate
+	var stub := SiteRide.new()
+	stub.heading = heading
+	ult._ride = stub
+	var aimed: Vector3 = kit._flat(kit._heading()).normalized()
+	var built: int = kit.terrain.builds
+	var queued: int = kit._late.size()
+	var hits: int = kit.carve_stats["breach_hits"]
+	var begin := Time.get_ticks_usec()
+	kit.landing("p3", at, 1.0, 1.0)
+	var total := (Time.get_ticks_usec() - begin) / 1000.0
+	ult._ride = null
+	var last: Dictionary = kit.last_landing
+	var row := {"level": bool(last["level"]), "fit": int(kit.carve_stats["breach_hits"]) == hits + 1, "shares": int(last["shares"]),
+		"work": int(last.get("work", 0)), "landing_ms": snappedf(total, 0.001)}
+	while kit._late.size() > queued:
+		kit._late.pop_back()
+	kit.selected_shapes.clear()
+	var reach: float = kit.breach_reach()
+	var t0 := Time.get_ticks_usec()
+	var late: Dictionary = kit._carve_late("p3", at, aimed, reach, 1.0, 0.0)
+	var t1 := Time.get_ticks_usec()
+	var done: bool = kit._shade_late(late, budget)
+	var t2 := Time.get_ticks_usec()
+	if done:
+		kit._breach(kit._late_shape(late), at, aimed, reach, 1.0, 0.0)
+	var t3 := Time.get_ticks_usec()
+	kit.selected_shapes.clear()
+	row["carve_ms"] = snappedf((t1 - t0) / 1000.0, 0.001)
+	row["share_ms"] = snappedf((t2 - t1) / 1000.0, 0.001)
+	row["breach_ms"] = snappedf((t3 - t2) / 1000.0, 0.001)
+	row["builds"] = kit.terrain.builds - built
+	return row
+
+
+func _ms_stats(rows: Array) -> Dictionary:
+	if rows.is_empty():
+		return {"n": 0}
+	var v: Array = rows.map(func(r): return float(r["landing_ms"]))
+	v.sort()
+	return {"n": v.size(), "median_ms": v[v.size() / 2], "p90_ms": v[mini(v.size() - 1, int(ceil(v.size() * 0.9)) - 1)], "max_ms": v.back()}
