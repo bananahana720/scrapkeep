@@ -8673,7 +8673,7 @@
   {
    "id": "isle_keel_rib",
    "path": "res://assets/models/park/isle_keel_rib.glb",
-   "class": "detail",
+   "class": "landform",
    "origin": "base_centre",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's greybox collider, which it keeps exactly; no -col mesh)",
