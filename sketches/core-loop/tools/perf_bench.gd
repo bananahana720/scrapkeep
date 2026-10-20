@@ -84,6 +84,9 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #                        --pilot=pylon_engineer must fail.
 #   --plant=no-carve     p3 skips its carves. Planted negative: it must fail.
 #   --plant=no-flat      p3 skips its flat-ground (slab) Breaches. Planted negative: it must fail.
+#   --plant=stand-late   p3's stand Breaches get a one-part landing budget, the old late path on level park ground
+#                        (RivetKit.LEVEL_GROUND_DEG). Planted negative: the stand's same-tick gate must fail.
+#   --plant=no-slope     p3 skips its real-slope Breaches. Planted negative: it must fail.
 #   --plant=late-flat    p3's slab Breaches get a one-part landing budget, so they go through the late path and
 #                        hit ticks after landing. Planted negative: the measured flat-hit check must fail.
 # The one-placement control (the old keying) is tests/rivet_warm_hitch_test.gd's: Andrew's park has no
@@ -109,10 +112,13 @@ const SCENES := {
 const CARVE_EVERY := 60
 # p3 keeps its original schedule (a carve on frame 59 of every 60, Full Cut and Breach alternating at the park
 # stand, so its 4080 history stays comparable) and adds a Breach on frame 29 of every 60 on a slab floating
-# FLAT_LIFT above the stand. The slab is a synthetic plane: it proves the instant light path (one share, hit on
-# the landing tick). The stand is the park's own ground: it proves the park-ground cost, and every Breach
-# there takes the heavy path, so its number is not a flat-ground number. Rows and maxima are keyed by
-# location (slab, stand) as well as by the kit's class (flat: done on the landing share; slope: later).
+# FLAT_LIFT above the stand, and one on frame 44 on the park's real slope (SLOPE_WANT_DEG, found from the reset
+# target within SLOPE_REACH). The slab is a synthetic plane; the stand is the park's own level ground (3.43 degrees,
+# under RivetKit.LEVEL_GROUND_DEG). Andrew's ruling (18 Oct, option B) is that both Breach on their landing tick:
+# one share, 0 ticks, hit_in_call 1. The slope site keeps the late path (shares over 1, a hit within the 0.18 s
+# limit). Each row carries its parts of work, so a cloud run proves the carve got cheaper in counts, not ms. Rows and
+# maxima are keyed by location (slab, stand, slope) as well as by the kit's class (flat: done on the landing share;
+# slope: later).
 const FLAT_LIFT := 40.0
 const FLAT_AHEAD := 30.0
 # Thick, so its underside is out of the carve's reach and the floor is one plane.
@@ -123,7 +129,14 @@ const FLAT_THICK := 30.0
 const SLOPE_HIT_SECONDS := 0.18
 const CARVE_BUDGET_MS := 16.7
 const LEVEL_DEG := 0.5
-const PLANTS := ["no-carve", "no-flat", "late-flat"]
+# The slope site: park ground this steep (RivetKit.LEVEL_GROUND_DEG is 5), the closest to SLOPE_WANT_DEG
+# within SLOPE_REACH of the reset target (inside the 60 m warm reach, so no terrain build lands in the window).
+const SLOPE_WANT_DEG := 15.0
+const SLOPE_MIN_DEG := 6.0
+const SLOPE_MAX_DEG := 25.0
+const SLOPE_REACH := 50.0
+const PLANTS := ["no-carve", "no-flat", "late-flat", "stand-late", "no-slope"]
+const RivetKit := preload("res://src/combat/rivet_kit.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
@@ -217,6 +230,8 @@ var _pending: Array = []
 var _hits_seen := 0
 var _stand_heading := Vector3.FORWARD
 var _flat_at := Vector3.INF
+var _slope_at := Vector3.INF
+var _slope_sites: Array = []
 var _slots := 0
 var _pilot := ""
 var _plant := ""
@@ -348,6 +363,8 @@ func _process(delta: float) -> bool:
 					_step_carve()
 				elif _frame % CARVE_EVERY == CARVE_EVERY / 2 - 1:
 					_step_flat()
+				elif _frame % CARVE_EVERY == CARVE_EVERY * 3 / 4 - 1:
+					_step_slope()
 	_harness_usec = Time.get_ticks_usec() - begin
 	return false
 
@@ -477,8 +494,36 @@ func _build_stand() -> void:
 		var ball: Vector3 = _ground(drop_in)
 		_flat_at = ball + heading * FLAT_AHEAD + Vector3.UP * FLAT_LIFT
 		slab.global_position = _flat_at - Vector3.UP * (1.0 + FLAT_THICK * 0.5)
+	if _scene_id == "p3":
+		_slope_sites = _slope_candidates(_ground(drop_in))
 	_swap["landmark"] = [mark.x, mark.y, mark.z] if mark != Vector3.INF else []
 	_swap["drop_in"] = [drop_in.x, drop_in.y, drop_in.z]
+
+
+# Park ground within SLOPE_REACH of from, 12 m or more away, whose slope over a 4 m span is between
+# SLOPE_MIN_DEG and SLOPE_MAX_DEG, the 12 closest to SLOPE_WANT_DEG first (the heightfield the colliders
+# are cut from; _step_slope confirms each with the collider's own face before landing on it).
+func _slope_candidates(from: Vector3) -> Array:
+	var terrain = _game.ctx.terrain
+	var found: Array = []
+	var x := from.x - SLOPE_REACH
+	while x <= from.x + SLOPE_REACH:
+		var z := from.z - SLOPE_REACH
+		while z <= from.z + SLOPE_REACH:
+			var away := Vector2(x - from.x, z - from.z).length()
+			if away <= SLOPE_REACH and away >= 12.0:
+				var gx: float = (terrain.height(x + 2.0, z) - terrain.height(x - 2.0, z)) / 4.0
+				var gz: float = (terrain.height(x, z + 2.0) - terrain.height(x, z - 2.0)) / 4.0
+				var angle := rad_to_deg(atan(sqrt(gx * gx + gz * gz)))
+				if angle >= SLOPE_MIN_DEG and angle <= SLOPE_MAX_DEG:
+					found.append([absf(angle - SLOPE_WANT_DEG), x, z])
+			z += 2.0
+		x += 2.0
+	found.sort()
+	var out: Array = []
+	for c in found.slice(0, 12):
+		out.append(_ground(Vector3(c[1], 0.0, c[2])))
+	return out
 
 
 func _step_carve() -> void:
@@ -530,19 +575,21 @@ func _landing(kit, at: Vector3, where: String) -> void:
 	var hits_before: int = kit.carve_stats["breach_hits"]
 	var queued: int = kit._late.size()
 	var saved: int = kit.late_work
-	if _plant == "late-flat" and where == "slab":
+	if (_plant == "late-flat" and where == "slab") or (_plant == "stand-late" and where == "stand"):
 		kit.late_work = 1
 	var begin := Time.get_ticks_usec()
 	kit.landing("p3", at, 1.0, 1.0)
 	row["landing_ms"] = snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001)
 	kit.late_work = saved
 	row["builds"] = kit.terrain.builds - built
+	row["level"] = bool(kit.last_landing["level"])
 	row["tick_ms"] = []
 	if kit._late.size() > queued:
 		row["late"] = kit._late.back()
 		_pending.append(row)
 	else:
 		row["shares"] = 1
+		row["work"] = int(kit.last_landing.get("work", 0))
 		row["hit_in_call"] = int(kit.carve_stats["breach_hits"]) - hits_before
 		# A light carve hits inside the landing call: the hit is the kit's breach_hits rise, read here.
 		if int(row["hit_in_call"]) == 1:
@@ -571,8 +618,29 @@ func _watch_hits() -> void:
 		row["hit_tick"] = Engine.get_physics_frames()
 		row["ticks"] = int(row["hit_tick"]) - int(row["landing_tick"])
 		row["shares"] = int((row["late"] as Dictionary).get("shares", 0))
+		row["work"] = int((row["late"] as Dictionary).get("work", 0))
 		row.erase("late")
 	_hits_seen = hits
+
+
+# A Breach landing on the park's real slope.
+func _step_slope() -> void:
+	var kit = _kit()
+	if kit == null or _plant == "no-slope":
+		return
+	if _slope_at == Vector3.INF:
+		# The first candidate whose collider face is steeper than level ground: the bench lands there from now on.
+		var space: PhysicsDirectSpaceState3D = _game.ctx.root.get_world_3d().direct_space_state
+		for site: Vector3 in _slope_sites:
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(site + Vector3.UP * 0.5, site + Vector3.DOWN * 6.0, Hitscan.WORLD))
+			var face_deg := rad_to_deg(acos(clampf((hit["normal"] as Vector3).y, -1.0, 1.0))) if not hit.is_empty() else 0.0
+			if face_deg >= SLOPE_MIN_DEG and face_deg <= 30.0:
+				_slope_at = site
+				_swap["slope_at"] = [site.x, site.y, site.z]
+				break
+		if _slope_at == Vector3.INF:
+			return
+	_landing(kit, _slope_at, "slope")
 
 
 # A Breach landing on the synthetic flat slab.
@@ -598,6 +666,8 @@ func _carve_stats() -> void:
 		var found: Dictionary = kit._terrain_near(at, sector["cells"])
 		row["faces"] = (found["faces"] as Array).size()
 		row["merged"] = TerrainFaces.merge(found["faces"]).size()
+		if breach:
+			row["level_merged"] = TerrainFaces.merge_level(found["faces"], RivetKit.LEVEL_GROUND_DEG, RivetKit.LEVEL_TOLERANCE_DEG, RivetKit.LEVEL_DEVIATION).size()
 		row.erase("heading")
 		row.erase("late")
 
@@ -605,7 +675,7 @@ func _carve_stats() -> void:
 # The largest carve time (landing call, or any tick it was queued in) by kit class (flat: done on the landing
 # share; slope: later), by location (slab, stand) and Full Cut.
 func _max_by_ground() -> Dictionary:
-	var out := {"flat": 0.0, "slope": 0.0, "full_cut": 0.0, "slab": 0.0, "stand": 0.0}
+	var out := {"flat": 0.0, "slope": 0.0, "full_cut": 0.0, "slab": 0.0, "stand": 0.0, "slope_site": 0.0}
 	for row in _carves:
 		var ms: float = float(row.get("ms", 0.0))
 		if row["kind"] == "full_cut":
@@ -613,25 +683,27 @@ func _max_by_ground() -> Dictionary:
 			continue
 		var cls := "flat" if int(row.get("shares", 0)) == 1 else "slope"
 		out[cls] = maxf(out[cls], ms)
-		out[row["where"]] = maxf(out[row["where"]], ms)
+		out["slope_site" if row["where"] == "slope" else row["where"]] = maxf(out["slope_site" if row["where"] == "slope" else row["where"]], ms)
 	return out
 
 
 # Rows to report per location: landing-share ms, shares, measured ticks to the hit, ground angle.
 func _where_summary() -> Dictionary:
 	var out := {}
-	for where in ["slab", "stand"]:
+	for where in ["slab", "stand", "slope"]:
 		var rows := _carves.filter(func(r): return r["kind"] == "breach" and r["where"] == where)
 		var landing := 0.0
 		var shares := 0
 		var ticks := 0
 		var angle := 0.0
+		var work := 0
 		for r in rows:
+			work = maxi(work, int(r.get("work", 0)))
 			landing = maxf(landing, float(r["landing_ms"]))
 			shares = maxi(shares, int(r.get("shares", 0)))
 			ticks = maxi(ticks, int(r.get("ticks", 0)))
 			angle = maxf(angle, float(r.get("angle_deg", 0.0)))
-		out[where] = {"n": rows.size(), "landing_ms_max": landing, "shares_max": shares, "ticks_max_measured": ticks, "angle_deg_max": angle}
+		out[where] = {"n": rows.size(), "landing_ms_max": landing, "shares_max": shares, "ticks_max_measured": ticks, "angle_deg_max": angle, "work_max": work}
 	return out
 
 
@@ -690,25 +762,32 @@ func _gate_carves(counts: Dictionary) -> void:
 		if int(carves["breach_slope"]) < 1:
 			_errors.append("p3: no slope Breach carve in the window")
 		var limit := int(ceil(SLOPE_HIT_SECONDS * Engine.physics_ticks_per_second))
-		var slab_hit := 0
-		var stand_hit := 0
+		var hit := {"slab": 0, "stand": 0, "slope": 0}
+		var level_deg: float = RivetKit.LEVEL_GROUND_DEG
 		for row in _carves:
-			if row["kind"] != "breach":
+			if row["kind"] != "breach" or not row.has("ticks"):
 				continue
-			if not row.has("ticks"):
-				continue
-			if row["where"] == "slab":
-				slab_hit += 1
-				if int(row["ticks"]) != 0:
-					_errors.append("p3: a flat (slab) Breach hit %d ticks after landing, measured (the ruling: the same tick)" % int(row["ticks"]))
-				if float(row.get("angle_deg", 99.0)) > LEVEL_DEG:
-					_errors.append("p3: the slab is not level (%.2f degrees)" % float(row.get("angle_deg", 99.0)))
-			else:
-				stand_hit += 1
+			var where: String = row["where"]
+			hit[where] += 1
+			var angle := float(row.get("angle_deg", 99.0))
+			if where == "slope":
 				if int(row["ticks"]) > limit:
-					_errors.append("p3: a stand Breach hit %d ticks after landing, measured (the ruling: within %d, %.2f s)" % [int(row["ticks"]), limit, SLOPE_HIT_SECONDS])
-		if slab_hit < 1 or stand_hit < 1:
-			_errors.append("p3: %d slab and %d stand Breaches hit; each needs one" % [slab_hit, stand_hit])
+					_errors.append("p3: a slope Breach hit %d ticks after landing, measured (the ruling: within %d, %.2f s)" % [int(row["ticks"]), limit, SLOPE_HIT_SECONDS])
+				if int(row.get("shares", 0)) < 2:
+					_errors.append("p3: a slope Breach (%.2f degrees) finished in %d share; the slope site must keep the late path" % [angle, int(row.get("shares", 0))])
+				if angle <= level_deg:
+					_errors.append("p3: the slope site is level ground (%.2f degrees, level is under %.1f)" % [angle, level_deg])
+				continue
+			# Slab and stand are level ground: the ruling (Andrew, 18 Oct) is that the Breach hits on its landing tick.
+			if int(row["ticks"]) != 0 or int(row.get("hit_in_call", 0)) != 1:
+				_errors.append("p3: a level-ground (%s) Breach hit %d ticks after landing, measured (the ruling: the same tick)" % [where, int(row["ticks"])])
+			if where == "slab" and angle > LEVEL_DEG:
+				_errors.append("p3: the slab is not level (%.2f degrees)" % angle)
+			if where == "stand" and angle > level_deg:
+				_errors.append("p3: the stand is not level ground (%.2f degrees, level is under %.1f)" % [angle, level_deg])
+		for where in hit:
+			if int(hit[where]) < 1:
+				_errors.append("p3: no %s Breach hit; each location needs one" % where)
 		if int(carves["breach_hits"]) < 1:
 			_errors.append("p3: no Breach carve hit in the window")
 		if int(carves["shares"]) < 1:
@@ -1213,9 +1292,11 @@ func _finish() -> void:
 	file.close()
 	var where := _where_summary()
 	if _scene_id == "p3":
-		print("perf_bench: p3 stand Breach landing-share %.3f ms, %d shares, %d ticks to the hit (measured), ground angle max %.2f deg | slab Breach landing-share %.3f ms, %d shares, %d ticks (measured), angle max %.2f deg | max_ms %s" % [
+		print("perf_bench: p3 stand Breach landing-share %.3f ms, %d shares, %d ticks to the hit (measured), ground angle max %.2f deg | slab Breach landing-share %.3f ms, %d shares, %d ticks (measured), angle max %.2f deg | slope Breach landing-share %.3f ms, %d shares, %d ticks (measured), angle max %.2f deg | work (parts) stand %d slab %d slope %d | max_ms %s" % [
 			where["stand"]["landing_ms_max"], where["stand"]["shares_max"], where["stand"]["ticks_max_measured"], where["stand"]["angle_deg_max"],
-			where["slab"]["landing_ms_max"], where["slab"]["shares_max"], where["slab"]["ticks_max_measured"], where["slab"]["angle_deg_max"], _max_by_ground()])
+			where["slab"]["landing_ms_max"], where["slab"]["shares_max"], where["slab"]["ticks_max_measured"], where["slab"]["angle_deg_max"],
+			where["slope"]["landing_ms_max"], where["slope"]["shares_max"], where["slope"]["ticks_max_measured"], where["slope"]["angle_deg_max"],
+			where["stand"]["work_max"], where["slab"]["work_max"], where["slope"]["work_max"], _max_by_ground()])
 	print("perf_bench: %s carve_window %s terrain_window %s valid %s errors %s" % [_scene_id, counts.get("carve_window", {}), counts.get("terrain_window", {}), _errors.is_empty(), _errors])
 	print("perf_bench: %s %s frame p50 %.2f p99 %.2f ms -> %s" % [_scene_id, ablations, stats["frame_ms"].get("p50", -1.0), stats["frame_ms"].get("p99", -1.0), _out])
 	quit(0 if _errors.is_empty() else 1)
