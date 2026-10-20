@@ -199,7 +199,6 @@ var _counter_serial := 0
 var _perched := ""
 var _perch_chosen := false
 var _early := ""
-var _standoff_tried := false
 var _relocated := false
 var _perch_top := Vector3.INF
 var _perch_source := "unknown"
@@ -210,7 +209,7 @@ var _standoff_clear := false
 var _standoff_at := Vector2.ZERO
 var _held := false
 var _perched_under := false
-var _perch_over_ball := 0.0
+var _perch_over_ball := -1.0
 var _ball_to_perch := -1.0
 var _perch_rise := -1.0
 var _mast_built := false
@@ -902,11 +901,7 @@ func _physics_process(delta: float) -> bool:
 				if step == "no_perch" or step == "not_perched":
 					# Ended before the spawn: nothing to fight. not_perched keeps its diagnostic fields on the row.
 					_early = step
-					_done = true
-					_record()
-					_game.free()
-					_game = null
-					quit(0)
+					_end_early()
 					return false
 				if step == "relocated":
 					# The ball was moved: rest-start again from its new spot before spawning.
@@ -917,6 +912,9 @@ func _physics_process(delta: float) -> bool:
 					return false
 			_settle_s = _landed_s
 			_spawn_duel()
+			if _early != "":
+				_end_early()
+				return false
 		else:
 			_driver.source.hold = {}
 			return false
@@ -1044,6 +1042,15 @@ func _all_tops() -> Array:
 # stage by the seed. "no_perch": the stage has no top at all. "not_perched": the standoff (or the resting
 # ball) is not clear of landforms or not PERCH_MIN under the top, or no spot lies in the play rect; the duel
 # ends before the spawn.
+# Records the early outcome (_early), frees the game (and any enemy already spawned) and quits.
+func _end_early() -> void:
+	_done = true
+	_record()
+	_game.free()
+	_game = null
+	quit(0)
+
+
 func _choose_perch() -> String:
 	var terrain = _game.ctx.terrain
 	var tops := _all_tops()
@@ -1059,7 +1066,6 @@ func _choose_perch() -> String:
 		rng.seed = hash(["perch_pick", _run_seed])
 		_perch_top = tops[rng.randi_range(0, tops.size() - 1)]["top"]
 		var found := _standoff(_perch_top, float(_settings.get("range", str(PERCH_RANGE))), rng.randf() * TAU)
-		_standoff_tried = true
 		_match_top(tops)
 		if found.is_empty():
 			return "not_perched"
@@ -1149,6 +1155,10 @@ func _spawn_perched(ball: Vector3) -> void:
 	_snapshot(_driver.enemy)
 	_perch_over_ball = _driver.enemy.global_position.y - float(terrain.height(ball.x, ball.z))
 	_perched_under = _perch_over_ball >= PerchPoints.PERCH_MIN
+	if not _perched_under:
+		# The real body is not PERCH_MIN over the ball (a mast row on a tall post, or a held ball that drifted
+		# uphill): not a perched duel. The caller ends the run before any fight.
+		_early = "not_perched"
 	_perch_rise = float(_driver.enemy.perch_height()) if _driver.enemy.has_method("perch_height") else -1.0
 	_mast_built = _driver.enemy.get("mast") != null
 
@@ -1199,7 +1209,7 @@ func _record() -> void:
 		row["landed_hits"] = int(_snap.get("landed_hits", 0))
 		row["escalation"] = int(_snap.get("escalation", 0))
 		row["relocated"] = _relocated
-		if _standoff_tried and _standoff_at != Vector2.ZERO:
+		if _standoff_at != Vector2.ZERO:
 			row["standoff_m"] = snappedf(_standoff_m, 0.1)
 			row["standoff_ok"] = _standoff_ok
 			row["standoff_clear"] = _standoff_clear
