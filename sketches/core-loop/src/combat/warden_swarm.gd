@@ -12,7 +12,10 @@ const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 # - headframe (stage 3): the hive rides the hoist on a CYCLE of 12 s: DWELL low at the collar,
 #   MOVE up RISE metres, DWELL high under the tipple deck, MOVE back down. A charge starts only
 #   PULSE_TELEGRAPH before a dwell ends (charge_allowed), so the pulse lands on each dwell's last
-#   tick and the 6 s pulse cycle locks to the hoist. A stagger brakes the hoist: the hive drops
+#   tick and the 6 s pulse cycle locks to the hoist. With the Challenge dial
+#   warden.pulse_cycle_by_stage at stage 3 x1.5 (9 s; the w3 tuning PR (#149 ruling 15)) the lock
+#   holds but the pulse lands on alternate dwell ends, the high dwell only, once per hoist cycle,
+#   so the low dwell at the collar is a pulse-free ram window. A stagger brakes the hoist: the hive drops
 #   to the collar over BRAKE_DROP, stays there for the stagger, and the cycle starts again from
 #   the low dwell when it ends. A ball latched through RIDE_MIN of the rise is thrown at the
 #   stop: the line drops off the grip cell ("shrugged") and the ball keeps the hoist's upward
