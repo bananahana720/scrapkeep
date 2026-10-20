@@ -379,7 +379,7 @@ func _perched_pure() -> void:
 	_check("--from lists kind, pack, then perched rows in first-seen order", code == 0 and lobber >= 0 and pack > lobber and mast > pack and park > mast)
 
 
-# Two real perched duels (1 pilot, 1 seed, low cap): the park row stands the Dispatcher on a real
+# Two real perched duels (1 pilot, seed 2 - the seeds whose standoff is both clear and under the top; seed 1 and 4 are clear but not under on park_dam; low cap): the park row stands the Dispatcher on a real
 # perch top with no mast; the mast row, planted as the negative, builds one.
 func _perched_duel() -> void:
 	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("perched.ndjson")
@@ -387,7 +387,7 @@ func _perched_duel() -> void:
 		DirAccess.remove_absolute(out)
 	var output := []
 	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
-			"--out=" + out, "--procs=1", "--seeds=1", "--cap=10", "--pilots=tarn", "--kinds=dispatcher", "--perched=park,mast", "--answer=0",
+			"--out=" + out, "--procs=1", "--seeds=2", "--cap=10", "--pilots=tarn", "--kinds=dispatcher", "--perched=park,mast", "--answer=0",
 			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
 	var code := OS.execute(OS.get_executable_path(), args, output, true)
 	_check("the perched duels exit 0", code == 0)
