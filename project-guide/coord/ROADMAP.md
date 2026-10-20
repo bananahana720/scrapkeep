@@ -13,13 +13,14 @@ Written 20 Oct 2026 after the [baseline](BASELINE-2026-10-20.md). It is linked f
 
 | Unit | Lane | What it needs |
 | --- | --- | --- |
-| #175, #184, #207, #217, #232, #238 (Systems B w18 chain) | Systems B | Gate each head, then re-record `run_tier_test` pins once on the stage after #214's islands re-record |
+| #175, #184, #207, #217, #232, #238 (Systems B w18 chain) | Systems B | Gate each head, then re-record `run_tier_test` pins once on the stage after #214 lands |
 | Sable hard cell (#149) | Systems B | Rerun the capped rows at about 120 s; author no pack until that reads |
 | Ruling 15 c′ mobs-connect half (follows #234) | Challenge | Warden-fight packs |
 | #191, #208, #209, #237 (skill bands to Spillway) | Challenge | Gate #191 and #208, re-gate #209, then stack #237 |
 | #220, #235 (dressing foundation, entry frames) | Dressing, Perf | Gate #220, then stack #235 |
 | #204, #206, #224 | World, Gate | Re-gate on the current stage (their PASS names an older SHA) |
 | #173, #222, #223, #225 to #228, #230 | Gate | Fast lane plus an independent reviewer, then stack |
+| #214, #219 islands rows and flush liners | World | `audio_bake_cancel` FX-2 re-entry sees the bake already finished; make the test independent of park bake timing, or ask why the liners finish it early, then stack |
 | #231 item-fuzz speed cap | Systems | Spawned enemies entering physics where they stand pushes Tally's `bot_brindle_short` heft from 1.30 to 1.36 (limit 1.30); fix or re-pin with a ruling, then stack |
 | #137 Rivet slope budget | Perf, GPU bench | Waits on #73's 4080 carve check; rebase onto the stage then |
 | ParkProps timing and the 4080 run | GPU bench | Queue rows for #235 and #236 |
