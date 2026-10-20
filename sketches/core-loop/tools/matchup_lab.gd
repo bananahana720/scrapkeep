@@ -1037,11 +1037,6 @@ func _all_tops() -> Array:
 	return out
 
 
-# Chooses this seed's perch top. "near": the terrain's own pick was within reach of the resting ball.
-# "relocated": none was, so the ball was moved to a standoff `--range` from a top chosen from the whole
-# stage by the seed. "no_perch": the stage has no top at all. "not_perched": the standoff (or the resting
-# ball) is not clear of landforms or not PERCH_MIN under the top, or no spot lies in the play rect; the duel
-# ends before the spawn.
 # Records the early outcome (_early), frees the game (and any enemy already spawned) and quits.
 func _end_early() -> void:
 	_done = true
@@ -1051,6 +1046,11 @@ func _end_early() -> void:
 	quit(0)
 
 
+# Chooses this seed's perch top. "near": the terrain's own pick was within reach of the resting ball.
+# "relocated": none was, so the ball was moved to a standoff `--range` from a top chosen from the whole
+# stage by the seed. "no_perch": the stage has no top at all. "not_perched": the standoff (or the resting
+# ball) is not clear of landforms or not PERCH_MIN under the top, or no spot lies in the play rect; the duel
+# ends before the spawn.
 func _choose_perch() -> String:
 	var terrain = _game.ctx.terrain
 	var tops := _all_tops()
