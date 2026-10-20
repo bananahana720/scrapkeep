@@ -86,6 +86,8 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #   --plant=no-flat      p3 skips its flat-ground (slab) Breaches. Planted negative: it must fail.
 #   --plant=stand-late   p3's stand Breaches get a one-part landing budget, the old late path on level park ground
 #                        (RivetKit.LEVEL_GROUND_DEG). Planted negative: the stand's same-tick gate must fail.
+#   --plant=live-merge   p3's Breaches merge their level ground live on the landing tick again (the pre-warm-up
+#                        call, scrapkeep#149 ruling 3). Planted negative: the zero-live-merge gate must fail.
 #   --plant=no-slope     p3 skips its real-slope Breaches. Planted negative: it must fail.
 #   --plant=late-flat    p3's slab Breaches get a one-part landing budget, so they go through the late path and
 #                        hit ticks after landing. Planted negative: the measured flat-hit check must fail.
@@ -135,7 +137,7 @@ const SLOPE_WANT_DEG := 15.0
 const SLOPE_MIN_DEG := 6.0
 const SLOPE_MAX_DEG := 25.0
 const SLOPE_REACH := 50.0
-const PLANTS := ["no-carve", "no-flat", "late-flat", "stand-late", "no-slope"]
+const PLANTS := ["no-carve", "no-flat", "late-flat", "stand-late", "no-slope", "live-merge"]
 const RivetKit := preload("res://src/combat/rivet_kit.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
@@ -577,12 +579,15 @@ func _landing(kit, at: Vector3, where: String) -> void:
 	var saved: int = kit.late_work
 	if (_plant == "late-flat" and where == "slab") or (_plant == "stand-late" and where == "stand"):
 		kit.late_work = 1
+	kit.plant_live_merge = _plant == "live-merge"
+	var merges: int = kit.live_level_merges
 	var begin := Time.get_ticks_usec()
 	kit.landing("p3", at, 1.0, 1.0)
 	row["landing_ms"] = snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001)
 	kit.late_work = saved
 	row["builds"] = kit.terrain.builds - built
 	row["level"] = bool(kit.last_landing["level"])
+	row["live_merges"] = kit.live_level_merges - merges
 	row["tick_ms"] = []
 	if kit._late.size() > queued:
 		row["late"] = kit._late.back()
@@ -667,7 +672,8 @@ func _carve_stats() -> void:
 		row["faces"] = (found["faces"] as Array).size()
 		row["merged"] = TerrainFaces.merge(found["faces"]).size()
 		if breach:
-			row["level_merged"] = TerrainFaces.merge_level(found["faces"], RivetKit.LEVEL_GROUND_DEG, RivetKit.LEVEL_TOLERANCE_DEG, RivetKit.LEVEL_DEVIATION).size()
+			# From the warm-up cache: the polygons a level landing carves (it merges nothing itself).
+			row["level_merged"] = kit.level_polygons(found).size()
 		row.erase("heading")
 		row.erase("late")
 
@@ -685,6 +691,29 @@ func _max_by_ground() -> Dictionary:
 		out[cls] = maxf(out[cls], ms)
 		out["slope_site" if row["where"] == "slope" else row["where"]] = maxf(out["slope_site" if row["where"] == "slope" else row["where"]], ms)
 	return out
+
+
+# The cache's merge_level builds (worker time per terrain shape placement, polygons kept).
+func _level_builds() -> Dictionary:
+	var kit = _kit()
+	if kit == null:
+		return {}
+	kit.terrain.finish()
+	var usec: Array = []
+	var polys := 0
+	var worst: Array = []
+	for placements in kit.terrain._entries.values():
+		for entry in placements.values():
+			if entry.has("level"):
+				usec.append(int(entry["level"].get("usec", 0)))
+				worst.append([int(entry["level"].get("usec", 0)) / 1000.0, (entry["result"].get("faces", []) as Array).size(), (entry["level"].get("faces", []) as Array).size()])
+				polys += (entry["level"].get("faces", []) as Array).size()
+	usec.sort()
+	worst.sort()
+	worst.reverse()
+	if usec.is_empty():
+		return {"n": 0}
+	return {"n": usec.size(), "worker_ms_max": usec.back() / 1000.0, "worker_ms_median": usec[usec.size() / 2] / 1000.0, "polygons": polys, "worst_ms_faces_polygons": worst.slice(0, 6)}
 
 
 # Rows to report per location: landing-share ms, shares, measured ticks to the hit, ground angle.
@@ -720,6 +749,10 @@ func _open_counts() -> void:
 	# the window with only a standing Rivet's own warm-up: its builds must be 0.
 	if _scene_id == "p3" and kit._rivet():
 		kit.warm_cycle()
+		# A played run has seconds between a tile entering the warm reach and a landing on it; this
+		# warm phase has under one, so the builds (a park tile's level polygons take 0.4 s on a
+		# cloud worker, see "level_builds") finish here and the window times the landing, not the wait.
+		kit.terrain.finish()
 	_carve_open = kit.carve_stats.duplicate()
 	_terrain_open = {"builds": kit.terrain.builds, "hits": kit.terrain.hits, "warm_cycles": kit.warm_cycles}
 
@@ -778,6 +811,8 @@ func _gate_carves(counts: Dictionary) -> void:
 				if angle <= level_deg:
 					_errors.append("p3: the slope site is level ground (%.2f degrees, level is under %.1f)" % [angle, level_deg])
 				continue
+			if int(row.get("live_merges", 0)) != 0 and bool(row.get("level", false)):
+				_errors.append("p3: a level-ground (%s) Breach ran merge_level on its landing tick (%d times; ruling 3: the warm-up cache builds it)" % [where, int(row["live_merges"])])
 			# Slab and stand are level ground: the ruling (Andrew, 18 Oct) is that the Breach hits on its landing tick.
 			if int(row["ticks"]) != 0 or int(row.get("hit_in_call", 0)) != 1:
 				_errors.append("p3: a level-ground (%s) Breach hit %d ticks after landing, measured (the ruling: the same tick)" % [where, int(row["ticks"])])
@@ -1274,6 +1309,7 @@ func _finish() -> void:
 		"ablation_notes": _ablation_notes, "checks": _check_delta(),
 		"view": _view, "memory": _memory, "swap": _swap, "segments": segments, "segment_starts": _segment_at,
 		"carve_window": counts.get("carve_window", {}), "terrain_window": counts.get("terrain_window", {}), "pilot": _pilot, "plant": _plant,
+		"level_builds": _level_builds(),
 		"carves": _carves, "carve_budget_ms": CARVE_BUDGET_MS,
 		"carve_max_ms_by": _max_by_ground(), "carve_where": _where_summary(),
 		"carve_builds": _carves.reduce(func(n, c): return n + int(c.get("builds", 0)), 0),

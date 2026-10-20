@@ -127,6 +127,153 @@ static func _within(poly: Array, normal: Vector3, offset: float, deviation: floa
 	return true
 
 
+# --- Level ground by group ------------------------------------------------------------------
+# merge_level's grouping, done once per shape on a worker ahead of any landing (a live merge_level
+# on the landing tick cost 2 to 4 ms). Faces on one plane are a unit (merge()); units grow into
+# level regions as merge_level grows its polygons, a region's faces snapped onto the seed's plane
+# (at most `deviation`). A region stays within one REGION_CELL of its seed, so its plane is fitted
+# to the ground near it and a carve's near ground is not split by a plane fitted metres away. Each
+# group's faces are then joined as merge() joins a plane group (merge_grouped). Returns
+# {"snapped": face index -> the face on its region's plane (only the faces a region moved),
+# "group": per face (-1: a degenerate one), "normals": per group}.
+static func level_groups(faces: Array, level_deg: float, tolerance_deg: float, deviation: float) -> Dictionary:
+	var up_cos := cos(deg_to_rad(level_deg))
+	var tol_cos := cos(deg_to_rad(tolerance_deg))
+	var count := faces.size()
+	var group := PackedInt32Array()
+	group.resize(count)
+	group.fill(-1)
+	var normals: Array = []
+	var offsets: Array = []
+	var members: Array = []
+	var keys := {}
+	for index in count:
+		var face: Array = faces[index]
+		var raw: Vector3 = ((face[1] as Vector3) - face[0]).cross((face[2] as Vector3) - face[0])
+		if raw.length_squared() < 1e-12:
+			continue
+		var normal := raw.normalized()
+		var offset := normal.dot(face[0])
+		var key := Vector4i(roundi(normal.x * 1000.0), roundi(normal.y * 1000.0), roundi(normal.z * 1000.0), roundi(offset * 1000.0))
+		var id := -1
+		if keys.has(key):
+			id = keys[key]
+			if not _on_plane(face, normals[id], offsets[id]):
+				id = -1
+		if id < 0:
+			id = normals.size()
+			normals.append(normal)
+			offsets.append(offset)
+			members.append([])
+			if not keys.has(key):
+				keys[key] = id
+		group[index] = id
+		(members[id] as Array).append(index)
+	# Level units: groups within level_deg of up, joined across shared corners.
+	var by_vertex := {}
+	var candidates: Array = []
+	for id in normals.size():
+		if absf((normals[id] as Vector3).y) < up_cos:
+			continue
+		candidates.append(id)
+		for index: int in members[id]:
+			for v: Vector3 in faces[index]:
+				if not by_vertex.has(v):
+					by_vertex[v] = []
+				(by_vertex[v] as Array).append(id)
+	candidates.sort_custom(func(a, b): return members[a][0] < members[b][0])
+	var snapped_faces := {}
+	var taken := {}
+	for seed: int in candidates:
+		if taken.has(seed):
+			continue
+		taken[seed] = true
+		var normal: Vector3 = normals[seed]
+		var offset: float = offsets[seed]
+		var cell := _unit_cell(faces, members[seed])
+		var units: Array = [seed]
+		var next := 0
+		while next < units.size():
+			for index: int in members[units[next]]:
+				for v: Vector3 in faces[index]:
+					for q: int in by_vertex[v]:
+						if not taken.has(q) and (normals[q] as Vector3).dot(normal) >= tol_cos and _unit_cell(faces, members[q]) == cell and _unit_within(faces, members[q], normal, offset, deviation):
+							taken[q] = true
+							units.append(q)
+			next += 1
+		if units.size() < 2:
+			continue
+		var id := normals.size()
+		normals.append(normal)
+		offsets.append(offset)
+		var joined: Array = []
+		for unit: int in units:
+			joined.append_array(members[unit])
+			members[unit] = []
+		joined.sort()
+		for index: int in joined:
+			var moved: Array = []
+			for v: Vector3 in faces[index]:
+				moved.append(v - normal * (normal.dot(v) - offset))
+			snapped_faces[index] = moved
+			group[index] = id
+		members.append(joined)
+	return {"snapped": snapped_faces, "group": group, "normals": normals}
+
+
+static func _unit_cell(faces: Array, unit: Array) -> Vector2i:
+	var face: Array = faces[unit[0]]
+	var at: Vector3 = ((face[0] as Vector3) + face[1] + face[2]) / 3.0
+	return Vector2i(floori(at.x / REGION_CELL), floori(at.z / REGION_CELL))
+
+
+const REGION_CELL := 8.0
+
+
+static func _unit_within(faces: Array, unit: Array, normal: Vector3, offset: float, deviation: float) -> bool:
+	for index: int in unit:
+		if not _within(faces[index], normal, offset, deviation):
+			return false
+	return true
+
+
+# A group's faces as merge() joins a plane group: their hull when they tile it, else convex pieces.
+static func _join(faces: Array, normal: Vector3) -> Array:
+	var hull := _hull_union(faces, normal)
+	if hull.is_empty():
+		return _merge_plane(faces, normal)
+	return [hull]
+
+
+# Joins each group's faces; faces and groups are parallel. Polygons come in the order their groups
+# (or lone faces) first appear.
+static func merge_grouped(faces: Array, groups: Array, normals: Array) -> Array:
+	var members := {}
+	var order: Array = []
+	for index in faces.size():
+		var id: int = groups[index]
+		if id < 0:
+			order.append(faces[index])
+			continue
+		if not members.has(id):
+			members[id] = []
+			order.append(id)
+		(members[id] as Array).append(faces[index])
+	var out: Array = []
+	for item in order:
+		if not item is int:
+			out.append(item)
+			continue
+		var joined: Array = members[item]
+		if joined.size() == 1:
+			out.append(joined[0])
+			continue
+		var hull := _hull_union(joined, normals[item])
+		if hull.is_empty():
+			out.append_array(_merge_plane(joined, normals[item]))
+		else:
+			out.append(hull)
+	return out
 
 
 # The upward normal of the highest face under a point (at most `above` over its surface), or
@@ -306,8 +453,12 @@ const BUCKET := 16.0
 # colliders and a moved body leaves its old placements behind, so entries are kept per shape
 # and transform and aged out instead of replaced.
 const STALE_TICKS := 450
+# A shape of at most this many faces builds its level polygons in its faces' task.
+const SMALL_SHAPE_FACES := 512
 
-# instance id -> {transform -> {shape (WeakRef), task, result: {faces, boxes, grid}, used}}
+# instance id -> {transform -> {shape (WeakRef), task, result: {faces, boxes, grid}, used,
+# ready, level: {faces, boxes, grid, usec}}}. "level" is the shape's level polygons (a request
+# that passed level_params), built beside the faces so a level Breach landing never merges.
 var _entries := {}
 var _watched := {}
 # Counters for a hitch guard: builds started (a cache miss) and cached() reads that found one.
@@ -319,8 +470,9 @@ var keep_one_placement := false
 
 
 # local_faces: the shape's faces in its own space, an Array of vertex Arrays, or a
-# PackedVector3Array of triangles (a trimesh).
-func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
+# PackedVector3Array of triangles (a trimesh). level_params: [level_deg, tolerance_deg, deviation]
+# for merge_level, or [] to build no level polygons.
+func request(shape: Shape3D, transform: Transform3D, local_faces, level_params := []) -> Dictionary:
 	var id := shape.get_instance_id()
 	var entry := cached(shape, transform)
 	if not entry.is_empty():
@@ -336,7 +488,26 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	builds += 1
 	entry = {"shape": weakref(shape), "result": {}, "used": Engine.get_physics_frames()}
 	var result: Dictionary = entry["result"]
-	entry["task"] = WorkerThreadPool.add_task(func(): _build(world, result), false, "rivet terrain faces")
+	var level: Dictionary = {}
+	var count := (world as PackedVector3Array).size() / 3 if world is PackedVector3Array else (world as Array).size()
+	if level_params.is_empty():
+		entry["task"] = WorkerThreadPool.add_task(func(): _build(world, result), true, "rivet terrain faces")
+	elif count <= SMALL_SHAPE_FACES:
+		# A prop or a slab merges in well under a millisecond: one task, ahead of the park tiles.
+		entry["level"] = level
+		entry["task"] = WorkerThreadPool.add_task(func():
+			_build(world, result)
+			_build_level(world, level, level_params), true, "rivet terrain faces")
+	else:
+		# A park tile's level polygons take several times as long as its faces, so the faces are
+		# announced first (ready) and a slope carve waits for them alone.
+		var ready := Semaphore.new()
+		entry["level"] = level
+		entry["ready"] = ready
+		entry["task"] = WorkerThreadPool.add_task(func():
+			_build(world, result)
+			ready.post()
+			_build_level(world, level, level_params), false, "rivet terrain faces")
 	if keep_one_placement:
 		_forget(id)
 	if not _entries.has(id):
@@ -357,10 +528,34 @@ func cached(shape: Shape3D, transform: Transform3D) -> Dictionary:
 
 # The faces whose box meets box, in the shape's order.
 func faces_near(entry: Dictionary, box: AABB) -> Array:
-	if entry.has("task"):
-		WorkerThreadPool.wait_for_task_completion(entry["task"])
-		entry.erase("task")
-	var result: Dictionary = entry["result"]
+	if entry.has("ready"):
+		(entry["ready"] as Semaphore).wait()
+		(entry["ready"] as Semaphore).post()
+	else:
+		_settle(entry, "task")
+	return _near(entry["result"], box)
+
+
+# The polygons a level Breach carves from this shape whose box meets box: the shape's level
+# grouping joined on a worker ahead of the landing, waiting for it if need be. A shape built
+# without level params gets the plain merge of its near faces.
+func level_near(entry: Dictionary, box: AABB) -> Array:
+	if not entry.has("level"):
+		return merge(faces_near(entry, box))
+	_settle(entry, "task")
+	return _near(entry["level"], box)
+
+
+static func _near(result: Dictionary, box: AABB) -> Array:
+	var faces: Array = result["faces"]
+	var near: Array = []
+	for index in _near_indices(result, box):
+		near.append(faces[index])
+	return near
+
+
+# Indices of the faces whose box meets box, in the shape's order.
+static func _near_indices(result: Dictionary, box: AABB) -> Array:
 	var picks := {}
 	var grid: Dictionary = result["grid"]
 	var low := _bucket(box.position)
@@ -371,22 +566,26 @@ func faces_near(entry: Dictionary, box: AABB) -> Array:
 				picks[index] = true
 	var order: Array = picks.keys()
 	order.sort()
-	var faces: Array = result["faces"]
 	var boxes: Array = result["boxes"]
-	var near: Array = []
-	for index in order:
-		if box.intersects(boxes[index]):
-			near.append(faces[index])
-	return near
+	return order.filter(func(index): return box.intersects(boxes[index]))
+
+
+static func _settle(entry: Dictionary, key: String) -> void:
+	if entry.has(key):
+		WorkerThreadPool.wait_for_task_completion(entry[key])
+		entry.erase(key)
+
+
+# True while a build of this entry is still running.
+static func _running(entry: Dictionary) -> bool:
+	return entry.has("task") and not WorkerThreadPool.is_task_completed(entry["task"])
 
 
 # Waits for every build, so none runs past its kit.
 func finish() -> void:
 	for placements in _entries.values():
 		for entry in placements.values():
-			if entry.has("task"):
-				WorkerThreadPool.wait_for_task_completion(entry["task"])
-				entry.erase("task")
+			_settle(entry, "task")
 
 
 # Drops builds whose shape is gone, so freed stages do not pin their faces, and builds nobody
@@ -413,20 +612,39 @@ func prune() -> void:
 
 func _forget(id: int) -> void:
 	for entry in (_entries.get(id, {}) as Dictionary).values():
-		if entry.has("task"):
-			WorkerThreadPool.wait_for_task_completion(entry["task"])
-			entry.erase("task")
+		_settle(entry, "task")
 	_entries.erase(id)
 
 
 static func _build(world, result: Dictionary) -> void:
+	_index_faces(_triangles(world), result)
+
+
+# The whole shape's level polygons (level_groups, then merge_grouped), indexed like the faces;
+# result["usec"] is the build time.
+static func _build_level(world, result: Dictionary, params: Array) -> void:
+	var begin := Time.get_ticks_usec()
+	var faces := _triangles(world)
+	var grouped := level_groups(faces, params[0], params[1], params[2])
+	var snapped: Dictionary = grouped["snapped"]
+	var flat := faces.duplicate()
+	for index: int in snapped:
+		flat[index] = snapped[index]
+	_index_faces(merge_grouped(flat, grouped["group"], grouped["normals"]), result)
+	result["usec"] = Time.get_ticks_usec() - begin
+
+
+static func _triangles(world) -> Array:
+	if not world is PackedVector3Array:
+		return world
 	var faces: Array = []
-	if world is PackedVector3Array:
-		var points: PackedVector3Array = world
-		for i in range(0, points.size(), 3):
-			faces.append([points[i], points[i + 1], points[i + 2]])
-	else:
-		faces = world
+	var points: PackedVector3Array = world
+	for i in range(0, points.size(), 3):
+		faces.append([points[i], points[i + 1], points[i + 2]])
+	return faces
+
+
+static func _index_faces(faces: Array, result: Dictionary) -> void:
 	var boxes: Array = []
 	var grid := {}
 	for index in faces.size():

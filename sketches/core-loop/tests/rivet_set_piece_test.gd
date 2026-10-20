@@ -62,7 +62,7 @@ func _initialize() -> void:
 	# 2026-10-18 (stage/alpha-w17): 238 -> 239, RIVET-CURVE on top of EARNED-COSMETICS' one check;
 	# 239 -> 244 with "Beat later" and "Spread every Breach" (header); 244 -> 255 with the level-ground
 	# Breach (Andrew's 18 Oct ruling, option B).
-	_expected_checks = 255
+	_expected_checks = 258
 	super._initialize()
 
 
@@ -459,9 +459,47 @@ func _level_ground_fixture() -> void:
 	var flat := _plate(Vector3(0.0, 400.0, 0.0), 3.4, 0.001, 7301)
 	await physics_frame
 	await physics_frame
+	# 2026-10-20 (MERGE-WARM, scrapkeep#149 ruling 3): the cached level regions are cut at
+	# TerrainFaces.REGION_CELL (8 m), so this 40 m sheet takes over 404 parts of work in the landing
+	# share, against 400 when the landing merged it live. The landing path is what this fixture
+	# proves, so its budget is 1200 here; the fit rate on the real park is measured by perf_bench.
+	_kit.late_work = 600
+	var live_before: int = _kit.live_level_merges
 	var landing: Array = _plate_landing(flat, _kit.landing_work(true))
 	var late: Dictionary = landing[0]
 	_t.check("level ground: a Breach on a 3.4 degree sheet is level, carves in its landing share and has parts", bool(late["level"]) and landing[1] and int(late["shares"]) == 1 and not (late["result"] as Array).is_empty(), "%d shares, %d parts of work" % [int(late["shares"]), int(late["work"])])
+	_t.eq("level ground: the landing tick ran merge_level 0 times (the cache has the polygons)", _kit.live_level_merges - live_before, 0)
+	var cached_shape: Dictionary = _kit._late_shape(late)
+	var again: Dictionary = _plate_landing(flat, 1 << 30)[0]
+	_t.check("level ground: two landings on the sheet make the same carve bytes", var_to_bytes([late["result"], late["shadows"]]) == var_to_bytes([again["result"], again["shadows"]]), "")
+	_kit.plant_live_merge = true
+	var live: Dictionary = _plate_landing(flat, 1 << 30)[0]
+	_kit.plant_live_merge = false
+	var live_shape: Dictionary = _kit._late_shape(live)
+	_kit.plant_plain = true
+	var plainc: Dictionary = _plate_landing(flat, 1 << 30)[0]
+	_kit.plant_plain = false
+	var plain_shape: Dictionary = _kit._late_shape(plainc)
+	var plain_boxes: Array = _kit._cell_boxes(plain_shape)
+	var dc := 0
+	var dl := 0
+	var apart := 0
+	var cached_boxes: Array = _kit._cell_boxes(cached_shape)
+	var live_boxes: Array = _kit._cell_boxes(live_shape)
+	var at: Vector3 = flat.global_position + Vector3.UP * 1.0
+	for gx in range(-14, 15, 2):
+		for gz in range(-14, 15, 2):
+			for h in [0.4, 1.2]:
+				var q: Vector3 = at + Vector3(gx + 0.7, h, gz + 0.3)
+				var pl: bool = _kit._in_shape(plain_shape, q, 0.5, plain_boxes)
+				if pl != _kit._in_shape(cached_shape, q, 0.5, cached_boxes): dc += 1
+				if pl != _kit._in_shape(live_shape, q, 0.5, live_boxes): dl += 1
+				if _kit._in_shape(cached_shape, q, 0.5, cached_boxes) != _kit._in_shape(live_shape, q, 0.5, live_boxes):
+					apart += 1
+	# Who is hit, against the plain merge of the same faces (the carve with no flattening at all).
+	# 2026-10-20 measured on this sheet: the cached carve differs from it at 1 of 450 points (a point
+	# within the 5 cm flattening of a region's edge), #205's live merge_level carve at 41.
+	_t.check("level ground: the cached carve hits the same points as the plain merge (within 2 of 450), and the planted live call is counted", dc <= 2 and _kit.live_level_merges - live_before == 1, "cached %d, live merge_level %d, apart from each other %d" % [dc, dl, apart])
 	var found: Dictionary = _kit._terrain_near(flat.global_position + Vector3.UP * 1.0, late["sector"]["cells"])
 	var plain: Array = TerrainFaces.merge(found["faces"])
 	var joined: Array = TerrainFaces.merge_level(found["faces"], _kit.LEVEL_GROUND_DEG, _kit.LEVEL_TOLERANCE_DEG, _kit.LEVEL_DEVIATION)
@@ -494,6 +532,7 @@ func _level_ground_fixture() -> void:
 	var queued: int = _kit._late.size()
 	_kit.landing("foundry_cutter", _player.ball_position(), 1.0, 1.0)
 	_t.check("level ground: landing() on the sheet hits in the call and queues nothing", int(_kit.carve_stats["breach_hits"]) == hits_before + 1 and _kit._late.size() == queued and bool(_kit.last_landing["level"]))
+	_kit.late_work = _kit.LATE_WORK
 	flat.queue_free()
 	# Slope plate, 12 degrees with 15 cm of noise: the plain merge, the old landing budget, the late path.
 	await _fresh()

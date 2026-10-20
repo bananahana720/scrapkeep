@@ -882,7 +882,7 @@ func _carve(origin: Vector3, cells: Array, shadows: Array, hull: Array, found: D
 
 
 # The terrain faces near the cells, with "unreadable" set when a shape there has none the carve
-# can read.
+# can read; "entries" are the cache entries with faces near and "bounds" the box the faces were taken in.
 func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 	var bounds := AABB(origin, Vector3.ZERO)
 	for cell in cells:
@@ -902,6 +902,8 @@ func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var excluded: Array[RID] = []
 	var faces: Array = []
+	var entries: Array = []
+	var near := bounds.grow(0.0001)
 	while true:
 		query.exclude = excluded
 		var hits := space.intersect_shape(query)
@@ -921,9 +923,14 @@ func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 					# 120 ms the first time.
 					var entry := _terrain_entry(collider.shape_owner_get_shape(owner, i), transform)
 					if entry.is_empty():
-						return {"faces": faces, "unreadable": true}
-					faces.append_array(terrain.faces_near(entry, bounds.grow(0.0001)))
-	return {"faces": faces}
+						return {"faces": faces, "entries": entries, "bounds": near, "unreadable": true}
+					var here: Array = terrain.faces_near(entry, near)
+					# A shape with nothing near has no level polygons near either, so a landing
+					# never waits on its build.
+					if not here.is_empty():
+						faces.append_array(here)
+						entries.append(entry)
+	return {"faces": faces, "entries": entries, "bounds": near}
 
 
 # The shape's cached world faces (TerrainFaces), or {} for a shape the carve cannot read.
@@ -934,7 +941,16 @@ func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	var local_faces = (shape as ConcavePolygonShape3D).get_faces() if shape is ConcavePolygonShape3D else _collider_faces(shape)
 	if local_faces.is_empty():
 		return {}
-	return terrain.request(shape, transform, local_faces)
+	return terrain.request(shape, transform, local_faces, [LEVEL_GROUND_DEG, LEVEL_TOLERANCE_DEG, LEVEL_DEVIATION])
+
+
+# The polygons a level Breach carves: each shape's cached merge_level polygons that meet the
+# bounds of found (built on a worker at warm-up, not merged here).
+func level_polygons(found: Dictionary) -> Array:
+	var polys: Array = []
+	for entry: Dictionary in found["entries"]:
+		polys.append_array(terrain.level_near(entry, found["bounds"]))
+	return polys
 
 
 # Subtracts each face's shadow in face order, exactly as one _subtract_shadow pass per face
@@ -1342,11 +1358,18 @@ const LANDING_WORK := 160
 # Breach on level park ground hits on the landing tick"; a 2 to 4 ms frame bump is allowed). A Breach
 # is on level ground when the face it lands on is within LEVEL_GROUND_DEG of straight up. The
 # park's ground is 2 m cells, never one plane, so such a landing also flattens its near-level faces
-# into larger polygons (TerrainFaces.merge_level: normals within LEVEL_TOLERANCE_DEG, every corner
-# within LEVEL_DEVIATION m of the region's plane) and its landing share is LEVEL_LANDING_SCALE
-# times larger (400 parts at the default late_work). A level carve that fits hits on the landing
-# tick; one that still needs more takes the late path. Andrew's stand: 859 parts become 101; of 80
-# sampled level park sites, 72 % fit (scrapkeep#73-B).
+# into larger polygons (normals within LEVEL_TOLERANCE_DEG, every corner within LEVEL_DEVIATION m of
+# the region's plane) and its landing share is LEVEL_LANDING_SCALE times larger (400 parts at the
+# default late_work). Those polygons come from the warm-up cache, not the landing tick (coordinator
+# ruling 3, scrapkeep#149 comment 6274605849: the 400-part stand-sized budget stays, merge_level moves
+# to warm-up): TerrainFaces builds each terrain shape's level polygons on a worker beside its faces
+# (level_groups, regions cut at REGION_CELL), and the landing reads those near its bounds
+# (level_polygons) and merges nothing (live_level_merges stays 0). The regions are fitted to the
+# whole shape, not to the landing's near faces, so they are smaller than the live merge's: more
+# polygons and parts on a flat sheet, same flattening bound, same targets hit. A level carve that fits hits on the landing
+# tick; one that still needs more takes the late path. Andrew's stand: 859 parts become 101 (102 from
+# the cache); of 80 sampled level park sites, 72 % fit with the live merge, 50 % from the cache
+# (scrapkeep#73-B, 2026-10-20 measurement).
 # 5 degrees, against the park's 2 m cells (360,000 sampled, scrapkeep#73-B): 85 % are under 5, only
 # 0.3 % lie between 5 and 6 and 14 % are over 10, so the line sits in a gap in the ground, above
 # Andrew's stand (3.43) and the park's rolling 2 to 3.5 degrees, below every real slope. Steeper
@@ -1356,6 +1379,13 @@ const LEVEL_GROUND_DEG := 5.0
 const LEVEL_TOLERANCE_DEG := 2.0
 const LEVEL_DEVIATION := 0.05
 const LEVEL_LANDING_SCALE := 2
+
+# merge_level calls a landing made on its own tick (the planted control restores the old live
+# call; a test and the bench read the count, which must stay 0). plant_plain is a test seam: the
+# plain merge of the near faces, the reference for who a level carve hits.
+var live_level_merges := 0
+var plant_live_merge := false
+var plant_plain := false
 
 # The latest Breach carve landing() made, for a timing run to read its level, shares and work.
 var last_landing := {}
@@ -1393,7 +1423,16 @@ func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: 
 	var found := _terrain_near(at, cells)
 	var shadows: Array = []
 	var level := level_ground(found["faces"], at)
-	var merged: Array = TerrainFaces.merge_level(found["faces"], LEVEL_GROUND_DEG, LEVEL_TOLERANCE_DEG, LEVEL_DEVIATION) if level else TerrainFaces.merge(found["faces"])
+	var merged: Array
+	if level and plant_plain:
+		merged = TerrainFaces.merge(found["faces"])
+	elif level and plant_live_merge:
+		live_level_merges += 1
+		merged = TerrainFaces.merge_level(found["faces"], LEVEL_GROUND_DEG, LEVEL_TOLERANCE_DEG, LEVEL_DEVIATION)
+	elif level and not found.has("unreadable"):
+		merged = level_polygons(found)
+	else:
+		merged = TerrainFaces.merge(found["faces"])
 	var cuts := _cuts(at, merged, cells, shadows, sector["hull"])
 	var start := Engine.get_physics_frames()
 	var late := {"centre": _commit_beam(at, heading, reach, 0.0), "start": start, "due": start + LATE_TICKS, "sector": sector,
