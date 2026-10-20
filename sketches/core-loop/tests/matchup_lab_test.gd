@@ -20,6 +20,8 @@ func _initialize() -> void:
 	_damage_control()
 	_packs_pure()
 	_pack_duel()
+	_perched_pure()
+	_perched_duel()
 	print("matchup_lab_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -276,6 +278,78 @@ func _pack_duel() -> void:
 		_check("ttk_s covers the whole pack (not before the first member went down)", float(r["ttk_s"]) >= float(r["first_down_s"]) and float(r["first_down_s"]) >= 0.0)
 	else:
 		_check("a capped pack duel records no ttk", float(r["ttk_s"]) < 0.0)
+
+
+func _perched_pure() -> void:
+	_check("row keys are dispatcher@park and dispatcher@mast", Lab.perched_key("park") == "dispatcher@park" and Lab.perched_key("mast") == "dispatcher@mast"
+		and Lab.perched_mode("dispatcher@mast") == "mast" and Lab.perched_mode("dispatcher") == "" and Lab.perched_mode("dispatcher@moat") == "")
+	var both := Lab.perched_plan("park,mast", ["dispatcher"], false)
+	_check("--perched=park,mast queues both rows in order", both["ok"] and both["kinds"] == ["dispatcher@park", "dispatcher@mast"])
+	_check("a duplicate mode queues one row", Lab.perched_plan("mast,mast", ["dispatcher"], false)["kinds"] == ["dispatcher@mast"])
+	_check("planted negative: another kind, several kinds, packs or an unknown mode are usage errors",
+		not Lab.perched_plan("park", ["chaser"], false)["ok"] and not Lab.perched_plan("park", ["dispatcher", "chaser"], false)["ok"]
+		and not Lab.perched_plan("park", ["dispatcher"], true)["ok"] and not Lab.perched_plan("roof", ["dispatcher"], false)["ok"]
+		and not Lab.perched_plan("", ["dispatcher"], false)["ok"])
+	var rows := [_row("a", "dispatcher@park", 1, 3.0), _row("a", "dispatcher@park", 2, 5.0)]
+	rows.append({"pilot": "a", "kind": "dispatcher@park", "seed": 3, "outcome": "no_perch", "ttk_s": -1.0, "hull_lost": 0.0})
+	var table := Lab.build_table(rows, ["a"], ["dispatcher@park"], 40.0)
+	_check("no_perch counts as no result, not a capped duel", table["cells"]["a|dispatcher@park"]["runs"] == 2
+		and is_equal_approx(float(table["cells"]["a|dispatcher@park"]["median_ttk"]), 4.0))
+	var graded := Lab.grade_answers(table, [{"pilot": "a", "kind": "dispatcher@park", "outcome": "no_perch", "ttk_s": -1.0}], {"a|dispatcher@park": "x"}, 40.0, 1)
+	_check("an all-no_perch table cell reads as no runs", Lab.build_table([rows[2]], ["a"], ["dispatcher@park"], 40.0)["cells"]["a|dispatcher@park"]["runs"] == 0 and graded.is_empty())
+	_check("perched labels stay distinct in 9 chars", Lab.row_label("dispatcher@park") == "disp@park" and Lab.row_label("dispatcher@mast") == "disp@mast")
+	# --from: kind rows, then pack rows, then perched rows, each first-seen.
+	var dir := OS.get_user_data_dir().path_join("matchup_lab_test")
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path := dir.path_join("from_perched.ndjson")
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	for s in [1, 2]:
+		f.store_line(JSON.stringify(_row("tarn", "dispatcher@mast", s, 9.0)))
+		f.store_line(JSON.stringify(_row("tarn", "dispatcher@park", s, 3.0)))
+		f.store_line(JSON.stringify(_row("tarn", "pack:grounded", s, 6.0)))
+		f.store_line(JSON.stringify(_row("tarn", "lobber", s, 2.0)))
+	f.close()
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--from=" + path, "--out=" + dir.path_join("from_perched.txt")], output, true)
+	var text := "\n".join(output)
+	var lobber := text.find("lobber ")
+	var pack := text.find("+grounded")
+	var mast := text.find("disp@mast")
+	var park := text.find("disp@park")
+	_check("--from lists kind, pack, then perched rows in first-seen order", code == 0 and lobber >= 0 and pack > lobber and mast > pack and park > mast)
+
+
+# Two real perched duels (1 pilot, 1 seed, low cap): the park row stands the Dispatcher on a real
+# perch top with no mast; the mast row, planted as the negative, builds one.
+func _perched_duel() -> void:
+	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("perched.ndjson")
+	if FileAccess.file_exists(out):
+		DirAccess.remove_absolute(out)
+	var output := []
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--out=" + out, "--procs=2", "--seeds=1", "--cap=10", "--pilots=tarn", "--kinds=dispatcher", "--perched=park,mast", "--answer=0",
+			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	_check("the perched duels exit 0", code == 0)
+	var by := {}
+	if FileAccess.file_exists(out):
+		for line in FileAccess.get_file_as_string(out).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary:
+				by[String(parsed["kind"])] = parsed
+	_check("one row per mode", by.size() == 2 and by.has("dispatcher@park") and by.has("dispatcher@mast"))
+	if by.size() != 2:
+		return
+	var park: Dictionary = by["dispatcher@park"]
+	var mast: Dictionary = by["dispatcher@mast"]
+	_check("the park row found a finite perch (not no_perch)", String(park["outcome"]) != "no_perch" and (park["perch"] as Array).size() == 3)
+	_check("park: no mast was built", park["mast_built"] == false)
+	_check("park: the perch top stands 6 to 10 m over its base", float(park["perch_base_rise_m"]) >= 5.99 and float(park["perch_base_rise_m"]) <= 10.01)
+	_check("park: the row records its perch fields", park.has("ball_to_perch_m") and park.has("drops") and park.has("landed_hits")
+		and park.has("escalation") and park.has("relocated") and park.has("dispatcher_down_s"))
+	_check("planted negative: the mast row builds its own mast, 8 m up", mast["mast_built"] == true and is_equal_approx(float(mast["perch_rise_m"]), 8.0))
+	_check("both rows chose the same top", park["perch"] == mast["perch"])
 
 
 func _check(label: String, ok: bool) -> void:
