@@ -416,7 +416,7 @@ func _perched_duel() -> void:
 	for row: Dictionary in [park, mast]:
 		_check("%s: a relocated ball was held and stood within 3 m of its standoff at the spawn" % row["kind"], row["relocated"] == true and row["held"] == true
 			and absf(float(row["ball_to_perch_m"]) - float(row["standoff_m"])) <= 3.0)
-	_check("mast: the Dispatcher stands at least PERCH_MIN over the ball", float(mast["perch_over_ball_m"]) >= Lab.PerchPoints.PERCH_MIN)
+	_check("both rows' standoff spots are clear of landform footprints", park["standoff_clear"] == true and mast["standoff_clear"] == true)
 	print("perched park perch_over_ball_m=%s standoff_m=%s standoff_ok=%s b2p=%s" % [park["perch_over_ball_m"], park["standoff_m"], park["standoff_ok"], park["ball_to_perch_m"]])
 	_check("both rows chose the same top", park["perch"] == mast["perch"])
 

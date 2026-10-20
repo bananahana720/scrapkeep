@@ -205,6 +205,8 @@ var _perch_source := "unknown"
 var _perch_base_rise := -1.0
 var _standoff_m := -1.0
 var _standoff_ok := false
+var _standoff_clear := false
+var _standoff_at := Vector2.ZERO
 var _held := false
 var _perched_under := false
 var _perch_over_ball := 0.0
@@ -1056,6 +1058,8 @@ func _choose_perch() -> String:
 		var spot: Vector2 = found["p"]
 		_standoff_m = found["dist"]
 		_standoff_ok = found["ok"]
+		_standoff_clear = found["clear"]
+		_standoff_at = spot
 		_game.player.reset_to(terrain.drop_point(spot.x, spot.y, 1.05))
 		_relocated = true
 	for entry in tops:
@@ -1068,14 +1072,18 @@ func _choose_perch() -> String:
 # A level, landform-clear spot for the ball: bearings (16, from `start`) at `distance`, then the radius
 # stepped out by STANDOFF_STEP_M up to STANDOFF_REACH_M past it. The first spot whose ground spread over
 # STANDOFF_PROBES is within STANDOFF_FLAT_M, clear of landforms and PERCH_MIN under the top wins (ok = true).
-# When none is, the best of: under the top, then clear, then least spread, is used with ok = false: the run
-# still goes, marked. Returns {p (x, z), dist, ok}.
+# When none is, the best of: clear of landforms, then under the top, then least spread, is used with
+# ok = false: the run still goes, marked. Spots outside the map's play rect are never used.
+# Returns {p (x, z), dist, ok, clear}.
 func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 	var terrain = _game.ctx.terrain
 	var m = terrain.map()
 	var blocked: Array = PerchPoints.blockers(m.park) if m is ParkMap and m.ok else []
 	var steps := int(STANDOFF_REACH_M / STANDOFF_STEP_M)
-	var best := {"p": Vector2(top.x, top.z) + Vector2(cos(start), sin(start)) * distance, "dist": distance, "ok": false}
+	var play := Rect2()
+	if m is ParkMap and m.ok:
+		play = m.play_rect
+	var best := {"p": Vector2(top.x, top.z) + Vector2(cos(start), sin(start)) * distance, "dist": distance, "ok": false, "clear": false}
 	var best_score := INF
 	for r in range(steps + 1):
 		var dist := distance + STANDOFF_STEP_M * r
@@ -1088,16 +1096,20 @@ func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 				var h: float = terrain.height(p.x + d.x, p.y + d.y)
 				lo = minf(lo, h)
 				hi = maxf(hi, h)
+			if play.size != Vector2.ZERO and not play.has_point(p):
+				continue
 			var clear := not ParkRecipes.in_clear(blocked, p, STANDOFF_CLEAR_M)
 			# The top must stand PERCH_MIN over the ground the ball is held on: stamped landforms are terrain,
 			# not blockers, so a spot can lie on the same plateau as a ledge top (a Dispatcher 2 m over the ball).
 			var under: bool = top.y - float(terrain.height(p.x, p.y)) >= PerchPoints.PERCH_MIN
 			if under and clear and hi - lo <= STANDOFF_FLAT_M:
-				return {"p": p, "dist": dist, "ok": true}
-			var score := (hi - lo) + (0.0 if clear else 1000.0) + (0.0 if under else 10000.0)
+				return {"p": p, "dist": dist, "ok": true, "clear": true}
+			# Clear first (a ball placed in a solid is wrong whatever the rise), then under, then spread; a
+			# clear spot that is not under the top is flagged by perched_under false.
+			var score := (hi - lo) + (0.0 if under else 1000.0) + (0.0 if clear else 10000.0)
 			if score < best_score:
 				best_score = score
-				best = {"p": p, "dist": dist, "ok": false}
+				best = {"p": p, "dist": dist, "ok": false, "clear": clear}
 	return best
 
 
@@ -1167,6 +1179,8 @@ func _record() -> void:
 		row["relocated"] = _relocated
 		row["standoff_m"] = snappedf(_standoff_m, 0.1)
 		row["standoff_ok"] = _standoff_ok
+		row["standoff_clear"] = _standoff_clear
+		row["standoff_at"] = [snappedf(_standoff_at.x, 0.1), snappedf(_standoff_at.y, 0.1)]
 		row["held"] = _held
 		row["perched_under"] = _perched_under
 		row["perch_over_ball_m"] = snappedf(_perch_over_ball, 0.01)
