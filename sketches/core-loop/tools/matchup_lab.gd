@@ -206,6 +206,7 @@ var _perch_base_rise := -1.0
 var _standoff_m := -1.0
 var _standoff_ok := false
 var _held := false
+var _perched_under := false
 var _perch_over_ball := 0.0
 var _ball_to_perch := -1.0
 var _perch_rise := -1.0
@@ -1066,9 +1067,9 @@ func _choose_perch() -> String:
 
 # A level, landform-clear spot for the ball: bearings (16, from `start`) at `distance`, then the radius
 # stepped out by STANDOFF_STEP_M up to STANDOFF_REACH_M past it. The first spot whose ground spread over
-# STANDOFF_PROBES is within STANDOFF_FLAT_M and clear of landforms wins (ok = true). When none is, the
-# clear spot with the least spread is used (any spot if none is clear) with ok = false: the run still
-# goes, marked, and the ball may roll. Returns {p (x, z), dist, ok}.
+# STANDOFF_PROBES is within STANDOFF_FLAT_M, clear of landforms and PERCH_MIN under the top wins (ok = true).
+# When none is, the best of: under the top, then clear, then least spread, is used with ok = false: the run
+# still goes, marked. Returns {p (x, z), dist, ok}.
 func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 	var terrain = _game.ctx.terrain
 	var m = terrain.map()
@@ -1088,9 +1089,12 @@ func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 				lo = minf(lo, h)
 				hi = maxf(hi, h)
 			var clear := not ParkRecipes.in_clear(blocked, p, STANDOFF_CLEAR_M)
-			if clear and hi - lo <= STANDOFF_FLAT_M:
+			# The top must stand PERCH_MIN over the ground the ball is held on: stamped landforms are terrain,
+			# not blockers, so a spot can lie on the same plateau as a ledge top (a Dispatcher 2 m over the ball).
+			var under: bool = top.y - float(terrain.height(p.x, p.y)) >= PerchPoints.PERCH_MIN
+			if under and clear and hi - lo <= STANDOFF_FLAT_M:
 				return {"p": p, "dist": dist, "ok": true}
-			var score := (hi - lo) + (0.0 if clear else 1000.0)
+			var score := (hi - lo) + (0.0 if clear else 1000.0) + (0.0 if under else 10000.0)
 			if score < best_score:
 				best_score = score
 				best = {"p": p, "dist": dist, "ok": false}
@@ -1110,6 +1114,7 @@ func _spawn_perched(ball: Vector3) -> void:
 	_ball_to_perch = Vector2(ball.x, ball.z).distance_to(Vector2(_perch_top.x, _perch_top.z))
 	_snapshot(_driver.enemy)
 	_perch_over_ball = _driver.enemy.global_position.y - float(terrain.height(ball.x, ball.z))
+	_perched_under = _perch_over_ball >= PerchPoints.PERCH_MIN
 	_perch_rise = float(_driver.enemy.perch_height()) if _driver.enemy.has_method("perch_height") else -1.0
 	_mast_built = _driver.enemy.get("mast") != null
 
@@ -1163,6 +1168,7 @@ func _record() -> void:
 		row["standoff_m"] = snappedf(_standoff_m, 0.1)
 		row["standoff_ok"] = _standoff_ok
 		row["held"] = _held
+		row["perched_under"] = _perched_under
 		row["perch_over_ball_m"] = snappedf(_perch_over_ball, 0.01)
 	if _pack_mode:
 		row["pack"] = _pack_id

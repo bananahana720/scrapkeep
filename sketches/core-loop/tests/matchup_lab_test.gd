@@ -353,8 +353,7 @@ func _perched_pure() -> void:
 	var table := Lab.build_table(rows, ["a"], ["dispatcher@park"], 40.0)
 	_check("no_perch counts as no result, not a capped duel", table["cells"]["a|dispatcher@park"]["runs"] == 2
 		and is_equal_approx(float(table["cells"]["a|dispatcher@park"]["median_ttk"]), 4.0))
-	var graded := Lab.grade_answers(table, [{"pilot": "a", "kind": "dispatcher@park", "outcome": "no_perch", "ttk_s": -1.0}], {"a|dispatcher@park": "x"}, 40.0, 1)
-	_check("an all-no_perch table cell reads as no runs", Lab.build_table([rows[2]], ["a"], ["dispatcher@park"], 40.0)["cells"]["a|dispatcher@park"]["runs"] == 0 and graded.is_empty())
+	_check("an all-no_perch table cell reads as no runs", Lab.build_table([rows[2]], ["a"], ["dispatcher@park"], 40.0)["cells"]["a|dispatcher@park"]["runs"] == 0)
 	var kid := Lab.child_args({"pilot": "tarn", "kind": "dispatcher@mast", "seed": 1, "give": "", "n": 0}, 40.0, {}, "park", "/x", "/p")
 	_check("a perched child gets --perched= and no --table=", "--perched=mast" in kid and not Array(kid).any(func(a): return String(a).begins_with("--table=")))
 	_check("perched labels stay distinct in 9 chars", Lab.row_label("dispatcher@park") == "disp@park" and Lab.row_label("dispatcher@mast") == "disp@mast")
@@ -405,7 +404,11 @@ func _perched_duel() -> void:
 	var mast: Dictionary = by["dispatcher@mast"]
 	_check("the park row found a finite perch (not no_perch)", String(park["outcome"]) != "no_perch" and (park["perch"] as Array).size() == 3)
 	_check("park: no mast was built", park["mast_built"] == false)
-	_check("park: the perch top stands 6 to 10 m over its base", float(park["perch_base_rise_m"]) >= 5.99 and float(park["perch_base_rise_m"]) <= 10.01)
+	_check("park: the chosen top is one of PerchPoints' tops (6 to 10 m over its base)", float(park["perch_base_rise_m"]) >= 5.99 and float(park["perch_base_rise_m"]) <= 10.01
+		and park["perch_source"] in ["post", "ledge"])
+	for row: Dictionary in [park, mast]:
+		_check("%s: the Dispatcher stands at least PERCH_MIN over the ball at the spawn (perched_under)" % row["kind"],
+			float(row["perch_over_ball_m"]) >= Lab.PerchPoints.PERCH_MIN and row["perched_under"] == true)
 	_check("park: the row records its perch fields", park.has("ball_to_perch_m") and park.has("drops") and park.has("landed_hits")
 		and park.has("escalation") and park.has("relocated") and park.has("dispatcher_down_s"))
 	_check("contrast row: the mast row builds its own mast, 8 m up", mast["mast_built"] == true and is_equal_approx(float(mast["perch_rise_m"]), 8.0))
