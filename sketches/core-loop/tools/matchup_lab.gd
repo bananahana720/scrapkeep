@@ -55,6 +55,8 @@ const DODGE := 0.65
 const DUEL_RANGE := 18.0
 # Pack mode (--packs): a named authored pack is the opponent, closer in, spaced like Director._place_pack.
 const PACK_RANGE := 12.0
+# Beacon seconds no duel can reach (the stage's own is 25).
+const BEACON_PIN_S := 1.0e9
 const PACK_PREFIX := "pack:"
 const TABLES := ["park", "alpha"]
 # Perched duel (--perched): the Dispatcher on a park perch top (`park`) or on its own mast (`mast`).
@@ -63,7 +65,7 @@ const PERCHED_KIND := "dispatcher"
 const PERCHED_MODES := ["park", "mast"]
 const PERCH_SEP := "@"
 const PERCH_RANGE := 15.0
-# A relocated ball stands on ground this flat (max height spread over a 2 m cross) and this clear of landforms.
+# A relocated ball stands on ground this flat (height spread over STANDOFF_PROBES) and this clear of landforms.
 const STANDOFF_FLAT_M := 0.12
 # Probe offsets: the spot and 8 points on a 4 m ring, so a gentle slope (which rolls a resting ball) fails.
 const STANDOFF_PROBES := [Vector2(0, 0), Vector2(4, 0), Vector2(-4, 0), Vector2(0, 4), Vector2(0, -4), Vector2(2.8, 2.8), Vector2(-2.8, 2.8), Vector2(2.8, -2.8), Vector2(-2.8, -2.8)]
@@ -71,8 +73,6 @@ const STANDOFF_CLEAR_M := 3.0
 const STANDOFF_BEARINGS := 16
 const STANDOFF_STEP_M := 5.0
 const STANDOFF_REACH_M := 15.0
-# Outcomes that count as no result (left out of the table).
-const NO_RESULT := ["no_result", "wall_timeout", "no_perch"]
 # A duel starts at rest: the ball must be grounded and slower than REST_SPEED for SETTLE_S in a
 # row. If it has not come to rest REST_WAIT_S after first landing, it is set to rest where it
 # stands (the player's own set_velocity_now); at SETTLE_MAX_S the duel starts regardless.
@@ -83,6 +83,8 @@ const SETTLE_MAX_S := 12.0
 # The hull pool a duel gives the ball, so a lost duel is measured by hull_lost and does not end the run.
 const HULL_POOL := 99999.0
 const WALL_LIMIT_S := 600.0
+# Outcomes that measured nothing: left out of the table and the answer arm.
+const NO_RESULT := ["no_result", "wall_timeout", "stage_changed", "no_perch"]
 const PENDING := "answer: pending (no answers tags on this base)"
 
 
@@ -187,6 +189,8 @@ var _pack_spawned := 0
 var _pack_skipped: Array = []
 var _collecting := false
 var _first_down_s := -1.0
+var _spawn_stage := 0
+var _stage_changed := false
 var _warnings := 0
 var _joined := 0
 var _scrap_serial := 0
@@ -858,6 +862,11 @@ func _physics_process(delta: float) -> bool:
 		_driver.idle = String(_settings.get("idle", "0")) == "1"
 		_driver._dodge_rng.seed = hash(["dodge", _run_seed])
 		_driver.stage_limit = INF
+		# The calm map's beacon charges from the start (the ball begins in its ring; ctx.calm does not
+		# stop beacon.advance) and a full charge runs gates, launch and the next stage, which frees the
+		# duel's enemies (a long pack duel read `killed` with ttk -1 and duel_s -10.61). Pin the
+		# beacon out of reach so no duel can leave its stage; the stage guard below is the backstop.
+		_game.flow.beacon_seconds_override = BEACON_PIN_S
 		_game.presentation.audio.bake_now()
 		_bot_options.apply_audio(_game.presentation.audio)
 		_game.events.player_hit.connect(func(amount: float, _source: String):
@@ -908,6 +917,11 @@ func _physics_process(delta: float) -> bool:
 			return false
 	var over: bool = _driver.tick(delta)
 	var t := _duel_s()
+	if not over and (_game.run.stage != _spawn_stage or _game.run.stage_time < _start_s):
+		# The stage changed under the duel: its enemies were freed, so "cleared" would be false.
+		_stage_changed = true
+		_driver._end("stage_changed")
+		over = true
 	# A freed object compares equal to null, so the duel's own flag says the enemy was ever set.
 	if _pack_mode:
 		if _first_down_s < 0.0 and _enemy_set:
@@ -972,6 +986,7 @@ func _cleared() -> bool:
 func _spawn_duel() -> void:
 	_spawned = true
 	_start_s = _game.run.stage_time
+	_spawn_stage = _game.run.stage
 	_hull_start = float(_game.run.metrics["hull_damage"])
 	# ctx.calm gates the Warden, the director's packs, flood and event pushes, and hit knockback in
 	# combat; it does not gate an enemy's attack or the damage it deals (combat._on_player_hit
@@ -1131,7 +1146,7 @@ func _record() -> void:
 	var row := {"pilot": _pilot, "class": _driver.class_id(), "kind": _kind, "seed": _run_seed, "give": String(_settings.get("give", "")),
 			"outcome": outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
 			"kill_dist_m": snappedf(_kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
-			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01), "settle_s": snappedf(_settle_s, 0.01), "rest_forced": _rest_forced}
+			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01), "settle_s": snappedf(_settle_s, 0.01), "rest_forced": _rest_forced, "stage_changed": _stage_changed}
 	if _perched != "":
 		row["perched"] = _perched
 		row["perch"] = [snappedf(_perch_top.x, 0.01), snappedf(_perch_top.y, 0.01), snappedf(_perch_top.z, 0.01)] if _perch_top.x != INF else []
