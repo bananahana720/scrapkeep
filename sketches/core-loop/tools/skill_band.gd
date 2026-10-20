@@ -57,12 +57,19 @@ var kit := "full"
 var _rng := RandomNumberGenerator.new()
 var _read := {}
 
+# A refusal's message, for tests to read. With quiet set, an unknown band is recorded but not printed (tests feed bad input without an ERROR line).
+static var quiet := false
+static var last_refusal := ""
+
 
 # An unknown name is a caller's typo: say so and play the Expert, which is the baseline.
 static func make(band_name: String, attempt_number: int, seed_value: int):
 	var key := band_name
 	if not BANDS.has(key):
-		push_error("skill_band: unknown band '%s'; use expert, learner or novice" % band_name)
+		var message := "skill_band: unknown band '%s'; use expert, learner or novice" % band_name
+		last_refusal = message
+		if not quiet:
+			push_error(message)
 		key = "expert"
 	var row: Dictionary = BANDS[key]
 	var band = new()

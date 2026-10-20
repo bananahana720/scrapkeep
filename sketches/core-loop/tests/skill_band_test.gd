@@ -63,8 +63,11 @@ func _unit(t) -> void:
 		"rate %.3f, chance %.3f" % [rate, learner.read_chance])
 	var again = SkillBand.make("learner", 1, 7)
 	t.check("a tell's answer is stable and the stream replays", again.reads(5) == learner.reads(5) and again.reads(5) == again.reads(5))
-	# A typo plays the Expert; the push_error is the intended report.
+	# A typo plays the Expert; the refusal is recorded quietly here, so no ERROR line reaches the smoke.
+	SkillBand.quiet = true
 	var fallback = SkillBand.make("nonesuch", 1, 7)
+	SkillBand.quiet = false
+	t.check("an unknown band is refused with its name", SkillBand.last_refusal.contains("nonesuch"))
 	t.eq("unknown band falls back to expert", fallback.name, "expert")
 
 
