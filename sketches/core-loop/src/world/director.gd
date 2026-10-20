@@ -139,6 +139,11 @@ const WARDEN_RING_FROM_STAGE := 2
 # away and keeps the sloped floor. The sky island's void lies past the ring (the isle is 180 m
 # wide), so there this is a backstop.
 const WARDEN_RING_DROP := 10.0
+# ...and at most this far above it, so the sinkhole's ring (core at the bottom of a ~100 m bowl) stays
+# on the floor and low ledges, not up the walls. Measured rise of 64 ring samples a park: dam to
+# 8.7 m, flume 12.9, crown 0.5, islands 0.2, pit 8.4, sinkhole median 1.9 (walls up to 101.9).
+# 15 m keeps every sample of the first five and 46 of the sinkhole's 64 (that pass the other tests).
+const WARDEN_RING_RISE := 15.0
 const HOME_WINDOW := Vector2(60.0, 250.0)
 # Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
 # elite pack again; never two elites in a row.
@@ -951,7 +956,9 @@ func _warden_ring_spot(ball: Vector2) -> Vector2:
 			continue
 		if _park_map != null and not _park_safe(spot):
 			continue
-		if terrain != null and terrain.height(spot.x, spot.y) < terrain.height(warden_core.x, warden_core.y) - WARDEN_RING_DROP:
-			continue
+		if terrain != null:
+			var rise: float = terrain.height(spot.x, spot.y) - terrain.height(warden_core.x, warden_core.y)
+			if rise < -WARDEN_RING_DROP or rise > WARDEN_RING_RISE:
+				continue
 		return spot
 	return Vector2.INF

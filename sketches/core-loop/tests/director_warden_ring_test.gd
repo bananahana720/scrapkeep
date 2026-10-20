@@ -2,11 +2,15 @@ extends SceneTree
 
 const Director := preload("res://src/world/director.gd")
 const T := preload("res://tests/support/t.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const Terrain := preload("res://src/world/terrain.gd")
 
 # w17 Warden contact (ruling 15 c'): while warden_core is finite, spawn_spot draws from the ring
 # WARDEN_RING around the core, so a pack reaches the 6 m core ring where the Warden's damage lands.
 # The honesty rules stay: 25 m from the ball, off the pilot corridor, inside the play rect.
 #
+# The sinkhole's core sits at the bottom of a ~100 m bowl: ring spots stay on its floor and low ledges.
+# Planted control 2: drop the rise test in _warden_ring_spot and "sinkhole: no spot above" fails.
 # Planted control: set WARDEN_RING.x to 0 (the inner radius) and "inside the ring radii" fails on
 # the first spawn within 14 m of the core; drop the MIN_GAP test in _warden_ring_spot and "25 m from the
 # ball" fails for the ball lapping at 10 to 20 m. Either mutation turns this test red.
@@ -17,11 +21,36 @@ const SLACK := 0.001
 # The ring as the ruling states it, kept apart from Director.WARDEN_RING so a mutated constant is caught.
 const RING_INNER := 14.0
 const RING_OUTER := 32.0
+# The ceiling and floor of a ring spot against the core ground, again as the ruling states them.
+const RISE_MAX := 15.0
+const DROP_MAX := 10.0
 
 var _t := T.new("director_warden_ring_test")
 
 
 # A pit on the +x half of the core's plane: 20 m below the core, so the drop guard must refuse it.
+# The baked sinkhole ground as a director terrain (height(x, z)), the same read terrain.gd makes.
+class BakedTerrain:
+	var heights := PackedFloat32Array()
+	var holes := PackedByteArray()
+	var under := PackedFloat32Array()
+
+	func _init(id: String) -> void:
+		var dir := ParkTerrain.bake_dir(id)
+		heights = ParkTerrain._read_zstd(dir + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
+		holes = FileAccess.get_file_as_bytes(dir + "/holes.bin")
+		var floors := FileAccess.get_file_as_bytes(dir + "/under.bin").to_float32_array()
+		under.resize(ParkTerrain.CELLS * ParkTerrain.CELLS)
+		var n := 0
+		for k in holes.size():
+			if holes[k] == 1:
+				under[k] = floors[n]
+				n += 1
+
+	func height(x: float, z: float) -> float:
+		return Terrain._park_height(heights, holes, under, x, z)
+
+
 class PitTerrain:
 	var edge := 0.0
 
@@ -34,6 +63,7 @@ func _initialize() -> void:
 		_ring_in_park(id)
 	_default_is_unchanged()
 	_drop_guard()
+	_sinkhole_rise()
 	_fallback()
 	_pack_arrivals()
 	quit(_t.verdict())
@@ -113,6 +143,29 @@ func _drop_guard() -> void:
 		clear = clear and at.x <= 0.0 and at.distance_to(d.warden_core) <= Director.WARDEN_RING.y + SLACK
 	_t.check("drop guard: ring spots found (%d)" % made, made > 0)
 	_t.check("drop guard: no spot lands in the pit", clear)
+
+
+func _sinkhole_rise() -> void:
+	var d = _park_director("park_sinkhole", 31)
+	var ground := BakedTerrain.new("park_sinkhole")
+	d.terrain = ground
+	var core: Vector2 = d.warden_core
+	var base: float = ground.height(core.x, core.y)
+	var made := 0
+	var low := true
+	var high := true
+	for i in SPOTS:
+		var ball := core + Vector2.RIGHT.rotated(TAU * i / 12.0) * (10.0 + 10.0 * float(i % 2))
+		var at: Vector2 = d.spawn_spot(ball, Vector2.ZERO, Vector2(0.0, 1.0))
+		if at == Vector2.INF or at.distance_to(core) > RING_OUTER + SLACK:
+			continue
+		made += 1
+		var rise: float = ground.height(at.x, at.y) - base
+		high = high and rise <= RISE_MAX
+		low = low and rise >= -DROP_MAX
+	_t.check("sinkhole: ring spots found (%d of %d)" % [made, SPOTS], made >= SPOTS * 0.8)
+	_t.check("sinkhole: no spot above the rise ceiling", high)
+	_t.check("sinkhole: no spot below the drop floor", low)
 
 
 func _fallback() -> void:
