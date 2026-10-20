@@ -14,7 +14,8 @@ terrain without floating); the -col mesh is the same profile COL_DROP under it, 
 collider gives the seat fit its authored ends and a safety net. Both offsets taper with the stamp's open ends (park_stamps.gd
 _open_end, min(width, length / 4)), so a piece meets the plain at its row's ends, and seated, the stretch scales those ends
 exactly as the stamp does. The lane is the footprint: nothing drawn or colliding stands over the ridden surface inside it;
-boulders, cones and crust only stand beyond the crest, |x| >= W / 2 + CREST_CLEAR. The carve band (the Dig's carving skill;
+boulders, cones and crust only stand beyond the crest, |x| >= W / 2 + CREST_CLEAR. On the chained piece they also stay END_ZONE
+from either end, where the next row's lane at a bend reaches, and the crest band is meshed finer (CREST_BAND). The carve band (the Dig's carving skill;
 FloorRule.on_floor is normal.y >= 0.9): wherever the stamp is steeper than CARVE_DEG the wall is drawn in polished glassy
 basalt with flow streaks along the run, computed from the profile's own gradient, with a pale lip line on the floor's last
 safe line (carve_x) and cinder grit on the floor centre, so the safe walls and the bitten floor read from the chase camera.
@@ -55,6 +56,14 @@ CARVE_DEG = 25.8              # FloorRule.on_floor: normal.y >= 0.9, so steeper 
 END_SLAB = (6.0, 0.2)         # a chained piece's -col: slabs this far under the floor, this thick
 BAKE_GRID = 2.0               # the park bake's height sample spacing, m
 SKIRT = 0.6                   # the shell's outer skirt reaches this far under the crest
+CREST_BAND = 2.0              # a chained shell's crest band: this far in from the crest the cross-section is halved (0.35 m apart) and the
+BAND_STEP = 0.5               # z step is this, m, so no long triangle chords across the steep ground just past the crest
+MAX_BEND_DEG = 45.0           # the largest yaw step between chained neighbours END_ZONE was measured for (check_rows enforces it)
+END_ZONE = 15.0               # m from a row's end with no beyond-crest props: measured over the 20 chain pairs (rows 51 to 60 m,
+                              # stamps overlapping about 17 m, bends up to 45 degrees) the next row's lane reaches props at |x| 14.5 to 19.5
+                              # no further than 13.9 m (about the 14 m lane half-width) from the end; 1 m slack
+MIN_STRETCH = 0.88            # the shortest seated row (51.16 m) over the 58 m piece: a metre of row is at most 1 / this in the GLB
+PROP_HALF = 1.5               # a prop's reach along z (boulders to 1.5 m, cones 1.6 m), so its whole body stays out of the zone
 
 si.HEX.update({
     "basalt": "2b2726", "basalt_hi": "433b37", "basalt_lo": "1d1a1a", "scoria": "6e3426", "ash": "6f655c",
@@ -84,6 +93,10 @@ class Piece:
             mid = 0.5 * (lo + hi)
             lo, hi = (lo, mid) if self.steep(mid, 0.5 * self.L) else (mid, hi)
         self.carve_x = hi
+        # The dressed span of a chained piece along z: beyond-crest props stand only here, END_ZONE (+ a prop's reach) in from either
+        # end, in GLB metres at the shortest row's stretch. Other pieces dress their whole length.
+        self.z_lo = (END_ZONE / MIN_STRETCH + PROP_HALF) if chained else 0.0
+        self.z_span = self.L - 2.0 * self.z_lo
 
     def cross(self, x):
         """The stamp's depth across the width, 0..1: park_stamps.gd wash or channel."""
@@ -124,7 +137,24 @@ class Piece:
             f = 0.2 * self.W
             wall = [f + (hw - f) * i / n_wall for i in range(1, n_wall + 1)]
         floor = [-f + 2 * f * i / n_floor for i in range(n_floor + 1)]
+        if self.chained:  # halve the wall facets inside CREST_BAND of the crest, so vertices there are under 0.4 m apart
+            edge = [f] + wall
+            wall = [w for a, b in zip(edge, edge[1:]) for w in ((0.5 * (a + b), b) if b > hw - CREST_BAND + 1e-9 else (b,))]
         return [-x for x in reversed(wall)] + floor + wall
+
+    def band_x(self, xs):
+        """|x| where a chained piece's crest band starts: its last wall node inside CREST_BAND of the crest, None on other pieces."""
+        if not self.chained:
+            return None
+        return max(abs(x) for x in xs if abs(x) <= self.W / 2 - CREST_BAND + 1e-9 and abs(x) > 0.2 * self.W)
+
+    def fine_zs(self, zs):
+        """zs with every interval split to at most BAND_STEP, so the crest band's rows nest in the coarse rows' edges."""
+        out = []
+        for a, b in zip(zs, zs[1:]):
+            n = max(1, math.ceil((b - a) / BAND_STEP - 1e-9))
+            out += [a + (b - a) * i / n for i in range(n)]
+        return sorted(set(round(z, 6) for z in out + [zs[-1]]))
 
     def zs(self, end_step, mid_step):
         n_end = max(4, math.ceil(self.run / end_step))
@@ -190,14 +220,44 @@ def build_base(p):
     s = Surf(p.id)
     nf, nw, es, ms = GRID[p.id]
     xs, zs = p.xs(nf, nw), p.zs(es, ms)
+    xb = p.band_x(xs)
+    zf = p.fine_zs(zs) if xb is not None else zs
+
+    def vert(x, z):
+        return (x, p.shell(x, z), z)
+
+    def emit(a, b, c):
+        pts = [vert(*a), vert(*b), vert(*c)]
+        s.poly(pts, [colour(p, q[0], q[2]) for q in pts], up=UP)
+
     for z0, z1 in zip(zs, zs[1:]):
+        inner = [z for z in zf if z0 < z < z1]
         for x0, x1 in zip(xs, xs[1:]):
-            pts = [(x0, p.shell(x0, z0), z0), (x0, p.shell(x0, z1), z1), (x1, p.shell(x1, z1), z1), (x1, p.shell(x1, z0), z0)]
-            s.poly(pts, [colour(p, q[0], q[2]) for q in pts], up=UP)
+            if xb is not None and min(abs(x0), abs(x1)) >= xb - 1e-9:  # the crest band: its own fine z step
+                zl = [z0] + inner + [z1]
+                for za, zb in zip(zl, zl[1:]):
+                    pts = [vert(x0, za), vert(x0, zb), vert(x1, zb), vert(x1, za)]
+                    s.poly(pts, [colour(p, q[0], q[2]) for q in pts], up=UP)
+                continue
+            seam = xb is not None and inner and {abs(x0), abs(x1)} & {xb} and max(abs(x0), abs(x1)) < p.W / 2 and min(abs(x0), abs(x1)) < xb - 1e-9
+            if not seam:
+                pts = [vert(x0, z0), vert(x0, z1), vert(x1, z1), vert(x1, z0)]
+                s.poly(pts, [colour(p, q[0], q[2]) for q in pts], up=UP)
+                continue
+            xa, xe = (x0, x1) if abs(x1) > abs(x0) else (x1, x0)  # the quad's inner edge xa and its seam edge xe, where the band's finer z nodes land
+            edge = [z0] + inner + [z1]
+            c = min(range(len(edge)), key=lambda k: abs(edge[k] - 0.5 * (z0 + z1)))
+            for k in range(c):
+                emit((xa, z0), (xe, edge[k]), (xe, edge[k + 1]))
+            emit((xa, z0), (xe, edge[c]), (xa, z1))
+            for k in range(c, len(edge) - 1):
+                emit((xa, z1), (xe, edge[k]), (xe, edge[k + 1]))
         for sign in (-1, 1):  # the skirt under the crest, so no slit shows where the shell meets the terrain
             x = sign * p.W / 2
-            s.poly([(x, p.shell(x, z0), z0), (x, p.shell(x, z1), z1), (x, p.shell(x, z1) - SKIRT, z1), (x, p.shell(x, z0) - SKIRT, z0)],
-                   col("cinder" if p.look == "lava" else "sand"), inside=(0.0, -p.H, 0.5 * (z0 + z1)))
+            zl = [z0] + [z for z in zf if z0 < z < z1] + [z1]
+            for za, zb in zip(zl, zl[1:]):
+                s.poly([(x, p.shell(x, za), za), (x, p.shell(x, zb), zb), (x, p.shell(x, zb) - SKIRT, zb), (x, p.shell(x, za) - SKIRT, za)],
+                       col("cinder" if p.look == "lava" else "sand"), inside=(0.0, -p.H, 0.5 * (za + zb)))
     return s
 
 
@@ -241,7 +301,7 @@ def stake(s, x, z):
 def rim_rock(s, p, sign, q, n, seed, size, tones):
     """A boulder past the crest: its inner face at least CREST_CLEAR beyond the footprint's side."""
     hw = p.W / 2
-    z = p.L * (q + 0.3 + 0.4 * rnd(q, sign, seed)) / n
+    z = p.z_lo + p.z_span * (q + 0.3 + 0.4 * rnd(q, sign, seed)) / n
     sz = size[0] + size[1] * rnd(q, sign, seed + 1)
     x = sign * (hw + CREST_CLEAR + 0.75 * sz + 3.5 * rnd(q, sign, seed + 2))
     s.chunk((x, -0.2, z), (sz, sz * 0.6, sz * 0.9), rnd(q, sign, seed + 3) * math.tau, seed * 7 + q + 50 * sign,
@@ -259,17 +319,18 @@ def build_d1(p):
     s = Surf(p.id + "_detail1")
     hw = p.W / 2
     n = 26 if p.L < 100 else 30
+    n_rock = max(1, round(n * p.z_span / p.L))  # the same density over the dressed span
     for sign in (-1, 1):
-        for q in range(n):
-            rim_rock(s, p, sign, q, n, 1, (0.5, 1.1), ("basalt", "basalt_hi") if p.look == "lava" else ("gravel", "sandstone"))
+        for q in range(n_rock):
+            rim_rock(s, p, sign, q, n_rock, 1, (0.5, 1.1), ("basalt", "basalt_hi") if p.look == "lava" else ("gravel", "sandstone"))
         if p.look == "lava":
             for q in range(3):
                 r = 1.1 + 0.5 * rnd(q, sign, 7)
-                spatter_cone(s, sign * (hw + CREST_CLEAR + r + 2.0 * rnd(q, sign, 6)), p.L * (0.2 + 0.3 * q) + 3.0 * sign, r, 1.2 + 0.8 * rnd(q, sign, 8), q + 9 * sign)
-    stake(s, -hw - 1.2, 1.5)
-    stake(s, hw + 1.2, p.L - 1.5)
+                spatter_cone(s, sign * (hw + CREST_CLEAR + r + 2.0 * rnd(q, sign, 6)), p.z_lo + p.z_span * (0.2 + 0.3 * q) + 3.0 * sign, r, 1.2 + 0.8 * rnd(q, sign, 8), q + 9 * sign)
+    stake(s, -hw - 1.2, p.z_lo + 1.5)
+    stake(s, hw + 1.2, p.z_lo + p.z_span - 1.5)
     if p.look == "lava":
-        kettle(s, hw + 2.6, 6.0)
+        kettle(s, hw + 2.6, p.z_lo + 6.0)
     assert len(s.t) <= SHELL_BUDGET[0], (s.name, len(s.t))
     on_crest(s, p)
     return s
@@ -317,9 +378,10 @@ def build_d2(p):
         x = 2.4 * (rnd(q, 11) - 0.5) * 2
         z = p.run + (p.L - 2 * p.run) * (q + rnd(q, 12)) / 40
         floor_strip(s, p, [(x, z), (x + 0.25 * (rnd(q, 13) - 0.5), z + 0.3)], 0.22, lerp(col("cinder"), col("ash"), rnd(q, 14)))
+    n_grit = max(1, round(26 * p.z_span / p.L))
     for sign in (-1, 1):
-        for q in range(26):  # cinders or pebbles past the crest
-            z = p.L * (q + rnd(q, sign, 5)) / 26
+        for q in range(n_grit):  # cinders or pebbles past the crest
+            z = p.z_lo + p.z_span * (q + rnd(q, sign, 5)) / n_grit
             sz = 0.12 + 0.22 * rnd(q, sign, 7)
             x = sign * (hw + CREST_CLEAR + 0.6 * sz + 2.6 * rnd(q, sign, 6))
             tones = ("cinder", "scoria") if p.look == "lava" else ("gravel", "bone")
@@ -429,6 +491,8 @@ def check_piece(p, base, col_s, shells):
         for x, y, z in shell.v:  # every shell vertex over the footprint: nothing stands in the lane but paint on the shell
             if abs(x) < p.W / 2 and 0.0 < z < p.L:
                 assert y - p.shell(x, z) <= SHELL_PROUD + 1e-6, (p.id, "shell vertex in the lane", shell.name, x, y, z)
+            elif p.chained and abs(x) >= p.W / 2:  # a beyond-crest prop in the end zone would stand in the next row's lane at the bends
+                assert END_ZONE / MIN_STRETCH <= z <= p.L - END_ZONE / MIN_STRETCH, (p.id, "prop in the end zone", shell.name, x, y, z)
     return worst
 
 
@@ -443,6 +507,26 @@ def check_chute(base, col_s, shells):
         for x, z in probes:
             assert si.height_at(shell, x, z) is None, ("chute shell in the lane", shell.name, x, z)
     return 0.0
+
+
+ROWS_JSON = HERE.parents[2] / "src" / "world" / "park" / "park_sinkhole.json"
+
+
+def check_rows(path=ROWS_JSON):
+    """The end zone holds only for the rows it was measured on: fail the build, naming the row, if a lava_channel row is shorter
+    than MIN_STRETCH of the piece or turns more than MAX_BEND_DEG from its chained neighbour."""
+    if not Path(path).is_file():
+        raise SystemExit("lavachannels: %s missing, cannot check the lava_channel rows against END_ZONE" % path)
+    rows = [r for r in json.loads(Path(path).read_text())["park_rows"] if r.get("recipe") == "lava_channel"]
+    assert rows, ("no lava_channel rows in", str(path))
+    prev = None
+    for r in rows:
+        assert r["size"][0] / PIECES["lava_channel"].L >= MIN_STRETCH - 1e-9, (r["id"], "row shorter than MIN_STRETCH of the piece", r["size"][0])
+        if prev is not None:
+            bend = abs((r["yaw_deg"] - prev["yaw_deg"] + 180.0) % 360.0 - 180.0)
+            assert bend <= MAX_BEND_DEG + 1e-9, (prev["id"], r["id"], "bend over MAX_BEND_DEG", bend)
+        prev = r
+    return len(rows)
 
 
 RECIPES = list(PIECES) + [CHUTE["id"]]
@@ -491,6 +575,8 @@ def main():
     parser.add_argument("--recipe", default="all")
     args = parser.parse_args(argv)
     ids = RECIPES if args.recipe == "all" else args.recipe.split(",")
+    if "lava_channel" in ids:
+        print("LAVACHANNELS rows checked", check_rows())
     log = [build(rid, args.out, args.count_only) for rid in ids]
     for row in log:
         print("LAVACHANNELS", row["recipe"], json.dumps({k: v for k, v in row.items() if k != "glb"}, sort_keys=True))
