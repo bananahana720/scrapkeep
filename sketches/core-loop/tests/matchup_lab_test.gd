@@ -369,7 +369,7 @@ func _perched_duel() -> void:
 		DirAccess.remove_absolute(out)
 	var output := []
 	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
-			"--out=" + out, "--procs=2", "--seeds=1", "--cap=10", "--pilots=tarn", "--kinds=dispatcher", "--perched=park,mast", "--answer=0",
+			"--out=" + out, "--procs=1", "--seeds=1", "--cap=10", "--pilots=tarn", "--kinds=dispatcher", "--perched=park,mast", "--answer=0",
 			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
 	var code := OS.execute(OS.get_executable_path(), args, output, true)
 	_check("the perched duels exit 0", code == 0)
@@ -389,7 +389,14 @@ func _perched_duel() -> void:
 	_check("park: the perch top stands 6 to 10 m over its base", float(park["perch_base_rise_m"]) >= 5.99 and float(park["perch_base_rise_m"]) <= 10.01)
 	_check("park: the row records its perch fields", park.has("ball_to_perch_m") and park.has("drops") and park.has("landed_hits")
 		and park.has("escalation") and park.has("relocated") and park.has("dispatcher_down_s"))
-	_check("planted negative: the mast row builds its own mast, 8 m up", mast["mast_built"] == true and is_equal_approx(float(mast["perch_rise_m"]), 8.0))
+	_check("contrast row: the mast row builds its own mast, 8 m up", mast["mast_built"] == true and is_equal_approx(float(mast["perch_rise_m"]), 8.0))
+	# park_dam has no level, clear standoff near its tops (measured), so standoff_ok is reported, not required;
+	# when a spot is ok the ball must have stayed within 3 m of it.
+	_check("park: a relocated row records standoff_ok and standoff_m", park["relocated"] == false or (park.has("standoff_ok") and float(park["standoff_m"]) >= 15.0))
+	_check("park: an ok standoff holds the ball near it at the spawn", park["relocated"] == false or park["standoff_ok"] == false
+		or absf(float(park["ball_to_perch_m"]) - float(park["standoff_m"])) <= 3.0)
+	_check("mast: the Dispatcher stands at least PERCH_MIN over the ball", float(mast["perch_over_ball_m"]) >= Lab.PerchPoints.PERCH_MIN)
+	print("perched park perch_over_ball_m=%s standoff_m=%s standoff_ok=%s b2p=%s" % [park["perch_over_ball_m"], park["standoff_m"], park["standoff_ok"], park["ball_to_perch_m"]])
 	_check("both rows chose the same top", park["perch"] == mast["perch"])
 
 

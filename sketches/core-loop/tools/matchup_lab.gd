@@ -64,8 +64,13 @@ const PERCHED_MODES := ["park", "mast"]
 const PERCH_SEP := "@"
 const PERCH_RANGE := 15.0
 # A relocated ball stands on ground this flat (max height spread over a 2 m cross) and this clear of landforms.
-const STANDOFF_FLAT_M := 0.8
+const STANDOFF_FLAT_M := 0.12
+# Probe offsets: the spot and 8 points on a 4 m ring, so a gentle slope (which rolls a resting ball) fails.
+const STANDOFF_PROBES := [Vector2(0, 0), Vector2(4, 0), Vector2(-4, 0), Vector2(0, 4), Vector2(0, -4), Vector2(2.8, 2.8), Vector2(-2.8, 2.8), Vector2(2.8, -2.8), Vector2(-2.8, -2.8)]
 const STANDOFF_CLEAR_M := 3.0
+const STANDOFF_BEARINGS := 16
+const STANDOFF_STEP_M := 5.0
+const STANDOFF_REACH_M := 15.0
 # Outcomes that count as no result (left out of the table).
 const NO_RESULT := ["no_result", "wall_timeout", "no_perch"]
 # A duel starts at rest: the ball must be grounded and slower than REST_SPEED for SETTLE_S in a
@@ -192,8 +197,11 @@ var _perch_chosen := false
 var _no_perch := false
 var _relocated := false
 var _perch_top := Vector3.INF
-var _perch_source := ""
+var _perch_source := "unknown"
 var _perch_base_rise := -1.0
+var _standoff_m := -1.0
+var _standoff_ok := false
+var _perch_over_ball := 0.0
 var _ball_to_perch := -1.0
 var _perch_rise := -1.0
 var _mast_built := false
@@ -1022,10 +1030,12 @@ func _choose_perch() -> String:
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(["perch_pick", _run_seed])
 		_perch_top = tops[rng.randi_range(0, tops.size() - 1)]["top"]
-		var spot := _standoff(_perch_top, float(_settings.get("range", str(PERCH_RANGE))), rng.randf() * TAU)
+		var found := _standoff(_perch_top, float(_settings.get("range", str(PERCH_RANGE))), rng.randf() * TAU)
+		var spot: Vector2 = found["p"]
+		_standoff_m = found["dist"]
+		_standoff_ok = found["ok"]
 		_game.player.reset_to(terrain.drop_point(spot.x, spot.y, 1.05))
 		_relocated = true
-	_perch_source = "ledge"
 	for entry in tops:
 		if (entry["top"] as Vector3).is_equal_approx(_perch_top):
 			_perch_source = entry["source"]
@@ -1033,27 +1043,37 @@ func _choose_perch() -> String:
 	return "relocated" if _relocated else "near"
 
 
-# A flat spot `distance` from the top: the first of eight directions (from `start`) whose ground is
-# level and clear of landforms, else the first. Returns the (x, z) as a Vector2.
-func _standoff(top: Vector3, distance: float, start: float) -> Vector2:
+# A level, landform-clear spot for the ball: bearings (16, from `start`) at `distance`, then the radius
+# stepped out by STANDOFF_STEP_M up to STANDOFF_REACH_M past it. The first spot whose ground spread over
+# STANDOFF_PROBES is within STANDOFF_FLAT_M and clear of landforms wins (ok = true). When none is, the
+# clear spot with the least spread is used (any spot if none is clear) with ok = false: the run still
+# goes, marked, and the ball may roll. Returns {p (x, z), dist, ok}.
+func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 	var terrain = _game.ctx.terrain
 	var m = terrain.map()
 	var blocked: Array = PerchPoints.blockers(m.park) if m is ParkMap and m.ok else []
-	var first := Vector2.INF
-	for k in 8:
-		var a := start + TAU * k / 8.0
-		var p := Vector2(top.x, top.z) + Vector2(cos(a), sin(a)) * distance
-		if first.x == INF:
-			first = p
-		var lo := INF
-		var hi := -INF
-		for d in [Vector2.ZERO, Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
-			var h: float = terrain.height(p.x + d.x, p.y + d.y)
-			lo = minf(lo, h)
-			hi = maxf(hi, h)
-		if hi - lo <= STANDOFF_FLAT_M and not ParkRecipes.in_clear(blocked, p, STANDOFF_CLEAR_M):
-			return p
-	return first
+	var steps := int(STANDOFF_REACH_M / STANDOFF_STEP_M)
+	var best := {"p": Vector2(top.x, top.z) + Vector2(cos(start), sin(start)) * distance, "dist": distance, "ok": false}
+	var best_score := INF
+	for r in range(steps + 1):
+		var dist := distance + STANDOFF_STEP_M * r
+		for k in STANDOFF_BEARINGS:
+			var a := start + TAU * k / float(STANDOFF_BEARINGS)
+			var p := Vector2(top.x, top.z) + Vector2(cos(a), sin(a)) * dist
+			var lo := INF
+			var hi := -INF
+			for d in STANDOFF_PROBES:
+				var h: float = terrain.height(p.x + d.x, p.y + d.y)
+				lo = minf(lo, h)
+				hi = maxf(hi, h)
+			var clear := not ParkRecipes.in_clear(blocked, p, STANDOFF_CLEAR_M)
+			if clear and hi - lo <= STANDOFF_FLAT_M:
+				return {"p": p, "dist": dist, "ok": true}
+			var score := (hi - lo) + (0.0 if clear else 1000.0)
+			if score < best_score:
+				best_score = score
+				best = {"p": p, "dist": dist, "ok": false}
+	return best
 
 
 # The Dispatcher goes on the chosen top: `park` passes it as the spawn's perch (no mast built);
@@ -1068,6 +1088,7 @@ func _spawn_perched(ball: Vector3) -> void:
 	_enemy_set = true
 	_ball_to_perch = Vector2(ball.x, ball.z).distance_to(Vector2(_perch_top.x, _perch_top.z))
 	_snapshot(_driver.enemy)
+	_perch_over_ball = _driver.enemy.global_position.y - float(terrain.height(ball.x, ball.z))
 	_perch_rise = float(_driver.enemy.perch_height()) if _driver.enemy.has_method("perch_height") else -1.0
 	_mast_built = _driver.enemy.get("mast") != null
 
@@ -1118,6 +1139,9 @@ func _record() -> void:
 		row["landed_hits"] = int(_snap.get("landed_hits", 0))
 		row["escalation"] = int(_snap.get("escalation", 0))
 		row["relocated"] = _relocated
+		row["standoff_m"] = snappedf(_standoff_m, 0.1)
+		row["standoff_ok"] = _standoff_ok
+		row["perch_over_ball_m"] = snappedf(_perch_over_ball, 0.01)
 	if _pack_mode:
 		row["pack"] = _pack_id
 		row["members"] = _pack_members
