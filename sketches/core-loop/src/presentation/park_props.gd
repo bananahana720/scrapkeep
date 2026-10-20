@@ -101,8 +101,11 @@ var map_id := ""
 var instances: Array = []
 var views: Array[GeometryInstance3D] = []
 # The main-thread time of the last stage entry's build call (the worker's expansion and the node slices are not in it).
-# stage_entry_budget_test does not read it: its modules table lists activities and set_dressing only.
+# stage_entry_budget_test reads it for the entry frame, and last_process_usec for the frames after.
 var last_entry_usec := 0
+# The main-thread time of _process in the frame it last ran (Engine.get_process_frames), for stage_entry_budget_test.
+var last_process_usec := 0
+var last_process_frame := -1
 var _built_for := []
 var _pending := false
 var _task := -1
@@ -1076,12 +1079,15 @@ func setup(context_in) -> void:
 
 
 func _process(_delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	if _pending and ctx.terrain.is_ready(ctx.terrain.stage):
 		_build_stage()
 	if _task >= 0 and WorkerThreadPool.is_task_completed(_task):
 		_take()
 	if not _jobs.is_empty():
 		_slice(BUILD_SLICE_USEC)
+	last_process_usec = Time.get_ticks_usec() - started
+	last_process_frame = Engine.get_process_frames()
 
 
 # True once the stage's nodes are all built (or it has none).
