@@ -1,4 +1,3 @@
-# smoke: solo timeout=300s (the KF3 hoist cycles plus the tuned w3 pattern check: about 163 s alone on 2026-10-20, near the 180 s cap)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
