@@ -145,7 +145,7 @@ func _real_run() -> void:
 	var bad := 0
 	for r in rows:
 		seen["%s|%s|%d" % [r["pilot"], r["kind"], int(r["seed"])]] = true
-		if String(r["outcome"]) in ["no_result", "wall_timeout"] or String(r.get("class", r["pilot"])) != String(r["pilot"]):
+		if String(r["outcome"]) in Lab.NO_RESULT or String(r.get("class", r["pilot"])) != String(r["pilot"]):
 			bad += 1
 	_check("every cell has both seeds", seen.size() == 12)
 	_check("every run produced a result for the pilot asked", bad == 0)
@@ -238,9 +238,20 @@ func _child_args_and_empty() -> void:
 	_check("an all-skipped pack row is left out of the table", empty["cells"]["a|pack:x"]["runs"] == 0)
 	var changed := Lab.build_table([{"pilot": "a", "kind": "k1", "outcome": "stage_changed", "ttk_s": -1.0, "stage_changed": true}], ["a"], ["k1"], 40.0)
 	_check("a stage_changed run is no result: left out of the table", changed["cells"]["a|k1"]["runs"] == 0 and "stage_changed" in Lab.NO_RESULT)
-	var graded := Lab.grade_answers(changed, [{"pilot": "a", "kind": "k1", "outcome": "stage_changed", "ttk_s": -1.0}], {"a|k1": "x"}, 40.0, 1)
 	_check("planted negative: a capped run still counts (the skip is only for no-result outcomes)", Lab.build_table([{"pilot": "a", "kind": "k1", "outcome": "capped", "ttk_s": -1.0}], ["a"], ["k1"], 40.0)["cells"]["a|k1"]["runs"] == 1)
-	_check("grade_answers skips stage_changed rows", graded.is_empty())
+	# A table with a real hard cell (c|k1: 9 s against a 2 s row), then an answer arm with stage_changed rows.
+	var hard_table := _table({"a|k1": 2.0, "b|k1": 2.0, "c|k1": 9.0}, ["a", "b", "c"], ["k1"])
+	var wins := []
+	var junk := []
+	for sd in [1, 2, 3]:
+		wins.append(_row("c", "k1", sd, 3.0))
+		junk.append({"pilot": "c", "kind": "k1", "seed": sd, "outcome": "stage_changed", "ttk_s": -1.0, "stage_changed": true})
+	var clean: Dictionary = Lab.grade_answers(hard_table, wins, {"c|k1": "x"}, 40.0, 3)["c|k1"]
+	var mixed_arm: Dictionary = Lab.grade_answers(hard_table, wins + junk, {"c|k1": "x"}, 40.0, 3)["c|k1"]
+	var only_junk: Dictionary = Lab.grade_answers(hard_table, junk, {"c|k1": "x"}, 40.0, 3)["c|k1"]
+	_check("the hard cell exists and the clean answer arm wins", (hard_table["hard"] as Array).size() == 1 and clean["status"] == "won")
+	_check("grade_answers ignores stage_changed rows: same status, runs and kills with them added", mixed_arm["status"] == "won" and mixed_arm["runs"] == 3 and mixed_arm["kills"] == 3)
+	_check("an answer arm of only stage_changed rows has no runs (not a win)", only_junk["runs"] == 0 and only_junk["status"] == "lost")
 
 
 # --from merge order: kind rows (default kinds order) first, then pack rows in first-seen order.
@@ -305,14 +316,16 @@ func _pack_duel() -> void:
 	_pack_capped()
 
 
-# An idle pilot cannot finish the pack inside a 1 s cap: live members must keep it from reading cleared.
+# An idle pilot cannot finish the pack inside a 30 s cap: live members must keep it from reading cleared. The
+# cap is past the ~24 s the calm map's beacon needed to charge and change stage (the regression for the
+# "killed, ttk -1, duel_s -10.61" rows), so the duel must run the whole cap on its own stage.
 func _pack_capped() -> void:
 	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("pack_capped.ndjson")
 	if FileAccess.file_exists(out):
 		DirAccess.remove_absolute(out)
 	var output := []
 	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
-			"--out=" + out, "--procs=1", "--seeds=1", "--cap=1", "--idle=1", "--pilots=tarn", "--packs=run_down", "--answer=0",
+			"--out=" + out, "--procs=1", "--seeds=1", "--cap=30", "--idle=1", "--pilots=tarn", "--packs=run_down", "--answer=0",
 			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
 	var code := OS.execute(OS.get_executable_path(), args, output, true)
 	var rows := []
@@ -321,7 +334,8 @@ func _pack_capped() -> void:
 			var parsed = JSON.parse_string(line)
 			if parsed is Dictionary:
 				rows.append(parsed)
-	_check("an idle pilot on a 1 s cap leaves the pack alive: capped, ttk -1", code == 0 and rows.size() == 1 and rows[0]["outcome"] == "capped" and float(rows[0]["ttk_s"]) < 0.0)
+	_check("an idle pilot on a 30 s cap leaves the pack alive: capped, ttk -1", code == 0 and rows.size() == 1 and rows[0]["outcome"] == "capped" and float(rows[0]["ttk_s"]) < 0.0)
+	_check("the 30 s duel stays on its stage: stage_changed false and duel_s >= cap - 0.5", rows.size() == 1 and rows[0].get("stage_changed", true) == false and float(rows[0]["duel_s"]) >= 29.5)
 
 
 func _perched_pure() -> void:

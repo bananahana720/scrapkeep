@@ -1145,7 +1145,7 @@ func _record() -> void:
 	var killed: bool = _kill_s >= 0.0 and outcome == "killed"
 	var row := {"pilot": _pilot, "class": _driver.class_id(), "kind": _kind, "seed": _run_seed, "give": String(_settings.get("give", "")),
 			"outcome": outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
-			"kill_dist_m": snappedf(_kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
+			"kill_dist_m": snappedf(-1.0 if _stage_changed else _kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
 			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01), "settle_s": snappedf(_settle_s, 0.01), "rest_forced": _rest_forced, "stage_changed": _stage_changed}
 	if _perched != "":
 		row["perched"] = _perched
@@ -1155,7 +1155,7 @@ func _record() -> void:
 		row["perch_base_rise_m"] = snappedf(_perch_base_rise, 0.01)
 		row["ball_to_perch_m"] = snappedf(_ball_to_perch, 0.1)
 		row["mast_built"] = _mast_built
-		row["dispatcher_down_s"] = snappedf(_dispatcher_down_s, 0.01)
+		row["dispatcher_down_s"] = snappedf(-1.0 if _stage_changed else _dispatcher_down_s, 0.01)
 		row["drops"] = int(_snap.get("drops", 0))
 		row["landed_hits"] = int(_snap.get("landed_hits", 0))
 		row["escalation"] = int(_snap.get("escalation", 0))
@@ -1170,7 +1170,7 @@ func _record() -> void:
 		row["table"] = _table_id
 		row["spawned"] = _pack_spawned
 		row["skipped"] = _pack_skipped
-		row["first_down_s"] = snappedf(_first_down_s, 0.01)
+		row["first_down_s"] = snappedf(-1.0 if _stage_changed else _first_down_s, 0.01)
 	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
 	file.store_string(JSON.stringify(row) + "\n")
 	file.close()
