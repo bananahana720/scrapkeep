@@ -234,6 +234,11 @@ func _child_args_and_empty() -> void:
 	_check("a pack with nothing spawned is no_result, one that spawned keeps its outcome", Lab.pack_outcome(0, "killed") == "no_result" and Lab.pack_outcome(3, "capped") == "capped")
 	var empty := Lab.build_table([{"pilot": "a", "kind": "pack:x", "outcome": Lab.pack_outcome(0, "killed"), "ttk_s": 0.0}], ["a"], ["pack:x"], 40.0)
 	_check("an all-skipped pack row is left out of the table", empty["cells"]["a|pack:x"]["runs"] == 0)
+	var changed := Lab.build_table([{"pilot": "a", "kind": "k1", "outcome": "stage_changed", "ttk_s": -1.0, "stage_changed": true}], ["a"], ["k1"], 40.0)
+	_check("a stage_changed run is no result: left out of the table", changed["cells"]["a|k1"]["runs"] == 0 and "stage_changed" in Lab.NO_RESULT)
+	var graded := Lab.grade_answers(changed, [{"pilot": "a", "kind": "k1", "outcome": "stage_changed", "ttk_s": -1.0}], {"a|k1": "x"}, 40.0, 1)
+	_check("planted negative: a capped run still counts (the skip is only for no-result outcomes)", Lab.build_table([{"pilot": "a", "kind": "k1", "outcome": "capped", "ttk_s": -1.0}], ["a"], ["k1"], 40.0)["cells"]["a|k1"]["runs"] == 1)
+	_check("grade_answers skips stage_changed rows", graded.is_empty())
 
 
 # --from merge order: kind rows (default kinds order) first, then pack rows in first-seen order.

@@ -51,6 +51,8 @@ const DODGE := 0.65
 const DUEL_RANGE := 18.0
 # Pack mode (--packs): a named authored pack is the opponent, closer in, spaced like Director._place_pack.
 const PACK_RANGE := 12.0
+# Beacon seconds no duel can reach (the stage's own is 25).
+const BEACON_PIN_S := 1.0e9
 const PACK_PREFIX := "pack:"
 const TABLES := ["park", "alpha"]
 # A duel starts at rest: the ball must be grounded and slower than REST_SPEED for SETTLE_S in a
@@ -63,6 +65,8 @@ const SETTLE_MAX_S := 12.0
 # The hull pool a duel gives the ball, so a lost duel is measured by hull_lost and does not end the run.
 const HULL_POOL := 99999.0
 const WALL_LIMIT_S := 600.0
+# Outcomes that measured nothing: left out of the table and the answer arm.
+const NO_RESULT := ["no_result", "wall_timeout", "stage_changed"]
 const PENDING := "answer: pending (no answers tags on this base)"
 
 
@@ -167,6 +171,8 @@ var _pack_spawned := 0
 var _pack_skipped: Array = []
 var _collecting := false
 var _first_down_s := -1.0
+var _spawn_stage := 0
+var _stage_changed := false
 var _warnings := 0
 var _joined := 0
 var _scrap_serial := 0
@@ -544,7 +550,7 @@ static func build_table(results: Array, pilots: Array, kinds: Array, cap: float)
 			cells[cell_key(pilot, kind)] = {"pilot": pilot, "kind": kind, "ttk": [], "hull": [], "kills": 0, "runs": 0, "hard": false}
 	for r in results:
 		var key := cell_key(String(r.get("pilot", "")), String(r.get("kind", "")))
-		if not cells.has(key) or String(r.get("outcome", "")) in ["no_result", "wall_timeout"]:
+		if not cells.has(key) or String(r.get("outcome", "")) in NO_RESULT:
 			continue
 		var cell: Dictionary = cells[key]
 		var killed := float(r.get("ttk_s", -1.0)) >= 0.0
@@ -609,7 +615,7 @@ static func grade_answers(table: Dictionary, answer_results: Array, plan: Dictio
 		var kills := 0
 		var runs := 0
 		for r in answer_results:
-			if cell_key(String(r.get("pilot", "")), String(r.get("kind", ""))) != key or String(r.get("outcome", "")) in ["no_result", "wall_timeout"]:
+			if cell_key(String(r.get("pilot", "")), String(r.get("kind", ""))) != key or String(r.get("outcome", "")) in NO_RESULT:
 				continue
 			runs += 1
 			if float(r.get("ttk_s", -1.0)) >= 0.0:
@@ -760,6 +766,11 @@ func _physics_process(delta: float) -> bool:
 		_driver.idle = String(_settings.get("idle", "0")) == "1"
 		_driver._dodge_rng.seed = hash(["dodge", _run_seed])
 		_driver.stage_limit = INF
+		# The calm map's beacon charges from the start (the ball begins in its ring; ctx.calm does not
+		# stop beacon.advance) and a full charge runs gates, launch and the next stage, which frees the
+		# duel's enemies (a long pack duel read `killed` with ttk -1 and duel_s -10.61). Pin the
+		# beacon out of reach so no duel can leave its stage; the stage guard below is the backstop.
+		_game.flow.beacon_seconds_override = BEACON_PIN_S
 		_game.presentation.audio.bake_now()
 		_bot_options.apply_audio(_game.presentation.audio)
 		_game.events.player_hit.connect(func(amount: float, _source: String):
@@ -787,6 +798,11 @@ func _physics_process(delta: float) -> bool:
 			return false
 	var over: bool = _driver.tick(delta)
 	var t := _duel_s()
+	if not over and (_game.run.stage != _spawn_stage or _game.run.stage_time < _start_s):
+		# The stage changed under the duel: its enemies were freed, so "cleared" would be false.
+		_stage_changed = true
+		_driver._end("stage_changed")
+		over = true
 	# A freed object compares equal to null, so the duel's own flag says the enemy was ever set.
 	if _pack_mode:
 		if _first_down_s < 0.0 and _enemy_set:
@@ -848,6 +864,7 @@ func _cleared() -> bool:
 func _spawn_duel() -> void:
 	_spawned = true
 	_start_s = _game.run.stage_time
+	_spawn_stage = _game.run.stage
 	_hull_start = float(_game.run.metrics["hull_damage"])
 	# ctx.calm gates the Warden, the director's packs, flood and event pushes, and hit knockback in
 	# combat; it does not gate an enemy's attack or the damage it deals (combat._on_player_hit
@@ -896,7 +913,7 @@ func _record() -> void:
 	var row := {"pilot": _pilot, "class": _driver.class_id(), "kind": _kind, "seed": _run_seed, "give": String(_settings.get("give", "")),
 			"outcome": pack_outcome(_pack_spawned, _driver.outcome) if _pack_mode else _driver.outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
 			"kill_dist_m": snappedf(_kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
-			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01), "settle_s": snappedf(_settle_s, 0.01), "rest_forced": _rest_forced}
+			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01), "settle_s": snappedf(_settle_s, 0.01), "rest_forced": _rest_forced, "stage_changed": _stage_changed}
 	if _pack_mode:
 		row["pack"] = _pack_id
 		row["members"] = _pack_members
