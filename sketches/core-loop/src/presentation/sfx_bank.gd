@@ -322,7 +322,9 @@ static func _event_samples(id: String, shift := 0) -> PackedFloat32Array:
 	var wav := ResourceLoader.load(path, "AudioStreamWAV", ResourceLoader.CACHE_MODE_IGNORE) as AudioStreamWAV
 	if wav == null or wav.format != AudioStreamWAV.FORMAT_16_BITS or wav.stereo:
 		return out
-	var count := wav.data.size() / 2
+	# wav.data returns a copy on every read, so read it once, not twice a sample.
+	var data := wav.data
+	var count := data.size() / 2
 	# A keyed bake (shift in semitones) is a varispeed of the file, like pitch_scale in play.
 	var step := float(wav.mix_rate) / float(RATE) * pow(2.0, float(shift) / 12.0)
 	var length := int(floor(float(count - 1) / step)) + 1
@@ -331,8 +333,8 @@ static func _event_samples(id: String, shift := 0) -> PackedFloat32Array:
 		var at := float(i) * step
 		var lo := int(at)
 		var hi := mini(lo + 1, count - 1)
-		var a := wav.data.decode_s16(lo * 2) / 32768.0
-		var b := wav.data.decode_s16(hi * 2) / 32768.0
+		var a := data.decode_s16(lo * 2) / 32768.0
+		var b := data.decode_s16(hi * 2) / 32768.0
 		out[i] = lerpf(a, b, at - lo)
 	return out
 

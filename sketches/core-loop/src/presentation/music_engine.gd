@@ -457,8 +457,14 @@ static func prepare_rest() -> void:
 	for list in [Harmony.WEIR, Harmony.BRINDLE, Harmony.MINOR_OF.values(), Harmony.BRINDLE_PHRYGIAN]:
 		for chord in list:
 			Synth.organ_chord(chord["voicing"])
+	# The boss phases that lift the key (BOSS_SECTIONS) hold an organ from phase 2 on.
+	for pair in [[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 1], [Harmony.BRINDLE, 2]]:
+		for chord in pair[0]:
+			if SfxBank.bake_cancel:
+				return
+			Synth.organ_chord(_shift(chord["voicing"], pair[1]))
 	for pair in [[Harmony.SLUICE, 0], [Harmony.WEIR, 0], [Harmony.VICTORY, 0], [Harmony.BRINDLE, 0],
-			[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 2]]:
+			[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 1], [Harmony.BRINDLE, 2]]:
 		_prepare_club(pair[0], pair[1], [12, 19, 22, 24])
 	# The Warden's escalation: the lift a half step up, the sinister break and pivots.
 	var lifted: Array = Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
