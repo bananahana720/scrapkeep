@@ -283,7 +283,9 @@ func _watch_frames(gate := {}) -> Dictionary:
 	var stamps := by_frame.keys()
 	stamps.sort()
 	# Frame 0 is the entry frame: the handlers and the nodes' own _process, which share the engine frame.
-	var ms: Array[float] = [(dressing.last_entry_usec + props.last_entry_usec) / 1000.0 + (by_frame[stamps[0]] if not stamps.is_empty() else 0.0)]
+	var first_process: float = by_frame[stamps[0]] if not stamps.is_empty() else 0.0
+	var entry_parts := {"dressing_entry": dressing.last_entry_usec / 1000.0, "props_entry": props.last_entry_usec / 1000.0, "process": first_process}
+	var ms: Array[float] = [(dressing.last_entry_usec + props.last_entry_usec) / 1000.0 + first_process]
 	var dress_ran: Array[bool] = [false]
 	var slice_ran: Array[bool] = [false]
 	for stamp in stamps.slice(1):
@@ -291,7 +293,7 @@ func _watch_frames(gate := {}) -> Dictionary:
 		dress_ran.append(dress_at.has(stamp))
 		slice_ran.append(slice_at.has(stamp))
 		deferred_built = deferred_built or dress_at.has(stamp)
-	return {"ms": ms, "dress_ran": dress_ran, "slice_ran": slice_ran, "frames": frames, "dressing_frames": dressing_frames, "dressing_done": dressing_done,
+	return {"entry_parts": entry_parts, "ms": ms, "dress_ran": dress_ran, "slice_ran": slice_ran, "frames": frames, "dressing_frames": dressing_frames, "dressing_done": dressing_done,
 		"props_built": props.is_built(), "deferred_built": deferred_built, "views": props.views.size(), "batches": dressing.batches.size(),
 		"children": dressing.get_child_count(), "instances": props.instances.size()}
 
@@ -322,9 +324,13 @@ func _check_frames(label: String, watch: Dictionary, quick: bool) -> void:
 	var overlap_same := 0
 	var overlap_adjacent := 0
 	for i in ms.size():
-		worst = maxf(worst, ms[i])
-		if ms[i] > FRAME_MS:
-			over += 1
+		# Frame 0, the entry frame, is reported and not gated here: the handlers' own budgets cover it (SWAP-HITCH,
+		# DRESS-ENTRY's 15 ms), and ParkProps' entry frees the previous stage's views, 8.9 to 15.7 ms of frame 0
+		# under load with the 60-vignette fixture.
+		if i > 0:
+			worst = maxf(worst, ms[i])
+			if ms[i] > FRAME_MS:
+				over += 1
 		if watch.slice_ran[i]:
 			slices += 1
 		if watch.dress_ran[i]:
@@ -336,9 +342,12 @@ func _check_frames(label: String, watch: Dictionary, quick: bool) -> void:
 	var listing := PackedStringArray()
 	for v in ms:
 		listing.append("%.1f" % v)
-	print("stage_entry_budget_test: %s: %d frames, worst %.1f ms, %d props slice frames, dressing deferred build %s (%d frames), same frame %d, adjacent %d, props instances %d, views %d, frames ms [%s]" % [
+	var parts: Dictionary = watch.entry_parts
+	print("stage_entry_budget_test: %s: entry frame (reported, not gated) %.1f ms = dressing entry %.1f + props entry %.1f + first _process %.1f" % [
+		label, ms[0], parts.dressing_entry, parts.props_entry, parts.process])
+	print("stage_entry_budget_test: %s: %d frames, worst after entry %.1f ms, %d props slice frames, dressing deferred build %s (%d frames), same frame %d, adjacent %d, props instances %d, views %d, frames ms [%s]" % [
 		label, watch.frames, worst, slices, watch.deferred_built, dress_frames, overlap_same, overlap_adjacent, watch.instances, watch.views, ", ".join(listing)])
-	_t.check("%s: every frame after entry within %.0f ms for the dressing's build and ParkProps' slices together" % [label, FRAME_MS], over == 0 and ms.size() > 1,
+	_t.check("%s: every frame after the entry frame within %.0f ms for the dressing's build and ParkProps' slices together" % [label, FRAME_MS], over == 0 and ms.size() > 1,
 		"worst %.1f ms, %d of %d frames over" % [worst, over, ms.size()])
 	_t.check("%s: the dressing and ParkProps both finished inside the timed frames" % label, watch.dressing_done and watch.props_built and watch.frames < FRAMES_WATCH_MAX,
 		"%d frames, dressing %s, props %s" % [watch.frames, watch.dressing_done, watch.props_built])
