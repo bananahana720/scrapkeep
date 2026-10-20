@@ -1,0 +1,82 @@
+{
+ "schema": "scrapkeep-park-props-kit/1",
+ "park": "dam",
+ "recipe": "tools/blender/park/props/dam.py",
+ "kinds": {
+  "gate_wheelhouse": {
+   "class": "dress_hero",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/gate_wheelhouse_a.glb",
+      "res://assets/models/park/props/dam/gate_wheelhouse_a_lod1.glb",
+      "res://assets/models/park/props/dam/gate_wheelhouse_a_lod2.glb"
+     ],
+     "tris": [
+      16880,
+      8440,
+      2532
+     ],
+     "radius": 3.006,
+     "height": 3.173
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/gate_wheelhouse_b.glb",
+      "res://assets/models/park/props/dam/gate_wheelhouse_b_lod1.glb",
+      "res://assets/models/park/props/dam/gate_wheelhouse_b_lod2.glb"
+     ],
+     "tris": [
+      17864,
+      8932,
+      2680
+     ],
+     "radius": 2.969,
+     "height": 3.15
+    }
+   }
+  },
+  "survey_tripod": {
+   "class": "dress_prop",
+   "tags": [
+    "machine"
+   ],
+   "story": "A survey tripod knocked flat when the line broke, its plumb bob still on its cord.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/survey_tripod_a.glb",
+      "res://assets/models/park/props/dam/survey_tripod_a_lod1.glb",
+      "res://assets/models/park/props/dam/survey_tripod_a_lod2.glb"
+     ],
+     "tris": [
+      2952,
+      1476,
+      442
+     ],
+     "radius": 1.286,
+     "height": 0.924
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/survey_tripod_b.glb",
+      "res://assets/models/park/props/dam/survey_tripod_b_lod1.glb",
+      "res://assets/models/park/props/dam/survey_tripod_b_lod2.glb"
+     ],
+     "tris": [
+      2952,
+      1476,
+      442
+     ],
+     "radius": 1.098,
+     "height": 0.42
+    }
+   }
+  }
+ }
+}
