@@ -36,6 +36,7 @@ const POOL_RISE := 3.0
 const HOLD_FALLBACK := 6.0
 const RACK_POSTURE := 25.0
 const LIFT := 10.0
+const IDENTITY_PULSE := {"warden.pulse_cycle_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}
 # The smash's hit-stop slows game time for a few frames, so a swell counted in frames right
 # after a real smash runs a little long; telegraph_timing_swarm_test holds it to one tick.
 const SLOW_TOLERANCE := 0.1
@@ -59,6 +60,9 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 
 func _initialize() -> void:
+	# The headframe checks pin the designed every-dwell lock at the base pulse cycle, not the tuned
+	# stage-3 cadence (x1.5); _tuned_headframe runs the shipped default and pins what that does.
+	ChallengeDials.set_overrides(IDENTITY_PULSE)
 	_run()
 
 
@@ -187,6 +191,7 @@ func _run() -> void:
 	_report("the swarm driver exists", _driver_script() != null, DRIVER_PATH)
 	await _park_spawn()
 	await _headframe()
+	await _tuned_headframe()
 	await _sinkhole()
 	print("warden_swarm_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
@@ -275,6 +280,56 @@ func _hoist_cycle(driver) -> void:
 	var in_dwell := charge_phases.size() >= 3 and charge_phases.all(func(p): return _near_any(p, [DWELL - 2.0, 2.0 * DWELL + MOVE - 2.0], 1.5))
 	_report("headframe: a charge starts only in a dwell, 2 s before its end", in_dwell, "charges at hoist clock %s" % [charge_phases])
 
+
+# The shipped default (warden.pulse_cycle_by_stage stage 3 x1.5, a 9 s cycle): the pulse is still
+# locked to a dwell's end, but a charge starts 2 s before a dwell end only when the 9 s clock is
+# ready, which is the high dwell's end (hoist clock 10) alone, once per 12 s hoist cycle.
+func _tuned_headframe() -> void:
+	ChallengeDials.set_overrides({})
+	if not await _start(3):
+		_report("stage 3 fields a Warden", false, "no Warden")
+		ChallengeDials.set_overrides(IDENTITY_PULSE)
+		return
+	var driver = _attach()
+	if driver == null:
+		_report("headframe tuned: driver attached", false, "no driver")
+		ChallengeDials.set_overrides(IDENTITY_PULSE)
+		await _end()
+		return
+	_pick_side()
+	var stand := _ground(_warden.home + _out * 14.0)
+	var pulses: int = _warden.pulses
+	var charging: bool = _warden._charging
+	var pulse_phases: Array = []
+	var pulse_times: Array = []
+	var charge_phases: Array = []
+	var cycle: float = _warden.pulse_cycle(_warden.stage)
+	var frames := _ticks(3.0 * 2.0 * (DWELL + MOVE) + 0.5)
+	for i in frames:
+		_player.reset_to(stand)
+		_quiet()
+		await physics_frame
+		if _warden.pulses > pulses:
+			pulses = _warden.pulses
+			pulse_phases.append(float(driver.clock))
+			pulse_times.append(float(i) * _tick())
+		if _warden._charging and not charging:
+			charge_phases.append(float(driver.clock))
+		charging = _warden._charging
+	var high_end := 2.0 * DWELL + MOVE
+	var gaps := []
+	for i in range(1, pulse_times.size()):
+		gaps.append(snappedf(float(pulse_times[i]) - float(pulse_times[i - 1]), 0.01))
+	var locked := pulse_phases.size() >= 2 and pulse_phases.all(func(p): return _near_any(p, [DWELL, high_end], 1.5))
+	var high_only := pulse_phases.size() >= 2 and pulse_phases.all(func(p): return _near_any(p, [high_end], 1.5)) \
+			and gaps.all(func(g): return absf(float(g) - 2.0 * (DWELL + MOVE)) <= 3.0 * _tick())
+	var charges := charge_phases.size() >= 2 and charge_phases.all(func(p): return _near_any(p, [high_end - 2.0], 1.5))
+	_report("headframe at the tuned stage-3 pulse (x1.5): the pulse still lands on a dwell's end, the high one only, once per hoist cycle",
+		is_equal_approx(cycle, 9.0) and locked and high_only and charges,
+		"cycle %.1f s, pulses at hoist clock %s, %s s apart, charges at hoist clock %s (high dwell ends at %.1f)" % [cycle,
+			pulse_phases, gaps, charge_phases, high_end])
+	ChallengeDials.set_overrides(IDENTITY_PULSE)
+	await _end()
 
 func _near_any(value: float, marks: Array, ticks: float) -> bool:
 	for mark in marks:

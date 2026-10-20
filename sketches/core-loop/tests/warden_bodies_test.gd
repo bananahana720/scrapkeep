@@ -56,6 +56,9 @@ var _seen: Array = []
 
 
 func _initialize() -> void:
+	# This pins swarm mechanics, not cadence: the tuned stage-3 pulse cycle (x1.5) moves the
+	# pulse off every dwell end. The band table measures the tuned fight; here it sits at identity.
+	ChallengeDials.set_overrides({"warden.pulse_cycle_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]})
 	_run()
 
 
