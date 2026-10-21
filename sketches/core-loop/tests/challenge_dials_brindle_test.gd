@@ -80,7 +80,8 @@ func _run() -> void:
 	_t.check("slag warn stays >= MIN_WARN at tell_mult 0.1", slag != null and slag.warn_seconds >= Hazard.MIN_WARN - 1e-6,
 			str(slag.warn_seconds if slag != null else -1.0))
 	if slag != null:
-		var want: float = slag.warn_seconds + Rules.SLAG_LIVE + Rules.SLAG_GAP
+		# The shipped Furnace period is 0.5 (brindle.period_by_phase), so the gap halves; the warn and live do not.
+		var want: float = slag.warn_seconds + Rules.SLAG_LIVE + Rules.SLAG_GAP * 0.5
 		_t.near("next slag is scheduled on the hazard's own warn", _boss._next_attack - _boss.clock, want, 0.02)
 	_boss._cancel_hazards()
 	_boss._enter_phase(3)

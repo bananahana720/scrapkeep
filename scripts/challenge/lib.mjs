@@ -117,7 +117,7 @@ export function planCells(opts) {
     builds = {}, cells = ["boss", "warden", "park"], only = null, seeds = null, columns = COLUMNS.map((c) => c.id), persona = "brawler", wardenPersona = "skipper", parkPersona = "skipper",
   } = opts;
   const jobs = [];
-  const tuneArgs = opts.tune ? ["--tune=" + opts.tune] : [];
+  const tuneArgs = [...(opts.tune ? ["--tune=" + opts.tune] : []), ...(opts.tuneUnruled ? ["--tune-unruled"] : [])];
   const want = (id) => !only || only.includes(id);
   const defs = [];
   for (const b of BOSSES) if (cells.includes("boss") && want(b.id)) defs.push({ kind: "boss", ...b });
@@ -189,11 +189,16 @@ export function botArgs(job, out) {
 // the largest single hit as a share of pilot health and the share of health lost in the fight's first 45 s.
 // A Warden never engaged has no fight to report, so its shares are null, not zero. The study file arrives with #167.
 export function fightReport(note, maxHp, engaged = true) {
-  if (!note || !engaged) return { largestShare: null, largestSource: null, hp45Share: null };
+  if (!note || !engaged) return { largestShare: null, largestSource: null, hp45Share: null, largestHullShare: null, hull45Share: null };
+  // hp_lost* and largest_hit are the whole hit before scrap armour; hull_* is what reached the hull. Rows
+  // recorded before the driver kept hull keys read null for the hull, not zero.
+  const hullKnown = note.hull_lost_45s != null || note.largest_hull_hit != null || note.hull_lost != null;
   return {
     largestShare: note.largest_hit_share ?? (note.largest_hit != null && maxHp ? note.largest_hit / maxHp : null),
     largestSource: note.largest_hit_source ?? null,
     hp45Share: maxHp ? Math.round(((note.hp_lost_45s ?? 0) / maxHp) * 1000) / 1000 : null,
+    largestHullShare: hullKnown ? note.largest_hull_hit_share ?? 0 : null,
+    hull45Share: hullKnown && maxHp ? Math.round(((note.hull_lost_45s ?? 0) / maxHp) * 1000) / 1000 : null,
   };
 }
 
@@ -283,6 +288,9 @@ export function aggregate(grades) {
     rate: n ? wins / n : null, lo, hi,
     medianFightS: median(used.filter((g) => g.result === "win").map((g) => g.fightS)),
     medianHpLost: median(used.map((g) => g.hpLost)),
+    largestHullShare: used.some((g) => g.largestHullShare != null) ? Math.max(...used.map((g) => g.largestHullShare ?? 0)) : null,
+    medianHull45Share: median(used.map((g) => g.hull45Share).filter((x) => x != null)),
+    maxHull45Share: used.some((g) => g.hull45Share != null) ? Math.max(...used.map((g) => g.hull45Share ?? 0)) : null,
     earliestDeathS: deaths.length ? Math.min(...deaths) : null,
     deathsS: deaths,
     earlyDeaths: deaths.filter((s) => s < TARGETS.earliestLearnerBossDeathS).length,
@@ -372,6 +380,7 @@ const fmt = (x, d = 1) => (x == null ? "-" : Number(x).toFixed(d));
 
 export function renderTable(table, meta = {}) {
   const lines = ["# Challenge band table", ""];
+  if (meta.tune_unruled) lines.push("Unruled: --tune-unruled was set, so pilot.* dials applied. No ruling allows them; this table is information only.", "");
   if (meta.tune) lines.push(`Tuned: --tune=${meta.tune} requested (difficulty dials, src/core/challenge_dials.gd). The applied dials are on each run row as "dials", from describe(); a rejected entry is not applied.`, "");
   if (meta.label) lines.push(`Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`, "");
   lines.push("Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. Brackets after a cell count deaths, fight caps (fight_capped, boss_stalled) and stalls; none is a win. Runs with no record, an unresumed doc or a harness kill are excluded from n and the rate and noted as `excluded`; over 10% excluded makes the column incomplete. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.", "");
@@ -388,12 +397,13 @@ export function renderTable(table, meta = {}) {
     lines.push("");
   }
   if (fights.length) {
-    lines.push("## Fight report (comps study format)", "", "From research/comps/difficulty/SUMMARY.md, Lab measure. Reference rows, which are tuning ranges, not rulings: boss TTK 50-90 s and Warden 90-150 s at an ordinary build (rows 1, 2); an ordinary hit 15-25% of pilot health, a heavy one 30-50%, and no single hit kills from full (rows 9, 10); a Learner loses well under full health in the first 45 s (row 11). Largest hit is the biggest single hit in any band's run, with its source id. Tells and recovery come from the attack sheet (`tools/attack_sheet.gd`), not from these runs. Warden rows count from the Warden fight's start.", "");
-    lines.push("| Cell | Expert ordinary TTK s | Largest hit, share of HP (source) | Learner a1 HP lost in first 45 s, share (median / max) |", "| --- | --- | --- | --- |");
+    lines.push("## Fight report (comps study format)", "", "From research/comps/difficulty/SUMMARY.md, Lab measure. Reference rows, which are tuning ranges, not rulings: boss TTK 50-90 s and Warden 90-150 s at an ordinary build (rows 1, 2); an ordinary hit 15-25% of pilot health, a heavy one 30-50%, and no single hit kills from full (rows 9, 10); a Learner loses well under full health in the first 45 s (row 11). Largest hit is the biggest single hit in any band's run, with its source id. Hit and HP-lost shares are the whole hit before scrap armour; the hull columns are what reached the hull after armour (blank for rows recorded before the driver kept them). Tells and recovery come from the attack sheet (`tools/attack_sheet.gd`), not from these runs. Warden rows count from the Warden fight's start.", "");
+    lines.push("| Cell | Expert ordinary TTK s | Largest hit, share of HP (source) | Learner a1 HP lost in first 45 s, share (median / max) | Largest hull hit | Learner a1 hull lost in first 45 s (median / max) |", "| --- | --- | --- | --- | --- | --- |");
     for (const c of fights) {
       const all = Object.values(c.columns).filter((x) => x.largestShare != null).sort((a, b) => b.largestShare - a.largestShare)[0];
       const l1 = c.columns.learner1;
-      lines.push(`| ${c.cell} | ${fmt(c.columns.expert?.medianFightS)} | ${all ? `${pct(all.largestShare)} (${all.largestSource ?? "?"})` : "-"} | ${l1?.medianHp45Share != null ? `${pct(l1.medianHp45Share)} / ${pct(l1.maxHp45Share)}` : "-"} |`);
+      const hullMax = Math.max(-1, ...Object.values(c.columns).map((x) => x.largestHullShare ?? -1));
+      lines.push(`| ${c.cell} | ${fmt(c.columns.expert?.medianFightS)} | ${all ? `${pct(all.largestShare)} (${all.largestSource ?? "?"})` : "-"} | ${l1?.medianHp45Share != null ? `${pct(l1.medianHp45Share)} / ${pct(l1.maxHp45Share)}` : "-"} | ${hullMax >= 0 ? pct(hullMax) : "-"} | ${l1?.medianHull45Share != null ? `${pct(l1.medianHull45Share)} / ${pct(l1.maxHull45Share)}` : "-"} |`);
     }
     lines.push("");
   }

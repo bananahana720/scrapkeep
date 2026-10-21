@@ -10,6 +10,8 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
+const BossRules := preload("res://src/boss/boss_rules.gd")
+const Requisition := preload("res://src/boss/requisition.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -285,6 +287,15 @@ const CLOSE_FIGHT := 14.0
 # The boss.
 const BOSS_ORBIT := 32.0
 const BAIT_RADIUS := 47.0
+# Brindle's charge lane: a read lane is left to half its width plus this margin (m). A clash needs
+# the ball closing on the bow at CLASH_SPEED (m/s), at least CLASH_MIN_GAP (m) ahead of the front, and
+# lined up within CLASH_ALIGN (m) of the axis at CLASH_ROLL (m/s) with CLASH_SPARE (s) to spare.
+const CHARGE_MARGIN := 2.0
+const CLASH_SPEED := 8.0
+const CLASH_MIN_GAP := 5.0
+const CLASH_ALIGN := 1.5
+const CLASH_ROLL := 12.0
+const CLASH_SPARE := 0.3
 const RAMP_ANGLES := [0.0, 180.0]
 const RAMP_BOTTOM := 46.0
 const RAMP_PAST := 18.0
@@ -454,6 +465,11 @@ var band = null
 # The lowest hull the run reached, for the record; it steers nothing.
 var _min_hp := INF
 var _evaded := {}
+# Brindle charge lanes (hazard instance id) already counted as read, sidestepped, clash-tried, and the clash taken.
+var _charge_read := {}
+var _charge_stepped := {}
+var _clash_tried := {}
+var _clash_latched := {}
 # The pulse ring the caps loop takes on purpose, by its centre.
 var _welcome_ring_at := Vector3.INF
 # Engineer plant cycle: idle, seek or mounted.
@@ -463,6 +479,8 @@ var _plant_cool := 0.0
 var _plant_face := Vector3.ZERO
 var _plant_target: Node3D = null
 var _boss_clock := 0.0
+# The hull at the last tick or hit: a hit's hull loss is what it took off this, after scrap armour.
+var _hull_seen := -1.0
 # The opening the 19 Oct ruling protects: no boss kills a Learner in its first 45 s.
 const FIRST_45_S := 45.0
 # Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
@@ -686,6 +704,7 @@ func tick(delta: float) -> bool:
 	if outcome != "":
 		return true
 	ticks += 1
+	_hull_seen = float(game.run.hp)
 	var flow = game.flow
 	var state: String = flow.state_name()
 	match state:
@@ -956,8 +975,14 @@ func _in_boss() -> bool:
 
 
 func _on_player_hit(amount: float, source_id: String) -> void:
+	# hp_lost and the largest hit are the whole hit before scrap armour; hull_lost is what reached the hull.
+	var hull: float = amount if _hull_seen < 0.0 else maxf(0.0, _hull_seen - float(game.run.hp))
+	_hull_seen = float(game.run.hp)
 	_count("hp_lost", amount)
+	_count("hull_lost", hull)
 	_count("hits")
+	if source_id == "brindle_charge":
+		_count("charge_hits")
 	var in_boss := _in_boss()
 	var into: Dictionary = boss_note if in_boss else _note
 	if not into.is_empty():
@@ -975,8 +1000,12 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 				into["largest_hit"] = snappedf(amount, 0.1)
 				into["largest_hit_source"] = source_id
 				into["largest_hit_share"] = snappedf(amount / maxf(float(game.run.max_hp), 1.0), 0.001)
+			if hull > float(into.get("largest_hull_hit", 0.0)):
+				into["largest_hull_hit"] = snappedf(hull, 0.1)
+				into["largest_hull_hit_share"] = snappedf(hull / maxf(float(game.run.max_hp), 1.0), 0.001)
 			if fight_s <= FIRST_45_S:
 				into["hp_lost_45s"] = snappedf(float(into.get("hp_lost_45s", 0.0)) + amount, 0.1)
+				into["hull_lost_45s"] = snappedf(float(into.get("hull_lost_45s", 0.0)) + hull, 0.1)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
@@ -1012,6 +1041,7 @@ func _close_note() -> void:
 		return
 	_note["exit_s"] = snappedf(game.run.stage_time, 0.01)
 	_note["hp_lost"] = snappedf(float(_note["hp_lost"]), 0.1)
+	_note["hull_lost"] = snappedf(float(_note.get("hull_lost", 0.0)), 0.1)
 	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
 	stage_notes.append(_note)
 	_note = {}
@@ -1022,12 +1052,17 @@ func _on_boss_entered() -> void:
 	_boss_clock = 0.0
 	_seen = {}
 	_evaded = {}
+	_charge_read = {}
+	_charge_stepped = {}
+	_clash_tried = {}
+	_clash_latched = {}
 	_plant_state = "idle"
 	_fight_phase = "charge"
 	_fight_target = null
 	boss_note = {"entered_run_s": snappedf(game.run.run_time, 0.01), "entry_heft": snappedf(game.run.heft(), 0.001),
 		"entry_parts": game.run.parts.size(), "phases": [], "weak_point_hits": {}, "hp_lost": 0.0, "hits": 0,
-		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null}
+		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null,
+		"charge_reads": 0, "charge_sidesteps": 0, "charge_hits": 0, "clash_tries": 0}
 
 
 func _on_boss_phase(phase: int, phase_name: String) -> void:
@@ -2594,6 +2629,9 @@ func _fight_boss(delta: float) -> void:
 				else:
 					source.hold["brake_held"] = true
 			return
+		# Phase 3's charge lane, once read, outranks the ram laps and run-ups _fight plans.
+		if phase == 3 and _charge_plan(boss, hull, ball, punch, delta):
+			return
 		_fight(hull, delta)
 		return
 	match phase:
@@ -2618,12 +2656,89 @@ func _fight_boss(delta: float) -> void:
 			if boss.has_method("stunned") and boss.stunned():
 				_goal = "boss stunned"
 				_ram_laps(hull, hull, delta)
-			elif boss.has_method("charging") and boss.charging() and punch >= float(boss.get("clash_punch") if boss.get("clash_punch") != null else 150.0):
-				_goal = "boss clash"
-				_act(hull.global_position, hull, delta, hull, false)
+			elif _charge_plan(boss, hull, ball, punch, delta):
+				pass
 			else:
 				_goal = "boss bait"
 				_act(arena.point_at(arena.angle_of(ball), BAIT_RADIUS), hull, delta, hull)
+
+
+# Brindle's committed charge lane when this band has seen it long enough and read it (the
+# `_threats` rules: seen for the band's reaction time, `band.reads`), else null. Counts each
+# read lane once.
+func _charge_lane(boss):
+	var c = boss.get("_charge")
+	if not c is Dictionary or not String(c.get("state", "")) in ["brace", "run"]:
+		return null
+	var h = c.get("hazard")
+	if h == null or not is_instance_valid(h) or h.is_done():
+		return null
+	var id: int = h.get_instance_id()
+	if not _seen.has(id):
+		_seen[id] = ticks
+		return null
+	if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < _reaction():
+		return null
+	if band != null and not band.reads(id):
+		return null
+	if not _charge_read.has(id):
+		_charge_read[id] = true
+		_count("charge_reads")
+	return h
+
+
+# Phase 3 against a read charge lane. Returns false (the old plan runs) on an unread lane.
+# The full kit clashes only when it can win; everything else steps out of the lane.
+func _charge_plan(boss, hull: Node3D, ball: Vector3, punch: float, delta: float) -> bool:
+	var h = _charge_lane(boss)
+	if h == null:
+		return false
+	var id: int = h.get_instance_id()
+	var lateral: float = h.lane_lateral(ball)
+	if _clash_viable(boss, h, ball, punch, id):
+		if not _clash_tried.has(id):
+			_clash_tried[id] = true
+			_count("clash_tries")
+		_goal = "boss clash"
+		_act(hull.global_position, hull, delta, hull, false)
+		return true
+	_clash_latched.erase(id)
+	if not _charge_stepped.has(id):
+		_charge_stepped[id] = true
+		_count("charge_sidesteps")
+	var out: float = h.half_width + CHARGE_MARGIN
+	var sign_side := 1.0 if lateral >= 0.0 else -1.0
+	var along: float = h.lane_along(ball)
+	var at: Vector3 = h.centre + h.heading * along + h.side() * sign_side * (out + 1.0)
+	_goal = "boss sidestep"
+	_act(Vector3(at.x, ball.y, at.z), hull, delta, hull, absf(lateral) >= h.half_width + 1.0)
+	return true
+
+
+# Head-on with time to spare: the full kit, enough punch, the ball closing on the bow at
+# speed, and it can line up with the lane's axis before the front arrives. Latched per lane
+# once taken, so the clash does not flicker.
+func _clash_viable(boss, h, ball: Vector3, punch: float, id: int) -> bool:
+	if band != null and band.kit != "full":
+		return false
+	var clash_punch: float = float(boss.get("clash_punch") if boss.get("clash_punch") != null else 150.0)
+	if punch < clash_punch:
+		return false
+	var c: Dictionary = boss.get("_charge")
+	var front: float = float(c.get("travelled", 0.0)) + Requisition.HULL.z * 0.5
+	var gap: float = h.lane_along(ball) - front
+	if gap < CLASH_MIN_GAP:
+		return _clash_latched.has(id) and gap > 0.0
+	var v: Vector3 = game.player.planar_velocity()
+	var closing: float = -v.dot(h.heading)
+	var wait: float = h.seconds_until_live() if not h.is_live() else 0.0
+	var arrive: float = wait + gap / (BossRules.CHARGE_SPEED + maxf(closing, 0.0))
+	var align: float = maxf(absf(h.lane_lateral(ball)) - CLASH_ALIGN, 0.0) / CLASH_ROLL
+	var ok: bool = _clash_latched.has(id) or closing >= CLASH_SPEED
+	ok = ok and (align <= 0.0 or align <= arrive - CLASH_SPARE)
+	if ok:
+		_clash_latched[id] = true
+	return ok
 
 
 func _live_part(boss, parts: Array, ball: Vector3) -> Node3D:

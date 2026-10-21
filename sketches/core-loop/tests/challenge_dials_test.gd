@@ -36,6 +36,13 @@ func _initialize() -> void:
 	_run()
 
 
+func _raw_identity() -> float:
+	ChallengeDials.set_overrides({"brindle.period_by_phase": [1.0, 1.0, 1.0, 1.0]})
+	var v := ChallengeDials.period("brindle", 3.4, 1)
+	ChallengeDials.reset()
+	return v
+
+
 func _rules() -> void:
 	_t.eq("no override: describe is empty", ChallengeDials.describe(), {})
 	for key in ChallengeDials.DEFAULTS:
@@ -43,7 +50,28 @@ func _rules() -> void:
 			_t.check("default " + key, false)
 	_t.eq("default damage_by_phase", ChallengeDials.value("waking.damage_by_phase"), [1.0, 1.0, 1.0, 1.0])
 	_t.near("default damage is the base", ChallengeDials.damage("mind", 10.0, 2), 10.0, 0.0)
-	_t.near("default period is the base", ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1), Rules.CRANE_PERIOD, 0.0)
+	# Brindle ships tuned (Spillway PR): the per-phase lists carry the band-swept values, every other key is identity.
+	_t.eq("brindle tuned period_by_phase", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.5, 1.0, 1.0])
+	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 2.0, 1.3, 1.0])
+	_t.near("tuned Requisition period", ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1), Rules.CRANE_PERIOD * 0.6, 1e-6)
+	_t.near("tuned Furnace period", ChallengeDials.period("brindle", 2.0, 2), 1.0, 1e-6)
+	_t.near("Scuttle and chase periods are the base", ChallengeDials.period("brindle", 2.0, 3), 2.0, 0.0)
+	_t.near("tuned Furnace damage", ChallengeDials.damage("brindle", 10.0, 2), 20.0, 1e-6)
+	_t.near("chase damage is the base", ChallengeDials.damage("brindle", 10.0, 4), 10.0, 0.0)
+	_t.eq("a --tune/override REPLACES the tuned list: 1/1/1/1 is the raw identity", _raw_identity(), 3.4)
+	_t.eq("and the tuned default returns after reset", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.5, 1.0, 1.0])
+	for key in ChallengeDials.DEFAULTS:
+		if key in ["brindle.period_by_phase", "brindle.damage_by_phase"]:
+			continue
+		var d: Variant = ChallengeDials.DEFAULTS[key]
+		var ident: bool = true
+		if d is Array:
+			for x in d:
+				ident = ident and (float(x) == 1.0 or key.contains("counter"))
+		else:
+			ident = float(d) == 1.0 or key == "brindle.combo" or key.ends_with(".combo")
+		if not ident:
+			_t.check("identity default " + key, false)
 	_t.near("default tell is the base", ChallengeDials.tell("brindle", Rules.CRANE_WARN), Rules.CRANE_WARN, 0.0)
 
 	var parsed := ChallengeDials.parse("mind.damage_mult=1.5,waking.damage_by_phase=1/1.25/1.5/2,brindle.combo=2")

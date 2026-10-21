@@ -224,7 +224,7 @@ func sheet_heft(warden, heft: float) -> float:
 
 func on_charge(warden, seconds: float) -> void:
 	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
-		warden._charge_time = maxf(0.0, warden._pulse_clock - (warden.pulse_cycle() - seconds))
+		warden._charge_time = maxf(0.0, warden._pulse_clock - (warden.pulse_cycle(warden.stage) - seconds))
 	if sheet_live():
 		sheet_left = 0.0
 		_close_sheet()
