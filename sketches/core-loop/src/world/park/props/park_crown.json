@@ -1511,6 +1511,44 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "low_tiny": {
+   "story": "A scrap of net-weaver camp left on the slope: a stool, a dish, a sprig of brush.",
+   "props": [
+    {
+     "kind": "watch_stool",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      1.8,
+      -1.4
+     ],
+     "yaw_deg": 0,
+     "scale": 1.19,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -1.8,
+      1.4
+     ],
+     "yaw_deg": 45,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -2963,6 +3001,76 @@
    ],
    "yaw_deg": -159,
    "near": "watch_butte, abandoned Fleet gear"
+  },
+  {
+   "id": "crown_mv_01",
+   "template": "low_tiny",
+   "at": [
+    60.0,
+    -396.0
+   ],
+   "yaw_deg": 315,
+   "near": "density/bare fill for pose 15"
+  },
+  {
+   "id": "crown_mv_02",
+   "template": "low_tiny",
+   "at": [
+    72.0,
+    -360.0
+   ],
+   "yaw_deg": 0,
+   "near": "density/bare fill for pose 16"
+  },
+  {
+   "id": "crown_mv_03",
+   "template": "low_cairn",
+   "at": [
+    14.0,
+    434.0
+   ],
+   "yaw_deg": 0,
+   "near": "density/bare fill for pose 115"
+  },
+  {
+   "id": "crown_mv_04",
+   "template": "mini_hammock",
+   "at": [
+    32.0,
+    488.0
+   ],
+   "yaw_deg": 45,
+   "near": "density/bare fill for pose 115"
+  },
+  {
+   "id": "crown_mv_05",
+   "template": "low_slab",
+   "at": [
+    122.0,
+    278.0
+   ],
+   "yaw_deg": 0,
+   "near": "density/bare fill for pose 208"
+  },
+  {
+   "id": "crown_mv_06",
+   "template": "mini_lesson",
+   "at": [
+    110.0,
+    290.0
+   ],
+   "yaw_deg": 0,
+   "near": "density/bare fill for pose 208"
+  },
+  {
+   "id": "crown_mv_07",
+   "template": "low_cairn",
+   "at": [
+    78.0,
+    -330.0
+   ],
+   "yaw_deg": 0,
+   "near": "density/bare fill for pose 220"
   }
  ],
  "litter": {
@@ -3003,7 +3111,7 @@
   ],
   "seed": 31
  },
- "pin": 1021932662,
+ "pin": 937138648,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",
