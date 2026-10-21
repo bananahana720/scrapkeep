@@ -1320,6 +1320,38 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "mini_ties": {
+   "story": "A few ties left stacked by the siphon verge.",
+   "props": [
+    {
+     "kind": "timber_ties",
+     "v": "b",
+     "at": [
+      0.0,
+      0.0
+     ],
+     "yaw_deg": 10,
+     "scale": 0.95,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "mini_cup": {
+   "story": "A cold cup of tea left by the siphon verge.",
+   "props": [
+    {
+     "kind": "tea_hearth",
+     "v": "a",
+     "at": [
+      0.0,
+      0.0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -2164,6 +2196,26 @@
    "near": "scan"
   },
   {
+   "id": "flume_s094",
+   "template": "mini_ties",
+   "at": [
+    -5,
+    225
+   ],
+   "yaw_deg": 20,
+   "near": "scan"
+  },
+  {
+   "id": "flume_s095",
+   "template": "mini_cup",
+   "at": [
+    -5,
+    230
+   ],
+   "yaw_deg": 100,
+   "near": "scan"
+  },
+  {
    "id": "flume_a03",
    "template": "camp_corner",
    "at": [
@@ -2280,5 +2332,5 @@
   ],
   "seed": 1021
  },
- "pin": 875855731
+ "pin": 1477437796
 }
